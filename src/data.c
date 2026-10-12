@@ -311,19 +311,22 @@ bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uin
     return false;
 }
 
-bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut)
+// The search of a unit table, taking the view's two fields by value so
+// that the set's loop keeps them in registers.
+static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
+                            uint32_t locale, DataSpan* spanOut)
 {
     uint64_t key = (uint64_t)kind << 32 | locale;
     uint32_t low = 0;
-    uint32_t high = view->unitCount;
+    uint32_t high = unitCount;
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
-        const uint8_t* entry = view->bytes + dataHeaderSize + (size_t)middle * dataUnitSize;
+        const uint8_t* entry = bytes + dataHeaderSize + (size_t)middle * dataUnitSize;
         uint64_t middleKey = (uint64_t)mlocLoad32(entry) << 32 | mlocLoad32(entry + 4);
         if (middleKey == key)
         {
-            *spanOut = (DataSpan){view->bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+            *spanOut = (DataSpan){bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
             return true;
         }
         if (middleKey < key)
@@ -338,18 +341,40 @@ bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, Data
     return false;
 }
 
-bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
-                         DataSpan* spanOut)
+bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut)
+{
+    return FindUnit(view->bytes, view->unitCount, kind, locale, spanOut);
+}
+
+// A unit for a locale id: the first source with the id and the unit.
+static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
+                           DataSpan* spanOut)
 {
     for (size_t i = 0; i < set->count; i++)
     {
         DataView view = mlocViewOf(&set->sources[i]);
         uint32_t locale = dataNoLocale;
-        if (id != nullptr && !mlocFindDataLocale(&view, id, length, &locale))
+        if (mlocFindDataLocale(&view, id, length, &locale) &&
+            FindUnit(view.bytes, view.unitCount, kind, locale, spanOut))
         {
-            continue;
+            return true;
         }
-        if (mlocFindDataUnit(&view, kind, locale, spanOut))
+    }
+    return false;
+}
+
+bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
+                         DataSpan* spanOut)
+{
+    if (id != nullptr)
+    {
+        return FindLocaleUnit(set, kind, id, length, spanOut);
+    }
+    // A unit of no locale, the common lookup, reads no locale table.
+    for (size_t i = 0; i < set->count; i++)
+    {
+        DataView view = mlocViewOf(&set->sources[i]);
+        if (FindUnit(view.bytes, view.unitCount, kind, dataNoLocale, spanOut))
         {
             return true;
         }
