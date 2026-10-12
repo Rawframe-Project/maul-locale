@@ -87,7 +87,6 @@ static bool Read(const mlocNumberFormatter* opaque, Formatter* f)
            f->minInteger <= maxMinInteger && f->grouping <= mloc_groupingOff &&
            f->signDisplay <= mloc_signNegative && f->notation == mloc_notationStandard &&
            f->style == mloc_numberDecimal && (f->core.primary == 0) == (f->core.secondary == 0) &&
-           f->core.secondary <= numberMaxGroup && f->core.primary <= numberMaxGroup &&
            mlocValidPrecision(&f->precision);
 }
 

@@ -228,7 +228,9 @@ static void TestPatterns(void)
     static const Case s_cases[] = {
         {patternMinInteger, 40, true, "40 integer digits"},
         {patternMinInteger, 41, false, "41 integer digits"},
+        {patternMaxFraction, 40, true, "40 fraction digits"},
         {patternMaxFraction, 41, false, "41 fraction digits"},
+        {patternSecondary, 9, true, "secondary groups of 9"},
         {patternMinFraction, 4, false, "a minimum past the maximum"},
         {patternPrimary, 9, true, "groups of 9"},
         {patternPrimary, 10, false, "groups of 10"},
@@ -272,6 +274,18 @@ static void TestPatterns(void)
     CHECK(!Valid(mlocValidNumberPatterns, table, sizeof(table)), "a NUL");
     table[13] = numberAffixMinus;
     CHECK(!Valid(mlocValidNumberSymbols, table, sizeof(table)), "a placeholder among symbols");
+    table[13] = ' ';
+    CHECK(Valid(mlocValidNumberSymbols, table, sizeof(table)), "a space");
+    // The last plane's first character, U+100000, and the last, U+10FFFF.
+    uint8_t wide[numberTableHeaderSize + 4 + 4] = {1, 0, 0, 0, 4,    0,    0,    0,
+                                                   0, 0, 4, 0, 0xF4, 0x80, 0x80, 0x80};
+    CHECK(Valid(mlocValidNumberSymbols, wide, sizeof(wide)), "U+100000");
+    wide[13] = 0x8F;
+    wide[14] = 0xBF;
+    wide[15] = 0xBF;
+    CHECK(Valid(mlocValidNumberSymbols, wide, sizeof(wide)), "U+10FFFF");
+    wide[13] = 0x90;
+    CHECK(!Valid(mlocValidNumberSymbols, wide, sizeof(wide)), "past U+10FFFF");
 }
 
 static void TestLocaleUnit(void)
@@ -412,6 +426,10 @@ static void TestDisagreeing(void)
     u[localeTraditionalSystem] = (uint8_t)(systems - 1);
     CHECK(InitWith(u, size) == mloc_success, "the last system of the table");
     u[localeTraditionalSystem] = keep;
+    keep = u[localeFinanceSystem];
+    u[localeFinanceSystem] = (uint8_t)systems;
+    CHECK(InitWith(u, size) == mloc_errorNotFound, "a finance system past the table");
+    u[localeFinanceSystem] = keep;
     // latn's entry, which the default system, latn, reads.
     uint8_t* entry = u + numberLocaleHeaderSize;
     for (uint32_t i = 0; i < u[localeEntryCount]; i++)

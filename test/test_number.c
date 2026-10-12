@@ -96,6 +96,8 @@ static void TestSystems(void)
           "no traditional system: the native one");
     CHECK(Init("en-u-nu-finance", nullptr) == mloc_success, "no finance system: the default");
     CHECK(Init("en-u-nu-zzzz", nullptr) == mloc_fellBack, "an unknown system");
+    CHECK(Plain("en-u-nu-mathbold", "12", "\xF0\x9D\x9F\x8F\xF0\x9D\x9F\x90"),
+          "digits of four bytes");
 }
 
 static mlocNumberOptions Fraction(uint8_t min, uint8_t max)
@@ -170,6 +172,16 @@ static void TestPrecision(void)
     o = (mlocNumberOptions){.precision = {.trailingZeros = mloc_trailingZerosStripIfInteger}};
     CHECK(Formats("en", &o, "5.000", "5") && Formats("en", &o, "5.50", "5.50"),
           "stripping with no rounding");
+    o = (mlocNumberOptions){.precision = {.kind = mloc_precisionMorePrecision,
+                                          .maxFractionDigits = 2,
+                                          .minSignificantDigits = 3,
+                                          .maxSignificantDigits = 3}};
+    CHECK(Formats("en", &o, "1.5", "1.50"),
+          "a tie in precision takes the significant result, with its minimum");
+    o.precision.kind = mloc_precisionLessPrecision;
+    CHECK(Formats("en", &o, "1.5", "1.5"), "less precision takes the fixed one at a tie");
+    o = (mlocNumberOptions){.minIntegerDigits = 21};
+    CHECK(Formats("en", &o, "5", "000,000,000,000,000,000,005"), "21 integer digits");
     o = (mlocNumberOptions){.minIntegerDigits = 3};
     CHECK(Formats("en", &o, "5.5", "005.5") && Formats("en", &o, "0.25", "000.25"),
           "minimum integer digits");
@@ -264,6 +276,12 @@ static void TestOutput(void)
     CHECK(mlocFormatNumber(&formatter, &decimal, &shortOne) == mloc_errorCapacity &&
               shortOne.length == 13,
           "a buffer a byte short");
+    mlocDecimal five;
+    char single[1] = {0};
+    mlocOutput exact = {.buffer = single, .capacity = 1};
+    CHECK(mlocParseDecimal("5", 1, &five).status == mloc_success &&
+              mlocFormatNumber(&formatter, &five, &exact) == mloc_success && single[0] == '5',
+          "a text that fills its buffer in one piece");
     Parts parts = {0};
     mlocOutput output = {.buffer = buffer, .capacity = 13, .part = Collect, .context = &parts};
     CHECK(mlocFormatNumber(&formatter, &decimal, &output) == mloc_success &&
@@ -376,6 +394,12 @@ static void TestRefusals(void)
     edges = (mlocNumberOptions){.precision = {.kind = mloc_precisionFraction, .increment = 1}};
     CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &edges) == mloc_success,
           "an increment of 1 is none");
+    edges = (mlocNumberOptions){.precision = {.kind = mloc_precisionSignificant,
+                                              .minSignificantDigits = 1,
+                                              .maxSignificantDigits = 2,
+                                              .increment = 1}};
+    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &edges) == mloc_success,
+          "with any kind");
     mlocDecimal decimal = {.count = 1, .digits = {1}};
     char buffer[16];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
