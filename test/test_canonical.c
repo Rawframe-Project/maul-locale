@@ -69,6 +69,10 @@ static void TestOtherAliases(void)
           "two variants to one");
     CHECK(Gives("en-aaland", "en-AX", mloc_changedRegion | mloc_changedVariants),
           "a variant that brings a region");
+    CHECK(Gives("ja-alalc97-hepburn-heploc", "ja-alalc97", mloc_changedVariants),
+          "a replacement variant already there");
+    CHECK(Gives("en-heploc-scouse", "en-alalc97-scouse", mloc_changedVariants),
+          "replaced variants in order");
 }
 
 static void TestRegionChoice(void)
@@ -78,6 +82,8 @@ static void TestRegionChoice(void)
     CHECK(Gives("en-SU", "en-RU", mloc_changedRegion), "the first region otherwise");
     CHECK(Gives("und-SU", "und-RU", mloc_changedRegion), "und");
     CHECK(Gives("sr-CS", "sr-RS", mloc_changedRegion), "Serbia and Montenegro");
+    CHECK(Gives("az-Arab-SU", "az-Arab-RU", mloc_changedRegion),
+          "the script counts: az-Arab is likely in IR, not one of them");
 }
 
 static void TestBcp47(void)
@@ -87,6 +93,7 @@ static void TestBcp47(void)
     CHECK(Gives("zh-min-nan", "nan", mloc_changedLegacy), "a legacy tag with three");
     CHECK(Gives("zh-min", "nan-x-zh-min", mloc_changedLegacy), "a legacy tag into private use");
     CHECK(Gives("zh-yue-HK", "yue-HK", mloc_changedExtlang), "an extlang");
+    CHECK(Gives("sgn-ase", "ase", mloc_changedExtlang), "an extlang after three letters");
     CHECK(Gives("x-private", "und-x-private", 0), "private use alone");
     CHECK(Gives("Latn-US", "und-Latn-US", 0), "a tag that begins with a script");
 }

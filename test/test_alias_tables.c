@@ -12,8 +12,13 @@
 #include "locale_tables.h"
 #include "test_harness.h"
 
+#include "maul-locale/locale.h"
+
 #include <stdlib.h>
 #include <string.h>
+
+extern const uint8_t mlocBuiltinData[];
+extern const uint32_t mlocBuiltinDataSize;
 
 static DataSpan s_builtin;
 static uint8_t* s_copy;
@@ -159,6 +164,43 @@ static void TestTables(void)
     CHECK(!ValidWith(s_layout.legacyAt + 2, 300, 2), "a legacy type too long to compare");
 }
 
+// Rules that never end: the compiled-in data with "iw" made to replace
+// itself, opened as a file, refuses to canonicalize "iw" instead of
+// looping.
+static void TestEndlessRules(void)
+{
+    uint8_t* file = malloc(mlocBuiltinDataSize);
+    if (file == nullptr)
+    {
+        return;
+    }
+    memcpy(file, mlocBuiltinData, mlocBuiltinDataSize);
+    uint8_t* table = file + (s_builtin.bytes - mlocBuiltinData);
+    uint32_t iw = mlocPackLanguage("iw", 2);
+    for (uint32_t r = 0; r < s_layout.rules; r++)
+    {
+        uint8_t* rule = table + RuleAt(r);
+        if (mlocLoad16(rule + 8) == iw && mlocLoad32(rule) == 0 && mlocLoad16(rule + 10) == 0 &&
+            (rule[27] & 15) == 0)
+        {
+            Put(rule + 16, iw, 2);
+        }
+    }
+    DataView view;
+    CHECK(mlocOpenDataWithKinds(&view, file, mlocBuiltinDataSize, mlocDataKinds,
+                                mlocDataKindCount) == mloc_success,
+          "a file whose rules loop still validates");
+    mlocData opened = {0};
+    memcpy(&opened, &view, sizeof(view));
+    mlocDataSet set = {&opened, 1};
+    mlocLocale locale;
+    CHECK(mlocCanonicalizeLocale(&set, "iw", 2, &locale, nullptr).status == mloc_errorData,
+          "rules that never end are refused");
+    CHECK(mlocCanonicalizeLocale(&set, "en", 2, &locale, nullptr).status == mloc_success,
+          "and other tags still canonicalize");
+    free(file);
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -178,6 +220,7 @@ int main(void)
     TestRules();
     TestIndex();
     TestTables();
+    TestEndlessRules();
     free(s_copy);
     return s_failures == 0 ? 0 : 1;
 }

@@ -651,17 +651,20 @@ static bool FromIdent(Ident* ident, const mlocLocale* old, size_t rest, mlocLoca
     return true;
 }
 
-// Applies the rules until none matches. Returns the changes, or ~0u
-// when they do not end or the result does not fit.
-static uint32_t ApplyRules(const mlocDataSet* data, const Aliases* aliases, mlocLocale* locale)
+// Applies the rules until none matches, adding what changed to
+// *changes. Returns mloc_errorCapacity when the result does not fit and
+// mloc_errorData when the rules do not end, which only a crafted data
+// file can make them do.
+static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, mlocLocale* locale,
+                             uint32_t* changes)
 {
     Ident ident;
     size_t rest = 0;
     if (!ToIdent(aliases, locale, &ident, &rest))
     {
-        return ~0u;
+        return mloc_errorCapacity;
     }
-    uint32_t changes = 0;
+    uint32_t applied = 0;
     for (int iteration = 0;; iteration++)
     {
         uint32_t index = FirstMatch(aliases, &ident);
@@ -669,19 +672,24 @@ static uint32_t ApplyRules(const mlocDataSet* data, const Aliases* aliases, mloc
         {
             break;
         }
-        Rule rule = ReadRule(aliases, index);
-        uint32_t applied = Apply(data, aliases, &rule, &ident);
-        if (applied == ~0u || iteration == MAX_ITERATIONS)
+        if (iteration == MAX_ITERATIONS)
         {
-            return ~0u;
+            return mloc_errorData;
         }
-        changes |= applied;
+        Rule rule = ReadRule(aliases, index);
+        uint32_t one = Apply(data, aliases, &rule, &ident);
+        if (one == ~0u)
+        {
+            return mloc_errorCapacity;
+        }
+        applied |= one;
     }
-    if (changes != 0 && !FromIdent(&ident, locale, rest, locale))
+    if (applied != 0 && !FromIdent(&ident, locale, rest, locale))
     {
-        return ~0u;
+        return mloc_errorCapacity;
     }
-    return changes;
+    *changes |= applied;
+    return mloc_success;
 }
 
 // Lowercases text into out with "-" for "_"; false when it does not fit.
@@ -809,15 +817,15 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
         result.offset = offset < 0 ? 0 : (size_t)offset > length ? length : (size_t)offset;
         return result;
     }
-    uint32_t applied = ApplyRules(data, &aliases, &locale);
-    if (applied == ~0u)
+    mlocResult applied = ApplyRules(data, &aliases, &locale, &changes);
+    if (applied != mloc_success)
     {
-        return (mlocTextResult){mloc_errorCapacity, length};
+        return (mlocTextResult){applied, applied == mloc_errorCapacity ? length : 0};
     }
     *localeOut = locale;
     if (changesOut != nullptr)
     {
-        *changesOut = changes | applied;
+        *changesOut = changes;
     }
     return (mlocTextResult){mloc_success, length};
 }
