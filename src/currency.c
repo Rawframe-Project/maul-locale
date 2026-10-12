@@ -183,7 +183,6 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
         .hidden = hidden,
         .spacing = shown != currencyFieldCount ? fields.spacing[shown]
                                                : currencyStartsAlpha | currencyEndsAlpha,
-        .longLength = o->number.notation == mloc_notationCompactLong,
     };
     // A currency's own pattern replaces the standard one alone.
     bool ownPattern =

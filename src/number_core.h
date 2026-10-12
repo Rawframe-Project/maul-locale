@@ -108,7 +108,6 @@ typedef struct CurrencyStyle
     bool accounting;
     bool hidden;
     uint8_t spacing;
-    bool longLength;
 } CurrencyStyle;
 
 // As mlocInitNumberCore, with the system's currency pattern of a style

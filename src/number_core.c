@@ -338,8 +338,7 @@ mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
                                 const mlocLocale* locale, const CurrencyStyle* style,
                                 const uint8_t** tableOut, const uint8_t** patternsOut)
 {
-    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, tableOut, style->longLength,
-                    patternsOut);
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, tableOut, false, patternsOut);
 }
 
 mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,

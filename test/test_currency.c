@@ -175,6 +175,16 @@ static void TestCompact(void)
                   "\xE0\xA7\xA7.\xE0\xA7\xA8" NBSP "\xE0\xA6\xB9\xE0\xA6\xBE"
                   "US$"),
           "a currency away from the zeros keeps its pattern (Bengali's 0 হা¤)");
+    CHECK(Formats("he", "USD", &s, "1000",
+                  "\xE2\x80\x8F"
+                  "1" NBSP "\xD7\x90\xD7\xB3\xE2\x80\x8F" NBSP "\xE2\x80\x8F$") &&
+              Formats("he", "USD", &s, "2000",
+                      "\xE2\x80\x8F"
+                      "2K\xE2\x80\x8F" NBSP "\xE2\x80\x8F$"),
+          "the plural category picks the pattern (Hebrew's one thousand)");
+    mlocCurrencyFormatter formatter;
+    CHECK(Init(&formatter, "en-u-nu-roman", "USD", &s) == mloc_fellBack,
+          "a system without digits in compact notation");
     CHECK(Formats("ja", "JPY", &s, "12345678",
                   "\xEF\xBF\xA5"
                   "1235\xE4\xB8\x87"),
