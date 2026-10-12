@@ -10,10 +10,13 @@
 #include "number_gen.h"
 
 #include "cldr.h"
+#include "currency_gen.h"
+#include "currency_tables.h"
 #include "keys.h"
 #include "kinds.h"
 #include "map.h"
 #include "number_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdint.h>
@@ -35,7 +38,6 @@ enum
     numberCompactNone = 0xFFFE,
     maxSystems = 96,
     maxLocales = 2048,
-    maxTable = 8192,
     maxKey = 64,
     maxAffix = 128,
 };
@@ -59,20 +61,6 @@ typedef struct System
     uint8_t digits[10][numberDigitSize];
 } System;
 
-// A string table and the records that index it, as the symbol and
-// pattern units store them.
-typedef struct Table
-{
-    Map strings;
-    char* texts[maxTable];
-    size_t lengths[maxTable];
-    int stringCount;
-    Map records;
-    uint8_t* recordBytes;
-    int recordCount;
-    int recordSize;
-} Table;
-
 // A numbering system's data in a locale.
 typedef struct Entry
 {
@@ -83,6 +71,8 @@ typedef struct Entry
     uint16_t percent;
     uint16_t compactShort;
     uint16_t compactLong;
+    // Its currency pattern set.
+    uint16_t currency;
 } Entry;
 
 // A locale's resolved numbers.
@@ -107,6 +97,7 @@ typedef struct Generator
     Table symbols;
     Table patterns;
     Table compactPatterns;
+    Table currencySets;
     // The distinct compact tables, each of its own size.
     uint8_t* tables[maxTable];
     size_t tableSizes[maxTable];
@@ -116,107 +107,6 @@ typedef struct Generator
     // bool per system, by locale id.
     Map ownFormats;
 } Generator;
-
-[[noreturn]] static void Die(const char* message, const char* detail)
-{
-    fprintf(stderr, "mlocgen: %s: %s\n", message, detail);
-    exit(1);
-}
-
-static void* Allocate(size_t size)
-{
-    void* p = calloc(1, size);
-    if (p == nullptr)
-    {
-        Die("out of memory", "numbers");
-    }
-    return p;
-}
-
-static void Put(uint8_t* p, uint64_t value, int bytes)
-{
-    for (int i = 0; i < bytes; i++)
-    {
-        p[i] = (uint8_t)(value >> (8 * i));
-    }
-}
-
-// The UTF-8 length of the character at text, or 0 when it is malformed.
-static int CharLength(const unsigned char* text)
-{
-    unsigned c = text[0];
-    int n = c < 0x80             ? 1
-            : (c & 0xE0) == 0xC0 ? 2
-            : (c & 0xF0) == 0xE0 ? 3
-            : (c & 0xF8) == 0xF0 ? 4
-                                 : 0;
-    for (int i = 1; i < n; i++)
-    {
-        if ((text[i] & 0xC0) != 0x80)
-        {
-            return 0;
-        }
-    }
-    return n;
-}
-
-// The index of a string in a table, added when new.
-static uint16_t AddString(Table* t, const char* text, size_t length)
-{
-    char key[maxAffix * 4 + 1];
-    if (length >= sizeof(key))
-    {
-        Die("a number string too long", text);
-    }
-    memcpy(key, text, length);
-    key[length] = '\0';
-    void* found = MapGet(&t->strings, key);
-    if (found != nullptr)
-    {
-        return (uint16_t)((uintptr_t)found - 1);
-    }
-    if (t->stringCount == maxTable)
-    {
-        Die("too many number strings", key);
-    }
-    t->texts[t->stringCount] = Allocate(length + 1);
-    memcpy(t->texts[t->stringCount], text, length);
-    t->lengths[t->stringCount] = length;
-    MapPut(&t->strings, key, (void*)(uintptr_t)(t->stringCount + 1));
-    return (uint16_t)t->stringCount++;
-}
-
-// The index of a record, added when new.
-static uint16_t AddRecord(Table* t, const uint8_t* record)
-{
-    // Records are at most a symbol set's 26 bytes.
-    char key[2 * 32 + 1];
-    if (t->recordSize > 32)
-    {
-        Die("a number record too long", "records");
-    }
-    for (int i = 0; i < t->recordSize; i++)
-    {
-        snprintf(key + 2 * i, 3, "%02X", record[i]);
-    }
-    void* found = MapGet(&t->records, key);
-    if (found != nullptr)
-    {
-        return (uint16_t)((uintptr_t)found - 1);
-    }
-    if (t->recordCount == maxTable)
-    {
-        Die("too many number records", key);
-    }
-    if (t->recordBytes == nullptr)
-    {
-        t->recordBytes = Allocate((size_t)maxTable * (size_t)t->recordSize);
-    }
-    memcpy(t->recordBytes + (size_t)t->recordCount * (size_t)t->recordSize, record,
-           (size_t)t->recordSize);
-    MapPut(&t->records, key, (void*)(uintptr_t)(t->recordCount + 1));
-    return (uint16_t)t->recordCount++;
-}
 
 // The index of a compact table, added when new.
 static uint16_t AddBlob(Generator* g, const uint8_t* bytes, size_t size)
@@ -234,9 +124,9 @@ static uint16_t AddBlob(Generator* g, const uint8_t* bytes, size_t size)
     }
     if (g->tableCount == maxTable)
     {
-        Die("too many compact tables", "tables");
+        GenDie("too many compact tables", "tables");
     }
-    g->tables[g->tableCount] = Allocate(size);
+    g->tables[g->tableCount] = GenAllocate(size);
     memcpy(g->tables[g->tableCount], bytes, size);
     g->tableSizes[g->tableCount] = size;
     MapPut(&g->tableIndex, key, (void*)(uintptr_t)(g->tableCount + 1));
@@ -252,66 +142,20 @@ static void AddCompactUnit(Generator* g, DataFile* file)
     }
     size_t offsets = 4 * (size_t)(g->tableCount + 1);
     size_t size = numberCompactHeaderSize + offsets + data;
-    uint8_t* unit = Allocate(size);
-    Put(unit, (uint64_t)g->tableCount, 4);
+    uint8_t* unit = GenAllocate(size);
+    GenPut(unit, (uint64_t)g->tableCount, 4);
     size_t at = 0;
     for (int i = 0; i < g->tableCount; i++)
     {
-        Put(unit + numberCompactHeaderSize + 4 * (size_t)i, at, 4);
+        GenPut(unit + numberCompactHeaderSize + 4 * (size_t)i, at, 4);
         memcpy(unit + numberCompactHeaderSize + offsets + at, g->tables[i], g->tableSizes[i]);
         at += g->tableSizes[i];
         free(g->tables[i]);
     }
-    Put(unit + numberCompactHeaderSize + 4 * (size_t)g->tableCount, at, 4);
+    GenPut(unit + numberCompactHeaderSize + 4 * (size_t)g->tableCount, at, 4);
     DataFileAdd(file, kindNumberCompact, nullptr, unit, size);
     free(unit);
     MapFree(&g->tableIndex);
-}
-
-static void AddTableUnit(const Table* t, uint32_t kind, DataFile* file)
-{
-    size_t text = 0;
-    for (int i = 0; i < t->stringCount; i++)
-    {
-        text += t->lengths[i];
-    }
-    size_t offsets = (size_t)(t->stringCount + 1) * 2;
-    size_t records = (size_t)t->recordCount * (size_t)t->recordSize;
-    size_t size = numberTableHeaderSize + offsets + records + text;
-    if (text > 0xFFFF || t->recordCount > 0xFFFF)
-    {
-        Die("a number table too large", "text or records");
-    }
-    uint8_t* unit = Allocate(size);
-    Put(unit, (uint64_t)t->stringCount, 2);
-    Put(unit + 2, (uint64_t)t->recordCount, 2);
-    Put(unit + 4, text, 4);
-    uint8_t* textAt = unit + numberTableHeaderSize + offsets + records;
-    size_t at = 0;
-    for (int i = 0; i < t->stringCount; i++)
-    {
-        Put(unit + numberTableHeaderSize + 2 * (size_t)i, at, 2);
-        memcpy(textAt + at, t->texts[i], t->lengths[i]);
-        at += t->lengths[i];
-    }
-    Put(unit + numberTableHeaderSize + 2 * (size_t)t->stringCount, at, 2);
-    if (records > 0)
-    {
-        memcpy(unit + numberTableHeaderSize + offsets, t->recordBytes, records);
-    }
-    DataFileAdd(file, kind, nullptr, unit, size);
-    free(unit);
-}
-
-static void FreeTable(Table* t)
-{
-    for (int i = 0; i < t->stringCount; i++)
-    {
-        free(t->texts[i]);
-    }
-    free(t->recordBytes);
-    MapFree(&t->strings);
-    MapFree(&t->records);
 }
 
 static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut,
@@ -339,7 +183,7 @@ static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut
         if (id == nullptr || digits == nullptr || g->systemCount == maxSystems ||
             g->systemCount == numberAlgorithmic)
         {
-            Die("a numeric system the table cannot hold", id == nullptr ? "(no id)" : id);
+            GenDie("a numeric system the table cannot hold", id == nullptr ? "(no id)" : id);
         }
         System* s = &g->systems[g->systemCount++];
         s->id = mlocPackSystem(id, (uint32_t)strlen(id));
@@ -348,10 +192,10 @@ static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut
         int length = 0;
         for (int d = 0; d < 10; d++)
         {
-            int n = CharLength(at);
+            int n = GenCharLength(at);
             if (n == 0 || (d > 0 && n != length))
             {
-                Die("digits of unequal or malformed UTF-8", id);
+                GenDie("digits of unequal or malformed UTF-8", id);
             }
             length = n;
             memcpy(s->digits[d], at, (size_t)n);
@@ -359,7 +203,7 @@ static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut
         }
         if (s->id == 0 || *at != '\0')
         {
-            Die("a numeric system not of ten digits", id);
+            GenDie("a numeric system not of ten digits", id);
         }
     }
     XmlFree(root);
@@ -384,12 +228,12 @@ static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut
 static void AddSystemUnit(const Generator* g, DataFile* file)
 {
     size_t size = numberSystemsHeaderSize + (size_t)g->systemCount * numberSystemSize;
-    uint8_t* unit = Allocate(size);
-    Put(unit, (uint64_t)g->systemCount, 4);
+    uint8_t* unit = GenAllocate(size);
+    GenPut(unit, (uint64_t)g->systemCount, 4);
     for (int i = 0; i < g->systemCount; i++)
     {
         uint8_t* entry = unit + numberSystemsHeaderSize + (size_t)i * numberSystemSize;
-        Put(entry, g->systems[i].id, 8);
+        GenPut(entry, g->systems[i].id, 8);
         memcpy(entry + 8, g->systems[i].digits, sizeof(g->systems[i].digits));
     }
     DataFileAdd(file, kindNumberSystems, nullptr, unit, size);
@@ -416,7 +260,7 @@ static int SystemOf(Generator* g, const char* locale, const char* chain)
     uint64_t id = mlocPackSystem(name, (uint32_t)strlen(name));
     if (id == 0)
     {
-        Die("not a numbering system id", name);
+        GenDie("not a numbering system id", name);
     }
     for (int i = 0; i < g->systemCount; i++)
     {
@@ -440,7 +284,7 @@ static void AffixPut(Affix* a, const char* bytes, size_t length, const char* pat
 {
     if (a->length + length > sizeof(a->bytes))
     {
-        Die("a pattern affix too long", pattern);
+        GenDie("a pattern affix too long", pattern);
     }
     memcpy(a->bytes + a->length, bytes, length);
     a->length += length;
@@ -510,14 +354,14 @@ static void ReadAffix(const char** at, Affix* a, bool prefix, const char* patter
                 0, numberAffixCurrencyNarrow};
             if (run > 5 || s_codes[run] == 0)
             {
-                Die("a currency sign run the library has no meaning for", pattern);
+                GenDie("a currency sign run the library has no meaning for", pattern);
             }
             code = s_codes[run];
             advance = 2 * (size_t)run;
         }
         else if ((unsigned char)*c < 0x20)
         {
-            Die("a control character in a pattern", pattern);
+            GenDie("a control character in a pattern", pattern);
         }
         if (code != 0)
         {
@@ -531,7 +375,7 @@ static void ReadAffix(const char** at, Affix* a, bool prefix, const char* patter
     }
     if (quoted)
     {
-        Die("an unended quote in a pattern", pattern);
+        GenDie("an unended quote in a pattern", pattern);
     }
 }
 
@@ -570,7 +414,7 @@ static void CompilePattern(Table* strings, const char* pattern, bool allowNoNumb
             }
             if (exponentDigits == 0)
             {
-                Die("an exponent without digits", pattern);
+                GenDie("an exponent without digits", pattern);
             }
             break;
         }
@@ -578,7 +422,7 @@ static void CompilePattern(Table* strings, const char* pattern, bool allowNoNumb
         {
             if (fraction)
             {
-                Die("two decimal points in a pattern", pattern);
+                GenDie("two decimal points in a pattern", pattern);
             }
             fraction = true;
         }
@@ -586,7 +430,7 @@ static void CompilePattern(Table* strings, const char* pattern, bool allowNoNumb
         {
             if (fraction)
             {
-                Die("a group separator in a fraction", pattern);
+                GenDie("a group separator in a fraction", pattern);
             }
             previousGroup = sinceComma;
             sinceComma = 0;
@@ -608,12 +452,12 @@ static void CompilePattern(Table* strings, const char* pattern, bool allowNoNumb
     }
     if (*at != '\0' && *at != ';' && strchr("123456789@", *at) != nullptr)
     {
-        Die("a pattern with significant digits or an increment", pattern);
+        GenDie("a pattern with significant digits or an increment", pattern);
     }
     bool noNumber = integer == 0 && !fraction;
     if (noNumber && !allowNoNumber)
     {
-        Die("a pattern without a number part", pattern);
+        GenDie("a pattern without a number part", pattern);
     }
     ReadAffix(&at, &suffix, false, pattern);
     Affix negativePrefix = {0};
@@ -638,22 +482,22 @@ static void CompilePattern(Table* strings, const char* pattern, bool allowNoNumb
     }
     if (*at != '\0')
     {
-        Die("text after a pattern", pattern);
+        GenDie("text after a pattern", pattern);
     }
     int primary = sinceComma > 0 ? sinceComma : 0;
     int secondary = previousGroup > 0 ? previousGroup : primary;
     if (primary > numberMaxGroup || secondary > numberMaxGroup || exponentDigits > numberMaxGroup ||
         minInteger > numberMaxPatternDigits || maxFraction > numberMaxPatternDigits)
     {
-        Die("a pattern past the record's limits", pattern);
+        GenDie("a pattern past the record's limits", pattern);
     }
     memset(record, 0, numberPatternSize);
-    Put(record + patternPositivePrefix, AddString(strings, prefix.bytes, prefix.length), 2);
-    Put(record + patternPositiveSuffix, AddString(strings, suffix.bytes, suffix.length), 2);
-    Put(record + patternNegativePrefix,
-        AddString(strings, negativePrefix.bytes, negativePrefix.length), 2);
-    Put(record + patternNegativeSuffix,
-        AddString(strings, negativeSuffix.bytes, negativeSuffix.length), 2);
+    GenPut(record + patternPositivePrefix, TableAddString(strings, prefix.bytes, prefix.length), 2);
+    GenPut(record + patternPositiveSuffix, TableAddString(strings, suffix.bytes, suffix.length), 2);
+    GenPut(record + patternNegativePrefix,
+           TableAddString(strings, negativePrefix.bytes, negativePrefix.length), 2);
+    GenPut(record + patternNegativeSuffix,
+           TableAddString(strings, negativeSuffix.bytes, negativeSuffix.length), 2);
     record[patternMinInteger] = (uint8_t)minInteger;
     record[patternMinFraction] = (uint8_t)minFraction;
     record[patternMaxFraction] = (uint8_t)maxFraction;
@@ -673,11 +517,234 @@ static uint16_t PatternOf(Generator* g, const char* locale, const char* system, 
     const char* pattern = Value(g, locale, chain);
     if (pattern == nullptr)
     {
-        Die("a locale without a pattern", chain);
+        GenDie("a locale without a pattern", chain);
     }
     uint8_t record[numberPatternSize];
     CompilePattern(&g->patterns, pattern, false, record);
-    return AddRecord(&g->patterns, record);
+    return TableAddRecord(&g->patterns, record);
+}
+
+// Where a compiled pattern's positive affixes hold a currency
+// placeholder: 0 nowhere, 1 in the prefix, 2 in the suffix, 3 in both.
+static int CurrencySide(const Table* t, const uint8_t* record)
+{
+    int side = 0;
+    for (int i = 0; i < 2; i++)
+    {
+        uint16_t index = (uint16_t)(record[2 * i] | record[2 * i + 1] << 8);
+        for (size_t c = 0; c < t->lengths[index]; c++)
+        {
+            uint8_t b = (uint8_t)t->texts[index][c];
+            side |= b >= numberAffixCurrency && b <= numberAffixCurrencyNarrow ? 1 << i : 0;
+        }
+    }
+    return side;
+}
+
+// A pattern with a no-break space between its currency and the digits
+// where they meet, as root's currencySpacing inserts one: the
+// alphaNextToNumber pattern a locale's data does not give in place.
+static uint16_t SpacedPattern(Generator* g, const uint8_t* pattern)
+{
+    uint8_t record[numberPatternSize];
+    memcpy(record, pattern, sizeof(record));
+    for (int i = 0; i < 4; i++)
+    {
+        bool prefix = i % 2 == 0;
+        uint16_t index = (uint16_t)(record[2 * i] | record[2 * i + 1] << 8);
+        const char* text = g->patterns.texts[index];
+        size_t length = g->patterns.lengths[index];
+        uint8_t edge = length == 0 ? 0 : (uint8_t)text[prefix ? length - 1 : 0];
+        if (edge < numberAffixCurrency || edge > numberAffixCurrencyNarrow)
+        {
+            continue;
+        }
+        char spaced[maxAffix + 2];
+        if (length + 2 > sizeof(spaced))
+        {
+            GenDie("a currency affix too long", "spacing");
+        }
+        memcpy(spaced + (prefix ? 0 : 2), text, length);
+        memcpy(spaced + (prefix ? length : 0), "\xC2\xA0", 2);
+        GenPut(record + 2 * i, TableAddString(&g->patterns, spaced, length + 2), 2);
+    }
+    return TableAddRecord(&g->patterns, record);
+}
+
+// The length of the space (U+0020, U+00A0, U+202F) starting text, with
+// length bytes, or 0.
+static size_t SpaceAt(const char* text, size_t length)
+{
+    if (length >= 1 && text[0] == ' ')
+    {
+        return 1;
+    }
+    if (length >= 2 && memcmp(text, "\xC2\xA0", 2) == 0)
+    {
+        return 2;
+    }
+    return length >= 3 && memcmp(text, "\xE2\x80\xAF", 3) == 0 ? 3 : 0;
+}
+
+// The length of the space ending text, or 0.
+static size_t SpaceBefore(const char* text, size_t length)
+{
+    for (size_t n = 1; n <= 3 && n <= length; n++)
+    {
+        if (SpaceAt(text + length - n, n) == n)
+        {
+            return n;
+        }
+    }
+    return 0;
+}
+
+// A pattern without its currency and the spaces beside it: the
+// noCurrency pattern a locale's data does not give in place.
+static uint16_t HiddenPattern(Generator* g, const uint8_t* pattern)
+{
+    uint8_t record[numberPatternSize];
+    memcpy(record, pattern, sizeof(record));
+    for (int i = 0; i < 4; i++)
+    {
+        uint16_t index = (uint16_t)(record[2 * i] | record[2 * i + 1] << 8);
+        const char* text = g->patterns.texts[index];
+        size_t length = g->patterns.lengths[index];
+        char kept[maxAffix];
+        size_t n = 0;
+        for (size_t at = 0; at < length;)
+        {
+            uint8_t b = (uint8_t)text[at];
+            if (b < numberAffixCurrency || b > numberAffixCurrencyNarrow)
+            {
+                kept[n++] = text[at++];
+                continue;
+            }
+            for (size_t space = SpaceBefore(kept, n); space != 0; space = SpaceBefore(kept, n))
+            {
+                n -= space;
+            }
+            at++;
+            for (size_t space = SpaceAt(text + at, length - at); space != 0;
+                 space = SpaceAt(text + at, length - at))
+            {
+                at += space;
+            }
+        }
+        GenPut(record + 2 * i, TableAddString(&g->patterns, kept, n), 2);
+    }
+    return TableAddRecord(&g->patterns, record);
+}
+
+// An affix without its spaces, in out.
+static size_t Unspaced(const Table* t, const uint8_t* field, char* out)
+{
+    uint16_t index = (uint16_t)(field[0] | field[1] << 8);
+    const char* text = t->texts[index];
+    size_t length = t->lengths[index];
+    size_t n = 0;
+    for (size_t i = 0; i < length;)
+    {
+        size_t space = SpaceAt(text + i, length - i);
+        if (space == 0)
+        {
+            out[n++] = text[i];
+        }
+        i += space == 0 ? 1 : space;
+    }
+    return n;
+}
+
+// Whether two compiled patterns differ in their spaces alone.
+static bool SameButSpaces(const Table* t, const uint8_t* a, const uint8_t* b)
+{
+    if (memcmp(a + patternMinInteger, b + patternMinInteger,
+               numberPatternSize - patternMinInteger) != 0)
+    {
+        return false;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        char x[maxAffix];
+        char y[maxAffix];
+        size_t n = Unspaced(t, a + 2 * i, x);
+        if (Unspaced(t, b + 2 * i, y) != n || memcmp(x, y, n) != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// A locale's currency pattern set for a system: the standard and
+// accounting patterns, each with its alphaNextToNumber variant and its
+// noCurrency variant, which has no currency. A variant that differs from
+// its pattern in more than spaces, or the noCurrency one in its digits,
+// was written for another pattern (Aghem's own alphaNextToNumber one is
+// provisional, so root's stands; Indian English inherits English's
+// grouping), so the pattern spaced as root's currencySpacing says, or
+// without its currency, stands instead.
+static uint16_t CurrencySetOf(Generator* g, const char* locale, const char* system)
+{
+    static const char* const s_types[2] = {"standard", "accounting"};
+    static const char* const s_alts[3] = {"", "[@alt=\"alphaNextToNumber\"]",
+                                          "[@alt=\"noCurrency\"]"};
+    uint8_t set[currencySetSize];
+    for (int type = 0; type < 2; type++)
+    {
+        uint8_t standard[numberPatternSize] = {0};
+        for (int alt = 0; alt < 3; alt++)
+        {
+            char chain[320];
+            snprintf(chain, sizeof(chain),
+                     "//ldml/numbers/currencyFormats[@numberSystem=\"%s\"]/currencyFormatLength/"
+                     "currencyFormat[@type=\"%s\"]/pattern%s",
+                     system, s_types[type], s_alts[alt]);
+            const char* pattern = Value(g, locale, chain);
+            if (pattern == nullptr)
+            {
+                GenDie("a locale without a currency pattern", chain);
+            }
+            uint8_t record[numberPatternSize];
+            CompilePattern(&g->patterns, pattern, false, record);
+            int at = CurrencySide(&g->patterns, record);
+            uint16_t index = TableAddRecord(&g->patterns, record);
+            if (alt == 0)
+            {
+                memcpy(standard, record, sizeof(standard));
+            }
+            if ((alt == 0 && (at == 0 || at == 3)) || (alt == 2 && at != 0))
+            {
+                GenDie("a currency pattern with its currency out of place", chain);
+            }
+            if (alt == 1 && !SameButSpaces(&g->patterns, record, standard))
+            {
+                index = SpacedPattern(g, standard);
+            }
+            if (alt == 2 && memcmp(record + patternMinInteger, standard + patternMinInteger,
+                                   numberPatternSize - patternMinInteger) != 0)
+            {
+                index = HiddenPattern(g, standard);
+            }
+            GenPut(set + 2 * (3 * type + alt), index, 2);
+        }
+    }
+    return TableAddRecord(&g->currencySets, set);
+}
+
+// Compiles a currency's own pattern (the generator's context) into the
+// patterns unit; its index.
+static uint16_t CompileCurrencyPattern(void* context, const char* pattern)
+{
+    Generator* g = context;
+    uint8_t record[numberPatternSize];
+    CompilePattern(&g->patterns, pattern, false, record);
+    int side = CurrencySide(&g->patterns, record);
+    if (side == 0 || side == 3)
+    {
+        GenDie("a currency's pattern without one currency place", pattern);
+    }
+    return TableAddRecord(&g->patterns, record);
 }
 
 // The text between {0} and {1} in a locale's range pattern for a system,
@@ -694,7 +761,7 @@ static const char* RangeSeparator(Generator* g, const char* locale, const char* 
     if (length < 6 || strncmp(pattern, "{0}", 3) != 0 || strcmp(pattern + length - 3, "{1}") != 0 ||
         length - 6 >= sizeof(s_separator))
     {
-        Die("a range pattern that is not {0}, a separator, {1}", chain);
+        GenDie("a range pattern that is not {0}, a separator, {1}", chain);
     }
     memcpy(s_separator, pattern + 3, length - 6);
     s_separator[length - 6] = '\0';
@@ -721,21 +788,21 @@ static uint16_t SymbolsOf(Generator* g, const char* locale, const char* system)
             }
             else
             {
-                Die("a locale without a number symbol", chain);
+                GenDie("a locale without a number symbol", chain);
             }
         }
         for (const unsigned char* c = (const unsigned char*)values[s]; *c != '\0';)
         {
-            int n = CharLength(c);
+            int n = GenCharLength(c);
             if (n == 0 || *c < 0x20)
             {
-                Die("a number symbol with a control or malformed character", chain);
+                GenDie("a number symbol with a control or malformed character", chain);
             }
             c += n;
         }
-        Put(record + 2 * s, AddString(&g->symbols, values[s], strlen(values[s])), 2);
+        GenPut(record + 2 * s, TableAddString(&g->symbols, values[s], strlen(values[s])), 2);
     }
-    return AddRecord(&g->symbols, record);
+    return TableAddRecord(&g->symbols, record);
 }
 
 static void MarkOwnFormats(const char* key, void* value, void* context)
@@ -765,7 +832,7 @@ static const bool* OwnFormats(Generator* g, const char* locale)
     {
         return own;
     }
-    own = Allocate(sizeof(bool) * maxSystems);
+    own = GenAllocate(sizeof(bool) * maxSystems);
     const LdmlFile* file = CldrFile(&g->cldr, locale, componentMain);
     if (file != nullptr)
     {
@@ -850,7 +917,7 @@ static uint16_t CompactSlot(Generator* g, const char* locale, const char* system
         memcmp(full + patternNegativeSuffix, full + patternPositiveSuffix, 2) != 0 ||
         full[patternMinInteger] > numberCompactFirstPower + numberCompactRows)
     {
-        Die("a compact pattern with more than zeros and affixes", pattern);
+        GenDie("a compact pattern with more than zeros and affixes", pattern);
     }
     uint8_t record[numberCompactPatternSize] = {0};
     memcpy(record + compactPrefix, full + patternPositivePrefix, 2);
@@ -858,7 +925,7 @@ static uint16_t CompactSlot(Generator* g, const char* locale, const char* system
     memcpy(record + compactNegativePrefix, full + patternNegativePrefix, 2);
     record[compactFlags] = full[patternFlags];
     *zerosOut = full[patternMinInteger];
-    return AddRecord(&g->compactPatterns, record);
+    return TableAddRecord(&g->compactPatterns, record);
 }
 
 // A locale's compact table of one length for a system; a power the long
@@ -888,7 +955,7 @@ static uint16_t CompactOf(Generator* g, const char* locale, const char* system, 
         }
         if (zeros < 1 || zeros > power + 1)
         {
-            Die("a compact pattern whose zeros give no divisor", locale);
+            GenDie("a compact pattern whose zeros give no divisor", locale);
         }
         uint16_t slots[numberCompactSlots];
         uint8_t mask = 0;
@@ -907,7 +974,7 @@ static uint16_t CompactOf(Generator* g, const char* locale, const char* system, 
             }
             if (slots[c] != numberCompactAbsent && slotZeros != 0 && slotZeros != zeros)
             {
-                Die("a compact category whose zeros differ from the other one's", locale);
+                GenDie("a compact category whose zeros differ from the other one's", locale);
             }
             mask |= slots[c] != numberCompactAbsent ? (uint8_t)(1u << c) : 0;
         }
@@ -917,7 +984,7 @@ static uint16_t CompactOf(Generator* g, const char* locale, const char* system, 
         {
             if (slots[c] != numberCompactAbsent)
             {
-                Put(table + size, slots[c], 2);
+                GenPut(table + size, slots[c], 2);
                 size += 2;
             }
         }
@@ -937,7 +1004,7 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
     out->minGrouping = grouping == nullptr ? 0 : atoi(grouping);
     if (out->defaultSystem >= numberAlgorithmic || out->minGrouping < 1 || out->minGrouping > 4)
     {
-        Die("a locale without a numeric default system or with odd grouping", locale);
+        GenDie("a locale without a numeric default system or with odd grouping", locale);
     }
     if (out->native == numberNoSystem)
     {
@@ -952,6 +1019,7 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
             .symbols = SymbolsOf(g, locale, s->name),
             .decimal = PatternOf(g, locale, s->name, "decimal"),
             .percent = PatternOf(g, locale, s->name, "percent"),
+            .currency = CurrencySetOf(g, locale, s->name),
         };
         if (s->id == numberLatn)
         {
@@ -986,7 +1054,7 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
     }
     if (latn.system == numberNoSystem)
     {
-        Die("numberingSystems.xml has no latn", locale);
+        GenDie("numberingSystems.xml has no latn", locale);
     }
     // Only the systems whose data differs from latn's, and latn.
     int kept = 0;
@@ -995,7 +1063,8 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
         const Entry* e = &out->entries[i];
         if (g->systems[e->system].id == numberLatn || e->symbols != latn.symbols ||
             e->decimal != latn.decimal || e->percent != latn.percent ||
-            e->compactShort != latn.compactShort || e->compactLong != latn.compactLong)
+            e->compactShort != latn.compactShort || e->compactLong != latn.compactLong ||
+            e->currency != latn.currency)
         {
             out->entries[kept++] = *e;
         }
@@ -1007,7 +1076,7 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
 static void AddLocaleUnit(const Numbers* n, const char* key, DataFile* file)
 {
     size_t size = numberLocaleHeaderSize + (size_t)n->entryCount * numberEntrySize;
-    uint8_t* unit = Allocate(size);
+    uint8_t* unit = GenAllocate(size);
     unit[localeDefaultSystem] = (uint8_t)n->defaultSystem;
     unit[localeNativeSystem] = (uint8_t)n->native;
     unit[localeTraditionalSystem] = (uint8_t)n->traditional;
@@ -1018,11 +1087,12 @@ static void AddLocaleUnit(const Numbers* n, const char* key, DataFile* file)
     {
         uint8_t* entry = unit + numberLocaleHeaderSize + (size_t)i * numberEntrySize;
         entry[entrySystem] = (uint8_t)n->entries[i].system;
-        Put(entry + entrySymbols, n->entries[i].symbols, 2);
-        Put(entry + entryDecimal, n->entries[i].decimal, 2);
-        Put(entry + entryPercent, n->entries[i].percent, 2);
-        Put(entry + entryCompactShort, n->entries[i].compactShort, 2);
-        Put(entry + entryCompactLong, n->entries[i].compactLong, 2);
+        GenPut(entry + entrySymbols, n->entries[i].symbols, 2);
+        GenPut(entry + entryDecimal, n->entries[i].decimal, 2);
+        GenPut(entry + entryPercent, n->entries[i].percent, 2);
+        GenPut(entry + entryCompactShort, n->entries[i].compactShort, 2);
+        GenPut(entry + entryCompactLong, n->entries[i].compactLong, 2);
+        GenPut(entry + entryCurrency, n->entries[i].currency, 2);
     }
     DataFileAdd(file, kindNumbers, key, unit, size);
     free(unit);
@@ -1044,7 +1114,7 @@ static int CompareNames(const void* a, const void* b)
 // list.
 static char** ListLocales(const char* commonDirectory, int* countOut)
 {
-    char** ids = Allocate(sizeof(char*) * maxLocales);
+    char** ids = GenAllocate(sizeof(char*) * maxLocales);
     int count = 0;
     char path[4096];
 #ifdef _WIN32
@@ -1059,7 +1129,7 @@ static char** ListLocales(const char* commonDirectory, int* countOut)
     DIR* directory = opendir(path);
     if (directory == nullptr)
     {
-        Die("cannot list", path);
+        GenDie("cannot list", path);
     }
     for (struct dirent* item = readdir(directory); item != nullptr; item = readdir(directory))
     {
@@ -1072,9 +1142,9 @@ static char** ListLocales(const char* commonDirectory, int* countOut)
         }
         if (count == maxLocales)
         {
-            Die("too many locales in", path);
+            GenDie("too many locales in", path);
         }
-        ids[count] = Allocate(length - 3);
+        ids[count] = GenAllocate(length - 3);
         memcpy(ids[count], name, length - 4);
         count++;
     }
@@ -1114,9 +1184,10 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* error
     static Generator s_g;
     memset(&s_g, 0, sizeof(s_g));
     Generator* g = &s_g;
-    g->symbols.recordSize = 2 * numberSymbolCount;
-    g->patterns.recordSize = numberPatternSize;
-    g->compactPatterns.recordSize = numberCompactPatternSize;
+    g->symbols = (Table){.recordSize = 2 * numberSymbolCount, .distinctRecords = true};
+    g->patterns = (Table){.recordSize = numberPatternSize, .distinctRecords = true};
+    g->compactPatterns = (Table){.recordSize = numberCompactPatternSize, .distinctRecords = true};
+    g->currencySets = (Table){.recordSize = currencySetSize, .distinctRecords = true};
     if (!ReadSystems(g, commonDirectory, errorOut, errorCapacity))
     {
         return 0;
@@ -1134,7 +1205,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* error
     char** ids = ListLocales(commonDirectory, &count);
     // Each locale's resolved numbers, by id; root's always filed.
     Map resolved = {0};
-    Numbers* all = Allocate(sizeof(Numbers) * (size_t)count);
+    Numbers* all = GenAllocate(sizeof(Numbers) * (size_t)count);
     for (int i = 0; i < count; i++)
     {
         Resolve(g, ids[i], &all[i]);
@@ -1157,24 +1228,35 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* error
             const Numbers* other = MapGet(&resolved, parent);
             if (other == nullptr || memcmp(other, &all[i], sizeof(Numbers)) != 0)
             {
-                Die("a locale's numbers differ from those of its parent's key", ids[i]);
+                GenDie("a locale's numbers differ from those of its parent's key", ids[i]);
             }
             continue;
         }
         const Numbers* base = next == nullptr ? nullptr : MapGet(&resolved, next);
         if (next != nullptr && base == nullptr)
         {
-            Die("a parent locale without a file", next);
+            GenDie("a parent locale without a file", next);
         }
         if (base == nullptr || memcmp(base, &all[i], sizeof(Numbers)) != 0)
         {
             AddLocaleUnit(&all[i], key, file);
         }
     }
+    CurrencyInput currency = {
+        .commonDirectory = commonDirectory,
+        .cldr = &g->cldr,
+        .keys = &g->keys,
+        .ids = (const char* const*)ids,
+        .count = count,
+        .compile = CompileCurrencyPattern,
+        .context = g,
+    };
+    int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity);
     AddSystemUnit(g, file);
-    AddTableUnit(&g->symbols, kindNumberSymbols, file);
-    AddTableUnit(&g->patterns, kindNumberPatterns, file);
-    AddTableUnit(&g->compactPatterns, kindNumberCompactPatterns, file);
+    TableAddUnit(&g->currencySets, kindCurrencyPatterns, nullptr, file);
+    TableAddUnit(&g->symbols, kindNumberSymbols, nullptr, file);
+    TableAddUnit(&g->patterns, kindNumberPatterns, nullptr, file);
+    TableAddUnit(&g->compactPatterns, kindNumberCompactPatterns, nullptr, file);
     AddCompactUnit(g, file);
     for (int i = 0; i < count; i++)
     {
@@ -1183,12 +1265,13 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* error
     free(ids);
     free(all);
     MapFree(&resolved);
-    FreeTable(&g->symbols);
-    FreeTable(&g->patterns);
-    FreeTable(&g->compactPatterns);
+    TableClear(&g->symbols);
+    TableClear(&g->patterns);
+    TableClear(&g->compactPatterns);
+    TableClear(&g->currencySets);
     MapEach(&g->ownFormats, FreeValue, nullptr);
     MapFree(&g->ownFormats);
     CldrClose(&g->cldr);
     KeysClose(&g->keys);
-    return 1;
+    return ok;
 }

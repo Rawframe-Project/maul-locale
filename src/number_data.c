@@ -6,6 +6,7 @@
 #include "number_data.h"
 
 #include "bytes.h"
+#include "currency_tables.h"
 #include "number_tables.h"
 
 // The length of the well-formed UTF-8 character at text (the Unicode
@@ -335,4 +336,218 @@ const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index)
     }
     const uint8_t* offsets = unit.bytes + numberCompactHeaderSize;
     return offsets + 4 * ((size_t)count + 1) + mlocLoad32(offsets + 4 * (size_t)index);
+}
+
+bool mlocValidCurrencyFractions(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (payload.size < currencyFractionsHeaderSize || mlocLoad32(payload.bytes + 4) != 0)
+    {
+        return false;
+    }
+    uint32_t count = mlocLoad32(payload.bytes);
+    if (count == 0 ||
+        (payload.size - currencyFractionsHeaderSize) / currencyFractionSize != count ||
+        (payload.size - currencyFractionsHeaderSize) % currencyFractionSize != 0)
+    {
+        return false;
+    }
+    int32_t previous = -1;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const uint8_t* e =
+            payload.bytes + currencyFractionsHeaderSize + (size_t)i * currencyFractionSize;
+        int32_t code = mlocLoad16(e + fractionCode);
+        // The default entry, code 0, comes first.
+        if (code <= previous || (i == 0) != (code == 0) || code > currencyMaxCode ||
+            e[fractionDigits] > currencyMaxDigits || e[fractionCashDigits] > currencyMaxDigits ||
+            !mlocValidCurrencyRounding(e[fractionRounding]) ||
+            !mlocValidCurrencyRounding(e[fractionCashRounding]) || e[6] != 0 || e[7] != 0)
+        {
+            return false;
+        }
+        previous = code;
+    }
+    return true;
+}
+
+CurrencyFraction mlocFindCurrencyFraction(DataSpan unit, uint16_t code)
+{
+    uint32_t low = 0;
+    uint32_t high = mlocLoad32(unit.bytes);
+    const uint8_t* entries = unit.bytes + currencyFractionsHeaderSize;
+    // The default entry stands for a code the table lacks.
+    const uint8_t* found = entries;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* e = entries + (size_t)middle * currencyFractionSize;
+        uint16_t at = mlocLoad16(e + fractionCode);
+        if (at == code)
+        {
+            found = e;
+            break;
+        }
+        if (at < code)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return (CurrencyFraction){
+        .digits = found[fractionDigits],
+        .rounding = found[fractionRounding],
+        .cashDigits = found[fractionCashDigits],
+        .cashRounding = found[fractionCashRounding],
+    };
+}
+
+bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    return ValidTable(payload, currencySetSize, 0) && mlocLoad16(payload.bytes) == 0;
+}
+
+SparseTable mlocReadSparseTable(DataSpan unit)
+{
+    SparseTable t = {
+        .stringCount = mlocLoad16(unit.bytes),
+        .entryCount = mlocLoad16(unit.bytes + 2),
+        .textSize = mlocLoad32(unit.bytes + 4),
+        .rowSize = mlocLoad32(unit.bytes + 8),
+    };
+    t.offsets = unit.bytes + sparseHeaderSize;
+    t.codes = t.offsets + 2 * ((size_t)t.stringCount + 1);
+    t.rowOffsets = t.codes + 2 * (size_t)t.entryCount;
+    t.rows = t.rowOffsets + 2 * ((size_t)t.entryCount + 1);
+    t.text = t.rows + t.rowSize;
+    return t;
+}
+
+// Whether a row of a sparse unit, its length given, has a mask of the
+// unit's fields and their values, each string field's in range.
+static bool ValidRow(const uint8_t* row, uint32_t length, uint32_t fieldCount,
+                     uint32_t stringFields, uint32_t stringCount)
+{
+    uint32_t mask = row[0];
+    uint32_t present = 0;
+    for (uint32_t m = mask; m != 0; m &= m - 1)
+    {
+        present++;
+    }
+    if (mask == 0 || mask >= 1u << fieldCount || length != 1 + 2 * present)
+    {
+        return false;
+    }
+    const uint8_t* value = row + 1;
+    for (uint32_t f = 0; f < fieldCount; f++)
+    {
+        if ((mask & 1u << f) == 0)
+        {
+            continue;
+        }
+        if ((stringFields & 1u << f) != 0 && mlocLoad16(value) >= stringCount)
+        {
+            return false;
+        }
+        value += 2;
+    }
+    return true;
+}
+
+// Whether a sparse unit's sizes hold, its strings are valid non-empty
+// text, its codes ascend and its rows are valid; flags, when the unit has
+// a byte per string after its text, are letter flags.
+static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFields, bool flags)
+{
+    if (payload.size < sparseHeaderSize)
+    {
+        return false;
+    }
+    SparseTable t = mlocReadSparseTable(payload);
+    size_t size = sparseHeaderSize + 2 * ((size_t)t.stringCount + 1) + 2 * (size_t)t.entryCount +
+                  2 * ((size_t)t.entryCount + 1) + t.rowSize + t.textSize +
+                  (flags ? t.stringCount : 0);
+    if (payload.size != size || mlocLoad16(t.offsets) != 0 ||
+        mlocLoad16(t.offsets + 2 * (size_t)t.stringCount) != t.textSize ||
+        mlocLoad16(t.rowOffsets) != 0 ||
+        mlocLoad16(t.rowOffsets + 2 * (size_t)t.entryCount) != t.rowSize)
+    {
+        return false;
+    }
+    for (uint32_t s = 0; s < t.stringCount; s++)
+    {
+        uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
+        uint32_t end = mlocLoad16(t.offsets + (size_t)s * 2 + 2);
+        if (end <= start || end > t.textSize || !ValidText(t.text + start, end - start, 0) ||
+            (flags && t.text[t.textSize + s] > (currencyStartsAlpha | currencyEndsAlpha)))
+        {
+            return false;
+        }
+    }
+    uint32_t previous = 0;
+    for (uint32_t e = 0; e < t.entryCount; e++)
+    {
+        uint32_t code = mlocLoad16(t.codes + (size_t)e * 2);
+        uint32_t start = mlocLoad16(t.rowOffsets + (size_t)e * 2);
+        uint32_t end = mlocLoad16(t.rowOffsets + (size_t)e * 2 + 2);
+        // Each row ends within the rows before any of it is read.
+        if (code <= previous || code > currencyMaxCode || end <= start || end > t.rowSize ||
+            !ValidRow(t.rows + start, end - start, fieldCount, stringFields, t.stringCount))
+        {
+            return false;
+        }
+        previous = code;
+    }
+    return true;
+}
+
+bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    uint32_t strings = (1u << currencyFieldCount) - 1 - (1u << currencyOwnPattern);
+    return ValidSparse(payload, currencyFieldCount, strings, true);
+}
+
+const uint8_t* mlocFindSparseRow(const SparseTable* t, uint16_t code)
+{
+    uint32_t low = 0;
+    uint32_t high = t->entryCount;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        uint16_t at = mlocLoad16(t->codes + (size_t)middle * 2);
+        if (at == code)
+        {
+            return t->rows + mlocLoad16(t->rowOffsets + (size_t)middle * 2);
+        }
+        if (at < code)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return nullptr;
+}
+
+bool mlocSparseField(const uint8_t* row, uint32_t field, uint16_t* valueOut)
+{
+    uint32_t mask = row[0];
+    if ((mask & 1u << field) == 0)
+    {
+        return false;
+    }
+    uint32_t before = 0;
+    for (uint32_t m = mask & ((1u << field) - 1); m != 0; m &= m - 1)
+    {
+        before++;
+    }
+    *valueOut = mlocLoad16(row + 1 + 2 * before);
+    return true;
 }

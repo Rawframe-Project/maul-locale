@@ -8,6 +8,7 @@
 #ifndef MLOC_NUMBER_CORE_H
 #define MLOC_NUMBER_CORE_H
 
+#include "data_view.h"
 #include "number_tables.h"
 
 #include "maul-locale/number.h"
@@ -47,6 +48,16 @@ typedef struct NumberCore
     uint8_t primary;
     uint8_t secondary;
     uint8_t minGrouping;
+    // The decimal and group separators' text: the symbol set's, its
+    // currency ones, or a currency's own; their lengths are symbolLength's.
+    const uint8_t* decimalText;
+    const uint8_t* groupText;
+    // A currency formatter's currency as shown (its symbol, a variant of
+    // it, or its code), and its code, for the placeholders of a currency
+    // pattern.
+    const uint8_t* currencyText;
+    uint8_t currencyLength;
+    char currencyCode[3];
 } NumberCore;
 
 // Where a formatter writes: the text pass copies bytes while they fit
@@ -82,6 +93,28 @@ mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
 mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
                                const mlocLocale* locale, bool longLength, const uint8_t** tableOut,
                                const uint8_t** patternsOut);
+
+// How a currency formatter's core takes its pattern: the locale's
+// accounting or standard one, its noCurrency variant when the currency is
+// hidden, else its alphaNextToNumber variant when the currency's
+// character next to the digits is neither a symbol nor a space (spacing
+// flags of the text shown, currency_tables.h).
+typedef struct CurrencyStyle
+{
+    bool accounting;
+    bool hidden;
+    uint8_t spacing;
+} CurrencyStyle;
+
+// As mlocInitNumberCore, with the system's currency pattern of a style
+// and the currency separators. mloc_errorNotFound for data without the
+// currency pattern sets.
+mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
+                                const mlocLocale* locale, const CurrencyStyle* style);
+
+// Points a core's pattern at a pattern of a valid patterns unit; false
+// for an index past its records.
+bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index);
 
 // Points a core's affixes at a compact pattern of a valid compact
 // patterns unit, keeping the decimal pattern's grouping, as ICU does;

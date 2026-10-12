@@ -6,6 +6,7 @@
 #include "number_core.h"
 
 #include "bytes.h"
+#include "currency_tables.h"
 #include "data_format.h"
 #include "data_view.h"
 #include "decimal.h"
@@ -137,22 +138,37 @@ static void TableString(NumberTable t, uint32_t index, uint16_t* startOut, uint1
     *lengthOut = (uint16_t)(mlocLoad16(t.offsets + (size_t)index * 2 + 2) - start);
 }
 
-// Fills a core from a system and an entry whose indexes are in bounds.
+bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index)
+{
+    NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
+    if (index >= t.recordCount)
+    {
+        return false;
+    }
+    const uint8_t* p = t.records + (size_t)index * numberPatternSize;
+    core->affixText = t.text;
+    for (int i = 0; i < affixCount; i++)
+    {
+        TableString(t, mlocLoad16(p + 2 * i), &core->affixStart[i], &core->affixLength[i]);
+    }
+    core->primary = p[patternPrimary];
+    core->secondary = p[patternSecondary];
+    return true;
+}
+
+// Fills a core from a system, an entry whose symbol set is in bounds and
+// a pattern index.
 static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_t* entry,
-                 uint8_t minGrouping, int patternField)
+                 uint8_t minGrouping, uint32_t pattern)
 {
     NumberTable symbols = mlocReadNumberTable(u->symbols, 2 * numberSymbolCount);
-    NumberTable patterns = mlocReadNumberTable(u->patterns, numberPatternSize);
     uint32_t set = mlocLoad16(entry + entrySymbols);
-    uint32_t pattern = mlocLoad16(entry + patternField);
-    if (set >= symbols.recordCount || mlocLoad16(entry + entryDecimal) >= patterns.recordCount ||
-        mlocLoad16(entry + entryPercent) >= patterns.recordCount)
+    if (set >= symbols.recordCount)
     {
         return false;
     }
     *core = (NumberCore){
         .symbolText = symbols.text,
-        .affixText = patterns.text,
         .minGrouping = minGrouping,
     };
     const uint8_t* s = symbols.records + (size_t)set * 2 * numberSymbolCount;
@@ -160,13 +176,12 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
     {
         TableString(symbols, mlocLoad16(s + 2 * i), &core->symbolStart[i], &core->symbolLength[i]);
     }
-    const uint8_t* p = patterns.records + (size_t)pattern * numberPatternSize;
-    for (int i = 0; i < affixCount; i++)
+    core->decimalText = core->symbolText + core->symbolStart[numberDecimal];
+    core->groupText = core->symbolText + core->symbolStart[numberGroup];
+    if (!mlocUseNumberPattern(core, u->patterns, pattern))
     {
-        TableString(patterns, mlocLoad16(p + 2 * i), &core->affixStart[i], &core->affixLength[i]);
+        return false;
     }
-    core->primary = p[patternPrimary];
-    core->secondary = p[patternSecondary];
     const uint8_t* digits = System(u->systems, system) + 8;
     memcpy(core->digits, digits, sizeof(core->digits));
     uint8_t length = 1;
@@ -178,11 +193,65 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
     return true;
 }
 
+// Whether a pattern's prefix holds a currency placeholder.
+static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
+{
+    NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
+    uint16_t start = 0;
+    uint16_t length = 0;
+    TableString(t, mlocLoad16(t.records + (size_t)index * numberPatternSize), &start, &length);
+    for (uint32_t i = 0; i < length; i++)
+    {
+        uint8_t b = t.text[start + i];
+        if (b >= numberAffixCurrency && b <= numberAffixCurrencyNarrow)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The index of an entry's currency pattern of a style; false when the
+// data has no pattern sets or the indexes leave them.
+static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_t* entry,
+                              const CurrencyStyle* style, uint32_t* patternOut)
+{
+    DataSpan sets;
+    if (!mlocFindDataUnit(view, kindCurrencyPatterns, dataNoLocale, &sets))
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(sets, currencySetSize);
+    NumberTable patterns = mlocReadNumberTable(u->patterns, numberPatternSize);
+    uint32_t set = mlocLoad16(entry + entryCurrency);
+    if (set >= t.recordCount)
+    {
+        return false;
+    }
+    const uint8_t* r = t.records + (size_t)set * currencySetSize;
+    for (int i = 0; i < currencyPatternCount; i++)
+    {
+        if (mlocLoad16(r + 2 * i) >= patterns.recordCount)
+        {
+            return false;
+        }
+    }
+    int base = style->accounting ? currencyAccounting : currencyStandard;
+    // The alphaNextToNumber pattern when the currency's character closest
+    // to the digits is neither a symbol nor a space.
+    uint8_t edge = CurrencyInPrefix(u->patterns, mlocLoad16(r + 2 * base)) ? currencyEndsAlpha
+                                                                           : currencyStartsAlpha;
+    int chosen = style->hidden ? base + 2 : (style->spacing & edge) != 0 ? base + 1 : base;
+    *patternOut = mlocLoad16(r + 2 * chosen);
+    return true;
+}
+
 // Resolves a core and, when compact is set, the entry's compact table of
-// a length and the compact patterns.
+// a length and the compact patterns; with a currency style, its currency
+// pattern and separators.
 static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const mlocLocale* locale,
-                           mlocNumberStyle style, const uint8_t** compact, bool longLength,
-                           const uint8_t** patternsOut)
+                           mlocNumberStyle style, const CurrencyStyle* currency,
+                           const uint8_t** compact, bool longLength, const uint8_t** patternsOut)
 {
     Units u;
     // Number data is filed only where it differs from the chain's, so
@@ -213,11 +282,20 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     uint32_t system = ChooseSystem(locale, header, u.systems, &fellBack);
     const uint8_t* entry = system < count ? FindEntry(u.locale, u.systems, system) : nullptr;
     NumberCore core;
-    int patternField = style == mloc_numberDecimal ? entryDecimal : entryPercent;
+    int field = style == mloc_numberDecimal ? entryDecimal : entryPercent;
+    uint32_t pattern = entry == nullptr ? 0 : mlocLoad16(entry + field);
     if (entry == nullptr ||
-        !Fill(&core, &u, system, entry, header[localeMinGrouping], patternField))
+        (currency != nullptr && !CurrencyPatternOf(&view, &u, entry, currency, &pattern)) ||
+        !Fill(&core, &u, system, entry, header[localeMinGrouping], pattern))
     {
         return mloc_errorNotFound;
+    }
+    if (currency != nullptr)
+    {
+        core.decimalText = core.symbolText + core.symbolStart[numberCurrencyDecimal];
+        core.groupText = core.symbolText + core.symbolStart[numberCurrencyGroup];
+        core.symbolLength[numberDecimal] = core.symbolLength[numberCurrencyDecimal];
+        core.symbolLength[numberGroup] = core.symbolLength[numberCurrencyGroup];
     }
     if (compact != nullptr)
     {
@@ -245,14 +323,21 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
                               const mlocLocale* locale, mlocNumberStyle style)
 {
-    return InitCore(coreOut, data, locale, style, nullptr, false, nullptr);
+    return InitCore(coreOut, data, locale, style, nullptr, nullptr, false, nullptr);
+}
+
+mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
+                                const mlocLocale* locale, const CurrencyStyle* style)
+{
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, nullptr, false, nullptr);
 }
 
 mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
                                const mlocLocale* locale, bool longLength, const uint8_t** tableOut,
                                const uint8_t** patternsOut)
 {
-    return InitCore(coreOut, data, locale, mloc_numberDecimal, tableOut, longLength, patternsOut);
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, nullptr, tableOut, longLength,
+                    patternsOut);
 }
 
 bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index)
@@ -307,7 +392,7 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
             w->start = w->length;
         }
     }
-    else if (length <= w->capacity && w->length <= w->capacity - length)
+    else if (length > 0 && length <= w->capacity && w->length <= w->capacity - length)
     {
         memcpy(w->buffer + w->length, bytes, length);
     }
@@ -330,7 +415,10 @@ void mlocEndParts(NumberWriter* w)
 
 static void PutSymbol(NumberWriter* w, const NumberCore* c, NumberSymbol symbol, uint32_t kind)
 {
-    Put(w, kind, c->symbolText + c->symbolStart[symbol], c->symbolLength[symbol]);
+    const uint8_t* text = symbol == numberDecimal ? c->decimalText
+                          : symbol == numberGroup ? c->groupText
+                                                  : c->symbolText + c->symbolStart[symbol];
+    Put(w, kind, text, c->symbolLength[symbol]);
 }
 
 // The length of the space (U+0020, U+00A0, U+202F) at text, or 0.
@@ -448,8 +536,20 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, SignSlot s
         case numberAffixPerMille:
             PutSymbol(w, c, numberPerMille, mloc_numberPartPerMilleSign);
             break;
+        case numberAffixCurrencyCode:
+            Put(w, mloc_numberPartCurrency, c->currencyCode, sizeof(c->currencyCode));
+            break;
         default:
-            // Currency placeholders belong to the currency formatter.
+            // The currency as the formatter shows it, its code when it has
+            // no symbol to show.
+            if (c->currencyText == nullptr)
+            {
+                Put(w, mloc_numberPartCurrency, c->currencyCode, sizeof(c->currencyCode));
+            }
+            else
+            {
+                Put(w, mloc_numberPartCurrency, c->currencyText, c->currencyLength);
+            }
             break;
         }
     }
@@ -459,6 +559,21 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, SignSlot s
     }
 }
 
+// What a sign's place writes: the sign, after the approximately sign
+// when there is one, or the approximately sign alone.
+static SignSlot SlotOf(NumberSign sign, bool approximately)
+{
+    if (sign == numberSignNone)
+    {
+        return slotApproximately;
+    }
+    if (sign == numberSignMinus)
+    {
+        return approximately ? slotApproximatelyMinus : slotMinus;
+    }
+    return approximately ? slotApproximatelyPlus : slotPlus;
+}
+
 static bool HasMinus(const NumberCore* c, int affix)
 {
     return memchr(c->affixText + c->affixStart[affix], numberAffixMinus, c->affixLength[affix]) !=
@@ -466,9 +581,10 @@ static bool HasMinus(const NumberCore* c, int affix)
 }
 
 // The prefix (or suffix) for a sign: a sign, or the approximately sign,
-// takes the negative affixes in the minus sign's place; when they have
-// no place for it, it goes before the positive prefix (the negative one
-// for a minus sign).
+// takes the negative affixes in the minus sign's place. Negative affixes
+// without that place (accounting's parentheses) stand for the minus sign
+// themselves; a plus sign, or the approximately sign, then goes before
+// the prefix.
 static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix,
                       const NumberLayout* layout)
 {
@@ -482,21 +598,12 @@ static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, boo
     }
     if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
     {
-        SignSlot slot = sign == numberSignMinus  ? slotMinus
-                        : sign == numberSignPlus ? slotPlus
-                                                 : slotApproximately;
-        if (approximately && sign != numberSignNone)
-        {
-            slot = sign == numberSignMinus ? slotApproximatelyMinus : slotApproximatelyPlus;
-        }
-        PutAffix(w, c, negative, slot, layout);
+        PutAffix(w, c, negative, SlotOf(sign, approximately), layout);
         return;
     }
-    if (prefix)
+    if (prefix && (sign != numberSignMinus || approximately))
     {
-        PutSlot(w, c,
-                approximately ? (sign == numberSignPlus ? slotApproximatelyPlus : slotApproximately)
-                              : slotPlus);
+        PutSlot(w, c, sign == numberSignMinus ? slotApproximately : SlotOf(sign, approximately));
     }
     PutAffix(w, c, sign == numberSignMinus ? negative : positive, slotMinus, layout);
 }

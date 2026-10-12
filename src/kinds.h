@@ -47,5 +47,14 @@ constexpr uint32_t kindNumbers = 0x00040004;
 constexpr uint32_t kindNumberCompactPatterns = 0x00040005;
 // The number part: the distinct compact tables, a unit of no locale.
 constexpr uint32_t kindNumberCompact = 0x00040006;
+// The number part: the currencies' digits and roundings, a unit of no
+// locale (record mloc-0022, src/currency_tables.h).
+constexpr uint32_t kindCurrencyFractions = 0x00040007;
+// The number part: the distinct currency pattern sets, a unit of no
+// locale.
+constexpr uint32_t kindCurrencyPatterns = 0x00040008;
+// The number part: the currency symbols a locale key gives of its own, a
+// unit per locale.
+constexpr uint32_t kindCurrencySymbols = 0x00040009;
 
 #endif

@@ -19,6 +19,9 @@ bool mlocValidNumberPatterns(const DataView* view, DataSpan payload);
 bool mlocValidNumbers(const DataView* view, DataSpan payload);
 bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload);
 bool mlocValidNumberCompact(const DataView* view, DataSpan payload);
+bool mlocValidCurrencyFractions(const DataView* view, DataSpan payload);
+bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload);
+bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload);
 
 // A table unit's string count, record count and the start of its text
 // (the symbol and pattern units share this shape).
@@ -37,5 +40,40 @@ NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize);
 // A compact table of a valid compact unit, or null for an index past its
 // tables.
 const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index);
+
+// A currency's digits and roundings.
+typedef struct CurrencyFraction
+{
+    uint8_t digits;
+    uint8_t rounding;
+    uint8_t cashDigits;
+    uint8_t cashRounding;
+} CurrencyFraction;
+
+// A currency's fraction in a valid fractions unit, the default entry's
+// for a code it lacks.
+CurrencyFraction mlocFindCurrencyFraction(DataSpan unit, uint16_t code);
+
+// The parts of a sparse unit (currency_tables.h).
+typedef struct SparseTable
+{
+    uint32_t stringCount;
+    uint32_t entryCount;
+    uint32_t textSize;
+    uint32_t rowSize;
+    const uint8_t* offsets;
+    const uint8_t* codes;
+    const uint8_t* rowOffsets;
+    const uint8_t* rows;
+    const uint8_t* text;
+} SparseTable;
+
+SparseTable mlocReadSparseTable(DataSpan unit);
+
+// The row of a code in a valid sparse unit, or null.
+const uint8_t* mlocFindSparseRow(const SparseTable* table, uint16_t code);
+
+// A row's value of a field; false when the row does not give it.
+bool mlocSparseField(const uint8_t* row, uint32_t field, uint16_t* valueOut);
 
 #endif

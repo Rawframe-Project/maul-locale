@@ -30,6 +30,24 @@ option(MAUL_LOCALE_SANITIZE "Instrument with AddressSanitizer and UBSan" OFF)
 option(MAUL_LOCALE_COVERAGE "Instrument for gcov coverage" OFF)
 option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 
+# The generator asks Maul Unicode which currency symbols start or end in
+# letters (record mloc-0022); the library itself does not link it.
+# Fetched before the family modules, so that ours, included after its
+# copies, serve this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds
+# a local copy instead, offline.
+if(MAUL_LOCALE_BUILD_TOOLS)
+    include(FetchContent)
+    set(MAUL_UNICODE_NORMALIZATION OFF)
+    set(MAUL_UNICODE_CASE OFF)
+    set(MAUL_UNICODE_SECURITY OFF)
+    set(MAUL_UNICODE_INSTALL OFF)
+    FetchContent_Declare(maul-unicode
+        GIT_REPOSITORY https://github.com/Rawframe-Project/maul-unicode.git
+        GIT_TAG v0.3.0
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(maul-unicode)
+endif()
+
 # Every executable (tests, benchmarks, tools) lands in the top of the
 # build tree, so scripts and CI find them in one place.
 if(PROJECT_IS_TOP_LEVEL)
@@ -63,10 +81,12 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
+    src/currency.c
     src/number.c
     src/number_compact.c
     src/number_core.c
     src/number_data.c
+    src/number_format.c
     src/number_precision.c
     src/plural.c
     src/generated/builtin_data.c
@@ -91,7 +111,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(decimal)
     maul_add_test(plural)
     maul_add_test(plural_tables WHITEBOX)
+    maul_add_test(currency)
     maul_add_test(number)
+    maul_add_test(currency_tables WHITEBOX)
     maul_add_test(number_tables WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
@@ -130,12 +152,12 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/cldr.c
-                                    tools/mlocgen/datafile.c
+                                    tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
                                     tools/mlocgen/generate.c tools/mlocgen/keys.c
                                     tools/mlocgen/ldml.c tools/mlocgen/locale_gen.c tools/mlocgen/map.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
-                                    tools/mlocgen/number_gen.c
+                                    tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c
                                     tools/mlocgen/xml.c)
@@ -143,7 +165,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # the versions of the public base header.
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)
     # The generator reads CLDR's ids with the library's own parser.
-    target_link_libraries(mlocgen_core PUBLIC maul-locale)
+    target_link_libraries(mlocgen_core PUBLIC maul-locale maul-unicode)
     maul_apply_flags(mlocgen_core)
     # The generator uses standard fopen, which the Windows C runtime
     # reports as deprecated in favor of its own fopen_s.

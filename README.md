@@ -40,8 +40,9 @@ operands, CLDR's cardinal, ordinal and range plural rules compiled to C
 (every sample of CLDR's files passes on every push), and numbers,
 percents and per mille in standard, scientific, engineering and compact
 notation and ranges, with every numbering system and ECMA-402's options
-(CLDR's decimal test data passes on every push). The library has
-36 public functions.
+(CLDR's decimal test data passes on every push), and amounts of money
+with each currency's symbols, digits and cash rounding. The library has
+39 public functions.
 
 ## Building
 

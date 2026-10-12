@@ -22,6 +22,25 @@ const char* mlocResultName(mlocResult result);
 ```
 Returns the name of a result code, for diagnostics.  @param result  Any value; an unknown one is named as such. @return A static, NUL-terminated string such as "mloc_errorCapacity". @par Thread safety Safe from any thread.
 
+## `currency.h`
+
+Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitCurrencyFormatter( mlocCurrencyFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const char* code, size_t codeLength, const mlocCurrencyOptions* options);
+```
+Makes a locale's formatter of a currency. The numbering system is the locale's, as for numbers; the locale's -u-cf-account keyword asks for its accounting pattern ("($3.00)"). The symbol meets the digits as UTS #35 prefers: a locale's alphaNextToNumber pattern spaces a symbol whose character next to the digits is a letter ("USD 3.00", "$3.00"). A code the data does not know shows as its code with the default digits.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the number and currency units, the parents and the likely subtags. @param locale        The locale, canonicalized. @param code          The currency's ISO 4217 code, three ASCII letters in any case. @param codeLength    Its length in bytes, 3. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the number or currency units; mloc_errorInvalid for a null pointer, a code that is not three letters, or options out of range or in conflict (a percent style, compact notation). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatCurrency(const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+```
+Formats an amount of the formatter's currency.  @param formatter  A formatter from mlocInitCurrencyFormatter. @param decimal    The amount. @param output     Receives the text; its part function, when set, receives mlocNumberPart values, the currency as mloc_numberPartCurrency. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatCurrencyRange(const mlocCurrencyFormatter* formatter, const mlocDecimal* start, const mlocDecimal* end, mlocOutput* output);
+```
+Formats a range of two amounts, as mlocFormatNumberRange does ("$3.00 – $5.00", "3,00–5,00 €"; ends that write alike give "~$5.00").  @param formatter  A formatter from mlocInitCurrencyFormatter. @param start      The range's start. @param end        Its end. @param output     Receives the text; its part function, when set, receives mlocNumberPart values with the end each belongs to (mloc_numberRangeStart, mloc_numberRangeEnd, or 0 for both). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, a NaN end, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
 ## `data.h`
 
 The library's data: the compiled-in data and data files the program holds, each opened once into an mlocData view and read in place (record mloc-0014). The library reads no file and allocates nothing; the bytes a view was opened from must outlive it and everything made from it.
@@ -209,4 +228,4 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ---
 
-36 functions across 6 headers.
+39 functions across 7 headers.

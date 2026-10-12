@@ -23,4 +23,17 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
                         const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut,
                         DataView* viewOut);
 
+// Called with each unit of a walk along a locale's chain, the source
+// that holds it and its step (0 for the locale's own key); returns true
+// to end the walk.
+typedef bool (*LocaleUnitVisitor)(void* context, DataSpan unit, const DataView* view, int depth);
+
+// Visits the units of a kind along a locale's chain, as
+// mlocFindLocaleUnit finds the first: each key of its chain in the
+// component, each in every source of the set in order, until the visitor
+// ends the walk. False when the chain is needed and the data has no
+// parents table.
+bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint32_t kind,
+                          const mlocLocale* locale, LocaleUnitVisitor visit, void* context);
+
 #endif

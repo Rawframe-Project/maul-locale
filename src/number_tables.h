@@ -25,8 +25,9 @@
 // with no digits; u8 minimum grouping digits, u8 entry count, 2 bytes 0),
 // then per numbering system whose data differs from latn's, and latn, in
 // the order of the systems: its index (u8), a 0, and the indexes of its
-// symbol set, its decimal and percent patterns and its short and long
-// compact tables (u16 each). Scientific notation writes the decimal
+// symbol set, its decimal and percent patterns, its short and long
+// compact tables and its currency pattern set (currency_tables.h; u16
+// each). Scientific notation writes the decimal
 // pattern's affixes, as ICU does: the locales' scientific patterns are
 // not read.
 //
@@ -61,7 +62,7 @@ enum
     numberTableHeaderSize = 8,
     numberPatternSize = 16,
     numberLocaleHeaderSize = 8,
-    numberEntrySize = 12,
+    numberEntrySize = 14,
     // A compact table: rows of the powers 10^3 to 10^14, slots of the six
     // categories and the exact value 1.
     numberCompactFirstPower = 3,
@@ -159,6 +160,7 @@ enum
     entryPercent = 6,
     entryCompactShort = 8,
     entryCompactLong = 10,
+    entryCurrency = 12,
     compactPrefix = 0,
     compactSuffix = 2,
     compactNegativePrefix = 4,

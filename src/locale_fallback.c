@@ -404,12 +404,12 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
     return mloc_success;
 }
 
-bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
-                        const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut,
-                        DataView* viewOut)
+bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint32_t kind,
+                          const mlocLocale* locale, LocaleUnitVisitor visit, void* context)
 {
-    // The parents are read only when the first step has no unit.
-    // Validation has made every chain end within maxChain steps.
+    // The parents are read only when the first step's units do not end
+    // the walk. Validation has made every chain end within maxChain
+    // steps.
     Parents parents;
     bool parentsOpen = false;
     mlocLocale step = FirstStep(data, locale);
@@ -421,16 +421,17 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
         {
             DataView view = mlocViewOf(&data->sources[s]);
             uint32_t index = 0;
+            DataSpan span;
             if (mlocFindDataLocale(&view, key, length, &index) &&
-                mlocFindDataUnit(&view, kind, index, spanOut))
+                mlocFindDataUnit(&view, kind, index, &span) && visit(context, span, &view, depth))
             {
-                *fellBackOut = depth > 0;
-                if (viewOut != nullptr)
-                {
-                    *viewOut = view;
-                }
                 return true;
             }
+        }
+        // Root ends every chain, parents table or none.
+        if (length == 4 && memcmp(key, "root", 4) == 0)
+        {
+            return true;
         }
         if (!parentsOpen && !OpenParents(data, &parents))
         {
@@ -439,8 +440,37 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
         parentsOpen = true;
         if (!NextStep(&parents, component, &step))
         {
-            return false;
+            return true;
         }
     }
-    return false;
+    return true;
+}
+
+typedef struct Found
+{
+    DataSpan* span;
+    bool* fellBack;
+    DataView* view;
+    bool found;
+} Found;
+
+static bool TakeFirst(void* context, DataSpan unit, const DataView* view, int depth)
+{
+    Found* f = context;
+    *f->span = unit;
+    *f->fellBack = depth > 0;
+    if (f->view != nullptr)
+    {
+        *f->view = *view;
+    }
+    f->found = true;
+    return true;
+}
+
+bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
+                        const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut,
+                        DataView* viewOut)
+{
+    Found f = {.span = spanOut, .fellBack = fellBackOut, .view = viewOut};
+    return mlocVisitLocaleUnits(data, component, kind, locale, TakeFirst, &f) && f.found;
 }

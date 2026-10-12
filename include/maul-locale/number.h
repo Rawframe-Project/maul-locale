@@ -129,7 +129,7 @@ extern "C"
     // mlocInitNumberFormatter.
     typedef struct mlocNumberFormatter
     {
-        uint64_t opaque[24];
+        uint64_t opaque[32];
     } mlocNumberFormatter;
 
     // The parts of a formatted number the output's part function
@@ -155,6 +155,8 @@ extern "C"
         mloc_numberPartCompact = 14,
         // The approximately sign of a range whose ends write alike ("~5").
         mloc_numberPartApproximatelySign = 15,
+        // A currency's symbol, code or name.
+        mloc_numberPartCurrency = 16,
     } mlocNumberPart;
 
     // In a range's parts, the end a part belongs to, added to its

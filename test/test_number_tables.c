@@ -12,6 +12,7 @@
 #include "number_data.h"
 #include "number_tables.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/number.h"
 
@@ -417,78 +418,28 @@ static void TestLocaleUnit(void)
     CHECK(!Valid(mlocValidNumbers, two, sizeof(two)), "two entries of one system");
 }
 
-alignas(8) static uint8_t s_pack[131072];
-
-static void Put(uint8_t* p, uint64_t value, int bytes)
-{
-    for (int i = 0; i < bytes; i++)
-    {
-        p[i] = (uint8_t)(value >> (8 * i));
-    }
-}
-
 // Opens a pack of root's plural rules, the compiled-in number units of no
 // locale and a root numbers unit, into a data set of it alone.
 static bool OpenPack(const uint8_t* root, uint32_t rootSize, mlocData* source)
 {
-    enum
-    {
-        unitCount = 8,
+    // In the order of their kinds.
+    const PackUnit units[] = {
+        {kindPlurals, s_plurals, true},
+        {kindPluralRanges, s_ranges, false},
+        {kindNumberSystems, s_systems, false},
+        {kindNumberSymbols, s_symbols, false},
+        {kindNumberPatterns, s_patterns, false},
+        {kindNumbers, {root, rootSize}, true},
+        {kindNumberCompactPatterns, s_compactPatterns, false},
+        {kindNumberCompact, s_compact, false},
     };
-    // In the order of their kinds; root, the one locale, is 0.
-    const DataSpan units[unitCount] = {s_plurals,  s_ranges,         s_systems,         s_symbols,
-                                       s_patterns, {root, rootSize}, s_compactPatterns, s_compact};
-    const uint32_t kinds[unitCount] = {
-        kindPlurals,        kindPluralRanges, kindNumberSystems,         kindNumberSymbols,
-        kindNumberPatterns, kindNumbers,      kindNumberCompactPatterns, kindNumberCompact};
-    const bool rootUnit[unitCount] = {true, false, false, false, false, true, false, false};
-    memset(s_pack, 0, sizeof(s_pack));
-    uint32_t at = dataHeaderSize + unitCount * dataUnitSize + dataLocaleSize;
-    for (int i = 0; i < unitCount; i++)
-    {
-        at = (at + 7) / 8 * 8;
-        uint8_t* unit = s_pack + dataHeaderSize + i * dataUnitSize;
-        Put(unit, kinds[i], 4);
-        Put(unit + 4, rootUnit[i] ? 0 : dataNoLocale, 4);
-        Put(unit + 8, at, 4);
-        Put(unit + 12, units[i].size, 4);
-        if (at + units[i].size > sizeof(s_pack) - 16)
-        {
-            return false;
-        }
-        memcpy(s_pack + at, units[i].bytes, units[i].size);
-        at += units[i].size;
-    }
-    uint32_t pool = at;
-    memcpy(s_pack + at, "root", 4);
-    at += 4;
-    uint8_t* entry = s_pack + dataHeaderSize + unitCount * dataUnitSize;
-    Put(entry, 0, 4);
-    Put(entry + 4, 4, 4);
-    mlocDataVersion version;
-    mlocGetDataVersion(&version);
-    memcpy(s_pack, MLOC_DATA_MAGIC, 4);
-    Put(s_pack + headerFormat, dataFormatVersion, 2);
-    Put(s_pack + headerHeaderSize, dataHeaderSize, 2);
-    Put(s_pack + headerFileSize, at, 4);
-    Put(s_pack + headerCldr,
-        mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch), 4);
-    Put(s_pack + headerUnicode,
-        mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch), 4);
-    Put(s_pack + headerLibrary,
-        mlocPackVersion(version.library.major, version.library.minor, version.library.patch), 4);
-    memcpy(s_pack + headerTzdb, version.tzdb, 8);
-    Put(s_pack + headerTables, version.tables, 8);
-    Put(s_pack + headerUnitCount, unitCount, 4);
-    Put(s_pack + headerLocaleCount, 1, 4);
-    Put(s_pack + headerPoolOffset, pool, 4);
-    Put(s_pack + headerPoolSize, 4, 4);
-    return mlocOpenData(source, s_pack, at) == mloc_success;
+    return OpenRootPack(units, sizeof(units) / sizeof(units[0]), source);
 }
 
 // The status of a formatter made for und over a pack with this root
 // unit, in a notation.
-static mlocResult InitAs(const uint8_t* root, uint32_t size, mlocNotation notation)
+static mlocResult InitStyled(const uint8_t* root, uint32_t size, mlocNotation notation,
+                             mlocNumberStyle style)
 {
     mlocData source;
     if (!OpenPack(root, size, &source))
@@ -498,12 +449,17 @@ static mlocResult InitAs(const uint8_t* root, uint32_t size, mlocNotation notati
     mlocDataSet set = {&source, 1};
     mlocLocale locale;
     mlocNumberFormatter formatter;
-    mlocNumberOptions options = {.notation = notation};
+    mlocNumberOptions options = {.notation = notation, .style = style};
     if (mlocParseLocale("und", 3, &locale).status != mloc_success)
     {
         return (mlocResult)-101;
     }
     return mlocInitNumberFormatter(&formatter, &set, &locale, &options);
+}
+
+static mlocResult InitAs(const uint8_t* root, uint32_t size, mlocNotation notation)
+{
+    return InitStyled(root, size, notation, mloc_numberDecimal);
 }
 
 static mlocResult InitWith(const uint8_t* root, uint32_t size)
@@ -540,15 +496,21 @@ static void TestDisagreeing(void)
     }
     uint32_t sets = mlocLoad16(s_symbols.bytes + 2);
     uint32_t patterns = mlocLoad16(s_patterns.bytes + 2);
+    // Each index is bounded where a formatter reads it: the percent
+    // pattern by a percent formatter alone.
     const int fields[3] = {entrySymbols, entryDecimal, entryPercent};
     for (int f = 0; f < 3; f++)
     {
         uint32_t value = mlocLoad16(entry + fields[f]);
         uint32_t past = f == 0 ? sets : patterns;
+        mlocNumberStyle style = f == 2 ? mloc_numberPercent : mloc_numberDecimal;
         Put16(entry + fields[f], past);
-        CHECK(InitWith(u, size) == mloc_errorNotFound, "an index past its table");
+        CHECK(InitStyled(u, size, mloc_notationStandard, style) == mloc_errorNotFound,
+              "an index past its table");
+        CHECK(f != 2 || InitWith(u, size) == mloc_success, "a decimal formatter reads no percent");
         Put16(entry + fields[f], past - 1);
-        CHECK(InitWith(u, size) == mloc_success, "the last of its table");
+        CHECK(InitStyled(u, size, mloc_notationStandard, style) == mloc_success,
+              "the last of its table");
         Put16(entry + fields[f], value);
     }
     uint32_t tables = mlocLoad32(s_compact.bytes);
