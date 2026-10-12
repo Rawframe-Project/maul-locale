@@ -219,6 +219,49 @@ static void TestCraftedChains(size_t entries, size_t text, uint32_t count)
     free(copy);
 }
 
+// A table of 4,097 valid entries, one past the bound: aa_AA to root and
+// on, each child a language of two letters and a region.
+static void TestBound(void)
+{
+    enum
+    {
+        entryCount = 4097,
+    };
+    size_t text = (size_t)entryCount * 9;
+    size_t size = parentHeaderSize + (size_t)entryCount * parentEntrySize + text;
+    uint8_t* table = calloc(size, 1);
+    if (table == nullptr)
+    {
+        return;
+    }
+    Put(table, entryCount, 4);
+    Put(table + 4, text, 4);
+    uint8_t* chars = table + parentHeaderSize + (size_t)entryCount * parentEntrySize;
+    for (uint32_t i = 0; i < entryCount; i++)
+    {
+        uint8_t* e = table + parentHeaderSize + (size_t)i * parentEntrySize;
+        char* child = (char*)chars + (size_t)i * 9;
+        child[0] = (char)('a' + i / 26 / 26 % 26);
+        child[1] = (char)('a' + i / 26 % 26);
+        child[2] = '_';
+        child[3] = (char)('A' + i % 26);
+        child[4] = 'A';
+        memcpy(child + 5, "root", 4);
+        e[1] = 5;
+        e[2] = 4;
+        Put(e + 4, (size_t)i * 9, 4);
+        Put(e + 8, (size_t)i * 9 + 5, 4);
+    }
+    CHECK(!mlocValidParents(nullptr, (DataSpan){table, (uint32_t)size}),
+          "more entries than the bound");
+    Put(table, entryCount - 1, 4);
+    Put(table + 4, text - 9, 4);
+    memmove(table + parentHeaderSize + (size_t)(entryCount - 1) * parentEntrySize, chars, text - 9);
+    CHECK(mlocValidParents(nullptr, (DataSpan){table, (uint32_t)(size - parentEntrySize - 9)}),
+          "as many as the bound");
+    free(table);
+}
+
 static void TestValidator(void)
 {
     mlocData builtin;
@@ -278,5 +321,6 @@ int main(void)
 {
     TestLookups();
     TestValidator();
+    TestBound();
     return s_failures == 0 ? 0 : 1;
 }

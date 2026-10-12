@@ -60,6 +60,7 @@ static void TestMain(void)
     CHECK(CHAIN(m, "de-CH-1996-fonipa", "de-CH-1996", "de-CH", "de", "und"),
           "variants dropped from the end");
     CHECK(CHAIN(m, "qaa-Cyrl-CH", "qaa-Cyrl", "und"), "a language without likely subtags");
+    CHECK(CHAIN(m, "und-Cyrl", "und"), "und with a script is not root yet");
 }
 
 static void TestComponents(void)
