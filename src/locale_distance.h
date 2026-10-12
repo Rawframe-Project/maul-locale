@@ -21,6 +21,7 @@
 enum
 {
     distanceShift = 3,
+    mlocNearestInvalid = -2,
 };
 
 typedef struct MatchTable
@@ -70,9 +71,10 @@ typedef struct Wanted
 void mlocWant(const Matcher* matcher, const Lsr* lsr, const mlocLocale* locale, Wanted* wantedOut);
 
 // The nearest of count LSRs (stored one after another, as entries are)
-// below a shifted threshold, ties broken as ICU breaks them; the locales
-// are those the LSRs' indexes name. Returns its position, or -1, and its
-// shifted distance.
+// below a shifted threshold, ties broken as ICU breaks them; the count
+// locales are those the LSRs' indexes name. Returns its position, -1 for
+// none, or mlocNearestInvalid for an LSR read that names no locale; and
+// its shifted distance.
 int32_t mlocNearest(const Matcher* matcher, const Wanted* wanted, const void* lsrs, uint32_t count,
                     const mlocLocale* locales, uint32_t shiftedThreshold, uint32_t* shiftedOut);
 

@@ -388,6 +388,39 @@ static int CompareLegacy(const void* a, const void* b)
     return strcmp(((const Legacy*)a)->type, ((const Legacy*)b)->type);
 }
 
+// Twice the keys of the sorted (key << 16 | rule) list, rounded up to
+// a power of two: a probe then reads one or two slots, and a 0 always
+// ends it.
+static uint32_t SlotCount(const uint64_t* keys, uint32_t count)
+{
+    uint32_t distinct = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        distinct += i == 0 || keys[i] >> 16 != keys[i - 1] >> 16;
+    }
+    uint32_t slots = 2;
+    while (slots < 2 * distinct)
+    {
+        slots *= 2;
+    }
+    if (slots > 65536)
+    {
+        Die("too many alias keys", "aliases");
+    }
+    return slots;
+}
+
+// Files a key's first index in the first free slot from its own.
+static void PutSlot(uint8_t* slots, uint32_t slotCount, uint32_t key, uint32_t index)
+{
+    uint32_t at = mlocAliasSlot(key, slotCount);
+    while (slots[at * 2] != 0 || slots[at * 2 + 1] != 0)
+    {
+        at = (at + 1) & (slotCount - 1);
+    }
+    Put(slots + at * 2, index + 1, 2);
+}
+
 static uint8_t* WriteAliases(Aliases* aliases, size_t* sizeOut)
 {
     uint32_t rules = (uint32_t)aliases->ruleCount;
@@ -402,22 +435,33 @@ static uint8_t* WriteAliases(Aliases* aliases, size_t* sizeOut)
         text +=
             (uint32_t)(strlen(aliases->legacy[i].type) + strlen(aliases->legacy[i].replacement));
     }
+    uint64_t* keys = calloc(rules + 1, sizeof(uint64_t));
+    if (keys == nullptr)
+    {
+        Die("out of memory", "aliases");
+    }
+    for (uint32_t r = 0; r < rules; r++)
+    {
+        keys[r] = (uint64_t)Key(aliases, &aliases->rules[r]) << 16 | r;
+    }
+    qsort(keys, rules, sizeof(uint64_t), CompareKeys);
+    uint32_t slots = SlotCount(keys, rules);
     size_t keysAt = aliasHeaderSize + (size_t)rules * aliasRuleSize;
-    size_t variantsAt = (keysAt + (size_t)rules * 6 + 7) / 8 * 8;
+    size_t slotsAt = keysAt + (size_t)rules * 6;
+    size_t variantsAt = (slotsAt + (size_t)slots * 2 + 7) / 8 * 8;
     size_t regionsAt = variantsAt + (size_t)aliases->variantCount * 8;
     size_t legacyAt = regionsAt + (size_t)regions * 2;
     size_t textAt = legacyAt + (size_t)aliases->legacyCount * aliasLegacySize;
     size_t size = textAt + text;
     uint8_t* out = calloc(size, 1);
-    uint64_t* keys = calloc(rules + 1, sizeof(uint64_t));
-    if (out == nullptr || keys == nullptr)
+    if (out == nullptr)
     {
         Die("out of memory", "aliases");
     }
-    uint32_t counts[6] = {
+    uint32_t counts[7] = {
         rules, rules, (uint32_t)aliases->variantCount, regions, (uint32_t)aliases->legacyCount,
-        text};
-    for (int i = 0; i < 6; i++)
+        text,  slots};
+    for (int i = 0; i < 7; i++)
     {
         Put(out + i * 4, counts[i], 4);
     }
@@ -432,13 +476,15 @@ static uint8_t* WriteAliases(Aliases* aliases, size_t* sizeOut)
             Put(out + regionsAt + (size_t)region++ * 2,
                 mlocPackRegion(code, (uint32_t)strlen(code)), 2);
         }
-        keys[r] = (uint64_t)Key(aliases, rule) << 16 | r;
     }
-    qsort(keys, rules, sizeof(uint64_t), CompareKeys);
     for (uint32_t i = 0; i < rules; i++)
     {
         Put(out + keysAt + (size_t)i * 4, keys[i] >> 16, 4);
         Put(out + keysAt + (size_t)rules * 4 + (size_t)i * 2, keys[i] & 0xFFFF, 2);
+        if (i == 0 || keys[i] >> 16 != keys[i - 1] >> 16)
+        {
+            PutSlot(out + slotsAt, slots, (uint32_t)(keys[i] >> 16), i);
+        }
     }
     for (int v = 0; v < aliases->variantCount; v++)
     {

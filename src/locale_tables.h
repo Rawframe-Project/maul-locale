@@ -20,7 +20,7 @@
 // Aliases (kindLocaleAliases), the rules of UTS #35 Annex C in its
 // order, each indexed under the first field its type has:
 //   u32 ruleCount, keyCount, variantCount, regionCount, legacyCount,
-//       textSize, u64 zero
+//       textSize, slotCount, zero
 //   rules[ruleCount], 32 bytes each: u32 typeScript, replacementScript;
 //       u16 typeLanguage, typeRegion, typeVariants[2],
 //       replacementLanguage, replacementRegion, replacementVariants[2],
@@ -30,6 +30,9 @@
 //   u32 keys[keyCount], sorted, then u16 keyRules[keyCount] in the same
 //       order: field << 30 | value (0 language, 1 script, 2 region, 3
 //       variant), and the rule, sorted by rule within a key
+//   u16 slots[slotCount], a power of two up to 65536, at least one 0:
+//       a hash index of the keys, 0 or 1 + a key's first index, at
+//       mlocAliasSlot of the key or after it (wrapping) with no 0 between
 //   zero bytes to a multiple of 8
 //   char variants[variantCount][8], sorted, NUL-padded
 //   u16 regions[regionCount]
@@ -179,6 +182,13 @@ static inline uint32_t mlocPackRegion(const char* region, uint32_t length)
         return 1024 + number;
     }
     return 0;
+}
+
+// The slot a key's probe starts at: Fibonacci hashing, the product's
+// bits from 16 up, as slotCount is at most 65536.
+static inline uint32_t mlocAliasSlot(uint32_t key, uint32_t slotCount)
+{
+    return (key * 0x9E3779B1u) >> 16 & (slotCount - 1);
 }
 
 enum

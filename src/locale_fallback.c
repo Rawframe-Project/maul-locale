@@ -12,6 +12,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_likely.h"
 #include "locale_tables.h"
 
 #include "maul-locale/locale.h"
@@ -243,19 +244,16 @@ static uint32_t KeyText(const mlocLocale* step, char* out)
     return (uint32_t)at;
 }
 
-// The script likely subtags give a locale, or 0 when there is none.
-static uint32_t LikelyScript(const mlocDataSet* data, const mlocLocale* locale)
+// The script likely subtags give a packed language and region, or 0
+// when there is none.
+static uint32_t LikelyScript(const Likely* likely, uint32_t language, uint32_t region)
 {
-    mlocLocale probe = {0};
-    memcpy(probe.language, locale->language, 8);
-    memcpy(probe.script, locale->script, 4);
-    memcpy(probe.region, locale->region, 4);
-    mlocLocale likely;
-    if (mlocMaximizeLocale(data, &probe, &likely) != mloc_success)
+    uint64_t value = 0;
+    if (likely == nullptr || !mlocLookupLikely(likely, language, 0, region, &value))
     {
         return 0;
     }
-    return mlocPackScript(likely.script, 4);
+    return (uint32_t)(value >> 11) & 0xFFFFF;
 }
 
 // A locale's first step: its language, script and region in key form
@@ -266,14 +264,17 @@ static mlocLocale FirstStep(const mlocDataSet* data, const mlocLocale* locale)
     memcpy(step.language, locale->language, 8);
     memcpy(step.region, locale->region, 4);
     memcpy(step.tail, locale->tail, VariantsLength(locale->tail, sizeof(locale->tail)));
+    Likely table;
+    const Likely* likely = mlocOpenLikely(data, &table) ? &table : nullptr;
+    uint32_t language =
+        mlocPackLanguage(locale->language, (uint32_t)FieldLength(locale->language, 8));
     uint32_t script = mlocPackScript(locale->script, (uint32_t)FieldLength(locale->script, 4));
     if (script == 0)
     {
-        script = LikelyScript(data, locale);
+        uint32_t region = mlocPackRegion(locale->region, (uint32_t)FieldLength(locale->region, 4));
+        script = LikelyScript(likely, language, region);
     }
-    mlocLocale alone = {0};
-    memcpy(alone.language, locale->language, 8);
-    if (script != 0 && script != LikelyScript(data, &alone))
+    if (script != 0 && script != LikelyScript(likely, language, 0))
     {
         mlocUnpackScript(script, step.script);
     }

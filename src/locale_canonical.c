@@ -13,6 +13,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_likely.h"
 #include "locale_tables.h"
 
 #include "maul-locale/locale.h"
@@ -28,11 +29,13 @@ typedef struct Aliases
     const uint8_t* rules;
     const uint8_t* keys;
     const uint8_t* keyRules;
+    const uint8_t* slots;
     const uint8_t* variants;
     const uint8_t* regions;
     const uint8_t* legacy;
     const uint8_t* text;
     uint32_t ruleCount;
+    uint32_t slotCount;
     uint32_t variantCount;
     uint32_t regionCount;
     uint32_t legacyCount;
@@ -52,12 +55,15 @@ static bool ReadAliases(DataSpan span, Aliases* out)
     uint64_t regions = mlocLoad32(span.bytes + 12);
     uint64_t legacy = mlocLoad32(span.bytes + 16);
     uint64_t text = mlocLoad32(span.bytes + 20);
+    uint64_t slots = mlocLoad32(span.bytes + 24);
     uint64_t keysAt = aliasHeaderSize + rules * aliasRuleSize;
-    uint64_t variantsAt = (keysAt + rules * 6 + 7) / 8 * 8;
+    uint64_t slotsAt = keysAt + rules * 6;
+    uint64_t variantsAt = (slotsAt + slots * 2 + 7) / 8 * 8;
     uint64_t regionsAt = variantsAt + variants * 8;
     uint64_t legacyAt = regionsAt + regions * 2;
     uint64_t textAt = legacyAt + legacy * aliasLegacySize;
-    if (keys != rules || rules > 0xFFFF || variants > 0xFFFF || textAt + text != span.size)
+    if (keys != rules || rules > 0xFFFF || variants > 0xFFFF || slots == 0 || slots > 65536 ||
+        (slots & (slots - 1)) != 0 || textAt + text != span.size)
     {
         return false;
     }
@@ -65,11 +71,13 @@ static bool ReadAliases(DataSpan span, Aliases* out)
         .rules = span.bytes + aliasHeaderSize,
         .keys = span.bytes + keysAt,
         .keyRules = span.bytes + keysAt + rules * 4,
+        .slots = span.bytes + slotsAt,
         .variants = span.bytes + variantsAt,
         .regions = span.bytes + regionsAt,
         .legacy = span.bytes + legacyAt,
         .text = span.bytes + textAt,
         .ruleCount = (uint32_t)rules,
+        .slotCount = (uint32_t)slots,
         .variantCount = (uint32_t)variants,
         .regionCount = (uint32_t)regions,
         .legacyCount = (uint32_t)legacy,
@@ -184,6 +192,34 @@ static bool ValidRule(const Aliases* aliases, const Rule* rule)
            (uint64_t)rule->regionStart + rule->regionCount <= aliases->regionCount;
 }
 
+// Orders texts by their bytes, a prefix first, as the generator sorts
+// the legacy tags.
+static int CompareText(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
+{
+    // A loop rather than memcmp: legacy tags are a dozen bytes, fewer
+    // than a call to the library takes to start.
+    size_t n = aLength < bLength ? aLength : bLength;
+    for (size_t i = 0; i < n; i++)
+    {
+        if (a[i] != b[i])
+        {
+            return a[i] < b[i] ? -1 : 1;
+        }
+    }
+    return aLength < bLength ? -1 : aLength > bLength;
+}
+
+// Whether two legacy entries, whose texts are in bounds, are in order.
+static bool LegacyBefore(const Aliases* aliases, const uint8_t* a, const uint8_t* b)
+{
+    uint32_t aAt = mlocLoad16(a);
+    uint32_t bAt = mlocLoad16(b);
+    uint32_t aLength = mlocLoad16(a + 2);
+    uint32_t bLength = mlocLoad16(b + 2);
+    return aAt + aLength <= aliases->textSize && bAt + bLength <= aliases->textSize &&
+           CompareText(aliases->text + aAt, aLength, aliases->text + bAt, bLength) < 0;
+}
+
 static bool ValidTables(const Aliases* aliases)
 {
     for (uint32_t i = 0; i < aliases->variantCount; i++)
@@ -214,6 +250,10 @@ static bool ValidTables(const Aliases* aliases)
     for (uint32_t i = 0; i < aliases->legacyCount; i++)
     {
         const uint8_t* entry = aliases->legacy + (size_t)i * aliasLegacySize;
+        if (i > 0 && !LegacyBefore(aliases, entry - aliasLegacySize, entry))
+        {
+            return false;
+        }
         uint32_t typeLength = mlocLoad16(entry + 2);
         uint32_t replacementLength = mlocLoad16(entry + 6);
         if ((uint32_t)mlocLoad16(entry) + typeLength > aliases->textSize ||
@@ -227,11 +267,74 @@ static bool ValidTables(const Aliases* aliases)
     return true;
 }
 
+static uint32_t KeyAt(const Aliases* aliases, uint32_t index)
+{
+    return mlocLoad32(aliases->keys + (size_t)index * 4);
+}
+
+// The first index of a key, or ruleCount: the slots' probe, which a 0
+// ends (validation finds one).
+static uint32_t KeyStart(const Aliases* aliases, uint32_t key)
+{
+    uint32_t mask = aliases->slotCount - 1;
+    for (uint32_t at = mlocAliasSlot(key, aliases->slotCount);; at = (at + 1) & mask)
+    {
+        uint32_t slot = mlocLoad16(aliases->slots + (size_t)at * 2);
+        if (slot == 0)
+        {
+            return aliases->ruleCount;
+        }
+        if (KeyAt(aliases, slot - 1) == key)
+        {
+            return slot - 1;
+        }
+    }
+}
+
+// Whether the slots name each key's first index once and nothing else,
+// with a 0 to end every probe.
+static bool ValidSlots(const Aliases* aliases)
+{
+    uint32_t used = 0;
+    for (uint32_t at = 0; at < aliases->slotCount; at++)
+    {
+        uint32_t slot = mlocLoad16(aliases->slots + (size_t)at * 2);
+        if (slot == 0)
+        {
+            continue;
+        }
+        if (slot > aliases->ruleCount ||
+            (slot > 1 && KeyAt(aliases, slot - 2) == KeyAt(aliases, slot - 1)))
+        {
+            return false;
+        }
+        used++;
+    }
+    if (used == aliases->slotCount)
+    {
+        return false;
+    }
+    uint32_t starts = 0;
+    for (uint32_t i = 0; i < aliases->ruleCount; i++)
+    {
+        if (i > 0 && KeyAt(aliases, i - 1) == KeyAt(aliases, i))
+        {
+            continue;
+        }
+        if (KeyStart(aliases, KeyAt(aliases, i)) != i)
+        {
+            return false;
+        }
+        starts++;
+    }
+    return starts == used;
+}
+
 bool mlocValidAliases(const DataView* view, DataSpan payload)
 {
     (void)view;
     Aliases aliases;
-    if (!ReadAliases(payload, &aliases) || mlocLoad64(payload.bytes + 24) != 0 ||
+    if (!ReadAliases(payload, &aliases) || mlocLoad32(payload.bytes + 28) != 0 ||
         !ValidTables(&aliases))
     {
         return false;
@@ -240,7 +343,7 @@ bool mlocValidAliases(const DataView* view, DataSpan payload)
     for (uint32_t i = 0; i < aliases.ruleCount; i++)
     {
         Rule rule = ReadRule(&aliases, i);
-        uint32_t key = mlocLoad32(aliases.keys + (size_t)i * 4);
+        uint32_t key = KeyAt(&aliases, i);
         uint32_t keyRule = mlocLoad16(aliases.keyRules + (size_t)i * 2);
         uint64_t sortKey = (uint64_t)key << 16 | keyRule;
         if (!ValidRule(&aliases, &rule) || keyRule >= aliases.ruleCount ||
@@ -255,7 +358,7 @@ bool mlocValidAliases(const DataView* view, DataSpan payload)
         }
         previous = sortKey;
     }
-    return true;
+    return ValidSlots(&aliases);
 }
 
 // A language id being canonicalized: packed fields (a language longer
@@ -315,17 +418,21 @@ static bool HasVariant(const Ident* ident, uint32_t id)
     return false;
 }
 
-static bool Matches(const Ident* ident, const Rule* rule)
+// Whether a rule's type matches, read from its bytes: most rules a key
+// files are tried and fail, so the rest of the rule is not unpacked.
+static bool MatchesAt(const Ident* ident, const uint8_t* r)
 {
-    if ((rule->typeLanguage != 0 && rule->typeLanguage != ident->language) ||
-        (rule->typeScript != 0 && rule->typeScript != ident->script) ||
-        (rule->typeRegion != 0 && rule->typeRegion != ident->region))
+    uint32_t language = mlocLoad16(r + 8);
+    uint32_t script = mlocLoad32(r);
+    uint32_t region = mlocLoad16(r + 10);
+    if ((language != 0 && language != ident->language) ||
+        (script != 0 && script != ident->script) || (region != 0 && region != ident->region))
     {
         return false;
     }
-    for (uint32_t v = 0; v < rule->typeVariantCount; v++)
+    for (uint32_t v = 0; v < (r[27] & 15u); v++)
     {
-        if (!HasVariant(ident, rule->typeVariants[v]))
+        if (!HasVariant(ident, mlocLoad16(r + 12 + 2 * v)))
         {
             return false;
         }
@@ -336,26 +443,11 @@ static bool Matches(const Ident* ident, const Rule* rule)
 // The first rule filed under key that matches, or ruleCount.
 static uint32_t FirstUnder(const Aliases* aliases, uint32_t key, const Ident* ident)
 {
-    uint32_t low = 0;
-    uint32_t high = aliases->ruleCount;
-    while (low < high)
-    {
-        uint32_t middle = low + (high - low) / 2;
-        if (mlocLoad32(aliases->keys + (size_t)middle * 4) < key)
-        {
-            low = middle + 1;
-        }
-        else
-        {
-            high = middle;
-        }
-    }
-    for (uint32_t i = low;
-         i < aliases->ruleCount && mlocLoad32(aliases->keys + (size_t)i * 4) == key; i++)
+    for (uint32_t i = KeyStart(aliases, key); i < aliases->ruleCount && KeyAt(aliases, i) == key;
+         i++)
     {
         uint32_t index = mlocLoad16(aliases->keyRules + (size_t)i * 2);
-        Rule rule = ReadRule(aliases, index);
-        if (Matches(ident, &rule))
+        if (MatchesAt(ident, aliases->rules + (size_t)index * aliasRuleSize))
         {
             return index;
         }
@@ -429,29 +521,18 @@ static uint32_t PickRegion(const mlocDataSet* data, const Aliases* aliases, cons
                            const Ident* ident)
 {
     uint32_t first = mlocLoad16(aliases->regions + (size_t)rule->regionStart * 2);
-    mlocLocale probe = {0};
-    if (ident->longLanguage)
-    {
-        memcpy(probe.language, ident->languageText, 8);
-    }
-    else if (ident->language != 0)
-    {
-        mlocUnpackLanguage(ident->language, probe.language);
-    }
-    else
-    {
-        memcpy(probe.language, "und", 3);
-    }
-    if (ident->script != 0)
-    {
-        mlocUnpackScript(ident->script, probe.script);
-    }
-    mlocLocale likely;
-    if (mlocMaximizeLocale(data, &probe, &likely) != mloc_success)
+    Likely likely;
+    if (ident->longLanguage || !mlocOpenLikely(data, &likely))
     {
         return first;
     }
-    uint32_t region = mlocPackRegion(likely.region, likely.region[2] != '\0' ? 3 : 2);
+    uint32_t language = ident->language != 0 ? ident->language : mlocPackLanguage("und", 3);
+    uint64_t value = 0;
+    if (!mlocLookupLikely(&likely, language, ident->script, 0, &value))
+    {
+        return first;
+    }
+    uint32_t region = (uint32_t)value & 0x7FF;
     for (uint32_t i = 0; i < rule->regionCount; i++)
     {
         if (mlocLoad16(aliases->regions + (size_t)(rule->regionStart + i) * 2) == region)
@@ -542,7 +623,12 @@ static size_t FieldLength(const char* field, size_t size)
 // *restOut (or are empty).
 static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ident, size_t* restOut)
 {
-    *ident = (Ident){0};
+    // The variant arrays are filled up to variantCount only, so that the
+    // ident is not cleared whole on every call.
+    ident->language = 0;
+    ident->longLanguage = false;
+    memset(ident->languageText, 0, sizeof(ident->languageText));
+    ident->variantCount = 0;
     size_t languageLength = FieldLength(locale->language, 8);
     if (memcmp(locale->language, "und\0", 4) != 0)
     {
@@ -584,30 +670,38 @@ static int CompareNames(const char* a, const char* b)
     return strcmp(a, b);
 }
 
-// Writes an ident back with the extensions kept from the old tail.
-static bool FromIdent(Ident* ident, const mlocLocale* old, size_t rest, mlocLocale* locale)
+// Writes an ident's language, script and region into a locale.
+static void WriteFields(const Ident* ident, mlocLocale* locale)
 {
-    mlocLocale result = {0};
+    memset(locale->language, 0, sizeof(locale->language));
+    memset(locale->script, 0, sizeof(locale->script));
+    memset(locale->region, 0, sizeof(locale->region));
     if (ident->longLanguage)
     {
-        memcpy(result.language, ident->languageText, 8);
+        memcpy(locale->language, ident->languageText, 8);
     }
     else if (ident->language != 0)
     {
-        mlocUnpackLanguage(ident->language, result.language);
+        mlocUnpackLanguage(ident->language, locale->language);
     }
     else
     {
-        memcpy(result.language, "und", 3);
+        memcpy(locale->language, "und", 3);
     }
     if (ident->script != 0)
     {
-        mlocUnpackScript(ident->script, result.script);
+        mlocUnpackScript(ident->script, locale->script);
     }
     if (ident->region != 0)
     {
-        mlocUnpackRegion(ident->region, result.region);
+        mlocUnpackRegion(ident->region, locale->region);
     }
+}
+
+// Writes an ident's variants, sorted, into a locale's tail before the
+// extensions, which start at rest.
+static bool WriteVariants(Ident* ident, size_t rest, mlocLocale* locale)
+{
     for (int i = 1; i < ident->variantCount; i++)
     {
         for (int k = i; k > 0 && CompareNames(ident->variants[k - 1], ident->variants[k]) > 0; k--)
@@ -618,36 +712,36 @@ static bool FromIdent(Ident* ident, const mlocLocale* old, size_t rest, mlocLoca
             memcpy(ident->variants[k - 1], swap, 9);
         }
     }
+    char tail[sizeof(locale->tail)] = {0};
     size_t at = 0;
-    size_t capacity = sizeof(result.tail);
     for (int v = 0; v < ident->variantCount; v++)
     {
         size_t length = strlen(ident->variants[v]);
-        if (at + (at > 0) + length > capacity)
+        if (at + (at > 0) + length > sizeof(tail))
         {
             return false;
         }
         if (at > 0)
         {
-            result.tail[at++] = '-';
+            tail[at++] = '-';
         }
-        memcpy(result.tail + at, ident->variants[v], length);
+        memcpy(tail + at, ident->variants[v], length);
         at += length;
     }
-    size_t restLength = FieldLength(old->tail, sizeof(old->tail)) - rest;
+    size_t restLength = FieldLength(locale->tail, sizeof(locale->tail)) - rest;
     if (restLength > 0)
     {
-        if (at + (at > 0) + restLength > capacity)
+        if (at + (at > 0) + restLength > sizeof(tail))
         {
             return false;
         }
         if (at > 0)
         {
-            result.tail[at++] = '-';
+            tail[at++] = '-';
         }
-        memcpy(result.tail + at, old->tail + rest, restLength);
+        memcpy(tail + at, locale->tail + rest, restLength);
     }
-    *locale = result;
+    memcpy(locale->tail, tail, sizeof(tail));
     return true;
 }
 
@@ -684,9 +778,14 @@ static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, ml
         }
         applied |= one;
     }
-    if (applied != 0 && !FromIdent(&ident, locale, rest, locale))
+    // The tail is written again only when the variants changed.
+    if ((applied & mloc_changedVariants) != 0 && !WriteVariants(&ident, rest, locale))
     {
         return mloc_errorCapacity;
+    }
+    if (applied != 0)
+    {
+        WriteFields(&ident, locale);
     }
     *changes |= applied;
     return mloc_success;
@@ -724,14 +823,26 @@ static bool Fold(const char* text, size_t length, char* out)
 static const char* Legacy(const Aliases* aliases, const char* folded, size_t length,
                           size_t* replacementLength)
 {
-    for (uint32_t i = 0; i < aliases->legacyCount; i++)
+    uint32_t low = 0;
+    uint32_t high = aliases->legacyCount;
+    while (low < high)
     {
-        const uint8_t* entry = aliases->legacy + (size_t)i * aliasLegacySize;
-        if (mlocLoad16(entry + 2) == length &&
-            memcmp(aliases->text + mlocLoad16(entry), folded, length) == 0)
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* entry = aliases->legacy + (size_t)middle * aliasLegacySize;
+        int order = CompareText(aliases->text + mlocLoad16(entry), mlocLoad16(entry + 2),
+                                (const uint8_t*)folded, length);
+        if (order == 0)
         {
             *replacementLength = mlocLoad16(entry + 6);
             return (const char*)aliases->text + mlocLoad16(entry + 4);
+        }
+        if (order < 0)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
         }
     }
     return nullptr;
@@ -751,12 +862,14 @@ static bool IsAlphaRun(const char* text, size_t length)
 
 // Rewrites a BCP 47 tag before it is parsed: a legacy tag replaced, an
 // extlang removed, "und-" put before a tag that begins with "x" or a
-// script. Writes the text to parse into out and returns its length;
-// *shiftOut is what to add to an offset in it to point into the text
-// given (or 0 when the text was replaced).
+// script. Points *textOut at the text to parse, out or the folded text
+// when nothing is rewritten, and returns its length; *shiftOut is what
+// to add to an offset in it to point into the text given (or 0 when the
+// text was replaced).
 static size_t Prepare(const Aliases* aliases, const char* folded, size_t length, char* out,
-                      ptrdiff_t* shiftOut, uint32_t* changes)
+                      const char** textOut, ptrdiff_t* shiftOut, uint32_t* changes)
 {
+    *textOut = out;
     *shiftOut = 0;
     size_t replacementLength = 0;
     const char* legacy = Legacy(aliases, folded, length, &replacementLength);
@@ -790,7 +903,7 @@ static size_t Prepare(const Aliases* aliases, const char* folded, size_t length,
         *shiftOut = -4;
         return length + 4;
     }
-    memcpy(out, folded, length);
+    *textOut = folded;
     return length;
 }
 
@@ -816,13 +929,14 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
     }
     uint32_t changes = 0;
     ptrdiff_t shift = 0;
-    size_t preparedLength = Prepare(&aliases, folded, length, prepared, &shift, &changes);
-    if (preparedLength >= MAX_TEXT)
+    const char* toParse = nullptr;
+    size_t parseLength = Prepare(&aliases, folded, length, prepared, &toParse, &shift, &changes);
+    if (parseLength >= MAX_TEXT)
     {
         return (mlocTextResult){mloc_errorCapacity, length};
     }
     mlocLocale locale;
-    mlocTextResult result = mlocParseLocale(prepared, preparedLength, &locale);
+    mlocTextResult result = mlocParseLocale(toParse, parseLength, &locale);
     if (result.status != mloc_success)
     {
         ptrdiff_t offset = (ptrdiff_t)result.offset + shift;

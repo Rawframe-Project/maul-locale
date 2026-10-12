@@ -188,6 +188,10 @@ static int Compare(const Parser* p, int a, int b)
 // Returns the index of a subtag equal to an earlier one, or -1.
 static int SortGroups(Parser* p, int first, int groupCount, const int* starts, int end)
 {
+    if (groupCount < 2)
+    {
+        return -1;
+    }
     int sorted[MAX_SUBTAGS];
     int lengths[MAX_SUBTAGS];
     int keys[MAX_SUBTAGS];
@@ -527,7 +531,10 @@ mlocTextResult mlocParseLocale(const char* text, size_t length, mlocLocale* loca
     {
         return result;
     }
-    mlocLocale locale = {0};
+    // Copied from a zero value rather than cleared: compilers clear 128
+    // bytes with a string store whose start costs more than the copy.
+    static const mlocLocale s_none;
+    mlocLocale locale = s_none;
     int s = LanguageId(&p, &locale);
     if (s < 0)
     {

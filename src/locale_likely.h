@@ -31,6 +31,12 @@ bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut);
 bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
                     uint64_t* valueOut);
 
+// The table's answer for a packed language ("und" packed, not 0),
+// script and region (0, Zzzz or ZZ for none) as maximizing finds it:
+// the full tag, packed.
+bool mlocLookupLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
+                      uint64_t* valueOut);
+
 // Whether an entry has the language and, unless script is 0, the
 // script.
 bool mlocHasLikely(const Likely* likely, uint32_t language, uint32_t script);

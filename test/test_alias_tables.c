@@ -31,6 +31,8 @@ typedef struct Layout
     uint32_t legacy;
     size_t keysAt;
     size_t keyRulesAt;
+    uint32_t slots;
+    size_t slotsAt;
     size_t variantsAt;
     size_t regionsAt;
     size_t legacyAt;
@@ -101,14 +103,22 @@ static void ReadLayout(void)
     s_layout.legacy = mlocLoad32(b + 16);
     s_layout.keysAt = aliasHeaderSize + (size_t)s_layout.rules * aliasRuleSize;
     s_layout.keyRulesAt = s_layout.keysAt + (size_t)s_layout.rules * 4;
-    s_layout.variantsAt = (s_layout.keysAt + (size_t)s_layout.rules * 6 + 7) / 8 * 8;
+    s_layout.slots = mlocLoad32(b + 24);
+    s_layout.slotsAt = s_layout.keyRulesAt + (size_t)s_layout.rules * 2;
+    s_layout.variantsAt = (s_layout.slotsAt + (size_t)s_layout.slots * 2 + 7) / 8 * 8;
     s_layout.regionsAt = s_layout.variantsAt + (size_t)s_layout.variants * 8;
     s_layout.legacyAt = s_layout.regionsAt + (size_t)s_layout.regions * 2;
 }
 
 static void TestHeader(void)
 {
-    CHECK(!ValidWith(24, 1, 8), "the reserved word is zero");
+    CHECK(!ValidWith(28, 1, 4), "the reserved word is zero");
+    // One slot fewer leaves the padded size as it is, so only the count
+    // being no power of two refuses it.
+    CHECK((s_layout.slotsAt + s_layout.slots * 2 + 7) / 8 ==
+              (s_layout.slotsAt + s_layout.slots * 2 + 5) / 8,
+          "one slot fewer keeps the size");
+    CHECK(!ValidWith(24, s_layout.slots - 1, 4), "a slot count that is no power of two");
     CHECK(!ValidWith(16, s_layout.legacy + 1, 4), "the counts give the size");
     CHECK(!ValidWith(4, s_layout.rules - 1, 4), "one key per rule");
     CHECK(!mlocValidAliases(nullptr, (DataSpan){s_copy, 16}), "shorter than the header");
@@ -148,6 +158,72 @@ static void TestIndex(void)
     CHECK(!ValidWith(s_layout.keyRulesAt, s_layout.rules, 2), "a key's rule past the rules");
     uint32_t second = mlocLoad16(s_builtin.bytes + s_layout.keyRulesAt + 2);
     CHECK(!ValidWith(s_layout.keyRulesAt, second, 2), "a rule filed twice");
+}
+
+static uint32_t KeyAt(uint32_t index)
+{
+    return mlocLoad32(s_builtin.bytes + s_layout.keysAt + (size_t)index * 4);
+}
+
+// The offset of the slot that names a key's first index.
+static size_t SlotOf(uint32_t index)
+{
+    uint32_t at = mlocAliasSlot(KeyAt(index), s_layout.slots);
+    while (mlocLoad16(s_builtin.bytes + s_layout.slotsAt + (size_t)at * 2) != index + 1)
+    {
+        at = (at + 1) & (s_layout.slots - 1);
+    }
+    return s_layout.slotsAt + (size_t)at * 2;
+}
+
+static size_t EmptySlot(void)
+{
+    size_t at = s_layout.slotsAt;
+    while (mlocLoad16(s_builtin.bytes + at) != 0)
+    {
+        at += 2;
+    }
+    return at;
+}
+
+// A table of one rule, iw to he, with slotCount slots: every slot
+// naming it, or only its own.
+static bool ValidOneRule(uint32_t slotCount, bool everySlot)
+{
+    uint8_t table[aliasHeaderSize + aliasRuleSize + 16] = {0};
+    Put(table, 1, 4);
+    Put(table + 4, 1, 4);
+    Put(table + 24, slotCount, 4);
+    uint8_t* rule = table + aliasHeaderSize;
+    uint32_t iw = mlocPackLanguage("iw", 2);
+    Put(rule + 8, iw, 2);
+    Put(rule + 16, mlocPackLanguage("he", 2), 2);
+    uint8_t* key = rule + aliasRuleSize;
+    Put(key, iw, 4);
+    for (uint32_t i = 0; i < slotCount; i++)
+    {
+        if (everySlot || i == mlocAliasSlot(iw, slotCount))
+        {
+            Put(key + 6 + i * 2, 1, 2);
+        }
+    }
+    uint32_t size = (aliasHeaderSize + aliasRuleSize + 6 + slotCount * 2 + 7) / 8 * 8;
+    return mlocValidAliases(nullptr, (DataSpan){table, size});
+}
+
+static void TestSlots(void)
+{
+    uint32_t run = 0;
+    while (KeyAt(run) != KeyAt(run + 1))
+    {
+        run++;
+    }
+    CHECK(!ValidWith(SlotOf(run), run + 2, 2), "a slot that names no key's first index");
+    CHECK(!ValidWith(EmptySlot(), s_layout.rules + 1, 2), "a slot past the keys");
+    CHECK(!ValidWith(EmptySlot(), 1, 2), "a key in two slots");
+    CHECK(!ValidWith(SlotOf(0), 0, 2), "a key that no slot names");
+    CHECK(ValidOneRule(2, false), "a table of one rule");
+    CHECK(!ValidOneRule(1, true), "slots with no 0 to end a probe");
 }
 
 static void TestTables(void)
@@ -286,6 +362,7 @@ int main(void)
     TestHeader();
     TestRules();
     TestIndex();
+    TestSlots();
     TestTables();
     TestEndlessRules();
     TestExtensionTable(&data);

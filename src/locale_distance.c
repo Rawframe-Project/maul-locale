@@ -443,11 +443,11 @@ static bool Reverse(const Matcher* m, const Wanted* w, const Lsr* s, const mlocL
     oneWay.bothWays = false;
     Wanted reversed;
     mlocWant(&oneWay, s, sLocale, &reversed);
-    // The list is the desired LSR alone; its locale is found by its index
-    // from the start of the desired ones.
+    // The list is the desired LSR alone, its locale the only one.
+    Lsr alone = w->lsr;
+    alone.index = 0;
     uint32_t shifted = 0;
-    return mlocNearest(&oneWay, &reversed, &w->lsr, 1, w->locale - w->lsr.index, shiftedThreshold,
-                       &shifted) >= 0;
+    return mlocNearest(&oneWay, &reversed, &alone, 1, w->locale, shiftedThreshold, &shifted) >= 0;
 }
 
 // ICU's compareLikely: whether a candidate as near as the best has its
@@ -477,6 +477,26 @@ static Lsr LsrAt(const void* lsrs, uint32_t i)
     return lsr;
 }
 
+// Whether an entry read from the caller's list holds: only its index
+// and region reach into arrays.
+static bool ValidLsr(const Lsr* s, uint32_t count)
+{
+    return s->index < count && s->kind <= lsrPrivate && s->flags <= lsrExplicit &&
+           s->region < matchRegionSlots;
+}
+
+// Whether a supported LSR is surely past the limit: most pairs are of
+// two languages the table has no pair for, at the default language
+// distance, which most limits pass.
+static bool SurelyFar(const Matcher* matcher, const Wanted* wanted, const Lsr* s, uint32_t limit)
+{
+    bool star = wanted->end == wanted->start || s->packedLanguage == 0;
+    bool other = s->kind != wanted->lsr.kind ||
+                 (s->kind != lsrPrivate && s->language != wanted->lsr.language);
+    uint32_t least = matcher->table->languageDistance >> (matcher->favorScript ? 2 : 0);
+    return star && other && least > limit;
+}
+
 int32_t mlocNearest(const Matcher* matcher, const Wanted* wanted, const void* lsrs, uint32_t count,
                     const mlocLocale* locales, uint32_t shiftedThreshold, uint32_t* shiftedOut)
 {
@@ -484,8 +504,16 @@ int32_t mlocNearest(const Matcher* matcher, const Wanted* wanted, const void* ls
     for (uint32_t i = 0; i < count; i++)
     {
         Lsr s = LsrAt(lsrs, i);
+        if (!ValidLsr(&s, count))
+        {
+            return mlocNearestInvalid;
+        }
         const mlocLocale* sLocale = locales + s.index;
         uint32_t limit = (shiftedThreshold + (1u << distanceShift) - 1) >> distanceShift;
+        if (SurelyFar(matcher, wanted, &s, limit))
+        {
+            continue;
+        }
         uint32_t distance = Distance(matcher, wanted, &s, sLocale, limit);
         if (distance > limit)
         {

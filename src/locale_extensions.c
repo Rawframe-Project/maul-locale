@@ -94,11 +94,20 @@ static bool ValidValue(const uint8_t* text, uint32_t length, uint32_t least)
     return true;
 }
 
-// Orders texts by their bytes, a prefix first.
+// Orders texts by their bytes, a prefix first. A loop rather than
+// memcmp: keys and values are a few bytes, fewer than a call to the
+// library takes to start.
 static int Compare(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
 {
-    int order = memcmp(a, b, aLength < bLength ? aLength : bLength);
-    return order != 0 ? order : (aLength > bLength) - (aLength < bLength);
+    uint32_t n = aLength < bLength ? aLength : bLength;
+    for (uint32_t i = 0; i < n; i++)
+    {
+        if (a[i] != b[i])
+        {
+            return a[i] < b[i] ? -1 : 1;
+        }
+    }
+    return (aLength > bLength) - (aLength < bLength);
 }
 
 // An entry of either list: its key (empty for a subdivision), from and
@@ -396,9 +405,37 @@ static void CopyExtension(const Subtags* s, int* i, bool privateUse, Writer* w)
     }
 }
 
+// Whether the tail has a u or t extension, the only ones this changes.
+static bool HasAliasedExtension(const char* tail, size_t size)
+{
+    for (size_t at = 0; at < size && tail[at] != '\0';)
+    {
+        size_t end = at;
+        while (end < size && tail[end] != '\0' && tail[end] != '-')
+        {
+            end++;
+        }
+        if (end - at == 1 && (tail[at] == 'u' || tail[at] == 't'))
+        {
+            return true;
+        }
+        if (end - at == 1 && tail[at] == 'x')
+        {
+            // Private use runs to the end; its subtags are no singletons.
+            return false;
+        }
+        at = end + 1;
+    }
+    return false;
+}
+
 mlocResult mlocCanonicalizeExtensions(const mlocDataSet* data, mlocLocale* locale,
                                       uint32_t* changes)
 {
+    if (!HasAliasedExtension(locale->tail, sizeof(locale->tail)))
+    {
+        return mloc_success;
+    }
     DataSpan span;
     Extensions x;
     if (!mlocFindDataSetUnit(data, kindLocaleExtensionAliases, nullptr, 0, &span) ||

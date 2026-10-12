@@ -238,6 +238,14 @@ bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script, ui
     return FindGeneral(likely, mlocPackTag(language, script, region), valueOut);
 }
 
+bool mlocLookupLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
+                      uint64_t* valueOut)
+{
+    script = script == mlocPackScript("Zzzz", 4) ? 0 : script;
+    region = region == mlocPackRegion("ZZ", 2) ? 0 : region;
+    return language != 0 && Lookup(likely, language, script, region, valueOut);
+}
+
 bool mlocHasLikely(const Likely* likely, uint32_t language, uint32_t script)
 {
     uint64_t value = 0;
@@ -291,13 +299,6 @@ mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
     return Maximize(&likely, locale, localeOut);
 }
 
-// Whether two locales have the same language, script and region.
-static bool SameIdentity(const mlocLocale* a, const mlocLocale* b)
-{
-    return memcmp(a->language, b->language, 8) == 0 && memcmp(a->script, b->script, 4) == 0 &&
-           memcmp(a->region, b->region, 4) == 0;
-}
-
 mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocFavor favor,
                               mlocLocale* localeOut)
 {
@@ -318,12 +319,25 @@ mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale,
         return result;
     }
     // The trials: the language alone, then with the favored subtag, then
-    // with the other.
+    // with the other. Each is maximized on the packed fields; a trial
+    // never has both a script and a region, so it is always looked up.
+    uint32_t language = mlocPackLanguage(max.language, FieldLength(max.language, 8));
+    uint32_t script = mlocPackScript(max.script, FieldLength(max.script, 4));
+    uint32_t region = mlocPackRegion(max.region, FieldLength(max.region, 4));
     static const bool s_keepScript[2][3] = {{false, false, true}, {false, true, false}};
     for (int t = 0; t < 3; t++)
     {
         bool keepScript = s_keepScript[favor][t];
         bool keepRegion = t > 0 && !keepScript;
+        uint32_t trialScript = keepScript ? script : 0;
+        uint32_t trialRegion = keepRegion ? region : 0;
+        uint64_t value = 0;
+        if (!mlocLookupLikely(&likely, language, trialScript, trialRegion, &value) ||
+            (trialScript == 0 && ((uint32_t)(value >> 11) & 0xFFFFF) != script) ||
+            (trialRegion == 0 && ((uint32_t)value & 0x7FF) != region))
+        {
+            continue;
+        }
         mlocLocale trial = {0};
         memcpy(trial.language, max.language, 8);
         if (keepScript)
@@ -334,13 +348,9 @@ mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale,
         {
             memcpy(trial.region, max.region, 4);
         }
-        mlocLocale back;
-        if (Maximize(&likely, &trial, &back) == mloc_success && SameIdentity(&back, &max))
-        {
-            memcpy(trial.tail, max.tail, sizeof(trial.tail));
-            *localeOut = trial;
-            return mloc_success;
-        }
+        memcpy(trial.tail, max.tail, sizeof(trial.tail));
+        *localeOut = trial;
+        return mloc_success;
     }
     *localeOut = max;
     return mloc_success;

@@ -101,7 +101,8 @@ extern "C"
     /// @return status mloc_success; mloc_errorSyntax with an offset into the
     ///         text as mlocParseLocale; mloc_errorCapacity for a text of 256
     ///         bytes or more, or a result that does not fit; mloc_errorNotFound
-    ///         for data without the aliases; mloc_errorData for aliases that
+    ///         for data without the aliases (or, for a tag with a u or t
+    ///         extension, the extension aliases); mloc_errorData for aliases that
     ///         never stop replacing, which only a crafted data file has;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -285,8 +286,9 @@ extern "C"
     /// @param matchOut      Receives the outcome; left unchanged on failure.
     /// @return mloc_success, also when nothing matches; mloc_errorNotFound
     ///         as mlocPrepareMatch; mloc_errorInvalid for a null pointer
-    ///         with a count, a count too large, an entry of another count,
-    ///         another flag or a threshold above 100.
+    ///         with a count, a count too large, another flag, a threshold
+    ///         above 100, or an entry the search reads that names no
+    ///         locale of the count (entries prepared for another list).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult

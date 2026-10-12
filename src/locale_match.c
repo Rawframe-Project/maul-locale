@@ -114,15 +114,6 @@ mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported
     return mloc_success;
 }
 
-// An entry mlocPrepareMatch could have made for count locales.
-static bool ValidEntry(const Lsr* lsr, size_t count)
-{
-    return lsr->index < count && lsr->kind <= lsrPrivate && lsr->flags <= lsrExplicit &&
-           (lsr->script == 0 || mlocValidPackedScript(lsr->script)) &&
-           (lsr->region == 0 || mlocValidPackedRegion(lsr->region)) &&
-           (lsr->packedLanguage == 0 || mlocValidPackedLanguage(lsr->packedLanguage));
-}
-
 static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
                            const mlocMatchEntry* entries, size_t count, const mlocLocale* desired,
                            size_t desiredCount, const mlocMatchOptions* options,
@@ -140,14 +131,6 @@ static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
          options->threshold > 100))
     {
         return false;
-    }
-    for (size_t i = 0; i < count; i++)
-    {
-        Lsr lsr = EntryAt(entries, i);
-        if (!ValidEntry(&lsr, count))
-        {
-            return false;
-        }
     }
     return true;
 }
@@ -186,6 +169,10 @@ mlocResult mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported
         uint32_t shifted = 0;
         int32_t at =
             mlocNearest(&matcher, &wanted, entries, (uint32_t)count, supported, best, &shifted);
+        if (at == mlocNearestInvalid)
+        {
+            return mloc_errorInvalid;
+        }
         if (at >= 0)
         {
             best = shifted;

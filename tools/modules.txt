@@ -10,9 +10,9 @@ locale_parse:
 kinds:
 locale_likely: bytes data_view kinds locale_tables
 locale_tables:
-locale_canonical: bytes data_view kinds locale_tables
+locale_canonical: bytes data_view kinds locale_likely locale_tables
 locale_extensions: bytes data_view kinds locale_canonical locale_tables
-locale_fallback: bytes data_view kinds locale_tables
+locale_fallback: bytes data_view kinds locale_likely locale_tables
 locale_lsr: bytes locale_likely locale_tables
 locale_distance: bytes data_view kinds locale_likely locale_lsr locale_tables
 locale_match: bytes locale_distance locale_likely locale_lsr locale_tables

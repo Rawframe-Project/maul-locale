@@ -50,6 +50,8 @@ generator and by the tests.
 ## Consequences
 
 Every lookup is a binary search over a small table and a pointer into
-caller memory. Resolved payloads cost more bytes than chains of
+caller memory, unless a table carries its own index where a search is
+hot: the alias rules' keys have a hash index (locale_tables.h), as a
+tag looks up each of its fields on every pass. Resolved payloads cost more bytes than chains of
 differences would; sharing identical payloads keeps that within the
 size budgets of mloc-0013, as ICU4X's data shows for the same choice.

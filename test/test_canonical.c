@@ -81,6 +81,10 @@ static void TestRegionChoice(void)
     CHECK(Gives("hy-SU", "hy-AM", mloc_changedRegion), "another language, another region");
     CHECK(Gives("en-SU", "en-RU", mloc_changedRegion), "the first region otherwise");
     CHECK(Gives("und-SU", "und-RU", mloc_changedRegion), "und");
+    CHECK(Gives("und-Armn-SU", "und-Armn-AM", mloc_changedRegion), "und with a script");
+    CHECK(Gives("hy-Zzzz-SU", "hy-Zzzz-AM", mloc_changedRegion), "Zzzz as no script");
+    CHECK(Gives("abcdefg-SU", "abcdefg-RU", mloc_changedRegion),
+          "the first for a language too long to look up");
     CHECK(Gives("sr-CS", "sr-RS", mloc_changedRegion), "Serbia and Montenegro");
     CHECK(Gives("az-Arab-SU", "az-Arab-RU", mloc_changedRegion),
           "the script counts: az-Arab is likely in IR, not one of them");
@@ -121,6 +125,9 @@ static void TestExtensions(void)
     CHECK(Gives("en-u-ca-gregory-a-foo-x-ms-imperial", "en-a-foo-u-ca-gregory-x-ms-imperial", 0),
           "other extensions and private use kept");
     CHECK(Gives("en-t-iw-k0-true", "en-t-he-k0-true", x), "a t value true stays");
+    CHECK(Gives("en-a-foo-u-ms-imperial", "en-a-foo-u-ms-uksystem", x),
+          "a u extension after another");
+    CHECK(Gives("en-a-foo-t-iw", "en-a-foo-t-he", x), "and a t extension");
     CHECK(Gives("en-u-ms-imperial-x-u-ms-imperial", "en-u-ms-uksystem-x-u-ms-imperial", x),
           "private use is not read as extensions");
     // A tail of 110 bytes grows past 112 when islamicc becomes
