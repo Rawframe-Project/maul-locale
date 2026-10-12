@@ -6,8 +6,8 @@
 // writes the same tag again. Canonicalizing on the compiled-in data
 // refuses within the text too, and a canonical tag canonicalizes to
 // itself, its fallback chain in every component ends at root, it
-// matches itself first, and its match among a few others is one of them
-// and combines with it.
+// matches itself first, its match among a few others is one of them and
+// combines with it, and it has regional preferences in range.
 
 #include "maul-locale/locale.h"
 
@@ -93,6 +93,11 @@ static void Canonicalize(const uint8_t* data, size_t size)
         Require(next == mloc_errorNotFound || next == mloc_errorCapacity);
     }
     Match(&set, &locale);
+    mlocLocalePreferences preferences;
+    Require(mlocGetLocalePreferences(&set, &locale, &preferences) == mloc_success &&
+            preferences.hourCycle <= mloc_hourFormatH24 && preferences.firstDay >= 1 &&
+            preferences.firstDay <= 7 && preferences.allowedHourCount >= 1 &&
+            preferences.allowedHourCount <= 6);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

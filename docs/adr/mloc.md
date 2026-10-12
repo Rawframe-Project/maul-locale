@@ -22,3 +22,4 @@ are listed in [README.md](README.md).
 | [mloc-0015](mloc-0015-locale-value-and-output.md) | The locale value, strict parsing and the output struct | Accepted |
 | [mloc-0016](mloc-0016-locale-fallback.md) | Locale keys and fallback per component | Accepted |
 | [mloc-0017](mloc-0017-language-matching.md) | Language matching as ICU's LocaleMatcher does it | Accepted |
+| [mloc-0018](mloc-0018-regional-preferences.md) | Regional preferences from one region, with the keys on top | Accepted |

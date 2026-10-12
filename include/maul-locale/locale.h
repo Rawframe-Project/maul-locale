@@ -313,6 +313,82 @@ extern "C"
                                                         const mlocLocale* supported,
                                                         mlocLocale* localeOut);
 
+    // An hour format of CLDR's time data: the four hour cycles (the
+    // pattern letters K, h, H and k), then 12 hours with a day period (hb,
+    // "noon") or a flexible one (hB, "in the evening").
+    typedef uint8_t mlocHourFormat;
+    enum
+    {
+        mloc_hourFormatH11 = 0,
+        mloc_hourFormatH12 = 1,
+        mloc_hourFormatH23 = 2,
+        mloc_hourFormatH24 = 3,
+        mloc_hourFormatH12DayPeriod = 4,
+        mloc_hourFormatH12FlexibleDayPeriod = 5,
+    };
+
+    typedef uint8_t mlocMeasurementSystem;
+    enum
+    {
+        mloc_measurementMetric = 0,
+        // Feet and pints of 16 ounces.
+        mloc_measurementUs = 1,
+        // Metric with feet and pints of 20 ounces.
+        mloc_measurementUk = 2,
+    };
+
+    typedef uint8_t mlocPaperSize;
+    enum
+    {
+        mloc_paperA4 = 0,
+        mloc_paperUsLetter = 1,
+    };
+
+    // A locale's regional preferences.
+    typedef struct mlocLocalePreferences
+    {
+        // The region they are from, NUL-padded: "001" when the locale
+        // gives none and has no likely one.
+        char region[4];
+        // One of the four hour cycles.
+        mlocHourFormat hourCycle;
+        uint8_t allowedHourCount;
+        // The formats the region accepts, the most usual first.
+        mlocHourFormat allowedHours[6];
+        // Days are numbered from Monday, 1, to Sunday, 7.
+        uint8_t firstDay;
+        // The days of a year's first week that must fall in the year.
+        uint8_t minimalDays;
+        uint8_t weekendStart;
+        uint8_t weekendEnd;
+        mlocMeasurementSystem measurementSystem;
+        mlocPaperSize paperSize;
+    } mlocLocalePreferences;
+
+    /// Returns a locale's regional preferences (UTS #35), the region's
+    /// values from CLDR's supplemental data. The region is the -u-rg
+    /// key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's
+    /// region, else the -u-sd key's, else the likely one ("en" takes the
+    /// US's), else 001; a region without data takes 001's. Keys override:
+    /// -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed
+    /// formats list first), -u-fw the first day, -u-ms the measurement
+    /// system; -u-ca-iso8601 begins weeks on Monday with four days in the
+    /// first unless -u-fw or -u-rg give the first day. The hour data is
+    /// looked up for the language in the region first (ca-ES has its own).
+    /// A key with a value it does not take is left out.
+    ///
+    /// @param data          The data with the preferences and likely
+    ///                      subtags.
+    /// @param locale        The locale, canonicalized.
+    /// @param preferencesOut Receives the preferences; left unchanged on
+    ///                      failure.
+    /// @return mloc_success; mloc_errorNotFound for data without the
+    ///         preferences; mloc_errorInvalid for a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences(
+        const mlocDataSet* data, const mlocLocale* locale, mlocLocalePreferences* preferencesOut);
+
 #ifdef __cplusplus
 }
 #endif

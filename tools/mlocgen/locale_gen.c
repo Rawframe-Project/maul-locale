@@ -11,6 +11,7 @@
 #include "locale_tables.h"
 #include "match_gen.h"
 #include "parents_gen.h"
+#include "prefs_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -196,5 +197,6 @@ int GenerateLocaleUnits(const char* commonDirectory, DataFile* file, char* error
     return ok && GenerateAliasUnit(commonDirectory, file, errorOut, errorCapacity) &&
            GenerateExtensionUnit(commonDirectory, file, errorOut, errorCapacity) &&
            GenerateParentUnit(commonDirectory, file, errorOut, errorCapacity) &&
-           GenerateMatchUnit(commonDirectory, file, errorOut, errorCapacity);
+           GenerateMatchUnit(commonDirectory, file, errorOut, errorCapacity) &&
+           GeneratePreferenceUnit(commonDirectory, file, errorOut, errorCapacity);
 }

@@ -10,6 +10,7 @@
 #include "locale_distance.h"
 #include "locale_fallback.h"
 #include "locale_likely.h"
+#include "locale_prefs.h"
 
 static const DataKind s_kinds[] = {
     {kindLocaleLikely, mlocValidLikely},
@@ -17,6 +18,7 @@ static const DataKind s_kinds[] = {
     {kindLocaleExtensionAliases, mlocValidExtensionAliases},
     {kindLocaleParents, mlocValidParents},
     {kindLocaleMatch, mlocValidMatch},
+    {kindLocalePreferences, mlocValidPreferences},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

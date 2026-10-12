@@ -81,6 +81,21 @@
 // The children of an entry are a run of the next level, sorted, unique,
 // "*" first and always there when the run is not empty; an entry without
 // children ends the lookup with the default distances.
+//
+// Regional preferences (kindLocalePreferences), supplementalData.xml's
+// timeData, weekData and measurementData with every field resolved
+// (what a region lacks is 001's):
+//   u16 regionCount, localeCount, hoursCount, zero, u64 zero
+//   hours[hoursCount], 8 bytes each: u8 preferred, allowedCount (1 to
+//       preferHoursMax), allowed[preferHoursMax], each an mlocHourFormat,
+//       the unused ones zero
+//   regions[regionCount], 8 bytes each: u16 region, packed, sorted,
+//       unique, 001 among them; u8 hours, firstDay, minimalDays,
+//       weekendStart, weekendEnd (days 1 to 7, Monday first),
+//       measurement (an mlocMeasurementSystem) | paperSize << 4
+//   locales[localeCount], 8 bytes each: u16 language, region, packed,
+//       sorted by region, then language, unique; u8 hours; zero bytes:
+//       timeData's entries for a language in a region (ca_ES)
 
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H
@@ -189,6 +204,9 @@ enum
     matchMaxParadigms = 16,
     matchSkipScript = 1,
     matchMacroRegion = 0x80,
+    preferHeaderSize = 16,
+    preferEntrySize = 8,
+    preferHoursMax = 6,
 };
 
 static inline uint64_t mlocPackTag(uint32_t language, uint32_t script, uint32_t region)

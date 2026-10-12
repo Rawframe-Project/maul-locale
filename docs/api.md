@@ -105,6 +105,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocCombineMatch(const mlocLocale* desired, c
 ```
 Makes the locale to use from a match, as ICU's resolved locale: the supported locale with the desired one's region, its variants (which replace the supported ones) and its extensions (each replacing the supported one of its letter): "ar-SA-u-nu-latn" matched with "ar-EG" gives "ar-SA-u-nu-latn".  @param desired    The desired locale of the match. @param supported  The supported locale of the match. @param localeOut  Receives the locale; may be either input; left unchanged on failure. @return mloc_success; mloc_errorCapacity when the variants and extensions pass 112 bytes; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences( const mlocDataSet* data, const mlocLocale* locale, mlocLocalePreferences* preferencesOut);
+```
+Returns a locale's regional preferences (UTS #35), the region's values from CLDR's supplemental data. The region is the -u-rg key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's region, else the -u-sd key's, else the likely one ("en" takes the US's), else 001; a region without data takes 001's. Keys override: -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed formats list first), -u-fw the first day, -u-ms the measurement system; -u-ca-iso8601 begins weeks on Monday with four days in the first unless -u-fw or -u-rg give the first day. The hour data is looked up for the language in the region first (ca-ES has its own). A key with a value it does not take is left out.  @param data          The data with the preferences and likely subtags. @param locale        The locale, canonicalized. @param preferencesOut Receives the preferences; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the preferences; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
 ---
 
-18 functions across 3 headers.
+19 functions across 3 headers.

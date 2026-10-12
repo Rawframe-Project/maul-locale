@@ -4,7 +4,7 @@ base:
 bytes:
 data: bytes data_format data_view
 data_format:
-data_kinds: data_view kinds locale_canonical locale_distance locale_fallback locale_likely
+data_kinds: data_view kinds locale_canonical locale_distance locale_fallback locale_likely locale_prefs
 data_view:
 locale_parse:
 kinds:
@@ -16,3 +16,4 @@ locale_fallback: bytes data_view kinds locale_tables
 locale_lsr: bytes locale_likely locale_tables
 locale_distance: bytes data_view kinds locale_likely locale_lsr locale_tables
 locale_match: bytes locale_distance locale_likely locale_lsr locale_tables
+locale_prefs: bytes data_view kinds locale_tables

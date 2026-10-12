@@ -24,5 +24,8 @@ constexpr uint32_t kindLocaleParents = 0x00010004;
 // The locale part: the distance table of language matching, a unit of no
 // locale.
 constexpr uint32_t kindLocaleMatch = 0x00010005;
+// The locale part: the regional preferences (hour cycle, week, measurement
+// system, paper size), a unit of no locale.
+constexpr uint32_t kindLocalePreferences = 0x00010006;
 
 #endif
