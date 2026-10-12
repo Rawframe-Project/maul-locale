@@ -22,6 +22,13 @@
 // variants with their separators.
 #define MAX_KEY 160
 
+// The longest chain: at most 22 variants (112 bytes hold no more), the
+// explicit parents, a region, a script and root, with room to spare.
+enum
+{
+    maxChain = 64,
+};
+
 typedef struct Parents
 {
     const uint8_t* entries;
@@ -70,8 +77,11 @@ static int Compare(const char* a, uint32_t aLength, const char* b, uint32_t bLen
     return order != 0 ? order : (aLength > bLength) - (aLength < bLength);
 }
 
-// Whether a text is a key as the generator writes one: a locale id with
-// "_" that parses.
+static uint32_t KeyText(const mlocLocale* step, char* out);
+
+// Whether a text is a key as the library writes one: a locale id that
+// parses, without extensions, and that it writes back byte for byte, so
+// that what validation follows is what a lookup meets.
 static bool ValidKey(const char* text, uint32_t length)
 {
     mlocLocale locale;
@@ -79,45 +89,21 @@ static bool ValidKey(const char* text, uint32_t length)
     {
         return false;
     }
-    for (uint32_t i = 0; i < length; i++)
-    {
-        if (text[i] == '-')
-        {
-            return false;
-        }
-    }
-    return true;
+    char key[MAX_KEY];
+    return KeyText(&locale, key) == length && memcmp(key, text, length) == 0;
 }
 
-static const Entry* FindParent(const Parents* p, uint32_t component, const char* key,
-                               uint32_t length, Entry* found);
-
-// Whether following explicit parents from every entry ends, so that a
-// file's chains always reach root.
-static bool ParentsEnd(const Parents* p)
-{
-    for (uint32_t i = 0; i < p->count; i++)
-    {
-        Entry entry = ReadEntry(p, i);
-        uint32_t steps = 0;
-        Entry next;
-        while (FindParent(p, entry.component, entry.parent, entry.parentLength, &next) != nullptr)
-        {
-            if (++steps > p->count)
-            {
-                return false;
-            }
-            entry = next;
-        }
-    }
-    return true;
-}
+static bool ChainsEnd(const Parents* p);
 
 bool mlocValidParents(const DataView* view, DataSpan payload)
 {
     (void)view;
     Parents p;
     if (!ReadParents(payload, &p) || mlocLoad64(payload.bytes + 8) != 0)
+    {
+        return false;
+    }
+    if (p.count > parentMaxEntries)
     {
         return false;
     }
@@ -149,7 +135,7 @@ bool mlocValidParents(const DataView* view, DataSpan payload)
             }
         }
     }
-    return ParentsEnd(&p);
+    return ChainsEnd(&p);
 }
 
 // The explicit parent of a key in a component, or null.
@@ -337,6 +323,32 @@ static bool NextStep(const Parents* parents, mlocComponent component, mlocLocale
     return true;
 }
 
+// Whether the chain from every explicit entry reaches root within
+// maxChain steps. A chain from any locale either never meets an entry,
+// and then only drops subtags until root, or continues as the chain of
+// the first entry it meets; so every chain of a valid file ends.
+static bool ChainsEnd(const Parents* p)
+{
+    for (uint32_t i = 0; i < p->count; i++)
+    {
+        Entry entry = ReadEntry(p, i);
+        mlocLocale step;
+        if (mlocParseLocale(entry.child, entry.childLength, &step).status != mloc_success)
+        {
+            return false;
+        }
+        int depth = 0;
+        while (NextStep(p, (mlocComponent)entry.component, &step))
+        {
+            if (++depth > maxChain)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 static bool OpenParents(const mlocDataSet* data, Parents* parents)
 {
     DataSpan span;
@@ -392,10 +404,9 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
     {
         return false;
     }
-    // A chain is at most 22 variants, explicit parents, a region, a
-    // script and root; the bound only stops data whose parents loop.
+    // Validation has made every chain end within maxChain steps.
     mlocLocale step = FirstStep(data, locale);
-    for (int depth = 0; depth < 64; depth++)
+    for (int depth = 0; depth <= maxChain; depth++)
     {
         char key[MAX_KEY];
         uint32_t length = KeyText(&step, key);

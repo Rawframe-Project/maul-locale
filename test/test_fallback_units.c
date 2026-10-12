@@ -168,6 +168,57 @@ static bool ValidWith(size_t offset, uint64_t value, int bytes)
     return valid;
 }
 
+// The entry of the main component whose child is key, or null.
+static uint8_t* MainEntry(uint8_t* copy, size_t entries, size_t text, uint32_t count,
+                          const char* key)
+{
+    for (uint32_t i = 0; i < count; i++)
+    {
+        uint8_t* e = copy + entries + (size_t)i * parentEntrySize;
+        if (e[0] == 0 && e[1] == strlen(key) &&
+            memcmp(copy + text + mlocLoad32(e + 4), key, e[1]) == 0)
+        {
+            return e;
+        }
+    }
+    return nullptr;
+}
+
+// Chains a crafted file could make loop: through a parent written in
+// another case, which a lookup would still meet, and through
+// truncation (en to en_AU, whose chain truncates back to en).
+static void TestCraftedChains(size_t entries, size_t text, uint32_t count)
+{
+    uint8_t* copy = malloc(s_table.size);
+    if (copy == nullptr)
+    {
+        return;
+    }
+    memcpy(copy, s_table.bytes, s_table.size);
+    uint8_t* au = MainEntry(copy, entries, text, count, "en_AU");
+    CHECK(au != nullptr, "the table has en_AU");
+    if (au != nullptr)
+    {
+        copy[text + mlocLoad32(au + 8)] = 'E';
+        CHECK(!mlocValidParents(nullptr, (DataSpan){copy, s_table.size}),
+              "a parent not written as the library writes it");
+    }
+    memcpy(copy, s_table.bytes, s_table.size);
+    au = MainEntry(copy, entries, text, count, "en_AU");
+    uint8_t* world = MainEntry(copy, entries, text, count, "en_150");
+    CHECK(au != nullptr && world != nullptr, "the table has en_150");
+    if (au != nullptr && world != nullptr)
+    {
+        // en_150 becomes en, whose parent is en_AU; the order holds.
+        world[1] = 2;
+        memcpy(world + 8, au + 4, 4);
+        world[2] = au[1];
+        CHECK(!mlocValidParents(nullptr, (DataSpan){copy, s_table.size}),
+              "a loop through truncation");
+    }
+    free(copy);
+}
+
 static void TestValidator(void)
 {
     mlocData builtin;
@@ -218,6 +269,7 @@ static void TestValidator(void)
               "explicit parents that loop");
         free(copy);
     }
+    TestCraftedChains(entries, text, count);
     CHECK(!ValidWith(text + 2, '-', 1), "a key with a hyphen");
     CHECK(!mlocValidParents(nullptr, (DataSpan){s_table.bytes, 8}), "shorter than the header");
 }
