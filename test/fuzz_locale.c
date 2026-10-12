@@ -121,12 +121,12 @@ static void Canonicalize(const uint8_t* data, size_t size)
     mlocDecimal value;
     char text[256];
     mlocOutput measure = {0};
-    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput written = {.buffer = text, .capacity = sizeof(text)};
     Require(mlocInitNumberFormatter(&formatter, &set, &locale, nullptr) >= 0 &&
             mlocParseDecimal("-1234.5", 7, &value).status == mloc_success &&
             mlocFormatNumber(&formatter, &value, &measure) == mloc_errorCapacity &&
-            mlocFormatNumber(&formatter, &value, &output) == mloc_success &&
-            output.length == measure.length);
+            mlocFormatNumber(&formatter, &value, &written) == mloc_success &&
+            written.length == measure.length);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

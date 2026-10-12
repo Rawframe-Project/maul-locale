@@ -24,12 +24,16 @@ static DataSpan s_symbols;
 static DataSpan s_patterns;
 static DataSpan s_root;
 
+// A copy of a unit with 64 bytes of room, filled with valid text so that
+// a validator reading past the unit reads on until the sanitizer builds
+// catch it.
 static uint8_t* Copy(DataSpan unit)
 {
     uint8_t* copy = malloc(unit.size + 64);
     if (copy != nullptr)
     {
         memcpy(copy, unit.bytes, unit.size);
+        memset(copy + unit.size, 'a', 64);
     }
     return copy;
 }
@@ -154,6 +158,15 @@ static void TestTable(Validator validate, DataSpan unit, uint32_t recordSize, co
     Put16(offsets + 4, mlocLoad16(offsets + 2) - 1);
     CHECK(mlocLoad16(offsets + 2) == 0 || !Valid(validate, u, size), "offsets out of order");
     Put16(offsets + 4, second);
+    // A first string ending past the text, the next one's end back
+    // within it: refused before the first is read.
+    if (strings >= 2)
+    {
+        uint32_t keepFirst = mlocLoad16(offsets + 2);
+        Put16(offsets + 2, 60000);
+        CHECK(!Valid(validate, u, size), "a string ending past the text");
+        Put16(offsets + 2, keepFirst);
+    }
     // Spoil a byte of the first non-empty string.
     for (uint32_t s = 0; s < strings; s++)
     {

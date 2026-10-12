@@ -112,7 +112,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_plurals conform_preferences
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json

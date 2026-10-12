@@ -146,7 +146,9 @@ static bool ValidTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceho
     {
         uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
         uint32_t end = mlocLoad16(t.offsets + (size_t)s * 2 + 2);
-        if (end < start || !ValidText(t.text + start, end - start, maxPlaceholder))
+        // Each string ends within the text before any of it is read.
+        if (end < start || end > textSize ||
+            !ValidText(t.text + start, end - start, maxPlaceholder))
         {
             return false;
         }
