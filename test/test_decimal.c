@@ -347,6 +347,135 @@ static void TestShortest(void)
     CHECK(mlocMakeShortestDecimal(1.0, nullptr) == mloc_errorInvalid, "a null pointer");
 }
 
+static uint64_t s_hash;
+
+// Adds a double's shortest digits to s_hash (FNV-1a) as [-]DIGITSe<exp>
+// and a newline, zero as 0e0.
+static void HashShortest(uint64_t bits)
+{
+    mlocDecimal d;
+    char text[64];
+    int at = 0;
+    if (mlocMakeShortestDecimal(FromBits(bits), &d) != mloc_success)
+    {
+        s_hash = 0;
+        return;
+    }
+    if (d.negative)
+    {
+        text[at++] = '-';
+    }
+    for (int k = 0; k < d.count; k++)
+    {
+        text[at++] = (char)('0' + d.digits[k]);
+    }
+    at += snprintf(text + at, sizeof(text) - (size_t)at, "%se%d\n", d.count == 0 ? "0" : "",
+                   (int)d.exponent);
+    for (int k = 0; k < at; k++)
+    {
+        s_hash = (s_hash ^ (uint8_t)text[k]) * 0x100000001B3u;
+    }
+}
+
+static uint64_t Lcg(uint64_t state)
+{
+    return state * 6364136223846793005u + 1442695040888963407u;
+}
+
+static uint64_t BitsOf(double value)
+{
+    uint64_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+// The digits of 150,084 doubles hashed, against the hash of Python's repr
+// of the same doubles: every exponent with mantissas 0, 1, the largest
+// and a random one, each power of ten and its neighbours, the integers
+// and thousandths to 20,000, and random finite bit patterns.
+static void TestKnownAnswers(void)
+{
+    s_hash = 0xCBF29CE484222325u;
+    uint64_t state = 0x2545F4914F6CDD1Du;
+    for (uint64_t e = 0; e < 2047; e++)
+    {
+        state = Lcg(state);
+        uint64_t mantissas[4] = {0, 1, (1ull << 52) - 1, state >> 12};
+        for (int m = 0; m < 4; m++)
+        {
+            HashShortest(e << 52 | mantissas[m]);
+        }
+    }
+    for (int k = -323; k < 309; k++)
+    {
+        char text[16];
+        snprintf(text, sizeof(text), "1e%d", k);
+        uint64_t bits = BitsOf(strtod(text, nullptr));
+        HashShortest(bits - 1);
+        HashShortest(bits);
+        HashShortest(bits + 1);
+    }
+    for (int n = 1; n <= 20000; n++)
+    {
+        HashShortest(BitsOf((double)n));
+        HashShortest(BitsOf((double)n / 1000.0));
+    }
+    for (int n = 0; n < 100000; n++)
+    {
+        state = Lcg(state);
+        uint64_t bits = state;
+        if (((bits >> 52) & 0x7FF) == 0x7FF)
+        {
+            bits &= ~(1ull << 62);
+        }
+        HashShortest(bits);
+    }
+    CHECK(s_hash == 0x33F722351DA5515Cu, "150,084 doubles give Python's shortest digits");
+}
+
+// Ulf Adams's regression values for Ryu (its own trailing-zero, power of
+// five and boundary-shift cases) and two whose lower bound is exact,
+// against Python's repr; negatives by their magnitude.
+static void TestRegressions(void)
+{
+    static const struct
+    {
+        uint64_t bits;
+        const char* digits;
+        int32_t exponent;
+    } s_cases[] = {
+        {0x44591D67FECC8000u, "18531501765868567", 5},
+        {0xC6E4A1C85222906Du, "3347727380279489", 18},
+        {0x435141F4BF38CB29u, "19430376160308388", 0},
+        {0xC40E3EE5E02E9B8Du, "69741824662760956", 3},
+        {0x43CE674B4B31190Fu, "43816050601147837", 2},
+        {0x4830F0CF064DD592u, "5764607523034235", 24},
+        {0x4840F0CF064DD592u, "1152921504606847", 25},
+        {0x4850F0CF064DD592u, "2305843009213694", 25},
+        {0x0040000000000000u, "17800590868057611", -323},
+        {0x0080000000000000u, "2848094538889218", -321},
+        {0x0290000000000000u, "2446494580089078", -311},
+        {0x029FFFFFFFFFFFFFu, "48929891601781557", -312},
+        {0x4350000000000000u, "18014398509481984", 0},
+        {0x435FFFFFFFFFFFFFu, "36028797018963964", 0},
+        {0x1330000000000000u, "2900835519859558", -231},
+        {0x133FFFFFFFFFFFFFu, "5801671039719115", -231},
+        {0x3A6FA7161A4D6E0Cu, "3196104012172126", -42},
+        {0x433FFFFFFFFFFFFFu, "9007199254740991", 0},
+        {0x444B1AE4D6E2EF50u, "1", 21},
+        {0x4480F0CF064DD592u, "1", 22},
+        {0x440CD71C11578C30u, "665011396436352", 5},
+        {0x43CB4209E3511322u, "3928286518818784", 3},
+    };
+    for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
+    {
+        double value = FromBits(s_cases[i].bits & ~(1ull << 63));
+        int32_t exponent = s_cases[i].exponent;
+        CHECK(Shortest(value, s_cases[i].digits, exponent, exponent < 0 ? -exponent : 0),
+              s_cases[i].digits);
+    }
+}
+
 // Random doubles read back from their shortest digits.
 static void TestRoundTrip(void)
 {
@@ -392,5 +521,7 @@ int main(void)
     TestOperands();
     TestShortest();
     TestRoundTrip();
+    TestKnownAnswers();
+    TestRegressions();
     return s_failures == 0 ? 0 : 1;
 }
