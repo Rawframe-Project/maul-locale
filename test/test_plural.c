@@ -11,6 +11,7 @@
 
 #include "maul-locale/plural.h"
 
+#include <stdint.h>
 #include <string.h>
 
 static mlocDataSet s_data;
@@ -60,6 +61,65 @@ static void TestCardinal(void)
     CHECK(CARDINAL("en", "1000000000000000000001", mloc_pluralOther),
           "a wide integer equals no literal");
     CHECK(CARDINAL("ru", "1000000000000000000021", mloc_pluralOne), "and keeps its last digits");
+}
+
+// Whether an integer selects as its decimal does, in both types.
+static bool IntegerAgrees(const mlocPluralRules* cardinal, const mlocPluralRules* ordinal,
+                          int64_t value)
+{
+    mlocDecimal decimal;
+    if (mlocMakeDecimal(value, &decimal) != mloc_success)
+    {
+        return false;
+    }
+    const mlocPluralRules* both[2] = {cardinal, ordinal};
+    for (int i = 0; i < 2; i++)
+    {
+        mlocPluralCategory fromDecimal = (mlocPluralCategory)-1;
+        mlocPluralCategory fromInteger = (mlocPluralCategory)-2;
+        if (mlocSelectPlural(both[i], &decimal, &fromDecimal) != mloc_success ||
+            mlocSelectPluralInteger(both[i], value, &fromInteger) != mloc_success ||
+            fromDecimal != fromInteger)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void TestInteger(void)
+{
+    static const char* const s_ids[] = {"en", "fr", "ru", "ar", "pl", "lv", "gd", "br", "cy", "it"};
+    const int64_t e18 = 1000000000000000000;
+    static const int64_t s_far[] = {INT64_MAX, INT64_MIN, INT64_MIN + 1, INT64_MAX - 1};
+    for (size_t l = 0; l < sizeof(s_ids) / sizeof(s_ids[0]); l++)
+    {
+        mlocPluralRules cardinal;
+        mlocPluralRules ordinal;
+        bool agrees = Rules(s_ids[l], mloc_pluralCardinal, &cardinal) &&
+                      Rules(s_ids[l], mloc_pluralOrdinal, &ordinal);
+        for (int64_t n = -3000; n <= 3000 && agrees; n++)
+        {
+            agrees = IntegerAgrees(&cardinal, &ordinal, n);
+        }
+        for (int64_t k = -1200; k <= 1200 && agrees; k++)
+        {
+            agrees = IntegerAgrees(&cardinal, &ordinal, e18 + k) &&
+                     IntegerAgrees(&cardinal, &ordinal, -e18 - k) &&
+                     IntegerAgrees(&cardinal, &ordinal, 9 * e18 + k * 1000003);
+        }
+        for (size_t k = 0; k < sizeof(s_far) / sizeof(s_far[0]) && agrees; k++)
+        {
+            agrees = IntegerAgrees(&cardinal, &ordinal, s_far[k]);
+        }
+        CHECK(agrees, s_ids[l]);
+    }
+    mlocPluralRules rules;
+    mlocPluralCategory category = (mlocPluralCategory)-1;
+    CHECK(Rules("ru", mloc_pluralCardinal, &rules) &&
+              mlocSelectPluralInteger(&rules, -21, &category) == mloc_success &&
+              category == mloc_pluralOne,
+          "the sign is no operand");
 }
 
 static void TestOrdinal(void)
@@ -213,8 +273,11 @@ static void TestRefusals(void)
           "a range flag past 1");
     spoiled = rules;
     ((uint8_t*)&spoiled)[4] = 9;
-    CHECK(mlocSelectPlural(&spoiled, &decimal, &category) == mloc_errorInvalid,
-          "a range table with no category");
+    CHECK(mlocSelectPluralRange(&spoiled, mloc_pluralZero, mloc_pluralZero, &category) ==
+                  mloc_errorInvalid &&
+              mlocSelectPluralRange(&spoiled, mloc_pluralZero, mloc_pluralOne, &category) ==
+                  mloc_success,
+          "a range table entry with no category, where it is read");
     CHECK(mlocSelectPlural(&rules, nullptr, &category) == mloc_errorInvalid &&
               mlocSelectPlural(&rules, &decimal, nullptr) == mloc_errorInvalid &&
               mlocSelectPlural(nullptr, &decimal, &category) == mloc_errorInvalid,
@@ -222,6 +285,11 @@ static void TestRefusals(void)
     mlocDecimal madeUp = decimal;
     madeUp.reserved = 1;
     CHECK(mlocSelectPlural(&rules, &madeUp, &category) == mloc_errorInvalid, "a made-up decimal");
+    CHECK(mlocSelectPluralInteger(&rules, 1, nullptr) == mloc_errorInvalid &&
+              mlocSelectPluralInteger(nullptr, 1, &category) == mloc_errorInvalid &&
+              mlocSelectPluralInteger(&zero, 1, &category) == mloc_errorInvalid &&
+              mlocSelectPluralInteger(&spoiled, 1, &category) == mloc_success,
+          "integer refusals");
     mlocPluralOperands operands = {0};
     CHECK(mlocSelectPluralOperands(&rules, nullptr, &category) == mloc_errorInvalid &&
               mlocSelectPluralOperands(&rules, &operands, nullptr) == mloc_errorInvalid &&
@@ -236,6 +304,7 @@ int main(void)
     s_data = (mlocDataSet){&builtin, 1};
     TestCardinal();
     TestOrdinal();
+    TestInteger();
     TestCompact();
     TestFallback();
     TestRanges();

@@ -31,6 +31,7 @@ lets locale data refer to them by index.
   its range table, so selecting reads no data; it reports
   `mloc_fellBack`, a new positive outcome, when the unit is a parent's.
   `mlocSelectPlural` takes a decimal (infinity and NaN are other),
+  `mlocSelectPluralInteger` an integer without making its decimal,
   `mlocSelectPluralOperands` takes operands with a compact exponent,
   `mlocSelectPluralRange` gives a range's category (the end's where
   CLDR has no table), and `mlocGetPluralCategories` the categories a

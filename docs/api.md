@@ -169,6 +169,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocSelectPlural(const mlocPluralRules* rules
 Selects the category of a decimal, by the digits it shows: in English 1 is one and 1.0 is other. Infinity and NaN are other.  @param rules        Rules from mlocInitPluralRules. @param decimal      The number. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer, or rules or a decimal the library did not make. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralInteger(const mlocPluralRules* rules, int64_t value, mlocPluralCategory* categoryOut);
+```
+Selects the category of an integer, as that of its decimal with no fraction digits, without making the decimal.  @param rules        Rules from mlocInitPluralRules. @param value        The integer. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralOperands(const mlocPluralRules* rules, const mlocPluralOperands* operands, mlocPluralCategory* categoryOut);
 ```
 Selects the category of plural operands, for a compact number whose exponent (c) the caller sets: in French 1c6 ("1 M") is many.  @param rules        Rules from mlocInitPluralRules. @param operands     The operands, as mlocGetPluralOperands gives them for the whole value, with c set. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
@@ -185,4 +190,4 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ---
 
-32 functions across 5 headers.
+33 functions across 5 headers.

@@ -39,7 +39,7 @@ digits of a double, rounded in ECMA-402's modes) with their plural
 operands, and CLDR's cardinal, ordinal and range plural rules compiled
 to C (every sample of CLDR's files passes on every push). The library
 has
-32 public functions.
+33 public functions.
 
 ## Building
 

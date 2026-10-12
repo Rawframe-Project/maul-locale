@@ -77,6 +77,20 @@ extern "C"
                                                         const mlocDecimal* decimal,
                                                         mlocPluralCategory* categoryOut);
 
+    /// Selects the category of an integer, as that of its decimal with no
+    /// fraction digits, without making the decimal.
+    ///
+    /// @param rules        Rules from mlocInitPluralRules.
+    /// @param value        The integer.
+    /// @param categoryOut  Receives the category.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer or rules
+    ///         the library did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralInteger(const mlocPluralRules* rules,
+                                                               int64_t value,
+                                                               mlocPluralCategory* categoryOut);
+
     /// Selects the category of plural operands, for a compact number
     /// whose exponent (c) the caller sets: in French 1c6 ("1 M") is many.
     ///
