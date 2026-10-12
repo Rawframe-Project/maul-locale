@@ -16,7 +16,8 @@ bool mlocValidParents(const DataView* view, DataSpan payload);
 // Finds the unit of a kind for a locale: its key, then each key of its
 // chain in the component, each in every source of the set in order.
 // *fellBackOut tells whether the unit is not the locale's own key's.
-// False when no step has it, or the data has no parents table.
+// False when no step has it, or when the chain is needed and the data
+// has no parents table.
 bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
                         const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut);
 

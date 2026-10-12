@@ -148,6 +148,11 @@ static void TestLookups(void)
     bool fell = false;
     CHECK(!mlocFindLocaleUnit(&empty, m, kindTest, &locale, &span, &fell),
           "data without the parents table");
+    // The pack alone has neither parents nor likely subtags: a locale's
+    // own key needs neither, its chain the parents.
+    s_set.count = 1;
+    CHECK(Finds(m, "de", "de", false), "its own key without the parents table");
+    CHECK(Finds(m, "de-AT", nullptr, false), "but no chain without it");
 }
 
 static DataSpan s_table;

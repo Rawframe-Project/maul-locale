@@ -83,13 +83,17 @@ static const uint8_t* LocaleId(const DataView* view, uint32_t i, uint32_t* lengt
     return view->bytes + view->poolOffset + mlocLoad32(entry);
 }
 
-// Orders ids by their bytes, a prefix first.
+// Orders ids by their bytes, a prefix first. Ids are short: a loop
+// beats a call to memcmp.
 static int CompareIds(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
 {
-    int order = memcmp(a, b, aLength < bLength ? aLength : bLength);
-    if (order != 0)
+    size_t common = aLength < bLength ? aLength : bLength;
+    for (size_t k = 0; k < common; k++)
     {
-        return order;
+        if (a[k] != b[k])
+        {
+            return a[k] < b[k] ? -1 : 1;
+        }
     }
     return aLength < bLength ? -1 : aLength > bLength;
 }

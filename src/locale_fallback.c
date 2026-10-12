@@ -264,14 +264,21 @@ static mlocLocale FirstStep(const mlocDataSet* data, const mlocLocale* locale)
     memcpy(step.language, locale->language, 8);
     memcpy(step.region, locale->region, 4);
     memcpy(step.tail, locale->tail, VariantsLength(locale->tail, sizeof(locale->tail)));
+    uint32_t script = mlocPackScript(locale->script, (uint32_t)FieldLength(locale->script, 4));
+    uint32_t region =
+        script == 0 ? mlocPackRegion(locale->region, (uint32_t)FieldLength(locale->region, 4)) : 0;
+    if (script == 0 && region == 0)
+    {
+        // Its script is its language's likely one, which the key leaves
+        // out.
+        return step;
+    }
     Likely table;
     const Likely* likely = mlocOpenLikely(data, &table) ? &table : nullptr;
     uint32_t language =
         mlocPackLanguage(locale->language, (uint32_t)FieldLength(locale->language, 8));
-    uint32_t script = mlocPackScript(locale->script, (uint32_t)FieldLength(locale->script, 4));
     if (script == 0)
     {
-        uint32_t region = mlocPackRegion(locale->region, (uint32_t)FieldLength(locale->region, 4));
         script = LikelyScript(likely, language, region);
     }
     if (script != 0 && script != LikelyScript(likely, language, 0))
@@ -400,12 +407,10 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
 bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
                         const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut)
 {
-    Parents parents;
-    if (!OpenParents(data, &parents))
-    {
-        return false;
-    }
+    // The parents are read only when the first step has no unit.
     // Validation has made every chain end within maxChain steps.
+    Parents parents;
+    bool parentsOpen = false;
     mlocLocale step = FirstStep(data, locale);
     for (int depth = 0; depth <= maxChain; depth++)
     {
@@ -422,6 +427,11 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
                 return true;
             }
         }
+        if (!parentsOpen && !OpenParents(data, &parents))
+        {
+            return false;
+        }
+        parentsOpen = true;
         if (!NextStep(&parents, component, &step))
         {
             return false;
