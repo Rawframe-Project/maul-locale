@@ -77,6 +77,9 @@ extern "C"
         mloc_changedScript = 8,
         mloc_changedRegion = 16,
         mloc_changedVariants = 32,
+        // An extension: a t extension's language, a u or t value, or a
+        // subdivision.
+        mloc_changedExtensions = 64,
     };
 
     /// Parses a BCP 47 tag or CLDR locale id and canonicalizes it as UTS
@@ -84,8 +87,11 @@ extern "C"
     /// "und-" put before a tag that begins with "x" or a script, then
     /// CLDR's language, script, region and variant aliases applied until
     /// none matches ("iw" gives "he", "sh" gives "sr-Latn", "SU" gives the
-    /// region of the language's likely one). The syntax is made canonical
-    /// as mlocParseLocale does.
+    /// region of the language's likely one), then the extensions: a t
+    /// extension's language the same way, u and t values by the bcp47
+    /// data's aliases ("ms-imperial" gives "ms-uksystem"), and the
+    /// subdivisions of "sd" and "rg" by theirs ("rg-fi01" gives
+    /// "rg-axzzzz"). The syntax is made canonical as mlocParseLocale does.
     ///
     /// @param data        The data with the aliases and likely subtags.
     /// @param text        The tag.

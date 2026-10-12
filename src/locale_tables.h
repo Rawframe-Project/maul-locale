@@ -37,6 +37,17 @@
 //       replacementOffset, replacementLength in text; types sorted, in
 //       lowercase with "-"
 //   char text[textSize]
+//
+// Extension aliases (kindLocaleExtensionAliases): the bcp47 data's type
+// aliases for u and t keys, and the subdivision aliases sd and rg take:
+//   u32 typeCount, subdivisionCount, textSize, u32 zero
+//   types[typeCount], 16 bytes each: char key[2], u8 fromLength,
+//       toLength, u32 fromOffset, toOffset, zero; sorted by key, then by
+//       the from text's bytes, a prefix first
+//   subdivisions[subdivisionCount], 12 bytes each: u8 fromLength,
+//       toLength, u16 zero, u32 fromOffset, toOffset; sorted by from
+//   char text[textSize]: values in lowercase, subtags joined by "-"; a
+//       subdivision replaced by a region is the region and "zzzz"
 
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H
@@ -128,6 +139,9 @@ enum
     aliasRuleSize = 32,
     aliasLegacySize = 8,
     aliasMaxVariants = 2,
+    extensionHeaderSize = 16,
+    extensionTypeSize = 16,
+    extensionSubdivisionSize = 12,
 };
 
 static inline uint64_t mlocPackTag(uint32_t language, uint32_t script, uint32_t region)

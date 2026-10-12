@@ -12,6 +12,7 @@
 static const DataKind s_kinds[] = {
     {kindLocaleLikely, mlocValidLikely},
     {kindLocaleAliases, mlocValidAliases},
+    {kindLocaleExtensionAliases, mlocValidExtensionAliases},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

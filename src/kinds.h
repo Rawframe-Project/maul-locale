@@ -16,5 +16,7 @@ constexpr uint32_t kindLocaleLikely = 0x00010001;
 // The locale part: the aliases canonicalization replaces, a unit of no
 // locale.
 constexpr uint32_t kindLocaleAliases = 0x00010002;
+// The locale part: the aliases of extension values, a unit of no locale.
+constexpr uint32_t kindLocaleExtensionAliases = 0x00010003;
 
 #endif

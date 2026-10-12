@@ -98,6 +98,30 @@ static void TestBcp47(void)
     CHECK(Gives("Latn-US", "und-Latn-US", 0), "a tag that begins with a script");
 }
 
+static void TestExtensions(void)
+{
+    mlocLocaleChanges x = mloc_changedExtensions;
+    CHECK(Gives("en-u-ms-imperial", "en-u-ms-uksystem", x), "a u value's alias");
+    CHECK(Gives("en-u-ca-ethiopic-amete-alem", "en-u-ca-ethioaa", x), "a value of three subtags");
+    CHECK(Gives("en-u-ca-islamicc", "en-u-ca-islamic-civil", x), "a deprecated value");
+    CHECK(Gives("en-u-ca-islamic-civil", "en-u-ca-islamic-civil", 0),
+          "its preferred value is not turned back");
+    CHECK(Gives("en-u-kb-yes", "en-u-kb", x), "a value that becomes true is removed");
+    CHECK(Gives("en-u-tz-cnckg", "en-u-tz-cnsha", x), "a deprecated zone");
+    CHECK(Gives("en-u-tz-cet", "en-u-tz-bebru", x), "a zone's alias");
+    CHECK(Gives("en-u-rg-fi01", "en-u-rg-axzzzz", x), "a subdivision that became a region");
+    CHECK(Gives("en-u-sd-frbl", "en-u-sd-blzzzz", x), "and for sd");
+    CHECK(Gives("en-u-attr-ca-islamicc", "en-u-attr-ca-islamic-civil", x), "attributes kept");
+    CHECK(Gives("und-t-iw", "und-t-he", x), "a t extension's language");
+    CHECK(Gives("en-t-sh-m0-ies-jes", "en-t-sr-latn-m0-iesjes", x),
+          "its language and a field value");
+    CHECK(Gives("en-t-d0-name", "en-t-d0-charname", x), "a t value's alias");
+    CHECK(Gives("iw-u-ms-imperial-x-foo", "he-u-ms-uksystem-x-foo", mloc_changedLanguage | x),
+          "the language and an extension");
+    CHECK(Gives("en-u-ca-gregory-a-foo-x-ms-imperial", "en-a-foo-u-ca-gregory-x-ms-imperial", 0),
+          "other extensions and private use kept");
+}
+
 static void TestRefusals(void)
 {
     CHECK(Refuses("en-", mloc_errorSyntax, 3), "a syntax error at its offset");
@@ -130,6 +154,7 @@ int main(void)
     TestOtherAliases();
     TestRegionChoice();
     TestBcp47();
+    TestExtensions();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

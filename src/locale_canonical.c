@@ -692,6 +692,18 @@ static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, ml
     return mloc_success;
 }
 
+mlocResult mlocApplyAliases(const mlocDataSet* data, mlocLocale* locale, uint32_t* changes)
+{
+    DataSpan span;
+    Aliases aliases;
+    if (!mlocFindDataSetUnit(data, kindLocaleAliases, nullptr, 0, &span) ||
+        !ReadAliases(span, &aliases))
+    {
+        return mloc_errorNotFound;
+    }
+    return ApplyRules(data, &aliases, locale, changes);
+}
+
 // Lowercases text into out with "-" for "_"; false when it does not fit.
 static bool Fold(const char* text, size_t length, char* out)
 {
@@ -818,6 +830,10 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
         return result;
     }
     mlocResult applied = ApplyRules(data, &aliases, &locale, &changes);
+    if (applied == mloc_success)
+    {
+        applied = mlocCanonicalizeExtensions(data, &locale, &changes);
+    }
     if (applied != mloc_success)
     {
         return (mlocTextResult){applied, applied == mloc_errorCapacity ? length : 0};

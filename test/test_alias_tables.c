@@ -201,6 +201,58 @@ static void TestEndlessRules(void)
     free(file);
 }
 
+// The extension aliases table: valid as compiled in, and refused with
+// one field spoiled.
+static void TestExtensionTable(const mlocDataSet* data)
+{
+    DataSpan table;
+    CHECK(mlocFindDataSetUnit(data, kindLocaleExtensionAliases, nullptr, 0, &table),
+          "the compiled-in data has the extension aliases");
+    uint8_t* copy = malloc(table.size);
+    if (copy == nullptr)
+    {
+        return;
+    }
+    uint32_t types = mlocLoad32(table.bytes);
+    uint32_t subdivisions = mlocLoad32(table.bytes + 4);
+    size_t typesAt = extensionHeaderSize;
+    size_t subdivisionsAt = typesAt + (size_t)types * extensionTypeSize;
+    size_t textAt = subdivisionsAt + (size_t)subdivisions * extensionSubdivisionSize;
+    struct
+    {
+        size_t offset;
+        uint32_t value;
+        int bytes;
+        const char* what;
+    } spoils[] = {
+        {12, 1, 4, "the reserved word is zero"},
+        {8, mlocLoad32(table.bytes + 8) + 1, 4, "the counts give the size"},
+        {typesAt, 'A', 1, "a key in uppercase"},
+        {typesAt + 2, 0, 1, "an empty from text"},
+        {typesAt + 4, 0xFFFFFF, 4, "a from text past the text"},
+        {typesAt + 12, 1, 4, "a type's reserved word"},
+        {typesAt + extensionTypeSize, 0, 2, "types in order"},
+        {subdivisionsAt + 2, 1, 2, "a subdivision's reserved field"},
+        {subdivisionsAt + 1, 2, 1, "a replacement of two characters"},
+        {textAt, '-', 1, "a value that begins with a separator"},
+        {textAt, 'Q', 1, "a value in uppercase"},
+    };
+    for (size_t i = 0; i < sizeof(spoils) / sizeof(spoils[0]); i++)
+    {
+        memcpy(copy, table.bytes, table.size);
+        Put(copy + spoils[i].offset, spoils[i].value, spoils[i].bytes);
+        CHECK(!mlocValidExtensionAliases(nullptr, (DataSpan){copy, table.size}), spoils[i].what);
+    }
+    memcpy(copy, table.bytes, table.size);
+    memcpy(copy + subdivisionsAt, table.bytes + subdivisionsAt + extensionSubdivisionSize,
+           extensionSubdivisionSize);
+    CHECK(!mlocValidExtensionAliases(nullptr, (DataSpan){copy, table.size}),
+          "subdivisions in order");
+    CHECK(mlocValidExtensionAliases(nullptr, table), "the compiled-in table is valid");
+    CHECK(!mlocValidExtensionAliases(nullptr, (DataSpan){copy, 8}), "shorter than the header");
+    free(copy);
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -221,6 +273,7 @@ int main(void)
     TestIndex();
     TestTables();
     TestEndlessRules();
+    TestExtensionTable(&data);
     free(s_copy);
     return s_failures == 0 ? 0 : 1;
 }

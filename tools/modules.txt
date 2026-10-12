@@ -11,3 +11,4 @@ kinds:
 locale_likely: bytes data_view kinds locale_tables
 locale_tables:
 locale_canonical: bytes data_view kinds locale_tables
+locale_extensions: bytes data_view kinds locale_canonical locale_tables
