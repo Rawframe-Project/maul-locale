@@ -51,6 +51,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/data.c
     src/data_kinds.c
     src/decimal.c
+    src/decimal_shortest.c
     src/locale_canonical.c
     src/locale_distance.c
     src/locale_extensions.c

@@ -94,6 +94,21 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocMakeUnsignedDecimal(uint64_t value,
                                                                mlocDecimal* decimalOut);
 
+    /// Makes the shortest decimal that reads back as a double: of the
+    /// decimals with the fewest digits that round to it, the nearest,
+    /// ties to even (0.1 is "0.1", not "0.1000000000000000055511151231257827").
+    /// Its fraction digits shown are those its digits need. Infinity and
+    /// NaN give decimals of those kinds, and -0.0 a negative zero. The
+    /// digits come from integer arithmetic, the same on every platform.
+    ///
+    /// @param value       The double.
+    /// @param decimalOut  Receives the decimal.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocMakeShortestDecimal(double value,
+                                                               mlocDecimal* decimalOut);
+
     /// Parses a decimal: an optional "+" or "-", digits with an optional
     /// "." and fraction (at least one digit in all), and an optional
     /// exponent, "e" or "E" with an optional sign and digits. The

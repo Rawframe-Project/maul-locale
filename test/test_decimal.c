@@ -9,6 +9,8 @@
 
 #include "maul-locale/decimal.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static bool Parsed(const char* text, mlocDecimal* out)
@@ -278,6 +280,107 @@ static void TestOperands(void)
           "null pointers");
 }
 
+// Whether a double's shortest decimal has the digits and exponent given.
+static bool Shortest(double value, const char* digits, int32_t exponent, int32_t fraction)
+{
+    mlocDecimal d;
+    if (mlocMakeShortestDecimal(value, &d) != mloc_success || d.kind != mloc_decimalFinite ||
+        d.count != strlen(digits) || d.exponent != exponent || d.fractionDigits != fraction)
+    {
+        return false;
+    }
+    for (int k = 0; k < d.count; k++)
+    {
+        if (d.digits[k] != digits[k] - '0')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static double FromBits(uint64_t bits)
+{
+    double value;
+    memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+static void TestShortest(void)
+{
+    // Python's repr, the shortest round-trip digits, is the reference.
+    CHECK(Shortest(0.1, "1", -1, 1), "0.1");
+    CHECK(Shortest(0.3, "3", -1, 1), "0.3");
+    CHECK(Shortest(1.0, "1", 0, 0), "1.0 shows no fraction digit");
+    CHECK(Shortest(100.0, "1", 2, 0), "100");
+    CHECK(Shortest(0.5, "5", -1, 1), "0.5");
+    CHECK(Shortest(1e23, "1", 23, 0), "1e23, not 9.999999999999999e22");
+    CHECK(Shortest(FromBits(1), "5", -324, 324), "the smallest subnormal");
+    CHECK(Shortest(FromBits(3), "15", -324, 324), "three times it");
+    CHECK(Shortest(FromBits(0x7FEFFFFFFFFFFFFF), "17976931348623157", 292, 0), "the largest");
+    CHECK(Shortest(2.98023223876953125e-08, "29802322387695312", -24, 24),
+          "a value exactly halfway rounds to even");
+    CHECK(Shortest(123456.789, "123456789", -3, 3), "123456.789");
+    CHECK(Shortest(FromBits(0x0010000000000000), "22250738585072014", -324, 324),
+          "the smallest normal");
+    CHECK(Shortest(FromBits(0x000FFFFFFFFFFFFF), "2225073858507201", -323, 323),
+          "the largest subnormal");
+    CHECK(Shortest(9007199254740992.0, "9007199254740992", 0, 0), "2^53");
+    CHECK(Shortest(1e-7, "1", -7, 7), "1e-7");
+    CHECK(Shortest(1.5e300, "15", 299, 0), "1.5e300");
+    CHECK(Shortest(-2.5, "25", -1, 1), "a negative value");
+    mlocDecimal d;
+    CHECK(mlocMakeShortestDecimal(-2.5, &d) == mloc_success && d.negative == 1, "keeps its sign");
+    CHECK(mlocMakeShortestDecimal(-0.0, &d) == mloc_success && d.count == 0 && d.negative == 1 &&
+              Writes(&d, "-0"),
+          "negative zero");
+    CHECK(mlocMakeShortestDecimal(0.0, &d) == mloc_success && Writes(&d, "0"), "zero");
+    CHECK(mlocMakeShortestDecimal(FromBits(0x7FF0000000000000), &d) == mloc_success &&
+              Writes(&d, "Infinity"),
+          "infinity");
+    CHECK(mlocMakeShortestDecimal(FromBits(0xFFF0000000000000), &d) == mloc_success &&
+              Writes(&d, "-Infinity"),
+          "negative infinity");
+    CHECK(mlocMakeShortestDecimal(FromBits(0xFFF8000000000001), &d) == mloc_success &&
+              Writes(&d, "NaN") && d.negative == 0,
+          "NaN, whatever its sign bit");
+    CHECK(mlocMakeShortestDecimal(1.0, nullptr) == mloc_errorInvalid, "a null pointer");
+}
+
+// Random doubles read back from their shortest digits.
+static void TestRoundTrip(void)
+{
+    uint64_t state = 0x9E3779B97F4A7C15u;
+    int failures = 0;
+    for (int n = 0; n < 200000; n++)
+    {
+        state = state * 6364136223846793005u + 1442695040888963407u;
+        uint64_t bits = state ^ (state >> 29);
+        double value = FromBits(bits);
+        mlocDecimal d;
+        if (mlocMakeShortestDecimal(value, &d) != mloc_success)
+        {
+            failures++;
+            continue;
+        }
+        if (d.kind != mloc_decimalFinite)
+        {
+            continue;
+        }
+        char text[64];
+        int at = d.negative ? snprintf(text, sizeof(text), "-") : 0;
+        for (int k = 0; k < d.count; k++)
+        {
+            text[at++] = (char)('0' + d.digits[k]);
+        }
+        snprintf(text + at, sizeof(text) - (size_t)at, "%se%d", d.count == 0 ? "0" : "",
+                 (int)d.exponent);
+        double back = strtod(text, nullptr);
+        failures += memcmp(&back, &value, sizeof(value)) != 0 || d.count > 17;
+    }
+    CHECK(failures == 0, "200,000 random doubles read back from at most 17 digits");
+}
+
 int main(void)
 {
     TestParse();
@@ -287,5 +390,7 @@ int main(void)
     TestFormat();
     TestMadeUp();
     TestOperands();
+    TestShortest();
+    TestRoundTrip();
     return s_failures == 0 ? 0 : 1;
 }

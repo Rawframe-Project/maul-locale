@@ -31,8 +31,16 @@ fixed-size and copyable).
   point, so `1.50e1` shows `15.0`. More than 40 significant digits, or
   a value beyond 10^±999,999, is refused with `mloc_errorCapacity`,
   never rounded silently; anything else is `mloc_errorSyntax` at the
-  offending byte. Shortest round-trip digits of a `double`, by integer
-  arithmetic, follow in the same part.
+  offending byte.
+- `mlocMakeShortestDecimal` gives a `double`'s shortest round-trip
+  digits (of the fewest that read back, the nearest, ties to even) by
+  Ulf Adams's Ryu, in integer arithmetic only, so every platform gives
+  the same digits. Its powers of five, 125 bits each (9,872 bytes),
+  are written by `tools/gen_pow5_tables.py`, which CI runs with
+  `--check`. It agreed with Python's `repr` on 31 million doubles
+  (every exponent with four mantissas, powers of ten and their
+  neighbours, integers, thousandths and random bit patterns); the
+  tests read 200,000 random ones back with `strtod`.
 - `mlocFormatDecimal` writes it back as plain text (`-1234.50`,
   `Infinity`, `NaN`), which parses to the same value.
 - The plural operands are computed here, for the `plural` part and the
