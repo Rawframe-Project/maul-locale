@@ -70,6 +70,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatLocale(const mlocLocale* locale, ml
 ```
 Writes a locale as its BCP 47 tag in canonical syntax, such as "sr-Latn-RS" or "de-DE-u-co-phonebk". It reports no parts.  @param locale  A locale from mlocParseLocale. @param output  Where the tag goes. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocLocale* localeOut);
+```
+Adds likely subtags (UTS #35): "zh-TW" gives "zh-Hant-TW", "und" gives "en-Latn-US". A script "Zzzz" and a region "ZZ" are dropped first; the variants and extensions are kept. Aliases are not replaced, so give a canonicalized locale.  @param data       The data to read the likely subtags from. @param locale     The locale. @param localeOut  Receives the result; may be locale itself; left unchanged on failure. @return mloc_success; mloc_errorNotFound when the data has no likely subtags for the locale or has no likely subtags table; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocFavor favor, mlocLocale* localeOut);
+```
+Removes likely subtags (UTS #35): the shortest of the language alone, then with its region or script (in the order favor gives), that adds back to the same locale; "zh-Hant-TW" gives "zh-TW", or "zh-Hant" when the script is favored. The variants and extensions are kept.  @param data       The data to read the likely subtags from. @param locale     The locale. @param favor      mloc_favorRegion or mloc_favorScript. @param localeOut  Receives the result; may be locale itself; left unchanged on failure. @return mloc_success; mloc_errorNotFound as mlocMaximizeLocale; mloc_errorInvalid for a null pointer or another favor. @par Thread safety Safe from any thread.
+
 ---
 
-11 functions across 3 headers.
+13 functions across 3 headers.

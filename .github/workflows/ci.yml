@@ -87,11 +87,12 @@ jobs:
         if: matrix.name == 'linux-shared'
         run: cmake --install build --prefix "$PWD/package"
 
-  # The generator's resolution of all of CLDR against CLDR's JSON of the
-  # same release (record mloc-0006). The pinned release is cached by
+  # The pinned CLDR release: the generator's resolution against CLDR's
+  # JSON of the same release (record mloc-0006), the generated sources,
+  # and CLDR's conformance files. The release is cached by
   # tools/cldr-release.txt, so a run fetches it only when the pin moves.
-  cldr-resolution:
-    name: cldr-resolution
+  cldr:
+    name: cldr
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -109,9 +110,8 @@ jobs:
           sudo apt-get $APT_OPTIONS install -y -q gcc-14
       - name: Build the generator
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_TESTS=OFF \
-            -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
+          cmake --build build -j 4 --target mlocgen conform_likely
       - name: Compare with the JSON
         run: python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
       - name: The generated sources are current
@@ -120,6 +120,8 @@ jobs:
         run: |
           build/mlocgen generate ~/cldr-cache/cldr/common .
           git diff --exit-code src/generated || { echo "src/generated is stale: run mlocgen generate"; exit 1; }
+      - name: Conformance
+        run: build/conform_likely ~/cldr-cache/cldr/common/testData/localeIdentifiers/likelySubtags.txt
 
   # Each fuzz target runs for one minute on every push.
   fuzz:

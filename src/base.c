@@ -31,6 +31,8 @@ const char* mlocResultName(mlocResult result)
         return "mloc_errorDataVersion";
     case mloc_errorSyntax:
         return "mloc_errorSyntax";
+    case mloc_errorNotFound:
+        return "mloc_errorNotFound";
     default:
         return "unknown result";
     }

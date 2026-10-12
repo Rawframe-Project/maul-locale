@@ -77,6 +77,9 @@ extern "C"
         // Text is not well-formed for what it was given as, such as a
         // locale id.
         mloc_errorSyntax = -5,
+        // The data has no answer: no likely subtags for a language, or a
+        // data set without the table asked for.
+        mloc_errorNotFound = -6,
     };
 
     // The result of a call that reads text: the status and, on failure,

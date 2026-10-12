@@ -8,6 +8,7 @@
 #define MAUL_LOCALE_LOCALE_H
 
 #include "maul-locale/base.h"
+#include "maul-locale/data.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -63,6 +64,53 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatLocale(const mlocLocale* locale,
                                                         mlocOutput* output);
+
+    // Which shorter form mlocMinimizeLocale keeps when a language's
+    // likely script and region could each be dropped: UTS #35's default
+    // keeps the region ("zh-TW"), the other the script ("zh-Hant").
+    typedef uint8_t mlocFavor;
+    enum
+    {
+        mloc_favorRegion = 0,
+        mloc_favorScript = 1,
+    };
+
+    /// Adds likely subtags (UTS #35): "zh-TW" gives "zh-Hant-TW", "und"
+    /// gives "en-Latn-US". A script "Zzzz" and a region "ZZ" are dropped
+    /// first; the variants and extensions are kept. Aliases are not
+    /// replaced, so give a canonicalized locale.
+    ///
+    /// @param data       The data to read the likely subtags from.
+    /// @param locale     The locale.
+    /// @param localeOut  Receives the result; may be locale itself; left
+    ///                   unchanged on failure.
+    /// @return mloc_success; mloc_errorNotFound when the data has no likely
+    ///         subtags for the locale or has no likely subtags table;
+    ///         mloc_errorInvalid for a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocMaximizeLocale(const mlocDataSet* data,
+                                                          const mlocLocale* locale,
+                                                          mlocLocale* localeOut);
+
+    /// Removes likely subtags (UTS #35): the shortest of the language
+    /// alone, then with its region or script (in the order favor gives),
+    /// that adds back to the same locale; "zh-Hant-TW" gives "zh-TW", or
+    /// "zh-Hant" when the script is favored. The variants and extensions
+    /// are kept.
+    ///
+    /// @param data       The data to read the likely subtags from.
+    /// @param locale     The locale.
+    /// @param favor      mloc_favorRegion or mloc_favorScript.
+    /// @param localeOut  Receives the result; may be locale itself; left
+    ///                   unchanged on failure.
+    /// @return mloc_success; mloc_errorNotFound as mlocMaximizeLocale;
+    ///         mloc_errorInvalid for a null pointer or another favor.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocMinimizeLocale(const mlocDataSet* data,
+                                                          const mlocLocale* locale, mlocFavor favor,
+                                                          mlocLocale* localeOut);
 
 #ifdef __cplusplus
 }

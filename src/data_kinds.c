@@ -5,6 +5,12 @@
 // sorted by kind. A part adds its kinds here as it is built.
 
 #include "data_view.h"
+#include "kinds.h"
+#include "locale_likely.h"
 
-const DataKind* const mlocDataKinds = nullptr;
-const uint32_t mlocDataKindCount = 0;
+static const DataKind s_kinds[] = {
+    {kindLocaleLikely, mlocValidLikely},
+};
+
+const DataKind* const mlocDataKinds = s_kinds;
+const uint32_t mlocDataKindCount = sizeof(s_kinds) / sizeof(s_kinds[0]);

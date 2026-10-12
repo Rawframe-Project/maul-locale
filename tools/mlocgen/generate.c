@@ -6,6 +6,7 @@
 #include "generate.h"
 
 #include "data_format.h"
+#include "locale_gen.h"
 
 #include "maul-locale/base.h"
 
@@ -231,7 +232,6 @@ static void BuiltinSource(Text* text, const uint8_t* bytes, size_t size)
 
 int Generate(const char* commonDirectory, const char* root, char* errorOut, size_t errorCapacity)
 {
-    (void)commonDirectory;
     DataFileVersion version;
     if (!GenerateVersion(root, &version, errorOut, errorCapacity))
     {
@@ -242,6 +242,12 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     Text header = {0};
     VersionHeader(&header, &version, tzdb);
     DataFile data = {0};
+    if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity))
+    {
+        free(header.bytes);
+        DataFileFree(&data);
+        return 0;
+    }
     size_t size = 0;
     uint8_t* bytes = DataFileWrite(&data, &version, &size);
     Text builtin = {0};

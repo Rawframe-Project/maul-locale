@@ -32,6 +32,7 @@ static void TestResultNames(void)
     CHECK(strcmp(mlocResultName(mloc_errorDataVersion), "mloc_errorDataVersion") == 0,
           "data version name");
     CHECK(strcmp(mlocResultName(mloc_errorSyntax), "mloc_errorSyntax") == 0, "syntax name");
+    CHECK(strcmp(mlocResultName(mloc_errorNotFound), "mloc_errorNotFound") == 0, "not found name");
     CHECK(strcmp(mlocResultName(12345), "unknown result") == 0, "unknown name");
 }
 
