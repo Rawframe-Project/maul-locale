@@ -91,6 +91,8 @@ static void TestSpacing(void)
     CHECK(Shows("en", "CHF", mloc_currencyNarrowSymbol, "5", "Fr." NBSP "5.00"),
           "a full stop next to the digits, spaced as currencySpacing says");
     CHECK(Plain("de", "EUR", "1234.5", "1.234,50" NBSP "\xE2\x82\xAC"), "a suffix symbol");
+    CHECK(Plain("agq", "USD", "5", "5,00" NBSP "US$"),
+          "a suffix symbol's first character is the one next to the digits");
     CHECK(Plain("fr", "EUR", "-1234.5",
                 "-1\xE2\x80\xAF"
                 "234,50" NBSP "\xE2\x82\xAC"),
@@ -151,6 +153,8 @@ static void TestPatterns(void)
           "Indian grouping");
     mlocCurrencyOptions scientific = {.number.notation = mloc_notationScientific};
     CHECK(Formats("en", "USD", &scientific, "1234.5", "$1.23E3"), "scientific notation");
+    mlocCurrencyOptions engineering = {.number.notation = mloc_notationEngineering};
+    CHECK(Formats("en", "USD", &engineering, "12345.678", "$12.35E3"), "engineering notation");
 }
 
 // Whether a range formats as expected in a locale with options.

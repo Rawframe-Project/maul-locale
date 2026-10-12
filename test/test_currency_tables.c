@@ -71,6 +71,9 @@ static void TestFractions(void)
     first[fractionCashDigits] = 2;
     Put16(second + fractionCode, Code("JPY"));
     CHECK(Valid(mlocValidCurrencyFractions, unit, sizeof(unit)), "a default and one currency");
+    second[fractionDigits] = currencyMaxDigits;
+    CHECK(Valid(mlocValidCurrencyFractions, unit, sizeof(unit)), "the most digits");
+    second[fractionDigits] = 0;
     CHECK(!Valid(mlocValidCurrencyFractions, unit, sizeof(unit) - 1) &&
               !Valid(mlocValidCurrencyFractions, unit, 4),
           "a size that is not the entries'");
@@ -229,34 +232,45 @@ static void TestSymbols(void)
     CHECK(ValidTest(u), "a pattern index is bounded when a formatter reads it");
 }
 
-// A formatter of EUR for und over a pack of the compiled-in number units,
-// root's numbers and this root currency symbols unit.
-static mlocResult InitOver(const uint8_t* symbols, uint32_t size)
+// What a pack holds beside the compiled-in number units of no locale:
+// root's numbers, the fractions and the sets (each left out when its
+// size is 0) and root's currency symbols.
+typedef struct Pack
 {
-    DataSpan systems;
-    DataSpan numberSymbols;
-    DataSpan patterns;
     DataSpan numbers;
-    uint32_t root = 0;
-    if (!mlocFindDataUnit(&s_view, kindNumberSystems, dataNoLocale, &systems) ||
-        !mlocFindDataUnit(&s_view, kindNumberSymbols, dataNoLocale, &numberSymbols) ||
-        !mlocFindDataUnit(&s_view, kindNumberPatterns, dataNoLocale, &patterns) ||
-        !mlocFindDataLocale(&s_view, "root", 4, &root) ||
-        !mlocFindDataUnit(&s_view, kindNumbers, root, &numbers))
-    {
-        return (mlocResult)-100;
-    }
+    DataSpan fractions;
+    DataSpan sets;
+    DataSpan symbols;
+} Pack;
+
+static DataSpan s_numbers;
+static DataSpan s_numberSystems;
+static DataSpan s_numberSymbols;
+static DataSpan s_numberPatterns;
+
+// A formatter of EUR for und over a pack.
+static mlocResult InitOver(const Pack* p)
+{
     // In the order of their kinds.
-    const PackUnit units[] = {
-        {kindNumberSystems, systems, false},          {kindNumberSymbols, numberSymbols, false},
-        {kindNumberPatterns, patterns, false},        {kindNumbers, numbers, true},
-        {kindCurrencyFractions, s_fractions, false},  {kindCurrencyPatterns, s_sets, false},
-        {kindCurrencySymbols, {symbols, size}, true},
-    };
+    PackUnit units[7];
+    uint32_t count = 0;
+    units[count++] = (PackUnit){kindNumberSystems, s_numberSystems, false};
+    units[count++] = (PackUnit){kindNumberSymbols, s_numberSymbols, false};
+    units[count++] = (PackUnit){kindNumberPatterns, s_numberPatterns, false};
+    units[count++] = (PackUnit){kindNumbers, p->numbers, true};
+    if (p->fractions.size > 0)
+    {
+        units[count++] = (PackUnit){kindCurrencyFractions, p->fractions, false};
+    }
+    if (p->sets.size > 0)
+    {
+        units[count++] = (PackUnit){kindCurrencyPatterns, p->sets, false};
+    }
+    units[count++] = (PackUnit){kindCurrencySymbols, p->symbols, true};
     mlocData source;
     mlocLocale locale;
     mlocCurrencyFormatter formatter;
-    if (!OpenRootPack(units, sizeof(units) / sizeof(units[0]), &source) ||
+    if (!OpenRootPack(units, count, &source) ||
         mlocParseLocale("und", 3, &locale).status != mloc_success)
     {
         return (mlocResult)-101;
@@ -267,16 +281,79 @@ static mlocResult InitOver(const uint8_t* symbols, uint32_t size)
 
 static void TestDisagreeing(void)
 {
-    DataSpan patterns;
-    CHECK(mlocFindDataUnit(&s_view, kindNumberPatterns, dataNoLocale, &patterns),
-          "the patterns unit");
-    uint32_t count = mlocLoad16(patterns.bytes + 2);
+    uint32_t count = mlocLoad16(s_numberPatterns.bytes + 2);
     uint8_t u[testSize];
     Build(u);
+    Pack p = {s_numbers, s_fractions, s_sets, {u, testSize}};
     Put16(u + testRowBytes + 3, count - 1);
-    CHECK(InitOver(u, testSize) == mloc_success, "a currency's own pattern, the last");
+    CHECK(InitOver(&p) == mloc_success, "a currency's own pattern, the last");
     Put16(u + testRowBytes + 3, count);
-    CHECK(InitOver(u, testSize) == mloc_errorNotFound, "a currency's own pattern past the unit");
+    CHECK(InitOver(&p) == mloc_errorNotFound, "a currency's own pattern past the unit");
+    Build(u);
+    p.fractions = (DataSpan){0};
+    CHECK(InitOver(&p) == mloc_errorNotFound, "no fractions");
+    p.fractions = s_fractions;
+    p.sets = (DataSpan){0};
+    CHECK(InitOver(&p) == mloc_errorNotFound, "no pattern sets");
+    p.sets = s_sets;
+    // Every entry of root's numbers names a set past the sets, or a set
+    // whose patterns pass the patterns.
+    uint8_t numbers[1024];
+    uint32_t sets = mlocLoad16(s_sets.bytes + 2);
+    if (s_numbers.size > sizeof(numbers))
+    {
+        CHECK(false, "room for root's numbers");
+        return;
+    }
+    memcpy(numbers, s_numbers.bytes, s_numbers.size);
+    for (uint32_t i = 0; i < numbers[localeEntryCount]; i++)
+    {
+        Put16(numbers + numberLocaleHeaderSize + i * numberEntrySize + entryCurrency, sets);
+    }
+    p.numbers = (DataSpan){numbers, s_numbers.size};
+    CHECK(InitOver(&p) == mloc_errorNotFound, "a set past the sets");
+    for (uint32_t i = 0; i < numbers[localeEntryCount]; i++)
+    {
+        Put16(numbers + numberLocaleHeaderSize + i * numberEntrySize + entryCurrency, sets - 1);
+    }
+    CHECK(InitOver(&p) == mloc_success, "the last set");
+    uint8_t spoiled[8192];
+    if (s_sets.size > sizeof(spoiled))
+    {
+        CHECK(false, "room for the sets");
+        return;
+    }
+    for (int field = 0; field < currencyPatternCount; field++)
+    {
+        memcpy(spoiled, s_sets.bytes, s_sets.size);
+        uint8_t* last = spoiled + s_sets.size - currencySetSize;
+        Put16(last + 2 * field, count);
+        p.sets = (DataSpan){spoiled, s_sets.size};
+        CHECK(InitOver(&p) == mloc_errorNotFound, "a set's pattern past the patterns");
+    }
+    p.sets = s_sets;
+    p.numbers = s_numbers;
+    // A symbol longer than a core holds.
+    enum
+    {
+        longSize = sparseHeaderSize + 4 + 2 + 4 + 3 + 256 + 1,
+    };
+    uint8_t wide[longSize] = {1, 0, 1, 0, 0, 1, 0, 0, 3};
+    uint8_t* at = wide + sparseHeaderSize;
+    Put16(at + 2, 256);
+    Put16(at + 4, Code("EUR"));
+    Put16(at + 8, 3);
+    at[10] = 1u << currencySymbol;
+    memset(at + 13, 'a', 256);
+    p.symbols = (DataSpan){wide, longSize};
+    CHECK(Valid(mlocValidCurrencySymbols, wide, longSize), "a long symbol is valid alone");
+    CHECK(InitOver(&p) == mloc_errorNotFound, "a symbol longer than a core holds");
+    Put16(wide + 4, 255);
+    Put16(at + 2, 255);
+    at[13 + 255] = 0;
+    p.symbols = (DataSpan){wide, longSize - 1};
+    CHECK(Valid(mlocValidCurrencySymbols, wide, longSize - 1), "a symbol of 255 bytes is valid");
+    CHECK(InitOver(&p) == mloc_success, "a symbol of 255 bytes");
 }
 
 int main(void)
@@ -288,7 +365,11 @@ int main(void)
     CHECK(mlocFindDataUnit(&s_view, kindCurrencyFractions, dataNoLocale, &s_fractions) &&
               mlocFindDataUnit(&s_view, kindCurrencyPatterns, dataNoLocale, &s_sets) &&
               mlocFindDataLocale(&s_view, "root", 4, &root) &&
-              mlocFindDataUnit(&s_view, kindCurrencySymbols, root, &s_rootSymbols),
+              mlocFindDataUnit(&s_view, kindCurrencySymbols, root, &s_rootSymbols) &&
+              mlocFindDataUnit(&s_view, kindNumbers, root, &s_numbers) &&
+              mlocFindDataUnit(&s_view, kindNumberSystems, dataNoLocale, &s_numberSystems) &&
+              mlocFindDataUnit(&s_view, kindNumberSymbols, dataNoLocale, &s_numberSymbols) &&
+              mlocFindDataUnit(&s_view, kindNumberPatterns, dataNoLocale, &s_numberPatterns),
           "the compiled-in data has the currency units");
     if (s_failures > 0)
     {
