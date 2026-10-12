@@ -454,15 +454,15 @@ static void TestRefusals(void)
     CHECK(mlocFormatCurrency(nullptr, &decimal, &output) == mloc_errorInvalid, "a null formatter");
 }
 
-// The compiled-in data, and with it the currency names data file whose
-// path is the program's argument.
-static bool OpenData(int argc, char** argv)
+// The compiled-in data, and with it the currency names data file, at
+// the path the build gives.
+static bool OpenData(void)
 {
     static mlocData s_sources[2];
     alignas(8) static uint8_t s_names[4 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 1};
-    FILE* file = argc == 2 ? fopen(argv[1], "rb") : nullptr;
+    FILE* file = fopen(MLOC_NAMES_FILE, "rb");
     size_t size = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
     if (file != nullptr)
     {
@@ -473,11 +473,11 @@ static bool OpenData(int argc, char** argv)
            mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
 }
 
-int main(int argc, char** argv)
+int main(void)
 {
-    if (!OpenData(argc, argv))
+    if (!OpenData())
     {
-        fputs("usage: test_currency <currency-names.mloc>\n", stderr);
+        fputs("test_currency: cannot open " MLOC_NAMES_FILE "\n", stderr);
         return 2;
     }
     TestDisplays();
