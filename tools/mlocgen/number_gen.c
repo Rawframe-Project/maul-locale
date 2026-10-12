@@ -71,8 +71,11 @@ typedef struct Entry
     uint16_t percent;
     uint16_t compactShort;
     uint16_t compactLong;
-    // Its currency pattern set.
+    // Its currency pattern set, and the compact currency tables the set
+    // holds.
     uint16_t currency;
+    uint16_t currencyCompact;
+    uint16_t currencyAlpha;
 } Entry;
 
 // A locale's resolved numbers.
@@ -676,7 +679,8 @@ static bool SameButSpaces(const Table* t, const uint8_t* a, const uint8_t* b)
     return true;
 }
 
-// A locale's currency pattern set for a system: the standard and
+// A locale's currency pattern set for a system, with its short compact
+// currency tables: the standard and
 // accounting patterns, each with its alphaNextToNumber variant and its
 // noCurrency variant, which has no currency. A variant that differs from
 // its pattern in more than spaces, or the noCurrency one in its digits,
@@ -684,7 +688,8 @@ static bool SameButSpaces(const Table* t, const uint8_t* a, const uint8_t* b)
 // provisional, so root's stands; Indian English inherits English's
 // grouping), so the pattern spaced as root's currencySpacing says, or
 // without its currency, stands instead.
-static uint16_t CurrencySetOf(Generator* g, const char* locale, const char* system)
+static uint16_t CurrencySetOf(Generator* g, const char* locale, const char* system,
+                              uint16_t compact, uint16_t compactAlpha)
 {
     static const char* const s_types[2] = {"standard", "accounting"};
     static const char* const s_alts[3] = {"", "[@alt=\"alphaNextToNumber\"]",
@@ -729,6 +734,8 @@ static uint16_t CurrencySetOf(Generator* g, const char* locale, const char* syst
             GenPut(set + 2 * (3 * type + alt), index, 2);
         }
     }
+    GenPut(set + setCompact, compact, 2);
+    GenPut(set + setCompactAlpha, compactAlpha, 2);
     return TableAddRecord(&g->currencySets, set);
 }
 
@@ -808,12 +815,21 @@ static uint16_t SymbolsOf(Generator* g, const char* locale, const char* system)
 static void MarkOwnFormats(const char* key, void* value, void* context)
 {
     (void)value;
-    static const char s_prefix[] = "//ldml/numbers/decimalFormats[@numberSystem=\"";
-    if (strncmp(key, s_prefix, sizeof(s_prefix) - 1) != 0)
+    static const char s_decimal[] = "//ldml/numbers/decimalFormats[@numberSystem=\"";
+    static const char s_currency[] = "//ldml/numbers/currencyFormats[@numberSystem=\"";
+    const char* name = nullptr;
+    if (strncmp(key, s_decimal, sizeof(s_decimal) - 1) == 0)
+    {
+        name = key + sizeof(s_decimal) - 1;
+    }
+    else if (strncmp(key, s_currency, sizeof(s_currency) - 1) == 0)
+    {
+        name = key + sizeof(s_currency) - 1;
+    }
+    else
     {
         return;
     }
-    const char* name = key + sizeof(s_prefix) - 1;
     uint64_t id = mlocPackSystem(name, (uint32_t)strcspn(name, "\""));
     const Generator* g = ((void**)context)[0];
     bool* own = ((void**)context)[1];
@@ -878,11 +894,151 @@ static const char* PlainValue(Generator* g, const char* locale, const char* chai
     return nullptr;
 }
 
+// Whose compact patterns a table holds: the decimal formats', the
+// currency formats', or the currency formats' alphaNextToNumber ones.
+typedef enum CompactKind
+{
+    compactDecimal,
+    compactCurrency,
+    compactCurrencyAlpha,
+} CompactKind;
+
+// A compact pattern of a kind by plain inheritance, the system's else
+// latn's, or null.
+static const char* KindPattern(Generator* g, const char* locale, const char* system,
+                               const char* length, const char* count, const char* type,
+                               CompactKind kind)
+{
+    const char* pattern = nullptr;
+    for (int pass = 0; pass < 2 && pattern == nullptr; pass++)
+    {
+        const char* name = pass == 0 ? system : "latn";
+        char chain[384];
+        if (kind == compactDecimal)
+        {
+            snprintf(chain, sizeof(chain),
+                     "//ldml/numbers/decimalFormats[@numberSystem=\"%s\"]/decimalFormatLength"
+                     "[@type=\"%s\"]/decimalFormat/pattern[@count=\"%s\"][@type=\"%s\"]",
+                     name, length, count, type);
+        }
+        else
+        {
+            snprintf(chain, sizeof(chain),
+                     "//ldml/numbers/currencyFormats[@numberSystem=\"%s\"]/currencyFormatLength"
+                     "[@type=\"%s\"]/currencyFormat[@type=\"standard\"]/pattern%s[@count=\"%s\"]"
+                     "[@type=\"%s\"]",
+                     name, length,
+                     kind == compactCurrencyAlpha ? "[@alt=\"alphaNextToNumber\"]" : "", count,
+                     type);
+        }
+        pattern = PlainValue(g, locale, chain);
+    }
+    return pattern;
+}
+
+// Whether two pattern strings differ in their spaces alone.
+static bool SameTextButSpaces(const char* a, const char* b)
+{
+    size_t i = 0;
+    size_t j = 0;
+    size_t m = strlen(a);
+    size_t n = strlen(b);
+    for (;;)
+    {
+        for (size_t space = SpaceAt(a + i, m - i); space != 0; space = SpaceAt(a + i, m - i))
+        {
+            i += space;
+        }
+        for (size_t space = SpaceAt(b + j, n - j); space != 0; space = SpaceAt(b + j, n - j))
+        {
+            j += space;
+        }
+        if (i == m || j == n)
+        {
+            return i == m && j == n;
+        }
+        if (a[i++] != b[j++])
+        {
+            return false;
+        }
+    }
+}
+
+// A compact currency pattern with a no-break space where its currency
+// and its zeros meet, in a buffer of its own.
+static const char* SpacedText(const char* pattern)
+{
+    static char s_spaced[maxAffix * 4];
+    size_t n = 0;
+    for (const char* c = pattern; *c != '\0'; c++)
+    {
+        bool sign = strncmp(c, "\xC2\xA4", 2) == 0;
+        bool signThenZero = sign && c[2] == '0';
+        bool zeroThenSign = *c == '0' && strncmp(c + 1, "\xC2\xA4", 2) == 0;
+        if (n + 5 >= sizeof(s_spaced))
+        {
+            GenDie("a compact currency pattern too long", pattern);
+        }
+        s_spaced[n++] = *c;
+        if (sign)
+        {
+            s_spaced[n++] = *++c;
+        }
+        if (signThenZero || zeroThenSign)
+        {
+            memcpy(s_spaced + n, "\xC2\xA0", 2);
+            n += 2;
+        }
+    }
+    s_spaced[n] = '\0';
+    return s_spaced;
+}
+
+// Whether a compact pattern's currency stands right beside its zeros.
+static bool CurrencyMeetsZeros(const char* pattern)
+{
+    const char* sign = strstr(pattern, "\xC2\xA4");
+    while (sign != nullptr)
+    {
+        size_t run = 0;
+        while (strncmp(sign + 2 * run, "\xC2\xA4", 2) == 0)
+        {
+            run++;
+        }
+        if ((sign > pattern && sign[-1] == '0') || sign[2 * run] == '0')
+        {
+            return true;
+        }
+        sign = strstr(sign + 2 * run, "\xC2\xA4");
+    }
+    return false;
+}
+
+// A compact pattern of a kind. UTS #35 switches to the alphaNextToNumber
+// pattern only where the currency meets the zeros (Bengali's "0 লা¤"
+// keeps its pattern); one that differs from its plain one in more than
+// spaces was written for another pattern (as CurrencySetOf says), so the
+// plain one spaced stands instead.
+static const char* CompactPattern(Generator* g, const char* locale, const char* system,
+                                  const char* length, const char* count, const char* type,
+                                  CompactKind kind)
+{
+    const char* plain = KindPattern(g, locale, system, length, count, type,
+                                    kind == compactDecimal ? compactDecimal : compactCurrency);
+    if (kind != compactCurrencyAlpha || plain == nullptr || !CurrencyMeetsZeros(plain))
+    {
+        return plain;
+    }
+    const char* alpha = KindPattern(g, locale, system, length, count, type, kind);
+    return alpha != nullptr && SameTextButSpaces(alpha, plain) ? alpha : SpacedText(plain);
+}
+
 // A compact row's slot: a pattern index, numberCompactAbsent, or for the
 // pattern "0" numberCompactNone. A system without formats of its own
 // takes latn's, as root's alias says.
 static uint16_t CompactSlot(Generator* g, const char* locale, const char* system,
-                            const char* length, const char* count, int power, int* zerosOut)
+                            const char* length, const char* count, int power, CompactKind kind,
+                            int* zerosOut)
 {
     *zerosOut = 0;
     char type[32] = "1";
@@ -890,16 +1046,7 @@ static uint16_t CompactSlot(Generator* g, const char* locale, const char* system
     {
         strcat(type, "0");
     }
-    const char* pattern = nullptr;
-    for (int pass = 0; pass < 2 && pattern == nullptr; pass++)
-    {
-        char chain[320];
-        snprintf(chain, sizeof(chain),
-                 "//ldml/numbers/decimalFormats[@numberSystem=\"%s\"]/decimalFormatLength[@type="
-                 "\"%s\"]/decimalFormat/pattern[@count=\"%s\"][@type=\"%s\"]",
-                 pass == 0 ? system : "latn", length, count, type);
-        pattern = PlainValue(g, locale, chain);
-    }
+    const char* pattern = CompactPattern(g, locale, system, length, count, type, kind);
     if (pattern == nullptr)
     {
         return numberCompactAbsent;
@@ -930,7 +1077,8 @@ static uint16_t CompactSlot(Generator* g, const char* locale, const char* system
 
 // A locale's compact table of one length for a system; a power the long
 // length lacks takes the short one's row, as UTS #35 says.
-static uint16_t CompactOf(Generator* g, const char* locale, const char* system, bool longLength)
+static uint16_t CompactOf(Generator* g, const char* locale, const char* system, bool longLength,
+                          CompactKind kind)
 {
     static const char* const s_counts[numberCompactSlots] = {"zero", "one",   "two", "few",
                                                              "many", "other", "1"};
@@ -941,11 +1089,11 @@ static uint16_t CompactOf(Generator* g, const char* locale, const char* system, 
         int power = numberCompactFirstPower + r;
         const char* length = longLength ? "long" : "short";
         int zeros = 0;
-        uint16_t other = CompactSlot(g, locale, system, length, "other", power, &zeros);
+        uint16_t other = CompactSlot(g, locale, system, length, "other", power, kind, &zeros);
         if (other == numberCompactAbsent && longLength)
         {
             length = "short";
-            other = CompactSlot(g, locale, system, length, "other", power, &zeros);
+            other = CompactSlot(g, locale, system, length, "other", power, kind, &zeros);
         }
         if (other == numberCompactAbsent || other == numberCompactNone)
         {
@@ -962,9 +1110,9 @@ static uint16_t CompactOf(Generator* g, const char* locale, const char* system, 
         for (int c = 0; c < numberCompactSlots; c++)
         {
             int slotZeros = 0;
-            slots[c] = c == numberCompactOther
-                           ? other
-                           : CompactSlot(g, locale, system, length, s_counts[c], power, &slotZeros);
+            slots[c] = c == numberCompactOther ? other
+                                               : CompactSlot(g, locale, system, length, s_counts[c],
+                                                             power, kind, &slotZeros);
             // A category's "0" where the other one compacts is no pattern
             // of its own, and one equal to the other one need not be named
             // (CLDR's resolution gives a missing category the other one's).
@@ -1019,7 +1167,6 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
             .symbols = SymbolsOf(g, locale, s->name),
             .decimal = PatternOf(g, locale, s->name, "decimal"),
             .percent = PatternOf(g, locale, s->name, "percent"),
-            .currency = CurrencySetOf(g, locale, s->name),
         };
         if (s->id == numberLatn)
         {
@@ -1034,13 +1181,18 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
         Entry* e = &out->entries[i];
         if (e->system == latn.system || HasOwnFormats(g, locale, e->system))
         {
-            e->compactShort = CompactOf(g, locale, g->systems[e->system].name, false);
-            e->compactLong = CompactOf(g, locale, g->systems[e->system].name, true);
+            const char* name = g->systems[e->system].name;
+            e->compactShort = CompactOf(g, locale, name, false, compactDecimal);
+            e->compactLong = CompactOf(g, locale, name, true, compactDecimal);
+            e->currencyCompact = CompactOf(g, locale, name, false, compactCurrency);
+            e->currencyAlpha = CompactOf(g, locale, name, false, compactCurrencyAlpha);
         }
         if (e->system == latn.system)
         {
             latn.compactShort = e->compactShort;
             latn.compactLong = e->compactLong;
+            latn.currencyCompact = e->currencyCompact;
+            latn.currencyAlpha = e->currencyAlpha;
         }
     }
     for (int i = 0; i < out->entryCount; i++)
@@ -1050,6 +1202,14 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
         {
             e->compactShort = latn.compactShort;
             e->compactLong = latn.compactLong;
+            e->currencyCompact = latn.currencyCompact;
+            e->currencyAlpha = latn.currencyAlpha;
+        }
+        e->currency = CurrencySetOf(g, locale, g->systems[e->system].name, e->currencyCompact,
+                                    e->currencyAlpha);
+        if (e->system == latn.system)
+        {
+            latn.currency = e->currency;
         }
     }
     if (latn.system == numberNoSystem)

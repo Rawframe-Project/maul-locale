@@ -14,7 +14,10 @@
 // Currency pattern sets, a unit of no locale in the table shape of
 // number_tables.h, with no strings: each record the indexes in the
 // patterns unit of the standard pattern, its alphaNextToNumber and its
-// noCurrency variants, then the accounting pattern's three (u16 each).
+// noCurrency variants, then the accounting pattern's three, then the
+// indexes in the compact tables unit of the short compact currency
+// table and its alphaNextToNumber table (u16 each; CLDR has no long
+// ones, so long compact notation takes them too, as ICU does).
 // A locale entry of the numbers unit names its set.
 //
 // Currency symbols, a unit per locale key that gives any of its own, in
@@ -42,7 +45,10 @@ enum
 {
     currencyFractionsHeaderSize = 8,
     currencyFractionSize = 8,
-    currencySetSize = 12,
+    currencySetSize = 16,
+    // The set fields of the compact tables.
+    setCompact = 12,
+    setCompactAlpha = 14,
     sparseHeaderSize = 12,
     // The largest digit count a fraction entry holds.
     currencyMaxDigits = 6,

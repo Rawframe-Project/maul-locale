@@ -157,6 +157,37 @@ static void TestPatterns(void)
     CHECK(Formats("en", "USD", &engineering, "12345.678", "$12.35E3"), "engineering notation");
 }
 
+static void TestCompact(void)
+{
+    mlocCurrencyOptions s = {.number.notation = mloc_notationCompactShort};
+    CHECK(Formats("en", "USD", &s, "1234", "$1.2K") && Formats("en", "USD", &s, "999", "$999"),
+          "short compact, rounded by its own rule");
+    CHECK(Formats("de", "EUR", &s, "1234567", "1,2" NBSP "Mio." NBSP "\xE2\x82\xAC") &&
+              Formats("de", "EUR", &s, "1234", "1234" NBSP "\xE2\x82\xAC"),
+          "German's currency table, which does not compact thousands");
+    s.display = mloc_currencyCode;
+    CHECK(Formats("en", "USD", &s, "1234", "USD" NBSP "1.2K"),
+          "the alphaNextToNumber table for a code");
+    s.display = mloc_currencyNarrowSymbol;
+    CHECK(Formats("en", "CHF", &s, "1234", "Fr." NBSP "1.2K"), "and for a full stop");
+    s.display = mloc_currencySymbol;
+    CHECK(Formats("bn", "USD", &s, "1234",
+                  "\xE0\xA7\xA7.\xE0\xA7\xA8" NBSP "\xE0\xA6\xB9\xE0\xA6\xBE"
+                  "US$"),
+          "a currency away from the zeros keeps its pattern (Bengali's 0 হা¤)");
+    CHECK(Formats("ja", "JPY", &s, "12345678",
+                  "\xEF\xBF\xA5"
+                  "1235\xE4\xB8\x87"),
+          "Japanese's man");
+    mlocCurrencyOptions l = {.number.notation = mloc_notationCompactLong};
+    CHECK(Formats("en", "USD", &l, "1234567", "$1.2M"),
+          "long compact takes the short currency table, as CLDR has no long one");
+    l.display = mloc_currencyHidden;
+    CHECK(Formats("en", "USD", &l, "1234", "1.2K") &&
+              Formats("af", "USD", &l, "1234", "1,2" NBSP "k"),
+          "hidden, the short decimal table");
+}
+
 // Whether a range formats as expected in a locale with options.
 static bool Ranges(const char* id, const char* code, mlocCurrencyDisplay display, const char* from,
                    const char* to, const char* expected)
@@ -251,6 +282,10 @@ static void TestRefusals(void)
                   mloc_errorInvalid,
           "a code that is not three letters");
     mlocCurrencyOptions percent = {.number.style = mloc_numberPercent};
+    mlocCurrencyOptions compactPercent = {
+        .number = {.notation = mloc_notationCompactShort, .style = mloc_numberPercent}};
+    CHECK(Init(&formatter, "en", "USD", &compactPercent) == mloc_errorInvalid,
+          "compact notation with a percent style");
     mlocCurrencyOptions display = {.display = (mlocCurrencyDisplay)6};
     mlocCurrencyOptions usage = {.usage = (mlocCurrencyUsage)2};
     CHECK(Init(&formatter, "en", "USD", &percent) == mloc_errorInvalid &&
@@ -287,6 +322,7 @@ int main(void)
     TestSpacing();
     TestDigits();
     TestPatterns();
+    TestCompact();
     TestRanges();
     TestParts();
     TestRefusals();

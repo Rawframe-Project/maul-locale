@@ -214,7 +214,8 @@ static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 // The index of an entry's currency pattern of a style; false when the
 // data has no pattern sets or the indexes leave them.
 static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_t* entry,
-                              const CurrencyStyle* style, uint32_t* patternOut)
+                              const CurrencyStyle* style, uint32_t* patternOut,
+                              uint32_t* compactOut)
 {
     DataSpan sets;
     if (!mlocFindDataUnit(view, kindCurrencyPatterns, dataNoLocale, &sets))
@@ -241,8 +242,12 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
     // to the digits is neither a symbol nor a space.
     uint8_t edge = CurrencyInPrefix(u->patterns, mlocLoad16(r + 2 * base)) ? currencyEndsAlpha
                                                                            : currencyStartsAlpha;
-    int chosen = style->hidden ? base + 2 : (style->spacing & edge) != 0 ? base + 1 : base;
+    bool alpha = (style->spacing & edge) != 0;
+    int chosen = style->hidden ? base + 2 : alpha ? base + 1 : base;
     *patternOut = mlocLoad16(r + 2 * chosen);
+    // Hidden, compact notation takes the short decimal table (UTS #35).
+    *compactOut = style->hidden ? mlocLoad16(entry + entryCompactShort)
+                                : mlocLoad16(r + (alpha ? setCompactAlpha : setCompact));
     return true;
 }
 
@@ -284,8 +289,12 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     NumberCore core;
     int field = style == mloc_numberDecimal ? entryDecimal : entryPercent;
     uint32_t pattern = entry == nullptr ? 0 : mlocLoad16(entry + field);
+    uint32_t compactIndex =
+        entry == nullptr ? 0
+                         : mlocLoad16(entry + (longLength ? entryCompactLong : entryCompactShort));
     if (entry == nullptr ||
-        (currency != nullptr && !CurrencyPatternOf(&view, &u, entry, currency, &pattern)) ||
+        (currency != nullptr &&
+         !CurrencyPatternOf(&view, &u, entry, currency, &pattern, &compactIndex)) ||
         !Fill(&core, &u, system, entry, header[localeMinGrouping], pattern))
     {
         return mloc_errorNotFound;
@@ -306,8 +315,7 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
         {
             return mloc_errorNotFound;
         }
-        const uint8_t* table = mlocFindCompactTable(
-            tables, mlocLoad16(entry + (longLength ? entryCompactLong : entryCompactShort)));
+        const uint8_t* table = mlocFindCompactTable(tables, compactIndex);
         if (table == nullptr ||
             !mlocValidCompactUse((CompactData){.table = table, .patterns = patterns.bytes}))
         {
@@ -327,9 +335,11 @@ mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
 }
 
 mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
-                                const mlocLocale* locale, const CurrencyStyle* style)
+                                const mlocLocale* locale, const CurrencyStyle* style,
+                                const uint8_t** tableOut, const uint8_t** patternsOut)
 {
-    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, nullptr, false, nullptr);
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, tableOut, style->longLength,
+                    patternsOut);
 }
 
 mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,

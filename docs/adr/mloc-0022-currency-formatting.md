@@ -63,17 +63,33 @@ CLDR's test data has no currency formatting cases.
   usage), in the options' rounding mode, as ECMA-402 and ICU do: a
   second default rounding beside compact notation's. A precision the
   options give replaces it.
+- **Compact notation:** each pattern set also names the short compact
+  currency table and its `alphaNextToNumber` table (both lengths take
+  them: CLDR has no long currency patterns, and ICU falls back to the
+  short ones); hidden, compact notation takes the short decimal table,
+  as UTS #35 says when there is no `noCurrency` compact pattern. A
+  compact pattern switches to its `alphaNextToNumber` variant only where
+  its currency meets its zeros (UTS #35; Bengali's "0 লা¤" keeps its
+  pattern), and a variant written for another pattern gives way as
+  above. The compact rounding applies unless the options give a
+  precision, as ICU does.
 - **Ranges** are the number formatter's (`mlocFormatCurrencyRange`).
 - **Proof:** ICU4C 79.1rc, built on CLDR 49, as oracle: 105 locales,
   12 currencies (one the data does not know), every display, accounting
   and cash, four amounts, 65,520 cases: every case agrees but the
   hidden display's, which differ in the spaces and bidi marks where the
-  symbol stood; and 13,230 range cases agree. The tests take their
-  expected text from it.
+  symbol stood; and 13,230 range cases agree. In compact notation
+  (40,320 cases: 6 currencies, four displays, both lengths, eight
+  amounts) every case agrees but Afrikaans's, whose own
+  `alphaNextToNumber` compact patterns write no space ("USD1,2 m."; ICU
+  reads no such pattern and spaces by `currencySpacing`), and the hidden
+  display's, whose short decimal table has other words than the
+  currency table in Macedonian, Mongolian and Pashto. The tests take
+  their expected text from it.
 
 ## Consequences
 
-The currency units cost about 45 KB of the compiled-in data, the
-symbols units 44 KB of it. The names and their plural forms, ten times
+The currency units cost about 65 KB of the compiled-in data: the
+symbols units 44 KB, the compact currency tables about 20 KB. The names and their plural forms, ten times
 the symbols, are a kind of their own, so data without them is a choice.
 Building the generator fetches Maul Unicode.

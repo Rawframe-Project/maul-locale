@@ -99,18 +99,25 @@ mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
 // hidden, else its alphaNextToNumber variant when the currency's
 // character next to the digits is neither a symbol nor a space (spacing
 // flags of the text shown, currency_tables.h).
+// In compact notation, the short compact currency table, or its
+// alphaNextToNumber one as for the pattern; hidden, the short decimal
+// compact table. Both lengths take the short tables (CLDR has no long
+// currency ones).
 typedef struct CurrencyStyle
 {
     bool accounting;
     bool hidden;
     uint8_t spacing;
+    bool longLength;
 } CurrencyStyle;
 
 // As mlocInitNumberCore, with the system's currency pattern of a style
-// and the currency separators. mloc_errorNotFound for data without the
+// and the currency separators; with tableOut, as mlocInitCompactCore,
+// the style's compact table. mloc_errorNotFound for data without the
 // currency pattern sets.
 mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
-                                const mlocLocale* locale, const CurrencyStyle* style);
+                                const mlocLocale* locale, const CurrencyStyle* style,
+                                const uint8_t** tableOut, const uint8_t** patternsOut);
 
 // Points a core's pattern at a pattern of a valid patterns unit; false
 // for an index past its records.

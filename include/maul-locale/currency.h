@@ -44,11 +44,14 @@ extern "C"
     // A currency formatter's options; the zero value is the default.
     typedef struct mlocCurrencyOptions
     {
-        // The notation (standard, scientific or engineering), grouping,
-        // sign display, minimum integer digits and precision, as for
-        // numbers; the style must be decimal. The zero precision rounds
-        // to the currency's digits and rounding increment (UTS #35's
-        // currencyData), its rounding mode and trailing zeros as given.
+        // The notation, grouping, sign display, minimum integer digits and
+        // precision, as for numbers; the style must be decimal. The zero
+        // precision rounds to the currency's digits and rounding
+        // increment (UTS #35's currencyData), its rounding mode and
+        // trailing zeros as given; in compact notation it rounds as for
+        // numbers. Compact notation takes the locale's short currency
+        // patterns at either length ("$1.2K"; CLDR has no long ones),
+        // and, hidden, its short decimal patterns.
         mlocNumberOptions number;
         mlocCurrencyDisplay display;
         mlocCurrencyUsage usage;
@@ -84,7 +87,7 @@ extern "C"
     ///         mloc_errorNotFound for data without the number or currency
     ///         units; mloc_errorInvalid for a null pointer, a code that is
     ///         not three letters, or options out of range or in conflict
-    ///         (a percent style, compact notation).
+    ///         (a percent style).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitCurrencyFormatter(

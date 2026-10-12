@@ -17,6 +17,7 @@
 #include "number_core.h"
 #include "number_data.h"
 #include "number_format.h"
+#include "plural.h"
 
 #include <string.h>
 
@@ -93,7 +94,7 @@ static bool ValidOptions(const mlocCurrencyOptions* o)
 {
     const mlocNumberOptions* n = &o->number;
     return mlocValidFormatOptions(n) && n->style == mloc_numberDecimal &&
-           n->notation <= mloc_notationEngineering && (uint32_t)o->display <= mloc_currencyHidden &&
+           (uint32_t)o->display <= mloc_currencyHidden &&
            (uint32_t)o->usage <= mloc_currencyUsageCash;
 }
 
@@ -175,25 +176,37 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
     bool hidden = o->display == mloc_currencyHidden;
     // A code shows as three letters.
     uint32_t shown = ShownField(&fields, o->display);
+    bool compact = o->number.notation == mloc_notationCompactShort ||
+                   o->number.notation == mloc_notationCompactLong;
     CurrencyStyle style = {
         .accounting = Accounting(locale),
         .hidden = hidden,
         .spacing = shown != currencyFieldCount ? fields.spacing[shown]
                                                : currencyStartsAlpha | currencyEndsAlpha,
+        .longLength = o->number.notation == mloc_notationCompactLong,
     };
     // A currency's own pattern replaces the standard one alone.
     bool ownPattern =
         (fields.found & 1u << currencyOwnPattern) != 0 && !style.accounting && !hidden;
     Formatter f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocInitCurrencyCore(&f.core, data, locale, &style);
+    mlocResult result =
+        mlocInitCurrencyCore(&f.core, data, locale, &style, compact ? &f.compactTable : nullptr,
+                             compact ? &f.compactPatterns : nullptr);
+    if (result >= 0 && compact)
+    {
+        mlocResult rule = mlocFindPluralRule(data, locale, mloc_pluralCardinal, &f.pluralRule);
+        result = rule < 0 ? rule : result;
+    }
     if (result < 0)
     {
         return result;
     }
     mlocSetFormatOptions(&f, &o->number, currencyStamp);
+    // Compact notation rounds by its own rule unless the options say
+    // otherwise, as ICU does.
     if (!ShowCurrency(&f.core, &fields, o->display, ownPattern) ||
-        (o->number.precision.kind == mloc_precisionNone &&
+        (o->number.precision.kind == mloc_precisionNone && !compact &&
          !CurrencyPrecision(data, packed, o->usage, &f.precision)))
     {
         return mloc_errorNotFound;
