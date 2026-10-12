@@ -298,8 +298,22 @@ static void TestHeaderRefusals(void)
     Corrupt(headerLocaleCount, 200, "a locale table past the pool");
     Corrupt(headerPoolOffset, size + 1, "a pool past the file");
     Corrupt(headerPoolSize, 3, "a pool that does not end the file");
+    Corrupt(headerPoolSize, 17, "a pool said to be longer than the file");
     Corrupt(headerPoolOffset, 64, "a pool inside the tables");
     CHECK(Open(size - 1) == mloc_errorData, "bytes shorter than the file size");
+}
+
+static void TestLongIds(void)
+{
+    static const TestUnit s_longUnits[] = {{kindAny, 0, "x"}};
+    char id[66];
+    memset(id, 'a', 65);
+    id[64] = '\0';
+    const char* longest[] = {id};
+    CHECK(Open(Build(s_longUnits, 1, longest, 1)) == mloc_success, "a 64-byte locale id");
+    id[64] = 'a';
+    id[65] = '\0';
+    CHECK(Open(Build(s_longUnits, 1, longest, 1)) == mloc_errorData, "a 65-byte locale id");
 }
 
 static void TestTableRefusals(void)
@@ -316,6 +330,8 @@ static void TestTableRefusals(void)
     Corrupt(units + dataUnitSize + 4, 0, "a kind and locale twice");
     Corrupt(units + 4, 4, "a locale index past the locales");
     Corrupt(units + 8, 1, "an unaligned payload");
+    Corrupt(units + 8, 177, "an unaligned payload among the payloads");
+    Corrupt(units + 4 * dataUnitSize + 12, 20, "a payload running into the pool");
     Corrupt(units + 8, 8, "a payload inside the tables");
     Corrupt(units + 12, 4000, "a payload past the pool");
     Corrupt(units + 4 * dataUnitSize, kindUnknown, "an unknown kind");
@@ -336,5 +352,6 @@ int main(void)
     TestVersionRefusals();
     TestHeaderRefusals();
     TestTableRefusals();
+    TestLongIds();
     return s_failures == 0 ? 0 : 1;
 }
