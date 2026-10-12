@@ -52,7 +52,8 @@ endif()
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
-    add_library(mlocgen_core STATIC tools/mlocgen/xml.c)
+    add_library(mlocgen_core STATIC tools/mlocgen/cldr.c tools/mlocgen/dtd.c
+                                    tools/mlocgen/ldml.c tools/mlocgen/map.c tools/mlocgen/xml.c)
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen)
     maul_apply_flags(mlocgen_core)
     # The generator uses standard fopen, which the Windows C runtime
@@ -60,6 +61,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     if(WIN32)
         target_compile_definitions(mlocgen_core PUBLIC _CRT_SECURE_NO_WARNINGS)
     endif()
+    add_executable(mlocgen tools/mlocgen/main.c)
+    target_link_libraries(mlocgen PRIVATE mlocgen_core)
+    maul_apply_flags(mlocgen)
     if(MAUL_LOCALE_BUILD_TESTS)
         add_executable(test_genxml test/test_genxml.c)
         target_link_libraries(test_genxml PRIVATE mlocgen_core)

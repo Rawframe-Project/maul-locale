@@ -1,0 +1,22 @@
+# Values where the generator's resolution and CLDR's JSON of the same
+# release disagree for a known reason. tools/check_resolution.py fails on
+# any other disagreement, and on a line here that no longer disagrees.
+# Each line: a locale, a tab, the start of the chains it covers, a tab,
+# the reason.
+#
+# The stand-alone abbreviated months below inherit through an inheritance
+# marker (es_PY and es_VE carry their own; el_POLYTON reaches el's) and
+# then root's alias to the format months. CLDR's resolver
+# (XMLSource.ResolvingSource.getPathLocation) looks the aliased chain up
+# again from the locale asked for, as the generator does, and so reaches
+# the locale's own format months ("ene."). CLDR's JSON of the same
+# release gives the parent's resolved names instead ("ene"). Restarting
+# from the marker's locale, with or without regard to its draft status,
+# fixes these and breaks others (ar_DZ, fa_AF, es_CL), so the generator
+# keeps CLDR's resolver.
+el_POLYTON	//ldml/dates/calendars/calendar[@type="buddhist"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
+el_POLYTON	//ldml/dates/calendars/calendar[@type="gregorian"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
+es_PY	//ldml/dates/calendars/calendar[@type="buddhist"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
+es_PY	//ldml/dates/calendars/calendar[@type="gregorian"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
+es_VE	//ldml/dates/calendars/calendar[@type="buddhist"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
+es_VE	//ldml/dates/calendars/calendar[@type="gregorian"]/months/monthContext[@type="stand-alone"]/monthWidth[@type="abbreviated"]	the JSON restarts the alias from the parent
