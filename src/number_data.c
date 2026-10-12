@@ -424,6 +424,21 @@ bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload)
             }
         }
     }
+    // Each text has its number's place and its text's place once.
+    for (uint32_t s = 0; s < t.stringCount; s++)
+    {
+        uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
+        uint32_t end = mlocLoad16(t.offsets + (size_t)s * 2 + 2);
+        uint32_t places[3] = {0};
+        for (uint32_t at = start; at < end; at++)
+        {
+            places[t.text[at] <= currencyTextOther ? t.text[at] : 0]++;
+        }
+        if (places[currencyTextNumber] != 1 || places[currencyTextOther] != 1)
+        {
+            return false;
+        }
+    }
     return true;
 }
 

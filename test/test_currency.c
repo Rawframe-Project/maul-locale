@@ -229,6 +229,9 @@ static void TestNames(void)
                 "234,50 euros"),
           "the decimal pattern, not the currency one");
     CHECK(Named("en", "ZZZ", &name, "5", "5.00 ZZZ"), "a currency without a name: its code");
+    CHECK(Named("de", "ANG", &name, "5", "5,00 Niederl\xC3\xA4ndische-Antillen-Gulden") &&
+              Named("fr", "ZWG", &name, "5", "5,00 or du Zimbabwe"),
+          "no name of a category: the currency's name");
     mlocCurrencyFormatter formatter;
     CHECK(Init(&formatter, "en", "USD", &name) == mloc_errorNotFound,
           "names come from the names data file alone");
@@ -339,6 +342,10 @@ static void TestLookups(void)
           "no name: the code, falling back");
     CHECK(mlocGetCurrencyName(&s_data, &en, "USD", 3, &output) == mloc_errorNotFound,
           "no names data file");
+    mlocOutput noBuffer = {.capacity = 4};
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "USD", 3, mloc_currencySymbol, &noBuffer) ==
+              mloc_errorInvalid,
+          "room without a buffer");
     mlocOutput small = {.buffer = buffer, .capacity = 4};
     CHECK(mlocGetCurrencyName(&s_withNames, &en, "USD", 3, &small) == mloc_errorCapacity &&
               small.length == 9,

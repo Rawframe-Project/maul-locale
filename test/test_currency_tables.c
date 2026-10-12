@@ -143,6 +143,11 @@ static void TestSets(void)
     unit[sizeof(unit) - 1] = currencyTextOther + 1;
     CHECK(!Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)),
           "a text with a byte past its places");
+    unit[sizeof(unit) - 1] = currencyTextNumber;
+    CHECK(!Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)), "a text with two number places");
+    unit[sizeof(unit) - 3] = ' ';
+    unit[sizeof(unit) - 1] = ' ';
+    CHECK(!Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)), "a text without its places");
     uint8_t none[numberTableHeaderSize + 2 + currencySetSize] = {0, 0, 1};
     CHECK(!Valid(mlocValidCurrencyPatterns, none, sizeof(none)), "a set without its texts");
 }
