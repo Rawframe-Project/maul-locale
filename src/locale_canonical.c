@@ -638,12 +638,14 @@ static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ide
     }
     ident->script = mlocPackScript(locale->script, (uint32_t)FieldLength(locale->script, 4));
     ident->region = mlocPackRegion(locale->region, (uint32_t)FieldLength(locale->region, 4));
-    size_t tailLength = FieldLength(locale->tail, sizeof(locale->tail));
+    // Only the variants are read: the scan stops at the first singleton.
+    const char* tail = locale->tail;
+    size_t size = sizeof(locale->tail);
     size_t at = 0;
-    while (at < tailLength)
+    while (at < size && tail[at] != '\0')
     {
         size_t end = at;
-        while (end < tailLength && locale->tail[end] != '-')
+        while (end < size && tail[end] != '\0' && tail[end] != '-')
         {
             end++;
         }
@@ -659,7 +661,7 @@ static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ide
         memcpy(name, locale->tail + at, end - at);
         name[end - at] = '\0';
         ident->variantIds[ident->variantCount++] = VariantId(aliases, name);
-        at = end + (end < tailLength);
+        at = end + (end < size && tail[end] == '-');
     }
     *restOut = at;
     return true;

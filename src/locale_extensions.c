@@ -189,13 +189,20 @@ bool mlocValidExtensionAliases(const DataView* view, DataSpan payload)
 static Text Find(const Extensions* x, const char* key, const char* value, uint32_t length)
 {
     bool subdivision = key == nullptr;
+    uint32_t wanted = subdivision ? 0 : (uint32_t)(uint8_t)key[0] << 8 | (uint8_t)key[1];
     uint32_t low = 0;
     uint32_t high = subdivision ? x->subdivisionCount : x->typeCount;
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
         Entry entry = ReadEntry(x, subdivision, middle);
-        int order = subdivision ? 0 : Compare(entry.key, 2, (const uint8_t*)key, 2);
+        // A key's two letters compare as one number, highest first.
+        int order = 0;
+        if (!subdivision)
+        {
+            uint32_t at = (uint32_t)entry.key[0] << 8 | entry.key[1];
+            order = (at > wanted) - (at < wanted);
+        }
         order = order != 0
                     ? order
                     : Compare(entry.from.bytes, entry.from.length, (const uint8_t*)value, length);
@@ -236,7 +243,11 @@ static void Write(Writer* w, const char* text, size_t length)
     {
         w->out[w->length++] = '-';
     }
-    memcpy(w->out + w->length, text, length);
+    // A loop rather than memcpy: subtags are a few bytes.
+    for (size_t i = 0; i < length; i++)
+    {
+        w->out[w->length + i] = text[i];
+    }
     w->length += length;
 }
 
