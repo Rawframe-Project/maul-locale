@@ -112,11 +112,12 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
           python3 tools/check_preferences.py build/conform_preferences ~/cldr-cache/json
+          python3 tools/check_currency.py build/conform_currency ~/cldr-cache/json
       - name: The generated sources are current
         # The generator gives the same bytes on every run, so a stale or
         # hand-edited file shows as a difference.

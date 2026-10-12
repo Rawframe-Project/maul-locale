@@ -4,6 +4,7 @@
 // The unit kinds the library reads, each with its part's validator,
 // sorted by kind. A part adds its kinds here as it is built.
 
+#include "currency_region.h"
 #include "data_view.h"
 #include "kinds.h"
 #include "locale_canonical.h"
@@ -33,6 +34,7 @@ static const DataKind s_kinds[] = {
     {kindCurrencyPatterns, mlocValidCurrencyPatterns},
     {kindCurrencySymbols, mlocValidCurrencySymbols},
     {kindCurrencyNames, mlocValidCurrencyNames},
+    {kindCurrencyRegions, mlocValidCurrencyRegions},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

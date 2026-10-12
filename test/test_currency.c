@@ -7,7 +7,8 @@
 // separators, ranges, the parts and the refusals. Every expected text is
 // ICU4C 79's for the same input (its hidden display aside, which keeps
 // the standard pattern without the symbol where we take CLDR's
-// noCurrency pattern).
+// noCurrency pattern). Then the currency of a locale on a day and the
+// currencies of a region, as supplementalData.xml gives them.
 
 #include "test_harness.h"
 
@@ -461,6 +462,111 @@ static void TestRefusals(void)
     CHECK(mlocFormatCurrency(nullptr, &decimal, &output) == mloc_errorInvalid, "a null formatter");
 }
 
+// The days from the Unix epoch's to a Gregorian date.
+static int32_t Day(int32_t year, int32_t month, int32_t day)
+{
+    year -= month <= 2;
+    int32_t era = (year >= 0 ? year : year - 399) / 400;
+    int32_t yearOfEra = year - era * 400;
+    int32_t dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+    return era * 146097 + yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear - 719468;
+}
+
+// The currency a locale uses on a day, or "" when none is found.
+static bool Uses(const char* id, int32_t day, const char* expected)
+{
+    mlocLocale locale;
+    char code[4] = "---";
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success)
+    {
+        return false;
+    }
+    mlocResult r = mlocFindCurrency(&s_data, &locale, day, code);
+    return expected[0] == '\0' ? r == mloc_errorNotFound && strcmp(code, "---") == 0
+                               : r == mloc_success && memcmp(code, expected, 4) == 0;
+}
+
+static void TestFind(void)
+{
+    int32_t now = Day(2026, 10, 13);
+    CHECK(Day(1970, 1, 1) == 0 && Day(2000, 3, 1) == 11017 && Day(1969, 12, 31) == -1,
+          "the test's day count");
+    CHECK(Uses("de", Day(1990, 6, 1), "DEM") && Uses("de", now, "EUR") &&
+              Uses("de", INT32_MAX, "EUR"),
+          "Germany's currency then and now, its likely region");
+    CHECK(Uses("de", Day(1999, 1, 1), "EUR") && Uses("de", Day(1998, 12, 31), "DEM") &&
+              Uses("de", Day(1948, 6, 20), "DEM") && Uses("de", Day(1948, 6, 19), ""),
+          "a span includes its first and last days");
+    CHECK(Uses("bg", Day(2026, 1, 15), "EUR") && Uses("bg", Day(2025, 12, 31), "BGN") &&
+              Uses("hr", Day(2023, 1, 10), "EUR") && Uses("hr", Day(2022, 12, 31), "HRK"),
+          "while two are in use, the first listed");
+    CHECK(Uses("en", now, "USD") && Uses("en-GB", now, "GBP") &&
+              Uses("en-GB-u-rg-uszzzz", now, "USD") && Uses("en-ZW", now, "ZWG") &&
+              Uses("en-AC", now, "SHP"),
+          "the region by the preferences' order, the table's first and last");
+    CHECK(Uses("en-US-u-cu-eur", now, "EUR") && Uses("de-u-cu-jpy", Day(1800, 1, 1), "JPY") &&
+              Uses("en-US-u-cu-abcd", now, "USD"),
+          "the -u-cu key, for any day, when it names three letters");
+    CHECK(Uses("und-AQ", now, "XXX") && Uses("en-001", now, "") && Uses("en-419", now, ""),
+          "a code that is no tender when none is, none for a region without currencies");
+    CHECK(Uses("en-DD", Day(1980, 1, 1), "DDM") && Uses("en-DD", now, ""),
+          "a region that no longer exists");
+    mlocLocale locale;
+    char code[4];
+    mlocDataSet none = {nullptr, 0};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocFindCurrency(&none, &locale, 0, code) == mloc_errorNotFound,
+          "data without the regions");
+    CHECK(mlocFindCurrency(nullptr, &locale, 0, code) == mloc_errorInvalid &&
+              mlocFindCurrency(&s_data, nullptr, 0, code) == mloc_errorInvalid &&
+              mlocFindCurrency(&s_data, &locale, 0, nullptr) == mloc_errorInvalid,
+          "a null pointer");
+}
+
+static void TestRegionLists(void)
+{
+    mlocRegionCurrency list[8];
+    size_t count = 99;
+    CHECK(mlocGetRegionCurrencies(&s_data, "de", 2, list, 8, &count) == mloc_success &&
+              count == 2 && memcmp(list[0].code, "EUR", 4) == 0 &&
+              list[0].from == Day(1999, 1, 1) && list[0].to == INT32_MAX && list[0].tender == 1 &&
+              memcmp(list[1].code, "DEM", 4) == 0 && list[1].from == Day(1948, 6, 20) &&
+              list[1].to == Day(2002, 2, 28),
+          "Germany's currencies in CLDR's order");
+    CHECK(mlocGetRegionCurrencies(&s_data, "AQ", 2, list, 8, &count) == mloc_success &&
+              count == 1 && memcmp(list[0].code, "XXX", 4) == 0 && list[0].tender == 0 &&
+              list[0].from == INT32_MIN && list[0].to == INT32_MAX,
+          "Antarctica's no currency, without a span");
+    CHECK(mlocGetRegionCurrencies(&s_data, "ZW", 2, list, 8, &count) == mloc_success &&
+              count == 6 && memcmp(list[5].code, "RHD", 4) == 0 &&
+              mlocGetRegionCurrencies(&s_data, "AC", 2, list, 8, &count) == mloc_success &&
+              count == 1 && memcmp(list[0].code, "SHP", 4) == 0,
+          "the table's last and first regions");
+    CHECK(mlocGetRegionCurrencies(&s_data, "DE", 2, list, 1, &count) == mloc_errorCapacity &&
+              count == 2 &&
+              mlocGetRegionCurrencies(&s_data, "DE", 2, nullptr, 0, &count) == mloc_errorCapacity &&
+              count == 2,
+          "too little room gives the count needed");
+    CHECK(mlocGetRegionCurrencies(&s_data, "419", 3, nullptr, 0, &count) == mloc_success &&
+              count == 0 &&
+              mlocGetRegionCurrencies(&s_data, "QO", 2, list, 8, &count) == mloc_success &&
+              count == 0,
+          "a region without currencies");
+    mlocDataSet none = {nullptr, 0};
+    CHECK(mlocGetRegionCurrencies(&none, "DE", 2, list, 8, &count) == mloc_errorNotFound,
+          "data without the regions");
+    CHECK(mlocGetRegionCurrencies(&s_data, "D", 1, list, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DEU", 3, list, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DEUT", 4, list, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "D1", 2, list, 8, &count) == mloc_errorInvalid,
+          "a region that is not two letters or three digits");
+    CHECK(mlocGetRegionCurrencies(nullptr, "DE", 2, list, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, nullptr, 2, list, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DE", 2, nullptr, 8, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DE", 2, list, 8, nullptr) == mloc_errorInvalid,
+          "a null pointer");
+}
+
 // The compiled-in data, and with it the currency names data file, at
 // the path the build gives.
 static bool OpenData(void)
@@ -496,6 +602,8 @@ int main(void)
     TestRanges();
     TestNameRanges();
     TestLookups();
+    TestFind();
+    TestRegionLists();
     TestParts();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

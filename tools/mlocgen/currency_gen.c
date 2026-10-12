@@ -10,12 +10,14 @@
 
 #include "currency_tables.h"
 #include "kinds.h"
+#include "locale_tables.h"
 #include "number_tables.h"
 #include "table_gen.h"
 #include "xml.h"
 
 #include "maul-unicode/properties.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +25,8 @@
 enum
 {
     maxFractions = 256,
+    maxRegions = 512,
+    maxRegionEntries = 1024,
     maxCurrencies = 512,
     maxKey = 64,
     maxSymbolPoints = 64,
@@ -108,17 +112,8 @@ static Fraction ReadFraction(const XmlNode* info)
     return f;
 }
 
-static int AddFractions(const char* commonDirectory, DataFile* file, char* errorOut,
-                        size_t errorCapacity)
+static int AddFractions(const XmlNode* data, DataFile* file, char* errorOut, size_t errorCapacity)
 {
-    char path[4096];
-    snprintf(path, sizeof(path), "%s/supplemental/supplementalData.xml", commonDirectory);
-    XmlNode* root = XmlParseFile(path, errorOut, errorCapacity);
-    if (root == nullptr)
-    {
-        return 0;
-    }
-    const XmlNode* data = XmlFindChild(root, "currencyData");
     const XmlNode* list = data == nullptr ? nullptr : XmlFindChild(data, "fractions");
     static Fraction s_fractions[maxFractions];
     int count = 0;
@@ -131,7 +126,7 @@ static int AddFractions(const char* commonDirectory, DataFile* file, char* error
         }
         if (count == maxFractions)
         {
-            GenDie("too many currency fractions", path);
+            GenDie("too many currency fractions", "supplementalData.xml");
         }
         Fraction f = ReadFraction(list->children[i]);
         hasDefault |= f.code == 0;
@@ -141,13 +136,12 @@ static int AddFractions(const char* commonDirectory, DataFile* file, char* error
         {
             if (s_fractions[at - 1].code == f.code)
             {
-                GenDie("a currency fraction given twice", path);
+                GenDie("a currency fraction given twice", "supplementalData.xml");
             }
             s_fractions[at] = s_fractions[at - 1];
         }
         s_fractions[at] = f;
     }
-    XmlFree(root);
     if (!hasDefault)
     {
         snprintf(errorOut, errorCapacity, "supplementalData.xml has no default currency fraction");
@@ -165,6 +159,174 @@ static int AddFractions(const char* commonDirectory, DataFile* file, char* error
     DataFileAdd(file, kindCurrencyFractions, nullptr, unit, size);
     free(unit);
     return 1;
+}
+
+// The days from the Unix epoch's to a proleptic Gregorian date (Howard
+// Hinnant's days_from_civil).
+static int32_t DaysFromCivil(int32_t year, int32_t month, int32_t day)
+{
+    year -= month <= 2;
+    int32_t era = (year >= 0 ? year : year - 399) / 400;
+    int32_t yearOfEra = year - era * 400;
+    int32_t dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+    int32_t dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+    return era * 146097 + dayOfEra - 719468;
+}
+
+// A from or to day: "yyyy-mm-dd", the hour absent (UTS #35's date ranges,
+// which then include the day), or the open end when the attribute is.
+static int32_t ReadDay(const XmlNode* currency, const char* name, int32_t open)
+{
+    const char* text = XmlGetAttribute(currency, name);
+    if (text == nullptr)
+    {
+        return open;
+    }
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    int end = 0;
+    if (sscanf(text, "%4d-%2d-%2d%n", &year, &month, &day, &end) != 3 || text[end] != '\0' ||
+        year < 1000 || month < 1 || month > 12 || day < 1 || day > 31)
+    {
+        GenDie("a currency date that is not yyyy-mm-dd", text);
+    }
+    return DaysFromCivil(year, month, day);
+}
+
+typedef struct RegionEntry
+{
+    uint16_t code;
+    uint8_t tender;
+    int32_t from;
+    int32_t to;
+} RegionEntry;
+
+typedef struct Region
+{
+    uint32_t region;
+    uint32_t first;
+    uint32_t count;
+} Region;
+
+static void ReadRegion(const XmlNode* node, Region* region, RegionEntry* entries,
+                       uint32_t* entryCount)
+{
+    const char* id = XmlGetAttribute(node, "iso3166");
+    region->region = id == nullptr ? 0 : mlocPackRegion(id, (uint32_t)strlen(id));
+    region->first = *entryCount;
+    if (region->region == 0)
+    {
+        GenDie("a currency region that is no region", id == nullptr ? "(none)" : id);
+    }
+    for (int i = 0; i < node->childCount; i++)
+    {
+        const XmlNode* c = node->children[i];
+        if (strcmp(c->name, "currency") != 0)
+        {
+            continue;
+        }
+        const char* code = XmlGetAttribute(c, "iso4217");
+        const char* tender = XmlGetAttribute(c, "tender");
+        if (*entryCount == maxRegionEntries)
+        {
+            GenDie("too many currency region entries", id);
+        }
+        RegionEntry e = {
+            .code = code == nullptr ? 0 : mlocPackCurrency(code, (uint32_t)strlen(code)),
+            .tender = tender == nullptr || strcmp(tender, "false") != 0,
+            .from = ReadDay(c, "from", INT32_MIN),
+            .to = ReadDay(c, "to", INT32_MAX),
+        };
+        if (e.code == 0 || e.from > e.to)
+        {
+            GenDie("a region's currency without a code or with an empty span", id);
+        }
+        entries[(*entryCount)++] = e;
+    }
+    region->count = *entryCount - region->first;
+}
+
+static void AddRegions(const XmlNode* data, DataFile* file)
+{
+    static Region s_regions[maxRegions];
+    static RegionEntry s_entries[maxRegionEntries];
+    uint32_t regionCount = 0;
+    uint32_t entryCount = 0;
+    for (int i = 0; data != nullptr && i < data->childCount; i++)
+    {
+        if (strcmp(data->children[i]->name, "region") != 0)
+        {
+            continue;
+        }
+        if (regionCount == maxRegions)
+        {
+            GenDie("too many currency regions", "supplementalData.xml");
+        }
+        Region r;
+        ReadRegion(data->children[i], &r, s_entries, &entryCount);
+        if (r.count == 0)
+        {
+            continue;
+        }
+        // Sorted by region; the entries stay in CLDR's order.
+        uint32_t at = regionCount++;
+        for (; at > 0 && s_regions[at - 1].region >= r.region; at--)
+        {
+            if (s_regions[at - 1].region == r.region)
+            {
+                GenDie("a currency region given twice", "supplementalData.xml");
+            }
+            s_regions[at] = s_regions[at - 1];
+        }
+        s_regions[at] = r;
+    }
+    size_t size = currencyRegionsHeaderSize + (size_t)regionCount * currencyRegionSize +
+                  (size_t)entryCount * currencyRegionEntrySize;
+    uint8_t* unit = GenAllocate(size);
+    GenPut(unit, regionCount, 2);
+    GenPut(unit + 2, entryCount, 2);
+    uint8_t* out = unit + currencyRegionsHeaderSize + (size_t)regionCount * currencyRegionSize;
+    uint32_t written = 0;
+    for (uint32_t i = 0; i < regionCount; i++)
+    {
+        uint8_t* r = unit + currencyRegionsHeaderSize + (size_t)i * currencyRegionSize;
+        GenPut(r, s_regions[i].region, 2);
+        GenPut(r + 2, written, 2);
+        for (uint32_t j = 0; j < s_regions[i].count; j++, written++)
+        {
+            const RegionEntry* e = &s_entries[s_regions[i].first + j];
+            uint8_t* w = out + (size_t)written * currencyRegionEntrySize;
+            GenPut(w + regionEntryCode, e->code, 2);
+            w[regionEntryTender] = e->tender;
+            GenPut(w + regionEntryFrom, (uint32_t)e->from, 4);
+            GenPut(w + regionEntryTo, (uint32_t)e->to, 4);
+        }
+    }
+    DataFileAdd(file, kindCurrencyRegions, nullptr, unit, size);
+    free(unit);
+}
+
+// The units of supplementalData.xml's currencyData: the fractions and
+// the regions.
+static int AddSupplemental(const char* commonDirectory, DataFile* file, char* errorOut,
+                           size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/supplemental/supplementalData.xml", commonDirectory);
+    XmlNode* root = XmlParseFile(path, errorOut, errorCapacity);
+    if (root == nullptr)
+    {
+        return 0;
+    }
+    const XmlNode* data = XmlFindChild(root, "currencyData");
+    int ok = AddFractions(data, file, errorOut, errorCapacity);
+    if (ok)
+    {
+        AddRegions(data, file);
+    }
+    XmlFree(root);
+    return ok;
 }
 
 // Decodes text's code points into out; their count, or -1 for malformed
@@ -477,7 +639,7 @@ static void AddNameUnit(Table* t, Own* own, int count, const char* locale, const
 int GenerateCurrencyUnits(const CurrencyInput* input, DataFile* file, char* errorOut,
                           size_t errorCapacity)
 {
-    if (!AddFractions(input->commonDirectory, file, errorOut, errorCapacity))
+    if (!AddSupplemental(input->commonDirectory, file, errorOut, errorCapacity))
     {
         return 0;
     }

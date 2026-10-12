@@ -24,7 +24,7 @@ Returns the name of a result code, for diagnostics.  @param result  Any value; a
 
 ## `currency.h`
 
-Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default.
+Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitCurrencyFormatter( mlocCurrencyFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const char* code, size_t codeLength, const mlocCurrencyOptions* options);
@@ -55,6 +55,16 @@ Writes a currency's name in a locale ("US Dollar", "Dollar américain"), as a me
 MLOC_NODISCARD MLOC_API mlocResult mlocGetCurrencyDigits(const mlocDataSet* data, const char* code, size_t codeLength, mlocCurrencyUsage usage, uint8_t* digitsOut, uint16_t* incrementOut);
 ```
 Gives a currency's fraction digits and rounding increment (supplementalData.xml): JPY 0, BHD 3, CHF cash 2 by 5.  @param data          The data with the currency fractions. @param code          The currency's ISO 4217 code, three ASCII letters; a code the data does not list has the default, 2 digits. @param codeLength    Its length in bytes, 3. @param usage         Standard or cash. @param digitsOut     Receives the fraction digits. @param incrementOut  Receives the rounding increment in units of the last digit, 1 for none. @return mloc_success; mloc_errorNotFound for data without the fractions; mloc_errorInvalid for a null pointer, a code that is not three letters or a usage out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindCurrency(const mlocDataSet* data, const mlocLocale* locale, int32_t day, char* codeOut);
+```
+Finds the currency a locale uses on a day: its -u-cu key's ("en-US-u-cu-eur" takes EUR), else the first legal tender in use that day of its region, the one mlocGetLocalePreferences takes ("de" takes Germany's: DEM in 1990, EUR now), else the first code in use that is none (Antarctica's code of no currency). The region's currencies are in CLDR's order, which puts the primary one first.  @param data     The data with the currency regions and the likely subtags. @param locale   The locale, canonicalized. @param day      The day (mlocRegionCurrency); INT32_MAX asks for the currencies still in use. @param codeOut  Receives the ISO 4217 code, NUL-padded, 4 bytes; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the currency regions, or a region with no currency in use on the day; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetRegionCurrencies(const mlocDataSet* data, const char* region, size_t regionLength, mlocRegionCurrency* currenciesOut, size_t capacity, size_t* countOut);
+```
+Lists the currencies a region uses and used, in CLDR's order: on any day the first legal tender in use is the region's primary one.  @param data           The data with the currency regions. @param region         The region, two ASCII letters in any case or three digits. @param regionLength   Its length in bytes. @param currenciesOut  Receives the currencies; may be null when capacity is 0. @param capacity       The room in currenciesOut. @param countOut       Receives the count, 0 for a region the data does not list; with mloc_errorCapacity the count needed. @return mloc_success; mloc_errorCapacity when the currencies do not fit; mloc_errorNotFound for data without the currency regions; mloc_errorInvalid for a null pointer or a region that is not two letters or three digits. @par Thread safety Safe from any thread.
 
 ## `data.h`
 
@@ -243,4 +253,4 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ---
 
-42 functions across 7 headers.
+44 functions across 7 headers.

@@ -2,16 +2,18 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The currency units' validators and reads (number_data.h,
-// currency_tables.h): the compiled-in units pass, units with one field
+// currency_region.h, currency_tables.h): the compiled-in units pass, units with one field
 // spoiled are refused, lookups find what the units hold; and a currency
 // formatter refuses units that pass alone but disagree, in a pack built
 // here.
 
 #include "bytes.h"
+#include "currency_region.h"
 #include "currency_tables.h"
 #include "data_format.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_tables.h"
 #include "number_data.h"
 #include "number_tables.h"
 #include "test_harness.h"
@@ -26,6 +28,7 @@ static DataView s_view;
 static DataSpan s_fractions;
 static DataSpan s_sets;
 static DataSpan s_rootSymbols;
+static DataSpan s_regions;
 
 typedef bool (*Validator)(const DataView* view, DataSpan payload);
 
@@ -110,6 +113,99 @@ static void TestFractions(void)
     Put16(first + fractionCode, Code("JPY"));
     Put16(second + fractionCode, Code("USD"));
     CHECK(!Valid(mlocValidCurrencyFractions, unit, sizeof(unit)), "no default first");
+}
+
+static void Put32(uint8_t* p, uint32_t value)
+{
+    Put16(p, value & 0xFFFF);
+    Put16(p + 2, value >> 16);
+}
+
+enum
+{
+    regionsSize = currencyRegionsHeaderSize + 2 * currencyRegionSize + 3 * currencyRegionEntrySize,
+};
+
+// Two regions, the first with two entries, the second with one.
+static void BuildRegions(uint8_t* u)
+{
+    memset(u, 0, regionsSize);
+    Put16(u, 2);
+    Put16(u + 2, 3);
+    uint8_t* regions = u + currencyRegionsHeaderSize;
+    Put16(regions, mlocPackRegion("DE", 2));
+    Put16(regions + currencyRegionSize, mlocPackRegion("US", 2));
+    Put16(regions + currencyRegionSize + 2, 2);
+    uint8_t* entries = regions + 2 * currencyRegionSize;
+    for (int i = 0; i < 3; i++)
+    {
+        uint8_t* e = entries + (size_t)i * currencyRegionEntrySize;
+        Put16(e + regionEntryCode, Code(i == 0 ? "EUR" : i == 1 ? "DEM" : "USD"));
+        e[regionEntryTender] = 1;
+        Put32(e + regionEntryFrom, (uint32_t)INT32_MIN);
+        Put32(e + regionEntryTo, (uint32_t)INT32_MAX);
+    }
+}
+
+static void TestRegions(void)
+{
+    CHECK(mlocValidCurrencyRegions(&s_view, s_regions), "the compiled-in regions are valid");
+    uint8_t u[regionsSize];
+    BuildRegions(u);
+    CHECK(Valid(mlocValidCurrencyRegions, u, sizeof(u)), "two regions, three entries");
+    uint8_t* regions = u + currencyRegionsHeaderSize;
+    uint8_t* entries = regions + 2 * currencyRegionSize;
+    uint8_t* last = entries + 2 * currencyRegionEntrySize;
+    Put32(last + regionEntryFrom, 100);
+    Put32(last + regionEntryTo, 100);
+    last[regionEntryTender] = 0;
+    CHECK(Valid(mlocValidCurrencyRegions, u, sizeof(u)), "a one-day span, no tender");
+    Put32(last + regionEntryTo, 99);
+    CHECK(!Valid(mlocValidCurrencyRegions, u, sizeof(u)), "a span that ends before it starts");
+    Put32(last + regionEntryFrom, (uint32_t)-5);
+    Put32(last + regionEntryTo, (uint32_t)-6);
+    CHECK(!Valid(mlocValidCurrencyRegions, u, sizeof(u)), "a span before 1970 that ends first");
+    Put32(last + regionEntryTo, (uint32_t)-5);
+    CHECK(Valid(mlocValidCurrencyRegions, u, sizeof(u)), "a day before 1970");
+    CHECK(!Valid(mlocValidCurrencyRegions, u, sizeof(u) - 1) &&
+              !Valid(mlocValidCurrencyRegions, u, sizeof(u) - currencyRegionEntrySize) &&
+              !Valid(mlocValidCurrencyRegions, u, 3),
+          "a size that is not the header's");
+    struct
+    {
+        uint8_t* at;
+        uint32_t value;
+        int bytes;
+        const char* what;
+    } const spoils[] = {
+        {last + regionEntryCode, 0, 2, "a code of 0"},
+        {last + regionEntryCode, currencyMaxCode + 1, 2, "a code past the last"},
+        {last + regionEntryTender, 2, 1, "a tender flag that is no flag"},
+        {last + 3, 1, 1, "a nonzero padding byte"},
+        {regions + 2, 1, 2, "a first region not starting at 0"},
+        {regions + currencyRegionSize + 2, 0, 2, "a region without entries"},
+        {regions + currencyRegionSize + 2, 3, 2, "a region past the entries"},
+        {regions + currencyRegionSize, mlocPackRegion("DE", 2), 2, "a region twice"},
+        {regions + currencyRegionSize, mlocPackRegion("AD", 2), 2, "regions out of order"},
+        {regions, 31, 2, "a packed region that is none"},
+    };
+    for (size_t i = 0; i < sizeof(spoils) / sizeof(spoils[0]); i++)
+    {
+        uint8_t keep[2] = {spoils[i].at[0], spoils[i].at[1]};
+        if (spoils[i].bytes == 2)
+        {
+            Put16(spoils[i].at, spoils[i].value);
+        }
+        else
+        {
+            spoils[i].at[0] = (uint8_t)spoils[i].value;
+        }
+        CHECK(!Valid(mlocValidCurrencyRegions, u, sizeof(u)), spoils[i].what);
+        memcpy(spoils[i].at, keep, 2);
+    }
+    CHECK(Valid(mlocValidCurrencyRegions, u, sizeof(u)), "each spoil undone");
+    uint8_t empty[currencyRegionsHeaderSize] = {0};
+    CHECK(Valid(mlocValidCurrencyRegions, empty, sizeof(empty)), "no regions");
 }
 
 static void TestSets(void)
@@ -402,6 +498,7 @@ int main(void)
     uint32_t root = 0;
     CHECK(mlocFindDataUnit(&s_view, kindCurrencyFractions, dataNoLocale, &s_fractions) &&
               mlocFindDataUnit(&s_view, kindCurrencyPatterns, dataNoLocale, &s_sets) &&
+              mlocFindDataUnit(&s_view, kindCurrencyRegions, dataNoLocale, &s_regions) &&
               mlocFindDataLocale(&s_view, "root", 4, &root) &&
               mlocFindDataUnit(&s_view, kindCurrencySymbols, root, &s_rootSymbols) &&
               mlocFindDataUnit(&s_view, kindNumbers, root, &s_numbers) &&
@@ -415,6 +512,7 @@ int main(void)
     }
     TestCodes();
     TestFractions();
+    TestRegions();
     TestSets();
     TestSymbols();
     TestDisagreeing();

@@ -11,6 +11,18 @@
 // the rounding, the cash digits and the cash rounding (u8 each), and 2
 // bytes 0. A rounding counts units of the last digit, 0 meaning none.
 //
+// Currency regions, a unit of no locale (supplementalData.xml's
+// currencyData/region): a header (u16 region count, u16 entry count),
+// the regions sorted by packed region, each currencyRegionSize bytes
+// (the region packed, u16, and the index of its first entry, u16, the
+// first region's 0 and each later one's higher, a region's entries
+// running to the next one's first or the last), then the entries in
+// CLDR's order, the region's primary currency first, each
+// currencyRegionEntrySize bytes: the code packed (u16), 1 for legal
+// tender or 0 (u8), a byte 0, and the first and last day in use (i32
+// each, days from the Unix epoch's, both included; INT32_MIN for no first,
+// INT32_MAX for no last).
+//
 // Currency pattern sets, a unit of no locale in the table shape of
 // number_tables.h: each record the indexes in the patterns unit of the
 // standard pattern, its alphaNextToNumber and its noCurrency variants,
@@ -59,6 +71,9 @@ enum
     currencyTextNumber = 1,
     currencyTextOther = 2,
     sparseHeaderSize = 12,
+    currencyRegionsHeaderSize = 4,
+    currencyRegionSize = 4,
+    currencyRegionEntrySize = 12,
     // The largest digit count a fraction entry holds.
     currencyMaxDigits = 6,
     // The largest packed code.
@@ -73,6 +88,15 @@ enum
     fractionRounding = 3,
     fractionCashDigits = 4,
     fractionCashRounding = 5,
+};
+
+// The fields of a region entry.
+enum
+{
+    regionEntryCode = 0,
+    regionEntryTender = 2,
+    regionEntryFrom = 4,
+    regionEntryTo = 8,
 };
 
 // The patterns of a set, in its record's order.

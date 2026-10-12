@@ -175,9 +175,8 @@ static uint32_t FieldLength(const char* field, uint32_t size)
     return n;
 }
 
-// The region by UTS #35's order, and the language (a likely one for und).
-static uint32_t PreferenceRegion(const mlocDataSet* data, const mlocLocale* locale,
-                                 uint32_t* languageOut)
+uint32_t mlocPreferenceRegion(const mlocDataSet* data, const mlocLocale* locale,
+                              uint32_t* languageOut)
 {
     mlocLocale max;
     bool maximized = mlocMaximizeLocale(data, locale, &max) == mloc_success;
@@ -282,7 +281,7 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
         return mloc_errorNotFound;
     }
     uint32_t language = 0;
-    uint32_t region = PreferenceRegion(data, locale, &language);
+    uint32_t region = mlocPreferenceRegion(data, locale, &language);
     const uint8_t* entry = RegionEntry(&p, region);
     const uint8_t* hours = LocaleHours(&p, language, region);
     if (hours == nullptr)

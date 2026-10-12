@@ -99,6 +99,22 @@ CLDR's test data has no currency formatting cases.
 - **Lookups:** `mlocGetCurrencySymbol`, `mlocGetCurrencyName` (ECMA-402
   DisplayNames of type currency) and `mlocGetCurrencyDigits`; the code
   stands in, with `mloc_fellBack`, where the data has no text.
+- **Regions:** `mlocGetRegionCurrencies` lists a region's currencies
+  in CLDR's order with their first and last days (days from 1970-01-01
+  in the region's civil calendar, both days included as UTS #35's date
+  ranges are without an hour) and tender flags; `mlocFindCurrency`
+  gives a locale's on a day: the -u-cu key's, else its region's first
+  legal tender in use that day, the region being the one regional
+  preferences take (-u-rg, the locale's, -u-sd, the likely one), else
+  the first code in use that is none (Antarctica's XXX). The library
+  reads no clock, so the caller gives the day; INT32_MAX asks for the
+  currencies still in use. ICU's `ucurr_forLocale` takes the region's
+  first tender code whatever the day, and no likely region; on
+  2026-10-13 the two agree for every region but the eight that no
+  longer exist (BU, CS, DD, SU, TP, YD, YU, ZR), where ICU gives the
+  last currency and we give none. The table is a unit of no
+  locale, 7 KB, checked in full against CLDR's JSON by
+  `tools/check_currency.py` with the fractions.
 - **Ranges** are the number formatter's (`mlocFormatCurrencyRange`). A
   name or the appended code is written once around both ends ("1.00–5.00
   US dollars"), in the category CLDR's plural ranges give the ends'
@@ -125,6 +141,7 @@ CLDR's test data has no currency formatting cases.
 
 The currency units cost about 65 KB of the compiled-in data: the
 symbols units 44 KB, the compact currency tables about 20 KB; the names
-are the data file of 2.1 MB that a program adds when it shows names. The names and their plural forms, ten times
+are the data file of 2.1 MB that a program adds when it shows names;
+the regions 7 KB. The names and their plural forms, ten times
 the symbols, are a kind of their own, so data without them is a choice.
 Building the generator fetches Maul Unicode.
