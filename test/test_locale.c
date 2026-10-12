@@ -114,32 +114,34 @@ static void TestRefusals(void)
     CHECK(Refuses("en-x", mloc_errorSyntax, 3), "empty private use");
 }
 
+// Writes start followed by count copies of piece into text, NUL-ended.
+static void Repeat(char* text, const char* start, const char* piece, int count)
+{
+    size_t at = strlen(start);
+    memcpy(text, start, at);
+    for (int i = 0; i < count; i++)
+    {
+        memcpy(text + at, piece, strlen(piece));
+        at += strlen(piece);
+    }
+    text[at] = '\0';
+}
+
 static void TestLimits(void)
 {
-    char text[512] = "en-x";
-    for (int i = 0; i < 13; i++)
-    {
-        strcat(text, "-abcdefgh");
-    }
+    char text[512];
+    Repeat(text, "en-x", "-abcdefgh", 13);
     CHECK(Refuses(text, mloc_errorCapacity, strlen(text)),
           "variants and extensions past 112 bytes");
-    strcpy(text, "en-x");
-    for (int i = 0; i < 63; i++)
-    {
-        strcat(text, "-a");
-    }
+    Repeat(text, "en-x", "-a", 63);
     CHECK(Refuses(text, mloc_errorCapacity, 4 + 62 * 2 + 1), "more than 64 subtags");
     // 112 bytes exactly: "x" and 37 subtags "-ab" make 1 + 37 * 3 = 112.
-    strcpy(text, "en-x");
-    for (int i = 0; i < 37; i++)
-    {
-        strcat(text, "-ab");
-    }
+    Repeat(text, "en-x", "-ab", 37);
     mlocLocale locale;
     CHECK(mlocParseLocale(text, strlen(text), &locale).status == mloc_success &&
               locale.tail[111] == 'b',
           "a tail of exactly 112 bytes");
-    strcat(text, "-c");
+    Repeat(text, "en-x", "-ab", 38);
     CHECK(Refuses(text, mloc_errorCapacity, strlen(text)), "one subtag more");
 }
 
