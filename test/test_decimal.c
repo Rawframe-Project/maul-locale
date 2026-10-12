@@ -71,8 +71,11 @@ static void TestParse(void)
 
 static void TestBounds(void)
 {
-    const char* forty = "1234567890123456789012345678901234567890";
+    const char* forty = "1234567890123456789012345678901234567891";
     CHECK(Reads(forty, forty), "forty significant digits");
+    CHECK(Reads("1234567890123456789012345678901234567890",
+                "1234567890123456789012345678901234567890"),
+          "and forty digits whose last is 0");
     CHECK(Refuses("12345678901234567890123456789012345678901", mloc_errorCapacity, 0),
           "forty-one are refused");
     CHECK(Refuses("1000000000000000000000000000000000000000001", mloc_errorCapacity, 0),
@@ -112,6 +115,8 @@ static void TestSyntax(void)
     CHECK(mlocParseDecimal(nullptr, 0, &d).status == mloc_errorSyntax, "no text at all");
     CHECK(mlocParseDecimal("12", 1, &d).status == mloc_success && Writes(&d, "1"),
           "only the length given is read");
+    CHECK(mlocParseDecimal("1e12", 3, &d).status == mloc_success && Writes(&d, "10"),
+          "in the exponent too");
 }
 
 static void TestIntegers(void)
@@ -154,6 +159,11 @@ static void TestFormat(void)
     special = (mlocDecimal){.kind = mloc_decimalNaN};
     CHECK(Writes(&special, "NaN"), "NaN");
     CHECK(Parsed("1e-3", &d) && Writes(&d, "0.001"), "zeros after the point");
+    char exact[2] = {'?', '?'};
+    mlocOutput tight = {.buffer = exact, .capacity = 1};
+    CHECK(Parsed("5", &d) && mlocFormatDecimal(&d, &tight) == mloc_success && tight.length == 1 &&
+              exact[0] == '5' && exact[1] == '?',
+          "an integer writes no point");
     CHECK(mlocFormatDecimal(nullptr, &output) == mloc_errorInvalid &&
               mlocFormatDecimal(&d, nullptr) == mloc_errorInvalid,
           "null pointers");
@@ -257,6 +267,11 @@ static void TestOperands(void)
           "leading zeros of a fraction make no wide f");
     CHECK(Operands("0.1000000000000000000001", 0, 22, 22, e18 + 1, e18 + 1),
           "a fraction of 22 digits");
+    CHECK(Operands("12345678901234567890123456789012345678910", 1456789012345678910u, 0, 0, 0, 0),
+          "forty digits after a zero");
+    CHECK(Operands("1e999999", e18, 0, 0, 0, 0), "the largest power has operands");
+    CHECK(Operands("1e-999999", 0, 999999, 999999, 1, 1), "and the smallest");
+    CHECK(Operands("0e-999999", 0, 999999, 0, 0, 0), "a zero with the most fraction digits");
     mlocDecimal d;
     CHECK(Parsed("1", &d) && mlocGetPluralOperands(&d, nullptr) == mloc_errorInvalid &&
               mlocGetPluralOperands(nullptr, &(mlocPluralOperands){0}) == mloc_errorInvalid,
