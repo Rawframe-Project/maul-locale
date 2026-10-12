@@ -34,8 +34,9 @@ canonicalized with CLDR's aliases, likely subtags added and removed,
 fallback chains per component, language matching as ICU's
 LocaleMatcher does it, and regional preferences (CLDR's conformance
 files, its own inheritance and JSON, and ICU's matcher test pass on
-every push). The library has
-19 public functions.
+every push), and decimal values with their plural operands. The
+library has
+24 public functions.
 
 ## Building
 

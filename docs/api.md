@@ -56,6 +56,35 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetDataLocale(const mlocData* data, size_
 ```
 Returns one locale a source has data for, as CLDR names it ("de_AT", "sr_Latn"), in the order of their bytes.  @param data       An opened source. @param index      Below mlocGetDataLocaleCount. @param idOut      Receives the id, which is not NUL-terminated and lives as long as the source's bytes. @param lengthOut  Receives its length in bytes. @return mloc_success; mloc_errorInvalid for a null pointer or an index out of range. @par Thread safety Safe from any thread.
 
+## `decimal.h`
+
+Decimal values and their plural operands (record mloc-0019): a number is formatted from its decimal digits, never from a binary value, so the digits a user typed are the digits shown.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMakeDecimal(int64_t value, mlocDecimal* decimalOut);
+```
+Makes the decimal of a signed integer, with no fraction digits.  @param value       The integer. @param decimalOut  Receives the decimal. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMakeUnsignedDecimal(uint64_t value, mlocDecimal* decimalOut);
+```
+Makes the decimal of an unsigned integer, with no fraction digits.  @param value       The integer. @param decimalOut  Receives the decimal. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* decimalOut);
+```
+Parses a decimal: an optional "+" or "-", digits with an optional "." and fraction (at least one digit in all), and an optional exponent, "e" or "E" with an optional sign and digits. The fraction digits written are the ones shown, the exponent moving the point: "1.50" shows two, "1.50e1" is 15.0 and shows one.  @param text        The text, without spaces. @param length      Its length in bytes. @param decimalOut  Receives the decimal; left unchanged on failure. @return status mloc_success with offset the length; mloc_errorSyntax with the offset of the byte at fault; mloc_errorCapacity with offset 0 for more than 40 significant digits, or digits or fraction digits shown past 10^999999 either way; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output);
+```
+Writes a decimal as plain text with every digit and the fraction digits it shows, such as "-1234.50"; "Infinity", "-Infinity" or "NaN" for the others. mlocParseDecimal reads a finite one back to the same value. It reports no parts.  @param decimal  The decimal. @param output   Where the text goes. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorInvalid for a null pointer or a decimal the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralOperands(const mlocDecimal* decimal, mlocPluralOperands* operandsOut);
+```
+Computes the plural operands of a finite decimal; c is 0.  @param decimal      The decimal. @param operandsOut  Receives the operands. @return mloc_success; mloc_errorInvalid for a null pointer, a decimal that is not finite, or one the library did not make. @par Thread safety Safe from any thread.
+
 ## `locale.h`
 
 Locale identifiers (UTS #35 Part 1): a parsed locale is a fixed-size value in canonical syntax (record mloc-0015).
@@ -112,4 +141,4 @@ Returns a locale's regional preferences (UTS #35), the region's values from CLDR
 
 ---
 
-19 functions across 3 headers.
+24 functions across 4 headers.

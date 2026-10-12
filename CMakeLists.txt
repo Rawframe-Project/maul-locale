@@ -50,6 +50,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/base.c
     src/data.c
     src/data_kinds.c
+    src/decimal.c
     src/locale_canonical.c
     src/locale_distance.c
     src/locale_extensions.c
@@ -77,6 +78,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(match_tables WHITEBOX)
     maul_add_test(preferences)
     maul_add_test(preference_tables WHITEBOX)
+    maul_add_test(decimal)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
@@ -100,7 +102,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data locale)
+    foreach(area data decimal locale)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
