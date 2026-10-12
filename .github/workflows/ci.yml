@@ -102,9 +102,15 @@ jobs:
       - name: Fetch CLDR
         timeout-minutes: 15
         run: bash tools/fetch_cldr.sh ~/cldr-cache
+      - name: Install the compiler
+        timeout-minutes: 15
+        run: |
+          sudo apt-get $APT_OPTIONS update -q
+          sudo apt-get $APT_OPTIONS install -y -q gcc-14
       - name: Build the generator
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_TESTS=OFF
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_TESTS=OFF \
+            -DCMAKE_C_COMPILER=gcc-14
           cmake --build build -j 4 --target mlocgen
       - name: Compare with the JSON
         run: python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
