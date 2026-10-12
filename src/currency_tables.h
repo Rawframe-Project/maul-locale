@@ -12,12 +12,15 @@
 // bytes 0. A rounding counts units of the last digit, 0 meaning none.
 //
 // Currency pattern sets, a unit of no locale in the table shape of
-// number_tables.h, with no strings: each record the indexes in the
-// patterns unit of the standard pattern, its alphaNextToNumber and its
-// noCurrency variants, then the accounting pattern's three, then the
-// indexes in the compact tables unit of the short compact currency
-// table and its alphaNextToNumber table (u16 each; CLDR has no long
-// ones, so long compact notation takes them too, as ICU does).
+// number_tables.h: each record the indexes in the patterns unit of the
+// standard pattern, its alphaNextToNumber and its noCurrency variants,
+// then the accounting pattern's three; the indexes in the compact tables
+// unit of the short compact currency table and its alphaNextToNumber
+// table (CLDR has no long ones, so long compact notation takes them too,
+// as ICU does); then the string indexes of the long name's unit pattern
+// for each plural category, zero to other, and of the ISO append
+// pattern (u16 each). Those strings hold currencyTextNumber where the
+// number goes and currencyTextOther where the name or the code goes.
 // A locale entry of the numbers unit names its set.
 //
 // Currency symbols, a unit per locale key that gives any of its own, in
@@ -45,10 +48,16 @@ enum
 {
     currencyFractionsHeaderSize = 8,
     currencyFractionSize = 8,
-    currencySetSize = 16,
-    // The set fields of the compact tables.
+    currencySetSize = 30,
+    // The set fields of the compact tables, the unit patterns and the
+    // append pattern.
     setCompact = 12,
     setCompactAlpha = 14,
+    setUnitPatterns = 16,
+    setAppend = 28,
+    // The places in a unit or append pattern.
+    currencyTextNumber = 1,
+    currencyTextOther = 2,
     sparseHeaderSize = 12,
     // The largest digit count a fraction entry holds.
     currencyMaxDigits = 6,
@@ -90,6 +99,19 @@ typedef enum CurrencyField
     currencyOwnGroup,
     currencyFieldCount,
 } CurrencyField;
+
+// Currency names, a unit per locale key that gives any of its own, in
+// the sparse shape: per currency the name the key itself gives (CLDR's
+// displayName without a count, "US Dollar") and the name after a number
+// for each plural category, zero to other ("US dollars"), as strings, a
+// field it does not give coming from its chain.
+typedef enum CurrencyNameField
+{
+    currencyName,
+    currencyNameZero,
+    currencyNameOther = currencyNameZero + 5,
+    currencyNameFieldCount,
+} CurrencyNameField;
 
 // A string's spacing flags: whether its first character, and its last,
 // is neither a symbol nor a space (General_Category S or Z): a letter, a

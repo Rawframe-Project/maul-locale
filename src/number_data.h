@@ -22,6 +22,7 @@ bool mlocValidNumberCompact(const DataView* view, DataSpan payload);
 bool mlocValidCurrencyFractions(const DataView* view, DataSpan payload);
 bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload);
 bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload);
+bool mlocValidCurrencyNames(const DataView* view, DataSpan payload);
 
 // A table unit's string count, record count and the start of its text
 // (the symbol and pattern units share this shape).

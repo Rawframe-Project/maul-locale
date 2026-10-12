@@ -11,6 +11,7 @@
 #include "number_core.h"
 
 #include "maul-locale/number.h"
+#include "maul-locale/plural.h"
 
 #include <stddef.h>
 
@@ -42,12 +43,37 @@ void mlocSetFormatOptions(Formatter* formatter, const mlocNumberOptions* options
 // library did not make it as a formatter of the stamp's kind.
 bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter* formatterOut);
 
-// Formats a decimal, after checking the decimal and the output.
-mlocResult mlocFormatWith(const Formatter* formatter, const mlocDecimal* decimal,
-                          mlocOutput* output);
+// A pattern around a formatted number, by the plural category of the
+// number as rounded (a currency's long name, "{0} US dollars"; the ISO
+// append, the same for every category): each category's pattern, where
+// currencyTextNumber stands for the number and currencyTextOther for its
+// text (currency_tables.h), and that text, a part of textKind; the code
+// where a category's text is null.
+typedef struct Outer
+{
+    const uint8_t* patternText;
+    uint16_t patternStart[6];
+    uint16_t patternLength[6];
+    const uint8_t* text[6];
+    uint16_t textLength[6];
+    uint32_t textKind;
+    char code[3];
+    // The plural rules whose ranges give a range's category; any for a
+    // pattern the same in every category.
+    mlocPluralRules rules;
+} Outer;
 
-// Formats a range of two decimals, after checking them and the output.
-mlocResult mlocFormatRangeWith(const Formatter* formatter, const mlocDecimal* start,
-                               const mlocDecimal* end, mlocOutput* output);
+// Formats a decimal, within an outer pattern when one is given (the
+// formatter then has its plural rule set), after checking the decimal
+// and the output.
+mlocResult mlocFormatWith(const Formatter* formatter, const Outer* outer,
+                          const mlocDecimal* decimal, mlocOutput* output);
+
+// Formats a range of two decimals, within an outer pattern when one is
+// given, once around both ends, in the category the plural ranges give
+// theirs. Checks the decimals and the output first.
+mlocResult mlocFormatRangeWith(const Formatter* formatter, const Outer* outer,
+                               const mlocDecimal* start, const mlocDecimal* end,
+                               mlocOutput* output);
 
 #endif

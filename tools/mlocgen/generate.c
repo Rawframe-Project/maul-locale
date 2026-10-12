@@ -240,13 +240,15 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
         return 0;
     }
     DataFile data = {0};
+    DataFile names = {0};
     Text rules = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
-        !GenerateNumberUnits(commonDirectory, &data, errorOut, errorCapacity))
+        !GenerateNumberUnits(commonDirectory, &data, &names, errorOut, errorCapacity))
     {
         DataFileFree(&data);
+        DataFileFree(&names);
         return 0;
     }
     // The compiled rules are code tables the data's indexes name, so they
@@ -260,9 +262,17 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     uint8_t* bytes = DataFileWrite(&data, &version, &size);
     Text builtin = {0};
     BuiltinSource(&builtin, bytes, size);
+    // The currency names ship as a data file of their own, which a
+    // program adds to its data set (record mloc-0022).
+    size_t namesSize = 0;
+    uint8_t* namesBytes = DataFileWrite(&names, &version, &namesSize);
+    Text namesFile = {.bytes = (char*)namesBytes, .size = namesSize};
     int ok = WriteFile(root, "data_version.h", &header, errorOut, errorCapacity) &&
              WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
-             WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity);
+             WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
+             WriteFile(root, "currency-names.mloc", &namesFile, errorOut, errorCapacity);
+    free(namesBytes);
+    DataFileFree(&names);
     free(header.bytes);
     free(builtin.bytes);
     free(rules.bytes);

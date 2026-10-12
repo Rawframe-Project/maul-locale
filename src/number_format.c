@@ -5,9 +5,11 @@
 
 #include "number_format.h"
 
+#include "currency_tables.h"
 #include "decimal.h"
 #include "number_compact.h"
 #include "number_precision.h"
+#include "plural.h"
 #include "plural_rules.h"
 
 #include <string.h>
@@ -68,7 +70,7 @@ bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter
 // Rounds a finite decimal in compact notation and points the core at the
 // compact pattern chosen.
 static mlocResult Compact(const Formatter* f, mlocDecimal* d, NumberLayout* layout,
-                          NumberCore* core)
+                          NumberCore* core, int32_t* exponentOut)
 {
     // Compact notation groups only with two digits before the first
     // separator, unless the options say otherwise.
@@ -76,6 +78,7 @@ static mlocResult Compact(const Formatter* f, mlocDecimal* d, NumberLayout* layo
     CompactChoice choice;
     CompactData compact = {.table = f->compactTable, .patterns = f->compactPatterns};
     mlocResult r = mlocApplyCompact(compact, &f->precision, f->pluralRule, d, &choice);
+    *exponentOut = choice.exponent;
     if (r == mloc_success && choice.pattern != compactNoPattern)
     {
         layout->noNumber = mlocUseCompactPattern(core, f->compactPatterns, choice.pattern);
@@ -109,11 +112,14 @@ typedef struct Prepared
     NumberLayout layout;
     NumberCore core;
     NumberSign sign;
+    // The compact exponent, the plural operand c.
+    int32_t exponent;
 } Prepared;
 
 static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepared* p)
 {
     p->decimal = *decimal;
+    p->exponent = 0;
     p->layout = (NumberLayout){
         .grouping = (mlocGrouping)f->grouping,
         .minInteger = f->minInteger,
@@ -124,8 +130,9 @@ static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepar
     p->core = f->core;
     if (p->decimal.kind == mloc_decimalFinite)
     {
-        mlocResult r = f->compactTable != nullptr ? Compact(f, &p->decimal, &p->layout, &p->core)
-                                                  : Round(f, &p->decimal, &p->layout);
+        mlocResult r = f->compactTable != nullptr
+                           ? Compact(f, &p->decimal, &p->layout, &p->core, &p->exponent)
+                           : Round(f, &p->decimal, &p->layout);
         if (r != mloc_success)
         {
             return r;
@@ -133,6 +140,62 @@ static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepar
     }
     p->sign = mlocNumberSign(&p->decimal, (mlocSignDisplay)f->signDisplay);
     return mloc_success;
+}
+
+// The plural category of a prepared number, other for infinity and NaN.
+static uint32_t Category(const Formatter* f, const Prepared* p)
+{
+    if (p->decimal.kind != mloc_decimalFinite)
+    {
+        return mloc_pluralOther;
+    }
+    mlocPluralOperands operands;
+    mlocFillPluralOperands(&p->decimal, &operands);
+    operands.c = p->exponent > 0 ? (uint32_t)p->exponent : 0;
+    return mlocSelectPluralRule(f->pluralRule, &operands);
+}
+
+// Writes the part of an outer pattern before its number, or after it.
+static void WriteOuterSide(const Outer* o, uint32_t category, bool before, NumberWriter* w)
+{
+    const uint8_t* pattern = o->patternText + o->patternStart[category];
+    size_t length = o->patternLength[category];
+    const uint8_t* number = memchr(pattern, currencyTextNumber, length);
+    size_t split = number == nullptr ? length : (size_t)(number - pattern);
+    size_t at = before ? 0 : (split < length ? split + 1 : length);
+    size_t end = before ? split : length;
+    size_t literal = at;
+    for (; at < end; at++)
+    {
+        if (pattern[at] != currencyTextOther && pattern[at] != currencyTextNumber)
+        {
+            continue;
+        }
+        mlocWriteLiteral(w, (const char*)pattern + literal, at - literal);
+        if (pattern[at] == currencyTextOther)
+        {
+            const uint8_t* text = o->text[category];
+            mlocWritePart(w, o->textKind, text != nullptr ? text : (const uint8_t*)o->code,
+                          text != nullptr ? o->textLength[category] : sizeof(o->code));
+        }
+        literal = at + 1;
+    }
+    mlocWriteLiteral(w, (const char*)pattern + literal, end - literal);
+}
+
+// Writes a prepared number, within an outer pattern when there is one.
+static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, NumberWriter* w)
+{
+    uint32_t category = o == nullptr ? 0 : Category(f, p);
+    if (o != nullptr)
+    {
+        WriteOuterSide(o, category, true, w);
+    }
+    mlocWriteNumber(&p->core, &p->decimal, p->sign, &p->layout, w);
+    if (o != nullptr)
+    {
+        WriteOuterSide(o, category, false, w);
+    }
 }
 
 static bool CheckArguments(const mlocDecimal* decimal, const mlocOutput* output)
@@ -149,7 +212,8 @@ static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
                                                                      : mloc_success;
 }
 
-mlocResult mlocFormatWith(const Formatter* f, const mlocDecimal* decimal, mlocOutput* output)
+mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
+                          mlocOutput* output)
 {
     Prepared p;
     if (!CheckArguments(decimal, output))
@@ -162,12 +226,12 @@ mlocResult mlocFormatWith(const Formatter* f, const mlocDecimal* decimal, mlocOu
         return r;
     }
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteNumber(&p.core, &p.decimal, p.sign, &p.layout, &w);
+    WriteOne(f, outer, &p, &w);
     r = Finish(&w, output);
     if (r == mloc_success && output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteNumber(&p.core, &p.decimal, p.sign, &p.layout, &parts);
+        WriteOne(f, outer, &p, &parts);
         mlocEndParts(&parts);
     }
     return r;
@@ -208,6 +272,25 @@ static bool IsSpace(const uint8_t* text, size_t length, bool atEnd)
     return false;
 }
 
+// Writes the range separator, spaced where it has no space of its own
+// when the ends ask for it; the end's parts follow.
+static void WriteSeparator(const NumberCore* core, bool spaced, NumberWriter* w)
+{
+    w->source = 0;
+    const uint8_t* separator = core->symbolText + core->symbolStart[numberRangeSeparator];
+    size_t length = core->symbolLength[numberRangeSeparator];
+    if (spaced && !IsSpace(separator, length, false))
+    {
+        mlocWriteLiteral(w, " ", 1);
+    }
+    mlocWriteLiteral(w, (const char*)separator, length);
+    if (spaced && !IsSpace(separator, length, true))
+    {
+        mlocWriteLiteral(w, " ", 1);
+    }
+    w->source = mloc_numberRangeEnd;
+}
+
 // Writes a range as ICU's NumberRangeFormatter does with its default
 // collapse and identity fallback.
 static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberWriter* w)
@@ -232,24 +315,44 @@ static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberW
     b->layout.sharedSuffix = collapse;
     w->source = mloc_numberRangeStart;
     mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
-    w->source = 0;
-    const uint8_t* separator = core->symbolText + core->symbolStart[numberRangeSeparator];
-    size_t length = core->symbolLength[numberRangeSeparator];
-    if (spaced && !IsSpace(separator, length, false))
-    {
-        mlocWriteLiteral(w, " ", 1);
-    }
-    mlocWriteLiteral(w, (const char*)separator, length);
-    if (spaced && !IsSpace(separator, length, true))
-    {
-        mlocWriteLiteral(w, " ", 1);
-    }
-    w->source = mloc_numberRangeEnd;
+    WriteSeparator(core, spaced, w);
     mlocWriteNumber(&b->core, &b->decimal, b->sign, &b->layout, w);
 }
 
-mlocResult mlocFormatRangeWith(const Formatter* f, const mlocDecimal* start, const mlocDecimal* end,
-                               mlocOutput* output)
+// Writes a range within an outer pattern, once around both ends, as ICU
+// collapses a long name: in the category CLDR's plural ranges give the
+// ends' ("1–5 долараў"), the start's when they write alike.
+static void WriteOuterRange(const Formatter* f, const Outer* o, Prepared* a, Prepared* b,
+                            NumberWriter* w)
+{
+    mlocPluralCategory category = (mlocPluralCategory)Category(f, a);
+    mlocPluralCategory end = (mlocPluralCategory)Category(f, b);
+    if (!Alike(a, b) && mlocSelectPluralRange(&o->rules, category, end, &category) != mloc_success)
+    {
+        category = end;
+    }
+    w->source = 0;
+    WriteOuterSide(o, category, true, w);
+    WriteRange(&f->core, a, b, w);
+    w->source = 0;
+    WriteOuterSide(o, category, false, w);
+}
+
+static void WriteEither(const Formatter* f, const Outer* outer, Prepared* a, Prepared* b,
+                        NumberWriter* w)
+{
+    if (outer != nullptr)
+    {
+        WriteOuterRange(f, outer, a, b, w);
+    }
+    else
+    {
+        WriteRange(&f->core, a, b, w);
+    }
+}
+
+mlocResult mlocFormatRangeWith(const Formatter* f, const Outer* outer, const mlocDecimal* start,
+                               const mlocDecimal* end, mlocOutput* output)
 {
     Prepared a;
     Prepared b;
@@ -267,12 +370,12 @@ mlocResult mlocFormatRangeWith(const Formatter* f, const mlocDecimal* start, con
     Prepared textA = a;
     Prepared textB = b;
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteRange(&f->core, &textA, &textB, &w);
+    WriteEither(f, outer, &textA, &textB, &w);
     r = Finish(&w, output);
     if (r == mloc_success && output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        WriteRange(&f->core, &a, &b, &parts);
+        WriteEither(f, outer, &a, &b, &parts);
         mlocEndParts(&parts);
     }
     return r;

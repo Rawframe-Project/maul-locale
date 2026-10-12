@@ -679,6 +679,53 @@ static bool SameButSpaces(const Table* t, const uint8_t* a, const uint8_t* b)
     return true;
 }
 
+// A long name's unit pattern ("{0} {1}"), or the ISO append pattern
+// ("{0} ¤¤"), as the sets unit stores it, from latn's formats whatever the
+// system (root gives other systems none; ICU reads latn's too): {0} as currencyTextNumber and
+// the name's {1}, or the code's ¤¤, as currencyTextOther, once each.
+static uint16_t CurrencyTextPattern(Generator* g, const char* locale, const char* chain,
+                                    const char* other)
+{
+    const char* pattern = Value(g, locale, chain);
+    if (pattern == nullptr)
+    {
+        GenDie("a locale without a currency unit or append pattern", chain);
+    }
+    char out[maxAffix];
+    size_t n = 0;
+    int numbers = 0;
+    int others = 0;
+    size_t otherLength = strlen(other);
+    for (const char* c = pattern; *c != '\0';)
+    {
+        if (n + 1 >= sizeof(out) || (unsigned char)*c < 0x20)
+        {
+            GenDie("a currency unit pattern too long or with a control character", pattern);
+        }
+        if (strncmp(c, "{0}", 3) == 0)
+        {
+            out[n++] = currencyTextNumber;
+            numbers++;
+            c += 3;
+        }
+        else if (strncmp(c, other, otherLength) == 0)
+        {
+            out[n++] = currencyTextOther;
+            others++;
+            c += otherLength;
+        }
+        else
+        {
+            out[n++] = *c++;
+        }
+    }
+    if (numbers != 1 || others != 1)
+    {
+        GenDie("a currency unit pattern without its two places once each", pattern);
+    }
+    return TableAddString(&g->currencySets, out, n);
+}
+
 // A locale's currency pattern set for a system, with its short compact
 // currency tables: the standard and
 // accounting patterns, each with its alphaNextToNumber variant and its
@@ -736,6 +783,20 @@ static uint16_t CurrencySetOf(Generator* g, const char* locale, const char* syst
     }
     GenPut(set + setCompact, compact, 2);
     GenPut(set + setCompactAlpha, compactAlpha, 2);
+    static const char* const s_counts[6] = {"zero", "one", "two", "few", "many", "other"};
+    for (int c = 0; c < 6; c++)
+    {
+        char chain[256];
+        snprintf(
+            chain, sizeof(chain),
+            "//ldml/numbers/currencyFormats[@numberSystem=\"latn\"]/unitPattern[@count=\"%s\"]",
+            s_counts[c]);
+        GenPut(set + setUnitPatterns + 2 * c, CurrencyTextPattern(g, locale, chain, "{1}"), 2);
+    }
+    char chain[256];
+    snprintf(chain, sizeof(chain),
+             "//ldml/numbers/currencyFormats[@numberSystem=\"latn\"]/currencyPatternAppendISO");
+    GenPut(set + setAppend, CurrencyTextPattern(g, locale, chain, "\xC2\xA4\xC2\xA4"), 2);
     return TableAddRecord(&g->currencySets, set);
 }
 
@@ -1338,8 +1399,8 @@ static const char* NextKeyed(Generator* g, const char* locale, const char* key)
     return nullptr;
 }
 
-int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* errorOut,
-                        size_t errorCapacity)
+int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
+                        char* errorOut, size_t errorCapacity)
 {
     static Generator s_g;
     memset(&s_g, 0, sizeof(s_g));
@@ -1410,6 +1471,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* error
         .count = count,
         .compile = CompileCurrencyPattern,
         .context = g,
+        .names = names,
     };
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity);
     AddSystemUnit(g, file);

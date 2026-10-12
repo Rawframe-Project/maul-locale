@@ -19,6 +19,7 @@
 
 #include "maul-locale/currency.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static DataView s_view;
@@ -114,13 +115,36 @@ static void TestFractions(void)
 static void TestSets(void)
 {
     CHECK(mlocValidCurrencyPatterns(&s_view, s_sets), "the compiled-in sets are valid");
-    uint8_t unit[numberTableHeaderSize + 2 + currencySetSize] = {0, 0, 1};
-    CHECK(Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)), "a set of no strings");
+    uint8_t* copy = malloc(s_sets.size);
+    if (copy == nullptr)
+    {
+        CHECK(false, "room for the sets");
+        return;
+    }
+    memcpy(copy, s_sets.bytes, s_sets.size);
+    NumberTable t = mlocReadNumberTable((DataSpan){copy, s_sets.size}, currencySetSize);
+    uint8_t* last = (uint8_t*)t.records + (size_t)(t.recordCount - 1) * currencySetSize;
+    for (int at = setUnitPatterns; at <= setAppend; at += 2)
+    {
+        uint16_t keep = mlocLoad16(last + at);
+        Put16(last + at, t.stringCount);
+        CHECK(!Valid(mlocValidCurrencyPatterns, copy, s_sets.size),
+              "a unit pattern past the strings");
+        Put16(last + at, keep);
+    }
+    CHECK(Valid(mlocValidCurrencyPatterns, copy, s_sets.size), "the copy restored");
+    free(copy);
+    // One set whose texts are all the one string, "\x01 \x02".
+    uint8_t unit[numberTableHeaderSize + 4 + currencySetSize + 3] = {1, 0, 1, 0, 3};
+    unit[numberTableHeaderSize + 2] = 3;
+    memcpy(unit + sizeof(unit) - 3, "\x01 \x02", 3);
+    CHECK(Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)), "a set and its one text");
     CHECK(!Valid(mlocValidCurrencyPatterns, unit, sizeof(unit) - 1), "a short set");
-    uint8_t strings[numberTableHeaderSize + 4 + currencySetSize + 1] = {1, 0, 1, 0, 1};
-    strings[numberTableHeaderSize + 2] = 1;
-    strings[sizeof(strings) - 1] = 'a';
-    CHECK(!Valid(mlocValidCurrencyPatterns, strings, sizeof(strings)), "a set with a string");
+    unit[sizeof(unit) - 1] = currencyTextOther + 1;
+    CHECK(!Valid(mlocValidCurrencyPatterns, unit, sizeof(unit)),
+          "a text with a byte past its places");
+    uint8_t none[numberTableHeaderSize + 2 + currencySetSize] = {0, 0, 1};
+    CHECK(!Valid(mlocValidCurrencyPatterns, none, sizeof(none)), "a set without its texts");
 }
 
 enum
@@ -230,6 +254,14 @@ static void TestSymbols(void)
     Build(u);
     Put16(u + testRowBytes + 3, 0xFFFF);
     CHECK(ValidTest(u), "a pattern index is bounded when a formatter reads it");
+    // The names shape: every field a string, no flags.
+    Build(u);
+    Put16(u + testRowBytes + 3, 1);
+    CHECK(Valid(mlocValidCurrencyNames, u, testSize - testStrings), "a names unit");
+    CHECK(!Valid(mlocValidCurrencyNames, u, testSize), "a names unit with flags");
+    Put16(u + testRowBytes + 3, testStrings);
+    CHECK(!Valid(mlocValidCurrencyNames, u, testSize - testStrings),
+          "a name past the strings, where symbols hold a pattern index");
 }
 
 // What a pack holds beside the compiled-in number units of no locale:
@@ -317,7 +349,7 @@ static void TestDisagreeing(void)
         Put16(numbers + numberLocaleHeaderSize + i * numberEntrySize + entryCurrency, sets - 1);
     }
     CHECK(InitOver(&p) == mloc_success, "the last set");
-    uint8_t spoiled[8192];
+    static uint8_t spoiled[65536];
     if (s_sets.size > sizeof(spoiled))
     {
         CHECK(false, "room for the sets");
@@ -326,7 +358,8 @@ static void TestDisagreeing(void)
     for (int field = 0; field < currencyPatternCount; field++)
     {
         memcpy(spoiled, s_sets.bytes, s_sets.size);
-        uint8_t* last = spoiled + s_sets.size - currencySetSize;
+        NumberTable t = mlocReadNumberTable((DataSpan){spoiled, s_sets.size}, currencySetSize);
+        uint8_t* last = (uint8_t*)t.records + (size_t)(sets - 1) * currencySetSize;
         Put16(last + 2 * field, count);
         p.sets = (DataSpan){spoiled, s_sets.size};
         CHECK(InitOver(&p) == mloc_errorNotFound, "a set's pattern past the patterns");

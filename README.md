@@ -41,8 +41,10 @@ operands, CLDR's cardinal, ordinal and range plural rules compiled to C
 percents and per mille in standard, scientific, engineering and compact
 notation and ranges, with every numbering system and ECMA-402's options
 (CLDR's decimal test data passes on every push), and amounts of money
-with each currency's symbols, digits and cash rounding. The library has
-39 public functions.
+with each currency's symbols, digits and cash rounding, in compact
+notation and by name (the names are a data file of their own,
+`src/generated/currency-names.mloc`). The library has
+42 public functions.
 
 ## Building
 

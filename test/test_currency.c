@@ -13,11 +13,13 @@
 
 #include "maul-locale/currency.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define NBSP "\xC2\xA0"
 
 static mlocDataSet s_data;
+static mlocDataSet s_withNames;
 
 static mlocResult Init(mlocCurrencyFormatter* formatter, const char* id, const char* code,
                        const mlocCurrencyOptions* options)
@@ -198,6 +200,51 @@ static void TestCompact(void)
           "hidden, the short decimal table");
 }
 
+// Whether an amount formats as expected with the names data.
+static bool Named(const char* id, const char* code, const mlocCurrencyOptions* options,
+                  const char* amount, const char* expected)
+{
+    mlocDataSet keep = s_data;
+    s_data = s_withNames;
+    bool ok = Formats(id, code, options, amount, expected);
+    s_data = keep;
+    return ok;
+}
+
+static void TestNames(void)
+{
+    mlocCurrencyOptions name = {.display = mloc_currencyName};
+    CHECK(Named("en", "USD", &name, "1", "1.00 US dollars") &&
+              Named("en", "JPY", &name, "1", "1 Japanese yen"),
+          "the category of the digits shown picks the name");
+    CHECK(Named("ru", "JPY", &name, "1",
+                "1 \xD1\x8F\xD0\xBF\xD0\xBE\xD0\xBD\xD1\x81\xD0\xBA\xD0\xB0\xD1\x8F "
+                "\xD0\xB8\xD0\xB5\xD0\xBD\xD0\xB0") &&
+              Named("ru", "JPY", &name, "5",
+                    "5 \xD1\x8F\xD0\xBF\xD0\xBE\xD0\xBD\xD1\x81\xD0\xBA\xD0\xB8\xD1\x85 "
+                    "\xD0\xB8\xD0\xB5\xD0\xBD"),
+          "Russian's one and many");
+    CHECK(Named("fr", "EUR", &name, "1234.5",
+                "1\xE2\x80\xAF"
+                "234,50 euros"),
+          "the decimal pattern, not the currency one");
+    CHECK(Named("en", "ZZZ", &name, "5", "5.00 ZZZ"), "a currency without a name: its code");
+    mlocCurrencyFormatter formatter;
+    CHECK(Init(&formatter, "en", "USD", &name) == mloc_errorNotFound,
+          "names come from the names data file alone");
+    mlocCurrencyOptions longCompact = {.display = mloc_currencyName,
+                                       .number.notation = mloc_notationCompactLong};
+    CHECK(Named("en", "USD", &longCompact, "1234567", "1.2 million US dollars"),
+          "compact long with a name: the decimal compact table");
+    mlocCurrencyOptions append = {.display = mloc_currencyNarrowSymbol, .appendCode = 1};
+    CHECK(Formats("en", "USD", &append, "1432", "$1,432.00" NBSP "USD"), "the ISO append");
+    mlocCurrencyOptions badAppend = {.display = mloc_currencyCode, .appendCode = 1};
+    mlocCurrencyOptions twoAppend = {.appendCode = 2};
+    CHECK(Init(&formatter, "en", "USD", &badAppend) == mloc_errorInvalid &&
+              Init(&formatter, "en", "USD", &twoAppend) == mloc_errorInvalid,
+          "the append with a code, and a value not 0 or 1");
+}
+
 // Whether a range formats as expected in a locale with options.
 static bool Ranges(const char* id, const char* code, mlocCurrencyDisplay display, const char* from,
                    const char* to, const char* expected)
@@ -228,6 +275,90 @@ static void TestRanges(void)
                  "3,00\xE2\x80\x93"
                  "5,00" NBSP "\xE2\x82\xAC"),
           "a symbol with its space is shared");
+}
+
+// Whether a range formats as expected with the names data.
+static bool NamedRanges(const char* id, const char* code, mlocCurrencyDisplay display,
+                        const char* from, const char* to, const char* expected)
+{
+    mlocDataSet keep = s_data;
+    s_data = s_withNames;
+    bool ok = Ranges(id, code, display, from, to, expected);
+    s_data = keep;
+    return ok;
+}
+
+static void TestNameRanges(void)
+{
+    CHECK(NamedRanges("en", "USD", mloc_currencyName, "1", "5",
+                      "1.00\xE2\x80\x93"
+                      "5.00 US dollars"),
+          "a name is written once");
+    CHECK(NamedRanges("en", "USD", mloc_currencyName, "1", "1", "~1.00 US dollars"),
+          "the approximately sign within the name");
+    CHECK(NamedRanges("ru", "JPY", mloc_currencyName, "1", "5",
+                      "1\xE2\x80\x93"
+                      "5 \xD1\x8F\xD0\xBF\xD0\xBE\xD0\xBD\xD1\x81\xD0\xBA\xD0\xB8\xD1\x85 "
+                      "\xD0\xB8\xD0\xB5\xD0\xBD"),
+          "in the category the plural ranges give (Russian one to many: many)");
+}
+
+static void TestLookups(void)
+{
+    mlocLocale en;
+    mlocLocale ja;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocParseLocale("ja", 2, &ja).status == mloc_success,
+          "locales");
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "USD", 3, mloc_currencySymbol, &output) ==
+                  mloc_success &&
+              output.length == 1 && buffer[0] == '$',
+          "a symbol");
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "RUB", 3, mloc_currencyNarrowSymbol, &output) ==
+                  mloc_success &&
+              output.length == 3 && memcmp(buffer, "\xE2\x82\xBD", 3) == 0,
+          "a narrow symbol");
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "ZZZ", 3, mloc_currencySymbol, &output) ==
+                  mloc_fellBack &&
+              output.length == 3 && memcmp(buffer, "ZZZ", 3) == 0,
+          "no symbol: the code, falling back");
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "usd", 3, mloc_currencyCode, &output) ==
+                  mloc_success &&
+              memcmp(buffer, "USD", 3) == 0,
+          "the code as asked");
+    CHECK(mlocGetCurrencySymbol(&s_data, &en, "USD", 3, mloc_currencyName, &output) ==
+              mloc_errorInvalid,
+          "a name is no symbol");
+    CHECK(mlocGetCurrencyName(&s_withNames, &en, "USD", 3, &output) == mloc_success &&
+              output.length == 9 && memcmp(buffer, "US Dollar", 9) == 0,
+          "a name");
+    CHECK(mlocGetCurrencyName(&s_withNames, &ja, "ZZZ", 3, &output) == mloc_fellBack &&
+              memcmp(buffer, "ZZZ", 3) == 0,
+          "no name: the code, falling back");
+    CHECK(mlocGetCurrencyName(&s_data, &en, "USD", 3, &output) == mloc_errorNotFound,
+          "no names data file");
+    mlocOutput small = {.buffer = buffer, .capacity = 4};
+    CHECK(mlocGetCurrencyName(&s_withNames, &en, "USD", 3, &small) == mloc_errorCapacity &&
+              small.length == 9,
+          "a name past the room, and the room it needs");
+    uint8_t digits = 9;
+    uint16_t increment = 0;
+    CHECK(mlocGetCurrencyDigits(&s_data, "CHF", 3, mloc_currencyUsageCash, &digits, &increment) ==
+                  mloc_success &&
+              digits == 2 && increment == 5,
+          "Swiss cash");
+    CHECK(mlocGetCurrencyDigits(&s_data, "JPY", 3, mloc_currencyUsageStandard, &digits,
+                                &increment) == mloc_success &&
+              digits == 0 && increment == 1,
+          "yen");
+    CHECK(mlocGetCurrencyDigits(&s_data, "US", 2, mloc_currencyUsageStandard, &digits,
+                                &increment) == mloc_errorInvalid &&
+              mlocGetCurrencyDigits(&s_data, "USD", 3, (mlocCurrencyUsage)2, &digits, &increment) ==
+                  mloc_errorInvalid &&
+              mlocGetCurrencyName(&s_withNames, &en, "U$D", 3, &output) == mloc_errorInvalid,
+          "refusals");
 }
 
 typedef struct Parts
@@ -296,7 +427,7 @@ static void TestRefusals(void)
         .number = {.notation = mloc_notationCompactShort, .style = mloc_numberPercent}};
     CHECK(Init(&formatter, "en", "USD", &compactPercent) == mloc_errorInvalid,
           "compact notation with a percent style");
-    mlocCurrencyOptions display = {.display = (mlocCurrencyDisplay)6};
+    mlocCurrencyOptions display = {.display = (mlocCurrencyDisplay)7};
     mlocCurrencyOptions usage = {.usage = (mlocCurrencyUsage)2};
     CHECK(Init(&formatter, "en", "USD", &percent) == mloc_errorInvalid &&
               Init(&formatter, "en", "USD", &display) == mloc_errorInvalid &&
@@ -316,24 +447,48 @@ static void TestRefusals(void)
     CHECK(mlocInitNumberFormatter(&number, &s_data, &locale, nullptr) == mloc_success &&
               mlocParseDecimal("1", 1, &decimal).status == mloc_success,
           "a number formatter");
-    static_assert(sizeof(number) == sizeof(mixed), "the opaque values agree in size");
-    memcpy(&mixed, &number, sizeof(mixed));
+    memset(&mixed, 0, sizeof(mixed));
+    memcpy(&mixed, &number, sizeof(number));
     CHECK(mlocFormatCurrency(&mixed, &decimal, &output) == mloc_errorInvalid,
           "a number formatter as a currency formatter");
     CHECK(mlocFormatCurrency(nullptr, &decimal, &output) == mloc_errorInvalid, "a null formatter");
 }
 
-int main(void)
+// The compiled-in data, and with it the currency names data file whose
+// path is the program's argument.
+static bool OpenData(int argc, char** argv)
 {
-    mlocData builtin;
-    mlocOpenBuiltinData(&builtin);
-    s_data = (mlocDataSet){&builtin, 1};
+    static mlocData s_sources[2];
+    alignas(8) static uint8_t s_names[4 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    s_data = (mlocDataSet){s_sources, 1};
+    FILE* file = argc == 2 ? fopen(argv[1], "rb") : nullptr;
+    size_t size = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_withNames = (mlocDataSet){s_sources, 2};
+    return size > 0 && size < sizeof(s_names) &&
+           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+}
+
+int main(int argc, char** argv)
+{
+    if (!OpenData(argc, argv))
+    {
+        fputs("usage: test_currency <currency-names.mloc>\n", stderr);
+        return 2;
+    }
     TestDisplays();
     TestSpacing();
     TestDigits();
     TestPatterns();
     TestCompact();
+    TestNames();
     TestRanges();
+    TestNameRanges();
+    TestLookups();
     TestParts();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

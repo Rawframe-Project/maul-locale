@@ -111,7 +111,10 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(decimal)
     maul_add_test(plural)
     maul_add_test(plural_tables WHITEBOX)
-    maul_add_test(currency)
+    # The currency names are a data file of their own (record mloc-0022).
+    maul_add_test(currency MANUAL)
+    add_test(NAME currency COMMAND test_currency
+             ${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc)
     maul_add_test(number)
     maul_add_test(currency_tables WHITEBOX)
     maul_add_test(number_tables WHITEBOX)

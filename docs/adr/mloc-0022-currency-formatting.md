@@ -73,7 +73,36 @@ CLDR's test data has no currency formatting cases.
   pattern), and a variant written for another pattern gives way as
   above. The compact rounding applies unless the options give a
   precision, as ICU does.
-- **Ranges** are the number formatter's (`mlocFormatCurrencyRange`).
+- **Names:** a fourth unit per locale key, in the same sparse shape:
+  the currency's name and its name for each plural category. The
+  generator writes them, 2.1 MB, into a data file of their own,
+  `src/generated/currency-names.mloc`, beside the compiled-in data (267
+  KB), which a program adds to its data set to show names: the library
+  stays small, and data without names is a choice (L20). Fields are
+  inherited one by one with the inheritance marker counting as absent,
+  then the lateral fallback from the locale asked for (a category's name
+  to other's, then to the name; an alternative symbol to the symbol):
+  CLDR's own resolution, which agrees with CLDR's JSON on 481,409 of
+  481,455 currency values (all but 46 Norwegian Nynorsk names, where the
+  JSON takes Norwegian's).
+- **Long names:** the name display writes the decimal pattern's number
+  (the currency's digits, the currency separators) inside the unit
+  pattern of the number's plural category, with that category's name
+  (UTS #35, ICU); the unit patterns and the ISO append pattern are latn's
+  (root gives other systems none, ICU reads latn's too) and live as texts
+  of the pattern sets. Compact notation with a name takes the decimal
+  compact table of its length ("1.2 million US dollars"). A name the
+  data does not give is the code, and showing names needs the names data
+  file in the set (`mloc_errorNotFound` otherwise).
+- **ISO append:** an option of the symbol displays writes the amount
+  inside `currencyPatternAppendISO` ("$1,432.00 USD").
+- **Lookups:** `mlocGetCurrencySymbol`, `mlocGetCurrencyName` (ECMA-402
+  DisplayNames of type currency) and `mlocGetCurrencyDigits`; the code
+  stands in, with `mloc_fellBack`, where the data has no text.
+- **Ranges** are the number formatter's (`mlocFormatCurrencyRange`). A
+  name or the appended code is written once around both ends ("1.00–5.00
+  US dollars"), in the category CLDR's plural ranges give the ends'
+  categories, as ICU collapses its outer modifier.
 - **Proof:** ICU4C 79.1rc, built on CLDR 49, as oracle: 105 locales,
   12 currencies (one the data does not know), every display, accounting
   and cash, four amounts, 65,520 cases: every case agrees but the
@@ -84,12 +113,18 @@ CLDR's test data has no currency formatting cases.
   `alphaNextToNumber` compact patterns write no space ("USD1,2 m."; ICU
   reads no such pattern and spaces by `currencySpacing`), and the hidden
   display's, whose short decimal table has other words than the
-  currency table in Macedonian, Mongolian and Pashto. The tests take
-  their expected text from it.
+  currency table in Macedonian, Mongolian and Pashto. Long names (11,340
+  cases, 105 locales, 12 currencies, nine amounts) agree but Burmese's,
+  whose unit pattern CLDR 49 gives as "{1} {0}" (XML and JSON; ICU
+  writes "{0} {1}"), and the 46 Nynorsk names above; name ranges (2,100
+  cases) agree but those and the locales without plural ranges, where
+  UTS #35 says a pair without a value takes the end's category and ICU
+  takes other. The tests take their expected text from it.
 
 ## Consequences
 
 The currency units cost about 65 KB of the compiled-in data: the
-symbols units 44 KB, the compact currency tables about 20 KB. The names and their plural forms, ten times
+symbols units 44 KB, the compact currency tables about 20 KB; the names
+are the data file of 2.1 MB that a program adds when it shows names. The names and their plural forms, ten times
 the symbols, are a kind of their own, so data without them is a choice.
 Building the generator fetches Maul Unicode.

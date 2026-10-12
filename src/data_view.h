@@ -70,6 +70,9 @@ bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uin
 // locale), or false.
 bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut);
 
+// Whether a source of a set has a unit of the kind.
+bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind);
+
 // The first source of a set with a unit of the kind for the locale id
 // (null for a unit of no locale), or false.
 bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,

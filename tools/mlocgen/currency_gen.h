@@ -3,9 +3,10 @@
 //
 // The number part's currency units (record mloc-0022,
 // src/currency_tables.h): the fractions of supplementalData.xml, and per
-// locale key the currency symbols, own patterns and own separators its
-// file gives, each field kept only where it differs from what the
-// parent's chain gives. The pattern sets are the number generator's.
+// locale key the currency symbols, own patterns and own separators, and
+// the names, its file gives, each field kept only where it differs from
+// what the parent's chain gives. The pattern sets are the number
+// generator's.
 
 #ifndef MLOCGEN_CURRENCY_GEN_H
 #define MLOCGEN_CURRENCY_GEN_H
@@ -28,6 +29,8 @@ typedef struct CurrencyInput
     // index.
     uint16_t (*compile)(void* context, const char* pattern);
     void* context;
+    // Receives the names units, which ship as a data file of their own.
+    DataFile* names;
 } CurrencyInput;
 
 int GenerateCurrencyUnits(const CurrencyInput* input, DataFile* file, char* errorOut,

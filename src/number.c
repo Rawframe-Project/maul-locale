@@ -62,7 +62,7 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatWith(&f, decimal, output);
+    return mlocFormatWith(&f, nullptr, decimal, output);
 }
 
 mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlocDecimal* start,
@@ -73,5 +73,5 @@ mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlo
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatRangeWith(&f, start, end, output);
+    return mlocFormatRangeWith(&f, nullptr, start, end, output);
 }

@@ -215,7 +215,7 @@ static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 // data has no pattern sets or the indexes leave them.
 static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_t* entry,
                               const CurrencyStyle* style, uint32_t* patternOut,
-                              uint32_t* compactOut)
+                              uint32_t* compactOut, CurrencyTexts* texts)
 {
     DataSpan sets;
     if (!mlocFindDataUnit(view, kindCurrencyPatterns, dataNoLocale, &sets))
@@ -237,6 +237,12 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
             return false;
         }
     }
+    texts->text = t.text;
+    for (int i = 0; i < 7; i++)
+    {
+        TableString(t, mlocLoad16(r + setUnitPatterns + 2 * i), &texts->start[i],
+                    &texts->length[i]);
+    }
     int base = style->accounting ? currencyAccounting : currencyStandard;
     // The alphaNextToNumber pattern when the currency's character closest
     // to the digits is neither a symbol nor a space.
@@ -245,9 +251,19 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
     bool alpha = (style->spacing & edge) != 0;
     int chosen = style->hidden ? base + 2 : alpha ? base + 1 : base;
     *patternOut = mlocLoad16(r + 2 * chosen);
-    // Hidden, compact notation takes the short decimal table (UTS #35).
-    *compactOut = style->hidden ? mlocLoad16(entry + entryCompactShort)
-                                : mlocLoad16(r + (alpha ? setCompactAlpha : setCompact));
+    *compactOut = mlocLoad16(r + (alpha ? setCompactAlpha : setCompact));
+    // A long name takes the decimal pattern and tables; hidden, compact
+    // notation takes the short decimal table (UTS #35).
+    if (style->name)
+    {
+        *patternOut = mlocLoad16(entry + entryDecimal);
+        *compactOut =
+            mlocLoad16(entry + (style->longLength ? entryCompactLong : entryCompactShort));
+    }
+    else if (style->hidden)
+    {
+        *compactOut = mlocLoad16(entry + entryCompactShort);
+    }
     return true;
 }
 
@@ -256,7 +272,8 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
 // pattern and separators.
 static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const mlocLocale* locale,
                            mlocNumberStyle style, const CurrencyStyle* currency,
-                           const uint8_t** compact, bool longLength, const uint8_t** patternsOut)
+                           const uint8_t** compact, bool longLength, const uint8_t** patternsOut,
+                           CurrencyTexts* texts)
 {
     Units u;
     // Number data is filed only where it differs from the chain's, so
@@ -294,7 +311,7 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
                          : mlocLoad16(entry + (longLength ? entryCompactLong : entryCompactShort));
     if (entry == nullptr ||
         (currency != nullptr &&
-         !CurrencyPatternOf(&view, &u, entry, currency, &pattern, &compactIndex)) ||
+         !CurrencyPatternOf(&view, &u, entry, currency, &pattern, &compactIndex, texts)) ||
         !Fill(&core, &u, system, entry, header[localeMinGrouping], pattern))
     {
         return mloc_errorNotFound;
@@ -331,14 +348,16 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
                               const mlocLocale* locale, mlocNumberStyle style)
 {
-    return InitCore(coreOut, data, locale, style, nullptr, nullptr, false, nullptr);
+    return InitCore(coreOut, data, locale, style, nullptr, nullptr, false, nullptr, nullptr);
 }
 
 mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
                                 const mlocLocale* locale, const CurrencyStyle* style,
-                                const uint8_t** tableOut, const uint8_t** patternsOut)
+                                const uint8_t** tableOut, const uint8_t** patternsOut,
+                                CurrencyTexts* textsOut)
 {
-    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, tableOut, false, patternsOut);
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, style, tableOut, false, patternsOut,
+                    textsOut);
 }
 
 mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
@@ -346,7 +365,7 @@ mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
                                const uint8_t** patternsOut)
 {
     return InitCore(coreOut, data, locale, mloc_numberDecimal, nullptr, tableOut, longLength,
-                    patternsOut);
+                    patternsOut, nullptr);
 }
 
 bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index)
@@ -411,6 +430,11 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
 void mlocWriteLiteral(NumberWriter* w, const char* text, size_t length)
 {
     Put(w, mloc_numberPartLiteral, text, length);
+}
+
+void mlocWritePart(NumberWriter* w, uint32_t kind, const uint8_t* text, size_t length)
+{
+    Put(w, kind, text, length);
 }
 
 void mlocEndParts(NumberWriter* w)

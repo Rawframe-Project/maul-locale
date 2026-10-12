@@ -350,6 +350,36 @@ bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, Data
     return FindUnit(view->bytes, view->unitCount, kind, locale, spanOut);
 }
 
+bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind)
+{
+    for (size_t i = 0; i < set->count; i++)
+    {
+        DataView view = mlocViewOf(&set->sources[i]);
+        // The first unit at or after the kind's first key.
+        uint32_t low = 0;
+        uint32_t high = view.unitCount;
+        while (low < high)
+        {
+            uint32_t middle = low + (high - low) / 2;
+            const uint8_t* entry = view.bytes + dataHeaderSize + (size_t)middle * dataUnitSize;
+            if (mlocLoad32(entry) < kind)
+            {
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle;
+            }
+        }
+        if (low < view.unitCount &&
+            mlocLoad32(view.bytes + dataHeaderSize + (size_t)low * dataUnitSize) == kind)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // A unit for a locale id: the first source with the id and the unit.
 static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
                            DataSpan* spanOut)

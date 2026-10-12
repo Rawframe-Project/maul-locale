@@ -29,6 +29,6 @@ number_data: bytes currency_tables data_view number_tables
 number_precision: decimal
 number_compact: bytes decimal number_data number_precision number_tables plural
 number_core: bytes currency_tables data_format data_view decimal kinds locale_fallback locale_keyword number_compact number_data number_tables
-number_format: decimal number_compact number_core number_precision plural_rules
+number_format: currency_tables decimal number_compact number_core number_precision plural plural_rules
 number: number_core number_format plural
-currency: bytes currency_tables data_format data_view kinds locale_fallback locale_keyword number_core number_data number_format plural
+currency: bytes currency_tables data_format data_view kinds locale_fallback locale_keyword number_core number_data number_format plural plural_rules

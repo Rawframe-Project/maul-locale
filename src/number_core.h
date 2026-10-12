@@ -102,13 +102,25 @@ mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
 // In compact notation, the short compact currency table, or its
 // alphaNextToNumber one as for the pattern; hidden, the short decimal
 // compact table. Both lengths take the short tables (CLDR has no long
-// currency ones).
+// currency ones). With a long name, the decimal pattern and the decimal
+// compact table of the length asked for, as UTS #35 and ICU say.
 typedef struct CurrencyStyle
 {
     bool accounting;
     bool hidden;
+    bool name;
+    bool longLength;
     uint8_t spacing;
 } CurrencyStyle;
+
+// The texts of a currency pattern set: the long name's unit patterns,
+// zero to other, then the ISO append pattern (currency_tables.h).
+typedef struct CurrencyTexts
+{
+    const uint8_t* text;
+    uint16_t start[7];
+    uint16_t length[7];
+} CurrencyTexts;
 
 // As mlocInitNumberCore, with the system's currency pattern of a style
 // and the currency separators; with tableOut, as mlocInitCompactCore,
@@ -116,7 +128,8 @@ typedef struct CurrencyStyle
 // currency pattern sets.
 mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
                                 const mlocLocale* locale, const CurrencyStyle* style,
-                                const uint8_t** tableOut, const uint8_t** patternsOut);
+                                const uint8_t** tableOut, const uint8_t** patternsOut,
+                                CurrencyTexts* textsOut);
 
 // Points a core's pattern at a pattern of a valid patterns unit; false
 // for an index past its records.
@@ -167,6 +180,9 @@ size_t mlocAffixCodePoints(const NumberCore* core, NumberSign sign, const Number
 
 // Writes literal text.
 void mlocWriteLiteral(NumberWriter* writer, const char* text, size_t length);
+
+// Writes text as a part of a kind.
+void mlocWritePart(NumberWriter* writer, uint32_t kind, const uint8_t* text, size_t length);
 
 // Ends a writer's last part.
 void mlocEndParts(NumberWriter* writer);

@@ -408,7 +408,23 @@ CurrencyFraction mlocFindCurrencyFraction(DataSpan unit, uint16_t code)
 bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
-    return ValidTable(payload, currencySetSize, 0) && mlocLoad16(payload.bytes) == 0;
+    if (!ValidTable(payload, currencySetSize, currencyTextOther))
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(payload, currencySetSize);
+    for (uint32_t i = 0; i < t.recordCount; i++)
+    {
+        const uint8_t* r = t.records + (size_t)i * currencySetSize;
+        for (uint32_t at = setUnitPatterns; at <= setAppend; at += 2)
+        {
+            if (mlocLoad16(r + at) >= t.stringCount)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 SparseTable mlocReadSparseTable(DataSpan unit)
@@ -510,6 +526,12 @@ bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload)
     (void)view;
     uint32_t strings = (1u << currencyFieldCount) - 1 - (1u << currencyOwnPattern);
     return ValidSparse(payload, currencyFieldCount, strings, true);
+}
+
+bool mlocValidCurrencyNames(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    return ValidSparse(payload, currencyNameFieldCount, (1u << currencyNameFieldCount) - 1, false);
 }
 
 const uint8_t* mlocFindSparseRow(const SparseTable* t, uint16_t code)

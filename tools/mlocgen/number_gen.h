@@ -11,7 +11,9 @@
 
 #include "datafile.h"
 
-int GenerateNumberUnits(const char* commonDirectory, DataFile* file, char* errorOut,
-                        size_t errorCapacity);
+// The currency names go into names, a data file of their own (record
+// mloc-0022).
+int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
+                        char* errorOut, size_t errorCapacity);
 
 #endif

@@ -56,5 +56,8 @@ constexpr uint32_t kindCurrencyPatterns = 0x00040008;
 // The number part: the currency symbols a locale key gives of its own, a
 // unit per locale.
 constexpr uint32_t kindCurrencySymbols = 0x00040009;
+// The number part: the currency names a locale key gives of its own, a
+// unit per locale.
+constexpr uint32_t kindCurrencyNames = 0x0004000A;
 
 #endif
