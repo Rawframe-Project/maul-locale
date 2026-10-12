@@ -5,7 +5,9 @@
 // parsed locale writes a tag that parses back to the same locale and
 // writes the same tag again. Canonicalizing on the compiled-in data
 // refuses within the text too, and a canonical tag canonicalizes to
-// itself, and its fallback chain in every component ends at root.
+// itself, its fallback chain in every component ends at root, it
+// matches itself first, and its match among a few others is one of them
+// and combines with it.
 
 #include "maul-locale/locale.h"
 
@@ -21,6 +23,36 @@ static void Require(bool condition)
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
+
+static void Match(const mlocDataSet* set, const mlocLocale* locale)
+{
+    static const char* const s_others[] = {"en", "en-GB", "zh-Hant", "und", "und-x-bork", "en-XA"};
+    mlocLocale supported[7] = {*locale};
+    for (size_t i = 0; i < 6; i++)
+    {
+        Require(mlocCanonicalizeLocale(set, s_others[i], strlen(s_others[i]), &supported[i + 1],
+                                       nullptr)
+                    .status == mloc_success);
+    }
+    mlocMatchEntry entries[7];
+    mlocMatch match;
+    mlocMatchOptions options = {.flags = mloc_matchBothWays | mloc_matchFavorScript};
+    Require(mlocPrepareMatch(set, supported, 1, locale, entries) == mloc_success);
+    Require(mlocMatchLocales(set, supported, entries, 1, locale, 1, &options, &match) ==
+                mloc_success &&
+            match.supported == 0 && match.desired == 0);
+    Require(mlocPrepareMatch(set, supported + 1, 6, nullptr, entries) == mloc_success);
+    Require(mlocMatchLocales(set, supported + 1, entries, 6, locale, 1, nullptr, &match) ==
+            mloc_success);
+    Require(match.supported >= -1 && match.supported < 6 &&
+            match.desired == (match.supported >= 0 ? 0 : -1));
+    if (match.supported >= 0)
+    {
+        mlocLocale combined;
+        mlocResult result = mlocCombineMatch(locale, &supported[1 + match.supported], &combined);
+        Require(result == mloc_success || result == mloc_errorCapacity);
+    }
+}
 
 // Canonicalizes the input; a result written and canonicalized again
 // stays the same.
@@ -60,6 +92,7 @@ static void Canonicalize(const uint8_t* data, size_t size)
         }
         Require(next == mloc_errorNotFound || next == mloc_errorCapacity);
     }
+    Match(&set, &locale);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

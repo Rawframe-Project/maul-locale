@@ -1,0 +1,4 @@
+# The lines of the localeMatcherTest.txt that tools/icu-release.txt pins
+# where matching differs from ICU, each with its reason. A line listed
+# must differ and every other must agree (test/conform_match.c).
+1393 "sh" is canonicalized to sr-Latn by CLDR's legacy alias (UTS #35 Annex C), which then matches sr at the distance of sr-Latn to sr-Cyrl; ICU replaces only one-subtag aliases, keeps "sh" and gives it the default script, too far from sr's

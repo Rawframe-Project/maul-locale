@@ -196,6 +196,123 @@ extern "C"
                                                            const mlocLocale* locale,
                                                            mlocLocale* parentOut);
 
+    // A supported locale prepared for matching by mlocPrepareMatch: its
+    // maximized language, script and region and its index. Opaque.
+    typedef struct mlocMatchEntry
+    {
+        uint64_t opaque[3];
+    } mlocMatchEntry;
+
+    /// Prepares supported locales for mlocMatchLocales (record mloc-0017):
+    /// maximizes each as matching does and orders them as they are tried,
+    /// those equivalent to the default locale first, then CLDR's paradigm
+    /// locales (en, en-GB, es, es-419, pt-BR, pt-PT), then the rest, each
+    /// group in the order given. Give canonicalized locales
+    /// (mlocCanonicalizeLocale): matching replaces no aliases.
+    ///
+    /// @param data           The data with the likely subtags and the
+    ///                       matching table.
+    /// @param supported      The supported locales.
+    /// @param count          Their number, below 2^31.
+    /// @param defaultLocale  The locale whose equivalents are tried first,
+    ///                       as ICU's default locale: usually supported[0];
+    ///                       null for none.
+    /// @param entriesOut     Receives count entries; left unchanged on
+    ///                       failure.
+    /// @return mloc_success; mloc_errorNotFound for data without the likely
+    ///         subtags or the matching table; mloc_errorInvalid for a null
+    ///         pointer with a count, or a count too large.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocPrepareMatch(const mlocDataSet* data,
+                                                        const mlocLocale* supported, size_t count,
+                                                        const mlocLocale* defaultLocale,
+                                                        mlocMatchEntry* entriesOut);
+
+    // How mlocMatchLocales weighs distances, as bits.
+    typedef uint32_t mlocMatchFlags;
+    enum
+    {
+        // The language distance counts a quarter, so that a script
+        // difference weighs more than a language one: "pl" then matches
+        // "fr" (one script), and "sr" matches "ru" rather than "hr".
+        mloc_matchFavorScript = 1,
+        // A later desired locale is not demoted: each is weighed alike.
+        mloc_matchNoDemotion = 2,
+        // A pair matches only when it also matches the other way, so the
+        // one-way rules (Afrikaans to English, Swiss German to German) do
+        // not apply.
+        mloc_matchBothWays = 4,
+    };
+
+    typedef struct mlocMatchOptions
+    {
+        mlocMatchFlags flags;
+        // The distance a match stays below, 1 to 100; 0 for CLDR's default
+        // script distance (50), so that different scripts do not match.
+        uint32_t threshold;
+    } mlocMatchOptions;
+
+    // The outcome of mlocMatchLocales.
+    typedef struct mlocMatch
+    {
+        // The index of the best supported locale, or -1 when none is near
+        // enough, for the default locale.
+        int32_t supported;
+        // The index of the desired locale it matched, or -1.
+        int32_t desired;
+    } mlocMatch;
+
+    /// Finds the supported locale that best matches the desired locales in
+    /// their order of preference, as ICU's LocaleMatcher does (record
+    /// mloc-0017). Each desired locale is maximized and each supported one
+    /// gets the distance CLDR's rules give its language, script and region
+    /// (regions by groups: "es-MX" is nearer "es-419" than "es", "en-IN"
+    /// nearer "en-GB" than "en-US"); the nearest wins, a tie going to the
+    /// one tried first unless a later one has its language's likely script
+    /// or region. Each later desired locale is demoted by the distance of
+    /// two English regions, so that it wins only with a closer match.
+    ///
+    /// @param data          The data mlocPrepareMatch was given.
+    /// @param supported     The supported locales mlocPrepareMatch was
+    ///                      given; private use tags are compared with them.
+    /// @param entries       What mlocPrepareMatch made of them.
+    /// @param count         Their number.
+    /// @param desired       The desired locales, the most wanted first,
+    ///                      canonicalized.
+    /// @param desiredCount  Their number, below 2^31.
+    /// @param options       The options; null for none.
+    /// @param matchOut      Receives the outcome; left unchanged on failure.
+    /// @return mloc_success, also when nothing matches; mloc_errorNotFound
+    ///         as mlocPrepareMatch; mloc_errorInvalid for a null pointer
+    ///         with a count, a count too large, an entry of another count,
+    ///         another flag or a threshold above 100.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported,
+                     const mlocMatchEntry* entries, size_t count, const mlocLocale* desired,
+                     size_t desiredCount, const mlocMatchOptions* options, mlocMatch* matchOut);
+
+    /// Makes the locale to use from a match, as ICU's resolved locale: the
+    /// supported locale with the desired one's region, its variants (which
+    /// replace the supported ones) and its extensions (each replacing the
+    /// supported one of its letter): "ar-SA-u-nu-latn" matched with "ar-EG"
+    /// gives "ar-SA-u-nu-latn".
+    ///
+    /// @param desired    The desired locale of the match.
+    /// @param supported  The supported locale of the match.
+    /// @param localeOut  Receives the locale; may be either input; left
+    ///                   unchanged on failure.
+    /// @return mloc_success; mloc_errorCapacity when the variants and
+    ///         extensions pass 112 bytes; mloc_errorInvalid for a null
+    ///         pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocCombineMatch(const mlocLocale* desired,
+                                                        const mlocLocale* supported,
+                                                        mlocLocale* localeOut);
+
 #ifdef __cplusplus
 }
 #endif

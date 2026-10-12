@@ -22,16 +22,6 @@ enum
     likelyHeaderSize = 16,
 };
 
-typedef struct Likely
-{
-    const uint8_t* generalKeys;
-    const uint8_t* generalValues;
-    const uint8_t* languageValues;
-    const uint8_t* languageKeys;
-    uint32_t generalCount;
-    uint32_t languageCount;
-} Likely;
-
 static Likely ReadLikely(DataSpan span)
 {
     uint32_t languageCount = mlocLoad32(span.bytes);
@@ -218,7 +208,64 @@ static mlocResult Maximize(const Likely* likely, const mlocLocale* locale, mlocL
     return mloc_success;
 }
 
-static bool OpenLikely(const mlocDataSet* data, Likely* likelyOut)
+// The index of the first general key at or above key.
+static uint32_t LowerBound(const Likely* likely, uint64_t key)
+{
+    uint32_t low = 0;
+    uint32_t high = likely->generalCount;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        if (mlocLoad64(likely->generalKeys + (size_t)middle * 8) < key)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return low;
+}
+
+bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
+                    uint64_t* valueOut)
+{
+    if (script == 0 && region == 0 && language != mlocPackLanguage("und", 3))
+    {
+        return FindLanguage(likely, language, valueOut);
+    }
+    return FindGeneral(likely, mlocPackTag(language, script, region), valueOut);
+}
+
+bool mlocHasLikely(const Likely* likely, uint32_t language, uint32_t script)
+{
+    uint64_t value = 0;
+    if (script == 0 && FindLanguage(likely, language, &value))
+    {
+        return true;
+    }
+    // The keys of a language, or of a language and script, are a run.
+    uint64_t start = script == 0 ? mlocPackTag(language, 0, 0) : mlocPackTag(language, script, 0);
+    uint64_t end =
+        script == 0 ? mlocPackTag(language + 1, 0, 0) : mlocPackTag(language, script + 1, 0);
+    uint32_t at = LowerBound(likely, start);
+    return at < likely->generalCount && mlocLoad64(likely->generalKeys + (size_t)at * 8) < end;
+}
+
+void mlocLikelyRegionRange(const Likely* likely, uint32_t language, uint32_t* startOut,
+                           uint32_t* endOut)
+{
+    *startOut = LowerBound(likely, mlocPackTag(language, 0, 1));
+    *endOut = LowerBound(likely, mlocPackTag(language, 1, 0));
+}
+
+uint64_t mlocLikelyValueAt(const Likely* likely, uint32_t index)
+{
+    return mlocLoad64(likely->generalValues + (size_t)index * 8);
+}
+
+bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut)
 {
     DataSpan span;
     if (!mlocFindDataSetUnit(data, kindLocaleLikely, nullptr, 0, &span))
@@ -237,7 +284,7 @@ mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
         return mloc_errorInvalid;
     }
     Likely likely;
-    if (!OpenLikely(data, &likely))
+    if (!mlocOpenLikely(data, &likely))
     {
         return mloc_errorNotFound;
     }
@@ -260,7 +307,7 @@ mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale,
         return mloc_errorInvalid;
     }
     Likely likely;
-    if (!OpenLikely(data, &likely))
+    if (!mlocOpenLikely(data, &likely))
     {
         return mloc_errorNotFound;
     }

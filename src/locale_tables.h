@@ -57,6 +57,30 @@
 //       component, then by the child's bytes, a prefix first
 //   char text[textSize]: keys, CLDR ids as mloc-0016 forms them, each
 //       exactly as the library writes it back
+//
+// Matching (kindLocaleMatch), the distance table of record mloc-0017:
+//   u8 languageDistance, scriptDistance, regionDistance,
+//       minRegionDistance: CLDR's defaults and its least region distance
+//   u16 paradigmCount (at most matchMaxParadigms), languageCount,
+//       scriptCount, regionCount, groupCount, groupTextSize
+//   u64 paradigms[paradigmCount]: language, script and region packed
+//   scripts[scriptCount], 16 bytes each: u64 desired << 20 | supported
+//       (0 for "*"), u16 childStart, childCount (regions), u8 distance,
+//       zero
+//   languages[languageCount], 12 bytes each: u32 desired << 15 |
+//       supported, sorted, unique; u16 childStart, childCount, u8
+//       distance, flags (matchSkipScript: the children are regions, not
+//       scripts), u16 zero
+//   regions[regionCount], 4 bytes each: u8 desired, supported partition
+//       (0 for "*"), distance, zero
+//   groups[groupCount], 4 bytes each: u16 textOffset, textLength
+//   u8 regionGroups[matchRegionSlots]: each packed region's group, 0 for
+//       one in no partition, with matchMacroRegion for a world, continent
+//       or subcontinent (not a grouping such as EU or 419)
+//   char groupText[groupTextSize]: each group's partitions
+// The children of an entry are a run of the next level, sorted, unique,
+// "*" first and always there when the run is not empty; an entry without
+// children ends the lookup with the default distances.
 
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H
@@ -155,6 +179,16 @@ enum
     parentEntrySize = 12,
     // CLDR 49 has 201; the bound keeps validation's chain walks short.
     parentMaxEntries = 4096,
+    matchHeaderSize = 16,
+    matchScriptSize = 16,
+    matchLanguageSize = 12,
+    matchRegionSize = 4,
+    matchGroupSize = 4,
+    matchRegionSlots = 2048,
+    // CLDR 49 has 6.
+    matchMaxParadigms = 16,
+    matchSkipScript = 1,
+    matchMacroRegion = 0x80,
 };
 
 static inline uint64_t mlocPackTag(uint32_t language, uint32_t script, uint32_t region)

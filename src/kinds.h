@@ -21,5 +21,8 @@ constexpr uint32_t kindLocaleExtensionAliases = 0x00010003;
 // The locale part: the explicit parent locales of each component, a unit
 // of no locale.
 constexpr uint32_t kindLocaleParents = 0x00010004;
+// The locale part: the distance table of language matching, a unit of no
+// locale.
+constexpr uint32_t kindLocaleMatch = 0x00010005;
 
 #endif

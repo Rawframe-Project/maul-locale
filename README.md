@@ -31,9 +31,10 @@ reading of CLDR (its inheritance checked against CLDR's own JSON on
 every push), the data layer that opens compiled-in data and data
 files, locale ids parsed strictly into canonical syntax and
 canonicalized with CLDR's aliases, likely subtags added and removed,
-and fallback chains per component (CLDR's conformance files and its
-own inheritance pass on every push). The library has
-15 public functions.
+fallback chains per component, and language matching as ICU's
+LocaleMatcher does it (CLDR's conformance files, its own inheritance
+and ICU's matcher test pass on every push). The library has
+18 public functions.
 
 ## Building
 

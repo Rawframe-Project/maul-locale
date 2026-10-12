@@ -1,0 +1,6 @@
+# ICU's data-driven test of its LocaleMatcher (record mloc-0017), which
+# test/conform_match.c runs in CI: the release and the file's SHA-256.
+# Until ICU 79 is final, its release candidate, built on CLDR 49.
+tag release-79.1rc
+file icu4c/source/test/testdata/localeMatcherTest.txt
+sha256 5ed4ec006dcc75afbe4162141dceddf2482a936c6b65affe62eacd6948e78f17
