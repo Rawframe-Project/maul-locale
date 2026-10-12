@@ -65,6 +65,8 @@ int main(void)
           "a script with a missing letter");
     CHECK(!ValidWith(lastKey, mlocLoad64(s_builtin.bytes + lastKey) | (uint64_t)1 << 50, 8),
           "bits past the tag");
+    CHECK(!ValidWith(lastKey, mlocLoad64(s_builtin.bytes + lastKey) | (uint64_t)1 << 63, 8),
+          "the top bit of a tag");
     CHECK(!ValidWith(generalValues, mlocPackTag(en, latn, 0), 8), "a value without a region");
     CHECK(!ValidWith(generalValues, mlocPackTag(en, 0, us), 8), "a value without a script");
     CHECK(!ValidWith(generalValues, mlocPackTag(en, latn, 2024), 8), "a region past 999");
