@@ -64,6 +64,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(likely)
     maul_add_test(likely_tables WHITEBOX)
     maul_add_test(canonical)
+    maul_add_test(alias_tables WHITEBOX)
     # CLDR's conformance files, which the cldr CI job runs on the pinned
     # release; built here so that every build compiles them.
     foreach(name likely canonical)

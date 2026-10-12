@@ -139,6 +139,11 @@ static bool Optional(uint32_t packed, bool (*valid)(uint32_t))
 
 static bool ValidVariants(const Aliases* aliases, const uint32_t* variants, uint32_t count)
 {
+    // The count comes from 4 bits of the file; the rule holds two.
+    if (count > aliasMaxVariants)
+    {
+        return false;
+    }
     for (uint32_t v = 0; v < count; v++)
     {
         if (variants[v] >= aliases->variantCount || (v > 0 && variants[v] <= variants[v - 1]))
@@ -146,7 +151,21 @@ static bool ValidVariants(const Aliases* aliases, const uint32_t* variants, uint
             return false;
         }
     }
-    return count <= aliasMaxVariants;
+    return true;
+}
+
+// A variant name as the parser writes one: 5 to 8 lowercase letters and
+// digits, or a digit and 3 of them.
+static bool ValidVariantName(const uint8_t* name, uint32_t length)
+{
+    for (uint32_t k = 0; k < length; k++)
+    {
+        if (!((name[k] >= 'a' && name[k] <= 'z') || (name[k] >= '0' && name[k] <= '9')))
+        {
+            return false;
+        }
+    }
+    return length >= 5 || (length == 4 && name[0] >= '0' && name[0] <= '9');
 }
 
 static bool ValidRule(const Aliases* aliases, const Rule* rule)
@@ -180,7 +199,7 @@ static bool ValidTables(const Aliases* aliases)
         {
             sorted = sorted && name[k] == 0;
         }
-        if (length < 4 || !sorted)
+        if (!ValidVariantName(name, length) || !sorted)
         {
             return false;
         }
