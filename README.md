@@ -36,8 +36,10 @@ LocaleMatcher does it, and regional preferences (CLDR's conformance
 files, its own inheritance and JSON, and ICU's matcher test pass on
 every push), and decimal values (from text, integers and the shortest
 digits of a double, rounded in ECMA-402's modes) with their plural
-operands. The library has
-27 public functions.
+operands, and CLDR's cardinal, ordinal and range plural rules compiled
+to C (every sample of CLDR's files passes on every push). The library
+has
+32 public functions.
 
 ## Building
 

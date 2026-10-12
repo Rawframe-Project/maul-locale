@@ -11,6 +11,7 @@
 #include "locale_fallback.h"
 #include "locale_likely.h"
 #include "locale_prefs.h"
+#include "plural.h"
 
 static const DataKind s_kinds[] = {
     {kindLocaleLikely, mlocValidLikely},
@@ -19,6 +20,8 @@ static const DataKind s_kinds[] = {
     {kindLocaleParents, mlocValidParents},
     {kindLocaleMatch, mlocValidMatch},
     {kindLocalePreferences, mlocValidPreferences},
+    {kindPlurals, mlocValidPlurals},
+    {kindPluralRanges, mlocValidPluralRanges},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

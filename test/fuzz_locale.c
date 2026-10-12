@@ -7,9 +7,11 @@
 // refuses within the text too, and a canonical tag canonicalizes to
 // itself, its fallback chain in every component ends at root, it
 // matches itself first, its match among a few others is one of them and
-// combines with it, and it has regional preferences in range.
+// combines with it, it has regional preferences in range, and plural
+// rules of both types whose category for 21 is one they name.
 
 #include "maul-locale/locale.h"
+#include "maul-locale/plural.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -98,6 +100,20 @@ static void Canonicalize(const uint8_t* data, size_t size)
             preferences.hourCycle <= mloc_hourFormatH24 && preferences.firstDay >= 1 &&
             preferences.firstDay <= 7 && preferences.allowedHourCount >= 1 &&
             preferences.allowedHourCount <= 6);
+    // Every locale has plural rules of both types (root's at worst), and
+    // a number takes one of the categories they name.
+    for (int type = mloc_pluralCardinal; type <= mloc_pluralOrdinal; type++)
+    {
+        mlocPluralRules rules;
+        mlocDecimal number;
+        mlocPluralCategory category;
+        uint32_t categories = 0;
+        Require(mlocInitPluralRules(&rules, &set, &locale, (mlocPluralType)type) >= 0);
+        Require(mlocMakeDecimal(21, &number) == mloc_success &&
+                mlocSelectPlural(&rules, &number, &category) == mloc_success &&
+                mlocGetPluralCategories(&rules, &categories) == mloc_success &&
+                (categories >> category & 1u) != 0);
+    }
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

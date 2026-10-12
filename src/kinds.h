@@ -27,5 +27,10 @@ constexpr uint32_t kindLocaleMatch = 0x00010005;
 // The locale part: the regional preferences (hour cycle, week, measurement
 // system, paper size), a unit of no locale.
 constexpr uint32_t kindLocalePreferences = 0x00010006;
+// The plural part: a locale's rule sets and range table, a unit per
+// locale (record mloc-0020).
+constexpr uint32_t kindPlurals = 0x00030001;
+// The plural part: the range tables, a unit of no locale.
+constexpr uint32_t kindPluralRanges = 0x00030002;
 
 #endif

@@ -4,7 +4,7 @@ base:
 bytes:
 data: bytes data_format data_view
 data_format:
-data_kinds: data_view kinds locale_canonical locale_distance locale_fallback locale_likely locale_prefs
+data_kinds: data_view kinds locale_canonical locale_distance locale_fallback locale_likely locale_prefs plural
 data_view:
 decimal:
 decimal_round: decimal
@@ -20,3 +20,5 @@ locale_lsr: bytes locale_likely locale_tables
 locale_distance: bytes data_view kinds locale_likely locale_lsr locale_tables
 locale_match: bytes locale_distance locale_likely locale_lsr locale_tables
 locale_prefs: bytes data_view kinds locale_tables
+plural_rules:
+plural: bytes data_format data_view decimal kinds locale_fallback plural_rules

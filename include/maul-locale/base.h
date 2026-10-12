@@ -63,6 +63,9 @@ extern "C"
     {
         // The call did what was asked.
         mloc_success = 0,
+        // The call did what was asked with the data of a locale the asked
+        // one falls back to (record mloc-0016).
+        mloc_fellBack = 1,
         // An argument is invalid: a null pointer where one is required, a
         // value out of range.
         mloc_errorInvalid = -1,

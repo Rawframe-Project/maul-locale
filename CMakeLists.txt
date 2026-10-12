@@ -62,7 +62,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
-    src/generated/builtin_data.c)
+    src/plural.c
+    src/generated/builtin_data.c
+    src/generated/plural_rules.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
@@ -81,10 +83,12 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(preferences)
     maul_add_test(preference_tables WHITEBOX)
     maul_add_test(decimal)
+    maul_add_test(plural)
+    maul_add_test(plural_tables WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
-    foreach(name likely canonical parents match preferences)
+    foreach(name likely canonical parents match plurals preferences)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})
@@ -123,7 +127,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/generate.c tools/mlocgen/keys.c
                                     tools/mlocgen/ldml.c tools/mlocgen/locale_gen.c tools/mlocgen/map.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
-                                    tools/mlocgen/parents_gen.c tools/mlocgen/prefs_gen.c
+                                    tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
+                                    tools/mlocgen/prefs_gen.c
                                     tools/mlocgen/xml.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.

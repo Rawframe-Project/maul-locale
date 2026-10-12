@@ -112,7 +112,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_preferences
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_plurals conform_preferences
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -131,6 +131,7 @@ jobs:
           ls ~/cldr-cache/cldr/common/main | grep '\.xml$' | sed 's/\.xml$//' |
             awk '{ print "main\t" $0; print "collation\t" $0 }' |
             build/mlocgen chains ~/cldr-cache/cldr/common | build/conform_parents
+          build/mlocgen plural-samples ~/cldr-cache/cldr/common | build/conform_plurals
       - name: Matching
         # ICU's matcher test (record mloc-0017), the file tools/icu-release.txt pins.
         timeout-minutes: 5

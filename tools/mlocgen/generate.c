@@ -7,6 +7,7 @@
 
 #include "data_format.h"
 #include "locale_gen.h"
+#include "plural_gen.h"
 
 #include "maul-locale/base.h"
 
@@ -237,25 +238,32 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     {
         return 0;
     }
+    DataFile data = {0};
+    Text rules = {0};
+    if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
+        !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
+                             errorCapacity))
+    {
+        DataFileFree(&data);
+        return 0;
+    }
+    // The compiled rules are code tables the data's indexes name, so they
+    // enter the data version (record mloc-0020).
+    version.tables = HashBytes(version.tables, rules.bytes, rules.size);
     char tzdb[9] = "";
     memcpy(tzdb, version.tzdb, sizeof(version.tzdb));
     Text header = {0};
     VersionHeader(&header, &version, tzdb);
-    DataFile data = {0};
-    if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity))
-    {
-        free(header.bytes);
-        DataFileFree(&data);
-        return 0;
-    }
     size_t size = 0;
     uint8_t* bytes = DataFileWrite(&data, &version, &size);
     Text builtin = {0};
     BuiltinSource(&builtin, bytes, size);
     int ok = WriteFile(root, "data_version.h", &header, errorOut, errorCapacity) &&
-             WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity);
+             WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
+             WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity);
     free(header.bytes);
     free(builtin.bytes);
+    free(rules.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;

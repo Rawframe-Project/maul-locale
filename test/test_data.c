@@ -181,7 +181,30 @@ static void TestBuiltin(void)
     mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     CHECK(memcmp(&data, &builtin, sizeof(data)) == 0, "opened alike either way");
-    CHECK(mlocGetDataLocaleCount(&builtin) == 0, "no part has data yet");
+    // The plural part files a unit under every locale id CLDR's plural
+    // files name, root included; the ids are sorted.
+    size_t count = mlocGetDataLocaleCount(&builtin);
+    CHECK(count > 200, "the plural part's locales");
+    bool sorted = true;
+    bool root = false;
+    const char* previous = nullptr;
+    size_t previousLength = 0;
+    for (size_t i = 0; i < count; i++)
+    {
+        const char* id = nullptr;
+        size_t length = 0;
+        sorted = sorted && mlocGetDataLocale(&builtin, i, &id, &length) == mloc_success;
+        if (previous != nullptr)
+        {
+            size_t n = length < previousLength ? length : previousLength;
+            int order = memcmp(previous, id, n);
+            sorted = sorted && (order < 0 || (order == 0 && previousLength < length));
+        }
+        root = root || (length == 4 && memcmp(id, "root", 4) == 0);
+        previous = id;
+        previousLength = length;
+    }
+    CHECK(sorted && root, "sorted, with root");
 }
 
 static void TestLookups(void)

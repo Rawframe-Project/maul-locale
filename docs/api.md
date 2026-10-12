@@ -154,6 +154,35 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences( const mlocDataSet* 
 ```
 Returns a locale's regional preferences (UTS #35), the region's values from CLDR's supplemental data. The region is the -u-rg key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's region, else the -u-sd key's, else the likely one ("en" takes the US's), else 001; a region without data takes 001's. Keys override: -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed formats list first), -u-fw the first day, -u-ms the measurement system; -u-ca-iso8601 begins weeks on Monday with four days in the first unless -u-fw or -u-rg give the first day. The hour data is looked up for the language in the region first (ca-ES has its own). A key with a value it does not take is left out.  @param data          The data with the preferences and likely subtags. @param locale        The locale, canonicalized. @param preferencesOut Receives the preferences; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the preferences; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+## `plural.h`
+
+Plural rules (UTS #35 Part 3, record mloc-0020): the category a number takes in a locale, cardinal ("1 file", "2 files") or ordinal ("1st", "2nd"), and that of a range of two numbers.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* data, const mlocLocale* locale, mlocPluralType type);
+```
+Finds a locale's plural rules along its chain in the plurals component: "pt-PT" has its own, "en-GB" takes "en"'s, and a language CLDR does not name takes root's (other for everything).  @param rulesOut  Receives the rules; left unchanged on failure. @param data      The data with the plural units and the parents. @param locale    The locale, canonicalized. @param type      Cardinal or ordinal. @return mloc_success; mloc_fellBack when the rules are those of a locale it falls back to; mloc_errorNotFound for data without them; mloc_errorInvalid for a null pointer or another type. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocSelectPlural(const mlocPluralRules* rules, const mlocDecimal* decimal, mlocPluralCategory* categoryOut);
+```
+Selects the category of a decimal, by the digits it shows: in English 1 is one and 1.0 is other. Infinity and NaN are other.  @param rules        Rules from mlocInitPluralRules. @param decimal      The number. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer, or rules or a decimal the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralOperands(const mlocPluralRules* rules, const mlocPluralOperands* operands, mlocPluralCategory* categoryOut);
+```
+Selects the category of plural operands, for a compact number whose exponent (c) the caller sets: in French 1c6 ("1 M") is many.  @param rules        Rules from mlocInitPluralRules. @param operands     The operands, as mlocGetPluralOperands gives them for the whole value, with c set. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralRange(const mlocPluralRules* rules, mlocPluralCategory start, mlocPluralCategory end, mlocPluralCategory* categoryOut);
+```
+Selects the category of a range from its ends' categories, by the locale's table (English days from 1 to 2 are other); where CLDR has no entry, the end's category.  @param rules        Cardinal rules from mlocInitPluralRules. @param start        The category of the range's start. @param end          The category of its end. @param categoryOut  Receives the category. @return mloc_success; mloc_errorInvalid for a null pointer, ordinal rules, rules the library did not make, or another category. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralCategories(const mlocPluralRules* rules, uint32_t* categoriesOut);
+```
+Gives the categories a locale's rules use, as bits 1 << category: one and other for English cardinals, all six for Arabic's.  @param rules          Rules from mlocInitPluralRules. @param categoriesOut  Receives the bits. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
+
 ---
 
-27 functions across 4 headers.
+32 functions across 5 headers.

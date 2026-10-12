@@ -22,6 +22,7 @@
 #include "cldr.h"
 #include "generate.h"
 #include "parents_gen.h"
+#include "plural_gen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,8 +94,19 @@ int main(int argc, char** argv)
         }
         return 0;
     }
+    if (argc == 3 && strcmp(argv[1], "plural-samples") == 0)
+    {
+        char error[1024];
+        if (!PrintPluralSamples(argv[2], error, sizeof(error)))
+        {
+            fprintf(stderr, "mlocgen: %s\n", error);
+            return 1;
+        }
+        return 0;
+    }
     fputs("usage: mlocgen resolve <CLDR common directory>\n"
           "       mlocgen chains <CLDR common directory>\n"
+          "       mlocgen plural-samples <CLDR common directory>\n"
           "       mlocgen generate <CLDR common directory> <repository root>\n",
           stderr);
     return 2;
