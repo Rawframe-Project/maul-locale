@@ -264,15 +264,13 @@ static bool Split(const char* tail, size_t size, Parts* parts)
     return true;
 }
 
-static bool Append(char* text, size_t capacity, size_t* length, const char* part, size_t size)
+// Appends a subtag run after a "-"; the text holds a language, script,
+// region and two full tails with room to spare.
+static void Append(char* text, size_t* length, const char* part, size_t size)
 {
     if (size == 0)
     {
-        return true;
-    }
-    if (*length + size + 2 > capacity)
-    {
-        return false;
+        return;
     }
     if (*length > 0)
     {
@@ -280,8 +278,6 @@ static bool Append(char* text, size_t capacity, size_t* length, const char* part
     }
     memcpy(text + *length, part, size);
     *length += size;
-    text[*length] = '\0';
-    return true;
 }
 
 mlocResult mlocCombineMatch(const mlocLocale* desired, const mlocLocale* supported,
@@ -301,21 +297,22 @@ mlocResult mlocCombineMatch(const mlocLocale* desired, const mlocLocale* support
     const Parts* variants = d.variantsLength > 0 ? &d : &s;
     const char* region = desired->region[0] != '\0' ? desired->region : supported->region;
     char text[512] = {0};
+    static_assert(sizeof(text) > 8 + 4 + 4 + 3 * sizeof(desired->tail) + 40, "the text holds all");
     size_t length = 0;
-    bool fits =
-        Append(text, sizeof(text), &length, supported->language,
-               FieldLength(supported->language, 8)) &&
-        Append(text, sizeof(text), &length, supported->script, FieldLength(supported->script, 4)) &&
-        Append(text, sizeof(text), &length, region, FieldLength(region, 4)) &&
-        Append(text, sizeof(text), &length, variants->variants, variants->variantsLength);
-    for (int i = 0; fits && i < 36; i++)
+    Append(text, &length, supported->language, FieldLength(supported->language, 8));
+    Append(text, &length, supported->script, FieldLength(supported->script, 4));
+    Append(text, &length, region, FieldLength(region, 4));
+    Append(text, &length, variants->variants, variants->variantsLength);
+    for (int i = 0; i < 36; i++)
     {
         const Parts* from = d.extensions[i] != nullptr ? &d : &s;
-        fits = from->extensions[i] == nullptr ||
-               Append(text, sizeof(text), &length, from->extensions[i], from->lengths[i]);
+        if (from->extensions[i] != nullptr)
+        {
+            Append(text, &length, from->extensions[i], from->lengths[i]);
+        }
     }
     mlocLocale combined;
-    mlocResult parsed = fits ? mlocParseLocale(text, length, &combined).status : mloc_errorCapacity;
+    mlocResult parsed = mlocParseLocale(text, length, &combined).status;
     if (parsed != mloc_success)
     {
         // Only a locale mlocParseLocale did not make has text it refuses.

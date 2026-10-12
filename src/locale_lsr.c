@@ -159,7 +159,8 @@ static bool OnlyVariant(const char* tail, size_t size, const char* variant)
     {
         return false;
     }
-    return length == size || tail[length] == '\0' || SubtagLength(tail, size, length + 1) == 1;
+    // A variant has at most 8 bytes, so the tail goes on past it.
+    return tail[length] == '\0' || SubtagLength(tail, size, length + 1) == 1;
 }
 
 // A pseudo locale: region XA, XB or XC as given, or a single variant

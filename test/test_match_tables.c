@@ -67,6 +67,19 @@ static void TestLsrs(void)
     CHECK(
         Makes("und-Hant-TW", "zh", "Hant", "TW", lsrExplicitScript | lsrExplicitRegion, lsrNormal),
         "und's script entry made from its region one");
+    CHECK(
+        Makes("und-Latn-AD", "ca", "Latn", "AD", lsrExplicitScript | lsrExplicitRegion, lsrNormal),
+        "an und script and region entry ICU makes from und-AD");
+    CHECK(Makes("und-Latn", "en", "Latn", "US", lsrExplicitScript, lsrNormal),
+          "und-Latn, which has region entries only");
+    CHECK(
+        Makes("und-Latn-EU", "en", "Latn", "EU", lsrExplicitScript | lsrExplicitRegion, lsrNormal),
+        "and a region und has no entry for");
+    CHECK(
+        Makes("qaa-Zinh", "qaa", "Zinh", "US", lsrExplicitLanguage | lsrExplicitScript, lsrNormal),
+        "a script und has no entry for");
+    CHECK(Makes("en-psaccent-valencia", "en", "Latn", "US", lsrExplicitLanguage, lsrNormal),
+          "a pseudo variant with a later one");
     CHECK(Makes("qaa", "qaa", "Latn", "US", lsrExplicitLanguage, lsrNormal),
           "a language without likely subtags takes und's");
     CHECK(
@@ -94,6 +107,40 @@ static void TestLsrs(void)
     CHECK(LsrOf("und-419", groups, &lsr) && lsr.flags == 0 &&
               lsr.region == mlocPackRegion("419", 3),
           "a macro region found takes the likely region");
+}
+
+// A likely table of three entries: und, und-XX giving qaa-Zinh-YY, and
+// en-US; so a script und has no entry of its own, and a region one whose
+// answer has another region.
+static void TestCraftedLikely(void)
+{
+    uint32_t und = mlocPackLanguage("und", 3);
+    uint64_t keys[3] = {mlocPackTag(und, 0, 0), mlocPackTag(und, 0, mlocPackRegion("XX", 2))};
+    uint64_t values[3] = {
+        mlocPackTag(mlocPackLanguage("en", 2), mlocPackScript("Latn", 4), mlocPackRegion("US", 2)),
+        mlocPackTag(mlocPackLanguage("qaa", 3), mlocPackScript("Zinh", 4),
+                    mlocPackRegion("YY", 2))};
+    uint8_t keyBytes[16];
+    uint8_t valueBytes[16];
+    for (int i = 0; i < 2; i++)
+    {
+        Put(keyBytes + 8 * i, keys[i], 8);
+        Put(valueBytes + 8 * i, values[i], 8);
+    }
+    Likely crafted = {.generalKeys = keyBytes, .generalValues = valueBytes, .generalCount = 2};
+    mlocLocale locale;
+    Lsr lsr;
+    CHECK(mlocParseLocale("und-Zinh-YY", 11, &locale).status == mloc_success &&
+              mlocMakeLsr(&crafted, s_table.regionGroups, &locale, 0, &lsr) &&
+              lsr.packedLanguage == mlocPackLanguage("qaa", 3) &&
+              lsr.flags == (lsrExplicitScript | lsrExplicitRegion),
+          "an und script entry from a region entry with another region");
+    CHECK(mlocParseLocale("und-Zinh", 8, &locale).status == mloc_success &&
+              mlocMakeLsr(&crafted, s_table.regionGroups, &locale, 0, &lsr) &&
+              lsr.packedLanguage == mlocPackLanguage("en", 2) && lsr.flags == lsrExplicitScript,
+          "its script found, with no entry of its own");
+    Likely empty = {0};
+    CHECK(!mlocMakeLsr(&empty, s_table.regionGroups, &locale, 0, &lsr), "a table without und");
 }
 
 static void TestParadigms(void)
@@ -185,6 +232,10 @@ static void TestValidator(void)
     }
     const uint8_t* region = s_table.regions + matchRegionSize;
     CHECK(!ValidWith(At(region), 0x7F, 1), "a partition no character is");
+    CHECK(ValidWith(At(region), 0x21, 1), "the lowest character is one");
+    CHECK(ValidWith(2, 100, 1), "a distance of 100");
+    CHECK(ValidWith(At(s_table.regionGroups) + 1, s_table.groupCount - 1, 1),
+          "the last group, read as no group entry");
     CHECK(!ValidWith(At(region) + 2, 101, 1), "a region pair's distance");
     CHECK(!ValidWith(At(region) + 3, 1, 1), "a region pair's reserved byte");
     CHECK(!ValidWith(At(s_table.groups) + 2, s_table.textSize + 1, 2), "a group past the text");
@@ -204,6 +255,7 @@ int main(void)
               mlocFindDataSetUnit(&s_data, kindLocaleMatch, nullptr, 0, &s_span),
           "the tables open");
     TestLsrs();
+    TestCraftedLikely();
     TestParadigms();
     TestValidator();
     return s_failures == 0 ? 0 : 1;

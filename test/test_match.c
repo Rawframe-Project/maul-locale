@@ -101,6 +101,11 @@ static void TestOrder(void)
     CHECK(Is(MatchWith("en-IN, en-AU", "en-ZA", 0, 0, 1), 1, 0), "whichever it is");
     CHECK(Is(MatchWith("en-IN, en-AU", "en-ZA", 0, 0, -1), 0, 0), "else to the first given");
     CHECK(Is(MATCH("en-IN, en-GB", "en-ZA"), 1, 0), "a paradigm locale is nearer");
+    CHECK(Is(MATCH("zh-Hant-TW, zh-Hans-TW", "zh-Hani-TW"), 1, 0),
+          "in a tie the likely script wins over the one tried first");
+    CHECK(Is(MatchWith("ja, abcde, de-AT", "fr", 0, 100, 0), 1, 0), "a tie of two languages");
+    CHECK(Is(MatchWith("ja, de-AT, abcde", "fr", 0, 100, 0), 1, 0),
+          "goes to the first tried, a long language not being a paradigm one");
 }
 
 static void TestOptions(void)
