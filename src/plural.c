@@ -9,7 +9,6 @@
 #include "plural.h"
 
 #include "bytes.h"
-#include "data_format.h"
 #include "data_view.h"
 #include "decimal.h"
 #include "kinds.h"
@@ -78,20 +77,14 @@ bool mlocValidPluralRanges(const DataView* view, DataSpan payload)
 
 bool mlocValidPlurals(const DataView* view, DataSpan payload)
 {
-    if (payload.size != pluralUnitSize || payload.bytes[3] != 0 ||
-        mlocLoad32(payload.bytes + 4) != 0 || !ValidRule(payload.bytes[0], 0) ||
-        !ValidRule(payload.bytes[1], 1))
-    {
-        return false;
-    }
-    if (payload.bytes[2] == pluralNone)
-    {
-        return true;
-    }
-    // A table the unit names is in the same file.
-    DataSpan ranges;
-    return mlocFindDataUnit(view, kindPluralRanges, dataNoLocale, &ranges) &&
-           ranges.size >= pluralRangesHeaderSize && payload.bytes[2] < ranges.bytes[0];
+    // The range table is not looked up here: validators run unit by unit,
+    // and the ranges unit, which sorts after this kind, has not had its
+    // bounds checked yet. mlocInitPluralRules takes an index past the
+    // tables as no table.
+    (void)view;
+    return payload.size == pluralUnitSize && payload.bytes[3] == 0 &&
+           mlocLoad32(payload.bytes + 4) == 0 && ValidRule(payload.bytes[0], 0) &&
+           ValidRule(payload.bytes[1], 1);
 }
 
 mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* data,

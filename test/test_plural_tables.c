@@ -11,7 +11,9 @@
 #include "test_harness.h"
 
 #include "maul-locale/locale.h"
+#include "maul-locale/plural.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static DataView s_view;
@@ -58,7 +60,8 @@ static void TestUnits(void)
     CHECK(!ValidUnit(spoiled, sizeof(spoiled)), "a rule past the sets");
     spoiled[1] = ordinal;
     spoiled[2] = ranges.bytes[0];
-    CHECK(!ValidUnit(spoiled, sizeof(spoiled)), "a range table past the tables");
+    CHECK(ValidUnit(spoiled, sizeof(spoiled)),
+          "a range table past the tables, which selecting takes as none");
     spoiled[2] = 0;
     spoiled[3] = 1;
     CHECK(!ValidUnit(spoiled, sizeof(spoiled)), "a reserved byte");
@@ -67,12 +70,14 @@ static void TestUnits(void)
     CHECK(!ValidUnit(spoiled, sizeof(spoiled)), "the last reserved byte");
     spoiled[7] = 0;
     CHECK(!ValidUnit(spoiled, sizeof(spoiled) - 1), "a short unit");
-    // A unit that names a table in a file without the tables.
-    DataView empty = s_view;
-    empty.unitCount = 0;
+    // The validator reads no other unit: during opening, later units'
+    // bounds are not checked yet. Looking one up in this view would read
+    // past its 8 bytes, which the sanitizer builds catch.
+    uint8_t bytes[8] = {0};
+    DataView hostile = {.bytes = bytes, .size = sizeof(bytes), .unitCount = 1};
     uint8_t named[pluralUnitSize] = {cardinal, ordinal, 0};
-    CHECK(!mlocValidPlurals(&empty, (DataSpan){named, sizeof(named)}),
-          "a table in a file without tables");
+    CHECK(mlocValidPlurals(&hostile, (DataSpan){named, sizeof(named)}),
+          "a unit validated without the ranges unit");
 }
 
 static void TestRanges(void)
@@ -99,6 +104,45 @@ static void TestRanges(void)
           "a size the count does not give");
     CHECK(!mlocValidPluralRanges(&s_view, (DataSpan){copy, 4}), "shorter than the header");
     CHECK(mlocValidPluralRanges(&s_view, span), "the copy restored");
+    uint8_t none[pluralRangesHeaderSize] = {0};
+    CHECK(mlocValidPluralRanges(&s_view, (DataSpan){none, sizeof(none)}), "a unit of no tables");
+}
+
+extern const uint8_t mlocBuiltinData[];
+extern const uint32_t mlocBuiltinDataSize;
+
+// English's unit made to name the table one past the last, opened as a
+// file: its rules then have no table, so a range takes its end's
+// category (English's table makes other to one other).
+static void TestTablePastTheLast(void)
+{
+    uint8_t* file = malloc(mlocBuiltinDataSize);
+    if (file == nullptr)
+    {
+        return;
+    }
+    memcpy(file, mlocBuiltinData, mlocBuiltinDataSize);
+    uint32_t index = 0;
+    DataSpan unit;
+    DataSpan ranges;
+    CHECK(mlocFindDataLocale(&s_view, "en", 2, &index) &&
+              mlocFindDataUnit(&s_view, kindPlurals, index, &unit) &&
+              mlocFindDataUnit(&s_view, kindPluralRanges, 0xFFFFFFFF, &ranges),
+          "English's unit");
+    file[unit.bytes - mlocBuiltinData + 2] = ranges.bytes[0];
+    mlocData opened;
+    mlocDataSet set = {&opened, 1};
+    mlocLocale locale;
+    mlocPluralRules rules;
+    mlocPluralCategory category = mloc_pluralZero;
+    CHECK(mlocOpenData(&opened, file, mlocBuiltinDataSize) == mloc_success &&
+              mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitPluralRules(&rules, &set, &locale, mloc_pluralCardinal) == mloc_success &&
+              mlocSelectPluralRange(&rules, mloc_pluralOther, mloc_pluralOne, &category) ==
+                  mloc_success &&
+              category == mloc_pluralOne,
+          "a table past the last is none");
+    free(file);
 }
 
 int main(void)
@@ -108,5 +152,6 @@ int main(void)
     s_view = mlocViewOf(&builtin);
     TestUnits();
     TestRanges();
+    TestTablePastTheLast();
     return s_failures == 0 ? 0 : 1;
 }

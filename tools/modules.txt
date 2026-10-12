@@ -21,4 +21,4 @@ locale_distance: bytes data_view kinds locale_likely locale_lsr locale_tables
 locale_match: bytes locale_distance locale_likely locale_lsr locale_tables
 locale_prefs: bytes data_view kinds locale_tables
 plural_rules:
-plural: bytes data_format data_view decimal kinds locale_fallback plural_rules
+plural: bytes data_view decimal kinds locale_fallback plural_rules

@@ -7,7 +7,8 @@
 //
 // Plurals (kindPlurals), one unit per locale id CLDR's files name:
 //   u8 cardinal, ordinal, ranges: a rule set's index (a cardinal one,
-//       then an ordinal one) and a range table's, 0xFF for none
+//       then an ordinal one) and a range table's, 0xFF for none (as is a
+//       table index past the ranges unit's tables)
 //   u8 zero[5]
 //
 // Plural ranges (kindPluralRanges), a unit of no locale:
