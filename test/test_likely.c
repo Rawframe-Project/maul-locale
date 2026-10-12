@@ -55,6 +55,9 @@ static void TestMaximize(void)
     CHECK(Maximizes("und-TW", "zh-Hant-TW"), "und with a region");
     CHECK(Maximizes("und-Cyrl", "ru-Cyrl-RU"), "und with a script");
     CHECK(Maximizes("de-Latn-AT", "de-Latn-AT"), "a full locale stays");
+    CHECK(Maximizes("qaa-Cyrl-CH", "qaa-Cyrl-CH"), "a full locale stays without a lookup");
+    CHECK(Maximizes("und-419", "es-Latn-419"), "a numeric region kept");
+    CHECK(Maximizes("eo", "eo-Latn-001"), "a numeric region from the table");
     CHECK(Maximizes("tr-Zzzz-ZZ", "tr-Latn-TR"), "Zzzz and ZZ are dropped");
     CHECK(Maximizes("de-1901-u-co-phonebk", "de-Latn-DE-1901-u-co-phonebk"),
           "variants and extensions are kept");

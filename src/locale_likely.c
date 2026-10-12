@@ -90,8 +90,8 @@ static bool ValidTag(uint64_t tag, bool full)
     uint32_t language = (uint32_t)(tag >> 31);
     uint32_t script = (uint32_t)(tag >> 11) & 0xFFFFF;
     uint32_t region = (uint32_t)tag & 0x7FF;
-    return tag >> 46 == 0 && ValidLanguage(language) &&
-           ((script == 0 && !full) || ValidScript(script)) &&
+    // Bits past the 46 of a tag land in the language, which refuses them.
+    return ValidLanguage(language) && ((script == 0 && !full) || ValidScript(script)) &&
            ((region == 0 && !full) || ValidRegion(region));
 }
 

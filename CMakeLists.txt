@@ -61,6 +61,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(data WHITEBOX)
     maul_add_test(locale)
     maul_add_test(likely)
+    maul_add_test(likely_tables WHITEBOX)
     # CLDR's conformance files, which the cldr CI job runs on the pinned
     # release; built here so that every build compiles them.
     add_executable(conform_likely test/conform_likely.c)
