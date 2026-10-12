@@ -9,6 +9,10 @@
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well.
 
+#ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "maul-locale/locale.h"
 
 #include <stdio.h>
