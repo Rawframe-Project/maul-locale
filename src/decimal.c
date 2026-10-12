@@ -7,6 +7,8 @@
 
 #include "decimal.h"
 
+#include "bytes.h"
+
 #include <string.h>
 
 // 10^0 to 10^18.
@@ -30,19 +32,31 @@ static const uint64_t s_pow10[19] = {1u,
                                      100000000000000000u,
                                      1000000000000000000u};
 
+static_assert(mlocDecimalDigits % 8 == 0, "the digits are checked eight at a time");
+
+// Whether each digit held is at most 9 and each unused byte 0, eight
+// bytes at a time: a byte below 0x80 plus 0x7F less its limit has its top
+// bit set only past the limit, and no such sum carries into the next byte.
+static bool ValidDigits(const mlocDecimal* d)
+{
+    const uint64_t nines = 0x0909090909090909u;
+    uint64_t bad = 0;
+    for (int k = 0; k < mlocDecimalDigits; k += 8)
+    {
+        uint64_t word = mlocLoad64(d->digits + k);
+        int used = d->count - k;
+        uint64_t limits = used >= 8 ? nines : used <= 0 ? 0 : nines >> (64 - 8 * used);
+        bad |= word | (word + 0x7F7F7F7F7F7F7F7Fu - limits);
+    }
+    return (bad & 0x8080808080808080u) == 0;
+}
+
 bool mlocValidDecimal(const mlocDecimal* d)
 {
     if (d->kind > mloc_decimalNaN || d->negative > 1 || d->reserved != 0 ||
-        d->count > mlocDecimalDigits)
+        d->count > mlocDecimalDigits || !ValidDigits(d))
     {
         return false;
-    }
-    for (int k = 0; k < mlocDecimalDigits; k++)
-    {
-        if (k < d->count ? d->digits[k] > 9 : d->digits[k] != 0)
-        {
-            return false;
-        }
     }
     if (d->kind != mloc_decimalFinite)
     {
@@ -72,17 +86,15 @@ mlocResult mlocMakeUnsignedDecimal(uint64_t value, mlocDecimal* decimalOut)
         value /= 10;
         d.exponent++;
     }
-    uint8_t reversed[20];
-    int n = 0;
+    // The digits from the last, then moved to the front.
+    uint8_t buffer[20];
+    int n = (int)sizeof(buffer);
     for (; value != 0; value /= 10)
     {
-        reversed[n++] = (uint8_t)(value % 10);
+        buffer[--n] = (uint8_t)(value % 10);
     }
-    for (int k = 0; k < n; k++)
-    {
-        d.digits[k] = reversed[n - 1 - k];
-    }
-    d.count = (uint8_t)n;
+    d.count = (uint8_t)(sizeof(buffer) - (size_t)n);
+    memcpy(d.digits, buffer + n, d.count);
     *decimalOut = d;
     return mloc_success;
 }
@@ -339,6 +351,44 @@ static uint64_t Window(const mlocDecimal* d, int64_t high, int64_t low)
     return wide ? s_pow10[18] + value : value;
 }
 
+void mlocFillPluralOperands(const mlocDecimal* d, mlocPluralOperands* operandsOut)
+{
+    uint32_t v = (uint32_t)d->fractionDigits;
+    uint32_t w = d->count > 0 && d->exponent < 0 ? (uint32_t)-d->exponent : 0;
+    int64_t top = mlocTopPower(d);
+    if (top >= 18 || v > 18)
+    {
+        *operandsOut = (mlocPluralOperands){
+            .i = Window(d, INT64_MAX, 0),
+            .f = v > 0 ? Window(d, -1, -(int64_t)v) : 0,
+            .t = w > 0 ? Window(d, -1, -(int64_t)w) : 0,
+            .v = v,
+            .w = w,
+        };
+        return;
+    }
+    // Each operand fits in its 18 digits: fold the integer digits, then
+    // the fraction digits, which end at the last nonzero one.
+    int integer = top < 0 ? 0 : d->count < top + 1 ? d->count : (int)top + 1;
+    uint64_t i = 0;
+    uint64_t t = 0;
+    for (int k = 0; k < integer; k++)
+    {
+        i = i * 10 + d->digits[k];
+    }
+    for (int k = integer; k < d->count; k++)
+    {
+        t = t * 10 + d->digits[k];
+    }
+    *operandsOut = (mlocPluralOperands){
+        .i = d->exponent > 0 ? i * s_pow10[d->exponent] : i,
+        .f = t * s_pow10[v - w],
+        .t = t,
+        .v = v,
+        .w = w,
+    };
+}
+
 mlocResult mlocGetPluralOperands(const mlocDecimal* decimal, mlocPluralOperands* operandsOut)
 {
     if (decimal == nullptr || operandsOut == nullptr || !mlocValidDecimal(decimal) ||
@@ -346,14 +396,6 @@ mlocResult mlocGetPluralOperands(const mlocDecimal* decimal, mlocPluralOperands*
     {
         return mloc_errorInvalid;
     }
-    uint32_t v = (uint32_t)decimal->fractionDigits;
-    uint32_t w = decimal->count > 0 && decimal->exponent < 0 ? (uint32_t)-decimal->exponent : 0;
-    *operandsOut = (mlocPluralOperands){
-        .i = Window(decimal, INT64_MAX, 0),
-        .f = v > 0 ? Window(decimal, -1, -(int64_t)v) : 0,
-        .t = w > 0 ? Window(decimal, -1, -(int64_t)w) : 0,
-        .v = v,
-        .w = w,
-    };
+    mlocFillPluralOperands(decimal, operandsOut);
     return mloc_success;
 }

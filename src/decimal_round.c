@@ -167,11 +167,14 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
             RoundsUp(mode, BeyondMultiple(remainder, part, increment), decimal->negative, odd);
         int64_t top = mlocTopPower(decimal);
         int64_t high = (top > (int64_t)position + 1 ? top : (int64_t)position + 1) + 1;
-        uint8_t buffer[mlocDecimalDigits + 3];
+        // The digits at and above the unit, in their places from high
+        // down; the places past the last digit are zeros.
+        uint8_t buffer[mlocDecimalDigits + 3] = {0};
         int length = (int)(high - position + 1);
-        for (int k = 0; k < length; k++)
+        int64_t kept = top - position + 1 < decimal->count ? top - position + 1 : decimal->count;
+        if (kept > 0)
         {
-            buffer[k] = mlocDigitAt(decimal, high - k);
+            memcpy(buffer + (high - top), decimal->digits, (size_t)kept);
         }
         uint32_t sum = last2 - remainder + (up ? increment : 0);
         buffer[length - 1] = (uint8_t)(sum % 10);

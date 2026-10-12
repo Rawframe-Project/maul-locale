@@ -232,6 +232,139 @@ static void TestMadeUp(void)
     CHECK(mlocGetPluralOperands(&d, &operands) == mloc_errorInvalid, "nor a made-up decimal");
 }
 
+// Every digit byte at every place, for every count: a byte past 9 among
+// the digits, or one other than 0 past them, is refused; 9 within them
+// is not.
+static void TestMadeUpBytes(void)
+{
+    static const char s_digits[] = "1234567890123456789012345678901234567890";
+    static const uint8_t s_bad[] = {10, 0x7F, 0x80, 0xFF, 1, 9};
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    bool all = true;
+    for (int count = 1; count <= mlocDecimalDigits && all; count++)
+    {
+        char text[mlocDecimalDigits + 1];
+        memcpy(text, s_digits, (size_t)count);
+        text[count - 1] = '7';
+        text[count] = '\0';
+        mlocDecimal good;
+        all = Parsed(text, &good) && good.count == count;
+        for (int k = 0; k < mlocDecimalDigits && all; k++)
+        {
+            for (size_t b = 0; b < sizeof(s_bad) && all; b++)
+            {
+                if (k < count && s_bad[b] <= 9)
+                {
+                    continue;
+                }
+                mlocDecimal d = good;
+                d.digits[k] = s_bad[b];
+                all = mlocFormatDecimal(&d, &output) == mloc_errorInvalid;
+            }
+            if (all && k < count)
+            {
+                mlocDecimal d = good;
+                d.digits[k] = 9;
+                all = mlocFormatDecimal(&d, &output) == mloc_success;
+            }
+        }
+    }
+    CHECK(all, "each digit byte at each place and count");
+}
+
+// A digit string's operand, wide as the library keeps it: past 18
+// digits, 10^18 plus the low 18.
+static uint64_t WideOperand(const char* digits, size_t length)
+{
+    while (length > 0 && *digits == '0')
+    {
+        digits++;
+        length--;
+    }
+    uint64_t value = 0;
+    for (size_t k = length > 18 ? length - 18 : 0; k < length; k++)
+    {
+        value = value * 10 + (uint64_t)(digits[k] - '0');
+    }
+    return length > 18 ? 1000000000000000000u + value : value;
+}
+
+// Whether a decimal's operands are those of its written form.
+static bool OperandsAsWritten(const mlocDecimal* d)
+{
+    char text[160];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocPluralOperands o;
+    if (mlocFormatDecimal(d, &output) != mloc_success ||
+        mlocGetPluralOperands(d, &o) != mloc_success)
+    {
+        return false;
+    }
+    const char* start = text[0] == '-' ? text + 1 : text;
+    const char* end = text + output.length;
+    const char* point = memchr(start, '.', (size_t)(end - start));
+    const char* fraction = point != nullptr ? point + 1 : end;
+    size_t v = (size_t)(end - fraction);
+    size_t w = v;
+    while (w > 0 && fraction[w - 1] == '0')
+    {
+        w--;
+    }
+    size_t integer = (size_t)((point != nullptr ? point : end) - start);
+    return o.i == WideOperand(start, integer) && o.v == v && o.w == w &&
+           o.f == WideOperand(fraction, v) && o.t == WideOperand(fraction, w) && o.c == 0;
+}
+
+// Random decimals in plain and exponent form: their operands match their
+// written form's, across the 18-digit edges of each operand.
+static void TestOperandsAsWritten(void)
+{
+    uint64_t state = 0x9E3779B97F4A7C15u;
+    bool all = true;
+    int checked = 0;
+    for (int n = 0; n < 300000 && all; n++)
+    {
+        state = state * 6364136223846793005u + 1442695040888963407u;
+        uint64_t r = state >> 11;
+        char text[96];
+        int at = 0;
+        int integer = (int)(r % 26);
+        int fraction = (int)((r >> 5) % 26);
+        for (int k = 0; k < integer; k++)
+        {
+            state = state * 6364136223846793005u + 1442695040888963407u;
+            text[at++] = (char)('0' + (state >> 33) % 10);
+        }
+        if (integer == 0)
+        {
+            text[at++] = '0';
+        }
+        if (fraction > 0)
+        {
+            text[at++] = '.';
+            // Some fractions end in zeros, which v counts and w does not.
+            int zeros = (r >> 10) % 4 == 0 ? (int)((r >> 12) % 6) : 0;
+            for (int k = 0; k < fraction; k++)
+            {
+                state = state * 6364136223846793005u + 1442695040888963407u;
+                text[at++] = k >= fraction - zeros ? '0' : (char)('0' + (state >> 33) % 10);
+            }
+        }
+        if ((r >> 15) % 3 == 0)
+        {
+            at += snprintf(text + at, sizeof(text) - (size_t)at, "e%d", (int)((r >> 17) % 61) - 40);
+        }
+        mlocDecimal d;
+        if (mlocParseDecimal(text, (size_t)at, &d).status == mloc_success)
+        {
+            all = OperandsAsWritten(&d);
+            checked++;
+        }
+    }
+    CHECK(all && checked > 200000, "operands of random decimals match their written form");
+}
+
 static bool Operands(const char* text, uint64_t i, uint32_t v, uint32_t w, uint64_t f, uint64_t t)
 {
     mlocDecimal d;
@@ -264,6 +397,12 @@ static void TestOperands(void)
                    e18 + 234567890123456789u),
           "a wide fraction");
     CHECK(Operands("1e-30", 0, 30, 30, 1, 1), "a fraction digit far out");
+    CHECK(Operands("5e-18", 0, 18, 18, 5, 5), "one at the 18th place");
+    CHECK(Operands("0.000000000000000000", 0, 18, 0, 0, 0), "18 zeros shown");
+    CHECK(Operands("123456789012345678.123456789012345678", 123456789012345678u, 18, 18,
+                   123456789012345678u, 123456789012345678u),
+          "18 digits on each side of the point");
+    CHECK(Operands("1.2e17", 120000000000000000u, 0, 0, 0, 0), "the last power of 18 digits");
     CHECK(Operands("5e-19", 0, 19, 19, 5, 5), "one at the 19th place");
     CHECK(Operands("5.000000000000000000001", 5, 21, 21, 1, 1),
           "leading zeros of a fraction make no wide f");
@@ -954,7 +1093,9 @@ int main(void)
     TestIntegers();
     TestFormat();
     TestMadeUp();
+    TestMadeUpBytes();
     TestOperands();
+    TestOperandsAsWritten();
     TestShortest();
     TestRoundTrip();
     TestKnownAnswers();

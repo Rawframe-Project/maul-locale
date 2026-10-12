@@ -6,7 +6,7 @@ data: bytes data_format data_view
 data_format:
 data_kinds: data_view kinds locale_canonical locale_distance locale_fallback locale_likely locale_prefs plural
 data_view:
-decimal:
+decimal: bytes
 decimal_round: decimal
 decimal_shortest:
 locale_parse:

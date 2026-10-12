@@ -28,4 +28,7 @@ static inline uint8_t mlocDigitAt(const mlocDecimal* d, int64_t power)
 // Whether every field holds as the library writes it.
 bool mlocValidDecimal(const mlocDecimal* d);
 
+// The plural operands of a valid finite decimal.
+void mlocFillPluralOperands(const mlocDecimal* d, mlocPluralOperands* operandsOut);
+
 #endif
