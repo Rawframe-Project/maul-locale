@@ -243,6 +243,21 @@ static void TestExtensionTable(const mlocDataSet* data)
         Put(copy + spoils[i].offset, spoils[i].value, spoils[i].bytes);
         CHECK(!mlocValidExtensionAliases(nullptr, (DataSpan){copy, table.size}), spoils[i].what);
     }
+    // A value's separator made a letter gives a subtag past 8.
+    for (uint32_t t = 0; t < types; t++)
+    {
+        const uint8_t* entry = table.bytes + typesAt + (size_t)t * extensionTypeSize;
+        size_t to = textAt + mlocLoad32(entry + 8);
+        const uint8_t* dash = memchr(table.bytes + to, '-', entry[3]);
+        if (dash != nullptr)
+        {
+            memcpy(copy, table.bytes, table.size);
+            copy[dash - table.bytes] = 'x';
+            CHECK(!mlocValidExtensionAliases(nullptr, (DataSpan){copy, table.size}),
+                  "a value with a subtag past 8");
+            break;
+        }
+    }
     memcpy(copy, table.bytes, table.size);
     memcpy(copy + subdivisionsAt, table.bytes + subdivisionsAt + extensionSubdivisionSize,
            extensionSubdivisionSize);

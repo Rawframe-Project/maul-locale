@@ -64,7 +64,7 @@ typedef struct Text
 
 static bool InText(const Extensions* x, uint32_t offset, uint32_t length)
 {
-    return (uint64_t)offset + length <= x->textSize && length > 0;
+    return (uint64_t)offset + length <= x->textSize;
 }
 
 // Whether a text is a value a tag holds: subtags of 3 to 8 lowercase

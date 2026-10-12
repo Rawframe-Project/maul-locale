@@ -120,6 +120,22 @@ static void TestExtensions(void)
           "the language and an extension");
     CHECK(Gives("en-u-ca-gregory-a-foo-x-ms-imperial", "en-a-foo-u-ca-gregory-x-ms-imperial", 0),
           "other extensions and private use kept");
+    CHECK(Gives("en-t-iw-k0-true", "en-t-he-k0-true", x), "a t value true stays");
+    CHECK(Gives("en-u-ms-imperial-x-u-ms-imperial", "en-u-ms-uksystem-x-u-ms-imperial", x),
+          "private use is not read as extensions");
+    // A tail of 110 bytes grows past 112 when islamicc becomes
+    // islamic-civil.
+    char text[256] = "en-u-ca-islamicc-x";
+    size_t length = strlen(text);
+    while (length < 3 + 110 - 2)
+    {
+        memcpy(text + length, "-ab", 4);
+        length += 3;
+    }
+    mlocLocale locale;
+    mlocTextResult result = mlocCanonicalizeLocale(&s_data, text, length, &locale, nullptr);
+    CHECK(result.status == mloc_errorCapacity && result.offset == length,
+          "a value that grows past the tail");
 }
 
 static void TestRefusals(void)
