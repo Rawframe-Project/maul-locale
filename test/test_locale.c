@@ -44,6 +44,7 @@ static void TestLanguageIds(void)
     CHECK(Gives("abcdefgh", "abcdefgh"), "an eight-letter language");
     CHECK(Gives("sl-rozaj-biske-1994", "sl-1994-biske-rozaj"), "variants in order");
     CHECK(Gives("de-CH-1901", "de-CH-1901"), "a digit-first variant of four");
+    CHECK(Gives("en-abcdef-abcde", "en-abcde-abcdef"), "a variant before one it begins");
 }
 
 static void TestFields(void)
@@ -97,6 +98,7 @@ static void TestRefusals(void)
     CHECK(Refuses("en-fonipa-US", mloc_errorSyntax, 10), "a region after a variant");
     CHECK(Refuses("de-1996-fonipa-1996", mloc_errorSyntax, 15), "a duplicate variant");
     CHECK(Refuses("en-US-ab", mloc_errorSyntax, 6), "a subtag that fits nowhere");
+    CHECK(Refuses("en-a1b", mloc_errorSyntax, 3), "a region of three that are not digits");
     CHECK(Refuses("root-Latn", mloc_errorSyntax, 5), "root takes no script");
     CHECK(Refuses("en-u", mloc_errorSyntax, 3), "an empty u extension");
     CHECK(Refuses("en-u-ca-buddhist-ca-islamic", mloc_errorSyntax, 17), "a duplicate key");
@@ -105,6 +107,7 @@ static void TestRefusals(void)
     CHECK(Refuses("en-u-ca-buddhist-u-nu-thai", mloc_errorSyntax, 17), "a singleton twice");
     CHECK(Refuses("en-t", mloc_errorSyntax, 3), "an empty t extension");
     CHECK(Refuses("en-t-k0", mloc_errorSyntax, 5), "a field without a value");
+    CHECK(Refuses("en-t-k0-abc-ka-abc", mloc_errorSyntax, 12), "a field key without its digit");
     CHECK(Refuses("en-t-k0-ab", mloc_errorSyntax, 5), "a field value of two");
     CHECK(Refuses("en-t-it-fonipa-fonipa", mloc_errorSyntax, 15),
           "a duplicate variant of the transformed language");
