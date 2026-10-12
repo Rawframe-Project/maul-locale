@@ -153,7 +153,19 @@ extern "C"
         // A compact pattern's words or symbol ("K", "thousand"), the
         // spaces around it being literal.
         mloc_numberPartCompact = 14,
+        // The approximately sign of a range whose ends write alike ("~5").
+        mloc_numberPartApproximatelySign = 15,
     } mlocNumberPart;
+
+    // In a range's parts, the end a part belongs to, added to its
+    // mlocNumberPart: the start, the end, or neither for what both share
+    // (the separator, the approximately sign's number, a collapsed
+    // affix).
+    enum
+    {
+        mloc_numberRangeStart = 0x100,
+        mloc_numberRangeEnd = 0x200,
+    };
 
     /// Makes a locale's number formatter. The numbering system is the
     /// locale's -u-nu keyword ("native", "traditio" and "finance" as the
@@ -196,6 +208,32 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter,
                                                         const mlocDecimal* decimal,
                                                         mlocOutput* output);
+
+    /// Formats a range of two decimals (ECMA-402's formatRange): both ends
+    /// by the formatter, around the locale's range separator, spaced when
+    /// the ends have affixes of their own ("3–5", "-5 – -3", "3K – 5K"),
+    /// an affix both share written once when it is longer than one
+    /// character ("3–5 thousand"); ends that write alike give one number
+    /// with the approximately sign ("~5"). The start may pass the end.
+    ///
+    /// @param formatter  A formatter from mlocInitNumberFormatter.
+    /// @param start      The range's start.
+    /// @param end        Its end.
+    /// @param output     Receives the text; its part function, when set,
+    ///                   receives mlocNumberPart values with the end each
+    ///                   belongs to (mloc_numberRangeStart,
+    ///                   mloc_numberRangeEnd, or 0 for both).
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed) or rounding
+    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         pointer, a NaN end, or a formatter or decimal the library
+    ///         did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter,
+                                                             const mlocDecimal* start,
+                                                             const mlocDecimal* end,
+                                                             mlocOutput* output);
 
 #ifdef __cplusplus
 }

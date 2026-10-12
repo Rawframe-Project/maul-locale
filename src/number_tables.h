@@ -98,6 +98,9 @@ typedef enum NumberSymbol
     numberApproximately,
     numberCurrencyDecimal,
     numberCurrencyGroup,
+    // What stands between a range's ends: CLDR's range pattern without
+    // its {0} and {1}.
+    numberRangeSeparator,
     numberSymbolCount,
 } NumberSymbol;
 

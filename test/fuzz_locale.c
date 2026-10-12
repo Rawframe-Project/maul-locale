@@ -133,6 +133,11 @@ static void Canonicalize(const uint8_t* data, size_t size)
         mlocNumberOptions options = {.notation = (mlocNotation)notation};
         Require(mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
                 mlocFormatNumber(&formatter, &value, &written) == mloc_success);
+        // A range, and one whose ends write alike.
+        Require(mlocFormatNumberRange(&formatter, &value, &value, &written) == mloc_success);
+        mlocDecimal other;
+        Require(mlocMakeDecimal(98765, &other) == mloc_success &&
+                mlocFormatNumberRange(&formatter, &value, &other, &written) == mloc_success);
     }
 }
 

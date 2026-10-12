@@ -44,10 +44,13 @@ static const char* const s_emptyMarker = "\xE2\x88\x85\xE2\x88\x85\xE2\x88\x85";
 
 // The CLDR element of each symbol, in NumberSymbol order.
 static const char* const s_symbolNames[numberSymbolCount] = {
-    "decimal",      "group",    "minusSign",         "plusSign",
-    "percentSign",  "perMille", "exponential",       "superscriptingExponent",
-    "infinity",     "nan",      "approximatelySign", "currencyDecimal",
-    "currencyGroup"};
+    "decimal",           "group",
+    "minusSign",         "plusSign",
+    "percentSign",       "perMille",
+    "exponential",       "superscriptingExponent",
+    "infinity",          "nan",
+    "approximatelySign", "currencyDecimal",
+    "currencyGroup",     "(range pattern)"};
 
 typedef struct System
 {
@@ -677,6 +680,27 @@ static uint16_t PatternOf(Generator* g, const char* locale, const char* system, 
     return AddRecord(&g->patterns, record);
 }
 
+// The text between {0} and {1} in a locale's range pattern for a system,
+// in a buffer of its own; every range pattern of CLDR 49 is the two ends
+// around it.
+static const char* RangeSeparator(Generator* g, const char* locale, const char* system)
+{
+    static char s_separator[64];
+    char chain[256];
+    snprintf(chain, sizeof(chain),
+             "//ldml/numbers/miscPatterns[@numberSystem=\"%s\"]/pattern[@type=\"range\"]", system);
+    const char* pattern = Value(g, locale, chain);
+    size_t length = pattern == nullptr ? 0 : strlen(pattern);
+    if (length < 6 || strncmp(pattern, "{0}", 3) != 0 || strcmp(pattern + length - 3, "{1}") != 0 ||
+        length - 6 >= sizeof(s_separator))
+    {
+        Die("a range pattern that is not {0}, a separator, {1}", chain);
+    }
+    memcpy(s_separator, pattern + 3, length - 6);
+    s_separator[length - 6] = '\0';
+    return s_separator;
+}
+
 static uint16_t SymbolsOf(Generator* g, const char* locale, const char* system)
 {
     uint8_t record[2 * numberSymbolCount];
@@ -686,7 +710,8 @@ static uint16_t SymbolsOf(Generator* g, const char* locale, const char* system)
         char chain[256];
         snprintf(chain, sizeof(chain), "//ldml/numbers/symbols[@numberSystem=\"%s\"]/%s", system,
                  s_symbolNames[s]);
-        values[s] = Value(g, locale, chain);
+        values[s] =
+            s == numberRangeSeparator ? RangeSeparator(g, locale, system) : Value(g, locale, chain);
         if (values[s] == nullptr)
         {
             // A currency separator CLDR does not give is the plain one.

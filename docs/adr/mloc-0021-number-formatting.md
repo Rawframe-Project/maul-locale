@@ -75,6 +75,18 @@ NumberFormatter.
   decimal pattern's grouping, with two digits before the first
   separator by default, and take the decimal style only. The compact
   word is its own part, the spaces around it literal.
+- **Ranges:** `mlocFormatNumberRange` follows ICU's NumberRangeFormatter
+  with its defaults, which ECMA-402's formatRange takes: the locale's
+  range separator (stored with the symbols; every CLDR 49 range
+  pattern is the two ends around it); an affix both ends share, sign
+  included, written once when it is longer than one character ("3–5
+  thousand", "3–5 %" in French, Arabic's two-character minus sign);
+  spaces around the separator when an affix is written for each end or
+  an exponent shows ("-5 – -3", "3K – 5K", "1E3 – 5E3"); and ends that
+  write alike give the approximately sign in the sign's place ("~5",
+  "~-5"). A range's parts carry the end they belong to. ICU4C 74,
+  given the same input for 105 locales, agrees on every case whose
+  data CLDR 49 has not changed.
 - **No default rounding:** the zero precision writes the digits the
   decimal shows (mloc-0019), as ICU4X's decimal formatter does; a
   precision, once set, rounds and cuts zeros to its minimum as

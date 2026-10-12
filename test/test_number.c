@@ -427,6 +427,129 @@ static void TestCompact(void)
           "a system without digits in compact notation");
 }
 
+// Whether a range formats as expected in a locale with options.
+static bool Ranges(const char* id, const mlocNumberOptions* options, const char* from,
+                   const char* to, const char* expected)
+{
+    mlocLocale locale;
+    mlocNumberFormatter formatter;
+    mlocDecimal start;
+    mlocDecimal end;
+    char buffer[256];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+           mlocInitNumberFormatter(&formatter, &s_data, &locale, options) >= 0 &&
+           mlocParseDecimal(from, strlen(from), &start).status == mloc_success &&
+           mlocParseDecimal(to, strlen(to), &end).status == mloc_success &&
+           mlocFormatNumberRange(&formatter, &start, &end, &output) == mloc_success &&
+           output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
+}
+
+// The cases below are ICU4C's NumberRangeFormatter's output for the same
+// input, where its CLDR data and CLDR 49's agree.
+static void TestRanges(void)
+{
+    CHECK(Ranges("en", nullptr, "3", "5",
+                 "3\xE2\x80\x93"
+                 "5"),
+          "a plain range");
+    CHECK(Ranges("en", nullptr, "5", "3",
+                 "5\xE2\x80\x93"
+                 "3"),
+          "the start may pass the end");
+    CHECK(Ranges("en", nullptr, "5", "5", "~5") && Ranges("en", nullptr, "-5", "-5", "~-5"),
+          "ends that write alike: the approximately sign");
+    CHECK(Ranges("en", nullptr, "-5", "-3", "-5 \xE2\x80\x93 -3") &&
+              Ranges("en", nullptr, "-3", "5", "-3 \xE2\x80\x93 5"),
+          "a sign of one character is not shared, and spaces the separator");
+    CHECK(Ranges("ar", nullptr, "-5", "-3",
+                 "\xE2\x80\x8E-5\xE2\x80\x93"
+                 "3"),
+          "a sign of two characters is shared");
+    CHECK(Ranges("de", nullptr, "1234.5", "2345.5",
+                 "1.234,5\xE2\x80\x93"
+                 "2.345,5"),
+          "German");
+    CHECK(Ranges("ja", nullptr, "3", "5",
+                 "3\xEF\xBD\x9E"
+                 "5"),
+          "Japanese's wave dash");
+    mlocNumberOptions o = {.signDisplay = mloc_signAlways};
+    CHECK(Ranges("en", &o, "3", "5", "+3 \xE2\x80\x93 +5"), "plus signs");
+    o = (mlocNumberOptions){.style = mloc_numberPercent};
+    CHECK(Ranges("en", &o, "0.03", "0.05", "3% \xE2\x80\x93 5%"), "a one-character percent");
+    CHECK(Ranges("fr", &o, "0.03", "0.05",
+                 "3\xE2\x80\x93"
+                 "5\xC2\xA0%"),
+          "French's percent, with its space, is shared");
+    o = (mlocNumberOptions){.notation = mloc_notationCompactShort};
+    CHECK(Ranges("en", &o, "3000", "5000", "3K \xE2\x80\x93 5K") &&
+              Ranges("en", &o, "5000", "5000", "~5K"),
+          "short compact");
+    o.notation = mloc_notationCompactLong;
+    CHECK(Ranges("en", &o, "3000", "5000",
+                 "3\xE2\x80\x93"
+                 "5 thousand"),
+          "long compact, shared");
+    CHECK(Ranges("fr", &o, "1000000", "2000000", "1 million \xE2\x80\x93 2 millions"),
+          "not shared across categories");
+    o.notation = mloc_notationScientific;
+    CHECK(Ranges("en", &o, "1000", "5000", "1E3 \xE2\x80\x93 5E3"), "an exponent spaces it");
+    mlocLocale locale;
+    mlocNumberFormatter formatter;
+    mlocDecimal three = {0};
+    mlocDecimal infinity = {.kind = mloc_decimalInfinity};
+    mlocDecimal nan = {.kind = mloc_decimalNaN};
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success &&
+              mlocParseDecimal("3", 1, &three).status == mloc_success &&
+              mlocFormatNumberRange(&formatter, &three, &infinity, &output) == mloc_success &&
+              output.length == 7 && memcmp(buffer, "3\xE2\x80\x93\xE2\x88\x9E", 7) == 0,
+          "to infinity");
+    CHECK(mlocFormatNumberRange(&formatter, &three, &nan, &output) == mloc_errorInvalid &&
+              mlocFormatNumberRange(&formatter, &nan, &three, &output) == mloc_errorInvalid,
+          "a NaN end");
+    CHECK(mlocFormatNumberRange(&formatter, &three, nullptr, &output) == mloc_errorInvalid &&
+              mlocFormatNumberRange(&formatter, nullptr, &three, &output) == mloc_errorInvalid &&
+              mlocFormatNumberRange(&formatter, &three, &three, nullptr) == mloc_errorInvalid &&
+              mlocFormatNumberRange(nullptr, &three, &three, &output) == mloc_errorInvalid,
+          "null pointers");
+    mlocDecimal madeUp = three;
+    madeUp.reserved = 1;
+    CHECK(mlocFormatNumberRange(&formatter, &three, &madeUp, &output) == mloc_errorInvalid,
+          "a made-up end");
+    mlocOutput measure = {0};
+    CHECK(mlocFormatNumberRange(&formatter, &three, &infinity, &measure) == mloc_errorCapacity &&
+              measure.length == 7,
+          "measuring");
+    // Parts: the start's, the end's, and what both share.
+    mlocNumberOptions longCompact = {.notation = mloc_notationCompactLong};
+    mlocDecimal start;
+    mlocDecimal end;
+    Parts parts = {0};
+    mlocOutput withParts = {
+        .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &parts};
+    static const uint32_t s_kinds[] = {mloc_numberPartInteger | mloc_numberRangeStart,
+                                       mloc_numberPartLiteral,
+                                       mloc_numberPartInteger | mloc_numberRangeEnd,
+                                       mloc_numberPartLiteral, mloc_numberPartCompact};
+    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &longCompact) == mloc_success &&
+              mlocParseDecimal("3000", 4, &start).status == mloc_success &&
+              mlocParseDecimal("5000", 4, &end).status == mloc_success &&
+              mlocFormatNumberRange(&formatter, &start, &end, &withParts) == mloc_success &&
+              parts.count == 5 && memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0,
+          "a range's parts with their ends");
+    Parts alike = {0};
+    withParts.context = &alike;
+    static const uint32_t s_alike[] = {mloc_numberPartApproximatelySign, mloc_numberPartInteger,
+                                       mloc_numberPartLiteral, mloc_numberPartCompact};
+    CHECK(mlocFormatNumberRange(&formatter, &start, &start, &withParts) == mloc_success &&
+              alike.count == 4 && memcmp(alike.kinds, s_alike, sizeof(s_alike)) == 0,
+          "an approximate number's parts are both ends'");
+}
+
 static void TestGrouping(void)
 {
     mlocNumberOptions o = {.grouping = mloc_groupingAlways};
@@ -661,6 +784,7 @@ int main(void)
     TestStyles();
     TestScientific();
     TestCompact();
+    TestRanges();
     TestGrouping();
     TestSigns();
     TestOutput();

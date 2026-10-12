@@ -39,9 +39,9 @@ digits of a double, rounded in ECMA-402's modes) with their plural
 operands, CLDR's cardinal, ordinal and range plural rules compiled to C
 (every sample of CLDR's files passes on every push), and numbers,
 percents and per mille in standard, scientific, engineering and compact
-notation with every numbering system and ECMA-402's options
+notation and ranges, with every numbering system and ECMA-402's options
 (CLDR's decimal test data passes on every push). The library has
-35 public functions.
+36 public functions.
 
 ## Building
 

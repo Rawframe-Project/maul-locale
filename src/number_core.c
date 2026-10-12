@@ -294,6 +294,7 @@ NumberSign mlocNumberSign(const mlocDecimal* d, mlocSignDisplay display)
 
 static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length)
 {
+    kind |= w->source;
     if (w->parts != nullptr)
     {
         if (kind != w->kind && w->length > w->start)
@@ -311,6 +312,11 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
         memcpy(w->buffer + w->length, bytes, length);
     }
     w->length += length;
+}
+
+void mlocWriteLiteral(NumberWriter* w, const char* text, size_t length)
+{
+    Put(w, mloc_numberPartLiteral, text, length);
 }
 
 void mlocEndParts(NumberWriter* w)
@@ -379,9 +385,36 @@ static void PutText(NumberWriter* w, const uint8_t* text, size_t length, bool co
     Put(w, mloc_numberPartLiteral, text + length - trail, trail);
 }
 
+// What the minus sign's place in an affix writes: the minus or plus
+// sign, the approximately sign alone or before either.
+typedef enum SignSlot
+{
+    slotMinus,
+    slotPlus,
+    slotApproximately,
+    slotApproximatelyMinus,
+    slotApproximatelyPlus,
+} SignSlot;
+
+static void PutSlot(NumberWriter* w, const NumberCore* c, SignSlot slot)
+{
+    if (slot >= slotApproximately)
+    {
+        PutSymbol(w, c, numberApproximately, mloc_numberPartApproximatelySign);
+    }
+    if (slot == slotMinus || slot == slotApproximatelyMinus)
+    {
+        PutSymbol(w, c, numberMinus, mloc_numberPartMinusSign);
+    }
+    else if (slot == slotPlus || slot == slotApproximatelyPlus)
+    {
+        PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
+    }
+}
+
 // Writes an affix: its literal text, and the symbols its placeholders
-// stand for; with plus set, the minus sign's place takes the plus sign.
-static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus,
+// stand for, the minus sign's place as the slot says.
+static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, SignSlot slot,
                      const NumberLayout* layout)
 {
     bool perMille = layout->perMille;
@@ -403,8 +436,7 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus,
         switch (b)
         {
         case numberAffixMinus:
-            PutSymbol(w, c, plus ? numberPlus : numberMinus,
-                      plus ? mloc_numberPartPlusSign : mloc_numberPartMinusSign);
+            PutSlot(w, c, slot);
             break;
         case numberAffixPlus:
             PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
@@ -433,34 +465,40 @@ static bool HasMinus(const NumberCore* c, int affix)
            nullptr;
 }
 
-// The prefix (or suffix) for a sign: a plus sign takes the negative
-// affixes with the plus sign in the minus sign's place, or, when they
-// have none, goes before the positive prefix.
+// The prefix (or suffix) for a sign: a sign, or the approximately sign,
+// takes the negative affixes in the minus sign's place; when they have
+// no place for it, it goes before the positive prefix (the negative one
+// for a minus sign).
 static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix,
                       const NumberLayout* layout)
 {
     int positive = prefix ? affixPositivePrefix : affixPositiveSuffix;
     int negative = prefix ? affixNegativePrefix : affixNegativeSuffix;
-    if (sign == numberSignNone)
+    bool approximately = layout->approximately;
+    if (sign == numberSignNone && !approximately)
     {
-        PutAffix(w, c, positive, false, layout);
+        PutAffix(w, c, positive, slotMinus, layout);
+        return;
     }
-    else if (sign == numberSignMinus)
+    if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
     {
-        PutAffix(w, c, negative, false, layout);
-    }
-    else if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
-    {
-        PutAffix(w, c, negative, true, layout);
-    }
-    else
-    {
-        if (prefix)
+        SignSlot slot = sign == numberSignMinus  ? slotMinus
+                        : sign == numberSignPlus ? slotPlus
+                                                 : slotApproximately;
+        if (approximately && sign != numberSignNone)
         {
-            PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
+            slot = sign == numberSignMinus ? slotApproximatelyMinus : slotApproximatelyPlus;
         }
-        PutAffix(w, c, positive, false, layout);
+        PutAffix(w, c, negative, slot, layout);
+        return;
     }
+    if (prefix)
+    {
+        PutSlot(w, c,
+                approximately ? (sign == numberSignPlus ? slotApproximatelyPlus : slotApproximately)
+                              : slotPlus);
+    }
+    PutAffix(w, c, sign == numberSignMinus ? negative : positive, slotMinus, layout);
 }
 
 static void PutDigit(NumberWriter* w, const NumberCore* c, uint8_t digit, uint32_t kind)
@@ -529,10 +567,25 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
     }
 }
 
+// Writes a prefix or suffix unless the layout skips it, for both ends of
+// a range where it is shared.
+static void PutEnd(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix,
+                   const NumberLayout* layout)
+{
+    if (prefix ? layout->skipPrefix : layout->skipSuffix)
+    {
+        return;
+    }
+    uint32_t source = w->source;
+    w->source = (prefix ? layout->sharedPrefix : layout->sharedSuffix) ? 0 : source;
+    PutSigned(w, c, sign, prefix, layout);
+    w->source = source;
+}
+
 void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
                      const NumberLayout* layout, NumberWriter* w)
 {
-    PutSigned(w, c, sign, true, layout);
+    PutEnd(w, c, sign, true, layout);
     if (d->kind == mloc_decimalNaN)
     {
         PutSymbol(w, c, numberNaN, mloc_numberPartNaN);
@@ -549,5 +602,19 @@ void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
             PutExponent(w, c, layout->exponent);
         }
     }
-    PutSigned(w, c, sign, false, layout);
+    PutEnd(w, c, sign, false, layout);
+}
+
+size_t mlocAffixCodePoints(const NumberCore* c, NumberSign sign, const NumberLayout* layout)
+{
+    char text[256] = {0};
+    NumberWriter w = {.buffer = text, .capacity = sizeof(text)};
+    PutSigned(&w, c, sign, true, layout);
+    PutSigned(&w, c, sign, false, layout);
+    size_t points = 0;
+    for (size_t i = 0; i < w.length && i < sizeof(text); i++)
+    {
+        points += ((uint8_t)text[i] & 0xC0) != 0x80;
+    }
+    return points;
 }

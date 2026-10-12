@@ -153,47 +153,183 @@ static mlocResult Round(const Formatter* f, mlocDecimal* d, NumberLayout* layout
     return r == mloc_success ? mlocApplyPrecision(&f->precision, d) : r;
 }
 
-mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDecimal* decimal,
-                            mlocOutput* output)
+// A decimal made ready to write: rounded, with its layout, the core its
+// affixes come from and its sign.
+typedef struct Prepared
 {
-    Formatter formatterValue;
-    const Formatter* f = &formatterValue;
-    if (!Read(formatter, &formatterValue) || decimal == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity > 0) || !mlocValidDecimal(decimal))
-    {
-        return mloc_errorInvalid;
-    }
-    mlocDecimal d = *decimal;
-    NumberLayout layout = {
+    mlocDecimal decimal;
+    NumberLayout layout;
+    NumberCore core;
+    NumberSign sign;
+} Prepared;
+
+static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepared* p)
+{
+    p->decimal = *decimal;
+    p->layout = (NumberLayout){
         .grouping = (mlocGrouping)f->grouping,
         .minInteger = f->minInteger,
         .perMille = f->style == mloc_numberPerMille,
         .scientific =
             f->notation == mloc_notationScientific || f->notation == mloc_notationEngineering,
     };
-    NumberCore core = f->core;
-    if (d.kind == mloc_decimalFinite)
+    p->core = f->core;
+    if (p->decimal.kind == mloc_decimalFinite)
     {
-        mlocResult r =
-            f->compactTable != nullptr ? Compact(f, &d, &layout, &core) : Round(f, &d, &layout);
+        mlocResult r = f->compactTable != nullptr ? Compact(f, &p->decimal, &p->layout, &p->core)
+                                                  : Round(f, &p->decimal, &p->layout);
         if (r != mloc_success)
         {
             return r;
         }
     }
-    NumberSign sign = mlocNumberSign(&d, (mlocSignDisplay)f->signDisplay);
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteNumber(&core, &d, sign, &layout, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
+    p->sign = mlocNumberSign(&p->decimal, (mlocSignDisplay)f->signDisplay);
+    return mloc_success;
+}
+
+static bool CheckArguments(const mlocNumberFormatter* formatter, Formatter* f,
+                           const mlocDecimal* decimal, const mlocOutput* output)
+{
+    return Read(formatter, f) && decimal != nullptr && output != nullptr &&
+           (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);
+}
+
+// Ends a text pass: the length written, and whether it fit.
+static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
+{
+    output->length = w->length;
+    return output->buffer == nullptr || w->length > output->capacity ? mloc_errorCapacity
+                                                                     : mloc_success;
+}
+
+mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDecimal* decimal,
+                            mlocOutput* output)
+{
+    Formatter f;
+    Prepared p;
+    if (!CheckArguments(formatter, &f, decimal, output))
     {
-        return mloc_errorCapacity;
+        return mloc_errorInvalid;
     }
-    if (output->part != nullptr)
+    mlocResult r = Prepare(&f, decimal, &p);
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocWriteNumber(&p.core, &p.decimal, p.sign, &p.layout, &w);
+    r = Finish(&w, output);
+    if (r == mloc_success && output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteNumber(&core, &d, sign, &layout, &parts);
+        mlocWriteNumber(&p.core, &p.decimal, p.sign, &p.layout, &parts);
         mlocEndParts(&parts);
     }
-    return mloc_success;
+    return r;
+}
+
+// Whether two ends share their affixes: one sign, one pattern. The rest
+// of their cores is the formatter's.
+static bool SameAffixes(const Prepared* a, const Prepared* b)
+{
+    return a->sign == b->sign && a->core.affixText == b->core.affixText &&
+           memcmp(a->core.affixStart, b->core.affixStart, sizeof(a->core.affixStart)) == 0 &&
+           memcmp(a->core.affixLength, b->core.affixLength, sizeof(a->core.affixLength)) == 0;
+}
+
+// Whether two prepared ends write alike.
+static bool Alike(const Prepared* a, const Prepared* b)
+{
+    return memcmp(&a->decimal, &b->decimal, sizeof(a->decimal)) == 0 && SameAffixes(a, b) &&
+           a->layout.exponent == b->layout.exponent && a->layout.noNumber == b->layout.noNumber;
+}
+
+// Whether text starts (or ends) with Pattern_White_Space, which ICU
+// takes as spacing already in a range pattern: U+0009 to U+000D, U+0020,
+// U+0085, U+200E, U+200F, U+2028 and U+2029.
+static bool IsSpace(const uint8_t* text, size_t length, bool atEnd)
+{
+    static const char* const s_spaces[] = {
+        "\x09",     "\x0A",         "\x0B",         "\x0C",         "\x0D",        " ",
+        "\xC2\x85", "\xE2\x80\x8E", "\xE2\x80\x8F", "\xE2\x80\xA8", "\xE2\x80\xA9"};
+    for (size_t i = 0; i < sizeof(s_spaces) / sizeof(s_spaces[0]); i++)
+    {
+        size_t n = strlen(s_spaces[i]);
+        if (n <= length && memcmp(atEnd ? text + length - n : text, s_spaces[i], n) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Writes a range as ICU's NumberRangeFormatter does with its default
+// collapse and identity fallback.
+static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberWriter* w)
+{
+    if (Alike(a, b))
+    {
+        a->layout.approximately = true;
+        w->source = 0;
+        mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
+        return;
+    }
+    // An affix both share is written once when it is more than one
+    // character; any affix written twice, or an exponent, spaces the
+    // separator.
+    size_t points = mlocAffixCodePoints(&a->core, a->sign, &a->layout);
+    bool collapse = SameAffixes(a, b) && a->layout.noNumber == b->layout.noNumber && points > 1 &&
+                    !a->layout.scientific;
+    bool spaced = !collapse && (points > 0 || a->layout.scientific);
+    a->layout.skipSuffix = collapse;
+    a->layout.sharedPrefix = collapse;
+    b->layout.skipPrefix = collapse;
+    b->layout.sharedSuffix = collapse;
+    w->source = mloc_numberRangeStart;
+    mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
+    w->source = 0;
+    const uint8_t* separator = core->symbolText + core->symbolStart[numberRangeSeparator];
+    size_t length = core->symbolLength[numberRangeSeparator];
+    if (spaced && !IsSpace(separator, length, false))
+    {
+        mlocWriteLiteral(w, " ", 1);
+    }
+    mlocWriteLiteral(w, (const char*)separator, length);
+    if (spaced && !IsSpace(separator, length, true))
+    {
+        mlocWriteLiteral(w, " ", 1);
+    }
+    w->source = mloc_numberRangeEnd;
+    mlocWriteNumber(&b->core, &b->decimal, b->sign, &b->layout, w);
+}
+
+mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlocDecimal* start,
+                                 const mlocDecimal* end, mlocOutput* output)
+{
+    Formatter f;
+    Prepared a;
+    Prepared b;
+    if (!CheckArguments(formatter, &f, start, output) || end == nullptr || !mlocValidDecimal(end) ||
+        start->kind == mloc_decimalNaN || end->kind == mloc_decimalNaN)
+    {
+        return mloc_errorInvalid;
+    }
+    mlocResult r = Prepare(&f, start, &a);
+    r = r == mloc_success ? Prepare(&f, end, &b) : r;
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    Prepared textA = a;
+    Prepared textB = b;
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    WriteRange(&f.core, &textA, &textB, &w);
+    r = Finish(&w, output);
+    if (r == mloc_success && output->part != nullptr)
+    {
+        NumberWriter parts = {.parts = output};
+        WriteRange(&f.core, &a, &b, &parts);
+        mlocEndParts(&parts);
+    }
+    return r;
 }

@@ -168,6 +168,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumber(const mlocNumberFormatter* f
 ```
 Formats a decimal.  @param formatter  A formatter from mlocInitNumberFormatter. @param decimal    The number. @param output     Receives the text; its part function, when set, receives mlocNumberPart values. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlocDecimal* start, const mlocDecimal* end, mlocOutput* output);
+```
+Formats a range of two decimals (ECMA-402's formatRange): both ends by the formatter, around the locale's range separator, spaced when the ends have affixes of their own ("3–5", "-5 – -3", "3K – 5K"), an affix both share written once when it is longer than one character ("3–5 thousand"); ends that write alike give one number with the approximately sign ("~5"). The start may pass the end.  @param formatter  A formatter from mlocInitNumberFormatter. @param start      The range's start. @param end        Its end. @param output     Receives the text; its part function, when set, receives mlocNumberPart values with the end each belongs to (mloc_numberRangeStart, mloc_numberRangeEnd, or 0 for both). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, a NaN end, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
 ## `plural.h`
 
 Plural rules (UTS #35 Part 3, record mloc-0020): the category a number takes in a locale, cardinal ("1 file", "2 files") or ordinal ("1st", "2nd"), and that of a range of two numbers.
@@ -204,4 +209,4 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ---
 
-35 functions across 6 headers.
+36 functions across 6 headers.

@@ -61,6 +61,9 @@ typedef struct NumberWriter
     const mlocOutput* parts;
     uint32_t kind;
     size_t start;
+    // The source of the parts being written, a range's start or end, or 0
+    // for both: added to each part's kind.
+    uint32_t source;
 } NumberWriter;
 
 // Resolves a locale's core: its numbers unit along the main chain, the
@@ -104,6 +107,14 @@ typedef struct NumberLayout
     bool compact;
     // The pattern writes no digits (a compact pattern for exactly 1).
     bool noNumber;
+    // The approximately sign goes where the sign would.
+    bool approximately;
+    // A range collapses the affixes its ends share: the prefix is written
+    // for the start alone and the suffix for the end, each for both.
+    bool skipPrefix;
+    bool skipSuffix;
+    bool sharedPrefix;
+    bool sharedSuffix;
 } NumberLayout;
 
 // Writes a rounded decimal: the affixes for its sign, the integer digits
@@ -111,6 +122,12 @@ typedef struct NumberLayout
 // exponent when the layout has one.
 void mlocWriteNumber(const NumberCore* core, const mlocDecimal* decimal, NumberSign sign,
                      const NumberLayout* layout, NumberWriter* writer);
+
+// The code points the prefix and suffix of a sign write.
+size_t mlocAffixCodePoints(const NumberCore* core, NumberSign sign, const NumberLayout* layout);
+
+// Writes literal text.
+void mlocWriteLiteral(NumberWriter* writer, const char* text, size_t length);
 
 // Ends a writer's last part.
 void mlocEndParts(NumberWriter* writer);
