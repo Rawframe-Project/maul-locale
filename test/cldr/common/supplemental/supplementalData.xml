@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE supplementalData SYSTEM "../../common/dtd/ldmlSupplemental.dtd">
+<!--
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Sirac Ozmen
+-->
+<supplementalData>
+	<parentLocales>
+		<parentLocale parent="root" localeRules="nonlikelyScript" locales="xx_Cyrl"/>
+		<parentLocale parent="xx_YY" locales="xx_ZZ"/>
+	</parentLocales>
+	<parentLocales component="segmentations grammaticalFeatures plurals">
+	</parentLocales>
+	<parentLocales component="collations">
+		<parentLocale parent="root" locales="xx_YY"/>
+	</parentLocales>
+</supplementalData>

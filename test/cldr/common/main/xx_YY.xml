@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">
+<!--
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Sirac Ozmen
+-->
+<ldml>
+	<identity>
+		<version number="$Revision$"/>
+		<language type="xx"/>
+		<territory type="YY"/>
+	</identity>
+	<localeDisplayNames>
+		<languages>
+			<language type="en">∅∅∅</language>
+		</languages>
+	</localeDisplayNames>
+	<dates>
+		<calendars>
+			<calendar type="gregorian">
+				<months>
+					<monthContext type="format">
+						<monthWidth type="abbreviated">
+							<month type="1" draft="contributed">Jan.</month>
+							<month type="2" draft="provisional">Feb.</month>
+						</monthWidth>
+					</monthContext>
+					<monthContext type="stand-alone">
+						<monthWidth type="abbreviated">
+							<month type="1">↑↑↑</month>
+						</monthWidth>
+					</monthContext>
+				</months>
+			</calendar>
+		</calendars>
+	</dates>
+	<numbers>
+		<symbols numberSystem="latn">
+			<decimal>↑↑↑</decimal>
+			<group draft="unconfirmed">'</group>
+		</symbols>
+	</numbers>
+</ldml>

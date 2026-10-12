@@ -87,6 +87,28 @@ jobs:
         if: matrix.name == 'linux-shared'
         run: cmake --install build --prefix "$PWD/package"
 
+  # The generator's resolution of all of CLDR against CLDR's JSON of the
+  # same release (record mloc-0006). The pinned release is cached by
+  # tools/cldr-release.txt, so a run fetches it only when the pin moves.
+  cldr-resolution:
+    name: cldr-resolution
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: ~/cldr-cache
+          key: cldr-${{ hashFiles('tools/cldr-release.txt') }}
+      - name: Fetch CLDR
+        timeout-minutes: 15
+        run: bash tools/fetch_cldr.sh ~/cldr-cache
+      - name: Build the generator
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_TESTS=OFF
+          cmake --build build -j 4 --target mlocgen
+      - name: Compare with the JSON
+        run: python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
+
   # The API reference is generated from the headers; it must match them,
   # and the README must give its function count.
   docs:

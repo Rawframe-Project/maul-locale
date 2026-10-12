@@ -1,0 +1,67 @@
+<!--
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Sirac Ozmen
+
+A cut of CLDR's ldml.dtd for test_genresolve: the elements the fixture
+files use, with CLDR's annotations on their attributes.
+-->
+<!ELEMENT ldml (identity, (alias | (localeDisplayNames?, layout?, dates?, numbers?, units?)))>
+<!ATTLIST ldml draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ELEMENT alias EMPTY >
+<!ATTLIST alias source NMTOKEN #REQUIRED >
+<!ATTLIST alias path CDATA #IMPLIED >
+<!ELEMENT identity (version, language, script?, territory?) >
+<!ELEMENT version EMPTY >
+<!ATTLIST version number CDATA #REQUIRED >
+    <!--@METADATA-->
+<!ELEMENT script EMPTY >
+<!ATTLIST script type NMTOKEN #REQUIRED >
+<!ELEMENT territory EMPTY >
+<!ATTLIST territory type NMTOKEN #REQUIRED >
+<!ELEMENT localeDisplayNames (languages?) >
+<!ELEMENT languages (alias | language*) >
+<!ELEMENT language ( #PCDATA ) >
+<!ATTLIST language type NMTOKEN #REQUIRED >
+<!ATTLIST language alt NMTOKENS #IMPLIED >
+<!ATTLIST language menu NMTOKENS #IMPLIED >
+<!ATTLIST language draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ELEMENT layout (orientation?) >
+<!ELEMENT orientation EMPTY >
+<!ATTLIST orientation characters (left-to-right | right-to-left | top-to-bottom | bottom-to-top) #IMPLIED >
+    <!--@VALUE-->
+<!ATTLIST orientation lines (left-to-right | right-to-left | top-to-bottom | bottom-to-top) #IMPLIED >
+    <!--@VALUE-->
+<!ELEMENT dates (calendars?) >
+<!ELEMENT calendars (calendar*) >
+<!ELEMENT calendar (alias | months?) >
+<!ATTLIST calendar type NMTOKEN #REQUIRED >
+<!ELEMENT months (alias | monthContext*) >
+<!ELEMENT monthContext (alias | monthWidth*) >
+<!ATTLIST monthContext type (format | stand-alone) #REQUIRED >
+<!ELEMENT monthWidth (alias | month*) >
+<!ATTLIST monthWidth type (abbreviated | narrow | wide) #REQUIRED >
+<!ELEMENT month ( #PCDATA ) >
+<!ATTLIST month type (1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13) #REQUIRED >
+<!ATTLIST month draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ELEMENT numbers (symbols*) >
+<!ELEMENT symbols (alias | (decimal?, group?, nan?)) >
+<!ATTLIST symbols numberSystem CDATA #IMPLIED >
+<!ELEMENT decimal ( #PCDATA ) >
+<!ATTLIST decimal draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ELEMENT group ( #PCDATA ) >
+<!ATTLIST group draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ELEMENT nan ( #PCDATA ) >
+<!ELEMENT units (unitLength*) >
+<!ELEMENT unitLength (alias | unit*) >
+<!ATTLIST unitLength type (long | short | narrow) #REQUIRED >
+<!ELEMENT unit (alias | (displayName*, unitPattern*)) >
+<!ATTLIST unit type NMTOKEN #REQUIRED >
+<!ELEMENT displayName ( #PCDATA ) >
+<!ATTLIST displayName count (0 | 1 | zero | one | two | few | many | other) #IMPLIED >
+<!ELEMENT unitPattern ( #PCDATA ) >
+<!ATTLIST unitPattern count (0 | 1 | zero | one | two | few | many | other) #REQUIRED >
