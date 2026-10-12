@@ -25,6 +25,10 @@ const char* mlocResultName(mlocResult result)
         return "mloc_errorInvalid";
     case mloc_errorCapacity:
         return "mloc_errorCapacity";
+    case mloc_errorData:
+        return "mloc_errorData";
+    case mloc_errorDataVersion:
+        return "mloc_errorDataVersion";
     default:
         return "unknown result";
     }

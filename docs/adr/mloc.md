@@ -18,3 +18,4 @@ are listed in [README.md](README.md).
 | [mloc-0011](mloc-0011-word-breaking-data.md) | Word breaking: dictionaries by default, models by choice | Accepted |
 | [mloc-0012](mloc-0012-system-languages.md) | The system's languages come from Maul Window | Accepted |
 | [mloc-0013](mloc-0013-proof-per-part.md) | What proves each part | Accepted |
+| [mloc-0014](mloc-0014-data-file-layout.md) | The data file layout | Accepted |

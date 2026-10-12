@@ -28,6 +28,9 @@ static void TestResultNames(void)
     CHECK(strcmp(mlocResultName(mloc_success), "mloc_success") == 0, "success name");
     CHECK(strcmp(mlocResultName(mloc_errorInvalid), "mloc_errorInvalid") == 0, "invalid name");
     CHECK(strcmp(mlocResultName(mloc_errorCapacity), "mloc_errorCapacity") == 0, "capacity name");
+    CHECK(strcmp(mlocResultName(mloc_errorData), "mloc_errorData") == 0, "data name");
+    CHECK(strcmp(mlocResultName(mloc_errorDataVersion), "mloc_errorDataVersion") == 0,
+          "data version name");
     CHECK(strcmp(mlocResultName(12345), "unknown result") == 0, "unknown name");
 }
 

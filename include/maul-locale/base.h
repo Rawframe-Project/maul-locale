@@ -68,6 +68,12 @@ extern "C"
         mloc_errorInvalid = -1,
         // A caller buffer or a named limit is too small for the result.
         mloc_errorCapacity = -2,
+        // Bytes given as data are not a valid data file: a wrong magic or
+        // format, or a table, offset or length that does not hold.
+        mloc_errorData = -3,
+        // A valid data file of another data version: another CLDR,
+        // Unicode, time zone or library release, or other code tables.
+        mloc_errorDataVersion = -4,
     };
 
     // A version: major, minor and patch.

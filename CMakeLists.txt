@@ -28,6 +28,7 @@ option(MAUL_LOCALE_INSTALL "Generate install rules" ${PROJECT_IS_TOP_LEVEL})
 option(MAUL_LOCALE_WERROR "Treat compiler warnings as errors" OFF)
 option(MAUL_LOCALE_SANITIZE "Instrument with AddressSanitizer and UBSan" OFF)
 option(MAUL_LOCALE_COVERAGE "Instrument for gcov coverage" OFF)
+option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 
 # Every executable (tests, benchmarks, tools) lands in the top of the
 # build tree, so scripts and CI find them in one place.
@@ -46,21 +47,45 @@ else()
     set(MAUL_LIBRARY_KIND STATIC)
 endif()
 add_library(maul-locale ${MAUL_LIBRARY_KIND}
-    src/base.c)
+    src/base.c
+    src/data.c
+    src/data_kinds.c
+    src/generated/builtin_data.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
     enable_testing()
     maul_add_test(base)
+    maul_add_test(data WHITEBOX)
     maul_add_header_tests()
+endif()
+
+# The fuzz targets: test/fuzz_<area>.c, run as fuzz_<area> <corpus dir>.
+# They reach internal functions, so the library is static.
+if(MAUL_LOCALE_FUZZ)
+    # The library is instrumented too: its coverage guides libFuzzer, and
+    # the sanitizers watch its code, not only the targets'.
+    target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
+    target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
+    foreach(area data)
+        add_executable(fuzz_${area} test/fuzz_${area}.c)
+        target_link_libraries(fuzz_${area} PRIVATE maul-locale)
+        target_include_directories(fuzz_${area} PRIVATE src)
+        maul_apply_flags(fuzz_${area})
+        target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
+        target_link_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
+    endforeach()
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
-    add_library(mlocgen_core STATIC tools/mlocgen/cldr.c tools/mlocgen/dtd.c
+    add_library(mlocgen_core STATIC tools/mlocgen/cldr.c tools/mlocgen/datafile.c
+                                    tools/mlocgen/dtd.c tools/mlocgen/generate.c
                                     tools/mlocgen/ldml.c tools/mlocgen/map.c tools/mlocgen/xml.c)
-    target_include_directories(mlocgen_core PUBLIC tools/mlocgen)
+    # The generator writes the layout src/data_format.h defines and reads
+    # the versions of the public base header.
+    target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)
     maul_apply_flags(mlocgen_core)
     # The generator uses standard fopen, which the Windows C runtime
     # reports as deprecated in favor of its own fopen_s.
@@ -81,6 +106,15 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_genresolve PRIVATE test)
         maul_apply_flags(test_genresolve)
         add_test(NAME genresolve COMMAND test_genresolve ${PROJECT_SOURCE_DIR}/test/cldr/common)
+        # The writer against the library's reader, which a shared build
+        # hides.
+        if(NOT MAUL_LOCALE_BUILD_SHARED)
+            add_executable(test_gendata test/test_gendata.c)
+            target_link_libraries(test_gendata PRIVATE mlocgen_core maul-locale)
+            target_include_directories(test_gendata PRIVATE test src)
+            maul_apply_flags(test_gendata)
+            add_test(NAME gendata COMMAND test_gendata)
+        endif()
     endif()
 endif()
 

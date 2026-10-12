@@ -26,8 +26,10 @@ buffer.
 
 ## Status
 
-Not released. The design is decided; the generator and the data layer
-come first. This skeleton has 3 public functions.
+Not released. The design is decided. Built so far: the generator's
+reading of CLDR (its inheritance checked against CLDR's own JSON on
+every push) and the data layer that opens compiled-in data and data
+files; no part has data yet. The library has 9 public functions.
 
 ## Building
 

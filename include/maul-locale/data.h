@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// The library's data: the compiled-in data and data files the program
+// holds, each opened once into an mlocData view and read in place
+// (record mloc-0014). The library reads no file and allocates nothing;
+// the bytes a view was opened from must outlive it and everything made
+// from it.
+
+#ifndef MAUL_LOCALE_DATA_H
+#define MAUL_LOCALE_DATA_H
+
+#include "maul-locale/base.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    // An opened source of data: compiled-in data or a data file. It is
+    // copyable and holds no resource; nothing closes it.
+    typedef struct mlocData
+    {
+        uint64_t opaque[4];
+    } mlocData;
+
+    // The sources a part looks data up in, searched in order: for example
+    // a downloaded language pack before the compiled-in data. The caller
+    // keeps the array.
+    typedef struct mlocDataSet
+    {
+        const mlocData* sources;
+        size_t count;
+    } mlocDataSet;
+
+    // What a data file was generated from. A library opens only data of
+    // its own version, every field equal.
+    typedef struct mlocDataVersion
+    {
+        mlocVersion cldr;
+        mlocVersion unicode;
+        // The library version the data was generated for.
+        mlocVersion library;
+        // The time zone database release, such as "2026e", padded with
+        // NULs; all eight bytes are used when the name is that long.
+        char tzdb[8];
+        // A hash of the code tables generated with the data and of the
+        // pinned sources.
+        uint64_t tables;
+    } mlocDataVersion;
+
+    /// Returns the data version this library reads.
+    ///
+    /// @param versionOut  Receives the version.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_API void mlocGetDataVersion(mlocDataVersion* versionOut);
+
+    /// Reads the version of a data file from its header alone, so that a
+    /// program can tell which file to fetch before it opens one.
+    ///
+    /// @param bytes       The file's first bytes; at least 64.
+    /// @param size        Their size.
+    /// @param versionOut  Receives the version.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer;
+    ///         mloc_errorData when the bytes are no data file header of a
+    ///         format this library knows.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocReadDataVersion(const void* bytes, size_t size,
+                                                           mlocDataVersion* versionOut);
+
+    /// Opens a data file held in memory. The whole file is validated here,
+    /// once; a view that opened is never checked again.
+    ///
+    /// @param dataOut  Receives the view; left unchanged on failure.
+    /// @param bytes    The file, 8-byte aligned (any allocator's memory is).
+    /// @param size     The file's size.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer or bytes
+    ///         that are not 8-byte aligned; mloc_errorDataVersion for a
+    ///         file of another data version (mlocReadDataVersion names
+    ///         it); mloc_errorData for bytes that are not a valid data
+    ///         file.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocOpenData(mlocData* dataOut, const void* bytes,
+                                                    size_t size);
+
+    /// Opens the data compiled into the library.
+    ///
+    /// @param dataOut  Receives the view.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_API void mlocOpenBuiltinData(mlocData* dataOut);
+
+    /// Returns the number of locales a source has data for.
+    ///
+    /// @param data  An opened source.
+    /// @return The count.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_API size_t mlocGetDataLocaleCount(const mlocData* data);
+
+    /// Returns one locale a source has data for, as CLDR names it
+    /// ("de_AT", "sr_Latn"), in the order of their bytes.
+    ///
+    /// @param data       An opened source.
+    /// @param index      Below mlocGetDataLocaleCount.
+    /// @param idOut      Receives the id, which is not NUL-terminated and
+    ///                   lives as long as the source's bytes.
+    /// @param lengthOut  Receives its length in bytes.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer or an
+    ///         index out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetDataLocale(const mlocData* data, size_t index,
+                                                         const char** idOut, size_t* lengthOut);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

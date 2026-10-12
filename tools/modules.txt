@@ -1,3 +1,8 @@
 # The internal module graph (docs/conventions.md, section 6): each module
 # and the modules it may use. tools/check_modules.py enforces it.
 base:
+bytes:
+data: bytes data_format data_view
+data_format:
+data_kinds: data_view
+data_view:

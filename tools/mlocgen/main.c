@@ -9,8 +9,12 @@
 //       "@name=value", tab-separated), "<none>" when nothing resolves, or
 //       "<empty>" for an explicitly empty value. The resolution checks
 //       compare this output with CLDR's JSON.
+//
+//   mlocgen generate <CLDR common directory> <repository root>
+//       Writes the library's generated sources under src/generated/.
 
 #include "cldr.h"
+#include "generate.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +66,18 @@ int main(int argc, char** argv)
     {
         return Resolve(argv[2]);
     }
-    fputs("usage: mlocgen resolve <CLDR common directory>\n", stderr);
+    if (argc == 4 && strcmp(argv[1], "generate") == 0)
+    {
+        char error[1024];
+        if (!Generate(argv[2], argv[3], error, sizeof(error)))
+        {
+            fprintf(stderr, "mlocgen: %s\n", error);
+            return 1;
+        }
+        return 0;
+    }
+    fputs("usage: mlocgen resolve <CLDR common directory>\n"
+          "       mlocgen generate <CLDR common directory> <repository root>\n",
+          stderr);
     return 2;
 }

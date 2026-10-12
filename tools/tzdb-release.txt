@@ -1,0 +1,3 @@
+# The time zone database release the generator reads (record mloc-0002),
+# pinned apart from CLDR because its rules change several times a year.
+release 2026e
