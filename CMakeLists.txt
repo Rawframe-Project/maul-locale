@@ -50,6 +50,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/base.c
     src/data.c
     src/data_kinds.c
+    src/locale_parse.c
     src/generated/builtin_data.c)
 maul_configure_library(maul-locale)
 
@@ -57,6 +58,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     enable_testing()
     maul_add_test(base)
     maul_add_test(data WHITEBOX)
+    maul_add_test(locale)
     maul_add_header_tests()
 endif()
 
@@ -67,7 +69,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data)
+    foreach(area data locale)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)

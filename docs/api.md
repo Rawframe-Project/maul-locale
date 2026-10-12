@@ -56,6 +56,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetDataLocale(const mlocData* data, size_
 ```
 Returns one locale a source has data for, as CLDR names it ("de_AT", "sr_Latn"), in the order of their bytes.  @param data       An opened source. @param index      Below mlocGetDataLocaleCount. @param idOut      Receives the id, which is not NUL-terminated and lives as long as the source's bytes. @param lengthOut  Receives its length in bytes. @return mloc_success; mloc_errorInvalid for a null pointer or an index out of range. @par Thread safety Safe from any thread.
 
+## `locale.h`
+
+Locale identifiers (UTS #35 Part 1): a parsed locale is a fixed-size value in canonical syntax (record mloc-0015).
+
+```c
+MLOC_NODISCARD MLOC_API mlocTextResult mlocParseLocale(const char* text, size_t length, mlocLocale* localeOut);
+```
+Parses a locale id strictly and puts it in canonical syntax: case, variants and attributes in order, extensions by their singleton with private use last, keys in order, a "u" value "true" removed. Aliases are not replaced.  @param text       The id, with "-" or "_" between subtags. @param length     Its length in bytes. @param localeOut  Receives the locale; left unchanged on failure. @return status mloc_success with offset the length; mloc_errorSyntax with the offset of the subtag at fault for text that is no locale id, a tag that begins with a script, and duplicate variants, extensions, keys or attributes; mloc_errorCapacity when the variants and extensions pass 112 bytes or the tag has more than 64 subtags; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* output);
+```
+Writes a locale as its BCP 47 tag in canonical syntax, such as "sr-Latn-RS" or "de-DE-u-co-phonebk". It reports no parts.  @param locale  A locale from mlocParseLocale. @param output  Where the tag goes. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
 ---
 
-9 functions across 2 headers.
+11 functions across 3 headers.

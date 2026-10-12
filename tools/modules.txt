@@ -6,3 +6,4 @@ data: bytes data_format data_view
 data_format:
 data_kinds: data_view
 data_view:
+locale_parse:

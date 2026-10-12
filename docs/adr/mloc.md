@@ -19,3 +19,4 @@ are listed in [README.md](README.md).
 | [mloc-0012](mloc-0012-system-languages.md) | The system's languages come from Maul Window | Accepted |
 | [mloc-0013](mloc-0013-proof-per-part.md) | What proves each part | Accepted |
 | [mloc-0014](mloc-0014-data-file-layout.md) | The data file layout | Accepted |
+| [mloc-0015](mloc-0015-locale-value-and-output.md) | The locale value, strict parsing and the output struct | Accepted |

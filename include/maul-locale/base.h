@@ -74,7 +74,40 @@ extern "C"
         // A valid data file of another data version: another CLDR,
         // Unicode, time zone or library release, or other code tables.
         mloc_errorDataVersion = -4,
+        // Text is not well-formed for what it was given as, such as a
+        // locale id.
+        mloc_errorSyntax = -5,
     };
+
+    // The result of a call that reads text: the status and, on failure,
+    // the byte offset where the fault starts; on success the offset is
+    // the length read.
+    typedef struct mlocTextResult
+    {
+        mlocResult status;
+        size_t offset;
+    } mlocTextResult;
+
+    // Receives one part of a formatted text, such as a number's integer
+    // digits: the part's kind (each formatting part names its own), and
+    // its byte range in the output.
+    typedef void (*mlocPartFunction)(void* context, uint32_t part, size_t start, size_t length);
+
+    // Where every formatting call writes its UTF-8 text (record
+    // mloc-0015). Set buffer and capacity (a null buffer with capacity 0
+    // measures); the call sets length to the bytes written, or with
+    // mloc_errorCapacity to the bytes needed, the buffer's contents then
+    // being unspecified. No NUL is written. When part is set, it is
+    // called for each part in order of start, after the whole text is
+    // written and only on success.
+    typedef struct mlocOutput
+    {
+        char* buffer;
+        size_t capacity;
+        size_t length;
+        mlocPartFunction part;
+        void* context;
+    } mlocOutput;
 
     // A version: major, minor and patch.
     typedef struct mlocVersion

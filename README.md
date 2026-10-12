@@ -28,8 +28,9 @@ buffer.
 
 Not released. The design is decided. Built so far: the generator's
 reading of CLDR (its inheritance checked against CLDR's own JSON on
-every push) and the data layer that opens compiled-in data and data
-files; no part has data yet. The library has 9 public functions.
+every push), the data layer that opens compiled-in data and data
+files, and locale ids parsed strictly into canonical syntax; no part
+has data yet. The library has 11 public functions.
 
 ## Building
 
