@@ -113,8 +113,16 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(plural_tables WHITEBOX)
     # The currency names are a data file of their own (record mloc-0022).
     maul_add_test(currency MANUAL)
-    add_test(NAME currency COMMAND test_currency
-             ${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc)
+    set(MLOC_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc)
+    if(EMSCRIPTEN)
+        # Node sees no host file: the file goes into the program's own.
+        target_link_options(test_currency PRIVATE "SHELL:--embed-file ${MLOC_NAMES_FILE}@/names.mloc")
+        set(MLOC_NAMES_FILE /names.mloc)
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_currency PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    add_test(NAME currency COMMAND test_currency ${MLOC_NAMES_FILE})
     maul_add_test(number)
     maul_add_test(currency_tables WHITEBOX)
     maul_add_test(number_tables WHITEBOX)
