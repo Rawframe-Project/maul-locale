@@ -474,6 +474,9 @@ static void TestRanges(void)
                  "3\xEF\xBD\x9E"
                  "5"),
           "Japanese's wave dash");
+    CHECK(Ranges("bg", nullptr, "-5", "-3", "-5 \xE2\x80\x93 -3") &&
+              Ranges("ro", nullptr, "-5", "-3", "-5 - -3"),
+          "a separator with its own spaces takes no more");
     mlocNumberOptions o = {.signDisplay = mloc_signAlways};
     CHECK(Ranges("en", &o, "3", "5", "+3 \xE2\x80\x93 +5"), "plus signs");
     o = (mlocNumberOptions){.style = mloc_numberPercent};
