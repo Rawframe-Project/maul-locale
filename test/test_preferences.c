@@ -47,6 +47,10 @@ static void TestRegion(void)
     CHECK(From("zxx", "001"), "001 without a region");
     CHECK(From("es-419", "419"), "a macro region as given");
     CHECK(From("en-u-rg-zz", "US"), "an override no subdivision is, left out");
+    CHECK(From("en-u-rg-gbx", "GB"), "a subdivision of one character");
+    CHECK(From("en-GB-u-rg-zzzzzz", "ZZ") && Of("en-GB-u-rg-zzzzzz").firstDay == 1 &&
+              Of("en-GB-u-rg-zzzzzz").paperSize == mloc_paperA4,
+          "the unknown region, which has no data and takes 001's");
     mlocLocalePreferences us = Of("en");
     CHECK(us.hourCycle == mloc_hourFormatH12 && us.firstDay == 7 && us.minimalDays == 1 &&
               us.weekendStart == 6 && us.weekendEnd == 7 &&
@@ -79,6 +83,7 @@ static void TestHours(void)
     CHECK(Of("en-u-hc-c12").hourCycle == mloc_hourFormatH12, "else h");
     CHECK(Of("en-u-hc-c24").hourCycle == mloc_hourFormatH23, "c24 takes H");
     CHECK(Of("hi-IN-u-hc-c12").hourCycle == mloc_hourFormatH12, "a day period counts as h");
+    CHECK(Of("ru-u-hc-c12").hourCycle == mloc_hourFormatH12, "h where none of 12 is allowed");
     CHECK(Of("en-u-hc-h25").hourCycle == mloc_hourFormatH12, "a value hc does not take");
     mlocLocalePreferences en = Of("en");
     CHECK(en.allowedHourCount == 4 && en.allowedHours[0] == mloc_hourFormatH12 &&
