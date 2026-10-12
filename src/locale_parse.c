@@ -437,17 +437,23 @@ static bool Put(Writer* w, char c)
 
 static bool PutSubtag(Writer* w, const Parser* p, int s)
 {
-    if (w->length > 0 && !Put(w, '-'))
+    // The room is checked once for the separator and the whole subtag.
+    uint32_t length = Length(p, s);
+    size_t needed = length + (w->length > 0);
+    if (w->capacity - w->length < needed)
     {
         return false;
     }
-    for (uint32_t k = 0; k < Length(p, s); k++)
+    if (w->length > 0)
     {
-        if (!Put(w, Lower(At(p, s, k))))
-        {
-            return false;
-        }
+        w->out[w->length++] = '-';
     }
+    const char* text = p->text + p->subtags[s].start;
+    for (uint32_t k = 0; k < length; k++)
+    {
+        w->out[w->length + k] = Lower(text[k]);
+    }
+    w->length += length;
     return true;
 }
 
