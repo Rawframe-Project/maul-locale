@@ -86,6 +86,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatDecimal(const mlocDecimal* decimal,
 Writes a decimal as plain text with every digit and the fraction digits it shows, such as "-1234.50"; "Infinity", "-Infinity" or "NaN" for the others. mlocParseDecimal reads a finite one back to the same value. It reports no parts.  @param decimal  The decimal. @param output   Where the text goes. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorInvalid for a null pointer or a decimal the library did not make. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t increment, mlocRoundingMode mode);
+```
+Rounds a decimal to a multiple of increment times 10^position: at position -2 with increment 5, 1.234 becomes 1.25 and 1.2 stays. It then shows the fewer of its fraction digits and -position (at least those its digits need), so 1.999 at -2 is 2.00 and 1.5 at -2 stays 1.5. A value that rounds to zero keeps its sign. Infinity and NaN are left as they are.  @param decimal    The decimal, rounded in place; left unchanged on failure. @param position   The power of ten of the increment's unit, within 10^±999999. @param increment  1, 2, 5 or 25 (ECMA-402's 10, 20, 50, 250 and larger are these at a higher position); 0 means 1. @param mode       How a value between two multiples rounds. @return mloc_success; mloc_errorCapacity when the rounded value passes 10^999999; mloc_errorInvalid for a null pointer, a decimal the library did not make, or another position, increment or mode. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocShowFractionDigits(mlocDecimal* decimal, int32_t count);
+```
+Sets the fraction digits a decimal shows, never fewer than its digits need: 1.5 shows 1.500 with three and 1.50 shows 1.5 with zero. The value is unchanged; mlocRoundDecimal removes digits.  @param decimal  The decimal, changed in place; left unchanged on failure. @param count    The fraction digits to show, 0 to 999999. @return mloc_success, also for infinity and NaN, which show none; mloc_errorInvalid for a null pointer, a decimal the library did not make, or a count out of range. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralOperands(const mlocDecimal* decimal, mlocPluralOperands* operandsOut);
 ```
 Computes the plural operands of a finite decimal; c is 0.  @param decimal      The decimal. @param operandsOut  Receives the operands. @return mloc_success; mloc_errorInvalid for a null pointer, a decimal that is not finite, or one the library did not make. @par Thread safety Safe from any thread.
@@ -146,4 +156,4 @@ Returns a locale's regional preferences (UTS #35), the region's values from CLDR
 
 ---
 
-25 functions across 4 headers.
+27 functions across 4 headers.

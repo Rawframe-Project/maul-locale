@@ -5,7 +5,7 @@
 // written as text, and the plural operands of their digits. A digit's
 // power of ten is the exponent plus its distance from the last digit.
 
-#include "maul-locale/decimal.h"
+#include "decimal.h"
 
 #include <string.h>
 
@@ -30,24 +30,7 @@ static const uint64_t s_pow10[19] = {1u,
                                      100000000000000000u,
                                      1000000000000000000u};
 
-// The power of ten of the first digit (that of the last for zero).
-static int64_t TopPower(const mlocDecimal* d)
-{
-    return d->count == 0 ? d->exponent : (int64_t)d->exponent + d->count - 1;
-}
-
-// The digit at a power of ten.
-static uint8_t DigitAt(const mlocDecimal* d, int64_t power)
-{
-    if (d->count == 0 || power < d->exponent || power > TopPower(d))
-    {
-        return 0;
-    }
-    return d->digits[(int64_t)d->count - 1 - (power - d->exponent)];
-}
-
-// Whether every field holds as the library writes it.
-static bool Valid(const mlocDecimal* d)
+bool mlocValidDecimal(const mlocDecimal* d)
 {
     if (d->kind > mloc_decimalNaN || d->negative > 1 || d->reserved != 0 ||
         d->count > mlocDecimalDigits)
@@ -73,7 +56,7 @@ static bool Valid(const mlocDecimal* d)
     }
     int64_t needed = d->exponent < 0 ? -(int64_t)d->exponent : 0;
     return d->digits[0] != 0 && d->digits[d->count - 1] != 0 &&
-           d->exponent >= -mlocDecimalMaxExponent && TopPower(d) <= mlocDecimalMaxExponent &&
+           d->exponent >= -mlocDecimalMaxExponent && mlocTopPower(d) <= mlocDecimalMaxExponent &&
            d->fractionDigits >= needed && d->fractionDigits <= mlocDecimalMaxExponent;
 }
 
@@ -285,7 +268,7 @@ mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* de
 mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output)
 {
     if (decimal == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity > 0) || !Valid(decimal))
+        (output->buffer == nullptr && output->capacity > 0) || !mlocValidDecimal(decimal))
     {
         return mloc_errorInvalid;
     }
@@ -295,7 +278,7 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output)
                           : decimal->kind == mloc_decimalNaN    ? s_nan
                                                                 : nullptr;
     int64_t specialLength = decimal->kind == mloc_decimalInfinity ? 8 : 3;
-    int64_t top = TopPower(decimal);
+    int64_t top = mlocTopPower(decimal);
     int64_t integerDigits = special != nullptr ? specialLength : top >= 0 ? top + 1 : 1;
     int64_t fraction = decimal->fractionDigits;
     size_t length = (size_t)(decimal->negative + integerDigits + (fraction > 0 ? fraction + 1 : 0));
@@ -318,14 +301,14 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output)
     }
     for (int64_t power = integerDigits - 1; power >= 0; power--)
     {
-        out[n++] = (char)('0' + DigitAt(decimal, power));
+        out[n++] = (char)('0' + mlocDigitAt(decimal, power));
     }
     if (fraction > 0)
     {
         out[n++] = '.';
         for (int64_t power = -1; power >= -fraction; power--)
         {
-            out[n++] = (char)('0' + DigitAt(decimal, power));
+            out[n++] = (char)('0' + mlocDigitAt(decimal, power));
         }
     }
     return mloc_success;
@@ -339,7 +322,7 @@ static uint64_t Window(const mlocDecimal* d, int64_t high, int64_t low)
     bool wide = false;
     for (int k = 0; k < d->count; k++)
     {
-        int64_t power = TopPower(d) - k;
+        int64_t power = mlocTopPower(d) - k;
         if (power > high || power < low || d->digits[k] == 0)
         {
             continue;
@@ -358,7 +341,7 @@ static uint64_t Window(const mlocDecimal* d, int64_t high, int64_t low)
 
 mlocResult mlocGetPluralOperands(const mlocDecimal* decimal, mlocPluralOperands* operandsOut)
 {
-    if (decimal == nullptr || operandsOut == nullptr || !Valid(decimal) ||
+    if (decimal == nullptr || operandsOut == nullptr || !mlocValidDecimal(decimal) ||
         decimal->kind != mloc_decimalFinite)
     {
         return mloc_errorInvalid;

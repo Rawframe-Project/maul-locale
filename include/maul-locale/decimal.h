@@ -54,6 +54,23 @@ extern "C"
         uint8_t reserved;
     } mlocDecimal;
 
+    // How a value between two multiples rounds (ECMA-402's names): toward
+    // positive infinity, negative infinity, away from zero or toward
+    // zero; or to the nearer, a tie going as named. The zero value is
+    // ECMA-402's default.
+    typedef enum mlocRoundingMode
+    {
+        mloc_roundHalfExpand = 0,
+        mloc_roundHalfEven = 1,
+        mloc_roundHalfTrunc = 2,
+        mloc_roundHalfCeil = 3,
+        mloc_roundHalfFloor = 4,
+        mloc_roundCeil = 5,
+        mloc_roundFloor = 6,
+        mloc_roundExpand = 7,
+        mloc_roundTrunc = 8,
+    } mlocRoundingMode;
+
     // The operands CLDR's plural rules read (UTS #35 Part 3). An integer
     // of more than 18 digits is 10^18 plus its low 18 digits: it equals
     // no literal of a rule and keeps every remainder by a power of ten up
@@ -143,6 +160,43 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatDecimal(const mlocDecimal* decimal,
                                                          mlocOutput* output);
+
+    /// Rounds a decimal to a multiple of increment times 10^position: at
+    /// position -2 with increment 5, 1.234 becomes 1.25 and 1.2 stays. It
+    /// then shows the fewer of its fraction digits and -position (at
+    /// least those its digits need), so 1.999 at -2 is 2.00 and 1.5 at -2
+    /// stays 1.5. A value that rounds to zero keeps its sign. Infinity and
+    /// NaN are left as they are.
+    ///
+    /// @param decimal    The decimal, rounded in place; left unchanged on
+    ///                   failure.
+    /// @param position   The power of ten of the increment's unit, within
+    ///                   10^±999999.
+    /// @param increment  1, 2, 5 or 25 (ECMA-402's 10, 20, 50, 250 and
+    ///                   larger are these at a higher position); 0 means 1.
+    /// @param mode       How a value between two multiples rounds.
+    /// @return mloc_success; mloc_errorCapacity when the rounded value
+    ///         passes 10^999999; mloc_errorInvalid for a null pointer, a
+    ///         decimal the library did not make, or another position,
+    ///         increment or mode.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position,
+                                                        uint32_t increment, mlocRoundingMode mode);
+
+    /// Sets the fraction digits a decimal shows, never fewer than its
+    /// digits need: 1.5 shows 1.500 with three and 1.50 shows 1.5 with
+    /// zero. The value is unchanged; mlocRoundDecimal removes digits.
+    ///
+    /// @param decimal  The decimal, changed in place; left unchanged on
+    ///                 failure.
+    /// @param count    The fraction digits to show, 0 to 999999.
+    /// @return mloc_success, also for infinity and NaN, which show none;
+    ///         mloc_errorInvalid for a null pointer, a decimal the library
+    ///         did not make, or a count out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocShowFractionDigits(mlocDecimal* decimal, int32_t count);
 
     /// Computes the plural operands of a finite decimal; c is 0.
     ///

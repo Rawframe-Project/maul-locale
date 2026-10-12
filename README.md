@@ -35,8 +35,9 @@ fallback chains per component, language matching as ICU's
 LocaleMatcher does it, and regional preferences (CLDR's conformance
 files, its own inheritance and JSON, and ICU's matcher test pass on
 every push), and decimal values (from text, integers and the shortest
-digits of a double) with their plural operands. The library has
-25 public functions.
+digits of a double, rounded in ECMA-402's modes) with their plural
+operands. The library has
+27 public functions.
 
 ## Building
 

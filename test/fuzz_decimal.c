@@ -69,4 +69,23 @@ static void Check(const mlocDecimal* decimal)
     const uint64_t limit = 2000000000000000000u;
     Require(operands.i < limit && operands.f < limit && operands.t < limit);
     Require(operands.w <= operands.v && (operands.t == 0) == (operands.w == 0));
+    // Rounding in every mode gives a decimal that writes and reads back,
+    // or refuses for capacity alone; rounding it again changes nothing.
+    for (int mode = 0; mode <= mloc_roundTrunc; mode++)
+    {
+        static const uint32_t s_increments[4] = {1, 2, 5, 25};
+        mlocDecimal rounded = *decimal;
+        int32_t position = (int32_t)(operands.i % 41) - 20;
+        uint32_t increment = s_increments[(operands.f + (uint32_t)mode) % 4];
+        mlocResult result = mlocRoundDecimal(&rounded, position, increment, mode);
+        Require(result == mloc_success || result == mloc_errorCapacity);
+        if (result == mloc_success)
+        {
+            mlocDecimal twice = rounded;
+            Require(mlocRoundDecimal(&twice, position, increment, mode) == mloc_success);
+            Require(memcmp(&twice, &rounded, sizeof(twice)) == 0);
+            mlocOutput out = {.buffer = s_buffer, .capacity = sizeof(s_buffer)};
+            Require(mlocFormatDecimal(&rounded, &out) == mloc_success);
+        }
+    }
 }

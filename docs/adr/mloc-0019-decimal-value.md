@@ -41,6 +41,16 @@ fixed-size and copyable).
   (every exponent with four mantissas, powers of ten and their
   neighbours, integers, thousandths and random bit patterns); the
   tests read 200,000 random ones back with `strtod`.
+- `mlocRoundDecimal` rounds to a multiple of an increment (1, 2, 5 or
+  25, which with the position give all of ECMA-402's increments) times
+  a power of ten, in ECMA-402's nine modes, half-expand the default.
+  The result shows the fewer of its fraction digits and the position's
+  (`1.999` at hundredths is `2.00`, `1.5` stays `1.5`), a value that
+  rounds to zero keeps its sign, and a result past 40 significant
+  digits or 10^999999 is refused. `mlocShowFractionDigits` pads or
+  trims the zeros shown without touching the digits. Python's
+  `decimal` module agreed on 1.3 million random cases (the two it
+  could write and this cannot hold refused with a reason).
 - `mlocFormatDecimal` writes it back as plain text (`-1234.50`,
   `Infinity`, `NaN`), which parses to the same value.
 - The plural operands are computed here, for the `plural` part and the

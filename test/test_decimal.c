@@ -433,6 +433,435 @@ static void TestKnownAnswers(void)
     CHECK(s_hash == 0x33F722351DA5515Cu, "150,084 doubles give Python's shortest digits");
 }
 
+// Rounding against Python's decimal module: every mode on values below,
+// at and above half, increments of 2, 5 and 25, and multiples of 25.
+static void TestRoundCases(void)
+{
+    static const struct
+    {
+        const char* text;
+        int32_t position;
+        uint32_t increment;
+        mlocRoundingMode mode;
+        const char* expected;
+    } s_cases[] = {
+        {"-2.5", 0, 1, mloc_roundHalfExpand, "-3"},
+        {"-2.5", 0, 1, mloc_roundHalfEven, "-2"},
+        {"-2.5", 0, 1, mloc_roundHalfTrunc, "-2"},
+        {"-2.5", 0, 1, mloc_roundHalfCeil, "-2"},
+        {"-2.5", 0, 1, mloc_roundHalfFloor, "-3"},
+        {"-2.5", 0, 1, mloc_roundCeil, "-2"},
+        {"-2.5", 0, 1, mloc_roundFloor, "-3"},
+        {"-2.5", 0, 1, mloc_roundExpand, "-3"},
+        {"-2.5", 0, 1, mloc_roundTrunc, "-2"},
+        {"-1.5", 0, 1, mloc_roundHalfExpand, "-2"},
+        {"-1.5", 0, 1, mloc_roundHalfEven, "-2"},
+        {"-1.5", 0, 1, mloc_roundHalfTrunc, "-1"},
+        {"-1.5", 0, 1, mloc_roundHalfCeil, "-1"},
+        {"-1.5", 0, 1, mloc_roundHalfFloor, "-2"},
+        {"-1.5", 0, 1, mloc_roundCeil, "-1"},
+        {"-1.5", 0, 1, mloc_roundFloor, "-2"},
+        {"-1.5", 0, 1, mloc_roundExpand, "-2"},
+        {"-1.5", 0, 1, mloc_roundTrunc, "-1"},
+        {"-1.4", 0, 1, mloc_roundHalfExpand, "-1"},
+        {"-1.4", 0, 1, mloc_roundHalfEven, "-1"},
+        {"-1.4", 0, 1, mloc_roundHalfTrunc, "-1"},
+        {"-1.4", 0, 1, mloc_roundHalfCeil, "-1"},
+        {"-1.4", 0, 1, mloc_roundHalfFloor, "-1"},
+        {"-1.4", 0, 1, mloc_roundCeil, "-1"},
+        {"-1.4", 0, 1, mloc_roundFloor, "-2"},
+        {"-1.4", 0, 1, mloc_roundExpand, "-2"},
+        {"-1.4", 0, 1, mloc_roundTrunc, "-1"},
+        {"-0.6", 0, 1, mloc_roundHalfExpand, "-1"},
+        {"-0.6", 0, 1, mloc_roundHalfEven, "-1"},
+        {"-0.6", 0, 1, mloc_roundHalfTrunc, "-1"},
+        {"-0.6", 0, 1, mloc_roundHalfCeil, "-1"},
+        {"-0.6", 0, 1, mloc_roundHalfFloor, "-1"},
+        {"-0.6", 0, 1, mloc_roundCeil, "-0"},
+        {"-0.6", 0, 1, mloc_roundFloor, "-1"},
+        {"-0.6", 0, 1, mloc_roundExpand, "-1"},
+        {"-0.6", 0, 1, mloc_roundTrunc, "-0"},
+        {"-0.5", 0, 1, mloc_roundHalfExpand, "-1"},
+        {"-0.5", 0, 1, mloc_roundHalfEven, "-0"},
+        {"-0.5", 0, 1, mloc_roundHalfTrunc, "-0"},
+        {"-0.5", 0, 1, mloc_roundHalfCeil, "-0"},
+        {"-0.5", 0, 1, mloc_roundHalfFloor, "-1"},
+        {"-0.5", 0, 1, mloc_roundCeil, "-0"},
+        {"-0.5", 0, 1, mloc_roundFloor, "-1"},
+        {"-0.5", 0, 1, mloc_roundExpand, "-1"},
+        {"-0.5", 0, 1, mloc_roundTrunc, "-0"},
+        {"-0.4", 0, 1, mloc_roundHalfExpand, "-0"},
+        {"-0.4", 0, 1, mloc_roundHalfEven, "-0"},
+        {"-0.4", 0, 1, mloc_roundHalfTrunc, "-0"},
+        {"-0.4", 0, 1, mloc_roundHalfCeil, "-0"},
+        {"-0.4", 0, 1, mloc_roundHalfFloor, "-0"},
+        {"-0.4", 0, 1, mloc_roundCeil, "-0"},
+        {"-0.4", 0, 1, mloc_roundFloor, "-1"},
+        {"-0.4", 0, 1, mloc_roundExpand, "-1"},
+        {"-0.4", 0, 1, mloc_roundTrunc, "-0"},
+        {"0.4", 0, 1, mloc_roundHalfExpand, "0"},
+        {"0.4", 0, 1, mloc_roundHalfEven, "0"},
+        {"0.4", 0, 1, mloc_roundHalfTrunc, "0"},
+        {"0.4", 0, 1, mloc_roundHalfCeil, "0"},
+        {"0.4", 0, 1, mloc_roundHalfFloor, "0"},
+        {"0.4", 0, 1, mloc_roundCeil, "1"},
+        {"0.4", 0, 1, mloc_roundFloor, "0"},
+        {"0.4", 0, 1, mloc_roundExpand, "1"},
+        {"0.4", 0, 1, mloc_roundTrunc, "0"},
+        {"0.5", 0, 1, mloc_roundHalfExpand, "1"},
+        {"0.5", 0, 1, mloc_roundHalfEven, "0"},
+        {"0.5", 0, 1, mloc_roundHalfTrunc, "0"},
+        {"0.5", 0, 1, mloc_roundHalfCeil, "1"},
+        {"0.5", 0, 1, mloc_roundHalfFloor, "0"},
+        {"0.5", 0, 1, mloc_roundCeil, "1"},
+        {"0.5", 0, 1, mloc_roundFloor, "0"},
+        {"0.5", 0, 1, mloc_roundExpand, "1"},
+        {"0.5", 0, 1, mloc_roundTrunc, "0"},
+        {"0.6", 0, 1, mloc_roundHalfExpand, "1"},
+        {"0.6", 0, 1, mloc_roundHalfEven, "1"},
+        {"0.6", 0, 1, mloc_roundHalfTrunc, "1"},
+        {"0.6", 0, 1, mloc_roundHalfCeil, "1"},
+        {"0.6", 0, 1, mloc_roundHalfFloor, "1"},
+        {"0.6", 0, 1, mloc_roundCeil, "1"},
+        {"0.6", 0, 1, mloc_roundFloor, "0"},
+        {"0.6", 0, 1, mloc_roundExpand, "1"},
+        {"0.6", 0, 1, mloc_roundTrunc, "0"},
+        {"1.4", 0, 1, mloc_roundHalfExpand, "1"},
+        {"1.4", 0, 1, mloc_roundHalfEven, "1"},
+        {"1.4", 0, 1, mloc_roundHalfTrunc, "1"},
+        {"1.4", 0, 1, mloc_roundHalfCeil, "1"},
+        {"1.4", 0, 1, mloc_roundHalfFloor, "1"},
+        {"1.4", 0, 1, mloc_roundCeil, "2"},
+        {"1.4", 0, 1, mloc_roundFloor, "1"},
+        {"1.4", 0, 1, mloc_roundExpand, "2"},
+        {"1.4", 0, 1, mloc_roundTrunc, "1"},
+        {"1.5", 0, 1, mloc_roundHalfExpand, "2"},
+        {"1.5", 0, 1, mloc_roundHalfEven, "2"},
+        {"1.5", 0, 1, mloc_roundHalfTrunc, "1"},
+        {"1.5", 0, 1, mloc_roundHalfCeil, "2"},
+        {"1.5", 0, 1, mloc_roundHalfFloor, "1"},
+        {"1.5", 0, 1, mloc_roundCeil, "2"},
+        {"1.5", 0, 1, mloc_roundFloor, "1"},
+        {"1.5", 0, 1, mloc_roundExpand, "2"},
+        {"1.5", 0, 1, mloc_roundTrunc, "1"},
+        {"2.5", 0, 1, mloc_roundHalfExpand, "3"},
+        {"2.5", 0, 1, mloc_roundHalfEven, "2"},
+        {"2.5", 0, 1, mloc_roundHalfTrunc, "2"},
+        {"2.5", 0, 1, mloc_roundHalfCeil, "3"},
+        {"2.5", 0, 1, mloc_roundHalfFloor, "2"},
+        {"2.5", 0, 1, mloc_roundCeil, "3"},
+        {"2.5", 0, 1, mloc_roundFloor, "2"},
+        {"2.5", 0, 1, mloc_roundExpand, "3"},
+        {"2.5", 0, 1, mloc_roundTrunc, "2"},
+        {"1.12", -2, 2, mloc_roundHalfExpand, "1.12"},
+        {"1.12", -2, 2, mloc_roundHalfEven, "1.12"},
+        {"1.12", -2, 2, mloc_roundHalfTrunc, "1.12"},
+        {"1.12", -2, 2, mloc_roundCeil, "1.12"},
+        {"1.12", -2, 2, mloc_roundTrunc, "1.12"},
+        {"1.12", -2, 5, mloc_roundHalfExpand, "1.10"},
+        {"1.12", -2, 5, mloc_roundHalfEven, "1.10"},
+        {"1.12", -2, 5, mloc_roundHalfTrunc, "1.10"},
+        {"1.12", -2, 5, mloc_roundCeil, "1.15"},
+        {"1.12", -2, 5, mloc_roundTrunc, "1.10"},
+        {"1.12", -2, 25, mloc_roundHalfExpand, "1.00"},
+        {"1.12", -2, 25, mloc_roundHalfEven, "1.00"},
+        {"1.12", -2, 25, mloc_roundHalfTrunc, "1.00"},
+        {"1.12", -2, 25, mloc_roundCeil, "1.25"},
+        {"1.12", -2, 25, mloc_roundTrunc, "1.00"},
+        {"1.125", -2, 2, mloc_roundHalfExpand, "1.12"},
+        {"1.125", -2, 2, mloc_roundHalfEven, "1.12"},
+        {"1.125", -2, 2, mloc_roundHalfTrunc, "1.12"},
+        {"1.125", -2, 2, mloc_roundCeil, "1.14"},
+        {"1.125", -2, 2, mloc_roundTrunc, "1.12"},
+        {"1.125", -2, 5, mloc_roundHalfExpand, "1.15"},
+        {"1.125", -2, 5, mloc_roundHalfEven, "1.10"},
+        {"1.125", -2, 5, mloc_roundHalfTrunc, "1.10"},
+        {"1.125", -2, 5, mloc_roundCeil, "1.15"},
+        {"1.125", -2, 5, mloc_roundTrunc, "1.10"},
+        {"1.125", -2, 25, mloc_roundHalfExpand, "1.25"},
+        {"1.125", -2, 25, mloc_roundHalfEven, "1.00"},
+        {"1.125", -2, 25, mloc_roundHalfTrunc, "1.00"},
+        {"1.125", -2, 25, mloc_roundCeil, "1.25"},
+        {"1.125", -2, 25, mloc_roundTrunc, "1.00"},
+        {"1.13", -2, 2, mloc_roundHalfExpand, "1.14"},
+        {"1.13", -2, 2, mloc_roundHalfEven, "1.12"},
+        {"1.13", -2, 2, mloc_roundHalfTrunc, "1.12"},
+        {"1.13", -2, 2, mloc_roundCeil, "1.14"},
+        {"1.13", -2, 2, mloc_roundTrunc, "1.12"},
+        {"1.13", -2, 5, mloc_roundHalfExpand, "1.15"},
+        {"1.13", -2, 5, mloc_roundHalfEven, "1.15"},
+        {"1.13", -2, 5, mloc_roundHalfTrunc, "1.15"},
+        {"1.13", -2, 5, mloc_roundCeil, "1.15"},
+        {"1.13", -2, 5, mloc_roundTrunc, "1.10"},
+        {"1.13", -2, 25, mloc_roundHalfExpand, "1.25"},
+        {"1.13", -2, 25, mloc_roundHalfEven, "1.25"},
+        {"1.13", -2, 25, mloc_roundHalfTrunc, "1.25"},
+        {"1.13", -2, 25, mloc_roundCeil, "1.25"},
+        {"1.13", -2, 25, mloc_roundTrunc, "1.00"},
+        {"1.1375", -2, 2, mloc_roundHalfExpand, "1.14"},
+        {"1.1375", -2, 2, mloc_roundHalfEven, "1.14"},
+        {"1.1375", -2, 2, mloc_roundHalfTrunc, "1.14"},
+        {"1.1375", -2, 2, mloc_roundCeil, "1.14"},
+        {"1.1375", -2, 2, mloc_roundTrunc, "1.12"},
+        {"1.1375", -2, 5, mloc_roundHalfExpand, "1.15"},
+        {"1.1375", -2, 5, mloc_roundHalfEven, "1.15"},
+        {"1.1375", -2, 5, mloc_roundHalfTrunc, "1.15"},
+        {"1.1375", -2, 5, mloc_roundCeil, "1.15"},
+        {"1.1375", -2, 5, mloc_roundTrunc, "1.10"},
+        {"1.1375", -2, 25, mloc_roundHalfExpand, "1.25"},
+        {"1.1375", -2, 25, mloc_roundHalfEven, "1.25"},
+        {"1.1375", -2, 25, mloc_roundHalfTrunc, "1.25"},
+        {"1.1375", -2, 25, mloc_roundCeil, "1.25"},
+        {"1.1375", -2, 25, mloc_roundTrunc, "1.00"},
+        {"1.375", -2, 2, mloc_roundHalfExpand, "1.38"},
+        {"1.375", -2, 2, mloc_roundHalfEven, "1.38"},
+        {"1.375", -2, 2, mloc_roundHalfTrunc, "1.38"},
+        {"1.375", -2, 2, mloc_roundCeil, "1.38"},
+        {"1.375", -2, 2, mloc_roundTrunc, "1.36"},
+        {"1.375", -2, 5, mloc_roundHalfExpand, "1.40"},
+        {"1.375", -2, 5, mloc_roundHalfEven, "1.40"},
+        {"1.375", -2, 5, mloc_roundHalfTrunc, "1.35"},
+        {"1.375", -2, 5, mloc_roundCeil, "1.40"},
+        {"1.375", -2, 5, mloc_roundTrunc, "1.35"},
+        {"1.375", -2, 25, mloc_roundHalfExpand, "1.50"},
+        {"1.375", -2, 25, mloc_roundHalfEven, "1.50"},
+        {"1.375", -2, 25, mloc_roundHalfTrunc, "1.25"},
+        {"1.375", -2, 25, mloc_roundCeil, "1.50"},
+        {"1.375", -2, 25, mloc_roundTrunc, "1.25"},
+        {"1.874", -2, 2, mloc_roundHalfExpand, "1.88"},
+        {"1.874", -2, 2, mloc_roundHalfEven, "1.88"},
+        {"1.874", -2, 2, mloc_roundHalfTrunc, "1.88"},
+        {"1.874", -2, 2, mloc_roundCeil, "1.88"},
+        {"1.874", -2, 2, mloc_roundTrunc, "1.86"},
+        {"1.874", -2, 5, mloc_roundHalfExpand, "1.85"},
+        {"1.874", -2, 5, mloc_roundHalfEven, "1.85"},
+        {"1.874", -2, 5, mloc_roundHalfTrunc, "1.85"},
+        {"1.874", -2, 5, mloc_roundCeil, "1.90"},
+        {"1.874", -2, 5, mloc_roundTrunc, "1.85"},
+        {"1.874", -2, 25, mloc_roundHalfExpand, "1.75"},
+        {"1.874", -2, 25, mloc_roundHalfEven, "1.75"},
+        {"1.874", -2, 25, mloc_roundHalfTrunc, "1.75"},
+        {"1.874", -2, 25, mloc_roundCeil, "2.00"},
+        {"1.874", -2, 25, mloc_roundTrunc, "1.75"},
+        {"-1.125", -2, 2, mloc_roundHalfExpand, "-1.12"},
+        {"-1.125", -2, 2, mloc_roundHalfEven, "-1.12"},
+        {"-1.125", -2, 2, mloc_roundHalfTrunc, "-1.12"},
+        {"-1.125", -2, 2, mloc_roundCeil, "-1.12"},
+        {"-1.125", -2, 2, mloc_roundTrunc, "-1.12"},
+        {"-1.125", -2, 5, mloc_roundHalfExpand, "-1.15"},
+        {"-1.125", -2, 5, mloc_roundHalfEven, "-1.10"},
+        {"-1.125", -2, 5, mloc_roundHalfTrunc, "-1.10"},
+        {"-1.125", -2, 5, mloc_roundCeil, "-1.10"},
+        {"-1.125", -2, 5, mloc_roundTrunc, "-1.10"},
+        {"-1.125", -2, 25, mloc_roundHalfExpand, "-1.25"},
+        {"-1.125", -2, 25, mloc_roundHalfEven, "-1.00"},
+        {"-1.125", -2, 25, mloc_roundHalfTrunc, "-1.00"},
+        {"-1.125", -2, 25, mloc_roundCeil, "-1.00"},
+        {"-1.125", -2, 25, mloc_roundTrunc, "-1.00"},
+        {"1.9999", -2, 2, mloc_roundHalfExpand, "2.00"},
+        {"1.9999", -2, 2, mloc_roundHalfEven, "2.00"},
+        {"1.9999", -2, 2, mloc_roundHalfTrunc, "2.00"},
+        {"1.9999", -2, 2, mloc_roundCeil, "2.00"},
+        {"1.9999", -2, 2, mloc_roundTrunc, "1.98"},
+        {"1.9999", -2, 5, mloc_roundHalfExpand, "2.00"},
+        {"1.9999", -2, 5, mloc_roundHalfEven, "2.00"},
+        {"1.9999", -2, 5, mloc_roundHalfTrunc, "2.00"},
+        {"1.9999", -2, 5, mloc_roundCeil, "2.00"},
+        {"1.9999", -2, 5, mloc_roundTrunc, "1.95"},
+        {"1.9999", -2, 25, mloc_roundHalfExpand, "2.00"},
+        {"1.9999", -2, 25, mloc_roundHalfEven, "2.00"},
+        {"1.9999", -2, 25, mloc_roundHalfTrunc, "2.00"},
+        {"1.9999", -2, 25, mloc_roundCeil, "2.00"},
+        {"1.9999", -2, 25, mloc_roundTrunc, "1.75"},
+        {"12.5", 0, 1, mloc_roundHalfExpand, "13"},
+        {"12.5", 0, 1, mloc_roundHalfEven, "12"},
+        {"12.5", 0, 1, mloc_roundHalfCeil, "13"},
+        {"12.5", 0, 1, mloc_roundHalfFloor, "12"},
+        {"12.5", 0, 1, mloc_roundExpand, "13"},
+        {"12.5", 0, 25, mloc_roundHalfExpand, "25"},
+        {"12.5", 0, 25, mloc_roundHalfEven, "0"},
+        {"12.5", 0, 25, mloc_roundHalfCeil, "25"},
+        {"12.5", 0, 25, mloc_roundHalfFloor, "0"},
+        {"12.5", 0, 25, mloc_roundExpand, "25"},
+        {"37.5", 0, 1, mloc_roundHalfExpand, "38"},
+        {"37.5", 0, 1, mloc_roundHalfEven, "38"},
+        {"37.5", 0, 1, mloc_roundHalfCeil, "38"},
+        {"37.5", 0, 1, mloc_roundHalfFloor, "37"},
+        {"37.5", 0, 1, mloc_roundExpand, "38"},
+        {"37.5", 0, 25, mloc_roundHalfExpand, "50"},
+        {"37.5", 0, 25, mloc_roundHalfEven, "50"},
+        {"37.5", 0, 25, mloc_roundHalfCeil, "50"},
+        {"37.5", 0, 25, mloc_roundHalfFloor, "25"},
+        {"37.5", 0, 25, mloc_roundExpand, "50"},
+        {"62.5", 0, 1, mloc_roundHalfExpand, "63"},
+        {"62.5", 0, 1, mloc_roundHalfEven, "62"},
+        {"62.5", 0, 1, mloc_roundHalfCeil, "63"},
+        {"62.5", 0, 1, mloc_roundHalfFloor, "62"},
+        {"62.5", 0, 1, mloc_roundExpand, "63"},
+        {"62.5", 0, 25, mloc_roundHalfExpand, "75"},
+        {"62.5", 0, 25, mloc_roundHalfEven, "50"},
+        {"62.5", 0, 25, mloc_roundHalfCeil, "75"},
+        {"62.5", 0, 25, mloc_roundHalfFloor, "50"},
+        {"62.5", 0, 25, mloc_roundExpand, "75"},
+        {"87.5", 0, 1, mloc_roundHalfExpand, "88"},
+        {"87.5", 0, 1, mloc_roundHalfEven, "88"},
+        {"87.5", 0, 1, mloc_roundHalfCeil, "88"},
+        {"87.5", 0, 1, mloc_roundHalfFloor, "87"},
+        {"87.5", 0, 1, mloc_roundExpand, "88"},
+        {"87.5", 0, 25, mloc_roundHalfExpand, "100"},
+        {"87.5", 0, 25, mloc_roundHalfEven, "100"},
+        {"87.5", 0, 25, mloc_roundHalfCeil, "100"},
+        {"87.5", 0, 25, mloc_roundHalfFloor, "75"},
+        {"87.5", 0, 25, mloc_roundExpand, "100"},
+        {"10", 0, 1, mloc_roundHalfExpand, "10"},
+        {"10", 0, 1, mloc_roundHalfEven, "10"},
+        {"10", 0, 1, mloc_roundHalfCeil, "10"},
+        {"10", 0, 1, mloc_roundHalfFloor, "10"},
+        {"10", 0, 1, mloc_roundExpand, "10"},
+        {"10", 0, 25, mloc_roundHalfExpand, "0"},
+        {"10", 0, 25, mloc_roundHalfEven, "0"},
+        {"10", 0, 25, mloc_roundHalfCeil, "0"},
+        {"10", 0, 25, mloc_roundHalfFloor, "0"},
+        {"10", 0, 25, mloc_roundExpand, "25"},
+        {"-10", 0, 1, mloc_roundHalfExpand, "-10"},
+        {"-10", 0, 1, mloc_roundHalfEven, "-10"},
+        {"-10", 0, 1, mloc_roundHalfCeil, "-10"},
+        {"-10", 0, 1, mloc_roundHalfFloor, "-10"},
+        {"-10", 0, 1, mloc_roundExpand, "-10"},
+        {"-10", 0, 25, mloc_roundHalfExpand, "-0"},
+        {"-10", 0, 25, mloc_roundHalfEven, "-0"},
+        {"-10", 0, 25, mloc_roundHalfCeil, "-0"},
+        {"-10", 0, 25, mloc_roundHalfFloor, "-0"},
+        {"-10", 0, 25, mloc_roundExpand, "-25"},
+        {"1234.5", 0, 1, mloc_roundHalfExpand, "1235"},
+        {"1234.5", 0, 1, mloc_roundHalfEven, "1234"},
+        {"1234.5", 0, 1, mloc_roundHalfCeil, "1235"},
+        {"1234.5", 0, 1, mloc_roundHalfFloor, "1234"},
+        {"1234.5", 0, 1, mloc_roundExpand, "1235"},
+        {"1234.5", 0, 25, mloc_roundHalfExpand, "1225"},
+        {"1234.5", 0, 25, mloc_roundHalfEven, "1225"},
+        {"1234.5", 0, 25, mloc_roundHalfCeil, "1225"},
+        {"1234.5", 0, 25, mloc_roundHalfFloor, "1225"},
+        {"1234.5", 0, 25, mloc_roundExpand, "1250"},
+        {"99.9", 0, 1, mloc_roundHalfExpand, "100"},
+        {"99.9", 0, 1, mloc_roundHalfEven, "100"},
+        {"99.9", 0, 1, mloc_roundHalfCeil, "100"},
+        {"99.9", 0, 1, mloc_roundHalfFloor, "100"},
+        {"99.9", 0, 1, mloc_roundExpand, "100"},
+        {"99.9", 0, 25, mloc_roundHalfExpand, "100"},
+        {"99.9", 0, 25, mloc_roundHalfEven, "100"},
+        {"99.9", 0, 25, mloc_roundHalfCeil, "100"},
+        {"99.9", 0, 25, mloc_roundHalfFloor, "100"},
+        {"99.9", 0, 25, mloc_roundExpand, "100"},
+        {"0.0001", 0, 1, mloc_roundHalfExpand, "0"},
+        {"0.0001", 0, 1, mloc_roundHalfEven, "0"},
+        {"0.0001", 0, 1, mloc_roundHalfCeil, "0"},
+        {"0.0001", 0, 1, mloc_roundHalfFloor, "0"},
+        {"0.0001", 0, 1, mloc_roundExpand, "1"},
+        {"0.0001", 0, 25, mloc_roundHalfExpand, "0"},
+        {"0.0001", 0, 25, mloc_roundHalfEven, "0"},
+        {"0.0001", 0, 25, mloc_roundHalfCeil, "0"},
+        {"0.0001", 0, 25, mloc_roundHalfFloor, "0"},
+        {"0.0001", 0, 25, mloc_roundExpand, "25"},
+        {"-0.0001", 0, 1, mloc_roundHalfExpand, "-0"},
+        {"-0.0001", 0, 1, mloc_roundHalfEven, "-0"},
+        {"-0.0001", 0, 1, mloc_roundHalfCeil, "-0"},
+        {"-0.0001", 0, 1, mloc_roundHalfFloor, "-0"},
+        {"-0.0001", 0, 1, mloc_roundExpand, "-1"},
+        {"-0.0001", 0, 25, mloc_roundHalfExpand, "-0"},
+        {"-0.0001", 0, 25, mloc_roundHalfEven, "-0"},
+        {"-0.0001", 0, 25, mloc_roundHalfCeil, "-0"},
+        {"-0.0001", 0, 25, mloc_roundHalfFloor, "-0"},
+        {"-0.0001", 0, 25, mloc_roundExpand, "-25"},
+    };
+    for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
+    {
+        mlocDecimal d;
+        bool ok = Parsed(s_cases[i].text, &d) &&
+                  mlocRoundDecimal(&d, s_cases[i].position, s_cases[i].increment,
+                                   s_cases[i].mode) == mloc_success &&
+                  Writes(&d, s_cases[i].expected);
+        CHECK(ok, s_cases[i].text);
+    }
+}
+
+static void TestRound(void)
+{
+    mlocDecimal d;
+    CHECK(Parsed("1.234", &d) && mlocRoundDecimal(&d, -2, 5, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "1.25"),
+          "an increment of 5 at hundredths");
+    CHECK(Parsed("1.999", &d) && mlocRoundDecimal(&d, -2, 1, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "2.00"),
+          "the fraction digits of the position");
+    CHECK(Parsed("1.5", &d) && mlocRoundDecimal(&d, -2, 1, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "1.5"),
+          "no more than it showed");
+    CHECK(Parsed("1.2", &d) && mlocRoundDecimal(&d, -2, 0, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "1.2"),
+          "an increment of 0 is 1");
+    CHECK(Parsed("-0.001", &d) && mlocRoundDecimal(&d, 0, 1, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "-0"),
+          "a value that rounds to zero keeps its sign");
+    CHECK(Parsed("5", &d) && mlocRoundDecimal(&d, 10, 1, mloc_roundExpand) == 0 &&
+              Writes(&d, "10000000000"),
+          "a position above the value");
+    CHECK(Parsed("0.004", &d) && mlocRoundDecimal(&d, -2, 1, mloc_roundExpand) == 0 &&
+              Writes(&d, "0.01"),
+          "a value below the unit, away from zero");
+    CHECK(Parsed("123e5", &d) && mlocRoundDecimal(&d, 0, 25, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "12300000"),
+          "digits two places above the unit are a multiple");
+    CHECK(Parsed("9.99e999999", &d) &&
+              mlocRoundDecimal(&d, 999998, 1, mloc_roundExpand) == mloc_errorCapacity &&
+              d.count == 3 && d.exponent == 999997,
+          "a value rounded past the largest power, left unchanged");
+    CHECK(Parsed("12345678901234567890123456789012345678910", &d) &&
+              mlocRoundDecimal(&d, 0, 25, mloc_roundExpand) == mloc_errorCapacity && d.count == 40,
+          "and one that needs 41 digits");
+    CHECK(Parsed("99999999999999999999999999999999999999.99", &d) &&
+              mlocRoundDecimal(&d, -1, 1, mloc_roundHalfExpand) == 0 &&
+              Writes(&d, "100000000000000000000000000000000000000.0"),
+          "a carry through forty nines");
+    mlocDecimal special = {.kind = mloc_decimalNaN};
+    CHECK(mlocRoundDecimal(&special, 0, 1, mloc_roundHalfExpand) == 0 && Writes(&special, "NaN"),
+          "NaN is left as it is");
+    CHECK(Parsed("1", &d) && mlocRoundDecimal(nullptr, 0, 1, mloc_roundHalfExpand) != 0 &&
+              mlocRoundDecimal(&d, 0, 3, mloc_roundHalfExpand) == mloc_errorInvalid &&
+              mlocRoundDecimal(&d, 0, 1, (mlocRoundingMode)9) == mloc_errorInvalid &&
+              mlocRoundDecimal(&d, 1000000, 1, mloc_roundHalfExpand) == mloc_errorInvalid &&
+              mlocRoundDecimal(&d, -1000000, 1, mloc_roundHalfExpand) == mloc_errorInvalid,
+          "refusals");
+    CHECK(mlocRoundDecimal(&d, 999999, 1, mloc_roundTrunc) == 0 &&
+              mlocRoundDecimal(&d, -999999, 1, mloc_roundTrunc) == 0,
+          "the extreme positions");
+    d.reserved = 1;
+    CHECK(mlocRoundDecimal(&d, 0, 1, mloc_roundHalfExpand) == mloc_errorInvalid,
+          "a made-up decimal");
+}
+
+static void TestShowFractionDigits(void)
+{
+    mlocDecimal d;
+    CHECK(Parsed("1.5", &d) && mlocShowFractionDigits(&d, 3) == 0 && Writes(&d, "1.500"),
+          "padding");
+    CHECK(Parsed("1.50", &d) && mlocShowFractionDigits(&d, 0) == 0 && Writes(&d, "1.5"),
+          "never fewer than the digits need");
+    CHECK(Parsed("7", &d) && mlocShowFractionDigits(&d, 2) == 0 && Writes(&d, "7.00"),
+          "an integer");
+    CHECK(Parsed("0", &d) && mlocShowFractionDigits(&d, 999999) == 0 && d.fractionDigits == 999999,
+          "the most");
+    mlocDecimal special = {.kind = mloc_decimalInfinity};
+    CHECK(mlocShowFractionDigits(&special, 2) == 0 && special.fractionDigits == 0,
+          "infinity shows none");
+    CHECK(mlocShowFractionDigits(&d, -1) == mloc_errorInvalid &&
+              mlocShowFractionDigits(&d, 1000000) == mloc_errorInvalid &&
+              mlocShowFractionDigits(nullptr, 1) == mloc_errorInvalid,
+          "refusals");
+    d.negative = 3;
+    CHECK(mlocShowFractionDigits(&d, 1) == mloc_errorInvalid, "a made-up decimal");
+}
+
 // Ulf Adams's regression values for Ryu (its own trailing-zero, power of
 // five and boundary-shift cases) and two whose lower bound is exact,
 // against Python's repr; negatives by their magnitude.
@@ -523,5 +952,8 @@ int main(void)
     TestRoundTrip();
     TestKnownAnswers();
     TestRegressions();
+    TestRoundCases();
+    TestRound();
+    TestShowFractionDigits();
     return s_failures == 0 ? 0 : 1;
 }
