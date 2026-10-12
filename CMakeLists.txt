@@ -66,6 +66,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
     add_executable(conform_likely test/conform_likely.c)
     target_link_libraries(conform_likely PRIVATE maul-locale)
     maul_apply_flags(conform_likely)
+    # It reads its file with standard fopen, which the Windows C runtime
+    # reports as deprecated.
+    if(WIN32)
+        target_compile_definitions(conform_likely PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
     maul_add_header_tests()
 endif()
 
