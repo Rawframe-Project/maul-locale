@@ -29,9 +29,10 @@ buffer.
 Not released. The design is decided. Built so far: the generator's
 reading of CLDR (its inheritance checked against CLDR's own JSON on
 every push), the data layer that opens compiled-in data and data
-files, locale ids parsed strictly into canonical syntax, and likely
-subtags added and removed (CLDR's conformance file passes on every
-push). The library has 13 public functions.
+files, locale ids parsed strictly into canonical syntax and
+canonicalized with CLDR's aliases, and likely subtags added and removed
+(CLDR's conformance files pass on every push). The library has
+14 public functions.
 
 ## Building
 

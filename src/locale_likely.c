@@ -49,40 +49,6 @@ static Likely ReadLikely(DataSpan span)
     };
 }
 
-// Whether count 5-bit groups, highest first, hold letters: the first
-// `required` must, and the rest may be zero once one is.
-static bool Letters(uint64_t packed, int count, int required)
-{
-    for (int i = 0; i < count; i++)
-    {
-        uint32_t letter = (uint32_t)(packed >> (5 * (count - 1 - i))) & 31;
-        if (letter > 26 || (i < required && letter == 0))
-        {
-            return false;
-        }
-        if (letter == 0 && i + 1 < count && ((packed >> (5 * (count - 2 - i))) & 31) != 0)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool ValidLanguage(uint32_t language)
-{
-    return language < 1u << 15 && Letters(language, 3, 2);
-}
-
-static bool ValidScript(uint32_t script)
-{
-    return script < 1u << 20 && Letters(script, 4, 4);
-}
-
-static bool ValidRegion(uint32_t region)
-{
-    return (region >= 1024 && region < 2024) || (region < 1024 && Letters(region, 2, 2));
-}
-
 // A packed tag whose parts are valid; script and region may be absent
 // unless full.
 static bool ValidTag(uint64_t tag, bool full)
@@ -91,9 +57,9 @@ static bool ValidTag(uint64_t tag, bool full)
     uint32_t script = (uint32_t)(tag >> 11) & 0xFFFFF;
     uint32_t region = (uint32_t)tag & 0x7FF;
     // Bits past the 46 of a tag land in the language, which refuses them.
-    return language < 1u << 15 && ValidLanguage((uint32_t)language) &&
-           ((script == 0 && !full) || ValidScript(script)) &&
-           ((region == 0 && !full) || ValidRegion(region));
+    return language < 1u << 15 && mlocValidPackedLanguage((uint32_t)language) &&
+           ((script == 0 && !full) || mlocValidPackedScript(script)) &&
+           ((region == 0 && !full) || mlocValidPackedRegion(region));
 }
 
 bool mlocValidLikely(const DataView* view, DataSpan payload)
@@ -126,7 +92,7 @@ bool mlocValidLikely(const DataView* view, DataSpan payload)
         uint32_t key = mlocLoad16(likely.languageKeys + (size_t)i * 2);
         uint32_t value = mlocLoad32(likely.languageValues + (size_t)i * 4);
         if ((i > 0 && key <= mlocLoad16(likely.languageKeys + (size_t)(i - 1) * 2)) ||
-            !ValidLanguage(key) || key == und ||
+            !mlocValidPackedLanguage(key) || key == und ||
             !ValidTag(mlocPackTag(key, value >> 11, value & 0x7FF), true) || value >> 31 != 0)
         {
             return false;
@@ -196,40 +162,6 @@ static uint32_t FieldLength(const char* field, uint32_t size)
     return n;
 }
 
-static void UnpackLanguage(uint32_t packed, char* language)
-{
-    memset(language, 0, 8);
-    for (int i = 0; i < 3; i++)
-    {
-        uint32_t letter = packed >> (5 * (2 - i)) & 31;
-        language[i] = letter == 0 ? '\0' : (char)('a' + letter - 1);
-    }
-}
-
-static void UnpackScript(uint32_t packed, char* script)
-{
-    for (int i = 0; i < 4; i++)
-    {
-        char base = i == 0 ? 'A' : 'a';
-        script[i] = (char)(base + (packed >> (5 * (3 - i)) & 31) - 1);
-    }
-}
-
-static void UnpackRegion(uint32_t packed, char* region)
-{
-    memset(region, 0, 4);
-    if (packed >= 1024)
-    {
-        uint32_t number = packed - 1024;
-        region[0] = (char)('0' + number / 100);
-        region[1] = (char)('0' + number / 10 % 10);
-        region[2] = (char)('0' + number % 10);
-        return;
-    }
-    region[0] = (char)('A' + (packed >> 5) - 1);
-    region[1] = (char)('A' + (packed & 31) - 1);
-}
-
 // The table's answer for a language, script and region, the latter two
 // possibly 0, in UTS #35's order.
 static bool Lookup(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
@@ -272,15 +204,15 @@ static mlocResult Maximize(const Likely* likely, const mlocLocale* locale, mlocL
     }
     if (und)
     {
-        UnpackLanguage((uint32_t)(value >> 31), result.language);
+        mlocUnpackLanguage((uint32_t)(value >> 31), result.language);
     }
     if (script == 0)
     {
-        UnpackScript((uint32_t)(value >> 11) & 0xFFFFF, result.script);
+        mlocUnpackScript((uint32_t)(value >> 11) & 0xFFFFF, result.script);
     }
     if (region == 0)
     {
-        UnpackRegion((uint32_t)value & 0x7FF, result.region);
+        mlocUnpackRegion((uint32_t)value & 0x7FF, result.region);
     }
     *localeOut = result;
     return mloc_success;

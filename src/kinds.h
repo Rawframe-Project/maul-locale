@@ -13,5 +13,8 @@
 
 // The locale part: likely subtags, a unit of no locale.
 constexpr uint32_t kindLocaleLikely = 0x00010001;
+// The locale part: the aliases canonicalization replaces, a unit of no
+// locale.
+constexpr uint32_t kindLocaleAliases = 0x00010002;
 
 #endif

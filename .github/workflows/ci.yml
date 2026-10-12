@@ -111,7 +111,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical
       - name: Compare with the JSON
         run: python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
       - name: The generated sources are current
@@ -121,7 +121,10 @@ jobs:
           build/mlocgen generate ~/cldr-cache/cldr/common .
           git diff --exit-code src/generated || { echo "src/generated is stale: run mlocgen generate"; exit 1; }
       - name: Conformance
-        run: build/conform_likely ~/cldr-cache/cldr/common/testData/localeIdentifiers/likelySubtags.txt
+        run: |
+          ids=~/cldr-cache/cldr/common/testData/localeIdentifiers
+          build/conform_likely $ids/likelySubtags.txt
+          build/conform_canonical $ids/localeCanonicalization.txt
 
   # Each fuzz target runs for one minute on every push.
   fuzz:

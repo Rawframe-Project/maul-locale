@@ -4,9 +4,10 @@ base:
 bytes:
 data: bytes data_format data_view
 data_format:
-data_kinds: data_view kinds locale_likely
+data_kinds: data_view kinds locale_canonical locale_likely
 data_view:
 locale_parse:
 kinds:
 locale_likely: bytes data_view kinds locale_tables
 locale_tables:
+locale_canonical: bytes data_view kinds locale_tables

@@ -65,6 +65,45 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatLocale(const mlocLocale* locale,
                                                         mlocOutput* output);
 
+    // What mlocCanonicalizeLocale replaced, as bits.
+    typedef uint32_t mlocLocaleChanges;
+    enum
+    {
+        // A whole legacy tag, such as "i-klingon".
+        mloc_changedLegacy = 1,
+        // An extlang removed: "zh-yue" became "yue".
+        mloc_changedExtlang = 2,
+        mloc_changedLanguage = 4,
+        mloc_changedScript = 8,
+        mloc_changedRegion = 16,
+        mloc_changedVariants = 32,
+    };
+
+    /// Parses a BCP 47 tag or CLDR locale id and canonicalizes it as UTS
+    /// #35 Annex C does: a legacy tag replaced whole, an extlang removed,
+    /// "und-" put before a tag that begins with "x" or a script, then
+    /// CLDR's language, script, region and variant aliases applied until
+    /// none matches ("iw" gives "he", "sh" gives "sr-Latn", "SU" gives the
+    /// region of the language's likely one). The syntax is made canonical
+    /// as mlocParseLocale does.
+    ///
+    /// @param data        The data with the aliases and likely subtags.
+    /// @param text        The tag.
+    /// @param length      Its length in bytes, below 256.
+    /// @param localeOut   Receives the locale; left unchanged on failure.
+    /// @param changesOut  Receives what was replaced; may be null.
+    /// @return status mloc_success; mloc_errorSyntax with an offset into the
+    ///         text as mlocParseLocale; mloc_errorCapacity for a text of 256
+    ///         bytes or more, or a result that does not fit; mloc_errorNotFound
+    ///         for data without the aliases; mloc_errorInvalid for a null
+    ///         pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data,
+                                                                  const char* text, size_t length,
+                                                                  mlocLocale* localeOut,
+                                                                  mlocLocaleChanges* changesOut);
+
     // Which shorter form mlocMinimizeLocale keeps when a language's
     // likely script and region could each be dropped: UTS #35's default
     // keeps the region ("zh-TW"), the other the script ("zh-Hant").

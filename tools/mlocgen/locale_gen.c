@@ -5,6 +5,7 @@
 
 #include "locale_gen.h"
 
+#include "alias_gen.h"
 #include "kinds.h"
 #include "locale_tables.h"
 #include "xml.h"
@@ -189,5 +190,5 @@ int GenerateLocaleUnits(const char* commonDirectory, DataFile* file, char* error
     }
     int ok = AddLikely(root, file, errorOut, errorCapacity);
     XmlFree(root);
-    return ok;
+    return ok && GenerateAliasUnit(commonDirectory, file, errorOut, errorCapacity);
 }
