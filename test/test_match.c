@@ -104,6 +104,8 @@ static void TestOrder(void)
     CHECK(Is(MATCH("zh-Hant-TW, zh-Hans-TW", "zh-Hani-TW"), 1, 0),
           "in a tie the likely script wins over the one tried first");
     CHECK(Is(MatchWith("ja, abcde, de-AT", "fr", 0, 100, 0), 1, 0), "a tie of two languages");
+    CHECK(Is(MatchWith("es-AR, es-419", "es-MX", 0, 0, -1), 1, 0), "a paradigm locale tried first");
+    CHECK(Is(MatchWith("fr, de, en", "fr", 0, 0, -1), 0, 0), "the others kept behind it");
     CHECK(Is(MatchWith("ja, de-AT, abcde", "fr", 0, 100, 0), 1, 0),
           "goes to the first tried, a long language not being a paradigm one");
 }
@@ -160,6 +162,8 @@ static void TestCombine(void)
           "ICU's own case");
     CHECK(Combines("de-x-a-b", "de-CH-u-co-phonebk", "de-CH-u-co-phonebk-x-a-b"),
           "private use kept whole");
+    CHECK(Combines("fr-a-bcd-z-efg", "fr-CA-u-ca-buddhist", "fr-CA-a-bcd-u-ca-buddhist-z-efg"),
+          "the first and last singletons");
     mlocLocale d;
     mlocLocale s;
     static const char s_long1[] =

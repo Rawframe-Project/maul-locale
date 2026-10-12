@@ -44,13 +44,9 @@ static bool Find(const Likely* likely, uint32_t language, uint32_t script, uint3
 {
     if (language == Und() && script != 0 && region != 0)
     {
+        // An answer for any of und's regions counts under its own script
+        // and region.
         uint64_t value = 0;
-        if (mlocFindLikely(likely, language, 0, region, &value) && ScriptOf(value) == script &&
-            (uint32_t)(value & 0x7FF) == region)
-        {
-            *valueOut = value;
-            return true;
-        }
         uint32_t start = 0;
         uint32_t end = 0;
         mlocLikelyRegionRange(likely, language, &start, &end);
