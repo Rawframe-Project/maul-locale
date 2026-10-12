@@ -246,6 +246,62 @@ static void TestValidator(void)
     CHECK(!mlocValidMatch(nullptr, (DataSpan){s_span.bytes, 8}), "a header cut off");
 }
 
+// Whether matching refuses entries with one field of the second spoiled.
+static bool Refused(void (*spoil)(Lsr*))
+{
+    mlocLocale supported[2];
+    mlocLocale desired;
+    mlocMatchEntry entries[2];
+    if (mlocParseLocale("fr", 2, &supported[0]).status != mloc_success ||
+        mlocParseLocale("en", 2, &supported[1]).status != mloc_success ||
+        mlocParseLocale("de", 2, &desired).status != mloc_success ||
+        mlocPrepareMatch(&s_data, supported, 2, nullptr, entries) != mloc_success)
+    {
+        return false;
+    }
+    Lsr lsr;
+    memcpy(&lsr, &entries[1], sizeof(lsr));
+    spoil(&lsr);
+    memcpy(&entries[1], &lsr, sizeof(lsr));
+    mlocMatch match;
+    return mlocMatchLocales(&s_data, supported, entries, 2, &desired, 1, nullptr, &match) ==
+           mloc_errorInvalid;
+}
+
+static void IndexPast(Lsr* lsr)
+{
+    lsr->index = 2;
+}
+
+static void KindPast(Lsr* lsr)
+{
+    lsr->kind = lsrPrivate + 1;
+}
+
+static void FlagsPast(Lsr* lsr)
+{
+    lsr->flags = lsrExplicit + 1;
+}
+
+static void RegionPast(Lsr* lsr)
+{
+    lsr->region = matchRegionSlots;
+}
+
+static void LastRegion(Lsr* lsr)
+{
+    lsr->region = matchRegionSlots - 1;
+}
+
+static void TestEntries(void)
+{
+    CHECK(Refused(IndexPast), "an entry naming no locale of the list");
+    CHECK(Refused(KindPast), "an entry of no kind");
+    CHECK(Refused(FlagsPast), "an entry of other flags");
+    CHECK(Refused(RegionPast), "an entry's region past the groups");
+    CHECK(!Refused(LastRegion), "and the last region");
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -258,5 +314,6 @@ int main(void)
     TestCraftedLikely();
     TestParadigms();
     TestValidator();
+    TestEntries();
     return s_failures == 0 ? 0 : 1;
 }

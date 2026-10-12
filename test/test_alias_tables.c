@@ -238,6 +238,16 @@ static void TestTables(void)
     CHECK(!ValidWith(s_layout.legacyAt, 0xFFFF, 2), "a legacy type past the text");
     CHECK(!ValidWith(s_layout.legacyAt + 6, 0, 2), "an empty legacy replacement");
     CHECK(!ValidWith(s_layout.legacyAt + 2, 300, 2), "a legacy type too long to compare");
+    Restore();
+    memcpy(s_copy + s_layout.legacyAt, s_builtin.bytes + s_layout.legacyAt + aliasLegacySize,
+           aliasLegacySize);
+    memcpy(s_copy + s_layout.legacyAt + aliasLegacySize, s_builtin.bytes + s_layout.legacyAt,
+           aliasLegacySize);
+    CHECK(!Valid(), "legacy types in order");
+    Restore();
+    memcpy(s_copy + s_layout.legacyAt + aliasLegacySize, s_builtin.bytes + s_layout.legacyAt,
+           aliasLegacySize);
+    CHECK(!Valid(), "a legacy type twice");
 }
 
 // Rules that never end: the compiled-in data with "iw" made to replace

@@ -128,6 +128,8 @@ static void TestExtensions(void)
     CHECK(Gives("en-a-foo-u-ms-imperial", "en-a-foo-u-ms-uksystem", x),
           "a u extension after another");
     CHECK(Gives("en-a-foo-t-iw", "en-a-foo-t-he", x), "and a t extension");
+    CHECK(Gives("en-xyzzy-u-ms-imperial", "en-xyzzy-u-ms-uksystem", x),
+          "a variant that begins with x is no private use");
     CHECK(Gives("en-u-ms-imperial-x-u-ms-imperial", "en-u-ms-uksystem-x-u-ms-imperial", x),
           "private use is not read as extensions");
     // A tail of 110 bytes grows past 112 when islamicc becomes
@@ -156,6 +158,15 @@ static void TestRefusals(void)
     mlocLocale locale;
     CHECK(mlocCanonicalizeLocale(&s_data, text, 256, &locale, nullptr).status == mloc_errorCapacity,
           "256 bytes are too many");
+    // 252 bytes fit, but not with "und-" put before them.
+    memcpy(text, "x-", 2);
+    for (size_t at = 2; at + 9 <= 252; at += 9)
+    {
+        text[at + 8] = '-';
+    }
+    text[251] = 'a';
+    mlocTextResult grown = mlocCanonicalizeLocale(&s_data, text, 252, &locale, nullptr);
+    CHECK(grown.status == mloc_errorCapacity && grown.offset == 252, "a tag that und- makes 256");
     mlocDataSet empty = {nullptr, 0};
     CHECK(mlocCanonicalizeLocale(&empty, "en", 2, &locale, nullptr).status == mloc_errorNotFound,
           "data without the aliases");

@@ -72,6 +72,7 @@ static void TestMinimize(void)
     CHECK(Minimizes("zh-Hant-TW", mloc_favorRegion, "zh-TW"), "favoring the region");
     CHECK(Minimizes("zh-Hant-TW", mloc_favorScript, "zh-Hant"), "favoring the script");
     CHECK(Minimizes("en-Latn-US", mloc_favorRegion, "en"), "to the language alone");
+    CHECK(Minimizes("en-Latn-GB", mloc_favorRegion, "en-GB"), "a region that is not likely");
     CHECK(Minimizes("en-US-u-ca-buddhist", mloc_favorRegion, "en-u-ca-buddhist"),
           "extensions are kept");
     CHECK(Minimizes("sr-Latn", mloc_favorScript, "sr-Latn"), "a script that is not likely");

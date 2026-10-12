@@ -119,6 +119,8 @@ static void TestOptions(void)
           "and sr with ru, not hr");
     CHECK(Is(MatchWith("fr, en", "af", mloc_matchBothWays, 0, 0), -1, -1),
           "both ways leaves out the one-way rules");
+    CHECK(Is(MatchWith("fr, en-GB", "en-AU", mloc_matchBothWays, 0, 0), 1, 0),
+          "and keeps the others");
     // af-ZA to en-US: 20 for the languages, 4 for the regions.
     CHECK(Is(MatchWith("fr, en", "af", 0, 24, 0), -1, -1), "a threshold the distance meets");
     CHECK(Is(MatchWith("fr, en", "af", 0, 25, 0), 1, 0), "and one it stays below");
