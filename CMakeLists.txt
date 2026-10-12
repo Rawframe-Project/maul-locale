@@ -90,6 +90,11 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/number_format.c
     src/number_precision.c
     src/plural.c
+    src/unit.c
+    src/unit_convert.c
+    src/unit_data.c
+    src/unit_id.c
+    src/wide.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c)
 maul_configure_library(maul-locale)
@@ -128,10 +133,13 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(number)
     maul_add_test(currency_tables WHITEBOX)
     maul_add_test(number_tables WHITEBOX)
+    maul_add_test(unit)
+    maul_add_test(unit_tables WHITEBOX)
+    maul_add_test(wide WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
-    foreach(name likely canonical parents match numbers plurals preferences currency)
+    foreach(name likely canonical parents match numbers plurals preferences currency units)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})
@@ -172,8 +180,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
                                     tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
-                                    tools/mlocgen/prefs_gen.c
-                                    tools/mlocgen/xml.c)
+                                    tools/mlocgen/prefs_gen.c tools/mlocgen/unit_gen.c
+                                    tools/mlocgen/xml.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)

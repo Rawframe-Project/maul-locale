@@ -44,8 +44,9 @@ notation and ranges, with every numbering system and ECMA-402's options
 with each currency's symbols, digits and cash rounding, in compact
 notation and by name (the names are a data file of their own,
 `src/generated/currency-names.mloc`), and the currency a locale or
-region uses on a day. The library has
-44 public functions.
+region uses on a day; and exact conversion between CLDR's units
+(every conversion CLDR's unit test data implies passes on every push).
+The library has 45 public functions.
 
 ## Building
 

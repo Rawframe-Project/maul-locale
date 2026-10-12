@@ -62,5 +62,8 @@ constexpr uint32_t kindCurrencyNames = 0x0004000A;
 // The number part: the currencies each region uses and used, a unit of no
 // locale.
 constexpr uint32_t kindCurrencyRegions = 0x0004000B;
+// The number part: the unit identifiers' parts and their conversion to
+// base units, a unit of no locale (record mloc-0023, src/unit_tables.h).
+constexpr uint32_t kindUnits = 0x0004000C;
 
 #endif
