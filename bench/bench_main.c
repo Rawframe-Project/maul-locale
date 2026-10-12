@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Speed of the locale part on the compiled-in data, in nanoseconds per
-// call, the best of five runs: parsing, canonicalizing, adding and
-// removing likely subtags, a parent, matching against 80 supported
-// locales (ICU's test list) and regional preferences. The inputs are the
-// ones the ICU4C and ICU4X baselines time (record mloc-0004). Given a
+// Speed of the locale, decimal and plural parts on the compiled-in data,
+// in nanoseconds per call, the best of five runs: parsing, canonicalizing,
+// adding and removing likely subtags, a parent, matching against 80
+// supported locales (ICU's test list), regional preferences; a decimal
+// parsed, made from a double and rounded; Russian plural rules made and
+// selecting for an integer and a decimal. The inputs are the ones the
+// ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well.
 
@@ -13,7 +15,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include "maul-locale/decimal.h"
 #include "maul-locale/locale.h"
+#include "maul-locale/plural.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,6 +134,49 @@ static void Preferences(void)
     s_sink = mlocGetLocalePreferences(&s_data, &s_enGB, &p) + p.firstDay;
 }
 
+static mlocLocale s_ru;
+static mlocPluralRules s_ruRules;
+static mlocDecimal s_value;
+static volatile double s_double = 1234567.891;
+static uint32_t s_n;
+
+static void DecimalParse(void)
+{
+    mlocDecimal d;
+    s_sink = mlocParseDecimal("1234567.891", 11, &d).status + d.count;
+}
+
+static void DecimalShortest(void)
+{
+    mlocDecimal d;
+    s_sink = mlocMakeShortestDecimal(s_double, &d) + d.count;
+}
+
+static void DecimalRound(void)
+{
+    mlocDecimal d = s_value;
+    s_sink = mlocRoundDecimal(&d, -2, 1, mloc_roundHalfEven) + d.count;
+}
+
+static void PluralInit(void)
+{
+    mlocPluralRules rules;
+    s_sink = mlocInitPluralRules(&rules, &s_data, &s_ru, mloc_pluralCardinal);
+}
+
+static void PluralSelectInteger(void)
+{
+    s_n = (s_n + 7) % 1000;
+    mlocPluralCategory category;
+    s_sink = mlocSelectPluralInteger(&s_ruRules, s_n, &category) + (int)category;
+}
+
+static void PluralSelectDecimal(void)
+{
+    mlocPluralCategory category;
+    s_sink = mlocSelectPlural(&s_ruRules, &s_value, &category) + (int)category;
+}
+
 typedef struct Case
 {
     const char* name;
@@ -188,6 +235,13 @@ int main(int argc, char** argv)
     s_esMX = Parsed("es-MX");
     s_enGB = Parsed("en-GB");
     PrepareMatch();
+    s_ru = Parsed("ru");
+    if (mlocInitPluralRules(&s_ruRules, &s_data, &s_ru, mloc_pluralCardinal) != mloc_success ||
+        mlocParseDecimal("1234567.891", 11, &s_value).status != mloc_success)
+    {
+        fprintf(stderr, "bench: no Russian rules\n");
+        return 1;
+    }
     FILE* baseline = argc > 1 ? fopen(argv[1], "r") : nullptr;
     static const Case s_cases[] = {
         {"parse", ParseTag, 2000000},
@@ -199,6 +253,12 @@ int main(int argc, char** argv)
         {"match-prepare", PrepareMatch, 50000},
         {"match", Match, 500000},
         {"preferences", Preferences, 2000000},
+        {"decimal-parse", DecimalParse, 5000000},
+        {"decimal-shortest", DecimalShortest, 5000000},
+        {"decimal-round", DecimalRound, 5000000},
+        {"plural-init", PluralInit, 200000},
+        {"plural-select-int", PluralSelectInteger, 10000000},
+        {"plural-select-dec", PluralSelectDecimal, 10000000},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
