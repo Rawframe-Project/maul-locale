@@ -16,6 +16,7 @@ project(maul-locale
 
 option(MAUL_LOCALE_BUILD_TESTS "Build the test suites" ${PROJECT_IS_TOP_LEVEL})
 option(MAUL_LOCALE_BUILD_BENCH "Build the benchmarks" ${PROJECT_IS_TOP_LEVEL})
+option(MAUL_LOCALE_BUILD_TOOLS "Build the data generator and its tests" ${PROJECT_IS_TOP_LEVEL})
 option(MAUL_LOCALE_BUILD_SHARED "Build a shared library instead of a static one" OFF)
 option(MAUL_LOCALE_INSTALL "Generate install rules" ${PROJECT_IS_TOP_LEVEL})
 option(MAUL_LOCALE_WERROR "Treat compiler warnings as errors" OFF)
@@ -46,6 +47,26 @@ if(MAUL_LOCALE_BUILD_TESTS)
     enable_testing()
     maul_add_test(base)
     maul_add_header_tests()
+endif()
+
+# The generator, mlocgen, writes the library's data from CLDR's XML. Its
+# parts are a static library so that their tests link them alone.
+if(MAUL_LOCALE_BUILD_TOOLS)
+    add_library(mlocgen_core STATIC tools/mlocgen/xml.c)
+    target_include_directories(mlocgen_core PUBLIC tools/mlocgen)
+    maul_apply_flags(mlocgen_core)
+    # The generator uses standard fopen, which the Windows C runtime
+    # reports as deprecated in favor of its own fopen_s.
+    if(WIN32)
+        target_compile_definitions(mlocgen_core PUBLIC _CRT_SECURE_NO_WARNINGS)
+    endif()
+    if(MAUL_LOCALE_BUILD_TESTS)
+        add_executable(test_genxml test/test_genxml.c)
+        target_link_libraries(test_genxml PRIVATE mlocgen_core)
+        target_include_directories(test_genxml PRIVATE test)
+        maul_apply_flags(test_genxml)
+        add_test(NAME genxml COMMAND test_genxml)
+    endif()
 endif()
 
 if(MAUL_LOCALE_BUILD_BENCH AND EXISTS ${PROJECT_SOURCE_DIR}/bench/bench_main.c)
