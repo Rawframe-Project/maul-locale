@@ -819,6 +819,13 @@ static void TestRound(void)
     CHECK(Parsed("12345678901234567890123456789012345678910", &d) &&
               mlocRoundDecimal(&d, 0, 25, mloc_roundExpand) == mloc_errorCapacity && d.count == 40,
           "and one that needs 41 digits");
+    CHECK(Parsed("1.5e999999", &d) && mlocRoundDecimal(&d, 999999, 1, mloc_roundHalfEven) == 0 &&
+              d.count == 1 && d.digits[0] == 2 && d.exponent == 999999,
+          "a value rounded to the largest power");
+    CHECK(Parsed("1234567890123456789012345678901234567810", &d) &&
+              mlocRoundDecimal(&d, 0, 25, mloc_roundExpand) == 0 &&
+              Writes(&d, "1234567890123456789012345678901234567825") && d.count == 40,
+          "a result of forty digits");
     CHECK(Parsed("99999999999999999999999999999999999999.99", &d) &&
               mlocRoundDecimal(&d, -1, 1, mloc_roundHalfExpand) == 0 &&
               Writes(&d, "100000000000000000000000000000000000000.0"),
