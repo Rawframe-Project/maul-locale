@@ -25,7 +25,11 @@ NumberFormatter.
   locale's resolved numbers differ from the next key's along its
   chain, with its default, native, traditional and finance systems,
   minimum grouping digits, and for latn and each system whose data
-  differs from latn's the indexes of its symbols and patterns. Each
+  differs from latn's the indexes of its symbols and its decimal and
+  percent patterns. Scientific notation writes the decimal pattern's
+  affixes with the exponential symbol and the minus sign, as ICU's
+  NumberFormatter does; the locales' scientific patterns (Hindi's
+  `[#E0]`) are not stored. Each
   validator reads its unit alone; a formatter bounds every index when
   it is made, in the source that holds the locale's unit.
 - **Formatters:** an internal core (digits, symbols, pattern, grouping)
@@ -45,6 +49,13 @@ NumberFormatter.
   significant digits or both with a priority, increments, the nine
   rounding modes, trailing zeros). Fields a kind does not read must be
   zero; conflicts are refused.
+- **Styles and notations:** percent and per mille multiply the decimal
+  by 10^2 or 10^3 before rounding, moving the fraction digits shown
+  with the point, and use the percent pattern (per mille in the percent
+  sign's place). Scientific and engineering notation round the
+  mantissa, choosing the exponent again when rounding carries it to
+  the next power (ECMA-402's ComputeExponent); a mantissa keeps the
+  places its decimal shows.
 - **No default rounding:** the zero precision writes the digits the
   decimal shows (mloc-0019), as ICU4X's decimal formatter does; a
   precision, once set, rounds and cuts zeros to its minimum as
@@ -53,7 +64,8 @@ NumberFormatter.
 - **Proof:** `conform_numbers` runs every line of `testData/decimal`
   in the cldr CI job with ICU4J's defaults set as options (six
   fraction digits at most, half to even). Where the files predate the
-  pinned data (Galician's group separator), `tools/number-exceptions.txt`
+  pinned data (Galician's group separator, Urdu's percent sign),
+  `tools/number-exceptions.txt`
   states the replacement and its reason, and each entry must be used.
   Notations and styles not yet built are refused and their lines
   counted as skipped.

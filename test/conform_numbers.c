@@ -6,8 +6,9 @@
 // <TAB>format_length<TAB>input<TAB>expected") and formats each input, a
 // double taken as its shortest decimal, on the compiled-in data. CLDR
 // made the files with ICU4J's NumberFormatter defaults, which these
-// options state: at most six fraction digits, half to even. Rows of a
-// notation or style not yet built are counted as skipped. Where the files
+// options state: at most six fraction digits (of the mantissa in
+// scientific notation), half to even. Rows of compact notation, not yet
+// built, are counted as skipped. Where the files
 // predate the pinned release's data, tools/number-exceptions.txt names
 // the text to replace in a locale's expected lines, with its reason; each
 // entry must be used. CI runs it.
@@ -124,11 +125,14 @@ static void ApplyExceptions(Exception* exceptions, int count, const char* locale
 }
 
 // Formats one row's input; false when a call fails.
-static bool Format(const mlocDataSet* data, const char* id, const char* input, char* out,
-                   size_t capacity, size_t* lengthOut)
+static bool Format(const mlocDataSet* data, const char* id, const char* format, const char* input,
+                   char* out, size_t capacity, size_t* lengthOut)
 {
     mlocLocale locale;
     mlocNumberOptions options = {
+        .notation =
+            strcmp(format, "scientific") == 0 ? mloc_notationScientific : mloc_notationStandard,
+        .style = strcmp(format, "percent") == 0 ? mloc_numberPercent : mloc_numberDecimal,
         .precision = {.kind = mloc_precisionFraction,
                       .mode = mloc_roundHalfEven,
                       .maxFractionDigits = 6},
@@ -181,7 +185,7 @@ int main(int argc, char** argv)
         {
             continue;
         }
-        if (strcmp(fields[1], "decimal") != 0 || fields[2][0] != '\0')
+        if (fields[2][0] != '\0')
         {
             skipped++;
             continue;
@@ -192,7 +196,7 @@ int main(int argc, char** argv)
         char expected[256];
         ApplyExceptions(s_exceptions, exceptionCount, fields[0], fields[4], expected,
                         sizeof(expected));
-        bool ok = Format(&data, fields[0], fields[3], text, sizeof(text), &length);
+        bool ok = Format(&data, fields[0], fields[1], fields[3], text, sizeof(text), &length);
         if (ok && length == strlen(expected) && memcmp(text, expected, length) == 0)
         {
             agreed++;

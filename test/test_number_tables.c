@@ -443,8 +443,8 @@ static void TestDisagreeing(void)
     }
     uint32_t sets = mlocLoad16(s_symbols.bytes + 2);
     uint32_t patterns = mlocLoad16(s_patterns.bytes + 2);
-    const int fields[4] = {entrySymbols, entryDecimal, entryPercent, entryScientific};
-    for (int f = 0; f < 4; f++)
+    const int fields[3] = {entrySymbols, entryDecimal, entryPercent};
+    for (int f = 0; f < 3; f++)
     {
         uint32_t value = mlocLoad16(entry + fields[f]);
         uint32_t past = f == 0 ? sets : patterns;

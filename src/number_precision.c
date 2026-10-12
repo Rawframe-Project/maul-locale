@@ -172,3 +172,67 @@ mlocResult mlocApplyPrecision(const mlocPrecision* p, mlocDecimal* decimal)
     *decimal = d;
     return mloc_success;
 }
+
+mlocResult mlocScaleDecimal(mlocDecimal* d, int32_t power)
+{
+    if (d->count > 0 && mlocTopPower(d) + power > mlocDecimalMaxExponent)
+    {
+        return mloc_errorCapacity;
+    }
+    if (d->count > 0)
+    {
+        d->exponent += power;
+    }
+    d->fractionDigits = d->fractionDigits > power ? d->fractionDigits - power : 0;
+    return mloc_success;
+}
+
+// The exponent for a magnitude: itself, or for engineering notation the
+// multiple of three at or below it.
+static int64_t ExponentFor(int64_t magnitude, bool engineering)
+{
+    if (!engineering)
+    {
+        return magnitude;
+    }
+    return magnitude >= 0 ? magnitude / 3 * 3 : -((2 - magnitude) / 3) * 3;
+}
+
+// A decimal divided by 10^exponent; a decimal that shows fraction digits
+// keeps showing as many places, at most the decimal's limit.
+static mlocDecimal Shift(const mlocDecimal* d, int64_t exponent)
+{
+    mlocDecimal m = *d;
+    m.exponent = (int32_t)(d->exponent - exponent);
+    int64_t shown = d->fractionDigits > 0 ? (int64_t)d->fractionDigits + exponent : 0;
+    shown = shown < mlocDecimalMaxExponent ? shown : mlocDecimalMaxExponent;
+    int32_t needed = Needed(&m);
+    m.fractionDigits = shown > needed ? (int32_t)shown : needed;
+    return m;
+}
+
+mlocResult mlocApplyScientific(const mlocPrecision* p, bool engineering, mlocDecimal* d,
+                               int32_t* exponentOut)
+{
+    if (d->count == 0)
+    {
+        *exponentOut = 0;
+        return mlocApplyPrecision(p, d);
+    }
+    int64_t magnitude = mlocTopPower(d);
+    int64_t exponent = ExponentFor(magnitude, engineering);
+    mlocDecimal m = Shift(d, exponent);
+    mlocResult r = mlocApplyPrecision(p, &m);
+    if (r == mloc_success && m.count > 0 && mlocTopPower(&m) != magnitude - exponent)
+    {
+        exponent = ExponentFor(magnitude + 1, engineering);
+        m = Shift(d, exponent);
+        r = mlocApplyPrecision(p, &m);
+    }
+    if (r == mloc_success)
+    {
+        *d = m;
+        *exponentOut = (int32_t)exponent;
+    }
+    return r;
+}

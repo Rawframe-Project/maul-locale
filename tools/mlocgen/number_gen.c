@@ -74,7 +74,6 @@ typedef struct Entry
     uint16_t symbols;
     uint16_t decimal;
     uint16_t percent;
-    uint16_t scientific;
 } Entry;
 
 // A locale's resolved numbers.
@@ -668,7 +667,6 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
             .symbols = SymbolsOf(g, locale, s->name),
             .decimal = PatternOf(g, locale, s->name, "decimal"),
             .percent = PatternOf(g, locale, s->name, "percent"),
-            .scientific = PatternOf(g, locale, s->name, "scientific"),
         };
         if (s->id == numberLatn)
         {
@@ -686,8 +684,7 @@ static void Resolve(Generator* g, const char* locale, Numbers* out)
     {
         const Entry* e = &out->entries[i];
         if (g->systems[e->system].id == numberLatn || e->symbols != latn.symbols ||
-            e->decimal != latn.decimal || e->percent != latn.percent ||
-            e->scientific != latn.scientific)
+            e->decimal != latn.decimal || e->percent != latn.percent)
         {
             out->entries[kept++] = *e;
         }
@@ -713,7 +710,6 @@ static void AddLocaleUnit(const Numbers* n, const char* key, DataFile* file)
         Put(entry + entrySymbols, n->entries[i].symbols, 2);
         Put(entry + entryDecimal, n->entries[i].decimal, 2);
         Put(entry + entryPercent, n->entries[i].percent, 2);
-        Put(entry + entryScientific, n->entries[i].scientific, 2);
     }
     DataFileAdd(file, kindNumbers, key, unit, size);
     free(unit);

@@ -37,9 +37,9 @@ static_assert(sizeof(Formatter) <= sizeof(mlocNumberFormatter),
 
 static bool ValidOptions(const mlocNumberOptions* o)
 {
-    // Only standard notation and the decimal style are built yet.
-    return o->notation == mloc_notationStandard && o->style == mloc_numberDecimal &&
-           (uint32_t)o->grouping <= mloc_groupingOff &&
+    // Compact notation is not built yet.
+    return (uint32_t)o->notation <= mloc_notationEngineering &&
+           (uint32_t)o->style <= mloc_numberPerMille && (uint32_t)o->grouping <= mloc_groupingOff &&
            (uint32_t)o->signDisplay <= mloc_signNegative && o->minIntegerDigits <= maxMinInteger &&
            mlocValidPrecision(&o->precision);
 }
@@ -55,7 +55,7 @@ mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mloc
     }
     Formatter f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocInitNumberCore(&f.core, data, locale);
+    mlocResult result = mlocInitNumberCore(&f.core, data, locale, o->style);
     if (result < 0)
     {
         return result;
@@ -85,8 +85,8 @@ static bool Read(const mlocNumberFormatter* opaque, Formatter* f)
            f->core.affixText != nullptr && f->core.digitLength >= 1 &&
            f->core.digitLength <= numberDigitSize && f->minInteger >= 1 &&
            f->minInteger <= maxMinInteger && f->grouping <= mloc_groupingOff &&
-           f->signDisplay <= mloc_signNegative && f->notation == mloc_notationStandard &&
-           f->style == mloc_numberDecimal && (f->core.primary == 0) == (f->core.secondary == 0) &&
+           f->signDisplay <= mloc_signNegative && f->notation <= mloc_notationEngineering &&
+           f->style <= mloc_numberPerMille && (f->core.primary == 0) == (f->core.secondary == 0) &&
            mlocValidPrecision(&f->precision);
 }
 
@@ -101,17 +101,37 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
         return mloc_errorInvalid;
     }
     mlocDecimal d = *decimal;
+    NumberLayout layout = {
+        .grouping = (mlocGrouping)f->grouping,
+        .minInteger = f->minInteger,
+        .perMille = f->style == mloc_numberPerMille,
+        .scientific =
+            f->notation == mloc_notationScientific || f->notation == mloc_notationEngineering,
+    };
     if (d.kind == mloc_decimalFinite)
     {
-        mlocResult rounded = mlocApplyPrecision(&f->precision, &d);
-        if (rounded != mloc_success)
+        mlocResult r = f->style == mloc_numberDecimal
+                           ? mloc_success
+                           : mlocScaleDecimal(&d, f->style == mloc_numberPercent ? 2 : 3);
+        if (r == mloc_success && layout.scientific)
         {
-            return rounded;
+            // A mantissa of one to three digits is never grouped.
+            layout.grouping = mloc_groupingOff;
+            r = mlocApplyScientific(&f->precision, f->notation == mloc_notationEngineering, &d,
+                                    &layout.exponent);
+        }
+        else if (r == mloc_success)
+        {
+            r = mlocApplyPrecision(&f->precision, &d);
+        }
+        if (r != mloc_success)
+        {
+            return r;
         }
     }
     NumberSign sign = mlocNumberSign(&d, (mlocSignDisplay)f->signDisplay);
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteStandard(&f->core, &d, sign, (mlocGrouping)f->grouping, f->minInteger, &w);
+    mlocWriteNumber(&f->core, &d, sign, &layout, &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -120,7 +140,7 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteStandard(&f->core, &d, sign, (mlocGrouping)f->grouping, f->minInteger, &parts);
+        mlocWriteNumber(&f->core, &d, sign, &layout, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;

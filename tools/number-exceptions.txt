@@ -4,3 +4,4 @@
 # reason, tab-separated. test/conform_numbers.c replaces the first by the
 # second in that locale's expected lines; each entry must be used.
 gl	.	 	CLDR 49's gl.xml and its JSON give a no-break space as the group separator; the test data has a full stop, from the older data ICU4J held
+ur	%	٪	CLDR 49's ur.xml and its JSON give the Arabic percent sign (U+066A) for latn; the test data has %, from the older data ICU4J held

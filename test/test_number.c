@@ -189,6 +189,149 @@ static void TestPrecision(void)
     CHECK(Formats("en", &o, "5", "00,005"), "zeros are grouped like digits");
 }
 
+typedef struct Parts
+{
+    uint32_t kinds[32];
+    size_t starts[32];
+    size_t lengths[32];
+    int count;
+} Parts;
+
+static void Collect(void* context, uint32_t part, size_t start, size_t length)
+{
+    Parts* p = context;
+    if (p->count < 32)
+    {
+        p->kinds[p->count] = part;
+        p->starts[p->count] = start;
+        p->lengths[p->count] = length;
+        p->count++;
+    }
+}
+
+static void TestStyles(void)
+{
+    mlocNumberOptions o = {.style = mloc_numberPercent};
+    CHECK(Formats("en", &o, "0.25", "25%") && Formats("en", &o, "1234.5", "123,450%"),
+          "percent multiplies by 100 and groups");
+    CHECK(Formats("en", &o, "0.50", "50%") && Formats("en", &o, "0.125", "12.5%") &&
+              Formats("en", &o, "0.0050", "0.50%"),
+          "the fraction digits shown move with the point");
+    CHECK(Formats("en", &o, "-0.5", "-50%"), "a negative percent");
+    CHECK(Formats("fr", &o, "0.25", "25\xC2\xA0%"), "French's no-break space before %");
+    CHECK(Formats("ar", &o, "0.25", "25\xE2\x80\x8E%\xE2\x80\x8E"), "Arabic's marks");
+    CHECK(Formats("tr", &o, "0.25", "%25"), "Turkish puts % first");
+    o.precision = (mlocPrecision){.kind = mloc_precisionFraction, .maxFractionDigits = 0};
+    CHECK(Formats("en", &o, "0.125", "13%"), "rounding after the scaling");
+    o = (mlocNumberOptions){.style = mloc_numberPerMille};
+    CHECK(Formats("en", &o, "0.025", "25\xE2\x80\xB0"), "per mille multiplies by 1000");
+    CHECK(Formats("tr", &o, "0.025",
+                  "\xE2\x80\xB0"
+                  "25"),
+          "in the percent sign's place");
+    o = (mlocNumberOptions){.style = mloc_numberPercent};
+    CHECK(Formats("en", &o, "1e999997", "1") == false, "a percent past the decimal's limits");
+    mlocLocale locale;
+    mlocNumberFormatter formatter;
+    mlocDecimal big;
+    char buffer[16];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocParseDecimal("1e999998", 8, &big).status == mloc_success &&
+              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity,
+          "is refused");
+    o.style = mloc_numberPerMille;
+    CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity,
+          "per mille too");
+    o.style = mloc_numberPercent;
+    CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity &&
+              output.length > sizeof(buffer),
+          "a percent at the limit is written in full");
+}
+
+static void TestScientific(void)
+{
+    mlocNumberOptions o = {.notation = mloc_notationScientific};
+    CHECK(Formats("en", &o, "1234.5", "1.2345E3") && Formats("en", &o, "0.00012", "1.2E-4"),
+          "one integer digit");
+    CHECK(Formats("en", &o, "0", "0E0") && Formats("en", &o, "0.00", "0.00E0"), "zero");
+    CHECK(Formats("en", &o, "-1500", "-1.5E3"), "the sign before the mantissa");
+    CHECK(Formats("en", &o, "12.30", "1.230E1") && Formats("en", &o, "0.0120", "1.20E-2"),
+          "the places the decimal shows stay shown");
+    CHECK(Formats("en", &o, "1e25", "1E25"), "an integer's zeros are not shown");
+    CHECK(Formats("ar", &o, "0.005", "5E\xE2\x80\x8E-3"),
+          "the exponent's minus sign is the locale's");
+    CHECK(Formats("fa", &o, "100", "\xDB\xB1\xC3\x97\xDB\xB1\xDB\xB0^\xDB\xB2"),
+          "an exponential symbol of its own, in the locale's digits");
+    o.precision = (mlocPrecision){.kind = mloc_precisionFraction, .maxFractionDigits = 2};
+    CHECK(Formats("en", &o, "1.23456e8", "1.23E8"), "the precision rounds the mantissa");
+    CHECK(Formats("en", &o, "9.999", "1E1") && Formats("en", &o, "0.0999999", "1E-1"),
+          "a carry takes the next exponent");
+    o.precision = (mlocPrecision){
+        .kind = mloc_precisionSignificant, .minSignificantDigits = 3, .maxSignificantDigits = 3};
+    CHECK(Formats("en", &o, "5", "5.00E0"), "significant digits of the mantissa");
+    o.precision = (mlocPrecision){.kind = mloc_precisionFraction,
+                                  .minFractionDigits = 0,
+                                  .maxFractionDigits = 0,
+                                  .increment = 5};
+    CHECK(Formats("en", &o, "1.2e3", "0E3"), "a mantissa rounded to zero keeps its exponent");
+    o = (mlocNumberOptions){.notation = mloc_notationEngineering};
+    CHECK(Formats("en", &o, "1234.5", "1.2345E3") && Formats("en", &o, "12345", "12.345E3") &&
+              Formats("en", &o, "123456", "123.456E3") &&
+              Formats("en", &o, "1234567", "1.234567E6"),
+          "engineering: one to three integer digits");
+    CHECK(Formats("en", &o, "0.0123", "12.3E-3") && Formats("en", &o, "0.123", "123E-3") &&
+              Formats("en", &o, "0.000123", "123E-6"),
+          "negative exponents are multiples of three too");
+    o.precision = (mlocPrecision){
+        .kind = mloc_precisionSignificant, .minSignificantDigits = 1, .maxSignificantDigits = 2};
+    CHECK(Formats("en", &o, "999", "1E3") && Formats("en", &o, "99.9", "100E0"),
+          "a carry past three digits moves the exponent");
+    o = (mlocNumberOptions){.notation = mloc_notationScientific, .style = mloc_numberPercent};
+    CHECK(Formats("en", &o, "12", "1.2E3%"), "a scientific percent");
+    o = (mlocNumberOptions){.notation = mloc_notationScientific, .minIntegerDigits = 2};
+    CHECK(Formats("en", &o, "5", "05E0"), "minimum integer digits pad the mantissa");
+    mlocLocale locale;
+    mlocNumberFormatter formatter;
+    char buffer[32];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    mlocDecimal infinity = {.kind = mloc_decimalInfinity};
+    o = (mlocNumberOptions){.notation = mloc_notationScientific};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocFormatNumber(&formatter, &infinity, &output) == mloc_success &&
+              output.length == 3 && memcmp(buffer, "\xE2\x88\x9E", 3) == 0,
+          "infinity has no exponent");
+    Parts parts = {0};
+    mlocDecimal value;
+    mlocOutput withParts = {
+        .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &parts};
+    static const uint32_t s_kinds[] = {
+        mloc_numberPartMinusSign,         mloc_numberPartInteger,
+        mloc_numberPartDecimal,           mloc_numberPartFraction,
+        mloc_numberPartExponentSeparator, mloc_numberPartExponentMinusSign,
+        mloc_numberPartExponentInteger};
+    CHECK(mlocParseDecimal("-0.0012", 7, &value).status == mloc_success &&
+              mlocFormatNumber(&formatter, &value, &withParts) == mloc_success &&
+              withParts.length == 7 && parts.count == 7 &&
+              memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0 && parts.starts[6] == 6 &&
+              parts.lengths[6] == 1,
+          "the exponent's parts");
+    mlocDecimal far;
+    o = (mlocNumberOptions){.notation = mloc_notationScientific};
+    char wide[64];
+    mlocOutput farOutput = {.buffer = wide, .capacity = sizeof(wide)};
+    CHECK(mlocParseDecimal("1e-999999", 9, &far).status == mloc_success &&
+              mlocFormatNumber(&formatter, &far, &farOutput) == mloc_success &&
+              farOutput.length == 9 && memcmp(wide, "1E-999999", 9) == 0,
+          "the smallest exponent");
+}
+
 static void TestGrouping(void)
 {
     mlocNumberOptions o = {.grouping = mloc_groupingAlways};
@@ -236,26 +379,6 @@ static void TestSigns(void)
     CHECK(mlocFormatNumber(&formatter, &special, &output) == mloc_success && output.length == 3 &&
               memcmp(buffer, "NaN", 3) == 0,
           "NaN shows no sign");
-}
-
-typedef struct Parts
-{
-    uint32_t kinds[32];
-    size_t starts[32];
-    size_t lengths[32];
-    int count;
-} Parts;
-
-static void Collect(void* context, uint32_t part, size_t start, size_t length)
-{
-    Parts* p = context;
-    if (p->count < 32)
-    {
-        p->kinds[p->count] = part;
-        p->starts[p->count] = start;
-        p->lengths[p->count] = length;
-        p->count++;
-    }
 }
 
 static void TestOutput(void)
@@ -329,9 +452,9 @@ static void TestRefusals(void)
         mlocNumberOptions options;
         const char* name;
     } const s_bad[] = {
-        {{.notation = mloc_notationScientific}, "a notation not yet built"},
+        {{.notation = mloc_notationCompactShort}, "a notation not yet built"},
         {{.notation = (mlocNotation)5}, "no notation"},
-        {{.style = mloc_numberPercent}, "a style not yet built"},
+        {{.style = (mlocNumberStyle)3}, "no style"},
         {{.grouping = (mlocGrouping)4}, "no grouping"},
         {{.signDisplay = (mlocSignDisplay)5}, "no sign display"},
         {{.minIntegerDigits = 22}, "22 integer digits"},
@@ -439,6 +562,8 @@ int main(void)
     TestLocales();
     TestSystems();
     TestPrecision();
+    TestStyles();
+    TestScientific();
     TestGrouping();
     TestSigns();
     TestOutput();

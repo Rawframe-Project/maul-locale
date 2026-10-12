@@ -25,8 +25,9 @@
 // with no digits; u8 minimum grouping digits, u8 entry count, 2 bytes 0),
 // then per numbering system whose data differs from latn's, and latn, in
 // the order of the systems: its index (u8), a 0, and the indexes of its
-// symbol set and its decimal, percent and scientific patterns (u16
-// each).
+// symbol set and its decimal and percent patterns (u16 each). Scientific
+// notation writes the decimal pattern's affixes, as ICU does: the
+// locales' scientific patterns are not read.
 
 #ifndef MLOC_NUMBER_TABLES_H
 #define MLOC_NUMBER_TABLES_H
@@ -41,7 +42,7 @@ enum
     numberTableHeaderSize = 8,
     numberPatternSize = 16,
     numberLocaleHeaderSize = 8,
-    numberEntrySize = 10,
+    numberEntrySize = 8,
     // A locale unit's system index for none, and for a system with no
     // digits (an algorithmic one, which the spellout part formats).
     numberNoSystem = 0xFF,
@@ -122,7 +123,6 @@ enum
     entrySymbols = 2,
     entryDecimal = 4,
     entryPercent = 6,
-    entryScientific = 8,
 };
 
 // A numbering system id packed, or 0 when it is not 1 to 8 lowercase

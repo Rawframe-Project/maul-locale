@@ -138,15 +138,14 @@ static void TableString(NumberTable t, uint32_t index, uint16_t* startOut, uint1
 
 // Fills a core from a system and an entry whose indexes are in bounds.
 static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_t* entry,
-                 uint8_t minGrouping)
+                 uint8_t minGrouping, int patternField)
 {
     NumberTable symbols = mlocReadNumberTable(u->symbols, 2 * numberSymbolCount);
     NumberTable patterns = mlocReadNumberTable(u->patterns, numberPatternSize);
     uint32_t set = mlocLoad16(entry + entrySymbols);
-    uint32_t pattern = mlocLoad16(entry + entryDecimal);
-    if (set >= symbols.recordCount || pattern >= patterns.recordCount ||
-        mlocLoad16(entry + entryPercent) >= patterns.recordCount ||
-        mlocLoad16(entry + entryScientific) >= patterns.recordCount)
+    uint32_t pattern = mlocLoad16(entry + patternField);
+    if (set >= symbols.recordCount || mlocLoad16(entry + entryDecimal) >= patterns.recordCount ||
+        mlocLoad16(entry + entryPercent) >= patterns.recordCount)
     {
         return false;
     }
@@ -179,7 +178,7 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
 }
 
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
-                              const mlocLocale* locale)
+                              const mlocLocale* locale, mlocNumberStyle style)
 {
     Units u;
     // Number data is filed only where it differs from the chain's, so
@@ -210,7 +209,9 @@ mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
     uint32_t system = ChooseSystem(locale, header, u.systems, &fellBack);
     const uint8_t* entry = system < count ? FindEntry(u.locale, u.systems, system) : nullptr;
     NumberCore core;
-    if (entry == nullptr || !Fill(&core, &u, system, entry, header[localeMinGrouping]))
+    int patternField = style == mloc_numberDecimal ? entryDecimal : entryPercent;
+    if (entry == nullptr ||
+        !Fill(&core, &u, system, entry, header[localeMinGrouping], patternField))
     {
         return mloc_errorNotFound;
     }
@@ -278,7 +279,7 @@ static void PutSymbol(NumberWriter* w, const NumberCore* c, NumberSymbol symbol,
 
 // Writes an affix: its literal text, and the symbols its placeholders
 // stand for; with plus set, the minus sign's place takes the plus sign.
-static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus)
+static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus, bool perMille)
 {
     const uint8_t* text = c->affixText + c->affixStart[affix];
     size_t length = c->affixLength[affix];
@@ -305,7 +306,8 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus)
             PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
             break;
         case numberAffixPercent:
-            PutSymbol(w, c, numberPercent, mloc_numberPartPercentSign);
+            PutSymbol(w, c, perMille ? numberPerMille : numberPercent,
+                      perMille ? mloc_numberPartPerMilleSign : mloc_numberPartPercentSign);
             break;
         case numberAffixPerMille:
             PutSymbol(w, c, numberPerMille, mloc_numberPartPerMilleSign);
@@ -330,21 +332,22 @@ static bool HasMinus(const NumberCore* c, int affix)
 // The prefix (or suffix) for a sign: a plus sign takes the negative
 // affixes with the plus sign in the minus sign's place, or, when they
 // have none, goes before the positive prefix.
-static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix)
+static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix,
+                      bool perMille)
 {
     int positive = prefix ? affixPositivePrefix : affixPositiveSuffix;
     int negative = prefix ? affixNegativePrefix : affixNegativeSuffix;
     if (sign == numberSignNone)
     {
-        PutAffix(w, c, positive, false);
+        PutAffix(w, c, positive, false, perMille);
     }
     else if (sign == numberSignMinus)
     {
-        PutAffix(w, c, negative, false);
+        PutAffix(w, c, negative, false, perMille);
     }
     else if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
     {
-        PutAffix(w, c, negative, true);
+        PutAffix(w, c, negative, true, perMille);
     }
     else
     {
@@ -352,7 +355,7 @@ static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, boo
         {
             PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
         }
-        PutAffix(w, c, positive, false);
+        PutAffix(w, c, positive, false, perMille);
     }
 }
 
@@ -368,10 +371,64 @@ static bool GroupAfter(const NumberCore* c, int64_t power)
     return power == c->primary || (power > c->primary && (power - c->primary) % c->secondary == 0);
 }
 
-void mlocWriteStandard(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
-                       mlocGrouping grouping, uint32_t minInteger, NumberWriter* w)
+// Writes an exponent: the exponential symbol, the minus sign when it is
+// negative, and its digits.
+static void PutExponent(NumberWriter* w, const NumberCore* c, int32_t exponent)
 {
-    PutSigned(w, c, sign, true);
+    PutSymbol(w, c, numberExponential, mloc_numberPartExponentSeparator);
+    uint32_t magnitude = exponent < 0 ? 0u - (uint32_t)exponent : (uint32_t)exponent;
+    if (exponent < 0)
+    {
+        PutSymbol(w, c, numberMinus, mloc_numberPartExponentMinusSign);
+    }
+    uint8_t digits[10];
+    int count = 0;
+    do
+    {
+        digits[count++] = (uint8_t)(magnitude % 10);
+        magnitude /= 10;
+    } while (magnitude != 0);
+    while (count > 0)
+    {
+        PutDigit(w, c, digits[--count], mloc_numberPartExponentInteger);
+    }
+}
+
+// Writes a finite decimal's integer digits, grouped as the layout says,
+// and the fraction digits it shows.
+static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d,
+                      const NumberLayout* layout)
+{
+    int64_t top = mlocTopPower(d);
+    int64_t integers = top >= 0 ? top + 1 : 0;
+    integers = integers > (int64_t)layout->minInteger ? integers : (int64_t)layout->minInteger;
+    uint32_t least = layout->grouping == mloc_groupingAlways ? 1
+                     : layout->grouping == mloc_groupingMin2 ? 2
+                                                             : c->minGrouping;
+    bool grouped =
+        layout->grouping != mloc_groupingOff && c->primary > 0 && integers >= c->primary + least;
+    for (int64_t power = integers - 1; power >= 0; power--)
+    {
+        PutDigit(w, c, mlocDigitAt(d, power), mloc_numberPartInteger);
+        if (grouped && power > 0 && GroupAfter(c, power))
+        {
+            PutSymbol(w, c, numberGroup, mloc_numberPartGroup);
+        }
+    }
+    if (d->fractionDigits > 0)
+    {
+        PutSymbol(w, c, numberDecimal, mloc_numberPartDecimal);
+        for (int64_t power = -1; power >= -(int64_t)d->fractionDigits; power--)
+        {
+            PutDigit(w, c, mlocDigitAt(d, power), mloc_numberPartFraction);
+        }
+    }
+}
+
+void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
+                     const NumberLayout* layout, NumberWriter* w)
+{
+    PutSigned(w, c, sign, true, layout->perMille);
     if (d->kind == mloc_decimalNaN)
     {
         PutSymbol(w, c, numberNaN, mloc_numberPartNaN);
@@ -382,30 +439,11 @@ void mlocWriteStandard(const NumberCore* c, const mlocDecimal* d, NumberSign sig
     }
     else
     {
-        int64_t top = mlocTopPower(d);
-        int64_t integers = top >= 0 ? top + 1 : 0;
-        integers = integers > (int64_t)minInteger ? integers : (int64_t)minInteger;
-        uint32_t least = grouping == mloc_groupingAlways ? 1
-                         : grouping == mloc_groupingMin2 ? 2
-                                                         : c->minGrouping;
-        bool grouped =
-            grouping != mloc_groupingOff && c->primary > 0 && integers >= c->primary + least;
-        for (int64_t power = integers - 1; power >= 0; power--)
+        PutDigits(w, c, d, layout);
+        if (layout->scientific)
         {
-            PutDigit(w, c, mlocDigitAt(d, power), mloc_numberPartInteger);
-            if (grouped && power > 0 && GroupAfter(c, power))
-            {
-                PutSymbol(w, c, numberGroup, mloc_numberPartGroup);
-            }
-        }
-        if (d->fractionDigits > 0)
-        {
-            PutSymbol(w, c, numberDecimal, mloc_numberPartDecimal);
-            for (int64_t power = -1; power >= -(int64_t)d->fractionDigits; power--)
-            {
-                PutDigit(w, c, mlocDigitAt(d, power), mloc_numberPartFraction);
-            }
+            PutExponent(w, c, layout->exponent);
         }
     }
-    PutSigned(w, c, sign, false);
+    PutSigned(w, c, sign, false, layout->perMille);
 }

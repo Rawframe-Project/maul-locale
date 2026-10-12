@@ -20,8 +20,9 @@ extern "C"
 #endif
 
     // How a number is written: in full, with an exponent of ten (any, or
-    // a multiple of three), or compact ("1.2K", "1.2 thousand"). Only
-    // standard notation is built yet; the others are refused.
+    // a multiple of three), or compact ("1.2K", "1.2 thousand"). The
+    // precision rounds the mantissa of scientific and engineering
+    // notation. Compact notation is not built yet and is refused.
     typedef enum mlocNotation
     {
         mloc_notationStandard = 0,
@@ -32,8 +33,8 @@ extern "C"
     } mlocNotation;
 
     // What a number stands for: itself, or a ratio shown as a percent or
-    // per mille (the value times 100 or 1000). Only decimal is built yet;
-    // the others are refused.
+    // per mille (the value times 100 or 1000, before rounding), in the
+    // locale's percent pattern.
     typedef enum mlocNumberStyle
     {
         mloc_numberDecimal = 0,

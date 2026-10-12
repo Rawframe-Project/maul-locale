@@ -65,21 +65,35 @@ typedef struct NumberWriter
 
 // Resolves a locale's core: its numbers unit along the main chain, the
 // numbering system its -u-nu keyword or its data names, and that
-// system's entry (latn's when it has none of its own). Returns
+// system's entry (latn's when it has none of its own), with the decimal
+// pattern or, for percent and per mille, the percent one. Returns
 // mloc_success, mloc_fellBack when the system asked for has no digits
 // and the default stands instead, or mloc_errorNotFound for data without
 // numbers or whose units disagree.
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
-                              const mlocLocale* locale);
+                              const mlocLocale* locale, mlocNumberStyle style);
 
 // The sign a rounded decimal shows under a sign display.
 NumberSign mlocNumberSign(const mlocDecimal* decimal, mlocSignDisplay display);
 
-// Writes a rounded decimal in standard notation: the affixes for its
-// sign, the integer digits (at least minInteger) grouped as grouping
-// says, and the fraction digits it shows.
-void mlocWriteStandard(const NumberCore* core, const mlocDecimal* decimal, NumberSign sign,
-                       mlocGrouping grouping, uint32_t minInteger, NumberWriter* writer);
+// How a rounded decimal is written.
+typedef struct NumberLayout
+{
+    mlocGrouping grouping;
+    // At least this many integer digits, zeros before.
+    uint32_t minInteger;
+    // The percent placeholder writes the per mille sign.
+    bool perMille;
+    // Whether an exponent of ten follows the digits, and which.
+    bool scientific;
+    int32_t exponent;
+} NumberLayout;
+
+// Writes a rounded decimal: the affixes for its sign, the integer digits
+// grouped as the layout says, the fraction digits it shows, and the
+// exponent when the layout has one.
+void mlocWriteNumber(const NumberCore* core, const mlocDecimal* decimal, NumberSign sign,
+                     const NumberLayout* layout, NumberWriter* writer);
 
 // Ends a writer's last part.
 void mlocEndParts(NumberWriter* writer);
