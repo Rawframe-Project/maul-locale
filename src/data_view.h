@@ -21,6 +21,9 @@ typedef struct DataView
     uint32_t localeCount;
     uint32_t poolOffset;
     uint32_t poolSize;
+    // Zero; it fills the struct so that a view has no padding bytes and
+    // two views of the same bytes compare equal.
+    uint32_t reserved;
 } DataView;
 
 static_assert(sizeof(DataView) <= sizeof(mlocData), "a view fits its public struct");

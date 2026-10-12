@@ -143,6 +143,18 @@ static mlocResult Open(uint32_t size)
     return mlocOpenDataWithKinds(&view, s_file, size, s_kinds, 2);
 }
 
+static bool SameVersions(mlocVersion a, mlocVersion b)
+{
+    return a.major == b.major && a.minor == b.minor && a.patch == b.patch;
+}
+
+static bool SameVersion(const mlocDataVersion* a, const mlocDataVersion* b)
+{
+    return SameVersions(a->cldr, b->cldr) && SameVersions(a->unicode, b->unicode) &&
+           SameVersions(a->library, b->library) && memcmp(a->tzdb, b->tzdb, 8) == 0 &&
+           a->tables == b->tables;
+}
+
 static void TestVersion(void)
 {
     mlocDataVersion version;
@@ -154,7 +166,7 @@ static void TestVersion(void)
     CHECK(memcmp(version.tzdb, "2026e\0\0\0", 8) == 0, "the time zone release, NUL-padded");
     mlocDataVersion read;
     CHECK(mlocReadDataVersion(mlocBuiltinData, mlocBuiltinDataSize, &read) == mloc_success &&
-              memcmp(&read, &version, sizeof(read)) == 0,
+              SameVersion(&read, &version),
           "the compiled-in data has the library's version");
     CHECK(mlocReadDataVersion(mlocBuiltinData, 63, &read) == mloc_errorData, "a short header");
     CHECK(mlocReadDataVersion(nullptr, 64, &read) == mloc_errorInvalid, "null bytes");

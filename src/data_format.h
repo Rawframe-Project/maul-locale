@@ -13,21 +13,21 @@
 // The first four bytes.
 #define MLOC_DATA_MAGIC "MLOC"
 
-enum
-{
-    dataFormatVersion = 1,
-    dataHeaderSize = 64,
-    // A unit: kind, locale index, offset, size, each 32 bits.
-    dataUnitSize = 16,
-    // A locale: the offset and length of its id in the string pool.
-    dataLocaleSize = 8,
-    // A payload's offset is a multiple of this.
-    dataAlignment = 8,
-    // The locale index of a unit that belongs to no locale.
-    dataNoLocale = 0xFFFFFFFF,
-    // The longest locale id a file may hold.
-    dataMaxLocaleId = 64,
-};
+// Unsigned constants, so that comparisons with the file's 32-bit fields
+// keep one type on every compiler (an enum holding 0xFFFFFFFF is signed
+// under MSVC's rules).
+static const uint32_t dataFormatVersion = 1;
+static const uint32_t dataHeaderSize = 64;
+// A unit: kind, locale index, offset, size, each 32 bits.
+static const uint32_t dataUnitSize = 16;
+// A locale: the offset and length of its id in the string pool.
+static const uint32_t dataLocaleSize = 8;
+// A payload's offset is a multiple of this.
+static const uint32_t dataAlignment = 8;
+// The locale index of a unit that belongs to no locale.
+static const uint32_t dataNoLocale = 0xFFFFFFFF;
+// The longest locale id a file may hold.
+static const uint32_t dataMaxLocaleId = 64;
 
 // The header's fields, by byte offset.
 enum
