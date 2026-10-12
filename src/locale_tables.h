@@ -48,6 +48,14 @@
 //       toLength, u16 zero, u32 fromOffset, toOffset; sorted by from
 //   char text[textSize]: values in lowercase, subtags joined by "-"; a
 //       subdivision replaced by a region is the region and "zzzz"
+//
+// Parents (kindLocaleParents), the explicit parent locales of record
+// mloc-0016, by locale key:
+//   u32 count, textSize, u64 zero
+//   entries[count], 12 bytes each: u8 component, childLength,
+//       parentLength, zero; u32 childOffset, parentOffset; sorted by
+//       component, then by the child's bytes, a prefix first
+//   char text[textSize]: keys, CLDR ids as mloc-0016 forms them
 
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H
@@ -142,6 +150,8 @@ enum
     extensionHeaderSize = 16,
     extensionTypeSize = 16,
     extensionSubdivisionSize = 12,
+    parentHeaderSize = 16,
+    parentEntrySize = 12,
 };
 
 static inline uint64_t mlocPackTag(uint32_t language, uint32_t script, uint32_t region)

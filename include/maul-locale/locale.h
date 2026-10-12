@@ -158,6 +158,44 @@ extern "C"
                                                           const mlocLocale* locale, mlocFavor favor,
                                                           mlocLocale* localeOut);
 
+    // The parts of CLDR's data whose locales inherit differently (UTS #35,
+    // Parent Locales).
+    typedef uint8_t mlocComponent;
+    enum
+    {
+        // Everything not listed below: names, numbers, dates and the rest.
+        mloc_componentMain = 0,
+        mloc_componentCollation = 1,
+        mloc_componentPlurals = 2,
+        mloc_componentSegmentation = 3,
+        mloc_componentGrammar = 4,
+    };
+
+    /// Returns the next locale of a locale's fallback chain in a component
+    /// (record mloc-0016): the locale is first put in key form, with the
+    /// script likely subtags give it and left out when it is its language's
+    /// own ("zh-TW" is zh-Hant-TW, "sr-Cyrl-BA" is sr-BA); then its next
+    /// key is CLDR's explicit parent ("en-AU" gives "en-001", "es-MX"
+    /// "es-419"), else the last variant, the region or the script dropped,
+    /// where in the main component a script gives root ("zh-Hant" gives
+    /// "und", never "zh"). The extensions are kept. Root is "und".
+    ///
+    /// @param data       The data with the parents and likely subtags.
+    /// @param component  The component whose parents apply.
+    /// @param locale     The locale.
+    /// @param parentOut  Receives the parent; left unchanged on failure.
+    /// @return mloc_success; mloc_errorNotFound for root, which has no
+    ///         parent, or data without the parents table;
+    ///         mloc_errorCapacity when the extensions do not fit after the
+    ///         parent's variants; mloc_errorInvalid for a null pointer or
+    ///         another component.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetParentLocale(const mlocDataSet* data,
+                                                           mlocComponent component,
+                                                           const mlocLocale* locale,
+                                                           mlocLocale* parentOut);
+
 #ifdef __cplusplus
 }
 #endif

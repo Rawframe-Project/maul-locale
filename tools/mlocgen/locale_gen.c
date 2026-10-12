@@ -9,6 +9,7 @@
 #include "extension_gen.h"
 #include "kinds.h"
 #include "locale_tables.h"
+#include "parents_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -192,5 +193,6 @@ int GenerateLocaleUnits(const char* commonDirectory, DataFile* file, char* error
     int ok = AddLikely(root, file, errorOut, errorCapacity);
     XmlFree(root);
     return ok && GenerateAliasUnit(commonDirectory, file, errorOut, errorCapacity) &&
-           GenerateExtensionUnit(commonDirectory, file, errorOut, errorCapacity);
+           GenerateExtensionUnit(commonDirectory, file, errorOut, errorCapacity) &&
+           GenerateParentUnit(commonDirectory, file, errorOut, errorCapacity);
 }

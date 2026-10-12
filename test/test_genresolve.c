@@ -40,6 +40,12 @@ static void TestParents(void)
     CHECK(strcmp(CldrParent(&s_cldr, "xx_ZZ", componentMain), "xx_YY") == 0, "an explicit parent");
     CHECK(strcmp(CldrParent(&s_cldr, "xx_Cyrl", componentMain), "root") == 0,
           "a non-likely script falls to root");
+    CHECK(strcmp(CldrParent(&s_cldr, "xx_Grek", componentMain), "root") == 0,
+          "and one that is not listed");
+    CHECK(strcmp(CldrParent(&s_cldr, "xx_Latn", componentMain), "xx") == 0,
+          "the likely script truncates");
+    CHECK(strcmp(CldrParent(&s_cldr, "xx_Grek", componentCollation), "xx") == 0,
+          "the rule is the main component's alone");
     CHECK(strcmp(CldrParent(&s_cldr, "xx", componentMain), "root") == 0, "a language to root");
     CHECK(CldrParent(&s_cldr, "root", componentMain) == nullptr, "root has no parent");
     CHECK(strcmp(CldrParent(&s_cldr, "xx_YY", componentCollation), "root") == 0,

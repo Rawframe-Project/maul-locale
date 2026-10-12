@@ -18,5 +18,8 @@ constexpr uint32_t kindLocaleLikely = 0x00010001;
 constexpr uint32_t kindLocaleAliases = 0x00010002;
 // The locale part: the aliases of extension values, a unit of no locale.
 constexpr uint32_t kindLocaleExtensionAliases = 0x00010003;
+// The locale part: the explicit parent locales of each component, a unit
+// of no locale.
+constexpr uint32_t kindLocaleParents = 0x00010004;
 
 #endif

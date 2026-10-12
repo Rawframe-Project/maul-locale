@@ -52,6 +52,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/data_kinds.c
     src/locale_canonical.c
     src/locale_extensions.c
+    src/locale_fallback.c
     src/locale_likely.c
     src/locale_parse.c
     src/generated/builtin_data.c)
@@ -66,9 +67,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(likely_tables WHITEBOX)
     maul_add_test(canonical)
     maul_add_test(alias_tables WHITEBOX)
+    maul_add_test(parents)
+    maul_add_test(fallback_units WHITEBOX)
     # CLDR's conformance files, which the cldr CI job runs on the pinned
     # release; built here so that every build compiles them.
-    foreach(name likely canonical)
+    foreach(name likely canonical parents)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})
@@ -104,8 +107,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/cldr.c
                                     tools/mlocgen/datafile.c
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
-                                    tools/mlocgen/generate.c
-                                    tools/mlocgen/ldml.c tools/mlocgen/locale_gen.c tools/mlocgen/map.c tools/mlocgen/xml.c)
+                                    tools/mlocgen/generate.c tools/mlocgen/keys.c
+                                    tools/mlocgen/ldml.c tools/mlocgen/locale_gen.c tools/mlocgen/map.c
+                                    tools/mlocgen/parents_gen.c tools/mlocgen/xml.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)

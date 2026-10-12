@@ -5,7 +5,7 @@
 // parsed locale writes a tag that parses back to the same locale and
 // writes the same tag again. Canonicalizing on the compiled-in data
 // refuses within the text too, and a canonical tag canonicalizes to
-// itself.
+// itself, and its fallback chain in every component ends at root.
 
 #include "maul-locale/locale.h"
 
@@ -45,6 +45,21 @@ static void Canonicalize(const uint8_t* data, size_t size)
     Require(mlocCanonicalizeLocale(&set, tag, output.length, &again, &changes).status ==
             mloc_success);
     Require(memcmp(&locale, &again, sizeof(locale)) == 0 && changes == 0);
+    // Every chain ends at root: one step a variant (112 bytes hold at
+    // most 22), then explicit parents, the region, the script and root.
+    for (mlocComponent component = 0; component <= mloc_componentGrammar; component++)
+    {
+        mlocLocale step = locale;
+        int depth = 0;
+        mlocResult next = mloc_success;
+        while (depth++ < 64 && next == mloc_success)
+        {
+            mlocLocale parent;
+            next = mlocGetParentLocale(&set, component, &step, &parent);
+            step = next == mloc_success ? parent : step;
+        }
+        Require(next == mloc_errorNotFound || next == mloc_errorCapacity);
+    }
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

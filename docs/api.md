@@ -85,6 +85,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocMinimizeLocale(const mlocDataSet* data, c
 ```
 Removes likely subtags (UTS #35): the shortest of the language alone, then with its region or script (in the order favor gives), that adds back to the same locale; "zh-Hant-TW" gives "zh-TW", or "zh-Hant" when the script is favored. The variants and extensions are kept.  @param data       The data to read the likely subtags from. @param locale     The locale. @param favor      mloc_favorRegion or mloc_favorScript. @param localeOut  Receives the result; may be locale itself; left unchanged on failure. @return mloc_success; mloc_errorNotFound as mlocMaximizeLocale; mloc_errorInvalid for a null pointer or another favor. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component, const mlocLocale* locale, mlocLocale* parentOut);
+```
+Returns the next locale of a locale's fallback chain in a component (record mloc-0016): the locale is first put in key form, with the script likely subtags give it and left out when it is its language's own ("zh-TW" is zh-Hant-TW, "sr-Cyrl-BA" is sr-BA); then its next key is CLDR's explicit parent ("en-AU" gives "en-001", "es-MX" "es-419"), else the last variant, the region or the script dropped, where in the main component a script gives root ("zh-Hant" gives "und", never "zh"). The extensions are kept. Root is "und".  @param data       The data with the parents and likely subtags. @param component  The component whose parents apply. @param locale     The locale. @param parentOut  Receives the parent; left unchanged on failure. @return mloc_success; mloc_errorNotFound for root, which has no parent, or data without the parents table; mloc_errorCapacity when the extensions do not fit after the parent's variants; mloc_errorInvalid for a null pointer or another component. @par Thread safety Safe from any thread.
+
 ---
 
-14 functions across 3 headers.
+15 functions across 3 headers.

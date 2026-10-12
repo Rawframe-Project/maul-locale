@@ -38,6 +38,8 @@ typedef struct Cldr
     // stand alone.
     Map parents;
     Map collationParents;
+    // A language alone to its likely script, from likelySubtags.xml.
+    Map scripts;
     // The least acceptable draft status (contributed, as ICU takes).
     Draft threshold;
 } Cldr;
@@ -48,6 +50,9 @@ int CldrOpen(Cldr* cldr, const char* commonDirectory, char* errorOut, size_t err
 
 // The parent of a locale id ("de_AT" to "de", "en_AU" to "en_001", "de"
 // to "root"), or null for root: the component's own parent locales, else
+// for the main component root when the id ends in a script that is not
+// its language's likely one (the nonlikelyScript rule, applied to every
+// id as CLDR's LocaleIDParser does, not only to the ones listed), else
 // truncation.
 const char* CldrParent(Cldr* cldr, const char* locale, Component component);
 

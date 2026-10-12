@@ -7,12 +7,14 @@
 #include "data_view.h"
 #include "kinds.h"
 #include "locale_canonical.h"
+#include "locale_fallback.h"
 #include "locale_likely.h"
 
 static const DataKind s_kinds[] = {
     {kindLocaleLikely, mlocValidLikely},
     {kindLocaleAliases, mlocValidAliases},
     {kindLocaleExtensionAliases, mlocValidExtensionAliases},
+    {kindLocaleParents, mlocValidParents},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

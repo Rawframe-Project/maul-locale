@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE supplementalData SYSTEM "../../common/dtd/ldmlSupplemental.dtd">
+<!--
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Sirac Ozmen
+-->
+<supplementalData>
+	<likelySubtags>
+		<likelySubtag from="xx" to="xx_Latn_YY"/>
+		<likelySubtag from="und" to="xx_Latn_YY"/>
+	</likelySubtags>
+</supplementalData>

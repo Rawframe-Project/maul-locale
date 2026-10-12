@@ -198,6 +198,36 @@ static void AddParents(Map* parents, const XmlNode* list)
     }
 }
 
+// Reads each language's likely script from likelySubtags.xml.
+static int LoadScripts(Cldr* cldr, const char* commonDirectory, char* errorOut,
+                       size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/supplemental/likelySubtags.xml", commonDirectory);
+    XmlNode* root = XmlParseFile(path, errorOut, errorCapacity);
+    if (root == nullptr)
+    {
+        return 0;
+    }
+    const XmlNode* list = XmlFindChild(root, "likelySubtags");
+    for (int i = 0; list != nullptr && i < list->childCount; i++)
+    {
+        const char* from = XmlGetAttribute(list->children[i], "from");
+        const char* to = XmlGetAttribute(list->children[i], "to");
+        const char* script = to == nullptr ? nullptr : strchr(to, '_');
+        if (from != nullptr && strchr(from, '_') == nullptr && script != nullptr &&
+            strlen(script) >= 5)
+        {
+            char copy[5];
+            memcpy(copy, script + 1, 4);
+            copy[4] = '\0';
+            MapPut(&cldr->scripts, from, Copy(copy));
+        }
+    }
+    XmlFree(root);
+    return 1;
+}
+
 int CldrOpen(Cldr* cldr, const char* commonDirectory, char* errorOut, size_t errorCapacity)
 {
     *cldr = (Cldr){.commonDirectory = Copy(commonDirectory), .threshold = draftContributed};
@@ -234,7 +264,7 @@ int CldrOpen(Cldr* cldr, const char* commonDirectory, char* errorOut, size_t err
         }
     }
     XmlFree(root);
-    return 1;
+    return LoadScripts(cldr, commonDirectory, errorOut, errorCapacity);
 }
 
 const char* CldrParent(Cldr* cldr, const char* locale, Component component)
@@ -256,6 +286,17 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component)
     if (cut == nullptr)
     {
         return "root";
+    }
+    if (component == componentMain && strchr(locale, '_') == cut && strlen(cut + 1) == 4)
+    {
+        char language[16];
+        const char* likely = CopyRange(language, sizeof(language), locale, cut)
+                                 ? MapGet(&cldr->scripts, language)
+                                 : nullptr;
+        if (likely == nullptr || strcmp(likely, cut + 1) != 0)
+        {
+            return "root";
+        }
     }
     // The truncated id is kept in the parents map so that it lives as
     // long as the Cldr.
@@ -507,6 +548,8 @@ void CldrClose(Cldr* cldr)
     MapEach(&cldr->collationParents, FreeText, nullptr);
     MapFree(&cldr->parents);
     MapFree(&cldr->collationParents);
+    MapEach(&cldr->scripts, FreeText, nullptr);
+    MapFree(&cldr->scripts);
     DtdFree(&cldr->dtd);
     free(cldr->commonDirectory);
 }
