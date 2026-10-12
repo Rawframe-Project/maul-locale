@@ -28,10 +28,7 @@ typedef struct CompactChoice
     uint32_t pattern;
 } CompactChoice;
 
-enum
-{
-    compactNoPattern = 0xFFFFFFFF,
-};
+constexpr uint32_t compactNoPattern = 0xFFFFFFFFu;
 
 // Whether every pattern index a table holds is in the patterns unit, and
 // every other pattern writes digits.

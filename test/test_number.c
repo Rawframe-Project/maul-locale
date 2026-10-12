@@ -391,6 +391,40 @@ static void TestCompact(void)
     mlocDecimal special = {.kind = mloc_decimalNaN};
     CHECK(mlocFormatNumber(&formatter, &special, &output) == mloc_success && output.length == 3,
           "NaN is not compacted");
+    // The spaces at a compact word's ends are literal, whichever space.
+    typedef struct SpaceCase
+    {
+        const char* id;
+        mlocNotation notation;
+        const char* number;
+        size_t compactStart;
+        size_t compactLength;
+    } SpaceCase;
+    static const SpaceCase s_spaces[] = {
+        {"de", mloc_notationCompactShort, "1234567", 5, 4},
+        {"en-IN", mloc_notationCompactLong, "150000", 6, 4},
+    };
+    for (size_t i = 0; i < sizeof(s_spaces) / sizeof(s_spaces[0]); i++)
+    {
+        mlocNumberOptions spaced = {.notation = s_spaces[i].notation};
+        Parts got = {0};
+        mlocOutput withParts = {
+            .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &got};
+        CHECK(mlocParseLocale(s_spaces[i].id, strlen(s_spaces[i].id), &locale).status ==
+                      mloc_success &&
+                  mlocInitNumberFormatter(&formatter, &s_data, &locale, &spaced) == mloc_success &&
+                  mlocParseDecimal(s_spaces[i].number, strlen(s_spaces[i].number), &value).status ==
+                      mloc_success &&
+                  mlocFormatNumber(&formatter, &value, &withParts) == mloc_success &&
+                  got.count == 5 && got.kinds[3] == mloc_numberPartLiteral &&
+                  got.kinds[4] == mloc_numberPartCompact &&
+                  got.starts[4] == s_spaces[i].compactStart &&
+                  got.lengths[4] == s_spaces[i].compactLength,
+              s_spaces[i].id);
+    }
+    o = (mlocNumberOptions){.notation = mloc_notationCompactShort};
+    CHECK(Init("en-u-nu-roman", &o) == mloc_fellBack,
+          "a system without digits in compact notation");
 }
 
 static void TestGrouping(void)

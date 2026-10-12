@@ -315,8 +315,9 @@ bool mlocValidNumberCompact(const DataView* view, DataSpan payload)
     {
         uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);
         uint32_t end = mlocLoad32(offsets + 4 * (size_t)i + 4);
-        // Each table ends within the bytes before any of it is read.
-        if (end < start || end > size ||
+        // Each table ends within the bytes before any of it is read, and
+        // none is empty: a table holds all its rows.
+        if (end <= start || end > size ||
             CompactTableSize(tables + start, end - start) != end - start)
         {
             return false;

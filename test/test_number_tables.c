@@ -356,6 +356,17 @@ static void TestCompactUnits(void)
     CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t) - 1), "a table ending past its unit");
     t[0] = 200;
     CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t)), "more offsets than the unit holds");
+    // Two tables, the first empty: its offsets agree, but it holds no row.
+    uint8_t two[numberCompactHeaderSize + 12 + 2 * numberCompactRows + 2] = {2};
+    uint32_t tableSize = 2 * numberCompactRows + 2;
+    two[numberCompactHeaderSize + 8] = (uint8_t)tableSize;
+    two[numberCompactHeaderSize + 12 + 1] = 0;
+    two[numberCompactHeaderSize + 12] = 1;
+    two[numberCompactHeaderSize + 12 + 1] = 1u << numberCompactOther;
+    CHECK(!Valid(mlocValidNumberCompact, two, sizeof(two)), "an empty table");
+    two[numberCompactHeaderSize + 4] = (uint8_t)tableSize;
+    two[numberCompactHeaderSize + 8] = (uint8_t)(2 * tableSize);
+    CHECK(!Valid(mlocValidNumberCompact, two, sizeof(two)), "a second table past the unit");
     t[0] = 1;
     CHECK(!Valid(mlocValidNumberCompact, t, 7), "shorter than its header");
 }
