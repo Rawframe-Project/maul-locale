@@ -525,21 +525,26 @@ static void TestFind(void)
 
 static void TestRegionLists(void)
 {
-    mlocRegionCurrency list[8];
+    mlocRegionCurrency list[24];
     size_t count = 99;
-    CHECK(mlocGetRegionCurrencies(&s_data, "de", 2, list, 8, &count) == mloc_success &&
+    CHECK(mlocGetRegionCurrencies(&s_data, "de", 2, list, 24, &count) == mloc_success &&
               count == 2 && memcmp(list[0].code, "EUR", 4) == 0 &&
               list[0].from == Day(1999, 1, 1) && list[0].to == INT32_MAX && list[0].tender == 1 &&
               memcmp(list[1].code, "DEM", 4) == 0 && list[1].from == Day(1948, 6, 20) &&
               list[1].to == Day(2002, 2, 28),
           "Germany's currencies in CLDR's order");
-    CHECK(mlocGetRegionCurrencies(&s_data, "AQ", 2, list, 8, &count) == mloc_success &&
+    CHECK(mlocGetRegionCurrencies(&s_data, "AQ", 2, list, 24, &count) == mloc_success &&
               count == 1 && memcmp(list[0].code, "XXX", 4) == 0 && list[0].tender == 0 &&
               list[0].from == INT32_MIN && list[0].to == INT32_MAX,
           "Antarctica's no currency, without a span");
-    CHECK(mlocGetRegionCurrencies(&s_data, "ZW", 2, list, 8, &count) == mloc_success &&
-              count == 6 && memcmp(list[5].code, "RHD", 4) == 0 &&
-              mlocGetRegionCurrencies(&s_data, "AC", 2, list, 8, &count) == mloc_success &&
+    CHECK(mlocGetRegionCurrencies(&s_data, "ZW", 2, list, 24, &count) == mloc_success &&
+              count == 6 && memcmp(list[5].code, "RHD", 4) == 0,
+          "Zimbabwe's six currencies");
+    CHECK(mlocGetRegionCurrencies(&s_data, "zz", 2, list, 24, &count) == mloc_success &&
+              count == 17 && memcmp(list[0].code, "XAD", 4) == 0 &&
+              list[0].from == Day(2025, 5, 12) && list[0].tender == 0 &&
+              memcmp(list[16].code, "XXX", 4) == 0 &&
+              mlocGetRegionCurrencies(&s_data, "AC", 2, list, 24, &count) == mloc_success &&
               count == 1 && memcmp(list[0].code, "SHP", 4) == 0,
           "the table's last and first regions");
     CHECK(mlocGetRegionCurrencies(&s_data, "DE", 2, list, 1, &count) == mloc_errorCapacity &&
@@ -549,19 +554,19 @@ static void TestRegionLists(void)
           "too little room gives the count needed");
     CHECK(mlocGetRegionCurrencies(&s_data, "419", 3, nullptr, 0, &count) == mloc_success &&
               count == 0 &&
-              mlocGetRegionCurrencies(&s_data, "QO", 2, list, 8, &count) == mloc_success &&
+              mlocGetRegionCurrencies(&s_data, "QO", 2, list, 24, &count) == mloc_success &&
               count == 0,
           "a region without currencies");
     mlocDataSet none = {nullptr, 0};
-    CHECK(mlocGetRegionCurrencies(&none, "DE", 2, list, 8, &count) == mloc_errorNotFound,
+    CHECK(mlocGetRegionCurrencies(&none, "DE", 2, list, 24, &count) == mloc_errorNotFound,
           "data without the regions");
-    CHECK(mlocGetRegionCurrencies(&s_data, "D", 1, list, 8, &count) == mloc_errorInvalid &&
-              mlocGetRegionCurrencies(&s_data, "DEU", 3, list, 8, &count) == mloc_errorInvalid &&
-              mlocGetRegionCurrencies(&s_data, "DEUT", 4, list, 8, &count) == mloc_errorInvalid &&
-              mlocGetRegionCurrencies(&s_data, "D1", 2, list, 8, &count) == mloc_errorInvalid,
+    CHECK(mlocGetRegionCurrencies(&s_data, "D", 1, list, 24, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DEU", 3, list, 24, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "DEUT", 4, list, 24, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, "D1", 2, list, 24, &count) == mloc_errorInvalid,
           "a region that is not two letters or three digits");
-    CHECK(mlocGetRegionCurrencies(nullptr, "DE", 2, list, 8, &count) == mloc_errorInvalid &&
-              mlocGetRegionCurrencies(&s_data, nullptr, 2, list, 8, &count) == mloc_errorInvalid &&
+    CHECK(mlocGetRegionCurrencies(nullptr, "DE", 2, list, 24, &count) == mloc_errorInvalid &&
+              mlocGetRegionCurrencies(&s_data, nullptr, 2, list, 24, &count) == mloc_errorInvalid &&
               mlocGetRegionCurrencies(&s_data, "DE", 2, nullptr, 8, &count) == mloc_errorInvalid &&
               mlocGetRegionCurrencies(&s_data, "DE", 2, list, 8, nullptr) == mloc_errorInvalid,
           "a null pointer");

@@ -35,10 +35,14 @@ static Regions ReadRegions(DataSpan unit)
     return r;
 }
 
+// A day of an entry, its two's complement bits (C23's only signed
+// representation).
 static int32_t LoadDay(const uint8_t* p)
 {
     uint32_t value = mlocLoad32(p);
-    return value <= INT32_MAX ? (int32_t)value : -(int32_t)(~value) - 1;
+    int32_t day = 0;
+    memcpy(&day, &value, sizeof(day));
+    return day;
 }
 
 static bool ValidEntry(const uint8_t* e)
