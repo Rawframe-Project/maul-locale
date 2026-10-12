@@ -6,3 +6,15 @@ are listed in [README.md](README.md).
 | Number | Title | Status |
 |---|---|---|
 | [mloc-0001](mloc-0001-library-profile.md) | Library profile | Accepted |
+| [mloc-0002](mloc-0002-pin-cldr-49-and-tzdb.md) | Pin CLDR 49 and the time zone database | Accepted |
+| [mloc-0003](mloc-0003-scope-and-parts.md) | The whole scope, in eighteen parts | Accepted |
+| [mloc-0004](mloc-0004-speed-bar.md) | No part slower than the fastest implementation | Accepted |
+| [mloc-0005](mloc-0005-one-data-format.md) | One data format, rules as code, exact data versions | Accepted |
+| [mloc-0006](mloc-0006-generator-from-cldr-xml.md) | A generator from CLDR's XML with its own compilers | Accepted |
+| [mloc-0007](mloc-0007-api-shape.md) | The shape of the API | Accepted |
+| [mloc-0008](mloc-0008-dates-as-values.md) | Dates and times as values with arithmetic | Accepted |
+| [mloc-0009](mloc-0009-grammatical-functions.md) | Grammatical functions for messages | Accepted |
+| [mloc-0010](mloc-0010-catalog-formats.md) | Catalogs: a source format, a compiled form, exchange files | Accepted |
+| [mloc-0011](mloc-0011-word-breaking-data.md) | Word breaking: dictionaries by default, models by choice | Accepted |
+| [mloc-0012](mloc-0012-system-languages.md) | The system's languages come from Maul Window | Accepted |
+| [mloc-0013](mloc-0013-proof-per-part.md) | What proves each part | Accepted |
