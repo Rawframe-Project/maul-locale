@@ -116,7 +116,7 @@ static bool Finds(mlocComponent component, const char* text, const char* key, bo
     }
     DataSpan span = {0};
     bool fell = !fellBack;
-    if (!mlocFindLocaleUnit(&s_set, component, kindTest, &locale, &span, &fell))
+    if (!mlocFindLocaleUnit(&s_set, component, kindTest, &locale, &span, &fell, nullptr))
     {
         return key == nullptr;
     }
@@ -146,7 +146,7 @@ static void TestLookups(void)
     mlocLocale locale = {.language = "de"};
     DataSpan span;
     bool fell = false;
-    CHECK(!mlocFindLocaleUnit(&empty, m, kindTest, &locale, &span, &fell),
+    CHECK(!mlocFindLocaleUnit(&empty, m, kindTest, &locale, &span, &fell, nullptr),
           "data without the parents table");
     // The pack alone has neither parents nor likely subtags: a locale's
     // own key needs neither, its chain the parents.

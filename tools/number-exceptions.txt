@@ -1,0 +1,6 @@
+# Where CLDR's testData/decimal, which ICU4J wrote from older data, disagrees
+# with the CLDR release tools/cldr-release.txt pins: per locale, a text of
+# the expected lines, the text CLDR's own data gives instead, and the
+# reason, tab-separated. test/conform_numbers.c replaces the first by the
+# second in that locale's expected lines; each entry must be used.
+gl	.	 	CLDR 49's gl.xml and its JSON give a no-break space as the group separator; the test data has a full stop, from the older data ICU4J held

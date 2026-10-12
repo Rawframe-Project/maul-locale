@@ -25,3 +25,4 @@ are listed in [README.md](README.md).
 | [mloc-0018](mloc-0018-regional-preferences.md) | Regional preferences from one region, with the keys on top | Accepted |
 | [mloc-0019](mloc-0019-decimal-value.md) | The decimal value and the plural operands | Accepted |
 | [mloc-0020](mloc-0020-plural-rules.md) | Plural rules compiled to C, chosen per locale by data | Accepted |
+| [mloc-0021](mloc-0021-number-formatting.md) | Number formatting from distinct tables, without default rounding | Accepted |

@@ -405,7 +405,8 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
 }
 
 bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
-                        const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut)
+                        const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut,
+                        DataView* viewOut)
 {
     // The parents are read only when the first step has no unit.
     // Validation has made every chain end within maxChain steps.
@@ -424,6 +425,10 @@ bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32
                 mlocFindDataUnit(&view, kind, index, spanOut))
             {
                 *fellBackOut = depth > 0;
+                if (viewOut != nullptr)
+                {
+                    *viewOut = view;
+                }
                 return true;
             }
         }

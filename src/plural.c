@@ -9,6 +9,7 @@
 #include "plural.h"
 
 #include "bytes.h"
+#include "data_format.h"
 #include "data_view.h"
 #include "decimal.h"
 #include "kinds.h"
@@ -98,7 +99,9 @@ mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* dat
     }
     DataSpan unit;
     bool fellBack = false;
-    if (!mlocFindLocaleUnit(data, mloc_componentPlurals, kindPlurals, locale, &unit, &fellBack))
+    DataView view;
+    if (!mlocFindLocaleUnit(data, mloc_componentPlurals, kindPlurals, locale, &unit, &fellBack,
+                            &view))
     {
         return mloc_errorNotFound;
     }
@@ -109,8 +112,10 @@ mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* dat
     }
     memset(rules.ranges, pluralNone, sizeof(rules.ranges));
     DataSpan ranges;
+    // The range table of the source that holds the unit, which its index
+    // names.
     if (unit.bytes[2] != pluralNone &&
-        mlocFindDataSetUnit(data, kindPluralRanges, nullptr, 0, &ranges) &&
+        mlocFindDataUnit(&view, kindPluralRanges, dataNoLocale, &ranges) &&
         unit.bytes[2] < ranges.bytes[0])
     {
         memcpy(rules.ranges,

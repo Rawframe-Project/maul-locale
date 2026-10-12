@@ -132,6 +132,8 @@ jobs:
             awk '{ print "main\t" $0; print "collation\t" $0 }' |
             build/mlocgen chains ~/cldr-cache/cldr/common | build/conform_parents
           build/mlocgen plural-samples ~/cldr-cache/cldr/common | build/conform_plurals
+          cat ~/cldr-cache/cldr/common/testData/decimal/*.tsv |
+            build/conform_numbers tools/number-exceptions.txt
       - name: Matching
         # ICU's matcher test (record mloc-0017), the file tools/icu-release.txt pins.
         timeout-minutes: 5

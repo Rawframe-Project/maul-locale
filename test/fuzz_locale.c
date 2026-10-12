@@ -7,10 +7,12 @@
 // refuses within the text too, and a canonical tag canonicalizes to
 // itself, its fallback chain in every component ends at root, it
 // matches itself first, its match among a few others is one of them and
-// combines with it, it has regional preferences in range, and plural
-// rules of both types whose category for 21 is one they name.
+// combines with it, it has regional preferences in range, plural rules
+// of both types whose category for 21 is one they name, and a number
+// formatter that writes -1234.5 measured and written alike.
 
 #include "maul-locale/locale.h"
+#include "maul-locale/number.h"
 #include "maul-locale/plural.h"
 
 #include <stdlib.h>
@@ -114,6 +116,17 @@ static void Canonicalize(const uint8_t* data, size_t size)
                 mlocGetPluralCategories(&rules, &categories) == mloc_success &&
                 (categories >> category & 1u) != 0);
     }
+    // Every locale has numbers (root's at worst), whatever -u-nu says.
+    mlocNumberFormatter formatter;
+    mlocDecimal value;
+    char text[256];
+    mlocOutput measure = {0};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    Require(mlocInitNumberFormatter(&formatter, &set, &locale, nullptr) >= 0 &&
+            mlocParseDecimal("-1234.5", 7, &value).status == mloc_success &&
+            mlocFormatNumber(&formatter, &value, &measure) == mloc_errorCapacity &&
+            mlocFormatNumber(&formatter, &value, &output) == mloc_success &&
+            output.length == measure.length);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

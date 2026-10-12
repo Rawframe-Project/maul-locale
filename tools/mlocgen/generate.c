@@ -7,6 +7,7 @@
 
 #include "data_format.h"
 #include "locale_gen.h"
+#include "number_gen.h"
 #include "plural_gen.h"
 
 #include "maul-locale/base.h"
@@ -242,7 +243,8 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     Text rules = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
-                             errorCapacity))
+                             errorCapacity) ||
+        !GenerateNumberUnits(commonDirectory, &data, errorOut, errorCapacity))
     {
         DataFileFree(&data);
         return 0;

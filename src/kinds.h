@@ -33,4 +33,15 @@ constexpr uint32_t kindPlurals = 0x00030001;
 // The plural part: the range tables, a unit of no locale.
 constexpr uint32_t kindPluralRanges = 0x00030002;
 
+// The number part: the numeric numbering systems and their digits, a unit
+// of no locale (record mloc-0021, src/number_tables.h).
+constexpr uint32_t kindNumberSystems = 0x00040001;
+// The number part: the distinct symbol sets, a unit of no locale.
+constexpr uint32_t kindNumberSymbols = 0x00040002;
+// The number part: the distinct compiled patterns, a unit of no locale.
+constexpr uint32_t kindNumberPatterns = 0x00040003;
+// The number part: a locale's numbering systems, grouping and the indexes
+// of its symbols and patterns, a unit per locale.
+constexpr uint32_t kindNumbers = 0x00040004;
+
 #endif

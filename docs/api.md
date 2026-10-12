@@ -154,6 +154,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences( const mlocDataSet* 
 ```
 Returns a locale's regional preferences (UTS #35), the region's values from CLDR's supplemental data. The region is the -u-rg key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's region, else the -u-sd key's, else the likely one ("en" takes the US's), else 001; a region without data takes 001's. Keys override: -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed formats list first), -u-fw the first day, -u-ms the measurement system; -u-ca-iso8601 begins weeks on Monday with four days in the first unless -u-fw or -u-rg give the first day. The hour data is looked up for the language in the region first (ca-ES has its own). A key with a value it does not take is left out.  @param data          The data with the preferences and likely subtags. @param locale        The locale, canonicalized. @param preferencesOut Receives the preferences; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the preferences; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+## `number.h`
+
+Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a locale's digits, symbols and grouping, rounded as the options say. The options follow ECMA-402's NumberFormat; their zero value is the default, and the zero precision rounds nothing.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocNumberOptions* options);
+```
+Makes a locale's number formatter. The numbering system is the locale's -u-nu keyword ("native", "traditio" and "finance" as the locale names them), else the locale's default; one without digits (Roman, for one) takes the default, which the spellout part formats instead.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the number units, the parents and the likely subtags. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead (the locale's data is always found along its chain, root's last, so whether a locale is supported is a question for language matching); mloc_errorNotFound for data without numbers; mloc_errorInvalid for a null pointer or options out of range or in conflict. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+```
+Formats a decimal.  @param formatter  A formatter from mlocInitNumberFormatter. @param decimal    The number. @param output     Receives the text; its part function, when set, receives mlocNumberPart values. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
 ## `plural.h`
 
 Plural rules (UTS #35 Part 3, record mloc-0020): the category a number takes in a locale, cardinal ("1 file", "2 files") or ordinal ("1st", "2nd"), and that of a range of two numbers.
@@ -190,4 +204,4 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ---
 
-33 functions across 5 headers.
+35 functions across 6 headers.

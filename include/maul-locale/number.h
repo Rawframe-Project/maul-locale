@@ -1,0 +1,196 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a
+// locale's digits, symbols and grouping, rounded as the options say.
+// The options follow ECMA-402's NumberFormat; their zero value is the
+// default, and the zero precision rounds nothing.
+
+#ifndef MAUL_LOCALE_NUMBER_H
+#define MAUL_LOCALE_NUMBER_H
+
+#include "maul-locale/base.h"
+#include "maul-locale/data.h"
+#include "maul-locale/decimal.h"
+#include "maul-locale/locale.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    // How a number is written: in full, with an exponent of ten (any, or
+    // a multiple of three), or compact ("1.2K", "1.2 thousand"). Only
+    // standard notation is built yet; the others are refused.
+    typedef enum mlocNotation
+    {
+        mloc_notationStandard = 0,
+        mloc_notationScientific = 1,
+        mloc_notationEngineering = 2,
+        mloc_notationCompactShort = 3,
+        mloc_notationCompactLong = 4,
+    } mlocNotation;
+
+    // What a number stands for: itself, or a ratio shown as a percent or
+    // per mille (the value times 100 or 1000). Only decimal is built yet;
+    // the others are refused.
+    typedef enum mlocNumberStyle
+    {
+        mloc_numberDecimal = 0,
+        mloc_numberPercent = 1,
+        mloc_numberPerMille = 2,
+    } mlocNumberStyle;
+
+    // When the integer digits are grouped: as the locale prefers
+    // (Spanish writes 1234 but 12 345), always, only with at least two
+    // digits before the first separator, or never.
+    typedef enum mlocGrouping
+    {
+        mloc_groupingAuto = 0,
+        mloc_groupingAlways = 1,
+        mloc_groupingMin2 = 2,
+        mloc_groupingOff = 3,
+    } mlocGrouping;
+
+    // Which numbers show a sign (ECMA-402's signDisplay): negative ones,
+    // negative zero included; every one but NaN; none; every one but
+    // zero; or negative ones but zero.
+    typedef enum mlocSignDisplay
+    {
+        mloc_signAuto = 0,
+        mloc_signAlways = 1,
+        mloc_signNever = 2,
+        mloc_signExceptZero = 3,
+        mloc_signNegative = 4,
+    } mlocSignDisplay;
+
+    // Which digit limits round the number (ECMA-402's roundingType): none
+    // (the decimal shows its own digits), fraction digits, significant
+    // digits, or both, the result with more or with less precision
+    // winning.
+    typedef enum mlocPrecisionKind
+    {
+        mloc_precisionNone = 0,
+        mloc_precisionFraction = 1,
+        mloc_precisionSignificant = 2,
+        mloc_precisionMorePrecision = 3,
+        mloc_precisionLessPrecision = 4,
+    } mlocPrecisionKind;
+
+    // Whether a rounded integer keeps the fraction zeros the minimum
+    // fraction digits ask for (ECMA-402's trailingZeroDisplay).
+    typedef enum mlocTrailingZeros
+    {
+        mloc_trailingZerosAuto = 0,
+        mloc_trailingZerosStripIfInteger = 1,
+    } mlocTrailingZeros;
+
+    // How a number is rounded. Fields a kind does not read must be 0.
+    typedef struct mlocPrecision
+    {
+        mlocPrecisionKind kind;
+        mlocRoundingMode mode;
+        mlocTrailingZeros trailingZeros;
+        // Fraction digits, 0 to 100, minimum at most maximum: read by the
+        // fraction, more and less precision kinds.
+        uint8_t minFractionDigits;
+        uint8_t maxFractionDigits;
+        // Significant digits, 1 to 21, minimum at most maximum: read by the
+        // significant, more and less precision kinds.
+        uint8_t minSignificantDigits;
+        uint8_t maxSignificantDigits;
+        // A rounding increment in units of the last fraction digit: 0 or 1
+        // for none, else 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000,
+        // 2000, 2500 or 5000, with the fraction kind and equal fraction
+        // limits.
+        uint16_t increment;
+    } mlocPrecision;
+
+    // A number formatter's options; the zero value is the default.
+    typedef struct mlocNumberOptions
+    {
+        mlocNotation notation;
+        mlocNumberStyle style;
+        mlocGrouping grouping;
+        mlocSignDisplay signDisplay;
+        mlocPrecision precision;
+        // At least this many integer digits, zeros before; 0 to 21, 0
+        // meaning 1.
+        uint8_t minIntegerDigits;
+    } mlocNumberOptions;
+
+    // A locale's number formatter: a value that points into the data it
+    // was made from, which must outlive it. Opaque; make it with
+    // mlocInitNumberFormatter.
+    typedef struct mlocNumberFormatter
+    {
+        uint64_t opaque[24];
+    } mlocNumberFormatter;
+
+    // The parts of a formatted number the output's part function
+    // receives.
+    typedef enum mlocNumberPart
+    {
+        mloc_numberPartInteger = 0,
+        mloc_numberPartGroup = 1,
+        mloc_numberPartDecimal = 2,
+        mloc_numberPartFraction = 3,
+        mloc_numberPartMinusSign = 4,
+        mloc_numberPartPlusSign = 5,
+        mloc_numberPartPercentSign = 6,
+        mloc_numberPartPerMilleSign = 7,
+        mloc_numberPartExponentSeparator = 8,
+        mloc_numberPartExponentMinusSign = 9,
+        mloc_numberPartExponentInteger = 10,
+        mloc_numberPartInfinity = 11,
+        mloc_numberPartNaN = 12,
+        mloc_numberPartLiteral = 13,
+    } mlocNumberPart;
+
+    /// Makes a locale's number formatter. The numbering system is the
+    /// locale's -u-nu keyword ("native", "traditio" and "finance" as the
+    /// locale names them), else the locale's default; one without digits
+    /// (Roman, for one) takes the default, which the spellout part
+    /// formats instead.
+    ///
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
+    /// @param data          The data with the number units, the parents and
+    ///                      the likely subtags.
+    /// @param locale        The locale, canonicalized.
+    /// @param options       The options, or null for the defaults.
+    /// @return mloc_success; mloc_fellBack when the numbering system
+    ///         asked for has no digits and the default stands instead (the
+    ///         locale's data is always found along its chain, root's last,
+    ///         so whether a locale is supported is a question for language
+    ///         matching); mloc_errorNotFound for data without numbers;
+    ///         mloc_errorInvalid for a null pointer or options out of
+    ///         range or in conflict.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut,
+                                                               const mlocDataSet* data,
+                                                               const mlocLocale* locale,
+                                                               const mlocNumberOptions* options);
+
+    /// Formats a decimal.
+    ///
+    /// @param formatter  A formatter from mlocInitNumberFormatter.
+    /// @param decimal    The number.
+    /// @param output     Receives the text; its part function, when set,
+    ///                   receives mlocNumberPart values.
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed) or rounding
+    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         pointer, or a formatter or decimal the library did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter,
+                                                        const mlocDecimal* decimal,
+                                                        mlocOutput* output);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

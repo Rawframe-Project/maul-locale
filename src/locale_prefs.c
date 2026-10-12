@@ -10,6 +10,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_keyword.h"
 #include "locale_tables.h"
 
 #include "maul-locale/locale.h"
@@ -145,47 +146,6 @@ static const uint8_t* LocaleHours(const Prefs* p, uint32_t language, uint32_t re
     return nullptr;
 }
 
-// The value of a -u key, or an empty one: the tail is canonical, so the
-// u extension's keys follow its attributes, each with its value.
-static size_t Keyword(const mlocLocale* locale, const char* key, const char** valueOut)
-{
-    const char* tail = locale->tail;
-    size_t size = sizeof(locale->tail);
-    bool inU = false;
-    for (size_t at = 0; at < size && tail[at] != '\0';)
-    {
-        size_t n = 0;
-        while (at + n < size && tail[at + n] != '\0' && tail[at + n] != '-')
-        {
-            n++;
-        }
-        size_t next = at + n + (at + n < size && tail[at + n] == '-');
-        if (n == 1 && tail[at] == 'x')
-        {
-            // Private use runs to the end; its subtags are no keys.
-            break;
-        }
-        if (n == 1)
-        {
-            inU = tail[at] == 'u';
-        }
-        else if (inU && n == 2 && memcmp(tail + at, key, 2) == 0)
-        {
-            size_t length = 0;
-            while (next + length < size && tail[next + length] != '\0' &&
-                   tail[next + length] != '-')
-            {
-                length++;
-            }
-            *valueOut = tail + next;
-            return length;
-        }
-        at = next;
-    }
-    *valueOut = "";
-    return 0;
-}
-
 static bool Is(const char* value, size_t length, const char* text)
 {
     return strlen(text) == length && memcmp(value, text, length) == 0;
@@ -196,7 +156,7 @@ static bool Is(const char* value, size_t length, const char* text)
 static uint32_t SubdivisionRegion(const mlocLocale* locale, const char* key)
 {
     const char* value = nullptr;
-    size_t length = Keyword(locale, key, &value);
+    size_t length = mlocFindKeyword(locale, key, &value);
     if (length < 3 || length > 6 || value[0] < 'a' || value[0] > 'z' || value[1] < 'a' ||
         value[1] > 'z')
     {
@@ -245,7 +205,7 @@ static mlocHourFormat HourCycle(const mlocLocale* locale, const uint8_t* hours)
 {
     static const char* const s_cycles[4] = {"h11", "h12", "h23", "h24"};
     const char* value = nullptr;
-    size_t length = Keyword(locale, "hc", &value);
+    size_t length = mlocFindKeyword(locale, "hc", &value);
     for (uint8_t c = 0; c < 4; c++)
     {
         if (Is(value, length, s_cycles[c]))
@@ -281,7 +241,7 @@ static uint8_t FirstDay(const mlocLocale* locale, const uint8_t* region, bool is
 {
     static const char* const s_days[7] = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"};
     const char* value = nullptr;
-    size_t length = Keyword(locale, "fw", &value);
+    size_t length = mlocFindKeyword(locale, "fw", &value);
     for (uint8_t d = 0; d < 7; d++)
     {
         if (Is(value, length, s_days[d]))
@@ -296,7 +256,7 @@ static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const u
 {
     static const char* const s_systems[3] = {"metric", "ussystem", "uksystem"};
     const char* value = nullptr;
-    size_t length = Keyword(locale, "ms", &value);
+    size_t length = mlocFindKeyword(locale, "ms", &value);
     for (uint8_t m = 0; m < 3; m++)
     {
         if (Is(value, length, s_systems[m]))
@@ -330,7 +290,7 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
         hours = p.hours + (size_t)entry[2] * preferEntrySize;
     }
     const char* calendar = nullptr;
-    size_t calendarLength = Keyword(locale, "ca", &calendar);
+    size_t calendarLength = mlocFindKeyword(locale, "ca", &calendar);
     bool iso = Is(calendar, calendarLength, "iso8601");
     mlocLocalePreferences out = {
         .hourCycle = HourCycle(locale, hours),
