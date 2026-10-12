@@ -24,6 +24,16 @@ mlocResult mlocApplyPrecision(const mlocPrecision* precision, mlocDecimal* decim
 // mloc_errorCapacity when the result passes 10^999999.
 mlocResult mlocScaleDecimal(mlocDecimal* decimal, int32_t power);
 
+// A decimal divided by 10^exponent, the exponent within the decimal's
+// digits' reach; a decimal that shows fraction digits keeps showing as
+// many places, at most the decimal's limit.
+mlocDecimal mlocShiftDecimal(const mlocDecimal* decimal, int64_t exponent);
+
+// Rounds a compact notation's scaled value: by the precision when it has
+// one, else as ECMA-402 and ICU do, to an integer when two or more
+// integer digits show and to two significant digits otherwise.
+mlocResult mlocApplyCompactPrecision(const mlocPrecision* precision, mlocDecimal* decimal);
+
 // Turns a finite decimal into the mantissa of scientific notation (one
 // integer digit) or engineering notation (one to three, the exponent a
 // multiple of three), rounded by the precision as ECMA-402's

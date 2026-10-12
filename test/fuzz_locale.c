@@ -9,7 +9,7 @@
 // matches itself first, its match among a few others is one of them and
 // combines with it, it has regional preferences in range, plural rules
 // of both types whose category for 21 is one they name, and a number
-// formatter that writes -1234.5 measured and written alike.
+// formatter that writes -1234.5 measured and written alike, compact too.
 
 #include "maul-locale/locale.h"
 #include "maul-locale/number.h"
@@ -127,6 +127,13 @@ static void Canonicalize(const uint8_t* data, size_t size)
             mlocFormatNumber(&formatter, &value, &measure) == mloc_errorCapacity &&
             mlocFormatNumber(&formatter, &value, &written) == mloc_success &&
             written.length == measure.length);
+    // And compact numbers of both lengths.
+    for (int notation = mloc_notationCompactShort; notation <= mloc_notationCompactLong; notation++)
+    {
+        mlocNumberOptions options = {.notation = (mlocNotation)notation};
+        Require(mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
+                mlocFormatNumber(&formatter, &value, &written) == mloc_success);
+    }
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)

@@ -22,7 +22,11 @@ extern "C"
     // How a number is written: in full, with an exponent of ten (any, or
     // a multiple of three), or compact ("1.2K", "1.2 thousand"). The
     // precision rounds the mantissa of scientific and engineering
-    // notation. Compact notation is not built yet and is refused.
+    // notation, and compact notation's scaled value, which the zero
+    // precision rounds to an integer when two integer digits or more show
+    // and to two significant digits otherwise. Compact notation groups
+    // with two digits before the first separator unless the grouping
+    // option says otherwise, and takes the decimal style only.
     typedef enum mlocNotation
     {
         mloc_notationStandard = 0,
@@ -146,6 +150,9 @@ extern "C"
         mloc_numberPartInfinity = 11,
         mloc_numberPartNaN = 12,
         mloc_numberPartLiteral = 13,
+        // A compact pattern's words or symbol ("K", "thousand"), the
+        // spaces around it being literal.
+        mloc_numberPartCompact = 14,
     } mlocNumberPart;
 
     /// Makes a locale's number formatter. The numbering system is the

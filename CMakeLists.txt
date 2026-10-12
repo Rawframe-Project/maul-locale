@@ -64,6 +64,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_parse.c
     src/locale_prefs.c
     src/number.c
+    src/number_compact.c
     src/number_core.c
     src/number_data.c
     src/number_precision.c

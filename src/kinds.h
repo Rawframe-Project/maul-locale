@@ -41,7 +41,11 @@ constexpr uint32_t kindNumberSymbols = 0x00040002;
 // The number part: the distinct compiled patterns, a unit of no locale.
 constexpr uint32_t kindNumberPatterns = 0x00040003;
 // The number part: a locale's numbering systems, grouping and the indexes
-// of its symbols and patterns, a unit per locale.
+// of its symbols, patterns and compact tables, a unit per locale.
 constexpr uint32_t kindNumbers = 0x00040004;
+// The number part: the distinct compact patterns, a unit of no locale.
+constexpr uint32_t kindNumberCompactPatterns = 0x00040005;
+// The number part: the distinct compact tables, a unit of no locale.
+constexpr uint32_t kindNumberCompact = 0x00040006;
 
 #endif

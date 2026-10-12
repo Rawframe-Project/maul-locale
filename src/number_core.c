@@ -12,6 +12,7 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
+#include "number_compact.h"
 #include "number_data.h"
 
 #include <string.h>
@@ -177,8 +178,11 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
     return true;
 }
 
-mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
-                              const mlocLocale* locale, mlocNumberStyle style)
+// Resolves a core and, when compact is set, the entry's compact table of
+// a length and the compact patterns.
+static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const mlocLocale* locale,
+                           mlocNumberStyle style, const uint8_t** compact, bool longLength,
+                           const uint8_t** patternsOut)
 {
     Units u;
     // Number data is filed only where it differs from the chain's, so
@@ -215,8 +219,54 @@ mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
     {
         return mloc_errorNotFound;
     }
+    if (compact != nullptr)
+    {
+        DataSpan tables;
+        DataSpan patterns;
+        if (!mlocFindDataUnit(&view, kindNumberCompact, dataNoLocale, &tables) ||
+            !mlocFindDataUnit(&view, kindNumberCompactPatterns, dataNoLocale, &patterns))
+        {
+            return mloc_errorNotFound;
+        }
+        const uint8_t* table = mlocFindCompactTable(
+            tables, mlocLoad16(entry + (longLength ? entryCompactLong : entryCompactShort)));
+        if (table == nullptr ||
+            !mlocValidCompactUse((CompactData){.table = table, .patterns = patterns.bytes}))
+        {
+            return mloc_errorNotFound;
+        }
+        *compact = table;
+        *patternsOut = patterns.bytes;
+    }
     *coreOut = core;
     return fellBack ? mloc_fellBack : mloc_success;
+}
+
+mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
+                              const mlocLocale* locale, mlocNumberStyle style)
+{
+    return InitCore(coreOut, data, locale, style, nullptr, false, nullptr);
+}
+
+mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
+                               const mlocLocale* locale, bool longLength, const uint8_t** tableOut,
+                               const uint8_t** patternsOut)
+{
+    return InitCore(coreOut, data, locale, mloc_numberDecimal, tableOut, longLength, patternsOut);
+}
+
+bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index)
+{
+    NumberTable t = mlocReadNumberTable((DataSpan){patterns, 0}, numberCompactPatternSize);
+    const uint8_t* p = t.records + (size_t)index * numberCompactPatternSize;
+    const int fields[affixCount] = {compactPrefix, compactSuffix, compactNegativePrefix,
+                                    compactSuffix};
+    core->affixText = t.text;
+    for (int i = 0; i < affixCount; i++)
+    {
+        TableString(t, mlocLoad16(p + fields[i]), &core->affixStart[i], &core->affixLength[i]);
+    }
+    return (p[compactFlags] & patternFlagNoNumber) != 0;
 }
 
 NumberSign mlocNumberSign(const mlocDecimal* d, mlocSignDisplay display)
@@ -277,10 +327,64 @@ static void PutSymbol(NumberWriter* w, const NumberCore* c, NumberSymbol symbol,
     Put(w, kind, c->symbolText + c->symbolStart[symbol], c->symbolLength[symbol]);
 }
 
+// The length of the space (U+0020, U+00A0, U+202F) at text, or 0.
+static size_t SpaceAt(const uint8_t* text, size_t length)
+{
+    if (length >= 1 && text[0] == 0x20)
+    {
+        return 1;
+    }
+    if (length >= 2 && text[0] == 0xC2 && text[1] == 0xA0)
+    {
+        return 2;
+    }
+    return length >= 3 && text[0] == 0xE2 && text[1] == 0x80 && text[2] == 0xAF ? 3 : 0;
+}
+
+// The length of the space ending text, or 0.
+static size_t SpaceBefore(const uint8_t* text, size_t length)
+{
+    for (size_t n = 1; n <= 3 && n <= length; n++)
+    {
+        if (SpaceAt(text + length - n, n) == n)
+        {
+            return n;
+        }
+    }
+    return 0;
+}
+
+// Writes a run of an affix's text: literal, or in a compact pattern a
+// compact part between the spaces at its ends.
+static void PutText(NumberWriter* w, const uint8_t* text, size_t length, bool compact)
+{
+    if (!compact)
+    {
+        Put(w, mloc_numberPartLiteral, text, length);
+        return;
+    }
+    size_t lead = 0;
+    for (size_t n = SpaceAt(text, length); n != 0; n = SpaceAt(text + lead, length - lead))
+    {
+        lead += n;
+    }
+    size_t trail = 0;
+    for (size_t n = SpaceBefore(text + lead, length - lead); n != 0;
+         n = SpaceBefore(text + lead, length - lead - trail))
+    {
+        trail += n;
+    }
+    Put(w, mloc_numberPartLiteral, text, lead);
+    Put(w, mloc_numberPartCompact, text + lead, length - lead - trail);
+    Put(w, mloc_numberPartLiteral, text + length - trail, trail);
+}
+
 // Writes an affix: its literal text, and the symbols its placeholders
 // stand for; with plus set, the minus sign's place takes the plus sign.
-static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus, bool perMille)
+static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus,
+                     const NumberLayout* layout)
 {
+    bool perMille = layout->perMille;
     const uint8_t* text = c->affixText + c->affixStart[affix];
     size_t length = c->affixLength[affix];
     size_t literal = 0;
@@ -293,7 +397,7 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus,
         }
         if (i > literal)
         {
-            Put(w, mloc_numberPartLiteral, text + literal, i - literal);
+            PutText(w, text + literal, i - literal, layout->compact);
         }
         literal = i + 1;
         switch (b)
@@ -319,7 +423,7 @@ static void PutAffix(NumberWriter* w, const NumberCore* c, int affix, bool plus,
     }
     if (length > literal)
     {
-        Put(w, mloc_numberPartLiteral, text + literal, length - literal);
+        PutText(w, text + literal, length - literal, layout->compact);
     }
 }
 
@@ -333,21 +437,21 @@ static bool HasMinus(const NumberCore* c, int affix)
 // affixes with the plus sign in the minus sign's place, or, when they
 // have none, goes before the positive prefix.
 static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, bool prefix,
-                      bool perMille)
+                      const NumberLayout* layout)
 {
     int positive = prefix ? affixPositivePrefix : affixPositiveSuffix;
     int negative = prefix ? affixNegativePrefix : affixNegativeSuffix;
     if (sign == numberSignNone)
     {
-        PutAffix(w, c, positive, false, perMille);
+        PutAffix(w, c, positive, false, layout);
     }
     else if (sign == numberSignMinus)
     {
-        PutAffix(w, c, negative, false, perMille);
+        PutAffix(w, c, negative, false, layout);
     }
     else if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
     {
-        PutAffix(w, c, negative, true, perMille);
+        PutAffix(w, c, negative, true, layout);
     }
     else
     {
@@ -355,7 +459,7 @@ static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, boo
         {
             PutSymbol(w, c, numberPlus, mloc_numberPartPlusSign);
         }
-        PutAffix(w, c, positive, false, perMille);
+        PutAffix(w, c, positive, false, layout);
     }
 }
 
@@ -428,7 +532,7 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
 void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
                      const NumberLayout* layout, NumberWriter* w)
 {
-    PutSigned(w, c, sign, true, layout->perMille);
+    PutSigned(w, c, sign, true, layout);
     if (d->kind == mloc_decimalNaN)
     {
         PutSymbol(w, c, numberNaN, mloc_numberPartNaN);
@@ -437,7 +541,7 @@ void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
     {
         PutSymbol(w, c, numberInfinity, mloc_numberPartInfinity);
     }
-    else
+    else if (!layout->noNumber)
     {
         PutDigits(w, c, d, layout);
         if (layout->scientific)
@@ -445,5 +549,5 @@ void mlocWriteNumber(const NumberCore* c, const mlocDecimal* d, NumberSign sign,
             PutExponent(w, c, layout->exponent);
         }
     }
-    PutSigned(w, c, sign, false, layout->perMille);
+    PutSigned(w, c, sign, false, layout);
 }

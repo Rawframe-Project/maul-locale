@@ -7,11 +7,11 @@
 // double taken as its shortest decimal, on the compiled-in data. CLDR
 // made the files with ICU4J's NumberFormatter defaults, which these
 // options state: at most six fraction digits (of the mantissa in
-// scientific notation), half to even. Rows of compact notation, not yet
-// built, are counted as skipped. Where the files
+// scientific notation), half to even; compact rows round by compact
+// notation's own rule, half to even. Where the files
 // predate the pinned release's data, tools/number-exceptions.txt names
-// the text to replace in a locale's expected lines, with its reason; each
-// entry must be used. CI runs it.
+// the text to replace in a locale's expected lines, or a line's expected
+// text, with its reason; each entry must be used. CI runs it.
 //
 // usage: cat decimals*.tsv | conform_numbers <number-exceptions.txt>
 
@@ -24,26 +24,49 @@
 enum
 {
     maxExceptions = 32,
+    maxField = 128,
 };
 
+// An entry of the exceptions file: a text to replace in a locale's
+// expected lines (locale, text, replacement, reason), or one line's
+// expected text (locale, format, length, input, text, reason).
 typedef struct Exception
 {
     char locale[16];
-    char from[16];
-    char to[16];
+    // For a line, its format, length and input, tab-separated.
+    char line[maxField];
+    char from[maxField];
+    char to[maxField];
     bool used;
 } Exception;
 
-// Copies a field into a 16-byte one; false when it does not fit.
-static bool CopyField(char* out, const char* field)
+// Copies a field into one of maxField bytes; false when it does not fit.
+static bool CopyField(char* out, const char* field, size_t capacity)
 {
     size_t length = strlen(field);
-    if (length >= 16)
+    if (length >= capacity)
     {
         return false;
     }
     memcpy(out, field, length + 1);
     return true;
+}
+
+// Splits a line at its tabs, its end of line removed; the field count.
+static int Split(char* line, char** fields, int capacity)
+{
+    line[strcspn(line, "\r\n")] = '\0';
+    int n = 1;
+    fields[0] = line;
+    for (char* at = line; *at != '\0' && n < capacity; at++)
+    {
+        if (*at == '\t')
+        {
+            *at = '\0';
+            fields[n++] = at + 1;
+        }
+    }
+    return n;
 }
 
 // Reads the exceptions file; -1 when it cannot be read.
@@ -55,53 +78,60 @@ static int ReadExceptions(const char* path, Exception* out)
         return -1;
     }
     int count = 0;
-    char line[1024];
-    while (fgets(line, sizeof(line), file) != nullptr && count < maxExceptions)
+    bool valid = true;
+    char text[1024];
+    while (valid && fgets(text, sizeof(text), file) != nullptr)
     {
-        if (line[0] == '#' || line[0] == '\n')
+        if (text[0] == '#' || text[0] == '\n')
         {
             continue;
         }
+        char* f[6];
+        int n = Split(text, f, 6);
         Exception* e = &out[count];
-        char* fields[3] = {line};
-        int n = 1;
-        for (char* at = line; *at != '\0' && n < 3; at++)
+        memset(e, 0, sizeof(*e));
+        if (count == maxExceptions || (n != 4 && n != 6) ||
+            !CopyField(e->locale, f[0], sizeof(e->locale)))
         {
-            if (*at == '\t')
-            {
-                *at = '\0';
-                fields[n++] = at + 1;
-            }
+            valid = false;
         }
-        char* end = n == 3 ? strchr(fields[2], '\t') : nullptr;
-        if (end == nullptr)
+        else if (n == 4)
         {
-            fclose(file);
-            return -1;
+            valid = CopyField(e->from, f[1], maxField) && CopyField(e->to, f[2], maxField);
         }
-        *end = '\0';
-        if (!CopyField(e->locale, fields[0]) || !CopyField(e->from, fields[1]) ||
-            !CopyField(e->to, fields[2]))
+        else
         {
-            fclose(file);
-            return -1;
+            valid =
+                (size_t)snprintf(e->line, maxField, "%s\t%s\t%s", f[1], f[2], f[3]) < maxField &&
+                CopyField(e->to, f[4], maxField);
         }
-        count++;
+        count += valid;
     }
     fclose(file);
-    return count;
+    return valid ? count : -1;
 }
 
-// Applies a locale's exceptions to an expected text.
-static void ApplyExceptions(Exception* exceptions, int count, const char* locale,
-                            const char* expected, char* out, size_t capacity)
+// Applies a locale's exceptions to a line's expected text.
+static void ApplyExceptions(Exception* exceptions, int count, char** fields, char* out,
+                            size_t capacity)
 {
-    snprintf(out, capacity, "%s", expected);
+    snprintf(out, capacity, "%s", fields[4]);
+    char line[3 * maxField];
+    snprintf(line, sizeof(line), "%s\t%s\t%s", fields[1], fields[2], fields[3]);
     for (int i = 0; i < count; i++)
     {
         Exception* e = &exceptions[i];
-        if (strcmp(e->locale, locale) != 0)
+        if (strcmp(e->locale, fields[0]) != 0)
         {
+            continue;
+        }
+        if (e->line[0] != '\0')
+        {
+            if (strcmp(e->line, line) == 0)
+            {
+                snprintf(out, capacity, "%s", e->to);
+                e->used = true;
+            }
             continue;
         }
         char result[256] = "";
@@ -124,18 +154,23 @@ static void ApplyExceptions(Exception* exceptions, int count, const char* locale
     }
 }
 
-// Formats one row's input; false when a call fails.
-static bool Format(const mlocDataSet* data, const char* id, const char* format, const char* input,
-                   char* out, size_t capacity, size_t* lengthOut)
+// Formats one row's input; false when a call fails. Compact rows round
+// by compact notation's own rule.
+static bool Format(const mlocDataSet* data, const char* id, const char* format, const char* length,
+                   const char* input, char* out, size_t capacity, size_t* lengthOut)
 {
     mlocLocale locale;
+    bool compact = length[0] != '\0';
+    mlocNotation notation = strcmp(format, "scientific") == 0 ? mloc_notationScientific
+                            : strcmp(length, "short") == 0    ? mloc_notationCompactShort
+                            : strcmp(length, "long") == 0     ? mloc_notationCompactLong
+                                                              : mloc_notationStandard;
     mlocNumberOptions options = {
-        .notation =
-            strcmp(format, "scientific") == 0 ? mloc_notationScientific : mloc_notationStandard,
+        .notation = notation,
         .style = strcmp(format, "percent") == 0 ? mloc_numberPercent : mloc_numberDecimal,
-        .precision = {.kind = mloc_precisionFraction,
+        .precision = {.kind = compact ? mloc_precisionNone : mloc_precisionFraction,
                       .mode = mloc_roundHalfEven,
-                      .maxFractionDigits = 6},
+                      .maxFractionDigits = compact ? 0 : 6},
     };
     mlocNumberFormatter formatter;
     mlocDecimal decimal;
@@ -167,48 +202,31 @@ int main(int argc, char** argv)
     char line[1024];
     long total = 0;
     long agreed = 0;
-    long skipped = 0;
     while (fgets(line, sizeof(line), stdin) != nullptr)
     {
-        line[strcspn(line, "\r\n")] = '\0';
-        char* fields[5] = {line};
-        int count = 1;
-        for (char* at = line; *at != '\0' && count < 5; at++)
+        char* fields[5];
+        if (Split(line, fields, 5) != 5 || strcmp(fields[0], "locale") == 0)
         {
-            if (*at == '\t')
-            {
-                *at = '\0';
-                fields[count++] = at + 1;
-            }
-        }
-        if (count != 5 || strcmp(fields[0], "locale") == 0)
-        {
-            continue;
-        }
-        if (fields[2][0] != '\0')
-        {
-            skipped++;
             continue;
         }
         total++;
         char text[256];
         size_t length = 0;
         char expected[256];
-        ApplyExceptions(s_exceptions, exceptionCount, fields[0], fields[4], expected,
-                        sizeof(expected));
-        bool ok = Format(&data, fields[0], fields[1], fields[3], text, sizeof(text), &length);
+        ApplyExceptions(s_exceptions, exceptionCount, fields, expected, sizeof(expected));
+        bool ok =
+            Format(&data, fields[0], fields[1], fields[2], fields[3], text, sizeof(text), &length);
         if (ok && length == strlen(expected) && memcmp(text, expected, length) == 0)
         {
             agreed++;
         }
         else if (total - agreed <= 20)
         {
-            printf("%s %s %s: got \"%.*s\", expected \"%s\"\n", fields[0], fields[1], fields[3],
-                   ok ? (int)length : 8, ok ? text : "(failed)", expected);
+            printf("%s %s %s %s: got \"%.*s\", expected \"%s\"\n", fields[0], fields[1], fields[2],
+                   fields[3], ok ? (int)length : 8, ok ? text : "(failed)", expected);
         }
     }
-    printf("numbers: %ld of %ld lines agree with CLDR; %ld of notations not yet built\n", agreed,
-           total, skipped);
+    printf("numbers: %ld of %ld lines agree with CLDR\n", agreed, total);
     bool allUsed = true;
     for (int i = 0; i < exceptionCount; i++)
     {

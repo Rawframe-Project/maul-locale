@@ -127,6 +127,25 @@ mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* dat
     return fellBack ? mloc_fellBack : mloc_success;
 }
 
+mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
+                              mlocPluralType type, uint8_t* ruleOut)
+{
+    mlocPluralRules opaque;
+    mlocResult result = mlocInitPluralRules(&opaque, data, locale, type);
+    if (result >= 0)
+    {
+        Rules rules;
+        memcpy(&rules, &opaque, sizeof(rules));
+        *ruleOut = rules.rule;
+    }
+    return result;
+}
+
+mlocPluralCategory mlocSelectPluralRule(uint8_t rule, const mlocPluralOperands* operands)
+{
+    return (mlocPluralCategory)mlocPluralRuleSets[rule].select(operands);
+}
+
 // The rules of an opaque value, or false when the library did not make
 // it. Only the header is read here: the range table is checked byte by
 // byte where it is read.

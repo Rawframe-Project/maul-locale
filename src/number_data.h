@@ -17,6 +17,8 @@ bool mlocValidNumberSystems(const DataView* view, DataSpan payload);
 bool mlocValidNumberSymbols(const DataView* view, DataSpan payload);
 bool mlocValidNumberPatterns(const DataView* view, DataSpan payload);
 bool mlocValidNumbers(const DataView* view, DataSpan payload);
+bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload);
+bool mlocValidNumberCompact(const DataView* view, DataSpan payload);
 
 // A table unit's string count, record count and the start of its text
 // (the symbol and pattern units share this shape).
@@ -31,5 +33,9 @@ typedef struct NumberTable
 
 // The parts of a valid table unit.
 NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize);
+
+// A compact table of a valid compact unit, or null for an index past its
+// tables.
+const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index);
 
 #endif

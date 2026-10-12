@@ -27,6 +27,8 @@ static const DataKind s_kinds[] = {
     {kindNumberSymbols, mlocValidNumberSymbols},
     {kindNumberPatterns, mlocValidNumberPatterns},
     {kindNumbers, mlocValidNumbers},
+    {kindNumberCompactPatterns, mlocValidNumberCompactPatterns},
+    {kindNumberCompact, mlocValidNumberCompact},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

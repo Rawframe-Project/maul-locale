@@ -332,6 +332,67 @@ static void TestScientific(void)
           "the smallest exponent");
 }
 
+static void TestCompact(void)
+{
+    mlocNumberOptions o = {.notation = mloc_notationCompactShort};
+    CHECK(Formats("en", &o, "1234", "1.2K") && Formats("en", &o, "12345", "12K") &&
+              Formats("en", &o, "123456", "123K") && Formats("en", &o, "1234567", "1.2M"),
+          "short English");
+    CHECK(Formats("en", &o, "1000", "1K") && Formats("en", &o, "15", "15") &&
+              Formats("en", &o, "1.25", "1.3") && Formats("en", &o, "0.0012345", "0.0012"),
+          "an integer, or two significant digits, without zeros after them");
+    CHECK(Formats("en", &o, "999999", "1M") && Formats("en", &o, "999.9", "1K"),
+          "a carry takes the next power's pattern");
+    CHECK(Formats("en", &o, "-1500", "-1.5K"), "a negative compact number");
+    CHECK(Formats("en", &o, "1e16", "10,000T"), "past 10^14 the last pattern, grouped");
+    CHECK(Formats("en", &o, "1e15", "1000T"), "grouped with two digits before the separator");
+    o.signDisplay = mloc_signAlways;
+    CHECK(Formats("en", &o, "1500", "+1.5K"), "a plus sign");
+    o = (mlocNumberOptions){.notation = mloc_notationCompactShort,
+                            .precision = {.kind = mloc_precisionFraction, .maxFractionDigits = 2}};
+    CHECK(Formats("en", &o, "1234", "1.23K"), "a precision rounds the scaled value");
+    o = (mlocNumberOptions){.notation = mloc_notationCompactShort, .grouping = mloc_groupingAlways};
+    CHECK(Formats("de", &o, "1234", "1.234") && Formats("de", &o, "1234567", "1,2\xC2\xA0Mio."),
+          "German does not compact thousands");
+    o = (mlocNumberOptions){.notation = mloc_notationCompactShort};
+    CHECK(Formats("de", &o, "1234", "1234"), "nor groups them by default");
+    CHECK(Formats("ja", &o, "12345", "1.2\xE4\xB8\x87") && Formats("ja", &o, "1234", "1234"),
+          "Japanese counts in ten thousands");
+    o.notation = mloc_notationCompactLong;
+    CHECK(Formats("en", &o, "1234", "1.2 thousand") && Formats("en", &o, "2e9", "2 billion"),
+          "long English");
+    CHECK(Formats("fr", &o, "1000", "mille") && Formats("fr", &o, "2000", "2 mille") &&
+              Formats("fr", &o, "1200", "1,2 millier"),
+          "French: the exact value 1 has its own pattern");
+    CHECK(Formats("fr", &o, "1000000", "1 million") && Formats("fr", &o, "2000000", "2 millions"),
+          "French millions by their category");
+    CHECK(Formats("it", &o, "1000", "mille") && Formats("it", &o, "2000", "2 mila"),
+          "Italian's one is a word alone");
+    CHECK(Formats("de", &o, "1000000", "1 Million") &&
+              Formats("de", &o, "1200000", "1,2 Millionen"),
+          "German long: the digits shown decide the category");
+    mlocLocale locale;
+    mlocNumberFormatter formatter;
+    mlocDecimal value;
+    char buffer[32];
+    Parts parts = {0};
+    mlocOutput output = {
+        .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &parts};
+    static const uint32_t s_kinds[] = {mloc_numberPartInteger, mloc_numberPartDecimal,
+                                       mloc_numberPartFraction, mloc_numberPartLiteral,
+                                       mloc_numberPartCompact};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocParseDecimal("1234", 4, &value).status == mloc_success &&
+              mlocFormatNumber(&formatter, &value, &output) == mloc_success && parts.count == 5 &&
+              memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0 && parts.starts[4] == 4 &&
+              parts.lengths[4] == 8,
+          "the compact word is its own part, the space before it literal");
+    mlocDecimal special = {.kind = mloc_decimalNaN};
+    CHECK(mlocFormatNumber(&formatter, &special, &output) == mloc_success && output.length == 3,
+          "NaN is not compacted");
+}
+
 static void TestGrouping(void)
 {
     mlocNumberOptions o = {.grouping = mloc_groupingAlways};
@@ -452,7 +513,8 @@ static void TestRefusals(void)
         mlocNumberOptions options;
         const char* name;
     } const s_bad[] = {
-        {{.notation = mloc_notationCompactShort}, "a notation not yet built"},
+        {{.notation = mloc_notationCompactShort, .style = mloc_numberPercent},
+         "compact notation with another style"},
         {{.notation = (mlocNotation)5}, "no notation"},
         {{.style = (mlocNumberStyle)3}, "no style"},
         {{.grouping = (mlocGrouping)4}, "no grouping"},
@@ -564,6 +626,7 @@ int main(void)
     TestPrecision();
     TestStyles();
     TestScientific();
+    TestCompact();
     TestGrouping();
     TestSigns();
     TestOutput();

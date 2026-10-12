@@ -23,6 +23,10 @@ static DataSpan s_systems;
 static DataSpan s_symbols;
 static DataSpan s_patterns;
 static DataSpan s_root;
+static DataSpan s_compactPatterns;
+static DataSpan s_compact;
+static DataSpan s_plurals;
+static DataSpan s_ranges;
 
 // A copy of a unit with 64 bytes of room, filled with valid text so that
 // a validator reading past the unit reads on until the sanitizer builds
@@ -288,6 +292,74 @@ static void TestPatterns(void)
     CHECK(!Valid(mlocValidNumberSymbols, wide, sizeof(wide)), "past U+10FFFF");
 }
 
+static void TestCompactUnits(void)
+{
+    TestTable(mlocValidNumberCompactPatterns, s_compactPatterns, numberCompactPatternSize,
+              "the compiled-in compact patterns are valid");
+    uint8_t* u = Copy(s_compactPatterns);
+    uint32_t size = s_compactPatterns.size;
+    uint32_t strings = mlocLoad16(u);
+    uint8_t* p = u + numberTableHeaderSize + (size_t)(strings + 1) * 2;
+    uint8_t keep[numberCompactPatternSize];
+    memcpy(keep, p, sizeof(keep));
+    const int fields[3] = {compactPrefix, compactSuffix, compactNegativePrefix};
+    for (int f = 0; f < 3; f++)
+    {
+        Put16(p + fields[f], strings);
+        CHECK(!Valid(mlocValidNumberCompactPatterns, u, size), "a compact affix past the strings");
+        memcpy(p, keep, sizeof(keep));
+    }
+    p[compactFlags] = patternFlagNoNumber;
+    CHECK(Valid(mlocValidNumberCompactPatterns, u, size), "a pattern without digits");
+    p[compactFlags] = patternFlagExponentPlus;
+    CHECK(!Valid(mlocValidNumberCompactPatterns, u, size), "a flag compact patterns have not");
+    free(u);
+
+    CHECK(mlocValidNumberCompact(&s_view, s_compact), "the compiled-in compact tables are valid");
+    // One table: its first row (10^3) compacts by the pattern given, the
+    // others do not compact.
+    uint8_t t[numberCompactHeaderSize + 8 + 2 * numberCompactRows + 2] = {1};
+    uint8_t* row = t + numberCompactHeaderSize + 8;
+    t[numberCompactHeaderSize + 4] = (uint8_t)(sizeof(t) - numberCompactHeaderSize - 8);
+    row[0] = 1;
+    row[1] = 1u << numberCompactOther;
+    CHECK(Valid(mlocValidNumberCompact, t, sizeof(t)), "a table of one compacted row");
+    typedef struct RowCase
+    {
+        uint8_t zeros;
+        uint8_t mask;
+        bool valid;
+        const char* name;
+    } RowCase;
+    static const RowCase s_rows[] = {
+        {4, 1u << numberCompactOther, true, "four zeros at 10^3"},
+        {5, 1u << numberCompactOther, false, "five zeros at 10^3"},
+        {1, 1u << numberCompactExactOne, false, "a compacted row without the other slot"},
+        {0, 1u << numberCompactOther, false, "a slot in a row that does not compact"},
+        {1, 0x80 | 1u << numberCompactOther, false, "a slot past the seven"},
+        {1, 3u << (numberCompactOther - 1), false, "more slots than the table holds"},
+    };
+    for (size_t i = 0; i < sizeof(s_rows) / sizeof(s_rows[0]); i++)
+    {
+        row[0] = s_rows[i].zeros;
+        row[1] = s_rows[i].mask;
+        CHECK(Valid(mlocValidNumberCompact, t, sizeof(t)) == s_rows[i].valid, s_rows[i].name);
+    }
+    row[0] = 1;
+    row[1] = 1u << numberCompactOther;
+    t[4] = 1;
+    CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t)), "the reserved word");
+    t[4] = 0;
+    t[numberCompactHeaderSize] = 1;
+    CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t)), "a first offset past 0");
+    t[numberCompactHeaderSize] = 0;
+    CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t) - 1), "a table ending past its unit");
+    t[0] = 200;
+    CHECK(!Valid(mlocValidNumberCompact, t, sizeof(t)), "more offsets than the unit holds");
+    t[0] = 1;
+    CHECK(!Valid(mlocValidNumberCompact, t, 7), "shorter than its header");
+}
+
 static void TestLocaleUnit(void)
 {
     CHECK(mlocValidNumbers(&s_view, s_root), "root's numbers are valid");
@@ -334,7 +406,7 @@ static void TestLocaleUnit(void)
     CHECK(!Valid(mlocValidNumbers, two, sizeof(two)), "two entries of one system");
 }
 
-alignas(8) static uint8_t s_pack[32768];
+alignas(8) static uint8_t s_pack[131072];
 
 static void Put(uint8_t* p, uint64_t value, int bytes)
 {
@@ -344,21 +416,29 @@ static void Put(uint8_t* p, uint64_t value, int bytes)
     }
 }
 
-// Opens a pack of the compiled-in systems, symbols and patterns and a
-// root numbers unit, into a data set of it alone.
+// Opens a pack of root's plural rules, the compiled-in number units of no
+// locale and a root numbers unit, into a data set of it alone.
 static bool OpenPack(const uint8_t* root, uint32_t rootSize, mlocData* source)
 {
-    const DataSpan units[4] = {s_systems, s_symbols, s_patterns, {root, rootSize}};
-    const uint32_t kinds[4] = {kindNumberSystems, kindNumberSymbols, kindNumberPatterns,
-                               kindNumbers};
+    enum
+    {
+        unitCount = 8,
+    };
+    // In the order of their kinds; root, the one locale, is 0.
+    const DataSpan units[unitCount] = {s_plurals,  s_ranges,         s_systems,         s_symbols,
+                                       s_patterns, {root, rootSize}, s_compactPatterns, s_compact};
+    const uint32_t kinds[unitCount] = {
+        kindPlurals,        kindPluralRanges, kindNumberSystems,         kindNumberSymbols,
+        kindNumberPatterns, kindNumbers,      kindNumberCompactPatterns, kindNumberCompact};
+    const bool rootUnit[unitCount] = {true, false, false, false, false, true, false, false};
     memset(s_pack, 0, sizeof(s_pack));
-    uint32_t at = dataHeaderSize + 4 * dataUnitSize + dataLocaleSize;
-    for (int i = 0; i < 4; i++)
+    uint32_t at = dataHeaderSize + unitCount * dataUnitSize + dataLocaleSize;
+    for (int i = 0; i < unitCount; i++)
     {
         at = (at + 7) / 8 * 8;
         uint8_t* unit = s_pack + dataHeaderSize + i * dataUnitSize;
         Put(unit, kinds[i], 4);
-        Put(unit + 4, i == 3 ? 0 : dataNoLocale, 4);
+        Put(unit + 4, rootUnit[i] ? 0 : dataNoLocale, 4);
         Put(unit + 8, at, 4);
         Put(unit + 12, units[i].size, 4);
         if (at + units[i].size > sizeof(s_pack) - 16)
@@ -371,7 +451,7 @@ static bool OpenPack(const uint8_t* root, uint32_t rootSize, mlocData* source)
     uint32_t pool = at;
     memcpy(s_pack + at, "root", 4);
     at += 4;
-    uint8_t* entry = s_pack + dataHeaderSize + 4 * dataUnitSize;
+    uint8_t* entry = s_pack + dataHeaderSize + unitCount * dataUnitSize;
     Put(entry, 0, 4);
     Put(entry + 4, 4, 4);
     mlocDataVersion version;
@@ -388,7 +468,7 @@ static bool OpenPack(const uint8_t* root, uint32_t rootSize, mlocData* source)
         mlocPackVersion(version.library.major, version.library.minor, version.library.patch), 4);
     memcpy(s_pack + headerTzdb, version.tzdb, 8);
     Put(s_pack + headerTables, version.tables, 8);
-    Put(s_pack + headerUnitCount, 4, 4);
+    Put(s_pack + headerUnitCount, unitCount, 4);
     Put(s_pack + headerLocaleCount, 1, 4);
     Put(s_pack + headerPoolOffset, pool, 4);
     Put(s_pack + headerPoolSize, 4, 4);
@@ -396,8 +476,8 @@ static bool OpenPack(const uint8_t* root, uint32_t rootSize, mlocData* source)
 }
 
 // The status of a formatter made for und over a pack with this root
-// unit.
-static mlocResult InitWith(const uint8_t* root, uint32_t size)
+// unit, in a notation.
+static mlocResult InitAs(const uint8_t* root, uint32_t size, mlocNotation notation)
 {
     mlocData source;
     if (!OpenPack(root, size, &source))
@@ -407,11 +487,17 @@ static mlocResult InitWith(const uint8_t* root, uint32_t size)
     mlocDataSet set = {&source, 1};
     mlocLocale locale;
     mlocNumberFormatter formatter;
+    mlocNumberOptions options = {.notation = notation};
     if (mlocParseLocale("und", 3, &locale).status != mloc_success)
     {
         return (mlocResult)-101;
     }
-    return mlocInitNumberFormatter(&formatter, &set, &locale, nullptr);
+    return mlocInitNumberFormatter(&formatter, &set, &locale, &options);
+}
+
+static mlocResult InitWith(const uint8_t* root, uint32_t size)
+{
+    return InitAs(root, size, mloc_notationStandard);
 }
 
 static void TestDisagreeing(void)
@@ -454,6 +540,18 @@ static void TestDisagreeing(void)
         CHECK(InitWith(u, size) == mloc_success, "the last of its table");
         Put16(entry + fields[f], value);
     }
+    uint32_t tables = mlocLoad32(s_compact.bytes);
+    for (int length = 0; length < 2; length++)
+    {
+        int field = length == 0 ? entryCompactShort : entryCompactLong;
+        mlocNotation notation = length == 0 ? mloc_notationCompactShort : mloc_notationCompactLong;
+        uint32_t value = mlocLoad16(entry + field);
+        CHECK(InitAs(u, size, notation) == mloc_success, "a compact formatter of the pack");
+        Put16(entry + field, tables);
+        CHECK(InitAs(u, size, notation) == mloc_errorNotFound && InitWith(u, size) == mloc_success,
+              "a compact table past the unit, which only compact notation reads");
+        Put16(entry + field, value);
+    }
     // A unit of one entry, not latn's, leaves none for the default.
     uint8_t one[numberLocaleHeaderSize + numberEntrySize];
     memcpy(one, u, numberLocaleHeaderSize);
@@ -462,6 +560,41 @@ static void TestDisagreeing(void)
     CHECK(InitWith(one, sizeof(one)) == mloc_success, "latn's entry alone");
     one[numberLocaleHeaderSize + entrySystem] = (uint8_t)(entry[entrySystem] == 0 ? 1 : 0);
     CHECK(InitWith(one, sizeof(one)) == mloc_errorNotFound, "no entry for the system nor for latn");
+    // A compact table naming a pattern past the unit, or one without
+    // digits as its other one, is refused when a formatter is made.
+    uint32_t count = mlocLoad16(s_compactPatterns.bytes + 2);
+    uint32_t strings = mlocLoad16(s_compactPatterns.bytes);
+    const uint8_t* records =
+        s_compactPatterns.bytes + numberTableHeaderSize + (size_t)(strings + 1) * 2;
+    uint32_t wordless = count;
+    uint32_t digits = count;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        bool none = (records[(size_t)i * numberCompactPatternSize + compactFlags] &
+                     patternFlagNoNumber) != 0;
+        wordless = none ? i : wordless;
+        digits = none ? digits : i;
+    }
+    CHECK(wordless < count && digits < count, "compact patterns with and without digits");
+    uint8_t table[numberCompactHeaderSize + 8 + 2 * numberCompactRows + 2] = {1};
+    table[numberCompactHeaderSize + 4] = (uint8_t)(sizeof(table) - numberCompactHeaderSize - 8);
+    uint8_t* row = table + numberCompactHeaderSize + 8;
+    row[0] = 1;
+    row[1] = 1u << numberCompactOther;
+    DataSpan saved = s_compact;
+    s_compact = (DataSpan){table, sizeof(table)};
+    memcpy(one + numberLocaleHeaderSize, entry, numberEntrySize);
+    Put16(one + numberLocaleHeaderSize + entryCompactShort, 0);
+    const uint32_t indexes[3] = {digits, count, wordless};
+    const mlocResult expected[3] = {mloc_success, mloc_errorNotFound, mloc_errorNotFound};
+    for (int i = 0; i < 3; i++)
+    {
+        Put16(row + 2, indexes[i]);
+        CHECK(InitAs(one, sizeof(one), mloc_notationCompactShort) == expected[i],
+              "a compact table's patterns checked at init");
+    }
+    s_compact = saved;
+
     free(u);
 }
 
@@ -475,7 +608,12 @@ int main(void)
               mlocFindDataUnit(&s_view, kindNumberSymbols, dataNoLocale, &s_symbols) &&
               mlocFindDataUnit(&s_view, kindNumberPatterns, dataNoLocale, &s_patterns) &&
               mlocFindDataLocale(&s_view, "root", 4, &root) &&
-              mlocFindDataUnit(&s_view, kindNumbers, root, &s_root),
+              mlocFindDataUnit(&s_view, kindNumbers, root, &s_root) &&
+              mlocFindDataUnit(&s_view, kindNumberCompactPatterns, dataNoLocale,
+                               &s_compactPatterns) &&
+              mlocFindDataUnit(&s_view, kindNumberCompact, dataNoLocale, &s_compact) &&
+              mlocFindDataUnit(&s_view, kindPlurals, root, &s_plurals) &&
+              mlocFindDataUnit(&s_view, kindPluralRanges, dataNoLocale, &s_ranges),
           "the compiled-in data has the number units");
     if (s_failures > 0)
     {
@@ -484,6 +622,7 @@ int main(void)
     TestSystems();
     TestSymbols();
     TestPatterns();
+    TestCompactUnits();
     TestLocaleUnit();
     TestDisagreeing();
     return s_failures == 0 ? 0 : 1;

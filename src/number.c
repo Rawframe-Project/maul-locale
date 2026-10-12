@@ -7,8 +7,11 @@
 #include "maul-locale/number.h"
 
 #include "decimal.h"
+#include "number_compact.h"
 #include "number_core.h"
 #include "number_precision.h"
+#include "plural.h"
+#include "plural_rules.h"
 
 #include <string.h>
 
@@ -23,23 +26,35 @@ enum
 typedef struct Formatter
 {
     NumberCore core;
+    // Compact notation's table and patterns; null otherwise.
+    const uint8_t* compactTable;
+    const uint8_t* compactPatterns;
     mlocPrecision precision;
     uint8_t notation;
     uint8_t style;
     uint8_t grouping;
     uint8_t signDisplay;
     uint8_t minInteger;
+    // The locale's cardinal rule set, for compact patterns.
+    uint8_t pluralRule;
     uint8_t stamp;
 } Formatter;
 
 static_assert(sizeof(Formatter) <= sizeof(mlocNumberFormatter),
               "a formatter fits its opaque value");
 
+static bool IsCompact(uint32_t notation)
+{
+    return notation == mloc_notationCompactShort || notation == mloc_notationCompactLong;
+}
+
 static bool ValidOptions(const mlocNumberOptions* o)
 {
-    // Compact notation is not built yet.
-    return (uint32_t)o->notation <= mloc_notationEngineering &&
-           (uint32_t)o->style <= mloc_numberPerMille && (uint32_t)o->grouping <= mloc_groupingOff &&
+    // Compact notation writes the decimal style alone.
+    return (uint32_t)o->notation <= mloc_notationCompactLong &&
+           (uint32_t)o->style <= mloc_numberPerMille &&
+           (!IsCompact(o->notation) || o->style == mloc_numberDecimal) &&
+           (uint32_t)o->grouping <= mloc_groupingOff &&
            (uint32_t)o->signDisplay <= mloc_signNegative && o->minIntegerDigits <= maxMinInteger &&
            mlocValidPrecision(&o->precision);
 }
@@ -55,7 +70,16 @@ mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mloc
     }
     Formatter f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocInitNumberCore(&f.core, data, locale, o->style);
+    mlocResult result =
+        IsCompact(o->notation)
+            ? mlocInitCompactCore(&f.core, data, locale, o->notation == mloc_notationCompactLong,
+                                  &f.compactTable, &f.compactPatterns)
+            : mlocInitNumberCore(&f.core, data, locale, o->style);
+    if (result >= 0 && IsCompact(o->notation))
+    {
+        mlocResult rule = mlocFindPluralRule(data, locale, mloc_pluralCardinal, &f.pluralRule);
+        result = rule < 0 ? rule : result;
+    }
     if (result < 0)
     {
         return result;
@@ -85,9 +109,48 @@ static bool Read(const mlocNumberFormatter* opaque, Formatter* f)
            f->core.affixText != nullptr && f->core.digitLength >= 1 &&
            f->core.digitLength <= numberDigitSize && f->minInteger >= 1 &&
            f->minInteger <= maxMinInteger && f->grouping <= mloc_groupingOff &&
-           f->signDisplay <= mloc_signNegative && f->notation <= mloc_notationEngineering &&
+           f->signDisplay <= mloc_signNegative && f->notation <= mloc_notationCompactLong &&
            f->style <= mloc_numberPerMille && (f->core.primary == 0) == (f->core.secondary == 0) &&
+           IsCompact(f->notation) == (f->compactTable != nullptr) &&
+           (f->compactTable == nullptr ||
+            (f->compactPatterns != nullptr && f->pluralRule < mlocPluralRuleSetCount)) &&
            mlocValidPrecision(&f->precision);
+}
+
+// Rounds a finite decimal in compact notation and points the core at the
+// compact pattern chosen.
+static mlocResult Compact(const Formatter* f, mlocDecimal* d, NumberLayout* layout,
+                          NumberCore* core)
+{
+    // Compact notation groups only with two digits before the first
+    // separator, unless the options say otherwise.
+    layout->grouping = layout->grouping == mloc_groupingAuto ? mloc_groupingMin2 : layout->grouping;
+    CompactChoice choice;
+    CompactData compact = {.table = f->compactTable, .patterns = f->compactPatterns};
+    mlocResult r = mlocApplyCompact(compact, &f->precision, f->pluralRule, d, &choice);
+    if (r == mloc_success && choice.pattern != compactNoPattern)
+    {
+        layout->noNumber = mlocUseCompactPattern(core, f->compactPatterns, choice.pattern);
+        layout->compact = true;
+    }
+    return r;
+}
+
+// Scales a finite decimal for its style and rounds it, in scientific
+// notation its mantissa.
+static mlocResult Round(const Formatter* f, mlocDecimal* d, NumberLayout* layout)
+{
+    mlocResult r = f->style == mloc_numberDecimal
+                       ? mloc_success
+                       : mlocScaleDecimal(d, f->style == mloc_numberPercent ? 2 : 3);
+    if (r == mloc_success && layout->scientific)
+    {
+        // A mantissa of one to three digits is never grouped.
+        layout->grouping = mloc_groupingOff;
+        return mlocApplyScientific(&f->precision, f->notation == mloc_notationEngineering, d,
+                                   &layout->exponent);
+    }
+    return r == mloc_success ? mlocApplyPrecision(&f->precision, d) : r;
 }
 
 mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDecimal* decimal,
@@ -108,22 +171,11 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
         .scientific =
             f->notation == mloc_notationScientific || f->notation == mloc_notationEngineering,
     };
+    NumberCore core = f->core;
     if (d.kind == mloc_decimalFinite)
     {
-        mlocResult r = f->style == mloc_numberDecimal
-                           ? mloc_success
-                           : mlocScaleDecimal(&d, f->style == mloc_numberPercent ? 2 : 3);
-        if (r == mloc_success && layout.scientific)
-        {
-            // A mantissa of one to three digits is never grouped.
-            layout.grouping = mloc_groupingOff;
-            r = mlocApplyScientific(&f->precision, f->notation == mloc_notationEngineering, &d,
-                                    &layout.exponent);
-        }
-        else if (r == mloc_success)
-        {
-            r = mlocApplyPrecision(&f->precision, &d);
-        }
+        mlocResult r =
+            f->compactTable != nullptr ? Compact(f, &d, &layout, &core) : Round(f, &d, &layout);
         if (r != mloc_success)
         {
             return r;
@@ -131,7 +183,7 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
     }
     NumberSign sign = mlocNumberSign(&d, (mlocSignDisplay)f->signDisplay);
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteNumber(&f->core, &d, sign, &layout, &w);
+    mlocWriteNumber(&core, &d, sign, &layout, &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -140,7 +192,7 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteNumber(&f->core, &d, sign, &layout, &parts);
+        mlocWriteNumber(&core, &d, sign, &layout, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;

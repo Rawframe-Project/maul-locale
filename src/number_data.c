@@ -237,3 +237,101 @@ bool mlocValidNumbers(const DataView* view, DataSpan payload)
     }
     return true;
 }
+
+bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (!ValidTable(payload, numberCompactPatternSize, numberAffixCurrencyNarrow))
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(payload, numberCompactPatternSize);
+    for (uint32_t i = 0; i < t.recordCount; i++)
+    {
+        const uint8_t* p = t.records + (size_t)i * numberCompactPatternSize;
+        if (mlocLoad16(p + compactPrefix) >= t.stringCount ||
+            mlocLoad16(p + compactSuffix) >= t.stringCount ||
+            mlocLoad16(p + compactNegativePrefix) >= t.stringCount ||
+            (p[compactFlags] & ~patternFlagNoNumber) != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The size of a valid table at bytes with room for available bytes, or
+// 0 when it is not one.
+static uint32_t CompactTableSize(const uint8_t* bytes, uint32_t available)
+{
+    uint32_t at = 0;
+    for (uint32_t r = 0; r < numberCompactRows; r++)
+    {
+        if (available - at < 2)
+        {
+            return 0;
+        }
+        uint32_t zeros = bytes[at];
+        uint32_t mask = bytes[at + 1];
+        uint32_t power = numberCompactFirstPower + r;
+        uint32_t other = 1u << numberCompactOther;
+        bool valid = zeros == 0 ? mask == 0
+                                : zeros <= power + 1 && (mask & other) != 0 &&
+                                      mask < 1u << numberCompactSlots;
+        uint32_t slots = 0;
+        for (uint32_t m = mask; m != 0; m &= m - 1)
+        {
+            slots++;
+        }
+        if (!valid || available - at - 2 < 2 * slots)
+        {
+            return 0;
+        }
+        at += 2 + 2 * slots;
+    }
+    return at;
+}
+
+bool mlocValidNumberCompact(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (payload.size < numberCompactHeaderSize || mlocLoad32(payload.bytes + 4) != 0)
+    {
+        return false;
+    }
+    uint32_t count = mlocLoad32(payload.bytes);
+    if ((payload.size - numberCompactHeaderSize) / 4 <= count)
+    {
+        return false;
+    }
+    const uint8_t* offsets = payload.bytes + numberCompactHeaderSize;
+    const uint8_t* tables = offsets + 4 * ((size_t)count + 1);
+    uint32_t size = payload.size - numberCompactHeaderSize - 4 * (count + 1);
+    if (mlocLoad32(offsets) != 0 || mlocLoad32(offsets + 4 * (size_t)count) != size)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < count; i++)
+    {
+        uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);
+        uint32_t end = mlocLoad32(offsets + 4 * (size_t)i + 4);
+        // Each table ends within the bytes before any of it is read.
+        if (end < start || end > size ||
+            CompactTableSize(tables + start, end - start) != end - start)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index)
+{
+    uint32_t count = mlocLoad32(unit.bytes);
+    if (index >= count)
+    {
+        return nullptr;
+    }
+    const uint8_t* offsets = unit.bytes + numberCompactHeaderSize;
+    return offsets + 4 * ((size_t)count + 1) + mlocLoad32(offsets + 4 * (size_t)index);
+}

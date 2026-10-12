@@ -25,9 +25,28 @@
 // with no digits; u8 minimum grouping digits, u8 entry count, 2 bytes 0),
 // then per numbering system whose data differs from latn's, and latn, in
 // the order of the systems: its index (u8), a 0, and the indexes of its
-// symbol set and its decimal and percent patterns (u16 each). Scientific
-// notation writes the decimal pattern's affixes, as ICU does: the
-// locales' scientific patterns are not read.
+// symbol set, its decimal and percent patterns and its short and long
+// compact tables (u16 each). Scientific notation writes the decimal
+// pattern's affixes, as ICU does: the locales' scientific patterns are
+// not read.
+//
+// Compact patterns, a unit of no locale in the table shape: each record
+// the string indexes of its prefix, suffix and negative prefix (the
+// negative suffix is the suffix; u16 each) and its flags (u8): a pattern
+// with patternFlagNoNumber writes no digits (Italian's "mille" for one
+// thousand).
+//
+// Compact tables, a unit of no locale: a header (u32 table count, u32
+// 0), the tables' offsets into the bytes that follow (u32 each, count + 1
+// of them, from 0 to their size), then the tables. A table is a row for
+// each power of ten from 10^3 to 10^14: the other pattern's zeros (u8; 0
+// where the locale does not compact at that power, CLDR's pattern "0"),
+// which give the divisor 10^(power - zeros + 1); a mask (u8) of the
+// slots present, a bit per plural category from zero to other and one
+// for the exact value 1 (CLDR's count="1"), the other one's bit set
+// exactly when the zeros are not 0; then the compact pattern index of
+// each slot present (u16), in slot order. A category absent takes the
+// other one's pattern.
 
 #ifndef MLOC_NUMBER_TABLES_H
 #define MLOC_NUMBER_TABLES_H
@@ -42,7 +61,16 @@ enum
     numberTableHeaderSize = 8,
     numberPatternSize = 16,
     numberLocaleHeaderSize = 8,
-    numberEntrySize = 8,
+    numberEntrySize = 12,
+    // A compact table: rows of the powers 10^3 to 10^14, slots of the six
+    // categories and the exact value 1.
+    numberCompactFirstPower = 3,
+    numberCompactRows = 12,
+    numberCompactSlots = 7,
+    numberCompactOther = 5,
+    numberCompactExactOne = 6,
+    numberCompactHeaderSize = 8,
+    numberCompactPatternSize = 7,
     // A locale unit's system index for none, and for a system with no
     // digits (an algorithmic one, which the spellout part formats).
     numberNoSystem = 0xFF,
@@ -108,6 +136,9 @@ enum
     patternFlags = 14,
     // The exponent shows a plus sign when positive.
     patternFlagExponentPlus = 1,
+    // The pattern writes no digits: a compact pattern for exactly 1
+    // ("mille"); the only flag of a compact pattern.
+    patternFlagNoNumber = 2,
 };
 
 // The fields of a locale unit's header and entries.
@@ -123,6 +154,12 @@ enum
     entrySymbols = 2,
     entryDecimal = 4,
     entryPercent = 6,
+    entryCompactShort = 8,
+    entryCompactLong = 10,
+    compactPrefix = 0,
+    compactSuffix = 2,
+    compactNegativePrefix = 4,
+    compactFlags = 6,
 };
 
 // A numbering system id packed, or 0 when it is not 1 to 8 lowercase

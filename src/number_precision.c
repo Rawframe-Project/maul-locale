@@ -198,9 +198,7 @@ static int64_t ExponentFor(int64_t magnitude, bool engineering)
     return magnitude >= 0 ? magnitude / 3 * 3 : -((2 - magnitude) / 3) * 3;
 }
 
-// A decimal divided by 10^exponent; a decimal that shows fraction digits
-// keeps showing as many places, at most the decimal's limit.
-static mlocDecimal Shift(const mlocDecimal* d, int64_t exponent)
+mlocDecimal mlocShiftDecimal(const mlocDecimal* d, int64_t exponent)
 {
     mlocDecimal m = *d;
     m.exponent = (int32_t)(d->exponent - exponent);
@@ -221,18 +219,35 @@ mlocResult mlocApplyScientific(const mlocPrecision* p, bool engineering, mlocDec
     }
     int64_t magnitude = mlocTopPower(d);
     int64_t exponent = ExponentFor(magnitude, engineering);
-    mlocDecimal m = Shift(d, exponent);
+    mlocDecimal m = mlocShiftDecimal(d, exponent);
     mlocResult r = mlocApplyPrecision(p, &m);
     if (r == mloc_success && m.count > 0 && mlocTopPower(&m) != magnitude - exponent)
     {
         exponent = ExponentFor(magnitude + 1, engineering);
-        m = Shift(d, exponent);
+        m = mlocShiftDecimal(d, exponent);
         r = mlocApplyPrecision(p, &m);
     }
     if (r == mloc_success)
     {
         *d = m;
         *exponentOut = (int32_t)exponent;
+    }
+    return r;
+}
+
+mlocResult mlocApplyCompactPrecision(const mlocPrecision* p, mlocDecimal* d)
+{
+    if (p->kind != mloc_precisionNone)
+    {
+        return mlocApplyPrecision(p, d);
+    }
+    // An integer when two integer digits or more show, else two
+    // significant digits; zeros past the digits are not shown.
+    int64_t top = Magnitude(d);
+    mlocResult r = RoundAt(d, top - 1 < 0 ? top - 1 : 0, 1, p->mode);
+    if (r == mloc_success)
+    {
+        d->fractionDigits = Needed(d);
     }
     return r;
 }

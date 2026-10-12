@@ -73,6 +73,18 @@ typedef struct NumberWriter
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
                               const mlocLocale* locale, mlocNumberStyle style);
 
+// As mlocInitNumberCore, for compact notation: also the system's compact
+// table of a length (long when longLength) and the compact patterns,
+// every index checked. mloc_errorNotFound for data without them.
+mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
+                               const mlocLocale* locale, bool longLength, const uint8_t** tableOut,
+                               const uint8_t** patternsOut);
+
+// Points a core's affixes at a compact pattern of a valid compact
+// patterns unit, keeping the decimal pattern's grouping, as ICU does;
+// returns whether the pattern writes no digits.
+bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index);
+
 // The sign a rounded decimal shows under a sign display.
 NumberSign mlocNumberSign(const mlocDecimal* decimal, mlocSignDisplay display);
 
@@ -87,6 +99,11 @@ typedef struct NumberLayout
     // Whether an exponent of ten follows the digits, and which.
     bool scientific;
     int32_t exponent;
+    // The affixes are a compact pattern's: their text is a compact part
+    // but for the spaces at its ends.
+    bool compact;
+    // The pattern writes no digits (a compact pattern for exactly 1).
+    bool noNumber;
 } NumberLayout;
 
 // Writes a rounded decimal: the affixes for its sign, the integer digits

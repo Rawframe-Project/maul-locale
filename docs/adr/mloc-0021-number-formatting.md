@@ -56,23 +56,42 @@ NumberFormatter.
   mantissa, choosing the exponent again when rounding carries it to
   the next power (ECMA-402's ComputeExponent); a mantissa keeps the
   places its decimal shows.
+- **Compact notation:** two more units: the distinct compact patterns
+  (affixes and a flag for a pattern of words alone, Italian's "mille")
+  and the distinct compact tables (a row per power from 10^3 to 10^14:
+  the other pattern's zeros, which give the divisor, a mask of the
+  categories present and their pattern indexes). The generator reads
+  compact patterns by plain inheritance: CLDR's resolution would give a
+  long table's missing category the short table's pattern, through
+  root's alias, or the other category's. A value is divided by its
+  magnitude's row, rounded (by default to an integer when two integer
+  digits or more show, else to two significant digits), the row chosen
+  again when rounding carries it, and the pattern taken by the plural
+  category of the digits shown with c the exponent, the exact value 1
+  taking its own pattern where the locale has one. That is what ICU,
+  ICU4X and CLDR's decimal test data do ("1,2 million" in French); CLDR's
+  plural samples, which take the whole value (1.1c6 is many), serve the
+  plural part's `mlocSelectPluralOperands`. Compact numbers keep the
+  decimal pattern's grouping, with two digits before the first
+  separator by default, and take the decimal style only. The compact
+  word is its own part, the spaces around it literal.
 - **No default rounding:** the zero precision writes the digits the
   decimal shows (mloc-0019), as ICU4X's decimal formatter does; a
   precision, once set, rounds and cuts zeros to its minimum as
   ECMA-402 does. Compact notation, whose scaled value has no digits
-  the caller chose, will round by default.
+  the caller chose, rounds by default.
 - **Proof:** `conform_numbers` runs every line of `testData/decimal`
   in the cldr CI job with ICU4J's defaults set as options (six
   fraction digits at most, half to even). Where the files predate the
   pinned data (Galician's group separator, Urdu's percent sign),
   `tools/number-exceptions.txt`
   states the replacement and its reason, and each entry must be used.
-  Notations and styles not yet built are refused and their lines
-  counted as skipped.
+  Rows whose expected text alone predates the data (compact patterns
+  in Afrikaans, Igbo, Pashto and Tamil) are listed one by one.
 
 ## Consequences
 
-The number data costs about 23 KB of the compiled-in data, a quarter of
-it the numbering systems' digits. Every formatter shares one core, so
+The number data costs about 65 KB of the compiled-in data, compact
+notation 43 KB of it (ICU4X's compact data for its locales: 457 KB). Every formatter shares one core, so
 currency and unit formatting add only their own data and code. A
 caller who wants ECMA-402's three fraction digits sets them.

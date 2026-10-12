@@ -62,6 +62,10 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component);
 // aliases that loop.
 const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Component component);
 
+// A locale's own file, loaded when first asked for, or null when CLDR has
+// none. Fails the program on a file CLDR cannot read.
+const LdmlFile* CldrFile(Cldr* cldr, const char* locale, Component component);
+
 void CldrClose(Cldr* cldr);
 
 #endif

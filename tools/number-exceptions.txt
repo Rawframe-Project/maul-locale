@@ -1,7 +1,18 @@
 # Where CLDR's testData/decimal, which ICU4J wrote from older data, disagrees
-# with the CLDR release tools/cldr-release.txt pins: per locale, a text of
-# the expected lines, the text CLDR's own data gives instead, and the
-# reason, tab-separated. test/conform_numbers.c replaces the first by the
-# second in that locale's expected lines; each entry must be used.
+# with the CLDR release tools/cldr-release.txt pins, each checked against
+# that release's XML and JSON. Two kinds of entry, tab-separated: a locale,
+# a text of its expected lines, the text CLDR's data gives instead and the
+# reason, replaced in all that locale's lines; or a locale, a line's
+# format, length and input, the text CLDR's data gives and the reason.
+# test/conform_numbers.c applies them; each entry must be used.
 gl	.	 	CLDR 49's gl.xml and its JSON give a no-break space as the group separator; the test data has a full stop, from the older data ICU4J held
 ur	%	٪	CLDR 49's ur.xml and its JSON give the Arabic percent sign (U+066A) for latn; the test data has %, from the older data ICU4J held
+af	decimal	short	1234565.0	1,2 m.	CLDR 49's af.xml and its JSON give the short compact pattern for 10^6 as 0 m'.' (m.); the test data has m, from the older data ICU4J held
+ig	decimal	long	1234565.0	1.2 nde	CLDR 49's ig.xml and its JSON give long compact patterns (0 puku, 0 nde); the test data has the short ones, from the older data ICU4J held, which had none
+ig	decimal	long	-1230.05	-1.2 puku	CLDR 49's ig.xml and its JSON give long compact patterns (0 puku, 0 nde); the test data has the short ones, from the older data ICU4J held, which had none
+ps	decimal	short	1234565.0	۱٫۲ میلیونه	CLDR 49's ps.xml and its JSON give compact patterns of their own (0 زره, 0 میلیونه); the test data has root's short ones and no long ones, from the older data ICU4J held
+ps	decimal	short	-1230.05	‎-‎۱٫۲ زره	CLDR 49's ps.xml and its JSON give compact patterns of their own (0 زره, 0 میلیونه); the test data has root's short ones and no long ones, from the older data ICU4J held
+ps	decimal	long	1234565.0	۱٫۲ میلیونه	CLDR 49's ps.xml and its JSON give compact patterns of their own (0 زره, 0 میلیونه); the test data has root's short ones and no long ones, from the older data ICU4J held
+ps	decimal	long	-1230.05	‎-‎۱٫۲ زره	CLDR 49's ps.xml and its JSON give compact patterns of their own (0 زره, 0 میلیونه); the test data has root's short ones and no long ones, from the older data ICU4J held
+ta	decimal	short	1234565.0	1.2M	CLDR 49's ta.xml and its JSON inherit root's short compact patterns (0K, 0M); the test data has Tamil ones, from the older data ICU4J held
+ta	decimal	short	-1230.05	-1.2K	CLDR 49's ta.xml and its JSON inherit root's short compact patterns (0K, 0M); the test data has Tamil ones, from the older data ICU4J held

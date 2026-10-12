@@ -343,6 +343,11 @@ static LdmlFile* File(Cldr* cldr, const char* locale, Component component)
     return file;
 }
 
+const LdmlFile* CldrFile(Cldr* cldr, const char* locale, Component component)
+{
+    return File(cldr, locale, component);
+}
+
 // A value below the draft threshold counts as absent, and so does the
 // inheritance marker.
 static const Leaf* Accept(const Cldr* cldr, const Leaf* leaf)
