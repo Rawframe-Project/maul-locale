@@ -44,8 +44,10 @@ static void TestParents(void)
     CHECK(CldrParent(&s_cldr, "root", componentMain) == nullptr, "root has no parent");
     CHECK(strcmp(CldrParent(&s_cldr, "xx_YY", componentCollation), "root") == 0,
           "collation's own parents come first");
-    CHECK(strcmp(CldrParent(&s_cldr, "xx_ZZ", componentCollation), "xx_YY") == 0,
-          "then the general ones");
+    CHECK(strcmp(CldrParent(&s_cldr, "xx_ZZ", componentCollation), "xx") == 0,
+          "and stand alone: the main ones do not apply");
+    CHECK(strcmp(CldrParent(&s_cldr, "xx_Cyrl", componentCollation), "xx") == 0,
+          "nor does the non-likely script's root");
 }
 
 static void TestVertical(void)

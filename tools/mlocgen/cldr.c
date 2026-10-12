@@ -243,9 +243,11 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component)
     {
         return nullptr;
     }
+    // A component's own parent locales stand alone: they are not merged
+    // with the main ones (UTS #35, Parent Locales), so zh_Hant's
+    // collation parent is zh, not root.
     const char* parent =
-        component == componentCollation ? MapGet(&cldr->collationParents, locale) : nullptr;
-    parent = parent != nullptr ? parent : MapGet(&cldr->parents, locale);
+        MapGet(component == componentCollation ? &cldr->collationParents : &cldr->parents, locale);
     if (parent != nullptr)
     {
         return parent;
