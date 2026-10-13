@@ -107,7 +107,7 @@ mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, 
 void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out)
 {
     *out = (Outer){
-        .patternText = u->pool,
+        .patternText = u->patterns,
         .textKind = mloc_numberPartUnit,
         .patternKind = mloc_numberPartUnit,
         .rules = u->rules,

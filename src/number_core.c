@@ -724,6 +724,100 @@ static void PutExponent(NumberWriter* w, const NumberCore* c, int32_t exponent)
     }
 }
 
+// Text gathered for one copy into the writer, where a call for each
+// digit of a number would cost more than the digit.
+enum
+{
+    chunkSize = 256,
+    // The room kept free before a digit: the digit's slot, and a short
+    // separator copied by hand.
+    chunkReserve = numberDigitSize + 16,
+};
+
+// Appends a separator to a chunk; returns the chunk's length.
+static size_t Gather(NumberWriter* w, char* chunk, size_t n, const uint8_t* text, size_t length)
+{
+    if (length <= 16)
+    {
+        // Room was kept for it; a short copy by hand costs less than a
+        // call.
+        for (size_t i = 0; i < length; i++)
+        {
+            chunk[n + i] = (char)text[i];
+        }
+        return n + length;
+    }
+    Put(w, mloc_numberPartInteger, chunk, n);
+    Put(w, mloc_numberPartInteger, text, length);
+    return 0;
+}
+
+// The digit at an index of a decimal's digits, 0 outside them.
+static inline uint8_t DigitIndexed(const mlocDecimal* d, int64_t index)
+{
+    return (uint64_t)index < d->count ? d->digits[index] : 0;
+}
+
+// PutDigits without a part function: the digits read in place and
+// copied a slot at a time (numberDigitSize bytes, the slot's length
+// kept) into chunks, the next group separator's power known ahead.
+static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecimal* d,
+                           int64_t integers, bool grouped)
+{
+    char chunk[chunkSize];
+    size_t n = 0;
+    size_t digitLength = c->digitLength;
+    int64_t index = mlocTopPower(d) - (integers - 1);
+    // The highest power a separator follows, or -1 for none: the primary
+    // size, then every secondary size above it.
+    int64_t separator = -1;
+    if (grouped && integers - 1 > c->primary)
+    {
+        separator = c->primary + (integers - 1 - c->primary) / c->secondary * c->secondary;
+    }
+    else if (grouped && integers - 1 == c->primary)
+    {
+        separator = c->primary;
+    }
+    for (int64_t power = integers - 1; power >= 0; power--, index++)
+    {
+        if (n > chunkSize - chunkReserve)
+        {
+            Put(w, mloc_numberPartInteger, chunk, n);
+            n = 0;
+        }
+        memcpy(chunk + n, c->digits + (size_t)DigitIndexed(d, index) * numberDigitSize,
+               numberDigitSize);
+        n += digitLength;
+        if (power == separator && power > 0)
+        {
+            n = Gather(w, chunk, n, c->groupText, c->symbolLength[numberGroup]);
+            separator = separator == c->primary ? -1 : separator - c->secondary;
+        }
+    }
+    if (d->fractionDigits > 0)
+    {
+        if (n > chunkSize - chunkReserve)
+        {
+            Put(w, mloc_numberPartInteger, chunk, n);
+            n = 0;
+        }
+        n = Gather(w, chunk, n, c->decimalText, c->symbolLength[numberDecimal]);
+        for (int32_t i = 0; i < d->fractionDigits; i++, index++)
+        {
+            if (n > chunkSize - chunkReserve)
+            {
+                Put(w, mloc_numberPartInteger, chunk, n);
+                n = 0;
+            }
+            memcpy(chunk + n, c->digits + (size_t)DigitIndexed(d, index) * numberDigitSize,
+                   numberDigitSize);
+            n += digitLength;
+        }
+    }
+    Put(w, mloc_numberPartInteger, chunk, n);
+}
+
 // Writes a finite decimal's integer digits, grouped as the layout says,
 // and the fraction digits it shows.
 static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d,
@@ -737,6 +831,11 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
                                                              : c->minGrouping;
     bool grouped =
         layout->grouping != mloc_groupingOff && c->primary > 0 && integers >= c->primary + least;
+    if (w->parts == nullptr)
+    {
+        PutDigitsPlain(w, c, d, integers, grouped);
+        return;
+    }
     for (int64_t power = integers - 1; power >= 0; power--)
     {
         PutDigit(w, c, mlocDigitAt(d, power), mloc_numberPartInteger);

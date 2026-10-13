@@ -237,7 +237,7 @@ static void SmallestLead(const Mixed* m, char* lead, ListItem* item)
         category = mlocSelectPluralRule(f->pluralRule, &operands);
     }
     uint32_t slot = m->output->slot + m->last;
-    const uint8_t* text = m->unit->pool + m->unit->start[slot][category];
+    const uint8_t* text = m->unit->patterns + m->unit->start[slot][category];
     size_t length = m->unit->length[slot][category];
     size_t n = 0;
     for (size_t at = 0; at < length && n + 3 <= itemLead; at++)

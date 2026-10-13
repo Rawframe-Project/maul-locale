@@ -111,7 +111,10 @@ typedef struct Prepared
 {
     mlocDecimal decimal;
     NumberLayout layout;
-    NumberCore core;
+    // The formatter's core, or in compact notation the copy its pattern
+    // is chosen in (a Prepared copied keeps pointing at its source's).
+    const NumberCore* core;
+    NumberCore compact;
     NumberSign sign;
     // The compact exponent, the plural operand c.
     int32_t exponent;
@@ -128,11 +131,16 @@ static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepar
         .scientific =
             f->notation == mloc_notationScientific || f->notation == mloc_notationEngineering,
     };
-    p->core = f->core;
+    p->core = &f->core;
     if (p->decimal.kind == mloc_decimalFinite)
     {
+        if (f->compactTable != nullptr)
+        {
+            p->compact = f->core;
+            p->core = &p->compact;
+        }
         mlocResult r = f->compactTable != nullptr
-                           ? Compact(f, &p->decimal, &p->layout, &p->core, &p->exponent)
+                           ? Compact(f, &p->decimal, &p->layout, &p->compact, &p->exponent)
                            : Round(f, &p->decimal, &p->layout);
         if (r != mloc_success)
         {
@@ -201,7 +209,7 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     }
     if (o == nullptr || HasNumber(o, category))
     {
-        mlocWriteNumber(&p->core, &p->decimal, p->sign, &p->layout, w);
+        mlocWriteNumber(p->core, &p->decimal, p->sign, &p->layout, w);
     }
     if (o != nullptr)
     {
@@ -264,9 +272,9 @@ mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDeci
 // of their cores is the formatter's.
 static bool SameAffixes(const Prepared* a, const Prepared* b)
 {
-    return a->sign == b->sign && a->core.affixText == b->core.affixText &&
-           memcmp(a->core.affixStart, b->core.affixStart, sizeof(a->core.affixStart)) == 0 &&
-           memcmp(a->core.affixLength, b->core.affixLength, sizeof(a->core.affixLength)) == 0;
+    return a->sign == b->sign && a->core->affixText == b->core->affixText &&
+           memcmp(a->core->affixStart, b->core->affixStart, sizeof(a->core->affixStart)) == 0 &&
+           memcmp(a->core->affixLength, b->core->affixLength, sizeof(a->core->affixLength)) == 0;
 }
 
 // Whether two prepared ends write alike.
@@ -320,13 +328,13 @@ static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberW
     {
         a->layout.approximately = true;
         w->source = 0;
-        mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
+        mlocWriteNumber(a->core, &a->decimal, a->sign, &a->layout, w);
         return;
     }
     // An affix both share is written once when it is more than one
     // character; any affix written twice, or an exponent, spaces the
     // separator.
-    size_t points = mlocAffixCodePoints(&a->core, a->sign, &a->layout);
+    size_t points = mlocAffixCodePoints(a->core, a->sign, &a->layout);
     bool collapse = SameAffixes(a, b) && a->layout.noNumber == b->layout.noNumber && points > 1 &&
                     !a->layout.scientific;
     bool spaced = !collapse && (points > 0 || a->layout.scientific);
@@ -335,9 +343,9 @@ static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberW
     b->layout.skipPrefix = collapse;
     b->layout.sharedSuffix = collapse;
     w->source = mloc_numberRangeStart;
-    mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
+    mlocWriteNumber(a->core, &a->decimal, a->sign, &a->layout, w);
     mlocWriteRangeSeparator(core, spaced, w);
-    mlocWriteNumber(&b->core, &b->decimal, b->sign, &b->layout, w);
+    mlocWriteNumber(b->core, &b->decimal, b->sign, &b->layout, w);
 }
 
 // Writes a range within an outer pattern, once around both ends, as ICU

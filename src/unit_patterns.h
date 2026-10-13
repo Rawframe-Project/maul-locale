@@ -61,6 +61,9 @@ typedef struct UnitFormat
     uint16_t start[unitSlots][unitCategories];
     uint16_t length[unitSlots][unitCategories];
     uint8_t pool[unitPool];
+    // The pool the patterns are read from: the formatter's own, in place
+    // (ReadUnit copies the rest and points here); null until then.
+    const uint8_t* patterns;
     mlocPluralRules rules;
     // Written in the percent pattern, with no pattern around it.
     bool percent;

@@ -21,6 +21,7 @@
 #include "unit_patterns.h"
 #include "unit_usage.h"
 
+#include <stddef.h>
 #include <string.h>
 
 static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
@@ -199,22 +200,47 @@ static bool ValidOutput(const UnitFormat* u, const UnitOutput* o)
     return true;
 }
 
+static_assert(offsetof(UnitFormat, formatter) == 0, "the formatter begins a unit formatter");
+
 // The unit formatter of an opaque value, or false when the library did
-// not make it.
+// not make it. Only what formatting reads is copied: the pattern pool,
+// most of the value, is read in place, the output units are those the
+// formatter has, and the input unit, unit table and unit list only a
+// usage or a mixed unit reads.
 static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
 {
     if (opaque == nullptr || !mlocReadFormatter(opaque, sizeof(*opaque), unitStamp, &u->formatter))
     {
         return false;
     }
-    memcpy(u, opaque, sizeof(*u));
+    const uint8_t* bytes = (const uint8_t*)opaque;
+    uint8_t* to = (uint8_t*)u;
+    size_t head = sizeof(Formatter);
+    size_t pool = offsetof(UnitFormat, pool);
+    size_t rest = offsetof(UnitFormat, patterns);
+    size_t input = offsetof(UnitFormat, input);
+    size_t outputs = offsetof(UnitFormat, output);
+    size_t tail = offsetof(UnitFormat, duration);
+    memcpy(to + head, bytes + head, pool - head);
+    memcpy(to + rest, bytes + rest, input - rest);
+    memcpy(to + tail, bytes + tail, sizeof(*u) - tail);
+    if (u->outputs < 1 || u->outputs > unitOutputs)
+    {
+        return false;
+    }
+    memcpy(to + outputs, bytes + outputs, u->outputs * sizeof(UnitOutput));
+    u->patterns = bytes + pool;
     bool mixed = false;
     bool valid = u->formatter.pluralRule < mlocPluralRuleSetCount && u->formatter.unscaled == 1 &&
-                 u->outputs >= 1 && u->outputs <= unitOutputs && (u->usage || u->outputs == 1);
+                 (u->usage || u->outputs == 1);
     for (uint32_t i = 0; valid && i < u->outputs; i++)
     {
         valid = ValidOutput(u, &u->output[i]);
         mixed |= u->output[i].parts > 1;
+    }
+    if (u->usage || mixed)
+    {
+        memcpy(to + input, bytes + input, outputs - input);
     }
     return valid && mlocValidCoordinate(u) && (!mixed || (!u->percent && mlocValidMixedUnit(u))) &&
            (!u->usage || (!u->percent && mlocValidUsageOutputs(u)));
