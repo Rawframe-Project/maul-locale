@@ -180,9 +180,11 @@ static void TestGather(void)
               Text(&f, unitExtraGender, "masculine") && Text(&f, unitNameOther, "{0} meter") &&
               (f.found & 1u << unitNamePer) == 0,
           "the extras: the gender and a pattern lowercased");
+    // English files its own display name, "m", and takes root's patterns.
     CHECK(mlocGatherUnitNames(&s_data, &en, kindUnitNamesShort, "meter", 5, &f) &&
-              Text(&f, unitNameDisplay, "m"),
-          "a field from root's unit, past a source without the identifiers");
+              Text(&f, unitNameDisplay, "m") && Text(&f, unitNameOther, "{0} m") &&
+              Text(&f, unitNamePer, "{0}/m"),
+          "fields from root's unit, past a source without the identifiers");
     uint8_t kind = 0;
     CHECK(mlocUnitNameKind(&s_data, "10p3", 4, &kind) && kind == unitIdPrefix &&
               !mlocUnitNameKind(&s_data, "kilometers", 10, &kind),
