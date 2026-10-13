@@ -221,14 +221,34 @@ static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
     size_t input = offsetof(UnitFormat, input);
     size_t outputs = offsetof(UnitFormat, output);
     size_t tail = offsetof(UnitFormat, duration);
-    memcpy(to + head, bytes + head, pool - head);
     memcpy(to + rest, bytes + rest, input - rest);
     memcpy(to + tail, bytes + tail, sizeof(*u) - tail);
     if (u->outputs < 1 || u->outputs > unitOutputs)
     {
         return false;
     }
-    memcpy(to + outputs, bytes + outputs, u->outputs * sizeof(UnitOutput));
+    // A single unit, the usual formatter, copies its one output and its
+    // one slot in moves of a fixed size; a variable size compiles to a
+    // string move, which costs more to start than these bytes.
+    if (u->outputs == 1)
+    {
+        memcpy(to + outputs, bytes + outputs, sizeof(UnitOutput));
+    }
+    else
+    {
+        memcpy(to + outputs, bytes + outputs, u->outputs * sizeof(UnitOutput));
+    }
+    if (u->outputs == 1 && u->output[0].slot == 0 && u->output[0].parts == 1)
+    {
+        size_t start = offsetof(UnitFormat, start);
+        size_t length = offsetof(UnitFormat, length);
+        memcpy(to + start, bytes + start, sizeof(u->start[0]));
+        memcpy(to + length, bytes + length, sizeof(u->length[0]));
+    }
+    else
+    {
+        memcpy(to + head, bytes + head, pool - head);
+    }
     u->patterns = bytes + pool;
     bool mixed = false;
     bool valid = u->formatter.pluralRule < mlocPluralRuleSetCount && u->formatter.unscaled == 1 &&
