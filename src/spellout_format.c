@@ -21,6 +21,8 @@ enum
 {
     // ICU's RECURSION_LIMIT: rule sets nested past it are an error.
     maxLevels = 64,
+    // The places a fraction is written digit by digit to.
+    fractionPlaces = 20,
     // Rules a ">>>" or infinity calls directly also nest; a crafted file
     // could chain them without end.
     maxFrames = 192,
@@ -203,10 +205,15 @@ static int64_t FindFraction(const Engine* e, const Set* set, const mlocDecimal* 
     }
     Rule last = ReadRule(e, set->first + set->normal - 1);
     int largest = last.power >= 0 ? last.power : 0;
-    mlocDecimal scaled = mlocSpelloutAbsolute(x);
-    scaled = mlocSpelloutShift(&scaled, -largest);
-    mlocDecimal numerator = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
-    int64_t zeros = numerator.count == 0 ? largest : numerator.exponent;
+    // A value too large to scale is a whole number of every base.
+    mlocDecimal magnitude = mlocSpelloutAbsolute(x);
+    mlocDecimal scaled;
+    int64_t zeros = largest;
+    if (mlocSpelloutShift(&magnitude, -largest, &scaled))
+    {
+        mlocDecimal numerator = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
+        zeros = numerator.count == 0 ? largest : numerator.exponent;
+    }
     uint32_t winner = set->normal - 1;
     for (uint32_t i = 0; i < set->normal; i++)
     {
@@ -223,12 +230,14 @@ static int64_t FindFraction(const Engine* e, const Set* set, const mlocDecimal* 
         Rule next = ReadRule(e, set->first + winner + 1);
         if (next.base == rule.base && rule.power >= 0)
         {
-            mlocDecimal n = mlocSpelloutAbsolute(x);
-            n = mlocSpelloutShift(&n, -rule.power);
+            mlocDecimal n;
             mlocDecimal half = {.digits = {5}, .count = 1, .exponent = -1, .fractionDigits = 1};
             mlocDecimal two = mlocSpelloutFromUnsigned(2);
+            bool large = !mlocSpelloutShift(&magnitude, -rule.power, &n);
             winner +=
-                mlocSpelloutCompare(&n, &half) < 0 || mlocSpelloutCompare(&n, &two) >= 0 ? 1 : 0;
+                large || mlocSpelloutCompare(&n, &half) < 0 || mlocSpelloutCompare(&n, &two) >= 0
+                    ? 1
+                    : 0;
         }
     }
     return set->first + winner;
@@ -437,12 +446,15 @@ static void PassOn(Engine* e, int64_t target, const mlocDecimal* t)
 }
 
 // FractionalPartSubstitution digit by digit: each digit after the point
-// of the value's magnitude (ICU reads the digits of the number itself,
-// not of number - floor(number)) by the set, from the first, spaced
-// unless ">>>"; none writes zero.
+// of the value's magnitude rounded half even to 20 places, as ICU rounds
+// it (it reads the digits of the number itself, not of number -
+// floor(number)), by the set, from the first, spaced unless ">>>"; none
+// writes zero. The rounding also bounds the digits a value can ask for.
 static void FractionDigits(Engine* e, const uint8_t* piece, const mlocDecimal* x)
 {
     mlocDecimal magnitude = mlocSpelloutAbsolute(x);
+    (void)mlocRoundDecimal(&magnitude, -fractionPlaces, 1, mloc_roundHalfEven);
+    mlocSpelloutNormalize(&magnitude);
     mlocDecimal fractionValue;
     (void)mlocSpelloutFraction(&magnitude, &fractionValue);
     const mlocDecimal* fraction = &fractionValue;
@@ -471,7 +483,12 @@ static void FractionDigits(Engine* e, const uint8_t* piece, const mlocDecimal* x
 // for each place it is short of the base when it is written "<<".
 static void Numerator(Engine* e, const Rule* rule, const uint8_t* piece, const mlocDecimal* x)
 {
-    mlocDecimal scaled = mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0);
+    mlocDecimal scaled;
+    if (!mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0, &scaled))
+    {
+        Fail(e, mloc_errorCapacity);
+        return;
+    }
     mlocDecimal t = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
     int64_t target = Target(piece);
     uint64_t numerator = 0;
@@ -536,6 +553,33 @@ static void SubDec(Engine* e, const Rule* rule, const uint8_t* piece, const mloc
     PassOn(e, target, &t);
 }
 
+// A plural block's operand: the value divided by the rule's divisor, a
+// fraction's numerator ICU's round(number * divisor); false when it does
+// not fit.
+static bool PluralOperand(const Rule* rule, int64_t n, const mlocDecimal* x, mlocDecimal* out)
+{
+    if (x == nullptr)
+    {
+        if (rule->divisor > (uint64_t)INT64_MAX)
+        {
+            return false;
+        }
+        *out = mlocSpelloutFromInt64(n / (int64_t)rule->divisor);
+        return true;
+    }
+    if (x->negative == 0 && mlocSpelloutCompare(x, &(mlocDecimal){.digits = {1}, .count = 1}) < 0)
+    {
+        mlocDecimal scaled;
+        if (!mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0, &scaled))
+        {
+            return false;
+        }
+        *out = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
+        return true;
+    }
+    return mlocSpelloutDivideTrunc(x, rule->div, out);
+}
+
 // The pieces of a rule, written in order; plural blocks by an operand.
 static void Pieces(Engine* e, const Rule* rule, int64_t n, const mlocDecimal* x)
 {
@@ -550,23 +594,7 @@ static void Pieces(Engine* e, const Rule* rule, int64_t n, const mlocDecimal* x)
         case spelloutPlural:
         {
             mlocDecimal operand;
-            if (x == nullptr && rule->divisor > (uint64_t)INT64_MAX)
-            {
-                Fail(e, mloc_errorCapacity);
-                return;
-            }
-            if (x == nullptr)
-            {
-                operand = mlocSpelloutFromInt64(n / (int64_t)rule->divisor);
-            }
-            else if (x->negative == 0 &&
-                     mlocSpelloutCompare(x, &(mlocDecimal){.digits = {1}, .count = 1}) < 0)
-            {
-                // A fraction's numerator: ICU's round(number * divisor).
-                mlocDecimal scaled = mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0);
-                operand = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
-            }
-            else if (!mlocSpelloutDivideTrunc(x, rule->div, &operand))
+            if (!PluralOperand(rule, n, x, &operand))
             {
                 Fail(e, mloc_errorCapacity);
                 return;

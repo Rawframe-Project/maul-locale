@@ -42,8 +42,9 @@ mlocDecimal mlocSpelloutRound(const mlocDecimal* x, mlocRoundingMode mode);
 
 mlocDecimal mlocSpelloutAbsolute(const mlocDecimal* x);
 
-// x divided by 10^power (multiplied for a negative power), exact.
-mlocDecimal mlocSpelloutShift(const mlocDecimal* x, int power);
+// x divided by 10^power (multiplied for a negative power), exact; false
+// past 10^±999999.
+bool mlocSpelloutShift(const mlocDecimal* x, int power, mlocDecimal* out);
 
 // x - floor(x), ICU's number - uprv_floor(number).
 bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out);

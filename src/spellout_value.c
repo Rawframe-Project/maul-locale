@@ -135,47 +135,68 @@ mlocDecimal mlocSpelloutAbsolute(const mlocDecimal* x)
     return d;
 }
 
-// x divided by 10^k, exact.
-mlocDecimal mlocSpelloutShift(const mlocDecimal* x, int power)
+bool mlocSpelloutShift(const mlocDecimal* x, int power, mlocDecimal* out)
 {
-    mlocDecimal d = mlocSpelloutIsZero(x) ? *x : mlocShiftDecimal(x, power);
-    mlocSpelloutNormalize(&d);
-    return d;
+    if (mlocSpelloutIsZero(x) || x->kind != mloc_decimalFinite)
+    {
+        *out = *x;
+        return true;
+    }
+    int64_t exponent = (int64_t)x->exponent - power;
+    if (exponent < -mlocDecimalMaxExponent || exponent + x->count - 1 > mlocDecimalMaxExponent)
+    {
+        return false;
+    }
+    *out = mlocShiftDecimal(x, power);
+    mlocSpelloutNormalize(out);
+    return true;
 }
 
 // x - floor(x): the digits below the point, or for a negative value one
 // less their value (ICU's number - uprv_floor(number)).
 bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
 {
-    uint8_t digits[mlocDecimalDigits];
-    int count = 0;
     if (mlocSpelloutIsInteger(x))
     {
         *out = (mlocDecimal){.kind = mloc_decimalFinite};
         return true;
     }
-    for (int64_t power = -1; power >= x->exponent; power--)
+    if (x->negative == 0)
     {
-        digits[count++] = mlocDigitAt(x, power);
-    }
-    if (x->negative != 0)
-    {
-        // 10^count - D: each digit's nines complement, plus one.
-        for (int i = 0; i < count; i++)
+        // The digits below the point, its zeros before them implied.
+        uint8_t digits[mlocDecimalDigits];
+        int count = 0;
+        for (int i = 0; i < x->count; i++)
         {
-            digits[i] = (uint8_t)(9 - digits[i]);
-        }
-        for (int i = count - 1; i >= 0; i--)
-        {
-            if (digits[i] < 9)
+            if (x->exponent + (int64_t)(x->count - 1 - i) < 0)
             {
-                digits[i]++;
-                break;
+                digits[count++] = x->digits[i];
             }
-            digits[i] = 0;
         }
+        return Build(out, digits, count, x->exponent, false);
     }
-    return Build(out, digits, count, -(int64_t)count, false);
+    // 1 - f: 10^places - D, each place's nines complement plus one, which
+    // fails past the places a decimal holds.
+    int64_t places = -(int64_t)x->exponent;
+    if (places > mlocDecimalDigits)
+    {
+        return false;
+    }
+    uint8_t digits[mlocDecimalDigits];
+    for (int64_t i = 0; i < places; i++)
+    {
+        digits[i] = (uint8_t)(9 - mlocDigitAt(x, -1 - i));
+    }
+    for (int64_t i = places - 1; i >= 0; i--)
+    {
+        if (digits[i] < 9)
+        {
+            digits[i]++;
+            break;
+        }
+        digits[i] = 0;
+    }
+    return Build(out, digits, (int)places, -places, false);
 }
 
 // x mod 10^k with x's sign (ICU's uprv_fmod by a power of ten).
@@ -262,7 +283,11 @@ bool mlocSpelloutDivideFloor(const mlocDecimal* x, SpelloutDivisor divisor, mloc
 {
     if (divisor.power >= 0)
     {
-        mlocDecimal shifted = mlocSpelloutShift(x, divisor.power);
+        mlocDecimal shifted;
+        if (!mlocSpelloutShift(x, divisor.power, &shifted))
+        {
+            return false;
+        }
         *out = mlocSpelloutRound(&shifted, mloc_roundFloor);
         return true;
     }
@@ -297,8 +322,7 @@ bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor, mloc
 {
     if (divisor.power >= 0)
     {
-        *out = mlocSpelloutShift(x, divisor.power);
-        return true;
+        return mlocSpelloutShift(x, divisor.power, out);
     }
     uint64_t rest = divisor.value;
     int twos = 0;
@@ -326,8 +350,7 @@ bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor, mloc
     {
         return false;
     }
-    *out = mlocSpelloutShift(&product, k);
-    return true;
+    return mlocSpelloutShift(&product, k, out);
 }
 
 // fmod(x, divisor) with x's sign.
@@ -347,27 +370,20 @@ bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecim
         return false;
     }
     // The remainder's integer digits, then the fraction's.
-    uint8_t digits[mlocDecimalDigits + 20];
-    int count = 0;
-    char text[24];
-    int n = 0;
-    for (uint64_t r = m % divisor.value; r != 0 || n == 0; r /= 10)
-    {
-        text[n++] = (char)(r % 10);
-    }
-    while (n > 0)
-    {
-        digits[count++] = (uint8_t)text[--n];
-    }
-    for (int64_t power = -1; power >= fraction.exponent && !mlocSpelloutIsZero(&fraction); power--)
-    {
-        if (count == (int)sizeof(digits))
-        {
-            return false;
-        }
-        digits[count++] = mlocDigitAt(&fraction, power);
-    }
+    mlocDecimal remainder = mlocSpelloutFromUnsigned(m % divisor.value);
+    int64_t top = remainder.count > 0 ? mlocTopPower(&remainder) : 0;
     int64_t last = mlocSpelloutIsZero(&fraction) ? 0 : fraction.exponent;
+    uint8_t digits[mlocDecimalDigits + 24];
+    if (top - last + 1 > (int64_t)sizeof(digits))
+    {
+        return false;
+    }
+    int count = (int)(top - last + 1);
+    for (int i = 0; i < count; i++)
+    {
+        int64_t power = top - i;
+        digits[i] = power >= 0 ? mlocDigitAt(&remainder, power) : mlocDigitAt(&fraction, power);
+    }
     return Build(out, digits, count, last, x->negative != 0);
 }
 

@@ -120,6 +120,16 @@ static void TestOthers(void)
                      "\xD1\x82\xD1\x8C \xD1\x82\xD1\x80\xD0\xB8 \xD1\x82\xD1\x8B\xD1\x81\xD1\x8F"
                      "\xD1\x87\xD0\xBD\xD1\x8B\xD1\x85"),
           "Russian: fraction rule sets and plural blocks");
+    // A fraction far below the point, whose places pass a decimal's
+    // digits, reaches the fraction rule set as ICU's double does.
+    CHECK(Spells("ru", "%spellout-cardinal-feminine", "1e-100",
+                 "\xD0\xBD\xD0\xBE\xD0\xBB\xD1\x8C "
+                 "\xD0\xB4\xD0\xB5\xD1\x81\xD1\x8F\xD1\x82\xD1\x8B\xD1\x85") &&
+              Spells("ru", "%spellout-cardinal-feminine", "-1e-100",
+                     "\xD0\xBC\xD0\xB8\xD0\xBD\xD1\x83\xD1\x81 "
+                     "\xD0\xBD\xD0\xBE\xD0\xBB\xD1\x8C "
+                     "\xD0\xB4\xD0\xB5\xD1\x81\xD1\x8F\xD1\x82\xD1\x8B\xD1\x85"),
+          "a fraction of a hundred places");
     CHECK(Spells("es", "%spellout-numbering", "2.5", "dos coma cinco") &&
               Spells("es-MX", "%spellout-numbering", "2.5", "dos punto cinco"),
           "the fraction rule of the locale's decimal separator");
@@ -143,10 +153,23 @@ static void TestExact(void)
                  "twelve quadrillion three hundred forty-five trillion six hundred seventy-eight "
                  "billion nine hundred one million two hundred thirty-four thousand five hundred "
                  "sixty-seven point five") &&
-              Spells("en", "%spellout-cardinal", "1.123456789012345678901234",
+              Spells("en", "%spellout-cardinal", "1.12345678901234567891",
                      "one point one two three four five six seven eight nine zero one two three "
-                     "four five six seven eight nine zero one two three four"),
+                     "four five six seven eight nine one"),
           "fractions past a double's digits");
+    // Digit by digit, ICU rounds to 20 places, half even.
+    CHECK(Spells("en", "%spellout-cardinal", "1.123456789012345678905",
+                 "one point one two three four five six seven eight nine zero one two three four "
+                 "five six seven eight nine") &&
+              Spells("en", "%spellout-cardinal", "1e-21", "zero point zero") &&
+              Spells("en", "%spellout-cardinal", "2.5e-20",
+                     "zero point zero zero zero zero zero zero zero zero zero zero zero zero zero "
+                     "zero zero zero zero zero zero two") &&
+              Spells("en", "%spellout-cardinal", "1.5e-20",
+                     "zero point zero zero zero zero zero zero zero zero zero zero zero zero zero "
+                     "zero zero zero zero zero zero two") &&
+              Spells("en", "%spellout-cardinal", "1e-999999", "zero point zero"),
+          "twenty places at most");
     CHECK(Spells("en", "%spellout-cardinal", "1e30", "1,000,000,000,000,000,000,000,000,000,000") &&
               Spells("en", "%digits-ordinal", "1e20", "100,000,000,000,000,000,000th") &&
               Spells("en", "%spellout-cardinal", "-9223372036854775808",
