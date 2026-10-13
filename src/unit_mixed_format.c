@@ -72,7 +72,8 @@ static mlocResult LoadParts(UnitFormat* u, const mlocDataSet* data, const mlocLo
             return mloc_errorCapacity;
         }
         UnitForms forms;
-        mlocResult r = mlocLoadUnitForms(data, locale, unit + start, at - start, kind, &forms);
+        mlocResult r = mlocLoadUnitForms(data, locale, unit + start, at - start, kind,
+                                         u->grammaticalCase, &forms);
         r = r == mloc_success ? mlocAddUnitPatterns(u, *slots, used, &forms) : r;
         if (r != mloc_success)
         {

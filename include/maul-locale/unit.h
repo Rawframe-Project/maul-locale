@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0029): CLDR's unit identifiers ("kilometer-per-hour",
+// mloc-0030): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -152,6 +152,43 @@ extern "C"
         mloc_coordinateLongitude = 2,
     } mlocCoordinate;
 
+    // A grammatical case, CLDR's (grammaticalFeatures.xml): the
+    // nominative, then the others in alphabetical order. The long width
+    // writes a unit in the case's patterns where the locale has them
+    // ("2 Metern", German's dative), the nominative's where it does not,
+    // as ICU's unitDisplayCase; the other widths have no cases.
+    typedef enum mlocGrammaticalCase
+    {
+        mloc_caseNominative = 0,
+        mloc_caseAbessive = 1,
+        mloc_caseAblative = 2,
+        mloc_caseAccusative = 3,
+        mloc_caseAdessive = 4,
+        mloc_caseAllative = 5,
+        mloc_caseCausal = 6,
+        mloc_caseComitative = 7,
+        mloc_caseDative = 8,
+        mloc_caseDelative = 9,
+        mloc_caseElative = 10,
+        mloc_caseErgative = 11,
+        mloc_caseEssive = 12,
+        mloc_caseGenitive = 13,
+        mloc_caseIllative = 14,
+        mloc_caseInessive = 15,
+        mloc_caseInstrumental = 16,
+        mloc_caseLocative = 17,
+        mloc_caseLocativecopulative = 18,
+        mloc_caseOblique = 19,
+        mloc_casePartitive = 20,
+        mloc_casePrepositional = 21,
+        mloc_caseSociative = 22,
+        mloc_caseSublative = 23,
+        mloc_caseSuperessive = 24,
+        mloc_caseTerminative = 25,
+        mloc_caseTranslative = 26,
+        mloc_caseVocative = 27,
+    } mlocGrammaticalCase;
+
     // A unit formatter's options; the zero value is the default.
     typedef struct mlocUnitOptions
     {
@@ -166,6 +203,7 @@ extern "C"
         const char* usage;
         size_t usageLength;
         mlocCoordinate coordinate;
+        mlocGrammaticalCase grammaticalCase;
     } mlocUnitOptions;
 
     // A locale's formatter of one unit: a value that points into the data
@@ -194,7 +232,10 @@ extern "C"
     /// in the options wins over the preference's), mixed outputs as
     /// above. With a coordinate, an angle is written with the locale's
     /// direction for its sign and the width ("12.5°N"; numeric takes
-    /// narrow's), the amount unsigned whatever the sign display.
+    /// narrow's), the amount unsigned whatever the sign display. With a
+    /// grammatical case and the long width, each name is the case's
+    /// where the locale's chain has it, as ICU's unitDisplayCase reads
+    /// it, a built name taking it through CLDR's case derivations.
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
@@ -212,19 +253,20 @@ extern "C"
     ///         mloc_errorNotFound for a unit the names do not know (a
     ///         simple unit without names, a power past three) or data
     ///         without the number units, the unit table, the names, the
-    ///         unit patterns or the lists;
+    ///         unit patterns, the lists or, for a case other than the
+    ///         nominative, the case patterns;
     ///         mloc_errorCapacity for a unit whose patterns pass the
     ///         formatter's room; mloc_errorInvalid for a null pointer, an
     ///         empty unit, a currency, a constant in the numerator, a name
     ///         ICU refuses to build (the number inside a part), a mixed
     ///         unit whose parts do not convert to each other alone (other
     ///         dimensions, a temperature) or are of one size, or with a
-    ///         notation other than
-    ///         standard, a usage with a mixed unit, one that does not
-    ///         convert or a notation other than standard, a coordinate
-    ///         of a unit not an angle or with a usage, or options out of
-    ///         range or in conflict (a percent style, a null usage of a
-    ///         length).
+    ///         notation other than standard, a usage with a mixed unit,
+    ///         one that does not convert or a notation other than
+    ///         standard, a coordinate of a unit not an angle or with a
+    ///         usage, or options out of range (a case past
+    ///         mloc_caseVocative) or in conflict (a percent style, a null
+    ///         usage of a length).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut,

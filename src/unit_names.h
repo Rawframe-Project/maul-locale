@@ -20,6 +20,7 @@
 bool mlocValidUnitIds(const DataView* view, DataSpan payload);
 bool mlocValidUnitNames(const DataView* view, DataSpan payload);
 bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload);
+bool mlocValidUnitCases(const DataView* view, DataSpan payload);
 bool mlocValidUnitDerivations(const DataView* view, DataSpan payload);
 
 // The code of an identifier in a valid identifiers unit, and its kind
@@ -44,6 +45,13 @@ typedef struct UnitNameFields
 // when the chain cannot be walked.
 bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
                          const char* id, size_t length, UnitNameFields* out);
+
+// Gathers an identifier's patterns of a case past the nominative from the
+// case rows of a kind (kindUnitCases, kindUnitCasesLowered) along the
+// locale's chain, as mlocGatherUnitNames: the fields zero to other from
+// 0. False for a case out of range, or data without the kind.
+bool mlocGatherUnitCases(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
+                         uint32_t caseIndex, const char* id, size_t length, UnitNameFields* out);
 
 // The field a plural category's pattern comes from: its own, else
 // other's; unitNameFields when neither is found.

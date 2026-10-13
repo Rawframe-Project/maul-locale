@@ -18,6 +18,9 @@ int UnitCaseIndex(const char* name);
 // The name of a case's index.
 const char* UnitCaseName(int index);
 
+// The name of a gender's index ("" for 0).
+const char* UnitGenderName(int index);
+
 // A gender's index (unitGenderAnimate and the others), or -1.
 int UnitGenderIndex(const char* name);
 

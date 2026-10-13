@@ -64,6 +64,18 @@ typedef struct Names
     Map filed;
     // Root's unit aliases: a type to the type whose data it takes.
     Map aliases;
+    // The types with patterns of a case in some locale.
+    Map caseTypes;
+    // Locale id to the cases its own file has patterns of (a bit per
+    // case index, plus 1 so none is null).
+    Map localeCases;
+    // Locale id to its cases and genders for the units, as
+    // grammaticalFeatures.xml lists them (a bit per index, shifted left
+    // by one with the low bit set).
+    Map grammarCases;
+    Map grammarGenders;
+    // The locale being collected.
+    const char* collecting;
     Table table;
 } Names;
 
@@ -77,6 +89,10 @@ void NamesCollect(Names* n);
 // Reads the cardinal rules' categories per locale. Returns 0 and a
 // message on failure.
 int NamesReadCategories(Names* n, char* errorOut, size_t errorCapacity);
+
+// Reads the grammatical features of the locales grammaticalFeatures.xml
+// lists. Returns 0 and a message on failure.
+int NamesReadGrammar(Names* n, char* errorOut, size_t errorCapacity);
 
 // A locale's plural categories and one (a bit per category).
 unsigned NamesCategoriesOf(const Names* n, const char* locale);
@@ -94,5 +110,18 @@ bool NamesGiven(const Names* n, const char* locale, const UnitName* name, int wi
 
 // A field's value as ICU reads it, or null.
 const char* NamesTarget(const Names* n, const char* locale, int id, int width, int field);
+
+// The cases a locale's chain below root has patterns of (a bit per case
+// index).
+uint32_t NamesCasesOf(const Names* n, const char* locale);
+
+// Whether a unit or power has patterns of a case in some locale.
+bool NamesHasCases(const Names* n, int id);
+
+// A unit's or power's long pattern of a case for a plural category as
+// ICU reads it (getMeasureData: the case's own value along the chain,
+// else the plain value's, a category ICU has neither of taking other's;
+// InflectedPluralSink for a power), or null.
+const char* NamesCaseTarget(const Names* n, const char* locale, int id, int caseIndex, int field);
 
 #endif

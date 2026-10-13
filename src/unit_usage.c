@@ -44,8 +44,8 @@ static mlocResult LoadOutput(UnitFormat* u, const mlocDataSet* data, const mlocL
         return mloc_errorCapacity;
     }
     UnitForms forms;
-    mlocResult r =
-        mlocLoadUnitForms(data, locale, entry->id, entry->length, mlocUnitWidthKind(width), &forms);
+    mlocResult r = mlocLoadUnitForms(data, locale, entry->id, entry->length,
+                                     mlocUnitWidthKind(width), u->grammaticalCase, &forms);
     r = r == mloc_success ? mlocAddUnitPatterns(u, *slots, used, &forms) : r;
     ++*slots;
     return r;

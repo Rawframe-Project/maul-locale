@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit name patterns (record mloc-0024): an identifier normalized as
-// ICU's MeasureUnit normalizes it, and its patterns per plural category:
-// those of a unit CLDR names, or built from the compound patterns as
-// ICU's LongNameHandler::forArbitraryUnit builds them.
+// Unit name patterns (records mloc-0024, mloc-0025 and mloc-0030): a
+// unit's patterns per plural category, those of a unit CLDR names, or
+// built from the compound patterns as ICU's
+// LongNameHandler::forArbitraryUnit builds them.
 
 #ifndef MLOC_UNIT_COMPOUND_H
 #define MLOC_UNIT_COMPOUND_H
@@ -37,23 +37,16 @@ typedef struct UnitForms
     UnitPattern per;
 } UnitForms;
 
-// Writes an identifier's normal form ("meter-per-second" for
-// "per-second-meter", "tonne" for "metric-ton"). Returns mloc_success;
-// mloc_errorSyntax or mloc_errorNotFound as mlocParseUnitId; mloc_errorInvalid
-// for a mixed or currency unit or a constant in the numerator;
-// mloc_errorCapacity when it passes the room; mloc_errorNotFound for data
-// without the unit table.
-mlocResult mlocNormalizeUnitName(const mlocDataSet* data, const char* unit, size_t length,
-                                 char* out, size_t capacity, size_t* lengthOut);
-
-// A unit's patterns in a width (kindUnitNamesLong and the others), a unit
-// CLDR names taken as it is:
+// A unit's patterns in a width (kindUnitNamesLong and the others) and,
+// in the long width, a grammatical case (unitCaseNominative and the
+// others; one out of range is the nominative), a unit CLDR names taken
+// as it is, others built with the case derivations:
 // mloc_success; the errors of mlocNormalizeUnitName; mloc_errorNotFound
 // for names the data lacks (a simple unit without names, a power past
 // three); mloc_errorInvalid for a pattern with the number inside a unit
 // name ICU refuses to build; mloc_errorCapacity for a pattern past
 // unitPatternRoom.
 mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
-                              size_t length, uint32_t kind, UnitForms* out);
+                              size_t length, uint32_t kind, uint32_t gcase, UnitForms* out);
 
 #endif

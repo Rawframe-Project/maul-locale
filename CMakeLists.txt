@@ -103,6 +103,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_mixed.c
     src/unit_mixed_format.c
     src/unit_names.c
+    src/unit_normal.c
     src/unit_patterns.c
     src/unit_prefs.c
     src/unit_usage.c

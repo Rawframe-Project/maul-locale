@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The unit names (record mloc-0024, src/unit_tables.h): the identifiers
-// the locale files name, and per locale key each width's names and the
-// long width's extras, CLDR's resolved values each filed where the key's
-// chain would give another. They ship as a data file of their own.
+// The unit names (records mloc-0024 and mloc-0030, src/unit_tables.h):
+// the identifiers the locale files name, and per locale key each width's
+// names, the long width's extras and its patterns of the grammatical
+// cases, the values ICU's data gives each filed where the key's chain
+// would give another. They ship as a data file of their own.
 
 #ifndef MLOCGEN_UNIT_NAMES_GEN_H
 #define MLOCGEN_UNIT_NAMES_GEN_H

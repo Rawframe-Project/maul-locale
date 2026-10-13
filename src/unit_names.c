@@ -102,6 +102,18 @@ bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload)
     return mlocValidSparse(payload, &s_shape);
 }
 
+bool mlocValidUnitCases(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    static const SparseShape s_shape = {
+        .fieldCount = unitCaseFields,
+        .stringFields = (1u << unitCaseFields) - 1,
+        .maxCode = UINT16_MAX,
+        .empty = true,
+    };
+    return mlocValidSparse(payload, &s_shape);
+}
+
 // Whether a derivation value is one its place allows.
 static bool ValidDerived(uint32_t at, uint8_t value)
 {
@@ -210,6 +222,8 @@ typedef struct Gathering
     const char* id;
     size_t length;
     uint32_t fieldCount;
+    // A case's index past the nominative, for the case rows; else 0.
+    uint32_t caseIndex;
     UnitNameFields* fields;
 } Gathering;
 
@@ -226,8 +240,15 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
     {
         return false;
     }
+    // A case row's code: the identifier's index past those of the cases
+    // before.
+    uint32_t full = code + (g->caseIndex > 0 ? (g->caseIndex - 1) * mlocLoad16(ids.bytes) : 0);
+    if (full > UINT16_MAX)
+    {
+        return false;
+    }
     SparseTable t = mlocReadSparseTable(unit);
-    const uint8_t* row = mlocFindSparseRow(&t, code);
+    const uint8_t* row = mlocFindSparseRow(&t, (uint16_t)full);
     for (uint32_t field = 0; row != nullptr && field < g->fieldCount; field++)
     {
         uint16_t value = 0;
@@ -241,6 +262,21 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
         f->length[field] = (uint16_t)(mlocLoad16(t.offsets + (size_t)value * 2 + 2) - start);
     }
     return f->found == (1u << g->fieldCount) - 1;
+}
+
+bool mlocGatherUnitCases(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
+                         uint32_t caseIndex, const char* id, size_t length, UnitNameFields* out)
+{
+    *out = (UnitNameFields){0};
+    Gathering g = {
+        .id = id,
+        .length = length,
+        .fieldCount = unitCaseFields,
+        .caseIndex = caseIndex,
+        .fields = out,
+    };
+    return caseIndex > 0 && caseIndex < unitCaseCount &&
+           mlocVisitLocaleUnits(data, mloc_componentMain, kind, locale, Gather, &g);
 }
 
 bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,

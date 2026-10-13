@@ -542,6 +542,57 @@ static void TestNumeric(void)
           "the smallest field rounded by the options, a carry moving up");
 }
 
+// Whether an amount formats as expected in a locale, width and case.
+static bool InCase(const char* id, const char* unit, mlocUnitWidth width, mlocGrammaticalCase gcase,
+                   const char* amount, const char* expected)
+{
+    mlocUnitOptions options = {.width = width, .grammaticalCase = gcase};
+    return Formats(id, unit, &options, amount, expected);
+}
+
+static void TestCases(void)
+{
+    mlocUnitWidth l = mloc_unitWidthLong;
+    CHECK(InCase("de", "meter", l, mloc_caseDative, "2", "2 Metern") &&
+              InCase("de", "meter", l, mloc_caseDative, "1", "1 Meter") &&
+              InCase("ru", "meter", l, mloc_caseGenitive, "5",
+                     "5 \xD0\xBC\xD0\xB5\xD1\x82\xD1\x80\xD0\xBE\xD0\xB2") &&
+              InCase("ru", "meter", l, mloc_caseInstrumental, "1",
+                     "1 \xD0\xBC\xD0\xB5\xD1\x82\xD1\x80\xD0\xBE\xD0\xBC") &&
+              InCase("fi", "meter", l, mloc_casePartitive, "2", "2 metri\xC3\xA4"),
+          "a unit's patterns of a case, a category the case leaves out the plain one's");
+    CHECK(InCase("de", "kilometer-per-hour", l, mloc_caseDative, "5", "5 Kilometern pro Stunde") &&
+              InCase("de", "newton-meter", l, mloc_caseDative, "2", "2 Newtonmetern") &&
+              InCase("de", "hectometer", l, mloc_caseDative, "2", "2 Hektometern") &&
+              InCase("de", "hectometer", l, mloc_caseDative, "1", "1 Hektometer") &&
+              InCase("pl", "kilometer-per-hour", l, mloc_caseGenitive, "5",
+                     "5 kilometr\xC3\xB3w na godzin\xC4\x99"),
+          "compound names: the case through per and times, a prefixed core lowercased in it");
+    CHECK(InCase("cs", "cubic-decimeter", l, mloc_caseDative, "1", "1 decimetr krychlov\xC3\xA9mu"),
+          "a power's pattern of the unit's gender and the case");
+    CHECK(InCase("de", "meter-and-centimeter", l, mloc_caseDative, "2.5",
+                 "2 Metern, 50 Zentimetern") &&
+              InCase("de-CH", "foot", l, mloc_caseDative, "2", "2 Fu\xC3\x9F") &&
+              InCase("de-CH", "foot", l, mloc_caseGenitive, "2", "2 Fuss"),
+          "a mixed unit's parts; a locale's chain as ICU reads it");
+    CHECK(InCase("de", "meter", mloc_unitWidthShort, mloc_caseDative, "2", "2 m") &&
+              InCase("de", "meter", l, mloc_caseVocative, "2", "2 Meter") &&
+              InCase("en", "meter", l, mloc_caseDative, "2", "2 meters"),
+          "no case in short; a case the locale lacks is the nominative");
+    mlocUnitOptions road = {
+        .width = l, .usage = "road", .usageLength = 4, .grammaticalCase = mloc_caseDative};
+    CHECK(Formats("de", "meter", &road, "2000", "2 Kilometern"), "a usage's output in the case");
+    mlocUnitFormatter formatter;
+    mlocUnitOptions past = {.width = l, .grammaticalCase = (mlocGrammaticalCase)28};
+    mlocUnitOptions dative = {.width = l, .grammaticalCase = mloc_caseDative};
+    CHECK(Init(&formatter, "de", "meter", &past) == mloc_errorInvalid, "a case out of range");
+    mlocLocale locale;
+    CHECK(mlocParseLocale("de", 2, &locale).status == mloc_success &&
+              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, &dative) ==
+                  mloc_errorNotFound,
+          "data without the case patterns");
+}
+
 static void TestCoordinate(void)
 {
     mlocUnitOptions lat = {.width = mloc_unitWidthNarrow, .coordinate = mloc_coordinateLatitude};
@@ -901,6 +952,7 @@ int main(void)
     TestUsage();
     TestNumeric();
     TestCoordinate();
+    TestCases();
     TestRanges();
     TestParts();
     TestNames();

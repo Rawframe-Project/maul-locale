@@ -9,7 +9,9 @@
 // and per mille, short or narrow and not compact, take the locale's
 // percent pattern instead, as ICU's number_formatimpl.cpp does.
 
+#include "data_view.h"
 #include "decimal.h"
+#include "kinds.h"
 #include "number_core.h"
 #include "plural.h"
 #include "plural_rules.h"
@@ -27,8 +29,8 @@ static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
 static bool ValidOptions(const mlocUnitOptions* o)
 {
     return o->width <= mloc_unitWidthNumeric && o->coordinate <= mloc_coordinateLongitude &&
-           mlocValidFormatOptions(&o->number) && o->number.style == mloc_numberDecimal &&
-           (o->usage != nullptr || o->usageLength == 0);
+           (uint32_t)o->grammaticalCase < unitCaseCount && mlocValidFormatOptions(&o->number) &&
+           o->number.style == mloc_numberDecimal && (o->usage != nullptr || o->usageLength == 0);
 }
 
 // The style ICU writes a unit in: percent and per mille, short or narrow
@@ -109,6 +111,11 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     size_t used = 0;
     static UnitFormat s_zero;
     UnitFormat u = s_zero;
+    u.grammaticalCase = (uint8_t)o->grammaticalCase;
+    if (u.grammaticalCase != mloc_caseNominative && !mlocDataSetHasKind(data, kindUnitCases))
+    {
+        return mloc_errorNotFound;
+    }
     u.outputs = 1;
     u.output[0].parts = 1;
     mlocResult found = o->usageLength > 0
@@ -120,7 +127,8 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     if (found == mloc_success && single)
     {
         UnitForms forms;
-        found = mlocBuildUnitForms(data, locale, id, idLength, mlocUnitWidthKind(o->width), &forms);
+        found = mlocBuildUnitForms(data, locale, id, idLength, mlocUnitWidthKind(o->width),
+                                   u.grammaticalCase, &forms);
         found = found == mloc_success ? mlocAddUnitPatterns(&u, 0, &used, &forms) : found;
     }
     found = found == mloc_success ? LoadDurations(&u, data, locale) : found;

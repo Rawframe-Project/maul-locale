@@ -82,6 +82,8 @@ typedef struct UnitFormat
     uint16_t directionLength[4];
     // The mlocCoordinate the amounts are written as.
     uint8_t coordinate;
+    // The mlocGrammaticalCase the patterns were loaded in.
+    uint8_t grammaticalCase;
 } UnitFormat;
 
 // The names kind of a width.
@@ -93,12 +95,12 @@ uint32_t mlocUnitWidthKind(mlocUnitWidth width);
 mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t length, char* out,
                               size_t capacity, size_t* lengthOut);
 
-// A unit's patterns in a width, by any identifier of it: its normal
-// identifier's (mlocBuildUnitForms), or as it is for one the unit table
-// does not know but the names do ("generic"). The errors of
+// A unit's patterns in a width and case, by any identifier of it: its
+// normal identifier's (mlocBuildUnitForms), or as it is for one the unit
+// table does not know but the names do ("generic"). The errors of
 // mlocBuildUnitForms.
 mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
-                             size_t length, uint32_t kind, UnitForms* out);
+                             size_t length, uint32_t kind, uint32_t gcase, UnitForms* out);
 
 // Copies a slot's patterns into the pool, a category without its own
 // taking other's: mloc_success, mloc_errorNotFound for forms without

@@ -8,6 +8,7 @@
 #include "currency_tables.h"
 #include "kinds.h"
 #include "unit_names.h"
+#include "unit_normal.h"
 
 #include <string.h>
 
@@ -95,12 +96,12 @@ mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t 
 }
 
 mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
-                             size_t length, uint32_t kind, UnitForms* out)
+                             size_t length, uint32_t kind, uint32_t gcase, UnitForms* out)
 {
     char id[unitMaxIdLength];
     size_t idLength = 0;
     mlocResult r = mlocNormalUnitName(data, unit, length, id, sizeof(id), &idLength);
-    return r == mloc_success ? mlocBuildUnitForms(data, locale, id, idLength, kind, out) : r;
+    return r == mloc_success ? mlocBuildUnitForms(data, locale, id, idLength, kind, gcase, out) : r;
 }
 
 void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out)

@@ -79,6 +79,11 @@ const char* UnitCaseName(int index)
     return s_cases[index];
 }
 
+const char* UnitGenderName(int index)
+{
+    return s_genders[index];
+}
+
 int UnitGenderIndex(const char* name)
 {
     return name[0] == '\0' ? -1 : IndexIn(s_genders, unitGenderCount, name);

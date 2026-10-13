@@ -80,6 +80,11 @@ constexpr uint32_t kindUnitDerivations = 0x00040013;
 // The unit names data file: a locale's duration and coordinate patterns,
 // a unit per locale.
 constexpr uint32_t kindUnitPatterns = 0x00040014;
+// The unit names data file: a locale's long patterns of the grammatical
+// cases, a unit per locale.
+constexpr uint32_t kindUnitCases = 0x00040015;
+// The unit names data file: those patterns lowercased, a unit per locale.
+constexpr uint32_t kindUnitCasesLowered = 0x00040016;
 
 // The list part: the distinct list pattern sets, a unit of no locale
 // (src/list_tables.h).

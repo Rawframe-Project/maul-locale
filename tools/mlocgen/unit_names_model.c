@@ -111,6 +111,19 @@ static bool AttributeOf(const char* element, const char* name, char* out, size_t
     return true;
 }
 
+// Notes a type's pattern of a case in the locale being collected.
+static void NoteCase(Names* n, const char* type, const char* gcase)
+{
+    int index = UnitCaseIndex(gcase);
+    if (index < 0)
+    {
+        GenDie("a unit pattern of a case the generator does not know", gcase);
+    }
+    MapPut(&n->caseTypes, type, (void*)1);
+    uintptr_t mask = (uintptr_t)MapGet(&n->localeCases, n->collecting);
+    MapPut(&n->localeCases, n->collecting, (void*)(mask | 1u << index | 1u));
+}
+
 // Takes one chain of a locale's file: the unit or compound it names.
 // Cases come with the grammar's data, and the coordinate and duration
 // units with the list patterns'.
@@ -149,13 +162,19 @@ static void CollectChain(const char* chain, void* value, void* context)
     memcpy(type, at, length);
     type[length] = '\0';
     const char* element = at + length + 3;
-    if (strstr(element, "[@case=") != nullptr)
-    {
-        return;
-    }
     uint8_t kind = compound ? CompoundKind(type) : unitIdUnit;
     char gender[maxKey];
     bool gendered = kind == unitIdPower && AttributeOf(element, "gender", gender, sizeof(gender));
+    char gcase[maxKey];
+    if (AttributeOf(element, "case", gcase, sizeof(gcase)))
+    {
+        NoteCase(n, type, gcase);
+        // A power's gender given only with cases is an identifier too.
+        if (!gendered)
+        {
+            return;
+        }
+    }
     AddName(n, type, gendered ? gender : nullptr, kind);
 }
 
@@ -201,6 +220,7 @@ void NamesCollect(Names* n)
         const LdmlFile* own = CldrFile(n->input->cldr, n->input->ids[i], componentMain);
         if (own != nullptr)
         {
+            n->collecting = n->input->ids[i];
             MapEach(&own->leaves, CollectChain, n);
         }
     }
@@ -277,6 +297,96 @@ int NamesReadCategories(Names* n, char* errorOut, size_t errorCapacity)
         return 0;
     }
     return 1;
+}
+
+// The values of a grammaticalFeatures child, for the units: its
+// scope="units" element's where it has one, else the unscoped one's (a
+// bit per index).
+static uint32_t FeatureValues(const XmlNode* node, const char* element, int (*indexOf)(const char*))
+{
+    const char* values[2] = {nullptr, nullptr};
+    bool scoped = false;
+    for (int i = 0; i < node->childCount; i++)
+    {
+        const XmlNode* child = node->children[i];
+        const char* scope = XmlGetAttribute(child, "scope");
+        if (strcmp(child->name, element) != 0 || (scope != nullptr && strcmp(scope, "units") != 0))
+        {
+            continue;
+        }
+        const char* value = XmlGetAttribute(child, "values");
+        values[scope != nullptr] = value != nullptr ? value : "";
+        scoped = scoped || scope != nullptr;
+    }
+    const char* list = scoped ? values[1] : values[0];
+    uint32_t mask = 0;
+    char word[maxKey];
+    for (const char* at = list; at != nullptr && *at != '\0';)
+    {
+        size_t length = strcspn(at, " ");
+        if (length > 0 && length < sizeof(word))
+        {
+            memcpy(word, at, length);
+            word[length] = '\0';
+            int index = indexOf(word);
+            if (index < 0)
+            {
+                GenDie("a grammatical feature value the generator does not know", word);
+            }
+            mask |= 1u << index;
+        }
+        at += length + strspn(at + length, " ");
+    }
+    return mask;
+}
+
+int NamesReadGrammar(Names* n, char* errorOut, size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/supplemental/grammaticalFeatures.xml",
+             n->input->commonDirectory);
+    XmlNode* root = XmlParseFile(path, errorOut, errorCapacity);
+    if (root == nullptr)
+    {
+        return 0;
+    }
+    const XmlNode* data = XmlFindChild(root, "grammaticalData");
+    for (int i = 0; data != nullptr && i < data->childCount; i++)
+    {
+        const XmlNode* node = data->children[i];
+        const char* locales = XmlGetAttribute(node, "locales");
+        const char* targets = XmlGetAttribute(node, "targets");
+        if (strcmp(node->name, "grammaticalFeatures") != 0 || locales == nullptr ||
+            targets == nullptr || strcmp(targets, "nominal") != 0)
+        {
+            continue;
+        }
+        uintptr_t cases = FeatureValues(node, "grammaticalCase", UnitCaseIndex);
+        uintptr_t genders = FeatureValues(node, "grammaticalGender", UnitGenderIndex);
+        char id[maxKey];
+        for (const char* at = locales; *at != '\0';)
+        {
+            size_t length = strcspn(at, " ");
+            if (length > 0 && length < sizeof(id))
+            {
+                memcpy(id, at, length);
+                id[length] = '\0';
+                MapPut(&n->grammarCases, id, (void*)(cases << 1 | 1));
+                MapPut(&n->grammarGenders, id, (void*)(genders << 1 | 1));
+            }
+            at += length + strspn(at + length, " ");
+        }
+    }
+    XmlFree(root);
+    return 1;
+}
+
+// A grammar locale's cases or genders for the units (a bit per index), or
+// none for a locale grammaticalFeatures.xml does not list: its logical
+// groups have no cases or genders (LogicalGrouping's COUNT_CASE).
+static uint32_t GrammarOf(const Map* map, const char* locale)
+{
+    return (uint32_t)((uintptr_t)MapGet(map, locale) >> 1);
 }
 
 // A locale's categories, its rules found by truncation as the library's.
@@ -377,6 +487,21 @@ static const char* OwnValue(const Names* n, const char* locale, const char* chai
     return leaf->text;
 }
 
+// The first value along a locale's chain for a chain, without CLDR's
+// lateral fallbacks, or null.
+static const char* Vertical(const Names* n, const char* locale, const char* chain)
+{
+    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, componentMain))
+    {
+        const char* value = OwnValue(n, at, chain);
+        if (value != nullptr)
+        {
+            return value;
+        }
+    }
+    return nullptr;
+}
+
 // A locale's own leaf of a chain, or null for none or a draft below the
 // threshold.
 static const Leaf* OwnLeaf(const Names* n, const char* locale, const char* chain)
@@ -415,8 +540,13 @@ static bool Kept(const Names* n, const char* locale, const char* chain, const Le
 static bool CaseKept(const Names* n, const char* locale, const char* type, unsigned rules)
 {
     char chain[maxChain];
-    for (int k = 1; k < unitCaseCount; k++)
+    uint32_t cases = GrammarOf(&n->grammarCases, locale);
+    for (int k = 1; (cases >> k) != 0 && k < unitCaseCount; k++)
     {
+        if ((cases & 1u << k) == 0)
+        {
+            continue;
+        }
         for (int c = 0; c < categoryCount; c++)
         {
             snprintf(chain, sizeof(chain),
@@ -430,6 +560,28 @@ static bool CaseKept(const Names* n, const char* locale, const char* type, unsig
         }
     }
     return false;
+}
+
+// Whether a locale keeps a leaf of a long pattern's logical group, its
+// plural categories of the rules and their cases (a unit's), or of
+// another width's pattern.
+static bool GroupKept(const Names* n, const char* locale, const UnitName* name, const char* type,
+                      int width, unsigned rules)
+{
+    char chain[maxChain];
+    for (int c = 0; c < categoryCount; c++)
+    {
+        if ((rules & 1u << c) != 0 &&
+            NamesChainOf(name, type, nullptr, width, unitNameZero + c, chain, sizeof(chain)))
+        {
+            const Leaf* leaf = OwnLeaf(n, locale, chain);
+            if (leaf != nullptr && Kept(n, locale, chain, leaf))
+            {
+                return true;
+            }
+        }
+    }
+    return width == widthLong && name->kind == unitIdUnit && CaseKept(n, locale, type, rules);
 }
 
 // Whether a locale's file in CLDR's production data has a field of a type
@@ -456,23 +608,8 @@ static bool ProducedAt(const Names* n, const char* locale, const UnitName* name,
     }
     unsigned rules = RuleCategories(n, locale);
     bool category = field >= unitNameZero && field <= unitNameOther;
-    if (!category || (rules & 1u << (field - unitNameZero)) == 0)
-    {
-        return false;
-    }
-    for (int c = 0; c < categoryCount; c++)
-    {
-        if (c != field - unitNameZero && (rules & 1u << c) != 0 &&
-            NamesChainOf(name, type, nullptr, width, unitNameZero + c, chain, sizeof(chain)))
-        {
-            const Leaf* other = OwnLeaf(n, locale, chain);
-            if (other != nullptr && Kept(n, locale, chain, other))
-            {
-                return true;
-            }
-        }
-    }
-    return width == widthLong && name->kind == unitIdUnit && CaseKept(n, locale, type, rules);
+    return category && (rules & 1u << (field - unitNameZero)) != 0 &&
+           GroupKept(n, locale, name, type, width, rules);
 }
 
 // The value a locale's file in CLDR's production data gives a field it
@@ -581,4 +718,282 @@ const char* NamesTarget(const Names* n, const char* locale, int id, int width, i
     return NamesChainOf(name, name->source, nullptr, width, field, chain, sizeof(chain))
                ? NamesResolved(n, locale, chain)
                : nullptr;
+}
+
+uint32_t NamesCasesOf(const Names* n, const char* locale)
+{
+    uint32_t mask = 0;
+    for (const char* at = locale; at != nullptr && strcmp(at, "root") != 0;
+         at = CldrParent(n->input->cldr, at, componentMain))
+    {
+        mask |= (uint32_t)(uintptr_t)MapGet(&n->localeCases, at);
+    }
+    return mask & ~1u;
+}
+
+bool NamesHasCases(const Names* n, int id)
+{
+    const UnitName* name = &n->names[id];
+    return (name->kind == unitIdUnit || name->kind == unitIdPower) &&
+           MapGet(&n->caseTypes, name->kind == unitIdUnit ? name->source : name->type) != nullptr;
+}
+
+// The chain of a field of a case: the field's, the case its element's
+// first attribute.
+static void CaseChainOf(const UnitName* name, const char* gender, int width, int field,
+                        int caseIndex, char* out, size_t capacity)
+{
+    char plain[maxChain];
+    (void)NamesChainOf(name, name->source, gender, width, field, plain, sizeof(plain));
+    const char* last = strrchr(plain, '/');
+    size_t head = (size_t)(last - plain) + strcspn(last, "[");
+    snprintf(out, capacity, "%.*s[@case=\"%s\"]%s", (int)head, plain, UnitCaseName(caseIndex),
+             plain + head);
+}
+
+// Whether a locale keeps a leaf of a long case pattern's logical group:
+// for a locale grammaticalFeatures.xml lists, the plain patterns' and
+// their cases' (GroupKept), the case one of them; for another, the
+// case's own plural categories (LogicalGrouping's addCaseOnly).
+static bool CaseGroupKept(const Names* n, const char* locale, const UnitName* name, int caseIndex,
+                          unsigned rules)
+{
+    if (MapGet(&n->grammarCases, locale) != nullptr)
+    {
+        return (GrammarOf(&n->grammarCases, locale) & 1u << caseIndex) != 0 &&
+               GroupKept(n, locale, name, name->source, widthLong, rules);
+    }
+    char chain[maxChain];
+    for (int c = 0; c < categoryCount; c++)
+    {
+        if ((rules & 1u << c) != 0)
+        {
+            CaseChainOf(name, nullptr, widthLong, unitNameZero + c, caseIndex, chain,
+                        sizeof(chain));
+            const Leaf* leaf = OwnLeaf(n, locale, chain);
+            if (leaf != nullptr && Kept(n, locale, chain, leaf))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Whether a locale's file in CLDR's production data has a unit's long
+// pattern of a case: kept, or restored with its logical group.
+static bool CaseProducedAt(const Names* n, const char* locale, const UnitName* name, int caseIndex,
+                           int field, const char** valueOut)
+{
+    char chain[maxChain];
+    CaseChainOf(name, nullptr, widthLong, field, caseIndex, chain, sizeof(chain));
+    const Leaf* leaf = OwnLeaf(n, locale, chain);
+    if (leaf == nullptr)
+    {
+        return false;
+    }
+    if (Kept(n, locale, chain, leaf))
+    {
+        *valueOut = leaf->text;
+        return true;
+    }
+    unsigned rules = RuleCategories(n, locale);
+    if ((rules & 1u << (field - unitNameZero)) == 0 ||
+        !CaseGroupKept(n, locale, name, caseIndex, rules))
+    {
+        return false;
+    }
+    // CLDR's resolution at that locale: the case's along the chain, else
+    // laterally the plain pattern's, its count then other.
+    const char* value = Vertical(n, locale, chain);
+    if (value == nullptr)
+    {
+        (void)NamesChainOf(name, name->source, nullptr, widthLong, field, chain, sizeof(chain));
+        value = NamesResolved(n, locale, chain);
+    }
+    *valueOut = value;
+    return value != nullptr;
+}
+
+// A unit's long pattern of a case as ICU's case sink reads it: the first
+// locale along the chain whose data has it, or null.
+static const char* CaseLocated(const Names* n, const char* locale, const UnitName* name,
+                               int caseIndex, int field)
+{
+    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, componentMain))
+    {
+        const char* value = nullptr;
+        if (CaseProducedAt(n, at, name, caseIndex, field, &value))
+        {
+            return value;
+        }
+    }
+    return nullptr;
+}
+
+// The chain of a power's field for a gender and a case (either may be
+// none: null, -1).
+static void PowerChainOf(const UnitName* name, const char* gender, int caseIndex, int width,
+                         int field, char* out, size_t capacity)
+{
+    if (caseIndex < 0)
+    {
+        (void)NamesChainOf(name, name->source, gender, width, field, out, capacity);
+        return;
+    }
+    CaseChainOf(name, gender, width, field, caseIndex, out, capacity);
+}
+
+// Whether a locale keeps a leaf of a power pattern's logical group: in
+// the long width of a locale grammaticalFeatures.xml lists, its plural
+// categories of the rules by its genders and cases and none
+// (LogicalGrouping's COUNT_CASE_GENDER); else its categories with the
+// same gender and case.
+static bool PowerGroupKept(const Names* n, const char* locale, const UnitName* name,
+                           const char* gender, int caseIndex, int width, unsigned rules)
+{
+    bool grammar = width == widthLong && MapGet(&n->grammarCases, locale) != nullptr;
+    uint32_t genders = grammar ? GrammarOf(&n->grammarGenders, locale) : 0;
+    uint32_t cases = grammar ? GrammarOf(&n->grammarCases, locale) & ~1u : 0;
+    char chain[maxChain];
+    for (int g = grammar ? -1 : 0; g < unitGenderCount; g++)
+    {
+        const char* gendered = g < 0 ? nullptr : UnitGenderName(g);
+        if (grammar ? g >= 0 && (genders & 1u << g) == 0 : g > 0)
+        {
+            continue;
+        }
+        for (int k = grammar ? -1 : 0; k < unitCaseCount; k++)
+        {
+            if (grammar ? k >= 0 && (cases & 1u << k) == 0 : k > 0)
+            {
+                continue;
+            }
+            for (int c = 0; c < categoryCount; c++)
+            {
+                if ((rules & 1u << c) == 0)
+                {
+                    continue;
+                }
+                PowerChainOf(name, grammar ? gendered : gender, grammar ? k : caseIndex, width,
+                             unitNameZero + c, chain, sizeof(chain));
+                const Leaf* leaf = OwnLeaf(n, locale, chain);
+                if (leaf != nullptr && Kept(n, locale, chain, leaf))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// CLDR's resolution of a power's field at a locale: along the chain,
+// then laterally the gender to neuter, then none, then the case to none,
+// and last the count to other.
+static const char* PowerResolved(const Names* n, const char* locale, const UnitName* name,
+                                 const char* gender, int caseIndex, int width, int field)
+{
+    const char* genders[3] = {gender, "neuter", nullptr};
+    char chain[maxChain];
+    for (int k = 0; k < (caseIndex < 0 ? 1 : 2); k++)
+    {
+        for (int g = gender == nullptr ? 2 : 0; g < 3; g++)
+        {
+            if (g == 1 && strcmp(gender, "neuter") == 0)
+            {
+                continue;
+            }
+            PowerChainOf(name, genders[g], k == 0 ? caseIndex : -1, width, field, chain,
+                         sizeof(chain));
+            bool last = g == 2 && (k == 1 || caseIndex < 0);
+            const char* value = last ? NamesResolved(n, locale, chain) : Vertical(n, locale, chain);
+            if (value != nullptr)
+            {
+                return value;
+            }
+        }
+    }
+    return nullptr;
+}
+
+// A power's field for a gender and case in a locale's file in CLDR's
+// production data: its leaf kept, or a leaf it dropped that its logical
+// group restores with CLDR's resolution there; null where it has none.
+static const char* PowerLevelValue(const Names* n, const char* locale, const UnitName* name,
+                                   const char* gender, int caseIndex, int width, int field)
+{
+    char chain[maxChain];
+    PowerChainOf(name, gender, caseIndex, width, field, chain, sizeof(chain));
+    const Leaf* leaf = OwnLeaf(n, locale, chain);
+    if (leaf == nullptr)
+    {
+        return nullptr;
+    }
+    if (Kept(n, locale, chain, leaf))
+    {
+        return leaf->text;
+    }
+    unsigned rules = RuleCategories(n, locale);
+    bool grammar = width == widthLong && MapGet(&n->grammarCases, locale) != nullptr;
+    int g = gender == nullptr ? -1 : UnitGenderIndex(gender);
+    bool member = !grammar ||
+                  ((g < 0 || (GrammarOf(&n->grammarGenders, locale) & 1u << g) != 0) &&
+                   (caseIndex < 0 || (GrammarOf(&n->grammarCases, locale) & 1u << caseIndex) != 0));
+    if ((rules & 1u << (field - unitNameZero)) == 0 || !member ||
+        !PowerGroupKept(n, locale, name, gender, caseIndex, width, rules))
+    {
+        return nullptr;
+    }
+    return PowerResolved(n, locale, name, gender, caseIndex, width, field);
+}
+
+// A power's pattern of a case as ICU loads it (InflectedPluralSink): at
+// the first locale along the chain whose data has the gender's, neuter's
+// or the plain one's, each in the case, the nominative or no case;
+// root's long and narrow widths are aliases of the short one.
+static const char* PowerCaseField(const Names* n, const char* locale, int id, int caseIndex,
+                                  int width, int field)
+{
+    const UnitName* name = &n->names[id];
+    const char* genders[3] = {name->gender, "neuter", nullptr};
+    int first = name->gender == nullptr ? 2 : strcmp(name->gender, "neuter") == 0 ? 1 : 0;
+    int cases[3] = {caseIndex, unitCaseNominative, -1};
+    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, componentMain))
+    {
+        for (int g = first; g < 3; g++)
+        {
+            for (int k = caseIndex == unitCaseNominative ? 1 : 0; k < 3; k++)
+            {
+                const char* value =
+                    PowerLevelValue(n, at, name, genders[g], cases[k], width, field);
+                if (value != nullptr)
+                {
+                    return value;
+                }
+            }
+        }
+    }
+    return width == widthShort ? nullptr
+                               : PowerCaseField(n, locale, id, caseIndex, widthShort, field);
+}
+
+const char* NamesCaseTarget(const Names* n, const char* locale, int id, int caseIndex, int field)
+{
+    const UnitName* name = &n->names[id];
+    bool category = field < unitNameOther;
+    if (name->kind == unitIdPower)
+    {
+        const char* value = PowerCaseField(n, locale, id, caseIndex, widthLong, field);
+        return value != nullptr || !category
+                   ? value
+                   : PowerCaseField(n, locale, id, caseIndex, widthLong, unitNameOther);
+    }
+    const char* value = CaseLocated(n, locale, name, caseIndex, field);
+    if (value != nullptr || NamesGiven(n, locale, name, widthLong, field))
+    {
+        return value != nullptr ? value : NamesTarget(n, locale, id, widthLong, field);
+    }
+    value = category ? CaseLocated(n, locale, name, caseIndex, unitNameOther) : nullptr;
+    return value != nullptr ? value : NamesTarget(n, locale, id, widthLong, field);
 }

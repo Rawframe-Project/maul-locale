@@ -47,6 +47,8 @@ static const DataKind s_kinds[] = {
     {kindUnitNameExtras, mlocValidUnitNameExtras},
     {kindUnitDerivations, mlocValidUnitDerivations},
     {kindUnitPatterns, mlocValidUnitPatterns},
+    {kindUnitCases, mlocValidUnitCases},
+    {kindUnitCasesLowered, mlocValidUnitCases},
     {kindListPatterns, mlocValidListPatterns},
     {kindLists, mlocValidLists},
 };

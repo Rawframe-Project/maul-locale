@@ -8,7 +8,7 @@
 // the fields gathered along a chain from the unit names data file, a
 // source without the identifiers skipped, the derivations looked up by
 // language, identifiers normalized as ICU normalizes them
-// (unit_compound.h), the trim of a unit's name (number_core.h), and a
+// (unit_normal.h), the trim of a unit's name (number_core.h), and a
 // locale's patterns found.
 
 #include "bytes.h"
@@ -21,6 +21,7 @@
 #include "unit_compound.h"
 #include "unit_id.h"
 #include "unit_names.h"
+#include "unit_normal.h"
 #include "unit_tables.h"
 
 #include <stdio.h>
@@ -158,6 +159,12 @@ static void TestNames(void)
     s_unit[sparseHeaderSize + 12] = 1u << 0 | 1u << unitExtraFields;
     CHECK(!mlocValidUnitNameExtras(nullptr, (DataSpan){s_unit, size}),
           "a field past the extras' fields");
+    size = BuildSparse("{0} meter", "{0} meters");
+    s_unit[sparseHeaderSize + 12] = 1u << 0 | 1u << (unitCaseFields - 1);
+    bool cases = mlocValidUnitCases(nullptr, (DataSpan){s_unit, size});
+    s_unit[sparseHeaderSize + 12] = 1u << 0 | 1u << unitCaseFields;
+    CHECK(cases && !mlocValidUnitCases(nullptr, (DataSpan){s_unit, size}),
+          "case rows: their six fields, none past");
 }
 
 static mlocData s_sources[3];
@@ -179,6 +186,7 @@ static uint32_t BuildDerivations(void)
     memset(at + unitDerivationPlural, unitDerivedCompound, 16);
     memset(at + unitDerivationGender, unitGenderFirst, 4);
     at[unitDerivationPlural + 1] = 1;
+    at[unitDerivationCase] = 7;
     at[unitDerivationCase + 1] = unitCaseCount - 1;
     at[unitDerivationGender + 1] = unitGenderSecond;
     at += unitDerivationSize;
@@ -186,6 +194,7 @@ static uint32_t BuildDerivations(void)
     memset(at + unitDerivationPlural, unitDerivedNone, 20);
     at[unitDerivationPlural] = 5;
     at[unitDerivationGender] = unitGenderCount - 1;
+    at[unitDerivationGender + 1] = unitGenderAnimate;
     return unitDerivationsHeaderSize + 2 * unitDerivationSize;
 }
 
@@ -197,7 +206,8 @@ static bool ValidDerivations(uint32_t size)
 static void TestDerivations(void)
 {
     uint32_t size = BuildDerivations();
-    CHECK(ValidDerivations(size), "derivations: categories, compound and none");
+    CHECK(ValidDerivations(size),
+          "derivations: categories, cases, genders, components, compound and none");
     CHECK(!ValidDerivations(size - 1) && !ValidDerivations(size + unitDerivationSize) &&
               !ValidDerivations(2),
           "a size that is not the count's");
@@ -262,6 +272,26 @@ static uint32_t BuildPatterns(uint32_t records, const char* direction)
 static bool ValidPatterns(uint32_t size)
 {
     return mlocValidUnitPatterns(nullptr, (DataSpan){s_unit, size});
+}
+
+static void TestCaseRows(void)
+{
+    mlocLocale de;
+    UnitNameFields f;
+    CHECK(mlocParseLocale("de", 2, &de).status == mloc_success &&
+              mlocGatherUnitCases(&s_data, &de, kindUnitCases, 8, "meter", 5, &f) &&
+              (f.found & 1u << 5) != 0 && f.length[5] == 10 &&
+              memcmp(f.text[5], "{0} Metern", 10) == 0,
+          "German's dative of meter, other");
+    CHECK(mlocGatherUnitCases(&s_data, &de, kindUnitCasesLowered, 8, "meter", 5, &f) &&
+              (f.found & 1u << 5) != 0 && memcmp(f.text[5], "{0} metern", 10) == 0,
+          "and lowercased");
+    CHECK(!mlocGatherUnitCases(&s_data, &de, kindUnitCases, unitCaseNominative, "meter", 5, &f) &&
+              !mlocGatherUnitCases(&s_data, &de, kindUnitCases, unitCaseCount, "meter", 5, &f),
+          "no rows of the nominative or past the cases");
+    mlocDataSet builtin = {s_sources, 1};
+    CHECK(mlocGatherUnitCases(&builtin, &de, kindUnitCases, 8, "meter", 5, &f) && f.found == 0,
+          "data without them gives none");
 }
 
 static void TestPatterns(void)
@@ -482,5 +512,6 @@ int main(void)
     TestDerivationLookup();
     TestNormalize();
     TestPatterns();
+    TestCaseRows();
     return s_failures == 0 ? 0 : 1;
 }

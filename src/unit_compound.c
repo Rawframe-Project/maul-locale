@@ -14,6 +14,7 @@
 #include "unit_data.h"
 #include "unit_id.h"
 #include "unit_names.h"
+#include "unit_normal.h"
 #include "unit_tables.h"
 
 #include <stdio.h>
@@ -46,6 +47,10 @@ typedef struct Context
     bool lower;
 } Context;
 
+// A case's index, or what a derivation gives (unitDerivedCompound,
+// unitDerivedNone), as a case's patterns are asked for.
+typedef uint8_t GrammaticalCase;
+
 // The space joining a unit's placeholder and core, as UTF-8.
 typedef struct Joiner
 {
@@ -61,6 +66,10 @@ typedef struct Product
     Joiner joiner;
     uint8_t value0;
     uint8_t value1;
+    // The case derivations of "times" and of a power.
+    uint8_t times0;
+    uint8_t times1;
+    uint8_t power0;
 } Product;
 
 // What one single unit brings: its patterns, lowercased ones, a power's
@@ -258,6 +267,61 @@ static mlocResult LoadForms(const Context* c, const char* id, size_t length, uin
     return mloc_success;
 }
 
+// Overlays an identifier's patterns of a case past the nominative on its
+// forms, and on its lowercased forms when given: each category the case
+// gives, with its lowercased pattern (an empty one where lowercasing
+// changes nothing). The long width only.
+static mlocResult LoadCase(const Context* c, const char* id, size_t length, GrammaticalCase gcase,
+                           UnitForms* forms, UnitForms* lowered)
+{
+    UnitNameFields f;
+    UnitNameFields low = {0};
+    if (!c->lower || gcase == unitCaseNominative ||
+        !mlocGatherUnitCases(c->data, c->locale, kindUnitCases, gcase, id, length, &f) ||
+        (lowered != nullptr &&
+         !mlocGatherUnitCases(c->data, c->locale, kindUnitCasesLowered, gcase, id, length, &low)))
+    {
+        return mloc_success;
+    }
+    // A category the plain patterns have takes other's lowercased one as
+    // the extras file it, before the case changes other's.
+    for (uint32_t k = 0; lowered != nullptr && k < categoryOther; k++)
+    {
+        if (forms->form[k].present && !lowered->form[k].present)
+        {
+            lowered->form[k] = lowered->form[categoryOther];
+        }
+    }
+    for (uint32_t k = 0; k < unitCategoryCount; k++)
+    {
+        if ((f.found & 1u << k) == 0 || f.length[k] == 0)
+        {
+            continue;
+        }
+        if (!Put(&forms->form[k], f.text[k], f.length[k]))
+        {
+            return mloc_errorCapacity;
+        }
+        if (lowered != nullptr)
+        {
+            lowered->form[k] = (UnitPattern){.present = true};
+            if ((low.found & 1u << k) != 0 && !Put(&lowered->form[k], low.text[k], low.length[k]))
+            {
+                return mloc_errorCapacity;
+            }
+        }
+    }
+    return mloc_success;
+}
+
+// Loads the patterns of a unit CLDR names in a case.
+static mlocResult LoadNamed(const Context* c, const char* id, size_t length, GrammaticalCase gcase,
+                            UnitForms* out)
+{
+    mlocResult r = LoadForms(c, id, length, c->kind, out);
+    return r == mloc_success ? LoadCase(c, id, length, gcase, out, nullptr) : r;
+}
+
 // Loads a compound key's pattern (its other field) of a kind.
 static mlocResult LoadOther(const Context* c, const char* id, uint32_t kind, UnitPattern* out)
 {
@@ -287,20 +351,10 @@ static void LoadGender(const Context* c, const char* id, size_t length, char* ou
     }
 }
 
-// A power's patterns for a gender: the gender's field where a key gives
-// it, else the plain power's (its other for a category it lacks), as the
-// data is filed.
-static mlocResult LoadPower(const Context* c, int power, const char* gender, UnitForms* out)
+// Overlays a power of a gender's fields on the plain power's.
+static mlocResult OverlayGender(const Context* c, const char* id, UnitForms* out)
 {
-    char id[32];
-    snprintf(id, sizeof(id), "power%d", power);
-    mlocResult r = LoadForms(c, id, strlen(id), c->kind, out);
-    if (r != mloc_success || gender[0] == '\0')
-    {
-        return r;
-    }
     UnitForms gendered;
-    snprintf(id, sizeof(id), "power%d:%s", power, gender);
     if (LoadForms(c, id, strlen(id), c->kind, &gendered) != mloc_success)
     {
         return mloc_success;
@@ -319,21 +373,27 @@ static mlocResult LoadPower(const Context* c, int power, const char* gender, Uni
     return mloc_success;
 }
 
-// The text of a simple unit and of a prefix, as identifiers write them.
-static void SimpleText(const UnitTable* t, uint16_t simple, const char** text, size_t* length)
+// A power's patterns for a gender and case: the gender's field where a
+// key gives it, else the plain power's (its other for a category it
+// lacks), as the data is filed; then the case's patterns of the gender's
+// identifier where the names have it, else of the plain power's.
+static mlocResult LoadPower(const Context* c, int power, const char* gender, GrammaticalCase gcase,
+                            UnitForms* out)
 {
-    const uint8_t* s = mlocSimpleUnit(t, simple);
-    *text = (const char*)t->text +
-            ((uint32_t)s[0] | (uint32_t)s[1] << 8 | (uint32_t)s[2] << 16 | (uint32_t)s[3] << 24);
-    *length = s[simpleLength];
-}
-
-static void PrefixText(const UnitTable* t, int8_t prefix, const char** text, size_t* length)
-{
-    const uint8_t* p = mlocUnitPrefix(t, (uint32_t)prefix);
-    *text = (const char*)t->text +
-            ((uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24);
-    *length = p[4];
+    char id[32];
+    snprintf(id, sizeof(id), "power%d", power);
+    mlocResult r = LoadForms(c, id, strlen(id), c->kind, out);
+    char gendered[32];
+    snprintf(gendered, sizeof(gendered), "power%d:%s", power, gender);
+    uint8_t kind = 0;
+    bool known = gender[0] != '\0' && mlocUnitNameKind(c->data, gendered, strlen(gendered), &kind);
+    if (r == mloc_success && known)
+    {
+        r = OverlayGender(c, gendered, out);
+    }
+    return r == mloc_success ? LoadCase(c, known ? gendered : id, strlen(known ? gendered : id),
+                                        gcase, out, nullptr)
+                             : r;
 }
 
 // A prefix's names key ("10p3", "1024p2").
@@ -350,12 +410,23 @@ static void PrefixKey(const UnitTable* t, int8_t prefix, char* out, size_t room)
     }
 }
 
-// Loads what one single unit of a product brings.
-static mlocResult LoadSingle(const Context* c, const UnitPart* part, Single* s)
+// A component's case: the compound's for compound, the nominative where
+// the language gives no rule (ICU's empty case).
+static GrammaticalCase DeriveCase(uint8_t value, GrammaticalCase compound)
+{
+    return value == unitDerivedCompound ? compound
+           : value == unitDerivedNone   ? unitCaseNominative
+                                        : value;
+}
+
+// Loads what one single unit of a product brings, in a case: a power's
+// patterns in it, the unit's in what the power's derivation gives.
+static mlocResult LoadSingle(const Context* c, const Product* p, const UnitPart* part,
+                             GrammaticalCase gcase, Single* s)
 {
     const char* text = nullptr;
     size_t length = 0;
-    SimpleText(&c->table, part->simple, &text, &length);
+    mlocSimpleUnitText(&c->table, part->simple, &text, &length);
     uint8_t kind = 0;
     if (!mlocUnitNameKind(c->data, text, length, &kind) || kind != unitIdUnit)
     {
@@ -369,7 +440,8 @@ static mlocResult LoadSingle(const Context* c, const UnitPart* part, Single* s)
     {
         char gender[32];
         LoadGender(c, text, length, gender, sizeof(gender));
-        r = power > 3 ? mloc_errorNotFound : LoadPower(c, power, gender, &s->power);
+        r = power > 3 ? mloc_errorNotFound : LoadPower(c, power, gender, gcase, &s->power);
+        gcase = DeriveCase(p->power0, gcase);
     }
     if (r == mloc_success && s->hasPrefix)
     {
@@ -384,12 +456,15 @@ static mlocResult LoadSingle(const Context* c, const UnitPart* part, Single* s)
             s->prefix = lowered;
         }
     }
-    if (r == mloc_success && c->lower && (s->hasPower || s->hasPrefix) &&
+    bool lowers = c->lower && (s->hasPower || s->hasPrefix);
+    if (r == mloc_success && lowers &&
         LoadForms(c, text, length, kindUnitNameExtras, &s->lowered) != mloc_success)
     {
         memset(&s->lowered, 0, sizeof(s->lowered));
     }
-    return r;
+    return r == mloc_success
+               ? LoadCase(c, text, length, gcase, &s->unit, lowers ? &s->lowered : nullptr)
+               : r;
 }
 
 // Builds one category of a product with a single unit (ICU's steps 4.6
@@ -497,10 +572,22 @@ static mlocResult Finish(const Product* p, uint64_t constant, UnitForms* out)
     return r;
 }
 
-// A product of single units built from their patterns
+// A structure's derivation of a feature, none where the data has no
+// derivations.
+static void Derivation(const Context* c, uint32_t feature, uint32_t structure, uint8_t* value0,
+                       uint8_t* value1)
+{
+    if (!mlocUnitDerivation(c->data, c->locale, feature, structure, value0, value1))
+    {
+        *value0 = unitDerivedNone;
+        *value1 = unitDerivedNone;
+    }
+}
+
+// A product of single units built from their patterns in a case
 // (processPatternTimes past a product CLDR names).
 static mlocResult BuildTimes(const Context* c, const UnitPart* parts, uint32_t count,
-                             uint64_t constant, UnitForms* out)
+                             uint64_t constant, GrammaticalCase gcase, UnitForms* out)
 {
     static const Product s_empty;
     Product p = s_empty;
@@ -509,12 +596,10 @@ static mlocResult BuildTimes(const Context* c, const UnitPart* parts, uint32_t c
     {
         return r;
     }
-    if (!mlocUnitDerivation(c->data, c->locale, unitFeaturePlural, unitDeriveTimes, &p.value0,
-                            &p.value1))
-    {
-        p.value0 = unitDerivedNone;
-        p.value1 = unitDerivedNone;
-    }
+    Derivation(c, unitFeaturePlural, unitDeriveTimes, &p.value0, &p.value1);
+    Derivation(c, unitFeatureCase, unitDeriveTimes, &p.times0, &p.times1);
+    uint8_t unused = 0;
+    Derivation(c, unitFeatureCase, unitDerivePower, &p.power0, &unused);
     memset(out, 0, sizeof(*out));
     out->form[categoryOther].present = true;
     uint8_t compound = unitDerivedCompound;
@@ -522,16 +607,19 @@ static mlocResult BuildTimes(const Context* c, const UnitPart* parts, uint32_t c
     {
         Single s;
         memset(&s, 0, sizeof(s));
+        GrammaticalCase single = DeriveCase(p.times1, gcase);
         if (i + 1 < count)
         {
             s.category = Derive(p.value0, compound);
             compound = Derive(p.value1, compound);
+            single = DeriveCase(p.times0, gcase);
+            gcase = DeriveCase(p.times1, gcase);
         }
         else
         {
             s.category = Derive(p.value1, compound);
         }
-        r = LoadSingle(c, &parts[i], &s);
+        r = LoadSingle(c, &p, &parts[i], single, &s);
         for (uint32_t k = 0; k < unitCategoryCount && r == mloc_success; k++)
         {
             r = ApplyCategory(c, &p, &s, k, out);
@@ -540,254 +628,11 @@ static mlocResult BuildTimes(const Context* c, const UnitPart* parts, uint32_t c
     return r == mloc_success ? Finish(&p, constant, out) : r;
 }
 
-// Appends text to an identifier being written.
-static bool AppendId(char* out, size_t room, size_t* at, const char* text, size_t length)
-{
-    if (length > room - *at)
-    {
-        return false;
-    }
-    memcpy(out + *at, text, length);
-    *at += length;
-    return true;
-}
-
-// Writes a single unit as ICU's appendNeutralIdentifier does.
-static bool WritePart(const UnitTable* t, const UnitPart* part, char* out, size_t room, size_t* at)
-{
-    int power = part->power < 0 ? -part->power : part->power;
-    char head[16] = "";
-    if (power == 2 || power == 3)
-    {
-        snprintf(head, sizeof(head), "%s", power == 2 ? "square-" : "cubic-");
-    }
-    else if (power > 3)
-    {
-        snprintf(head, sizeof(head), "pow%d-", power);
-    }
-    const char* text = nullptr;
-    size_t length = 0;
-    if (!AppendId(out, room, at, head, strlen(head)))
-    {
-        return false;
-    }
-    if (part->prefix >= 0)
-    {
-        PrefixText(t, part->prefix, &text, &length);
-        if (!AppendId(out, room, at, text, length))
-        {
-            return false;
-        }
-    }
-    SimpleText(t, part->simple, &text, &length);
-    return AppendId(out, room, at, text, length);
-}
-
-// A constant as ICU writes it: its digits, or 1eN for a power of ten past
-// 1000.
-static size_t ConstantText(uint64_t constant, char* out, size_t room)
-{
-    int n = snprintf(out, room, "%llu", (unsigned long long)constant);
-    size_t zeros = strspn(out + 1, "0");
-    if (constant > 1000 && out[0] == '1' && zeros == (size_t)n - 1)
-    {
-        n = snprintf(out, room, "1e%zu", zeros);
-    }
-    return (size_t)n;
-}
-
-// Writes a normalized product as ICU's MeasureUnitImpl::serialize does:
-// "per-" before the first denominator unit, a constant after it (or at
-// the end).
-static bool WriteProduct(const UnitTable* t, const UnitPart* parts, uint32_t count,
-                         uint64_t constant, char* out, size_t room, size_t* lengthOut)
-{
-    size_t at = 0;
-    bool beforePer = true;
-    bool constantWritten = false;
-    char number[24];
-    size_t numberLength = constant > 1 ? ConstantText(constant, number, sizeof(number)) : 0;
-    for (uint32_t i = 0; i < count; i++)
-    {
-        bool firstDenominator = beforePer && parts[i].power < 0;
-        beforePer = beforePer && !firstDenominator;
-        bool ok = true;
-        if (firstDenominator)
-        {
-            ok = AppendId(out, room, &at, at == 0 ? "per-" : "-per-", at == 0 ? 4 : 5);
-            if (ok && numberLength > 0)
-            {
-                ok = AppendId(out, room, &at, number, numberLength) &&
-                     AppendId(out, room, &at, "-", 1);
-                constantWritten = true;
-            }
-        }
-        else if (at != 0)
-        {
-            ok = AppendId(out, room, &at, "-", 1);
-        }
-        if (!ok || !WritePart(t, &parts[i], out, room, &at))
-        {
-            return false;
-        }
-    }
-    if (!constantWritten && numberLength > 0 &&
-        (!AppendId(out, room, &at, "-per-", 5) || !AppendId(out, room, &at, number, numberLength)))
-    {
-        return false;
-    }
-    *lengthOut = at;
-    return true;
-}
-
-// A prefix's power for ordering (a binary power counts thrice) and its
-// base.
-static int PrefixOrder(const UnitTable* t, int8_t prefix, int* base)
-{
-    if (prefix < 0)
-    {
-        *base = 10;
-        return 0;
-    }
-    const uint8_t* p = mlocUnitPrefix(t, (uint32_t)prefix);
-    *base = p[6] != 0 ? 1024 : 10;
-    return p[6] != 0 ? 3 * p[6] : (int8_t)p[5];
-}
-
-// ICU's SingleUnitImpl::compareTo: the numerator first, then the
-// quantity's order, the simple unit's index, the larger prefix.
-static int ComparePart(const UnitTable* t, const UnitPart* a, const UnitPart* b)
-{
-    if ((a->power < 0) != (b->power < 0))
-    {
-        return a->power < 0 ? 1 : -1;
-    }
-    int qa = mlocSimpleUnit(t, a->simple)[simpleOrder];
-    int qb = mlocSimpleUnit(t, b->simple)[simpleOrder];
-    if (qa != qb)
-    {
-        return qa < qb ? -1 : 1;
-    }
-    if (a->simple != b->simple)
-    {
-        return a->simple < b->simple ? -1 : 1;
-    }
-    int baseA = 0;
-    int baseB = 0;
-    int pa = PrefixOrder(t, a->prefix, &baseA);
-    int pb = PrefixOrder(t, b->prefix, &baseB);
-    if (pa != pb)
-    {
-        return pa < pb ? 1 : -1;
-    }
-    return baseA == baseB ? 0 : (baseA < baseB ? 1 : -1);
-}
-
-// Merges single units of one simple unit, prefix and side, then sorts
-// them (ICU's appendSingleUnit and serialize).
-static void Normalize(const UnitTable* t, UnitId* id)
-{
-    uint32_t count = 0;
-    for (uint32_t i = 0; i < id->count; i++)
-    {
-        UnitPart part = id->parts[i];
-        uint32_t j = 0;
-        while (j < count &&
-               !(id->parts[j].simple == part.simple && id->parts[j].prefix == part.prefix &&
-                 (id->parts[j].power < 0) == (part.power < 0)))
-        {
-            j++;
-        }
-        if (j < count)
-        {
-            id->parts[j].power = (int8_t)(id->parts[j].power + part.power);
-            continue;
-        }
-        id->parts[count++] = part;
-    }
-    id->count = (uint8_t)count;
-    for (uint32_t i = 1; i < count; i++)
-    {
-        UnitPart part = id->parts[i];
-        uint32_t j = i;
-        for (; j > 0 && ComparePart(t, &id->parts[j - 1], &part) > 0; j--)
-        {
-            id->parts[j] = id->parts[j - 1];
-        }
-        id->parts[j] = part;
-    }
-}
-
-// ICU's parser knows kilogram as kilo- and gram (measunit_extra.cpp
-// leaves it out of its simple units), so its names are built from
-// gram's and the prefix's, and it sorts as gram.
-static void SplitKilogram(const UnitTable* t, UnitId* id)
-{
-    int32_t kilogram = mlocFindSimpleUnit(t, "kilogram", 8);
-    int32_t gram = mlocFindSimpleUnit(t, "gram", 4);
-    int32_t kilo = mlocFindUnitPrefix(t, "kilogram", 8);
-    for (uint32_t i = 0; gram >= 0 && kilo >= 0 && i < id->count; i++)
-    {
-        if (id->parts[i].simple == (uint16_t)kilogram && id->parts[i].prefix < 0)
-        {
-            id->parts[i].simple = (uint16_t)gram;
-            id->parts[i].prefix = (int8_t)kilo;
-        }
-    }
-}
-
-// Parses and normalizes an identifier into a context's table.
-static mlocResult ParseUnit(const mlocDataSet* data, const char* unit, size_t length,
-                            UnitTable* table, UnitId* id)
-{
-    DataSpan span;
-    if (!mlocFindDataSetUnit(data, kindUnits, nullptr, 0, &span))
-    {
-        return mloc_errorNotFound;
-    }
-    *table = mlocReadUnitTable(span);
-    mlocResult r = mlocParseUnitId(table, unit, length, id);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    if (id->mixed != 0 || id->numeratorConstant != 1)
-    {
-        return mloc_errorInvalid;
-    }
-    for (uint32_t i = 0; i < id->count; i++)
-    {
-        int power = id->parts[i].power < 0 ? -id->parts[i].power : id->parts[i].power;
-        if (id->parts[i].currency != 0 || power > 15)
-        {
-            return mloc_errorInvalid;
-        }
-    }
-    SplitKilogram(table, id);
-    Normalize(table, id);
-    return mloc_success;
-}
-
-mlocResult mlocNormalizeUnitName(const mlocDataSet* data, const char* unit, size_t length,
-                                 char* out, size_t capacity, size_t* lengthOut)
-{
-    UnitTable table;
-    UnitId id;
-    mlocResult r = ParseUnit(data, unit, length, &table, &id);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    return WriteProduct(&table, id.parts, id.count, id.denominatorConstant, out, capacity,
-                        lengthOut)
-               ? mloc_success
-               : mloc_errorCapacity;
-}
-
-// A product's forms: a product CLDR names takes its own; nothing gives
-// empty patterns, every category present (ICU's untouched arrays).
+// A product's forms in a case: a product CLDR names takes its own;
+// nothing gives empty patterns, every category present (ICU's untouched
+// arrays).
 static mlocResult ProcessTimes(const Context* c, const UnitPart* parts, uint32_t count,
-                               uint64_t constant, UnitForms* out)
+                               uint64_t constant, GrammaticalCase gcase, UnitForms* out)
 {
     memset(out, 0, sizeof(*out));
     if (count == 0 && constant <= 1)
@@ -802,15 +647,15 @@ static mlocResult ProcessTimes(const Context* c, const UnitPart* parts, uint32_t
     char id[maxId];
     size_t length = 0;
     uint8_t kind = 0;
-    if (!WriteProduct(&c->table, parts, count, constant, id, sizeof(id), &length))
+    if (!mlocWriteNormalUnit(&c->table, parts, count, constant, id, sizeof(id), &length))
     {
         return mloc_errorCapacity;
     }
     if (mlocUnitNameKind(c->data, id, length, &kind) && kind == unitIdUnit)
     {
-        return LoadForms(c, id, length, c->kind, out);
+        return LoadNamed(c, id, length, gcase, out);
     }
-    return BuildTimes(c, parts, count, constant, out);
+    return BuildTimes(c, parts, count, constant, gcase, out);
 }
 
 // The per-unit pattern: the denominator's own, else "per" with the
@@ -852,8 +697,10 @@ static mlocResult PerPattern(const Context* c, const UnitForms* denominator, Uni
     return Format(&per, &number, &trimmed, out) ? mloc_success : mloc_errorCapacity;
 }
 
-// A unit CLDR does not name, from its sides (forArbitraryUnit).
-static mlocResult BuildArbitrary(const Context* c, const UnitId* id, UnitForms* out)
+// A unit CLDR does not name, from its sides in their cases
+// (forArbitraryUnit).
+static mlocResult BuildArbitrary(const Context* c, const UnitId* id, GrammaticalCase gcase,
+                                 UnitForms* out)
 {
     UnitPart numerator[unitMaxFactors];
     UnitPart denominator[unitMaxFactors];
@@ -873,8 +720,13 @@ static mlocResult BuildArbitrary(const Context* c, const UnitId* id, UnitForms* 
     UnitForms lead;
     UnitForms trail;
     UnitPattern per;
-    mlocResult r = ProcessTimes(c, numerator, n, 1, &lead);
-    r = r == mloc_success ? ProcessTimes(c, denominator, d, id->denominatorConstant, &trail) : r;
+    uint8_t per0 = 0;
+    uint8_t per1 = 0;
+    Derivation(c, unitFeatureCase, unitDerivePer, &per0, &per1);
+    mlocResult r = ProcessTimes(c, numerator, n, 1, DeriveCase(per0, gcase), &lead);
+    r = r == mloc_success ? ProcessTimes(c, denominator, d, id->denominatorConstant,
+                                         DeriveCase(per1, gcase), &trail)
+                          : r;
     r = r == mloc_success ? PerPattern(c, &trail, &per) : r;
     if (r != mloc_success)
     {
@@ -900,30 +752,31 @@ static mlocResult BuildArbitrary(const Context* c, const UnitId* id, UnitForms* 
 }
 
 mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
-                              size_t length, uint32_t kind, UnitForms* out)
+                              size_t length, uint32_t kind, uint32_t gcase, UnitForms* out)
 {
     Context c = {.data = data, .locale = locale, .kind = kind, .lower = kind == kindUnitNamesLong};
+    GrammaticalCase k = (GrammaticalCase)(gcase < unitCaseCount ? gcase : unitCaseNominative);
     uint8_t idKind = 0;
     if (mlocUnitNameKind(data, unit, length, &idKind) && idKind == unitIdUnit)
     {
-        return LoadForms(&c, unit, length, kind, out);
+        return LoadNamed(&c, unit, length, k, out);
     }
     UnitId id;
-    mlocResult r = ParseUnit(data, unit, length, &c.table, &id);
+    mlocResult r = mlocParseNormalUnit(data, unit, length, &c.table, &id);
     if (r != mloc_success)
     {
         return r;
     }
     char name[maxId];
     size_t nameLength = 0;
-    if (!WriteProduct(&c.table, id.parts, id.count, id.denominatorConstant, name, sizeof(name),
-                      &nameLength))
+    if (!mlocWriteNormalUnit(&c.table, id.parts, id.count, id.denominatorConstant, name,
+                             sizeof(name), &nameLength))
     {
         return mloc_errorCapacity;
     }
     if (mlocUnitNameKind(data, name, nameLength, &idKind) && idKind == unitIdUnit)
     {
-        return LoadForms(&c, name, nameLength, kind, out);
+        return LoadNamed(&c, name, nameLength, k, out);
     }
-    return BuildArbitrary(&c, &id, out);
+    return BuildArbitrary(&c, &id, k, out);
 }

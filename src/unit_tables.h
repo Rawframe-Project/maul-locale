@@ -102,6 +102,19 @@
 // one, which compound names read for a denominator and for the units of
 // a product before the last.
 //
+// The long width's patterns of a case, in the same shape with
+// unitCaseFields fields, the patterns for each plural category zero to
+// other: a row per identifier and case past the nominative, coded by the
+// identifier's index plus the count of identifiers times the case's
+// index less one. A field is ICU's pattern of the case (getMeasureData:
+// the case's own value along the chain, else the plain one's; a power's
+// as InflectedPluralSink loads it) where the plain lookup would give
+// another; an empty field or none takes the plain lookup. Only units and
+// powers with case patterns in some locale have rows. Those patterns
+// lowercased, likewise, for the units: a field is the lowercased form of
+// the case pattern the library takes, an empty field or none where
+// lowercasing changes nothing.
+//
 // The derivations (grammaticalFeatures.xml), a unit of no locale: a
 // header (u16 count, u16 0), then per language, sorted by it,
 // unitDerivationSize bytes: the language (ASCII, NUL-padded); the plural
@@ -213,6 +226,7 @@ enum
     unitExtraGender = 0,
     unitExtraLowerZero = 1,
     unitExtraFields = 7,
+    unitCaseFields = 6,
 };
 
 // The flags of a simple unit.

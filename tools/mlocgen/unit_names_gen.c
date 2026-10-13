@@ -31,6 +31,10 @@ enum
     rowCount = widthCount + 1,
     // A pattern's bytes once lowercased.
     maxLowered = 4 * maxTableString,
+    // The case rows: the patterns, then the lowercased ones.
+    caseRow = 0,
+    loweredCaseRow = 1,
+    caseRows = 2,
 };
 
 static const uint32_t s_kinds[rowCount] = {kindUnitNamesLong, kindUnitNamesShort,
@@ -43,10 +47,13 @@ static const int s_fieldOrder[unitNameFields] = {
     unitNameDisplay, unitNameOther, unitNamePer, 1, 2, 3, 4, 5,
 };
 
-// The fields a locale files, per row and identifier; null where none.
+// The fields a locale files, per row and identifier, and per case past
+// the nominative and identifier (allocated for a locale that files a
+// case); null where none.
 typedef struct Filed
 {
     const char** rows[rowCount][maxIds];
+    const char*** cases[caseRows][unitCaseCount];
 } Filed;
 
 // Whether a field is one the locale files.
@@ -208,6 +215,107 @@ static void TakeExtras(Names* n, Filed* filed, const char* locale, unsigned cate
     }
 }
 
+// The first case pattern of a plural category filed along a locale's
+// chain in a case row.
+static const char* FiledCase(const Names* n, const char* locale, int row, int caseIndex, int id,
+                             int category)
+{
+    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, componentMain))
+    {
+        const Filed* filed = MapGet(&n->filed, at);
+        const char** const* ids = filed != nullptr ? filed->cases[row][caseIndex] : nullptr;
+        if (ids != nullptr && ids[id] != nullptr && ids[id][category] != nullptr)
+        {
+            return ids[id][category];
+        }
+    }
+    return nullptr;
+}
+
+// Files a case row's field at a locale (filed null: dies, the locale's
+// key giving another).
+static void FileCase(Filed* filed, const char* locale, int row, int caseIndex, int id, int category,
+                     const char* value)
+{
+    if (filed == nullptr)
+    {
+        GenDie("a locale's case patterns differ from those of its parent's key", locale);
+    }
+    if (filed->cases[row][caseIndex] == nullptr)
+    {
+        filed->cases[row][caseIndex] = GenAllocate(sizeof(char**) * maxIds);
+    }
+    if (filed->cases[row][caseIndex][id] == nullptr)
+    {
+        filed->cases[row][caseIndex][id] = GenAllocate(sizeof(char*) * categoryCount);
+    }
+    filed->cases[row][caseIndex][id][category] = value;
+}
+
+// Files a locale's case patterns where the library's lookup (the case's
+// field along the chain, an empty one or none taking the long name's)
+// would give another; an empty field where the long name's is right but
+// a key of the chain files a case pattern (filed null: checks them).
+static void TakeCases(Names* n, Filed* filed, const char* locale, unsigned categories)
+{
+    uint32_t cases = NamesCasesOf(n, locale);
+    for (int k = 1; k < unitCaseCount; k++)
+    {
+        for (int id = 0; (cases & 1u << k) != 0 && id < n->count; id++)
+        {
+            for (int c = 0; NamesHasCases(n, id) && c < categoryCount; c++)
+            {
+                int field = unitNameZero + c;
+                if (!Wanted(categories, field))
+                {
+                    continue;
+                }
+                const char* target = NamesCaseTarget(n, locale, id, k, field);
+                const char* plain = LookedUp(n, locale, widthLong, id, field);
+                const char* own = FiledCase(n, locale, caseRow, k, id, c);
+                const char* looked = own != nullptr && own[0] != '\0' ? own : plain;
+                if (target == nullptr || !Differs(looked, target))
+                {
+                    continue;
+                }
+                FileCase(filed, locale, caseRow, k, id, c, Differs(plain, target) ? target : "");
+            }
+        }
+    }
+}
+
+// Files a unit's case patterns lowercased, as the extras do the plain
+// ones, where the library's lookup would give another: for each case
+// pattern the library takes, the lowercased one along the chain, an
+// empty one or none where lowercasing changes nothing (filed null:
+// checks them).
+static void TakeLoweredCases(Names* n, Filed* filed, const char* locale, unsigned categories)
+{
+    uint32_t cases = NamesCasesOf(n, locale);
+    for (int k = 1; k < unitCaseCount; k++)
+    {
+        for (int id = 0; (cases & 1u << k) != 0 && id < n->count; id++)
+        {
+            bool unit = n->names[id].kind == unitIdUnit && NamesHasCases(n, id);
+            for (int c = 0; unit && c < categoryCount; c++)
+            {
+                const char* pattern = FiledCase(n, locale, caseRow, k, id, c);
+                if (pattern == nullptr || pattern[0] == '\0' ||
+                    !Wanted(categories, unitNameZero + c))
+                {
+                    continue;
+                }
+                const char* want = Lowered(locale, pattern);
+                const char* have = FiledCase(n, locale, loweredCaseRow, k, id, c);
+                if (Differs(have != nullptr ? have : "", want))
+                {
+                    FileCase(filed, locale, loweredCaseRow, k, id, c, want);
+                }
+            }
+        }
+    }
+}
+
 // Files a locale's names (filed null: checks them).
 static void TakeLocale(Names* n, Filed* filed, const char* locale)
 {
@@ -231,6 +339,8 @@ static void TakeLocale(Names* n, Filed* filed, const char* locale)
         }
     }
     TakeExtras(n, filed, locale, categories);
+    TakeCases(n, filed, locale, categories);
+    TakeLoweredCases(n, filed, locale, categories);
 }
 
 // A string's index in the unit's table, checked as a sparse unit's.
@@ -287,6 +397,59 @@ static void AddRow(Names* n, const Filed* filed, int row, const char* key, DataF
     TableClear(&n->table);
 }
 
+// Adds a locale key's case patterns: a row per case past the nominative
+// and identifier, coded by the identifier's index plus the count of
+// identifiers times the case's index less one.
+static void AddCaseRow(Names* n, const Filed* filed, int row, const char* key, DataFile* file)
+{
+    enum
+    {
+        maxRows = 8192,
+    };
+    static uint16_t s_codes[maxRows];
+    static uint8_t s_rows[maxRows][1 + 2 * categoryCount];
+    static uint8_t* s_rowPointers[maxRows];
+    static size_t s_rowSizes[maxRows];
+    int count = 0;
+    for (int k = 1; k < unitCaseCount; k++)
+    {
+        for (int id = 0; filed->cases[row][k] != nullptr && id < n->count; id++)
+        {
+            const char* const* fields = filed->cases[row][k][id];
+            if (fields == nullptr)
+            {
+                continue;
+            }
+            if (count == maxRows)
+            {
+                GenDie("too many case rows", key);
+            }
+            uint8_t* bytes = s_rows[count];
+            size_t size = 1;
+            bytes[0] = 0;
+            for (int c = 0; c < categoryCount; c++)
+            {
+                if (fields[c] != nullptr)
+                {
+                    bytes[0] |= (uint8_t)(1u << c);
+                    GenPut(bytes + size, FieldString(&n->table, fields[c], key), 2);
+                    size += 2;
+                }
+            }
+            s_codes[count] = (uint16_t)(id + n->count * (k - 1));
+            s_rowPointers[count] = bytes;
+            s_rowSizes[count] = size;
+            count++;
+        }
+    }
+    if (count > 0)
+    {
+        TableAddSparseUnit(&n->table, s_codes, s_rowPointers, s_rowSizes, count, nullptr,
+                           row == caseRow ? kindUnitCases : kindUnitCasesLowered, key, file);
+    }
+    TableClear(&n->table);
+}
+
 // Takes a locale after its parent.
 static void TakeChain(Names* n, const char* locale, DataFile* file)
 {
@@ -315,6 +478,10 @@ static void TakeChain(Names* n, const char* locale, DataFile* file)
     for (int row = 0; own && row < rowCount; row++)
     {
         AddRow(n, filed, row, key, file);
+    }
+    for (int row = 0; own && row < caseRows; row++)
+    {
+        AddCaseRow(n, filed, row, key, file);
     }
 }
 
@@ -359,7 +526,8 @@ int GenerateUnitNames(const UnitNamesInput* input, DataFile* file, char* errorOu
     static Names s_names;
     Names* n = &s_names;
     *n = (Names){.input = input};
-    if (!NamesReadCategories(n, errorOut, errorCapacity))
+    if (!NamesReadCategories(n, errorOut, errorCapacity) ||
+        !NamesReadGrammar(n, errorOut, errorCapacity))
     {
         return 0;
     }
