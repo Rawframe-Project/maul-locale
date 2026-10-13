@@ -617,6 +617,7 @@ static void TestGenders(void)
               GenderIs("de", "dunam", mloc_genderNone),
           "one CLDR names without a gender: its parts' through the derivations");
     CHECK(GenderIs("de", "newton-second", mloc_genderFeminine) &&
+              GenderIs("de", "second-newton", mloc_genderFeminine) &&
               GenderIs("fr", "newton-second", mloc_genderMasculine) &&
               GenderIs("de", "kilocalorie-per-gram", mloc_genderFeminine) &&
               GenderIs("fr", "square-second", mloc_genderFeminine) &&
@@ -638,6 +639,68 @@ static void TestGenders(void)
               mlocGetUnitGender(&s_data, &de, "meter", 5, nullptr) == mloc_errorInvalid &&
               gender == mloc_genderNeuter,
           "refusals, the gender left unchanged");
+}
+
+// A set whose first source is a pack of one derivations unit, of German
+// (per and times: the first, power: feminine, prefix: common), French (no
+// rules) and Italian (per and times: the second, power: the unit's,
+// prefix: masculine), before the names.
+static bool OpenGenderRules(mlocData* sources)
+{
+    static uint8_t s_unit[unitDerivationsHeaderSize + 3 * unitDerivationSize];
+    static const char* const s_languages[3] = {"de", "fr", "it"};
+    static const uint8_t s_rules[3][unitDeriveStructures] = {
+        {unitGenderFirst, unitGenderFirst, mloc_genderFeminine, mloc_genderCommon},
+        {unitDerivedNone, unitDerivedNone, unitDerivedNone, unitDerivedNone},
+        {unitGenderSecond, unitGenderSecond, unitGenderFirst, mloc_genderMasculine},
+    };
+    memset(s_unit, 0, sizeof(s_unit));
+    s_unit[0] = 3;
+    for (int i = 0; i < 3; i++)
+    {
+        uint8_t* record = s_unit + unitDerivationsHeaderSize + i * unitDerivationSize;
+        memcpy(record, s_languages[i], 2);
+        memset(record + unitDerivationPlural, unitDerivedNone,
+               unitDerivationSize - unitDerivationPlural);
+        memcpy(record + unitDerivationGender, s_rules[i], unitDeriveStructures);
+    }
+    PackUnit unit = {kindUnitDerivations, {s_unit, sizeof(s_unit)}, false};
+    sources[1] = s_data.sources[0];
+    sources[2] = s_data.sources[1];
+    return OpenRootPack(&unit, 1, &sources[0]);
+}
+
+// Whether a unit's gender under the crafted rules is as expected.
+static bool RuledGender(const mlocDataSet* set, const char* id, const char* unit,
+                        mlocGender expected)
+{
+    mlocLocale locale;
+    mlocGender gender = (mlocGender)99;
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+           mlocGetUnitGender(set, &locale, unit, strlen(unit), &gender) == mloc_success &&
+           gender == expected;
+}
+
+static void TestGenderRules(void)
+{
+    mlocData sources[3];
+    CHECK(OpenGenderRules(sources), "a pack of crafted gender rules");
+    mlocDataSet set = {sources, 3};
+    CHECK(RuledGender(&set, "de", "newton-second", mloc_genderNeuter) &&
+              RuledGender(&set, "it", "liter-per-hour", mloc_genderFeminine) &&
+              RuledGender(&set, "de", "attoliter", mloc_genderCommon) &&
+              RuledGender(&set, "de", "square-newton", mloc_genderFeminine),
+          "built names: the times and per rules' sides, a fixed prefix's and power's gender");
+    CHECK(RuledGender(&set, "it", "pixel-per-inch", mloc_genderMasculine) &&
+              RuledGender(&set, "de", "pound-force-foot", mloc_genderNone) &&
+              RuledGender(&set, "de", "square-yard", mloc_genderFeminine) &&
+              RuledGender(&set, "it", "square-yard", mloc_genderMasculine),
+          "names without a gender: the rules top down, a fixed prefix beside a power");
+    CHECK(RuledGender(&set, "fr", "newton-second", mloc_genderNone) &&
+              RuledGender(&set, "fr", "pixel-per-inch", mloc_genderNone) &&
+              RuledGender(&set, "fr", "square-yard", mloc_genderNone) &&
+              RuledGender(&set, "fr", "liter-per-second", mloc_genderNone),
+          "no rules: no gender");
 }
 
 static void TestCoordinate(void)
@@ -1001,6 +1064,7 @@ int main(void)
     TestCoordinate();
     TestCases();
     TestGenders();
+    TestGenderRules();
     TestRanges();
     TestParts();
     TestNames();
