@@ -388,6 +388,99 @@ static void TestMixed(void)
           "a text that does not fit gives its length; no range of a mixed unit");
 }
 
+static bool Used(const char* id, const char* unit, const char* usage, mlocUnitWidth width,
+                 const char* amount, const char* expected)
+{
+    mlocUnitOptions options = {.width = width, .usage = usage, .usageLength = strlen(usage)};
+    return Formats(id, unit, &options, amount, expected);
+}
+
+static bool UsedRange(const char* id, const char* unit, const char* usage, const char* start,
+                      const char* end, const char* expected)
+{
+    mlocUnitOptions options = {.usage = usage, .usageLength = strlen(usage)};
+    mlocUnitFormatter formatter;
+    mlocDecimal a;
+    mlocDecimal b;
+    char buffer[128];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    return Init(&formatter, id, unit, &options) >= 0 &&
+           mlocParseDecimal(start, strlen(start), &a).status == mloc_success &&
+           mlocParseDecimal(end, strlen(end), &b).status == mloc_success &&
+           mlocFormatUnitRange(&formatter, &a, &b, &output) == mloc_success &&
+           Same(buffer, &output, expected);
+}
+
+static void TestUsage(void)
+{
+    CHECK(Used("en-US", "meter", "road", mloc_unitWidthShort, "0.3", "1 ft") &&
+              Used("en-US", "meter", "road", mloc_unitWidthShort, "1000", "0.62 mi") &&
+              Used("fr", "meter", "road", mloc_unitWidthLong, "12345.678",
+                   "12\xC2\xA0kilom\xC3\xA8tres"),
+          "the output unit chosen by the value, rounded as the preference says");
+    CHECK(Used("en-US", "meter", "person-height", mloc_unitWidthShort, "1.8", "5 ft, 11 in") &&
+              Used("en-GB", "kilogram", "person", mloc_unitWidthShort, "80", "12 st, 8.4 lb"),
+          "a mixed output");
+    CHECK(Used("en-GB-u-mu-fahrenhe", "celsius", "weather", mloc_unitWidthShort, "20",
+               "68\xC2\xB0"
+               "F") &&
+              Used("en-US-u-ms-metric", "meter", "road", mloc_unitWidthShort, "1000", "1 km"),
+          "the -u-mu and -u-ms keys");
+    CHECK(Used("en-US", "meter", "nonsense", mloc_unitWidthShort, "5", "16 ft") &&
+              Used("en-US", "kilogram-meter", "default", mloc_unitWidthShort, "3",
+                   "3 kg\xE2\x8B\x85m"),
+          "an unknown usage takes the default, a quantity without preferences its base unit");
+    mlocUnitOptions precise = {
+        .number.precision = {.kind = mloc_precisionFraction, .maxFractionDigits = 3},
+        .usage = "road",
+        .usageLength = 4};
+    CHECK(Formats("en-US", "meter", &precise, "1000", "0.621 mi"), "a precision given wins");
+    CHECK(UsedRange("en-US", "meter", "road", "10", "20",
+                    "30\xE2\x80\x93"
+                    "70 ft") &&
+              UsedRange("en-US", "meter", "road", "10", "2000", "30 ft \xE2\x80\x93 1.2 mi") &&
+              UsedRange("en-US", "meter", "road", "100", "100", "~350 ft") &&
+              UsedRange("en-US", "meter", "person-height", "1.7", "1.8",
+                        "5 ft, 6.9 in \xE2\x80\x93 5 ft, 11 in"),
+          "a range in one output collapses; ends in two, or mixed, are written whole");
+    mlocUnitFormatter formatter;
+    mlocLocale locale;
+    mlocUnitOptions bad = {.usage = "Road", .usageLength = 4};
+    mlocUnitOptions shortUsage = {.usage = "ro", .usageLength = 2};
+    mlocUnitOptions compact = {
+        .number.notation = mloc_notationCompactShort, .usage = "road", .usageLength = 4};
+    mlocUnitOptions road = {.usage = "road", .usageLength = 4};
+    mlocUnitOptions null = {.usageLength = 4};
+    CHECK(mlocParseLocale("en-US", 5, &locale).status == mloc_success &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &bad) ==
+                  mloc_errorSyntax &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &shortUsage) ==
+                  mloc_errorSyntax &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &compact) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, &road) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &null) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, &road) ==
+                  mloc_errorNotFound,
+          "a usage not well-formed, compact notation, a mixed input, a null usage, no names");
+    mlocDecimal amount;
+    mlocDecimal nan = {.kind = mloc_decimalNaN};
+    char buffer[32];
+    mlocOutput output = {.buffer = buffer, .capacity = 3};
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &road) == mloc_success &&
+              mlocParseDecimal("1000", 4, &amount).status == mloc_success &&
+              mlocFormatUnit(&formatter, &amount, &output) == mloc_errorCapacity &&
+              output.length == 7 &&
+              mlocFormatUnitRange(&formatter, &nan, &amount, &output) == mloc_errorInvalid,
+          "a text that does not fit gives its length; a NaN end is refused");
+    output.capacity = sizeof(buffer);
+    CHECK(mlocFormatUnit(&formatter, &nan, &output) == mloc_success &&
+              Same(buffer, &output, "NaN mi"),
+          "NaN in the first output, as the largest value");
+}
+
 static void TestRefusals(void)
 {
     mlocUnitFormatter formatter;
@@ -445,53 +538,74 @@ static void TestRefusals(void)
           "a text that does not fit gives its length");
 }
 
-alignas(8) static uint8_t s_built[4096];
+alignas(8) static uint8_t s_built[8192];
 
-// Builds an identifiers unit naming "meter" and root's short names of it,
-// a pattern per category zero to other: "{0}" and that many bytes of the
-// category's letter ("a" to "f"); opens them as a pack, false when it is
-// refused.
-static bool OpenNames(mlocData* source, const uint32_t* lengths)
+// Builds an identifiers unit naming units (sorted) and root's short names
+// of them, a pattern per category zero to other: "{0}" and that many
+// bytes of the category's letter ("a" to "f"); opens them as a pack,
+// false when it is refused.
+static bool OpenUnitNames(mlocData* source, const char* const* units, uint32_t count,
+                          const uint32_t (*lengths)[6])
 {
     uint8_t* ids = s_built;
     memset(s_built, 0, sizeof(s_built));
-    PackPut(ids, 1, 2);
-    PackPut(ids + 4, 5, 4);
-    PackPut(ids + unitIdsHeaderSize + 4, 5, 4);
-    memcpy(ids + unitIdsHeaderSize + 9, "meter", 5);
-    uint32_t idsSize = unitIdsHeaderSize + 9 + 5;
-    uint8_t* names = s_built + 64;
-    enum
+    uint32_t idText = 0;
+    for (uint32_t u = 0; u < count; u++)
     {
-        strings = 6,
-        rowSize = 1 + 2 * strings,
-        head = sparseHeaderSize + 2 * (strings + 1) + 2 + 4 + rowSize,
-    };
+        idText += (uint32_t)strlen(units[u]);
+    }
+    PackPut(ids, count, 2);
+    PackPut(ids + 4, idText, 4);
+    uint8_t* idOffsets = ids + unitIdsHeaderSize;
+    uint8_t* idChars = idOffsets + 4 * (count + 1) + count;
+    for (uint32_t u = 0, at = 0; u < count; u++)
+    {
+        memcpy(idChars + at, units[u], strlen(units[u]));
+        at += (uint32_t)strlen(units[u]);
+        PackPut(idOffsets + 4 * (u + 1), at, 4);
+    }
+    uint32_t idsSize = (uint32_t)(idChars + idText - ids);
+    uint8_t* names = s_built + ((idsSize + 7) / 8 * 8);
+    uint32_t strings = 6 * count;
+    uint32_t rowSize = 1 + 2 * 6;
     uint8_t* offsets = names + sparseHeaderSize;
-    uint8_t* row = offsets + 2 * (strings + 1) + 2 + 4;
-    uint8_t* text = names + head;
+    uint8_t* codes = offsets + 2 * (strings + 1);
+    uint8_t* rowOffsets = codes + 2 * count;
+    uint8_t* rows = rowOffsets + 2 * (count + 1);
+    uint8_t* text = rows + rowSize * count;
     uint32_t at = 0;
-    row[0] = 0x7E;
-    for (uint32_t k = 0; k < strings; k++)
+    for (uint32_t u = 0; u < count; u++)
     {
-        PackPut(offsets + 2 * k, at, 2);
-        PackPut(row + 1 + 2 * k, k, 2);
-        memcpy(text + at, "{0}", 3);
-        memset(text + at + 3, 'a' + (int)k, lengths[k]);
-        at += 3 + lengths[k];
+        PackPut(codes + 2 * u, u, 2);
+        PackPut(rowOffsets + 2 * (u + 1), rowSize * (u + 1), 2);
+        uint8_t* row = rows + rowSize * u;
+        row[0] = 0x7E;
+        for (uint32_t k = 0; k < 6; k++)
+        {
+            uint32_t string = 6 * u + k;
+            PackPut(offsets + 2 * string, at, 2);
+            PackPut(row + 1 + 2 * k, string, 2);
+            memcpy(text + at, "{0}", 3);
+            memset(text + at + 3, 'a' + (int)k, lengths[u][k]);
+            at += 3 + lengths[u][k];
+        }
     }
     PackPut(offsets + 2 * strings, at, 2);
-    PackPut(row - 4, 0, 2);
-    PackPut(row - 2, rowSize, 2);
     PackPut(names, strings, 2);
-    PackPut(names + 2, 1, 2);
+    PackPut(names + 2, count, 2);
     PackPut(names + 4, at, 4);
-    PackPut(names + 8, rowSize, 4);
-    PackUnit units[2] = {
+    PackPut(names + 8, rowSize * count, 4);
+    PackUnit packed[2] = {
         {kindUnitIds, {ids, idsSize}, false},
-        {kindUnitNamesShort, {names, head + at}, true},
+        {kindUnitNamesShort, {names, (uint32_t)(text + at - names)}, true},
     };
-    return OpenRootPack(units, 2, source);
+    return OpenRootPack(packed, 2, source);
+}
+
+static bool OpenNames(mlocData* source, const uint32_t* lengths)
+{
+    static const char* const s_meter[1] = {"meter"};
+    return OpenUnitNames(source, s_meter, 1, (const uint32_t (*)[6])lengths);
 }
 
 // Builds an identifiers unit naming "foot" and "inch" and root's short
@@ -573,18 +687,25 @@ static void TestPool(void)
     mlocLocale locale;
     mlocUnitFormatter formatter;
     // Arabic takes all six categories; each pattern is marked in one byte
-    // for its "{0}".
-    static const uint32_t s_fill[6] = {170, 170, 170, 170, 170, 168};
-    static const uint32_t s_past[6] = {170, 170, 170, 170, 170, 169};
+    // for its "{0}". Four parts of six patterns fill the pool.
+    static const char* const s_parts[4] = {"foot", "inch", "mile", "yard"};
+    static uint32_t s_fill[4][6];
+    for (uint32_t i = 0; i < 24; i++)
+    {
+        s_fill[i / 6][i % 6] = (unitPool - 24) / 24 + (i < (unitPool - 24) % 24);
+    }
+    static const char s_mixed[] = "mile-and-yard-and-foot-and-inch";
     static const uint32_t s_room[6] = {1, 1, 1, 1, 1, unitPatternRoom - 3};
     static const uint32_t s_long[6] = {1, 1, 1, 1, 1, unitPatternRoom - 2};
     CHECK(mlocParseLocale("ar", 2, &locale).status == mloc_success, "a locale");
-    CHECK(OpenNames(&sources[1], s_fill) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
+    CHECK(OpenUnitNames(&sources[1], s_parts, 4, s_fill) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, s_mixed, sizeof(s_mixed) - 1,
+                                    nullptr) == mloc_success,
           "patterns that fill the pool");
-    CHECK(OpenNames(&sources[1], s_past) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
-                  mloc_errorCapacity,
+    s_fill[3][5]++;
+    CHECK(OpenUnitNames(&sources[1], s_parts, 4, s_fill) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, s_mixed, sizeof(s_mixed) - 1,
+                                    nullptr) == mloc_errorCapacity,
           "patterns a byte past the pool");
     CHECK(OpenNames(&sources[1], s_room) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
@@ -626,6 +747,7 @@ int main(void)
     TestPercent();
     TestCompounds();
     TestMixed();
+    TestUsage();
     TestRanges();
     TestParts();
     TestNames();

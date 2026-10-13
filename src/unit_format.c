@@ -9,12 +9,14 @@
 // and per mille, short or narrow and not compact, take the locale's
 // percent pattern instead, as ICU's number_formatimpl.cpp does.
 
+#include "decimal.h"
 #include "number_core.h"
 #include "plural.h"
 #include "plural_rules.h"
 #include "unit_mixed_format.h"
 #include "unit_names.h"
 #include "unit_patterns.h"
+#include "unit_usage.h"
 
 #include <string.h>
 
@@ -24,7 +26,7 @@ static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
 static bool ValidOptions(const mlocUnitOptions* o)
 {
     return o->width <= mloc_unitWidthLong && mlocValidFormatOptions(&o->number) &&
-           o->number.style == mloc_numberDecimal;
+           o->number.style == mloc_numberDecimal && (o->usage != nullptr || o->usageLength == 0);
 }
 
 // The style ICU writes a unit in: percent and per mille, short or narrow
@@ -80,11 +82,15 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     size_t used = 0;
     static UnitFormat s_zero;
     UnitFormat u = s_zero;
-    u.parts = 1;
-    mlocResult found = mlocIsMixedUnit(unit, unitLength)
+    u.outputs = 1;
+    u.output[0].parts = 1;
+    mlocResult found = o->usageLength > 0
+                           ? mlocInitUsage(&u, data, locale, unit, unitLength, o, &used)
+                       : mlocIsMixedUnit(unit, unitLength)
                            ? mlocInitMixedUnit(&u, data, locale, unit, unitLength, o, &used)
                            : mlocNormalUnitName(data, unit, unitLength, id, sizeof(id), &idLength);
-    if (found == mloc_success && u.parts == 1)
+    bool single = !u.usage && u.output[0].parts == 1;
+    if (found == mloc_success && single)
     {
         UnitForms forms;
         found = mlocBuildUnitForms(data, locale, id, idLength, mlocUnitWidthKind(o->width), &forms);
@@ -97,7 +103,7 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     Formatter* f = &u.formatter;
     bool compact = o->number.notation == mloc_notationCompactShort ||
                    o->number.notation == mloc_notationCompactLong;
-    mlocNumberStyle style = u.parts == 1 ? UnitStyle(id, idLength, o) : mloc_numberDecimal;
+    mlocNumberStyle style = single ? UnitStyle(id, idLength, o) : mloc_numberDecimal;
     mlocResult result = compact
                             ? mlocInitCompactCore(&f->core, data, locale,
                                                   o->number.notation == mloc_notationCompactLong,
@@ -121,22 +127,15 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     return result;
 }
 
-// The unit formatter of an opaque value, or false when the library did
-// not make it.
-static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
+// Whether an output's slots and patterns lie within the formatter.
+static bool ValidOutput(const UnitFormat* u, const UnitOutput* o)
 {
-    if (opaque == nullptr || !mlocReadFormatter(opaque, sizeof(*opaque), unitStamp, &u->formatter))
+    if (o->parts < 1 || o->parts > unitMaxParts || o->slot > unitSlots - o->parts ||
+        o->smallest >= o->parts || (o->parts > 1 && (!o->id.mixed || o->id.count != o->parts)))
     {
         return false;
     }
-    memcpy(u, opaque, sizeof(*u));
-    if (u->formatter.pluralRule >= mlocPluralRuleSetCount || u->formatter.unscaled != 1 ||
-        u->parts < 1 || u->parts > unitMaxParts ||
-        (u->parts > 1 && (u->percent || !mlocValidMixedUnit(u))))
-    {
-        return false;
-    }
-    for (uint32_t p = 0; p < u->parts; p++)
+    for (uint32_t p = o->slot; p < o->slot + o->parts; p++)
     {
         for (uint32_t c = 0; c < unitCategories; c++)
         {
@@ -149,15 +148,46 @@ static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
     return true;
 }
 
+// The unit formatter of an opaque value, or false when the library did
+// not make it.
+static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
+{
+    if (opaque == nullptr || !mlocReadFormatter(opaque, sizeof(*opaque), unitStamp, &u->formatter))
+    {
+        return false;
+    }
+    memcpy(u, opaque, sizeof(*u));
+    bool mixed = false;
+    bool valid = u->formatter.pluralRule < mlocPluralRuleSetCount && u->formatter.unscaled == 1 &&
+                 u->outputs >= 1 && u->outputs <= unitOutputs && (u->usage || u->outputs == 1);
+    for (uint32_t i = 0; valid && i < u->outputs; i++)
+    {
+        valid = ValidOutput(u, &u->output[i]);
+        mixed |= u->output[i].parts > 1;
+    }
+    return valid && (!mixed || (!u->percent && mlocValidMixedUnit(u))) &&
+           (!u->usage || (!u->percent && mlocValidUsageOutputs(u)));
+}
+
+static bool ValidArguments(const mlocDecimal* decimal, const mlocOutput* output)
+{
+    return decimal != nullptr && output != nullptr &&
+           (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);
+}
+
 mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal* decimal,
                           mlocOutput* output)
 {
     UnitFormat u;
-    if (!ReadUnit(formatter, &u))
+    if (!ReadUnit(formatter, &u) || !ValidArguments(decimal, output))
     {
         return mloc_errorInvalid;
     }
-    if (u.parts > 1)
+    if (u.usage)
+    {
+        return mlocFormatUsage(&u, decimal, output);
+    }
+    if (u.output[0].parts > 1)
     {
         return mlocFormatMixedUnit(&u, decimal, output);
     }
@@ -170,9 +200,18 @@ mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter, const mlocDec
                                const mlocDecimal* end, mlocOutput* output)
 {
     UnitFormat u;
-    if (!ReadUnit(formatter, &u) || u.parts > 1)
+    if (!ReadUnit(formatter, &u) || (u.output[0].parts > 1 && !u.usage))
     {
         return mloc_errorInvalid;
+    }
+    if (u.usage)
+    {
+        if (!ValidArguments(start, output) || end == nullptr || !mlocValidDecimal(end) ||
+            start->kind == mloc_decimalNaN || end->kind == mloc_decimalNaN)
+        {
+            return mloc_errorInvalid;
+        }
+        return mlocFormatUsageRange(&u, start, end, output);
     }
     Outer outer;
     mlocUnitOuter(&u, 0, &outer);

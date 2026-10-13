@@ -250,3 +250,27 @@ mlocResult mlocSplitMixed(const UnitTable* t, const UnitId* mixed, const UnitSca
     out->amounts[0].negative = negative;
     return mloc_success;
 }
+
+mlocResult mlocReachesThreshold(const UnitTable* t, const UnitScale* input, const UnitValue* value,
+                                const UnitId* output, uint32_t threshold, uint8_t places,
+                                bool* reachesOut)
+{
+    UnitId first = output->mixed ? mlocUnitPartOf(output, 0) : *output;
+    UnitScale scale;
+    bool reciprocal = false;
+    if (mlocScaleUnit(t, &first, &scale) != mloc_success ||
+        !mlocSameDimensions(input, &scale, &reciprocal))
+    {
+        return mloc_errorData;
+    }
+    UnitValue v;
+    if (!mlocUnitValueIn(t, input, value, &scale, &v))
+    {
+        return mloc_errorCapacity;
+    }
+    Wide n = mlocWideOf(threshold);
+    Wide d = mlocWideOf(1);
+    (void)mlocWideScale10(&d, places);
+    *reachesOut = mlocUnitValueAtLeast(&v, &n, &d);
+    return mloc_success;
+}

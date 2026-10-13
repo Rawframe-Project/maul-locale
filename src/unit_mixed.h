@@ -31,6 +31,14 @@ bool mlocUnitValueIn(const UnitTable* t, const UnitScale* from, const UnitValue*
 // other dimensions or of one size, an offset (a temperature) or Beaufort.
 mlocResult mlocCheckMixed(const UnitTable* t, const UnitId* mixed, uint32_t* smallestOut);
 
+// Whether a value of the input's unit reaches a threshold (threshold /
+// 10^places) in an output unit (a mixed unit's largest part):
+// mloc_success; mloc_errorData for an output that does not convert from
+// the input; mloc_errorCapacity when the integers cannot hold the value.
+mlocResult mlocReachesThreshold(const UnitTable* t, const UnitScale* input, const UnitValue* value,
+                                const UnitId* output, uint32_t threshold, uint8_t places,
+                                bool* reachesOut);
+
 // Rounds the last part's amount in place, given whether it is exact.
 typedef mlocResult (*MixedRound)(void* context, mlocDecimal* amount, bool exact);
 

@@ -104,6 +104,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_names.c
     src/unit_patterns.c
     src/unit_prefs.c
+    src/unit_usage.c
     src/wide.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c)

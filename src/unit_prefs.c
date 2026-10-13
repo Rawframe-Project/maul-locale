@@ -6,6 +6,8 @@
 // quantity, the usage, the region and the value, and the value split
 // exactly across a mixed unit's parts.
 
+#include "unit_prefs.h"
+
 #include "bytes.h"
 #include "data_view.h"
 #include "decimal.h"
@@ -23,13 +25,6 @@
 #include "maul-locale/unit.h"
 
 #include <string.h>
-
-enum
-{
-    // The longest usage read, and the longest base unit identifier written.
-    maxUsage = 64,
-    maxBaseId = 256,
-};
 
 // A unit's exponents of each dimension in its numerator and denominator.
 typedef struct Exponents
@@ -52,8 +47,7 @@ static bool Is(const char* value, size_t length, const char* text)
     return strlen(text) == length && memcmp(value, text, length) == 0;
 }
 
-// Whether a usage is well-formed: parts of 3 to 8 letters or digits.
-static bool ValidUsage(const char* usage, size_t length)
+bool mlocValidUsage(const char* usage, size_t length)
 {
     size_t part = 0;
     for (size_t i = 0; i <= length; i++)
@@ -212,7 +206,7 @@ static bool AppendSide(const UnitTable* t, const int32_t* exponents, char* out, 
             char prefix[8];
             size_t p = exponents[d] > 15 ? 0 : PowerPrefix(exponents[d], prefix);
             size_t length = dim[4];
-            if (exponents[d] > 15 || *at + 1 + p + length >= maxBaseId)
+            if (exponents[d] > 15 || *at + 1 + p + length >= unitMaxBaseId)
             {
                 return false;
             }
@@ -245,7 +239,7 @@ static size_t BaseIdentifier(const UnitTable* t, const Exponents* e, char* out)
     }
     if (any)
     {
-        if (at + 5 >= maxBaseId)
+        if (at + 5 >= unitMaxBaseId)
         {
             return 0;
         }
@@ -367,38 +361,27 @@ static mlocResult ChooseRun(const UnitTable* t, const UnitPrefsTable* p, uint32_
     return mloc_success;
 }
 
-// The first entry of a run whose threshold the value reaches in its unit
-// (a mixed unit's largest part); NaN reaches every one.
-static mlocResult ChooseEntry(const Choice* c, const UnitPrefsTable* p, uint32_t run,
-                              const uint8_t** entryOut)
+// The first output whose threshold the value reaches in its unit (a
+// mixed unit's largest part); NaN reaches every one.
+static mlocResult ChooseEntry(const Choice* c, const UnitRoute* route,
+                              const UnitRouteEntry** entryOut)
 {
-    const uint8_t* entry = nullptr;
-    uint32_t count = mlocUnitPrefEntries(p, run, &entry);
-    for (uint32_t i = 0; i < count; i++, entry += unitEntrySize)
+    for (uint32_t i = 0; i < route->count; i++)
     {
+        const UnitRouteEntry* entry = &route->entries[i];
         UnitId id;
-        UnitScale scale = {0};
-        if (mlocParseUnitId(c->table, (const char*)p->text + mlocLoad32(entry), entry[4], &id) !=
-            mloc_success)
+        if (mlocParseUnitId(c->table, entry->id, entry->length, &id) != mloc_success)
         {
             return mloc_errorData;
         }
-        UnitId first = id.mixed ? mlocUnitPartOf(&id, 0) : id;
-        UnitValue v;
-        bool reciprocal = false;
-        if (mlocScaleUnit(c->table, &first, &scale) != mloc_success ||
-            !mlocSameDimensions(&c->input, &scale, &reciprocal))
+        bool reaches = false;
+        mlocResult r = mlocReachesThreshold(c->table, &c->input, &c->value, &id, entry->threshold,
+                                            entry->places, &reaches);
+        if (r != mloc_success)
         {
-            return mloc_errorData;
+            return r;
         }
-        if (!mlocUnitValueIn(c->table, &c->input, &c->value, &scale, &v))
-        {
-            return mloc_errorCapacity;
-        }
-        Wide threshold = mlocWideOf(mlocLoad32(entry + 8));
-        Wide places = mlocWideOf(1);
-        (void)mlocWideScale10(&places, entry[5]);
-        if (c->nan || i + 1 == count || mlocUnitValueAtLeast(&v, &threshold, &places))
+        if (c->nan || i + 1 == route->count || reaches)
         {
             *entryOut = entry;
             return mloc_success;
@@ -407,11 +390,8 @@ static mlocResult ChooseEntry(const Choice* c, const UnitPrefsTable* p, uint32_t
     return mloc_errorData;
 }
 
-// The precision the last amount takes: none, the one given, or for the
-// zero precision the preference's increment, else an integer of at least
-// two significant digits.
-static const mlocPrecision* LastPrecision(const mlocPrecision* given, uint32_t increment,
-                                          mlocPrecision* own)
+const mlocPrecision* mlocRoutePrecision(const mlocPrecision* given, uint32_t increment,
+                                        mlocPrecision* own)
 {
     if (given == nullptr || given->kind != mloc_precisionNone)
     {
@@ -489,25 +469,59 @@ static mlocResult ChooseBase(const UnitTable* t, int32_t quantity, const Exponen
     return *lengthOut > 0 ? mloc_success : mloc_errorInvalid;
 }
 
-// Chooses the unit for the input: -u-mu, else the preferences of its
-// quantity and the usage, else its base units. Writes its identifier
-// (at most maxBaseId bytes) and the preference's increment.
-static mlocResult ChooseUnit(const Choice* c, const mlocDataSet* data, const mlocLocale* locale,
-                             const UnitId* input, const char* usage, size_t usageLength,
-                             char* idOut, size_t* lengthOut, uint32_t* incrementOut)
+// A route of one output.
+static mlocResult RouteOne(UnitRoute* out, const char* id, size_t length)
 {
-    const UnitTable* t = c->table;
+    out->count = 1;
+    out->entries[0] = (UnitRouteEntry){.id = id, .length = (uint8_t)length};
+    return mloc_success;
+}
+
+// The route's base output: a quantity's base unit, or the input's base
+// units.
+static mlocResult RouteBase(const UnitTable* t, int32_t quantity, const Exponents* e,
+                            UnitRoute* out)
+{
+    size_t length = 0;
+    mlocResult r = ChooseBase(t, quantity, e, out->base, &length);
+    return r == mloc_success ? RouteOne(out, out->base, length) : r;
+}
+
+// The set of a quantity's preferences for the usage, then each shorter by
+// its last part, then "default".
+static int32_t FindSet(const UnitPrefsTable* p, const char* category, uint8_t length,
+                       const char* usage, size_t usageLength)
+{
+    int32_t set = -1;
+    for (size_t n = usageLength; set < 0; n = n == 0 ? 0 : n - 1)
+    {
+        while (n > 0 && n < usageLength && usage[n] != '-')
+        {
+            n--;
+        }
+        set = n == 0 ? mlocFindUnitPrefSet(p, category, length, "default", 7)
+                     : mlocFindUnitPrefSet(p, category, length, usage, n);
+        if (n == 0)
+        {
+            break;
+        }
+    }
+    return set;
+}
+
+mlocResult mlocRouteUnit(const mlocDataSet* data, const mlocLocale* locale, const UnitTable* t,
+                         const UnitId* input, const UnitScale* inputScale, const char* usage,
+                         size_t usageLength, UnitRoute* out)
+{
     const char* key = KeyUnit(locale);
     UnitId keyId;
     UnitScale keyScale = {0};
     bool reciprocal = false;
-    *incrementOut = 0;
+    *out = (UnitRoute){0};
     if (key != nullptr && ScaleOf(t, key, strlen(key), &keyId, &keyScale) == mloc_success &&
-        mlocSameDimensions(&c->input, &keyScale, &reciprocal) && !reciprocal)
+        mlocSameDimensions(inputScale, &keyScale, &reciprocal) && !reciprocal)
     {
-        *lengthOut = strlen(key);
-        memcpy(idOut, key, *lengthOut);
-        return mloc_success;
+        return RouteOne(out, key, strlen(key));
     }
     Exponents e;
     ExponentsOf(t, input, &e);
@@ -515,7 +529,7 @@ static mlocResult ChooseUnit(const Choice* c, const mlocDataSet* data, const mlo
     DataSpan unit;
     if (quantity < 0)
     {
-        return ChooseBase(t, quantity, &e, idOut, lengthOut);
+        return RouteBase(t, quantity, &e, out);
     }
     if (!mlocFindDataSetUnit(data, kindUnitPreferences, nullptr, 0, &unit))
     {
@@ -526,37 +540,33 @@ static mlocResult ChooseUnit(const Choice* c, const mlocDataSet* data, const mlo
     const char* category = (const char*)t->text + mlocLoad32(q);
     if (mlocFindUnitPrefSet(&p, category, q[8], nullptr, 0) < 0)
     {
-        return ChooseBase(t, quantity, &e, idOut, lengthOut);
+        return RouteBase(t, quantity, &e, out);
     }
-    // The usage, then each shorter by its last part, then "default".
-    int32_t set = -1;
-    for (size_t n = usageLength; set < 0; n = n == 0 ? 0 : n - 1)
-    {
-        while (n > 0 && n < usageLength && usage[n] != '-')
-        {
-            n--;
-        }
-        set = n == 0 ? mlocFindUnitPrefSet(&p, category, q[8], "default", 7)
-                     : mlocFindUnitPrefSet(&p, category, q[8], usage, n);
-        if (n == 0 && set < 0)
-        {
-            return mloc_errorData;
-        }
-    }
+    int32_t set = FindSet(&p, category, q[8], usage, usageLength);
     uint32_t run = 0;
+    mlocResult r = set < 0 ? mloc_errorData : ChooseRun(t, &p, (uint32_t)set, locale, data, &run);
+    if (r != mloc_success)
+    {
+        return r;
+    }
     const uint8_t* entry = nullptr;
-    mlocResult r = ChooseRun(t, &p, (uint32_t)set, locale, data, &run);
-    if (r == mloc_success)
+    uint32_t count = mlocUnitPrefEntries(&p, run, &entry);
+    if (count == 0 || count > unitMaxOutputs)
     {
-        r = ChooseEntry(c, &p, run, &entry);
+        return mloc_errorData;
     }
-    if (r == mloc_success)
+    for (uint32_t i = 0; i < count; i++, entry += unitEntrySize)
     {
-        *lengthOut = entry[4];
-        memcpy(idOut, p.text + mlocLoad32(entry), entry[4]);
-        *incrementOut = mlocLoad16(entry + 6);
+        out->entries[i] = (UnitRouteEntry){
+            .id = (const char*)p.text + mlocLoad32(entry),
+            .threshold = mlocLoad32(entry + 8),
+            .increment = mlocLoad16(entry + 6),
+            .length = entry[4],
+            .places = entry[5],
+        };
     }
-    return r;
+    out->count = count;
+    return mloc_success;
 }
 
 mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* locale,
@@ -572,7 +582,7 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
     {
         return mloc_errorInvalid;
     }
-    if (usageLength > maxUsage || (usageLength > 0 && !ValidUsage(usage, usageLength)))
+    if (usageLength > unitMaxUsage || (usageLength > 0 && !mlocValidUsage(usage, usageLength)))
     {
         return mloc_errorSyntax;
     }
@@ -596,29 +606,30 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
     {
         return mloc_errorCapacity;
     }
-    char id[maxBaseId];
-    size_t length = 0;
-    uint32_t increment = 0;
-    r = ChooseUnit(&c, data, locale, &input, usage, usageLength, id, &length, &increment);
+    static UnitRoute s_zero;
+    UnitRoute route = s_zero;
+    const UnitRouteEntry* entry = nullptr;
+    r = mlocRouteUnit(data, locale, &t, &input, &c.input, usage, usageLength, &route);
+    r = r == mloc_success ? ChooseEntry(&c, &route, &entry) : r;
     UnitId chosen;
     mlocUnitAmounts amounts;
     mlocPrecision own;
     if (r == mloc_success)
     {
-        r = mlocParseUnitId(&t, id, length, &chosen) == mloc_success ? mloc_success
-                                                                     : mloc_errorData;
+        r = mlocParseUnitId(&t, entry->id, entry->length, &chosen) == mloc_success ? mloc_success
+                                                                                   : mloc_errorData;
     }
     if (r == mloc_success)
     {
-        r = AmountsIn(&c, &chosen, LastPrecision(precision, increment, &own), &amounts);
+        r = AmountsIn(&c, &chosen, mlocRoutePrecision(precision, entry->increment, &own), &amounts);
     }
     if (r == mloc_success)
     {
-        r = WriteText(id, length, unitOut);
+        r = WriteText(entry->id, entry->length, unitOut);
     }
     if (r == mloc_success)
     {
-        amounts.increment = (uint16_t)increment;
+        amounts.increment = entry->increment;
         *amountsOut = amounts;
     }
     return r;

@@ -24,7 +24,7 @@ uint32_t mlocUnitWidthKind(mlocUnitWidth width)
 
 // Copies a pattern into the pool, "{0}" as currencyTextNumber, sharing an
 // equal one already there; false when the pool is full.
-static bool AddPattern(UnitFormat* u, uint32_t part, size_t* used, uint32_t category,
+static bool AddPattern(UnitFormat* u, uint32_t slot, size_t* used, uint32_t category,
                        const uint8_t* text, size_t length)
 {
     uint8_t copy[unitPool];
@@ -39,8 +39,8 @@ static bool AddPattern(UnitFormat* u, uint32_t part, size_t* used, uint32_t cate
         copy[n++] = number ? currencyTextNumber : text[at];
         at += number ? 2 : 0;
     }
-    uint16_t* start = u->start[part];
-    uint16_t* lengths = u->length[part];
+    uint16_t* start = u->start[slot];
+    uint16_t* lengths = u->length[slot];
     for (uint32_t c = 0; c < category; c++)
     {
         if (lengths[c] == n && memcmp(u->pool + start[c], copy, n) == 0)
@@ -61,7 +61,7 @@ static bool AddPattern(UnitFormat* u, uint32_t part, size_t* used, uint32_t cate
     return true;
 }
 
-mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t part, size_t* used, const UnitForms* forms)
+mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t slot, size_t* used, const UnitForms* forms)
 {
     for (uint32_t c = 0; c < unitCategories; c++)
     {
@@ -70,7 +70,7 @@ mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t part, size_t* used, const
         {
             return mloc_errorNotFound;
         }
-        if (!AddPattern(u, part, used, c, (const uint8_t*)p->text, p->length))
+        if (!AddPattern(u, slot, used, c, (const uint8_t*)p->text, p->length))
         {
             return mloc_errorCapacity;
         }
@@ -102,7 +102,7 @@ mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, 
     return r == mloc_success ? mlocBuildUnitForms(data, locale, id, idLength, kind, out) : r;
 }
 
-void mlocUnitOuter(const UnitFormat* u, uint32_t part, Outer* out)
+void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out)
 {
     *out = (Outer){
         .patternText = u->pool,
@@ -110,6 +110,6 @@ void mlocUnitOuter(const UnitFormat* u, uint32_t part, Outer* out)
         .patternKind = mloc_numberPartUnit,
         .rules = u->rules,
     };
-    memcpy(out->patternStart, u->start[part], sizeof(out->patternStart));
-    memcpy(out->patternLength, u->length[part], sizeof(out->patternLength));
+    memcpy(out->patternStart, u->start[slot], sizeof(out->patternStart));
+    memcpy(out->patternLength, u->length[slot], sizeof(out->patternLength));
 }

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0027): CLDR's unit identifiers ("kilometer-per-hour",
+// mloc-0028): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -145,6 +145,12 @@ extern "C"
         // precision, as for numbers; the style must be decimal.
         mlocNumberOptions number;
         mlocUnitWidth width;
+        // A usage ("road", "person-height"; UTS #35 Part 6): when its
+        // length is not 0, the amount, of the formatter's unit, is
+        // written in the unit the locale prefers for its value, as
+        // mlocGetUnitPreference chooses it. Null and 0 for none.
+        const char* usage;
+        size_t usageLength;
     } mlocUnitOptions;
 
     // A locale's formatter of one unit: a value that points into the data
@@ -152,7 +158,7 @@ extern "C"
     // mlocInitUnitFormatter.
     typedef struct mlocUnitFormatter
     {
-        uint64_t opaque[208];
+        uint64_t opaque[448];
     } mlocUnitFormatter;
 
     /// Makes a locale's formatter of a unit: the number as for numbers, in
@@ -167,7 +173,11 @@ extern "C"
     /// each part ("5 ft, 6 in"), joined by the locale's unit list of the
     /// width: the larger parts whole, as the locale's default number
     /// format writes them, the smallest with the options, and the first
-    /// part given with the amount's sign.
+    /// part given with the amount's sign. With a usage, the amount, of
+    /// the unit given, is written in the unit the locale prefers for its
+    /// value, as mlocGetUnitPreference chooses and rounds it (a precision
+    /// in the options wins over the preference's), mixed outputs as
+    /// above.
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
@@ -193,8 +203,10 @@ extern "C"
     ///         unit whose parts do not convert to each other alone (other
     ///         dimensions, a temperature) or are of one size, or with a
     ///         notation other than
-    ///         standard, or options out of range or in conflict (a percent
-    ///         style).
+    ///         standard, a usage with a mixed unit, one that does not
+    ///         convert or a notation other than standard, or options out
+    ///         of range or in conflict (a percent style, a null usage of a
+    ///         length).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut,
@@ -227,7 +239,10 @@ extern "C"
 
     /// Formats a range of two amounts, as mlocFormatNumberRange does, the
     /// unit written once in the category CLDR's plural ranges give the
-    /// ends' ("3–5 meters"), as ICU collapses a unit.
+    /// ends' ("3–5 meters"), as ICU collapses a unit. With a usage, ends
+    /// whose values choose one output unit, not mixed, collapse so
+    /// ("30–70 ft"); others are each written whole, joined by the spaced
+    /// range separator ("30 ft – 1.2 mi").
     ///
     /// @param formatter  A formatter from mlocInitUnitFormatter.
     /// @param start      The range's start.
@@ -239,9 +254,9 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed) or rounding
     ///         passes the decimal's limits; mloc_errorInvalid for a null
-    ///         pointer, a NaN end, a formatter of a mixed unit (which ICU
-    ///         does not range either), or a formatter or decimal the
-    ///         library did not make.
+    ///         pointer, a NaN end, a formatter of a mixed unit without a
+    ///         usage (which ICU does not range either), or a formatter or
+    ///         decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,

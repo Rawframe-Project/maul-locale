@@ -295,9 +295,7 @@ static bool IsSpace(const uint8_t* text, size_t length, bool atEnd)
     return false;
 }
 
-// Writes the range separator, spaced where it has no space of its own
-// when the ends ask for it; the end's parts follow.
-static void WriteSeparator(const NumberCore* core, bool spaced, NumberWriter* w)
+void mlocWriteRangeSeparator(const NumberCore* core, bool spaced, NumberWriter* w)
 {
     w->source = 0;
     const uint8_t* separator = core->symbolText + core->symbolStart[numberRangeSeparator];
@@ -338,7 +336,7 @@ static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberW
     b->layout.sharedSuffix = collapse;
     w->source = mloc_numberRangeStart;
     mlocWriteNumber(&a->core, &a->decimal, a->sign, &a->layout, w);
-    WriteSeparator(core, spaced, w);
+    mlocWriteRangeSeparator(core, spaced, w);
     mlocWriteNumber(&b->core, &b->decimal, b->sign, &b->layout, w);
 }
 

@@ -49,9 +49,10 @@ static ListStyle StyleOf(mlocUnitWidth width)
                                            : listUnitShort;
 }
 
-// Loads each part's patterns, the parts split at "-and-".
+// Loads each part's patterns into the slots, the parts split at "-and-".
 static mlocResult LoadParts(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
-                            const char* unit, size_t length, uint32_t kind, size_t* used)
+                            const char* unit, size_t length, uint32_t kind, uint32_t* slots,
+                            size_t* used, const UnitOutput* o)
 {
     uint32_t part = 0;
     size_t start = 0;
@@ -62,22 +63,50 @@ static mlocResult LoadParts(UnitFormat* u, const mlocDataSet* data, const mlocLo
         {
             continue;
         }
-        if (part == u->mixed.count)
+        if (part == o->id.count)
         {
             return mloc_errorSyntax;
         }
+        if (*slots == unitSlots)
+        {
+            return mloc_errorCapacity;
+        }
         UnitForms forms;
         mlocResult r = mlocLoadUnitForms(data, locale, unit + start, at - start, kind, &forms);
-        r = r == mloc_success ? mlocAddUnitPatterns(u, part, used, &forms) : r;
+        r = r == mloc_success ? mlocAddUnitPatterns(u, *slots, used, &forms) : r;
         if (r != mloc_success)
         {
             return r;
         }
+        ++*slots;
         part++;
         start = at + 5;
         at += 4;
     }
-    return part == u->mixed.count ? mloc_success : mloc_errorSyntax;
+    return part == o->id.count ? mloc_success : mloc_errorSyntax;
+}
+
+mlocResult mlocLoadMixedOutput(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
+                               const char* unit, size_t length, mlocUnitWidth width,
+                               uint32_t* slots, size_t* used, UnitOutput* out)
+{
+    uint32_t smallest = 0;
+    out->slot = (uint8_t)*slots;
+    mlocResult r = mlocCheckMixed(&u->table, &out->id, &smallest);
+    r = r == mloc_success
+            ? LoadParts(u, data, locale, unit, length, mlocUnitWidthKind(width), slots, used, out)
+            : r;
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    if (u->list.text[0] == nullptr && !mlocFindListPatterns(data, locale, StyleOf(width), &u->list))
+    {
+        return mloc_errorNotFound;
+    }
+    out->parts = out->id.count;
+    out->smallest = (uint8_t)smallest;
+    return mloc_success;
 }
 
 mlocResult mlocInitMixedUnit(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
@@ -94,31 +123,18 @@ mlocResult mlocInitMixedUnit(UnitFormat* u, const mlocDataSet* data, const mlocL
         return mloc_errorNotFound;
     }
     u->table = mlocReadUnitTable(table);
-    mlocResult r = mlocParseUnitId(&u->table, unit, length, &u->mixed);
+    UnitOutput* o = &u->output[0];
+    mlocResult r = mlocParseUnitId(&u->table, unit, length, &o->id);
     if (r != mloc_success)
     {
         return r;
     }
-    if (!u->mixed.mixed)
+    if (!o->id.mixed)
     {
         return mloc_errorSyntax;
     }
-    uint32_t smallest = 0;
-    r = mlocCheckMixed(&u->table, &u->mixed, &smallest);
-    r = r == mloc_success
-            ? LoadParts(u, data, locale, unit, length, mlocUnitWidthKind(options->width), used)
-            : r;
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    if (!mlocFindListPatterns(data, locale, StyleOf(options->width), &u->list))
-    {
-        return mloc_errorNotFound;
-    }
-    u->parts = u->mixed.count;
-    u->smallest = (uint8_t)smallest;
-    return mloc_success;
+    uint32_t slots = 0;
+    return mlocLoadMixedOutput(u, data, locale, unit, length, options->width, &slots, used, o);
 }
 
 bool mlocValidMixedUnit(const UnitFormat* u)
@@ -128,28 +144,26 @@ bool mlocValidMixedUnit(const UnitFormat* u)
     {
         texts &= u->list.text[p] != nullptr;
     }
-    return texts && u->list.rule <= listRuleHebrew && u->mixed.mixed == 1 &&
-           u->mixed.count == u->parts && u->smallest < u->parts && u->table.simples != nullptr &&
+    return texts && u->list.rule <= listRuleHebrew && u->table.simples != nullptr &&
            u->table.text != nullptr;
 }
 
-// Rounds the smallest part: by the formatter's precision, else an
-// inexact value to 38 digits.
-static mlocResult RoundLast(void* context, mlocDecimal* amount, bool exact)
+mlocResult mlocRoundSmallest(void* context, mlocDecimal* amount, bool exact)
 {
-    const Formatter* f = context;
+    const mlocPrecision* precision = context;
     if (amount->kind != mloc_decimalFinite)
     {
         return mloc_success;
     }
-    return f->precision.kind == mloc_precisionNone ? mlocRoundConverted(amount, exact, nullptr)
-                                                   : mlocApplyPrecision(&f->precision, amount);
+    return precision->kind == mloc_precisionNone ? mlocRoundConverted(amount, exact, nullptr)
+                                                 : mlocApplyPrecision(precision, amount);
 }
 
 // What writing the parts needs.
 typedef struct Mixed
 {
     const UnitFormat* unit;
+    const UnitOutput* output;
     mlocUnitAmounts amounts;
     // The formatters of the larger parts and of the smallest, each with
     // the sign display of the first part where it is first.
@@ -163,7 +177,7 @@ static void WritePart(void* context, uint32_t index, NumberWriter* writer)
 {
     Mixed* m = context;
     Outer outer;
-    mlocUnitOuter(m->unit, index, &outer);
+    mlocUnitOuter(m->unit, m->output->slot + index, &outer);
     const Formatter* f = index == m->last ? &m->smallest[index == 0] : &m->larger[index == 0];
     mlocResult r = mlocWriteFormatted(f, &outer, &m->amounts.amounts[index], writer);
     m->result = m->result == mloc_success ? r : m->result;
@@ -182,8 +196,9 @@ static void SmallestLead(const Mixed* m, char* lead, ListItem* item)
         mlocFillPluralOperands(&d, &operands);
         category = mlocSelectPluralRule(f->pluralRule, &operands);
     }
-    const uint8_t* text = m->unit->pool + m->unit->start[m->last][category];
-    size_t length = m->unit->length[m->last][category];
+    uint32_t slot = m->output->slot + m->last;
+    const uint8_t* text = m->unit->pool + m->unit->start[slot][category];
+    size_t length = m->unit->length[slot][category];
     size_t n = 0;
     for (size_t at = 0; at < length && n + 3 <= itemLead; at++)
     {
@@ -209,10 +224,11 @@ static void LargerLead(Mixed* m, uint32_t index, char* lead, ListItem* item)
     *item = (ListItem){lead, w.length < itemLead ? w.length : itemLead};
 }
 
-static void SetUp(Mixed* m, const UnitFormat* u)
+static void SetUp(Mixed* m, const UnitFormat* u, const UnitOutput* o)
 {
     m->unit = u;
-    m->last = u->smallest;
+    m->output = o;
+    m->last = o->smallest;
     m->result = mloc_success;
     m->smallest[1] = u->formatter;
     m->smallest[0] = u->formatter;
@@ -226,31 +242,16 @@ static void SetUp(Mixed* m, const UnitFormat* u)
     m->larger[1] = plain;
 }
 
-mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, mlocOutput* output)
+mlocResult mlocWriteMixedTo(const UnitFormat* u, const UnitOutput* o,
+                            const mlocUnitAmounts* amounts, NumberWriter* writer)
 {
-    if (decimal == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) || !mlocValidDecimal(decimal))
-    {
-        return mloc_errorInvalid;
-    }
     static Mixed s_zero;
     Mixed m = s_zero;
-    SetUp(&m, u);
-    bool nan = decimal->kind == mloc_decimalNaN;
-    UnitValue value = {0};
-    if (!nan && !mlocUnitValueOf(decimal, &value))
-    {
-        return mloc_errorCapacity;
-    }
-    mlocResult r = mlocSplitMixed(&u->table, &u->mixed, nullptr, &value, nan, RoundLast,
-                                  (void*)&u->formatter, &m.amounts);
-    if (r != mloc_success)
-    {
-        return r;
-    }
+    SetUp(&m, u, o);
+    m.amounts = *amounts;
     char leads[unitMaxParts][itemLead];
     ListItem items[unitMaxParts];
-    for (uint32_t i = 0; i < u->parts; i++)
+    for (uint32_t i = 0; i < o->parts; i++)
     {
         if (i == m.last)
         {
@@ -261,11 +262,18 @@ mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, 
             LargerLead(&m, i, leads[i], &items[i]);
         }
     }
+    mlocWriteList(&u->list, items, o->parts, WritePart, &m, writer);
+    return m.result;
+}
+
+mlocResult mlocWriteMixed(const UnitFormat* u, const UnitOutput* o, const mlocUnitAmounts* amounts,
+                          mlocOutput* output)
+{
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteList(&u->list, items, u->parts, WritePart, &m, &w);
-    if (m.result != mloc_success)
+    mlocResult r = mlocWriteMixedTo(u, o, amounts, &w);
+    if (r != mloc_success)
     {
-        return m.result;
+        return r;
     }
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
@@ -275,8 +283,22 @@ mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, 
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteList(&u->list, items, u->parts, WritePart, &m, &parts);
+        (void)mlocWriteMixedTo(u, o, amounts, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;
+}
+
+mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, mlocOutput* output)
+{
+    bool nan = decimal->kind == mloc_decimalNaN;
+    UnitValue value = {0};
+    if (!nan && !mlocUnitValueOf(decimal, &value))
+    {
+        return mloc_errorCapacity;
+    }
+    mlocUnitAmounts amounts;
+    mlocResult r = mlocSplitMixed(&u->table, &u->output[0].id, nullptr, &value, nan,
+                                  mlocRoundSmallest, (void*)&u->formatter.precision, &amounts);
+    return r == mloc_success ? mlocWriteMixed(u, &u->output[0], &amounts, output) : r;
 }

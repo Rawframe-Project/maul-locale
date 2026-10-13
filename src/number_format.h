@@ -76,6 +76,10 @@ typedef struct Outer
 mlocResult mlocWriteFormatted(const Formatter* formatter, const Outer* outer,
                               const mlocDecimal* decimal, NumberWriter* writer);
 
+// Writes the locale's range separator, spaced where it has no space of
+// its own when spaced is set; the parts that follow are the range end's.
+void mlocWriteRangeSeparator(const NumberCore* core, bool spaced, NumberWriter* writer);
+
 // Formats a decimal, within an outer pattern when one is given (the
 // formatter then has its plural rule set), after checking the decimal
 // and the output.
