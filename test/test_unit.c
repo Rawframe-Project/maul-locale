@@ -412,6 +412,15 @@ static void TestPreferences(void)
               Prefers("en", "pow4-meter-per-second", nullptr, "1", nullptr,
                       "pow4-meter-per-second 1"),
           "usage fallback, reciprocals, base units");
+    CHECK(Prefers("en-US", "square-meter", nullptr, "1000", nullptr,
+                  "square-foot 10763.910416709722308333505555900000689"),
+          "the first category's preferences");
+    char text[256];
+    CHECK(Prefer("en", "celsius", "weather", "1e700", nullptr, text, sizeof(text)) ==
+                  mloc_errorCapacity &&
+              Prefer("en-US", "meter", "person-height", "1e700", nullptr, text, sizeof(text)) ==
+                  mloc_errorCapacity,
+          "values the exact integers cannot hold");
 }
 
 static void TestPreferenceEdges(void)
@@ -442,6 +451,11 @@ static void TestPreferenceEdges(void)
                                     &small, &amounts) == mloc_errorCapacity &&
               small.length == 13,
           "an identifier past the output's room");
+    mlocOutput exact = {.buffer = unit, .capacity = 13};
+    CHECK(mlocGetUnitPreference(&s_data, &locale, "meter", 5, "person-height", 13, &v, nullptr,
+                                &exact, &amounts) == mloc_success &&
+              exact.length == 13 && memcmp(unit, "foot-and-inch", 13) == 0,
+          "an identifier that just fits");
     mlocOutput measure = {0};
     CHECK(mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, nullptr, &measure,
                                 &amounts) == mloc_errorCapacity &&

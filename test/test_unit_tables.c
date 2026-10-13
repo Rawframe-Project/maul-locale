@@ -238,6 +238,22 @@ static void TestPreferences(void)
     memcpy(s_copy + sets, s_prefs.bytes + sets + unitSetSize, 10);
     memcpy(s_copy + sets + unitSetSize, s_prefs.bytes + sets, 10);
     CHECK(!ValidPrefsCopy(s_prefs.size), "sets out of order");
+    // A set twice: the second's texts the first's.
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    memcpy(s_copy + sets + unitSetSize, s_prefs.bytes + sets, 10);
+    CHECK(!ValidPrefsCopy(s_prefs.size), "a set given twice");
+    // A region twice in the first set.
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    memcpy(s_copy + runs + unitRunSize, s_prefs.bytes + runs, 2);
+    CHECK(!ValidPrefsCopy(s_prefs.size), "a region given twice in a set");
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    s_copy[entries + 5] = unitMaxPlaces;
+    CHECK(ValidPrefsCopy(s_prefs.size), "the most decimal places");
+    uint8_t empty[unitPrefsHeaderSize] = {0};
+    CHECK(mlocValidUnitPreferences(&s_view, (DataSpan){empty, sizeof(empty)}), "no sets");
+    CHECK(mlocFindUnitPrefSet(&p, "zzzz", 4, nullptr, 0) < 0 &&
+              mlocFindUnitPrefSet(&p, "zzzz", 4, "default", 7) < 0,
+          "a category past the last");
     memcpy(s_copy, s_prefs.bytes, s_prefs.size);
     s_copy[11] = (uint8_t)(s_copy[11] + 0x80);
     CHECK(!ValidPrefsCopy(s_prefs.size), "a text size past the unit");

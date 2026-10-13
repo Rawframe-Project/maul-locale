@@ -427,10 +427,15 @@ static mlocResult ChooseEntry(const Choice* c, const UnitPrefsTable* p, uint32_t
         }
         UnitId first = id.mixed ? PartOf(&id, 0) : id;
         UnitValue v;
+        bool reciprocal = false;
         if (mlocScaleUnit(c->table, &first, &scale) != mloc_success ||
-            !ValueIn(c, &c->input, &c->value, &scale, &v))
+            !SameDimensions(&c->input, &scale, &reciprocal))
         {
             return mloc_errorData;
+        }
+        if (!ValueIn(c, &c->input, &c->value, &scale, &v))
+        {
+            return mloc_errorCapacity;
         }
         Wide threshold = mlocWideOf(mlocLoad32(entry + 8));
         Wide places = mlocWideOf(1);
