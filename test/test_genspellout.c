@@ -611,7 +611,7 @@ static void TestFractionLimits(void)
     CHECK(FormatText(s_parts, "%a", 0, 0, "1e999999", text, sizeof(text)) == mloc_errorCapacity,
           "a numerator past a decimal's exponent");
     // A remainder by a divisor not a power of ten, of a value past 64 bits.
-    static const char s_seconds[] = "%a:\n0: =#,##0.##=;\n60/60: >> s;\n";
+    static const char s_seconds[] = "%a:\n0: =#,##0.##=;\n60/60: >#,##0.##> s;\n";
     CHECK(FormatText(s_seconds, "%a", 0, 0, "61.5", text, sizeof(text)) == mloc_success &&
               strcmp(text, "1.5 s") == 0 &&
               FormatText(s_seconds, "%a", 0, 0, "1e30", text, sizeof(text)) == mloc_errorCapacity,
