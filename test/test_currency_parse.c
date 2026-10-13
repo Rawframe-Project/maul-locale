@@ -461,6 +461,27 @@ static bool ReadsStrictly(const char* id, const char* code, const char* text, bo
     return reads ? r == mloc_success && at == strlen(text) : r == mloc_errorSyntax;
 }
 
+// The code display writes "USD 12.50" (the alphaNextToNumber pattern)
+// but parses with the standard pattern, as ICU's ISO currency formatter
+// does: strict mode wants the code next to the digits.
+static void TestCodeDisplayStrictly(void)
+{
+    mlocCurrencyOptions options = {.display = mloc_currencyCode};
+    mlocCurrencyFormatter f;
+    mlocDecimal d;
+    char code[3];
+    size_t spaced = 0;
+    size_t joined = 0;
+    CHECK(Init(&s_withNames, "en", "USD", &options, &f) == mloc_success &&
+              ParseCopy(&f, "USD 12.50", 9, mloc_parseStrict, 0, &d, code, &spaced) ==
+                  mloc_errorSyntax &&
+              spaced == 3 &&
+              ParseCopy(&f, "USD12.50", 8, mloc_parseStrict, 0, &d, code, &joined) ==
+                  mloc_success &&
+              joined == 8,
+          "the standard pattern's affixes");
+}
+
 static void TestLongNamesStrictly(void)
 {
     CHECK(ReadsStrictly("en", "USD", "12.50", false), "no name");
@@ -561,6 +582,7 @@ int main(void)
     TestCases();
     TestRoundTrip();
     TestLongNamesStrictly();
+    TestCodeDisplayStrictly();
     TestWithoutNames();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
