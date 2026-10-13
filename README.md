@@ -56,8 +56,12 @@ numeric durations ("1:05:09") and coordinates ("12.5°N"), long names
 in a grammatical case ("2 Metern", German's dative) and units'
 grammatical genders, with
 the display names of the units CLDR names (the
-names are a data file of their own, `src/generated/units.mloc`).
-The library has 53 public functions.
+names are a data file of their own, `src/generated/units.mloc`); and
+numbers in words, ordinal suffixes and Roman, Hebrew and the other
+algorithmic numerals by CLDR's rule-based formats, as ICU runs them but
+on the exact decimal (CLDR's rule-based test data passes on every push;
+the rules are a data file of their own, `src/generated/spellout.mloc`).
+The library has 57 public functions.
 
 ## Building
 

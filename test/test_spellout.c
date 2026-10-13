@@ -1,0 +1,280 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// Spell-out formatting with the spell-out data file (record mloc-0034):
+// cardinals, years, ordinals and ordinal suffixes, radix 20, fraction
+// rule sets and plural blocks, the decimal comma's fraction rule, Roman
+// and Hebrew numerals, NaN and the infinities, each expected text
+// ICU4C 79's for the same input; then where the library is exact and
+// ICU is not (long fractions, values past int64_t, plural blocks past
+// 2^31), root's rules with mloc_fellBack, the rule sets listed, and the
+// refusals. CLDR's testData/rbnf runs in CI (conform_spellout).
+
+#include "test_harness.h"
+
+#include "maul-locale/spellout.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#define SHY "\xC2\xAD"
+
+static mlocDataSet s_builtin;
+static mlocDataSet s_data;
+
+static bool Locale(const char* id, mlocLocale* out)
+{
+    return mlocParseLocale(id, strlen(id), out).status == mloc_success;
+}
+
+static bool Decimal(const char* text, mlocDecimal* out)
+{
+    if (strcmp(text, "NaN") == 0 || strcmp(text, "Infinity") == 0 || strcmp(text, "-Infinity") == 0)
+    {
+        *out = (mlocDecimal){
+            .kind = text[0] == 'N' ? mloc_decimalNaN : mloc_decimalInfinity,
+            .negative = text[0] == '-' ? 1 : 0,
+        };
+        return true;
+    }
+    return mlocParseDecimal(text, strlen(text), out).status == mloc_success;
+}
+
+// Whether a number formats as expected by a locale's rule set.
+static bool Spells(const char* id, const char* ruleSet, const char* number, const char* expected)
+{
+    mlocLocale locale;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    char buffer[512];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    bool same = Locale(id, &locale) &&
+                mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet,
+                                          ruleSet != nullptr ? strlen(ruleSet) : 0) >= 0 &&
+                Decimal(number, &decimal) &&
+                mlocFormatSpellout(&formatter, &decimal, &output) == mloc_success &&
+                output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
+    if (!same)
+    {
+        printf("%s %s %s: \"%.*s\"\n", id, ruleSet != nullptr ? ruleSet : "(default)", number,
+               (int)output.length, buffer);
+    }
+    return same;
+}
+
+static void TestEnglish(void)
+{
+    CHECK(Spells("en", "%spellout-cardinal", "0", "zero") &&
+              Spells("en", "%spellout-cardinal", "21", "twenty-one") &&
+              Spells("en", "%spellout-cardinal", "101", "one hundred one") &&
+              Spells("en", "%spellout-cardinal", "1999", "one thousand nine hundred ninety-nine") &&
+              Spells("en", "%spellout-cardinal", "1000000", "one million"),
+          "cardinals, the rollback of 101 and 200");
+    CHECK(Spells("en", "%spellout-cardinal", "12345678901234567",
+                 "twelve quadrillion three hundred forty-five trillion six hundred seventy-eight "
+                 "billion nine hundred one million two hundred thirty-four thousand five hundred "
+                 "sixty-seven"),
+          "an integer of int64_t");
+    CHECK(Spells("en", "%spellout-cardinal", "-5", "minus five") &&
+              Spells("en", "%spellout-cardinal", "-0", "zero") &&
+              Spells("en", "%spellout-cardinal", "2.3", "two point three") &&
+              Spells("en", "%spellout-cardinal", "1.10", "one point one") &&
+              Spells("en", "%spellout-cardinal", "0.05", "zero point zero five"),
+          "signs, fractions digit by digit, the value not the digits shown");
+    CHECK(Spells("en", "%spellout-numbering-year", "1999", "nineteen ninety-nine") &&
+              Spells("en", "%spellout-numbering-year", "2005", "two thousand five") &&
+              Spells("en", "%spellout-ordinal", "21", "twenty-first") &&
+              Spells("en", "%spellout-ordinal", "100", "one hundredth") &&
+              Spells("en", nullptr, "21", "twenty-one"),
+          "years, ordinals and the default rule set");
+    CHECK(Spells("en", "%digits-ordinal", "21", "21st") &&
+              Spells("en", "%digits-ordinal", "112", "112th") &&
+              Spells("en", "%digits-ordinal", "1003", "1,003rd") &&
+              Spells("en", "%digits-ordinal", "-3",
+                     "\xE2\x88\x92"
+                     "3rd"),
+          "ordinal suffixes: a pattern and a plural block of ordinal rules");
+    CHECK(Spells("en", "%spellout-cardinal", "NaN", "not a number") &&
+              Spells("en", "%spellout-cardinal", "Infinity", "infinite") &&
+              Spells("en", "%spellout-cardinal", "-Infinity", "minus infinite"),
+          "NaN and the infinities");
+}
+
+static void TestOthers(void)
+{
+    CHECK(Spells("fr", "%spellout-cardinal-masculine", "71", "soixante-et-onze") &&
+              Spells("fr", "%spellout-cardinal-masculine", "80", "quatre-vingts") &&
+              Spells("fr", "%spellout-cardinal-masculine", "81", "quatre-vingt-un") &&
+              Spells("fr", "%spellout-cardinal-masculine", "91", "quatre-vingt-onze"),
+          "French: radix 20 and \"|\"");
+    CHECK(Spells("ru", "%spellout-cardinal-feminine", "1.5",
+                 "\xD0\xBE\xD0\xB4\xD0\xBD\xD0\xB0 \xD1\x86\xD0\xB5\xD0\xBB\xD0\xB0\xD1\x8F "
+                 "\xD0\xBF\xD1\x8F\xD1\x82\xD1\x8C "
+                 "\xD0\xB4\xD0\xB5\xD1\x81\xD1\x8F\xD1\x82\xD1\x8B\xD1\x85") &&
+              Spells("ru", "%spellout-cardinal-feminine", "2.3",
+                     "\xD0\xB4\xD0\xB2\xD0\xB5 \xD1\x86\xD0\xB5\xD0\xBB\xD1\x8B\xD1\x85 "
+                     "\xD1\x82\xD1\x80\xD0\xB8 "
+                     "\xD0\xB4\xD0\xB5\xD1\x81\xD1\x8F\xD1\x82\xD1\x8B\xD1\x85") &&
+              Spells("ru", "%spellout-cardinal-feminine", "0.123",
+                     "\xD1\x81\xD1\x82\xD0\xBE \xD0\xB4\xD0\xB2\xD0\xB0\xD0\xB4\xD1\x86\xD0\xB0"
+                     "\xD1\x82\xD1\x8C \xD1\x82\xD1\x80\xD0\xB8 \xD1\x82\xD1\x8B\xD1\x81\xD1\x8F"
+                     "\xD1\x87\xD0\xBD\xD1\x8B\xD1\x85"),
+          "Russian: fraction rule sets and plural blocks");
+    CHECK(Spells("es", "%spellout-numbering", "2.5", "dos coma cinco") &&
+              Spells("es-MX", "%spellout-numbering", "2.5", "dos punto cinco"),
+          "the fraction rule of the locale's decimal separator");
+    CHECK(Spells("en", "%roman-upper", "1999", "MCMXCIX") &&
+              Spells("en", "%roman-lower", "2024", "mmxxiv") &&
+              Spells("en", "%hebrew", "5784",
+                     "\xD7\x94\xD7\xB3\xD7\xAA\xD7\xA9\xD7\xA4\xD7\xB4\xD7\x93"),
+          "numbering systems' rules");
+    CHECK(Spells("ja", "%spellout-cardinal", "12345",
+                 "\xE4\xB8\x80\xE4\xB8\x87\xE4\xBA\x8C\xE5\x8D\x83\xE4\xB8\x89\xE7\x99\xBE\xE5\x9B"
+                 "\x9B\xE5\x8D\x81\xE4\xBA\x94") &&
+              Spells("de", "%spellout-numbering", "1001", "ein" SHY "tausend" SHY "eins") &&
+              Spells("de", "%spellout-numbering", "21", "ein" SHY "und" SHY "zwanzig"),
+          "Japanese and German");
+}
+
+// Where ICU's int64_t or double loses the value and the library does not.
+static void TestExact(void)
+{
+    CHECK(Spells("en", "%spellout-cardinal", "12345678901234567.5",
+                 "twelve quadrillion three hundred forty-five trillion six hundred seventy-eight "
+                 "billion nine hundred one million two hundred thirty-four thousand five hundred "
+                 "sixty-seven point five") &&
+              Spells("en", "%spellout-cardinal", "1.123456789012345678901234",
+                     "one point one two three four five six seven eight nine zero one two three "
+                     "four five six seven eight nine zero one two three four"),
+          "fractions past a double's digits");
+    CHECK(Spells("en", "%spellout-cardinal", "1e30", "1,000,000,000,000,000,000,000,000,000,000") &&
+              Spells("en", "%digits-ordinal", "1e20", "100,000,000,000,000,000,000th") &&
+              Spells("en", "%spellout-cardinal", "-9223372036854775808",
+                     "minus 9,223,372,036,854,775,808"),
+          "values past int64_t by the rules, a suffix kept");
+    CHECK(Spells("af", "%digits-ordinal", "10000000000",
+                 "10\xC2\xA0"
+                 "000\xC2\xA0"
+                 "000\xC2\xA0"
+                 "000ste"),
+          "a plural block's operand past 2^31 (ICU's wraps to int32_t)");
+}
+
+static void TestFellBack(void)
+{
+    mlocLocale locale;
+    mlocSpelloutFormatter formatter;
+    CHECK(Locale("eu", &locale) &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%spellout-cardinal", 18) ==
+                  mloc_fellBack &&
+              Spells("eu", "%spellout-cardinal", "1234", "1.234") &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%roman-upper", 12) ==
+                  mloc_success,
+          "root's rules write digits with mloc_fellBack; numbering systems are root's alone");
+}
+
+static void TestRuleSets(void)
+{
+    mlocLocale en;
+    size_t count = Locale("en", &en) ? mlocGetSpelloutRuleSetCount(&s_data, &en) : 0;
+    bool cardinal = false;
+    bool ordinal = false;
+    bool all = count > 0;
+    for (size_t i = 0; i < count; i++)
+    {
+        const char* name = nullptr;
+        size_t length = 0;
+        all = all && mlocGetSpelloutRuleSet(&s_data, &en, i, &name, &length) == mloc_success &&
+              length > 1 && name[0] == '%' && name[1] != '%';
+        cardinal |= length == 18 && memcmp(name, "%spellout-cardinal", 18) == 0;
+        ordinal |= length == 15 && memcmp(name, "%digits-ordinal", 15) == 0;
+    }
+    const char* name = nullptr;
+    size_t length = 0;
+    CHECK(all && cardinal && ordinal, "en's public rule sets, both groups");
+    CHECK(mlocGetSpelloutRuleSet(&s_data, &en, count, &name, &length) == mloc_errorNotFound &&
+              mlocGetSpelloutRuleSet(&s_data, &en, 0, nullptr, &length) == mloc_errorInvalid &&
+              mlocGetSpelloutRuleSetCount(&s_builtin, &en) == 0 &&
+              mlocGetSpelloutRuleSetCount(nullptr, &en) == 0,
+          "an index past the last, a null pointer, data without the rules");
+}
+
+static void Ignore(void* context, uint32_t part, size_t start, size_t length)
+{
+    (void)context;
+    (void)part;
+    (void)start;
+    (void)length;
+}
+
+static void TestRefusals(void)
+{
+    mlocLocale en;
+    mlocSpelloutFormatter formatter;
+    CHECK(
+        Locale("en", &en) &&
+            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%nope", 5) == mloc_errorNotFound &&
+            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%%and", 5) == mloc_errorInvalid &&
+            mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 3) == mloc_errorInvalid &&
+            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%x", 0) == mloc_errorInvalid &&
+            mlocInitSpelloutFormatter(&formatter, &s_builtin, &en, nullptr, 0) ==
+                mloc_errorNotFound &&
+            mlocInitSpelloutFormatter(nullptr, &s_data, &en, nullptr, 0) == mloc_errorInvalid,
+        "an unknown or private rule set, a bad length, data without the rules, null");
+    mlocDecimal decimal = {0};
+    char small[4];
+    mlocOutput output = {.buffer = small, .capacity = sizeof(small)};
+    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%spellout-cardinal", 18) ==
+                  mloc_success &&
+              Decimal("21", &decimal) &&
+              mlocFormatSpellout(&formatter, &decimal, &output) == mloc_errorCapacity &&
+              output.length == 10,
+          "a buffer too small gives the size needed");
+    mlocOutput empty = {0};
+    mlocOutput parts = {.buffer = small, .capacity = sizeof(small), .part = Ignore};
+    CHECK(mlocFormatSpellout(&formatter, &decimal, &empty) == mloc_errorCapacity &&
+              empty.length == 10 &&
+              mlocFormatSpellout(&formatter, &decimal, &parts) == mloc_errorInvalid,
+          "no buffer; an output asking for parts");
+    mlocSpelloutFormatter forged;
+    memset(&forged, 0, sizeof(forged));
+    mlocDecimal bad = decimal;
+    bad.digits[0] = 10;
+    CHECK(mlocFormatSpellout(&forged, &decimal, &output) == mloc_errorInvalid &&
+              mlocFormatSpellout(&formatter, &bad, &output) == mloc_errorInvalid &&
+              mlocFormatSpellout(nullptr, &decimal, &output) == mloc_errorInvalid,
+          "a formatter the library did not make, an invalid decimal");
+}
+
+static bool OpenData(void)
+{
+    static mlocData s_sources[2];
+    alignas(8) static uint8_t s_rules[4 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    s_builtin = (mlocDataSet){s_sources, 1};
+    FILE* file = fopen(MLOC_SPELLOUT_FILE, "rb");
+    size_t size = file == nullptr ? 0 : fread(s_rules, 1, sizeof(s_rules), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_data = (mlocDataSet){s_sources, 2};
+    return size > 0 && size < sizeof(s_rules) &&
+           mlocOpenData(&s_sources[1], s_rules, size) == mloc_success;
+}
+
+int main(void)
+{
+    if (!OpenData())
+    {
+        fputs("test_spellout: cannot open " MLOC_SPELLOUT_FILE "\n", stderr);
+        return 2;
+    }
+    TestEnglish();
+    TestOthers();
+    TestExact();
+    TestFellBack();
+    TestRuleSets();
+    TestRefusals();
+    return s_failures == 0 ? 0 : 1;
+}

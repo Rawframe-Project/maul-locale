@@ -59,3 +59,6 @@ unit_usage: data_view kinds number_core number_format unit_convert unit_data uni
 unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:
 spellout_data: bytes data_view number_data spellout_tables
+spellout_format: bytes decimal number_core number_precision plural spellout_data spellout_value
+spellout_value: decimal number_precision
+spellout: bytes data_view decimal kinds locale_fallback number_core plural plural_rules spellout_data spellout_format

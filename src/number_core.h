@@ -174,6 +174,9 @@ typedef struct NumberLayout
     bool skipSuffix;
     bool sharedPrefix;
     bool sharedSuffix;
+    // The decimal separator is written with no fraction digits shown, as
+    // a pattern ending in its point ("#,##0.") writes it.
+    bool point;
 } NumberLayout;
 
 // Writes a rounded decimal: the affixes for its sign, the integer digits

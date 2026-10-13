@@ -261,6 +261,30 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralCategories(const mlocPluralRules
 ```
 Gives the categories a locale's rules use, as bits 1 << category: one and other for English cardinals, all six for Arabic's.  @param rules          Rules from mlocInitPluralRules. @param categoriesOut  Receives the bits. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
 
+## `spellout.h`
+
+Numbers in words, ordinal suffixes and the algorithmic numbering systems (UTS #35 Part 3, record mloc-0034): CLDR's rule-based number formats, as ICU4C reads and runs them, on the exact decimal. The rules are in a data file of their own, spellout.mloc, which a program adds to its data set.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const char* ruleSet, size_t length);
+```
+Makes a locale's formatter of a rule set: words ("%spellout-cardinal", "%spellout-ordinal-feminine", "%spellout-numbering-year"), ordinal suffixes ("%digits-ordinal") or a numbering system's rules ("%roman-upper"). The rules are the first the locale's chain has of each group (spell-out, ordinal suffixes, numbering systems), a group taken whole as ICU takes it.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the number units, the plural rules and the spell-out rules (spellout.mloc). @param locale        The locale, canonicalized. @param ruleSet       A public rule set's name, with its "%" as CLDR writes it, or null for the locale's default (ICU's: "%spellout-numbering"). @param length        The name's length in bytes, 0 with null. @return mloc_success; mloc_fellBack when the locale has no rules of its own and root's, which write digits, stand instead, or when the numbering system asked for has no digits and the default writes the digits of patterns; mloc_errorNotFound for a rule set the locale's rules do not have, or data without the spell-out rules or the number units; mloc_errorInvalid for a null pointer, a length with a null name, or a private rule set's name ("%%..."). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+```
+Formats a decimal by the formatter's rules: its value, not the digits it shows ("1.10" is written as 1.1, "-0" as 0), exactly (ICU4C's results wherever its int64_t or double holds the value; long fractions and values past int64_t are written exactly where ICU loses digits). Nothing is rounded: round the decimal first (mlocRoundDecimal).  @param formatter  A formatter from mlocInitSpelloutFormatter. @param decimal    The value. @param output     Receives the text; on mloc_errorCapacity its length is the size needed. The text has no parts. @return mloc_success; mloc_errorCapacity for a buffer too small, or rules that nest past 64 levels for a value (a value far past the rules' largest base) or would divide it to more digits than a decimal holds; mloc_errorInvalid for a null pointer, an invalid decimal, an output asking for parts, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* locale);
+```
+The number of public rule sets a locale's spell-out and ordinal suffix rules have, the names mlocGetSpelloutRuleSet lists.  @param data    The data with the spell-out rules. @param locale  The locale, canonicalized. @return The count; 0 for a null pointer or data without the rules. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetSpelloutRuleSet(const mlocDataSet* data, const mlocLocale* locale, size_t index, const char** nameOut, size_t* lengthOut);
+```
+A public rule set's name, with its "%": the spell-out rules' in their order, then the ordinal suffix rules'.  @param data       The data with the spell-out rules. @param locale     The locale, canonicalized. @param index      The rule set's index, below mlocGetSpelloutRuleSetCount. @param nameOut    Receives the name, in the data, not NUL-terminated. @param lengthOut  Receives its length in bytes. @return mloc_success; mloc_errorNotFound for an index past the last or data without the rules; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
 ## `unit.h`
 
 Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to mloc-0031): CLDR's unit identifiers ("kilometer-per-hour", "square-foot", "foot-and-inch") and exact conversion between them by CLDR's units.xml, the units a locale prefers for a usage, and amounts of a unit formatted with its name in a locale. The names are in a data file of their own, units.mloc, which a program adds to its data set.
@@ -302,4 +326,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-53 functions across 8 headers.
+57 functions across 9 headers.

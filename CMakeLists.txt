@@ -96,7 +96,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/parse_currency.c
     src/parse_match.c
     src/plural.c
+    src/spellout.c
     src/spellout_data.c
+    src/spellout_format.c
+    src/spellout_value.c
     src/unit.c
     src/unit_convert.c
     src/unit_data.c
@@ -188,12 +191,25 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_unit_names PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
     endif()
+    # So are the spell-out rules (record mloc-0034).
+    maul_add_test(spellout MANUAL)
+    set(MLOC_SPELLOUT_FILE ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+    if(EMSCRIPTEN)
+        target_link_options(test_spellout PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE}@/spellout.mloc")
+        set(MLOC_SPELLOUT_FILE /spellout.mloc)
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_spellout PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_spellout PRIVATE MLOC_SPELLOUT_FILE="${MLOC_SPELLOUT_FILE}")
+    add_test(NAME spellout COMMAND test_spellout)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
-    foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs)
+    foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs
+                 spellout)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})

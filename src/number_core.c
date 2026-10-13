@@ -789,7 +789,7 @@ static inline uint8_t DigitIndexed(const mlocDecimal* d, int64_t index)
 // copied a slot at a time (numberDigitSize bytes, the slot's length
 // kept) into chunks, the next group separator's power known ahead.
 static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecimal* d,
-                           int64_t integers, bool grouped)
+                           int64_t integers, bool grouped, bool point)
 {
     char chunk[chunkSize];
     size_t n = 0;
@@ -818,7 +818,7 @@ static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecim
             separator = separator == c->primary ? -1 : separator - c->secondary;
         }
     }
-    if (d->fractionDigits > 0)
+    if (d->fractionDigits > 0 || point)
     {
         if (n > chunkSize - chunkReserve)
         {
@@ -856,7 +856,7 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
         layout->grouping != mloc_groupingOff && c->primary > 0 && integers >= c->primary + least;
     if (w->parts == nullptr)
     {
-        PutDigitsPlain(w, c, d, integers, grouped);
+        PutDigitsPlain(w, c, d, integers, grouped, layout->point);
         return;
     }
     for (int64_t power = integers - 1; power >= 0; power--)
@@ -867,7 +867,7 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
             PutSymbol(w, c, numberGroup, mloc_numberPartGroup);
         }
     }
-    if (d->fractionDigits > 0)
+    if (d->fractionDigits > 0 || layout->point)
     {
         PutSymbol(w, c, numberDecimal, mloc_numberPartDecimal);
         for (int64_t power = -1; power >= -(int64_t)d->fractionDigits; power--)

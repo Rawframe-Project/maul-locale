@@ -8,12 +8,18 @@
 // plural blocks, apostrophes, patterns, ">>>"); the rules ICU refuses,
 // and the one the library refuses that ICU takes (a fraction rule set
 // read before a rule names it); and the unit the generator writes
-// opening, every corruption of it refused.
+// opening, every corruption of it refused; and the engine's limits on
+// rules that nest without end.
 
+#include "data_format.h"
+#include "datafile.h"
+#include "kinds.h"
 #include "spellout_compile.h"
 #include "spellout_data.h"
 #include "spellout_gen.h"
 #include "test_harness.h"
+
+#include "maul-locale/spellout.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -357,7 +363,8 @@ static void TestUnit(void)
     CHECK(!TwoChanged(unit, size, plurals + 4, r.textSize, plurals + 6, 0),
           "an empty form at the end of the text");
     CHECK(Refused(unit, size, pieces, spelloutPieceTypeCount) && Refused(unit, size, sub + 1, 7) &&
-              Refused(unit, size, sub + 2, 9) && Refused(unit, size, sub + 1, 0x80),
+              !Refused(unit, size, sub + 2, 2) && Refused(unit, size, sub + 2, 9) &&
+              Refused(unit, size, sub + 1, 0x80),
           "a piece's type and a substitution's kind and target");
     CHECK(Refused(unit, size, plurals + 22, 0xFF) && Refused(unit, size, plurals + 23, 0xFF) &&
               Refused(unit, size, patterns, 0) && Refused(unit, size, patterns + 1, 21),
@@ -422,11 +429,100 @@ static void TestSystems(void)
           "a name, its range, the group and the ids' order");
 }
 
+// A data file with one group, root's spell-out rules.
+static uint8_t* RootFile(const uint8_t* unit, size_t unitSize, size_t* sizeOut)
+{
+    DataFile file = {0};
+    DataFileAdd(&file, kindSpelloutRules, "root", unit, unitSize);
+    mlocDataVersion own;
+    mlocGetDataVersion(&own);
+    DataFileVersion version = {
+        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
+        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
+        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .tables = own.tables,
+    };
+    memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
+    uint8_t* bytes = DataFileWrite(&file, &version, sizeOut);
+    DataFileFree(&file);
+    return bytes;
+}
+
+// Formats a number by root's %a of rules, a byte of their unit changed
+// first (none for at 0).
+static mlocResult FormatRoot(const char* rules, size_t at, uint8_t value, const char* number)
+{
+    RbnfGroup group;
+    char error[256];
+    if (!RbnfCompile(rules, strlen(rules), &group, error, sizeof(error)))
+    {
+        return (mlocResult)-100;
+    }
+    size_t unitSize = 0;
+    uint8_t* unit = SpelloutPayload(&group, &unitSize);
+    RbnfFree(&group);
+    if (at != 0)
+    {
+        unit[at] = value;
+    }
+    size_t size = 0;
+    uint8_t* bytes = RootFile(unit, unitSize, &size);
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet set = {sources, 2};
+    mlocLocale locale;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    char text[512];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocResult r = mlocOpenData(&sources[1], bytes, size);
+    r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
+    r = r == mloc_success ? mlocInitSpelloutFormatter(&formatter, &set, &locale, "%a", 2) : r;
+    r = r >= 0 && mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success
+            ? mlocFormatSpellout(&formatter, &decimal, &output)
+            : (mlocResult)-101;
+    free(bytes);
+    free(unit);
+    return r;
+}
+
+static void TestEngineLimits(void)
+{
+    // "<<" by ten: 10^63 nests 64 rule sets deep, 10^64 one past ICU's
+    // limit.
+    static const char s_tens[] = "%a:\n0: x;\n10: << y;\n";
+    CHECK(FormatRoot(s_tens, 0, 0, "1e63") == mloc_success &&
+              FormatRoot(s_tens, 0, 0, "1e64") == mloc_errorCapacity,
+          "rule sets nested past 64 levels");
+    // A ">>>" remainder made to take its own rule: 15 keeps 5 forever.
+    static const char s_triple[] = "%a:\n0: x;\n10: a >>> b;\n";
+    RbnfGroup group;
+    char error[256];
+    size_t piece = 0;
+    if (RbnfCompile(s_triple, strlen(s_triple), &group, error, sizeof(error)))
+    {
+        size_t size = 0;
+        uint8_t* unit = SpelloutPayload(&group, &size);
+        SpelloutRules r = mlocReadSpelloutRules((DataSpan){unit, (uint32_t)size});
+        piece = (size_t)(r.pieces - unit);
+        while (unit[piece] != spelloutSubstitution)
+        {
+            piece += spelloutPieceSize;
+        }
+        free(unit);
+        RbnfFree(&group);
+    }
+    CHECK(FormatRoot(s_triple, 0, 0, "15") == mloc_success &&
+              FormatRoot(s_triple, piece + 4, 1, "15") == mloc_errorCapacity,
+          "rules a remainder calls directly without end");
+}
+
 int main(void)
 {
     TestCompile();
     TestRefused();
     TestUnit();
     TestSystems();
+    TestEngineLimits();
     return s_failures == 0 ? 0 : 1;
 }

@@ -54,6 +54,16 @@ digits, an ordinal suffix dropped.
   are listed departures. The rules apply to every value; recursion past
   64 levels is an error. The value is spelled out, not the digits
   shown; nothing is rounded.
+- **The departures from ICU4C 79,** every difference of an oracle run
+  over every public rule set of 119 locales and 2,081 values (3.4
+  million results, all others equal): a plural block's operand is the
+  exact quotient, where ICU casts it to `int32_t` (af's "10 000 000
+  000ste", ICU "…de"); a locale without rules of its own takes root's,
+  where ICU takes the process's default locale (eu); `zh_Hant_HK` takes
+  `zh_Hant`'s as CLDR's chain gives them, where ICU's data takes
+  `yue`'s; a negative infinity through a pattern is written ("−ke-∞"),
+  where ICU crashes; and values past `int64_t` or with digits past a
+  `double`'s, as above.
 - **Rule sets** by name (public ones only, ICU's default for none),
   numbering systems by CLDR id, capitalization contexts as ICU applies
   them; a locale whose rules are root's alone is formatted by them and
