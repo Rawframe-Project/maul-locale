@@ -378,24 +378,8 @@ static void SubInt(Engine* e, const Rule* rule, const uint8_t* piece, int64_t n)
         t = n < 0 ? -n : n;
         break;
     case spelloutNumerator:
-    {
-        // The product, exact past int64_t (ICU's wraps).
-        uint64_t magnitude = n < 0 ? 0 - (uint64_t)n : (uint64_t)n;
-        if (rule->base != 0 && magnitude > (uint64_t)INT64_MAX / rule->base)
-        {
-            mlocDecimal x = mlocSpelloutFromInt64(n);
-            mlocDecimal product;
-            if (!mlocSpelloutMultiply(&x, rule->base, &product))
-            {
-                Fail(e, mloc_errorCapacity);
-                return;
-            }
-            PassOn(e, target, &product);
-            return;
-        }
-        t = n * (int64_t)rule->base;
-        break;
-    }
+        // NumeratorSubstitution writes nothing for an integer.
+        return;
     default:
         break;
     }

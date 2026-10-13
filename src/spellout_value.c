@@ -175,8 +175,9 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
         }
         return Build(out, digits, count, x->exponent, false);
     }
-    // 1 - f: 10^places - D, each place's nines complement plus one, which
-    // fails past the places a decimal holds.
+    // 1 - f: 10^places - D, each place's nines complement and the last's
+    // tens complement (a decimal's last digit is not 0, so nothing
+    // carries), which fails past the places a decimal holds.
     int64_t places = -(int64_t)x->exponent;
     if (places > mlocDecimalDigits)
     {
@@ -187,15 +188,7 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
     {
         digits[i] = (uint8_t)(9 - mlocDigitAt(x, -1 - i));
     }
-    for (int64_t i = places - 1; i >= 0; i--)
-    {
-        if (digits[i] < 9)
-        {
-            digits[i]++;
-            break;
-        }
-        digits[i] = 0;
-    }
+    digits[places - 1]++;
     return Build(out, digits, (int)places, -places, false);
 }
 

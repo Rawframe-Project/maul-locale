@@ -448,9 +448,10 @@ static uint8_t* RootFile(const uint8_t* unit, size_t unitSize, size_t* sizeOut)
     return bytes;
 }
 
-// Formats a number by root's %a of rules, a byte of their unit changed
-// first (none for at 0).
-static mlocResult FormatRoot(const char* rules, size_t at, uint8_t value, const char* number)
+// Formats a number by a rule set of root's rules, a byte of their unit
+// changed first (none for at 0), into text (NUL-terminated on success).
+static mlocResult FormatText(const char* rules, const char* name, size_t at, uint8_t value,
+                             const char* number, char* text, size_t capacity)
 {
     RbnfGroup group;
     char error[256];
@@ -473,17 +474,27 @@ static mlocResult FormatRoot(const char* rules, size_t at, uint8_t value, const 
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
-    char text[512];
-    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput output = {.buffer = text, .capacity = capacity - 1};
     mlocResult r = mlocOpenData(&sources[1], bytes, size);
     r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
-    r = r == mloc_success ? mlocInitSpelloutFormatter(&formatter, &set, &locale, "%a", 2) : r;
+    r = r == mloc_success ? mlocInitSpelloutFormatter(&formatter, &set, &locale, name, strlen(name))
+                          : r;
     r = r >= 0 && mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success
             ? mlocFormatSpellout(&formatter, &decimal, &output)
             : (mlocResult)-101;
     free(bytes);
     free(unit);
+    if (r >= 0)
+    {
+        text[output.length] = '\0';
+    }
     return r;
+}
+
+static mlocResult FormatRoot(const char* rules, size_t at, uint8_t value, const char* number)
+{
+    char text[512];
+    return FormatText(rules, "%a", at, value, number, text, sizeof(text));
 }
 
 static void TestEngineLimits(void)
@@ -517,6 +528,77 @@ static void TestEngineLimits(void)
           "rules a remainder calls directly without end");
 }
 
+// Rules CLDR's data barely reaches, ICU4C 79's results: a divisor not a
+// power of ten taking a fraction (%duration's 60), a negative value
+// without a "-x" rule, whose fraction is x - floor(x) for a fraction rule
+// set and its own digits digit by digit, and a fraction rule set's
+// choice of base.
+static const char s_minutes[] = "%a:\n-x: minus >>;\nx.x: << point >>;\n"
+                                "0: zero; one; two; three; four; five; six; seven; eight; nine;\n"
+                                "10: ten[ >>];\n60/60: <%%m< min[ >>];\n%%m:\n0: =#,##0=;\n";
+static const char s_digits[] = "%a:\nx.x: << point >>;\n"
+                               "0: zero; one; two; three; four; five; six; seven; eight; nine;\n"
+                               "10: ten[ >>];\n";
+static const char s_parts[] = "%b:\nx.x: << point >%a>;\n0: =#,##0=;\n%a:\n10: <%b< tenths;\n"
+                              "100: <%b< hundredths;\n1000: <%b< thousandths;\n";
+
+static const struct
+{
+    const char* rules;
+    const char* name;
+    const char* number;
+    const char* expected;
+} s_results[] = {
+    {s_minutes, "%a", "61.5", "1 min one point five"},
+    {s_minutes, "%a", "3661.25", "61 min one point two five"},
+    {s_minutes, "%a", "-61.5", "minus 1 min one point five"},
+    {s_minutes, "%a", "120.75", "2 min point seven five"},
+    {s_digits, "%a", "-1.25", "two point two five"},
+    {s_digits, "%a", "-0.001", "one point zero zero one"},
+    {s_digits, "%a", "-12.375", "ten three point three seven five"},
+    {s_parts, "%b", "-1.25", "-2 point 75 hundredths"},
+    {s_parts, "%b", "-0.001", "-1 point 999 thousandths"},
+    {s_parts, "%b", "-12.375", "-13 point 625 thousandths"},
+    {s_parts, "%b", "-0.0625", "-1 point 938 thousandths"},
+    {s_parts, "%a", "0.5", "5 tenths"},
+    {s_parts, "%a", "0.0625", "63 thousandths"},
+    {s_parts, "%a", "0.9999", "10 tenths"},
+    {s_parts, "%a", "0.0005", "1 thousandths"},
+    {s_parts, "%a", "0.00049", "0 tenths"},
+    {s_parts, "%a", "2", " tenths"},
+    {s_parts, "%a", "100.5", "1,005 tenths"},
+};
+
+static void TestEngineResults(void)
+{
+    for (size_t i = 0; i < sizeof(s_results) / sizeof(s_results[0]); i++)
+    {
+        char text[256];
+        mlocResult r = FormatText(s_results[i].rules, s_results[i].name, 0, 0, s_results[i].number,
+                                  text, sizeof(text));
+        if (r != mloc_success || strcmp(text, s_results[i].expected) != 0)
+        {
+            printf("%s %s: got %d \"%s\", expected \"%s\"\n", s_results[i].name,
+                   s_results[i].number, (int)r, r == mloc_success ? text : "",
+                   s_results[i].expected);
+            s_failures++;
+        }
+    }
+}
+
+// A negative value's fraction, 1 - f, holds at most a decimal's 40
+// places; a value too large to scale by a fraction rule set's bases
+// cannot be its numerator.
+static void TestFractionLimits(void)
+{
+    char text[256];
+    CHECK(FormatText(s_parts, "%b", 0, 0, "-1e-40", text, sizeof(text)) == mloc_success &&
+              FormatText(s_parts, "%b", 0, 0, "-1e-41", text, sizeof(text)) == mloc_errorCapacity,
+          "a negative fraction to 40 places");
+    CHECK(FormatText(s_parts, "%a", 0, 0, "1e999999", text, sizeof(text)) == mloc_errorCapacity,
+          "a numerator past a decimal's exponent");
+}
+
 int main(void)
 {
     TestCompile();
@@ -524,5 +606,7 @@ int main(void)
     TestUnit();
     TestSystems();
     TestEngineLimits();
+    TestEngineResults();
+    TestFractionLimits();
     return s_failures == 0 ? 0 : 1;
 }
