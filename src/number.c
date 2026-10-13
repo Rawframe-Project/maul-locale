@@ -50,8 +50,8 @@ mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mloc
         return result;
     }
     mlocSetFormatOptions(&f, o, formatterStamp);
-    memset(formatterOut, 0, sizeof(*formatterOut));
     memcpy(formatterOut, &f, sizeof(f));
+    memset((uint8_t*)formatterOut + sizeof(f), 0, sizeof(*formatterOut) - sizeof(f));
     return result;
 }
 

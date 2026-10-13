@@ -83,16 +83,16 @@ mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t slot, size_t* used, const
 mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t length, char* out,
                               size_t capacity, size_t* lengthOut)
 {
-    mlocResult r = mlocNormalizeUnitName(data, unit, length, out, capacity, lengthOut);
+    // A unit the names data names is its own normal identifier (or one
+    // normalizing does not find): test_unit_names checks each.
     uint8_t kind = 0;
-    if (r == mloc_errorNotFound && length <= capacity &&
-        mlocUnitNameKind(data, unit, length, &kind) && kind == unitIdUnit)
+    if (length <= capacity && mlocUnitNameKind(data, unit, length, &kind) && kind == unitIdUnit)
     {
         memcpy(out, unit, length);
         *lengthOut = length;
         return mloc_success;
     }
-    return r;
+    return mlocNormalizeUnitName(data, unit, length, out, capacity, lengthOut);
 }
 
 mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,

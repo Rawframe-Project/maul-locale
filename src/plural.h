@@ -19,6 +19,10 @@ bool mlocValidPluralRanges(const DataView* view, DataSpan payload);
 mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
                               mlocPluralType type, uint8_t* ruleOut);
 
+// The index of the rule set of rules mlocInitPluralRules made, as
+// mlocFindPluralRule gives it.
+uint8_t mlocPluralRuleOf(const mlocPluralRules* rules);
+
 // The category a rule set gives operands; the index from
 // mlocFindPluralRule.
 mlocPluralCategory mlocSelectPluralRule(uint8_t rule, const mlocPluralOperands* operands);

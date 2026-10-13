@@ -425,6 +425,38 @@ static void TestNormalize(void)
           "an identifier that fills the room, one past it");
 }
 
+// Each unit the names data names normalizes to itself, or normalizing
+// does not find it: mlocNormalUnitName takes a named unit as it is.
+static void TestNamedAreNormal(void)
+{
+    DataSpan ids;
+    CHECK(mlocFindDataSetUnit(&s_data, kindUnitIds, nullptr, 0, &ids), "the identifiers");
+    uint32_t count = mlocLoad16(ids.bytes);
+    const uint8_t* offsets = ids.bytes + unitIdsHeaderSize;
+    const uint8_t* kinds = offsets + 4 * ((size_t)count + 1);
+    const uint8_t* text = kinds + count;
+    uint32_t units = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        uint32_t start = mlocLoad32(offsets + (size_t)i * 4);
+        size_t length = mlocLoad32(offsets + (size_t)i * 4 + 4) - start;
+        char out[unitMaxIdLength];
+        size_t outLength = 0;
+        mlocResult r = kinds[i] != unitIdUnit
+                           ? mloc_success
+                           : mlocNormalizeUnitName(&s_data, (const char*)text + start, length, out,
+                                                   sizeof(out), &outLength);
+        units += kinds[i] == unitIdUnit;
+        if (kinds[i] == unitIdUnit && r != mloc_errorNotFound &&
+            (r != mloc_success || outLength != length || memcmp(out, text + start, length) != 0))
+        {
+            fprintf(stderr, "%.*s\n", (int)length, (const char*)text + start);
+            CHECK(false, "a named unit normalizes to another");
+        }
+    }
+    CHECK(units > 200, "the named units");
+}
+
 typedef struct Parts
 {
     uint32_t kinds[8];
@@ -511,6 +543,7 @@ int main(void)
     TestGather();
     TestDerivationLookup();
     TestNormalize();
+    TestNamedAreNormal();
     TestPatterns();
     TestCaseRows();
     return s_failures == 0 ? 0 : 1;

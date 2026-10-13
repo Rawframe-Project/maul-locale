@@ -127,6 +127,13 @@ mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* dat
     return fellBack ? mloc_fellBack : mloc_success;
 }
 
+uint8_t mlocPluralRuleOf(const mlocPluralRules* rules)
+{
+    Rules r;
+    memcpy(&r, rules, sizeof(r));
+    return r.rule;
+}
+
 mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
                               mlocPluralType type, uint8_t* ruleOut)
 {
@@ -134,9 +141,7 @@ mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
     mlocResult result = mlocInitPluralRules(&opaque, data, locale, type);
     if (result >= 0)
     {
-        Rules rules;
-        memcpy(&rules, &opaque, sizeof(rules));
-        *ruleOut = rules.rule;
+        *ruleOut = mlocPluralRuleOf(&opaque);
     }
     return result;
 }

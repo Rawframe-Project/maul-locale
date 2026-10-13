@@ -324,7 +324,8 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     }
     uint32_t system = ChooseSystem(locale, header, u.systems, &fellBack);
     const uint8_t* entry = system < count ? FindEntry(u.locale, u.systems, system) : nullptr;
-    NumberCore core;
+    // Written in place: callers drop the core when making it fails.
+    NumberCore* core = coreOut;
     int field = style == mloc_numberDecimal ? entryDecimal : entryPercent;
     uint32_t pattern = entry == nullptr ? 0 : mlocLoad16(entry + field);
     uint32_t parsePattern = pattern;
@@ -334,17 +335,17 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     if (entry == nullptr ||
         (currency != nullptr && !CurrencyPatternOf(&view, &u, entry, currency, &pattern,
                                                    &parsePattern, &compactIndex, texts)) ||
-        !Fill(&core, &u, system, entry, header[localeMinGrouping], pattern))
+        !Fill(core, &u, system, entry, header[localeMinGrouping], pattern))
     {
         return mloc_errorNotFound;
     }
-    UseParsePattern(&core, u.patterns, parsePattern, pattern);
+    UseParsePattern(core, u.patterns, parsePattern, pattern);
     if (currency != nullptr)
     {
-        core.decimalText = core.symbolText + core.symbolStart[numberCurrencyDecimal];
-        core.groupText = core.symbolText + core.symbolStart[numberCurrencyGroup];
-        core.symbolLength[numberDecimal] = core.symbolLength[numberCurrencyDecimal];
-        core.symbolLength[numberGroup] = core.symbolLength[numberCurrencyGroup];
+        core->decimalText = core->symbolText + core->symbolStart[numberCurrencyDecimal];
+        core->groupText = core->symbolText + core->symbolStart[numberCurrencyGroup];
+        core->symbolLength[numberDecimal] = core->symbolLength[numberCurrencyDecimal];
+        core->symbolLength[numberGroup] = core->symbolLength[numberCurrencyGroup];
     }
     if (compact != nullptr)
     {
@@ -365,9 +366,8 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
         *patternsOut = patterns.bytes;
     }
     DataSpan sets;
-    core.parseSets =
+    core->parseSets =
         mlocFindDataUnit(&view, kindParseSets, dataNoLocale, &sets) ? sets.bytes : nullptr;
-    *coreOut = core;
     return fellBack ? mloc_fellBack : mloc_success;
 }
 

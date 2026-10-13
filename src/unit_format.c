@@ -156,11 +156,11 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     {
         return result;
     }
-    if (mlocFindPluralRule(data, locale, mloc_pluralCardinal, &f->pluralRule) < 0 ||
-        mlocInitPluralRules(&u.rules, data, locale, mloc_pluralCardinal) < 0)
+    if (mlocInitPluralRules(&u.rules, data, locale, mloc_pluralCardinal) < 0)
     {
         return mloc_errorNotFound;
     }
+    f->pluralRule = mlocPluralRuleOf(&u.rules);
     mlocSetFormatOptions(f, &o->number, unitStamp);
     f->style = (uint8_t)style;
     f->unscaled = 1;
