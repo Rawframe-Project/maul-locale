@@ -448,7 +448,20 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
     }
     else if (length > 0 && length <= w->capacity && w->length <= w->capacity - length)
     {
-        memcpy(w->buffer + w->length, bytes, length);
+        // A sign or a separator, a few bytes, costs less copied by hand
+        // than a call.
+        if (length <= 4)
+        {
+            const uint8_t* from = bytes;
+            for (size_t i = 0; i < length; i++)
+            {
+                w->buffer[w->length + i] = (char)from[i];
+            }
+        }
+        else
+        {
+            memcpy(w->buffer + w->length, bytes, length);
+        }
     }
     w->length += length;
 }

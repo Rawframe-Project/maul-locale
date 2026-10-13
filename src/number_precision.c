@@ -129,14 +129,18 @@ static mlocResult Precise(const mlocPrecision* p, mlocDecimal* d, int64_t* magni
 
 mlocResult mlocApplyPrecision(const mlocPrecision* p, mlocDecimal* decimal)
 {
-    // The fraction and significant kinds round in place: a rounding that
+    // No precision, and the fraction and significant kinds, work in
+    // place: a rounding that
     // fails leaves the decimal as it was (mlocRoundDecimal writes only on
     // success), and the digits shown are set only after one succeeds.
     mlocResult r = mloc_success;
     int64_t magnitude = 0;
-    if (p->kind == mloc_precisionFraction || p->kind == mloc_precisionSignificant)
+    if (p->kind == mloc_precisionNone || p->kind == mloc_precisionFraction ||
+        p->kind == mloc_precisionSignificant)
     {
-        r = p->kind == mloc_precisionFraction ? Fixed(p, decimal) : Precise(p, decimal, &magnitude);
+        r = p->kind == mloc_precisionFraction      ? Fixed(p, decimal)
+            : p->kind == mloc_precisionSignificant ? Precise(p, decimal, &magnitude)
+                                                   : mloc_success;
         if (r == mloc_success && p->trailingZeros == mloc_trailingZerosStripIfInteger &&
             Needed(decimal) == 0)
         {
