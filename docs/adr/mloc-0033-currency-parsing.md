@@ -74,10 +74,12 @@ cache and allocates nothing.
   currency: 472,010 lines, 468,298 equal to ICU4C 79's; every other
   line is a departure above (2,362 the code-led names, the rest nn,
   hi_Latn, en_IN, es_MX, es_US and en_AU), as are the differing lines
-  of three random corpora of 25,200 lines each. The tests hold 88 of
-  those cases, the round trip of four displays in 20 locales for six
-  currencies in both modes with and without any currency, the absence
-  of the names file, and the refusals.
+  of three random corpora of 25,200 lines each. The tests hold 121
+  cases ICU4C gives alike but the one departure marked (Adlam names,
+  Turkish capitals, the equivalent signs among them), the round trip
+  of four displays and the ISO append in 23 locales for six currencies
+  in both modes with and without any currency, the absence of the
+  names file, and the refusals.
 
 ## Consequences
 
