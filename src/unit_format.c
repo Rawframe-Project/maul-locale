@@ -114,8 +114,13 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     char id[unitMaxIdLength];
     size_t idLength = 0;
     size_t used = 0;
-    static UnitFormat s_zero;
-    UnitFormat u = s_zero;
+    // All but the pool begins as zero; the pool's bytes the patterns
+    // take are copied out, its rest written as zero there.
+    UnitFormat u;
+    size_t pool = offsetof(UnitFormat, pool);
+    size_t rest = offsetof(UnitFormat, patterns);
+    memset(&u, 0, pool);
+    memset((uint8_t*)&u + rest, 0, sizeof(u) - rest);
     u.grammaticalCase = (uint8_t)o->grammaticalCase;
     if (u.grammaticalCase != mloc_caseNominative && !mlocDataSetHasKind(data, kindUnitCases))
     {
@@ -165,8 +170,11 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     f->style = (uint8_t)style;
     f->unscaled = 1;
     u.percent = style != mloc_numberDecimal;
-    memset(formatterOut, 0, sizeof(*formatterOut));
-    memcpy(formatterOut, &u, sizeof(u));
+    uint8_t* out = (uint8_t*)formatterOut;
+    memcpy(out, &u, pool + used);
+    memset(out + pool + used, 0, rest - pool - used);
+    memcpy(out + rest, (const uint8_t*)&u + rest, sizeof(u) - rest);
+    memset(out + sizeof(u), 0, sizeof(*formatterOut) - sizeof(u));
     return result;
 }
 

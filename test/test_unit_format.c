@@ -1001,6 +1001,37 @@ static void TestMixedContext(void)
           "Spanish's y read against the smallest part's pattern for its category");
 }
 
+// A formatter is the same value whatever its bytes held before: the room
+// the patterns leave in the pool is written as zero. A refusal leaves
+// the bytes as they were.
+static void TestWholeValue(void)
+{
+    static const mlocUnitOptions s_options[] = {
+        {.width = mloc_unitWidthLong},
+        {.width = mloc_unitWidthShort},
+        {.usage = "road", .usageLength = 4},
+        {.coordinate = mloc_coordinateLatitude},
+    };
+    static const char* const s_units[] = {"meter", "foot-and-inch", "meter", "degree"};
+    static mlocUnitFormatter s_zeros;
+    static mlocUnitFormatter s_ones;
+    static mlocUnitFormatter s_before;
+    bool same = true;
+    for (size_t i = 0; i < sizeof(s_units) / sizeof(s_units[0]); i++)
+    {
+        memset(&s_zeros, 0, sizeof(s_zeros));
+        memset(&s_ones, 0xFF, sizeof(s_ones));
+        same = same && Init(&s_zeros, "en", s_units[i], &s_options[i]) == mloc_success &&
+               Init(&s_ones, "en", s_units[i], &s_options[i]) == mloc_success &&
+               memcmp(&s_zeros, &s_ones, sizeof(s_zeros)) == 0;
+    }
+    CHECK(same, "a formatter whatever its bytes held");
+    memcpy(&s_before, &s_ones, sizeof(s_before));
+    CHECK(Init(&s_ones, "en", "meter-per-meter-per", nullptr) < 0 &&
+              memcmp(&s_before, &s_ones, sizeof(s_before)) == 0,
+          "a refusal leaves the bytes");
+}
+
 static void TestPool(void)
 {
     mlocData sources[2];
@@ -1079,6 +1110,7 @@ int main(void)
     TestParts();
     TestNames();
     TestRefusals();
+    TestWholeValue();
     TestPool();
     TestMixedContext();
     return s_failures == 0 ? 0 : 1;
