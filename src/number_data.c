@@ -498,11 +498,19 @@ static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFi
     {
         return false;
     }
+    // The size in 64 bits, so that the two u32 sizes cannot wrap on a
+    // 32-bit target, and checked before any part's address is taken.
+    uint64_t strings = mlocLoad16(payload.bytes);
+    uint64_t entries = mlocLoad16(payload.bytes + 2);
+    uint64_t size = sparseHeaderSize + 2 * (strings + 1) + 2 * entries + 2 * (entries + 1) +
+                    mlocLoad32(payload.bytes + 4) + mlocLoad32(payload.bytes + 8) +
+                    (flags ? strings : 0);
+    if (payload.size != size)
+    {
+        return false;
+    }
     SparseTable t = mlocReadSparseTable(payload);
-    size_t size = sparseHeaderSize + 2 * ((size_t)t.stringCount + 1) + 2 * (size_t)t.entryCount +
-                  2 * ((size_t)t.entryCount + 1) + t.rowSize + t.textSize +
-                  (flags ? t.stringCount : 0);
-    if (payload.size != size || mlocLoad16(t.offsets) != 0 ||
+    if (mlocLoad16(t.offsets) != 0 ||
         mlocLoad16(t.offsets + 2 * (size_t)t.stringCount) != t.textSize ||
         mlocLoad16(t.rowOffsets) != 0 ||
         mlocLoad16(t.rowOffsets + 2 * (size_t)t.entryCount) != t.rowSize)

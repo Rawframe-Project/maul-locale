@@ -300,6 +300,11 @@ static void TestSymbols(void)
     uint8_t u[testSize];
     Build(u);
     CHECK(ValidTest(u), "the test unit");
+    // Text and row sizes each 2^31 larger: the same sum modulo 2^32.
+    u[7] = (uint8_t)(u[7] + 0x80);
+    u[11] = (uint8_t)(u[11] + 0x80);
+    CHECK(!ValidTest(u), "sizes that wrap 32 bits");
+    Build(u);
     SparseTable t = mlocReadSparseTable((DataSpan){u, testSize});
     const uint8_t* usd = mlocFindSparseRow(&t, Code("USD"));
     const uint8_t* eur = mlocFindSparseRow(&t, Code("EUR"));

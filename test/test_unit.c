@@ -75,7 +75,9 @@ static void TestIdentifiers(void)
     CHECK(Converts("1", "kilometer", "meter", "1000") &&
               Converts("1", "kibibyte", "byte", "1024") &&
               Converts("1", "microsecond", "nanosecond", "1000") &&
-              Converts("1", "gigagram", "microgram", "1000000000000000"),
+              Converts("1", "gigagram", "microgram", "1000000000000000") &&
+              Converts("1", "zettameter", "exameter", "1000") &&
+              Converts("1000", "attometer", "femtometer", "1"),
           "SI and binary prefixes");
     CHECK(Converts("1", "kilogram", "gram", "1000"), "a unit the table names before a prefix");
     CHECK(Converts("1", "square-foot", "square-meter", "0.09290304") &&
@@ -93,12 +95,13 @@ static void TestIdentifiers(void)
               Converts("1", "part-per-1e6", "part-per-1e9", "1000") &&
               Converts("1", "per-12-meter", "per-meter",
                        "0.083333333333333333333333333333333333333") &&
-              Converts("1", "12-meter", "meter", "12"),
+              Converts("1", "12-meter", "meter", "12") &&
+              Converts("18", "per-9-meter", "per-meter", "2"),
           "unit constants, in the denominator and the numerator");
     CHECK(Converts("1", "metric-ton", "kilogram", "1000") &&
               Converts("1", "meter-per-second-squared", "meter-per-square-second", "1") &&
               Converts("1", "metric-ton-per-hour", "kilogram-per-hour", "1000") &&
-              Converts("2", "portion", "part", "2"),
+              Converts("2", "portion", "part", "2") && Converts("1", "inch-hg", "inch-ofhg", "1"),
           "deprecated identifiers, whole and inside a compound");
 }
 
@@ -107,6 +110,8 @@ static void TestTemperatures(void)
     CHECK(Converts("100", "celsius", "fahrenheit", "212") &&
               Converts("-40", "celsius", "fahrenheit", "-40") &&
               Converts("0", "kelvin", "celsius", "-273.15") &&
+              Converts("-273.15", "celsius", "kelvin", "0") &&
+              Converts("-459.67", "fahrenheit", "kelvin", "0") &&
               Converts("1e-30", "celsius", "fahrenheit", "32.0000000000000000000000000000018"),
           "temperatures with their offsets");
     CHECK(Converts("1", "celsius-per-second", "kelvin-per-second", "1") &&
@@ -276,6 +281,7 @@ static void TestRefusals(void)
               Refusal("meter-meter-meter-meter-meter-meter-meter-meter-meter", "meter") ==
                   mloc_errorCapacity &&
               Refusal("foot-and-foot-and-foot-and-foot-and-foot", "foot") == mloc_errorCapacity &&
+              Refusal("pow15-yobibyte-pow15-yobibyte", "pow30-bit") == mloc_errorCapacity &&
               Refusal("per-1e20", "part") == mloc_errorCapacity &&
               Refusal("per-1e9-1e9-1e9", "part") == mloc_errorCapacity,
           "past the limits");
@@ -283,6 +289,14 @@ static void TestRefusals(void)
     memset(longId, 'm', sizeof(longId) - 1);
     longId[sizeof(longId) - 1] = '\0';
     CHECK(Refusal(longId, "meter") == mloc_errorCapacity, "an identifier past 255 bytes");
+    // 255 bytes of one-letter tokens: the most tokens an identifier holds.
+    for (size_t i = 0; i < 255; i++)
+    {
+        longId[i] = i % 2 == 0 ? 'm' : '-';
+    }
+    longId[255] = '\0';
+    CHECK(Refusal(longId, "meter") == mloc_errorSyntax, "128 tokens");
+    CHECK(Refusal("zblorp", "meter") == mloc_errorNotFound, "an unknown unit from z");
     mlocDecimal v;
     mlocDecimal out;
     CHECK(mlocMakeDecimal(1, &v) == mloc_success &&

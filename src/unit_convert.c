@@ -199,9 +199,10 @@ static bool AddFraction(Exact* x, const Wide* n, const Wide* d, bool negative)
     {
         return mlocWideAdd(&x->a, &left, &right);
     }
-    bool rightLarger = mlocWideCompare(&right, &left) > 0;
-    mlocWideSubtract(&x->a, rightLarger ? &right : &left, rightLarger ? &left : &right);
-    x->negative = rightLarger ? negative : x->negative;
+    int c = mlocWideCompare(&right, &left);
+    mlocWideSubtract(&x->a, c > 0 ? &right : &left, c > 0 ? &left : &right);
+    // A sum of zero is positive: -273.15 degrees Celsius is 0 kelvin.
+    x->negative = c > 0 ? negative : c < 0 && x->negative;
     return true;
 }
 

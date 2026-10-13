@@ -131,7 +131,9 @@ static bool ValidSimples(const UnitTable* t, uint32_t textSize, uint32_t numbers
         if (!ValidText(t, textSize, s + simpleText, s[simpleLength]) ||
             !Ascending(t, s, previous, simpleLength) ||
             (s[simpleBase] != unitNoBase && s[simpleBase] >= t->baseCount) ||
-            s[simpleFlags] > (unitOffset | unitBeaufort) || !ValidFactor(t, numbersSize, s))
+            (s[simpleFlags] != 0 && s[simpleFlags] != unitOffset &&
+             s[simpleFlags] != unitBeaufort) ||
+            !ValidFactor(t, numbersSize, s))
         {
             return false;
         }
@@ -213,16 +215,24 @@ bool mlocValidUnits(const DataView* view, DataSpan payload)
     {
         return false;
     }
+    // The sizes in 64 bits, so that no count or size wraps on a 32-bit
+    // target, and checked before any part's address is taken.
+    const uint8_t* h = payload.bytes;
+    uint32_t textSize = mlocLoad32(h + 12);
+    uint32_t numbersSize = mlocLoad32(h + 16);
+    uint64_t size = unitsHeaderSize + (uint64_t)mlocLoad16(h) * unitSimpleSize +
+                    (uint64_t)mlocLoad16(h + 2) * unitPrefixSize +
+                    (uint64_t)mlocLoad16(h + 4) * unitAliasSize +
+                    (uint64_t)mlocLoad16(h + 6) * unitBaseSize + (uint64_t)mlocLoad16(h + 8) * 2 +
+                    textSize + numbersSize;
+    if (size != payload.size)
+    {
+        return false;
+    }
     UnitTable t = mlocReadUnitTable(payload);
-    uint32_t textSize = mlocLoad32(payload.bytes + 12);
-    uint32_t numbersSize = mlocLoad32(payload.bytes + 16);
-    size_t size = unitsHeaderSize + (size_t)t.simpleCount * unitSimpleSize +
-                  (size_t)t.prefixCount * unitPrefixSize + (size_t)t.aliasCount * unitAliasSize +
-                  (size_t)t.baseCount * unitBaseSize + (size_t)t.beaufortCount * 2 + textSize +
-                  numbersSize;
-    return size == payload.size && t.dimensionCount <= unitMaxDimensions &&
-           ValidSimples(&t, textSize, numbersSize) && ValidPrefixes(&t, textSize) &&
-           ValidAliases(&t, textSize) && ValidBases(&t, textSize) && ValidBeaufort(&t);
+    return t.dimensionCount <= unitMaxDimensions && ValidSimples(&t, textSize, numbersSize) &&
+           ValidPrefixes(&t, textSize) && ValidAliases(&t, textSize) && ValidBases(&t, textSize) &&
+           ValidBeaufort(&t);
 }
 
 // The index of the record whose text equals an identifier, or -1.

@@ -92,6 +92,20 @@ static void TestLimits(void)
     high.count = wideLimbs / 2 + 1;
     CHECK(!mlocWideMultiply(&product, &high, &high), "a product past the width");
     CHECK(mlocWideMultiply(&product, &top, &two) == false, "a product of one limb too many");
+    Wide low = mlocWideOf(0);
+    low.limb[wideLimbs - 1] = 1;
+    low.count = wideLimbs;
+    CHECK(mlocWideMultiply(&product, &low, &two) && product.limb[wideLimbs - 1] == 2,
+          "limb counts that add to one past the width, a product within it");
+    Wide a = mlocWideOf(0);
+    Wide b = mlocWideOf(0);
+    a.limb[32] = 1;
+    a.count = 33;
+    b.limb[31] = 0x100;
+    b.count = 32;
+    CHECK(mlocWideMultiply(&product, &a, &b) && product.count == wideLimbs &&
+              product.limb[wideLimbs - 1] == 0x100,
+          "a product filling every limb");
     Wide all = top;
     for (uint32_t i = 0; i < wideLimbs; i++)
     {
@@ -103,6 +117,8 @@ static void TestLimits(void)
     Wide scaled = mlocWideOf(1);
     CHECK(mlocWideScale10(&scaled, 616) && !mlocWideScale10(&scaled, 1),
           "10^616 fits and 10^617 does not");
+    scaled = mlocWideOf(1);
+    CHECK(!mlocWideScale10(&scaled, 617), "10^617 fails in its steps of 10^9");
 }
 
 static void TestDigits(void)
@@ -149,6 +165,13 @@ static void TestDivision(void)
     mlocWideDivide(&u, &v, &q, nullptr);
     mlocWideDivide(&u, &v, nullptr, &r);
     CHECK(q.count == 1 && q.limb[0] == 3 && Equals(&r, s_r3, 3), "either output alone");
+    static const uint32_t s_u4[3] = {0, 0x80000000, 0x7FFFFFFF};
+    static const uint32_t s_v4[2] = {0, 0x80000000};
+    u = Limbs(s_u4, 3);
+    v = Limbs(s_v4, 2);
+    mlocWideDivide(&u, &v, &q, &r);
+    CHECK(q.count == 1 && q.limb[0] == 0xFFFFFFFF && mlocWideIsZero(&r),
+          "an estimate of exactly the largest limb");
     Wide small = mlocWideOf(5);
     Wide large = mlocWideOf(UINT64_MAX);
     mlocWideDivide(&small, &large, &q, &r);

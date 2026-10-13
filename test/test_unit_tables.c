@@ -94,6 +94,13 @@ static void TestSpoiled(void)
     CHECK(!ValidCopy(s_units.size), "an identifier past the text");
     Spoil(simples + simpleBase, (uint8_t)t.baseCount, "a base past the bases");
     Spoil(simples + simpleFlags, 4, "an unknown flag");
+    Spoil(simples + simpleFlags, unitOffset | unitBeaufort, "an offset and the Beaufort table");
+    // Text and number sizes each 2^31 larger: their sum is the same modulo
+    // 2^32, which a 32-bit size would not tell apart.
+    Restore();
+    s_copy[15] = (uint8_t)(s_copy[15] + 0x80);
+    s_copy[19] = (uint8_t)(s_copy[19] + 0x80);
+    CHECK(!ValidCopy(s_units.size), "sizes that wrap 32 bits");
     Spoil(text, 'A', "a character no identifier uses");
     Restore();
     memcpy(s_copy + simples, s_units.bytes + simples + unitSimpleSize, 5);
