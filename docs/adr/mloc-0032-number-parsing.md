@@ -42,7 +42,13 @@ mode checks grouping sizes and the full affixes.
   formatter that shows the plus sign makes ICU's plus-sign affixes. The
   list is an array on the stack, the text is read once, with no
   recursion and no allocation; leading zeros are not held and trailing
-  zeros are counted, so only significant digits meet the capacity.
+  zeros are counted, so only significant digits meet the capacity. An
+  affix pattern is a series of at most 32 matchers from at most 64
+  bytes (16 literals in lenient mode, where an ignorables matcher goes
+  between two, 32 in strict mode); a longer one is
+  `mloc_errorCapacity`. CLDR's decimal and percent patterns have no
+  literal the ignorables do not cover, so in lenient mode they make no
+  affix matchers at all.
 - **Data**: the parse sets, a unit of no locale in the numbers data
   (`src/parse_tables.h`, 0x40017): root's parseLenients of the general
   and number scopes, which the generator compiles from CLDR as ICU
@@ -66,9 +72,12 @@ mode checks grouping sizes and the full affixes.
   alone): value and end equal to ICU4C 79's but the departures above
   (the bracket patterns' strict lines, and exponents past the
   decimal's range); and the NaN and exponent symbols of every locale
-  ICU has in five casings, all equal. The tests hold 84 of those cases, the round trip
-  of formatted values in 40 locales (the same decimal back, fraction
-  digits too), the bounds and the refusals.
+  ICU has in five casings, all equal. The tests hold 108 of those
+  cases; 138 on crafted patterns with literals (a pack whose patterns
+  are "#,##0 pcs", explicit negative subpatterns, parentheses, a
+  trailing minus), each as ICU's DecimalFormat gives it with the same
+  pattern; the round trip of formatted values in 40 locales (the same
+  decimal back, fraction digits too); the bounds and the refusals.
 
 ## Consequences
 

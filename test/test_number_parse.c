@@ -11,6 +11,7 @@
 #include "maul-locale/decimal.h"
 #include "maul-locale/number.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static mlocDataSet s_data;
@@ -171,6 +172,49 @@ static const Case s_cases[] = {
     {"en", styleDecimal, mloc_parseLenient, "1.2,3", "1.2", 3},
     {"en", styleDecimal, mloc_parseLenient, "1,,234", "1234", 6},
     {"en", styleDecimal, mloc_parseStrict, "1,,234", "1", 1},
+    // ICU's lead set (the strict separators in lenient mode), separators
+    // after the decimal one, the exponent's own signs (bidi controls
+    // first), digits that are not decimal digits (hanidec).
+    {"en", styleDecimal, mloc_parseLenient,
+     "\xE3\x80\x82"
+     "5",
+     nullptr, 0},
+    {"en", styleDecimal, mloc_parseLenient,
+     "\xE3\x80\x81"
+     "5",
+     nullptr, 0},
+    {"en", styleDecimal, mloc_parseStrict,
+     "\xE3\x80\x82"
+     "5",
+     nullptr, 0},
+    {"en", styleDecimal, mloc_parseStrict,
+     "\xEF\xBC\x8E"
+     "5",
+     "0.5", 4},
+    {"en", styleDecimal, mloc_parseLenient,
+     "\xEF\xBC\x8E"
+     "5",
+     "0.5", 4},
+    {"en", styleDecimal, mloc_parseStrict, "50%", "50", 2},
+    {"en", styleScientific, mloc_parseLenient, "1E3.5", "1000", 3},
+    {"en", styleDecimal, mloc_parseLenient, "1,234.5,6", "1234.5", 7},
+    {"en", styleDecimal, mloc_parseLenient, "1,2,345", "1", 1},
+    {"en", styleDecimal, mloc_parseStrict, "1,2,345", nullptr, 0},
+    {"he", styleScientific, mloc_parseLenient, "1E\xE2\x80\x8E\xE2\x80\x8E-3", "0.001", 10},
+    {"he", styleScientific, mloc_parseLenient, "1E\xE2\x80\x8E\xE2\x80\x8E+3", "1", 1},
+    {"he", styleScientific, mloc_parseLenient,
+     "1E\xE2\x80\x8E\xE2\x80\x8E"
+     "5",
+     "1", 1},
+    {"he", styleScientific, mloc_parseLenient, "1E\xE2\x80\x8E-3", "0.001", 7},
+    {"zh-u-nu-hanidec", styleDecimal, mloc_parseLenient, "\xE4\xB8\x80\xE4\xBA\x8C\xE4\xB8\x89",
+     "123", 9},
+    {"zh-u-nu-hanidec", styleDecimal, mloc_parseLenient, "\xE3\x80\x87.\xE4\xBA\x94", "0.5", 7},
+    {"zh-u-nu-hanidec", styleDecimal, mloc_parseStrict,
+     "\xE4\xB8\x80,\xE4\xBA\x8C\xE4\xB8\x89\xE5\x9B\x9B", "1234", 13},
+    {"en", styleDecimal, mloc_parseLenient, "1,23.4", "123.4", 6},
+    {"en", styleDecimal, mloc_parseStrict, "1,23.4", nullptr, 0},
+    {"en", styleDecimal, mloc_parseStrict, "1,234.5,6", "1234.5", 7},
     // ICU's comparisons fold case, the Turkic way for I.
     {"ru", styleDecimal, mloc_parseLenient,
      "\xD0\x9D\xD0\x95\xC2\xA0\xD0\xA7\xD0\x98\xD0\xA1\xD0\x9B\xD0\x9E", "NaN", 16},
@@ -181,6 +225,22 @@ static const Case s_cases[] = {
     {"fi", styleDecimal, mloc_parseStrict, "EP\xC3\x84LUKU", "NaN", 8},
     {"hy", styleDecimal, mloc_parseLenient, "\xD5\xB8\xD5\xB9\xD5\xA9", "NaN", 6},
 };
+
+// Parses text from a copy of its exact length, so that the sanitizer
+// builds catch a read past it.
+static mlocResult ParseCopy(const mlocNumberFormatter* formatter, const char* text, size_t length,
+                            mlocParseMode mode, mlocDecimal* decimal, size_t* end)
+{
+    char* copy = malloc(length == 0 ? 1 : length);
+    if (copy == nullptr)
+    {
+        return (mlocResult)-100;
+    }
+    memcpy(copy, text, length);
+    mlocResult r = mlocParseNumber(formatter, copy, length, mode, decimal, end);
+    free(copy);
+    return r;
+}
 
 static bool Parses(const Case* c)
 {
@@ -193,7 +253,7 @@ static bool Parses(const Case* c)
     {
         return false;
     }
-    mlocResult r = mlocParseNumber(&formatter, c->text, strlen(c->text), c->mode, &decimal, &end);
+    mlocResult r = ParseCopy(&formatter, c->text, strlen(c->text), c->mode, &decimal, &end);
     if (c->expected == nullptr)
     {
         return r == mloc_errorSyntax && end == c->end;
@@ -232,7 +292,7 @@ static bool RoundTrips(const char* id, Style style, const char* value)
     {
         mlocDecimal back;
         size_t end = 0;
-        if (mlocParseNumber(&formatter, buffer, output.length, (mlocParseMode)mode, &back, &end) !=
+        if (ParseCopy(&formatter, buffer, output.length, (mlocParseMode)mode, &back, &end) !=
                 mloc_success ||
             end != output.length || memcmp(&back, &decimal, sizeof(back)) != 0)
         {
@@ -287,7 +347,7 @@ static mlocResult ParseIn(const char* id, Style style, const char* text, size_t 
     {
         return (mlocResult)-100;
     }
-    return mlocParseNumber(&formatter, text, length, mloc_parseLenient, decimal, end);
+    return ParseCopy(&formatter, text, length, mloc_parseLenient, decimal, end);
 }
 
 static void TestBounds(void)
@@ -320,6 +380,9 @@ static void TestBounds(void)
     CHECK(ParseIn("en", styleDecimal, "1E999999", 8, &d, &end) == mloc_success &&
               d.exponent == 999999,
           "the largest exponent");
+    CHECK(ParseIn("en", styleDecimal, "1E-999999", 9, &d, &end) == mloc_success &&
+              d.exponent == -999999 && d.fractionDigits == 999999,
+          "the smallest exponent");
     CHECK(ParseIn("en", styleDecimal, "1E1000000", 9, &d, &end) == mloc_errorCapacity,
           "an exponent past it");
     CHECK(ParseIn("en", styleDecimal, "1E-9999999999", 13, &d, &end) == mloc_errorCapacity,

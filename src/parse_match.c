@@ -682,7 +682,6 @@ static void MatchDecimal(const Parser* r, const DecimalConfig* c, Segment* s, Pa
         p->overflow = p->overflow || !fits;
         p->exponent += exponentSign * exponent;
     }
-    p->flags |= afterPoint > 0 ? parsedHasDecimal : 0;
     p->charEnd = s->at;
 }
 

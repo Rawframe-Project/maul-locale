@@ -38,10 +38,9 @@ enum
     parsedPercent = 2,
     parsedPerMille = 4,
     parsedHasExponent = 8,
-    parsedHasDecimal = 16,
-    parsedNaN = 32,
-    parsedInfinity = 64,
-    parsedFail = 128,
+    parsedNaN = 16,
+    parsedInfinity = 32,
+    parsedFail = 64,
 };
 
 // The modes' flags (ICU's parse flags).
