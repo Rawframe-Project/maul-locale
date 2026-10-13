@@ -457,9 +457,11 @@ static void TestTitlecase(void)
               length == 1 && text[0] == 'A' && !mlocSpelloutTitlecase(span, 'b', &text, &length) &&
               !mlocSpelloutTitlecase(span, 0, &text, &length),
           "a titlecase unit and its lookup");
+    static const uint8_t s_none[4] = {0};
     CHECK(TitlecaseRefused(0, 3) && TitlecaseRefused(2, 2) &&
-              !mlocValidSpelloutTitlecase(nullptr, (DataSpan){s_titlecase, 3}),
-          "its counts and header");
+              !mlocValidSpelloutTitlecase(nullptr, (DataSpan){s_titlecase, 3}) &&
+              mlocValidSpelloutTitlecase(nullptr, (DataSpan){s_none, 4}),
+          "its counts and header; an empty table");
     CHECK(TitlecaseRefused(12, 'a') && TitlecaseRefused(4, 0xE0) && TitlecaseRefused(15, 0x11),
           "code points out of order or past U+10FFFF");
     CHECK(TitlecaseRefused(10, 0) && TitlecaseRefused(11, 1) && TitlecaseRefused(16, 4) &&
