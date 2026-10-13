@@ -11,6 +11,7 @@
 // opening, every corruption of it refused; and the engine's limits on
 // rules that nest without end.
 
+#include "bytes.h"
 #include "data_format.h"
 #include "datafile.h"
 #include "kinds.h"
@@ -370,6 +371,13 @@ static void TestUnit(void)
     CHECK(Refused(unit, size, plurals + 22, 0xFF) && Refused(unit, size, plurals + 23, 0xFF) &&
               Refused(unit, size, patterns, 0) && Refused(unit, size, patterns + 1, 21),
           "a plural block's other form and a pattern's digits");
+    // The block's order, one then other (0x51, then 0xF nibbles).
+    CHECK(mlocLoad32(unit + plurals + 24) == 0xFFFFFF51u &&
+              !Refused(unit, size, plurals + 24, 0x15) && Refused(unit, size, plurals + 24, 0x11) &&
+              Refused(unit, size, plurals + 24, 0x61) && Refused(unit, size, plurals + 24, 0xF1) &&
+              Refused(unit, size, plurals + 24, 0x21) && Refused(unit, size, plurals + 26, 0x7F),
+          "a plural block's order: another order, a repeat, a category past other, a form "
+          "left out, one absent, a nibble after the end");
     CHECK(Refused(unit, size, text, 0xFF) && Refused(unit, size, text, 0),
           "the text is well-formed UTF-8 without NUL");
     free(unit);

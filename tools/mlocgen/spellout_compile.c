@@ -627,6 +627,7 @@ static void ParsePluralForms(Compiler* c, RbnfRule* rule, const char* p, size_t 
             return;
         }
         rule->forms[category] = CopyRange(p + open + 1, (size_t)(close - open - 1));
+        rule->order[rule->formCount++] = (uint8_t)category;
         at = (size_t)close + 1;
     }
     if (rule->forms[rbnfCategories - 1] == nullptr)

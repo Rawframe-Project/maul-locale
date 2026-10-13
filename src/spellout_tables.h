@@ -53,8 +53,10 @@ enum
     // Piece: u8 type, u8 detail, u16 index or length, u16 offset or rule.
     spelloutPieceSize = 6,
     // Plural: per category u16 offset, u16 length (spelloutNone for
-    // none).
-    spelloutPluralSize = 24,
+    // none); u32 the categories in the order the block writes them, a
+    // nibble each from the lowest, 0xF past the last (parsing searches
+    // the forms in that order).
+    spelloutPluralSize = 28,
     // Pattern: u8 minimum integer digits, minimum and maximum fraction
     // digits, primary and secondary grouping (0 for none), flags.
     spelloutPatternSize = 6,

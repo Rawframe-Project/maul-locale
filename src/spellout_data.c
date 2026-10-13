@@ -166,12 +166,14 @@ static bool ValidPieces(const SpelloutRules* r)
     return true;
 }
 
-// Each plural block's forms in the text, other's present.
+// Each plural block's forms in the text, other's present, and its order
+// naming each form once and nothing else.
 static bool ValidPlurals(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->pluralCount; i++)
     {
         const uint8_t* plural = r->plurals + (size_t)i * spelloutPluralSize;
+        uint32_t present = 0;
         for (uint32_t c = 0; c < 6; c++)
         {
             uint32_t length = mlocLoad16(plural + 4 * c + 2);
@@ -180,6 +182,23 @@ static bool ValidPlurals(const SpelloutRules* r)
             {
                 return false;
             }
+            present |= none ? 0 : 1u << c;
+        }
+        uint32_t order = mlocLoad32(plural + 24);
+        uint32_t named = 0;
+        uint32_t k = 0;
+        for (; k < 8 && (order >> (4 * k) & 0xF) != 0xF; k++)
+        {
+            uint32_t c = order >> (4 * k) & 0xF;
+            if (c >= 6 || (named & 1u << c) != 0)
+            {
+                return false;
+            }
+            named |= 1u << c;
+        }
+        if (named != present || (k < 8 && order >> (4 * k) != 0xFFFFFFFFu >> (4 * k)))
+        {
+            return false;
         }
     }
     return true;

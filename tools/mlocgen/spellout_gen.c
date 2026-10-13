@@ -249,6 +249,16 @@ static void PluralPiece(Builder* b, const RbnfRule* rule)
         }
         used += (size_t)n;
     }
+    // The order, a nibble per category written, 0xF past the last.
+    uint32_t order = 0xFFFFFFFFu;
+    for (int k = 0; k < rule->formCount; k++)
+    {
+        order = (order & ~(0xFu << (4 * k))) | (uint32_t)rule->order[k] << (4 * k);
+    }
+    if (snprintf(key + used, sizeof(key) - used, "%08x", order) != 8)
+    {
+        GenDie("a plural block is too long", rule->text);
+    }
     uintptr_t found = (uintptr_t)MapGet(&b->plurals, key);
     if (found == 0)
     {
@@ -264,6 +274,7 @@ static void PluralPiece(Builder* b, const RbnfRule* rule)
             GenPut(p + 4 * c, form == nullptr ? 0 : AddText(b, form, length), 2);
             GenPut(p + 4 * c + 2, form == nullptr ? spelloutNone : length, 2);
         }
+        GenPut(p + 24, order, 4);
         found = (uintptr_t)++b->pluralCount;
         MapPut(&b->plurals, key, (void*)found);
     }

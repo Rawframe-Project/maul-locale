@@ -95,6 +95,9 @@ typedef struct RbnfRule
     size_t pluralStart;
     size_t pluralEnd;
     char* forms[rbnfCategories];
+    // The categories in the order the block writes them.
+    uint8_t order[rbnfCategories];
+    int formCount;
 } RbnfRule;
 
 typedef struct RbnfSet
