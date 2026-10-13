@@ -226,11 +226,12 @@ static void TestRefused(void)
 }
 
 // A unit with every kind of piece: brackets, a ">>>" remainder, a
-// fraction rule set, a plural block and patterns.
+// fraction rule set (two rules of one base), a plural block, patterns
+// (one with its point) and a last rule without text.
 static const char s_unit[] =
-    "%a:\n-x: minus >>;\nx.x: << and >%%f>;\n0: zero;\none;\n"
-    "10: ten[->>];\n20: x >>> y;\n100: << $(cardinal,one{c}other{cs})$[ >>];\n"
-    "1000: =#,##0=;\n%%f:\n10: <%a< tenths;\n100: <#,##0< hundredths;\n";
+    "%a:\n-x: minus >>;\nx.x: << and >%%f>;\n0: zero;\none;\n10: ten[->>];\n20: x >>> y;\n"
+    "100: << $(cardinal,one{c}other{cs})$[ >>];\n1000: =#,##0=;\n%%f:\n10: <%a< tenths;\n"
+    "10: <%a< tenth;\n100: <#,##0< hundredths;\n%c:\n0: =#,##0.=;\n1: ;\n";
 
 static uint8_t* Unit(size_t* sizeOut)
 {
@@ -251,12 +252,52 @@ static bool Valid(const uint8_t* bytes, size_t size)
     return mlocValidSpelloutRules(nullptr, (DataSpan){bytes, (uint32_t)size});
 }
 
-// Whether a copy of the unit with one change is refused.
-static bool Refused(const uint8_t* unit, size_t size, size_t at, uint8_t value)
+// Whether a copy of the unit with a byte or a 16-bit field changed is
+// refused.
+static bool Changed(const uint8_t* unit, size_t size, size_t at, uint32_t value, int bytes)
 {
     uint8_t* copy = malloc(size);
     memcpy(copy, unit, size);
-    copy[at] = value;
+    copy[at] = (uint8_t)value;
+    if (bytes == 2)
+    {
+        copy[at + 1] = (uint8_t)(value >> 8);
+    }
+    bool refused = !Valid(copy, size);
+    free(copy);
+    return refused;
+}
+
+// Whether the unit with two 16-bit fields changed is refused.
+static bool TwoChanged(const uint8_t* unit, size_t size, size_t at, uint32_t value, size_t other,
+                       uint32_t otherValue)
+{
+    uint8_t* copy = malloc(size);
+    memcpy(copy, unit, size);
+    copy[at] = (uint8_t)value;
+    copy[at + 1] = (uint8_t)(value >> 8);
+    copy[other] = (uint8_t)otherValue;
+    copy[other + 1] = (uint8_t)(otherValue >> 8);
+    bool refused = !Valid(copy, size);
+    free(copy);
+    return refused;
+}
+
+static bool Refused(const uint8_t* unit, size_t size, size_t at, uint8_t value)
+{
+    return Changed(unit, size, at, value, 1);
+}
+
+// The unit with a rule's divisor made a radix to an exponent.
+static bool RadixRefused(const uint8_t* unit, size_t size, size_t rule, uint32_t radix,
+                         uint8_t exponent)
+{
+    uint8_t* copy = malloc(size);
+    memcpy(copy, unit, size);
+    copy[rule + 10] = (uint8_t)radix;
+    copy[rule + 11] = (uint8_t)(radix >> 8);
+    copy[rule + 13] &= (uint8_t)~spelloutPowerOfTen;
+    copy[rule + 15] = exponent;
     bool refused = !Valid(copy, size);
     free(copy);
     return refused;
@@ -278,7 +319,7 @@ static void TestUnit(void)
     size_t plurals = (size_t)(r.plurals - unit);
     size_t patterns = (size_t)(r.patterns - unit);
     size_t text = (size_t)(r.text - unit);
-    CHECK(r.setCount == 2 && r.pluralCount == 1 && r.patternCount == 1,
+    CHECK(r.setCount == 3 && r.pluralCount == 1 && r.patternCount == 2,
           "its sets, plural block and patterns");
     // The first substitution piece, and the plural block's other form.
     size_t sub = pieces;
@@ -286,8 +327,9 @@ static void TestUnit(void)
     {
         sub += spelloutPieceSize;
     }
-    CHECK(!Valid(unit, size - 1) && Refused(unit, size, 0, (uint8_t)(r.setCount + 1)) &&
-              Refused(unit, size, 10, 9) && Refused(unit, size, 14, 1),
+    CHECK(!Valid(unit, size - 1) && !Valid(unit, 8) &&
+              Refused(unit, size, 0, (uint8_t)(r.setCount + 1)) && Refused(unit, size, 10, 9) &&
+              Refused(unit, size, 14, 1),
           "counts, the default set and the zero field");
     CHECK(Refused(unit, size, sets + 2, 0) && Refused(unit, size, sets + 3, 0x80) &&
               Refused(unit, size, sets + 6, 200),
@@ -300,8 +342,20 @@ static void TestUnit(void)
               Refused(unit, size, rules + 13, 0x80) && Refused(unit, size, rules + 14, 0xFF) &&
               Refused(unit, size, rules + 15, 25),
           "a rule's kind, flags, pieces and exponent");
-    // The third rule, "1: one", has a base after "0: zero"'s.
-    CHECK(Refused(unit, size, rules + 3 * spelloutRuleSize, 0), "bases in order");
+    // "1: one" made "0" again: equal bases only in a fraction rule set,
+    // which has two rules of base 10.
+    CHECK(Refused(unit, size, rules + spelloutRuleSize, 0), "bases in order");
+    // "20: x >>> y" divided by 20 to the 14th fits 64 bits, to the 15th
+    // does not; a radix is at least 2.
+    size_t twenty = rules + 4 * spelloutRuleSize;
+    CHECK(!RadixRefused(unit, size, twenty, 20, 14) && RadixRefused(unit, size, twenty, 20, 15) &&
+              RadixRefused(unit, size, twenty, 1, 1),
+          "a divisor within 64 bits");
+    // %c's two rules made none.
+    CHECK(Changed(unit, size, sets + 2 * spelloutSetSize + 6, 0, 2), "a set with no rules");
+    // The plural block's "one" made empty at the text's end.
+    CHECK(!TwoChanged(unit, size, plurals + 4, r.textSize, plurals + 6, 0),
+          "an empty form at the end of the text");
     CHECK(Refused(unit, size, pieces, spelloutPieceTypeCount) && Refused(unit, size, sub + 1, 7) &&
               Refused(unit, size, sub + 2, 9) && Refused(unit, size, sub + 1, 0x80),
           "a piece's type and a substitution's kind and target");
@@ -313,14 +367,14 @@ static void TestUnit(void)
     free(unit);
 }
 
-// The numbering systems unit: "hans" (zh's %spellout-cardinal) and
-// "roman" (the locale's own %roman-upper), sorted.
+// The numbering systems unit: "hans" and "hansfin" (zh's cardinal and
+// financial rule sets), sorted, the text with a byte no record uses.
 static void SystemsUnit(uint8_t* unit, size_t* sizeOut)
 {
-    static const char s_text[] = "hanszh%spellout-cardinalroman%roman-upper";
+    static const char s_text[] = "hanszh%spellout-cardinalhansfin%spellout-cardinal-financialx";
     static const uint8_t s_records[2][spelloutSystemSize] = {
         {0, 0, 4, 0, 6, 0, 4, 2, 18, spelloutGroupSpellout},
-        {24, 0, 29, 0, 29, 0, 5, 0, 12, spelloutGroupNumbering},
+        {24, 0, 4, 0, 31, 0, 7, 2, 28, spelloutGroupSpellout},
     };
     size_t text = sizeof(s_text) - 1;
     unit[0] = 2;
@@ -350,13 +404,21 @@ static void TestSystems(void)
     SystemsUnit(unit, &size);
     size_t second = spelloutSystemHeaderSize + spelloutSystemSize;
     CHECK(mlocValidSpelloutSystems(nullptr, (DataSpan){unit, (uint32_t)size}),
-          "a numbering systems unit");
-    CHECK(SystemsRefused(0, 3, 0, 3) && SystemsRefused(2, 40, 2, 40), "its counts");
+          "a numbering systems unit, an id the start of the next");
+    static const uint8_t s_empty[4] = {0};
+    CHECK(mlocValidSpelloutSystems(nullptr, (DataSpan){s_empty, 4}) &&
+              !mlocValidSpelloutSystems(nullptr, (DataSpan){s_empty, 2}),
+          "an empty unit, and one shorter than its header");
+    // The text size one short: the records still within it.
+    CHECK(SystemsRefused(0, 3, 0, 3) && SystemsRefused(2, (uint8_t)(unit[2] - 1), 2, 0),
+          "its counts");
+    // A locale empty at the text's end.
+    CHECK(!SystemsRefused(second + 2, unit[2], second + 7, 0), "an empty range at the end");
     // The second id made "hans" too: not after the first.
     CHECK(SystemsRefused(second + 8, 0, second + 8, 0) &&
-              SystemsRefused(second + 8, 13, second + 8, 13) &&
+              SystemsRefused(second + 8, 30, second + 8, 30) &&
               SystemsRefused(second + 9, spelloutGroupCount, second + 9, spelloutGroupCount) &&
-              SystemsRefused(second, 0, second + 6, 4),
+              SystemsRefused(second + 6, 4, second + 6, 4),
           "a name, its range, the group and the ids' order");
 }
 

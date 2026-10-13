@@ -36,14 +36,15 @@ static bool InText(const SpelloutRules* r, uint32_t offset, uint32_t length)
     return offset <= r->textSize && length <= r->textSize - offset;
 }
 
-// A set's rules: its normal rules of the normal kind, bases ascending
-// (equal ones allowed in a fraction rule set), then its special ones.
+// A set's rules, at least one: its normal rules of the normal kind,
+// bases ascending (equal ones allowed in a fraction rule set), then its
+// special ones.
 static bool ValidSetRules(const SpelloutRules* r, const uint8_t* set)
 {
     uint32_t first = mlocLoad16(set + 4);
     uint32_t normal = mlocLoad16(set + 6);
     uint32_t special = mlocLoad16(set + 8);
-    if (first > r->ruleCount || normal + special > r->ruleCount - first)
+    if (first > r->ruleCount || normal + special == 0 || normal + special > r->ruleCount - first)
     {
         return false;
     }
