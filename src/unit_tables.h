@@ -110,6 +110,16 @@
 // other, unitDerivedCompound for the compound's own, unitDerivedNone
 // where the language gives no rule. A language CLDR lists takes its
 // rules; any other takes root's, as ICU's DerivedComponents.
+//
+// A locale's duration and coordinate patterns, a unit per locale key
+// filed where they differ from its chain's, in the table shape of
+// number_tables.h with one record: the string indexes (u16) of the
+// numeric duration patterns for hours and minutes, minutes and seconds,
+// and all three ("h:mm", "m:ss", "h:mm:ss"; "h", "m" and "s" stand for
+// the fields, doubled for two digits, and text in apostrophes is
+// literal), then the coordinate patterns ("{0}N") of each width, long,
+// short and narrow, for east, north, south and west. The values are
+// CLDR's resolution.
 
 #ifndef MLOC_UNIT_TABLES_H
 #define MLOC_UNIT_TABLES_H
@@ -221,6 +231,21 @@ enum
     baseDenominator = baseNumerator + unitMaxDimensions,
     quantityNumerator = 12,
     quantityDenominator = quantityNumerator + unitMaxDimensions,
+};
+
+enum
+{
+    unitPatternHm = 0,
+    unitPatternMs = 1,
+    unitPatternHms = 2,
+    // The first coordinate pattern: width (0 long, 1 short, 2 narrow) * 4
+    // + direction.
+    unitPatternCoordinates = 3,
+    unitDirectionEast = 0,
+    unitDirectionNorth = 1,
+    unitDirectionSouth = 2,
+    unitDirectionWest = 3,
+    unitPatternCount = 15,
 };
 
 #endif

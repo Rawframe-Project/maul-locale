@@ -45,6 +45,12 @@ typedef struct UnitOutput
     uint8_t slot;
     uint8_t parts;
     uint8_t smallest;
+    // For the numeric width, the duration pattern a mixed unit of hours,
+    // minutes and seconds takes (unitPatternHm and the others, plus 1; 0
+    // for none), and the part of each field (hour, minute, second; -1 for
+    // none).
+    uint8_t numeric;
+    int8_t field[3];
 } UnitOutput;
 
 // The opaque value's contents: each slot's patterns by plural category,
@@ -68,6 +74,14 @@ typedef struct UnitFormat
     UnitTable table;
     ListPatterns list;
     UnitOutput output[unitOutputs];
+    // The numeric width's duration patterns, and a coordinate's direction
+    // patterns (east, north, south, west), in the data.
+    const char* duration[3];
+    uint16_t durationLength[3];
+    const char* direction[4];
+    uint16_t directionLength[4];
+    // The mlocCoordinate the amounts are written as.
+    uint8_t coordinate;
 } UnitFormat;
 
 // The names kind of a width.

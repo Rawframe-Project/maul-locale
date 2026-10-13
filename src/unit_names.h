@@ -56,4 +56,19 @@ uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category);
 bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t structure,
                         uint8_t* value0Out, uint8_t* value1Out);
 
+// Whether a patterns unit is a table of one record whose string indexes
+// are in range, its coordinate patterns each holding "{0}" once.
+bool mlocValidUnitPatterns(const DataView* view, DataSpan payload);
+
+// A locale's duration and coordinate patterns (unit_tables.h's order).
+typedef struct UnitPatternTexts
+{
+    const char* text[unitPatternCount];
+    uint16_t length[unitPatternCount];
+} UnitPatternTexts;
+
+// Finds a locale's patterns along its main chain; false when the data has
+// none or the chain cannot be walked.
+bool mlocFindUnitPatterns(const mlocDataSet* data, const mlocLocale* locale, UnitPatternTexts* out);
+
 #endif

@@ -15,6 +15,7 @@ static const uint32_t s_widthKinds[] = {
     [mloc_unitWidthShort] = kindUnitNamesShort,
     [mloc_unitWidthNarrow] = kindUnitNamesNarrow,
     [mloc_unitWidthLong] = kindUnitNamesLong,
+    [mloc_unitWidthNumeric] = kindUnitNamesNarrow,
 };
 
 uint32_t mlocUnitWidthKind(mlocUnitWidth width)

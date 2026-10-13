@@ -13,6 +13,7 @@
 #include "number_core.h"
 #include "plural.h"
 #include "plural_rules.h"
+#include "unit_coordinate.h"
 #include "unit_mixed_format.h"
 #include "unit_names.h"
 #include "unit_patterns.h"
@@ -25,8 +26,9 @@ static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
 
 static bool ValidOptions(const mlocUnitOptions* o)
 {
-    return o->width <= mloc_unitWidthLong && mlocValidFormatOptions(&o->number) &&
-           o->number.style == mloc_numberDecimal && (o->usage != nullptr || o->usageLength == 0);
+    return o->width <= mloc_unitWidthNumeric && o->coordinate <= mloc_coordinateLongitude &&
+           mlocValidFormatOptions(&o->number) && o->number.style == mloc_numberDecimal &&
+           (o->usage != nullptr || o->usageLength == 0);
 }
 
 // The style ICU writes a unit in: percent and per mille, short or narrow
@@ -66,6 +68,31 @@ static mlocResult FindNames(const mlocDataSet* data, const mlocLocale* locale, c
     return mloc_success;
 }
 
+// Takes the locale's duration patterns when an output writes in them.
+static mlocResult LoadDurations(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale)
+{
+    bool numeric = false;
+    for (uint32_t i = 0; i < u->outputs; i++)
+    {
+        numeric |= u->output[i].numeric != 0;
+    }
+    UnitPatternTexts p;
+    if (!numeric)
+    {
+        return mloc_success;
+    }
+    if (!mlocFindUnitPatterns(data, locale, &p))
+    {
+        return mloc_errorNotFound;
+    }
+    for (uint32_t d = 0; d < 3; d++)
+    {
+        u->duration[d] = p.text[unitPatternHm + d];
+        u->durationLength[d] = p.length[unitPatternHm + d];
+    }
+    return mloc_success;
+}
+
 mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocDataSet* data,
                                  const mlocLocale* locale, const char* unit, size_t unitLength,
                                  const mlocUnitOptions* options)
@@ -96,6 +123,9 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
         found = mlocBuildUnitForms(data, locale, id, idLength, mlocUnitWidthKind(o->width), &forms);
         found = found == mloc_success ? mlocAddUnitPatterns(&u, 0, &used, &forms) : found;
     }
+    found = found == mloc_success ? LoadDurations(&u, data, locale) : found;
+    found =
+        found == mloc_success ? mlocInitCoordinate(&u, data, locale, unit, unitLength, o) : found;
     if (found < 0)
     {
         return found;
@@ -131,9 +161,18 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
 static bool ValidOutput(const UnitFormat* u, const UnitOutput* o)
 {
     if (o->parts < 1 || o->parts > unitMaxParts || o->slot > unitSlots - o->parts ||
-        o->smallest >= o->parts || (o->parts > 1 && (!o->id.mixed || o->id.count != o->parts)))
+        o->smallest >= o->parts || (o->parts > 1 && (!o->id.mixed || o->id.count != o->parts)) ||
+        o->numeric > unitPatternHms + 1 ||
+        (o->numeric != 0 && (o->parts < 2 || u->duration[o->numeric - 1] == nullptr)))
     {
         return false;
+    }
+    for (uint32_t f = 0; f < 3; f++)
+    {
+        if (o->numeric != 0 && o->field[f] >= (int8_t)o->parts)
+        {
+            return false;
+        }
     }
     for (uint32_t p = o->slot; p < o->slot + o->parts; p++)
     {
@@ -165,7 +204,7 @@ static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
         valid = ValidOutput(u, &u->output[i]);
         mixed |= u->output[i].parts > 1;
     }
-    return valid && (!mixed || (!u->percent && mlocValidMixedUnit(u))) &&
+    return valid && mlocValidCoordinate(u) && (!mixed || (!u->percent && mlocValidMixedUnit(u))) &&
            (!u->usage || (!u->percent && mlocValidUsageOutputs(u)));
 }
 
@@ -182,6 +221,10 @@ mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal*
     if (!ReadUnit(formatter, &u) || !ValidArguments(decimal, output))
     {
         return mloc_errorInvalid;
+    }
+    if (u.coordinate != mloc_coordinateNone)
+    {
+        return mlocFormatCoordinate(&u, decimal, output);
     }
     if (u.usage)
     {
@@ -200,7 +243,8 @@ mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter, const mlocDec
                                const mlocDecimal* end, mlocOutput* output)
 {
     UnitFormat u;
-    if (!ReadUnit(formatter, &u) || (u.output[0].parts > 1 && !u.usage))
+    if (!ReadUnit(formatter, &u) || (u.output[0].parts > 1 && !u.usage) ||
+        u.coordinate != mloc_coordinateNone)
     {
         return mloc_errorInvalid;
     }
@@ -224,7 +268,7 @@ mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* loc
 {
     if (data == nullptr || locale == nullptr || unit == nullptr || unitLength == 0 ||
         output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
-        width > mloc_unitWidthLong)
+        width > mloc_unitWidthNumeric)
     {
         return mloc_errorInvalid;
     }

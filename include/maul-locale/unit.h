@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0028): CLDR's unit identifiers ("kilometer-per-hour",
+// mloc-0029): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -130,13 +130,27 @@ extern "C"
         const mlocPrecision* precision, mlocOutput* unitOut, mlocUnitAmounts* amountsOut);
 
     // How a unit's name is written, as ECMA-402's unitDisplay: short
-    // ("3 km"), narrow ("3km") or long ("3 kilometers").
+    // ("3 km"), narrow ("3km") or long ("3 kilometers"); or numeric, as
+    // ICU's MeasureFormat: a mixed unit of hours, minutes and seconds by
+    // the locale's duration patterns ("1:05:09"), any other unit, and a
+    // negative or non-finite amount, as narrow.
     typedef enum mlocUnitWidth
     {
         mloc_unitWidthShort = 0,
         mloc_unitWidthNarrow = 1,
         mloc_unitWidthLong = 2,
+        mloc_unitWidthNumeric = 3,
     } mlocUnitWidth;
+
+    // An angle written as a coordinate with the locale's direction
+    // ("12°N"): a latitude's sign gives north or south, a longitude's
+    // east or west, and the amount is written unsigned.
+    typedef enum mlocCoordinate
+    {
+        mloc_coordinateNone = 0,
+        mloc_coordinateLatitude = 1,
+        mloc_coordinateLongitude = 2,
+    } mlocCoordinate;
 
     // A unit formatter's options; the zero value is the default.
     typedef struct mlocUnitOptions
@@ -151,6 +165,7 @@ extern "C"
         // mlocGetUnitPreference chooses it. Null and 0 for none.
         const char* usage;
         size_t usageLength;
+        mlocCoordinate coordinate;
     } mlocUnitOptions;
 
     // A locale's formatter of one unit: a value that points into the data
@@ -177,7 +192,9 @@ extern "C"
     /// the unit given, is written in the unit the locale prefers for its
     /// value, as mlocGetUnitPreference chooses and rounds it (a precision
     /// in the options wins over the preference's), mixed outputs as
-    /// above.
+    /// above. With a coordinate, an angle is written with the locale's
+    /// direction for its sign and the width ("12.5°N"; numeric takes
+    /// narrow's), the amount unsigned whatever the sign display.
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
@@ -194,8 +211,8 @@ extern "C"
     ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
     ///         mloc_errorNotFound for a unit the names do not know (a
     ///         simple unit without names, a power past three) or data
-    ///         without the number units, the unit table, the names or
-    ///         the lists;
+    ///         without the number units, the unit table, the names, the
+    ///         unit patterns or the lists;
     ///         mloc_errorCapacity for a unit whose patterns pass the
     ///         formatter's room; mloc_errorInvalid for a null pointer, an
     ///         empty unit, a currency, a constant in the numerator, a name
@@ -204,8 +221,9 @@ extern "C"
     ///         dimensions, a temperature) or are of one size, or with a
     ///         notation other than
     ///         standard, a usage with a mixed unit, one that does not
-    ///         convert or a notation other than standard, or options out
-    ///         of range or in conflict (a percent style, a null usage of a
+    ///         convert or a notation other than standard, a coordinate
+    ///         of a unit not an angle or with a usage, or options out of
+    ///         range or in conflict (a percent style, a null usage of a
     ///         length).
     /// @par Thread safety
     /// Safe from any thread.
@@ -255,8 +273,9 @@ extern "C"
     ///         (output->length is then the length needed) or rounding
     ///         passes the decimal's limits; mloc_errorInvalid for a null
     ///         pointer, a NaN end, a formatter of a mixed unit without a
-    ///         usage (which ICU does not range either), or a formatter or
-    ///         decimal the library did not make.
+    ///         usage (which ICU does not range either), a formatter of a
+    ///         coordinate, or a formatter or decimal the library did not
+    ///         make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,
@@ -272,7 +291,7 @@ extern "C"
     /// @param unit        A unit CLDR names, by any identifier of it
     ///                    ("metric-ton" for "tonne").
     /// @param unitLength  Its length in bytes.
-    /// @param width       The width.
+    /// @param width       The width; numeric writes narrow's name.
     /// @param output      Receives the text.
     /// @return mloc_success; mloc_fellBack when no locale of the chain
     ///         names it and the identifier is written instead;

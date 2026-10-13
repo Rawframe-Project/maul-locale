@@ -33,3 +33,4 @@ are listed in [README.md](README.md).
 | [mloc-0026](mloc-0026-list-patterns.md) | List patterns: compiled in by style, joined as ICU joins them | Accepted |
 | [mloc-0027](mloc-0027-mixed-units.md) | Mixed units: split exactly, joined by the unit list, as ICU writes them | Accepted |
 | [mloc-0028](mloc-0028-unit-usage.md) | The usage option: every output unit kept, the value choosing, as ICU routes it | Accepted |
+| [mloc-0029](mloc-0029-numeric-and-coordinates.md) | Numeric durations and coordinates: CLDR's patterns, written as ICU writes them | Accepted |

@@ -49,7 +49,8 @@ the units a locale prefers for a usage (every conversion and preference
 CLDR's unit test data gives passes on every push), and amounts and
 ranges of any core unit in each width (a name CLDR lacks built from its
 compound patterns), amounts of mixed units ("5 ft, 6 in") and of a usage
-in the unit the locale prefers ("0.62 mi" for 1000 m on a US road), with
+in the unit the locale prefers ("0.62 mi" for 1000 m on a US road),
+numeric durations ("1:05:09") and coordinates ("12.5°N"), with
 the display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`).
 The library has 50 public functions.

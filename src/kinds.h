@@ -77,6 +77,9 @@ constexpr uint32_t kindUnitNamesShort = 0x00040010;
 constexpr uint32_t kindUnitNamesNarrow = 0x00040011;
 constexpr uint32_t kindUnitNameExtras = 0x00040012;
 constexpr uint32_t kindUnitDerivations = 0x00040013;
+// The unit names data file: a locale's duration and coordinate patterns,
+// a unit per locale.
+constexpr uint32_t kindUnitPatterns = 0x00040014;
 
 // The list part: the distinct list pattern sets, a unit of no locale
 // (src/list_tables.h).

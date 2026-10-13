@@ -19,6 +19,7 @@
 #include "number_tables.h"
 #include "table_gen.h"
 #include "unit_names_gen.h"
+#include "unit_patterns_gen.h"
 #include "xml.h"
 
 #include <stdint.h>
@@ -1491,6 +1492,10 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
     GenerateListUnits(&lists, file);
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
              GenerateUnitNames(&units, unitNames, errorOut, errorCapacity);
+    if (ok)
+    {
+        GenerateUnitPatterns(&units, unitNames);
+    }
     AddSystemUnit(g, file);
     TableAddUnit(&g->currencySets, kindCurrencyPatterns, nullptr, file);
     TableAddUnit(&g->symbols, kindNumberSymbols, nullptr, file);

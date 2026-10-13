@@ -301,3 +301,63 @@ uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category)
     }
     return (fields->found & 1u << unitNameOther) != 0 ? unitNameOther : unitNameFields;
 }
+
+// Whether text holds "{0}" exactly once.
+static bool OnePlaceholder(const uint8_t* text, uint32_t length)
+{
+    uint32_t count = 0;
+    for (uint32_t at = 0; at + 3 <= length; at++)
+    {
+        count += memcmp(text + at, "{0}", 3) == 0;
+    }
+    return count == 1;
+}
+
+bool mlocValidUnitPatterns(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (!mlocValidNumberTable(payload, 2 * unitPatternCount, 0))
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(payload, 2 * unitPatternCount);
+    if (t.recordCount != 1)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < unitPatternCount; i++)
+    {
+        uint32_t s = mlocLoad16(t.records + 2 * (size_t)i);
+        if (s >= t.stringCount)
+        {
+            return false;
+        }
+        uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
+        uint32_t end = mlocLoad16(t.offsets + (size_t)s * 2 + 2);
+        if (i >= unitPatternCoordinates && !OnePlaceholder(t.text + start, end - start))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool mlocFindUnitPatterns(const mlocDataSet* data, const mlocLocale* locale, UnitPatternTexts* out)
+{
+    DataSpan unit;
+    bool fellBack = false;
+    if (!mlocFindLocaleUnit(data, mloc_componentMain, kindUnitPatterns, locale, &unit, &fellBack,
+                            nullptr))
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(unit, 2 * unitPatternCount);
+    for (uint32_t i = 0; i < unitPatternCount; i++)
+    {
+        uint32_t s = mlocLoad16(t.records + 2 * (size_t)i);
+        uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
+        out->text[i] = (const char*)t.text + start;
+        out->length[i] = (uint16_t)(mlocLoad16(t.offsets + (size_t)s * 2 + 2) - start);
+    }
+    return true;
+}

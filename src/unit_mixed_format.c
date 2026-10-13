@@ -44,9 +44,9 @@ bool mlocIsMixedUnit(const char* unit, size_t length)
 
 static ListStyle StyleOf(mlocUnitWidth width)
 {
-    return width == mloc_unitWidthLong     ? listUnit
-           : width == mloc_unitWidthNarrow ? listUnitNarrow
-                                           : listUnitShort;
+    return width == mloc_unitWidthLong                                       ? listUnit
+           : width == mloc_unitWidthNarrow || width == mloc_unitWidthNumeric ? listUnitNarrow
+                                                                             : listUnitShort;
 }
 
 // Loads each part's patterns into the slots, the parts split at "-and-".
@@ -86,6 +86,41 @@ static mlocResult LoadParts(UnitFormat* u, const mlocDataSet* data, const mlocLo
     return part == o->id.count ? mloc_success : mloc_errorSyntax;
 }
 
+// The numeric width's pattern of a mixed unit of hours, minutes and
+// seconds in that order, each plain: hours and minutes, minutes and
+// seconds, or all three (hours and seconds take it too, minutes 0, as
+// ICU's MeasureFormat).
+static void SetNumeric(const UnitTable* t, UnitOutput* o)
+{
+    static const char* const s_fields[3] = {"hour", "minute", "second"};
+    int32_t simples[3];
+    for (uint32_t f = 0; f < 3; f++)
+    {
+        simples[f] = mlocFindSimpleUnit(t, s_fields[f], strlen(s_fields[f]));
+        o->field[f] = -1;
+    }
+    int32_t last = -1;
+    for (uint32_t i = 0; i < o->id.count; i++)
+    {
+        const UnitPart* p = &o->id.parts[i];
+        int32_t f = 0;
+        while (f < 3 && (p->simple != simples[f] || p->prefix >= 0 || p->power != 1))
+        {
+            f++;
+        }
+        if (f == 3 || f <= last)
+        {
+            return;
+        }
+        o->field[f] = (int8_t)i;
+        last = f;
+    }
+    bool hours = o->field[0] >= 0;
+    o->numeric = (uint8_t)(1 + (!hours             ? unitPatternMs
+                                : o->field[2] >= 0 ? unitPatternHms
+                                                   : unitPatternHm));
+}
+
 mlocResult mlocLoadMixedOutput(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
                                const char* unit, size_t length, mlocUnitWidth width,
                                uint32_t* slots, size_t* used, UnitOutput* out)
@@ -106,6 +141,10 @@ mlocResult mlocLoadMixedOutput(UnitFormat* u, const mlocDataSet* data, const mlo
     }
     out->parts = out->id.count;
     out->smallest = (uint8_t)smallest;
+    if (width == mloc_unitWidthNumeric)
+    {
+        SetNumeric(&u->table, out);
+    }
     return mloc_success;
 }
 
@@ -242,9 +281,82 @@ static void SetUp(Mixed* m, const UnitFormat* u, const UnitOutput* o)
     m->larger[1] = plain;
 }
 
+// Writes a field of the numeric width: its part's amount, 0 for a field
+// the unit lacks, the smallest with the formatter's options; at least two
+// digits for a doubled letter.
+static mlocResult WriteField(const UnitFormat* u, const UnitOutput* o,
+                             const mlocUnitAmounts* amounts, int32_t part, bool doubled,
+                             NumberWriter* w)
+{
+    Formatter f = u->formatter;
+    if (part != o->smallest)
+    {
+        f.precision = (mlocPrecision){0};
+        f.grouping = mloc_groupingAuto;
+        f.minInteger = 1;
+    }
+    f.signDisplay = mloc_signAuto;
+    f.minInteger = doubled && f.minInteger < 2 ? 2 : f.minInteger;
+    mlocDecimal zero = {0};
+    return mlocWriteFormatted(&f, nullptr, part >= 0 ? &amounts->amounts[part] : &zero, w);
+}
+
+// Writes the amounts by a duration pattern, as ICU's formatNumeric: "h"
+// (or "H"), "m" and "s" stand for the fields, doubled for two digits;
+// text in apostrophes is literal, "''" an apostrophe.
+static mlocResult WriteNumeric(const UnitFormat* u, const UnitOutput* o,
+                               const mlocUnitAmounts* amounts, NumberWriter* w)
+{
+    const char* p = u->duration[o->numeric - 1];
+    size_t length = u->durationLength[o->numeric - 1];
+    bool quoted = false;
+    mlocResult r = mloc_success;
+    for (size_t at = 0; at < length; at++)
+    {
+        char c = p[at];
+        bool doubled = at + 1 < length && p[at + 1] == c;
+        int32_t f = c == 'h' || c == 'H' ? 0 : c == 'm' ? 1 : c == 's' ? 2 : -1;
+        if (c == '\'' && doubled)
+        {
+            mlocWriteLiteral(w, "'", 1);
+            at++;
+        }
+        else if (c == '\'')
+        {
+            quoted = !quoted;
+        }
+        else if (f >= 0 && !quoted)
+        {
+            mlocResult s = WriteField(u, o, amounts, o->field[f], doubled, w);
+            r = r == mloc_success ? s : r;
+            at += doubled ? 1 : 0;
+        }
+        else
+        {
+            mlocWriteLiteral(w, p + at, 1);
+        }
+    }
+    return r;
+}
+
+// Whether amounts take the numeric width: none negative or not finite.
+static bool NumericAmounts(const UnitOutput* o, const mlocUnitAmounts* amounts)
+{
+    bool plain = o->numeric != 0;
+    for (uint32_t i = 0; i < o->parts; i++)
+    {
+        plain &= amounts->amounts[i].kind == mloc_decimalFinite && !amounts->amounts[i].negative;
+    }
+    return plain;
+}
+
 mlocResult mlocWriteMixedTo(const UnitFormat* u, const UnitOutput* o,
                             const mlocUnitAmounts* amounts, NumberWriter* writer)
 {
+    if (NumericAmounts(o, amounts))
+    {
+        return WriteNumeric(u, o, amounts, writer);
+    }
     static Mixed s_zero;
     Mixed m = s_zero;
     SetUp(&m, u, o);

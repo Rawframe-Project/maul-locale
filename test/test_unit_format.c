@@ -296,7 +296,7 @@ static void TestNames(void)
                   mloc_errorInvalid &&
               mlocGetUnitDisplayName(&s_data, &locale, "meter", 0, mloc_unitWidthLong, &output) ==
                   mloc_errorInvalid &&
-              mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, (mlocUnitWidth)3, &output) ==
+              mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, (mlocUnitWidth)4, &output) ==
                   mloc_errorInvalid &&
               mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, mloc_unitWidthLong, nullptr) ==
                   mloc_errorInvalid,
@@ -517,6 +517,76 @@ static void TestUsage(void)
           "an input of the most single units");
 }
 
+static void TestNumeric(void)
+{
+    mlocUnitWidth n = mloc_unitWidthNumeric;
+    CHECK(Width("en", "hour-and-minute-and-second", n, "1.5083", "1:30:29.88") &&
+              Width("en", "hour-and-minute", n, "1.5", "1:30") &&
+              Width("en", "minute-and-second", n, "5.15", "5:09") &&
+              Width("en", "hour-and-second", n, "1.0025", "1:00:09"),
+          "hours, minutes and seconds by the duration patterns, two digits where doubled");
+    CHECK(Width("fi", "hour-and-minute-and-second", n, "1.5083", "1.30.29,88") &&
+              Width("en", "hour-and-minute", n, "1234.5", "1,234:30"),
+          "the locale's patterns and number symbols, larger fields grouped");
+    CHECK(Width("en", "hour-and-minute-and-second", n, "-1.5", "-1h 30m 0s") &&
+              Width("en", "hour", n, "5", "5h") &&
+              Width("en", "foot-and-inch", n, "5.5", "5\xE2\x80\xB2 6\xE2\x80\xB3") &&
+              Named("en", "meter", n, "m"),
+          "a negative amount, and any other unit, as narrow");
+    mlocUnitOptions whole = {.width = n, .number.precision = {.kind = mloc_precisionFraction}};
+    CHECK(Formats("en", "hour-and-minute-and-second", &whole, "1.99999", "2:00:00"),
+          "the smallest field rounded by the options, a carry moving up");
+}
+
+static void TestCoordinate(void)
+{
+    mlocUnitOptions lat = {.width = mloc_unitWidthNarrow, .coordinate = mloc_coordinateLatitude};
+    mlocUnitOptions lon = {.width = mloc_unitWidthLong, .coordinate = mloc_coordinateLongitude};
+    CHECK(Formats("en", "degree", &lat, "12.5", "12.5\xC2\xB0N") &&
+              Formats("en", "degree", &lat, "-12.5", "12.5\xC2\xB0S") &&
+              Formats("en", "degree", &lat, "0", "0\xC2\xB0N") &&
+              Formats("en", "degree", &lon, "-77.03", "77.03 degrees west") &&
+              Formats("fi", "degree", &lat, "60.17", "60,17\xC2\xB0P"),
+          "the direction by the sign, the amount unsigned");
+    CHECK(Formats("en", "degree-and-arc-minute-and-arc-second", &lat, "40.446111",
+                  "40\xC2\xB0 26\xE2\x80\xB2 45.9996\xE2\x80\xB3N"),
+          "a mixed angle");
+    mlocUnitOptions always = {.number.signDisplay = mloc_signAlways,
+                              .coordinate = mloc_coordinateLongitude};
+    mlocUnitOptions numeric = {.width = mloc_unitWidthNumeric,
+                               .coordinate = mloc_coordinateLatitude};
+    CHECK(Formats("en", "degree", &always, "8", "8 deg E") &&
+              Formats("en", "degree", &numeric, "12.5", "12.5\xC2\xB0N"),
+          "no sign written; the numeric width takes the narrow directions");
+    mlocUnitFormatter formatter;
+    mlocLocale locale;
+    mlocDecimal nan = {.kind = mloc_decimalNaN};
+    mlocDecimal south = {.kind = mloc_decimalInfinity, .negative = 1};
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    bool nanNorth =
+        mlocParseLocale("en", 2, &locale).status == mloc_success &&
+        mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &lat) == mloc_success &&
+        mlocFormatUnit(&formatter, &nan, &output) == mloc_success &&
+        Same(buffer, &output, "NaN\xC2\xB0N");
+    CHECK(nanNorth && mlocFormatUnit(&formatter, &south, &output) == mloc_success &&
+              Same(buffer, &output, "\xE2\x88\x9E\xC2\xB0S") &&
+              mlocFormatUnitRange(&formatter, &nan, &nan, &output) == mloc_errorInvalid,
+          "NaN north, an infinity by its sign; no range");
+    mlocUnitOptions road = {
+        .usage = "road", .usageLength = 4, .coordinate = mloc_coordinateLatitude};
+    mlocUnitOptions bad = {.coordinate = (mlocCoordinate)3};
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &lat) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &road) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &bad) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "degree", 6, &lat) ==
+                  mloc_errorNotFound,
+          "a unit not an angle, a usage, a coordinate out of range, data without the names");
+}
+
 static void TestRefusals(void)
 {
     mlocUnitFormatter formatter;
@@ -535,7 +605,7 @@ static void TestRefusals(void)
                   mloc_errorInvalid,
           "a currency, a constant in the numerator");
     mlocUnitOptions percent = {.number = {.style = mloc_numberPercent}};
-    mlocUnitOptions width = {.width = (mlocUnitWidth)3};
+    mlocUnitOptions width = {.width = (mlocUnitWidth)4};
     CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &percent) ==
                   mloc_errorInvalid &&
               mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &width) ==
@@ -788,6 +858,8 @@ int main(void)
     TestCompounds();
     TestMixed();
     TestUsage();
+    TestNumeric();
+    TestCoordinate();
     TestRanges();
     TestParts();
     TestNames();
