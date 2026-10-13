@@ -5,9 +5,14 @@
 // widths, the plural categories and their fallbacks, patterns without the
 // number, percent and per mille, compact notation, ranges, the parts, the
 // display names and the refusals. Every expected text is ICU4C 79's for
-// the same input ("generic" aside, which ICU does not take).
+// the same input ("generic" aside, which ICU does not take). Then the
+// formatter's pool of patterns on names built here.
 
+#include "currency_tables.h"
+#include "kinds.h"
 #include "test_harness.h"
+#include "test_pack.h"
+#include "unit_tables.h"
 
 #include "maul-locale/unit.h"
 
@@ -162,14 +167,15 @@ static void Collect(void* context, uint32_t kind, size_t start, size_t length)
     p->count++;
 }
 
-static bool PartsOf(const char* id, const char* unit, const char* amount, char* buffer,
-                    size_t capacity, Parts* parts)
+static bool PartsOf(const char* id, const char* unit, mlocUnitWidth width, const char* amount,
+                    char* buffer, size_t capacity, Parts* parts)
 {
     mlocUnitFormatter formatter;
+    mlocUnitOptions options = {.width = width};
     mlocDecimal decimal;
     *parts = (Parts){0};
     mlocOutput output = {.buffer = buffer, .capacity = capacity, .part = Collect, .context = parts};
-    return Init(&formatter, id, unit, nullptr) >= 0 &&
+    return Init(&formatter, id, unit, &options) >= 0 &&
            mlocParseDecimal(amount, strlen(amount), &decimal).status == mloc_success &&
            mlocFormatUnit(&formatter, &decimal, &output) == mloc_success;
 }
@@ -178,22 +184,30 @@ static void TestParts(void)
 {
     char buffer[64];
     Parts parts;
-    CHECK(PartsOf("en", "meter", "3", buffer, sizeof(buffer), &parts) && parts.count == 3 &&
-              parts.kinds[0] == mloc_numberPartInteger &&
+    CHECK(PartsOf("en", "meter", mloc_unitWidthShort, "3", buffer, sizeof(buffer), &parts) &&
+              parts.count == 3 && parts.kinds[0] == mloc_numberPartInteger &&
               parts.kinds[1] == mloc_numberPartLiteral && parts.lengths[1] == 1 &&
               parts.kinds[2] == mloc_numberPartUnit && parts.starts[2] == 2 &&
               parts.lengths[2] == 1,
           "the unit's name is its own part, the space literal");
     // Persian's zero, a left-to-right mark, a space and "cm" cubed: the
     // mark and the space are literal.
-    CHECK(PartsOf("fa", "cubic-centimeter", "0", buffer, sizeof(buffer), &parts) &&
+    CHECK(PartsOf("fa", "cubic-centimeter", mloc_unitWidthShort, "0", buffer, sizeof(buffer),
+                  &parts) &&
               parts.count == 3 && parts.kinds[1] == mloc_numberPartLiteral &&
               parts.lengths[1] == 4 && parts.kinds[2] == mloc_numberPartUnit &&
               parts.lengths[2] == 4 && memcmp(buffer + parts.starts[2], "cm\xC2\xB3", 4) == 0,
           "bidi controls at the name's ends are literal, as ICU trims them");
-    CHECK(PartsOf("en", "percent", "5", buffer, sizeof(buffer), &parts) && parts.count == 2 &&
-              parts.kinds[1] == mloc_numberPartPercentSign,
+    CHECK(PartsOf("en", "percent", mloc_unitWidthShort, "5", buffer, sizeof(buffer), &parts) &&
+              parts.count == 2 && parts.kinds[1] == mloc_numberPartPercentSign,
           "percent's sign is the percent part");
+    CHECK(PartsOf("en", "permille", mloc_unitWidthShort, "5", buffer, sizeof(buffer), &parts) &&
+              parts.count == 2 && parts.kinds[1] == mloc_numberPartPerMilleSign,
+          "per mille's sign is the per mille part");
+    CHECK(PartsOf("ar", "degree", mloc_unitWidthNarrow, "1", buffer, sizeof(buffer), &parts) &&
+              parts.count == 4 && parts.kinds[2] == mloc_numberPartUnit && parts.lengths[2] == 2 &&
+              parts.kinds[3] == mloc_numberPartLiteral && parts.lengths[3] == 3,
+          "a right-to-left mark after the name is literal");
 }
 
 static bool Named(const char* id, const char* unit, mlocUnitWidth width, const char* expected)
@@ -279,6 +293,66 @@ static void TestRefusals(void)
           "a text that does not fit gives its length");
 }
 
+alignas(8) static uint8_t s_built[4096];
+
+// Builds an identifiers unit naming "meter" and root's short names of it,
+// its one and other patterns "{0}" and that many bytes "x", and opens them
+// as a pack; false when the pack is refused.
+static bool OpenNames(mlocData* source, uint32_t one, uint32_t other)
+{
+    uint8_t* ids = s_built;
+    memset(s_built, 0, sizeof(s_built));
+    PackPut(ids, 1, 2);
+    PackPut(ids + 4, 5, 4);
+    PackPut(ids + unitIdsHeaderSize + 4, 5, 4);
+    memcpy(ids + unitIdsHeaderSize + 9, "meter", 5);
+    uint32_t idsSize = unitIdsHeaderSize + 9 + 5;
+    uint8_t* names = s_built + 64;
+    uint32_t text = 6 + one + other;
+    PackPut(names, 2, 2);
+    PackPut(names + 2, 1, 2);
+    PackPut(names + 4, text, 4);
+    PackPut(names + 8, 5, 4);
+    uint8_t* at = names + sparseHeaderSize;
+    PackPut(at + 2, 3 + one, 2);
+    PackPut(at + 4, text, 2);
+    PackPut(at + 10, 5, 2);
+    at[12] = 1u << (unitNameZero + 1) | 1u << unitNameOther;
+    PackPut(at + 13, 0, 2);
+    PackPut(at + 15, 1, 2);
+    uint8_t* strings = at + 17;
+    memcpy(strings, "{0}", 3);
+    memset(strings + 3, 'x', one);
+    memcpy(strings + 3 + one, "{0}", 3);
+    memset(strings + 6 + one, 'y', other);
+    PackUnit units[2] = {
+        {kindUnitIds, {ids, idsSize}, false},
+        {kindUnitNamesShort, {names, sparseHeaderSize + 17 + text}, true},
+    };
+    return OpenRootPack(units, 2, source);
+}
+
+static void TestPool(void)
+{
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet set = {sources, 2};
+    mlocLocale locale;
+    mlocUnitFormatter formatter;
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
+    CHECK(OpenNames(&sources[1], 1, 1023 - 1 - 1) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
+          "patterns that fill the pool");
+    CHECK(OpenNames(&sources[1], 1, 1023 - 1) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
+                  mloc_errorCapacity,
+          "patterns a byte past the pool");
+    CHECK(OpenNames(&sources[1], 1, 1024) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
+                  mloc_errorCapacity,
+          "a pattern longer than the pool");
+}
+
 // The compiled-in data, and with it the unit names data file, at the
 // path the build gives.
 static bool OpenData(void)
@@ -312,5 +386,6 @@ int main(void)
     TestParts();
     TestNames();
     TestRefusals();
+    TestPool();
     return s_failures == 0 ? 0 : 1;
 }
