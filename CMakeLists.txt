@@ -72,6 +72,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
+    src/list_data.c
+    src/list_join.c
     src/locale_canonical.c
     src/locale_distance.c
     src/locale_extensions.c
@@ -165,6 +167,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(test_unit_names PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
     endif()
     maul_add_test(wide WHITEBOX)
+    maul_add_test(list WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
@@ -205,7 +208,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
                                     tools/mlocgen/generate.c tools/mlocgen/keys.c
-                                    tools/mlocgen/ldml.c tools/mlocgen/locale_gen.c tools/mlocgen/map.c
+                                    tools/mlocgen/ldml.c tools/mlocgen/list_gen.c tools/mlocgen/locale_gen.c
+                                    tools/mlocgen/map.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
                                     tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c

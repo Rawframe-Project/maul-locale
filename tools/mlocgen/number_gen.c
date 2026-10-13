@@ -14,6 +14,7 @@
 #include "currency_tables.h"
 #include "keys.h"
 #include "kinds.h"
+#include "list_gen.h"
 #include "map.h"
 #include "number_tables.h"
 #include "table_gen.h"
@@ -1481,6 +1482,13 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
         .ids = (const char* const*)ids,
         .count = count,
     };
+    ListInput lists = {
+        .cldr = &g->cldr,
+        .keys = &g->keys,
+        .ids = (const char* const*)ids,
+        .count = count,
+    };
+    GenerateListUnits(&lists, file);
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
              GenerateUnitNames(&units, unitNames, errorOut, errorCapacity);
     AddSystemUnit(g, file);

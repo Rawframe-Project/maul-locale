@@ -127,9 +127,7 @@ NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize)
     return t;
 }
 
-// Whether a table unit's sizes and string offsets hold, and each string
-// is valid text.
-static bool ValidTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceholder)
+bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceholder)
 {
     if (payload.size < numberTableHeaderSize)
     {
@@ -160,7 +158,7 @@ static bool ValidTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceho
 bool mlocValidNumberSymbols(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (!ValidTable(payload, 2 * numberSymbolCount, 0))
+    if (!mlocValidNumberTable(payload, 2 * numberSymbolCount, 0))
     {
         return false;
     }
@@ -196,7 +194,7 @@ static bool ValidPattern(const uint8_t* p, uint32_t stringCount)
 bool mlocValidNumberPatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (!ValidTable(payload, numberPatternSize, numberAffixCurrencyNarrow))
+    if (!mlocValidNumberTable(payload, numberPatternSize, numberAffixCurrencyNarrow))
     {
         return false;
     }
@@ -242,7 +240,7 @@ bool mlocValidNumbers(const DataView* view, DataSpan payload)
 bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (!ValidTable(payload, numberCompactPatternSize, numberAffixCurrencyNarrow))
+    if (!mlocValidNumberTable(payload, numberCompactPatternSize, numberAffixCurrencyNarrow))
     {
         return false;
     }
@@ -408,7 +406,7 @@ CurrencyFraction mlocFindCurrencyFraction(DataSpan unit, uint16_t code)
 bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (!ValidTable(payload, currencySetSize, currencyTextOther))
+    if (!mlocValidNumberTable(payload, currencySetSize, currencyTextOther))
     {
         return false;
     }

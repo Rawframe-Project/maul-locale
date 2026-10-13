@@ -78,4 +78,10 @@ constexpr uint32_t kindUnitNamesNarrow = 0x00040011;
 constexpr uint32_t kindUnitNameExtras = 0x00040012;
 constexpr uint32_t kindUnitDerivations = 0x00040013;
 
+// The list part: the distinct list pattern sets, a unit of no locale
+// (src/list_tables.h).
+constexpr uint32_t kindListPatterns = 0x00050001;
+// The list part: a locale's set of each list style, a unit per locale.
+constexpr uint32_t kindLists = 0x00050002;
+
 #endif

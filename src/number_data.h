@@ -38,6 +38,11 @@ typedef struct NumberTable
 // The parts of a valid table unit.
 NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize);
 
+// Whether a table unit's sizes hold and its strings are well-formed
+// UTF-8 without NUL, their bytes below 0x20 at most maxPlaceholder (0 for
+// none). Its records are the caller's to check.
+bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceholder);
+
 // A compact table of a valid compact unit, or null for an index past its
 // tables.
 const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index);

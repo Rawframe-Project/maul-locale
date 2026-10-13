@@ -4,7 +4,7 @@ base:
 bytes:
 data: bytes data_format data_view
 data_format:
-data_kinds: currency_region data_view kinds locale_canonical locale_distance locale_fallback locale_likely locale_prefs number_data plural unit_data unit_names
+data_kinds: currency_region data_view kinds list_data locale_canonical locale_distance locale_fallback locale_likely locale_prefs number_data plural unit_data unit_names
 data_view:
 decimal: bytes
 decimal_round: decimal
@@ -43,3 +43,6 @@ unit_prefs: bytes data_view decimal kinds locale_keyword locale_prefs locale_tab
 unit_names: bytes currency_tables data_format data_view kinds locale_fallback number_data unit_tables
 unit_compound: data_view kinds unit_data unit_id unit_names unit_tables
 unit_format: currency_tables kinds number_core number_format plural plural_rules unit_compound unit_id unit_names
+list_tables:
+list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
+list_join: list_data number_core
