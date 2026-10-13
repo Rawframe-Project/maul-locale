@@ -533,14 +533,20 @@ static void TestEngineLimits(void)
 // without a "-x" rule, whose fraction is x - floor(x) for a fraction rule
 // set and its own digits digit by digit, and a fraction rule set's
 // choice of base.
-static const char s_minutes[] = "%a:\n-x: minus >>;\nx.x: << point >>;\n"
-                                "0: zero; one; two; three; four; five; six; seven; eight; nine;\n"
-                                "10: ten[ >>];\n60/60: <%%m< min[ >>];\n%%m:\n0: =#,##0=;\n";
+static const char s_minutes[] = "%a:\n-x: minus >>;\n0: =#,##0.##=;\n"
+                                "60/60: <%%m< min[ >>];\n%%m:\n0: =#,##0=;\n";
 static const char s_digits[] = "%a:\nx.x: << point >>;\n"
                                "0: zero; one; two; three; four; five; six; seven; eight; nine;\n"
                                "10: ten[ >>];\n";
 static const char s_parts[] = "%b:\nx.x: << point >%a>;\n0: =#,##0=;\n%a:\n10: <%b< tenths;\n"
                               "100: <%b< hundredths;\n1000: <%b< thousandths;\n";
+
+// A base of one, two equal bases (the second unless the value times the
+// base is one), and a set after the last base, which the choice must not
+// read.
+static const char s_choice[] = "%b:\nx.x: << point >%a>;\n0: =#,##0=;\n%a:\n1: <%b< wholes;\n"
+                               "10: <%b< tenth;\n10: <%b< tenths;\n1000: <%b< thousandths;\n"
+                               "%c:\n1000: past;\n";
 
 static const struct
 {
@@ -549,10 +555,11 @@ static const struct
     const char* number;
     const char* expected;
 } s_results[] = {
-    {s_minutes, "%a", "61.5", "1 min one point five"},
-    {s_minutes, "%a", "3661.25", "61 min one point two five"},
-    {s_minutes, "%a", "-61.5", "minus 1 min one point five"},
-    {s_minutes, "%a", "120.75", "2 min point seven five"},
+    {s_minutes, "%a", "61.5", "1 min 1.5"},
+    {s_minutes, "%a", "3661.25", "61 min 1.25"},
+    {s_minutes, "%a", "-61.5", "minus 1 min 1.5"},
+    {s_minutes, "%a", "120.75", "2 min 0.75"},
+    {s_minutes, "%a", "59.5", "0 min"},
     {s_digits, "%a", "-1.25", "two point two five"},
     {s_digits, "%a", "-0.001", "one point zero zero one"},
     {s_digits, "%a", "-12.375", "ten three point three seven five"},
@@ -567,6 +574,12 @@ static const struct
     {s_parts, "%a", "0.00049", "0 tenths"},
     {s_parts, "%a", "2", " tenths"},
     {s_parts, "%a", "100.5", "1,005 tenths"},
+    {s_choice, "%a", "1.0004", "1 wholes"},
+    {s_choice, "%a", "0.9996", "1 wholes"},
+    {s_choice, "%a", "0.1", "1 tenth"},
+    {s_choice, "%a", "0.2", "2 tenths"},
+    {s_choice, "%a", "0.125", "125 thousandths"},
+    {s_choice, "%a", "0.04", "40 thousandths"},
 };
 
 static void TestEngineResults(void)
