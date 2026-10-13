@@ -106,12 +106,18 @@ mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, 
 
 void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out)
 {
-    *out = (Outer){
-        .patternText = u->patterns,
-        .textKind = mloc_numberPartUnit,
-        .patternKind = mloc_numberPartUnit,
-        .rules = u->rules,
-    };
+    // Field by field: clearing the whole value first takes a string
+    // store, which costs more to start than these writes.
+    out->patternText = u->patterns;
     memcpy(out->patternStart, u->start[slot], sizeof(out->patternStart));
     memcpy(out->patternLength, u->length[slot], sizeof(out->patternLength));
+    for (uint32_t c = 0; c < 6; c++)
+    {
+        out->text[c] = nullptr;
+        out->textLength[c] = 0;
+    }
+    out->textKind = mloc_numberPartUnit;
+    out->patternKind = mloc_numberPartUnit;
+    memset(out->code, 0, sizeof(out->code));
+    out->rules = u->rules;
 }
