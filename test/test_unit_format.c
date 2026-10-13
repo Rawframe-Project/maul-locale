@@ -483,8 +483,12 @@ static void TestUsage(void)
     CHECK(mlocFormatUnit(&formatter, &amount, &measure) == mloc_errorCapacity &&
               measure.length == 7,
           "a null buffer measures");
-    mlocUnitFormatter forged = formatter;
-    ((UnitFormat*)(void*)&forged)->table.simples = nullptr;
+    mlocUnitFormatter forged;
+    UnitFormat inside;
+    memcpy(&inside, &formatter, sizeof(inside));
+    inside.table.simples = nullptr;
+    memcpy(&forged, &formatter, sizeof(forged));
+    memcpy(&forged, &inside, sizeof(inside));
     CHECK(mlocFormatUnit(&forged, &amount, &output) == mloc_errorInvalid,
           "a usage formatter without its unit table");
     // A usage of 64 bytes is read (it falls back to the default); one of
@@ -554,13 +558,17 @@ static void TestRefusals(void)
     mlocUnitFormatter made;
     CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "meter", 5, nullptr) == mloc_success,
           "a formatter");
-    UnitFormat* inside = (UnitFormat*)(void*)&made;
-    inside->start[1][0] = 2 * unitPool;
+    UnitFormat inside;
+    memcpy(&inside, &made, sizeof(inside));
+    inside.start[1][0] = 2 * unitPool;
+    memcpy(&made, &inside, sizeof(inside));
     bool unused = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
-    inside->start[0][0] = unitPool;
-    inside->length[0][0] = 0;
+    inside.start[0][0] = unitPool;
+    inside.length[0][0] = 0;
+    memcpy(&made, &inside, sizeof(inside));
     bool emptyAtEnd = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
-    inside->start[0][0] = unitPool + 1;
+    inside.start[0][0] = unitPool + 1;
+    memcpy(&made, &inside, sizeof(inside));
     CHECK(unused && emptyAtEnd && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
           "a pattern's offsets checked within the pool, an unused part's not read");
     output.capacity = 2;
