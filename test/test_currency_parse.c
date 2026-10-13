@@ -168,6 +168,12 @@ static const Case s_cases[] = {
     {"tr", "TRY", mloc_parseLenient, 1, "12,50 T\xC3\x9CRK L\xC4\xB0RASI", "12.5", "TRY", 19},
     {"tr", "TRY", mloc_parseLenient, 1, "12,50 t\xC3\xBCrk liras\xC4\xB1", "12.5", "TRY", 19},
     {"tr", "USD", mloc_parseLenient, 1, "12,50 ABD DOLARI", "12.5", "USD", 16},
+    // Text that ends with the spacing after a number, read to its end
+    // and no further.
+    {"en", "USD", mloc_parseLenient, 0, "12\xC2\xA0", "12", "USD", 2},
+    {"en", "USD", mloc_parseLenient, 1, "12\xC2\xA0", nullptr, nullptr, 2},
+    {"en", "USD", mloc_parseStrict, 0, "12\xC2\xA0", nullptr, nullptr, 2},
+    {"en", "USD", mloc_parseStrict, 1, "12\xC2\xA0", nullptr, nullptr, 2},
 };
 
 static mlocResult Init(const mlocDataSet* data, const char* id, const char* code,

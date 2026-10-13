@@ -696,7 +696,8 @@ void mlocMatchCurrency(const Parser* r, Segment* s, Parsed* p)
     // kept: "706 $" ends at 3 in strict mode.
     size_t spacing = SeenNumber(p) ? mlocParsePrefix(r->sets, s, s_nbsp, sizeof(s_nbsp)) : 0;
     s->at += spacing;
-    if (spacing > 0 && UnitsOf(s->text + s->at, s->length - s->at) == 1)
+    // Text that ends with the spacing has no currency to read.
+    if (s->at == s->length || (spacing > 0 && UnitsOf(s->text + s->at, s->length - s->at) == 1))
     {
         s->at = initial;
         return;
