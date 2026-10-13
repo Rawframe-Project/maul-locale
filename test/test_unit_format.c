@@ -808,6 +808,14 @@ static void TestRefusals(void)
     memcpy(&made, &inside, sizeof(inside));
     CHECK(unused && emptyAtEnd && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
           "a pattern's offsets checked within the pool, an unused part's not read");
+    inside.start[0][0] = 0;
+    inside.outputs = 0;
+    memcpy(&made, &inside, sizeof(inside));
+    bool none = mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid;
+    inside.outputs = unitOutputs + 1;
+    memcpy(&made, &inside, sizeof(inside));
+    CHECK(none && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+          "the output units counted within the formatter's");
     output.capacity = 2;
     CHECK(Init(&formatter, "en", "meter", nullptr) == mloc_success &&
               mlocFormatUnit(&formatter, &decimal, &output) == mloc_errorCapacity &&

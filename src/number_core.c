@@ -771,13 +771,9 @@ static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecim
     // The highest power a separator follows, or -1 for none: the primary
     // size, then every secondary size above it.
     int64_t separator = -1;
-    if (grouped && integers - 1 > c->primary)
+    if (grouped && integers - 1 >= c->primary)
     {
         separator = c->primary + (integers - 1 - c->primary) / c->secondary * c->secondary;
-    }
-    else if (grouped && integers - 1 == c->primary)
-    {
-        separator = c->primary;
     }
     for (int64_t power = integers - 1; power >= 0; power--, index++)
     {
