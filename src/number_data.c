@@ -68,6 +68,11 @@ static bool ValidText(const uint8_t* text, uint32_t length, uint8_t maxPlacehold
     return true;
 }
 
+bool mlocValidDataText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder)
+{
+    return ValidText(text, length, maxPlaceholder);
+}
+
 bool mlocValidNumberSystems(const DataView* view, DataSpan payload)
 {
     (void)view;

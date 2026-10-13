@@ -287,7 +287,7 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component)
     {
         return "root";
     }
-    if (component == componentMain && strchr(locale, '_') == cut && strlen(cut + 1) == 4)
+    if (component != componentCollation && strchr(locale, '_') == cut && strlen(cut + 1) == 4)
     {
         char language[16];
         const char* likely = CopyRange(language, sizeof(language), locale, cut)
@@ -316,6 +316,8 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component)
     return kept;
 }
 
+static const char* const s_directories[componentCount] = {"main", "collation", "rbnf"};
+
 static LdmlFile* File(Cldr* cldr, const char* locale, Component component)
 {
     LdmlFile* file = MapGet(&cldr->files[component], locale);
@@ -324,8 +326,8 @@ static LdmlFile* File(Cldr* cldr, const char* locale, Component component)
         return file == &s_missing ? nullptr : file;
     }
     char path[4096];
-    snprintf(path, sizeof(path), "%s/%s/%s.xml", cldr->commonDirectory,
-             component == componentCollation ? "collation" : "main", locale);
+    snprintf(path, sizeof(path), "%s/%s/%s.xml", cldr->commonDirectory, s_directories[component],
+             locale);
     FILE* probe = fopen(path, "rb");
     if (probe == nullptr)
     {
@@ -544,7 +546,7 @@ static void FreeText(const char* key, void* value, void* context)
 
 void CldrClose(Cldr* cldr)
 {
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < componentCount; i++)
     {
         MapEach(&cldr->files[i], FreeFile, nullptr);
         MapFree(&cldr->files[i]);

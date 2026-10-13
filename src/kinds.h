@@ -94,5 +94,14 @@ constexpr uint32_t kindParseSets = 0x00040017;
 constexpr uint32_t kindListPatterns = 0x00050001;
 // The list part: a locale's set of each list style, a unit per locale.
 constexpr uint32_t kindLists = 0x00050002;
+// The spell-out data file: a locale's spell-out rules, ordinal-suffix
+// rules and numbering-system rules, a unit per locale key whose file has
+// the group (record mloc-0034, src/spellout_tables.h).
+constexpr uint32_t kindSpelloutRules = 0x00060001;
+constexpr uint32_t kindSpelloutOrdinals = 0x00060002;
+constexpr uint32_t kindSpelloutNumbering = 0x00060003;
+// The spell-out data file: the algorithmic numbering systems, a unit of
+// no locale.
+constexpr uint32_t kindSpelloutSystems = 0x00060004;
 
 #endif

@@ -43,6 +43,10 @@ NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize);
 // none). Its records are the caller's to check.
 bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceholder);
 
+// Whether text is well-formed UTF-8 without NUL, its bytes below 0x20 at
+// most maxPlaceholder (0 for none).
+bool mlocValidDataText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder);
+
 // A compact table of a valid compact unit, or null for an index past its
 // tables.
 const uint8_t* mlocFindCompactTable(DataSpan unit, uint32_t index);

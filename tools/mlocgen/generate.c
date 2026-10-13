@@ -9,6 +9,7 @@
 #include "locale_gen.h"
 #include "number_gen.h"
 #include "plural_gen.h"
+#include "spellout_gen.h"
 #include "unit_gen.h"
 
 #include "maul-locale/base.h"
@@ -243,16 +244,19 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     DataFile data = {0};
     DataFile names = {0};
     DataFile unitNames = {0};
+    DataFile spellout = {0};
     Text rules = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
         !GenerateNumberUnits(commonDirectory, &data, &names, &unitNames, errorOut, errorCapacity) ||
-        !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity))
+        !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
+        !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity))
     {
         DataFileFree(&data);
         DataFileFree(&names);
         DataFileFree(&unitNames);
+        DataFileFree(&spellout);
         return 0;
     }
     // The compiled rules are code tables the data's indexes name, so they
@@ -275,15 +279,22 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     size_t unitNamesSize = 0;
     uint8_t* unitNamesBytes = DataFileWrite(&unitNames, &version, &unitNamesSize);
     Text unitNamesFile = {.bytes = (char*)unitNamesBytes, .size = unitNamesSize};
+    // And the spell-out rules (record mloc-0034).
+    size_t spelloutSize = 0;
+    uint8_t* spelloutBytes = DataFileWrite(&spellout, &version, &spelloutSize);
+    Text spelloutFile = {.bytes = (char*)spelloutBytes, .size = spelloutSize};
     int ok = WriteFile(root, "data_version.h", &header, errorOut, errorCapacity) &&
              WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
              WriteFile(root, "currency-names.mloc", &namesFile, errorOut, errorCapacity) &&
-             WriteFile(root, "units.mloc", &unitNamesFile, errorOut, errorCapacity);
+             WriteFile(root, "units.mloc", &unitNamesFile, errorOut, errorCapacity) &&
+             WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     free(namesBytes);
     free(unitNamesBytes);
+    free(spelloutBytes);
     DataFileFree(&names);
     DataFileFree(&unitNames);
+    DataFileFree(&spellout);
     free(header.bytes);
     free(builtin.bytes);
     free(rules.bytes);

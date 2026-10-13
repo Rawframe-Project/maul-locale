@@ -96,6 +96,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/parse_currency.c
     src/parse_match.c
     src/plural.c
+    src/spellout_data.c
     src/unit.c
     src/unit_convert.c
     src/unit_data.c
@@ -236,7 +237,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
                                     tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
-                                    tools/mlocgen/prefs_gen.c tools/mlocgen/unit_gen.c
+                                    tools/mlocgen/prefs_gen.c tools/mlocgen/spellout_compile.c
+                                    tools/mlocgen/spellout_gen.c
+                                    tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/xml.c src/wide.c)
@@ -250,6 +253,10 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # reports as deprecated in favor of its own fopen_s.
     if(WIN32)
         target_compile_definitions(mlocgen_core PUBLIC _CRT_SECURE_NO_WARNINGS)
+    endif()
+    # The rule compiler checks a rule's exponent with ICU's logarithms.
+    if(UNIX)
+        target_link_libraries(mlocgen_core PUBLIC m)
     endif()
     add_executable(mlocgen tools/mlocgen/main.c)
     target_link_libraries(mlocgen PRIVATE mlocgen_core)
@@ -268,6 +275,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         # The writer against the library's reader, which a shared build
         # hides.
         if(NOT MAUL_LOCALE_BUILD_SHARED)
+            add_executable(test_genspellout test/test_genspellout.c)
+            target_link_libraries(test_genspellout PRIVATE mlocgen_core maul-locale)
+            target_include_directories(test_genspellout PRIVATE test src)
+            maul_apply_flags(test_genspellout)
+            add_test(NAME genspellout COMMAND test_genspellout)
             add_executable(test_gendata test/test_gendata.c)
             target_link_libraries(test_gendata PRIVATE mlocgen_core maul-locale)
             target_include_directories(test_gendata PRIVATE test src)

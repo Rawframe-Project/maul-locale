@@ -16,6 +16,7 @@
 #include "number_data.h"
 #include "number_parse.h"
 #include "plural.h"
+#include "spellout_data.h"
 #include "unit_data.h"
 #include "unit_names.h"
 
@@ -53,6 +54,10 @@ static const DataKind s_kinds[] = {
     {kindUnitCasesLowered, mlocValidUnitCases},
     {kindListPatterns, mlocValidListPatterns},
     {kindLists, mlocValidLists},
+    {kindSpelloutRules, mlocValidSpelloutRules},
+    {kindSpelloutOrdinals, mlocValidSpelloutRules},
+    {kindSpelloutNumbering, mlocValidSpelloutRules},
+    {kindSpelloutSystems, mlocValidSpelloutSystems},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;
