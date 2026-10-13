@@ -1,4 +1,4 @@
-# mloc-0023. Units: identifiers parsed, conversion exact and rounded once
+# mloc-0023. Units: identifiers parsed, conversion exact and rounded once, preferences
 
 Status: Accepted
 
@@ -18,7 +18,8 @@ ICU4X 2.3 moved to exact ratios. Profile L14 asks for exact rationals.
 
 ## Decision
 
-- **Data:** a unit of no locale (`src/unit_tables.h`, 6.9 KB): the
+- **Data:** a unit of no locale (`src/unit_tables.h`, 12 KB with what the
+  preferences need): the
   simple units sorted by identifier, each with its base unit, flags
   (offset, Beaufort), its place in UTS #35's normalization order and
   its size in the base unit as a reduced fraction (numerator and
@@ -57,12 +58,40 @@ ICU4X 2.3 moved to exact ratios. Profile L14 asks for exact rationals.
   rounded half even to 38 significant digits; a precision given is
   applied to the rounded-to-odd value. An inexact value whose 40
   digits pass the decimal's smallest exponent is refused.
+- **Preferences** (`mlocGetUnitPreference`): a second unit of no locale
+  holds CLDR's preference sets by category and usage, each with a run
+  of entries per region (001 always among them; CLDR 49 names no other
+  containing region, so a region without a run takes 001's), each
+  entry a unit, a threshold and a skeleton's increment. The unit table
+  gains each unit's systems, base units' exponents kept by side
+  ("cubic-meter-per-meter" is not "square-meter"), the dimensions' names
+  and the quantities. The order is UTS #35's: a valid `-u-mu` that
+  converts from the unit decides; else the quantity, looked up as ICU's
+  `getUnitQuantity` does (the base units as written, their reciprocal,
+  then cancelled, then that reciprocal), so "mile-per-gallon" is a
+  consumption; the usage falls back by its last part to "default"; the
+  region is the regional preferences' (record mloc-0018) and `-u-ms`
+  moves to 001, the US or GB when a unit of the run is of another
+  system (systems derived by UTS #35's modified intersection); the first
+  entry whose threshold the value reaches in that unit, NaN reaching
+  all. A quantity without preferences takes its base unit and a unit of
+  no quantity its base units, cancelled and in normalization order
+  ("candela-per-bit"). A mixed unit splits the exact value: integer
+  larger parts, the exact rest in the last, which alone is rounded, a
+  rounding that reaches the next part's size carrying up. The zero
+  precision rounds as ICU's router (the skeleton's increment, else an
+  integer of at least two significant digits); a null precision leaves
+  the amounts as `mlocConvertUnit` does.
 - **Proof:** `tools/check_units.py` with `conform_units` in the cldr CI
   job: from `unitsTest.txt`'s own fractions, every unit to its base,
   to every unit of its quantity and to every unit of the reciprocal
   quantity, at five values, 21,173 conversions, each equal to the
   exact value as the default precision rounds it; the file's
-  seven-digit column agrees with its fractions.
+  seven-digit column agrees with its fractions. `tools/check_unit_prefs.py`
+  with `conform_unit_prefs`: all 393 cases of `unitPreferencesTest.txt`
+  and `unitLocalePreferencesTest.txt`, the same unit, the same integer
+  parts and the last amount as the default precision writes the exact
+  value (inputs that are no finite decimal, given to 40 digits, at 30).
 
 ## Consequences
 

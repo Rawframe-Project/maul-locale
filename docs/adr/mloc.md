@@ -27,4 +27,4 @@ are listed in [README.md](README.md).
 | [mloc-0020](mloc-0020-plural-rules.md) | Plural rules compiled to C, chosen per locale by data | Accepted |
 | [mloc-0021](mloc-0021-number-formatting.md) | Number formatting from distinct tables, without default rounding | Accepted |
 | [mloc-0022](mloc-0022-currency-formatting.md) | Currency formatting: symbols field by field, spacing as ICU | Accepted |
-| [mloc-0023](mloc-0023-unit-conversion.md) | Units: identifiers parsed, conversion exact and rounded once | Accepted |
+| [mloc-0023](mloc-0023-unit-conversion.md) | Units: identifiers parsed, conversion exact and rounded once, preferences | Accepted |

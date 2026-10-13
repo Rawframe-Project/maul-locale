@@ -22,6 +22,8 @@ typedef struct UnitTable
     const uint8_t* prefixes;
     const uint8_t* aliases;
     const uint8_t* bases;
+    const uint8_t* dimensions;
+    const uint8_t* quantities;
     const uint8_t* beaufort;
     const uint8_t* text;
     const uint8_t* numbers;
@@ -31,6 +33,7 @@ typedef struct UnitTable
     uint32_t baseCount;
     uint32_t beaufortCount;
     uint32_t dimensionCount;
+    uint32_t quantityCount;
 } UnitTable;
 
 UnitTable mlocReadUnitTable(DataSpan unit);
@@ -50,8 +53,9 @@ size_t mlocFindUnitAlias(const UnitTable* t, const char* id, size_t length,
 const uint8_t* mlocSimpleUnit(const UnitTable* t, uint32_t index);
 const uint8_t* mlocUnitPrefix(const UnitTable* t, uint32_t index);
 
-// A base unit's exponent of each dimension.
-const int8_t* mlocBaseDimensions(const UnitTable* t, uint32_t base);
+// A base unit's record: its numerator's and denominator's exponents at
+// baseNumerator and baseDenominator (unit_tables.h).
+const uint8_t* mlocBaseUnit(const UnitTable* t, uint32_t base);
 
 // A simple unit's size in its base unit, and its offset (0 without
 // one); the offset's numerator sign is never negative in CLDR, so it is
@@ -65,5 +69,32 @@ typedef struct UnitFactor
 } UnitFactor;
 
 void mlocReadUnitFactor(const UnitTable* t, uint32_t simple, UnitFactor* out);
+
+bool mlocValidUnitPreferences(const DataView* view, DataSpan payload);
+
+// The parts of a valid unit preferences unit.
+typedef struct UnitPrefsTable
+{
+    const uint8_t* sets;
+    const uint8_t* runs;
+    const uint8_t* entries;
+    const uint8_t* text;
+    uint32_t setCount;
+    uint32_t runCount;
+    uint32_t entryCount;
+} UnitPrefsTable;
+
+UnitPrefsTable mlocReadUnitPrefs(DataSpan unit);
+
+// The set of a category and usage, or -1; with a null usage, the first set
+// of the category, or -1 when it has none.
+int32_t mlocFindUnitPrefSet(const UnitPrefsTable* t, const char* category, size_t categoryLength,
+                            const char* usage, size_t usageLength);
+
+// The run of a set for a region, else its run for 001.
+uint32_t mlocFindUnitPrefRun(const UnitPrefsTable* t, uint32_t set, uint32_t region);
+
+// A run's first entry and its entry count.
+uint32_t mlocUnitPrefEntries(const UnitPrefsTable* t, uint32_t run, const uint8_t** firstOut);
 
 #endif

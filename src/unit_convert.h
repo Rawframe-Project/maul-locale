@@ -14,7 +14,7 @@
 #include "unit_tables.h"
 #include "wide.h"
 
-#include "maul-locale/decimal.h"
+#include "maul-locale/number.h"
 
 // A core unit's size in its base unit, its dimensions, and how it
 // converts: by its size, its size and an offset (a temperature alone),
@@ -25,10 +25,21 @@ typedef struct UnitScale
     Wide denominator;
     Wide offsetNumerator;
     Wide offsetDenominator;
-    int8_t dimensions[unitMaxDimensions];
+    int16_t dimensions[unitMaxDimensions];
     bool offset;
     bool beaufort;
 } UnitScale;
+
+// A value in flight: ±a / b * 10^e with the power kept out of the
+// integers, or an infinity.
+typedef struct UnitValue
+{
+    Wide a;
+    Wide b;
+    int64_t e;
+    bool negative;
+    bool infinite;
+} UnitValue;
 
 // The scale of a parsed core unit. Returns mloc_success;
 // mloc_errorInvalid for a mixed unit or one that does not convert (a
@@ -47,5 +58,34 @@ mlocResult mlocScaleUnit(const UnitTable* t, const UnitId* id, UnitScale* out);
 // when the integers or the decimal's exponent cannot hold the value.
 mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const UnitScale* to,
                              const mlocDecimal* value, mlocDecimal* out, bool* exactOut);
+
+// A finite or infinite decimal's value; false when its digits do not fit.
+bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out);
+
+// A value in a scale's unit to its base unit, and back; false when the
+// integers cannot hold it.
+bool mlocUnitValueToBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
+bool mlocUnitValueFromBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
+
+// x = 1 / x: zero gives an infinity and an infinity zero.
+void mlocInvertUnitValue(UnitValue* x);
+
+// Whether |x| is at least n / d (d not zero).
+bool mlocUnitValueAtLeast(const UnitValue* x, const Wide* n, const Wide* d);
+
+// Takes the integer part of a finite |x| out: *integerOut receives it and
+// x keeps the rest, positive. False when the power cannot be folded in.
+bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut);
+
+// An integer's value.
+UnitValue mlocUnitValueOfInteger(const Wide* integer);
+
+// Writes a value as 40 digits rounded to odd (mlocConvertScaled);
+// mloc_errorCapacity when a decimal cannot hold it.
+mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exactOut);
+
+// Rounds a converted value: by a precision with a kind, else an exact one
+// stays and an inexact one rounds half even to 38 significant digits.
+mlocResult mlocRoundConverted(mlocDecimal* d, bool exact, const mlocPrecision* precision);
 
 #endif

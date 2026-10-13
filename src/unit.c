@@ -14,13 +14,6 @@
 #include "unit_data.h"
 #include "unit_id.h"
 
-enum
-{
-    // The significant digits an inexact conversion keeps by default: two
-    // fewer than it computes, so that rounding to odd makes them exact.
-    defaultDigits = 38,
-};
-
 static mlocResult Scale(const UnitTable* t, const char* id, size_t length, UnitScale* out)
 {
     UnitId parsed;
@@ -58,22 +51,9 @@ mlocResult mlocConvertUnit(const mlocDataSet* data, const char* from, size_t fro
     {
         r = mlocConvertScaled(&t, &source, &target, value, &converted, &exact);
     }
-    if (r == mloc_success && converted.kind == mloc_decimalFinite)
+    if (r == mloc_success)
     {
-        if (precision->kind != mloc_precisionNone)
-        {
-            r = mlocApplyPrecision(precision, &converted);
-        }
-        else if (!exact)
-        {
-            int64_t position = mlocTopPower(&converted) - defaultDigits + 1;
-            r = mlocRoundDecimal(
-                &converted,
-                (int32_t)(position < -mlocDecimalMaxExponent ? -mlocDecimalMaxExponent : position),
-                1, mloc_roundHalfEven);
-            // Shown as the digits it holds, without the zeros rounding left.
-            converted.fractionDigits = converted.exponent < 0 ? -converted.exponent : 0;
-        }
+        r = mlocRoundConverted(&converted, exact, precision);
     }
     if (r == mloc_success)
     {

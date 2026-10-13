@@ -94,6 +94,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_convert.c
     src/unit_data.c
     src/unit_id.c
+    src/unit_prefs.c
     src/wide.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c)
@@ -139,7 +140,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
-    foreach(name likely canonical parents match numbers plurals preferences currency units)
+    foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})

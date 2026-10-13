@@ -11,28 +11,22 @@
 
 #include "bytes.h"
 #include "decimal.h"
+#include "number_precision.h"
 #include "unit_tables.h"
 
 #include <string.h>
 
 enum
 {
+    // The significant digits an inexact conversion keeps by default: two
+    // fewer than it computes, so that rounding to odd makes them exact.
+    defaultDigits = 38,
     // The digits a conversion computes before rounding to odd.
     convertDigits = mlocDecimalDigits,
     // Past this power of ten a value is beyond every Beaufort force or
     // below the first.
     beaufortReach = 64,
 };
-
-// A value: ±a / b * 10^e, or an infinity.
-typedef struct Exact
-{
-    Wide a;
-    Wide b;
-    int64_t e;
-    bool negative;
-    bool infinite;
-} Exact;
 
 static bool MultiplyPower(Wide* w, uint32_t base, uint32_t times)
 {
@@ -100,10 +94,11 @@ static mlocResult ScalePart(const UnitTable* t, const UnitPart* part, bool alone
     {
         return mloc_errorInvalid;
     }
-    const int8_t* dimensions = mlocBaseDimensions(t, simple[simpleBase]);
+    const uint8_t* base = mlocBaseUnit(t, simple[simpleBase]);
     for (uint32_t d = 0; d < unitMaxDimensions; d++)
     {
-        s->dimensions[d] = (int8_t)(s->dimensions[d] + part->power * dimensions[d]);
+        int net = base[baseNumerator + d] - base[baseDenominator + d];
+        s->dimensions[d] = (int16_t)(s->dimensions[d] + part->power * net);
     }
     UnitFactor f;
     mlocReadUnitFactor(t, part->simple, &f);
@@ -152,12 +147,12 @@ mlocResult mlocScaleUnit(const UnitTable* t, const UnitId* id, UnitScale* out)
 }
 
 // The decimal's value: its digits as an integer, its last digit's power.
-static bool ExactOf(const mlocDecimal* d, Exact* out)
+bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out)
 {
-    *out = (Exact){.b = mlocWideOf(1),
-                   .e = d->exponent,
-                   .negative = d->negative != 0,
-                   .infinite = d->kind == mloc_decimalInfinity};
+    *out = (UnitValue){.b = mlocWideOf(1),
+                       .e = d->exponent,
+                       .negative = d->negative != 0,
+                       .infinite = d->kind == mloc_decimalInfinity};
     for (uint32_t i = 0; i < d->count; i++)
     {
         if (!mlocWideMultiplyAdd(&out->a, 10, d->digits[i]))
@@ -169,7 +164,7 @@ static bool ExactOf(const mlocDecimal* d, Exact* out)
 }
 
 // Folds the power of ten into the integers.
-static bool Fold(Exact* x)
+static bool Fold(UnitValue* x)
 {
     if (x->e > mlocDecimalMaxExponent || x->e < -mlocDecimalMaxExponent)
     {
@@ -182,7 +177,7 @@ static bool Fold(Exact* x)
 }
 
 // x = x + sign * n / d, the power folded in first.
-static bool AddFraction(Exact* x, const Wide* n, const Wide* d, bool negative)
+static bool AddFraction(UnitValue* x, const Wide* n, const Wide* d, bool negative)
 {
     if (x->infinite || mlocWideIsZero(n))
     {
@@ -208,21 +203,21 @@ static bool AddFraction(Exact* x, const Wide* n, const Wide* d, bool negative)
 
 // The Beaufort force's middle speed in its base unit: |x| rounded to a
 // force, half up, within the table (as ICU's scaleToBase).
-static bool FromBeaufort(const UnitTable* t, Exact* x)
+static bool FromBeaufort(const UnitTable* t, UnitValue* x)
 {
     uint32_t last = t->beaufortCount - 2;
     uint32_t force = last;
     if (!x->infinite)
     {
         // force = floor(|x| + 1/2) = floor((2a + b) / 2b) * 10^e folded.
-        Exact y = *x;
+        UnitValue y = *x;
         Wide twice;
         Wide sum;
         Wide divisor;
         // Far past the table either way, the force is its last or 0.
         if (y.e > beaufortReach || y.e < -beaufortReach)
         {
-            y = (Exact){.a = mlocWideOf(y.e > 0 ? last : 0), .b = mlocWideOf(1)};
+            y = (UnitValue){.a = mlocWideOf(y.e > 0 ? last : 0), .b = mlocWideOf(1)};
         }
         if (!Fold(&y) || !mlocWideAdd(&twice, &y.a, &y.a) || !mlocWideAdd(&sum, &twice, &y.b) ||
             !mlocWideAdd(&divisor, &y.b, &y.b))
@@ -237,12 +232,12 @@ static bool FromBeaufort(const UnitTable* t, Exact* x)
     }
     uint32_t low = mlocLoad16(t->beaufort + 2 * force);
     uint32_t high = mlocLoad16(t->beaufort + 2 * (force + 1));
-    *x = (Exact){.a = mlocWideOf(low + high), .b = mlocWideOf(20)};
+    *x = (UnitValue){.a = mlocWideOf(low + high), .b = mlocWideOf(20)};
     return true;
 }
 
 // The Beaufort force whose range holds |x| (as ICU's baseToScale).
-static bool ToBeaufort(const UnitTable* t, Exact* x)
+static bool ToBeaufort(const UnitTable* t, UnitValue* x)
 {
     uint32_t last = t->beaufortCount - 2;
     uint32_t force = 0;
@@ -254,7 +249,7 @@ static bool ToBeaufort(const UnitTable* t, Exact* x)
     }
     else if (!tiny)
     {
-        Exact y = *x;
+        UnitValue y = *x;
         if (!Fold(&y) || !mlocWideMultiplyAdd(&y.a, 10, 0))
         {
             return false;
@@ -271,12 +266,12 @@ static bool ToBeaufort(const UnitTable* t, Exact* x)
             force = mlocWideCompare(&y.a, &scaled) >= 0 ? i : force;
         }
     }
-    *x = (Exact){.a = mlocWideOf(force), .b = mlocWideOf(1)};
+    *x = (UnitValue){.a = mlocWideOf(force), .b = mlocWideOf(1)};
     return true;
 }
 
 // Writes x as 40 digits rounded to odd.
-static mlocResult ToDecimal(const Exact* x, mlocDecimal* out, bool* exactOut)
+mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exactOut)
 {
     mlocDecimal d = {.negative = x->negative};
     *exactOut = true;
@@ -350,24 +345,83 @@ static bool Opposite(const UnitScale* a, const UnitScale* b)
 }
 
 // x = x * n / d.
-static bool Scale(Exact* x, const Wide* n, const Wide* d)
+static bool Scale(UnitValue* x, const Wide* n, const Wide* d)
 {
     return mlocWideMultiply(&x->a, &x->a, n) && mlocWideMultiply(&x->b, &x->b, d);
 }
 
 // x = 1 / x: zero gives an infinity and an infinity zero.
-static void Invert(Exact* x)
+void mlocInvertUnitValue(UnitValue* x)
 {
     if (x->infinite || mlocWideIsZero(&x->a))
     {
         bool infinite = !x->infinite;
-        *x = (Exact){.b = mlocWideOf(1), .negative = x->negative, .infinite = infinite};
+        *x = (UnitValue){.b = mlocWideOf(1), .negative = x->negative, .infinite = infinite};
         return;
     }
     Wide a = x->a;
     x->a = x->b;
     x->b = a;
     x->e = -x->e;
+}
+
+bool mlocUnitValueToBase(const UnitTable* t, const UnitScale* scale, UnitValue* x)
+{
+    return scale->beaufort ? FromBeaufort(t, x)
+                           : Scale(x, &scale->numerator, &scale->denominator) &&
+                                 (!scale->offset || AddFraction(x, &scale->offsetNumerator,
+                                                                &scale->offsetDenominator, false));
+}
+
+bool mlocUnitValueFromBase(const UnitTable* t, const UnitScale* scale, UnitValue* x)
+{
+    if (scale->beaufort)
+    {
+        return ToBeaufort(t, x);
+    }
+    return (!scale->offset ||
+            AddFraction(x, &scale->offsetNumerator, &scale->offsetDenominator, true)) &&
+           Scale(x, &scale->denominator, &scale->numerator);
+}
+
+bool mlocUnitValueAtLeast(const UnitValue* x, const Wide* n, const Wide* d)
+{
+    if (x->infinite || mlocWideIsZero(n))
+    {
+        return true;
+    }
+    if (mlocWideIsZero(&x->a))
+    {
+        return false;
+    }
+    // |x| >= n / d as a * d >= n * b, the power folded in; past the
+    // integers the power decides alone.
+    UnitValue y = *x;
+    Wide left;
+    Wide right;
+    if (!Fold(&y) || !mlocWideMultiply(&left, &y.a, d) || !mlocWideMultiply(&right, n, &y.b))
+    {
+        return x->e > 0;
+    }
+    return mlocWideCompare(&left, &right) >= 0;
+}
+
+bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut)
+{
+    if (!Fold(x))
+    {
+        return false;
+    }
+    Wide remainder;
+    mlocWideDivide(&x->a, &x->b, integerOut, &remainder);
+    x->a = remainder;
+    x->negative = false;
+    return true;
+}
+
+UnitValue mlocUnitValueOfInteger(const Wide* integer)
+{
+    return (UnitValue){.a = *integer, .b = mlocWideOf(1)};
 }
 
 mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const UnitScale* to,
@@ -385,29 +439,39 @@ mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const Un
         *exactOut = true;
         return mloc_success;
     }
-    Exact x;
-    if (!ExactOf(value, &x))
+    UnitValue x;
+    if (!mlocUnitValueOf(value, &x))
     {
         return mloc_errorCapacity;
     }
-    // To the base unit.
-    bool ok = from->beaufort ? FromBeaufort(t, &x)
-                             : Scale(&x, &from->numerator, &from->denominator) &&
-                                   (!from->offset || AddFraction(&x, &from->offsetNumerator,
-                                                                 &from->offsetDenominator, false));
+    bool ok = mlocUnitValueToBase(t, from, &x);
     if (ok && reciprocal)
     {
-        Invert(&x);
+        mlocInvertUnitValue(&x);
     }
-    // From the base unit to the target.
-    if (ok && to->beaufort)
+    ok = ok && mlocUnitValueFromBase(t, to, &x);
+    return ok ? mlocUnitValueDecimal(&x, out, exactOut) : mloc_errorCapacity;
+}
+
+mlocResult mlocRoundConverted(mlocDecimal* d, bool exact, const mlocPrecision* precision)
+{
+    if (d->kind != mloc_decimalFinite)
     {
-        ok = ToBeaufort(t, &x);
+        return mloc_success;
     }
-    else if (ok)
+    if (precision != nullptr && precision->kind != mloc_precisionNone)
     {
-        ok = (!to->offset || AddFraction(&x, &to->offsetNumerator, &to->offsetDenominator, true)) &&
-             Scale(&x, &to->denominator, &to->numerator);
+        return mlocApplyPrecision(precision, d);
     }
-    return ok ? ToDecimal(&x, out, exactOut) : mloc_errorCapacity;
+    if (exact)
+    {
+        return mloc_success;
+    }
+    int64_t position = mlocTopPower(d) - defaultDigits + 1;
+    mlocResult r = mlocRoundDecimal(
+        d, (int32_t)(position < -mlocDecimalMaxExponent ? -mlocDecimalMaxExponent : position), 1,
+        mloc_roundHalfEven);
+    // Shown as the digits it holds, without the zeros rounding left.
+    d->fractionDigits = d->exponent < 0 ? -d->exponent : 0;
+    return r;
 }

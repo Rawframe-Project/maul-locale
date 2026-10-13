@@ -37,6 +37,7 @@ static const DataKind s_kinds[] = {
     {kindCurrencyNames, mlocValidCurrencyNames},
     {kindCurrencyRegions, mlocValidCurrencyRegions},
     {kindUnits, mlocValidUnits},
+    {kindUnitPreferences, mlocValidUnitPreferences},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

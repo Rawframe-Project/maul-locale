@@ -35,7 +35,8 @@ currency: bytes currency_tables data_format data_view kinds locale_fallback loca
 currency_region: bytes currency_tables data_view kinds locale_keyword locale_prefs locale_tables
 wide:
 unit_tables:
-unit_data: bytes data_view unit_tables wide
+unit_data: bytes data_view locale_tables unit_tables wide
 unit_id: bytes currency_tables unit_data unit_tables
-unit_convert: bytes decimal unit_data unit_id unit_tables wide
+unit_convert: bytes decimal number_precision unit_data unit_id unit_tables wide
 unit: data_view decimal kinds number_precision unit_convert unit_data unit_id
+unit_prefs: bytes data_view decimal kinds locale_keyword locale_prefs locale_tables number_precision unit_convert unit_data unit_id unit_tables

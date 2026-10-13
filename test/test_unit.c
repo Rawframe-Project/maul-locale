@@ -10,6 +10,7 @@
 
 #include "maul-locale/unit.h"
 
+#include <stdio.h>
 #include <string.h>
 
 static mlocDataSet s_data;
@@ -320,6 +321,176 @@ static void TestRefusals(void)
           "data without the unit table");
 }
 
+// The unit a locale prefers and its amounts, as "unit amount amount".
+static mlocResult Prefer(const char* id, const char* unit, const char* usage, const char* value,
+                         const mlocPrecision* precision, char* text, size_t capacity)
+{
+    mlocLocale locale;
+    mlocDecimal v;
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
+        mlocParseDecimal(value, strlen(value), &v).status != mloc_success)
+    {
+        return (mlocResult)-100;
+    }
+    char chosen[64];
+    mlocOutput unitOut = {.buffer = chosen, .capacity = sizeof(chosen)};
+    mlocUnitAmounts amounts;
+    mlocResult r = mlocGetUnitPreference(&s_data, &locale, unit, strlen(unit), usage,
+                                         usage == nullptr ? 0 : strlen(usage), &v, precision,
+                                         &unitOut, &amounts);
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    size_t at = (size_t)snprintf(text, capacity, "%.*s", (int)unitOut.length, chosen);
+    for (uint8_t i = 0; i < amounts.count && at < capacity; i++)
+    {
+        char amount[64];
+        mlocOutput output = {.buffer = amount, .capacity = sizeof(amount)};
+        if (mlocFormatDecimal(&amounts.amounts[i], &output) != mloc_success)
+        {
+            return (mlocResult)-101;
+        }
+        at += (size_t)snprintf(text + at, capacity - at, " %.*s", (int)output.length, amount);
+    }
+    if (amounts.increment != 0 && at < capacity)
+    {
+        (void)snprintf(text + at, capacity - at, " /%u", amounts.increment);
+    }
+    return mloc_success;
+}
+
+static bool Prefers(const char* id, const char* unit, const char* usage, const char* value,
+                    const mlocPrecision* precision, const char* expected)
+{
+    char text[256] = "";
+    return Prefer(id, unit, usage, value, precision, text, sizeof(text)) == mloc_success &&
+           strcmp(text, expected) == 0;
+}
+
+static void TestPreferences(void)
+{
+    mlocPrecision zero = {0};
+    CHECK(Prefers("en-US", "meter", "person-height", "1.8", nullptr,
+                  "foot-and-inch 5 10.866141732283464566929133858267716535") &&
+              Prefers("en-US", "meter", "person-height", "-1.8", nullptr,
+                      "foot-and-inch -5 10.866141732283464566929133858267716535") &&
+              Prefers("de", "meter", "person-height", "1.8", nullptr, "centimeter 180") &&
+              Prefers("und-001", "second", "media", "66", nullptr, "minute-and-second 1 6"),
+          "a mixed unit split exactly, the sign on its first part");
+    CHECK(Prefers("en-US", "meter", "person-height", "1.8", &zero, "foot-and-inch 5 11") &&
+              Prefers("en-US", "meter", "person-height", "1.82879", &zero, "foot-and-inch 6 0") &&
+              Prefers("en-US", "meter", "person-height", "0.3", &zero, "inch 12"),
+          "the last part rounded, carrying into the one before");
+    CHECK(Prefers("de", "meter", "road", "1000", &zero, "kilometer 1") &&
+              Prefers("de", "meter", "road", "512", &zero, "meter 500 /50") &&
+              Prefers("de", "meter", "road", "512", nullptr, "meter 512 /50") &&
+              Prefers("de", "meter", "road", "12.34", &zero, "meter 10 /10") &&
+              Prefers("de", "meter", "road", "1.234", &zero, "meter 1 /1") &&
+              Prefers("de", "kilometer", "road", "0.0123", &zero, "meter 12") == false,
+          "thresholds and the skeleton's increments");
+    CHECK(Prefers("en", "meter", "default", "0.123", &zero, "inch 4.8") &&
+              Prefers("en", "meter", "default", "1234", &zero, "foot 4049"),
+          "the zero precision without a skeleton: at least two significant digits");
+    CHECK(Prefers("en", "fahrenheit", "weather", "1", nullptr, "fahrenheit 1") &&
+              Prefers("en-u-mu-celsius", "fahrenheit", "weather", "212", nullptr, "celsius 100") &&
+              Prefers("en-u-mu-celsius", "foot", nullptr, "1", nullptr, "foot 1") &&
+              Prefers("en-u-ms-metric", "foot", nullptr, "1", nullptr, "centimeter 30.48") &&
+              Prefers("en-US-u-ms-uksystem", "gallon-imperial", "fluid", "2.5", nullptr,
+                      "gallon-imperial 2.5") &&
+              Prefers("en-GB-u-ms-uksystem", "gallon-imperial", "fluid", "2.5", nullptr,
+                      "gallon-imperial 2.5"),
+          "the -u-mu and -u-ms keys");
+    CHECK(Prefers("en-US", "meter", "road-xyz-abc", "20", nullptr,
+                  "foot 65.616797900262467191601049868766404199 /10") &&
+              Prefers("en-US", "mile-per-gallon", "vehicle-fuel", "30", nullptr,
+                      "mile-per-gallon 30") &&
+              Prefers("de", "mile-per-gallon", "vehicle-fuel", "30", nullptr,
+                      "liter-per-100-kilometer 7.8404861111111111111111111111111111111") &&
+              Prefers("en", "ampere", nullptr, "2.5", nullptr, "ampere 2.5") &&
+              Prefers("en", "candela-per-byte", nullptr, "1", nullptr, "candela-per-bit 0.125") &&
+              Prefers("en", "pow4-meter-per-second", nullptr, "1", nullptr,
+                      "pow4-meter-per-second 1"),
+          "usage fallback, reciprocals, base units");
+}
+
+static void TestPreferenceEdges(void)
+{
+    double infinity = 1.0 / 0.0;
+    mlocLocale locale;
+    mlocDecimal v;
+    char unit[64];
+    mlocOutput unitOut = {.buffer = unit, .capacity = sizeof(unit)};
+    mlocUnitAmounts amounts;
+    CHECK(mlocParseLocale("en-US", 5, &locale).status == mloc_success &&
+              mlocMakeShortestDecimal(-infinity, &v) == mloc_success &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, "person-height", 13, &v, nullptr,
+                                    &unitOut, &amounts) == mloc_success &&
+              amounts.count == 2 && amounts.amounts[0].kind == mloc_decimalInfinity &&
+              amounts.amounts[0].negative == 1 && amounts.amounts[1].count == 0 &&
+              unitOut.length == 13,
+          "an infinity in the largest part");
+    CHECK(mlocMakeShortestDecimal(infinity - infinity, &v) == mloc_success &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, "road", 4, &v, nullptr, &unitOut,
+                                    &amounts) == mloc_success &&
+              amounts.count == 1 && amounts.amounts[0].kind == mloc_decimalNaN &&
+              unitOut.length == 4 && memcmp(unit, "mile", 4) == 0,
+          "NaN chooses as the largest value");
+    mlocOutput small = {.buffer = unit, .capacity = 3};
+    CHECK(mlocMakeDecimal(2, &v) == mloc_success &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, "person-height", 13, &v, nullptr,
+                                    &small, &amounts) == mloc_errorCapacity &&
+              small.length == 13,
+          "an identifier past the output's room");
+    mlocOutput measure = {0};
+    CHECK(mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, nullptr, &measure,
+                                &amounts) == mloc_errorCapacity &&
+              measure.length == 4,
+          "measuring the identifier");
+    static const char* const s_usages[] = {"ro", "roadroadroad", "road-", "-road", "Road", "ro_ad"};
+    for (size_t i = 0; i < sizeof(s_usages) / sizeof(s_usages[0]); i++)
+    {
+        CHECK(mlocGetUnitPreference(&s_data, &locale, "meter", 5, s_usages[i], strlen(s_usages[i]),
+                                    &v, nullptr, &unitOut, &amounts) == mloc_errorSyntax,
+              s_usages[i]);
+    }
+    CHECK(mlocGetUnitPreference(&s_data, &locale, "foot-and-inch", 13, nullptr, 0, &v, nullptr,
+                                &unitOut, &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "curr-usd", 8, nullptr, 0, &v, nullptr,
+                                    &unitOut, &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "blorp", 5, nullptr, 0, &v, nullptr, &unitOut,
+                                    &amounts) == mloc_errorNotFound &&
+              mlocGetUnitPreference(&s_data, &locale, "meter-", 6, nullptr, 0, &v, nullptr,
+                                    &unitOut, &amounts) == mloc_errorSyntax,
+          "units that are mixed, do not convert, are unknown or malformed");
+    CHECK(mlocGetUnitPreference(nullptr, &locale, "meter", 5, nullptr, 0, &v, nullptr, &unitOut,
+                                &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, nullptr, "meter", 5, nullptr, 0, &v, nullptr, &unitOut,
+                                    &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, nullptr, 5, nullptr, 0, &v, nullptr, &unitOut,
+                                    &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 4, &v, nullptr, &unitOut,
+                                    &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, nullptr, nullptr,
+                                    &unitOut, &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, nullptr, nullptr,
+                                    &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, nullptr, &unitOut,
+                                    nullptr) == mloc_errorInvalid,
+          "a null pointer");
+    mlocOutput broken = {.buffer = nullptr, .capacity = 8};
+    mlocPrecision bad = {.kind = mloc_precisionFraction, .maxFractionDigits = 101};
+    CHECK(mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, nullptr, &broken,
+                                &amounts) == mloc_errorInvalid &&
+              mlocGetUnitPreference(&s_data, &locale, "meter", 5, nullptr, 0, &v, &bad, &unitOut,
+                                    &amounts) == mloc_errorInvalid,
+          "an output without a buffer, an invalid precision");
+    mlocDataSet none = {nullptr, 0};
+    CHECK(mlocGetUnitPreference(&none, &locale, "meter", 5, nullptr, 0, &v, nullptr, &unitOut,
+                                &amounts) == mloc_errorNotFound,
+          "data without the unit table");
+}
+
 int main(void)
 {
     static mlocData s_builtin;
@@ -333,5 +504,7 @@ int main(void)
     TestNotFinite();
     TestPrecision();
     TestRefusals();
+    TestPreferences();
+    TestPreferenceEdges();
     return s_failures == 0 ? 0 : 1;
 }

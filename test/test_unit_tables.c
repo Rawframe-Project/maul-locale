@@ -98,8 +98,8 @@ static void TestSpoiled(void)
     // Text and number sizes each 2^31 larger: their sum is the same modulo
     // 2^32, which a 32-bit size would not tell apart.
     Restore();
-    s_copy[15] = (uint8_t)(s_copy[15] + 0x80);
     s_copy[19] = (uint8_t)(s_copy[19] + 0x80);
+    s_copy[23] = (uint8_t)(s_copy[23] + 0x80);
     CHECK(!ValidCopy(s_units.size), "sizes that wrap 32 bits");
     Spoil(text, 'A', "a character no identifier uses");
     Restore();
@@ -121,7 +121,23 @@ static void TestSpoiled(void)
     Spoil(aliases + 10, 1, "an alias's padding");
     Spoil(aliases + 9, 0, "an empty replacement");
     Spoil(bases + 5, 1, "a base's padding");
-    Spoil(bases + 8 + unitMaxDimensions - 1, 1, "a dimension past the count");
+    Spoil(bases + baseNumerator + unitMaxDimensions - 1, 1, "a dimension past the count");
+    Spoil(bases + baseDenominator + unitMaxDimensions - 1, 1,
+          "a denominator dimension past the count");
+    Spoil(14, 1, "the header's padding");
+    Spoil(simples + simpleSystems + 1, 4, "a system the table does not name");
+    Spoil(simples + 14, 1, "a unit's padding");
+    size_t dimensions = (size_t)(t.dimensions - s_units.bytes);
+    size_t quantities = (size_t)(t.quantities - s_units.bytes);
+    Spoil(dimensions + 4, 0, "an empty dimension name");
+    Spoil(dimensions + 6, 1, "a dimension's padding");
+    Spoil(quantities + 8, 0, "an empty quantity name");
+    Spoil(quantities + 9, 0, "an empty quantity base unit");
+    Spoil(quantities + 10, 1, "a quantity's padding");
+    Spoil(quantities + quantityNumerator + unitMaxDimensions - 1, 1,
+          "a quantity dimension past the count");
+    Spoil(quantities + quantityDenominator + unitMaxDimensions - 1, 1,
+          "a quantity denominator dimension past the count");
     Spoil(beaufort + 2, 0, "Beaufort steps that do not ascend");
     // The first unit's factor: a numerator's length past the numbers, a
     // top byte 0, a zero numerator, a zero denominator.
@@ -146,6 +162,87 @@ static void TestSpoiled(void)
     CHECK(!ValidCopy(s_units.size), "a unit without a base that has flags");
 }
 
+static DataSpan s_prefs;
+
+static bool ValidPrefsCopy(uint32_t size)
+{
+    return mlocValidUnitPreferences(&s_view, (DataSpan){s_copy, size});
+}
+
+// Spoils one byte of a copy of the preferences and checks it is refused.
+static void SpoilPrefs(size_t offset, uint8_t value, const char* what)
+{
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    s_copy[offset] = value;
+    CHECK(!ValidPrefsCopy(s_prefs.size), what);
+}
+
+static void TestPreferences(void)
+{
+    UnitPrefsTable p = mlocReadUnitPrefs(s_prefs);
+    int32_t road = mlocFindUnitPrefSet(&p, "length", 6, "road", 4);
+    int32_t length = mlocFindUnitPrefSet(&p, "length", 6, nullptr, 0);
+    CHECK(road >= 0 && length >= 0 && length <= road &&
+              mlocFindUnitPrefSet(&p, "length", 6, "roads", 5) < 0 &&
+              mlocFindUnitPrefSet(&p, "lengths", 7, nullptr, 0) < 0 &&
+              mlocFindUnitPrefSet(&p, "area", 4, nullptr, 0) == 0,
+          "sets by category and usage");
+    uint32_t us = mlocFindUnitPrefRun(&p, (uint32_t)road, 0x2B3);
+    uint32_t world = mlocFindUnitPrefRun(&p, (uint32_t)road, 1024 + 1);
+    uint32_t none = mlocFindUnitPrefRun(&p, (uint32_t)road, 1024 + 999);
+    const uint8_t* entry = nullptr;
+    CHECK(us != world && none == world &&
+              mlocLoad16(p.runs + (size_t)world * unitRunSize) == 1024 + 1 &&
+              mlocUnitPrefEntries(&p, world, &entry) > 1 && entry[4] == 9 &&
+              memcmp(p.text + mlocLoad32(entry), "kilometer", 9) == 0,
+          "runs by region, 001 for a region without one");
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    CHECK(ValidPrefsCopy(s_prefs.size), "the preferences copy passes");
+    CHECK(!ValidPrefsCopy(s_prefs.size - 1) && !ValidPrefsCopy(unitPrefsHeaderSize - 1),
+          "a wrong size");
+    size_t sets = (size_t)(p.sets - s_prefs.bytes);
+    size_t runs = (size_t)(p.runs - s_prefs.bytes);
+    size_t entries = (size_t)(p.entries - s_prefs.bytes);
+    size_t text = (size_t)(p.text - s_prefs.bytes);
+    SpoilPrefs(6, 1, "the header's padding");
+    SpoilPrefs(sets + 14, 1, "a set's padding");
+    SpoilPrefs(sets + 8, 0, "an empty category");
+    SpoilPrefs(sets + 12, 0, "a set without runs");
+    SpoilPrefs(sets + 10, 1, "a first set not starting at run 0");
+    SpoilPrefs(text, 'A', "a character no identifier uses");
+    SpoilPrefs(runs + 2, 1, "a first run not starting at entry 0");
+    SpoilPrefs(runs, 0, "a run of no region");
+    SpoilPrefs(entries + 5, unitMaxPlaces + 1, "too many decimal places");
+    SpoilPrefs(entries + 6, 3, "an increment the precision does not take");
+    SpoilPrefs(entries + 4, 0, "an empty unit");
+    // The first set's runs: none of them 001.
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    uint32_t first = mlocLoad16(s_prefs.bytes + sets + 12);
+    for (uint32_t r = 0; r < first; r++)
+    {
+        uint8_t* at = s_copy + runs + (size_t)r * unitRunSize;
+        if (mlocLoad16(at) == 1024 + 1)
+        {
+            at[0] = 2;
+            at[1] = 4;
+        }
+    }
+    CHECK(!ValidPrefsCopy(s_prefs.size), "a set without 001");
+    // A run's last entry with a threshold.
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    uint32_t end = mlocLoad16(s_prefs.bytes + runs + unitRunSize + 2);
+    s_copy[entries + (size_t)(end - 1) * unitEntrySize + 8] = 1;
+    CHECK(!ValidPrefsCopy(s_prefs.size), "a run whose last threshold is not 0");
+    // Sets out of order: the first two swapped.
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    memcpy(s_copy + sets, s_prefs.bytes + sets + unitSetSize, 10);
+    memcpy(s_copy + sets + unitSetSize, s_prefs.bytes + sets, 10);
+    CHECK(!ValidPrefsCopy(s_prefs.size), "sets out of order");
+    memcpy(s_copy, s_prefs.bytes, s_prefs.size);
+    s_copy[11] = (uint8_t)(s_copy[11] + 0x80);
+    CHECK(!ValidPrefsCopy(s_prefs.size), "a text size past the unit");
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -158,13 +255,17 @@ int main(void)
     {
         return 1;
     }
-    s_copy = malloc(s_units.size);
+    CHECK(mlocFindDataUnit(&s_view, kindUnitPreferences, dataNoLocale, &s_prefs) &&
+              mlocValidUnitPreferences(&s_view, s_prefs),
+          "the compiled-in data has valid unit preferences");
+    s_copy = malloc(s_units.size > s_prefs.size ? s_units.size : s_prefs.size);
     if (s_copy == nullptr)
     {
         return 1;
     }
     TestLookups();
     TestSpoiled();
+    TestPreferences();
     free(s_copy);
     return s_failures == 0 ? 0 : 1;
 }
