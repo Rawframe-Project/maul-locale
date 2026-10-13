@@ -150,9 +150,9 @@ bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index)
     for (int i = 0; i < affixCount; i++)
     {
         TableString(t, mlocLoad16(p + 2 * i), &core->affixStart[i], &core->affixLength[i]);
-        core->parseStart[i] = core->affixStart[i];
-        core->parseLength[i] = core->affixLength[i];
     }
+    memcpy(core->parseStart, core->affixStart, sizeof(core->parseStart));
+    memcpy(core->parseLength, core->affixLength, sizeof(core->parseLength));
     core->primary = p[patternPrimary];
     core->secondary = p[patternSecondary];
     return true;
@@ -271,13 +271,21 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
     return true;
 }
 
-// Points a core's parse affixes at a pattern CurrencyPatternOf checked.
-static void UseParsePattern(NumberCore* core, DataSpan patterns, uint32_t index)
+// Points a core's parse affixes at a pattern CurrencyPatternOf checked
+// (in the same patterns unit, so the same text), unless it is the one
+// the core writes, whose affixes they already are.
+static void UseParsePattern(NumberCore* core, DataSpan patterns, uint32_t index, uint32_t written)
 {
-    NumberCore parse = *core;
-    (void)mlocUseNumberPattern(&parse, patterns, index);
-    memcpy(core->parseStart, parse.affixStart, sizeof(core->parseStart));
-    memcpy(core->parseLength, parse.affixLength, sizeof(core->parseLength));
+    if (index == written)
+    {
+        return;
+    }
+    NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
+    const uint8_t* p = t.records + (size_t)index * numberPatternSize;
+    for (int i = 0; i < affixCount; i++)
+    {
+        TableString(t, mlocLoad16(p + 2 * i), &core->parseStart[i], &core->parseLength[i]);
+    }
 }
 
 // Resolves a core and, when compact is set, the entry's compact table of
@@ -330,7 +338,7 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     {
         return mloc_errorNotFound;
     }
-    UseParsePattern(&core, u.patterns, parsePattern);
+    UseParsePattern(&core, u.patterns, parsePattern, pattern);
     if (currency != nullptr)
     {
         core.decimalText = core.symbolText + core.symbolStart[numberCurrencyDecimal];
@@ -524,6 +532,12 @@ static size_t IgnorableBefore(const uint8_t* text, size_t length)
 
 void mlocWriteTrimmed(NumberWriter* w, uint32_t kind, const uint8_t* text, size_t length)
 {
+    // The ends matter only to the parts; the text is the same.
+    if (w->parts == nullptr)
+    {
+        Put(w, kind, text, length);
+        return;
+    }
     size_t lead = 0;
     for (size_t n = IgnorableAt(text, length); n != 0; n = IgnorableAt(text + lead, length - lead))
     {

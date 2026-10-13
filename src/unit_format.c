@@ -256,7 +256,18 @@ mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal*
                           mlocOutput* output)
 {
     UnitFormat u;
-    if (!ReadUnit(formatter, &u) || !ValidArguments(decimal, output))
+    if (!ReadUnit(formatter, &u))
+    {
+        return mloc_errorInvalid;
+    }
+    // A single unit goes to mlocFormatWith, which checks the arguments.
+    if (u.coordinate == mloc_coordinateNone && !u.usage && u.output[0].parts == 1)
+    {
+        Outer outer;
+        mlocUnitOuter(&u, 0, &outer);
+        return mlocFormatWith(&u.formatter, u.percent ? nullptr : &outer, decimal, output);
+    }
+    if (!ValidArguments(decimal, output))
     {
         return mloc_errorInvalid;
     }
@@ -264,17 +275,8 @@ mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal*
     {
         return mlocFormatCoordinate(&u, decimal, output);
     }
-    if (u.usage)
-    {
-        return mlocFormatUsage(&u, decimal, output);
-    }
-    if (u.output[0].parts > 1)
-    {
-        return mlocFormatMixedUnit(&u, decimal, output);
-    }
-    Outer outer;
-    mlocUnitOuter(&u, 0, &outer);
-    return mlocFormatWith(&u.formatter, u.percent ? nullptr : &outer, decimal, output);
+    return u.usage ? mlocFormatUsage(&u, decimal, output)
+                   : mlocFormatMixedUnit(&u, decimal, output);
 }
 
 mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter, const mlocDecimal* start,

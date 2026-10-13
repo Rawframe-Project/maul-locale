@@ -275,19 +275,56 @@ static bool KeepUnit(void* context, DataSpan unit, const DataView* view, int dep
     return false;
 }
 
-// The currency units of a locale's chain, which parsing reads; the names
-// when the set has the names data file.
-static bool KeepChain(const mlocDataSet* data, const mlocLocale* locale, CurrencyChain* out)
+// One walk of a kind along a locale's chain: each unit kept for parsing
+// and, when fields are asked for, the currency's gathered (one walk
+// rather than a walk for each).
+typedef struct Walk
+{
+    Fields* fields;
+    bool done;
+    Keep keep;
+} Walk;
+
+static bool WalkUnit(void* context, DataSpan unit, const DataView* view, int depth)
+{
+    Walk* w = context;
+    if (w->fields != nullptr && !w->done)
+    {
+        w->done = Gather(w->fields, unit, view, depth);
+    }
+    (void)KeepUnit(&w->keep, unit, view, depth);
+    return false;
+}
+
+// The currency units of a locale's chain, which parsing reads (the names
+// when the set has the names data file), and a currency's symbol fields,
+// and its name fields when names is set; false when the chain cannot be
+// walked or a field names what its source lacks.
+static bool WalkChain(const mlocDataSet* data, const mlocLocale* locale, uint16_t code,
+                      Fields* symbols, Fields* names, CurrencyChain* out)
 {
     *out = (CurrencyChain){.complete = true};
     out->turkic = strcmp(locale->language, "tr") == 0 || strcmp(locale->language, "az") == 0;
-    Keep symbols = {out, false};
-    Keep names = {out, true};
-    return mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencySymbols, locale, KeepUnit,
-                                &symbols) &&
-           (!mlocDataSetHasKind(data, kindCurrencyNames) ||
-            mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencyNames, locale, KeepUnit,
-                                 &names));
+    *symbols = (Fields){.kind = kindCurrencySymbols, .code = code};
+    Walk walk = {.fields = symbols, .keep = {out, false}};
+    if (!mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencySymbols, locale, WalkUnit,
+                              &walk) ||
+        symbols->broken)
+    {
+        return false;
+    }
+    if (!mlocDataSetHasKind(data, kindCurrencyNames))
+    {
+        return true;
+    }
+    if (names != nullptr)
+    {
+        *names = (Fields){.kind = kindCurrencyNames, .code = code};
+    }
+    walk = (Walk){.fields = names, .keep = {out, true}};
+    return mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencyNames, locale, WalkUnit,
+                                &walk) &&
+           (names == nullptr || !names->broken);
 }
 
 // Makes the core, and the compact tables and plural rule that compact
@@ -322,10 +359,11 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
     bool name = o->display == mloc_currencyName;
     Fields fields;
     Fields names;
+    Currency c;
+    memset(&c, 0, sizeof(c));
     // A long name needs the names data file in the set.
-    if (!GatherFields(data, locale, kindCurrencySymbols, packed, &fields) ||
-        (name && (!mlocDataSetHasKind(data, kindCurrencyNames) ||
-                  !GatherFields(data, locale, kindCurrencyNames, packed, &names))))
+    if ((name && !mlocDataSetHasKind(data, kindCurrencyNames)) ||
+        !WalkChain(data, locale, packed, &fields, name ? &names : nullptr, &c.chain))
     {
         return mloc_errorNotFound;
     }
@@ -344,8 +382,6 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
     // A currency's own pattern replaces the standard one alone.
     bool ownPattern = (fields.found & 1u << currencyOwnPattern) != 0 &&
                       IsSymbolDisplay(o->display) && !style.accounting;
-    Currency c;
-    memset(&c, 0, sizeof(c));
     CurrencyTexts texts;
     mlocResult result = InitParts(&c, data, locale, &style, compact, &texts);
     if (result < 0)
@@ -353,10 +389,6 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
         return result;
     }
     mlocSetFormatOptions(&c.formatter, &o->number, currencyStamp);
-    if (!KeepChain(data, locale, &c.chain))
-    {
-        return mloc_errorNotFound;
-    }
     // Compact notation rounds by its own rule unless the options say
     // otherwise, as ICU does.
     if (!ShowCurrency(&c.formatter.core, &fields, o->display, ownPattern) ||
