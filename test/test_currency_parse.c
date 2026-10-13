@@ -295,6 +295,10 @@ static const Case s_cases[] = {
      "\xE2\x82\xA8"
      "12",
      "12", "MUR", 5},
+    // A long name of the formatter's currency that the chain's search
+    // leaves out (es-419 gives some of the unknown currency's plural
+    // names).
+    {"es-UY", "XXX", mloc_parseLenient, 1, "0,00 (moneda desconocida)", "0", "XXX", 25},
     // Text that ends with the spacing after a number, read to its end
     // and no further.
     {"en", "USD", mloc_parseLenient, 0, "12\xC2\xA0", "12", "USD", 2},
@@ -407,10 +411,11 @@ static bool RoundTrips(const char* id, const char* code, mlocCurrencyDisplay dis
 
 static void TestRoundTrip(void)
 {
-    // my, si and to write a long name before the number.
+    // my, si and to write a long name before the number; ro writes
+    // "12,00 euro" and "20,00 de euro".
     static const char* const s_locales[] = {"en",    "de", "fr", "ja", "hi", "ar-EG", "fa", "de-CH",
                                             "pt-CV", "tr", "ru", "zh", "ko", "es",    "sv", "he",
-                                            "bn",    "th", "pl", "it", "my", "si",    "to"};
+                                            "bn",    "th", "pl", "it", "my", "si",    "to", "ro"};
     static const char* const s_codes[] = {"USD", "EUR", "JPY", "CHF", "INR", "CVE"};
     static const mlocCurrencyDisplay s_displays[] = {mloc_currencySymbol, mloc_currencyNarrowSymbol,
                                                      mloc_currencyCode, mloc_currencyName};
@@ -431,7 +436,8 @@ static void TestRoundTrip(void)
                     continue;
                 }
                 if (!RoundTrips(s_locales[l], s_codes[c], display, append, amount) ||
-                    !RoundTrips(s_locales[l], s_codes[c], display, append, "12"))
+                    !RoundTrips(s_locales[l], s_codes[c], display, append, "12") ||
+                    !RoundTrips(s_locales[l], s_codes[c], display, append, "20"))
                 {
                     CHECK(false, s_locales[l]);
                 }

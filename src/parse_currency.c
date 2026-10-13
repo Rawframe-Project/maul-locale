@@ -607,8 +607,9 @@ static void MatchAny(const Parser* r, const CurrencyChain* c, Segment* s, Parsed
     }
 }
 
-// The longest of the currency's long names, case folded.
-static void MatchNames(const Parser* r, const ParseCurrency* c, Segment* s, Parsed* p)
+// The bytes of the longest of the currency's long names, case folded, at
+// the segment; 0 for none.
+static size_t LongestName(const Parser* r, const ParseCurrency* c, const Segment* s)
 {
     uint32_t longest = 0;
     size_t bytes = 0;
@@ -624,10 +625,7 @@ static void MatchNames(const Parser* r, const ParseCurrency* c, Segment* s, Pars
             bytes = n;
         }
     }
-    if (longest > 0)
-    {
-        Take(s, p, bytes, c->code);
-    }
+    return longest > 0 ? bytes : 0;
 }
 
 // Whether a code point after the code can go on a name: no name has a
@@ -667,13 +665,18 @@ static void MatchText(const Parser* r, const ParseCurrency* c, Segment* s, Parse
     s->at += code;
     bool names = code == 0 || NameGoesOn(r, s);
     s->at = initial;
+    // With any currency, the formatter's own long names too where they
+    // read further: the chain's search skips a step's plurals of a
+    // currency an earlier step gives some of (record mloc-0033).
+    size_t own = names ? LongestName(r, c, s) : 0;
     if (names && c->chain != nullptr)
     {
         MatchAny(r, c->chain, s, p);
     }
-    else if (names)
+    if (own > 0 && (!p->hasCode || s->at - initial < own))
     {
-        MatchNames(r, c, s, p);
+        s->at = initial;
+        Take(s, p, own, c->code);
     }
     if (code > 0 && (!p->hasCode || s->at - initial <= code))
     {

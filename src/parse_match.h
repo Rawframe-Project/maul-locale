@@ -19,12 +19,14 @@
 enum
 {
     // The matchers of a list and of an affix's series.
-    parseMaxMatchers = 24,
+    parseMaxMatchers = 32,
     parseMaxSeries = 32,
-    // The affix patterns of a parser: a prefix and a suffix per sign type.
-    parseMaxAffixes = 4,
-    // The affix matchers: the pairs and the unpaired affixes.
-    parseMaxAffixMatchers = 6,
+    // The affix patterns of a parser: a prefix and a suffix per sign type,
+    // and in strict mode those of each outer pattern of a currency.
+    parseMaxAffixes = 8,
+    // The affix matchers: the pairs and the unpaired affixes, and in
+    // strict mode the pairs of each outer pattern of a currency.
+    parseMaxAffixMatchers = 18,
     // The bytes of an affix pattern a series is built from.
     parseMaxAffixText = 64,
     // A code point no set holds: a byte that does not begin valid UTF-8.

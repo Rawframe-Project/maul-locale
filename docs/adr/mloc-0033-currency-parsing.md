@@ -43,7 +43,11 @@ cache and allocates nothing.
   uppercased as the locale uppercases (u_strToUpper's full mappings,
   Turkic i for tr and az) and compared by their own UTF-16 length,
   symbols as written, a name winning a tie; the end moved by UTF-16
-  units, the input limited to 100 of them as ICU limits it. The search
+  units, the input limited to 100 of them as ICU limits it; and the
+  formatter's own long names where they read further (the search drops
+  a step's plurals of a currency an earlier step gives some of, so in
+  es-UY, whose chain has es-419, "(moneda desconocida)" would not come
+  back; ICU, walking es-UY to es, reads it). The search
   is a walk over the kept units with first-character rejects and
   ASCII fast paths; it is skipped where the text begins with a digit
   or an ignorable but a bidi control, which no currency symbol or name
@@ -53,7 +57,9 @@ cache and allocates nothing.
   with); a formatter of long names or of the ISO append parses within
   its outer pattern of the category other, with the name placeholder
   in the currency's place or the code the ISO append writes (ICU's
-  currency plural patterns, "#,##0.00 ¤¤¤").
+  currency plural patterns, "#,##0.00 ¤¤¤"); strict mode reads each
+  category's pattern that differs (Romanian writes "12,00 euro" and
+  "20,00 de euro").
 - **Data**: the parse sets gain the uppercase mappings u_strToUpper
   makes (runs, and the special mappings to several code points, from
   Maul Unicode); the currency formatter keeps its chain's currency
@@ -85,5 +91,6 @@ cache and allocates nothing.
 
 Reading the formatter's currency costs about 1.5 µs a parse; reading
 any currency about 30 µs where a name or a symbol has to be searched
-(ICU's cached table is not built), nothing until called. The fuzz
-target follows in its own step.
+(ICU's cached table is not built), nothing until called. The parse
+fuzz target (record mloc-0032) covers currency formatters with the
+names file; it found the Romanian patterns.

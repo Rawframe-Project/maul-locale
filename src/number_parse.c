@@ -181,10 +181,10 @@ static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t leng
 }
 
 // The affix patterns the parser reads: the formatter's parse affixes,
-// within the currency's outer pattern when it has one (a prefix after
-// the text before the number, a suffix before the text after it). False
-// when one does not fit.
-static bool FillAffixes(Parser* r)
+// within one of the currency's outer patterns when it has them (a prefix
+// after the text before the number, a suffix before the text after it).
+// False when one does not fit.
+static bool FillAffixes(Parser* r, uint32_t variant)
 {
     const NumberCore* c = &r->f->core;
     const ParseCurrency* outer =
@@ -197,12 +197,12 @@ static bool FillAffixes(Parser* r)
         uint8_t* out = r->affixText[affix];
         if (outer != nullptr && prefix)
         {
-            ok = ok && Append(out, &at, outer->before, outer->beforeLength);
+            ok = ok && Append(out, &at, outer->before[variant], outer->beforeLength[variant]);
         }
         ok = ok && Append(out, &at, c->affixText + c->parseStart[affix], c->parseLength[affix]);
         if (outer != nullptr && !prefix)
         {
-            ok = ok && Append(out, &at, outer->after, outer->afterLength);
+            ok = ok && Append(out, &at, outer->after[variant], outer->afterLength[variant]);
         }
         r->affixLength[affix] = (uint8_t)at;
     }
@@ -294,10 +294,25 @@ static bool AffixAfter(const Parser* r, const AffixMatcher* a, const AffixMatche
     return AffixUnits(r, a->suffix) < AffixUnits(r, b->suffix);
 }
 
-static void AddAffixMatcher(Parser* r, int prefix, int suffix, uint32_t flags)
+// Adds an affix matcher once; false when the matchers are full.
+static bool AddAffixMatcher(Parser* r, int prefix, int suffix, uint32_t flags)
 {
+    // The outer patterns of a currency's categories may give a pair twice.
+    for (uint32_t i = 0; i < r->affixCount; i++)
+    {
+        const AffixMatcher* a = &r->affixes[i];
+        if (a->prefix == prefix && a->suffix == suffix && a->flags == flags)
+        {
+            return true;
+        }
+    }
+    if (r->affixCount == parseMaxAffixMatchers)
+    {
+        return false;
+    }
     r->affixes[r->affixCount++] =
         (AffixMatcher){.prefix = (int8_t)prefix, .suffix = (int8_t)suffix, .flags = flags};
+    return true;
 }
 
 // The positive pair.
@@ -334,37 +349,52 @@ static bool AddSignType(Parser* r, SignType type, Pair* positive)
         return true;
     }
     uint32_t flags = type == signNegative ? parsedNegative : 0;
-    AddAffixMatcher(r, prefix, suffix, flags);
+    bool ok = AddAffixMatcher(r, prefix, suffix, flags);
     if ((r->flags & modeUnpairedAffixes) != 0 && prefix >= 0 && suffix >= 0)
     {
         if (first || prefix != positive->prefix)
         {
-            AddAffixMatcher(r, prefix, affixNone, flags);
+            ok = ok && AddAffixMatcher(r, prefix, affixNone, flags);
         }
         if (first || suffix != positive->suffix)
         {
-            AddAffixMatcher(r, affixNone, suffix, flags);
+            ok = ok && AddAffixMatcher(r, affixNone, suffix, flags);
         }
     }
-    return true;
+    return ok;
 }
 
 // ICU's createAffixMatchers: the positive sign type (with a plus sign
 // when the formatter shows one) and the negative one, then the matchers
-// sorted (a stable bubble sort, as ICU's) into the list.
+// sorted (a stable bubble sort, as ICU's) into the list. The except-zero
+// sign display, which ICU's DecimalFormat lacks, writes zero without the
+// plus sign: strict mode reads the positive type too (record mloc-0032).
+// Strict mode reads each outer pattern of a currency's categories, as the
+// formatter writes them (record mloc-0033).
 static bool AddAffixMatchers(Parser* r)
 {
     if (!Interesting(r))
     {
         return true;
     }
+    bool strict = (r->flags & modeFullAffixes) != 0;
     bool plus = (r->flags & modePlusAllowed) != 0;
-    Pair positive = {affixNone, affixNone};
-    if (!AddSignType(r, plus ? signPositiveSign : signPositive, &positive) ||
-        !AddSignType(r, signNegative, &positive))
+    bool unsignedToo = plus && strict && r->f->signDisplay == mloc_signExceptZero;
+    uint32_t variants =
+        strict && r->currency != nullptr && r->currency->outer ? r->currency->outerCount : 1;
+    for (uint32_t v = 0; v < variants; v++)
     {
-        return false;
+        Pair positive = {affixNone, affixNone};
+        if (!FillAffixes(r, v) ||
+            !AddSignType(r, plus ? signPositiveSign : signPositive, &positive) ||
+            (unsignedToo && !AddSignType(r, signPositive, &positive)) ||
+            !AddSignType(r, signNegative, &positive))
+        {
+            return false;
+        }
     }
+    // The rest of the parser reads the first pattern's affixes.
+    (void)FillAffixes(r, 0);
     for (bool changed = true; changed;)
     {
         changed = false;
@@ -501,7 +531,7 @@ static bool BuildParser(Parser* r, const Formatter* f, const ParseCurrency* curr
     r->sets = f->core.parseSets;
     r->flags = ModeFlags(f, mode);
     SetSeparators(r);
-    if (!FillAffixes(r) || !AddAffixMatchers(r))
+    if (!FillAffixes(r, 0) || !AddAffixMatchers(r))
     {
         return false;
     }

@@ -411,14 +411,14 @@ static void GatherKept(const DataSpan* units, uint32_t count, uint32_t kind, uin
     }
 }
 
-// A side of the outer pattern of the category other as an affix pattern
-// (ICU builds its currency plural patterns so), into parseMaxAffixText
-// bytes and one past them when it does not fit.
-static uint8_t OuterSide(const Currency* c, bool before, uint8_t* out)
+// A side of a category's outer pattern as an affix pattern (ICU builds
+// its currency plural patterns so), into parseMaxAffixText bytes and one
+// past them when it does not fit.
+static uint8_t OuterSide(const Currency* c, uint32_t category, bool before, uint8_t* out)
 {
     const Outer* o = &c->outer;
-    const uint8_t* pattern = o->patternText + o->patternStart[mloc_pluralOther];
-    size_t length = o->patternLength[mloc_pluralOther];
+    const uint8_t* pattern = o->patternText + o->patternStart[category];
+    size_t length = o->patternLength[category];
     const uint8_t* number = memchr(pattern, currencyTextNumber, length);
     size_t split = number == nullptr ? length : (size_t)(number - pattern);
     size_t end = before ? split : length;
@@ -475,10 +475,23 @@ static void ParseOf(const Currency* c, bool any, ParseCurrency* out)
         out->nameLengths[category] = code ? 3 : names.length[field];
     }
     out->outer = c->hasOuter;
-    if (c->hasOuter)
+    // Other's pattern, then each other category's that differs.
+    static const uint8_t s_order[6] = {mloc_pluralOther, mloc_pluralZero, mloc_pluralOne,
+                                       mloc_pluralTwo,   mloc_pluralFew,  mloc_pluralMany};
+    for (uint32_t i = 0; c->hasOuter && i < 6; i++)
     {
-        out->beforeLength = OuterSide(c, true, out->before);
-        out->afterLength = OuterSide(c, false, out->after);
+        uint32_t n = out->outerCount;
+        out->beforeLength[n] = OuterSide(c, s_order[i], true, out->before[n]);
+        out->afterLength[n] = OuterSide(c, s_order[i], false, out->after[n]);
+        bool seen = false;
+        for (uint32_t k = 0; k < n && !seen; k++)
+        {
+            seen = out->beforeLength[k] == out->beforeLength[n] &&
+                   out->afterLength[k] == out->afterLength[n] &&
+                   memcmp(out->before[k], out->before[n], out->beforeLength[n]) == 0 &&
+                   memcmp(out->after[k], out->after[n], out->afterLength[n]) == 0;
+        }
+        out->outerCount = (uint8_t)(n + (seen ? 0 : 1));
     }
     out->chain = any ? &c->chain : nullptr;
 }

@@ -23,6 +23,8 @@ typedef enum Style
     stylePerMille,
     styleScientific,
     stylePlus,
+    // The except-zero sign display, which ICU's DecimalFormat lacks.
+    styleExceptZero,
 } Style;
 
 static mlocNumberOptions OptionsOf(Style style)
@@ -32,7 +34,9 @@ static mlocNumberOptions OptionsOf(Style style)
               : style == stylePerMille ? mloc_numberPerMille
                                        : mloc_numberDecimal;
     o.notation = style == styleScientific ? mloc_notationScientific : mloc_notationStandard;
-    o.signDisplay = style == stylePlus ? mloc_signAlways : mloc_signAuto;
+    o.signDisplay = style == stylePlus         ? mloc_signAlways
+                    : style == styleExceptZero ? mloc_signExceptZero
+                                               : mloc_signAuto;
     return o;
 }
 
@@ -406,6 +410,24 @@ static void TestBounds(void)
           "the text ends at its length");
 }
 
+// The except-zero display writes zero without the plus sign the others
+// show: strict mode reads both (record mloc-0032).
+static void TestExceptZero(void)
+{
+    mlocNumberFormatter f;
+    CHECK(Formatter("en", styleExceptZero, &f), "a formatter");
+    static const char* const s_texts[] = {"0", "+12", "-12", "12"};
+    for (size_t i = 0; i < 4; i++)
+    {
+        mlocDecimal d;
+        size_t end = 0;
+        size_t length = strlen(s_texts[i]);
+        CHECK(ParseCopy(&f, s_texts[i], length, mloc_parseStrict, &d, &end) == mloc_success &&
+                  end == length,
+              s_texts[i]);
+    }
+}
+
 static void TestRefusals(void)
 {
     mlocNumberFormatter formatter;
@@ -446,6 +468,7 @@ int main(void)
     TestCases();
     TestRoundTrip();
     TestBounds();
+    TestExceptZero();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

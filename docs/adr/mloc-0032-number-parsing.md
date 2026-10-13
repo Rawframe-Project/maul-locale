@@ -63,7 +63,11 @@ mode checks grouping sizes and the full affixes.
   character. ICU's createScientificInstance reads the locale's
   scientific pattern, which in five locales has brackets ("[#E0]");
   the library's scientific notation writes the decimal pattern's
-  affixes (record mloc-0021) and reads what it writes.
+  affixes (record mloc-0021) and reads what it writes. The except-zero
+  sign display, which DecimalFormat lacks, writes zero without the plus
+  sign: strict mode reads its positive affixes beside the plus sign's
+  (the always display keeps ICU's rule, plus sign required, so NaN,
+  written without it, is read in lenient mode alone).
 - **Proof**: the parse oracle (`docs/locale/research/oracle/parse`)
   over the 105 locales of the earlier oracles, five styles and both
   modes: 314,824 lines made from formatted values and their lenient
@@ -77,11 +81,16 @@ mode checks grouping sizes and the full affixes.
   are "#,##0 pcs", explicit negative subpatterns, parentheses, a
   trailing minus), each as ICU's DecimalFormat gives it with the same
   pattern; the round trip of formatted values in 40 locales (the same
-  decimal back, fraction digits too); the bounds and the refusals.
+  decimal back, fraction digits too); the bounds and the refusals. A
+  fuzz target (`test/fuzz_parse.c`, a minute on every push) parses
+  random text with a formatter of any locale of the data, of every
+  notation but compact, style, sign display and grouping, or a
+  currency formatter of any display: a refusal is syntax or capacity
+  and ends inside the text, a parse reads the same twice, and what it
+  reads writes text read back whole (trailing ignorables aside) in both
+  modes to the same text again.
 
 ## Consequences
 
 Parsing costs the formatter nothing until it is called and needs one
-small unit of data (4 KB). Currency parsing (the formatter's
-currency and any currency) and the fuzz target follow in their own
-steps.
+small unit of data (4 KB). Currency parsing is record mloc-0033.
