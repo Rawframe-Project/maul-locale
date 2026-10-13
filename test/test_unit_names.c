@@ -6,7 +6,8 @@
 // identifiers are found; copies with one field spoiled are refused, the
 // derivations' as well. Then the fields gathered along a chain from the
 // unit names data file, a source without the identifiers skipped, the
-// derivations looked up by language, and the trim of a unit's name
+// derivations looked up by language, identifiers normalized as ICU
+// normalizes them (unit_compound.h), and the trim of a unit's name
 // (number_core.h).
 
 #include "bytes.h"
@@ -16,6 +17,8 @@
 #include "number_core.h"
 #include "test_harness.h"
 #include "test_pack.h"
+#include "unit_compound.h"
+#include "unit_id.h"
 #include "unit_names.h"
 #include "unit_tables.h"
 
@@ -165,7 +168,7 @@ static bool Text(const UnitNameFields* f, uint32_t field, const char* expected)
            memcmp(f->text[field], expected, f->length[field]) == 0;
 }
 
-// Builds a derivations unit of two records, "de" and "fr"; its size.
+// Builds a derivations unit of two records, "de" and "fa"; its size.
 static uint32_t BuildDerivations(void)
 {
     memset(s_unit, 0, sizeof(s_unit));
@@ -175,7 +178,7 @@ static uint32_t BuildDerivations(void)
     memset(at + unitDerivationLanguage, unitDerivedCompound, 8);
     at[unitDerivationLanguage + 1] = 1;
     at += unitDerivationSize;
-    memcpy(at, "fr", 2);
+    memcpy(at, "fa", 2);
     memset(at + unitDerivationLanguage, unitDerivedNone, 8);
     at[unitDerivationLanguage] = 5;
     return unitDerivationsHeaderSize + 2 * unitDerivationSize;
@@ -202,7 +205,7 @@ static void TestDerivations(void)
         uint8_t value;
         const char* what;
     } spoils[] = {
-        {0, 'F', "a language not in lowercase"},
+        {1, 'A', "a language not in lowercase"},
         {0, 0, "an empty language"},
         {3, 'x', "a language's padding set"},
         {unitDerivationLanguage + 1, 6, "a value past the categories"},
@@ -240,6 +243,9 @@ static void TestDerivationLookup(void)
     CHECK(mlocUnitDerivation(&s_data, &de, unitDerivePer, &value0, &value1) &&
               value0 == unitDerivedCompound && value1 == 1,
           "a structure's two values");
+    mlocDataSet builtin = {s_sources, 1};
+    CHECK(!mlocUnitDerivation(&builtin, &en, unitDeriveTimes, &value0, &value1),
+          "data without the derivations");
 }
 
 static void TestGather(void)
@@ -267,6 +273,43 @@ static void TestGather(void)
     CHECK(mlocUnitNameKind(&s_data, "10p3", 4, &kind) && kind == unitIdPrefix &&
               !mlocUnitNameKind(&s_data, "kilometers", 10, &kind),
           "an identifier's kind");
+}
+
+static bool Normal(const char* unit, const char* expected)
+{
+    char out[unitMaxIdLength];
+    size_t length = 0;
+    return mlocNormalizeUnitName(&s_data, unit, strlen(unit), out, sizeof(out), &length) ==
+               mloc_success &&
+           length == strlen(expected) && memcmp(out, expected, length) == 0;
+}
+
+static void TestNormalize(void)
+{
+    CHECK(Normal("hour-meter", "meter-hour") && Normal("meter-foot", "foot-meter"),
+          "by quantity, then by simple unit");
+    CHECK(Normal("meter-kilometer", "kilometer-meter") &&
+              Normal("kibibyte-megabyte", "megabyte-kibibyte") &&
+              Normal("kilobyte-kibibyte", "kibibyte-kilobyte"),
+          "a larger prefix first, a binary one at a tie");
+    CHECK(Normal("meter-per-second-kilogram", "meter-per-kilogram-second") &&
+              Normal("per-second-meter", "per-meter-second") &&
+              Normal("second-per-meter", "second-per-meter"),
+          "the numerator first, per before the first denominator unit");
+    CHECK(Normal("kilogram-per-1000000-meter", "kilogram-per-1e6-meter") &&
+              Normal("meter-per-1000-second", "meter-per-1000-second"),
+          "a constant past 1,000 written with its exponent");
+    CHECK(Normal("meter-square-meter", "cubic-meter") && Normal("metric-ton", "tonne"),
+          "powers of one unit merged, an alias replaced");
+    char out[12];
+    size_t length = 0;
+    CHECK(mlocNormalizeUnitName(&s_data, "square-meter", 12, out, 12, &length) == mloc_success &&
+              length == 12 &&
+              mlocNormalizeUnitName(&s_data, "square-meter", 12, out, 11, &length) ==
+                  mloc_errorCapacity &&
+              mlocNormalizeUnitName(&s_data, "square-meter", 12, out, 6, &length) ==
+                  mloc_errorCapacity,
+          "an identifier that fills the room, one past it");
 }
 
 typedef struct Parts
@@ -354,5 +397,6 @@ int main(void)
     }
     TestGather();
     TestDerivationLookup();
+    TestNormalize();
     return s_failures == 0 ? 0 : 1;
 }

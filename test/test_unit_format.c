@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit formatting with the unit names data file (record mloc-0024): the
-// widths, the plural categories and their fallbacks, patterns without the
-// number, percent and per mille, compact notation, ranges, the parts, the
+// Unit formatting with the unit names data file (records mloc-0024 and
+// mloc-0025): the widths, the plural categories and their fallbacks,
+// patterns without the number, percent and per mille, compound names
+// built from the patterns, compact notation, ranges, the parts, the
 // display names and the refusals. Every expected text is ICU4C 79's for
 // the same input ("generic" aside, which ICU does not take). Then the
 // formatter's pool of patterns on names built here.
@@ -148,6 +149,16 @@ static void TestCompounds(void)
           "a category ICU's data drops (markers alone) takes other's");
     CHECK(Long("de_CH", "jigger", "2", "2 Jigger"),
           "a restored category keeps the value resolved at its locale");
+    CHECK(Long("fr", "square-second", "1",
+               "1\xC2\xA0seconde carr\xC3\xA9"
+               "e"),
+          "a power of a feminine unit");
+    CHECK(Long("de", "square-millimeter", "2", "2 Quadratmillimeter"),
+          "a prefix lowercased under a power in long names");
+    CHECK(Long("sw", "square-millimeter", "2", "milimita mraba 2") &&
+              Long("sw", "kilometer-per-second", "2", "kilomita 2 kwa kila sekunde"),
+          "the placeholder at the end, its joiner kept");
+    CHECK(Long("en", "attometer", "2", "2 attometers"), "the first prefix");
 }
 
 static bool Range(const char* id, const char* unit, mlocUnitWidth width, const char* start,
@@ -398,7 +409,8 @@ static void TestPool(void)
     // for its "{0}".
     static const uint32_t s_fill[6] = {170, 170, 170, 170, 170, 168};
     static const uint32_t s_past[6] = {170, 170, 170, 170, 170, 169};
-    static const uint32_t s_long[6] = {1, 1, 1, 1, 1, unitPatternRoom};
+    static const uint32_t s_room[6] = {1, 1, 1, 1, 1, unitPatternRoom - 3};
+    static const uint32_t s_long[6] = {1, 1, 1, 1, 1, unitPatternRoom - 2};
     CHECK(mlocParseLocale("ar", 2, &locale).status == mloc_success, "a locale");
     CHECK(OpenNames(&sources[1], s_fill) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
@@ -407,10 +419,13 @@ static void TestPool(void)
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
                   mloc_errorCapacity,
           "patterns a byte past the pool");
+    CHECK(OpenNames(&sources[1], s_room) &&
+              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
+          "a pattern that fills a pattern's room");
     CHECK(OpenNames(&sources[1], s_long) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
                   mloc_errorCapacity,
-          "a pattern longer than a pattern's room");
+          "a pattern a byte past a pattern's room");
 }
 
 // The compiled-in data, and with it the unit names data file, at the
