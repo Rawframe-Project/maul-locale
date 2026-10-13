@@ -97,7 +97,7 @@ static bool CheckLine(const mlocDataSet* data, const mlocLocale* locale, char* l
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
     const char* name = fields[1][0] != '\0' ? fields[1] : nullptr;
     if (mlocInitSpelloutFormatter(&formatter, data, locale, name,
-                                  name != nullptr ? strlen(name) : 0) < 0 ||
+                                  name != nullptr ? strlen(name) : 0, nullptr) < 0 ||
         !ReadNumber(fields[2], &decimal) ||
         mlocFormatSpellout(&formatter, &decimal, &output) != mloc_success ||
         output.length != strlen(fields[3]) || memcmp(s_text, fields[3], output.length) != 0)

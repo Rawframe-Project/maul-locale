@@ -59,9 +59,10 @@ the display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`); and
 numbers in words, ordinal suffixes and Roman, Hebrew and the other
 algorithmic numerals by CLDR's rule-based formats, as ICU runs them but
-on the exact decimal (CLDR's rule-based test data passes on every push;
+on the exact decimal, by rule set or numbering system, capitalized as
+the context asks (CLDR's rule-based test data passes on every push;
 the rules are a data file of their own, `src/generated/spellout.mloc`).
-The library has 57 public functions.
+The library has 58 public functions.
 
 ## Building
 

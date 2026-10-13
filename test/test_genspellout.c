@@ -14,6 +14,7 @@
 #include "data_format.h"
 #include "datafile.h"
 #include "kinds.h"
+#include "locale_context.h"
 #include "spellout_compile.h"
 #include "spellout_data.h"
 #include "spellout_gen.h"
@@ -429,6 +430,60 @@ static void TestSystems(void)
           "a name, its range, the group and the ids' order");
 }
 
+// A titlecase unit of "a" and "ß" ("A" and "Ss").
+static const uint8_t s_titlecase[] = {
+    2,    0,   3,   0,             // count, text size
+    'a',  0,   0,   0, 0, 0, 1, 0, // "a": offset 0, length 1
+    0xDF, 0,   0,   0, 1, 0, 2, 0, // "ß": offset 1, length 2
+    'A',  'S', 's',                // the text
+};
+
+static bool TitlecaseRefused(size_t at, uint8_t value)
+{
+    uint8_t unit[sizeof(s_titlecase)];
+    memcpy(unit, s_titlecase, sizeof(unit));
+    unit[at] = value;
+    return !mlocValidSpelloutTitlecase(nullptr, (DataSpan){unit, sizeof(unit)});
+}
+
+static void TestTitlecase(void)
+{
+    DataSpan span = {s_titlecase, sizeof(s_titlecase)};
+    const uint8_t* text = nullptr;
+    uint32_t length = 0;
+    CHECK(mlocValidSpelloutTitlecase(nullptr, span) &&
+              mlocSpelloutTitlecase(span, 0xDF, &text, &length) && length == 2 &&
+              memcmp(text, "Ss", 2) == 0 && mlocSpelloutTitlecase(span, 'a', &text, &length) &&
+              length == 1 && text[0] == 'A' && !mlocSpelloutTitlecase(span, 'b', &text, &length) &&
+              !mlocSpelloutTitlecase(span, 0, &text, &length),
+          "a titlecase unit and its lookup");
+    CHECK(TitlecaseRefused(0, 3) && TitlecaseRefused(2, 2) &&
+              !mlocValidSpelloutTitlecase(nullptr, (DataSpan){s_titlecase, 3}),
+          "its counts and header");
+    CHECK(TitlecaseRefused(12, 'a') && TitlecaseRefused(4, 0xE0) && TitlecaseRefused(15, 0x11),
+          "code points out of order or past U+10FFFF");
+    CHECK(TitlecaseRefused(10, 0) && TitlecaseRefused(11, 1) && TitlecaseRefused(16, 4) &&
+              TitlecaseRefused(18, 3) && TitlecaseRefused(21, 0x80),
+          "an empty titlecase, the zero byte, the range and ill-formed UTF-8");
+    static const uint8_t s_contexts[] = {contextAll, contextAll + 1};
+    CHECK(mlocValidLocaleContext(nullptr, (DataSpan){s_contexts, 1}) &&
+              !mlocValidLocaleContext(nullptr, (DataSpan){s_contexts + 1, 1}) &&
+              !mlocValidLocaleContext(nullptr, (DataSpan){s_contexts, 2}),
+          "a context transforms unit: a byte per usage, no other bits");
+}
+
+// The rule text ICU's case locales would titlecase otherwise.
+static void TestCasesAsIcu(void)
+{
+    CHECK(SpelloutCasesAsIcu("nl", "acht; vijf; zij", 15) &&
+              !SpelloutCasesAsIcu("nl_BE", "x: ijs;", 7) && SpelloutCasesAsIcu("en", "ijs", 3),
+          "Dutch ij only beginning a word");
+    CHECK(!SpelloutCasesAsIcu("lt", "i\xCC\x87", 3) && SpelloutCasesAsIcu("lv", "i\xCC\x87", 3) &&
+              !SpelloutCasesAsIcu("hy", "\xD6\x87", 2) && SpelloutCasesAsIcu("tr", "iki", 3) &&
+              !SpelloutCasesAsIcu("en", "\xC3", 1),
+          "a Lithuanian dot above, Armenian ech-yiwn, Turkish i, ill-formed text");
+}
+
 // A data file with one group, root's spell-out rules.
 static uint8_t* RootFile(const uint8_t* unit, size_t unitSize, size_t* sizeOut)
 {
@@ -477,8 +532,9 @@ static mlocResult FormatText(const char* rules, const char* name, size_t at, uin
     mlocOutput output = {.buffer = text, .capacity = capacity - 1};
     mlocResult r = mlocOpenData(&sources[1], bytes, size);
     r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
-    r = r == mloc_success ? mlocInitSpelloutFormatter(&formatter, &set, &locale, name, strlen(name))
-                          : r;
+    r = r == mloc_success
+            ? mlocInitSpelloutFormatter(&formatter, &set, &locale, name, strlen(name), nullptr)
+            : r;
     r = r >= 0 && mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success
             ? mlocFormatSpellout(&formatter, &decimal, &output)
             : (mlocResult)-101;
@@ -624,6 +680,8 @@ int main(void)
     TestRefused();
     TestUnit();
     TestSystems();
+    TestTitlecase();
+    TestCasesAsIcu();
     TestEngineLimits();
     TestEngineResults();
     TestFractionLimits();

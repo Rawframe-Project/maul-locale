@@ -266,3 +266,87 @@ bool mlocValidSpelloutSystems(const DataView* view, DataSpan payload)
     }
     return true;
 }
+
+bool mlocValidSpelloutTitlecase(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (payload.size < spelloutTitlecaseHeaderSize)
+    {
+        return false;
+    }
+    uint32_t count = mlocLoad16(payload.bytes);
+    uint32_t textSize = mlocLoad16(payload.bytes + 2);
+    const uint8_t* records = payload.bytes + spelloutTitlecaseHeaderSize;
+    const uint8_t* text = records + (size_t)count * spelloutTitlecaseSize;
+    if (spelloutTitlecaseHeaderSize + (uint64_t)count * spelloutTitlecaseSize + textSize !=
+        payload.size)
+    {
+        return false;
+    }
+    uint32_t last = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const uint8_t* t = records + (size_t)i * spelloutTitlecaseSize;
+        uint32_t codePoint = mlocLoad32(t);
+        uint32_t offset = mlocLoad16(t + 4);
+        if ((i > 0 && codePoint <= last) || codePoint > 0x10FFFF || t[6] == 0 || t[7] != 0 ||
+            offset > textSize || t[6] > textSize - offset ||
+            !mlocValidDataText(text + offset, t[6], 0))
+        {
+            return false;
+        }
+        last = codePoint;
+    }
+    return true;
+}
+
+bool mlocSpelloutTitlecase(DataSpan unit, uint32_t codePoint, const uint8_t** textOut,
+                           uint32_t* lengthOut)
+{
+    uint32_t count = mlocLoad16(unit.bytes);
+    const uint8_t* records = unit.bytes + spelloutTitlecaseHeaderSize;
+    uint32_t low = 0;
+    uint32_t high = count;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* t = records + (size_t)middle * spelloutTitlecaseSize;
+        uint32_t at = mlocLoad32(t);
+        if (at == codePoint)
+        {
+            *textOut = records + (size_t)count * spelloutTitlecaseSize + mlocLoad16(t + 4);
+            *lengthOut = t[6];
+            return true;
+        }
+        if (at < codePoint)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return false;
+}
+
+bool mlocFindSpelloutSystem(DataSpan unit, const char* id, size_t length, SpelloutSystem* out)
+{
+    uint32_t count = mlocLoad16(unit.bytes);
+    const uint8_t* records = unit.bytes + spelloutSystemHeaderSize;
+    const uint8_t* text = records + (size_t)count * spelloutSystemSize;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const uint8_t* s = records + (size_t)i * spelloutSystemSize;
+        if (s[6] == length && memcmp(text + mlocLoad16(s), id, length) == 0)
+        {
+            out->locale = (const char*)text + mlocLoad16(s + 2);
+            out->localeLength = s[7];
+            out->name = (const char*)text + mlocLoad16(s + 4);
+            out->nameLength = s[8];
+            out->group = s[9];
+            return true;
+        }
+    }
+    return false;
+}

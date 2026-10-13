@@ -64,10 +64,24 @@ digits, an ordinal suffix dropped.
   `yue`'s; a negative infinity through a pattern is written ("−ke-∞"),
   where ICU crashes; and values past `int64_t` or with digits past a
   `double`'s, as above.
-- **Rule sets** by name (public ones only, ICU's default for none),
-  numbering systems by CLDR id, capitalization contexts as ICU applies
-  them; a locale whose rules are root's alone is formatted by them and
-  reported with `mloc_fellBack`.
+- **Rule sets** by name (public ones only, ICU's default for none); a
+  locale whose rules are root's alone is formatted by them and
+  reported with `mloc_fellBack`. **Numbering systems** by CLDR id, the
+  19 algorithmic ones, as ICU's `NumberFormat` makes them: the rules,
+  plural rules and symbols of the locale the system names (`hans` is
+  zh's), or of the locale asked for when the rules are root's (`roman`).
+- **Capitalization** as ICU applies it: when the text begins with a
+  lowercase letter, its first code point is titlecased at the
+  beginning of a sentence, and in a UI list or menu or stand-alone
+  when the locale's `number-spellout` context transforms say so (en
+  and its children in CLDR 49). ICU titlecases with a sentence break
+  iterator; over every public rule set of its locales only the first
+  code point ever changes. Turkish and Azerbaijani "i" becomes "İ";
+  the generator refuses rule text in which ICU's other case locales
+  (Dutch "ij", a Lithuanian dot above, Armenian "և") would matter. The
+  context transforms are general locale data in the built-in data, a
+  byte per usage; the titlecase of the rules' lowercase letters is a
+  table in the spell-out file, so the library holds no case tables.
 - **Parsing** as ICU's strict parse: every public rule set, the
   longest match, the value exact, the byte offset where it ended. No
   lenient parsing, which needs a collator and which CLDR 49's data does

@@ -75,6 +75,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/list_data.c
     src/list_join.c
     src/locale_canonical.c
+    src/locale_context.c
     src/locale_distance.c
     src/locale_extensions.c
     src/locale_fallback.c
@@ -245,6 +246,7 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/cldr.c
+                                    tools/mlocgen/context_gen.c
                                     tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
                                     tools/mlocgen/generate.c tools/mlocgen/keys.c

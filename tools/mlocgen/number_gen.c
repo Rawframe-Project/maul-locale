@@ -10,6 +10,7 @@
 #include "number_gen.h"
 
 #include "cldr.h"
+#include "context_gen.h"
 #include "currency_gen.h"
 #include "currency_tables.h"
 #include "keys.h"
@@ -1491,6 +1492,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
         .count = count,
     };
     GenerateListUnits(&lists, file);
+    GenerateContextUnits(&lists, file);
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
              GenerateUnitNames(&units, unitNames, errorOut, errorCapacity);
     if (ok)

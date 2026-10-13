@@ -11,9 +11,11 @@
 #include "data_view.h"
 #include "decimal.h"
 #include "kinds.h"
+#include "locale_context.h"
 #include "locale_fallback.h"
 #include "plural.h"
 #include "plural_rules.h"
+#include "spellout_data.h"
 #include "spellout_format.h"
 
 #include <string.h>
@@ -99,32 +101,90 @@ static mlocResult FindRuleSet(const mlocDataSet* data, const mlocLocale* locale,
     return mloc_errorNotFound;
 }
 
-// The first code point of a symbol's UTF-8 text.
-static uint32_t FirstCodePoint(const uint8_t* text, uint32_t length)
+// The public rule set of a name in one group along the locale's chain.
+static mlocResult FindNamedSet(const mlocDataSet* data, const mlocLocale* locale, int group,
+                               const char* name, size_t length, SpelloutFormat* f)
 {
-    if (length == 0)
+    DataSpan span;
+    bool root = false;
+    if (group < 0 || group >= spelloutGroupCount ||
+        !FindGroup(data, locale, s_groupKinds[group], &span, &root))
     {
-        return 0;
+        return mloc_errorNotFound;
     }
-    uint8_t c = text[0];
-    uint32_t n = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
-    if (n > length)
+    int32_t set = FindSet(span, name, length);
+    if (set < 0)
     {
-        return 0;
+        return mloc_errorNotFound;
     }
-    uint32_t cp = n == 1 ? c : c & (0x7Fu >> n);
-    for (uint32_t i = 1; i < n; i++)
+    f->group = span.bytes;
+    f->groupSize = span.size;
+    f->set = (uint16_t)set;
+    return mloc_success;
+}
+
+// Whether the first word is titlecased in a context, as ICU decides: at
+// the beginning of a sentence always, in a list or menu or alone as the
+// locale's number-spellout transforms say.
+static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale,
+                        mlocCapitalization capitalization)
+{
+    uint8_t contexts =
+        capitalization == mloc_capitalizationNone || capitalization == mloc_capitalizationSentence
+            ? 0
+            : mlocGetLocaleContext(data, locale, contextNumberSpellout);
+    return capitalization == mloc_capitalizationSentence ||
+           (capitalization == mloc_capitalizationListOrMenu &&
+            (contexts & contextListOrMenu) != 0) ||
+           (capitalization == mloc_capitalizationStandAlone && (contexts & contextStandAlone) != 0);
+}
+
+// Completes a formatter whose rule set is found: the locale's symbols,
+// plural rules and capitalization.
+static mlocResult Complete(SpelloutFormat* f, const mlocDataSet* data, const mlocLocale* locale,
+                           const mlocSpelloutOptions* options, mlocResult found,
+                           mlocSpelloutFormatter* formatterOut)
+{
+    mlocResult core = mlocInitNumberCore(&f->core, data, locale, mloc_numberDecimal);
+    if (core < 0 || mlocFindPluralRule(data, locale, mloc_pluralCardinal, &f->cardinal) < 0 ||
+        mlocFindPluralRule(data, locale, mloc_pluralOrdinal, &f->ordinal) < 0)
     {
-        cp = cp << 6 | (text[i] & 0x3Fu);
+        return mloc_errorNotFound;
     }
-    return cp;
+    if (options != nullptr && Capitalizes(data, locale, options->capitalization))
+    {
+        DataSpan titlecase;
+        if (!mlocFindDataSetUnit(data, kindSpelloutTitlecase, nullptr, 0, &titlecase))
+        {
+            return mloc_errorNotFound;
+        }
+        f->capitalize = true;
+        f->turkic = strcmp(locale->language, "tr") == 0 || strcmp(locale->language, "az") == 0;
+        f->titlecase = titlecase.bytes;
+        f->titlecaseSize = titlecase.size;
+    }
+    f->decimalPoint =
+        mlocSpelloutFirstCodePoint(f->core.symbolText + f->core.symbolStart[numberDecimal],
+                                   f->core.symbolLength[numberDecimal]);
+    f->stamp = spelloutStamp;
+    memcpy(formatterOut, f, sizeof(*f));
+    memset((uint8_t*)formatterOut + sizeof(*f), 0, sizeof(*formatterOut) - sizeof(*f));
+    return found == mloc_fellBack || core == mloc_fellBack ? mloc_fellBack : mloc_success;
+}
+
+static bool ValidOptions(const mlocSpelloutOptions* options)
+{
+    return options == nullptr ||
+           ((uint32_t)options->capitalization <= (uint32_t)mloc_capitalizationStandAlone);
 }
 
 mlocResult mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const char* ruleSet, size_t length)
+                                     const mlocLocale* locale, const char* ruleSet, size_t length,
+                                     const mlocSpelloutOptions* options)
 {
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
-        (ruleSet == nullptr && length != 0) || (ruleSet != nullptr && length == 0))
+        (ruleSet == nullptr && length != 0) || (ruleSet != nullptr && length == 0) ||
+        !ValidOptions(options))
     {
         return mloc_errorInvalid;
     }
@@ -139,18 +199,53 @@ mlocResult mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const 
     {
         return found;
     }
-    mlocResult core = mlocInitNumberCore(&f.core, data, locale, mloc_numberDecimal);
-    if (core < 0 || mlocFindPluralRule(data, locale, mloc_pluralCardinal, &f.cardinal) < 0 ||
-        mlocFindPluralRule(data, locale, mloc_pluralOrdinal, &f.ordinal) < 0)
+    return Complete(&f, data, locale, options, found, formatterOut);
+}
+
+mlocResult mlocInitNumberingSystemFormatter(mlocSpelloutFormatter* formatterOut,
+                                            const mlocDataSet* data, const mlocLocale* locale,
+                                            const char* system, size_t length,
+                                            const mlocSpelloutOptions* options)
+{
+    if (formatterOut == nullptr || data == nullptr || locale == nullptr || system == nullptr ||
+        !ValidOptions(options))
+    {
+        return mloc_errorInvalid;
+    }
+    DataSpan systems;
+    SpelloutSystem s;
+    if (!mlocFindDataSetUnit(data, kindSpelloutSystems, nullptr, 0, &systems) ||
+        !mlocFindSpelloutSystem(systems, system, length, &s))
     {
         return mloc_errorNotFound;
     }
-    f.decimalPoint = FirstCodePoint(f.core.symbolText + f.core.symbolStart[numberDecimal],
-                                    f.core.symbolLength[numberDecimal]);
-    f.stamp = spelloutStamp;
-    memcpy(formatterOut, &f, sizeof(f));
-    memset((uint8_t*)formatterOut + sizeof(f), 0, sizeof(*formatterOut) - sizeof(f));
-    return found == mloc_fellBack || core == mloc_fellBack ? mloc_fellBack : mloc_success;
+    // The locale the system names ("zh_Hant"), else the one asked for.
+    mlocLocale named;
+    if (s.localeLength > 0)
+    {
+        char tag[16];
+        if (s.localeLength >= sizeof(tag))
+        {
+            return mloc_errorNotFound;
+        }
+        for (size_t i = 0; i < s.localeLength; i++)
+        {
+            tag[i] = s.locale[i] == '_' ? '-' : s.locale[i];
+        }
+        if (mlocParseLocale(tag, s.localeLength, &named).status != mloc_success)
+        {
+            return mloc_errorNotFound;
+        }
+        locale = &named;
+    }
+    SpelloutFormat f;
+    memset(&f, 0, sizeof(f));
+    mlocResult found = FindNamedSet(data, locale, s.group, s.name, s.nameLength, &f);
+    if (found < 0)
+    {
+        return found;
+    }
+    return Complete(&f, data, locale, options, found, formatterOut);
 }
 
 // A formatter the library made, copied out; false for any other.
@@ -164,11 +259,41 @@ static bool ReadFormatter(const mlocSpelloutFormatter* opaque, SpelloutFormat* f
     if (f->stamp != spelloutStamp || f->group == nullptr || f->groupSize < spelloutHeaderSize ||
         f->core.symbolText == nullptr || f->core.digitLength < 1 ||
         f->core.digitLength > numberDigitSize || f->cardinal >= mlocPluralRuleSetCount ||
-        f->ordinal >= mlocPluralRuleSetCount)
+        f->ordinal >= mlocPluralRuleSetCount ||
+        (f->capitalize &&
+         (f->titlecase == nullptr || f->titlecaseSize < spelloutTitlecaseHeaderSize)))
     {
         return false;
     }
     return f->set < mlocLoad16(f->group);
+}
+
+// Titlecases the text's first code point, a lowercase letter, moving the
+// rest when its length changes (only when the whole text is written; the
+// length is the one needed either way).
+static void Capitalize(const SpelloutFormat* f, uint32_t first, NumberWriter* w)
+{
+    static const uint8_t s_dottedI[] = {0xC4, 0xB0};
+    const uint8_t* title = nullptr;
+    uint32_t titleLength = 0;
+    if (f->turkic && first == 'i')
+    {
+        title = s_dottedI;
+        titleLength = sizeof(s_dottedI);
+    }
+    else if (first == 0 || !mlocSpelloutTitlecase((DataSpan){f->titlecase, f->titlecaseSize}, first,
+                                                  &title, &titleLength))
+    {
+        return;
+    }
+    size_t old = first < 0x80 ? 1 : first < 0x800 ? 2 : first < 0x10000 ? 3 : 4;
+    size_t length = w->length - old + titleLength;
+    if (w->buffer != nullptr && w->length <= w->capacity && length <= w->capacity)
+    {
+        memmove(w->buffer + titleLength, w->buffer + old, w->length - old);
+        memcpy(w->buffer, title, titleLength);
+    }
+    w->length = length;
 }
 
 mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal,
@@ -182,7 +307,12 @@ mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mloc
         return mloc_errorInvalid;
     }
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocResult r = mlocWriteSpellout(&f, decimal, &w);
+    uint32_t first = 0;
+    mlocResult r = mlocWriteSpellout(&f, decimal, &w, &first);
+    if (r == mloc_success && f.capitalize)
+    {
+        Capitalize(&f, first, &w);
+    }
     output->length = w.length;
     if (r != mloc_success)
     {

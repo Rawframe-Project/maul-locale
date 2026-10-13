@@ -37,6 +37,9 @@ typedef struct Engine
     int levels;
     int frames;
     mlocResult error;
+    // The text's first code point when a rule's text or a symbol begins
+    // it, else 0.
+    uint32_t first;
 } Engine;
 
 // A rule's fields.
@@ -102,8 +105,32 @@ static bool Fail(Engine* e, mlocResult error)
     return false;
 }
 
+uint32_t mlocSpelloutFirstCodePoint(const uint8_t* text, size_t length)
+{
+    if (length == 0)
+    {
+        return 0;
+    }
+    uint8_t c = text[0];
+    uint32_t n = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+    if (n > length)
+    {
+        return 0;
+    }
+    uint32_t cp = n == 1 ? c : c & (0x7Fu >> n);
+    for (uint32_t i = 1; i < n; i++)
+    {
+        cp = cp << 6 | (text[i] & 0x3Fu);
+    }
+    return cp;
+}
+
 static void Write(Engine* e, const uint8_t* text, size_t length)
 {
+    if (e->w->length == 0 && length > 0)
+    {
+        e->first = mlocSpelloutFirstCodePoint(text, length);
+    }
     mlocWriteLiteral(e->w, (const char*)text, length);
 }
 
@@ -728,7 +755,7 @@ static void SetDec(Engine* e, uint32_t set, const mlocDecimal* x)
 }
 
 mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* decimal,
-                             NumberWriter* writer)
+                             NumberWriter* writer, uint32_t* firstOut)
 {
     Engine e = {
         .f = format,
@@ -746,5 +773,6 @@ mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* de
     {
         SetDec(&e, format->set, &x);
     }
+    *firstOut = e.first;
     return e.error;
 }

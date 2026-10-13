@@ -40,26 +40,39 @@ static bool Decimal(const char* text, mlocDecimal* out)
     return mlocParseDecimal(text, strlen(text), out).status == mloc_success;
 }
 
-// Whether a number formats as expected by a locale's rule set.
-static bool Spells(const char* id, const char* ruleSet, const char* number, const char* expected)
+// Whether a number formats as expected by a locale's rule set, or with a
+// leading '@' its numbering system, in a capitalization context.
+static bool SpellsIn(const char* id, const char* ruleSet, mlocCapitalization capitalization,
+                     const char* number, const char* expected)
 {
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
     char buffer[512];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
-    bool same = Locale(id, &locale) &&
-                mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet,
-                                          ruleSet != nullptr ? strlen(ruleSet) : 0) >= 0 &&
-                Decimal(number, &decimal) &&
-                mlocFormatSpellout(&formatter, &decimal, &output) == mloc_success &&
-                output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
+    mlocSpelloutOptions options = {.capitalization = capitalization};
+    bool system = ruleSet != nullptr && ruleSet[0] == '@';
+    bool same =
+        Locale(id, &locale) &&
+        (system ? mlocInitNumberingSystemFormatter(&formatter, &s_data, &locale, ruleSet + 1,
+                                                   strlen(ruleSet + 1), &options)
+                : mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet,
+                                            ruleSet != nullptr ? strlen(ruleSet) : 0, &options)) >=
+            0 &&
+        Decimal(number, &decimal) &&
+        mlocFormatSpellout(&formatter, &decimal, &output) == mloc_success &&
+        output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
     if (!same)
     {
         printf("%s %s %s: \"%.*s\"\n", id, ruleSet != nullptr ? ruleSet : "(default)", number,
                (int)output.length, buffer);
     }
     return same;
+}
+
+static bool Spells(const char* id, const char* ruleSet, const char* number, const char* expected)
+{
+    return SpellsIn(id, ruleSet, mloc_capitalizationNone, number, expected);
 }
 
 static void TestEnglish(void)
@@ -188,11 +201,11 @@ static void TestFellBack(void)
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     CHECK(Locale("eu", &locale) &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%spellout-cardinal", 18) ==
-                  mloc_fellBack &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%spellout-cardinal", 18,
+                                        nullptr) == mloc_fellBack &&
               Spells("eu", "%spellout-cardinal", "1234", "1.234") &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%roman-upper", 12) ==
-                  mloc_success,
+              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%roman-upper", 12,
+                                        nullptr) == mloc_success,
           "root's rules write digits with mloc_fellBack; numbering systems are root's alone");
 }
 
@@ -234,20 +247,24 @@ static void TestRefusals(void)
 {
     mlocLocale en;
     mlocSpelloutFormatter formatter;
-    CHECK(
-        Locale("en", &en) &&
-            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%nope", 5) == mloc_errorNotFound &&
-            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%%and", 5) == mloc_errorInvalid &&
-            mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 3) == mloc_errorInvalid &&
-            mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%x", 0) == mloc_errorInvalid &&
-            mlocInitSpelloutFormatter(&formatter, &s_builtin, &en, nullptr, 0) ==
-                mloc_errorNotFound &&
-            mlocInitSpelloutFormatter(nullptr, &s_data, &en, nullptr, 0) == mloc_errorInvalid,
-        "an unknown or private rule set, a bad length, data without the rules, null");
+    CHECK(Locale("en", &en) &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%nope", 5, nullptr) ==
+                  mloc_errorNotFound &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%%and", 5, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 3, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%x", 0, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitSpelloutFormatter(&formatter, &s_builtin, &en, nullptr, 0, nullptr) ==
+                  mloc_errorNotFound &&
+              mlocInitSpelloutFormatter(nullptr, &s_data, &en, nullptr, 0, nullptr) ==
+                  mloc_errorInvalid,
+          "an unknown or private rule set, a bad length, data without the rules, null");
     mlocDecimal decimal = {0};
     char small[4];
     mlocOutput output = {.buffer = small, .capacity = sizeof(small)};
-    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%spellout-cardinal", 18) ==
+    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%spellout-cardinal", 18, nullptr) ==
                   mloc_success &&
               Decimal("21", &decimal) &&
               mlocFormatSpellout(&formatter, &decimal, &output) == mloc_errorCapacity &&
@@ -267,6 +284,97 @@ static void TestRefusals(void)
               mlocFormatSpellout(&formatter, &bad, &output) == mloc_errorInvalid &&
               mlocFormatSpellout(nullptr, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make, an invalid decimal");
+}
+
+// ICU4C 79's results with each context (the double path for NaN).
+static void TestCapitalization(void)
+{
+    CHECK(
+        SpellsIn("en", "%spellout-cardinal", mloc_capitalizationNone, "21", "twenty-one") &&
+            SpellsIn("en", "%spellout-cardinal", mloc_capitalizationSentence, "21", "Twenty-one") &&
+            SpellsIn("en", "%spellout-cardinal", mloc_capitalizationListOrMenu, "21",
+                     "Twenty-one") &&
+            SpellsIn("en", "%spellout-cardinal", mloc_capitalizationStandAlone, "-5",
+                     "Minus five") &&
+            SpellsIn("en-GB", "%spellout-ordinal", mloc_capitalizationListOrMenu, "3", "Third") &&
+            SpellsIn("en", "%spellout-cardinal", mloc_capitalizationSentence, "NaN",
+                     "Not a number"),
+        "English titlecases in every context, en-GB by inheritance");
+    CHECK(
+        SpellsIn("de", nullptr, mloc_capitalizationSentence, "21", "Ein" SHY "und" SHY "zwanzig") &&
+            SpellsIn("de", nullptr, mloc_capitalizationListOrMenu, "21",
+                     "ein" SHY "und" SHY "zwanzig") &&
+            SpellsIn("fr", nullptr, mloc_capitalizationStandAlone, "21", "vingt-et-un"),
+        "other languages only at the beginning of a sentence");
+    CHECK(
+        SpellsIn("tr", "%spellout-cardinal", mloc_capitalizationSentence, "2", "\xC4\xB0ki") &&
+            SpellsIn("tr", "%spellout-cardinal", mloc_capitalizationSentence, "3",
+                     "\xC3\x9C\xC3\xA7") &&
+            SpellsIn("az", "%spellout-cardinal", mloc_capitalizationSentence, "2", "\xC4\xB0ki") &&
+            SpellsIn("ru", nullptr, mloc_capitalizationSentence, "NaN",
+                     "\xD0\x9D\xD0\xB5\xC2\xA0\xD1\x87\xD0\xB8\xD1\x81\xD0\xBB\xD0\xBE"),
+        "the Turkic dotted I, a symbol's first letter");
+    CHECK(
+        SpellsIn("en", "@romanlow", mloc_capitalizationSentence, "1999", "Mcmxcix") &&
+            SpellsIn("en", "@armnlow", mloc_capitalizationSentence, "12", "\xD4\xBA\xD5\xA2") &&
+            SpellsIn("en", "@greklow", mloc_capitalizationSentence, "12",
+                     "\xCE\x99\xCE\xB2\xC2\xB4") &&
+            SpellsIn("en", "@geor", mloc_capitalizationSentence, "12", "\xE1\x83\x98\xE1\x83\x91"),
+        "lowercase numerals; Georgian has no titlecase");
+    mlocLocale tr;
+    mlocSpelloutFormatter formatter;
+    mlocSpelloutOptions sentence = {.capitalization = mloc_capitalizationSentence};
+    mlocDecimal two;
+    char buffer[4];
+    mlocOutput small = {.buffer = buffer, .capacity = 3};
+    mlocOutput measure = {0};
+    mlocOutput exact = {.buffer = buffer, .capacity = 4};
+    CHECK(Locale("tr", &tr) &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &tr, "%spellout-cardinal", 18,
+                                        &sentence) == mloc_success &&
+              Decimal("2", &two) &&
+              mlocFormatSpellout(&formatter, &two, &small) == mloc_errorCapacity &&
+              small.length == 4 &&
+              mlocFormatSpellout(&formatter, &two, &measure) == mloc_errorCapacity &&
+              measure.length == 4 && mlocFormatSpellout(&formatter, &two, &exact) == mloc_success &&
+              exact.length == 4 && memcmp(buffer, "\xC4\xB0ki", 4) == 0,
+          "a titlecase longer than its letter: the size needed, then the text");
+    mlocSpelloutOptions bad = {.capitalization = (mlocCapitalization)4};
+    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &tr, nullptr, 0, &bad) ==
+                  mloc_errorInvalid &&
+              mlocInitNumberingSystemFormatter(&formatter, &s_data, &tr, "roman", 5, &bad) ==
+                  mloc_errorInvalid,
+          "a capitalization out of range");
+}
+
+// ICU4C 79's NumberFormat with -u-nu of each system.
+static void TestNumberingSystems(void)
+{
+    CHECK(Spells("en", "@roman", "1999", "MCMXCIX") &&
+              Spells("fr", "@hans", "123",
+                     "\xE4\xB8\x80\xE7\x99\xBE\xE4\xBA\x8C\xE5\x8D\x81"
+                     "\xE4\xB8\x89") &&
+              Spells("fr", "@hans", "1.5", "\xE4\xB8\x80\xE7\x82\xB9\xE4\xBA\x94") &&
+              Spells("en", "@hant", "12", "\xE5\x8D\x81\xE4\xBA\x8C") &&
+              Spells("en", "@jpanyear", "2026", "2026") &&
+              Spells("en", "@jpanyear", "1", "\xE5\x85\x83") &&
+              Spells("en", "@hebr", "5786",
+                     "\xD7\x94\xD7\xB3\xD7\xAA\xD7\xA9\xD7\xA4\xD7\xB4\xD7\x95"),
+          "root's systems by the locale asked for, the others by the locale they name");
+    mlocLocale en;
+    mlocSpelloutFormatter formatter;
+    CHECK(Locale("en", &en) &&
+              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, "latn", 4, nullptr) ==
+                  mloc_errorNotFound &&
+              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, "rom", 3, nullptr) ==
+                  mloc_errorNotFound &&
+              mlocInitNumberingSystemFormatter(&formatter, &s_builtin, &en, "roman", 5, nullptr) ==
+                  mloc_errorNotFound &&
+              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, nullptr, 0, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitNumberingSystemFormatter(nullptr, &s_data, &en, "roman", 5, nullptr) ==
+                  mloc_errorInvalid,
+          "a numeric system, an unknown id, data without the rules, null");
 }
 
 static bool OpenData(void)
@@ -299,5 +407,7 @@ int main(void)
     TestFellBack();
     TestRuleSets();
     TestRefusals();
+    TestCapitalization();
+    TestNumberingSystems();
     return s_failures == 0 ? 0 : 1;
 }

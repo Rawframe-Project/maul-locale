@@ -26,6 +26,15 @@ extern "C"
         uint64_t opaque[32];
     } mlocSpelloutFormatter;
 
+    // A spell-out formatter's options; zero is the default.
+    typedef struct mlocSpelloutOptions
+    {
+        // The first word titlecased by the context, as ICU does: when the
+        // text begins with a lowercase letter, at the beginning of a
+        // sentence always, in a list or menu or alone as the locale says.
+        mlocCapitalization capitalization;
+    } mlocSpelloutOptions;
+
     /// Makes a locale's formatter of a rule set: words
     /// ("%spellout-cardinal", "%spellout-ordinal-feminine",
     /// "%spellout-numbering-year"), ordinal suffixes ("%digits-ordinal")
@@ -42,6 +51,7 @@ extern "C"
     ///                      writes it, or null for the locale's default
     ///                      (ICU's: "%spellout-numbering").
     /// @param length        The name's length in bytes, 0 with null.
+    /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_fellBack when the locale has no rules of
     ///         its own and root's, which write digits, stand instead, or
     ///         when the numbering system asked for has no digits and the
@@ -49,12 +59,39 @@ extern "C"
     ///         for a rule set the locale's rules do not have, or data
     ///         without the spell-out rules or the number units;
     ///         mloc_errorInvalid for a null pointer, a length with a null
-    ///         name, or a private rule set's name ("%%...").
+    ///         name, a private rule set's name ("%%..."), or options out of
+    ///         range.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const mlocDataSet* data,
-                              const mlocLocale* locale, const char* ruleSet, size_t length);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitSpelloutFormatter(
+        mlocSpelloutFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale,
+        const char* ruleSet, size_t length, const mlocSpelloutOptions* options);
+
+    /// Makes a formatter of an algorithmic numbering system by its CLDR id
+    /// ("roman", "hebr", "hans", "jpanyear"), as ICU's NumberFormat makes
+    /// one: the rules of the locale the system names, with that locale's
+    /// plural rules and symbols ("hans" is zh's "%spellout-cardinal"), or
+    /// for a system of root's rules ("roman", "armn", "geor") the locale
+    /// asked for.
+    ///
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
+    /// @param data          The data with the number units, the plural
+    ///                      rules and the spell-out rules (spellout.mloc).
+    /// @param locale        The locale, canonicalized.
+    /// @param system        The numbering system's id.
+    /// @param length        Its length in bytes.
+    /// @param options       The options, or null for the defaults.
+    /// @return mloc_success; mloc_errorNotFound for an id not of an
+    ///         algorithmic system (the numeric ones, "latn" or "arab", are
+    ///         the number formatter's), or data without the spell-out
+    ///         rules or the number units; mloc_errorInvalid for a null
+    ///         pointer or options out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberingSystemFormatter(
+        mlocSpelloutFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale,
+        const char* system, size_t length, const mlocSpelloutOptions* options);
 
     /// Formats a decimal by the formatter's rules: its value, not the
     /// digits it shows ("1.10" is written as 1.1, "-0" as 0), exactly
@@ -63,7 +100,8 @@ extern "C"
     /// ICU loses digits). Nothing is rounded: round the decimal first
     /// (mlocRoundDecimal).
     ///
-    /// @param formatter  A formatter from mlocInitSpelloutFormatter.
+    /// @param formatter  A formatter from mlocInitSpelloutFormatter or
+    ///                   mlocInitNumberingSystemFormatter.
     /// @param decimal    The value.
     /// @param output     Receives the text; on mloc_errorCapacity its
     ///                   length is the size needed. The text has no parts.

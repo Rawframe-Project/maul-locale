@@ -34,12 +34,23 @@ typedef struct SpelloutFormat
     uint8_t cardinal;
     uint8_t ordinal;
     uint8_t stamp;
+    // Whether the first word is titlecased, by the titlecase unit, and
+    // "i" as Turkish and Azerbaijani titlecase it.
+    bool capitalize;
+    bool turkic;
+    const uint8_t* titlecase;
+    uint32_t titlecaseSize;
 } SpelloutFormat;
 
-// Writes a valid decimal by a formatter's rule set. Returns
-// mloc_errorCapacity when the rules nest past 64 levels or a division
-// passes the decimal's digits; the writer's text is then partial.
+// The first code point of well-formed UTF-8 text, 0 for none.
+uint32_t mlocSpelloutFirstCodePoint(const uint8_t* text, size_t length);
+
+// Writes a valid decimal by a formatter's rule set, with the text's first
+// code point when a rule's text or a symbol begins it (0 when a pattern's
+// digits do, or for no text). Returns mloc_errorCapacity when the rules
+// nest past 64 levels or a division passes the decimal's digits; the
+// writer's text is then partial.
 mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* decimal,
-                             NumberWriter* writer);
+                             NumberWriter* writer, uint32_t* firstOut);
 
 #endif

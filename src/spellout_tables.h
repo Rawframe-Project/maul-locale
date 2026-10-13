@@ -26,6 +26,12 @@
 // spelloutSystemSize bytes (u16 offsets of the id, the locale whose rules
 // it names, "" for the locale asked for, and the rule set's name; u8
 // their lengths; u8 the group), then the text.
+//
+// The titlecase table, a unit of no locale: u16 count, u16 text size,
+// then per lowercase letter (General_Category Ll) of the rules' text whose
+// full titlecase differs, sorted by code point, a record of
+// spelloutTitlecaseSize bytes (u32 code point, u16 offset and u8 length
+// of its titlecase, u8 zero), then the text.
 
 #ifndef MLOC_SPELLOUT_TABLES_H
 #define MLOC_SPELLOUT_TABLES_H
@@ -54,6 +60,8 @@ enum
     spelloutPatternSize = 6,
     spelloutSystemHeaderSize = 4,
     spelloutSystemSize = 10,
+    spelloutTitlecaseHeaderSize = 4,
+    spelloutTitlecaseSize = 8,
     spelloutMaxText = 0xFFFF,
     spelloutNone = 0xFFFF,
 };

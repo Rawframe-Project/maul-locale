@@ -27,6 +27,9 @@ constexpr uint32_t kindLocaleMatch = 0x00010005;
 // The locale part: the regional preferences (hour cycle, week, measurement
 // system, paper size), a unit of no locale.
 constexpr uint32_t kindLocalePreferences = 0x00010006;
+// The locale part: a locale's context transforms, a unit per locale key
+// (src/locale_context.h).
+constexpr uint32_t kindLocaleContext = 0x00010007;
 // The plural part: a locale's rule sets and range table, a unit per
 // locale (record mloc-0020).
 constexpr uint32_t kindPlurals = 0x00030001;
@@ -103,5 +106,8 @@ constexpr uint32_t kindSpelloutNumbering = 0x00060003;
 // The spell-out data file: the algorithmic numbering systems, a unit of
 // no locale.
 constexpr uint32_t kindSpelloutSystems = 0x00060004;
+// The spell-out data file: the titlecase of the rules' lowercase letters,
+// a unit of no locale.
+constexpr uint32_t kindSpelloutTitlecase = 0x00060005;
 
 #endif

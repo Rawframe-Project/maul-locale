@@ -115,6 +115,19 @@ extern "C"
         void* context;
     } mlocOutput;
 
+    // Where a formatted text stands, which decides whether its first word
+    // is capitalized (CLDR's context transforms): mid-sentence as the data
+    // writes it; at the beginning of a sentence, titlecased; an item of a
+    // UI list or menu, or alone (a label), titlecased when the locale's
+    // data asks for it there.
+    typedef enum mlocCapitalization
+    {
+        mloc_capitalizationNone = 0,
+        mloc_capitalizationSentence = 1,
+        mloc_capitalizationListOrMenu = 2,
+        mloc_capitalizationStandAlone = 3,
+    } mlocCapitalization;
+
     // A version: major, minor and patch.
     typedef struct mlocVersion
     {

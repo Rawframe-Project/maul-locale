@@ -9,6 +9,7 @@
 #include "kinds.h"
 #include "list_data.h"
 #include "locale_canonical.h"
+#include "locale_context.h"
 #include "locale_distance.h"
 #include "locale_fallback.h"
 #include "locale_likely.h"
@@ -27,6 +28,7 @@ static const DataKind s_kinds[] = {
     {kindLocaleParents, mlocValidParents},
     {kindLocaleMatch, mlocValidMatch},
     {kindLocalePreferences, mlocValidPreferences},
+    {kindLocaleContext, mlocValidLocaleContext},
     {kindPlurals, mlocValidPlurals},
     {kindPluralRanges, mlocValidPluralRanges},
     {kindNumberSystems, mlocValidNumberSystems},
@@ -58,6 +60,7 @@ static const DataKind s_kinds[] = {
     {kindSpelloutOrdinals, mlocValidSpelloutRules},
     {kindSpelloutNumbering, mlocValidSpelloutRules},
     {kindSpelloutSystems, mlocValidSpelloutSystems},
+    {kindSpelloutTitlecase, mlocValidSpelloutTitlecase},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

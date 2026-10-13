@@ -15,6 +15,9 @@
 #include "table_gen.h"
 #include "xml.h"
 
+#include "maul-unicode/case.h"
+#include "maul-unicode/properties.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +41,7 @@ enum
 {
     maxFiles = 512,
     maxSystems = 64,
+    maxCodePoint = 0x10FFFF,
 };
 
 typedef struct Bytes
@@ -549,6 +553,100 @@ static void NoteSets(Map* sets, const char* id, int group, const RbnfGroup* comp
     }
 }
 
+// The lowercase letters of every rule text, which the titlecase table
+// lists.
+static uint8_t s_lowercase[(maxCodePoint + 1) / 8];
+
+bool SpelloutCasesAsIcu(const char* id, const char* text, size_t length)
+{
+    size_t language = strcspn(id, "_");
+    bool dutch = language == 2 && memcmp(id, "nl", 2) == 0;
+    bool lithuanian = language == 2 && memcmp(id, "lt", 2) == 0;
+    bool armenian = language == 2 && memcmp(id, "hy", 2) == 0;
+    bool wordStart = true;
+    for (size_t at = 0; at < length;)
+    {
+        uint32_t cp = 0;
+        size_t size = 0;
+        if (muniDecodeUtf8(text + at, length - at, &cp, &size) != muni_success ||
+            (dutch && wordStart && length - at >= 2 && memcmp(text + at, "ij", 2) == 0) ||
+            (lithuanian && cp == 0x0307) || (armenian && cp == 0x0587))
+        {
+            return false;
+        }
+        muniGeneralCategory gc = muniGetGeneralCategory(cp);
+        wordStart = gc != muni_gcLl && gc != muni_gcLu && gc != muni_gcLt && gc != muni_gcLm &&
+                    gc != muni_gcLo && gc != muni_gcMn;
+        at += size;
+    }
+    return true;
+}
+
+// Notes the lowercase letters of well-formed text.
+static void NoteLetters(const char* text, size_t length)
+{
+    for (size_t at = 0; at < length;)
+    {
+        uint32_t cp = 0;
+        size_t size = 0;
+        if (muniDecodeUtf8(text + at, length - at, &cp, &size) == muni_success &&
+            muniGetGeneralCategory(cp) == muni_gcLl)
+        {
+            s_lowercase[cp / 8] |= (uint8_t)(1u << (cp % 8));
+        }
+        at += size;
+    }
+}
+
+// Files the titlecase table: each noted letter whose full titlecase
+// differs.
+static void AddTitlecase(DataFile* file)
+{
+    Bytes unit = {0};
+    Bytes text = {0};
+    uint32_t count = 0;
+    Grow(&unit, spelloutTitlecaseHeaderSize);
+    for (uint32_t cp = 0; cp <= maxCodePoint; cp++)
+    {
+        if ((s_lowercase[cp / 8] & (1u << (cp % 8))) == 0)
+        {
+            continue;
+        }
+        char letter[4];
+        char title[16];
+        size_t length = 0;
+        size_t needed = 0;
+        if (muniEncodeUtf8(cp, letter, &length) != muni_success ||
+            muniConvertCase(letter, length, muni_caseTitle, muni_caseDefault, muni_convertStrict,
+                            title, sizeof(title), &needed)
+                    .status != muni_success)
+        {
+            GenDie("a titlecase mapping failed", "");
+        }
+        if (needed == length && memcmp(letter, title, length) == 0)
+        {
+            continue;
+        }
+        uint8_t* record = Grow(&unit, spelloutTitlecaseSize);
+        GenPut(record, cp, 4);
+        GenPut(record + 4, text.size, 2);
+        record[6] = (uint8_t)needed;
+        record[7] = 0;
+        memcpy(Grow(&text, needed), title, needed);
+        count++;
+    }
+    if (count > 0xFFFF || text.size > spelloutMaxText)
+    {
+        GenDie("the titlecase table passes its offsets", "");
+    }
+    GenPut(unit.bytes, count, 2);
+    GenPut(unit.bytes + 2, text.size, 2);
+    Concatenate(&unit, &text);
+    DataFileAdd(file, kindSpelloutTitlecase, nullptr, unit.bytes, unit.size);
+    free(unit.bytes);
+    free(text.bytes);
+}
+
 // Compiles and files a file's groups.
 static int AddFile(const char* commonDirectory, const Keys* keys, const char* id, DataFile* file,
                    Map* sets, char* errorOut, size_t errorCapacity)
@@ -576,6 +674,14 @@ static int AddFile(const char* commonDirectory, const Keys* keys, const char* id
             XmlFree(root);
             return 0;
         }
+        if (!SpelloutCasesAsIcu(id, rules->text, rules->textLength))
+        {
+            snprintf(errorOut, errorCapacity,
+                     "%s %s: text the library cannot titlecase as ICU does", path, s_groups[group]);
+            XmlFree(root);
+            return 0;
+        }
+        NoteLetters(rules->text, rules->textLength);
         RbnfGroup compiled;
         char error[512];
         if (!RbnfCompile(rules->text, rules->textLength, &compiled, error, sizeof(error)))
@@ -729,6 +835,10 @@ int GenerateSpellout(const char* commonDirectory, DataFile* file, char* errorOut
         ok = AddFile(commonDirectory, &keys, ids[i], file, &sets, errorOut, errorCapacity);
     }
     ok = ok && AddSystems(commonDirectory, &sets, file, errorOut, errorCapacity);
+    if (ok)
+    {
+        AddTitlecase(file);
+    }
     for (int i = 0; i < count; i++)
     {
         free(ids[i]);
