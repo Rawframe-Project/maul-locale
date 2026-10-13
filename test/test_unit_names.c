@@ -176,12 +176,16 @@ static uint32_t BuildDerivations(void)
     Put(s_unit, 2, 2);
     uint8_t* at = s_unit + unitDerivationsHeaderSize;
     memcpy(at, "de", 2);
-    memset(at + unitDerivationLanguage, unitDerivedCompound, 8);
-    at[unitDerivationLanguage + 1] = 1;
+    memset(at + unitDerivationPlural, unitDerivedCompound, 16);
+    memset(at + unitDerivationGender, unitGenderFirst, 4);
+    at[unitDerivationPlural + 1] = 1;
+    at[unitDerivationCase + 1] = unitCaseCount - 1;
+    at[unitDerivationGender + 1] = unitGenderSecond;
     at += unitDerivationSize;
     memcpy(at, "fa", 2);
-    memset(at + unitDerivationLanguage, unitDerivedNone, 8);
-    at[unitDerivationLanguage] = 5;
+    memset(at + unitDerivationPlural, unitDerivedNone, 20);
+    at[unitDerivationPlural] = 5;
+    at[unitDerivationGender] = unitGenderCount - 1;
     return unitDerivationsHeaderSize + 2 * unitDerivationSize;
 }
 
@@ -209,8 +213,13 @@ static void TestDerivations(void)
         {1, 'A', "a language not in lowercase"},
         {0, 0, "an empty language"},
         {3, 'x', "a language's padding set"},
-        {unitDerivationLanguage + 1, 6, "a value past the categories"},
-        {unitDerivationLanguage + 7, unitDerivedCompound - 1, "a value below compound"},
+        {unitDerivationPlural + 1, 6, "a value past the categories"},
+        {unitDerivationPlural + 7, unitDerivedCompound - 1, "a value below compound"},
+        {unitDerivationCase, unitCaseCount, "a value past the cases"},
+        {unitDerivationGender, unitDerivedCompound, "a gender of compound"},
+        {unitDerivationGender + 1, 0, "a gender of 0"},
+        {unitDerivationGender + 3, unitGenderCount, "a value past the genders"},
+        {unitDerivationGender + 2, unitGenderFirst - 1, "a value below the first component"},
         {0, 'a', "a language not after the one before"},
     };
     for (size_t i = 0; i < sizeof(spoils) / sizeof(spoils[0]); i++)
@@ -291,17 +300,34 @@ static void TestDerivationLookup(void)
           "the locales");
     uint8_t value0 = 0;
     uint8_t value1 = 0;
-    CHECK(mlocUnitDerivation(&s_data, &en, unitDeriveTimes, &value0, &value1) && value0 == 1 &&
-              value1 == unitDerivedCompound,
+    CHECK(mlocUnitDerivation(&s_data, &en, unitFeaturePlural, unitDeriveTimes, &value0, &value1) &&
+              value0 == 1 && value1 == unitDerivedCompound,
           "a language the derivations do not list takes root's");
-    CHECK(mlocUnitDerivation(&s_data, &fr, unitDeriveTimes, &value0, &value1) &&
+    CHECK(mlocUnitDerivation(&s_data, &fr, unitFeaturePlural, unitDeriveTimes, &value0, &value1) &&
               value0 == unitDerivedCompound && value1 == unitDerivedCompound,
           "a locale takes its language's");
-    CHECK(mlocUnitDerivation(&s_data, &de, unitDerivePer, &value0, &value1) &&
+    CHECK(mlocUnitDerivation(&s_data, &de, unitFeaturePlural, unitDerivePer, &value0, &value1) &&
               value0 == unitDerivedCompound && value1 == 1,
           "a structure's two values");
+    CHECK(
+        mlocUnitDerivation(&s_data, &de, unitFeatureCase, unitDerivePer, &value0, &value1) &&
+            value0 == unitDerivedCompound && value1 == 3 &&
+            mlocUnitDerivation(&s_data, &en, unitFeatureCase, unitDerivePower, &value0, &value1) &&
+            value0 == unitCaseNominative && value1 == unitDerivedCompound &&
+            mlocUnitDerivation(&s_data, &fr, unitFeatureCase, unitDerivePer, &value0, &value1) &&
+            value0 == unitDerivedNone && value1 == unitDerivedNone,
+        "cases: de's accusative denominator, root's nominative power, none for French");
+    CHECK(mlocUnitDerivation(&s_data, &en, unitFeatureGender, unitDeriveTimes, &value0, &value1) &&
+              value0 == unitGenderSecond && value1 == unitDerivedNone &&
+              mlocUnitDerivation(&s_data, &fr, unitFeatureGender, unitDeriveTimes, &value0,
+                                 &value1) &&
+              value0 == unitGenderFirst &&
+              mlocUnitDerivation(&s_data, &de, unitFeatureGender, unitDerivePrefix, &value0,
+                                 &value1) &&
+              value0 == unitGenderFirst,
+          "genders: a product's second component's, French's first");
     mlocDataSet builtin = {s_sources, 1};
-    CHECK(!mlocUnitDerivation(&builtin, &en, unitDeriveTimes, &value0, &value1),
+    CHECK(!mlocUnitDerivation(&builtin, &en, unitFeaturePlural, unitDeriveTimes, &value0, &value1),
           "data without the derivations");
 }
 

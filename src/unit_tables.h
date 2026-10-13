@@ -104,12 +104,18 @@
 //
 // The derivations (grammaticalFeatures.xml), a unit of no locale: a
 // header (u16 count, u16 0), then per language, sorted by it,
-// unitDerivationSize bytes: the language (ASCII, NUL-padded), then the
-// plural category each structure gives its two components (per, times,
-// power, prefix; value0 then value1, u8 each): a category's index zero to
+// unitDerivationSize bytes: the language (ASCII, NUL-padded); the plural
+// category each structure gives its two components (per, times, power,
+// prefix; value0 then value1, u8 each): a category's index zero to
 // other, unitDerivedCompound for the compound's own, unitDerivedNone
-// where the language gives no rule. A language CLDR lists takes its
-// rules; any other takes root's, as ICU's DerivedComponents.
+// where the language gives no rule; the case each structure gives its
+// components, in the same order: a case's index (unitCaseNominative and
+// the others), unitDerivedCompound or unitDerivedNone; then the gender
+// each structure gives the compound (u8 each): unitGenderFirst or
+// unitGenderSecond for a component's, a gender's index (unitGenderAnimate
+// and the others) or unitDerivedNone. A language CLDR lists takes its
+// rules, a feature it gives no rule for none; any other language takes
+// root's, as ICU's DerivedComponents.
 //
 // A locale's duration and coordinate patterns, a unit per locale key
 // filed where they differ from its chain's, in the table shape of
@@ -148,10 +154,32 @@ enum
     // The longest identifier the names know.
     unitMaxNameId = 64,
     unitDerivationsHeaderSize = 4,
-    unitDerivationSize = 16,
+    unitDerivationSize = 28,
     unitDerivationLanguage = 8,
+    unitDerivationPlural = 8,
+    unitDerivationCase = 16,
+    unitDerivationGender = 24,
     unitDerivedCompound = 0xFE,
     unitDerivedNone = 0xFF,
+    unitGenderFirst = 0xF0,
+    unitGenderSecond = 0xF1,
+};
+
+// The grammatical cases CLDR names (grammaticalFeatures.xml): the
+// nominative, then the others in alphabetical order, as
+// mlocGrammaticalCase numbers them.
+enum
+{
+    unitCaseNominative = 0,
+    unitCaseCount = 28,
+};
+
+// The grammatical genders CLDR names, from 1 in alphabetical order
+// (animate, common, feminine, inanimate, masculine, neuter, personal).
+enum
+{
+    unitGenderAnimate = 1,
+    unitGenderCount = 8,
 };
 
 // The structures of a derivation, in record order (two values each).

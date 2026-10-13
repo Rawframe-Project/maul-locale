@@ -219,7 +219,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/unit_gen.c
-                                    tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_patterns_gen.c
+                                    tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
+                                    tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/xml.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.

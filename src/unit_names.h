@@ -49,12 +49,23 @@ bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint
 // other's; unitNameFields when neither is found.
 uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category);
 
-// The plural categories a structure (unitDerivePer and the others) gives
-// its two components in a locale's language, root's for a language the
-// derivations do not list: a category's index, unitDerivedCompound or
-// unitDerivedNone. False when the data has no derivations.
-bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t structure,
-                        uint8_t* value0Out, uint8_t* value1Out);
+// The features a derivation gives.
+enum
+{
+    unitFeaturePlural = unitDerivationPlural,
+    unitFeatureCase = unitDerivationCase,
+    unitFeatureGender = unitDerivationGender,
+};
+
+// What a structure (unitDerivePer and the others) gives its two
+// components for a feature in a locale's language, root's for a language
+// the derivations do not list: plural categories' or cases' indexes,
+// unitDerivedCompound or unitDerivedNone; for the gender, the compound's
+// in value0 (unitGenderFirst, unitGenderSecond, a gender's index or
+// unitDerivedNone) and unitDerivedNone in value1. False when the data
+// has no derivations.
+bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t feature,
+                        uint32_t structure, uint8_t* value0Out, uint8_t* value1Out);
 
 // Whether a patterns unit is a table of one record whose string indexes
 // are in range, its coordinate patterns each holding "{0}" once.

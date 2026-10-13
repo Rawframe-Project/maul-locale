@@ -509,7 +509,8 @@ static mlocResult BuildTimes(const Context* c, const UnitPart* parts, uint32_t c
     {
         return r;
     }
-    if (!mlocUnitDerivation(c->data, c->locale, unitDeriveTimes, &p.value0, &p.value1))
+    if (!mlocUnitDerivation(c->data, c->locale, unitFeaturePlural, unitDeriveTimes, &p.value0,
+                            &p.value1))
     {
         p.value0 = unitDerivedNone;
         p.value1 = unitDerivedNone;

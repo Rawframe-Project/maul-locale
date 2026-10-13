@@ -102,8 +102,24 @@ bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload)
     return mlocValidSparse(payload, &s_shape);
 }
 
+// Whether a derivation value is one its place allows.
+static bool ValidDerived(uint32_t at, uint8_t value)
+{
+    if (value == unitDerivedNone)
+    {
+        return true;
+    }
+    if (at >= unitDerivationGender)
+    {
+        return value == unitGenderFirst || value == unitGenderSecond ||
+               (value >= unitGenderAnimate && value < unitGenderCount);
+    }
+    uint32_t count = at >= unitDerivationCase ? unitCaseCount : unitNameOther - unitNameZero + 1;
+    return value < count || value == unitDerivedCompound;
+}
+
 // Whether a derivation's language is lowercase letters then NULs, and
-// its values categories, compound or none.
+// its values those of their places.
 static bool ValidDerivation(const uint8_t* record)
 {
     uint32_t length = 0;
@@ -117,10 +133,7 @@ static bool ValidDerivation(const uint8_t* record)
     }
     for (uint32_t i = length; i < unitDerivationSize; i++)
     {
-        uint8_t value = record[i];
-        bool padding = i < unitDerivationLanguage;
-        if (padding ? value != 0
-                    : value > 5 && value != unitDerivedCompound && value != unitDerivedNone)
+        if (i < unitDerivationLanguage ? record[i] != 0 : !ValidDerived(i, record[i]))
         {
             return false;
         }
@@ -275,8 +288,8 @@ static const uint8_t* FindDerivation(DataSpan unit, const char* language)
     return nullptr;
 }
 
-bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t structure,
-                        uint8_t* value0Out, uint8_t* value1Out)
+bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t feature,
+                        uint32_t structure, uint8_t* value0Out, uint8_t* value1Out)
 {
     DataSpan unit;
     if (!mlocFindDataSetUnit(data, kindUnitDerivations, nullptr, 0, &unit))
@@ -285,10 +298,11 @@ bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint3
     }
     const uint8_t* record = FindDerivation(unit, locale->language);
     record = record != nullptr ? record : FindDerivation(unit, "root");
-    *value0Out =
-        record != nullptr ? record[unitDerivationLanguage + 2 * structure] : unitDerivedNone;
+    uint32_t at =
+        feature == unitFeatureGender ? unitDerivationGender + structure : feature + 2 * structure;
+    *value0Out = record != nullptr ? record[at] : unitDerivedNone;
     *value1Out =
-        record != nullptr ? record[unitDerivationLanguage + 2 * structure + 1] : unitDerivedNone;
+        record != nullptr && feature != unitFeatureGender ? record[at + 1] : unitDerivedNone;
     return true;
 }
 
