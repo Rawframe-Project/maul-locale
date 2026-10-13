@@ -99,6 +99,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_compound.c
     src/unit_coordinate.c
     src/unit_format.c
+    src/unit_gender.c
     src/unit_id.c
     src/unit_mixed.c
     src/unit_mixed_format.c

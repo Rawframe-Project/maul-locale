@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit formatting with the unit names data file (records mloc-0024 and
-// mloc-0025): the widths, the plural categories and their fallbacks,
+// Unit formatting with the unit names data file (records mloc-0024 to
+// mloc-0031): the widths, the plural categories and their fallbacks,
 // patterns without the number, percent and per mille, compound names
 // built from the patterns, compact notation, ranges, the parts, the
-// display names and the refusals. Every expected text is ICU4C 79's for
-// the same input ("generic" aside, which ICU does not take). Then the
-// formatter's pool of patterns on names built here.
+// display names, mixed units, usages, numeric durations, coordinates,
+// grammatical cases and genders, and the refusals. Every expected text
+// and gender is ICU4C 79's for the same input ("generic" aside, which
+// ICU does not take). Then the formatter's pool of patterns on names
+// built here.
 
 #include "currency_tables.h"
 #include "kinds.h"
@@ -594,6 +596,50 @@ static void TestCases(void)
           "data without the case patterns");
 }
 
+// Whether a unit's gender in a locale is as expected.
+static bool GenderIs(const char* id, const char* unit, mlocGender expected)
+{
+    mlocLocale locale;
+    mlocGender gender = (mlocGender)99;
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+           mlocGetUnitGender(&s_data, &locale, unit, strlen(unit), &gender) == mloc_success &&
+           gender == expected;
+}
+
+static void TestGenders(void)
+{
+    CHECK(GenderIs("de", "meter", mloc_genderMasculine) &&
+              GenderIs("cs", "cubic-decimeter", mloc_genderInanimate) &&
+              GenderIs("de", "generic", mloc_genderNeuter),
+          "a unit CLDR names: its long name's gender");
+    CHECK(GenderIs("de", "square-yard", mloc_genderNeuter) &&
+              GenderIs("de", "pixel-per-inch", mloc_genderNeuter) &&
+              GenderIs("de", "dunam", mloc_genderNone),
+          "one CLDR names without a gender: its parts' through the derivations");
+    CHECK(GenderIs("de", "newton-second", mloc_genderFeminine) &&
+              GenderIs("fr", "newton-second", mloc_genderMasculine) &&
+              GenderIs("de", "kilocalorie-per-gram", mloc_genderFeminine) &&
+              GenderIs("fr", "square-second", mloc_genderFeminine) &&
+              GenderIs("de", "hectoliter", mloc_genderMasculine),
+          "built names: German's product takes its last unit's, French's its first, per the "
+          "numerator's, a power and a prefix the unit's");
+    CHECK(GenderIs("de", "per-second", mloc_genderNone) &&
+              GenderIs("de", "foot-and-inch", mloc_genderNone) &&
+              GenderIs("en", "meter", mloc_genderNone),
+          "none: no numerator, a mixed unit, a language without genders");
+    mlocLocale de;
+    mlocGender gender = mloc_genderNeuter;
+    CHECK(mlocParseLocale("de", 2, &de).status == mloc_success &&
+              mlocGetUnitGender(&s_data, &de, "Meter", 5, &gender) == mloc_errorSyntax &&
+              mlocGetUnitGender(&s_data, &de, "furlong-x", 9, &gender) == mloc_errorNotFound &&
+              mlocGetUnitGender(&s_builtin, &de, "meter", 5, &gender) == mloc_errorNotFound &&
+              mlocGetUnitGender(&s_data, &de, "meter", 0, &gender) == mloc_errorInvalid &&
+              mlocGetUnitGender(nullptr, &de, "meter", 5, &gender) == mloc_errorInvalid &&
+              mlocGetUnitGender(&s_data, &de, "meter", 5, nullptr) == mloc_errorInvalid &&
+              gender == mloc_genderNeuter,
+          "refusals, the gender left unchanged");
+}
+
 static void TestCoordinate(void)
 {
     mlocUnitOptions lat = {.width = mloc_unitWidthNarrow, .coordinate = mloc_coordinateLatitude};
@@ -954,6 +1000,7 @@ int main(void)
     TestNumeric();
     TestCoordinate();
     TestCases();
+    TestGenders();
     TestRanges();
     TestParts();
     TestNames();

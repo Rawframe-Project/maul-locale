@@ -42,6 +42,7 @@ unit: data_view decimal kinds number_precision unit_convert unit_data unit_id
 unit_prefs: bytes data_view decimal kinds locale_keyword locale_prefs locale_tables number_precision unit_convert unit_data unit_id unit_mixed unit_tables
 unit_mixed: decimal unit_convert unit_data unit_id wide
 unit_names: bytes currency_tables data_format data_view kinds locale_fallback number_data unit_tables
+unit_gender: data_view kinds unit_data unit_id unit_names unit_normal unit_tables
 unit_normal: data_view kinds unit_data unit_id unit_tables
 unit_compound: data_view kinds unit_data unit_id unit_names unit_normal unit_tables
 unit_patterns: currency_tables kinds list_data number_format unit_compound unit_data unit_id unit_names unit_normal

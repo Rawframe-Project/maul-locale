@@ -253,7 +253,7 @@ Gives the categories a locale's rules use, as bits 1 << category: one and other 
 
 ## `unit.h`
 
-Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to mloc-0030): CLDR's unit identifiers ("kilometer-per-hour", "square-foot", "foot-and-inch") and exact conversion between them by CLDR's units.xml, the units a locale prefers for a usage, and amounts of a unit formatted with its name in a locale. The names are in a data file of their own, units.mloc, which a program adds to its data set.
+Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to mloc-0031): CLDR's unit identifiers ("kilometer-per-hour", "square-foot", "foot-and-inch") and exact conversion between them by CLDR's units.xml, the units a locale prefers for a usage, and amounts of a unit formatted with its name in a locale. The names are in a data file of their own, units.mloc, which a program adds to its data set.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocConvertUnit(const mlocDataSet* data, const char* from, size_t fromLength, const char* to, size_t toLength, const mlocPrecision* precision, const mlocDecimal* value, mlocDecimal* valueOut);
@@ -285,6 +285,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitDisplayName(const mlocDataSet* dat
 ```
 Writes a unit's display name in a locale ("meters", "m"), as a menu of units shows it.  @param data        The data with the unit names. @param locale      The locale, canonicalized. @param unit        A unit CLDR names, by any identifier of it ("metric-ton" for "tonne"). @param unitLength  Its length in bytes. @param width       The width; numeric writes narrow's name. @param output      Receives the text. @return mloc_success; mloc_fellBack when no locale of the chain names it and the identifier is written instead; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorSyntax for an identifier UTS #35 does not allow; mloc_errorNotFound for a unit the names do not know (a compound CLDR does not name), data without them, or a chain that cannot be walked; mloc_errorInvalid for a null pointer, an empty unit, a mixed unit, a currency, a constant in the numerator or a width out of range. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitGender(const mlocDataSet* data, const mlocLocale* locale, const char* unit, size_t unitLength, mlocGender* genderOut);
+```
+Gives a unit's grammatical gender in a locale, the one a message agreeing with a formatted amount needs, as ICU's FormattedNumber::getNounClass gives it: a unit CLDR names has its long name's ("Meter", masculine in German), else in a language whose units have genders what CLDR's gender derivations make of its parts ("kilometer-per-hour" takes kilometer's, a prefix and a power keeping meter's). A language without genders, and a mixed unit, give mloc_genderNone.  @param data        The data with the unit table and the unit names. @param locale      The locale, canonicalized. @param unit        A core unit identifier or a mixed unit. @param unitLength  Its length in bytes. @param genderOut   Receives the gender; left unchanged on failure. @return mloc_success; mloc_errorSyntax for an identifier UTS #35 does not allow; mloc_errorNotFound for a simple unit the table does not know, or data without the unit table or the names; mloc_errorCapacity for an identifier whose normal form passes 255 bytes; mloc_errorInvalid for a null pointer, an empty unit, a currency or a constant in the numerator. @par Thread safety Safe from any thread.
+
 ---
 
-50 functions across 8 headers.
+51 functions across 8 headers.

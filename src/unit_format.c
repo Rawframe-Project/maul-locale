@@ -33,6 +33,10 @@ static bool ValidOptions(const mlocUnitOptions* o)
            o->number.style == mloc_numberDecimal && (o->usage != nullptr || o->usageLength == 0);
 }
 
+static_assert((int)mloc_caseNominative == (int)unitCaseNominative &&
+                  (int)mloc_caseVocative + 1 == (int)unitCaseCount,
+              "the public cases are the data's");
+
 // The style ICU writes a unit in: percent and per mille, short or narrow
 // and not compact, in the percent pattern; others decimal, in their own.
 static mlocNumberStyle UnitStyle(const char* unit, size_t length, const mlocUnitOptions* o)

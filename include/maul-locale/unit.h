@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0030): CLDR's unit identifiers ("kilometer-per-hour",
+// mloc-0031): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -189,6 +189,20 @@ extern "C"
         mloc_caseVocative = 27,
     } mlocGrammaticalCase;
 
+    // A grammatical gender, CLDR's (grammaticalFeatures.xml): none, then
+    // the others in alphabetical order.
+    typedef enum mlocGender
+    {
+        mloc_genderNone = 0,
+        mloc_genderAnimate = 1,
+        mloc_genderCommon = 2,
+        mloc_genderFeminine = 3,
+        mloc_genderInanimate = 4,
+        mloc_genderMasculine = 5,
+        mloc_genderNeuter = 6,
+        mloc_genderPersonal = 7,
+    } mlocGender;
+
     // A unit formatter's options; the zero value is the default.
     typedef struct mlocUnitOptions
     {
@@ -352,6 +366,33 @@ extern "C"
                                                               const char* unit, size_t unitLength,
                                                               mlocUnitWidth width,
                                                               mlocOutput* output);
+
+    /// Gives a unit's grammatical gender in a locale, the one a message
+    /// agreeing with a formatted amount needs, as ICU's
+    /// FormattedNumber::getNounClass gives it: a unit CLDR names has its
+    /// long name's ("Meter", masculine in German), else in a language
+    /// whose units have genders what CLDR's gender derivations make of
+    /// its parts ("kilometer-per-hour" takes kilometer's, a prefix and a
+    /// power keeping meter's). A language without genders, and a mixed
+    /// unit, give mloc_genderNone.
+    ///
+    /// @param data        The data with the unit table and the unit names.
+    /// @param locale      The locale, canonicalized.
+    /// @param unit        A core unit identifier or a mixed unit.
+    /// @param unitLength  Its length in bytes.
+    /// @param genderOut   Receives the gender; left unchanged on failure.
+    /// @return mloc_success; mloc_errorSyntax for an identifier UTS #35
+    ///         does not allow; mloc_errorNotFound for a simple unit the
+    ///         table does not know, or data without the unit table or the
+    ///         names; mloc_errorCapacity for an identifier whose normal
+    ///         form passes 255 bytes; mloc_errorInvalid for a null
+    ///         pointer, an empty unit, a currency or a constant in the
+    ///         numerator.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitGender(const mlocDataSet* data,
+                                                         const mlocLocale* locale, const char* unit,
+                                                         size_t unitLength, mlocGender* genderOut);
 
 #ifdef __cplusplus
 }

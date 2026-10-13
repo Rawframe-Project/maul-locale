@@ -51,10 +51,11 @@ ranges of any core unit in each width (a name CLDR lacks built from its
 compound patterns), amounts of mixed units ("5 ft, 6 in") and of a usage
 in the unit the locale prefers ("0.62 mi" for 1000 m on a US road),
 numeric durations ("1:05:09") and coordinates ("12.5°N"), long names
-in a grammatical case ("2 Metern", German's dative), with
+in a grammatical case ("2 Metern", German's dative) and units'
+grammatical genders, with
 the display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`).
-The library has 50 public functions.
+The library has 51 public functions.
 
 ## Building
 
