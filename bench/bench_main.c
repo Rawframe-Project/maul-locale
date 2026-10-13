@@ -6,18 +6,24 @@
 // adding and removing likely subtags, a parent, matching against 80
 // supported locales (ICU's test list), regional preferences; a decimal
 // parsed, made from a double and rounded; Russian plural rules made and
-// selecting for an integer and a decimal. The inputs are the ones the
+// selecting for an integer and a decimal; number, currency and unit
+// formatters made and formatting (decimal, compact, percent, scientific),
+// and numbers and amounts of money parsed. The inputs are the ones the
 // ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
-// prints each time's ratio to the recorded one as well.
+// prints each time's ratio to the recorded one as well. With BENCH_SHOW
+// set in the environment it first prints the texts the formatters write.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include "maul-locale/currency.h"
 #include "maul-locale/decimal.h"
 #include "maul-locale/locale.h"
+#include "maul-locale/number.h"
 #include "maul-locale/plural.h"
+#include "maul-locale/unit.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -177,6 +183,144 @@ static void PluralSelectDecimal(void)
     s_sink = mlocSelectPlural(&s_ruRules, &s_value, &category) + (int)category;
 }
 
+// The number part: formatters of de, en, en's dollar and meter (long),
+// the values they format and the texts they parse.
+static mlocLocale s_de;
+static mlocLocale s_en;
+static mlocDataSet s_withUnits;
+static mlocNumberFormatter s_deDecimal;
+static mlocNumberFormatter s_enCompact;
+static mlocNumberFormatter s_enPercent;
+static mlocNumberFormatter s_enScientific;
+static mlocCurrencyFormatter s_usd;
+static mlocUnitFormatter s_meter;
+static mlocDecimal s_million;
+static mlocDecimal s_ratio;
+static mlocDecimal s_money;
+static mlocDecimal s_length;
+static char s_text[128];
+
+static void NumberInit(void)
+{
+    mlocNumberFormatter f;
+    s_sink = mlocInitNumberFormatter(&f, &s_data, &s_de, nullptr);
+}
+
+static void Format(const mlocNumberFormatter* f, const mlocDecimal* d)
+{
+    mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
+    s_sink = mlocFormatNumber(f, d, &output) + (int)output.length;
+}
+
+static void NumberFormat(void)
+{
+    Format(&s_deDecimal, &s_value);
+}
+
+static void CompactFormat(void)
+{
+    Format(&s_enCompact, &s_million);
+}
+
+static void PercentFormat(void)
+{
+    Format(&s_enPercent, &s_ratio);
+}
+
+static void ScientificFormat(void)
+{
+    Format(&s_enScientific, &s_value);
+}
+
+static void CurrencyInit(void)
+{
+    mlocCurrencyFormatter f;
+    s_sink = mlocInitCurrencyFormatter(&f, &s_data, &s_en, "USD", 3, nullptr);
+}
+
+static void CurrencyFormat(void)
+{
+    mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
+    s_sink = mlocFormatCurrency(&s_usd, &s_money, &output) + (int)output.length;
+}
+
+static const mlocUnitOptions s_long = {.width = mloc_unitWidthLong};
+
+static void UnitInit(void)
+{
+    static mlocUnitFormatter f;
+    s_sink = mlocInitUnitFormatter(&f, &s_withUnits, &s_en, "meter", 5, &s_long);
+}
+
+static void UnitFormat(void)
+{
+    mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
+    s_sink = mlocFormatUnit(&s_meter, &s_length, &output) + (int)output.length;
+}
+
+static void NumberParse(void)
+{
+    mlocDecimal d;
+    size_t end = 0;
+    s_sink =
+        mlocParseNumber(&s_deDecimal, "1.234.567,891", 13, mloc_parseLenient, &d, &end) + (int)end;
+}
+
+static void CurrencyParse(void)
+{
+    mlocDecimal d;
+    char code[3];
+    size_t end = 0;
+    s_sink = mlocParseCurrency(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 0, &d, code, &end) +
+             (int)end;
+}
+
+static void CurrencyParseAny(void)
+{
+    mlocDecimal d;
+    char code[3];
+    size_t end = 0;
+    s_sink = mlocParseCurrency(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 1, &d, code, &end) +
+             (int)end;
+}
+
+static bool Number(const char* text, mlocDecimal* out)
+{
+    return mlocParseDecimal(text, strlen(text), out).status == mloc_success;
+}
+
+// The number part's formatters and values; false when one cannot be
+// made (units.mloc missing).
+static bool PrepareNumbers(void)
+{
+    static mlocData s_sources[2];
+    alignas(8) static uint8_t s_units[8 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    FILE* file = fopen(MLOC_UNITS_FILE, "rb");
+    size_t size = file == nullptr ? 0 : fread(s_units, 1, sizeof(s_units), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_withUnits = (mlocDataSet){s_sources, 2};
+    s_de = Parsed("de");
+    s_en = Parsed("en");
+    mlocNumberOptions compact = {.notation = mloc_notationCompactShort};
+    mlocNumberOptions percent = {.style = mloc_numberPercent};
+    mlocNumberOptions scientific = {.notation = mloc_notationScientific};
+    return size > 0 && size < sizeof(s_units) &&
+           mlocOpenData(&s_sources[1], s_units, size) == mloc_success &&
+           mlocInitNumberFormatter(&s_deDecimal, &s_data, &s_de, nullptr) == mloc_success &&
+           mlocInitNumberFormatter(&s_enCompact, &s_data, &s_en, &compact) == mloc_success &&
+           mlocInitNumberFormatter(&s_enPercent, &s_data, &s_en, &percent) == mloc_success &&
+           mlocInitNumberFormatter(&s_enScientific, &s_data, &s_en, &scientific) == mloc_success &&
+           mlocInitCurrencyFormatter(&s_usd, &s_data, &s_en, "USD", 3, nullptr) == mloc_success &&
+           mlocInitUnitFormatter(&s_meter, &s_withUnits, &s_en, "meter", 5, &s_long) ==
+               mloc_success &&
+           Number("1234567", &s_million) && Number("0.256", &s_ratio) &&
+           Number("1234567.89", &s_money) && Number("1234.5", &s_length);
+}
+
 typedef struct Case
 {
     const char* name;
@@ -242,6 +386,22 @@ int main(int argc, char** argv)
         fprintf(stderr, "bench: no Russian rules\n");
         return 1;
     }
+    if (!PrepareNumbers())
+    {
+        fprintf(stderr, "bench: cannot make the number formatters (%s)\n", MLOC_UNITS_FILE);
+        return 1;
+    }
+    if (getenv("BENCH_SHOW") != nullptr)
+    {
+        void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
+                                      ScientificFormat, CurrencyFormat, UnitFormat};
+        for (size_t i = 0; i < 6; i++)
+        {
+            memset(s_text, 0, sizeof(s_text));
+            show[i]();
+            printf("[%s]\n", s_text);
+        }
+    }
     FILE* baseline = argc > 1 ? fopen(argv[1], "r") : nullptr;
     static const Case s_cases[] = {
         {"parse", ParseTag, 2000000},
@@ -259,6 +419,18 @@ int main(int argc, char** argv)
         {"plural-init", PluralInit, 200000},
         {"plural-select-int", PluralSelectInteger, 10000000},
         {"plural-select-dec", PluralSelectDecimal, 10000000},
+        {"number-init", NumberInit, 500000},
+        {"number-format", NumberFormat, 2000000},
+        {"compact-format", CompactFormat, 2000000},
+        {"percent-format", PercentFormat, 2000000},
+        {"scientific-format", ScientificFormat, 2000000},
+        {"currency-init", CurrencyInit, 200000},
+        {"currency-format", CurrencyFormat, 2000000},
+        {"unit-init", UnitInit, 200000},
+        {"unit-format", UnitFormat, 2000000},
+        {"number-parse", NumberParse, 1000000},
+        {"currency-parse", CurrencyParse, 500000},
+        {"currency-parse-any", CurrencyParseAny, 100000},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
