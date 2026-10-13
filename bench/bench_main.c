@@ -30,6 +30,12 @@
 #include <string.h>
 #include <time.h>
 
+// The unit names file, which bench/Local.cmake names from the source
+// tree; relative to the working directory otherwise.
+#ifndef MLOC_UNITS_FILE
+#define MLOC_UNITS_FILE "src/generated/units.mloc"
+#endif
+
 static volatile int s_sink;
 static mlocDataSet s_data;
 
