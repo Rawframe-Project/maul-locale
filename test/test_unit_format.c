@@ -533,6 +533,10 @@ static void TestNumeric(void)
               Width("en", "foot-and-inch", n, "5.5", "5\xE2\x80\xB2 6\xE2\x80\xB3") &&
               Named("en", "meter", n, "m"),
           "a negative amount, and any other unit, as narrow");
+    mlocUnitOptions ungrouped = {.width = n, .number.grouping = mloc_groupingOff};
+    CHECK(Formats("en", "hour-and-minute", &ungrouped, "1234.5", "1,234:30") &&
+              Formats("en", "minute-and-second", &ungrouped, "1.5", "1:30"),
+          "the larger fields in the default format, the options for the smallest");
     mlocUnitOptions whole = {.width = n, .number.precision = {.kind = mloc_precisionFraction}};
     CHECK(Formats("en", "hour-and-minute-and-second", &whole, "1.99999", "2:00:00"),
           "the smallest field rounded by the options, a carry moving up");
@@ -646,6 +650,43 @@ static void TestRefusals(void)
               mlocFormatUnit(&formatter, &decimal, &output) == mloc_errorCapacity &&
               output.length == 3,
           "a text that does not fit gives its length");
+    mlocUnitOptions numeric = {.width = mloc_unitWidthNumeric};
+    output.capacity = sizeof(buffer);
+    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "hour-and-minute", 15, &numeric) ==
+                  mloc_success &&
+              mlocFormatUnit(&made, &decimal, &output) == mloc_success &&
+              Same(buffer, &output, "1:00"),
+          "a numeric formatter");
+    memcpy(&inside, &made, sizeof(inside));
+    struct
+    {
+        int8_t field;
+        uint8_t numeric;
+        bool duration;
+    } numerics[] = {{2, 1, true}, {0, unitPatternHms + 2, true}, {0, 1, false}};
+    for (size_t i = 0; i < sizeof(numerics) / sizeof(numerics[0]); i++)
+    {
+        UnitFormat spoiled = inside;
+        spoiled.output[0].field[1] = numerics[i].field != 0 ? numerics[i].field : 1;
+        spoiled.output[0].numeric = numerics[i].numeric;
+        spoiled.duration[0] = numerics[i].duration ? spoiled.duration[0] : nullptr;
+        memcpy(&made, &spoiled, sizeof(spoiled));
+        CHECK(mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+              "a numeric field past the parts, a pattern past the three, a pattern missing");
+    }
+    mlocUnitOptions lat = {.coordinate = mloc_coordinateLatitude};
+    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "degree", 6, &lat) == mloc_success,
+          "a coordinate formatter");
+    memcpy(&inside, &made, sizeof(inside));
+    UnitFormat spoiled = inside;
+    spoiled.coordinate = mloc_coordinateLongitude + 1;
+    memcpy(&made, &spoiled, sizeof(spoiled));
+    bool past = mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid;
+    spoiled = inside;
+    spoiled.direction[3] = nullptr;
+    memcpy(&made, &spoiled, sizeof(spoiled));
+    CHECK(past && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+          "a coordinate past longitude, a direction missing");
 }
 
 alignas(8) static uint8_t s_built[8192];

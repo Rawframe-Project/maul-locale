@@ -4,11 +4,12 @@
 // The unit names' validators and identifier lookup (unit_names.h,
 // unit_tables.h) on units built here: valid ones pass and their
 // identifiers are found; copies with one field spoiled are refused, the
-// derivations' as well. Then the fields gathered along a chain from the
-// unit names data file, a source without the identifiers skipped, the
-// derivations looked up by language, identifiers normalized as ICU
-// normalizes them (unit_compound.h), and the trim of a unit's name
-// (number_core.h).
+// derivations' and the duration and coordinate patterns' as well. Then
+// the fields gathered along a chain from the unit names data file, a
+// source without the identifiers skipped, the derivations looked up by
+// language, identifiers normalized as ICU normalizes them
+// (unit_compound.h), the trim of a unit's name (number_core.h), and a
+// locale's patterns found.
 
 #include "bytes.h"
 #include "currency_tables.h"
@@ -223,6 +224,62 @@ static void TestDerivations(void)
     CHECK(!ValidDerivations(size), "a language twice");
 }
 
+// Builds a patterns unit of records records: the durations "h:mm", each
+// direction the text given; its size.
+static uint32_t BuildPatterns(uint32_t records, const char* direction)
+{
+    memset(s_unit, 0, sizeof(s_unit));
+    uint32_t length = (uint32_t)strlen(direction);
+    Put(s_unit, 2, 2);
+    Put(s_unit + 2, records, 2);
+    Put(s_unit + 4, 4 + length, 4);
+    uint8_t* offsets = s_unit + numberTableHeaderSize;
+    Put(offsets + 2, 4, 2);
+    Put(offsets + 4, 4 + length, 2);
+    uint8_t* at = offsets + 6;
+    for (uint32_t r = 0; r < records; r++)
+    {
+        for (uint32_t i = 0; i < unitPatternCount; i++)
+        {
+            Put(at, i >= unitPatternCoordinates, 2);
+            at += 2;
+        }
+    }
+    memcpy(at, "h:mm", 4);
+    memcpy(at + 4, direction, length);
+    return (uint32_t)(at - s_unit) + 4 + length;
+}
+
+static bool ValidPatterns(uint32_t size)
+{
+    return mlocValidUnitPatterns(nullptr, (DataSpan){s_unit, size});
+}
+
+static void TestPatterns(void)
+{
+    uint32_t size = BuildPatterns(1, "{0}N");
+    CHECK(ValidPatterns(size), "patterns: durations and directions");
+    CHECK(!ValidPatterns(size - 1), "a table of the wrong size");
+    CHECK(!ValidPatterns(BuildPatterns(2, "{0}N")), "two records");
+    CHECK(!ValidPatterns(BuildPatterns(1, "{0}{0}")) && !ValidPatterns(BuildPatterns(1, "N")),
+          "a direction whose number is not there once");
+    uint8_t* records = s_unit + numberTableHeaderSize + 6;
+    size = BuildPatterns(1, "{0}N");
+    Put(records + 2 * unitPatternHms, 2, 2);
+    CHECK(!ValidPatterns(size), "a string past the table's");
+    size = BuildPatterns(1, "{0}N");
+    Put(records + 2 * unitPatternCoordinates, 0, 2);
+    CHECK(!ValidPatterns(size), "the first direction without its number");
+    UnitPatternTexts texts;
+    mlocLocale en;
+    mlocDataSet builtin = {s_sources, 1};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocFindUnitPatterns(&s_data, &en, &texts) && texts.length[unitPatternHm] == 4 &&
+              memcmp(texts.text[unitPatternHm], "h:mm", 4) == 0 &&
+              !mlocFindUnitPatterns(&builtin, &en, &texts),
+          "a locale's patterns found, none in data without them");
+}
+
 static void TestDerivationLookup(void)
 {
     mlocLocale en;
@@ -398,5 +455,6 @@ int main(void)
     TestGather();
     TestDerivationLookup();
     TestNormalize();
+    TestPatterns();
     return s_failures == 0 ? 0 : 1;
 }

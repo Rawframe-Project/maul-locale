@@ -35,9 +35,12 @@ units and mixed units by name only.
   (mloc_errorInvalid): a unit not an angle, a usage, and ranges.
 - **Proof** (`docs/locale/research/oracle/numeric`): ICU4C 79.1rc's
   formatMeasures on 105 locales by four mixed units by ten amounts:
-  4,200 lines, all equal but 91 where ICU groups a field's thousands
-  the locale's minimum grouping digits do not (Bulgarian "1 234:30");
-  the library follows CLDR. The coordinate patterns read back equal to
+  of 4,200 lines, the 3,780 non-negative ones equal but 91 where ICU
+  groups a field's thousands the locale's minimum grouping digits do
+  not (Bulgarian "1 234:30"; the library follows CLDR). The 420
+  negative ones differ by design: given the split's decimal amounts
+  ICU writes "-01:30", where its own path from a negative double, like
+  the library, falls back to narrow. The coordinate patterns read back equal to
   CLDR's JSON for every locale and width (657 records).
 
 ## Consequences
