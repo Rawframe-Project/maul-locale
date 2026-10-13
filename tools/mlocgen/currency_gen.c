@@ -489,14 +489,32 @@ static int CompareOwn(const void* a, const void* b)
     return (int)((const Own*)a)->code - (int)((const Own*)b)->code;
 }
 
+// Whether a code point is a decimal digit or one of number parsing's
+// ignorables but the bidi controls: Nd, Zs, the tab or a variation
+// selector.
+static bool DigitOrSpace(uint32_t cp)
+{
+    muniGeneralCategory gc = muniGetGeneralCategory(cp);
+    bool selector = (cp >= 0x180B && cp <= 0x180D) || cp == 0x180F ||
+                    (cp >= 0xFE00 && cp <= 0xFE0F) || (cp >= 0xE0100 && cp <= 0xE01EF);
+    return gc == muni_gcNd || gc == muni_gcZs || cp == '\t' || selector;
+}
+
 // A string field's index in the unit's table, checked for the bytes a
-// table may hold.
-static uint16_t FieldString(Table* t, const char* text, const char* locale)
+// table may hold. A symbol or a name that parsing reads (read set) does
+// not begin with a digit or an ignorable other than a bidi control (Hebrew
+// writes its yuan after a mark), so that currency parsing passes those
+// at once (record mloc-0033).
+static uint16_t FieldString(Table* t, const char* text, const char* locale, bool read)
 {
     uint32_t points[maxNamePoints];
     if (Decode(text, points, maxNamePoints) <= 0)
     {
         GenDie("a currency string empty, too long or malformed", locale);
+    }
+    if (read && DigitOrSpace(points[0]))
+    {
+        GenDie("a currency symbol or name that begins with a digit or a space", locale);
     }
     return TableAddString(t, text, strlen(text));
 }
@@ -529,7 +547,7 @@ static void AddSymbolUnit(const CurrencyInput* input, Table* t, Own* own, int co
             }
             else
             {
-                index = FieldString(t, text, locale);
+                index = FieldString(t, text, locale, f < fieldPattern);
                 s_flags[index] = SpacingFlags(text);
             }
             row[0] |= (uint8_t)(1u << f);
@@ -563,7 +581,7 @@ static void AddNameUnit(Table* t, Own* own, int count, const char* locale, const
             if (own[i].fields[f] != nullptr)
             {
                 row[0] |= (uint8_t)(1u << f);
-                GenPut(row + size, FieldString(t, own[i].fields[f], locale), 2);
+                GenPut(row + size, FieldString(t, own[i].fields[f], locale, true), 2);
                 size += 2;
             }
         }

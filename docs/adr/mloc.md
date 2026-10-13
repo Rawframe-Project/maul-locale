@@ -37,3 +37,4 @@ are listed in [README.md](README.md).
 | [mloc-0030](mloc-0030-grammatical-cases.md) | Grammatical cases: ICU's reading of CLDR's production data, kept in the names file | Accepted |
 | [mloc-0031](mloc-0031-unit-genders.md) | Unit genders: ICU's noun class, derived as ICU derives it | Accepted |
 | [mloc-0032](mloc-0032-number-parsing.md) | Number parsing: ICU's matchers, read once without allocation | Accepted |
+| [mloc-0033](mloc-0033-currency-parsing.md) | Currency parsing: ICU's currency matcher, the chain's names without allocation | Accepted |

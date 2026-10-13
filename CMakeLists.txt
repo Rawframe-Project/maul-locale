@@ -93,6 +93,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/number_format.c
     src/number_parse.c
     src/number_precision.c
+    src/parse_currency.c
     src/parse_match.c
     src/plural.c
     src/unit.c
@@ -146,6 +147,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     target_compile_definitions(test_currency PRIVATE MLOC_NAMES_FILE="${MLOC_NAMES_FILE}")
     add_test(NAME currency COMMAND test_currency)
+    maul_add_test(currency_parse MANUAL)
+    if(EMSCRIPTEN)
+        target_link_options(test_currency_parse PRIVATE "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc@/names.mloc")
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_currency_parse PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_currency_parse PRIVATE MLOC_NAMES_FILE="${MLOC_NAMES_FILE}")
+    add_test(NAME currency_parse COMMAND test_currency_parse)
     maul_add_test(number)
     maul_add_test(number_parse)
     maul_add_test(parse_patterns WHITEBOX)

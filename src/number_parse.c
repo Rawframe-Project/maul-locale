@@ -13,6 +13,7 @@
 #include "bytes.h"
 #include "decimal.h"
 #include "number_tables.h"
+#include "parse_currency.h"
 #include "parse_match.h"
 #include "parse_tables.h"
 
@@ -53,9 +54,9 @@ static bool AddTo(Series* series, Matcher m)
 
 // The matcher of an affix's symbol: a sign in an affix may follow the
 // number; the percent placeholder of the per mille style is the per
-// mille sign; the currency, which a number formatter's pattern does not
-// hold, matches nothing.
-static Matcher SymbolMatcher(uint32_t placeholder, bool perMille)
+// mille sign; the currency is the currency matcher, which a number
+// formatter does not have.
+static Matcher SymbolMatcher(uint32_t placeholder, bool perMille, bool currency)
 {
     switch (placeholder)
     {
@@ -68,7 +69,8 @@ static Matcher SymbolMatcher(uint32_t placeholder, bool perMille)
     case numberAffixPerMille:
         return (Matcher){.kind = matchPerMille};
     default:
-        return (Matcher){.kind = matchCodePoint, .arg = parseNoCodePoint};
+        return currency ? (Matcher){.kind = matchCurrency}
+                        : (Matcher){.kind = matchCodePoint, .arg = parseNoCodePoint};
     }
 }
 
@@ -121,7 +123,7 @@ static bool BuildSeries(const Parser* r, const uint8_t* text, size_t length, Ser
         bool ignorable = !symbol && !exact && mlocParseHas(r->sets, parseIgnorables, token);
         if (symbol || !ignorable)
         {
-            ok = ok && AddTo(out, symbol ? SymbolMatcher(token, perMille)
+            ok = ok && AddTo(out, symbol ? SymbolMatcher(token, perMille, r->currency != nullptr)
                                          : (Matcher){.kind = matchCodePoint, .arg = token});
         }
         lastSymbol = symbol;
@@ -154,24 +156,64 @@ static int AddSeries(Parser* r, const uint8_t* text, size_t length)
     return (int)r->seriesCount++;
 }
 
-static const uint8_t* AffixText(const NumberCore* c, int affix, size_t* lengthOut)
+static const uint8_t* AffixText(const Parser* r, int affix, size_t* lengthOut)
 {
-    *lengthOut = c->affixLength[affix];
-    return c->affixText + c->affixStart[affix];
+    *lengthOut = r->affixLength[affix];
+    return r->affixText[affix];
 }
 
-static bool HasPlaceholder(const NumberCore* c, int affix, uint8_t placeholder)
+static bool HasPlaceholder(const Parser* r, int affix, uint8_t placeholder)
 {
     size_t length = 0;
-    const uint8_t* text = AffixText(c, affix, &length);
+    const uint8_t* text = AffixText(r, affix, &length);
     return memchr(text, placeholder, length) != nullptr;
+}
+
+static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t length)
+{
+    if (length > parseMaxAffixText - *at)
+    {
+        return false;
+    }
+    memcpy(buffer + *at, text, length);
+    *at += length;
+    return true;
+}
+
+// The affix patterns the parser reads: the formatter's parse affixes,
+// within the currency's outer pattern when it has one (a prefix after
+// the text before the number, a suffix before the text after it). False
+// when one does not fit.
+static bool FillAffixes(Parser* r)
+{
+    const NumberCore* c = &r->f->core;
+    const ParseCurrency* outer =
+        r->currency != nullptr && r->currency->outer ? r->currency : nullptr;
+    bool ok = true;
+    for (int affix = 0; affix < affixCount; affix++)
+    {
+        bool prefix = affix == affixPositivePrefix || affix == affixNegativePrefix;
+        size_t at = 0;
+        uint8_t* out = r->affixText[affix];
+        if (outer != nullptr && prefix)
+        {
+            ok = ok && Append(out, &at, outer->before, outer->beforeLength);
+        }
+        ok = ok && Append(out, &at, c->affixText + c->parseStart[affix], c->parseLength[affix]);
+        if (outer != nullptr && !prefix)
+        {
+            ok = ok && Append(out, &at, outer->after, outer->afterLength);
+        }
+        r->affixLength[affix] = (uint8_t)at;
+    }
+    return ok;
 }
 
 // An affix pattern of a sign type (ICU's patternInfoToStringBuilder):
 // the positive or negative affix, or for a plus sign the negative one
 // with the plus sign in the minus sign's place, or, when the negative
 // affixes have no minus sign, the positive one after a plus sign.
-static size_t PatternOf(const NumberCore* c, SignType type, bool prefix, uint8_t* buffer,
+static size_t PatternOf(const Parser* r, SignType type, bool prefix, uint8_t* buffer,
                         size_t capacity)
 {
     int positive = prefix ? affixPositivePrefix : affixPositiveSuffix;
@@ -179,14 +221,14 @@ static size_t PatternOf(const NumberCore* c, SignType type, bool prefix, uint8_t
     size_t length = 0;
     if (type != signPositiveSign)
     {
-        const uint8_t* text = AffixText(c, type == signNegative ? negative : positive, &length);
+        const uint8_t* text = AffixText(r, type == signNegative ? negative : positive, &length);
         length = length < capacity ? length : capacity;
         memcpy(buffer, text, length);
         return length;
     }
-    bool minus = HasPlaceholder(c, affixNegativePrefix, numberAffixMinus) ||
-                 HasPlaceholder(c, affixNegativeSuffix, numberAffixMinus);
-    const uint8_t* text = AffixText(c, minus ? negative : positive, &length);
+    bool minus = HasPlaceholder(r, affixNegativePrefix, numberAffixMinus) ||
+                 HasPlaceholder(r, affixNegativeSuffix, numberAffixMinus);
+    const uint8_t* text = AffixText(r, minus ? negative : positive, &length);
     size_t at = 0;
     if (!minus && prefix && capacity > 0)
     {
@@ -204,7 +246,7 @@ static size_t PatternOf(const NumberCore* c, SignType type, bool prefix, uint8_t
 static bool OnlySymbols(const Parser* r, int affix)
 {
     size_t length = 0;
-    const uint8_t* text = AffixText(&r->f->core, affix, &length);
+    const uint8_t* text = AffixText(r, affix, &length);
     for (size_t at = 0; at < length;)
     {
         bool symbol = false;
@@ -223,7 +265,6 @@ static bool OnlySymbols(const Parser* r, int affix)
 // affix has a literal ignorables do not cover, or a suffix a sign.
 static bool Interesting(const Parser* r)
 {
-    const NumberCore* c = &r->f->core;
     bool plain = true;
     for (int affix = 0; affix < affixCount; affix++)
     {
@@ -231,8 +272,8 @@ static bool Interesting(const Parser* r)
     }
     for (int affix = affixPositiveSuffix; affix < affixCount; affix += 2)
     {
-        plain = plain && !HasPlaceholder(c, affix, numberAffixMinus) &&
-                !HasPlaceholder(c, affix, numberAffixPlus);
+        plain = plain && !HasPlaceholder(r, affix, numberAffixMinus) &&
+                !HasPlaceholder(r, affix, numberAffixPlus);
     }
     return (r->flags & modeFullAffixes) != 0 || !plain;
 }
@@ -273,9 +314,9 @@ typedef struct Pair
 static bool AddSignType(Parser* r, SignType type, Pair* positive)
 {
     uint8_t buffer[parseMaxAffixText + 1];
-    size_t length = PatternOf(&r->f->core, type, true, buffer, sizeof(buffer));
+    size_t length = PatternOf(r, type, true, buffer, sizeof(buffer));
     int prefix = AddSeries(r, buffer, length);
-    length = PatternOf(&r->f->core, type, false, buffer, sizeof(buffer));
+    length = PatternOf(r, type, false, buffer, sizeof(buffer));
     int suffix = AddSeries(r, buffer, length);
     if (prefix < affixNone || suffix < affixNone)
     {
@@ -350,11 +391,24 @@ static void Add(Parser* r, MatcherKind kind, uint32_t arg)
     r->list[r->count++] = (Matcher){.kind = (uint8_t)kind, .arg = arg};
 }
 
-static bool PatternHas(const NumberCore* c, uint8_t placeholder)
+static bool PatternHas(const Parser* r, uint8_t placeholder)
 {
     for (int affix = 0; affix < affixCount; affix++)
     {
-        if (HasPlaceholder(c, affix, placeholder))
+        if (HasPlaceholder(r, affix, placeholder))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool HasCurrency(const Parser* r)
+{
+    for (uint32_t placeholder = numberAffixCurrency; placeholder <= numberAffixCurrencyNarrow;
+         placeholder++)
+    {
+        if (PatternHas(r, (uint8_t)placeholder))
         {
             return true;
         }
@@ -437,24 +491,34 @@ static uint32_t ModeFlags(const Formatter* f, mlocParseMode mode)
 // Builds the list in ICU's order: the affix matchers, in lenient mode the
 // percent or per mille sign the pattern has and the signs, NaN, infinity,
 // the ignorables, the digits, the exponent, then the validators.
-static bool BuildParser(Parser* r, const Formatter* f, mlocParseMode mode)
+static bool BuildParser(Parser* r, const Formatter* f, const ParseCurrency* currency,
+                        mlocParseMode mode)
 {
     memset(r, 0, sizeof(*r));
     r->f = f;
+    r->currency = currency;
+    r->matchCurrency = currency != nullptr ? mlocMatchCurrency : nullptr;
     r->sets = f->core.parseSets;
     r->flags = ModeFlags(f, mode);
     SetSeparators(r);
-    if (!AddAffixMatchers(r))
+    if (!FillAffixes(r) || !AddAffixMatchers(r))
     {
         return false;
     }
     bool strict = mode == mloc_parseStrict;
     bool perMille = f->style == mloc_numberPerMille;
-    if (!strict && PatternHas(&f->core, numberAffixPercent))
+    // ICU adds the currency matcher for parseCurrency or a pattern with
+    // the currency (a long name's too).
+    bool any = currency != nullptr && currency->chain != nullptr;
+    if (currency != nullptr && (any || HasCurrency(r)))
+    {
+        Add(r, matchCurrency, 0);
+    }
+    if (!strict && PatternHas(r, numberAffixPercent))
     {
         Add(r, perMille ? matchPerMille : matchPercent, 0);
     }
-    if (!strict && PatternHas(&f->core, numberAffixPerMille) && !perMille)
+    if (!strict && PatternHas(r, numberAffixPerMille) && !perMille)
     {
         Add(r, matchPerMille, 0);
     }
@@ -473,6 +537,10 @@ static bool BuildParser(Parser* r, const Formatter* f, mlocParseMode mode)
     if (strict)
     {
         Add(r, validateAffix, 0);
+    }
+    if (any)
+    {
+        Add(r, validateCurrency, 0);
     }
     if (f->style != mloc_numberDecimal && f->unscaled == 0)
     {
@@ -526,6 +594,9 @@ static void PostProcess(const Parser* r, Parsed* p, int64_t* scaleOut)
             p->flags |= p->quantity.present || (p->flags & (parsedNaN | parsedInfinity)) != 0
                             ? 0
                             : parsedFail;
+            break;
+        case validateCurrency:
+            p->flags |= p->hasCode ? 0 : parsedFail;
             break;
         case validateAffix:
             p->flags |= p->prefix == affixNone || p->suffix == affixNone ? parsedFail : 0;
@@ -583,15 +654,16 @@ static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
     return true;
 }
 
-mlocResult mlocParseWith(const Formatter* formatter, const char* text, size_t length,
-                         mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut)
+mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* currency,
+                         const char* text, size_t length, mlocParseMode mode,
+                         mlocDecimal* decimalOut, char* codeOut, size_t* endOut)
 {
     if (formatter->core.parseSets == nullptr)
     {
         return mloc_errorNotFound;
     }
     Parser r;
-    if (!BuildParser(&r, formatter, mode))
+    if (!BuildParser(&r, formatter, currency, mode))
     {
         return mloc_errorCapacity;
     }
@@ -607,6 +679,10 @@ mlocResult mlocParseWith(const Formatter* formatter, const char* text, size_t le
     if (p.charEnd == 0 || (p.flags & parsedFail) != 0)
     {
         return mloc_errorSyntax;
+    }
+    if (codeOut != nullptr && currency != nullptr)
+    {
+        memcpy(codeOut, p.hasCode ? p.code : currency->code, 3);
     }
     return ToDecimal(&p, scale, decimalOut) ? mloc_success : mloc_errorCapacity;
 }
@@ -627,9 +703,9 @@ static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)
     return true;
 }
 
-// The folds: runs of 1 or more code points 1 or 2 apart, sorted and
-// disjoint, each folding within the code points.
-static bool ValidFolds(const uint8_t* folds, uint32_t count)
+// Runs of a mapping: 1 or more code points 1 or 2 apart, sorted and
+// disjoint, each mapping within the code points.
+static bool ValidRuns(const uint8_t* folds, uint32_t count)
 {
     int64_t previous = -1;
     for (uint32_t i = 0; i < count; i++)
@@ -648,6 +724,25 @@ static bool ValidFolds(const uint8_t* folds, uint32_t count)
     return true;
 }
 
+// The specials: sorted, each of two or three code points.
+static bool ValidSpecials(const uint8_t* specials, uint32_t count)
+{
+    uint32_t previous = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const uint8_t* e = specials + (size_t)i * parseSpecialSize;
+        uint32_t cp = mlocLoad32(e);
+        bool ordered = i == 0 || cp > previous;
+        if (!ordered || cp > 0x10FFFF || mlocLoad32(e + 4) - 1 > 0x10FFFE ||
+            mlocLoad32(e + 8) - 1 > 0x10FFFE || mlocLoad32(e + 12) > 0x10FFFF)
+        {
+            return false;
+        }
+        previous = cp;
+    }
+    return true;
+}
+
 bool mlocValidParseSets(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -660,13 +755,18 @@ bool mlocValidParseSets(const DataView* view, DataSpan payload)
     uint32_t strings = mlocLoad16(b + 4);
     uint32_t textSize = mlocLoad16(b + 6);
     uint32_t folds = mlocLoad16(b + 8);
+    uint32_t uppers = mlocLoad16(b + 10);
+    uint32_t specials = mlocLoad16(b + 12);
     size_t rangeStart = parseHeaderSize + (size_t)parseClassCount * parseClassSize;
     size_t foldStart = rangeStart + (size_t)ranges * parseRangeSize;
-    size_t offsetStart = foldStart + (size_t)folds * parseFoldSize;
+    size_t upperStart = foldStart + (size_t)folds * parseFoldSize;
+    size_t specialStart = upperStart + (size_t)uppers * parseFoldSize;
+    size_t offsetStart = specialStart + (size_t)specials * parseSpecialSize;
     size_t textStart = offsetStart + 2 * ((size_t)strings + 1);
-    if (payload.size != textStart + textSize || mlocLoad16(b + 10) != 0 ||
+    if (payload.size != textStart + textSize || mlocLoad16(b + 14) != 0 ||
         mlocLoad16(b + offsetStart) != 0 || mlocLoad16(b + textStart - 2) != textSize ||
-        !ValidFolds(b + foldStart, folds))
+        !ValidRuns(b + foldStart, folds) || !ValidRuns(b + upperStart, uppers) ||
+        !ValidSpecials(b + specialStart, specials))
     {
         return false;
     }

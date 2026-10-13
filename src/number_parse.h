@@ -18,9 +18,14 @@
 // Whether a parse sets unit is as parse_tables.h lays it out.
 bool mlocValidParseSets(const DataView* view, DataSpan payload);
 
-// Parses text with a formatter of standard or scientific notation, as
-// mlocParseNumber does.
-mlocResult mlocParseWith(const Formatter* formatter, const char* text, size_t length,
-                         mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut);
+typedef struct ParseCurrency ParseCurrency;
+
+// Parses text with a formatter of standard, scientific or engineering
+// notation, as mlocParseNumber does; with a currency formatter's currency
+// (parse_currency.h), as mlocParseCurrency does, the currency read, or
+// the formatter's, into codeOut (null for a number formatter).
+mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* currency,
+                         const char* text, size_t length, mlocParseMode mode,
+                         mlocDecimal* decimalOut, char* codeOut, size_t* endOut);
 
 #endif

@@ -44,8 +44,9 @@ notation and ranges, with every numbering system and ECMA-402's options
 person types them, as ICU parses, and amounts of money
 with each currency's symbols, digits and cash rounding, in compact
 notation and by name (the names are a data file of their own,
-`src/generated/currency-names.mloc`), and the currency a locale or
-region uses on a day; and exact conversion between CLDR's units and
+`src/generated/currency-names.mloc`), read back as ICU reads them
+(the formatter's currency or any the locale names), and the currency a
+locale or region uses on a day; and exact conversion between CLDR's units and
 the units a locale prefers for a usage (every conversion and preference
 CLDR's unit test data gives passes on every push), and amounts and
 ranges of any core unit in each width (a name CLDR lacks built from its
@@ -56,7 +57,7 @@ in a grammatical case ("2 Metern", German's dative) and units'
 grammatical genders, with
 the display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`).
-The library has 52 public functions.
+The library has 53 public functions.
 
 ## Building
 

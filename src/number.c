@@ -87,5 +87,5 @@ mlocResult mlocParseNumber(const mlocNumberFormatter* formatter, const char* tex
     {
         return mloc_errorInvalid;
     }
-    return mlocParseWith(&f, text, length, mode, decimalOut, endOut);
+    return mlocParseWith(&f, nullptr, text, length, mode, decimalOut, nullptr, endOut);
 }

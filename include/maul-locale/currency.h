@@ -75,7 +75,7 @@ extern "C"
     // mlocInitCurrencyFormatter.
     typedef struct mlocCurrencyFormatter
     {
-        uint64_t opaque[48];
+        uint64_t opaque[96];
     } mlocCurrencyFormatter;
 
     /// Makes a locale's formatter of a currency. The numbering system is
@@ -149,6 +149,47 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult
     mlocFormatCurrencyRange(const mlocCurrencyFormatter* formatter, const mlocDecimal* start,
                             const mlocDecimal* end, mlocOutput* output);
+
+    /// Reads an amount of money as a person types it (ICU's
+    /// DecimalFormat::parse on a currency formatter, or with anyCurrency
+    /// its parseCurrency), as mlocParseNumber reads a number: the
+    /// formatter's separators and pattern, and the currency where the
+    /// pattern or the person puts it: the formatter's symbol as written
+    /// (or the text it shows, a narrow symbol), its code in any case, its
+    /// long names case folded ("12.50 US dollars"). With anyCurrency, any
+    /// currency the locale's chain names: its symbol (with root's
+    /// equivalent signs, "＄" for "$"), its code, its names uppercased as
+    /// the locale uppercases; a currency is then required. A formatter
+    /// of long names or of the ISO append reads the text around its
+    /// number as it writes it ("12.50 US dollars" in strict mode too).
+    ///
+    /// @param formatter    A formatter from mlocInitCurrencyFormatter, not
+    ///                     of compact notation. Its long names are read
+    ///                     when its data set had the names data file.
+    /// @param text         UTF-8 text; it need not end in a 0 byte.
+    /// @param length       Its length in bytes.
+    /// @param mode         An mlocParseMode.
+    /// @param anyCurrency  1 to read any currency, 0 for the formatter's
+    ///                     alone.
+    /// @param decimalOut   Receives the amount.
+    /// @param codeOut      Receives the currency's code, three letters
+    ///                     (the formatter's when none was typed).
+    /// @param endOut       Receives the offset after the amount, or on
+    ///                     mloc_errorSyntax the offset reading stopped at.
+    /// @return mloc_success; mloc_errorSyntax when no amount is read (or
+    ///         no currency, with anyCurrency); mloc_errorCapacity as for
+    ///         mlocParseNumber; mloc_errorNotFound for data without the
+    ///         parse sets, or with anyCurrency a chain of more than eight
+    ///         currency units of a kind; mloc_errorInvalid for a null
+    ///         pointer, a mode out of range, or a formatter the library did
+    ///         not make or of compact notation, or anyCurrency past 1.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter,
+                                                         const char* text, size_t length,
+                                                         mlocParseMode mode, uint8_t anyCurrency,
+                                                         mlocDecimal* decimalOut, char* codeOut,
+                                                         size_t* endOut);
 
     /// Writes a currency's symbol, or a variant of it, as a locale shows
     /// it (the ECMA-402 DisplayNames of type currency take names, below).

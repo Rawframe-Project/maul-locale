@@ -42,6 +42,11 @@ typedef struct NumberCore
     uint16_t symbolLength[numberSymbolCount];
     uint16_t affixStart[affixCount];
     uint16_t affixLength[affixCount];
+    // The affixes parsing reads, in the same text: the pattern's, but a
+    // currency pattern's alphaNextToNumber variant, which ICU's
+    // DecimalFormat does not take, reads as the pattern it varies.
+    uint16_t parseStart[affixCount];
+    uint16_t parseLength[affixCount];
     // The ten digits, numberDigitSize bytes apart, each digitLength long.
     uint8_t digits[10 * numberDigitSize];
     uint8_t digitLength;

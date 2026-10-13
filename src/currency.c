@@ -18,6 +18,8 @@
 #include "number_core.h"
 #include "number_data.h"
 #include "number_format.h"
+#include "number_parse.h"
+#include "parse_currency.h"
 #include "plural.h"
 #include "plural_rules.h"
 
@@ -29,13 +31,17 @@ enum
     currencyStamp = 0x43,
 };
 
-// The opaque value's contents: the formatter, and the pattern around its
-// number when it has one.
+// The opaque value's contents: the formatter, the pattern around its
+// number when it has one, and the currency units of its locale's chain,
+// which parsing reads.
 typedef struct Currency
 {
     Formatter formatter;
     Outer outer;
     bool hasOuter;
+    // The outer pattern is the ISO append's.
+    bool appended;
+    CurrencyChain chain;
 } Currency;
 
 static_assert(sizeof(Currency) <= sizeof(mlocCurrencyFormatter),
@@ -76,9 +82,11 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
         f->found |= 1u << field;
         if (symbols && field == currencyOwnPattern)
         {
-            // The index names a pattern of the unit's own source.
+            // The index names a pattern of the unit's own source, which a
+            // walk over kept units (view null) does not read.
             f->pattern = value;
-            f->broken |= !mlocFindDataUnit(view, kindNumberPatterns, dataNoLocale, &f->patterns);
+            f->broken |= view != nullptr &&
+                         !mlocFindDataUnit(view, kindNumberPatterns, dataNoLocale, &f->patterns);
             continue;
         }
         uint16_t start = mlocLoad16(t.offsets + (size_t)value * 2);
@@ -243,6 +251,45 @@ static void AppendOuter(Outer* o, const CurrencyTexts* texts)
     }
 }
 
+// Keeps a unit of a walk along the chain, with its step.
+typedef struct Keep
+{
+    CurrencyChain* chain;
+    bool names;
+} Keep;
+
+static bool KeepUnit(void* context, DataSpan unit, const DataView* view, int depth)
+{
+    (void)view;
+    Keep* k = context;
+    CurrencyChain* c = k->chain;
+    uint8_t* count = k->names ? &c->nameCount : &c->symbolCount;
+    if (*count == currencyChainUnits || depth > UINT8_MAX)
+    {
+        c->complete = false;
+        return false;
+    }
+    (k->names ? c->names : c->symbols)[*count] = unit;
+    (k->names ? c->nameSteps : c->symbolSteps)[*count] = (uint8_t)depth;
+    (*count)++;
+    return false;
+}
+
+// The currency units of a locale's chain, which parsing reads; the names
+// when the set has the names data file.
+static bool KeepChain(const mlocDataSet* data, const mlocLocale* locale, CurrencyChain* out)
+{
+    *out = (CurrencyChain){.complete = true};
+    out->turkic = strcmp(locale->language, "tr") == 0 || strcmp(locale->language, "az") == 0;
+    Keep symbols = {out, false};
+    Keep names = {out, true};
+    return mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencySymbols, locale, KeepUnit,
+                                &symbols) &&
+           (!mlocDataSetHasKind(data, kindCurrencyNames) ||
+            mlocVisitLocaleUnits(data, mloc_componentMain, kindCurrencyNames, locale, KeepUnit,
+                                 &names));
+}
+
 // Makes the core, and the compact tables and plural rule that compact
 // notation and long names need.
 static mlocResult InitParts(Currency* c, const mlocDataSet* data, const mlocLocale* locale,
@@ -306,6 +353,10 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
         return result;
     }
     mlocSetFormatOptions(&c.formatter, &o->number, currencyStamp);
+    if (!KeepChain(data, locale, &c.chain))
+    {
+        return mloc_errorNotFound;
+    }
     // Compact notation rounds by its own rule unless the options say
     // otherwise, as ICU does.
     if (!ShowCurrency(&c.formatter.core, &fields, o->display, ownPattern) ||
@@ -315,6 +366,7 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
         return mloc_errorNotFound;
     }
     c.hasOuter = name || o->appendCode;
+    c.appended = !name && o->appendCode;
     if (name)
     {
         LongNameOuter(&c.outer, &texts, &names);
@@ -344,8 +396,111 @@ static bool ReadCurrency(const mlocCurrencyFormatter* opaque, Currency* c)
         return false;
     }
     memcpy(c, opaque, sizeof(*c));
-    return !c->hasOuter ||
-           (c->outer.patternText != nullptr && c->formatter.pluralRule < mlocPluralRuleSetCount);
+    return (!c->hasOuter || (c->outer.patternText != nullptr &&
+                             c->formatter.pluralRule < mlocPluralRuleSetCount)) &&
+           c->chain.symbolCount <= currencyChainUnits && c->chain.nameCount <= currencyChainUnits;
+}
+
+// A currency's fields of a kind from the units a formatter kept.
+static void GatherKept(const DataSpan* units, uint32_t count, uint32_t kind, uint16_t code,
+                       Fields* out)
+{
+    *out = (Fields){.kind = kind, .code = code};
+    for (uint32_t i = 0; i < count && !Gather(out, units[i], nullptr, 0); i++)
+    {
+    }
+}
+
+// A side of the outer pattern of the category other as an affix pattern
+// (ICU builds its currency plural patterns so), into parseMaxAffixText
+// bytes and one past them when it does not fit.
+static uint8_t OuterSide(const Currency* c, bool before, uint8_t* out)
+{
+    const Outer* o = &c->outer;
+    const uint8_t* pattern = o->patternText + o->patternStart[mloc_pluralOther];
+    size_t length = o->patternLength[mloc_pluralOther];
+    const uint8_t* number = memchr(pattern, currencyTextNumber, length);
+    size_t split = number == nullptr ? length : (size_t)(number - pattern);
+    size_t end = before ? split : length;
+    size_t n = 0;
+    for (size_t at = before ? 0 : (split < length ? split + 1 : length);
+         at < end && n <= parseMaxAffixText; at++)
+    {
+        if (pattern[at] != currencyTextOther)
+        {
+            out[n++] = pattern[at];
+        }
+        else if (!c->appended)
+        {
+            out[n++] = numberAffixCurrencyName;
+        }
+        else
+        {
+            for (size_t i = 0; i < sizeof(o->code) && n <= parseMaxAffixText; i++)
+            {
+                out[n++] = (uint8_t)o->code[i];
+            }
+        }
+    }
+    return (uint8_t)n;
+}
+
+// What parsing reads of a formatter's currency (ICU's CurrencySymbols):
+// its symbol, else its code; the text shown when it is another; and with
+// the names data the long name of each category as ICU's getPluralName
+// gives it (its own, other's, the name, the code).
+static void ParseOf(const Currency* c, bool any, ParseCurrency* out)
+{
+    memset(out, 0, sizeof(*out));
+    const NumberCore* core = &c->formatter.core;
+    memcpy(out->code, core->currencyCode, 3);
+    uint16_t packed = mlocPackCurrency(out->code, 3);
+    Fields f;
+    GatherKept(c->chain.symbols, c->chain.symbolCount, kindCurrencySymbols, packed, &f);
+    bool symbol = (f.found & 1u << currencySymbol) != 0;
+    out->symbol = symbol ? f.text[currencySymbol] : (const uint8_t*)out->code;
+    out->symbolLength = symbol ? f.length[currencySymbol] : 3;
+    bool other = core->currencyText != nullptr &&
+                 (core->currencyLength != out->symbolLength ||
+                  memcmp(core->currencyText, out->symbol, out->symbolLength) != 0);
+    out->shown = other ? core->currencyText : nullptr;
+    out->shownLength = other ? core->currencyLength : 0;
+    Fields names;
+    GatherKept(c->chain.names, c->chain.nameCount, kindCurrencyNames, packed, &names);
+    for (uint32_t category = 0; c->chain.nameCount > 0 && category < 6; category++)
+    {
+        uint32_t field = NameField(&names, category);
+        bool code = field == currencyNameFieldCount;
+        out->names[category] = code ? (const uint8_t*)out->code : names.text[field];
+        out->nameLengths[category] = code ? 3 : names.length[field];
+    }
+    out->outer = c->hasOuter;
+    if (c->hasOuter)
+    {
+        out->beforeLength = OuterSide(c, true, out->before);
+        out->afterLength = OuterSide(c, false, out->after);
+    }
+    out->chain = any ? &c->chain : nullptr;
+}
+
+mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter, const char* text,
+                             size_t length, mlocParseMode mode, uint8_t anyCurrency,
+                             mlocDecimal* decimalOut, char* codeOut, size_t* endOut)
+{
+    Currency c;
+    if (!ReadCurrency(formatter, &c) || (text == nullptr && length > 0) || decimalOut == nullptr ||
+        codeOut == nullptr || endOut == nullptr || (uint32_t)mode > mloc_parseStrict ||
+        anyCurrency > 1 || c.formatter.compactTable != nullptr)
+    {
+        return mloc_errorInvalid;
+    }
+    if (anyCurrency == 1 && !c.chain.complete)
+    {
+        return mloc_errorNotFound;
+    }
+    ParseCurrency currency;
+    ParseOf(&c, anyCurrency == 1, &currency);
+    return mlocParseWith(&c.formatter, &currency, text, length, mode, decimalOut, codeOut, endOut);
 }
 
 mlocResult mlocFormatCurrency(const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal,

@@ -58,17 +58,16 @@ static const uint8_t* Folds(const uint8_t* sets)
            (size_t)mlocLoad16(sets + 2) * parseRangeSize;
 }
 
-// What a code point folds to by the parse sets' folds, or itself.
-static uint32_t Fold(const uint8_t* sets, uint32_t cp)
+// What a code point maps to by runs of a mapping, or itself.
+static uint32_t MapByRuns(const uint8_t* runs, uint32_t count, uint32_t cp)
 {
-    const uint8_t* folds = Folds(sets);
     uint32_t low = 0;
-    uint32_t high = mlocLoad16(sets + 8);
+    uint32_t high = count;
     // The last run that starts at or before the code point.
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
-        if (mlocLoad32(folds + (size_t)middle * parseFoldSize) <= cp)
+        if (mlocLoad32(runs + (size_t)middle * parseFoldSize) <= cp)
         {
             low = middle + 1;
         }
@@ -81,11 +80,47 @@ static uint32_t Fold(const uint8_t* sets, uint32_t cp)
     {
         return cp;
     }
-    const uint8_t* run = folds + (size_t)(low - 1) * parseFoldSize;
+    const uint8_t* run = runs + (size_t)(low - 1) * parseFoldSize;
     uint32_t offset = cp - mlocLoad32(run);
     uint32_t stride = run[6];
     bool in = offset % stride == 0 && offset / stride < mlocLoad16(run + 4);
     return in ? (uint32_t)((int64_t)cp + (int32_t)mlocLoad32(run + 8)) : cp;
+}
+
+// What a code point folds to by the parse sets' folds, or itself.
+static uint32_t Fold(const uint8_t* sets, uint32_t cp)
+{
+    return MapByRuns(Folds(sets), mlocLoad16(sets + 8), cp);
+}
+
+int mlocParseUpper(const uint8_t* sets, uint32_t cp, uint32_t* out)
+{
+    const uint8_t* uppers = Folds(sets) + (size_t)mlocLoad16(sets + 8) * parseFoldSize;
+    const uint8_t* specials = uppers + (size_t)mlocLoad16(sets + 10) * parseFoldSize;
+    uint32_t low = 0;
+    uint32_t high = mlocLoad16(sets + 12);
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* e = specials + (size_t)middle * parseSpecialSize;
+        if (cp < mlocLoad32(e))
+        {
+            high = middle;
+        }
+        else if (cp > mlocLoad32(e))
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            out[0] = mlocLoad32(e + 4);
+            out[1] = mlocLoad32(e + 8);
+            out[2] = mlocLoad32(e + 12);
+            return out[2] != 0 ? 3 : 2;
+        }
+    }
+    out[0] = MapByRuns(uppers, mlocLoad16(sets + 10), cp);
+    return 1;
 }
 
 // Whether two code points are equal or fold alike (ICU's
@@ -100,10 +135,7 @@ static bool SameFolded(const uint8_t* sets, uint32_t a, uint32_t b, bool units)
     return (!units || (a <= 0xFFFF && b <= 0xFFFF)) && Fold(sets, a) == Fold(sets, b);
 }
 
-// The bytes of the segment that begin with a text, compared by code
-// point as ICU's getCommonPrefixLength compares; 0 when it does not.
-static size_t PrefixFolded(const uint8_t* sets, const Segment* s, const uint8_t* text,
-                           size_t length)
+size_t mlocParsePrefix(const uint8_t* sets, const Segment* s, const uint8_t* text, size_t length)
 {
     size_t at = s->at;
     for (size_t i = 0; i < length;)
@@ -153,9 +185,30 @@ bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp)
     return false;
 }
 
-// Whether a class holds a symbol: its one code point, or one of the
-// class's strings (ICU's UnicodeSet::contains of a string).
-static bool HoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text, size_t length)
+ParseClassView mlocParseClass(const uint8_t* sets, uint32_t set)
+{
+    const uint8_t* entry = sets + parseHeaderSize + (size_t)set * parseClassSize;
+    const uint8_t* offsets =
+        Folds(sets) + (size_t)(mlocLoad16(sets + 8) + mlocLoad16(sets + 10)) * parseFoldSize +
+        (size_t)mlocLoad16(sets + 12) * parseSpecialSize;
+    return (ParseClassView){
+        .ranges = sets + parseHeaderSize + (size_t)parseClassCount * parseClassSize +
+                  (size_t)mlocLoad16(entry) * parseRangeSize,
+        .rangeCount = mlocLoad16(entry + 2),
+        .offsets = offsets + 2 * (size_t)mlocLoad16(entry + 4),
+        .text = offsets + 2 * ((size_t)mlocLoad16(sets + 4) + 1),
+        .stringCount = mlocLoad16(entry + 6),
+    };
+}
+
+const uint8_t* mlocParseClassString(const ParseClassView* c, uint32_t index, size_t* lengthOut)
+{
+    uint32_t start = mlocLoad16(c->offsets + 2 * (size_t)index);
+    *lengthOut = mlocLoad16(c->offsets + 2 * (size_t)index + 2) - start;
+    return c->text + start;
+}
+
+bool mlocParseHoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text, size_t length)
 {
     size_t size = 0;
     uint32_t cp = length > 0 ? mlocParseCodePoint(text, length, 0, &size) : parseNoCodePoint;
@@ -163,15 +216,12 @@ static bool HoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text, 
     {
         return mlocParseHas(sets, set, cp);
     }
-    const uint8_t* entry = sets + parseHeaderSize + (size_t)set * parseClassSize;
-    const uint8_t* offsets = Folds(sets) + (size_t)mlocLoad16(sets + 8) * parseFoldSize;
-    const uint8_t* stringText = offsets + 2 * ((size_t)mlocLoad16(sets + 4) + 1);
-    for (uint32_t i = 0; i < mlocLoad16(entry + 6); i++)
+    ParseClassView c = mlocParseClass(sets, set);
+    for (uint32_t i = 0; i < c.stringCount; i++)
     {
-        uint32_t s = mlocLoad16(entry + 4) + i;
-        uint32_t start = mlocLoad16(offsets + 2 * (size_t)s);
-        uint32_t end = mlocLoad16(offsets + 2 * (size_t)s + 2);
-        if (end - start == length && memcmp(stringText + start, text, length) == 0)
+        size_t n = 0;
+        const uint8_t* string = mlocParseClassString(&c, i, &n);
+        if (n == length && memcmp(string, text, length) == 0)
         {
             return true;
         }
@@ -242,10 +292,10 @@ static void MatchSymbol(const Parser* r, const Matcher* m, Segment* s, Parsed* p
     uint32_t set = SymbolClass((MatcherKind)m->kind, &symbol);
     size_t length = 0;
     const uint8_t* text = Symbol(r->f, symbol, &length);
-    bool own = set == parseClassCount || !HoldsSymbol(r->sets, set, text, length);
+    bool own = set == parseClassCount || !mlocParseHoldsSymbol(r->sets, set, text, length);
     size_t size = 0;
     uint32_t cp = First(s, &size);
-    size_t prefix = own ? PrefixFolded(r->sets, s, text, length) : 0;
+    size_t prefix = own ? mlocParsePrefix(r->sets, s, text, length) : 0;
     if (prefix > 0)
     {
         s->at += prefix;
@@ -340,8 +390,8 @@ static int DigitAt(const Parser* r, Segment* s)
     }
     for (int d = 0; r->digitStrings && d < 10; d++)
     {
-        size_t n = PrefixFolded(r->sets, s, r->f->core.digits + d * numberDigitSize,
-                                r->f->core.digitLength);
+        size_t n = mlocParsePrefix(r->sets, s, r->f->core.digits + d * numberDigitSize,
+                                   r->f->core.digitLength);
         if (n > 0)
         {
             s->at += n;
@@ -466,19 +516,19 @@ static void MatchSeparator(const Parser* r, const DecimalConfig* c, const Segmen
                            Separators* seen, bool* isDecimal, bool* isGrouping)
 {
     size_t n =
-        SeenIs(&seen->decimal) ? 0 : PrefixFolded(r->sets, s, r->decimalText, r->decimalLength);
+        SeenIs(&seen->decimal) ? 0 : mlocParsePrefix(r->sets, s, r->decimalText, r->decimalLength);
     if (n > 0)
     {
         *isDecimal = true;
         seen->decimal = (Seen){s->text + s->at, n};
     }
     if (SeenIs(&seen->grouping) &&
-        PrefixFolded(r->sets, s, seen->grouping.text, seen->grouping.length) > 0)
+        mlocParsePrefix(r->sets, s, seen->grouping.text, seen->grouping.length) > 0)
     {
         *isGrouping = true;
     }
     bool fresh = !c->groupingDisabled && !SeenIs(&seen->grouping) && !SeenIs(&seen->decimal);
-    n = fresh ? PrefixFolded(r->sets, s, r->groupText, r->groupLength) : 0;
+    n = fresh ? mlocParsePrefix(r->sets, s, r->groupText, r->groupLength) : 0;
     if (n > 0)
     {
         *isGrouping = true;
@@ -701,13 +751,13 @@ static int ExponentSign(const Parser* r, Segment* s, bool* partialOut)
     {
         size_t length = 0;
         const uint8_t* text = Symbol(r->f, i == 0 ? numberMinus : numberPlus, &length);
-        if (HoldsSymbol(r->sets, i == 0 ? parseMinus : parsePlus, text, length) || length == 0 ||
-            cp == parseNoCodePoint ||
+        if (mlocParseHoldsSymbol(r->sets, i == 0 ? parseMinus : parsePlus, text, length) ||
+            length == 0 || cp == parseNoCodePoint ||
             !SameFolded(r->sets, mlocParseCodePoint(text, length, 0, &size), cp, false))
         {
             continue;
         }
-        size_t n = PrefixFolded(r->sets, s, text, length);
+        size_t n = mlocParsePrefix(r->sets, s, text, length);
         *partialOut = n == 0;
         s->at += n;
         return n == 0 ? 0 : (i == 0 ? -1 : 1);
@@ -723,7 +773,7 @@ static void MatchScientific(const Parser* r, Segment* s, Parsed* p)
     size_t length = 0;
     const uint8_t* symbol = Symbol(r->f, numberExponential, &length);
     size_t n = SeenNumber(p) && (p->flags & parsedHasExponent) == 0
-                   ? PrefixFolded(r->sets, s, symbol, length)
+                   ? mlocParsePrefix(r->sets, s, symbol, length)
                    : 0;
     if (n == 0 || s->at + n == s->length)
     {
@@ -858,8 +908,15 @@ void mlocParseMatch(const Parser* r, const Matcher* m, Segment* s, Parsed* p)
     case matchAffix:
         MatchAffix(r, &r->affixes[m->arg], s, p);
         break;
+    case matchCurrency:
+        if (r->matchCurrency != nullptr)
+        {
+            r->matchCurrency(r, s, p);
+        }
+        break;
     case validateNumber:
     case validateAffix:
+    case validateCurrency:
     case validateScale:
         break;
     default:

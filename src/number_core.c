@@ -150,6 +150,8 @@ bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index)
     for (int i = 0; i < affixCount; i++)
     {
         TableString(t, mlocLoad16(p + 2 * i), &core->affixStart[i], &core->affixLength[i]);
+        core->parseStart[i] = core->affixStart[i];
+        core->parseLength[i] = core->affixLength[i];
     }
     core->primary = p[patternPrimary];
     core->secondary = p[patternSecondary];
@@ -214,7 +216,7 @@ static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 // The index of an entry's currency pattern of a style; false when the
 // data has no pattern sets or the indexes leave them.
 static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_t* entry,
-                              const CurrencyStyle* style, uint32_t* patternOut,
+                              const CurrencyStyle* style, uint32_t* patternOut, uint32_t* parseOut,
                               uint32_t* compactOut, CurrencyTexts* texts)
 {
     DataSpan sets;
@@ -251,12 +253,14 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
     bool alpha = (style->spacing & edge) != 0;
     int chosen = style->hidden ? base + 2 : alpha ? base + 1 : base;
     *patternOut = mlocLoad16(r + 2 * chosen);
+    *parseOut = mlocLoad16(r + 2 * (style->hidden ? chosen : base));
     *compactOut = mlocLoad16(r + (alpha ? setCompactAlpha : setCompact));
     // A long name takes the decimal pattern and tables; hidden, compact
     // notation takes the short decimal table (UTS #35).
     if (style->name)
     {
         *patternOut = mlocLoad16(entry + entryDecimal);
+        *parseOut = *patternOut;
         *compactOut =
             mlocLoad16(entry + (style->longLength ? entryCompactLong : entryCompactShort));
     }
@@ -265,6 +269,15 @@ static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_
         *compactOut = mlocLoad16(entry + entryCompactShort);
     }
     return true;
+}
+
+// Points a core's parse affixes at a pattern CurrencyPatternOf checked.
+static void UseParsePattern(NumberCore* core, DataSpan patterns, uint32_t index)
+{
+    NumberCore parse = *core;
+    (void)mlocUseNumberPattern(&parse, patterns, index);
+    memcpy(core->parseStart, parse.affixStart, sizeof(core->parseStart));
+    memcpy(core->parseLength, parse.affixLength, sizeof(core->parseLength));
 }
 
 // Resolves a core and, when compact is set, the entry's compact table of
@@ -306,16 +319,18 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
     NumberCore core;
     int field = style == mloc_numberDecimal ? entryDecimal : entryPercent;
     uint32_t pattern = entry == nullptr ? 0 : mlocLoad16(entry + field);
+    uint32_t parsePattern = pattern;
     uint32_t compactIndex =
         entry == nullptr ? 0
                          : mlocLoad16(entry + (longLength ? entryCompactLong : entryCompactShort));
     if (entry == nullptr ||
-        (currency != nullptr &&
-         !CurrencyPatternOf(&view, &u, entry, currency, &pattern, &compactIndex, texts)) ||
+        (currency != nullptr && !CurrencyPatternOf(&view, &u, entry, currency, &pattern,
+                                                   &parsePattern, &compactIndex, texts)) ||
         !Fill(&core, &u, system, entry, header[localeMinGrouping], pattern))
     {
         return mloc_errorNotFound;
     }
+    UseParsePattern(&core, u.patterns, parsePattern);
     if (currency != nullptr)
     {
         core.decimalText = core.symbolText + core.symbolStart[numberCurrencyDecimal];

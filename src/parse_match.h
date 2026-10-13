@@ -71,9 +71,11 @@ typedef enum MatcherKind
     matchScientific,
     matchCodePoint,
     matchAffix,
+    matchCurrency,
     // Validators, which read nothing and check the parse after the run.
     validateNumber,
     validateAffix,
+    validateCurrency,
     validateScale,
 } MatcherKind;
 
@@ -136,6 +138,9 @@ typedef struct Parsed
     uint32_t flags;
     // Where the last matcher that ends a number stopped (ICU's charEnd).
     size_t charEnd;
+    // The currency read, when hasCode is set.
+    char code[3];
+    bool hasCode;
     // The affixes matched: series indexes, affixNone or affixEmpty.
     int8_t prefix;
     int8_t suffix;
@@ -158,7 +163,16 @@ enum
     setOwn = 0x101,
 };
 
-typedef struct Parser
+typedef struct Parser Parser;
+
+// What a currency parse reads (parse_currency.h); the parser does not
+// look inside.
+typedef struct ParseCurrency ParseCurrency;
+
+// The currency matcher, which the currency parse gives.
+typedef void (*CurrencyMatcher)(const Parser* parser, Segment* segment, Parsed* parsed);
+
+struct Parser
 {
     const Formatter* f;
     const uint8_t* sets;
@@ -182,14 +196,45 @@ typedef struct Parser
     // Digits are also matched by the numbering system's strings: its zero
     // is not a decimal digit of value 0.
     bool digitStrings;
-} Parser;
+    // A currency formatter's currency and its matcher; null for a number
+    // formatter.
+    const ParseCurrency* currency;
+    CurrencyMatcher matchCurrency;
+    // The affix patterns read (FillAffixes).
+    uint8_t affixText[affixCount][parseMaxAffixText];
+    uint8_t affixLength[affixCount];
+};
 
 // The code point at an offset and its length; parseNoCodePoint and 1 for
 // a byte that does not begin valid UTF-8.
 uint32_t mlocParseCodePoint(const uint8_t* text, size_t length, size_t at, size_t* sizeOut);
 
+// A class of the parse sets: its ranges (parseRangeSize each) and its
+// strings.
+typedef struct ParseClassView
+{
+    const uint8_t* ranges;
+    uint32_t rangeCount;
+    const uint8_t* offsets;
+    const uint8_t* text;
+    uint32_t stringCount;
+} ParseClassView;
+
+ParseClassView mlocParseClass(const uint8_t* sets, uint32_t set);
+
+// A class's string of an index below its count.
+const uint8_t* mlocParseClassString(const ParseClassView* c, uint32_t index, size_t* lengthOut);
+
+// Whether a class holds a symbol: its one code point, or one of the
+// class's strings (ICU's UnicodeSet::contains of a string).
+bool mlocParseHoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text, size_t length);
+
 // Whether a class of the parse sets holds a code point.
 bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp);
+
+// A code point's full uppercase by the parse sets (u_strToUpper's default
+// rules): one to three code points into out, and their count.
+int mlocParseUpper(const uint8_t* sets, uint32_t cp, uint32_t* out);
 
 // The value of a decimal digit's code point, -1 for another.
 int mlocParseDigit(const uint8_t* sets, uint32_t cp);
@@ -198,6 +243,12 @@ int mlocParseDigit(const uint8_t* sets, uint32_t cp);
 // (ICU's unisets::chooseFrom).
 uint32_t mlocParseChooseSet(const uint8_t* sets, const uint8_t* text, size_t length, uint32_t first,
                             uint32_t second);
+
+// The bytes of the segment that begin with a text, compared by code
+// point as ICU's getCommonPrefixLength compares (case folded, BMP alone);
+// 0 when it does not.
+size_t mlocParsePrefix(const uint8_t* sets, const Segment* segment, const uint8_t* text,
+                       size_t length);
 
 // Whether the affix a matcher names is the one a parse matched (ICU's
 // AffixMatcher::matched): both none, or equal patterns.
