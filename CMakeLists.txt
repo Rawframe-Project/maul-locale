@@ -91,7 +91,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/number_core.c
     src/number_data.c
     src/number_format.c
+    src/number_parse.c
     src/number_precision.c
+    src/parse_match.c
     src/plural.c
     src/unit.c
     src/unit_convert.c
@@ -145,6 +147,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     target_compile_definitions(test_currency PRIVATE MLOC_NAMES_FILE="${MLOC_NAMES_FILE}")
     add_test(NAME currency COMMAND test_currency)
     maul_add_test(number)
+    maul_add_test(number_parse)
     maul_add_test(currency_tables WHITEBOX)
     maul_add_test(number_tables WHITEBOX)
     maul_add_test(unit)
@@ -218,7 +221,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/ldml.c tools/mlocgen/list_gen.c tools/mlocgen/locale_gen.c
                                     tools/mlocgen/map.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
-                                    tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
+                                    tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c

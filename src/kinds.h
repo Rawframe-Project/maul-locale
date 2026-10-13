@@ -85,6 +85,9 @@ constexpr uint32_t kindUnitPatterns = 0x00040014;
 constexpr uint32_t kindUnitCases = 0x00040015;
 // The unit names data file: those patterns lowercased, a unit per locale.
 constexpr uint32_t kindUnitCasesLowered = 0x00040016;
+// The number part: the sets number parsing reads, a unit of no locale
+// (src/parse_tables.h).
+constexpr uint32_t kindParseSets = 0x00040017;
 
 // The list part: the distinct list pattern sets, a unit of no locale
 // (src/list_tables.h).

@@ -17,6 +17,7 @@
 #include "list_gen.h"
 #include "map.h"
 #include "number_tables.h"
+#include "parse_gen.h"
 #include "table_gen.h"
 #include "unit_names_gen.h"
 #include "unit_patterns_gen.h"
@@ -1496,6 +1497,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
     {
         GenerateUnitPatterns(&units, unitNames);
     }
+    GenerateParseSets(&g->cldr, file);
     AddSystemUnit(g, file);
     TableAddUnit(&g->currencySets, kindCurrencyPatterns, nullptr, file);
     TableAddUnit(&g->symbols, kindNumberSymbols, nullptr, file);

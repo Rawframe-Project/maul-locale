@@ -40,7 +40,8 @@ operands, CLDR's cardinal, ordinal and range plural rules compiled to C
 (every sample of CLDR's files passes on every push), and numbers,
 percents and per mille in standard, scientific, engineering and compact
 notation and ranges, with every numbering system and ECMA-402's options
-(CLDR's decimal test data passes on every push), and amounts of money
+(CLDR's decimal test data passes on every push) and read back as a
+person types them, as ICU parses, and amounts of money
 with each currency's symbols, digits and cash rounding, in compact
 notation and by name (the names are a data file of their own,
 `src/generated/currency-names.mloc`), and the currency a locale or
@@ -55,7 +56,7 @@ in a grammatical case ("2 Metern", German's dative) and units'
 grammatical genders, with
 the display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`).
-The library has 51 public functions.
+The library has 52 public functions.
 
 ## Building
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number units' validators (number_data.h): the compiled-in units
+// The number units' validators (number_data.h, number_parse.h): the compiled-in units
 // pass, a copy with one field spoiled is refused; and a formatter refuses
 // units that pass alone but disagree, in a pack built here.
 
@@ -10,7 +10,9 @@
 #include "data_view.h"
 #include "kinds.h"
 #include "number_data.h"
+#include "number_parse.h"
 #include "number_tables.h"
+#include "parse_tables.h"
 #include "test_harness.h"
 #include "test_pack.h"
 
@@ -28,6 +30,7 @@ static DataSpan s_compactPatterns;
 static DataSpan s_compact;
 static DataSpan s_plurals;
 static DataSpan s_ranges;
+static DataSpan s_parseSets;
 
 // A copy of a unit with 64 bytes of room, filled with valid text so that
 // a validator reading past the unit reads on until the sanitizer builds
@@ -571,6 +574,97 @@ static void TestDisagreeing(void)
     free(u);
 }
 
+// The parse sets: each field spoiled in turn is refused.
+static void TestParseSets(void)
+{
+    DataSpan u = s_parseSets;
+    CHECK(Valid(mlocValidParseSets, u.bytes, u.size), "the compiled-in parse sets");
+    CHECK(!Valid(mlocValidParseSets, u.bytes, parseHeaderSize - 1), "a short header");
+    CHECK(!Valid(mlocValidParseSets, u.bytes, u.size - 1), "a short unit");
+    uint8_t* c = Copy(u);
+    if (c == nullptr)
+    {
+        CHECK(false, "a copy");
+        return;
+    }
+    uint32_t ranges = mlocLoad16(u.bytes + 2);
+    uint32_t strings = mlocLoad16(u.bytes + 4);
+    uint32_t textSize = mlocLoad16(u.bytes + 6);
+    uint32_t folds = mlocLoad16(u.bytes + 8);
+    size_t rangeStart = parseHeaderSize + (size_t)parseClassCount * parseClassSize;
+    size_t foldStart = rangeStart + (size_t)ranges * parseRangeSize;
+    size_t offsetStart = foldStart + (size_t)folds * parseFoldSize;
+    Put16(c, parseClassCount + 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "another class count");
+    memcpy(c, u.bytes, u.size);
+    Put16(c + 6, textSize + 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a text size past the unit");
+    memcpy(c, u.bytes, u.size);
+    Put16(c + offsetStart, 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a first offset not 0");
+    memcpy(c, u.bytes, u.size);
+    CHECK(strings >= 1, "the sets hold a string");
+    Put16(c + offsetStart + 2, textSize + 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "offsets that go back");
+    memcpy(c, u.bytes, u.size);
+    const uint8_t* entry = u.bytes + parseHeaderSize + (size_t)parseDigits * parseClassSize;
+    Put16(c + parseHeaderSize + (size_t)parseDigits * parseClassSize, ranges);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a class's ranges past the table");
+    memcpy(c, u.bytes, u.size);
+    Put16(c + parseHeaderSize + (size_t)parseDigits * parseClassSize + 4, strings + 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a class's strings past the table");
+    memcpy(c, u.bytes, u.size);
+    CHECK(mlocLoad16(entry + 2) >= 2, "the digits have runs");
+    uint8_t* first = c + rangeStart + (size_t)mlocLoad16(entry) * parseRangeSize;
+    memcpy(first, first + parseRangeSize, 4);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "ranges out of order");
+    memcpy(c, u.bytes, u.size);
+    memcpy(first + 4, first, 4);
+    first[4] = (uint8_t)(first[4] - 1);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a range that ends before it starts");
+    memcpy(c, u.bytes, u.size);
+    uint8_t* last = first + (size_t)(mlocLoad16(entry + 2) - 1) * parseRangeSize;
+    last[4] = 0xFF;
+    last[5] = 0xFF;
+    last[6] = 0x11;
+    last[7] = 0;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a range past U+10FFFF");
+    memcpy(c, u.bytes, u.size);
+    c[10] = 1;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a header's last field not 0");
+    CHECK(folds >= 2, "the sets hold folds");
+    uint8_t* fold = c + foldStart;
+    memcpy(c, u.bytes, u.size);
+    fold[4] = 0;
+    fold[5] = 0;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a run of no code point");
+    memcpy(c, u.bytes, u.size);
+    fold[6] = 3;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a stride of 3");
+    memcpy(c, u.bytes, u.size);
+    fold[6] = 0;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a stride of 0");
+    memcpy(c, u.bytes, u.size);
+    fold[7] = 1;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a run's padding not 0");
+    memcpy(c, u.bytes, u.size);
+    memcpy(fold + parseFoldSize, fold, 4);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "runs out of order");
+    memcpy(c, u.bytes, u.size);
+    Put16(fold + 4, 0xFFFF);
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a run over the next");
+    memcpy(c, u.bytes, u.size);
+    uint8_t* lastFold = fold + (size_t)(folds - 1) * parseFoldSize;
+    memset(lastFold + 8, 0x7F, 3);
+    lastFold[11] = 0;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a fold past U+10FFFF");
+    memcpy(c, u.bytes, u.size);
+    memset(fold + 8, 0x80, 3);
+    fold[11] = 0xFF;
+    CHECK(!Valid(mlocValidParseSets, c, u.size), "a fold below 0");
+    free(c);
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -586,7 +680,8 @@ int main(void)
                                &s_compactPatterns) &&
               mlocFindDataUnit(&s_view, kindNumberCompact, dataNoLocale, &s_compact) &&
               mlocFindDataUnit(&s_view, kindPlurals, root, &s_plurals) &&
-              mlocFindDataUnit(&s_view, kindPluralRanges, dataNoLocale, &s_ranges),
+              mlocFindDataUnit(&s_view, kindPluralRanges, dataNoLocale, &s_ranges) &&
+              mlocFindDataUnit(&s_view, kindParseSets, dataNoLocale, &s_parseSets),
           "the compiled-in data has the number units");
     if (s_failures > 0)
     {
@@ -598,5 +693,6 @@ int main(void)
     TestCompactUnits();
     TestLocaleUnit();
     TestDisagreeing();
+    TestParseSets();
     return s_failures == 0 ? 0 : 1;
 }

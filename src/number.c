@@ -8,6 +8,7 @@
 
 #include "number_core.h"
 #include "number_format.h"
+#include "number_parse.h"
 #include "plural.h"
 
 #include <string.h>
@@ -74,4 +75,17 @@ mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlo
         return mloc_errorInvalid;
     }
     return mlocFormatRangeWith(&f, nullptr, start, end, output);
+}
+
+mlocResult mlocParseNumber(const mlocNumberFormatter* formatter, const char* text, size_t length,
+                           mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut)
+{
+    Formatter f;
+    if (!mlocReadFormatter(formatter, sizeof(*formatter), formatterStamp, &f) ||
+        (text == nullptr && length > 0) || decimalOut == nullptr || endOut == nullptr ||
+        (uint32_t)mode > mloc_parseStrict || f.compactTable != nullptr)
+    {
+        return mloc_errorInvalid;
+    }
+    return mlocParseWith(&f, text, length, mode, decimalOut, endOut);
 }

@@ -4,7 +4,8 @@
 // Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a
 // locale's digits, symbols and grouping, rounded as the options say.
 // The options follow ECMA-402's NumberFormat; their zero value is the
-// default, and the zero precision rounds nothing.
+// default, and the zero precision rounds nothing. A formatter also reads
+// a number a person types (record mloc-0032).
 
 #ifndef MAUL_LOCALE_NUMBER_H
 #define MAUL_LOCALE_NUMBER_H
@@ -239,6 +240,50 @@ extern "C"
                                                              const mlocDecimal* start,
                                                              const mlocDecimal* end,
                                                              mlocOutput* output);
+
+    // How strictly a number is read (ICU's lenient and strict parse
+    // modes). Lenient: ignorables anywhere, separators by their
+    // equivalence classes and grouping sizes unchecked, signs, percent
+    // and per mille signs read where the pattern has none, affixes alone.
+    // Strict: the grouping sizes, the strict separator classes, the
+    // pattern's full affixes, bidi controls the only ignorables.
+    typedef enum mlocParseMode
+    {
+        mloc_parseLenient = 0,
+        mloc_parseStrict = 1,
+    } mlocParseMode;
+
+    /// Reads a number as a person types it in the formatter's locale
+    /// (ICU's DecimalFormat::parse): its digits, any Unicode decimal
+    /// digits, its separators, signs, pattern affixes, percent or per
+    /// mille sign (the value then divided by 100 or 1000, as the style
+    /// multiplies it), NaN, infinity, and an exponent. Reading starts at
+    /// the first byte and stops where no matcher reads more: "12 apples"
+    /// gives 12, ending at 2; compare the end with the length to require
+    /// the whole text. The decimal is exact, its fraction digits those
+    /// typed (English "1.50" gives 1.50).
+    ///
+    /// @param formatter   A formatter from mlocInitNumberFormatter, of
+    ///                    standard, scientific or engineering notation.
+    /// @param text        UTF-8 text; it need not end in a 0 byte.
+    /// @param length      Its length in bytes.
+    /// @param mode        An mlocParseMode.
+    /// @param decimalOut  Receives the number read.
+    /// @param endOut      Receives the offset after the number read, or on
+    ///                    mloc_errorSyntax the offset reading stopped at.
+    /// @return mloc_success; mloc_errorSyntax when no number is read (or,
+    ///         in strict mode, the affixes or grouping do not match);
+    ///         mloc_errorCapacity when the digits or the exponent pass the
+    ///         decimal's limits; mloc_errorNotFound for data without the
+    ///         parse sets; mloc_errorInvalid for a null pointer, a mode out
+    ///         of range, a formatter the library did not make or one of
+    ///         compact notation.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocParseNumber(const mlocNumberFormatter* formatter,
+                                                       const char* text, size_t length,
+                                                       mlocParseMode mode, mlocDecimal* decimalOut,
+                                                       size_t* endOut);
 
 #ifdef __cplusplus
 }

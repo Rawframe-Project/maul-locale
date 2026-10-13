@@ -14,6 +14,7 @@
 #include "locale_likely.h"
 #include "locale_prefs.h"
 #include "number_data.h"
+#include "number_parse.h"
 #include "plural.h"
 #include "unit_data.h"
 #include "unit_names.h"
@@ -33,6 +34,7 @@ static const DataKind s_kinds[] = {
     {kindNumbers, mlocValidNumbers},
     {kindNumberCompactPatterns, mlocValidNumberCompactPatterns},
     {kindNumberCompact, mlocValidNumberCompact},
+    {kindParseSets, mlocValidParseSets},
     {kindCurrencyFractions, mlocValidCurrencyFractions},
     {kindCurrencyPatterns, mlocValidCurrencyPatterns},
     {kindCurrencySymbols, mlocValidCurrencySymbols},

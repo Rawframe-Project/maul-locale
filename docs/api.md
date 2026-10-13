@@ -200,7 +200,7 @@ Returns a locale's regional preferences (UTS #35), the region's values from CLDR
 
 ## `number.h`
 
-Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a locale's digits, symbols and grouping, rounded as the options say. The options follow ECMA-402's NumberFormat; their zero value is the default, and the zero precision rounds nothing.
+Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a locale's digits, symbols and grouping, rounded as the options say. The options follow ECMA-402's NumberFormat; their zero value is the default, and the zero precision rounds nothing. A formatter also reads a number a person types (record mloc-0032).
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocNumberOptions* options);
@@ -216,6 +216,11 @@ Formats a decimal.  @param formatter  A formatter from mlocInitNumberFormatter. 
 MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlocDecimal* start, const mlocDecimal* end, mlocOutput* output);
 ```
 Formats a range of two decimals (ECMA-402's formatRange): both ends by the formatter, around the locale's range separator, spaced when the ends have affixes of their own ("3–5", "-5 – -3", "3K – 5K"), an affix both share written once when it is longer than one character ("3–5 thousand"); ends that write alike give one number with the approximately sign ("~5"). The start may pass the end.  @param formatter  A formatter from mlocInitNumberFormatter. @param start      The range's start. @param end        Its end. @param output     Receives the text; its part function, when set, receives mlocNumberPart values with the end each belongs to (mloc_numberRangeStart, mloc_numberRangeEnd, or 0 for both). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorInvalid for a null pointer, a NaN end, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseNumber(const mlocNumberFormatter* formatter, const char* text, size_t length, mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut);
+```
+Reads a number as a person types it in the formatter's locale (ICU's DecimalFormat::parse): its digits, any Unicode decimal digits, its separators, signs, pattern affixes, percent or per mille sign (the value then divided by 100 or 1000, as the style multiplies it), NaN, infinity, and an exponent. Reading starts at the first byte and stops where no matcher reads more: "12 apples" gives 12, ending at 2; compare the end with the length to require the whole text. The decimal is exact, its fraction digits those typed (English "1.50" gives 1.50).  @param formatter   A formatter from mlocInitNumberFormatter, of standard, scientific or engineering notation. @param text        UTF-8 text; it need not end in a 0 byte. @param length      Its length in bytes. @param mode        An mlocParseMode. @param decimalOut  Receives the number read. @param endOut      Receives the offset after the number read, or on mloc_errorSyntax the offset reading stopped at. @return mloc_success; mloc_errorSyntax when no number is read (or, in strict mode, the affixes or grouping do not match); mloc_errorCapacity when the digits or the exponent pass the decimal's limits; mloc_errorNotFound for data without the parse sets; mloc_errorInvalid for a null pointer, a mode out of range, a formatter the library did not make or one of compact notation. @par Thread safety Safe from any thread.
 
 ## `plural.h`
 
@@ -292,4 +297,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-51 functions across 8 headers.
+52 functions across 8 headers.

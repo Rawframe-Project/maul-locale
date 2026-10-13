@@ -58,6 +58,8 @@ typedef struct NumberCore
     const uint8_t* currencyText;
     uint8_t currencyLength;
     char currencyCode[3];
+    // The sets parsing reads (parse_tables.h); null in data without them.
+    const uint8_t* parseSets;
 } NumberCore;
 
 // Where a formatter writes: the text pass copies bytes while they fit

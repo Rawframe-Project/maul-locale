@@ -341,6 +341,9 @@ static mlocResult InitCore(NumberCore* coreOut, const mlocDataSet* data, const m
         *compact = table;
         *patternsOut = patterns.bytes;
     }
+    DataSpan sets;
+    core.parseSets =
+        mlocFindDataUnit(&view, kindParseSets, dataNoLocale, &sets) ? sets.bytes : nullptr;
     *coreOut = core;
     return fellBack ? mloc_fellBack : mloc_success;
 }
