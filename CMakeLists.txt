@@ -212,7 +212,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal locale)
+    foreach(area data decimal locale parse)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -220,6 +220,8 @@ if(MAUL_LOCALE_FUZZ)
         target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
         target_link_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
     endforeach()
+    target_compile_definitions(fuzz_parse PRIVATE
+        MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
