@@ -68,5 +68,13 @@ constexpr uint32_t kindUnits = 0x0004000C;
 // The number part: the units each usage prefers by region, a unit of no
 // locale (record mloc-0023).
 constexpr uint32_t kindUnitPreferences = 0x0004000D;
+// The unit names data file: the identifiers it names, a unit of no
+// locale; the names of each width and the long width's extras, units per
+// locale (record mloc-0023, src/unit_tables.h).
+constexpr uint32_t kindUnitIds = 0x0004000E;
+constexpr uint32_t kindUnitNamesLong = 0x0004000F;
+constexpr uint32_t kindUnitNamesShort = 0x00040010;
+constexpr uint32_t kindUnitNamesNarrow = 0x00040011;
+constexpr uint32_t kindUnitNameExtras = 0x00040012;
 
 #endif

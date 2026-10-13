@@ -38,7 +38,8 @@ option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 if(MAUL_LOCALE_BUILD_TOOLS)
     include(FetchContent)
     set(MAUL_UNICODE_NORMALIZATION OFF)
-    set(MAUL_UNICODE_CASE OFF)
+    # The generator lowercases the unit names' patterns.
+    set(MAUL_UNICODE_CASE ON)
     set(MAUL_UNICODE_SECURITY OFF)
     set(MAUL_UNICODE_INSTALL OFF)
     FetchContent_Declare(maul-unicode
@@ -93,7 +94,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit.c
     src/unit_convert.c
     src/unit_data.c
+    src/unit_format.c
     src/unit_id.c
+    src/unit_names.c
     src/unit_prefs.c
     src/wide.c
     src/generated/builtin_data.c
@@ -136,6 +139,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(number_tables WHITEBOX)
     maul_add_test(unit)
     maul_add_test(unit_tables WHITEBOX)
+    maul_add_test(unit_names WHITEBOX)
+    # So are the unit names (record mloc-0024).
+    maul_add_test(unit_format MANUAL)
+    set(MLOC_UNITS_FILE ${PROJECT_SOURCE_DIR}/src/generated/units.mloc)
+    if(EMSCRIPTEN)
+        target_link_options(test_unit_format PRIVATE "SHELL:--embed-file ${MLOC_UNITS_FILE}@/units.mloc")
+        set(MLOC_UNITS_FILE /units.mloc)
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_unit_format PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_unit_format PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
+    add_test(NAME unit_format COMMAND test_unit_format)
     maul_add_test(wide WHITEBOX)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
@@ -182,6 +198,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/number_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/unit_gen.c
+                                    tools/mlocgen/unit_names_gen.c
                                     tools/mlocgen/xml.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.

@@ -454,56 +454,86 @@ static void PutSymbol(NumberWriter* w, const NumberCore* c, NumberSymbol symbol,
     Put(w, kind, text, c->symbolLength[symbol]);
 }
 
-// The length of the space (U+0020, U+00A0, U+202F) at text, or 0.
-static size_t SpaceAt(const uint8_t* text, size_t length)
+// Whether a code point is one ICU trims from the ends of a unit or
+// compact field: [[:Zs:][\u0009][:Bidi_Control:][:Variation_Selector:]]
+// (its default ignorables).
+static bool Ignorable(uint32_t c)
 {
-    if (length >= 1 && text[0] == 0x20)
-    {
-        return 1;
-    }
-    if (length >= 2 && text[0] == 0xC2 && text[1] == 0xA0)
-    {
-        return 2;
-    }
-    return length >= 3 && text[0] == 0xE2 && text[1] == 0x80 && text[2] == 0xAF ? 3 : 0;
+    return c == 0x09 || c == 0x20 || c == 0xA0 || c == 0x061C || c == 0x1680 ||
+           (c >= 0x180B && c <= 0x180F && c != 0x180E) || (c >= 0x2000 && c <= 0x200A) ||
+           c == 0x200E || c == 0x200F || (c >= 0x202A && c <= 0x202F) || c == 0x205F ||
+           (c >= 0x2066 && c <= 0x2069) || c == 0x3000 || (c >= 0xFE00 && c <= 0xFE0F) ||
+           (c >= 0xE0100 && c <= 0xE01EF);
 }
 
-// The length of the space ending text, or 0.
-static size_t SpaceBefore(const uint8_t* text, size_t length)
+// The code point of the well-formed UTF-8 character at text, given its
+// length (1 to 4).
+static uint32_t Decode(const uint8_t* text, size_t length)
 {
-    for (size_t n = 1; n <= 3 && n <= length; n++)
+    static const uint8_t s_leadMasks[5] = {0, 0x7F, 0x1F, 0x0F, 0x07};
+    uint32_t c = text[0] & s_leadMasks[length];
+    for (size_t i = 1; i < length; i++)
     {
-        if (SpaceAt(text + length - n, n) == n)
-        {
-            return n;
-        }
+        c = c << 6 | (text[i] & 0x3F);
     }
-    return 0;
+    return c;
+}
+
+// The length of the character at text, from its lead byte.
+static size_t CharAt(const uint8_t* text, size_t length)
+{
+    size_t n = text[0] < 0x80 ? 1 : text[0] < 0xE0 ? 2 : text[0] < 0xF0 ? 3 : 4;
+    return n <= length ? n : 0;
+}
+
+// The length of the ignorable at text, or 0.
+static size_t IgnorableAt(const uint8_t* text, size_t length)
+{
+    size_t n = length == 0 ? 0 : CharAt(text, length);
+    return n != 0 && Ignorable(Decode(text, n)) ? n : 0;
+}
+
+// The length of the ignorable ending text, or 0.
+static size_t IgnorableBefore(const uint8_t* text, size_t length)
+{
+    size_t n = 1;
+    while (n < 4 && n < length && (text[length - n] & 0xC0) == 0x80)
+    {
+        n++;
+    }
+    return n <= length && IgnorableAt(text + length - n, n) == n ? n : 0;
+}
+
+void mlocWriteTrimmed(NumberWriter* w, uint32_t kind, const uint8_t* text, size_t length)
+{
+    size_t lead = 0;
+    for (size_t n = IgnorableAt(text, length); n != 0; n = IgnorableAt(text + lead, length - lead))
+    {
+        lead += n;
+    }
+    size_t trail = 0;
+    for (size_t n = IgnorableBefore(text + lead, length - lead); n != 0;
+         n = IgnorableBefore(text + lead, length - lead - trail))
+    {
+        trail += n;
+    }
+    Put(w, mloc_numberPartLiteral, text, lead);
+    Put(w, kind, text + lead, length - lead - trail);
+    Put(w, mloc_numberPartLiteral, text + length - trail, trail);
 }
 
 // Writes a run of an affix's text: literal, or in a compact pattern a
 // compact part between the spaces at its ends.
 static void PutText(NumberWriter* w, const uint8_t* text, size_t length, bool compact)
 {
-    if (!compact)
+    if (compact)
+    {
+        mlocWriteTrimmed(w, mloc_numberPartCompact, text, length);
+    }
+    else
     {
         Put(w, mloc_numberPartLiteral, text, length);
-        return;
     }
-    size_t lead = 0;
-    for (size_t n = SpaceAt(text, length); n != 0; n = SpaceAt(text + lead, length - lead))
-    {
-        lead += n;
-    }
-    size_t trail = 0;
-    for (size_t n = SpaceBefore(text + lead, length - lead); n != 0;
-         n = SpaceBefore(text + lead, length - lead - trail))
-    {
-        trail += n;
-    }
-    Put(w, mloc_numberPartLiteral, text, lead);
-    Put(w, mloc_numberPartCompact, text + lead, length - lead - trail);
-    Put(w, mloc_numberPartLiteral, text + length - trail, trail);
 }
 
 // What the minus sign's place in an affix writes: the minus or plus

@@ -157,6 +157,9 @@ extern "C"
         mloc_numberPartApproximatelySign = 15,
         // A currency's symbol, code or name.
         mloc_numberPartCurrency = 16,
+        // A unit's name ("m", "meters"), the spaces around it being
+        // literal.
+        mloc_numberPartUnit = 17,
     } mlocNumberPart;
 
     // In a range's parts, the end a part belongs to, added to its

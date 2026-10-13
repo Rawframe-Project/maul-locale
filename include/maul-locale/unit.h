@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Units of measurement (UTS #35 Parts 2 and 6, record mloc-0023): CLDR's
-// unit identifiers ("kilometer-per-hour", "square-foot", "foot-and-inch")
-// and exact conversion between them by CLDR's units.xml, and the units
-// a locale prefers for a usage.
+// Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 and
+// mloc-0024): CLDR's unit identifiers ("kilometer-per-hour",
+// "square-foot", "foot-and-inch") and exact conversion between them by
+// CLDR's units.xml, the units a locale prefers for a usage, and amounts
+// of a unit formatted with its name in a locale. The names are in a data
+// file of their own, units.mloc, which a program adds to its data set.
 
 #ifndef MAUL_LOCALE_UNIT_H
 #define MAUL_LOCALE_UNIT_H
@@ -126,6 +128,127 @@ extern "C"
         const mlocDataSet* data, const mlocLocale* locale, const char* unit, size_t unitLength,
         const char* usage, size_t usageLength, const mlocDecimal* value,
         const mlocPrecision* precision, mlocOutput* unitOut, mlocUnitAmounts* amountsOut);
+
+    // How a unit's name is written, as ECMA-402's unitDisplay: short
+    // ("3 km"), narrow ("3km") or long ("3 kilometers").
+    typedef enum mlocUnitWidth
+    {
+        mloc_unitWidthShort = 0,
+        mloc_unitWidthNarrow = 1,
+        mloc_unitWidthLong = 2,
+    } mlocUnitWidth;
+
+    // A unit formatter's options; the zero value is the default.
+    typedef struct mlocUnitOptions
+    {
+        // The notation, grouping, sign display, minimum integer digits and
+        // precision, as for numbers; the style must be decimal.
+        mlocNumberOptions number;
+        mlocUnitWidth width;
+    } mlocUnitOptions;
+
+    // A locale's formatter of one unit: a value that points into the data
+    // it was made from, which must outlive it. Opaque; make it with
+    // mlocInitUnitFormatter.
+    typedef struct mlocUnitFormatter
+    {
+        uint64_t opaque[168];
+    } mlocUnitFormatter;
+
+    /// Makes a locale's formatter of a unit: the number as for numbers, in
+    /// the unit's pattern for the plural category of the number as
+    /// rounded ("1 meter", "2 meters"), a category the locale lacks
+    /// taking the other category's. A pattern may leave the number out
+    /// (Arabic's dual names), as CLDR's data does.
+    ///
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
+    /// @param data          The data with the number units, the plural
+    ///                      rules and the unit names (units.mloc).
+    /// @param locale        The locale, canonicalized.
+    /// @param unit          A unit CLDR names ("meter", "kilometer-per-hour",
+    ///                      "celsius").
+    /// @param unitLength    Its length in bytes.
+    /// @param options       The options, or null for the defaults.
+    /// @return mloc_success; mloc_fellBack when the numbering system asked
+    ///         for has no digits and the default stands instead;
+    ///         mloc_errorNotFound for a unit the names do not know or data
+    ///         without the number units or the names; mloc_errorCapacity
+    ///         for a unit whose patterns pass the formatter's room;
+    ///         mloc_errorInvalid for a null pointer, an empty unit, or
+    ///         options out of range or in conflict (a percent style).
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut,
+                                                             const mlocDataSet* data,
+                                                             const mlocLocale* locale,
+                                                             const char* unit, size_t unitLength,
+                                                             const mlocUnitOptions* options);
+
+    /// Formats an amount of the formatter's unit.
+    ///
+    /// @param formatter  A formatter from mlocInitUnitFormatter.
+    /// @param decimal    The amount.
+    /// @param output     Receives the text; its part function, when set,
+    ///                   receives mlocNumberPart values, the unit's name as
+    ///                   mloc_numberPartUnit.
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed) or rounding
+    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         pointer, or a formatter or decimal the library did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter,
+                                                      const mlocDecimal* decimal,
+                                                      mlocOutput* output);
+
+    /// Formats a range of two amounts, as mlocFormatNumberRange does, the
+    /// unit written once in the category CLDR's plural ranges give the
+    /// ends' ("3–5 meters"), as ICU collapses a unit.
+    ///
+    /// @param formatter  A formatter from mlocInitUnitFormatter.
+    /// @param start      The range's start.
+    /// @param end        Its end.
+    /// @param output     Receives the text; its part function, when set,
+    ///                   receives mlocNumberPart values with the end each
+    ///                   belongs to (mloc_numberRangeStart,
+    ///                   mloc_numberRangeEnd, or 0 for both).
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed) or rounding
+    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         pointer, a NaN end, or a formatter or decimal the library
+    ///         did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,
+                                                           const mlocDecimal* start,
+                                                           const mlocDecimal* end,
+                                                           mlocOutput* output);
+
+    /// Writes a unit's display name in a locale ("meters", "m"), as a menu
+    /// of units shows it.
+    ///
+    /// @param data        The data with the unit names.
+    /// @param locale      The locale, canonicalized.
+    /// @param unit        A unit CLDR names.
+    /// @param unitLength  Its length in bytes.
+    /// @param width       The width.
+    /// @param output      Receives the text.
+    /// @return mloc_success; mloc_fellBack when no locale of the chain
+    ///         names it and the identifier is written instead;
+    ///         mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed);
+    ///         mloc_errorNotFound for a unit the names do not know, data
+    ///         without them, or a chain that cannot be walked;
+    ///         mloc_errorInvalid for a null pointer, an empty unit or a
+    ///         width out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitDisplayName(const mlocDataSet* data,
+                                                              const mlocLocale* locale,
+                                                              const char* unit, size_t unitLength,
+                                                              mlocUnitWidth width,
+                                                              mlocOutput* output);
 
 #ifdef __cplusplus
 }

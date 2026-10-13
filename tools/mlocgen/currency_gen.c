@@ -501,66 +501,6 @@ static uint16_t FieldString(Table* t, const char* text, const char* locale)
     return TableAddString(t, text, strlen(text));
 }
 
-// Writes a unit of the sparse shape (currency_tables.h): the table's
-// strings, and per entry its code and row; with flags, a byte per string
-// after the text.
-static void AddSparseUnit(const Table* t, const uint16_t* codes, uint8_t* const* rows,
-                          const size_t* rowSizes, int count, const uint8_t* flags, uint32_t kind,
-                          const char* key, DataFile* file)
-{
-    size_t text = 0;
-    for (int i = 0; i < t->stringCount; i++)
-    {
-        text += t->lengths[i];
-    }
-    size_t rowBytes = 0;
-    for (int i = 0; i < count; i++)
-    {
-        rowBytes += rowSizes[i];
-    }
-    if (text > 0xFFFF || rowBytes > 0xFFFF)
-    {
-        GenDie("a currency unit too large", key);
-    }
-    size_t strings = 2 * ((size_t)t->stringCount + 1);
-    size_t entries = 2 * (size_t)count + 2 * ((size_t)count + 1);
-    size_t size = sparseHeaderSize + strings + entries + rowBytes + text +
-                  (flags != nullptr ? (size_t)t->stringCount : 0);
-    uint8_t* unit = GenAllocate(size);
-    GenPut(unit, (uint64_t)t->stringCount, 2);
-    GenPut(unit + 2, (uint64_t)count, 2);
-    GenPut(unit + 4, text, 4);
-    GenPut(unit + 8, rowBytes, 4);
-    uint8_t* at = unit + sparseHeaderSize;
-    uint8_t* textAt = at + strings + entries + rowBytes;
-    size_t offset = 0;
-    for (int i = 0; i < t->stringCount; i++)
-    {
-        GenPut(at + 2 * (size_t)i, offset, 2);
-        memcpy(textAt + offset, t->texts[i], t->lengths[i]);
-        offset += t->lengths[i];
-    }
-    GenPut(at + 2 * (size_t)t->stringCount, offset, 2);
-    at += strings;
-    uint8_t* rowOffsets = at + 2 * (size_t)count;
-    uint8_t* rowAt = rowOffsets + 2 * ((size_t)count + 1);
-    offset = 0;
-    for (int i = 0; i < count; i++)
-    {
-        GenPut(at + 2 * (size_t)i, codes[i], 2);
-        GenPut(rowOffsets + 2 * (size_t)i, offset, 2);
-        memcpy(rowAt + offset, rows[i], rowSizes[i]);
-        offset += rowSizes[i];
-    }
-    GenPut(rowOffsets + 2 * (size_t)count, offset, 2);
-    if (flags != nullptr)
-    {
-        memcpy(textAt + text, flags, (size_t)t->stringCount);
-    }
-    DataFileAdd(file, kind, key, unit, size);
-    free(unit);
-}
-
 static void AddSymbolUnit(const CurrencyInput* input, Table* t, Own* own, int count,
                           const char* locale, const char* key, DataFile* file)
 {
@@ -600,8 +540,8 @@ static void AddSymbolUnit(const CurrencyInput* input, Table* t, Own* own, int co
         s_rowPointers[i] = row;
         s_rowSizes[i] = size;
     }
-    AddSparseUnit(t, s_codes, s_rowPointers, s_rowSizes, count, s_flags, kindCurrencySymbols, key,
-                  file);
+    TableAddSparseUnit(t, s_codes, s_rowPointers, s_rowSizes, count, s_flags, kindCurrencySymbols,
+                       key, file);
     TableClear(t);
 }
 
@@ -631,8 +571,8 @@ static void AddNameUnit(Table* t, Own* own, int count, const char* locale, const
         s_rowPointers[i] = row;
         s_rowSizes[i] = size;
     }
-    AddSparseUnit(t, s_codes, s_rowPointers, s_rowSizes, count, nullptr, kindCurrencyNames, key,
-                  file);
+    TableAddSparseUnit(t, s_codes, s_rowPointers, s_rowSizes, count, nullptr, kindCurrencyNames,
+                       key, file);
     TableClear(t);
 }
 

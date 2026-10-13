@@ -328,6 +328,7 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
         AppendOuter(&c.outer, &texts);
     }
     c.outer.textKind = mloc_numberPartCurrency;
+    c.outer.patternKind = mloc_numberPartLiteral;
     memcpy(c.outer.code, c.formatter.core.currencyCode, sizeof(c.outer.code));
     memset(formatterOut, 0, sizeof(*formatterOut));
     memcpy(formatterOut, &c, sizeof(c));

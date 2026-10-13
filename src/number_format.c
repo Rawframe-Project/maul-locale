@@ -60,7 +60,8 @@ bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter
            (c->currencyText != nullptr || c->currencyLength == 0) && f->minInteger >= 1 &&
            f->minInteger <= maxMinInteger && f->grouping <= mloc_groupingOff &&
            f->signDisplay <= mloc_signNegative && f->notation <= mloc_notationCompactLong &&
-           f->style <= mloc_numberPerMille && (c->primary == 0) == (c->secondary == 0) &&
+           f->style <= mloc_numberPerMille && f->unscaled <= 1 &&
+           (c->primary == 0) == (c->secondary == 0) &&
            IsCompact(f->notation) == (f->compactTable != nullptr) &&
            (f->compactTable == nullptr ||
             (f->compactPatterns != nullptr && f->pluralRule < mlocPluralRuleSetCount)) &&
@@ -91,7 +92,7 @@ static mlocResult Compact(const Formatter* f, mlocDecimal* d, NumberLayout* layo
 // notation its mantissa.
 static mlocResult Round(const Formatter* f, mlocDecimal* d, NumberLayout* layout)
 {
-    mlocResult r = f->style == mloc_numberDecimal
+    mlocResult r = f->style == mloc_numberDecimal || f->unscaled != 0
                        ? mloc_success
                        : mlocScaleDecimal(d, f->style == mloc_numberPercent ? 2 : 3);
     if (r == mloc_success && layout->scientific)
@@ -155,6 +156,13 @@ static uint32_t Category(const Formatter* f, const Prepared* p)
     return mlocSelectPluralRule(f->pluralRule, &operands);
 }
 
+// Whether a category's outer pattern writes the number.
+static bool HasNumber(const Outer* o, uint32_t category)
+{
+    return memchr(o->patternText + o->patternStart[category], currencyTextNumber,
+                  o->patternLength[category]) != nullptr;
+}
+
 // Writes the part of an outer pattern before its number, or after it.
 static void WriteOuterSide(const Outer* o, uint32_t category, bool before, NumberWriter* w)
 {
@@ -171,7 +179,7 @@ static void WriteOuterSide(const Outer* o, uint32_t category, bool before, Numbe
         {
             continue;
         }
-        mlocWriteLiteral(w, (const char*)pattern + literal, at - literal);
+        mlocWriteTrimmed(w, o->patternKind, pattern + literal, at - literal);
         if (pattern[at] == currencyTextOther)
         {
             const uint8_t* text = o->text[category];
@@ -180,7 +188,7 @@ static void WriteOuterSide(const Outer* o, uint32_t category, bool before, Numbe
         }
         literal = at + 1;
     }
-    mlocWriteLiteral(w, (const char*)pattern + literal, end - literal);
+    mlocWriteTrimmed(w, o->patternKind, pattern + literal, end - literal);
 }
 
 // Writes a prepared number, within an outer pattern when there is one.
@@ -191,7 +199,10 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     {
         WriteOuterSide(o, category, true, w);
     }
-    mlocWriteNumber(&p->core, &p->decimal, p->sign, &p->layout, w);
+    if (o == nullptr || HasNumber(o, category))
+    {
+        mlocWriteNumber(&p->core, &p->decimal, p->sign, &p->layout, w);
+    }
     if (o != nullptr)
     {
         WriteOuterSide(o, category, false, w);
@@ -320,22 +331,25 @@ static void WriteRange(const NumberCore* core, Prepared* a, Prepared* b, NumberW
 }
 
 // Writes a range within an outer pattern, once around both ends, as ICU
-// collapses a long name: in the category CLDR's plural ranges give the
-// ends' ("1–5 долараў"), the start's when they write alike.
+// collapses a long name or a unit: in the category CLDR's plural ranges
+// give the ends' ("1–5 долараў"), other where they give none, the
+// start's when the ends write alike.
 static void WriteOuterRange(const Formatter* f, const Outer* o, Prepared* a, Prepared* b,
                             NumberWriter* w)
 {
     mlocPluralCategory category = (mlocPluralCategory)Category(f, a);
-    mlocPluralCategory end = (mlocPluralCategory)Category(f, b);
-    if (!Alike(a, b) && mlocSelectPluralRange(&o->rules, category, end, &category) != mloc_success)
+    if (!Alike(a, b))
     {
-        category = end;
+        category = mlocResolvePluralRange(&o->rules, category, (mlocPluralCategory)Category(f, b));
     }
     w->source = 0;
     WriteOuterSide(o, category, true, w);
-    WriteRange(&f->core, a, b, w);
-    w->source = 0;
-    WriteOuterSide(o, category, false, w);
+    if (HasNumber(o, category))
+    {
+        WriteRange(&f->core, a, b, w);
+        w->source = 0;
+        WriteOuterSide(o, category, false, w);
+    }
 }
 
 static void WriteEither(const Formatter* f, const Outer* outer, Prepared* a, Prepared* b,

@@ -15,6 +15,7 @@
 #include "number_data.h"
 #include "plural.h"
 #include "unit_data.h"
+#include "unit_names.h"
 
 static const DataKind s_kinds[] = {
     {kindLocaleLikely, mlocValidLikely},
@@ -38,6 +39,11 @@ static const DataKind s_kinds[] = {
     {kindCurrencyRegions, mlocValidCurrencyRegions},
     {kindUnits, mlocValidUnits},
     {kindUnitPreferences, mlocValidUnitPreferences},
+    {kindUnitIds, mlocValidUnitIds},
+    {kindUnitNamesLong, mlocValidUnitNames},
+    {kindUnitNamesShort, mlocValidUnitNames},
+    {kindUnitNamesNarrow, mlocValidUnitNames},
+    {kindUnitNameExtras, mlocValidUnitNameExtras},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

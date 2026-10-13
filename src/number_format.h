@@ -29,6 +29,9 @@ typedef struct Formatter
     uint8_t minInteger;
     // The locale's cardinal rule set, for compact patterns.
     uint8_t pluralRule;
+    // 1 for a percent or per mille style that writes the value as it is
+    // (the unit percent, as ICU), 0 to scale it.
+    uint8_t unscaled;
     // Which formatter made it.
     uint8_t stamp;
 } Formatter;
@@ -45,10 +48,13 @@ bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter
 
 // A pattern around a formatted number, by the plural category of the
 // number as rounded (a currency's long name, "{0} US dollars"; the ISO
-// append, the same for every category): each category's pattern, where
-// currencyTextNumber stands for the number and currencyTextOther for its
-// text (currency_tables.h), and that text, a part of textKind; the code
-// where a category's text is null.
+// append, the same for every category; a unit's name): each category's
+// pattern, where currencyTextNumber stands for the number and
+// currencyTextOther for its text (currency_tables.h), and that text, a
+// part of textKind; the code where a category's text is null. The
+// pattern's own text is a part of patternKind between the spaces at its
+// ends; a pattern without the number writes none (Arabic's dual unit
+// names, as ICU).
 typedef struct Outer
 {
     const uint8_t* patternText;
@@ -57,6 +63,7 @@ typedef struct Outer
     const uint8_t* text[6];
     uint16_t textLength[6];
     uint32_t textKind;
+    uint32_t patternKind;
     char code[3];
     // The plural rules whose ranges give a range's category; any for a
     // pattern the same in every category.

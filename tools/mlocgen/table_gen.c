@@ -5,6 +5,7 @@
 
 #include "table_gen.h"
 
+#include "currency_tables.h"
 #include "number_tables.h"
 
 #include <stdio.h>
@@ -160,4 +161,64 @@ void TableClear(Table* t)
     memset(t, 0, sizeof(*t));
     t->recordSize = recordSize;
     t->distinctRecords = distinct;
+}
+
+// Writes a unit of the sparse shape (currency_tables.h): the table's
+// strings, and per entry its code and row; with flags, a byte per string
+// after the text.
+void TableAddSparseUnit(const Table* t, const uint16_t* codes, uint8_t* const* rows,
+                        const size_t* rowSizes, int count, const uint8_t* flags, uint32_t kind,
+                        const char* key, DataFile* file)
+{
+    size_t text = 0;
+    for (int i = 0; i < t->stringCount; i++)
+    {
+        text += t->lengths[i];
+    }
+    size_t rowBytes = 0;
+    for (int i = 0; i < count; i++)
+    {
+        rowBytes += rowSizes[i];
+    }
+    if (text > 0xFFFF || rowBytes > 0xFFFF)
+    {
+        GenDie("a sparse unit too large", key);
+    }
+    size_t strings = 2 * ((size_t)t->stringCount + 1);
+    size_t entries = 2 * (size_t)count + 2 * ((size_t)count + 1);
+    size_t size = sparseHeaderSize + strings + entries + rowBytes + text +
+                  (flags != nullptr ? (size_t)t->stringCount : 0);
+    uint8_t* unit = GenAllocate(size);
+    GenPut(unit, (uint64_t)t->stringCount, 2);
+    GenPut(unit + 2, (uint64_t)count, 2);
+    GenPut(unit + 4, text, 4);
+    GenPut(unit + 8, rowBytes, 4);
+    uint8_t* at = unit + sparseHeaderSize;
+    uint8_t* textAt = at + strings + entries + rowBytes;
+    size_t offset = 0;
+    for (int i = 0; i < t->stringCount; i++)
+    {
+        GenPut(at + 2 * (size_t)i, offset, 2);
+        memcpy(textAt + offset, t->texts[i], t->lengths[i]);
+        offset += t->lengths[i];
+    }
+    GenPut(at + 2 * (size_t)t->stringCount, offset, 2);
+    at += strings;
+    uint8_t* rowOffsets = at + 2 * (size_t)count;
+    uint8_t* rowAt = rowOffsets + 2 * ((size_t)count + 1);
+    offset = 0;
+    for (int i = 0; i < count; i++)
+    {
+        GenPut(at + 2 * (size_t)i, codes[i], 2);
+        GenPut(rowOffsets + 2 * (size_t)i, offset, 2);
+        memcpy(rowAt + offset, rows[i], rowSizes[i]);
+        offset += rowSizes[i];
+    }
+    GenPut(rowOffsets + 2 * (size_t)count, offset, 2);
+    if (flags != nullptr)
+    {
+        memcpy(textAt + text, flags, (size_t)t->stringCount);
+    }
+    DataFileAdd(file, kind, key, unit, size);
+    free(unit);
 }

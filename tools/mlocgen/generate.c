@@ -242,15 +242,17 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     }
     DataFile data = {0};
     DataFile names = {0};
+    DataFile unitNames = {0};
     Text rules = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
-        !GenerateNumberUnits(commonDirectory, &data, &names, errorOut, errorCapacity) ||
+        !GenerateNumberUnits(commonDirectory, &data, &names, &unitNames, errorOut, errorCapacity) ||
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity))
     {
         DataFileFree(&data);
         DataFileFree(&names);
+        DataFileFree(&unitNames);
         return 0;
     }
     // The compiled rules are code tables the data's indexes name, so they
@@ -269,12 +271,19 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     size_t namesSize = 0;
     uint8_t* namesBytes = DataFileWrite(&names, &version, &namesSize);
     Text namesFile = {.bytes = (char*)namesBytes, .size = namesSize};
+    // So do the unit names (record mloc-0024).
+    size_t unitNamesSize = 0;
+    uint8_t* unitNamesBytes = DataFileWrite(&unitNames, &version, &unitNamesSize);
+    Text unitNamesFile = {.bytes = (char*)unitNamesBytes, .size = unitNamesSize};
     int ok = WriteFile(root, "data_version.h", &header, errorOut, errorCapacity) &&
              WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
-             WriteFile(root, "currency-names.mloc", &namesFile, errorOut, errorCapacity);
+             WriteFile(root, "currency-names.mloc", &namesFile, errorOut, errorCapacity) &&
+             WriteFile(root, "units.mloc", &unitNamesFile, errorOut, errorCapacity);
     free(namesBytes);
+    free(unitNamesBytes);
     DataFileFree(&names);
+    DataFileFree(&unitNames);
     free(header.bytes);
     free(builtin.bytes);
     free(rules.bytes);

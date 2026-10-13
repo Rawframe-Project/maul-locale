@@ -23,4 +23,10 @@ mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
 // mlocFindPluralRule.
 mlocPluralCategory mlocSelectPluralRule(uint8_t rule, const mlocPluralOperands* operands);
 
+// A range's category by valid cardinal rules' table, other where it has no
+// entry, as ICU's StandardPluralRanges resolves the plural of a unit or
+// currency name around a range.
+mlocPluralCategory mlocResolvePluralRange(const mlocPluralRules* rules, mlocPluralCategory start,
+                                          mlocPluralCategory end);
+
 #endif

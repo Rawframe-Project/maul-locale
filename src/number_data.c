@@ -489,11 +489,9 @@ static bool ValidRow(const uint8_t* row, uint32_t length, uint32_t fieldCount,
     return true;
 }
 
-// Whether a sparse unit's sizes hold, its strings are valid non-empty
-// text, its codes ascend and its rows are valid; flags, when the unit has
-// a byte per string after its text, are letter flags.
-static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFields, bool flags)
+bool mlocValidSparse(DataSpan payload, const SparseShape* shape)
 {
+    bool flags = shape->flags;
     if (payload.size < sparseHeaderSize)
     {
         return false;
@@ -521,7 +519,8 @@ static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFi
     {
         uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
         uint32_t end = mlocLoad16(t.offsets + (size_t)s * 2 + 2);
-        if (end <= start || end > t.textSize || !ValidText(t.text + start, end - start, 0) ||
+        if (end < start + (shape->empty ? 0 : 1) || end > t.textSize ||
+            !ValidText(t.text + start, end - start, 0) ||
             (flags && t.text[t.textSize + s] > (currencyStartsAlpha | currencyEndsAlpha)))
         {
             return false;
@@ -534,8 +533,10 @@ static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFi
         uint32_t start = mlocLoad16(t.rowOffsets + (size_t)e * 2);
         uint32_t end = mlocLoad16(t.rowOffsets + (size_t)e * 2 + 2);
         // Each row ends within the rows before any of it is read.
-        if (code <= previous || code > currencyMaxCode || end <= start || end > t.rowSize ||
-            !ValidRow(t.rows + start, end - start, fieldCount, stringFields, t.stringCount))
+        if ((e > 0 && code <= previous) || code < shape->minCode || code > shape->maxCode ||
+            end <= start || end > t.rowSize ||
+            !ValidRow(t.rows + start, end - start, shape->fieldCount, shape->stringFields,
+                      t.stringCount))
         {
             return false;
         }
@@ -547,14 +548,26 @@ static bool ValidSparse(DataSpan payload, uint32_t fieldCount, uint32_t stringFi
 bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload)
 {
     (void)view;
-    uint32_t strings = (1u << currencyFieldCount) - 1 - (1u << currencyOwnPattern);
-    return ValidSparse(payload, currencyFieldCount, strings, true);
+    static const SparseShape s_shape = {
+        .fieldCount = currencyFieldCount,
+        .stringFields = (1u << currencyFieldCount) - 1 - (1u << currencyOwnPattern),
+        .minCode = 1,
+        .maxCode = currencyMaxCode,
+        .flags = true,
+    };
+    return mlocValidSparse(payload, &s_shape);
 }
 
 bool mlocValidCurrencyNames(const DataView* view, DataSpan payload)
 {
     (void)view;
-    return ValidSparse(payload, currencyNameFieldCount, (1u << currencyNameFieldCount) - 1, false);
+    static const SparseShape s_shape = {
+        .fieldCount = currencyNameFieldCount,
+        .stringFields = (1u << currencyNameFieldCount) - 1,
+        .minCode = 1,
+        .maxCode = currencyMaxCode,
+    };
+    return mlocValidSparse(payload, &s_shape);
 }
 
 const uint8_t* mlocFindSparseRow(const SparseTable* t, uint16_t code)

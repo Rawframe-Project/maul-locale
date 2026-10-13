@@ -46,8 +46,10 @@ notation and by name (the names are a data file of their own,
 `src/generated/currency-names.mloc`), and the currency a locale or
 region uses on a day; and exact conversion between CLDR's units and
 the units a locale prefers for a usage (every conversion and preference
-CLDR's unit test data gives passes on every push). The library has
-46 public functions.
+CLDR's unit test data gives passes on every push), and amounts and
+ranges of the units CLDR names in each width, with their display names
+(the names are a data file of their own, `src/generated/units.mloc`).
+The library has 50 public functions.
 
 ## Building
 

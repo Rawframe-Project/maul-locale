@@ -233,6 +233,14 @@ mlocResult mlocSelectPluralRange(const mlocPluralRules* rules, mlocPluralCategor
     return mloc_success;
 }
 
+mlocPluralCategory mlocResolvePluralRange(const mlocPluralRules* rules, mlocPluralCategory start,
+                                          mlocPluralCategory end)
+{
+    const uint8_t* table = (const uint8_t*)rules->opaque + offsetof(Rules, ranges);
+    uint8_t category = table[start * categoryCount + end];
+    return category < categoryCount ? (mlocPluralCategory)category : mloc_pluralOther;
+}
+
 mlocResult mlocGetPluralCategories(const mlocPluralRules* rules, uint32_t* categoriesOut)
 {
     Rules r;

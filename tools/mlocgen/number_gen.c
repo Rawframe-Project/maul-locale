@@ -17,6 +17,7 @@
 #include "map.h"
 #include "number_tables.h"
 #include "table_gen.h"
+#include "unit_names_gen.h"
 #include "xml.h"
 
 #include <stdint.h>
@@ -1400,7 +1401,7 @@ static const char* NextKeyed(Generator* g, const char* locale, const char* key)
 }
 
 int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
-                        char* errorOut, size_t errorCapacity)
+                        DataFile* unitNames, char* errorOut, size_t errorCapacity)
 {
     static Generator s_g;
     memset(&s_g, 0, sizeof(s_g));
@@ -1473,7 +1474,15 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
         .context = g,
         .names = names,
     };
-    int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity);
+    UnitNamesInput units = {
+        .commonDirectory = commonDirectory,
+        .cldr = &g->cldr,
+        .keys = &g->keys,
+        .ids = (const char* const*)ids,
+        .count = count,
+    };
+    int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
+             GenerateUnitNames(&units, unitNames, errorOut, errorCapacity);
     AddSystemUnit(g, file);
     TableAddUnit(&g->currencySets, kindCurrencyPatterns, nullptr, file);
     TableAddUnit(&g->symbols, kindNumberSymbols, nullptr, file);

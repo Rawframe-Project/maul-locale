@@ -59,6 +59,13 @@ uint16_t TableAddRecord(Table* t, const uint8_t* record);
 // Adds a table as a unit of a kind, under a locale key or none.
 void TableAddUnit(const Table* t, uint32_t kind, const char* key, DataFile* file);
 
+// Adds a unit in the sparse shape (src/currency_tables.h): the table's
+// strings, the entries' codes (ascending) and rows, and with flags a
+// byte per string after the text.
+void TableAddSparseUnit(const Table* t, const uint16_t* codes, uint8_t* const* rows,
+                        const size_t* rowSizes, int count, const uint8_t* flags, uint32_t kind,
+                        const char* key, DataFile* file);
+
 // Frees a table's contents and empties it, keeping its record settings.
 void TableClear(Table* t);
 

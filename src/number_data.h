@@ -71,6 +71,23 @@ typedef struct SparseTable
 
 SparseTable mlocReadSparseTable(DataSpan unit);
 
+// What a kind's sparse units hold: the fields, those that are strings, the
+// least and the largest code, a byte of letter flags per string after the text, and
+// whether a string may be empty.
+typedef struct SparseShape
+{
+    uint32_t fieldCount;
+    uint32_t stringFields;
+    uint32_t minCode;
+    uint32_t maxCode;
+    bool flags;
+    bool empty;
+} SparseShape;
+
+// Whether a sparse unit's sizes hold, its strings are valid text, its
+// codes ascend and its rows are valid, as its shape says.
+bool mlocValidSparse(DataSpan payload, const SparseShape* shape);
+
 // The row of a code in a valid sparse unit, or null.
 const uint8_t* mlocFindSparseRow(const SparseTable* table, uint16_t code);
 

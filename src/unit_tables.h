@@ -67,6 +67,34 @@
 //   none), and the threshold scaled by its places (u32): 0.9 is 9 with
 //   1 place. A run's last entry has the threshold 0.
 // - The text.
+//
+// The unit names ship as a data file of their own (units.mloc, record
+// mloc-0024). Its unit of no locale lists the identifiers the names
+// units know: a header (u16 count, u16 0, u32 text size), the
+// identifiers' text offsets (u32 each, count + 1, from 0 to the text
+// size, ascending), their kinds (u8 each, the unitId values), then the
+// text: identifiers strictly ascending by their bytes, each of ASCII
+// lowercase letters, digits, '-' and ':'. An identifier is a core unit
+// identifier ("meter", "kilometer-per-hour"), a compound key ("per",
+// "times", "power2", "10p3", "1024p3") or a power of a gender
+// ("power2:feminine"); its index is its code in the names units.
+//
+// The names of a width (long, short, narrow): a unit per locale key in
+// the sparse shape (currency_tables.h, codes from 0) with unitNameFields
+// fields, all strings: the display name, the pattern for each plural
+// category zero to other, and the per-unit pattern ("{0} per meter"); a
+// prefix's, "per"'s and "times"'s pattern is its other field. The values
+// are CLDR's resolved values (width and unit aliases followed), each
+// filed at a key where it differs from what the key's chain gives, a
+// plural category the chain lacks taking the other category's; a power
+// of a gender the chain lacks takes the plain power's field. Patterns
+// keep "{0}" and "{1}".
+//
+// The long width's extras, in the same shape with unitExtraFields
+// fields: the unit's grammatical gender, and each pattern of a unit or
+// prefix lowercased by the locale's case rules (ICU lowercases a core
+// unit under a prefix or power in long names), an empty string where
+// lowercasing changes nothing.
 
 #ifndef MLOC_UNIT_TABLES_H
 #define MLOC_UNIT_TABLES_H
@@ -91,6 +119,32 @@ enum
     unitEntrySize = 12,
     // The most decimal places a threshold has.
     unitMaxPlaces = 9,
+    unitIdsHeaderSize = 8,
+    // The longest identifier the names know.
+    unitMaxNameId = 64,
+};
+
+// The kinds of a names identifier.
+enum
+{
+    unitIdUnit = 0,
+    unitIdPrefix = 1,
+    unitIdPower = 2,
+    // "per" and "times".
+    unitIdCompound = 3,
+};
+
+// The fields of a names unit and of the extras.
+enum
+{
+    unitNameDisplay = 0,
+    unitNameZero = 1,
+    unitNameOther = 6,
+    unitNamePer = 7,
+    unitNameFields = 8,
+    unitExtraGender = 0,
+    unitExtraLowerZero = 1,
+    unitExtraFields = 7,
 };
 
 // The flags of a simple unit.
