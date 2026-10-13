@@ -15,6 +15,8 @@
 #include "number_format.h"
 #include "plural.h"
 #include "plural_rules.h"
+#include "unit_compound.h"
+#include "unit_id.h"
 #include "unit_names.h"
 
 #include "maul-locale/unit.h"
@@ -94,18 +96,19 @@ static bool AddPattern(UnitFormat* u, size_t* used, uint32_t category, const uin
     return true;
 }
 
-// Fills the patterns of each category from a unit's names.
-static mlocResult AddPatterns(UnitFormat* u, const UnitNameFields* names)
+// Fills the patterns of each category from a unit's forms, a category
+// without its own taking other's.
+static mlocResult AddPatterns(UnitFormat* u, const UnitForms* forms)
 {
     size_t used = 0;
     for (uint32_t c = 0; c < unitCategories; c++)
     {
-        uint32_t field = mlocUnitPatternField(names, c);
-        if (field == unitNameFields)
+        const UnitPattern* p = forms->form[c].present ? &forms->form[c] : &forms->form[5];
+        if (!p->present)
         {
             return mloc_errorNotFound;
         }
-        if (!AddPattern(u, &used, c, names->text[field], names->length[field]))
+        if (!AddPattern(u, &used, c, (const uint8_t*)p->text, p->length))
         {
             return mloc_errorCapacity;
         }
@@ -130,13 +133,37 @@ static mlocNumberStyle UnitStyle(const char* unit, size_t length, const mlocUnit
                                                            : mloc_numberDecimal;
 }
 
-// Checks the unit's arguments and finds its names.
+// A unit's normal identifier; one the unit table does not know but the
+// names do ("generic", which converts to nothing) as it is.
+static mlocResult NormalName(const mlocDataSet* data, const char* unit, size_t length, char* out,
+                             size_t capacity, size_t* lengthOut)
+{
+    mlocResult r = mlocNormalizeUnitName(data, unit, length, out, capacity, lengthOut);
+    uint8_t kind = 0;
+    if (r == mloc_errorNotFound && length <= capacity &&
+        mlocUnitNameKind(data, unit, length, &kind) && kind == unitIdUnit)
+    {
+        memcpy(out, unit, length);
+        *lengthOut = length;
+        return mloc_success;
+    }
+    return r;
+}
+
+// Finds the names of a unit CLDR names, by its normal identifier.
 static mlocResult FindNames(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
                             size_t unitLength, uint32_t kind, UnitNameFields* names)
 {
+    char id[unitMaxIdLength];
+    size_t length = 0;
     uint8_t idKind = 0;
-    if (!mlocUnitNameKind(data, unit, unitLength, &idKind) || idKind != unitIdUnit ||
-        !mlocGatherUnitNames(data, locale, kind, unit, unitLength, names))
+    mlocResult r = NormalName(data, unit, unitLength, id, sizeof(id), &length);
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    if (!mlocUnitNameKind(data, id, length, &idKind) || idKind != unitIdUnit ||
+        !mlocGatherUnitNames(data, locale, kind, id, length, names))
     {
         return mloc_errorNotFound;
     }
@@ -154,15 +181,16 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     {
         return mloc_errorInvalid;
     }
-    UnitNameFields names;
-    mlocResult found = FindNames(data, locale, unit, unitLength, s_widthKinds[o->width], &names);
-    if (found < 0)
-    {
-        return found;
-    }
+    char id[unitMaxIdLength];
+    size_t idLength = 0;
+    UnitForms forms;
     UnitFormat u;
     memset(&u, 0, sizeof(u));
-    found = AddPatterns(&u, &names);
+    mlocResult found = NormalName(data, unit, unitLength, id, sizeof(id), &idLength);
+    found = found == mloc_success
+                ? mlocBuildUnitForms(data, locale, id, idLength, s_widthKinds[o->width], &forms)
+                : found;
+    found = found == mloc_success ? AddPatterns(&u, &forms) : found;
     if (found < 0)
     {
         return found;
@@ -170,7 +198,7 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     Formatter* f = &u.formatter;
     bool compact = o->number.notation == mloc_notationCompactShort ||
                    o->number.notation == mloc_notationCompactLong;
-    mlocNumberStyle style = UnitStyle(unit, unitLength, o);
+    mlocNumberStyle style = UnitStyle(id, idLength, o);
     mlocResult result = compact
                             ? mlocInitCompactCore(&f->core, data, locale,
                                                   o->number.notation == mloc_notationCompactLong,
@@ -263,13 +291,13 @@ mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* loc
     {
         return mloc_errorInvalid;
     }
-    UnitNameFields names;
+    UnitNameFields names = {0};
     mlocResult found = FindNames(data, locale, unit, unitLength, s_widthKinds[width], &names);
     if (found < 0)
     {
         return found;
     }
-    bool named = (names.found & 1u << unitNameDisplay) != 0;
+    bool named = (names.found & 1u << unitNameDisplay) != 0 && names.length[unitNameDisplay] != 0;
     const void* text = named ? (const void*)names.text[unitNameDisplay] : unit;
     size_t length = named ? names.length[unitNameDisplay] : unitLength;
     output->length = length;

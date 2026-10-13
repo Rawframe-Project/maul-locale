@@ -3,9 +3,10 @@
 //
 // The unit names' validators and identifier lookup (unit_names.h,
 // unit_tables.h) on units built here: valid ones pass and their
-// identifiers are found; copies with one field spoiled are refused. Then
-// the fields gathered along a chain from the unit names data file, a
-// source without the identifiers skipped, and the trim of a unit's name
+// identifiers are found; copies with one field spoiled are refused, the
+// derivations' as well. Then the fields gathered along a chain from the
+// unit names data file, a source without the identifiers skipped, the
+// derivations looked up by language, and the trim of a unit's name
 // (number_core.h).
 
 #include "bytes.h"
@@ -142,9 +143,9 @@ static void TestNames(void)
               mlocValidUnitNameExtras(nullptr, (DataSpan){s_unit, size}),
           "a names unit, code 0 among its codes");
     size = BuildSparse("masculine", "");
-    CHECK(!mlocValidUnitNames(nullptr, (DataSpan){s_unit, size}) &&
+    CHECK(mlocValidUnitNames(nullptr, (DataSpan){s_unit, size}) &&
               mlocValidUnitNameExtras(nullptr, (DataSpan){s_unit, size}),
-          "an empty string in the extras alone");
+          "an empty string in the names and the extras");
     size = BuildSparse("meters", "{0} meters");
     s_unit[sparseHeaderSize + 12] = 1u << 0 | 1u << 1 | 1u << 6;
     CHECK(!mlocValidUnitNames(nullptr, (DataSpan){s_unit, size}),
@@ -162,6 +163,83 @@ static bool Text(const UnitNameFields* f, uint32_t field, const char* expected)
 {
     return (f->found & 1u << field) != 0 && f->length[field] == strlen(expected) &&
            memcmp(f->text[field], expected, f->length[field]) == 0;
+}
+
+// Builds a derivations unit of two records, "de" and "fr"; its size.
+static uint32_t BuildDerivations(void)
+{
+    memset(s_unit, 0, sizeof(s_unit));
+    Put(s_unit, 2, 2);
+    uint8_t* at = s_unit + unitDerivationsHeaderSize;
+    memcpy(at, "de", 2);
+    memset(at + unitDerivationLanguage, unitDerivedCompound, 8);
+    at[unitDerivationLanguage + 1] = 1;
+    at += unitDerivationSize;
+    memcpy(at, "fr", 2);
+    memset(at + unitDerivationLanguage, unitDerivedNone, 8);
+    at[unitDerivationLanguage] = 5;
+    return unitDerivationsHeaderSize + 2 * unitDerivationSize;
+}
+
+static bool ValidDerivations(uint32_t size)
+{
+    return mlocValidUnitDerivations(nullptr, (DataSpan){s_unit, size});
+}
+
+static void TestDerivations(void)
+{
+    uint32_t size = BuildDerivations();
+    CHECK(ValidDerivations(size), "derivations: categories, compound and none");
+    CHECK(!ValidDerivations(size - 1) && !ValidDerivations(size + unitDerivationSize) &&
+              !ValidDerivations(2),
+          "a size that is not the count's");
+    s_unit[2] = 1;
+    CHECK(!ValidDerivations(size), "a header's padding set");
+    uint8_t* second = s_unit + unitDerivationsHeaderSize + unitDerivationSize;
+    struct
+    {
+        uint32_t offset;
+        uint8_t value;
+        const char* what;
+    } spoils[] = {
+        {0, 'F', "a language not in lowercase"},
+        {0, 0, "an empty language"},
+        {3, 'x', "a language's padding set"},
+        {unitDerivationLanguage + 1, 6, "a value past the categories"},
+        {unitDerivationLanguage + 7, unitDerivedCompound - 1, "a value below compound"},
+        {0, 'a', "a language not after the one before"},
+    };
+    for (size_t i = 0; i < sizeof(spoils) / sizeof(spoils[0]); i++)
+    {
+        size = BuildDerivations();
+        second[spoils[i].offset] = spoils[i].value;
+        CHECK(!ValidDerivations(size), spoils[i].what);
+    }
+    size = BuildDerivations();
+    memcpy(second, "de", 2);
+    CHECK(!ValidDerivations(size), "a language twice");
+}
+
+static void TestDerivationLookup(void)
+{
+    mlocLocale en;
+    mlocLocale fr;
+    mlocLocale de;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocParseLocale("fr_CA", 5, &fr).status == mloc_success &&
+              mlocParseLocale("de", 2, &de).status == mloc_success,
+          "the locales");
+    uint8_t value0 = 0;
+    uint8_t value1 = 0;
+    CHECK(mlocUnitDerivation(&s_data, &en, unitDeriveTimes, &value0, &value1) && value0 == 1 &&
+              value1 == unitDerivedCompound,
+          "a language the derivations do not list takes root's");
+    CHECK(mlocUnitDerivation(&s_data, &fr, unitDeriveTimes, &value0, &value1) &&
+              value0 == unitDerivedCompound && value1 == unitDerivedCompound,
+          "a locale takes its language's");
+    CHECK(mlocUnitDerivation(&s_data, &de, unitDerivePer, &value0, &value1) &&
+              value0 == unitDerivedCompound && value1 == 1,
+          "a structure's two values");
 }
 
 static void TestGather(void)
@@ -267,6 +345,7 @@ int main(void)
 {
     TestIds();
     TestNames();
+    TestDerivations();
     TestTrim();
     if (!OpenData())
     {
@@ -274,5 +353,6 @@ int main(void)
         return 2;
     }
     TestGather();
+    TestDerivationLookup();
     return s_failures == 0 ? 0 : 1;
 }

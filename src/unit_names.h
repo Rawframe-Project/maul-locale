@@ -20,6 +20,7 @@
 bool mlocValidUnitIds(const DataView* view, DataSpan payload);
 bool mlocValidUnitNames(const DataView* view, DataSpan payload);
 bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload);
+bool mlocValidUnitDerivations(const DataView* view, DataSpan payload);
 
 // The code of an identifier in a valid identifiers unit, and its kind
 // (a unitId value); false when the unit lacks it.
@@ -47,5 +48,12 @@ bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint
 // The field a plural category's pattern comes from: its own, else
 // other's; unitNameFields when neither is found.
 uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category);
+
+// The plural categories a structure (unitDerivePer and the others) gives
+// its two components in a locale's language, root's for a language the
+// derivations do not list: a category's index, unitDerivedCompound or
+// unitDerivedNone. False when the data has no derivations.
+bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t structure,
+                        uint8_t* value0Out, uint8_t* value1Out);
 
 #endif

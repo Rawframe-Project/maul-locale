@@ -84,17 +84,32 @@
 // fields, all strings: the display name, the pattern for each plural
 // category zero to other, and the per-unit pattern ("{0} per meter"); a
 // prefix's, "per"'s and "times"'s pattern is its other field. The values
-// are CLDR's resolved values (width and unit aliases followed), each
-// filed at a key where it differs from what the key's chain gives, a
-// plural category the chain lacks taking the other category's; a power
-// of a gender the chain lacks takes the plain power's field. Patterns
-// keep "{0}" and "{1}".
+// are those of ICU's data (CLDR's production data read along the chain,
+// width and unit aliases followed), each filed at a key where it differs
+// from what the key's chain gives, a plural category the chain lacks
+// taking the other category's; a power of a gender the chain lacks takes
+// the plain power's field. An empty plural category is other's: it marks
+// a category ICU's data has where the text is the same, which a compound
+// name needs (ICU takes a unit's placeholder from the first category it
+// has); an empty display name or per-unit pattern is none. Patterns keep
+// "{0}" and "{1}".
 //
 // The long width's extras, in the same shape with unitExtraFields
 // fields: the unit's grammatical gender, and each pattern of a unit or
 // prefix lowercased by the locale's case rules (ICU lowercases a core
 // unit under a prefix or power in long names), an empty string where
-// lowercasing changes nothing.
+// lowercasing changes nothing. Every locale files its categories and
+// one, which compound names read for a denominator and for the units of
+// a product before the last.
+//
+// The derivations (grammaticalFeatures.xml), a unit of no locale: a
+// header (u16 count, u16 0), then per language, sorted by it,
+// unitDerivationSize bytes: the language (ASCII, NUL-padded), then the
+// plural category each structure gives its two components (per, times,
+// power, prefix; value0 then value1, u8 each): a category's index zero to
+// other, unitDerivedCompound for the compound's own, unitDerivedNone
+// where the language gives no rule. A language CLDR lists takes its
+// rules; any other takes root's, as ICU's DerivedComponents.
 
 #ifndef MLOC_UNIT_TABLES_H
 #define MLOC_UNIT_TABLES_H
@@ -122,6 +137,21 @@ enum
     unitIdsHeaderSize = 8,
     // The longest identifier the names know.
     unitMaxNameId = 64,
+    unitDerivationsHeaderSize = 4,
+    unitDerivationSize = 16,
+    unitDerivationLanguage = 8,
+    unitDerivedCompound = 0xFE,
+    unitDerivedNone = 0xFF,
+};
+
+// The structures of a derivation, in record order (two values each).
+enum
+{
+    unitDerivePer = 0,
+    unitDeriveTimes = 1,
+    unitDerivePower = 2,
+    unitDerivePrefix = 3,
+    unitDeriveStructures = 4,
 };
 
 // The kinds of a names identifier.

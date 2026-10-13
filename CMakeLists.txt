@@ -94,6 +94,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit.c
     src/unit_convert.c
     src/unit_data.c
+    src/unit_compound.c
     src/unit_format.c
     src/unit_id.c
     src/unit_names.c

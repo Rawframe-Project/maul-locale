@@ -76,5 +76,6 @@ constexpr uint32_t kindUnitNamesLong = 0x0004000F;
 constexpr uint32_t kindUnitNamesShort = 0x00040010;
 constexpr uint32_t kindUnitNamesNarrow = 0x00040011;
 constexpr uint32_t kindUnitNameExtras = 0x00040012;
+constexpr uint32_t kindUnitDerivations = 0x00040013;
 
 #endif

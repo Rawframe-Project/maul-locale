@@ -12,6 +12,7 @@
 #include "kinds.h"
 #include "test_harness.h"
 #include "test_pack.h"
+#include "unit_compound.h"
 #include "unit_tables.h"
 
 #include "maul-locale/unit.h"
@@ -111,6 +112,42 @@ static void TestPercent(void)
     CHECK(Formats("en", "percent", &compact, "1234", "1.2K%") &&
               Formats("en", "meter", &compact, "1234", "1.2K m"),
           "compact notation within the unit's pattern");
+}
+
+static void TestCompounds(void)
+{
+    CHECK(Long("en", "kilometer-per-second", "2", "2 kilometers per second") &&
+              Long("fr", "kilometer-per-second", "2", "2\xC2\xA0kilom\xC3\xA8tres par seconde"),
+          "a quotient from the per pattern");
+    CHECK(Long("ja", "kilometer-per-second", "3",
+               "3 \xE3\x82\xAD\xE3\x83\xAD\xE3\x83\xA1\xE3\x83\xBC\xE3\x83\x88\xE3\x83\xAB/"
+               "\xE7\xA7\x92"),
+          "a quotient from the denominator's per pattern");
+    CHECK(Long("en", "per-second-meter", "2", "2 per meter-second"),
+          "per takes the rest, normalized");
+    CHECK(Width("en", "meter-per-square-second", mloc_unitWidthShort, "3", "3 m/s\xC2\xB2") &&
+              Long("en", "kilogram-meter-per-square-second", "2",
+                   "2 kilogram-meters per square second"),
+          "powers and products");
+    CHECK(Long("de", "cubic-centimeter", "2", "2\xC2\xA0Kubikzentimeter") &&
+              Long("de", "square-meter", "1", "1 Quadratmeter"),
+          "a power lowercases the core unit in long names");
+    CHECK(Long("pl", "square-kilometer", "5", "5 kilometr\xC3\xB3w kwadratowych"),
+          "a power of the unit's gender, by plural category");
+    CHECK(Long("ru", "kilogram-meter", "2",
+               "2 \xD0\xBA\xD0\xB8\xD0\xBB\xD0\xBE\xD0\xB3\xD1\x80\xD0\xB0\xD0\xBC\xD0\xBC\xE2\x8B"
+               "\x85\xD0\xBC\xD0\xB5\xD1\x82\xD1\x80\xD0\xB0"),
+          "a product's derived plural categories");
+    CHECK(Long("ar", "gram-meter", "2",
+               "\xD8\xBA\xD8\xB1\xD8\xA7\xD9\x85\xE2\x8B\x85\xD9\x85\xD8\xAA\xD8\xB1"),
+          "a product of patterns without the number writes none");
+    CHECK(Width("lv", "per-100-kilometer", mloc_unitWidthShort, "0", "0/100\xE2\x8B\x85km") &&
+              Width("cy", "gram-per-1000-meter", mloc_unitWidthShort, "1", "1 g/1000\xE2\x8B\x85m"),
+          "a constant denominator");
+    CHECK(Width("ps", "square-millimeter", mloc_unitWidthShort, "1", "\xDB\xB1 mm\xC2\xB2"),
+          "a category ICU's data drops (markers alone) takes other's");
+    CHECK(Long("de_CH", "jigger", "2", "2 Jigger"),
+          "a restored category keeps the value resolved at its locale");
 }
 
 static bool Range(const char* id, const char* unit, mlocUnitWidth width, const char* start,
@@ -227,6 +264,7 @@ static void TestNames(void)
               Named("en", "meter", mloc_unitWidthShort, "m") &&
               Named("de", "kilometer-per-hour", mloc_unitWidthLong, "Kilometer pro Stunde"),
           "display names");
+    CHECK(Named("en", "metric-ton", mloc_unitWidthShort, "t"), "a unit by another identifier");
     mlocLocale locale;
     char buffer[4];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
@@ -236,12 +274,12 @@ static void TestNames(void)
               output.length == 6,
           "a name that does not fit gives its length");
     CHECK(mlocGetUnitDisplayName(&s_data, &locale, "per", 3, mloc_unitWidthLong, &output) ==
-                  mloc_errorNotFound &&
+                  mloc_errorSyntax &&
               mlocGetUnitDisplayName(&s_data, &locale, "furlong-per-fortnight", 21,
                                      mloc_unitWidthLong, &output) == mloc_errorNotFound &&
               mlocGetUnitDisplayName(&s_builtin, &locale, "meter", 5, mloc_unitWidthLong,
                                      &output) == mloc_errorNotFound,
-          "a compound key, a unit the names lack, data without the names");
+          "a malformed identifier, a compound CLDR does not name, data without the names");
     CHECK(mlocGetUnitDisplayName(nullptr, &locale, "meter", 5, mloc_unitWidthLong, &output) ==
                   mloc_errorInvalid &&
               mlocGetUnitDisplayName(&s_data, &locale, "meter", 0, mloc_unitWidthLong, &output) ==
@@ -258,13 +296,20 @@ static void TestRefusals(void)
     mlocUnitFormatter formatter;
     mlocLocale locale;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "power2", 6, nullptr) ==
-                  mloc_errorNotFound &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "Meter", 5, nullptr) ==
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "Meter", 5, nullptr) ==
+                  mloc_errorSyntax &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "pow4-meter", 10, nullptr) ==
                   mloc_errorNotFound &&
               mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, nullptr) ==
                   mloc_errorNotFound,
-          "a compound key, a unit the names lack, data without the names");
+          "a malformed identifier, a power past three, data without the names");
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "curr-usd", 8, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "100-meter", 9, nullptr) ==
+                  mloc_errorInvalid,
+          "a mixed unit, a currency, a constant in the numerator");
     mlocUnitOptions percent = {.number = {.style = mloc_numberPercent}};
     mlocUnitOptions width = {.width = (mlocUnitWidth)3};
     CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &percent) ==
@@ -296,9 +341,10 @@ static void TestRefusals(void)
 alignas(8) static uint8_t s_built[4096];
 
 // Builds an identifiers unit naming "meter" and root's short names of it,
-// its one and other patterns "{0}" and that many bytes "x", and opens them
-// as a pack; false when the pack is refused.
-static bool OpenNames(mlocData* source, uint32_t one, uint32_t other)
+// a pattern per category zero to other: "{0}" and that many bytes of the
+// category's letter ("a" to "f"); opens them as a pack, false when it is
+// refused.
+static bool OpenNames(mlocData* source, const uint32_t* lengths)
 {
     uint8_t* ids = s_built;
     memset(s_built, 0, sizeof(s_built));
@@ -308,26 +354,35 @@ static bool OpenNames(mlocData* source, uint32_t one, uint32_t other)
     memcpy(ids + unitIdsHeaderSize + 9, "meter", 5);
     uint32_t idsSize = unitIdsHeaderSize + 9 + 5;
     uint8_t* names = s_built + 64;
-    uint32_t text = 6 + one + other;
-    PackPut(names, 2, 2);
+    enum
+    {
+        strings = 6,
+        rowSize = 1 + 2 * strings,
+        head = sparseHeaderSize + 2 * (strings + 1) + 2 + 4 + rowSize,
+    };
+    uint8_t* offsets = names + sparseHeaderSize;
+    uint8_t* row = offsets + 2 * (strings + 1) + 2 + 4;
+    uint8_t* text = names + head;
+    uint32_t at = 0;
+    row[0] = 0x7E;
+    for (uint32_t k = 0; k < strings; k++)
+    {
+        PackPut(offsets + 2 * k, at, 2);
+        PackPut(row + 1 + 2 * k, k, 2);
+        memcpy(text + at, "{0}", 3);
+        memset(text + at + 3, 'a' + (int)k, lengths[k]);
+        at += 3 + lengths[k];
+    }
+    PackPut(offsets + 2 * strings, at, 2);
+    PackPut(row - 4, 0, 2);
+    PackPut(row - 2, rowSize, 2);
+    PackPut(names, strings, 2);
     PackPut(names + 2, 1, 2);
-    PackPut(names + 4, text, 4);
-    PackPut(names + 8, 5, 4);
-    uint8_t* at = names + sparseHeaderSize;
-    PackPut(at + 2, 3 + one, 2);
-    PackPut(at + 4, text, 2);
-    PackPut(at + 10, 5, 2);
-    at[12] = 1u << (unitNameZero + 1) | 1u << unitNameOther;
-    PackPut(at + 13, 0, 2);
-    PackPut(at + 15, 1, 2);
-    uint8_t* strings = at + 17;
-    memcpy(strings, "{0}", 3);
-    memset(strings + 3, 'x', one);
-    memcpy(strings + 3 + one, "{0}", 3);
-    memset(strings + 6 + one, 'y', other);
+    PackPut(names + 4, at, 4);
+    PackPut(names + 8, rowSize, 4);
     PackUnit units[2] = {
         {kindUnitIds, {ids, idsSize}, false},
-        {kindUnitNamesShort, {names, sparseHeaderSize + 17 + text}, true},
+        {kindUnitNamesShort, {names, head + at}, true},
     };
     return OpenRootPack(units, 2, source);
 }
@@ -339,18 +394,23 @@ static void TestPool(void)
     mlocDataSet set = {sources, 2};
     mlocLocale locale;
     mlocUnitFormatter formatter;
-    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
-    CHECK(OpenNames(&sources[1], 1, 1023 - 1 - 1) &&
+    // Arabic takes all six categories; each pattern is marked in one byte
+    // for its "{0}".
+    static const uint32_t s_fill[6] = {170, 170, 170, 170, 170, 168};
+    static const uint32_t s_past[6] = {170, 170, 170, 170, 170, 169};
+    static const uint32_t s_long[6] = {1, 1, 1, 1, 1, unitPatternRoom};
+    CHECK(mlocParseLocale("ar", 2, &locale).status == mloc_success, "a locale");
+    CHECK(OpenNames(&sources[1], s_fill) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
           "patterns that fill the pool");
-    CHECK(OpenNames(&sources[1], 1, 1023 - 1) &&
+    CHECK(OpenNames(&sources[1], s_past) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
                   mloc_errorCapacity,
           "patterns a byte past the pool");
-    CHECK(OpenNames(&sources[1], 1, 1024) &&
+    CHECK(OpenNames(&sources[1], s_long) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
                   mloc_errorCapacity,
-          "a pattern longer than the pool");
+          "a pattern longer than a pattern's room");
 }
 
 // The compiled-in data, and with it the unit names data file, at the
@@ -382,6 +442,7 @@ int main(void)
     TestWidths();
     TestFallbacks();
     TestPercent();
+    TestCompounds();
     TestRanges();
     TestParts();
     TestNames();

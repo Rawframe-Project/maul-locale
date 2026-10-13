@@ -85,6 +85,7 @@ bool mlocValidUnitNames(const DataView* view, DataSpan payload)
         .fieldCount = unitNameFields,
         .stringFields = (1u << unitNameFields) - 1,
         .maxCode = UINT16_MAX,
+        .empty = true,
     };
     return mlocValidSparse(payload, &s_shape);
 }
@@ -99,6 +100,55 @@ bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload)
         .empty = true,
     };
     return mlocValidSparse(payload, &s_shape);
+}
+
+// Whether a derivation's language is lowercase letters then NULs, and
+// its values categories, compound or none.
+static bool ValidDerivation(const uint8_t* record)
+{
+    uint32_t length = 0;
+    while (length < unitDerivationLanguage && record[length] != 0)
+    {
+        if (record[length] < 'a' || record[length] > 'z')
+        {
+            return false;
+        }
+        length++;
+    }
+    for (uint32_t i = length; i < unitDerivationSize; i++)
+    {
+        uint8_t value = record[i];
+        bool padding = i < unitDerivationLanguage;
+        if (padding ? value != 0
+                    : value > 5 && value != unitDerivedCompound && value != unitDerivedNone)
+        {
+            return false;
+        }
+    }
+    return length > 0;
+}
+
+bool mlocValidUnitDerivations(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (payload.size < unitDerivationsHeaderSize || mlocLoad16(payload.bytes + 2) != 0 ||
+        payload.size !=
+            unitDerivationsHeaderSize + (size_t)mlocLoad16(payload.bytes) * unitDerivationSize)
+    {
+        return false;
+    }
+    const uint8_t* records = payload.bytes + unitDerivationsHeaderSize;
+    uint32_t count = mlocLoad16(payload.bytes);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const uint8_t* record = records + (size_t)i * unitDerivationSize;
+        if (!ValidDerivation(record) ||
+            (i > 0 && memcmp(record - unitDerivationSize, record, unitDerivationLanguage) >= 0))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool mlocFindUnitNameId(DataSpan ids, const char* id, size_t length, uint16_t* codeOut,
@@ -191,6 +241,55 @@ bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint
         .fields = out,
     };
     return mlocVisitLocaleUnits(data, mloc_componentMain, kind, locale, Gather, &g);
+}
+
+// The record of a language in a valid derivations unit, or null.
+static const uint8_t* FindDerivation(DataSpan unit, const char* language)
+{
+    uint8_t key[unitDerivationLanguage] = {0};
+    for (size_t i = 0; i < unitDerivationLanguage && language[i] != '\0'; i++)
+    {
+        key[i] = (uint8_t)language[i];
+    }
+    const uint8_t* records = unit.bytes + unitDerivationsHeaderSize;
+    uint32_t low = 0;
+    uint32_t high = mlocLoad16(unit.bytes);
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* record = records + (size_t)middle * unitDerivationSize;
+        int order = memcmp(record, key, unitDerivationLanguage);
+        if (order == 0)
+        {
+            return record;
+        }
+        if (order < 0)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return nullptr;
+}
+
+bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t structure,
+                        uint8_t* value0Out, uint8_t* value1Out)
+{
+    DataSpan unit;
+    if (!mlocFindDataSetUnit(data, kindUnitDerivations, nullptr, 0, &unit))
+    {
+        return false;
+    }
+    const uint8_t* record = FindDerivation(unit, locale->language);
+    record = record != nullptr ? record : FindDerivation(unit, "root");
+    *value0Out =
+        record != nullptr ? record[unitDerivationLanguage + 2 * structure] : unitDerivedNone;
+    *value1Out =
+        record != nullptr ? record[unitDerivationLanguage + 2 * structure + 1] : unitDerivedNone;
+    return true;
 }
 
 uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category)

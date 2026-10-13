@@ -44,6 +44,7 @@ static const DataKind s_kinds[] = {
     {kindUnitNamesShort, mlocValidUnitNames},
     {kindUnitNamesNarrow, mlocValidUnitNames},
     {kindUnitNameExtras, mlocValidUnitNameExtras},
+    {kindUnitDerivations, mlocValidUnitDerivations},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

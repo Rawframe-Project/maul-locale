@@ -41,4 +41,5 @@ unit_convert: bytes decimal number_precision unit_data unit_id unit_tables wide
 unit: data_view decimal kinds number_precision unit_convert unit_data unit_id
 unit_prefs: bytes data_view decimal kinds locale_keyword locale_prefs locale_tables number_precision unit_convert unit_data unit_id unit_tables
 unit_names: bytes currency_tables data_format data_view kinds locale_fallback number_data unit_tables
-unit_format: currency_tables kinds number_core number_format plural plural_rules unit_names
+unit_compound: data_view kinds unit_data unit_id unit_names unit_tables
+unit_format: currency_tables kinds number_core number_format plural plural_rules unit_compound unit_id unit_names

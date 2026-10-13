@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 and
-// mloc-0024): CLDR's unit identifiers ("kilometer-per-hour",
+// Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
+// mloc-0025): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -159,24 +159,32 @@ extern "C"
     /// the unit's pattern for the plural category of the number as
     /// rounded ("1 meter", "2 meters"), a category the locale lacks
     /// taking the other category's. A pattern may leave the number out
-    /// (Arabic's dual names), as CLDR's data does.
+    /// (Arabic's dual names), as CLDR's data does. A unit CLDR does not
+    /// name ("kilometer-per-second", "square-millimeter") takes a name
+    /// built from the locale's compound patterns as ICU builds it, its
+    /// identifier normalized first, as ICU normalizes it.
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
     /// @param data          The data with the number units, the plural
     ///                      rules and the unit names (units.mloc).
     /// @param locale        The locale, canonicalized.
-    /// @param unit          A unit CLDR names ("meter", "kilometer-per-hour",
-    ///                      "celsius").
+    /// @param unit          A core unit identifier ("meter",
+    ///                      "kilometer-per-hour", "square-millimeter").
     /// @param unitLength    Its length in bytes.
     /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
-    ///         mloc_errorNotFound for a unit the names do not know or data
-    ///         without the number units or the names; mloc_errorCapacity
-    ///         for a unit whose patterns pass the formatter's room;
-    ///         mloc_errorInvalid for a null pointer, an empty unit, or
-    ///         options out of range or in conflict (a percent style).
+    ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
+    ///         mloc_errorNotFound for a unit the names do not know (a
+    ///         simple unit without names, a power past three) or data
+    ///         without the number units, the unit table or the names;
+    ///         mloc_errorCapacity for a unit whose patterns pass the
+    ///         formatter's room; mloc_errorInvalid for a null pointer, an
+    ///         empty unit, a mixed unit, a currency, a constant in the
+    ///         numerator, a name ICU refuses to build (the number inside
+    ///         a part), or options out of range or in conflict (a percent
+    ///         style).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut,
@@ -230,7 +238,8 @@ extern "C"
     ///
     /// @param data        The data with the unit names.
     /// @param locale      The locale, canonicalized.
-    /// @param unit        A unit CLDR names.
+    /// @param unit        A unit CLDR names, by any identifier of it
+    ///                    ("metric-ton" for "tonne").
     /// @param unitLength  Its length in bytes.
     /// @param width       The width.
     /// @param output      Receives the text.
@@ -238,10 +247,12 @@ extern "C"
     ///         names it and the identifier is written instead;
     ///         mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed);
-    ///         mloc_errorNotFound for a unit the names do not know, data
-    ///         without them, or a chain that cannot be walked;
-    ///         mloc_errorInvalid for a null pointer, an empty unit or a
-    ///         width out of range.
+    ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
+    ///         mloc_errorNotFound for a unit the names do not know (a
+    ///         compound CLDR does not name), data without them, or a
+    ///         chain that cannot be walked; mloc_errorInvalid for a null
+    ///         pointer, an empty unit, a mixed unit, a currency, a
+    ///         constant in the numerator or a width out of range.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitDisplayName(const mlocDataSet* data,

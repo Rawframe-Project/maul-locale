@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The unit names (unit_names_gen.h). Each value is CLDR's resolution as
-// ICU reads it (Target), and a key files it where the library's lookup along
+// The unit names (unit_names_gen.h). Each value is the one ICU's data
+// gives (Target): CLDR's production data, built from the development
+// data as GenerateProductionData builds it, read along the chain as ICU
+// reads it. A key files it where the library's lookup along
 // its chain (the first key filing the field, a plural category no key
 // files taking the other category's) would give another. Locales are
 // taken parent first, so a key's chain is filed before it; a locale under
@@ -362,7 +364,7 @@ static int ReadCategories(Names* n, char* errorOut, size_t errorCapacity)
 }
 
 // A locale's categories, its rules found by truncation as the library's.
-static unsigned CategoriesOf(const Names* n, const char* locale)
+static unsigned RuleCategories(const Names* n, const char* locale)
 {
     char id[maxKey];
     snprintf(id, sizeof(id), "%s", locale);
@@ -380,6 +382,13 @@ static unsigned CategoriesOf(const Names* n, const char* locale)
         }
         *cut = '\0';
     }
+}
+
+// A locale's categories and one, which compound names read whatever the
+// rules.
+static unsigned CategoriesOf(const Names* n, const char* locale)
+{
+    return RuleCategories(n, locale) | 1u << 1;
 }
 
 // Whether a field is one the locale files.
@@ -459,39 +468,171 @@ static const char* OwnValue(const Names* n, const char* locale, const char* chai
     return leaf->text;
 }
 
-// Whether a locale along the chain has a field of a type in a width, a
-// value or an inheritance marker: CLDR's production data, which ICU is
-// built from, replaces a marker by the value it stands for.
-static bool GivenIn(const Names* n, const char* locale, const UnitName* name, const char* type,
-                    int width, int field)
+static bool Differs(const char* a, const char* b)
+{
+    return (a == nullptr) != (b == nullptr) || (a != nullptr && strcmp(a, b) != 0);
+}
+
+// A locale's own leaf of a chain, or null for none or a draft below the
+// threshold.
+static const Leaf* OwnLeaf(const Names* n, const char* locale, const char* chain)
 {
     Cldr* cldr = n->input->cldr;
-    char chain[maxChain];
-    if (!ChainOf(name, type, nullptr, width, field, chain, sizeof(chain)))
+    const LdmlFile* file = CldrFile(cldr, locale, componentMain);
+    const Leaf* leaf = file == nullptr ? nullptr : MapGet(&file->leaves, chain);
+    return leaf == nullptr || leaf->draft > cldr->threshold ? nullptr : leaf;
+}
+
+// Whether CLDR's production data keeps a locale's leaf as it is
+// (GenerateProductionData): a value, unless a locale above it below root
+// gives the same at the same chain.
+static bool Kept(const Names* n, const char* locale, const char* chain, const Leaf* leaf)
+{
+    if (strcmp(leaf->text, s_inherit) == 0 || strcmp(leaf->text, s_empty) == 0)
     {
         return false;
     }
-    for (const char* at = locale; at != nullptr; at = CldrParent(cldr, at, componentMain))
+    Cldr* cldr = n->input->cldr;
+    for (const char* at = CldrParent(cldr, locale, componentMain);
+         at != nullptr && strcmp(at, "root") != 0; at = CldrParent(cldr, at, componentMain))
     {
-        const LdmlFile* file = CldrFile(cldr, at, componentMain);
-        const Leaf* leaf = file == nullptr ? nullptr : MapGet(&file->leaves, chain);
-        if (leaf != nullptr && leaf->draft <= cldr->threshold)
+        const Leaf* above = OwnLeaf(n, at, chain);
+        if (above != nullptr && strcmp(above->text, s_inherit) != 0)
         {
-            return true;
+            return strcmp(above->text, leaf->text) != 0;
+        }
+    }
+    return true;
+}
+
+// The grammatical cases CLDR's unit patterns take.
+static const char* const s_cases[] = {
+    "abessive",      "ablative",           "accusative",  "adessive",    "allative",
+    "causal",        "comitative",         "dative",      "elative",     "ergative",
+    "essive",        "genitive",           "illative",    "inessive",    "instrumental",
+    "locative",      "locativecopulative", "nominative",  "oblique",     "partitive",
+    "prepositional", "sociative",          "terminative", "translative", "vocative"};
+
+// Whether a locale keeps a long unit pattern of a case, in a plural
+// category of its rules: the logical group of a long unit pattern holds
+// its cases as well.
+static bool CaseKept(const Names* n, const char* locale, const char* type, unsigned rules)
+{
+    char chain[maxChain];
+    for (size_t k = 0; k < sizeof(s_cases) / sizeof(s_cases[0]); k++)
+    {
+        for (int c = 0; c < categoryCount; c++)
+        {
+            snprintf(chain, sizeof(chain),
+                     "%s%s\"]/unit[@type=\"%s\"]/unitPattern[@case=\"%s\"][@count=\"%s\"]",
+                     s_prefix, s_widths[widthLong], type, s_cases[k], s_categories[c]);
+            const Leaf* leaf = (rules & 1u << c) != 0 ? OwnLeaf(n, locale, chain) : nullptr;
+            if (leaf != nullptr && Kept(n, locale, chain, leaf))
+            {
+                return true;
+            }
         }
     }
     return false;
 }
 
-// Whether ICU's data has a plural category's own pattern: a locale along
-// the chain gives it in the width, or in short (root's alias of the
-// other widths), or in short for the unit root aliases.
+// Whether a locale's file in CLDR's production data has a field of a type
+// in a width: a leaf kept, or a leaf it dropped (an inheritance marker, a
+// value its parents give) that it restores as a plural category of its
+// rules beside a category kept, or a case of a long pattern kept (the
+// logical group, restored only where the file has a leaf).
+static bool ProducedAt(const Names* n, const char* locale, const UnitName* name, const char* type,
+                       int width, int field)
+{
+    char chain[maxChain];
+    if (!ChainOf(name, type, nullptr, width, field, chain, sizeof(chain)))
+    {
+        return false;
+    }
+    const Leaf* leaf = OwnLeaf(n, locale, chain);
+    if (leaf == nullptr)
+    {
+        return false;
+    }
+    if (Kept(n, locale, chain, leaf))
+    {
+        return true;
+    }
+    unsigned rules = RuleCategories(n, locale);
+    bool category = field >= unitNameZero && field <= unitNameOther;
+    if (!category || (rules & 1u << (field - unitNameZero)) == 0)
+    {
+        return false;
+    }
+    for (int c = 0; c < categoryCount; c++)
+    {
+        if (c != field - unitNameZero && (rules & 1u << c) != 0 &&
+            ChainOf(name, type, nullptr, width, unitNameZero + c, chain, sizeof(chain)))
+        {
+            const Leaf* other = OwnLeaf(n, locale, chain);
+            if (other != nullptr && Kept(n, locale, chain, other))
+            {
+                return true;
+            }
+        }
+    }
+    return width == widthLong && name->kind == unitIdUnit && CaseKept(n, locale, type, rules);
+}
+
+// The value a locale's file in CLDR's production data gives a field it
+// has: the leaf kept, or the one restored, CLDR's resolution at that
+// locale (frozen there: "{0} Jigger" for Swiss German's long jigger from
+// German's file, where the resolution from Swiss German would give
+// "{0} Schuss").
+static const char* ProducedValue(const Names* n, const char* locale, const UnitName* name,
+                                 const char* type, int width, int field)
+{
+    char chain[maxChain];
+    (void)ChainOf(name, type, nullptr, width, field, chain, sizeof(chain));
+    const Leaf* leaf = OwnLeaf(n, locale, chain);
+    if (Kept(n, locale, chain, leaf))
+    {
+        return leaf->text;
+    }
+    const char* value = Resolved(n, locale, chain);
+    if (value == nullptr &&
+        ChainOf(name, type, nullptr, width, unitNameOther, chain, sizeof(chain)))
+    {
+        value = Resolved(n, locale, chain);
+    }
+    return value;
+}
+
+// Whether ICU's data has a field's own value, and the value
+// (PluralTableSink): the first locale along the chain with the field in
+// the width, or in short (root's alias of the other widths), or in short
+// for the unit root aliases.
+static bool Located(const Names* n, const char* locale, const UnitName* name, int width, int field,
+                    const char** valueOut)
+{
+    Cldr* cldr = n->input->cldr;
+    const char* types[3] = {name->source, name->source, MapGet(&n->aliases, name->source)};
+    int widths[3] = {width, widthShort, widthShort};
+    for (int i = 0; i < 3; i++)
+    {
+        for (const char* at = locale; types[i] != nullptr && at != nullptr;
+             at = CldrParent(cldr, at, componentMain))
+        {
+            if (ProducedAt(n, at, name, types[i], widths[i], field))
+            {
+                *valueOut = ProducedValue(n, at, name, types[i], widths[i], field);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Whether ICU's data has a plural category's own pattern.
 static bool Given(const Names* n, const char* locale, const UnitName* name, int width, int field)
 {
-    const char* alias = MapGet(&n->aliases, name->source);
-    return GivenIn(n, locale, name, name->source, width, field) ||
-           GivenIn(n, locale, name, name->source, widthShort, field) ||
-           (alias != nullptr && GivenIn(n, locale, name, alias, widthShort, field));
+    const char* value;
+    return Located(n, locale, name, width, field, &value);
 }
 
 // A power of a gender's field as ICU loads it (InflectedPluralSink): at
@@ -533,10 +674,13 @@ static const char* Target(const Names* n, const char* locale, int id, int width,
         return value != nullptr || !category ? value
                                              : PowerField(n, locale, id, width, unitNameOther);
     }
-    if (category && !Given(n, locale, name, width, field))
+    const char* value;
+    if (Located(n, locale, name, width, field, &value) ||
+        (category && Located(n, locale, name, width, unitNameOther, &value)))
     {
-        field = unitNameOther;
+        return value;
     }
+    field = category ? unitNameOther : field;
     char chain[maxChain];
     return ChainOf(name, name->source, nullptr, width, field, chain, sizeof(chain))
                ? Resolved(n, locale, chain)
@@ -567,26 +711,38 @@ static const char* LookedUp(const Names* n, const char* locale, int row, int id,
     {
         return value != nullptr ? value : LookedUp(n, locale, row, name->plain, field);
     }
-    if (value == nullptr && field >= unitNameZero && field < unitNameOther)
+    bool category = field >= unitNameZero && field < unitNameOther;
+    // A name's empty category is other's (present for compound names).
+    if (category && (value == nullptr || (row != extrasRow && value[0] == '\0')))
     {
         value = FiledValue(n, locale, row, id, unitNameOther);
     }
     return value;
 }
 
-static bool Differs(const char* a, const char* b)
+// Whether a unit's plural category ICU's data has (Given) is filed by no key of the chain: the
+// library then takes other's for it, where a compound name needs to know that ICU has a pattern of
+// its own (it takes a unit's placeholder from the first category that has one).
+static bool Unfiled(const Names* n, const char* locale, int row, int id, int field)
 {
-    return (a == nullptr) != (b == nullptr) || (a != nullptr && strcmp(a, b) != 0);
+    const UnitName* name = &n->names[id];
+    return row != extrasRow && name->kind == unitIdUnit && field >= unitNameZero &&
+           field < unitNameOther && Given(n, locale, name, row, field) &&
+           FiledValue(n, locale, row, id, field) == nullptr;
 }
 
 // Files a value at a locale, or checks a locale that files nothing.
 static void Take(Names* n, Filed* filed, const char* locale, int row, int id, int field,
                  const char* value)
 {
-    if (!Differs(LookedUp(n, locale, row, id, field), value))
+    bool same = !Differs(LookedUp(n, locale, row, id, field), value);
+    if (same && !Unfiled(n, locale, row, id, field))
     {
         return;
     }
+    // A category the library would take from other's anyway is filed
+    // empty, which costs no text: it only says ICU has it.
+    value = same && row != extrasRow && value != nullptr ? "" : value;
     if (value == nullptr)
     {
         GenDie("a unit name CLDR leaves out that the chain gives", locale);
@@ -599,7 +755,7 @@ static void Take(Names* n, Filed* filed, const char* locale, int row, int id, in
     // revolution), and ICU then writes none; a pattern that builds a name
     // may not.
     if (row != extrasRow && (field == unitNamePer || n->names[id].kind != unitIdUnit) &&
-        strstr(value, "{0}") == nullptr)
+        value[0] != '\0' && strstr(value, "{0}") == nullptr)
     {
         GenDie("a unit pattern without {0}", value);
     }
@@ -822,6 +978,109 @@ static void AddIds(const Names* n, DataFile* file)
     free(unit);
 }
 
+// A derivation's value: a category's index, compound or none.
+static uint8_t DerivedValue(const char* value, const char* where)
+{
+    if (value == nullptr)
+    {
+        GenDie("a derivation without its value", where);
+    }
+    if (strcmp(value, "compound") == 0)
+    {
+        return unitDerivedCompound;
+    }
+    for (int c = 0; c < categoryCount; c++)
+    {
+        if (strcmp(value, s_categories[c]) == 0)
+        {
+            return (uint8_t)c;
+        }
+    }
+    GenDie("a plural derivation of no category", value);
+}
+
+// Fills a language's record from its grammaticalDerivations element.
+static void ReadDerivation(const XmlNode* node, uint8_t* record)
+{
+    static const char* const s_structures[unitDeriveStructures] = {"per", "times", "power",
+                                                                   "prefix"};
+    memset(record + unitDerivationLanguage, unitDerivedNone, 2 * unitDeriveStructures);
+    for (int i = 0; i < node->childCount; i++)
+    {
+        const XmlNode* rule = node->children[i];
+        const char* feature = XmlGetAttribute(rule, "feature");
+        const char* structure = XmlGetAttribute(rule, "structure");
+        if (strcmp(rule->name, "deriveComponent") != 0 || feature == nullptr ||
+            strcmp(feature, "plural") != 0)
+        {
+            continue;
+        }
+        int s = 0;
+        while (s < unitDeriveStructures && structure != nullptr &&
+               strcmp(structure, s_structures[s]) != 0)
+        {
+            s++;
+        }
+        if (s == unitDeriveStructures || structure == nullptr)
+        {
+            GenDie("a plural derivation of no structure", structure == nullptr ? "" : structure);
+        }
+        record[unitDerivationLanguage + 2 * s] =
+            DerivedValue(XmlGetAttribute(rule, "value0"), structure);
+        record[unitDerivationLanguage + 2 * s + 1] =
+            DerivedValue(XmlGetAttribute(rule, "value1"), structure);
+    }
+}
+
+static int CompareRecords(const void* a, const void* b)
+{
+    return memcmp(a, b, unitDerivationLanguage);
+}
+
+// The derivations' unit from supplemental/grammaticalFeatures.xml.
+static int AddDerivations(const Names* n, DataFile* file, char* errorOut, size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/supplemental/grammaticalFeatures.xml",
+             n->input->commonDirectory);
+    XmlNode* root = XmlParseFile(path, errorOut, errorCapacity);
+    if (root == nullptr)
+    {
+        return 0;
+    }
+    enum
+    {
+        maxLanguages = 64,
+    };
+    uint8_t unit[unitDerivationsHeaderSize + maxLanguages * unitDerivationSize] = {0};
+    uint32_t count = 0;
+    const XmlNode* data = XmlFindChild(root, "grammaticalData");
+    for (int i = 0; data != nullptr && i < data->childCount; i++)
+    {
+        const XmlNode* node = data->children[i];
+        const char* locales = XmlGetAttribute(node, "locales");
+        for (const char* at = locales;
+             strcmp(node->name, "grammaticalDerivations") == 0 && at != nullptr && *at != '\0';)
+        {
+            size_t length = strcspn(at, " ");
+            if (length == 0 || length > unitDerivationLanguage || count == maxLanguages)
+            {
+                GenDie("a derivation's language too long, or too many", at);
+            }
+            uint8_t* record = unit + unitDerivationsHeaderSize + count++ * unitDerivationSize;
+            memcpy(record, at, length);
+            ReadDerivation(node, record);
+            at += length + strspn(at + length, " ");
+        }
+    }
+    XmlFree(root);
+    qsort(unit + unitDerivationsHeaderSize, count, unitDerivationSize, CompareRecords);
+    GenPut(unit, count, 2);
+    DataFileAdd(file, kindUnitDerivations, nullptr, unit,
+                unitDerivationsHeaderSize + count * unitDerivationSize);
+    return 1;
+}
+
 int GenerateUnitNames(const UnitNamesInput* input, DataFile* file, char* errorOut,
                       size_t errorCapacity)
 {
@@ -834,6 +1093,10 @@ int GenerateUnitNames(const UnitNamesInput* input, DataFile* file, char* errorOu
     }
     CollectNames(n);
     AddIds(n, file);
+    if (!AddDerivations(n, file, errorOut, errorCapacity))
+    {
+        return 0;
+    }
     for (int i = 0; i < input->count; i++)
     {
         TakeChain(n, input->ids[i], file);
