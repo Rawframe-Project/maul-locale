@@ -642,17 +642,17 @@ static void TestGenders(void)
 }
 
 // A set whose first source is a pack of one derivations unit, of German
-// (per and times: the first, power: feminine, prefix: common), French (no
-// rules) and Italian (per and times: the second, power: the unit's,
-// prefix: masculine), before the names.
+// (per and times: the first, power: feminine, prefix: common), French
+// (per: feminine, no other rules) and Italian (per: the second, times:
+// common, power: the unit's, prefix: masculine), before the names.
 static bool OpenGenderRules(mlocData* sources)
 {
     static uint8_t s_unit[unitDerivationsHeaderSize + 3 * unitDerivationSize];
     static const char* const s_languages[3] = {"de", "fr", "it"};
     static const uint8_t s_rules[3][unitDeriveStructures] = {
         {unitGenderFirst, unitGenderFirst, mloc_genderFeminine, mloc_genderCommon},
-        {unitDerivedNone, unitDerivedNone, unitDerivedNone, unitDerivedNone},
-        {unitGenderSecond, unitGenderSecond, unitGenderFirst, mloc_genderMasculine},
+        {mloc_genderFeminine, unitDerivedNone, unitDerivedNone, unitDerivedNone},
+        {unitGenderSecond, mloc_genderCommon, unitGenderFirst, mloc_genderMasculine},
     };
     memset(s_unit, 0, sizeof(s_unit));
     s_unit[0] = 3;
@@ -696,11 +696,13 @@ static void TestGenderRules(void)
               RuledGender(&set, "de", "square-yard", mloc_genderFeminine) &&
               RuledGender(&set, "it", "square-yard", mloc_genderMasculine),
           "names without a gender: the rules top down, a fixed prefix beside a power");
-    CHECK(RuledGender(&set, "fr", "newton-second", mloc_genderNone) &&
-              RuledGender(&set, "fr", "pixel-per-inch", mloc_genderNone) &&
-              RuledGender(&set, "fr", "square-yard", mloc_genderNone) &&
-              RuledGender(&set, "fr", "liter-per-second", mloc_genderNone),
-          "no rules: no gender");
+    CHECK(RuledGender(&set, "fr", "newton-second", mloc_genderFeminine) &&
+              RuledGender(&set, "fr", "pixel-per-inch", mloc_genderFeminine) &&
+              RuledGender(&set, "fr", "liter-per-second", mloc_genderFeminine),
+          "a fixed per rule");
+    CHECK(RuledGender(&set, "fr", "square-yard", mloc_genderNone) &&
+              RuledGender(&set, "fr", "pound-force-foot", mloc_genderNone),
+          "no rule: no gender");
 }
 
 static void TestCoordinate(void)
