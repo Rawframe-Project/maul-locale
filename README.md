@@ -48,7 +48,8 @@ region uses on a day; and exact conversion between CLDR's units and
 the units a locale prefers for a usage (every conversion and preference
 CLDR's unit test data gives passes on every push), and amounts and
 ranges of any core unit in each width (a name CLDR lacks built from its
-compound patterns), with the display names of the units CLDR names (the
+compound patterns) and amounts of mixed units ("5 ft, 6 in"), with the
+display names of the units CLDR names (the
 names are a data file of their own, `src/generated/units.mloc`).
 The library has 50 public functions.
 

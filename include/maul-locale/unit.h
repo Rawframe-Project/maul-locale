@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0025): CLDR's unit identifiers ("kilometer-per-hour",
+// mloc-0027): CLDR's unit identifiers ("kilometer-per-hour",
 // "square-foot", "foot-and-inch") and exact conversion between them by
 // CLDR's units.xml, the units a locale prefers for a usage, and amounts
 // of a unit formatted with its name in a locale. The names are in a data
@@ -152,7 +152,7 @@ extern "C"
     // mlocInitUnitFormatter.
     typedef struct mlocUnitFormatter
     {
-        uint64_t opaque[168];
+        uint64_t opaque[208];
     } mlocUnitFormatter;
 
     /// Makes a locale's formatter of a unit: the number as for numbers, in
@@ -162,7 +162,12 @@ extern "C"
     /// (Arabic's dual names), as CLDR's data does. A unit CLDR does not
     /// name ("kilometer-per-second", "square-millimeter") takes a name
     /// built from the locale's compound patterns as ICU builds it, its
-    /// identifier normalized first, as ICU normalizes it.
+    /// identifier normalized first, as ICU normalizes it. A mixed unit
+    /// ("foot-and-inch") takes an amount of its largest part and writes
+    /// each part ("5 ft, 6 in"), joined by the locale's unit list of the
+    /// width: the larger parts whole, as the locale's default number
+    /// format writes them, the smallest with the options, and the first
+    /// part given with the amount's sign.
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
@@ -170,7 +175,8 @@ extern "C"
     ///                      rules and the unit names (units.mloc).
     /// @param locale        The locale, canonicalized.
     /// @param unit          A core unit identifier ("meter",
-    ///                      "kilometer-per-hour", "square-millimeter").
+    ///                      "kilometer-per-hour", "square-millimeter") or a
+    ///                      mixed unit ("foot-and-inch").
     /// @param unitLength    Its length in bytes.
     /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
@@ -178,12 +184,15 @@ extern "C"
     ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
     ///         mloc_errorNotFound for a unit the names do not know (a
     ///         simple unit without names, a power past three) or data
-    ///         without the number units, the unit table or the names;
+    ///         without the number units, the unit table, the names or
+    ///         the lists;
     ///         mloc_errorCapacity for a unit whose patterns pass the
     ///         formatter's room; mloc_errorInvalid for a null pointer, an
-    ///         empty unit, a mixed unit, a currency, a constant in the
-    ///         numerator, a name ICU refuses to build (the number inside
-    ///         a part), or options out of range or in conflict (a percent
+    ///         empty unit, a currency, a constant in the numerator, a name
+    ///         ICU refuses to build (the number inside a part), a mixed
+    ///         unit whose parts do not convert to each other alone (other
+    ///         dimensions, a temperature) or with a notation other than
+    ///         standard, or options out of range or in conflict (a percent
     ///         style).
     /// @par Thread safety
     /// Safe from any thread.
@@ -193,17 +202,22 @@ extern "C"
                                                              const char* unit, size_t unitLength,
                                                              const mlocUnitOptions* options);
 
-    /// Formats an amount of the formatter's unit.
+    /// Formats an amount of the formatter's unit (of a mixed unit's largest
+    /// part, split exactly: whole larger parts, the rest in the smallest,
+    /// rounded, a part that rounds up to the next carrying; NaN and the
+    /// infinities in the largest part, the others 0).
     ///
     /// @param formatter  A formatter from mlocInitUnitFormatter.
     /// @param decimal    The amount.
     /// @param output     Receives the text; its part function, when set,
-    ///                   receives mlocNumberPart values, the unit's name as
-    ///                   mloc_numberPartUnit.
+    ///                   receives mlocNumberPart values, each unit name as
+    ///                   mloc_numberPartUnit and a unit list's text as
+    ///                   mloc_numberPartLiteral.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
-    ///         pointer, or a formatter or decimal the library did not make.
+    ///         (output->length is then the length needed) or rounding or a
+    ///         part passes the decimal's limits; mloc_errorInvalid for a
+    ///         null pointer, or a formatter or decimal the library did not
+    ///         make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter,
@@ -224,8 +238,9 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed) or rounding
     ///         passes the decimal's limits; mloc_errorInvalid for a null
-    ///         pointer, a NaN end, or a formatter or decimal the library
-    ///         did not make.
+    ///         pointer, a NaN end, a formatter of a mixed unit (which ICU
+    ///         does not range either), or a formatter or decimal the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,

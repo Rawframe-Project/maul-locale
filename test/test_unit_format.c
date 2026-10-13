@@ -302,6 +302,85 @@ static void TestNames(void)
           "a null pointer, an empty unit, a width out of range");
 }
 
+static void TestMixed(void)
+{
+    CHECK(Width("en", "foot-and-inch", mloc_unitWidthShort, "5.5", "5 ft, 6 in") &&
+              Long("en", "foot-and-inch", "5.5", "5 feet, 6 inches") &&
+              Width("en", "foot-and-inch", mloc_unitWidthNarrow, "-5.25",
+                    "-5\xE2\x80\xB2 3\xE2\x80\xB3"),
+          "a mixed unit in each width, the sign on the first part");
+    CHECK(Long("en", "hour-and-minute-and-second", "1.5083", "1 hour, 30 minutes, 29.88 seconds") &&
+              Long("en", "pound-and-ounce", "0.999999", "0 pounds, 15.999984 ounces"),
+          "the amount split exactly");
+    CHECK(Width("en", "inch-and-foot", mloc_unitWidthShort, "5.5", "6 in, 5 ft"),
+          "the parts in the order given, the amount in the largest");
+    CHECK(Long("es", "foot-and-inch", "1.5", "1 pie y 6 pulgadas") &&
+              Long("sw", "foot-and-inch", "2.5", "futi 2 na inchi 6") &&
+              Long("ar", "foot-and-inch", "2.5",
+                   "2 \xD9\x82\xD8\xAF\xD9\x85 \xD9\x88"
+                   "6 \xD8\xA8\xD9\x88\xD8\xB5\xD8\xA9"),
+          "the locale's unit list");
+    CHECK(
+        Width("en", "meter-and-centimeter", mloc_unitWidthShort, "1234.567", "1,234 m, 56.7 cm") &&
+            Width("en", "square-foot-and-square-inch", mloc_unitWidthShort, "1.5",
+                  "1 sq ft, 72 in\xC2\xB2"),
+        "larger parts grouped, built names among the parts");
+    mlocUnitOptions whole = {.number.precision = {.kind = mloc_precisionFraction}};
+    CHECK(Formats("en", "foot-and-inch", &whole, "5.99", "6 ft, 0 in") &&
+              Formats("en", "yard-and-foot-and-inch", &whole, "2.9999", "3 yd, 0 ft, 0 in"),
+          "a rounded smallest part that reaches the next carries up");
+    mlocUnitOptions options = {.number = {.minIntegerDigits = 2, .grouping = mloc_groupingOff}};
+    CHECK(Formats("en", "foot-and-inch", &options, "1234.5", "1,234 ft, 06 in"),
+          "the options shape the smallest part alone");
+    options = (mlocUnitOptions){.number.signDisplay = mloc_signAlways};
+    CHECK(Formats("en", "foot-and-inch", &options, "5.5", "+5 ft, 6 in") &&
+              Formats("en", "foot-and-inch", nullptr, "-0.5", "-0 ft, 6 in"),
+          "the sign display on the first part, a negative zero kept");
+    mlocUnitFormatter special;
+    mlocDecimal nan = {.kind = mloc_decimalNaN};
+    mlocDecimal infinity = {.kind = mloc_decimalInfinity, .negative = 1};
+    char text[32];
+    mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
+    bool nanWritten = Init(&special, "en", "inch-and-foot", nullptr) == mloc_success &&
+                      mlocFormatUnit(&special, &nan, &out) == mloc_success &&
+                      Same(text, &out, "0 in, NaN ft");
+    CHECK(nanWritten && mlocFormatUnit(&special, &infinity, &out) == mloc_success &&
+              Same(text, &out, "0 in, -\xE2\x88\x9E ft"),
+          "NaN and the infinities in the largest part, with their sign");
+    char buffer[64];
+    Parts parts;
+    CHECK(PartsOf("en", "foot-and-inch", mloc_unitWidthShort, "5.5", buffer, sizeof(buffer),
+                  &parts) &&
+              parts.count == 7 && parts.kinds[0] == mloc_numberPartInteger &&
+              parts.kinds[1] == mloc_numberPartLiteral && parts.kinds[2] == mloc_numberPartUnit &&
+              parts.kinds[3] == mloc_numberPartLiteral &&
+              parts.kinds[4] == mloc_numberPartInteger &&
+              parts.kinds[5] == mloc_numberPartLiteral && parts.kinds[6] == mloc_numberPartUnit,
+          "each part's number and name, the list's text literal");
+    mlocUnitFormatter formatter;
+    mlocLocale locale;
+    mlocUnitOptions compact = {.number.notation = mloc_notationCompactShort};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-second", 15, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "celsius-and-kelvin", 18,
+                                    nullptr) == mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, &compact) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-", 9, nullptr) ==
+                  mloc_errorSyntax,
+          "parts that do not convert alone, a notation other than standard, a part missing");
+    mlocDecimal one;
+    mlocOutput output = {.buffer = buffer, .capacity = 4};
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, nullptr) ==
+                  mloc_success &&
+              mlocParseDecimal("1.5", 3, &one).status == mloc_success &&
+              mlocFormatUnit(&formatter, &one, &output) == mloc_errorCapacity &&
+              output.length == 10 &&
+              mlocFormatUnitRange(&formatter, &one, &one, &output) == mloc_errorInvalid,
+          "a text that does not fit gives its length; no range of a mixed unit");
+}
+
 static void TestRefusals(void)
 {
     mlocUnitFormatter formatter;
@@ -314,13 +393,11 @@ static void TestRefusals(void)
               mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, nullptr) ==
                   mloc_errorNotFound,
           "a malformed identifier, a power past three, data without the names");
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, nullptr) ==
-                  mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "curr-usd", 8, nullptr) ==
+    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "curr-usd", 8, nullptr) ==
                   mloc_errorInvalid &&
               mlocInitUnitFormatter(&formatter, &s_data, &locale, "100-meter", 9, nullptr) ==
                   mloc_errorInvalid,
-          "a mixed unit, a currency, a constant in the numerator");
+          "a currency, a constant in the numerator");
     mlocUnitOptions percent = {.number = {.style = mloc_numberPercent}};
     mlocUnitOptions width = {.width = (mlocUnitWidth)3};
     CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &percent) ==
@@ -458,6 +535,7 @@ int main(void)
     TestFallbacks();
     TestPercent();
     TestCompounds();
+    TestMixed();
     TestRanges();
     TestParts();
     TestNames();

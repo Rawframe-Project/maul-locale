@@ -209,6 +209,18 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     }
 }
 
+mlocResult mlocWriteFormatted(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
+                              NumberWriter* writer)
+{
+    Prepared p;
+    mlocResult r = Prepare(f, decimal, &p);
+    if (r == mloc_success)
+    {
+        WriteOne(f, outer, &p, writer);
+    }
+    return r;
+}
+
 static bool CheckArguments(const mlocDecimal* decimal, const mlocOutput* output)
 {
     return decimal != nullptr && output != nullptr &&

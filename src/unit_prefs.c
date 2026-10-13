@@ -17,6 +17,7 @@
 #include "unit_convert.h"
 #include "unit_data.h"
 #include "unit_id.h"
+#include "unit_mixed.h"
 #include "unit_tables.h"
 
 #include "maul-locale/unit.h"
@@ -95,49 +96,6 @@ static mlocResult ScaleOf(const UnitTable* t, const char* id, size_t length, Uni
 {
     mlocResult r = mlocParseUnitId(t, id, length, parsed);
     return r == mloc_success ? mlocScaleUnit(t, parsed, scale) : r;
-}
-
-// A single part of a mixed unit as a core unit.
-static UnitId PartOf(const UnitId* mixed, uint32_t i)
-{
-    UnitId part = {.numeratorConstant = 1, .denominatorConstant = 1, .count = 1};
-    part.parts[0] = mixed->parts[i];
-    return part;
-}
-
-static bool SameDimensions(const UnitScale* a, const UnitScale* b, bool* reciprocalOut)
-{
-    bool same = true;
-    bool opposite = true;
-    for (uint32_t d = 0; d < unitMaxDimensions; d++)
-    {
-        same &= a->dimensions[d] == b->dimensions[d];
-        opposite &= a->dimensions[d] == -b->dimensions[d];
-    }
-    *reciprocalOut = !same && opposite;
-    return same || opposite;
-}
-
-// The value in a target unit, exactly; false when the integers cannot
-// hold it or the units do not convert.
-static bool ValueIn(const Choice* c, const UnitScale* from, const UnitValue* value,
-                    const UnitScale* to, UnitValue* out)
-{
-    bool reciprocal = false;
-    if (!SameDimensions(from, to, &reciprocal) || (reciprocal && (from->beaufort || to->beaufort)))
-    {
-        return false;
-    }
-    *out = *value;
-    if (!mlocUnitValueToBase(c->table, from, out))
-    {
-        return false;
-    }
-    if (reciprocal)
-    {
-        mlocInvertUnitValue(out);
-    }
-    return mlocUnitValueFromBase(c->table, to, out);
 }
 
 // The input unit's exponents: each part's base unit raised to its power,
@@ -425,15 +383,15 @@ static mlocResult ChooseEntry(const Choice* c, const UnitPrefsTable* p, uint32_t
         {
             return mloc_errorData;
         }
-        UnitId first = id.mixed ? PartOf(&id, 0) : id;
+        UnitId first = id.mixed ? mlocUnitPartOf(&id, 0) : id;
         UnitValue v;
         bool reciprocal = false;
         if (mlocScaleUnit(c->table, &first, &scale) != mloc_success ||
-            !SameDimensions(&c->input, &scale, &reciprocal))
+            !mlocSameDimensions(&c->input, &scale, &reciprocal))
         {
             return mloc_errorData;
         }
-        if (!ValueIn(c, &c->input, &c->value, &scale, &v))
+        if (!mlocUnitValueIn(c->table, &c->input, &c->value, &scale, &v))
         {
             return mloc_errorCapacity;
         }
@@ -481,127 +439,10 @@ static mlocResult DecimalOf(const UnitValue* v, const mlocPrecision* precision, 
     return r == mloc_success ? mlocRoundConverted(out, exact, precision) : r;
 }
 
-// Whether a rounded amount of one part reaches one of the part before.
-static bool Reaches(const Choice* c, const mlocDecimal* amount, const UnitScale* part,
-                    const UnitScale* before)
+// Rounds a mixed unit's last amount by the precision.
+static mlocResult RoundLast(void* context, mlocDecimal* amount, bool exact)
 {
-    Wide one = mlocWideOf(1);
-    UnitValue unit = mlocUnitValueOfInteger(&one);
-    UnitValue size;
-    UnitValue value;
-    if (!ValueIn(c, before, &unit, part, &size) || !mlocUnitValueOf(amount, &value))
-    {
-        return false;
-    }
-    return mlocUnitValueAtLeast(&value, &size.a, &size.b) && size.e == 0;
-}
-
-// A last part that rounds up to the size of the one before carries, and
-// so on up (UTS #35 Part 6, Mixed Units).
-static mlocResult Carry(const Choice* c, const UnitScale* scales, Wide* integers, uint32_t last,
-                        mlocDecimal* lastAmount)
-{
-    for (uint32_t i = last; i > 0 && lastAmount->kind == mloc_decimalFinite; i--)
-    {
-        bool carries = false;
-        if (i == last)
-        {
-            carries = Reaches(c, lastAmount, &scales[i], &scales[i - 1]);
-        }
-        else
-        {
-            mlocDecimal whole;
-            UnitValue w = mlocUnitValueOfInteger(&integers[i]);
-            carries = DecimalOf(&w, nullptr, &whole) == mloc_success &&
-                      Reaches(c, &whole, &scales[i], &scales[i - 1]);
-        }
-        if (!carries)
-        {
-            break;
-        }
-        if (i == last)
-        {
-            *lastAmount = (mlocDecimal){0};
-        }
-        else
-        {
-            integers[i] = mlocWideOf(0);
-        }
-        if (!mlocWideMultiplyAdd(&integers[i - 1], 1, 1))
-        {
-            return mloc_errorCapacity;
-        }
-    }
-    return mloc_success;
-}
-
-// Splits the value across a mixed unit's parts: whole larger parts, the
-// rest in the last, which alone is rounded; a carry moves up.
-static mlocResult SplitMixed(const Choice* c, const UnitId* id, const mlocPrecision* precision,
-                             mlocUnitAmounts* out)
-{
-    UnitScale scales[unitMaxParts] = {0};
-    Wide integers[unitMaxParts] = {0};
-    if (id->count < 2 || id->count > unitMaxParts)
-    {
-        return mloc_errorData;
-    }
-    for (uint32_t i = 0; i < id->count; i++)
-    {
-        UnitId part = PartOf(id, i);
-        if (mlocScaleUnit(c->table, &part, &scales[i]) != mloc_success)
-        {
-            return mloc_errorData;
-        }
-    }
-    UnitValue v;
-    if (!ValueIn(c, &c->input, &c->value, &scales[0], &v))
-    {
-        return mloc_errorCapacity;
-    }
-    bool negative = v.negative;
-    uint32_t last = id->count - 1;
-    for (uint32_t i = 0; i < last && !v.infinite && !c->nan; i++)
-    {
-        UnitValue rest;
-        if (!mlocSplitUnitValue(&v, &integers[i]) ||
-            !ValueIn(c, &scales[i], &v, &scales[i + 1], &rest))
-        {
-            return mloc_errorCapacity;
-        }
-        v = rest;
-    }
-    mlocDecimal lastAmount = {.kind = mloc_decimalNaN};
-    mlocResult r = c->nan ? mloc_success : DecimalOf(&v, precision, &lastAmount);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    r = Carry(c, scales, integers, last, &lastAmount);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    *out = (mlocUnitAmounts){.count = id->count};
-    for (uint32_t i = 0; i < last; i++)
-    {
-        UnitValue w = mlocUnitValueOfInteger(&integers[i]);
-        r = v.infinite || c->nan ? mlocMakeDecimal(0, &out->amounts[i])
-                                 : DecimalOf(&w, nullptr, &out->amounts[i]);
-        if (r != mloc_success)
-        {
-            return r;
-        }
-    }
-    out->amounts[last] = lastAmount;
-    if (v.infinite || c->nan)
-    {
-        // Not finite: the largest part takes it, the others are 0.
-        out->amounts[0] = lastAmount;
-        (void)mlocMakeDecimal(0, &out->amounts[last]);
-    }
-    out->amounts[0].negative = negative;
-    return mloc_success;
+    return mlocRoundConverted(amount, exact, context);
 }
 
 // The amounts of a chosen unit.
@@ -610,7 +451,8 @@ static mlocResult AmountsIn(const Choice* c, const UnitId* id, const mlocPrecisi
 {
     if (id->mixed)
     {
-        return SplitMixed(c, id, precision, out);
+        return mlocSplitMixed(c->table, id, &c->input, &c->value, c->nan, RoundLast,
+                              (void*)precision, out);
     }
     UnitScale scale = {0};
     UnitValue v;
@@ -618,7 +460,7 @@ static mlocResult AmountsIn(const Choice* c, const UnitId* id, const mlocPrecisi
     {
         return mloc_errorData;
     }
-    if (!ValueIn(c, &c->input, &c->value, &scale, &v))
+    if (!mlocUnitValueIn(c->table, &c->input, &c->value, &scale, &v))
     {
         return mloc_errorCapacity;
     }
@@ -661,7 +503,7 @@ static mlocResult ChooseUnit(const Choice* c, const mlocDataSet* data, const mlo
     bool reciprocal = false;
     *incrementOut = 0;
     if (key != nullptr && ScaleOf(t, key, strlen(key), &keyId, &keyScale) == mloc_success &&
-        SameDimensions(&c->input, &keyScale, &reciprocal) && !reciprocal)
+        mlocSameDimensions(&c->input, &keyScale, &reciprocal) && !reciprocal)
     {
         *lengthOut = strlen(key);
         memcpy(idOut, key, *lengthOut);

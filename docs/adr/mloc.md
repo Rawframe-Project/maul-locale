@@ -31,3 +31,4 @@ are listed in [README.md](README.md).
 | [mloc-0024](mloc-0024-unit-formatting.md) | Unit formatting: names in a data file of their own, read as ICU reads them | Accepted |
 | [mloc-0025](mloc-0025-compound-unit-names.md) | Compound unit names: built as ICU builds them, from the data ICU reads | Accepted |
 | [mloc-0026](mloc-0026-list-patterns.md) | List patterns: compiled in by style, joined as ICU joins them | Accepted |
+| [mloc-0027](mloc-0027-mixed-units.md) | Mixed units: split exactly, joined by the unit list, as ICU writes them | Accepted |

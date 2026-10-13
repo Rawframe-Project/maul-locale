@@ -70,6 +70,12 @@ typedef struct Outer
     mlocPluralRules rules;
 } Outer;
 
+// Writes a valid decimal as mlocFormatWith does, into a writer of the
+// caller's: mloc_success, or mloc_errorCapacity when rounding passes the
+// decimal's limits.
+mlocResult mlocWriteFormatted(const Formatter* formatter, const Outer* outer,
+                              const mlocDecimal* decimal, NumberWriter* writer);
+
 // Formats a decimal, within an outer pattern when one is given (the
 // formatter then has its plural rule set), after checking the decimal
 // and the output.
