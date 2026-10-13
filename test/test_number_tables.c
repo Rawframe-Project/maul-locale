@@ -630,6 +630,11 @@ static void TestParseSets(void)
     last[7] = 0;
     CHECK(!Valid(mlocValidParseSets, c, u.size), "a range past U+10FFFF");
     memcpy(c, u.bytes, u.size);
+    size_t textStart = offsetStart + 2 * ((size_t)strings + 1);
+    c[textStart] = 0;
+    c[textStart + 1] = 0;
+    CHECK(Valid(mlocValidParseSets, c, u.size), "the strings' text is not read as offsets");
+    memcpy(c, u.bytes, u.size);
     c[10] = 1;
     CHECK(!Valid(mlocValidParseSets, c, u.size), "a header's last field not 0");
     CHECK(folds >= 2, "the sets hold folds");
