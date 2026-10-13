@@ -370,13 +370,13 @@ static void TestCases(void)
     }
 }
 
-// Formats an amount with a display and reads the text back, all of it,
-// in both modes, with and without any currency, to the same decimal and
-// the formatter's currency.
+// Formats an amount with a display, with or without the ISO append, and
+// reads the text back, all of it, in both modes, with and without any
+// currency, to the same decimal and the formatter's currency.
 static bool RoundTrips(const char* id, const char* code, mlocCurrencyDisplay display,
-                       const char* amount)
+                       uint8_t append, const char* amount)
 {
-    mlocCurrencyOptions options = {.display = display};
+    mlocCurrencyOptions options = {.display = display, .appendCode = append};
     mlocCurrencyFormatter f;
     mlocDecimal d;
     char buffer[256];
@@ -407,9 +407,10 @@ static bool RoundTrips(const char* id, const char* code, mlocCurrencyDisplay dis
 
 static void TestRoundTrip(void)
 {
-    static const char* const s_locales[] = {"en",    "de",    "fr", "ja", "hi", "ar-EG", "fa",
-                                            "de-CH", "pt-CV", "tr", "ru", "zh", "ko",    "es",
-                                            "sv",    "he",    "bn", "th", "pl", "it"};
+    // my, si and to write a long name before the number.
+    static const char* const s_locales[] = {"en",    "de", "fr", "ja", "hi", "ar-EG", "fa", "de-CH",
+                                            "pt-CV", "tr", "ru", "zh", "ko", "es",    "sv", "he",
+                                            "bn",    "th", "pl", "it", "my", "si",    "to"};
     static const char* const s_codes[] = {"USD", "EUR", "JPY", "CHF", "INR", "CVE"};
     static const mlocCurrencyDisplay s_displays[] = {mloc_currencySymbol, mloc_currencyNarrowSymbol,
                                                      mloc_currencyCode, mloc_currencyName};
@@ -417,12 +418,20 @@ static void TestRoundTrip(void)
     {
         for (size_t c = 0; c < sizeof(s_codes) / sizeof(s_codes[0]); c++)
         {
-            for (size_t d = 0; d < sizeof(s_displays) / sizeof(s_displays[0]); d++)
+            for (size_t d = 0; d < sizeof(s_displays) / sizeof(s_displays[0]) * 2; d++)
             {
                 // The yen has no fraction digits.
                 const char* amount = strcmp(s_codes[c], "JPY") == 0 ? "-1234" : "-1234.5";
-                if (!RoundTrips(s_locales[l], s_codes[c], s_displays[d], amount) ||
-                    !RoundTrips(s_locales[l], s_codes[c], s_displays[d], "12"))
+                mlocCurrencyDisplay display = s_displays[d / 2];
+                uint8_t append = (uint8_t)(d % 2);
+                // The ISO append goes with a symbol alone.
+                if (append == 1 && display != mloc_currencySymbol &&
+                    display != mloc_currencyNarrowSymbol)
+                {
+                    continue;
+                }
+                if (!RoundTrips(s_locales[l], s_codes[c], display, append, amount) ||
+                    !RoundTrips(s_locales[l], s_codes[c], display, append, "12"))
                 {
                     CHECK(false, s_locales[l]);
                 }
