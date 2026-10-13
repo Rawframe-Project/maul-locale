@@ -281,6 +281,20 @@ static const Case s_cases[] = {
      "12",
      nullptr, nullptr, 0},
     {"en", "EUR", mloc_parseLenient, 1, "12 \xEF\xBC\x84", "12", "USD", 6},
+    // A sign equivalent to a two-letter symbol ("Rp", "Rs") reads as
+    // that currency.
+    {"id", "EUR", mloc_parseLenient, 1,
+     "\xE2\x82\xA8"
+     "12",
+     "12", "IDR", 5},
+    {"en-PK", "EUR", mloc_parseLenient, 1,
+     "\xE2\x82\xA8"
+     "12",
+     "12", "PKR", 5},
+    {"en-MU", "EUR", mloc_parseLenient, 1,
+     "\xE2\x82\xA8"
+     "12",
+     "12", "MUR", 5},
     // Text that ends with the spacing after a number, read to its end
     // and no further.
     {"en", "USD", mloc_parseLenient, 0, "12\xC2\xA0", "12", "USD", 2},
