@@ -479,6 +479,38 @@ static void TestUsage(void)
     CHECK(mlocFormatUnit(&formatter, &nan, &output) == mloc_success &&
               Same(buffer, &output, "NaN mi"),
           "NaN in the first output, as the largest value");
+    mlocOutput measure = {0};
+    CHECK(mlocFormatUnit(&formatter, &amount, &measure) == mloc_errorCapacity &&
+              measure.length == 7,
+          "a null buffer measures");
+    mlocUnitFormatter forged = formatter;
+    ((UnitFormat*)(void*)&forged)->table.simples = nullptr;
+    CHECK(mlocFormatUnit(&forged, &amount, &output) == mloc_errorInvalid,
+          "a usage formatter without its unit table");
+    // A usage of 64 bytes is read (it falls back to the default); one of
+    // 65 is refused.
+    static const char s_long[] =
+        "abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdef-abcd";
+    mlocUnitOptions longest = {.usage = s_long, .usageLength = sizeof(s_long) - 2};
+    mlocUnitOptions past = {.usage = s_long, .usageLength = sizeof(s_long) - 1};
+    char unit[64];
+    mlocOutput unitOut = {.buffer = unit, .capacity = sizeof(unit)};
+    mlocUnitAmounts amounts;
+    CHECK(Formats("en-US", "meter", &longest, "3", "9.8 ft") &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &past) ==
+                  mloc_errorSyntax &&
+              mlocGetUnitPreference(&s_builtin, &locale, "meter", 5, s_long, sizeof(s_long) - 2,
+                                    &amount, nullptr, &unitOut, &amounts) == mloc_success &&
+              mlocGetUnitPreference(&s_builtin, &locale, "meter", 5, s_long, sizeof(s_long) - 1,
+                                    &amount, nullptr, &unitOut, &amounts) == mloc_errorSyntax,
+          "the longest usage read");
+    CHECK(Used("en-US", "meter-second-kilogram-ampere-kelvin-mole-candela-bit", "default",
+               mloc_unitWidthShort, "3",
+               "1,806,642,228,000,000,000,000,000 cd\xE2\x8B\x85kg\xE2\x8B\x85m\xE2\x8B\x85sec"
+               "\xE2\x8B\x85"
+               "A\xE2\x8B\x85K\xE2\x8B\x85item\xE2\x8B\x85"
+               "bit"),
+          "an input of the most single units");
 }
 
 static void TestRefusals(void)
