@@ -446,6 +446,30 @@ static void TestRoundTrip(void)
     }
 }
 
+// Strict mode wants a long name formatter's name, in each category's
+// pattern.
+static bool ReadsStrictly(const char* id, const char* code, const char* text, bool reads)
+{
+    mlocCurrencyOptions options = {.display = mloc_currencyName};
+    mlocCurrencyFormatter f;
+    mlocDecimal d;
+    char read[3];
+    size_t at = 0;
+    mlocResult r = Init(&s_withNames, id, code, &options, &f) < 0
+                       ? (mlocResult)-100
+                       : ParseCopy(&f, text, strlen(text), mloc_parseStrict, 0, &d, read, &at);
+    return reads ? r == mloc_success && at == strlen(text) : r == mloc_errorSyntax;
+}
+
+static void TestLongNamesStrictly(void)
+{
+    CHECK(ReadsStrictly("en", "USD", "12.50", false), "no name");
+    CHECK(ReadsStrictly("en", "USD", "12.50 US dollars", true), "the name");
+    CHECK(ReadsStrictly("ro", "EUR", "20,00 euro", true), "few's pattern");
+    CHECK(ReadsStrictly("ro", "EUR", "6,00 de euro", true), "other's pattern");
+    CHECK(ReadsStrictly("ro", "EUR", "6,00", false), "none");
+}
+
 static void TestWithoutNames(void)
 {
     mlocCurrencyFormatter f;
@@ -536,6 +560,7 @@ int main(void)
     }
     TestCases();
     TestRoundTrip();
+    TestLongNamesStrictly();
     TestWithoutNames();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

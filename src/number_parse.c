@@ -294,18 +294,9 @@ static bool AffixAfter(const Parser* r, const AffixMatcher* a, const AffixMatche
     return AffixUnits(r, a->suffix) < AffixUnits(r, b->suffix);
 }
 
-// Adds an affix matcher once; false when the matchers are full.
+// Adds an affix matcher; false when the matchers are full.
 static bool AddAffixMatcher(Parser* r, int prefix, int suffix, uint32_t flags)
 {
-    // The outer patterns of a currency's categories may give a pair twice.
-    for (uint32_t i = 0; i < r->affixCount; i++)
-    {
-        const AffixMatcher* a = &r->affixes[i];
-        if (a->prefix == prefix && a->suffix == suffix && a->flags == flags)
-        {
-            return true;
-        }
-    }
     if (r->affixCount == parseMaxAffixMatchers)
     {
         return false;
