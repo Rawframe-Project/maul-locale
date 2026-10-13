@@ -28,7 +28,7 @@ bool mlocUnitValueIn(const UnitTable* t, const UnitScale* from, const UnitValue*
 
 // Whether a mixed unit's parts convert to each other alone, and the index
 // of its smallest part: mloc_success, or mloc_errorInvalid for parts of
-// other dimensions, an offset (a temperature) or Beaufort.
+// other dimensions or of one size, an offset (a temperature) or Beaufort.
 mlocResult mlocCheckMixed(const UnitTable* t, const UnitId* mixed, uint32_t* smallestOut);
 
 // Rounds the last part's amount in place, given whether it is exact.

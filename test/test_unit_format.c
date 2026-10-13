@@ -14,6 +14,7 @@
 #include "test_harness.h"
 #include "test_pack.h"
 #include "unit_compound.h"
+#include "unit_patterns.h"
 #include "unit_tables.h"
 
 #include "maul-locale/unit.h"
@@ -312,8 +313,11 @@ static void TestMixed(void)
     CHECK(Long("en", "hour-and-minute-and-second", "1.5083", "1 hour, 30 minutes, 29.88 seconds") &&
               Long("en", "pound-and-ounce", "0.999999", "0 pounds, 15.999984 ounces"),
           "the amount split exactly");
-    CHECK(Width("en", "inch-and-foot", mloc_unitWidthShort, "5.5", "6 in, 5 ft"),
-          "the parts in the order given, the amount in the largest");
+    CHECK(
+        Width("en", "inch-and-foot", mloc_unitWidthShort, "5.5", "6 in, 5 ft") &&
+            Width("en", "inch-and-foot-and-yard", mloc_unitWidthShort, "2.5", "6 in, 1 ft, 2 yd") &&
+            Width("en", "foot-and-yard-and-inch", mloc_unitWidthShort, "2.5", "1 ft, 2 yd, 6 in"),
+        "the parts in the order given, the amount in the largest");
     CHECK(Long("es", "foot-and-inch", "1.5", "1 pie y 6 pulgadas") &&
               Long("sw", "foot-and-inch", "2.5", "futi 2 na inchi 6") &&
               Long("ar", "foot-and-inch", "2.5",
@@ -368,8 +372,11 @@ static void TestMixed(void)
               mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, &compact) ==
                   mloc_errorInvalid &&
               mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-", 9, nullptr) ==
-                  mloc_errorSyntax,
-          "parts that do not convert alone, a notation other than standard, a part missing");
+                  mloc_errorSyntax &&
+              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-foot", 13, nullptr) ==
+                  mloc_errorInvalid,
+          "parts that do not convert alone, a notation other than standard, a part missing, "
+          "parts of one size");
     mlocDecimal one;
     mlocOutput output = {.buffer = buffer, .capacity = 4};
     CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, nullptr) ==
@@ -419,6 +426,18 @@ static void TestRefusals(void)
               mlocFormatUnitRange(&forged, &decimal, &decimal, &output) == mloc_errorInvalid &&
               mlocFormatUnit(nullptr, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make");
+    mlocUnitFormatter made;
+    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "meter", 5, nullptr) == mloc_success,
+          "a formatter");
+    UnitFormat* inside = (UnitFormat*)(void*)&made;
+    inside->start[1][0] = 2 * unitPool;
+    bool unused = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
+    inside->start[0][0] = unitPool;
+    inside->length[0][0] = 0;
+    bool emptyAtEnd = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
+    inside->start[0][0] = unitPool + 1;
+    CHECK(unused && emptyAtEnd && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+          "a pattern's offsets checked within the pool, an unused part's not read");
     output.capacity = 2;
     CHECK(Init(&formatter, "en", "meter", nullptr) == mloc_success &&
               mlocFormatUnit(&formatter, &decimal, &output) == mloc_errorCapacity &&
@@ -473,6 +492,77 @@ static bool OpenNames(mlocData* source, const uint32_t* lengths)
         {kindUnitNamesShort, {names, head + at}, true},
     };
     return OpenRootPack(units, 2, source);
+}
+
+// Builds an identifiers unit naming "foot" and "inch" and root's short
+// names of them: "{0} ft" for every category of the foot, "{0} inch" for
+// one and "in {0}" for the others of the inch; opens them as a pack.
+static bool OpenFootAndInch(mlocData* source)
+{
+    static uint8_t s_units[512];
+    memset(s_units, 0, sizeof(s_units));
+    uint8_t* ids = s_units;
+    PackPut(ids, 2, 2);
+    PackPut(ids + 4, 8, 4);
+    PackPut(ids + unitIdsHeaderSize + 4, 4, 4);
+    PackPut(ids + unitIdsHeaderSize + 8, 8, 4);
+    memcpy(ids + unitIdsHeaderSize + 14, "footinch", 8);
+    uint32_t idsSize = unitIdsHeaderSize + 14 + 8;
+    static const char* const s_strings[3] = {"{0} ft", "{0} inch", "in {0}"};
+    uint8_t* names = s_units + 64;
+    uint8_t* offsets = names + sparseHeaderSize;
+    uint8_t* codes = offsets + 2 * 4;
+    uint8_t* rowOffsets = codes + 2 * 2;
+    uint8_t* rows = rowOffsets + 2 * 3;
+    uint8_t* text = rows + 8;
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < 3; i++)
+    {
+        PackPut(offsets + 2 * i, at, 2);
+        memcpy(text + at, s_strings[i], strlen(s_strings[i]));
+        at += (uint32_t)strlen(s_strings[i]);
+    }
+    PackPut(offsets + 2 * 3, at, 2);
+    PackPut(codes + 2, 1, 2);
+    PackPut(rowOffsets + 2, 3, 2);
+    PackPut(rowOffsets + 4, 8, 2);
+    rows[0] = 1u << unitNameOther;
+    rows[3] = 1u << (unitNameZero + 1) | 1u << unitNameOther;
+    PackPut(rows + 4, 1, 2);
+    PackPut(rows + 6, 2, 2);
+    PackPut(names, 3, 2);
+    PackPut(names + 2, 2, 2);
+    PackPut(names + 4, at, 4);
+    PackPut(names + 8, 8, 4);
+    PackUnit units[2] = {
+        {kindUnitIds, {ids, idsSize}, false},
+        {kindUnitNamesShort, {names, (uint32_t)(text + at - names)}, true},
+    };
+    return OpenRootPack(units, 2, source);
+}
+
+static void TestMixedContext(void)
+{
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet set = {sources, 2};
+    mlocLocale locale;
+    mlocUnitFormatter formatter;
+    mlocUnitOptions whole = {.number.precision = {.kind = mloc_precisionFraction}};
+    mlocDecimal amount;
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    bool other = OpenFootAndInch(&sources[1]) &&
+                 mlocParseLocale("es", 2, &locale).status == mloc_success &&
+                 mlocInitUnitFormatter(&formatter, &set, &locale, "foot-and-inch", 13, &whole) ==
+                     mloc_success &&
+                 mlocParseDecimal("1.25", 4, &amount).status == mloc_success &&
+                 mlocFormatUnit(&formatter, &amount, &output) == mloc_success &&
+                 Same(buffer, &output, "1 ft e in 3");
+    CHECK(other && mlocParseDecimal("1.0833", 6, &amount).status == mloc_success &&
+              mlocFormatUnit(&formatter, &amount, &output) == mloc_success &&
+              Same(buffer, &output, "1 ft y 1 inch"),
+          "Spanish's y read against the smallest part's pattern for its category");
 }
 
 static void TestPool(void)
@@ -541,5 +631,6 @@ int main(void)
     TestNames();
     TestRefusals();
     TestPool();
+    TestMixedContext();
     return s_failures == 0 ? 0 : 1;
 }

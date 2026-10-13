@@ -20,8 +20,8 @@ width. Record mloc-0023's preferences split mixed outputs exactly.
   the largest; whole larger parts, the rest in the smallest, exactly;
   the smallest rounded by the formatter's precision (an inexact rest
   to 38 digits without one), a part that rounds up to the next
-  carrying, and so on up. Parts of other dimensions, a temperature or
-  Beaufort are refused.
+  carrying, and so on up. Parts of other dimensions or of one size
+  ("foot-and-foot", as ICU), a temperature or Beaufort are refused.
 - **Writing** (`src/unit_mixed_format.c`): each part with its own
   patterns (named or built, record mloc-0025) in the formatter's pool;
   the larger parts as the default number format writes them (grouped,

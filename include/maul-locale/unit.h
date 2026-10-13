@@ -191,7 +191,8 @@ extern "C"
     ///         empty unit, a currency, a constant in the numerator, a name
     ///         ICU refuses to build (the number inside a part), a mixed
     ///         unit whose parts do not convert to each other alone (other
-    ///         dimensions, a temperature) or with a notation other than
+    ///         dimensions, a temperature) or are of one size, or with a
+    ///         notation other than
     ///         standard, or options out of range or in conflict (a percent
     ///         style).
     /// @par Thread safety

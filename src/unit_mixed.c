@@ -91,6 +91,14 @@ static mlocResult Sort(const UnitTable* t, const UnitId* mixed, Split* s)
         {
             return mloc_errorInvalid;
         }
+        for (uint32_t j = 0; j < i; j++)
+        {
+            // Two parts of one size ("foot-and-foot") are refused, as ICU.
+            if (!Larger(&scale, &s->scales[j]) && !Larger(&s->scales[j], &scale))
+            {
+                return mloc_errorInvalid;
+            }
+        }
         uint32_t at = i;
         while (at > 0 && Larger(&scale, &s->scales[at - 1]))
         {
