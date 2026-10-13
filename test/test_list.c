@@ -69,9 +69,12 @@ static void TestValidators(void)
     static const char* const s_brace[4] = {"{0} {1} }", "{0}, {1}", "{0}, {1}", "{0}, {1}"};
     static const char* const s_other[4] = {"{0} {2}", "{0}, {1}", "{0}, {1}", "{0}, {1}"};
     static const char* const s_cut[4] = {"{0} {1", "{0}, {1}", "{0}, {1}", "{0}, {1}"};
+    static const char* const s_noZero[4] = {"{1} {}", "{0}, {1}", "{0}, {1}", "{0}, {1}"};
+    static const char* const s_noOne[4] = {"{0} {}", "{0}, {1}", "{0}, {1}", "{0}, {1}"};
     CHECK(!ValidSets(s_twice, 4, nullptr) && !ValidSets(s_missing, 4, nullptr) &&
               !ValidSets(s_brace, 4, nullptr) && !ValidSets(s_other, 4, nullptr) &&
-              !ValidSets(s_cut, 4, nullptr),
+              !ValidSets(s_cut, 4, nullptr) && !ValidSets(s_noZero, 4, nullptr) &&
+              !ValidSets(s_noOne, 4, nullptr),
           "a placeholder twice, missing, another brace, another number, cut short");
     uint32_t size = BuildSets(s_good, 4, nullptr);
     CHECK(!mlocValidListPatterns(nullptr, (DataSpan){s_unit, size - 1}), "a table cut short");
@@ -197,6 +200,7 @@ static void TestJoin(void)
     p = Patterns("{0} \xD7\x95{1}", "{0}, {1}", "{0}, {1}", "{0} \xD7\x95{1}", listRuleHebrew);
     CHECK(Joins(&p, "a|\xD7\x91", "a \xD7\x95\xD7\x91") && Joins(&p, "a|b", "a \xD7\x95-b") &&
               Joins(&p, "a|\xEF\xAC\xA0", "a \xD7\x95\xEF\xAC\xA0") &&
+              Joins(&p, "a|\xD7\xAA", "a \xD7\x95\xD7\xAA") &&
               Joins(&p, "a|\xF0\x9F\x98\x80", "a \xD7\x95-\xF0\x9F\x98\x80") &&
               Joins(&p, "a|\xC3\xA9", "a \xD7\x95-\xC3\xA9") && Joins(&p, "a|", "a \xD7\x95"),
           "Hebrew's vav takes a dash before a code point of another script");
