@@ -305,17 +305,21 @@ static void TestBounds(void)
                         true) == mloc_success,
           "32 literals in strict mode");
     // 21 and 22 three-byte literals: 63 bytes fit, 66 do not.
-    char prefix[80] = "";
-    char text[90] = "";
-    for (int i = 0; i < 21; i++)
+    char prefix[80] = {0};
+    char text[90] = {0};
+    for (int count = 21; count <= 22; count++)
     {
-        strcat(prefix, "\xE3\x81\x82");
+        for (int i = 0; i < count; i++)
+        {
+            memcpy(prefix + 3 * i, "\xE3\x81\x82", 3);
+        }
+        prefix[3 * count] = '\0';
+        memcpy(text, prefix, (size_t)(3 * count));
+        memcpy(text + 3 * count, "12", 3);
+        CHECK(ParsePrefixed(prefix, text, true) ==
+                  (count == 21 ? mloc_success : mloc_errorCapacity),
+              count == 21 ? "an affix of 63 bytes" : "an affix of 66 bytes");
     }
-    strcat(strcpy(text, prefix), "12");
-    CHECK(ParsePrefixed(prefix, text, true) == mloc_success, "an affix of 63 bytes");
-    strcat(prefix, "\xE3\x81\x82");
-    strcat(strcpy(text, prefix), "12");
-    CHECK(ParsePrefixed(prefix, text, true) == mloc_errorCapacity, "an affix of 66 bytes");
     const char* plain[4] = {"", "", "\x01", ""};
     mlocData source;
     mlocNumberFormatter formatter;
