@@ -565,6 +565,7 @@ static void TestCases(void)
               InCase("de", "newton-meter", l, mloc_caseDative, "2", "2 Newtonmetern") &&
               InCase("de", "hectometer", l, mloc_caseDative, "2", "2 Hektometern") &&
               InCase("de", "hectometer", l, mloc_caseDative, "1", "1 Hektometer") &&
+              InCase("de", "hectosecond", l, mloc_caseDative, "1", "1 Hektosekunde") &&
               InCase("pl", "kilometer-per-hour", l, mloc_caseGenitive, "5",
                      "5 kilometr\xC3\xB3w na godzin\xC4\x99"),
           "compound names: the case through per and times, a prefixed core lowercased in it");
