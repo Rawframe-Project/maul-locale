@@ -894,6 +894,21 @@ static void TestParseLimits(void)
         memcpy(text + 2 * k, "x", 2);
         pairs = pairs && ParsesTo(s_pairs, text, "0", (size_t)(2 * k + 1));
     }
+    // The one word tried first: the deep searches, cut by the limit, come
+    // before the shallow ones that reach the same text (ICU reads 2k + 1
+    // to 80).
+    static const char s_singles[] = "%a:\n0: x;\n1: o;\n2: o o =%a=;\n3: o =%a=;\n";
+    static const int s_singleCounts[] = {64, 65, 70, 80};
+    for (size_t c = 0; c < sizeof(s_singleCounts) / sizeof(s_singleCounts[0]); c++)
+    {
+        int k = s_singleCounts[c];
+        for (int i = 0; i < k; i++)
+        {
+            memcpy(text + 2 * i, "o ", 2);
+        }
+        memcpy(text + 2 * k, "x", 2);
+        pairs = pairs && ParsesTo(s_singles, text, "0", (size_t)(2 * k + 1));
+    }
     CHECK(pairs, "a remembered search reused only at depths where it stands");
     // A negative rule counts a level too: after "m ", 62 levels.
     static const char s_minus[] = "%a:\n-x: m >>;\n0: x;\n1: o;\n2: o =%a=;\n";
@@ -926,6 +941,11 @@ static void TestParseLimits(void)
               ParsesTo(s_special, "inf k y", "NaN", 7) && ParsesTo(s_special, "nan k", "NaN", 5) &&
               ParsesTo(s_over, "x p inf t", "Infinity", 9),
           "an infinity or NaN times a divisor, as a remainder, over a base");
+    static const char s_opposite[] = "%a:\nx.x: << p >%%f>;\nInf: inf;\n0: zero;\n%%f:\n-x: m >>;\n"
+                                     "Inf: inf;\n10: <%a< t;\n";
+    CHECK(ParsesTo(s_opposite, "inf p m inf", "NaN", 11) &&
+              ParsesTo(s_opposite, "zero p m inf", "-Infinity", 12),
+          "an infinity and a negative one add to NaN");
     static const char s_zeros[] = "%a:\nx.x: << p >%%f>;\n0: zero; one; two; three; four; five;\n"
                                   "%%f:\n100: <%a<<;\n";
     char zeros[256] = "zero p ";
