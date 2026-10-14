@@ -6,7 +6,8 @@
 // spoiled are refused. Then names found along a chain from the names data
 // file: each namespace, each kind of field, a field the chain lacks
 // taking the name, a region's own names over its parent's, and the codes
-// and fields that find nothing.
+// and fields that find nothing. Last, whole-locale names by patterns and
+// names built here.
 
 #include "bytes.h"
 #include "data_view.h"
@@ -19,6 +20,7 @@
 #include "test_pack.h"
 
 #include "maul-locale/data.h"
+#include "maul-locale/names.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -257,12 +259,13 @@ static void TestCapitalization(void)
 
 // A set of the compiled-in data, a root pack of a codes unit and one
 // names unit, and with the file the names data file.
-static bool OpenPack(const char* code, uint32_t kind, const uint16_t* keys,
-                     const char* const* texts, uint32_t count, bool withFile, mlocDataSet* set)
+static bool OpenPackCodes(const char* const* codes, uint32_t codeCount, uint32_t kind,
+                          const uint16_t* keys, const char* const* texts, uint32_t count,
+                          bool withFile, mlocDataSet* set)
 {
-    static uint8_t s_ids[64];
-    static uint8_t s_names[64];
-    uint32_t idsSize = BuildIds(&code, 1);
+    static uint8_t s_ids[256];
+    static uint8_t s_names[256];
+    uint32_t idsSize = BuildIds(codes, codeCount);
     memcpy(s_ids, s_unit, idsSize);
     uint32_t namesSize = BuildNames(keys, texts, count);
     memcpy(s_names, s_unit, namesSize);
@@ -272,6 +275,12 @@ static bool OpenPack(const char* code, uint32_t kind, const uint16_t* keys,
     PackUnit units[] = {{kindNameIds, {s_ids, idsSize}, false}, {kind, {s_names, namesSize}, true}};
     *set = (mlocDataSet){s_three, withFile ? 3 : 2};
     return OpenRootPack(units, 2, &s_three[1]);
+}
+
+static bool OpenPack(const char* code, uint32_t kind, const uint16_t* keys,
+                     const char* const* texts, uint32_t count, bool withFile, mlocDataSet* set)
+{
+    return OpenPackCodes(&code, 1, kind, keys, texts, count, withFile, set);
 }
 
 // A source whose codes lack the one asked for is passed over; a code's
@@ -296,6 +305,61 @@ static void TestSources(void)
               !mlocFindName(&set, &und, "l:zz", 4, nameFieldName, &name) &&
               mlocFindName(&set, &und, "l:zz", 4, nameFieldShort, &name) && name.length == 2,
           "a code's entries at its unit's end, its name absent");
+}
+
+// Whether a locale's name in English, by a set, is as expected.
+static bool LocaleNamed(const mlocDataSet* set, mlocLanguageDisplay mode, const char* id,
+                        const char* expected)
+{
+    mlocLocale en;
+    mlocLocale named;
+    mlocLocaleNameOptions options = {.languageDisplay = mode};
+    char buffer[256];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    mlocResult r = mlocParseLocale("en", 2, &en).status == mloc_success &&
+                           mlocParseLocale(id, strlen(id), &named).status == mloc_success
+                       ? mlocGetLocaleName(set, &en, &named, &options, &output)
+                       : mloc_errorInvalid;
+    bool same =
+        r >= 0 && output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
+    if (!same)
+    {
+        printf("%s: %d \"%.*s\"\n", id, (int)r, r >= 0 ? (int)output.length : 0, buffer);
+    }
+    return same;
+}
+
+// Whole-locale names by patterns and names no CLDR locale has: a pattern
+// with a prefix and a separator with both, a pattern without its
+// placeholders (root's taken instead), and a dialect name for a whole id
+// with variants, passed over when it holds a hyphen.
+static void TestCraftedLocaleNames(void)
+{
+    mlocDataSet set;
+    static const char* const s_patternCodes[] = {"p:localePattern", "p:localeSeparator"};
+    static const uint16_t s_patternKeys[] = {0, nameFieldCount};
+    static const char* const s_patterns[] = {"<{0}|{1}>", "!{0};{1}/"};
+    CHECK(OpenPackCodes(s_patternCodes, 2, kindNamePatterns, s_patternKeys, s_patterns, 2, true,
+                        &set) &&
+              LocaleNamed(&set, mloc_languageDisplayStandard, "en", "English") &&
+              LocaleNamed(&set, mloc_languageDisplayStandard, "en-Latn-GB",
+                          "<English|!Latin;United Kingdom/>") &&
+              LocaleNamed(&set, mloc_languageDisplayStandard, "en-u-kr-latn-grek",
+                          "<English|Script/Block Reordering: !Latin;Greek/>"),
+          "a pattern's prefix only with parts, a separator's prefix and suffix");
+    static const uint16_t s_name[] = {0};
+    static const char* const s_broken[] = {"{0} only"};
+    CHECK(OpenPack("p:localePattern", kindNamePatterns, s_name, s_broken, 1, true, &set) &&
+              LocaleNamed(&set, mloc_languageDisplayStandard, "en-GB", "English (United Kingdom)"),
+          "a pattern without its placeholders: root's");
+    static const char* const s_wholeCodes[] = {"l:xx-YY-varxx", "l:xy-YY-varyy"};
+    static const uint16_t s_wholeKeys[] = {0, nameFieldCount};
+    static const char* const s_wholes[] = {"Foo", "Fo-o"};
+    CHECK(
+        OpenPackCodes(s_wholeCodes, 2, kindNamesLanguages, s_wholeKeys, s_wholes, 2, true, &set) &&
+            LocaleNamed(&set, mloc_languageDisplayDialect, "xx-YY-varxx", "Foo") &&
+            LocaleNamed(&set, mloc_languageDisplayDialect, "xy-YY-varyy", "xy (YY, varyy)"),
+        "a whole id's dialect name, passed over when it holds a hyphen");
 }
 
 // The compiled-in data, then the names data file at the path the build
@@ -326,6 +390,7 @@ int main(void)
     }
     TestFind();
     TestSources();
+    TestCraftedLocaleNames();
     TestCapitalization();
     return s_failures == 0 ? 0 : 1;
 }

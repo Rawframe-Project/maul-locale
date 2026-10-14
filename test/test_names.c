@@ -136,6 +136,13 @@ static void TestCapitalization(void)
               Named("en", mloc_nameMeasurementSystem, "metric", mloc_nameFormStandard,
                     mloc_capitalizationListOrMenu, mloc_success, "Metric"),
           "Azerbaijani's dotted capital I; a measurement system by the sentence rule alone");
+    CHECK(
+        Named("ru", mloc_nameLanguage, "en", mloc_nameFormStandard, mloc_capitalizationSentence,
+              mloc_success,
+              "\xD0\x90\xD0\xBD\xD0\xB3\xD0\xBB\xD0\xB8\xD0\xB9\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9") &&
+            Named("zh", mloc_nameLanguage, "en", mloc_nameFormStandard, mloc_capitalizationSentence,
+                  mloc_success, "\xE8\x8B\xB1\xE8\xAF\xAD"),
+        "a letter beyond ASCII titlecased by the table, a character without a titlecase kept");
 }
 
 static void TestOutput(void)
@@ -272,6 +279,17 @@ static void TestLocaleName(void)
                           "Fran\xC3\xA7"
                           "ais (Canada)"),
           "a language without a name, the short form, a menu's capital");
+    CHECK(Dialect("en-u-kr-zyyy", "English (Script/Block Reordering: Common)") &&
+              LocaleNamed("en-ZA", "en-u-cu-zar", mloc_languageDisplayStandard,
+                          mloc_nameFormStandard, mloc_capitalizationNone, mloc_success,
+                          "English (Currency: R)") &&
+              Dialect("en-u-cu-abcde", "English (Currency: ABCDE)") &&
+              Dialect("en-u-cu-usd-eur", "English (Currency: USD-EUR)") &&
+              LocaleNamed("fr", "fr-CA", mloc_languageDisplayStandard, mloc_nameFormStandard,
+                          mloc_capitalizationStandAlone, mloc_success,
+                          "fran\xC3\xA7"
+                          "ais (Canada)"),
+          "codes beginning with z, a currency without a symbol in capitals, alone");
     mlocLocale en;
     mlocLocale gb;
     char small[4];

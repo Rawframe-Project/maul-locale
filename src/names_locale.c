@@ -442,6 +442,11 @@ static void JoinSpans(Composer* c, Span values, void (*write)(Composer*, Span))
     }
 }
 
+static char Upper(char letter)
+{
+    return (char)(letter >= 'a' && letter <= 'z' ? letter - 32 : letter);
+}
+
 // A collation reorder code's name: a script's, else the kr value's, else
 // the code.
 static void WriteReorder(Composer* c, Span code)
@@ -452,7 +457,7 @@ static void WriteReorder(Composer* c, Span code)
     if (four)
     {
         memcpy(script, code.text, 4);
-        script[0] = (char)(script[0] >= 'a' && script[0] <= 'z' ? script[0] - 32 : script[0]);
+        script[0] = Upper(script[0]);
     }
     Span parts[] = {SpanOf("kr"), code};
     Span scriptCode = {script, 4};
@@ -465,7 +470,9 @@ static void WriteReorder(Composer* c, Span code)
     Append(c, code, true);
 }
 
-// A currency's symbol in the locale, else its code in capitals.
+// A currency's symbol in the locale, else its code in capitals (CLDR's
+// tools look the symbol up by the code in capitals, which is its own
+// fallback, whatever its length).
 static void WriteCurrency(Composer* c, Span code)
 {
     char upper[3];
@@ -473,8 +480,7 @@ static void WriteCurrency(Composer* c, Span code)
     mlocOutput output = {.buffer = symbol, .capacity = sizeof(symbol)};
     for (size_t i = 0; code.length == 3 && i < 3; i++)
     {
-        upper[i] =
-            (char)(code.text[i] >= 'a' && code.text[i] <= 'z' ? code.text[i] - 32 : code.text[i]);
+        upper[i] = Upper(code.text[i]);
     }
     mlocResult r = code.length == 3 ? mlocGetCurrencySymbol(c->data, c->display, upper, 3,
                                                             mloc_currencySymbol, &output)
@@ -484,7 +490,11 @@ static void WriteCurrency(Composer* c, Span code)
         Append(c, (Span){symbol, output.length}, true);
         return;
     }
-    Append(c, code.length == 3 ? (Span){upper, 3} : code, true);
+    for (size_t i = 0; i < code.length; i++)
+    {
+        char letter = Upper(code.text[i]);
+        Append(c, (Span){&letter, 1}, true);
+    }
 }
 
 // A u key or t field: its value's name when the locale has one (the
@@ -517,7 +527,7 @@ static void WriteKeyword(Composer* c, const Item* item)
     NameText keyName = {0};
     (void)Find(c, 'k', &key, 1, nameFieldName, &keyName);
     KeyTypeStart(c, keyName, key);
-    if (strcmp(item->key, "cu") == 0 && item->count == 1)
+    if (strcmp(item->key, "cu") == 0)
     {
         WriteCurrency(c, item->values);
     }

@@ -27,7 +27,9 @@ and ICU4X stop at the language id.
   - then the script and region the match left out and the variants;
   - then the u attributes and keys, the t extension's language and its
     fields, in that order, each by its value's name when the locale has
-    one, else by the key-type pattern: the currency's symbol for cu, the
+    one, else by the key-type pattern: the currency's symbol for cu
+    (looked up by the whole value in capitals, which stands when there
+    is none, so "usd-eur" reads "USD-EUR"), the
     reorder codes' script names for kr, the t language's own name joined
     by the separator after "Transform" (or h0's value's name), the
     subtags for the rest; a key without a value has "true";
