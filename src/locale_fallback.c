@@ -404,22 +404,68 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
     return mloc_success;
 }
 
+// A walk along a locale's chain: each step's key in turn. The parents
+// are read only when the first step does not end the walk. Validation
+// has made every chain end within maxChain steps.
+typedef struct ChainWalk
+{
+    const mlocDataSet* data;
+    mlocComponent component;
+    mlocLocale step;
+    Parents parents;
+    bool parentsOpen;
+    int depth;
+    char key[MAX_KEY];
+    uint32_t length;
+} ChainWalk;
+
+static inline void WalkStart(ChainWalk* w, const mlocDataSet* data, mlocComponent component,
+                             const mlocLocale* locale)
+{
+    w->data = data;
+    w->component = component;
+    w->parentsOpen = false;
+    w->depth = 0;
+    w->step = FirstStep(data, locale);
+    w->length = KeyText(&w->step, w->key);
+}
+
+// Moves to the next step; false at the chain's end, with *okOut false
+// when the chain is needed and the data has no parents table.
+static inline bool WalkNext(ChainWalk* w, bool* okOut)
+{
+    *okOut = true;
+    // Root ends every chain, parents table or none.
+    if ((w->length == 4 && memcmp(w->key, "root", 4) == 0) || w->depth == maxChain)
+    {
+        return false;
+    }
+    if (!w->parentsOpen && !OpenParents(w->data, &w->parents))
+    {
+        *okOut = false;
+        return false;
+    }
+    w->parentsOpen = true;
+    if (!NextStep(&w->parents, w->component, &w->step))
+    {
+        return false;
+    }
+    w->depth++;
+    w->length = KeyText(&w->step, w->key);
+    return true;
+}
+
 bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint32_t kind,
                           const mlocLocale* locale, LocaleUnitVisitor visit, void* context)
 {
-    // The parents are read only when the first step's units do not end
-    // the walk. Validation has made every chain end within maxChain
-    // steps.
-    Parents parents;
-    bool parentsOpen = false;
+    ChainWalk w;
+    WalkStart(&w, data, component, locale);
     // The first 32 sources found to hold no unit of the kind, which the
     // later steps skip.
     uint32_t without = 0;
-    mlocLocale step = FirstStep(data, locale);
-    for (int depth = 0; depth <= maxChain; depth++)
+    bool ok = true;
+    do
     {
-        char key[MAX_KEY];
-        uint32_t length = KeyText(&step, key);
         for (size_t s = 0; s < data->count; s++)
         {
             DataView view = mlocViewOf(&data->sources[s]);
@@ -427,7 +473,7 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
             DataSpan span;
             bool none = false;
             if ((s < 32 && (without >> s & 1) != 0) ||
-                !mlocFindDataLocale(&view, key, length, &index))
+                !mlocFindDataLocale(&view, w.key, w.length, &index))
             {
                 continue;
             }
@@ -435,27 +481,35 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
             {
                 without |= none && s < 32 ? 1u << s : 0;
             }
-            else if (visit(context, span, &view, depth))
+            else if (visit(context, span, &view, w.depth))
             {
                 return true;
             }
         }
-        // Root ends every chain, parents table or none.
-        if (length == 4 && memcmp(key, "root", 4) == 0)
+    } while (WalkNext(&w, &ok));
+    return ok;
+}
+
+bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
+                          const mlocLocale* locale, LocaleStepVisitor visit, void* context)
+{
+    ChainWalk w;
+    WalkStart(&w, data, component, locale);
+    bool ok = true;
+    do
+    {
+        for (size_t s = 0; s < data->count; s++)
         {
-            return true;
+            DataView view = mlocViewOf(&data->sources[s]);
+            uint32_t index = 0;
+            if (mlocFindDataLocale(&view, w.key, w.length, &index) &&
+                visit(context, &view, index, w.depth))
+            {
+                return true;
+            }
         }
-        if (!parentsOpen && !OpenParents(data, &parents))
-        {
-            return false;
-        }
-        parentsOpen = true;
-        if (!NextStep(&parents, component, &step))
-        {
-            return true;
-        }
-    }
-    return true;
+    } while (WalkNext(&w, &ok));
+    return ok;
 }
 
 typedef struct Found

@@ -36,4 +36,16 @@ typedef bool (*LocaleUnitVisitor)(void* context, DataSpan unit, const DataView* 
 bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint32_t kind,
                           const mlocLocale* locale, LocaleUnitVisitor visit, void* context);
 
+// Called with each step of a locale's chain that a source holds: the
+// source, the locale's index in it and the step (0 for the locale's own
+// key); returns true to end the walk.
+typedef bool (*LocaleStepVisitor)(void* context, const DataView* view, uint32_t locale, int depth);
+
+// Visits the steps of a locale's chain that each source holds, in the
+// order mlocVisitLocaleUnits visits units, for a part that looks up many
+// units at the same steps. False when the chain is needed and the data
+// has no parents table.
+bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
+                          const mlocLocale* locale, LocaleStepVisitor visit, void* context);
+
 #endif

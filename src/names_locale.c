@@ -69,6 +69,8 @@ typedef struct Composer
 {
     const mlocDataSet* data;
     const mlocLocale* display;
+    // The display locale's chain, resolved once for the call's lookups.
+    const NameChain* chain;
     bool dialect;
     NameField field;
     Pattern separator;
@@ -146,8 +148,7 @@ static Pattern FindPattern(const Composer* c, const char* code, const char* fall
 {
     NameText text;
     Pattern p;
-    if (mlocFindName(c->data, c->display, code, strlen(code), nameFieldName, &text) &&
-        Split(text, &p))
+    if (mlocFindChainName(c->chain, code, strlen(code), nameFieldName, &text) && Split(text, &p))
     {
         return p;
     }
@@ -180,7 +181,7 @@ static bool Find(const Composer* c, char space, const Span* parts, size_t count,
         memcpy(code + at, parts[i].text, parts[i].length);
         at += parts[i].length;
     }
-    return mlocFindName(c->data, c->display, code, at, field, out);
+    return mlocFindChainName(c->chain, code, at, field, out);
 }
 
 // Whether a name holds '_' or '-', which sends the whole id's match on
@@ -724,9 +725,14 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
         return mloc_errorNotFound;
     }
     NameWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    // A chain that cannot be walked past its first step keeps that step,
+    // where mlocFindName would find names too.
+    NameChain chain;
+    (void)mlocOpenNameChain(data, displayLocale, &chain);
     Composer c = {
         .data = data,
         .display = displayLocale,
+        .chain = &chain,
         .dialect = o.languageDisplay == mloc_languageDisplayDialect,
         .field = (NameField)o.form,
         .w = &w,

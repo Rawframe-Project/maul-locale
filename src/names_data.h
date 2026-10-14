@@ -37,4 +37,35 @@ typedef struct NameText
 bool mlocFindName(const mlocDataSet* data, const mlocLocale* locale, const char* code,
                   size_t length, NameField field, NameText* out);
 
+enum
+{
+    // The steps a names chain keeps; a longer one is walked per lookup.
+    nameChainMost = 24,
+};
+
+// A locale's chain resolved once for many lookups: each step that a
+// source with a codes unit holds, in the walk's order.
+typedef struct NameStep
+{
+    DataView view;
+    DataSpan ids;
+    uint32_t locale;
+} NameStep;
+
+typedef struct NameChain
+{
+    const mlocDataSet* data;
+    const mlocLocale* locale;
+    // nameChainMost + 1 when the chain did not fit.
+    uint32_t count;
+    NameStep steps[nameChainMost];
+} NameChain;
+
+// Resolves a locale's chain; false when it cannot be walked.
+bool mlocOpenNameChain(const mlocDataSet* data, const mlocLocale* locale, NameChain* out);
+
+// mlocFindName along an opened chain.
+bool mlocFindChainName(const NameChain* chain, const char* code, size_t length, NameField field,
+                       NameText* out);
+
 #endif

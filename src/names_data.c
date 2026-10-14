@@ -238,3 +238,67 @@ bool mlocFindName(const mlocDataSet* data, const mlocLocale* locale, const char*
     }
     return out->text != nullptr;
 }
+
+static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
+{
+    (void)depth;
+    NameChain* chain = context;
+    DataSpan ids;
+    if (!mlocFindDataUnit(view, kindNameIds, dataNoLocale, &ids))
+    {
+        return false;
+    }
+    if (chain->count == nameChainMost)
+    {
+        chain->count = nameChainMost + 1;
+        return true;
+    }
+    chain->steps[chain->count++] = (NameStep){*view, ids, locale};
+    return false;
+}
+
+bool mlocOpenNameChain(const mlocDataSet* data, const mlocLocale* locale, NameChain* out)
+{
+    out->data = data;
+    out->locale = locale;
+    out->count = 0;
+    return mlocVisitLocaleChain(data, mloc_componentMain, locale, TakeStep, out);
+}
+
+bool mlocFindChainName(const NameChain* chain, const char* code, size_t length, NameField field,
+                       NameText* out)
+{
+    if (chain->count > nameChainMost)
+    {
+        return mlocFindName(chain->data, chain->locale, code, length, field, out);
+    }
+    *out = (NameText){0};
+    uint32_t kind = mlocNameKind(code, length);
+    if (kind == 0 || (uint32_t)field >= nameFieldCount)
+    {
+        return false;
+    }
+    NameText name = {0};
+    // The code's index in the source last looked up.
+    const uint8_t* source = nullptr;
+    bool known = false;
+    uint16_t index = 0;
+    for (uint32_t i = 0; i < chain->count; i++)
+    {
+        const NameStep* step = &chain->steps[i];
+        if (step->view.bytes != source)
+        {
+            source = step->view.bytes;
+            known = mlocFindNameId(step->ids, code, length, &index);
+        }
+        DataSpan unit;
+        bool none = false;
+        if (known && mlocFindDataUnitOrKind(&step->view, kind, step->locale, &unit, &none) &&
+            UnitField(unit, index, field, out, &name))
+        {
+            return true;
+        }
+    }
+    *out = name;
+    return out->text != nullptr;
+}

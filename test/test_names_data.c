@@ -405,6 +405,26 @@ static void TestSubdivisions(void)
     }
 }
 
+// A locale's name by a set whose chain has more steps with names than a
+// names chain keeps (each source holds en and root): the lookups walk
+// the chain each time and give the same name.
+static void TestLongChain(void)
+{
+    static mlocData s_many[1 + nameChainMost];
+    s_many[0] = s_sources[0];
+    for (size_t i = 1; i < sizeof(s_many) / sizeof(s_many[0]); i++)
+    {
+        s_many[i] = s_sources[1];
+    }
+    mlocDataSet set = {s_many, sizeof(s_many) / sizeof(s_many[0])};
+    mlocDataSet few = {s_many, 1 + nameChainMost / 2};
+    CHECK(LocaleNamed(&set, mloc_languageDisplayStandard, "en-Latn-GB",
+                      "English (Latin, United Kingdom)") &&
+              LocaleNamed(&few, mloc_languageDisplayStandard, "en-Latn-GB",
+                          "English (Latin, United Kingdom)"),
+          "a chain longer than a names chain keeps, and one that just fits");
+}
+
 // Reads a data file into a buffer and opens it.
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
@@ -445,6 +465,7 @@ int main(void)
     TestSources();
     TestCraftedLocaleNames();
     TestSubdivisions();
+    TestLongChain();
     TestCapitalization();
     return s_failures == 0 ? 0 : 1;
 }
