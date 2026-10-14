@@ -73,6 +73,7 @@ static void TestTypes(void)
           "the forms, a form the chain lacks giving the name");
     CHECK(Plain("en", mloc_nameSubdivision, "GBSCT", "Scotland") &&
               Plain("en-AU", mloc_nameSubdivision, "usca", "California") &&
+              Plain("en", mloc_nameSubdivision, "arc", "Buenos Aires") &&
               Plain("fr", mloc_nameSubdivision, "gbsct",
                     "\xC3\x89"
                     "cosse") &&
@@ -82,7 +83,8 @@ static void TestTypes(void)
                     mloc_capitalizationSentence, mloc_fellBack, "Usca") &&
               Named("en", mloc_nameSubdivision, "0011", mloc_nameFormStandard,
                     mloc_capitalizationNone, mloc_fellBack, "0011"),
-          "subdivisions: English's names inherited, French's own, the code where CLDR's is "
+          "subdivisions: English's names inherited, a code of three, French's own, the code where "
+          "CLDR's is "
           "provisional, titlecased only at a sentence's start, a region of digits");
 }
 

@@ -159,7 +159,7 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
         break;
     case mloc_nameSubdivision:
         // A region and one to four letters or digits (BCP 47's sd).
-        valid = length >= 3 && Alnum(code, length, 3, 7) &&
+        valid = Alnum(code, length, 3, 7) &&
                 ((Alpha(code[0]) && Alpha(code[1])) ||
                  (Digit(code[0]) && Digit(code[1]) && Digit(code[2]) && length >= 4));
         break;
