@@ -164,20 +164,28 @@ static uint32_t Category(const Formatter* f, const Prepared* p)
     return mlocSelectPluralRule(f->pluralRule, &operands);
 }
 
-// Whether a category's outer pattern writes the number.
-static bool HasNumber(const Outer* o, uint32_t category)
-{
-    return memchr(o->patternText + o->patternStart[category], currencyTextNumber,
-                  o->patternLength[category]) != nullptr;
-}
-
-// Writes the part of an outer pattern before its number, or after it.
-static void WriteOuterSide(const Outer* o, uint32_t category, bool before, NumberWriter* w)
+// Where a category's outer pattern writes the number; its length when it
+// writes none. Patterns are a few bytes, which a loop scans for less than
+// a call.
+static size_t NumberAt(const Outer* o, uint32_t category)
 {
     const uint8_t* pattern = o->patternText + o->patternStart[category];
     size_t length = o->patternLength[category];
-    const uint8_t* number = memchr(pattern, currencyTextNumber, length);
-    size_t split = number == nullptr ? length : (size_t)(number - pattern);
+    size_t at = 0;
+    while (at < length && pattern[at] != currencyTextNumber)
+    {
+        at++;
+    }
+    return at;
+}
+
+// Writes the part of an outer pattern before its number (at split), or
+// after it.
+static void WriteOuterSide(const Outer* o, uint32_t category, size_t split, bool before,
+                           NumberWriter* w)
+{
+    const uint8_t* pattern = o->patternText + o->patternStart[category];
+    size_t length = o->patternLength[category];
     size_t at = before ? 0 : (split < length ? split + 1 : length);
     size_t end = before ? split : length;
     size_t literal = at;
@@ -203,17 +211,18 @@ static void WriteOuterSide(const Outer* o, uint32_t category, bool before, Numbe
 static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, NumberWriter* w)
 {
     uint32_t category = o == nullptr ? 0 : Category(f, p);
+    size_t split = o == nullptr ? 0 : NumberAt(o, category);
     if (o != nullptr)
     {
-        WriteOuterSide(o, category, true, w);
+        WriteOuterSide(o, category, split, true, w);
     }
-    if (o == nullptr || HasNumber(o, category))
+    if (o == nullptr || split < o->patternLength[category])
     {
         mlocWriteNumber(p->core, &p->decimal, p->sign, &p->layout, w);
     }
     if (o != nullptr)
     {
-        WriteOuterSide(o, category, false, w);
+        WriteOuterSide(o, category, split, false, w);
     }
 }
 
@@ -361,12 +370,13 @@ static void WriteOuterRange(const Formatter* f, const Outer* o, Prepared* a, Pre
         category = mlocResolvePluralRange(&o->rules, category, (mlocPluralCategory)Category(f, b));
     }
     w->source = 0;
-    WriteOuterSide(o, category, true, w);
-    if (HasNumber(o, category))
+    size_t split = NumberAt(o, category);
+    WriteOuterSide(o, category, split, true, w);
+    if (split < o->patternLength[category])
     {
         WriteRange(&f->core, a, b, w);
         w->source = 0;
-        WriteOuterSide(o, category, false, w);
+        WriteOuterSide(o, category, split, false, w);
     }
 }
 
