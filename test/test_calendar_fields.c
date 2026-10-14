@@ -144,9 +144,16 @@ static void TestMonthDayCases(void)
           "February 29 of a common year");
     // A month's place without a year names no month.
     mlocDateChanges place = {.given = mloc_givenMonth | mloc_givenDay, .month = 2, .day = 1};
+    mlocDateChanges both = {.given = mloc_givenMonth | mloc_givenMonthCode | mloc_givenDay,
+                            .monthCode = "M02",
+                            .monthCodeLength = 3,
+                            .month = 2,
+                            .day = 1};
     CHECK(mlocMakeMonthDay(mloc_calendarGregorian, &place, mloc_overflowConstrain, &out) ==
-              mloc_errorInvalid,
-          "a month without a year refused");
+                  mloc_errorInvalid &&
+              mlocMakeMonthDay(mloc_calendarGregorian, &both, mloc_overflowConstrain, &out) ==
+                  mloc_errorInvalid,
+          "a month without a year refused, beside a code too");
     // Chinese M01L has no reference year: the common month, or refused.
     mlocDateChanges rare = {.given = mloc_givenMonthCode | mloc_givenDay,
                             .monthCode = "M01L",

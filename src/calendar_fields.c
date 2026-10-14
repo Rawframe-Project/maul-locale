@@ -97,8 +97,9 @@ mlocResult mlocWithDate(const mlocDate* date, const mlocDateChanges* changes, ml
     return Resolve((mlocCalendar)date->calendar, &merged, overflow, dateOut);
 }
 
-// The most days a month of the code has in any year.
-static uint32_t LongestMonth(mlocCalendar calendar, uint32_t number, bool leap)
+// The most days a month of the code has in any year; a leap month's are
+// those of the month of its number.
+static uint32_t LongestMonth(mlocCalendar calendar, uint32_t number)
 {
     static const uint8_t s_gregorian[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     static const uint8_t s_indian[12] = {31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30};
@@ -115,7 +116,7 @@ static uint32_t LongestMonth(mlocCalendar calendar, uint32_t number, bool leap)
     case mloc_calendarPersian:
         return s_persian[number - 1];
     case mloc_calendarHebrew:
-        return leap ? 30 : s_hebrew[number - 1];
+        return s_hebrew[number - 1];
     case mloc_calendarIslamicCivil:
     case mloc_calendarIslamicTbla:
         return number % 2 == 1 || number == 12 ? 30 : 29;
@@ -244,7 +245,7 @@ static mlocResult MonthOfFields(mlocCalendar calendar, const mlocDateChanges* f,
     {
         return mloc_errorSyntax;
     }
-    *longestOut = LongestMonth(calendar, *numberOut, *leapOut);
+    *longestOut = LongestMonth(calendar, *numberOut);
     return mloc_success;
 }
 
