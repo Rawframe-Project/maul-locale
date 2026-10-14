@@ -701,7 +701,11 @@ static void PutSigned(NumberWriter* w, const NumberCore* c, NumberSign sign, boo
     bool approximately = layout->approximately;
     if (sign == numberSignNone && !approximately)
     {
-        PutAffix(w, c, positive, slotMinus, layout);
+        // Most patterns have an empty prefix or suffix: no call for it.
+        if (c->affixLength[positive] > 0)
+        {
+            PutAffix(w, c, positive, slotMinus, layout);
+        }
         return;
     }
     if (HasMinus(c, affixNegativePrefix) || HasMinus(c, affixNegativeSuffix))
