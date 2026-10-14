@@ -43,7 +43,12 @@ ICU4C and ICU4X carry no subdivision names.
 
 ## Proof
 
-`test_names_data` reads the two files in one set, in each order: each
+`conform_locale_names` runs CLDR's `localeDisplayName.txt` with the
+four `sd` and `rg` lines off the exceptions list: 3,433 of 3,433.
+`test_names` checks a subdivision named in English, inherited by
+Australian English, in French, its code where CLDR's name is
+provisional, the capitalization, a region of digits and the refused
+syntaxes. `test_names_data` reads the two files in one set, in each order: each
 finds its own codes; a subdivision has a name in English, inherited by
 British English, and in French, and none where CLDR has only a
 provisional one.

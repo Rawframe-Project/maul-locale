@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Display names (maul-locale/names.h): each type and form, a code in any
-// case, the fallbacks, the capitalization contexts, the output protocol
+// Display names (maul-locale/names.h): each type and form, subdivisions
+// included, a code in any case, the fallbacks, the capitalization contexts, the output protocol
 // and every refusal. Every code of every locale agrees with ICU4C 79's
 // LocaleDisplayNames (conform_names, record mloc-0037).
 
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static mlocData s_sources[2];
+static mlocData s_sources[3];
 static mlocDataSet s_data;
 
 // Whether a locale's name of a code is as expected, with the status.
@@ -71,6 +71,19 @@ static void TestTypes(void)
               Named("en", mloc_nameLanguage, "fr", mloc_nameFormShort, mloc_capitalizationNone,
                     mloc_success, "French"),
           "the forms, a form the chain lacks giving the name");
+    CHECK(Plain("en", mloc_nameSubdivision, "GBSCT", "Scotland") &&
+              Plain("en-AU", mloc_nameSubdivision, "usca", "California") &&
+              Plain("fr", mloc_nameSubdivision, "gbsct",
+                    "\xC3\x89"
+                    "cosse") &&
+              Named("fr", mloc_nameSubdivision, "USCA", mloc_nameFormStandard,
+                    mloc_capitalizationListOrMenu, mloc_fellBack, "usca") &&
+              Named("fr", mloc_nameSubdivision, "usca", mloc_nameFormStandard,
+                    mloc_capitalizationSentence, mloc_fellBack, "Usca") &&
+              Named("en", mloc_nameSubdivision, "0011", mloc_nameFormStandard,
+                    mloc_capitalizationNone, mloc_fellBack, "0011"),
+          "subdivisions: English's names inherited, French's own, the code where CLDR's is "
+          "provisional, titlecased only at a sentence's start, a region of digits");
 }
 
 static void TestFallback(void)
@@ -171,10 +184,12 @@ static void TestRefusals(void)
     char buffer[32];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     static const char* const s_bad[][2] = {
-        {"0", "e"},           {"0", "en-u-ca-roc"}, {"0", ""},    {"1", "Lat"},
-        {"1", "La1n"},        {"2", "USA"},         {"2", "4x9"}, {"3", "abcd"},
-        {"3", "abcdefghi"},   {"4", "cal"},         {"5", "ca"},  {"5", "ca-ab"},
-        {"5", "caa-gregory"}, {"5", "ca-gregory-"}, {"6", "ab"},  {"6", "uk-system"},
+        {"0", "e"},           {"0", "en-u-ca-roc"}, {"0", ""},      {"1", "Lat"},
+        {"1", "La1n"},        {"2", "USA"},         {"2", "4x9"},   {"3", "abcd"},
+        {"3", "abcdefghi"},   {"4", "cal"},         {"5", "ca"},    {"5", "ca-ab"},
+        {"5", "caa-gregory"}, {"5", "ca-gregory-"}, {"6", "ab"},    {"6", "uk-system"},
+        {"7", "gb"},          {"7", "gbsctxxx"},    {"7", "g1sct"}, {"7", "123"},
+        {"7", "gb-ct"},
     };
     bool refused = mlocParseLocale("en", 2, &en).status == mloc_success;
     for (size_t i = 0; refused && i < sizeof(s_bad) / sizeof(s_bad[0]); i++)
@@ -205,7 +220,7 @@ static void TestRefusals(void)
                   mloc_errorInvalid &&
               mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, nullptr, &noBuffer) ==
                   mloc_errorInvalid &&
-              mlocGetName(&s_data, &en, (mlocNameType)7, "US", 2, nullptr, &output) ==
+              mlocGetName(&s_data, &en, (mlocNameType)8, "US", 2, nullptr, &output) ==
                   mloc_errorInvalid &&
               mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, &badForm, &output) ==
                   mloc_errorInvalid &&
@@ -290,6 +305,10 @@ static void TestLocaleName(void)
                           "fran\xC3\xA7"
                           "ais (Canada)"),
           "codes beginning with z, a currency without a symbol in capitals, alone");
+    CHECK(Dialect("en-u-sd-gbsct", "English (Region Subdivision: Scotland)") &&
+              Dialect("en-u-rg-gbeng", "English (Region For Supplemental Data: England)") &&
+              Dialect("en-u-rg-uszzzz", "English (Region For Supplemental Data: uszzzz)"),
+          "subdivisions by name, a region's rg value as written");
     mlocLocale en;
     mlocLocale gb;
     char small[4];
@@ -322,28 +341,36 @@ static void TestLocaleName(void)
     CHECK(r == mloc_success || r == mloc_fellBack, "a locale value without a NUL read in bounds");
 }
 
-// The compiled-in data, then the names data file at the path the build
-// gives.
-static bool OpenData(void)
+// Reads a data file into a buffer and opens it.
+static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
-    alignas(8) static uint8_t s_names[8 << 20];
-    mlocOpenBuiltinData(&s_sources[0]);
-    FILE* file = fopen(MLOC_LOCALE_NAMES_FILE, "rb");
-    size_t read = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    FILE* file = fopen(path, "rb");
+    size_t read = file == nullptr ? 0 : fread(buffer, 1, capacity, file);
     if (file != nullptr)
     {
         fclose(file);
     }
-    s_data = (mlocDataSet){s_sources, 2};
-    return read > 0 && read < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, read) == mloc_success;
+    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+}
+
+// The compiled-in data, then the names and subdivisions data files at the
+// paths the build gives.
+static bool OpenData(void)
+{
+    alignas(8) static uint8_t s_names[8 << 20];
+    alignas(8) static uint8_t s_subdivisions[1 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    s_data = (mlocDataSet){s_sources, 3};
+    return OpenFile(MLOC_LOCALE_NAMES_FILE, s_names, sizeof(s_names), &s_sources[1]) &&
+           OpenFile(MLOC_SUBDIVISIONS_FILE, s_subdivisions, sizeof(s_subdivisions), &s_sources[2]);
 }
 
 int main(void)
 {
     if (!OpenData())
     {
-        fputs("test_names: cannot open " MLOC_LOCALE_NAMES_FILE "\n", stderr);
+        fputs("test_names: cannot open " MLOC_LOCALE_NAMES_FILE " or " MLOC_SUBDIVISIONS_FILE "\n",
+              stderr);
         return 2;
     }
     TestTypes();

@@ -125,7 +125,7 @@ static bool Language(const mlocDataSet* data, const char* code, size_t length, b
 static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* code, size_t length,
                       char* out, size_t* lengthOut, size_t* fallbackOut)
 {
-    static const char s_prefixes[] = "lsrvktm";
+    static const char s_prefixes[] = "lsrvktmd";
     out[0] = s_prefixes[type];
     out[1] = ':';
     *fallbackOut = 2;
@@ -157,6 +157,12 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
         valid = KeyValue(code, length);
         *fallbackOut = 5;
         break;
+    case mloc_nameSubdivision:
+        // A region and one to four letters or digits (BCP 47's sd).
+        valid = length >= 3 && Alnum(code, length, 3, 7) &&
+                ((Alpha(code[0]) && Alpha(code[1])) ||
+                 (Digit(code[0]) && Digit(code[1]) && Digit(code[2]) && length >= 4));
+        break;
     default:
         valid = Alnum(code, length, 3, 8);
         break;
@@ -175,13 +181,14 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
 }
 
 // Whether the first letter is titlecased in a context: by the type's
-// usage of the context transforms (a measurement system has none).
+// usage of the context transforms (a measurement system and a
+// subdivision have none).
 static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocNameType type,
                         mlocCapitalization capitalization)
 {
-    static const ContextUsage s_usages[] = {contextLanguages, contextScript, contextTerritory,
-                                            contextVariant,   contextKey,    contextKeyValue,
-                                            contextUsageCount};
+    static const ContextUsage s_usages[] = {contextLanguages,  contextScript,    contextTerritory,
+                                            contextVariant,    contextKey,       contextKeyValue,
+                                            contextUsageCount, contextUsageCount};
     return mlocNameCapitalizes(data, locale, s_usages[type], capitalization);
 }
 
@@ -223,7 +230,7 @@ mlocResult mlocGetName(const mlocDataSet* data, const mlocLocale* locale, mlocNa
     if (data == nullptr || locale == nullptr || (code == nullptr && length != 0) ||
         output == nullptr || output->part != nullptr ||
         (output->buffer == nullptr && output->capacity != 0) ||
-        (uint32_t)type > mloc_nameMeasurementSystem || (uint32_t)o.form >= nameFieldCount ||
+        (uint32_t)type > mloc_nameSubdivision || (uint32_t)o.form >= nameFieldCount ||
         (uint32_t)o.fallback > mloc_nameFallbackNone ||
         (uint32_t)o.capitalization > mloc_capitalizationStandAlone)
     {

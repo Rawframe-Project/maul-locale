@@ -497,12 +497,24 @@ static void WriteCurrency(Composer* c, Span code)
     }
 }
 
+// A subdivision's name (subdivisions.mloc), else its code.
+static void WriteSubdivision(Composer* c, Span code)
+{
+    NameText name;
+    if (Find(c, 'd', &code, 1, nameFieldName, &name))
+    {
+        AppendName(c, name, true);
+        return;
+    }
+    Append(c, code, true);
+}
+
 // A u key or t field: its value's name when the locale has one (the
 // calendar's whatever its subtags, another key's for one subtag), else
 // the key's name and the value by the key-type pattern: the currency's
-// symbol for cu, the reorder codes' names for kr, the subtags for the
-// rest (time zones and subdivisions as written until their names are in
-// the data).
+// symbol for cu, the reorder codes' names for kr, the subdivision's for
+// sd and rg (record mloc-0039), the subtags for the rest (time zones as
+// written until their names are in the data).
 static void WriteKeyword(Composer* c, const Item* item)
 {
     NameText name;
@@ -534,6 +546,10 @@ static void WriteKeyword(Composer* c, const Item* item)
     else if (strcmp(item->key, "kr") == 0)
     {
         JoinSpans(c, item->values, WriteReorder);
+    }
+    else if (strcmp(item->key, "sd") == 0 || strcmp(item->key, "rg") == 0)
+    {
+        WriteSubdivision(c, item->values);
     }
     else
     {

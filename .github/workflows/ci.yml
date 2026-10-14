@@ -141,7 +141,7 @@ jobs:
             build/conform_numbers tools/number-exceptions.txt
           build/conform_spellout src/generated/spellout.mloc \
             ~/cldr-cache/cldr/common/testData/rbnf/*.ssv
-          build/conform_locale_names src/generated/names.mloc \
+          build/conform_locale_names src/generated/names.mloc src/generated/subdivisions.mloc \
             $ids/localeDisplayName.txt tools/locale-name-exceptions.txt
       - name: Matching
         # ICU's matcher test (record mloc-0017), the file tools/icu-release.txt pins.

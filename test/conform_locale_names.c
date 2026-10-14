@@ -3,12 +3,12 @@
 //
 // CLDR's localeDisplayName.txt (record mloc-0038): each locale id's name
 // in each display locale, in standard and dialect mode, against
-// mlocGetLocaleName. A line of the exceptions file, tab-separated, is a
-// display locale, a mode, an id, the name CLDR's data gives here and
-// the reason; each must be used. Prints each difference and a count;
-// exits 1 on a difference.
+// mlocGetLocaleName, with the names and subdivisions data files. A line of the exceptions file,
+// tab-separated, is a display locale, a mode, an id, the name CLDR's data gives here and the
+// reason; each must be used. Prints each difference and a count; exits 1 on a difference.
 //
-// usage: conform_locale_names names.mloc localeDisplayName.txt exceptions.txt
+// usage: conform_locale_names names.mloc subdivisions.mloc localeDisplayName.txt
+//        exceptions.txt
 
 #include "maul-locale/data.h"
 #include "maul-locale/names.h"
@@ -32,24 +32,29 @@ typedef struct Exception
     bool used;
 } Exception;
 
-static mlocData s_sources[2];
+static mlocData s_sources[3];
 static Exception s_exceptions[maxExceptions];
 static int s_exceptionCount;
 
-static bool Open(const char* path, mlocDataSet* set)
+// Opens a data file into a source; its bytes live as long as the program.
+static bool OpenFile(const char* path, mlocData* source)
 {
     FILE* file = fopen(path, "rb");
     if (file == nullptr)
     {
         return false;
     }
-    static uint8_t* s_bytes;
-    s_bytes = malloc((size_t)16 << 20);
-    size_t read = s_bytes == nullptr ? 0 : fread(s_bytes, 1, (size_t)16 << 20, file);
+    uint8_t* bytes = malloc((size_t)16 << 20);
+    size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)16 << 20, file);
     fclose(file);
+    return read > 0 && mlocOpenData(source, bytes, read) == mloc_success;
+}
+
+static bool Open(const char* names, const char* subdivisions, mlocDataSet* set)
+{
     mlocOpenBuiltinData(&s_sources[0]);
-    *set = (mlocDataSet){s_sources, 2};
-    return read > 0 && mlocOpenData(&s_sources[1], s_bytes, read) == mloc_success;
+    *set = (mlocDataSet){s_sources, 3};
+    return OpenFile(names, &s_sources[1]) && OpenFile(subdivisions, &s_sources[2]);
 }
 
 static char* Copy(const char* text)
@@ -138,10 +143,11 @@ static void Name(const mlocDataSet* set, const mlocLocale* display, bool dialect
 int main(int argc, char** argv)
 {
     mlocDataSet set;
-    FILE* in = argc == 4 ? fopen(argv[2], "r") : nullptr;
-    if (in == nullptr || !Open(argv[1], &set) || !ReadExceptions(argv[3]))
+    FILE* in = argc == 5 ? fopen(argv[3], "r") : nullptr;
+    if (in == nullptr || !Open(argv[1], argv[2], &set) || !ReadExceptions(argv[4]))
     {
-        fputs("usage: conform_locale_names names.mloc localeDisplayName.txt exceptions.txt\n",
+        fputs("usage: conform_locale_names names.mloc subdivisions.mloc localeDisplayName.txt "
+              "exceptions.txt\n",
               stderr);
         return 2;
     }

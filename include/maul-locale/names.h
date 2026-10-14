@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Display names (UTS #35 Part 2, records mloc-0036 to mloc-0038): a
+// Display names (UTS #35 Part 2, records mloc-0036 to mloc-0039): a
 // locale's name for a language, script, region, variant, key, key's value
 // or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's
-// Intl.DisplayNames give them, and its name for a whole locale. The names are in a data file of
-// their own, names.mloc, which a program adds to its data set.
+// Intl.DisplayNames give them, for a subdivision, and for a whole locale.
+// The names are in a data file of their own, names.mloc, and the
+// subdivision names in another, subdivisions.mloc, which a program adds
+// to its data set.
 
 #ifndef MAUL_LOCALE_NAMES_H
 #define MAUL_LOCALE_NAMES_H
@@ -35,6 +37,9 @@ extern "C"
         mloc_nameKeyValue = 5,
         // A measurement system: "metric", "uksystem", "ussystem".
         mloc_nameMeasurementSystem = 6,
+        // A subdivision, as -u-sd writes it: "gbsct", "usca" (names in
+        // subdivisions.mloc; ICU4C has none).
+        mloc_nameSubdivision = 7,
     } mlocNameType;
 
     // Which of a name's forms: CLDR's name, or one of its alternates,
@@ -75,8 +80,8 @@ extern "C"
         mlocNameFallback fallback;
         // The first letter titlecased, as ICU does: at the beginning of
         // a sentence always, in a list or menu or alone as the locale's
-        // context transforms for the type say (a measurement system has
-        // none).
+        // context transforms for the type say (a measurement system and
+        // a subdivision have none).
         mlocCapitalization capitalization;
     } mlocNameOptions;
 
@@ -84,7 +89,8 @@ extern "C"
     /// chain, else the standard name along the chain, as ICU4C's
     /// LocaleDisplayNames looks it up.
     ///
-    /// @param data     The data with the names (names.mloc) and the
+    /// @param data     The data with the names (names.mloc, or
+    ///                 subdivisions.mloc for a subdivision) and the
     ///                 parents.
     /// @param locale   The locale, canonicalized.
     /// @param type     What the code names.
@@ -139,11 +145,13 @@ extern "C"
     /// ("Transform: Russian, Cyrillic") and its fields, and the other
     /// extensions and private use as written ("x: abc"), joined by the
     /// locale's separator, brackets inside a name nested ("Myanmar
-    /// [Burma]"). A part without a name stands as written; time zones and
-    /// subdivisions stand as written until their names are in the data.
+    /// [Burma]"). The sd and rg values are named as subdivisions ("Region
+    /// Subdivision: Scotland"). A part without a name stands as written;
+    /// time zones stand as written until their names are in the data.
     ///
     /// @param data           The data with the names (names.mloc), the
-    ///                       parents and, for -u-cu, the currency symbols.
+    ///                       parents and, for -u-cu, the currency symbols;
+    ///                       for -u-sd and -u-rg, subdivisions.mloc too.
     /// @param displayLocale  The locale the name is in, canonicalized.
     /// @param locale         The locale named, canonicalized.
     /// @param options        The options, or null for the defaults.
