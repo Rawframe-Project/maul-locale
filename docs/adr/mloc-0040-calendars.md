@@ -147,6 +147,22 @@ down, without the specification's loops of one unit at a time:
 Temporal's `since` is this difference negated, from the same first
 date.
 
+`mlocDateUntilRounded` rounds the difference as Temporal's
+`RoundRelativeDuration` does for two dates:
+- for years, months or weeks, `NudgeToCalendarUnit`: the multiples of
+  the increment around the duration are added to the first date, and
+  the second date's place between them decides by the mode, on an exact
+  fraction of days;
+- for days, `NudgeToDayOrTime`: the days rounded to the increment;
+- then `BubbleRelativeDuration` carries a rounding that reached a
+  larger unit's next value up to the largest unit.
+
+ECMA-262's Temporal text (tc39/ecma262#3759, the source of truth since
+Temporal's stage 4) is followed where it differs from the proposal's.
+It takes the first date as the window's start only when the start
+duration is zero, where the proposal's "r1 = 0" ignored larger units.
+test262 checks the corrected rule.
+
 ## Proof
 
 `test_calendar` checks each calendar's fields at days across
@@ -191,7 +207,9 @@ hashes taken from ICU4X 2.3's own output. ISO 8601 is left out, since
 ICU4X gives it an era Temporal does not have.
 
 `test_calendar_arithmetic` compares `mlocAddToDate` and
-`mlocDateUntil` with the proposal's steps transcribed literally. That
+`mlocDateUntil` with the proposal's steps transcribed literally.
+It also checks one-unit roundings against the dates of the multiples
+around them, in every calendar and mode (more than 100,000). That
 covers its month and day balancing loops and its counts of one unit at
 a time: more than 100,000 additions and 14,000 differences in every
 calendar. It also checks Temporal's duration limits, and the range's
@@ -200,15 +218,17 @@ ends apart in every unit.
 `test_calendar_test262` checks test262's Temporal calendar cases (the
 PlainDate tests of `test/intl402/Temporal`: making dates from fields,
 eras, month codes, overflow, the field getters, `add`, `subtract`,
-`until` and `since`).
+`until` and `since`; and the ISO calendar's `add`, `subtract`, `until`
+and `since` of `test/built-ins`, rounding included).
 They were run on
 the library through a reader of their JavaScript, kept in the docs. It
 records every assertion about a date made from fields or an ISO date,
-or by adding durations to one, and about the difference of two dates:
-15,570 rows and 37,321 checks from 367 files, none differing. The rows are in
+or by adding durations to one, and about the difference of two dates,
+rounded or not: 16,400 rows and 39,830 checks from 476 files, none
+differing. The rows are in
 `test/test262_calendar.inc`, under test262's BSD license. Left out:
-dates parsed from strings (the `datetime` part's), `with` and
-rounding (their slices), and the calendar names `islamic` and
+dates parsed from strings beyond plain ISO dates (the `datetime`
+part's), `with` (its slice), and the calendar names `islamic` and
 `islamic-rgsa`. test262 expects Temporal to refuse those two names,
 which only date formatting accepts. The library reads them as Umm
 al-Qura, and a Temporal host must refuse them when it maps the names.

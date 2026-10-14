@@ -51,6 +51,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocDateUntil(const mlocDate* one, const mloc
 ```
 Computes the duration from one date to another of the same calendar, as Temporal's PlainDate.until does: the most years whose addition does not pass the second date (judged by year, month code and day), then the most months, then weeks if they are the largest unit, then days; none larger than the largest unit. Temporal's since of the first date and the second is this duration negated (not the duration from the second to the first, which may differ by the clamping of days).  @param one          The date from. @param two          The date to. @param largestUnit  The largest unit to give. @param durationOut  Receives the duration, of one sign; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, dates of two calendars, or an unknown unit. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocDateUntilRounded(const mlocDate* one, const mlocDate* two, const mlocDateRounding* rounding, mlocDateDuration* durationOut);
+```
+Computes the duration from one date to another of the same calendar and rounds it, as Temporal's PlainDate.until does with rounding options: the difference of mlocDateUntil, then for a smallest unit of years, months or weeks the multiples of the increment around it, added to the first date, with the second date's place between them deciding by mode; for days, the days rounded to the increment. A rounding that reaches a larger unit's next value carries into it, up to the largest unit. Temporal's since is this from the same first date with the mode negated (ceil for floor, half-ceil for half-floor, and back), and the result negated.  @param one          The date from. @param two          The date to. @param rounding     The units, increment and mode. @param durationOut  Receives the duration; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, dates of two calendars, an unknown unit or mode, a smallest unit larger than the largest, an increment out of range, or a multiple whose date falls outside Temporal's range. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -393,4 +398,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-68 functions across 12 headers.
+69 functions across 12 headers.

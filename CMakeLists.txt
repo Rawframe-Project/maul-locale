@@ -93,6 +93,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/calendar_chinese.c
     src/calendar_lunar.c
     src/calendar_hebrew.c
+    src/calendar_round.c
     src/calendar_umalqura.c
     src/calendar_until.c
     src/calendar_year.c

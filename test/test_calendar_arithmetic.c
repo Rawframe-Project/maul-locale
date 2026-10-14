@@ -488,8 +488,157 @@ static void TestUntilRoundTrip(void)
     CHECK(all, "random differences of one sign, adding back to the second date");
 }
 
+// Rounding to one unit with nothing larger, in every calendar and mode:
+// the result is the truncated count or one increment more: the next one
+// when the second date is its date, else the multiple whose date is
+// nearer for the half modes (by days), and toward or away from zero as
+// the directed modes say.
+static void TestRoundingOneUnit(void)
+{
+    static const uint32_t s_increments[] = {1, 2, 3, 5};
+    uint64_t state = UINT64_C(0x243F6A8885A308D3);
+    bool all = true;
+    long compared = 0;
+    for (uint32_t c = 0; c < calendarCount; c++)
+    {
+        for (int i = 0; i < 40; i++)
+        {
+            state = state * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
+            mlocDate one = {.day = 730000 + (int32_t)((state >> 33) % 9000),
+                            .calendar = (uint8_t)c};
+            mlocDate two = {.day = one.day + (int32_t)((state >> 13) % 4001) - 2000,
+                            .calendar = (uint8_t)c};
+            if (one.day == two.day)
+            {
+                continue;
+            }
+            int sign = two.day > one.day ? 1 : -1;
+            for (int u = mloc_dateUnitYear; u <= mloc_dateUnitDay; u++)
+            {
+                mlocDateDuration exact = {0};
+                CHECK(mlocDateUntil(&one, &two, (mlocDateUnit)u, &exact) == mloc_success,
+                      "a difference");
+                int64_t count = u == 0   ? exact.years
+                                : u == 1 ? exact.months
+                                : u == 2 ? exact.weeks
+                                         : exact.days;
+                for (size_t k = 0; k < sizeof(s_increments) / sizeof(s_increments[0]); k++)
+                {
+                    int64_t inc = s_increments[k];
+                    int64_t low = count / inc * inc;
+                    int64_t high = low + sign * inc;
+                    mlocDateDuration lowD = {0};
+                    mlocDateDuration highD = {0};
+                    int64_t* lowField = u == 0   ? &lowD.years
+                                        : u == 1 ? &lowD.months
+                                        : u == 2 ? &lowD.weeks
+                                                 : &lowD.days;
+                    int64_t* highField = u == 0   ? &highD.years
+                                         : u == 1 ? &highD.months
+                                         : u == 2 ? &highD.weeks
+                                                  : &highD.days;
+                    *lowField = low;
+                    *highField = high;
+                    mlocDate lowDate = one;
+                    mlocDate highDate = {0};
+                    bool reach = (low == 0 || mlocAddToDate(&one, &lowD, mloc_overflowConstrain,
+                                                            &lowDate) == mloc_success) &&
+                                 mlocAddToDate(&one, &highD, mloc_overflowConstrain, &highDate) ==
+                                     mloc_success;
+                    if (!reach)
+                    {
+                        continue;
+                    }
+                    int64_t toLow = sign * ((int64_t)two.day - lowDate.day);
+                    int64_t toHigh = sign * ((int64_t)highDate.day - two.day);
+                    for (int m = 0; m <= mloc_roundTrunc; m++)
+                    {
+                        mlocDateRounding rounding = {(mlocDateUnit)u, (mlocDateUnit)u,
+                                                     (uint32_t)inc, (mlocRoundingMode)m};
+                        mlocDateDuration got = {0};
+                        if (mlocDateUntilRounded(&one, &two, &rounding, &got) != mloc_success)
+                        {
+                            all = false;
+                            continue;
+                        }
+                        int64_t value = *(u == 0   ? &got.years
+                                          : u == 1 ? &got.months
+                                          : u == 2 ? &got.weeks
+                                                   : &got.days);
+                        bool away = m == mloc_roundExpand || (m == mloc_roundCeil && sign > 0) ||
+                                    (m == mloc_roundFloor && sign < 0);
+                        bool toward = m == mloc_roundTrunc || (m == mloc_roundCeil && sign < 0) ||
+                                      (m == mloc_roundFloor && sign > 0);
+                        int64_t want = value;
+                        if (toLow == 0)
+                        {
+                            want = low;
+                        }
+                        else if (toHigh == 0)
+                        {
+                            // The second date at the next multiple's own
+                            // (a clamped day can put it there): that
+                            // multiple, whatever the mode.
+                            want = high;
+                        }
+                        else if (away)
+                        {
+                            want = high;
+                        }
+                        else if (toward)
+                        {
+                            want = low;
+                        }
+                        else if (toLow != toHigh)
+                        {
+                            want = toLow < toHigh ? low : high;
+                        }
+                        all = all && (value == low || value == high) && value == want &&
+                              got.years * (u != 0) == 0;
+                        compared++;
+                    }
+                }
+            }
+        }
+    }
+    printf("%ld roundings compared\n", compared);
+    CHECK(all, "one-unit roundings at the multiple the mode and the dates choose");
+}
+
+static void TestRoundingRefusals(void)
+{
+    mlocDate a = {.day = 738000, .calendar = mloc_calendarGregorian};
+    mlocDate b = {.day = 738500, .calendar = mloc_calendarGregorian};
+    mlocDateDuration d = {0};
+    const mlocDateRounding bad[] = {
+        {mloc_dateUnitMonth, mloc_dateUnitYear, 1, mloc_roundTrunc},
+        {mloc_dateUnitYear, mloc_dateUnitDay, 0, mloc_roundTrunc},
+        {mloc_dateUnitYear, mloc_dateUnitDay, 1000000001, mloc_roundTrunc},
+        {mloc_dateUnitYear, mloc_dateUnitDay, 1, (mlocRoundingMode)9},
+        {(mlocDateUnit)4, mloc_dateUnitDay, 1, mloc_roundTrunc},
+    };
+    bool refused = true;
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        refused = refused && mlocDateUntilRounded(&a, &b, &bad[i], &d) == mloc_errorInvalid;
+    }
+    const mlocDateRounding ok = {mloc_dateUnitYear, mloc_dateUnitYear, 1000000000, mloc_roundCeil};
+    CHECK(refused && mlocDateUntilRounded(&a, &b, nullptr, &d) == mloc_errorInvalid &&
+              mlocDateUntilRounded(&a, &b, &ok, nullptr) == mloc_errorInvalid,
+          "bad settings and null pointers refused");
+    // A multiple of a billion years lies past the range.
+    CHECK(mlocDateUntilRounded(&a, &b, &ok, &d) == mloc_errorInvalid,
+          "a multiple past the range refused");
+    const mlocDateRounding trunc = {mloc_dateUnitYear, mloc_dateUnitYear, 1000000000,
+                                    mloc_roundTrunc};
+    CHECK(mlocDateUntilRounded(&a, &b, &trunc, &d) == mloc_errorInvalid,
+          "the window's far end past the range refused, as Temporal's add throws");
+}
+
 int main(void)
 {
+    TestRoundingOneUnit();
+    TestRoundingRefusals();
     TestUntilRoundTrip();
     TestUntilAgainstSpecification();
     TestUntilFar();

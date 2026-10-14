@@ -11,6 +11,7 @@
 #define MAUL_LOCALE_CALENDAR_H
 
 #include "maul-locale/base.h"
+#include "maul-locale/decimal.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -250,6 +251,45 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two,
                                                      mlocDateUnit largestUnit,
                                                      mlocDateDuration* durationOut);
+
+    // How a difference of dates is rounded (Temporal's difference
+    // settings): to a multiple of increment (1 to 10^9) of smallestUnit,
+    // which is no larger than largestUnit, by mode. Temporal's default
+    // mode for a difference is mloc_roundTrunc.
+    typedef struct mlocDateRounding
+    {
+        mlocDateUnit largestUnit;
+        mlocDateUnit smallestUnit;
+        uint32_t increment;
+        mlocRoundingMode mode;
+    } mlocDateRounding;
+
+    /// Computes the duration from one date to another of the same calendar
+    /// and rounds it, as Temporal's PlainDate.until does with rounding
+    /// options: the difference of mlocDateUntil, then for a smallest unit
+    /// of years, months or weeks the multiples of the increment around it,
+    /// added to the first date, with the second date's place between them
+    /// deciding by mode; for days, the days rounded to the increment. A
+    /// rounding that reaches a larger unit's next value carries into it,
+    /// up to the largest unit. Temporal's since is this from the same
+    /// first date with the mode negated (ceil for floor, half-ceil for
+    /// half-floor, and back), and the result negated.
+    ///
+    /// @param one          The date from.
+    /// @param two          The date to.
+    /// @param rounding     The units, increment and mode.
+    /// @param durationOut  Receives the duration; left unchanged on failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
+    ///         the library did not make, dates of two calendars, an unknown
+    ///         unit or mode, a smallest unit larger than the largest, an
+    ///         increment out of range, or a multiple whose date falls
+    ///         outside Temporal's range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateUntilRounded(const mlocDate* one,
+                                                            const mlocDate* two,
+                                                            const mlocDateRounding* rounding,
+                                                            mlocDateDuration* durationOut);
 
 #ifdef __cplusplus
 }

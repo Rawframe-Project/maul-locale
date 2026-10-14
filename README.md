@@ -75,8 +75,9 @@ dates as values in CLDR's calendars, as Temporal models them, with era
 and month codes and overflow constrained or refused, all 18 of
 them (each day from 1600 to 2400 as ICU4X computes it, and the
 Chinese and Dangi calendars from integer astronomy), with durations
-added to them and their differences taken as Temporal does it.
-The library has 68 public functions.
+added to them and their differences taken and rounded as Temporal
+does it.
+The library has 69 public functions.
 
 ## Building
 

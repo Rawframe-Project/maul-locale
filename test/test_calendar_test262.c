@@ -5,7 +5,7 @@
 // PlainDate tests make about a date made from fields or by adding
 // durations, or about the difference of two dates, in
 // test262_calendar.inc, checked against mlocMakeDate, mlocAddToDate,
-// mlocDateUntil and mlocGetDateFields.
+// mlocDateUntil, mlocDateUntilRounded and mlocGetDateFields.
 // The rows were recorded by running the tests on the library through a
 // reader of their JavaScript, kept in the docs with the oracle programs.
 // A row giving a year as well as an era and its year is refused when the
@@ -272,28 +272,66 @@ static bool EarlierDate(Token token, size_t row, size_t* indexOut)
     return true;
 }
 
-// A difference: "@index until @index unit".
-static Made MakeDifference(const Token* tokens, size_t row, mlocDateDuration* durationOut)
+static bool UnitOf(Token token, mlocDateUnit* unitOut)
 {
     static const char* const s_units[] = {"year", "month", "week", "day"};
+    for (int u = 0; u < 4; u++)
+    {
+        if (Is(token, s_units[u]))
+        {
+            *unitOut = (mlocDateUnit)u;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool ModeOf(Token token, mlocRoundingMode* modeOut)
+{
+    // In mlocRoundingMode's order.
+    static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
+                                          "halfCeil",   "halfFloor", "ceil",
+                                          "floor",      "expand",    "trunc"};
+    for (int m = 0; m < 9; m++)
+    {
+        if (Is(token, s_modes[m]))
+        {
+            *modeOut = (mlocRoundingMode)m;
+            return true;
+        }
+    }
+    return false;
+}
+
+// A difference: "@index until @index largest smallest increment mode";
+// one in days to an increment of 1 is mlocDateUntil's as well.
+static Made MakeDifference(const Token* tokens, size_t row, mlocDateDuration* durationOut)
+{
     size_t one = 0;
     size_t two = 0;
+    int64_t increment = 0;
+    mlocDateRounding rounding = {0};
     if (!EarlierDate(tokens[0], row, &one) || !Is(tokens[1], "until") ||
-        !EarlierDate(tokens[2], row, &two))
+        !EarlierDate(tokens[2], row, &two) || !UnitOf(tokens[3], &rounding.largestUnit) ||
+        !UnitOf(tokens[4], &rounding.smallestUnit) || !Number(tokens[5], &increment) ||
+        increment < 0 || increment > UINT32_MAX || !ModeOf(tokens[6], &rounding.mode))
     {
         return madeBadRow;
     }
-    for (int u = 0; u < 4; u++)
+    rounding.increment = (uint32_t)increment;
+    mlocResult r = mlocDateUntilRounded(&s_dates[one], &s_dates[two], &rounding, durationOut);
+    if (r == mloc_success && rounding.smallestUnit == mloc_dateUnitDay && increment == 1)
     {
-        if (Is(tokens[3], s_units[u]))
+        mlocDateDuration plain = {0};
+        if (mlocDateUntil(&s_dates[one], &s_dates[two], rounding.largestUnit, &plain) !=
+                mloc_success ||
+            plain.years != durationOut->years || plain.months != durationOut->months ||
+            plain.weeks != durationOut->weeks || plain.days != durationOut->days)
         {
-            return mlocDateUntil(&s_dates[one], &s_dates[two], (mlocDateUnit)u, durationOut) ==
-                           mloc_success
-                       ? madeDuration
-                       : madeRefused;
+            return madeBadRow;
         }
     }
-    return madeBadRow;
+    return r == mloc_success ? madeDuration : madeRefused;
 }
 
 // A date added to: "@index add years months weeks days overflow", the
@@ -335,7 +373,7 @@ static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dat
     bool earlier = tokens[1].length > 0 && tokens[1].text[0] == '@';
     bool difference = earlier && count > 2 && Is(tokens[2], "until");
     bool iso = !earlier && count > 2 && Is(tokens[2], "iso");
-    size_t equals = difference ? 5 : earlier ? 8 : iso ? 6 : 8;
+    size_t equals = difference ? 8 : earlier ? 8 : iso ? 6 : 8;
     *equalsOut = equals;
     if (count <= equals || !Is(tokens[equals], "="))
     {
