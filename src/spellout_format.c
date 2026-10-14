@@ -251,15 +251,10 @@ bool mlocValidSpelloutCore(const NumberCore* core)
            core->digitLength <= numberDigitSize;
 }
 
-// The formatter's core, from its source when it was left there; false,
-// the engine failed, when that one does not hold.
+// The formatter's core, from its source; false, the engine failed, when
+// it does not hold.
 static bool LoadCore(Engine* e, NumberCore* out)
 {
-    if (e->f->source == nullptr)
-    {
-        *out = e->f->core;
-        return true;
-    }
     memcpy(out, (const uint8_t*)e->f->source + offsetof(SpelloutFormat, core), sizeof(*out));
     return mlocValidSpelloutCore(out) || Fail(e, mloc_errorInvalid);
 }

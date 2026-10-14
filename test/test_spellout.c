@@ -194,6 +194,19 @@ static void TestExact(void)
                  "000\xC2\xA0"
                  "000ste"),
           "a plural block's operand past 2^31 (ICU's wraps to int32_t)");
+    // A pattern's digits in the locale's system, Adlam's of four bytes
+    // each; its fraction digits rounded half even.
+    CHECK(Spells("en-u-nu-adlm", "%spellout-cardinal", "1e6", "one million") &&
+              Spells("en-u-nu-adlm", "%spellout-cardinal", "1e18",
+                     "\xF0\x9E\xA5\x91,\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90,"
+                     "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90,"
+                     "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90,"
+                     "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90,"
+                     "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90,"
+                     "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90\xF0\x9E\xA5\x90") &&
+              Spells("fr", "%spellout-ordinal-masculine", "1.25", "1,2") &&
+              Spells("fr", "%spellout-ordinal-masculine", "1.35", "1,4"),
+          "a pattern's digits and rounding");
 }
 
 static void TestFellBack(void)
