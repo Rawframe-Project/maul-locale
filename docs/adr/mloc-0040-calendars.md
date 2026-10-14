@@ -55,8 +55,15 @@ an explicit choice when a field overflows.
   2400. The years where official rules differ come as overrides, each
   with its source. The same model, compiled in, serves days outside
   the tables, with no cache and no lock.
-- **Japanese eras** come from CLDR's data. Nothing reads the
-  environment.
+- **Japanese eras** come from CLDR's data: the generator writes them as
+  a compiled table (`src/generated/calendar_eras.c`), each era's code,
+  its first Gregorian year and its first day. Nothing reads the
+  environment for a tentative era; a new era comes with a new CLDR.
+  Days before January 1 of 1873 (Meiji 6), when Japan took the
+  Gregorian calendar, read in `ce` and `bce`, as Temporal's era table
+  and ICU4X have it; ICU4C 79 starts Meiji on its CLDR date, 1868, a
+  listed departure. On input an era's years count on past its end
+  (Heisei 32 is 2020), and `ce`, `bce`, `ad` and `bc` are taken too.
 
 ## Proof
 
@@ -68,9 +75,11 @@ and every refusal have their own cases.
 
 A run outside the repository compared every day from 1600 to 2400, and
 2,001 days spread over the whole range, with ICU4X 2.3 for the ten
-arithmetic calendars built first, and then for Hebrew (every day from
-1600 to 2400 and 3,999 days over the range, the leap year and the
-year's and month's lengths included): no difference. The differential test
+arithmetic calendars built first, and then for Hebrew and Japanese
+(every day from 1600 to 2400 and 3,999 days over the range, the leap
+year and the year's and month's lengths included): no difference.
+`test_gencalendar` checks the era table's generator and its
+refusals. The differential test
 against ICU4C 79 and ICU4X joins CI with the other calendars.
 
 ## Consequences

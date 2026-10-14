@@ -8,6 +8,7 @@
 #include "maul-locale/calendar.h"
 
 #include "calendar_arith.h"
+#include "calendar_eras.h"
 #include "calendar_hebrew.h"
 
 #include <string.h>
@@ -18,6 +19,10 @@ enum
     // Years past this are refused before any arithmetic; Temporal's range
     // lies well within.
     maxYear = 1000000,
+    // January 1 of 1873 (Meiji 6), when Japan took the Gregorian
+    // calendar: earlier days read in ce and bce, as Temporal's era table
+    // and ICU4X have it.
+    japaneseGregorianDay = 683735,
 };
 
 // An era: year = base + sign * eraYear.
@@ -45,6 +50,7 @@ static Eras ErasOf(mlocCalendar calendar)
     switch (calendar)
     {
     case mloc_calendarGregorian:
+    case mloc_calendarJapanese:
         return (Eras){{s_ce, s_bce, {"ad", 0, 1}, {"bc", 1, -1}}, 4, 1};
     case mloc_calendarBuddhist:
         return (Eras){{{"be", 0, 1}}, 1, INT32_MIN};
@@ -84,7 +90,30 @@ static bool YearInEra(mlocCalendar calendar, const char* era, size_t length, int
             return true;
         }
     }
+    for (uint32_t i = 0; calendar == mloc_calendarJapanese && i < mlocJapaneseEraCount; i++)
+    {
+        const JapaneseEra* e = &mlocJapaneseEras[i];
+        if (strlen(e->code) == length && memcmp(e->code, era, length) == 0)
+        {
+            *yearOut = e->year + eraYear - 1;
+            return true;
+        }
+    }
     return false;
+}
+
+// The Japanese era a day falls in from Meiji 6, or null.
+static const JapaneseEra* JapaneseEraOf(int32_t day)
+{
+    const JapaneseEra* found = nullptr;
+    for (uint32_t i = 0; day >= japaneseGregorianDay && i < mlocJapaneseEraCount; i++)
+    {
+        if (mlocJapaneseEras[i].day <= day)
+        {
+            found = &mlocJapaneseEras[i];
+        }
+    }
+    return found;
 }
 
 // A month code's number, 1 to 13, and whether it names a leap month;
@@ -295,6 +324,15 @@ mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
         f.eraYear = e->sign * (d.year - e->base);
         f.eraLength = (uint8_t)strlen(e->code);
         memcpy(f.era, e->code, f.eraLength);
+    }
+    const JapaneseEra* japanese =
+        calendar == mloc_calendarJapanese ? JapaneseEraOf(date->day) : nullptr;
+    if (japanese != nullptr)
+    {
+        f.eraYear = d.year - japanese->year + 1;
+        f.eraLength = (uint8_t)strlen(japanese->code);
+        memset(f.era, 0, sizeof(f.era));
+        memcpy(f.era, japanese->code, f.eraLength);
     }
     uint32_t number = 0;
     bool leapMonth = false;

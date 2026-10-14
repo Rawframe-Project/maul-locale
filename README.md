@@ -73,8 +73,8 @@ are a data file of their own, `src/generated/names.mloc`, and the
 subdivision names another, `src/generated/subdivisions.mloc`); and
 dates as values in CLDR's calendars, as Temporal models them, with era
 and month codes and overflow constrained or refused (the arithmetic
-calendars and Hebrew so far, each day from 1600 to 2400 as ICU4X
-computes it).
+calendars, Hebrew and Japanese so far, each day from 1600 to 2400 as
+ICU4X computes it).
 The library has 66 public functions.
 
 ## Building

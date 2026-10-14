@@ -29,7 +29,9 @@ extern "C"
         mloc_calendarBuddhist = 2,
         // "roc": Gregorian, years of the Republic of China (roc, broc).
         mloc_calendarRoc = 3,
-        // "japanese": Gregorian, years of the Japanese eras since Meiji.
+        // "japanese": Gregorian, years of Japan's eras from Meiji 6
+        // (1873), when Japan took the Gregorian calendar; ce and bce
+        // before.
         mloc_calendarJapanese = 4,
         // "coptic": thirteen months, era am.
         mloc_calendarCoptic = 5,
@@ -95,7 +97,8 @@ extern "C"
         // 0 is 1 BCE in the Gregorian calendar.
         int32_t year;
         // The year in its era, and the era's code (Temporal's: "ce", "bce",
-        // "be", "roc", "broc", "am", "aa", "shaka", "ap", "ah", "bh"),
+        // "be", "roc", "broc", "am", "aa", "shaka", "ap", "ah", "bh", and
+        // Japan's "meiji", "taisho", "showa", "heisei", "reiwa"),
         // NUL-padded; eraLength 0 and eraYear the year in a calendar with no
         // eras.
         int32_t eraYear;

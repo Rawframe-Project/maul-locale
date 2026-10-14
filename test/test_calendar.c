@@ -33,7 +33,8 @@ typedef struct Case
 // day, Persian years around a correction (1502, not leap, and 1503), and
 // years just past the leap rules' bounds (Persian 1407, Islamic 1437);
 // Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar,
-// and a new year put off a day after a leap year (5766).
+// and a new year put off a day after a leap year (5766); Japan's eras on
+// their first days, ce until Meiji 6.
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -199,6 +200,22 @@ static const Case s_cases[] = {
     {mloc_calendarHebrew, 739320, 5785, "am", 5785, 6, false, 10, 0, 355, 29},
     {mloc_calendarHebrew, 732222, 5765, "am", 5765, 12, false, 29, 1, 383, 29},
     {mloc_calendarHebrew, 732223, 5766, "am", 5766, 1, false, 1, 0, 354, 30},
+    {mloc_calendarJapanese, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
+    {mloc_calendarJapanese, 0, 0, "bce", 1, 12, false, 31, 1, 366, 31},
+    {mloc_calendarJapanese, 682203, 1868, "ce", 1868, 10, false, 22, 1, 366, 31},
+    {mloc_calendarJapanese, 682204, 1868, "ce", 1868, 10, false, 23, 1, 366, 31},
+    {mloc_calendarJapanese, 683734, 1872, "ce", 1872, 12, false, 31, 1, 366, 31},
+    {mloc_calendarJapanese, 683735, 1873, "meiji", 6, 1, false, 1, 0, 365, 31},
+    {mloc_calendarJapanese, 698188, 1912, "meiji", 45, 7, false, 29, 1, 366, 31},
+    {mloc_calendarJapanese, 698189, 1912, "taisho", 1, 7, false, 30, 1, 366, 31},
+    {mloc_calendarJapanese, 703449, 1926, "taisho", 15, 12, false, 24, 0, 365, 31},
+    {mloc_calendarJapanese, 703450, 1926, "showa", 1, 12, false, 25, 0, 365, 31},
+    {mloc_calendarJapanese, 726109, 1989, "showa", 64, 1, false, 7, 0, 365, 31},
+    {mloc_calendarJapanese, 726110, 1989, "heisei", 1, 1, false, 8, 0, 365, 31},
+    {mloc_calendarJapanese, 737179, 2019, "heisei", 31, 4, false, 30, 0, 365, 30},
+    {mloc_calendarJapanese, 737180, 2019, "reiwa", 1, 5, false, 1, 0, 365, 31},
+    {mloc_calendarJapanese, 739000, 2024, "reiwa", 6, 4, false, 24, 1, 366, 30},
+    {mloc_calendarJapanese, 100719163, 275760, "reiwa", 273742, 9, false, 13, 1, 366, 30},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
@@ -259,17 +276,12 @@ static bool MadeBack(mlocCalendar calendar, int32_t day)
 static void TestRoundTrip(void)
 {
     static const mlocCalendar s_all[] = {
-        mloc_calendarGregorian,
-        mloc_calendarIso8601,
-        mloc_calendarBuddhist,
-        mloc_calendarRoc,
-        mloc_calendarCoptic,
-        mloc_calendarEthiopic,
-        mloc_calendarEthiopicAmeteAlem,
-        mloc_calendarIndian,
-        mloc_calendarPersian,
-        mloc_calendarHebrew,
-        mloc_calendarIslamicCivil,
+        mloc_calendarGregorian,   mloc_calendarIso8601,
+        mloc_calendarBuddhist,    mloc_calendarRoc,
+        mloc_calendarJapanese,    mloc_calendarCoptic,
+        mloc_calendarEthiopic,    mloc_calendarEthiopicAmeteAlem,
+        mloc_calendarIndian,      mloc_calendarPersian,
+        mloc_calendarHebrew,      mloc_calendarIslamicCivil,
         mloc_calendarIslamicTbla,
     };
     bool all = true;
@@ -356,6 +368,11 @@ static void TestEras(void)
     mlocDateInput bh = {.era = "bh", .eraLength = 2, .year = 641, .month = 5, .day = 18};
     mlocDateInput other = {.era = "ah", .eraLength = 2, .year = 1, .month = 1, .day = 1};
     mlocDateInput empty = {.era = "", .year = 1, .month = 1, .day = 1};
+    mlocDateInput meiji = {.era = "meiji", .eraLength = 5, .year = 1, .month = 1, .day = 1};
+    mlocDateInput heisei = {.era = "heisei", .eraLength = 6, .year = 32, .month = 1, .day = 1};
+    mlocDateInput reiwa = {.era = "reiwa", .eraLength = 5, .year = 1, .month = 4, .day = 1};
+    mlocDateInput ad = {.era = "ad", .eraLength = 2, .year = 1873, .month = 1, .day = 1};
+    mlocDateInput be = {.era = "be", .eraLength = 2, .year = 2562, .month = 1, .day = 1};
     mlocDateInput leap = {.year = 2024, .monthCode = "M02L", .monthCodeLength = 4, .day = 1};
     mlocDateInput bad = {.year = 2024, .monthCode = "M2", .monthCodeLength = 2, .day = 1};
     mlocDateInput both = {
@@ -367,11 +384,18 @@ static void TestEras(void)
               Made(mloc_calendarIslamicCivil, &bh, mloc_overflowReject, mloc_success, 1) &&
               Made(mloc_calendarGregorian, &other, mloc_overflowReject, mloc_errorSyntax, 0) &&
               Made(mloc_calendarRoc, &empty, mloc_overflowReject, mloc_errorSyntax, 0) &&
+              Made(mloc_calendarJapanese, &meiji, mloc_overflowReject, mloc_success, 681908) &&
+              Made(mloc_calendarJapanese, &heisei, mloc_overflowReject, mloc_success, 737425) &&
+              Made(mloc_calendarJapanese, &reiwa, mloc_overflowReject, mloc_success, 737150) &&
+              Made(mloc_calendarJapanese, &ad, mloc_overflowReject, mloc_success, 683735) &&
+              Made(mloc_calendarJapanese, &be, mloc_overflowReject, mloc_errorSyntax, 0) &&
+              Made(mloc_calendarGregorian, &meiji, mloc_overflowReject, mloc_errorSyntax, 0) &&
               Made(mloc_calendarIso8601, &bce, mloc_overflowReject, mloc_errorSyntax, 0) &&
               Made(mloc_calendarGregorian, &leap, mloc_overflowConstrain, mloc_errorSyntax, 0) &&
               Made(mloc_calendarGregorian, &bad, mloc_overflowConstrain, mloc_errorSyntax, 0) &&
               Made(mloc_calendarGregorian, &both, mloc_overflowConstrain, mloc_errorInvalid, 0),
-          "eras and their aliases; an era of another calendar or empty; month codes leap, "
+          "eras and their aliases; Japan's eras counted on past their ends; an era of "
+          "another calendar or empty; month codes leap, "
           "malformed, or naming another month than the place");
 }
 
@@ -402,7 +426,7 @@ static void TestRefusals(void)
     mlocDate bad = {.day = 1, .calendar = 18};
     mlocDate reserved = {.day = 1, .reserved = {1}};
     mlocDate outside = {.day = mlocDateMaxDay + 1};
-    mlocDate japanese = {.day = 1, .calendar = mloc_calendarJapanese};
+    mlocDate dangi = {.day = 1, .calendar = mloc_calendarDangi};
     CHECK(
         mlocMakeDate(mloc_calendarGregorian, nullptr, mloc_overflowReject, &date) ==
                 mloc_errorInvalid &&
@@ -420,18 +444,19 @@ static void TestRefusals(void)
                  0) &&
             Made(mloc_calendarGregorian, &codeLength, mloc_overflowConstrain, mloc_errorInvalid,
                  0) &&
-            Made(mloc_calendarJapanese, &ok, mloc_overflowConstrain, mloc_errorNotFound, 0) &&
+            Made(mloc_calendarIslamicUmalqura, &ok, mloc_overflowConstrain, mloc_errorNotFound,
+                 0) &&
             mlocMakeDateFromDay(mloc_calendarGregorian, mlocDateMinDay - 1, &date) ==
                 mloc_errorInvalid &&
             mlocMakeDateFromDay(mloc_calendarGregorian, 1, nullptr) == mloc_errorInvalid &&
             mlocMakeDateFromDay((mlocCalendar)18, 1, &date) == mloc_errorInvalid &&
             mlocMakeDateFromDay(mloc_calendarChinese, 1, &date) == mloc_errorNotFound &&
             mlocGetDateFields(nullptr, &f) == mloc_errorInvalid &&
-            mlocGetDateFields(&japanese, nullptr) == mloc_errorInvalid &&
+            mlocGetDateFields(&dangi, nullptr) == mloc_errorInvalid &&
             mlocGetDateFields(&bad, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&reserved, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&outside, &f) == mloc_errorInvalid &&
-            mlocGetDateFields(&japanese, &f) == mloc_errorNotFound,
+            mlocGetDateFields(&dangi, &f) == mloc_errorNotFound,
         "every refusal, and the calendars not built yet");
 }
 

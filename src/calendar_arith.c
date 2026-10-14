@@ -203,6 +203,7 @@ bool mlocArithmetic(mlocCalendar calendar)
     case mloc_calendarIso8601:
     case mloc_calendarBuddhist:
     case mloc_calendarRoc:
+    case mloc_calendarJapanese:
     case mloc_calendarCoptic:
     case mloc_calendarEthiopic:
     case mloc_calendarEthiopicAmeteAlem:

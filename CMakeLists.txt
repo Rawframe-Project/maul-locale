@@ -128,7 +128,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_usage.c
     src/wide.c
     src/generated/builtin_data.c
-    src/generated/plural_rules.c)
+    src/generated/plural_rules.c
+    src/generated/calendar_eras.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
@@ -288,7 +289,8 @@ endif()
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
-    add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/cldr.c
+    add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
+                                    tools/mlocgen/cldr.c
                                     tools/mlocgen/context_gen.c
                                     tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
@@ -303,7 +305,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
-                                    tools/mlocgen/xml.c src/wide.c)
+                                    tools/mlocgen/xml.c src/calendar_arith.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)
@@ -346,6 +348,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_include_directories(test_gendata PRIVATE test src)
             maul_apply_flags(test_gendata)
             add_test(NAME gendata COMMAND test_gendata)
+            add_executable(test_gencalendar test/test_gencalendar.c)
+            target_link_libraries(test_gencalendar PRIVATE mlocgen_core)
+            target_include_directories(test_gencalendar PRIVATE test)
+            maul_apply_flags(test_gencalendar)
+            add_test(NAME gencalendar COMMAND test_gencalendar)
         endif()
     endif()
 endif()
