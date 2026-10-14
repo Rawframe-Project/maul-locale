@@ -30,7 +30,8 @@ typedef struct Case
 
 // ICU4X 2.3's fields (icu_calendar's to_calendar) at Temporal's first and
 // last days, far back, around day 1, now, a Coptic leap year's last
-// day, and Persian years around a correction (1502, not leap, and 1503).
+// day, Persian years around a correction (1502, not leap, and 1503), and
+// years just past the leap rules' bounds (Persian 1407, Islamic 1437).
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -172,6 +173,9 @@ static const Case s_cases[] = {
     {mloc_calendarIslamicTbla, 811647, 1650, "ah", 1650, 10, false, 17, 0, 354, 29},
     {mloc_calendarIslamicTbla, 850000, 1759, "ah", 1759, 1, false, 10, 0, 354, 30},
     {mloc_calendarIslamicTbla, 100719163, 283583, "ah", 283583, 5, false, 24, 0, 354, 30},
+    {mloc_calendarPersian, 740450, 1407, "ap", 1407, 1, false, 25, 0, 365, 31},
+    {mloc_calendarIslamicCivil, 735900, 1437, "ah", 1437, 1, false, 15, 0, 354, 30},
+    {mloc_calendarIslamicTbla, 735900, 1437, "ah", 1437, 1, false, 16, 0, 354, 30},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
