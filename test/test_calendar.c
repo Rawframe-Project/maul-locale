@@ -32,7 +32,8 @@ typedef struct Case
 // last days, far back, around day 1, now, a Coptic leap year's last
 // day, Persian years around a correction (1502, not leap, and 1503), and
 // years just past the leap rules' bounds (Persian 1407, Islamic 1437);
-// Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar.
+// Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar,
+// and a new year put off a day after a leap year (5766).
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -196,6 +197,8 @@ static const Case s_cases[] = {
     {mloc_calendarHebrew, 738930, 5784, "am", 5784, 5, true, 5, 1, 383, 30},
     {mloc_calendarHebrew, 738960, 5784, "am", 5784, 6, false, 5, 1, 383, 29},
     {mloc_calendarHebrew, 739320, 5785, "am", 5785, 6, false, 10, 0, 355, 29},
+    {mloc_calendarHebrew, 732222, 5765, "am", 5765, 12, false, 29, 1, 383, 29},
+    {mloc_calendarHebrew, 732223, 5766, "am", 5766, 1, false, 1, 0, 354, 30},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
