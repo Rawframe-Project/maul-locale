@@ -1040,6 +1040,34 @@ static void TestLeads(void)
           "a pattern reached through \"=...=\"; a plural block first starts nothing");
     free(unit);
     free(same);
+    // "<<" and ">>" read below the divisor: 100 for 150, 10 for 20 and 10.
+    static const char s_divisor[] = "%a:\n0: zero;\n150: <%b< x;\n%b:\n0: nil;\n120: =#,##0=;\n";
+    static const char s_modulus[] = "%a:\n0: zero;\n20: >%b> y;\n%b:\n0: nil;\n15: =#,##0=;\n";
+    static const char s_reach[] = "%a:\n0: zero;\n10: <%b< ten;\n%b:\n0: nil;\n5: =#,##0=;\n";
+    static const char* const s_needs[] = {s_divisor, s_modulus, s_reach};
+    static const uint64_t s_expected[] = {UINT64_MAX, UINT64_MAX, 11};
+    bool needs = true;
+    for (size_t i = 0; i < 3; i++)
+    {
+        size_t needSize = 0;
+        uint8_t* needUnit = UnitOf(s_needs[i], &needSize);
+        needs = needs && needUnit != nullptr &&
+                mlocLoad64(LeadOf(needUnit, needSize, 0)) == s_expected[i];
+        free(needUnit);
+    }
+    CHECK(needs && ParsesTo(s_reach, "7 ten", "70", 5),
+          "a pattern reached below a divisor, not past it");
+    // The block where the substitution ends: the rule starts with "<%b<".
+    static const char s_block[] =
+        "%a:\n0: zero;\n10: <%b<$(cardinal,one{ten}other{tens})$;\n%b:\n0: nil;\n1: one;\n";
+    CHECK(ParsesTo(s_block, "onetens", "10", 7), "a plural block after the first substitution");
+    // The last negative rule kept, every fraction rule.
+    static const char s_kept[] =
+        "%a:\n-x: m >>;\n-x: minus >>;\nx.x: << point >>;\nx,x: << comma >>;\n0: zero;\none;\n";
+    char text[64];
+    CHECK(FormatText(s_kept, "%a", 0, 0, "-1.1", text, sizeof(text)) == mloc_success &&
+              strcmp(text, "minus one point one") == 0,
+          "the special rules ICU keeps");
 }
 
 int main(void)

@@ -16,9 +16,8 @@
 #include <string.h>
 
 // The largest integer a double holds exactly, to which the parser clamps
-// an upper bound, and the bound of none.
+// an upper bound, and the need of a set that reaches no pattern.
 static const uint64_t maxUpper = 9007199254740991;
-static const uint64_t noUpper = UINT64_MAX;
 static const uint64_t never = UINT64_MAX;
 
 typedef struct Lead
@@ -54,42 +53,29 @@ static bool Reaches(const Lead* leads, int set, uint64_t upper)
 // The least upper bound with which a normal rule starting with a
 // substitution reaches a pattern, the bound read with deciding both
 // whether the rule is tried (below it, in a set not of fractions) and,
-// through "=...=", the bound its set is read with.
+// through "==", the bound its set is read with. A normal rule's
+// substitutions are "<<" and ">>", read below its divisor, "==", and
+// ">>>" and a fraction rule set's numerator "<<".
 static uint64_t RuleNeed(const Lead* leads, const RbnfSet* set, const RbnfRule* rule)
 {
     uint64_t gate = set->fraction                     ? 0
                     : (uint64_t)rule->base < maxUpper ? (uint64_t)rule->base + 1
                                                       : never;
     const RbnfSub* sub = &rule->subs[0];
-    if (gate == never || sub->set < 0 || (sub->kind == rbnfModulus && sub->triple))
+    if (gate == never || sub->set < 0 || sub->triple ||
+        (sub->kind != rbnfMultiplier && sub->kind != rbnfModulus && sub->kind != rbnfSame))
     {
-        // A pattern, or ">>>", whose rule before the parser reads
-        // whatever the bound: taken as reaching one.
+        // A pattern; ">>>", whose rule before the parser reads whatever
+        // the bound; a numerator, whose set every bound tries: taken as
+        // reaching one.
         return gate;
     }
+    uint64_t need = leads[sub->set].need;
     if (sub->kind == rbnfSame)
     {
-        uint64_t need = leads[sub->set].need;
         return need == never ? never : gate > need ? gate : need;
     }
-    bool reaches = false;
-    if (sub->kind == rbnfFraction && sub->byDigits)
-    {
-        reaches = Reaches(leads, sub->set, 10);
-    }
-    else if (sub->kind == rbnfNumerator)
-    {
-        reaches = Reaches(leads, sub->set, 1) || Reaches(leads, sub->set, (uint64_t)rule->base);
-    }
-    else
-    {
-        uint64_t upper = sub->kind == rbnfMultiplier || sub->kind == rbnfModulus ? RbnfDivisor(rule)
-                         : sub->kind == rbnfIntegral || sub->kind == rbnfAbsolute ? noUpper
-                         : sub->kind == rbnfFraction ? 0
-                                                     : (uint64_t)rule->base;
-        reaches = Reaches(leads, sub->set, upper);
-    }
-    return reaches ? gate : never;
+    return Reaches(leads, sub->set, RbnfDivisor(rule)) ? gate : never;
 }
 
 // Adds a rule to its set's lead: the text it starts with, or what the
