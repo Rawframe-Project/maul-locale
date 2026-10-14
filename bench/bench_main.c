@@ -8,7 +8,9 @@
 // parsed, made from a double and rounded; Russian plural rules made and
 // selecting for an integer and a decimal; number, currency and unit
 // formatters made and formatting (decimal, compact, percent, scientific),
-// and numbers and amounts of money parsed. The inputs are the ones the
+// numbers and amounts of money parsed; a spell-out formatter made,
+// numbers in words (an integer, a fraction, an ordinal), a Roman numeral
+// and words parsed back. The inputs are the ones the
 // ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well. With BENCH_SHOW
@@ -23,6 +25,7 @@
 #include "maul-locale/locale.h"
 #include "maul-locale/number.h"
 #include "maul-locale/plural.h"
+#include "maul-locale/spellout.h"
 #include "maul-locale/unit.h"
 
 #include <stdio.h>
@@ -34,6 +37,9 @@
 // tree; relative to the working directory otherwise.
 #ifndef MLOC_UNITS_FILE
 #define MLOC_UNITS_FILE "src/generated/units.mloc"
+#endif
+#ifndef MLOC_SPELLOUT_FILE
+#define MLOC_SPELLOUT_FILE "src/generated/spellout.mloc"
 #endif
 
 static volatile int s_sink;
@@ -327,6 +333,88 @@ static bool PrepareNumbers(void)
            Number("1234567.89", &s_money) && Number("1234.5", &s_length);
 }
 
+// The spell-out part: formatters of en's cardinal, ru's feminine
+// cardinal, fr's masculine ordinal and Roman numerals, with the values
+// they write and the text read back.
+static mlocDataSet s_withRules;
+static mlocLocale s_fr;
+static mlocSpelloutFormatter s_enWords;
+static mlocSpelloutFormatter s_ruWords;
+static mlocSpelloutFormatter s_frOrdinal;
+static mlocSpelloutFormatter s_roman;
+static mlocDecimal s_half;
+static mlocDecimal s_ninetySeven;
+static mlocDecimal s_year;
+static char s_words[512];
+
+static void SpelloutInit(void)
+{
+    mlocSpelloutFormatter f;
+    s_sink = mlocInitSpelloutFormatter(&f, &s_withRules, &s_en, "%spellout-cardinal", 18, nullptr);
+}
+
+static void Spell(const mlocSpelloutFormatter* f, const mlocDecimal* d)
+{
+    mlocOutput output = {.buffer = s_words, .capacity = sizeof(s_words)};
+    s_sink = mlocFormatSpellout(f, d, &output) + (int)output.length;
+}
+
+static void SpelloutInteger(void)
+{
+    Spell(&s_enWords, &s_million);
+}
+
+static void SpelloutFraction(void)
+{
+    Spell(&s_ruWords, &s_half);
+}
+
+static void SpelloutOrdinal(void)
+{
+    Spell(&s_frOrdinal, &s_ninetySeven);
+}
+
+static void SpelloutRoman(void)
+{
+    Spell(&s_roman, &s_year);
+}
+
+static void SpelloutParse(void)
+{
+    mlocDecimal d;
+    size_t end = 0;
+    s_sink = mlocParseSpellout(&s_enWords, "one thousand two hundred thirty-four", 36, &d, &end) +
+             (int)end;
+}
+
+// The spell-out part's formatters and values; false when one cannot be
+// made (spellout.mloc missing).
+static bool PrepareSpellout(void)
+{
+    static mlocData s_sources[2];
+    alignas(8) static uint8_t s_rules[4 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    FILE* file = fopen(MLOC_SPELLOUT_FILE, "rb");
+    size_t size = file == nullptr ? 0 : fread(s_rules, 1, sizeof(s_rules), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_withRules = (mlocDataSet){s_sources, 2};
+    s_fr = Parsed("fr");
+    return size > 0 && size < sizeof(s_rules) &&
+           mlocOpenData(&s_sources[1], s_rules, size) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_enWords, &s_withRules, &s_en, "%spellout-cardinal", 18,
+                                     nullptr) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_ruWords, &s_withRules, &s_ru, "%spellout-cardinal-feminine",
+                                     27, nullptr) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_frOrdinal, &s_withRules, &s_fr,
+                                     "%spellout-ordinal-masculine", 27, nullptr) == mloc_success &&
+           mlocInitNumberingSystemFormatter(&s_roman, &s_withRules, &s_en, "roman", 5, nullptr) ==
+               mloc_success &&
+           Number("21.5", &s_half) && Number("97", &s_ninetySeven) && Number("1999", &s_year);
+}
+
 typedef struct Case
 {
     const char* name;
@@ -397,6 +485,11 @@ int main(int argc, char** argv)
         fprintf(stderr, "bench: cannot make the number formatters (%s)\n", MLOC_UNITS_FILE);
         return 1;
     }
+    if (!PrepareSpellout())
+    {
+        fprintf(stderr, "bench: cannot make the spell-out formatters (%s)\n", MLOC_SPELLOUT_FILE);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
@@ -406,6 +499,14 @@ int main(int argc, char** argv)
             memset(s_text, 0, sizeof(s_text));
             show[i]();
             printf("[%s]\n", s_text);
+        }
+        void (*const spell[])(void) = {SpelloutInteger, SpelloutFraction, SpelloutOrdinal,
+                                       SpelloutRoman};
+        for (size_t i = 0; i < 4; i++)
+        {
+            memset(s_words, 0, sizeof(s_words));
+            spell[i]();
+            printf("[%s]\n", s_words);
         }
     }
     FILE* baseline = argc > 1 ? fopen(argv[1], "r") : nullptr;
@@ -437,6 +538,12 @@ int main(int argc, char** argv)
         {"number-parse", NumberParse, 1000000},
         {"currency-parse", CurrencyParse, 500000},
         {"currency-parse-any", CurrencyParseAny, 100000},
+        {"spellout-init", SpelloutInit, 500000},
+        {"spellout-integer", SpelloutInteger, 1000000},
+        {"spellout-fraction", SpelloutFraction, 1000000},
+        {"spellout-ordinal", SpelloutOrdinal, 1000000},
+        {"spellout-roman", SpelloutRoman, 2000000},
+        {"spellout-parse", SpelloutParse, 200000},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
