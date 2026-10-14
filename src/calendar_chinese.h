@@ -24,12 +24,20 @@ typedef struct LunisolarYear
     uint8_t count;
     // The leap month's place, from 1, or 0 in a year of twelve.
     uint8_t leap;
+    // The number of the new moon the first month begins with, as
+    // calendar_astro.h counts them; the months that follow take the
+    // numbers after it.
+    int32_t lunation;
 } LunisolarYear;
 
 // The model's year holding a day; korea selects Dangi. The dates' own
 // years come from calendar_lunar.h, which reads the tables for 1600 to
 // 2400 and calls these outside them.
 void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out);
+
+// The first day of the month the numbered new moon begins, for a new
+// moon within a year of the dates' range.
+int64_t mlocChineseModelMonthStart(bool korea, int64_t lunation);
 
 // The model's year numbered year: the one holding July 1 of that
 // Gregorian year.

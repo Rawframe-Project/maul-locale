@@ -10,6 +10,7 @@
 
 #include "calendar_arith.h"
 #include "calendar_chinese.h"
+#include "calendar_lunar.h"
 
 #include "maul-locale/calendar.h"
 
@@ -50,6 +51,20 @@ int64_t mlocYearDays(const CalendarYear* y);
 
 // The year holding a day, and the day's month and day in it.
 CalendarDate mlocYearOpenOf(CalendarYear* y, mlocCalendar calendar, int32_t day);
+
+// A month as one number, so that adding months is an addition: months
+// from year 0's first month in the calendars with a fixed count, from
+// the Hebrew epoch's in Hebrew, and the number of the new moon that
+// begins it in Chinese and Dangi (calendar_astro.h's).
+int64_t mlocYearMonthNumber(const CalendarYear* y, uint32_t month);
+
+// Opens the year holding a month number and gives the month's place;
+// false for a month past the years the calendar is computed for: 2^34
+// years either way in the arithmetic calendars, beyond any a valid
+// Temporal duration reaches (2^33), and lunarMinYear to lunarMaxYear in
+// Chinese and Dangi.
+bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t number,
+                             uint32_t* monthOut);
 
 // A month's code: its number, and whether it is the leap month, which
 // takes the number of the month before it ('M05L' after 'M05'); the

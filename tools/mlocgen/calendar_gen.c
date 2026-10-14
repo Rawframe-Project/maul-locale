@@ -315,22 +315,39 @@ static int AppendTable(char* source, size_t capacity, int size, const char* name
     return size + snprintf(source + size, capacity - (size_t)size, "};\n");
 }
 
+static int AppendMonths(char* source, size_t capacity, int size, const char* name,
+                        const uint16_t* months)
+{
+    size += snprintf(source + size, capacity - (size_t)size,
+                     "\nconst uint16_t %s[lunarYearCount] = {\n", name);
+    for (int i = 0; i < lunarYearCount; i++)
+    {
+        size +=
+            snprintf(source + size, capacity - (size_t)size, "%s%d,%s", i % 12 == 0 ? "    " : " ",
+                     (int)months[i], i % 12 == 11 || i == lunarYearCount - 1 ? "\n" : "");
+    }
+    return size + snprintf(source + size, capacity - (size_t)size, "};\n");
+}
+
 int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceSizeOut,
                         char* errorOut, size_t errorCapacity)
 {
     LunarYears* lunar = calloc(2, sizeof(LunarYears));
     uint32_t* tables = malloc(2 * lunarYearCount * sizeof(uint32_t));
-    size_t capacity = headRoom + 2 * (size_t)lunarYearCount * 12;
+    uint16_t* months = malloc(2 * lunarYearCount * sizeof(uint16_t));
+    size_t capacity = headRoom + 2 * (size_t)lunarYearCount * 18;
     char* source = malloc(capacity);
-    if (lunar == nullptr || tables == nullptr || source == nullptr)
+    if (lunar == nullptr || tables == nullptr || months == nullptr || source == nullptr)
     {
         snprintf(errorOut, errorCapacity, "out of memory");
         free(lunar);
         free(tables);
+        free(months);
         free(source);
         return 0;
     }
     int ok = ReadOverrides(overrides, lunar, errorOut, errorCapacity);
+    int32_t firstLunation[2] = {0};
     for (int c = 0; ok && c < 2; c++)
     {
         for (int i = 0; i < lunarYearCount + 2; i++)
@@ -353,6 +370,23 @@ int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceS
                          c == 1 ? "dangi" : "chinese", (int)y->year);
             }
         }
+        // The table's months are numbered on from the model's year before
+        // it, and must reach the model's year after it.
+        const LunisolarYear* before = &lunar[c].years[0];
+        int64_t lunation = (int64_t)before->lunation + before->count;
+        firstLunation[c] = (int32_t)lunation;
+        for (int i = 1; i < lunarYearCount + 1; i++)
+        {
+            months[c * lunarYearCount + i - 1] = (uint16_t)(lunation - firstLunation[c]);
+            lunation += lunar[c].years[i].count;
+        }
+        if (ok && lunation != lunar[c].years[lunarYearCount + 1].lunation)
+        {
+            ok = 0;
+            snprintf(errorOut, errorCapacity,
+                     "calendar-overrides.txt: the %s table's months do not reach the model's",
+                     c == 1 ? "dangi" : "chinese");
+        }
     }
     if (ok)
     {
@@ -369,12 +403,20 @@ int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceS
                             "#include \"calendar_years.h\"\n");
         size = AppendTable(source, capacity, size, "mlocChineseYears", tables);
         size = AppendTable(source, capacity, size, "mlocDangiYears", tables + lunarYearCount);
+        size = AppendMonths(source, capacity, size, "mlocChineseMonthsBefore", months);
+        size =
+            AppendMonths(source, capacity, size, "mlocDangiMonthsBefore", months + lunarYearCount);
+        size += snprintf(source + size, capacity - (size_t)size,
+                         "\nconst int32_t mlocChineseFirstLunation = %d;\n"
+                         "const int32_t mlocDangiFirstLunation = %d;\n",
+                         (int)firstLunation[0], (int)firstLunation[1]);
         *sourceOut = source;
         *sourceSizeOut = (size_t)size;
         source = nullptr;
     }
     free(lunar);
     free(tables);
+    free(months);
     free(source);
     return ok;
 }

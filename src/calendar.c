@@ -18,10 +18,6 @@ enum
     // Years past this are refused before any arithmetic; Temporal's range
     // lies well within.
     maxYear = 1000000,
-    // The Chinese and Dangi years the astronomy is computed for: those
-    // holding Temporal's first and last days, and one more each side.
-    lunisolarMinYear = -271822,
-    lunisolarMaxYear = 275761,
     // January 1 of 1873 (Meiji 6), when Japan took the Gregorian
     // calendar: earlier days read in ce and bce, as Temporal's era table
     // and ICU4X have it.
@@ -176,8 +172,8 @@ static mlocResult YearOfInput(mlocCalendar calendar, const mlocDateInput* input,
         return mloc_errorSyntax;
     }
     bool lunisolar = mlocYearLunisolar(mlocYearSource(calendar));
-    if (*yearOut < (lunisolar ? lunisolarMinYear : -maxYear) ||
-        *yearOut > (lunisolar ? lunisolarMaxYear : maxYear))
+    if (*yearOut < (lunisolar ? lunarMinYear : -maxYear) ||
+        *yearOut > (lunisolar ? lunarMaxYear : maxYear))
     {
         return mloc_errorInvalid;
     }

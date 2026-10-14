@@ -6,7 +6,6 @@
 #include "calendar_year.h"
 
 #include "calendar_hebrew.h"
-#include "calendar_lunar.h"
 #include "calendar_umalqura.h"
 
 CalendarSource mlocYearSource(mlocCalendar calendar)
@@ -194,4 +193,82 @@ mlocResult mlocYearMonthOfCode(const CalendarYear* y, uint32_t number, bool leap
     }
     *monthOut = leapMonth != 0 && number >= leapMonth ? number + 1 : number;
     return mloc_success;
+}
+
+static const int64_t s_monthNumberYears = INT64_C(1) << 34;
+
+static int64_t FloorDiv(int64_t a, int64_t b)
+{
+    int64_t q = a / b;
+    return q - (a % b != 0 && (a < 0) != (b < 0));
+}
+
+// The Hebrew months before a year's Tishrei, from the epoch.
+static int64_t HebrewMonthsBefore(int64_t year)
+{
+    return FloorDiv(235 * year - 234, 19);
+}
+
+int64_t mlocYearMonthNumber(const CalendarYear* y, uint32_t month)
+{
+    switch (y->source)
+    {
+    case sourceHebrew:
+        return HebrewMonthsBefore(y->year) + month - 1;
+    case sourceChinese:
+    case sourceDangi:
+        return (int64_t)y->lunar.lunation + month - 1;
+    default:
+        return y->year * mlocYearMonths(y) + month - 1;
+    }
+}
+
+bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t number,
+                             uint32_t* monthOut)
+{
+    CalendarSource source = mlocYearSource(calendar);
+    if (mlocYearLunisolar(source))
+    {
+        y->calendar = calendar;
+        y->source = source;
+        if (!mlocLunarYearOfLunation(source == sourceDangi, number, &y->lunar))
+        {
+            return false;
+        }
+        y->year = y->lunar.year;
+        *monthOut = (uint32_t)(number - y->lunar.lunation + 1);
+        return true;
+    }
+    int64_t year = 0;
+    if (source == sourceHebrew)
+    {
+        if (number > 13 * s_monthNumberYears || number < -13 * s_monthNumberYears)
+        {
+            return false;
+        }
+        // A mean year is 235 / 19 months; the estimate is off by one at
+        // most.
+        year = FloorDiv(19 * number, 235) + 1;
+        while (HebrewMonthsBefore(year) > number)
+        {
+            year--;
+        }
+        while (HebrewMonthsBefore(year + 1) <= number)
+        {
+            year++;
+        }
+        mlocYearOpen(y, calendar, year);
+        *monthOut = (uint32_t)(number - HebrewMonthsBefore(year) + 1);
+        return true;
+    }
+    mlocYearOpen(y, calendar, 0);
+    int64_t months = mlocYearMonths(y);
+    year = FloorDiv(number, months);
+    if (year > s_monthNumberYears || year < -s_monthNumberYears)
+    {
+        return false;
+    }
+    mlocYearOpen(y, calendar, year);
+    *monthOut = (uint32_t)(number - year * months + 1);
+    return true;
 }

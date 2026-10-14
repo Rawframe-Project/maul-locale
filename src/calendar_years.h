@@ -26,4 +26,14 @@ enum
 extern const uint32_t mlocChineseYears[lunarYearCount];
 extern const uint32_t mlocDangiYears[lunarYearCount];
 
+// The months from 1600's first month to each year's first month.
+extern const uint16_t mlocChineseMonthsBefore[lunarYearCount];
+extern const uint16_t mlocDangiMonthsBefore[lunarYearCount];
+
+// The number of the new moon 1600's first month begins with, as
+// calendar_astro.h counts them; the table's months are numbered on from
+// it.
+extern const int32_t mlocChineseFirstLunation;
+extern const int32_t mlocDangiFirstLunation;
+
 #endif

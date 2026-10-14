@@ -72,10 +72,10 @@ static int64_t DayOfMoon(bool korea, int64_t n)
     return FloorDiv(moon + Zone(korea, FloorDiv(moon, s_unit)), s_unit);
 }
 
-// The day of the first new moon on or after a day.
+// The number of the first new moon on or after a day.
 static int64_t NewMoonOnOrAfter(bool korea, int64_t day)
 {
-    return DayOfMoon(korea, mlocAstroNewMoonIndex(Midnight(korea, day)));
+    return mlocAstroNewMoonIndex(Midnight(korea, day));
 }
 
 // The day of the last new moon before a day.
@@ -110,6 +110,8 @@ static int64_t SolsticeOnOrBefore(bool korea, int64_t day)
 typedef struct Sui
 {
     int64_t start[maxSuiMonths + 1];
+    // The number of the new moon each month begins with.
+    int64_t moon[maxSuiMonths + 1];
     int count;
     int leap;
     int newYear;
@@ -118,11 +120,13 @@ typedef struct Sui
 static void MakeSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
 {
     int64_t nextEleventh = NewMoonBefore(korea, nextSolstice + 1);
-    s->start[0] = NewMoonOnOrAfter(korea, solstice + 1);
+    s->moon[0] = NewMoonOnOrAfter(korea, solstice + 1);
+    s->start[0] = DayOfMoon(korea, s->moon[0]);
     s->count = 0;
     while (s->count < maxSuiMonths && s->start[s->count] < nextEleventh)
     {
-        s->start[s->count + 1] = NewMoonOnOrAfter(korea, s->start[s->count] + 1);
+        s->moon[s->count + 1] = NewMoonOnOrAfter(korea, s->start[s->count] + 1);
+        s->start[s->count + 1] = DayOfMoon(korea, s->moon[s->count + 1]);
         s->count++;
     }
     // In a span of twelve lunations the first month with no major
@@ -163,6 +167,7 @@ static void YearFrom(const Sui* a, const Sui* b, LunisolarYear* out)
     }
     out->count = (uint8_t)n;
     out->start[n] = (int32_t)b->start[b->newYear];
+    out->lunation = (int32_t)a->moon[a->newYear];
     // Numbered by the Gregorian year whose July 1 it holds.
     int32_t gregorian = mlocArithmeticFromDay(mloc_calendarGregorian, out->start[0]).year;
     int64_t july = mlocArithmeticToDay(mloc_calendarGregorian, gregorian, 7, 1);
@@ -186,6 +191,11 @@ void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out)
         MakeSui(korea, SolsticeOnOrBefore(korea, solstice - 1), solstice, &b);
         YearFrom(&b, &a, out);
     }
+}
+
+int64_t mlocChineseModelMonthStart(bool korea, int64_t lunation)
+{
+    return DayOfMoon(korea, lunation);
 }
 
 void mlocChineseModelYear(bool korea, int64_t year, LunisolarYear* out)
