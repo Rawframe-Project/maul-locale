@@ -109,5 +109,16 @@ constexpr uint32_t kindSpelloutSystems = 0x00060004;
 // The spell-out data file: the titlecase of the rules' lowercase letters,
 // a unit of no locale.
 constexpr uint32_t kindSpelloutTitlecase = 0x00060005;
+// The names data file: the codes it names, a unit of no locale; the
+// names a locale key gives of languages, scripts, regions, variants,
+// keys and their values, and its display patterns, units per locale key
+// (record mloc-0036, src/names_tables.h).
+constexpr uint32_t kindNameIds = 0x00070001;
+constexpr uint32_t kindNamesLanguages = 0x00070002;
+constexpr uint32_t kindNamesScripts = 0x00070003;
+constexpr uint32_t kindNamesRegions = 0x00070004;
+constexpr uint32_t kindNamesVariants = 0x00070005;
+constexpr uint32_t kindNamesKeys = 0x00070006;
+constexpr uint32_t kindNamePatterns = 0x00070007;
 
 #endif

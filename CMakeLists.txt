@@ -86,6 +86,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
+    src/names_data.c
     src/currency.c
     src/currency_region.c
     src/number.c
@@ -213,6 +214,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
     maul_add_test(list_format)
+    # So are the names of languages and the rest (record mloc-0036).
+    maul_add_test(names_data WHITEBOX)
+    if(TARGET test_names_data)
+        set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_names_data PRIVATE "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
+            set(MLOC_LOCALE_NAMES_FILE /locale-names.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_names_data PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_names_data PRIVATE MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_FILE}")
+    endif()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
@@ -260,7 +274,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/dtd.c tools/mlocgen/extension_gen.c
                                     tools/mlocgen/generate.c tools/mlocgen/keys.c
                                     tools/mlocgen/ldml.c tools/mlocgen/list_gen.c tools/mlocgen/locale_gen.c
-                                    tools/mlocgen/map.c
+                                    tools/mlocgen/map.c tools/mlocgen/names_gen.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
                                     tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c

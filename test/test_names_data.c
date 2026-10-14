@@ -1,0 +1,257 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// The names part's units (names_data.h, names_tables.h) on units built
+// here: valid ones pass and their codes are found; copies with one field
+// spoiled are refused. Then names found along a chain from the names data
+// file: each namespace, each kind of field, a field the chain lacks
+// taking the name, a region's own names over its parent's, and the codes
+// and fields that find nothing.
+
+#include "bytes.h"
+#include "data_view.h"
+#include "kinds.h"
+#include "names_data.h"
+#include "names_tables.h"
+#include "test_harness.h"
+
+#include "maul-locale/data.h"
+
+#include <stdio.h>
+#include <string.h>
+
+static uint8_t s_unit[131072];
+static mlocData s_sources[2];
+static mlocDataSet s_data;
+
+static void Put(uint8_t* p, uint32_t value, int bytes)
+{
+    for (int i = 0; i < bytes; i++)
+    {
+        p[i] = (uint8_t)(value >> (8 * i));
+    }
+}
+
+// Builds a codes unit; its size.
+static uint32_t BuildIds(const char* const* codes, uint32_t count)
+{
+    memset(s_unit, 0, sizeof(s_unit));
+    uint32_t text = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        text += (uint32_t)strlen(codes[i]);
+    }
+    uint8_t* offsets = s_unit + nameIdsHeaderSize;
+    uint8_t* textAt = offsets + 4 * (count + 1);
+    Put(s_unit, count, 2);
+    Put(s_unit + 4, text, 4);
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        Put(offsets + 4 * i, at, 4);
+        memcpy(textAt + at, codes[i], strlen(codes[i]));
+        at += (uint32_t)strlen(codes[i]);
+    }
+    Put(offsets + 4 * count, at, 4);
+    return nameIdsHeaderSize + 4 * (count + 1) + text;
+}
+
+static bool ValidIds(uint32_t size)
+{
+    return mlocValidNameIds(nullptr, (DataSpan){s_unit, size});
+}
+
+// Whether a codes unit of one code is valid.
+static bool OneValid(const char* code)
+{
+    return ValidIds(BuildIds(&code, 1));
+}
+
+static void TestIds(void)
+{
+    static const char* const s_codes[] = {"l:en", "l:en-GB", "r:IO%chagos", "t:ca-gregory"};
+    uint32_t size = BuildIds(s_codes, 4);
+    CHECK(ValidIds(size), "a valid codes unit");
+    DataSpan ids = {s_unit, size};
+    uint16_t index = 9;
+    CHECK(mlocFindNameId(ids, "l:en-GB", 7, &index) && index == 1 &&
+              mlocFindNameId(ids, "t:ca-gregory", 12, &index) && index == 3 &&
+              !mlocFindNameId(ids, "l:e", 3, &index) && !mlocFindNameId(ids, "l:en-G", 6, &index) &&
+              !mlocFindNameId(ids, "z:z", 3, &index),
+          "codes found, a prefix or a code past the last not");
+    static const char* const s_unordered[] = {"l:en-GB", "l:en"};
+    static const char* const s_twice[] = {"l:en", "l:en"};
+    char longest[nameMaxId + 2];
+    memset(longest, 'a', sizeof(longest));
+    longest[1] = ':';
+    longest[nameMaxId] = '\0';
+    bool fits = OneValid(longest);
+    longest[nameMaxId] = 'a';
+    longest[nameMaxId + 1] = '\0';
+    CHECK(fits && !OneValid(longest) && !OneValid("l:e n") && !OneValid("l:\xC3\xA9") &&
+              !ValidIds(BuildIds(s_unordered, 2)) && !ValidIds(BuildIds(s_twice, 2)),
+          "a code too long, of other bytes, out of order or twice");
+    size = BuildIds(s_codes, 4);
+    CHECK(!ValidIds(size - 1) && !ValidIds(3), "a size not the counts'");
+    Put(s_unit + 2, 1, 2);
+    bool padded = ValidIds(size);
+    size = BuildIds(s_codes, 4);
+    Put(s_unit + nameIdsHeaderSize + 4, 12, 4);
+    bool backwards = ValidIds(size);
+    size = BuildIds(s_codes, 4);
+    Put(s_unit + nameIdsHeaderSize, 1, 4);
+    CHECK(!padded && !backwards && !ValidIds(size),
+          "a pad not 0, offsets out of order or not from 0");
+    // More codes than keys of 16 bits hold.
+    memset(s_unit, 0, sizeof(s_unit));
+    Put(s_unit, nameMaxCodes + 1, 2);
+    CHECK(!ValidIds(nameIdsHeaderSize + 4 * (nameMaxCodes + 2)), "too many codes");
+}
+
+// Builds a names unit of entries (keys and texts); its size.
+static uint32_t BuildNames(const uint16_t* keys, const char* const* texts, uint32_t count)
+{
+    memset(s_unit, 0, sizeof(s_unit));
+    uint8_t* offsets = s_unit + nameUnitHeaderSize + 2 * count;
+    uint8_t* textAt = offsets + 2 * (count + 1);
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        Put(s_unit + nameUnitHeaderSize + 2 * i, keys[i], 2);
+        Put(offsets + 2 * i, at, 2);
+        memcpy(textAt + at, texts[i], strlen(texts[i]));
+        at += (uint32_t)strlen(texts[i]);
+    }
+    Put(offsets + 2 * count, at, 2);
+    Put(s_unit, count, 2);
+    Put(s_unit + 2, at, 2);
+    return nameUnitHeaderSize + 2 * count + 2 * (count + 1) + at;
+}
+
+static bool ValidNames(uint32_t size)
+{
+    return mlocValidNames(nullptr, (DataSpan){s_unit, size});
+}
+
+static void TestNames(void)
+{
+    static const uint16_t s_keys[] = {0, 1, 8 * 5 + 7};
+    static const char* const s_texts[] = {"English", "Eng.", "\xE4\xB8\xAD"};
+    uint32_t size = BuildNames(s_keys, s_texts, 3);
+    CHECK(ValidNames(size) && ValidNames(BuildNames(s_keys, s_texts, 0)), "valid names units");
+    static const uint16_t s_same[] = {1, 1};
+    static const uint16_t s_down[] = {2, 1};
+    static const char* const s_two[] = {"a", "b"};
+    static const char* const s_empty[] = {"a", ""};
+    static const char* const s_control[] = {"a", "b\n"};
+    static const char* const s_broken[] = {"a", "\xC3"};
+    CHECK(!ValidNames(BuildNames(s_same, s_two, 2)) && !ValidNames(BuildNames(s_down, s_two, 2)),
+          "keys twice or out of order");
+    CHECK(!ValidNames(BuildNames(s_keys, s_empty, 2)) &&
+              !ValidNames(BuildNames(s_keys, s_control, 2)) &&
+              !ValidNames(BuildNames(s_keys, s_broken, 2)),
+          "an empty text, a control byte, malformed UTF-8");
+    size = BuildNames(s_keys, s_texts, 3);
+    CHECK(!ValidNames(size - 1) && !ValidNames(3), "a size not the counts'");
+    Put(s_unit + nameUnitHeaderSize + 6, 1, 2);
+    bool first = ValidNames(size);
+    size = BuildNames(s_keys, s_texts, 3);
+    Put(s_unit + nameUnitHeaderSize + 6 + 6, 2, 2);
+    CHECK(!first && !ValidNames(size), "text offsets not from 0, not to the text's size");
+    CHECK(mlocNameKind("l:en", 4) == kindNamesLanguages &&
+              mlocNameKind("s:Latn", 6) == kindNamesScripts &&
+              mlocNameKind("r:US", 4) == kindNamesRegions &&
+              mlocNameKind("v:valencia", 10) == kindNamesVariants &&
+              mlocNameKind("k:ca", 4) == kindNamesKeys &&
+              mlocNameKind("t:ca-roc", 8) == kindNamesKeys &&
+              mlocNameKind("p:localePattern", 15) == kindNamePatterns &&
+              mlocNameKind("c:script", 8) == kindNamePatterns &&
+              mlocNameKind("m:metric", 8) == kindNamePatterns &&
+              mlocNameKind("b:yes", 5) == kindNamePatterns && mlocNameKind("z:z", 3) == 0 &&
+              mlocNameKind("l", 1) == 0 && mlocNameKind("lx", 2) == 0,
+          "each namespace's kind, none for another");
+}
+
+// Whether a locale's code field is found as expected.
+static bool Named(const char* id, const char* code, NameField field, const char* expected)
+{
+    mlocLocale locale;
+    NameText name;
+    bool same = mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+                mlocFindName(&s_data, &locale, code, strlen(code), field, &name) &&
+                name.length == strlen(expected) && memcmp(name.text, expected, name.length) == 0;
+    if (!same)
+    {
+        printf("%s %s %d\n", id, code, (int)field);
+    }
+    return same;
+}
+
+static void TestFind(void)
+{
+    CHECK(Named("en", "l:en-GB", nameFieldName, "British English") &&
+              Named("en", "l:en-GB", nameFieldShort, "UK English") &&
+              Named("en", "s:Hans", nameFieldName, "Simplified") &&
+              Named("en", "s:Hans", nameFieldStandAlone, "Simplified Han") &&
+              Named("en", "r:US", nameFieldShort, "US") &&
+              Named("en", "v:valencia", nameFieldName, "Valencian") &&
+              Named("en", "k:ca", nameFieldName, "Calendar") &&
+              Named("en", "t:ca-gregory", nameFieldName, "Gregorian Calendar") &&
+              Named("en", "t:ca-gregory", nameFieldCore, "Gregorian") &&
+              Named("en", "l:ku", nameFieldExtension, "Kurmanji"),
+          "each namespace's names and alternates");
+    CHECK(Named("en", "p:localePattern", nameFieldName, "{0} ({1})") &&
+              Named("en", "c:region", nameFieldName, "Region: {0}") &&
+              Named("en", "m:uksystem", nameFieldName, "UK") &&
+              Named("en", "b:yes", nameFieldName, "On") &&
+              Named("en", "r:IO%chagos", nameFieldName, "Chagos Archipelago"),
+          "patterns, measurement systems, yes and no, an alt of a code of its own");
+    CHECK(Named("en", "l:fr", nameFieldShort, "French") &&
+              Named("en", "l:ku", nameFieldCore, "Kurdish") &&
+              Named("fr", "s:Latn", nameFieldMenu, "latin"),
+          "a field the chain lacks takes the name");
+    CHECK(Named("en-AU", "l:en-US", nameFieldName, "United States English") &&
+              Named("en-AU", "l:en-GB", nameFieldName, "British English") &&
+              Named("de-CH", "r:BW", nameFieldName, "Botswana") &&
+              Named("de-AT", "r:BW", nameFieldName, "Botsuana") &&
+              Named("de-CH", "r:CV", nameFieldName, "Kapverden"),
+          "a region's own names, the rest from its chain");
+    mlocLocale en;
+    NameText name;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              !mlocFindName(&s_data, &en, "l:qqq", 5, nameFieldName, &name) &&
+              name.text == nullptr &&
+              !mlocFindName(&s_data, &en, "z:en", 4, nameFieldName, &name) &&
+              !mlocFindName(&s_data, &en, "l:en", 4, nameFieldCount, &name),
+          "a code without a name, of no namespace, a field out of range");
+}
+
+// The compiled-in data, then the names data file at the path the build
+// gives.
+static bool OpenData(void)
+{
+    alignas(8) static uint8_t s_names[8 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    FILE* file = fopen(MLOC_LOCALE_NAMES_FILE, "rb");
+    size_t read = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_data = (mlocDataSet){s_sources, 2};
+    return read > 0 && read < sizeof(s_names) &&
+           mlocOpenData(&s_sources[1], s_names, read) == mloc_success;
+}
+
+int main(void)
+{
+    TestIds();
+    TestNames();
+    if (!OpenData())
+    {
+        fputs("test_names_data: cannot open " MLOC_LOCALE_NAMES_FILE "\n", stderr);
+        return 2;
+    }
+    TestFind();
+    return s_failures == 0 ? 0 : 1;
+}

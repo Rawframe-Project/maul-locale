@@ -245,11 +245,13 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     DataFile names = {0};
     DataFile unitNames = {0};
     DataFile spellout = {0};
+    DataFile localeNames = {0};
     Text rules = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
-        !GenerateNumberUnits(commonDirectory, &data, &names, &unitNames, errorOut, errorCapacity) ||
+        !GenerateNumberUnits(commonDirectory, &data, &names, &unitNames, &localeNames, errorOut,
+                             errorCapacity) ||
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity))
     {
@@ -257,6 +259,7 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
         DataFileFree(&names);
         DataFileFree(&unitNames);
         DataFileFree(&spellout);
+        DataFileFree(&localeNames);
         return 0;
     }
     // The compiled rules are code tables the data's indexes name, so they
@@ -283,18 +286,26 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     size_t spelloutSize = 0;
     uint8_t* spelloutBytes = DataFileWrite(&spellout, &version, &spelloutSize);
     Text spelloutFile = {.bytes = (char*)spelloutBytes, .size = spelloutSize};
+    // And the names of languages, scripts, regions and the rest (record
+    // mloc-0036).
+    size_t localeNamesSize = 0;
+    uint8_t* localeNamesBytes = DataFileWrite(&localeNames, &version, &localeNamesSize);
+    Text localeNamesFile = {.bytes = (char*)localeNamesBytes, .size = localeNamesSize};
     int ok = WriteFile(root, "data_version.h", &header, errorOut, errorCapacity) &&
              WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
              WriteFile(root, "currency-names.mloc", &namesFile, errorOut, errorCapacity) &&
              WriteFile(root, "units.mloc", &unitNamesFile, errorOut, errorCapacity) &&
-             WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
+             WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity) &&
+             WriteFile(root, "names.mloc", &localeNamesFile, errorOut, errorCapacity);
     free(namesBytes);
+    free(localeNamesBytes);
     free(unitNamesBytes);
     free(spelloutBytes);
     DataFileFree(&names);
     DataFileFree(&unitNames);
     DataFileFree(&spellout);
+    DataFileFree(&localeNames);
     free(header.bytes);
     free(builtin.bytes);
     free(rules.bytes);

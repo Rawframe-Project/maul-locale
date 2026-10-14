@@ -12,9 +12,11 @@
 #include "datafile.h"
 
 // The currency names go into names, a data file of their own (record
-// mloc-0022), and the unit names into unitNames, another (record
-// mloc-0024).
+// mloc-0022), the unit names into unitNames, another (record mloc-0024),
+// and the names of languages and the rest into localeNames, a third
+// (record mloc-0036).
 int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
-                        DataFile* unitNames, char* errorOut, size_t errorCapacity);
+                        DataFile* unitNames, DataFile* localeNames, char* errorOut,
+                        size_t errorCapacity);
 
 #endif

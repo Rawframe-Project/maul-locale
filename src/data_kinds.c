@@ -14,6 +14,7 @@
 #include "locale_fallback.h"
 #include "locale_likely.h"
 #include "locale_prefs.h"
+#include "names_data.h"
 #include "number_data.h"
 #include "number_parse.h"
 #include "plural.h"
@@ -61,6 +62,13 @@ static const DataKind s_kinds[] = {
     {kindSpelloutNumbering, mlocValidSpelloutRules},
     {kindSpelloutSystems, mlocValidSpelloutSystems},
     {kindSpelloutTitlecase, mlocValidSpelloutTitlecase},
+    {kindNameIds, mlocValidNameIds},
+    {kindNamesLanguages, mlocValidNames},
+    {kindNamesScripts, mlocValidNames},
+    {kindNamesRegions, mlocValidNames},
+    {kindNamesVariants, mlocValidNames},
+    {kindNamesKeys, mlocValidNames},
+    {kindNamePatterns, mlocValidNames},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

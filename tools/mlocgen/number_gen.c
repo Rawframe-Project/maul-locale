@@ -17,6 +17,7 @@
 #include "kinds.h"
 #include "list_gen.h"
 #include "map.h"
+#include "names_gen.h"
 #include "number_tables.h"
 #include "parse_gen.h"
 #include "table_gen.h"
@@ -1405,7 +1406,8 @@ static const char* NextKeyed(Generator* g, const char* locale, const char* key)
 }
 
 int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
-                        DataFile* unitNames, char* errorOut, size_t errorCapacity)
+                        DataFile* unitNames, DataFile* localeNames, char* errorOut,
+                        size_t errorCapacity)
 {
     static Generator s_g;
     memset(&s_g, 0, sizeof(s_g));
@@ -1485,6 +1487,13 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
         .ids = (const char* const*)ids,
         .count = count,
     };
+    NamesInput localeNamesInput = {
+        .commonDirectory = commonDirectory,
+        .cldr = &g->cldr,
+        .keys = &g->keys,
+        .ids = (const char* const*)ids,
+        .count = count,
+    };
     ListInput lists = {
         .cldr = &g->cldr,
         .keys = &g->keys,
@@ -1494,7 +1503,8 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
     GenerateListUnits(&lists, file);
     GenerateContextUnits(&lists, file);
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
-             GenerateUnitNames(&units, unitNames, errorOut, errorCapacity);
+             GenerateUnitNames(&units, unitNames, errorOut, errorCapacity) &&
+             GenerateNames(&localeNamesInput, localeNames, errorOut, errorCapacity);
     if (ok)
     {
         GenerateUnitPatterns(&units, unitNames);

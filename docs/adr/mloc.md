@@ -40,3 +40,4 @@ are listed in [README.md](README.md).
 | [mloc-0033](mloc-0033-currency-parsing.md) | Currency parsing: ICU's currency matcher, the chain's names without allocation | Accepted |
 | [mloc-0034](mloc-0034-spellout.md) | Spell-out: ICU's rules compiled, run on the exact decimal | Accepted |
 | [mloc-0035](mloc-0035-list-formatter.md) | The list formatter: patterns kept in the formatter, items joined in place | Accepted |
+| [mloc-0036](mloc-0036-names-data.md) | The names data: CLDR's display names by code, filed per key in a file of their own | Accepted |
