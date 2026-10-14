@@ -86,6 +86,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
+    src/names.c
     src/names_data.c
     src/currency.c
     src/currency_region.c
@@ -215,23 +216,30 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(list WHITEBOX)
     maul_add_test(list_format)
     # So are the names of languages and the rest (record mloc-0036).
-    maul_add_test(names_data WHITEBOX)
-    if(TARGET test_names_data)
-        set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
-        if(EMSCRIPTEN)
-            target_link_options(test_names_data PRIVATE "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
-            set(MLOC_LOCALE_NAMES_FILE /locale-names.mloc)
-        endif()
-        if(WIN32)
-            target_compile_definitions(test_names_data PRIVATE _CRT_SECURE_NO_WARNINGS)
-        endif()
-        target_compile_definitions(test_names_data PRIVATE MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_FILE}")
+    set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
+    set(MLOC_LOCALE_NAMES_PATH ${MLOC_LOCALE_NAMES_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_LOCALE_NAMES_PATH /locale-names.mloc)
     endif()
+    maul_add_test(names_data WHITEBOX)
+    maul_add_test(names MANUAL)
+    add_test(NAME names COMMAND test_names)
+    foreach(target test_names_data test_names)
+        if(TARGET ${target})
+            if(EMSCRIPTEN)
+                target_link_options(${target} PRIVATE "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
+            endif()
+            if(WIN32)
+                target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
+            endif()
+            target_compile_definitions(${target} PRIVATE MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}")
+        endif()
+    endforeach()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
     foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs
-                 spellout)
+                 spellout names)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})

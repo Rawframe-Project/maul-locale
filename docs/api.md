@@ -217,6 +217,15 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences( const mlocDataSet* 
 ```
 Returns a locale's regional preferences (UTS #35), the region's values from CLDR's supplemental data. The region is the -u-rg key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's region, else the -u-sd key's, else the likely one ("en" takes the US's), else 001; a region without data takes 001's. Keys override: -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed formats list first), -u-fw the first day, -u-ms the measurement system; -u-ca-iso8601 begins weeks on Monday with four days in the first unless -u-fw or -u-rg give the first day. The hour data is looked up for the language in the region first (ca-ES has its own). A key with a value it does not take is left out.  @param data          The data with the preferences and likely subtags. @param locale        The locale, canonicalized. @param preferencesOut Receives the preferences; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the preferences; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+## `names.h`
+
+Display names (UTS #35 Part 2, records mloc-0036 and mloc-0037): a locale's name for a language, script, region, variant, key, key's value or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's Intl.DisplayNames give them. The names are in a data file of their own, names.mloc, which a program adds to its data set.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetName(const mlocDataSet* data, const mlocLocale* locale, mlocNameType type, const char* code, size_t length, const mlocNameOptions* options, mlocOutput* output);
+```
+Writes a locale's name for a code: the form's along the locale's chain, else the standard name along the chain, as ICU4C's LocaleDisplayNames looks it up.  @param data     The data with the names (names.mloc) and the parents. @param locale   The locale, canonicalized. @param type     What the code names. @param code     The code, in any case. @param length   Its length in bytes. @param options  The options, or null for the defaults. @param output   Where the name goes (record mloc-0015); no parts. @return mloc_success; mloc_fellBack when the code, in canonical case, is written for a name the locale's chain lacks; mloc_errorNotFound for a missing name with mloc_nameFallbackNone, or data without the names; mloc_errorSyntax for a code not of the type's syntax; mloc_errorCapacity when the name does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a part function, or a type or options out of range. @par Thread safety Safe from any thread.
+
 ## `number.h`
 
 Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a locale's digits, symbols and grouping, rounded as the options say. The options follow ECMA-402's NumberFormat; their zero value is the default, and the zero precision rounds nothing. A formatter also reads a number a person types (record mloc-0032).
@@ -350,4 +359,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-61 functions across 10 headers.
+62 functions across 11 headers.

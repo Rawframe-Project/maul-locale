@@ -62,9 +62,13 @@ algorithmic numerals by CLDR's rule-based formats, as ICU runs them but
 on the exact decimal, by rule set or numbering system, capitalized as
 the context asks, and read back as ICU's strict parse reads them (CLDR's rule-based test data passes on every push;
 the rules are a data file of their own, `src/generated/spellout.mloc`);
-and lists of any items ("a, b, and c", "a, b, or c") in each width, as
-ICU joins them.
-The library has 61 public functions.
+lists of any items ("a, b, and c", "a, b, or c") in each width, as
+ICU joins them; and the display names of languages, scripts, regions,
+variants, keys and their values and measurement systems, in every form
+CLDR has and each capitalization context, as ICU4C's LocaleDisplayNames
+gives them (the names are a data file of their own,
+`src/generated/names.mloc`).
+The library has 62 public functions.
 
 ## Building
 
