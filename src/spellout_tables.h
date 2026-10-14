@@ -107,6 +107,32 @@ static inline uint32_t mlocSpelloutLeadHash(const uint8_t* text, size_t length)
     return (key * 0x9E3779B1u) >> 24;
 }
 
+// Ten to a power below 20, else 0 (a divisor past 64 bits).
+static inline uint64_t mlocSpelloutTen(uint32_t power)
+{
+    static const uint64_t s_tens[20] = {1u,
+                                        10u,
+                                        100u,
+                                        1000u,
+                                        10000u,
+                                        100000u,
+                                        1000000u,
+                                        10000000u,
+                                        100000000u,
+                                        1000000000u,
+                                        10000000000u,
+                                        100000000000u,
+                                        1000000000000u,
+                                        10000000000000u,
+                                        100000000000000u,
+                                        1000000000000000u,
+                                        10000000000000000u,
+                                        100000000000000000u,
+                                        1000000000000000000u,
+                                        10000000000000000000u};
+    return power < 20 ? s_tens[power] : 0;
+}
+
 // Set flags.
 enum
 {

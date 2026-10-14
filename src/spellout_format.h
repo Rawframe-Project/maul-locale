@@ -21,8 +21,12 @@
 typedef struct SpelloutFormat
 {
     // The locale's symbols and digits, which decimal patterns, NaN and
-    // infinity are written in.
+    // infinity are written in: here, or in source when it is set.
     NumberCore core;
+    // The formatter the fields below were copied from, without its core,
+    // which formatting reads only for a pattern or a symbol; null when
+    // core is here (always so in a formatter as stored).
+    const void* source;
     // The group's unit, in the data.
     const uint8_t* group;
     uint32_t groupSize;
@@ -45,11 +49,15 @@ typedef struct SpelloutFormat
 // The first code point of well-formed UTF-8 text, 0 for none.
 uint32_t mlocSpelloutFirstCodePoint(const uint8_t* text, size_t length);
 
+// Whether a core holds what a formatter reads of it.
+bool mlocValidSpelloutCore(const NumberCore* core);
+
 // Writes a valid decimal by a formatter's rule set, with the text's first
 // code point when a rule's text or a symbol begins it (0 when a pattern's
 // digits do, or for no text). Returns mloc_errorCapacity when the rules
-// nest past 64 levels or a division passes the decimal's digits; the
-// writer's text is then partial.
+// nest past 64 levels or a division passes the decimal's digits, or
+// mloc_errorInvalid for a source whose core does not hold; the writer's
+// text is then partial.
 mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* decimal,
                              NumberWriter* writer, uint32_t* firstOut);
 

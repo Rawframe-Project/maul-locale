@@ -7,6 +7,7 @@
 #ifndef MLOC_SPELLOUT_DATA_H
 #define MLOC_SPELLOUT_DATA_H
 
+#include "bytes.h"
 #include "data_view.h"
 #include "spellout_tables.h"
 
@@ -63,7 +64,30 @@ typedef struct SpelloutRules
     uint32_t flags;
 } SpelloutRules;
 
-SpelloutRules mlocReadSpelloutRules(DataSpan payload);
+// The parts of a valid group's unit (inline: a format reads them on
+// every call).
+static inline SpelloutRules mlocReadSpelloutRules(DataSpan payload)
+{
+    const uint8_t* p = payload.bytes;
+    SpelloutRules r = {
+        .setCount = mlocLoad16(p),
+        .ruleCount = mlocLoad16(p + 2),
+        .pieceCount = mlocLoad16(p + 4),
+        .pluralCount = mlocLoad16(p + 6),
+        .patternCount = mlocLoad16(p + 8),
+        .defaultSet = mlocLoad16(p + 10),
+        .textSize = mlocLoad16(p + 12),
+        .flags = mlocLoad16(p + 14),
+    };
+    r.sets = p + spelloutHeaderSize;
+    r.leads = r.sets + (size_t)r.setCount * spelloutSetSize;
+    r.rules = r.leads + (size_t)r.setCount * spelloutLeadSize;
+    r.pieces = r.rules + (size_t)r.ruleCount * spelloutRuleSize;
+    r.plurals = r.pieces + (size_t)r.pieceCount * spelloutPieceSize;
+    r.patterns = r.plurals + (size_t)r.pluralCount * spelloutPluralSize;
+    r.text = r.patterns + (size_t)r.patternCount * spelloutPatternSize;
+    return r;
+}
 
 // A rule's divisor (ten, or a normal rule's radix, to its exponent), or 0
 // when it passes 64 bits, which a valid unit never has.

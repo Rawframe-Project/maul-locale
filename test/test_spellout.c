@@ -284,6 +284,22 @@ static void TestRefusals(void)
               mlocFormatSpellout(&formatter, &bad, &output) == mloc_errorInvalid &&
               mlocFormatSpellout(nullptr, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make, an invalid decimal");
+    // A formatter whose symbols' text is gone (its first field): formatting
+    // reads the symbols only for a pattern (10^18 and past) or a symbol,
+    // parsing always.
+    mlocSpelloutFormatter hollow = formatter;
+    memset(&hollow, 0, sizeof(void*));
+    mlocDecimal huge;
+    mlocDecimal back;
+    size_t end = 0;
+    char text[256];
+    mlocOutput words = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput more = {.buffer = text, .capacity = sizeof(text)};
+    CHECK(Decimal("1e18", &huge) && mlocFormatSpellout(&hollow, &decimal, &words) == mloc_success &&
+              words.length == 10 &&
+              mlocFormatSpellout(&hollow, &huge, &more) == mloc_errorInvalid &&
+              mlocParseSpellout(&hollow, "one", 3, &back, &end) == mloc_errorInvalid,
+          "a formatter without its symbols: refused where they are read");
 }
 
 // ICU4C 79's results with each context (the double path for NaN).

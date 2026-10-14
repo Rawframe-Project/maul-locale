@@ -10,29 +10,6 @@
 
 #include <string.h>
 
-SpelloutRules mlocReadSpelloutRules(DataSpan payload)
-{
-    const uint8_t* p = payload.bytes;
-    SpelloutRules r = {
-        .setCount = mlocLoad16(p),
-        .ruleCount = mlocLoad16(p + 2),
-        .pieceCount = mlocLoad16(p + 4),
-        .pluralCount = mlocLoad16(p + 6),
-        .patternCount = mlocLoad16(p + 8),
-        .defaultSet = mlocLoad16(p + 10),
-        .textSize = mlocLoad16(p + 12),
-        .flags = mlocLoad16(p + 14),
-    };
-    r.sets = p + spelloutHeaderSize;
-    r.leads = r.sets + (size_t)r.setCount * spelloutSetSize;
-    r.rules = r.leads + (size_t)r.setCount * spelloutLeadSize;
-    r.pieces = r.rules + (size_t)r.ruleCount * spelloutRuleSize;
-    r.plurals = r.pieces + (size_t)r.pieceCount * spelloutPieceSize;
-    r.patterns = r.plurals + (size_t)r.pluralCount * spelloutPluralSize;
-    r.text = r.patterns + (size_t)r.patternCount * spelloutPatternSize;
-    return r;
-}
-
 static bool InText(const SpelloutRules* r, uint32_t offset, uint32_t length)
 {
     return offset <= r->textSize && length <= r->textSize - offset;
@@ -94,8 +71,11 @@ static bool ValidSets(const SpelloutRules* r)
 // when it passes 64 bits.
 uint64_t mlocSpelloutDivisor(const uint8_t* rule)
 {
-    bool power = (rule[13] & spelloutPowerOfTen) != 0;
-    uint64_t radix = power ? 10 : mlocLoad16(rule + 10);
+    if ((rule[13] & spelloutPowerOfTen) != 0)
+    {
+        return mlocSpelloutTen(rule[15]);
+    }
+    uint64_t radix = mlocLoad16(rule + 10);
     uint64_t divisor = 1;
     for (uint32_t k = 0; k < rule[15]; k++)
     {

@@ -16,6 +16,7 @@
 #include "spellout_rule.h"
 #include "spellout_value.h"
 
+#include <stddef.h>
 #include <string.h>
 
 enum
@@ -244,12 +245,34 @@ static void PassOn(Engine* e, int64_t target, const mlocDecimal* t);
 static void RuleInt(Engine* e, uint32_t rule, int64_t n);
 static void RuleDec(Engine* e, uint32_t rule, const mlocDecimal* x);
 
+bool mlocValidSpelloutCore(const NumberCore* core)
+{
+    return core->symbolText != nullptr && core->digitLength >= 1 &&
+           core->digitLength <= numberDigitSize;
+}
+
+// The formatter's core, from its source when it was left there; false,
+// the engine failed, when that one does not hold.
+static bool LoadCore(Engine* e, NumberCore* out)
+{
+    if (e->f->source == nullptr)
+    {
+        *out = e->f->core;
+        return true;
+    }
+    memcpy(out, (const uint8_t*)e->f->source + offsetof(SpelloutFormat, core), sizeof(*out));
+    return mlocValidSpelloutCore(out) || Fail(e, mloc_errorInvalid);
+}
+
 // The text of a symbol of the locale (NaN, infinity), which ICU's default
 // rules write.
 static void WriteSymbol(Engine* e, NumberSymbol symbol)
 {
-    const NumberCore* c = &e->f->core;
-    Write(e, c->symbolText + c->symbolStart[symbol], c->symbolLength[symbol]);
+    NumberCore c;
+    if (LoadCore(e, &c))
+    {
+        Write(e, c.symbolText + c.symbolStart[symbol], c.symbolLength[symbol]);
+    }
 }
 
 // A decimal pattern's text of a value, as DecimalFormat writes it: half
@@ -274,7 +297,11 @@ static void WritePattern(Engine* e, uint32_t index, const mlocDecimal* x)
             return;
         }
     }
-    NumberCore core = e->f->core;
+    NumberCore core;
+    if (!LoadCore(e, &core))
+    {
+        return;
+    }
     core.primary = p[3];
     core.secondary = p[4];
     core.minGrouping = 1;
@@ -697,20 +724,25 @@ static void SetDec(Engine* e, uint32_t set, const mlocDecimal* x)
 mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* decimal,
                              NumberWriter* writer, uint32_t* firstOut)
 {
-    Engine e = {
-        .f = format,
-        .r = mlocReadSpelloutRules((DataSpan){format->group, format->groupSize}),
-        .w = writer,
-    };
-    mlocDecimal x = *decimal;
-    mlocSpelloutNormalize(&x);
+    // Each field set on its own: an initializer would clear the whole
+    // engine first, which costs a short format a fifth of its time.
+    Engine e;
+    e.f = format;
+    e.r = mlocReadSpelloutRules((DataSpan){format->group, format->groupSize});
+    e.w = writer;
+    e.levels = 0;
+    e.frames = 0;
+    e.error = mloc_success;
+    e.first = 0;
     int64_t n = 0;
-    if (mlocSpelloutToInt64(&x, &n))
+    if (mlocSpelloutToInt64(decimal, &n))
     {
         SetInt(&e, format->set, n);
     }
     else
     {
+        mlocDecimal x = *decimal;
+        mlocSpelloutNormalize(&x);
         SetDec(&e, format->set, &x);
     }
     *firstOut = e.first;

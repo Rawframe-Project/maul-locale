@@ -19,6 +19,7 @@
 #include "spellout_format.h"
 #include "spellout_parse.h"
 
+#include <stddef.h>
 #include <string.h>
 
 enum
@@ -249,18 +250,30 @@ mlocResult mlocInitNumberingSystemFormatter(mlocSpelloutFormatter* formatterOut,
     return Complete(&f, data, locale, options, found, formatterOut);
 }
 
-// A formatter the library made, copied out; false for any other.
-static bool ReadFormatter(const mlocSpelloutFormatter* opaque, SpelloutFormat* f)
+// A formatter the library made, copied out, with its core or (to format,
+// which seldom reads it) without; false for any other.
+static bool ReadFormatter(const mlocSpelloutFormatter* opaque, bool withCore, SpelloutFormat* f)
 {
     if (opaque == nullptr)
     {
         return false;
     }
-    memcpy(f, opaque, sizeof(*f));
+    if (withCore)
+    {
+        memcpy(f, opaque, sizeof(*f));
+    }
+    else
+    {
+        size_t at = offsetof(SpelloutFormat, source);
+        memcpy((uint8_t*)f + at, (const uint8_t*)opaque + at, sizeof(*f) - at);
+    }
+    if ((withCore && !mlocValidSpelloutCore(&f->core)) || f->source != nullptr)
+    {
+        return false;
+    }
+    f->source = withCore ? nullptr : opaque;
     if (f->stamp != spelloutStamp || f->group == nullptr || f->groupSize < spelloutHeaderSize ||
-        f->core.symbolText == nullptr || f->core.digitLength < 1 ||
-        f->core.digitLength > numberDigitSize || f->cardinal >= mlocPluralRuleSetCount ||
-        f->ordinal >= mlocPluralRuleSetCount ||
+        f->cardinal >= mlocPluralRuleSetCount || f->ordinal >= mlocPluralRuleSetCount ||
         (f->capitalize &&
          (f->titlecase == nullptr || f->titlecaseSize < spelloutTitlecaseHeaderSize)))
     {
@@ -301,7 +314,7 @@ mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mloc
                               mlocOutput* output)
 {
     SpelloutFormat f;
-    if (!ReadFormatter(formatter, &f) || decimal == nullptr || output == nullptr ||
+    if (!ReadFormatter(formatter, false, &f) || decimal == nullptr || output == nullptr ||
         output->part != nullptr || (output->buffer == nullptr && output->capacity != 0) ||
         !mlocValidDecimal(decimal))
     {
@@ -327,7 +340,7 @@ mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter, const char*
                              size_t length, mlocDecimal* decimalOut, size_t* endOut)
 {
     SpelloutFormat f;
-    if (!ReadFormatter(formatter, &f) || (text == nullptr && length != 0) ||
+    if (!ReadFormatter(formatter, true, &f) || (text == nullptr && length != 0) ||
         decimalOut == nullptr || endOut == nullptr)
     {
         return mloc_errorInvalid;
