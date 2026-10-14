@@ -155,6 +155,19 @@ without ICU4X: every day from 1600 to 2400 (Chinese and Dangi 1900 to
 hashes taken from ICU4X 2.3's own output. ISO 8601 is left out, since
 ICU4X gives it an era Temporal does not have.
 
+`test_calendar_test262` checks test262's Temporal calendar cases (the
+PlainDate tests of `test/intl402/Temporal`: making dates from fields,
+eras, month codes, overflow, and the field getters). They were run on
+the library through a reader of their JavaScript, kept in the docs. It
+records every assertion about a date made from fields or an ISO date,
+2,988 rows in all: none differed. The rows are in
+`test/test262_calendar.inc`, under test262's BSD license. Left out:
+dates parsed from strings (the `datetime` part's), durations and
+`with` (date arithmetic, next), and the calendar names `islamic` and
+`islamic-rgsa`. test262 expects Temporal to refuse those two names,
+which only date formatting accepts. The library reads them as Umm
+al-Qura, and a Temporal host must refuse them when it maps the names.
+
 ## Consequences
 
 Dates need no data except the Japanese eras and the astronomical and
