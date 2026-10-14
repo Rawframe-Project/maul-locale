@@ -19,6 +19,7 @@
 #include "spellout_compile.h"
 #include "spellout_data.h"
 #include "spellout_gen.h"
+#include "spellout_value.h"
 #include "test_harness.h"
 
 #include "maul-locale/spellout.h"
@@ -564,6 +565,9 @@ static mlocResult FormatRoot(const char* rules, size_t at, uint8_t value, const 
     return FormatText(rules, "%a", at, value, number, text, sizeof(text));
 }
 
+static mlocResult ParseText(const char* rules, size_t at, uint8_t byte, const char* text,
+                            char* value, size_t capacity, size_t* endOut);
+
 static void TestEngineLimits(void)
 {
     // "<<" by ten: 10^63 nests 64 rule sets deep, 10^64 one past ICU's
@@ -593,6 +597,44 @@ static void TestEngineLimits(void)
     CHECK(FormatRoot(s_triple, 0, 0, "15") == mloc_success &&
               FormatRoot(s_triple, piece + 4, 1, "15") == mloc_errorCapacity,
           "rules a remainder calls directly without end");
+    // Parsing by a ">>>" with no text after it made to take its own rule
+    // nests a level for each "a " (the remainder is the rest of the text),
+    // which no rule ends: 20,000 levels would overflow the stack, and stop
+    // at the frames allowed.
+    static const char s_tail[] = "%a:\n0: x;\n10: a >>>;\n";
+    size_t tail = 0;
+    if (RbnfCompile(s_tail, strlen(s_tail), &group, error, sizeof(error)))
+    {
+        size_t size = 0;
+        uint8_t* unit = SpelloutPayload(&group, &size);
+        SpelloutRules r = mlocReadSpelloutRules((DataSpan){unit, (uint32_t)size});
+        tail = (size_t)(r.pieces - unit);
+        while (unit[tail] != spelloutSubstitution)
+        {
+            tail += spelloutPieceSize;
+        }
+        free(unit);
+        RbnfFree(&group);
+    }
+    enum
+    {
+        levels = 20000,
+    };
+    char value[64];
+    char* deep = malloc(2 * levels + 1);
+    size_t end = 0;
+    for (int i = 0; i < levels; i++)
+    {
+        memcpy(deep + 2 * i, "a ", 2);
+    }
+    deep[2 * levels] = '\0';
+    CHECK(ParseText(s_tail, 0, 0, "a x", value, sizeof(value), &end) == mloc_success &&
+              strcmp(value, "10") == 0 &&
+              ParseText(s_tail, tail + 4, 1, deep, value, sizeof(value), &end) ==
+                  mloc_errorCapacity &&
+              end == 0,
+          "parsing rules a remainder calls directly, nested past the frames allowed");
+    free(deep);
 }
 
 // Rules CLDR's data barely reaches, ICU4C 79's results: a divisor not a
@@ -685,9 +727,45 @@ static void TestFractionLimits(void)
           "a remainder past 64 bits");
 }
 
-// Parses text by root's rules; the value as mlocFormatDecimal writes it.
-static mlocResult ParseText(const char* rules, const char* text, char* value, size_t capacity,
-                            size_t* endOut)
+// Whether a + b, exact, is the expected text (null for a sum too wide).
+static bool Sums(const char* a, const char* b, const char* expected)
+{
+    mlocDecimal x;
+    mlocDecimal y;
+    mlocDecimal sum;
+    char text[64];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    if (mlocParseDecimal(a, strlen(a), &x).status != mloc_success ||
+        mlocParseDecimal(b, strlen(b), &y).status != mloc_success)
+    {
+        return false;
+    }
+    mlocSpelloutNormalize(&x);
+    mlocSpelloutNormalize(&y);
+    bool added = mlocSpelloutAdd(&x, &y, &sum);
+    if (expected == nullptr)
+    {
+        return !added;
+    }
+    return added && mlocFormatDecimal(&sum, &output) == mloc_success &&
+           output.length == strlen(expected) && memcmp(text, expected, output.length) == 0;
+}
+
+static void TestAdd(void)
+{
+    CHECK(Sums("99", "1", "100") && Sums("100", "-1", "99") && Sums("-3", "1.5", "-1.5") &&
+              Sums("1.5", "-3", "-1.5") && Sums("0.5", "0.25", "0.75") && Sums("5", "-5", "0") &&
+              Sums("0", "-2", "-2") && Sums("7", "0", "7"),
+          "carries, borrows, unlike signs, zero");
+    CHECK(Sums("1e100", "1", nullptr) && Sums("1e39", "1e-1", nullptr) &&
+              Sums("1e30", "1e-9", "1000000000000000000000000000000.000000001"),
+          "a sum wider than a decimal's digits");
+}
+
+// Parses text by root's rules, a byte of their unit changed first (none
+// for at 0); the value as mlocFormatDecimal writes it.
+static mlocResult ParseText(const char* rules, size_t at, uint8_t byte, const char* text,
+                            char* value, size_t capacity, size_t* endOut)
 {
     RbnfGroup group;
     char error[256];
@@ -700,6 +778,10 @@ static mlocResult ParseText(const char* rules, const char* text, char* value, si
     size_t unitSize = 0;
     uint8_t* unit = SpelloutPayload(&group, &unitSize);
     RbnfFree(&group);
+    if (at != 0)
+    {
+        unit[at] = byte;
+    }
     size_t size = 0;
     uint8_t* bytes = RootFile(unit, unitSize, &size);
     mlocData sources[2];
@@ -728,7 +810,7 @@ static bool ParsesTo(const char* rules, const char* text, const char* expected, 
 {
     char value[64];
     size_t got = 0;
-    mlocResult r = ParseText(rules, text, value, sizeof(value), &got);
+    mlocResult r = ParseText(rules, 0, 0, text, value, sizeof(value), &got);
     bool same = expected == nullptr
                     ? r == mloc_errorSyntax && got == 0
                     : r == mloc_success && got == end && strcmp(value, expected) == 0;
@@ -763,6 +845,11 @@ static void TestParseRules(void)
               ParsesTo(s_numerator, "zero p zero five hundredths", "0", 4) &&
               ParsesTo(s_numerator, "one p two", "1", 3),
           "numerators; with \"<<\", the zeros read leave ICU short of the text");
+    CHECK(ParsesTo("%a:\n0: x;\n1: x;\n", "x", "1", 1) &&
+              ParsesTo("%a:\n0: x;\n%b:\n0: y;\n1: x;\n", "x", "0", 1) &&
+              ParsesTo("%a:\nNaN: x;\n0: x;\n", "x", "NaN", 1),
+          "of readings of one length the first: rules from the last, sets in order, special "
+          "rules before normal ones");
 }
 
 int main(void)
@@ -777,5 +864,6 @@ int main(void)
     TestEngineResults();
     TestFractionLimits();
     TestParseRules();
+    TestAdd();
     return s_failures == 0 ? 0 : 1;
 }

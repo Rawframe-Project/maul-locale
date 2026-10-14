@@ -90,7 +90,10 @@ digits, an ordinal suffix dropped.
   it reports, a group with two substitutions of one class refused). A
   rule set's search is remembered for its inputs, which changes no
   result and keeps ICU's exponential search to a few thousand steps
-  for natural text. The departures: a value past a decimal's 40
+  for natural text. Rules a ">>>" calls directly nest without a rule
+  set between to count them; past 192 such frames (a crafted file
+  whose remainder takes its own rule) the parse is an error, as the
+  formatting is. The departures: a value past a decimal's 40
   digits, or a search past 2^20 steps (ICU runs for minutes on a long
   text nested to its limit: 42 of 7,872 texts of values near 10^18 in
   Lithuanian and Romanian), is `mloc_errorCapacity`; a digit-by-digit

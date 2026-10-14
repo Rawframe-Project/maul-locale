@@ -428,6 +428,14 @@ static void TestParse(void)
               Parses("en", "%spellout-cardinal", "infinite", "Infinity", 8) &&
               Parses("en", "%spellout-cardinal", "minus infinite", "-Infinity", 14),
           "NaN and the infinities by the rules");
+    CHECK(Parses("en", "%spellout-cardinal", "infinite point five", "Infinity", 19) &&
+              Parses("en", "%spellout-cardinal", "infinite thousand", "Infinity", 8) &&
+              Parses("en", "%spellout-cardinal", "minus not a number", "NaN", 18) &&
+              Parses("en", "%spellout-cardinal", "not a number thousand", "NaN", 12) &&
+              Parses("en", "%spellout-cardinal", "minus infinite thousand", "-Infinity", 14) &&
+              Parses("en", "%spellout-cardinal", "one thousand infinite", "1000", 12) &&
+              Parses("en", "%spellout-cardinal", "three point one four", "3.14", 20),
+          "values that are not finite composed as doubles compose them; fraction digits");
     CHECK(Parses("en", "%digits-ordinal", "21st", "21", 4) &&
               Parses("en", "%digits-ordinal", "1,234th", "1234", 7) &&
               Parses("en", "%digits-ordinal", "1234th", "1234", 6) &&

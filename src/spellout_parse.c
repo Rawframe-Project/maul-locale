@@ -28,6 +28,10 @@ enum
 {
     // ICU's RECURSION_LIMIT: a rule set nested past it reads nothing.
     maxLevels = 64,
+    // Rules a ">>>" calls directly nest too, without a rule set between to
+    // count them; a crafted file could chain them without end. An error
+    // past it, as when formatting.
+    maxFrames = 192,
     // The rule matches a search may try, an error past it: ICU's search
     // is exponential, and a long text whose nesting meets the limit can
     // keep it busy for minutes (the longest search of the oracle's
@@ -567,7 +571,7 @@ static void RuleParse(Parser* p, uint32_t index, SpelloutText text, bool fractio
 {
     *endOut = 0;
     *valueOut = Zero();
-    if (++p->steps > maxSteps)
+    if (++p->steps > maxSteps || depth >= maxFrames)
     {
         Fail(p, mloc_errorCapacity);
         return;
