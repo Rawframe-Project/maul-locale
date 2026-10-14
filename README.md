@@ -96,3 +96,15 @@ The rules every Maul library follows are in `docs/conventions.md` and
 ## License
 
 MIT; see `LICENSE`.
+
+The data the library ships is generated from the Unicode Common Locale
+Data Repository (CLDR), which is covered by the Unicode License v3; its
+notice is in `LICENSES/Unicode-3.0.txt`. That covers:
+- the compiled-in data, `src/generated/builtin_data.c`;
+- the data files in `src/generated`;
+- the tables taken from CLDR's supplemental data.
+
+The library's code is its own, written from the specifications and
+from Reingold and Dershowitz's Calendrical Calculations. The Persian
+calendar's corrections are published facts. Maul Locale takes them as
+ICU4C and ICU4X list them, under the same notice.
