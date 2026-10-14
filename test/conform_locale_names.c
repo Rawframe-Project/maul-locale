@@ -156,7 +156,7 @@ int main(int argc, char** argv)
         line[strcspn(line, "\r\n")] = '\0';
         if (strncmp(line, "@locale=", 8) == 0)
         {
-            snprintf(displayId, sizeof(displayId), "%s", line + 8);
+            snprintf(displayId, sizeof(displayId), "%.63s", line + 8);
             continue;
         }
         if (strncmp(line, "@languageDisplay=", 17) == 0)
@@ -172,7 +172,7 @@ int main(int argc, char** argv)
         *semicolon = '\0';
         const char* expected = semicolon + 2;
         char tag[64];
-        snprintf(tag, sizeof(tag), "%s", displayId);
+        snprintf(tag, sizeof(tag), "%.63s", displayId);
         for (char* at = tag; *at != '\0'; at++)
         {
             *at = *at == '_' ? '-' : *at;
@@ -180,7 +180,7 @@ int main(int argc, char** argv)
         char name[maxLine];
         if (mlocParseLocale(tag, strlen(tag), &display).status < 0)
         {
-            snprintf(name, sizeof(name), "<display %s>", displayId);
+            snprintf(name, sizeof(name), "<display %.63s>", displayId);
         }
         else
         {
