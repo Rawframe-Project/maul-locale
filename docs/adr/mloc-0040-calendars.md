@@ -57,6 +57,18 @@ an explicit choice when a field overflows.
   2400. The years where official rules differ come as overrides, each
   with its source. The same model, compiled in, serves days outside
   the tables, with no cache and no lock.
+  - Days and degrees are scaled by 2^32, centuries by 2^48 and sines
+    by 2^62 (an eighth of a turn and a Taylor series past the scale's
+    resolution); products are 128-bit and rounded to nearest. The
+    book's decimals are kept exactly where they multiply a whole
+    lunation count.
+  - The ephemeris correction takes the moment's Gregorian year, as the
+    book does (calendrical_calculations 0.2.4 approximates it, a few
+    seconds apart near New Year).
+  - The new moon's eccentricity factor is held past 50 centuries from
+    2000. Its square would otherwise scale the terms to days and make
+    months of 21 to 43 days at the range's ends; held, every lunation
+    over the range is 29.2 to 29.9 days.
 - **Japanese eras** come from CLDR's data: the generator writes them as
   a compiled table (`src/generated/calendar_eras.c`), each era's code,
   its first Gregorian year and its first day. Nothing reads the
