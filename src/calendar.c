@@ -8,9 +8,9 @@
 #include "maul-locale/calendar.h"
 
 #include "calendar_arith.h"
-#include "calendar_chinese.h"
 #include "calendar_eras.h"
 #include "calendar_hebrew.h"
+#include "calendar_lunar.h"
 #include "calendar_umalqura.h"
 
 #include <string.h>
@@ -189,7 +189,7 @@ static void OpenYear(Year* y, mlocCalendar calendar, int64_t year)
     y->year = year;
     if (Lunisolar(y->source))
     {
-        mlocChineseYear(y->source == sourceDangi, year, &y->lunar);
+        mlocLunarYear(y->source == sourceDangi, year, &y->lunar);
     }
 }
 
@@ -291,7 +291,7 @@ static CalendarDate OpenYearOf(Year* y, mlocCalendar calendar, int32_t day)
     }
     y->calendar = calendar;
     y->source = source;
-    mlocChineseYearOf(source == sourceDangi, day, &y->lunar);
+    mlocLunarYearOf(source == sourceDangi, day, &y->lunar);
     y->year = y->lunar.year;
     uint32_t month = 1;
     while (y->lunar.start[month] <= day)

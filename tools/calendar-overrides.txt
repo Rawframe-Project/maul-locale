@@ -1,0 +1,44 @@
+# The Chinese and Dangi years the generator takes as given rather than
+# from the model (record mloc-0040). tools/mlocgen writes them into
+# src/generated/calendar_years.c in place of the model's years.
+#
+# A line: the calendar, the year (the Gregorian year whose July 1 it
+# holds), its first day, its months' lengths in order (1 for 30 days,
+# 0 for 29; 12 or 13 of them), the leap month's place from 1 (0 for
+# none), and a source tag from the list below. The generator checks
+# that each year meets its neighbours: it begins where the year before
+# ends, and ends where the year after begins.
+#
+# Sources:
+#   qing  The Qing calendar of 1900 to 1911, as the Hong Kong
+#         Observatory and the Korea Astronomy and Space Science
+#         Institute publish it (taken as ICU4X 2.3's qing_data.rs
+#         carries it, Unicode License v3, LICENSES/Unicode-3.0.txt).
+#         Korea kept the Qing calendar until 1912, so Dangi takes the
+#         same years. The model, computed with today's astronomy, misses
+#         the Qing calendar in China's 1906 and in Korea's 1903, 1904,
+#         1905, 1908 and 1911.
+chinese 1900 1900-01-31 0100101101101 9 qing
+chinese 1901 1901-02-19 010010101110 0 qing
+chinese 1902 1902-02-08 101001010111 0 qing
+chinese 1903 1903-01-29 0101001001101 6 qing
+chinese 1904 1904-02-16 110100100110 0 qing
+chinese 1905 1905-02-04 110110010101 0 qing
+chinese 1906 1906-01-25 0110101010101 5 qing
+chinese 1907 1907-02-13 010101101010 0 qing
+chinese 1908 1908-02-02 100110101101 0 qing
+chinese 1909 1909-01-22 0100101011101 3 qing
+chinese 1910 1910-02-10 010010101110 0 qing
+chinese 1911 1911-01-30 1010010011011 7 qing
+dangi 1900 1900-01-31 0100101101101 9 qing
+dangi 1901 1901-02-19 010010101110 0 qing
+dangi 1902 1902-02-08 101001010111 0 qing
+dangi 1903 1903-01-29 0101001001101 6 qing
+dangi 1904 1904-02-16 110100100110 0 qing
+dangi 1905 1905-02-04 110110010101 0 qing
+dangi 1906 1906-01-25 0110101010101 5 qing
+dangi 1907 1907-02-13 010101101010 0 qing
+dangi 1908 1908-02-02 100110101101 0 qing
+dangi 1909 1909-01-22 0100101011101 3 qing
+dangi 1910 1910-02-10 010010101110 0 qing
+dangi 1911 1911-01-30 1010010011011 7 qing

@@ -107,6 +107,6 @@ notice is in `LICENSES/Unicode-3.0.txt`. That covers:
 
 The library's code is its own, written from the specifications and
 from Reingold and Dershowitz's Calendrical Calculations. The Persian
-calendar's corrections and KACST's Umm al-Qura month lengths are
-published facts. Maul Locale takes them as ICU4C and ICU4X list them,
-under the same notice.
+calendar's corrections, KACST's Umm al-Qura month lengths and the Qing
+calendar's years 1900 to 1911 are published facts. Maul Locale takes
+them as ICU4C and ICU4X list them, under the same notice.

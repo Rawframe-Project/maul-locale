@@ -54,9 +54,15 @@ an explicit choice when a field overflows.
   Dershowitz's new moons and solar terms), in integer fixed point as
   the library profile requires (mloc-0001: bit-exact, no floating
   point). It runs in the generator to write year tables for 1600 to
-  2400. The years where official rules differ come as overrides, each
-  with its source. The same model, compiled in, serves days outside
-  the tables, with no cache and no lock.
+  2400 (`src/generated/calendar_years.c`, four bytes a year: the month
+  lengths, the leap month and the new year's offset). The years where
+  official rules differ come as overrides in
+  `tools/calendar-overrides.txt`, each with its source; the generator
+  checks that each meets its neighbours. The first are the Qing
+  calendar's years 1900 to 1911, which the Hong Kong Observatory and
+  the Korea Astronomy and Space Science Institute publish and Korea
+  also kept. The same model, compiled in, serves days outside the
+  tables, with no cache and no lock.
   - Days and degrees are scaled by 2^32, centuries by 2^48 and sines
     by 2^62 (an eighth of a turn and a Taylor series past the scale's
     resolution); products are 128-bit and rounded to nearest. The
@@ -116,11 +122,18 @@ compared:
   differently in 4 Chinese and 4 Dangi years whose leap month follows
   the solstice; 2033 is one of them.
 - Against ICU4X's observatory tables (1900 to 2100), every start agrees
-  except Qing China's 1906 and Korea before 1912. Those are the
-  overrides the tables slice adds.
+  except Qing China's 1906 and Korea before 1912. With the tables and
+  their Qing overrides, every day from 1900 to 2099 agrees in both
+  calendars, every field included.
 - Against ICU4C 79, 170 of 9,907 lines differ in each calendar. These
   are new moons near midnight that ICU4C's reduced astronomy decides
   otherwise.
+
+`test_calendar_lunar` checks that the tables are the model's years
+except the overrides, and that the days at the tables' ends fall in
+the same years from either side. `test_gencalendar` checks that the
+generator refuses an override that is malformed or does not meet its
+neighbours.
 
 `test_calendar_astro` checks the astronomy against a 45-digit
 evaluation of the book, and the model's own bits on both product

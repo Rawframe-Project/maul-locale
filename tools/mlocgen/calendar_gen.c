@@ -7,6 +7,8 @@
 #include "calendar_gen.h"
 
 #include "calendar_arith.h"
+#include "calendar_chinese.h"
+#include "calendar_years.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -188,4 +190,218 @@ int CalendarErasSource(const XmlNode* supplemental, char** sourceOut, size_t* so
     *sourceOut = source;
     *sourceSizeOut = (size_t)size;
     return 1;
+}
+
+// The model's years with the overrides in place, the years before and
+// after the table included.
+typedef struct LunarYears
+{
+    LunisolarYear years[lunarYearCount + 2];
+    bool overridden[lunarYearCount + 2];
+} LunarYears;
+
+// Reads an override's months: 12 or 13 of '0' and '1'.
+static bool ParseLengths(const char* text, LunisolarYear* out)
+{
+    size_t count = strlen(text);
+    if (count != 12 && count != 13)
+    {
+        return false;
+    }
+    out->count = (uint8_t)count;
+    for (size_t m = 0; m < count; m++)
+    {
+        if (text[m] != '0' && text[m] != '1')
+        {
+            return false;
+        }
+        out->start[m + 1] = out->start[m] + 29 + (text[m] - '0');
+    }
+    return true;
+}
+
+// One override line into its calendar's years; false for a malformed
+// one.
+static bool ReadOverride(char* line, LunarYears* lunar)
+{
+    char calendar[16];
+    char date[16];
+    char lengths[32];
+    char tag[32];
+    int year = 0;
+    int leap = -1;
+    int32_t first = 0;
+    int32_t ignored = 0;
+    if (sscanf(line, "%15s %d %15s %31s %d %31s", calendar, &year, date, lengths, &leap, tag) !=
+            6 ||
+        (strcmp(calendar, "chinese") != 0 && strcmp(calendar, "dangi") != 0) ||
+        year < lunarFirstYear || year > lunarLastYear || !ParseStart(date, &ignored, &first))
+    {
+        return false;
+    }
+    bool korea = strcmp(calendar, "dangi") == 0;
+    size_t i = (size_t)(year - lunarFirstYear + 1);
+    LunarYears* y = &lunar[korea ? 1 : 0];
+    LunisolarYear entry = {.year = year};
+    entry.start[0] = first;
+    int64_t july = mlocArithmeticToDay(mloc_calendarGregorian, year, 7, 1);
+    if (y->overridden[i] || !ParseLengths(lengths, &entry) ||
+        (entry.count == 12 ? leap != 0 : leap < 1 || leap > 13) || july < first ||
+        july >= entry.start[entry.count])
+    {
+        return false;
+    }
+    entry.leap = (uint8_t)leap;
+    y->years[i] = entry;
+    y->overridden[i] = true;
+    return true;
+}
+
+static bool ReadOverrides(const char* text, LunarYears* lunar, char* errorOut, size_t errorCapacity)
+{
+    int number = 0;
+    for (const char* at = text; *at != '\0';)
+    {
+        const char* end = strchr(at, '\n');
+        size_t length = end != nullptr ? (size_t)(end - at) : strlen(at);
+        char line[256];
+        number++;
+        if (length >= sizeof(line))
+        {
+            snprintf(errorOut, errorCapacity, "calendar-overrides.txt:%d: too long", number);
+            return false;
+        }
+        memcpy(line, at, length);
+        line[length] = '\0';
+        if (line[0] != '#' && line[0] != '\0' && !ReadOverride(line, lunar))
+        {
+            snprintf(errorOut, errorCapacity, "calendar-overrides.txt:%d: malformed or repeated",
+                     number);
+            return false;
+        }
+        at += length + (end != nullptr ? 1 : 0);
+    }
+    return true;
+}
+
+// Packs a year, which begins at most 127 days into its Gregorian year.
+static bool Pack(const LunisolarYear* y, uint32_t* out)
+{
+    int64_t offset = y->start[0] - mlocArithmeticToDay(mloc_calendarGregorian, y->year, 1, 1);
+    if (offset < 0 || offset > 127)
+    {
+        return false;
+    }
+    uint32_t bits = (uint32_t)offset << lunarOffsetShift | (uint32_t)y->leap << lunarLeapShift;
+    for (uint32_t m = 0; m < y->count; m++)
+    {
+        bits |= (uint32_t)(y->start[m + 1] - y->start[m] - 29) << m;
+    }
+    *out = bits;
+    return true;
+}
+
+static int AppendTable(char* source, size_t capacity, int size, const char* name,
+                       const uint32_t* table)
+{
+    size += snprintf(source + size, capacity - (size_t)size,
+                     "\nconst uint32_t %s[lunarYearCount] = {\n", name);
+    for (int i = 0; i < lunarYearCount; i++)
+    {
+        size += snprintf(source + size, capacity - (size_t)size, "%s0x%06X,%s",
+                         i % 8 == 0 ? "    " : " ", (unsigned)table[i],
+                         i % 8 == 7 || i == lunarYearCount - 1 ? "\n" : "");
+    }
+    return size + snprintf(source + size, capacity - (size_t)size, "};\n");
+}
+
+int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceSizeOut,
+                        char* errorOut, size_t errorCapacity)
+{
+    LunarYears* lunar = calloc(2, sizeof(LunarYears));
+    uint32_t* tables = malloc(2 * lunarYearCount * sizeof(uint32_t));
+    size_t capacity = headRoom + 2 * (size_t)lunarYearCount * 12;
+    char* source = malloc(capacity);
+    if (lunar == nullptr || tables == nullptr || source == nullptr)
+    {
+        snprintf(errorOut, errorCapacity, "out of memory");
+        free(lunar);
+        free(tables);
+        free(source);
+        return 0;
+    }
+    int ok = ReadOverrides(overrides, lunar, errorOut, errorCapacity);
+    for (int c = 0; ok && c < 2; c++)
+    {
+        for (int i = 0; i < lunarYearCount + 2; i++)
+        {
+            if (!lunar[c].overridden[i])
+            {
+                mlocChineseModelYear(c == 1, lunarFirstYear - 1 + i, &lunar[c].years[i]);
+            }
+        }
+        for (int i = 1; ok && i < lunarYearCount + 1; i++)
+        {
+            const LunisolarYear* y = &lunar[c].years[i];
+            ok = y->start[0] == lunar[c].years[i - 1].start[lunar[c].years[i - 1].count] &&
+                 y->start[y->count] == lunar[c].years[i + 1].start[0] &&
+                 Pack(y, &tables[c * lunarYearCount + i - 1]);
+            if (!ok)
+            {
+                snprintf(errorOut, errorCapacity,
+                         "calendar-overrides.txt: the %s year %d does not meet its neighbours",
+                         c == 1 ? "dangi" : "chinese", (int)y->year);
+            }
+        }
+    }
+    if (ok)
+    {
+        int size = snprintf(source, capacity,
+                            "// SPDX-License-Identifier: MIT\n"
+                            "// Copyright (c) 2026 Sirac Ozmen\n"
+                            "//\n"
+                            "// The Chinese and Dangi years from 1600 to 2400 (record mloc-0040),\n"
+                            "// packed as calendar_years.h says: the model's, with the years of\n"
+                            "// tools/calendar-overrides.txt in their place.\n"
+                            "// Generated by tools/mlocgen; do not edit.\n"
+                            "// clang-format off\n"
+                            "\n"
+                            "#include \"calendar_years.h\"\n");
+        size = AppendTable(source, capacity, size, "mlocChineseYears", tables);
+        size = AppendTable(source, capacity, size, "mlocDangiYears", tables + lunarYearCount);
+        *sourceOut = source;
+        *sourceSizeOut = (size_t)size;
+        source = nullptr;
+    }
+    free(lunar);
+    free(tables);
+    free(source);
+    return ok;
+}
+
+int GenerateCalendarYears(const char* root, char** sourceOut, size_t* sourceSizeOut, char* errorOut,
+                          size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/tools/calendar-overrides.txt", root);
+    FILE* file = fopen(path, "rb");
+    if (file == nullptr)
+    {
+        snprintf(errorOut, errorCapacity, "cannot read %s", path);
+        return 0;
+    }
+    char* text = malloc(65536);
+    size_t length = text != nullptr ? fread(text, 1, 65535, file) : 0;
+    bool whole = text != nullptr && feof(file);
+    fclose(file);
+    if (!whole)
+    {
+        snprintf(errorOut, errorCapacity, "%s is too long or unreadable", path);
+        free(text);
+        return 0;
+    }
+    text[length] = '\0';
+    int ok = CalendarYearsSource(text, sourceOut, sourceSizeOut, errorOut, errorCapacity);
+    free(text);
+    return ok;
 }

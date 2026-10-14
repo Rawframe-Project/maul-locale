@@ -84,8 +84,44 @@ static void TestRefusals(void)
           "eras out of order or on one day");
 }
 
+static bool YearsRefused(const char* overrides)
+{
+    char* source = nullptr;
+    size_t size = 0;
+    char error[256];
+    bool refused = !CalendarYearsSource(overrides, &source, &size, error, sizeof(error));
+    free(source);
+    return refused;
+}
+
+static void TestYears(void)
+{
+    char* source = nullptr;
+    size_t size = 0;
+    char error[256];
+    bool made = CalendarYearsSource("# none\n\nchinese 1906 1906-01-25 0110101010101 5 qing\n",
+                                    &source, &size, error, sizeof(error));
+    CHECK(made &&
+              strstr(source, "const uint32_t mlocChineseYears[lunarYearCount] = {") != nullptr &&
+              strstr(source, "const uint32_t mlocDangiYears[lunarYearCount] = {") != nullptr,
+          "the year tables, with an override in place");
+    free(source);
+    CHECK(YearsRefused("chinese 1906 1906-01-26 0110101010101 5 qing\n") &&
+              YearsRefused("chinese 1906 1906-01-25 0110101010101 0 qing\n") &&
+              YearsRefused("chinese 1906 1906-01-25 011010101010 5 qing\n") &&
+              YearsRefused("chinese 1906 1906-01-25 01101010101x1 5 qing\n") &&
+              YearsRefused("chinese 1599 1599-01-25 011010101010 0 qing\n") &&
+              YearsRefused("korean 1906 1906-01-25 0110101010101 5 qing\n") &&
+              YearsRefused("chinese 1906 1906-01-25 0110101010101 5\n") &&
+              YearsRefused("chinese 1906 1906-01-25 0110101010101 5 qing\n"
+                           "chinese 1906 1906-01-25 0110101010101 5 qing\n"),
+          "an override that misses its neighbours, its leap month or its months, a year past "
+          "the tables, an unknown calendar, a missing source, a year twice");
+}
+
 int main(void)
 {
+    TestYears();
     TestTable();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

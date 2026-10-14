@@ -18,6 +18,18 @@
 int GenerateCalendarEras(const char* commonDirectory, char** sourceOut, size_t* sourceSizeOut,
                          char* errorOut, size_t errorCapacity);
 
+// The source of src/generated/calendar_years.c: the Chinese and Dangi
+// years from 1600 to 2400 by the model, with the years of
+// root/tools/calendar-overrides.txt in their place. Returns 0 and a
+// message on failure: a malformed override, one for a year twice, or a
+// year that does not meet its neighbours.
+int GenerateCalendarYears(const char* root, char** sourceOut, size_t* sourceSizeOut, char* errorOut,
+                          size_t errorCapacity);
+
+// The same years from the overrides' text, for the tests.
+int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceSizeOut,
+                        char* errorOut, size_t errorCapacity);
+
 // The same from supplementalData.xml's parsed root.
 int CalendarErasSource(const XmlNode* supplemental, char** sourceOut, size_t* sourceSizeOut,
                        char* errorOut, size_t errorCapacity);

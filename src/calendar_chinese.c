@@ -169,7 +169,7 @@ static void YearFrom(const Sui* a, const Sui* b, LunisolarYear* out)
     out->year = july >= out->start[0] ? gregorian : gregorian + 1;
 }
 
-void mlocChineseYearOf(bool korea, int32_t day, LunisolarYear* out)
+void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out)
 {
     int64_t solstice = SolsticeOnOrBefore(korea, day);
     int64_t next = SolsticeOnOrBefore(korea, solstice + 370);
@@ -188,7 +188,8 @@ void mlocChineseYearOf(bool korea, int32_t day, LunisolarYear* out)
     }
 }
 
-void mlocChineseYear(bool korea, int64_t year, LunisolarYear* out)
+void mlocChineseModelYear(bool korea, int64_t year, LunisolarYear* out)
 {
-    mlocChineseYearOf(korea, (int32_t)mlocArithmeticToDay(mloc_calendarGregorian, year, 7, 1), out);
+    mlocChineseModelYearOf(korea, (int32_t)mlocArithmeticToDay(mloc_calendarGregorian, year, 7, 1),
+                           out);
 }

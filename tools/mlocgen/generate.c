@@ -255,15 +255,18 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     DataFile spellout = {0};
     Text rules = {0};
     Text eras = {0};
+    Text years = {0};
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
         !GenerateNumberUnits(commonDirectory, &data, &names, errorOut, errorCapacity) ||
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
-        !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity))
+        !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
+        !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity))
     {
         free(rules.bytes);
+        free(eras.bytes);
         DataFileFree(&data);
         FreeNameFiles(&names);
         DataFileFree(&spellout);
@@ -293,6 +296,7 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
              WriteFile(root, "builtin_data.c", &builtin, errorOut, errorCapacity) &&
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_eras.c", &eras, errorOut, errorCapacity) &&
+             WriteFile(root, "calendar_years.c", &years, errorOut, errorCapacity) &&
              WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     for (size_t i = 0; ok && i < sizeof(nameFiles) / sizeof(nameFiles[0]); i++)
     {
@@ -309,6 +313,7 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     free(builtin.bytes);
     free(rules.bytes);
     free(eras.bytes);
+    free(years.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;

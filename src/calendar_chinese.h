@@ -26,10 +26,13 @@ typedef struct LunisolarYear
     uint8_t leap;
 } LunisolarYear;
 
-// The year holding a day; korea selects Dangi.
-void mlocChineseYearOf(bool korea, int32_t day, LunisolarYear* out);
+// The model's year holding a day; korea selects Dangi. The dates' own
+// years come from calendar_lunar.h, which reads the tables for 1600 to
+// 2400 and calls these outside them.
+void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out);
 
-// The year numbered year: the one holding July 1 of that Gregorian year.
-void mlocChineseYear(bool korea, int64_t year, LunisolarYear* out);
+// The model's year numbered year: the one holding July 1 of that
+// Gregorian year.
+void mlocChineseModelYear(bool korea, int64_t year, LunisolarYear* out);
 
 #endif

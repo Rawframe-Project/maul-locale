@@ -37,8 +37,8 @@ typedef struct Case
 // their first days, ce until Meiji 6; Umm al-Qura at its table's ends,
 // in two of its leap years, and tabular outside; Chinese and Dangi new
 // years, leap months (2033's eleventh, by the rule of GB/T 33661) and the
-// days Korea changed zones, 1912 to 2099, where ICU4X follows the
-// observatories.
+// days Korea changed zones, 1912 to 2099; the Qing years 1906 in China and
+// 1903 to 1911 in Korea, where the model and the Qing calendar part.
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -258,6 +258,12 @@ static const Case s_cases[] = {
     {mloc_calendarDangi, 698026, 1912, "", 1912, 1, false, 1, 0, 354, 30},
     {mloc_calendarDangi, 713398, 1954, "", 1954, 2, false, 17, 0, 354, 29},
     {mloc_calendarDangi, 716097, 1961, "", 1961, 6, false, 29, 0, 355, 29},
+    {mloc_calendarChinese, 695899, 1906, "", 1906, 3, false, 30, 1, 384, 30},
+    {mloc_calendarChinese, 695900, 1906, "", 1906, 4, false, 1, 1, 384, 29},
+    {mloc_calendarDangi, 695072, 1903, "", 1903, 12, false, 1, 1, 383, 30},
+    {mloc_calendarDangi, 695073, 1903, "", 1903, 12, false, 2, 1, 383, 30},
+    {mloc_calendarDangi, 696637, 1908, "", 1908, 4, false, 1, 0, 355, 30},
+    {mloc_calendarDangi, 697966, 1911, "", 1911, 11, false, 1, 1, 384, 30},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)

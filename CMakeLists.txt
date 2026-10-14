@@ -90,6 +90,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/calendar_arith.c
     src/calendar_astro.c
     src/calendar_chinese.c
+    src/calendar_lunar.c
     src/calendar_hebrew.c
     src/calendar_umalqura.c
     src/names.c
@@ -132,7 +133,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/wide.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c
-    src/generated/calendar_eras.c)
+    src/generated/calendar_eras.c
+    src/generated/calendar_years.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
@@ -225,6 +227,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(list WHITEBOX)
     maul_add_test(calendar)
     maul_add_test(calendar_astro WHITEBOX)
+    maul_add_test(calendar_lunar WHITEBOX)
     maul_add_test(list_format)
     # So are the names of languages and the rest (record mloc-0036), and
     # the subdivision names (record mloc-0039).
@@ -309,7 +312,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
-                                    tools/mlocgen/xml.c src/calendar_arith.c src/wide.c)
+                                    tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
+                                    src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.
     target_include_directories(mlocgen_core PUBLIC tools/mlocgen src include)
