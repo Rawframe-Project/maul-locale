@@ -11,12 +11,19 @@
 
 #include "datafile.h"
 
-// The currency names go into names, a data file of their own (record
-// mloc-0022), the unit names into unitNames, another (record mloc-0024),
-// and the names of languages and the rest into localeNames, a third
-// (record mloc-0036).
-int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
-                        DataFile* unitNames, DataFile* localeNames, char* errorOut,
-                        size_t errorCapacity);
+// The data files of names, each of its own: the currency names (record
+// mloc-0022), the unit names (record mloc-0024), the names of languages
+// and the rest (record mloc-0036) and the subdivision names (record
+// mloc-0039).
+typedef struct NameFiles
+{
+    DataFile currencies;
+    DataFile units;
+    DataFile locales;
+    DataFile subdivisions;
+} NameFiles;
+
+int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* names,
+                        char* errorOut, size_t errorCapacity);
 
 #endif

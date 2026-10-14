@@ -16,7 +16,7 @@ names data for all locales is 4.9 MB and leaves keys and values out.
 
 - **A file of its own,** `names.mloc`, as the currency names, unit
   names and spell-out rules are. Subdivisions, five megabytes used only
-  by the `sd` and `rg` values, go to a second file later.
+  by the `sd` and `rg` values, go to a second file (record mloc-0039).
 - **One table of codes** (`src/names_tables.h`), each a namespace letter
   and what it names in BCP 47's case: `l:en-GB`, `s:Latn`, `r:419`,
   `v:valencia`, `k:ca`, `t:ca-gregory`, the display patterns

@@ -2,8 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The names part's units (record mloc-0036), shared by the library and
-// the generator. They ship as a data file of their own, names.mloc. All
-// integers are little-endian.
+// the generator. They ship as a data file of their own, names.mloc, and
+// the subdivision names as another, subdivisions.mloc, with a codes unit
+// and names units of its own (record mloc-0039). All integers are
+// little-endian.
 //
 // The codes, a unit of no locale: a header (u16 count, u16 0, u32 text
 // size), the codes' text offsets (u32 each, count + 1, from 0 to the
@@ -23,6 +25,7 @@
 //   m:  a measurement system by its BCP 47 value: "m:metric",
 //       "m:uksystem", "m:ussystem"
 //   b:  a key's value of yes or no: "b:yes", "b:no" (CLDR's typeValues)
+//   d:  a subdivision by its code, in subdivisions.mloc: "d:gbsct"
 //
 // A name whose alt is not one of the fields below ("biot", "chagos" and
 // Finnish's "secondary") has a code of its own, the alt after '%':
@@ -31,7 +34,8 @@
 //
 // The names, units per locale key, one kind for each of languages,
 // scripts, regions, variants, keys with their values, and the patterns
-// with the rest (p:, c:, m: and b:): a header (u16 entry count, u16 text
+// with the rest (p:, c:, m: and b:), and the subdivisions (d:, the name
+// field alone): a header (u16 entry count, u16 text
 // size), the entries' keys (u16 each, a code's index times 8 plus a
 // NameField, strictly ascending), their text offsets (u16 each, count +
 // 1, from 0 to the text size, strictly ascending: no text is empty), then
@@ -106,6 +110,8 @@ static inline uint32_t mlocNameKind(const char* code, size_t length)
     case 'm':
     case 'b':
         return kindNamePatterns;
+    case 'd':
+        return kindNamesSubdivisions;
     default:
         return 0;
     }

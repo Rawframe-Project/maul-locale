@@ -316,7 +316,8 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component)
     return kept;
 }
 
-static const char* const s_directories[componentCount] = {"main", "collation", "rbnf"};
+static const char* const s_directories[componentCount] = {"main", "collation", "rbnf",
+                                                          "subdivisions"};
 
 static LdmlFile* File(Cldr* cldr, const char* locale, Component component)
 {

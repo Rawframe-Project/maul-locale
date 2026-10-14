@@ -69,7 +69,8 @@ CLDR has and each capitalization context, as ICU4C's LocaleDisplayNames
 gives them, and of whole locales by UTS #35's algorithm, dialect names,
 extensions and transforms included, as CLDR's own tools build them
 (CLDR's locale display name test data passes on every push; the names
-are a data file of their own, `src/generated/names.mloc`).
+are a data file of their own, `src/generated/names.mloc`, and the
+subdivision names another, `src/generated/subdivisions.mloc`).
 The library has 63 public functions.
 
 ## Building

@@ -5,7 +5,8 @@
 // files name, and per locale key the names of languages, scripts,
 // regions, variants, keys and their values, and the display patterns,
 // each value CLDR resolves filed where the key's chain would give
-// another. They ship as a data file of their own.
+// another. They ship as a data file of their own, and the subdivision
+// names as another (record mloc-0039).
 
 #ifndef MLOCGEN_NAMES_GEN_H
 #define MLOCGEN_NAMES_GEN_H
@@ -26,7 +27,9 @@ typedef struct NamesInput
     int count;
 } NamesInput;
 
-// Adds the names units to a file. Returns 0 and a message on failure.
-int GenerateNames(const NamesInput* input, DataFile* file, char* errorOut, size_t errorCapacity);
+// Adds the names units to a file and the subdivision names to another.
+// Returns 0 and a message on failure.
+int GenerateNames(const NamesInput* input, DataFile* file, DataFile* subdivisionsFile,
+                  char* errorOut, size_t errorCapacity);
 
 #endif

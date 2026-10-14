@@ -6,8 +6,8 @@
 // spoiled are refused. Then names found along a chain from the names data
 // file: each namespace, each kind of field, a field the chain lacks
 // taking the name, a region's own names over its parent's, and the codes
-// and fields that find nothing. Last, whole-locale names by patterns and
-// names built here.
+// and fields that find nothing. Then whole-locale names by patterns and
+// names built here, and the subdivisions data file beside the names.
 
 #include "bytes.h"
 #include "data_view.h"
@@ -176,7 +176,8 @@ static void TestNames(void)
               mlocNameKind("p:localePattern", 15) == kindNamePatterns &&
               mlocNameKind("c:script", 8) == kindNamePatterns &&
               mlocNameKind("m:metric", 8) == kindNamePatterns &&
-              mlocNameKind("b:yes", 5) == kindNamePatterns && mlocNameKind("z:z", 3) == 0 &&
+              mlocNameKind("b:yes", 5) == kindNamePatterns &&
+              mlocNameKind("d:gbsct", 7) == kindNamesSubdivisions && mlocNameKind("z:z", 3) == 0 &&
               mlocNameKind("l", 1) == 0 && mlocNameKind("lx", 2) == 0,
           "each namespace's kind, none for another");
 }
@@ -362,21 +363,71 @@ static void TestCraftedLocaleNames(void)
         "a whole id's dialect name, passed over when it holds a hyphen");
 }
 
-// The compiled-in data, then the names data file at the path the build
-// gives.
-static bool OpenData(void)
+static mlocData s_subdivisions;
+
+// Whether a code's name is found by a set as expected; null expects none.
+static bool FoundIn(const mlocDataSet* set, const char* id, const char* code, const char* expected)
 {
-    alignas(8) static uint8_t s_names[8 << 20];
-    mlocOpenBuiltinData(&s_sources[0]);
-    FILE* file = fopen(MLOC_LOCALE_NAMES_FILE, "rb");
-    size_t read = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    mlocLocale locale;
+    NameText name;
+    bool found = mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+                 mlocFindName(set, &locale, code, strlen(code), nameFieldName, &name);
+    bool same = expected == nullptr ? !found
+                                    : found && name.length == strlen(expected) &&
+                                          memcmp(name.text, expected, name.length) == 0;
+    if (!same)
+    {
+        printf("%s %s\n", id, code);
+    }
+    return same;
+}
+
+// The subdivisions data file in a set with the names data file, in
+// either order: each finds its own codes, a subdivision's name in
+// English, inherited by British English, in French, and none where CLDR
+// has only a provisional one.
+static void TestSubdivisions(void)
+{
+    mlocData orders[2][3] = {{s_sources[0], s_sources[1], s_subdivisions},
+                             {s_sources[0], s_subdivisions, s_sources[1]}};
+    for (int i = 0; i < 2; i++)
+    {
+        mlocDataSet set = {orders[i], 3};
+        CHECK(FoundIn(&set, "en", "d:gbsct", "Scotland") &&
+                  FoundIn(&set, "en-GB", "d:gbsct", "Scotland") &&
+                  FoundIn(&set, "fr", "d:gbsct",
+                          "\xC3\x89"
+                          "cosse") &&
+                  FoundIn(&set, "en", "d:usca", "California") &&
+                  FoundIn(&set, "fr", "d:usca", nullptr) &&
+                  FoundIn(&set, "en", "d:zzzz", nullptr) && FoundIn(&set, "fr", "l:en", "anglais"),
+              i == 0 ? "subdivisions after the names" : "subdivisions before the names");
+    }
+}
+
+// Reads a data file into a buffer and opens it.
+static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
+{
+    FILE* file = fopen(path, "rb");
+    size_t read = file == nullptr ? 0 : fread(buffer, 1, capacity, file);
     if (file != nullptr)
     {
         fclose(file);
     }
+    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+}
+
+// The compiled-in data, then the names and subdivisions data files at the
+// paths the build gives.
+static bool OpenData(void)
+{
+    alignas(8) static uint8_t s_names[8 << 20];
+    alignas(8) static uint8_t s_subdivisionBytes[1 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
-    return read > 0 && read < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, read) == mloc_success;
+    return OpenFile(MLOC_LOCALE_NAMES_FILE, s_names, sizeof(s_names), &s_sources[1]) &&
+           OpenFile(MLOC_SUBDIVISIONS_FILE, s_subdivisionBytes, sizeof(s_subdivisionBytes),
+                    &s_subdivisions);
 }
 
 int main(void)
@@ -385,12 +436,15 @@ int main(void)
     TestNames();
     if (!OpenData())
     {
-        fputs("test_names_data: cannot open " MLOC_LOCALE_NAMES_FILE "\n", stderr);
+        fputs("test_names_data: cannot open " MLOC_LOCALE_NAMES_FILE " or " MLOC_SUBDIVISIONS_FILE
+              "\n",
+              stderr);
         return 2;
     }
     TestFind();
     TestSources();
     TestCraftedLocaleNames();
+    TestSubdivisions();
     TestCapitalization();
     return s_failures == 0 ? 0 : 1;
 }

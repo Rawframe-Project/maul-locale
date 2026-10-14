@@ -27,6 +27,8 @@ typedef enum Component
     componentCollation,
     // common/rbnf, with the main parent locales.
     componentRbnf,
+    // common/subdivisions, with the main parent locales.
+    componentSubdivisions,
     componentCount,
 } Component;
 
@@ -53,7 +55,7 @@ int CldrOpen(Cldr* cldr, const char* commonDirectory, char* errorOut, size_t err
 
 // The parent of a locale id ("de_AT" to "de", "en_AU" to "en_001", "de"
 // to "root"), or null for root: the component's own parent locales, else
-// for the main and rbnf components root when the id ends in a script
+// for every component but collation root when the id ends in a script
 // that is not its language's likely one (the nonlikelyScript rule,
 // applied to every id as CLDR's LocaleIDParser does, not only to the
 // ones listed), else truncation.

@@ -9,8 +9,10 @@
 // (the first key filing the field, else the first filing the name) would
 // give another. Locales are taken parent first, so a key's chain is
 // filed before it; a locale under its parent's key files nothing and is
-// checked to resolve to what the key gives. Subdivisions are left to
-// their own file.
+// checked to resolve to what the key gives. The subdivision names
+// (common/subdivisions, codes "d:gbsct") are taken the same way into a
+// file of their own, with codes of their own; the titlecase table in the
+// names file covers both.
 
 #include "names_gen.h"
 
@@ -38,6 +40,7 @@ static const char s_inheritMarker[] = "\xE2\x86\x91\xE2\x86\x91\xE2\x86\x91";
 
 static const uint32_t s_kinds[] = {kindNamesLanguages, kindNamesScripts, kindNamesRegions,
                                    kindNamesVariants,  kindNamesKeys,    kindNamePatterns};
+static const uint32_t s_subdivisionKinds[] = {kindNamesSubdivisions};
 
 // A code and the CLDR chain of each of its fields; null where no locale
 // has the field.
@@ -47,15 +50,20 @@ typedef struct Code
     char* chains[nameFieldCount];
 } Code;
 
-// The fields a locale files, per code; null where none.
+// The fields a locale files, per code (as many rows as codes); null
+// where none.
 typedef struct Filed
 {
-    const char** rows[maxCodes];
+    const char*** rows;
 } Filed;
 
 typedef struct Names
 {
     const NamesInput* input;
+    // The component the names are read from, and the kinds of its units.
+    Component component;
+    const uint32_t* kinds;
+    size_t kindCount;
     // An LDML key to its BCP 47 id; "id/value" to the BCP 47 value.
     Map keys;
     Map values;
@@ -64,8 +72,8 @@ typedef struct Names
     Code codes[maxCodes];
     int count;
     Map filed;
-    // The first letters of the names filed.
-    Titlecase titlecase;
+    // The first letters of the names filed, shared by both files.
+    Titlecase* titlecase;
 } Names;
 
 static char* Copy(const char* text)
@@ -285,8 +293,7 @@ static bool PatternCode(const char* element, const char* type, char* out, size_t
     return false;
 }
 
-// The code a chain's element and attributes name, or false for a
-// subdivision.
+// The code a chain's element and attributes name.
 static bool CodeOf(const Names* n, const char* element, const char* step, char* out,
                    size_t capacity)
 {
@@ -317,7 +324,7 @@ static bool CodeOf(const Names* n, const char* element, const char* step, char* 
     }
     else if (strcmp(element, "subdivision") == 0)
     {
-        return false;
+        snprintf(out, capacity, "d:%s", type);
     }
     else if (!PatternCode(element, type, out, capacity))
     {
@@ -404,9 +411,14 @@ static void Collect(const char* chain, void* value, void* context)
     char code[maxText];
     if (strchr(element, '/') != nullptr || !CodeOf(n, element, step, code, sizeof(code)))
     {
-        if (strcmp(element, "subdivision") != 0)
+        GenDie("a display name chain the generator does not know", chain);
+    }
+    // Subdivisions in a main file are left to the subdivisions file.
+    if ((code[0] == 'd') != (n->component == componentSubdivisions))
+    {
+        if (code[0] != 'd')
         {
-            GenDie("a display name chain the generator does not know", chain);
+            GenDie("a display name in the subdivisions files other than a subdivision", chain);
         }
         return;
     }
@@ -446,7 +458,7 @@ static void CollectAll(Names* n)
 {
     for (int i = 0; i < n->input->count; i++)
     {
-        const LdmlFile* file = CldrFile(n->input->cldr, n->input->ids[i], componentMain);
+        const LdmlFile* file = CldrFile(n->input->cldr, n->input->ids[i], n->component);
         if (file != nullptr)
         {
             MapEach(&file->leaves, Collect, n);
@@ -458,7 +470,7 @@ static void CollectAll(Names* n)
 // CLDR's value of a chain at a locale, or null.
 static const char* Resolved(Names* n, const char* locale, const char* chain)
 {
-    const Leaf* leaf = CldrResolve(n->input->cldr, locale, chain, componentMain);
+    const Leaf* leaf = CldrResolve(n->input->cldr, locale, chain, n->component);
     if (leaf != nullptr && strcmp(leaf->text, s_emptyMarker) == 0)
     {
         GenDie("a display name explicitly empty", chain);
@@ -482,7 +494,7 @@ static const char* Target(Names* n, const char* locale, int code, int field)
 // The first value of a field filed along a locale's chain.
 static const char* FiledValue(Names* n, const char* locale, int code, int field)
 {
-    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, componentMain))
+    for (const char* at = locale; at != nullptr; at = CldrParent(n->input->cldr, at, n->component))
     {
         const Filed* filed = MapGet(&n->filed, at);
         const char* const* fields = filed != nullptr ? filed->rows[code] : nullptr;
@@ -566,7 +578,7 @@ static void Take(Names* n, Filed* filed, const char* locale, int code, int field
         filed->rows[code] = GenAllocate(sizeof(char*) * nameFieldCount);
     }
     filed->rows[code][field] = value;
-    TitlecaseNote(&n->titlecase, value, strlen(value), true);
+    TitlecaseNote(n->titlecase, value, strlen(value), true);
 }
 
 // Files a locale's names (filed null: checks them); the name first, which
@@ -644,7 +656,7 @@ static void TakeChain(Names* n, const char* locale, DataFile* file)
         return;
     }
     const NamesInput* input = n->input;
-    const char* parent = CldrParent(input->cldr, locale, componentMain);
+    const char* parent = CldrParent(input->cldr, locale, n->component);
     if (parent != nullptr)
     {
         TakeChain(n, parent, file);
@@ -657,13 +669,14 @@ static void TakeChain(Names* n, const char* locale, DataFile* file)
         KeyOf(input->keys, parent, parentKey, sizeof(parentKey));
     }
     Filed* filed = GenAllocate(sizeof(Filed));
+    filed->rows = GenAllocate(sizeof(*filed->rows) * (size_t)(n->count > 0 ? n->count : 1));
     bool own = strcmp(key, parentKey) != 0;
     // Filed first, so that the locale's own fields count in its lookups.
     MapPut(&n->filed, locale, filed);
     TakeLocale(n, own ? filed : nullptr, locale);
-    for (size_t k = 0; own && k < sizeof(s_kinds) / sizeof(s_kinds[0]); k++)
+    for (size_t k = 0; own && k < n->kindCount; k++)
     {
-        AddUnit(n, filed, s_kinds[k], key, file);
+        AddUnit(n, filed, n->kinds[k], key, file);
     }
 }
 
@@ -720,22 +733,41 @@ static void CheckBrackets(const NamesInput* input)
     }
 }
 
-int GenerateNames(const NamesInput* input, DataFile* file, char* errorOut, size_t errorCapacity)
+// Takes one component's names into a file: the codes, then each
+// locale's units.
+static void TakeAll(Names* n, DataFile* file)
+{
+    CollectAll(n);
+    AddCodes(n, file);
+    for (int i = 0; i < n->input->count; i++)
+    {
+        TakeChain(n, n->input->ids[i], file);
+    }
+}
+
+int GenerateNames(const NamesInput* input, DataFile* file, DataFile* subdivisionsFile,
+                  char* errorOut, size_t errorCapacity)
 {
     static Names s_names;
-    Names* n = &s_names;
-    *n = (Names){.input = input};
-    if (!ReadAllKeys(n, errorOut, errorCapacity))
+    static Names s_subdivisions;
+    static Titlecase s_titlecase;
+    s_names = (Names){.input = input,
+                      .component = componentMain,
+                      .kinds = s_kinds,
+                      .kindCount = sizeof(s_kinds) / sizeof(s_kinds[0]),
+                      .titlecase = &s_titlecase};
+    if (!ReadAllKeys(&s_names, errorOut, errorCapacity))
     {
         return 0;
     }
     CheckBrackets(input);
-    CollectAll(n);
-    AddCodes(n, file);
-    for (int i = 0; i < input->count; i++)
-    {
-        TakeChain(n, input->ids[i], file);
-    }
-    TitlecaseAdd(&n->titlecase, kindNameTitlecase, file);
+    TakeAll(&s_names, file);
+    s_subdivisions = (Names){.input = input,
+                             .component = componentSubdivisions,
+                             .kinds = s_subdivisionKinds,
+                             .kindCount = 1,
+                             .titlecase = &s_titlecase};
+    TakeAll(&s_subdivisions, subdivisionsFile);
+    TitlecaseAdd(&s_titlecase, kindNameTitlecase, file);
     return 1;
 }

@@ -1405,9 +1405,8 @@ static const char* NextKeyed(Generator* g, const char* locale, const char* key)
     return nullptr;
 }
 
-int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* names,
-                        DataFile* unitNames, DataFile* localeNames, char* errorOut,
-                        size_t errorCapacity)
+int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* names,
+                        char* errorOut, size_t errorCapacity)
 {
     static Generator s_g;
     memset(&s_g, 0, sizeof(s_g));
@@ -1478,7 +1477,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
         .count = count,
         .compile = CompileCurrencyPattern,
         .context = g,
-        .names = names,
+        .names = &names->currencies,
     };
     UnitNamesInput units = {
         .commonDirectory = commonDirectory,
@@ -1503,11 +1502,12 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, DataFile* n
     GenerateListUnits(&lists, file);
     GenerateContextUnits(&lists, file);
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
-             GenerateUnitNames(&units, unitNames, errorOut, errorCapacity) &&
-             GenerateNames(&localeNamesInput, localeNames, errorOut, errorCapacity);
+             GenerateUnitNames(&units, &names->units, errorOut, errorCapacity) &&
+             GenerateNames(&localeNamesInput, &names->locales, &names->subdivisions, errorOut,
+                           errorCapacity);
     if (ok)
     {
-        GenerateUnitPatterns(&units, unitNames);
+        GenerateUnitPatterns(&units, &names->units);
     }
     GenerateParseSets(&g->cldr, file);
     AddSystemUnit(g, file);

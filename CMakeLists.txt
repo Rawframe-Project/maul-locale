@@ -217,11 +217,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
     maul_add_test(list_format)
-    # So are the names of languages and the rest (record mloc-0036).
+    # So are the names of languages and the rest (record mloc-0036), and
+    # the subdivision names (record mloc-0039).
     set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
     set(MLOC_LOCALE_NAMES_PATH ${MLOC_LOCALE_NAMES_FILE})
+    set(MLOC_SUBDIVISIONS_FILE ${PROJECT_SOURCE_DIR}/src/generated/subdivisions.mloc)
+    set(MLOC_SUBDIVISIONS_PATH ${MLOC_SUBDIVISIONS_FILE})
     if(EMSCRIPTEN)
         set(MLOC_LOCALE_NAMES_PATH /locale-names.mloc)
+        set(MLOC_SUBDIVISIONS_PATH /subdivisions.mloc)
     endif()
     maul_add_test(names_data WHITEBOX)
     maul_add_test(names MANUAL)
@@ -229,12 +233,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
     foreach(target test_names_data test_names)
         if(TARGET ${target})
             if(EMSCRIPTEN)
-                target_link_options(${target} PRIVATE "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
+                target_link_options(${target} PRIVATE "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc"
+                                    "SHELL:--embed-file ${MLOC_SUBDIVISIONS_FILE}@/subdivisions.mloc")
             endif()
             if(WIN32)
                 target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
             endif()
-            target_compile_definitions(${target} PRIVATE MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}")
+            target_compile_definitions(${target} PRIVATE MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}"
+                                       MLOC_SUBDIVISIONS_FILE="${MLOC_SUBDIVISIONS_PATH}")
         endif()
     endforeach()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI

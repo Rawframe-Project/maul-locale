@@ -123,5 +123,8 @@ constexpr uint32_t kindNamePatterns = 0x00070007;
 // The names data file: the titlecase of the names' first letters, a unit
 // of no locale in the spell-out titlecase table's layout.
 constexpr uint32_t kindNameTitlecase = 0x00070008;
+// The subdivisions data file: subdivision names, in the names layout
+// (record mloc-0039).
+constexpr uint32_t kindNamesSubdivisions = 0x00070009;
 
 #endif
