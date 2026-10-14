@@ -267,27 +267,55 @@ static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
            mlocGetDateFields(&date, out) == mloc_success;
 }
 
+// Whether a day's fields are a case's.
+static bool SameAsCase(const Case* c)
+{
+    mlocDateFields f;
+    bool same = Fields(c->calendar, c->day, &f) && f.year == c->year && f.eraYear == c->eraYear &&
+                f.eraLength == strlen(c->era) && memcmp(f.era, c->era, f.eraLength) == 0 &&
+                f.monthCodeLength == (c->leapMonth ? 4 : 3) &&
+                f.monthCode[1] == '0' + c->month / 10 && f.monthCode[2] == '0' + c->month % 10 &&
+                f.day == c->dayOfMonth && (f.inLeapYear != 0) == c->inLeapYear &&
+                f.daysInYear == c->daysInYear && f.daysInMonth == c->daysInMonth;
+    if (!same)
+    {
+        printf("calendar %d day %d\n", (int)c->calendar, (int)c->day);
+    }
+    return same;
+}
+
 static void TestOracle(void)
 {
     bool all = true;
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
-        const Case* c = &s_cases[i];
-        mlocDateFields f;
-        bool same =
-            Fields(c->calendar, c->day, &f) && f.year == c->year && f.eraYear == c->eraYear &&
-            f.eraLength == strlen(c->era) && memcmp(f.era, c->era, f.eraLength) == 0 &&
-            f.monthCodeLength == (c->leapMonth ? 4 : 3) && f.monthCode[1] == '0' + c->month / 10 &&
-            f.monthCode[2] == '0' + c->month % 10 && f.day == c->dayOfMonth &&
-            (f.inLeapYear != 0) == c->inLeapYear && f.daysInYear == c->daysInYear &&
-            f.daysInMonth == c->daysInMonth;
-        if (!same)
-        {
-            printf("calendar %d day %d\n", (int)c->calendar, (int)c->day);
-            all = false;
-        }
+        all = SameAsCase(&s_cases[i]) && all;
     }
     CHECK(all, "each calendar's fields, leap years and lengths as ICU4X gives them");
+}
+
+// The Chinese and Dangi model's own fields far from the observatories'
+// years (record mloc-0001: the same on every machine), where no other
+// library computes the same model.
+static const Case s_lunisolarFar[] = {
+    {mloc_calendarChinese, -99280838, -271822, "", -271822, 12, false, 25, 0, 354, 30},
+    {mloc_calendarChinese, -1000000, -2737, "", -2737, 1, false, 14, 1, 384, 29},
+    {mloc_calendarChinese, 0, 0, "", 0, 11, false, 20, 1, 384, 30},
+    {mloc_calendarChinese, 1, 0, "", 0, 11, false, 21, 1, 384, 30},
+    {mloc_calendarChinese, 100719163, 275760, "", 275760, 10, false, 23, 1, 385, 30},
+    {mloc_calendarDangi, -99280838, -271822, "", -271822, 12, false, 25, 0, 354, 30},
+    {mloc_calendarDangi, -1000000, -2737, "", -2737, 1, false, 14, 1, 384, 29},
+    {mloc_calendarDangi, 100719163, 275760, "", 275760, 10, false, 23, 1, 385, 30},
+};
+
+static void TestLunisolarFar(void)
+{
+    bool all = true;
+    for (size_t i = 0; i < sizeof(s_lunisolarFar) / sizeof(s_lunisolarFar[0]); i++)
+    {
+        all = SameAsCase(&s_lunisolarFar[i]) && all;
+    }
+    CHECK(all, "the Chinese and Dangi model's own fields at the range's ends");
 }
 
 // Makes a date from its fields by era and by year, by code and by place.
@@ -597,6 +625,7 @@ int main(void)
     TestFields();
     TestUmalquraAliases();
     TestLunisolarRange();
+    TestLunisolarFar();
     TestLunisolarLeap();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
