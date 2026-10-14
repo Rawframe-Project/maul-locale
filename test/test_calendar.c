@@ -34,7 +34,8 @@ typedef struct Case
 // years just past the leap rules' bounds (Persian 1407, Islamic 1437);
 // Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar,
 // and a new year put off a day after a leap year (5766); Japan's eras on
-// their first days, ce until Meiji 6.
+// their first days, ce until Meiji 6; Umm al-Qura at its table's ends,
+// in two of its leap years, and tabular outside.
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -216,6 +217,16 @@ static const Case s_cases[] = {
     {mloc_calendarJapanese, 737180, 2019, "reiwa", 1, 5, false, 1, 0, 365, 31},
     {mloc_calendarJapanese, 739000, 2024, "reiwa", 6, 4, false, 24, 1, 366, 30},
     {mloc_calendarJapanese, 100719163, 275760, "reiwa", 273742, 9, false, 13, 1, 366, 30},
+    {mloc_calendarIslamicUmalqura, -99280838, -280804, "bh", 280805, 3, false, 21, 1, 355, 30},
+    {mloc_calendarIslamicUmalqura, 0, -640, "bh", 641, 5, false, 17, 0, 354, 30},
+    {mloc_calendarIslamicUmalqura, 687336, 1299, "ah", 1299, 12, false, 29, 0, 354, 29},
+    {mloc_calendarIslamicUmalqura, 687337, 1300, "ah", 1300, 1, false, 1, 0, 354, 30},
+    {mloc_calendarIslamicUmalqura, 688145, 1302, "ah", 1302, 4, false, 11, 1, 355, 29},
+    {mloc_calendarIslamicUmalqura, 739000, 1445, "ah", 1445, 10, false, 15, 0, 354, 29},
+    {mloc_calendarIslamicUmalqura, 739434, 1447, "ah", 1447, 1, false, 7, 1, 355, 30},
+    {mloc_calendarIslamicUmalqura, 794001, 1600, "ah", 1600, 12, false, 30, 0, 354, 30},
+    {mloc_calendarIslamicUmalqura, 794002, 1601, "ah", 1601, 1, false, 1, 0, 354, 30},
+    {mloc_calendarIslamicUmalqura, 100719163, 283583, "ah", 283583, 5, false, 23, 0, 354, 30},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
@@ -282,7 +293,7 @@ static void TestRoundTrip(void)
         mloc_calendarEthiopic,    mloc_calendarEthiopicAmeteAlem,
         mloc_calendarIndian,      mloc_calendarPersian,
         mloc_calendarHebrew,      mloc_calendarIslamicCivil,
-        mloc_calendarIslamicTbla,
+        mloc_calendarIslamicTbla, mloc_calendarIslamicUmalqura,
     };
     bool all = true;
     for (size_t c = 0; c < sizeof(s_all) / sizeof(s_all[0]); c++)
@@ -412,6 +423,35 @@ static void TestFields(void)
           "weekday, day of year and the year's and month's lengths");
 }
 
+// Field by field, so padding is not compared.
+static bool SameFields(const mlocDateFields* a, const mlocDateFields* b)
+{
+    return a->year == b->year && a->eraYear == b->eraYear && a->eraLength == b->eraLength &&
+           memcmp(a->era, b->era, sizeof(a->era)) == 0 &&
+           a->monthCodeLength == b->monthCodeLength &&
+           memcmp(a->monthCode, b->monthCode, sizeof(a->monthCode)) == 0 && a->month == b->month &&
+           a->day == b->day && a->dayOfWeek == b->dayOfWeek && a->daysInMonth == b->daysInMonth &&
+           a->monthsInYear == b->monthsInYear && a->inLeapYear == b->inLeapYear &&
+           a->dayOfYear == b->dayOfYear && a->daysInYear == b->daysInYear;
+}
+
+// 'islamic' and 'islamic-rgsa' read as Umm al-Qura (record mloc-0040).
+static void TestUmalquraAliases(void)
+{
+    bool all = true;
+    for (int32_t day = 687000; all && day <= 794500; day += 97)
+    {
+        mlocDateFields u;
+        mlocDateFields islamic;
+        mlocDateFields rgsa;
+        all = Fields(mloc_calendarIslamicUmalqura, day, &u) &&
+              Fields(mloc_calendarIslamic, day, &islamic) &&
+              Fields(mloc_calendarIslamicRgsa, day, &rgsa) && SameFields(&u, &islamic) &&
+              SameFields(&u, &rgsa);
+    }
+    CHECK(all, "islamic and islamic-rgsa read as Umm al-Qura");
+}
+
 static void TestRefusals(void)
 {
     mlocDate date;
@@ -444,8 +484,7 @@ static void TestRefusals(void)
                  0) &&
             Made(mloc_calendarGregorian, &codeLength, mloc_overflowConstrain, mloc_errorInvalid,
                  0) &&
-            Made(mloc_calendarIslamicUmalqura, &ok, mloc_overflowConstrain, mloc_errorNotFound,
-                 0) &&
+            Made(mloc_calendarChinese, &ok, mloc_overflowConstrain, mloc_errorNotFound, 0) &&
             mlocMakeDateFromDay(mloc_calendarGregorian, mlocDateMinDay - 1, &date) ==
                 mloc_errorInvalid &&
             mlocMakeDateFromDay(mloc_calendarGregorian, 1, nullptr) == mloc_errorInvalid &&
@@ -468,6 +507,7 @@ int main(void)
     TestHebrewLeapMonth();
     TestEras();
     TestFields();
+    TestUmalquraAliases();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

@@ -10,6 +10,7 @@
 #include "calendar_arith.h"
 #include "calendar_eras.h"
 #include "calendar_hebrew.h"
+#include "calendar_umalqura.h"
 
 #include <string.h>
 
@@ -69,6 +70,9 @@ static Eras ErasOf(mlocCalendar calendar)
         return (Eras){{{"ap", 0, 1}}, 1, INT32_MIN};
     case mloc_calendarIslamicCivil:
     case mloc_calendarIslamicTbla:
+    case mloc_calendarIslamicUmalqura:
+    case mloc_calendarIslamic:
+    case mloc_calendarIslamicRgsa:
         return (Eras){{{"ah", 0, 1}, {"bh", 1, -1}}, 2, 1};
     default:
         return (Eras){0};
@@ -130,22 +134,59 @@ static bool ParseMonthCode(const char* code, size_t length, uint32_t* numberOut,
     return *numberOut >= 1 && *numberOut <= 13;
 }
 
-static bool Built(mlocCalendar calendar)
+// The file that has a calendar's arithmetic.
+typedef enum Source
 {
-    return mlocArithmetic(calendar) || calendar == mloc_calendarHebrew;
+    sourceNone,
+    sourceArithmetic,
+    sourceHebrew,
+    sourceUmalqura,
+} Source;
+
+static Source SourceOf(mlocCalendar calendar)
+{
+    switch (calendar)
+    {
+    case mloc_calendarHebrew:
+        return sourceHebrew;
+    case mloc_calendarIslamicUmalqura:
+    case mloc_calendarIslamic:
+    case mloc_calendarIslamicRgsa:
+        return sourceUmalqura;
+    default:
+        return mlocArithmetic(calendar) ? sourceArithmetic : sourceNone;
+    }
 }
 
-// Each calendar's arithmetic, by the file that has it.
+static bool Built(mlocCalendar calendar)
+{
+    return SourceOf(calendar) != sourceNone;
+}
+
 static CalendarDate FromDay(mlocCalendar calendar, int32_t day)
 {
-    return calendar == mloc_calendarHebrew ? mlocHebrewFromDay(day)
-                                           : mlocArithmeticFromDay(calendar, day);
+    switch (SourceOf(calendar))
+    {
+    case sourceHebrew:
+        return mlocHebrewFromDay(day);
+    case sourceUmalqura:
+        return mlocUmalquraFromDay(day);
+    default:
+        return mlocArithmeticFromDay(calendar, day);
+    }
 }
 
 static int64_t ToDay(mlocCalendar calendar, int64_t year, uint32_t month, uint32_t day)
 {
-    return calendar == mloc_calendarHebrew ? mlocHebrewToDay(year, month, day)
-                                           : mlocArithmeticToDay(calendar, year, month, day);
+    switch (SourceOf(calendar))
+    {
+    case sourceHebrew:
+        return mlocHebrewToDay(year, month, day);
+    case sourceUmalqura:
+        return mlocUmalquraToDay(year, month, day);
+    default:
+        return mlocArithmeticToDay(calendar, year, month, day);
+    }
 }
 
 static uint32_t MonthsInYear(mlocCalendar calendar, int64_t year)
@@ -156,14 +197,28 @@ static uint32_t MonthsInYear(mlocCalendar calendar, int64_t year)
 
 static uint32_t DaysInMonth(mlocCalendar calendar, int64_t year, uint32_t month)
 {
-    return calendar == mloc_calendarHebrew ? mlocHebrewDaysInMonth(year, month)
-                                           : mlocArithmeticDaysInMonth(calendar, year, month);
+    switch (SourceOf(calendar))
+    {
+    case sourceHebrew:
+        return mlocHebrewDaysInMonth(year, month);
+    case sourceUmalqura:
+        return mlocUmalquraDaysInMonth(year, month);
+    default:
+        return mlocArithmeticDaysInMonth(calendar, year, month);
+    }
 }
 
 static bool Leap(mlocCalendar calendar, int64_t year)
 {
-    return calendar == mloc_calendarHebrew ? mlocHebrewLeap(year)
-                                           : mlocArithmeticLeap(calendar, year);
+    switch (SourceOf(calendar))
+    {
+    case sourceHebrew:
+        return mlocHebrewLeap(year);
+    case sourceUmalqura:
+        return mlocUmalquraLeap(year);
+    default:
+        return mlocArithmeticLeap(calendar, year);
+    }
 }
 
 // A month's code: its number and whether it is the leap month. In a

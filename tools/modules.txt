@@ -75,4 +75,5 @@ names_locale: data_view kinds locale_context names_data names_text
 calendar_arith:
 calendar_hebrew: calendar_arith
 calendar_eras:
-calendar: calendar_arith calendar_eras calendar_hebrew
+calendar_umalqura: calendar_arith
+calendar: calendar_arith calendar_eras calendar_hebrew calendar_umalqura

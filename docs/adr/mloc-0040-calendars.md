@@ -45,7 +45,9 @@ an explicit choice when a field overflows.
   Gregorian, ISO 8601, Buddhist, ROC, Japanese, Coptic, both Ethiopic
   eras, Indian, Persian, Hebrew, and the tabular Islamic calendars.
 - **Umm al-Qura:** KACST's month lengths for 1300 to 1600 AH as a
-  table, tabular outside. `islamic` and `islamic-rgsa` read as Umm
+  table (two bytes a year: the twelve lengths and the first day's
+  offset from the tabular civil calendar, within a day), tabular civil
+  outside, which meets the table's first and last days exactly. `islamic` and `islamic-rgsa` read as Umm
   al-Qura, as in ICU4X. An observational calendar cannot be computed,
   and ICU4C's estimate is not what Saudi Arabia publishes.
 - **Chinese and Dangi:** one astronomical model (Reingold and
@@ -75,8 +77,8 @@ and every refusal have their own cases.
 
 A run outside the repository compared every day from 1600 to 2400, and
 2,001 days spread over the whole range, with ICU4X 2.3 for the ten
-arithmetic calendars built first, and then for Hebrew and Japanese
-(every day from 1600 to 2400 and 3,999 days over the range, the leap
+arithmetic calendars built first, and then for Hebrew, Japanese and
+Umm al-Qura (every day from 1600 to 2400 and 3,999 days over the range, the leap
 year and the year's and month's lengths included): no difference.
 `test_gencalendar` checks the era table's generator and its
 refusals. The differential test
