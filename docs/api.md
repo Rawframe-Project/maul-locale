@@ -149,6 +149,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralOperands(const mlocDecimal* deci
 ```
 Computes the plural operands of a finite decimal; c is 0.  @param decimal      The decimal. @param operandsOut  Receives the operands. @return mloc_success; mloc_errorInvalid for a null pointer, a decimal that is not finite, or one the library did not make. @par Thread safety Safe from any thread.
 
+## `list.h`
+
+Lists (UTS #35 Part 2, records mloc-0026 and mloc-0035): items joined by a locale's list patterns ("a, b, and c", "a, b o c"), as ICU4C's ListFormatter and ECMA-402's Intl.ListFormat join them, with ICU's contextual changes (Spanish "e" and "u", Hebrew's vav before a word of another script). The patterns are compiled in.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitListFormatter(mlocListFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocListOptions* options);
+```
+Makes a locale's list formatter of a type and width. The patterns are the first the locale's chain has, root's last.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the list units, the parents and the likely subtags. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorNotFound for data without the list units; mloc_errorInvalid for a null pointer or options out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatList(const mlocListFormatter* formatter, const mlocListItem* items, size_t count, mlocOutput* output);
+```
+Writes items joined by a formatter's patterns: none as no text, one as itself, two by the locale's pattern for two, more by its start, middle and end patterns. Parts are mlocListPart values.  @param formatter  A formatter mlocInitListFormatter made. @param items      The items, count of them; may be null when count is 0. @param count      The number of items, at most UINT32_MAX. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a formatter the library did not make, a null pointer, an item with a null text and a length, or a count past UINT32_MAX. @par Thread safety Safe from any thread.
+
 ## `locale.h`
 
 Locale identifiers (UTS #35 Part 1): a parsed locale is a fixed-size value in canonical syntax (record mloc-0015).
@@ -336,4 +350,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-59 functions across 9 headers.
+61 functions across 10 headers.

@@ -72,6 +72,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
+    src/list.c
     src/list_data.c
     src/list_join.c
     src/locale_canonical.c
@@ -211,6 +212,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     add_test(NAME spellout COMMAND test_spellout)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
+    maul_add_test(list_format)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.

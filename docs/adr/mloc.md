@@ -39,3 +39,4 @@ are listed in [README.md](README.md).
 | [mloc-0032](mloc-0032-number-parsing.md) | Number parsing: ICU's matchers, read once without allocation | Accepted |
 | [mloc-0033](mloc-0033-currency-parsing.md) | Currency parsing: ICU's currency matcher, the chain's names without allocation | Accepted |
 | [mloc-0034](mloc-0034-spellout.md) | Spell-out: ICU's rules compiled, run on the exact decimal | Accepted |
+| [mloc-0035](mloc-0035-list-formatter.md) | The list formatter: patterns kept in the formatter, items joined in place | Accepted |

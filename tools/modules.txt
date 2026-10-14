@@ -56,6 +56,7 @@ unit_mixed_format: currency_tables data_view decimal kinds list_data list_join n
 list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
+list: list_data list_join number_core
 unit_usage: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
 unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:

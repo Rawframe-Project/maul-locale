@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// Lists (UTS #35 Part 2, records mloc-0026 and mloc-0035): items joined
+// by a locale's list patterns ("a, b, and c", "a, b o c"), as ICU4C's
+// ListFormatter and ECMA-402's Intl.ListFormat join them, with ICU's
+// contextual changes (Spanish "e" and "u", Hebrew's vav before a word of
+// another script). The patterns are compiled in.
+
+#ifndef MAUL_LOCALE_LIST_H
+#define MAUL_LOCALE_LIST_H
+
+#include "maul-locale/locale.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    // What a list says of its items: all of them ("a, b, and c"), one of
+    // them ("a, b, or c"), or amounts of units together ("3 ft, 7 in").
+    typedef enum mlocListType
+    {
+        mloc_listAnd = 0,
+        mloc_listOr = 1,
+        mloc_listUnit = 2,
+    } mlocListType;
+
+    // How much room the list takes: its words written out ("a, b, and
+    // c"), short ("a, b, & c" in English), or narrow ("a, b, c").
+    typedef enum mlocListWidth
+    {
+        mloc_listWide = 0,
+        mloc_listShort = 1,
+        mloc_listNarrow = 2,
+    } mlocListWidth;
+
+    // The parts of a list (mlocOutput's part function): an item, or the
+    // text the patterns put between items. An empty item has no part.
+    typedef enum mlocListPart
+    {
+        mloc_listPartElement = 0,
+        mloc_listPartLiteral = 1,
+    } mlocListPart;
+
+    // A list formatter's options; the zero value is the default (and,
+    // wide).
+    typedef struct mlocListOptions
+    {
+        mlocListType type;
+        mlocListWidth width;
+    } mlocListOptions;
+
+    // A list formatter: a locale's patterns of a type and width, in the
+    // data it was made from, which must outlive it. Opaque; make it with
+    // mlocInitListFormatter.
+    typedef struct mlocListFormatter
+    {
+        uint64_t opaque[8];
+    } mlocListFormatter;
+
+    // An item of a list: UTF-8 text, written as it is.
+    typedef struct mlocListItem
+    {
+        const char* text;
+        size_t length;
+    } mlocListItem;
+
+    /// Makes a locale's list formatter of a type and width. The patterns
+    /// are the first the locale's chain has, root's last.
+    ///
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
+    /// @param data          The data with the list units, the parents and
+    ///                      the likely subtags.
+    /// @param locale        The locale, canonicalized.
+    /// @param options       The options, or null for the defaults.
+    /// @return mloc_success; mloc_errorNotFound for data without the list
+    ///         units; mloc_errorInvalid for a null pointer or options out
+    ///         of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitListFormatter(mlocListFormatter* formatterOut,
+                                                             const mlocDataSet* data,
+                                                             const mlocLocale* locale,
+                                                             const mlocListOptions* options);
+
+    /// Writes items joined by a formatter's patterns: none as no text, one
+    /// as itself, two by the locale's pattern for two, more by its start,
+    /// middle and end patterns. Parts are mlocListPart values.
+    ///
+    /// @param formatter  A formatter mlocInitListFormatter made.
+    /// @param items      The items, count of them; may be null when count
+    ///                   is 0.
+    /// @param count      The number of items, at most UINT32_MAX.
+    /// @param output     Where the text goes (record mloc-0015).
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output's length then the size needed); mloc_errorInvalid
+    ///         for a formatter the library did not make, a null pointer, an
+    ///         item with a null text and a length, or a count past
+    ///         UINT32_MAX.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatList(const mlocListFormatter* formatter,
+                                                      const mlocListItem* items, size_t count,
+                                                      mlocOutput* output);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

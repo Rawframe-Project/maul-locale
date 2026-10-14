@@ -12,15 +12,14 @@
 #include "list_data.h"
 #include "number_core.h"
 
+#include "maul-locale/list.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
-// An item's text, which the contextual changes read.
-typedef struct ListItem
-{
-    const char* text;
-    size_t length;
-} ListItem;
+// An item's text, which the contextual changes read: the public list
+// item, so that a caller's array is joined as it is.
+typedef mlocListItem ListItem;
 
 // Writes an item, given its index (to report its parts).
 typedef void (*ListItemWriter)(void* context, uint32_t index, NumberWriter* writer);
