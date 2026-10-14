@@ -92,11 +92,11 @@ typedef struct UnitFormat
 // The names kind of a width.
 uint32_t mlocUnitWidthKind(mlocUnitWidth width);
 
-// A unit's normal identifier (mlocNormalizeUnitName); one the unit table
-// does not know but the names do ("generic", which converts to nothing)
-// as it is.
+// A unit's normal identifier (mlocNormalizeUnitName); one the names data
+// names, "generic" too (which converts to nothing), as it is, namedOut
+// then true.
 mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t length, char* out,
-                              size_t capacity, size_t* lengthOut);
+                              size_t capacity, size_t* lengthOut, bool* namedOut);
 
 // A unit's patterns in a width and case, by any identifier of it: its
 // normal identifier's (mlocBuildUnitForms), or as it is for one the unit

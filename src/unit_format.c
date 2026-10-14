@@ -62,12 +62,13 @@ static mlocResult FindNames(const mlocDataSet* data, const mlocLocale* locale, c
     char id[unitMaxIdLength];
     size_t length = 0;
     uint8_t idKind = 0;
-    mlocResult r = mlocNormalUnitName(data, unit, unitLength, id, sizeof(id), &length);
+    bool named = false;
+    mlocResult r = mlocNormalUnitName(data, unit, unitLength, id, sizeof(id), &length, &named);
     if (r != mloc_success)
     {
         return r;
     }
-    if (!mlocUnitNameKind(data, id, length, &idKind) || idKind != unitIdUnit ||
+    if ((!named && (!mlocUnitNameKind(data, id, length, &idKind) || idKind != unitIdUnit)) ||
         !mlocGatherUnitNames(data, locale, kind, id, length, names))
     {
         return mloc_errorNotFound;
@@ -128,16 +129,17 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     }
     u.outputs = 1;
     u.output[0].parts = 1;
-    mlocResult found = o->usageLength > 0
-                           ? mlocInitUsage(&u, data, locale, unit, unitLength, o, &used)
-                       : mlocIsMixedUnit(unit, unitLength)
-                           ? mlocInitMixedUnit(&u, data, locale, unit, unitLength, o, &used)
-                           : mlocNormalUnitName(data, unit, unitLength, id, sizeof(id), &idLength);
+    bool named = false;
+    mlocResult found =
+        o->usageLength > 0 ? mlocInitUsage(&u, data, locale, unit, unitLength, o, &used)
+        : mlocIsMixedUnit(unit, unitLength)
+            ? mlocInitMixedUnit(&u, data, locale, unit, unitLength, o, &used)
+            : mlocNormalUnitName(data, unit, unitLength, id, sizeof(id), &idLength, &named);
     bool single = !u.usage && u.output[0].parts == 1;
     if (found == mloc_success && single)
     {
         UnitForms forms;
-        found = mlocBuildUnitForms(data, locale, id, idLength, mlocUnitWidthKind(o->width),
+        found = mlocBuildUnitForms(data, locale, id, idLength, named, mlocUnitWidthKind(o->width),
                                    u.grammaticalCase, &forms);
         found = found == mloc_success ? mlocAddUnitPatterns(&u, 0, &used, &forms) : found;
     }

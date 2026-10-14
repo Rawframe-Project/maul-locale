@@ -225,6 +225,11 @@ typedef struct Gathering
     // A case's index past the nominative, for the case rows; else 0.
     uint32_t caseIndex;
     UnitNameFields* fields;
+    // The identifier's code in the source last visited, whose ids table
+    // the walk's later steps would look up again.
+    const uint8_t* source;
+    DataSpan ids;
+    uint16_t code;
 } Gathering;
 
 static bool Gather(void* context, DataSpan unit, const DataView* view, int depth)
@@ -232,14 +237,17 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
     (void)depth;
     Gathering* g = context;
     UnitNameFields* f = g->fields;
-    DataSpan ids;
-    uint16_t code = 0;
     uint8_t kind = 0;
-    if (!mlocFindDataUnit(view, kindUnitIds, dataNoLocale, &ids) ||
-        !mlocFindUnitNameId(ids, g->id, g->length, &code, &kind))
+    if (g->source != view->bytes &&
+        (!mlocFindDataUnit(view, kindUnitIds, dataNoLocale, &g->ids) ||
+         !mlocFindUnitNameId(g->ids, g->id, g->length, &g->code, &kind)))
     {
+        g->source = nullptr;
         return false;
     }
+    g->source = view->bytes;
+    DataSpan ids = g->ids;
+    uint16_t code = g->code;
     // A case row's code: the identifier's index past those of the cases
     // before.
     uint32_t full = code + (g->caseIndex > 0 ? (g->caseIndex - 1) * mlocLoad16(ids.bytes) : 0);

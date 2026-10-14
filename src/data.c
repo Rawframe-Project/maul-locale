@@ -316,9 +316,10 @@ bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uin
 }
 
 // The search of a unit table, taking the view's two fields by value so
-// that the set's loop keeps them in registers.
-static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
-                            uint32_t locale, DataSpan* spanOut)
+// that the set's loop keeps them in registers; on a miss, where the key
+// would be.
+static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
+                              uint32_t locale, DataSpan* spanOut, uint32_t* atOut)
 {
     uint64_t key = (uint64_t)kind << 32 | locale;
     uint32_t low = 0;
@@ -342,12 +343,36 @@ static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t k
             high = middle;
         }
     }
+    *atOut = low;
     return false;
+}
+
+static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
+                            uint32_t locale, DataSpan* spanOut)
+{
+    uint32_t at = 0;
+    return FindUnitAt(bytes, unitCount, kind, locale, spanOut, &at);
 }
 
 bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut)
 {
     return FindUnit(view->bytes, view->unitCount, kind, locale, spanOut);
+}
+
+bool mlocFindDataUnitOrKind(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut,
+                            bool* noKindOut)
+{
+    uint32_t at = 0;
+    if (FindUnitAt(view->bytes, view->unitCount, kind, locale, spanOut, &at))
+    {
+        return true;
+    }
+    // The units sort by kind, then locale: a kind's units lie together,
+    // so a miss between two units of other kinds means none.
+    const uint8_t* units = view->bytes + dataHeaderSize;
+    *noKindOut = (at == 0 || mlocLoad32(units + (size_t)(at - 1) * dataUnitSize) != kind) &&
+                 (at == view->unitCount || mlocLoad32(units + (size_t)at * dataUnitSize) != kind);
+    return false;
 }
 
 bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind)

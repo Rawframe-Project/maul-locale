@@ -752,12 +752,13 @@ static mlocResult BuildArbitrary(const Context* c, const UnitId* id, Grammatical
 }
 
 mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
-                              size_t length, uint32_t kind, uint32_t gcase, UnitForms* out)
+                              size_t length, bool named, uint32_t kind, uint32_t gcase,
+                              UnitForms* out)
 {
     Context c = {.data = data, .locale = locale, .kind = kind, .lower = kind == kindUnitNamesLong};
     GrammaticalCase k = (GrammaticalCase)(gcase < unitCaseCount ? gcase : unitCaseNominative);
     uint8_t idKind = 0;
-    if (mlocUnitNameKind(data, unit, length, &idKind) && idKind == unitIdUnit)
+    if (named || (mlocUnitNameKind(data, unit, length, &idKind) && idKind == unitIdUnit))
     {
         return LoadNamed(&c, unit, length, k, out);
     }

@@ -81,7 +81,7 @@ mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t slot, size_t* used, const
 }
 
 mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t length, char* out,
-                              size_t capacity, size_t* lengthOut)
+                              size_t capacity, size_t* lengthOut, bool* namedOut)
 {
     // A unit the names data names is its own normal identifier (or one
     // normalizing does not find): test_unit_names checks each.
@@ -90,8 +90,10 @@ mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t 
     {
         memcpy(out, unit, length);
         *lengthOut = length;
+        *namedOut = true;
         return mloc_success;
     }
+    *namedOut = false;
     return mlocNormalizeUnitName(data, unit, length, out, capacity, lengthOut);
 }
 
@@ -100,8 +102,11 @@ mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, 
 {
     char id[unitMaxIdLength];
     size_t idLength = 0;
-    mlocResult r = mlocNormalUnitName(data, unit, length, id, sizeof(id), &idLength);
-    return r == mloc_success ? mlocBuildUnitForms(data, locale, id, idLength, kind, gcase, out) : r;
+    bool named = false;
+    mlocResult r = mlocNormalUnitName(data, unit, length, id, sizeof(id), &idLength, &named);
+    return r == mloc_success
+               ? mlocBuildUnitForms(data, locale, id, idLength, named, kind, gcase, out)
+               : r;
 }
 
 void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out)

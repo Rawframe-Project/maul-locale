@@ -412,6 +412,9 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
     // steps.
     Parents parents;
     bool parentsOpen = false;
+    // The first 32 sources found to hold no unit of the kind, which the
+    // later steps skip.
+    uint32_t without = 0;
     mlocLocale step = FirstStep(data, locale);
     for (int depth = 0; depth <= maxChain; depth++)
     {
@@ -422,8 +425,17 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
             DataView view = mlocViewOf(&data->sources[s]);
             uint32_t index = 0;
             DataSpan span;
-            if (mlocFindDataLocale(&view, key, length, &index) &&
-                mlocFindDataUnit(&view, kind, index, &span) && visit(context, span, &view, depth))
+            bool none = false;
+            if ((s < 32 && (without >> s & 1) != 0) ||
+                !mlocFindDataLocale(&view, key, length, &index))
+            {
+                continue;
+            }
+            if (!mlocFindDataUnitOrKind(&view, kind, index, &span, &none))
+            {
+                without |= none && s < 32 ? 1u << s : 0;
+            }
+            else if (visit(context, span, &view, depth))
             {
                 return true;
             }
