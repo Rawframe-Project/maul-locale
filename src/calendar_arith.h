@@ -5,8 +5,10 @@
 // and day and back, after Reingold and Dershowitz's Calendrical
 // Calculations, with Persian's 33-year rule and its corrections as both
 // ICUs have them. Days are those of maul-locale/calendar.h; years are
-// counted on across eras. Every function takes a calendar mlocArithmetic
-// accepts and values in Temporal's range.
+// counted on across eras. Every function takes a Gregorian-based,
+// Coptic, Ethiopic, Indian, Persian or tabular Islamic calendar (the
+// other calendars' files use the Gregorian) and values in Temporal's
+// range.
 
 #ifndef MLOC_CALENDAR_ARITH_H
 #define MLOC_CALENDAR_ARITH_H
@@ -23,9 +25,6 @@ typedef struct CalendarDate
     uint8_t month;
     uint8_t day;
 } CalendarDate;
-
-// Whether the calendar is one of this file's.
-bool mlocArithmetic(mlocCalendar calendar);
 
 CalendarDate mlocArithmeticFromDay(mlocCalendar calendar, int32_t day);
 

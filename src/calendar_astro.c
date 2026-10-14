@@ -16,6 +16,10 @@ enum
 {
     // The lunation numbered 0 in the new-moon terms (January 6 of 2000).
     lunationOfJ2000 = 24724,
+    // The years 50 centuries either side of 2000, past which the model
+    // holds the fits that would otherwise run away.
+    heldFirstYear = -3000,
+    heldLastYear = 7000,
 };
 
 // The days of a mean lunation in billionths, and of a mean tropical year
@@ -261,6 +265,11 @@ int64_t mlocAstroDeltaT(int64_t moment)
 {
     int32_t day = (int32_t)FloorDiv(moment, s_unit);
     int64_t year = mlocArithmeticFromDay(mloc_calendarGregorian, day).year;
+    // Held past 50 centuries from 2000, as the new moon's eccentricity
+    // factor is: the parabola would move universal time by years (2,133
+    // days at the range's start) and walk the new year around the
+    // Gregorian year.
+    year = year < heldFirstYear ? heldFirstYear : year > heldLastYear ? heldLastYear : year;
     return RoundDiv(DeltaSeconds(year), 86400);
 }
 

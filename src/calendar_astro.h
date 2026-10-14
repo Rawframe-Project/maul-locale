@@ -12,6 +12,9 @@
 // degrees scaled by 2^32. The functions are defined for moments within
 // a few days of the dates' range; the model's terms are fitted to
 // recent millennia and are only consistent, not true, far from them.
+// Past 50 centuries from 2000 (the years -3000 and 7000) two fits are
+// held at their values there: the ephemeris correction, and the new
+// moon's eccentricity factor.
 
 #ifndef MLOC_CALENDAR_ASTRO_H
 #define MLOC_CALENDAR_ASTRO_H

@@ -24,22 +24,22 @@ Returns the name of a result code, for diagnostics.  @param result  Any value; a
 
 ## `calendar.h`
 
-Calendars (UTS #35 Part 4, record mloc-0040): dates as values in CLDR's calendars, as Temporal models them. A date is a day, counted from January 1 of year 1 in the proleptic Gregorian calendar (day 1), read in a calendar; its fields (year, era, month code, day) are computed from it. Calendars without a built implementation yet refuse with mloc_errorNotFound.
+Calendars (UTS #35 Part 4, record mloc-0040): dates as values in CLDR's calendars, as Temporal models them. A date is a day, counted from January 1 of year 1 in the proleptic Gregorian calendar (day 1), read in a calendar; its fields (year, era, month code, day) are computed from it.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocOverflow overflow, mlocDate* dateOut);
 ```
-Makes a date from its fields in a calendar, as Temporal's PlainDate.from does: a month or day past the calendar's is clamped to the last (mloc_overflowConstrain) or refused (mloc_overflowReject), and so is a leap month the year lacks (made the month after it); a month code no year of the calendar has, an unknown era, or a month or day below 1 is refused either way.  @param calendar  The calendar. @param input     The fields. @param overflow  What a month or day past the calendar's does. @param dateOut   Receives the date; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a value out of range or refused, or a date outside Temporal's range; mloc_errorSyntax for an era or month code not of the calendar; mloc_errorNotFound for a calendar not built yet. @par Thread safety Safe from any thread.
+Makes a date from its fields in a calendar, as Temporal's PlainDate.from does: a month or day past the calendar's is clamped to the last (mloc_overflowConstrain) or refused (mloc_overflowReject), and so is a leap month the year lacks (made the month after it); a month code no year of the calendar has, an unknown era, or a month or day below 1 is refused either way.  @param calendar  The calendar. @param input     The fields. @param overflow  What a month or day past the calendar's does. @param dateOut   Receives the date; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a value out of range or refused, or a date outside Temporal's range; mloc_errorSyntax for an era or month code not of the calendar. @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocMakeDateFromDay(mlocCalendar calendar, int32_t day, mlocDate* dateOut);
 ```
-Makes the date of a day in a calendar.  @param calendar  The calendar. @param day       The day, 1 for January 1 of year 1 in the proleptic Gregorian calendar. @param dateOut   Receives the date; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a calendar out of range, or a day outside Temporal's range; mloc_errorNotFound for a calendar not built yet. @par Thread safety Safe from any thread.
+Makes the date of a day in a calendar.  @param calendar  The calendar. @param day       The day, 1 for January 1 of year 1 in the proleptic Gregorian calendar. @param dateOut   Receives the date; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a calendar out of range, or a day outside Temporal's range. @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut);
 ```
-Computes a date's fields in its calendar.  @param date       The date. @param fieldsOut  Receives the fields. @return mloc_success; mloc_errorInvalid for a null pointer or a date the library did not make (a day out of range, an unknown calendar, reserved bytes not zero); mloc_errorNotFound for a calendar not built yet. @par Thread safety Safe from any thread.
+Computes a date's fields in its calendar.  @param date       The date. @param fieldsOut  Receives the fields. @return mloc_success; mloc_errorInvalid for a null pointer or a date the library did not make (a day out of range, an unknown calendar, reserved bytes not zero). @par Thread safety Safe from any thread.
 
 ## `currency.h`
 

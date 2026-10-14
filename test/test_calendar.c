@@ -35,7 +35,10 @@ typedef struct Case
 // Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar,
 // and a new year put off a day after a leap year (5766); Japan's eras on
 // their first days, ce until Meiji 6; Umm al-Qura at its table's ends,
-// in two of its leap years, and tabular outside.
+// in two of its leap years, and tabular outside; Chinese and Dangi new
+// years, leap months (2033's eleventh, by the rule of GB/T 33661) and the
+// days Korea changed zones, 1912 to 2099, where ICU4X follows the
+// observatories.
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -227,6 +230,34 @@ static const Case s_cases[] = {
     {mloc_calendarIslamicUmalqura, 794001, 1600, "ah", 1600, 12, false, 30, 0, 354, 30},
     {mloc_calendarIslamicUmalqura, 794002, 1601, "ah", 1601, 1, false, 1, 0, 354, 30},
     {mloc_calendarIslamicUmalqura, 100719163, 283583, "ah", 283583, 5, false, 23, 0, 354, 30},
+    {mloc_calendarChinese, 742529, 2033, "", 2033, 11, true, 1, 1, 384, 29},
+    {mloc_calendarChinese, 742558, 2033, "", 2033, 12, false, 1, 1, 384, 30},
+    {mloc_calendarChinese, 738601, 2023, "", 2023, 2, true, 1, 1, 384, 29},
+    {mloc_calendarChinese, 738630, 2023, "", 2023, 3, false, 1, 1, 384, 29},
+    {mloc_calendarChinese, 738542, 2023, "", 2023, 1, false, 1, 1, 384, 29},
+    {mloc_calendarChinese, 738541, 2022, "", 2022, 12, false, 30, 0, 355, 30},
+    {mloc_calendarChinese, 738926, 2024, "", 2024, 1, false, 1, 0, 354, 29},
+    {mloc_calendarChinese, 737568, 2020, "", 2020, 4, true, 1, 1, 384, 29},
+    {mloc_calendarChinese, 724692, 1985, "", 1985, 1, false, 1, 0, 354, 29},
+    {mloc_calendarChinese, 752552, 2061, "", 2061, 4, false, 14, 1, 384, 30},
+    {mloc_calendarChinese, 766644, 2099, "", 2099, 11, false, 20, 1, 384, 29},
+    {mloc_calendarChinese, 698026, 1912, "", 1912, 1, false, 1, 0, 354, 30},
+    {mloc_calendarChinese, 713398, 1954, "", 1954, 2, false, 17, 0, 355, 29},
+    {mloc_calendarChinese, 716097, 1961, "", 1961, 6, false, 29, 0, 355, 29},
+    {mloc_calendarDangi, 742529, 2033, "", 2033, 11, true, 1, 1, 384, 29},
+    {mloc_calendarDangi, 742558, 2033, "", 2033, 12, false, 1, 1, 384, 30},
+    {mloc_calendarDangi, 738601, 2023, "", 2023, 2, true, 1, 1, 384, 29},
+    {mloc_calendarDangi, 738630, 2023, "", 2023, 3, false, 1, 1, 384, 30},
+    {mloc_calendarDangi, 738542, 2023, "", 2023, 1, false, 1, 1, 384, 29},
+    {mloc_calendarDangi, 738541, 2022, "", 2022, 12, false, 30, 0, 355, 30},
+    {mloc_calendarDangi, 738926, 2024, "", 2024, 1, false, 1, 0, 354, 29},
+    {mloc_calendarDangi, 737568, 2020, "", 2020, 4, true, 1, 1, 384, 29},
+    {mloc_calendarDangi, 724692, 1985, "", 1985, 1, false, 1, 0, 354, 29},
+    {mloc_calendarDangi, 752552, 2061, "", 2061, 4, false, 14, 1, 383, 30},
+    {mloc_calendarDangi, 766644, 2099, "", 2099, 11, false, 20, 1, 384, 29},
+    {mloc_calendarDangi, 698026, 1912, "", 1912, 1, false, 1, 0, 354, 30},
+    {mloc_calendarDangi, 713398, 1954, "", 1954, 2, false, 17, 0, 354, 29},
+    {mloc_calendarDangi, 716097, 1961, "", 1961, 6, false, 29, 0, 355, 29},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
@@ -452,6 +483,64 @@ static void TestUmalquraAliases(void)
     CHECK(all, "islamic and islamic-rgsa read as Umm al-Qura");
 }
 
+// Chinese and Dangi dates made back from their fields over the range,
+// with years and months of the calendar's shape.
+static void TestLunisolarRange(void)
+{
+    static const mlocCalendar s_lunisolar[] = {mloc_calendarChinese, mloc_calendarDangi};
+    bool all = true;
+    for (size_t c = 0; c < 2; c++)
+    {
+        for (int64_t day = mlocDateMinDay; all && day <= mlocDateMaxDay; day += 999983)
+        {
+            mlocDateFields f;
+            all = MadeBack(s_lunisolar[c], (int32_t)day) &&
+                  Fields(s_lunisolar[c], (int32_t)day, &f) &&
+                  (f.monthsInYear == 12 || f.monthsInYear == 13) &&
+                  (f.daysInMonth == 29 || f.daysInMonth == 30) &&
+                  f.daysInYear >= 29 * f.monthsInYear && f.daysInYear <= 30 * f.monthsInYear &&
+                  f.dayOfYear <= f.daysInYear;
+            if (!all)
+            {
+                printf("calendar %d day %d\n", (int)s_lunisolar[c], (int)day);
+            }
+        }
+        all = all && MadeBack(s_lunisolar[c], mlocDateMinDay) &&
+              MadeBack(s_lunisolar[c], mlocDateMaxDay);
+        for (int32_t day = 738500; all && day <= 742600; day += 29)
+        {
+            all = MadeBack(s_lunisolar[c], day);
+        }
+    }
+    CHECK(all, "Chinese and Dangi dates made back, of 12 or 13 months of 29 or 30 days");
+}
+
+// Leap months by code: 2023's 'M02L', which 2024 lacks.
+static void TestLunisolarLeap(void)
+{
+    mlocDateInput leap = {.year = 2023, .monthCode = "M02L", .monthCodeLength = 4, .day = 1};
+    mlocDateInput after = {.year = 2023, .monthCode = "M03", .monthCodeLength = 3, .day = 1};
+    mlocDateInput fourth = {.year = 2023, .month = 4, .day = 1};
+    mlocDateInput both = {
+        .year = 2023, .monthCode = "M02L", .monthCodeLength = 4, .month = 2, .day = 1};
+    mlocDateInput absent = {.year = 2024, .monthCode = "M02L", .monthCodeLength = 4, .day = 1};
+    mlocDateInput twelfth = {.year = 2022, .monthCode = "M12L", .monthCodeLength = 4, .day = 1};
+    mlocDateInput thirteenth = {.year = 2023, .monthCode = "M13", .monthCodeLength = 3, .day = 1};
+    mlocDateInput place = {.year = 2024, .month = 13, .day = 1};
+    CHECK(
+        Made(mloc_calendarChinese, &leap, mloc_overflowReject, mloc_success, 738601) &&
+            Made(mloc_calendarChinese, &after, mloc_overflowReject, mloc_success, 738630) &&
+            Made(mloc_calendarChinese, &fourth, mloc_overflowReject, mloc_success, 738630) &&
+            Made(mloc_calendarChinese, &both, mloc_overflowReject, mloc_errorInvalid, 0) &&
+            Made(mloc_calendarChinese, &absent, mloc_overflowConstrain, mloc_success, 738955) &&
+            Made(mloc_calendarChinese, &absent, mloc_overflowReject, mloc_errorInvalid, 0) &&
+            Made(mloc_calendarDangi, &twelfth, mloc_overflowConstrain, mloc_success, 738512) &&
+            Made(mloc_calendarChinese, &thirteenth, mloc_overflowConstrain, mloc_errorSyntax, 0) &&
+            Made(mloc_calendarChinese, &place, mloc_overflowReject, mloc_errorInvalid, 0),
+        "a leap month by code and by place; one the year lacks made the month of its "
+        "number, or refused; no thirteenth month");
+}
+
 static void TestRefusals(void)
 {
     mlocDate date;
@@ -467,6 +556,7 @@ static void TestRefusals(void)
     mlocDate reserved = {.day = 1, .reserved = {1}};
     mlocDate outside = {.day = mlocDateMaxDay + 1};
     mlocDate dangi = {.day = 1, .calendar = mloc_calendarDangi};
+    mlocDateInput lunarFar = {.year = 275762, .month = 1, .day = 1};
     CHECK(
         mlocMakeDate(mloc_calendarGregorian, nullptr, mloc_overflowReject, &date) ==
                 mloc_errorInvalid &&
@@ -484,19 +574,17 @@ static void TestRefusals(void)
                  0) &&
             Made(mloc_calendarGregorian, &codeLength, mloc_overflowConstrain, mloc_errorInvalid,
                  0) &&
-            Made(mloc_calendarChinese, &ok, mloc_overflowConstrain, mloc_errorNotFound, 0) &&
+            Made(mloc_calendarChinese, &lunarFar, mloc_overflowConstrain, mloc_errorInvalid, 0) &&
             mlocMakeDateFromDay(mloc_calendarGregorian, mlocDateMinDay - 1, &date) ==
                 mloc_errorInvalid &&
             mlocMakeDateFromDay(mloc_calendarGregorian, 1, nullptr) == mloc_errorInvalid &&
             mlocMakeDateFromDay((mlocCalendar)18, 1, &date) == mloc_errorInvalid &&
-            mlocMakeDateFromDay(mloc_calendarChinese, 1, &date) == mloc_errorNotFound &&
             mlocGetDateFields(nullptr, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&dangi, nullptr) == mloc_errorInvalid &&
             mlocGetDateFields(&bad, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&reserved, &f) == mloc_errorInvalid &&
-            mlocGetDateFields(&outside, &f) == mloc_errorInvalid &&
-            mlocGetDateFields(&dangi, &f) == mloc_errorNotFound,
-        "every refusal, and the calendars not built yet");
+            mlocGetDateFields(&outside, &f) == mloc_errorInvalid,
+        "every refusal");
 }
 
 int main(void)
@@ -508,6 +596,8 @@ int main(void)
     TestEras();
     TestFields();
     TestUmalquraAliases();
+    TestLunisolarRange();
+    TestLunisolarLeap();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

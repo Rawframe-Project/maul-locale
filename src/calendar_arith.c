@@ -195,28 +195,6 @@ static CalendarDate IslamicFromDay(int64_t epoch, int64_t day)
                           (uint8_t)(day - IslamicDay(epoch, year, month, 1) + 1)};
 }
 
-bool mlocArithmetic(mlocCalendar calendar)
-{
-    switch (calendar)
-    {
-    case mloc_calendarGregorian:
-    case mloc_calendarIso8601:
-    case mloc_calendarBuddhist:
-    case mloc_calendarRoc:
-    case mloc_calendarJapanese:
-    case mloc_calendarCoptic:
-    case mloc_calendarEthiopic:
-    case mloc_calendarEthiopicAmeteAlem:
-    case mloc_calendarIndian:
-    case mloc_calendarPersian:
-    case mloc_calendarIslamicCivil:
-    case mloc_calendarIslamicTbla:
-        return true;
-    default:
-        return false;
-    }
-}
-
 // The Gregorian year's offset of a Gregorian-based calendar.
 static int64_t GregorianOffset(mlocCalendar calendar)
 {

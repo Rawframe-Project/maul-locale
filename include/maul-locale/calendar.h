@@ -5,8 +5,7 @@
 // CLDR's calendars, as Temporal models them. A date is a day, counted
 // from January 1 of year 1 in the proleptic Gregorian calendar (day 1), read in a
 // calendar; its fields (year, era, month code, day) are computed from
-// it. Calendars without a built implementation yet refuse with
-// mloc_errorNotFound.
+// it.
 
 #ifndef MAUL_LOCALE_CALENDAR_H
 #define MAUL_LOCALE_CALENDAR_H
@@ -154,8 +153,7 @@ extern "C"
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         value out of range or refused, or a date outside
     ///         Temporal's range; mloc_errorSyntax for an era or month code
-    ///         not of the calendar; mloc_errorNotFound for a calendar not
-    ///         built yet.
+    ///         not of the calendar.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocMakeDate(mlocCalendar calendar,
@@ -169,8 +167,7 @@ extern "C"
     ///                  Gregorian calendar.
     /// @param dateOut   Receives the date; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
-    ///         calendar out of range, or a day outside Temporal's range;
-    ///         mloc_errorNotFound for a calendar not built yet.
+    ///         calendar out of range, or a day outside Temporal's range.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocMakeDateFromDay(mlocCalendar calendar, int32_t day,
@@ -182,8 +179,7 @@ extern "C"
     /// @param fieldsOut  Receives the fields.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
     ///         date the library did not make (a day out of range, an unknown
-    ///         calendar, reserved bytes not zero); mloc_errorNotFound for a
-    ///         calendar not built yet.
+    ///         calendar, reserved bytes not zero).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocGetDateFields(const mlocDate* date,

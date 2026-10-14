@@ -65,10 +65,27 @@ an explicit choice when a field overflows.
   - The ephemeris correction takes the moment's Gregorian year, as the
     book does (calendrical_calculations 0.2.4 approximates it, a few
     seconds apart near New Year).
-  - The new moon's eccentricity factor is held past 50 centuries from
-    2000. Its square would otherwise scale the terms to days and make
-    months of 21 to 43 days at the range's ends; held, every lunation
-    over the range is 29.2 to 29.9 days.
+  - Past 50 centuries from 2000 (the years -3000 and 7000) two fits are
+    held at their values there. The first is the new moon's
+    eccentricity factor: its square would scale the terms to days and
+    make months of 21 to 43 days at the range's ends. Held, every
+    lunation over the range is 29.2 to 29.9 days. The second is the
+    ephemeris correction's year: its parabola would move universal
+    time by years (2,133 days at the range's start) and walk the new
+    year round the Gregorian year. Held, the new year stays between
+    late October and mid-May over the whole range.
+  - The months follow the book. A month begins on the day of a new
+    moon in China's time (Beijing's mean time before 1929, UTC+8 after)
+    or Korea's (Seoul's mean time, then UTC+8:30 and UTC+9 by the dates
+    of 1908, 1912, 1954 and 1961). The eleventh month holds the winter
+    solstice. In a solstice-to-solstice span of thirteen months, the
+    first month without a major solar term is the leap month; this
+    gives 2033's leap eleventh month, as GB/T 33661-2017 does.
+  - A year is numbered by the Gregorian year whose July 1 it holds, as
+    Temporal and ICU4X number it. The year has no era, and its months'
+    codes are 'M01' to 'M12', a leap month taking the code of the month
+    before it with 'L'. A leap month the year lacks is constrained to
+    the month of its number.
 - **Japanese eras** come from CLDR's data: the generator writes them as
   a compiled table (`src/generated/calendar_eras.c`), each era's code,
   its first Gregorian year and its first day. Nothing reads the
@@ -81,7 +98,7 @@ an explicit choice when a field overflows.
 
 ## Proof
 
-`test_calendar` checks each built calendar's fields at days across
+`test_calendar` checks each calendar's fields at days across
 the range as ICU4X 2.3 gives them. It also makes dates back from their
 fields by era and by year, by code and by place, across 2.4 million
 days. Overflow, eras and their aliases, month codes, the other fields
@@ -92,6 +109,22 @@ A run outside the repository compared every day from 1600 to 2400, and
 arithmetic calendars built first, and then for Hebrew, Japanese and
 Umm al-Qura (every day from 1600 to 2400 and 3,999 days over the range, the leap
 year and the year's and month's lengths included): no difference.
+For Chinese and Dangi, every month start from 1600 to 2400 was
+compared:
+- Against binary64 Reingold (calendrical_calculations 0.2.4), every
+  start agrees. Its year-based leap rule places the leap month
+  differently in 4 Chinese and 4 Dangi years whose leap month follows
+  the solstice; 2033 is one of them.
+- Against ICU4X's observatory tables (1900 to 2100), every start agrees
+  except Qing China's 1906 and Korea before 1912. Those are the
+  overrides the tables slice adds.
+- Against ICU4C 79, 170 of 9,907 lines differ in each calendar. These
+  are new moons near midnight that ICU4C's reduced astronomy decides
+  otherwise.
+
+`test_calendar_astro` checks the astronomy against a 45-digit
+evaluation of the book, and the model's own bits on both product
+paths.
 `test_gencalendar` checks the era table's generator and its
 refusals. The differential test
 against ICU4C 79 and ICU4X joins CI with the other calendars.
@@ -99,7 +132,6 @@ against ICU4C 79 and ICU4X joins CI with the other calendars.
 ## Consequences
 
 Dates need no data except the Japanese eras and the astronomical and
-Umm al-Qura tables, a few KB in all. A Chinese or Dangi date outside
-1600 to 2400 costs about 100 microseconds, against nanoseconds inside.
-Calendars land one slice at a time; until a calendar's slice, its
-functions refuse with `mloc_errorNotFound`.
+Umm al-Qura tables, a few KB in all. A Chinese or Dangi year costs
+about 0.4 milliseconds to compute; once the tables land, a date
+inside 1600 to 2400 costs nanoseconds.
