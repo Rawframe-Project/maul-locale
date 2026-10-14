@@ -2,8 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // test262's Temporal calendar cases (record mloc-0040): every assertion its
-// PlainDate tests make about a date made from fields, in
-// test262_calendar.inc, checked against mlocMakeDate and mlocGetDateFields.
+// PlainDate tests make about a date made from fields or by adding
+// durations, in test262_calendar.inc, checked against mlocMakeDate,
+// mlocAddToDate and mlocGetDateFields.
 // The rows were recorded by running the tests on the library through a
 // reader of their JavaScript, kept in the docs with the oracle programs.
 // A row giving a year as well as an era and its year is refused when the
@@ -23,6 +24,7 @@ static const char* const s_rows[] = {
 enum
 {
     maxTokens = 24,
+    rowCount = sizeof s_rows / sizeof s_rows[0],
 };
 
 typedef struct Token
@@ -128,6 +130,10 @@ typedef enum Made
     madeRefused,
     madeBadRow,
 } Made;
+
+// Each row's date and how it was made, for the rows that add to it.
+static mlocDate s_dates[rowCount];
+static Made s_made[rowCount];
 
 // The date of an ISO origin: "iso year month day".
 static Made MakeIso(mlocCalendar calendar, const Token* tokens, mlocDate* dateOut)
@@ -250,31 +256,77 @@ static bool Expected(Token expectation, const mlocDateFields* f)
     return false;
 }
 
-static void CheckRow(const char* row, size_t* checksOut)
+// A date added to: "@index add years months weeks days overflow", the
+// index that of an earlier row which made its date.
+static Made MakeAdded(const Token* tokens, size_t row, mlocDate* dateOut)
 {
-    Token tokens[maxTokens];
-    size_t count = Split(row, tokens);
-    mlocCalendar calendar = mloc_calendarGregorian;
-    if (count < 7 || !CalendarOf(tokens[0], &calendar) ||
-        !(Is(tokens[1], "c") || Is(tokens[1], "r")))
+    int64_t index = 0;
+    int64_t values[4] = {0};
+    Token at = {tokens[0].text + 1, tokens[0].length - 1};
+    if (tokens[0].length < 2 || tokens[0].text[0] != '@' || !Number(at, &index) || index < 0 ||
+        (size_t)index >= row || s_made[index] != madeDate || !Is(tokens[1], "add") ||
+        !(Is(tokens[6], "c") || Is(tokens[6], "r")))
     {
-        printf("bad row: %s\n", row);
-        CHECK(false, "a row is well formed");
-        return;
+        return madeBadRow;
+    }
+    for (size_t i = 0; i < 4; i += 1)
+    {
+        if (!Number(tokens[2 + i], &values[i]))
+        {
+            return madeBadRow;
+        }
+    }
+    mlocDateDuration duration = {values[0], values[1], values[2], values[3]};
+    mlocOverflow overflow = Is(tokens[6], "r") ? mloc_overflowReject : mloc_overflowConstrain;
+    return mlocAddToDate(&s_dates[index], &duration, overflow, dateOut) == mloc_success
+               ? madeDate
+               : madeRefused;
+}
+
+// Makes a row's date: from fields, from an ISO date, or by adding to an
+// earlier row's; equalsOut receives the place of its '='.
+static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dateOut,
+                    size_t* equalsOut)
+{
+    mlocCalendar calendar = mloc_calendarGregorian;
+    if (count < 2 || !CalendarOf(tokens[0], &calendar))
+    {
+        return madeBadRow;
+    }
+    bool added = tokens[1].length > 0 && tokens[1].text[0] == '@';
+    bool iso = !added && count > 2 && Is(tokens[2], "iso");
+    size_t equals = added ? 8 : iso ? 6 : 8;
+    *equalsOut = equals;
+    if (count <= equals || !Is(tokens[equals], "="))
+    {
+        return madeBadRow;
+    }
+    if (added)
+    {
+        return MakeAdded(tokens + 1, row, dateOut);
+    }
+    if (!(Is(tokens[1], "c") || Is(tokens[1], "r")))
+    {
+        return madeBadRow;
     }
     mlocOverflow overflow = Is(tokens[1], "r") ? mloc_overflowReject : mloc_overflowConstrain;
-    bool iso = Is(tokens[2], "iso");
-    size_t equals = iso ? 6 : 8;
+    return iso ? MakeIso(calendar, tokens + 3, dateOut)
+               : MakeFields(calendar, overflow, tokens + 2, dateOut);
+}
+
+static void CheckRow(size_t row, size_t* checksOut)
+{
+    const char* text = s_rows[row];
+    Token tokens[maxTokens];
+    size_t count = Split(text, tokens);
+    size_t equals = 0;
     mlocDate date = {0};
-    Made made = madeBadRow;
-    if (count > equals && Is(tokens[equals], "="))
-    {
-        made = iso ? MakeIso(calendar, tokens + 3, &date)
-                   : MakeFields(calendar, overflow, tokens + 2, &date);
-    }
+    Made made = MakeRow(tokens, count, row, &date, &equals);
+    s_made[row] = made;
+    s_dates[row] = date;
     if (made == madeBadRow)
     {
-        printf("bad row: %s\n", row);
+        printf("bad row: %s\n", text);
         CHECK(false, "a row is well formed");
         return;
     }
@@ -283,14 +335,14 @@ static void CheckRow(const char* row, size_t* checksOut)
         *checksOut += 1;
         if (made != madeRefused)
         {
-            printf("made, test262 refuses: %s\n", row);
+            printf("made, test262 refuses: %s\n", text);
             CHECK(false, "test262's refusal");
         }
         return;
     }
     if (made == madeRefused)
     {
-        printf("refused, test262 makes it: %s\n", row);
+        printf("refused, test262 makes it: %s\n", text);
         CHECK(false, "test262's date");
         return;
     }
@@ -301,7 +353,7 @@ static void CheckRow(const char* row, size_t* checksOut)
         *checksOut += 1;
         if (!Expected(tokens[i], &fields))
         {
-            printf("%.*s differs: %s\n", (int)tokens[i].length, tokens[i].text, row);
+            printf("%.*s differs: %s\n", (int)tokens[i].length, tokens[i].text, text);
             CHECK(false, "test262's field");
         }
     }
@@ -313,7 +365,7 @@ int main(void)
     size_t rows = sizeof s_rows / sizeof s_rows[0];
     for (size_t i = 0; i < rows; i += 1)
     {
-        CheckRow(s_rows[i], &checks);
+        CheckRow(i, &checks);
     }
     printf("%zu rows, %zu checks\n", rows, checks);
     CHECK(rows > 0 && checks >= rows, "the table is read");

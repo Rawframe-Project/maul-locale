@@ -195,6 +195,13 @@ mlocResult mlocYearMonthOfCode(const CalendarYear* y, uint32_t number, bool leap
     return mloc_success;
 }
 
+bool mlocYearDateValid(const mlocDate* date)
+{
+    return date != nullptr && date->calendar < yearCalendarCount && date->day >= mlocDateMinDay &&
+           date->day <= mlocDateMaxDay && date->reserved[0] == 0 && date->reserved[1] == 0 &&
+           date->reserved[2] == 0;
+}
+
 static const int64_t s_monthNumberYears = INT64_C(1) << 34;
 
 static int64_t FloorDiv(int64_t a, int64_t b)

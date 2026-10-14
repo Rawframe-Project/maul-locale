@@ -82,3 +82,4 @@ calendar_eras:
 calendar_umalqura: calendar_arith
 calendar_year: calendar_arith calendar_chinese calendar_hebrew calendar_lunar calendar_umalqura
 calendar: calendar_arith calendar_eras calendar_year
+calendar_add: calendar_arith calendar_year

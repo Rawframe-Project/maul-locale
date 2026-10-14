@@ -185,6 +185,40 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocGetDateFields(const mlocDate* date,
                                                          mlocDateFields* fieldsOut);
 
+    // A date duration, Temporal's date part of a duration: years, months,
+    // weeks and days, none of another sign than the rest, years, months
+    // and weeks below 2^32 in size and days at most 104249991374 (2^53
+    // seconds).
+    typedef struct mlocDateDuration
+    {
+        int64_t years;
+        int64_t months;
+        int64_t weeks;
+        int64_t days;
+    } mlocDateDuration;
+
+    /// Adds a duration to a date in its calendar, as Temporal's
+    /// PlainDate.add does: the years first, keeping the month code (a leap
+    /// month the new year lacks is clamped as mlocMakeDate clamps it, or
+    /// refused), then the months, then the day clamped to its month or
+    /// refused, then weeks and days as days. Subtracting is adding the
+    /// negated duration.
+    ///
+    /// @param date      The date.
+    /// @param duration  The duration.
+    /// @param overflow  What a month code or day the result lacks does.
+    /// @param dateOut   Receives the date, in the date's calendar; left
+    ///                  unchanged on failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
+    ///         the library did not make, a duration out of its limits or of
+    ///         two signs, a month code or day refused, or a result outside
+    ///         Temporal's range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocAddToDate(const mlocDate* date,
+                                                     const mlocDateDuration* duration,
+                                                     mlocOverflow overflow, mlocDate* dateOut);
+
 #ifdef __cplusplus
 }
 #endif

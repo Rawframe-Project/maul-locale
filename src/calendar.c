@@ -14,7 +14,6 @@
 
 enum
 {
-    calendarCount = 18,
     // Years past this are refused before any arithmetic; Temporal's range
     // lies well within.
     maxYear = 1000000,
@@ -183,7 +182,7 @@ static mlocResult YearOfInput(mlocCalendar calendar, const mlocDateInput* input,
 mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocOverflow overflow,
                         mlocDate* dateOut)
 {
-    if (input == nullptr || dateOut == nullptr || (uint32_t)calendar >= calendarCount ||
+    if (input == nullptr || dateOut == nullptr || (uint32_t)calendar >= yearCalendarCount ||
         (uint32_t)overflow > mloc_overflowReject ||
         (input->era == nullptr && input->eraLength != 0) ||
         (input->monthCode == nullptr && input->monthCodeLength != 0))
@@ -227,7 +226,7 @@ mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocO
 
 mlocResult mlocMakeDateFromDay(mlocCalendar calendar, int32_t day, mlocDate* dateOut)
 {
-    if (dateOut == nullptr || (uint32_t)calendar >= calendarCount || day < mlocDateMinDay ||
+    if (dateOut == nullptr || (uint32_t)calendar >= yearCalendarCount || day < mlocDateMinDay ||
         day > mlocDateMaxDay)
     {
         return mloc_errorInvalid;
@@ -260,9 +259,7 @@ static void SetEra(mlocCalendar calendar, int32_t day, int32_t year, mlocDateFie
 
 mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
 {
-    if (date == nullptr || fieldsOut == nullptr || date->calendar >= calendarCount ||
-        date->day < mlocDateMinDay || date->day > mlocDateMaxDay || date->reserved[0] != 0 ||
-        date->reserved[1] != 0 || date->reserved[2] != 0)
+    if (!mlocYearDateValid(date) || fieldsOut == nullptr)
     {
         return mloc_errorInvalid;
     }

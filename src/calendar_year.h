@@ -35,6 +35,15 @@ typedef struct CalendarYear
     LunisolarYear lunar;
 } CalendarYear;
 
+enum
+{
+    yearCalendarCount = 18,
+};
+
+// Whether a date is one the library made: not null, a known calendar, a
+// day in Temporal's range, reserved bytes zero.
+bool mlocYearDateValid(const mlocDate* date);
+
 CalendarSource mlocYearSource(mlocCalendar calendar);
 bool mlocYearLunisolar(CalendarSource source);
 

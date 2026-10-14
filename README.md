@@ -74,8 +74,9 @@ subdivision names another, `src/generated/subdivisions.mloc`); and
 dates as values in CLDR's calendars, as Temporal models them, with era
 and month codes and overflow constrained or refused, all 18 of
 them (each day from 1600 to 2400 as ICU4X computes it, and the
-Chinese and Dangi calendars from integer astronomy).
-The library has 66 public functions.
+Chinese and Dangi calendars from integer astronomy), with durations
+added to them as Temporal adds them.
+The library has 67 public functions.
 
 ## Building
 

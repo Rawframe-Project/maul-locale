@@ -41,6 +41,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetDateFields(const mlocDate* date, mlocD
 ```
 Computes a date's fields in its calendar.  @param date       The date. @param fieldsOut  Receives the fields. @return mloc_success; mloc_errorInvalid for a null pointer or a date the library did not make (a day out of range, an unknown calendar, reserved bytes not zero). @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocAddToDate(const mlocDate* date, const mlocDateDuration* duration, mlocOverflow overflow, mlocDate* dateOut);
+```
+Adds a duration to a date in its calendar, as Temporal's PlainDate.add does: the years first, keeping the month code (a leap month the new year lacks is clamped as mlocMakeDate clamps it, or refused), then the months, then the day clamped to its month or refused, then weeks and days as days. Subtracting is adding the negated duration.  @param date      The date. @param duration  The duration. @param overflow  What a month code or day the result lacks does. @param dateOut   Receives the date, in the date's calendar; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, a duration out of its limits or of two signs, a month code or day refused, or a result outside Temporal's range. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -383,4 +388,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-66 functions across 12 headers.
+67 functions across 12 headers.
