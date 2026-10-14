@@ -52,18 +52,14 @@ static bool Surpasses(int sign, const Parts* one, const Parts* two, const Calend
                       int64_t years)
 {
     int64_t y0 = one->year + years;
-    // CompareSurpasses on the year, the month code and the day.
+    // CompareSurpasses on the year and the month code. Equal codes leave
+    // the day, which the comparison by place below makes as well.
     int c = Past(sign, y0, two->year);
     if (c != 0)
     {
         return c > 0;
     }
-    c = Past(sign, CodeOrder(one->number, one->leap), CodeOrder(two->number, two->leap));
-    if (c == 0)
-    {
-        c = Past(sign, one->day, two->day);
-    }
-    if (c > 0)
+    if (Past(sign, CodeOrder(one->number, one->leap), CodeOrder(two->number, two->leap)) > 0)
     {
         return true;
     }
@@ -116,7 +112,8 @@ mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit 
         }
     }
     // The months: the month numbers' difference, less one where the day
-    // would pass, never against the sign.
+    // would pass. The years did not pass the second date, so this is
+    // never against the sign.
     CalendarYear y;
     mlocYearOpen(&y, calendar, a.year + d.years);
     uint32_t m0 = 0;
@@ -129,8 +126,10 @@ mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit 
     {
         months -= sign;
     }
-    d.months = sign * months > 0 ? months : 0;
-    // The days from the date the months reach, its day clamped.
+    d.months = months;
+    // The days from the date the months reach, its day clamped. That
+    // date is not past the second (its day is at most the one the months
+    // were judged by), so the days are never against the sign.
     uint32_t month = m0;
     if (d.months != 0 &&
         !mlocYearOpenMonthNumber(&y, calendar, mlocYearMonthNumber(&y, m0) + d.months, &month))
@@ -139,8 +138,7 @@ mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit 
     }
     uint32_t last = mlocYearDaysInMonth(&y, month);
     int64_t reached = mlocYearDayOf(&y, month, a.day < last ? a.day : last);
-    int64_t days = two->day - reached;
-    d.days = sign * days > 0 ? days : 0;
+    d.days = two->day - reached;
     *durationOut = d;
     return mloc_success;
 }

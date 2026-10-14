@@ -443,8 +443,54 @@ static void TestUntilFar(void)
           "two calendars, an unknown unit and null pointers refused");
 }
 
+// Random pairs over Temporal's whole range in every calendar and unit:
+// the difference added back to the first date gives the second, as the
+// specification's construction of the difference requires.
+static void TestUntilRoundTrip(void)
+{
+    uint64_t state = UINT64_C(0x9E3779B97F4A7C15);
+    const int64_t span = (int64_t)mlocDateMaxDay - mlocDateMinDay + 1;
+    bool all = true;
+    for (uint32_t c = 0; c < calendarCount; c++)
+    {
+        bool lunisolar = c == mloc_calendarChinese || c == mloc_calendarDangi;
+        for (int i = 0; i < (lunisolar ? 24 : 900); i++)
+        {
+            int32_t days[2];
+            for (int k = 0; k < 2; k++)
+            {
+                state = state * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
+                days[k] = (int32_t)(mlocDateMinDay + (int64_t)((state >> 16) % (uint64_t)span));
+            }
+            // Every third pair close together, where months and days matter.
+            if (i % 3 == 0)
+            {
+                int64_t near = days[0] + (int64_t)(state >> 40) % 900 - 450;
+                days[1] = (int32_t)(near < mlocDateMinDay   ? mlocDateMinDay
+                                    : near > mlocDateMaxDay ? mlocDateMaxDay
+                                                            : near);
+            }
+            mlocDate one = {.day = days[0], .calendar = (uint8_t)c};
+            mlocDate two = {.day = days[1], .calendar = (uint8_t)c};
+            for (int u = 0; u <= mloc_dateUnitDay; u++)
+            {
+                mlocDateDuration d = {0};
+                mlocDate back = {0};
+                bool ok = mlocDateUntil(&one, &two, (mlocDateUnit)u, &d) == mloc_success &&
+                          mlocAddToDate(&one, &d, mloc_overflowConstrain, &back) == mloc_success &&
+                          back.day == two.day;
+                bool oneSign = !((d.years > 0 || d.months > 0 || d.weeks > 0 || d.days > 0) &&
+                                 (d.years < 0 || d.months < 0 || d.weeks < 0 || d.days < 0));
+                all = all && ok && oneSign;
+            }
+        }
+    }
+    CHECK(all, "random differences of one sign, adding back to the second date");
+}
+
 int main(void)
 {
+    TestUntilRoundTrip();
     TestUntilAgainstSpecification();
     TestUntilFar();
     TestAgainstSpecification();
