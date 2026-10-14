@@ -54,8 +54,14 @@ static void TestTypes(void)
               Plain("en", mloc_nameKey, "CA", "Calendar") &&
               Plain("en", mloc_nameKeyValue, "ca-Gregory", "Gregorian Calendar") &&
               Plain("en", mloc_nameMeasurementSystem, "uksystem", "UK") &&
-              Plain("de", mloc_nameRegion, "DE", "Deutschland"),
-          "each type, codes in any case");
+              Plain("de", mloc_nameRegion, "DE", "Deutschland") &&
+              Plain("en", mloc_nameScript, "ZZZZ", "Unknown Script") &&
+              Plain("en", mloc_nameRegion, "zz", "Unknown Region") &&
+              Plain("en", mloc_nameVariant, "1901", "Traditional German orthography"),
+          "each type, codes in any case (Z and z among them), a variant of a digit and three");
+    CHECK(Plain("af", mloc_nameLanguage, "tl", "Filippyns") &&
+              Plain("az", mloc_nameLanguage, "tl", "taqaloq"),
+          "a deprecated code by its alias where the chain lacks its own name");
     CHECK(Named("en", mloc_nameLanguage, "en-GB", mloc_nameFormShort, mloc_capitalizationNone,
                 mloc_success, "UK English") &&
               Named("en", mloc_nameScript, "Hans", mloc_nameFormStandAlone, mloc_capitalizationNone,
@@ -82,6 +88,19 @@ static void TestFallback(void)
               Named("en", mloc_nameScript, "qaaa", mloc_nameFormStandard, mloc_capitalizationNone,
                     mloc_fellBack, "Qaaa"),
           "a missing name gives the code in canonical case, a value's for a key and value");
+    char longest[200];
+    memset(longest, 'a', sizeof(longest));
+    memcpy(longest, "en-", 3);
+    for (size_t i = 11; i < sizeof(longest); i += 9)
+    {
+        longest[i] = '-';
+    }
+    CHECK(Named("en", mloc_nameLanguage, "en-scouse-fonipa", mloc_nameFormStandard,
+                mloc_capitalizationNone, mloc_fellBack, "en-fonipa-scouse") &&
+              mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocGetName(&s_data, &en, mloc_nameLanguage, longest, sizeof(longest), nullptr,
+                          &output) == mloc_errorSyntax,
+          "variants in order; a language id longer than the library reads refused");
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
               mlocGetName(&s_data, &en, mloc_nameLanguage, "qqq", 3, &none, &output) ==
                   mloc_errorNotFound,
@@ -101,11 +120,22 @@ static void TestCapitalization(void)
               Named("fr", mloc_nameLanguage, "qqq", mloc_nameFormStandard,
                     mloc_capitalizationSentence, mloc_fellBack, "Qqq"),
           "titlecased at a sentence's start always, in a menu as French's data says, a code too");
-    CHECK(Named("tr", mloc_nameLanguage, "it", mloc_nameFormStandard, mloc_capitalizationSentence,
-                mloc_success, "\xC4\xB0talyanca") &&
+    CHECK(Named("fr", mloc_nameLanguage, "de", mloc_nameFormStandard, mloc_capitalizationSentence,
+                mloc_success, "Allemand") &&
+              Named("pt", mloc_nameLanguage, "en", mloc_nameFormStandard,
+                    mloc_capitalizationStandAlone, mloc_success, "Ingl\xC3\xAAs") &&
+              Named("en", mloc_nameLanguage, "en", mloc_nameFormStandard,
+                    mloc_capitalizationSentence, mloc_success, "English") &&
+              Named("en", mloc_nameKey, "q", mloc_nameFormStandard, mloc_capitalizationSentence,
+                    mloc_fellBack, "Q"),
+          "a first a, Portuguese alone, a capital kept, a code of one letter");
+    CHECK(Named("az", mloc_nameLanguage, "en", mloc_nameFormStandard, mloc_capitalizationSentence,
+                mloc_success, "\xC4\xB0ngilis") &&
+              Named("az", mloc_nameLanguage, "de", mloc_nameFormStandard,
+                    mloc_capitalizationSentence, mloc_success, "Alman") &&
               Named("en", mloc_nameMeasurementSystem, "metric", mloc_nameFormStandard,
                     mloc_capitalizationListOrMenu, mloc_success, "Metric"),
-          "Turkish's dotted capital I; a measurement system by the sentence rule alone");
+          "Azerbaijani's dotted capital I; a measurement system by the sentence rule alone");
 }
 
 static void TestOutput(void)
@@ -114,14 +144,18 @@ static void TestOutput(void)
     char small[4];
     mlocOutput tight = {.buffer = small, .capacity = sizeof(small)};
     mlocOutput measure = {0};
+    char exact[13];
+    mlocOutput fits = {.buffer = exact, .capacity = sizeof(exact)};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
               mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, nullptr, &tight) ==
                   mloc_errorCapacity &&
               tight.length == 13 &&
               mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, nullptr, &measure) ==
                   mloc_errorCapacity &&
-              measure.length == 13,
-          "a buffer too small or none gives the size needed");
+              measure.length == 13 &&
+              mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, nullptr, &fits) == mloc_success &&
+              fits.length == 13 && memcmp(exact, "United States", 13) == 0,
+          "a buffer too small or none gives the size needed; one of that size takes it");
 }
 
 static void TestRefusals(void)
