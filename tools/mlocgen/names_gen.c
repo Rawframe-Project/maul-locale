@@ -17,6 +17,7 @@
 #include "kinds.h"
 #include "names_tables.h"
 #include "table_gen.h"
+#include "titlecase_gen.h"
 #include "xml.h"
 
 #include <stdint.h>
@@ -63,6 +64,8 @@ typedef struct Names
     Code codes[maxCodes];
     int count;
     Map filed;
+    // The first letters of the names filed.
+    Titlecase titlecase;
 } Names;
 
 static char* Copy(const char* text)
@@ -516,6 +519,21 @@ static bool ValidValue(const char* code, const char* value)
     return value[0] != '\0' && (code[0] != 'p' || (zero && one)) && (code[0] != 'c' || zero);
 }
 
+// Whether the library titlecases a value's first letter as ICU does in
+// the locale's language: ICU's Dutch titlecases a leading "ij" as "IJ",
+// its Lithuanian drops the dot of a leading "i" and combining dot, and
+// its Armenian titlecases the ligature ech-yiwn otherwise.
+static bool TitlecasesAsIcu(const char* locale, const char* value)
+{
+    size_t language = strcspn(locale, "_");
+    bool dutch = language == 2 && memcmp(locale, "nl", 2) == 0;
+    bool lithuanian = language == 2 && memcmp(locale, "lt", 2) == 0;
+    bool armenian = language == 2 && memcmp(locale, "hy", 2) == 0;
+    return !(dutch && strncmp(value, "ij", 2) == 0) &&
+           !(lithuanian && strncmp(value, "i\xCC\x87", 3) == 0) &&
+           !(armenian && strncmp(value, "\xD6\x87", 2) == 0);
+}
+
 // Files a value at a locale, or checks a locale that files nothing.
 static void Take(Names* n, Filed* filed, const char* locale, int code, int field, const char* value)
 {
@@ -533,6 +551,10 @@ static void Take(Names* n, Filed* filed, const char* locale, int code, int field
     {
         GenDie("a locale's display names differ from those of its parent's key", locale);
     }
+    if (!TitlecasesAsIcu(locale, value))
+    {
+        GenDie("a display name the library cannot titlecase as ICU does", value);
+    }
     if (!ValidValue(n->codes[code].code, value))
     {
         GenDie("a display name empty, of a control or malformed byte, or a pattern without its "
@@ -544,6 +566,7 @@ static void Take(Names* n, Filed* filed, const char* locale, int code, int field
         filed->rows[code] = GenAllocate(sizeof(char*) * nameFieldCount);
     }
     filed->rows[code][field] = value;
+    TitlecaseNote(&n->titlecase, value, strlen(value), true);
 }
 
 // Files a locale's names (filed null: checks them); the name first, which
@@ -686,5 +709,6 @@ int GenerateNames(const NamesInput* input, DataFile* file, char* errorOut, size_
     {
         TakeChain(n, input->ids[i], file);
     }
+    TitlecaseAdd(&n->titlecase, kindNameTitlecase, file);
     return 1;
 }

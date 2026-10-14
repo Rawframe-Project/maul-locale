@@ -120,5 +120,8 @@ constexpr uint32_t kindNamesRegions = 0x00070004;
 constexpr uint32_t kindNamesVariants = 0x00070005;
 constexpr uint32_t kindNamesKeys = 0x00070006;
 constexpr uint32_t kindNamePatterns = 0x00070007;
+// The names data file: the titlecase of the names' first letters, a unit
+// of no locale in the spell-out titlecase table's layout.
+constexpr uint32_t kindNameTitlecase = 0x00070008;
 
 #endif

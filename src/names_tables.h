@@ -39,6 +39,10 @@
 // code's field (resolved along the locale's chain, as CLDR resolves it),
 // filed at a key where the library's lookup would give another: the
 // field along the chain, else the name along the chain.
+//
+// The titlecase of the lowercase letters that begin a name, a unit of no
+// locale in spellout_tables.h's titlecase layout, for the capitalization
+// contexts.
 
 #ifndef MLOC_NAMES_TABLES_H
 #define MLOC_NAMES_TABLES_H

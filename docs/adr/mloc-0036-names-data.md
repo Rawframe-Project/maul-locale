@@ -40,6 +40,15 @@ names data for all locales is 4.9 MB and leaves keys and values out.
   patterns, which keeps each unit's text far below 64 KB (the largest,
   Fulah in Adlam's languages, is 19 KB).
 
+- **Capitalization data:** the compiled-in context transforms gain the
+  six usages ICU's LocaleDisplayNames reads (languages, script,
+  territory, variant, key, keyValue), and `names.mloc` carries the
+  titlecase of each lowercase letter that begins a name, in the
+  spell-out titlecase table's layout, so names are titlecased without
+  the spell-out file. The generator refuses a name whose first letter
+  ICU titlecases by its language's own rules (Dutch "ij", Lithuanian
+  "i" with a dot, Armenian ech-yiwn); none does in CLDR 49.
+
 ## Proof
 
 `test_names_data` checks the validators against units built by hand and

@@ -486,10 +486,13 @@ static void TestTitlecase(void)
     CHECK(TitlecaseRefused(10, 0) && TitlecaseRefused(11, 1) && TitlecaseRefused(16, 4) &&
               TitlecaseRefused(18, 3) && TitlecaseRefused(21, 0x80),
           "an empty titlecase, the zero byte, the range and ill-formed UTF-8");
-    static const uint8_t s_contexts[] = {contextAll, contextAll + 1};
-    CHECK(mlocValidLocaleContext(nullptr, (DataSpan){s_contexts, 1}) &&
-              !mlocValidLocaleContext(nullptr, (DataSpan){s_contexts + 1, 1}) &&
-              !mlocValidLocaleContext(nullptr, (DataSpan){s_contexts, 2}),
+    uint8_t contexts[contextUsageCount + 1];
+    memset(contexts, contextAll, sizeof(contexts));
+    bool valid = mlocValidLocaleContext(nullptr, (DataSpan){contexts, contextUsageCount}) &&
+                 !mlocValidLocaleContext(nullptr, (DataSpan){contexts, contextUsageCount + 1}) &&
+                 !mlocValidLocaleContext(nullptr, (DataSpan){contexts, contextUsageCount - 1});
+    contexts[contextKeyValue] = contextAll + 1;
+    CHECK(valid && !mlocValidLocaleContext(nullptr, (DataSpan){contexts, contextUsageCount}),
           "a context transforms unit: a byte per usage, no other bits");
 }
 

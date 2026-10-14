@@ -21,7 +21,15 @@ typedef enum ContextUsage
 {
     // number-spellout: the words of spelled-out numbers.
     contextNumberSpellout = 0,
-    contextUsageCount = 1,
+    // languages, script, territory, variant, key and keyValue: the names
+    // of each (ICU's LocaleDisplayNames reads the same six).
+    contextLanguages = 1,
+    contextScript = 2,
+    contextTerritory = 3,
+    contextVariant = 4,
+    contextKey = 5,
+    contextKeyValue = 6,
+    contextUsageCount = 7,
 } ContextUsage;
 
 // The contexts of a usage's byte.

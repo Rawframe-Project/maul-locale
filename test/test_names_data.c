@@ -11,8 +11,10 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_context.h"
 #include "names_data.h"
 #include "names_tables.h"
+#include "spellout_data.h"
 #include "test_harness.h"
 #include "test_pack.h"
 
@@ -231,6 +233,28 @@ static void TestFind(void)
           "a code without a name, of no namespace, a field out of range");
 }
 
+// The names' capitalization: the context transforms of each usage, and
+// the titlecase of a name's first letter.
+static void TestCapitalization(void)
+{
+    mlocLocale fr;
+    mlocLocale en;
+    DataSpan titlecase;
+    const uint8_t* text = nullptr;
+    uint32_t length = 0;
+    CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
+              mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocGetLocaleContext(&s_data, &fr, contextLanguages) == contextListOrMenu &&
+              mlocGetLocaleContext(&s_data, &fr, contextTerritory) == 0 &&
+              mlocGetLocaleContext(&s_data, &en, contextLanguages) == 0,
+          "French titlecases language names in lists and menus");
+    CHECK(mlocFindDataSetUnit(&s_data, kindNameTitlecase, nullptr, 0, &titlecase) &&
+              mlocSpelloutTitlecase(titlecase, 0xE9, &text, &length) && length == 2 &&
+              memcmp(text, "\xC3\x89", 2) == 0 &&
+              !mlocSpelloutTitlecase(titlecase, 'A', &text, &length),
+          "the names' titlecase table");
+}
+
 // A set of the compiled-in data, a root pack of a codes unit and one
 // names unit, and with the file the names data file.
 static bool OpenPack(const char* code, uint32_t kind, const uint16_t* keys,
@@ -302,5 +326,6 @@ int main(void)
     }
     TestFind();
     TestSources();
+    TestCapitalization();
     return s_failures == 0 ? 0 : 1;
 }
