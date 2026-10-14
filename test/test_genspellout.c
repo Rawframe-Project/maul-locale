@@ -845,11 +845,71 @@ static void TestParseRules(void)
               ParsesTo(s_numerator, "zero p zero five hundredths", "0", 4) &&
               ParsesTo(s_numerator, "one p two", "1", 3),
           "numerators; with \"<<\", the zeros read leave ICU short of the text");
-    CHECK(ParsesTo("%a:\n0: x;\n1: x;\n", "x", "1", 1) &&
-              ParsesTo("%a:\n0: x;\n%b:\n0: y;\n1: x;\n", "x", "0", 1) &&
-              ParsesTo("%a:\nNaN: x;\n0: x;\n", "x", "NaN", 1),
+    CHECK(ParsesTo("%a:\n0: x;\n1: x;\n", "x z", "1", 1) &&
+              ParsesTo("%a:\n0: x;\n%b:\n0: y;\n1: x;\n", "x z", "0", 1) &&
+              ParsesTo("%a:\nNaN: x;\n0: x;\n", "x z", "NaN", 1),
           "of readings of one length the first: rules from the last, sets in order, special "
           "rules before normal ones");
+}
+
+// ICU4C 79's parse of each text by the same rules: the 64-level limit,
+// values that are not finite composed, numerators' zeros, digits read by
+// the set's own rules.
+static void TestParseLimits(void)
+{
+    // "o " read again by "=%a=" a level deeper each time: ICU reads 63.
+    static const char s_same[] = "%a:\n0: x;\n1: o;\n2: o =%a=;\n";
+    char text[256];
+    static const struct
+    {
+        int levels;
+        const char* value;
+        size_t end;
+    } s_levels[] = {{1, "0", 3}, {31, "0", 63}, {63, "0", 127}, {64, "1", 127}, {70, "1", 127}};
+    bool deep = true;
+    for (size_t c = 0; c < sizeof(s_levels) / sizeof(s_levels[0]); c++)
+    {
+        int k = s_levels[c].levels;
+        for (int i = 0; i < k; i++)
+        {
+            memcpy(text + 2 * i, "o ", 2);
+        }
+        memcpy(text + 2 * k, "x", 2);
+        deep = deep && ParsesTo(s_same, text, s_levels[c].value, s_levels[c].end);
+    }
+    CHECK(deep, "rule sets nested to ICU's limit and past it");
+    static const char s_special[] = "%a:\n0: x;\n1: y;\n1000: <%%b< k[ >%%b>];\n%%b:\nInf: inf;\n"
+                                    "NaN: nan;\n0: x;\n1: y;\n";
+    static const char s_over[] =
+        "%a:\nx.x: << p >%%f>;\n0: x;\n1: y;\n%%f:\n10: <%%b< t;\n%%b:\nInf: inf;\n0: x;\n";
+    CHECK(ParsesTo(s_special, "inf k", "Infinity", 5) &&
+              ParsesTo(s_special, "y k inf", "Infinity", 7) &&
+              ParsesTo(s_special, "inf k y", "NaN", 7) && ParsesTo(s_special, "nan k", "NaN", 5) &&
+              ParsesTo(s_over, "x p inf t", "Infinity", 9),
+          "an infinity or NaN times a divisor, as a remainder, over a base");
+    static const char s_zeros[] = "%a:\nx.x: << p >%%f>;\n0: zero; one; two; three; four; five;\n"
+                                  "%%f:\n100: <%a<<;\n";
+    char zeros[256] = "zero p ";
+    for (int i = 0; i < 20; i++)
+    {
+        strcat(zeros, "zero ");
+    }
+    strcat(zeros, "five");
+    CHECK(ParsesTo(s_zeros, "zero p zero five", "0.05", 11) &&
+              ParsesTo(s_zeros, "zero p five", "0.5", 11) && ParsesTo(s_zeros, zeros, "0", 4),
+          "a numerator's zeros, spaces between; past 18 places ICU reads nothing");
+    static const char s_own[] = "%a:\nx.x: << p >>;\n0: zero; one; two;\n";
+    CHECK(ParsesTo(s_own, "one p two", "1.2", 9) && ParsesTo(s_own, "one p two one", "1.21", 13),
+          "digits read by the first rule set itself");
+    // A value of more digits than a decimal holds: 40 digits and a tenth.
+    static const char s_wide[] = "%a:\nx.x: <#,##0< p >>;\n0: zero; one;\n";
+    char value[64];
+    size_t end = 0;
+    CHECK(ParseText(s_wide, 0, 0, "1234567890123456789012345678901234567890 p one", value,
+                    sizeof(value), &end) == mloc_errorCapacity &&
+              ParsesTo(s_wide, "123456789012345678901234567890123456789 p one",
+                       "123456789012345678901234567890123456789.1", 45),
+          "a value past a decimal's digits");
 }
 
 int main(void)
@@ -865,5 +925,6 @@ int main(void)
     TestFractionLimits();
     TestParseRules();
     TestAdd();
+    TestParseLimits();
     return s_failures == 0 ? 0 : 1;
 }
