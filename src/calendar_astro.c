@@ -92,7 +92,7 @@ static uint64_t MultiplyHigh(uint64_t a, uint64_t b, uint64_t* lowOut)
 }
 
 // a * b / 2^shift, rounded to nearest with ties away from zero, for a
-// shift of 1 to 127 and a result that fits.
+// shift of 1 to 64 and a result that fits.
 static int64_t Mul(int64_t a, int64_t b, uint32_t shift)
 {
     bool negative = (a < 0) != (b < 0);
@@ -100,19 +100,10 @@ static int64_t Mul(int64_t a, int64_t b, uint32_t shift)
     uint64_t y = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
     uint64_t low = 0;
     uint64_t high = MultiplyHigh(x, y, &low);
-    if (shift <= 64)
-    {
-        uint64_t half = UINT64_C(1) << (shift - 1);
-        low += half;
-        high += low < half;
-    }
-    else
-    {
-        high += UINT64_C(1) << (shift - 65);
-    }
-    uint64_t magnitude = shift < 64    ? (high << (64 - shift)) | (low >> shift)
-                         : shift == 64 ? high
-                                       : high >> (shift - 64);
+    uint64_t half = UINT64_C(1) << (shift - 1);
+    low += half;
+    high += low < half;
+    uint64_t magnitude = shift == 64 ? high : (high << (64 - shift)) | (low >> shift);
     return negative ? -(int64_t)magnitude : (int64_t)magnitude;
 }
 

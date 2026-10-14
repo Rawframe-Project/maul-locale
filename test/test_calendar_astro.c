@@ -92,6 +92,47 @@ static const AstroCase s_deltas[] = {
     {INT64_C(3307124817920000), INT64_C(13438774)},
     {INT64_C(3435973836800000), INT64_C(20900743)},
     {INT64_C(432585511165493248), INT64_C(11937323511413)},
+    // July 1 of each range's last and the next range's first year.
+    {INT64_C(3371927284482048), INT64_C(16328829)},
+    {INT64_C(3373494947545088), INT64_C(16433977)},
+    {INT64_C(3215057898962944), INT64_C(4623105)},
+    {INT64_C(3216625562025984), INT64_C(10263799)},
+    {INT64_C(3144465816485888), INT64_C(3217281)},
+    {INT64_C(3146033479548928), INT64_C(3233863)},
+    {INT64_C(3114658743451648), INT64_C(2761545)},
+    {INT64_C(3116226406514688), INT64_C(2749795)},
+    {INT64_C(2978181862653952), INT64_C(-113179)},
+    {INT64_C(2979749525716992), INT64_C(-77015)},
+    {INT64_C(2821312477134848), INT64_C(718565)},
+    {INT64_C(2822880140197888), INT64_C(677218)},
+    {INT64_C(2664443091615744), INT64_C(440204)},
+    {INT64_C(2666010754678784), INT64_C(403587)},
+    {INT64_C(2507569411129344), INT64_C(5999896)},
+    {INT64_C(2509141369159680), INT64_C(5965232)},
+    {INT64_C(781997580484608), INT64_C(284336650)},
+    {INT64_C(783565243547648), INT64_C(283847860)},
+    {INT64_C(-783573833482240), INT64_C(854300010)},
+    {INT64_C(-785141496545280), INT64_C(855199571)},
+};
+
+// The model's own bits (record mloc-0001: bit-exact on every machine),
+// from the 128-bit and the four-product paths alike: lunation and moment.
+static const AstroCase s_goldenMoons[] = {
+    {-3400000, INT64_C(-431040968784227846)},
+    {-37118, INT64_C(-4707734911127656)},
+    {0, INT64_C(49215698741)},
+    {24724, INT64_C(3135866259099851)},
+    {86566, INT64_C(10979464012300791)},
+    {3390000, INT64_C(430115583582881420)},
+};
+
+// Moment, solar longitude, ephemeris correction, next lunation.
+static const int64_t s_goldenMoments[][4] = {
+    {INT64_C(-426407952329474048), INT64_C(682166296353), INT64_C(11911279033502), -3363408},
+    {INT64_C(3135843669639168), INT64_C(1204176076542), INT64_C(3174498), 24724},
+    {INT64_C(2978972136636416), INT64_C(1203250298943), INT64_C(-77015), 23487},
+    {INT64_C(2663738716979200), INT64_C(1281118687227), INT64_C(440201), 21002},
+    {INT64_C(432585511165493248), INT64_C(497638973449), INT64_C(11937323511413), 3409445},
 };
 
 static const int64_t s_turn = INT64_C(360) << 32;
@@ -199,8 +240,25 @@ static void TestPriorLongitude(void)
     CHECK(all, "the prior solar longitude's estimate within a quarter of a degree");
 }
 
+static void TestGolden(void)
+{
+    bool all = true;
+    for (size_t i = 0; i < sizeof(s_goldenMoons) / sizeof(s_goldenMoons[0]); i++)
+    {
+        all = all && mlocAstroNewMoon(s_goldenMoons[i].input) == s_goldenMoons[i].expected;
+    }
+    for (size_t i = 0; i < sizeof(s_goldenMoments) / sizeof(s_goldenMoments[0]); i++)
+    {
+        const int64_t* g = s_goldenMoments[i];
+        all = all && mlocAstroSolarLongitude(g[0]) == g[1] && mlocAstroDeltaT(g[0]) == g[2] &&
+              mlocAstroNewMoonIndex(g[0]) == g[3];
+    }
+    CHECK(all, "the model's bits unchanged");
+}
+
 int main(void)
 {
+    TestGolden();
     TestNewMoons();
     TestLongitudes();
     TestDeltas();
