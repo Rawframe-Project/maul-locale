@@ -101,7 +101,8 @@ extern "C"
         int32_t eraYear;
         char era[16];
         uint8_t eraLength;
-        // The month's code: 'M01' to 'M13', 'M05L' for a leap month;
+        // The month's code: 'M01' to 'M13', 'M05L' for a leap month (in
+        // Hebrew, Adar I of a leap year, Adar II keeping 'M06');
         // NUL-padded, of monthCodeLength bytes.
         char monthCode[5];
         uint8_t monthCodeLength;
@@ -139,7 +140,8 @@ extern "C"
     /// Makes a date from its fields in a calendar, as Temporal's
     /// PlainDate.from does: a month or day past the calendar's is clamped
     /// to the last (mloc_overflowConstrain) or refused
-    /// (mloc_overflowReject); a month code no year of the calendar has, an
+    /// (mloc_overflowReject), and so is a leap month the year lacks (made
+    /// the month after it); a month code no year of the calendar has, an
     /// unknown era, or a month or day below 1 is refused either way.
     ///
     /// @param calendar  The calendar.

@@ -60,7 +60,7 @@ an explicit choice when a field overflows.
 
 ## Proof
 
-`test_calendar` checks each arithmetic calendar's fields at days across
+`test_calendar` checks each built calendar's fields at days across
 the range as ICU4X 2.3 gives them. It also makes dates back from their
 fields by era and by year, by code and by place, across 2.4 million
 days. Overflow, eras and their aliases, month codes, the other fields
@@ -68,7 +68,9 @@ and every refusal have their own cases.
 
 A run outside the repository compared every day from 1600 to 2400, and
 2,001 days spread over the whole range, with ICU4X 2.3 for the ten
-arithmetic calendars built first: no difference. The differential test
+arithmetic calendars built first, and then for Hebrew (every day from
+1600 to 2400 and 3,999 days over the range, the leap year and the
+year's and month's lengths included): no difference. The differential test
 against ICU4C 79 and ICU4X joins CI with the other calendars.
 
 ## Consequences

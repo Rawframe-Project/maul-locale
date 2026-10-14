@@ -73,4 +73,5 @@ names: data_view kinds locale_context names_data names_text
 names_text: data_view kinds locale_context spellout_data
 names_locale: data_view kinds locale_context names_data names_text
 calendar_arith:
-calendar: calendar_arith
+calendar_hebrew: calendar_arith
+calendar: calendar_arith calendar_hebrew

@@ -31,7 +31,8 @@ typedef struct Case
 // ICU4X 2.3's fields (icu_calendar's to_calendar) at Temporal's first and
 // last days, far back, around day 1, now, a Coptic leap year's last
 // day, Persian years around a correction (1502, not leap, and 1503), and
-// years just past the leap rules' bounds (Persian 1407, Islamic 1437).
+// years just past the leap rules' bounds (Persian 1407, Islamic 1437);
+// Hebrew's Shevat, Adar I ('M05L'), Adar II and a common year's Adar.
 static const Case s_cases[] = {
     {mloc_calendarGregorian, -99280838, -271821, "bce", 271822, 4, false, 19, 0, 365, 30},
     {mloc_calendarGregorian, -2000000, -5475, "bce", 5476, 3, false, 9, 0, 365, 31},
@@ -176,6 +177,25 @@ static const Case s_cases[] = {
     {mloc_calendarPersian, 740450, 1407, "ap", 1407, 1, false, 25, 0, 365, 31},
     {mloc_calendarIslamicCivil, 735900, 1437, "ah", 1437, 1, false, 15, 0, 354, 30},
     {mloc_calendarIslamicTbla, 735900, 1437, "ah", 1437, 1, false, 16, 0, 354, 30},
+    {mloc_calendarHebrew, -99280838, -268058, "am", -268058, 11, false, 4, 0, 354, 30},
+    {mloc_calendarHebrew, -2000000, -1715, "am", -1715, 7, false, 7, 1, 385, 30},
+    {mloc_calendarHebrew, 0, 3761, "am", 3761, 4, false, 17, 0, 355, 29},
+    {mloc_calendarHebrew, 1, 3761, "am", 3761, 4, false, 18, 0, 355, 29},
+    {mloc_calendarHebrew, 730120, 5760, "am", 5760, 4, false, 23, 1, 385, 29},
+    {mloc_calendarHebrew, 738774, 5783, "am", 5783, 12, false, 25, 0, 355, 29},
+    {mloc_calendarHebrew, 739000, 5784, "am", 5784, 7, false, 16, 1, 383, 30},
+    {mloc_calendarHebrew, 739139, 5784, "am", 5784, 12, false, 7, 1, 383, 29},
+    {mloc_calendarHebrew, 775488, 5884, "am", 5884, 7, false, 4, 0, 354, 30},
+    {mloc_calendarHebrew, 775489, 5884, "am", 5884, 7, false, 5, 0, 354, 30},
+    {mloc_calendarHebrew, 775854, 5885, "am", 5885, 6, false, 14, 1, 385, 29},
+    {mloc_calendarHebrew, 811647, 5983, "am", 5983, 6, false, 16, 1, 385, 29},
+    {mloc_calendarHebrew, 850000, 6088, "am", 6088, 6, false, 9, 1, 385, 29},
+    {mloc_calendarHebrew, 100719163, 279517, "am", 279517, 9, false, 11, 1, 383, 30},
+    {mloc_calendarHebrew, 738550, 5783, "am", 5783, 5, false, 8, 0, 355, 30},
+    {mloc_calendarHebrew, 738929, 5784, "am", 5784, 5, true, 4, 1, 383, 30},
+    {mloc_calendarHebrew, 738930, 5784, "am", 5784, 5, true, 5, 1, 383, 30},
+    {mloc_calendarHebrew, 738960, 5784, "am", 5784, 6, false, 5, 1, 383, 29},
+    {mloc_calendarHebrew, 739320, 5785, "am", 5785, 6, false, 10, 0, 355, 29},
 };
 
 static bool Fields(mlocCalendar calendar, int32_t day, mlocDateFields* out)
@@ -217,13 +237,13 @@ static bool MadeBack(mlocCalendar calendar, int32_t day)
     mlocDateInput era = {
         .era = f.era,
         .monthCode = f.monthCode,
-        .monthCodeLength = 3,
     };
     if (!Fields(calendar, day, &f))
     {
         return false;
     }
     era.eraLength = f.eraLength;
+    era.monthCodeLength = f.monthCodeLength;
     era.era = f.eraLength > 0 ? f.era : nullptr;
     era.year = f.eraLength > 0 ? f.eraYear : f.year;
     era.day = f.day;
@@ -245,6 +265,7 @@ static void TestRoundTrip(void)
         mloc_calendarEthiopicAmeteAlem,
         mloc_calendarIndian,
         mloc_calendarPersian,
+        mloc_calendarHebrew,
         mloc_calendarIslamicCivil,
         mloc_calendarIslamicTbla,
     };
@@ -299,6 +320,30 @@ static void TestOverflow(void)
         "day in a leap year only; a Persian leap year's 30 Esfand");
 }
 
+// Adar I, 'M05L', in a Hebrew leap year (5784) and a common one (5785).
+static void TestHebrewLeapMonth(void)
+{
+    mlocDateInput adarI = {.year = 5784, .monthCode = "M05L", .monthCodeLength = 4, .day = 5};
+    mlocDateInput adarII = {.year = 5784, .monthCode = "M06", .monthCodeLength = 3, .day = 5};
+    mlocDateInput sixth = {
+        .year = 5784, .monthCode = "M05L", .monthCodeLength = 4, .month = 6, .day = 5};
+    mlocDateInput seventh = {
+        .year = 5784, .monthCode = "M05L", .monthCodeLength = 4, .month = 7, .day = 5};
+    mlocDateInput common = {.year = 5785, .monthCode = "M05L", .monthCodeLength = 4, .day = 10};
+    mlocDateInput thirteenth = {.year = 5785, .month = 13, .day = 1};
+    mlocDateInput otherLeap = {.year = 5784, .monthCode = "M06L", .monthCodeLength = 4, .day = 1};
+    CHECK(Made(mloc_calendarHebrew, &adarI, mloc_overflowReject, mloc_success, 738930) &&
+              Made(mloc_calendarHebrew, &adarII, mloc_overflowReject, mloc_success, 738960) &&
+              Made(mloc_calendarHebrew, &sixth, mloc_overflowReject, mloc_success, 738930) &&
+              Made(mloc_calendarHebrew, &seventh, mloc_overflowReject, mloc_errorInvalid, 0) &&
+              Made(mloc_calendarHebrew, &common, mloc_overflowConstrain, mloc_success, 739320) &&
+              Made(mloc_calendarHebrew, &common, mloc_overflowReject, mloc_errorInvalid, 0) &&
+              Made(mloc_calendarHebrew, &thirteenth, mloc_overflowReject, mloc_errorInvalid, 0) &&
+              Made(mloc_calendarHebrew, &otherLeap, mloc_overflowConstrain, mloc_errorSyntax, 0),
+          "Hebrew's leap month: the sixth place in a leap year, Adar in a common one or "
+          "refused; no other leap month");
+}
+
 static void TestEras(void)
 {
     mlocDateInput bc = {.era = "bc", .eraLength = 2, .year = 1, .month = 12, .day = 31};
@@ -324,8 +369,7 @@ static void TestEras(void)
               Made(mloc_calendarGregorian, &bad, mloc_overflowConstrain, mloc_errorSyntax, 0) &&
               Made(mloc_calendarGregorian, &both, mloc_overflowConstrain, mloc_errorInvalid, 0),
           "eras and their aliases; an era of another calendar or empty; month codes leap, "
-          "malformed, "
-          "or naming another month than the place");
+          "malformed, or naming another month than the place");
 }
 
 static void TestFields(void)
@@ -373,7 +417,7 @@ static void TestRefusals(void)
                  0) &&
             Made(mloc_calendarGregorian, &codeLength, mloc_overflowConstrain, mloc_errorInvalid,
                  0) &&
-            Made(mloc_calendarHebrew, &ok, mloc_overflowConstrain, mloc_errorNotFound, 0) &&
+            Made(mloc_calendarJapanese, &ok, mloc_overflowConstrain, mloc_errorNotFound, 0) &&
             mlocMakeDateFromDay(mloc_calendarGregorian, mlocDateMinDay - 1, &date) ==
                 mloc_errorInvalid &&
             mlocMakeDateFromDay(mloc_calendarGregorian, 1, nullptr) == mloc_errorInvalid &&
@@ -393,6 +437,7 @@ int main(void)
     TestOracle();
     TestRoundTrip();
     TestOverflow();
+    TestHebrewLeapMonth();
     TestEras();
     TestFields();
     TestRefusals();
