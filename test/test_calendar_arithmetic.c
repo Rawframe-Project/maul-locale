@@ -499,6 +499,7 @@ static void TestRoundingOneUnit(void)
     uint64_t state = UINT64_C(0x243F6A8885A308D3);
     bool all = true;
     long compared = 0;
+    long ties = 0;
     for (uint32_t c = 0; c < calendarCount; c++)
     {
         for (int i = 0; i < 40; i++)
@@ -593,6 +594,17 @@ static void TestRoundingOneUnit(void)
                         {
                             want = toLow < toHigh ? low : high;
                         }
+                        else
+                        {
+                            // A tie, as the half mode names it.
+                            bool evenLow = (low / inc) % 2 == 0;
+                            bool up = m == mloc_roundHalfExpand ||
+                                      (m == mloc_roundHalfCeil && sign > 0) ||
+                                      (m == mloc_roundHalfFloor && sign < 0) ||
+                                      (m == mloc_roundHalfEven && !evenLow);
+                            want = up ? high : low;
+                            ties++;
+                        }
                         all = all && (value == low || value == high) && value == want &&
                               got.years * (u != 0) == 0;
                         compared++;
@@ -601,8 +613,315 @@ static void TestRoundingOneUnit(void)
             }
         }
     }
-    printf("%ld roundings compared\n", compared);
-    CHECK(all, "one-unit roundings at the multiple the mode and the dates choose");
+    printf("%ld roundings compared, %ld ties\n", compared, ties);
+    CHECK(all && ties > 1000, "one-unit roundings at the multiple the mode and the dates choose");
+}
+
+// Temporal's RoundRelativeDuration for two dates, transcribed step by step
+// (ECMA-262's text): ComputeNudgeWindow, NudgeToCalendarUnit,
+// NudgeToDayOrTime, BubbleRelativeDuration, with epoch values as days.
+typedef struct SpecWindow
+{
+    int64_t r1, r2, startDay, endDay;
+    mlocDateDuration start, end;
+} SpecWindow;
+
+static int64_t SpecTrunc(int64_t x, int64_t increment)
+{
+    return x / increment * increment;
+}
+
+static bool SpecAddDays(mlocDate origin, mlocDateDuration d, int64_t* dayOut)
+{
+    mlocDate out = {0};
+    if (mlocAddToDate(&origin, &d, mloc_overflowConstrain, &out) != mloc_success)
+    {
+        return false;
+    }
+    *dayOut = out.day;
+    return true;
+}
+
+static bool SpecWindowOf(int sign, mlocDateDuration d, mlocDate origin, int unit, int64_t inc,
+                         bool shift, SpecWindow* w)
+{
+    if (unit == mloc_dateUnitYear)
+    {
+        int64_t years = SpecTrunc(d.years, inc);
+        w->r1 = shift ? years + inc * sign : years;
+        w->r2 = w->r1 + inc * sign;
+        w->start = (mlocDateDuration){w->r1, 0, 0, 0};
+        w->end = (mlocDateDuration){w->r2, 0, 0, 0};
+    }
+    else if (unit == mloc_dateUnitMonth)
+    {
+        int64_t months = SpecTrunc(d.months, inc);
+        w->r1 = shift ? months + inc * sign : months;
+        w->r2 = w->r1 + inc * sign;
+        w->start = (mlocDateDuration){d.years, w->r1, 0, 0};
+        w->end = (mlocDateDuration){d.years, w->r2, 0, 0};
+    }
+    else
+    {
+        int64_t weeksStart = 0;
+        if (!SpecAddDays(origin, (mlocDateDuration){d.years, d.months, 0, 0}, &weeksStart))
+        {
+            return false;
+        }
+        mlocDate from = {.day = (int32_t)weeksStart, .calendar = origin.calendar};
+        mlocDate to = {.day = (int32_t)(weeksStart + d.days), .calendar = origin.calendar};
+        mlocDateDuration untilResult = {0};
+        if (mlocDateUntil(&from, &to, mloc_dateUnitWeek, &untilResult) != mloc_success)
+        {
+            return false;
+        }
+        int64_t weeks = SpecTrunc(d.weeks + untilResult.weeks, inc);
+        w->r1 = weeks;
+        w->r2 = weeks + inc * sign;
+        w->start = (mlocDateDuration){d.years, d.months, w->r1, 0};
+        w->end = (mlocDateDuration){d.years, d.months, w->r2, 0};
+    }
+    bool startZero =
+        w->start.years == 0 && w->start.months == 0 && w->start.weeks == 0 && w->start.days == 0;
+    w->startDay = origin.day;
+    if (!startZero && !SpecAddDays(origin, w->start, &w->startDay))
+    {
+        return false;
+    }
+    return SpecAddDays(origin, w->end, &w->endDay);
+}
+
+// ApplyUnsignedRoundingMode on x = r1 + (r2 - r1) * num / den, num/den in
+// [0, 1), with GetUnsignedRoundingMode's table spelled out by mode.
+static bool SpecRoundsToR2(int64_t num, int64_t den, int64_t r1Abs, int64_t inc,
+                           mlocRoundingMode mode, bool negative)
+{
+    if (num == 0)
+    {
+        return false;
+    }
+    switch (mode)
+    {
+    case mloc_roundCeil:
+        return !negative;
+    case mloc_roundFloor:
+        return negative;
+    case mloc_roundExpand:
+        return true;
+    case mloc_roundTrunc:
+        return false;
+    default:
+        break;
+    }
+    if (2 * num < den)
+    {
+        return false;
+    }
+    if (2 * num > den)
+    {
+        return true;
+    }
+    switch (mode)
+    {
+    case mloc_roundHalfCeil:
+        return !negative;
+    case mloc_roundHalfFloor:
+        return negative;
+    case mloc_roundHalfExpand:
+        return true;
+    case mloc_roundHalfTrunc:
+        return false;
+    default:
+        return (r1Abs / inc) % 2 != 0;
+    }
+}
+
+static bool SpecRound(mlocDate one, mlocDate two, mlocDateRounding r, mlocDateDuration* out)
+{
+    mlocDateDuration d = {0};
+    if (mlocDateUntil(&one, &two, r.largestUnit, &d) != mloc_success)
+    {
+        return false;
+    }
+    if (one.day == two.day || (r.smallestUnit == mloc_dateUnitDay && r.increment == 1))
+    {
+        *out = d;
+        return true;
+    }
+    int sign = (d.years < 0 || d.months < 0 || d.weeks < 0 || d.days < 0) ? -1 : 1;
+    int64_t inc = r.increment;
+    int64_t nudged = 0;
+    bool expanded = false;
+    if (r.smallestUnit != mloc_dateUnitDay)
+    {
+        SpecWindow w = {0};
+        if (!SpecWindowOf(sign, d, one, r.smallestUnit, inc, false, &w))
+        {
+            return false;
+        }
+        bool inside = sign == 1 ? w.startDay <= two.day && two.day <= w.endDay
+                                : w.endDay <= two.day && two.day <= w.startDay;
+        if (!inside)
+        {
+            if (!SpecWindowOf(sign, d, one, r.smallestUnit, inc, true, &w))
+            {
+                return false;
+            }
+            expanded = true;
+        }
+        int64_t num = (int64_t)two.day - w.startDay;
+        int64_t den = w.endDay - w.startDay;
+        if (den < 0)
+        {
+            num = -num;
+            den = -den;
+        }
+        bool toR2 =
+            num == den || SpecRoundsToR2(num, den, w.r1 < 0 ? -w.r1 : w.r1, inc, r.mode, sign < 0);
+        if (toR2)
+        {
+            expanded = true;
+            d = w.end;
+            nudged = w.endDay;
+        }
+        else
+        {
+            d = w.start;
+            nudged = w.startDay;
+        }
+    }
+    else
+    {
+        int64_t whole = d.days;
+        int64_t q = whole < 0 ? -whole : whole;
+        int64_t low = q / inc;
+        bool up = SpecRoundsToR2(q % inc, inc, low * inc, inc, r.mode, whole < 0);
+        int64_t rounded = (low + (up ? 1 : 0)) * inc * (whole < 0 ? -1 : 1);
+        int64_t delta = rounded - whole;
+        int deltaSign = (delta > 0) - (delta < 0);
+        int wholeSign = (whole > 0) - (whole < 0);
+        expanded = deltaSign == wholeSign;
+        nudged = two.day + delta;
+        d.days = rounded;
+    }
+    if (expanded && r.smallestUnit != mloc_dateUnitWeek && r.smallestUnit != r.largestUnit)
+    {
+        for (int unit = (int)r.smallestUnit - 1; unit >= (int)r.largestUnit; unit--)
+        {
+            if (unit == mloc_dateUnitWeek && r.largestUnit != mloc_dateUnitWeek)
+            {
+                continue;
+            }
+            mlocDateDuration end = unit == 0 ? (mlocDateDuration){d.years + sign, 0, 0, 0}
+                                   : unit == 1
+                                       ? (mlocDateDuration){d.years, d.months + sign, 0, 0}
+                                       : (mlocDateDuration){d.years, d.months, d.weeks + sign, 0};
+            int64_t endDay = 0;
+            if (!SpecAddDays(one, end, &endDay))
+            {
+                return false;
+            }
+            int64_t beyond = nudged - endDay;
+            int beyondSign = (beyond > 0) - (beyond < 0);
+            if (beyondSign == -sign)
+            {
+                break;
+            }
+            d = end;
+        }
+    }
+    *out = d;
+    return true;
+}
+
+// Random pairs, every calendar, every pair of units, increments and
+// modes, against the transcription.
+static void TestRoundingAgainstSpecification(void)
+{
+    static const uint32_t s_increments[] = {1, 2, 3, 4, 5, 7, 10, 12};
+    uint64_t state = UINT64_C(0x13198A2E03707344);
+    bool all = true;
+    long compared = 0;
+    for (uint32_t c = 0; c < calendarCount; c++)
+    {
+        for (int i = 0; i < 24; i++)
+        {
+            state = state * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
+            mlocDate one = {.day = 700000 + (int32_t)((state >> 33) % 60000),
+                            .calendar = (uint8_t)c};
+            int32_t span = (int32_t)((state >> 11) % 7001) - 3500;
+            mlocDate two = {.day = one.day + span, .calendar = (uint8_t)c};
+            for (int largest = 0; largest <= mloc_dateUnitDay; largest++)
+            {
+                for (int smallest = largest; smallest <= mloc_dateUnitDay; smallest++)
+                {
+                    for (size_t k = 0; k < sizeof(s_increments) / sizeof(s_increments[0]); k++)
+                    {
+                        for (int m = 0; m <= mloc_roundTrunc; m++)
+                        {
+                            mlocDateRounding r = {(mlocDateUnit)largest, (mlocDateUnit)smallest,
+                                                  s_increments[k], (mlocRoundingMode)m};
+                            mlocDateDuration want = {0};
+                            mlocDateDuration got = {0};
+                            bool wantOk = SpecRound(one, two, r, &want);
+                            bool gotOk = mlocDateUntilRounded(&one, &two, &r, &got) == mloc_success;
+                            all =
+                                all && wantOk == gotOk &&
+                                (!wantOk || (want.years == got.years && want.months == got.months &&
+                                             want.weeks == got.weeks && want.days == got.days));
+                            compared++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Leap months: from a day of a Chinese or Dangi leap month (or of
+    // Hebrew's Adar I) to days about a year on, where the year's code
+    // passes the second date while the clamped date stays short of it, so
+    // the window shifts once.
+    long shifted = 0;
+    const mlocCalendar leapCalendars[] = {mloc_calendarChinese, mloc_calendarDangi,
+                                          mloc_calendarHebrew};
+    for (size_t c = 0; c < 3; c++)
+    {
+        for (int32_t day = 730000; day < 745000; day++)
+        {
+            mlocDate one = {.day = day, .calendar = (uint8_t)leapCalendars[c]};
+            mlocDateFields f = Fields(one);
+            if (f.monthCodeLength != 4 || f.day % 7 != 3)
+            {
+                continue;
+            }
+            for (int32_t later = 340; later <= 420; later += 3)
+            {
+                mlocDate two = {.day = day + later, .calendar = one.calendar};
+                for (int m = 0; m <= mloc_roundTrunc; m++)
+                {
+                    for (int unit = 0; unit < 6; unit++)
+                    {
+                        // Years, months and weeks alone, and below years.
+                        static const int s_pairs[6][2] = {{0, 0}, {1, 1}, {2, 2},
+                                                          {0, 1}, {0, 2}, {1, 2}};
+                        mlocDateRounding r = {(mlocDateUnit)s_pairs[unit][0],
+                                              (mlocDateUnit)s_pairs[unit][1], 1,
+                                              (mlocRoundingMode)m};
+                        mlocDateDuration want = {0};
+                        mlocDateDuration got = {0};
+                        bool wantOk = SpecRound(one, two, r, &want);
+                        bool gotOk = mlocDateUntilRounded(&one, &two, &r, &got) == mloc_success;
+                        all = all && wantOk == gotOk &&
+                              (!wantOk || (want.years == got.years && want.months == got.months &&
+                                           want.weeks == got.weeks && want.days == got.days));
+                        compared++;
+                        shifted++;
+                    }
+                }
+            }
+        }
+    }
+    printf("%ld rounded differences compared, %ld from leap months\n", compared, shifted);
+    CHECK(all, "every rounding as Temporal's steps give it");
 }
 
 static void TestRoundingRefusals(void)
@@ -638,6 +957,7 @@ static void TestRoundingRefusals(void)
 int main(void)
 {
     TestRoundingOneUnit();
+    TestRoundingAgainstSpecification();
     TestRoundingRefusals();
     TestUntilRoundTrip();
     TestUntilAgainstSpecification();
