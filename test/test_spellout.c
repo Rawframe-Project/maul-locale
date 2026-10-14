@@ -377,6 +377,118 @@ static void TestNumberingSystems(void)
           "a numeric system, an unknown id, data without the rules, null");
 }
 
+// Whether text reads back as a value (mlocFormatDecimal's text) ending at
+// a byte, by a formatter of a locale's rule set or ('@') numbering system.
+static bool Parses(const char* id, const char* ruleSet, const char* text, const char* expected,
+                   size_t expectedEnd)
+{
+    mlocLocale locale;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    size_t end = 0;
+    char value[64] = "";
+    mlocOutput output = {.buffer = value, .capacity = sizeof(value) - 1};
+    bool system = ruleSet[0] == '@';
+    bool same =
+        Locale(id, &locale) &&
+        (system ? mlocInitNumberingSystemFormatter(&formatter, &s_data, &locale, ruleSet + 1,
+                                                   strlen(ruleSet + 1), nullptr)
+                : mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet, strlen(ruleSet),
+                                            nullptr)) >= 0 &&
+        mlocParseSpellout(&formatter, text, strlen(text), &decimal, &end) == mloc_success &&
+        mlocFormatDecimal(&decimal, &output) == mloc_success && end == expectedEnd &&
+        output.length == strlen(expected) && memcmp(value, expected, output.length) == 0;
+    if (!same)
+    {
+        printf("%s %s \"%s\": %.*s, end %zu\n", id, ruleSet, text, (int)output.length, value, end);
+    }
+    return same;
+}
+
+// ICU4C 79's parse of each text (its value a double).
+static void TestParse(void)
+{
+    CHECK(Parses("en", "%spellout-cardinal", "twenty-one", "21", 10) &&
+              Parses("en", "%spellout-cardinal", "one thousand two hundred thirty-four", "1234",
+                     36) &&
+              Parses("en", "%spellout-cardinal", "one point five", "1.5", 14) &&
+              Parses("en", "%spellout-cardinal", "zero point zero five", "0.05", 20) &&
+              Parses("en", "%spellout-cardinal", "minus five", "-5", 10) &&
+              Parses("en", "%spellout-cardinal", "minus zero", "0", 10) &&
+              Parses("en", "%spellout-cardinal", "one billion", "1000000000", 11),
+          "English cardinals, fractions, negatives; minus zero is zero");
+    CHECK(Parses("en", "%spellout-cardinal", "twenty-one apples", "21", 10) &&
+              Parses("en", "%spellout-cardinal", "twenty one", "2001", 10) &&
+              Parses("en", "%spellout-cardinal", "one thousand thousand", "1000", 12) &&
+              Parses("en", "%spellout-cardinal", "three quarters", "3", 5) &&
+              Parses("en", "%spellout-cardinal", "one hundred and one", "101", 19) &&
+              Parses("en", "%spellout-cardinal", "twenty-first", "21", 12),
+          "every rule set of the group: a year, an ordinal, the verbose cardinal; text after");
+    CHECK(Parses("en", "%spellout-cardinal", "not a number", "NaN", 12) &&
+              Parses("en", "%spellout-cardinal", "infinite", "Infinity", 8) &&
+              Parses("en", "%spellout-cardinal", "minus infinite", "-Infinity", 14),
+          "NaN and the infinities by the rules");
+    CHECK(Parses("en", "%digits-ordinal", "21st", "21", 4) &&
+              Parses("en", "%digits-ordinal", "1,234th", "1234", 7) &&
+              Parses("en", "%digits-ordinal", "1234th", "1234", 6) &&
+              Parses("en", "%digits-ordinal", "21nd", "21", 4) &&
+              Parses("en", "%digits-ordinal",
+                     "\xE2\x88\x92"
+                     "5th",
+                     "-5", 6),
+          "ordinal suffixes: digits read strictly, any of the block's forms");
+    CHECK(Parses("en", "@roman", "MCMXCIX", "1999", 7) &&
+              Parses("en", "@roman", "mcmxcix", "1999", 7),
+          "Roman numerals, upper and lower: every set of the group");
+    CHECK(Parses("ru", "%spellout-cardinal-feminine",
+                 "\xD0\xB4\xD0\xB2\xD0\xB0\xD0\xB4\xD1\x86\xD0\xB0\xD1\x82\xD1\x8C "
+                 "\xD0\xBE\xD0\xB4\xD0\xBD\xD0\xB0 \xD1\x86\xD0\xB5\xD0\xBB\xD0\xB0\xD1\x8F "
+                 "\xD0\xBF\xD1\x8F\xD1\x82\xD1\x8C "
+                 "\xD0\xB4\xD0\xB5\xD1\x81\xD1\x8F\xD1\x82\xD1\x8B\xD1\x85",
+                 "21.5", 60),
+          "a Russian fraction rule set and its plural blocks");
+    CHECK(Parses("fr", "%spellout-cardinal-masculine", "quatre-vingt-dix-sept", "97", 21) &&
+              Parses("fr", "%spellout-cardinal-masculine", "vingt et un", "20", 5) &&
+              Parses("de", "%spellout-cardinal-masculine", "einundzwanzig", "1", 3) &&
+              Parses("de", "%spellout-cardinal-masculine", "eins Komma f\xC3\xBCnf", "1.5", 16),
+          "the text exactly as the rules write it: no spaces for hyphens, German's soft hyphens");
+    CHECK(Parses("pl", "%spellout-cardinal-masculine", "zero przecinek zero pi\xC4\x99\xC4\x87",
+                 "0.05", 26) &&
+              Parses("pl", "%spellout-cardinal-masculine", "jeden przecinek zero zero jeden",
+                     "1.001", 31),
+          "Polish numerators with their zeros, exact where ICU's double is not");
+    // Lithuanian's 123456789012345678.75 nests past ICU's limit, which
+    // keeps ICU's search busy for minutes.
+    mlocLocale lt;
+    mlocSpelloutFormatter words;
+    mlocDecimal big;
+    char text[512];
+    mlocOutput written = {.buffer = text, .capacity = sizeof(text)};
+    size_t stop = 99;
+    CHECK(Locale("lt", &lt) &&
+              mlocInitSpelloutFormatter(&words, &s_data, &lt, "%spellout-numbering", 19, nullptr) ==
+                  mloc_success &&
+              Decimal("123456789012345678.75", &big) &&
+              mlocFormatSpellout(&words, &big, &written) == mloc_success &&
+              mlocParseSpellout(&words, text, written.length, &big, &stop) == mloc_errorCapacity &&
+              stop == 0,
+          "a search past its steps");
+    mlocLocale en;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    size_t end = 99;
+    CHECK(Locale("en", &en) &&
+              mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 0, nullptr) >= 0 &&
+              mlocParseSpellout(&formatter, "Twenty-one", 10, &decimal, &end) == mloc_errorSyntax &&
+              end == 0 &&
+              mlocParseSpellout(&formatter, nullptr, 0, &decimal, &end) == mloc_errorSyntax &&
+              mlocParseSpellout(&formatter, nullptr, 1, &decimal, &end) == mloc_errorInvalid &&
+              mlocParseSpellout(&formatter, "one", 3, nullptr, &end) == mloc_errorInvalid &&
+              mlocParseSpellout(&formatter, "one", 3, &decimal, nullptr) == mloc_errorInvalid &&
+              mlocParseSpellout(nullptr, "one", 3, &decimal, &end) == mloc_errorInvalid,
+          "nothing read, empty text, null pointers");
+}
+
 static bool OpenData(void)
 {
     static mlocData s_sources[2];
@@ -409,5 +521,6 @@ int main(void)
     TestRefusals();
     TestCapitalization();
     TestNumberingSystems();
+    TestParse();
     return s_failures == 0 ? 0 : 1;
 }

@@ -412,3 +412,44 @@ int mlocSpelloutCompare(const mlocDecimal* a, const mlocDecimal* b)
     }
     return 0;
 }
+
+bool mlocSpelloutAdd(const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* out)
+{
+    if (mlocSpelloutIsZero(b))
+    {
+        *out = *a;
+        return true;
+    }
+    if (mlocSpelloutIsZero(a))
+    {
+        *out = *b;
+        return true;
+    }
+    int64_t topA = mlocTopPower(a);
+    int64_t topB = mlocTopPower(b);
+    int64_t top = (topA > topB ? topA : topB) + 1;
+    int64_t low = a->exponent < b->exponent ? a->exponent : b->exponent;
+    // Digits past a decimal's 40 are a sum it cannot hold.
+    uint8_t digits[2 * mlocDecimalDigits + 2];
+    if (top - low + 1 > (int64_t)sizeof(digits))
+    {
+        return false;
+    }
+    int count = (int)(top - low + 1);
+    // The larger magnitude first; unlike signs subtract the smaller.
+    mlocDecimal magnitudeA = mlocSpelloutAbsolute(a);
+    mlocDecimal magnitudeB = mlocSpelloutAbsolute(b);
+    bool swap = mlocSpelloutCompare(&magnitudeA, &magnitudeB) < 0;
+    const mlocDecimal* big = swap ? b : a;
+    const mlocDecimal* small = swap ? a : b;
+    int sign = a->negative == b->negative ? 1 : -1;
+    int carry = 0;
+    for (int i = count - 1; i >= 0; i--)
+    {
+        int64_t power = top - i;
+        int value = mlocDigitAt(big, power) + sign * mlocDigitAt(small, power) + carry;
+        carry = value < 0 ? -1 : value / 10;
+        digits[i] = (uint8_t)(value - carry * 10);
+    }
+    return Build(out, digits, count, low, big->negative != 0);
+}

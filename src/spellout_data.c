@@ -21,6 +21,7 @@ SpelloutRules mlocReadSpelloutRules(DataSpan payload)
         .patternCount = mlocLoad16(p + 8),
         .defaultSet = mlocLoad16(p + 10),
         .textSize = mlocLoad16(p + 12),
+        .flags = mlocLoad16(p + 14),
     };
     r.sets = p + spelloutHeaderSize;
     r.rules = r.sets + (size_t)r.setCount * spelloutSetSize;
@@ -232,9 +233,9 @@ bool mlocValidSpelloutRules(const DataView* view, DataSpan payload)
                     (uint64_t)r.pluralCount * spelloutPluralSize +
                     (uint64_t)r.patternCount * spelloutPatternSize + r.textSize;
     return size == payload.size && r.setCount > 0 && r.defaultSet < r.setCount &&
-           mlocLoad16(payload.bytes + 14) == 0 && mlocValidDataText(r.text, r.textSize, 0) &&
-           ValidSets(&r) && ValidRules(&r) && ValidPieces(&r) && ValidPlurals(&r) &&
-           ValidPatterns(&r);
+           (mlocLoad16(payload.bytes + 14) & ~spelloutGroupUnparseable) == 0 &&
+           mlocValidDataText(r.text, r.textSize, 0) && ValidSets(&r) && ValidRules(&r) &&
+           ValidPieces(&r) && ValidPlurals(&r) && ValidPatterns(&r);
 }
 
 // Whether one id sorts before another, byte by byte.

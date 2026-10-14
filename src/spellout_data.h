@@ -59,6 +59,7 @@ typedef struct SpelloutRules
     uint32_t patternCount;
     uint32_t defaultSet;
     uint32_t textSize;
+    uint32_t flags;
 } SpelloutRules;
 
 SpelloutRules mlocReadSpelloutRules(DataSpan payload);

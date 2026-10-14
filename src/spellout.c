@@ -17,6 +17,7 @@
 #include "plural_rules.h"
 #include "spellout_data.h"
 #include "spellout_format.h"
+#include "spellout_parse.h"
 
 #include <string.h>
 
@@ -320,6 +321,18 @@ mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mloc
     }
     return output->buffer == nullptr || w.length > output->capacity ? mloc_errorCapacity
                                                                     : mloc_success;
+}
+
+mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter, const char* text,
+                             size_t length, mlocDecimal* decimalOut, size_t* endOut)
+{
+    SpelloutFormat f;
+    if (!ReadFormatter(formatter, &f) || (text == nullptr && length != 0) ||
+        decimalOut == nullptr || endOut == nullptr)
+    {
+        return mloc_errorInvalid;
+    }
+    return mlocReadSpellout(&f, (const uint8_t*)text, length, decimalOut, endOut);
 }
 
 // The public sets of the locale's spell-out and ordinal suffix groups:

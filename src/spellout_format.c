@@ -13,6 +13,7 @@
 #include "decimal.h"
 #include "number_precision.h"
 #include "plural.h"
+#include "spellout_rule.h"
 #include "spellout_value.h"
 
 #include <string.h>
@@ -26,7 +27,6 @@ enum
     // Rules a ">>>" or infinity calls directly also nest; a crafted file
     // could chain them without end.
     maxFrames = 192,
-    noRule = -1,
 };
 
 typedef struct Engine
@@ -42,58 +42,17 @@ typedef struct Engine
     uint32_t first;
 } Engine;
 
-// A rule's fields.
-typedef struct Rule
-{
-    const uint8_t* bytes;
-    uint64_t base;
-    uint64_t divisor;
-    SpelloutRuleKind kind;
-    bool rollback;
-    // The divisor's power of ten, or -1.
-    int power;
-    SpelloutDivisor div;
-    uint32_t firstPiece;
-    uint32_t pieces;
-    uint32_t decimalPoint;
-} Rule;
+typedef SpelloutRule Rule;
+typedef SpelloutSet Set;
 
 static Rule ReadRule(const Engine* e, uint32_t index)
 {
-    const uint8_t* p = e->r.rules + (size_t)index * spelloutRuleSize;
-    bool power = (p[13] & spelloutPowerOfTen) != 0;
-    Rule rule = {
-        .bytes = p,
-        .base = mlocLoad64(p),
-        .divisor = mlocSpelloutDivisor(p),
-        .kind = (SpelloutRuleKind)p[12],
-        .rollback = (p[13] & spelloutRollback) != 0,
-        .power = power ? p[15] : -1,
-        .firstPiece = mlocLoad16(p + 8),
-        .pieces = p[14],
-        .decimalPoint = mlocLoad16(p + 10),
-    };
-    rule.div = (SpelloutDivisor){.value = rule.divisor, .power = rule.power};
-    return rule;
+    return mlocReadSpelloutRule(&e->r, index);
 }
-
-typedef struct Set
-{
-    uint32_t first;
-    uint32_t normal;
-    uint32_t special;
-    bool fraction;
-} Set;
 
 static Set ReadSet(const Engine* e, uint32_t index)
 {
-    const uint8_t* p = e->r.sets + (size_t)index * spelloutSetSize;
-    return (Set){
-        .first = mlocLoad16(p + 4),
-        .normal = mlocLoad16(p + 6),
-        .special = mlocLoad16(p + 8),
-        .fraction = (p[3] & spelloutSetFraction) != 0,
-    };
+    return mlocReadSpelloutSet(&e->r, index);
 }
 
 static bool Fail(Engine* e, mlocResult error)
@@ -170,7 +129,7 @@ static int64_t FindNormal(const Engine* e, const Set* set, const Magnitude* m)
                 return set->first + i;
             }
         }
-        return noRule;
+        return spelloutNoRule;
     }
     uint32_t lo = 0;
     uint32_t hi = set->normal;
@@ -193,31 +152,19 @@ static int64_t FindNormal(const Engine* e, const Set* set, const Magnitude* m)
     }
     if (hi == 0)
     {
-        return noRule;
+        return spelloutNoRule;
     }
     Rule rule = ReadRule(e, set->first + hi - 1);
     if (rule.rollback && Divisible(m, &rule))
     {
-        return hi == 1 ? noRule : (int64_t)(set->first + hi - 2);
+        return hi == 1 ? spelloutNoRule : (int64_t)(set->first + hi - 2);
     }
     return set->first + hi - 1;
 }
 
-// A special rule of a kind: ICU keeps one negative, infinity and NaN
-// rule; of the fraction rules, the first unless a later one's decimal
-// point is the locale's (NFRuleSet::setBestFractionRule).
 static int64_t FindSpecial(const Engine* e, const Set* set, SpelloutRuleKind kind)
 {
-    int64_t best = noRule;
-    for (uint32_t i = 0; i < set->special; i++)
-    {
-        Rule rule = ReadRule(e, set->first + set->normal + i);
-        if (rule.kind == kind && (best == noRule || rule.decimalPoint == e->f->decimalPoint))
-        {
-            best = set->first + set->normal + i;
-        }
-    }
-    return best;
+    return mlocFindSpelloutSpecial(&e->r, set, kind, e->f->decimalPoint);
 }
 
 // NFRuleSet::findFractionRuleSetRule, its bases powers of ten: the
@@ -228,7 +175,7 @@ static int64_t FindFraction(const Engine* e, const Set* set, const mlocDecimal* 
 {
     if (set->normal == 0)
     {
-        return noRule;
+        return spelloutNoRule;
     }
     Rule last = ReadRule(e, set->first + set->normal - 1);
     int largest = last.power >= 0 ? last.power : 0;
@@ -367,13 +314,6 @@ static bool HasModulus(const Engine* e, const Rule* rule)
     return false;
 }
 
-// A substitution's target: a rule set, or a pattern (-1 - its index).
-static int64_t Target(const uint8_t* piece)
-{
-    uint32_t index = mlocLoad16(piece + 2);
-    return (piece[1] & spelloutSubPattern) != 0 ? -1 - (int64_t)index : (int64_t)index;
-}
-
 // NFSubstitution::doSubstitution(int64_t) and its subclasses'.
 static void SubInt(Engine* e, const Rule* rule, const uint8_t* piece, int64_t n)
 {
@@ -384,7 +324,7 @@ static void SubInt(Engine* e, const Rule* rule, const uint8_t* piece, int64_t n)
     }
     int64_t d = (int64_t)rule->divisor;
     int64_t t = n;
-    int64_t target = Target(piece);
+    int64_t target = mlocSpelloutTarget(piece);
     switch ((SpelloutSubKind)(piece[1] & spelloutSubKindMask))
     {
     case spelloutMultiplier:
@@ -435,7 +375,7 @@ static void PassOn(Engine* e, int64_t target, const mlocDecimal* t)
     {
         Set set = ReadSet(e, (uint32_t)target);
         int64_t rule = FindSpecial(e, &set, spelloutInfinity);
-        if (rule == noRule)
+        if (rule == spelloutNoRule)
         {
             WriteSymbol(e, numberInfinity);
         }
@@ -469,7 +409,7 @@ static void FractionDigits(Engine* e, const uint8_t* piece, const mlocDecimal* x
     mlocDecimal fractionValue;
     (void)mlocSpelloutFraction(&magnitude, &fractionValue);
     const mlocDecimal* fraction = &fractionValue;
-    int64_t target = Target(piece);
+    int64_t target = mlocSpelloutTarget(piece);
     if (target < 0)
     {
         return;
@@ -501,7 +441,7 @@ static void Numerator(Engine* e, const Rule* rule, const uint8_t* piece, const m
         return;
     }
     mlocDecimal t = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
-    int64_t target = Target(piece);
+    int64_t target = mlocSpelloutTarget(piece);
     uint64_t numerator = 0;
     if ((piece[1] & spelloutSubZeros) != 0 && target >= 0 &&
         mlocSpelloutMagnitude64(&t, &numerator) && numerator != 0)
@@ -519,7 +459,7 @@ static void Numerator(Engine* e, const Rule* rule, const uint8_t* piece, const m
 // NFSubstitution::doSubstitution(double) and its subclasses', exact.
 static void SubDec(Engine* e, const Rule* rule, const uint8_t* piece, const mlocDecimal* x)
 {
-    int64_t target = Target(piece);
+    int64_t target = mlocSpelloutTarget(piece);
     mlocDecimal t = *x;
     bool done = true;
     switch ((SpelloutSubKind)(piece[1] & spelloutSubKindMask))
@@ -662,7 +602,7 @@ static void SetInt(Engine* e, uint32_t set, int64_t n)
         return;
     }
     Set s = ReadSet(e, set);
-    int64_t rule = noRule;
+    int64_t rule = spelloutNoRule;
     if (s.fraction)
     {
         mlocDecimal x = mlocSpelloutFromInt64(n);
@@ -670,14 +610,14 @@ static void SetInt(Engine* e, uint32_t set, int64_t n)
     }
     else
     {
-        rule = n < 0 ? FindSpecial(e, &s, spelloutNegative) : noRule;
-        if (rule == noRule)
+        rule = n < 0 ? FindSpecial(e, &s, spelloutNegative) : spelloutNoRule;
+        if (rule == spelloutNoRule)
         {
             Magnitude m = {.small = n < 0 ? 0 - (uint64_t)n : (uint64_t)n};
             rule = FindNormal(e, &s, &m);
         }
     }
-    if (rule != noRule)
+    if (rule != spelloutNoRule)
     {
         RuleInt(e, (uint32_t)rule, n);
     }
@@ -693,13 +633,13 @@ static int64_t FindDouble(const Engine* e, const Set* s, const mlocDecimal* x, b
     if (x->kind == mloc_decimalNaN)
     {
         int64_t rule = FindSpecial(e, s, spelloutNaN);
-        *symbol = rule == noRule;
+        *symbol = rule == spelloutNoRule;
         return rule;
     }
     if (x->negative != 0 && !mlocSpelloutIsZero(x))
     {
         int64_t rule = FindSpecial(e, s, spelloutNegative);
-        if (rule != noRule)
+        if (rule != spelloutNoRule)
         {
             return rule;
         }
@@ -707,23 +647,23 @@ static int64_t FindDouble(const Engine* e, const Set* s, const mlocDecimal* x, b
     if (x->kind == mloc_decimalInfinity)
     {
         int64_t rule = FindSpecial(e, s, spelloutInfinity);
-        *symbol = rule == noRule;
+        *symbol = rule == spelloutNoRule;
         return rule;
     }
     mlocDecimal magnitude = mlocSpelloutAbsolute(x);
     if (!mlocSpelloutIsInteger(&magnitude))
     {
         mlocDecimal one = mlocSpelloutFromUnsigned(1);
-        int64_t rule =
-            mlocSpelloutCompare(&magnitude, &one) < 0 ? FindSpecial(e, s, spelloutProper) : noRule;
-        rule = rule == noRule ? FindSpecial(e, s, spelloutImproper) : rule;
-        if (rule != noRule)
+        int64_t rule = mlocSpelloutCompare(&magnitude, &one) < 0 ? FindSpecial(e, s, spelloutProper)
+                                                                 : spelloutNoRule;
+        rule = rule == spelloutNoRule ? FindSpecial(e, s, spelloutImproper) : rule;
+        if (rule != spelloutNoRule)
         {
             return rule;
         }
     }
     int64_t rule = FindSpecial(e, s, spelloutDefault);
-    if (rule != noRule)
+    if (rule != spelloutNoRule)
     {
         return rule;
     }
@@ -747,7 +687,7 @@ static void SetDec(Engine* e, uint32_t set, const mlocDecimal* x)
     {
         WriteSymbol(e, x->kind == mloc_decimalNaN ? numberNaN : numberInfinity);
     }
-    else if (rule != noRule)
+    else if (rule != spelloutNoRule)
     {
         RuleDec(e, (uint32_t)rule, x);
     }

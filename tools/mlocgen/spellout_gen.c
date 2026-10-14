@@ -457,6 +457,7 @@ uint8_t* SpelloutPayload(const RbnfGroup* group, size_t* sizeOut)
     GenPut(header + 8, (uint64_t)b.patternCount, 2);
     GenPut(header + 10, (uint64_t)group->defaultSet, 2);
     GenPut(header + 12, b.text.size, 2);
+    GenPut(header + 14, group->unparseable ? spelloutGroupUnparseable : 0, 2);
     Concatenate(&out, &b.sets);
     Concatenate(&out, &b.rules);
     Concatenate(&out, &b.pieces);

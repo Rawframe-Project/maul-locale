@@ -69,6 +69,10 @@ bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecim
 // An integer decimal's magnitude mod a divisor, for any exponent.
 uint64_t mlocSpelloutMagnitudeMod(const mlocDecimal* d, uint64_t divisor);
 
+// a + b of finite decimals, exact; false when the sum passes a decimal's
+// digits or exponent.
+bool mlocSpelloutAdd(const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* out);
+
 // The order of two finite decimals: -1, 0 or 1.
 int mlocSpelloutCompare(const mlocDecimal* a, const mlocDecimal* b);
 

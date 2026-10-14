@@ -82,10 +82,26 @@ digits, an ordinal suffix dropped.
   context transforms are general locale data in the built-in data, a
   byte per usage; the titlecase of the rules' lowercase letters is a
   table in the spell-out file, so the library holds no case tables.
-- **Parsing** as ICU's strict parse: every public rule set, the
-  longest match, the value exact, the byte offset where it ended. No
-  lenient parsing, which needs a collator and which CLDR 49's data does
-  not use.
+- **Parsing** as ICU's strict parse: every public, parseable rule set
+  of the formatter's group, the longest match, the value exact, the
+  byte offset where it ended; ICU's quirks kept (a plural block's forms
+  searched in the order written, ICU's upper bounds clamped as it
+  clamps them, the zeros of a "<<" numerator left out of the position
+  it reports, a group with two substitutions of one class refused). A
+  rule set's search is remembered for its inputs, which changes no
+  result and keeps ICU's exponential search to a few thousand steps
+  for natural text. The departures: a value past a decimal's 40
+  digits, or a search past 2^20 steps (ICU runs for minutes on a long
+  text nested to its limit: 42 of 7,872 texts of values near 10^18 in
+  Lithuanian and Romanian), is `mloc_errorCapacity`; a digit-by-digit
+  fraction stops at a rule reading other than a digit, which ICU
+  appends as one; a rule's prefix holding a plural block never
+  matches (ICU compares the block's pattern text). No lenient
+  parsing, which needs a collator and which CLDR 49's data does not
+  use.
+- **Stack:** formatting and parsing nest up to 64 levels, as ICU does,
+  about 100 KB of stack at the deepest; a WebAssembly build needs a
+  stack of 256 KB for rules nested that far.
 
 ## Consequences
 

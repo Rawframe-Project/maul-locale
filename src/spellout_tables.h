@@ -41,7 +41,7 @@
 enum
 {
     // Header: u16 sets, rules, pieces, plurals, patterns, default set,
-    // text size, zero.
+    // text size, flags.
     spelloutHeaderSize = 16,
     // Set: u16 name offset, u8 name length, u8 flags, u16 first rule,
     // u16 normal rules, u16 special rules.
@@ -66,6 +66,14 @@ enum
     spelloutTitlecaseSize = 8,
     spelloutMaxText = 0xFFFF,
     spelloutNone = 0xFFFF,
+};
+
+// Group flags.
+enum
+{
+    // A rule has two substitutions of one class, which makes ICU's
+    // formatter refuse to parse.
+    spelloutGroupUnparseable = 1,
 };
 
 // Set flags.

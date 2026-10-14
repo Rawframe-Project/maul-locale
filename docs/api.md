@@ -281,6 +281,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatSpellout(const mlocSpelloutFormatte
 Formats a decimal by the formatter's rules: its value, not the digits it shows ("1.10" is written as 1.1, "-0" as 0), exactly (ICU4C's results wherever its int64_t or double holds the value; long fractions and values past int64_t are written exactly where ICU loses digits). Nothing is rounded: round the decimal first (mlocRoundDecimal).  @param formatter  A formatter from mlocInitSpelloutFormatter or mlocInitNumberingSystemFormatter. @param decimal    The value. @param output     Receives the text; on mloc_errorCapacity its length is the size needed. The text has no parts. @return mloc_success; mloc_errorCapacity for a buffer too small, or rules that nest past 64 levels for a value (a value far past the rules' largest base) or would divide it to more digits than a decimal holds; mloc_errorInvalid for a null pointer, an invalid decimal, an output asking for parts, or a formatter the library did not make. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter, const char* text, size_t length, mlocDecimal* decimalOut, size_t* endOut);
+```
+Reads a number written in words (or ordinal suffixes, or a numbering system's numerals) back, as ICU4C's RuleBasedNumberFormat parses it, strictly: every public rule set of the formatter's group is tried and the longest reading kept, the first of equal ones, so a cardinal formatter also reads ordinals and years. The text must be written as the rules write it (case, spaces and hyphens as they are); digits in a rule's pattern read as the strict number parser reads them. Reading starts at the first byte and stops where no rule reads more: compare the end with the length to require the whole text. The value is exact (ICU's is a double).  @param formatter   A formatter from mlocInitSpelloutFormatter or mlocInitNumberingSystemFormatter. @param text        UTF-8 text; it need not end in a 0 byte. @param length      Its length in bytes. @param decimalOut  Receives the value read: finite, NaN or an infinity; zero is never negative. @param endOut      Receives the offset after the text read, 0 when none is. @return mloc_success; mloc_errorSyntax when no rule reads anything (or the rules are of a kind ICU refuses to parse); mloc_errorCapacity when a value read passes a decimal's digits, or text crafted against the search makes it take more than 4,194,304 steps; mloc_errorInvalid for a null pointer or a formatter the library did not make. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* locale);
 ```
 The number of public rule sets a locale's spell-out and ordinal suffix rules have, the names mlocGetSpelloutRuleSet lists.  @param data    The data with the spell-out rules. @param locale  The locale, canonicalized. @return The count; 0 for a null pointer or data without the rules. @par Thread safety Safe from any thread.
@@ -331,4 +336,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-58 functions across 9 headers.
+59 functions across 9 headers.

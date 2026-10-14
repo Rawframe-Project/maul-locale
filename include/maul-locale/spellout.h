@@ -117,6 +117,43 @@ extern "C"
                                                           const mlocDecimal* decimal,
                                                           mlocOutput* output);
 
+    /// Reads a number written in words (or ordinal suffixes, or a
+    /// numbering system's numerals) back, as ICU4C's RuleBasedNumberFormat
+    /// parses it, strictly: every public rule set of the formatter's
+    /// group is tried and the longest reading kept, the first of equal
+    /// ones, so a cardinal formatter also reads ordinals and years. The
+    /// text must be written as the rules write it (case, spaces and
+    /// hyphens as they are); digits in a rule's pattern read as the
+    /// strict number parser reads them. Reading starts at the first byte
+    /// and stops where no rule reads more: compare the end with the
+    /// length to require the whole text. The value is exact (ICU's is a
+    /// double).
+    ///
+    /// @param formatter   A formatter from mlocInitSpelloutFormatter or
+    ///                    mlocInitNumberingSystemFormatter.
+    /// @param text        UTF-8 text; it need not end in a 0 byte.
+    /// @param length      Its length in bytes.
+    /// @param decimalOut  Receives the value read: finite, NaN or an
+    ///                    infinity; zero is never negative.
+    /// @param endOut      Receives the offset after the text read, 0 when
+    ///                    none is.
+    /// @return mloc_success; mloc_errorSyntax when no rule reads anything
+    ///         (or the rules are of a kind ICU refuses to parse);
+    ///         mloc_errorCapacity when a value read passes a decimal's
+    ///         digits, or text crafted against the search makes it take
+    ///         more than 4,194,304 steps; mloc_errorInvalid for a null
+    ///         pointer or a formatter the library did not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter,
+                                                         const char* text, size_t length,
+                                                         mlocDecimal* decimalOut, size_t* endOut);
+
+    // Formatting and parsing nest rule sets up to 64 levels deep, as ICU
+    // does, and take about 100 KB of stack at the deepest: a thread for
+    // them, or a WebAssembly build (Emscripten's default stack is 64 KB),
+    // needs a stack of 256 KB to format or parse rules nested that far.
+
     /// The number of public rule sets a locale's spell-out and ordinal
     /// suffix rules have, the names mlocGetSpelloutRuleSet lists.
     ///

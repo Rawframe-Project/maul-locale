@@ -337,8 +337,9 @@ static void TestUnit(void)
     }
     CHECK(!Valid(unit, size - 1) && !Valid(unit, 8) &&
               Refused(unit, size, 0, (uint8_t)(r.setCount + 1)) && Refused(unit, size, 10, 9) &&
-              Refused(unit, size, 14, 1),
-          "counts, the default set and the zero field");
+              !Refused(unit, size, 14, spelloutGroupUnparseable) && Refused(unit, size, 14, 2) &&
+              Refused(unit, size, 15, 1),
+          "counts, the default set and the flags");
     CHECK(Refused(unit, size, sets + 2, 0) && Refused(unit, size, sets + 3, 0x80) &&
               Refused(unit, size, sets + 6, 200),
           "a set's name, flags and rules");
@@ -684,6 +685,86 @@ static void TestFractionLimits(void)
           "a remainder past 64 bits");
 }
 
+// Parses text by root's rules; the value as mlocFormatDecimal writes it.
+static mlocResult ParseText(const char* rules, const char* text, char* value, size_t capacity,
+                            size_t* endOut)
+{
+    RbnfGroup group;
+    char error[256];
+    *endOut = 0;
+    value[0] = '\0';
+    if (!RbnfCompile(rules, strlen(rules), &group, error, sizeof(error)))
+    {
+        return (mlocResult)-100;
+    }
+    size_t unitSize = 0;
+    uint8_t* unit = SpelloutPayload(&group, &unitSize);
+    RbnfFree(&group);
+    size_t size = 0;
+    uint8_t* bytes = RootFile(unit, unitSize, &size);
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet set = {sources, 2};
+    mlocLocale locale;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    mlocResult r = mlocOpenData(&sources[1], bytes, size);
+    r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
+    r = r == mloc_success
+            ? mlocInitSpelloutFormatter(&formatter, &set, &locale, nullptr, 0, nullptr)
+            : r;
+    r = r >= 0 ? mlocParseSpellout(&formatter, text, strlen(text), &decimal, endOut) : r;
+    mlocOutput output = {.buffer = value, .capacity = capacity - 1};
+    if (r == mloc_success && mlocFormatDecimal(&decimal, &output) == mloc_success)
+    {
+        value[output.length] = '\0';
+    }
+    free(bytes);
+    free(unit);
+    return r;
+}
+
+static bool ParsesTo(const char* rules, const char* text, const char* expected, size_t end)
+{
+    char value[64];
+    size_t got = 0;
+    mlocResult r = ParseText(rules, text, value, sizeof(value), &got);
+    bool same = expected == nullptr
+                    ? r == mloc_errorSyntax && got == 0
+                    : r == mloc_success && got == end && strcmp(value, expected) == 0;
+    if (!same)
+    {
+        printf("\"%s\": %d %s end %zu\n", text, (int)r, value, got);
+    }
+    return same;
+}
+
+// ICU4C 79's parse of each text by the same rules.
+static void TestParseRules(void)
+{
+    // A plural block's forms are searched in the order written: "aab"
+    // first finds the block after " ", "b" first finds a "b" without it.
+    static const char s_oneFirst[] = "%a:\n0: x;\n1: y;\n10: << $(cardinal,one{aab}other{b})$;\n";
+    static const char s_otherFirst[] = "%a:\n0: x;\n1: y;\n10: << $(cardinal,other{b}one{aab})$;\n";
+    CHECK(ParsesTo(s_oneFirst, "y aab b", "10", 5) && ParsesTo(s_otherFirst, "y aab b", "1", 1),
+          "a plural block's order decides the form read");
+    static const char s_twice[] = "%a:\n0: zero;\n10: << << ten;\n";
+    CHECK(ParsesTo(s_twice, "zero", nullptr, 0),
+          "two substitutions of one class: ICU parses nothing");
+    static const char s_triple[] = "%a:\n0: x;\n1: y;\n2: z;\n10: q >>>;\n20: w >>> v;\n";
+    CHECK(ParsesTo(s_triple, "q z", "12", 3) && ParsesTo(s_triple, "w q z v", "32", 7) &&
+              ParsesTo(s_triple, "w q y v", nullptr, 0) && ParsesTo(s_triple, "y", "1", 1),
+          "a \">>>\" remainder reads by the rule before only");
+    static const char s_numerator[] =
+        "%a:\nx.x: << p >%%f>;\n0: zero; one; two; three; four; five; six; seven; eight; nine;\n"
+        "%%f:\n10: <%a< tenths;\n100: <%a<< hundredths;\n";
+    CHECK(ParsesTo(s_numerator, "zero p five tenths", "0.5", 18) &&
+              ParsesTo(s_numerator, "zero p five hundredths", "0.5", 22) &&
+              ParsesTo(s_numerator, "zero p zero five hundredths", "0", 4) &&
+              ParsesTo(s_numerator, "one p two", "1", 3),
+          "numerators; with \"<<\", the zeros read leave ICU short of the text");
+}
+
 int main(void)
 {
     TestCompile();
@@ -695,5 +776,6 @@ int main(void)
     TestEngineLimits();
     TestEngineResults();
     TestFractionLimits();
+    TestParseRules();
     return s_failures == 0 ? 0 : 1;
 }

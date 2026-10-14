@@ -100,6 +100,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/spellout.c
     src/spellout_data.c
     src/spellout_format.c
+    src/spellout_match.c
+    src/spellout_parse.c
     src/spellout_value.c
     src/unit.c
     src/unit_convert.c
@@ -197,6 +199,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
     set(MLOC_SPELLOUT_FILE ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
     if(EMSCRIPTEN)
         target_link_options(test_spellout PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE}@/spellout.mloc")
+        # Rules nested 64 levels deep need more than Emscripten's 64 KB
+        # of stack (record mloc-0034).
+        target_link_options(test_spellout PRIVATE "-sSTACK_SIZE=262144")
         set(MLOC_SPELLOUT_FILE /spellout.mloc)
     endif()
     if(WIN32)
