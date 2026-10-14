@@ -240,6 +240,17 @@ static size_t SubtagLength(const char* at)
     return strcspn(at, "-");
 }
 
+// The length of the subtag at at, which ends by end at the latest.
+static size_t SubtagIn(const char* at, const char* end)
+{
+    size_t n = 0;
+    while (at + n < end && at[n] != '-')
+    {
+        n++;
+    }
+    return n;
+}
+
 // The span from one subtag's start to another's end.
 static Span Between(const char* start, const char* end)
 {
@@ -305,20 +316,19 @@ typedef struct Tail
 static const char* Keys(const char* at, bool (*isKey)(const char*, size_t), Item* list,
                         size_t* count, Span* hybrid)
 {
-    while (*at != '\0' && SubtagLength(at) != 1 && *count < maxItems)
+    while (*at != '\0' && SubtagLength(at) != 1)
     {
-        Item* item = &list[*count];
-        *item = (Item){.kind = itemKeyword};
+        Item item = {.kind = itemKeyword};
         size_t n = SubtagLength(at);
-        memcpy(item->key, at, n < 2 ? n : 2);
-        at = Values(at + n + (at[n] == '-'), isKey, item);
-        if (hybrid != nullptr && strcmp(item->key, "h0") == 0)
+        memcpy(item.key, at, n < 2 ? n : 2);
+        at = Values(at + n + (at[n] == '-'), isKey, &item);
+        if (hybrid != nullptr && strcmp(item.key, "h0") == 0)
         {
-            *hybrid = item->values;
+            *hybrid = item.values;
         }
-        else
+        else if (*count < maxItems)
         {
-            (*count)++;
+            list[(*count)++] = item;
         }
     }
     return at;
@@ -354,17 +364,18 @@ static const char* Extension(const char* at, Tail* t)
         at = Values(at, NoKey, &item);
     }
     // Private use goes among the singletons by its letter.
+    if (t->otherCount == maxItems)
+    {
+        return at;
+    }
     size_t place = t->otherCount;
     while (place > 0 && t->other[place - 1].key[0] > singleton)
     {
         t->other[place] = t->other[place - 1];
         place--;
     }
-    if (t->otherCount < maxItems)
-    {
-        t->other[place] = item;
-        t->otherCount++;
-    }
+    t->other[place] = item;
+    t->otherCount++;
     return at;
 }
 
@@ -404,19 +415,20 @@ static void KeyTypeStart(Composer* c, NameText keyName, Span keyText)
 // Writes the items of a list joined by the separator, each by write.
 static void JoinSpans(Composer* c, Span values, void (*write)(Composer*, Span))
 {
+    const char* end = values.text + values.length;
     size_t count = 0;
-    for (const char* at = values.text; at < values.text + values.length; count++)
+    for (const char* at = values.text; at < end; count++)
     {
-        at += SubtagLength(at) + 1;
+        at += SubtagIn(at, end) + 1;
     }
     for (size_t i = 1; i < count; i++)
     {
         Append(c, c->separator.prefix, true);
     }
     size_t index = 0;
-    for (const char* at = values.text; at < values.text + values.length; index++)
+    for (const char* at = values.text; at < end; index++)
     {
-        size_t n = SubtagLength(at);
+        size_t n = SubtagIn(at, end);
         if (index > 0)
         {
             Append(c, c->separator.middle, true);
@@ -613,10 +625,10 @@ static mlocResult WriteLocale(Composer* c, const mlocLocale* locale, const Tail*
         order[count] = &names[count];
         count++;
     }
-    for (const char* at = p.variants.text;
-         !language.whole && count < 2 + maxItems && at < p.variants.text + p.variants.length;)
+    const char* end = p.variants.text + p.variants.length;
+    for (const char* at = p.variants.text; !language.whole && count < 2 + maxItems && at < end;)
     {
-        size_t n = SubtagLength(at);
+        size_t n = SubtagIn(at, end);
         names[count] = NameItem(c, 'v', (Span){at, n});
         order[count] = &names[count];
         count++;
@@ -696,8 +708,14 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
     c.separator = FindPattern(&c, "p:localeSeparator", "{0}, {1}");
     c.keyType = FindPattern(&c, "p:localeKeyTypePattern", "{0}: {1}");
     Pattern pattern = FindPattern(&c, "p:localePattern", "{0} ({1})");
+    // The tail is read from a copy that ends in a NUL whatever the
+    // caller's value holds.
+    char text[sizeof(locale->tail) + 1];
+    Span field = FieldOf(locale->tail, sizeof(locale->tail));
+    memcpy(text, field.text, field.length);
+    text[field.length] = '\0';
     Tail tail = {0};
-    ReadTail(locale->tail, &tail);
+    ReadTail(text, &tail);
     c.hybrid = tail.hybrid;
     mlocResult r = WriteLocale(&c, locale, &tail, &pattern, false);
     if (mlocNameCapitalizes(data, displayLocale, contextLanguages, o.capitalization))

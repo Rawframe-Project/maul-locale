@@ -295,6 +295,13 @@ static void TestLocaleName(void)
               mlocGetLocaleName(&s_data, &en, &gb, &badCase, &tight) == mloc_errorInvalid &&
               mlocGetLocaleName(&builtinAlone, &en, &gb, nullptr, &tight) == mloc_errorNotFound,
           "the size needed, and every refusal");
+    // A value the parser did not make: its fields full, with no NUL.
+    mlocLocale full;
+    memset(&full, 'a', sizeof(full));
+    char buffer[512];
+    mlocOutput wide = {.buffer = buffer, .capacity = sizeof(buffer)};
+    mlocResult r = mlocGetLocaleName(&s_data, &en, &full, nullptr, &wide);
+    CHECK(r == mloc_success || r == mloc_fellBack, "a locale value without a NUL read in bounds");
 }
 
 // The compiled-in data, then the names data file at the path the build
