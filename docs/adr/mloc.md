@@ -42,3 +42,4 @@ are listed in [README.md](README.md).
 | [mloc-0035](mloc-0035-list-formatter.md) | The list formatter: patterns kept in the formatter, items joined in place | Accepted |
 | [mloc-0036](mloc-0036-names-data.md) | The names data: CLDR's display names by code, filed per key in a file of their own | Accepted |
 | [mloc-0037](mloc-0037-single-code-names.md) | Single-code display names: ICU4C's lookups, BCP 47's codes | Accepted |
+| [mloc-0038](mloc-0038-locale-names.md) | Whole-locale names: UTS #35's algorithm as CLDR's tools run it | Accepted |

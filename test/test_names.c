@@ -211,6 +211,92 @@ static void TestRefusals(void)
           "null pointers, a part function, values out of range, data without the names");
 }
 
+// Whether a locale's name in a display locale is as expected.
+static bool LocaleNamed(const char* display, const char* id, mlocLanguageDisplay mode,
+                        mlocNameForm form, mlocCapitalization capitalization, mlocResult status,
+                        const char* expected)
+{
+    mlocLocale in;
+    mlocLocale named;
+    mlocLocaleNameOptions options = {mode, form, capitalization};
+    char buffer[256];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    mlocResult r = mlocParseLocale(display, strlen(display), &in).status == mloc_success &&
+                           mlocParseLocale(id, strlen(id), &named).status == mloc_success
+                       ? mlocGetLocaleName(&s_data, &in, &named, &options, &output)
+                       : mloc_errorInvalid;
+    bool same = r == status && output.length == strlen(expected) &&
+                memcmp(buffer, expected, output.length) == 0;
+    if (!same)
+    {
+        printf("%s %s: %d \"%.*s\"\n", display, id, (int)r, (int)output.length, buffer);
+    }
+    return same;
+}
+
+static bool Dialect(const char* id, const char* expected)
+{
+    return LocaleNamed("en", id, mloc_languageDisplayDialect, mloc_nameFormStandard,
+                       mloc_capitalizationNone, mloc_success, expected);
+}
+
+static void TestLocaleName(void)
+{
+    CHECK(Dialect("en-GB", "British English") && Dialect("nl-BE", "Flemish") &&
+              Dialect("es-Cyrl-MX", "Mexican Spanish (Cyrillic)") &&
+              LocaleNamed("en", "en-GB", mloc_languageDisplayStandard, mloc_nameFormStandard,
+                          mloc_capitalizationNone, mloc_success, "English (United Kingdom)") &&
+              Dialect("en-MM", "English (Myanmar [Burma])"),
+          "dialect and standard names, nested brackets");
+    CHECK(Dialect("en-u-ca-buddhist", "English (Buddhist Calendar)") &&
+              Dialect("en-u-cu-eur", "English (Currency: \xE2\x82\xAC)") &&
+              Dialect("en-u-kr-digit-deva-latn",
+                      "English (Script/Block Reordering: Digits, Devanagari, Latin)") &&
+              Dialect("en-u-kn", "English (Sort Digits Numerically)") &&
+              Dialect("en-t-h0-hybrid", "English") &&
+              Dialect("hi-u-nu-latn-t-en-h0-hybrid", "Hindi (Western Digits, Hybrid: English)") &&
+              Dialect("en-t-ja-latn-jp-m0-iso",
+                      "English (Transform: Japanese, Latin, Japan, ISO Transliteration)") &&
+              Dialect("fr-z-zz-zzz-v-vv-vvv-u-uu-uuu-t-ru-Cyrl-s-ss-sss-a-aa-aaa-x-u-x",
+                      "French (uu: uuu, Transform: Russian, Cyrillic, a: aa-aaa, s: ss-sss, v: "
+                      "vv-vvv, x: u-x, z: zz-zzz)"),
+          "keys and values, currency symbols, reorder codes, a key's true, the t extension");
+    CHECK(LocaleNamed("en", "qqq-US", mloc_languageDisplayDialect, mloc_nameFormStandard,
+                      mloc_capitalizationNone, mloc_fellBack, "qqq (United States)") &&
+              LocaleNamed("en", "en-GB", mloc_languageDisplayDialect, mloc_nameFormShort,
+                          mloc_capitalizationNone, mloc_success, "UK English") &&
+              LocaleNamed("en", "en-US", mloc_languageDisplayStandard, mloc_nameFormShort,
+                          mloc_capitalizationNone, mloc_success, "English (US)") &&
+              LocaleNamed("fr", "fr-CA", mloc_languageDisplayStandard, mloc_nameFormStandard,
+                          mloc_capitalizationListOrMenu, mloc_success,
+                          "Fran\xC3\xA7"
+                          "ais (Canada)"),
+          "a language without a name, the short form, a menu's capital");
+    mlocLocale en;
+    mlocLocale gb;
+    char small[4];
+    mlocOutput tight = {.buffer = small, .capacity = sizeof(small)};
+    mlocOutput parts = {.buffer = small, .capacity = sizeof(small), .part = (mlocPartFunction)1};
+    mlocLocaleNameOptions badMode = {.languageDisplay = (mlocLanguageDisplay)2};
+    mlocLocaleNameOptions badForm = {.form = (mlocNameForm)8};
+    mlocLocaleNameOptions badCase = {.capitalization = (mlocCapitalization)4};
+    mlocDataSet builtinAlone = {s_sources, 1};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocParseLocale("en-GB", 5, &gb).status == mloc_success &&
+              mlocGetLocaleName(&s_data, &en, &gb, nullptr, &tight) == mloc_errorCapacity &&
+              tight.length == 15 &&
+              mlocGetLocaleName(nullptr, &en, &gb, nullptr, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, nullptr, &gb, nullptr, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, nullptr, nullptr, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, &gb, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, &gb, nullptr, &parts) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, &gb, &badMode, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, &gb, &badForm, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&s_data, &en, &gb, &badCase, &tight) == mloc_errorInvalid &&
+              mlocGetLocaleName(&builtinAlone, &en, &gb, nullptr, &tight) == mloc_errorNotFound,
+          "the size needed, and every refusal");
+}
+
 // The compiled-in data, then the names data file at the path the build
 // gives.
 static bool OpenData(void)
@@ -240,5 +326,6 @@ int main(void)
     TestCapitalization();
     TestOutput();
     TestRefusals();
+    TestLocaleName();
     return s_failures == 0 ? 0 : 1;
 }

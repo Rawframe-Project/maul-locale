@@ -112,7 +112,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -141,6 +141,8 @@ jobs:
             build/conform_numbers tools/number-exceptions.txt
           build/conform_spellout src/generated/spellout.mloc \
             ~/cldr-cache/cldr/common/testData/rbnf/*.ssv
+          build/conform_locale_names src/generated/names.mloc \
+            $ids/localeDisplayName.txt tools/locale-name-exceptions.txt
       - name: Matching
         # ICU's matcher test (record mloc-0017), the file tools/icu-release.txt pins.
         timeout-minutes: 5

@@ -88,6 +88,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_prefs.c
     src/names.c
     src/names_data.c
+    src/names_locale.c
+    src/names_text.c
     src/currency.c
     src/currency_region.c
     src/number.c
@@ -239,7 +241,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     # job runs on the pinned releases; built here so that every build
     # compiles them.
     foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs
-                 spellout names)
+                 spellout names locale_names)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
         maul_apply_flags(conform_${name})

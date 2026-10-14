@@ -694,6 +694,32 @@ static void AddCodes(const Names* n, DataFile* file)
     free(unit);
 }
 
+// Checks that every locale resolves the nested bracket replacements to
+// root's, which the library applies to every name (src/names_text.h).
+static void CheckBrackets(const NamesInput* input)
+{
+    static const char* const s_pairs[][2] = {
+        {"(", "["},
+        {")", "]"},
+        {"\xEF\xBC\x88", "\xEF\xBC\xBB"},
+        {"\xEF\xBC\x89", "\xEF\xBC\xBD"},
+    };
+    for (int i = 0; i < input->count; i++)
+    {
+        for (size_t p = 0; p < sizeof(s_pairs) / sizeof(s_pairs[0]); p++)
+        {
+            char chain[128];
+            snprintf(chain, sizeof(chain),
+                     "//ldml/characters/nestedBracketReplacement[@bracket=\"%s\"]", s_pairs[p][0]);
+            const Leaf* leaf = CldrResolve(input->cldr, input->ids[i], chain, componentMain);
+            if (leaf == nullptr || strcmp(leaf->text, s_pairs[p][1]) != 0)
+            {
+                GenDie("a nested bracket replacement other than root's", input->ids[i]);
+            }
+        }
+    }
+}
+
 int GenerateNames(const NamesInput* input, DataFile* file, char* errorOut, size_t errorCapacity)
 {
     static Names s_names;
@@ -703,6 +729,7 @@ int GenerateNames(const NamesInput* input, DataFile* file, char* errorOut, size_
     {
         return 0;
     }
+    CheckBrackets(input);
     CollectAll(n);
     AddCodes(n, file);
     for (int i = 0; i < input->count; i++)

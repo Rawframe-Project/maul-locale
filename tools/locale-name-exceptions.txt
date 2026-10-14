@@ -1,0 +1,17 @@
+# Where CLDR's localeDisplayName.txt and the library differ (record mloc-0038),
+# tab-separated: display locale, mode, id, the name here, the reason.
+en	standard	en-u-rg-gbsct	English (Region For Supplemental Data: gbsct)	subdivision names wait for subdivisions.mloc (slice 10e); the value stands as written
+en	standard	en-u-rg-gbeng	English (Region For Supplemental Data: gbeng)	subdivision names wait for subdivisions.mloc (slice 10e); the value stands as written
+en	standard	en-u-sd-gbsct	English (Region Subdivision: gbsct)	subdivision names wait for subdivisions.mloc (slice 10e); the value stands as written
+en	standard	en-u-sd-gbwls	English (Region Subdivision: gbwls)	subdivision names wait for subdivisions.mloc (slice 10e); the value stands as written
+en	standard	en-u-tz-uslax	English (Time Zone: uslax)	time zone names wait for the zone part; the value stands as written
+en	standard	en-u-tz-gblon	English (Time Zone: gblon)	time zone names wait for the zone part; the value stands as written
+en	standard	en-u-tz-chzrh	English (Time Zone: chzrh)	time zone names wait for the zone part; the value stands as written
+root	standard	en-u-ca-buddhist-t-en-latn-001-t0-und	en (ca: buddhist, t: en, Latn, 001, t0: und)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	standard	en-u-hc-h12-t-s0-ascii-d0-fwidth	en (hc: h12, d0: fwidth, s0: ascii)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	standard	en-u-nu-deva-t-de-mm-fonipa	en (nu: deva, t: de, MM, fonipa)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	standard	hi-u-nu-latn-t-en-h0-hybrid	hi (nu: latn, t: en)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	dialect	en-u-ca-buddhist-t-en-latn-001-t0-und	en (ca: buddhist, t: en, Latn, 001, t0: und)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	dialect	en-u-hc-h12-t-s0-ascii-d0-fwidth	en (hc: h12, d0: fwidth, s0: ascii)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	dialect	en-u-nu-deva-t-de-mm-fonipa	en (nu: deva, t: de, MM, fonipa)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value
+root	dialect	hi-u-nu-latn-t-en-h0-hybrid	hi (nu: latn, t: en)	CLDR's tools give root a u value's code as its name (code fallback), so the key's name is left out; root has no names, so the library writes the key's code and the value

@@ -10,9 +10,8 @@
 
 #include "data_view.h"
 #include "kinds.h"
-#include "locale_context.h"
 #include "names_data.h"
-#include "spellout_data.h"
+#include "names_text.h"
 
 #include <string.h>
 
@@ -175,113 +174,28 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
     return true;
 }
 
-// Whether the first letter is titlecased in a context, as ICU decides: at
-// the beginning of a sentence always, in a list or menu or alone as the
-// locale's transforms for the type's usage say.
+// Whether the first letter is titlecased in a context: by the type's
+// usage of the context transforms (a measurement system has none).
 static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocNameType type,
                         mlocCapitalization capitalization)
 {
     static const ContextUsage s_usages[] = {contextLanguages, contextScript, contextTerritory,
-                                            contextVariant,   contextKey,    contextKeyValue};
-    if (capitalization == mloc_capitalizationSentence)
-    {
-        return true;
-    }
-    if (type == mloc_nameMeasurementSystem || capitalization == mloc_capitalizationNone)
-    {
-        return false;
-    }
-    uint8_t contexts = mlocGetLocaleContext(data, locale, s_usages[type]);
-    return (capitalization == mloc_capitalizationListOrMenu &&
-            (contexts & contextListOrMenu) != 0) ||
-           (capitalization == mloc_capitalizationStandAlone && (contexts & contextStandAlone) != 0);
-}
-
-// The first code point of valid UTF-8 text and its length in bytes.
-static uint32_t First(const uint8_t* text, size_t length, size_t* sizeOut)
-{
-    uint32_t size = text[0] < 0x80 ? 1 : text[0] < 0xE0 ? 2 : text[0] < 0xF0 ? 3 : 4;
-    if (length < size)
-    {
-        *sizeOut = 0;
-        return 0;
-    }
-    static const uint8_t s_masks[] = {0, 0x7F, 0x1F, 0x0F, 0x07};
-    uint32_t cp = text[0] & s_masks[size];
-    for (uint32_t i = 1; i < size; i++)
-    {
-        cp = cp << 6 | (text[i] & 0x3Fu);
-    }
-    *sizeOut = size;
-    return cp;
-}
-
-// The titlecase of a text's first code point, or false when it has none
-// other: ASCII by itself ("i" as Turkish and Azerbaijani titlecase it),
-// the rest by the names' titlecase table.
-static bool Titlecase(const mlocDataSet* data, const mlocLocale* locale, uint32_t cp,
-                      const uint8_t** textOut, uint32_t* lengthOut)
-{
-    static const uint8_t s_dottedI[] = {0xC4, 0xB0};
-    static const char s_upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    bool turkic = strcmp(locale->language, "tr") == 0 || strcmp(locale->language, "az") == 0;
-    if (turkic && cp == 'i')
-    {
-        *textOut = s_dottedI;
-        *lengthOut = sizeof(s_dottedI);
-        return true;
-    }
-    if (cp < 0x80)
-    {
-        if (cp < 'a' || cp > 'z')
-        {
-            return false;
-        }
-        *textOut = (const uint8_t*)s_upper + (cp - 'a');
-        *lengthOut = 1;
-        return true;
-    }
-    DataSpan unit;
-    return mlocFindDataSetUnit(data, kindNameTitlecase, nullptr, 0, &unit) &&
-           mlocSpelloutTitlecase(unit, cp, textOut, lengthOut);
+                                            contextVariant,   contextKey,    contextKeyValue,
+                                            contextUsageCount};
+    return mlocNameCapitalizes(data, locale, s_usages[type], capitalization);
 }
 
 // Writes text, its first code point titlecased when asked.
 static mlocResult Write(const mlocDataSet* data, const mlocLocale* locale, const uint8_t* text,
                         size_t length, bool capitalize, mlocOutput* output)
 {
-    const uint8_t* title = nullptr;
-    uint32_t titleLength = 0;
-    size_t firstSize = 0;
-    if (capitalize && length > 0)
+    NameWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocNameAppend(&w, text, length, false);
+    if (capitalize)
     {
-        uint32_t cp = First(text, length, &firstSize);
-        if (firstSize == 0 || !Titlecase(data, locale, cp, &title, &titleLength))
-        {
-            firstSize = 0;
-            titleLength = 0;
-        }
+        mlocNameCapitalize(data, locale, &w);
     }
-    size_t needed = length - firstSize + titleLength;
-    output->length = needed;
-    if (needed > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    // Nothing to write fits a null buffer.
-    if (output->buffer == nullptr)
-    {
-        return mloc_success;
-    }
-    if (titleLength > 0)
-    {
-        memcpy(output->buffer, title, titleLength);
-    }
-    if (length > firstSize)
-    {
-        memcpy(output->buffer + titleLength, text + firstSize, length - firstSize);
-    }
-    return mloc_success;
+    return mlocNameFinish(&w, output);
 }
 
 // A language id's name by its CLDR alias, as ICU4C looks a deprecated

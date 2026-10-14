@@ -66,9 +66,11 @@ lists of any items ("a, b, and c", "a, b, or c") in each width, as
 ICU joins them; and the display names of languages, scripts, regions,
 variants, keys and their values and measurement systems, in every form
 CLDR has and each capitalization context, as ICU4C's LocaleDisplayNames
-gives them (the names are a data file of their own,
-`src/generated/names.mloc`).
-The library has 62 public functions.
+gives them, and of whole locales by UTS #35's algorithm, dialect names,
+extensions and transforms included, as CLDR's own tools build them
+(CLDR's locale display name test data passes on every push; the names
+are a data file of their own, `src/generated/names.mloc`).
+The library has 63 public functions.
 
 ## Building
 
