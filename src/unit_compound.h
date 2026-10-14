@@ -40,8 +40,8 @@ typedef struct UnitForms
 // A unit's patterns in a width (kindUnitNamesLong and the others) and,
 // in the long width, a grammatical case (unitCaseNominative and the
 // others; one out of range is the nominative), a unit CLDR names taken
-// as it is (named: the caller knows it is one), others built with the
-// case derivations:
+// as it is (named: mlocNormalUnitName found it named; else the unit is a
+// normal identifier), others built with the case derivations:
 // mloc_success; the errors of mlocNormalizeUnitName; mloc_errorNotFound
 // for names the data lacks (a simple unit without names, a power past
 // three); mloc_errorInvalid for a pattern with the number inside a unit

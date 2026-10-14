@@ -757,11 +757,13 @@ mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale,
 {
     Context c = {.data = data, .locale = locale, .kind = kind, .lower = kind == kindUnitNamesLong};
     GrammaticalCase k = (GrammaticalCase)(gcase < unitCaseCount ? gcase : unitCaseNominative);
-    uint8_t idKind = 0;
-    if (named || (mlocUnitNameKind(data, unit, length, &idKind) && idKind == unitIdUnit))
+    if (named)
     {
         return LoadNamed(&c, unit, length, k, out);
     }
+    // Normal already: one the names data names, which writing it back
+    // gives as it is, is found below.
+    uint8_t idKind = 0;
     UnitId id;
     mlocResult r = mlocParseNormalUnit(data, unit, length, &c.table, &id);
     if (r != mloc_success)
