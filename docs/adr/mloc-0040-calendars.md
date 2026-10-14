@@ -63,6 +63,16 @@ an explicit choice when a field overflows.
   the Korea Astronomy and Space Science Institute publish and Korea
   also kept. The same model, compiled in, serves days outside the
   tables, with no cache and no lock.
+  - Before 1900 the dates are the model's, not the Qing court's. The
+    Qing calendar reckoned in Beijing's apparent time with its own
+    astronomy (Tycho's tables, then from 1742 tables after Kepler).
+    Yuk Tung Liu counts over 200 months where it differs from a
+    modern computation between 1645 and 1911. The one such month
+    testable here, April 1906, is not explained by apparent time
+    alone: the model's new moon falls at 23:54 apparent time, and the
+    court began the month the next day. A table of those years from a
+    source with free terms can join the overrides later. ICU4C also
+    computes these years by astronomy, and ICU4X by mean motion.
   - Days and degrees are scaled by 2^32, centuries by 2^48 and sines
     by 2^62 (an eighth of a turn and a Taylor series past the scale's
     resolution); products are 128-bit and rounded to nearest. The
