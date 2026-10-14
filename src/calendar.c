@@ -7,11 +7,8 @@
 
 #include "maul-locale/calendar.h"
 
-#include "calendar_arith.h"
 #include "calendar_eras.h"
-#include "calendar_hebrew.h"
-#include "calendar_lunar.h"
-#include "calendar_umalqura.h"
+#include "calendar_year.h"
 
 #include <string.h>
 
@@ -139,226 +136,9 @@ static bool ParseMonthCode(const char* code, size_t length, uint32_t* numberOut,
     return *numberOut >= 1 && *numberOut <= 13;
 }
 
-// The file that has a calendar's arithmetic.
-typedef enum Source
-{
-    sourceArithmetic,
-    sourceHebrew,
-    sourceUmalqura,
-    sourceChinese,
-    sourceDangi,
-} Source;
-
-static Source SourceOf(mlocCalendar calendar)
-{
-    switch (calendar)
-    {
-    case mloc_calendarHebrew:
-        return sourceHebrew;
-    case mloc_calendarIslamicUmalqura:
-    case mloc_calendarIslamic:
-    case mloc_calendarIslamicRgsa:
-        return sourceUmalqura;
-    case mloc_calendarChinese:
-        return sourceChinese;
-    case mloc_calendarDangi:
-        return sourceDangi;
-    default:
-        return sourceArithmetic;
-    }
-}
-
-static bool Lunisolar(Source source)
-{
-    return source == sourceChinese || source == sourceDangi;
-}
-
-// A year of a calendar, with the Chinese and Dangi months computed once.
-typedef struct Year
-{
-    mlocCalendar calendar;
-    Source source;
-    int64_t year;
-    LunisolarYear lunar;
-} Year;
-
-static void OpenYear(Year* y, mlocCalendar calendar, int64_t year)
-{
-    y->calendar = calendar;
-    y->source = SourceOf(calendar);
-    y->year = year;
-    if (Lunisolar(y->source))
-    {
-        mlocLunarYear(y->source == sourceDangi, year, &y->lunar);
-    }
-}
-
-static uint32_t MonthsIn(const Year* y)
-{
-    switch (y->source)
-    {
-    case sourceHebrew:
-        return mlocHebrewMonths(y->year);
-    case sourceChinese:
-    case sourceDangi:
-        return y->lunar.count;
-    default:
-        return mlocArithmeticMonths(y->calendar);
-    }
-}
-
-static uint32_t DaysIn(const Year* y, uint32_t month)
-{
-    switch (y->source)
-    {
-    case sourceHebrew:
-        return mlocHebrewDaysInMonth(y->year, month);
-    case sourceUmalqura:
-        return mlocUmalquraDaysInMonth(y->year, month);
-    case sourceChinese:
-    case sourceDangi:
-        return (uint32_t)(y->lunar.start[month] - y->lunar.start[month - 1]);
-    default:
-        return mlocArithmeticDaysInMonth(y->calendar, y->year, month);
-    }
-}
-
-static int64_t DayOf(const Year* y, uint32_t month, uint32_t day)
-{
-    switch (y->source)
-    {
-    case sourceHebrew:
-        return mlocHebrewToDay(y->year, month, day);
-    case sourceUmalqura:
-        return mlocUmalquraToDay(y->year, month, day);
-    case sourceChinese:
-    case sourceDangi:
-        return (int64_t)y->lunar.start[month - 1] + day - 1;
-    default:
-        return mlocArithmeticToDay(y->calendar, y->year, month, day);
-    }
-}
-
-static bool LeapYear(const Year* y)
-{
-    switch (y->source)
-    {
-    case sourceHebrew:
-        return mlocHebrewLeap(y->year);
-    case sourceUmalqura:
-        return mlocUmalquraLeap(y->year);
-    case sourceChinese:
-    case sourceDangi:
-        return y->lunar.count == 13;
-    default:
-        return mlocArithmeticLeap(y->calendar, y->year);
-    }
-}
-
-// The leap month's place in the year, 0 for none: Hebrew's Adar I, the
-// sixth month of a leap year, and the Chinese or Dangi leap month.
-static uint32_t LeapMonth(const Year* y)
-{
-    if (y->source == sourceHebrew)
-    {
-        return mlocHebrewLeap(y->year) ? 6 : 0;
-    }
-    return Lunisolar(y->source) ? y->lunar.leap : 0;
-}
-
-static int64_t DaysInYear(const Year* y)
-{
-    if (Lunisolar(y->source))
-    {
-        return y->lunar.start[y->lunar.count] - y->lunar.start[0];
-    }
-    Year next;
-    OpenYear(&next, y->calendar, y->year + 1);
-    return DayOf(&next, 1, 1) - DayOf(y, 1, 1);
-}
-
-// The year holding a day, and the day's month and day in it.
-static CalendarDate OpenYearOf(Year* y, mlocCalendar calendar, int32_t day)
-{
-    Source source = SourceOf(calendar);
-    if (!Lunisolar(source))
-    {
-        CalendarDate d = source == sourceHebrew     ? mlocHebrewFromDay(day)
-                         : source == sourceUmalqura ? mlocUmalquraFromDay(day)
-                                                    : mlocArithmeticFromDay(calendar, day);
-        OpenYear(y, calendar, d.year);
-        return d;
-    }
-    y->calendar = calendar;
-    y->source = source;
-    mlocLunarYearOf(source == sourceDangi, day, &y->lunar);
-    y->year = y->lunar.year;
-    uint32_t month = 1;
-    while (y->lunar.start[month] <= day)
-    {
-        month++;
-    }
-    return (CalendarDate){y->lunar.year, (uint8_t)month,
-                          (uint8_t)(day - y->lunar.start[month - 1] + 1)};
-}
-
-// A month's code: its number, and whether it is the leap month, which
-// takes the number of the month before it ('M05L' after 'M05'); the
-// months after a leap month take the code of the place before theirs.
-static void CodeOf(const Year* y, uint32_t month, uint32_t* numberOut, bool* leapOut)
-{
-    uint32_t leap = LeapMonth(y);
-    *leapOut = leap != 0 && month == leap;
-    *numberOut = leap != 0 && month >= leap ? month - 1 : month;
-}
-
-// Whether a code is one some year of the calendar has.
-static bool CodeExists(const Year* y, uint32_t number, bool leap)
-{
-    switch (y->source)
-    {
-    case sourceHebrew:
-        return number <= 12 && (!leap || number == 5);
-    case sourceChinese:
-    case sourceDangi:
-        return number <= 12;
-    default:
-        return !leap && number <= mlocArithmeticMonths(y->calendar);
-    }
-}
-
-// The month a code names in a year: mloc_success; for a leap month the
-// year lacks, the month Temporal puts in its place (Hebrew's Adar,
-// 'M06'; the Chinese month of the same number) or mloc_errorInvalid
-// (reject); mloc_errorSyntax for a code no year of the calendar has.
-static mlocResult MonthOfCode(const Year* y, uint32_t number, bool leap, mlocOverflow overflow,
-                              uint32_t* monthOut)
-{
-    if (!CodeExists(y, number, leap))
-    {
-        return mloc_errorSyntax;
-    }
-    uint32_t leapMonth = LeapMonth(y);
-    if (leap && leapMonth != 0 && number == leapMonth - 1)
-    {
-        *monthOut = leapMonth;
-        return mloc_success;
-    }
-    if (leap && overflow == mloc_overflowReject)
-    {
-        return mloc_errorInvalid;
-    }
-    if (leap && y->source == sourceHebrew)
-    {
-        number++;
-    }
-    *monthOut = leapMonth != 0 && number >= leapMonth ? number + 1 : number;
-    return mloc_success;
-}
-
 // The month's place the input names, by code, by place, or by both
 // when they agree; 0 when it names none.
-static mlocResult MonthOf(const Year* y, const mlocDateInput* input, mlocOverflow overflow,
+static mlocResult MonthOf(const CalendarYear* y, const mlocDateInput* input, mlocOverflow overflow,
                           uint32_t* monthOut)
 {
     *monthOut = input->month;
@@ -373,7 +153,7 @@ static mlocResult MonthOf(const Year* y, const mlocDateInput* input, mlocOverflo
     {
         return mloc_errorSyntax;
     }
-    mlocResult r = MonthOfCode(y, number, leap, overflow, &coded);
+    mlocResult r = mlocYearMonthOfCode(y, number, leap, overflow, &coded);
     if (r != mloc_success)
     {
         return r;
@@ -395,7 +175,7 @@ static mlocResult YearOfInput(mlocCalendar calendar, const mlocDateInput* input,
     {
         return mloc_errorSyntax;
     }
-    bool lunisolar = Lunisolar(SourceOf(calendar));
+    bool lunisolar = mlocYearLunisolar(mlocYearSource(calendar));
     if (*yearOut < (lunisolar ? lunisolarMinYear : -maxYear) ||
         *yearOut > (lunisolar ? lunisolarMaxYear : maxYear))
     {
@@ -420,9 +200,9 @@ mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocO
     {
         return r;
     }
-    Year y;
-    OpenYear(&y, calendar, year);
-    uint32_t months = MonthsIn(&y);
+    CalendarYear y;
+    mlocYearOpen(&y, calendar, year);
+    uint32_t months = mlocYearMonths(&y);
     uint32_t month = 0;
     r = MonthOf(&y, input, overflow, &month);
     if (r != mloc_success)
@@ -434,13 +214,13 @@ mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocO
         return mloc_errorInvalid;
     }
     month = month < months ? month : months;
-    uint32_t last = DaysIn(&y, month);
+    uint32_t last = mlocYearDaysInMonth(&y, month);
     if (overflow == mloc_overflowReject && input->day > last)
     {
         return mloc_errorInvalid;
     }
     uint32_t day = input->day < last ? input->day : last;
-    int64_t fixed = DayOf(&y, month, day);
+    int64_t fixed = mlocYearDayOf(&y, month, day);
     if (fixed < mlocDateMinDay || fixed > mlocDateMaxDay)
     {
         return mloc_errorInvalid;
@@ -491,20 +271,20 @@ mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
         return mloc_errorInvalid;
     }
     mlocCalendar calendar = (mlocCalendar)date->calendar;
-    Year y;
-    CalendarDate d = OpenYearOf(&y, calendar, date->day);
+    CalendarYear y;
+    CalendarDate d = mlocYearOpenOf(&y, calendar, date->day);
     mlocDateFields f = {
         .year = d.year,
         .month = d.month,
         .day = d.day,
-        .monthsInYear = (uint8_t)MonthsIn(&y),
-        .daysInMonth = (uint8_t)DaysIn(&y, d.month),
-        .inLeapYear = LeapYear(&y) ? 1 : 0,
+        .monthsInYear = (uint8_t)mlocYearMonths(&y),
+        .daysInMonth = (uint8_t)mlocYearDaysInMonth(&y, d.month),
+        .inLeapYear = mlocYearLeap(&y) ? 1 : 0,
     };
     SetEra(calendar, date->day, d.year, &f);
     uint32_t number = 0;
     bool leapMonth = false;
-    CodeOf(&y, d.month, &number, &leapMonth);
+    mlocYearCodeOf(&y, d.month, &number, &leapMonth);
     f.monthCode[0] = 'M';
     f.monthCode[1] = (char)('0' + number / 10);
     f.monthCode[2] = (char)('0' + number % 10);
@@ -513,8 +293,8 @@ mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
     // January 1 of year 1, day 1, was a Monday.
     int64_t weekday = ((int64_t)date->day - 1) % 7;
     f.dayOfWeek = (uint8_t)((weekday < 0 ? weekday + 7 : weekday) + 1);
-    f.dayOfYear = (uint16_t)(date->day - DayOf(&y, 1, 1) + 1);
-    f.daysInYear = (uint16_t)DaysInYear(&y);
+    f.dayOfYear = (uint16_t)(date->day - mlocYearDayOf(&y, 1, 1) + 1);
+    f.daysInYear = (uint16_t)mlocYearDays(&y);
     *fieldsOut = f;
     return mloc_success;
 }
