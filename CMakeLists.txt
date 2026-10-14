@@ -235,7 +235,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal locale parse)
+    foreach(area data decimal locale parse spellout)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -245,6 +245,8 @@ if(MAUL_LOCALE_FUZZ)
     endforeach()
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
+    target_compile_definitions(fuzz_spellout PRIVATE
+        MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
@@ -261,7 +263,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/spellout_compile.c
-                                    tools/mlocgen/spellout_gen.c
+                                    tools/mlocgen/spellout_gen.c tools/mlocgen/spellout_lead.c
                                     tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c

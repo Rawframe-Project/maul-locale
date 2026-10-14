@@ -88,15 +88,23 @@ digits, an ordinal suffix dropped.
   searched in the order written, ICU's upper bounds clamped as it
   clamps them, the zeros of a "<<" numerator left out of the position
   it reports, a group with two substitutions of one class refused). A
-  rule set's search is remembered for its inputs, which changes no
-  result and keeps ICU's exponential search to a few thousand steps
-  for natural text. Rules a ">>>" calls directly nest without a rule
-  set between to count them; past 192 such frames (a crafted file
-  whose remainder takes its own rule) the parse is an error, as the
-  formatting is. The departures: a value past a decimal's 40
-  digits, or a search past 2^20 steps (ICU runs for minutes on a long
-  text nested to its limit: 42 of 7,872 texts of values near 10^18 in
-  Lithuanian and Romanian), is `mloc_errorCapacity`; a digit-by-digit
+  rule set's search is remembered for its inputs, in 512 slots by
+  pairs that keep a costly search over a cheap one; a search no rule
+  of the set can start is refused at once by the set's lead record,
+  which the generator writes: the first characters its rules start
+  with, through the sets the substitutions they start with reach, the
+  least upper bound with which it reaches a decimal pattern, and the
+  special rules it reaches. Neither changes a result; ICU's
+  exponential search takes at most 47,400 steps here for the 323,098
+  texts CLDR's rules write that the proof reads, and a text no rule
+  starts (a capitalized one) ends at once. Rules a ">>>" calls
+  directly nest without a rule set between to count them; past 192
+  such frames (a crafted file whose remainder takes its own rule) the
+  parse is an error, as the formatting is. The departures: a value
+  past a decimal's 40 digits, or a search past 2^18 steps (ICU runs
+  for minutes on a long text nested to its limit: 35 Lithuanian texts
+  of 7,872 of values near 10^18, which pass 2^26 steps here too), is
+  `mloc_errorCapacity`; a digit-by-digit
   fraction stops at a rule reading other than a digit, which ICU
   appends as one; a rule's prefix holding a plural block never
   matches (ICU compares the block's pattern text). No lenient

@@ -11,6 +11,7 @@
 //   header      spelloutHeaderSize bytes: the counts below, the default
 //               rule set, the text size
 //   sets        spelloutSetSize each
+//   leads       spelloutLeadSize each, one per set, in the sets' order
 //   rules       spelloutRuleSize each; a set's normal rules (bases
 //               ascending), then its special rules in the order they
 //               came (the last negative, infinity and NaN rule, every
@@ -20,6 +21,15 @@
 //   plurals     spelloutPluralSize each: a text per plural category
 //   patterns    spelloutPatternSize each: a decimal pattern compiled
 //   text        UTF-8, which every offset indexes
+//
+// A set's lead record lets the parser refuse at once a place no rule of
+// the set can start reading at. A rule starts reading with the text
+// before its first substitution or, that text empty, with that
+// substitution's set or decimal pattern. So a set may start at a place
+// only when the place's first character leads a text that a rule of the
+// set, or of a set so reached, starts with; when it reaches a pattern
+// with the upper bound it is read with; or when it reaches a special
+// rule not yet tried, taken as reaching anything.
 //
 // The numbering systems, a unit of no locale: u16 count, u16 text size,
 // then per algorithmic system, sorted by its CLDR id, a record of
@@ -36,6 +46,7 @@
 #ifndef MLOC_SPELLOUT_TABLES_H
 #define MLOC_SPELLOUT_TABLES_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 enum
@@ -46,6 +57,13 @@ enum
     // Set: u16 name offset, u8 name length, u8 flags, u16 first rule,
     // u16 normal rules, u16 special rules.
     spelloutSetSize = 10,
+    // Lead: u64 the least upper bound with which the set reaches a
+    // pattern by its normal rules (all ones for none); u8 the kinds of
+    // the special rules it reaches, a bit per kind from negative's (bit
+    // 0); u8 0; then 256 bits, bit mlocSpelloutLeadHash set for the text
+    // each rule it reaches starts with.
+    spelloutLeadSize = 42,
+    spelloutLeadBits = 10,
     // Rule: u64 base, u16 first piece, u16 radix (a normal rule's) or
     // decimal point (a fraction rule's), u8 kind, u8 flags, u8 pieces,
     // u8 exponent (of ten with spelloutPowerOfTen, else of the radix).
@@ -75,6 +93,19 @@ enum
     // formatter refuse to parse.
     spelloutGroupUnparseable = 1,
 };
+
+// The lead hash of a text's first character, at most its first three
+// bytes (as many as the text has), to a bit of a lead record.
+static inline uint32_t mlocSpelloutLeadHash(const uint8_t* text, size_t length)
+{
+    size_t take = text[0] < 0xC0 ? 1 : text[0] < 0xE0 ? 2 : 3;
+    uint32_t key = 0;
+    for (size_t i = 0; i < take && i < length; i++)
+    {
+        key = key << 8 | text[i];
+    }
+    return (key * 0x9E3779B1u) >> 24;
+}
 
 // Set flags.
 enum

@@ -47,6 +47,7 @@ bool mlocFindSpelloutSystem(DataSpan unit, const char* id, size_t length, Spello
 typedef struct SpelloutRules
 {
     const uint8_t* sets;
+    const uint8_t* leads;
     const uint8_t* rules;
     const uint8_t* pieces;
     const uint8_t* plurals;

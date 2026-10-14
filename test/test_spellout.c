@@ -481,6 +481,26 @@ static void TestParse(void)
               mlocParseSpellout(&words, text, written.length, &big, &stop) == mloc_errorCapacity &&
               stop == 0,
           "a search past its steps");
+    // A long Lithuanian number reads within the steps, its searches kept
+    // over cheaper ones; capitalized, no rule starts where it does, which
+    // ends the search at once.
+    static const char s_long[] =
+        "trys \xC5\xA1imtai \xC5\xA1"
+        "e\xC5\xA1iasde\xC5\xA1imt \xC5\xA1"
+        "e\xC5\xA1i milijardai penki \xC5\xA1imtai trys milijonai a\xC5\xA1tuoni "
+        "\xC5\xA1imtai septyniasde\xC5\xA1imt penki t\xC5\xABkstan\xC4\x8Diai devyni "
+        "\xC5\xA1imtai dvide\xC5\xA1imt penkios";
+    static const char s_capital[] =
+        "Vienas milijardas keturi \xC5\xA1imtai a\xC5\xA1tuoniasde\xC5\xA1imt trys milijonai "
+        "a\xC5\xA1tuoni \xC5\xA1imtai trisde\xC5\xA1imt vienas t\xC5\xABkstantis devyni "
+        "\xC5\xA1imtai \xC5\xA1"
+        "e\xC5\xA1iasde\xC5\xA1imt";
+    stop = 99;
+    CHECK(Parses("lt", "%spellout-numbering", s_long, "366503875925", 163) &&
+              mlocParseSpellout(&words, s_capital, sizeof(s_capital) - 1, &big, &stop) ==
+                  mloc_errorSyntax &&
+              stop == 0,
+          "a long number within the steps, a text no rule starts ended at once");
     mlocLocale en;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;

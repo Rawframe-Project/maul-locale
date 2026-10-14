@@ -2,15 +2,17 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The spell-out rules (spellout_gen.h). A group's unit holds its rule
-// sets, rules, pieces, plural blocks and decimal patterns in the layout
-// of src/spellout_tables.h; each rule's text is cut into pieces at its
-// substitutions and plural block, in the order ICU writes them.
+// sets, their lead records, rules, pieces, plural blocks and decimal
+// patterns in the layout of src/spellout_tables.h; each rule's text is
+// cut into pieces at its substitutions and plural block, in the order
+// ICU writes them.
 
 #include "spellout_gen.h"
 
 #include "keys.h"
 #include "kinds.h"
 #include "map.h"
+#include "spellout_lead.h"
 #include "spellout_tables.h"
 #include "table_gen.h"
 #include "xml.h"
@@ -370,31 +372,12 @@ static void AddRule(Builder* b, const RbnfRule* rule, int setFirst)
     b->ruleCount++;
 }
 
-// Whether ICU keeps a special rule: every fraction rule, and the last
-// negative, infinity and NaN rule.
-static bool Kept(const RbnfSet* set, int index)
-{
-    RbnfRuleKind kind = set->specials[index].kind;
-    if (kind == rbnfImproper || kind == rbnfProper || kind == rbnfDefault)
-    {
-        return true;
-    }
-    for (int i = index + 1; i < set->specialCount; i++)
-    {
-        if (set->specials[i].kind == kind)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 static int KeptCount(const RbnfSet* set)
 {
     int count = 0;
     for (int i = 0; i < set->specialCount; i++)
     {
-        count += Kept(set, i) ? 1 : 0;
+        count += SpelloutKept(set, i) ? 1 : 0;
     }
     return count;
 }
@@ -435,7 +418,7 @@ uint8_t* SpelloutPayload(const RbnfGroup* group, size_t* sizeOut)
         }
         for (int i = 0; i < set->specialCount; i++)
         {
-            if (Kept(set, i))
+            if (SpelloutKept(set, i))
             {
                 AddRule(&b, &set->specials[i], total);
             }
@@ -459,6 +442,7 @@ uint8_t* SpelloutPayload(const RbnfGroup* group, size_t* sizeOut)
     GenPut(header + 12, b.text.size, 2);
     GenPut(header + 14, group->unparseable ? spelloutGroupUnparseable : 0, 2);
     Concatenate(&out, &b.sets);
+    SpelloutLeads(group, Grow(&out, (size_t)group->setCount * spelloutLeadSize));
     Concatenate(&out, &b.rules);
     Concatenate(&out, &b.pieces);
     Concatenate(&out, &b.pluralBytes);

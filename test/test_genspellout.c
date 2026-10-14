@@ -7,9 +7,9 @@
 // bases, brackets with "|", the special rules, fraction rule sets,
 // plural blocks, apostrophes, patterns, ">>>"); the rules ICU refuses,
 // and the one the library refuses that ICU takes (a fraction rule set
-// read before a rule names it); and the unit the generator writes
-// opening, every corruption of it refused; and the engine's limits on
-// rules that nest without end.
+// read before a rule names it); the unit the generator writes opening,
+// every corruption of it refused, and its lead records; and the
+// engine's limits on rules that nest without end.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -242,11 +242,11 @@ static const char s_unit[] =
     "100: << $(cardinal,one{c}other{cs})$[ >>];\n1000: =#,##0=;\n%%f:\n10: <%a< tenths;\n"
     "10: <%a< tenth;\n100: <#,##0< hundredths;\n%c:\n0: =#,##0.=;\n1: ;\n";
 
-static uint8_t* Unit(size_t* sizeOut)
+static uint8_t* UnitOf(const char* rules, size_t* sizeOut)
 {
     RbnfGroup group;
     char error[256];
-    if (!RbnfCompile(s_unit, strlen(s_unit), &group, error, sizeof(error)))
+    if (!RbnfCompile(rules, strlen(rules), &group, error, sizeof(error)))
     {
         printf("%s\n", error);
         return nullptr;
@@ -254,6 +254,11 @@ static uint8_t* Unit(size_t* sizeOut)
     uint8_t* bytes = SpelloutPayload(&group, sizeOut);
     RbnfFree(&group);
     return bytes;
+}
+
+static uint8_t* Unit(size_t* sizeOut)
+{
+    return UnitOf(s_unit, sizeOut);
 }
 
 static bool Valid(const uint8_t* bytes, size_t size)
@@ -344,6 +349,10 @@ static void TestUnit(void)
     CHECK(Refused(unit, size, sets + 2, 0) && Refused(unit, size, sets + 3, 0x80) &&
               Refused(unit, size, sets + 6, 200),
           "a set's name, flags and rules");
+    size_t leads = (size_t)(r.leads - unit);
+    CHECK(!Refused(unit, size, leads + 8, 0x3F) && Refused(unit, size, leads + 8, 0x40) &&
+              Refused(unit, size, leads + 9, 1) && !Refused(unit, size, leads, 0xFF),
+          "a lead record's special rule kinds and zero byte");
     // %a's eight normal rules, then its two special ones.
     size_t special = rules + 8 * spelloutRuleSize;
     CHECK(Refused(unit, size, special + 12, spelloutNormal) &&
@@ -971,6 +980,68 @@ static void TestParseLimits(void)
           "a value past a decimal's digits");
 }
 
+// The lead record of a set of a unit.
+static const uint8_t* LeadOf(const uint8_t* unit, size_t size, uint32_t set)
+{
+    SpelloutRules r = mlocReadSpelloutRules((DataSpan){unit, (uint32_t)size});
+    return r.leads + (size_t)set * spelloutLeadSize;
+}
+
+// Whether a lead record has the bit of a text's first character.
+static bool LeadHas(const uint8_t* lead, const char* text)
+{
+    uint32_t bit = mlocSpelloutLeadHash((const uint8_t*)text, strlen(text));
+    return (lead[spelloutLeadBits + (bit >> 3)] >> (bit & 7) & 1) != 0;
+}
+
+// The lead records the generator writes and the parser refuses by: the
+// texts rules start with, through the sets the substitutions rules start
+// with reach; the least bound with which a pattern is reached; the
+// special rules reached.
+static void TestLeads(void)
+{
+    size_t size = 0;
+    uint8_t* unit = Unit(&size);
+    static const char s_same[] = "%a:\n0: zero;\n10: =%b=;\n%b:\n0: nil;\n"
+                                 "7: $(cardinal,one{q}other{qs})$;\n499: =#,##0=;\n";
+    size_t sameSize = 0;
+    uint8_t* same = UnitOf(s_same, &sameSize);
+    CHECK(unit != nullptr && same != nullptr, "the units");
+    if (unit == nullptr || same == nullptr)
+    {
+        free(unit);
+        free(same);
+        return;
+    }
+    // s_unit's %a, %%f and %c.
+    const uint8_t* a = LeadOf(unit, size, 0);
+    const uint8_t* f = LeadOf(unit, size, 1);
+    const uint8_t* c = LeadOf(unit, size, 2);
+    uint32_t cBits = 0;
+    for (uint32_t k = 0; k < 32; k++)
+    {
+        cBits |= c[spelloutLeadBits + k];
+    }
+    CHECK(mlocLoad64(a) == 1001 && mlocLoad64(f) == 0 && mlocLoad64(c) == 1,
+          "a pattern reached past a normal rule's base, by any bound in a fraction rule set");
+    CHECK(a[8] == 0x02 && f[8] == 0x02 && c[8] == 0,
+          "the special rules reached: \"x.x\", from %%f through \"<%a<\"; not \"-x\", "
+          "which starts with its text");
+    CHECK(LeadHas(a, "m") && LeadHas(a, "z") && LeadHas(a, "o") && LeadHas(a, "t") &&
+              LeadHas(a, "x") && !LeadHas(a, "n") &&
+              memcmp(f + spelloutLeadBits, a + spelloutLeadBits, 32) == 0 && cBits == 0,
+          "the texts rules start with, through the sets reached");
+    // "=%b=" reads %b with the bound it is read with: its pattern past 499.
+    const uint8_t* sameA = LeadOf(same, sameSize, 0);
+    const uint8_t* sameB = LeadOf(same, sameSize, 1);
+    CHECK(mlocLoad64(sameA) == 500 && mlocLoad64(sameB) == 500 && LeadHas(sameA, "n") &&
+              !LeadHas(sameB, "q") && ParsesTo(s_same, "600", "600", 3) &&
+              ParsesTo(s_same, "nil", "0", 3),
+          "a pattern reached through \"=...=\"; a plural block first starts nothing");
+    free(unit);
+    free(same);
+}
+
 int main(void)
 {
     TestCompile();
@@ -985,5 +1056,6 @@ int main(void)
     TestParseRules();
     TestAdd();
     TestParseLimits();
+    TestLeads();
     return s_failures == 0 ? 0 : 1;
 }

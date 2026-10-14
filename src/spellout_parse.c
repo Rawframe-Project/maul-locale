@@ -34,16 +34,18 @@ enum
     maxFrames = 192,
     // The rule matches a search may try, an error past it: ICU's search
     // is exponential, and a long text whose nesting meets the limit can
-    // keep it busy for minutes (the longest search of the oracle's
-    // 315,226 texts takes 30,364 here).
-    maxSteps = 1 << 20,
+    // keep it busy for minutes (of the 323,098 texts CLDR's rules write
+    // that the oracle and the survey of long values read, the longest
+    // search takes 47,400 here; the 35 past the bound pass 2^26).
+    maxSteps = 1 << 18,
     // A digit by digit fraction reads at most a decimal's digits.
     maxFractionDigits = mlocDecimalDigits,
-    // The rule set searches remembered (a power of two): ICU's search
-    // reads the same part of the text by the same rule set again and
-    // again; a search depends only on its inputs, so its result is
-    // remembered.
-    memoSize = 256,
+    // The rule set searches remembered (a power of two), in pairs of
+    // slots: ICU's search reads the same part of the text by the same
+    // rule set again and again; a search depends only on its inputs, so
+    // its result is remembered, a costly one kept over a cheap one.
+    memoSize = 512,
+    memoWays = 2,
 };
 
 // util64_fromDouble clamps an upper bound to the largest integer a double
@@ -52,17 +54,42 @@ constexpr uint64_t maxUpper = 9007199254740991;
 // DBL_MAX, ICU's bound for "none".
 constexpr uint64_t noUpper = UINT64_MAX;
 
+// A rule set search's inputs, which decide it: the set, the text's place
+// (within the first 64 KiB of the text, past which no search is
+// remembered), the upper bound and the special rules tried.
+typedef struct MemoKey
+{
+    uint64_t upper;
+    uint32_t set;
+    uint32_t start;
+    uint32_t length;
+    uint32_t mask;
+} MemoKey;
+
+// The flags of a memo slot: whether it is used, whether its search met
+// the depth limit, its value's sign and kind (two bits), and its cost,
+// the steps its search took (three bits, a bucket per power of four).
+enum
+{
+    memoUsed = 1,
+    memoLimited = 2,
+    memoNegative = 4,
+    memoKindShift = 3,
+    memoCostShift = 5,
+    memoCostBuckets = 8,
+};
+
 // A rule set search remembered: its inputs and result.
 typedef struct Memo
 {
     uint64_t upper;
-    // The value: its digits as an integer, the power of the last, its
-    // kind and sign (a value of more digits is not remembered).
+    // The value: its digits as an integer and the power of the last (a
+    // value of more digits is not remembered).
     uint64_t digits;
     int32_t exponent;
-    uint32_t start;
-    uint32_t length;
-    uint32_t end;
+    uint16_t start;
+    uint16_t length;
+    uint16_t end;
     uint16_t set;
     uint8_t mask;
     // How many levels below it the search went; a result stands at any
@@ -70,10 +97,7 @@ typedef struct Memo
     // search met the limit, at its own depth only.
     uint8_t height;
     uint8_t depth;
-    uint8_t kind;
-    bool negative;
-    bool limited;
-    bool used;
+    uint8_t flags;
 } Memo;
 
 typedef struct Parser
@@ -253,7 +277,8 @@ static int64_t GetLong(const mlocDecimal* d)
 // A remembered value.
 MLOC_NOINLINE static mlocDecimal Unpack(const Memo* memo)
 {
-    mlocDecimal d = {.kind = memo->kind, .negative = memo->negative ? 1 : 0};
+    mlocDecimal d = {.kind = (uint8_t)(memo->flags >> memoKindShift & 3),
+                     .negative = (memo->flags & memoNegative) != 0 ? 1 : 0};
     uint8_t digits[20];
     int count = 0;
     for (uint64_t n = memo->digits; n > 0; n /= 10)
@@ -637,54 +662,83 @@ static void RuleParse(Parser* p, uint32_t index, SpelloutText text, bool fractio
     *valueOut = result;
 }
 
-// The memo slot of a rule set search's inputs.
-static Memo* MemoOf(Parser* p, uint32_t set, uint32_t start, size_t length, uint64_t upper,
-                    uint32_t mask)
+// The pair of memo slots of a rule set search's inputs.
+static Memo* MemoOf(Parser* p, const MemoKey* key)
 {
-    uint64_t hash = ((uint64_t)start * 0x9E3779B1u) ^ ((uint64_t)length * 0x85EBCA77u) ^
-                    (upper * 0xC2B2AE3Du) ^ ((uint64_t)set << 7) ^ ((uint64_t)mask << 3);
-    return &p->memo[(hash ^ hash >> 29) & (memoSize - 1)];
+    uint64_t hash = ((uint64_t)key->start * 0x9E3779B1u) ^ ((uint64_t)key->length * 0x85EBCA77u) ^
+                    (key->upper * 0xC2B2AE3Du) ^ ((uint64_t)key->set << 7) ^
+                    ((uint64_t)key->mask << 3);
+    return &p->memo[(hash ^ hash >> 29) & (memoSize - memoWays)];
 }
 
-// Whether a slot holds the search of these inputs, valid at this depth;
-// its result then, the levels it went counted as reached.
-static bool Recall(Parser* p, const Memo* memo, uint32_t set, uint32_t start, size_t length,
-                   uint64_t upper, uint32_t mask, int depth, size_t* endOut, mlocDecimal* valueOut)
+// Whether a slot holds the search of these inputs, valid at this depth.
+static bool Holds(const Memo* memo, const MemoKey* key, int depth)
 {
-    if (!memo->used || memo->start != start || memo->length != length || memo->upper != upper ||
-        memo->set != set || memo->mask != mask ||
-        (memo->limited ? memo->depth != depth : depth + memo->height >= maxLevels))
+    return (memo->flags & memoUsed) != 0 && memo->start == key->start &&
+           memo->length == key->length && memo->upper == key->upper && memo->set == key->set &&
+           memo->mask == key->mask &&
+           ((memo->flags & memoLimited) != 0 ? memo->depth == depth
+                                             : depth + memo->height < maxLevels);
+}
+
+// Whether a pair of slots holds the search of these inputs, valid at this
+// depth; its result then, the levels it went counted as reached.
+static bool Recall(Parser* p, const Memo* pair, const MemoKey* key, int depth, size_t* endOut,
+                   mlocDecimal* valueOut)
+{
+    for (uint32_t way = 0; way < memoWays; way++)
     {
-        return false;
+        const Memo* memo = &pair[way];
+        if (Holds(memo, key, depth))
+        {
+            p->deepest = p->deepest > depth + memo->height ? p->deepest : depth + memo->height;
+            p->limited = p->limited || (memo->flags & memoLimited) != 0;
+            *endOut = memo->end;
+            *valueOut = Unpack(memo);
+            return true;
+        }
     }
-    p->deepest = p->deepest > depth + memo->height ? p->deepest : depth + memo->height;
-    p->limited = p->limited || memo->limited;
-    *endOut = memo->end;
-    *valueOut = Unpack(memo);
-    return true;
+    return false;
 }
 
-// Remembers a search's result, when its digits fit the slot.
-static void Remember(Parser* p, Memo* memo, uint32_t set, uint32_t start, size_t length,
-                     uint64_t upper, uint32_t mask, int depth, size_t end, const mlocDecimal* value)
+// The cost bucket of a search of so many steps.
+static uint32_t CostBucket(uint64_t steps)
 {
-    if (p->error != mloc_success || value->count > 19 || length > UINT32_MAX)
+    uint32_t bucket = 0;
+    for (; steps >= 4 && bucket < memoCostBuckets - 1; steps >>= 2)
+    {
+        bucket++;
+    }
+    return bucket;
+}
+
+// Remembers a search's result, when its digits fit a slot: in a free slot
+// of the pair, else in place of the one whose search cost less, the
+// second of equal ones.
+static void Remember(Parser* p, Memo* pair, const MemoKey* key, int depth, size_t end,
+                     const mlocDecimal* value, uint64_t steps)
+{
+    if (p->error != mloc_success || value->count > 19)
     {
         return;
     }
-    *memo = (Memo){.upper = upper,
+    Memo* memo = (pair[0].flags & memoUsed) == 0                                   ? &pair[0]
+                 : (pair[1].flags & memoUsed) == 0                                 ? &pair[1]
+                 : pair[0].flags >> memoCostShift < pair[1].flags >> memoCostShift ? &pair[0]
+                                                                                   : &pair[1];
+    uint32_t flags = memoUsed | (p->limited ? memoLimited : 0u) |
+                     (value->negative != 0 ? memoNegative : 0u) |
+                     (uint32_t)value->kind << memoKindShift | CostBucket(steps) << memoCostShift;
+    *memo = (Memo){.upper = key->upper,
                    .exponent = value->exponent,
-                   .start = start,
-                   .length = (uint32_t)length,
-                   .end = (uint32_t)end,
-                   .set = (uint16_t)set,
-                   .mask = (uint8_t)mask,
+                   .start = (uint16_t)key->start,
+                   .length = (uint16_t)key->length,
+                   .end = (uint16_t)end,
+                   .set = (uint16_t)key->set,
+                   .mask = (uint8_t)key->mask,
                    .height = (uint8_t)(p->deepest - depth),
                    .depth = (uint8_t)depth,
-                   .kind = value->kind,
-                   .negative = value->negative != 0,
-                   .limited = p->limited,
-                   .used = true};
+                   .flags = (uint8_t)flags};
     for (uint32_t i = 0; i < value->count; i++)
     {
         memo->digits = memo->digits * 10 + value->digits[i];
@@ -738,6 +792,23 @@ static size_t TryRules(Parser* p, uint32_t index, SpelloutText text, uint64_t up
     return best;
 }
 
+// Whether a rule of a set may start reading the text, by the set's lead
+// record: it reaches a pattern under the upper bound, or a special rule
+// not yet tried, or a text starting with the text's first character. A
+// search refused reads nothing at any depth, as ICU's would.
+static bool MayStart(const Parser* p, uint32_t index, SpelloutText text, uint64_t upper,
+                     uint32_t mask)
+{
+    const uint8_t* lead = p->r.leads + (size_t)index * spelloutLeadSize;
+    uint64_t need = mlocLoad64(lead);
+    if ((need != UINT64_MAX && upper >= need) || (lead[8] & ~mask) != 0)
+    {
+        return true;
+    }
+    uint32_t bit = mlocSpelloutLeadHash(text.bytes, text.length);
+    return (lead[spelloutLeadBits + (bit >> 3)] >> (bit & 7) & 1) != 0;
+}
+
 // NFRuleSet::parse, its result remembered for its inputs (the text's
 // place, the upper bound, the special rules tried), which decide it.
 static void SetParse(Parser* p, uint32_t index, SpelloutText text, uint64_t upper, uint32_t mask,
@@ -750,22 +821,27 @@ static void SetParse(Parser* p, uint32_t index, SpelloutText text, uint64_t uppe
         p->limited = true;
         return;
     }
-    if (text.length == 0)
+    if (text.length == 0 || !MayStart(p, index, text, upper, mask))
     {
         return;
     }
-    uint32_t start = (uint32_t)(text.bytes - p->origin);
-    Memo* memo = MemoOf(p, index, start, text.length, upper, mask);
-    if (Recall(p, memo, index, start, text.length, upper, mask, depth, endOut, valueOut))
+    size_t start = (size_t)(text.bytes - p->origin);
+    MemoKey key = {upper, index, (uint32_t)start, (uint32_t)text.length, mask};
+    Memo* pair = start + text.length <= UINT16_MAX ? MemoOf(p, &key) : nullptr;
+    if (pair != nullptr && Recall(p, pair, &key, depth, endOut, valueOut))
     {
         return;
     }
     int deepest = p->deepest;
     bool limited = p->limited;
+    uint64_t steps = p->steps;
     p->deepest = depth;
     p->limited = false;
     *endOut = TryRules(p, index, text, upper, mask, depth, valueOut);
-    Remember(p, memo, index, start, text.length, upper, mask, depth, *endOut, valueOut);
+    if (pair != nullptr)
+    {
+        Remember(p, pair, &key, depth, *endOut, valueOut, p->steps - steps);
+    }
     p->deepest = deepest > p->deepest ? deepest : p->deepest;
     p->limited = limited || p->limited;
 }
@@ -773,7 +849,7 @@ static void SetParse(Parser* p, uint32_t index, SpelloutText text, uint64_t uppe
 mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, size_t length,
                             mlocDecimal* valueOut, size_t* endOut)
 {
-    static_assert(sizeof(Memo) <= 48, "a memo entry stays small");
+    static_assert(sizeof(Memo) == 32 && mloc_decimalNaN < 4, "a memo slot stays 32 bytes");
     Parser p;
     p.f = format;
     p.r = mlocReadSpelloutRules((DataSpan){format->group, format->groupSize});
@@ -784,7 +860,7 @@ mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, s
     p.limited = false;
     for (uint32_t i = 0; i < memoSize; i++)
     {
-        p.memo[i].used = false;
+        p.memo[i].flags = 0;
     }
     *endOut = 0;
     if ((p.r.flags & spelloutGroupUnparseable) != 0)

@@ -24,7 +24,8 @@ SpelloutRules mlocReadSpelloutRules(DataSpan payload)
         .flags = mlocLoad16(p + 14),
     };
     r.sets = p + spelloutHeaderSize;
-    r.rules = r.sets + (size_t)r.setCount * spelloutSetSize;
+    r.leads = r.sets + (size_t)r.setCount * spelloutSetSize;
+    r.rules = r.leads + (size_t)r.setCount * spelloutLeadSize;
     r.pieces = r.rules + (size_t)r.ruleCount * spelloutRuleSize;
     r.plurals = r.pieces + (size_t)r.pieceCount * spelloutPieceSize;
     r.patterns = r.plurals + (size_t)r.pluralCount * spelloutPluralSize;
@@ -71,14 +72,17 @@ static bool ValidSetRules(const SpelloutRules* r, const uint8_t* set)
     return true;
 }
 
+// Each set's rules, and its lead record naming special rule kinds alone.
 static bool ValidSets(const SpelloutRules* r)
 {
     for (uint32_t s = 0; s < r->setCount; s++)
     {
         const uint8_t* set = r->sets + (size_t)s * spelloutSetSize;
+        const uint8_t* lead = r->leads + (size_t)s * spelloutLeadSize;
         if (set[2] == 0 || !InText(r, mlocLoad16(set), set[2]) ||
             (set[3] & ~(spelloutSetPublic | spelloutSetFraction | spelloutSetParseable)) != 0 ||
-            !ValidSetRules(r, set))
+            !ValidSetRules(r, set) || lead[8] >> (spelloutKindCount - spelloutNegative) != 0 ||
+            lead[9] != 0)
         {
             return false;
         }
@@ -227,11 +231,11 @@ bool mlocValidSpelloutRules(const DataView* view, DataSpan payload)
         return false;
     }
     SpelloutRules r = mlocReadSpelloutRules(payload);
-    uint64_t size = spelloutHeaderSize + (uint64_t)r.setCount * spelloutSetSize +
-                    (uint64_t)r.ruleCount * spelloutRuleSize +
-                    (uint64_t)r.pieceCount * spelloutPieceSize +
-                    (uint64_t)r.pluralCount * spelloutPluralSize +
-                    (uint64_t)r.patternCount * spelloutPatternSize + r.textSize;
+    uint64_t size =
+        spelloutHeaderSize + (uint64_t)r.setCount * (spelloutSetSize + spelloutLeadSize) +
+        (uint64_t)r.ruleCount * spelloutRuleSize + (uint64_t)r.pieceCount * spelloutPieceSize +
+        (uint64_t)r.pluralCount * spelloutPluralSize +
+        (uint64_t)r.patternCount * spelloutPatternSize + r.textSize;
     return size == payload.size && r.setCount > 0 && r.defaultSet < r.setCount &&
            (mlocLoad16(payload.bytes + 14) & ~spelloutGroupUnparseable) == 0 &&
            mlocValidDataText(r.text, r.textSize, 0) && ValidSets(&r) && ValidRules(&r) &&
