@@ -3,8 +3,9 @@
 //
 // test262's Temporal calendar cases (record mloc-0040): every assertion its
 // PlainDate tests make about a date made from fields or by adding
-// durations, in test262_calendar.inc, checked against mlocMakeDate,
-// mlocAddToDate and mlocGetDateFields.
+// durations, or about the difference of two dates, in
+// test262_calendar.inc, checked against mlocMakeDate, mlocAddToDate,
+// mlocDateUntil and mlocGetDateFields.
 // The rows were recorded by running the tests on the library through a
 // reader of their JavaScript, kept in the docs with the oracle programs.
 // A row giving a year as well as an era and its year is refused when the
@@ -127,11 +128,12 @@ static bool CalendarOf(Token token, mlocCalendar* calendarOut)
 typedef enum Made
 {
     madeDate,
+    madeDuration,
     madeRefused,
     madeBadRow,
 } Made;
 
-// Each row's date and how it was made, for the rows that add to it.
+// Each row's date and how it was made, for the rows that use it.
 static mlocDate s_dates[rowCount];
 static Made s_made[rowCount];
 
@@ -256,15 +258,51 @@ static bool Expected(Token expectation, const mlocDateFields* f)
     return false;
 }
 
+// An earlier row's index, "@index", whose date was made.
+static bool EarlierDate(Token token, size_t row, size_t* indexOut)
+{
+    int64_t index = 0;
+    Token at = {token.text + 1, token.length - 1};
+    if (token.length < 2 || token.text[0] != '@' || !Number(at, &index) || index < 0 ||
+        (size_t)index >= row || s_made[index] != madeDate)
+    {
+        return false;
+    }
+    *indexOut = (size_t)index;
+    return true;
+}
+
+// A difference: "@index until @index unit".
+static Made MakeDifference(const Token* tokens, size_t row, mlocDateDuration* durationOut)
+{
+    static const char* const s_units[] = {"year", "month", "week", "day"};
+    size_t one = 0;
+    size_t two = 0;
+    if (!EarlierDate(tokens[0], row, &one) || !Is(tokens[1], "until") ||
+        !EarlierDate(tokens[2], row, &two))
+    {
+        return madeBadRow;
+    }
+    for (int u = 0; u < 4; u++)
+    {
+        if (Is(tokens[3], s_units[u]))
+        {
+            return mlocDateUntil(&s_dates[one], &s_dates[two], (mlocDateUnit)u, durationOut) ==
+                           mloc_success
+                       ? madeDuration
+                       : madeRefused;
+        }
+    }
+    return madeBadRow;
+}
+
 // A date added to: "@index add years months weeks days overflow", the
 // index that of an earlier row which made its date.
 static Made MakeAdded(const Token* tokens, size_t row, mlocDate* dateOut)
 {
-    int64_t index = 0;
+    size_t index = 0;
     int64_t values[4] = {0};
-    Token at = {tokens[0].text + 1, tokens[0].length - 1};
-    if (tokens[0].length < 2 || tokens[0].text[0] != '@' || !Number(at, &index) || index < 0 ||
-        (size_t)index >= row || s_made[index] != madeDate || !Is(tokens[1], "add") ||
+    if (!EarlierDate(tokens[0], row, &index) || !Is(tokens[1], "add") ||
         !(Is(tokens[6], "c") || Is(tokens[6], "r")))
     {
         return madeBadRow;
@@ -284,24 +322,30 @@ static Made MakeAdded(const Token* tokens, size_t row, mlocDate* dateOut)
 }
 
 // Makes a row's date: from fields, from an ISO date, or by adding to an
-// earlier row's; equalsOut receives the place of its '='.
+// earlier row's; or its duration, the difference of two earlier rows'
+// dates. equalsOut receives the place of its '='.
 static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dateOut,
-                    size_t* equalsOut)
+                    mlocDateDuration* durationOut, size_t* equalsOut)
 {
     mlocCalendar calendar = mloc_calendarGregorian;
     if (count < 2 || !CalendarOf(tokens[0], &calendar))
     {
         return madeBadRow;
     }
-    bool added = tokens[1].length > 0 && tokens[1].text[0] == '@';
-    bool iso = !added && count > 2 && Is(tokens[2], "iso");
-    size_t equals = added ? 8 : iso ? 6 : 8;
+    bool earlier = tokens[1].length > 0 && tokens[1].text[0] == '@';
+    bool difference = earlier && count > 2 && Is(tokens[2], "until");
+    bool iso = !earlier && count > 2 && Is(tokens[2], "iso");
+    size_t equals = difference ? 5 : earlier ? 8 : iso ? 6 : 8;
     *equalsOut = equals;
     if (count <= equals || !Is(tokens[equals], "="))
     {
         return madeBadRow;
     }
-    if (added)
+    if (difference)
+    {
+        return MakeDifference(tokens + 1, row, durationOut);
+    }
+    if (earlier)
     {
         return MakeAdded(tokens + 1, row, dateOut);
     }
@@ -314,6 +358,24 @@ static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dat
                : MakeFields(calendar, overflow, tokens + 2, dateOut);
 }
 
+// Checks one "key=value" against a duration.
+static bool ExpectedDuration(Token expectation, const mlocDateDuration* d)
+{
+    const char* eq = memchr(expectation.text, '=', expectation.length);
+    int64_t n = 0;
+    if (eq == nullptr ||
+        !Number((Token){eq + 1, expectation.length - (size_t)(eq + 1 - expectation.text)}, &n))
+    {
+        return false;
+    }
+    Token key = {expectation.text, (size_t)(eq - expectation.text)};
+    return Is(key, "dy")   ? d->years == n
+           : Is(key, "dm") ? d->months == n
+           : Is(key, "dw") ? d->weeks == n
+           : Is(key, "dd") ? d->days == n
+                           : false;
+}
+
 static void CheckRow(size_t row, size_t* checksOut)
 {
     const char* text = s_rows[row];
@@ -321,7 +383,8 @@ static void CheckRow(size_t row, size_t* checksOut)
     size_t count = Split(text, tokens);
     size_t equals = 0;
     mlocDate date = {0};
-    Made made = MakeRow(tokens, count, row, &date, &equals);
+    mlocDateDuration duration = {0};
+    Made made = MakeRow(tokens, count, row, &date, &duration, &equals);
     s_made[row] = made;
     s_dates[row] = date;
     if (made == madeBadRow)
@@ -347,11 +410,13 @@ static void CheckRow(size_t row, size_t* checksOut)
         return;
     }
     mlocDateFields fields = {0};
-    CHECK(mlocGetDateFields(&date, &fields) == mloc_success, "a made date's fields");
+    CHECK(made == madeDuration || mlocGetDateFields(&date, &fields) == mloc_success,
+          "a made date's fields");
     for (size_t i = equals + 1; i < count; i += 1)
     {
         *checksOut += 1;
-        if (!Expected(tokens[i], &fields))
+        if (made == madeDuration ? !ExpectedDuration(tokens[i], &duration)
+                                 : !Expected(tokens[i], &fields))
         {
             printf("%.*s differs: %s\n", (int)tokens[i].length, tokens[i].text, text);
             CHECK(false, "test262's field");

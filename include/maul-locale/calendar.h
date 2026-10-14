@@ -219,6 +219,38 @@ extern "C"
                                                      const mlocDateDuration* duration,
                                                      mlocOverflow overflow, mlocDate* dateOut);
 
+    // The largest unit a difference of dates is given in.
+    typedef enum mlocDateUnit
+    {
+        mloc_dateUnitYear = 0,
+        mloc_dateUnitMonth = 1,
+        mloc_dateUnitWeek = 2,
+        mloc_dateUnitDay = 3,
+    } mlocDateUnit;
+
+    /// Computes the duration from one date to another of the same
+    /// calendar, as Temporal's PlainDate.until does: the most years whose
+    /// addition does not pass the second date (judged by year, month code
+    /// and day), then the most months, then weeks if they are the largest
+    /// unit, then days; none larger than the largest unit. Temporal's
+    /// since of the first date and the second is this duration negated
+    /// (not the duration from the second to the first, which may differ
+    /// by the clamping of days).
+    ///
+    /// @param one          The date from.
+    /// @param two          The date to.
+    /// @param largestUnit  The largest unit to give.
+    /// @param durationOut  Receives the duration, of one sign; left
+    ///                     unchanged on failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
+    ///         the library did not make, dates of two calendars, or an
+    ///         unknown unit.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two,
+                                                     mlocDateUnit largestUnit,
+                                                     mlocDateDuration* durationOut);
+
 #ifdef __cplusplus
 }
 #endif

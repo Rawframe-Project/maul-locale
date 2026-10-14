@@ -133,6 +133,20 @@ A duration has one sign, so a year past the range never leads back
 into it. Refusing such a year early therefore gives the
 specification's result everywhere.
 
+`mlocDateUntil` gives the difference of two dates as `NonISODateUntil`
+does. It counts years, months, weeks and days from the largest unit
+down, without the specification's loops of one unit at a time:
+- years start from the year difference less one, which never passes
+  the second date, and one or two checks of `NonISODateSurpasses`
+  settle them;
+- months are the difference of month numbers, one less when the day
+  would pass;
+- weeks and days are the days from the date the months reach, its day
+  clamped.
+
+Temporal's `since` is this difference negated, from the same first
+date.
+
 ## Proof
 
 `test_calendar` checks each calendar's fields at days across
@@ -176,22 +190,25 @@ without ICU4X: every day from 1600 to 2400 (Chinese and Dangi 1900 to
 hashes taken from ICU4X 2.3's own output. ISO 8601 is left out, since
 ICU4X gives it an era Temporal does not have.
 
-`test_calendar_add` compares `mlocAddToDate` with the proposal's steps
-transcribed literally, its month and day balancing loops included,
-over more than 100,000 additions in every calendar. It also checks
-Temporal's duration limits and the range's ends.
+`test_calendar_arithmetic` compares `mlocAddToDate` and
+`mlocDateUntil` with the proposal's steps transcribed literally. That
+covers its month and day balancing loops and its counts of one unit at
+a time: more than 100,000 additions and 14,000 differences in every
+calendar. It also checks Temporal's duration limits, and the range's
+ends apart in every unit.
 
 `test_calendar_test262` checks test262's Temporal calendar cases (the
 PlainDate tests of `test/intl402/Temporal`: making dates from fields,
-eras, month codes, overflow, the field getters, `add` and `subtract`).
+eras, month codes, overflow, the field getters, `add`, `subtract`,
+`until` and `since`).
 They were run on
 the library through a reader of their JavaScript, kept in the docs. It
 records every assertion about a date made from fields or an ISO date,
-or by adding durations to one (`add` and `subtract`): 11,881 rows and
-26,869 checks from 251 files, none differing. The rows are in
+or by adding durations to one, and about the difference of two dates:
+15,570 rows and 37,321 checks from 367 files, none differing. The rows are in
 `test/test262_calendar.inc`, under test262's BSD license. Left out:
-dates parsed from strings (the `datetime` part's), `with` and the
-difference of dates (their slices), and the calendar names `islamic` and
+dates parsed from strings (the `datetime` part's), `with` and
+rounding (their slices), and the calendar names `islamic` and
 `islamic-rgsa`. test262 expects Temporal to refuse those two names,
 which only date formatting accepts. The library reads them as Umm
 al-Qura, and a Temporal host must refuse them when it maps the names.

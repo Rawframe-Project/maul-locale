@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Adding durations to dates (record mloc-0040): mlocAddToDate against the
-// Intl Era and Month Code proposal's NonISODateAdd transcribed step by
-// step, its BalanceNonISODate loops included, over the public functions;
+// Date arithmetic (record mloc-0040): mlocAddToDate and mlocDateUntil
+// against the Intl Era and Month Code proposal's NonISODateAdd and
+// NonISODateUntil transcribed step by step, their BalanceNonISODate loops
+// and one-unit-at-a-time counts included, over the public functions;
 // Temporal's duration limits; and results at the range's ends.
 
 #include "test_harness.h"
 
 #include "maul-locale/calendar.h"
+
+#include <string.h>
 
 enum
 {
@@ -266,8 +269,184 @@ static void TestRangeEnds(void)
     CHECK(all, "the range's ends reached and not passed, the largest durations refused");
 }
 
+// CompareSurpasses: a month code (code not null) compares as text, a
+// month place (code null) as a number.
+static bool CompareSurpasses(int sign, int64_t year, const char* code, size_t codeLength,
+                             int64_t month, int64_t day, const mlocDateFields* target)
+{
+    if (year != target->year)
+    {
+        return sign * (year - target->year) > 0;
+    }
+    if (code != nullptr && !(codeLength == target->monthCodeLength &&
+                             memcmp(code, target->monthCode, codeLength) == 0))
+    {
+        size_t n = codeLength < target->monthCodeLength ? codeLength : target->monthCodeLength;
+        int c = memcmp(code, target->monthCode, n);
+        bool greater = c > 0 || (c == 0 && codeLength > target->monthCodeLength);
+        return sign > 0 ? greater : !greater;
+    }
+    if (code == nullptr && month != target->month)
+    {
+        return sign * (month - target->month) > 0;
+    }
+    if (day != target->day)
+    {
+        return sign * (day - target->day) > 0;
+    }
+    return false;
+}
+
+// NonISODateSurpasses, as the proposal writes it.
+static bool SpecSurpasses(int sign, mlocDate one, mlocDate two, int64_t years, int64_t months,
+                          int64_t weeks, int64_t days)
+{
+    mlocCalendar calendar = (mlocCalendar)one.calendar;
+    mlocDateFields parts = Fields(one);
+    mlocDateFields target = Fields(two);
+    int64_t y0 = parts.year + years;
+    if (CompareSurpasses(sign, y0, parts.monthCode, parts.monthCodeLength, 0, parts.day, &target))
+    {
+        return true;
+    }
+    mlocDateInput input = {.year = (int32_t)y0,
+                           .monthCode = parts.monthCode,
+                           .monthCodeLength = parts.monthCodeLength,
+                           .day = 1};
+    mlocDate first = {0};
+    CHECK(mlocMakeDate(calendar, &input, mloc_overflowConstrain, &first) == mloc_success,
+          "the month code constrained");
+    Balanced added = Balance(calendar, y0, Fields(first).month + months, 1);
+    if (CompareSurpasses(sign, added.year, nullptr, 0, added.month, parts.day, &target))
+    {
+        return true;
+    }
+    if (weeks == 0 && days == 0)
+    {
+        return false;
+    }
+    Balanced end = Balance(calendar, added.year, added.month + 1, 0);
+    int64_t day = parts.day <= end.day ? parts.day : end.day;
+    Balanced b = Balance(calendar, end.year, end.month, day + 7 * weeks + days);
+    return CompareSurpasses(sign, b.year, nullptr, 0, b.month, b.day, &target);
+}
+
+// NonISODateUntil, as the proposal writes it: one unit at a time.
+static mlocDateDuration SpecUntil(mlocDate one, mlocDate two, mlocDateUnit largest)
+{
+    mlocDateDuration d = {0};
+    int sign = two.day > one.day ? 1 : two.day < one.day ? -1 : 0;
+    if (sign == 0)
+    {
+        return d;
+    }
+    if (largest == mloc_dateUnitYear)
+    {
+        for (int64_t c = sign; !SpecSurpasses(sign, one, two, c, 0, 0, 0); c += sign)
+        {
+            d.years = c;
+        }
+    }
+    if (largest == mloc_dateUnitYear || largest == mloc_dateUnitMonth)
+    {
+        for (int64_t c = sign; !SpecSurpasses(sign, one, two, d.years, c, 0, 0); c += sign)
+        {
+            d.months = c;
+        }
+    }
+    if (largest == mloc_dateUnitWeek)
+    {
+        for (int64_t c = sign; !SpecSurpasses(sign, one, two, d.years, d.months, c, 0); c += sign)
+        {
+            d.weeks = c;
+        }
+    }
+    for (int64_t c = sign; !SpecSurpasses(sign, one, two, d.years, d.months, d.weeks, c); c += sign)
+    {
+        d.days = c;
+    }
+    return d;
+}
+
+// Every calendar, between days a few years apart either way, in every
+// largest unit (weeks and days over shorter spans, the loops being one
+// day at a time).
+static void TestUntilAgainstSpecification(void)
+{
+    static const int32_t s_offsets[] = {0,   1,   -1,   28,   -29,  30,    31,   -59,
+                                        89,  177, -183, 354,  -355, 365,   383,  -384,
+                                        385, 730, -731, 1000, 1096, -1461, 1830, -2000};
+    bool all = true;
+    long compared = 0;
+    for (uint32_t c = 0; c < calendarCount; c++)
+    {
+        for (int32_t step = 0; step < 1400; step += 127)
+        {
+            mlocDate one = {.day = 738000 + step, .calendar = (uint8_t)c};
+            for (size_t i = 0; i < sizeof(s_offsets) / sizeof(s_offsets[0]); i++)
+            {
+                mlocDate two = {.day = one.day + s_offsets[i], .calendar = (uint8_t)c};
+                for (int u = 0; u <= mloc_dateUnitDay; u++)
+                {
+                    if (u >= mloc_dateUnitWeek && (s_offsets[i] > 100 || s_offsets[i] < -100))
+                    {
+                        continue;
+                    }
+                    mlocDateDuration want = SpecUntil(one, two, (mlocDateUnit)u);
+                    mlocDateDuration got = {-7, -7, -7, -7};
+                    bool ok = mlocDateUntil(&one, &two, (mlocDateUnit)u, &got) == mloc_success;
+                    all = all && ok && got.years == want.years && got.months == want.months &&
+                          got.weeks == want.weeks && got.days == want.days;
+                    compared++;
+                }
+            }
+        }
+    }
+    printf("%ld differences compared\n", compared);
+    CHECK(all, "every difference as the proposal's loops count it");
+}
+
+// Far apart: Temporal's whole range in every unit and calendar, each
+// result added back to the first date reaching the second (exact for
+// differences counted to days).
+static void TestUntilFar(void)
+{
+    bool all = true;
+    for (uint32_t c = 0; c < calendarCount; c++)
+    {
+        mlocDate first = {.day = mlocDateMinDay, .calendar = (uint8_t)c};
+        mlocDate last = {.day = mlocDateMaxDay, .calendar = (uint8_t)c};
+        const mlocDate pairs[][2] = {{first, last}, {last, first}};
+        for (size_t p = 0; p < 2; p++)
+        {
+            for (int u = 0; u <= mloc_dateUnitDay; u++)
+            {
+                mlocDateDuration d = {0};
+                mlocDate back = {0};
+                all = all &&
+                      mlocDateUntil(&pairs[p][0], &pairs[p][1], (mlocDateUnit)u, &d) ==
+                          mloc_success &&
+                      mlocAddToDate(&pairs[p][0], &d, mloc_overflowConstrain, &back) ==
+                          mloc_success &&
+                      back.day == pairs[p][1].day;
+            }
+        }
+    }
+    CHECK(all, "the range's ends apart in every unit, the difference adding back");
+    mlocDate a = {.day = 738000, .calendar = mloc_calendarGregorian};
+    mlocDate b = {.day = 738000, .calendar = mloc_calendarHebrew};
+    mlocDateDuration d = {0};
+    CHECK(mlocDateUntil(&a, &b, mloc_dateUnitDay, &d) == mloc_errorInvalid &&
+              mlocDateUntil(&a, &a, (mlocDateUnit)4, &d) == mloc_errorInvalid &&
+              mlocDateUntil(nullptr, &a, mloc_dateUnitDay, &d) == mloc_errorInvalid &&
+              mlocDateUntil(&a, &a, mloc_dateUnitDay, nullptr) == mloc_errorInvalid,
+          "two calendars, an unknown unit and null pointers refused");
+}
+
 int main(void)
 {
+    TestUntilAgainstSpecification();
+    TestUntilFar();
     TestAgainstSpecification();
     TestDurationLimits();
     TestRangeEnds();

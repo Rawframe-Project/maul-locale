@@ -46,6 +46,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocAddToDate(const mlocDate* date, const mlo
 ```
 Adds a duration to a date in its calendar, as Temporal's PlainDate.add does: the years first, keeping the month code (a leap month the new year lacks is clamped as mlocMakeDate clamps it, or refused), then the months, then the day clamped to its month or refused, then weeks and days as days. Subtracting is adding the negated duration.  @param date      The date. @param duration  The duration. @param overflow  What a month code or day the result lacks does. @param dateOut   Receives the date, in the date's calendar; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, a duration out of its limits or of two signs, a month code or day refused, or a result outside Temporal's range. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit largestUnit, mlocDateDuration* durationOut);
+```
+Computes the duration from one date to another of the same calendar, as Temporal's PlainDate.until does: the most years whose addition does not pass the second date (judged by year, month code and day), then the most months, then weeks if they are the largest unit, then days; none larger than the largest unit. Temporal's since of the first date and the second is this duration negated (not the duration from the second to the first, which may differ by the clamping of days).  @param one          The date from. @param two          The date to. @param largestUnit  The largest unit to give. @param durationOut  Receives the duration, of one sign; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, dates of two calendars, or an unknown unit. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -388,4 +393,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-67 functions across 12 headers.
+68 functions across 12 headers.
