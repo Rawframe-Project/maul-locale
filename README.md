@@ -70,8 +70,11 @@ gives them, and of whole locales by UTS #35's algorithm, dialect names,
 extensions and transforms included, as CLDR's own tools build them
 (CLDR's locale display name test data passes on every push; the names
 are a data file of their own, `src/generated/names.mloc`, and the
-subdivision names another, `src/generated/subdivisions.mloc`).
-The library has 63 public functions.
+subdivision names another, `src/generated/subdivisions.mloc`); and
+dates as values in CLDR's calendars, as Temporal models them, with era
+and month codes and overflow constrained or refused (the arithmetic
+calendars so far, each day from 1600 to 2400 as ICU4X computes it).
+The library has 66 public functions.
 
 ## Building
 

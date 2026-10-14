@@ -44,3 +44,4 @@ are listed in [README.md](README.md).
 | [mloc-0037](mloc-0037-single-code-names.md) | Single-code display names: ICU4C's lookups, BCP 47's codes | Accepted |
 | [mloc-0038](mloc-0038-locale-names.md) | Whole-locale names: UTS #35's algorithm as CLDR's tools run it | Accepted |
 | [mloc-0039](mloc-0039-subdivision-names.md) | Subdivision names: a small file of their own, read through the names lookup | Accepted |
+| [mloc-0040](mloc-0040-calendars.md) | Calendars: Temporal's values, computed in code, astronomical years as tables | Accepted |

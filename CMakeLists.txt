@@ -86,6 +86,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
+    src/calendar.c
+    src/calendar_arith.c
     src/names.c
     src/names_data.c
     src/names_locale.c
@@ -216,6 +218,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     add_test(NAME spellout COMMAND test_spellout)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
+    maul_add_test(calendar)
     maul_add_test(list_format)
     # So are the names of languages and the rest (record mloc-0036), and
     # the subdivision names (record mloc-0039).
