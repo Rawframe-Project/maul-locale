@@ -119,18 +119,6 @@ static const JapaneseEra* JapaneseEraOf(int32_t day)
 
 // A month code's number, 1 to 13, and whether it names a leap month;
 // false when it is not of the form "Mnn" or "MnnL".
-static bool ParseMonthCode(const char* code, size_t length, uint32_t* numberOut, bool* leapOut)
-{
-    if ((length != 3 && length != 4) || code[0] != 'M' || code[1] < '0' || code[1] > '9' ||
-        code[2] < '0' || code[2] > '9' || (length == 4 && code[3] != 'L'))
-    {
-        return false;
-    }
-    *numberOut = (uint32_t)(code[1] - '0') * 10 + (uint32_t)(code[2] - '0');
-    *leapOut = length == 4;
-    return *numberOut >= 1 && *numberOut <= 13;
-}
-
 // The month's place the input names, by code, by place, or by both
 // when they agree; 0 when it names none.
 static mlocResult MonthOf(const CalendarYear* y, const mlocDateInput* input, mlocOverflow overflow,
@@ -144,7 +132,7 @@ static mlocResult MonthOf(const CalendarYear* y, const mlocDateInput* input, mlo
     uint32_t number = 0;
     bool leap = false;
     uint32_t coded = 0;
-    if (!ParseMonthCode(input->monthCode, input->monthCodeLength, &number, &leap))
+    if (!mlocYearParseMonthCode(input->monthCode, input->monthCodeLength, &number, &leap))
     {
         return mloc_errorSyntax;
     }

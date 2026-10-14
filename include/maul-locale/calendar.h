@@ -291,6 +291,85 @@ extern "C"
                                                             const mlocDateRounding* rounding,
                                                             mlocDateDuration* durationOut);
 
+    // Which fields an mlocDateChanges gives.
+    enum
+    {
+        mloc_givenEra = 1,
+        mloc_givenEraYear = 2,
+        mloc_givenYear = 4,
+        mloc_givenMonth = 8,
+        mloc_givenMonthCode = 16,
+        mloc_givenDay = 32,
+    };
+
+    // Fields given by name, as a Temporal property bag gives them: given
+    // is a set of mloc_given flags, and only the flagged fields are read.
+    // An era comes with its era year; a year given with them must name
+    // the same year.
+    typedef struct mlocDateChanges
+    {
+        uint32_t given;
+        // The era's code, of eraLength bytes.
+        const char* era;
+        size_t eraLength;
+        int32_t eraYear;
+        // The calendar's year counted on across eras.
+        int32_t year;
+        // The month's code, of monthCodeLength bytes; month its place.
+        const char* monthCode;
+        size_t monthCodeLength;
+        uint32_t month;
+        uint32_t day;
+    } mlocDateChanges;
+
+    /// Makes a date with some of a date's fields changed, as Temporal's
+    /// PlainDate.with does: the date's year, month code and day, less the
+    /// month code where a month or month code is given and less the year
+    /// where a year, era or era year is given, with the given fields over
+    /// them, made as mlocMakeDate makes a date.
+    ///
+    /// @param date      The date.
+    /// @param changes   The fields to change.
+    /// @param overflow  What a month or day past the calendar's does.
+    /// @param dateOut   Receives the date; left unchanged on failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
+    ///         the library did not make, an era without its era year or
+    ///         the reverse, a year, month or day refused or disagreeing,
+    ///         or a date outside Temporal's range; mloc_errorSyntax for an
+    ///         era or month code not of the calendar.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocWithDate(const mlocDate* date,
+                                                    const mlocDateChanges* changes,
+                                                    mlocOverflow overflow, mlocDate* dateOut);
+
+    /// Finds a month and day's reference date, as Temporal's
+    /// PlainMonthDay.from does in the Intl Era and Month Code proposal: a
+    /// month code (or, with a year, a month or month code of that year)
+    /// and a day, clamped to the month's longest length (30 in Chinese and
+    /// Dangi, the given year's month with a year) or refused; then the
+    /// latest date from 1900 to 1972 in the ISO calendar with that month
+    /// code and day, else the earliest from 1973 to 2035. Chinese and
+    /// Dangi take the proposal's table of reference years, a month and
+    /// day it lacks becoming the month of the same number (or refused).
+    ///
+    /// @param calendar      The calendar.
+    /// @param fields        A day, and a month code, or a year (or era and
+    ///                      era year) and a month or month code.
+    /// @param overflow      What a month or day past the calendar's does.
+    /// @param referenceOut  Receives the reference date, in the calendar;
+    ///                      left unchanged on failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, missing
+    ///         or disagreeing fields (a month's place without a year among
+    ///         them), or a value refused; mloc_errorSyntax
+    ///         for an era or month code not of the calendar.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocMakeMonthDay(mlocCalendar calendar,
+                                                        const mlocDateChanges* fields,
+                                                        mlocOverflow overflow,
+                                                        mlocDate* referenceOut);
+
 #ifdef __cplusplus
 }
 #endif

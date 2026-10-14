@@ -56,6 +56,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocDateUntilRounded(const mlocDate* one, con
 ```
 Computes the duration from one date to another of the same calendar and rounds it, as Temporal's PlainDate.until does with rounding options: the difference of mlocDateUntil, then for a smallest unit of years, months or weeks the multiples of the increment around it, added to the first date, with the second date's place between them deciding by mode; for days, the days rounded to the increment. A rounding that reaches a larger unit's next value carries into it, up to the largest unit. Temporal's since is this from the same first date with the mode negated (ceil for floor, half-ceil for half-floor, and back), and the result negated.  @param one          The date from. @param two          The date to. @param rounding     The units, increment and mode. @param durationOut  Receives the duration; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, dates of two calendars, an unknown unit or mode, a smallest unit larger than the largest, an increment out of range, or a multiple whose date falls outside Temporal's range. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocWithDate(const mlocDate* date, const mlocDateChanges* changes, mlocOverflow overflow, mlocDate* dateOut);
+```
+Makes a date with some of a date's fields changed, as Temporal's PlainDate.with does: the date's year, month code and day, less the month code where a month or month code is given and less the year where a year, era or era year is given, with the given fields over them, made as mlocMakeDate makes a date.  @param date      The date. @param changes   The fields to change. @param overflow  What a month or day past the calendar's does. @param dateOut   Receives the date; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date the library did not make, an era without its era year or the reverse, a year, month or day refused or disagreeing, or a date outside Temporal's range; mloc_errorSyntax for an era or month code not of the calendar. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMakeMonthDay(mlocCalendar calendar, const mlocDateChanges* fields, mlocOverflow overflow, mlocDate* referenceOut);
+```
+Finds a month and day's reference date, as Temporal's PlainMonthDay.from does in the Intl Era and Month Code proposal: a month code (or, with a year, a month or month code of that year) and a day, clamped to the month's longest length (30 in Chinese and Dangi, the given year's month with a year) or refused; then the latest date from 1900 to 1972 in the ISO calendar with that month code and day, else the earliest from 1973 to 2035. Chinese and Dangi take the proposal's table of reference years, a month and day it lacks becoming the month of the same number (or refused).  @param calendar      The calendar. @param fields        A day, and a month code, or a year (or era and era year) and a month or month code. @param overflow      What a month or day past the calendar's does. @param referenceOut  Receives the reference date, in the calendar; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, missing or disagreeing fields (a month's place without a year among them), or a value refused; mloc_errorSyntax for an era or month code not of the calendar. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -398,4 +408,4 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ---
 
-69 functions across 12 headers.
+71 functions across 12 headers.

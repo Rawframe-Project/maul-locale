@@ -75,6 +75,10 @@ int64_t mlocYearMonthNumber(const CalendarYear* y, uint32_t month);
 bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t number,
                              uint32_t* monthOut);
 
+// Reads a month code's text, 'M01' to 'M13' with 'L' after for a leap
+// month: false for any other.
+bool mlocYearParseMonthCode(const char* code, size_t length, uint32_t* numberOut, bool* leapOut);
+
 // A month's code: its number, and whether it is the leap month, which
 // takes the number of the month before it ('M05L' after 'M05'); the
 // months after a leap month take the code of the place before theirs.

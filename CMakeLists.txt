@@ -89,6 +89,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/calendar.c
     src/calendar_add.c
     src/calendar_arith.c
+    src/calendar_fields.c
     src/calendar_astro.c
     src/calendar_chinese.c
     src/calendar_lunar.c
@@ -234,6 +235,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(calendar_lunar WHITEBOX)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
+    maul_add_test(calendar_fields)
     maul_add_test(calendar_oracle)
     maul_add_test(calendar_test262)
     maul_add_test(list_format)

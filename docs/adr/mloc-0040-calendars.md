@@ -157,6 +157,22 @@ date.
 - then `BubbleRelativeDuration` carries a rounding that reached a
   larger unit's next value up to the largest unit.
 
+`mlocWithDate` changes some of a date's fields, as PlainDate.with does.
+It takes the date's year, month code and day (`ISODateToFields`). A
+given month or month code drops the code, and a given year, era or era
+year drops the year (`NonISOFieldKeysToIgnore`). The given fields go on
+top, made as `mlocMakeDate` makes them; a year given with an era must
+name the same year.
+
+`mlocMakeMonthDay` finds a month and day's reference date, as the
+proposal's `NonISOMonthDayToISOReferenceDate` does:
+- the day is clamped to the month code's longest month in any year
+  (30 in Chinese and Dangi), or to the given year's month;
+- then the latest date from 1900 to 1972 in the ISO calendar with that
+  month code and day is taken, else the earliest from 1973 to 2035;
+- Chinese and Dangi take the proposal's table of reference years, and
+  a rare leap month day becomes the common month's, or is refused.
+
 ECMA-262's Temporal text (tc39/ecma262#3759, the source of truth since
 Temporal's stage 4) is followed where it differs from the proposal's.
 It takes the first date as the window's start only when the start
@@ -209,7 +225,10 @@ ICU4X gives it an era Temporal does not have.
 `test_calendar_arithmetic` compares `mlocAddToDate` and
 `mlocDateUntil` with the proposal's steps transcribed literally.
 It also checks one-unit roundings against the dates of the multiples
-around them, in every calendar and mode (more than 100,000). That
+around them, in every calendar and mode (more than 100,000).
+`test_calendar_fields` checks every month code and day's clamp and
+reference date against a scan of every day from 1900 to 2035, in every
+calendar but Chinese and Dangi. That
 covers its month and day balancing loops and its counts of one unit at
 a time: more than 100,000 additions and 14,000 differences in every
 calendar. It also checks Temporal's duration limits, and the range's
@@ -218,17 +237,19 @@ ends apart in every unit.
 `test_calendar_test262` checks test262's Temporal calendar cases (the
 PlainDate tests of `test/intl402/Temporal`: making dates from fields,
 eras, month codes, overflow, the field getters, `add`, `subtract`,
-`until` and `since`; and the ISO calendar's `add`, `subtract`, `until`
-and `since` of `test/built-ins`, rounding included).
+`until`, `since`, `with` and `toPlainMonthDay`, and PlainMonthDay's
+`from`; and the ISO calendar's `add`, `subtract`, `until` and `since`
+of `test/built-ins`, rounding included).
 They were run on
 the library through a reader of their JavaScript, kept in the docs. It
 records every assertion about a date made from fields or an ISO date,
-or by adding durations to one, and about the difference of two dates,
-rounded or not: 16,400 rows and 39,830 checks from 476 files, none
+by adding durations to one or by changing its fields, about the
+difference of two dates, rounded or not, and about month and day
+reference dates: 18,591 rows and 45,734 checks from 601 files, none
 differing. The rows are in
 `test/test262_calendar.inc`, under test262's BSD license. Left out:
 dates parsed from strings beyond plain ISO dates (the `datetime`
-part's), `with` (its slice), and the calendar names `islamic` and
+part's), and the calendar names `islamic` and
 `islamic-rgsa`. test262 expects Temporal to refuse those two names,
 which only date formatting accepts. The library reads them as Umm
 al-Qura, and a Temporal host must refuse them when it maps the names.

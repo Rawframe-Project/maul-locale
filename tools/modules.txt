@@ -85,3 +85,4 @@ calendar: calendar_arith calendar_eras calendar_year
 calendar_add: calendar_arith calendar_year
 calendar_until: calendar_arith calendar_year
 calendar_round: calendar_arith calendar_year
+calendar_fields: calendar_arith calendar_year

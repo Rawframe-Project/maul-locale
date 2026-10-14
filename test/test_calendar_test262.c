@@ -3,9 +3,11 @@
 //
 // test262's Temporal calendar cases (record mloc-0040): every assertion its
 // PlainDate tests make about a date made from fields or by adding
-// durations, or about the difference of two dates, in
+// durations or by changing fields, about the difference of two dates,
+// or about a month and day's reference date, in
 // test262_calendar.inc, checked against mlocMakeDate, mlocAddToDate,
-// mlocDateUntil, mlocDateUntilRounded and mlocGetDateFields.
+// mlocDateUntil, mlocDateUntilRounded, mlocWithDate, mlocMakeMonthDay and
+// mlocGetDateFields.
 // The rows were recorded by running the tests on the library through a
 // reader of their JavaScript, kept in the docs with the oracle programs.
 // A row giving a year as well as an era and its year is refused when the
@@ -207,8 +209,9 @@ static bool SameText(Token value, const char* text, size_t length)
     return value.length == length && memcmp(value.text, text, length) == 0;
 }
 
-// Checks one "key=value" against the fields.
-static bool Expected(Token expectation, const mlocDateFields* f)
+// Checks one "key=value" against the fields; ry is the date's year in
+// the ISO calendar.
+static bool Expected(Token expectation, const mlocDateFields* f, const mlocDate* date)
 {
     const char* eq = memchr(expectation.text, '=', expectation.length);
     if (eq == nullptr)
@@ -238,6 +241,13 @@ static bool Expected(Token expectation, const mlocDateFields* f)
     if (Is(key, "ey"))
     {
         return f->eraLength != 0 && f->eraYear == n;
+    }
+    if (Is(key, "ry"))
+    {
+        mlocDate iso = {0};
+        mlocDateFields g = {0};
+        return mlocMakeDateFromDay(mloc_calendarGregorian, date->day, &iso) == mloc_success &&
+               mlocGetDateFields(&iso, &g) == mloc_success && g.year == n;
     }
     const struct
     {
@@ -334,6 +344,83 @@ static Made MakeDifference(const Token* tokens, size_t row, mlocDateDuration* du
     return r == mloc_success ? madeDuration : madeRefused;
 }
 
+// Fields given by name: era, era year, year, month code, month and day,
+// '-' for one not given and '~' for the empty string.
+static bool Given(const Token* tokens, mlocDateChanges* out)
+{
+    static const uint32_t s_flags[6] = {mloc_givenEra,       mloc_givenEraYear, mloc_givenYear,
+                                        mloc_givenMonthCode, mloc_givenMonth,   mloc_givenDay};
+    *out = (mlocDateChanges){0};
+    for (size_t i = 0; i < 6; i++)
+    {
+        if (Is(tokens[i], "-"))
+        {
+            continue;
+        }
+        out->given |= s_flags[i];
+        bool empty = Is(tokens[i], "~");
+        const char* text = tokens[i].text;
+        size_t length = empty ? 0 : tokens[i].length;
+        int64_t n = 0;
+        if (i == 0 || i == 3)
+        {
+            *(i == 0 ? &out->era : &out->monthCode) = text;
+            *(i == 0 ? &out->eraLength : &out->monthCodeLength) = length;
+        }
+        else if (!Number(tokens[i], &n) || n < INT32_MIN || n > (i >= 4 ? UINT32_MAX : INT32_MAX))
+        {
+            return false;
+        }
+        else if (i == 1 || i == 2)
+        {
+            *(i == 1 ? &out->eraYear : &out->year) = (int32_t)n;
+        }
+        else
+        {
+            *(i == 4 ? &out->month : &out->day) = (uint32_t)n;
+        }
+    }
+    return true;
+}
+
+static bool OverflowOf(Token token, mlocOverflow* out)
+{
+    if (!Is(token, "c") && !Is(token, "r"))
+    {
+        return false;
+    }
+    *out = Is(token, "r") ? mloc_overflowReject : mloc_overflowConstrain;
+    return true;
+}
+
+// A date with fields changed: "@index with fields overflow".
+static Made MakeWith(const Token* tokens, size_t row, mlocDate* dateOut)
+{
+    size_t index = 0;
+    mlocDateChanges changes;
+    mlocOverflow overflow = mloc_overflowConstrain;
+    if (!EarlierDate(tokens[0], row, &index) || !Is(tokens[1], "with") ||
+        !Given(tokens + 2, &changes) || !OverflowOf(tokens[8], &overflow))
+    {
+        return madeBadRow;
+    }
+    return mlocWithDate(&s_dates[index], &changes, overflow, dateOut) == mloc_success ? madeDate
+                                                                                      : madeRefused;
+}
+
+// A month and day's reference date: "monthday overflow fields".
+static Made MakeMonthDay(mlocCalendar calendar, const Token* tokens, mlocDate* dateOut)
+{
+    mlocDateChanges fields;
+    mlocOverflow overflow = mloc_overflowConstrain;
+    if (!OverflowOf(tokens[0], &overflow) || !Given(tokens + 1, &fields))
+    {
+        return madeBadRow;
+    }
+    return mlocMakeMonthDay(calendar, &fields, overflow, dateOut) == mloc_success ? madeDate
+                                                                                  : madeRefused;
+}
+
 // A date added to: "@index add years months weeks days overflow", the
 // index that of an earlier row which made its date.
 static Made MakeAdded(const Token* tokens, size_t row, mlocDate* dateOut)
@@ -372,8 +459,10 @@ static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dat
     }
     bool earlier = tokens[1].length > 0 && tokens[1].text[0] == '@';
     bool difference = earlier && count > 2 && Is(tokens[2], "until");
+    bool with = earlier && count > 2 && Is(tokens[2], "with");
+    bool monthDay = Is(tokens[1], "monthday");
     bool iso = !earlier && count > 2 && Is(tokens[2], "iso");
-    size_t equals = difference ? 8 : earlier ? 8 : iso ? 6 : 8;
+    size_t equals = with ? 10 : monthDay ? 9 : difference ? 8 : earlier ? 8 : iso ? 6 : 8;
     *equalsOut = equals;
     if (count <= equals || !Is(tokens[equals], "="))
     {
@@ -382,6 +471,14 @@ static Made MakeRow(const Token* tokens, size_t count, size_t row, mlocDate* dat
     if (difference)
     {
         return MakeDifference(tokens + 1, row, durationOut);
+    }
+    if (with)
+    {
+        return MakeWith(tokens + 1, row, dateOut);
+    }
+    if (monthDay)
+    {
+        return MakeMonthDay(calendar, tokens + 2, dateOut);
     }
     if (earlier)
     {
@@ -454,7 +551,7 @@ static void CheckRow(size_t row, size_t* checksOut)
     {
         *checksOut += 1;
         if (made == madeDuration ? !ExpectedDuration(tokens[i], &duration)
-                                 : !Expected(tokens[i], &fields))
+                                 : !Expected(tokens[i], &fields, &date))
         {
             printf("%.*s differs: %s\n", (int)tokens[i].length, tokens[i].text, text);
             CHECK(false, "test262's field");

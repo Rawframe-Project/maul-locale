@@ -279,3 +279,15 @@ bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t num
     *monthOut = (uint32_t)(number - year * months + 1);
     return true;
 }
+
+bool mlocYearParseMonthCode(const char* code, size_t length, uint32_t* numberOut, bool* leapOut)
+{
+    if ((length != 3 && length != 4) || code[0] != 'M' || code[1] < '0' || code[1] > '9' ||
+        code[2] < '0' || code[2] > '9' || (length == 4 && code[3] != 'L'))
+    {
+        return false;
+    }
+    *numberOut = (uint32_t)(code[1] - '0') * 10 + (uint32_t)(code[2] - '0');
+    *leapOut = length == 4;
+    return *numberOut >= 1 && *numberOut <= 13;
+}
