@@ -149,8 +149,11 @@ neighbours.
 evaluation of the book, and the model's own bits on both product
 paths.
 `test_gencalendar` checks the era table's generator and its
-refusals. The differential test
-against ICU4C 79 and ICU4X joins CI with the other calendars.
+refusals. `test_calendar_oracle` runs the comparison with ICU4X in CI
+without ICU4X: every day from 1600 to 2400 (Chinese and Dangi 1900 to
+2099) is formatted as the oracle program prints it and hashed, against
+hashes taken from ICU4X 2.3's own output. ISO 8601 is left out, since
+ICU4X gives it an era Temporal does not have.
 
 ## Consequences
 
