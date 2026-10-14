@@ -209,8 +209,8 @@ static bool SameText(Token value, const char* text, size_t length)
     return value.length == length && memcmp(value.text, text, length) == 0;
 }
 
-// Checks one "key=value" against the fields; ry is the date's year in
-// the ISO calendar.
+// Checks one "key=value" against the fields; ry and rd are the date's
+// year and day of the month in the ISO calendar.
 static bool Expected(Token expectation, const mlocDateFields* f, const mlocDate* date)
 {
     const char* eq = memchr(expectation.text, '=', expectation.length);
@@ -242,12 +242,13 @@ static bool Expected(Token expectation, const mlocDateFields* f, const mlocDate*
     {
         return f->eraLength != 0 && f->eraYear == n;
     }
-    if (Is(key, "ry"))
+    if (Is(key, "ry") || Is(key, "rd"))
     {
         mlocDate iso = {0};
         mlocDateFields g = {0};
         return mlocMakeDateFromDay(mloc_calendarGregorian, date->day, &iso) == mloc_success &&
-               mlocGetDateFields(&iso, &g) == mloc_success && g.year == n;
+               mlocGetDateFields(&iso, &g) == mloc_success &&
+               (Is(key, "ry") ? g.year == n : g.day == n);
     }
     const struct
     {

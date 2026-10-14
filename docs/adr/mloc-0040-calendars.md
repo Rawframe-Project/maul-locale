@@ -173,6 +173,22 @@ proposal's `NonISOMonthDayToISOReferenceDate` does:
 - Chinese and Dangi take the proposal's table of reference years, and
   a rare leap month day becomes the common month's, or is refused.
 
+A PlainYearMonth needs no functions of its own. In ECMA-262's text it
+is its month's first day:
+- it is made from a year (or an era and its year) and a month or month
+  code with day 1;
+- it adds a duration of years and months to that day (weeks, days and
+  time are refused), which lands on another first day;
+- its difference is that of the first days, in years and months,
+  rounded as dates are (week and day units are refused).
+
+One listed departure: Temporal bounds a year-month by its ISO year and
+month, not by its day. A month whose first day falls after September
+13 of 275760 but in that ISO month is valid there, but lies outside the
+days a date holds here. That affects the last month of a few calendars
+(Coptic, Ethiopic, Indian, the tabular Islamic ones), and it is refused
+here.
+
 ECMA-262's Temporal text (tc39/ecma262#3759, the source of truth since
 Temporal's stage 4) is followed where it differs from the proposal's.
 It takes the first date as the window's start only when the start
@@ -237,16 +253,18 @@ ends apart in every unit.
 `test_calendar_test262` checks test262's Temporal calendar cases (the
 PlainDate tests of `test/intl402/Temporal`: making dates from fields,
 eras, month codes, overflow, the field getters, `add`, `subtract`,
-`until`, `since`, `with` and `toPlainMonthDay`, and PlainMonthDay's
-`from`; and the ISO calendar's `add`, `subtract`, `until` and `since`
+`until`, `since`, `with` and `toPlainMonthDay`, PlainMonthDay's `from`,
+and PlainYearMonth's `from`, getters, `add`, `subtract`, `until`,
+`since` and `with`; and the ISO calendar's `add`, `subtract`, `until` and `since`
 of `test/built-ins`, rounding included).
 They were run on
 the library through a reader of their JavaScript, kept in the docs. It
 records every assertion about a date made from fields or an ISO date,
 by adding durations to one or by changing its fields, about the
 difference of two dates, rounded or not, and about month and day
-reference dates: 18,591 rows and 45,734 checks from 601 files, none
-differing. The rows are in
+reference dates: 20,743 rows and 53,221 checks from 885 files, none
+differing (but the year-months of the departure above, in
+`PlainYearMonth/from/extreme-dates`). The rows are in
 `test/test262_calendar.inc`, under test262's BSD license. Left out:
 dates parsed from strings beyond plain ISO dates (the `datetime`
 part's), and the calendar names `islamic` and
