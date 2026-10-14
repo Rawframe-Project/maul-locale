@@ -405,10 +405,11 @@ static void TestSubdivisions(void)
     }
 }
 
-// A locale's name by a set whose chain has more steps with names than a
-// names chain keeps (each source holds en and root): the lookups walk
-// the chain each time and give the same name.
-static void TestLongChain(void)
+// Names chains: a locale's name by a set whose chain has more steps with
+// names than a chain keeps (each source holds en and root), where the
+// lookups walk the chain each time and give the same name; the steps
+// kept; the lookups refused; data without parents.
+static void TestChain(void)
 {
     static mlocData s_many[1 + nameChainMost];
     s_many[0] = s_sources[0];
@@ -423,6 +424,22 @@ static void TestLongChain(void)
               LocaleNamed(&few, mloc_languageDisplayStandard, "en-Latn-GB",
                           "English (Latin, United Kingdom)"),
           "a chain longer than a names chain keeps, and one that just fits");
+    mlocLocale en;
+    mlocLocale enZZ;
+    NameChain chain;
+    NameText name;
+    mlocDataSet namesAlone = {&s_sources[1], 1};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocParseLocale("en-ZZ", 5, &enZZ).status == mloc_success &&
+              mlocOpenNameChain(&s_data, &en, &chain) && chain.count == 2 &&
+              !mlocFindChainName(&chain, "zz", 2, nameFieldName, &name) &&
+              !mlocFindChainName(&chain, "l:en", 4, nameFieldCount, &name) &&
+              mlocOpenNameChain(&few, &en, &chain) && chain.count == nameChainMost &&
+              mlocOpenNameChain(&set, &en, &chain) && chain.count == nameChainMost + 1 &&
+              !mlocOpenNameChain(&namesAlone, &enZZ, &chain) &&
+              !mlocFindName(&namesAlone, &enZZ, "l:en", 4, nameFieldName, &name),
+          "a chain's steps: en and root, as many as fit, past them; a code of no namespace and a "
+          "field out of range; data without parents when the chain needs them");
 }
 
 // Reads a data file into a buffer and opens it.
@@ -465,7 +482,7 @@ int main(void)
     TestSources();
     TestCraftedLocaleNames();
     TestSubdivisions();
-    TestLongChain();
+    TestChain();
     TestCapitalization();
     return s_failures == 0 ? 0 : 1;
 }
