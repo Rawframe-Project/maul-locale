@@ -10,7 +10,9 @@
 // formatters made and formatting (decimal, compact, percent, scientific),
 // numbers and amounts of money parsed; a spell-out formatter made,
 // numbers in words (an integer, a fraction, an ordinal), a Roman numeral
-// and words parsed back. The inputs are the ones the
+// and words parsed back; display names (a language, a region, a key's
+// value, a language at a sentence's start) and whole locales' names in
+// dialect and standard form. The inputs are the ones the
 // ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well. With BENCH_SHOW
@@ -23,6 +25,7 @@
 #include "maul-locale/currency.h"
 #include "maul-locale/decimal.h"
 #include "maul-locale/locale.h"
+#include "maul-locale/names.h"
 #include "maul-locale/number.h"
 #include "maul-locale/plural.h"
 #include "maul-locale/spellout.h"
@@ -40,6 +43,9 @@
 #endif
 #ifndef MLOC_SPELLOUT_FILE
 #define MLOC_SPELLOUT_FILE "src/generated/spellout.mloc"
+#endif
+#ifndef MLOC_LOCALE_NAMES_FILE
+#define MLOC_LOCALE_NAMES_FILE "src/generated/names.mloc"
 #endif
 
 static volatile int s_sink;
@@ -415,6 +421,78 @@ static bool PrepareSpellout(void)
            Number("21.5", &s_half) && Number("97", &s_ninetySeven) && Number("1999", &s_year);
 }
 
+// The names part: display names in en and fr, whole locales' names in
+// en.
+static mlocDataSet s_withNames;
+static mlocLocale s_deATBuddhist;
+static mlocLocale s_zhHantTWName;
+static char s_name[128];
+
+static void Name(const mlocLocale* locale, mlocNameType type, const char* code, size_t length,
+                 mlocCapitalization capitalization)
+{
+    mlocNameOptions options = {.capitalization = capitalization};
+    mlocOutput output = {.buffer = s_name, .capacity = sizeof(s_name)};
+    s_sink = mlocGetName(&s_withNames, locale, type, code, length, &options, &output) +
+             (int)output.length;
+}
+
+static void NameLanguage(void)
+{
+    Name(&s_en, mloc_nameLanguage, "de", 2, mloc_capitalizationNone);
+}
+
+static void NameRegion(void)
+{
+    Name(&s_fr, mloc_nameRegion, "DE", 2, mloc_capitalizationNone);
+}
+
+static void NameKeyValue(void)
+{
+    Name(&s_en, mloc_nameKeyValue, "ca-gregory", 10, mloc_capitalizationNone);
+}
+
+static void NameSentence(void)
+{
+    Name(&s_fr, mloc_nameLanguage, "de", 2, mloc_capitalizationSentence);
+}
+
+static void LocaleName(const mlocLocale* locale, mlocLanguageDisplay display)
+{
+    mlocLocaleNameOptions options = {.languageDisplay = display};
+    mlocOutput output = {.buffer = s_name, .capacity = sizeof(s_name)};
+    s_sink = mlocGetLocaleName(&s_withNames, &s_en, locale, &options, &output) + (int)output.length;
+}
+
+static void LocaleNameDialect(void)
+{
+    LocaleName(&s_deATBuddhist, mloc_languageDisplayDialect);
+}
+
+static void LocaleNameStandard(void)
+{
+    LocaleName(&s_zhHantTWName, mloc_languageDisplayStandard);
+}
+
+// The names data; false when names.mloc cannot be read.
+static bool PrepareNames(void)
+{
+    static mlocData s_sources[2];
+    alignas(8) static uint8_t s_names[8 << 20];
+    mlocOpenBuiltinData(&s_sources[0]);
+    FILE* file = fopen(MLOC_LOCALE_NAMES_FILE, "rb");
+    size_t size = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    s_withNames = (mlocDataSet){s_sources, 2};
+    s_deATBuddhist = Parsed("de-AT-u-ca-buddhist");
+    s_zhHantTWName = Parsed("zh-Hant-TW");
+    return size > 0 && size < sizeof(s_names) &&
+           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+}
+
 typedef struct Case
 {
     const char* name;
@@ -490,6 +568,11 @@ int main(int argc, char** argv)
         fprintf(stderr, "bench: cannot make the spell-out formatters (%s)\n", MLOC_SPELLOUT_FILE);
         return 1;
     }
+    if (!PrepareNames())
+    {
+        fprintf(stderr, "bench: cannot read the names (%s)\n", MLOC_LOCALE_NAMES_FILE);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
@@ -507,6 +590,14 @@ int main(int argc, char** argv)
             memset(s_words, 0, sizeof(s_words));
             spell[i]();
             printf("[%s]\n", s_words);
+        }
+        void (*const names[])(void) = {NameLanguage, NameRegion,        NameKeyValue,
+                                       NameSentence, LocaleNameDialect, LocaleNameStandard};
+        for (size_t i = 0; i < 6; i++)
+        {
+            memset(s_name, 0, sizeof(s_name));
+            names[i]();
+            printf("[%s]\n", s_name);
         }
     }
     FILE* baseline = argc > 1 ? fopen(argv[1], "r") : nullptr;
@@ -544,6 +635,12 @@ int main(int argc, char** argv)
         {"spellout-ordinal", SpelloutOrdinal, 1000000},
         {"spellout-roman", SpelloutRoman, 2000000},
         {"spellout-parse", SpelloutParse, 200000},
+        {"name-language", NameLanguage, 2000000},
+        {"name-region", NameRegion, 2000000},
+        {"name-key-value", NameKeyValue, 2000000},
+        {"name-sentence", NameSentence, 2000000},
+        {"locale-name", LocaleNameDialect, 500000},
+        {"locale-name-std", LocaleNameStandard, 500000},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
