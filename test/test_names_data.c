@@ -14,6 +14,7 @@
 #include "names_data.h"
 #include "names_tables.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/data.h"
 
@@ -81,6 +82,8 @@ static void TestIds(void)
           "codes found, a prefix or a code past the last not");
     static const char* const s_unordered[] = {"l:en-GB", "l:en"};
     static const char* const s_twice[] = {"l:en", "l:en"};
+    static const char* const s_emptyFirst[] = {"", "l:en"};
+    static const char* const s_lastLow[] = {"a:a", "b:b", "a:c"};
     char longest[nameMaxId + 2];
     memset(longest, 'a', sizeof(longest));
     longest[1] = ':';
@@ -89,8 +92,10 @@ static void TestIds(void)
     longest[nameMaxId] = 'a';
     longest[nameMaxId + 1] = '\0';
     CHECK(fits && !OneValid(longest) && !OneValid("l:e n") && !OneValid("l:\xC3\xA9") &&
-              !ValidIds(BuildIds(s_unordered, 2)) && !ValidIds(BuildIds(s_twice, 2)),
-          "a code too long, of other bytes, out of order or twice");
+              !ValidIds(BuildIds(s_unordered, 2)) && !ValidIds(BuildIds(s_twice, 2)) &&
+              !ValidIds(BuildIds(s_emptyFirst, 2)) && !ValidIds(BuildIds(s_lastLow, 3)),
+          "a code too long, empty, of other bytes, out of order (the last below the one before it) "
+          "or twice");
     size = BuildIds(s_codes, 4);
     CHECK(!ValidIds(size - 1) && !ValidIds(3), "a size not the counts'");
     Put(s_unit + 2, 1, 2);
@@ -226,6 +231,49 @@ static void TestFind(void)
           "a code without a name, of no namespace, a field out of range");
 }
 
+// A set of the compiled-in data, a root pack of a codes unit and one
+// names unit, and with the file the names data file.
+static bool OpenPack(const char* code, uint32_t kind, const uint16_t* keys,
+                     const char* const* texts, uint32_t count, bool withFile, mlocDataSet* set)
+{
+    static uint8_t s_ids[64];
+    static uint8_t s_names[64];
+    uint32_t idsSize = BuildIds(&code, 1);
+    memcpy(s_ids, s_unit, idsSize);
+    uint32_t namesSize = BuildNames(keys, texts, count);
+    memcpy(s_names, s_unit, namesSize);
+    static mlocData s_three[3];
+    s_three[0] = s_sources[0];
+    s_three[2] = s_sources[1];
+    PackUnit units[] = {{kindNameIds, {s_ids, idsSize}, false}, {kind, {s_names, namesSize}, true}};
+    *set = (mlocDataSet){s_three, withFile ? 3 : 2};
+    return OpenRootPack(units, 2, &s_three[1]);
+}
+
+// A source whose codes lack the one asked for is passed over; a code's
+// entries ending its unit end the search there.
+static void TestSources(void)
+{
+    mlocLocale en;
+    mlocDataSet set;
+    NameText name;
+    static const uint16_t s_one[] = {0};
+    static const char* const s_other[] = {"(x)"};
+    bool passed = mlocParseLocale("en", 2, &en).status == mloc_success &&
+                  OpenPack("p:zzz", kindNamePatterns, s_one, s_other, 1, true, &set) &&
+                  mlocFindName(&set, &en, "p:localePattern", 15, nameFieldName, &name) &&
+                  name.length == 9 && memcmp(name.text, "{0} ({1})", 9) == 0;
+    CHECK(passed, "a source without the code passed over");
+    static const uint16_t s_short[] = {nameFieldShort};
+    static const char* const s_text[] = {"aa"};
+    mlocLocale und;
+    CHECK(mlocParseLocale("und", 3, &und).status == mloc_success &&
+              OpenPack("l:zz", kindNamesLanguages, s_short, s_text, 1, false, &set) &&
+              !mlocFindName(&set, &und, "l:zz", 4, nameFieldName, &name) &&
+              mlocFindName(&set, &und, "l:zz", 4, nameFieldShort, &name) && name.length == 2,
+          "a code's entries at its unit's end, its name absent");
+}
+
 // The compiled-in data, then the names data file at the path the build
 // gives.
 static bool OpenData(void)
@@ -253,5 +301,6 @@ int main(void)
         return 2;
     }
     TestFind();
+    TestSources();
     return s_failures == 0 ? 0 : 1;
 }
