@@ -878,6 +878,45 @@ static void TestParseLimits(void)
         deep = deep && ParsesTo(s_same, text, s_levels[c].value, s_levels[c].end);
     }
     CHECK(deep, "rule sets nested to ICU's limit and past it");
+    // Two words read at once as well as one: a part of the text is reached
+    // at several depths, and a search remembered near the limit stands
+    // only where it can (ICU reads 2k + 1 bytes of k words to 126).
+    static const char s_pairs[] = "%a:\n0: x;\n1: o;\n2: o =%a=;\n3: o o =%a=;\n";
+    static const int s_counts[] = {60, 64, 100, 126};
+    bool pairs = true;
+    for (size_t c = 0; c < sizeof(s_counts) / sizeof(s_counts[0]); c++)
+    {
+        int k = s_counts[c];
+        for (int i = 0; i < k; i++)
+        {
+            memcpy(text + 2 * i, "o ", 2);
+        }
+        memcpy(text + 2 * k, "x", 2);
+        pairs = pairs && ParsesTo(s_pairs, text, "0", (size_t)(2 * k + 1));
+    }
+    CHECK(pairs, "a remembered search reused only at depths where it stands");
+    // A negative rule counts a level too: after "m ", 62 levels.
+    static const char s_minus[] = "%a:\n-x: m >>;\n0: x;\n1: o;\n2: o =%a=;\n";
+    static const struct
+    {
+        int levels;
+        const char* value;
+    } s_negative[] = {{62, "0"}, {63, "-1"}};
+    bool minus = true;
+    for (size_t c = 0; c < 2; c++)
+    {
+        int k = s_negative[c].levels;
+        memcpy(text, "m ", 2);
+        for (int i = 0; i < k; i++)
+        {
+            memcpy(text + 2 + 2 * i, "o ", 2);
+        }
+        memcpy(text + 2 + 2 * k, "x", 2);
+        minus = minus && ParsesTo(s_minus, text, s_negative[c].value, 127);
+    }
+    CHECK(minus, "a special rule nests a level");
+    CHECK(ParsesTo("%a:\nInf: x;\nNaN: x;\n0: y;\n", "x z", "Infinity", 1),
+          "of special rules reading one length the first");
     static const char s_special[] = "%a:\n0: x;\n1: y;\n1000: <%%b< k[ >%%b>];\n%%b:\nInf: inf;\n"
                                     "NaN: nan;\n0: x;\n1: y;\n";
     static const char s_over[] =
