@@ -16,6 +16,7 @@
 #include "test_pack.h"
 
 #include "maul-locale/data.h"
+#include "maul-locale/datetime.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -278,6 +279,33 @@ static void TestNamesPastUnit(void)
     CHECK(!mlocFindDateNames(&data, &fr, 2, &t, &set), "a name set past the unit's");
 }
 
+// A formatter refuses a pattern with a field it does not write ("Q",
+// which a compiled pattern may hold but CLDR's date patterns do not).
+static void TestUnwritablePattern(void)
+{
+    alignas(8) static uint8_t s_patterns[256];
+    uint32_t patterns = BuildUnit();
+    s_unit[88 + 1] = 'Q';
+    memcpy(s_patterns, s_unit, patterns);
+    uint32_t names = BuildNames();
+    uint8_t dates[dateLocaleSize] = {0};
+    PackUnit units[] = {{kindDatePatterns, {s_patterns, patterns}, false},
+                        {kindDates, {dates, sizeof(dates)}, true},
+                        {kindDateNames, {s_unit, names}, false}};
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    CHECK(OpenRootPack(units, 3, &sources[1]), "a pack with a quarter in a pattern");
+    mlocDataSet data = {sources, 2};
+    mlocLocale fr;
+    mlocDateFormatter formatter;
+    CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
+              mlocInitDateFormatter(&formatter, &data, &fr, nullptr) == mloc_errorData,
+          "a pattern the formatter cannot write");
+    mlocDateOptions month = {.fields = mloc_dateFieldSetMonth, .length = mloc_dateLengthMedium};
+    CHECK(mlocInitDateFormatter(&formatter, &data, &fr, &month) == mloc_success,
+          "another of the pack's patterns");
+}
+
 static mlocData s_sources[2];
 static mlocDataSet s_data;
 
@@ -452,6 +480,7 @@ int main(void)
     TestSetPastUnit();
     TestNamesUnit();
     TestNamesPastUnit();
+    TestUnwritablePattern();
     alignas(8) static uint8_t s_dates[1 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};

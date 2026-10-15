@@ -99,6 +99,29 @@ static void TestFieldSets(void)
     CHECK(Is("en", (mlocDateOptions){0}, date, "October 15, 2026"), "the default options");
 }
 
+static void TestContexts(void)
+{
+    mlocDate date = Iso(2026, 10, 15);
+    CHECK(Is("ru", Set(mloc_dateFieldSetMonth, mloc_dateLengthLong), date, "октябрь") &&
+              Is("ru", Set(mloc_dateFieldSetMonthDay, mloc_dateLengthLong), date, "15 октября"),
+          "a stand-alone month alone, a format one beside its day");
+    CHECK(Is("fi", Set(mloc_dateFieldSetWeekday, mloc_dateLengthLong), date, "torstai"),
+          "a stand-alone weekday");
+}
+
+// gl's Buddhist full date writes the week-based year: a week starts on
+// Monday and needs four days in its year.
+static void TestWeekYear(void)
+{
+    mlocDateOptions full = {.style = mloc_dateStyleFull};
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2000, 1, 1), "sábado, 1 de xaneiro de 2542 BE"),
+          "January 1 in the last week of the year before");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2024, 12, 30), "luns, 30 de decembro de 2568 BE"),
+          "December 30 in the first week of the next");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2024, 6, 30), "domingo, 30 de xuño de 2567 BE"),
+          "a day in its own year");
+}
+
 static void TestYearStyles(void)
 {
     mlocDateOptions shortDate = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthShort);
@@ -109,7 +132,8 @@ static void TestYearStyles(void)
               Is("en", shortDate, Iso(1949, 1, 2), "1/2/1949"),
           "its century outside them");
     CHECK(Is("en", shortDate, Iso(999, 1, 2), "1/2/999 AD") &&
-              Is("en", shortDate, Iso(-49, 1, 2), "1/2/50 BC"),
+              Is("en", shortDate, Iso(-49, 1, 2), "1/2/50 BC") &&
+              Is("en", shortDate, Iso(-1499, 1, 2), "1/2/1500 BC"),
           "its era before the year 1000 or the common era");
     shortDate.yearStyle = mloc_yearStyleFull;
     CHECK(Is("en", shortDate, Iso(2026, 1, 2), "1/2/2026") &&
@@ -158,12 +182,23 @@ static void TestCalendars(void)
           "a numeric leap month");
     CHECK(Is("en-u-ca-iso8601", longDate, Iso(2026, 10, 15), "October 15, 2026"),
           "the ISO calendar by the Gregorian data");
-    CHECK(Is("en-u-ca-persian", longDate, Iso(500, 6, 15), "Khordad 25, -121 AP"),
-          "a Persian year before its epoch");
+    CHECK(Is("en-u-ca-persian", longDate, Iso(500, 6, 15), "Khordad 25, -121 AP") &&
+              Is("en-u-ca-persian", longDate, Iso(621, 6, 15), "Khordad 25, 0 AP"),
+          "a Persian year before its epoch, and its year 0");
+    mlocDateOptions longStyle = {.style = mloc_dateStyleLong};
+    CHECK(Is("he-u-ca-hebrew", longStyle, Iso(1240, 10, 1), "ז׳ בתשרי א׳") &&
+              Is("he-u-ca-hebrew", longStyle, Iso(2240, 10, 1), "ט״ו בתשרי ו׳א׳"),
+          "the Hebrew millennium's ends: 5001 without its thousands, 6001 with them");
 }
 
 static void TestDigits(void)
 {
+    mlocLocale hebr;
+    mlocDateFormatter formatter;
+    CHECK(mlocCanonicalizeLocale(&s_data, "en-u-nu-hebr", 12, &hebr, nullptr).status ==
+                  mloc_success &&
+              mlocInitDateFormatter(&formatter, &s_data, &hebr, nullptr) == mloc_fellBack,
+          "a numbering system without digits falls back");
     mlocDateOptions shortDate = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthShort);
     CHECK(Is("fa", shortDate, Iso(2026, 10, 15), "۱۴۰۵/۷/۲۳"), "the locale's own digits");
     CHECK(Is("en-u-nu-arab", shortDate, Iso(2026, 10, 15), "١٠/١٥/٢٦"), "nu's digits");
@@ -196,6 +231,26 @@ static void TestOutput(void)
     CHECK(mlocFormatDate(&formatter, &date, &output) == mloc_success &&
               strcmp(parts, "5:0:3 0:3:1 7:4:2 0:6:2 2:8:4 ") == 0,
           "the parts of \"Oct 15, 2026\"");
+    parts[0] = '\0';
+    options = (mlocDateOptions){.fields = mloc_dateFieldSetYearMonthDayWeekday,
+                                .yearStyle = mloc_yearStyleWithEra};
+    output.capacity = sizeof(text);
+    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+              mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+              strcmp(parts, "6:0:8 0:8:2 5:10:7 0:17:1 7:18:2 0:20:2 2:22:4 0:26:1 1:27:2 ") == 0,
+          "the parts of \"Thursday, October 15, 2026 AD\"");
+    parts[0] = '\0';
+    mlocLocale zh;
+    options = (mlocDateOptions){.style = mloc_dateStyleLong};
+    CHECK(mlocCanonicalizeLocale(&s_data, "zh-u-ca-chinese", 15, &zh, nullptr).status ==
+                  mloc_success &&
+              mlocInitDateFormatter(&formatter, &s_data, &zh, &options) == mloc_success &&
+              mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+              strncmp(parts, "3:0:4 4:4:6 ", 12) == 0,
+          "a related year and a year name");
+    options = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthMedium);
+    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+          "the medium formatter again");
     mlocOutput measure = {0};
     CHECK(mlocFormatDate(&formatter, &date, &measure) == mloc_errorCapacity && measure.length == 12,
           "measuring");
@@ -231,8 +286,9 @@ static void TestRefusals(void)
     CHECK(mlocInitDateFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
           "data without the dates");
     CHECK(memcmp(&formatter, &before, sizeof(formatter)) == 0, "the formatter left unchanged");
-    CHECK(mlocFormatDate(&formatter, &date, &output) == mloc_errorInvalid,
-          "a formatter the library did not make");
+    CHECK(mlocFormatDate(&formatter, &date, &output) == mloc_errorInvalid &&
+              mlocFormatDate(nullptr, &date, &output) == mloc_errorInvalid,
+          "a formatter the library did not make, or none");
     CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, nullptr) == mloc_success &&
               mlocFormatDate(&formatter, nullptr, &output) == mloc_errorInvalid &&
               mlocFormatDate(&formatter, &date, nullptr) == mloc_errorInvalid,
@@ -256,6 +312,8 @@ int main(void)
     }
     s_data = (mlocDataSet){s_sources, 3};
     TestFieldSets();
+    TestContexts();
+    TestWeekYear();
     TestYearStyles();
     TestStyles();
     TestCalendars();
