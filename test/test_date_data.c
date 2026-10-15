@@ -31,9 +31,19 @@ static void Put(uint8_t* p, uint32_t value, int bytes)
     }
 }
 
+// A pattern checked in a block of exactly its length, so a sanitizer sees
+// any read past it.
 static bool Valid(const char* pattern, size_t length)
 {
-    return mlocValidDatePattern((const uint8_t*)pattern, (uint32_t)length);
+    uint8_t* copy = malloc(length > 0 ? length : 1);
+    if (copy == nullptr)
+    {
+        return false;
+    }
+    memcpy(copy, pattern, length);
+    bool result = mlocValidDatePattern(copy, (uint32_t)length);
+    free(copy);
+    return result;
 }
 
 static void TestPatterns(void)
@@ -216,6 +226,9 @@ static void TestNamesUnit(void)
     CHECK(name.size == 4 && memcmp(name.bytes, "{0}x", 4) == 0, "a name by list and item");
     CHECK(!ValidNames(size - 1) && !ValidNames(size + 1) && !ValidNames(12),
           "a size that is not the layout's");
+    BuildNames();
+    Put(s_unit + 4, 1000, 4);
+    CHECK(!ValidNames(size), "a list count past the unit");
     BuildNames();
     Put(s_unit + dateNamesHeaderSize + 8, 6, 4);
     CHECK(!ValidNames(size), "string offsets out of order");
