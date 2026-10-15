@@ -21,6 +21,7 @@
 #include "spellout_data.h"
 #include "unit_data.h"
 #include "unit_names.h"
+#include "zone_code_tables.h"
 #include "zone_tables.h"
 
 static const DataKind s_kinds[] = {
@@ -73,6 +74,7 @@ static const DataKind s_kinds[] = {
     {kindNameTitlecase, mlocValidSpelloutTitlecase},
     {kindNamesSubdivisions, mlocValidNames},
     {kindZones, mlocValidZones},
+    {kindZoneCodes, mlocValidZoneCodes},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

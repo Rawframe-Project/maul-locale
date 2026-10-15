@@ -520,6 +520,26 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneRelease(const mlocDataSet* dat
 Writes the time zone database release a data set's zones are compiled from, such as "2026e": that of the first source with zones, which every zone lookup in the set reads. A zones file (mlocgen zonesfile) put before the compiled-in data gives a release other than the library's.  @param data    The data with the zones unit. @param output  Receives the release's name. @return mloc_success; mloc_errorCapacity when the buffer is too short; mloc_errorInvalid for a null pointer; mloc_errorNotFound for data without the zones unit. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindTimeZoneBcp47(const mlocDataSet* data, const char* id, size_t length, mlocTimeZone* zoneOut);
+```
+Finds a time zone by its BCP 47 id, the value of a locale's "tz" key ("usnyc" for America/New_York), as CLDR lists them: the zone is the id's identifier, found in the set's zones. A deprecated id ("camtr") finds its replacement's zone; "unk" is refused.  @param data     The data with the zone codes and the zones units. @param id       The id, ASCII letters in any case. @param length   Its length in bytes. @param zoneOut  Receives the zone; left unchanged on failure. @return mloc_success; mloc_errorNotFound for an id CLDR does not list, a zone the set's zones lack, or data without either unit; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneBcp47(const mlocDataSet* data, const mlocTimeZone* zone, mlocOutput* output);
+```
+Writes a zone's BCP 47 id: the id whose CLDR aliases hold the zone's identifier, or else its primary identifier; for an offset zone of whole hours from -12 to +14, the id of its Etc/GMT zone ("utcw05" for -05:00, "utc" for +00:00).  @param data    The data with the zone codes unit. @param zone    The zone. @param output  Receives the id, lower-case. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorNotFound for a zone CLDR gives no id, or data without the zone codes unit; mloc_errorInvalid for a null pointer or a zone the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindTimeZoneWindows(const mlocDataSet* data, const char* name, size_t length, const char* region, size_t regionLength, mlocTimeZone* zoneOut);
+```
+Finds a time zone by its Windows name ("Eastern Standard Time"), as CLDR's windowsZones maps it: the zone of the region's mapping, or of the 001 mapping when the region has none or none is given, as ICU's TimeZone::getIDForWindowsID does.  @param data          The data with the zone codes and the zones units. @param name          The Windows name, ASCII letters in any case. @param length        Its length in bytes. @param region        The region, two ASCII letters in any case or three digits; may be null when regionLength is 0. @param regionLength  Its length in bytes, or 0 for none. @param zoneOut       Receives the zone; left unchanged on failure. @return mloc_success; mloc_errorNotFound for a name CLDR does not map, a zone the set's zones lack, or data without either unit; mloc_errorInvalid for a null pointer or a region that is not two letters or three digits. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneWindows(const mlocDataSet* data, const mlocTimeZone* zone, mlocOutput* output);
+```
+Writes a zone's Windows name: the name CLDR's windowsZones maps the zone's BCP 47 id to (mlocFormatTimeZoneBcp47), as ICU's TimeZone::getWindowsID gives it.  @param data    The data with the zone codes unit. @param zone    The zone. @param output  Receives the name. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorNotFound for a zone with no Windows name, or data without the zone codes unit; mloc_errorInvalid for a null pointer or a zone the library did not make. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* instant, int32_t* offsetSecondsOut);
 ```
 Returns a zone's offset from universal time at an instant, in seconds: local time is the instant plus the offset. The database's offsets before 1900 or so are local mean time, to the second.  @param zone              The zone. @param instant           An instant in Temporal's range. @param offsetSecondsOut  Receives the offset. @return mloc_success; mloc_errorInvalid for a null pointer, a zone the library did not make or an instant out of range. @par Thread safety Safe from any thread.
@@ -671,4 +691,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-122 functions across 14 headers.
+126 functions across 14 headers.

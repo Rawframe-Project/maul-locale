@@ -59,3 +59,6 @@ format.
 - Zones files: a data file of zones alone may bring another IANA
   release, built by `mlocgen zonesfile`, and `mlocGetTimeZoneRelease`
   names the release a data set's zones are (mloc-0041).
+- Time zones by their BCP 47 ids and Windows names, both ways, as CLDR
+  maps them (`mlocFindTimeZoneBcp47`, `mlocFormatTimeZoneBcp47`,
+  `mlocFindTimeZoneWindows`, `mlocFormatTimeZoneWindows`; mloc-0041).

@@ -131,5 +131,8 @@ constexpr uint32_t kindNamesSubdivisions = 0x00070009;
 // identifiers with their primaries, a unit of no locale (record
 // mloc-0041, src/zone_tables.h).
 constexpr uint32_t kindZones = 0x00080001;
+// The zone part: the BCP 47 time zone ids and the Windows zone names, a
+// unit of no locale (src/zone_code_tables.h).
+constexpr uint32_t kindZoneCodes = 0x00080002;
 
 #endif

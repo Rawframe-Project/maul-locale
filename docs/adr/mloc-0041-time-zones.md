@@ -296,7 +296,28 @@ nanoseconds.
     a difference is listed on standard error, and a Link CLDR does not
     know, or one without a country, resolves to its target. The
     library's own data keeps the strict check.
-- **Later in this part:** CLDR's BCP 47 ids and Windows names.
+- **BCP 47 ids and Windows names** (amended 2026-10-15): a unit of
+  CLDR's own (`src/zone_code_tables.h`), built from
+  `bcp47/timezone.xml` and `supplemental/windowsZones.xml` and keyed
+  by identifier names, so it serves a zones unit of any release.
+  - `mlocFindTimeZoneBcp47` finds the zone of an id's identifier: the
+    IANA name CLDR gives, else its first alias, as the set's zones have
+    it ("usnyc" gives America/New_York, "gmt" Etc/GMT, "utc" Etc/UTC).
+    A deprecated id finds its replacement's zone; "unk" is refused.
+  - `mlocFormatTimeZoneBcp47` gives the id whose aliases hold the
+    zone's identifier, else its primary identifier's. An offset zone of
+    whole hours from -12 to +14 gives its Etc/GMT zone's id ("utcw05"
+    for -05:00, "utc" for +00:00); other offsets have none.
+  - `mlocFindTimeZoneWindows` takes the region's mapping, or 001's when
+    the region has none or none is given, as ICU's
+    `TimeZone::getIDForWindowsID` does; a region is two letters or
+    three digits. `mlocFormatTimeZoneWindows` gives the name the zone's
+    id is mapped to, as ICU's `TimeZone::getWindowsID` does. Ids and
+    names are compared with ASCII letters folded.
+  - The generator refuses a name two ids list, a deprecated id whose
+    replacement is missing or deprecated, a Windows name without a 001
+    mapping, a mapped identifier no id lists, and an id mapped to two
+    Windows names.
 
 ## Proof
 
@@ -322,6 +343,27 @@ nanoseconds.
     (Asia/Calcutta, Etc/GMT, Europe/Bratislava, Atlantic/Jan_Mayen);
   - the validator refusing a changed count, offset place, order,
     closing month and saving, and a malformed release.
+- **BCP 47 ids and Windows names against CLDR:**
+  `tools/check_zone_codes.py` reads CLDR's two files and the tzdb
+  source on its own and asks `test/conform_zone_codes.c` 2,865
+  questions: every id in its case and upper case, every identifier an
+  id lists (those tzdb no longer has are no zone), every offset of
+  whole hours, and every Windows name in each region it maps, in 001,
+  in a region it does not map and in none. All agree; the cldr CI job
+  runs it.
+- **Against ICU4C 79** (CLDR 49.0), once: 2,313 questions over every
+  id, every Zone and Link name of the pinned source and every Windows
+  mapping. Every identifier's id and Windows name and every Windows
+  lookup agree. The ids differ only where the library names the IANA
+  identifier and ICU's `uloc_toLegacyType` CLDR's first alias, 21 ids
+  naming the same zone, and for "unk", which ICU maps to Etc/Unknown.
+- **The zone codes unit** (`test/test_zone_codes.c`): every id finds a
+  zone that gives back the id, or its replacement's; known ids, names,
+  offsets and regions; and the validator refusing ids out of order or
+  not lower case, replacements that are deprecated or their own,
+  aliases of deprecated ids, mappings out of their name's range and a
+  name without a 001 mapping. `fuzz_zone_codes` checks that every
+  lookup of a unit the validator accepts reads inside it.
 - **Zones files:** `test/test_data.c` opens a zones file of another
   release, and refuses one holding another unit too, one of another
   library version and one holding no unit. `test/test_zone_files.c`

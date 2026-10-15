@@ -12,6 +12,7 @@
 #include "plural_gen.h"
 #include "spellout_gen.h"
 #include "unit_gen.h"
+#include "zone_codes_gen.h"
 #include "zone_gen.h"
 
 #include "maul-locale/base.h"
@@ -268,7 +269,8 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
         !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity) ||
-        !GenerateZones(tzdbDirectory, commonDirectory, release, &data, errorOut, errorCapacity))
+        !GenerateZones(tzdbDirectory, commonDirectory, release, &data, errorOut, errorCapacity) ||
+        !GenerateZoneCodes(commonDirectory, &data, errorOut, errorCapacity))
     {
         free(rules.bytes);
         free(eras.bytes);

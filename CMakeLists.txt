@@ -148,6 +148,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/rounding.c
     src/time_arith.c
     src/zone.c
+    src/zone_code_tables.c
+    src/zone_codes.c
     src/zone_handle.c
     src/zone_local.c
     src/zone_rules.c
@@ -252,6 +254,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(zone_rules WHITEBOX)
     maul_add_test(zone)
     maul_add_test(zone_files WHITEBOX)
+    maul_add_test(zone_codes WHITEBOX)
     maul_add_test(zone_test262)
     maul_add_test(zone_local)
     maul_add_test(time_arith)
@@ -320,6 +323,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_include_directories(conform_zones PRIVATE src)
         maul_apply_flags(conform_zones)
     endif()
+    # BCP 47 ids and Windows names against CLDR's files
+    # (tools/check_zone_codes.py).
+    add_executable(conform_zone_codes test/conform_zone_codes.c)
+    target_link_libraries(conform_zone_codes PRIVATE maul-locale)
+    maul_apply_flags(conform_zone_codes)
     # Local times against zoneinfo (tools/check_local.py), through the
     # public functions.
     add_executable(conform_local test/conform_local.c)
@@ -356,7 +364,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal ixdtf locale parse spellout zones)
+    foreach(area data decimal ixdtf locale parse spellout zone_codes zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -390,7 +398,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
-                                    tools/mlocgen/zone_ids.c
+                                    tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c
                                     tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads

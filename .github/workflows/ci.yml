@@ -155,6 +155,13 @@ jobs:
           older=~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)
           build/mlocgen zonesfile $older ~/cldr-cache/cldr/common build/zones-older.mloc
           python3 tools/check_zones.py build/conform_zones $older build/zones-older.mloc
+      - name: BCP 47 ids and Windows names against CLDR
+        # Record mloc-0041: every id, identifier and Windows mapping, as
+        # check_zone_codes.py reads CLDR's files.
+        timeout-minutes: 5
+        run: |
+          python3 tools/check_zone_codes.py build/conform_zone_codes ~/cldr-cache/cldr/common \
+            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: Local times against zoneinfo
         # Record mloc-0041: the instants of the local times around every
         # change from 1800 to 2500, their disambiguations, the start of

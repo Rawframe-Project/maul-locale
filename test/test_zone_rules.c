@@ -397,6 +397,26 @@ static void TestHandleBounds(const mlocDataSet* data)
     CHECK(mlocFormatTimeZoneId(&zone, &output) == mloc_errorInvalid, "one past the last");
 }
 
+// A release of eight bytes ends the header: the byte after it is the
+// first section's, which the release check never reads; a header alone
+// is a unit of no sections, and a shorter payload is none.
+static void TestReleaseEnd(void)
+{
+    alignas(8) static uint8_t s_unit[56];
+    memset(s_unit, 0, sizeof(s_unit));
+    s_unit[32] = 8;
+    memcpy(s_unit + 40, "abcdefgh", 8);
+    s_unit[48] = 'x';
+    ZoneTables t;
+    DataSpan span = {s_unit, sizeof(s_unit)};
+    CHECK(mlocZoneTablesOf(span, &t) && t.releaseLength == 8 && t.textSize == 8,
+          "a release of eight bytes, then the text");
+    s_unit[32] = 0;
+    CHECK(mlocZoneTablesOf((DataSpan){s_unit, zoneHeaderSize}, &t) && t.zoneCount == 0,
+          "a header alone");
+    CHECK(!mlocZoneTablesOf((DataSpan){s_unit, zoneHeaderSize - 1}, &t), "a header cut short");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_builtin);
@@ -410,5 +430,6 @@ int main(void)
     TestTransitions();
     TestRangeEnd();
     TestHandleBounds(&data);
+    TestReleaseEnd();
     return s_failures == 0 ? 0 : 1;
 }
