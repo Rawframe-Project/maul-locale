@@ -138,6 +138,10 @@ static void TestWindows(void)
               Formats("Asia/Calcutta", true, "India Standard Time") &&
               Formats("UTC", true, "UTC") && Formats("-05:00", true, "SA Pacific Standard Time"),
           "a zone's Windows name");
+    char exact[8];
+    CHECK(Format("America/New_York", false, exact, 5) == mloc_success &&
+              memcmp(exact, "usnyc", 5) == 0,
+          "an id into a buffer of its length");
     char text[8];
     CHECK(Format("+05:30", true, text, sizeof text) == mloc_errorNotFound &&
               Format("America/New_York", true, text, sizeof text) == mloc_errorCapacity,
@@ -188,7 +192,7 @@ enum
     smallSize = 123,
 };
 
-alignas(8) static uint8_t s_small[128];
+alignas(8) static uint8_t s_small[136];
 
 static void Put(size_t at, uint64_t value, int bytes)
 {
@@ -274,6 +278,7 @@ static void TestValidator(void)
         {{smallAliases + 8}, {12}, {4}, false, "an alias twice"},
         {{smallText + 13}, {' '}, {1}, false, "an identifier with a space"},
         {{smallWindows + 6}, {1}, {2}, false, "a first mapping past the count"},
+        {{smallWindows + 5}, {1}, {1}, false, "a Windows name's zero byte"},
         {{smallMappings + 5}, {'X' | 'X' << 8}, {3}, false, "no mapping for 001"},
         {{smallMappings + 5}, {'0' | 'A' << 8 | '1' << 16}, {3}, false, "a region that is not"},
         {{smallMappings + 4}, {0}, {1}, false, "an empty identifier"},
@@ -300,6 +305,26 @@ static void TestValidator(void)
           "a header cut short");
 }
 
+// The small unit with a second mapping for W, the text moved past it:
+// another region is valid, 001 twice is not.
+static void TestTwoMappings(void)
+{
+    DataView view = {0};
+    static const char* const s_regions[2] = {"US", "001"};
+    for (int i = 0; i < 2; i++)
+    {
+        DataSpan span = SmallUnit();
+        memmove(s_small + smallText + zoneMappingSize, s_small + smallText, 19);
+        Put(12, 2, 4);
+        Put(smallText, 12, 4);
+        Put(smallText + 4, 3, 1);
+        memcpy(s_small + smallText + 5, s_regions[i], 3);
+        span.size += zoneMappingSize;
+        CHECK(mlocValidZoneCodes(&view, span) == (i == 0),
+              i == 0 ? "a second region for a name" : "a region twice for a name");
+    }
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_builtin);
@@ -308,5 +333,6 @@ int main(void)
     TestWindows();
     TestRefusals();
     TestValidator();
+    TestTwoMappings();
     return s_failures == 0 ? 0 : 1;
 }
