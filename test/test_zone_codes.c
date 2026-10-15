@@ -250,6 +250,8 @@ static void TestValidator(void)
         {{smallText}, {'A'}, {1}, false, "an id with an upper-case letter"},
         {{smallCodes + 8}, {1}, {1}, false, "an id of one letter"},
         {{smallCodes}, {8}, {4}, false, "ids out of order"},
+        {{smallCodes + 16}, {0}, {4}, false, "an id twice"},
+        {{smallCodes + 8}, {2}, {1}, true, "an id of two letters"},
         {{smallCodes + 14}, {1}, {2}, false, "a code's zero bytes"},
         {{smallCodes + 12}, {1}, {2}, false, "a Windows name past the count"},
         {{smallCodes + 26}, {1}, {2}, false, "a replacement of its own"},
@@ -269,6 +271,7 @@ static void TestValidator(void)
         {{smallAliases + 14}, {1}, {2}, false, "an alias of a deprecated id"},
         {{smallAliases + 5}, {1}, {1}, false, "an alias's zero byte"},
         {{smallAliases, smallAliases + 8}, {15, 12}, {4, 4}, false, "aliases out of order"},
+        {{smallAliases + 8}, {12}, {4}, false, "an alias twice"},
         {{smallText + 13}, {' '}, {1}, false, "an identifier with a space"},
         {{smallWindows + 6}, {1}, {2}, false, "a first mapping past the count"},
         {{smallMappings + 5}, {'X' | 'X' << 8}, {3}, false, "no mapping for 001"},
@@ -288,6 +291,13 @@ static void TestValidator(void)
     DataSpan cut = SmallUnit();
     cut.size -= 1;
     CHECK(!mlocValidZoneCodes(&view, cut), "a payload cut short");
+    // A header alone is a unit of no sections; a shorter payload is none.
+    memset(s_small, 0, sizeof(s_small));
+    ZoneCodeTables t;
+    CHECK(mlocZoneCodeTablesOf((DataSpan){s_small, zoneCodeHeaderSize}, &t) && t.codeCount == 0,
+          "a header alone");
+    CHECK(!mlocZoneCodeTablesOf((DataSpan){s_small, zoneCodeHeaderSize - 1}, &t),
+          "a header cut short");
 }
 
 int main(void)
