@@ -648,9 +648,38 @@ static bool NameGoesOn(const Parser* r, const Segment* s)
 // another, the code in any case, then any currency or the long names.
 // Where a name begins with the code, the longer is taken: ICU takes the
 // code, leaving "o" of "Euro" unread (record mloc-0033).
+// Whether the text holds the shown text, then ignorables and the code:
+// what a formatter with the ISO append writes. The symbol may begin
+// with that text and the code's first letters (fr-CA writes USD's
+// narrow symbol as "$" and its symbol as "$ US", so "0,00 $ USD"), and
+// read first it would leave the code unread.
+static bool ShownBeforeCode(const Parser* r, const ParseCurrency* c, Segment* s)
+{
+    if (!c->appended || !Begins(s, c->shown, c->shownLength))
+    {
+        return false;
+    }
+    size_t initial = s->at;
+    s->at += c->shownLength;
+    size_t size = 0;
+    while (s->at < s->length && mlocParseHas(r->sets, parseIgnorables,
+                                             mlocParseCodePoint(s->text, s->length, s->at, &size)))
+    {
+        s->at += size;
+    }
+    bool code = mlocParsePrefix(r->sets, s, (const uint8_t*)c->code, 3) > 0;
+    s->at = initial;
+    return code;
+}
+
 static void MatchText(const Parser* r, const ParseCurrency* c, Segment* s, Parsed* p)
 {
     size_t code = mlocParsePrefix(r->sets, s, (const uint8_t*)c->code, 3);
+    if (ShownBeforeCode(r, c, s))
+    {
+        Take(s, p, c->shownLength, c->code);
+        return;
+    }
     if (Begins(s, c->symbol, c->symbolLength))
     {
         Take(s, p, c->symbolLength, c->code);

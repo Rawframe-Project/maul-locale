@@ -450,16 +450,16 @@ static void TestRoundTrip(void)
 // is written without the sign; the code after it is read back too, also
 // where the sign is a suffix (fy: "£ NaN GBP" beside "£ 1,00+ GBP").
 // Strict mode wants the plus sign of the always display, which NaN lacks.
-static bool AppendedReadsBack(const char* id, mlocSignDisplay sign, const mlocDecimal* d,
-                              mlocParseMode lastMode)
+static bool AppendedReadsBack(const char* id, const char* code, mlocCurrencyDisplay display,
+                              mlocSignDisplay sign, const mlocDecimal* d, mlocParseMode lastMode)
 {
     mlocCurrencyOptions options = {
-        .display = mloc_currencySymbol, .appendCode = 1, .number = {.signDisplay = sign}};
+        .display = display, .appendCode = 1, .number = {.signDisplay = sign}};
     mlocCurrencyFormatter f;
     char buffer[256];
     char again[256];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
-    if (Init(&s_withNames, id, "GBP", &options, &f) < 0 ||
+    if (Init(&s_withNames, id, code, &options, &f) < 0 ||
         mlocFormatCurrency(&f, d, &output) != mloc_success)
     {
         return false;
@@ -481,6 +481,12 @@ static bool AppendedReadsBack(const char* id, mlocSignDisplay sign, const mlocDe
     return true;
 }
 
+static bool Appended(const char* id, mlocSignDisplay sign, const mlocDecimal* d,
+                     mlocParseMode lastMode)
+{
+    return AppendedReadsBack(id, "GBP", mloc_currencySymbol, sign, d, lastMode);
+}
+
 static void TestAppendedUnsigned(void)
 {
     static const char* const s_locales[] = {"fy", "en", "de", "nl", "he", "fa"};
@@ -492,12 +498,29 @@ static void TestAppendedUnsigned(void)
     for (size_t l = 0; l < sizeof(s_locales) / sizeof(s_locales[0]); l++)
     {
         const char* id = s_locales[l];
-        all = all && AppendedReadsBack(id, mloc_signAlways, &nan, mloc_parseLenient) &&
-              AppendedReadsBack(id, mloc_signAlways, &zero, mloc_parseStrict) &&
-              AppendedReadsBack(id, mloc_signExceptZero, &nan, mloc_parseStrict) &&
-              AppendedReadsBack(id, mloc_signExceptZero, &zero, mloc_parseStrict);
+        all = all && Appended(id, mloc_signAlways, &nan, mloc_parseLenient) &&
+              Appended(id, mloc_signAlways, &zero, mloc_parseStrict) &&
+              Appended(id, mloc_signExceptZero, &nan, mloc_parseStrict) &&
+              Appended(id, mloc_signExceptZero, &zero, mloc_parseStrict);
     }
     CHECK(all, "NaN and zero without a sign, then the appended code, read back");
+}
+
+// fr-CA writes USD's narrow symbol as "$" and its symbol as "$ US": with
+// the ISO append, "0,00 $ USD" reads the narrow symbol, not "$ US" with
+// the code's "D" left over. The symbol display writes "$ US USD".
+static void TestAppendedShownSymbol(void)
+{
+    mlocDecimal d;
+    bool all = mlocParseDecimal("1234.5", 6, &d).status == mloc_success;
+    static const mlocCurrencyDisplay s_displays[] = {mloc_currencyNarrowSymbol,
+                                                     mloc_currencySymbol};
+    for (size_t i = 0; i < sizeof(s_displays) / sizeof(s_displays[0]); i++)
+    {
+        all = all &&
+              AppendedReadsBack("fr-CA", "USD", s_displays[i], mloc_signAuto, &d, mloc_parseStrict);
+    }
+    CHECK(all, "the narrow symbol, then the appended code, read back");
 }
 
 // Strict mode wants a long name formatter's name, in each category's
@@ -636,6 +659,7 @@ int main(void)
     TestCases();
     TestRoundTrip();
     TestAppendedUnsigned();
+    TestAppendedShownSymbol();
     TestLongNamesStrictly();
     TestCodeDisplayStrictly();
     TestWithoutNames();
