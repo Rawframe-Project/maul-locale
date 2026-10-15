@@ -316,9 +316,17 @@ static void Put(Out* o, uint64_t value, int count)
     }
 }
 
-// Appends a name to the text; returns its offset.
+// A name's offset in the text: where the text already holds its bytes,
+// else appended.
 static uint32_t Text(Out* text, const char* name, size_t length)
 {
+    for (size_t from = 0; from + length <= text->size; from++)
+    {
+        if (memcmp(text->data + from, name, length) == 0)
+        {
+            return (uint32_t)from;
+        }
+    }
     uint32_t at = (uint32_t)text->size;
     for (size_t i = 0; i < length; i++)
     {
