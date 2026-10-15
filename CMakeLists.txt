@@ -136,10 +136,12 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_prefs.c
     src/unit_usage.c
     src/wide.c
+    src/zone_rules.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c
     src/generated/calendar_eras.c
-    src/generated/calendar_years.c)
+    src/generated/calendar_years.c
+    src/generated/zone_data.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
@@ -233,6 +235,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(calendar)
     maul_add_test(calendar_astro WHITEBOX)
     maul_add_test(calendar_lunar WHITEBOX)
+    maul_add_test(zone_rules WHITEBOX)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)
@@ -279,6 +282,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(conform_${name} PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
     endforeach()
+    # The zones against zic and zdump (tools/check_zones.py), on the
+    # library's internal tables.
+    if(NOT MAUL_LOCALE_BUILD_SHARED)
+        add_executable(conform_zones test/conform_zones.c)
+        target_link_libraries(conform_zones PRIVATE maul-locale)
+        target_include_directories(conform_zones PRIVATE src)
+        maul_apply_flags(conform_zones)
+    endif()
     maul_add_header_tests()
 endif()
 
@@ -322,6 +333,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_gen.c
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
+                                    tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
                                     tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads

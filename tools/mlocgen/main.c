@@ -10,8 +10,13 @@
 //       "<empty>" for an explicitly empty value. The resolution checks
 //       compare this output with CLDR's JSON.
 //
-//   mlocgen generate <CLDR common directory> <repository root>
-//       Writes the library's generated sources under src/generated/.
+//   mlocgen generate <CLDR common directory> <repository root> <tzdb directory>
+//       Writes the library's generated sources under src/generated/, the
+//       zones from the pinned tzdb release's source (record mloc-0041).
+//
+//   mlocgen zones <tzdb directory> <until year>
+//       Prints each zone's compiled offsets up to the start of a year
+//       (zone_gen.h), for comparing the compiler with zic and zdump.
 //
 //   mlocgen chains <CLDR common directory>
 //       Reads lines "main<TAB>id" or "collation<TAB>id" and writes, for
@@ -23,6 +28,7 @@
 #include "generate.h"
 #include "parents_gen.h"
 #include "plural_gen.h"
+#include "zone_gen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,10 +80,10 @@ int main(int argc, char** argv)
     {
         return Resolve(argv[2]);
     }
-    if (argc == 4 && strcmp(argv[1], "generate") == 0)
+    if (argc == 5 && strcmp(argv[1], "generate") == 0)
     {
         char error[1024];
-        if (!Generate(argv[2], argv[3], error, sizeof(error)))
+        if (!Generate(argv[2], argv[3], argv[4], error, sizeof(error)))
         {
             fprintf(stderr, "mlocgen: %s\n", error);
             return 1;
@@ -88,6 +94,16 @@ int main(int argc, char** argv)
     {
         char error[1024];
         if (!PrintChains(argv[2], error, sizeof(error)))
+        {
+            fprintf(stderr, "mlocgen: %s\n", error);
+            return 1;
+        }
+        return 0;
+    }
+    if (argc == 4 && strcmp(argv[1], "zones") == 0)
+    {
+        char error[1024];
+        if (!PrintZones(argv[2], (int32_t)atoi(argv[3]), error, sizeof(error)))
         {
             fprintf(stderr, "mlocgen: %s\n", error);
             return 1;
@@ -107,7 +123,8 @@ int main(int argc, char** argv)
     fputs("usage: mlocgen resolve <CLDR common directory>\n"
           "       mlocgen chains <CLDR common directory>\n"
           "       mlocgen plural-samples <CLDR common directory>\n"
-          "       mlocgen generate <CLDR common directory> <repository root>\n",
+          "       mlocgen zones <tzdb directory> <until year>\n"
+          "       mlocgen generate <CLDR common directory> <repository root> <tzdb directory>\n",
           stderr);
     return 2;
 }

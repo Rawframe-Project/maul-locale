@@ -101,9 +101,16 @@ jobs:
         with:
           path: ~/cldr-cache
           key: cldr-${{ hashFiles('tools/cldr-release.txt') }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/tzdb-cache
+          key: tzdb-${{ hashFiles('tools/tzdb-release.txt') }}
       - name: Fetch CLDR
         timeout-minutes: 15
         run: bash tools/fetch_cldr.sh ~/cldr-cache
+      - name: Fetch tzdb
+        timeout-minutes: 5
+        run: bash tools/fetch_tzdb.sh ~/tzdb-cache
       - name: Install the compiler
         timeout-minutes: 15
         run: |
@@ -112,7 +119,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -126,8 +133,17 @@ jobs:
         # The generator gives the same bytes on every run, so a stale or
         # hand-edited file shows as a difference.
         run: |
-          build/mlocgen generate ~/cldr-cache/cldr/common .
+          build/mlocgen generate ~/cldr-cache/cldr/common . ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
           git diff --exit-code src/generated || { echo "src/generated is stale: run mlocgen generate"; exit 1; }
+      - name: The zones against zic and zdump
+        # Record mloc-0041: every zone's offsets as zdump reads zic's output
+        # for the same source, from 1800 to 2500 and in the range's last
+        # years.
+        timeout-minutes: 20
+        run: |
+          command -v zic zdump
+          python3 tools/check_zones.py build/conform_zones \
+            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: Conformance
         run: |
           ids=~/cldr-cache/cldr/common/testData/localeIdentifiers

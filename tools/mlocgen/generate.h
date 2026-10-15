@@ -18,7 +18,9 @@
 int GenerateVersion(const char* root, DataFileVersion* versionOut, char* errorOut,
                     size_t errorCapacity);
 
-// Writes src/generated/ under root. Returns 0 and a message on failure.
-int Generate(const char* commonDirectory, const char* root, char* errorOut, size_t errorCapacity);
+// Writes src/generated/ under root from CLDR's common directory and a
+// tzdb source directory. Returns 0 and a message on failure.
+int Generate(const char* commonDirectory, const char* root, const char* tzdbDirectory,
+             char* errorOut, size_t errorCapacity);
 
 #endif

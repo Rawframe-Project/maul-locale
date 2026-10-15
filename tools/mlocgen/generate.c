@@ -12,6 +12,7 @@
 #include "plural_gen.h"
 #include "spellout_gen.h"
 #include "unit_gen.h"
+#include "zone_gen.h"
 
 #include "maul-locale/base.h"
 
@@ -243,7 +244,8 @@ static void FreeNameFiles(NameFiles* names)
     DataFileFree(&names->subdivisions);
 }
 
-int Generate(const char* commonDirectory, const char* root, char* errorOut, size_t errorCapacity)
+int Generate(const char* commonDirectory, const char* root, const char* tzdbDirectory,
+             char* errorOut, size_t errorCapacity)
 {
     DataFileVersion version;
     if (!GenerateVersion(root, &version, errorOut, errorCapacity))
@@ -256,6 +258,9 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     Text rules = {0};
     Text eras = {0};
     Text years = {0};
+    Text zones = {0};
+    char release[9] = "";
+    memcpy(release, version.tzdb, sizeof(version.tzdb));
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
         !GeneratePluralUnits(commonDirectory, &data, &rules.bytes, &rules.size, errorOut,
                              errorCapacity) ||
@@ -263,10 +268,12 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
-        !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity))
+        !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity) ||
+        !GenerateZones(tzdbDirectory, release, &zones.bytes, &zones.size, errorOut, errorCapacity))
     {
         free(rules.bytes);
         free(eras.bytes);
+        free(years.bytes);
         DataFileFree(&data);
         FreeNameFiles(&names);
         DataFileFree(&spellout);
@@ -275,10 +282,8 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     // The compiled rules are code tables the data's indexes name, so they
     // enter the data version (record mloc-0020).
     version.tables = HashBytes(version.tables, rules.bytes, rules.size);
-    char tzdb[9] = "";
-    memcpy(tzdb, version.tzdb, sizeof(version.tzdb));
     Text header = {0};
-    VersionHeader(&header, &version, tzdb);
+    VersionHeader(&header, &version, release);
     size_t size = 0;
     uint8_t* bytes = DataFileWrite(&data, &version, &size);
     Text builtin = {0};
@@ -297,6 +302,7 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_eras.c", &eras, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_years.c", &years, errorOut, errorCapacity) &&
+             WriteFile(root, "zone_data.c", &zones, errorOut, errorCapacity) &&
              WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     for (size_t i = 0; ok && i < sizeof(nameFiles) / sizeof(nameFiles[0]); i++)
     {
@@ -314,6 +320,7 @@ int Generate(const char* commonDirectory, const char* root, char* errorOut, size
     free(rules.bytes);
     free(eras.bytes);
     free(years.bytes);
+    free(zones.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;
