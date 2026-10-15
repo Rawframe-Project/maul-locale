@@ -155,6 +155,27 @@ nanoseconds.
 
   Temporal's rounding of integers moved out of the calendar's rounding
   into `src/rounding.c` for both.
+- **Date-times** (amended 2026-10-15, slice 12g):
+  - `mlocUnit` names Temporal's ten units in its table's order, and
+    `mlocDateTimeDuration` is its Internal Duration Record (date fields
+    and a time duration);
+  - `mlocAddToDateTime` is AddDurationToDateTime: the time first, its
+    days passed joining the date part's, then mlocAddToDate;
+  - `mlocDateTimeUntil` is DifferencePlainDateTimeWithRounding with
+    `mlocDateTimeRounding`; the host balances the time part with
+    mlocBalanceTimeDuration and keeps each field as a float64, as
+    TemporalDurationFromInternal does;
+  - `mlocRoundDateTime` is RoundISODateTime.
+
+  RoundRelativeDuration without a time zone lives in
+  `src/duration_round.c`, and the calendar's mlocDateUntilRounded is its
+  case of midnight at both ends (its 20,743 test262 rows unchanged). A
+  moment is a day and the nanoseconds past midnight. Twice the progress
+  is compared with the window by days first, so ranges of 10^8 days need
+  no integer wider than 64 bits. A time duration is rounded by whole
+  seconds or by a divisor of a second. With a divisor, half-even's
+  parity also counts the seconds when a second holds an odd number of
+  steps (200 ms).
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
@@ -197,6 +218,11 @@ nanoseconds.
   files: times made, added to, rounded, and their differences until and
   since. They are in `test/test262_time.inc`. Files that need ISO time
   strings wait for the IXDTF slice.
+- **PlainDateTime against test262:** `test/test_datetime_test262.c`
+  replays 7,532 rows and 73,614 checks from 404 of test262's
+  Temporal.PlainDateTime files, in every calendar: date-times made,
+  added to, rounded, and their differences until and since. They are in
+  `test/test262_datetime.inc`.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in

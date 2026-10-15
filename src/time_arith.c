@@ -7,10 +7,10 @@
 // RoundTimeDuration, and RoundTime. A duration is seconds and
 // nanoseconds, so its 2^53 seconds need no wider integers.
 
+#include "time_arith.h"
+
 #include "date_time.h"
 #include "rounding.h"
-
-#include "maul-locale/zone.h"
 
 enum
 {
@@ -43,7 +43,7 @@ static const int64_t s_parentLength[7] = {
 // MaximumTemporalDurationRoundingIncrement, and 1 for days.
 static const uint32_t s_maxIncrement[7] = {1, 24, 60, 60, 1000, 1000, 1000};
 
-static bool ValidDuration(const mlocTimeDuration* d)
+bool mlocTimeDurationValid(const mlocTimeDuration* d)
 {
     return d->seconds > -s_maxSeconds && d->seconds < s_maxSeconds &&
            d->nanoseconds > -nanosecondsPerSecond && d->nanoseconds < nanosecondsPerSecond &&
@@ -88,7 +88,7 @@ static bool Normalize(int64_t seconds, int64_t nanoseconds, mlocTimeDuration* ou
         nanoseconds -= nanosecondsPerSecond;
     }
     *out = (mlocTimeDuration){seconds, (int32_t)nanoseconds};
-    return ValidDuration(out);
+    return mlocTimeDurationValid(out);
 }
 
 mlocResult mlocMakeTimeDuration(const mlocTimeDurationFields* fields, mlocTimeDuration* durationOut)
@@ -123,7 +123,7 @@ mlocResult mlocMakeTimeDuration(const mlocTimeDurationFields* fields, mlocTimeDu
 mlocResult mlocBalanceTimeDuration(const mlocTimeDuration* duration, mlocTimeUnit largestUnit,
                                    mlocTimeDurationFields* fieldsOut)
 {
-    if (duration == nullptr || fieldsOut == nullptr || !ValidDuration(duration) ||
+    if (duration == nullptr || fieldsOut == nullptr || !mlocTimeDurationValid(duration) ||
         (uint32_t)largestUnit > mloc_timeUnitNanosecond)
     {
         return mloc_errorInvalid;
@@ -205,7 +205,7 @@ mlocResult mlocAddToTime(const mlocTime* time, const mlocTimeDuration* duration,
                          int64_t* daysOut)
 {
     if (time == nullptr || duration == nullptr || timeOut == nullptr || !mlocTimeValid(time) ||
-        !ValidDuration(duration))
+        !mlocTimeDurationValid(duration))
     {
         return mloc_errorInvalid;
     }

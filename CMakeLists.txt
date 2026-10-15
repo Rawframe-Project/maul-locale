@@ -137,6 +137,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_usage.c
     src/wide.c
     src/date_time.c
+    src/datetime_arith.c
+    src/duration_round.c
     src/rounding.c
     src/time_arith.c
     src/zone.c
@@ -247,6 +249,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(zone_local)
     maul_add_test(time_arith)
     maul_add_test(time_test262)
+    maul_add_test(datetime_test262)
+    maul_add_test(datetime_arith)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)

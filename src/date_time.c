@@ -18,6 +18,15 @@ bool mlocDateTimeValid(const mlocDateTime* dateTime)
     return mlocYearDateValid(&dateTime->date) && mlocTimeValid(&dateTime->time);
 }
 
+bool mlocDateTimeWithinLimits(const mlocDateTime* dateTime)
+{
+    // More than a day before the first instant is out, which on the first
+    // day is its midnight alone.
+    const mlocTime* t = &dateTime->time;
+    return dateTime->date.day != mlocDateMinDay || t->hour != 0 || t->minute != 0 ||
+           t->second != 0 || t->nanosecond != 0;
+}
+
 int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime)
 {
     const mlocTime* t = &dateTime->time;
@@ -67,13 +76,11 @@ mlocResult mlocMakeDateTime(const mlocDate* date, const mlocTime* time, mlocDate
     {
         return mloc_errorInvalid;
     }
-    // ISODateTimeWithinLimits: more than a day before the first instant
-    // is out, which on the first day is its midnight alone.
-    if (date->day == mlocDateMinDay && time->hour == 0 && time->minute == 0 && time->second == 0 &&
-        time->nanosecond == 0)
+    mlocDateTime dateTime = {.date = *date, .time = *time};
+    if (!mlocDateTimeWithinLimits(&dateTime))
     {
         return mloc_errorInvalid;
     }
-    *dateTimeOut = (mlocDateTime){.date = *date, .time = *time};
+    *dateTimeOut = dateTime;
     return mloc_success;
 }

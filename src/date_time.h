@@ -26,6 +26,10 @@ bool mlocTimeValid(const mlocTime* time);
 // date-time's limits are not checked.
 bool mlocDateTimeValid(const mlocDateTime* dateTime);
 
+// ISODateTimeWithinLimits for a valid date-time: all but the first
+// day's midnight.
+bool mlocDateTimeWithinLimits(const mlocDateTime* dateTime);
+
 // A date-time's seconds since 1970 as if in universal time (its
 // nanoseconds aside).
 int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime);

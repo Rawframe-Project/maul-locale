@@ -486,6 +486,21 @@ MLOC_NODISCARD MLOC_API mlocResult mlocRoundTime(const mlocTime* time, mlocTimeU
 Rounds a time of day to a multiple of an increment of a unit (ECMA-262's RoundTime), as Temporal's PlainTime.round (units hour to nanosecond, which drops the days) and PlainDateTime.round read it. A unit of hours to nanoseconds takes an increment dividing the next unit (24, 60, 60, 1000, 1000, 1000) into more than one part; a day takes 1, giving midnight of the day or the next.  @param time       The time of day. @param unit       The unit. @param increment  The increment. @param mode       The rounding mode. @param timeOut    Receives the time. @param daysOut    Receives 1 when the rounding reaches the next midnight, else 0; may be null. @return mloc_success; mloc_errorInvalid for a null pointer, a time the library did not make, or a unit, increment or mode refused. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocAddToDateTime(const mlocDateTime* dateTime, const mlocDateTimeDuration* duration, mlocOverflow overflow, mlocDateTime* dateTimeOut);
+```
+Adds a duration to a date-time, as Temporal's PlainDateTime.add does (AddDurationToDateTime): the time first, its days passed added to the duration's days, then the date part in the date's calendar as mlocAddToDate adds it. Subtracting is adding the negated duration.  @param dateTime     The date-time. @param duration     The duration, its days of 24 hours. @param overflow     What a month code or day the result lacks does. @param dateTimeOut  Receives the date-time; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date-time the library did not make, a duration of two signs or out of its limits, a month code or day refused, or a result outside Temporal's limits for a date-time. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeUntil(const mlocDateTime* one, const mlocDateTime* two, const mlocDateTimeRounding* rounding, mlocDateTimeDuration* durationOut);
+```
+Computes the duration from one date-time to another of the same calendar, rounded, as Temporal's PlainDateTime.until does (DifferencePlainDateTimeWithRounding): the date difference to the second date, or the day before or after it when the times run the other way, the time difference beside it, then the rounding of RoundRelativeDuration. A largest time unit folds the days into the time. Increments: 1 to 10^9 for date units; for time units one that divides the next unit (24, 60, 60, 1000, 1000, 1000) into more than one part. Temporal's since is this with the mode negated and the result negated. The time part is given to mlocBalanceTimeDuration with the largest unit (or days, for a date unit, whose days the host adds to the date part's).  @param one          The date-time from. @param two          The date-time to. @param rounding     The units, increment and mode. @param durationOut  Receives the duration; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date-time the library did not make or out of the limits, date-times of two calendars, a unit, increment or mode refused, or a rounding that reaches a date out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocRoundDateTime(const mlocDateTime* dateTime, mlocTimeUnit unit, uint32_t increment, mlocRoundingMode mode, mlocDateTime* dateTimeOut);
+```
+Rounds a date-time's time of day as mlocRoundTime does, carrying a next midnight into the date (Temporal's PlainDateTime.round, RoundISODateTime).  @param dateTime     The date-time. @param unit         The unit, a day to a nanosecond. @param increment    The increment, as mlocRoundTime takes it. @param mode         The rounding mode. @param dateTimeOut  Receives the date-time; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date-time the library did not make, a unit, increment or mode refused, or a result outside Temporal's limits. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetPossibleInstants(const mlocTimeZone* zone, const mlocDateTime* dateTime, mlocPossibleInstants* instantsOut);
 ```
 Finds the instants at which a zone's clocks read a date-time (ECMA-262's GetPossibleEpochNanoseconds): none when a forward change skips it, two when a backward change repeats it. The date-time's calendar does not matter.  @param zone         The zone. @param dateTime     The local date-time. @param instantsOut  Receives the instants. @return mloc_success; mloc_errorInvalid for a null pointer, a zone or date-time the library did not make, or an instant outside Temporal's range among them. @par Thread safety Safe from any thread.
@@ -507,4 +522,4 @@ Finds a zone's local date-time at an instant, in a calendar (ECMA-262's GetISODa
 
 ---
 
-90 functions across 13 headers.
+93 functions across 13 headers.
