@@ -52,7 +52,9 @@ cycle, time precision, zone style).
   - a locale that inherits its glue ("↑↑↑") inherits it chain by chain
     (fr_ML's own standard glue); ICU inherits its parent's whole array;
   - a pattern is read whole: ICU's pattern reader keeps 50 tokens and
-    drops the fields after them (tok's long date loses its day).
+    drops the fields after them (tok's long date loses its day);
+  - an item CLDR gives per plural count ("MMMMW", "yw") takes its
+    count "other" form; ICU returns no pattern for it.
 - **A chain names one element however it spells its defaults.** The
   generator's CLDR resolver looks a chain up both as written and
   without the attributes whose values are their DTD defaults, so
@@ -66,14 +68,18 @@ cycle, time precision, zone style).
 ## Proof
 
 - **Against ICU4C 79** (CLDR 49.0), on every push:
-  `tools/check_skeletons.py` asks `mlocgen skeletons` the 21,182
-  questions of CLDR's `testData/datetime/skeletons*.tsv` (113 locales,
-  16 calendars, 132 skeletons) and compares the answers with ICU's,
-  kept in `test/skeletons_icu.tsv`. All agree; 331 agree with
+  `tools/check_skeletons.py` asks `mlocgen skeletons` 26,970
+  questions and compares the answers with ICU's, kept in
+  `test/skeletons_icu.tsv`: the 21,182 of CLDR's
+  `testData/datetime/skeletons*.tsv` (113 locales, 16 calendars, 132
+  skeletons), and every field letter at each length it takes, alone
+  and with others, with the special cases (minutes and fractions
+  without seconds, the hour metacharacters, every zone form), in
+  eight locales of the Gregorian calendar. All agree; 347 agree with
   `tools/skeleton-exceptions.txt`, which lists, with mlocgen's
   pattern, the answers where CLDR's inheritance and ICU's data part
-  (the two non-Gregorian causes above). An exception that stops
-  differing from ICU fails the check.
+  (the two non-Gregorian causes above) and the plural items. An
+  exception that stops differing from ICU fails the check.
 - **Every locale ICU ships, once:** 141,336 questions (906 locales,
   the Gregorian calendar, 156 skeletons: CLDR's and those the semantic
   field sets ask for). All agree but 14, the fr_ML glue and tok's

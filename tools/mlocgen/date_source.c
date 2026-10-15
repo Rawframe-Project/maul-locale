@@ -274,6 +274,14 @@ static void AddFileItems(Cldr* cldr, const char* locale, const LdmlFile* file, c
         char chain[cldrMaxChain];
         Format(chain, sizeof(chain), "%s/dateFormatItem[@id=\"%s\"]", prefix, ids->ids[i]);
         const char* pattern = Resolve(cldr, locale, chain);
+        if (pattern == nullptr)
+        {
+            // An item given per plural count (week of month, week of
+            // year) takes its "other" form.
+            Format(chain, sizeof(chain), "%s/dateFormatItem[@count=\"other\"][@id=\"%s\"]", prefix,
+                   ids->ids[i]);
+            pattern = Resolve(cldr, locale, chain);
+        }
         if (pattern != nullptr)
         {
             PatternGeneratorAdd(g, pattern, ids->ids[i]);

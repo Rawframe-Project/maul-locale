@@ -1,6 +1,8 @@
 # ICU4C 79.1 DateTimePatternGenerator (CLDR 49.0) over the questions of
 # CLDR 49's testData/datetime/skeletons*.tsv: locale, calendar, skeleton,
-# the best pattern. tools/check_skeletons.py compares mlocgen with it.
+# the best pattern; then every field letter at each length it takes,
+# alone and with others, in eight locales of the Gregorian calendar.
+# tools/check_skeletons.py compares mlocgen with it.
 af	buddhist	Bh	h B
 af	buddhist	CCCC	HH
 af	buddhist	Cms	HH:mm:ss
@@ -21183,3 +21185,5791 @@ zu	roc	Jm	HH:mm
 zu	roc	MMM	LLL
 zu	roc	U	y G
 zu	roc	yMMMMEEEEdvvvv	EEEE, MMMM d, y vvvv
+en	gregorian	A	A
+en	gregorian	AA	A
+en	gregorian	AAA	A
+en	gregorian	AAAA	A
+en	gregorian	AAAAA	A
+en	gregorian	AAAAAA	A
+en	gregorian	AAAAAAHm	HH:mm:AA
+en	gregorian	AAAAAHm	HH:mm:AA
+en	gregorian	AAAAHm	HH:mm:AA
+en	gregorian	AAAHm	HH:mm:AA
+en	gregorian	AAHm	HH:mm:AA
+en	gregorian	AHm	HH:mm:AA
+en	gregorian	B	B
+en	gregorian	BB	BB
+en	gregorian	BBB	BBB
+en	gregorian	BBBB	BBBB
+en	gregorian	BBBBB	BBBBB
+en	gregorian	BBBBBB	BBBBBB
+en	gregorian	BBBBBBHm	HH:mm
+en	gregorian	BBBBBHm	HH:mm
+en	gregorian	BBBBHm	HH:mm
+en	gregorian	BBBHm	HH:mm
+en	gregorian	BBHm	HH:mm
+en	gregorian	BHm	HH:mm
+en	gregorian	Bhm	h:mm B
+en	gregorian	C	h a
+en	gregorian	CC	h a
+en	gregorian	CCC	h aaaa
+en	gregorian	CCCC	h aaaa
+en	gregorian	CCCCC	h aaaaa
+en	gregorian	CCCCCC	h aaaaa
+en	gregorian	CCCCCCHm	HH:mm
+en	gregorian	CCCCCHm	HH:mm
+en	gregorian	CCCCCm	h:mm aaaaa
+en	gregorian	CCCCHm	HH:mm
+en	gregorian	CCCCm	h:mm aaaa
+en	gregorian	CCCHm	HH:mm
+en	gregorian	CCCm	h:mm aaaa
+en	gregorian	CCHm	HH:mm
+en	gregorian	CCm	h:mm a
+en	gregorian	CHm	HH:mm
+en	gregorian	Cm	h:mm a
+en	gregorian	D	D
+en	gregorian	DD	DD
+en	gregorian	DDD	DDD
+en	gregorian	DDDD	DDDD
+en	gregorian	DDDDD	DDDDD
+en	gregorian	DDDDDD	DDDDDD
+en	gregorian	DDDDDDHm	DDDDDD, HH:mm
+en	gregorian	DDDDDHm	DDDDD, HH:mm
+en	gregorian	DDDDHm	DDDD, HH:mm
+en	gregorian	DDDHm	DDD, HH:mm
+en	gregorian	DDHm	DD, HH:mm
+en	gregorian	DHm	D, HH:mm
+en	gregorian	E	ccc
+en	gregorian	EE	ccc
+en	gregorian	EEE	ccc
+en	gregorian	EEEE	cccc
+en	gregorian	EEEEE	ccccc
+en	gregorian	EEEEEE	cccccc
+en	gregorian	EEEEEEHm	EEEEEE HH:mm
+en	gregorian	EEEEEHm	EEEEE HH:mm
+en	gregorian	EEEEHm	EEEE HH:mm
+en	gregorian	EEEEd	d EEEE
+en	gregorian	EEEEhms	EEEE h:mm:ss a
+en	gregorian	EEEHm	EEE HH:mm
+en	gregorian	EEHm	EEE HH:mm
+en	gregorian	EHm	EEE HH:mm
+en	gregorian	Ed	d EEE
+en	gregorian	Ehm	EEE h:mm a
+en	gregorian	F	F
+en	gregorian	FF	FF
+en	gregorian	FFF	FFF
+en	gregorian	FFFF	FFFF
+en	gregorian	FFFFF	FFFFF
+en	gregorian	FFFFFF	FFFFFF
+en	gregorian	FFFFFFHm	FFFFFF, HH:mm
+en	gregorian	FFFFFHm	FFFFF, HH:mm
+en	gregorian	FFFFHm	FFFF, HH:mm
+en	gregorian	FFFHm	FFF, HH:mm
+en	gregorian	FFHm	FF, HH:mm
+en	gregorian	FHm	F, HH:mm
+en	gregorian	Fd	F ('day': d)
+en	gregorian	G	G
+en	gregorian	GG	GG
+en	gregorian	GGG	GGG
+en	gregorian	GGGG	GGGG
+en	gregorian	GGGGG	GGGGG
+en	gregorian	GGGGGG	GGGGGG
+en	gregorian	GGGGGGHm	GGGGGG, HH:mm
+en	gregorian	GGGGGHm	GGGGG, HH:mm
+en	gregorian	GGGGGy	y GGGGG
+en	gregorian	GGGGHm	GGGG, HH:mm
+en	gregorian	GGGHm	GGG, HH:mm
+en	gregorian	GGHm	GG, HH:mm
+en	gregorian	GHm	G, HH:mm
+en	gregorian	H	HH
+en	gregorian	HB	HH
+en	gregorian	HH	HH
+en	gregorian	HHH	HH
+en	gregorian	HHHH	HH
+en	gregorian	HHHHH	HH
+en	gregorian	HHHHHH	HH
+en	gregorian	Hb	HH
+en	gregorian	HmsSSSSSS	HH:mm:ss.SSSSSS
+en	gregorian	J	hh
+en	gregorian	JHm	hh:mm
+en	gregorian	JJ	hh
+en	gregorian	JJHm	hh:mm
+en	gregorian	JJJ	hh
+en	gregorian	JJJHm	hh:mm
+en	gregorian	JJJJ	hh
+en	gregorian	JJJJHm	hh:mm
+en	gregorian	JJJJJ	hh
+en	gregorian	JJJJJHm	hh:mm
+en	gregorian	JJJJJJ	hh
+en	gregorian	JJJJJJHm	hh:mm
+en	gregorian	JJm	hh:mm
+en	gregorian	Jm	hh:mm
+en	gregorian	Jms	hh:mm:ss
+en	gregorian	K	h a
+en	gregorian	KHm	HH:mm
+en	gregorian	KK	h a
+en	gregorian	KKHm	HH:mm
+en	gregorian	KKK	h a
+en	gregorian	KKKHm	HH:mm
+en	gregorian	KKKK	h a
+en	gregorian	KKKKHm	HH:mm
+en	gregorian	KKKKK	h a
+en	gregorian	KKKKKHm	HH:mm
+en	gregorian	KKKKKK	h a
+en	gregorian	KKKKKKHm	HH:mm
+en	gregorian	Khm	h:mm a
+en	gregorian	Kms	h:mm:ss a
+en	gregorian	L	L
+en	gregorian	LHm	L, HH:mm
+en	gregorian	LL	LL
+en	gregorian	LLHm	LL, HH:mm
+en	gregorian	LLL	LLL
+en	gregorian	LLLHm	LLL, HH:mm
+en	gregorian	LLLL	LLLL
+en	gregorian	LLLLHm	LLLL 'at' HH:mm
+en	gregorian	LLLLL	LLLLL
+en	gregorian	LLLLLHm	LLLLL, HH:mm
+en	gregorian	LLLLLL	LLLLLL
+en	gregorian	LLLLLLHm	LLLLLL, HH:mm
+en	gregorian	M	L
+en	gregorian	MHm	L, HH:mm
+en	gregorian	MM	LL
+en	gregorian	MMHm	LL, HH:mm
+en	gregorian	MMM	LLL
+en	gregorian	MMMEdjmO	EEE, MMM d, h:mm a O
+en	gregorian	MMMHm	LLL, HH:mm
+en	gregorian	MMMMHm	LLLL 'at' HH:mm
+en	gregorian	MMMMM	LLLLL
+en	gregorian	MMMMMHm	LLLLL, HH:mm
+en	gregorian	MMMMMM	LLLLLL
+en	gregorian	MMMMMMHm	LLLLLL, HH:mm
+en	gregorian	MMMMW	
+en	gregorian	MMMd'x'	MMM d
+en	gregorian	O	O
+en	gregorian	OHm	HH:mm O
+en	gregorian	OO	OO
+en	gregorian	OOHm	HH:mm OO
+en	gregorian	OOO	OOO
+en	gregorian	OOOHm	HH:mm OOO
+en	gregorian	OOOO	OOOO
+en	gregorian	OOOOHm	HH:mm OOOO
+en	gregorian	OOOOO	OOOOO
+en	gregorian	OOOOOHm	HH:mm OOOOO
+en	gregorian	OOOOOO	OOOOOO
+en	gregorian	OOOOOOHm	HH:mm OOOOOO
+en	gregorian	Q	Q
+en	gregorian	QHm	Q, HH:mm
+en	gregorian	QQ	QQ
+en	gregorian	QQHm	QQ, HH:mm
+en	gregorian	QQQ	QQQ
+en	gregorian	QQQHm	QQQ, HH:mm
+en	gregorian	QQQQ	QQQQ
+en	gregorian	QQQQHm	QQQQ, HH:mm
+en	gregorian	QQQQQ	QQQQQ
+en	gregorian	QQQQQHm	QQQQQ, HH:mm
+en	gregorian	QQQQQQ	QQQQQQ
+en	gregorian	QQQQQQHm	QQQQQQ, HH:mm
+en	gregorian	S	S
+en	gregorian	SHm	HH:mm:ss.S
+en	gregorian	SS	SS
+en	gregorian	SSHm	HH:mm:ss.SS
+en	gregorian	SSS	SSS
+en	gregorian	SSSHm	HH:mm:ss.SSS
+en	gregorian	SSSS	SSSS
+en	gregorian	SSSSHm	HH:mm:ss.SSSS
+en	gregorian	SSSSS	SSSSS
+en	gregorian	SSSSSHm	HH:mm:ss.SSSSS
+en	gregorian	SSSSSS	SSSSSS
+en	gregorian	SSSSSSHm	HH:mm:ss.SSSSSS
+en	gregorian	U	y
+en	gregorian	UHm	y, HH:mm
+en	gregorian	UMMMd	MMM d, y
+en	gregorian	UU	y
+en	gregorian	UUHm	y, HH:mm
+en	gregorian	UUU	y
+en	gregorian	UUUHm	y, HH:mm
+en	gregorian	UUUU	y
+en	gregorian	UUUUHm	y, HH:mm
+en	gregorian	UUUUU	y
+en	gregorian	UUUUUHm	y, HH:mm
+en	gregorian	UUUUUU	y
+en	gregorian	UUUUUUHm	y, HH:mm
+en	gregorian	V	V
+en	gregorian	VHm	HH:mm V
+en	gregorian	VV	VV
+en	gregorian	VVHm	HH:mm VV
+en	gregorian	VVV	VVV
+en	gregorian	VVVHm	HH:mm VVV
+en	gregorian	VVVV	VVVV
+en	gregorian	VVVVHm	HH:mm VVVV
+en	gregorian	VVVVV	VVVVV
+en	gregorian	VVVVVHm	HH:mm VVVVV
+en	gregorian	VVVVVV	VVVVVV
+en	gregorian	VVVVVVHm	HH:mm VVVVVV
+en	gregorian	W	W
+en	gregorian	WHm	W, HH:mm
+en	gregorian	WW	WW
+en	gregorian	WWHm	WW, HH:mm
+en	gregorian	WWW	WWW
+en	gregorian	WWWHm	WWW, HH:mm
+en	gregorian	WWWW	WWWW
+en	gregorian	WWWWHm	WWWW, HH:mm
+en	gregorian	WWWWW	WWWWW
+en	gregorian	WWWWWHm	WWWWW, HH:mm
+en	gregorian	WWWWWW	WWWWWW
+en	gregorian	WWWWWWHm	WWWWWW, HH:mm
+en	gregorian	X	X
+en	gregorian	XHm	HH:mm X
+en	gregorian	XX	XX
+en	gregorian	XXHm	HH:mm XX
+en	gregorian	XXX	XXX
+en	gregorian	XXXHm	HH:mm XXX
+en	gregorian	XXXX	XXXX
+en	gregorian	XXXXHm	HH:mm XXXX
+en	gregorian	XXXXX	XXXXX
+en	gregorian	XXXXXHm	HH:mm XXXXX
+en	gregorian	XXXXXX	XXXXXX
+en	gregorian	XXXXXXHm	HH:mm XXXXXX
+en	gregorian	Y	Y
+en	gregorian	YHm	Y, HH:mm
+en	gregorian	YMMMd	MMM d, Y
+en	gregorian	YY	’YY
+en	gregorian	YYHm	’YY, HH:mm
+en	gregorian	YYY	YYY
+en	gregorian	YYYHm	YYY, HH:mm
+en	gregorian	YYYY	YYYY
+en	gregorian	YYYYHm	YYYY, HH:mm
+en	gregorian	YYYYY	YYYYY
+en	gregorian	YYYYYHm	YYYYY, HH:mm
+en	gregorian	YYYYYY	YYYYYY
+en	gregorian	YYYYYYHm	YYYYYY, HH:mm
+en	gregorian	Z	Z
+en	gregorian	ZHm	HH:mm Z
+en	gregorian	ZZ	ZZ
+en	gregorian	ZZHm	HH:mm ZZ
+en	gregorian	ZZZ	ZZZ
+en	gregorian	ZZZHm	HH:mm ZZZ
+en	gregorian	ZZZZ	ZZZZ
+en	gregorian	ZZZZHm	HH:mm ZZZZ
+en	gregorian	ZZZZZ	ZZZZZ
+en	gregorian	ZZZZZHm	HH:mm ZZZZZ
+en	gregorian	ZZZZZZ	ZZZZZZ
+en	gregorian	ZZZZZZHm	HH:mm ZZZZZZ
+en	gregorian	a	a
+en	gregorian	aHm	HH:mm
+en	gregorian	aa	aa
+en	gregorian	aaHm	HH:mm
+en	gregorian	aaa	aaa
+en	gregorian	aaaHm	HH:mm
+en	gregorian	aaaa	aaaa
+en	gregorian	aaaaHm	HH:mm
+en	gregorian	aaaaa	aaaaa
+en	gregorian	aaaaaHm	HH:mm
+en	gregorian	aaaaaa	aaaaaa
+en	gregorian	aaaaaaHm	HH:mm
+en	gregorian	b	b
+en	gregorian	bHm	HH:mm
+en	gregorian	bb	bb
+en	gregorian	bbHm	HH:mm
+en	gregorian	bbb	bbb
+en	gregorian	bbbHm	HH:mm
+en	gregorian	bbbb	bbbb
+en	gregorian	bbbbHm	HH:mm
+en	gregorian	bbbbb	bbbbb
+en	gregorian	bbbbbHm	HH:mm
+en	gregorian	bbbbbb	bbbbbb
+en	gregorian	bbbbbbHm	HH:mm
+en	gregorian	bhm	h:mm b
+en	gregorian	c	c
+en	gregorian	cHm	e HH:mm
+en	gregorian	cc	cc
+en	gregorian	ccHm	ee HH:mm
+en	gregorian	ccc	ccc
+en	gregorian	cccHm	EEE HH:mm
+en	gregorian	cccc	cccc
+en	gregorian	ccccHm	EEEE HH:mm
+en	gregorian	ccccc	ccccc
+en	gregorian	cccccHm	EEEEE HH:mm
+en	gregorian	cccccc	cccccc
+en	gregorian	ccccccHm	EEEEEE HH:mm
+en	gregorian	d	d
+en	gregorian	dHm	d, HH:mm
+en	gregorian	dd	dd
+en	gregorian	ddHm	dd, HH:mm
+en	gregorian	ddd	d
+en	gregorian	dddHm	d, HH:mm
+en	gregorian	dddd	d
+en	gregorian	ddddHm	d, HH:mm
+en	gregorian	ddddd	d
+en	gregorian	dddddHm	d, HH:mm
+en	gregorian	dddddd	d
+en	gregorian	ddddddHm	d, HH:mm
+en	gregorian	e	c
+en	gregorian	eHm	e HH:mm
+en	gregorian	ee	cc
+en	gregorian	eeHm	ee HH:mm
+en	gregorian	eee	ccc
+en	gregorian	eeeHm	EEE HH:mm
+en	gregorian	eeee	cccc
+en	gregorian	eeeeHm	EEEE HH:mm
+en	gregorian	eeeee	ccccc
+en	gregorian	eeeeeHm	EEEEE HH:mm
+en	gregorian	eeeeee	cccccc
+en	gregorian	eeeeeeHm	EEEEEE HH:mm
+en	gregorian	g	g
+en	gregorian	gHm	g, HH:mm
+en	gregorian	gg	gg
+en	gregorian	ggHm	gg, HH:mm
+en	gregorian	ggg	ggg
+en	gregorian	gggHm	ggg, HH:mm
+en	gregorian	gggg	gggg
+en	gregorian	ggggHm	gggg, HH:mm
+en	gregorian	ggggg	ggggg
+en	gregorian	gggggHm	ggggg, HH:mm
+en	gregorian	gggggg	gggggg
+en	gregorian	ggggggHm	gggggg, HH:mm
+en	gregorian	h	h a
+en	gregorian	hB	h B
+en	gregorian	hHm	HH:mm
+en	gregorian	hb	h b
+en	gregorian	hh	h a
+en	gregorian	hhHm	HH:mm
+en	gregorian	hhh	h a
+en	gregorian	hhhHm	HH:mm
+en	gregorian	hhhh	h a
+en	gregorian	hhhhHm	HH:mm
+en	gregorian	hhhhh	h a
+en	gregorian	hhhhhHm	HH:mm
+en	gregorian	hhhhhh	h a
+en	gregorian	hhhhhhHm	HH:mm
+en	gregorian	hmS	h:mm:ss.S a
+en	gregorian	hmV	h:mm a V
+en	gregorian	hmVVVV	h:mm a VVVV
+en	gregorian	hmX	h:mm a X
+en	gregorian	hmXXXXX	h:mm a XXXXX
+en	gregorian	hmZ	h:mm a Z
+en	gregorian	hmZZZZ	h:mm a ZZZZ
+en	gregorian	hmsSSS	h:mm:ss.SSS a
+en	gregorian	hmx	h:mm a x
+en	gregorian	j	h a
+en	gregorian	jHm	HH:mm
+en	gregorian	jj	h a
+en	gregorian	jjHm	HH:mm
+en	gregorian	jjj	h aaaa
+en	gregorian	jjjHm	HH:mm
+en	gregorian	jjjj	h aaaa
+en	gregorian	jjjjHm	HH:mm
+en	gregorian	jjjjj	h aaaaa
+en	gregorian	jjjjjHm	HH:mm
+en	gregorian	jjjjjj	h aaaaa
+en	gregorian	jjjjjjHm	HH:mm
+en	gregorian	k	HH
+en	gregorian	kHm	HH:mm
+en	gregorian	khm	h:mm a
+en	gregorian	kk	HH
+en	gregorian	kkHm	HH:mm
+en	gregorian	kkk	HH
+en	gregorian	kkkHm	HH:mm
+en	gregorian	kkkk	HH
+en	gregorian	kkkkHm	HH:mm
+en	gregorian	kkkkk	HH
+en	gregorian	kkkkkHm	HH:mm
+en	gregorian	kkkkkk	HH
+en	gregorian	kkkkkkHm	HH:mm
+en	gregorian	kms	HH:mm:ss
+en	gregorian	l	L
+en	gregorian	lHm	L, HH:mm
+en	gregorian	ll	LL
+en	gregorian	llHm	LL, HH:mm
+en	gregorian	lll	LLL
+en	gregorian	lllHm	LLL, HH:mm
+en	gregorian	llll	LLLL
+en	gregorian	llllHm	LLLL, HH:mm
+en	gregorian	lllll	LLLLL
+en	gregorian	lllllHm	LLLLL, HH:mm
+en	gregorian	llllll	LLLLLL
+en	gregorian	llllllHm	LLLLLL, HH:mm
+en	gregorian	m	m
+en	gregorian	mS	mm:ss.S
+en	gregorian	mSS	mm:ss.SS
+en	gregorian	mSSS	mm:ss.SSS
+en	gregorian	mm	m
+en	gregorian	mmm	m
+en	gregorian	mmmm	m
+en	gregorian	mmmmm	m
+en	gregorian	mmmmmm	m
+en	gregorian	msS	mm:ss.S
+en	gregorian	q	q
+en	gregorian	qHm	q, HH:mm
+en	gregorian	qq	qq
+en	gregorian	qqHm	qq, HH:mm
+en	gregorian	qqq	qqq
+en	gregorian	qqqHm	qqq, HH:mm
+en	gregorian	qqqq	qqqq
+en	gregorian	qqqqHm	qqqq, HH:mm
+en	gregorian	qqqqq	qqqqq
+en	gregorian	qqqqqHm	qqqqq, HH:mm
+en	gregorian	qqqqqq	qqqqqq
+en	gregorian	qqqqqqHm	qqqqqq, HH:mm
+en	gregorian	r	y
+en	gregorian	rHm	y, HH:mm
+en	gregorian	rMMMd	MMM d, y
+en	gregorian	rr	’yy
+en	gregorian	rrHm	’yy, HH:mm
+en	gregorian	rrr	yyy
+en	gregorian	rrrHm	yyy, HH:mm
+en	gregorian	rrrr	yyyy
+en	gregorian	rrrrHm	yyyy, HH:mm
+en	gregorian	rrrrr	yyyyy
+en	gregorian	rrrrrHm	yyyyy, HH:mm
+en	gregorian	rrrrrr	yyyyyy
+en	gregorian	rrrrrrHm	yyyyyy, HH:mm
+en	gregorian	s	s
+en	gregorian	sHm	HH:mm:ss
+en	gregorian	ss	s
+en	gregorian	ssHm	HH:mm:ss
+en	gregorian	sss	s
+en	gregorian	sssHm	HH:mm:ss
+en	gregorian	ssss	s
+en	gregorian	ssssHm	HH:mm:ss
+en	gregorian	sssss	s
+en	gregorian	sssssHm	HH:mm:ss
+en	gregorian	ssssss	s
+en	gregorian	ssssssHm	HH:mm:ss
+en	gregorian	u	y
+en	gregorian	uHm	y, HH:mm
+en	gregorian	uMMMd	MMM d, y
+en	gregorian	uu	’yy
+en	gregorian	uuHm	’yy, HH:mm
+en	gregorian	uuu	yyy
+en	gregorian	uuuHm	yyy, HH:mm
+en	gregorian	uuuu	yyyy
+en	gregorian	uuuuHm	yyyy, HH:mm
+en	gregorian	uuuuu	yyyyy
+en	gregorian	uuuuuHm	yyyyy, HH:mm
+en	gregorian	uuuuuu	yyyyyy
+en	gregorian	uuuuuuHm	yyyyyy, HH:mm
+en	gregorian	v	v
+en	gregorian	vHm	HH:mm v
+en	gregorian	vv	vv
+en	gregorian	vvHm	HH:mm vv
+en	gregorian	vvv	vvv
+en	gregorian	vvvHm	HH:mm vvv
+en	gregorian	vvvv	vvvv
+en	gregorian	vvvvHm	HH:mm vvvv
+en	gregorian	vvvvv	vvvvv
+en	gregorian	vvvvvHm	HH:mm vvvvv
+en	gregorian	vvvvvv	vvvvvv
+en	gregorian	vvvvvvHm	HH:mm vvvvvv
+en	gregorian	w	w
+en	gregorian	wHm	w, HH:mm
+en	gregorian	ww	ww
+en	gregorian	wwHm	ww, HH:mm
+en	gregorian	www	www
+en	gregorian	wwwHm	www, HH:mm
+en	gregorian	wwww	wwww
+en	gregorian	wwwwHm	wwww, HH:mm
+en	gregorian	wwwww	wwwww
+en	gregorian	wwwwwHm	wwwww, HH:mm
+en	gregorian	wwwwww	wwwwww
+en	gregorian	wwwwwwHm	wwwwww, HH:mm
+en	gregorian	x	x
+en	gregorian	xHm	HH:mm x
+en	gregorian	xx	xx
+en	gregorian	xxHm	HH:mm xx
+en	gregorian	xxx	xxx
+en	gregorian	xxxHm	HH:mm xxx
+en	gregorian	xxxx	xxxx
+en	gregorian	xxxxHm	HH:mm xxxx
+en	gregorian	xxxxx	xxxxx
+en	gregorian	xxxxxHm	HH:mm xxxxx
+en	gregorian	xxxxxx	xxxxxx
+en	gregorian	xxxxxxHm	HH:mm xxxxxx
+en	gregorian	y	y
+en	gregorian	y'q'M	M/y
+en	gregorian	yD	y ├'day of year': D┤
+en	gregorian	yHm	y, HH:mm
+en	gregorian	yMMMMEEEEEd	EEEEE, MMMM d, y
+en	gregorian	yMMMMEEEEdHmsSSSvvvv	EEEE, MMMM d, y 'at' HH:mm:ss.SSS vvvv
+en	gregorian	yMMMdhmz	MMM d, y, h:mm a z
+en	gregorian	yMdA	M/d/y, A
+en	gregorian	yMdAA	M/d/y, A
+en	gregorian	yMdAAA	M/d/y, A
+en	gregorian	yMdAAAA	M/d/y, A
+en	gregorian	yMdAAAAA	M/d/y, A
+en	gregorian	yMdAAAAAA	M/d/y, A
+en	gregorian	yMdB	M/d/y, B
+en	gregorian	yMdBB	M/d/y, BB
+en	gregorian	yMdBBB	M/d/y, BBB
+en	gregorian	yMdBBBB	M/d/y, BBBB
+en	gregorian	yMdBBBBB	M/d/y, BBBBB
+en	gregorian	yMdBBBBBB	M/d/y, BBBBBB
+en	gregorian	yMdC	M/d/y, h a
+en	gregorian	yMdCC	M/d/y, h a
+en	gregorian	yMdCCC	M/d/y, h aaaa
+en	gregorian	yMdCCCC	M/d/y, h aaaa
+en	gregorian	yMdCCCCC	M/d/y, h aaaaa
+en	gregorian	yMdCCCCCC	M/d/y, h aaaaa
+en	gregorian	yMdD	M/d/y ├'day of year': D┤
+en	gregorian	yMdDD	M/d/y ├'day of year': DD┤
+en	gregorian	yMdDDD	M/d/y ├'day of year': DDD┤
+en	gregorian	yMdDDDD	M/d/y ├'day of year': DDDD┤
+en	gregorian	yMdDDDDD	M/d/y ├'day of year': DDDDD┤
+en	gregorian	yMdDDDDDD	M/d/y ├'day of year': DDDDDD┤
+en	gregorian	yMdE	EEE, M/d/y
+en	gregorian	yMdEE	EEE, M/d/y
+en	gregorian	yMdEEE	EEE, M/d/y
+en	gregorian	yMdEEEE	EEEE, M/d/y
+en	gregorian	yMdEEEEEE	EEEEEE, M/d/y
+en	gregorian	yMdF	M/d/y ├'weekday of the month': F┤
+en	gregorian	yMdFF	M/d/y ├'weekday of the month': FF┤
+en	gregorian	yMdFFF	M/d/y ├'weekday of the month': FFF┤
+en	gregorian	yMdFFFF	M/d/y ├'weekday of the month': FFFF┤
+en	gregorian	yMdFFFFF	M/d/y ├'weekday of the month': FFFFF┤
+en	gregorian	yMdFFFFFF	M/d/y ├'weekday of the month': FFFFFF┤
+en	gregorian	yMdG	M/d/y G
+en	gregorian	yMdGG	M/d/y GG
+en	gregorian	yMdGGG	M/d/y GGG
+en	gregorian	yMdGGGG	M/d/y GGGG
+en	gregorian	yMdGGGGG	M/d/y GGGGG
+en	gregorian	yMdGGGGGG	M/d/y GGGGGG
+en	gregorian	yMdH	M/d/y, HH
+en	gregorian	yMdHH	M/d/y, HH
+en	gregorian	yMdHHH	M/d/y, HH
+en	gregorian	yMdHHHH	M/d/y, HH
+en	gregorian	yMdHHHHH	M/d/y, HH
+en	gregorian	yMdHHHHHH	M/d/y, HH
+en	gregorian	yMdJ	M/d/y, hh
+en	gregorian	yMdJJ	M/d/y, hh
+en	gregorian	yMdJJJ	M/d/y, hh
+en	gregorian	yMdJJJJ	M/d/y, hh
+en	gregorian	yMdJJJJJ	M/d/y, hh
+en	gregorian	yMdJJJJJJ	M/d/y, hh
+en	gregorian	yMdK	M/d/y, h a
+en	gregorian	yMdKK	M/d/y, h a
+en	gregorian	yMdKKK	M/d/y, h a
+en	gregorian	yMdKKKK	M/d/y, h a
+en	gregorian	yMdKKKKK	M/d/y, h a
+en	gregorian	yMdKKKKKK	M/d/y, h a
+en	gregorian	yMdL	M/d/y
+en	gregorian	yMdLL	MM/d/y
+en	gregorian	yMdLLL	MMM d, y
+en	gregorian	yMdLLLL	MMMM d, y
+en	gregorian	yMdLLLLL	MMMMM d, y
+en	gregorian	yMdLLLLLL	MMMMMM d, y
+en	gregorian	yMdO	M/d/y, O
+en	gregorian	yMdOO	M/d/y, OO
+en	gregorian	yMdOOO	M/d/y, OOO
+en	gregorian	yMdOOOO	M/d/y, OOOO
+en	gregorian	yMdOOOOO	M/d/y, OOOOO
+en	gregorian	yMdOOOOOO	M/d/y, OOOOOO
+en	gregorian	yMdQ	M/d/y ('quarter': Q)
+en	gregorian	yMdQQ	M/d/y ('quarter': QQ)
+en	gregorian	yMdQQQ	M/d/y ('quarter': QQQ)
+en	gregorian	yMdQQQQ	M/d/y ('quarter': QQQQ)
+en	gregorian	yMdQQQQQ	M/d/y ('quarter': QQQQQ)
+en	gregorian	yMdQQQQQQ	M/d/y ('quarter': QQQQQQ)
+en	gregorian	yMdS	M/d/y, S
+en	gregorian	yMdSS	M/d/y, SS
+en	gregorian	yMdSSS	M/d/y, SSS
+en	gregorian	yMdSSSS	M/d/y, SSSS
+en	gregorian	yMdSSSSS	M/d/y, SSSSS
+en	gregorian	yMdSSSSSS	M/d/y, SSSSSS
+en	gregorian	yMdU	M/d/y
+en	gregorian	yMdUU	M/d/y
+en	gregorian	yMdUUU	M/d/y
+en	gregorian	yMdUUUU	M/d/y
+en	gregorian	yMdUUUUU	M/d/y
+en	gregorian	yMdUUUUUU	M/d/y
+en	gregorian	yMdV	M/d/y, V
+en	gregorian	yMdVV	M/d/y, VV
+en	gregorian	yMdVVV	M/d/y, VVV
+en	gregorian	yMdVVVV	M/d/y, VVVV
+en	gregorian	yMdVVVVV	M/d/y, VVVVV
+en	gregorian	yMdVVVVVV	M/d/y, VVVVVV
+en	gregorian	yMdW	M/d/y ├'week of month': W┤
+en	gregorian	yMdWW	M/d/y ├'week of month': WW┤
+en	gregorian	yMdWWW	M/d/y ├'week of month': WWW┤
+en	gregorian	yMdWWWW	M/d/y ├'week of month': WWWW┤
+en	gregorian	yMdWWWWW	M/d/y ├'week of month': WWWWW┤
+en	gregorian	yMdWWWWWW	M/d/y ├'week of month': WWWWWW┤
+en	gregorian	yMdX	M/d/y, X
+en	gregorian	yMdXX	M/d/y, XX
+en	gregorian	yMdXXX	M/d/y, XXX
+en	gregorian	yMdXXXX	M/d/y, XXXX
+en	gregorian	yMdXXXXX	M/d/y, XXXXX
+en	gregorian	yMdXXXXXX	M/d/y, XXXXXX
+en	gregorian	yMdY	M/d/Y
+en	gregorian	yMdYY	M/d/YY
+en	gregorian	yMdYYY	M/d/YYY
+en	gregorian	yMdYYYY	M/d/YYYY
+en	gregorian	yMdYYYYY	M/d/YYYYY
+en	gregorian	yMdYYYYYY	M/d/YYYYYY
+en	gregorian	yMdZ	M/d/y, Z
+en	gregorian	yMdZZ	M/d/y, ZZ
+en	gregorian	yMdZZZ	M/d/y, ZZZ
+en	gregorian	yMdZZZZ	M/d/y, ZZZZ
+en	gregorian	yMdZZZZZ	M/d/y, ZZZZZ
+en	gregorian	yMdZZZZZZ	M/d/y, ZZZZZZ
+en	gregorian	yMda	M/d/y, a
+en	gregorian	yMdaa	M/d/y, aa
+en	gregorian	yMdaaa	M/d/y, aaa
+en	gregorian	yMdaaaa	M/d/y, aaaa
+en	gregorian	yMdaaaaa	M/d/y, aaaaa
+en	gregorian	yMdaaaaaa	M/d/y, aaaaaa
+en	gregorian	yMdb	M/d/y, b
+en	gregorian	yMdbb	M/d/y, bb
+en	gregorian	yMdbbb	M/d/y, bbb
+en	gregorian	yMdbbbb	M/d/y, bbbb
+en	gregorian	yMdbbbbb	M/d/y, bbbbb
+en	gregorian	yMdbbbbbb	M/d/y, bbbbbb
+en	gregorian	yMdc	e, M/d/y
+en	gregorian	yMdcc	ee, M/d/y
+en	gregorian	yMdccc	EEE, M/d/y
+en	gregorian	yMdcccc	EEEE, M/d/y
+en	gregorian	yMdccccc	EEEEE, M/d/y
+en	gregorian	yMdcccccc	EEEEEE, M/d/y
+en	gregorian	yMde	e, M/d/y
+en	gregorian	yMdee	ee, M/d/y
+en	gregorian	yMdeee	EEE, M/d/y
+en	gregorian	yMdeeee	EEEE, M/d/y
+en	gregorian	yMdeeeee	EEEEE, M/d/y
+en	gregorian	yMdeeeeee	EEEEEE, M/d/y
+en	gregorian	yMdg	M/g/y
+en	gregorian	yMdgg	M/gg/y
+en	gregorian	yMdggg	M/ggg/y
+en	gregorian	yMdgggg	M/gggg/y
+en	gregorian	yMdggggg	M/ggggg/y
+en	gregorian	yMdgggggg	M/gggggg/y
+en	gregorian	yMdh	M/d/y, h a
+en	gregorian	yMdhh	M/d/y, h a
+en	gregorian	yMdhhh	M/d/y, h a
+en	gregorian	yMdhhhh	M/d/y, h a
+en	gregorian	yMdhhhhh	M/d/y, h a
+en	gregorian	yMdhhhhhh	M/d/y, h a
+en	gregorian	yMdj	M/d/y, h a
+en	gregorian	yMdjj	M/d/y, h a
+en	gregorian	yMdjjj	M/d/y, h aaaa
+en	gregorian	yMdjjjj	M/d/y, h aaaa
+en	gregorian	yMdjjjjj	M/d/y, h aaaaa
+en	gregorian	yMdjjjjjj	M/d/y, h aaaaa
+en	gregorian	yMdk	M/d/y, HH
+en	gregorian	yMdkk	M/d/y, HH
+en	gregorian	yMdkkk	M/d/y, HH
+en	gregorian	yMdkkkk	M/d/y, HH
+en	gregorian	yMdkkkkk	M/d/y, HH
+en	gregorian	yMdkkkkkk	M/d/y, HH
+en	gregorian	yMdl	M/d/y
+en	gregorian	yMdll	MM/d/y
+en	gregorian	yMdlll	MMM/d/y
+en	gregorian	yMdllll	MMMM/d/y
+en	gregorian	yMdlllll	MMMMM/d/y
+en	gregorian	yMdllllll	MMMMMM/d/y
+en	gregorian	yMdm	M/d/y, m
+en	gregorian	yMdmm	M/d/y, m
+en	gregorian	yMdmmm	M/d/y, m
+en	gregorian	yMdmmmm	M/d/y, m
+en	gregorian	yMdmmmmm	M/d/y, m
+en	gregorian	yMdmmmmmm	M/d/y, m
+en	gregorian	yMdq	M/d/y ('quarter': q)
+en	gregorian	yMdqq	M/d/y ('quarter': qq)
+en	gregorian	yMdqqq	M/d/y ('quarter': qqq)
+en	gregorian	yMdqqqq	M/d/y ('quarter': qqqq)
+en	gregorian	yMdqqqqq	M/d/y ('quarter': qqqqq)
+en	gregorian	yMdqqqqqq	M/d/y ('quarter': qqqqqq)
+en	gregorian	yMdr	M/d/y
+en	gregorian	yMdrr	M/d/yy
+en	gregorian	yMdrrr	M/d/yyy
+en	gregorian	yMdrrrr	M/d/yyyy
+en	gregorian	yMdrrrrr	M/d/yyyyy
+en	gregorian	yMdrrrrrr	M/d/yyyyyy
+en	gregorian	yMds	M/d/y, s
+en	gregorian	yMdss	M/d/y, s
+en	gregorian	yMdsss	M/d/y, s
+en	gregorian	yMdssss	M/d/y, s
+en	gregorian	yMdsssss	M/d/y, s
+en	gregorian	yMdssssss	M/d/y, s
+en	gregorian	yMdu	M/d/y
+en	gregorian	yMduu	M/d/yy
+en	gregorian	yMduuu	M/d/yyy
+en	gregorian	yMduuuu	M/d/yyyy
+en	gregorian	yMduuuuu	M/d/yyyyy
+en	gregorian	yMduuuuuu	M/d/yyyyyy
+en	gregorian	yMdv	M/d/y, v
+en	gregorian	yMdvv	M/d/y, vv
+en	gregorian	yMdvvv	M/d/y, vvv
+en	gregorian	yMdvvvv	M/d/y, vvvv
+en	gregorian	yMdvvvvv	M/d/y, vvvvv
+en	gregorian	yMdvvvvvv	M/d/y, vvvvvv
+en	gregorian	yMdw	M/d/y ('week': w)
+en	gregorian	yMdww	M/d/y ('week': ww)
+en	gregorian	yMdwww	M/d/y ('week': www)
+en	gregorian	yMdwwww	M/d/y ('week': wwww)
+en	gregorian	yMdwwwww	M/d/y ('week': wwwww)
+en	gregorian	yMdwwwwww	M/d/y ('week': wwwwww)
+en	gregorian	yMdx	M/d/y, x
+en	gregorian	yMdxx	M/d/y, xx
+en	gregorian	yMdxxx	M/d/y, xxx
+en	gregorian	yMdxxxx	M/d/y, xxxx
+en	gregorian	yMdxxxxx	M/d/y, xxxxx
+en	gregorian	yMdxxxxxx	M/d/y, xxxxxx
+en	gregorian	yMdz	M/d/y, z
+en	gregorian	yMdzz	M/d/y, zz
+en	gregorian	yMdzzz	M/d/y, zzz
+en	gregorian	yMdzzzz	M/d/y, zzzz
+en	gregorian	yMdzzzzz	M/d/y, zzzzz
+en	gregorian	yMdzzzzzz	M/d/y, zzzzzz
+en	gregorian	yQQQ	QQQ y
+en	gregorian	yQQQQ	QQQQ y
+en	gregorian	yw	
+en	gregorian	yy	’yy
+en	gregorian	yyHm	’yy, HH:mm
+en	gregorian	yyMMMMd	MMMM d, yy
+en	gregorian	yyy	yyy
+en	gregorian	yyyHm	yyy, HH:mm
+en	gregorian	yyyy	yyyy
+en	gregorian	yyyyHm	yyyy, HH:mm
+en	gregorian	yyyyMMMd	MMM d, yyyy
+en	gregorian	yyyyy	yyyyy
+en	gregorian	yyyyyHm	yyyyy, HH:mm
+en	gregorian	yyyyyy	yyyyyy
+en	gregorian	yyyyyyHm	yyyyyy, HH:mm
+en	gregorian	z	z
+en	gregorian	zHm	HH:mm z
+en	gregorian	zz	zz
+en	gregorian	zzHm	HH:mm zz
+en	gregorian	zzz	zzz
+en	gregorian	zzzHm	HH:mm zzz
+en	gregorian	zzzz	zzzz
+en	gregorian	zzzzHm	HH:mm zzzz
+en	gregorian	zzzzz	zzzzz
+en	gregorian	zzzzzHm	HH:mm zzzzz
+en	gregorian	zzzzzz	zzzzzz
+en	gregorian	zzzzzzHm	HH:mm zzzzzz
+de	gregorian	A	A
+de	gregorian	AA	A
+de	gregorian	AAA	A
+de	gregorian	AAAA	A
+de	gregorian	AAAAA	A
+de	gregorian	AAAAAA	A
+de	gregorian	AAAAAAHm	HH:mm:AA
+de	gregorian	AAAAAHm	HH:mm:AA
+de	gregorian	AAAAHm	HH:mm:AA
+de	gregorian	AAAHm	HH:mm:AA
+de	gregorian	AAHm	HH:mm:AA
+de	gregorian	AHm	HH:mm:AA
+de	gregorian	B	B
+de	gregorian	BB	BB
+de	gregorian	BBB	BBB
+de	gregorian	BBBB	BBBB
+de	gregorian	BBBBB	BBBBB
+de	gregorian	BBBBBB	BBBBBB
+de	gregorian	BBBBBBHm	HH:mm
+de	gregorian	BBBBBHm	HH:mm
+de	gregorian	BBBBHm	HH:mm
+de	gregorian	BBBHm	HH:mm
+de	gregorian	BBHm	HH:mm
+de	gregorian	BHm	HH:mm
+de	gregorian	Bhm	h:mm B
+de	gregorian	C	HH 'Uhr'
+de	gregorian	CC	HH 'Uhr'
+de	gregorian	CCCC	HH 'Uhr'
+de	gregorian	CCCCC	HH 'Uhr'
+de	gregorian	CCCCCC	HH 'Uhr'
+de	gregorian	CCCCCCHm	HH:mm
+de	gregorian	CCCCCHm	HH:mm
+de	gregorian	CCCCCm	HH:mm
+de	gregorian	CCCCHm	HH:mm
+de	gregorian	CCCCm	HH:mm
+de	gregorian	CCCHm	HH:mm
+de	gregorian	CCCm	HH:mm
+de	gregorian	CCHm	HH:mm
+de	gregorian	CCm	HH:mm
+de	gregorian	CHm	HH:mm
+de	gregorian	Cm	HH:mm
+de	gregorian	D	D
+de	gregorian	DD	DD
+de	gregorian	DDD	DDD
+de	gregorian	DDDD	DDDD
+de	gregorian	DDDDD	DDDDD
+de	gregorian	DDDDDD	DDDDDD
+de	gregorian	DDDDDDHm	DDDDDD, HH:mm
+de	gregorian	DDDDDHm	DDDDD, HH:mm
+de	gregorian	DDDDHm	DDDD, HH:mm
+de	gregorian	DDDHm	DDD, HH:mm
+de	gregorian	DDHm	DD, HH:mm
+de	gregorian	DHm	D, HH:mm
+de	gregorian	E	ccc
+de	gregorian	EE	ccc
+de	gregorian	EEE	ccc
+de	gregorian	EEEE	cccc
+de	gregorian	EEEEE	ccccc
+de	gregorian	EEEEEE	cccccc
+de	gregorian	EEEEEEHm	EEEEEE, HH:mm
+de	gregorian	EEEEEHm	EEEEE, HH:mm
+de	gregorian	EEEEHm	EEEE, HH:mm
+de	gregorian	EEEEd	EEEE, d.
+de	gregorian	EEEEhms	EEEE, h:mm:ss a
+de	gregorian	EEEHm	EEE, HH:mm
+de	gregorian	EEHm	EEE, HH:mm
+de	gregorian	EHm	EEE, HH:mm
+de	gregorian	Ed	EEE, d.
+de	gregorian	Ehm	EEE h:mm a
+de	gregorian	F	F
+de	gregorian	FF	FF
+de	gregorian	FFF	FFF
+de	gregorian	FFFF	FFFF
+de	gregorian	FFFFF	FFFFF
+de	gregorian	FFFFFF	FFFFFF
+de	gregorian	FFFFFFHm	FFFFFF, HH:mm
+de	gregorian	FFFFFHm	FFFFF, HH:mm
+de	gregorian	FFFFHm	FFFF, HH:mm
+de	gregorian	FFFHm	FFF, HH:mm
+de	gregorian	FFHm	FF, HH:mm
+de	gregorian	FHm	F, HH:mm
+de	gregorian	Fd	F ('Tag': d)
+de	gregorian	GG	GG
+de	gregorian	GGG	GGG
+de	gregorian	GGGG	GGGG
+de	gregorian	GGGGG	GGGGG
+de	gregorian	GGGGGG	GGGGGG
+de	gregorian	GGGGGGHm	GGGGGG, HH:mm
+de	gregorian	GGGGGHm	GGGGG, HH:mm
+de	gregorian	GGGGGy	y GGGGG
+de	gregorian	GGGGHm	GGGG, HH:mm
+de	gregorian	GGGHm	GGG, HH:mm
+de	gregorian	GGHm	GG, HH:mm
+de	gregorian	GHm	G, HH:mm
+de	gregorian	H	HH 'Uhr'
+de	gregorian	HB	HH 'Uhr'
+de	gregorian	HH	HH 'Uhr'
+de	gregorian	HHH	HH 'Uhr'
+de	gregorian	HHHH	HH 'Uhr'
+de	gregorian	HHHHH	HH 'Uhr'
+de	gregorian	HHHHHH	HH 'Uhr'
+de	gregorian	Hb	HH 'Uhr'
+de	gregorian	HmsSSSSSS	HH:mm:ss,SSSSSS
+de	gregorian	J	HH 'Uhr'
+de	gregorian	JHm	HH:mm
+de	gregorian	JJ	HH 'Uhr'
+de	gregorian	JJHm	HH:mm
+de	gregorian	JJJ	HH 'Uhr'
+de	gregorian	JJJHm	HH:mm
+de	gregorian	JJJJ	HH 'Uhr'
+de	gregorian	JJJJHm	HH:mm
+de	gregorian	JJJJJ	HH 'Uhr'
+de	gregorian	JJJJJHm	HH:mm
+de	gregorian	JJJJJJ	HH 'Uhr'
+de	gregorian	JJJJJJHm	HH:mm
+de	gregorian	JJm	HH:mm
+de	gregorian	Jm	HH:mm
+de	gregorian	Jms	HH:mm:ss
+de	gregorian	K	h a
+de	gregorian	KHm	HH:mm
+de	gregorian	KK	h a
+de	gregorian	KKHm	HH:mm
+de	gregorian	KKK	h a
+de	gregorian	KKKHm	HH:mm
+de	gregorian	KKKK	h a
+de	gregorian	KKKKHm	HH:mm
+de	gregorian	KKKKK	h a
+de	gregorian	KKKKKHm	HH:mm
+de	gregorian	KKKKKK	h a
+de	gregorian	KKKKKKHm	HH:mm
+de	gregorian	Khm	h:mm a
+de	gregorian	Kms	h:mm:ss a
+de	gregorian	L	L
+de	gregorian	LHm	L, HH:mm
+de	gregorian	LL	LL
+de	gregorian	LLHm	LL, HH:mm
+de	gregorian	LLL	LLL
+de	gregorian	LLLHm	LLL, HH:mm
+de	gregorian	LLLL	LLLL
+de	gregorian	LLLLHm	LLLL 'um' HH:mm
+de	gregorian	LLLLL	LLLLL
+de	gregorian	LLLLLHm	LLLLL, HH:mm
+de	gregorian	LLLLLL	LLLLLL
+de	gregorian	LLLLLLHm	LLLLLL, HH:mm
+de	gregorian	M	L
+de	gregorian	MHm	L, HH:mm
+de	gregorian	MM	LL
+de	gregorian	MMHm	LL, HH:mm
+de	gregorian	MMM	LLL
+de	gregorian	MMMEdjmO	EEE, d. MMM, HH:mm O
+de	gregorian	MMMHm	LLL, HH:mm
+de	gregorian	MMMMHm	LLLL 'um' HH:mm
+de	gregorian	MMMMM	LLLLL
+de	gregorian	MMMMMHm	LLLLL, HH:mm
+de	gregorian	MMMMMM	LLLLLL
+de	gregorian	MMMMMMHm	LLLLLL, HH:mm
+de	gregorian	MMMMW	
+de	gregorian	MMMd'x'	d. MMM
+de	gregorian	O	O
+de	gregorian	OHm	HH:mm O
+de	gregorian	OO	OO
+de	gregorian	OOHm	HH:mm OO
+de	gregorian	OOO	OOO
+de	gregorian	OOOHm	HH:mm OOO
+de	gregorian	OOOO	OOOO
+de	gregorian	OOOOHm	HH:mm OOOO
+de	gregorian	OOOOO	OOOOO
+de	gregorian	OOOOOHm	HH:mm OOOOO
+de	gregorian	OOOOOO	OOOOOO
+de	gregorian	OOOOOOHm	HH:mm OOOOOO
+de	gregorian	Q	Q
+de	gregorian	QHm	Q, HH:mm
+de	gregorian	QQ	QQ
+de	gregorian	QQHm	QQ, HH:mm
+de	gregorian	QQQ	QQQ
+de	gregorian	QQQHm	QQQ, HH:mm
+de	gregorian	QQQQ	QQQQ
+de	gregorian	QQQQHm	QQQQ, HH:mm
+de	gregorian	QQQQQ	QQQQQ
+de	gregorian	QQQQQHm	QQQQQ, HH:mm
+de	gregorian	QQQQQQ	QQQQQQ
+de	gregorian	QQQQQQHm	QQQQQQ, HH:mm
+de	gregorian	S	S
+de	gregorian	SHm	HH:mm:ss,S
+de	gregorian	SS	SS
+de	gregorian	SSHm	HH:mm:ss,SS
+de	gregorian	SSS	SSS
+de	gregorian	SSSHm	HH:mm:ss,SSS
+de	gregorian	SSSS	SSSS
+de	gregorian	SSSSHm	HH:mm:ss,SSSS
+de	gregorian	SSSSS	SSSSS
+de	gregorian	SSSSSHm	HH:mm:ss,SSSSS
+de	gregorian	SSSSSS	SSSSSS
+de	gregorian	SSSSSSHm	HH:mm:ss,SSSSSS
+de	gregorian	U	y
+de	gregorian	UHm	y, HH:mm
+de	gregorian	UMMMd	d. MMM y
+de	gregorian	UU	y
+de	gregorian	UUHm	y, HH:mm
+de	gregorian	UUU	y
+de	gregorian	UUUHm	y, HH:mm
+de	gregorian	UUUU	y
+de	gregorian	UUUUHm	y, HH:mm
+de	gregorian	UUUUU	y
+de	gregorian	UUUUUHm	y, HH:mm
+de	gregorian	UUUUUU	y
+de	gregorian	UUUUUUHm	y, HH:mm
+de	gregorian	V	V
+de	gregorian	VHm	HH:mm V
+de	gregorian	VV	VV
+de	gregorian	VVHm	HH:mm VV
+de	gregorian	VVV	VVV
+de	gregorian	VVVHm	HH:mm VVV
+de	gregorian	VVVV	VVVV
+de	gregorian	VVVVHm	HH:mm VVVV
+de	gregorian	VVVVV	VVVVV
+de	gregorian	VVVVVHm	HH:mm VVVVV
+de	gregorian	VVVVVV	VVVVVV
+de	gregorian	VVVVVVHm	HH:mm VVVVVV
+de	gregorian	W	W
+de	gregorian	WHm	W, HH:mm
+de	gregorian	WW	WW
+de	gregorian	WWHm	WW, HH:mm
+de	gregorian	WWW	WWW
+de	gregorian	WWWHm	WWW, HH:mm
+de	gregorian	WWWW	WWWW
+de	gregorian	WWWWHm	WWWW, HH:mm
+de	gregorian	WWWWW	WWWWW
+de	gregorian	WWWWWHm	WWWWW, HH:mm
+de	gregorian	WWWWWW	WWWWWW
+de	gregorian	WWWWWWHm	WWWWWW, HH:mm
+de	gregorian	X	X
+de	gregorian	XHm	HH:mm X
+de	gregorian	XX	XX
+de	gregorian	XXHm	HH:mm XX
+de	gregorian	XXX	XXX
+de	gregorian	XXXHm	HH:mm XXX
+de	gregorian	XXXX	XXXX
+de	gregorian	XXXXHm	HH:mm XXXX
+de	gregorian	XXXXX	XXXXX
+de	gregorian	XXXXXHm	HH:mm XXXXX
+de	gregorian	XXXXXX	XXXXXX
+de	gregorian	XXXXXXHm	HH:mm XXXXXX
+de	gregorian	Y	Y
+de	gregorian	YHm	Y, HH:mm
+de	gregorian	YMMMd	d. MMM Y
+de	gregorian	YY	YY
+de	gregorian	YYHm	YY, HH:mm
+de	gregorian	YYY	YYY
+de	gregorian	YYYHm	YYY, HH:mm
+de	gregorian	YYYY	YYYY
+de	gregorian	YYYYHm	YYYY, HH:mm
+de	gregorian	YYYYY	YYYYY
+de	gregorian	YYYYYHm	YYYYY, HH:mm
+de	gregorian	YYYYYY	YYYYYY
+de	gregorian	YYYYYYHm	YYYYYY, HH:mm
+de	gregorian	Z	Z
+de	gregorian	ZHm	HH:mm Z
+de	gregorian	ZZ	ZZ
+de	gregorian	ZZHm	HH:mm ZZ
+de	gregorian	ZZZ	ZZZ
+de	gregorian	ZZZHm	HH:mm ZZZ
+de	gregorian	ZZZZ	ZZZZ
+de	gregorian	ZZZZHm	HH:mm ZZZZ
+de	gregorian	ZZZZZ	ZZZZZ
+de	gregorian	ZZZZZHm	HH:mm ZZZZZ
+de	gregorian	ZZZZZZ	ZZZZZZ
+de	gregorian	ZZZZZZHm	HH:mm ZZZZZZ
+de	gregorian	a	a
+de	gregorian	aHm	HH:mm
+de	gregorian	aa	aa
+de	gregorian	aaHm	HH:mm
+de	gregorian	aaa	aaa
+de	gregorian	aaaHm	HH:mm
+de	gregorian	aaaa	aaaa
+de	gregorian	aaaaHm	HH:mm
+de	gregorian	aaaaa	aaaaa
+de	gregorian	aaaaaHm	HH:mm
+de	gregorian	aaaaaa	aaaaaa
+de	gregorian	aaaaaaHm	HH:mm
+de	gregorian	b	b
+de	gregorian	bHm	HH:mm
+de	gregorian	bb	bb
+de	gregorian	bbHm	HH:mm
+de	gregorian	bbb	bbb
+de	gregorian	bbbHm	HH:mm
+de	gregorian	bbbb	bbbb
+de	gregorian	bbbbHm	HH:mm
+de	gregorian	bbbbb	bbbbb
+de	gregorian	bbbbbHm	HH:mm
+de	gregorian	bbbbbb	bbbbbb
+de	gregorian	bbbbbbHm	HH:mm
+de	gregorian	bhm	h:mm b
+de	gregorian	c	c
+de	gregorian	cHm	e, HH:mm
+de	gregorian	cc	cc
+de	gregorian	ccHm	ee, HH:mm
+de	gregorian	ccc	ccc
+de	gregorian	cccHm	EEE, HH:mm
+de	gregorian	cccc	cccc
+de	gregorian	ccccHm	EEEE, HH:mm
+de	gregorian	ccccc	ccccc
+de	gregorian	cccccHm	EEEEE, HH:mm
+de	gregorian	cccccc	cccccc
+de	gregorian	ccccccHm	EEEEEE, HH:mm
+de	gregorian	d	d
+de	gregorian	dHm	d, HH:mm
+de	gregorian	dd	dd
+de	gregorian	ddHm	dd, HH:mm
+de	gregorian	ddd	d
+de	gregorian	dddHm	d, HH:mm
+de	gregorian	dddd	d
+de	gregorian	ddddHm	d, HH:mm
+de	gregorian	ddddd	d
+de	gregorian	dddddHm	d, HH:mm
+de	gregorian	dddddd	d
+de	gregorian	ddddddHm	d, HH:mm
+de	gregorian	e	c
+de	gregorian	eHm	e, HH:mm
+de	gregorian	ee	cc
+de	gregorian	eeHm	ee, HH:mm
+de	gregorian	eee	ccc
+de	gregorian	eeeHm	EEE, HH:mm
+de	gregorian	eeee	cccc
+de	gregorian	eeeeHm	EEEE, HH:mm
+de	gregorian	eeeee	ccccc
+de	gregorian	eeeeeHm	EEEEE, HH:mm
+de	gregorian	eeeeee	cccccc
+de	gregorian	eeeeeeHm	EEEEEE, HH:mm
+de	gregorian	g	g
+de	gregorian	gHm	g, HH:mm
+de	gregorian	gg	gg
+de	gregorian	ggHm	gg, HH:mm
+de	gregorian	ggg	ggg
+de	gregorian	gggHm	ggg, HH:mm
+de	gregorian	gggg	gggg
+de	gregorian	ggggHm	gggg, HH:mm
+de	gregorian	ggggg	ggggg
+de	gregorian	gggggHm	ggggg, HH:mm
+de	gregorian	gggggg	gggggg
+de	gregorian	ggggggHm	gggggg, HH:mm
+de	gregorian	h	h a
+de	gregorian	hB	h 'Uhr' B
+de	gregorian	hHm	HH:mm
+de	gregorian	hb	h b
+de	gregorian	hh	h a
+de	gregorian	hhHm	HH:mm
+de	gregorian	hhh	h a
+de	gregorian	hhhHm	HH:mm
+de	gregorian	hhhh	h a
+de	gregorian	hhhhHm	HH:mm
+de	gregorian	hhhhh	h a
+de	gregorian	hhhhhHm	HH:mm
+de	gregorian	hhhhhh	h a
+de	gregorian	hhhhhhHm	HH:mm
+de	gregorian	hmS	h:mm:ss,S a
+de	gregorian	hmV	h:mm a V
+de	gregorian	hmVVVV	h:mm a VVVV
+de	gregorian	hmX	h:mm a X
+de	gregorian	hmXXXXX	h:mm a XXXXX
+de	gregorian	hmZ	h:mm a Z
+de	gregorian	hmZZZZ	h:mm a ZZZZ
+de	gregorian	hmsSSS	h:mm:ss,SSS a
+de	gregorian	hmx	h:mm a x
+de	gregorian	j	HH 'Uhr'
+de	gregorian	jHm	HH:mm
+de	gregorian	jj	HH 'Uhr'
+de	gregorian	jjHm	HH:mm
+de	gregorian	jjj	HH 'Uhr'
+de	gregorian	jjjHm	HH:mm
+de	gregorian	jjjj	HH 'Uhr'
+de	gregorian	jjjjHm	HH:mm
+de	gregorian	jjjjj	HH 'Uhr'
+de	gregorian	jjjjjHm	HH:mm
+de	gregorian	jjjjjj	HH 'Uhr'
+de	gregorian	jjjjjjHm	HH:mm
+de	gregorian	k	HH 'Uhr'
+de	gregorian	kHm	HH:mm
+de	gregorian	khm	h:mm a
+de	gregorian	kk	HH 'Uhr'
+de	gregorian	kkHm	HH:mm
+de	gregorian	kkk	HH 'Uhr'
+de	gregorian	kkkHm	HH:mm
+de	gregorian	kkkk	HH 'Uhr'
+de	gregorian	kkkkHm	HH:mm
+de	gregorian	kkkkk	HH 'Uhr'
+de	gregorian	kkkkkHm	HH:mm
+de	gregorian	kkkkkk	HH 'Uhr'
+de	gregorian	kkkkkkHm	HH:mm
+de	gregorian	kms	HH:mm:ss
+de	gregorian	l	L
+de	gregorian	lHm	L, HH:mm
+de	gregorian	ll	LL
+de	gregorian	llHm	LL, HH:mm
+de	gregorian	lll	LLL
+de	gregorian	lllHm	LLL, HH:mm
+de	gregorian	llll	LLLL
+de	gregorian	llllHm	LLLL, HH:mm
+de	gregorian	lllll	LLLLL
+de	gregorian	lllllHm	LLLLL, HH:mm
+de	gregorian	llllll	LLLLLL
+de	gregorian	llllllHm	LLLLLL, HH:mm
+de	gregorian	m	m
+de	gregorian	mS	mm:ss,S
+de	gregorian	mSS	mm:ss,SS
+de	gregorian	mSSS	mm:ss,SSS
+de	gregorian	mm	m
+de	gregorian	mmm	m
+de	gregorian	mmmm	m
+de	gregorian	mmmmm	m
+de	gregorian	mmmmmm	m
+de	gregorian	msS	mm:ss,S
+de	gregorian	q	q
+de	gregorian	qHm	q, HH:mm
+de	gregorian	qq	qq
+de	gregorian	qqHm	qq, HH:mm
+de	gregorian	qqq	qqq
+de	gregorian	qqqHm	qqq, HH:mm
+de	gregorian	qqqq	qqqq
+de	gregorian	qqqqHm	qqqq, HH:mm
+de	gregorian	qqqqq	qqqqq
+de	gregorian	qqqqqHm	qqqqq, HH:mm
+de	gregorian	qqqqqq	qqqqqq
+de	gregorian	qqqqqqHm	qqqqqq, HH:mm
+de	gregorian	r	y
+de	gregorian	rHm	y, HH:mm
+de	gregorian	rMMMd	d. MMM y
+de	gregorian	rr	yy
+de	gregorian	rrHm	yy, HH:mm
+de	gregorian	rrr	yyy
+de	gregorian	rrrHm	yyy, HH:mm
+de	gregorian	rrrr	yyyy
+de	gregorian	rrrrHm	yyyy, HH:mm
+de	gregorian	rrrrr	yyyyy
+de	gregorian	rrrrrHm	yyyyy, HH:mm
+de	gregorian	rrrrrr	yyyyyy
+de	gregorian	rrrrrrHm	yyyyyy, HH:mm
+de	gregorian	s	s
+de	gregorian	sHm	HH:mm:ss
+de	gregorian	ss	s
+de	gregorian	ssHm	HH:mm:ss
+de	gregorian	sss	s
+de	gregorian	sssHm	HH:mm:ss
+de	gregorian	ssss	s
+de	gregorian	ssssHm	HH:mm:ss
+de	gregorian	sssss	s
+de	gregorian	sssssHm	HH:mm:ss
+de	gregorian	ssssss	s
+de	gregorian	ssssssHm	HH:mm:ss
+de	gregorian	u	y
+de	gregorian	uHm	y, HH:mm
+de	gregorian	uMMMd	d. MMM y
+de	gregorian	uu	yy
+de	gregorian	uuHm	yy, HH:mm
+de	gregorian	uuu	yyy
+de	gregorian	uuuHm	yyy, HH:mm
+de	gregorian	uuuu	yyyy
+de	gregorian	uuuuHm	yyyy, HH:mm
+de	gregorian	uuuuu	yyyyy
+de	gregorian	uuuuuHm	yyyyy, HH:mm
+de	gregorian	uuuuuu	yyyyyy
+de	gregorian	uuuuuuHm	yyyyyy, HH:mm
+de	gregorian	v	v
+de	gregorian	vHm	HH:mm v
+de	gregorian	vv	vv
+de	gregorian	vvHm	HH:mm vv
+de	gregorian	vvv	vvv
+de	gregorian	vvvHm	HH:mm vvv
+de	gregorian	vvvv	vvvv
+de	gregorian	vvvvHm	HH:mm vvvv
+de	gregorian	vvvvv	vvvvv
+de	gregorian	vvvvvHm	HH:mm vvvvv
+de	gregorian	vvvvvv	vvvvvv
+de	gregorian	vvvvvvHm	HH:mm vvvvvv
+de	gregorian	w	w
+de	gregorian	wHm	w, HH:mm
+de	gregorian	ww	ww
+de	gregorian	wwHm	ww, HH:mm
+de	gregorian	www	www
+de	gregorian	wwwHm	www, HH:mm
+de	gregorian	wwww	wwww
+de	gregorian	wwwwHm	wwww, HH:mm
+de	gregorian	wwwww	wwwww
+de	gregorian	wwwwwHm	wwwww, HH:mm
+de	gregorian	wwwwww	wwwwww
+de	gregorian	wwwwwwHm	wwwwww, HH:mm
+de	gregorian	x	x
+de	gregorian	xHm	HH:mm x
+de	gregorian	xx	xx
+de	gregorian	xxHm	HH:mm xx
+de	gregorian	xxx	xxx
+de	gregorian	xxxHm	HH:mm xxx
+de	gregorian	xxxx	xxxx
+de	gregorian	xxxxHm	HH:mm xxxx
+de	gregorian	xxxxx	xxxxx
+de	gregorian	xxxxxHm	HH:mm xxxxx
+de	gregorian	xxxxxx	xxxxxx
+de	gregorian	xxxxxxHm	HH:mm xxxxxx
+de	gregorian	y	y
+de	gregorian	y'q'M	M/y
+de	gregorian	yD	y ├'Tag des Jahres': D┤
+de	gregorian	yHm	y, HH:mm
+de	gregorian	yMMMMEEEEEd	EEEEE, d. MMMM y
+de	gregorian	yMMMMEEEEdHmsSSSvvvv	EEEE, d. MMMM y 'um' HH:mm:ss,SSS vvvv
+de	gregorian	yMMMdhmz	d. MMM y, h:mm a z
+de	gregorian	yMdA	d.M.y, A
+de	gregorian	yMdAA	d.M.y, A
+de	gregorian	yMdAAA	d.M.y, A
+de	gregorian	yMdAAAA	d.M.y, A
+de	gregorian	yMdAAAAA	d.M.y, A
+de	gregorian	yMdAAAAAA	d.M.y, A
+de	gregorian	yMdB	d.M.y, B
+de	gregorian	yMdBB	d.M.y, BB
+de	gregorian	yMdBBB	d.M.y, BBB
+de	gregorian	yMdBBBB	d.M.y, BBBB
+de	gregorian	yMdBBBBB	d.M.y, BBBBB
+de	gregorian	yMdBBBBBB	d.M.y, BBBBBB
+de	gregorian	yMdC	d.M.y, HH 'Uhr'
+de	gregorian	yMdCC	d.M.y, HH 'Uhr'
+de	gregorian	yMdCCC	d.M.y, HH 'Uhr'
+de	gregorian	yMdCCCC	d.M.y, HH 'Uhr'
+de	gregorian	yMdCCCCC	d.M.y, HH 'Uhr'
+de	gregorian	yMdCCCCCC	d.M.y, HH 'Uhr'
+de	gregorian	yMdD	d.M.y ├'Tag des Jahres': D┤
+de	gregorian	yMdDD	d.M.y ├'Tag des Jahres': DD┤
+de	gregorian	yMdDDD	d.M.y ├'Tag des Jahres': DDD┤
+de	gregorian	yMdDDDD	d.M.y ├'Tag des Jahres': DDDD┤
+de	gregorian	yMdDDDDD	d.M.y ├'Tag des Jahres': DDDDD┤
+de	gregorian	yMdDDDDDD	d.M.y ├'Tag des Jahres': DDDDDD┤
+de	gregorian	yMdE	EEE, d.M.y
+de	gregorian	yMdEE	EEE, d.M.y
+de	gregorian	yMdEEE	EEE, d.M.y
+de	gregorian	yMdEEEE	EEEE, d.M.y
+de	gregorian	yMdEEEEE	EEEEE, d.M.y
+de	gregorian	yMdEEEEEE	EEEEEE, d.M.y
+de	gregorian	yMdF	d.M.y ├'Wochentag': F┤
+de	gregorian	yMdFF	d.M.y ├'Wochentag': FF┤
+de	gregorian	yMdFFF	d.M.y ├'Wochentag': FFF┤
+de	gregorian	yMdFFFF	d.M.y ├'Wochentag': FFFF┤
+de	gregorian	yMdFFFFF	d.M.y ├'Wochentag': FFFFF┤
+de	gregorian	yMdFFFFFF	d.M.y ├'Wochentag': FFFFFF┤
+de	gregorian	yMdG	dd.MM.y G
+de	gregorian	yMdGG	dd.MM.y GG
+de	gregorian	yMdGGG	dd.MM.y GGG
+de	gregorian	yMdGGGG	dd.MM.y GGGG
+de	gregorian	yMdGGGGG	dd.MM.y GGGGG
+de	gregorian	yMdGGGGGG	dd.MM.y GGGGGG
+de	gregorian	yMdH	d.M.y, HH 'Uhr'
+de	gregorian	yMdHH	d.M.y, HH 'Uhr'
+de	gregorian	yMdHHH	d.M.y, HH 'Uhr'
+de	gregorian	yMdHHHH	d.M.y, HH 'Uhr'
+de	gregorian	yMdHHHHH	d.M.y, HH 'Uhr'
+de	gregorian	yMdHHHHHH	d.M.y, HH 'Uhr'
+de	gregorian	yMdJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdJJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdJJJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdJJJJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdJJJJJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdJJJJJJ	d.M.y, HH 'Uhr'
+de	gregorian	yMdK	d.M.y, h a
+de	gregorian	yMdKK	d.M.y, h a
+de	gregorian	yMdKKK	d.M.y, h a
+de	gregorian	yMdKKKK	d.M.y, h a
+de	gregorian	yMdKKKKK	d.M.y, h a
+de	gregorian	yMdKKKKKK	d.M.y, h a
+de	gregorian	yMdL	d.M.y
+de	gregorian	yMdLL	d.MM.y
+de	gregorian	yMdLLL	d. MMM y
+de	gregorian	yMdLLLL	d. MMMM y
+de	gregorian	yMdLLLLL	d. MMMMM y
+de	gregorian	yMdLLLLLL	d. MMMMMM y
+de	gregorian	yMdO	d.M.y, O
+de	gregorian	yMdOO	d.M.y, OO
+de	gregorian	yMdOOO	d.M.y, OOO
+de	gregorian	yMdOOOO	d.M.y, OOOO
+de	gregorian	yMdOOOOO	d.M.y, OOOOO
+de	gregorian	yMdOOOOOO	d.M.y, OOOOOO
+de	gregorian	yMdQ	d.M.y ('Quartal': Q)
+de	gregorian	yMdQQ	d.M.y ('Quartal': QQ)
+de	gregorian	yMdQQQ	d.M.y ('Quartal': QQQ)
+de	gregorian	yMdQQQQ	d.M.y ('Quartal': QQQQ)
+de	gregorian	yMdQQQQQ	d.M.y ('Quartal': QQQQQ)
+de	gregorian	yMdQQQQQQ	d.M.y ('Quartal': QQQQQQ)
+de	gregorian	yMdS	d.M.y, S
+de	gregorian	yMdSS	d.M.y, SS
+de	gregorian	yMdSSS	d.M.y, SSS
+de	gregorian	yMdSSSS	d.M.y, SSSS
+de	gregorian	yMdSSSSS	d.M.y, SSSSS
+de	gregorian	yMdSSSSSS	d.M.y, SSSSSS
+de	gregorian	yMdU	d.M.y
+de	gregorian	yMdUU	d.M.y
+de	gregorian	yMdUUU	d.M.y
+de	gregorian	yMdUUUU	d.M.y
+de	gregorian	yMdUUUUU	d.M.y
+de	gregorian	yMdUUUUUU	d.M.y
+de	gregorian	yMdV	d.M.y, V
+de	gregorian	yMdVV	d.M.y, VV
+de	gregorian	yMdVVV	d.M.y, VVV
+de	gregorian	yMdVVVV	d.M.y, VVVV
+de	gregorian	yMdVVVVV	d.M.y, VVVVV
+de	gregorian	yMdVVVVVV	d.M.y, VVVVVV
+de	gregorian	yMdW	d.M.y ├'Woche des Monats': W┤
+de	gregorian	yMdWW	d.M.y ├'Woche des Monats': WW┤
+de	gregorian	yMdWWW	d.M.y ├'Woche des Monats': WWW┤
+de	gregorian	yMdWWWW	d.M.y ├'Woche des Monats': WWWW┤
+de	gregorian	yMdWWWWW	d.M.y ├'Woche des Monats': WWWWW┤
+de	gregorian	yMdWWWWWW	d.M.y ├'Woche des Monats': WWWWWW┤
+de	gregorian	yMdX	d.M.y, X
+de	gregorian	yMdXX	d.M.y, XX
+de	gregorian	yMdXXX	d.M.y, XXX
+de	gregorian	yMdXXXX	d.M.y, XXXX
+de	gregorian	yMdXXXXX	d.M.y, XXXXX
+de	gregorian	yMdXXXXXX	d.M.y, XXXXXX
+de	gregorian	yMdY	d.M.Y
+de	gregorian	yMdYY	d.M.YY
+de	gregorian	yMdYYY	d.M.YYY
+de	gregorian	yMdYYYY	d.M.YYYY
+de	gregorian	yMdYYYYY	d.M.YYYYY
+de	gregorian	yMdYYYYYY	d.M.YYYYYY
+de	gregorian	yMdZ	d.M.y, Z
+de	gregorian	yMdZZ	d.M.y, ZZ
+de	gregorian	yMdZZZ	d.M.y, ZZZ
+de	gregorian	yMdZZZZ	d.M.y, ZZZZ
+de	gregorian	yMdZZZZZ	d.M.y, ZZZZZ
+de	gregorian	yMdZZZZZZ	d.M.y, ZZZZZZ
+de	gregorian	yMda	d.M.y, a
+de	gregorian	yMdaa	d.M.y, aa
+de	gregorian	yMdaaa	d.M.y, aaa
+de	gregorian	yMdaaaa	d.M.y, aaaa
+de	gregorian	yMdaaaaa	d.M.y, aaaaa
+de	gregorian	yMdaaaaaa	d.M.y, aaaaaa
+de	gregorian	yMdb	d.M.y, b
+de	gregorian	yMdbb	d.M.y, bb
+de	gregorian	yMdbbb	d.M.y, bbb
+de	gregorian	yMdbbbb	d.M.y, bbbb
+de	gregorian	yMdbbbbb	d.M.y, bbbbb
+de	gregorian	yMdbbbbbb	d.M.y, bbbbbb
+de	gregorian	yMdc	e, d.M.y
+de	gregorian	yMdcc	ee, d.M.y
+de	gregorian	yMdccc	EEE, d.M.y
+de	gregorian	yMdcccc	EEEE, d.M.y
+de	gregorian	yMdccccc	EEEEE, d.M.y
+de	gregorian	yMdcccccc	EEEEEE, d.M.y
+de	gregorian	yMde	e, d.M.y
+de	gregorian	yMdee	ee, d.M.y
+de	gregorian	yMdeee	EEE, d.M.y
+de	gregorian	yMdeeee	EEEE, d.M.y
+de	gregorian	yMdeeeee	EEEEE, d.M.y
+de	gregorian	yMdeeeeee	EEEEEE, d.M.y
+de	gregorian	yMdg	g.M.y
+de	gregorian	yMdgg	gg.M.y
+de	gregorian	yMdggg	ggg.M.y
+de	gregorian	yMdgggg	gggg.M.y
+de	gregorian	yMdggggg	ggggg.M.y
+de	gregorian	yMdgggggg	gggggg.M.y
+de	gregorian	yMdh	d.M.y, h a
+de	gregorian	yMdhh	d.M.y, h a
+de	gregorian	yMdhhh	d.M.y, h a
+de	gregorian	yMdhhhh	d.M.y, h a
+de	gregorian	yMdhhhhh	d.M.y, h a
+de	gregorian	yMdhhhhhh	d.M.y, h a
+de	gregorian	yMdj	d.M.y, HH 'Uhr'
+de	gregorian	yMdjj	d.M.y, HH 'Uhr'
+de	gregorian	yMdjjj	d.M.y, HH 'Uhr'
+de	gregorian	yMdjjjj	d.M.y, HH 'Uhr'
+de	gregorian	yMdjjjjj	d.M.y, HH 'Uhr'
+de	gregorian	yMdjjjjjj	d.M.y, HH 'Uhr'
+de	gregorian	yMdk	d.M.y, HH 'Uhr'
+de	gregorian	yMdkk	d.M.y, HH 'Uhr'
+de	gregorian	yMdkkk	d.M.y, HH 'Uhr'
+de	gregorian	yMdkkkk	d.M.y, HH 'Uhr'
+de	gregorian	yMdkkkkk	d.M.y, HH 'Uhr'
+de	gregorian	yMdkkkkkk	d.M.y, HH 'Uhr'
+de	gregorian	yMdl	d.M.y
+de	gregorian	yMdll	d.MM.y
+de	gregorian	yMdlll	d.MMM.y
+de	gregorian	yMdllll	d.MMMM.y
+de	gregorian	yMdlllll	d.MMMMM.y
+de	gregorian	yMdllllll	d.MMMMMM.y
+de	gregorian	yMdm	d.M.y, m
+de	gregorian	yMdmm	d.M.y, m
+de	gregorian	yMdmmm	d.M.y, m
+de	gregorian	yMdmmmm	d.M.y, m
+de	gregorian	yMdmmmmm	d.M.y, m
+de	gregorian	yMdmmmmmm	d.M.y, m
+de	gregorian	yMdq	d.M.y ('Quartal': q)
+de	gregorian	yMdqq	d.M.y ('Quartal': qq)
+de	gregorian	yMdqqq	d.M.y ('Quartal': qqq)
+de	gregorian	yMdqqqq	d.M.y ('Quartal': qqqq)
+de	gregorian	yMdqqqqq	d.M.y ('Quartal': qqqqq)
+de	gregorian	yMdqqqqqq	d.M.y ('Quartal': qqqqqq)
+de	gregorian	yMdr	d.M.y
+de	gregorian	yMdrr	d.M.yy
+de	gregorian	yMdrrr	d.M.yyy
+de	gregorian	yMdrrrr	d.M.yyyy
+de	gregorian	yMdrrrrr	d.M.yyyyy
+de	gregorian	yMdrrrrrr	d.M.yyyyyy
+de	gregorian	yMds	d.M.y, s
+de	gregorian	yMdss	d.M.y, s
+de	gregorian	yMdsss	d.M.y, s
+de	gregorian	yMdssss	d.M.y, s
+de	gregorian	yMdsssss	d.M.y, s
+de	gregorian	yMdssssss	d.M.y, s
+de	gregorian	yMdu	d.M.y
+de	gregorian	yMduu	d.M.yy
+de	gregorian	yMduuu	d.M.yyy
+de	gregorian	yMduuuu	d.M.yyyy
+de	gregorian	yMduuuuu	d.M.yyyyy
+de	gregorian	yMduuuuuu	d.M.yyyyyy
+de	gregorian	yMdv	d.M.y, v
+de	gregorian	yMdvv	d.M.y, vv
+de	gregorian	yMdvvv	d.M.y, vvv
+de	gregorian	yMdvvvv	d.M.y, vvvv
+de	gregorian	yMdvvvvv	d.M.y, vvvvv
+de	gregorian	yMdvvvvvv	d.M.y, vvvvvv
+de	gregorian	yMdw	d.M.y ('Woche': w)
+de	gregorian	yMdww	d.M.y ('Woche': ww)
+de	gregorian	yMdwww	d.M.y ('Woche': www)
+de	gregorian	yMdwwww	d.M.y ('Woche': wwww)
+de	gregorian	yMdwwwww	d.M.y ('Woche': wwwww)
+de	gregorian	yMdwwwwww	d.M.y ('Woche': wwwwww)
+de	gregorian	yMdx	d.M.y, x
+de	gregorian	yMdxx	d.M.y, xx
+de	gregorian	yMdxxx	d.M.y, xxx
+de	gregorian	yMdxxxx	d.M.y, xxxx
+de	gregorian	yMdxxxxx	d.M.y, xxxxx
+de	gregorian	yMdxxxxxx	d.M.y, xxxxxx
+de	gregorian	yMdz	d.M.y, z
+de	gregorian	yMdzz	d.M.y, zz
+de	gregorian	yMdzzz	d.M.y, zzz
+de	gregorian	yMdzzzz	d.M.y, zzzz
+de	gregorian	yMdzzzzz	d.M.y, zzzzz
+de	gregorian	yMdzzzzzz	d.M.y, zzzzzz
+de	gregorian	yQQQ	QQQ y
+de	gregorian	yQQQQ	QQQQ y
+de	gregorian	yw	
+de	gregorian	yy	yy
+de	gregorian	yyHm	yy, HH:mm
+de	gregorian	yyMMMMd	d. MMMM yy
+de	gregorian	yyy	yyy
+de	gregorian	yyyHm	yyy, HH:mm
+de	gregorian	yyyy	yyyy
+de	gregorian	yyyyHm	yyyy, HH:mm
+de	gregorian	yyyyMMMd	d. MMM yyyy
+de	gregorian	yyyyy	yyyyy
+de	gregorian	yyyyyHm	yyyyy, HH:mm
+de	gregorian	yyyyyy	yyyyyy
+de	gregorian	yyyyyyHm	yyyyyy, HH:mm
+de	gregorian	z	z
+de	gregorian	zHm	HH:mm z
+de	gregorian	zz	zz
+de	gregorian	zzHm	HH:mm zz
+de	gregorian	zzz	zzz
+de	gregorian	zzzHm	HH:mm zzz
+de	gregorian	zzzz	zzzz
+de	gregorian	zzzzHm	HH:mm zzzz
+de	gregorian	zzzzz	zzzzz
+de	gregorian	zzzzzHm	HH:mm zzzzz
+de	gregorian	zzzzzz	zzzzzz
+de	gregorian	zzzzzzHm	HH:mm zzzzzz
+ja	gregorian	A	A
+ja	gregorian	AA	A
+ja	gregorian	AAA	A
+ja	gregorian	AAAA	A
+ja	gregorian	AAAAA	A
+ja	gregorian	AAAAAA	A
+ja	gregorian	AAAAAAHm	H:mm:AA
+ja	gregorian	AAAAAHm	H:mm:AA
+ja	gregorian	AAAAHm	H:mm:AA
+ja	gregorian	AAAHm	H:mm:AA
+ja	gregorian	AAHm	H:mm:AA
+ja	gregorian	AHm	H:mm:AA
+ja	gregorian	BB	BB
+ja	gregorian	BBB	BBB
+ja	gregorian	BBBBBB	BBBBBB
+ja	gregorian	BBBBBBHm	H:mm
+ja	gregorian	BBBBBHm	H:mm
+ja	gregorian	BBBBHm	H:mm
+ja	gregorian	BBBHm	H:mm
+ja	gregorian	BBHm	H:mm
+ja	gregorian	BHm	H:mm
+ja	gregorian	CCCCCCHm	H:mm
+ja	gregorian	CCCCCHm	H:mm
+ja	gregorian	CCCCHm	H:mm
+ja	gregorian	CCCHm	H:mm
+ja	gregorian	CCHm	H:mm
+ja	gregorian	CHm	H:mm
+ja	gregorian	D	D
+ja	gregorian	DD	DD
+ja	gregorian	DDD	DDD
+ja	gregorian	DDDD	DDDD
+ja	gregorian	DDDDD	DDDDD
+ja	gregorian	DDDDDD	DDDDDD
+ja	gregorian	DDDDDDHm	DDDDDD H:mm
+ja	gregorian	DDDDDHm	DDDDD H:mm
+ja	gregorian	DDDDHm	DDDD H:mm
+ja	gregorian	DDDHm	DDD H:mm
+ja	gregorian	DDHm	DD H:mm
+ja	gregorian	DHm	D H:mm
+ja	gregorian	EE	ccc
+ja	gregorian	EEE	ccc
+ja	gregorian	EEEEEEHm	H:mm (EEEEEE)
+ja	gregorian	EEEEEHm	H:mm (EEEEE)
+ja	gregorian	EEEEHm	H:mm (EEEE)
+ja	gregorian	EEEEd	d日EEEE
+ja	gregorian	EEEEhms	aK:mm:ss (EEEE)
+ja	gregorian	EEEHm	H:mm (EEE)
+ja	gregorian	EEHm	H:mm (EEE)
+ja	gregorian	EHm	H:mm (EEE)
+ja	gregorian	Ed	d日(EEE)
+ja	gregorian	Ehm	aK:mm (EEE)
+ja	gregorian	F	F
+ja	gregorian	FF	FF
+ja	gregorian	FFF	FFF
+ja	gregorian	FFFF	FFFF
+ja	gregorian	FFFFF	FFFFF
+ja	gregorian	FFFFFF	FFFFFF
+ja	gregorian	FFFFFFHm	FFFFFF H:mm
+ja	gregorian	FFFFFHm	FFFFF H:mm
+ja	gregorian	FFFFHm	FFFF H:mm
+ja	gregorian	FFFHm	FFF H:mm
+ja	gregorian	FFHm	FF H:mm
+ja	gregorian	FHm	F H:mm
+ja	gregorian	Fd	F ('日': d日)
+ja	gregorian	GGGGGG	GGGGGG
+ja	gregorian	GGGGGGHm	GGGGGG H:mm
+ja	gregorian	GGGGGHm	GGGGG H:mm
+ja	gregorian	GGGGGy	GGGGGy年
+ja	gregorian	GGGGHm	GGGG H:mm
+ja	gregorian	GGGHm	GGG H:mm
+ja	gregorian	GGHm	GG H:mm
+ja	gregorian	GHm	G H:mm
+ja	gregorian	HB	H時
+ja	gregorian	HHH	H時
+ja	gregorian	HHHH	H時
+ja	gregorian	HHHHH	H時
+ja	gregorian	HHHHHH	H時
+ja	gregorian	Hb	H時
+ja	gregorian	HmsSSSSSS	H:mm:ss.SSSSSS
+ja	gregorian	JHm	H:mm
+ja	gregorian	JJHm	H:mm
+ja	gregorian	JJJHm	H:mm
+ja	gregorian	JJJJHm	H:mm
+ja	gregorian	JJJJJHm	H:mm
+ja	gregorian	JJJJJJHm	H:mm
+ja	gregorian	Jms	H:mm:ss
+ja	gregorian	K	aK時
+ja	gregorian	KHm	H:mm
+ja	gregorian	KK	aK時
+ja	gregorian	KKHm	H:mm
+ja	gregorian	KKK	aK時
+ja	gregorian	KKKHm	H:mm
+ja	gregorian	KKKK	aK時
+ja	gregorian	KKKKHm	H:mm
+ja	gregorian	KKKKK	aK時
+ja	gregorian	KKKKKHm	H:mm
+ja	gregorian	KKKKKK	aK時
+ja	gregorian	KKKKKKHm	H:mm
+ja	gregorian	Khm	aK:mm
+ja	gregorian	Kms	aK:mm:ss
+ja	gregorian	L	M月
+ja	gregorian	LHm	M月 H:mm
+ja	gregorian	LL	MM月
+ja	gregorian	LLHm	MM月 H:mm
+ja	gregorian	LLL	M月
+ja	gregorian	LLLHm	M月 H:mm
+ja	gregorian	LLLL	M月
+ja	gregorian	LLLLHm	M月 H:mm
+ja	gregorian	LLLLL	M月
+ja	gregorian	LLLLLHm	M月 H:mm
+ja	gregorian	LLLLLL	M月
+ja	gregorian	LLLLLLHm	M月 H:mm
+ja	gregorian	MHm	M月 H:mm
+ja	gregorian	MMHm	MM月 H:mm
+ja	gregorian	MMMEdjmO	M月d日(EEE) H:mm O
+ja	gregorian	MMMHm	M月 H:mm
+ja	gregorian	MMMMHm	M月 H:mm
+ja	gregorian	MMMMMHm	M月 H:mm
+ja	gregorian	MMMMMM	M月
+ja	gregorian	MMMMMMHm	M月 H:mm
+ja	gregorian	MMMMW	
+ja	gregorian	MMMd'x'	M月d日
+ja	gregorian	O	O
+ja	gregorian	OHm	H:mm O
+ja	gregorian	OO	OO
+ja	gregorian	OOHm	H:mm OO
+ja	gregorian	OOO	OOO
+ja	gregorian	OOOHm	H:mm OOO
+ja	gregorian	OOOO	OOOO
+ja	gregorian	OOOOHm	H:mm OOOO
+ja	gregorian	OOOOO	OOOOO
+ja	gregorian	OOOOOHm	H:mm OOOOO
+ja	gregorian	OOOOOO	OOOOOO
+ja	gregorian	OOOOOOHm	H:mm OOOOOO
+ja	gregorian	QHm	Q H:mm
+ja	gregorian	QQHm	QQ H:mm
+ja	gregorian	QQQHm	QQQ H:mm
+ja	gregorian	QQQQHm	QQQQ H:mm
+ja	gregorian	QQQQQHm	QQQQQ H:mm
+ja	gregorian	QQQQQQ	QQQQQQ
+ja	gregorian	QQQQQQHm	QQQQQQ H:mm
+ja	gregorian	S	S
+ja	gregorian	SHm	H:mm:ss.S
+ja	gregorian	SS	SS
+ja	gregorian	SSHm	H:mm:ss.SS
+ja	gregorian	SSS	SSS
+ja	gregorian	SSSHm	H:mm:ss.SSS
+ja	gregorian	SSSS	SSSS
+ja	gregorian	SSSSHm	H:mm:ss.SSSS
+ja	gregorian	SSSSS	SSSSS
+ja	gregorian	SSSSSHm	H:mm:ss.SSSSS
+ja	gregorian	SSSSSS	SSSSSS
+ja	gregorian	SSSSSSHm	H:mm:ss.SSSSSS
+ja	gregorian	UHm	y年 H:mm
+ja	gregorian	UMMMd	y年M月d日
+ja	gregorian	UU	y年
+ja	gregorian	UUHm	y年 H:mm
+ja	gregorian	UUU	y年
+ja	gregorian	UUUHm	y年 H:mm
+ja	gregorian	UUUUHm	y年 H:mm
+ja	gregorian	UUUUU	y年
+ja	gregorian	UUUUUHm	y年 H:mm
+ja	gregorian	UUUUUU	y年
+ja	gregorian	UUUUUUHm	y年 H:mm
+ja	gregorian	V	V
+ja	gregorian	VHm	H:mm V
+ja	gregorian	VV	VV
+ja	gregorian	VVHm	H:mm VV
+ja	gregorian	VVV	VVV
+ja	gregorian	VVVHm	H:mm VVV
+ja	gregorian	VVVV	VVVV
+ja	gregorian	VVVVHm	H:mm VVVV
+ja	gregorian	VVVVV	VVVVV
+ja	gregorian	VVVVVHm	H:mm VVVVV
+ja	gregorian	VVVVVV	VVVVVV
+ja	gregorian	VVVVVVHm	H:mm VVVVVV
+ja	gregorian	W	W
+ja	gregorian	WHm	W H:mm
+ja	gregorian	WW	WW
+ja	gregorian	WWHm	WW H:mm
+ja	gregorian	WWW	WWW
+ja	gregorian	WWWHm	WWW H:mm
+ja	gregorian	WWWW	WWWW
+ja	gregorian	WWWWHm	WWWW H:mm
+ja	gregorian	WWWWW	WWWWW
+ja	gregorian	WWWWWHm	WWWWW H:mm
+ja	gregorian	WWWWWW	WWWWWW
+ja	gregorian	WWWWWWHm	WWWWWW H:mm
+ja	gregorian	X	X
+ja	gregorian	XHm	H:mm X
+ja	gregorian	XX	XX
+ja	gregorian	XXHm	H:mm XX
+ja	gregorian	XXX	XXX
+ja	gregorian	XXXHm	H:mm XXX
+ja	gregorian	XXXX	XXXX
+ja	gregorian	XXXXHm	H:mm XXXX
+ja	gregorian	XXXXX	XXXXX
+ja	gregorian	XXXXXHm	H:mm XXXXX
+ja	gregorian	XXXXXX	XXXXXX
+ja	gregorian	XXXXXXHm	H:mm XXXXXX
+ja	gregorian	Y	Y年
+ja	gregorian	YHm	Y年 H:mm
+ja	gregorian	YMMMd	Y年M月d日
+ja	gregorian	YY	YY年
+ja	gregorian	YYHm	YY年 H:mm
+ja	gregorian	YYY	YYY年
+ja	gregorian	YYYHm	YYY年 H:mm
+ja	gregorian	YYYY	YYYY年
+ja	gregorian	YYYYHm	YYYY年 H:mm
+ja	gregorian	YYYYY	YYYYY年
+ja	gregorian	YYYYYHm	YYYYY年 H:mm
+ja	gregorian	YYYYYY	YYYYYY年
+ja	gregorian	YYYYYYHm	YYYYYY年 H:mm
+ja	gregorian	Z	Z
+ja	gregorian	ZHm	H:mm Z
+ja	gregorian	ZZ	ZZ
+ja	gregorian	ZZHm	H:mm ZZ
+ja	gregorian	ZZZ	ZZZ
+ja	gregorian	ZZZHm	H:mm ZZZ
+ja	gregorian	ZZZZ	ZZZZ
+ja	gregorian	ZZZZHm	H:mm ZZZZ
+ja	gregorian	ZZZZZ	ZZZZZ
+ja	gregorian	ZZZZZHm	H:mm ZZZZZ
+ja	gregorian	ZZZZZZ	ZZZZZZ
+ja	gregorian	ZZZZZZHm	H:mm ZZZZZZ
+ja	gregorian	a	a
+ja	gregorian	aHm	H:mm
+ja	gregorian	aa	aa
+ja	gregorian	aaHm	H:mm
+ja	gregorian	aaa	aaa
+ja	gregorian	aaaHm	H:mm
+ja	gregorian	aaaa	aaaa
+ja	gregorian	aaaaHm	H:mm
+ja	gregorian	aaaaa	aaaaa
+ja	gregorian	aaaaaHm	H:mm
+ja	gregorian	aaaaaa	aaaaaa
+ja	gregorian	aaaaaaHm	H:mm
+ja	gregorian	b	b
+ja	gregorian	bHm	H:mm
+ja	gregorian	bb	bb
+ja	gregorian	bbHm	H:mm
+ja	gregorian	bbb	bbb
+ja	gregorian	bbbHm	H:mm
+ja	gregorian	bbbb	bbbb
+ja	gregorian	bbbbHm	H:mm
+ja	gregorian	bbbbb	bbbbb
+ja	gregorian	bbbbbHm	H:mm
+ja	gregorian	bbbbbb	bbbbbb
+ja	gregorian	bbbbbbHm	H:mm
+ja	gregorian	bhm	bK:mm
+ja	gregorian	c	c
+ja	gregorian	cHm	H:mm (e)
+ja	gregorian	cc	cc
+ja	gregorian	ccHm	H:mm (ee)
+ja	gregorian	ccc	ccc
+ja	gregorian	cccHm	H:mm (EEE)
+ja	gregorian	cccc	cccc
+ja	gregorian	ccccHm	H:mm (EEEE)
+ja	gregorian	ccccc	ccccc
+ja	gregorian	cccccHm	H:mm (EEEEE)
+ja	gregorian	cccccc	cccccc
+ja	gregorian	ccccccHm	H:mm (EEEEEE)
+ja	gregorian	dHm	d日 H:mm
+ja	gregorian	ddHm	dd日 H:mm
+ja	gregorian	ddd	d日
+ja	gregorian	dddHm	d日 H:mm
+ja	gregorian	dddd	d日
+ja	gregorian	ddddHm	d日 H:mm
+ja	gregorian	ddddd	d日
+ja	gregorian	dddddHm	d日 H:mm
+ja	gregorian	dddddd	d日
+ja	gregorian	ddddddHm	d日 H:mm
+ja	gregorian	e	c
+ja	gregorian	eHm	H:mm (e)
+ja	gregorian	ee	cc
+ja	gregorian	eeHm	H:mm (ee)
+ja	gregorian	eee	ccc
+ja	gregorian	eeeHm	H:mm (EEE)
+ja	gregorian	eeee	cccc
+ja	gregorian	eeeeHm	H:mm (EEEE)
+ja	gregorian	eeeee	ccccc
+ja	gregorian	eeeeeHm	H:mm (EEEEE)
+ja	gregorian	eeeeee	cccccc
+ja	gregorian	eeeeeeHm	H:mm (EEEEEE)
+ja	gregorian	g	g日
+ja	gregorian	gHm	g日 H:mm
+ja	gregorian	gg	gg日
+ja	gregorian	ggHm	gg日 H:mm
+ja	gregorian	ggg	ggg日
+ja	gregorian	gggHm	ggg日 H:mm
+ja	gregorian	gggg	gggg日
+ja	gregorian	ggggHm	gggg日 H:mm
+ja	gregorian	ggggg	ggggg日
+ja	gregorian	gggggHm	ggggg日 H:mm
+ja	gregorian	gggggg	gggggg日
+ja	gregorian	ggggggHm	gggggg日 H:mm
+ja	gregorian	hB	BK時
+ja	gregorian	hHm	H:mm
+ja	gregorian	hb	bK時
+ja	gregorian	hhHm	H:mm
+ja	gregorian	hhh	aK時
+ja	gregorian	hhhHm	H:mm
+ja	gregorian	hhhh	aK時
+ja	gregorian	hhhhHm	H:mm
+ja	gregorian	hhhhh	aK時
+ja	gregorian	hhhhhHm	H:mm
+ja	gregorian	hhhhhh	aK時
+ja	gregorian	hhhhhhHm	H:mm
+ja	gregorian	hmS	aK:mm:ss.S
+ja	gregorian	hmV	aK:mm V
+ja	gregorian	hmVVVV	aK:mm VVVV
+ja	gregorian	hmX	aK:mm X
+ja	gregorian	hmXXXXX	aK:mm XXXXX
+ja	gregorian	hmZ	aK:mm Z
+ja	gregorian	hmZZZZ	aK:mm ZZZZ
+ja	gregorian	hmsSSS	aK:mm:ss.SSS
+ja	gregorian	hmx	aK:mm x
+ja	gregorian	jHm	H:mm
+ja	gregorian	jjHm	H:mm
+ja	gregorian	jjjHm	H:mm
+ja	gregorian	jjjjHm	H:mm
+ja	gregorian	jjjjjHm	H:mm
+ja	gregorian	jjjjjjHm	H:mm
+ja	gregorian	k	H時
+ja	gregorian	kHm	H:mm
+ja	gregorian	khm	aK:mm
+ja	gregorian	kk	H時
+ja	gregorian	kkHm	H:mm
+ja	gregorian	kkk	H時
+ja	gregorian	kkkHm	H:mm
+ja	gregorian	kkkk	H時
+ja	gregorian	kkkkHm	H:mm
+ja	gregorian	kkkkk	H時
+ja	gregorian	kkkkkHm	H:mm
+ja	gregorian	kkkkkk	H時
+ja	gregorian	kkkkkkHm	H:mm
+ja	gregorian	kms	H:mm:ss
+ja	gregorian	l	M月
+ja	gregorian	lHm	M月 H:mm
+ja	gregorian	ll	MM月
+ja	gregorian	llHm	MM月 H:mm
+ja	gregorian	lll	MMM月
+ja	gregorian	lllHm	MMM月 H:mm
+ja	gregorian	llll	MMMM月
+ja	gregorian	llllHm	MMMM月 H:mm
+ja	gregorian	lllll	MMMMM月
+ja	gregorian	lllllHm	MMMMM月 H:mm
+ja	gregorian	llllll	MMMMMM月
+ja	gregorian	llllllHm	MMMMMM月 H:mm
+ja	gregorian	mS	mm:ss.S
+ja	gregorian	mSS	mm:ss.SS
+ja	gregorian	mSSS	mm:ss.SSS
+ja	gregorian	mmm	m
+ja	gregorian	mmmm	m
+ja	gregorian	mmmmm	m
+ja	gregorian	mmmmmm	m
+ja	gregorian	msS	mm:ss.S
+ja	gregorian	q	q
+ja	gregorian	qHm	q H:mm
+ja	gregorian	qq	qq
+ja	gregorian	qqHm	qq H:mm
+ja	gregorian	qqq	qqq
+ja	gregorian	qqqHm	qqq H:mm
+ja	gregorian	qqqq	qqqq
+ja	gregorian	qqqqHm	qqqq H:mm
+ja	gregorian	qqqqq	qqqqq
+ja	gregorian	qqqqqHm	qqqqq H:mm
+ja	gregorian	qqqqqq	qqqqqq
+ja	gregorian	qqqqqqHm	qqqqqq H:mm
+ja	gregorian	r	y年
+ja	gregorian	rHm	y年 H:mm
+ja	gregorian	rMMMd	y年M月d日
+ja	gregorian	rr	yy年
+ja	gregorian	rrHm	yy年 H:mm
+ja	gregorian	rrr	yyy年
+ja	gregorian	rrrHm	yyy年 H:mm
+ja	gregorian	rrrr	yyyy年
+ja	gregorian	rrrrHm	yyyy年 H:mm
+ja	gregorian	rrrrr	yyyyy年
+ja	gregorian	rrrrrHm	yyyyy年 H:mm
+ja	gregorian	rrrrrr	yyyyyy年
+ja	gregorian	rrrrrrHm	yyyyyy年 H:mm
+ja	gregorian	sHm	H:mm:ss
+ja	gregorian	ssHm	H:mm:ss
+ja	gregorian	sss	s
+ja	gregorian	sssHm	H:mm:ss
+ja	gregorian	ssss	s
+ja	gregorian	ssssHm	H:mm:ss
+ja	gregorian	sssss	s
+ja	gregorian	sssssHm	H:mm:ss
+ja	gregorian	ssssss	s
+ja	gregorian	ssssssHm	H:mm:ss
+ja	gregorian	u	y年
+ja	gregorian	uHm	y年 H:mm
+ja	gregorian	uMMMd	y年M月d日
+ja	gregorian	uu	yy年
+ja	gregorian	uuHm	yy年 H:mm
+ja	gregorian	uuu	yyy年
+ja	gregorian	uuuHm	yyy年 H:mm
+ja	gregorian	uuuu	yyyy年
+ja	gregorian	uuuuHm	yyyy年 H:mm
+ja	gregorian	uuuuu	yyyyy年
+ja	gregorian	uuuuuHm	yyyyy年 H:mm
+ja	gregorian	uuuuuu	yyyyyy年
+ja	gregorian	uuuuuuHm	yyyyyy年 H:mm
+ja	gregorian	vHm	H:mm v
+ja	gregorian	vv	vv
+ja	gregorian	vvHm	H:mm vv
+ja	gregorian	vvv	vvv
+ja	gregorian	vvvHm	H:mm vvv
+ja	gregorian	vvvvHm	H:mm vvvv
+ja	gregorian	vvvvv	vvvvv
+ja	gregorian	vvvvvHm	H:mm vvvvv
+ja	gregorian	vvvvvv	vvvvvv
+ja	gregorian	vvvvvvHm	H:mm vvvvvv
+ja	gregorian	w	w
+ja	gregorian	wHm	w H:mm
+ja	gregorian	ww	ww
+ja	gregorian	wwHm	ww H:mm
+ja	gregorian	www	www
+ja	gregorian	wwwHm	www H:mm
+ja	gregorian	wwww	wwww
+ja	gregorian	wwwwHm	wwww H:mm
+ja	gregorian	wwwww	wwwww
+ja	gregorian	wwwwwHm	wwwww H:mm
+ja	gregorian	wwwwww	wwwwww
+ja	gregorian	wwwwwwHm	wwwwww H:mm
+ja	gregorian	x	x
+ja	gregorian	xHm	H:mm x
+ja	gregorian	xx	xx
+ja	gregorian	xxHm	H:mm xx
+ja	gregorian	xxx	xxx
+ja	gregorian	xxxHm	H:mm xxx
+ja	gregorian	xxxx	xxxx
+ja	gregorian	xxxxHm	H:mm xxxx
+ja	gregorian	xxxxx	xxxxx
+ja	gregorian	xxxxxHm	H:mm xxxxx
+ja	gregorian	xxxxxx	xxxxxx
+ja	gregorian	xxxxxxHm	H:mm xxxxxx
+ja	gregorian	y'q'M	y/M
+ja	gregorian	yD	y年 ├'年の通日': D┤
+ja	gregorian	yHm	y年 H:mm
+ja	gregorian	yMMMMEEEEEd	y年M月d日(EEEEE)
+ja	gregorian	yMMMMEEEEdHmsSSSvvvv	y年M月d日EEEE H:mm:ss.SSS vvvv
+ja	gregorian	yMMMdhmz	y年M月d日 aK:mm z
+ja	gregorian	yMdA	y/M/d A
+ja	gregorian	yMdAA	y/M/d A
+ja	gregorian	yMdAAA	y/M/d A
+ja	gregorian	yMdAAAA	y/M/d A
+ja	gregorian	yMdAAAAA	y/M/d A
+ja	gregorian	yMdAAAAAA	y/M/d A
+ja	gregorian	yMdB	y/M/d B
+ja	gregorian	yMdBB	y/M/d BB
+ja	gregorian	yMdBBB	y/M/d BBB
+ja	gregorian	yMdBBBB	y/M/d BBBB
+ja	gregorian	yMdBBBBB	y/M/d BBBBB
+ja	gregorian	yMdBBBBBB	y/M/d BBBBBB
+ja	gregorian	yMdC	y/M/d H時
+ja	gregorian	yMdCC	y/M/d H時
+ja	gregorian	yMdCCC	y/M/d H時
+ja	gregorian	yMdCCCC	y/M/d H時
+ja	gregorian	yMdCCCCC	y/M/d H時
+ja	gregorian	yMdCCCCCC	y/M/d H時
+ja	gregorian	yMdD	y/M/d ├'年の通日': D┤
+ja	gregorian	yMdDD	y/M/d ├'年の通日': DD┤
+ja	gregorian	yMdDDD	y/M/d ├'年の通日': DDD┤
+ja	gregorian	yMdDDDD	y/M/d ├'年の通日': DDDD┤
+ja	gregorian	yMdDDDDD	y/M/d ├'年の通日': DDDDD┤
+ja	gregorian	yMdDDDDDD	y/M/d ├'年の通日': DDDDDD┤
+ja	gregorian	yMdEE	y/M/d(EEE)
+ja	gregorian	yMdEEE	y/M/d(EEE)
+ja	gregorian	yMdF	y/M/d ├'月の曜日番号': F┤
+ja	gregorian	yMdFF	y/M/d ├'月の曜日番号': FF┤
+ja	gregorian	yMdFFF	y/M/d ├'月の曜日番号': FFF┤
+ja	gregorian	yMdFFFF	y/M/d ├'月の曜日番号': FFFF┤
+ja	gregorian	yMdFFFFF	y/M/d ├'月の曜日番号': FFFFF┤
+ja	gregorian	yMdFFFFFF	y/M/d ├'月の曜日番号': FFFFFF┤
+ja	gregorian	yMdG	Gy/M/d
+ja	gregorian	yMdGG	GGy/M/d
+ja	gregorian	yMdGGG	GGGy/M/d
+ja	gregorian	yMdGGGG	GGGGy/M/d
+ja	gregorian	yMdGGGGG	GGGGGy/M/d
+ja	gregorian	yMdGGGGGG	GGGGGGy/M/d
+ja	gregorian	yMdH	y/M/d H時
+ja	gregorian	yMdHH	y/M/d H時
+ja	gregorian	yMdHHH	y/M/d H時
+ja	gregorian	yMdHHHH	y/M/d H時
+ja	gregorian	yMdHHHHH	y/M/d H時
+ja	gregorian	yMdHHHHHH	y/M/d H時
+ja	gregorian	yMdJ	y/M/d H時
+ja	gregorian	yMdJJ	y/M/d H時
+ja	gregorian	yMdJJJ	y/M/d H時
+ja	gregorian	yMdJJJJ	y/M/d H時
+ja	gregorian	yMdJJJJJ	y/M/d H時
+ja	gregorian	yMdJJJJJJ	y/M/d H時
+ja	gregorian	yMdK	y/M/d aK時
+ja	gregorian	yMdKK	y/M/d aK時
+ja	gregorian	yMdKKK	y/M/d aK時
+ja	gregorian	yMdKKKK	y/M/d aK時
+ja	gregorian	yMdKKKKK	y/M/d aK時
+ja	gregorian	yMdKKKKKK	y/M/d aK時
+ja	gregorian	yMdL	y/M/d
+ja	gregorian	yMdLL	y/MM/d
+ja	gregorian	yMdLLL	y年M月d日
+ja	gregorian	yMdLLLL	y年M月d日
+ja	gregorian	yMdLLLLL	y年M月d日
+ja	gregorian	yMdLLLLLL	y年M月d日
+ja	gregorian	yMdO	y/M/d O
+ja	gregorian	yMdOO	y/M/d OO
+ja	gregorian	yMdOOO	y/M/d OOO
+ja	gregorian	yMdOOOO	y/M/d OOOO
+ja	gregorian	yMdOOOOO	y/M/d OOOOO
+ja	gregorian	yMdOOOOOO	y/M/d OOOOOO
+ja	gregorian	yMdQ	y/M/d ('四半期': Q)
+ja	gregorian	yMdQQ	y/M/d ('四半期': QQ)
+ja	gregorian	yMdQQQ	y/M/d ('四半期': QQQ)
+ja	gregorian	yMdQQQQ	y/M/d ('四半期': QQQQ)
+ja	gregorian	yMdQQQQQ	y/M/d ('四半期': QQQQQ)
+ja	gregorian	yMdQQQQQQ	y/M/d ('四半期': QQQQQQ)
+ja	gregorian	yMdS	y/M/d S
+ja	gregorian	yMdSS	y/M/d SS
+ja	gregorian	yMdSSS	y/M/d SSS
+ja	gregorian	yMdSSSS	y/M/d SSSS
+ja	gregorian	yMdSSSSS	y/M/d SSSSS
+ja	gregorian	yMdSSSSSS	y/M/d SSSSSS
+ja	gregorian	yMdU	y/M/d
+ja	gregorian	yMdUU	y/M/d
+ja	gregorian	yMdUUU	y/M/d
+ja	gregorian	yMdUUUU	y/M/d
+ja	gregorian	yMdUUUUU	y/M/d
+ja	gregorian	yMdUUUUUU	y/M/d
+ja	gregorian	yMdV	y/M/d V
+ja	gregorian	yMdVV	y/M/d VV
+ja	gregorian	yMdVVV	y/M/d VVV
+ja	gregorian	yMdVVVV	y/M/d VVVV
+ja	gregorian	yMdVVVVV	y/M/d VVVVV
+ja	gregorian	yMdVVVVVV	y/M/d VVVVVV
+ja	gregorian	yMdW	y/M/d ├'月の週番号': W┤
+ja	gregorian	yMdWW	y/M/d ├'月の週番号': WW┤
+ja	gregorian	yMdWWW	y/M/d ├'月の週番号': WWW┤
+ja	gregorian	yMdWWWW	y/M/d ├'月の週番号': WWWW┤
+ja	gregorian	yMdWWWWW	y/M/d ├'月の週番号': WWWWW┤
+ja	gregorian	yMdWWWWWW	y/M/d ├'月の週番号': WWWWWW┤
+ja	gregorian	yMdX	y/M/d X
+ja	gregorian	yMdXX	y/M/d XX
+ja	gregorian	yMdXXX	y/M/d XXX
+ja	gregorian	yMdXXXX	y/M/d XXXX
+ja	gregorian	yMdXXXXX	y/M/d XXXXX
+ja	gregorian	yMdXXXXXX	y/M/d XXXXXX
+ja	gregorian	yMdY	Y/M/d
+ja	gregorian	yMdYY	YY/M/d
+ja	gregorian	yMdYYY	YYY/M/d
+ja	gregorian	yMdYYYY	YYYY/M/d
+ja	gregorian	yMdYYYYY	YYYYY/M/d
+ja	gregorian	yMdYYYYYY	YYYYYY/M/d
+ja	gregorian	yMdZ	y/M/d Z
+ja	gregorian	yMdZZ	y/M/d ZZ
+ja	gregorian	yMdZZZ	y/M/d ZZZ
+ja	gregorian	yMdZZZZ	y/M/d ZZZZ
+ja	gregorian	yMdZZZZZ	y/M/d ZZZZZ
+ja	gregorian	yMdZZZZZZ	y/M/d ZZZZZZ
+ja	gregorian	yMda	y/M/d a
+ja	gregorian	yMdaa	y/M/d aa
+ja	gregorian	yMdaaa	y/M/d aaa
+ja	gregorian	yMdaaaa	y/M/d aaaa
+ja	gregorian	yMdaaaaa	y/M/d aaaaa
+ja	gregorian	yMdaaaaaa	y/M/d aaaaaa
+ja	gregorian	yMdb	y/M/d b
+ja	gregorian	yMdbb	y/M/d bb
+ja	gregorian	yMdbbb	y/M/d bbb
+ja	gregorian	yMdbbbb	y/M/d bbbb
+ja	gregorian	yMdbbbbb	y/M/d bbbbb
+ja	gregorian	yMdbbbbbb	y/M/d bbbbbb
+ja	gregorian	yMdc	y/M/d(e)
+ja	gregorian	yMdcc	y/M/d(ee)
+ja	gregorian	yMdccc	y/M/dEEE
+ja	gregorian	yMdcccc	y/M/dEEEE
+ja	gregorian	yMdccccc	y/M/dEEEEE
+ja	gregorian	yMdcccccc	y/M/dEEEEEE
+ja	gregorian	yMde	y/M/d(e)
+ja	gregorian	yMdee	y/M/d(ee)
+ja	gregorian	yMdeee	y/M/dEEE
+ja	gregorian	yMdeeee	y/M/dEEEE
+ja	gregorian	yMdeeeee	y/M/dEEEEE
+ja	gregorian	yMdeeeeee	y/M/dEEEEEE
+ja	gregorian	yMdg	y/M/g
+ja	gregorian	yMdgg	y/M/gg
+ja	gregorian	yMdggg	y/M/ggg
+ja	gregorian	yMdgggg	y/M/gggg
+ja	gregorian	yMdggggg	y/M/ggggg
+ja	gregorian	yMdgggggg	y/M/gggggg
+ja	gregorian	yMdh	y/M/d aK時
+ja	gregorian	yMdhh	y/M/d aK時
+ja	gregorian	yMdhhh	y/M/d aK時
+ja	gregorian	yMdhhhh	y/M/d aK時
+ja	gregorian	yMdhhhhh	y/M/d aK時
+ja	gregorian	yMdhhhhhh	y/M/d aK時
+ja	gregorian	yMdj	y/M/d H時
+ja	gregorian	yMdjj	y/M/d H時
+ja	gregorian	yMdjjj	y/M/d H時
+ja	gregorian	yMdjjjj	y/M/d H時
+ja	gregorian	yMdjjjjj	y/M/d H時
+ja	gregorian	yMdjjjjjj	y/M/d H時
+ja	gregorian	yMdk	y/M/d H時
+ja	gregorian	yMdkk	y/M/d H時
+ja	gregorian	yMdkkk	y/M/d H時
+ja	gregorian	yMdkkkk	y/M/d H時
+ja	gregorian	yMdkkkkk	y/M/d H時
+ja	gregorian	yMdkkkkkk	y/M/d H時
+ja	gregorian	yMdl	y/M/d
+ja	gregorian	yMdll	y/MM/d
+ja	gregorian	yMdlll	y/MMM/d
+ja	gregorian	yMdllll	y/MMMM/d
+ja	gregorian	yMdlllll	y/MMMMM/d
+ja	gregorian	yMdllllll	y/MMMMMM/d
+ja	gregorian	yMdm	y/M/d m
+ja	gregorian	yMdmm	y/M/d m
+ja	gregorian	yMdmmm	y/M/d m
+ja	gregorian	yMdmmmm	y/M/d m
+ja	gregorian	yMdmmmmm	y/M/d m
+ja	gregorian	yMdmmmmmm	y/M/d m
+ja	gregorian	yMdq	y/M/d ('四半期': q)
+ja	gregorian	yMdqq	y/M/d ('四半期': qq)
+ja	gregorian	yMdqqq	y/M/d ('四半期': qqq)
+ja	gregorian	yMdqqqq	y/M/d ('四半期': qqqq)
+ja	gregorian	yMdqqqqq	y/M/d ('四半期': qqqqq)
+ja	gregorian	yMdqqqqqq	y/M/d ('四半期': qqqqqq)
+ja	gregorian	yMdr	y/M/d
+ja	gregorian	yMdrr	yy/M/d
+ja	gregorian	yMdrrr	yyy/M/d
+ja	gregorian	yMdrrrr	yyyy/M/d
+ja	gregorian	yMdrrrrr	yyyyy/M/d
+ja	gregorian	yMdrrrrrr	yyyyyy/M/d
+ja	gregorian	yMds	y/M/d s
+ja	gregorian	yMdss	y/M/d s
+ja	gregorian	yMdsss	y/M/d s
+ja	gregorian	yMdssss	y/M/d s
+ja	gregorian	yMdsssss	y/M/d s
+ja	gregorian	yMdssssss	y/M/d s
+ja	gregorian	yMdu	y/M/d
+ja	gregorian	yMduu	yy/M/d
+ja	gregorian	yMduuu	yyy/M/d
+ja	gregorian	yMduuuu	yyyy/M/d
+ja	gregorian	yMduuuuu	yyyyy/M/d
+ja	gregorian	yMduuuuuu	yyyyyy/M/d
+ja	gregorian	yMdv	y/M/d v
+ja	gregorian	yMdvv	y/M/d vv
+ja	gregorian	yMdvvv	y/M/d vvv
+ja	gregorian	yMdvvvv	y/M/d vvvv
+ja	gregorian	yMdvvvvv	y/M/d vvvvv
+ja	gregorian	yMdvvvvvv	y/M/d vvvvvv
+ja	gregorian	yMdw	y/M/d ('週': w)
+ja	gregorian	yMdww	y/M/d ('週': ww)
+ja	gregorian	yMdwww	y/M/d ('週': www)
+ja	gregorian	yMdwwww	y/M/d ('週': wwww)
+ja	gregorian	yMdwwwww	y/M/d ('週': wwwww)
+ja	gregorian	yMdwwwwww	y/M/d ('週': wwwwww)
+ja	gregorian	yMdx	y/M/d x
+ja	gregorian	yMdxx	y/M/d xx
+ja	gregorian	yMdxxx	y/M/d xxx
+ja	gregorian	yMdxxxx	y/M/d xxxx
+ja	gregorian	yMdxxxxx	y/M/d xxxxx
+ja	gregorian	yMdxxxxxx	y/M/d xxxxxx
+ja	gregorian	yMdz	y/M/d z
+ja	gregorian	yMdzz	y/M/d zz
+ja	gregorian	yMdzzz	y/M/d zzz
+ja	gregorian	yMdzzzz	y/M/d zzzz
+ja	gregorian	yMdzzzzz	y/M/d zzzzz
+ja	gregorian	yMdzzzzzz	y/M/d zzzzzz
+ja	gregorian	yw	
+ja	gregorian	yyHm	yy年 H:mm
+ja	gregorian	yyMMMMd	yy年M月d日
+ja	gregorian	yyy	yyy年
+ja	gregorian	yyyHm	yyy年 H:mm
+ja	gregorian	yyyyHm	yyyy年 H:mm
+ja	gregorian	yyyyMMMd	yyyy年M月d日
+ja	gregorian	yyyyy	yyyyy年
+ja	gregorian	yyyyyHm	yyyyy年 H:mm
+ja	gregorian	yyyyyy	yyyyyy年
+ja	gregorian	yyyyyyHm	yyyyyy年 H:mm
+ja	gregorian	zHm	H:mm z
+ja	gregorian	zzHm	H:mm zz
+ja	gregorian	zzzHm	H:mm zzz
+ja	gregorian	zzzzHm	H:mm zzzz
+ja	gregorian	zzzzzHm	H:mm zzzzz
+ja	gregorian	zzzzzz	zzzzzz
+ja	gregorian	zzzzzzHm	H:mm zzzzzz
+zh_Hant_TW	gregorian	A	A
+zh_Hant_TW	gregorian	AA	A
+zh_Hant_TW	gregorian	AAA	A
+zh_Hant_TW	gregorian	AAAA	A
+zh_Hant_TW	gregorian	AAAAA	A
+zh_Hant_TW	gregorian	AAAAAA	A
+zh_Hant_TW	gregorian	AAAAAAHm	HH:mm:AA
+zh_Hant_TW	gregorian	AAAAAHm	HH:mm:AA
+zh_Hant_TW	gregorian	AAAAHm	HH:mm:AA
+zh_Hant_TW	gregorian	AAAHm	HH:mm:AA
+zh_Hant_TW	gregorian	AAHm	HH:mm:AA
+zh_Hant_TW	gregorian	AHm	HH:mm:AA
+zh_Hant_TW	gregorian	BB	BB
+zh_Hant_TW	gregorian	BBB	BBB
+zh_Hant_TW	gregorian	BBBBBB	BBBBBB
+zh_Hant_TW	gregorian	BBBBBBHm	HH:mm
+zh_Hant_TW	gregorian	BBBBBHm	HH:mm
+zh_Hant_TW	gregorian	BBBBHm	HH:mm
+zh_Hant_TW	gregorian	BBBHm	HH:mm
+zh_Hant_TW	gregorian	BBHm	HH:mm
+zh_Hant_TW	gregorian	BHm	HH:mm
+zh_Hant_TW	gregorian	CCCCCCHm	HH:mm
+zh_Hant_TW	gregorian	CCCCCHm	HH:mm
+zh_Hant_TW	gregorian	CCCCHm	HH:mm
+zh_Hant_TW	gregorian	CCCHm	HH:mm
+zh_Hant_TW	gregorian	CCHm	HH:mm
+zh_Hant_TW	gregorian	CHm	HH:mm
+zh_Hant_TW	gregorian	D	D
+zh_Hant_TW	gregorian	DD	DD
+zh_Hant_TW	gregorian	DDD	DDD
+zh_Hant_TW	gregorian	DDDD	DDDD
+zh_Hant_TW	gregorian	DDDDD	DDDDD
+zh_Hant_TW	gregorian	DDDDDD	DDDDDD
+zh_Hant_TW	gregorian	DDDDDDHm	DDDDDD HH:mm
+zh_Hant_TW	gregorian	DDDDDHm	DDDDD HH:mm
+zh_Hant_TW	gregorian	DDDDHm	DDDD HH:mm
+zh_Hant_TW	gregorian	DDDHm	DDD HH:mm
+zh_Hant_TW	gregorian	DDHm	DD HH:mm
+zh_Hant_TW	gregorian	DHm	D HH:mm
+zh_Hant_TW	gregorian	EE	ccc
+zh_Hant_TW	gregorian	EEE	ccc
+zh_Hant_TW	gregorian	EEEEEEHm	EEEEEE HH:mm
+zh_Hant_TW	gregorian	EEEEEHm	EEEEE HH:mm
+zh_Hant_TW	gregorian	EEEEHm	EEEE HH:mm
+zh_Hant_TW	gregorian	EEEEd	d EEEE
+zh_Hant_TW	gregorian	EEEEhms	EEEEah:mm:ss
+zh_Hant_TW	gregorian	EEEHm	EEE HH:mm
+zh_Hant_TW	gregorian	EEHm	EEE HH:mm
+zh_Hant_TW	gregorian	EHm	EEE HH:mm
+zh_Hant_TW	gregorian	Ed	d EEE
+zh_Hant_TW	gregorian	Ehm	EEEah:mm
+zh_Hant_TW	gregorian	F	F
+zh_Hant_TW	gregorian	FF	FF
+zh_Hant_TW	gregorian	FFF	FFF
+zh_Hant_TW	gregorian	FFFF	FFFF
+zh_Hant_TW	gregorian	FFFFF	FFFFF
+zh_Hant_TW	gregorian	FFFFFF	FFFFFF
+zh_Hant_TW	gregorian	FFFFFFHm	FFFFFF HH:mm
+zh_Hant_TW	gregorian	FFFFFHm	FFFFF HH:mm
+zh_Hant_TW	gregorian	FFFFHm	FFFF HH:mm
+zh_Hant_TW	gregorian	FFFHm	FFF HH:mm
+zh_Hant_TW	gregorian	FFHm	FF HH:mm
+zh_Hant_TW	gregorian	FHm	F HH:mm
+zh_Hant_TW	gregorian	Fd	F ('日': d日)
+zh_Hant_TW	gregorian	GGGGGG	GGGGGG
+zh_Hant_TW	gregorian	GGGGGGHm	GGGGGG HH:mm
+zh_Hant_TW	gregorian	GGGGGHm	GGGGG HH:mm
+zh_Hant_TW	gregorian	GGGGGy	GGGGGy年
+zh_Hant_TW	gregorian	GGGGHm	GGGG HH:mm
+zh_Hant_TW	gregorian	GGGHm	GGG HH:mm
+zh_Hant_TW	gregorian	GGHm	GG HH:mm
+zh_Hant_TW	gregorian	GHm	G HH:mm
+zh_Hant_TW	gregorian	HB	H時
+zh_Hant_TW	gregorian	HHH	H時
+zh_Hant_TW	gregorian	HHHH	H時
+zh_Hant_TW	gregorian	HHHHH	H時
+zh_Hant_TW	gregorian	HHHHHH	H時
+zh_Hant_TW	gregorian	Hb	H時
+zh_Hant_TW	gregorian	HmsSSSSSS	HH:mm:ss.SSSSSS
+zh_Hant_TW	gregorian	JHm	hh:mm
+zh_Hant_TW	gregorian	JJHm	hh:mm
+zh_Hant_TW	gregorian	JJJHm	hh:mm
+zh_Hant_TW	gregorian	JJJJHm	hh:mm
+zh_Hant_TW	gregorian	JJJJJHm	hh:mm
+zh_Hant_TW	gregorian	JJJJJJHm	hh:mm
+zh_Hant_TW	gregorian	Jms	hh:mm:ss
+zh_Hant_TW	gregorian	K	ah時
+zh_Hant_TW	gregorian	KHm	HH:mm
+zh_Hant_TW	gregorian	KK	ah時
+zh_Hant_TW	gregorian	KKHm	HH:mm
+zh_Hant_TW	gregorian	KKK	ah時
+zh_Hant_TW	gregorian	KKKHm	HH:mm
+zh_Hant_TW	gregorian	KKKK	ah時
+zh_Hant_TW	gregorian	KKKKHm	HH:mm
+zh_Hant_TW	gregorian	KKKKK	ah時
+zh_Hant_TW	gregorian	KKKKKHm	HH:mm
+zh_Hant_TW	gregorian	KKKKKK	ah時
+zh_Hant_TW	gregorian	KKKKKKHm	HH:mm
+zh_Hant_TW	gregorian	Khm	ah:mm
+zh_Hant_TW	gregorian	Kms	ah:mm:ss
+zh_Hant_TW	gregorian	L	M月
+zh_Hant_TW	gregorian	LHm	M月 HH:mm
+zh_Hant_TW	gregorian	LL	MM月
+zh_Hant_TW	gregorian	LLHm	MM月 HH:mm
+zh_Hant_TW	gregorian	LLL	LLL
+zh_Hant_TW	gregorian	LLLHm	LLL HH:mm
+zh_Hant_TW	gregorian	LLLL	LLLL
+zh_Hant_TW	gregorian	LLLLHm	LLLL HH:mm
+zh_Hant_TW	gregorian	LLLLL	LLLLL
+zh_Hant_TW	gregorian	LLLLLHm	LLLLL HH:mm
+zh_Hant_TW	gregorian	LLLLLL	LLLLLL
+zh_Hant_TW	gregorian	LLLLLLHm	LLLLLL HH:mm
+zh_Hant_TW	gregorian	MHm	M月 HH:mm
+zh_Hant_TW	gregorian	MMHm	MM月 HH:mm
+zh_Hant_TW	gregorian	MMMEdjmO	M月d日EEE ah:mm [O]
+zh_Hant_TW	gregorian	MMMHm	LLL HH:mm
+zh_Hant_TW	gregorian	MMMMHm	LLLL HH:mm
+zh_Hant_TW	gregorian	MMMMMHm	LLLLL HH:mm
+zh_Hant_TW	gregorian	MMMMMM	LLLLLL
+zh_Hant_TW	gregorian	MMMMMMHm	LLLLLL HH:mm
+zh_Hant_TW	gregorian	MMMMW	
+zh_Hant_TW	gregorian	MMMd'x'	M月d日
+zh_Hant_TW	gregorian	O	O
+zh_Hant_TW	gregorian	OHm	HH:mm [O]
+zh_Hant_TW	gregorian	OO	OO
+zh_Hant_TW	gregorian	OOHm	HH:mm [OO]
+zh_Hant_TW	gregorian	OOO	OOO
+zh_Hant_TW	gregorian	OOOHm	HH:mm [OOO]
+zh_Hant_TW	gregorian	OOOO	OOOO
+zh_Hant_TW	gregorian	OOOOHm	HH:mm [OOOO]
+zh_Hant_TW	gregorian	OOOOO	OOOOO
+zh_Hant_TW	gregorian	OOOOOHm	HH:mm [OOOOO]
+zh_Hant_TW	gregorian	OOOOOO	OOOOOO
+zh_Hant_TW	gregorian	OOOOOOHm	HH:mm [OOOOOO]
+zh_Hant_TW	gregorian	QHm	Q HH:mm
+zh_Hant_TW	gregorian	QQHm	QQ HH:mm
+zh_Hant_TW	gregorian	QQQHm	QQQ HH:mm
+zh_Hant_TW	gregorian	QQQQHm	QQQQ HH:mm
+zh_Hant_TW	gregorian	QQQQQHm	QQQQQ HH:mm
+zh_Hant_TW	gregorian	QQQQQQ	QQQQQQ
+zh_Hant_TW	gregorian	QQQQQQHm	QQQQQQ HH:mm
+zh_Hant_TW	gregorian	S	S
+zh_Hant_TW	gregorian	SHm	HH:mm:ss.S
+zh_Hant_TW	gregorian	SS	SS
+zh_Hant_TW	gregorian	SSHm	HH:mm:ss.SS
+zh_Hant_TW	gregorian	SSS	SSS
+zh_Hant_TW	gregorian	SSSHm	HH:mm:ss.SSS
+zh_Hant_TW	gregorian	SSSS	SSSS
+zh_Hant_TW	gregorian	SSSSHm	HH:mm:ss.SSSS
+zh_Hant_TW	gregorian	SSSSS	SSSSS
+zh_Hant_TW	gregorian	SSSSSHm	HH:mm:ss.SSSSS
+zh_Hant_TW	gregorian	SSSSSS	SSSSSS
+zh_Hant_TW	gregorian	SSSSSSHm	HH:mm:ss.SSSSSS
+zh_Hant_TW	gregorian	UHm	y年 HH:mm
+zh_Hant_TW	gregorian	UMMMd	y年M月d日
+zh_Hant_TW	gregorian	UU	y年
+zh_Hant_TW	gregorian	UUHm	y年 HH:mm
+zh_Hant_TW	gregorian	UUU	y年
+zh_Hant_TW	gregorian	UUUHm	y年 HH:mm
+zh_Hant_TW	gregorian	UUUUHm	y年 HH:mm
+zh_Hant_TW	gregorian	UUUUU	y年
+zh_Hant_TW	gregorian	UUUUUHm	y年 HH:mm
+zh_Hant_TW	gregorian	UUUUUU	y年
+zh_Hant_TW	gregorian	UUUUUUHm	y年 HH:mm
+zh_Hant_TW	gregorian	V	V
+zh_Hant_TW	gregorian	VHm	HH:mm [V]
+zh_Hant_TW	gregorian	VV	VV
+zh_Hant_TW	gregorian	VVHm	HH:mm [VV]
+zh_Hant_TW	gregorian	VVV	VVV
+zh_Hant_TW	gregorian	VVVHm	HH:mm [VVV]
+zh_Hant_TW	gregorian	VVVV	VVVV
+zh_Hant_TW	gregorian	VVVVHm	HH:mm [VVVV]
+zh_Hant_TW	gregorian	VVVVV	VVVVV
+zh_Hant_TW	gregorian	VVVVVHm	HH:mm [VVVVV]
+zh_Hant_TW	gregorian	VVVVVV	VVVVVV
+zh_Hant_TW	gregorian	VVVVVVHm	HH:mm [VVVVVV]
+zh_Hant_TW	gregorian	W	W
+zh_Hant_TW	gregorian	WHm	W HH:mm
+zh_Hant_TW	gregorian	WW	WW
+zh_Hant_TW	gregorian	WWHm	WW HH:mm
+zh_Hant_TW	gregorian	WWW	WWW
+zh_Hant_TW	gregorian	WWWHm	WWW HH:mm
+zh_Hant_TW	gregorian	WWWW	WWWW
+zh_Hant_TW	gregorian	WWWWHm	WWWW HH:mm
+zh_Hant_TW	gregorian	WWWWW	WWWWW
+zh_Hant_TW	gregorian	WWWWWHm	WWWWW HH:mm
+zh_Hant_TW	gregorian	WWWWWW	WWWWWW
+zh_Hant_TW	gregorian	WWWWWWHm	WWWWWW HH:mm
+zh_Hant_TW	gregorian	X	X
+zh_Hant_TW	gregorian	XHm	HH:mm [X]
+zh_Hant_TW	gregorian	XX	XX
+zh_Hant_TW	gregorian	XXHm	HH:mm [XX]
+zh_Hant_TW	gregorian	XXX	XXX
+zh_Hant_TW	gregorian	XXXHm	HH:mm [XXX]
+zh_Hant_TW	gregorian	XXXX	XXXX
+zh_Hant_TW	gregorian	XXXXHm	HH:mm [XXXX]
+zh_Hant_TW	gregorian	XXXXX	XXXXX
+zh_Hant_TW	gregorian	XXXXXHm	HH:mm [XXXXX]
+zh_Hant_TW	gregorian	XXXXXX	XXXXXX
+zh_Hant_TW	gregorian	XXXXXXHm	HH:mm [XXXXXX]
+zh_Hant_TW	gregorian	Y	Y年
+zh_Hant_TW	gregorian	YHm	Y年 HH:mm
+zh_Hant_TW	gregorian	YMMMd	Y年M月d日
+zh_Hant_TW	gregorian	YY	YY年
+zh_Hant_TW	gregorian	YYHm	YY年 HH:mm
+zh_Hant_TW	gregorian	YYY	YYY年
+zh_Hant_TW	gregorian	YYYHm	YYY年 HH:mm
+zh_Hant_TW	gregorian	YYYY	YYYY年
+zh_Hant_TW	gregorian	YYYYHm	YYYY年 HH:mm
+zh_Hant_TW	gregorian	YYYYY	YYYYY年
+zh_Hant_TW	gregorian	YYYYYHm	YYYYY年 HH:mm
+zh_Hant_TW	gregorian	YYYYYY	YYYYYY年
+zh_Hant_TW	gregorian	YYYYYYHm	YYYYYY年 HH:mm
+zh_Hant_TW	gregorian	Z	Z
+zh_Hant_TW	gregorian	ZHm	HH:mm [Z]
+zh_Hant_TW	gregorian	ZZ	ZZ
+zh_Hant_TW	gregorian	ZZHm	HH:mm [ZZ]
+zh_Hant_TW	gregorian	ZZZ	ZZZ
+zh_Hant_TW	gregorian	ZZZHm	HH:mm [ZZZ]
+zh_Hant_TW	gregorian	ZZZZ	ZZZZ
+zh_Hant_TW	gregorian	ZZZZHm	HH:mm [ZZZZ]
+zh_Hant_TW	gregorian	ZZZZZ	ZZZZZ
+zh_Hant_TW	gregorian	ZZZZZHm	HH:mm [ZZZZZ]
+zh_Hant_TW	gregorian	ZZZZZZ	ZZZZZZ
+zh_Hant_TW	gregorian	ZZZZZZHm	HH:mm [ZZZZZZ]
+zh_Hant_TW	gregorian	a	a
+zh_Hant_TW	gregorian	aHm	HH:mm
+zh_Hant_TW	gregorian	aa	aa
+zh_Hant_TW	gregorian	aaHm	HH:mm
+zh_Hant_TW	gregorian	aaa	aaa
+zh_Hant_TW	gregorian	aaaHm	HH:mm
+zh_Hant_TW	gregorian	aaaa	aaaa
+zh_Hant_TW	gregorian	aaaaHm	HH:mm
+zh_Hant_TW	gregorian	aaaaa	aaaaa
+zh_Hant_TW	gregorian	aaaaaHm	HH:mm
+zh_Hant_TW	gregorian	aaaaaa	aaaaaa
+zh_Hant_TW	gregorian	aaaaaaHm	HH:mm
+zh_Hant_TW	gregorian	b	b
+zh_Hant_TW	gregorian	bHm	HH:mm
+zh_Hant_TW	gregorian	bb	bb
+zh_Hant_TW	gregorian	bbHm	HH:mm
+zh_Hant_TW	gregorian	bbb	bbb
+zh_Hant_TW	gregorian	bbbHm	HH:mm
+zh_Hant_TW	gregorian	bbbb	bbbb
+zh_Hant_TW	gregorian	bbbbHm	HH:mm
+zh_Hant_TW	gregorian	bbbbb	bbbbb
+zh_Hant_TW	gregorian	bbbbbHm	HH:mm
+zh_Hant_TW	gregorian	bbbbbb	bbbbbb
+zh_Hant_TW	gregorian	bbbbbbHm	HH:mm
+zh_Hant_TW	gregorian	bhm	bh:mm
+zh_Hant_TW	gregorian	c	c
+zh_Hant_TW	gregorian	cHm	e HH:mm
+zh_Hant_TW	gregorian	cc	cc
+zh_Hant_TW	gregorian	ccHm	ee HH:mm
+zh_Hant_TW	gregorian	ccc	ccc
+zh_Hant_TW	gregorian	cccHm	EEE HH:mm
+zh_Hant_TW	gregorian	cccc	cccc
+zh_Hant_TW	gregorian	ccccHm	EEEE HH:mm
+zh_Hant_TW	gregorian	ccccc	ccccc
+zh_Hant_TW	gregorian	cccccHm	EEEEE HH:mm
+zh_Hant_TW	gregorian	cccccc	cccccc
+zh_Hant_TW	gregorian	ccccccHm	EEEEEE HH:mm
+zh_Hant_TW	gregorian	dHm	d日 HH:mm
+zh_Hant_TW	gregorian	ddHm	dd日 HH:mm
+zh_Hant_TW	gregorian	ddd	d日
+zh_Hant_TW	gregorian	dddHm	d日 HH:mm
+zh_Hant_TW	gregorian	dddd	d日
+zh_Hant_TW	gregorian	ddddHm	d日 HH:mm
+zh_Hant_TW	gregorian	ddddd	d日
+zh_Hant_TW	gregorian	dddddHm	d日 HH:mm
+zh_Hant_TW	gregorian	dddddd	d日
+zh_Hant_TW	gregorian	ddddddHm	d日 HH:mm
+zh_Hant_TW	gregorian	e	c
+zh_Hant_TW	gregorian	eHm	e HH:mm
+zh_Hant_TW	gregorian	ee	cc
+zh_Hant_TW	gregorian	eeHm	ee HH:mm
+zh_Hant_TW	gregorian	eee	ccc
+zh_Hant_TW	gregorian	eeeHm	EEE HH:mm
+zh_Hant_TW	gregorian	eeee	cccc
+zh_Hant_TW	gregorian	eeeeHm	EEEE HH:mm
+zh_Hant_TW	gregorian	eeeee	ccccc
+zh_Hant_TW	gregorian	eeeeeHm	EEEEE HH:mm
+zh_Hant_TW	gregorian	eeeeee	cccccc
+zh_Hant_TW	gregorian	eeeeeeHm	EEEEEE HH:mm
+zh_Hant_TW	gregorian	g	g日
+zh_Hant_TW	gregorian	gHm	g日 HH:mm
+zh_Hant_TW	gregorian	gg	gg日
+zh_Hant_TW	gregorian	ggHm	gg日 HH:mm
+zh_Hant_TW	gregorian	ggg	ggg日
+zh_Hant_TW	gregorian	gggHm	ggg日 HH:mm
+zh_Hant_TW	gregorian	gggg	gggg日
+zh_Hant_TW	gregorian	ggggHm	gggg日 HH:mm
+zh_Hant_TW	gregorian	ggggg	ggggg日
+zh_Hant_TW	gregorian	gggggHm	ggggg日 HH:mm
+zh_Hant_TW	gregorian	gggggg	gggggg日
+zh_Hant_TW	gregorian	ggggggHm	gggggg日 HH:mm
+zh_Hant_TW	gregorian	hB	Bh時
+zh_Hant_TW	gregorian	hHm	HH:mm
+zh_Hant_TW	gregorian	hb	bh時
+zh_Hant_TW	gregorian	hhHm	HH:mm
+zh_Hant_TW	gregorian	hhh	ah時
+zh_Hant_TW	gregorian	hhhHm	HH:mm
+zh_Hant_TW	gregorian	hhhh	ah時
+zh_Hant_TW	gregorian	hhhhHm	HH:mm
+zh_Hant_TW	gregorian	hhhhh	ah時
+zh_Hant_TW	gregorian	hhhhhHm	HH:mm
+zh_Hant_TW	gregorian	hhhhhh	ah時
+zh_Hant_TW	gregorian	hhhhhhHm	HH:mm
+zh_Hant_TW	gregorian	hmS	ah:mm:ss.S
+zh_Hant_TW	gregorian	hmV	ah:mm [V]
+zh_Hant_TW	gregorian	hmVVVV	ah:mm [VVVV]
+zh_Hant_TW	gregorian	hmX	ah:mm [X]
+zh_Hant_TW	gregorian	hmXXXXX	ah:mm [XXXXX]
+zh_Hant_TW	gregorian	hmZ	ah:mm [Z]
+zh_Hant_TW	gregorian	hmZZZZ	ah:mm [ZZZZ]
+zh_Hant_TW	gregorian	hmsSSS	ah:mm:ss.SSS
+zh_Hant_TW	gregorian	hmx	ah:mm [x]
+zh_Hant_TW	gregorian	jHm	HH:mm
+zh_Hant_TW	gregorian	jjHm	HH:mm
+zh_Hant_TW	gregorian	jjjHm	HH:mm
+zh_Hant_TW	gregorian	jjjjHm	HH:mm
+zh_Hant_TW	gregorian	jjjjjHm	HH:mm
+zh_Hant_TW	gregorian	jjjjjjHm	HH:mm
+zh_Hant_TW	gregorian	k	H時
+zh_Hant_TW	gregorian	kHm	HH:mm
+zh_Hant_TW	gregorian	khm	ah:mm
+zh_Hant_TW	gregorian	kk	H時
+zh_Hant_TW	gregorian	kkHm	HH:mm
+zh_Hant_TW	gregorian	kkk	H時
+zh_Hant_TW	gregorian	kkkHm	HH:mm
+zh_Hant_TW	gregorian	kkkk	H時
+zh_Hant_TW	gregorian	kkkkHm	HH:mm
+zh_Hant_TW	gregorian	kkkkk	H時
+zh_Hant_TW	gregorian	kkkkkHm	HH:mm
+zh_Hant_TW	gregorian	kkkkkk	H時
+zh_Hant_TW	gregorian	kkkkkkHm	HH:mm
+zh_Hant_TW	gregorian	kms	HH:mm:ss
+zh_Hant_TW	gregorian	l	M月
+zh_Hant_TW	gregorian	lHm	M月 HH:mm
+zh_Hant_TW	gregorian	ll	MM月
+zh_Hant_TW	gregorian	llHm	MM月 HH:mm
+zh_Hant_TW	gregorian	lll	MMM月
+zh_Hant_TW	gregorian	lllHm	MMM月 HH:mm
+zh_Hant_TW	gregorian	llll	MMMM月
+zh_Hant_TW	gregorian	llllHm	MMMM月 HH:mm
+zh_Hant_TW	gregorian	lllll	MMMMM月
+zh_Hant_TW	gregorian	lllllHm	MMMMM月 HH:mm
+zh_Hant_TW	gregorian	llllll	MMMMMM月
+zh_Hant_TW	gregorian	llllllHm	MMMMMM月 HH:mm
+zh_Hant_TW	gregorian	mS	mm:ss.S
+zh_Hant_TW	gregorian	mSS	mm:ss.SS
+zh_Hant_TW	gregorian	mSSS	mm:ss.SSS
+zh_Hant_TW	gregorian	mmm	m
+zh_Hant_TW	gregorian	mmmm	m
+zh_Hant_TW	gregorian	mmmmm	m
+zh_Hant_TW	gregorian	mmmmmm	m
+zh_Hant_TW	gregorian	msS	mm:ss.S
+zh_Hant_TW	gregorian	q	q
+zh_Hant_TW	gregorian	qHm	q HH:mm
+zh_Hant_TW	gregorian	qq	qq
+zh_Hant_TW	gregorian	qqHm	qq HH:mm
+zh_Hant_TW	gregorian	qqq	qqq
+zh_Hant_TW	gregorian	qqqHm	qqq HH:mm
+zh_Hant_TW	gregorian	qqqq	qqqq
+zh_Hant_TW	gregorian	qqqqHm	qqqq HH:mm
+zh_Hant_TW	gregorian	qqqqq	qqqqq
+zh_Hant_TW	gregorian	qqqqqHm	qqqqq HH:mm
+zh_Hant_TW	gregorian	qqqqqq	qqqqqq
+zh_Hant_TW	gregorian	qqqqqqHm	qqqqqq HH:mm
+zh_Hant_TW	gregorian	r	y年
+zh_Hant_TW	gregorian	rHm	y年 HH:mm
+zh_Hant_TW	gregorian	rMMMd	y年M月d日
+zh_Hant_TW	gregorian	rr	yy年
+zh_Hant_TW	gregorian	rrHm	yy年 HH:mm
+zh_Hant_TW	gregorian	rrr	yyy年
+zh_Hant_TW	gregorian	rrrHm	yyy年 HH:mm
+zh_Hant_TW	gregorian	rrrr	yyyy年
+zh_Hant_TW	gregorian	rrrrHm	yyyy年 HH:mm
+zh_Hant_TW	gregorian	rrrrr	yyyyy年
+zh_Hant_TW	gregorian	rrrrrHm	yyyyy年 HH:mm
+zh_Hant_TW	gregorian	rrrrrr	yyyyyy年
+zh_Hant_TW	gregorian	rrrrrrHm	yyyyyy年 HH:mm
+zh_Hant_TW	gregorian	sHm	HH:mm:ss
+zh_Hant_TW	gregorian	ssHm	HH:mm:ss
+zh_Hant_TW	gregorian	sss	s
+zh_Hant_TW	gregorian	sssHm	HH:mm:ss
+zh_Hant_TW	gregorian	ssss	s
+zh_Hant_TW	gregorian	ssssHm	HH:mm:ss
+zh_Hant_TW	gregorian	sssss	s
+zh_Hant_TW	gregorian	sssssHm	HH:mm:ss
+zh_Hant_TW	gregorian	ssssss	s
+zh_Hant_TW	gregorian	ssssssHm	HH:mm:ss
+zh_Hant_TW	gregorian	u	y年
+zh_Hant_TW	gregorian	uHm	y年 HH:mm
+zh_Hant_TW	gregorian	uMMMd	y年M月d日
+zh_Hant_TW	gregorian	uu	yy年
+zh_Hant_TW	gregorian	uuHm	yy年 HH:mm
+zh_Hant_TW	gregorian	uuu	yyy年
+zh_Hant_TW	gregorian	uuuHm	yyy年 HH:mm
+zh_Hant_TW	gregorian	uuuu	yyyy年
+zh_Hant_TW	gregorian	uuuuHm	yyyy年 HH:mm
+zh_Hant_TW	gregorian	uuuuu	yyyyy年
+zh_Hant_TW	gregorian	uuuuuHm	yyyyy年 HH:mm
+zh_Hant_TW	gregorian	uuuuuu	yyyyyy年
+zh_Hant_TW	gregorian	uuuuuuHm	yyyyyy年 HH:mm
+zh_Hant_TW	gregorian	vHm	HH:mm [v]
+zh_Hant_TW	gregorian	vv	vv
+zh_Hant_TW	gregorian	vvHm	HH:mm [vv]
+zh_Hant_TW	gregorian	vvv	vvv
+zh_Hant_TW	gregorian	vvvHm	HH:mm [vvv]
+zh_Hant_TW	gregorian	vvvvHm	HH:mm [vvvv]
+zh_Hant_TW	gregorian	vvvvv	vvvvv
+zh_Hant_TW	gregorian	vvvvvHm	HH:mm [vvvvv]
+zh_Hant_TW	gregorian	vvvvvv	vvvvvv
+zh_Hant_TW	gregorian	vvvvvvHm	HH:mm [vvvvvv]
+zh_Hant_TW	gregorian	w	w
+zh_Hant_TW	gregorian	wHm	w HH:mm
+zh_Hant_TW	gregorian	ww	ww
+zh_Hant_TW	gregorian	wwHm	ww HH:mm
+zh_Hant_TW	gregorian	www	www
+zh_Hant_TW	gregorian	wwwHm	www HH:mm
+zh_Hant_TW	gregorian	wwww	wwww
+zh_Hant_TW	gregorian	wwwwHm	wwww HH:mm
+zh_Hant_TW	gregorian	wwwww	wwwww
+zh_Hant_TW	gregorian	wwwwwHm	wwwww HH:mm
+zh_Hant_TW	gregorian	wwwwww	wwwwww
+zh_Hant_TW	gregorian	wwwwwwHm	wwwwww HH:mm
+zh_Hant_TW	gregorian	x	x
+zh_Hant_TW	gregorian	xHm	HH:mm [x]
+zh_Hant_TW	gregorian	xx	xx
+zh_Hant_TW	gregorian	xxHm	HH:mm [xx]
+zh_Hant_TW	gregorian	xxx	xxx
+zh_Hant_TW	gregorian	xxxHm	HH:mm [xxx]
+zh_Hant_TW	gregorian	xxxx	xxxx
+zh_Hant_TW	gregorian	xxxxHm	HH:mm [xxxx]
+zh_Hant_TW	gregorian	xxxxx	xxxxx
+zh_Hant_TW	gregorian	xxxxxHm	HH:mm [xxxxx]
+zh_Hant_TW	gregorian	xxxxxx	xxxxxx
+zh_Hant_TW	gregorian	xxxxxxHm	HH:mm [xxxxxx]
+zh_Hant_TW	gregorian	y'q'M	y/M
+zh_Hant_TW	gregorian	yD	y年 ├'該年第幾天': D┤
+zh_Hant_TW	gregorian	yHm	y年 HH:mm
+zh_Hant_TW	gregorian	yMMMMEEEEEd	y年M月d日 EEEEE
+zh_Hant_TW	gregorian	yMMMMEEEEdHmsSSSvvvv	y年M月d日 EEEE HH:mm:ss.SSS [vvvv]
+zh_Hant_TW	gregorian	yMMMdhmz	y年M月d日 ah:mm [z]
+zh_Hant_TW	gregorian	yMdA	y/M/d A
+zh_Hant_TW	gregorian	yMdAA	y/M/d A
+zh_Hant_TW	gregorian	yMdAAA	y/M/d A
+zh_Hant_TW	gregorian	yMdAAAA	y/M/d A
+zh_Hant_TW	gregorian	yMdAAAAA	y/M/d A
+zh_Hant_TW	gregorian	yMdAAAAAA	y/M/d A
+zh_Hant_TW	gregorian	yMdB	y/M/d B
+zh_Hant_TW	gregorian	yMdBB	y/M/d BB
+zh_Hant_TW	gregorian	yMdBBB	y/M/d BBB
+zh_Hant_TW	gregorian	yMdBBBB	y/M/d BBBB
+zh_Hant_TW	gregorian	yMdBBBBB	y/M/d BBBBB
+zh_Hant_TW	gregorian	yMdBBBBBB	y/M/d BBBBBB
+zh_Hant_TW	gregorian	yMdC	y/M/d Bh時
+zh_Hant_TW	gregorian	yMdCC	y/M/d Bh時
+zh_Hant_TW	gregorian	yMdCCC	y/M/d BBBBh時
+zh_Hant_TW	gregorian	yMdCCCC	y/M/d BBBBh時
+zh_Hant_TW	gregorian	yMdCCCCC	y/M/d BBBBBh時
+zh_Hant_TW	gregorian	yMdCCCCCC	y/M/d BBBBBh時
+zh_Hant_TW	gregorian	yMdD	y/M/d ├'該年第幾天': D┤
+zh_Hant_TW	gregorian	yMdDD	y/M/d ├'該年第幾天': DD┤
+zh_Hant_TW	gregorian	yMdDDD	y/M/d ├'該年第幾天': DDD┤
+zh_Hant_TW	gregorian	yMdDDDD	y/M/d ├'該年第幾天': DDDD┤
+zh_Hant_TW	gregorian	yMdDDDDD	y/M/d ├'該年第幾天': DDDDD┤
+zh_Hant_TW	gregorian	yMdDDDDDD	y/M/d ├'該年第幾天': DDDDDD┤
+zh_Hant_TW	gregorian	yMdEE	y/M/d（EEE）
+zh_Hant_TW	gregorian	yMdEEE	y/M/d（EEE）
+zh_Hant_TW	gregorian	yMdF	y/M/d ├'該月第幾週': F┤
+zh_Hant_TW	gregorian	yMdFF	y/M/d ├'該月第幾週': FF┤
+zh_Hant_TW	gregorian	yMdFFF	y/M/d ├'該月第幾週': FFF┤
+zh_Hant_TW	gregorian	yMdFFFF	y/M/d ├'該月第幾週': FFFF┤
+zh_Hant_TW	gregorian	yMdFFFFF	y/M/d ├'該月第幾週': FFFFF┤
+zh_Hant_TW	gregorian	yMdFFFFFF	y/M/d ├'該月第幾週': FFFFFF┤
+zh_Hant_TW	gregorian	yMdG	G y/M/d
+zh_Hant_TW	gregorian	yMdGG	GG y/M/d
+zh_Hant_TW	gregorian	yMdGGG	GGG y/M/d
+zh_Hant_TW	gregorian	yMdGGGG	GGGG y/M/d
+zh_Hant_TW	gregorian	yMdGGGGG	GGGGG y/M/d
+zh_Hant_TW	gregorian	yMdGGGGGG	GGGGGG y/M/d
+zh_Hant_TW	gregorian	yMdH	y/M/d H時
+zh_Hant_TW	gregorian	yMdHH	y/M/d H時
+zh_Hant_TW	gregorian	yMdHHH	y/M/d H時
+zh_Hant_TW	gregorian	yMdHHHH	y/M/d H時
+zh_Hant_TW	gregorian	yMdHHHHH	y/M/d H時
+zh_Hant_TW	gregorian	yMdHHHHHH	y/M/d H時
+zh_Hant_TW	gregorian	yMdJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdJJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdJJJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdJJJJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdJJJJJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdJJJJJJ	y/M/d h時
+zh_Hant_TW	gregorian	yMdK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdKK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdKKK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdKKKK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdKKKKK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdKKKKKK	y/M/d ah時
+zh_Hant_TW	gregorian	yMdL	y/M/d
+zh_Hant_TW	gregorian	yMdLL	y/MM/d
+zh_Hant_TW	gregorian	yMdLLL	y年M月d日
+zh_Hant_TW	gregorian	yMdLLLL	y年M月d日
+zh_Hant_TW	gregorian	yMdLLLLL	y年M月d日
+zh_Hant_TW	gregorian	yMdLLLLLL	y年M月d日
+zh_Hant_TW	gregorian	yMdO	y/M/d O
+zh_Hant_TW	gregorian	yMdOO	y/M/d OO
+zh_Hant_TW	gregorian	yMdOOO	y/M/d OOO
+zh_Hant_TW	gregorian	yMdOOOO	y/M/d OOOO
+zh_Hant_TW	gregorian	yMdOOOOO	y/M/d OOOOO
+zh_Hant_TW	gregorian	yMdOOOOOO	y/M/d OOOOOO
+zh_Hant_TW	gregorian	yMdQ	y/M/d ('季度': Q)
+zh_Hant_TW	gregorian	yMdQQ	y/M/d ('季度': QQ)
+zh_Hant_TW	gregorian	yMdQQQ	y/M/d ('季度': QQQ)
+zh_Hant_TW	gregorian	yMdQQQQ	y/M/d ('季度': QQQQ)
+zh_Hant_TW	gregorian	yMdQQQQQ	y/M/d ('季度': QQQQQ)
+zh_Hant_TW	gregorian	yMdQQQQQQ	y/M/d ('季度': QQQQQQ)
+zh_Hant_TW	gregorian	yMdS	y/M/d S
+zh_Hant_TW	gregorian	yMdSS	y/M/d SS
+zh_Hant_TW	gregorian	yMdSSS	y/M/d SSS
+zh_Hant_TW	gregorian	yMdSSSS	y/M/d SSSS
+zh_Hant_TW	gregorian	yMdSSSSS	y/M/d SSSSS
+zh_Hant_TW	gregorian	yMdSSSSSS	y/M/d SSSSSS
+zh_Hant_TW	gregorian	yMdU	y/M/d
+zh_Hant_TW	gregorian	yMdUU	y/M/d
+zh_Hant_TW	gregorian	yMdUUU	y/M/d
+zh_Hant_TW	gregorian	yMdUUUU	y/M/d
+zh_Hant_TW	gregorian	yMdUUUUU	y/M/d
+zh_Hant_TW	gregorian	yMdUUUUUU	y/M/d
+zh_Hant_TW	gregorian	yMdV	y/M/d V
+zh_Hant_TW	gregorian	yMdVV	y/M/d VV
+zh_Hant_TW	gregorian	yMdVVV	y/M/d VVV
+zh_Hant_TW	gregorian	yMdVVVV	y/M/d VVVV
+zh_Hant_TW	gregorian	yMdVVVVV	y/M/d VVVVV
+zh_Hant_TW	gregorian	yMdVVVVVV	y/M/d VVVVVV
+zh_Hant_TW	gregorian	yMdW	y/M/d ├'該月第幾週': W┤
+zh_Hant_TW	gregorian	yMdWW	y/M/d ├'該月第幾週': WW┤
+zh_Hant_TW	gregorian	yMdWWW	y/M/d ├'該月第幾週': WWW┤
+zh_Hant_TW	gregorian	yMdWWWW	y/M/d ├'該月第幾週': WWWW┤
+zh_Hant_TW	gregorian	yMdWWWWW	y/M/d ├'該月第幾週': WWWWW┤
+zh_Hant_TW	gregorian	yMdWWWWWW	y/M/d ├'該月第幾週': WWWWWW┤
+zh_Hant_TW	gregorian	yMdX	y/M/d X
+zh_Hant_TW	gregorian	yMdXX	y/M/d XX
+zh_Hant_TW	gregorian	yMdXXX	y/M/d XXX
+zh_Hant_TW	gregorian	yMdXXXX	y/M/d XXXX
+zh_Hant_TW	gregorian	yMdXXXXX	y/M/d XXXXX
+zh_Hant_TW	gregorian	yMdXXXXXX	y/M/d XXXXXX
+zh_Hant_TW	gregorian	yMdY	Y/M/d
+zh_Hant_TW	gregorian	yMdYY	YY/M/d
+zh_Hant_TW	gregorian	yMdYYY	YYY/M/d
+zh_Hant_TW	gregorian	yMdYYYY	YYYY/M/d
+zh_Hant_TW	gregorian	yMdYYYYY	YYYYY/M/d
+zh_Hant_TW	gregorian	yMdYYYYYY	YYYYYY/M/d
+zh_Hant_TW	gregorian	yMdZ	y/M/d Z
+zh_Hant_TW	gregorian	yMdZZ	y/M/d ZZ
+zh_Hant_TW	gregorian	yMdZZZ	y/M/d ZZZ
+zh_Hant_TW	gregorian	yMdZZZZ	y/M/d ZZZZ
+zh_Hant_TW	gregorian	yMdZZZZZ	y/M/d ZZZZZ
+zh_Hant_TW	gregorian	yMdZZZZZZ	y/M/d ZZZZZZ
+zh_Hant_TW	gregorian	yMda	y/M/d a
+zh_Hant_TW	gregorian	yMdaa	y/M/d aa
+zh_Hant_TW	gregorian	yMdaaa	y/M/d aaa
+zh_Hant_TW	gregorian	yMdaaaa	y/M/d aaaa
+zh_Hant_TW	gregorian	yMdaaaaa	y/M/d aaaaa
+zh_Hant_TW	gregorian	yMdaaaaaa	y/M/d aaaaaa
+zh_Hant_TW	gregorian	yMdb	y/M/d b
+zh_Hant_TW	gregorian	yMdbb	y/M/d bb
+zh_Hant_TW	gregorian	yMdbbb	y/M/d bbb
+zh_Hant_TW	gregorian	yMdbbbb	y/M/d bbbb
+zh_Hant_TW	gregorian	yMdbbbbb	y/M/d bbbbb
+zh_Hant_TW	gregorian	yMdbbbbbb	y/M/d bbbbbb
+zh_Hant_TW	gregorian	yMdc	y/M/d（e）
+zh_Hant_TW	gregorian	yMdcc	y/M/d（ee）
+zh_Hant_TW	gregorian	yMdccc	y年M月d日 EEE
+zh_Hant_TW	gregorian	yMdcccc	y年M月d日 EEEE
+zh_Hant_TW	gregorian	yMdccccc	y年M月d日 EEEEE
+zh_Hant_TW	gregorian	yMdcccccc	y年M月d日 EEEEEE
+zh_Hant_TW	gregorian	yMde	y/M/d（e）
+zh_Hant_TW	gregorian	yMdee	y/M/d（ee）
+zh_Hant_TW	gregorian	yMdeee	y年M月d日 EEE
+zh_Hant_TW	gregorian	yMdeeee	y年M月d日 EEEE
+zh_Hant_TW	gregorian	yMdeeeee	y年M月d日 EEEEE
+zh_Hant_TW	gregorian	yMdeeeeee	y年M月d日 EEEEEE
+zh_Hant_TW	gregorian	yMdg	y/M/g
+zh_Hant_TW	gregorian	yMdgg	y/M/gg
+zh_Hant_TW	gregorian	yMdggg	y/M/ggg
+zh_Hant_TW	gregorian	yMdgggg	y/M/gggg
+zh_Hant_TW	gregorian	yMdggggg	y/M/ggggg
+zh_Hant_TW	gregorian	yMdgggggg	y/M/gggggg
+zh_Hant_TW	gregorian	yMdh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdhh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdhhh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdhhhh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdhhhhh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdhhhhhh	y/M/d ah時
+zh_Hant_TW	gregorian	yMdj	y/M/d ah時
+zh_Hant_TW	gregorian	yMdjj	y/M/d ah時
+zh_Hant_TW	gregorian	yMdjjj	y/M/d aaaah時
+zh_Hant_TW	gregorian	yMdjjjj	y/M/d aaaah時
+zh_Hant_TW	gregorian	yMdjjjjj	y/M/d aaaaah時
+zh_Hant_TW	gregorian	yMdjjjjjj	y/M/d aaaaah時
+zh_Hant_TW	gregorian	yMdk	y/M/d H時
+zh_Hant_TW	gregorian	yMdkk	y/M/d H時
+zh_Hant_TW	gregorian	yMdkkk	y/M/d H時
+zh_Hant_TW	gregorian	yMdkkkk	y/M/d H時
+zh_Hant_TW	gregorian	yMdkkkkk	y/M/d H時
+zh_Hant_TW	gregorian	yMdkkkkkk	y/M/d H時
+zh_Hant_TW	gregorian	yMdl	y/M/d
+zh_Hant_TW	gregorian	yMdll	y/MM/d
+zh_Hant_TW	gregorian	yMdlll	y/MMM/d
+zh_Hant_TW	gregorian	yMdllll	y/MMMM/d
+zh_Hant_TW	gregorian	yMdlllll	y/MMMMM/d
+zh_Hant_TW	gregorian	yMdllllll	y/MMMMMM/d
+zh_Hant_TW	gregorian	yMdm	y/M/d m
+zh_Hant_TW	gregorian	yMdmm	y/M/d m
+zh_Hant_TW	gregorian	yMdmmm	y/M/d m
+zh_Hant_TW	gregorian	yMdmmmm	y/M/d m
+zh_Hant_TW	gregorian	yMdmmmmm	y/M/d m
+zh_Hant_TW	gregorian	yMdmmmmmm	y/M/d m
+zh_Hant_TW	gregorian	yMdq	y/M/d ('季度': q)
+zh_Hant_TW	gregorian	yMdqq	y/M/d ('季度': qq)
+zh_Hant_TW	gregorian	yMdqqq	y/M/d ('季度': qqq)
+zh_Hant_TW	gregorian	yMdqqqq	y/M/d ('季度': qqqq)
+zh_Hant_TW	gregorian	yMdqqqqq	y/M/d ('季度': qqqqq)
+zh_Hant_TW	gregorian	yMdqqqqqq	y/M/d ('季度': qqqqqq)
+zh_Hant_TW	gregorian	yMdr	y/M/d
+zh_Hant_TW	gregorian	yMdrr	yy/M/d
+zh_Hant_TW	gregorian	yMdrrr	yyy/M/d
+zh_Hant_TW	gregorian	yMdrrrr	yyyy/M/d
+zh_Hant_TW	gregorian	yMdrrrrr	yyyyy/M/d
+zh_Hant_TW	gregorian	yMdrrrrrr	yyyyyy/M/d
+zh_Hant_TW	gregorian	yMds	y/M/d s
+zh_Hant_TW	gregorian	yMdss	y/M/d s
+zh_Hant_TW	gregorian	yMdsss	y/M/d s
+zh_Hant_TW	gregorian	yMdssss	y/M/d s
+zh_Hant_TW	gregorian	yMdsssss	y/M/d s
+zh_Hant_TW	gregorian	yMdssssss	y/M/d s
+zh_Hant_TW	gregorian	yMdu	y/M/d
+zh_Hant_TW	gregorian	yMduu	yy/M/d
+zh_Hant_TW	gregorian	yMduuu	yyy/M/d
+zh_Hant_TW	gregorian	yMduuuu	yyyy/M/d
+zh_Hant_TW	gregorian	yMduuuuu	yyyyy/M/d
+zh_Hant_TW	gregorian	yMduuuuuu	yyyyyy/M/d
+zh_Hant_TW	gregorian	yMdv	y/M/d v
+zh_Hant_TW	gregorian	yMdvv	y/M/d vv
+zh_Hant_TW	gregorian	yMdvvv	y/M/d vvv
+zh_Hant_TW	gregorian	yMdvvvv	y/M/d vvvv
+zh_Hant_TW	gregorian	yMdvvvvv	y/M/d vvvvv
+zh_Hant_TW	gregorian	yMdvvvvvv	y/M/d vvvvvv
+zh_Hant_TW	gregorian	yMdw	y/M/d ('週': w)
+zh_Hant_TW	gregorian	yMdww	y/M/d ('週': ww)
+zh_Hant_TW	gregorian	yMdwww	y/M/d ('週': www)
+zh_Hant_TW	gregorian	yMdwwww	y/M/d ('週': wwww)
+zh_Hant_TW	gregorian	yMdwwwww	y/M/d ('週': wwwww)
+zh_Hant_TW	gregorian	yMdwwwwww	y/M/d ('週': wwwwww)
+zh_Hant_TW	gregorian	yMdx	y/M/d x
+zh_Hant_TW	gregorian	yMdxx	y/M/d xx
+zh_Hant_TW	gregorian	yMdxxx	y/M/d xxx
+zh_Hant_TW	gregorian	yMdxxxx	y/M/d xxxx
+zh_Hant_TW	gregorian	yMdxxxxx	y/M/d xxxxx
+zh_Hant_TW	gregorian	yMdxxxxxx	y/M/d xxxxxx
+zh_Hant_TW	gregorian	yMdz	y/M/d z
+zh_Hant_TW	gregorian	yMdzz	y/M/d zz
+zh_Hant_TW	gregorian	yMdzzz	y/M/d zzz
+zh_Hant_TW	gregorian	yMdzzzz	y/M/d zzzz
+zh_Hant_TW	gregorian	yMdzzzzz	y/M/d zzzzz
+zh_Hant_TW	gregorian	yMdzzzzzz	y/M/d zzzzzz
+zh_Hant_TW	gregorian	yw	
+zh_Hant_TW	gregorian	yyHm	yy年 HH:mm
+zh_Hant_TW	gregorian	yyMMMMd	yy年M月d日
+zh_Hant_TW	gregorian	yyy	yyy年
+zh_Hant_TW	gregorian	yyyHm	yyy年 HH:mm
+zh_Hant_TW	gregorian	yyyyHm	yyyy年 HH:mm
+zh_Hant_TW	gregorian	yyyyMMMd	yyyy年M月d日
+zh_Hant_TW	gregorian	yyyyy	yyyyy年
+zh_Hant_TW	gregorian	yyyyyHm	yyyyy年 HH:mm
+zh_Hant_TW	gregorian	yyyyyy	yyyyyy年
+zh_Hant_TW	gregorian	yyyyyyHm	yyyyyy年 HH:mm
+zh_Hant_TW	gregorian	zHm	HH:mm [z]
+zh_Hant_TW	gregorian	zzHm	HH:mm [zz]
+zh_Hant_TW	gregorian	zzzHm	HH:mm [zzz]
+zh_Hant_TW	gregorian	zzzzHm	HH:mm [zzzz]
+zh_Hant_TW	gregorian	zzzzzHm	HH:mm [zzzzz]
+zh_Hant_TW	gregorian	zzzzzz	zzzzzz
+zh_Hant_TW	gregorian	zzzzzzHm	HH:mm [zzzzzz]
+ar	gregorian	A	A
+ar	gregorian	AA	A
+ar	gregorian	AAA	A
+ar	gregorian	AAAA	A
+ar	gregorian	AAAAA	A
+ar	gregorian	AAAAAA	A
+ar	gregorian	AAAAAAHm	HH:mm:AA
+ar	gregorian	AAAAAHm	HH:mm:AA
+ar	gregorian	AAAAHm	HH:mm:AA
+ar	gregorian	AAAHm	HH:mm:AA
+ar	gregorian	AAHm	HH:mm:AA
+ar	gregorian	AHm	HH:mm:AA
+ar	gregorian	BB	BB
+ar	gregorian	BBB	BBB
+ar	gregorian	BBBBBB	BBBBBB
+ar	gregorian	BBBBBBHm	HH:mm
+ar	gregorian	BBBBBHm	HH:mm
+ar	gregorian	BBBBHm	HH:mm
+ar	gregorian	BBBHm	HH:mm
+ar	gregorian	BBHm	HH:mm
+ar	gregorian	BHm	HH:mm
+ar	gregorian	CCCCCCHm	HH:mm
+ar	gregorian	CCCCCHm	HH:mm
+ar	gregorian	CCCCHm	HH:mm
+ar	gregorian	CCCHm	HH:mm
+ar	gregorian	CCHm	HH:mm
+ar	gregorian	CHm	HH:mm
+ar	gregorian	D	D
+ar	gregorian	DD	DD
+ar	gregorian	DDD	DDD
+ar	gregorian	DDDD	DDDD
+ar	gregorian	DDDDD	DDDDD
+ar	gregorian	DDDDDD	DDDDDD
+ar	gregorian	DDDDDDHm	DDDDDD، HH:mm
+ar	gregorian	DDDDDHm	DDDDD، HH:mm
+ar	gregorian	DDDDHm	DDDD، HH:mm
+ar	gregorian	DDDHm	DDD، HH:mm
+ar	gregorian	DDHm	DD، HH:mm
+ar	gregorian	DHm	D، HH:mm
+ar	gregorian	EE	ccc
+ar	gregorian	EEE	ccc
+ar	gregorian	EEEEEEHm	EEEEEE HH:mm
+ar	gregorian	EEEEEHm	EEEEE HH:mm
+ar	gregorian	EEEEHm	EEEE HH:mm
+ar	gregorian	EEEEd	EEEE، d
+ar	gregorian	EEEEhms	EEEE h:mm:ss a
+ar	gregorian	EEEHm	EEE HH:mm
+ar	gregorian	EEHm	EEE HH:mm
+ar	gregorian	EHm	EEE HH:mm
+ar	gregorian	Ed	EEE، d
+ar	gregorian	Ehm	EEE h:mm a
+ar	gregorian	F	F
+ar	gregorian	FF	FF
+ar	gregorian	FFF	FFF
+ar	gregorian	FFFF	FFFF
+ar	gregorian	FFFFF	FFFFF
+ar	gregorian	FFFFFF	FFFFFF
+ar	gregorian	FFFFFFHm	FFFFFF، HH:mm
+ar	gregorian	FFFFFHm	FFFFF، HH:mm
+ar	gregorian	FFFFHm	FFFF، HH:mm
+ar	gregorian	FFFHm	FFF، HH:mm
+ar	gregorian	FFHm	FF، HH:mm
+ar	gregorian	FHm	F، HH:mm
+ar	gregorian	Fd	F ('يوم': d)
+ar	gregorian	GGGGGG	GGGGGG
+ar	gregorian	GGGGGGHm	GGGGGG، HH:mm
+ar	gregorian	GGGGGHm	GGGGG، HH:mm
+ar	gregorian	GGGGGy	y GGGGG
+ar	gregorian	GGGGHm	GGGG، HH:mm
+ar	gregorian	GGGHm	GGG، HH:mm
+ar	gregorian	GGHm	GG، HH:mm
+ar	gregorian	GHm	G، HH:mm
+ar	gregorian	HB	HH
+ar	gregorian	HHH	HH
+ar	gregorian	HHHH	HH
+ar	gregorian	HHHHH	HH
+ar	gregorian	HHHHHH	HH
+ar	gregorian	Hb	HH
+ar	gregorian	HmsSSSSSS	HH:mm:ss.SSSSSS
+ar	gregorian	JHm	hh:mm
+ar	gregorian	JJHm	hh:mm
+ar	gregorian	JJJHm	hh:mm
+ar	gregorian	JJJJHm	hh:mm
+ar	gregorian	JJJJJHm	hh:mm
+ar	gregorian	JJJJJJHm	hh:mm
+ar	gregorian	Jms	hh:mm:ss
+ar	gregorian	K	h a
+ar	gregorian	KHm	HH:mm
+ar	gregorian	KK	h a
+ar	gregorian	KKHm	HH:mm
+ar	gregorian	KKK	h a
+ar	gregorian	KKKHm	HH:mm
+ar	gregorian	KKKK	h a
+ar	gregorian	KKKKHm	HH:mm
+ar	gregorian	KKKKK	h a
+ar	gregorian	KKKKKHm	HH:mm
+ar	gregorian	KKKKKK	h a
+ar	gregorian	KKKKKKHm	HH:mm
+ar	gregorian	Khm	h:mm a
+ar	gregorian	Kms	h:mm:ss a
+ar	gregorian	L	L
+ar	gregorian	LHm	L، HH:mm
+ar	gregorian	LL	LL
+ar	gregorian	LLHm	LL، HH:mm
+ar	gregorian	LLL	LLL
+ar	gregorian	LLLHm	LLL، HH:mm
+ar	gregorian	LLLL	LLLL
+ar	gregorian	LLLLHm	LLLL في HH:mm
+ar	gregorian	LLLLL	LLLLL
+ar	gregorian	LLLLLHm	LLLLL، HH:mm
+ar	gregorian	LLLLLL	LLLLLL
+ar	gregorian	LLLLLLHm	LLLLLL، HH:mm
+ar	gregorian	MHm	L، HH:mm
+ar	gregorian	MMHm	LL، HH:mm
+ar	gregorian	MMMEdjmO	EEE، d MMM، h:mm a O
+ar	gregorian	MMMHm	LLL، HH:mm
+ar	gregorian	MMMMHm	LLLL في HH:mm
+ar	gregorian	MMMMMHm	LLLLL، HH:mm
+ar	gregorian	MMMMMM	LLLLLL
+ar	gregorian	MMMMMMHm	LLLLLL، HH:mm
+ar	gregorian	MMMMW	
+ar	gregorian	MMMd'x'	d MMM
+ar	gregorian	O	O
+ar	gregorian	OHm	HH:mm O
+ar	gregorian	OO	OO
+ar	gregorian	OOHm	HH:mm OO
+ar	gregorian	OOO	OOO
+ar	gregorian	OOOHm	HH:mm OOO
+ar	gregorian	OOOO	OOOO
+ar	gregorian	OOOOHm	HH:mm OOOO
+ar	gregorian	OOOOO	OOOOO
+ar	gregorian	OOOOOHm	HH:mm OOOOO
+ar	gregorian	OOOOOO	OOOOOO
+ar	gregorian	OOOOOOHm	HH:mm OOOOOO
+ar	gregorian	QHm	Q، HH:mm
+ar	gregorian	QQHm	QQ، HH:mm
+ar	gregorian	QQQHm	QQQ، HH:mm
+ar	gregorian	QQQQHm	QQQQ، HH:mm
+ar	gregorian	QQQQQHm	QQQQQ، HH:mm
+ar	gregorian	QQQQQQ	QQQQQQ
+ar	gregorian	QQQQQQHm	QQQQQQ، HH:mm
+ar	gregorian	S	S
+ar	gregorian	SHm	HH:mm:ss.S
+ar	gregorian	SS	SS
+ar	gregorian	SSHm	HH:mm:ss.SS
+ar	gregorian	SSS	SSS
+ar	gregorian	SSSHm	HH:mm:ss.SSS
+ar	gregorian	SSSS	SSSS
+ar	gregorian	SSSSHm	HH:mm:ss.SSSS
+ar	gregorian	SSSSS	SSSSS
+ar	gregorian	SSSSSHm	HH:mm:ss.SSSSS
+ar	gregorian	SSSSSS	SSSSSS
+ar	gregorian	SSSSSSHm	HH:mm:ss.SSSSSS
+ar	gregorian	UHm	y، HH:mm
+ar	gregorian	UMMMd	d MMM y
+ar	gregorian	UU	y
+ar	gregorian	UUHm	y، HH:mm
+ar	gregorian	UUU	y
+ar	gregorian	UUUHm	y، HH:mm
+ar	gregorian	UUUUHm	y، HH:mm
+ar	gregorian	UUUUU	y
+ar	gregorian	UUUUUHm	y، HH:mm
+ar	gregorian	UUUUUU	y
+ar	gregorian	UUUUUUHm	y، HH:mm
+ar	gregorian	V	V
+ar	gregorian	VHm	HH:mm V
+ar	gregorian	VV	VV
+ar	gregorian	VVHm	HH:mm VV
+ar	gregorian	VVV	VVV
+ar	gregorian	VVVHm	HH:mm VVV
+ar	gregorian	VVVV	VVVV
+ar	gregorian	VVVVHm	HH:mm VVVV
+ar	gregorian	VVVVV	VVVVV
+ar	gregorian	VVVVVHm	HH:mm VVVVV
+ar	gregorian	VVVVVV	VVVVVV
+ar	gregorian	VVVVVVHm	HH:mm VVVVVV
+ar	gregorian	W	W
+ar	gregorian	WHm	W، HH:mm
+ar	gregorian	WW	WW
+ar	gregorian	WWHm	WW، HH:mm
+ar	gregorian	WWW	WWW
+ar	gregorian	WWWHm	WWW، HH:mm
+ar	gregorian	WWWW	WWWW
+ar	gregorian	WWWWHm	WWWW، HH:mm
+ar	gregorian	WWWWW	WWWWW
+ar	gregorian	WWWWWHm	WWWWW، HH:mm
+ar	gregorian	WWWWWW	WWWWWW
+ar	gregorian	WWWWWWHm	WWWWWW، HH:mm
+ar	gregorian	X	X
+ar	gregorian	XHm	HH:mm X
+ar	gregorian	XX	XX
+ar	gregorian	XXHm	HH:mm XX
+ar	gregorian	XXX	XXX
+ar	gregorian	XXXHm	HH:mm XXX
+ar	gregorian	XXXX	XXXX
+ar	gregorian	XXXXHm	HH:mm XXXX
+ar	gregorian	XXXXX	XXXXX
+ar	gregorian	XXXXXHm	HH:mm XXXXX
+ar	gregorian	XXXXXX	XXXXXX
+ar	gregorian	XXXXXXHm	HH:mm XXXXXX
+ar	gregorian	Y	Y
+ar	gregorian	YHm	Y، HH:mm
+ar	gregorian	YMMMd	d MMM Y
+ar	gregorian	YY	YY
+ar	gregorian	YYHm	YY، HH:mm
+ar	gregorian	YYY	YYY
+ar	gregorian	YYYHm	YYY، HH:mm
+ar	gregorian	YYYY	YYYY
+ar	gregorian	YYYYHm	YYYY، HH:mm
+ar	gregorian	YYYYY	YYYYY
+ar	gregorian	YYYYYHm	YYYYY، HH:mm
+ar	gregorian	YYYYYY	YYYYYY
+ar	gregorian	YYYYYYHm	YYYYYY، HH:mm
+ar	gregorian	Z	Z
+ar	gregorian	ZHm	HH:mm Z
+ar	gregorian	ZZ	ZZ
+ar	gregorian	ZZHm	HH:mm ZZ
+ar	gregorian	ZZZ	ZZZ
+ar	gregorian	ZZZHm	HH:mm ZZZ
+ar	gregorian	ZZZZ	ZZZZ
+ar	gregorian	ZZZZHm	HH:mm ZZZZ
+ar	gregorian	ZZZZZ	ZZZZZ
+ar	gregorian	ZZZZZHm	HH:mm ZZZZZ
+ar	gregorian	ZZZZZZ	ZZZZZZ
+ar	gregorian	ZZZZZZHm	HH:mm ZZZZZZ
+ar	gregorian	a	a
+ar	gregorian	aHm	HH:mm
+ar	gregorian	aa	aa
+ar	gregorian	aaHm	HH:mm
+ar	gregorian	aaa	aaa
+ar	gregorian	aaaHm	HH:mm
+ar	gregorian	aaaa	aaaa
+ar	gregorian	aaaaHm	HH:mm
+ar	gregorian	aaaaa	aaaaa
+ar	gregorian	aaaaaHm	HH:mm
+ar	gregorian	aaaaaa	aaaaaa
+ar	gregorian	aaaaaaHm	HH:mm
+ar	gregorian	b	b
+ar	gregorian	bHm	HH:mm
+ar	gregorian	bb	bb
+ar	gregorian	bbHm	HH:mm
+ar	gregorian	bbb	bbb
+ar	gregorian	bbbHm	HH:mm
+ar	gregorian	bbbb	bbbb
+ar	gregorian	bbbbHm	HH:mm
+ar	gregorian	bbbbb	bbbbb
+ar	gregorian	bbbbbHm	HH:mm
+ar	gregorian	bbbbbb	bbbbbb
+ar	gregorian	bbbbbbHm	HH:mm
+ar	gregorian	bhm	h:mm b
+ar	gregorian	c	c
+ar	gregorian	cHm	e HH:mm
+ar	gregorian	cc	cc
+ar	gregorian	ccHm	ee HH:mm
+ar	gregorian	ccc	ccc
+ar	gregorian	cccHm	EEE HH:mm
+ar	gregorian	cccc	cccc
+ar	gregorian	ccccHm	EEEE HH:mm
+ar	gregorian	ccccc	ccccc
+ar	gregorian	cccccHm	EEEEE HH:mm
+ar	gregorian	cccccc	cccccc
+ar	gregorian	ccccccHm	EEEEEE HH:mm
+ar	gregorian	dHm	d، HH:mm
+ar	gregorian	ddHm	dd، HH:mm
+ar	gregorian	ddd	d
+ar	gregorian	dddHm	d، HH:mm
+ar	gregorian	dddd	d
+ar	gregorian	ddddHm	d، HH:mm
+ar	gregorian	ddddd	d
+ar	gregorian	dddddHm	d، HH:mm
+ar	gregorian	dddddd	d
+ar	gregorian	ddddddHm	d، HH:mm
+ar	gregorian	e	c
+ar	gregorian	eHm	e HH:mm
+ar	gregorian	ee	cc
+ar	gregorian	eeHm	ee HH:mm
+ar	gregorian	eee	ccc
+ar	gregorian	eeeHm	EEE HH:mm
+ar	gregorian	eeee	cccc
+ar	gregorian	eeeeHm	EEEE HH:mm
+ar	gregorian	eeeee	ccccc
+ar	gregorian	eeeeeHm	EEEEE HH:mm
+ar	gregorian	eeeeee	cccccc
+ar	gregorian	eeeeeeHm	EEEEEE HH:mm
+ar	gregorian	g	g
+ar	gregorian	gHm	g، HH:mm
+ar	gregorian	gg	gg
+ar	gregorian	ggHm	gg، HH:mm
+ar	gregorian	ggg	ggg
+ar	gregorian	gggHm	ggg، HH:mm
+ar	gregorian	gggg	gggg
+ar	gregorian	ggggHm	gggg، HH:mm
+ar	gregorian	ggggg	ggggg
+ar	gregorian	gggggHm	ggggg، HH:mm
+ar	gregorian	gggggg	gggggg
+ar	gregorian	ggggggHm	gggggg، HH:mm
+ar	gregorian	hB	h B
+ar	gregorian	hHm	HH:mm
+ar	gregorian	hb	h b
+ar	gregorian	hhHm	HH:mm
+ar	gregorian	hhh	h a
+ar	gregorian	hhhHm	HH:mm
+ar	gregorian	hhhh	h a
+ar	gregorian	hhhhHm	HH:mm
+ar	gregorian	hhhhh	h a
+ar	gregorian	hhhhhHm	HH:mm
+ar	gregorian	hhhhhh	h a
+ar	gregorian	hhhhhhHm	HH:mm
+ar	gregorian	hmS	h:mm:ss.S a
+ar	gregorian	hmV	h:mm a V
+ar	gregorian	hmVVVV	h:mm a VVVV
+ar	gregorian	hmX	h:mm a X
+ar	gregorian	hmXXXXX	h:mm a XXXXX
+ar	gregorian	hmZ	h:mm a Z
+ar	gregorian	hmZZZZ	h:mm a ZZZZ
+ar	gregorian	hmsSSS	h:mm:ss.SSS a
+ar	gregorian	hmx	h:mm a x
+ar	gregorian	jHm	HH:mm
+ar	gregorian	jjHm	HH:mm
+ar	gregorian	jjjHm	HH:mm
+ar	gregorian	jjjjHm	HH:mm
+ar	gregorian	jjjjjHm	HH:mm
+ar	gregorian	jjjjjjHm	HH:mm
+ar	gregorian	k	HH
+ar	gregorian	kHm	HH:mm
+ar	gregorian	khm	h:mm a
+ar	gregorian	kk	HH
+ar	gregorian	kkHm	HH:mm
+ar	gregorian	kkk	HH
+ar	gregorian	kkkHm	HH:mm
+ar	gregorian	kkkk	HH
+ar	gregorian	kkkkHm	HH:mm
+ar	gregorian	kkkkk	HH
+ar	gregorian	kkkkkHm	HH:mm
+ar	gregorian	kkkkkk	HH
+ar	gregorian	kkkkkkHm	HH:mm
+ar	gregorian	kms	HH:mm:ss
+ar	gregorian	l	L
+ar	gregorian	lHm	L، HH:mm
+ar	gregorian	ll	LL
+ar	gregorian	llHm	LL، HH:mm
+ar	gregorian	lll	LLL
+ar	gregorian	lllHm	LLL، HH:mm
+ar	gregorian	llll	LLLL
+ar	gregorian	llllHm	LLLL، HH:mm
+ar	gregorian	lllll	LLLLL
+ar	gregorian	lllllHm	LLLLL، HH:mm
+ar	gregorian	llllll	LLLLLL
+ar	gregorian	llllllHm	LLLLLL، HH:mm
+ar	gregorian	mS	mm:ss.S
+ar	gregorian	mSS	mm:ss.SS
+ar	gregorian	mSSS	mm:ss.SSS
+ar	gregorian	mmm	m
+ar	gregorian	mmmm	m
+ar	gregorian	mmmmm	m
+ar	gregorian	mmmmmm	m
+ar	gregorian	msS	mm:ss.S
+ar	gregorian	q	q
+ar	gregorian	qHm	q، HH:mm
+ar	gregorian	qq	qq
+ar	gregorian	qqHm	qq، HH:mm
+ar	gregorian	qqq	qqq
+ar	gregorian	qqqHm	qqq، HH:mm
+ar	gregorian	qqqq	qqqq
+ar	gregorian	qqqqHm	qqqq، HH:mm
+ar	gregorian	qqqqq	qqqqq
+ar	gregorian	qqqqqHm	qqqqq، HH:mm
+ar	gregorian	qqqqqq	qqqqqq
+ar	gregorian	qqqqqqHm	qqqqqq، HH:mm
+ar	gregorian	r	y
+ar	gregorian	rHm	y، HH:mm
+ar	gregorian	rMMMd	d MMM y
+ar	gregorian	rr	yy
+ar	gregorian	rrHm	yy، HH:mm
+ar	gregorian	rrr	yyy
+ar	gregorian	rrrHm	yyy، HH:mm
+ar	gregorian	rrrr	yyyy
+ar	gregorian	rrrrHm	yyyy، HH:mm
+ar	gregorian	rrrrr	yyyyy
+ar	gregorian	rrrrrHm	yyyyy، HH:mm
+ar	gregorian	rrrrrr	yyyyyy
+ar	gregorian	rrrrrrHm	yyyyyy، HH:mm
+ar	gregorian	sHm	HH:mm:ss
+ar	gregorian	ssHm	HH:mm:ss
+ar	gregorian	sss	s
+ar	gregorian	sssHm	HH:mm:ss
+ar	gregorian	ssss	s
+ar	gregorian	ssssHm	HH:mm:ss
+ar	gregorian	sssss	s
+ar	gregorian	sssssHm	HH:mm:ss
+ar	gregorian	ssssss	s
+ar	gregorian	ssssssHm	HH:mm:ss
+ar	gregorian	u	y
+ar	gregorian	uHm	y، HH:mm
+ar	gregorian	uMMMd	d MMM y
+ar	gregorian	uu	yy
+ar	gregorian	uuHm	yy، HH:mm
+ar	gregorian	uuu	yyy
+ar	gregorian	uuuHm	yyy، HH:mm
+ar	gregorian	uuuu	yyyy
+ar	gregorian	uuuuHm	yyyy، HH:mm
+ar	gregorian	uuuuu	yyyyy
+ar	gregorian	uuuuuHm	yyyyy، HH:mm
+ar	gregorian	uuuuuu	yyyyyy
+ar	gregorian	uuuuuuHm	yyyyyy، HH:mm
+ar	gregorian	vHm	HH:mm v
+ar	gregorian	vv	vv
+ar	gregorian	vvHm	HH:mm vv
+ar	gregorian	vvv	vvv
+ar	gregorian	vvvHm	HH:mm vvv
+ar	gregorian	vvvvHm	HH:mm vvvv
+ar	gregorian	vvvvv	vvvvv
+ar	gregorian	vvvvvHm	HH:mm vvvvv
+ar	gregorian	vvvvvv	vvvvvv
+ar	gregorian	vvvvvvHm	HH:mm vvvvvv
+ar	gregorian	w	w
+ar	gregorian	wHm	w، HH:mm
+ar	gregorian	ww	ww
+ar	gregorian	wwHm	ww، HH:mm
+ar	gregorian	www	www
+ar	gregorian	wwwHm	www، HH:mm
+ar	gregorian	wwww	wwww
+ar	gregorian	wwwwHm	wwww، HH:mm
+ar	gregorian	wwwww	wwwww
+ar	gregorian	wwwwwHm	wwwww، HH:mm
+ar	gregorian	wwwwww	wwwwww
+ar	gregorian	wwwwwwHm	wwwwww، HH:mm
+ar	gregorian	x	x
+ar	gregorian	xHm	HH:mm x
+ar	gregorian	xx	xx
+ar	gregorian	xxHm	HH:mm xx
+ar	gregorian	xxx	xxx
+ar	gregorian	xxxHm	HH:mm xxx
+ar	gregorian	xxxx	xxxx
+ar	gregorian	xxxxHm	HH:mm xxxx
+ar	gregorian	xxxxx	xxxxx
+ar	gregorian	xxxxxHm	HH:mm xxxxx
+ar	gregorian	xxxxxx	xxxxxx
+ar	gregorian	xxxxxxHm	HH:mm xxxxxx
+ar	gregorian	y'q'M	M‏/y
+ar	gregorian	yD	y ├'يوم من السنة': D┤
+ar	gregorian	yHm	y، HH:mm
+ar	gregorian	yMMMMEEEEEd	EEEEE، d MMMM y
+ar	gregorian	yMMMMEEEEdHmsSSSvvvv	EEEE، d MMMM y في HH:mm:ss.SSS vvvv
+ar	gregorian	yMMMdhmz	d MMM y، h:mm a z
+ar	gregorian	yMdA	d‏/M‏/y، A
+ar	gregorian	yMdAA	d‏/M‏/y، A
+ar	gregorian	yMdAAA	d‏/M‏/y، A
+ar	gregorian	yMdAAAA	d‏/M‏/y، A
+ar	gregorian	yMdAAAAA	d‏/M‏/y، A
+ar	gregorian	yMdAAAAAA	d‏/M‏/y، A
+ar	gregorian	yMdB	d‏/M‏/y، B
+ar	gregorian	yMdBB	d‏/M‏/y، BB
+ar	gregorian	yMdBBB	d‏/M‏/y، BBB
+ar	gregorian	yMdBBBB	d‏/M‏/y، BBBB
+ar	gregorian	yMdBBBBB	d‏/M‏/y، BBBBB
+ar	gregorian	yMdBBBBBB	d‏/M‏/y، BBBBBB
+ar	gregorian	yMdC	d‏/M‏/y، h a
+ar	gregorian	yMdCC	d‏/M‏/y، h a
+ar	gregorian	yMdCCC	d‏/M‏/y، h aaaa
+ar	gregorian	yMdCCCC	d‏/M‏/y، h aaaa
+ar	gregorian	yMdCCCCC	d‏/M‏/y، h aaaaa
+ar	gregorian	yMdCCCCCC	d‏/M‏/y، h aaaaa
+ar	gregorian	yMdD	d‏/M‏/y ├'يوم من السنة': D┤
+ar	gregorian	yMdDD	d‏/M‏/y ├'يوم من السنة': DD┤
+ar	gregorian	yMdDDD	d‏/M‏/y ├'يوم من السنة': DDD┤
+ar	gregorian	yMdDDDD	d‏/M‏/y ├'يوم من السنة': DDDD┤
+ar	gregorian	yMdDDDDD	d‏/M‏/y ├'يوم من السنة': DDDDD┤
+ar	gregorian	yMdDDDDDD	d‏/M‏/y ├'يوم من السنة': DDDDDD┤
+ar	gregorian	yMdEE	EEE، d‏/M‏/y
+ar	gregorian	yMdEEE	EEE، d‏/M‏/y
+ar	gregorian	yMdF	d‏/M‏/y ├'يوم عمل من الشهر': F┤
+ar	gregorian	yMdFF	d‏/M‏/y ├'يوم عمل من الشهر': FF┤
+ar	gregorian	yMdFFF	d‏/M‏/y ├'يوم عمل من الشهر': FFF┤
+ar	gregorian	yMdFFFF	d‏/M‏/y ├'يوم عمل من الشهر': FFFF┤
+ar	gregorian	yMdFFFFF	d‏/M‏/y ├'يوم عمل من الشهر': FFFFF┤
+ar	gregorian	yMdFFFFFF	d‏/M‏/y ├'يوم عمل من الشهر': FFFFFF┤
+ar	gregorian	yMdG	dd-MM-y GGGGG
+ar	gregorian	yMdGG	dd-MM-y GG
+ar	gregorian	yMdGGG	dd-MM-y GGG
+ar	gregorian	yMdGGGG	dd-MM-y GGGG
+ar	gregorian	yMdGGGGG	dd-MM-y GGGGG
+ar	gregorian	yMdGGGGGG	dd-MM-y GGGGGG
+ar	gregorian	yMdH	d‏/M‏/y، HH
+ar	gregorian	yMdHH	d‏/M‏/y، HH
+ar	gregorian	yMdHHH	d‏/M‏/y، HH
+ar	gregorian	yMdHHHH	d‏/M‏/y، HH
+ar	gregorian	yMdHHHHH	d‏/M‏/y، HH
+ar	gregorian	yMdHHHHHH	d‏/M‏/y، HH
+ar	gregorian	yMdJ	d‏/M‏/y، hh
+ar	gregorian	yMdJJ	d‏/M‏/y، hh
+ar	gregorian	yMdJJJ	d‏/M‏/y، hh
+ar	gregorian	yMdJJJJ	d‏/M‏/y، hh
+ar	gregorian	yMdJJJJJ	d‏/M‏/y، hh
+ar	gregorian	yMdJJJJJJ	d‏/M‏/y، hh
+ar	gregorian	yMdK	d‏/M‏/y، h a
+ar	gregorian	yMdKK	d‏/M‏/y، h a
+ar	gregorian	yMdKKK	d‏/M‏/y، h a
+ar	gregorian	yMdKKKK	d‏/M‏/y، h a
+ar	gregorian	yMdKKKKK	d‏/M‏/y، h a
+ar	gregorian	yMdKKKKKK	d‏/M‏/y، h a
+ar	gregorian	yMdL	d‏/M‏/y
+ar	gregorian	yMdLL	d‏/MM‏/y
+ar	gregorian	yMdLLL	d MMM y
+ar	gregorian	yMdLLLL	d MMMM y
+ar	gregorian	yMdLLLLL	d MMMMM y
+ar	gregorian	yMdLLLLLL	d MMMMMM y
+ar	gregorian	yMdO	d‏/M‏/y، O
+ar	gregorian	yMdOO	d‏/M‏/y، OO
+ar	gregorian	yMdOOO	d‏/M‏/y، OOO
+ar	gregorian	yMdOOOO	d‏/M‏/y، OOOO
+ar	gregorian	yMdOOOOO	d‏/M‏/y، OOOOO
+ar	gregorian	yMdOOOOOO	d‏/M‏/y، OOOOOO
+ar	gregorian	yMdQ	d‏/M‏/y ('ربع السنة': Q)
+ar	gregorian	yMdQQ	d‏/M‏/y ('ربع السنة': QQ)
+ar	gregorian	yMdQQQ	d‏/M‏/y ('ربع السنة': QQQ)
+ar	gregorian	yMdQQQQ	d‏/M‏/y ('ربع السنة': QQQQ)
+ar	gregorian	yMdQQQQQ	d‏/M‏/y ('ربع السنة': QQQQQ)
+ar	gregorian	yMdQQQQQQ	d‏/M‏/y ('ربع السنة': QQQQQQ)
+ar	gregorian	yMdS	d‏/M‏/y، S
+ar	gregorian	yMdSS	d‏/M‏/y، SS
+ar	gregorian	yMdSSS	d‏/M‏/y، SSS
+ar	gregorian	yMdSSSS	d‏/M‏/y، SSSS
+ar	gregorian	yMdSSSSS	d‏/M‏/y، SSSSS
+ar	gregorian	yMdSSSSSS	d‏/M‏/y، SSSSSS
+ar	gregorian	yMdU	d‏/M‏/y
+ar	gregorian	yMdUU	d‏/M‏/y
+ar	gregorian	yMdUUU	d‏/M‏/y
+ar	gregorian	yMdUUUU	d‏/M‏/y
+ar	gregorian	yMdUUUUU	d‏/M‏/y
+ar	gregorian	yMdUUUUUU	d‏/M‏/y
+ar	gregorian	yMdV	d‏/M‏/y، V
+ar	gregorian	yMdVV	d‏/M‏/y، VV
+ar	gregorian	yMdVVV	d‏/M‏/y، VVV
+ar	gregorian	yMdVVVV	d‏/M‏/y، VVVV
+ar	gregorian	yMdVVVVV	d‏/M‏/y، VVVVV
+ar	gregorian	yMdVVVVVV	d‏/M‏/y، VVVVVV
+ar	gregorian	yMdW	d‏/M‏/y ├'الأسبوع من الشهر': W┤
+ar	gregorian	yMdWW	d‏/M‏/y ├'الأسبوع من الشهر': WW┤
+ar	gregorian	yMdWWW	d‏/M‏/y ├'الأسبوع من الشهر': WWW┤
+ar	gregorian	yMdWWWW	d‏/M‏/y ├'الأسبوع من الشهر': WWWW┤
+ar	gregorian	yMdWWWWW	d‏/M‏/y ├'الأسبوع من الشهر': WWWWW┤
+ar	gregorian	yMdWWWWWW	d‏/M‏/y ├'الأسبوع من الشهر': WWWWWW┤
+ar	gregorian	yMdX	d‏/M‏/y، X
+ar	gregorian	yMdXX	d‏/M‏/y، XX
+ar	gregorian	yMdXXX	d‏/M‏/y، XXX
+ar	gregorian	yMdXXXX	d‏/M‏/y، XXXX
+ar	gregorian	yMdXXXXX	d‏/M‏/y، XXXXX
+ar	gregorian	yMdXXXXXX	d‏/M‏/y، XXXXXX
+ar	gregorian	yMdY	d‏/M‏/Y
+ar	gregorian	yMdYY	d‏/M‏/YY
+ar	gregorian	yMdYYY	d‏/M‏/YYY
+ar	gregorian	yMdYYYY	d‏/M‏/YYYY
+ar	gregorian	yMdYYYYY	d‏/M‏/YYYYY
+ar	gregorian	yMdYYYYYY	d‏/M‏/YYYYYY
+ar	gregorian	yMdZ	d‏/M‏/y، Z
+ar	gregorian	yMdZZ	d‏/M‏/y، ZZ
+ar	gregorian	yMdZZZ	d‏/M‏/y، ZZZ
+ar	gregorian	yMdZZZZ	d‏/M‏/y، ZZZZ
+ar	gregorian	yMdZZZZZ	d‏/M‏/y، ZZZZZ
+ar	gregorian	yMdZZZZZZ	d‏/M‏/y، ZZZZZZ
+ar	gregorian	yMda	d‏/M‏/y، a
+ar	gregorian	yMdaa	d‏/M‏/y، aa
+ar	gregorian	yMdaaa	d‏/M‏/y، aaa
+ar	gregorian	yMdaaaa	d‏/M‏/y، aaaa
+ar	gregorian	yMdaaaaa	d‏/M‏/y، aaaaa
+ar	gregorian	yMdaaaaaa	d‏/M‏/y، aaaaaa
+ar	gregorian	yMdb	d‏/M‏/y، b
+ar	gregorian	yMdbb	d‏/M‏/y، bb
+ar	gregorian	yMdbbb	d‏/M‏/y، bbb
+ar	gregorian	yMdbbbb	d‏/M‏/y، bbbb
+ar	gregorian	yMdbbbbb	d‏/M‏/y، bbbbb
+ar	gregorian	yMdbbbbbb	d‏/M‏/y، bbbbbb
+ar	gregorian	yMdc	e، d‏/M‏/y
+ar	gregorian	yMdcc	ee، d‏/M‏/y
+ar	gregorian	yMdccc	EEE، d‏/M‏/y
+ar	gregorian	yMdcccc	EEEE، d‏/M‏/y
+ar	gregorian	yMdccccc	EEEEE، d‏/M‏/y
+ar	gregorian	yMdcccccc	EEEEEE، d‏/M‏/y
+ar	gregorian	yMde	e، d‏/M‏/y
+ar	gregorian	yMdee	ee، d‏/M‏/y
+ar	gregorian	yMdeee	EEE، d‏/M‏/y
+ar	gregorian	yMdeeee	EEEE، d‏/M‏/y
+ar	gregorian	yMdeeeee	EEEEE، d‏/M‏/y
+ar	gregorian	yMdeeeeee	EEEEEE، d‏/M‏/y
+ar	gregorian	yMdg	g‏/M‏/y
+ar	gregorian	yMdgg	gg‏/M‏/y
+ar	gregorian	yMdggg	ggg‏/M‏/y
+ar	gregorian	yMdgggg	gggg‏/M‏/y
+ar	gregorian	yMdggggg	ggggg‏/M‏/y
+ar	gregorian	yMdgggggg	gggggg‏/M‏/y
+ar	gregorian	yMdh	d‏/M‏/y، h a
+ar	gregorian	yMdhh	d‏/M‏/y، h a
+ar	gregorian	yMdhhh	d‏/M‏/y، h a
+ar	gregorian	yMdhhhh	d‏/M‏/y، h a
+ar	gregorian	yMdhhhhh	d‏/M‏/y، h a
+ar	gregorian	yMdhhhhhh	d‏/M‏/y، h a
+ar	gregorian	yMdj	d‏/M‏/y، h a
+ar	gregorian	yMdjj	d‏/M‏/y، h a
+ar	gregorian	yMdjjj	d‏/M‏/y، h aaaa
+ar	gregorian	yMdjjjj	d‏/M‏/y، h aaaa
+ar	gregorian	yMdjjjjj	d‏/M‏/y، h aaaaa
+ar	gregorian	yMdjjjjjj	d‏/M‏/y، h aaaaa
+ar	gregorian	yMdk	d‏/M‏/y، HH
+ar	gregorian	yMdkk	d‏/M‏/y، HH
+ar	gregorian	yMdkkk	d‏/M‏/y، HH
+ar	gregorian	yMdkkkk	d‏/M‏/y، HH
+ar	gregorian	yMdkkkkk	d‏/M‏/y، HH
+ar	gregorian	yMdkkkkkk	d‏/M‏/y، HH
+ar	gregorian	yMdl	d‏/M‏/y
+ar	gregorian	yMdll	d‏/MM‏/y
+ar	gregorian	yMdlll	d‏/MMM‏/y
+ar	gregorian	yMdllll	d‏/MMMM‏/y
+ar	gregorian	yMdlllll	d‏/MMMMM‏/y
+ar	gregorian	yMdllllll	d‏/MMMMMM‏/y
+ar	gregorian	yMdm	d‏/M‏/y، m
+ar	gregorian	yMdmm	d‏/M‏/y، m
+ar	gregorian	yMdmmm	d‏/M‏/y، m
+ar	gregorian	yMdmmmm	d‏/M‏/y، m
+ar	gregorian	yMdmmmmm	d‏/M‏/y، m
+ar	gregorian	yMdmmmmmm	d‏/M‏/y، m
+ar	gregorian	yMdq	d‏/M‏/y ('ربع السنة': q)
+ar	gregorian	yMdqq	d‏/M‏/y ('ربع السنة': qq)
+ar	gregorian	yMdqqq	d‏/M‏/y ('ربع السنة': qqq)
+ar	gregorian	yMdqqqq	d‏/M‏/y ('ربع السنة': qqqq)
+ar	gregorian	yMdqqqqq	d‏/M‏/y ('ربع السنة': qqqqq)
+ar	gregorian	yMdqqqqqq	d‏/M‏/y ('ربع السنة': qqqqqq)
+ar	gregorian	yMdr	d‏/M‏/y
+ar	gregorian	yMdrr	d‏/M‏/yy
+ar	gregorian	yMdrrr	d‏/M‏/yyy
+ar	gregorian	yMdrrrr	d‏/M‏/yyyy
+ar	gregorian	yMdrrrrr	d‏/M‏/yyyyy
+ar	gregorian	yMdrrrrrr	d‏/M‏/yyyyyy
+ar	gregorian	yMds	d‏/M‏/y، s
+ar	gregorian	yMdss	d‏/M‏/y، s
+ar	gregorian	yMdsss	d‏/M‏/y، s
+ar	gregorian	yMdssss	d‏/M‏/y، s
+ar	gregorian	yMdsssss	d‏/M‏/y، s
+ar	gregorian	yMdssssss	d‏/M‏/y، s
+ar	gregorian	yMdu	d‏/M‏/y
+ar	gregorian	yMduu	d‏/M‏/yy
+ar	gregorian	yMduuu	d‏/M‏/yyy
+ar	gregorian	yMduuuu	d‏/M‏/yyyy
+ar	gregorian	yMduuuuu	d‏/M‏/yyyyy
+ar	gregorian	yMduuuuuu	d‏/M‏/yyyyyy
+ar	gregorian	yMdv	d‏/M‏/y، v
+ar	gregorian	yMdvv	d‏/M‏/y، vv
+ar	gregorian	yMdvvv	d‏/M‏/y، vvv
+ar	gregorian	yMdvvvv	d‏/M‏/y، vvvv
+ar	gregorian	yMdvvvvv	d‏/M‏/y، vvvvv
+ar	gregorian	yMdvvvvvv	d‏/M‏/y، vvvvvv
+ar	gregorian	yMdw	d‏/M‏/y ('الأسبوع': w)
+ar	gregorian	yMdww	d‏/M‏/y ('الأسبوع': ww)
+ar	gregorian	yMdwww	d‏/M‏/y ('الأسبوع': www)
+ar	gregorian	yMdwwww	d‏/M‏/y ('الأسبوع': wwww)
+ar	gregorian	yMdwwwww	d‏/M‏/y ('الأسبوع': wwwww)
+ar	gregorian	yMdwwwwww	d‏/M‏/y ('الأسبوع': wwwwww)
+ar	gregorian	yMdx	d‏/M‏/y، x
+ar	gregorian	yMdxx	d‏/M‏/y، xx
+ar	gregorian	yMdxxx	d‏/M‏/y، xxx
+ar	gregorian	yMdxxxx	d‏/M‏/y، xxxx
+ar	gregorian	yMdxxxxx	d‏/M‏/y، xxxxx
+ar	gregorian	yMdxxxxxx	d‏/M‏/y، xxxxxx
+ar	gregorian	yMdz	d‏/M‏/y، z
+ar	gregorian	yMdzz	d‏/M‏/y، zz
+ar	gregorian	yMdzzz	d‏/M‏/y، zzz
+ar	gregorian	yMdzzzz	d‏/M‏/y، zzzz
+ar	gregorian	yMdzzzzz	d‏/M‏/y، zzzzz
+ar	gregorian	yMdzzzzzz	d‏/M‏/y، zzzzzz
+ar	gregorian	yw	
+ar	gregorian	yyHm	yy، HH:mm
+ar	gregorian	yyMMMMd	d MMMM yy
+ar	gregorian	yyy	yyy
+ar	gregorian	yyyHm	yyy، HH:mm
+ar	gregorian	yyyyHm	yyyy، HH:mm
+ar	gregorian	yyyyMMMd	d MMM yyyy
+ar	gregorian	yyyyy	yyyyy
+ar	gregorian	yyyyyHm	yyyyy، HH:mm
+ar	gregorian	yyyyyy	yyyyyy
+ar	gregorian	yyyyyyHm	yyyyyy، HH:mm
+ar	gregorian	zHm	HH:mm z
+ar	gregorian	zzHm	HH:mm zz
+ar	gregorian	zzzHm	HH:mm zzz
+ar	gregorian	zzzzHm	HH:mm zzzz
+ar	gregorian	zzzzzHm	HH:mm zzzzz
+ar	gregorian	zzzzzz	zzzzzz
+ar	gregorian	zzzzzzHm	HH:mm zzzzzz
+ru	gregorian	A	A
+ru	gregorian	AA	A
+ru	gregorian	AAA	A
+ru	gregorian	AAAA	A
+ru	gregorian	AAAAA	A
+ru	gregorian	AAAAAA	A
+ru	gregorian	AAAAAAHm	HH:mm:AA
+ru	gregorian	AAAAAHm	HH:mm:AA
+ru	gregorian	AAAAHm	HH:mm:AA
+ru	gregorian	AAAHm	HH:mm:AA
+ru	gregorian	AAHm	HH:mm:AA
+ru	gregorian	AHm	HH:mm:AA
+ru	gregorian	BB	BB
+ru	gregorian	BBB	BBB
+ru	gregorian	BBBBBB	BBBBBB
+ru	gregorian	BBBBBBHm	HH:mm
+ru	gregorian	BBBBBHm	HH:mm
+ru	gregorian	BBBBHm	HH:mm
+ru	gregorian	BBBHm	HH:mm
+ru	gregorian	BBHm	HH:mm
+ru	gregorian	BHm	HH:mm
+ru	gregorian	CCCCCCHm	HH:mm
+ru	gregorian	CCCCCHm	HH:mm
+ru	gregorian	CCCCHm	HH:mm
+ru	gregorian	CCCHm	HH:mm
+ru	gregorian	CCHm	HH:mm
+ru	gregorian	CHm	HH:mm
+ru	gregorian	D	D
+ru	gregorian	DD	DD
+ru	gregorian	DDD	DDD
+ru	gregorian	DDDD	DDDD
+ru	gregorian	DDDDD	DDDDD
+ru	gregorian	DDDDDD	DDDDDD
+ru	gregorian	DDDDDDHm	DDDDDD, HH:mm
+ru	gregorian	DDDDDHm	DDDDD, HH:mm
+ru	gregorian	DDDDHm	DDDD, HH:mm
+ru	gregorian	DDDHm	DDD, HH:mm
+ru	gregorian	DDHm	DD, HH:mm
+ru	gregorian	DHm	D, HH:mm
+ru	gregorian	EE	ccc
+ru	gregorian	EEE	ccc
+ru	gregorian	EEEEEEHm	EEEEEE HH:mm
+ru	gregorian	EEEEEHm	EEEEE HH:mm
+ru	gregorian	EEEEHm	EEEE HH:mm
+ru	gregorian	EEEEd	cccc, d
+ru	gregorian	EEEEhms	EEEE h:mm:ss a
+ru	gregorian	EEEHm	EEE HH:mm
+ru	gregorian	EEHm	EEE HH:mm
+ru	gregorian	EHm	EEE HH:mm
+ru	gregorian	Ed	ccc, d
+ru	gregorian	Ehm	EEE h:mm a
+ru	gregorian	F	F
+ru	gregorian	FF	FF
+ru	gregorian	FFF	FFF
+ru	gregorian	FFFF	FFFF
+ru	gregorian	FFFFF	FFFFF
+ru	gregorian	FFFFFF	FFFFFF
+ru	gregorian	FFFFFFHm	FFFFFF, HH:mm
+ru	gregorian	FFFFFHm	FFFFF, HH:mm
+ru	gregorian	FFFFHm	FFFF, HH:mm
+ru	gregorian	FFFHm	FFF, HH:mm
+ru	gregorian	FFHm	FF, HH:mm
+ru	gregorian	FHm	F, HH:mm
+ru	gregorian	Fd	F ('день': d)
+ru	gregorian	GGGGGG	GGGGGG
+ru	gregorian	GGGGGGHm	GGGGGG, HH:mm
+ru	gregorian	GGGGGHm	GGGGG, HH:mm
+ru	gregorian	GGGGGy	y 'г'. GGGGG
+ru	gregorian	GGGGHm	GGGG, HH:mm
+ru	gregorian	GGGHm	GGG, HH:mm
+ru	gregorian	GGHm	GG, HH:mm
+ru	gregorian	GHm	G, HH:mm
+ru	gregorian	HB	H
+ru	gregorian	HHH	H
+ru	gregorian	HHHH	H
+ru	gregorian	HHHHH	H
+ru	gregorian	HHHHHH	H
+ru	gregorian	Hb	H
+ru	gregorian	HmsSSSSSS	HH:mm:ss,SSSSSS
+ru	gregorian	JHm	HH:mm
+ru	gregorian	JJHm	HH:mm
+ru	gregorian	JJJHm	HH:mm
+ru	gregorian	JJJJHm	HH:mm
+ru	gregorian	JJJJJHm	HH:mm
+ru	gregorian	JJJJJJHm	HH:mm
+ru	gregorian	Jms	HH:mm:ss
+ru	gregorian	K	h a
+ru	gregorian	KHm	HH:mm
+ru	gregorian	KK	h a
+ru	gregorian	KKHm	HH:mm
+ru	gregorian	KKK	h a
+ru	gregorian	KKKHm	HH:mm
+ru	gregorian	KKKK	h a
+ru	gregorian	KKKKHm	HH:mm
+ru	gregorian	KKKKK	h a
+ru	gregorian	KKKKKHm	HH:mm
+ru	gregorian	KKKKKK	h a
+ru	gregorian	KKKKKKHm	HH:mm
+ru	gregorian	Khm	h:mm a
+ru	gregorian	Kms	h:mm:ss a
+ru	gregorian	L	L
+ru	gregorian	LHm	L, HH:mm
+ru	gregorian	LL	LL
+ru	gregorian	LLHm	LL, HH:mm
+ru	gregorian	LLL	LLL
+ru	gregorian	LLLHm	LLL, HH:mm
+ru	gregorian	LLLL	LLLL
+ru	gregorian	LLLLHm	LLLL 'в' HH:mm
+ru	gregorian	LLLLL	LLLLL
+ru	gregorian	LLLLLHm	LLLLL, HH:mm
+ru	gregorian	LLLLLL	LLLLLL
+ru	gregorian	LLLLLLHm	LLLLLL, HH:mm
+ru	gregorian	MHm	L, HH:mm
+ru	gregorian	MMHm	LL, HH:mm
+ru	gregorian	MMMEdjmO	ccc, d MMM, HH:mm O
+ru	gregorian	MMMHm	LLL, HH:mm
+ru	gregorian	MMMMHm	LLLL 'в' HH:mm
+ru	gregorian	MMMMMHm	LLLLL, HH:mm
+ru	gregorian	MMMMMM	LLLLLL
+ru	gregorian	MMMMMMHm	LLLLLL, HH:mm
+ru	gregorian	MMMMW	
+ru	gregorian	MMMd'x'	d MMM
+ru	gregorian	O	O
+ru	gregorian	OHm	HH:mm O
+ru	gregorian	OO	OO
+ru	gregorian	OOHm	HH:mm OO
+ru	gregorian	OOO	OOO
+ru	gregorian	OOOHm	HH:mm OOO
+ru	gregorian	OOOO	OOOO
+ru	gregorian	OOOOHm	HH:mm OOOO
+ru	gregorian	OOOOO	OOOOO
+ru	gregorian	OOOOOHm	HH:mm OOOOO
+ru	gregorian	OOOOOO	OOOOOO
+ru	gregorian	OOOOOOHm	HH:mm OOOOOO
+ru	gregorian	QHm	Q, HH:mm
+ru	gregorian	QQHm	QQ, HH:mm
+ru	gregorian	QQQHm	QQQ, HH:mm
+ru	gregorian	QQQQHm	QQQQ, HH:mm
+ru	gregorian	QQQQQHm	QQQQQ, HH:mm
+ru	gregorian	QQQQQQ	QQQQQQ
+ru	gregorian	QQQQQQHm	QQQQQQ, HH:mm
+ru	gregorian	S	S
+ru	gregorian	SHm	HH:mm:ss,S
+ru	gregorian	SS	SS
+ru	gregorian	SSHm	HH:mm:ss,SS
+ru	gregorian	SSS	SSS
+ru	gregorian	SSSHm	HH:mm:ss,SSS
+ru	gregorian	SSSS	SSSS
+ru	gregorian	SSSSHm	HH:mm:ss,SSSS
+ru	gregorian	SSSSS	SSSSS
+ru	gregorian	SSSSSHm	HH:mm:ss,SSSSS
+ru	gregorian	SSSSSS	SSSSSS
+ru	gregorian	SSSSSSHm	HH:mm:ss,SSSSSS
+ru	gregorian	UHm	y, HH:mm
+ru	gregorian	UMMMd	d MMM y 'г'.
+ru	gregorian	UU	y
+ru	gregorian	UUHm	y, HH:mm
+ru	gregorian	UUU	y
+ru	gregorian	UUUHm	y, HH:mm
+ru	gregorian	UUUUHm	y, HH:mm
+ru	gregorian	UUUUU	y
+ru	gregorian	UUUUUHm	y, HH:mm
+ru	gregorian	UUUUUU	y
+ru	gregorian	UUUUUUHm	y, HH:mm
+ru	gregorian	V	V
+ru	gregorian	VHm	HH:mm V
+ru	gregorian	VV	VV
+ru	gregorian	VVHm	HH:mm VV
+ru	gregorian	VVV	VVV
+ru	gregorian	VVVHm	HH:mm VVV
+ru	gregorian	VVVV	VVVV
+ru	gregorian	VVVVHm	HH:mm VVVV
+ru	gregorian	VVVVV	VVVVV
+ru	gregorian	VVVVVHm	HH:mm VVVVV
+ru	gregorian	VVVVVV	VVVVVV
+ru	gregorian	VVVVVVHm	HH:mm VVVVVV
+ru	gregorian	W	W
+ru	gregorian	WHm	W, HH:mm
+ru	gregorian	WW	WW
+ru	gregorian	WWHm	WW, HH:mm
+ru	gregorian	WWW	WWW
+ru	gregorian	WWWHm	WWW, HH:mm
+ru	gregorian	WWWW	WWWW
+ru	gregorian	WWWWHm	WWWW, HH:mm
+ru	gregorian	WWWWW	WWWWW
+ru	gregorian	WWWWWHm	WWWWW, HH:mm
+ru	gregorian	WWWWWW	WWWWWW
+ru	gregorian	WWWWWWHm	WWWWWW, HH:mm
+ru	gregorian	X	X
+ru	gregorian	XHm	HH:mm X
+ru	gregorian	XX	XX
+ru	gregorian	XXHm	HH:mm XX
+ru	gregorian	XXX	XXX
+ru	gregorian	XXXHm	HH:mm XXX
+ru	gregorian	XXXX	XXXX
+ru	gregorian	XXXXHm	HH:mm XXXX
+ru	gregorian	XXXXX	XXXXX
+ru	gregorian	XXXXXHm	HH:mm XXXXX
+ru	gregorian	XXXXXX	XXXXXX
+ru	gregorian	XXXXXXHm	HH:mm XXXXXX
+ru	gregorian	Y	Y
+ru	gregorian	YHm	Y, HH:mm
+ru	gregorian	YMMMd	d MMM Y 'г'.
+ru	gregorian	YY	YY
+ru	gregorian	YYHm	YY, HH:mm
+ru	gregorian	YYY	YYY
+ru	gregorian	YYYHm	YYY, HH:mm
+ru	gregorian	YYYY	YYYY
+ru	gregorian	YYYYHm	YYYY, HH:mm
+ru	gregorian	YYYYY	YYYYY
+ru	gregorian	YYYYYHm	YYYYY, HH:mm
+ru	gregorian	YYYYYY	YYYYYY
+ru	gregorian	YYYYYYHm	YYYYYY, HH:mm
+ru	gregorian	Z	Z
+ru	gregorian	ZHm	HH:mm Z
+ru	gregorian	ZZ	ZZ
+ru	gregorian	ZZHm	HH:mm ZZ
+ru	gregorian	ZZZ	ZZZ
+ru	gregorian	ZZZHm	HH:mm ZZZ
+ru	gregorian	ZZZZ	ZZZZ
+ru	gregorian	ZZZZHm	HH:mm ZZZZ
+ru	gregorian	ZZZZZ	ZZZZZ
+ru	gregorian	ZZZZZHm	HH:mm ZZZZZ
+ru	gregorian	ZZZZZZ	ZZZZZZ
+ru	gregorian	ZZZZZZHm	HH:mm ZZZZZZ
+ru	gregorian	a	a
+ru	gregorian	aHm	HH:mm
+ru	gregorian	aa	aa
+ru	gregorian	aaHm	HH:mm
+ru	gregorian	aaa	aaa
+ru	gregorian	aaaHm	HH:mm
+ru	gregorian	aaaa	aaaa
+ru	gregorian	aaaaHm	HH:mm
+ru	gregorian	aaaaa	aaaaa
+ru	gregorian	aaaaaHm	HH:mm
+ru	gregorian	aaaaaa	aaaaaa
+ru	gregorian	aaaaaaHm	HH:mm
+ru	gregorian	b	b
+ru	gregorian	bHm	HH:mm
+ru	gregorian	bb	bb
+ru	gregorian	bbHm	HH:mm
+ru	gregorian	bbb	bbb
+ru	gregorian	bbbHm	HH:mm
+ru	gregorian	bbbb	bbbb
+ru	gregorian	bbbbHm	HH:mm
+ru	gregorian	bbbbb	bbbbb
+ru	gregorian	bbbbbHm	HH:mm
+ru	gregorian	bbbbbb	bbbbbb
+ru	gregorian	bbbbbbHm	HH:mm
+ru	gregorian	bhm	h:mm b
+ru	gregorian	c	c
+ru	gregorian	cHm	e HH:mm
+ru	gregorian	cc	cc
+ru	gregorian	ccHm	ee HH:mm
+ru	gregorian	ccc	ccc
+ru	gregorian	cccHm	EEE HH:mm
+ru	gregorian	cccc	cccc
+ru	gregorian	ccccHm	EEEE HH:mm
+ru	gregorian	ccccc	ccccc
+ru	gregorian	cccccHm	EEEEE HH:mm
+ru	gregorian	cccccc	cccccc
+ru	gregorian	ccccccHm	EEEEEE HH:mm
+ru	gregorian	dHm	d, HH:mm
+ru	gregorian	ddHm	dd, HH:mm
+ru	gregorian	ddd	d
+ru	gregorian	dddHm	d, HH:mm
+ru	gregorian	dddd	d
+ru	gregorian	ddddHm	d, HH:mm
+ru	gregorian	ddddd	d
+ru	gregorian	dddddHm	d, HH:mm
+ru	gregorian	dddddd	d
+ru	gregorian	ddddddHm	d, HH:mm
+ru	gregorian	e	c
+ru	gregorian	eHm	e HH:mm
+ru	gregorian	ee	cc
+ru	gregorian	eeHm	ee HH:mm
+ru	gregorian	eee	ccc
+ru	gregorian	eeeHm	EEE HH:mm
+ru	gregorian	eeee	cccc
+ru	gregorian	eeeeHm	EEEE HH:mm
+ru	gregorian	eeeee	ccccc
+ru	gregorian	eeeeeHm	EEEEE HH:mm
+ru	gregorian	eeeeee	cccccc
+ru	gregorian	eeeeeeHm	EEEEEE HH:mm
+ru	gregorian	g	g
+ru	gregorian	gHm	g, HH:mm
+ru	gregorian	gg	gg
+ru	gregorian	ggHm	gg, HH:mm
+ru	gregorian	ggg	ggg
+ru	gregorian	gggHm	ggg, HH:mm
+ru	gregorian	gggg	gggg
+ru	gregorian	ggggHm	gggg, HH:mm
+ru	gregorian	ggggg	ggggg
+ru	gregorian	gggggHm	ggggg, HH:mm
+ru	gregorian	gggggg	gggggg
+ru	gregorian	ggggggHm	gggggg, HH:mm
+ru	gregorian	hB	h B
+ru	gregorian	hHm	HH:mm
+ru	gregorian	hb	h b
+ru	gregorian	hhHm	HH:mm
+ru	gregorian	hhh	h a
+ru	gregorian	hhhHm	HH:mm
+ru	gregorian	hhhh	h a
+ru	gregorian	hhhhHm	HH:mm
+ru	gregorian	hhhhh	h a
+ru	gregorian	hhhhhHm	HH:mm
+ru	gregorian	hhhhhh	h a
+ru	gregorian	hhhhhhHm	HH:mm
+ru	gregorian	hmS	h:mm:ss,S a
+ru	gregorian	hmV	h:mm a V
+ru	gregorian	hmVVVV	h:mm a VVVV
+ru	gregorian	hmX	h:mm a X
+ru	gregorian	hmXXXXX	h:mm a XXXXX
+ru	gregorian	hmZ	h:mm a Z
+ru	gregorian	hmZZZZ	h:mm a ZZZZ
+ru	gregorian	hmsSSS	h:mm:ss,SSS a
+ru	gregorian	hmx	h:mm a x
+ru	gregorian	jHm	HH:mm
+ru	gregorian	jjHm	HH:mm
+ru	gregorian	jjjHm	HH:mm
+ru	gregorian	jjjjHm	HH:mm
+ru	gregorian	jjjjjHm	HH:mm
+ru	gregorian	jjjjjjHm	HH:mm
+ru	gregorian	k	H
+ru	gregorian	kHm	HH:mm
+ru	gregorian	khm	h:mm a
+ru	gregorian	kk	H
+ru	gregorian	kkHm	HH:mm
+ru	gregorian	kkk	H
+ru	gregorian	kkkHm	HH:mm
+ru	gregorian	kkkk	H
+ru	gregorian	kkkkHm	HH:mm
+ru	gregorian	kkkkk	H
+ru	gregorian	kkkkkHm	HH:mm
+ru	gregorian	kkkkkk	H
+ru	gregorian	kkkkkkHm	HH:mm
+ru	gregorian	kms	HH:mm:ss
+ru	gregorian	l	L
+ru	gregorian	lHm	L, HH:mm
+ru	gregorian	ll	LL
+ru	gregorian	llHm	LL, HH:mm
+ru	gregorian	lll	LLL
+ru	gregorian	lllHm	LLL, HH:mm
+ru	gregorian	llll	LLLL
+ru	gregorian	llllHm	LLLL, HH:mm
+ru	gregorian	lllll	LLLLL
+ru	gregorian	lllllHm	LLLLL, HH:mm
+ru	gregorian	llllll	LLLLLL
+ru	gregorian	llllllHm	LLLLLL, HH:mm
+ru	gregorian	mS	mm:ss,S
+ru	gregorian	mSS	mm:ss,SS
+ru	gregorian	mSSS	mm:ss,SSS
+ru	gregorian	mmm	m
+ru	gregorian	mmmm	m
+ru	gregorian	mmmmm	m
+ru	gregorian	mmmmmm	m
+ru	gregorian	msS	mm:ss,S
+ru	gregorian	q	q
+ru	gregorian	qHm	q, HH:mm
+ru	gregorian	qq	qq
+ru	gregorian	qqHm	qq, HH:mm
+ru	gregorian	qqq	qqq
+ru	gregorian	qqqHm	qqq, HH:mm
+ru	gregorian	qqqq	qqqq
+ru	gregorian	qqqqHm	qqqq, HH:mm
+ru	gregorian	qqqqq	qqqqq
+ru	gregorian	qqqqqHm	qqqqq, HH:mm
+ru	gregorian	qqqqqq	qqqqqq
+ru	gregorian	qqqqqqHm	qqqqqq, HH:mm
+ru	gregorian	r	y
+ru	gregorian	rHm	y, HH:mm
+ru	gregorian	rMMMd	d MMM y 'г'.
+ru	gregorian	rr	yy
+ru	gregorian	rrHm	yy, HH:mm
+ru	gregorian	rrr	yyy
+ru	gregorian	rrrHm	yyy, HH:mm
+ru	gregorian	rrrr	yyyy
+ru	gregorian	rrrrHm	yyyy, HH:mm
+ru	gregorian	rrrrr	yyyyy
+ru	gregorian	rrrrrHm	yyyyy, HH:mm
+ru	gregorian	rrrrrr	yyyyyy
+ru	gregorian	rrrrrrHm	yyyyyy, HH:mm
+ru	gregorian	sHm	HH:mm:ss
+ru	gregorian	ssHm	HH:mm:ss
+ru	gregorian	sss	s
+ru	gregorian	sssHm	HH:mm:ss
+ru	gregorian	ssss	s
+ru	gregorian	ssssHm	HH:mm:ss
+ru	gregorian	sssss	s
+ru	gregorian	sssssHm	HH:mm:ss
+ru	gregorian	ssssss	s
+ru	gregorian	ssssssHm	HH:mm:ss
+ru	gregorian	u	y
+ru	gregorian	uHm	y, HH:mm
+ru	gregorian	uMMMd	d MMM y 'г'.
+ru	gregorian	uu	yy
+ru	gregorian	uuHm	yy, HH:mm
+ru	gregorian	uuu	yyy
+ru	gregorian	uuuHm	yyy, HH:mm
+ru	gregorian	uuuu	yyyy
+ru	gregorian	uuuuHm	yyyy, HH:mm
+ru	gregorian	uuuuu	yyyyy
+ru	gregorian	uuuuuHm	yyyyy, HH:mm
+ru	gregorian	uuuuuu	yyyyyy
+ru	gregorian	uuuuuuHm	yyyyyy, HH:mm
+ru	gregorian	vHm	HH:mm v
+ru	gregorian	vv	vv
+ru	gregorian	vvHm	HH:mm vv
+ru	gregorian	vvv	vvv
+ru	gregorian	vvvHm	HH:mm vvv
+ru	gregorian	vvvvHm	HH:mm vvvv
+ru	gregorian	vvvvv	vvvvv
+ru	gregorian	vvvvvHm	HH:mm vvvvv
+ru	gregorian	vvvvvv	vvvvvv
+ru	gregorian	vvvvvvHm	HH:mm vvvvvv
+ru	gregorian	w	w
+ru	gregorian	wHm	w, HH:mm
+ru	gregorian	ww	ww
+ru	gregorian	wwHm	ww, HH:mm
+ru	gregorian	www	www
+ru	gregorian	wwwHm	www, HH:mm
+ru	gregorian	wwww	wwww
+ru	gregorian	wwwwHm	wwww, HH:mm
+ru	gregorian	wwwww	wwwww
+ru	gregorian	wwwwwHm	wwwww, HH:mm
+ru	gregorian	wwwwww	wwwwww
+ru	gregorian	wwwwwwHm	wwwwww, HH:mm
+ru	gregorian	x	x
+ru	gregorian	xHm	HH:mm x
+ru	gregorian	xx	xx
+ru	gregorian	xxHm	HH:mm xx
+ru	gregorian	xxx	xxx
+ru	gregorian	xxxHm	HH:mm xxx
+ru	gregorian	xxxx	xxxx
+ru	gregorian	xxxxHm	HH:mm xxxx
+ru	gregorian	xxxxx	xxxxx
+ru	gregorian	xxxxxHm	HH:mm xxxxx
+ru	gregorian	xxxxxx	xxxxxx
+ru	gregorian	xxxxxxHm	HH:mm xxxxxx
+ru	gregorian	y'q'M	MM.y
+ru	gregorian	yD	y ├'день года': D┤
+ru	gregorian	yHm	y, HH:mm
+ru	gregorian	yMMMMEEEEEd	EEEEE, d MMMM y 'г'.
+ru	gregorian	yMMMMEEEEdHmsSSSvvvv	EEEE, d MMMM y 'г'. 'в' HH:mm:ss,SSS vvvv
+ru	gregorian	yMMMdhmz	d MMM y 'г'., h:mm a z
+ru	gregorian	yMdA	dd.MM.y, A
+ru	gregorian	yMdAA	dd.MM.y, A
+ru	gregorian	yMdAAA	dd.MM.y, A
+ru	gregorian	yMdAAAA	dd.MM.y, A
+ru	gregorian	yMdAAAAA	dd.MM.y, A
+ru	gregorian	yMdAAAAAA	dd.MM.y, A
+ru	gregorian	yMdB	dd.MM.y, B
+ru	gregorian	yMdBB	dd.MM.y, BB
+ru	gregorian	yMdBBB	dd.MM.y, BBB
+ru	gregorian	yMdBBBB	dd.MM.y, BBBB
+ru	gregorian	yMdBBBBB	dd.MM.y, BBBBB
+ru	gregorian	yMdBBBBBB	dd.MM.y, BBBBBB
+ru	gregorian	yMdC	dd.MM.y, H
+ru	gregorian	yMdCC	dd.MM.y, H
+ru	gregorian	yMdCCC	dd.MM.y, H
+ru	gregorian	yMdCCCC	dd.MM.y, H
+ru	gregorian	yMdCCCCC	dd.MM.y, H
+ru	gregorian	yMdCCCCCC	dd.MM.y, H
+ru	gregorian	yMdD	dd.MM.y ├'день года': D┤
+ru	gregorian	yMdDD	dd.MM.y ├'день года': DD┤
+ru	gregorian	yMdDDD	dd.MM.y ├'день года': DDD┤
+ru	gregorian	yMdDDDD	dd.MM.y ├'день года': DDDD┤
+ru	gregorian	yMdDDDDD	dd.MM.y ├'день года': DDDDD┤
+ru	gregorian	yMdDDDDDD	dd.MM.y ├'день года': DDDDDD┤
+ru	gregorian	yMdEE	ccc, dd.MM.y
+ru	gregorian	yMdEEE	ccc, dd.MM.y
+ru	gregorian	yMdF	dd.MM.y ├'день недели в месяце': F┤
+ru	gregorian	yMdFF	dd.MM.y ├'день недели в месяце': FF┤
+ru	gregorian	yMdFFF	dd.MM.y ├'день недели в месяце': FFF┤
+ru	gregorian	yMdFFFF	dd.MM.y ├'день недели в месяце': FFFF┤
+ru	gregorian	yMdFFFFF	dd.MM.y ├'день недели в месяце': FFFFF┤
+ru	gregorian	yMdFFFFFF	dd.MM.y ├'день недели в месяце': FFFFFF┤
+ru	gregorian	yMdG	dd.MM.y GGGGG
+ru	gregorian	yMdGG	dd.MM.y GG
+ru	gregorian	yMdGGG	dd.MM.y GGG
+ru	gregorian	yMdGGGG	dd.MM.y GGGG
+ru	gregorian	yMdGGGGG	dd.MM.y GGGGG
+ru	gregorian	yMdGGGGGG	dd.MM.y GGGGGG
+ru	gregorian	yMdH	dd.MM.y, H
+ru	gregorian	yMdHH	dd.MM.y, H
+ru	gregorian	yMdHHH	dd.MM.y, H
+ru	gregorian	yMdHHHH	dd.MM.y, H
+ru	gregorian	yMdHHHHH	dd.MM.y, H
+ru	gregorian	yMdHHHHHH	dd.MM.y, H
+ru	gregorian	yMdJ	dd.MM.y, H
+ru	gregorian	yMdJJ	dd.MM.y, H
+ru	gregorian	yMdJJJ	dd.MM.y, H
+ru	gregorian	yMdJJJJ	dd.MM.y, H
+ru	gregorian	yMdJJJJJ	dd.MM.y, H
+ru	gregorian	yMdJJJJJJ	dd.MM.y, H
+ru	gregorian	yMdK	dd.MM.y, h a
+ru	gregorian	yMdKK	dd.MM.y, h a
+ru	gregorian	yMdKKK	dd.MM.y, h a
+ru	gregorian	yMdKKKK	dd.MM.y, h a
+ru	gregorian	yMdKKKKK	dd.MM.y, h a
+ru	gregorian	yMdKKKKKK	dd.MM.y, h a
+ru	gregorian	yMdL	d.M.y
+ru	gregorian	yMdLL	d.MM.y
+ru	gregorian	yMdLLL	d MMM y 'г'.
+ru	gregorian	yMdLLLL	d MMMM y 'г'.
+ru	gregorian	yMdLLLLL	d MMMMM y 'г'.
+ru	gregorian	yMdLLLLLL	d MMMMMM y 'г'.
+ru	gregorian	yMdO	dd.MM.y, O
+ru	gregorian	yMdOO	dd.MM.y, OO
+ru	gregorian	yMdOOO	dd.MM.y, OOO
+ru	gregorian	yMdOOOO	dd.MM.y, OOOO
+ru	gregorian	yMdOOOOO	dd.MM.y, OOOOO
+ru	gregorian	yMdOOOOOO	dd.MM.y, OOOOOO
+ru	gregorian	yMdQ	dd.MM.y ('квартал': Q)
+ru	gregorian	yMdQQ	dd.MM.y ('квартал': QQ)
+ru	gregorian	yMdQQQ	dd.MM.y ('квартал': QQQ)
+ru	gregorian	yMdQQQQ	dd.MM.y ('квартал': QQQQ)
+ru	gregorian	yMdQQQQQ	dd.MM.y ('квартал': QQQQQ)
+ru	gregorian	yMdQQQQQQ	dd.MM.y ('квартал': QQQQQQ)
+ru	gregorian	yMdS	dd.MM.y, S
+ru	gregorian	yMdSS	dd.MM.y, SS
+ru	gregorian	yMdSSS	dd.MM.y, SSS
+ru	gregorian	yMdSSSS	dd.MM.y, SSSS
+ru	gregorian	yMdSSSSS	dd.MM.y, SSSSS
+ru	gregorian	yMdSSSSSS	dd.MM.y, SSSSSS
+ru	gregorian	yMdU	dd.MM.y
+ru	gregorian	yMdUU	dd.MM.y
+ru	gregorian	yMdUUU	dd.MM.y
+ru	gregorian	yMdUUUU	dd.MM.y
+ru	gregorian	yMdUUUUU	dd.MM.y
+ru	gregorian	yMdUUUUUU	dd.MM.y
+ru	gregorian	yMdV	dd.MM.y, V
+ru	gregorian	yMdVV	dd.MM.y, VV
+ru	gregorian	yMdVVV	dd.MM.y, VVV
+ru	gregorian	yMdVVVV	dd.MM.y, VVVV
+ru	gregorian	yMdVVVVV	dd.MM.y, VVVVV
+ru	gregorian	yMdVVVVVV	dd.MM.y, VVVVVV
+ru	gregorian	yMdW	dd.MM.y ├'неделя месяца': W┤
+ru	gregorian	yMdWW	dd.MM.y ├'неделя месяца': WW┤
+ru	gregorian	yMdWWW	dd.MM.y ├'неделя месяца': WWW┤
+ru	gregorian	yMdWWWW	dd.MM.y ├'неделя месяца': WWWW┤
+ru	gregorian	yMdWWWWW	dd.MM.y ├'неделя месяца': WWWWW┤
+ru	gregorian	yMdWWWWWW	dd.MM.y ├'неделя месяца': WWWWWW┤
+ru	gregorian	yMdX	dd.MM.y, X
+ru	gregorian	yMdXX	dd.MM.y, XX
+ru	gregorian	yMdXXX	dd.MM.y, XXX
+ru	gregorian	yMdXXXX	dd.MM.y, XXXX
+ru	gregorian	yMdXXXXX	dd.MM.y, XXXXX
+ru	gregorian	yMdXXXXXX	dd.MM.y, XXXXXX
+ru	gregorian	yMdY	dd.MM.Y
+ru	gregorian	yMdYY	dd.MM.YY
+ru	gregorian	yMdYYY	dd.MM.YYY
+ru	gregorian	yMdYYYY	dd.MM.YYYY
+ru	gregorian	yMdYYYYY	dd.MM.YYYYY
+ru	gregorian	yMdYYYYYY	dd.MM.YYYYYY
+ru	gregorian	yMdZ	dd.MM.y, Z
+ru	gregorian	yMdZZ	dd.MM.y, ZZ
+ru	gregorian	yMdZZZ	dd.MM.y, ZZZ
+ru	gregorian	yMdZZZZ	dd.MM.y, ZZZZ
+ru	gregorian	yMdZZZZZ	dd.MM.y, ZZZZZ
+ru	gregorian	yMdZZZZZZ	dd.MM.y, ZZZZZZ
+ru	gregorian	yMda	dd.MM.y, a
+ru	gregorian	yMdaa	dd.MM.y, aa
+ru	gregorian	yMdaaa	dd.MM.y, aaa
+ru	gregorian	yMdaaaa	dd.MM.y, aaaa
+ru	gregorian	yMdaaaaa	dd.MM.y, aaaaa
+ru	gregorian	yMdaaaaaa	dd.MM.y, aaaaaa
+ru	gregorian	yMdb	dd.MM.y, b
+ru	gregorian	yMdbb	dd.MM.y, bb
+ru	gregorian	yMdbbb	dd.MM.y, bbb
+ru	gregorian	yMdbbbb	dd.MM.y, bbbb
+ru	gregorian	yMdbbbbb	dd.MM.y, bbbbb
+ru	gregorian	yMdbbbbbb	dd.MM.y, bbbbbb
+ru	gregorian	yMdc	c, dd.MM.y
+ru	gregorian	yMdcc	cc, dd.MM.y
+ru	gregorian	yMdccc	ccc, dd.MM.y
+ru	gregorian	yMdcccc	cccc, dd.MM.y
+ru	gregorian	yMdccccc	ccccc, dd.MM.y
+ru	gregorian	yMdcccccc	cccccc, dd.MM.y
+ru	gregorian	yMde	c, dd.MM.y
+ru	gregorian	yMdee	cc, dd.MM.y
+ru	gregorian	yMdeee	ccc, dd.MM.y
+ru	gregorian	yMdeeee	cccc, dd.MM.y
+ru	gregorian	yMdeeeee	ccccc, dd.MM.y
+ru	gregorian	yMdeeeeee	cccccc, dd.MM.y
+ru	gregorian	yMdg	g.M.y
+ru	gregorian	yMdgg	gg.M.y
+ru	gregorian	yMdggg	ggg.M.y
+ru	gregorian	yMdgggg	gggg.M.y
+ru	gregorian	yMdggggg	ggggg.M.y
+ru	gregorian	yMdgggggg	gggggg.M.y
+ru	gregorian	yMdh	dd.MM.y, h a
+ru	gregorian	yMdhh	dd.MM.y, h a
+ru	gregorian	yMdhhh	dd.MM.y, h a
+ru	gregorian	yMdhhhh	dd.MM.y, h a
+ru	gregorian	yMdhhhhh	dd.MM.y, h a
+ru	gregorian	yMdhhhhhh	dd.MM.y, h a
+ru	gregorian	yMdj	dd.MM.y, H
+ru	gregorian	yMdjj	dd.MM.y, H
+ru	gregorian	yMdjjj	dd.MM.y, H
+ru	gregorian	yMdjjjj	dd.MM.y, H
+ru	gregorian	yMdjjjjj	dd.MM.y, H
+ru	gregorian	yMdjjjjjj	dd.MM.y, H
+ru	gregorian	yMdk	dd.MM.y, H
+ru	gregorian	yMdkk	dd.MM.y, H
+ru	gregorian	yMdkkk	dd.MM.y, H
+ru	gregorian	yMdkkkk	dd.MM.y, H
+ru	gregorian	yMdkkkkk	dd.MM.y, H
+ru	gregorian	yMdkkkkkk	dd.MM.y, H
+ru	gregorian	yMdl	d.M.y
+ru	gregorian	yMdll	d.MM.y
+ru	gregorian	yMdlll	d.MMM.y
+ru	gregorian	yMdllll	d.MMMM.y
+ru	gregorian	yMdlllll	d.MMMMM.y
+ru	gregorian	yMdllllll	d.MMMMMM.y
+ru	gregorian	yMdm	dd.MM.y, m
+ru	gregorian	yMdmm	dd.MM.y, m
+ru	gregorian	yMdmmm	dd.MM.y, m
+ru	gregorian	yMdmmmm	dd.MM.y, m
+ru	gregorian	yMdmmmmm	dd.MM.y, m
+ru	gregorian	yMdmmmmmm	dd.MM.y, m
+ru	gregorian	yMdq	dd.MM.y ('квартал': q)
+ru	gregorian	yMdqq	dd.MM.y ('квартал': qq)
+ru	gregorian	yMdqqq	dd.MM.y ('квартал': qqq)
+ru	gregorian	yMdqqqq	dd.MM.y ('квартал': qqqq)
+ru	gregorian	yMdqqqqq	dd.MM.y ('квартал': qqqqq)
+ru	gregorian	yMdqqqqqq	dd.MM.y ('квартал': qqqqqq)
+ru	gregorian	yMdr	dd.MM.y
+ru	gregorian	yMdrr	dd.MM.yy
+ru	gregorian	yMdrrr	dd.MM.yyy
+ru	gregorian	yMdrrrr	dd.MM.yyyy
+ru	gregorian	yMdrrrrr	dd.MM.yyyyy
+ru	gregorian	yMdrrrrrr	dd.MM.yyyyyy
+ru	gregorian	yMds	dd.MM.y, s
+ru	gregorian	yMdss	dd.MM.y, s
+ru	gregorian	yMdsss	dd.MM.y, s
+ru	gregorian	yMdssss	dd.MM.y, s
+ru	gregorian	yMdsssss	dd.MM.y, s
+ru	gregorian	yMdssssss	dd.MM.y, s
+ru	gregorian	yMdu	dd.MM.y
+ru	gregorian	yMduu	dd.MM.yy
+ru	gregorian	yMduuu	dd.MM.yyy
+ru	gregorian	yMduuuu	dd.MM.yyyy
+ru	gregorian	yMduuuuu	dd.MM.yyyyy
+ru	gregorian	yMduuuuuu	dd.MM.yyyyyy
+ru	gregorian	yMdv	dd.MM.y, v
+ru	gregorian	yMdvv	dd.MM.y, vv
+ru	gregorian	yMdvvv	dd.MM.y, vvv
+ru	gregorian	yMdvvvv	dd.MM.y, vvvv
+ru	gregorian	yMdvvvvv	dd.MM.y, vvvvv
+ru	gregorian	yMdvvvvvv	dd.MM.y, vvvvvv
+ru	gregorian	yMdw	dd.MM.y ('неделя': w)
+ru	gregorian	yMdww	dd.MM.y ('неделя': ww)
+ru	gregorian	yMdwww	dd.MM.y ('неделя': www)
+ru	gregorian	yMdwwww	dd.MM.y ('неделя': wwww)
+ru	gregorian	yMdwwwww	dd.MM.y ('неделя': wwwww)
+ru	gregorian	yMdwwwwww	dd.MM.y ('неделя': wwwwww)
+ru	gregorian	yMdx	dd.MM.y, x
+ru	gregorian	yMdxx	dd.MM.y, xx
+ru	gregorian	yMdxxx	dd.MM.y, xxx
+ru	gregorian	yMdxxxx	dd.MM.y, xxxx
+ru	gregorian	yMdxxxxx	dd.MM.y, xxxxx
+ru	gregorian	yMdxxxxxx	dd.MM.y, xxxxxx
+ru	gregorian	yMdz	dd.MM.y, z
+ru	gregorian	yMdzz	dd.MM.y, zz
+ru	gregorian	yMdzzz	dd.MM.y, zzz
+ru	gregorian	yMdzzzz	dd.MM.y, zzzz
+ru	gregorian	yMdzzzzz	dd.MM.y, zzzzz
+ru	gregorian	yMdzzzzzz	dd.MM.y, zzzzzz
+ru	gregorian	yw	
+ru	gregorian	yyHm	yy, HH:mm
+ru	gregorian	yyMMMMd	d MMMM yy 'г'.
+ru	gregorian	yyy	yyy
+ru	gregorian	yyyHm	yyy, HH:mm
+ru	gregorian	yyyyHm	yyyy, HH:mm
+ru	gregorian	yyyyMMMd	d MMM yyyy 'г'.
+ru	gregorian	yyyyy	yyyyy
+ru	gregorian	yyyyyHm	yyyyy, HH:mm
+ru	gregorian	yyyyyy	yyyyyy
+ru	gregorian	yyyyyyHm	yyyyyy, HH:mm
+ru	gregorian	zHm	HH:mm z
+ru	gregorian	zzHm	HH:mm zz
+ru	gregorian	zzzHm	HH:mm zzz
+ru	gregorian	zzzzHm	HH:mm zzzz
+ru	gregorian	zzzzzHm	HH:mm zzzzz
+ru	gregorian	zzzzzz	zzzzzz
+ru	gregorian	zzzzzzHm	HH:mm zzzzzz
+fi	gregorian	A	A
+fi	gregorian	AA	A
+fi	gregorian	AAA	A
+fi	gregorian	AAAA	A
+fi	gregorian	AAAAA	A
+fi	gregorian	AAAAAA	A
+fi	gregorian	AAAAAAHm	H.mm.AA
+fi	gregorian	AAAAAHm	H.mm.AA
+fi	gregorian	AAAAHm	H.mm.AA
+fi	gregorian	AAAHm	H.mm.AA
+fi	gregorian	AAHm	H.mm.AA
+fi	gregorian	AHm	H.mm.AA
+fi	gregorian	B	B
+fi	gregorian	BB	BB
+fi	gregorian	BBB	BBB
+fi	gregorian	BBBB	BBBB
+fi	gregorian	BBBBB	BBBBB
+fi	gregorian	BBBBBB	BBBBBB
+fi	gregorian	BBBBBBHm	H.mm
+fi	gregorian	BBBBBHm	H.mm
+fi	gregorian	BBBBHm	H.mm
+fi	gregorian	BBBHm	H.mm
+fi	gregorian	BBHm	H.mm
+fi	gregorian	BHm	H.mm
+fi	gregorian	Bhm	h.mm B
+fi	gregorian	C	H
+fi	gregorian	CC	H
+fi	gregorian	CCC	H
+fi	gregorian	CCCC	H
+fi	gregorian	CCCCC	H
+fi	gregorian	CCCCCC	H
+fi	gregorian	CCCCCCHm	H.mm
+fi	gregorian	CCCCCHm	H.mm
+fi	gregorian	CCCCCm	H.mm
+fi	gregorian	CCCCHm	H.mm
+fi	gregorian	CCCCm	H.mm
+fi	gregorian	CCCHm	H.mm
+fi	gregorian	CCCm	H.mm
+fi	gregorian	CCHm	H.mm
+fi	gregorian	CCm	H.mm
+fi	gregorian	CHm	H.mm
+fi	gregorian	Cm	H.mm
+fi	gregorian	D	D
+fi	gregorian	DD	DD
+fi	gregorian	DDD	DDD
+fi	gregorian	DDDD	DDDD
+fi	gregorian	DDDDD	DDDDD
+fi	gregorian	DDDDDD	DDDDDD
+fi	gregorian	DDDDDDHm	DDDDDD 'klo' H.mm
+fi	gregorian	DDDDDHm	DDDDD 'klo' H.mm
+fi	gregorian	DDDDHm	DDDD 'klo' H.mm
+fi	gregorian	DDDHm	DDD 'klo' H.mm
+fi	gregorian	DDHm	DD 'klo' H.mm
+fi	gregorian	DHm	D 'klo' H.mm
+fi	gregorian	EE	ccc
+fi	gregorian	EEE	ccc
+fi	gregorian	EEEE	cccc
+fi	gregorian	EEEEE	ccccc
+fi	gregorian	EEEEEE	cccccc
+fi	gregorian	EEEEEEHm	EEEEEE H.mm
+fi	gregorian	EEEEEHm	EEEEE H.mm
+fi	gregorian	EEEEHm	EEEE H.mm
+fi	gregorian	EEEEd	EEEE d.
+fi	gregorian	EEEEhms	EEEE h.mm.ss a
+fi	gregorian	EEEHm	EEE H.mm
+fi	gregorian	EEHm	EEE H.mm
+fi	gregorian	EHm	EEE H.mm
+fi	gregorian	Ed	EEE d.
+fi	gregorian	Ehm	EEE h.mm a
+fi	gregorian	F	F
+fi	gregorian	FF	FF
+fi	gregorian	FFF	FFF
+fi	gregorian	FFFF	FFFF
+fi	gregorian	FFFFF	FFFFF
+fi	gregorian	FFFFFF	FFFFFF
+fi	gregorian	FFFFFFHm	FFFFFF 'klo' H.mm
+fi	gregorian	FFFFFHm	FFFFF 'klo' H.mm
+fi	gregorian	FFFFHm	FFFF 'klo' H.mm
+fi	gregorian	FFFHm	FFF 'klo' H.mm
+fi	gregorian	FFHm	FF 'klo' H.mm
+fi	gregorian	FHm	F 'klo' H.mm
+fi	gregorian	Fd	F ('päivä': d)
+fi	gregorian	G	G
+fi	gregorian	GG	GG
+fi	gregorian	GGG	GGG
+fi	gregorian	GGGG	GGGG
+fi	gregorian	GGGGG	GGGGG
+fi	gregorian	GGGGGG	GGGGGG
+fi	gregorian	GGGGGGHm	GGGGGG 'klo' H.mm
+fi	gregorian	GGGGGHm	GGGGG 'klo' H.mm
+fi	gregorian	GGGGGy	y GGGGG
+fi	gregorian	GGGGHm	GGGG 'klo' H.mm
+fi	gregorian	GGGHm	GGG 'klo' H.mm
+fi	gregorian	GGHm	GG 'klo' H.mm
+fi	gregorian	GHm	G 'klo' H.mm
+fi	gregorian	H	H
+fi	gregorian	HB	H
+fi	gregorian	HH	H
+fi	gregorian	HHH	H
+fi	gregorian	HHHH	H
+fi	gregorian	HHHHH	H
+fi	gregorian	HHHHHH	H
+fi	gregorian	Hb	H
+fi	gregorian	HmsSSSSSS	H.mm.ss,SSSSSS
+fi	gregorian	J	H
+fi	gregorian	JHm	H.mm
+fi	gregorian	JJ	H
+fi	gregorian	JJHm	H.mm
+fi	gregorian	JJJ	H
+fi	gregorian	JJJHm	H.mm
+fi	gregorian	JJJJ	H
+fi	gregorian	JJJJHm	H.mm
+fi	gregorian	JJJJJ	H
+fi	gregorian	JJJJJHm	H.mm
+fi	gregorian	JJJJJJ	H
+fi	gregorian	JJJJJJHm	H.mm
+fi	gregorian	JJm	H.mm
+fi	gregorian	Jms	H.mm.ss
+fi	gregorian	K	h a
+fi	gregorian	KHm	H.mm
+fi	gregorian	KK	h a
+fi	gregorian	KKHm	H.mm
+fi	gregorian	KKK	h a
+fi	gregorian	KKKHm	H.mm
+fi	gregorian	KKKK	h a
+fi	gregorian	KKKKHm	H.mm
+fi	gregorian	KKKKK	h a
+fi	gregorian	KKKKKHm	H.mm
+fi	gregorian	KKKKKK	h a
+fi	gregorian	KKKKKKHm	H.mm
+fi	gregorian	Khm	h.mm a
+fi	gregorian	Kms	h.mm.ss a
+fi	gregorian	L	L
+fi	gregorian	LHm	L 'klo' H.mm
+fi	gregorian	LL	LL
+fi	gregorian	LLHm	LL 'klo' H.mm
+fi	gregorian	LLL	LLL
+fi	gregorian	LLLHm	LLL 'klo' H.mm
+fi	gregorian	LLLL	LLLL
+fi	gregorian	LLLLHm	LLLL 'klo' H.mm
+fi	gregorian	LLLLL	LLLLL
+fi	gregorian	LLLLLHm	LLLLL 'klo' H.mm
+fi	gregorian	LLLLLL	LLLLLL
+fi	gregorian	LLLLLLHm	LLLLLL 'klo' H.mm
+fi	gregorian	M	L
+fi	gregorian	MHm	L 'klo' H.mm
+fi	gregorian	MM	LL
+fi	gregorian	MMHm	LL 'klo' H.mm
+fi	gregorian	MMM	LLL
+fi	gregorian	MMMEdjmO	ccc d.M. 'klo' H.mm O
+fi	gregorian	MMMHm	LLL 'klo' H.mm
+fi	gregorian	MMMMHm	LLLL 'klo' H.mm
+fi	gregorian	MMMMM	LLLLL
+fi	gregorian	MMMMMHm	LLLLL 'klo' H.mm
+fi	gregorian	MMMMMM	LLLLLL
+fi	gregorian	MMMMMMHm	LLLLLL 'klo' H.mm
+fi	gregorian	MMMMW	
+fi	gregorian	MMMd'x'	d.M.
+fi	gregorian	O	O
+fi	gregorian	OHm	H.mm O
+fi	gregorian	OO	OO
+fi	gregorian	OOHm	H.mm OO
+fi	gregorian	OOO	OOO
+fi	gregorian	OOOHm	H.mm OOO
+fi	gregorian	OOOO	OOOO
+fi	gregorian	OOOOHm	H.mm OOOO
+fi	gregorian	OOOOO	OOOOO
+fi	gregorian	OOOOOHm	H.mm OOOOO
+fi	gregorian	OOOOOO	OOOOOO
+fi	gregorian	OOOOOOHm	H.mm OOOOOO
+fi	gregorian	Q	Q
+fi	gregorian	QHm	Q 'klo' H.mm
+fi	gregorian	QQ	QQ
+fi	gregorian	QQHm	QQ 'klo' H.mm
+fi	gregorian	QQQ	QQQ
+fi	gregorian	QQQHm	QQQ 'klo' H.mm
+fi	gregorian	QQQQ	QQQQ
+fi	gregorian	QQQQHm	QQQQ 'klo' H.mm
+fi	gregorian	QQQQQ	QQQQQ
+fi	gregorian	QQQQQHm	QQQQQ 'klo' H.mm
+fi	gregorian	QQQQQQ	QQQQQQ
+fi	gregorian	QQQQQQHm	QQQQQQ 'klo' H.mm
+fi	gregorian	S	S
+fi	gregorian	SHm	H.mm.ss,S
+fi	gregorian	SS	SS
+fi	gregorian	SSHm	H.mm.ss,SS
+fi	gregorian	SSS	SSS
+fi	gregorian	SSSHm	H.mm.ss,SSS
+fi	gregorian	SSSS	SSSS
+fi	gregorian	SSSSHm	H.mm.ss,SSSS
+fi	gregorian	SSSSS	SSSSS
+fi	gregorian	SSSSSHm	H.mm.ss,SSSSS
+fi	gregorian	SSSSSS	SSSSSS
+fi	gregorian	SSSSSSHm	H.mm.ss,SSSSSS
+fi	gregorian	U	y
+fi	gregorian	UHm	y 'klo' H.mm
+fi	gregorian	UMMMd	d.M.y
+fi	gregorian	UU	y
+fi	gregorian	UUHm	y 'klo' H.mm
+fi	gregorian	UUU	y
+fi	gregorian	UUUHm	y 'klo' H.mm
+fi	gregorian	UUUU	y
+fi	gregorian	UUUUHm	y 'klo' H.mm
+fi	gregorian	UUUUU	y
+fi	gregorian	UUUUUHm	y 'klo' H.mm
+fi	gregorian	UUUUUU	y
+fi	gregorian	UUUUUUHm	y 'klo' H.mm
+fi	gregorian	V	V
+fi	gregorian	VHm	H.mm V
+fi	gregorian	VV	VV
+fi	gregorian	VVHm	H.mm VV
+fi	gregorian	VVV	VVV
+fi	gregorian	VVVHm	H.mm VVV
+fi	gregorian	VVVV	VVVV
+fi	gregorian	VVVVHm	H.mm VVVV
+fi	gregorian	VVVVV	VVVVV
+fi	gregorian	VVVVVHm	H.mm VVVVV
+fi	gregorian	VVVVVV	VVVVVV
+fi	gregorian	VVVVVVHm	H.mm VVVVVV
+fi	gregorian	W	W
+fi	gregorian	WHm	W 'klo' H.mm
+fi	gregorian	WW	WW
+fi	gregorian	WWHm	WW 'klo' H.mm
+fi	gregorian	WWW	WWW
+fi	gregorian	WWWHm	WWW 'klo' H.mm
+fi	gregorian	WWWW	WWWW
+fi	gregorian	WWWWHm	WWWW 'klo' H.mm
+fi	gregorian	WWWWW	WWWWW
+fi	gregorian	WWWWWHm	WWWWW 'klo' H.mm
+fi	gregorian	WWWWWW	WWWWWW
+fi	gregorian	WWWWWWHm	WWWWWW 'klo' H.mm
+fi	gregorian	X	X
+fi	gregorian	XHm	H.mm X
+fi	gregorian	XX	XX
+fi	gregorian	XXHm	H.mm XX
+fi	gregorian	XXX	XXX
+fi	gregorian	XXXHm	H.mm XXX
+fi	gregorian	XXXX	XXXX
+fi	gregorian	XXXXHm	H.mm XXXX
+fi	gregorian	XXXXX	XXXXX
+fi	gregorian	XXXXXHm	H.mm XXXXX
+fi	gregorian	XXXXXX	XXXXXX
+fi	gregorian	XXXXXXHm	H.mm XXXXXX
+fi	gregorian	Y	Y
+fi	gregorian	YHm	Y 'klo' H.mm
+fi	gregorian	YMMMd	d.M.Y
+fi	gregorian	YY	YY
+fi	gregorian	YYHm	YY 'klo' H.mm
+fi	gregorian	YYY	YYY
+fi	gregorian	YYYHm	YYY 'klo' H.mm
+fi	gregorian	YYYY	YYYY
+fi	gregorian	YYYYHm	YYYY 'klo' H.mm
+fi	gregorian	YYYYY	YYYYY
+fi	gregorian	YYYYYHm	YYYYY 'klo' H.mm
+fi	gregorian	YYYYYY	YYYYYY
+fi	gregorian	YYYYYYHm	YYYYYY 'klo' H.mm
+fi	gregorian	Z	Z
+fi	gregorian	ZHm	H.mm Z
+fi	gregorian	ZZ	ZZ
+fi	gregorian	ZZHm	H.mm ZZ
+fi	gregorian	ZZZ	ZZZ
+fi	gregorian	ZZZHm	H.mm ZZZ
+fi	gregorian	ZZZZ	ZZZZ
+fi	gregorian	ZZZZHm	H.mm ZZZZ
+fi	gregorian	ZZZZZ	ZZZZZ
+fi	gregorian	ZZZZZHm	H.mm ZZZZZ
+fi	gregorian	ZZZZZZ	ZZZZZZ
+fi	gregorian	ZZZZZZHm	H.mm ZZZZZZ
+fi	gregorian	a	a
+fi	gregorian	aHm	H.mm
+fi	gregorian	aa	aa
+fi	gregorian	aaHm	H.mm
+fi	gregorian	aaa	aaa
+fi	gregorian	aaaHm	H.mm
+fi	gregorian	aaaa	aaaa
+fi	gregorian	aaaaHm	H.mm
+fi	gregorian	aaaaa	aaaaa
+fi	gregorian	aaaaaHm	H.mm
+fi	gregorian	aaaaaa	aaaaaa
+fi	gregorian	aaaaaaHm	H.mm
+fi	gregorian	b	b
+fi	gregorian	bHm	H.mm
+fi	gregorian	bb	bb
+fi	gregorian	bbHm	H.mm
+fi	gregorian	bbb	bbb
+fi	gregorian	bbbHm	H.mm
+fi	gregorian	bbbb	bbbb
+fi	gregorian	bbbbHm	H.mm
+fi	gregorian	bbbbb	bbbbb
+fi	gregorian	bbbbbHm	H.mm
+fi	gregorian	bbbbbb	bbbbbb
+fi	gregorian	bbbbbbHm	H.mm
+fi	gregorian	bhm	h.mm b
+fi	gregorian	c	c
+fi	gregorian	cHm	e H.mm
+fi	gregorian	cc	cc
+fi	gregorian	ccHm	ee H.mm
+fi	gregorian	ccc	ccc
+fi	gregorian	cccHm	EEE H.mm
+fi	gregorian	cccc	cccc
+fi	gregorian	ccccHm	EEEE H.mm
+fi	gregorian	ccccc	ccccc
+fi	gregorian	cccccHm	EEEEE H.mm
+fi	gregorian	cccccc	cccccc
+fi	gregorian	ccccccHm	EEEEEE H.mm
+fi	gregorian	d	d
+fi	gregorian	dHm	d 'klo' H.mm
+fi	gregorian	dd	dd
+fi	gregorian	ddHm	dd 'klo' H.mm
+fi	gregorian	ddd	d
+fi	gregorian	dddHm	d 'klo' H.mm
+fi	gregorian	dddd	d
+fi	gregorian	ddddHm	d 'klo' H.mm
+fi	gregorian	ddddd	d
+fi	gregorian	dddddHm	d 'klo' H.mm
+fi	gregorian	dddddd	d
+fi	gregorian	ddddddHm	d 'klo' H.mm
+fi	gregorian	e	c
+fi	gregorian	eHm	e H.mm
+fi	gregorian	ee	cc
+fi	gregorian	eeHm	ee H.mm
+fi	gregorian	eee	ccc
+fi	gregorian	eeeHm	EEE H.mm
+fi	gregorian	eeee	cccc
+fi	gregorian	eeeeHm	EEEE H.mm
+fi	gregorian	eeeee	ccccc
+fi	gregorian	eeeeeHm	EEEEE H.mm
+fi	gregorian	eeeeee	cccccc
+fi	gregorian	eeeeeeHm	EEEEEE H.mm
+fi	gregorian	g	g
+fi	gregorian	gHm	g 'klo' H.mm
+fi	gregorian	gg	gg
+fi	gregorian	ggHm	gg 'klo' H.mm
+fi	gregorian	ggg	ggg
+fi	gregorian	gggHm	ggg 'klo' H.mm
+fi	gregorian	gggg	gggg
+fi	gregorian	ggggHm	gggg 'klo' H.mm
+fi	gregorian	ggggg	ggggg
+fi	gregorian	gggggHm	ggggg 'klo' H.mm
+fi	gregorian	gggggg	gggggg
+fi	gregorian	ggggggHm	gggggg 'klo' H.mm
+fi	gregorian	h	h a
+fi	gregorian	hB	h B
+fi	gregorian	hHm	H.mm
+fi	gregorian	hb	h b
+fi	gregorian	hh	h a
+fi	gregorian	hhHm	H.mm
+fi	gregorian	hhh	h a
+fi	gregorian	hhhHm	H.mm
+fi	gregorian	hhhh	h a
+fi	gregorian	hhhhHm	H.mm
+fi	gregorian	hhhhh	h a
+fi	gregorian	hhhhhHm	H.mm
+fi	gregorian	hhhhhh	h a
+fi	gregorian	hhhhhhHm	H.mm
+fi	gregorian	hmS	h.mm.ss,S a
+fi	gregorian	hmV	h.mm a V
+fi	gregorian	hmVVVV	h.mm a VVVV
+fi	gregorian	hmX	h.mm a X
+fi	gregorian	hmXXXXX	h.mm a XXXXX
+fi	gregorian	hmZ	h.mm a Z
+fi	gregorian	hmZZZZ	h.mm a ZZZZ
+fi	gregorian	hmsSSS	h.mm.ss,SSS a
+fi	gregorian	hmx	h.mm a x
+fi	gregorian	j	H
+fi	gregorian	jHm	H.mm
+fi	gregorian	jj	H
+fi	gregorian	jjHm	H.mm
+fi	gregorian	jjj	H
+fi	gregorian	jjjHm	H.mm
+fi	gregorian	jjjj	H
+fi	gregorian	jjjjHm	H.mm
+fi	gregorian	jjjjj	H
+fi	gregorian	jjjjjHm	H.mm
+fi	gregorian	jjjjjj	H
+fi	gregorian	jjjjjjHm	H.mm
+fi	gregorian	k	H
+fi	gregorian	kHm	H.mm
+fi	gregorian	khm	h.mm a
+fi	gregorian	kk	H
+fi	gregorian	kkHm	H.mm
+fi	gregorian	kkk	H
+fi	gregorian	kkkHm	H.mm
+fi	gregorian	kkkk	H
+fi	gregorian	kkkkHm	H.mm
+fi	gregorian	kkkkk	H
+fi	gregorian	kkkkkHm	H.mm
+fi	gregorian	kkkkkk	H
+fi	gregorian	kkkkkkHm	H.mm
+fi	gregorian	kms	H.mm.ss
+fi	gregorian	l	L
+fi	gregorian	lHm	L 'klo' H.mm
+fi	gregorian	ll	LL
+fi	gregorian	llHm	LL 'klo' H.mm
+fi	gregorian	lll	LLL
+fi	gregorian	lllHm	LLL 'klo' H.mm
+fi	gregorian	llll	LLLL
+fi	gregorian	llllHm	LLLL 'klo' H.mm
+fi	gregorian	lllll	LLLLL
+fi	gregorian	lllllHm	LLLLL 'klo' H.mm
+fi	gregorian	llllll	LLLLLL
+fi	gregorian	llllllHm	LLLLLL 'klo' H.mm
+fi	gregorian	mS	m.ss,S
+fi	gregorian	mSS	m.ss,SS
+fi	gregorian	mSSS	m.ss,SSS
+fi	gregorian	mm	m
+fi	gregorian	mmm	m
+fi	gregorian	mmmm	m
+fi	gregorian	mmmmm	m
+fi	gregorian	mmmmmm	m
+fi	gregorian	msS	m.ss,S
+fi	gregorian	q	q
+fi	gregorian	qHm	q 'klo' H.mm
+fi	gregorian	qq	qq
+fi	gregorian	qqHm	qq 'klo' H.mm
+fi	gregorian	qqq	qqq
+fi	gregorian	qqqHm	qqq 'klo' H.mm
+fi	gregorian	qqqq	qqqq
+fi	gregorian	qqqqHm	qqqq 'klo' H.mm
+fi	gregorian	qqqqq	qqqqq
+fi	gregorian	qqqqqHm	qqqqq 'klo' H.mm
+fi	gregorian	qqqqqq	qqqqqq
+fi	gregorian	qqqqqqHm	qqqqqq 'klo' H.mm
+fi	gregorian	r	y
+fi	gregorian	rHm	y 'klo' H.mm
+fi	gregorian	rMMMd	d.M.y
+fi	gregorian	rr	yy
+fi	gregorian	rrHm	yy 'klo' H.mm
+fi	gregorian	rrr	yyy
+fi	gregorian	rrrHm	yyy 'klo' H.mm
+fi	gregorian	rrrr	yyyy
+fi	gregorian	rrrrHm	yyyy 'klo' H.mm
+fi	gregorian	rrrrr	yyyyy
+fi	gregorian	rrrrrHm	yyyyy 'klo' H.mm
+fi	gregorian	rrrrrr	yyyyyy
+fi	gregorian	rrrrrrHm	yyyyyy 'klo' H.mm
+fi	gregorian	s	s
+fi	gregorian	sHm	H.mm.ss
+fi	gregorian	ss	s
+fi	gregorian	ssHm	H.mm.ss
+fi	gregorian	sss	s
+fi	gregorian	sssHm	H.mm.ss
+fi	gregorian	ssss	s
+fi	gregorian	ssssHm	H.mm.ss
+fi	gregorian	sssss	s
+fi	gregorian	sssssHm	H.mm.ss
+fi	gregorian	ssssss	s
+fi	gregorian	ssssssHm	H.mm.ss
+fi	gregorian	u	y
+fi	gregorian	uHm	y 'klo' H.mm
+fi	gregorian	uMMMd	d.M.y
+fi	gregorian	uu	yy
+fi	gregorian	uuHm	yy 'klo' H.mm
+fi	gregorian	uuu	yyy
+fi	gregorian	uuuHm	yyy 'klo' H.mm
+fi	gregorian	uuuu	yyyy
+fi	gregorian	uuuuHm	yyyy 'klo' H.mm
+fi	gregorian	uuuuu	yyyyy
+fi	gregorian	uuuuuHm	yyyyy 'klo' H.mm
+fi	gregorian	uuuuuu	yyyyyy
+fi	gregorian	uuuuuuHm	yyyyyy 'klo' H.mm
+fi	gregorian	v	v
+fi	gregorian	vHm	H.mm v
+fi	gregorian	vv	vv
+fi	gregorian	vvHm	H.mm vv
+fi	gregorian	vvv	vvv
+fi	gregorian	vvvHm	H.mm vvv
+fi	gregorian	vvvv	vvvv
+fi	gregorian	vvvvHm	H.mm vvvv
+fi	gregorian	vvvvv	vvvvv
+fi	gregorian	vvvvvHm	H.mm vvvvv
+fi	gregorian	vvvvvv	vvvvvv
+fi	gregorian	vvvvvvHm	H.mm vvvvvv
+fi	gregorian	w	w
+fi	gregorian	wHm	w 'klo' H.mm
+fi	gregorian	ww	ww
+fi	gregorian	wwHm	ww 'klo' H.mm
+fi	gregorian	www	www
+fi	gregorian	wwwHm	www 'klo' H.mm
+fi	gregorian	wwww	wwww
+fi	gregorian	wwwwHm	wwww 'klo' H.mm
+fi	gregorian	wwwww	wwwww
+fi	gregorian	wwwwwHm	wwwww 'klo' H.mm
+fi	gregorian	wwwwww	wwwwww
+fi	gregorian	wwwwwwHm	wwwwww 'klo' H.mm
+fi	gregorian	x	x
+fi	gregorian	xHm	H.mm x
+fi	gregorian	xx	xx
+fi	gregorian	xxHm	H.mm xx
+fi	gregorian	xxx	xxx
+fi	gregorian	xxxHm	H.mm xxx
+fi	gregorian	xxxx	xxxx
+fi	gregorian	xxxxHm	H.mm xxxx
+fi	gregorian	xxxxx	xxxxx
+fi	gregorian	xxxxxHm	H.mm xxxxx
+fi	gregorian	xxxxxx	xxxxxx
+fi	gregorian	xxxxxxHm	H.mm xxxxxx
+fi	gregorian	y	y
+fi	gregorian	y'q'M	L.y
+fi	gregorian	yD	y ├'vuodenpäivä': D┤
+fi	gregorian	yHm	y 'klo' H.mm
+fi	gregorian	yMMMMEEEEEd	EEEEE d. MMMM y
+fi	gregorian	yMMMMEEEEdHmsSSSvvvv	cccc d. MMMM y 'klo' H.mm.ss,SSS vvvv
+fi	gregorian	yMMMdhmz	d.M.y 'klo' h.mm a z
+fi	gregorian	yMdA	d.M.y 'klo' A
+fi	gregorian	yMdAA	d.M.y 'klo' A
+fi	gregorian	yMdAAA	d.M.y 'klo' A
+fi	gregorian	yMdAAAA	d.M.y 'klo' A
+fi	gregorian	yMdAAAAA	d.M.y 'klo' A
+fi	gregorian	yMdAAAAAA	d.M.y 'klo' A
+fi	gregorian	yMdB	d.M.y 'klo' B
+fi	gregorian	yMdBB	d.M.y 'klo' BB
+fi	gregorian	yMdBBB	d.M.y 'klo' BBB
+fi	gregorian	yMdBBBB	d.M.y 'klo' BBBB
+fi	gregorian	yMdBBBBB	d.M.y 'klo' BBBBB
+fi	gregorian	yMdBBBBBB	d.M.y 'klo' BBBBBB
+fi	gregorian	yMdC	d.M.y 'klo' H
+fi	gregorian	yMdCC	d.M.y 'klo' H
+fi	gregorian	yMdCCC	d.M.y 'klo' H
+fi	gregorian	yMdCCCC	d.M.y 'klo' H
+fi	gregorian	yMdCCCCC	d.M.y 'klo' H
+fi	gregorian	yMdCCCCCC	d.M.y 'klo' H
+fi	gregorian	yMdD	d.M.y ├'vuodenpäivä': D┤
+fi	gregorian	yMdDD	d.M.y ├'vuodenpäivä': DD┤
+fi	gregorian	yMdDDD	d.M.y ├'vuodenpäivä': DDD┤
+fi	gregorian	yMdDDDD	d.M.y ├'vuodenpäivä': DDDD┤
+fi	gregorian	yMdDDDDD	d.M.y ├'vuodenpäivä': DDDDD┤
+fi	gregorian	yMdDDDDDD	d.M.y ├'vuodenpäivä': DDDDDD┤
+fi	gregorian	yMdE	EEE d.M.y
+fi	gregorian	yMdEE	EEE d.M.y
+fi	gregorian	yMdEEE	EEE d.M.y
+fi	gregorian	yMdEEEE	EEEE d.M.y
+fi	gregorian	yMdEEEEE	EEEEE d.M.y
+fi	gregorian	yMdEEEEEE	EEEEEE d.M.y
+fi	gregorian	yMdF	d.M.y ├'kuukauden viikonpäivä': F┤
+fi	gregorian	yMdFF	d.M.y ├'kuukauden viikonpäivä': FF┤
+fi	gregorian	yMdFFF	d.M.y ├'kuukauden viikonpäivä': FFF┤
+fi	gregorian	yMdFFFF	d.M.y ├'kuukauden viikonpäivä': FFFF┤
+fi	gregorian	yMdFFFFF	d.M.y ├'kuukauden viikonpäivä': FFFFF┤
+fi	gregorian	yMdFFFFFF	d.M.y ├'kuukauden viikonpäivä': FFFFFF┤
+fi	gregorian	yMdG	d.M.y G
+fi	gregorian	yMdGG	d.M.y GG
+fi	gregorian	yMdGGG	d.M.y GGG
+fi	gregorian	yMdGGGG	d.M.y GGGG
+fi	gregorian	yMdGGGGG	d.M.y GGGGG
+fi	gregorian	yMdGGGGGG	d.M.y GGGGGG
+fi	gregorian	yMdH	d.M.y 'klo' H
+fi	gregorian	yMdHH	d.M.y 'klo' H
+fi	gregorian	yMdHHH	d.M.y 'klo' H
+fi	gregorian	yMdHHHH	d.M.y 'klo' H
+fi	gregorian	yMdHHHHH	d.M.y 'klo' H
+fi	gregorian	yMdHHHHHH	d.M.y 'klo' H
+fi	gregorian	yMdJ	d.M.y 'klo' H
+fi	gregorian	yMdJJ	d.M.y 'klo' H
+fi	gregorian	yMdJJJ	d.M.y 'klo' H
+fi	gregorian	yMdJJJJ	d.M.y 'klo' H
+fi	gregorian	yMdJJJJJ	d.M.y 'klo' H
+fi	gregorian	yMdJJJJJJ	d.M.y 'klo' H
+fi	gregorian	yMdK	d.M.y 'klo' h a
+fi	gregorian	yMdKK	d.M.y 'klo' h a
+fi	gregorian	yMdKKK	d.M.y 'klo' h a
+fi	gregorian	yMdKKKK	d.M.y 'klo' h a
+fi	gregorian	yMdKKKKK	d.M.y 'klo' h a
+fi	gregorian	yMdKKKKKK	d.M.y 'klo' h a
+fi	gregorian	yMdL	d.M.y
+fi	gregorian	yMdLL	d.MM.y
+fi	gregorian	yMdLLL	d. MMM y
+fi	gregorian	yMdLLLL	d. MMMM y
+fi	gregorian	yMdLLLLL	d. MMMMM y
+fi	gregorian	yMdLLLLLL	d. MMMMMM y
+fi	gregorian	yMdO	d.M.y 'klo' O
+fi	gregorian	yMdOO	d.M.y 'klo' OO
+fi	gregorian	yMdOOO	d.M.y 'klo' OOO
+fi	gregorian	yMdOOOO	d.M.y 'klo' OOOO
+fi	gregorian	yMdOOOOO	d.M.y 'klo' OOOOO
+fi	gregorian	yMdOOOOOO	d.M.y 'klo' OOOOOO
+fi	gregorian	yMdQ	d.M.y ('neljännesvuosi': Q)
+fi	gregorian	yMdQQ	d.M.y ('neljännesvuosi': QQ)
+fi	gregorian	yMdQQQ	d.M.y ('neljännesvuosi': QQQ)
+fi	gregorian	yMdQQQQ	d.M.y ('neljännesvuosi': QQQQ)
+fi	gregorian	yMdQQQQQ	d.M.y ('neljännesvuosi': QQQQQ)
+fi	gregorian	yMdQQQQQQ	d.M.y ('neljännesvuosi': QQQQQQ)
+fi	gregorian	yMdS	d.M.y 'klo' S
+fi	gregorian	yMdSS	d.M.y 'klo' SS
+fi	gregorian	yMdSSS	d.M.y 'klo' SSS
+fi	gregorian	yMdSSSS	d.M.y 'klo' SSSS
+fi	gregorian	yMdSSSSS	d.M.y 'klo' SSSSS
+fi	gregorian	yMdSSSSSS	d.M.y 'klo' SSSSSS
+fi	gregorian	yMdU	d.M.y
+fi	gregorian	yMdUU	d.M.y
+fi	gregorian	yMdUUU	d.M.y
+fi	gregorian	yMdUUUU	d.M.y
+fi	gregorian	yMdUUUUU	d.M.y
+fi	gregorian	yMdUUUUUU	d.M.y
+fi	gregorian	yMdV	d.M.y 'klo' V
+fi	gregorian	yMdVV	d.M.y 'klo' VV
+fi	gregorian	yMdVVV	d.M.y 'klo' VVV
+fi	gregorian	yMdVVVV	d.M.y 'klo' VVVV
+fi	gregorian	yMdVVVVV	d.M.y 'klo' VVVVV
+fi	gregorian	yMdVVVVVV	d.M.y 'klo' VVVVVV
+fi	gregorian	yMdW	d.M.y ├'kuukauden viikko': W┤
+fi	gregorian	yMdWW	d.M.y ├'kuukauden viikko': WW┤
+fi	gregorian	yMdWWW	d.M.y ├'kuukauden viikko': WWW┤
+fi	gregorian	yMdWWWW	d.M.y ├'kuukauden viikko': WWWW┤
+fi	gregorian	yMdWWWWW	d.M.y ├'kuukauden viikko': WWWWW┤
+fi	gregorian	yMdWWWWWW	d.M.y ├'kuukauden viikko': WWWWWW┤
+fi	gregorian	yMdX	d.M.y 'klo' X
+fi	gregorian	yMdXX	d.M.y 'klo' XX
+fi	gregorian	yMdXXX	d.M.y 'klo' XXX
+fi	gregorian	yMdXXXX	d.M.y 'klo' XXXX
+fi	gregorian	yMdXXXXX	d.M.y 'klo' XXXXX
+fi	gregorian	yMdXXXXXX	d.M.y 'klo' XXXXXX
+fi	gregorian	yMdY	d.M.Y
+fi	gregorian	yMdYY	d.M.YY
+fi	gregorian	yMdYYY	d.M.YYY
+fi	gregorian	yMdYYYY	d.M.YYYY
+fi	gregorian	yMdYYYYY	d.M.YYYYY
+fi	gregorian	yMdYYYYYY	d.M.YYYYYY
+fi	gregorian	yMdZ	d.M.y 'klo' Z
+fi	gregorian	yMdZZ	d.M.y 'klo' ZZ
+fi	gregorian	yMdZZZ	d.M.y 'klo' ZZZ
+fi	gregorian	yMdZZZZ	d.M.y 'klo' ZZZZ
+fi	gregorian	yMdZZZZZ	d.M.y 'klo' ZZZZZ
+fi	gregorian	yMdZZZZZZ	d.M.y 'klo' ZZZZZZ
+fi	gregorian	yMda	d.M.y 'klo' a
+fi	gregorian	yMdaa	d.M.y 'klo' aa
+fi	gregorian	yMdaaa	d.M.y 'klo' aaa
+fi	gregorian	yMdaaaa	d.M.y 'klo' aaaa
+fi	gregorian	yMdaaaaa	d.M.y 'klo' aaaaa
+fi	gregorian	yMdaaaaaa	d.M.y 'klo' aaaaaa
+fi	gregorian	yMdb	d.M.y 'klo' b
+fi	gregorian	yMdbb	d.M.y 'klo' bb
+fi	gregorian	yMdbbb	d.M.y 'klo' bbb
+fi	gregorian	yMdbbbb	d.M.y 'klo' bbbb
+fi	gregorian	yMdbbbbb	d.M.y 'klo' bbbbb
+fi	gregorian	yMdbbbbbb	d.M.y 'klo' bbbbbb
+fi	gregorian	yMdc	e d.M.y
+fi	gregorian	yMdcc	ee d.M.y
+fi	gregorian	yMdccc	EEE d.M.y
+fi	gregorian	yMdcccc	EEEE d.M.y
+fi	gregorian	yMdccccc	EEEEE d.M.y
+fi	gregorian	yMdcccccc	EEEEEE d.M.y
+fi	gregorian	yMde	e d.M.y
+fi	gregorian	yMdee	ee d.M.y
+fi	gregorian	yMdeee	EEE d.M.y
+fi	gregorian	yMdeeee	EEEE d.M.y
+fi	gregorian	yMdeeeee	EEEEE d.M.y
+fi	gregorian	yMdeeeeee	EEEEEE d.M.y
+fi	gregorian	yMdg	g.M.y
+fi	gregorian	yMdgg	gg.M.y
+fi	gregorian	yMdggg	ggg.M.y
+fi	gregorian	yMdgggg	gggg.M.y
+fi	gregorian	yMdggggg	ggggg.M.y
+fi	gregorian	yMdgggggg	gggggg.M.y
+fi	gregorian	yMdh	d.M.y 'klo' h a
+fi	gregorian	yMdhh	d.M.y 'klo' h a
+fi	gregorian	yMdhhh	d.M.y 'klo' h a
+fi	gregorian	yMdhhhh	d.M.y 'klo' h a
+fi	gregorian	yMdhhhhh	d.M.y 'klo' h a
+fi	gregorian	yMdhhhhhh	d.M.y 'klo' h a
+fi	gregorian	yMdj	d.M.y 'klo' H
+fi	gregorian	yMdjj	d.M.y 'klo' H
+fi	gregorian	yMdjjj	d.M.y 'klo' H
+fi	gregorian	yMdjjjj	d.M.y 'klo' H
+fi	gregorian	yMdjjjjj	d.M.y 'klo' H
+fi	gregorian	yMdjjjjjj	d.M.y 'klo' H
+fi	gregorian	yMdk	d.M.y 'klo' H
+fi	gregorian	yMdkk	d.M.y 'klo' H
+fi	gregorian	yMdkkk	d.M.y 'klo' H
+fi	gregorian	yMdkkkk	d.M.y 'klo' H
+fi	gregorian	yMdkkkkk	d.M.y 'klo' H
+fi	gregorian	yMdkkkkkk	d.M.y 'klo' H
+fi	gregorian	yMdl	d.M.y
+fi	gregorian	yMdll	d.MM.y
+fi	gregorian	yMdlll	d.MMM.y
+fi	gregorian	yMdllll	d.MMMM.y
+fi	gregorian	yMdlllll	d.MMMMM.y
+fi	gregorian	yMdllllll	d.MMMMMM.y
+fi	gregorian	yMdm	d.M.y 'klo' m
+fi	gregorian	yMdmm	d.M.y 'klo' m
+fi	gregorian	yMdmmm	d.M.y 'klo' m
+fi	gregorian	yMdmmmm	d.M.y 'klo' m
+fi	gregorian	yMdmmmmm	d.M.y 'klo' m
+fi	gregorian	yMdmmmmmm	d.M.y 'klo' m
+fi	gregorian	yMdq	d.M.y ('neljännesvuosi': q)
+fi	gregorian	yMdqq	d.M.y ('neljännesvuosi': qq)
+fi	gregorian	yMdqqq	d.M.y ('neljännesvuosi': qqq)
+fi	gregorian	yMdqqqq	d.M.y ('neljännesvuosi': qqqq)
+fi	gregorian	yMdqqqqq	d.M.y ('neljännesvuosi': qqqqq)
+fi	gregorian	yMdqqqqqq	d.M.y ('neljännesvuosi': qqqqqq)
+fi	gregorian	yMdr	d.M.y
+fi	gregorian	yMdrr	d.M.yy
+fi	gregorian	yMdrrr	d.M.yyy
+fi	gregorian	yMdrrrr	d.M.yyyy
+fi	gregorian	yMdrrrrr	d.M.yyyyy
+fi	gregorian	yMdrrrrrr	d.M.yyyyyy
+fi	gregorian	yMds	d.M.y 'klo' s
+fi	gregorian	yMdss	d.M.y 'klo' s
+fi	gregorian	yMdsss	d.M.y 'klo' s
+fi	gregorian	yMdssss	d.M.y 'klo' s
+fi	gregorian	yMdsssss	d.M.y 'klo' s
+fi	gregorian	yMdssssss	d.M.y 'klo' s
+fi	gregorian	yMdu	d.M.y
+fi	gregorian	yMduu	d.M.yy
+fi	gregorian	yMduuu	d.M.yyy
+fi	gregorian	yMduuuu	d.M.yyyy
+fi	gregorian	yMduuuuu	d.M.yyyyy
+fi	gregorian	yMduuuuuu	d.M.yyyyyy
+fi	gregorian	yMdv	d.M.y 'klo' v
+fi	gregorian	yMdvv	d.M.y 'klo' vv
+fi	gregorian	yMdvvv	d.M.y 'klo' vvv
+fi	gregorian	yMdvvvv	d.M.y 'klo' vvvv
+fi	gregorian	yMdvvvvv	d.M.y 'klo' vvvvv
+fi	gregorian	yMdvvvvvv	d.M.y 'klo' vvvvvv
+fi	gregorian	yMdw	d.M.y ('viikko': w)
+fi	gregorian	yMdww	d.M.y ('viikko': ww)
+fi	gregorian	yMdwww	d.M.y ('viikko': www)
+fi	gregorian	yMdwwww	d.M.y ('viikko': wwww)
+fi	gregorian	yMdwwwww	d.M.y ('viikko': wwwww)
+fi	gregorian	yMdwwwwww	d.M.y ('viikko': wwwwww)
+fi	gregorian	yMdx	d.M.y 'klo' x
+fi	gregorian	yMdxx	d.M.y 'klo' xx
+fi	gregorian	yMdxxx	d.M.y 'klo' xxx
+fi	gregorian	yMdxxxx	d.M.y 'klo' xxxx
+fi	gregorian	yMdxxxxx	d.M.y 'klo' xxxxx
+fi	gregorian	yMdxxxxxx	d.M.y 'klo' xxxxxx
+fi	gregorian	yMdz	d.M.y 'klo' z
+fi	gregorian	yMdzz	d.M.y 'klo' zz
+fi	gregorian	yMdzzz	d.M.y 'klo' zzz
+fi	gregorian	yMdzzzz	d.M.y 'klo' zzzz
+fi	gregorian	yMdzzzzz	d.M.y 'klo' zzzzz
+fi	gregorian	yMdzzzzzz	d.M.y 'klo' zzzzzz
+fi	gregorian	yQQQ	QQQ y
+fi	gregorian	yQQQQ	QQQQ y
+fi	gregorian	yw	
+fi	gregorian	yy	yy
+fi	gregorian	yyHm	yy 'klo' H.mm
+fi	gregorian	yyMMMMd	d. MMMM yy
+fi	gregorian	yyy	yyy
+fi	gregorian	yyyHm	yyy 'klo' H.mm
+fi	gregorian	yyyy	yyyy
+fi	gregorian	yyyyHm	yyyy 'klo' H.mm
+fi	gregorian	yyyyMMMd	d.M.yyyy
+fi	gregorian	yyyyy	yyyyy
+fi	gregorian	yyyyyHm	yyyyy 'klo' H.mm
+fi	gregorian	yyyyyy	yyyyyy
+fi	gregorian	yyyyyyHm	yyyyyy 'klo' H.mm
+fi	gregorian	z	z
+fi	gregorian	zHm	H.mm z
+fi	gregorian	zz	zz
+fi	gregorian	zzHm	H.mm zz
+fi	gregorian	zzz	zzz
+fi	gregorian	zzzHm	H.mm zzz
+fi	gregorian	zzzz	zzzz
+fi	gregorian	zzzzHm	H.mm zzzz
+fi	gregorian	zzzzz	zzzzz
+fi	gregorian	zzzzzHm	H.mm zzzzz
+fi	gregorian	zzzzzz	zzzzzz
+fi	gregorian	zzzzzzHm	H.mm zzzzzz
+bg	gregorian	A	A
+bg	gregorian	AA	A
+bg	gregorian	AAA	A
+bg	gregorian	AAAA	A
+bg	gregorian	AAAAA	A
+bg	gregorian	AAAAAA	A
+bg	gregorian	AAAAAAHm	H:mm:AA
+bg	gregorian	AAAAAHm	H:mm:AA
+bg	gregorian	AAAAHm	H:mm:AA
+bg	gregorian	AAAHm	H:mm:AA
+bg	gregorian	AAHm	H:mm:AA
+bg	gregorian	AHm	H:mm:AA
+bg	gregorian	B	B
+bg	gregorian	BB	BB
+bg	gregorian	BBB	BBB
+bg	gregorian	BBBB	BBBB
+bg	gregorian	BBBBB	BBBBB
+bg	gregorian	BBBBBB	BBBBBB
+bg	gregorian	BBBBBBHm	HH:mm 'ч'.
+bg	gregorian	BBBBBHm	HH:mm 'ч'.
+bg	gregorian	BBBBHm	HH:mm 'ч'.
+bg	gregorian	BBBHm	HH:mm 'ч'.
+bg	gregorian	BBHm	HH:mm 'ч'.
+bg	gregorian	BHm	HH:mm 'ч'.
+bg	gregorian	Bhm	h:mm 'ч'. B
+bg	gregorian	C	HH 'ч'.
+bg	gregorian	CC	HH 'ч'.
+bg	gregorian	CCC	HH 'ч'.
+bg	gregorian	CCCC	HH 'ч'.
+bg	gregorian	CCCCC	HH 'ч'.
+bg	gregorian	CCCCCC	HH 'ч'.
+bg	gregorian	CCCCCCHm	HH:mm 'ч'.
+bg	gregorian	CCCCCHm	HH:mm 'ч'.
+bg	gregorian	CCCCCm	HH:mm 'ч'.
+bg	gregorian	CCCCHm	HH:mm 'ч'.
+bg	gregorian	CCCCm	HH:mm 'ч'.
+bg	gregorian	CCCHm	HH:mm 'ч'.
+bg	gregorian	CCCm	HH:mm 'ч'.
+bg	gregorian	CCHm	HH:mm 'ч'.
+bg	gregorian	CCm	HH:mm 'ч'.
+bg	gregorian	CHm	HH:mm 'ч'.
+bg	gregorian	Cm	HH:mm 'ч'.
+bg	gregorian	D	D
+bg	gregorian	DD	DD
+bg	gregorian	DDD	DDD
+bg	gregorian	DDDD	DDDD
+bg	gregorian	DDDDD	DDDDD
+bg	gregorian	DDDDDD	DDDDDD
+bg	gregorian	DDDDDDHm	DDDDDD, HH:mm 'ч'. 'ч'.
+bg	gregorian	DDDDDHm	DDDDD, HH:mm 'ч'. 'ч'.
+bg	gregorian	DDDDHm	DDDD, HH:mm 'ч'. 'ч'.
+bg	gregorian	DDDHm	DDD, HH:mm 'ч'. 'ч'.
+bg	gregorian	DDHm	DD, HH:mm 'ч'. 'ч'.
+bg	gregorian	DHm	D, HH:mm 'ч'. 'ч'.
+bg	gregorian	E	ccc
+bg	gregorian	EE	ccc
+bg	gregorian	EEE	ccc
+bg	gregorian	EEEE	cccc
+bg	gregorian	EEEEE	ccccc
+bg	gregorian	EEEEEE	cccccc
+bg	gregorian	EEEEEEHm	EEEEEE, HH:mm 'ч'.
+bg	gregorian	EEEEEHm	EEEEE, HH:mm 'ч'.
+bg	gregorian	EEEEHm	EEEE, HH:mm 'ч'.
+bg	gregorian	EEEEd	EEEE, d
+bg	gregorian	EEEEhms	EEEE, h:mm:ss 'ч'. a
+bg	gregorian	EEEHm	EEE, HH:mm 'ч'.
+bg	gregorian	EEHm	EEE, HH:mm 'ч'.
+bg	gregorian	EHm	EEE, HH:mm 'ч'.
+bg	gregorian	Ed	EEE, d
+bg	gregorian	Ehm	EEE, h:mm 'ч'. a
+bg	gregorian	F	F
+bg	gregorian	FF	FF
+bg	gregorian	FFF	FFF
+bg	gregorian	FFFF	FFFF
+bg	gregorian	FFFFF	FFFFF
+bg	gregorian	FFFFFF	FFFFFF
+bg	gregorian	FFFFFFHm	FFFFFF, HH:mm 'ч'. 'ч'.
+bg	gregorian	FFFFFHm	FFFFF, HH:mm 'ч'. 'ч'.
+bg	gregorian	FFFFHm	FFFF, HH:mm 'ч'. 'ч'.
+bg	gregorian	FFFHm	FFF, HH:mm 'ч'. 'ч'.
+bg	gregorian	FFHm	FF, HH:mm 'ч'. 'ч'.
+bg	gregorian	FHm	F, HH:mm 'ч'. 'ч'.
+bg	gregorian	Fd	F ('ден': d)
+bg	gregorian	G	G
+bg	gregorian	GG	GG
+bg	gregorian	GGG	GGG
+bg	gregorian	GGGG	GGGG
+bg	gregorian	GGGGG	GGGGG
+bg	gregorian	GGGGGG	GGGGGG
+bg	gregorian	GGGGGGHm	GGGGGG, HH:mm 'ч'. 'ч'.
+bg	gregorian	GGGGGHm	GGGGG, HH:mm 'ч'. 'ч'.
+bg	gregorian	GGGGGy	y 'г'. GGGGG
+bg	gregorian	GGGGHm	GGGG, HH:mm 'ч'. 'ч'.
+bg	gregorian	GGGHm	GGG, HH:mm 'ч'. 'ч'.
+bg	gregorian	GGHm	GG, HH:mm 'ч'. 'ч'.
+bg	gregorian	GHm	G, HH:mm 'ч'. 'ч'.
+bg	gregorian	H	HH 'ч'.
+bg	gregorian	HB	HH 'ч'.
+bg	gregorian	HH	HH 'ч'.
+bg	gregorian	HHH	HH 'ч'.
+bg	gregorian	HHHH	HH 'ч'.
+bg	gregorian	HHHHH	HH 'ч'.
+bg	gregorian	HHHHHH	HH 'ч'.
+bg	gregorian	Hb	HH 'ч'.
+bg	gregorian	HmsSSSSSS	HH:mm:ss,SSSSSS 'ч'.
+bg	gregorian	J	HH 'ч'.
+bg	gregorian	JHm	HH:mm 'ч'.
+bg	gregorian	JJ	HH 'ч'.
+bg	gregorian	JJHm	HH:mm 'ч'.
+bg	gregorian	JJJ	HH 'ч'.
+bg	gregorian	JJJHm	HH:mm 'ч'.
+bg	gregorian	JJJJ	HH 'ч'.
+bg	gregorian	JJJJHm	HH:mm 'ч'.
+bg	gregorian	JJJJJ	HH 'ч'.
+bg	gregorian	JJJJJHm	HH:mm 'ч'.
+bg	gregorian	JJJJJJ	HH 'ч'.
+bg	gregorian	JJJJJJHm	HH:mm 'ч'.
+bg	gregorian	JJm	HH:mm 'ч'.
+bg	gregorian	Jm	HH:mm 'ч'.
+bg	gregorian	Jms	HH:mm:ss 'ч'.
+bg	gregorian	K	h 'ч'. a
+bg	gregorian	KHm	HH:mm 'ч'.
+bg	gregorian	KK	h 'ч'. a
+bg	gregorian	KKHm	HH:mm 'ч'.
+bg	gregorian	KKK	h 'ч'. a
+bg	gregorian	KKKHm	HH:mm 'ч'.
+bg	gregorian	KKKK	h 'ч'. a
+bg	gregorian	KKKKHm	HH:mm 'ч'.
+bg	gregorian	KKKKK	h 'ч'. a
+bg	gregorian	KKKKKHm	HH:mm 'ч'.
+bg	gregorian	KKKKKK	h 'ч'. a
+bg	gregorian	KKKKKKHm	HH:mm 'ч'.
+bg	gregorian	Khm	h:mm 'ч'. a
+bg	gregorian	Kms	h:mm:ss 'ч'. a
+bg	gregorian	L	L
+bg	gregorian	LHm	L, HH:mm 'ч'. 'ч'.
+bg	gregorian	LL	LL
+bg	gregorian	LLHm	LL, HH:mm 'ч'. 'ч'.
+bg	gregorian	LLL	LLL
+bg	gregorian	LLLHm	LLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	LLLL	LLLL
+bg	gregorian	LLLLHm	LLLL 'в' HH:mm 'ч'.
+bg	gregorian	LLLLL	LLLLL
+bg	gregorian	LLLLLHm	LLLLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	LLLLLL	LLLLLL
+bg	gregorian	LLLLLLHm	LLLLLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	M	L
+bg	gregorian	MHm	L, HH:mm 'ч'. 'ч'.
+bg	gregorian	MM	LL
+bg	gregorian	MMHm	LL, HH:mm 'ч'. 'ч'.
+bg	gregorian	MMM	MM.
+bg	gregorian	MMMEdjmO	EEE, d.MM., HH:mm 'ч'. O 'ч'.
+bg	gregorian	MMMHm	MM., HH:mm 'ч'. 'ч'.
+bg	gregorian	MMMMHm	LLLL 'в' HH:mm 'ч'.
+bg	gregorian	MMMMM	MM.
+bg	gregorian	MMMMMHm	MM., HH:mm 'ч'. 'ч'.
+bg	gregorian	MMMMMM	MM.
+bg	gregorian	MMMMMMHm	MM., HH:mm 'ч'. 'ч'.
+bg	gregorian	MMMMW	
+bg	gregorian	MMMd'x'	d.MM.
+bg	gregorian	O	O
+bg	gregorian	OHm	HH:mm 'ч'. O
+bg	gregorian	OO	OO
+bg	gregorian	OOHm	HH:mm 'ч'. OO
+bg	gregorian	OOO	OOO
+bg	gregorian	OOOHm	HH:mm 'ч'. OOO
+bg	gregorian	OOOO	OOOO
+bg	gregorian	OOOOHm	HH:mm 'ч'. OOOO
+bg	gregorian	OOOOO	OOOOO
+bg	gregorian	OOOOOHm	HH:mm 'ч'. OOOOO
+bg	gregorian	OOOOOO	OOOOOO
+bg	gregorian	OOOOOOHm	HH:mm 'ч'. OOOOOO
+bg	gregorian	Q	Q
+bg	gregorian	QHm	Q, HH:mm 'ч'. 'ч'.
+bg	gregorian	QQ	QQ
+bg	gregorian	QQHm	QQ, HH:mm 'ч'. 'ч'.
+bg	gregorian	QQQ	QQQ
+bg	gregorian	QQQHm	QQQ, HH:mm 'ч'. 'ч'.
+bg	gregorian	QQQQ	QQQQ
+bg	gregorian	QQQQHm	QQQQ, HH:mm 'ч'. 'ч'.
+bg	gregorian	QQQQQ	QQQQQ
+bg	gregorian	QQQQQHm	QQQQQ, HH:mm 'ч'. 'ч'.
+bg	gregorian	QQQQQQ	QQQQQQ
+bg	gregorian	QQQQQQHm	QQQQQQ, HH:mm 'ч'. 'ч'.
+bg	gregorian	S	S
+bg	gregorian	SHm	HH:mm:ss,S 'ч'.
+bg	gregorian	SS	SS
+bg	gregorian	SSHm	HH:mm:ss,SS 'ч'.
+bg	gregorian	SSS	SSS
+bg	gregorian	SSSHm	HH:mm:ss,SSS 'ч'.
+bg	gregorian	SSSS	SSSS
+bg	gregorian	SSSSHm	HH:mm:ss,SSSS 'ч'.
+bg	gregorian	SSSSS	SSSSS
+bg	gregorian	SSSSSHm	HH:mm:ss,SSSSS 'ч'.
+bg	gregorian	SSSSSS	SSSSSS
+bg	gregorian	SSSSSSHm	HH:mm:ss,SSSSSS 'ч'.
+bg	gregorian	U	y 'г'.
+bg	gregorian	UHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	UMMMd	d.MM.y 'г'.
+bg	gregorian	UU	y 'г'.
+bg	gregorian	UUHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	UUU	y 'г'.
+bg	gregorian	UUUHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	UUUU	y 'г'.
+bg	gregorian	UUUUHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	UUUUU	y 'г'.
+bg	gregorian	UUUUUHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	UUUUUU	y 'г'.
+bg	gregorian	UUUUUUHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	V	V
+bg	gregorian	VHm	HH:mm 'ч'. V
+bg	gregorian	VV	VV
+bg	gregorian	VVHm	HH:mm 'ч'. VV
+bg	gregorian	VVV	VVV
+bg	gregorian	VVVHm	HH:mm 'ч'. VVV
+bg	gregorian	VVVV	VVVV
+bg	gregorian	VVVVHm	HH:mm 'ч'. VVVV
+bg	gregorian	VVVVV	VVVVV
+bg	gregorian	VVVVVHm	HH:mm 'ч'. VVVVV
+bg	gregorian	VVVVVV	VVVVVV
+bg	gregorian	VVVVVVHm	HH:mm 'ч'. VVVVVV
+bg	gregorian	W	W
+bg	gregorian	WHm	W, HH:mm 'ч'. 'ч'.
+bg	gregorian	WW	WW
+bg	gregorian	WWHm	WW, HH:mm 'ч'. 'ч'.
+bg	gregorian	WWW	WWW
+bg	gregorian	WWWHm	WWW, HH:mm 'ч'. 'ч'.
+bg	gregorian	WWWW	WWWW
+bg	gregorian	WWWWHm	WWWW, HH:mm 'ч'. 'ч'.
+bg	gregorian	WWWWW	WWWWW
+bg	gregorian	WWWWWHm	WWWWW, HH:mm 'ч'. 'ч'.
+bg	gregorian	WWWWWW	WWWWWW
+bg	gregorian	WWWWWWHm	WWWWWW, HH:mm 'ч'. 'ч'.
+bg	gregorian	X	X
+bg	gregorian	XHm	HH:mm 'ч'. X
+bg	gregorian	XX	XX
+bg	gregorian	XXHm	HH:mm 'ч'. XX
+bg	gregorian	XXX	XXX
+bg	gregorian	XXXHm	HH:mm 'ч'. XXX
+bg	gregorian	XXXX	XXXX
+bg	gregorian	XXXXHm	HH:mm 'ч'. XXXX
+bg	gregorian	XXXXX	XXXXX
+bg	gregorian	XXXXXHm	HH:mm 'ч'. XXXXX
+bg	gregorian	XXXXXX	XXXXXX
+bg	gregorian	XXXXXXHm	HH:mm 'ч'. XXXXXX
+bg	gregorian	Y	Y 'г'.
+bg	gregorian	YHm	Y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	YMMMd	d.MM.Y 'г'.
+bg	gregorian	YY	YY 'г'.
+bg	gregorian	YYHm	YY 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	YYY	YYY 'г'.
+bg	gregorian	YYYHm	YYY 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	YYYY	YYYY 'г'.
+bg	gregorian	YYYYHm	YYYY 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	YYYYY	YYYYY 'г'.
+bg	gregorian	YYYYYHm	YYYYY 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	YYYYYY	YYYYYY 'г'.
+bg	gregorian	YYYYYYHm	YYYYYY 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	Z	Z
+bg	gregorian	ZHm	HH:mm 'ч'. Z
+bg	gregorian	ZZ	ZZ
+bg	gregorian	ZZHm	HH:mm 'ч'. ZZ
+bg	gregorian	ZZZ	ZZZ
+bg	gregorian	ZZZHm	HH:mm 'ч'. ZZZ
+bg	gregorian	ZZZZ	ZZZZ
+bg	gregorian	ZZZZHm	HH:mm 'ч'. ZZZZ
+bg	gregorian	ZZZZZ	ZZZZZ
+bg	gregorian	ZZZZZHm	HH:mm 'ч'. ZZZZZ
+bg	gregorian	ZZZZZZ	ZZZZZZ
+bg	gregorian	ZZZZZZHm	HH:mm 'ч'. ZZZZZZ
+bg	gregorian	a	a
+bg	gregorian	aHm	HH:mm 'ч'.
+bg	gregorian	aa	aa
+bg	gregorian	aaHm	HH:mm 'ч'.
+bg	gregorian	aaa	aaa
+bg	gregorian	aaaHm	HH:mm 'ч'.
+bg	gregorian	aaaa	aaaa
+bg	gregorian	aaaaHm	HH:mm 'ч'.
+bg	gregorian	aaaaa	aaaaa
+bg	gregorian	aaaaaHm	HH:mm 'ч'.
+bg	gregorian	aaaaaa	aaaaaa
+bg	gregorian	aaaaaaHm	HH:mm 'ч'.
+bg	gregorian	b	b
+bg	gregorian	bHm	HH:mm 'ч'.
+bg	gregorian	bb	bb
+bg	gregorian	bbHm	HH:mm 'ч'.
+bg	gregorian	bbb	bbb
+bg	gregorian	bbbHm	HH:mm 'ч'.
+bg	gregorian	bbbb	bbbb
+bg	gregorian	bbbbHm	HH:mm 'ч'.
+bg	gregorian	bbbbb	bbbbb
+bg	gregorian	bbbbbHm	HH:mm 'ч'.
+bg	gregorian	bbbbbb	bbbbbb
+bg	gregorian	bbbbbbHm	HH:mm 'ч'.
+bg	gregorian	bhm	h:mm 'ч'. b
+bg	gregorian	c	c
+bg	gregorian	cHm	e, HH:mm 'ч'.
+bg	gregorian	cc	cc
+bg	gregorian	ccHm	ee, HH:mm 'ч'.
+bg	gregorian	ccc	ccc
+bg	gregorian	cccHm	EEE, HH:mm 'ч'.
+bg	gregorian	cccc	cccc
+bg	gregorian	ccccHm	EEEE, HH:mm 'ч'.
+bg	gregorian	ccccc	ccccc
+bg	gregorian	cccccHm	EEEEE, HH:mm 'ч'.
+bg	gregorian	cccccc	cccccc
+bg	gregorian	ccccccHm	EEEEEE, HH:mm 'ч'.
+bg	gregorian	d	d
+bg	gregorian	dHm	d, HH:mm 'ч'. 'ч'.
+bg	gregorian	dd	dd
+bg	gregorian	ddHm	dd, HH:mm 'ч'. 'ч'.
+bg	gregorian	ddd	d
+bg	gregorian	dddHm	d, HH:mm 'ч'. 'ч'.
+bg	gregorian	dddd	d
+bg	gregorian	ddddHm	d, HH:mm 'ч'. 'ч'.
+bg	gregorian	ddddd	d
+bg	gregorian	dddddHm	d, HH:mm 'ч'. 'ч'.
+bg	gregorian	dddddd	d
+bg	gregorian	ddddddHm	d, HH:mm 'ч'. 'ч'.
+bg	gregorian	e	c
+bg	gregorian	eHm	e, HH:mm 'ч'.
+bg	gregorian	ee	cc
+bg	gregorian	eeHm	ee, HH:mm 'ч'.
+bg	gregorian	eee	ccc
+bg	gregorian	eeeHm	EEE, HH:mm 'ч'.
+bg	gregorian	eeee	cccc
+bg	gregorian	eeeeHm	EEEE, HH:mm 'ч'.
+bg	gregorian	eeeee	ccccc
+bg	gregorian	eeeeeHm	EEEEE, HH:mm 'ч'.
+bg	gregorian	eeeeee	cccccc
+bg	gregorian	eeeeeeHm	EEEEEE, HH:mm 'ч'.
+bg	gregorian	g	g
+bg	gregorian	gHm	g, HH:mm 'ч'. 'ч'.
+bg	gregorian	gg	gg
+bg	gregorian	ggHm	gg, HH:mm 'ч'. 'ч'.
+bg	gregorian	ggg	ggg
+bg	gregorian	gggHm	ggg, HH:mm 'ч'. 'ч'.
+bg	gregorian	gggg	gggg
+bg	gregorian	ggggHm	gggg, HH:mm 'ч'. 'ч'.
+bg	gregorian	ggggg	ggggg
+bg	gregorian	gggggHm	ggggg, HH:mm 'ч'. 'ч'.
+bg	gregorian	gggggg	gggggg
+bg	gregorian	ggggggHm	gggggg, HH:mm 'ч'. 'ч'.
+bg	gregorian	h	h 'ч'. a
+bg	gregorian	hB	h 'ч'. B
+bg	gregorian	hHm	HH:mm 'ч'.
+bg	gregorian	hb	h 'ч'. b
+bg	gregorian	hh	h 'ч'. a
+bg	gregorian	hhHm	HH:mm 'ч'.
+bg	gregorian	hhh	h 'ч'. a
+bg	gregorian	hhhHm	HH:mm 'ч'.
+bg	gregorian	hhhh	h 'ч'. a
+bg	gregorian	hhhhHm	HH:mm 'ч'.
+bg	gregorian	hhhhh	h 'ч'. a
+bg	gregorian	hhhhhHm	HH:mm 'ч'.
+bg	gregorian	hhhhhh	h 'ч'. a
+bg	gregorian	hhhhhhHm	HH:mm 'ч'.
+bg	gregorian	hmS	h:mm:ss,S 'ч'. a
+bg	gregorian	hmV	h:mm 'ч'. a V
+bg	gregorian	hmVVVV	h:mm 'ч'. a VVVV
+bg	gregorian	hmX	h:mm 'ч'. a X
+bg	gregorian	hmXXXXX	h:mm 'ч'. a XXXXX
+bg	gregorian	hmZ	h:mm 'ч'. a Z
+bg	gregorian	hmZZZZ	h:mm 'ч'. a ZZZZ
+bg	gregorian	hmsSSS	h:mm:ss,SSS 'ч'. a
+bg	gregorian	hmx	h:mm 'ч'. a x
+bg	gregorian	j	HH 'ч'.
+bg	gregorian	jHm	HH:mm 'ч'.
+bg	gregorian	jj	HH 'ч'.
+bg	gregorian	jjHm	HH:mm 'ч'.
+bg	gregorian	jjj	HH 'ч'.
+bg	gregorian	jjjHm	HH:mm 'ч'.
+bg	gregorian	jjjj	HH 'ч'.
+bg	gregorian	jjjjHm	HH:mm 'ч'.
+bg	gregorian	jjjjj	HH 'ч'.
+bg	gregorian	jjjjjHm	HH:mm 'ч'.
+bg	gregorian	jjjjjj	HH 'ч'.
+bg	gregorian	jjjjjjHm	HH:mm 'ч'.
+bg	gregorian	k	HH 'ч'.
+bg	gregorian	kHm	HH:mm 'ч'.
+bg	gregorian	khm	h:mm 'ч'. a
+bg	gregorian	kk	HH 'ч'.
+bg	gregorian	kkHm	HH:mm 'ч'.
+bg	gregorian	kkk	HH 'ч'.
+bg	gregorian	kkkHm	HH:mm 'ч'.
+bg	gregorian	kkkk	HH 'ч'.
+bg	gregorian	kkkkHm	HH:mm 'ч'.
+bg	gregorian	kkkkk	HH 'ч'.
+bg	gregorian	kkkkkHm	HH:mm 'ч'.
+bg	gregorian	kkkkkk	HH 'ч'.
+bg	gregorian	kkkkkkHm	HH:mm 'ч'.
+bg	gregorian	kms	HH:mm:ss 'ч'.
+bg	gregorian	l	L
+bg	gregorian	lHm	L, HH:mm 'ч'. 'ч'.
+bg	gregorian	ll	LL
+bg	gregorian	llHm	LL, HH:mm 'ч'. 'ч'.
+bg	gregorian	lll	LLL
+bg	gregorian	lllHm	LLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	llll	LLLL
+bg	gregorian	llllHm	LLLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	lllll	LLLLL
+bg	gregorian	lllllHm	LLLLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	llllll	LLLLLL
+bg	gregorian	llllllHm	LLLLLL, HH:mm 'ч'. 'ч'.
+bg	gregorian	m	m
+bg	gregorian	mS	m:ss,S
+bg	gregorian	mSS	m:ss,SS
+bg	gregorian	mSSS	m:ss,SSS
+bg	gregorian	mm	m
+bg	gregorian	mmm	m
+bg	gregorian	mmmm	m
+bg	gregorian	mmmmm	m
+bg	gregorian	mmmmmm	m
+bg	gregorian	msS	m:ss,S
+bg	gregorian	q	q
+bg	gregorian	qHm	q, HH:mm 'ч'. 'ч'.
+bg	gregorian	qq	qq
+bg	gregorian	qqHm	qq, HH:mm 'ч'. 'ч'.
+bg	gregorian	qqq	qqq
+bg	gregorian	qqqHm	qqq, HH:mm 'ч'. 'ч'.
+bg	gregorian	qqqq	qqqq
+bg	gregorian	qqqqHm	qqqq, HH:mm 'ч'. 'ч'.
+bg	gregorian	qqqqq	qqqqq
+bg	gregorian	qqqqqHm	qqqqq, HH:mm 'ч'. 'ч'.
+bg	gregorian	qqqqqq	qqqqqq
+bg	gregorian	qqqqqqHm	qqqqqq, HH:mm 'ч'. 'ч'.
+bg	gregorian	r	y 'г'.
+bg	gregorian	rHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	rMMMd	d.MM.y 'г'.
+bg	gregorian	rr	yy 'г'.
+bg	gregorian	rrHm	yy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	rrr	yyy 'г'.
+bg	gregorian	rrrHm	yyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	rrrr	yyyy 'г'.
+bg	gregorian	rrrrHm	yyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	rrrrr	yyyyy 'г'.
+bg	gregorian	rrrrrHm	yyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	rrrrrr	yyyyyy 'г'.
+bg	gregorian	rrrrrrHm	yyyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	sHm	HH:mm:ss 'ч'.
+bg	gregorian	ss	s
+bg	gregorian	ssHm	H:mm:ss
+bg	gregorian	sss	s
+bg	gregorian	sssHm	H:mm:ss
+bg	gregorian	ssss	s
+bg	gregorian	ssssHm	H:mm:ss
+bg	gregorian	sssss	s
+bg	gregorian	sssssHm	H:mm:ss
+bg	gregorian	ssssss	s
+bg	gregorian	ssssssHm	H:mm:ss
+bg	gregorian	u	y 'г'.
+bg	gregorian	uHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	uMMMd	d.MM.y 'г'.
+bg	gregorian	uu	yy 'г'.
+bg	gregorian	uuHm	yy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	uuu	yyy 'г'.
+bg	gregorian	uuuHm	yyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	uuuu	yyyy 'г'.
+bg	gregorian	uuuuHm	yyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	uuuuu	yyyyy 'г'.
+bg	gregorian	uuuuuHm	yyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	uuuuuu	yyyyyy 'г'.
+bg	gregorian	uuuuuuHm	yyyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	v	v
+bg	gregorian	vHm	HH:mm 'ч'. v
+bg	gregorian	vv	vv
+bg	gregorian	vvHm	HH:mm 'ч'. vv
+bg	gregorian	vvv	vvv
+bg	gregorian	vvvHm	HH:mm 'ч'. vvv
+bg	gregorian	vvvv	vvvv
+bg	gregorian	vvvvHm	HH:mm 'ч'. vvvv
+bg	gregorian	vvvvv	vvvvv
+bg	gregorian	vvvvvHm	HH:mm 'ч'. vvvvv
+bg	gregorian	vvvvvv	vvvvvv
+bg	gregorian	vvvvvvHm	HH:mm 'ч'. vvvvvv
+bg	gregorian	w	w
+bg	gregorian	wHm	w, HH:mm 'ч'. 'ч'.
+bg	gregorian	ww	ww
+bg	gregorian	wwHm	ww, HH:mm 'ч'. 'ч'.
+bg	gregorian	www	www
+bg	gregorian	wwwHm	www, HH:mm 'ч'. 'ч'.
+bg	gregorian	wwww	wwww
+bg	gregorian	wwwwHm	wwww, HH:mm 'ч'. 'ч'.
+bg	gregorian	wwwww	wwwww
+bg	gregorian	wwwwwHm	wwwww, HH:mm 'ч'. 'ч'.
+bg	gregorian	wwwwww	wwwwww
+bg	gregorian	wwwwwwHm	wwwwww, HH:mm 'ч'. 'ч'.
+bg	gregorian	x	x
+bg	gregorian	xHm	HH:mm 'ч'. x
+bg	gregorian	xx	xx
+bg	gregorian	xxHm	HH:mm 'ч'. xx
+bg	gregorian	xxx	xxx
+bg	gregorian	xxxHm	HH:mm 'ч'. xxx
+bg	gregorian	xxxx	xxxx
+bg	gregorian	xxxxHm	HH:mm 'ч'. xxxx
+bg	gregorian	xxxxx	xxxxx
+bg	gregorian	xxxxxHm	HH:mm 'ч'. xxxxx
+bg	gregorian	xxxxxx	xxxxxx
+bg	gregorian	xxxxxxHm	HH:mm 'ч'. xxxxxx
+bg	gregorian	y	y 'г'.
+bg	gregorian	y'q'M	MM.y 'г'.
+bg	gregorian	yD	y 'г'. ├'ден от годината': D┤
+bg	gregorian	yHm	y 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	yMMMMEEEEEd	EEEEE, d MMMM y 'г'.
+bg	gregorian	yMMMMEEEEdHmsSSSvvvv	EEEE, d MMMM y 'г'. 'в' HH:mm:ss,SSS 'ч'. vvvv
+bg	gregorian	yMMMdhmz	d.MM.y 'г'., h:mm 'ч'. a z 'ч'.
+bg	gregorian	yMdA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdAA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdAAA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdAAAA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdAAAAA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdAAAAAA	d.MM.y 'г'., A 'ч'.
+bg	gregorian	yMdB	d.MM.y 'г'., B 'ч'.
+bg	gregorian	yMdBB	d.MM.y 'г'., BB 'ч'.
+bg	gregorian	yMdBBB	d.MM.y 'г'., BBB 'ч'.
+bg	gregorian	yMdBBBB	d.MM.y 'г'., BBBB 'ч'.
+bg	gregorian	yMdBBBBB	d.MM.y 'г'., BBBBB 'ч'.
+bg	gregorian	yMdBBBBBB	d.MM.y 'г'., BBBBBB 'ч'.
+bg	gregorian	yMdC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdCC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdCCC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdCCCC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdCCCCC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdCCCCCC	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdD	d.MM.y 'г'. ├'ден от годината': D┤
+bg	gregorian	yMdDD	d.MM.y 'г'. ├'ден от годината': DD┤
+bg	gregorian	yMdDDD	d.MM.y 'г'. ├'ден от годината': DDD┤
+bg	gregorian	yMdDDDD	d.MM.y 'г'. ├'ден от годината': DDDD┤
+bg	gregorian	yMdDDDDD	d.MM.y 'г'. ├'ден от годината': DDDDD┤
+bg	gregorian	yMdDDDDDD	d.MM.y 'г'. ├'ден от годината': DDDDDD┤
+bg	gregorian	yMdE	EEE, d.MM.y 'г'.
+bg	gregorian	yMdEE	EEE, d.MM.y 'г'.
+bg	gregorian	yMdEEE	EEE, d.MM.y 'г'.
+bg	gregorian	yMdEEEE	EEEE, d.MM.y 'г'.
+bg	gregorian	yMdEEEEEE	EEEEEE, d.MM.y 'г'.
+bg	gregorian	yMdF	d.MM.y 'г'. ├'работен ден от месеца': F┤
+bg	gregorian	yMdFF	d.MM.y 'г'. ├'работен ден от месеца': FF┤
+bg	gregorian	yMdFFF	d.MM.y 'г'. ├'работен ден от месеца': FFF┤
+bg	gregorian	yMdFFFF	d.MM.y 'г'. ├'работен ден от месеца': FFFF┤
+bg	gregorian	yMdFFFFF	d.MM.y 'г'. ├'работен ден от месеца': FFFFF┤
+bg	gregorian	yMdFFFFFF	d.MM.y 'г'. ├'работен ден от месеца': FFFFFF┤
+bg	gregorian	yMdG	dd.MM.y 'г'. GGGGG
+bg	gregorian	yMdGG	dd.MM.y 'г'. GG
+bg	gregorian	yMdGGG	dd.MM.y 'г'. GGG
+bg	gregorian	yMdGGGG	dd.MM.y 'г'. GGGG
+bg	gregorian	yMdGGGGG	dd.MM.y 'г'. GGGGG
+bg	gregorian	yMdGGGGGG	dd.MM.y 'г'. GGGGGG
+bg	gregorian	yMdH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdHH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdHHH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdHHHH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdHHHHH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdHHHHHH	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJJJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJJJJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJJJJJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdJJJJJJ	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdKK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdKKK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdKKKK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdKKKKK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdKKKKKK	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdL	d.M.y 'г'.
+bg	gregorian	yMdLL	d.MM.y 'г'.
+bg	gregorian	yMdLLL	d MMM y 'г'.
+bg	gregorian	yMdLLLL	d MMMM y 'г'.
+bg	gregorian	yMdLLLLL	d MMMMM y 'г'.
+bg	gregorian	yMdLLLLLL	d MMMMMM y 'г'.
+bg	gregorian	yMdO	d.MM.y 'г'., O 'ч'.
+bg	gregorian	yMdOO	d.MM.y 'г'., OO 'ч'.
+bg	gregorian	yMdOOO	d.MM.y 'г'., OOO 'ч'.
+bg	gregorian	yMdOOOO	d.MM.y 'г'., OOOO 'ч'.
+bg	gregorian	yMdOOOOO	d.MM.y 'г'., OOOOO 'ч'.
+bg	gregorian	yMdOOOOOO	d.MM.y 'г'., OOOOOO 'ч'.
+bg	gregorian	yMdQ	d.MM.y 'г'. ('тримесечие': Q)
+bg	gregorian	yMdQQ	d.MM.y 'г'. ('тримесечие': QQ)
+bg	gregorian	yMdQQQ	d.MM.y 'г'. ('тримесечие': QQQ)
+bg	gregorian	yMdQQQQ	d.MM.y 'г'. ('тримесечие': QQQQ)
+bg	gregorian	yMdQQQQQ	d.MM.y 'г'. ('тримесечие': QQQQQ)
+bg	gregorian	yMdQQQQQQ	d.MM.y 'г'. ('тримесечие': QQQQQQ)
+bg	gregorian	yMdS	d.MM.y 'г'., S 'ч'.
+bg	gregorian	yMdSS	d.MM.y 'г'., SS 'ч'.
+bg	gregorian	yMdSSS	d.MM.y 'г'., SSS 'ч'.
+bg	gregorian	yMdSSSS	d.MM.y 'г'., SSSS 'ч'.
+bg	gregorian	yMdSSSSS	d.MM.y 'г'., SSSSS 'ч'.
+bg	gregorian	yMdSSSSSS	d.MM.y 'г'., SSSSSS 'ч'.
+bg	gregorian	yMdU	d.MM.y 'г'.
+bg	gregorian	yMdUU	d.MM.y 'г'.
+bg	gregorian	yMdUUU	d.MM.y 'г'.
+bg	gregorian	yMdUUUU	d.MM.y 'г'.
+bg	gregorian	yMdUUUUU	d.MM.y 'г'.
+bg	gregorian	yMdUUUUUU	d.MM.y 'г'.
+bg	gregorian	yMdV	d.MM.y 'г'., V 'ч'.
+bg	gregorian	yMdVV	d.MM.y 'г'., VV 'ч'.
+bg	gregorian	yMdVVV	d.MM.y 'г'., VVV 'ч'.
+bg	gregorian	yMdVVVV	d.MM.y 'г'., VVVV 'ч'.
+bg	gregorian	yMdVVVVV	d.MM.y 'г'., VVVVV 'ч'.
+bg	gregorian	yMdVVVVVV	d.MM.y 'г'., VVVVVV 'ч'.
+bg	gregorian	yMdW	d.MM.y 'г'. ├'седмица от месеца': W┤
+bg	gregorian	yMdWW	d.MM.y 'г'. ├'седмица от месеца': WW┤
+bg	gregorian	yMdWWW	d.MM.y 'г'. ├'седмица от месеца': WWW┤
+bg	gregorian	yMdWWWW	d.MM.y 'г'. ├'седмица от месеца': WWWW┤
+bg	gregorian	yMdWWWWW	d.MM.y 'г'. ├'седмица от месеца': WWWWW┤
+bg	gregorian	yMdWWWWWW	d.MM.y 'г'. ├'седмица от месеца': WWWWWW┤
+bg	gregorian	yMdX	d.MM.y 'г'., X 'ч'.
+bg	gregorian	yMdXX	d.MM.y 'г'., XX 'ч'.
+bg	gregorian	yMdXXX	d.MM.y 'г'., XXX 'ч'.
+bg	gregorian	yMdXXXX	d.MM.y 'г'., XXXX 'ч'.
+bg	gregorian	yMdXXXXX	d.MM.y 'г'., XXXXX 'ч'.
+bg	gregorian	yMdXXXXXX	d.MM.y 'г'., XXXXXX 'ч'.
+bg	gregorian	yMdY	d.MM.Y 'г'.
+bg	gregorian	yMdYY	d.MM.YY 'г'.
+bg	gregorian	yMdYYY	d.MM.YYY 'г'.
+bg	gregorian	yMdYYYY	d.MM.YYYY 'г'.
+bg	gregorian	yMdYYYYY	d.MM.YYYYY 'г'.
+bg	gregorian	yMdYYYYYY	d.MM.YYYYYY 'г'.
+bg	gregorian	yMdZ	d.MM.y 'г'., Z 'ч'.
+bg	gregorian	yMdZZ	d.MM.y 'г'., ZZ 'ч'.
+bg	gregorian	yMdZZZ	d.MM.y 'г'., ZZZ 'ч'.
+bg	gregorian	yMdZZZZ	d.MM.y 'г'., ZZZZ 'ч'.
+bg	gregorian	yMdZZZZZ	d.MM.y 'г'., ZZZZZ 'ч'.
+bg	gregorian	yMdZZZZZZ	d.MM.y 'г'., ZZZZZZ 'ч'.
+bg	gregorian	yMda	d.MM.y 'г'., a 'ч'.
+bg	gregorian	yMdaa	d.MM.y 'г'., aa 'ч'.
+bg	gregorian	yMdaaa	d.MM.y 'г'., aaa 'ч'.
+bg	gregorian	yMdaaaa	d.MM.y 'г'., aaaa 'ч'.
+bg	gregorian	yMdaaaaa	d.MM.y 'г'., aaaaa 'ч'.
+bg	gregorian	yMdaaaaaa	d.MM.y 'г'., aaaaaa 'ч'.
+bg	gregorian	yMdb	d.MM.y 'г'., b 'ч'.
+bg	gregorian	yMdbb	d.MM.y 'г'., bb 'ч'.
+bg	gregorian	yMdbbb	d.MM.y 'г'., bbb 'ч'.
+bg	gregorian	yMdbbbb	d.MM.y 'г'., bbbb 'ч'.
+bg	gregorian	yMdbbbbb	d.MM.y 'г'., bbbbb 'ч'.
+bg	gregorian	yMdbbbbbb	d.MM.y 'г'., bbbbbb 'ч'.
+bg	gregorian	yMdc	e, d.MM.y 'г'.
+bg	gregorian	yMdcc	ee, d.MM.y 'г'.
+bg	gregorian	yMdccc	EEE, d.MM.y 'г'.
+bg	gregorian	yMdcccc	EEEE, d.MM.y 'г'.
+bg	gregorian	yMdccccc	EEEEE, d.MM.y 'г'.
+bg	gregorian	yMdcccccc	EEEEEE, d.MM.y 'г'.
+bg	gregorian	yMde	e, d.MM.y 'г'.
+bg	gregorian	yMdee	ee, d.MM.y 'г'.
+bg	gregorian	yMdeee	EEE, d.MM.y 'г'.
+bg	gregorian	yMdeeee	EEEE, d.MM.y 'г'.
+bg	gregorian	yMdeeeee	EEEEE, d.MM.y 'г'.
+bg	gregorian	yMdeeeeee	EEEEEE, d.MM.y 'г'.
+bg	gregorian	yMdg	g.MM.y 'г'.
+bg	gregorian	yMdgg	gg.MM.y 'г'.
+bg	gregorian	yMdggg	ggg.MM.y 'г'.
+bg	gregorian	yMdgggg	gggg.MM.y 'г'.
+bg	gregorian	yMdggggg	ggggg.MM.y 'г'.
+bg	gregorian	yMdgggggg	gggggg.MM.y 'г'.
+bg	gregorian	yMdh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdhh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdhhh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdhhhh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdhhhhh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdhhhhhh	d.MM.y 'г'., h 'ч'. a 'ч'.
+bg	gregorian	yMdj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdjj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdjjj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdjjjj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdjjjjj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdjjjjjj	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdkk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdkkk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdkkkk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdkkkkk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdkkkkkk	d.MM.y 'г'., HH 'ч'. 'ч'.
+bg	gregorian	yMdl	d.M.y 'г'.
+bg	gregorian	yMdll	d.MM.y 'г'.
+bg	gregorian	yMdlll	d.MMM.y 'г'.
+bg	gregorian	yMdllll	d.MMMM.y 'г'.
+bg	gregorian	yMdlllll	d.MMMMM.y 'г'.
+bg	gregorian	yMdllllll	d.MMMMMM.y 'г'.
+bg	gregorian	yMdm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdmm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdmmm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdmmmm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdmmmmm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdmmmmmm	d.MM.y 'г'., m 'ч'.
+bg	gregorian	yMdq	d.MM.y 'г'. ('тримесечие': q)
+bg	gregorian	yMdqq	d.MM.y 'г'. ('тримесечие': qq)
+bg	gregorian	yMdqqq	d.MM.y 'г'. ('тримесечие': qqq)
+bg	gregorian	yMdqqqq	d.MM.y 'г'. ('тримесечие': qqqq)
+bg	gregorian	yMdqqqqq	d.MM.y 'г'. ('тримесечие': qqqqq)
+bg	gregorian	yMdqqqqqq	d.MM.y 'г'. ('тримесечие': qqqqqq)
+bg	gregorian	yMdr	d.MM.y 'г'.
+bg	gregorian	yMdrr	d.MM.yy 'г'.
+bg	gregorian	yMdrrr	d.MM.yyy 'г'.
+bg	gregorian	yMdrrrr	d.MM.yyyy 'г'.
+bg	gregorian	yMdrrrrr	d.MM.yyyyy 'г'.
+bg	gregorian	yMdrrrrrr	d.MM.yyyyyy 'г'.
+bg	gregorian	yMds	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdss	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdsss	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdssss	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdsssss	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdssssss	d.MM.y 'г'., s 'ч'.
+bg	gregorian	yMdu	d.MM.y 'г'.
+bg	gregorian	yMduu	d.MM.yy 'г'.
+bg	gregorian	yMduuu	d.MM.yyy 'г'.
+bg	gregorian	yMduuuu	d.MM.yyyy 'г'.
+bg	gregorian	yMduuuuu	d.MM.yyyyy 'г'.
+bg	gregorian	yMduuuuuu	d.MM.yyyyyy 'г'.
+bg	gregorian	yMdv	d.MM.y 'г'., v 'ч'.
+bg	gregorian	yMdvv	d.MM.y 'г'., vv 'ч'.
+bg	gregorian	yMdvvv	d.MM.y 'г'., vvv 'ч'.
+bg	gregorian	yMdvvvv	d.MM.y 'г'., vvvv 'ч'.
+bg	gregorian	yMdvvvvv	d.MM.y 'г'., vvvvv 'ч'.
+bg	gregorian	yMdvvvvvv	d.MM.y 'г'., vvvvvv 'ч'.
+bg	gregorian	yMdw	d.MM.y 'г'. ('седмица': w)
+bg	gregorian	yMdww	d.MM.y 'г'. ('седмица': ww)
+bg	gregorian	yMdwww	d.MM.y 'г'. ('седмица': www)
+bg	gregorian	yMdwwww	d.MM.y 'г'. ('седмица': wwww)
+bg	gregorian	yMdwwwww	d.MM.y 'г'. ('седмица': wwwww)
+bg	gregorian	yMdwwwwww	d.MM.y 'г'. ('седмица': wwwwww)
+bg	gregorian	yMdx	d.MM.y 'г'., x 'ч'.
+bg	gregorian	yMdxx	d.MM.y 'г'., xx 'ч'.
+bg	gregorian	yMdxxx	d.MM.y 'г'., xxx 'ч'.
+bg	gregorian	yMdxxxx	d.MM.y 'г'., xxxx 'ч'.
+bg	gregorian	yMdxxxxx	d.MM.y 'г'., xxxxx 'ч'.
+bg	gregorian	yMdxxxxxx	d.MM.y 'г'., xxxxxx 'ч'.
+bg	gregorian	yMdz	d.MM.y 'г'., z 'ч'.
+bg	gregorian	yMdzz	d.MM.y 'г'., zz 'ч'.
+bg	gregorian	yMdzzz	d.MM.y 'г'., zzz 'ч'.
+bg	gregorian	yMdzzzz	d.MM.y 'г'., zzzz 'ч'.
+bg	gregorian	yMdzzzzz	d.MM.y 'г'., zzzzz 'ч'.
+bg	gregorian	yMdzzzzzz	d.MM.y 'г'., zzzzzz 'ч'.
+bg	gregorian	yQQQ	QQQ y 'г'.
+bg	gregorian	yQQQQ	QQQQ y 'г'.
+bg	gregorian	yw	
+bg	gregorian	yy	yy 'г'.
+bg	gregorian	yyHm	yy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	yyMMMMd	d MMMM yy 'г'.
+bg	gregorian	yyy	yyy 'г'.
+bg	gregorian	yyyHm	yyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	yyyy	yyyy 'г'.
+bg	gregorian	yyyyHm	yyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	yyyyMMMd	d.MM.yyyy 'г'.
+bg	gregorian	yyyyy	yyyyy 'г'.
+bg	gregorian	yyyyyHm	yyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	yyyyyy	yyyyyy 'г'.
+bg	gregorian	yyyyyyHm	yyyyyy 'г'., HH:mm 'ч'. 'ч'.
+bg	gregorian	z	z
+bg	gregorian	zHm	HH:mm 'ч'. z
+bg	gregorian	zz	zz
+bg	gregorian	zzHm	HH:mm 'ч'. zz
+bg	gregorian	zzz	zzz
+bg	gregorian	zzzHm	HH:mm 'ч'. zzz
+bg	gregorian	zzzz	zzzz
+bg	gregorian	zzzzHm	HH:mm 'ч'. zzzz
+bg	gregorian	zzzzz	zzzzz
+bg	gregorian	zzzzzHm	HH:mm 'ч'. zzzzz
+bg	gregorian	zzzzzz	zzzzzz
+bg	gregorian	zzzzzzHm	HH:mm 'ч'. zzzzzz

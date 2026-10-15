@@ -10,6 +10,9 @@
 #   them to the locale's Gregorian ones ("HH.mm" in da); ICU takes root's
 #   own Chinese formats ("HH:mm").
 # CLDR's own skeletons*.tsv joins with the calendar's glue as mlocgen does.
+# - An item CLDR gives per plural count ("MMMMW", "yw"): ICU returns no
+#   pattern for it; mlocgen takes the count "other" form, as CLDR's
+#   resolution does.
 # locale, calendar, skeleton, mlocgen's pattern.
 ak	buddhist	yMdHmsv	y/M/d HH:mm:ss v
 ak	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
@@ -342,3 +345,19 @@ yue_Hant	japanese	yMdHmsv	Gy/M/d HH:mm:ss (v)
 yue	islamic-umalqura	EEEEv	cccc v
 yue	islamic-umalqura	yMv	Gy/M v
 yue	japanese	yMdHmsv	Gy/M/d HH:mm:ss (v)
+en	gregorian	MMMMW	'week' W 'of' MMMM
+en	gregorian	yw	'week' w 'of' Y
+de	gregorian	MMMMW	'Woche' W 'im' MMMM
+de	gregorian	yw	'Woche' w 'des' 'Jahres' Y
+ja	gregorian	MMMMW	M月第W週
+ja	gregorian	yw	Y年第w週
+zh_Hant_TW	gregorian	MMMMW	MMMM的第W週
+zh_Hant_TW	gregorian	yw	Y年的第w週
+ar	gregorian	MMMMW	الأسبوع W من MMMM
+ar	gregorian	yw	الأسبوع w من سنة Y
+ru	gregorian	MMMMW	W-'я' 'неделя' MMMM
+ru	gregorian	yw	w-'я' 'неделя' Y 'г'.
+fi	gregorian	MMMMW	LLLL'n' W. 'viikko'
+fi	gregorian	yw	'vuoden' Y 'viikko' w
+bg	gregorian	MMMMW	'седмица' W 'от' MMMM
+bg	gregorian	yw	'седмица' w 'от' Y 'г'.
