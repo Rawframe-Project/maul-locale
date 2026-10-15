@@ -120,6 +120,16 @@ static void TestWeekYear(void)
           "December 30 in the first week of the next");
     CHECK(Is("gl-u-ca-buddhist", full, Iso(2024, 6, 30), "domingo, 30 de xuño de 2567 BE"),
           "a day in its own year");
+    // ISO 8601's weeks, which gl's rule is: each year's edges.
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2005, 1, 2), "domingo, 2 de xaneiro de 2547 BE") &&
+              Is("gl-u-ca-buddhist", full, Iso(2010, 1, 3), "domingo, 3 de xaneiro de 2552 BE") &&
+              Is("gl-u-ca-buddhist", full, Iso(2027, 1, 1), "venres, 1 de xaneiro de 2569 BE"),
+          "a first week of three days or fewer belongs to the year before");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2026, 1, 1), "xoves, 1 de xaneiro de 2569 BE") &&
+              Is("gl-u-ca-buddhist", full, Iso(2020, 12, 31), "xoves, 31 de decembro de 2563 BE"),
+          "a week of four days in its year is the year's");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2019, 12, 30), "luns, 30 de decembro de 2563 BE"),
+          "the last days of a year in the next year's first week");
 }
 
 static void TestYearStyles(void)
@@ -187,8 +197,9 @@ static void TestCalendars(void)
           "a Persian year before its epoch, and its year 0");
     mlocDateOptions longStyle = {.style = mloc_dateStyleLong};
     CHECK(Is("he-u-ca-hebrew", longStyle, Iso(1240, 10, 1), "ז׳ בתשרי א׳") &&
+              Is("he-u-ca-hebrew", longStyle, Iso(2239, 10, 15), "ט״ז בתשרי ו׳ אלפים") &&
               Is("he-u-ca-hebrew", longStyle, Iso(2240, 10, 1), "ט״ו בתשרי ו׳א׳"),
-          "the Hebrew millennium's ends: 5001 without its thousands, 6001 with them");
+          "the Hebrew millennium's ends: 5001 without its thousands, 6000 and 6001 with them");
 }
 
 static void TestDigits(void)
