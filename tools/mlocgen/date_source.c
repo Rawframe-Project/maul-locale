@@ -5,6 +5,7 @@
 
 #include "date_source.h"
 
+#include "semantic.h"
 #include "xml.h"
 
 #include <stdarg.h>
@@ -426,6 +427,102 @@ int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapa
         char* pattern = PatternGeneratorBest(&g, skeleton);
         puts(pattern);
         free(pattern);
+    }
+    PatternGeneratorFree(&g);
+    DateSupplementFree(&supplement);
+    CldrClose(&cldr);
+    return 1;
+}
+
+const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar, int length)
+{
+    static const char* const s_lengths[3] = {"long", "medium", "short"};
+    char rest[256];
+    Format(rest, sizeof(rest),
+           "dateFormats/dateFormatLength[@type=\"%s\"]/dateFormat/datetimeSkeleton",
+           s_lengths[length]);
+    const char* skeleton = CalendarValue(cldr, locale, calendar, rest);
+    return skeleton != nullptr ? skeleton : "yMd";
+}
+
+// A field set written as letters: Y, M, D, E, T and Z.
+static unsigned FieldsOf(const char* letters)
+{
+    static const char s_letters[] = "YMDETZ";
+    unsigned fields = 0;
+    for (const char* p = letters; *p != '\0'; p++)
+    {
+        const char* at = strchr(s_letters, *p);
+        fields |= at != nullptr ? 1U << (at - s_letters) : 1U << 8;
+    }
+    return fields;
+}
+
+// Answers one line: "locale calendar fields length year-style hour-cycle
+// precision zone-style", numbers as semantic.h's enumerations.
+static void AnswerSemantic(Cldr* cldr, const DateSupplement* s, PatternGenerator* g, char* loaded,
+                           size_t loadedCapacity, const char* line)
+{
+    char locale[64];
+    char calendar[64];
+    char fields[16];
+    int length = 0;
+    int year = 0;
+    int hour = 0;
+    int precision = 0;
+    int zone = 0;
+    if (sscanf(line, "%63s %63s %15s %d %d %d %d %d", locale, calendar, fields, &length, &year,
+               &hour, &precision, &zone) != 8 ||
+        length < 0 || length > 2 || year < 0 || year > 2 || hour < 0 || hour > 6 || precision < 0 ||
+        precision > 11 || zone < 0 || zone > 3)
+    {
+        puts("?");
+        return;
+    }
+    char key[160];
+    Format(key, sizeof(key), "%s\t%s", locale, calendar);
+    if (strcmp(key, loaded) != 0)
+    {
+        PatternGeneratorFree(g);
+        PatternGeneratorInit(g);
+        DateSourceLoad(cldr, s, locale, calendar, g);
+        Format(loaded, loadedCapacity, "%s", key);
+    }
+    SemanticSkeleton semantic = {
+        FieldsOf(fields), (SemanticLength)length, (SemanticYearStyle)year, (SemanticHourCycle)hour,
+        precision,        (SemanticZoneStyle)zone};
+    char classical[64];
+    if (!SemanticClassical(&semantic, DateSkeletonOf(cldr, locale, calendar, length), classical,
+                           sizeof(classical)))
+    {
+        puts("-");
+        return;
+    }
+    char* pattern = PatternGeneratorBest(g, classical);
+    printf("%s\t%s\n", classical, pattern);
+    free(pattern);
+}
+
+int PrintSemantic(const char* commonDirectory, char* errorOut, size_t errorCapacity)
+{
+    Cldr cldr;
+    DateSupplement supplement;
+    if (!CldrOpen(&cldr, commonDirectory, errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    if (!DateSupplementLoad(&supplement, commonDirectory, errorOut, errorCapacity))
+    {
+        CldrClose(&cldr);
+        return 0;
+    }
+    PatternGenerator g;
+    PatternGeneratorInit(&g);
+    char loaded[160] = "";
+    char line[512];
+    while (fgets(line, sizeof(line), stdin) != nullptr)
+    {
+        AnswerSemantic(&cldr, &supplement, &g, loaded, sizeof(loaded), line);
     }
     PatternGeneratorFree(&g);
     DateSupplementFree(&supplement);

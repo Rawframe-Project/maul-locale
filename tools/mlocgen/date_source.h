@@ -39,4 +39,11 @@ void DateSourceLoad(Cldr* cldr, const DateSupplement* s, const char* locale, con
 // <TAB>skeleton", for tools/check_skeletons.py.
 int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapacity);
 
+// The datetimeSkeleton of a date length (0 long, 1 medium, 2 short).
+const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar, int length);
+
+// Prints the classical skeleton and the pattern of each semantic skeleton
+// on standard input, for tools/check_datetime.py.
+int PrintSemantic(const char* commonDirectory, char* errorOut, size_t errorCapacity);
+
 #endif

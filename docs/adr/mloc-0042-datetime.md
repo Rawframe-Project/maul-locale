@@ -55,6 +55,22 @@ cycle, time precision, zone style).
     drops the fields after them (tok's long date loses its day);
   - an item CLDR gives per plural count ("MMMMW", "yw") takes its
     count "other" form; ICU returns no pattern for it.
+- **Semantic skeletons map to classical ones as UTS #35's table maps
+  them** (`tools/mlocgen/semantic.c`): the year, month and day letters
+  of the length's `datetimeSkeleton`; a month alone as `LLLL`, `LLL` or
+  `L`; the weekday `EEEE`, `EEE` or `EEE` (`EEEEE` alone and short);
+  the hour `j` for the locale's own cycle (CLDR's test data; UTS #35's
+  table says `C`), `h` for the 12-hour cycles and `H` for the 24-hour
+  ones; minutes, seconds and fraction digits by the precision; the zone
+  as `zzzz` or `vvvv` alone and not short, otherwise `z` or `v`,
+  `VVVV` for the location and `O` for the offset. The year style
+  "full" drops a two-digit year, "with era" adds `G`.
+- **A date with a time is joined by the atTime glue**, as UTS #35 makes
+  it the default, as ICU4C 79 and ICU4X do ("January 1 at 12:00:00 AM
+  GMT"). CLDR's `datetime.json` expects the standard glue for its
+  composites ("January 1, 12:00:00 AM GMT"); those cases are checked
+  for their classical skeleton, and their text will be listed where
+  it differs.
 - **A chain names one element however it spells its defaults.** The
   generator's CLDR resolver looks a chain up both as written and
   without the attributes whose values are their DTD defaults, so
@@ -84,6 +100,11 @@ cycle, time precision, zone style).
   the Gregorian calendar, 156 skeletons: CLDR's and those the semantic
   field sets ask for). All agree but 14, the fr_ML glue and tok's
   long date above.
+- **CLDR's semantic cases:** `tools/check_datetime.py` maps each of
+  the 240 semantic skeletons of `testData/datetime/datetime.json`
+  (four locales, four calendars, every field set, length, year style,
+  hour cycle and zone style it has) and compares the classical
+  skeleton with the file's. All agree.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

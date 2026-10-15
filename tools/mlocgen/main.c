@@ -126,6 +126,16 @@ int main(int argc, char** argv)
         }
         return 0;
     }
+    if (argc == 3 && strcmp(argv[1], "semantic") == 0)
+    {
+        char error[1024];
+        if (!PrintSemantic(argv[2], error, sizeof(error)))
+        {
+            fprintf(stderr, "mlocgen: %s\n", error);
+            return 1;
+        }
+        return 0;
+    }
     if (argc == 3 && strcmp(argv[1], "skeletons") == 0)
     {
         char error[1024];
@@ -150,6 +160,7 @@ int main(int argc, char** argv)
           "       mlocgen chains <CLDR common directory>\n"
           "       mlocgen plural-samples <CLDR common directory>\n"
           "       mlocgen skeletons <CLDR common directory> < questions\n"
+          "       mlocgen semantic <CLDR common directory> < questions\n"
           "       mlocgen zones <tzdb directory> <until year>\n"
           "       mlocgen zonesfile <tzdb directory> <CLDR common directory> <out file>\n"
           "       mlocgen generate <CLDR common directory> <repository root> <tzdb directory>\n",
