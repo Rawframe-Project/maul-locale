@@ -6,6 +6,7 @@
 
 #include "currency_region.h"
 #include "data_view.h"
+#include "date_data.h"
 #include "kinds.h"
 #include "list_data.h"
 #include "locale_canonical.h"
@@ -75,6 +76,8 @@ static const DataKind s_kinds[] = {
     {kindNamesSubdivisions, mlocValidNames},
     {kindZones, mlocValidZones},
     {kindZoneCodes, mlocValidZoneCodes},
+    {kindDatePatterns, mlocValidDatePatterns},
+    {kindDates, mlocValidDates},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

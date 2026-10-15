@@ -76,6 +76,27 @@ cycle, time precision, zone style).
   without the attributes whose values are their DTD defaults, so
   root's alias to `dateTimeFormat[@type='standard']` finds the
   `dateTimeFormat` a locale writes without a type.
+- **The dates data file, `dates.mloc`** (`src/date_tables.h`), which a
+  program adds to its data set: a unit of no locale holds the compiled
+  patterns (literal text and field items, quotes resolved, so the run
+  time parses nothing), rows of a field set's patterns at the three
+  lengths, and sets of a calendar's rows (the date field sets D, E,
+  DE, MD, MDE and M, and YMD, YMDE, Y and YM in the three year styles)
+  with its four standard date formats; a unit per locale key, filed
+  where its chain would give others, names the set of each calendar,
+  the ISO calendar taking the Gregorian one's.
+- **The standard formats are CLDR's, resolved per path**: ICU's data
+  holds a calendar's time, date and glue patterns as one array, owned
+  by the first locale giving any of them, and differs from CLDR's
+  inheritance on 27 of 15,402 locale-calendars (nl_BE's Buddhist short
+  date is nl_BE's, not nl's; the Chinese calendar's times are the
+  locale's Gregorian ones).
+- **Numbering overrides** (`numbers="hanidec"`, `"y=jpanyear"`) are
+  read as CLDR's JSON gives them, the first along the chain and root's
+  aliases through inheritance markers, and a length's override is
+  carried to its semantic patterns' numeric year, month and day fields
+  (a symbol-bound one to its symbol), as ICU4X carries it; a field it
+  writes is stored with the numbering system's id.
 - **Still to come in this part** (research 39's slices): the data units
   of compiled patterns per locale and calendar; dates in all 18
   calendars; times, hour cycles and day periods; time zone names by
@@ -107,6 +128,16 @@ cycle, time precision, zone style).
   skeleton with the file's; 14 questions of its own cover the field
   sets UTS #35 does not define, the other precisions and hour cycles,
   and the year styles of a two-digit year. All agree.
+- **The dates data file**, once: the standard date formats of all
+  15,402 locale-calendars ICU4C 79 ships compared with its
+  `DateFormat` patterns: all equal but the 27 above. The numbering
+  overrides of the 11,169 locale-calendars of CLDR's JSON: all equal
+  (24 with overrides). CLDR 49 gives 2,125 distinct patterns (34,630
+  bytes compiled), 2,486 rows and 682 sets; the file is 107,457
+  bytes. `test_date_data` reads its patterns (en, en_GB, the ISO
+  calendar, ja's Japanese year by jpanyear) and spoils a unit field
+  by field; `fuzz_date_data` checks that an accepted unit reads only
+  inside itself.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

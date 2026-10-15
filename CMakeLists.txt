@@ -69,6 +69,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/base.c
     src/data.c
     src/data_kinds.c
+    src/date_data.c
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
@@ -301,6 +302,22 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                        MLOC_SUBDIVISIONS_FILE="${MLOC_SUBDIVISIONS_PATH}")
         endif()
     endforeach()
+    # And the date patterns (record mloc-0042).
+    set(MLOC_DATES_FILE ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
+    set(MLOC_DATES_PATH ${MLOC_DATES_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_DATES_PATH /dates.mloc)
+    endif()
+    maul_add_test(date_data WHITEBOX)
+    if(TARGET test_date_data)
+        if(EMSCRIPTEN)
+            target_link_options(test_date_data PRIVATE "SHELL:--embed-file ${MLOC_DATES_FILE}@/dates.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_date_data PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_date_data PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}")
+    endif()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
@@ -364,7 +381,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal ixdtf locale parse spellout zone_codes zones)
+    foreach(area data date_data decimal ixdtf locale parse spellout zone_codes zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -399,7 +416,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
                                     tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c
-                                    tools/mlocgen/date_source.c tools/mlocgen/semantic.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
+                                    tools/mlocgen/date_gen.c tools/mlocgen/date_source.c tools/mlocgen/semantic.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.

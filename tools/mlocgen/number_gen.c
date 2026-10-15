@@ -13,6 +13,7 @@
 #include "context_gen.h"
 #include "currency_gen.h"
 #include "currency_tables.h"
+#include "date_gen.h"
 #include "keys.h"
 #include "kinds.h"
 #include "list_gen.h"
@@ -1501,7 +1502,15 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* 
     };
     GenerateListUnits(&lists, file);
     GenerateContextUnits(&lists, file);
+    DateInput dates = {
+        .commonDirectory = commonDirectory,
+        .cldr = &g->cldr,
+        .keys = &g->keys,
+        .ids = (const char* const*)ids,
+        .count = count,
+    };
     int ok = GenerateCurrencyUnits(&currency, file, errorOut, errorCapacity) &&
+             GenerateDateUnits(&dates, &names->dates, errorOut, errorCapacity) &&
              GenerateUnitNames(&units, &names->units, errorOut, errorCapacity) &&
              GenerateNames(&localeNamesInput, &names->locales, &names->subdivisions, errorOut,
                            errorCapacity);

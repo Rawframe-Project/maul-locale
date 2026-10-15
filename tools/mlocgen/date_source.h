@@ -42,6 +42,16 @@ int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapa
 // The datetimeSkeleton of a date length (0 long, 1 medium, 2 short).
 const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar, int length);
 
+// A standard date format's pattern (0 full, 1 long, 2 medium, 3 short),
+// or null.
+const char* DateStandardPattern(Cldr* cldr, const char* locale, const char* calendar, int length);
+
+// The numbering override of a standard date format ("hanidec",
+// "y=jpanyear"), or null: the first one along the chain and root's
+// aliases, through inheritance markers, up to the element holding the
+// value, as CLDR's JSON and ICU4X take it.
+const char* DateNumbersOf(Cldr* cldr, const char* locale, const char* calendar, int length);
+
 // Prints the classical skeleton and the pattern of each semantic skeleton
 // on standard input, for tools/check_datetime.py.
 int PrintSemantic(const char* commonDirectory, char* errorOut, size_t errorCapacity);

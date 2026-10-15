@@ -62,3 +62,6 @@ format.
 - Time zones by their BCP 47 ids and Windows names, both ways, as CLDR
   maps them (`mlocFindTimeZoneBcp47`, `mlocFormatTimeZoneBcp47`,
   `mlocFindTimeZoneWindows`, `mlocFormatTimeZoneWindows`; mloc-0041).
+- The dates data file, `dates.mloc`: every locale's semantic date
+  patterns and standard date formats in the 18 calendars, compiled, for
+  the date formatter (mloc-0042).

@@ -243,6 +243,7 @@ static void FreeNameFiles(NameFiles* names)
     DataFileFree(&names->units);
     DataFileFree(&names->locales);
     DataFileFree(&names->subdivisions);
+    DataFileFree(&names->dates);
 }
 
 int Generate(const char* commonDirectory, const char* root, const char* tzdbDirectory,
@@ -291,10 +292,12 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     BuiltinSource(&builtin, bytes, size);
     // The names ship as data files of their own, which a program adds to
     // its data set (records mloc-0022, mloc-0024, mloc-0036 and
-    // mloc-0039), and so do the spell-out rules (record mloc-0034).
+    // mloc-0039), and so do the spell-out rules (record mloc-0034) and the
+    // date patterns (record mloc-0042).
     static const char* const s_nameFiles[] = {"currency-names.mloc", "units.mloc", "names.mloc",
-                                              "subdivisions.mloc"};
-    DataFile* nameFiles[] = {&names.currencies, &names.units, &names.locales, &names.subdivisions};
+                                              "subdivisions.mloc", "dates.mloc"};
+    DataFile* nameFiles[] = {&names.currencies, &names.units, &names.locales, &names.subdivisions,
+                             &names.dates};
     size_t spelloutSize = 0;
     uint8_t* spelloutBytes = DataFileWrite(&spellout, &version, &spelloutSize);
     Text spelloutFile = {.bytes = (char*)spelloutBytes, .size = spelloutSize};

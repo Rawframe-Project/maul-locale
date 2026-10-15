@@ -21,6 +21,7 @@ typedef struct NameFiles
     DataFile units;
     DataFile locales;
     DataFile subdivisions;
+    DataFile dates;
 } NameFiles;
 
 int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* names,

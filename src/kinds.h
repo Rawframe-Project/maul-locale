@@ -134,5 +134,10 @@ constexpr uint32_t kindZones = 0x00080001;
 // The zone part: the BCP 47 time zone ids and the Windows zone names, a
 // unit of no locale (src/zone_code_tables.h).
 constexpr uint32_t kindZoneCodes = 0x00080002;
+// The dates data file: the compiled date patterns, their rows by length
+// and their sets by calendar, a unit of no locale; a locale's set of each
+// calendar, a unit per locale key (record mloc-0042, src/date_tables.h).
+constexpr uint32_t kindDatePatterns = 0x00090001;
+constexpr uint32_t kindDates = 0x00090002;
 
 #endif

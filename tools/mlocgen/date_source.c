@@ -213,6 +213,8 @@ static const char* CalendarValue(Cldr* cldr, const char* locale, const char* cal
     return Resolve(cldr, locale, chain);
 }
 
+static const char* const s_standardLengths[4] = {"full", "long", "medium", "short"};
+
 typedef struct Ids
 {
     const char* prefix;
@@ -319,13 +321,12 @@ static void AddItems(Cldr* cldr, const char* locale, const char* calendar, Patte
 
 static void AddStandard(Cldr* cldr, const char* locale, const char* calendar, PatternGenerator* g)
 {
-    static const char* const s_lengths[4] = {"full", "long", "medium", "short"};
     for (int i = 0; i < 8; i++)
     {
         const char* kind = i < 4 ? "time" : "date";
         char rest[256];
         Format(rest, sizeof(rest), "%sFormats/%sFormatLength[@type=\"%s\"]/%sFormat/pattern", kind,
-               kind, s_lengths[i % 4], kind);
+               kind, s_standardLengths[i % 4], kind);
         const char* pattern = CalendarValue(cldr, locale, calendar, rest);
         if (pattern != nullptr)
         {
@@ -339,13 +340,13 @@ static void AddStandard(Cldr* cldr, const char* locale, const char* calendar, Pa
             rest, sizeof(rest),
             "dateTimeFormats/dateTimeFormatLength[@type=\"%s\"]/dateTimeFormat[@type=\"atTime\"]/"
             "pattern",
-            s_lengths[i]);
+            s_standardLengths[i]);
         const char* glue = CalendarValue(cldr, locale, calendar, rest);
         if (glue == nullptr)
         {
             Format(rest, sizeof(rest),
                    "dateTimeFormats/dateTimeFormatLength[@type=\"%s\"]/dateTimeFormat/pattern",
-                   s_lengths[i]);
+                   s_standardLengths[i]);
             glue = CalendarValue(cldr, locale, calendar, rest);
         }
         g->glue[i] = Copy(glue != nullptr ? glue : "{1} {0}");
@@ -443,6 +444,66 @@ const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar,
            s_lengths[length]);
     const char* skeleton = CalendarValue(cldr, locale, calendar, rest);
     return skeleton != nullptr ? skeleton : "yMd";
+}
+
+const char* DateStandardPattern(Cldr* cldr, const char* locale, const char* calendar, int length)
+{
+    char rest[256];
+    Format(rest, sizeof(rest), "dateFormats/dateFormatLength[@type=\"%s\"]/dateFormat/pattern",
+           s_standardLengths[length]);
+    return CalendarValue(cldr, locale, calendar, rest);
+}
+
+// The numbers attribute along a chain as CLDR's JSON resolves it: the
+// first element's that has one, inheritance markers passed through, up
+// to the element that holds the value.
+static const char* NumbersAlong(Cldr* cldr, const char* locale, const char* chain, bool* found)
+{
+    for (const char* at = locale; at != nullptr; at = CldrParent(cldr, at, componentMain))
+    {
+        const LdmlFile* file = CldrFile(cldr, at, componentMain);
+        const Leaf* leaf = file == nullptr ? nullptr : MapGet(&file->leaves, chain);
+        if (leaf == nullptr)
+        {
+            continue;
+        }
+        for (int i = 0; i < leaf->valueCount; i++)
+        {
+            if (strcmp(leaf->valueNames[i], "numbers") == 0)
+            {
+                *found = true;
+                return leaf->values[i];
+            }
+        }
+        if (strcmp(leaf->text, "\xE2\x86\x91\xE2\x86\x91\xE2\x86\x91") != 0)
+        {
+            *found = true;
+            return nullptr;
+        }
+    }
+    *found = false;
+    return nullptr;
+}
+
+const char* DateNumbersOf(Cldr* cldr, const char* locale, const char* calendar, int length)
+{
+    char chain[cldrMaxChain];
+    char rest[256];
+    Format(rest, sizeof(rest), "dateFormats/dateFormatLength[@type=\"%s\"]/dateFormat/pattern",
+           s_standardLengths[length]);
+    Format(chain, sizeof(chain), s_calendarChain, calendar, rest);
+    for (int depth = 0; depth < 8; depth++)
+    {
+        bool found = false;
+        const char* numbers = NumbersAlong(cldr, locale, chain, &found);
+        char target[cldrMaxChain];
+        if (found || !CldrAliasOf(cldr, chain, target, componentMain))
+        {
+            return numbers;
+        }
+        memcpy(chain, target, sizeof(chain));
+    }
+    return nullptr;
 }
 
 // A field set written as letters: Y, M, D, E, T and Z.
