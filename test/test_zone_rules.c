@@ -91,7 +91,7 @@ static void TestIdentifiers(void)
 // A small unit: two zones (the first with a time before and after
 // int32_t's range, two between, and a closing rule), three identifiers;
 // test/seeds/fuzz_zones/valid holds the same bytes.
-static uint8_t s_small[256];
+static uint8_t s_small[512];
 
 static void Put(size_t at, uint64_t value, int bytes)
 {
@@ -101,62 +101,79 @@ static void Put(size_t at, uint64_t value, int bytes)
     }
 }
 
+// The small unit's sections.
+enum
+{
+    smallZones = 48,
+    smallIds = 96,
+    smallOffsets = 136,
+    smallList = 168,
+    smallNarrow = 176,
+    smallWide = 184,
+    smallTypes = 200,
+    smallClosing = 208,
+    smallText = 240,
+    smallPrimaries = 264,
+    smallSize = 268,
+};
+
 static DataSpan SmallUnit(void)
 {
     memset(s_small, 0, sizeof(s_small));
-    static const uint32_t s_counts[10] = {2, 3, 4, 4, 2, 2, 4, 1, 19, 0};
+    static const uint32_t s_counts[10] = {2, 3, 4, 4, 2, 2, 4, 1, 19, 2};
     for (int i = 0; i < 10; i++)
     {
         Put((size_t)i * 4, s_counts[i], 4);
     }
-    // Zones at 40: narrow, type and wide firsts, count, list first, name,
+    // Zones: narrow, type and wide firsts, count, list first, name,
     // early, late, offset count, initial, closing.
     static const uint32_t s_zone[2][11] = {{0, 0, 4, 0, 0, 1, 1, 1, 3, 0, 1},
                                            {2, 4, 0, 2, 3, 0, 0, 0, 1, 0, 0}};
     static const int s_widths[11] = {4, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1};
-    for (size_t z = 0, at = 40; z < 2; z++, at += 3)
+    for (size_t z = 0, at = smallZones; z < 2; z++, at += 3)
     {
         for (int f = 0; f < 11; at += (size_t)s_widths[f], f++)
         {
             Put(at, s_zone[z][f], s_widths[f]);
         }
     }
-    // Identifiers at 88: Etc/UTC, Test/Zone, UTC.
+    // Identifiers: Etc/UTC, Test/Zone, UTC.
     static const uint32_t s_ids[3][4] = {{0, 7, 1, 0}, {7, 9, 0, 1}, {16, 3, 1, 0}};
     for (size_t i = 0; i < 3; i++)
     {
-        Put(88 + i * 12, s_ids[i][0], 4);
-        Put(92 + i * 12, s_ids[i][1], 1);
-        Put(94 + i * 12, s_ids[i][2], 2);
-        Put(96 + i * 12, s_ids[i][3], 2);
+        Put(smallIds + i * 12, s_ids[i][0], 4);
+        Put(smallIds + 4 + i * 12, s_ids[i][1], 1);
+        Put(smallIds + 6 + i * 12, s_ids[i][2], 2);
+        Put(smallIds + 8 + i * 12, s_ids[i][3], 2);
     }
     static const int32_t s_offsets[4][2] = {{-18000, 0}, {-18000, 3600}, {0, 0}, {-17762, 0}};
     for (size_t i = 0; i < 4; i++)
     {
-        Put(128 + i * 8, (uint32_t)s_offsets[i][0], 4);
-        Put(132 + i * 8, (uint32_t)s_offsets[i][1], 4);
+        Put(smallOffsets + i * 8, (uint32_t)s_offsets[i][0], 4);
+        Put(smallOffsets + 4 + i * 8, (uint32_t)s_offsets[i][1], 4);
     }
     static const uint16_t s_list[4] = {3, 0, 1, 2};
     for (size_t i = 0; i < 4; i++)
     {
-        Put(160 + i * 2, s_list[i], 2);
+        Put(smallList + i * 2, s_list[i], 2);
     }
-    Put(168, 100000, 4);
-    Put(172, 200000, 4);
-    Put(176, (uint64_t)INT64_C(-3000000000), 8);
-    Put(184, (uint64_t)INT64_C(3000000000), 8);
-    Put(192, 0x02010201, 4);
-    // The closing rule at 200: from 2066, the second Sunday of March at
-    // 07:00 and the first of November at 06:00.
-    Put(200, 2066, 4);
-    Put(204, 0x02000803, 4);
-    Put(208, 25200, 4);
-    Put(212, 2, 2);
-    Put(216, 0x0200010B, 4);
-    Put(220, 21600, 4);
-    Put(224, 1, 2);
-    memcpy(s_small + 232, "Etc/UTCTest/ZoneUTC", 19);
-    return (DataSpan){s_small, 251};
+    Put(smallNarrow, 100000, 4);
+    Put(smallNarrow + 4, 200000, 4);
+    Put(smallWide, (uint64_t)INT64_C(-3000000000), 8);
+    Put(smallWide + 8, (uint64_t)INT64_C(3000000000), 8);
+    Put(smallTypes, 0x02010201, 4);
+    // The closing rule: from 2066, the second Sunday of March at 07:00
+    // and the first of November at 06:00.
+    Put(smallClosing, 2066, 4);
+    Put(smallClosing + 4, 0x02000803, 4);
+    Put(smallClosing + 8, 25200, 4);
+    Put(smallClosing + 12, 2, 2);
+    Put(smallClosing + 16, 0x0200010B, 4);
+    Put(smallClosing + 20, 21600, 4);
+    Put(smallClosing + 24, 1, 2);
+    memcpy(s_small + smallText, "Etc/UTCTest/ZoneUTC", 19);
+    Put(smallPrimaries, 0x00010000, 4);
+    return (DataSpan){s_small, smallSize};
 }
 
 // Up to three writes (a byte offset, a value, its width) to a fresh small
@@ -175,29 +192,42 @@ static void TestValidatorBounds(void)
 {
     static const Edit s_edits[] = {
         {{0}, {0}, {0}, true, "the small unit"},
-        {{36}, {1}, {4}, false, "the header's zero word"},
-        {{39}, {0}, {0}, false, "a payload shorter than the header"},
-        {{40 + 19}, {3}, {1}, false, "an initial offset at the zone's offset count"},
-        {{40 + 14}, {3}, {2}, false, "a name at the identifier count"},
-        {{40 + 21}, {1}, {1}, false, "a zone's zero byte"},
-        {{192}, {3}, {1}, false, "a type at the zone's offset count"},
-        {{172}, {100000}, {4}, false, "two equal times"},
-        {{100, 104}, {0, 7}, {4, 1}, false, "two equal names"},
-        {{100, 104}, {7, 3}, {4, 1}, true, "a name's prefix after a shorter name"},
-        {{112, 116}, {7, 3}, {4, 1}, false, "a prefix after its longer name"},
-        {{100, 104, 112}, {16, 3, 7}, {4, 1, 4}, false, "names out of order"},
-        {{88 + 12 + 6}, {2}, {2}, false, "an identifier's zone at the zone count"},
-        {{232 + 3}, {' '}, {1}, false, "a space in a name"},
-        {{232 + 3}, {'~'}, {1}, true, "a tilde in a name"},
-        {{88 + 5}, {1}, {1}, false, "an identifier's zero byte"},
-        {{200}, {(uint32_t)-271822}, {4}, true, "the earliest closing year"},
-        {{200}, {(uint32_t)-271823}, {4}, false, "a closing year before it"},
-        {{204}, {2}, {1}, true, "a closing change in February"},
-        {{208}, {(uint32_t)(-8 * 86400)}, {4}, true, "a change eight days before its day"},
-        {{208}, {(uint32_t)(-8 * 86400 - 1)}, {4}, false, "a second more"},
-        {{128 + 16}, {(uint32_t)-86400}, {4}, false, "an offset of a whole day back"},
-        {{128 + 16}, {(uint32_t)-86399}, {4}, true, "a second less"},
-        {{160}, {4}, {2}, false, "a list entry at the offset count"},
+        {{40}, {1}, {4}, false, "the header's first zero word"},
+        {{44}, {1}, {4}, false, "the header's second zero word"},
+        {{47}, {0}, {0}, false, "a payload shorter than the header"},
+        {{smallZones + 19}, {3}, {1}, false, "an initial offset at the zone's offset count"},
+        {{smallZones + 14}, {3}, {2}, false, "a name at the identifier count"},
+        {{smallZones + 21}, {1}, {1}, false, "a zone's zero byte"},
+        {{smallTypes}, {3}, {1}, false, "a type at the zone's offset count"},
+        {{smallNarrow + 4}, {100000}, {4}, false, "two equal times"},
+        {{smallIds + 12, smallIds + 16}, {0, 7}, {4, 1}, false, "two equal names"},
+        {{smallIds + 12, smallIds + 16}, {7, 3}, {4, 1}, true, "a prefix after a shorter name"},
+        {{smallIds + 24, smallIds + 28}, {7, 3}, {4, 1}, false, "a prefix after its longer name"},
+        {{smallIds + 12, smallIds + 16, smallIds + 24},
+         {16, 3, 7},
+         {4, 1, 4},
+         false,
+         "names out of order"},
+        {{smallIds + 12 + 6}, {2}, {2}, false, "an identifier's zone at the zone count"},
+        {{smallText + 3}, {' '}, {1}, false, "a space in a name"},
+        {{smallText + 3}, {'~'}, {1}, true, "a tilde in a name"},
+        {{smallIds + 5}, {1}, {1}, false, "an identifier's zero byte"},
+        {{smallClosing}, {(uint32_t)-271822}, {4}, true, "the earliest closing year"},
+        {{smallClosing}, {(uint32_t)-271823}, {4}, false, "a closing year before it"},
+        {{smallClosing + 4}, {2}, {1}, true, "a closing change in February"},
+        {{smallClosing + 8},
+         {(uint32_t)(-8 * 86400)},
+         {4},
+         true,
+         "a change eight days before its day"},
+        {{smallClosing + 8}, {(uint32_t)(-8 * 86400 - 1)}, {4}, false, "a second more"},
+        {{smallOffsets + 16}, {(uint32_t)-86400}, {4}, false, "an offset of a whole day back"},
+        {{smallOffsets + 16}, {(uint32_t)-86399}, {4}, true, "a second less"},
+        {{smallList}, {4}, {2}, false, "a list entry at the offset count"},
+        {{smallPrimaries}, {0x00000001}, {4}, false, "primaries out of byte order"},
+        {{smallPrimaries}, {0x00000000}, {4}, false, "a primary twice"},
+        {{smallPrimaries}, {0x00020000}, {4}, false, "a listed name that is not primary"},
+        {{36}, {1}, {4}, false, "a primary count other than the identifiers'"},
     };
     DataView view = {0};
     for (size_t i = 0; i < sizeof(s_edits) / sizeof(s_edits[0]); i++)

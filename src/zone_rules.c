@@ -131,34 +131,45 @@ int32_t mlocZoneFindIdentifier(const ZoneTables* t, const char* name, size_t len
     return -1;
 }
 
-ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds)
+// The last transition at or before a time, the table's or the closing
+// rule's: false when the time is before the first.
+static bool Latest(const ZoneTables* t, const ZoneRecord* z, int64_t seconds, int64_t* atOut,
+                   ZoneOffset* offsetOut)
 {
-    ZoneRecord z = mlocZoneRecord(t, zone);
-    uint32_t count = CountUpTo(t, &z, seconds);
-    ZoneOffset offset = count == 0 ? OffsetOf(t, &z, z.initial) : TypeOf(t, &z, count - 1);
-    if (count < z.transitionCount || z.closing == 0)
+    uint32_t count = CountUpTo(t, z, seconds);
+    int64_t at = count == 0 ? INT64_MIN : TimeOf(t, z, count - 1);
+    ZoneOffset offset = count == 0 ? (ZoneOffset){0} : TypeOf(t, z, count - 1);
+    if (count == z->transitionCount && z->closing != 0)
     {
-        return offset;
-    }
-    // Past the table: the latest change at or before the time, of its
-    // year or the year before, else the table's last offset.
-    int32_t first = mlocZoneClosingYear(t, z.closing - 1U);
-    int64_t latest = INT64_MIN;
-    int32_t year = YearOf(seconds);
-    for (int32_t y = year - 1; y <= year; y++)
-    {
-        for (uint32_t k = 0; y >= first && k < 2; k++)
+        // Past the table: the latest change at or before the time, of its
+        // year or the year before.
+        int32_t first = mlocZoneClosingYear(t, z->closing - 1U);
+        int32_t year = YearOf(seconds);
+        for (int32_t y = year - 1; y <= year; y++)
         {
-            ZoneChange c = mlocZoneClosingChange(t, z.closing - 1U, k);
-            int64_t at = ChangeTime(&c, y);
-            if (at <= seconds && at > latest)
+            for (uint32_t k = 0; y >= first && k < 2; k++)
             {
-                latest = at;
-                offset = mlocZoneOffsetOf(t, c.offset);
+                ZoneChange c = mlocZoneClosingChange(t, z->closing - 1U, k);
+                int64_t candidate = ChangeTime(&c, y);
+                if (candidate <= seconds && candidate > at)
+                {
+                    at = candidate;
+                    offset = mlocZoneOffsetOf(t, c.offset);
+                }
             }
         }
     }
-    return offset;
+    *atOut = at;
+    *offsetOut = offset;
+    return at != INT64_MIN;
+}
+
+ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds)
+{
+    ZoneRecord z = mlocZoneRecord(t, zone);
+    int64_t at = 0;
+    ZoneOffset offset = {0};
+    return Latest(t, &z, seconds, &at, &offset) ? offset : OffsetOf(t, &z, z.initial);
 }
 
 bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
@@ -198,6 +209,21 @@ bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds,
         return false;
     }
     if (at > zoneMaxSeconds)
+    {
+        return false;
+    }
+    *atOut = at;
+    *offsetOut = offset;
+    return true;
+}
+
+bool mlocZonePreviousTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
+                                ZoneOffset* offsetOut)
+{
+    ZoneRecord z = mlocZoneRecord(t, zone);
+    int64_t at = 0;
+    ZoneOffset offset = {0};
+    if (!Latest(t, &z, seconds, &at, &offset) || at < zoneMinSeconds)
     {
         return false;
     }

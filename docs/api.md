@@ -406,6 +406,50 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetUnitGender(const mlocDataSet* data, co
 ```
 Gives a unit's grammatical gender in a locale, the one a message agreeing with a formatted amount needs, as ICU's FormattedNumber::getNounClass gives it: a unit CLDR names has its long name's ("Meter", masculine in German), else in a language whose units have genders what CLDR's gender derivations make of its parts ("kilometer-per-hour" takes kilometer's, a prefix and a power keeping meter's). A language without genders, and a mixed unit, give mloc_genderNone.  @param data        The data with the unit table and the unit names. @param locale      The locale, canonicalized. @param unit        A core unit identifier or a mixed unit. @param unitLength  Its length in bytes. @param genderOut   Receives the gender; left unchanged on failure. @return mloc_success; mloc_errorSyntax for an identifier UTS #35 does not allow; mloc_errorNotFound for a simple unit the table does not know, or data without the unit table or the names; mloc_errorCapacity for an identifier whose normal form passes 255 bytes; mloc_errorInvalid for a null pointer, an empty unit, a currency or a constant in the numerator. @par Thread safety Safe from any thread.
 
+## `zone.h`
+
+Time zones (record mloc-0041): the IANA time zone database's zones as ECMA-262's Temporal and ECMA-402 read them. A zone is found by an identifier, a Zone or Link name of the database in any letter case ("America/New_York", "asia/calcutta") or a fixed offset ("+05:30"), and keeps the identifier as given; two zones are equal when their identifiers resolve to the same primary identifier. Its offset at any instant comes from the data's zones unit, compiled from the pinned database release (mlocGetDataVersion names it), and runs over Temporal's whole range.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t length, mlocTimeZone* zoneOut);
+```
+Finds a time zone by its identifier: an available Zone or Link name compared with ASCII letters folded, or an offset as ECMA-262's UTCOffset without seconds: a sign ("+", "-" or U+2212) and hours 00 to 23, then optionally minutes, after a colon or not ("+05", "+0530", "-05:30").  @param data     The data with the zones unit; may be null for an offset. @param id       The identifier, UTF-8. @param length   Its length in bytes. @param zoneOut  Receives the zone; left unchanged on failure. @return mloc_success; mloc_errorSyntax for an offset that is not one of those forms; mloc_errorNotFound for a name the data does not have, or data without the zones unit; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneId(const mlocTimeZone* zone, mlocOutput* output);
+```
+Writes a zone's identifier in its normalized form: a name in the database's letter case, as given otherwise ("Asia/Calcutta" stays itself), or an offset as "+HH:MM" ("+00:00" for zero). It reports no parts.  @param zone    The zone. @param output  Where the identifier goes. @return mloc_success; mloc_errorCapacity with the length needed; mloc_errorInvalid for a null pointer or a zone the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatPrimaryTimeZoneId(const mlocTimeZone* zone, mlocOutput* output);
+```
+Writes a zone's primary identifier, as ECMA-402's AvailableNamedTimeZoneIdentifiers resolves it ("Asia/Calcutta" gives "Asia/Kolkata", "Etc/GMT" gives "UTC"); an offset zone's is its identifier. It reports no parts.  @param zone    The zone. @param output  Where the identifier goes. @return As mlocFormatTimeZoneId. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocTimeZonesEqual(const mlocTimeZone* one, const mlocTimeZone* two, bool* equalOut);
+```
+Tells whether two zones are equal as ECMA-262's TimeZoneEquals says: named zones whose primary identifiers are the same, or offset zones of the same offset. A named zone never equals an offset zone, even "UTC" and "+00:00".  @param one       A zone. @param two       Another. @param equalOut  Receives whether they are equal. @return mloc_success; mloc_errorInvalid for a null pointer or a zone the library did not make. @par Thread safety Safe from any thread.
+
+```c
+size_t mlocGetTimeZoneCount(const mlocDataSet* data);
+```
+Returns the number of primary time zone identifiers the data has, the list ECMA-402's Intl.supportedValuesOf("timeZone") gives.  @param data  The data with the zones unit. @return The count; 0 for data without the zones unit or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* zoneOut);
+```
+Returns the zone of a primary identifier, in the order of the identifiers' bytes ("Etc/UTC" before "Etc/Universal" were both primary).  @param data     The data with the zones unit. @param index    Below mlocGetTimeZoneCount. @param zoneOut  Receives the zone. @return mloc_success; mloc_errorInvalid for a null pointer or an index out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* instant, int32_t* offsetSecondsOut);
+```
+Returns a zone's offset from universal time at an instant, in seconds: local time is the instant plus the offset. The database's offsets before 1900 or so are local mean time, to the second.  @param zone              The zone. @param instant           An instant in Temporal's range. @param offsetSecondsOut  Receives the offset. @return mloc_success; mloc_errorInvalid for a null pointer, a zone the library did not make or an instant out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneTransition(const mlocTimeZone* zone, const mlocInstant* instant, mlocTransitionDirection direction, mlocInstant* transitionOut);
+```
+Finds a zone's first transition strictly after an instant, or its last strictly before, as Temporal's getTimeZoneTransition: the first instant of a new offset (one that changes only whether daylight saving time is in effect is not a transition).  @param zone           The zone. @param instant        An instant in Temporal's range. @param direction      Next or previous. @param transitionOut  Receives the transition, whose nanoseconds are 0. @return mloc_success; mloc_errorNotFound when there is none within Temporal's range (an offset zone has none); mloc_errorInvalid for a null pointer, a zone the library did not make, an instant out of range or another direction. @par Thread safety Safe from any thread.
+
 ---
 
-71 functions across 12 headers.
+79 functions across 13 headers.

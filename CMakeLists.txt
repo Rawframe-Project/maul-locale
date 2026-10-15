@@ -136,6 +136,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_prefs.c
     src/unit_usage.c
     src/wide.c
+    src/zone.c
     src/zone_rules.c
     src/zone_tables.c
     src/generated/builtin_data.c
@@ -236,6 +237,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(calendar_astro WHITEBOX)
     maul_add_test(calendar_lunar WHITEBOX)
     maul_add_test(zone_rules WHITEBOX)
+    maul_add_test(zone)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)

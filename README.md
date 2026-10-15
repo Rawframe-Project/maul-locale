@@ -77,7 +77,7 @@ them (each day from 1600 to 2400 as ICU4X computes it, and the
 Chinese and Dangi calendars from integer astronomy), with durations
 added to them, their differences taken and rounded, their fields
 changed and month-day reference dates found, as Temporal does it.
-The library has 71 public functions.
+The library has 79 public functions.
 
 ## Building
 

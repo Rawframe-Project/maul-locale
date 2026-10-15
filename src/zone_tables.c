@@ -9,6 +9,8 @@
 #include "bytes.h"
 #include "kinds.h"
 
+#include <string.h>
+
 enum
 {
     secondsPerDay = 86400,
@@ -27,22 +29,23 @@ static uint64_t Align(uint64_t at)
 // The sections in order: their sizes from the counts.
 bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out)
 {
-    if (payload.size < zoneHeaderSize || mlocLoad32(payload.bytes + 36) != 0)
+    if (payload.size < zoneHeaderSize || mlocLoad32(payload.bytes + 40) != 0 ||
+        mlocLoad32(payload.bytes + 44) != 0)
     {
         return false;
     }
-    uint32_t counts[9];
-    for (int i = 0; i < 9; i++)
+    uint32_t counts[zoneSectionCount];
+    for (int i = 0; i < zoneSectionCount; i++)
     {
         counts[i] = mlocLoad32(payload.bytes + 4 * i);
     }
-    static const uint32_t s_sizes[9] = {
-        zoneRecordSize, zoneIdentifierSize, zoneOffsetSize, 2, 4, 8, 1, zoneClosingSize, 1};
-    const uint8_t** sections[9] = {&out->zones, &out->identifiers, &out->offsets,
-                                   &out->list,  &out->narrow,      &out->wide,
-                                   &out->types, &out->closings,    &out->text};
+    static const uint32_t s_sizes[zoneSectionCount] = {
+        zoneRecordSize, zoneIdentifierSize, zoneOffsetSize, 2, 4, 8, 1, zoneClosingSize, 1, 2};
+    const uint8_t** sections[zoneSectionCount] = {
+        &out->zones, &out->identifiers, &out->offsets,  &out->list, &out->narrow,
+        &out->wide,  &out->types,       &out->closings, &out->text, &out->primaries};
     uint64_t at = zoneHeaderSize;
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < zoneSectionCount; i++)
     {
         at = Align(at);
         *sections[i] = payload.bytes + (at <= payload.size ? at : 0);
@@ -57,6 +60,7 @@ bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out)
     out->typeCount = counts[6];
     out->closingCount = counts[7];
     out->textSize = counts[8];
+    out->primaryCount = counts[9];
     return at == payload.size;
 }
 
@@ -230,6 +234,45 @@ static bool ValidClosing(const ZoneTables* t, uint32_t closing)
     return true;
 }
 
+// The primaries' list: each a primary identifier, in strictly ascending
+// byte order, as many as the identifiers that are their own primary.
+static bool ValidPrimaries(const ZoneTables* t)
+{
+    uint32_t primaries = 0;
+    for (uint32_t i = 0; i < t->identifierCount; i++)
+    {
+        primaries += mlocZoneIdentifierPrimary(t, i) == i;
+    }
+    if (primaries != t->primaryCount)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < t->primaryCount; i++)
+    {
+        uint32_t identifier = mlocLoad16(t->primaries + (size_t)i * 2);
+        if (identifier >= t->identifierCount ||
+            mlocZoneIdentifierPrimary(t, identifier) != identifier)
+        {
+            return false;
+        }
+        if (i > 0)
+        {
+            size_t length = 0;
+            size_t previousLength = 0;
+            const char* name = mlocZoneIdentifierName(t, identifier, &length);
+            const char* previous = mlocZoneIdentifierName(
+                t, mlocLoad16(t->primaries + (size_t)(i - 1) * 2), &previousLength);
+            size_t common = length < previousLength ? length : previousLength;
+            int order = memcmp(previous, name, common);
+            if (order > 0 || (order == 0 && previousLength >= length))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool mlocValidZones(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -268,5 +311,5 @@ bool mlocValidZones(const DataView* view, DataSpan payload)
     {
         valid = ValidClosing(&t, i);
     }
-    return valid;
+    return valid && ValidPrimaries(&t);
 }

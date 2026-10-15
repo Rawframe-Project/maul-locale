@@ -85,6 +85,7 @@ calendar: calendar_arith calendar_eras calendar_year
 calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_rules: bytes calendar_arith zone_tables
+zone: bytes data_view kinds zone_rules
 calendar_until: calendar_arith calendar_year
 calendar_round: calendar_arith calendar_year
 calendar_fields: calendar_arith calendar_year

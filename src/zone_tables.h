@@ -9,7 +9,7 @@
 // standard offset and a saving, never negative, in seconds: the daylight
 // periods are tzdb's rearguard ones.
 //
-// The payload is a header of nine 32-bit counts and a zero word, then
+// The payload is a header of ten 32-bit counts and two zero words, then
 // these sections, each starting on an 8-byte boundary:
 //   zones        24 bytes each: the first of its int32 times (u32), of its
 //                offset places (u32), its transition count (u16), the
@@ -35,6 +35,8 @@
 //                (i32, which may pass the day's ends), the offset it
 //                starts (u16), two zero bytes
 //   text         the names, ASCII, unterminated
+//   primaries    the primary identifiers, sorted by their bytes (u16), as
+//                ECMA-402 lists them
 // Within a zone, times ascend; its int64 times are its first few (before
 // December 1901) and last few (after January 2038).
 
@@ -47,7 +49,8 @@
 
 enum
 {
-    zoneHeaderSize = 40,
+    zoneHeaderSize = 48,
+    zoneSectionCount = 10,
     zoneRecordSize = 24,
     zoneIdentifierSize = 12,
     zoneOffsetSize = 8,
@@ -109,6 +112,7 @@ typedef struct ZoneTables
     const uint8_t* types;
     const uint8_t* closings;
     const uint8_t* text;
+    const uint8_t* primaries;
     uint32_t zoneCount;
     uint32_t identifierCount;
     uint32_t offsetCount;
@@ -118,6 +122,7 @@ typedef struct ZoneTables
     uint32_t typeCount;
     uint32_t closingCount;
     uint32_t textSize;
+    uint32_t primaryCount;
 } ZoneTables;
 
 // The sections of a payload whose size their counts give; false when it
@@ -127,7 +132,8 @@ bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out);
 // The validator of the zones unit: the sections, every index and range,
 // times ascending within a zone, identifiers in order and unique with
 // case folded, each primary its own primary and of its name's zone,
-// offsets within a day, closing changes in February to November.
+// the primaries listed once each in byte order, offsets within a day,
+// closing changes in February to November.
 bool mlocValidZones(const DataView* view, DataSpan payload);
 
 // The tables of the first source of a set with a zones unit, or false.

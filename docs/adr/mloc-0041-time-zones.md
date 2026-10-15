@@ -89,10 +89,27 @@ nanoseconds.
 - **Version:** the release is pinned by name and the archive's SHA-256
   (`tools/tzdb-release.txt`, fetched by `tools/fetch_tzdb.sh`). The
   generator refuses a source directory holding another release.
+- **The public functions** (`maul-locale/zone.h`):
+  - `mlocFindTimeZone`, from a data set, by name (ASCII letters folded)
+    or by offset (UTCOffset without seconds: `+05`, `+0530`, `-05:30`,
+    U+2212 too);
+  - `mlocFormatTimeZoneId` (the name as given, or `+HH:MM`) and
+    `mlocFormatPrimaryTimeZoneId`;
+  - `mlocTimeZonesEqual`, by primary identifier, as TimeZoneEquals;
+  - `mlocGetTimeZoneCount` and `mlocGetTimeZone`, the primaries in
+    byte order (a section of the unit lists them), as
+    Intl.supportedValuesOf;
+  - `mlocGetTimeZoneOffset` at an `mlocInstant` (seconds and
+    nanoseconds over Temporal's range);
+  - `mlocGetTimeZoneTransition`, next or previous, strictly, counting
+    only changes of offset (London's 1968 change from daylight to
+    standard time at one offset is none).
+
+  An `mlocTimeZone` is 16 bytes: the zones unit and an identifier's
+  place, or an offset in minutes; it points into its data.
 - **Later in this part:**
-  - the public functions: a zone by name (ignoring case) or offset,
-    equality by primary identifier, the list of primaries, the offset
-    at an instant, possible instants, transitions, the start of a day;
+  - possible instants of a local date-time with the four
+    disambiguations, and the start of a day, with the date-time values;
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;

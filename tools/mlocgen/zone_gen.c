@@ -9,6 +9,7 @@
 #include "tzdb.h"
 #include "zone_compile.h"
 #include "zone_ids.h"
+#include "zone_tables.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -247,8 +248,8 @@ static void PutN(Bytes* b, uint64_t value, int count)
 typedef struct Tables
 {
     Offsets offsets;
-    Bytes sections[9];
-    uint32_t counts[9];
+    Bytes sections[zoneSectionCount];
+    uint32_t counts[zoneSectionCount];
 } Tables;
 
 enum
@@ -262,6 +263,7 @@ enum
     sectionTypes,
     sectionClosings,
     sectionText,
+    sectionPrimaries,
 };
 
 static void Put(Tables* t, int section, uint64_t value, int count)
@@ -375,6 +377,26 @@ static void AddIdentifiers(Tables* t, const ZoneIdentifier* ids, int count)
         t->counts[sectionText] += (uint32_t)length;
         t->counts[sectionIdentifiers]++;
     }
+    // The primaries in byte order; the identifiers are in folded order.
+    static int order[UINT16_MAX];
+    int primaries = 0;
+    for (int i = 0; i < count; i++)
+    {
+        if (ids[i].primary == i)
+        {
+            int at = primaries++;
+            for (; at > 0 && strcmp(ids[order[at - 1]].name, ids[i].name) > 0; at--)
+            {
+                order[at] = order[at - 1];
+            }
+            order[at] = i;
+        }
+    }
+    for (int i = 0; i < primaries; i++)
+    {
+        Put(t, sectionPrimaries, (uint64_t)order[i], 2);
+    }
+    t->counts[sectionPrimaries] = (uint32_t)primaries;
 }
 
 // The header, then each section from an 8-byte boundary.
@@ -387,12 +409,12 @@ static Bytes Assemble(Tables* t)
     }
     t->counts[sectionOffsets] = (uint32_t)t->offsets.count;
     Bytes out = {0};
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < zoneSectionCount; i++)
     {
         PutN(&out, t->counts[i], 4);
     }
-    PutN(&out, 0, 4);
-    for (int i = 0; i < 9; i++)
+    PutN(&out, 0, 8);
+    for (int i = 0; i < zoneSectionCount; i++)
     {
         while (out.size % 8 != 0)
         {
@@ -510,7 +532,7 @@ int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const 
     }
     else if (t != nullptr)
     {
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < zoneSectionCount; i++)
         {
             free(t->sections[i].data);
         }
