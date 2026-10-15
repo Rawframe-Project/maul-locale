@@ -10,8 +10,8 @@ files) and power2/power3 by case and gender; grammaticalFeatures.xml
 names each language's cases and genders and how a compound unit
 passes its case to its components. ICU4C's number formatter writes them
 with `unitDisplayCase` ("2 Metern", German's dative). Record mloc-0024
-put the names in `units.mloc`; decision L21 first gave the cases a file
-of their own.
+put the names in `units.mloc`; a first design gave the cases a file of
+their own.
 
 ## Decision
 

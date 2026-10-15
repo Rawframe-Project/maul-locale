@@ -76,7 +76,13 @@ and month codes and overflow constrained or refused, all 18 of
 them (each day from 1600 to 2400 as ICU4X computes it, and the
 Chinese and Dangi calendars from integer astronomy), with durations
 added to them, their differences taken and rounded, their fields
-changed and month-day reference dates found, as Temporal does it.
+changed and month-day reference dates found, as Temporal does it; and
+time zones compiled from the pinned IANA release (every zone's offsets
+and transitions checked against zic), with times of day, date-times,
+instants and zoned date-times and their arithmetic, differences,
+rounding, totals and durations as ECMA-262's Temporal computes them,
+read from and written to Temporal's ISO 8601 and RFC 9557 strings
+(test262's Temporal tests replayed on every push).
 The library has 121 public functions.
 
 ## Building

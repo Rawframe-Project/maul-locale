@@ -5,8 +5,8 @@ Status: Accepted
 ## Context
 
 Record mloc-0026 compiled in CLDR's list patterns and joined items as
-ICU4C's ListFormatter does, for mixed units only; the list part (L18
-step 5) gives programs the same joins. ICU4C's ListFormatter takes a
+ICU4C's ListFormatter does, for mixed units only; the list part
+(mloc-0013's fifth step) gives programs the same joins. ICU4C's ListFormatter takes a
 type (and, or, units) and a width, ICU4X's `ListFormatter` and
 ECMA-402's `Intl.ListFormat` the same, and each reports items and the
 text between them as parts.

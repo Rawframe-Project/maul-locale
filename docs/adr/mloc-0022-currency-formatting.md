@@ -78,7 +78,7 @@ CLDR's test data has no currency formatting cases.
   generator writes them, 2.1 MB, into a data file of their own,
   `src/generated/currency-names.mloc`, beside the compiled-in data (267
   KB), which a program adds to its data set to show names: the library
-  stays small, and data without names is a choice (L20). Fields are
+  stays small, and data without names is a choice. Fields are
   inherited one by one with the inheritance marker counting as absent,
   then the lateral fallback from the locale asked for (a category's name
   to other's, then to the name; an alternative symbol to the symbol):

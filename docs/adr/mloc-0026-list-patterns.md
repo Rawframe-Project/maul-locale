@@ -9,7 +9,7 @@ wide, short and narrow), four patterns each: for two items, the start,
 the middle and the end. Root aliases the narrow and short styles to
 the wider ones and the wide unit style to the short one. Mixed units
 ("5 ft, 3 in") join their parts by the unit lists, and the list part
-(L18 step 5) formats lists of any items. ICU4C's ListFormatter takes
+(mloc-0013's fifth step) formats lists of any items. ICU4C's ListFormatter takes
 each pattern from the first locale having it, then the style its root
 alias names, and changes Spanish's "y" and "o" and Hebrew's vav by the
 item that follows.

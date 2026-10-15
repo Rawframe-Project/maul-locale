@@ -4,7 +4,7 @@ Status: Accepted
 
 ## Context
 
-The names part (L18 step 5) names languages, scripts, regions,
+The names part (mloc-0013's fifth step) names languages, scripts, regions,
 variants, keys and their values, and whole locales, as UTS #35 Part 2's
 Locale Display Name Algorithm builds them. CLDR 49 holds about 240,000
 such names in 434 locales, megabytes of text that a program naming

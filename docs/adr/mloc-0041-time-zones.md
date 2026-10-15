@@ -232,7 +232,7 @@ nanoseconds.
   instants. DifferenceZonedDateTimeWithRounding does not, and
   Duration.round refuses rounding a zero duration whose next day passes
   the range; Temporal's until and since check equal instants first.
-- **Strings in** (amended 2026-10-15, slice 12k; research 37): a new
+- **Strings in** (amended 2026-10-15, slice 12k): a new
   header, `maul-locale/ixdtf.h`, reads Temporal's strings by
   ECMA-262's grammar.
   - `mlocParseTemporalString` is ParseISODateTime. It takes a set of
@@ -255,7 +255,7 @@ nanoseconds.
     descent that reads each byte a bounded number of times. Malformed
     text is `mloc_errorSyntax`; ParseISODateTime gives no position, so
     neither does the library.
-- **Strings out** (amended 2026-10-15, slice 12l; research 37): nine
+- **Strings out** (amended 2026-10-15, slice 12l): nine
   writers, one for each of ECMA-262's formatting operations, write
   into `mlocOutput`: `mlocFormatTemporalDate`, `mlocFormatYearMonth`,
   `mlocFormatMonthDay`, `mlocFormatTemporalTime`,

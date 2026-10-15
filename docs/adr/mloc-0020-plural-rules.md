@@ -9,9 +9,9 @@ CLDR 49 has 39 distinct cardinal rule sets and 28 ordinal ones
 what a range's ends give (`pluralRanges.xml`). Rules read the operands
 of record mloc-0019 with `=`, `!=`, ranges, lists and remainders. ICU4X
 interprets a small tree per category (36 ns for an integer); the same
-rule compiled to C selects in about 4 ns (research 18). Record L16 of
-the design compiles algorithms over a closed set into the library and
-lets locale data refer to them by index.
+rule compiled to C selects in about 4 ns. Record mloc-0005 compiles
+algorithms over a closed set into the library and lets locale data
+refer to them by index.
 
 ## Decision
 

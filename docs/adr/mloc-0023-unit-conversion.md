@@ -14,7 +14,8 @@ mixed units ("foot-and-inch"), with 13 deprecated aliases. Beaufort
 converts by a table UTS #35 does not give. ICU4C converts in `double`
 (its factors read with a string-to-double converter, prefixes and
 constants raised with `pow`), so its results carry binary rounding;
-ICU4X 2.3 moved to exact ratios. Profile L14 asks for exact rationals.
+ICU4X 2.3 moved to exact ratios. The profile (mloc-0001) asks for exact
+rationals.
 
 ## Decision
 
@@ -99,4 +100,4 @@ Conversion is exact and the same on every platform, at the cost of
 multi-limb arithmetic: a conversion multiplies a few integers of a few
 hundred bits and divides once. Units of absurd size (two `pow15`
 daltons) are refused rather than rounded. The library holds no unit
-names yet: formatting comes with its own data file (research 25).
+names yet: formatting comes with its own data file (mloc-0024).
