@@ -446,6 +446,60 @@ static void TestRoundTrip(void)
     }
 }
 
+// With the ISO append and a plus sign shown, NaN (and zero, except zero)
+// is written without the sign; the code after it is read back too, also
+// where the sign is a suffix (fy: "£ NaN GBP" beside "£ 1,00+ GBP").
+// Strict mode wants the plus sign of the always display, which NaN lacks.
+static bool AppendedReadsBack(const char* id, mlocSignDisplay sign, const mlocDecimal* d,
+                              mlocParseMode lastMode)
+{
+    mlocCurrencyOptions options = {
+        .display = mloc_currencySymbol, .appendCode = 1, .number = {.signDisplay = sign}};
+    mlocCurrencyFormatter f;
+    char buffer[256];
+    char again[256];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    if (Init(&s_withNames, id, "GBP", &options, &f) < 0 ||
+        mlocFormatCurrency(&f, d, &output) != mloc_success)
+    {
+        return false;
+    }
+    for (int mode = mloc_parseLenient; mode <= (int)lastMode; mode++)
+    {
+        mlocDecimal back;
+        char read[3];
+        size_t end = 0;
+        mlocOutput second = {.buffer = again, .capacity = sizeof(again)};
+        if (ParseCopy(&f, buffer, output.length, (mlocParseMode)mode, 0, &back, read, &end) !=
+                mloc_success ||
+            end != output.length || mlocFormatCurrency(&f, &back, &second) != mloc_success ||
+            second.length != output.length || memcmp(buffer, again, output.length) != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void TestAppendedUnsigned(void)
+{
+    static const char* const s_locales[] = {"fy", "en", "de", "nl", "he", "fa"};
+    mlocDecimal zero;
+    mlocDecimal nan;
+    memset(&nan, 0, sizeof(nan));
+    nan.kind = mloc_decimalNaN;
+    bool all = mlocParseDecimal("0", 1, &zero).status == mloc_success;
+    for (size_t l = 0; l < sizeof(s_locales) / sizeof(s_locales[0]); l++)
+    {
+        const char* id = s_locales[l];
+        all = all && AppendedReadsBack(id, mloc_signAlways, &nan, mloc_parseLenient) &&
+              AppendedReadsBack(id, mloc_signAlways, &zero, mloc_parseStrict) &&
+              AppendedReadsBack(id, mloc_signExceptZero, &nan, mloc_parseStrict) &&
+              AppendedReadsBack(id, mloc_signExceptZero, &zero, mloc_parseStrict);
+    }
+    CHECK(all, "NaN and zero without a sign, then the appended code, read back");
+}
+
 // Strict mode wants a long name formatter's name, in each category's
 // pattern.
 static bool ReadsStrictly(const char* id, const char* code, const char* text, bool reads)
@@ -581,6 +635,7 @@ int main(void)
     }
     TestCases();
     TestRoundTrip();
+    TestAppendedUnsigned();
     TestLongNamesStrictly();
     TestCodeDisplayStrictly();
     TestWithoutNames();

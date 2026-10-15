@@ -65,6 +65,8 @@ struct ParseCurrency
     uint8_t afterLength[parseMaxOuters];
     uint8_t outerCount;
     bool outer;
+    // The outer pattern is the ISO append, which ICU lacks.
+    bool appended;
     // For any currency, the chain; null for the formatter's alone.
     const CurrencyChain* chain;
 };

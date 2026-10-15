@@ -507,6 +507,7 @@ static void ParseOf(const Currency* c, bool any, ParseCurrency* out)
         out->nameLengths[category] = code ? 3 : names.length[field];
     }
     out->outer = c->hasOuter;
+    out->appended = c->appended;
     // Other's pattern, then each other category's that differs.
     static const uint8_t s_order[6] = {mloc_pluralOther, mloc_pluralZero, mloc_pluralOne,
                                        mloc_pluralTwo,   mloc_pluralFew,  mloc_pluralMany};

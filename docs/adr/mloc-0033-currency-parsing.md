@@ -59,7 +59,11 @@ cache and allocates nothing.
   in the currency's place or the code the ISO append writes (ICU's
   currency plural patterns, "#,##0.00 ¤¤¤"); strict mode reads each
   category's pattern that differs (Romanian writes "12,00 euro" and
-  "20,00 de euro").
+  "20,00 de euro"). With the ISO append, which ICU lacks, and a plus
+  sign shown, lenient mode also reads the affixes without the sign:
+  NaN (and zero, with except zero) is written without one, and the
+  appended code would otherwise be left unread where the sign is a
+  suffix (Western Frisian's "£ NaN GBP" beside "£ 1,00+ GBP").
 - **Data**: the parse sets gain the uppercase mappings u_strToUpper
   makes (runs, and the special mappings to several code points, from
   Maul Unicode); the currency formatter keeps its chain's currency
