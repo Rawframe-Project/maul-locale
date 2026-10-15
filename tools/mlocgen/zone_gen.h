@@ -27,4 +27,12 @@ int PrintZones(const char* tzdbDirectory, int32_t untilYear, char* errorOut, siz
 int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const char* release,
                   DataFile* file, char* errorOut, size_t errorCapacity);
 
+// Writes a zones file (record mloc-0041): a data file holding the zones
+// unit alone, compiled from a tzdb source directory of any release, with
+// the version of the library this generator links but for that release.
+// A primary other than CLDR's is reported on standard error, as a newer
+// release may differ from CLDR. Returns 0 and a message on failure.
+int WriteZonesFile(const char* tzdbDirectory, const char* commonDirectory, const char* path,
+                   char* errorOut, size_t errorCapacity);
+
 #endif

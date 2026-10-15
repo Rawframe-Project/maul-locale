@@ -26,11 +26,36 @@ static uint64_t Align(uint64_t at)
     return (at + 7) & ~(uint64_t)7;
 }
 
+// The release's length: one to eight digits and lower-case letters, then
+// NULs; 0 when the bytes are not that.
+static uint32_t ReleaseLength(const uint8_t* bytes)
+{
+    uint32_t length = 0;
+    while (length < 8 && ((bytes[length] >= '0' && bytes[length] <= '9') ||
+                          (bytes[length] >= 'a' && bytes[length] <= 'z')))
+    {
+        length += 1;
+    }
+    for (uint32_t i = length; i < 8; i++)
+    {
+        if (bytes[i] != 0)
+        {
+            return 0;
+        }
+    }
+    return length;
+}
+
 // The sections in order: their sizes from the counts.
 bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out)
 {
-    if (payload.size < zoneHeaderSize || mlocLoad32(payload.bytes + 40) != 0 ||
-        mlocLoad32(payload.bytes + 44) != 0)
+    if (payload.size < zoneHeaderSize)
+    {
+        return false;
+    }
+    out->release = payload.bytes + 40;
+    out->releaseLength = ReleaseLength(out->release);
+    if (out->releaseLength == 0)
     {
         return false;
     }

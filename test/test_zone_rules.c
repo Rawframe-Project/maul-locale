@@ -126,6 +126,7 @@ static DataSpan SmallUnit(void)
     {
         Put((size_t)i * 4, s_counts[i], 4);
     }
+    memcpy(s_small + 40, "2026e", 5);
     // Zones: narrow, type and wide firsts, count, list first, name,
     // early, late, offset count, initial, closing.
     static const uint32_t s_zone[2][11] = {{0, 0, 4, 0, 0, 1, 1, 1, 3, 0, 1},
@@ -193,8 +194,10 @@ static void TestValidatorBounds(void)
 {
     static const Edit s_edits[] = {
         {{0}, {0}, {0}, true, "the small unit"},
-        {{40}, {1}, {4}, false, "the header's first zero word"},
-        {{44}, {1}, {4}, false, "the header's second zero word"},
+        {{40}, {0}, {1}, false, "a release that starts with a NUL"},
+        {{44}, {'E'}, {1}, false, "a release with an upper-case letter"},
+        {{46}, {'x'}, {1}, false, "a release with a byte after its NUL"},
+        {{40, 44}, {0x3132617a, 0x33343536}, {4, 4}, true, "a release of eight bytes"},
         {{47}, {0}, {0}, false, "a payload shorter than the header"},
         {{smallZones + 19}, {3}, {1}, false, "an initial offset at the zone's offset count"},
         {{smallZones + 14}, {3}, {2}, false, "a name at the identifier count"},

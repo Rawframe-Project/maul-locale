@@ -26,9 +26,10 @@ typedef struct ZoneIdentifier
 // its country from CLDR's bcp47/timezone.xml, which groups each place's
 // names, under the common directory. Returns the count, or -1 and a
 // message: a name twice when case is ignored, a Link that reaches no
-// Zone, one whose country neither file gives, or a primary other than
-// CLDR's for a name CLDR has.
-int ZoneIdentifiers(const Tzdb* tzdb, const char* commonDirectory, ZoneIdentifier** out,
-                    char* errorOut, size_t errorCapacity);
+// Zone, one whose country neither file gives, or, when strict, a primary
+// other than CLDR's for a name CLDR has (otherwise reported on standard
+// error: a source of another release than CLDR's may differ).
+int ZoneIdentifiers(const Tzdb* tzdb, const char* commonDirectory, bool strict,
+                    ZoneIdentifier** out, char* errorOut, size_t errorCapacity);
 
 #endif

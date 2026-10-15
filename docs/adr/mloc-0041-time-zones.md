@@ -278,10 +278,25 @@ nanoseconds.
     sub-second fields, each a float64 integer read from its bits, past
     2^64 nanoseconds when the fields are; nothing is computed in
     floating point.
-- **Later in this part:**
-  - a zones file whose tzdb release may differ from the library's, so
-    a program takes a new release without the rest of the data;
-  - CLDR's BCP 47 ids and Windows names.
+- **Zones files** (amended 2026-10-15): a program takes a new tzdb
+  release without the rest of the data.
+  - A data file holding zones units alone may carry another release in
+    its header; every other field of its version must be the
+    library's. A file holding anything else must match in every field,
+    the release included.
+  - The zones unit's header ends with its release (one to eight
+    characters of `0-9a-z`, then zeros), so `mlocGetTimeZoneRelease`
+    gives the release of the zones a data set reads: the first zones
+    unit in it. A zone keeps the unit it was found in, so zones of two
+    releases each read their own tables, and equality compares
+    identifiers by name.
+  - `mlocgen zonesfile <tzdb directory> <CLDR common directory> <out
+    file>` compiles a tzdb source tree into one. Its CLDR check reports
+    rather than refuses: an identifier CLDR names gets CLDR's primary,
+    a difference is listed on standard error, and a Link CLDR does not
+    know, or one without a country, resolves to its target. The
+    library's own data keeps the strict check.
+- **Later in this part:** CLDR's BCP 47 ids and Windows names.
 
 ## Proof
 
@@ -291,6 +306,11 @@ nanoseconds.
   to the range's end. Every change of offset must match in time and
   offset, and so must every change of the daylight flag, outside the
   five zones with negative savings. The cldr CI job runs it.
+- **A zones file of an older release:** the same job fetches the
+  release `tools/tzdb-older.txt` pins (2025b), builds a zones file from
+  it with `mlocgen zonesfile`, and checks it with the same script
+  against that release's zic: all 340 zones agree, and the file reports
+  its release.
 - **Against ICU:** for those five zones, ICU's pairs of raw offset and
   saving match the library's. ICU's data is one release older, and
   the one difference is Dublin's autumn of 1925, which 2026e corrected.
@@ -301,7 +321,13 @@ nanoseconds.
   - names found with case ignored, Links, and ECMA-402's primaries
     (Asia/Calcutta, Etc/GMT, Europe/Bratislava, Atlantic/Jan_Mayen);
   - the validator refusing a changed count, offset place, order,
-    closing month and saving.
+    closing month and saving, and a malformed release.
+- **Zones files:** `test/test_data.c` opens a zones file of another
+  release, and refuses one holding another unit too, one of another
+  library version and one holding no unit. `test/test_zone_files.c`
+  builds one from the compiled-in zones with the release renamed: a
+  data set with it first names its release and reads its zones, which
+  equal the compiled-in ones.
 - **Local times against zoneinfo:** `tools/check_local.py` asks
   `test/conform_local.c` about every change of offset from 1800 to 2500
   in every zone. It covers the local times at the edges and in the

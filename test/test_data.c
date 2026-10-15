@@ -8,6 +8,7 @@
 #include "bytes.h"
 #include "data_format.h"
 #include "data_view.h"
+#include "kinds.h"
 #include "test_harness.h"
 
 #include "maul-locale/data.h"
@@ -298,6 +299,37 @@ static void TestVersionRefusals(void)
     CHECK(Open(size) == mloc_errorDataVersion, "the version is checked before the rest");
 }
 
+// A zones file may be of another tzdb release; any other file may not,
+// whatever else it holds beside zones (record mloc-0041).
+static void TestZonesFiles(void)
+{
+    static const DataKind s_zoneKinds[] = {{kindWords, ValidWords}, {kindZones, ValidAny}};
+    static const TestUnit s_zones[] = {{kindZones, dataNoLocale, "zones"}};
+    static const TestUnit s_mixed[] = {{kindWords, dataNoLocale, "root"},
+                                       {kindZones, dataNoLocale, "zones"}};
+    DataView view;
+    uint32_t size = Build(s_zones, 1, nullptr, 0);
+    memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_success,
+          "zones alone, of another release");
+    size = Build(s_mixed, 2, nullptr, 0);
+    memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+          "zones beside another unit, of another release");
+    size = Build(s_mixed, 2, nullptr, 0);
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_success,
+          "zones beside another unit, of the library's release");
+    size = Build(s_zones, 0, nullptr, 0);
+    memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+          "no unit at all, of another release");
+    size = Build(s_zones, 1, nullptr, 0);
+    memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
+    s_file[headerLibrary] ^= 1;
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+          "zones of another library version");
+}
+
 // Builds the good file, puts a 32-bit value at an offset, and expects a
 // refusal.
 static void Corrupt(uint32_t offset, uint32_t value, const char* what)
@@ -373,6 +405,7 @@ int main(void)
     TestDataSet();
     TestArguments();
     TestVersionRefusals();
+    TestZonesFiles();
     TestHeaderRefusals();
     TestTableRefusals();
     TestLongIds();

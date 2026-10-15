@@ -82,8 +82,9 @@ and transitions checked against zic), with times of day, date-times,
 instants and zoned date-times and their arithmetic, differences,
 rounding, totals and durations as ECMA-262's Temporal computes them,
 read from and written to Temporal's ISO 8601 and RFC 9557 strings
-(test262's Temporal tests replayed on every push).
-The library has 121 public functions.
+(test262's Temporal tests replayed on every push), and zones files that
+bring a newer IANA release without the rest of the data.
+The library has 122 public functions.
 
 ## Building
 

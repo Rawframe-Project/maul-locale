@@ -10,9 +10,11 @@
 # change of offset must match in time and offset, and every change of
 # the daylight flag too, except in the zones whose source has negative
 # savings: there the library keeps tzdb's rearguard daylight periods,
-# where zdump shows the main form's.
+# where zdump shows the main form's. Given a zones file (mlocgen
+# zonesfile), the library reads its zones from it, and its release must
+# be the source's.
 #
-# usage: check_zones.py <conform_zones> <tzdb source directory>
+# usage: check_zones.py <conform_zones> <tzdb source directory> [zones file]
 
 import os
 import subprocess
@@ -39,14 +41,16 @@ def seconds(year, month, day, h, m, s):
     return days * 86400 + h * 3600 + m * 60 + s
 
 
-def library(conform, first, end):
+def library(conform, first, end, extra):
     zones = {}
     rows = None
-    out = subprocess.run([conform, str(first), str(end)], capture_output=True, text=True,
+    out = subprocess.run([conform, str(first), str(end)] + extra, capture_output=True, text=True,
                          check=True).stdout
     for line in out.splitlines():
         f = line.split()
-        if f[0] == "zone":
+        if f[0] == "release":
+            zones[None] = f[1]
+        elif f[0] == "zone":
             rows = zones[f[1]] = [(None, int(f[2]) + int(f[3]), f[3] != "0")]
         else:
             rows.append((int(f[1]), int(f[2]) + int(f[3]), f[3] != "0"))
@@ -79,14 +83,19 @@ def changes(rows, flags):
 
 
 def main():
-    if len(sys.argv) != 3:
-        sys.exit("usage: check_zones.py <conform_zones> <tzdb source directory>")
+    if len(sys.argv) not in (3, 4):
+        sys.exit("usage: check_zones.py <conform_zones> <tzdb source directory> [zones file]")
     conform, source = sys.argv[1], sys.argv[2]
+    extra = sys.argv[3:]
+    with open(os.path.join(source, "version")) as f:
+        release = f.read().strip()
     failures = 0
     with tempfile.TemporaryDirectory() as compiled:
         subprocess.run(["zic", "-b", "fat", "-d", compiled] + FILES, cwd=source, check=True)
         for first, end in SPANS:
-            zones = library(conform, first, end)
+            zones = library(conform, first, end, extra)
+            if zones.pop(None) != release:
+                sys.exit(f"the library's zones are not tzdb {release}")
             for name, rows in sorted(zones.items()):
                 flags = name not in REARGUARD
                 want = [(t, o, d if flags else None)

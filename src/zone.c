@@ -132,6 +132,20 @@ static mlocResult FormatId(const mlocTimeZone* zone, bool primary, mlocOutput* o
     return Write(name, length, 0, output);
 }
 
+mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* output)
+{
+    ZoneTables t;
+    if (data == nullptr || output == nullptr || (output->buffer == nullptr && output->capacity > 0))
+    {
+        return mloc_errorInvalid;
+    }
+    if (!mlocFindZoneTables(data, &t))
+    {
+        return mloc_errorNotFound;
+    }
+    return Write((const char*)t.release, t.releaseLength, 0, output);
+}
+
 mlocResult mlocFormatTimeZoneId(const mlocTimeZone* zone, mlocOutput* output)
 {
     return FormatId(zone, false, output);

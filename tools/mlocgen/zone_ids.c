@@ -187,10 +187,10 @@ static const char* BackzoneTarget(const Tzdb* t, const char* name)
 }
 
 // ECMA-402's primary identifier of a name, into out (tzdbMaxName bytes).
-// Returns false with a message when a country or a backzone Link is
-// missing.
-static bool PrimaryName(const Tzdb* t, const Groups* g, const char* name, char* out, char* errorOut,
-                        size_t errorCapacity)
+// When a country or a backzone Link is missing, returns false with a
+// message if strict, else takes the Link's own target.
+static bool PrimaryName(const Tzdb* t, const Groups* g, const char* name, bool strict, char* out,
+                        char* errorOut, size_t errorCapacity)
 {
     const char* primary = name;
     int zone = Resolve(t, name);
@@ -215,19 +215,28 @@ static bool PrimaryName(const Tzdb* t, const Groups* g, const char* name, char* 
         {
             primary = zoneName;
         }
-        else if (nameCountry == nullptr)
+        else if (nameCountry == nullptr && strict)
         {
             Fail(errorOut, errorCapacity, "a Link of no country", name);
             return false;
         }
         else
         {
-            primary = lines == 1 ? only : BackzoneTarget(t, name);
+            primary = nameCountry == nullptr ? nullptr
+                      : lines == 1           ? only
+                                             : BackzoneTarget(t, name);
         }
-        if (primary == nullptr)
+        if (primary == nullptr && strict)
         {
             Fail(errorOut, errorCapacity, "no backzone Link for", name);
             return false;
+        }
+        if (primary == nullptr)
+        {
+            // A source of another release than CLDR's: the Link's own
+            // target, as tzdb and ICU resolve it.
+            fprintf(stderr, "mlocgen: %s: no country, resolved to %s\n", name, zoneName);
+            primary = zoneName;
         }
     }
     bool utc = strcmp(primary, "Etc/UTC") == 0 || strcmp(primary, "Etc/GMT") == 0 ||
@@ -281,15 +290,16 @@ static int Collect(const Tzdb* t, ZoneIdentifier* ids, char* errorOut, size_t er
     return count;
 }
 
-// Each name's primary, checked against CLDR's.
-static int Primaries(const Tzdb* t, const Groups* g, ZoneIdentifier* ids, int count, char* errorOut,
-                     size_t errorCapacity)
+// Each name's primary, checked against CLDR's: a difference fails when
+// strict, and is reported on standard error otherwise.
+static int Primaries(const Tzdb* t, const Groups* g, ZoneIdentifier* ids, int count, bool strict,
+                     char* errorOut, size_t errorCapacity)
 {
     for (int i = 0; i < count; i++)
     {
         char primary[tzdbMaxName];
         char cldr[tzdbMaxName];
-        if (!PrimaryName(t, g, ids[i].name, primary, errorOut, errorCapacity))
+        if (!PrimaryName(t, g, ids[i].name, strict, primary, errorOut, errorCapacity))
         {
             return -1;
         }
@@ -297,10 +307,14 @@ static int Primaries(const Tzdb* t, const Groups* g, ZoneIdentifier* ids, int co
         if (type != nullptr)
         {
             GroupPrimary(type, cldr);
-            if (strcmp(cldr, primary) != 0)
+            if (strcmp(cldr, primary) != 0 && strict)
             {
                 return Fail(errorOut, errorCapacity, "a primary other than CLDR's for",
                             ids[i].name);
+            }
+            if (strcmp(cldr, primary) != 0)
+            {
+                fprintf(stderr, "mlocgen: %s: primary %s, CLDR's %s\n", ids[i].name, primary, cldr);
             }
         }
         ids[i].primary = Find(ids, count, primary);
@@ -312,8 +326,8 @@ static int Primaries(const Tzdb* t, const Groups* g, ZoneIdentifier* ids, int co
     return count;
 }
 
-int ZoneIdentifiers(const Tzdb* tzdb, const char* commonDirectory, ZoneIdentifier** out,
-                    char* errorOut, size_t errorCapacity)
+int ZoneIdentifiers(const Tzdb* tzdb, const char* commonDirectory, bool strict,
+                    ZoneIdentifier** out, char* errorOut, size_t errorCapacity)
 {
     char path[4096];
     snprintf(path, sizeof(path), "%s/bcp47/timezone.xml", commonDirectory);
@@ -333,7 +347,7 @@ int ZoneIdentifiers(const Tzdb* tzdb, const char* commonDirectory, ZoneIdentifie
     else
     {
         count = Collect(tzdb, ids, errorOut, errorCapacity);
-        count = count < 0 ? -1 : Primaries(tzdb, &g, ids, count, errorOut, errorCapacity);
+        count = count < 0 ? -1 : Primaries(tzdb, &g, ids, count, strict, errorOut, errorCapacity);
     }
     XmlFree(g.root);
     if (count < 0)

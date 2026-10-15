@@ -7,12 +7,17 @@
 # SHA-256 checked, unpacked. A cache that already holds it is checked and
 # used as it is.
 #
-# usage: tools/fetch_tzdb.sh <cache directory>
-#   then <cache>/tzdb-<release> is the source directory mlocgen reads.
+# usage: tools/fetch_tzdb.sh <cache directory> [older]
+#   then <cache>/tzdb-<release> is the source directory mlocgen reads;
+#   with "older", the release tools/tzdb-older.txt names instead.
 set -euo pipefail
 cache=${1:?usage: fetch_tzdb.sh <cache directory>}
 here=$(cd "$(dirname "$0")" && pwd)
-field() { awk -v k="$1" '$1 == k { print $2 }' "$here/tzdb-release.txt"; }
+pin="$here/tzdb-release.txt"
+if [ "${2:-}" = older ]; then
+    pin="$here/tzdb-older.txt"
+fi
+field() { awk -v k="$1" '$1 == k { print $2 }' "$pin"; }
 release=$(field release)
 sha=$(field sha256)
 archive="$cache/tzdata$release.tar.gz"

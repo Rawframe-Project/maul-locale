@@ -132,7 +132,7 @@ Reads the version of a data file from its header alone, so that a program can te
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocOpenData(mlocData* dataOut, const void* bytes, size_t size);
 ```
-Opens a data file held in memory. The whole file is validated here, once; a view that opened is never checked again.  @param dataOut  Receives the view; left unchanged on failure. @param bytes    The file, 8-byte aligned (any allocator's memory is). @param size     The file's size. @return mloc_success; mloc_errorInvalid for a null pointer or bytes that are not 8-byte aligned; mloc_errorDataVersion for a file of another data version (mlocReadDataVersion names it); mloc_errorData for bytes that are not a valid data file. @par Thread safety Safe from any thread.
+Opens a data file held in memory. The whole file is validated here, once; a view that opened is never checked again.  @param dataOut  Receives the view; left unchanged on failure. @param bytes    The file, 8-byte aligned (any allocator's memory is). @param size     The file's size. @return mloc_success; mloc_errorInvalid for a null pointer or bytes that are not 8-byte aligned; mloc_errorDataVersion for a file of another data version (mlocReadDataVersion names it), a zones file's release aside; mloc_errorData for bytes that are not a valid data file. @par Thread safety Safe from any thread.
 
 ```c
 void mlocOpenBuiltinData(mlocData* dataOut);
@@ -515,6 +515,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZone(const mlocDataSet* data, size
 Returns the zone of a primary identifier, in the order of the identifiers' bytes ("Etc/UTC" before "Etc/Universal" were both primary).  @param data     The data with the zones unit. @param index    Below mlocGetTimeZoneCount. @param zoneOut  Receives the zone. @return mloc_success; mloc_errorInvalid for a null pointer or an index out of range. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* output);
+```
+Writes the time zone database release a data set's zones are compiled from, such as "2026e": that of the first source with zones, which every zone lookup in the set reads. A zones file (mlocgen zonesfile) put before the compiled-in data gives a release other than the library's.  @param data    The data with the zones unit. @param output  Receives the release's name. @return mloc_success; mloc_errorCapacity when the buffer is too short; mloc_errorInvalid for a null pointer; mloc_errorNotFound for data without the zones unit. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* instant, int32_t* offsetSecondsOut);
 ```
 Returns a zone's offset from universal time at an instant, in seconds: local time is the instant plus the offset. The database's offsets before 1900 or so are local mean time, to the second.  @param zone              The zone. @param instant           An instant in Temporal's range. @param offsetSecondsOut  Receives the offset. @return mloc_success; mloc_errorInvalid for a null pointer, a zone the library did not make or an instant out of range. @par Thread safety Safe from any thread.
@@ -666,4 +671,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-121 functions across 14 headers.
+122 functions across 14 headers.

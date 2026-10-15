@@ -56,3 +56,6 @@ format.
   zone and calendar strings and durations read by ECMA-262's grammar,
   and every type's toString written (`maul-locale/ixdtf.h`,
   mloc-0041).
+- Zones files: a data file of zones alone may bring another IANA
+  release, built by `mlocgen zonesfile`, and `mlocGetTimeZoneRelease`
+  names the release a data set's zones are (mloc-0041).

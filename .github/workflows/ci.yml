@@ -104,13 +104,15 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/tzdb-cache
-          key: tzdb-${{ hashFiles('tools/tzdb-release.txt') }}
+          key: tzdb-${{ hashFiles('tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
       - name: Fetch CLDR
         timeout-minutes: 15
         run: bash tools/fetch_cldr.sh ~/cldr-cache
       - name: Fetch tzdb
         timeout-minutes: 5
-        run: bash tools/fetch_tzdb.sh ~/tzdb-cache
+        run: |
+          bash tools/fetch_tzdb.sh ~/tzdb-cache
+          bash tools/fetch_tzdb.sh ~/tzdb-cache older
       - name: Install the compiler
         timeout-minutes: 15
         run: |
@@ -144,6 +146,15 @@ jobs:
           command -v zic zdump
           python3 tools/check_zones.py build/conform_zones \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
+      - name: A zones file of an older release against its zic
+        # Record mloc-0041: a zones file mlocgen writes from another tzdb
+        # release opens beside the library's zones, names its release,
+        # and gives that release's offsets.
+        timeout-minutes: 20
+        run: |
+          older=~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)
+          build/mlocgen zonesfile $older ~/cldr-cache/cldr/common build/zones-older.mloc
+          python3 tools/check_zones.py build/conform_zones $older build/zones-older.mloc
       - name: Local times against zoneinfo
         # Record mloc-0041: the instants of the local times around every
         # change from 1800 to 2500, their disambiguations, the start of

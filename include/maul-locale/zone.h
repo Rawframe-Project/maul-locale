@@ -147,6 +147,22 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index,
                                                        mlocTimeZone* zoneOut);
 
+    /// Writes the time zone database release a data set's zones are
+    /// compiled from, such as "2026e": that of the first source with
+    /// zones, which every zone lookup in the set reads. A zones file
+    /// (mlocgen zonesfile) put before the compiled-in data gives a
+    /// release other than the library's.
+    ///
+    /// @param data    The data with the zones unit.
+    /// @param output  Receives the release's name.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null pointer; mloc_errorNotFound
+    ///         for data without the zones unit.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data,
+                                                              mlocOutput* output);
+
     /// Returns a zone's offset from universal time at an instant, in
     /// seconds: local time is the instant plus the offset. The database's
     /// offsets before 1900 or so are local mean time, to the second.

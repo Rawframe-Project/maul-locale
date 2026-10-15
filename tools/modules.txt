@@ -2,7 +2,7 @@
 # and the modules it may use. tools/check_modules.py enforces it.
 base:
 bytes:
-data: bytes data_format data_view
+data: bytes data_format data_view kinds
 data_format:
 data_kinds: currency_region data_view kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural spellout_data unit_data unit_names zone_tables
 data_view:

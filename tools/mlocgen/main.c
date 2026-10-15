@@ -14,6 +14,11 @@
 //       Writes the library's generated sources under src/generated/, the
 //       zones from the pinned tzdb release's source (record mloc-0041).
 //
+//   mlocgen zonesfile <tzdb directory> <CLDR common directory> <out file>
+//       Writes a zones file: the zones unit alone, from a tzdb source of
+//       any release, for this library (record mloc-0041). A program puts
+//       it before the compiled-in data to take that release's rules.
+//
 //   mlocgen zones <tzdb directory> <until year>
 //       Prints each zone's compiled offsets up to the start of a year
 //       (zone_gen.h), for comparing the compiler with zic and zdump.
@@ -100,6 +105,16 @@ int main(int argc, char** argv)
         }
         return 0;
     }
+    if (argc == 5 && strcmp(argv[1], "zonesfile") == 0)
+    {
+        char error[1024];
+        if (!WriteZonesFile(argv[2], argv[3], argv[4], error, sizeof(error)))
+        {
+            fprintf(stderr, "mlocgen: %s\n", error);
+            return 1;
+        }
+        return 0;
+    }
     if (argc == 4 && strcmp(argv[1], "zones") == 0)
     {
         char error[1024];
@@ -124,6 +139,7 @@ int main(int argc, char** argv)
           "       mlocgen chains <CLDR common directory>\n"
           "       mlocgen plural-samples <CLDR common directory>\n"
           "       mlocgen zones <tzdb directory> <until year>\n"
+          "       mlocgen zonesfile <tzdb directory> <CLDR common directory> <out file>\n"
           "       mlocgen generate <CLDR common directory> <repository root> <tzdb directory>\n",
           stderr);
     return 2;

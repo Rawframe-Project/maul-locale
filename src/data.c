@@ -8,6 +8,7 @@
 #include "bytes.h"
 #include "data_format.h"
 #include "data_view.h"
+#include "kinds.h"
 
 #include "generated/data_version.h"
 
@@ -66,12 +67,26 @@ mlocResult mlocReadDataVersion(const void* bytes, size_t size, mlocDataVersion* 
     return mloc_success;
 }
 
-static bool SameVersion(const mlocDataVersion* a, const mlocDataVersion* b)
+// Whether two versions are equal but perhaps in the tzdb release.
+static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
 {
     return memcmp(&a->cldr, &b->cldr, sizeof(a->cldr)) == 0 &&
            memcmp(&a->unicode, &b->unicode, sizeof(a->unicode)) == 0 &&
-           memcmp(&a->library, &b->library, sizeof(a->library)) == 0 &&
-           memcmp(a->tzdb, b->tzdb, sizeof(a->tzdb)) == 0 && a->tables == b->tables;
+           memcmp(&a->library, &b->library, sizeof(a->library)) == 0 && a->tables == b->tables;
+}
+
+// Whether a file holds zones units alone: a zones file, which may be of
+// another tzdb release than the library's (record mloc-0041).
+static bool OnlyZones(const DataView* view)
+{
+    for (uint32_t i = 0; i < view->unitCount; i++)
+    {
+        if (mlocLoad32(view->bytes + dataHeaderSize + (size_t)i * dataUnitSize) != kindZones)
+        {
+            return false;
+        }
+    }
+    return view->unitCount > 0;
 }
 
 // The id of locale i, which validation has bounded.
@@ -207,7 +222,8 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     mlocDataVersion own;
     mlocGetDataVersion(&own);
     mlocDataVersion theirs = HeaderVersion(b);
-    if (!SameVersion(&own, &theirs))
+    bool sameRelease = memcmp(own.tzdb, theirs.tzdb, sizeof(own.tzdb)) == 0;
+    if (!SameButRelease(&own, &theirs))
     {
         return mloc_errorDataVersion;
     }
@@ -227,6 +243,10 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     if (!ValidTables(&view, kinds, kindCount))
     {
         return mloc_errorData;
+    }
+    if (!sameRelease && !OnlyZones(&view))
+    {
+        return mloc_errorDataVersion;
     }
     *viewOut = view;
     return mloc_success;

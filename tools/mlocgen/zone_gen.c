@@ -5,11 +5,14 @@
 
 #include "zone_gen.h"
 
+#include "data_format.h"
 #include "kinds.h"
 #include "tzdb.h"
 #include "zone_compile.h"
 #include "zone_ids.h"
 #include "zone_tables.h"
+
+#include "maul-locale/data.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -250,6 +253,8 @@ typedef struct Tables
     Offsets offsets;
     Bytes sections[zoneSectionCount];
     uint32_t counts[zoneSectionCount];
+    // The tzdb release, NUL-padded, in the header's last eight bytes.
+    char release[8];
 } Tables;
 
 enum
@@ -413,7 +418,10 @@ static Bytes Assemble(Tables* t)
     {
         PutN(&out, t->counts[i], 4);
     }
-    PutN(&out, 0, 8);
+    for (size_t i = 0; i < sizeof(t->release); i++)
+    {
+        PutN(&out, (uint8_t)t->release[i], 1);
+    }
     for (int i = 0; i < zoneSectionCount; i++)
     {
         while (out.size % 8 != 0)
@@ -475,37 +483,36 @@ static int IdentifierOf(const ZoneIdentifier* ids, int count, const char* name)
     return -1;
 }
 
-// The release in the source directory's version file must be the pin's.
-static int CheckRelease(const char* tzdbDirectory, const char* release, char* errorOut,
-                        size_t errorCapacity)
+// The release a source directory's version file names, at most eight
+// bytes; false when it names none.
+static bool ReadRelease(const char* tzdbDirectory, char* releaseOut, size_t capacity,
+                        char* errorOut, size_t errorCapacity)
 {
     char path[4096];
-    char found[16] = "";
     snprintf(path, sizeof(path), "%s/version", tzdbDirectory);
     FILE* file = fopen(path, "rb");
-    size_t length = file == nullptr ? 0 : fread(found, 1, sizeof(found) - 1, file);
-    if (file != nullptr)
+    if (file == nullptr)
     {
-        fclose(file);
+        snprintf(errorOut, errorCapacity, "cannot read %s", path);
+        return false;
     }
-    found[length] = '\0';
-    found[strcspn(found, "\r\n")] = '\0';
-    if (strcmp(found, release) != 0)
+    size_t length = fread(releaseOut, 1, capacity - 1, file);
+    fclose(file);
+    releaseOut[length] = '\0';
+    releaseOut[strcspn(releaseOut, "\r\n")] = '\0';
+    if (releaseOut[0] == '\0' || strlen(releaseOut) > 8)
     {
-        snprintf(errorOut, errorCapacity, "%s holds tzdb \"%s\", not the pinned %s", path, found,
-                 release);
-        return 0;
+        snprintf(errorOut, errorCapacity, "%s names no tzdb release", path);
+        return false;
     }
-    return 1;
+    return true;
 }
 
-int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const char* release,
-                  DataFile* file, char* errorOut, size_t errorCapacity)
+// The zones unit from a source directory, its release given; a primary
+// other than CLDR's fails when strict.
+static int BuildUnit(const char* tzdbDirectory, const char* commonDirectory, const char* release,
+                     bool strict, Bytes* unitOut, char* errorOut, size_t errorCapacity)
 {
-    if (!CheckRelease(tzdbDirectory, release, errorOut, errorCapacity))
-    {
-        return 0;
-    }
     Tzdb tzdb;
     CompiledZone* zones = nullptr;
     int count = CompileAll(tzdbDirectory, &tzdb, &zones, errorOut, errorCapacity);
@@ -514,7 +521,7 @@ int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const 
         return 0;
     }
     ZoneIdentifier* ids = nullptr;
-    int idCount = ZoneIdentifiers(&tzdb, commonDirectory, &ids, errorOut, errorCapacity);
+    int idCount = ZoneIdentifiers(&tzdb, commonDirectory, strict, &ids, errorOut, errorCapacity);
     Tables* t = idCount < 0 ? nullptr : calloc(1, sizeof(Tables));
     int ok = t != nullptr && idCount <= UINT16_MAX &&
              ReadPrimaryData(ids, idCount, zones, errorOut, errorCapacity);
@@ -525,10 +532,9 @@ int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const 
     }
     if (ok)
     {
+        memcpy(t->release, release, strlen(release));
         AddIdentifiers(t, ids, idCount);
-        Bytes unit = Assemble(t);
-        DataFileAdd(file, kindZones, nullptr, unit.data, unit.size);
-        free(unit.data);
+        *unitOut = Assemble(t);
     }
     else if (t != nullptr)
     {
@@ -540,5 +546,66 @@ int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const 
     free(t);
     free(ids);
     FreeAll(&tzdb, zones, count);
+    return ok;
+}
+
+int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const char* release,
+                  DataFile* file, char* errorOut, size_t errorCapacity)
+{
+    char found[16];
+    if (!ReadRelease(tzdbDirectory, found, sizeof(found), errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    if (strcmp(found, release) != 0)
+    {
+        snprintf(errorOut, errorCapacity, "%s holds tzdb \"%s\", not the pinned %s", tzdbDirectory,
+                 found, release);
+        return 0;
+    }
+    Bytes unit = {0};
+    if (!BuildUnit(tzdbDirectory, commonDirectory, release, true, &unit, errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    DataFileAdd(file, kindZones, nullptr, unit.data, unit.size);
+    free(unit.data);
+    return 1;
+}
+
+int WriteZonesFile(const char* tzdbDirectory, const char* commonDirectory, const char* path,
+                   char* errorOut, size_t errorCapacity)
+{
+    char release[16];
+    Bytes unit = {0};
+    if (!ReadRelease(tzdbDirectory, release, sizeof(release), errorOut, errorCapacity) ||
+        !BuildUnit(tzdbDirectory, commonDirectory, release, false, &unit, errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    // The library's own version, the release aside.
+    mlocDataVersion own;
+    mlocGetDataVersion(&own);
+    DataFileVersion version = {
+        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
+        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
+        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .tables = own.tables,
+    };
+    memcpy(version.tzdb, release, strlen(release));
+    DataFile file = {0};
+    DataFileAdd(&file, kindZones, nullptr, unit.data, unit.size);
+    free(unit.data);
+    size_t size = 0;
+    uint8_t* bytes = DataFileWrite(&file, &version, &size);
+    FILE* out = bytes == nullptr ? nullptr : fopen(path, "wb");
+    int ok = out != nullptr && fwrite(bytes, 1, size, out) == size;
+    ok = (out != nullptr && fclose(out) == 0) && ok;
+    if (!ok)
+    {
+        snprintf(errorOut, errorCapacity, "cannot write %s", path);
+    }
+    free(bytes);
+    DataFileFree(&file);
     return ok;
 }

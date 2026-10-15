@@ -9,8 +9,10 @@
 // standard offset and a saving, never negative, in seconds: the daylight
 // periods are tzdb's rearguard ones.
 //
-// The payload is a header of ten 32-bit counts and two zero words, then
-// these sections, each starting on an 8-byte boundary:
+// The payload is a header of ten 32-bit counts and the tzdb release the
+// unit was compiled from (eight bytes: one to eight ASCII digits and
+// lower-case letters, then NULs), then these sections, each starting on
+// an 8-byte boundary:
 //   zones        24 bytes each: the first of its int32 times (u32), of its
 //                offset places (u32), its transition count (u16), the
 //                first of its int64 times (u16), the first of its offsets
@@ -123,6 +125,9 @@ typedef struct ZoneTables
     uint32_t closingCount;
     uint32_t textSize;
     uint32_t primaryCount;
+    // The tzdb release's name, not NUL-terminated.
+    const uint8_t* release;
+    uint32_t releaseLength;
 } ZoneTables;
 
 // The sections of a payload whose size their counts give; false when it

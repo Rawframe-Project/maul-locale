@@ -34,7 +34,8 @@ extern "C"
     } mlocDataSet;
 
     // What a data file was generated from. A library opens only data of
-    // its own version, every field equal.
+    // its own version, every field equal, but for a zones file (the zones
+    // alone, written by mlocgen zonesfile), whose tzdb release may differ.
     typedef struct mlocDataVersion
     {
         mlocVersion cldr;
@@ -79,8 +80,8 @@ extern "C"
     /// @return mloc_success; mloc_errorInvalid for a null pointer or bytes
     ///         that are not 8-byte aligned; mloc_errorDataVersion for a
     ///         file of another data version (mlocReadDataVersion names
-    ///         it); mloc_errorData for bytes that are not a valid data
-    ///         file.
+    ///         it), a zones file's release aside; mloc_errorData for
+    ///         bytes that are not a valid data file.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocOpenData(mlocData* dataOut, const void* bytes,
