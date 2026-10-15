@@ -24,6 +24,8 @@ typedef struct DateSupplement
     Map hours;
     // A language, language_Script or und_Script to its likely tag.
     Map likely;
+    // "calendar code" ("japanese reiwa") to the era's CLDR type ("236").
+    Map eras;
 } DateSupplement;
 
 int DateSupplementLoad(DateSupplement* s, const char* commonDirectory, char* errorOut,
@@ -41,6 +43,11 @@ int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapa
 
 // The datetimeSkeleton of a date length (0 long, 1 medium, 2 short).
 const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar, int length);
+
+// The value of a path under a calendar ("months/monthContext[...]/..."),
+// resolved by CLDR's inheritance, or null.
+const char* DateCalendarValue(Cldr* cldr, const char* locale, const char* calendar,
+                              const char* rest);
 
 // A standard date format's pattern (0 full, 1 long, 2 medium, 3 short),
 // or null.

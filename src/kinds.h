@@ -135,9 +135,12 @@ constexpr uint32_t kindZones = 0x00080001;
 // unit of no locale (src/zone_code_tables.h).
 constexpr uint32_t kindZoneCodes = 0x00080002;
 // The dates data file: the compiled date patterns, their rows by length
-// and their sets by calendar, a unit of no locale; a locale's set of each
-// calendar, a unit per locale key (record mloc-0042, src/date_tables.h).
+// and their sets by calendar, a unit of no locale; a locale's pattern set
+// and name set of each calendar, a unit per locale key; the names, their
+// lists and name sets, a unit of no locale (record mloc-0042,
+// src/date_tables.h).
 constexpr uint32_t kindDatePatterns = 0x00090001;
 constexpr uint32_t kindDates = 0x00090002;
+constexpr uint32_t kindDateNames = 0x00090003;
 
 #endif

@@ -157,6 +157,165 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
     return true;
 }
 
+// The section offsets of a names unit (lists, items, sets, text), or
+// false when its counts do not fit its size.
+static bool NamesLayout(DataSpan unit, uint32_t out[4])
+{
+    if (unit.size < dateNamesHeaderSize)
+    {
+        return false;
+    }
+    uint64_t strings = mlocLoad32(unit.bytes);
+    uint64_t lists = mlocLoad32(unit.bytes + 4);
+    uint64_t sets = mlocLoad32(unit.bytes + 8);
+    uint64_t text = mlocLoad32(unit.bytes + 12);
+    uint64_t listsAt = (dateNamesHeaderSize + 4 * (strings + 1) + 7) & ~7ULL;
+    uint64_t itemsAt = listsAt + 4 * (lists + 1);
+    if (itemsAt > unit.size)
+    {
+        return false;
+    }
+    uint64_t items = mlocLoad32(unit.bytes + itemsAt - 4);
+    uint64_t setsAt = (itemsAt + 2 * items + 7) & ~7ULL;
+    uint64_t textAt = (setsAt + (uint64_t)dateNameSetSize * sets + 7) & ~7ULL;
+    if (textAt + text != unit.size)
+    {
+        return false;
+    }
+    out[0] = (uint32_t)listsAt;
+    out[1] = (uint32_t)itemsAt;
+    out[2] = (uint32_t)setsAt;
+    out[3] = (uint32_t)textAt;
+    return true;
+}
+
+DateNameTables mlocReadDateNames(DataSpan unit)
+{
+    DateNameTables t = {0};
+    uint32_t at[4] = {0};
+    (void)NamesLayout(unit, at);
+    t.stringCount = mlocLoad32(unit.bytes);
+    t.listCount = mlocLoad32(unit.bytes + 4);
+    t.setCount = mlocLoad32(unit.bytes + 8);
+    t.strings = unit.bytes + dateNamesHeaderSize;
+    t.lists = unit.bytes + at[0];
+    t.items = unit.bytes + at[1];
+    t.sets = unit.bytes + at[2];
+    t.text = unit.bytes + at[3];
+    return t;
+}
+
+DateNameList mlocDateNameList(const DateNameTables* t, uint32_t list)
+{
+    uint32_t start = mlocLoad32(t->lists + 4 * (size_t)list);
+    uint32_t end = mlocLoad32(t->lists + 4 * (size_t)list + 4);
+    return (DateNameList){t->items + 2 * (size_t)start, end - start};
+}
+
+DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item)
+{
+    if (item >= list.count)
+    {
+        return (DataSpan){t->text, 0};
+    }
+    uint32_t s = mlocLoad16(list.items + 2 * (size_t)item);
+    uint32_t start = mlocLoad32(t->strings + 4 * (size_t)s);
+    return (DataSpan){t->text + start, mlocLoad32(t->strings + 4 * (size_t)s + 4) - start};
+}
+
+// Whether offsets (u32, count + 1) run from 0 up to end without falling.
+static bool Ascending(const uint8_t* offsets, uint32_t count, uint32_t end)
+{
+    uint32_t previous = 0;
+    for (uint32_t i = 0; i <= count; i++)
+    {
+        uint32_t at = mlocLoad32(offsets + 4 * (size_t)i);
+        if (at < previous || (i == 0 && at != 0))
+        {
+            return false;
+        }
+        previous = at;
+    }
+    return previous == end;
+}
+
+// Whether a list's size suits its kind; leap patterns must hold "{0}".
+static bool ValidList(const DateNameTables* t, uint32_t kind, DateNameList list)
+{
+    switch (kind)
+    {
+    case dateNamesMonths:
+        return list.count == dateMonthListSize;
+    case dateNamesWeekdays:
+        return list.count == dateWeekdayListSize;
+    case dateNamesQuarters:
+        return list.count == dateQuarterListSize;
+    case dateNamesEras:
+        return list.count % 3 == 0 && list.count <= 3 * dateMaxEras;
+    case dateNamesCyclic:
+        return list.count == 0 || list.count == dateCyclicListSize;
+    default:
+        break;
+    }
+    if (list.count != 0 && list.count != dateLeapListSize)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < list.count; i++)
+    {
+        DataSpan name = mlocDateName(t, list, i);
+        bool placeholder = false;
+        for (uint32_t at = 0; at + 3 <= name.size; at++)
+        {
+            placeholder |= memcmp(name.bytes + at, "{0}", 3) == 0;
+        }
+        if (!placeholder)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool mlocValidDateNames(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    uint32_t at[4];
+    if (!NamesLayout(payload, at))
+    {
+        return false;
+    }
+    DateNameTables t = mlocReadDateNames(payload);
+    uint32_t text = mlocLoad32(payload.bytes + 12);
+    uint32_t items = mlocLoad32(t.lists + 4 * (size_t)t.listCount);
+    if (!Ascending(t.strings, t.stringCount, text) || !Ascending(t.lists, t.listCount, items) ||
+        !ValidIndexes(t.items, items, t.stringCount))
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < t.stringCount; i++)
+    {
+        uint32_t start = mlocLoad32(t.strings + 4 * (size_t)i);
+        uint32_t end = mlocLoad32(t.strings + 4 * (size_t)i + 4);
+        if (!mlocValidDataText(t.text + start, end - start, 0))
+        {
+            return false;
+        }
+    }
+    for (uint32_t s = 0; s < t.setCount; s++)
+    {
+        for (uint32_t k = 0; k < dateNameKindCount; k++)
+        {
+            uint32_t list = mlocLoad16(t.sets + (size_t)s * dateNameSetSize + 2 * k);
+            if (list >= t.listCount || !ValidList(&t, k, mlocDateNameList(&t, list)))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool mlocValidDates(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -184,6 +343,30 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
         return false;
     }
     *set = patterns->sets + (size_t)index * dateSetSize;
+    return true;
+}
+
+bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                       DateNameTables* names, const uint8_t** set)
+{
+    DataSpan dates;
+    DataSpan unit;
+    bool fellBack = false;
+    DataView view;
+    if (calendar >= dateCalendarCount ||
+        !mlocFindLocaleUnit(data, mloc_componentMain, kindDates, locale, &dates, &fellBack,
+                            &view) ||
+        !mlocFindDataUnit(&view, kindDateNames, dataNoLocale, &unit))
+    {
+        return false;
+    }
+    *names = mlocReadDateNames(unit);
+    uint32_t index = mlocLoad16(dates.bytes + 2 * ((size_t)dateCalendarCount + calendar));
+    if (index >= names->setCount)
+    {
+        return false;
+    }
+    *set = names->sets + (size_t)index * dateNameSetSize;
     return true;
 }
 

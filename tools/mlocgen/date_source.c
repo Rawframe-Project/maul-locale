@@ -85,6 +85,28 @@ static void AddHours(DateSupplement* s, const XmlNode* hours)
     }
 }
 
+// calendarData's era types by calendar and era code.
+static void AddEras(DateSupplement* s, const XmlNode* calendarData)
+{
+    for (int c = 0; calendarData != nullptr && c < calendarData->childCount; c++)
+    {
+        const XmlNode* calendar = calendarData->children[c];
+        const XmlNode* eras = XmlFindChild(calendar, "eras");
+        const char* type = XmlGetAttribute(calendar, "type");
+        for (int e = 0; eras != nullptr && type != nullptr && e < eras->childCount; e++)
+        {
+            const char* code = XmlGetAttribute(eras->children[e], "code");
+            const char* era = XmlGetAttribute(eras->children[e], "type");
+            if (code != nullptr && era != nullptr)
+            {
+                char key[128];
+                Format(key, sizeof(key), "%s %s", type, code);
+                MapPut(&s->eras, key, Copy(era));
+            }
+        }
+    }
+}
+
 int DateSupplementLoad(DateSupplement* s, const char* commonDirectory, char* errorOut,
                        size_t errorCapacity)
 {
@@ -97,6 +119,7 @@ int DateSupplementLoad(DateSupplement* s, const char* commonDirectory, char* err
     {
         AddHours(s, timeData->children[i]);
     }
+    AddEras(s, root == nullptr ? nullptr : XmlFindChild(root, "calendarData"));
     XmlFree(root);
     Format(path, sizeof(path), "%s/supplemental/likelySubtags.xml", commonDirectory);
     XmlNode* likely = timeData == nullptr ? nullptr : XmlParseFile(path, errorOut, errorCapacity);
@@ -125,8 +148,10 @@ void DateSupplementFree(DateSupplement* s)
 {
     MapEach(&s->hours, FreeValue, nullptr);
     MapEach(&s->likely, FreeValue, nullptr);
+    MapEach(&s->eras, FreeValue, nullptr);
     MapFree(&s->hours);
     MapFree(&s->likely);
+    MapFree(&s->eras);
 }
 
 // The language and region of a CLDR id, the region by likely subtags
@@ -444,6 +469,12 @@ const char* DateSkeletonOf(Cldr* cldr, const char* locale, const char* calendar,
            s_lengths[length]);
     const char* skeleton = CalendarValue(cldr, locale, calendar, rest);
     return skeleton != nullptr ? skeleton : "yMd";
+}
+
+const char* DateCalendarValue(Cldr* cldr, const char* locale, const char* calendar,
+                              const char* rest)
+{
+    return CalendarValue(cldr, locale, calendar, rest);
 }
 
 const char* DateStandardPattern(Cldr* cldr, const char* locale, const char* calendar, int length)

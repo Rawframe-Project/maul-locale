@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the date patterns unit's validator (record
-// mloc-0042). The input is a date patterns payload; one the validator
-// accepts must give every pattern from inside its text, well formed, and
-// every row's and set's pattern by index.
+// libFuzzer target for the date patterns and date names units'
+// validators (record mloc-0042). The input is a payload of either; a
+// patterns unit the validator accepts must give every pattern from inside
+// its text, well formed, and every row's and set's pattern by index; a
+// names unit, every name of every set's lists from inside its text.
 
 #include "bytes.h"
 #include "date_data.h"
@@ -17,6 +18,26 @@ static void Require(bool condition)
     if (!condition)
     {
         abort();
+    }
+}
+
+static void CheckNames(DataSpan span)
+{
+    DateNameTables t = mlocReadDateNames(span);
+    for (uint32_t s = 0; s < t.setCount; s++)
+    {
+        for (uint32_t k = 0; k < dateNameKindCount; k++)
+        {
+            uint32_t index = mlocLoad16(t.sets + (size_t)s * dateNameSetSize + 2 * k);
+            Require(index < t.listCount);
+            DateNameList list = mlocDateNameList(&t, index);
+            for (uint32_t i = 0; i < list.count; i++)
+            {
+                DataSpan name = mlocDateName(&t, list, i);
+                Require(name.bytes >= span.bytes &&
+                        name.bytes + name.size <= span.bytes + span.size);
+            }
+        }
     }
 }
 
@@ -33,6 +54,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     memcpy(s_bytes, data, size);
     DataSpan span = {(const uint8_t*)s_bytes, (uint32_t)size};
     DataView view = {0};
+    if (mlocValidDateNames(&view, span))
+    {
+        CheckNames(span);
+    }
     if (!mlocValidDatePatterns(&view, span))
     {
         return 0;

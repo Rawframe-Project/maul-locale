@@ -84,7 +84,14 @@ cycle, time precision, zone style).
   DE, MD, MDE and M, and YMD, YMDE, Y and YM in the three year styles)
   with its four standard date formats; a unit per locale key, filed
   where its chain would give others, names the set of each calendar,
-  the ISO calendar taking the Gregorian one's.
+  the ISO calendar taking the Gregorian one's, and its name set.
+- **Calendar names in the same file:** a unit of no locale holds the
+  names (months by context and width with the Hebrew leap year's Adar
+  II, weekdays with the short width, quarters, eras in calendarData's
+  order, cyclic years and leap month patterns of the Chinese and Dangi
+  calendars), lists of them by kind and name sets, each name CLDR's
+  value of its path (root's aliases followed from the locale); a name
+  no path gives is empty. Day periods come with the times.
 - **The standard formats are CLDR's, resolved per path**: ICU's data
   holds a calendar's time, date and glue patterns as one array, owned
   by the first locale giving any of them, and differs from CLDR's
@@ -133,11 +140,14 @@ cycle, time precision, zone style).
   `DateFormat` patterns: all equal but the 27 above. The numbering
   overrides of the 11,169 locale-calendars of CLDR's JSON: all equal
   (24 with overrides). CLDR 49 gives 2,125 distinct patterns (34,630
-  bytes compiled), 2,486 rows and 682 sets; the file is 107,457
-  bytes. `test_date_data` reads its patterns (en, en_GB, the ISO
-  calendar, ja's Japanese year by jpanyear) and spoils a unit field
-  by field; `fuzz_date_data` checks that an accepted unit reads only
-  inside itself.
+  bytes compiled), 2,486 rows and 682 sets, and 16,359 distinct names
+  (178,791 bytes) in 1,696 lists and 3,783 name sets; the file is
+  583,770 bytes. `test_date_data` reads its patterns (en, en_GB, the
+  ISO calendar, ja's Japanese year by jpanyear) and names (ru's two
+  Januaries, Adar II, ja's Reiwa, the Chinese cycle's first year, zh's
+  leap pattern) and spoils each unit field by field; `fuzz_date_data`
+  checks that an accepted unit of either kind reads only inside
+  itself.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

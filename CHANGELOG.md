@@ -63,5 +63,6 @@ format.
   maps them (`mlocFindTimeZoneBcp47`, `mlocFormatTimeZoneBcp47`,
   `mlocFindTimeZoneWindows`, `mlocFormatTimeZoneWindows`; mloc-0041).
 - The dates data file, `dates.mloc`: every locale's semantic date
-  patterns and standard date formats in the 18 calendars, compiled, for
-  the date formatter (mloc-0042).
+  patterns and standard date formats in the 18 calendars, compiled, and
+  its calendar names (months, weekdays, quarters, eras, cyclic years,
+  leap month patterns), for the date formatter (mloc-0042).

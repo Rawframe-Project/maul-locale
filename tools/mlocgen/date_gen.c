@@ -11,6 +11,7 @@
 
 #include "date_gen.h"
 
+#include "date_names_gen.h"
 #include "date_source.h"
 #include "date_tables.h"
 #include "kinds.h"
@@ -68,6 +69,7 @@ typedef struct DateBuilder
 typedef struct DateLocale
 {
     uint16_t sets[dateCalendarCount];
+    uint16_t names[dateCalendarCount];
 } DateLocale;
 
 // Whether a numbering override writes a field: an override of the whole
@@ -435,6 +437,7 @@ static void FileLocales(const DateInput* in, const DateLocale* all, DataFile* fi
             for (int c = 0; c < dateCalendarCount; c++)
             {
                 GenPut(unit + 2 * c, all[i].sets[c], 2);
+                GenPut(unit + 2 * (dateCalendarCount + c), all[i].names[c], 2);
             }
             DataFileAdd(file, kindDates, key, unit, sizeof(unit));
         }
@@ -449,19 +452,26 @@ int GenerateDateUnits(const DateInput* in, DataFile* file, char* errorOut, size_
         return 0;
     }
     static DateBuilder s_b;
+    static DateNames s_names;
     DateBuilder* b = &s_b;
     memset(b, 0, sizeof(*b));
+    memset(&s_names, 0, sizeof(s_names));
     DateLocale* all = GenAllocate(sizeof(DateLocale) * (size_t)in->count);
     for (int i = 0; i < in->count; i++)
     {
         for (int c = 0; c < dateCalendarCount; c++)
         {
-            all[i].sets[c] = c == 1 ? all[i].sets[0]
-                                    : CalendarSet(in, &supplement, b, in->ids[i], s_calendars[c]);
+            bool iso = c == 1;
+            all[i].sets[c] =
+                iso ? all[i].sets[0] : CalendarSet(in, &supplement, b, in->ids[i], s_calendars[c]);
+            all[i].names[c] =
+                iso ? all[i].names[0]
+                    : DateNamesSet(&s_names, in->cldr, &supplement, in->ids[i], c, s_calendars[c]);
         }
     }
     FileLocales(in, all, file);
     AddPatternsUnit(b, file);
+    DateNamesFinish(&s_names, file);
     for (int i = 0; i < b->patternCount; i++)
     {
         free(b->texts[i]);

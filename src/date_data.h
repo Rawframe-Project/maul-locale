@@ -39,12 +39,51 @@ typedef struct DatePatterns
 
 DatePatterns mlocReadDatePatterns(DataSpan unit);
 
+// Whether a date names unit's sizes hold, each name is UTF-8 without
+// control bytes, each list indexes its names and each set's lists have
+// their kinds' sizes, each leap month pattern holding "{0}".
+bool mlocValidDateNames(const DataView* view, DataSpan payload);
+
+// The parts of a valid date names unit.
+typedef struct DateNameTables
+{
+    uint32_t stringCount;
+    uint32_t listCount;
+    uint32_t setCount;
+    const uint8_t* strings;
+    const uint8_t* lists;
+    const uint8_t* items;
+    const uint8_t* sets;
+    const uint8_t* text;
+} DateNameTables;
+
+DateNameTables mlocReadDateNames(DataSpan unit);
+
+// A list of a valid names unit: its first item and its length.
+typedef struct DateNameList
+{
+    const uint8_t* items;
+    uint32_t count;
+} DateNameList;
+
+DateNameList mlocDateNameList(const DateNameTables* t, uint32_t list);
+
+// The name of a list's item; an empty span past the list.
+DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item);
+
 // A locale's date patterns in a calendar (MlocCalendar's value) along its
 // main chain: the set's bytes (dateSetSize) and the unit they index.
 // False when the data has no dates, the calendar is unknown or the
 // locale's set is past the unit's.
 bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                      DatePatterns* patterns, const uint8_t** set);
+
+// A locale's date names in a calendar along its main chain: the name
+// set's bytes (dateNameSetSize) and the unit they index. False when the
+// data has no names, the calendar is unknown or the set is past the
+// unit's.
+bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                       DateNameTables* names, const uint8_t** set);
 
 // A pattern of a valid unit by index; false past its patterns.
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);

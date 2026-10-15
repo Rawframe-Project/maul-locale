@@ -130,6 +130,87 @@ static void TestUnit(void)
           "a locale's dates of its size");
 }
 
+// Builds a names unit: names "", "a" and "{0}x"; lists of months,
+// weekdays and quarters of "a", an empty one and leap patterns of "{0}x";
+// one set of them. Its size.
+static uint32_t BuildNames(void)
+{
+    memset(s_unit, 0, sizeof(s_unit));
+    static const uint32_t s_sizes[5] = {dateMonthListSize, dateWeekdayListSize, dateQuarterListSize,
+                                        0, dateLeapListSize};
+    Put(s_unit, 3, 4);
+    Put(s_unit + 4, 5, 4);
+    Put(s_unit + 8, 1, 4);
+    Put(s_unit + 12, 5, 4);
+    Put(s_unit + 20, 0, 4);
+    Put(s_unit + 24, 1, 4);
+    Put(s_unit + 28, 5, 4);
+    uint32_t item = 0;
+    for (uint32_t l = 0; l <= 5; l++)
+    {
+        Put(s_unit + 32 + 4 * l, item, 4);
+        for (uint32_t i = 0; l < 5 && i < s_sizes[l]; i++)
+        {
+            Put(s_unit + 56 + 2 * (item + i), l == 4 ? 2 : 1, 2);
+        }
+        item += l < 5 ? s_sizes[l] : 0;
+    }
+    static const uint16_t s_set[dateNameKindCount] = {0, 1, 2, 3, 3, 4};
+    for (uint32_t k = 0; k < dateNameKindCount; k++)
+    {
+        Put(s_unit + 408 + 2 * k, s_set[k], 2);
+    }
+    memcpy(s_unit + 424, "a{0}x", 5);
+    return 429;
+}
+
+static bool ValidNames(uint32_t size)
+{
+    return mlocValidDateNames(nullptr, (DataSpan){s_unit, size});
+}
+
+// Whether the unit built here is refused once a set's kind points at a
+// list.
+static bool RefusedWith(uint32_t kind, uint32_t list)
+{
+    uint32_t size = BuildNames();
+    Put(s_unit + 408 + 2 * kind, list, 2);
+    return !ValidNames(size);
+}
+
+static void TestNamesUnit(void)
+{
+    uint32_t size = BuildNames();
+    CHECK(ValidNames(size), "a valid names unit");
+    DateNameTables t = mlocReadDateNames((DataSpan){s_unit, size});
+    DataSpan name = mlocDateName(&t, mlocDateNameList(&t, 4), 8);
+    CHECK(name.size == 4 && memcmp(name.bytes, "{0}x", 4) == 0, "a name by list and item");
+    CHECK(!ValidNames(size - 1) && !ValidNames(size + 1) && !ValidNames(12),
+          "a size that is not the layout's");
+    BuildNames();
+    Put(s_unit + 24, 2, 4);
+    CHECK(!ValidNames(size), "string offsets out of order");
+    BuildNames();
+    Put(s_unit + 16, 1, 4);
+    CHECK(!ValidNames(size), "a first string offset that is not 0");
+    BuildNames();
+    Put(s_unit + 56, 3, 2);
+    CHECK(!ValidNames(size), "an item past the names");
+    BuildNames();
+    s_unit[424] = 0x05;
+    CHECK(!ValidNames(size), "a control byte in a name");
+    BuildNames();
+    Put(s_unit + 56 + 2 * (dateMonthListSize + dateWeekdayListSize + dateQuarterListSize), 1, 2);
+    CHECK(!ValidNames(size), "a leap pattern without {0}");
+    CHECK(RefusedWith(dateNamesMonths, 1), "months of the weekdays' size");
+    CHECK(RefusedWith(dateNamesWeekdays, 2), "weekdays of the quarters' size");
+    CHECK(RefusedWith(dateNamesQuarters, 3), "no quarters");
+    CHECK(RefusedWith(dateNamesEras, 0), "more eras than dateMaxEras");
+    CHECK(RefusedWith(dateNamesCyclic, 2), "cyclic years of the quarters' size");
+    CHECK(RefusedWith(dateNamesLeap, 2), "leap patterns of the quarters' size");
+    CHECK(RefusedWith(dateNamesMonths, 5), "a list past the lists");
+}
+
 static mlocData s_sources[2];
 static mlocDataSet s_data;
 
@@ -229,6 +310,63 @@ static void TestSetPastUnit(void)
     CHECK(!mlocFindDateSet(&data, &fr, 2, &p, &set), "a set past the unit's");
 }
 
+// A locale's name of a calendar's list kind at an item, compared with
+// text.
+static bool NameIs(const char* id, uint32_t calendar, uint32_t kind, uint32_t item,
+                   const char* want)
+{
+    mlocLocale locale;
+    DateNameTables t;
+    const uint8_t* set = nullptr;
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
+        !mlocFindDateNames(&s_data, &locale, calendar, &t, &set))
+    {
+        return false;
+    }
+    DateNameList list = mlocDateNameList(&t, mlocLoad16(set + 2 * (size_t)kind));
+    DataSpan name = mlocDateName(&t, list, item);
+    return name.size == strlen(want) && memcmp(name.bytes, want, name.size) == 0;
+}
+
+// Months by context, width (abbreviated, wide, narrow) and month.
+static uint32_t Month(uint32_t context, uint32_t width, uint32_t month)
+{
+    return (context * 3 + width) * dateMonthCount + month - 1;
+}
+
+static void TestNames(void)
+{
+    CHECK(NameIs("en", 0, dateNamesMonths, Month(0, 1, 1), "January"), "en's wide January");
+    CHECK(NameIs("en", 0, dateNamesMonths, Month(1, 2, 9), "S"), "a narrow stand-alone month");
+    CHECK(NameIs("en", 0, dateNamesMonths, Month(0, 1, 13), ""), "no thirteenth month");
+    CHECK(NameIs("ru", 0, dateNamesMonths, Month(0, 1, 1), "января") &&
+              NameIs("ru", 0, dateNamesMonths, Month(1, 1, 1), "январь"),
+          "ru's format and stand-alone January");
+    CHECK(NameIs("en", 10, dateNamesMonths, Month(0, 1, 7), "Adar") &&
+              NameIs("en", 10, dateNamesMonths, Month(0, 1, 14), "Adar II"),
+          "the Hebrew leap year's Adar II");
+    CHECK(NameIs("en", 0, dateNamesWeekdays, (0 * 4 + 3) * 7 + 1, "Mo"), "a short weekday");
+    CHECK(NameIs("en", 0, dateNamesQuarters, (0 * 3 + 1) * 4 + 1, "2nd quarter"), "a wide quarter");
+    CHECK(NameIs("en", 0, dateNamesEras, 0 * 2 + 1, "AD") &&
+              NameIs("en", 0, dateNamesEras, 1 * 2 + 0, "Before Christ"),
+          "en's Gregorian eras");
+    CHECK(NameIs("ja", 4, dateNamesEras, 1 * 5 + 4, "令和"), "ja's Reiwa");
+    CHECK(NameIs("en", 1, dateNamesEras, 0 * 2 + 1, "AD"), "the ISO calendar's Gregorian eras");
+    CHECK(NameIs("zh", 16, dateNamesCyclic, 1 * 60 + 0, "甲子"), "the Chinese cycle's first year");
+    CHECK(NameIs("zh", 16, dateNamesLeap, 0 * 3 + 1, "闰{0}"), "zh's leap month pattern");
+    mlocLocale en;
+    DateNameTables t;
+    const uint8_t* set = nullptr;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocFindDateNames(&s_data, &en, 0, &t, &set) &&
+              mlocDateNameList(&t, mlocLoad16(set + 2 * dateNamesCyclic)).count == 0 &&
+              mlocDateNameList(&t, mlocLoad16(set + 2 * dateNamesLeap)).count == 0 &&
+              mlocDateName(&t, mlocDateNameList(&t, mlocLoad16(set)), dateMonthListSize).size == 0,
+          "no cyclic years or leap patterns in the Gregorian calendar, nothing past a list");
+    CHECK(!mlocFindDateNames(&s_data, &en, dateCalendarCount, &t, &set),
+          "names of a calendar past MlocCalendar's");
+}
+
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
     FILE* file = fopen(path, "rb");
@@ -245,6 +383,7 @@ int main(void)
     TestPatterns();
     TestUnit();
     TestSetPastUnit();
+    TestNamesUnit();
     alignas(8) static uint8_t s_dates[1 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
@@ -254,5 +393,6 @@ int main(void)
         return 2;
     }
     TestFile();
+    TestNames();
     return s_failures == 0 ? 0 : 1;
 }

@@ -78,6 +78,7 @@ static const DataKind s_kinds[] = {
     {kindZoneCodes, mlocValidZoneCodes},
     {kindDatePatterns, mlocValidDatePatterns},
     {kindDates, mlocValidDates},
+    {kindDateNames, mlocValidDateNames},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;
