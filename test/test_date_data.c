@@ -18,6 +18,7 @@
 #include "maul-locale/data.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uint8_t s_unit[4096];
@@ -85,9 +86,24 @@ static uint32_t BuildUnit(void)
     return 88 + 6;
 }
 
+// A validator run on a copy of the unit's first bytes in a block of
+// exactly that size, so a sanitizer sees any read past them.
+static bool ValidCopy(bool (*valid)(const DataView*, DataSpan), uint32_t size)
+{
+    uint8_t* copy = malloc(size > 0 ? size : 1);
+    if (copy == nullptr)
+    {
+        return false;
+    }
+    memcpy(copy, s_unit, size);
+    bool result = valid(nullptr, (DataSpan){copy, size});
+    free(copy);
+    return result;
+}
+
 static bool ValidUnit(uint32_t size)
 {
-    return mlocValidDatePatterns(nullptr, (DataSpan){s_unit, size});
+    return ValidCopy(mlocValidDatePatterns, size);
 }
 
 static void TestUnit(void)
@@ -179,7 +195,7 @@ static uint32_t BuildNames(void)
 
 static bool ValidNames(uint32_t size)
 {
-    return mlocValidDateNames(nullptr, (DataSpan){s_unit, size});
+    return ValidCopy(mlocValidDateNames, size);
 }
 
 // Whether the unit built here is refused once a set's kind points at a
