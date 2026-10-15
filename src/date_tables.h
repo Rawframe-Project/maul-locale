@@ -44,8 +44,9 @@
 // the months; eras, by width and the calendar's eras in the order of
 // dateEraCodes; cyclic years, by width and year 1 to 60 (empty for a
 // calendar without them); leap month patterns, by context (format,
-// stand-alone, numeric) and width, each holding "{0}" (empty for a
-// calendar without them).
+// stand-alone, numeric) and width, each holding "{0}" as the generator
+// writes them, which their user checks (empty for a calendar without
+// them).
 //
 // A locale's dates, a unit per locale filed where the resolved data
 // differs from its chain's: the pattern set index (u16) of each

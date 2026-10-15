@@ -41,7 +41,8 @@ DatePatterns mlocReadDatePatterns(DataSpan unit);
 
 // Whether a date names unit's sizes hold, each name is UTF-8 without
 // control bytes, each list indexes its names and each set's lists have
-// their kinds' sizes, each leap month pattern holding "{0}".
+// their kinds' sizes. A leap month pattern's "{0}" is the user's to
+// check: the validator stays linear in the unit's size.
 bool mlocValidDateNames(const DataView* view, DataSpan payload);
 
 // The parts of a valid date names unit.

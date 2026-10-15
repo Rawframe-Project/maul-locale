@@ -212,10 +212,7 @@ static void TestNamesUnit(void)
     BuildNames();
     s_unit[s_textAt] = 0x05;
     CHECK(!ValidNames(size), "a control byte in a name");
-    BuildNames();
-    Put(s_unit + s_itemsAt + 2 * (dateMonthListSize + dateWeekdayListSize + dateQuarterListSize), 1,
-        2);
-    CHECK(!ValidNames(size), "a leap pattern without {0}");
+    CHECK(!RefusedWith(dateNamesLeap, 3), "no leap patterns");
     CHECK(RefusedWith(dateNamesMonths, 1), "months of the weekdays' size");
     CHECK(RefusedWith(dateNamesWeekdays, 2), "weekdays of the quarters' size");
     CHECK(RefusedWith(dateNamesQuarters, 3), "no quarters");

@@ -231,8 +231,10 @@ static bool Ascending(const uint8_t* offsets, uint32_t count, uint32_t end)
     return previous == end;
 }
 
-// Whether a list's size suits its kind; leap patterns must hold "{0}".
-static bool ValidList(const DateNameTables* t, uint32_t kind, DateNameList list)
+// Whether a list's size suits its kind. A leap month pattern's "{0}" is
+// checked where it is used: checking it here would scan a list again for
+// every set that names it.
+static bool ValidList(uint32_t kind, DateNameList list)
 {
     switch (kind)
     {
@@ -247,26 +249,8 @@ static bool ValidList(const DateNameTables* t, uint32_t kind, DateNameList list)
     case dateNamesCyclic:
         return list.count == 0 || list.count == dateCyclicListSize;
     default:
-        break;
+        return list.count == 0 || list.count == dateLeapListSize;
     }
-    if (list.count != 0 && list.count != dateLeapListSize)
-    {
-        return false;
-    }
-    for (uint32_t i = 0; i < list.count; i++)
-    {
-        DataSpan name = mlocDateName(t, list, i);
-        bool placeholder = false;
-        for (uint32_t at = 0; at + 3 <= name.size; at++)
-        {
-            placeholder |= memcmp(name.bytes + at, "{0}", 3) == 0;
-        }
-        if (!placeholder)
-        {
-            return false;
-        }
-    }
-    return true;
 }
 
 bool mlocValidDateNames(const DataView* view, DataSpan payload)
@@ -299,7 +283,7 @@ bool mlocValidDateNames(const DataView* view, DataSpan payload)
         for (uint32_t k = 0; k < dateNameKindCount; k++)
         {
             uint32_t list = mlocLoad16(t.sets + (size_t)s * dateNameSetSize + 2 * k);
-            if (list >= t.listCount || !ValidList(&t, k, mlocDateNameList(&t, list)))
+            if (list >= t.listCount || !ValidList(k, mlocDateNameList(&t, list)))
             {
                 return false;
             }
