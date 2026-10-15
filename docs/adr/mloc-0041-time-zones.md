@@ -136,6 +136,18 @@ nanoseconds.
     (Asia/Calcutta, Etc/GMT, Europe/Bratislava, Atlantic/Jan_Mayen);
   - the validator refusing a changed count, offset place, order,
     closing month and saving.
+- **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
+  from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
+  or refused, equality, offsets and transitions. The rows are in
+  `test/test262_zone.inc`, under test262's BSD license. Three tests
+  loop over `Intl.supportedValuesOf("timeZone")`, and the replay runs
+  their loops over the library's list: each primary keeps its
+  identifier, no two are equal, and none has a transition beyond the
+  range. Tests that need date-times, ISO strings or other calendars'
+  dates wait for those parts. `links.js` is one of them; it expects
+  CST6CDT, EST5EDT, MST7MDT and PST8PDT to equal America/Chicago and
+  the others. Since 2026e they are Zones again, and the library follows
+  tzdb there.
 
 ## Consequences
 

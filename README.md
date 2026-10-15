@@ -113,7 +113,8 @@ calendar's corrections, KACST's Umm al-Qura month lengths and the Qing
 calendar's years 1900 to 1911 are published facts. Maul Locale takes
 them as ICU4C and ICU4X list them, under the same notice.
 
-The test cases in `test/test262_calendar.inc` are taken from test262,
+The test cases in `test/test262_calendar.inc` and
+`test/test262_zone.inc` are taken from test262,
 the ECMAScript test suite, under its BSD license; its notice is in
 `LICENSES/BSD-3-Clause-test262.txt`. They are tests only and are not
 part of the library.
