@@ -119,7 +119,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones conform_local
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -143,6 +143,15 @@ jobs:
         run: |
           command -v zic zdump
           python3 tools/check_zones.py build/conform_zones \
+            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
+      - name: Local times against zoneinfo
+        # Record mloc-0041: the instants of the local times around every
+        # change from 1800 to 2500, their disambiguations, the start of
+        # those days and the local time at each change, as Python's
+        # zoneinfo reads zic's output for the same source.
+        timeout-minutes: 20
+        run: |
+          python3 tools/check_local.py build/conform_local \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: Conformance
         run: |

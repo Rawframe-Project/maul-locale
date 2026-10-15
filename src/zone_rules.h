@@ -32,6 +32,12 @@ ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds)
 bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
                             ZoneOffset* offsetOut);
 
+// The first transition strictly after a time, past zoneMaxSeconds too
+// (a local time near the range's end needs it): false when there is
+// none.
+bool mlocZoneFollowingTransition(const ZoneTables* t, uint32_t zone, int64_t seconds,
+                                 int64_t* atOut, ZoneOffset* offsetOut);
+
 // The last transition at or before a time and no earlier than
 // zoneMinSeconds, with the offset it starts: false when there is none.
 bool mlocZonePreviousTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,

@@ -408,7 +408,7 @@ Gives a unit's grammatical gender in a locale, the one a message agreeing with a
 
 ## `zone.h`
 
-Time zones (record mloc-0041): the IANA time zone database's zones as ECMA-262's Temporal and ECMA-402 read them. A zone is found by an identifier, a Zone or Link name of the database in any letter case ("America/New_York", "asia/calcutta") or a fixed offset ("+05:30"), and keeps the identifier as given; two zones are equal when their identifiers resolve to the same primary identifier. Its offset at any instant comes from the data's zones unit, compiled from the pinned database release (mlocGetDataVersion names it), and runs over Temporal's whole range.
+Time zones (record mloc-0041): the IANA time zone database's zones as ECMA-262's Temporal and ECMA-402 read them. A zone is found by an identifier, a Zone or Link name of the database in any letter case ("America/New_York", "asia/calcutta") or a fixed offset ("+05:30"), and keeps the identifier as given; two zones are equal when their identifiers resolve to the same primary identifier. Its offset at any instant comes from the data's zones unit, compiled from the pinned database release (mlocGetDataVersion names it), and runs over Temporal's whole range. A date and a time of day make a date-time, which a zone maps to the instants it names (none in a gap, two in a fold) and back.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t length, mlocTimeZone* zoneOut);
@@ -450,6 +450,36 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneTransition(const mlocTimeZone*
 ```
 Finds a zone's first transition strictly after an instant, or its last strictly before, as Temporal's getTimeZoneTransition: the first instant of a new offset (one that changes only whether daylight saving time is in effect is not a transition).  @param zone           The zone. @param instant        An instant in Temporal's range. @param direction      Next or previous. @param transitionOut  Receives the transition, whose nanoseconds are 0. @return mloc_success; mloc_errorNotFound when there is none within Temporal's range (an offset zone has none); mloc_errorInvalid for a null pointer, a zone the library did not make, an instant out of range or another direction. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMakeTime(const mlocTimeInput* input, mlocOverflow overflow, mlocTime* timeOut);
+```
+Makes a time of day from its fields, as Temporal's RegulateTime does: a field out of its range is clamped into it (mloc_overflowConstrain; a leap second's 60 becomes 59) or refused (mloc_overflowReject). Milliseconds, microseconds and nanoseconds range 0 to 999 each.  @param input     The fields. @param overflow  What a field out of range does. @param timeOut   Receives the time; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, another overflow, or a field refused. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocMakeDateTime(const mlocDate* date, const mlocTime* time, mlocDateTime* dateTimeOut);
+```
+Makes a date-time of a date and a time of day, within Temporal's limits for one: every date and time but midnight at the start of the first day (April 19 of year -271821 in the ISO calendar), which lies a whole day before the first instant.  @param date         The date. @param time         The time of day. @param dateTimeOut  Receives the date-time; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, a date or time the library did not make, or that midnight. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetPossibleInstants(const mlocTimeZone* zone, const mlocDateTime* dateTime, mlocPossibleInstants* instantsOut);
+```
+Finds the instants at which a zone's clocks read a date-time (ECMA-262's GetPossibleEpochNanoseconds): none when a forward change skips it, two when a backward change repeats it. The date-time's calendar does not matter.  @param zone         The zone. @param dateTime     The local date-time. @param instantsOut  Receives the instants. @return mloc_success; mloc_errorInvalid for a null pointer, a zone or date-time the library did not make, or an instant outside Temporal's range among them. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetInstantFor(const mlocTimeZone* zone, const mlocDateTime* dateTime, mlocDisambiguation disambiguation, mlocInstant* instantOut);
+```
+Finds the one instant a zone's local date-time names, choosing in a gap or fold as the disambiguation says (ECMA-262's GetEpochNanosecondsFor). In a gap the date-time moves by the gap's length: for 02:30 in a gap from 02:00 to 03:00, compatible and later give 03:30, earlier 01:30.  @param zone            The zone. @param dateTime        The local date-time. @param disambiguation  How to choose. @param instantOut      Receives the instant. @return mloc_success; mloc_errorInvalid for a null pointer, a zone or date-time the library did not make, another disambiguation, a gap or fold refused by mloc_disambiguationReject, or an instant outside Temporal's range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetStartOfDay(const mlocTimeZone* zone, const mlocDate* date, mlocInstant* instantOut);
+```
+Finds the first instant of a date in a zone (ECMA-262's GetStartOfDay): midnight's earlier instant, or the end of the gap when a forward change skips midnight.  @param zone        The zone. @param date        The date. @param instantOut  Receives the instant. @return mloc_success; mloc_errorInvalid for a null pointer, a zone or date the library did not make, or an instant outside Temporal's range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetDateTimeFor(const mlocTimeZone* zone, const mlocInstant* instant, mlocCalendar calendar, mlocDateTime* dateTimeOut);
+```
+Finds a zone's local date-time at an instant, in a calendar (ECMA-262's GetISODateTimeFor): the instant plus the zone's offset then.  @param zone         The zone. @param instant      An instant in Temporal's range. @param calendar     The calendar the date is read in. @param dateTimeOut  Receives the date-time. @return mloc_success; mloc_errorInvalid for a null pointer, a zone the library did not make, an instant out of range or a calendar out of range. @par Thread safety Safe from any thread.
+
 ---
 
-79 functions across 13 headers.
+85 functions across 13 headers.

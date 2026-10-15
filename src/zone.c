@@ -10,42 +10,12 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "zone_handle.h"
 #include "zone_rules.h"
 
 #include <string.h>
 
-enum
-{
-    maxOffsetMinutes = 23 * 60 + 59,
-};
-
 static const uint8_t s_minusSign[3] = {0xE2, 0x88, 0x92};
-
-static bool ValidInstant(const mlocInstant* i)
-{
-    return i->nanoseconds >= 0 && i->nanoseconds <= 999999999 && i->seconds >= zoneMinSeconds &&
-           (i->seconds < zoneMaxSeconds || (i->seconds == zoneMaxSeconds && i->nanoseconds == 0));
-}
-
-// A zone's tables when it is named, after checking that the library made
-// it: an offset zone has no unit and an offset within a day, a named one
-// an identifier of its unit and no offset.
-static bool ReadZone(const mlocTimeZone* zone, ZoneTables* t, bool* namedOut)
-{
-    if (zone == nullptr)
-    {
-        return false;
-    }
-    *namedOut = zone->zones != nullptr;
-    if (!*namedOut)
-    {
-        return zone->zonesSize == 0 && zone->identifier == 0 &&
-               zone->offsetMinutes >= -maxOffsetMinutes && zone->offsetMinutes <= maxOffsetMinutes;
-    }
-    return zone->offsetMinutes == 0 &&
-           mlocZoneTablesOf((DataSpan){(const uint8_t*)zone->zones, zone->zonesSize}, t) &&
-           zone->identifier < t->identifierCount;
-}
 
 static bool TwoDigits(const char* p, int limit, int* out)
 {
@@ -147,7 +117,7 @@ static mlocResult FormatId(const mlocTimeZone* zone, bool primary, mlocOutput* o
     ZoneTables t;
     bool named = false;
     if (output == nullptr || (output->buffer == nullptr && output->capacity > 0) ||
-        !ReadZone(zone, &t, &named))
+        !mlocReadTimeZone(zone, &t, &named))
     {
         return mloc_errorInvalid;
     }
@@ -178,7 +148,8 @@ mlocResult mlocTimeZonesEqual(const mlocTimeZone* one, const mlocTimeZone* two, 
     ZoneTables b;
     bool namedOne = false;
     bool namedTwo = false;
-    if (equalOut == nullptr || !ReadZone(one, &a, &namedOne) || !ReadZone(two, &b, &namedTwo))
+    if (equalOut == nullptr || !mlocReadTimeZone(one, &a, &namedOne) ||
+        !mlocReadTimeZone(two, &b, &namedTwo))
     {
         return mloc_errorInvalid;
     }
@@ -226,19 +197,12 @@ mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* in
 {
     ZoneTables t;
     bool named = false;
-    if (instant == nullptr || offsetSecondsOut == nullptr || !ReadZone(zone, &t, &named) ||
-        !ValidInstant(instant))
+    if (instant == nullptr || offsetSecondsOut == nullptr || !mlocReadTimeZone(zone, &t, &named) ||
+        !mlocValidInstant(instant))
     {
         return mloc_errorInvalid;
     }
-    if (!named)
-    {
-        *offsetSecondsOut = zone->offsetMinutes * 60;
-        return mloc_success;
-    }
-    ZoneOffset o =
-        mlocZoneOffsetAt(&t, mlocZoneIdentifierZone(&t, zone->identifier), instant->seconds);
-    *offsetSecondsOut = o.standard + o.save;
+    *offsetSecondsOut = mlocTimeZoneOffsetAt(zone, &t, named, instant->seconds);
     return mloc_success;
 }
 
@@ -276,8 +240,8 @@ mlocResult mlocGetTimeZoneTransition(const mlocTimeZone* zone, const mlocInstant
 {
     ZoneTables t;
     bool named = false;
-    if (instant == nullptr || transitionOut == nullptr || !ReadZone(zone, &t, &named) ||
-        !ValidInstant(instant) || (uint32_t)direction > mloc_transitionPrevious)
+    if (instant == nullptr || transitionOut == nullptr || !mlocReadTimeZone(zone, &t, &named) ||
+        !mlocValidInstant(instant) || (uint32_t)direction > mloc_transitionPrevious)
     {
         return mloc_errorInvalid;
     }

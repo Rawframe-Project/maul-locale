@@ -107,9 +107,34 @@ nanoseconds.
 
   An `mlocTimeZone` is 16 bytes: the zones unit and an identifier's
   place, or an offset in minutes; it points into its data.
+- **Local times** (amended 2026-10-15, slice 12e):
+  - `mlocTime` (8 bytes: hour, minute, second, and the nanoseconds
+    past the second, which hold Temporal's millisecond, microsecond and
+    nanosecond) is made by `mlocMakeTime`, as RegulateTime does, with
+    `mlocOverflow`'s constrain or reject;
+  - `mlocDateTime` (16 bytes: an `mlocDate` and an `mlocTime`) is made
+    by `mlocMakeDateTime`, within ISODateTimeWithinLimits: everything
+    but the first day's midnight;
+  - `mlocGetPossibleInstants` gives a local date-time's count of
+    instants with the earliest and the latest, which is all that
+    disambiguation reads. A zone's offsets are under a day, so every
+    instant lies within a day of the local time read as universal
+    time. The spans of one offset over those two days are walked, each
+    giving the local time minus its offset when that falls inside the
+    span. Exact, with no assumption about how far apart changes are;
+  - `mlocGetInstantFor` takes `mlocDisambiguation`. In a gap, the time
+    moves by the difference of the offsets on its two sides and that
+    time's instants are found again (DisambiguatePossibleEpochNanoseconds);
+  - `mlocGetStartOfDay` is midnight's earliest instant, or the change
+    ending a gap that skips midnight;
+  - `mlocGetDateTimeFor` is the instant plus its offset, in a calendar.
+
+  An instant outside Temporal's range among the possible ones refuses
+  the call, as ECMA-262 refuses the list. Changes past the range's end
+  are still read, so a local time on its last day is placed exactly.
+  The C function mlocGetInstantFor refuses with mloc_errorInvalid where
+  ECMA-262 throws a RangeError, as the calendar's reject does.
 - **Later in this part:**
-  - possible instants of a local date-time with the four
-    disambiguations, and the start of a day, with the date-time values;
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;
@@ -136,6 +161,16 @@ nanoseconds.
     (Asia/Calcutta, Etc/GMT, Europe/Bratislava, Atlantic/Jan_Mayen);
   - the validator refusing a changed count, offset place, order,
     closing month and saving.
+- **Local times against zoneinfo:** `tools/check_local.py` asks
+  `test/conform_local.c` about every change of offset from 1800 to 2500
+  in every zone. It covers the local times at the edges and in the
+  middle of each gap or fold, and every disambiguation of them. It also
+  covers the start of those days and the local time at the change and a
+  second before. Python's zoneinfo reads zic's fat files for the same
+  source. A local time's instant under each of its folds counts when
+  the offset at that instant agrees. In a gap the shift is the
+  difference of the two folds' offsets. All 1,441,140 answers agree.
+  The cldr CI job runs it.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in

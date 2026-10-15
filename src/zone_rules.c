@@ -172,8 +172,8 @@ ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds)
     return Latest(t, &z, seconds, &at, &offset) ? offset : OffsetOf(t, &z, z.initial);
 }
 
-bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
-                            ZoneOffset* offsetOut)
+bool mlocZoneFollowingTransition(const ZoneTables* t, uint32_t zone, int64_t seconds,
+                                 int64_t* atOut, ZoneOffset* offsetOut)
 {
     ZoneRecord z = mlocZoneRecord(t, zone);
     uint32_t count = CountUpTo(t, &z, seconds);
@@ -208,7 +208,17 @@ bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds,
     {
         return false;
     }
-    if (at > zoneMaxSeconds)
+    *atOut = at;
+    *offsetOut = offset;
+    return true;
+}
+
+bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
+                            ZoneOffset* offsetOut)
+{
+    int64_t at = 0;
+    ZoneOffset offset = {0};
+    if (!mlocZoneFollowingTransition(t, zone, seconds, &at, &offset) || at > zoneMaxSeconds)
     {
         return false;
     }

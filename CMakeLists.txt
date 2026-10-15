@@ -136,7 +136,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_prefs.c
     src/unit_usage.c
     src/wide.c
+    src/date_time.c
     src/zone.c
+    src/zone_handle.c
+    src/zone_local.c
     src/zone_rules.c
     src/zone_tables.c
     src/generated/builtin_data.c
@@ -239,6 +242,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(zone_rules WHITEBOX)
     maul_add_test(zone)
     maul_add_test(zone_test262)
+    maul_add_test(zone_local)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)
@@ -293,6 +297,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_include_directories(conform_zones PRIVATE src)
         maul_apply_flags(conform_zones)
     endif()
+    # Local times against zoneinfo (tools/check_local.py), through the
+    # public functions.
+    add_executable(conform_local test/conform_local.c)
+    target_link_libraries(conform_local PRIVATE maul-locale)
+    maul_apply_flags(conform_local)
     maul_add_header_tests()
 endif()
 
