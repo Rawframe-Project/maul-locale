@@ -786,24 +786,20 @@ mlocResult mlocParseCalendarString(const char* text, size_t length, mlocTextSpan
     return mloc_success;
 }
 
-// A run of digits as a number; saturated past 2^120, which every field
-// limit is far below.
-static bool Number(Cursor* c, Wide* out)
+// A run of digits, at least one, as a number; saturated past 2^120,
+// which every field limit is far below.
+static Wide Number(Cursor* c)
 {
-    *out = (Wide){0, 0};
-    if (!IsDigit(Next(c)))
-    {
-        return false;
-    }
+    Wide out = {0, 0};
     while (IsDigit(Next(c)))
     {
-        if (out->high >> 56 == 0)
+        if (out.high >> 56 == 0)
         {
-            *out = mlocWideSum(mlocWideScaled(*out, 10), (Wide){0, (uint64_t)(Next(c) - '0')});
+            out = mlocWideSum(mlocWideScaled(out, 10), (Wide){0, (uint64_t)(Next(c) - '0')});
         }
         c->at += 1;
     }
-    return true;
+    return out;
 }
 
 // Which of the designators a character is, from the first given, or -1.
@@ -826,8 +822,7 @@ static bool DateParts(Cursor* c, Wide* f, bool* anyOut)
     int next = 0;
     while (IsDigit(Next(c)))
     {
-        Wide value;
-        (void)Number(c, &value);
+        Wide value = Number(c);
         int unit = Designator(Next(c), "YMWD", 4);
         if (unit < next)
         {
@@ -850,9 +845,8 @@ static bool TimeParts(Cursor* c, Wide* f)
     int next = 0;
     while (IsDigit(Next(c)))
     {
-        Wide value;
+        Wide value = Number(c);
         int32_t fraction = 0;
-        (void)Number(c, &value);
         bool fractional = Fraction(c, &fraction);
         int unit = Designator(Next(c), "HMS", 3);
         if (unit < next)

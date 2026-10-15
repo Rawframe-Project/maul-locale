@@ -5,7 +5,8 @@
 // mloc-0041). Every parser reads the input; what one accepts must hold:
 // a date-time's spans lie inside the input, its fields in their ranges,
 // and a duration's fields are integers of one sign that make a valid
-// record again.
+// record again. An offset or duration accepted is written and read back
+// to the same value.
 
 #include "maul-locale/ixdtf.h"
 
@@ -23,6 +24,29 @@ static void Require(bool condition)
 static void RequireInside(mlocTextSpan span, size_t size)
 {
     Require(span.start <= size && span.length <= size - span.start);
+}
+
+static void RoundTrips(int64_t offset, const mlocDurationValues* values)
+{
+    char text[128];
+    mlocOutput out = {.buffer = text, .capacity = sizeof text};
+    int64_t back = 0;
+    if (values == nullptr)
+    {
+        Require(mlocFormatUTCOffset(offset, &out) == mloc_success &&
+                mlocParseUTCOffset(text, out.length, &back, nullptr) == mloc_success &&
+                back == offset);
+        return;
+    }
+    // Compared by value: "-PT0S" reads as zeros of either sign.
+    mlocDurationValues again;
+    Require(mlocFormatDuration(values, nullptr, &out) == mloc_success &&
+            mlocParseDuration(text, out.length, &again) == mloc_success &&
+            again.years == values->years && again.months == values->months &&
+            again.weeks == values->weeks && again.days == values->days &&
+            again.hours == values->hours && again.minutes == values->minutes &&
+            again.seconds == values->seconds && again.milliseconds == values->milliseconds &&
+            again.microseconds == values->microseconds && again.nanoseconds == values->nanoseconds);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
@@ -48,6 +72,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     if (mlocParseUTCOffset(text, size, &offset, nullptr) == mloc_success)
     {
         Require(offset > -INT64_C(86400000000000) && offset < INT64_C(86400000000000));
+        RoundTrips(offset, nullptr);
     }
     mlocTimeZoneParse zone;
     if (mlocParseTimeZoneString(text, size, &zone) == mloc_success)
@@ -65,6 +90,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     if (mlocParseDuration(text, size, &values) == mloc_success)
     {
         Require(mlocMakeDuration(&values, &record) == mloc_success);
+        RoundTrips(0, &values);
     }
     return 0;
 }

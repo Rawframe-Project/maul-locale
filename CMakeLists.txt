@@ -143,6 +143,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/binary64.c
     src/duration_values.c
     src/ixdtf_parse.c
+    src/ixdtf_write.c
     src/duration_round.c
     src/rounding.c
     src/time_arith.c

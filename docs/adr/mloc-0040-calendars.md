@@ -262,15 +262,17 @@ the library through a reader of their JavaScript, kept in the docs. It
 records every assertion about a date made from fields or an ISO date,
 by adding durations to one or by changing its fields, about the
 difference of two dates, rounded or not, and about month and day
-reference dates: 20,743 rows and 53,221 checks from 885 files, none
+reference dates: 21,683 rows and 55,828 checks from 3,088 files, none
 differing (but the year-months of the departure above, in
 `PlainYearMonth/from/extreme-dates`). The rows are in
-`test/test262_calendar.inc`, under test262's BSD license. Left out:
-dates parsed from strings beyond plain ISO dates (the `datetime`
-part's), and the calendar names `islamic` and
-`islamic-rgsa`. test262 expects Temporal to refuse those two names,
-which only date formatting accepts. The library reads them as Umm
-al-Qura, and a Temporal host must refuse them when it maps the names.
+`test/test262_calendar.inc`, under test262's BSD license. Since slice
+12l of record mloc-0041 (amended 2026-10-15) dates come from strings
+too, through the library's parser, and the rows come from every
+Temporal file the reader runs, not only the calendar tests. The
+calendar names `islamic` and `islamic-rgsa`: test262 expects Temporal
+to refuse them, as only date formatting accepts them. The library
+reads them as Umm al-Qura, and a Temporal host must refuse them when it
+maps the names, as the reader does.
 
 ## Consequences
 

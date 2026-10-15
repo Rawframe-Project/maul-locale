@@ -15,12 +15,24 @@
 //                    offset in minutes or '_'
 //   calendar HEX     mlocParseCalendarString: the id or '_'
 //   duration HEX     mlocParseDuration: the ten fields
+// and for the writers, which write their string or '-' for refused, each
+// with the precision as 0 to 9 digits, -1 for auto or -2 for minutes:
+//   wdate DAY CAL PREC SHOW           mlocFormatTemporalDate (wym, wmd:
+//                                     mlocFormatYearMonth, MonthDay)
+//   wtime H M S NS PREC               mlocFormatTemporalTime
+//   wdt DAY H M S NS CAL PREC SHOW    mlocFormatTemporalDateTime
+//   winst SEC NS ZONE PREC            mlocFormatInstant, the zone an offset
+//                                     in minutes or '-' for none
+//   wzdt ZONE SEC NS CAL PREC SHOW TZ HIDE  mlocFormatZonedDateTime
+//   wdur F0 ... F9 PREC               mlocFormatDuration
+//   woffset NS                        mlocFormatUTCOffset
 //
 // usage: conform_ixdtf < questions
 
 #include "maul-locale/ixdtf.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum
@@ -158,12 +170,141 @@ static void Duration(const char* text, size_t length)
     printf("\n");
 }
 
+static mlocTemporalStringOptions Options(const char* calendar, long precision, long show, long zone,
+                                         long hide)
+{
+    return (mlocTemporalStringOptions){
+        .calendar = calendar,
+        .calendarLength = strlen(calendar),
+        .secondsPrecision = precision == -1   ? mloc_secondsAuto
+                            : precision == -2 ? mloc_secondsMinute
+                                              : mloc_secondsDigits,
+        .fractionDigits = precision >= 0 ? (uint8_t)precision : 0,
+        .showCalendar = (uint8_t)show,
+        .showTimeZone = (uint8_t)zone,
+        .hideOffset = hide != 0,
+    };
+}
+
+static bool DateOf(long day, mlocDate* out)
+{
+    return mlocMakeDateFromDay(mloc_calendarGregorian, (int32_t)day, out) == mloc_success;
+}
+
+// Runs a writer's question; false for a malformed one.
+static bool Write(char** t, int count, mlocOutput* out, mlocResult* r)
+{
+    long v[12] = {0};
+    for (int i = 1; i < count && i < 12; i += 1)
+    {
+        v[i] = strtol(t[i], nullptr, 10);
+    }
+    mlocTemporalStringOptions o;
+    mlocDate date;
+    mlocDateTime dt;
+    mlocTimeZone zone = {0};
+    *r = mloc_errorInvalid;
+    if ((strcmp(t[0], "wdate") == 0 || strcmp(t[0], "wym") == 0 || strcmp(t[0], "wmd") == 0) &&
+        count == 5)
+    {
+        o = Options(t[2], v[3], v[4], 0, 0);
+        if (DateOf(v[1], &date))
+        {
+            *r = t[0][1] == 'd'   ? mlocFormatTemporalDate(&date, &o, out)
+                 : t[0][1] == 'y' ? mlocFormatYearMonth(&date, &o, out)
+                                  : mlocFormatMonthDay(&date, &o, out);
+        }
+        return true;
+    }
+    if (strcmp(t[0], "wtime") == 0 && count == 6)
+    {
+        mlocTime time = {(uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3], 0, (uint32_t)v[4]};
+        o = Options("iso8601", v[5], 0, 0, 0);
+        *r = mlocFormatTemporalTime(&time, &o, out);
+        return true;
+    }
+    if (strcmp(t[0], "wdt") == 0 && count == 9)
+    {
+        dt.time = (mlocTime){(uint8_t)v[2], (uint8_t)v[3], (uint8_t)v[4], 0, (uint32_t)v[5]};
+        o = Options(t[6], v[7], v[8], 0, 0);
+        if (DateOf(v[1], &dt.date))
+        {
+            *r = mlocFormatTemporalDateTime(&dt, &o, out);
+        }
+        return true;
+    }
+    if (strcmp(t[0], "winst") == 0 && count == 5)
+    {
+        mlocInstant instant = {strtoll(t[1], nullptr, 10), (int32_t)v[2]};
+        zone.offsetMinutes = (int16_t)v[3];
+        o = Options("iso8601", v[4], 0, 0, 0);
+        *r = mlocFormatInstant(&instant, strcmp(t[3], "-") == 0 ? nullptr : &zone, &o, out);
+        return true;
+    }
+    if (strcmp(t[0], "wzdt") == 0 && count == 9)
+    {
+        mlocInstant instant = {strtoll(t[2], nullptr, 10), (int32_t)v[3]};
+        zone.offsetMinutes = (int16_t)v[1];
+        o = Options(t[4], v[5], v[6], v[7], v[8]);
+        *r = mlocFormatZonedDateTime(&zone, &instant, &o, out);
+        return true;
+    }
+    if (strcmp(t[0], "wdur") == 0 && count == 12)
+    {
+        double f[10];
+        for (int i = 0; i < 10; i += 1)
+        {
+            f[i] = strtod(t[1 + i], nullptr);
+        }
+        mlocDurationValues values = {f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9]};
+        o = Options("iso8601", v[11], 0, 0, 0);
+        *r = mlocFormatDuration(&values, &o, out);
+        return true;
+    }
+    if (strcmp(t[0], "woffset") == 0 && count == 2)
+    {
+        *r = mlocFormatUTCOffset(strtoll(t[1], nullptr, 10), out);
+        return true;
+    }
+    return false;
+}
+
+static void Writer(char* line)
+{
+    char* t[16];
+    int count = 0;
+    for (char* p = strtok(line, " \n"); p != nullptr && count < 16; p = strtok(nullptr, " \n"))
+    {
+        t[count] = p;
+        count += 1;
+    }
+    char text[512];
+    mlocOutput out = {.buffer = text, .capacity = sizeof text};
+    mlocResult r = mloc_errorInvalid;
+    if (count == 0 || !Write(t, count, &out, &r))
+    {
+        printf("error\n");
+        return;
+    }
+    if (r != mloc_success)
+    {
+        printf("-\n");
+        return;
+    }
+    printf("%.*s\n", (int)out.length, text);
+}
+
 int main(void)
 {
     static char line[2 * maxText + 64];
     static char text[maxText];
     while (fgets(line, sizeof line, stdin) != nullptr)
     {
+        if (line[0] == 'w')
+        {
+            Writer(line);
+            continue;
+        }
         // The kind, for dt the goals, then x and the string's bytes in
         // hexadecimal, so that an empty string has a token too.
         char* tokens[3] = {nullptr, nullptr, nullptr};

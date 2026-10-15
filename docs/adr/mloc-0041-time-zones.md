@@ -255,11 +255,33 @@ nanoseconds.
     descent that reads each byte a bounded number of times. Malformed
     text is `mloc_errorSyntax`; ParseISODateTime gives no position, so
     neither does the library.
+- **Strings out** (amended 2026-10-15, slice 12l; research 37): nine
+  writers, one for each of ECMA-262's formatting operations, write
+  into `mlocOutput`: `mlocFormatTemporalDate`, `mlocFormatYearMonth`,
+  `mlocFormatMonthDay`, `mlocFormatTemporalTime`,
+  `mlocFormatTemporalDateTime`, `mlocFormatInstant` (Z, or a zone's
+  local time and its offset rounded to the minute),
+  `mlocFormatZonedDateTime`, `mlocFormatDuration` and
+  `mlocFormatUTCOffset`.
+  - `mlocTemporalStringOptions` carries what a toString reads: the
+    precision (`mlocSecondsPrecision` and the fraction's digits), the
+    calendar id as the caller keeps it with when its annotation shows,
+    when a zone's annotation shows, and whether the offset is left out.
+    Zeroed or null, it gives each toString's defaults. A calendar id is
+    checked against the grammar, so a writer never writes a string its
+    parser would refuse.
+  - The writers truncate. Rounding stays where it was built
+    (`mlocRoundTime`, `mlocRoundDateTime`, `mlocRoundInstant`,
+    `mlocRoundTimeDuration`), and a host rounds first, as each toString
+    does.
+  - A duration's seconds part is the exact sum of its seconds and
+    sub-second fields, each a float64 integer read from its bits, past
+    2^64 nanoseconds when the fields are; nothing is computed in
+    floating point.
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
-  - CLDR's BCP 47 ids and Windows names;
-  - IXDTF strings out: every type's toString.
+  - CLDR's BCP 47 ids and Windows names.
 
 ## Proof
 
@@ -295,7 +317,7 @@ nanoseconds.
   files: times made, added to, rounded, and their differences until and
   since. They are in `test/test262_time.inc`.
 - **PlainDateTime against test262:** `test/test_datetime_test262.c`
-  replays 7,887 rows and 77,164 checks from 437 of test262's
+  replays 7,962 rows and 77,896 checks from 476 of test262's
   Temporal.PlainDateTime files, in every calendar: date-times made,
   added to, rounded, and their differences until and since. They are in
   `test/test262_datetime.inc`.
@@ -306,7 +328,7 @@ nanoseconds.
   or nanoseconds past `int64_t` takes its field from the exact decimal,
   as a host does.
 - **ZonedDateTime against test262:** `test/test_zoned_test262.c`
-  replays 6,808 rows and 61,826 checks from 403 of test262's
+  replays 6,848 rows and 61,866 checks from 414 of test262's
   Temporal.ZonedDateTime files, in every calendar: added to, rounded,
   differences until and since, starts of days, and property bags'
   offsets weighed against the zone. They are in
@@ -331,15 +353,19 @@ nanoseconds.
   changes 44,296 of them, and one in a total's numerator 465,000. The
   cldr CI job runs it.
 - **Duration against test262:** `test/test_duration_test262.c` replays
-  1,390 rows and 7,222 checks from 157 of test262's Temporal.Duration
+  1,563 rows and 8,439 checks from 165 of test262's Temporal
   files. They cover round and total with no start, a plain date or a
   zoned date-time, sums, and comparisons, doing what a host does. They
   are in `test/test262_duration.inc`.
 - **Strings against test262:** the reader takes every string through
-  the parsers above. `test/test_ixdtf_test262.c` replays the 428
-  strings from 324 files that test262 expects a parser to refuse, in
-  `test/test262_ixdtf.inc`. A string read successfully is checked by
-  the rows of the values made from it, in the tables above.
+  the parsers above and every toString and toJSON through the writers.
+  `test/test_ixdtf_test262.c` replays, from 712 files, the 580 strings
+  test262 expects a parser to refuse and the 563 strings it expects a
+  writer to give, with the value and options the reader gave it; they
+  are in `test/test262_ixdtf.inc`. A string read successfully is checked
+  by the rows of the values made from it, in the tables above. The
+  reader now runs all of test262's Temporal files but Temporal.Now's,
+  and every table takes its rows from all of them.
 - **Strings against a second reading of the grammar:**
   `tools/check_ixdtf.py` writes each goal from `grammar.emu` as regular
   expressions over its basic and extended forms, which backtrack where
@@ -349,19 +375,30 @@ nanoseconds.
   every string literal of test262's Temporal tests, strings assembled
   from the grammar's pieces and near misses, and each with a byte
   dropped, doubled or changed. It asks each goal alone and in sets. All
-  962,621 answers agree, over 83,633 strings and 35,271 durations.
+  962,883 answers agree, over 83,688 strings and 35,239 durations.
   Planted faults are caught: an hour of 24 (782 answers), the time
   early error dropped (1,013), a critical second calendar allowed
-  (1,513), and a fraction carried one second wrong (387). The cldr CI
-  job runs it without test262's literals (911,041 answers).
+  (1,513), a fraction carried one second wrong (387), and a lower-case z
+  left out of names (5,594). The cldr CI job runs it without test262's
+  literals (911,511 answers).
   `test/fuzz_ixdtf.c` checks that what each parser accepts holds
-  together, and it ran 1.29 million inputs without a fault.
+  together, and that an offset or duration accepted is written and read
+  back to the same value; it ran 8 million inputs without a fault.
+- **Strings out against a second reading:** `tools/check_ixdtf.py`
+  also writes, from ECMA-262's formatting operations alone, 34,221
+  strings: dates and instants across the range, times, offset zones,
+  every precision and show option, and durations whose sub-second sums
+  pass 2^64 nanoseconds. All agree with the writers, and each is read
+  back through the library's parser to the value it was written from.
+  A planted fault in a zero duration's seconds is caught. Offsets with
+  seconds exist only in named zones, so the minute rounding is tested
+  by Monrovia's -00:44:30 of 1970, which writes -00:45.
 - **Totals as float64:** the rounding to binary64 agrees with Python's
   correctly rounded `float(Fraction)` on 183,417 random quotients of
   numerators below 2^120 and denominators below 2^74, near-ties among
   them.
-- **Against test262:** `test/test_zone_test262.c` replays 3,137 rows
-  from 31 of test262's Temporal.ZonedDateTime files: identifiers kept
+- **Against test262:** `test/test_zone_test262.c` replays 3,152 rows
+  from 96 of test262's Temporal files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in
   `test/test262_zone.inc`, under test262's BSD license. Three tests
   loop over `Intl.supportedValuesOf("timeZone")`, and the replay runs

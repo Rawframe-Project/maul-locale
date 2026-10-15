@@ -18,11 +18,32 @@
 // dms, dus, dns of a duration (since's as until gives them; each as the
 // float64 Temporal keeps).
 //
-// 7887 rows, 77164 checks, from 437 files:
+// 7962 rows, 77896 checks, from 476 files:
+// test/built-ins/Temporal/Duration/compare/relativeto-string-limits.js
 // test/built-ins/Temporal/PlainDateTime/argument-convert.js
 // test/built-ins/Temporal/PlainDateTime/basic.js
 // test/built-ins/Temporal/PlainDateTime/compare/argument-string-limits.js
 // test/built-ins/Temporal/PlainDateTime/constructor-full.js
+// test/built-ins/Temporal/PlainDateTime/datetime-math.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-plaindatetime.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-calendar-annotation.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-comma-decimal-separator.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-date-with-utc-offset.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-invalid.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-limits.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-offset.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-optional-data.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-subsecond.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-time-separators.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-time-zone-annotation.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-timezone.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string-unknown-annotation.js
+// test/built-ins/Temporal/PlainDateTime/from/argument-string.js
+// test/built-ins/Temporal/PlainDateTime/from/leap-second.js
+// test/built-ins/Temporal/PlainDateTime/from/limits.js
+// test/built-ins/Temporal/PlainDateTime/from/overflow-undefined.js
+// test/built-ins/Temporal/PlainDateTime/from/parser.js
+// test/built-ins/Temporal/PlainDateTime/from/roundtrip-from-string.js
 // test/built-ins/Temporal/PlainDateTime/hour-undefined.js
 // test/built-ins/Temporal/PlainDateTime/limits.js
 // test/built-ins/Temporal/PlainDateTime/microsecond-undefined.js
@@ -49,7 +70,15 @@
 // test/built-ins/Temporal/PlainDateTime/prototype/add/overflow-adding-months-to-max-year.js
 // test/built-ins/Temporal/PlainDateTime/prototype/add/overflow-undefined.js
 // test/built-ins/Temporal/PlainDateTime/prototype/add/throws-if-duration-days-too-large.js
+// test/built-ins/Temporal/PlainDateTime/prototype/day/basic.js
 // test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-string-limits.js
+// test/built-ins/Temporal/PlainDateTime/prototype/hour/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/microsecond/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/millisecond/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/minute/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/month/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/monthCode/basic.js
+// test/built-ins/Temporal/PlainDateTime/prototype/nanosecond/basic.js
 // test/built-ins/Temporal/PlainDateTime/prototype/round/balance.js
 // test/built-ins/Temporal/PlainDateTime/prototype/round/limits.js
 // test/built-ins/Temporal/PlainDateTime/prototype/round/rounding-direction.js
@@ -70,6 +99,7 @@
 // test/built-ins/Temporal/PlainDateTime/prototype/round/roundingmode-halfexpand-is-default.js
 // test/built-ins/Temporal/PlainDateTime/prototype/round/roundingmode-trunc.js
 // test/built-ins/Temporal/PlainDateTime/prototype/round/roundingmode-undefined.js
+// test/built-ins/Temporal/PlainDateTime/prototype/second/basic.js
 // test/built-ins/Temporal/PlainDateTime/prototype/since/argument-object.js
 // test/built-ins/Temporal/PlainDateTime/prototype/since/argument-propertybag-calendar-case-insensitive.js
 // test/built-ins/Temporal/PlainDateTime/prototype/since/argument-propertybag-calendar-iso-string.js
@@ -197,7 +227,13 @@
 // test/built-ins/Temporal/PlainDateTime/prototype/until/throws-if-rounded-date-outside-valid-iso-range.js
 // test/built-ins/Temporal/PlainDateTime/prototype/until/units-changed.js
 // test/built-ins/Temporal/PlainDateTime/prototype/until/weeks-months-mutually-exclusive.js
+// test/built-ins/Temporal/PlainDateTime/prototype/year/basic.js
 // test/built-ins/Temporal/PlainDateTime/second-undefined.js
+// test/built-ins/Temporal/ZonedDateTime/compare/argument-string-limits.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-limits.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/since/argument-string-limits.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/until/argument-string-limits.js
+// test/intl402/Temporal/PlainDateTime/from/roundtrip-from-string.js
 // test/intl402/Temporal/PlainDateTime/prototype/add/basic-buddhist.js
 // test/intl402/Temporal/PlainDateTime/prototype/add/basic-chinese.js
 // test/intl402/Temporal/PlainDateTime/prototype/add/basic-coptic.js
@@ -272,6 +308,8 @@
 // test/intl402/Temporal/PlainDateTime/prototype/add/proleptic-gregory.js
 // test/intl402/Temporal/PlainDateTime/prototype/add/proleptic-japanese.js
 // test/intl402/Temporal/PlainDateTime/prototype/add/proleptic-roc.js
+// test/intl402/Temporal/PlainDateTime/prototype/era/basic.js
+// test/intl402/Temporal/PlainDateTime/prototype/eraYear/basic.js
 // test/intl402/Temporal/PlainDateTime/prototype/since/basic-buddhist.js
 // test/intl402/Temporal/PlainDateTime/prototype/since/basic-chinese.js
 // test/intl402/Temporal/PlainDateTime/prototype/since/basic-coptic.js
@@ -401,6 +439,7 @@
 // test/intl402/Temporal/PlainDateTime/prototype/subtract/proleptic-gregory.js
 // test/intl402/Temporal/PlainDateTime/prototype/subtract/proleptic-japanese.js
 // test/intl402/Temporal/PlainDateTime/prototype/subtract/proleptic-roc.js
+// test/intl402/Temporal/PlainDateTime/prototype/until/adjusted-dates.js
 // test/intl402/Temporal/PlainDateTime/prototype/until/basic-buddhist.js
 // test/intl402/Temporal/PlainDateTime/prototype/until/basic-chinese.js
 // test/intl402/Temporal/PlainDateTime/prototype/until/basic-coptic.js
@@ -457,9 +496,40 @@
 // test/intl402/Temporal/PlainDateTime/prototype/until/wrapping-at-end-of-month-persian.js
 // test/intl402/Temporal/PlainDateTime/prototype/until/wrapping-at-end-of-month-roc.js
 
+"make buddhist 1 1 1 12 34 0 0 0 0 = y=544 m=1 mc=M01 d=1 era=be ey=544 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make buddhist 2000 1 1 12 34 0 0 0 0 = y=2543 m=1 mc=M01 d=1 era=be ey=2543 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make chinese 2000 1 1 12 34 0 0 0 0 = y=1999 m=11 mc=M11 d=25 era=- ey=- h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make coptic 1 1 1 12 34 0 0 0 0 = y=-283 m=5 mc=M05 d=8 era=am ey=-283 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make coptic 2000 1 1 12 34 0 0 0 0 = y=1716 m=4 mc=M04 d=22 era=am ey=1716 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make dangi 2000 1 1 12 34 0 0 0 0 = y=1999 m=11 mc=M11 d=25 era=- ey=- h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make ethioaa 1 1 1 12 34 0 0 0 0 = y=5493 m=5 mc=M05 d=8 era=aa ey=5493 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make ethioaa 2000 1 1 12 34 0 0 0 0 = y=7492 m=4 mc=M04 d=22 era=aa ey=7492 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make ethiopic 1 1 1 12 34 0 0 0 0 = y=-7 m=5 mc=M05 d=8 era=aa ey=5493 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make ethiopic 2000 1 1 12 34 0 0 0 0 = y=1992 m=4 mc=M04 d=22 era=am ey=1992 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make gregory 1 1 1 12 34 0 0 0 0 = y=1 m=1 mc=M01 d=1 era=ce ey=1 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make gregory 2000 1 1 12 34 0 0 0 0 = y=2000 m=1 mc=M01 d=1 era=ce ey=2000 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make gregory 2000 3 6 12 34 56 234 563 734 = ey=2000",
+"make gregory 2000 3 6 12 34 56 234 763 777 = era=ce",
+"make hebrew 1 1 1 12 34 0 0 0 0 = y=3761 m=4 mc=M04 d=18 era=am ey=3761 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make hebrew 2000 1 1 12 34 0 0 0 0 = y=5760 m=4 mc=M04 d=23 era=am ey=5760 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make hebrew 2046 10 30 12 34 0 0 0 0 = y=5807 m=1 mc=M01 d=30 era=am ey=5807 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make indian 1 1 1 12 34 0 0 0 0 = y=-78 m=10 mc=M10 d=11 era=shaka ey=-78 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make indian 2000 1 1 12 34 0 0 0 0 = y=1921 m=10 mc=M10 d=11 era=shaka ey=1921 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make indian 2004 3 21 12 34 0 0 0 0 = y=1926 m=1 mc=M01 d=1 era=shaka ey=1926 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make indian 2005 3 22 12 34 0 0 0 0 = y=1927 m=1 mc=M01 d=1 era=shaka ey=1927 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-civil 1 1 1 12 34 0 0 0 0 = y=-640 m=5 mc=M05 d=18 era=bh ey=641 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-civil 2000 1 1 12 34 0 0 0 0 = y=1420 m=9 mc=M09 d=24 era=ah ey=1420 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-tbla 1 1 1 12 34 0 0 0 0 = y=-640 m=5 mc=M05 d=19 era=bh ey=641 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-tbla 2000 1 1 12 34 0 0 0 0 = y=1420 m=9 mc=M09 d=25 era=ah ey=1420 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-umalqura 1 1 1 12 34 0 0 0 0 = y=-640 m=5 mc=M05 d=18 era=bh ey=641 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-umalqura 2000 1 1 12 34 0 0 0 0 = y=1420 m=9 mc=M09 d=24 era=ah ey=1420 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make islamic-umalqura 2006 7 25 12 34 0 0 0 0 = y=1427 m=6 mc=M06 d=29 era=ah ey=1427 h=12 mi=34 s=0 ms=0 us=0 ns=0",
 "make iso8601 -2020 11 24 11 12 13 14 15 1 = y=-2020 m=11 mc=M11 d=24 h=11 mi=12 s=13 ms=14 us=15 ns=1",
 "make iso8601 -25406 1 1 0 0 0 0 0 0 = y=-25406 m=1 mc=M01 d=1 h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "make iso8601 -271821 4 19 0 0 0 0 0 0 = refused",
+"make iso8601 -271821 4 19 0 0 0 0 0 1 = y=-271821 m=4 mc=M04 d=19 h=0 mi=0 s=0 ms=0 us=0 ns=1",
+"make iso8601 -999999 1 1 0 0 0 0 0 0 = refused",
+"make iso8601 1 1 1 12 34 56 987 654 321 = y=1 m=1 mc=M01 d=1 h=12 mi=34 s=56 ms=987 us=654 ns=321",
 "make iso8601 1 2 3 0 0 0 0 0 0 = y=1 m=2 mc=M02 d=3 h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "make iso8601 1 2 3 4 0 0 0 0 0 = y=1 m=2 mc=M02 d=3 h=4 mi=0 s=0 ms=0 us=0 ns=0",
 "make iso8601 1 2 3 4 5 0 0 0 0 = y=1 m=2 mc=M02 d=3 h=4 mi=5 s=0 ms=0 us=0 ns=0",
@@ -467,16 +537,51 @@
 "make iso8601 1 2 3 4 5 6 7 0 0 = y=1 m=2 mc=M02 d=3 h=4 mi=5 s=6 ms=7 us=0 ns=0",
 "make iso8601 1 2 3 4 5 6 7 8 0 = y=1 m=2 mc=M02 d=3 h=4 mi=5 s=6 ms=7 us=8 ns=0",
 "make iso8601 1 2 3 4 5 6 7 8 9 = y=1 m=2 mc=M02 d=3 h=4 mi=5 s=6 ms=7 us=8 ns=9",
+"make iso8601 1976 11 18 0 0 0 0 0 0 = y=1976 m=11 mc=M11 d=18 h=0 mi=0 s=0 ms=0 us=0 ns=0",
+"make iso8601 1976 11 18 15 0 0 0 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=0 s=0 ms=0 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 0 0 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=0 ms=0 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 20 123 456 789 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=20 ms=123 us=456 ns=789",
+"make iso8601 1976 11 18 15 23 30 0 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=0 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 30 1 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=1 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 30 1 123 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=1 us=123 ns=0",
+"make iso8601 1976 11 18 15 23 30 1 123 456 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=1 us=123 ns=456",
+"make iso8601 1976 11 18 15 23 30 100 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=100 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 30 120 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=120 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 30 123 0 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=0 ns=0",
+"make iso8601 1976 11 18 15 23 30 123 400 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=400 ns=0",
+"make iso8601 1976 11 18 15 23 30 123 450 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=450 ns=0",
+"make iso8601 1976 11 18 15 23 30 123 456 0 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=456 ns=0",
+"make iso8601 1976 11 18 15 23 30 123 456 700 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=456 ns=700",
+"make iso8601 1976 11 18 15 23 30 123 456 780 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=456 ns=780",
 "make iso8601 1976 11 18 15 23 30 123 456 789 = y=1976 m=11 mc=M11 d=18 h=15 mi=23 s=30 ms=123 us=456 ns=789",
+"make iso8601 1997 8 23 5 30 13 0 0 0 = m=8 mc=M08",
+"make iso8601 2000 1 1 12 34 56 987 654 321 = y=2000 m=1 mc=M01 d=1 h=12 mi=34 s=56 ms=987 us=654 ns=321",
 "make iso8601 2000 5 2 0 0 0 0 0 0 = y=2000 m=5 mc=M05 d=2 h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "make iso8601 2000 5 2 12 0 0 0 0 0 = y=2000 m=5 mc=M05 d=2 h=12 mi=0 s=0 ms=0 us=0 ns=0",
 "make iso8601 2000 5 2 12 34 0 0 0 0 = y=2000 m=5 mc=M05 d=2 h=12 mi=34 s=0 ms=0 us=0 ns=0",
 "make iso8601 2000 5 2 12 34 56 0 0 0 = y=2000 m=5 mc=M05 d=2 h=12 mi=34 s=56 ms=0 us=0 ns=0",
 "make iso8601 2000 5 2 12 34 56 123 0 0 = y=2000 m=5 mc=M05 d=2 h=12 mi=34 s=56 ms=123 us=0 ns=0",
 "make iso8601 2000 5 2 12 34 56 123 456 0 = y=2000 m=5 mc=M05 d=2 h=12 mi=34 s=56 ms=123 us=456 ns=0",
+"make iso8601 2016 12 31 23 59 59 0 0 0 = y=2016 m=12 mc=M12 d=31 h=23 mi=59 s=59 ms=0 us=0 ns=0",
+"make iso8601 2019 3 15 15 30 26 0 0 0 = y=2019",
+"make iso8601 2019 3 18 5 30 13 0 0 0 = d=18",
+"make iso8601 2020 1 1 0 0 0 0 0 0 = y=2020 m=1 mc=M01 d=1 h=0 mi=0 s=0 ms=0 us=0 ns=0",
+"make iso8601 2020 1 1 1 23 45 0 0 0 = y=2020 m=1 mc=M01 d=1 h=1 mi=23 s=45 ms=0 us=0 ns=0",
 "make iso8601 2020 11 24 11 12 13 14 15 1 = y=2020 m=11 mc=M11 d=24 h=11 mi=12 s=13 ms=14 us=15 ns=1",
+"make iso8601 2021 7 15 15 30 26 123 456 789 = y=2021",
+"make iso8601 2021 7 15 5 30 13 0 0 0 = d=15",
+"make iso8601 2026 3 6 12 34 56 987 654 321 = h=12 mi=34 s=56 ms=987 us=654 ns=321",
+"make iso8601 275760 9 13 23 59 59 999 999 999 = y=275760 m=9 mc=M09 d=13 h=23 mi=59 s=59 ms=999 us=999 ns=999",
 "make iso8601 275760 9 14 0 0 0 0 0 0 = refused",
 "make iso8601 29345 12 31 23 59 59 999 999 999 = y=29345 m=12 mc=M12 d=31 h=23 mi=59 s=59 ms=999 us=999 ns=999",
+"make iso8601 999999 1 1 0 0 0 0 0 0 = refused",
+"make japanese 1 1 1 12 34 0 0 0 0 = y=1 m=1 mc=M01 d=1 era=ce ey=1 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make japanese 2000 1 1 12 34 0 0 0 0 = y=2000 m=1 mc=M01 d=1 era=heisei ey=12 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make persian 1 1 1 12 34 0 0 0 0 = y=-621 m=10 mc=M10 d=11 era=ap ey=-621 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make persian 2000 1 1 12 34 0 0 0 0 = y=1378 m=10 mc=M10 d=11 era=ap ey=1378 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make persian 2025 4 19 12 34 0 0 0 0 = y=1404 m=1 mc=M01 d=30 era=ap ey=1404 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make roc 1 1 1 12 34 0 0 0 0 = y=-1910 m=1 mc=M01 d=1 era=broc ey=1911 h=12 mi=34 s=0 ms=0 us=0 ns=0",
+"make roc 2000 1 1 12 34 0 0 0 0 = y=89 m=1 mc=M01 d=1 era=roc ey=89 h=12 mi=34 s=0 ms=0 us=0 ns=0",
 "add ethiopic -15641 12 34 0 0 5 0 0 0 0 0 c = y=-45 m=7 mc=M07 d=12 era=aa ey=5455 h=12 mi=34 s=0 ms=0 us=0 ns=0",
 "add gregory -1766 12 34 0 0 10 0 0 0 0 0 c = y=6 m=3 mc=M03 d=1 era=ce ey=6 h=12 mi=34 s=0 ms=0 us=0 ns=0",
 "add gregory -199 12 34 0 0 -1 0 0 0 0 0 c = y=-1 m=6 mc=M06 d=15 era=bce ey=2 h=12 mi=34 s=0 ms=0 us=0 ns=0",
@@ -4209,6 +4314,11 @@
 "until gregory 738352 12 34 0 0 737987 12 34 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=-365 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until gregory 738355 12 34 0 0 737987 12 34 0 0 0 9 1 trunc = dy=-1 dm=0 dw=0 dd=-3 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until gregory 738417 12 34 0 0 737987 12 34 0 0 0 9 1 trunc = dy=-1 dm=-2 dw=0 dd=-3 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until gregory 739622 11 2 0 0 739623 9 2 0 0 0 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=22 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until gregory 739622 11 2 0 0 739623 9 2 0 0 1 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=22 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until gregory 739622 11 2 0 0 739623 9 2 0 0 2 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=22 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until gregory 739622 11 2 0 0 739623 9 2 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=22 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until gregory 739622 11 2 0 0 739623 9 2 0 0 4 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=22 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until gregory 741639 12 34 0 0 737987 12 34 0 0 0 9 1 trunc = dy=-10 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until gregory 741639 12 34 0 0 737987 12 34 0 0 1 9 1 trunc = dy=0 dm=-120 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until gregory 741639 12 34 0 0 737987 12 34 0 0 2 9 1 trunc = dy=0 dm=0 dw=-521 dd=-5 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -4832,6 +4942,7 @@
 "until iso8601 719163 0 0 0 0 932666 23 34 33 709551616 8 9 1 trunc = dus=18446744073709552",
 "until iso8601 721676 0 0 0 0 721676 0 0 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 721676 15 23 0 0 721676 15 23 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until iso8601 721676 15 23 30 123456789 737361 10 46 38 271986102 0 9 1 trunc = dy=42 dm=11 dw=0 dd=10 dh=19 dmi=23 ds=8 dms=148 dus=529 dns=313",
 "until iso8601 721676 15 23 30 123456789 721718 18 23 30 123456789 1 9 1 trunc = dy=0 dm=1 dw=0 dd=12 dh=3 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 721676 15 23 30 123456789 721718 18 23 30 123456789 2 9 1 trunc = dy=0 dm=0 dw=6 dd=0 dh=3 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 721676 15 23 30 123456789 736026 18 0 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=14350 dh=2 dmi=36 ds=29 dms=876 dus=543 dns=211",
@@ -5193,6 +5304,8 @@
 "until iso8601 737608 0 0 0 0 737060 0 0 0 0 0 0 1 halfExpand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 737849 0 0 0 0 738214 0 0 0 0 0 9 1 trunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 737849 0 0 0 0 738214 0 0 0 0 1 9 1 trunc = dy=0 dm=12 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until iso8601 737854 3 32 45 0 736607 8 7 14 0 1 9 1 trunc = dy=0 dm=-40 dw=0 dd=-30 dh=-19 dmi=-25 ds=-31 dms=0 dus=0 dns=0",
+"until iso8601 737854 9 32 45 0 736607 8 7 14 0 1 9 1 trunc = dy=0 dm=-41 dw=0 dd=0 dh=-1 dmi=-25 ds=-31 dms=0 dus=0 dns=0",
 "until iso8601 738040 12 39 40 987654289 737067 8 22 36 123456789 0 0 1 ceil = dy=-2 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 738040 12 39 40 987654289 737067 8 22 36 123456789 0 0 1 expand = dy=-3 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until iso8601 738040 12 39 40 987654289 737067 8 22 36 123456789 0 0 1 floor = dy=-3 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -7434,6 +7547,7 @@
 "since iso8601 719163 0 0 0 0 932666 23 34 33 709551616 8 9 1 trunc = dus=18446744073709552",
 "since iso8601 721676 0 0 0 0 721676 0 0 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since iso8601 721676 15 23 0 0 721676 15 23 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"since iso8601 721676 15 23 30 123456789 737361 10 46 38 271986102 0 9 1 trunc = dy=42 dm=11 dw=0 dd=10 dh=19 dmi=23 ds=8 dms=148 dus=529 dns=313",
 "since iso8601 721676 15 23 30 123456789 737361 10 0 0 0 3 9 1 trunc = dy=0 dm=0 dw=0 dd=15684 dh=18 dmi=36 ds=29 dms=876 dus=543 dns=211",
 "since iso8601 721676 15 23 30 123456789 737361 10 46 38 271986102 3 9 1 trunc = dy=0 dm=0 dw=0 dd=15684 dh=19 dmi=23 ds=8 dms=148 dus=529 dns=313",
 "since iso8601 721718 18 23 30 123456789 721676 15 23 30 123456789 1 9 1 trunc = dy=0 dm=-1 dw=0 dd=-12 dh=-3 dmi=0 ds=0 dms=0 dus=0 dns=0",

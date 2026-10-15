@@ -13,7 +13,37 @@
 // identifier, an instant, '=' and the zone's transition after or before it
 // in nanoseconds, or 'none'. Bytes beyond printable ASCII are octal escapes.
 //
-// 3137 rows from 31 files:
+// 3152 rows from 96 files:
+// test/built-ins/Temporal/Instant/prototype/toString/timezone-string-unknown.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-ignores-incorrect-properties.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-monthcode-month.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-timezone-string-datetime.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-timezone-string-leap-second.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-timezone-string-multiple-offsets.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-propertybag-timezone-string.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-basic-and-extended-format.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-date-with-utc-offset.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-decimal-places.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-negative-extended-year.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-optional-parts.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-time-separators.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-time-zone-annotation.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-string-variant-decimal-separator.js
+// test/built-ins/Temporal/ZonedDateTime/from/argument-zoneddatetime.js
+// test/built-ins/Temporal/ZonedDateTime/from/overflow-options.js
+// test/built-ins/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
+// test/built-ins/Temporal/ZonedDateTime/from/zoneddatetime-string-multiple-offsets.js
+// test/built-ins/Temporal/ZonedDateTime/from/zoneddatetime-string.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/add-duration.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/casts-argument.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/constrain-when-ambiguous-result.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/cross-epoch.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/math-order-of-operations-add-constrain.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/math-order-of-operations-add-none.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/overflow.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/add/symmetrical-wrt-negative-durations-in-time-part.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/argument-object.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/argument-valid.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/constructed-from-equivalent-parameters-are-equal.js
@@ -21,8 +51,36 @@
 // test/built-ins/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/offset-timezone-no-transitions.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/utc-no-transitions.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/offsetNanoseconds/basic.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/round/rounding-increments.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/round/smallestunit-string-shorthand.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/round/smallestunit.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/since/reversibility-of-differences.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/startOfDay/throws-if-epoch-nanoseconds-outside-valid-limits.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/casts-argument.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/constrain-when-ambiguous-result.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/math-order-of-operations-subtract-constrain.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/math-order-of-operations-subtract-none.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/overflow.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/subtract-duration-object.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/subtract/symmetrical-wrt-negative-durations.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/timeZoneId/basic.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withPlainTime/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withPlainTime/basic.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withPlainTime/incorrectly-spelled-properties-ignored.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/preserves-instant.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/timezone-case-insensitive.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/timezone-string-datetime.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/timezone-string-leap-second.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/timezone-string-multiple-offsets.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/timezone-string.js
+// test/built-ins/Temporal/ZonedDateTime/timezone-case-insensitive.js
+// test/built-ins/Temporal/ZonedDateTime/timezone-string.js
 // test/intl402/Temporal/ZonedDateTime/etc-timezone.js
+// test/intl402/Temporal/ZonedDateTime/from/argument-propertybag-timezone-string-datetime.js
+// test/intl402/Temporal/ZonedDateTime/from/do-not-canonicalize-iana-identifiers.js
+// test/intl402/Temporal/ZonedDateTime/from/etc-timezone.js
+// test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
 // test/intl402/Temporal/ZonedDateTime/iana-legacy-names.js
 // test/intl402/Temporal/ZonedDateTime/legacy-non-iana.js
 // test/intl402/Temporal/ZonedDateTime/links-backward.js
@@ -42,7 +100,14 @@
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/rule-change-without-offset-transition.js
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/specific-tzdb-values.js
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/transitions-close-together.js
+// test/intl402/Temporal/ZonedDateTime/prototype/hoursInDay/same-date-starts-twice.js
+// test/intl402/Temporal/ZonedDateTime/prototype/monthCode/chinese-calendar-dates.js
+// test/intl402/Temporal/ZonedDateTime/prototype/monthCode/dangi-calendar-dates.js
+// test/intl402/Temporal/ZonedDateTime/prototype/offsetNanoseconds/basic-named-timezone.js
+// test/intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js
+// test/intl402/Temporal/ZonedDateTime/prototype/startOfDay/same-date-starts-twice.js
 // test/intl402/Temporal/ZonedDateTime/prototype/timeZoneId/basic.js
+// test/intl402/Temporal/ZonedDateTime/prototype/withCalendar/preserves-time-zone.js
 // test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
 // test/intl402/Temporal/ZonedDateTime/timezone-ids-basic.js
 
@@ -51,6 +116,7 @@
 "refused AGT",
 "refused ART",
 "refused AST",
+"refused America/Nonexistent",
 "refused BET",
 "refused BST",
 "refused CAT",
@@ -84,6 +150,7 @@
 "refused IST",
 "refused JST",
 "refused MIT",
+"refused Mars/Olympus_Mons",
 "refused NET",
 "refused NST",
 "refused PLT",
@@ -92,6 +159,16 @@
 "refused PST",
 "refused SST",
 "refused VST",
+"id +00:00 = +00:00",
+"id +01:00 = +01:00",
+"id +01:30 = +01:30",
+"id +01:35 = +01:35",
+"id +01:46 = +01:46",
+"id +09:00 = +09:00",
+"id -03:00 = -03:00",
+"id -04:00 = -04:00",
+"id -07:00 = -07:00",
+"id -08:00 = -08:00",
 "id AFRICA/ABIDJAN = Africa/Abidjan",
 "id AFRICA/ACCRA = Africa/Accra",
 "id AFRICA/ADDIS_ABABA = Africa/Addis_Ababa",
@@ -1843,6 +1920,7 @@
 "id rok = ROK",
 "id singapore = Singapore",
 "id turkey = Turkey",
+"id uTc = UTC",
 "id uct = UCT",
 "id universal = Universal",
 "id us/alaska = US/Alaska",
@@ -1866,6 +1944,7 @@
 "equal +03:30 +03:31 = 0",
 "equal +03:31 +03:30 = 0",
 "equal +05:30 +05:30 = 1",
+"equal -03:00 -03:00 = 1",
 "equal -05:00 -05:00 = 1",
 "equal -05:00 -05:01 = 0",
 "equal -05:00 UTC = 0",
@@ -3123,6 +3202,7 @@
 "equal etc/gmt Etc/GMT = 1",
 "offset +01:00 0 = 3600000000000",
 "offset -05:00 0 = -18000000000000",
+"offset America/Los_Angeles 0 = -28800000000000",
 "offset UTC 0 = 0",
 "next -10:00 0 = none",
 "next Africa/Tunis -842225400000000000 = -842223600000000000",

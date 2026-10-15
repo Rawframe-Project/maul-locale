@@ -12,7 +12,13 @@
 # ParseTemporalCalendarString in code. The strings are every string
 # literal of test262's Temporal tests given as an argument, strings
 # assembled from the grammar's pieces and near misses, and each of those
-# with a byte dropped, doubled or changed.
+# with a byte dropped, doubled or changed. The writers are checked the
+# same way against this program's own reading of ECMA-262's formatting
+# operations (TemporalDateToString to TemporalDurationToString,
+# FormatUTCOffsetNanoseconds), over dates and instants across Temporal's
+# range, times, offset zones, every precision and show option, and
+# durations with exact sub-second sums past 2^64; each string written is
+# also read back through the library's parser.
 #
 # usage: check_ixdtf.py <conform_ixdtf> [test262 directory]
 
@@ -351,11 +357,12 @@ PIECES = {
                "+1", "−02:00"],
     "zone": ["", "[UTC]", "[!UTC]", "[Europe/Vienna]", "[+01:00]", "[+0100]", "[+01]",
              "[+01:00:00]", "[America/Argentina/Buenos_Aires]", "[Etc/GMT+5]", "[.x]", "[-x]",
-             "[]", "[a/]", "[/a]", "[a//b]"],
+             "[]", "[a/]", "[/a]", "[a//b]", "[America/Mazatlan]", "[zz/z_z]"],
     "ann": ["", "[u-ca=hebrew]", "[!u-ca=hebrew]", "[u-ca=iso8601]", "[foo=bar]", "[!foo=bar]",
             "[u-ca=hebrew][u-ca=gregory]", "[u-ca=hebrew][!u-ca=gregory]",
             "[!u-ca=hebrew][u-ca=gregory]", "[U-CA=hebrew]", "[u-ca=]", "[u-ca=a-b-c]",
-            "[u-ca=a--b]", "[_k=v]", "[k-1=v]", "[1k=v]", "[u-ca=ISO8601]"],
+            "[u-ca=a--b]", "[_k=v]", "[k-1=v]", "[1k=v]", "[u-ca=ISO8601]", "[z=yz]",
+            "[u-ca=zz-z9]"],
 }
 
 
@@ -439,6 +446,267 @@ def test262_strings(root):
     return out
 
 
+# The writers, as ECMA-262's formatting operations write.
+
+MIN_DAY, MAX_DAY = -99280838, 100719162
+SHOW_CALENDAR = ["auto", "always", "never", "critical"]
+SHOW_TIME_ZONE = ["zone-auto", "zone-never", "zone-critical"]
+
+
+def iso_date(day):
+    # mlocDate's day 1 is 0001-01-01; days from 1970 by Hinnant's
+    # civil_from_days.
+    z = day - 719163 + 719468
+    era = z // 146097
+    doe = z - era * 146097
+    yoe = (doe - doe // 1460 + doe // 36524 - doe // 146096) // 365
+    doy = doe - (365 * yoe + yoe // 4 - yoe // 100)
+    mp = (5 * doy + 2) // 153
+    d = doy - (153 * mp + 2) // 5 + 1
+    m = mp + 3 if mp < 10 else mp - 9
+    return yoe + era * 400 + (m <= 2), m, d
+
+
+def pad_year(y):
+    return "%04d" % y if 0 <= y <= 9999 else ("+" if y > 0 else "-") + "%06d" % abs(y)
+
+
+def calendar_annotation(cal, show):
+    if show == "never" or (show == "auto" and cal == "iso8601"):
+        return ""
+    return "[%su-ca=%s]" % ("!" if show == "critical" else "", cal)
+
+
+def fraction(ns, precision):
+    if precision == -1:
+        return ("." + "%09d" % ns).rstrip("0") if ns else ""
+    return "." + ("%09d" % ns)[:precision] if precision > 0 else ""
+
+
+def time_string(h, m, s, ns, precision):
+    if precision == -2:
+        return "%02d:%02d" % (h, m)
+    return "%02d:%02d:%02d" % (h, m, s) + fraction(ns, precision)
+
+
+def offset_minutes_string(minutes):
+    return ("-" if minutes < 0 else "+") + "%02d:%02d" % divmod(abs(minutes), 60)
+
+
+def utc_offset_string(ns):
+    a = abs(ns)
+    s, sub = divmod(a, 10**9)
+    precision = -2 if s % 60 == 0 and sub == 0 else -1
+    return ("-" if ns < 0 else "+") + time_string(s // 3600, s // 60 % 60, s % 60, sub, precision)
+
+
+def date_time_of(seconds, nanoseconds):
+    day, rest = divmod(seconds, 86400)
+    y, m, d = iso_date(day + 719163)
+    return "%s-%02d-%02dT" % (pad_year(y), m, d), rest
+
+
+def write_answer(q):
+    kind, v = q[0], q[1:]
+    if kind in ("wdate", "wym", "wmd"):
+        day, cal, precision, show = v
+        y, m, d = iso_date(day)
+        full = show in ("always", "critical") or cal != "iso8601"
+        if kind == "wdate":
+            text = "%s-%02d-%02d" % (pad_year(y), m, d)
+        elif kind == "wym":
+            text = "%s-%02d" % (pad_year(y), m) + ("-%02d" % d if full else "")
+        else:
+            text = ("%s-" % pad_year(y) if full else "") + "%02d-%02d" % (m, d)
+        return text + (calendar_annotation(cal, show) if kind == "wdate" or full else "")
+    if kind == "wtime":
+        return time_string(*v)
+    if kind == "wdt":
+        day, h, m, s, ns, cal, precision, show = v
+        y, mo, d = iso_date(day)
+        return "%s-%02d-%02dT" % (pad_year(y), mo, d) + time_string(h, m, s, ns, precision) + \
+            calendar_annotation(cal, show)
+    if kind in ("winst", "wzdt"):
+        if kind == "winst":
+            seconds, ns, zone, precision = v
+            cal, show, tz, hide = "iso8601", "never", "zone-never", zone is None
+        else:
+            zone, seconds, ns, cal, precision, show, tz, hide = v
+        if abs(seconds * 10**9 + ns) > 8640000000000 * 10**9:
+            return "-"
+        date, rest = date_time_of(seconds + (zone or 0) * 60, ns)
+        text = date + time_string(rest // 3600, rest // 60 % 60, rest % 60, ns, precision)
+        if kind == "winst" and zone is None:
+            return text + "Z"
+        if not hide:
+            text += offset_minutes_string(zone)
+        if tz != "zone-never":
+            text += "[%s%s]" % ("!" if tz == "zone-critical" else "", offset_minutes_string(zone))
+        return text + calendar_annotation(cal, show)
+    if kind == "wdur":
+        fields, precision = v[:10], v[10]
+        values = [Fraction(f) for f in fields]
+        signs = {(f > 0) - (f < 0) for f in values} - {0}
+        if len(signs) > 1 or precision == -2 or any(f.denominator != 1 for f in values) or \
+                any(abs(f) >= 2**32 for f in values[:3]):
+            return "-"
+        a = [abs(int(f)) for f in values]
+        total = ((a[3] * 24 + a[4]) * 60 + a[5]) * 60 * 10**9 + a[6] * 10**9 + a[7] * 10**6 + \
+            a[8] * 10**3 + a[9]
+        if total >= 2**53 * 10**9:
+            return "-"
+        date = "".join("%d%s" % (n, c) for n, c in zip(a[:4], "YMWD") if n)
+        time = "".join("%d%s" % (n, c) for n, c in zip(a[4:6], "HM") if n)
+        sub = a[6] * 10**9 + a[7] * 10**6 + a[8] * 10**3 + a[9]
+        if sub or not any(a[:6]) or precision != -1:
+            time += "%d%sS" % (sub // 10**9, fraction(sub % 10**9, precision))
+        return ("-" if signs == {-1} else "") + "P" + date + ("T" + time if time else "")
+    if kind == "woffset":
+        return utc_offset_string(v[0]) if abs(v[0]) < 86400 * 10**9 else "-"
+    raise ValueError(kind)
+
+
+def truncated(ns, precision):
+    if precision == -2:
+        return 0
+    if precision == -1:
+        return ns
+    return ns // 10 ** (9 - precision) * 10 ** (9 - precision)
+
+
+def read_back_question(q, text):
+    # The parse that reads a written string back, and what it must give.
+    kind, v = q[0], q[1:]
+    hexed = "x" + text.encode("utf-8").hex()
+    if kind == "wdur":
+        fields, precision = v[:10], v[10]
+        a = [abs(int(f)) for f in fields]
+        sign = -1 if any(f < 0 for f in fields) else 1
+        sub = a[6] * 10**9 + a[7] * 10**6 + a[8] * 10**3 + a[9]
+        frac = truncated(sub % 10**9, precision)
+        want = a[:6] + [sub // 10**9, frac // 10**6, frac // 1000 % 1000, frac % 1000]
+        return "duration " + hexed, [sign * n if n else 0 for n in want]
+    if kind == "woffset":
+        return "offset " + hexed, [v[0]]
+    if kind in ("wdate", "wym", "wmd"):
+        y, m, d = iso_date(v[0])
+        return "dt 63 " + hexed, [y, m, d, None, None]
+    if kind == "wtime":
+        h, m, s, ns, precision = v
+        return "dt 8 " + hexed, [None, None, None, (h, m, 0 if precision == -2 else s,
+                                                    truncated(ns, precision)), None]
+    if kind == "wdt":
+        day, h, m, s, ns, cal, precision, show = v
+        y, mo, d = iso_date(day)
+        return "dt 2 " + hexed, [y, mo, d, (h, m, 0 if precision == -2 else s,
+                                            truncated(ns, precision)), None]
+    if kind == "winst":
+        seconds, ns, zone, precision = v
+    else:
+        zone, seconds, ns, cal, precision, show, tz, hide = v
+    local = seconds + (zone or 0) * 60
+    day, rest = divmod(local, 86400)
+    y, mo, d = iso_date(day + 719163)
+    t = (rest // 3600, rest // 60 % 60, 0 if precision == -2 else rest % 60,
+         truncated(ns, precision))
+    offset = None if kind == "wzdt" and hide else (zone or 0) * 60 * 10**9
+    return "dt 63 " + hexed, [y, mo, d, t, offset]
+
+
+def read_back(pairs):
+    # Reads each written string back through the library's parser; returns
+    # the count of strings that do not give their values.
+    asked = [read_back_question(q, text) for q, text in pairs]
+    got = subprocess.run([sys.argv[1]], input="\n".join(a for a, _ in asked) + "\n",
+                         capture_output=True, text=True, check=True).stdout.splitlines()
+    failures = 0
+    for (q, text), (question, want), have in zip(pairs, asked, got):
+        tokens = have.split()
+        if question.startswith("duration") or question.startswith("offset"):
+            ok = tokens != ["-"] and [int(float(x)) for x in tokens[:len(want)]] == want
+        else:
+            ok = tokens != ["-"] and len(tokens) == 9
+            if ok:
+                year, month, day, time, offset = want
+                ok = (year is None or (tokens[1], tokens[2], tokens[3]) ==
+                      (str(year), str(month), str(day)) or q[0] in ("wym", "wmd"))
+                if time is not None:
+                    ok = ok and tokens[4] == "%d:%d:%d.%d" % time
+                if offset is not None:
+                    ok = ok and (tokens[6] == "%d/0" % offset or (offset == 0 and tokens[5] == "1"))
+        if not ok:
+            failures += 1
+            if failures <= 30:
+                print("read back %r (%s): %r" % (text, write_question(q), have))
+    return failures
+
+
+def write_question(q):
+    parts = [q[0]]
+    for x in q[1:]:
+        if x is None:
+            parts.append("-")
+        elif isinstance(x, str):
+            parts.append(str(SHOW_CALENDAR.index(x)) if x in SHOW_CALENDAR else
+                         str(SHOW_TIME_ZONE.index(x)) if x in SHOW_TIME_ZONE else x)
+        elif isinstance(x, float):
+            parts.append(repr(x))
+        else:
+            parts.append(str(x))
+    return " ".join(parts)
+
+
+def write_questions(rng):
+    out = []
+    calendars = ["iso8601", "gregory", "hebrew", "islamic-umalqura", "japanese"]
+    days = [MIN_DAY, MAX_DAY, 1, 0, 719163, 3652059, 3652060] + \
+        [rng.randint(MIN_DAY, MAX_DAY) for _ in range(3000)]
+    precisions = [-1, -2] + list(range(10))
+    for day in days:
+        cal = rng.choice(calendars)
+        show = rng.choice(SHOW_CALENDAR)
+        for kind in ("wdate", "wym", "wmd"):
+            out.append((kind, day, cal, -1, show))
+        t = (rng.randrange(24), rng.randrange(60), rng.randrange(60),
+             rng.choice([0, 1, 500000000, 999999999, rng.randrange(10**9)]))
+        out.append(("wdt", day) + t + (cal, rng.choice(precisions), show))
+    for _ in range(3000):
+        t = (rng.randrange(24), rng.randrange(60), rng.randrange(60),
+             rng.choice([0, 10, 120000000, rng.randrange(10**9)]))
+        out.append(("wtime",) + t + (rng.choice(precisions),))
+    limit = 8640000000000
+    for _ in range(6000):
+        seconds = rng.choice([limit, -limit, limit + 1, 0, -1, rng.randint(-limit, limit)])
+        ns = rng.choice([0, 1, 999999999, rng.randrange(10**9)])
+        zone = rng.choice([None, 0, 330, -44, 1439, -1439, rng.randint(-1439, 1439)])
+        out.append(("winst", seconds, ns, zone, rng.choice(precisions)))
+        if zone is not None:
+            out.append(("wzdt", zone, seconds, ns, rng.choice(calendars), rng.choice(precisions),
+                        rng.choice(SHOW_CALENDAR), rng.choice(SHOW_TIME_ZONE),
+                        rng.randrange(2)))
+    for _ in range(6000):
+        sign = rng.choice([1, -1])
+        fields = []
+        for i in range(10):
+            if rng.random() < 0.5:
+                fields.append(0.0)
+                continue
+            top = [2**32, 2**32, 2**32, 10**11, 10**12, 10**14, 2**53, 2**63, 2**73, 2**83][i]
+            fields.append(float(sign * rng.choice([1, rng.randrange(1, 1000), rng.randrange(top)])))
+        if rng.random() < 0.05:
+            fields[rng.randrange(10)] *= -1
+        out.append(("wdur",) + tuple(fields) + (rng.choice([-1, -2] + list(range(10))),))
+    for precision in [-1, -2] + list(range(10)):
+        for fields in ([0.0] * 10, [1.0] + [0.0] * 9, [0.0] * 5 + [-5.0] + [0.0] * 4,
+                       [0.0] * 3 + [2.0] + [0.0] * 6, [0.0] * 9 + [1.0]):
+            out.append(("wdur",) + tuple(fields) + (precision,))
+    for _ in range(2000):
+        out.append(("woffset", rng.choice([0, -1, 86400 * 10**9, rng.randint(-86399 * 10**9,
+                                                                             86399 * 10**9),
+                                          rng.randint(-1439, 1439) * 60 * 10**9])))
+    return out
+
+
 def main():
     if len(sys.argv) not in (2, 3):
         sys.exit("usage: check_ixdtf.py <conform_ixdtf> [test262 directory]")
@@ -465,10 +733,12 @@ def main():
     for kind, t, formats in questions:
         hexed = "x" + t.encode("utf-8").hex()
         lines.append("dt %d %s" % (formats, hexed) if kind == "dt" else "%s %s" % (kind, hexed))
+    writes = write_questions(rng)
+    lines += [write_question(q) for q in writes]
     got = subprocess.run([sys.argv[1]], input="\n".join(lines) + "\n", capture_output=True,
                          text=True, check=True).stdout.splitlines()
-    if len(got) != len(questions):
-        sys.exit("conform_ixdtf answered %d of %d questions" % (len(got), len(questions)))
+    if len(got) != len(questions) + len(writes):
+        sys.exit("conform_ixdtf answered %d of %d questions" % (len(got), len(lines)))
     failures = 0
     for (kind, t, formats), have in zip(questions, got):
         want = answer(kind, t, formats)
@@ -476,8 +746,19 @@ def main():
             failures += 1
             if failures <= 30:
                 print("%s %r %s: ECMA-262 %r, library %r" % (kind, t, formats or "", want, have))
-    print("%d questions over %d strings and %d durations" % (len(questions), len(texts),
-                                                            len(durations)))
+    # Each string written, then read back by the library's parser.
+    readback = []
+    for q, have in zip(writes, got[len(questions):]):
+        want = write_answer(q)
+        if have != want:
+            failures += 1
+            if failures <= 30:
+                print("%s: ECMA-262 %r, library %r" % (write_question(q), want, have))
+        elif have != "-":
+            readback.append((q, have))
+    failures += read_back(readback)
+    print("%d questions over %d strings and %d durations, %d strings written" % (
+        len(questions), len(texts), len(durations), len(writes)))
     if failures:
         sys.exit("%d answers differ from ECMA-262" % failures)
 

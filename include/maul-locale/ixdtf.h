@@ -169,6 +169,195 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocParseDuration(const char* text, size_t length,
                                                          mlocDurationValues* valuesOut);
 
+    // How a string shows seconds (ToSecondsStringPrecisionRecord's
+    // [[Precision]]). The writers truncate; a caller rounds first, as each
+    // toString does.
+    typedef enum mlocSecondsPrecision
+    {
+        // As many digits of a fraction as it needs, none for a whole second.
+        mloc_secondsAuto = 0,
+        // Hours and minutes alone.
+        mloc_secondsMinute = 1,
+        // Seconds and the options' fractionDigits digits, 0 to 9.
+        mloc_secondsDigits = 2,
+    } mlocSecondsPrecision;
+
+    // When a string shows its calendar annotation (Temporal's
+    // calendarName option): auto leaves out the ISO calendar's.
+    typedef enum mlocShowCalendar
+    {
+        mloc_showCalendarAuto = 0,
+        mloc_showCalendarAlways = 1,
+        mloc_showCalendarNever = 2,
+        mloc_showCalendarCritical = 3,
+    } mlocShowCalendar;
+
+    // When a zoned date-time's string shows its time zone annotation
+    // (Temporal's timeZoneName option).
+    typedef enum mlocShowTimeZone
+    {
+        mloc_showTimeZoneAuto = 0,
+        mloc_showTimeZoneNever = 1,
+        mloc_showTimeZoneCritical = 2,
+    } mlocShowTimeZone;
+
+    // What a Temporal string shows, as its toString's options give it.
+    // Zeroed, it shows a fraction as long as needed, the calendar unless
+    // ISO, and a zoned date-time's offset and zone.
+    typedef struct mlocTemporalStringOptions
+    {
+        // The calendar's id as the caller keeps it (the library maps
+        // iso8601 and gregory to one calendar); null for iso8601. It is
+        // checked against the grammar's calendar ids.
+        const char* calendar;
+        size_t calendarLength;
+        // An mlocSecondsPrecision, and the digits for mloc_secondsDigits.
+        uint8_t secondsPrecision;
+        uint8_t fractionDigits;
+        // An mlocShowCalendar.
+        uint8_t showCalendar;
+        // An mlocShowTimeZone.
+        uint8_t showTimeZone;
+        // Whether a zoned date-time's string leaves out its offset
+        // (Temporal's offset option of never).
+        bool hideOffset;
+    } mlocTemporalStringOptions;
+
+    /// Writes a date (ECMA-262's TemporalDateToString): its ISO year,
+    /// month and day and the calendar annotation.
+    ///
+    /// @param date     The date.
+    /// @param options  The calendar and its annotation; may be null.
+    /// @param output   Receives the string.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null date or output, a date
+    ///         the library did not make, or options out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTemporalDate(
+        const mlocDate* date, const mlocTemporalStringOptions* options, mlocOutput* output);
+
+    /// Writes a year-month (ECMA-262's TemporalYearMonthToString): its ISO
+    /// year and month, and the reference day with the annotation when the
+    /// calendar is not ISO or is shown.
+    ///
+    /// @param date     The year-month's reference date.
+    /// @param options  The calendar and its annotation; may be null.
+    /// @param output   Receives the string.
+    /// @return As mlocFormatTemporalDate.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatYearMonth(const mlocDate* date,
+                                                           const mlocTemporalStringOptions* options,
+                                                           mlocOutput* output);
+
+    /// Writes a month-day (ECMA-262's TemporalMonthDayToString): its ISO
+    /// month and day, and the reference year with the annotation when the
+    /// calendar is not ISO or is shown.
+    ///
+    /// @param date     The month-day's reference date.
+    /// @param options  The calendar and its annotation; may be null.
+    /// @param output   Receives the string.
+    /// @return As mlocFormatTemporalDate.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatMonthDay(const mlocDate* date,
+                                                          const mlocTemporalStringOptions* options,
+                                                          mlocOutput* output);
+
+    /// Writes a time of day (ECMA-262's TimeRecordToString) to the
+    /// options' precision, truncated.
+    ///
+    /// @param time     The time.
+    /// @param options  The precision; may be null.
+    /// @param output   Receives the string.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null time or output, a time
+    ///         the library did not make, or options out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTemporalTime(
+        const mlocTime* time, const mlocTemporalStringOptions* options, mlocOutput* output);
+
+    /// Writes a date-time (ECMA-262's FormatISODateTime): the date, T,
+    /// the time to the options' precision, and the calendar annotation.
+    ///
+    /// @param dateTime  The date-time.
+    /// @param options   The precision, calendar and annotation; may be
+    ///                  null.
+    /// @param output    Receives the string.
+    /// @return As mlocFormatTemporalDate.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTemporalDateTime(
+        const mlocDateTime* dateTime, const mlocTemporalStringOptions* options, mlocOutput* output);
+
+    /// Writes an instant (ECMA-262's TemporalInstantToString): its
+    /// date-time in universal time and Z, or with a zone its local
+    /// date-time and offset rounded to the minute.
+    ///
+    /// @param instant  The instant.
+    /// @param zone     The zone; null for universal time.
+    /// @param options  The precision; may be null.
+    /// @param output   Receives the string.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null instant or output, an
+    ///         instant out of range, a zone the library did not make, or
+    ///         options out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatInstant(const mlocInstant* instant,
+                                                         const mlocTimeZone* zone,
+                                                         const mlocTemporalStringOptions* options,
+                                                         mlocOutput* output);
+
+    /// Writes a zoned date-time (ECMA-262's TemporalZonedDateTimeToString):
+    /// its local date-time, the offset rounded to the minute, the zone's
+    /// identifier and the calendar annotation, each as the options show
+    /// them.
+    ///
+    /// @param zone     The zone.
+    /// @param instant  The instant.
+    /// @param options  The precision, calendar and what is shown; may be
+    ///                 null.
+    /// @param output   Receives the string.
+    /// @return As mlocFormatInstant.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocFormatZonedDateTime(const mlocTimeZone* zone, const mlocInstant* instant,
+                            const mlocTemporalStringOptions* options, mlocOutput* output);
+
+    /// Writes a duration (ECMA-262's TemporalDurationToString): each
+    /// field not zero with its designator, the seconds from the exact sum
+    /// of seconds and the sub-second fields to the options' precision,
+    /// truncated (mloc_secondsMinute is refused).
+    ///
+    /// @param values   The fields, which pass Temporal's limits.
+    /// @param options  The precision; may be null.
+    /// @param output   Receives the string.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null pointer, fields past
+    ///         the limits or of mixed signs, or options out of range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationValues* values,
+                                                          const mlocTemporalStringOptions* options,
+                                                          mlocOutput* output);
+
+    /// Writes a UTC offset (ECMA-262's FormatUTCOffsetNanoseconds):
+    /// ±HH:MM, with seconds and as many digits of a fraction as it needs.
+    ///
+    /// @param offsetNanoseconds  The offset, less than a day either way.
+    /// @param output             Receives the string.
+    /// @return mloc_success; mloc_errorCapacity when the buffer is too
+    ///         short; mloc_errorInvalid for a null output or an offset of
+    ///         a day or more.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatUTCOffset(int64_t offsetNanoseconds,
+                                                           mlocOutput* output);
+
 #ifdef __cplusplus
 }
 #endif

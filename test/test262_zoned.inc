@@ -21,7 +21,13 @@
 // balanced to the largest unit or hours, each as the float64 Temporal keeps).
 // Bytes beyond printable ASCII are octal escapes.
 //
-// 6808 rows, 61826 checks, from 403 files:
+// 6848 rows, 61866 checks, from 414 files:
+// test/built-ins/Temporal/Duration/compare/relativeto-string-limits.js
+// test/built-ins/Temporal/Duration/compare/relativeto-string-wrong-offset.js
+// test/built-ins/Temporal/Duration/compare/relativeto-sub-minute-offset.js
+// test/built-ins/Temporal/Duration/prototype/round/relativeto-string-wrong-offset.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-string-wrong-offset.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-sub-minute-offset.js
 // test/built-ins/Temporal/ZonedDateTime/compare/argument-propertybag-offset-not-agreeing-with-timezone.js
 // test/built-ins/Temporal/ZonedDateTime/compare/argument-string-limits.js
 // test/built-ins/Temporal/ZonedDateTime/compare/zoneddatetime-string.js
@@ -222,6 +228,10 @@
 // test/built-ins/Temporal/ZonedDateTime/prototype/withPlainTime/plaintime-propertybag-no-time-units.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/withPlainTime/throws-if-epoch-nanoseconds-outside-valid-limits.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/withTimeZone/preserves-instant.js
+// test/intl402/Temporal/Duration/compare/relativeto-sub-minute-offset.js
+// test/intl402/Temporal/Duration/prototype/round/relativeto-string-datetime.js
+// test/intl402/Temporal/Duration/prototype/total/relativeto-string-datetime.js
+// test/intl402/Temporal/Duration/prototype/total/relativeto-sub-minute-offset.js
 // test/intl402/Temporal/ZonedDateTime/compare/sub-minute-offset.js
 // test/intl402/Temporal/ZonedDateTime/from/argument-propertybag-dst-option-disambiguation.js
 // test/intl402/Temporal/ZonedDateTime/from/argument-propertybag-dst-options-offset-disambiguation-combinations.js
@@ -269,6 +279,7 @@
 // test/intl402/Temporal/ZonedDateTime/prototype/hoursInDay/same-date-starts-twice.js
 // test/intl402/Temporal/ZonedDateTime/prototype/monthCode/chinese-calendar-dates.js
 // test/intl402/Temporal/ZonedDateTime/prototype/monthCode/dangi-calendar-dates.js
+// test/intl402/Temporal/ZonedDateTime/prototype/round/same-date-starts-twice.js
 // test/intl402/Temporal/ZonedDateTime/prototype/since/basic-buddhist.js
 // test/intl402/Temporal/ZonedDateTime/prototype/since/basic-chinese.js
 // test/intl402/Temporal/ZonedDateTime/prototype/since/basic-coptic.js
@@ -447,6 +458,7 @@
 "offset Pacific/Niue 712876 23 59 59 0 -40790000000000 reject compatible 0 = refused",
 "offset Pacific/Niue 712876 23 59 59 0 -40800000000000 reject compatible 0 = ns=-543069601000000000",
 "offset Pacific/Niue 712876 23 59 59 0 -40800000000000 reject compatible 1 = ns=-543069621000000000",
+"offset +00:45 719163 0 0 0 0 2670123456789 reject compatible 0 = refused",
 "offset +01:00 719163 0 0 0 0 -15300000000000 ignore compatible 1 = ns=-3600000000000",
 "offset +01:00 719163 0 0 0 0 -15300000000000 reject compatible 1 = refused",
 "offset +01:00 719163 0 0 0 0 0 ignore compatible 1 = ns=-3600000000000",
@@ -472,6 +484,7 @@
 "offset Africa/Monrovia 719163 12 0 0 0 -2700000000000 prefer compatible 1 = ns=45870000000000",
 "offset Africa/Monrovia 719163 12 0 0 0 -2700000000000 reject compatible 1 = ns=45870000000000",
 "offset UTC 719163 12 34 56 987654321 0 ignore compatible 0 = ns=45296987654321",
+"offset -00:44 719528 0 0 0 0 7200000000000 reject compatible 1 = refused",
 "offset UTC 719701 0 0 0 0 0 ignore compatible 0 = ns=46483200000000000",
 "offset UTC 720765 0 0 0 0 0 ignore compatible 0 = ns=138412800000000000",
 "offset UTC 721621 0 0 0 0 0 ignore compatible 0 = ns=212371200000000000",
@@ -494,6 +507,7 @@
 "offset UTC 727675 0 0 0 0 0 ignore compatible 0 = ns=735436800000000000",
 "offset UTC 728561 0 0 0 0 0 ignore compatible 0 = ns=811987200000000000",
 "offset UTC 729564 0 0 0 0 0 ignore compatible 0 = ns=898646400000000000",
+"offset UTC 730120 0 0 0 0 19800000000000 reject compatible 1 = refused",
 "offset America/Vancouver 730212 2 30 0 0 0 ignore compatible 0 = ns=954671400000000000",
 "offset America/Vancouver 730212 2 34 56 987654321 0 ignore compatible 0 = ns=954671696987654321",
 "offset UTC 730242 0 0 0 0 86340000000000 reject compatible 0 = refused",
@@ -514,6 +528,7 @@
 "offset UTC 736504 0 0 0 0 0 ignore compatible 0 = ns=1498262400000000000",
 "offset UTC 736533 0 0 0 0 0 ignore compatible 0 = ns=1500768000000000000",
 "offset +01:00 737090 0 0 0 0 0 ignore compatible 0 = ns=1548889200000000000",
+"offset America/Vancouver 737364 0 0 0 0 15300000000000 reject compatible 1 = refused",
 "offset +01:00 737381 15 23 30 123456789 3600000000000 reject compatible 1 = ns=1574087010123456789",
 "offset -04:00 737471 23 45 0 0 3600000000000 reject compatible 0 = refused",
 "offset UTC 737492 1 0 0 0 -14400000000000 reject compatible 0 = refused",
@@ -1001,6 +1016,42 @@
 "round UTC 1000000000 987654321 4 1 halfExpand = ns=1000000000988000000",
 "round UTC 1000000000 987654321 5 1 halfExpand = ns=1000000000987654000",
 "round UTC 1000000000 987654321 6 1 halfExpand = ns=1000000000987654321",
+"round Antarctica/Casey 1267704600 0 0 1 ceil = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 expand = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 floor = ns=1267621200000000000",
+"round Antarctica/Casey 1267704600 0 0 1 halfCeil = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 halfEven = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 halfExpand = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 halfFloor = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 halfTrunc = ns=1267707600000000000",
+"round Antarctica/Casey 1267704600 0 0 1 trunc = ns=1267621200000000000",
+"round Antarctica/Casey 1267710300 0 0 1 ceil = ns=1267804800000000000",
+"round Antarctica/Casey 1267710300 0 0 1 expand = ns=1267804800000000000",
+"round Antarctica/Casey 1267710300 0 0 1 floor = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 halfCeil = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 halfEven = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 halfExpand = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 halfFloor = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 halfTrunc = ns=1267707600000000000",
+"round Antarctica/Casey 1267710300 0 0 1 trunc = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 ceil = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 expand = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 floor = ns=1267621200000000000",
+"round Antarctica/Casey 1267715400 0 0 1 halfCeil = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 halfEven = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 halfExpand = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 halfFloor = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 halfTrunc = ns=1267707600000000000",
+"round Antarctica/Casey 1267715400 0 0 1 trunc = ns=1267621200000000000",
+"round Antarctica/Casey 1267721100 0 0 1 ceil = ns=1267804800000000000",
+"round Antarctica/Casey 1267721100 0 0 1 expand = ns=1267804800000000000",
+"round Antarctica/Casey 1267721100 0 0 1 floor = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 halfCeil = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 halfEven = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 halfExpand = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 halfFloor = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 halfTrunc = ns=1267707600000000000",
+"round Antarctica/Casey 1267721100 0 0 1 trunc = ns=1267707600000000000",
 "round +01:00 217175010 123456789 0 1 halfExpand = ns=217206000000000000",
 "round +01:00 217175010 123456789 0 29 halfExpand = refused",
 "round +01:00 217175010 123456789 1 24 halfExpand = refused",
