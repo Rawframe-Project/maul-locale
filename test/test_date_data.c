@@ -11,7 +11,9 @@
 #include "data_view.h"
 #include "date_data.h"
 #include "date_tables.h"
+#include "kinds.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/data.h"
 
@@ -54,6 +56,7 @@ static void TestPatterns(void)
     CHECK(!Valid("\x02y\x01\x07Hanidec", 11), "an override's id in upper case");
     CHECK(!Valid("\x02y\x01\x07hanide", 10), "an override cut short");
     CHECK(!Valid("\x02y\x01", 3), "an override without its id");
+    CHECK(Valid("\x02y\x01\x01x", 5), "an override's id of one letter");
     CHECK(!Valid("a\x05", 2), "a control byte in a literal");
     CHECK(!Valid("\xC0\x80", 2), "malformed UTF-8");
 }
@@ -203,6 +206,29 @@ static void TestFile(void)
           "a calendar past MlocCalendar's");
 }
 
+// A root pack of the unit built here and a dates unit naming set 0 for
+// the Gregorian calendar and set 1, past the unit's one set, for the
+// Buddhist.
+static void TestSetPastUnit(void)
+{
+    uint32_t size = BuildUnit();
+    uint8_t dates[dateLocaleSize] = {0};
+    Put(dates + 4, 1, 2);
+    PackUnit units[] = {{kindDatePatterns, {s_unit, size}, false},
+                        {kindDates, {dates, sizeof(dates)}, true}};
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    CHECK(OpenRootPack(units, 2, &sources[1]), "a pack of date units");
+    mlocDataSet data = {sources, 2};
+    mlocLocale fr;
+    DatePatterns p;
+    const uint8_t* set = nullptr;
+    CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
+              mlocFindDateSet(&data, &fr, 0, &p, &set) && set == p.sets,
+          "root's Gregorian set");
+    CHECK(!mlocFindDateSet(&data, &fr, 2, &p, &set), "a set past the unit's");
+}
+
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
     FILE* file = fopen(path, "rb");
@@ -218,6 +244,7 @@ int main(void)
 {
     TestPatterns();
     TestUnit();
+    TestSetPastUnit();
     alignas(8) static uint8_t s_dates[1 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
