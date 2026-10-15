@@ -5,10 +5,11 @@
 
 #include "zone_gen.h"
 
+#include "kinds.h"
 #include "tzdb.h"
 #include "zone_compile.h"
+#include "zone_ids.h"
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,40 +18,6 @@ enum
 {
     maxOffsets = 4096,
 };
-
-typedef struct Text
-{
-    char* bytes;
-    size_t size;
-    size_t capacity;
-} Text;
-
-[[gnu::format(printf, 2, 3)]] static void Put(Text* text, const char* format, ...)
-{
-    for (;;)
-    {
-        va_list arguments;
-        va_start(arguments, format);
-        size_t room = text->capacity - text->size;
-        int written = vsnprintf(text->bytes == nullptr ? nullptr : text->bytes + text->size, room,
-                                format, arguments);
-        va_end(arguments);
-        if (written >= 0 && (size_t)written < room)
-        {
-            text->size += (size_t)written;
-            return;
-        }
-        size_t next = text->capacity == 0 ? 65536 : text->capacity * 2;
-        char* grown = written < 0 ? nullptr : realloc(text->bytes, next);
-        if (grown == nullptr)
-        {
-            fputs("mlocgen: cannot write the zone tables\n", stderr);
-            exit(1);
-        }
-        text->bytes = grown;
-        text->capacity = next;
-    }
-}
 
 // The offset (standard plus saving) at each change, without the changes
 // that keep it, for comparing two compiles of one zone.
@@ -249,61 +216,86 @@ static bool Narrow(int64_t at)
     return at >= INT32_MIN && at <= INT32_MAX;
 }
 
-// A list of values written as C, a dozen to a line.
-typedef struct Values
+// A growing run of little-endian bytes.
+typedef struct Bytes
 {
-    Text text;
-    int count;
-} Values;
+    uint8_t* data;
+    size_t size;
+    size_t capacity;
+} Bytes;
 
-[[gnu::format(printf, 2, 3)]] static void Value(Values* v, const char* format, ...)
+static void PutN(Bytes* b, uint64_t value, int count)
 {
-    char value[64];
-    va_list arguments;
-    va_start(arguments, format);
-    vsnprintf(value, sizeof(value), format, arguments);
-    va_end(arguments);
-    Put(&v->text, "%s%s,", v->count % 12 == 0 ? "\n    " : " ", value);
-    v->count++;
+    if (b->size + (size_t)count > b->capacity)
+    {
+        b->capacity = b->capacity == 0 ? 4096 : b->capacity * 2;
+        uint8_t* grown = realloc(b->data, b->capacity);
+        if (grown == nullptr)
+        {
+            fputs("mlocgen: cannot build the zones unit\n", stderr);
+            exit(1);
+        }
+        b->data = grown;
+    }
+    for (int i = 0; i < count; i++)
+    {
+        b->data[b->size++] = (uint8_t)(value >> (8 * i));
+    }
 }
 
+// The unit's sections, in the order of zone_tables.h, and their counts.
 typedef struct Tables
 {
     Offsets offsets;
-    Values list;
-    Values times;
-    Values wide;
-    Values types;
-    Text closings;
-    Text names;
-    Text records;
-    int closingCount;
-    size_t nameSize;
+    Bytes sections[9];
+    uint32_t counts[9];
 } Tables;
+
+enum
+{
+    sectionZones,
+    sectionIdentifiers,
+    sectionOffsets,
+    sectionList,
+    sectionNarrow,
+    sectionWide,
+    sectionTypes,
+    sectionClosings,
+    sectionText,
+};
+
+static void Put(Tables* t, int section, uint64_t value, int count)
+{
+    PutN(&t->sections[section], value, count);
+}
 
 static int Limit(char* errorOut, size_t errorCapacity, const char* zone, const char* what)
 {
-    snprintf(errorOut, errorCapacity, "zone %s: %s exceeds the table's field", zone, what);
+    snprintf(errorOut, errorCapacity, "zone %s: %s exceeds the unit's field", zone, what);
     return 0;
 }
 
 static void AddClosing(Tables* t, const CompiledZone* zone)
 {
-    Put(&t->closings, "\n    {%d, {", (int)zone->firstYear);
+    Put(t, sectionClosings, (uint32_t)zone->firstYear, 4);
     for (int k = 0; k < 2; k++)
     {
         const CompiledChange* c = &zone->changes[k];
-        Put(&t->closings, "%s{%d, %d, %d, %d, %d, %d}", k == 0 ? "" : ", ", c->month + 1,
-            c->dayOfMonth, c->weekday, (int)c->day, (int)c->time,
-            OffsetIndex(&t->offsets, c->offset));
+        Put(t, sectionClosings, c->month + 1U, 1);
+        Put(t, sectionClosings, c->dayOfMonth, 1);
+        Put(t, sectionClosings, c->weekday, 1);
+        Put(t, sectionClosings, (uint64_t)c->day, 1);
+        Put(t, sectionClosings, (uint32_t)c->time, 4);
+        Put(t, sectionClosings, (uint64_t)OffsetIndex(&t->offsets, c->offset), 2);
+        Put(t, sectionClosings, 0, 2);
     }
-    Put(&t->closings, "}},");
-    t->closingCount++;
+    t->counts[sectionClosings]++;
 }
 
-// Adds a zone's transitions, offsets, closing rule, name and record.
-static int AddZone(Tables* t, const char* name, const CompiledZone* zone, char* errorOut,
-                   size_t errorCapacity)
+// Adds a zone's transitions, offsets, closing rule and record; name is
+// its own identifier.
+static int AddZone(Tables* t, const char* name, int identifier, const CompiledZone* zone,
+                   char* errorOut, size_t errorCapacity)
 {
     int count = zone->transitionCount;
     int early = 0;
@@ -316,95 +308,149 @@ static int AddZone(Tables* t, const char* name, const CompiledZone* zone, char* 
     {
         late++;
     }
-    if (count > UINT16_MAX || early > UINT8_MAX || late > UINT8_MAX || t->wide.count > UINT16_MAX ||
-        t->list.count > UINT16_MAX || t->nameSize > UINT16_MAX || t->closingCount >= UINT8_MAX)
-    {
-        return Limit(errorOut, errorCapacity, name, "a count or an index");
-    }
-    Put(&t->records, "\n    {%d, %d, %d, %d, %d, %d, %d, ", t->times.count, t->types.count, count,
-        t->wide.count, early, late, t->list.count);
     Local local = {0};
     int initial = LocalIndex(&local, &t->offsets, zone->initial);
+    uint32_t typeFirst = t->counts[sectionTypes];
+    uint32_t narrowFirst = t->counts[sectionNarrow];
+    uint32_t wideFirst = t->counts[sectionWide];
     for (int i = 0; i < count; i++)
     {
         const CompiledTransition* tr = &zone->transitions[i];
-        if (i < early || i >= count - late)
-        {
-            Value(&t->wide, "INT64_C(%lld)", (long long)tr->at);
-        }
-        else if (!Narrow(tr->at))
+        bool wide = i < early || i >= count - late;
+        if (!wide && !Narrow(tr->at))
         {
             return Limit(errorOut, errorCapacity, name, "a time between narrow ones");
         }
-        else
-        {
-            Value(&t->times, "%lld", (long long)tr->at);
-        }
-        Value(&t->types, "%d", LocalIndex(&local, &t->offsets, tr->offset));
+        Put(t, wide ? sectionWide : sectionNarrow, (uint64_t)tr->at, wide ? 8 : 4);
+        t->counts[wide ? sectionWide : sectionNarrow]++;
+        Put(t, sectionTypes, (uint64_t)LocalIndex(&local, &t->offsets, tr->offset), 1);
+        t->counts[sectionTypes]++;
     }
-    for (int i = 0; i < local.count; i++)
+    if (count > UINT16_MAX || early > UINT8_MAX || late > UINT8_MAX || local.count > UINT8_MAX ||
+        wideFirst > UINT16_MAX || t->counts[sectionList] > UINT16_MAX ||
+        t->counts[sectionClosings] >= UINT8_MAX)
     {
-        Value(&t->list, "%d", local.shared[i]);
+        return Limit(errorOut, errorCapacity, name, "a count or an index");
     }
+    Put(t, sectionZones, narrowFirst, 4);
+    Put(t, sectionZones, typeFirst, 4);
+    Put(t, sectionZones, (uint64_t)count, 2);
+    Put(t, sectionZones, wideFirst, 2);
+    Put(t, sectionZones, t->counts[sectionList], 2);
+    Put(t, sectionZones, (uint64_t)identifier, 2);
+    Put(t, sectionZones, (uint64_t)early, 1);
+    Put(t, sectionZones, (uint64_t)late, 1);
+    Put(t, sectionZones, (uint64_t)local.count, 1);
+    Put(t, sectionZones, (uint64_t)initial, 1);
     if (zone->closing)
     {
         AddClosing(t, zone);
     }
-    Put(&t->records, "%d, %d, %d},", initial, zone->closing ? t->closingCount : 0,
-        (int)t->nameSize);
-    Put(&t->names, "\n    \"%s\\0\"", name);
-    t->nameSize += strlen(name) + 1;
+    Put(t, sectionZones, zone->closing ? t->counts[sectionClosings] : 0, 1);
+    Put(t, sectionZones, 0, 3);
+    t->counts[sectionZones]++;
+    for (int i = 0; i < local.count; i++)
+    {
+        Put(t, sectionList, (uint64_t)local.shared[i], 2);
+        t->counts[sectionList]++;
+    }
     return 1;
 }
 
-static void Assemble(Text* out, Tables* t, const char* release, int zoneCount)
+static void AddIdentifiers(Tables* t, const ZoneIdentifier* ids, int count)
 {
-    Put(out,
-        "// SPDX-License-Identifier: MIT\n"
-        "// Copyright (c) 2026 Sirac Ozmen\n"
-        "//\n"
-        "// The time zones of tzdb %s (record mloc-0041), compiled from its\n"
-        "// source in the layout of zone_tables.h.\n"
-        "// Generated by tools/mlocgen; do not edit.\n"
-        "// clang-format off\n"
-        "\n"
-        "#include \"zone_tables.h\"\n"
-        "\n"
-        "const char mlocZoneRelease[] = \"%s\";\n"
-        "const uint16_t mlocZoneCount = %d;\n",
-        release, release, zoneCount);
-    Put(out, "\nconst ZoneRecord mlocZones[%d] = {%.*s\n};\n", zoneCount, (int)t->records.size,
-        t->records.bytes);
-    Put(out, "\nconst ZoneOffset mlocZoneOffsets[%d] = {", t->offsets.count);
-    for (int i = 0; i < t->offsets.count; i++)
+    for (int i = 0; i < count; i++)
     {
-        Put(out, "%s{%d, %d},", i % 6 == 0 ? "\n    " : " ", (int)t->offsets.items[i].standard,
-            (int)t->offsets.items[i].save);
+        size_t length = strlen(ids[i].name);
+        Put(t, sectionIdentifiers, t->counts[sectionText], 4);
+        Put(t, sectionIdentifiers, length, 1);
+        Put(t, sectionIdentifiers, 0, 1);
+        Put(t, sectionIdentifiers, (uint64_t)ids[i].zone, 2);
+        Put(t, sectionIdentifiers, (uint64_t)ids[i].primary, 2);
+        Put(t, sectionIdentifiers, 0, 2);
+        for (size_t k = 0; k < length; k++)
+        {
+            Put(t, sectionText, (uint8_t)ids[i].name[k], 1);
+        }
+        t->counts[sectionText] += (uint32_t)length;
+        t->counts[sectionIdentifiers]++;
     }
-    Put(out, "\n};\n");
-    Put(out, "\nconst uint16_t mlocZoneOffsetList[%d] = {%.*s\n};\n", t->list.count,
-        (int)t->list.text.size, t->list.text.bytes);
-    Put(out, "\nconst int32_t mlocZoneTimes[%d] = {%.*s\n};\n", t->times.count,
-        (int)t->times.text.size, t->times.text.bytes);
-    Put(out, "\nconst int64_t mlocZoneWideTimes[%d] = {%.*s\n};\n", t->wide.count,
-        (int)t->wide.text.size, t->wide.text.bytes);
-    Put(out, "\nconst uint8_t mlocZoneTypes[%d] = {%.*s\n};\n", t->types.count,
-        (int)t->types.text.size, t->types.text.bytes);
-    Put(out, "\nconst ZoneClosing mlocZoneClosings[%d] = {%.*s\n};\n", t->closingCount,
-        (int)t->closings.size, t->closings.bytes);
-    Put(out, "\nconst char mlocZoneNameText[] =%.*s;\n", (int)t->names.size, t->names.bytes);
 }
 
-static void FreeTables(Tables* t)
+// The header, then each section from an 8-byte boundary.
+static Bytes Assemble(Tables* t)
 {
-    free(t->list.text.bytes);
-    free(t->times.text.bytes);
-    free(t->wide.text.bytes);
-    free(t->types.text.bytes);
-    free(t->closings.bytes);
-    free(t->names.bytes);
-    free(t->records.bytes);
-    free(t);
+    for (int i = 0; i < t->offsets.count; i++)
+    {
+        Put(t, sectionOffsets, (uint32_t)t->offsets.items[i].standard, 4);
+        Put(t, sectionOffsets, (uint32_t)t->offsets.items[i].save, 4);
+    }
+    t->counts[sectionOffsets] = (uint32_t)t->offsets.count;
+    Bytes out = {0};
+    for (int i = 0; i < 9; i++)
+    {
+        PutN(&out, t->counts[i], 4);
+    }
+    PutN(&out, 0, 4);
+    for (int i = 0; i < 9; i++)
+    {
+        while (out.size % 8 != 0)
+        {
+            PutN(&out, 0, 1);
+        }
+        for (size_t k = 0; k < t->sections[i].size; k++)
+        {
+            PutN(&out, t->sections[i].data[k], 1);
+        }
+        free(t->sections[i].data);
+    }
+    return out;
+}
+
+static bool SameZone(const CompiledZone* a, const CompiledZone* b)
+{
+    bool same = a->initial.standard == b->initial.standard && a->initial.save == b->initial.save &&
+                a->transitionCount == b->transitionCount && a->closing == b->closing &&
+                (!a->closing || (a->firstYear == b->firstYear &&
+                                 memcmp(a->changes, b->changes, sizeof(a->changes)) == 0));
+    for (int i = 0; same && i < a->transitionCount; i++)
+    {
+        same = a->transitions[i].at == b->transitions[i].at &&
+               a->transitions[i].offset.standard == b->transitions[i].offset.standard &&
+               a->transitions[i].offset.save == b->transitions[i].offset.save;
+    }
+    return same;
+}
+
+// Each name reads its primary's data, so equal identifiers give equal
+// offsets; where the two differ as Zones (Etc/GMT's primary is UTC, a
+// Link to Etc/UTC), they must compile the same.
+static int ReadPrimaryData(ZoneIdentifier* ids, int count, const CompiledZone* zones,
+                           char* errorOut, size_t errorCapacity)
+{
+    for (int i = 0; i < count; i++)
+    {
+        int zone = ids[ids[i].primary].zone;
+        if (zone != ids[i].zone && !SameZone(&zones[zone], &zones[ids[i].zone]))
+        {
+            snprintf(errorOut, errorCapacity, "zone %s: its primary's data differs", ids[i].name);
+            return 0;
+        }
+        ids[i].zone = zone;
+    }
+    return 1;
+}
+
+static int IdentifierOf(const ZoneIdentifier* ids, int count, const char* name)
+{
+    for (int i = 0; i < count; i++)
+    {
+        if (strcmp(ids[i].name, name) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 // The release in the source directory's version file must be the pin's.
@@ -431,8 +477,8 @@ static int CheckRelease(const char* tzdbDirectory, const char* release, char* er
     return 1;
 }
 
-int GenerateZones(const char* tzdbDirectory, const char* release, char** sourceOut,
-                  size_t* sourceSizeOut, char* errorOut, size_t errorCapacity)
+int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const char* release,
+                  DataFile* file, char* errorOut, size_t errorCapacity)
 {
     if (!CheckRelease(tzdbDirectory, release, errorOut, errorCapacity))
     {
@@ -445,23 +491,32 @@ int GenerateZones(const char* tzdbDirectory, const char* release, char** sourceO
     {
         return 0;
     }
-    Tables* t = calloc(1, sizeof(Tables));
-    int ok = t != nullptr;
+    ZoneIdentifier* ids = nullptr;
+    int idCount = ZoneIdentifiers(&tzdb, commonDirectory, &ids, errorOut, errorCapacity);
+    Tables* t = idCount < 0 ? nullptr : calloc(1, sizeof(Tables));
+    int ok = t != nullptr && idCount <= UINT16_MAX &&
+             ReadPrimaryData(ids, idCount, zones, errorOut, errorCapacity);
     for (int z = 0; ok && z < count; z++)
     {
-        ok = AddZone(t, tzdb.zones[z].name, &zones[z], errorOut, errorCapacity);
+        ok = AddZone(t, tzdb.zones[z].name, IdentifierOf(ids, idCount, tzdb.zones[z].name),
+                     &zones[z], errorOut, errorCapacity);
     }
     if (ok)
     {
-        Text out = {0};
-        Assemble(&out, t, release, count);
-        *sourceOut = out.bytes;
-        *sourceSizeOut = out.size;
+        AddIdentifiers(t, ids, idCount);
+        Bytes unit = Assemble(t);
+        DataFileAdd(file, kindZones, nullptr, unit.data, unit.size);
+        free(unit.data);
     }
-    if (t != nullptr)
+    else if (t != nullptr)
     {
-        FreeTables(t);
+        for (int i = 0; i < 9; i++)
+        {
+            free(t->sections[i].data);
+        }
     }
+    free(t);
+    free(ids);
     FreeAll(&tzdb, zones, count);
     return ok;
 }

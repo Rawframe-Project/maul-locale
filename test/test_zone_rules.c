@@ -8,16 +8,39 @@
 // every transition from 1800 to 2100 seen as a change of offset.
 // tools/check_zones.py compares every zone with zdump in CI.
 
+#include "data_format.h"
+#include "data_view.h"
+#include "kinds.h"
 #include "test_harness.h"
 #include "zone_rules.h"
 
+#include "maul-locale/data.h"
+
 #include <string.h>
+
+static ZoneTables s_tables;
+static mlocData s_builtin;
+
+static int32_t Identifier(const char* name)
+{
+    return mlocZoneFindIdentifier(&s_tables, name, strlen(name));
+}
 
 static uint32_t Zone(const char* name)
 {
-    int32_t zone = mlocZoneFind(name, strlen(name));
-    CHECK(zone >= 0, name);
-    return zone < 0 ? 0 : (uint32_t)zone;
+    int32_t identifier = Identifier(name);
+    CHECK(identifier >= 0, name);
+    return identifier < 0 ? 0 : mlocZoneIdentifierZone(&s_tables, (uint32_t)identifier);
+}
+
+static ZoneOffset OffsetAt(uint32_t zone, int64_t seconds)
+{
+    return mlocZoneOffsetAt(&s_tables, zone, seconds);
+}
+
+static bool Next(uint32_t zone, int64_t seconds, int64_t* at, ZoneOffset* o)
+{
+    return mlocZoneNextTransition(&s_tables, zone, seconds, at, o);
 }
 
 static bool Is(ZoneOffset o, int32_t standard, int32_t save)
@@ -25,19 +48,94 @@ static bool Is(ZoneOffset o, int32_t standard, int32_t save)
     return o.standard == standard && o.save == save;
 }
 
-static void TestFind(void)
+// Whether a name's primary identifier is the given one.
+static bool PrimaryIs(const char* name, const char* primary)
 {
-    CHECK(mlocZoneFind("America/New_York", 16) >= 0 &&
-              strcmp(mlocZoneName(Zone("America/New_York")), "America/New_York") == 0,
-          "a zone by name");
-    CHECK(mlocZoneFind("America/New_Yor", 15) < 0 && mlocZoneFind("america/new_york", 16) < 0 &&
-              mlocZoneFind("US/Eastern", 10) < 0 && mlocZoneFind("Factory", 7) < 0,
-          "a prefix, another case, a link and Factory are not zones here");
-    CHECK(mlocZoneFind(mlocZoneName(0), strlen(mlocZoneName(0))) == 0 &&
-              mlocZoneFind(mlocZoneName(mlocZoneCount - 1),
-                           strlen(mlocZoneName(mlocZoneCount - 1))) == mlocZoneCount - 1,
-          "the first and last zones");
-    CHECK(strlen(mlocZoneRelease) == 5, "the release");
+    int32_t identifier = Identifier(name);
+    if (identifier < 0)
+    {
+        return false;
+    }
+    size_t length = 0;
+    const char* found = mlocZoneIdentifierName(
+        &s_tables, mlocZoneIdentifierPrimary(&s_tables, (uint32_t)identifier), &length);
+    return length == strlen(primary) && memcmp(found, primary, length) == 0;
+}
+
+static void TestIdentifiers(void)
+{
+    size_t length = 0;
+    const char* name =
+        mlocZoneIdentifierName(&s_tables, (uint32_t)Identifier("africa/CAIRO"), &length);
+    CHECK(Identifier("africa/CAIRO") >= 0 && length == 12 && memcmp(name, "Africa/Cairo", 12) == 0,
+          "a name found with case ignored, given in its own case");
+    CHECK(Identifier("America/New_Yor") < 0 && Identifier("Factory") < 0 && Identifier("") < 0 &&
+              Identifier("America/New_York/") < 0,
+          "a prefix, Factory, nothing and a longer name are not identifiers");
+    CHECK(Zone("US/Eastern") == Zone("America/New_York") &&
+              PrimaryIs("US/Eastern", "America/New_York"),
+          "a Link reads its Zone and resolves to it");
+    // ECMA-402's exceptions and test262's cases.
+    CHECK(PrimaryIs("Asia/Calcutta", "Asia/Kolkata") && PrimaryIs("Etc/GMT", "UTC") &&
+              PrimaryIs("Etc/UTC", "UTC") && PrimaryIs("GMT", "UTC") && PrimaryIs("UTC", "UTC") &&
+              PrimaryIs("Europe/Bratislava", "Europe/Bratislava") &&
+              Zone("Europe/Bratislava") == Zone("Europe/Prague") &&
+              PrimaryIs("Atlantic/Jan_Mayen", "Arctic/Longyearbyen") &&
+              PrimaryIs("Atlantic/Reykjavik", "Atlantic/Reykjavik") &&
+              PrimaryIs("Asia/Chungking", "Asia/Shanghai") &&
+              PrimaryIs("Europe/Kiev", "Europe/Kyiv") && PrimaryIs("CST6CDT", "CST6CDT"),
+          "primary identifiers");
+    CHECK(s_tables.identifierCount > s_tables.zoneCount && s_tables.zoneCount > 300, "the counts");
+}
+
+// A copy of the unit with one field changed is refused.
+static void TestValidator(void)
+{
+    DataSpan span;
+    DataView view = mlocViewOf(&s_builtin);
+    CHECK(mlocFindDataUnit(&view, kindZones, dataNoLocale, &span) && mlocValidZones(&view, span),
+          "the compiled-in unit");
+    static uint8_t s_copy[1 << 18];
+    if (span.size > sizeof(s_copy))
+    {
+        CHECK(false, "the copy's room");
+        return;
+    }
+    ZoneTables t;
+    DataSpan copy = {s_copy, span.size};
+    bool all = true;
+    // A count one higher, a type past its zone's offsets, two identifiers
+    // swapped, a closing month of January, a negative saving.
+    for (int c = 0; c < 5; c++)
+    {
+        memcpy(s_copy, span.bytes, span.size);
+        all = all && mlocZoneTablesOf(copy, &t);
+        if (c == 0)
+        {
+            s_copy[0]++;
+        }
+        else if (c == 1)
+        {
+            ((uint8_t*)t.types)[0] = 200;
+        }
+        else if (c == 2)
+        {
+            uint8_t swap[zoneIdentifierSize];
+            memcpy(swap, t.identifiers, zoneIdentifierSize);
+            memcpy((uint8_t*)t.identifiers, t.identifiers + zoneIdentifierSize, zoneIdentifierSize);
+            memcpy((uint8_t*)t.identifiers + zoneIdentifierSize, swap, zoneIdentifierSize);
+        }
+        else if (c == 3)
+        {
+            ((uint8_t*)t.closings)[4] = 1;
+        }
+        else
+        {
+            ((uint8_t*)t.offsets)[7] = 0xFF;
+        }
+        all = all && !mlocValidZones(&view, copy);
+    }
+    CHECK(all, "a changed count, type, order, month or saving refused");
 }
 
 static void TestKnownTimes(void)
@@ -45,23 +143,23 @@ static void TestKnownTimes(void)
     uint32_t newYork = Zone("America/New_York");
     // Local mean time until November 18 of 1883 at 17:00, before int32_t's
     // range.
-    CHECK(Is(mlocZoneOffsetAt(newYork, INT64_C(-2717650801)), -17762, 0) &&
-              Is(mlocZoneOffsetAt(newYork, INT64_C(-2717650800)), -18000, 0) &&
-              Is(mlocZoneOffsetAt(newYork, zoneMinSeconds), -17762, 0),
+    CHECK(Is(OffsetAt(newYork, INT64_C(-2717650801)), -17762, 0) &&
+              Is(OffsetAt(newYork, INT64_C(-2717650800)), -18000, 0) &&
+              Is(OffsetAt(newYork, zoneMinSeconds), -17762, 0),
           "New York's local mean time");
-    CHECK(Is(mlocZoneOffsetAt(newYork, 1710053999), -18000, 0) &&
-              Is(mlocZoneOffsetAt(newYork, 1710054000), -18000, 3600) &&
-              Is(mlocZoneOffsetAt(newYork, 1730613599), -18000, 3600) &&
-              Is(mlocZoneOffsetAt(newYork, 1730613600), -18000, 0),
+    CHECK(Is(OffsetAt(newYork, 1710053999), -18000, 0) &&
+              Is(OffsetAt(newYork, 1710054000), -18000, 3600) &&
+              Is(OffsetAt(newYork, 1730613599), -18000, 3600) &&
+              Is(OffsetAt(newYork, 1730613600), -18000, 0),
           "New York in 2024");
     // The closing rule near the end of the range: March 12 of 275758.
-    CHECK(Is(mlocZoneOffsetAt(newYork, INT64_C(8639920882799)), -18000, 0) &&
-              Is(mlocZoneOffsetAt(newYork, INT64_C(8639920882800)), -18000, 3600),
+    CHECK(Is(OffsetAt(newYork, INT64_C(8639920882799)), -18000, 0) &&
+              Is(OffsetAt(newYork, INT64_C(8639920882800)), -18000, 3600),
           "New York in 275758");
     uint32_t gaza = Zone("Asia/Gaza");
     int64_t at = 0;
     ZoneOffset o = {0};
-    CHECK(mlocZoneNextTransition(gaza, INT64_C(2208988800), &at, &o) && at == INT64_C(2216160000) &&
+    CHECK(Next(gaza, INT64_C(2208988800), &at, &o) && at == INT64_C(2216160000) &&
               Is(o, 7200, 3600),
           "Gaza in 2040, after int32_t's range");
 }
@@ -70,22 +168,20 @@ static void TestKnownTimes(void)
 static void TestRearguard(void)
 {
     uint32_t dublin = Zone("Europe/Dublin");
-    CHECK(Is(mlocZoneOffsetAt(dublin, 1751328000), 0, 3600) &&
-              Is(mlocZoneOffsetAt(dublin, 1735689600), 0, 0) &&
-              Is(mlocZoneOffsetAt(dublin, -15897600), 3600, 0) &&
-              Is(mlocZoneOffsetAt(dublin, 1509238799), 0, 3600) &&
-              Is(mlocZoneOffsetAt(dublin, 1509238800), 0, 0),
+    CHECK(Is(OffsetAt(dublin, 1751328000), 0, 3600) && Is(OffsetAt(dublin, 1735689600), 0, 0) &&
+              Is(OffsetAt(dublin, -15897600), 3600, 0) &&
+              Is(OffsetAt(dublin, 1509238799), 0, 3600) && Is(OffsetAt(dublin, 1509238800), 0, 0),
           "Dublin: summer is daylight time, and 1968 to 1971 standard");
     uint32_t windhoek = Zone("Africa/Windhoek");
-    CHECK(Is(mlocZoneOffsetAt(windhoek, 1467331200), 3600, 0) &&
-              Is(mlocZoneOffsetAt(windhoek, 1504400400), 3600, 3600) &&
-              Is(mlocZoneOffsetAt(windhoek, 1508795999), 3600, 3600) &&
-              Is(mlocZoneOffsetAt(windhoek, 1508796000), 7200, 0),
+    CHECK(Is(OffsetAt(windhoek, 1467331200), 3600, 0) &&
+              Is(OffsetAt(windhoek, 1504400400), 3600, 3600) &&
+              Is(OffsetAt(windhoek, 1508795999), 3600, 3600) &&
+              Is(OffsetAt(windhoek, 1508796000), 7200, 0),
           "Windhoek: daylight time until 2017-10-24, then standard");
     uint32_t casablanca = Zone("Africa/Casablanca");
-    CHECK(Is(mlocZoneOffsetAt(casablanca, 1751328000), 0, 3600) &&
-              Is(mlocZoneOffsetAt(casablanca, 1740787200), 0, 0) &&
-              Is(mlocZoneOffsetAt(casablanca, 1790812800), 0, 0),
+    CHECK(Is(OffsetAt(casablanca, 1751328000), 0, 3600) &&
+              Is(OffsetAt(casablanca, 1740787200), 0, 0) &&
+              Is(OffsetAt(casablanca, 1790812800), 0, 0),
           "Casablanca: +01 as daylight time outside Ramadan, until 2026-09-20");
 }
 
@@ -94,17 +190,16 @@ static void TestTransitions(void)
 {
     bool all = true;
     long count = 0;
-    for (uint32_t z = 0; z < mlocZoneCount; z++)
+    for (uint32_t z = 0; z < s_tables.zoneCount; z++)
     {
         int64_t at = INT64_C(-5364662400);
-        ZoneOffset before = mlocZoneOffsetAt(z, at);
+        ZoneOffset before = OffsetAt(z, at);
         ZoneOffset o = {0};
-        while (mlocZoneNextTransition(z, at, &at, &o) && at < INT64_C(4102444800))
+        while (Next(z, at, &at, &o) && at < INT64_C(4102444800))
         {
-            ZoneOffset previous = mlocZoneOffsetAt(z, at - 1);
+            ZoneOffset previous = OffsetAt(z, at - 1);
             all = all && Is(previous, before.standard, before.save) &&
-                  !Is(o, before.standard, before.save) &&
-                  Is(mlocZoneOffsetAt(z, at), o.standard, o.save);
+                  !Is(o, before.standard, before.save) && Is(OffsetAt(z, at), o.standard, o.save);
             before = o;
             count++;
         }
@@ -119,18 +214,20 @@ static void TestRangeEnd(void)
     uint32_t utc = Zone("Etc/UTC");
     int64_t at = 0;
     ZoneOffset o = {0};
-    CHECK(!mlocZoneNextTransition(newYork, zoneMaxSeconds, &at, &o) &&
-              !mlocZoneNextTransition(utc, zoneMinSeconds, &at, &o) &&
-              Is(mlocZoneOffsetAt(utc, zoneMaxSeconds), 0, 0),
+    CHECK(!Next(newYork, zoneMaxSeconds, &at, &o) && !Next(utc, zoneMinSeconds, &at, &o) &&
+              Is(OffsetAt(utc, zoneMaxSeconds), 0, 0),
           "no transition past the range's end, nor in UTC");
-    CHECK(mlocZoneNextTransition(newYork, zoneMaxSeconds - INT64_C(31622400), &at, &o) &&
-              at <= zoneMaxSeconds,
+    CHECK(Next(newYork, zoneMaxSeconds - INT64_C(31622400), &at, &o) && at <= zoneMaxSeconds,
           "the last year's transitions");
 }
 
 int main(void)
 {
-    TestFind();
+    mlocOpenBuiltinData(&s_builtin);
+    mlocDataSet data = {&s_builtin, 1};
+    CHECK(mlocFindZoneTables(&data, &s_tables), "the zones unit");
+    TestIdentifiers();
+    TestValidator();
     TestKnownTimes();
     TestRearguard();
     TestTransitions();

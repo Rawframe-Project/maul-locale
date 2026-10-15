@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A zone's offsets read from the compiled tables (zone_tables.h, record
-// mloc-0041): the offset at a time and the transitions around it. Times
-// are seconds since 1970 in universal time, within Temporal's range
-// (±10⁸ days); the closing rule runs to its end.
+// A zone's offsets read from the zones unit (zone_tables.h, record
+// mloc-0041): an identifier by name, the offset at a time and the next
+// transition. Times are seconds since 1970 in universal time, within
+// Temporal's range (±10⁸ days); the closing rule runs to its end.
 
 #ifndef MLOC_ZONE_RULES_H
 #define MLOC_ZONE_RULES_H
@@ -18,18 +18,18 @@
 static const int64_t zoneMinSeconds = INT64_C(-8640000000000);
 static const int64_t zoneMaxSeconds = INT64_C(8640000000000);
 
-// The zone named exactly, or -1.
-int32_t mlocZoneFind(const char* name, size_t length);
-
-const char* mlocZoneName(uint32_t zone);
+// The identifier a name matches with ASCII letters folded (ECMA-262
+// compares time zone identifiers so), or -1.
+int32_t mlocZoneFindIdentifier(const ZoneTables* t, const char* name, size_t length);
 
 // The offset in effect at a time.
-ZoneOffset mlocZoneOffsetAt(uint32_t zone, int64_t seconds);
+ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds);
 
 // The first transition strictly after a time and no later than
 // zoneMaxSeconds, with the offset it starts: false when there is none. A
 // transition changes the standard offset or the saving, even where their
 // sum stays.
-bool mlocZoneNextTransition(uint32_t zone, int64_t seconds, int64_t* atOut, ZoneOffset* offsetOut);
+bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
+                            ZoneOffset* offsetOut);
 
 #endif

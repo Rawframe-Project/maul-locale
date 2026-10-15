@@ -93,6 +93,13 @@ typedef struct TzdbLink
     char name[tzdbMaxName];
 } TzdbLink;
 
+// A row of zone.tab: a country code and a zone or link name.
+typedef struct TzdbCountry
+{
+    char code[3];
+    char zone[tzdbMaxName];
+} TzdbCountry;
+
 typedef struct Tzdb
 {
     // Sorted by name, so each rule set is one range.
@@ -105,10 +112,18 @@ typedef struct Tzdb
     int zoneCount;
     TzdbLink* links;
     int linkCount;
+    // zone.tab's rows, and backzone's Links (its "#PACKRATLIST zone.tab
+    // Link" lines included), which ECMA-402 reads to resolve primary
+    // identifiers; TzdbParse leaves them empty.
+    TzdbCountry* countries;
+    int countryCount;
+    TzdbLink* backzoneLinks;
+    int backzoneLinkCount;
 } Tzdb;
 
 // Reads the default build's files (the seven regions, etcetera and
-// backward) from a tzdb source directory. Returns 0 and a message on
+// backward) from a tzdb source directory, then zone.tab and backzone's
+// Links. Returns 0 and a message on
 // failure: a file missing, a form not taken, a zone line naming no rule
 // set, or a zone or link name twice.
 int TzdbRead(const char* directory, bool rearguard, Tzdb* out, char* errorOut,

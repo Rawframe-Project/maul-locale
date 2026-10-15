@@ -56,7 +56,10 @@ nanoseconds.
     saving raised by the most negative.
   - The generator checks that the rearguard form gives the main form's
     offsets for every zone.
-- **Layout** (`src/zone_tables.h`): per zone,
+- **A unit of the data file** (`src/zone_tables.h`, kind zones): the
+  compiled-in data carries it, its validator checks every index,
+  range and order on open, and the zone functions will take a data set
+  as the formatters do. It holds, per zone:
   - its transitions as `int32_t` seconds, with `int64_t` for the
     first or last few outside that range;
   - a one-byte place in the zone's own offset list, whose entries
@@ -67,19 +70,35 @@ nanoseconds.
 
   The generator checks that the closing rule gives the two years after
   the table as the source does, and that each of its changes changes
-  the offset.
+  the offset. Changes fall in February to November, so a year's
+  changes stay within that year.
+- **Identifiers:** every Zone and Link name, sorted with ASCII letters
+  folded, so a lookup ignores case as ECMA-262 does.
+  - Each name carries its primary identifier, as ECMA-402's
+    `AvailableNamedTimeZoneIdentifiers` resolves it from zone.tab,
+    backzone's Links and the UTC names.
+  - A Link outside zone.tab takes its country from CLDR's
+    `bcp47/timezone.xml`, which groups each place's names; the
+    generator refuses a primary that differs from CLDR's for a name
+    CLDR has, so a rename that needs ECMA-402's two-year wait shows
+    when the pin moves.
+  - A name reads its primary's data, so equal identifiers give equal
+    offsets; where the two are different Zones (Etc/GMT resolves to
+    UTC, a Link to Etc/UTC), the generator checks that they compile
+    the same.
 - **Version:** the release is pinned by name and the archive's SHA-256
   (`tools/tzdb-release.txt`, fetched by `tools/fetch_tzdb.sh`). The
   generator refuses a source directory holding another release.
 - **Later in this part:**
-  - Link names, and primary identifiers as ECMA-402 resolves them;
-  - lookup that ignores case, and offset zones;
+  - the public functions: a zone by name (ignoring case) or offset,
+    equality by primary identifier, the list of primaries, the offset
+    at an instant, possible instants, transitions, the start of a day;
+  - a zones file whose tzdb release may differ from the library's, so
+    a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;
   - Temporal's instants, date-times and zoned date-times with their
     arithmetic and rounding;
-  - IXDTF strings;
-  - and the zone tables as a unit of the data file, replaceable on
-    their own.
+  - IXDTF strings.
 
 ## Proof
 
@@ -95,11 +114,15 @@ nanoseconds.
 - **The unit test** (`test/test_zone_rules.c`) covers:
   - known times, at both ends of a table and near the range's end;
   - the rearguard periods;
-  - every transition from 1800 to 2100 seen as a change of offset.
+  - every transition from 1800 to 2100 seen as a change of offset;
+  - names found with case ignored, Links, and ECMA-402's primaries
+    (Asia/Calcutta, Etc/GMT, Europe/Bratislava, Atlantic/Jan_Mayen);
+  - the validator refusing a changed count, offset place, order,
+    closing month and saving.
 
 ## Consequences
 
 The zones answer the same as zic for the pinned source and give ICU's
 daylight periods. A new tzdb release is a new pin, a generator run, and
-the zic check. The tables for every zone take 108,948 bytes, against
-the 147,792 of ICU's `zoneinfo64.res`.
+the zic check. The zones unit takes 120,536 bytes with its 597
+identifiers, against the 147,792 of ICU's `zoneinfo64.res`.

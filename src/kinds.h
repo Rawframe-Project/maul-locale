@@ -127,4 +127,9 @@ constexpr uint32_t kindNameTitlecase = 0x00070008;
 // (record mloc-0039).
 constexpr uint32_t kindNamesSubdivisions = 0x00070009;
 
+// The zone part: every zone's transitions and closing rule, and the
+// identifiers with their primaries, a unit of no locale (record
+// mloc-0041, src/zone_tables.h).
+constexpr uint32_t kindZones = 0x00080001;
+
 #endif

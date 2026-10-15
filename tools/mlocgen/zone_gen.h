@@ -6,6 +6,8 @@
 #ifndef MLOCGEN_ZONE_GEN_H
 #define MLOCGEN_ZONE_GEN_H
 
+#include "datafile.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,12 +18,13 @@
 // failure.
 int PrintZones(const char* tzdbDirectory, int32_t untilYear, char* errorOut, size_t errorCapacity);
 
-// The source of src/generated/zone_data.c from a tzdb source directory
-// holding the pinned release, in *sourceOut, which the caller frees.
-// Returns 0 and a message on failure: another release, a zone the
-// compiler refuses, a zone whose rearguard form gives other offsets than
-// its main form, or a count past the table's fields.
-int GenerateZones(const char* tzdbDirectory, const char* release, char** sourceOut,
-                  size_t* sourceSizeOut, char* errorOut, size_t errorCapacity);
+// Adds the zones unit (src/zone_tables.h) to a data file, from a tzdb
+// source directory holding the pinned release and CLDR's common
+// directory (whose bcp47/timezone.xml gives Links' countries). Returns 0
+// and a message on failure: another release, a zone the compiler refuses,
+// a zone whose rearguard form gives other offsets than its main form,
+// identifiers zone_ids.h refuses, or a count past the unit's fields.
+int GenerateZones(const char* tzdbDirectory, const char* commonDirectory, const char* release,
+                  DataFile* file, char* errorOut, size_t errorCapacity);
 
 #endif

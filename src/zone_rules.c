@@ -7,9 +7,8 @@
 
 #include "zone_rules.h"
 
+#include "bytes.h"
 #include "calendar_arith.h"
-
-#include <string.h>
 
 enum
 {
@@ -23,39 +22,36 @@ static int64_t FloorDiv(int64_t a, int64_t b)
     return a / b - (a % b != 0 && (a < 0) != (b < 0));
 }
 
-static int64_t TimeOf(const ZoneRecord* z, uint32_t i)
+static int64_t TimeOf(const ZoneTables* t, const ZoneRecord* z, uint32_t i)
 {
     uint32_t late = (uint32_t)z->transitionCount - z->wideLate;
-    if (i < z->wideEarly)
+    if (i < z->wideEarly || i >= late)
     {
-        return mlocZoneWideTimes[z->wideFirst + i];
+        uint32_t wide = z->wideFirst + (i < z->wideEarly ? i : z->wideEarly + i - late);
+        return (int64_t)mlocLoad64(t->wide + (size_t)wide * 8);
     }
-    if (i >= late)
-    {
-        return mlocZoneWideTimes[z->wideFirst + z->wideEarly + (i - late)];
-    }
-    return mlocZoneTimes[z->narrowFirst + i - z->wideEarly];
+    return (int32_t)mlocLoad32(t->narrow + (size_t)(z->narrowFirst + i - z->wideEarly) * 4);
 }
 
-static ZoneOffset OffsetOf(const ZoneRecord* z, uint32_t place)
+static ZoneOffset OffsetOf(const ZoneTables* t, const ZoneRecord* z, uint32_t place)
 {
-    return mlocZoneOffsets[mlocZoneOffsetList[z->offsetFirst + place]];
+    return mlocZoneOffsetOf(t, mlocLoad16(t->list + (size_t)(z->offsetFirst + place) * 2));
 }
 
-static ZoneOffset TypeOf(const ZoneRecord* z, uint32_t i)
+static ZoneOffset TypeOf(const ZoneTables* t, const ZoneRecord* z, uint32_t i)
 {
-    return OffsetOf(z, mlocZoneTypes[z->typeFirst + i]);
+    return OffsetOf(t, z, t->types[z->typeFirst + i]);
 }
 
 // The number of transitions at or before a time.
-static uint32_t CountUpTo(const ZoneRecord* z, int64_t seconds)
+static uint32_t CountUpTo(const ZoneTables* t, const ZoneRecord* z, int64_t seconds)
 {
     uint32_t low = 0;
     uint32_t high = z->transitionCount;
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
-        if (TimeOf(z, middle) <= seconds)
+        if (TimeOf(t, z, middle) <= seconds)
         {
             low = middle + 1;
         }
@@ -90,21 +86,35 @@ static int64_t ChangeTime(const ZoneChange* c, int32_t year)
     return (day - epochDay) * secondsPerDay + c->time;
 }
 
-int32_t mlocZoneFind(const char* name, size_t length)
+static int Folded(char c)
+{
+    return c >= 'A' && c <= 'Z' ? c + 32 : (unsigned char)c;
+}
+
+// The order of an identifier's name and a name, letters folded.
+static int Order(const char* candidate, size_t candidateLength, const char* name, size_t length)
+{
+    for (size_t i = 0; i < candidateLength && i < length; i++)
+    {
+        int difference = Folded(candidate[i]) - Folded(name[i]);
+        if (difference != 0)
+        {
+            return difference;
+        }
+    }
+    return (candidateLength > length) - (candidateLength < length);
+}
+
+int32_t mlocZoneFindIdentifier(const ZoneTables* t, const char* name, size_t length)
 {
     uint32_t low = 0;
-    uint32_t high = mlocZoneCount;
+    uint32_t high = t->identifierCount;
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
-        const char* candidate = mlocZoneNameText + mlocZones[middle].name;
-        size_t candidateLength = strlen(candidate);
-        size_t common = candidateLength < length ? candidateLength : length;
-        int order = memcmp(candidate, name, common);
-        if (order == 0)
-        {
-            order = (candidateLength > length) - (candidateLength < length);
-        }
+        size_t candidateLength = 0;
+        const char* candidate = mlocZoneIdentifierName(t, middle, &candidateLength);
+        int order = Order(candidate, candidateLength, name, length);
         if (order == 0)
         {
             return (int32_t)middle;
@@ -121,67 +131,65 @@ int32_t mlocZoneFind(const char* name, size_t length)
     return -1;
 }
 
-const char* mlocZoneName(uint32_t zone)
+ZoneOffset mlocZoneOffsetAt(const ZoneTables* t, uint32_t zone, int64_t seconds)
 {
-    return mlocZoneNameText + mlocZones[zone].name;
-}
-
-ZoneOffset mlocZoneOffsetAt(uint32_t zone, int64_t seconds)
-{
-    const ZoneRecord* z = &mlocZones[zone];
-    uint32_t count = CountUpTo(z, seconds);
-    ZoneOffset offset = count == 0 ? OffsetOf(z, z->initial) : TypeOf(z, count - 1);
-    if (count < z->transitionCount || z->closing == 0)
+    ZoneRecord z = mlocZoneRecord(t, zone);
+    uint32_t count = CountUpTo(t, &z, seconds);
+    ZoneOffset offset = count == 0 ? OffsetOf(t, &z, z.initial) : TypeOf(t, &z, count - 1);
+    if (count < z.transitionCount || z.closing == 0)
     {
         return offset;
     }
     // Past the table: the latest change at or before the time, of its
     // year or the year before, else the table's last offset.
-    const ZoneClosing* c = &mlocZoneClosings[z->closing - 1];
+    int32_t first = mlocZoneClosingYear(t, z.closing - 1U);
     int64_t latest = INT64_MIN;
     int32_t year = YearOf(seconds);
     for (int32_t y = year - 1; y <= year; y++)
     {
-        for (int k = 0; y >= c->firstYear && k < 2; k++)
+        for (uint32_t k = 0; y >= first && k < 2; k++)
         {
-            int64_t at = ChangeTime(&c->changes[k], y);
+            ZoneChange c = mlocZoneClosingChange(t, z.closing - 1U, k);
+            int64_t at = ChangeTime(&c, y);
             if (at <= seconds && at > latest)
             {
                 latest = at;
-                offset = mlocZoneOffsets[c->changes[k].offset];
+                offset = mlocZoneOffsetOf(t, c.offset);
             }
         }
     }
     return offset;
 }
 
-bool mlocZoneNextTransition(uint32_t zone, int64_t seconds, int64_t* atOut, ZoneOffset* offsetOut)
+bool mlocZoneNextTransition(const ZoneTables* t, uint32_t zone, int64_t seconds, int64_t* atOut,
+                            ZoneOffset* offsetOut)
 {
-    const ZoneRecord* z = &mlocZones[zone];
-    uint32_t count = CountUpTo(z, seconds);
+    ZoneRecord z = mlocZoneRecord(t, zone);
+    uint32_t count = CountUpTo(t, &z, seconds);
     int64_t at = 0;
     ZoneOffset offset = {0};
-    if (count < z->transitionCount)
+    if (count < z.transitionCount)
     {
-        at = TimeOf(z, count);
-        offset = TypeOf(z, count);
+        at = TimeOf(t, &z, count);
+        offset = TypeOf(t, &z, count);
     }
-    else if (z->closing != 0)
+    else if (z.closing != 0)
     {
         // The changes come in time order: within a year by month, and
         // the years in turn; the time's year and the next hold the next
         // one.
-        const ZoneClosing* c = &mlocZoneClosings[z->closing - 1];
+        int32_t first = mlocZoneClosingYear(t, z.closing - 1U);
         int32_t year = YearOf(seconds);
-        year = year < c->firstYear ? c->firstYear : year;
+        year = year < first ? first : year;
         at = INT64_MAX;
-        for (int i = 0; at == INT64_MAX && i < 4; i++)
+        for (uint32_t i = 0; at == INT64_MAX && i < 4; i++)
         {
-            int64_t candidate = ChangeTime(&c->changes[i % 2], year + i / 2);
+            ZoneChange c = mlocZoneClosingChange(t, z.closing - 1U, i % 2);
+            int64_t candidate = ChangeTime(&c, year + (int32_t)(i / 2));
             if (candidate > seconds)
             {
                 at = candidate;
-                offset = mlocZoneOffsets[c->changes[i % 2].offset];
+                offset = mlocZoneOffsetOf(t, c.offset);
             }
         }
     }

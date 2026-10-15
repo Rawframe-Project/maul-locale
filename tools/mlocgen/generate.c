@@ -258,7 +258,6 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     Text rules = {0};
     Text eras = {0};
     Text years = {0};
-    Text zones = {0};
     char release[9] = "";
     memcpy(release, version.tzdb, sizeof(version.tzdb));
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
@@ -269,7 +268,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
         !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity) ||
-        !GenerateZones(tzdbDirectory, release, &zones.bytes, &zones.size, errorOut, errorCapacity))
+        !GenerateZones(tzdbDirectory, commonDirectory, release, &data, errorOut, errorCapacity))
     {
         free(rules.bytes);
         free(eras.bytes);
@@ -302,7 +301,6 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
              WriteFile(root, "plural_rules.c", &rules, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_eras.c", &eras, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_years.c", &years, errorOut, errorCapacity) &&
-             WriteFile(root, "zone_data.c", &zones, errorOut, errorCapacity) &&
              WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     for (size_t i = 0; ok && i < sizeof(nameFiles) / sizeof(nameFiles[0]); i++)
     {
@@ -320,7 +318,6 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     free(rules.bytes);
     free(eras.bytes);
     free(years.bytes);
-    free(zones.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;

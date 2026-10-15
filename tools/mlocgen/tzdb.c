@@ -502,42 +502,128 @@ int TzdbParse(const char* text, bool rearguard, Tzdb* out, char* errorOut, size_
     return ok;
 }
 
+// Appends a file of the source directory to a text, which ends with a
+// newline and a NUL. Returns the grown text, or null with a message (the
+// text then freed).
+static char* AppendFile(const char* directory, const char* name, char* text, size_t* size,
+                        char* errorOut, size_t errorCapacity)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/%s", directory, name);
+    FILE* file = fopen(path, "rb");
+    long length = -1;
+    if (file != nullptr && fseek(file, 0, SEEK_END) == 0)
+    {
+        length = ftell(file);
+    }
+    char* grown = length < 0 ? nullptr : realloc(text, *size + (size_t)length + 2);
+    bool read = grown != nullptr && fseek(file, 0, SEEK_SET) == 0 &&
+                fread(grown + *size, 1, (size_t)length, file) == (size_t)length;
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    if (!read)
+    {
+        free(grown != nullptr ? grown : text);
+        snprintf(errorOut, errorCapacity, "cannot read %s", path);
+        return nullptr;
+    }
+    *size += (size_t)length;
+    // A file's last line ends here even without its newline.
+    grown[(*size)++] = '\n';
+    grown[*size] = '\0';
+    return grown;
+}
+
+// zone.tab's rows: a country code, coordinates and a name, tab-separated.
+static int ReadCountries(const char* text, Tzdb* t, char* errorOut, size_t errorCapacity)
+{
+    for (const char* p = text; *p != '\0'; p += strcspn(p, "\n") + (p[strcspn(p, "\n")] != 0))
+    {
+        if (*p == '#' || *p == '\n')
+        {
+            continue;
+        }
+        const char* tab = strchr(p, '\t');
+        const char* zone = tab == nullptr ? nullptr : strchr(tab + 1, '\t');
+        size_t length = zone == nullptr ? 0 : strcspn(zone + 1, "\t\n");
+        if (tab == nullptr || tab - p != 2 || length == 0 || length >= tzdbMaxName)
+        {
+            snprintf(errorOut, errorCapacity, "zone.tab: a row is not taken");
+            return 0;
+        }
+        t->countries = Grow(t->countries, t->countryCount, sizeof(TzdbCountry));
+        TzdbCountry* row = &t->countries[t->countryCount++];
+        memcpy(row->code, p, 2);
+        row->code[2] = '\0';
+        memcpy(row->zone, zone + 1, length);
+        row->zone[length] = '\0';
+    }
+    return 1;
+}
+
+// backzone's "Link TARGET NAME" lines and those behind "#PACKRATLIST
+// zone.tab ".
+static int ReadBackzoneLinks(char* text, Tzdb* t, char* errorOut, size_t errorCapacity)
+{
+    static const char s_packrat[] = "#PACKRATLIST zone.tab ";
+    for (char* p = text; *p != '\0';)
+    {
+        size_t length = strcspn(p, "\n");
+        bool more = p[length] != '\0';
+        p[length] = '\0';
+        char* line =
+            strncmp(p, s_packrat, sizeof(s_packrat) - 1) == 0 ? p + sizeof(s_packrat) - 1 : p;
+        char* fields[maxFields];
+        bool quoted = false;
+        int n = strncmp(line, "Link", 4) == 0 ? Split(line, fields, &quoted) : 0;
+        if (n > 0)
+        {
+            t->backzoneLinks = Grow(t->backzoneLinks, t->backzoneLinkCount, sizeof(TzdbLink));
+            TzdbLink* link = &t->backzoneLinks[t->backzoneLinkCount++];
+            if (n != 3 || strcmp(fields[0], "Link") != 0 || !CopyName(link->target, fields[1]) ||
+                !CopyName(link->name, fields[2]))
+            {
+                snprintf(errorOut, errorCapacity, "backzone: a Link line is not taken");
+                return 0;
+            }
+        }
+        p += length + more;
+    }
+    return 1;
+}
+
 int TzdbRead(const char* directory, bool rearguard, Tzdb* out, char* errorOut, size_t errorCapacity)
 {
+    *out = (Tzdb){0};
     char* text = nullptr;
     size_t size = 0;
-    for (size_t i = 0; i < sizeof(s_files) / sizeof(s_files[0]); i++)
+    bool read = true;
+    for (size_t i = 0; read && i < sizeof(s_files) / sizeof(s_files[0]); i++)
     {
-        char path[4096];
-        snprintf(path, sizeof(path), "%s/%s", directory, s_files[i]);
-        FILE* file = fopen(path, "rb");
-        if (file == nullptr)
-        {
-            free(text);
-            snprintf(errorOut, errorCapacity, "cannot open %s", path);
-            return 0;
-        }
-        fseek(file, 0, SEEK_END);
-        long length = ftell(file);
-        fseek(file, 0, SEEK_SET);
-        char* grown = length < 0 ? nullptr : realloc(text, size + (size_t)length + 2);
-        bool read =
-            grown != nullptr && fread(grown + size, 1, (size_t)length, file) == (size_t)length;
-        fclose(file);
-        if (!read)
-        {
-            free(grown != nullptr ? grown : text);
-            snprintf(errorOut, errorCapacity, "cannot read %s", path);
-            return 0;
-        }
-        text = grown;
-        size += (size_t)length;
-        // A file's last line ends here even without its newline.
-        text[size++] = '\n';
-        text[size] = '\0';
+        text = AppendFile(directory, s_files[i], text, &size, errorOut, errorCapacity);
+        read = text != nullptr;
     }
-    int ok = TzdbParse(text, rearguard, out, errorOut, errorCapacity);
+    int ok = read && TzdbParse(text, rearguard, out, errorOut, errorCapacity);
     free(text);
+    char* countries = nullptr;
+    char* backzone = nullptr;
+    size_t countriesSize = 0;
+    size_t backzoneSize = 0;
+    ok = ok &&
+         (countries = AppendFile(directory, "zone.tab", nullptr, &countriesSize, errorOut,
+                                 errorCapacity)) != nullptr &&
+         ReadCountries(countries, out, errorOut, errorCapacity) &&
+         (backzone = AppendFile(directory, "backzone", nullptr, &backzoneSize, errorOut,
+                                errorCapacity)) != nullptr &&
+         ReadBackzoneLinks(backzone, out, errorOut, errorCapacity);
+    free(countries);
+    free(backzone);
+    if (!ok)
+    {
+        TzdbFree(out);
+    }
     return ok;
 }
 
@@ -547,5 +633,7 @@ void TzdbFree(Tzdb* tzdb)
     free(tzdb->lines);
     free(tzdb->zones);
     free(tzdb->links);
+    free(tzdb->countries);
+    free(tzdb->backzoneLinks);
     *tzdb = (Tzdb){0};
 }

@@ -137,11 +137,11 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/unit_usage.c
     src/wide.c
     src/zone_rules.c
+    src/zone_tables.c
     src/generated/builtin_data.c
     src/generated/plural_rules.c
     src/generated/calendar_eras.c
-    src/generated/calendar_years.c
-    src/generated/zone_data.c)
+    src/generated/calendar_years.c)
 maul_configure_library(maul-locale)
 
 if(MAUL_LOCALE_BUILD_TESTS)
@@ -300,7 +300,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal locale parse spellout)
+    foreach(area data decimal locale parse spellout zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -334,6 +334,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
+                                    tools/mlocgen/zone_ids.c
                                     tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
