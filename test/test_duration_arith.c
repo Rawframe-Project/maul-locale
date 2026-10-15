@@ -48,7 +48,15 @@ static void TestMakeDuration(void)
               d.time.seconds == 0 && d.time.nanoseconds == -1,
           "negative");
     mlocDurationValues zeros = {.years = -0.0, .days = 1};
-    CHECK(mlocMakeDuration(&zeros, &d) == mloc_success && d.date.days == 1, "-0 is no sign");
+    CHECK(mlocMakeDuration(&zeros, &d) == mloc_success && d.date.days == 1 && d.time.seconds == 0 &&
+              d.time.nanoseconds == 0,
+          "-0 is no sign; whole days leave no time");
+    // Only years, months and weeks stop at 2^32; days stop with the time
+    // at 2^53 seconds.
+    mlocDurationValues manyDays = {.days = 4294967296.0, .hours = 1};
+    CHECK(mlocMakeDuration(&manyDays, &d) == mloc_success && d.date.days == INT64_C(4294967296) &&
+              d.time.seconds == 3600,
+          "days past 2^32");
     // 2^53 seconds less a nanosecond, and 2^53 seconds.
     mlocDurationValues last = {.seconds = 9007199254740991.0,
                                .milliseconds = 999,
@@ -173,6 +181,13 @@ static void TestTimeDurations(void)
     CHECK(mlocTotalTimeDuration(&longest, mloc_timeUnitNanosecond, &total) == mloc_success &&
               total == -9007199254740991999999999.0,
           "every nanosecond, the nearest float64");
+    // A numerator ten bits shorter than an hour's nanoseconds is scaled by
+    // exactly 2^64 before the division; the bits are Python's
+    // float(Fraction(2147483762, 3600 * 10**9)).
+    mlocTimeDuration scaled = {2, 147483762};
+    CHECK(mlocTotalTimeDuration(&scaled, mloc_timeUnitHour, &total) == mloc_success &&
+              BitsOf(total) == UINT64_C(0x3f438bfff6465ea5),
+          "a quotient scaled by 2^64");
     mlocTimeDuration zero = {0, 0};
     CHECK(mlocTotalTimeDuration(&zero, mloc_timeUnitDay, &total) == mloc_success &&
               BitsOf(total) == 0,
@@ -228,6 +243,11 @@ static void TestDateTimeTotal(void)
     mlocDateTime before = At(275760, 8, 13, 0);
     CHECK(mlocDateTimeTotal(&before, &last, mloc_unitYear, &total) == mloc_errorInvalid,
           "the next year past the range");
+    // Equal date-times on the range's first full day: no month before it
+    // is asked for.
+    mlocDateTime first = At(-271821, 4, 20, 0);
+    CHECK(mlocDateTimeTotal(&first, &first, mloc_unitMonth, &total) == mloc_success && total == 0,
+          "zero in months at the start of the range");
 }
 
 static void TestZonedTotal(void)

@@ -145,6 +145,17 @@ static void TestUntil(void)
               mlocZonedDateTimeUntil(&berlin, mloc_calendarGregorian, &noon, &next, &r, nullptr) ==
                   mloc_errorInvalid,
           "a zone, instant or calendar the library would not make, nulls, with hours too");
+    // NudgeToZonedTime finds the instant a day after the start's date at
+    // the start's time; from the last hour of the range that is past it.
+    mlocTimeZone utc = {0};
+    mlocInstant last = {INT64_C(8640000000000), 0};
+    mlocInstant hourBefore = {INT64_C(8640000000000) - 3600, 0};
+    r = (mlocDateTimeRounding){mloc_unitDay, mloc_unitHour, 1, mloc_roundHalfExpand};
+    CHECK(mlocZonedDateTimeUntil(&utc, mloc_calendarIso8601, &hourBefore, &last, &r, &d) ==
+                  mloc_errorInvalid &&
+              mlocZonedDateTimeUntil(&utc, mloc_calendarIso8601, &last, &last, &r, &d) ==
+                  mloc_errorInvalid,
+          "a rounding whose next day passes the range");
 }
 
 static void TestRound(void)
