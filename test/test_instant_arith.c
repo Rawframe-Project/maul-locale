@@ -57,6 +57,12 @@ static void TestUntil(void)
     CHECK(mlocInstantUntil(&a, &b, &r, &d) == mloc_success && d.seconds == -20 &&
               d.nanoseconds == -999999998,
           "back, of one sign");
+    mlocInstant zero = {0, 0};
+    mlocInstant hour = {3600, 0};
+    r = (mlocTimeRounding){mloc_timeUnitHour, mloc_timeUnitHour, 1, mloc_roundTrunc};
+    CHECK(mlocInstantUntil(&zero, &hour, &r, &d) == mloc_success && d.seconds == 3600 &&
+              d.nanoseconds == 0,
+          "an exact hour, truncated to hours");
     r = (mlocTimeRounding){mloc_timeUnitHour, mloc_timeUnitSecond, 30, mloc_roundHalfExpand};
     CHECK(mlocInstantUntil(&b, &a, &r, &d) == mloc_success && d.seconds == 30 && d.nanoseconds == 0,
           "to 30 seconds");
