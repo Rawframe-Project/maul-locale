@@ -104,7 +104,9 @@ cycle, time precision, zone style).
   the 240 semantic skeletons of `testData/datetime/datetime.json`
   (four locales, four calendars, every field set, length, year style,
   hour cycle and zone style it has) and compares the classical
-  skeleton with the file's. All agree.
+  skeleton with the file's; 14 questions of its own cover the field
+  sets UTS #35 does not define, the other precisions and hour cycles,
+  and the year styles of a two-digit year. All agree.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,
