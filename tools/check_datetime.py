@@ -6,9 +6,12 @@
 # to Standard Skeletons") against CLDR's own test data: every case of
 # common/testData/datetime/datetime.json that names a semantic skeleton
 # must map to its classicalSkeleton, and the matcher must give a pattern;
-# so must the check's own questions below.
+# so must the check's own questions below. Given the formatter's tool and
+# data files, every date case (field sets without a time, and the
+# standard date formats alone) must also give the file's text.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
+#            [<conform_datetime> <dates.mloc> <spellout.mloc>]
 
 import json
 import os
@@ -52,12 +55,47 @@ def question(case):
                      str(PRECISION), str(ZONES[case.get("zoneStyle")])])
 
 
+# The date cases' field sets (mlocDateFieldSet), year styles and
+# standard styles, and the calendars' BCP 47 types.
+FIELD_SETS = {"YMDE": 1, "M": 7}
+STYLES = {"full": 1, "long": 2, "medium": 3, "short": 4}
+BCP47 = {"gregorian": "gregory", "buddhist": "buddhist", "japanese": "japanese",
+         "islamic-civil": "islamic-civil"}
+
+
+def date_line(case):
+    locale = "%s-u-ca-%s" % (case["locale"], BCP47[case["calendar"]])
+    day = case["input"][:10]
+    if "semanticSkeleton" in case:
+        return "\t".join([locale, str(FIELD_SETS[case["semanticSkeleton"]]),
+                          str(LENGTHS[case.get("semanticSkeletonLength", "medium")]),
+                          str(YEARS[case.get("yearStyle")]), "0", day])
+    return "\t".join([locale, "0", "0", "0", str(STYLES[case["dateLength"]]), day])
+
+
+def check_dates(cases, tool, dates, spellout):
+    """The formatted text of every date case; the count of differences."""
+    chosen = [c for c in cases if c.get("semanticSkeleton") in FIELD_SETS or
+              ("dateLength" in c and "timeLength" not in c)]
+    asked = "".join(date_line(c) + "\n" for c in chosen)
+    run = subprocess.run([tool, dates, spellout], input=asked, capture_output=True, text=True,
+                         check=True)
+    got = run.stdout.split("\n")[:len(chosen)]
+    wrong = [(date_line(c), c["expected"], g) for c, g in zip(chosen, got) if g != c["expected"]]
+    for line, want, have in wrong[:20]:
+        print(f"{line}: want {want}, got {have}")
+    print(f"{len(chosen) - len(wrong)} of {len(chosen)} dates agree")
+    return len(wrong)
+
+
 def main():
-    if len(sys.argv) != 3:
-        sys.exit("usage: check_datetime.py <mlocgen> <CLDR common directory>")
+    if len(sys.argv) not in (3, 6):
+        sys.exit("usage: check_datetime.py <mlocgen> <CLDR common directory> "
+                 "[<conform_datetime> <dates.mloc> <spellout.mloc>]")
     path = os.path.join(sys.argv[2], "testData", "datetime", "datetime.json")
     with open(path, encoding="utf-8") as f:
-        cases = [c for c in json.load(f) if "semanticSkeleton" in c]
+        every = json.load(f)
+    cases = [c for c in every if "semanticSkeleton" in c]
     questions = [question(c) for c in cases] + [q for q, _ in OWN]
     wants = [c["classicalSkeleton"] for c in cases] + [w for _, w in OWN]
     asked = "".join(q + "\n" for q in questions)
@@ -75,7 +113,8 @@ def main():
         print(f"{asked_line}: want {want}, got {got}")
     print(f"{len(questions) - len(wrong)} of {len(questions)} semantic skeletons agree "
           f"({len(OWN)} of them the check's own)")
-    sys.exit(1 if wrong else 0)
+    dates = check_dates(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
+    sys.exit(1 if wrong or dates else 0)
 
 
 if __name__ == "__main__":

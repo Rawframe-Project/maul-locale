@@ -62,6 +62,10 @@ format.
 - Time zones by their BCP 47 ids and Windows names, both ways, as CLDR
   maps them (`mlocFindTimeZoneBcp47`, `mlocFormatTimeZoneBcp47`,
   `mlocFindTimeZoneWindows`, `mlocFormatTimeZoneWindows`; mloc-0041).
+- Dates formatted (`maul-locale/datetime.h`): `mlocInitDateFormatter`
+  and `mlocFormatDate` write a date by a field set, length and year
+  style or a standard format, in the locale's calendar and digits, with
+  parts (mloc-0042).
 - Regional preferences give the calendar: the region's first in CLDR's
   calendarPreferenceData, or -u-ca's whole value (mloc-0018).
 - The dates data file, `dates.mloc`: every locale's semantic date

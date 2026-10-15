@@ -70,6 +70,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/data.c
     src/data_kinds.c
     src/date_data.c
+    src/date_format.c
+    src/date_write.c
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
@@ -318,6 +320,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_date_data PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}")
     endif()
+    # The date formatter reads the dates and the spell-out rules.
+    maul_add_test(date_format)
+    if(TARGET test_date_format)
+        set(MLOC_DATE_SPELLOUT_PATH ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_date_format PRIVATE "SHELL:--embed-file ${MLOC_DATES_FILE}@/dates.mloc"
+                                "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc@/spellout.mloc"
+                                "-sSTACK_SIZE=262144")
+            set(MLOC_DATE_SPELLOUT_PATH /spellout.mloc)
+        endif()
+        target_compile_definitions(test_date_format PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}"
+                                   MLOC_SPELLOUT_FILE="${MLOC_DATE_SPELLOUT_PATH}")
+    endif()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
@@ -340,6 +355,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_include_directories(conform_zones PRIVATE src)
         maul_apply_flags(conform_zones)
     endif()
+    # Dates formatted against CLDR's datetime conformance data
+    # (tools/check_datetime.py).
+    add_executable(conform_datetime test/conform_datetime.c)
+    target_link_libraries(conform_datetime PRIVATE maul-locale)
+    maul_apply_flags(conform_datetime)
     # BCP 47 ids and Windows names against CLDR's files
     # (tools/check_zone_codes.py).
     add_executable(conform_zone_codes test/conform_zone_codes.c)

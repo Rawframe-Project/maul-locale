@@ -195,6 +195,30 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
     return true;
 }
 
+bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t length,
+                            uint8_t digits[10 * numberDigitSize], uint8_t* lengthOut)
+{
+    DataSpan systems;
+    if (length > 8 || !mlocFindDataSetUnit(data, kindNumberSystems, nullptr, 0, &systems))
+    {
+        return false;
+    }
+    uint32_t system = FindSystem(systems, mlocPackSystem(id, (uint32_t)length));
+    if (system == numberAlgorithmic)
+    {
+        return false;
+    }
+    const uint8_t* found = System(systems, system) + 8;
+    memcpy(digits, found, 10 * numberDigitSize);
+    uint8_t n = 1;
+    while (n < numberDigitSize && found[n] != 0)
+    {
+        n++;
+    }
+    *lengthOut = n;
+    return true;
+}
+
 // Whether a pattern's prefix holds a currency placeholder.
 static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 {

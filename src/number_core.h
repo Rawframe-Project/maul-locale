@@ -94,6 +94,12 @@ typedef struct NumberWriter
 mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
                               const mlocLocale* locale, mlocNumberStyle style);
 
+// The ten digits of a numbering system by its id ("hanidec"), numberDigitSize
+// bytes apart, and their length; false for a system without digits or
+// data without the number systems.
+bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t length,
+                            uint8_t digits[10 * numberDigitSize], uint8_t* lengthOut);
+
 // As mlocInitNumberCore, for compact notation: also the system's compact
 // table of a length (long when longLength) and the compact patterns,
 // every index checked. mloc_errorNotFound for data without them.

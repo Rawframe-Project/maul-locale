@@ -104,6 +104,31 @@ cycle, time precision, zone style).
   carried to its semantic patterns' numeric year, month and day fields
   (a symbol-bound one to its symbol), as ICU4X carries it; a field it
   writes is stored with the numbering system's id.
+- **The formatter** (`maul-locale/datetime.h`): `mlocInitDateFormatter`
+  takes a field set (year, month and day by default), a length and a
+  year style, or one of the four standard formats; the calendar is the
+  locale's preference (-u-ca, else the region's first), a date of
+  another calendar read in it, the ISO calendar by the Gregorian data;
+  the digits are the locale's (-u-nu, else its default) and a pattern's
+  override writes its fields by its system (hanidec's digits, or the
+  spell-out part's hebr, jpanyear, hanidays and romanlow rules).
+  `mlocFormatDate` writes the fields CLDR 49's date patterns hold (G,
+  y, Y, r, U, M, L, d, E, c) with parts, refusing a pattern with any
+  other when made.
+- **Year style auto:** a year of a calendar counted from the Gregorian
+  (Gregorian, Buddhist, ROC, Japanese) is written as its pattern writes
+  it when its Gregorian year is from 1950 to 2049, as CLDR's datetime
+  conformance data expects (ICU4X asks the Buddhist calendar for its
+  century always); any other year takes the full year, and a year of an
+  era before the calendar's main one, or a Gregorian year before 1000,
+  its era too.
+- **Where ICU4C and ICU4X differ, chosen one by one:** a Hebrew year of
+  the current millennium in Hebrew letters leaves its thousands out
+  ("תשפ״ז"), as ICU4C writes dates (ICU4X writes "ה׳תשפ״ז"); a year
+  before the Hijra is a year of CLDR's "bh" era (ICU4C writes a negative
+  year of AH), a Persian year before its epoch a negative year of AP;
+  dates before 1582 are proleptic Gregorian, as Temporal and ICU4X have
+  them (ICU4C's Gregorian calendar turns Julian).
 - **Still to come in this part** (research 39's slices): the data units
   of compiled patterns per locale and calendar; dates in all 18
   calendars; times, hour cycles and day periods; time zone names by
@@ -148,6 +173,20 @@ cycle, time precision, zone style).
   leap pattern) and spoils each unit field by field; `fuzz_date_data`
   checks that an accepted unit of either kind reads only inside
   itself.
+- **The formatter against CLDR's datetime.json:** its 96 date cases
+  (YMDE and M at every length and year style, the standard date formats,
+  en, ja-JP, th-TH and ar-SA in their four calendars) give the file's
+  text, on every push (`tools/check_datetime.py` with
+  `conform_datetime`).
+- **Against ICU4C 79's DateFormat, once:** the four standard date
+  formats of its 906 locales in 16 calendars (islamic-rgsa left out) on
+  14 dates from 1700 to 2033 (an era's change, Adar I and Adar II, a
+  Chinese leap month): 811,776 dates, all equal but 33,103: 32,621 are
+  the astronomical Islamic calendar's days (mloc-0040), the rest the
+  standard formats' per-path inheritance above (nl_BE, ms_BN, es_HN,
+  zh_Hans_HK and its siblings), ckb_IR's Persian months, and gl's
+  Buddhist and ROC patterns, whose week-based year ICU4C counts in
+  Gregorian years.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

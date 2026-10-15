@@ -59,6 +59,8 @@ list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
 list: list_data list_join number_core
+date_format: bytes date_data date_write locale_prefs number_core number_tables
+date_write: bytes date_data decimal number_core number_tables
 unit_usage: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
 unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:

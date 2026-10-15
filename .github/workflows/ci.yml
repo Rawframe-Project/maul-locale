@@ -121,7 +121,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -162,11 +162,13 @@ jobs:
         run: |
           python3 tools/check_skeletons.py build/mlocgen ~/cldr-cache/cldr/common \
             test/skeletons_icu.tsv tools/skeleton-exceptions.txt
-      - name: Semantic skeletons against CLDR's test data
+      - name: Semantic skeletons and dates against CLDR's test data
         # Record mloc-0042: each semantic skeleton of datetime.json maps to
-        # its classical skeleton.
+        # its classical skeleton, and each date case gives its text.
         timeout-minutes: 5
-        run: python3 tools/check_datetime.py build/mlocgen ~/cldr-cache/cldr/common
+        run: |
+          python3 tools/check_datetime.py build/mlocgen ~/cldr-cache/cldr/common \
+            build/conform_datetime src/generated/dates.mloc src/generated/spellout.mloc
       - name: BCP 47 ids and Windows names against CLDR
         # Record mloc-0041: every id, identifier and Windows mapping, as
         # check_zone_codes.py reads CLDR's files.

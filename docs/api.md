@@ -149,6 +149,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetDataLocale(const mlocData* data, size_
 ```
 Returns one locale a source has data for, as CLDR names it ("de_AT", "sr_Latn"), in the order of their bytes.  @param data       An opened source. @param index      Below mlocGetDataLocaleCount. @param idOut      Receives the id, which is not NUL-terminated and lives as long as the source's bytes. @param lengthOut  Receives its length in bytes. @return mloc_success; mloc_errorInvalid for a null pointer or an index out of range. @par Thread safety Safe from any thread.
 
+## `datetime.h`
+
+Dates formatted (UTS #35 Part 4, record mloc-0042): a date written in a locale by what it should show, a semantic field set at a length ("Jan 5, 2026" for year, month and day, medium), as ICU4X's semantic skeletons and CLDR's datetime conformance data name them, or by the locale's four standard formats. The patterns were matched to the locale's data by the generator as ICU4C's DateTimePatternGenerator matches them; they and the calendar names are in a data file of their own, dates.mloc, which a program adds to its data set.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocDateOptions* options);
+```
+Makes a locale's date formatter. The calendar is the locale's (mlocLocalePreferences: -u-ca, else its region's first); the numbering system its -u-nu keyword's, else its default, with the systems a pattern names for its fields (Japanese years by jpanyear, Hebrew dates by hebr).  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the dates (dates.mloc), the number units, the preferences, the parents and, for a pattern naming an algorithmic numbering system, the spell-out rules. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the dates, the number units or the preferences, or a numbering system the spell-out rules lack; mloc_errorData for a pattern the formatter cannot write; mloc_errorInvalid for a null pointer or options out of range. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* date, mlocOutput* output);
+```
+Writes a date by the formatter, read in the formatter's calendar (the same day). Parts: mlocDatePart.  @param formatter  A formatter from mlocInitDateFormatter. @param date       The date. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a date outside Temporal's range, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
 ## `decimal.h`
 
 Decimal values and their plural operands (record mloc-0019): a number is formatted from its decimal digits, never from a binary value, so the digits a user typed are the digits shown.
@@ -691,4 +705,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-126 functions across 14 headers.
+128 functions across 15 headers.
