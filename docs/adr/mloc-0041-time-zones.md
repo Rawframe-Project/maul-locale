@@ -176,12 +176,23 @@ nanoseconds.
   seconds or by a divisor of a second. With a divisor, half-even's
   parity also counts the seconds when a second holds an odd number of
   steps (200 ms).
+- **Instants** (amended 2026-10-15, slice 12h):
+  - `mlocAddToInstant` is AddDurationToInstant: an instant plus a time
+    duration, refused past the range;
+  - `mlocInstantUntil` is DifferenceTemporalInstant's rounding of
+    DifferenceEpochNanoseconds, with `mlocTimeRounding` from hours down
+    and an increment below and dividing the next larger unit; the host
+    balances it as for times;
+  - `mlocRoundInstant` is RoundTemporalInstant: the increment divides a
+    day of the unit, and the nanoseconds are rounded as if positive
+    (RoundNumberToIncrementAsIfPositive). The nanoseconds past the
+    floored day's midnight are rounded, so half-even's parity also
+    counts the days when a day holds an odd number of steps (24 hours).
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;
-  - Temporal's instants, date-times and zoned date-times with their
-    arithmetic and rounding;
+  - Temporal's zoned date-times with their arithmetic and rounding;
   - IXDTF strings.
 
 ## Proof
@@ -223,6 +234,12 @@ nanoseconds.
   Temporal.PlainDateTime files, in every calendar: date-times made,
   added to, rounded, and their differences until and since. They are in
   `test/test262_datetime.inc`.
+- **Instant against test262:** `test/test_instant_test262.c` replays
+  377 rows and 1,583 checks from 67 of test262's Temporal.Instant
+  files: instants added to, rounded, and their differences until and
+  since, in `test/test262_instant.inc`. A largest unit of microseconds
+  or nanoseconds past `int64_t` takes its field from the exact decimal,
+  as a host does.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in
