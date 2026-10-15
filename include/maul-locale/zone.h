@@ -19,6 +19,7 @@
 #include "maul-locale/base.h"
 #include "maul-locale/calendar.h"
 #include "maul-locale/data.h"
+#include "maul-locale/decimal.h"
 
 // bool, for C17 callers; C23 and C++ have it built in.
 #include <stdbool.h>
@@ -270,6 +271,147 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocMakeDateTime(const mlocDate* date, const mlocTime* time,
                                                         mlocDateTime* dateTimeOut);
+
+    // A time duration, as Temporal's: seconds and the nanoseconds past
+    // them, of one sign (nanoseconds -999,999,999 to 999,999,999), the
+    // seconds below 2^53 in size.
+    typedef struct mlocTimeDuration
+    {
+        int64_t seconds;
+        int32_t nanoseconds;
+    } mlocTimeDuration;
+
+    // A duration's time fields, with days of 24 hours.
+    typedef struct mlocTimeDurationFields
+    {
+        int64_t days;
+        int64_t hours;
+        int64_t minutes;
+        int64_t seconds;
+        int64_t milliseconds;
+        int64_t microseconds;
+        int64_t nanoseconds;
+    } mlocTimeDurationFields;
+
+    // Temporal's units of a day and less.
+    typedef enum mlocTimeUnit
+    {
+        mloc_timeUnitDay = 0,
+        mloc_timeUnitHour = 1,
+        mloc_timeUnitMinute = 2,
+        mloc_timeUnitSecond = 3,
+        mloc_timeUnitMillisecond = 4,
+        mloc_timeUnitMicrosecond = 5,
+        mloc_timeUnitNanosecond = 6,
+    } mlocTimeUnit;
+
+    // How a difference of times is rounded and given (Temporal's
+    // difference settings): rounded to a multiple of increment of
+    // smallestUnit by mode, then given in units up to largestUnit.
+    typedef struct mlocTimeRounding
+    {
+        mlocTimeUnit largestUnit;
+        mlocTimeUnit smallestUnit;
+        uint32_t increment;
+        mlocRoundingMode mode;
+    } mlocTimeRounding;
+
+    /// Makes a time duration of fields (ECMA-262's
+    /// TimeDurationFromComponents, with days of 24 hours as
+    /// Add24HourDaysToTimeDuration counts them). A field too large for
+    /// int64_t is the host's to fold in.
+    ///
+    /// @param fields       The fields, of any signs.
+    /// @param durationOut  Receives the duration; left unchanged on
+    ///                     failure.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, or a
+    ///         field or the total of 2^53 seconds or more in size.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocMakeTimeDuration(const mlocTimeDurationFields* fields,
+                                                            mlocTimeDuration* durationOut);
+
+    /// Gives a time duration in fields up to a largest unit, each of the
+    /// duration's sign (ECMA-262's TemporalDurationFromInternal for its
+    /// time part): with days, hours below 24; with hours, minutes below
+    /// 60; and so on down to the largest unit, which takes the rest.
+    ///
+    /// @param duration     The duration.
+    /// @param largestUnit  The largest unit to give.
+    /// @param fieldsOut    Receives the fields.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a
+    ///         duration the library would not make, an unknown unit, or a
+    ///         largest field past int64_t: nanoseconds of a duration of
+    ///         more than about 292 years, microseconds of more than about
+    ///         292,000 years. The host then forms that field, which
+    ///         Temporal keeps as a float64, from the duration.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocBalanceTimeDuration(const mlocTimeDuration* duration,
+                                                               mlocTimeUnit largestUnit,
+                                                               mlocTimeDurationFields* fieldsOut);
+
+    /// Adds a time duration to a time of day (ECMA-262's AddTime), giving
+    /// the time and the days it passes, as Temporal's PlainTime.add (which
+    /// drops the days) and PlainDateTime.add read it. Subtracting is
+    /// adding the negated duration.
+    ///
+    /// @param time      The time of day.
+    /// @param duration  The duration.
+    /// @param timeOut   Receives the time.
+    /// @param daysOut   Receives the days passed, negative going back; may
+    ///                  be null.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, or a
+    ///         time or duration the library would not make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocAddToTime(const mlocTime* time,
+                                                     const mlocTimeDuration* duration,
+                                                     mlocTime* timeOut, int64_t* daysOut);
+
+    /// Computes the duration from one time of day to another, rounded and
+    /// given in fields, as Temporal's PlainTime.until does: units hour to
+    /// nanosecond, the smallest no larger than the largest, an increment
+    /// dividing the unit's next (24 for hours, 60 for minutes and seconds,
+    /// 1000 for the rest) into more than one part. Temporal's since is
+    /// this with the mode negated (ceil for floor, half-ceil for
+    /// half-floor, and back) and the fields negated.
+    ///
+    /// @param one        The time from.
+    /// @param two        The time to.
+    /// @param rounding   The units, increment and mode.
+    /// @param fieldsOut  Receives the fields; days are 0.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a time
+    ///         the library did not make, a unit, increment or mode
+    ///         refused.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocTimeUntil(const mlocTime* one, const mlocTime* two,
+                                                     const mlocTimeRounding* rounding,
+                                                     mlocTimeDurationFields* fieldsOut);
+
+    /// Rounds a time of day to a multiple of an increment of a unit
+    /// (ECMA-262's RoundTime), as Temporal's PlainTime.round (units hour
+    /// to nanosecond, which drops the days) and PlainDateTime.round read
+    /// it. A unit of hours to nanoseconds takes an increment dividing the
+    /// next unit (24, 60, 60, 1000, 1000, 1000) into more than one part;
+    /// a day takes 1, giving midnight of the day or the next.
+    ///
+    /// @param time       The time of day.
+    /// @param unit       The unit.
+    /// @param increment  The increment.
+    /// @param mode       The rounding mode.
+    /// @param timeOut    Receives the time.
+    /// @param daysOut    Receives 1 when the rounding reaches the next
+    ///                   midnight, else 0; may be null.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a time
+    ///         the library did not make, or a unit, increment or mode
+    ///         refused.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocRoundTime(const mlocTime* time, mlocTimeUnit unit,
+                                                     uint32_t increment, mlocRoundingMode mode,
+                                                     mlocTime* timeOut, int64_t* daysOut);
 
     /// Finds the instants at which a zone's clocks read a date-time
     /// (ECMA-262's GetPossibleEpochNanoseconds): none when a forward

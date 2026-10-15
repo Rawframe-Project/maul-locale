@@ -134,6 +134,27 @@ nanoseconds.
   are still read, so a local time on its last day is placed exactly.
   The C function mlocGetInstantFor refuses with mloc_errorInvalid where
   ECMA-262 throws a RangeError, as the calendar's reject does.
+- **Time durations and times of day** (amended 2026-10-15, slice 12f):
+  - `mlocTimeDuration` is Temporal's time duration as seconds and the
+    nanoseconds past them, of one sign, the seconds below 2^53, so no
+    wider integer is needed. `mlocMakeTimeDuration` sums
+    `mlocTimeDurationFields` (days of 24 hours, then hours to
+    nanoseconds, int64_t each), and `mlocBalanceTimeDuration` gives
+    them back up to an `mlocTimeUnit`. Temporal keeps a field as a
+    float64, so a valid duration may hold more nanoseconds than int64_t
+    can: such a field is the host's to form, from the duration, and
+    the balance refuses it (beyond about 292 years in nanoseconds, or
+    292,000 in microseconds);
+  - `mlocAddToTime` is AddTime, giving the days passed for
+    PlainDateTime;
+  - `mlocTimeUntil` is DifferenceTemporalPlainTime with
+    `mlocTimeRounding`; since is until with the mode negated and the
+    fields negated, as for dates;
+  - `mlocRoundTime` is RoundTime with ValidateTemporalRoundingIncrement's
+    rules, a day taking 1 and giving the next midnight's day.
+
+  Temporal's rounding of integers moved out of the calendar's rounding
+  into `src/rounding.c` for both.
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
@@ -171,6 +192,11 @@ nanoseconds.
   the offset at that instant agrees. In a gap the shift is the
   difference of the two folds' offsets. All 1,441,140 answers agree.
   The cldr CI job runs it.
+- **PlainTime against test262:** `test/test_time_test262.c` replays
+  613 rows and 3,615 checks from 115 of test262's Temporal.PlainTime
+  files: times made, added to, rounded, and their differences until and
+  since. They are in `test/test262_time.inc`. Files that need ISO time
+  strings wait for the IXDTF slice.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in

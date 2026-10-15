@@ -9,6 +9,7 @@
 // fraction of days.
 
 #include "calendar_year.h"
+#include "rounding.h"
 
 #include "maul-locale/calendar.h"
 
@@ -19,78 +20,10 @@ static int SignOf(int64_t v)
     return (v > 0) - (v < 0);
 }
 
-// The unsigned rounding mode of GetUnsignedRoundingMode.
-typedef enum Unsigned
-{
-    unsignedZero,
-    unsignedInfinity,
-    unsignedHalfZero,
-    unsignedHalfInfinity,
-    unsignedHalfEven,
-} Unsigned;
-
-static Unsigned UnsignedMode(mlocRoundingMode mode, bool negative)
-{
-    switch (mode)
-    {
-    case mloc_roundCeil:
-        return negative ? unsignedZero : unsignedInfinity;
-    case mloc_roundFloor:
-        return negative ? unsignedInfinity : unsignedZero;
-    case mloc_roundExpand:
-        return unsignedInfinity;
-    case mloc_roundTrunc:
-        return unsignedZero;
-    case mloc_roundHalfCeil:
-        return negative ? unsignedHalfZero : unsignedHalfInfinity;
-    case mloc_roundHalfFloor:
-        return negative ? unsignedHalfInfinity : unsignedHalfZero;
-    case mloc_roundHalfExpand:
-        return unsignedHalfInfinity;
-    case mloc_roundHalfTrunc:
-        return unsignedHalfZero;
-    default:
-        return unsignedHalfEven;
-    }
-}
-
-// ApplyUnsignedRoundingMode for x = r1 + (r2 - r1) * part / whole, with
-// 0 <= part < whole: whether x rounds to r2. evenLow says whether r1 is
-// an even multiple of the step, for half-even.
-static bool RoundsUp(int64_t part, int64_t whole, Unsigned mode, bool evenLow)
-{
-    if (part == 0)
-    {
-        return false;
-    }
-    if (mode == unsignedZero || mode == unsignedInfinity)
-    {
-        return mode == unsignedInfinity;
-    }
-    int64_t twice = 2 * part;
-    if (twice != whole)
-    {
-        return twice > whole;
-    }
-    return mode == unsignedHalfInfinity || (mode == unsignedHalfEven && !evenLow);
-}
-
 // RoundNumberToIncrement with trunc: toward zero to a multiple.
 static int64_t Truncated(int64_t value, int64_t increment)
 {
     return value / increment * increment;
-}
-
-// RoundNumberToIncrement with a mode, signed.
-static int64_t RoundedToIncrement(int64_t value, int64_t increment, mlocRoundingMode mode)
-{
-    bool negative = value < 0;
-    int64_t magnitude = negative ? -value : value;
-    int64_t low = magnitude / increment;
-    bool up =
-        RoundsUp(magnitude % increment, increment, UnsignedMode(mode, negative), low % 2 == 0);
-    int64_t rounded = (low + (up ? 1 : 0)) * increment;
-    return negative ? -rounded : rounded;
 }
 
 // The day a date duration reaches from a date, constrained.
@@ -228,7 +161,7 @@ mlocResult mlocDateUntilRounded(const mlocDate* one, const mlocDate* two,
     if (rounding->smallestUnit == mloc_dateUnitDay)
     {
         // NudgeToDayOrTime: the days to a multiple of the increment.
-        int64_t days = RoundedToIncrement(d.days, increment, rounding->mode);
+        int64_t days = mlocRoundToIncrement(d.days, increment, rounding->mode);
         expanded = SignOf(days - d.days) == SignOf(d.days);
         nudged = two->day + (days - d.days);
         d.days = days;
@@ -255,7 +188,8 @@ mlocResult mlocDateUntilRounded(const mlocDate* one, const mlocDate* two,
         bool negative = sign < 0;
         bool evenLow = (w.r1 / increment) % 2 == 0;
         bool up =
-            part == whole || RoundsUp(part, whole, UnsignedMode(rounding->mode, negative), evenLow);
+            part == whole ||
+            mlocRoundsUp(part, whole, mlocUnsignedRoundingMode(rounding->mode, negative), evenLow);
         expanded = expanded || up;
         d = up ? w.end : w.start;
         nudged = up ? w.endDay : w.startDay;
