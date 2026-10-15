@@ -188,11 +188,28 @@ nanoseconds.
     (RoundNumberToIncrementAsIfPositive). The nanoseconds past the
     floored day's midnight are rounded, so half-even's parity also
     counts the days when a day holds an odd number of steps (24 hours).
+- **Zoned date-times** (amended 2026-10-15, slice 12i): a zoned
+  date-time is its instant with the zone and calendar passed beside it.
+  - `mlocGetInstantForOffset` is InterpretISODateTimeOffset, with
+    `mlocOffsetOption` (use, ignore, prefer, reject) and matchMinutes for
+    a string's offset given to the minute; an exact offset is use, a wall
+    time ignore, and the start of a day is mlocGetStartOfDay;
+  - `mlocAddToZonedDateTime` is AddZonedDateTime;
+  - `mlocZonedDateTimeUntil` is DifferenceZonedDateTimeWithRounding with
+    `mlocDateTimeRounding`; the host balances the time part to hours, or
+    to a largest time unit, as TemporalDurationFromInternal does;
+  - `mlocRoundZonedDateTime` is Temporal.ZonedDateTime's round.
+
+  RoundRelativeDuration takes a zone: NudgeToZonedTime, and the day as a
+  calendar unit. Its moments are then the zone's instants, as a day and
+  the nanoseconds past universal midnight, and a window's length is no
+  longer whole days. Twice the progress is still compared by days first,
+  so 64 bits suffice. hoursInDay and withPlainTime are the host's, from
+  mlocGetStartOfDay and mlocGetInstantFor.
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;
-  - Temporal's zoned date-times with their arithmetic and rounding;
   - IXDTF strings.
 
 ## Proof
@@ -240,6 +257,28 @@ nanoseconds.
   since, in `test/test262_instant.inc`. A largest unit of microseconds
   or nanoseconds past `int64_t` takes its field from the exact decimal,
   as a host does.
+- **ZonedDateTime against test262:** `test/test_zoned_test262.c`
+  replays 6,279 rows and 57,301 checks from 318 of test262's
+  Temporal.ZonedDateTime files, in every calendar: added to, rounded,
+  differences until and since, starts of days, and property bags'
+  offsets weighed against the zone. They are in
+  `test/test262_zoned.inc`. Nearly all of test262's cases are in UTC or
+  an offset zone.
+- **Zoned arithmetic against a reading of ECMA-262:**
+  `tools/check_zoned.py` follows the specification's steps for
+  AddZonedDateTime, DifferenceZonedDateTimeWithRounding, the round and
+  InterpretISODateTimeOffset in the ISO calendar. It uses exact integers
+  and fractions over Python's zoneinfo, which reads zic's fat files for
+  the same source. Around every change of offset from 1900 to 2040 in
+  every zone it asks `test/conform_zoned.c` about:
+  - differences across the change, including ones near a whole day or
+    a whole month, with each kind of rounding;
+  - durations added across it;
+  - instants near it rounded;
+  - local times in its gap or fold found with either offset.
+
+  All 1,650,750 answers agree. A planted fault in NudgeToZonedTime
+  changes 44,296 of them. The cldr CI job runs it.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in

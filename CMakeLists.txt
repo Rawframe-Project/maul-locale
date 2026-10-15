@@ -139,6 +139,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/date_time.c
     src/datetime_arith.c
     src/instant_arith.c
+    src/zoned_arith.c
     src/duration_round.c
     src/rounding.c
     src/time_arith.c
@@ -254,6 +255,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(datetime_arith)
     maul_add_test(instant_test262)
     maul_add_test(instant_arith)
+    maul_add_test(zoned_test262)
+    maul_add_test(zoned_arith)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)
@@ -317,6 +320,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
     # runtime reports as deprecated.
     if(WIN32)
         target_compile_definitions(conform_local PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    # Zoned arithmetic against a reading of ECMA-262 over zoneinfo
+    # (tools/check_zoned.py), through the public functions.
+    add_executable(conform_zoned test/conform_zoned.c)
+    target_link_libraries(conform_zoned PRIVATE maul-locale)
+    maul_apply_flags(conform_zoned)
+    if(WIN32)
+        target_compile_definitions(conform_zoned PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
     maul_add_header_tests()
 endif()

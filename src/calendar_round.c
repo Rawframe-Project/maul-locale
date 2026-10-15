@@ -37,7 +37,8 @@ mlocResult mlocDateUntilRounded(const mlocDate* one, const mlocDate* two,
     // rounding's (duration_round.h).
     RelativeRounding relative = {(int)rounding->largestUnit, (int)rounding->smallestUnit,
                                  rounding->increment, rounding->mode};
-    if (!mlocRoundRelative(&d, one, 0, (Moment){two->day, 0}, &relative))
+    RelativeStart start = {one, 0, nullptr, {one->day, 0}};
+    if (!mlocRoundRelative(&d, &start, (Moment){two->day, 0}, &relative))
     {
         return mloc_errorInvalid;
     }

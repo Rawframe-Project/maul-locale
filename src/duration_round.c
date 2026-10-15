@@ -5,12 +5,12 @@
 
 #include "duration_round.h"
 
+#include "date_time.h"
 #include "rounding.h"
 
 enum
 {
     nanosecondsPerSecond = 1000000000,
-    secondsPerDay = 86400,
 };
 
 static const int64_t s_nanosecondsPerDay = INT64_C(86400000000000);
@@ -145,20 +145,61 @@ static bool Reach(const mlocDate* date, const mlocDateDuration* d, int64_t* dayO
     return true;
 }
 
+Moment mlocMomentOf(const mlocInstant* instant)
+{
+    int64_t day = FloorDiv(instant->seconds, secondsPerDay);
+    return (Moment){day + epochDay,
+                    (instant->seconds - day * secondsPerDay) * nanosecondsPerSecond +
+                        instant->nanoseconds};
+}
+
+// The moment a day reaches at the start's time of day: without a zone
+// the wall clock, with one its compatible instant (GetEpochNanosecondsFor).
+static bool At(const RelativeStart* s, int64_t day, Moment* out)
+{
+    if (s->zone == nullptr)
+    {
+        *out = (Moment){day, s->nanosecond};
+        return true;
+    }
+    int64_t second = s->nanosecond / nanosecondsPerSecond;
+    mlocTime time = {(uint8_t)(second / 3600), (uint8_t)(second / 60 % 60), (uint8_t)(second % 60),
+                     0, (uint32_t)(s->nanosecond % nanosecondsPerSecond)};
+    mlocDateTime dateTime = {{0}, time};
+    mlocInstant instant;
+    if (day < INT32_MIN || day > INT32_MAX ||
+        mlocMakeDateFromDay(mloc_calendarGregorian, (int32_t)day, &dateTime.date) != mloc_success ||
+        mlocGetInstantFor(s->zone, &dateTime, mloc_disambiguationCompatible, &instant) !=
+            mloc_success)
+    {
+        return false;
+    }
+    *out = mlocMomentOf(&instant);
+    return true;
+}
+
+// The time duration from one moment to another.
+static mlocTimeDuration Between(Moment from, Moment to)
+{
+    return Normalized((to.day - from.day) * secondsPerDay +
+                          (to.nanosecond - from.nanosecond) / nanosecondsPerSecond,
+                      (to.nanosecond - from.nanosecond) % nanosecondsPerSecond);
+}
+
 // ComputeNudgeWindow: the multiples r1 and r2 of the unit around the
 // duration (r1 shifted one increment on with shift), the durations with
-// them in place, and the days they reach.
+// them in place, and the moments they reach.
 typedef struct Window
 {
     int64_t r1;
     int64_t r2;
     mlocDateDuration start;
     mlocDateDuration end;
-    int64_t startDay;
-    int64_t endDay;
+    Moment startMoment;
+    Moment endMoment;
 } Window;
 
-static bool ComputeWindow(int sign, const mlocDateDuration* d, const mlocDate* one, int unit,
+static bool ComputeWindow(int sign, const mlocDateDuration* d, const RelativeStart* s, int unit,
                           int64_t increment, bool shift, Window* w)
 {
     int64_t step = increment * sign;
@@ -177,7 +218,7 @@ static bool ComputeWindow(int sign, const mlocDateDuration* d, const mlocDate* o
         w->start = (mlocDateDuration){d->years, w->r1, 0, 0};
         w->end = (mlocDateDuration){d->years, w->r2, 0, 0};
     }
-    else
+    else if (unit == unitWeek)
     {
         // Weeks: the weeks the days hold from where the years and months
         // reach, which every calendar counts as seven days (that date lies
@@ -188,23 +229,32 @@ static bool ComputeWindow(int sign, const mlocDateDuration* d, const mlocDate* o
         w->start = (mlocDateDuration){d->years, d->months, w->r1, 0};
         w->end = (mlocDateDuration){d->years, d->months, w->r2, 0};
     }
-    // The first date itself when the start duration is zero (ECMA-262's
+    else
+    {
+        // Days, which only a zone makes irregular.
+        w->r1 = Truncated(d->days, increment);
+        w->r2 = w->r1 + step;
+        w->start = (mlocDateDuration){d->years, d->months, d->weeks, w->r1};
+        w->end = (mlocDateDuration){d->years, d->months, d->weeks, w->r2};
+    }
+    // The first moment itself when the start duration is zero (ECMA-262's
     // Temporal text; the proposal's r1 = 0 left the larger units out).
-    w->startDay = one->day;
-    bool zero = w->start.years == 0 && w->start.months == 0 && w->start.weeks == 0;
-    if (!zero && !Reach(one, &w->start, &w->startDay))
+    w->startMoment = s->origin;
+    bool zero =
+        w->start.years == 0 && w->start.months == 0 && w->start.weeks == 0 && w->start.days == 0;
+    int64_t day = 0;
+    if (!zero && !(Reach(s->date, &w->start, &day) && At(s, day, &w->startMoment)))
     {
         return false;
     }
-    return Reach(one, &w->end, &w->endDay);
+    return Reach(s->date, &w->end, &day) && At(s, day, &w->endMoment);
 }
 
-// Whether a part of a window rounds up: part is partDays days and
-// partNanoseconds (|partNanoseconds| under a day, of any sign), whole is
-// wholeDays days, 0 <= part < whole. Twice the part is compared with the
-// whole by days first, exactly.
+// Whether a part of a window rounds up: part and whole are days and
+// nanoseconds (each under a day, of any sign), 0 <= part < whole. Twice
+// the part is compared with the whole by days first, exactly.
 static bool UpByDays(int64_t partDays, int64_t partNanoseconds, int64_t wholeDays,
-                     RoundingUnsigned mode, bool evenLow)
+                     int64_t wholeNanoseconds, RoundingUnsigned mode, bool evenLow)
 {
     if (partDays == 0 && partNanoseconds == 0)
     {
@@ -214,8 +264,12 @@ static bool UpByDays(int64_t partDays, int64_t partNanoseconds, int64_t wholeDay
     {
         return mode == roundingInfinity;
     }
+    // The nanoseconds of the difference lie within three days.
     int64_t k = 2 * partDays - wholeDays;
-    int order = k >= 2 ? 1 : k <= -2 ? -1 : SignOf(k * s_nanosecondsPerDay + 2 * partNanoseconds);
+    int order = k >= 3 ? 1
+                : k <= -3
+                    ? -1
+                    : SignOf(k * s_nanosecondsPerDay + 2 * partNanoseconds - wholeNanoseconds);
     if (order != 0)
     {
         return order > 0;
@@ -235,35 +289,76 @@ typedef struct Nudge
 // NudgeToCalendarUnit: the multiples around the duration, shifted once
 // when the destination lies past them, and the destination's place
 // between them deciding by mode.
-static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const mlocDate* one,
-                                int64_t start, Moment dest, const RelativeRounding* r, Nudge* out)
+static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const RelativeStart* s,
+                                Moment dest, const RelativeRounding* r, Nudge* out)
 {
     Window w;
-    if (!ComputeWindow(sign, &d->date, one, r->smallestUnit, r->increment, false, &w))
+    if (!ComputeWindow(sign, &d->date, s, r->smallestUnit, r->increment, false, &w))
     {
         return false;
     }
     bool expanded = false;
-    Moment low = {sign > 0 ? w.startDay : w.endDay, start};
-    Moment high = {sign > 0 ? w.endDay : w.startDay, start};
+    Moment low = sign > 0 ? w.startMoment : w.endMoment;
+    Moment high = sign > 0 ? w.endMoment : w.startMoment;
     if (Compare(low, dest) > 0 || Compare(dest, high) > 0)
     {
-        if (!ComputeWindow(sign, &d->date, one, r->smallestUnit, r->increment, true, &w))
+        if (!ComputeWindow(sign, &d->date, s, r->smallestUnit, r->increment, true, &w))
         {
             return false;
         }
         expanded = true;
     }
-    int64_t partDays = sign * (dest.day - w.startDay);
-    int64_t partNanoseconds = sign * (dest.nanosecond - start);
-    int64_t wholeDays = sign * (w.endDay - w.startDay);
-    bool atEnd = dest.day == w.endDay && dest.nanosecond == start;
+    int64_t partDays = sign * (dest.day - w.startMoment.day);
+    int64_t partNanoseconds = sign * (dest.nanosecond - w.startMoment.nanosecond);
+    int64_t wholeDays = sign * (w.endMoment.day - w.startMoment.day);
+    int64_t wholeNanoseconds = sign * (w.endMoment.nanosecond - w.startMoment.nanosecond);
+    bool atEnd = Compare(dest, w.endMoment) == 0;
     bool evenLow = (w.r1 / r->increment) % 2 == 0;
-    bool up = atEnd || UpByDays(partDays, partNanoseconds, wholeDays,
+    bool up = atEnd || UpByDays(partDays, partNanoseconds, wholeDays, wholeNanoseconds,
                                 mlocUnsignedRoundingMode(r->mode, sign < 0), evenLow);
     *out = (Nudge){.duration = {.date = up ? w.end : w.start},
-                   .nudged = {up ? w.endDay : w.startDay, start},
+                   .nudged = up ? w.endMoment : w.startMoment,
                    .expanded = expanded || up};
+    return true;
+}
+
+// NudgeToZonedTime: the time part rounded within the day the date part
+// reaches, and past that day's end into the next when it rounds beyond
+// it; a day's length is the zone's.
+static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const RelativeStart* s,
+                             const RelativeRounding* r, Nudge* out)
+{
+    int64_t startDay = 0;
+    Moment start;
+    Moment end;
+    if (!Reach(s->date, &d->date, &startDay) || !At(s, startDay, &start) ||
+        !At(s, startDay + sign, &end))
+    {
+        return false;
+    }
+    mlocTimeDuration daySpan = Between(start, end);
+    int64_t stepSeconds = s_unitSeconds[r->smallestUnit] * r->increment;
+    int64_t stepNanoseconds = s_unitNanoseconds[r->smallestUnit] * r->increment;
+    mlocTimeDuration rounded;
+    if (!mlocRoundTimeDuration(d->time, stepSeconds, stepNanoseconds, r->mode, &rounded))
+    {
+        return false;
+    }
+    mlocTimeDuration beyond =
+        Normalized(rounded.seconds - daySpan.seconds, rounded.nanoseconds - daySpan.nanoseconds);
+    bool beyondDay = Sign(beyond) != -sign;
+    Moment nudged = start;
+    if (beyondDay)
+    {
+        if (!mlocRoundTimeDuration(beyond, stepSeconds, stepNanoseconds, r->mode, &rounded))
+        {
+            return false;
+        }
+        nudged = end;
+    }
+    RelativeDuration result = {.date = d->date, .time = rounded};
+    result.date.days += beyondDay ? sign : 0;
+    *out = (Nudge){.duration = result, .nudged = Plus(nudged, rounded), .expanded = beyondDay};
     return true;
 }
 
@@ -302,7 +397,7 @@ static bool NudgeToDayOrTime(const RelativeDuration* d, Moment dest, const Relat
 
 // BubbleRelativeDuration: carries a rounding that reached the next value
 // of a larger unit into it, up to the largest unit.
-static bool Bubble(int sign, RelativeDuration* d, Moment nudged, const mlocDate* one, int64_t start,
+static bool Bubble(int sign, RelativeDuration* d, Moment nudged, const RelativeStart* s,
                    int largest, int smallest)
 {
     for (int unit = smallest - 1; unit >= largest; unit--)
@@ -317,11 +412,12 @@ static bool Bubble(int sign, RelativeDuration* d, Moment nudged, const mlocDate*
                                    ? (mlocDateDuration){t->years, t->months + sign, 0, 0}
                                    : (mlocDateDuration){t->years, t->months, t->weeks + sign, 0};
         int64_t endDay = 0;
-        if (!Reach(one, &end, &endDay))
+        Moment endMoment;
+        if (!Reach(s->date, &end, &endDay) || !At(s, endDay, &endMoment))
         {
             return false;
         }
-        if (Compare(nudged, (Moment){endDay, start}) == -sign)
+        if (Compare(nudged, endMoment) == -sign)
         {
             break;
         }
@@ -340,15 +436,16 @@ static int DurationSign(const RelativeDuration* d)
     return date != 0 ? date : Sign(d->time);
 }
 
-bool mlocRoundRelative(RelativeDuration* duration, const mlocDate* one, int64_t startNanosecond,
-                       Moment dest, const RelativeRounding* rounding)
+bool mlocRoundRelative(RelativeDuration* duration, const RelativeStart* start, Moment dest,
+                       const RelativeRounding* rounding)
 {
     int sign = DurationSign(duration) < 0 ? -1 : 1;
     Nudge nudge;
-    bool done =
-        rounding->smallestUnit < unitDay
-            ? NudgeToCalendarUnit(sign, duration, one, startNanosecond, dest, rounding, &nudge)
-            : NudgeToDayOrTime(duration, dest, rounding, &nudge);
+    bool irregular = rounding->smallestUnit < unitDay ||
+                     (start->zone != nullptr && rounding->smallestUnit == unitDay);
+    bool done = irregular ? NudgeToCalendarUnit(sign, duration, start, dest, rounding, &nudge)
+                : start->zone != nullptr ? NudgeToZonedTime(sign, duration, start, rounding, &nudge)
+                                         : NudgeToDayOrTime(duration, dest, rounding, &nudge);
     if (!done)
     {
         return false;
@@ -357,8 +454,7 @@ bool mlocRoundRelative(RelativeDuration* duration, const mlocDate* one, int64_t 
     if (nudge.expanded && rounding->smallestUnit != unitWeek)
     {
         int startUnit = rounding->smallestUnit < unitDay ? rounding->smallestUnit : unitDay;
-        return Bubble(sign, duration, nudge.nudged, one, startNanosecond, rounding->largestUnit,
-                      startUnit);
+        return Bubble(sign, duration, nudge.nudged, start, rounding->largestUnit, startUnit);
     }
     return true;
 }

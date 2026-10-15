@@ -18,11 +18,8 @@ enum
 };
 
 static const int64_t s_nanosecondsPerDay = INT64_C(86400000000000);
-static const uint32_t s_maxIncrement = 1000000000;
 // A date duration's days, at most 2^53 seconds of them.
 static const int64_t s_maxDays = INT64_C(104249991374);
-// MaximumTemporalDurationRoundingIncrement of the time units, hour on.
-static const uint32_t s_timeMaximum[6] = {24, 60, 60, 1000, 1000, 1000};
 
 static int SignOf(int64_t v)
 {
@@ -81,22 +78,6 @@ mlocResult mlocAddToDateTime(const mlocDateTime* dateTime, const mlocDateTimeDur
     return mloc_success;
 }
 
-static bool ValidRounding(const mlocDateTimeRounding* r)
-{
-    if ((uint32_t)r->largestUnit > mloc_unitNanosecond ||
-        (uint32_t)r->smallestUnit > mloc_unitNanosecond || r->smallestUnit < r->largestUnit ||
-        r->increment == 0 || r->increment > s_maxIncrement || (uint32_t)r->mode > mloc_roundTrunc)
-    {
-        return false;
-    }
-    if (r->smallestUnit < mloc_unitHour)
-    {
-        return true;
-    }
-    uint32_t maximum = s_timeMaximum[r->smallestUnit - mloc_unitHour];
-    return r->increment < maximum && maximum % r->increment == 0;
-}
-
 // DifferenceISODateTime: the date difference to the second date, moved a
 // day toward the first when the times run against the dates, and the
 // time difference; a largest time unit takes the days into the time.
@@ -133,7 +114,7 @@ mlocResult mlocDateTimeUntil(const mlocDateTime* one, const mlocDateTime* two,
                              mlocDateTimeDuration* durationOut)
 {
     if (!Usable(one) || !Usable(two) || rounding == nullptr || durationOut == nullptr ||
-        one->date.calendar != two->date.calendar || !ValidRounding(rounding))
+        one->date.calendar != two->date.calendar || !mlocDateTimeRoundingValid(rounding))
     {
         return mloc_errorInvalid;
     }
@@ -152,8 +133,10 @@ mlocResult mlocDateTimeUntil(const mlocDateTime* one, const mlocDateTime* two,
     {
         RelativeRounding relative = {(int)rounding->largestUnit, (int)rounding->smallestUnit,
                                      rounding->increment, rounding->mode};
+        int64_t nanosecond = NanosecondOfDay(&one->time);
+        RelativeStart start = {&one->date, nanosecond, nullptr, {one->date.day, nanosecond}};
         Moment dest = {two->date.day, NanosecondOfDay(&two->time)};
-        if (!mlocRoundRelative(&d, &one->date, NanosecondOfDay(&one->time), dest, &relative))
+        if (!mlocRoundRelative(&d, &start, dest, &relative))
         {
             return mloc_errorInvalid;
         }

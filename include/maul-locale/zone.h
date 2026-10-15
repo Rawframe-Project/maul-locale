@@ -228,6 +228,19 @@ extern "C"
         mloc_disambiguationReject = 3,
     } mlocDisambiguation;
 
+    // How mlocGetInstantForOffset weighs an offset against the zone's
+    // rules, as Temporal's offset option: use takes the offset alone;
+    // ignore takes the zone's rules alone; prefer takes the offset when
+    // the zone gives the date-time that offset, else the zone's rules;
+    // reject refuses in that case.
+    typedef enum mlocOffsetOption
+    {
+        mloc_offsetUse = 0,
+        mloc_offsetIgnore = 1,
+        mloc_offsetPrefer = 2,
+        mloc_offsetReject = 3,
+    } mlocOffsetOption;
+
     // The instants a zone's local date-time names, in time order.
     typedef struct mlocPossibleInstants
     {
@@ -649,6 +662,110 @@ extern "C"
                                                           const mlocInstant* instant,
                                                           mlocCalendar calendar,
                                                           mlocDateTime* dateTimeOut);
+
+    /// Finds the instant a local date-time names with an offset from
+    /// universal time (ECMA-262's InterpretISODateTimeOffset), weighing
+    /// the offset against the zone's rules as the option says. With
+    /// matchMinutes, as for a string that gives the offset to the minute,
+    /// the zone's offset rounded to the minute also matches.
+    ///
+    /// @param zone                The zone.
+    /// @param dateTime            The local date-time.
+    /// @param offsetNanoseconds   The offset, under a day either way.
+    /// @param option              How the offset is weighed.
+    /// @param disambiguation      How to choose when the zone's rules
+    ///                            decide.
+    /// @param matchMinutes        Whether an offset rounded to the minute
+    ///                            matches.
+    /// @param instantOut          Receives the instant.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
+    ///         or date-time the library did not make, an offset of a day
+    ///         or more, another option or disambiguation, an offset
+    ///         refused by mloc_offsetReject, a gap or fold refused by
+    ///         mloc_disambiguationReject, or an instant outside Temporal's
+    ///         range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetInstantForOffset(
+        const mlocTimeZone* zone, const mlocDateTime* dateTime, int64_t offsetNanoseconds,
+        mlocOffsetOption option, mlocDisambiguation disambiguation, bool matchMinutes,
+        mlocInstant* instantOut);
+
+    /// Adds a duration to a zoned date-time (ECMA-262's
+    /// AddZonedDateTime): the date part to the local date in its
+    /// calendar, its time kept and found again in the zone (the earlier
+    /// of a fold, past a gap by its length), then the time part as exact
+    /// time.
+    ///
+    /// @param zone        The zone.
+    /// @param calendar    The calendar the date part is added in.
+    /// @param instant     The zoned date-time's instant.
+    /// @param duration    The duration, of one sign.
+    /// @param overflow    Constrain or refuse a day past its month's
+    ///                    end.
+    /// @param instantOut  Receives the instant.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone,
+    ///         instant or duration the library did not make, a calendar
+    ///         out of range, a duration of two signs or too many days, a
+    ///         date refused by mloc_overflowReject, or a date-time or
+    ///         instant outside Temporal's range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocAddToZonedDateTime(
+        const mlocTimeZone* zone, mlocCalendar calendar, const mlocInstant* instant,
+        const mlocDateTimeDuration* duration, mlocOverflow overflow, mlocInstant* instantOut);
+
+    /// Finds the rounded duration from one zoned date-time to another in
+    /// the same zone and calendar (ECMA-262's
+    /// DifferenceZonedDateTimeWithRounding): with a largest time unit the
+    /// exact time between them, else the date difference of their local
+    /// dates and the exact time that remains, rounded relative to the
+    /// first with days as long as the zone makes them. The host balances
+    /// the time part to hours with mlocBalanceTimeDuration. since is
+    /// until with the mode negated and the fields negated.
+    ///
+    /// @param zone         The zone.
+    /// @param calendar     The calendar.
+    /// @param one          The first instant.
+    /// @param two          The second instant.
+    /// @param rounding     The units, increment and mode, as for
+    ///                     mlocDateTimeUntil.
+    /// @param durationOut  Receives the duration.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
+    ///         or instant the library did not make, a calendar out of
+    ///         range, units, an increment or a mode refused, or a date or
+    ///         instant the rounding reaches outside Temporal's range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocZonedDateTimeUntil(const mlocTimeZone* zone,
+                                                              mlocCalendar calendar,
+                                                              const mlocInstant* one,
+                                                              const mlocInstant* two,
+                                                              const mlocDateTimeRounding* rounding,
+                                                              mlocDateTimeDuration* durationOut);
+
+    /// Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a
+    /// day, the nearer start of a day as long as the zone makes it;
+    /// otherwise its local date-time rounded and found again with its
+    /// offset preferred.
+    ///
+    /// @param zone        The zone.
+    /// @param instant     The zoned date-time's instant.
+    /// @param unit        The unit, day to nanosecond.
+    /// @param increment   1 for a day; for another unit below and
+    ///                    dividing the next larger.
+    /// @param mode        The rounding mode.
+    /// @param instantOut  Receives the instant.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
+    ///         or instant the library did not make, a unit, increment or
+    ///         mode refused, or an instant outside Temporal's range.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocRoundZonedDateTime(const mlocTimeZone* zone,
+                                                              const mlocInstant* instant,
+                                                              mlocTimeUnit unit, uint32_t increment,
+                                                              mlocRoundingMode mode,
+                                                              mlocInstant* instantOut);
 
 #ifdef __cplusplus
 }

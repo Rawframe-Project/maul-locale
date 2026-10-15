@@ -34,6 +34,24 @@ int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime)
            t->minute * 60 + t->second;
 }
 
+bool mlocDateTimeRoundingValid(const mlocDateTimeRounding* r)
+{
+    // The time units' maximum increments, hour on.
+    static const uint32_t s_timeMaximum[6] = {24, 60, 60, 1000, 1000, 1000};
+    if ((uint32_t)r->largestUnit > mloc_unitNanosecond ||
+        (uint32_t)r->smallestUnit > mloc_unitNanosecond || r->smallestUnit < r->largestUnit ||
+        r->increment == 0 || r->increment > 1000000000 || (uint32_t)r->mode > mloc_roundTrunc)
+    {
+        return false;
+    }
+    if (r->smallestUnit < mloc_unitHour)
+    {
+        return true;
+    }
+    uint32_t maximum = s_timeMaximum[r->smallestUnit - mloc_unitHour];
+    return r->increment < maximum && maximum % r->increment == 0;
+}
+
 // A field clamped into 0 to limit, or false when rejecting one outside.
 static bool Regulate(int64_t value, int64_t limit, bool reject, int64_t* out)
 {

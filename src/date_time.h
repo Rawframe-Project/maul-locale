@@ -34,4 +34,9 @@ bool mlocDateTimeWithinLimits(const mlocDateTime* dateTime);
 // nanoseconds aside).
 int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime);
 
+// Whether a difference's rounding is one Temporal allows: units in
+// order, an increment of 1 to 10^9, and for a time unit one below and
+// dividing the next larger (MaximumTemporalDurationRoundingIncrement).
+bool mlocDateTimeRoundingValid(const mlocDateTimeRounding* rounding);
+
 #endif
