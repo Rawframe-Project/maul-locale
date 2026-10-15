@@ -270,6 +270,7 @@ static void TestDateWriters(void)
         {.calendar = "", .calendarLength = 0},
         {.calendar = "a]b", .calendarLength = 3},
         {.calendar = "toolongname", .calendarLength = 11},
+        {.calendar = "abcdefghi", .calendarLength = 9},
         {.calendar = "a--b", .calendarLength = 4},
         {.calendar = "ab-", .calendarLength = 3},
         {.calendar = nullptr, .calendarLength = 3},
@@ -284,8 +285,10 @@ static void TestDateWriters(void)
               "a calendar id outside the grammar, options out of range");
     }
     mlocTemporalStringOptions dashed = {.calendar = "islamic-umalqura", .calendarLength = 16};
-    CHECK(strcmp(DateText(719163, &dashed, 0), "1970-01-01[u-ca=islamic-umalqura]") == 0,
-          "a calendar id with a hyphen");
+    mlocTemporalStringOptions digits = {.calendar = "abcdefg9-0z", .calendarLength = 11};
+    CHECK(strcmp(DateText(719163, &dashed, 0), "1970-01-01[u-ca=islamic-umalqura]") == 0 &&
+              strcmp(DateText(719163, &digits, 0), "1970-01-01[u-ca=abcdefg9-0z]") == 0,
+          "calendar ids with a hyphen, digits and components of eight");
     mlocDate forged = {.day = mlocDateMaxDay + 1};
     mlocOutput out = Out();
     CHECK(mlocFormatTemporalDate(&forged, nullptr, &out) == mloc_errorInvalid &&
@@ -304,6 +307,11 @@ static void TestDateWriters(void)
               mlocFormatTemporalDate(&date, nullptr, &forgedOut) == mloc_errorInvalid &&
               mlocFormatTemporalDate(&date, nullptr, nullptr) == mloc_errorInvalid,
           "measured, too short, a null buffer with a capacity, no output");
+    char exact[10];
+    mlocOutput exactOut = {.buffer = exact, .capacity = sizeof exact};
+    CHECK(mlocFormatTemporalDate(&date, nullptr, &exactOut) == mloc_success &&
+              exactOut.length == 10 && memcmp(exact, "1970-01-01", 10) == 0,
+          "a buffer the string fills exactly");
 }
 
 enum
@@ -455,6 +463,7 @@ static void TestDurationWriters(void)
               strcmp(Text(mlocFormatUTCOffset(-INT64_C(86399999999999), &out), &out),
                      "-23:59:59.999999999") == 0 &&
               mlocFormatUTCOffset(INT64_C(86400000000000), &out) == mloc_errorInvalid &&
+              mlocFormatUTCOffset(-INT64_C(86400000000000), &out) == mloc_errorInvalid &&
               mlocFormatUTCOffset(0, nullptr) == mloc_errorInvalid,
           "offsets");
 }
