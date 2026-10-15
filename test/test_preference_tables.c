@@ -11,6 +11,7 @@
 #include "locale_tables.h"
 #include "test_harness.h"
 
+#include "maul-locale/calendar.h"
 #include "maul-locale/locale.h"
 
 #include <stdlib.h>
@@ -61,11 +62,12 @@ int main(void)
     CHECK(!ValidWith(r, mlocLoad16(s_span.bytes + s_regions), 2), "regions out of order");
     CHECK(!ValidWith(s_regions, 0, 2), "a region no code is");
     CHECK(!ValidWith(r + 2, hoursCount, 1), "hours past the table");
-    CHECK(!ValidWith(r + 3, 0, 1) && !ValidWith(r + 4, 8, 1) && !ValidWith(r + 5, 0, 1) &&
-              !ValidWith(r + 6, 8, 1),
+    CHECK(!ValidWith(r + 3, 0x40, 1) && !ValidWith(r + 3, 0x48, 1) && !ValidWith(r + 3, 0x01, 1) &&
+              !ValidWith(r + 3, 0x81, 1) && !ValidWith(r + 4, 0, 1) && !ValidWith(r + 5, 8, 1),
           "a day outside 1 to 7");
-    CHECK(!ValidWith(r + 7, mloc_measurementUk + 1, 1), "an unknown measurement system");
-    CHECK(!ValidWith(r + 7, (mloc_paperUsLetter + 1) << 4, 1), "an unknown paper size");
+    CHECK(!ValidWith(r + 6, mloc_measurementUk + 1, 1), "an unknown measurement system");
+    CHECK(!ValidWith(r + 6, (mloc_paperUsLetter + 1) << 4, 1), "an unknown paper size");
+    CHECK(!ValidWith(r + 7, mloc_calendarDangi + 1, 1), "an unknown calendar");
     // 001 is the 1025th packed region; giving its entry another code
     // that keeps the order leaves the table without it.
     for (uint32_t i = 0; i < regionCount; i++)

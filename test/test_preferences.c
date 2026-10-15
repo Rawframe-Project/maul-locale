@@ -9,6 +9,7 @@
 
 #include "test_harness.h"
 
+#include "maul-locale/calendar.h"
 #include "maul-locale/locale.h"
 
 #include <string.h>
@@ -118,6 +119,27 @@ static void TestWeekAndMeasures(void)
           "among other keys");
 }
 
+static void TestCalendar(void)
+{
+    CHECK(Of("en").calendar == mloc_calendarGregorian, "the US's Gregorian calendar");
+    CHECK(Of("th").calendar == mloc_calendarBuddhist, "Thailand's Buddhist calendar");
+    CHECK(Of("fa-IR").calendar == mloc_calendarPersian, "Iran's Persian calendar");
+    CHECK(Of("ar-SA").calendar == mloc_calendarGregorian, "Saudi Arabia's first preference");
+    CHECK(Of("en-u-rg-thzzzz").calendar == mloc_calendarBuddhist, "rg's region");
+    CHECK(Of("th-u-ca-gregory").calendar == mloc_calendarGregorian, "ca overrides");
+    CHECK(Of("en-u-ca-japanese").calendar == mloc_calendarJapanese, "a calendar of one subtag");
+    CHECK(Of("en-u-ca-islamic-civil").calendar == mloc_calendarIslamicCivil &&
+              Of("en-u-ca-islamic-umalqura").calendar == mloc_calendarIslamicUmalqura,
+          "a calendar of two subtags");
+    CHECK(Of("en-u-ca-islamicc").calendar == mloc_calendarIslamicCivil, "its alias, canonicalized");
+    CHECK(Of("en-u-ca-ethioaa").calendar == mloc_calendarEthiopicAmeteAlem &&
+              Of("en-u-ca-iso8601").calendar == mloc_calendarIso8601,
+          "the BCP 47 types that differ from CLDR's");
+    CHECK(Of("th-u-ca-xyz").calendar == mloc_calendarBuddhist &&
+              Of("th-u-ca-islamic-xyz").calendar == mloc_calendarBuddhist,
+          "a value it does not take");
+}
+
 static void TestRefusals(void)
 {
     mlocLocale locale;
@@ -143,6 +165,7 @@ int main(void)
     TestRegion();
     TestHours();
     TestWeekAndMeasures();
+    TestCalendar();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

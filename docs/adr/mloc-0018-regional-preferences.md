@@ -18,21 +18,27 @@ the region each time, and some read the hour cycle of a bare "en" from
 
 - One call, `mlocGetLocalePreferences`, fills one struct: the region
   used, the hour cycle with the allowed formats in order, the first
-  day, minimal days and weekend, the measurement system and the paper
-  size.
+  day, minimal days and weekend, the measurement system, the paper
+  size and the calendar (the region's first in calendarPreferenceData:
+  Thailand's Buddhist, Iran's and Afghanistan's Persian, the Gregorian
+  elsewhere; amended 2026-10-15 for the date formatter, record
+  mloc-0042).
 - The region is the first of -u-rg, the locale's region, -u-sd, the
   likely region, 001, for every field; a region without data takes
   001's. So "en" has the US's 12 hours, as ICU and ECMA-402 give.
 - Hours are looked up for the language in the region first (timeData
   lists `ca_ES`, `en_001`), then for the region.
 - Keys override: -u-hc (c12 and c24 by the allowed formats), -u-fw,
-  -u-ms; -u-ca-iso8601 starts weeks on Monday unless -u-fw or -u-rg
+  -u-ms, -u-ca (its whole value, "islamic-civil"); -u-ca-iso8601 starts weeks on Monday unless -u-fw or -u-rg
   give the first day, and needs four days in the first week, as ISO
   8601 does. A value a key does not take is left out.
 - The temperature category of measurementData is left to the units'
   preferences, which CLDR moves the measurement system towards.
 - `tools/check_preferences.py` compares every region CLDR's JSON names,
-  each as -u-rg too, and every language and region of timeData, in CI.
+  each as -u-rg too, every language and region of timeData, and each
+  calendar's BCP 47 type as -u-ca, in CI.
+- A region's entry packs the first day and minimal days in one byte to
+  keep its eight bytes with the calendar beside them.
 
 ## Consequences
 

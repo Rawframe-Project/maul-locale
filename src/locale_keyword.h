@@ -11,8 +11,9 @@
 
 #include <stddef.h>
 
-// The value of the -u key (two letters), and its length; an empty value
-// of length 0 when the locale has none. The value is not NUL-ended.
+// The value of the -u key (two letters), and its length: its type
+// subtags joined by hyphens ("islamic-civil"); an empty value of length 0
+// when the locale has none. The value is not NUL-ended.
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut);
 
 #endif

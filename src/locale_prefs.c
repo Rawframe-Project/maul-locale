@@ -13,6 +13,7 @@
 #include "locale_keyword.h"
 #include "locale_tables.h"
 
+#include "maul-locale/calendar.h"
 #include "maul-locale/locale.h"
 
 #include <string.h>
@@ -57,9 +58,10 @@ static bool ValidRegions(const Prefs* p)
         const uint8_t* e = p->regions + (size_t)i * preferEntrySize;
         uint32_t region = mlocLoad16(e);
         if ((i > 0 && region <= mlocLoad16(e - preferEntrySize)) ||
-            !mlocValidPackedRegion(region) || e[2] >= p->hoursCount || !ValidDay(e[3]) ||
-            !ValidDay(e[4]) || !ValidDay(e[5]) || !ValidDay(e[6]) ||
-            (e[7] & 15) > mloc_measurementUk || e[7] >> 4 > mloc_paperUsLetter)
+            !mlocValidPackedRegion(region) || e[2] >= p->hoursCount || !ValidDay(e[3] & 15) ||
+            !ValidDay(e[3] >> 4) || !ValidDay(e[4]) || !ValidDay(e[5]) ||
+            (e[6] & 15) > mloc_measurementUk || e[6] >> 4 > mloc_paperUsLetter ||
+            e[7] > mloc_calendarDangi)
         {
             return false;
         }
@@ -248,7 +250,24 @@ static uint8_t FirstDay(const mlocLocale* locale, const uint8_t* region, bool is
             return (uint8_t)(d + 1);
         }
     }
-    return iso && SubdivisionRegion(locale, "rg") == 0 ? 1 : region[3];
+    return iso && SubdivisionRegion(locale, "rg") == 0 ? 1 : region[3] & 15;
+}
+
+// The calendar of -u-ca (its BCP 47 type), else the region's.
+static uint8_t Calendar(const char* value, size_t length, const uint8_t* region)
+{
+    static const char* const s_types[18] = {
+        "gregory",      "iso8601",          "buddhist", "roc",          "japanese", "coptic",
+        "ethiopic",     "ethioaa",          "indian",   "persian",      "hebrew",   "islamic-civil",
+        "islamic-tbla", "islamic-umalqura", "islamic",  "islamic-rgsa", "chinese",  "dangi"};
+    for (uint8_t c = 0; c < 18; c++)
+    {
+        if (Is(value, length, s_types[c]))
+        {
+            return c;
+        }
+    }
+    return region[7];
 }
 
 static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const uint8_t* region)
@@ -263,7 +282,7 @@ static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const u
             return m;
         }
     }
-    return region[7] & 15;
+    return region[6] & 15;
 }
 
 mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* locale,
@@ -295,11 +314,12 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
         .hourCycle = HourCycle(locale, hours),
         .allowedHourCount = hours[1],
         .firstDay = FirstDay(locale, entry, iso),
-        .minimalDays = iso ? 4 : entry[4],
-        .weekendStart = entry[5],
-        .weekendEnd = entry[6],
+        .minimalDays = iso ? 4 : entry[3] >> 4,
+        .weekendStart = entry[4],
+        .weekendEnd = entry[5],
         .measurementSystem = MeasurementSystem(locale, entry),
-        .paperSize = (mlocPaperSize)(entry[7] >> 4),
+        .paperSize = (mlocPaperSize)(entry[6] >> 4),
+        .calendar = Calendar(calendar, calendarLength, entry),
     };
     mlocUnpackRegion(region, out.region);
     memcpy(out.allowedHours, hours + 2, preferHoursMax);

@@ -29,6 +29,7 @@ enum
     fieldWeekendEnd,
     fieldMeasurement,
     fieldPaper,
+    fieldCalendar,
     fieldCount,
 };
 
@@ -279,6 +280,37 @@ static int CompareLocales(const void* a, const void* b)
     return kx < ky ? -1 : kx > ky;
 }
 
+// calendarPreferenceData: each region's first calendar, as an
+// mlocCalendar.
+static void ReadCalendars(Prefs* p, const XmlNode* data)
+{
+    static const char* const s_types[18] = {"gregorian",    "iso8601",
+                                            "buddhist",     "roc",
+                                            "japanese",     "coptic",
+                                            "ethiopic",     "ethiopic-amete-alem",
+                                            "indian",       "persian",
+                                            "hebrew",       "islamic-civil",
+                                            "islamic-tbla", "islamic-umalqura",
+                                            "islamic",      "islamic-rgsa",
+                                            "chinese",      "dangi"};
+    for (int i = 0; data != nullptr && i < data->childCount; i++)
+    {
+        const char* ordering = XmlGetAttribute(data->children[i], "ordering");
+        size_t length = ordering == nullptr ? 0 : strcspn(ordering, " ");
+        int calendar = -1;
+        for (int c = 0; c < 18 && calendar < 0; c++)
+        {
+            calendar =
+                strlen(s_types[c]) == length && strncmp(ordering, s_types[c], length) == 0 ? c : -1;
+        }
+        if (calendar < 0)
+        {
+            Die("a calendar preference of no known calendar", ordering ? ordering : "(none)");
+        }
+        Assign(p, XmlGetAttribute(data->children[i], "territories"), fieldCalendar, calendar);
+    }
+}
+
 // Fills every region's missing fields from 001 and writes the unit.
 static uint8_t* Write(Prefs* p, size_t* sizeOut)
 {
@@ -336,11 +368,12 @@ static uint8_t* Write(Prefs* p, size_t* sizeOut)
         }
         uint8_t* e = out + regionsAt + r++ * preferEntrySize;
         Store(e, slot, 2);
-        for (int f = 0; f < fieldMeasurement; f++)
-        {
-            e[2 + f] = (uint8_t)v[f];
-        }
-        e[7] = (uint8_t)(v[fieldMeasurement] | v[fieldPaper] << 4);
+        e[2] = (uint8_t)v[fieldHours];
+        e[3] = (uint8_t)(v[fieldFirstDay] | v[fieldMinimalDays] << 4);
+        e[4] = (uint8_t)v[fieldWeekendStart];
+        e[5] = (uint8_t)v[fieldWeekendEnd];
+        e[6] = (uint8_t)(v[fieldMeasurement] | v[fieldPaper] << 4);
+        e[7] = (uint8_t)v[fieldCalendar];
     }
     for (int i = 0; i < p->localeCount; i++)
     {
@@ -374,6 +407,7 @@ int GeneratePreferenceUnit(const char* commonDirectory, DataFile* file, char* er
     ReadWeek(&s_prefs, XmlFindChild(root, "weekData"));
     ReadTimeAndMeasurement(&s_prefs, XmlFindChild(root, "timeData"),
                            XmlFindChild(root, "measurementData"));
+    ReadCalendars(&s_prefs, XmlFindChild(root, "calendarPreferenceData"));
     XmlFree(root);
     size_t size = 0;
     uint8_t* unit = Write(&s_prefs, &size);

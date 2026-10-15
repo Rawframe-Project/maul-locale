@@ -3,12 +3,13 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Compares the library's regional preferences with CLDR's JSON of the
-# same release (timeData, weekData, measurementData of cldr-core; the
-# JSON is an oracle, never an input). For every region the JSON names it
-# asks for qaa-R (qaa has no likely subtags, so R is the region), for
-# qaa with R as the -u-rg override, and for every language and region
-# timeData lists (ca-ES); each answer must be R's values, a missing one
-# being 001's.
+# same release (timeData, weekData, measurementData and
+# calendarPreferenceData of cldr-core; the JSON is an oracle, never an
+# input). For every region the JSON names it asks for qaa-R (qaa has no
+# likely subtags, so R is the region), for qaa with R as the -u-rg
+# override, and for every language and region timeData lists (ca-ES);
+# each answer must be R's values, a missing one being 001's. Each
+# calendar's BCP 47 type as -u-ca must give that calendar.
 #
 # usage: check_preferences.py <conform_preferences> <CLDR JSON full dir>
 
@@ -21,6 +22,13 @@ FORMATS = ["K", "h", "H", "k", "hb", "hB"]
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 SYSTEMS = ["metric", "US", "UK"]
 PAPERS = ["A4", "US-Letter"]
+# mlocCalendar's order, by CLDR's calendar types and their BCP 47 ones.
+CALENDARS = ["gregorian", "iso8601", "buddhist", "roc", "japanese", "coptic", "ethiopic",
+             "ethiopic-amete-alem", "indian", "persian", "hebrew", "islamic-civil",
+             "islamic-tbla", "islamic-umalqura", "islamic", "islamic-rgsa", "chinese", "dangi"]
+BCP47 = ["gregory", "iso8601", "buddhist", "roc", "japanese", "coptic", "ethiopic", "ethioaa",
+         "indian", "persian", "hebrew", "islamic-civil", "islamic-tbla", "islamic-umalqura",
+         "islamic", "islamic-rgsa", "chinese", "dangi"]
 
 
 def load(root, name):
@@ -41,6 +49,7 @@ def main():
     time = load(root, "timeData")["timeData"]
     week = load(root, "weekData")["weekData"]
     measure = load(root, "measurementData")["measurementData"]
+    calendars = load(root, "calendarPreferenceData")["calendarPreferenceData"]
     tables = {
         "min": plain(week["minDays"]),
         "first": plain(week["firstDay"]),
@@ -48,6 +57,7 @@ def main():
         "end": plain(week["weekendEnd"]),
         "system": plain(measure["measurementSystem"]),
         "paper": plain(measure["paperSize"]),
+        "calendar": {k: v[0] for k, v in calendars.items()},
     }
     # A language and region is written "ca-ES" in the JSON.
     regions = {k for k in time if "-" not in k}
@@ -57,7 +67,7 @@ def main():
     def value(table, region):
         return table.get(region, table["001"])
 
-    def expect(hours_key, region):
+    def expect(hours_key, region, calendar=None):
         hours = time.get(hours_key) or time.get(region) or time["001"]
         allowed = "".join(str(FORMATS.index(f)) for f in hours["_allowed"].split())
         return "\t".join([
@@ -69,6 +79,8 @@ def main():
                              DAYS.index(value(tables["end"], region)) + 1),
             "%d %d" % (SYSTEMS.index(value(tables["system"], region)),
                        PAPERS.index(value(tables["paper"], region))),
+            "%d" % (calendar if calendar is not None
+                    else CALENDARS.index(value(tables["calendar"], region))),
         ])
 
     cases = {}
@@ -79,6 +91,11 @@ def main():
     for key in sorted(k for k in time if "-" in k):
         language, region = key.split("-")
         cases[key] = expect(key, region)
+    # The ISO calendar also moves the week's start; the others only
+    # name themselves.
+    for index, name in enumerate(BCP47):
+        if name != "iso8601":
+            cases["qaa-TH-u-ca-" + name] = expect(None, "TH", index)
     ids = "\n".join(cases) + "\n"
     run = subprocess.run([tool], input=ids, capture_output=True, text=True, check=True)
     differences = 0

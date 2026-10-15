@@ -86,16 +86,17 @@
 // children ends the lookup with the default distances.
 //
 // Regional preferences (kindLocalePreferences), supplementalData.xml's
-// timeData, weekData and measurementData with every field resolved
-// (what a region lacks is 001's):
+// timeData, weekData, measurementData and calendarPreferenceData with
+// every field resolved (what a region lacks is 001's):
 //   u16 regionCount, localeCount, hoursCount, zero, u64 zero
 //   hours[hoursCount], 8 bytes each: u8 preferred, allowedCount (1 to
 //       preferHoursMax), allowed[preferHoursMax], each an mlocHourFormat,
 //       the unused ones zero
 //   regions[regionCount], 8 bytes each: u16 region, packed, sorted,
-//       unique, 001 among them; u8 hours, firstDay, minimalDays,
+//       unique, 001 among them; u8 hours, firstDay | minimalDays << 4,
 //       weekendStart, weekendEnd (days 1 to 7, Monday first),
-//       measurement (an mlocMeasurementSystem) | paperSize << 4
+//       measurement (an mlocMeasurementSystem) | paperSize << 4, the
+//       calendar of the region's first preference (an mlocCalendar)
 //   locales[localeCount], 8 bytes each: u16 language, region, packed,
 //       sorted by region, then language, unique; u8 hours; zero bytes:
 //       timeData's entries for a language in a region (ca_ES)

@@ -365,6 +365,9 @@ extern "C"
         uint8_t weekendEnd;
         mlocMeasurementSystem measurementSystem;
         mlocPaperSize paperSize;
+        // The calendar (an mlocCalendar of maul-locale/calendar.h): the
+        // region's first preference, as CLDR orders them.
+        uint8_t calendar;
     } mlocLocalePreferences;
 
     /// Returns a locale's regional preferences (UTS #35), the region's
@@ -374,8 +377,9 @@ extern "C"
     /// US's), else 001; a region without data takes 001's. Keys override:
     /// -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed
     /// formats list first), -u-fw the first day, -u-ms the measurement
-    /// system; -u-ca-iso8601 begins weeks on Monday with four days in the
-    /// first unless -u-fw or -u-rg give the first day. The hour data is
+    /// system, -u-ca the calendar; -u-ca-iso8601 also begins weeks on
+    /// Monday with four days in the first unless -u-fw or -u-rg give the
+    /// first day. The hour data is
     /// looked up for the language in the region first (ca-ES has its own).
     /// A key with a value it does not take is left out.
     ///

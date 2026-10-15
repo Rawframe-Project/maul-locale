@@ -6,7 +6,8 @@
 // to compare with CLDR's JSON of the pinned release. Each line is the id,
 // then tab-separated: the region; the hour cycle and the allowed formats
 // as mlocHourFormat digits; the first day, minimal days, weekend start
-// and end; the measurement system and paper size. Ids are parsed, not
+// and end; the measurement system and paper size; the calendar. Ids are
+// parsed, not
 // canonicalized, so that a deprecated region keeps its own data; one
 // that does not parse writes "error".
 //
@@ -39,8 +40,8 @@ int main(void)
         {
             printf("%d", p.allowedHours[i]);
         }
-        printf("\t%d %d %d %d\t%d %d\n", p.firstDay, p.minimalDays, p.weekendStart, p.weekendEnd,
-               p.measurementSystem, p.paperSize);
+        printf("\t%d %d %d %d\t%d %d\t%d\n", p.firstDay, p.minimalDays, p.weekendStart,
+               p.weekendEnd, p.measurementSystem, p.paperSize, p.calendar);
     }
     return 0;
 }

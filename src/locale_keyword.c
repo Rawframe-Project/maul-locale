@@ -33,11 +33,22 @@ size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** v
         }
         else if (inU && n == 2 && memcmp(tail + at, key, 2) == 0)
         {
+            // The value's type subtags (three to eight characters) run to
+            // the next key or singleton: "islamic-civil".
             size_t length = 0;
-            while (next + length < size && tail[next + length] != '\0' &&
-                   tail[next + length] != '-')
+            for (;;)
             {
-                length++;
+                size_t part = 0;
+                size_t from = next + length + (length > 0);
+                while (from + part < size && tail[from + part] != '\0' && tail[from + part] != '-')
+                {
+                    part++;
+                }
+                if (part < 3)
+                {
+                    break;
+                }
+                length = from + part - next;
             }
             *valueOut = tail + next;
             return length;
