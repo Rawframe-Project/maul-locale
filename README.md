@@ -77,7 +77,7 @@ them (each day from 1600 to 2400 as ICU4X computes it, and the
 Chinese and Dangi calendars from integer astronomy), with durations
 added to them, their differences taken and rounded, their fields
 changed and month-day reference dates found, as Temporal does it.
-The library has 107 public functions.
+The library has 112 public functions.
 
 ## Building
 
@@ -116,7 +116,8 @@ them as ICU4C and ICU4X list them, under the same notice.
 The test cases in `test/test262_calendar.inc`,
 `test/test262_zone.inc`, `test/test262_time.inc`,
 `test/test262_datetime.inc`, `test/test262_instant.inc`,
-`test/test262_zoned.inc` and `test/test262_duration.inc` are taken from
+`test/test262_zoned.inc`, `test/test262_duration.inc` and
+`test/test262_ixdtf.inc` are taken from
 test262,
 the ECMAScript test suite, under its BSD license; its notice is in
 `LICENSES/BSD-3-Clause-test262.txt`. They are tests only and are not

@@ -193,6 +193,35 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralOperands(const mlocDecimal* deci
 ```
 Computes the plural operands of a finite decimal; c is 0.  @param decimal      The decimal. @param operandsOut  Receives the operands. @return mloc_success; mloc_errorInvalid for a null pointer, a decimal that is not finite, or one the library did not make. @par Thread safety Safe from any thread.
 
+## `ixdtf.h`
+
+Temporal's strings (record mloc-0041): ISO 8601 date-times with RFC 9557's annotations, durations, UTC offsets, and time zone and calendar strings, read as ECMA-262's grammar reads them. The text is UTF-8; every terminal of the grammar is ASCII.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseTemporalString(const char* text, size_t length, uint32_t formats, mlocTemporalParse* parseOut);
+```
+Reads a date-time string (ECMA-262's ParseISODateTime) as one of the goals allowed: dates in basic or extended form, times to the nanosecond, offsets, a time zone annotation and annotations with their rules for u-ca and for critical flags.  @param text     The string, UTF-8; it need not end in a zero byte. @param length   Its length in bytes. @param formats  The goals allowed, mlocTemporalFormat bits. @param parseOut Receives what the string holds. @return mloc_success; mloc_errorSyntax for a string no allowed goal matches, or that the grammar's early errors or the annotation rules refuse; mloc_errorInvalid for a null pointer or no goal allowed. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseUTCOffset(const char* text, size_t length, int64_t* nanosecondsOut, bool* hasSecondsOut);
+```
+Reads a UTC offset (ECMA-262's ParseDateTimeUTCOffset): ±HH, ±HH:MM or ±HHMM, with seconds and up to nine digits of a fraction.  @param text               The string, UTF-8. @param length             Its length in bytes. @param nanosecondsOut     Receives the offset. @param hasSecondsOut      Receives whether it gave seconds; may be null. @return mloc_success; mloc_errorSyntax for a string that is no UTC offset; mloc_errorInvalid for a null text or nanosecondsOut. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseTimeZoneString(const char* text, size_t length, mlocTimeZoneParse* parseOut);
+```
+Reads a time zone string (ECMA-262's ParseTemporalTimeZoneString): a time zone identifier, or a date-time string whose annotation, Z or offset names the zone.  @param text      The string, UTF-8. @param length    Its length in bytes. @param parseOut  Receives the zone read. @return mloc_success; mloc_errorSyntax for a string that names no zone by the grammar; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseCalendarString(const char* text, size_t length, mlocTextSpan* calendarOut);
+```
+Reads a calendar string (ECMA-262's ParseTemporalCalendarString): a date-time string's calendar annotation, an empty span when it has none (the ISO calendar), or the string itself when it is a calendar id by the grammar.  @param text        The string, UTF-8. @param length      Its length in bytes. @param calendarOut Receives the calendar id's span. @return mloc_success; mloc_errorSyntax for a string that is neither; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocParseDuration(const char* text, size_t length, mlocDurationValues* valuesOut);
+```
+Reads a duration string (ECMA-262's ParseTemporalDurationString): P with years, months, weeks and days, then T with hours, minutes and seconds, the last of which may have a fraction that carries down exactly; the fields, as float64 values, pass Temporal's limits.  @param text       The string, UTF-8. @param length     Its length in bytes. @param valuesOut  Receives the fields. @return mloc_success; mloc_errorSyntax for a string that is no duration; mloc_errorInvalid for a null pointer or fields past the limits. @par Thread safety Safe from any thread.
+
 ## `list.h`
 
 Lists (UTS #35 Part 2, records mloc-0026 and mloc-0035): items joined by a locale's list patterns ("a, b, and c", "a, b o c"), as ICU4C's ListFormatter and ECMA-402's Intl.ListFormat join them, with ICU's contextual changes (Spanish "e" and "u", Hebrew's vav before a word of another script). The patterns are compiled in.
@@ -592,4 +621,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-107 functions across 13 headers.
+112 functions across 14 headers.

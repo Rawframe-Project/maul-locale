@@ -119,7 +119,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones conform_local conform_zoned
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_zones conform_local conform_zoned conform_ixdtf
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -153,6 +153,11 @@ jobs:
         run: |
           python3 tools/check_local.py build/conform_local \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
+      - name: Temporal strings against ECMA-262's grammar
+        # Record mloc-0041: every goal, offset, time zone, calendar and
+        # duration string, against check_ixdtf.py's second reading.
+        timeout-minutes: 10
+        run: python3 tools/check_ixdtf.py build/conform_ixdtf
       - name: Zoned arithmetic against ECMA-262
         # Record mloc-0041: additions, rounded differences, rounding and
         # offsets around every change from 1900 to 2040, against

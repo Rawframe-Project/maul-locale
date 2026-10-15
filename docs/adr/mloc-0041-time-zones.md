@@ -232,11 +232,34 @@ nanoseconds.
   instants. DifferenceZonedDateTimeWithRounding does not, and
   Duration.round refuses rounding a zero duration whose next day passes
   the range; Temporal's until and since check equal instants first.
+- **Strings in** (amended 2026-10-15, slice 12k; research 37): a new
+  header, `maul-locale/ixdtf.h`, reads Temporal's strings by
+  ECMA-262's grammar.
+  - `mlocParseTemporalString` is ParseISODateTime. It takes a set of
+    the grammar's goals (`mlocTemporalFormat`), tried in the one
+    precedence every list of goals in the specification has. It gives
+    `mlocTemporalParse`: the ISO date (the year absent for a bare
+    month-day), the time or the start of the day, Z or the offset
+    (with whether it gave seconds, for match-minutes), and the time
+    zone annotation and calendar as spans of the text. The caller looks
+    them up; the library maps `iso8601` and `gregory` to one calendar,
+    so calendar ids stay the host's.
+  - `mlocParseUTCOffset` is ParseDateTimeUTCOffset,
+    `mlocParseTimeZoneString` is ParseTemporalTimeZoneString,
+    `mlocParseCalendarString` is ParseTemporalCalendarString, and
+    `mlocParseDuration` is ParseTemporalDurationString. A fraction
+    carries down exactly, and the result passes CreateTemporalDuration's
+    limits as `mlocDurationValues`.
+  - The sign is ASCII only (U+2212 is refused, as the specification now
+    has it). There is no length limit: the reader is a recursive
+    descent that reads each byte a bounded number of times. Malformed
+    text is `mloc_errorSyntax`; ParseISODateTime gives no position, so
+    neither does the library.
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
   - CLDR's BCP 47 ids and Windows names;
-  - IXDTF strings.
+  - IXDTF strings out: every type's toString.
 
 ## Proof
 
@@ -268,23 +291,22 @@ nanoseconds.
   difference of the two folds' offsets. All 1,441,140 answers agree.
   The cldr CI job runs it.
 - **PlainTime against test262:** `test/test_time_test262.c` replays
-  613 rows and 3,615 checks from 115 of test262's Temporal.PlainTime
+  734 rows and 4,161 checks from 155 of test262's Temporal.PlainTime
   files: times made, added to, rounded, and their differences until and
-  since. They are in `test/test262_time.inc`. Files that need ISO time
-  strings wait for the IXDTF slice.
+  since. They are in `test/test262_time.inc`.
 - **PlainDateTime against test262:** `test/test_datetime_test262.c`
-  replays 7,532 rows and 73,614 checks from 404 of test262's
+  replays 7,887 rows and 77,164 checks from 437 of test262's
   Temporal.PlainDateTime files, in every calendar: date-times made,
   added to, rounded, and their differences until and since. They are in
   `test/test262_datetime.inc`.
 - **Instant against test262:** `test/test_instant_test262.c` replays
-  377 rows and 1,583 checks from 67 of test262's Temporal.Instant
+  400 rows and 1,636 checks from 92 of test262's Temporal.Instant
   files: instants added to, rounded, and their differences until and
   since, in `test/test262_instant.inc`. A largest unit of microseconds
   or nanoseconds past `int64_t` takes its field from the exact decimal,
   as a host does.
 - **ZonedDateTime against test262:** `test/test_zoned_test262.c`
-  replays 6,159 rows and 56,101 checks from 318 of test262's
+  replays 6,808 rows and 61,826 checks from 403 of test262's
   Temporal.ZonedDateTime files, in every calendar: added to, rounded,
   differences until and since, starts of days, and property bags'
   offsets weighed against the zone. They are in
@@ -309,23 +331,43 @@ nanoseconds.
   changes 44,296 of them, and one in a total's numerator 465,000. The
   cldr CI job runs it.
 - **Duration against test262:** `test/test_duration_test262.c` replays
-  1,227 rows and 5,943 checks from 131 of test262's Temporal.Duration
+  1,390 rows and 7,222 checks from 157 of test262's Temporal.Duration
   files. They cover round and total with no start, a plain date or a
   zoned date-time, sums, and comparisons, doing what a host does. They
   are in `test/test262_duration.inc`.
+- **Strings against test262:** the reader takes every string through
+  the parsers above. `test/test_ixdtf_test262.c` replays the 428
+  strings from 324 files that test262 expects a parser to refuse, in
+  `test/test262_ixdtf.inc`. A string read successfully is checked by
+  the rows of the values made from it, in the tables above.
+- **Strings against a second reading of the grammar:**
+  `tools/check_ixdtf.py` writes each goal from `grammar.emu` as regular
+  expressions over its basic and extended forms, which backtrack where
+  the library reads ahead once. The early errors, the annotation rules,
+  the duration fractions and limits, and the offset, time zone and
+  calendar strings are in code. It asks `test/conform_ixdtf.c` about
+  every string literal of test262's Temporal tests, strings assembled
+  from the grammar's pieces and near misses, and each with a byte
+  dropped, doubled or changed. It asks each goal alone and in sets. All
+  962,621 answers agree, over 83,633 strings and 35,271 durations.
+  Planted faults are caught: an hour of 24 (782 answers), the time
+  early error dropped (1,013), a critical second calendar allowed
+  (1,513), and a fraction carried one second wrong (387). The cldr CI
+  job runs it without test262's literals (911,041 answers).
+  `test/fuzz_ixdtf.c` checks that what each parser accepts holds
+  together, and it ran 1.29 million inputs without a fault.
 - **Totals as float64:** the rounding to binary64 agrees with Python's
   correctly rounded `float(Fraction)` on 183,417 random quotients of
   numerators below 2^120 and denominators below 2^74, near-ties among
   them.
-- **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
-  from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
+- **Against test262:** `test/test_zone_test262.c` replays 3,137 rows
+  from 31 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in
   `test/test262_zone.inc`, under test262's BSD license. Three tests
   loop over `Intl.supportedValuesOf("timeZone")`, and the replay runs
   their loops over the library's list: each primary keeps its
   identifier, no two are equal, and none has a transition beyond the
-  range. Tests that need date-times, ISO strings or other calendars'
-  dates wait for those parts. `links.js` is one of them; it expects
+  range. `links.js` waits for PlainDate.toZonedDateTime; it expects
   CST6CDT, EST5EDT, MST7MDT and PST8PDT to equal America/Chicago and
   the others. Since 2026e they are Zones again, and the library follows
   tzdb there.

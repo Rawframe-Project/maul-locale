@@ -19,18 +19,23 @@
 // duration (each as the float64 Temporal keeps). Bytes beyond printable
 // ASCII are octal escapes.
 //
-// 1227 rows, 5943 checks, from 131 files:
+// 1390 rows, 7222 checks, from 157 files:
 // test/built-ins/Temporal/Duration/compare/basic.js
 // test/built-ins/Temporal/Duration/compare/duration-out-of-range-added-to-relativeto.js
 // test/built-ins/Temporal/Duration/compare/exhaustive.js
 // test/built-ins/Temporal/Duration/compare/relativeto-month.js
 // test/built-ins/Temporal/Duration/compare/relativeto-plaindate-add24hourdaystonormalizedtimeduration-out-of-range.js
 // test/built-ins/Temporal/Duration/compare/relativeto-propertybag-optional-properties.js
+// test/built-ins/Temporal/Duration/compare/relativeto-string.js
+// test/built-ins/Temporal/Duration/compare/relativeto-sub-minute-offset.js
 // test/built-ins/Temporal/Duration/compare/relativeto-year.js
 // test/built-ins/Temporal/Duration/compare/throws-when-target-zoned-date-time-outside-valid-limits.js
 // test/built-ins/Temporal/Duration/max.js
+// test/built-ins/Temporal/Duration/prototype/add/argument-duration-max.js
 // test/built-ins/Temporal/Duration/prototype/add/argument-duration-precision-exact-numerical-values.js
 // test/built-ins/Temporal/Duration/prototype/add/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/Duration/prototype/add/argument-string-fractional-units-rounding-mode.js
+// test/built-ins/Temporal/Duration/prototype/add/argument-string-negative-fractional-units.js
 // test/built-ins/Temporal/Duration/prototype/add/argument-string.js
 // test/built-ins/Temporal/Duration/prototype/add/balance-negative-result.js
 // test/built-ins/Temporal/Duration/prototype/add/balance-negative-time-units.js
@@ -55,9 +60,11 @@
 // test/built-ins/Temporal/Duration/prototype/round/durations-do-not-balance-beyond-largest-unit.js
 // test/built-ins/Temporal/Duration/prototype/round/end-of-month-round-up.js
 // test/built-ins/Temporal/Duration/prototype/round/exact-multiple-of-larger-unit-plaindate.js
+// test/built-ins/Temporal/Duration/prototype/round/exact-multiple-of-larger-unit-zoned.js
 // test/built-ins/Temporal/Duration/prototype/round/february-leap-year.js
 // test/built-ins/Temporal/Duration/prototype/round/float64-representable-integer.js
 // test/built-ins/Temporal/Duration/prototype/round/half-expand-is-default.js
+// test/built-ins/Temporal/Duration/prototype/round/largestunit-correct-rebalancing.js
 // test/built-ins/Temporal/Duration/prototype/round/largestunit-smallestunit-combinations.js
 // test/built-ins/Temporal/Duration/prototype/round/largestunit-smallestunit-default.js
 // test/built-ins/Temporal/Duration/prototype/round/largestunit-undefined.js
@@ -66,17 +73,21 @@
 // test/built-ins/Temporal/Duration/prototype/round/precision-exact-in-round-duration.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-balances-down-differently-depending-on-relative-date.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-balances-up-differently-depending-on-relative-date.js
+// test/built-ins/Temporal/Duration/prototype/round/relativeto-casts-relative-date-to-plain-date.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-days-24-hours-relative-to-plain-date.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-days-24-hours-relative-to-zoned-date-time.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-duration-out-of-range-added-to-relative-date.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-ignores-incorrect-properties.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-largestunit-smallestunit-combinations.js
+// test/built-ins/Temporal/Duration/prototype/round/relativeto-leap-second.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-not-required-to-round-non-calendar-units.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-plaindate-large-time-component-out-of-range.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-propertybag-no-time-units.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-propertybag-optional-properties.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-rounding-date.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-rounding-near-minimum-date.js
+// test/built-ins/Temporal/Duration/prototype/round/relativeto-string-limits.js
+// test/built-ins/Temporal/Duration/prototype/round/relativeto-string.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-undefined-throw-on-calendar-units.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-zoneddatetime-large-time-component-out-of-range.js
 // test/built-ins/Temporal/Duration/prototype/round/relativeto-zoneddatetime-negative-epochnanoseconds.js
@@ -110,6 +121,8 @@
 // test/built-ins/Temporal/Duration/prototype/round/zero-duration.js
 // test/built-ins/Temporal/Duration/prototype/subtract/argument-duration-precision-exact-numerical-values.js
 // test/built-ins/Temporal/Duration/prototype/subtract/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/Duration/prototype/subtract/argument-string-fractional-units-rounding-mode.js
+// test/built-ins/Temporal/Duration/prototype/subtract/argument-string-negative-fractional-units.js
 // test/built-ins/Temporal/Duration/prototype/subtract/argument-string.js
 // test/built-ins/Temporal/Duration/prototype/subtract/balance-negative-result.js
 // test/built-ins/Temporal/Duration/prototype/subtract/balance-negative-time-units.js
@@ -130,11 +143,15 @@
 // test/built-ins/Temporal/Duration/prototype/total/precision-exact-mathematical-values-7.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-duration-out-of-range-added-to-relative-date.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-fixed-length-units-ignore-relative-date.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-leap-second.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-plaindate-add24hourdaystonormalizedtimeduration-out-of-range.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-plaindate-large-time-component-out-of-range.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-plaindatetime.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-propertybag-no-time-units.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-propertybag-optional-properties.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-string-limits.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-string.js
+// test/built-ins/Temporal/Duration/prototype/total/relativeto-sub-minute-offset.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-total-of-each-unit.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-undefined-throw-on-calendar-units.js
 // test/built-ins/Temporal/Duration/prototype/total/relativeto-zoneddatetime-large-time-component-out-of-range.js
@@ -147,21 +164,48 @@
 // test/built-ins/Temporal/Duration/prototype/total/total-of-each-unit.js
 // test/built-ins/Temporal/Duration/prototype/total/unit-string-shorthand-string.js
 // test/built-ins/Temporal/Duration/prototype/total/zero-duration.js
+// test/intl402/Temporal/Duration/compare/relativeto-hour.js
+// test/intl402/Temporal/Duration/compare/relativeto-sub-minute-offset.js
+// test/intl402/Temporal/Duration/prototype/round/adjust-rounded-duration-days.js
 // test/intl402/Temporal/Duration/prototype/round/dst-rounding-result.js
+// test/intl402/Temporal/Duration/prototype/round/relativeto-dst-back-transition.js
+// test/intl402/Temporal/Duration/prototype/round/relativeto-string-datetime.js
+// test/intl402/Temporal/Duration/prototype/round/rounding-increment-relativeto.js
 // test/intl402/Temporal/Duration/prototype/round/rounding-with-largestunit.js
 // test/intl402/Temporal/Duration/prototype/total/dst-day-length.js
 // test/intl402/Temporal/Duration/prototype/total/dst-rounding-result.js
+// test/intl402/Temporal/Duration/prototype/total/relativeto-dst-back-transition.js
+// test/intl402/Temporal/Duration/prototype/total/relativeto-string-datetime.js
+// test/intl402/Temporal/Duration/prototype/total/relativeto-sub-minute-offset.js
 
 "round plain iso8601 738156 -1 -11 0 0 -2073600 0 0 1 1 expand = dy=-2 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 ceil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 ceil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 expand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 expand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 floor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 floor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 halfCeil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 halfCeil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 halfEven = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 halfEven = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 halfExpand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 halfExpand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 halfFloor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 halfFloor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 halfTrunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 halfTrunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 -1 0 0 0 0 0 0 1 1 trunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 1 1 trunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 ceil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 expand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 floor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 halfCeil = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 halfEven = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 halfExpand = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 halfFloor = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 halfTrunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 -1 0 0 0 0 0 0 3 1 trunc = dy=-1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737425 -1 0 0 0 0 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=-365 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737607 -1 0 0 0 0 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=-366 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737425 -5 -5 -5 0 -450305 -5005005 0 0 1 halfExpand = dy=-6 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -255,6 +299,33 @@
 "round plain iso8601 737760 -5 -6 -7 0 -837020 -123987500 0 9 1 halfFloor = dy=-5 dm=-7 dw=0 dd=-27 dh=-16 dmi=-30 ds=-20 dms=-123 dus=-987 dns=-500",
 "round plain iso8601 737760 -5 -6 -7 0 -837020 -123987500 0 9 1 halfTrunc = dy=-5 dm=-7 dw=0 dd=-27 dh=-16 dmi=-30 ds=-20 dms=-123 dus=-987 dns=-500",
 "round plain iso8601 737760 -5 -6 -7 0 -837020 -123987500 0 9 1 trunc = dy=-5 dm=-7 dw=0 dd=-27 dh=-16 dmi=-30 ds=-20 dms=-123 dus=-987 dns=-500",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 ceil = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 expand = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 floor = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 halfCeil = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 halfEven = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 halfExpand = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 halfFloor = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 halfTrunc = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 2 1 trunc = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 ceil = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 expand = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 floor = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 halfCeil = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 halfEven = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 halfExpand = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 halfFloor = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 halfTrunc = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -31 0 0 1 3 1 trunc = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 ceil = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 expand = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 floor = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 halfCeil = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 halfEven = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 halfExpand = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 halfFloor = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 halfTrunc = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 -7 0 0 2 3 1 trunc = dy=0 dm=0 dw=-1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 -2 -998998999 6 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=-2 dms=-998 dus=-998 dns=-999",
 "round none 0 0 0 0 -216000 0 3 3 1 halfExpand = dy=0 dm=0 dw=0 dd=-3 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 -216000 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=-2 dh=-12 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -271,10 +342,13 @@
 "round plain iso8601 737456 0 0 0 0 -3456000 0 0 9 1 halfExpand = dy=0 dm=-1 dw=0 dd=-9 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737485 0 0 0 0 -3456000 0 0 9 1 halfExpand = dy=0 dm=-1 dw=0 dd=-11 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737516 0 0 0 0 -3456000 0 0 9 1 halfExpand = dy=0 dm=-1 dw=0 dd=-9 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 -3540 0 3 3 1 expand = dy=0 dm=0 dw=0 dd=-1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 -3540 0 3 3 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737105 0 0 0 0 -3888000 0 1 1 1 halfExpand = dy=0 dm=-1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 0 0 -43200000000000 0 0 0 1 halfExpand = refused",
 "round plain iso8601 730120 0 0 0 0 -43200000000000 0 1 1 1 halfExpand = refused",
 "round plain iso8601 730120 0 0 0 0 -43200000000000 0 2 2 1 halfExpand = refused",
+"round zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 -45000 0 3 3 1 halfExpand = dy=0 dm=0 dw=0 dd=-1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 -7199 -900000000 4 6 1 expand = dy=0 dm=0 dw=0 dd=0 dh=-2 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 -99280808 0 0 0 0 -82800 0 0 3 1 expand = dy=0 dm=0 dw=0 dd=-1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 -86399 -999999997 4 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=-23 dmi=-59 ds=-59 dms=-999 dus=-999 dns=-997",
@@ -367,6 +441,9 @@
 "round plain iso8601 734503 0 0 0 0 2678400 0 1 2 1 trunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738886 0 0 0 0 2678400 0 2 3 1 halfExpand = dy=0 dm=0 dw=4 dd=3 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738886 0 0 0 0 2678400 0 3 3 30 ceil = dy=0 dm=0 dw=0 dd=60 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned +01:00 iso8601 8640000000000 0 0 0 0 0 300 0 5 5 1 halfExpand = refused",
+"round zoned +23:59 iso8601 8640000000000 0 0 0 0 0 300 0 5 5 1 halfExpand = refused",
+"round zoned UTC iso8601 8640000000000 0 0 0 0 0 300 0 5 5 1 halfExpand = refused",
 "round none 0 0 0 0 302400 0 3 4 8 halfEven = dy=0 dm=0 dw=0 dd=3 dh=8 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 719163 0 0 0 0 302400 0 3 4 8 halfEven = dy=0 dm=0 dw=0 dd=3 dh=8 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737425 0 0 0 0 31449600 0 0 0 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -375,6 +452,8 @@
 "round plain iso8601 737485 0 0 0 0 3456000 0 0 9 1 halfExpand = dy=0 dm=1 dw=0 dd=9 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737516 0 0 0 0 3456000 0 0 9 1 halfExpand = dy=0 dm=1 dw=0 dd=10 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737425 0 0 0 0 3456000 0 3 6 1 halfExpand = dy=0 dm=0 dw=0 dd=40 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1762070460 0 0 0 0 0 3540 0 3 3 1 expand = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1762070460 0 0 0 0 0 3540 0 3 3 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 3599 0 4 4 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 360000000 5 4 4 1 ceil = dy=0 dm=0 dw=0 dd=0 dh=100001 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738139 0 0 0 0 3628800 0 0 9 1 halfExpand = dy=0 dm=1 dw=0 dd=11 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -391,6 +470,7 @@
 "round none 0 0 0 0 3723 123456789 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=2 ds=3 dms=123 dus=456 dns=789",
 "round plain iso8601 737060 0 0 0 0 3888000 0 1 1 1 halfExpand = dy=0 dm=2 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 390896 987654321 3 6 1 halfExpand = dy=0 dm=0 dw=0 dd=4 dh=12 dmi=34 ds=57 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 41400 0 3 3 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 0 0 43200000000000 0 0 0 1 halfExpand = refused",
 "round plain iso8601 730120 0 0 0 0 43200000000000 0 1 1 1 halfExpand = refused",
 "round plain iso8601 730120 0 0 0 0 43200000000000 0 2 2 1 halfExpand = refused",
@@ -439,6 +519,8 @@
 "round none 0 0 0 0 45296 123987500 4 6 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=12 dmi=34 ds=56 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 45296 123987500 4 7 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=12 dmi=34 ds=56 dms=124 dus=0 dns=0",
 "round none 0 0 0 0 45296 123987500 4 8 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=12 dmi=34 ds=56 dms=123 dus=988 dns=0",
+"round zoned America/New_York iso8601 1710046800 0 0 0 0 0 46800 0 0 3 1 ceil = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/New_York iso8601 1710046800 0 0 0 0 0 46800 0 0 4 12 ceil = dy=0 dm=0 dw=0 dd=1 dh=12 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 0 46800 0 4 4 12 ceil = dy=0 dm=0 dw=0 dd=0 dh=24 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 736695 0 0 0 0 47304000 0 0 0 1 halfExpand = dy=2 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 736876 0 0 0 0 47304000 0 0 0 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -461,15 +543,19 @@
 "round none 0 0 0 0 86399 999999997 4 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=23 dmi=59 ds=59 dms=999 dus=999 dns=997",
 "round plain iso8601 730120 0 0 0 0 86399 999999997 4 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=23 dmi=59 ds=59 dms=999 dus=999 dns=997",
 "round zoned UTC iso8601 0 0 0 0 0 0 86399 999999997 4 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=23 dmi=59 ds=59 dms=999 dus=999 dns=997",
+"round zoned America/New_York iso8601 1730606400 0 0 0 0 0 86400 0 0 4 12 ceil = dy=0 dm=0 dw=0 dd=0 dh=24 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 0 0 86400 0 3 3 1000000000 expand = dy=0 dm=0 dw=0 dd=1000000000 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 0 0 86400 0 3 3 2 expand = dy=0 dm=0 dw=0 dd=2 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 86400 0 3 3 99999999 ceil = dy=0 dm=0 dw=0 dd=99999999 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 719163 0 0 0 0 86400 0 3 3 99999999 ceil = dy=0 dm=0 dw=0 dd=99999999 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 86400 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 0 0 86400 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round plain iso8601 738572 0 0 0 0 8640000 0 1 9 1 halfExpand = dy=0 dm=3 dw=0 dd=11 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 86400000 5 3 3 1 ceil = dy=0 dm=0 dw=0 dd=1001 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/New_York iso8601 1730606400 0 0 0 0 0 90000 0 0 4 12 ceil = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 90000 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 736330 0 0 0 0 90000 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round plain iso8601 737365 0 0 0 0 90000 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned +04:30 iso8601 1000000000 0 0 0 0 0 90000 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 90000 0 4 9 1 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=25 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round none 0 0 0 0 9007199254 740991000 3 3 10000000 halfExpand = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -497,7 +583,26 @@
 "round none 0 0 0 0 93784 5006007 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=2 dmi=3 ds=4 dms=5 dus=6 dns=7",
 "round zoned UTC iso8601 0 0 0 0 0 1 0 0 3 3 99999999 ceil = dy=0 dm=0 dw=0 dd=99999999 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 -13849765 1 0 0 0 1 0 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/New_York iso8601 1730606400 0 0 0 0 1 0 0 4 4 12 ceil = dy=0 dm=0 dw=0 dd=0 dh=36 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 3 43200 0 3 4 8 halfEven = dy=0 dm=0 dw=0 dd=3 dh=16 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 ceil = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 expand = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 floor = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 halfCeil = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 halfEven = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 halfExpand = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 halfFloor = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 halfTrunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 2 1 trunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 ceil = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 expand = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 floor = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 halfCeil = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 halfEven = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 halfExpand = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 halfFloor = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 halfTrunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 31 0 0 1 3 1 trunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 3 2 halfExpand = dy=0 dm=0 dw=0 dd=6 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 4 3 halfExpand = dy=0 dm=0 dw=0 dd=5 dh=6 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 5 30 halfExpand = dy=0 dm=0 dw=0 dd=5 dh=5 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -505,6 +610,15 @@
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 7 10 halfExpand = dy=0 dm=0 dw=0 dd=5 dh=5 dmi=5 ds=5 dms=10 dus=0 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 8 10 halfExpand = dy=0 dm=0 dw=0 dd=5 dh=5 dmi=5 ds=5 dms=5 dus=10 dns=0",
 "round zoned UTC iso8601 0 0 0 0 0 5 18305 5005005 3 9 10 halfExpand = dy=0 dm=0 dw=0 dd=5 dh=5 dmi=5 ds=5 dms=5 dus=5 dns=10",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 ceil = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 expand = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 floor = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 halfCeil = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 halfEven = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 halfExpand = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 halfFloor = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 halfTrunc = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 0 0 0 7 0 0 2 3 1 trunc = dy=0 dm=0 dw=1 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737425 0 0 1 0 604800 0 2 2 2 halfExpand = dy=0 dm=0 dw=2 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 0 0 1 0 9007199254713600 0 3 9 1 halfExpand = refused",
 "round plain iso8601 738139 0 0 5 0 0 0 0 9 1 halfExpand = dy=0 dm=1 dw=0 dd=4 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -522,6 +636,7 @@
 "round zoned America/Vancouver iso8601 951991200 0 0 1 0 15 1800 0 1 1 1 halfTrunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned America/Vancouver iso8601 950868000 0 0 1 0 15 41400 0 1 1 1 halfExpand = dy=0 dm=2 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned America/Vancouver iso8601 950868000 0 0 1 0 15 41400 0 1 1 1 halfTrunc = dy=0 dm=1 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1741514400 0 0 1 0 30 0 0 1 1 2 halfExpand = dy=0 dm=2 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738671 0 11 0 0 0 0 1 1 1 ceil = dy=0 dm=11 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738156 0 11 0 0 2073600 0 1 1 1 expand = dy=0 dm=12 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 736330 0 11 0 0 34214400 0 0 9 1 halfExpand = dy=2 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -532,15 +647,33 @@
 "round plain iso8601 738886 0 9 0 0 0 0 0 1 1 halfExpand = dy=0 dm=9 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738886 0 9 0 0 0 0 1 1 8 ceil = dy=0 dm=16 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 ceil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 ceil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 expand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 expand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 floor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 floor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 halfCeil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 halfCeil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 halfEven = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 halfEven = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737484 1 0 0 0 0 0 0 1 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 halfFloor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 halfFloor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 halfTrunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 halfTrunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 734503 1 0 0 0 0 0 0 1 1 trunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 1 1 trunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 ceil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 expand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 floor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 halfCeil = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 halfEven = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 halfFloor = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 halfTrunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1325419200 0 1 0 0 0 0 0 0 3 1 trunc = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738139 1 0 0 0 0 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738139 1 0 0 0 0 0 1 9 1 halfExpand = dy=0 dm=12 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738139 1 0 0 0 0 0 2 9 1 halfExpand = dy=0 dm=0 dw=52 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -549,7 +682,17 @@
 "round plain iso8601 738139 1 0 0 0 0 0 3 9 1 halfExpand = dy=0 dm=0 dw=0 dd=365 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 737484 1 0 0 0 3600 0 0 0 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 730120 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round plain iso8601 736329 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round plain iso8601 737364 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round plain iso8601 737425 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned -07:00 iso8601 1572566400 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned -07:00 iso8601 1572591600 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1572566400 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=24 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned America/Vancouver iso8601 1572591600 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=0 dh=24 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1483228799 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 1572566400 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round zoned UTC iso8601 1635379200 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"round zoned UTC iso8601 946684800 0 1 0 0 0 86400 0 0 9 1 halfExpand = dy=1 dm=0 dw=0 dd=1 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738886 1 1 0 0 86400 0 2 2 57 ceil = dy=0 dm=0 dw=57 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738886 1 1 0 0 86400 0 2 2 99 ceil = dy=0 dm=0 dw=99 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "round plain iso8601 738156 1 11 0 0 2073600 0 0 1 1 expand = dy=2 dm=0 dw=0 dd=0 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -683,12 +826,14 @@
 "total zoned America/Vancouver iso8601 972896400 0 0 0 0 -1 0 0 4 = total=-25.0",
 "total none 0 0 0 0 -2 -998998999 6 = total=-2.998998999",
 "total none 0 0 0 0 -216000 0 3 = total=-2.5",
+"total zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 -3540 0 3 = total=-0.03933333333333333",
 "total zoned America/Vancouver iso8601 954702000 0 0 0 0 0 -43200 0 3 = total=-0.5217391304347826",
 "total zoned America/Vancouver iso8601 972849600 0 0 0 0 0 -43200 0 3 = total=-0.48",
 "total plain iso8601 730120 0 0 0 0 -43200000000000 0 0 = refused",
 "total plain iso8601 730120 0 0 0 0 -43200000000000 0 1 = refused",
 "total plain iso8601 730120 0 0 0 0 -43200000000000 0 2 = refused",
 "total none 0 0 0 0 -450305 -5005005 9 = total=-450305005005005.0",
+"total zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 -7200 0 3 = total=-0.08",
 "total zoned America/Vancouver iso8601 954745200 0 0 0 0 0 -90000 0 3 = total=-1.0833333333333333",
 "total zoned America/Vancouver iso8601 972892800 0 0 0 0 0 -90000 0 3 = total=-1.0",
 "total zoned America/Vancouver iso8601 972896400 0 0 0 0 0 -90000 0 3 = total=-1.0",
@@ -1062,6 +1207,10 @@
 "total plain iso8601 737425 0 0 0 0 2678400 0 1 = total=1.0",
 "total none 0 0 0 0 3 0 6 = total=3.0",
 "total none 0 0 0 0 3 999000000 6 = total=3.999",
+"total zoned +01:00 iso8601 8640000000000 0 0 0 0 0 300 0 5 = refused",
+"total zoned +23:59 iso8601 8640000000000 0 0 0 0 0 300 0 5 = refused",
+"total zoned UTC iso8601 8640000000000 0 0 0 0 0 300 0 5 = refused",
+"total zoned America/Vancouver iso8601 1762070460 0 0 0 0 0 3540 0 3 = total=0.03933333333333333",
 "total none 0 0 0 0 3628800 0 3 = total=42.0",
 "total plain iso8601 738139 0 0 0 0 3628800 0 3 = total=42.0",
 "total none 0 0 0 0 363967 987654321 3 = total=4.21259244970279",
@@ -1170,6 +1319,7 @@
 "total none 0 0 0 0 5 999000000 6 = total=5.999",
 "total none 0 0 0 0 6 0 6 = total=6.0",
 "total none 0 0 0 0 6 999000000 6 = total=6.999",
+"total zoned America/Vancouver iso8601 1762074000 0 0 0 0 0 7200 0 3 = total=0.08333333333333333",
 "total none 0 0 0 0 86400 0 3 = total=1.0",
 "total none 0 0 0 0 86400 0 4 = total=24.0",
 "total plain iso8601 736330 0 0 0 0 86400 0 4 = total=24.0",
@@ -1246,6 +1396,8 @@
 "total zoned America/Vancouver iso8601 954662400 0 0 0 0 1 0 0 4 = total=23.0",
 "total zoned America/Vancouver iso8601 972802800 0 0 0 0 1 0 0 4 = total=25.0",
 "total zoned America/Vancouver iso8601 972806400 0 0 0 0 1 0 0 4 = total=25.0",
+"total zoned Pacific/Niue iso8601 -543069601 0 0 0 0 1 0 0 6 = total=86400.0",
+"total zoned Pacific/Niue iso8601 -543069621 0 0 0 0 1 0 0 6 = total=86420.0",
 "total zoned UTC iso8601 -13849765 1 0 0 0 1 0 0 3 = total=1.0",
 "total plain iso8601 738139 0 0 1 0 0 0 3 = total=7.0",
 "total zoned UTC iso8601 0 0 0 0 1 0 3600 0 3 = total=7.041666666666667",
@@ -1257,7 +1409,20 @@
 "total plain iso8601 738139 0 49 0 0 0 0 3 = total=1492.0",
 "total plain iso8601 737484 1 0 0 0 3600 0 0 = total=1.0001141552511414",
 "total plain iso8601 730120 1 0 0 0 86400 0 3 = total=367.0",
+"total plain iso8601 736329 1 0 0 0 86400 0 3 = total=366.0",
+"total plain iso8601 737364 1 0 0 0 86400 0 3 = total=367.0",
+"total plain iso8601 737425 1 0 0 0 86400 0 3 = total=367.0",
+"total zoned +00:45 iso8601 -2700 0 1 0 0 0 86400 0 3 = total=366.0",
+"total zoned -00:45 iso8601 2700 0 1 0 0 0 86400 0 3 = total=366.0",
+"total zoned -07:00 iso8601 1572566400 0 1 0 0 0 86400 0 3 = total=367.0",
+"total zoned -07:00 iso8601 1572591600 0 1 0 0 0 86400 0 3 = total=367.0",
+"total zoned Africa/Monrovia iso8601 2670 0 1 0 0 0 86400 0 3 = total=366.0",
+"total zoned America/Vancouver iso8601 1572566400 0 1 0 0 0 86400 0 3 = total=366.96",
+"total zoned America/Vancouver iso8601 1572591600 0 1 0 0 0 86400 0 3 = total=366.96",
+"total zoned UTC iso8601 1483228799 0 1 0 0 0 86400 0 3 = total=366.0",
+"total zoned UTC iso8601 1572566400 0 1 0 0 0 86400 0 3 = total=367.0",
 "total zoned UTC iso8601 1635379200 0 1 0 0 0 86400 0 3 = total=366.0",
+"total zoned UTC iso8601 946684800 0 1 0 0 0 86400 0 3 = total=367.0",
 "total plain iso8601 730120 1 0 0 0 9007199254740991 0 3 = refused",
 "total plain iso8601 719163 1 2 3 0 363967 8009010 0 = total=1.2307194003046997",
 "total plain iso8601 719163 1 2 3 0 363967 8009010 1 = total=14.813309068103722",
@@ -1288,12 +1453,20 @@
 "add 263400 0 -86700 0 3 = dy=0 dm=0 dw=0 dd=2 dh=1 dmi=5 ds=0 dms=0 dus=0 dns=0",
 "add 263400 0 -900 0 3 = dy=0 dm=0 dw=0 dd=3 dh=0 dmi=55 ds=0 dms=0 dus=0 dns=0",
 "add 4200 0 259200 0 3 = dy=0 dm=0 dw=0 dd=3 dh=1 dmi=10 ds=0 dms=0 dus=0 dns=0",
+"add 4503050 500500500 4503050 500500500 3 = dy=0 dm=0 dw=0 dd=104 dh=5 dmi=41 ds=41 dms=1 dus=1 dns=0",
 "add 864000 0 -1296000 0 3 = dy=0 dm=0 dw=0 dd=-5 dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "add 86700 0 173100 0 3 = dy=0 dm=0 dw=0 dd=3 dh=0 dmi=10 ds=0 dms=0 dus=0 dns=0",
 "add 86700 0 43230 0 3 = dy=0 dm=0 dw=0 dd=1 dh=12 dmi=5 ds=30 dms=0 dus=0 dns=0",
+"add 86700 0 86400 0 3 = dy=0 dm=0 dw=0 dd=2 dh=0 dmi=5 ds=0 dms=0 dus=0 dns=0",
 "add 9007199254713600 0 9007199254713600 0 3 = refused",
+"add -3660 0 7320 0 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=1 ds=0 dms=0 dus=0 dns=0",
+"add -7321 0 7382 1 4 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=1 ds=1 dms=0 dus=0 dns=1",
 "add 0 0 -3600 0 4 = dy=0 dm=0 dw=0 dd=0 dh=-1 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"add 0 0 -3712 -500000000 4 = dy=0 dm=0 dw=0 dd=0 dh=-1 dmi=-1 ds=-52 dms=-500 dus=0 dns=0",
+"add 0 0 -88444 -404442800 4 = dy=0 dm=0 dw=0 dd=0 dh=-24 dmi=-34 ds=-4 dms=-404 dus=-442 dns=-800",
 "add 0 0 3600 0 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"add 0 0 3712 500000000 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=1 ds=52 dms=500 dus=0 dns=0",
+"add 0 0 88444 404442800 4 = dy=0 dm=0 dw=0 dd=0 dh=24 dmi=34 ds=4 dms=404 dus=442 dns=800",
 "add 3660 0 -7320 0 4 = dy=0 dm=0 dw=0 dd=0 dh=-1 dmi=-1 ds=0 dms=0 dus=0 dns=0",
 "add 3661 1001001 -120 0 4 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=59 ds=1 dms=1 dus=1 dns=1",
 "add 3661 1001001 -2 0 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=0 ds=59 dms=1 dus=1 dns=1",
@@ -1302,6 +1475,8 @@
 "add 3661 1001001 0 -2000 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=1 ds=1 dms=0 dus=999 dns=1",
 "add 3661 1001001 0 -2 4 = dy=0 dm=0 dw=0 dd=0 dh=1 dmi=1 ds=1 dms=1 dus=0 dns=999",
 "add 7321 0 -7382 -1 4 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=-1 ds=-1 dms=0 dus=0 dns=-1",
+"add 0 0 -86434 -73407380 5 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=-1440 ds=-34 dms=-73 dus=-407 dns=-380",
+"add 0 0 86434 73407380 5 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=1440 ds=34 dms=73 dus=407 dns=380",
 "add 600 0 -900 0 5 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=-5 ds=0 dms=0 dus=0 dns=0",
 "add 6102 2002000 -610 -500500500 5 = dy=0 dm=0 dw=0 dd=0 dh=0 dmi=91 ds=31 dms=501 dus=501 dns=500",
 "add -9007199254740991 0 -9007199254740991 0 6 = refused",
@@ -1326,7 +1501,21 @@
 "compare plain iso8601 730120 0 0 0 0 0 0 0 0 -1 -104249991374 0 0 = refused",
 "compare plain iso8601 730120 0 0 0 0 0 0 0 0 1 104249991374 0 0 = refused",
 "compare zoned UTC iso8601 8640000000000 0 0 0 0 0 0 0 0 0 0 1 0 0 = refused",
+"compare zoned Pacific/Niue iso8601 -543069601 0 0 0 0 0 86400 0 0 0 0 1 0 0 = c=0",
+"compare zoned Pacific/Niue iso8601 -543069621 0 0 0 0 0 86400 0 0 0 0 1 0 0 = c=-1",
+"compare zoned America/Montevideo iso8601 1483239600 0 0 0 0 1 0 0 0 0 0 0 86400 0 = c=0",
+"compare zoned America/Vancouver iso8601 1572764400 0 0 0 0 1 0 0 0 0 0 0 86400 0 = c=1",
 "compare zoned UTC iso8601 8640000000000 0 0 0 0 1 0 0 0 0 0 0 0 0 = refused",
+"compare plain iso8601 730120 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
+"compare plain iso8601 737364 0 0 0 31 0 0 0 1 0 0 0 0 = c=1",
+"compare plain iso8601 737425 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
+"compare zoned +00:45 iso8601 -2700 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
+"compare zoned -00:45 iso8601 2700 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
+"compare zoned -07:00 iso8601 1572566400 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=1",
+"compare zoned -07:00 iso8601 1572591600 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=1",
+"compare zoned Africa/Monrovia iso8601 2670 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
+"compare zoned UTC iso8601 1572566400 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=1",
+"compare zoned UTC iso8601 946684800 0 0 0 0 31 0 0 0 1 0 0 0 0 = c=0",
 "compare plain iso8601 730120 0 0 1 104249991374 0 0 0 0 0 0 0 0 = refused",
 "compare plain iso8601 736726 0 1 0 0 0 0 0 0 0 30 0 0 = c=-1",
 "compare plain iso8601 736754 0 1 0 0 0 0 0 0 0 30 0 0 = c=1",

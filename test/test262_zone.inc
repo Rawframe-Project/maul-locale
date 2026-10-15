@@ -13,9 +13,10 @@
 // identifier, an instant, '=' and the zone's transition after or before it
 // in nanoseconds, or 'none'. Bytes beyond printable ASCII are octal escapes.
 //
-// 3138 rows from 27 files:
+// 3137 rows from 31 files:
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/argument-object.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/argument-valid.js
+// test/built-ins/Temporal/ZonedDateTime/prototype/equals/constructed-from-equivalent-parameters-are-equal.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/equals/different-time-zone-not-equal.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/offset-timezone-no-transitions.js
 // test/built-ins/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/utc-no-transitions.js
@@ -31,10 +32,13 @@
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/argument-object.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/argument-valid.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/canonical-iana-names.js
+// test/intl402/Temporal/ZonedDateTime/prototype/equals/canonicalize-iana-identifiers-before-comparing.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/canonicalize-timezone.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/canonicalize-utc-timezone.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/offset-and-iana.js
 // test/intl402/Temporal/ZonedDateTime/prototype/equals/timezone-case-insensitive.js
+// test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/no-future-transitions.js
+// test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/no-transitions-named-timezone.js
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/rule-change-without-offset-transition.js
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/specific-tzdb-values.js
 // test/intl402/Temporal/ZonedDateTime/prototype/getTimeZoneTransition/transitions-close-together.js
@@ -42,8 +46,6 @@
 // test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
 // test/intl402/Temporal/ZonedDateTime/timezone-ids-basic.js
 
-"refused +00:01.1",
-"refused -01.1",
 "refused ACT",
 "refused AET",
 "refused AGT",
@@ -1859,24 +1861,21 @@
 "id w-su = W-SU",
 "id wet = WET",
 "id zulu = Zulu",
-"equal +00 +00 = 1",
-"equal +00 +0000 = 1",
-"equal +00 +00:00 = 1",
-"equal +0000 +00 = 1",
-"equal +0000 +0000 = 1",
-"equal +0000 +00:00 = 1",
-"equal +00:00 +00 = 1",
-"equal +00:00 +0000 = 1",
 "equal +00:00 +00:00 = 1",
-"equal +0330 +03:30 = 1",
-"equal +03:30 +0330 = 1",
-"equal +0530 +05:30 = 1",
-"equal +05:30 +0530 = 1",
+"equal +03:30 +03:30 = 1",
+"equal +03:30 +03:31 = 0",
+"equal +03:31 +03:30 = 0",
+"equal +05:30 +05:30 = 1",
+"equal -05:00 -05:00 = 1",
+"equal -05:00 -05:01 = 0",
 "equal -05:00 UTC = 0",
-"equal -0650 -06:50 = 1",
-"equal -06:50 -0650 = 1",
-"equal -08 -08:00 = 1",
-"equal -08:00 -08 = 1",
+"equal -05:01 -05:00 = 0",
+"equal -06:50 -06:50 = 1",
+"equal -06:50 -06:51 = 0",
+"equal -06:51 -06:50 = 0",
+"equal -08:00 -08:00 = 1",
+"equal -08:00 -08:01 = 0",
+"equal -08:01 -08:00 = 0",
 "equal ASIA/calcutta ASIA/calcutta = 1",
 "equal ASIA/calcutta ASIA/colombo = 0",
 "equal ASIA/calcutta Asia/Calcutta = 1",
@@ -2233,6 +2232,7 @@
 "equal America/Nassau AMERICA/NASSAU = 1",
 "equal America/Nassau america/nassau = 1",
 "equal America/New_York AMERICA/NEW_YORK = 1",
+"equal America/New_York America/New_York = 1",
 "equal America/New_York america/new_york = 1",
 "equal America/Nipigon AMERICA/NIPIGON = 1",
 "equal America/Nipigon america/nipigon = 1",
@@ -3142,6 +3142,8 @@
 "next America/Noronha 971569800000000000 = 971571600000000000",
 "next America/Recife 970972200000000000 = 970974000000000000",
 "next America/Recife 971573400000000000 = 971575200000000000",
+"next Asia/Kolkata 1718433000000000000 = none",
+"next Asia/Riyadh 1718442000000000000 = none",
 "next Europe/London -39488400000000000 = 57722400000000000",
 "next Europe/Riga -795835800000000000 = -795834000000000000",
 "next Europe/Riga -796779000000000000 = -796777200000000000",
@@ -3168,6 +3170,7 @@
 "previous America/Noronha 971573400000000000 = 971571600000000000",
 "previous America/Recife 970975800000000000 = 970974000000000000",
 "previous America/Recife 971577000000000000 = 971575200000000000",
+"previous Asia/Riyadh -3786836812000000000 = none",
 "previous Europe/London -3849984000000000000 = -3852662325000000000",
 "previous Europe/London 0 = -59004000000000000",
 "previous Europe/London 1591909260000000000 = 1585443600000000000",

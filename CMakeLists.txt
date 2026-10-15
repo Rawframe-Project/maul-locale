@@ -142,6 +142,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zoned_arith.c
     src/binary64.c
     src/duration_values.c
+    src/ixdtf_parse.c
     src/duration_round.c
     src/rounding.c
     src/time_arith.c
@@ -261,6 +262,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(zoned_arith)
     maul_add_test(duration_test262)
     maul_add_test(duration_arith)
+    maul_add_test(ixdtf)
+    maul_add_test(ixdtf_test262)
     maul_add_test(calendar_year WHITEBOX)
     maul_add_test(calendar_arithmetic)
     maul_add_test(calendar_fields)
@@ -327,6 +330,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     # Zoned arithmetic against a reading of ECMA-262 over zoneinfo
     # (tools/check_zoned.py), through the public functions.
+    # Temporal's strings against a reading of ECMA-262's grammar
+    # (tools/check_ixdtf.py), through the public parsers.
+    add_executable(conform_ixdtf test/conform_ixdtf.c)
+    target_link_libraries(conform_ixdtf PRIVATE maul-locale)
+    maul_apply_flags(conform_ixdtf)
+    if(WIN32)
+        target_compile_definitions(conform_ixdtf PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
     add_executable(conform_zoned test/conform_zoned.c)
     target_link_libraries(conform_zoned PRIVATE maul-locale)
     maul_apply_flags(conform_zoned)
@@ -343,7 +354,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data decimal locale parse spellout zones)
+    foreach(area data decimal ixdtf locale parse spellout zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)

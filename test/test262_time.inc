@@ -15,11 +15,20 @@
 // the fields checked: h, mi, s, ms, us, ns of a time; dh, dmi, ds, dms, dus,
 // dns of a duration (since's as until gives them, before negation).
 //
-// 613 rows, 3615 checks, from 115 files:
+// 734 rows, 4161 checks, from 155 files:
 // test/built-ins/Temporal/PlainTime/argument-convert.js
 // test/built-ins/Temporal/PlainTime/basic.js
 // test/built-ins/Temporal/PlainTime/from/argument-object-leap-second.js
 // test/built-ins/Temporal/PlainTime/from/argument-object.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-calendar-annotation.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-date-with-utc-offset.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-leap-second.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-time-separators.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-time-zone-annotation.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-unknown-annotation.js
+// test/built-ins/Temporal/PlainTime/from/argument-string-with-time-designator.js
+// test/built-ins/Temporal/PlainTime/from/argument-string.js
+// test/built-ins/Temporal/PlainTime/from/leap-second.js
 // test/built-ins/Temporal/PlainTime/from/options-object.js
 // test/built-ins/Temporal/PlainTime/from/options-undefined.js
 // test/built-ins/Temporal/PlainTime/from/overflow-constrain.js
@@ -32,9 +41,12 @@
 // test/built-ins/Temporal/PlainTime/nanosecond-undefined.js
 // test/built-ins/Temporal/PlainTime/negative-zero.js
 // test/built-ins/Temporal/PlainTime/prototype/add/add-large-subseconds.js
+// test/built-ins/Temporal/PlainTime/prototype/add/argument-duration-max.js
 // test/built-ins/Temporal/PlainTime/prototype/add/argument-duration.js
 // test/built-ins/Temporal/PlainTime/prototype/add/argument-higher-units.js
 // test/built-ins/Temporal/PlainTime/prototype/add/argument-object.js
+// test/built-ins/Temporal/PlainTime/prototype/add/argument-string-fractional-units-rounding-mode.js
+// test/built-ins/Temporal/PlainTime/prototype/add/argument-string-negative-fractional-units.js
 // test/built-ins/Temporal/PlainTime/prototype/add/argument-string.js
 // test/built-ins/Temporal/PlainTime/prototype/add/balance-negative-time-units.js
 // test/built-ins/Temporal/PlainTime/prototype/add/blank-duration.js
@@ -45,8 +57,10 @@
 // test/built-ins/Temporal/PlainTime/prototype/millisecond/basic.js
 // test/built-ins/Temporal/PlainTime/prototype/minute/basic.js
 // test/built-ins/Temporal/PlainTime/prototype/nanosecond/basic.js
+// test/built-ins/Temporal/PlainTime/prototype/round/rounding-cross-midnight.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-divides.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-hours.js
+// test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-invalid.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-microseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-milliseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingincrement-minutes.js
@@ -63,18 +77,29 @@
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingmode-halfFloor.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingmode-halfTrunc.js
 // test/built-ins/Temporal/PlainTime/prototype/round/roundingmode-trunc.js
+// test/built-ins/Temporal/PlainTime/prototype/round/roundingmode-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/second/basic.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-cast.js
 // test/built-ins/Temporal/PlainTime/prototype/since/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-calendar-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-date-with-utc-offset.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-time-separators.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-time-zone-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-unknown-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/since/argument-string-with-time-designator.js
 // test/built-ins/Temporal/PlainTime/prototype/since/balance-negative-time-units.js
 // test/built-ins/Temporal/PlainTime/prototype/since/basic.js
 // test/built-ins/Temporal/PlainTime/prototype/since/blank-result.js
 // test/built-ins/Temporal/PlainTime/prototype/since/largestunit-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/since/largestunit.js
+// test/built-ins/Temporal/PlainTime/prototype/since/leap-second.js
 // test/built-ins/Temporal/PlainTime/prototype/since/options-object.js
 // test/built-ins/Temporal/PlainTime/prototype/since/options-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/since/plaintime-propertybag-no-time-units.js
+// test/built-ins/Temporal/PlainTime/prototype/since/result-sub-second.js
 // test/built-ins/Temporal/PlainTime/prototype/since/round-cross-unit-boundary.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingincrement-hours.js
+// test/built-ins/Temporal/PlainTime/prototype/since/roundingincrement-invalid.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingincrement-microseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingincrement-milliseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingincrement-minutes.js
@@ -91,27 +116,41 @@
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingmode-halfFloor.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingmode-halfTrunc.js
 // test/built-ins/Temporal/PlainTime/prototype/since/roundingmode-trunc.js
+// test/built-ins/Temporal/PlainTime/prototype/since/roundingmode-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/since/smallestunit-undefined.js
+// test/built-ins/Temporal/PlainTime/prototype/subtract/argument-duration-max.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/argument-duration.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/argument-higher-units.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/argument-object.js
+// test/built-ins/Temporal/PlainTime/prototype/subtract/argument-string-fractional-units-rounding-mode.js
+// test/built-ins/Temporal/PlainTime/prototype/subtract/argument-string-negative-fractional-units.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/argument-string.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/balance-negative-time-units.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/blank-duration.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/precision-exact-mathematical-values-1.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/precision-exact-mathematical-values-2.js
 // test/built-ins/Temporal/PlainTime/prototype/subtract/subtract-large-subseconds.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-cast.js
 // test/built-ins/Temporal/PlainTime/prototype/until/argument-propertybag-optional-properties.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-calendar-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-date-with-utc-offset.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-time-separators.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-time-zone-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-unknown-annotation.js
+// test/built-ins/Temporal/PlainTime/prototype/until/argument-string-with-time-designator.js
 // test/built-ins/Temporal/PlainTime/prototype/until/balance-negative-time-units.js
 // test/built-ins/Temporal/PlainTime/prototype/until/basic.js
 // test/built-ins/Temporal/PlainTime/prototype/until/blank-result.js
 // test/built-ins/Temporal/PlainTime/prototype/until/largestunit-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/until/largestunit.js
+// test/built-ins/Temporal/PlainTime/prototype/until/leap-second.js
 // test/built-ins/Temporal/PlainTime/prototype/until/options-object.js
 // test/built-ins/Temporal/PlainTime/prototype/until/options-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/until/plaintime-propertybag-no-time-units.js
+// test/built-ins/Temporal/PlainTime/prototype/until/result-sub-second.js
 // test/built-ins/Temporal/PlainTime/prototype/until/round-cross-unit-boundary.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingincrement-hours.js
+// test/built-ins/Temporal/PlainTime/prototype/until/roundingincrement-invalid.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingincrement-microseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingincrement-milliseconds.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingincrement-minutes.js
@@ -128,15 +167,18 @@
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingmode-halfFloor.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingmode-halfTrunc.js
 // test/built-ins/Temporal/PlainTime/prototype/until/roundingmode-trunc.js
+// test/built-ins/Temporal/PlainTime/prototype/until/roundingmode-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/until/smallestunit-undefined.js
 // test/built-ins/Temporal/PlainTime/prototype/with/basic.js
 // test/built-ins/Temporal/PlainTime/second-undefined.js
 
 "make r 0 0 0 0 0 0 = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "make c 0 30 0 0 0 0 = h=0 mi=30 s=0 ms=0 us=0 ns=0",
+"make r 0 30 0 0 0 0 = h=0 mi=30 s=0 ms=0 us=0 ns=0",
 "make c 0 30 0 0 555 0 = h=0 mi=30 s=0 ms=0 us=555 ns=0",
 "make r 11 12 13 14 15 1 = h=11 mi=12 s=13 ms=14 us=15 ns=1",
 "make r 12 0 0 0 0 0 = h=12 mi=0 s=0 ms=0 us=0 ns=0",
+"make r 12 30 59 0 0 0 = h=12 mi=30 s=59 ms=0 us=0 ns=0",
 "make c 12 30 60 0 0 0 = h=12 mi=30 s=59 ms=0 us=0 ns=0",
 "make r 12 30 60 0 0 0 = refused",
 "make c 12 34 0 0 0 0 = h=12 mi=34 s=0 ms=0 us=0 ns=0",
@@ -147,10 +189,23 @@
 "make r 12 34 56 987 654 321 = h=12 mi=34 s=56 ms=987 us=654 ns=321",
 "make c 12 60 0 0 0 0 = mi=59",
 "make c 14 20 36 0 0 0 = h=14 mi=20 s=36 ms=0 us=0 ns=0",
+"make r 15 0 0 0 0 0 = h=15 mi=0 s=0 ms=0 us=0 ns=0",
 "make c 15 23 0 0 0 0 = h=15 mi=23 s=0 ms=0 us=0 ns=0",
+"make r 15 23 0 0 0 0 = h=15 mi=23 s=0 ms=0 us=0 ns=0",
+"make r 15 23 30 0 0 0 = h=15 mi=23 s=30 ms=0 us=0 ns=0",
+"make r 15 23 30 100 0 0 = h=15 mi=23 s=30 ms=100 us=0 ns=0",
+"make r 15 23 30 120 0 0 = h=15 mi=23 s=30 ms=120 us=0 ns=0",
+"make r 15 23 30 123 0 0 = h=15 mi=23 s=30 ms=123 us=0 ns=0",
+"make r 15 23 30 123 400 0 = h=15 mi=23 s=30 ms=123 us=400 ns=0",
+"make r 15 23 30 123 450 0 = h=15 mi=23 s=30 ms=123 us=450 ns=0",
+"make r 15 23 30 123 456 0 = h=15 mi=23 s=30 ms=123 us=456 ns=0",
+"make r 15 23 30 123 456 700 = h=15 mi=23 s=30 ms=123 us=456 ns=700",
+"make r 15 23 30 123 456 780 = h=15 mi=23 s=30 ms=123 us=456 ns=780",
 "make r 15 23 30 123 456 789 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "make c 22 0 0 0 0 0 = h=22 mi=0 s=0 ms=0 us=0 ns=0",
 "make r 22 0 0 0 0 0 = h=22 mi=0 s=0 ms=0 us=0 ns=0",
+"make r 23 59 59 0 0 0 = h=23 mi=59 s=59 ms=0 us=0 ns=0",
+"make r 23 59 59 170 0 0 = h=23 mi=59 s=59 ms=170 us=0 ns=0",
 "make c 23 59 60 0 0 0 = h=23 mi=59 s=59 ms=0 us=0 ns=0",
 "make r 23 59 60 0 0 0 = refused",
 "make c 23 59 60 170 0 0 = h=23 mi=59 s=59 ms=170 us=0 ns=0",
@@ -161,9 +216,17 @@
 "add 12 34 56 987654321 -180 0 = h=12 mi=31 s=56 ms=987 us=654 ns=321",
 "add 1 1 1 1001001 -2 0 = h=1 mi=0 s=59 ms=1 us=1 ns=1",
 "add 15 23 30 123456789 -2700 0 = h=14 mi=38 s=30 ms=123 us=456 ns=789",
+"add 16 8 30 123456789 -2700 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
+"add 0 0 0 0 -27391 -999999999 = h=16 mi=23 s=28 ms=0 us=0 ns=1",
+"add 15 23 30 123456789 -3600 0 = h=14 mi=23 s=30 ms=123 us=456 ns=789",
+"add 0 0 0 0 -3712 -500000000 = h=22 mi=58 s=7 ms=500 us=0 ns=0",
 "add 15 23 30 123456789 -45 0 = h=15 mi=22 s=45 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 -57600 0 = h=23 mi=23 s=30 ms=123 us=456 ns=789",
+"add 7 23 30 123456789 -57600 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 1 1 1 1001001 -7200 0 = h=23 mi=1 s=1 ms=1 us=1 ns=1",
+"add 15 36 50 123456789 -800 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
+"add 0 0 0 0 -86434 -73407380 = h=23 mi=59 s=25 ms=926 us=592 ns=620",
+"add 0 0 0 0 -88444 -404442800 = h=23 mi=25 s=55 ms=595 us=557 ns=200",
 "add 0 57 27 747612578 -9007199 -254740991 = h=18 mi=57 s=28 ms=492 us=871 ns=587",
 "add 0 0 0 0 -9007199254 -740990976 = h=0 mi=12 s=25 ms=259 us=9 ns=24",
 "add 0 57 27 747612578 -9007199254 -740990976 = h=1 mi=9 s=53 ms=6 us=621 ns=602",
@@ -173,22 +236,37 @@
 "add 0 57 27 747612578 -9007199254740 -991000000 = h=15 mi=58 s=26 ms=756 us=612 ns=578",
 "add 0 0 0 0 -9007199254740990 -976000000 = h=16 mi=23 s=29 ms=24 us=0 ns=0",
 "add 0 57 27 747612578 -9007199254740990 -976000000 = h=17 mi=20 s=56 ms=771 us=612 ns=578",
+"add 0 0 0 0 -9007199254740991 -999999999 = h=16 mi=23 s=28 ms=0 us=0 ns=1",
 "add 0 57 27 747612578 -9007199254740991 0 = h=17 mi=20 s=56 ms=747 us=612 ns=578",
 "add 1 1 1 1001001 0 -2000000 = h=1 mi=1 s=0 ms=999 us=1 ns=1",
 "add 1 1 1 1001001 0 -2000 = h=1 mi=1 s=1 ms=0 us=999 ns=1",
 "add 1 1 1 1001001 0 -2 = h=1 mi=1 s=1 ms=1 us=0 ns=999",
+"add 15 23 30 123457089 0 -300 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 -800000000 = h=15 mi=23 s=29 ms=323 us=456 ns=789",
+"add 15 23 30 923456789 0 -800000000 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 -800000 = h=15 mi=23 s=30 ms=122 us=656 ns=789",
+"add 15 23 30 124256789 0 -800000 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 -800 = h=15 mi=23 s=30 ms=123 us=455 ns=989",
 "add 14 1 0 0 0 0 = h=14 mi=1 s=0 ms=0 us=0 ns=0",
 "add 15 23 30 123456789 0 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 300 = h=15 mi=23 s=30 ms=123 us=457 ns=89",
+"add 15 23 29 323456789 0 800000000 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 800000000 = h=15 mi=23 s=30 ms=923 us=456 ns=789",
+"add 15 23 30 122656789 0 800000 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 0 800000 = h=15 mi=23 s=30 ms=124 us=256 ns=789",
+"add 15 23 30 123455989 0 800 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 12 34 56 987654321 180 0 = h=12 mi=37 s=56 ms=987 us=654 ns=321",
+"add 14 38 30 123456789 2700 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 2700 0 = h=16 mi=8 s=30 ms=123 us=456 ns=789",
+"add 0 0 0 0 27391 999999999 = h=7 mi=36 s=31 ms=999 us=999 ns=999",
+"add 15 23 30 123456789 3600 0 = h=16 mi=23 s=30 ms=123 us=456 ns=789",
+"add 0 0 0 0 3712 500000000 = h=1 mi=1 s=52 ms=500 us=0 ns=0",
+"add 15 22 45 123456789 45 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 57600 0 = h=7 mi=23 s=30 ms=123 us=456 ns=789",
+"add 23 23 30 123456789 57600 0 = h=15 mi=23 s=30 ms=123 us=456 ns=789",
 "add 15 23 30 123456789 800 0 = h=15 mi=36 s=50 ms=123 us=456 ns=789",
+"add 0 0 0 0 86434 73407380 = h=0 mi=0 s=34 ms=73 us=407 ns=380",
+"add 0 0 0 0 88444 404442800 = h=0 mi=34 s=4 ms=404 us=442 ns=800",
 "add 0 57 27 747612578 9007199 254740991 = h=6 mi=57 s=27 ms=2 us=353 ns=569",
 "add 0 0 0 0 9007199254 740990976 = h=23 mi=47 s=34 ms=740 us=990 ns=976",
 "add 0 57 27 747612578 9007199254 740990976 = h=0 mi=45 s=2 ms=488 us=603 ns=554",
@@ -206,14 +284,18 @@
 "round 13 46 23 123987500 1 1 floor = h=13 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 halfCeil = h=14 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 halfEven = h=14 mi=0 s=0 ms=0 us=0 ns=0",
+"round 13 46 23 123456789 1 1 halfExpand = h=14 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 halfExpand = h=14 mi=0 s=0 ms=0 us=0 ns=0",
+"round 23 59 59 999999999 1 1 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 1 1 halfExpand = h=4 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 halfFloor = h=14 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 halfTrunc = h=14 mi=0 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 1 1 trunc = h=13 mi=0 s=0 ms=0 us=0 ns=0",
+"round 8 22 36 123456789 1 11 halfExpand = refused",
 "round 3 34 56 987654321 1 12 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 1 2 halfExpand = h=4 mi=0 s=0 ms=0 us=0 ns=0",
 "round 14 23 30 123456789 1 24 halfExpand = refused",
+"round 8 22 36 123456789 1 24 halfExpand = refused",
 "round 3 34 56 987654321 1 3 halfExpand = h=3 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 1 4 halfExpand = h=4 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 1 6 halfExpand = h=6 mi=0 s=0 ms=0 us=0 ns=0",
@@ -223,7 +305,9 @@
 "round 13 46 23 123987500 2 1 floor = h=13 mi=46 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 2 1 halfCeil = h=13 mi=46 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 2 1 halfEven = h=13 mi=46 s=0 ms=0 us=0 ns=0",
+"round 13 46 23 123456789 2 1 halfExpand = h=13 mi=46 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 2 1 halfExpand = h=13 mi=46 s=0 ms=0 us=0 ns=0",
+"round 23 59 59 999999999 2 1 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 1 halfExpand = h=3 mi=35 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 2 1 halfFloor = h=13 mi=46 s=0 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 2 1 halfTrunc = h=13 mi=46 s=0 ms=0 us=0 ns=0",
@@ -233,19 +317,23 @@
 "round 3 34 56 987654321 2 15 halfExpand = h=3 mi=30 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 2 halfExpand = h=3 mi=34 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 20 halfExpand = h=3 mi=40 s=0 ms=0 us=0 ns=0",
+"round 8 22 36 123456789 2 29 halfExpand = refused",
 "round 3 34 56 987654321 2 3 halfExpand = h=3 mi=36 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 30 halfExpand = h=3 mi=30 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 4 halfExpand = h=3 mi=36 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 5 halfExpand = h=3 mi=35 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 2 6 halfExpand = h=3 mi=36 s=0 ms=0 us=0 ns=0",
 "round 14 23 30 123456789 2 60 halfExpand = refused",
+"round 8 22 36 123456789 2 60 halfExpand = refused",
 "round 13 46 23 123987500 3 1 ceil = h=13 mi=46 s=24 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 expand = h=13 mi=46 s=24 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 floor = h=13 mi=46 s=23 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 halfCeil = h=13 mi=46 s=23 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 halfEven = h=13 mi=46 s=23 ms=0 us=0 ns=0",
 "round 12 34 56 987654321 3 1 halfExpand = h=12 mi=34 s=57 ms=0 us=0 ns=0",
+"round 13 46 23 123456789 3 1 halfExpand = h=13 mi=46 s=23 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 halfExpand = h=13 mi=46 s=23 ms=0 us=0 ns=0",
+"round 23 59 59 999999999 3 1 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 1 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 halfFloor = h=13 mi=46 s=23 ms=0 us=0 ns=0",
 "round 13 46 23 123987500 3 1 halfTrunc = h=13 mi=46 s=23 ms=0 us=0 ns=0",
@@ -255,18 +343,22 @@
 "round 3 34 56 987654321 3 15 halfExpand = h=3 mi=35 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 2 halfExpand = h=3 mi=34 s=56 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 20 halfExpand = h=3 mi=35 s=0 ms=0 us=0 ns=0",
+"round 8 22 36 123456789 3 29 halfExpand = refused",
 "round 3 34 56 987654321 3 3 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 30 halfExpand = h=3 mi=35 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 4 halfExpand = h=3 mi=34 s=56 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 5 halfExpand = h=3 mi=34 s=55 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 3 6 halfExpand = h=3 mi=34 s=54 ms=0 us=0 ns=0",
 "round 14 23 30 123456789 3 60 halfExpand = refused",
+"round 8 22 36 123456789 3 60 halfExpand = refused",
 "round 13 46 23 123987500 4 1 ceil = h=13 mi=46 s=23 ms=124 us=0 ns=0",
 "round 13 46 23 123987500 4 1 expand = h=13 mi=46 s=23 ms=124 us=0 ns=0",
 "round 13 46 23 123987500 4 1 floor = h=13 mi=46 s=23 ms=123 us=0 ns=0",
 "round 13 46 23 123987500 4 1 halfCeil = h=13 mi=46 s=23 ms=124 us=0 ns=0",
 "round 13 46 23 123987500 4 1 halfEven = h=13 mi=46 s=23 ms=124 us=0 ns=0",
+"round 13 46 23 123456789 4 1 halfExpand = h=13 mi=46 s=23 ms=123 us=0 ns=0",
 "round 13 46 23 123987500 4 1 halfExpand = h=13 mi=46 s=23 ms=124 us=0 ns=0",
+"round 23 59 59 999999999 4 1 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 4 1 halfExpand = h=3 mi=34 s=56 ms=988 us=0 ns=0",
 "round 13 46 23 123987500 4 1 halfFloor = h=13 mi=46 s=23 ms=124 us=0 ns=0",
 "round 13 46 23 123987500 4 1 halfTrunc = h=13 mi=46 s=23 ms=124 us=0 ns=0",
@@ -274,12 +366,14 @@
 "round 3 34 56 987654321 4 10 halfExpand = h=3 mi=34 s=56 ms=990 us=0 ns=0",
 "round 3 34 56 987654321 4 100 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 14 23 30 123456789 4 1000 halfExpand = refused",
+"round 8 22 36 123456789 4 1000 halfExpand = refused",
 "round 3 34 56 987654321 4 125 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 4 2 halfExpand = h=3 mi=34 s=56 ms=988 us=0 ns=0",
 "round 3 34 56 987654321 4 20 halfExpand = h=3 mi=34 s=56 ms=980 us=0 ns=0",
 "round 3 34 56 987654321 4 200 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 4 25 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 4 250 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
+"round 8 22 36 123456789 4 29 halfExpand = refused",
 "round 3 34 56 987654321 4 4 halfExpand = h=3 mi=34 s=56 ms=988 us=0 ns=0",
 "round 3 34 56 987654321 4 40 halfExpand = h=3 mi=34 s=57 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 4 5 halfExpand = h=3 mi=34 s=56 ms=990 us=0 ns=0",
@@ -291,7 +385,9 @@
 "round 13 46 23 123987500 5 1 floor = h=13 mi=46 s=23 ms=123 us=987 ns=0",
 "round 13 46 23 123987500 5 1 halfCeil = h=13 mi=46 s=23 ms=123 us=988 ns=0",
 "round 13 46 23 123987500 5 1 halfEven = h=13 mi=46 s=23 ms=123 us=988 ns=0",
+"round 13 46 23 123456789 5 1 halfExpand = h=13 mi=46 s=23 ms=123 us=457 ns=0",
 "round 13 46 23 123987500 5 1 halfExpand = h=13 mi=46 s=23 ms=123 us=988 ns=0",
+"round 23 59 59 999999999 5 1 halfExpand = h=0 mi=0 s=0 ms=0 us=0 ns=0",
 "round 3 34 56 987654321 5 1 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=0",
 "round 13 46 23 123987500 5 1 halfFloor = h=13 mi=46 s=23 ms=123 us=987 ns=0",
 "round 13 46 23 123987500 5 1 halfTrunc = h=13 mi=46 s=23 ms=123 us=987 ns=0",
@@ -299,12 +395,14 @@
 "round 3 34 56 987654321 5 10 halfExpand = h=3 mi=34 s=56 ms=987 us=650 ns=0",
 "round 3 34 56 987654321 5 100 halfExpand = h=3 mi=34 s=56 ms=987 us=700 ns=0",
 "round 14 23 30 123456789 5 1000 halfExpand = refused",
+"round 8 22 36 123456789 5 1000 halfExpand = refused",
 "round 3 34 56 987654321 5 125 halfExpand = h=3 mi=34 s=56 ms=987 us=625 ns=0",
 "round 3 34 56 987654321 5 2 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=0",
 "round 3 34 56 987654321 5 20 halfExpand = h=3 mi=34 s=56 ms=987 us=660 ns=0",
 "round 3 34 56 987654321 5 200 halfExpand = h=3 mi=34 s=56 ms=987 us=600 ns=0",
 "round 3 34 56 987654321 5 25 halfExpand = h=3 mi=34 s=56 ms=987 us=650 ns=0",
 "round 3 34 56 987654321 5 250 halfExpand = h=3 mi=34 s=56 ms=987 us=750 ns=0",
+"round 8 22 36 123456789 5 29 halfExpand = refused",
 "round 3 34 56 987654321 5 4 halfExpand = h=3 mi=34 s=56 ms=987 us=656 ns=0",
 "round 3 34 56 987654321 5 40 halfExpand = h=3 mi=34 s=56 ms=987 us=640 ns=0",
 "round 3 34 56 987654321 5 5 halfExpand = h=3 mi=34 s=56 ms=987 us=655 ns=0",
@@ -316,6 +414,7 @@
 "round 13 46 23 123987500 6 1 floor = h=13 mi=46 s=23 ms=123 us=987 ns=500",
 "round 13 46 23 123987500 6 1 halfCeil = h=13 mi=46 s=23 ms=123 us=987 ns=500",
 "round 13 46 23 123987500 6 1 halfEven = h=13 mi=46 s=23 ms=123 us=987 ns=500",
+"round 13 46 23 123456789 6 1 halfExpand = h=13 mi=46 s=23 ms=123 us=456 ns=789",
 "round 13 46 23 123987500 6 1 halfExpand = h=13 mi=46 s=23 ms=123 us=987 ns=500",
 "round 3 34 56 987654321 6 1 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=321",
 "round 13 46 23 123987500 6 1 halfFloor = h=13 mi=46 s=23 ms=123 us=987 ns=500",
@@ -324,6 +423,7 @@
 "round 3 34 56 987654321 6 10 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=320",
 "round 3 34 56 987654321 6 100 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=300",
 "round 14 23 30 123456789 6 1000 halfExpand = refused",
+"round 8 22 36 123456789 6 1000 halfExpand = refused",
 "round 3 34 56 987654321 6 125 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=375",
 "round 12 34 56 5 6 2 expand = h=12 mi=34 s=56 ms=0 us=0 ns=6",
 "round 3 34 56 987654321 6 2 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=322",
@@ -331,6 +431,7 @@
 "round 3 34 56 987654321 6 200 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=400",
 "round 3 34 56 987654321 6 25 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=325",
 "round 3 34 56 987654321 6 250 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=250",
+"round 8 22 36 123456789 6 29 halfExpand = refused",
 "round 3 34 56 987654321 6 4 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=320",
 "round 3 34 56 987654321 6 40 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=320",
 "round 3 34 56 987654321 6 5 halfExpand = h=3 mi=34 s=56 ms=987 us=654 ns=320",
@@ -345,9 +446,13 @@
 "until 0 0 2 0 1 1 1 1001001 1 6 1 trunc = dh=1 dmi=0 ds=59 dms=1 dus=1 dns=1",
 "until 0 2 0 0 1 1 1 1001001 1 6 1 trunc = dh=0 dmi=59 ds=1 dms=1 dus=1 dns=1",
 "until 1 0 0 1 0 30 0 0 1 6 1 trunc = dh=0 dmi=-30 ds=0 dms=0 dus=0 dns=-1",
+"until 10 23 15 0 17 15 57 250250250 4 6 1 trunc = dh=0 dmi=0 ds=0 dms=24762250 dus=250 dns=250",
+"until 10 23 15 0 17 15 57 250250250 5 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=24762250250 dns=250",
+"until 10 23 15 0 17 15 57 250250250 6 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=24762250250250",
 "until 12 34 56 0 13 35 57 987654321 1 6 1 trunc = dh=1 dmi=1 ds=1 dms=987 dus=654 dns=321",
 "until 12 34 56 0 12 34 56 5 1 6 2 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=4",
 "until 12 34 56 987654321 0 0 0 0 1 6 1 trunc = dh=-12 dmi=-34 ds=-56 dms=-987 dus=-654 dns=-321",
+"until 12 34 56 987654321 12 34 56 987654321 1 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 12 34 56 987654321 13 35 57 988655322 1 6 1 trunc = dh=1 dmi=1 ds=1 dms=1 dus=1 dns=1",
 "until 12 34 56 987654321 18 34 56 987654322 1 6 1 trunc = dh=6 dns=1",
 "until 12 39 40 987654289 8 22 36 123456789 1 1 1 ceil = dh=-4 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -404,12 +509,20 @@
 "until 12 39 40 987654289 8 22 36 123456789 1 6 1 halfFloor = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
 "until 12 39 40 987654289 8 22 36 123456789 1 6 1 halfTrunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
 "until 12 39 40 987654289 8 22 36 123456789 1 6 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
+"until 12 39 40 987654321 8 22 36 123456789 1 1 1 trunc = dh=-4 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until 12 39 40 987654321 8 22 36 123456789 1 2 1 trunc = dh=-4 dmi=-17 ds=0 dms=0 dus=0 dns=0",
+"until 12 39 40 987654321 8 22 36 123456789 1 3 1 trunc = dh=-4 dmi=-17 ds=-4 dms=0 dus=0 dns=0",
+"until 12 39 40 987654321 8 22 36 123456789 1 4 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=0 dns=0",
+"until 12 39 40 987654321 8 22 36 123456789 1 5 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=0",
+"until 12 39 40 987654321 8 22 36 123456789 1 6 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-532",
 "until 13 52 0 0 13 52 0 0 1 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 15 23 30 123456789 16 23 30 123456789 1 6 1 trunc = dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until 15 23 30 123456789 16 34 0 0 1 6 1 trunc = dh=1 dmi=10 ds=29 dms=876 dus=543 dns=211",
 "until 15 23 30 123456789 17 0 30 123456789 1 6 1 trunc = dh=1 dmi=37 ds=0 dms=0 dus=0 dns=0",
 "until 16 23 30 123456789 15 23 30 123456789 1 6 1 trunc = dh=-1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 17 0 30 123456789 15 23 30 123456789 1 6 1 trunc = dh=-1 dmi=-37 ds=0 dms=0 dus=0 dns=0",
 "until 2 0 0 0 1 1 1 1001001 1 6 1 trunc = dh=0 dmi=-58 ds=-58 dms=-998 dus=-998 dns=-999",
+"until 23 59 59 0 23 59 59 0 1 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 3 12 34 123456789 13 47 57 988655322 1 1 1 trunc = dh=10 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 3 12 34 123456789 13 47 57 988655322 1 1 12 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 3 12 34 123456789 13 47 57 988655322 1 1 2 trunc = dh=10 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -496,6 +609,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 1 1 halfFloor = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 1 1 halfTrunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 1 1 trunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 1 1 trunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 1 11 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 1 24 trunc = refused",
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 ceil = dh=4 dmi=18 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 expand = dh=4 dmi=18 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 floor = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
@@ -505,6 +621,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 halfFloor = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 halfTrunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 2 1 trunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 2 1 trunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 2 29 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 2 60 trunc = refused",
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 ceil = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 expand = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 floor = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
@@ -514,6 +633,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 halfFloor = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 halfTrunc = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 3 1 trunc = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 3 1 trunc = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 3 29 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 3 60 trunc = refused",
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 ceil = dh=4 dmi=17 ds=4 dms=865 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 expand = dh=4 dmi=17 ds=4 dms=865 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 floor = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
@@ -523,6 +645,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 4 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 4 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 4 1000 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 4 29 trunc = refused",
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 ceil = dh=4 dmi=17 ds=4 dms=864 dus=198 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 expand = dh=4 dmi=17 ds=4 dms=864 dus=198 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 floor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
@@ -532,6 +657,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
 "until 8 22 36 123456789 12 39 40 987654289 1 5 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 5 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
+"until 8 22 36 123456789 12 39 40 987654321 1 5 1000 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 5 29 trunc = refused",
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 ceil = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 expand = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 floor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
@@ -541,6 +669,9 @@
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "until 8 22 36 123456789 12 39 40 987654289 1 6 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
+"until 8 22 36 123456789 12 39 40 987654321 1 6 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=532",
+"until 8 22 36 123456789 12 39 40 987654321 1 6 1000 trunc = refused",
+"until 8 22 36 123456789 12 39 40 987654321 1 6 29 trunc = refused",
 "since 0 0 0 0 1 59 59 0 1 2 1 expand = dh=2 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 0 0 0 0 12 34 56 0 1 6 1 trunc = dh=12 dmi=34 ds=56 dms=0 dus=0 dns=0",
 "since 1 0 0 1 0 30 0 0 1 6 1 trunc = dh=0 dmi=-30 ds=0 dms=0 dus=0 dns=-1",
@@ -555,6 +686,7 @@
 "since 11 59 58 0 4 48 55 0 3 6 1 trunc = dh=0 dmi=0 ds=-25863 dms=0 dus=0 dns=0",
 "since 12 34 56 5 12 34 56 0 1 6 2 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=-4",
 "since 12 34 56 987654321 0 0 0 0 1 6 1 trunc = dh=-12 dmi=-34 ds=-56 dms=-987 dus=-654 dns=-321",
+"since 12 34 56 987654321 12 34 56 987654321 1 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 12 39 40 987654289 8 22 36 123456789 1 1 1 ceil = dh=-5 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 12 39 40 987654289 8 22 36 123456789 1 1 1 expand = dh=-5 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 12 39 40 987654289 8 22 36 123456789 1 1 1 floor = dh=-4 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -609,6 +741,24 @@
 "since 12 39 40 987654289 8 22 36 123456789 1 6 1 halfFloor = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
 "since 12 39 40 987654289 8 22 36 123456789 1 6 1 halfTrunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
 "since 12 39 40 987654289 8 22 36 123456789 1 6 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-500",
+"since 12 39 40 987654321 8 22 36 123456789 1 1 1 trunc = dh=-4 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"since 12 39 40 987654321 8 22 36 123456789 1 1 11 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 1 24 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 2 1 trunc = dh=-4 dmi=-17 ds=0 dms=0 dus=0 dns=0",
+"since 12 39 40 987654321 8 22 36 123456789 1 2 29 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 2 60 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 3 1 trunc = dh=-4 dmi=-17 ds=-4 dms=0 dus=0 dns=0",
+"since 12 39 40 987654321 8 22 36 123456789 1 3 29 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 3 60 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 4 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=0 dns=0",
+"since 12 39 40 987654321 8 22 36 123456789 1 4 1000 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 4 29 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 5 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=0",
+"since 12 39 40 987654321 8 22 36 123456789 1 5 1000 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 5 29 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 6 1 trunc = dh=-4 dmi=-17 ds=-4 dms=-864 dus=-197 dns=-532",
+"since 12 39 40 987654321 8 22 36 123456789 1 6 1000 trunc = refused",
+"since 12 39 40 987654321 8 22 36 123456789 1 6 29 trunc = refused",
 "since 13 30 30 123456789 15 23 30 123456789 1 6 1 trunc = dh=1 dmi=53 ds=0 dms=0 dus=0 dns=0",
 "since 13 35 57 987654321 12 34 56 0 1 6 1 trunc = dh=-1 dmi=-1 ds=-1 dms=-987 dus=-654 dns=-321",
 "since 13 35 57 988655322 12 34 56 987654321 1 6 1 trunc = dh=-1 dmi=-1 ds=-1 dms=-1 dus=-1 dns=-1",
@@ -690,7 +840,12 @@
 "since 14 23 30 123456789 15 23 30 123456789 1 6 1 trunc = dh=1 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 15 23 30 123456789 13 30 30 123456789 1 6 1 trunc = dh=-1 dmi=-53 ds=0 dms=0 dus=0 dns=0",
 "since 15 23 30 123456789 14 23 30 123456789 1 6 1 trunc = dh=-1 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"since 15 23 30 123456789 16 34 0 0 1 6 1 trunc = dh=1 dmi=10 ds=29 dms=876 dus=543 dns=211",
+"since 17 15 57 250250250 10 23 15 0 4 6 1 trunc = dh=0 dmi=0 ds=0 dms=-24762250 dus=-250 dns=-250",
+"since 17 15 57 250250250 10 23 15 0 5 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=-24762250250 dns=-250",
+"since 17 15 57 250250250 10 23 15 0 6 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=-24762250250250",
 "since 18 34 56 987654322 12 34 56 987654321 1 6 1 trunc = dh=-6 dns=-1",
+"since 23 59 59 0 23 59 59 0 1 6 1 trunc = dh=0 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 ceil = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 expand = dh=5 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 floor = dh=5 dmi=0 ds=0 dms=0 dus=0 dns=0",
@@ -700,6 +855,7 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 halfFloor = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 halfTrunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 1 1 trunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
+"since 8 22 36 123456789 12 39 40 987654321 1 1 1 trunc = dh=4 dmi=0 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 ceil = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 expand = dh=4 dmi=18 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 floor = dh=4 dmi=18 ds=0 dms=0 dus=0 dns=0",
@@ -709,6 +865,7 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 halfFloor = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 halfTrunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 2 1 trunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
+"since 8 22 36 123456789 12 39 40 987654321 1 2 1 trunc = dh=4 dmi=17 ds=0 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 ceil = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 expand = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 floor = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
@@ -718,6 +875,7 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 halfFloor = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 halfTrunc = dh=4 dmi=17 ds=5 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 3 1 trunc = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
+"since 8 22 36 123456789 12 39 40 987654321 1 3 1 trunc = dh=4 dmi=17 ds=4 dms=0 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 ceil = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 expand = dh=4 dmi=17 ds=4 dms=865 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 floor = dh=4 dmi=17 ds=4 dms=865 dus=0 dns=0",
@@ -727,6 +885,7 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 4 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
+"since 8 22 36 123456789 12 39 40 987654321 1 4 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=0 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 ceil = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 expand = dh=4 dmi=17 ds=4 dms=864 dus=198 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 floor = dh=4 dmi=17 ds=4 dms=864 dus=198 dns=0",
@@ -736,6 +895,7 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=198 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 5 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
+"since 8 22 36 123456789 12 39 40 987654321 1 5 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=0",
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 ceil = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 expand = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 floor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
@@ -745,3 +905,4 @@
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 halfFloor = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 halfTrunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
 "since 8 22 36 123456789 12 39 40 987654289 1 6 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=500",
+"since 8 22 36 123456789 12 39 40 987654321 1 6 1 trunc = dh=4 dmi=17 ds=4 dms=864 dus=197 dns=532",
