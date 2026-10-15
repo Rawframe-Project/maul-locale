@@ -83,10 +83,9 @@ mlocResult mlocInstantUntil(const mlocInstant* one, const mlocInstant* two,
     int unit = rounding->smallestUnit - 1;
     mlocTimeDuration d = {seconds, (int32_t)nanoseconds};
     mlocTimeDuration rounded;
-    if (!mlocRoundTimeDuration(d, s_unitSeconds[unit] * rounding->increment,
-                               s_unitSeconds[unit] > 0 ? 0
-                                                       : s_unitLength[unit] * rounding->increment,
-                               rounding->mode, &rounded))
+    if (!mlocRoundTimeStep(d, s_unitSeconds[unit] * rounding->increment,
+                           s_unitSeconds[unit] > 0 ? 0 : s_unitLength[unit] * rounding->increment,
+                           rounding->mode, &rounded))
     {
         return mloc_errorInvalid;
     }

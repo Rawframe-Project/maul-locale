@@ -16,8 +16,10 @@ compiler does.
 - **Determinism:** bit-exact. Identical input gives identical output on
   every platform, compiler and architecture. A `double` given as input
   is converted to its shortest decimal digits by integer arithmetic;
-  unit conversion uses exact rationals; nothing else touches floating
-  point.
+  unit conversion uses exact rationals. A `double` returned (a Temporal
+  duration's fields and totals) is the nearest to an exact value, its
+  bits assembled by integer arithmetic (amended 2026-10-15, mloc-0041).
+  Nothing else touches floating point.
 - **Threads:** none. Every function runs on the caller's thread; data
   is immutable and every function is safe from any thread.
 - **Memory:** there are no owner objects and nothing is allocated. Data

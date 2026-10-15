@@ -14,6 +14,9 @@
 //   add S N Y M W D S N OVERFLOW      mlocAddToZonedDateTime (overflow 0
 //                                     constrain, 1 reject): the instant
 //   round S N UNIT INCREMENT MODE     mlocRoundZonedDateTime: the instant
+//   total S N S N UNIT                mlocZonedDateTimeTotal in the ISO
+//                                     calendar: the float64's bits in
+//                                     hexadecimal
 //   offset LOCAL NANOSECOND OFFSET OPTION DISAMBIGUATION
 //                                     mlocGetInstantForOffset of a local
 //                                     date-time (seconds since 1970 read
@@ -80,6 +83,32 @@ static void Until(const mlocTimeZone* zone, const char* line)
     printf("%lld %lld %lld %lld %lld %ld\n", (long long)d.date.years, (long long)d.date.months,
            (long long)d.date.weeks, (long long)d.date.days, (long long)d.time.seconds,
            (long)d.time.nanoseconds);
+}
+
+static void Total(const mlocTimeZone* zone, const char* line)
+{
+    long long s1 = 0;
+    long long s2 = 0;
+    long n1 = 0;
+    long n2 = 0;
+    int unit = 0;
+    double total = 0;
+    if (sscanf(line, "total %lld %ld %lld %ld %d", &s1, &n1, &s2, &n2, &unit) != 5)
+    {
+        printf("error\n");
+        return;
+    }
+    mlocInstant one = {s1, (int32_t)n1};
+    mlocInstant two = {s2, (int32_t)n2};
+    if (mlocZonedDateTimeTotal(zone, mloc_calendarGregorian, &one, &two, (mlocUnit)unit, &total) !=
+        mloc_success)
+    {
+        printf("-\n");
+        return;
+    }
+    uint64_t bits;
+    memcpy(&bits, &total, sizeof bits);
+    printf("%016llx\n", (unsigned long long)bits);
 }
 
 static void Add(const mlocTimeZone* zone, const char* line)
@@ -178,6 +207,10 @@ int main(void)
         else if (strncmp(line, "until ", 6) == 0)
         {
             Until(&zone, line);
+        }
+        else if (strncmp(line, "total ", 6) == 0)
+        {
+            Total(&zone, line);
         }
         else if (strncmp(line, "add ", 4) == 0)
         {

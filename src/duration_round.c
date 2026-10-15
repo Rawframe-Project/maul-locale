@@ -5,6 +5,7 @@
 
 #include "duration_round.h"
 
+#include "binary64.h"
 #include "date_time.h"
 #include "rounding.h"
 
@@ -98,8 +99,8 @@ static bool UpBySeconds(int64_t partSeconds, int64_t partNanoseconds, int64_t wh
     return mode == roundingHalfInfinity || (mode == roundingHalfEven && !evenLow);
 }
 
-bool mlocRoundTimeDuration(mlocTimeDuration value, int64_t stepSeconds, int64_t stepNanoseconds,
-                           mlocRoundingMode mode, mlocTimeDuration* out)
+bool mlocRoundTimeStep(mlocTimeDuration value, int64_t stepSeconds, int64_t stepNanoseconds,
+                       mlocRoundingMode mode, mlocTimeDuration* out)
 {
     bool negative = value.seconds < 0 || value.nanoseconds < 0;
     int64_t s = negative ? -value.seconds : value.seconds;
@@ -289,24 +290,34 @@ typedef struct Nudge
 // NudgeToCalendarUnit: the multiples around the duration, shifted once
 // when the destination lies past them, and the destination's place
 // between them deciding by mode.
+// The window holding the destination: the first, or the next when the
+// destination lies past it (expanded).
+static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart* s, Moment dest,
+                       int unit, int64_t increment, Window* w, bool* expandedOut)
+{
+    if (!ComputeWindow(sign, &d->date, s, unit, increment, false, w))
+    {
+        return false;
+    }
+    *expandedOut = false;
+    Moment low = sign > 0 ? w->startMoment : w->endMoment;
+    Moment high = sign > 0 ? w->endMoment : w->startMoment;
+    if (Compare(low, dest) > 0 || Compare(dest, high) > 0)
+    {
+        *expandedOut = true;
+        return ComputeWindow(sign, &d->date, s, unit, increment, true, w);
+    }
+    return true;
+}
+
 static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const RelativeStart* s,
                                 Moment dest, const RelativeRounding* r, Nudge* out)
 {
     Window w;
-    if (!ComputeWindow(sign, &d->date, s, r->smallestUnit, r->increment, false, &w))
+    bool expanded = false;
+    if (!FindWindow(sign, d, s, dest, r->smallestUnit, r->increment, &w, &expanded))
     {
         return false;
-    }
-    bool expanded = false;
-    Moment low = sign > 0 ? w.startMoment : w.endMoment;
-    Moment high = sign > 0 ? w.endMoment : w.startMoment;
-    if (Compare(low, dest) > 0 || Compare(dest, high) > 0)
-    {
-        if (!ComputeWindow(sign, &d->date, s, r->smallestUnit, r->increment, true, &w))
-        {
-            return false;
-        }
-        expanded = true;
     }
     int64_t partDays = sign * (dest.day - w.startMoment.day);
     int64_t partNanoseconds = sign * (dest.nanosecond - w.startMoment.nanosecond);
@@ -340,7 +351,7 @@ static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const Relative
     int64_t stepSeconds = s_unitSeconds[r->smallestUnit] * r->increment;
     int64_t stepNanoseconds = s_unitNanoseconds[r->smallestUnit] * r->increment;
     mlocTimeDuration rounded;
-    if (!mlocRoundTimeDuration(d->time, stepSeconds, stepNanoseconds, r->mode, &rounded))
+    if (!mlocRoundTimeStep(d->time, stepSeconds, stepNanoseconds, r->mode, &rounded))
     {
         return false;
     }
@@ -350,7 +361,7 @@ static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const Relative
     Moment nudged = start;
     if (beyondDay)
     {
-        if (!mlocRoundTimeDuration(beyond, stepSeconds, stepNanoseconds, r->mode, &rounded))
+        if (!mlocRoundTimeStep(beyond, stepSeconds, stepNanoseconds, r->mode, &rounded))
         {
             return false;
         }
@@ -371,9 +382,8 @@ static bool NudgeToDayOrTime(const RelativeDuration* d, Moment dest, const Relat
     mlocTimeDuration total =
         Normalized(d->date.days * secondsPerDay + d->time.seconds, d->time.nanoseconds);
     mlocTimeDuration rounded;
-    if (!mlocRoundTimeDuration(total, s_unitSeconds[r->smallestUnit] * r->increment,
-                               s_unitNanoseconds[r->smallestUnit] * r->increment, r->mode,
-                               &rounded))
+    if (!mlocRoundTimeStep(total, s_unitSeconds[r->smallestUnit] * r->increment,
+                           s_unitNanoseconds[r->smallestUnit] * r->increment, r->mode, &rounded))
     {
         return false;
     }
@@ -457,4 +467,50 @@ bool mlocRoundRelative(RelativeDuration* duration, const RelativeStart* start, M
         return Bubble(sign, duration, nudge.nudged, start, rounding->largestUnit, startUnit);
     }
     return true;
+}
+
+// The nanoseconds from one moment to another, which lie within a few
+// hundred days here.
+static int64_t NanosecondsBetween(Moment from, Moment to)
+{
+    return (to.day - from.day) * s_nanosecondsPerDay + to.nanosecond - from.nanosecond;
+}
+
+bool mlocTotalRelative(const RelativeDuration* duration, const RelativeStart* start, Moment dest,
+                       int unit, double* totalOut)
+{
+    if (unit < unitDay || (start->zone != nullptr && unit == unitDay))
+    {
+        // NudgeToCalendarUnit's total with an increment of 1: the
+        // multiple before, and the destination's place in the window.
+        int sign = DurationSign(duration) < 0 ? -1 : 1;
+        Window w;
+        bool expanded = false;
+        if (!FindWindow(sign, duration, start, dest, unit, 1, &w, &expanded))
+        {
+            return false;
+        }
+        uint64_t part = (uint64_t)(sign * NanosecondsBetween(w.startMoment, dest));
+        uint64_t whole = (uint64_t)(sign * NanosecondsBetween(w.startMoment, w.endMoment));
+        uint64_t below = (uint64_t)(w.r1 < 0 ? -w.r1 : w.r1);
+        Wide numerator = mlocWideSum(mlocWideProduct(below, whole), (Wide){0, part});
+        *totalOut = mlocBinary64Of(sign < 0, numerator, (Wide){0, whole});
+        return true;
+    }
+    // A time unit, or days without a zone: the days as 24 hours.
+    mlocTimeDuration time = Normalized(duration->date.days * secondsPerDay + duration->time.seconds,
+                                       duration->time.nanoseconds);
+    *totalOut = mlocTotalOfTime(&time, s_unitSeconds[unit] * nanosecondsPerSecond +
+                                           s_unitNanoseconds[unit]);
+    return true;
+}
+
+double mlocTotalOfTime(const mlocTimeDuration* time, int64_t unitNanoseconds)
+{
+    bool negative = time->seconds < 0 || time->nanoseconds < 0;
+    uint64_t seconds = (uint64_t)(negative ? -time->seconds : time->seconds);
+    uint64_t nanoseconds = (uint64_t)(negative ? -time->nanoseconds : time->nanoseconds);
+    Wide numerator =
+        mlocWideSum(mlocWideProduct(seconds, nanosecondsPerSecond), (Wide){0, nanoseconds});
+    return mlocBinary64Of(negative, numerator, (Wide){0, (uint64_t)unitNanoseconds});
 }

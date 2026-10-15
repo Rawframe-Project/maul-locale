@@ -206,6 +206,32 @@ nanoseconds.
   longer whole days. Twice the progress is still compared by days first,
   so 64 bits suffice. hoursInDay and withPlainTime are the host's, from
   mlocGetStartOfDay and mlocGetInstantFor.
+- **Durations and totals** (amended 2026-10-15, slice 12j):
+  - `mlocDurationValues` holds Temporal.Duration's ten fields as the
+    float64 integers a host keeps. `mlocMakeDuration` is IsValidDuration
+    with ToInternalDurationRecord, and `mlocGetDurationValues` is
+    TemporalDurationFromInternal with CreateTemporalDuration's check.
+    The doubles are read and made from their bits, and every sum is
+    exact, including microseconds and nanoseconds past 2^53 and the
+    float64 rounding of the sub-second fields that the check counts.
+  - `mlocAddTimeDurations` is AddTimeDuration, `mlocRoundTimeDuration`
+    is RoundTimeDuration (a day taking increments to 10^9), and
+    `mlocTotalTimeDuration` is TotalTimeDuration.
+  - `mlocDateTimeTotal` is DifferencePlainDateTimeWithTotal, and
+    `mlocZonedDateTimeTotal` is DifferenceZonedDateTimeWithTotal. Both
+    use TotalRelativeDuration, which is NudgeToCalendarUnit's window with
+    an increment of 1.
+
+  A total is the float64 nearest an exact rational: the units before
+  the window, and the destination's place in it. The library divides
+  128-bit integers and rounds to nearest, ties to even, then assembles
+  the double from its bits. No floating-point arithmetic is used
+  (mloc-0001). Duration.round, total, add, subtract and compare are the
+  host's, through these and the sums of slices 12g and 12i, as ECMA-262
+  writes them. mlocZonedDateTimeUntil no longer returns early for equal
+  instants. DifferenceZonedDateTimeWithRounding does not, and
+  Duration.round refuses rounding a zero duration whose next day passes
+  the range; Temporal's until and since check equal instants first.
 - **Later in this part:**
   - a zones file whose tzdb release may differ from the library's, so
     a program takes a new release without the rest of the data;
@@ -258,7 +284,7 @@ nanoseconds.
   or nanoseconds past `int64_t` takes its field from the exact decimal,
   as a host does.
 - **ZonedDateTime against test262:** `test/test_zoned_test262.c`
-  replays 6,279 rows and 57,301 checks from 318 of test262's
+  replays 6,159 rows and 56,101 checks from 318 of test262's
   Temporal.ZonedDateTime files, in every calendar: added to, rounded,
   differences until and since, starts of days, and property bags'
   offsets weighed against the zone. They are in
@@ -266,19 +292,31 @@ nanoseconds.
   an offset zone.
 - **Zoned arithmetic against a reading of ECMA-262:**
   `tools/check_zoned.py` follows the specification's steps for
-  AddZonedDateTime, DifferenceZonedDateTimeWithRounding, the round and
+  AddZonedDateTime, DifferenceZonedDateTimeWithRounding,
+  DifferenceZonedDateTimeWithTotal, the round and
   InterpretISODateTimeOffset in the ISO calendar. It uses exact integers
   and fractions over Python's zoneinfo, which reads zic's fat files for
   the same source. Around every change of offset from 1900 to 2040 in
   every zone it asks `test/conform_zoned.c` about:
   - differences across the change, including ones near a whole day or
     a whole month, with each kind of rounding;
+  - totals of each unit over spans across it, as the float64 bits;
   - durations added across it;
   - instants near it rounded;
   - local times in its gap or fold found with either offset.
 
-  All 1,650,750 answers agree. A planted fault in NudgeToZonedTime
-  changes 44,296 of them. The cldr CI job runs it.
+  All 2,348,250 answers agree. A planted fault in NudgeToZonedTime
+  changes 44,296 of them, and one in a total's numerator 465,000. The
+  cldr CI job runs it.
+- **Duration against test262:** `test/test_duration_test262.c` replays
+  1,227 rows and 5,943 checks from 131 of test262's Temporal.Duration
+  files. They cover round and total with no start, a plain date or a
+  zoned date-time, sums, and comparisons, doing what a host does. They
+  are in `test/test262_duration.inc`.
+- **Totals as float64:** the rounding to binary64 agrees with Python's
+  correctly rounded `float(Fraction)` on 183,417 random quotients of
+  numerators below 2^120 and denominators below 2^74, near-ties among
+  them.
 - **Against test262:** `test/test_zone_test262.c` replays 3,138 rows
   from 27 of test262's Temporal.ZonedDateTime files: identifiers kept
   or refused, equality, offsets and transitions. The rows are in

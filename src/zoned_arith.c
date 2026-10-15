@@ -23,8 +23,6 @@ enum
 
 static const int64_t s_nanosecondsPerDay = INT64_C(86400000000000);
 static const int64_t s_nanosecondsPerMinute = INT64_C(60000000000);
-// A date duration's days, at most 2^53 seconds of them.
-static const int64_t s_maxDays = INT64_C(104249991374);
 // CheckISODaysRange: 10^8 days either side of 1970.
 static const int64_t s_maxEpochDays = 100000000;
 
@@ -89,6 +87,16 @@ static int64_t CandidateOffset(const mlocDateTime* dateTime, const mlocInstant* 
            (int64_t)dateTime->time.nanosecond - candidate->nanoseconds;
 }
 
+// Whether a candidate's offset is the one given, or rounds to it when
+// minutes match.
+static bool Matches(const mlocDateTime* dateTime, const mlocInstant* candidate, int64_t offset,
+                    bool matchMinutes)
+{
+    int64_t own = CandidateOffset(dateTime, candidate);
+    return own == offset || (matchMinutes && mlocRoundToIncrement(own, s_nanosecondsPerMinute,
+                                                                  mloc_roundHalfExpand) == offset);
+}
+
 mlocResult mlocGetInstantForOffset(const mlocTimeZone* zone, const mlocDateTime* dateTime,
                                    int64_t offsetNanoseconds, mlocOffsetOption option,
                                    mlocDisambiguation disambiguation, bool matchMinutes,
@@ -134,17 +142,18 @@ mlocResult mlocGetInstantForOffset(const mlocTimeZone* zone, const mlocDateTime*
     {
         return mloc_errorInvalid;
     }
-    for (uint32_t i = 0; i < possible.count; i += 1)
+    // The earlier candidate first: in a fold of under a minute both can
+    // match to the minute.
+    if (possible.count >= 1 &&
+        Matches(dateTime, &possible.earliest, offsetNanoseconds, matchMinutes))
     {
-        const mlocInstant* candidate = i == 0 ? &possible.earliest : &possible.latest;
-        int64_t offset = CandidateOffset(dateTime, candidate);
-        if (offset == offsetNanoseconds ||
-            (matchMinutes && mlocRoundToIncrement(offset, s_nanosecondsPerMinute,
-                                                  mloc_roundHalfExpand) == offsetNanoseconds))
-        {
-            *instantOut = *candidate;
-            return mloc_success;
-        }
+        *instantOut = possible.earliest;
+        return mloc_success;
+    }
+    if (possible.count == 2 && Matches(dateTime, &possible.latest, offsetNanoseconds, matchMinutes))
+    {
+        *instantOut = possible.latest;
+        return mloc_success;
     }
     if (option == mloc_offsetReject)
     {
@@ -163,8 +172,7 @@ mlocResult mlocAddToZonedDateTime(const mlocTimeZone* zone, mlocCalendar calenda
         return mloc_errorInvalid;
     }
     int dateSign = DateSign(&duration->date);
-    if (dateSign * TimeSign(&duration->time) < 0 || duration->date.days > s_maxDays ||
-        duration->date.days < -s_maxDays)
+    if (dateSign * TimeSign(&duration->time) < 0)
     {
         return mloc_errorInvalid;
     }
@@ -271,8 +279,7 @@ mlocResult mlocZonedDateTimeUntil(const mlocTimeZone* zone, mlocCalendar calenda
     {
         return mloc_errorInvalid;
     }
-    bool equal = CompareInstants(one, two) == 0;
-    if (!equal && (rounding->smallestUnit != mloc_unitNanosecond || rounding->increment != 1))
+    if (rounding->smallestUnit != mloc_unitNanosecond || rounding->increment != 1)
     {
         RelativeRounding relative = {(int)rounding->largestUnit, (int)rounding->smallestUnit,
                                      rounding->increment, rounding->mode};
@@ -284,6 +291,33 @@ mlocResult mlocZonedDateTimeUntil(const mlocTimeZone* zone, mlocCalendar calenda
     }
     *durationOut = (mlocDateTimeDuration){.date = d.date, .time = d.time};
     return mloc_success;
+}
+
+mlocResult mlocZonedDateTimeTotal(const mlocTimeZone* zone, mlocCalendar calendar,
+                                  const mlocInstant* one, const mlocInstant* two, mlocUnit unit,
+                                  double* totalOut)
+{
+    mlocDateTime start;
+    if (one == nullptr || two == nullptr || totalOut == nullptr ||
+        (uint32_t)unit > mloc_unitNanosecond || !mlocValidInstant(two) ||
+        mlocGetDateTimeFor(zone, one, calendar, &start) != mloc_success)
+    {
+        return mloc_errorInvalid;
+    }
+    if (unit >= mloc_unitHour)
+    {
+        // Exact time over the unit's length.
+        mlocTimeDuration d = Between(one, two);
+        return mlocTotalTimeDuration(&d, (mlocTimeUnit)(unit - mloc_unitDay), totalOut);
+    }
+    RelativeDuration d = {0};
+    if (!Difference(zone, calendar, one, two, unit, &start, &d))
+    {
+        return mloc_errorInvalid;
+    }
+    RelativeStart from = {&start.date, NanosecondOfDay(&start.time), zone, mlocMomentOf(one)};
+    return mlocTotalRelative(&d, &from, mlocMomentOf(two), (int)unit, totalOut) ? mloc_success
+                                                                                : mloc_errorInvalid;
 }
 
 // Rounding to a day: the day's progress from its start to the next day's

@@ -121,6 +121,14 @@ static void TestUntil(void)
     }
     mlocTimeZone forged = {.offsetMinutes = 1440};
     mlocInstant past = {INT64_C(8640000000000), 1};
+    r = (mlocDateTimeRounding){mloc_unitDay, mloc_unitSecond, 1, mloc_roundTrunc};
+    CHECK(mlocZonedDateTimeUntil(&forged, mloc_calendarGregorian, &noon, &next, &r, &d) ==
+                  mloc_errorInvalid &&
+              mlocZonedDateTimeUntil(&berlin, mloc_calendarGregorian, &noon, &past, &r, &d) ==
+                  mloc_errorInvalid &&
+              mlocZonedDateTimeUntil(&berlin, mloc_calendarGregorian, &past, &noon, &r, &d) ==
+                  mloc_errorInvalid,
+          "a zone or instant the library would not make, with days");
     r = (mlocDateTimeRounding){mloc_unitHour, mloc_unitSecond, 1, mloc_roundTrunc};
     CHECK(mlocZonedDateTimeUntil(&forged, mloc_calendarGregorian, &noon, &next, &r, &d) ==
                   mloc_errorInvalid &&
@@ -177,15 +185,55 @@ static void TestRound(void)
           "the last day, an increment, mode or zone refused, nulls");
 }
 
-static mlocDateTime Local(int32_t day, uint8_t hour, uint8_t minute)
+static mlocDateTime LocalSecond(int32_t day, uint8_t hour, uint8_t minute, uint8_t second)
 {
     mlocDate date = {0};
-    mlocTime time = {hour, minute, 0, 0, 0};
+    mlocTime time = {hour, minute, second, 0, 0};
     mlocDateTime out = {0};
     CHECK(mlocMakeDateFromDay(mloc_calendarGregorian, day, &date) == mloc_success &&
               mlocMakeDateTime(&date, &time, &out) == mloc_success,
           "a date-time");
     return out;
+}
+
+static mlocDateTime Local(int32_t day, uint8_t hour, uint8_t minute)
+{
+    return LocalSecond(day, hour, minute, 0);
+}
+
+// The first day of Temporal's range, and N'Djamena's fold of 12 seconds
+// in 1912 (+01:00:12 to +01:00), whose two offsets round to one minute.
+static void TestOffsetEdges(void)
+{
+    mlocTimeZone utc = Zone("UTC");
+    const int64_t h = INT64_C(3600000000000);
+    const int64_t first = -INT64_C(8640000000000);
+    mlocDateTime noon = Local(719163 - 100000000, 12, 0);
+    mlocInstant out = {0};
+    CHECK(mlocGetInstantForOffset(&utc, &noon, h, mloc_offsetUse, mloc_disambiguationCompatible,
+                                  false, &out) == mloc_success &&
+              out.seconds == first + 43200 - 3600,
+          "an offset used on the first day");
+    CHECK(mlocGetInstantForOffset(&utc, &noon, 0, mloc_offsetReject, mloc_disambiguationCompatible,
+                                  false, &out) == mloc_success &&
+              out.seconds == first + 43200,
+          "an offset matched on the first day");
+    mlocTimeZone berlin = Zone("Europe/Berlin");
+    mlocDateTime october = Local(739176, 12, 0);
+    CHECK(mlocGetInstantForOffset(&berlin, &october, 2 * h, mloc_offsetReject,
+                                  mloc_disambiguationReject, false, &out) == mloc_success &&
+              out.seconds == INT64_C(1729159200),
+          "the one instant matched");
+    mlocTimeZone ndjamena = Zone("Africa/Ndjamena");
+    mlocDateTime fold = LocalSecond(697977, 23, 59, 54);
+    CHECK(mlocGetInstantForOffset(&ndjamena, &fold, h, mloc_offsetReject,
+                                  mloc_disambiguationCompatible, true, &out) == mloc_success &&
+              out.seconds == -INT64_C(1830387618),
+          "minutes matching both, the earlier");
+    CHECK(mlocGetInstantForOffset(&ndjamena, &fold, h, mloc_offsetReject,
+                                  mloc_disambiguationCompatible, false, &out) == mloc_success &&
+              out.seconds == -INT64_C(1830387606),
+          "exactly, the later");
 }
 
 static void TestOffset(void)
@@ -264,5 +312,6 @@ int main(void)
     TestUntil();
     TestRound();
     TestOffset();
+    TestOffsetEdges();
     return s_failures == 0 ? 0 : 1;
 }

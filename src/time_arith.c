@@ -10,6 +10,7 @@
 #include "time_arith.h"
 
 #include "date_time.h"
+#include "duration_round.h"
 #include "rounding.h"
 
 enum
@@ -117,6 +118,57 @@ mlocResult mlocMakeTimeDuration(const mlocTimeDurationFields* fields, mlocTimeDu
         return mloc_errorInvalid;
     }
     *durationOut = d;
+    return mloc_success;
+}
+
+mlocResult mlocAddTimeDurations(const mlocTimeDuration* one, const mlocTimeDuration* two,
+                                mlocTimeDuration* durationOut)
+{
+    mlocTimeDuration sum;
+    if (one == nullptr || two == nullptr || durationOut == nullptr || !mlocTimeDurationValid(one) ||
+        !mlocTimeDurationValid(two) ||
+        !Normalize(one->seconds + two->seconds, (int64_t)one->nanoseconds + two->nanoseconds, &sum))
+    {
+        return mloc_errorInvalid;
+    }
+    *durationOut = sum;
+    return mloc_success;
+}
+
+mlocResult mlocRoundTimeDuration(const mlocTimeDuration* duration, mlocTimeUnit unit,
+                                 uint32_t increment, mlocRoundingMode mode,
+                                 mlocTimeDuration* durationOut)
+{
+    // Duration.round's increments: a day any of 1 to 10^9 (it has no
+    // maximum there), another unit as for times.
+    if (duration == nullptr || durationOut == nullptr || !mlocTimeDurationValid(duration) ||
+        (uint32_t)unit > mloc_timeUnitNanosecond || (uint32_t)mode > mloc_roundTrunc ||
+        (unit == mloc_timeUnitDay ? increment == 0 || increment > 1000000000
+                                  : !ValidIncrement(unit, increment)))
+    {
+        return mloc_errorInvalid;
+    }
+    int64_t length = s_unitLength[unit];
+    bool whole = length >= nanosecondsPerSecond;
+    mlocTimeDuration rounded;
+    if (!mlocRoundTimeStep(*duration, whole ? length / nanosecondsPerSecond * increment : 0,
+                           whole ? 0 : length * increment, mode, &rounded))
+    {
+        return mloc_errorInvalid;
+    }
+    *durationOut = rounded;
+    return mloc_success;
+}
+
+mlocResult mlocTotalTimeDuration(const mlocTimeDuration* duration, mlocTimeUnit unit,
+                                 double* totalOut)
+{
+    if (duration == nullptr || totalOut == nullptr || !mlocTimeDurationValid(duration) ||
+        (uint32_t)unit > mloc_timeUnitNanosecond)
+    {
+        return mloc_errorInvalid;
+    }
+    *totalOut = mlocTotalOfTime(duration, s_unitLength[unit]);
     return mloc_success;
 }
 

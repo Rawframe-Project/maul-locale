@@ -7,11 +7,13 @@
 # reading zic's fat TZif files for the same tzdb source: AddZonedDateTime,
 # DifferenceZonedDateTimeWithRounding (DifferenceZonedDateTime,
 # RoundRelativeDuration with ComputeNudgeWindow, NudgeToCalendarUnit,
-# NudgeToZonedTime and BubbleRelativeDuration), Temporal.ZonedDateTime's
-# round and InterpretISODateTimeOffset, in the ISO calendar, written from
+# NudgeToZonedTime and BubbleRelativeDuration),
+# DifferenceZonedDateTimeWithTotal, Temporal.ZonedDateTime's round and
+# InterpretISODateTimeOffset, in the ISO calendar, written from
 # the specification's steps with exact integers and fractions. Around
 # every change of offset from 1900 to 2040 in every zone, conform_zoned is
-# asked about differences spanning the change with each kind of rounding,
+# asked about differences spanning the change with each kind of rounding
+# and their totals of each unit (the float64 nearest the exact total),
 # durations added across it, instants near it rounded, and local times in
 # its gap or fold found with either offset.
 #
@@ -19,6 +21,7 @@
 
 import datetime
 import os
+import struct
 import subprocess
 import sys
 import tempfile
@@ -362,6 +365,21 @@ def until(zone, ns1, ns2, largest, smallest, increment, mode):
                           smallest, mode)
 
 
+def total(zone, ns1, ns2, unit):
+    # DifferenceZonedDateTimeWithTotal.
+    if unit >= HOUR:
+        return Fraction(ns2 - ns1, UNIT_LENGTH[unit])
+    date, time = difference_zoned(zone, ns1, ns2, unit)
+    sign = -1 if duration_sign(date, time) < 0 else 1
+    dt = zone.date_time_for(ns1)
+    w = nudge_window(sign, date, time, ns1, dt, zone, 1, unit, False)
+    low, high = (w[2], w[3]) if sign == 1 else (w[3], w[2])
+    if not low <= ns2 <= high:
+        w = nudge_window(sign, date, time, ns1, dt, zone, 1, unit, True)
+    r1, _, start_ns, end_ns, _, _ = w
+    return r1 + Fraction(ns2 - start_ns, end_ns - start_ns) * sign
+
+
 def interpret_offset(zone, date, time, offset, option, disambiguation):
     if option == "ignore":
         return zone.epoch_for(date, time, disambiguation)
@@ -446,6 +464,13 @@ def questions(zone, t, before, after):
             return "%d %d %d %d %s" % (*date, time_text(time))
         out.append(("until %s %s %d %d %d %d" % (instant_text(one), instant_text(two), largest,
                                                   smallest, increment, MODES.index(mode)), fn))
+    # Totals of each unit over spans across the change.
+    for one, two in ((c, d), (d, c), (a, at + 30 * DAY), (month_before, one + 1200 * NS),
+                     (one + 1200 * NS, month_before)):
+        for unit in (0, 1, 2, 3, 4, 9):
+            def fn(one=one, two=two, unit=unit):
+                return struct.pack(">d", float(total(zone, one, two, unit))).hex()
+            out.append(("total %s %s %d" % (instant_text(one), instant_text(two), unit), fn))
     for start, duration, overflow in ((c, (0, 0, 0, 1, 0), 0), (c, (0, 1, 0, 0, 25 * 3600 * NS), 0),
                                       (a, (0, 0, 0, -1, 0), 0), (at - 1, (0, 0, 1, 0, 0), 1),
                                       (b, (0, -1, 0, -1, -3600 * NS), 1)):

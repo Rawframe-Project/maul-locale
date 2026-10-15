@@ -77,10 +77,20 @@ bool mlocRoundRelative(RelativeDuration* duration, const RelativeStart* start, M
 // An instant as a moment.
 Moment mlocMomentOf(const mlocInstant* instant);
 
+// TotalRelativeDuration: the total of a unit in a duration that runs from
+// start to the moment dest, as the binary64 nearest it. False when a date
+// or instant it reaches leaves Temporal's range.
+bool mlocTotalRelative(const RelativeDuration* duration, const RelativeStart* start, Moment dest,
+                       int unit, double* totalOut);
+
+// TotalTimeDuration: a time duration over a unit's length in
+// nanoseconds, as the binary64 nearest it.
+double mlocTotalOfTime(const mlocTimeDuration* time, int64_t unitNanoseconds);
+
 // RoundTimeDurationToIncrement: a time duration to a multiple of a step
 // of stepSeconds whole seconds, or when that is 0 of stepNanoseconds, a
 // divisor of a second. False when the result passes 2^53 seconds.
-bool mlocRoundTimeDuration(mlocTimeDuration value, int64_t stepSeconds, int64_t stepNanoseconds,
-                           mlocRoundingMode mode, mlocTimeDuration* out);
+bool mlocRoundTimeStep(mlocTimeDuration value, int64_t stepSeconds, int64_t stepNanoseconds,
+                       mlocRoundingMode mode, mlocTimeDuration* out);
 
 #endif

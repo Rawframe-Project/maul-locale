@@ -145,6 +145,31 @@ mlocResult mlocDateTimeUntil(const mlocDateTime* one, const mlocDateTime* two,
     return mloc_success;
 }
 
+mlocResult mlocDateTimeTotal(const mlocDateTime* one, const mlocDateTime* two, mlocUnit unit,
+                             double* totalOut)
+{
+    if (!Usable(one) || !Usable(two) || totalOut == nullptr ||
+        one->date.calendar != two->date.calendar || (uint32_t)unit > mloc_unitNanosecond)
+    {
+        return mloc_errorInvalid;
+    }
+    int64_t start = NanosecondOfDay(&one->time);
+    int64_t end = NanosecondOfDay(&two->time);
+    if (one->date.day == two->date.day && start == end)
+    {
+        *totalOut = 0;
+        return mloc_success;
+    }
+    RelativeDuration d = {0};
+    RelativeStart from = {&one->date, start, nullptr, {one->date.day, start}};
+    if (!Difference(one, two, unit, &d) ||
+        !mlocTotalRelative(&d, &from, (Moment){two->date.day, end}, (int)unit, totalOut))
+    {
+        return mloc_errorInvalid;
+    }
+    return mloc_success;
+}
+
 mlocResult mlocRoundDateTime(const mlocDateTime* dateTime, mlocTimeUnit unit, uint32_t increment,
                              mlocRoundingMode mode, mlocDateTime* dateTimeOut)
 {

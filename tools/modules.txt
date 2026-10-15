@@ -88,13 +88,15 @@ zone_rules: bytes calendar_arith zone_tables
 zone_handle: zone_rules zone_tables
 zone: bytes data_view kinds zone_handle zone_rules
 date_time: calendar_year
-time_arith: date_time rounding
+time_arith: date_time duration_round rounding
 datetime_arith: date_time duration_round time_arith
 instant_arith: duration_round rounding time_arith zone_handle
 zoned_arith: date_time duration_round rounding time_arith zone_handle
 zone_local: date_time zone_handle zone_rules zone_tables
 calendar_until: calendar_arith calendar_year
 calendar_round: duration_round
-duration_round: date_time rounding
+duration_round: binary64 date_time rounding
 rounding:
+binary64:
+duration_values: binary64 time_arith
 calendar_fields: calendar_arith calendar_year
