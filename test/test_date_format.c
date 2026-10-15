@@ -128,8 +128,11 @@ static void TestWeekYear(void)
     CHECK(Is("gl-u-ca-buddhist", full, Iso(2026, 1, 1), "xoves, 1 de xaneiro de 2569 BE") &&
               Is("gl-u-ca-buddhist", full, Iso(2020, 12, 31), "xoves, 31 de decembro de 2563 BE"),
           "a week of four days in its year is the year's");
-    CHECK(Is("gl-u-ca-buddhist", full, Iso(2019, 12, 30), "luns, 30 de decembro de 2563 BE"),
-          "the last days of a year in the next year's first week");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2019, 12, 30), "luns, 30 de decembro de 2563 BE") &&
+              Is("gl-u-ca-buddhist", full, Iso(2014, 12, 29), "luns, 29 de decembro de 2558 BE"),
+          "the last days of a year in the next year's first week, of four days or more");
+    CHECK(Is("gl-u-ca-buddhist", full, Iso(2010, 1, 4), "luns, 4 de xaneiro de 2553 BE"),
+          "the first day of a year's first week");
 }
 
 static void TestYearStyles(void)

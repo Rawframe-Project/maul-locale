@@ -68,6 +68,7 @@ int main(void)
     CHECK(!ValidWith(r + 6, mloc_measurementUk + 1, 1), "an unknown measurement system");
     CHECK(!ValidWith(r + 6, (mloc_paperUsLetter + 1) << 4, 1), "an unknown paper size");
     CHECK(!ValidWith(r + 7, mloc_calendarDangi + 1, 1), "an unknown calendar");
+    CHECK(ValidWith(r + 7, mloc_calendarDangi, 1), "the last calendar");
     // 001 is the 1025th packed region; giving its entry another code
     // that keeps the order leaves the table without it.
     for (uint32_t i = 0; i < regionCount; i++)
