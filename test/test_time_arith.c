@@ -37,6 +37,10 @@ static void TestMakeDuration(void)
     CHECK(DurationIs(&f, 0, 999999999), "of one sign after a borrow");
     f = (mlocTimeDurationFields){.seconds = -1, .nanoseconds = 1};
     CHECK(DurationIs(&f, 0, -999999999), "and the other way");
+    f = (mlocTimeDurationFields){.microseconds = 7};
+    CHECK(DurationIs(&f, 0, 7000), "under a second");
+    f = (mlocTimeDurationFields){.nanoseconds = -7};
+    CHECK(DurationIs(&f, 0, -7), "under a second, negative");
     f = (mlocTimeDurationFields){
         .milliseconds = -1500, .microseconds = -2500000, .nanoseconds = -3500000000};
     CHECK(DurationIs(&f, -7, -500000000), "subsecond fields carry into seconds");
@@ -53,6 +57,11 @@ static void TestMakeDuration(void)
         {.milliseconds = INT64_MIN},
         {.microseconds = INT64_MIN},
         {.nanoseconds = INT64_MIN},
+        {.days = INT64_MIN},
+        {.hours = INT64_MIN},
+        {.minutes = INT64_MIN},
+        {.seconds = INT64_MIN},
+        {.seconds = INT64_C(9007199254740992), .nanoseconds = -1},
         {.days = INT64_C(-104249991375)},
     };
     for (size_t i = 0; i < sizeof s_out / sizeof s_out[0]; i++)

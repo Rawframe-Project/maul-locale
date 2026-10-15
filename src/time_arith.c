@@ -50,6 +50,13 @@ static bool ValidDuration(const mlocTimeDuration* d)
            !(d->seconds > 0 && d->nanoseconds < 0) && !(d->seconds < 0 && d->nanoseconds > 0);
 }
 
+// Whether a field lies within a limit either side; compared, not
+// negated, so INT64_MIN is out rather than an overflow.
+static bool Within(int64_t v, int64_t limit)
+{
+    return v >= -limit && v <= limit;
+}
+
 static int64_t Magnitude(int64_t v)
 {
     return v < 0 ? -v : v;
@@ -93,8 +100,8 @@ mlocResult mlocMakeTimeDuration(const mlocTimeDurationFields* fields, mlocTimeDu
     const mlocTimeDurationFields* f = fields;
     // Each field alone below 2^53 seconds, so that the sums below stay in
     // int64_t.
-    if (Magnitude(f->days) > s_maxSeconds / 86400 || Magnitude(f->hours) > s_maxSeconds / 3600 ||
-        Magnitude(f->minutes) > s_maxSeconds / 60 || Magnitude(f->seconds) >= s_maxSeconds ||
+    if (!Within(f->days, s_maxSeconds / 86400) || !Within(f->hours, s_maxSeconds / 3600) ||
+        !Within(f->minutes, s_maxSeconds / 60) || !Within(f->seconds, s_maxSeconds - 1) ||
         f->milliseconds == INT64_MIN || f->microseconds == INT64_MIN || f->nanoseconds == INT64_MIN)
     {
         return mloc_errorInvalid;
