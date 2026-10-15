@@ -15,6 +15,7 @@
 #include "zone_rules.h"
 
 #include "maul-locale/data.h"
+#include "maul-locale/zone.h"
 
 #include <string.h>
 
@@ -379,6 +380,20 @@ static void TestRangeEnd(void)
           "the last year's transitions");
 }
 
+// A public zone handle's identifier must be one of the unit's: the last
+// is read, one past it refused.
+static void TestHandleBounds(const mlocDataSet* data)
+{
+    mlocTimeZone zone = {0};
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    CHECK(mlocFindTimeZone(data, "UTC", 3, &zone) == mloc_success, "a zone");
+    zone.identifier = (uint16_t)(s_tables.identifierCount - 1);
+    CHECK(mlocFormatTimeZoneId(&zone, &output) == mloc_success, "the last identifier");
+    zone.identifier = (uint16_t)s_tables.identifierCount;
+    CHECK(mlocFormatTimeZoneId(&zone, &output) == mloc_errorInvalid, "one past the last");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_builtin);
@@ -391,5 +406,6 @@ int main(void)
     TestRearguard();
     TestTransitions();
     TestRangeEnd();
+    TestHandleBounds(&data);
     return s_failures == 0 ? 0 : 1;
 }

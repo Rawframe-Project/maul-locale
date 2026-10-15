@@ -302,6 +302,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
     add_executable(conform_local test/conform_local.c)
     target_link_libraries(conform_local PRIVATE maul-locale)
     maul_apply_flags(conform_local)
+    # It reads its questions with standard sscanf, which the Windows C
+    # runtime reports as deprecated.
+    if(WIN32)
+        target_compile_definitions(conform_local PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
     maul_add_header_tests()
 endif()
 

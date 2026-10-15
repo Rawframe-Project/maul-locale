@@ -214,6 +214,10 @@ static void TestDateTimeFor(void)
               LocalIs(&york, 1509863400, epochDay + 17475, 1, 30, 0),
           "both instants of a fold read the same local time");
     CHECK(LocalIs(&york, -1, epochDay - 1, 18, 59, 59), "before 1970, across a day");
+    mlocTimeZone utc = Find("UTC");
+    CHECK(LocalIs(&utc, 86400, epochDay + 1, 0, 0, 0) &&
+              LocalIs(&utc, -86400, epochDay - 1, 0, 0, 0),
+          "midnight exactly starts its day");
     mlocTimeZone east = Find("+23:59");
     mlocTimeZone west = Find("-23:59");
     mlocInstant last = {INT64_C(8640000000000), 0};
