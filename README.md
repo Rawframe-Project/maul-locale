@@ -113,7 +113,9 @@ Data Repository (CLDR), which is covered by the Unicode License v3; its
 notice is in `LICENSES/Unicode-3.0.txt`. That covers:
 - the compiled-in data, `src/generated/builtin_data.c`;
 - the data files in `src/generated`;
-- the tables taken from CLDR's supplemental data.
+- the tables taken from CLDR's supplemental data;
+- the skeleton test table `test/skeletons_icu.tsv` (CLDR's test
+  questions with ICU4C's answers, ICU being under the same license).
 
 The library's code is its own, written from the specifications and
 from Reingold and Dershowitz's Calendrical Calculations. The Persian

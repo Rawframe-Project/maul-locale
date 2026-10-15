@@ -71,6 +71,16 @@ const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Compo
 // none. Fails the program on a file CLDR cannot read.
 const LdmlFile* CldrFile(Cldr* cldr, const char* locale, Component component);
 
+enum
+{
+    // The longest chain, with its NUL.
+    cldrMaxChain = 2048,
+};
+
+// The chain root's alias for the chain or one of its elements gives (out
+// holds cldrMaxChain bytes); 0 when root has none.
+int CldrAliasOf(Cldr* cldr, const char* chain, char* out, Component component);
+
 void CldrClose(Cldr* cldr);
 
 #endif

@@ -16,6 +16,8 @@ typedef struct ElementInfo
     int ordered;
     // Attribute name to its AttributeKind plus one.
     Map attributes;
+    // Attribute name to its default value, for those the DTD gives one.
+    Map defaults;
 } ElementInfo;
 
 static ElementInfo* Element(Dtd* dtd, const char* name)
@@ -32,6 +34,19 @@ static ElementInfo* Element(Dtd* dtd, const char* name)
         MapPut(&dtd->elements, name, info);
     }
     return info;
+}
+
+static char* Copy(const char* text)
+{
+    size_t length = strlen(text);
+    char* copy = malloc(length + 1);
+    if (copy == nullptr)
+    {
+        fputs("mlocgen: out of memory\n", stderr);
+        exit(1);
+    }
+    memcpy(copy, text, length + 1);
+    return copy;
 }
 
 // Copies the n-th white-space separated word of line into word.
@@ -63,6 +78,17 @@ static int Word(const char* line, int n, char* word, size_t capacity)
     return 0;
 }
 
+// The text after the n-th white-space separated word of line.
+static const char* AfterWord(const char* line, int n)
+{
+    for (int i = 0; i <= n; i++)
+    {
+        line += strspn(line, " \t");
+        line += strcspn(line, " \t\r\n>");
+    }
+    return line;
+}
+
 int DtdLoad(Dtd* dtd, const char* path, char* errorOut, size_t errorCapacity)
 {
     FILE* file = fopen(path, "r");
@@ -88,6 +114,16 @@ int DtdLoad(Dtd* dtd, const char* path, char* errorOut, size_t errorCapacity)
         {
             MapPut(&Element(dtd, element)->attributes, attribute,
                    (void*)(intptr_t)(attributeDistinguishing + 1));
+            // A default is the quoted value after the type.
+            const char* open = strchr(AfterWord(text, 2), '"');
+            const char* close = open == nullptr ? nullptr : strchr(open + 1, '"');
+            if (close != nullptr && close > open + 1 && close - open < 128)
+            {
+                char value[128];
+                snprintf(value, sizeof(value), "%.*s", (int)(close - open - 1), open + 1);
+                free(MapGet(&Element(dtd, element)->defaults, attribute));
+                MapPut(&Element(dtd, element)->defaults, attribute, Copy(value));
+            }
             lastWasElement = 0;
         }
         else if (strncmp(text, "<!--@ORDERED-->", 15) == 0 && lastWasElement)
@@ -122,10 +158,23 @@ AttributeKind DtdAttributeKind(const Dtd* dtd, const char* element, const char* 
     return kind == 0 ? attributeDistinguishing : (AttributeKind)(kind - 1);
 }
 
+const char* DtdDefault(const Dtd* dtd, const char* element, const char* attribute)
+{
+    const ElementInfo* info = MapGet(&dtd->elements, element);
+    return info == nullptr ? nullptr : MapGet(&info->defaults, attribute);
+}
+
 int DtdIsOrdered(const Dtd* dtd, const char* element)
 {
     const ElementInfo* info = MapGet(&dtd->elements, element);
     return info != nullptr && info->ordered;
+}
+
+static void FreeDefault(const char* key, void* value, void* context)
+{
+    (void)key;
+    (void)context;
+    free(value);
 }
 
 static void FreeElement(const char* key, void* value, void* context)
@@ -133,6 +182,8 @@ static void FreeElement(const char* key, void* value, void* context)
     (void)key;
     (void)context;
     ElementInfo* info = value;
+    MapEach(&info->defaults, FreeDefault, nullptr);
+    MapFree(&info->defaults);
     MapFree(&info->attributes);
     free(info);
 }

@@ -46,3 +46,4 @@ are listed in [README.md](README.md).
 | [mloc-0039](mloc-0039-subdivision-names.md) | Subdivision names: a small file of their own, read through the names lookup | Accepted |
 | [mloc-0040](mloc-0040-calendars.md) | Calendars: Temporal's values, computed in code, astronomical years as tables | Accepted |
 | [mloc-0041](mloc-0041-time-zones.md) | Time zones: the library's own tzdb compiler, Temporal's exact time | Accepted |
+| [mloc-0042](mloc-0042-datetime.md) | Dates and times formatted: semantic skeletons, patterns compiled by the generator | Accepted |

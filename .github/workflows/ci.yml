@@ -155,6 +155,13 @@ jobs:
           older=~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)
           build/mlocgen zonesfile $older ~/cldr-cache/cldr/common build/zones-older.mloc
           python3 tools/check_zones.py build/conform_zones $older build/zones-older.mloc
+      - name: Skeleton matching against ICU
+        # Record mloc-0042: mlocgen's best pattern for each question of
+        # CLDR's skeleton test files equals ICU4C 79's, or the listed one.
+        timeout-minutes: 5
+        run: |
+          python3 tools/check_skeletons.py build/mlocgen ~/cldr-cache/cldr/common \
+            test/skeletons_icu.tsv tools/skeleton-exceptions.txt
       - name: BCP 47 ids and Windows names against CLDR
         # Record mloc-0041: every id, identifier and Windows mapping, as
         # check_zone_codes.py reads CLDR's files.

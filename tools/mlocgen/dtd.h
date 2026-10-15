@@ -32,6 +32,10 @@ int DtdLoad(Dtd* dtd, const char* path, char* errorOut, size_t errorCapacity);
 // declare counts as distinguishing.
 AttributeKind DtdAttributeKind(const Dtd* dtd, const char* element, const char* attribute);
 
+// An attribute's default value, or null when the DTD gives none
+// ("standard" for dateTimeFormat's type).
+const char* DtdDefault(const Dtd* dtd, const char* element, const char* attribute);
+
 // Whether the DTD marks the element @ORDERED.
 int DtdIsOrdered(const Dtd* dtd, const char* element);
 

@@ -1,0 +1,344 @@
+# Where mlocgen's patterns differ from ICU4C 79's (test/skeletons_icu.tsv)
+# on purpose, with mlocgen's pattern. Both read CLDR 49; ICU's data build
+# resolves two things otherwise than CLDR's inheritance (UTS #35, root's
+# aliases resolved from the locale asked for), which mlocgen follows:
+# - The date-time glue of a calendar other than the Gregorian: CLDR gives
+#   the calendar's own atTime glue, through root's alias to its standard
+#   one ("{1} {0}" for many); ICU's data has no atTime glue for those
+#   calendars and takes the Gregorian one ("{1}, {0}" for many).
+# - The time formats of the Chinese and Dangi calendars: root aliases
+#   them to the locale's Gregorian ones ("HH.mm" in da); ICU takes root's
+#   own Chinese formats ("HH:mm").
+# CLDR's own skeletons*.tsv joins with the calendar's glue as mlocgen does.
+# locale, calendar, skeleton, mlocgen's pattern.
+ak	buddhist	yMdHmsv	y/M/d HH:mm:ss v
+ak	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ak	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+ak	ethiopic	yMEdz	EEE, M/d/y z
+ak	islamic-rgsa	yMv	M/y v
+ak	islamic-umalqura	yMMMMdhmsvvvv	G y MMMM d h:mm:ss a vvvv
+ak	islamic	yMdHmsv	y/M/d HH:mm:ss v
+ak	japanese	yMdHmsv	y/M/d HH:mm:ss v
+ak	roc	EEEEv	cccc v
+ak	roc	yMMMdv	G y MMM d v
+ar	buddhist	EEEEv	cccc, v
+ar	buddhist	Ez	ccc, z
+ar	buddhist	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	buddhist	yMEdz	EEE، d‏/M‏/y G, z
+ar	buddhist	yMv	M‏/y G, v
+ar	chinese	EEEEv	cccc v
+ar	chinese	Ez	ccc z
+ar	chinese	yMdHmsv	r/MM/dd HH:mm:ss v
+ar	chinese	yMEdz	r-MM-dd, EEE z
+ar	chinese	yMMMdv	r MMM d v
+ar	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+ar	chinese	yMMMMdv	r(U) MMMM d v
+ar	chinese	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+ar	chinese	yMv	r-MM v
+ar	coptic	Ez	ccc, z
+ar	coptic	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	coptic	yMEdz	EEE، d‏/M‏/y G, z
+ar	dangi	yMdHmsv	r/MM/dd HH:mm:ss v
+ar	ethiopic	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	hebrew	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	indian	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	islamic-civil	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	islamic-rgsa	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	islamic-tbla	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	islamic-umalqura	EEEEv	cccc, v
+ar	islamic-umalqura	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	islamic	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	japanese	EEEEv	cccc, v
+ar	japanese	Ez	ccc, z
+ar	japanese	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	japanese	yMEdz	EEE، d‏/M‏/y G, z
+ar	japanese	yMv	M‏/y G, v
+ar	persian	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	roc	yMdHmsv	d‏/M‏/y G, HH:mm:ss v
+ar	roc	yMEdz	EEE، d‏/M‏/y G, z
+as	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+as	chinese	yMEdz	r-MM-dd, EEE z
+as	chinese	yMMMMdhmsvvvv	r(U) MMMM d a h.mm.ss vvvv
+as	ethiopic	yMMMMdhmsvvvv	d MMMM y G a h.mm.ss vvvv বজাত
+as	indian	yMMMMdhmsvvvv	d MMMM y G a h.mm.ss vvvv বজাত
+az	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+az_Latn	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+az_Latn	dangi	yMMMdv	r MMM d v
+be	chinese	yMdHmsv	r-MM-dd HH:mm:ss, v
+be	chinese	yMMMdv	r MMM d v
+be	dangi	yMdHmsv	r-MM-dd HH:mm:ss, v
+bg	buddhist	yMdHmsv	d.MM.y 'г'. G, H:mm:ss 'ч'. v
+bg	chinese	yMdHmsv	r-MM-dd H:mm:ss 'ч'. v
+bg	dangi	EEEEv	cccc v
+bg	dangi	yMMMdv	r MMM d v
+bg	hebrew	EEEEv	cccc, v
+bg	indian	EEEEv	cccc, v
+bg	indian	yMMMdv	d.MM.y 'г'. G, v
+bg	islamic-umalqura	yMMMdv	d.MM.y 'г'. G, v
+bg	islamic-umalqura	yMv	M.y 'г'. G, v
+bg	japanese	yMdHmsv	d.MM.y 'г'. G, H:mm:ss 'ч'. v
+bn	buddhist	yMdHmsv	d/M/y G HH:mm:ss v
+bn	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+bn	dangi	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+bn	islamic-rgsa	yMdHmsv	d/M/y G HH:mm:ss v
+bn	islamic-tbla	yMdHmsv	d/M/y G HH:mm:ss v
+bn	japanese	Ez	ccc z
+bn	japanese	yMdHmsv	d/M/y G HH:mm:ss v
+bn	persian	EEEEv	cccc v
+bs	buddhist	yMdHmsv	d.M.y. G, HH:mm:ss v
+bs	coptic	Ez	ccc, z
+bs	dangi	yMv	r-MM, v
+bs	ethiopic	yMv	MM/y G, v
+bs	indian	yMv	MM/y G, v
+bs	islamic-umalqura	EEEEv	cccc, v
+bs	islamic-umalqura	yMMMdv	dd. MMM y. G, v
+bs	japanese	yMdHmsv	d. M. y. GGGGG, HH:mm:ss v
+bs_Latn	buddhist	yMdHmsv	d.M.y. G, HH:mm:ss v
+bs_Latn	ethiopic	yMv	MM/y G, v
+bs_Latn	japanese	yMdHmsv	d. M. y. GGGGG, HH:mm:ss v
+bs_Latn	roc	Ez	ccc, z
+bs	roc	yMEdz	EEE, d.M.y. G, z
+ca	buddhist	yMdHmsv	d/M/y G, H:mm:ss (v)
+ca	buddhist	yMMMMEEEEdvvvv	EEEE, d MMMM 'del' y G 'a' 'les' vvvv
+ca	indian	yMMMMdhmsvvvv	d MMMM 'del' y G 'a' 'les' h:mm:ss a vvvv
+ca	islamic-tbla	yMv	M/y G, v
+ca	japanese	yMdHmsv	d/M/y G, H:mm:ss (v)
+ca	roc	yMv	M/y G, v
+chr	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+cy	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+cy	dangi	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+da	buddhist	yMdHmsv	d.M.y HH.mm.ss v
+da	chinese	jjm	HH.mm
+da	chinese	yMdHmsv	r-MM-dd HH.mm.ss v
+da	ethiopic	yMv	M.y G v
+da	indian	yMv	M.y G v
+da	japanese	yMdHmsv	d/M/y HH.mm.ss v
+de	chinese	yMdHmsv	d.M.y HH:mm:ss v
+dsb	chinese	yMdHmsv	r-MM-dd H:mm:ss v
+dsb	dangi	yMdHmsv	r-MM-dd H:mm:ss v
+el	chinese	hmszz	h:mm:ss a zz
+el	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+el	dangi	yMdHmsv	r-MM-dd HH:mm:ss v
+es	chinese	yMdHmsv	d-M-r H:mm:ss (v)
+es	chinese	yMMMMdv	r(U) MMMM d v
+es	japanese	yMMMMEEEEdvvvv	EEEE, d 'de' MMMM 'de' y G 'a' 'las' vvvv
+et	buddhist	yMdHmsv	d.M.y G HH:mm:ss v
+et	chinese	yMdHmsv	dd.MM.r HH:mm:ss v
+et	islamic-rgsa	yMEdz	EEE, d.M y G z
+et	japanese	yMdHmsv	d.M.y G HH:mm:ss v
+et	japanese	yMMMdv	d. MMM y G v
+eu	buddhist	yMMMMdhmsvvvv	y('e')'ko' MMMM'k' d (h:mm:ss a (vvvv))
+eu	buddhist	yMMMMdv	y('e')'ko' MMMM'k' d (v)
+eu	buddhist	yMMMMEEEEdvvvv	y('e')'ko' MMMM'k' d, EEEE (vvvv)
+eu	chinese	yMdHmsv	r-MM-dd HH:mm:ss (v)
+eu	dangi	yMdHmsv	r-MM-dd HH:mm:ss (v)
+eu	hebrew	yMMMMEEEEdvvvv	y('e')'ko' MMMM'k' d, EEEE (vvvv)
+eu	japanese	yMMMMdhmsvvvv	y('e')'ko' MMMM'k' d (h:mm:ss a (vvvv))
+eu	japanese	yMMMMdv	y('e')'ko' MMMM'k' d (v)
+eu	japanese	yMMMMEEEEdvvvv	y('e')'ko' MMMM'k' d, EEEE (vvvv)
+fa	buddhist	yMdHmsv	y/M/d GGGGG،‏ H:mm:ss (v)
+fa	chinese	EEEEv	cccc v
+fa	chinese	yMdHmsv	r-MM-dd H:mm:ss (v)
+fa	chinese	yMv	r-MM v
+fa	islamic-rgsa	yMMMMdhmsvvvv	d MMMM y G، ساعت h:mm:ss a (vvvv)
+fa	islamic	yMMMMdhmsvvvv	d MMMM y G، ساعت h:mm:ss a (vvvv)
+fa	japanese	EEEEv	cccc،‏ v
+fa	japanese	yMdHmsv	y/M/d GGGGG،‏ H:mm:ss (v)
+fa	japanese	yMv	y/M GGGGG،‏ v
+fa	persian	yMEdz	EEE y/M/d،‏ z
+fi	chinese	yMdHmsv	d.M.y H.mm.ss v
+fi	chinese	yMv	r-MM v
+fil	chinese	hmszzz	h:mm:ss a zzz
+fil	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+fr	buddhist	yMMMdv	d MMM y G v
+fr	chinese	yMMMdv	d MMM U v
+fr	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+fr	chinese	yMMMMdv	r(U) MMMM d v
+fr	chinese	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+fr	dangi	yMMMMdv	r(U) MMMM d v
+fr	japanese	yMMMdv	d MMM y G v
+fr	persian	yMMMdv	d MMM y G v
+ga	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ga	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+ga	chinese	yMMMMdv	r(U) MMMM d v
+gu	chinese	jjm	hh:mm a
+gu	dangi	jjjjjjm	hh:mm aaaaa
+ha	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ha	islamic-rgsa	yMMMMEEEEdvvvv	EEEE, d MMMM, y 'a' vvvv
+ha	roc	yMMMMdv	G y MMMM d 'a' v
+he	chinese	yMdHmsv	r-MM-dd H:mm:ss v
+he	dangi	EEEEv	cccc v
+hi	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+hr	chinese	yMMMMdv	r(U) MMMM d v
+hsb	chinese	yMdHmsv	r-MM-dd H:mm:ss v
+hu	buddhist	yMdHmsv	G y. MM. dd., H:mm:ss v
+hu	chinese	yMdHmsv	r-MM-dd H:mm:ss v
+hu	islamic-umalqura	yMv	G y. MM., v
+hu	japanese	yMdHmsv	G y. MM. dd., H:mm:ss v
+hu	roc	Ez	ccc, z
+id	chinese	EEEEv	cccc v
+id	chinese	yMdHmsv	y-M-d HH.mm.ss v
+id	chinese	yMv	r-MM v
+ig	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+is	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+is	chinese	yMEdz	r-MM-dd, EEE z
+is	dangi	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+it	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+jv	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+kk_Arab	buddhist	yMdHmsv	M/d/y GGGGG، HH:mm:ss v
+kk_Arab	chinese	yMdHmsv	r-MM-dd، HH:mm:ss v
+kk_Arab	coptic	Ez	ccc، z
+kk_Arab	coptic	yMEdz	EEE، M/d/y GGGGG، z
+kk_Arab	coptic	yMMMMdv	MMMM d، y G v
+kk_Arab	dangi	yMv	r-MM، v
+kk_Arab	hebrew	yMMMdv	MMM d، y G، v
+kk_Arab	hebrew	yMv	M/y GGGGG، v
+kk_Arab	indian	yMMMdv	MMM d، y G، v
+kk_Arab	islamic-civil	yMEdz	EEE، M/d/y GGGGG، z
+kk_Arab	islamic-tbla	yMMMMEEEEdvvvv	EEEE، MMMM d، y G vvvv
+kk_Arab	islamic	yMMMMEEEEdvvvv	EEEE، MMMM d، y G vvvv
+kk_Arab	japanese	yMdHmsv	M/d/y GGGGG، HH:mm:ss v
+kk_Arab	roc	yMEdz	EEE، M/d/y GGGGG، z
+km	buddhist	yMdHmsv	d/M/y GGGGG HH:mm:ss v
+km	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+km	indian	Ez	ccc z
+km	islamic-tbla	yMv	M/y GGGGG v
+km	islamic-umalqura	yMEdz	EEE d/M/y GGGGG z
+km	japanese	yMdHmsv	d/M/y GGGGG HH:mm:ss v
+km	persian	yMdHmsv	d/M/y GGGGG HH:mm:ss v
+km	roc	yMv	M/y GGGGG v
+kn	chinese	jjm	hh:mm a
+kn	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+kn	dangi	hmm	hh:mm a
+kok	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+kok_Deva	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+kok_Deva	dangi	Ez	ccc z
+kok_Deva	dangi	yMEdz	r-MM-dd, EEE z
+lv	hebrew	yMMMMdhmsvvvv	y. 'g'. d. MMMM G 'plkst'. h:mm:ss a vvvv
+mk	buddhist	yMdHmsv	dd.M.y G HH:mm:ss v
+mk	buddhist	yMMMMEEEEdvvvv	EEEE, dd MMMM y 'г'. G 'во' vvvv
+mk	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+mk	chinese	yMMMMdv	r(U) MMMM d v
+mk	ethiopic	yMEdz	EEE, d.M.y 'г'. G z
+mk	hebrew	yMMMMdhmsvvvv	dd MMMM y 'г'. G h:mm:ss a vvvv
+mk	indian	Ez	EEE z
+mk	indian	yMEdz	EEE, d.M.y 'г'. G z
+mk	indian	yMMMMdv	d MMMM y 'г'. G v
+mk	islamic-umalqura	Ez	EEE z
+mk	japanese	yMdHmsv	d.M.y 'г'. G HH:mm:ss v
+mk	roc	yMv	M.y 'г'. G v
+ml	chinese	yMdHmsv	d/M/r HH:mm:ss v
+ml	chinese	yMMMdv	r MMM d v
+ml	chinese	yMv	r-MM v
+ml	dangi	yMdHmsv	d/M/r HH:mm:ss v
+mr	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+mr	dangi	EEEEv	cccc v
+mr	islamic-civil	yMMMMdhmsvvvv	d MMMM, y G h:mm:ss a vvvv वाजता
+mr	persian	yMMMMEEEEdvvvv	EEEE, d MMMM, y G vvvv वाजता
+ms	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ms	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+my	chinese	yMdHmsv	r-MM-dd v HH:mm:ss
+ne	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ne	chinese	yMMMdv	r MMM d v
+ne	coptic	yMMMMEEEEdvvvv	G y MMMM d, EEEE, vvvv
+ne	islamic-rgsa	yMMMMdv	G y MMMM d बजे v
+nl	chinese	yMdHmsv	y-MM-dd HH:mm:ss v
+nl	chinese	yMEdz	EEE d-M-y z
+nn	buddhist	Ez	ccc z
+nn	buddhist	yMdHmsv	d.M.y G HH:mm:ss v
+nn	chinese	yMdHmsv	dd.MM.r HH:mm:ss v
+nn	coptic	yMv	M.y G v
+nn	dangi	yMMMMdv	r(U) MMMM d v
+nn	islamic	EEEEv	cccc v
+nn	japanese	yMdHmsv	d.M.y G HH:mm:ss v
+nn	roc	yMdHmsv	d.M.y G HH:mm:ss v
+no	buddhist	yMdHmsv	d.M.y G HH:mm:ss v
+no	chinese	yMdHmsv	dd.MM.r HH:mm:ss v
+no	dangi	yMMMdv	d. MMM r v
+no	hebrew	EEEEv	cccc v
+no	hebrew	yMv	M.y G v
+no	indian	EEEEv	cccc v
+no	islamic-civil	Ez	ccc z
+no	islamic-umalqura	yMv	M.y G v
+no	japanese	yMdHmsv	d.M.y G HH:mm:ss v
+or	chinese	EEEEv	cccc v
+or	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+or	islamic-civil	yMMMMEEEEdvvvv	EEEE, MMMM d, y G ରେ vvvv
+or	islamic-rgsa	yMMMMdv	MMMM d, y G ରେ v
+or	islamic	yMMMMdhmsvvvv	MMMM d, y G ରେ h:mm:ss a vvvv
+pcm	chinese	Ez	ccc z
+pcm	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ps	chinese	yMdHmsv	r-MM-dd H:mm:ss (v)
+ps	dangi	yMdHmsv	r-MM-dd H:mm:ss (v)
+pt	chinese	yMdHmsv	dd/MM/r HH:mm:ss v
+pt	dangi	Ez	ccc z
+qu	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+qu	dangi	yMEdz	r-MM-dd, EEE z
+ro	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ru	chinese	EEEEv	cccc v
+ru	chinese	Ez	ccc z
+ru	chinese	yMdHmsv	d.M.y HH:mm:ss v
+ru	chinese	yMEdz	EEE, dd.MM.y z
+ru	chinese	yMMMdv	d MMM U v
+ru	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+ru	chinese	yMMMMdv	r(U) MMMM d v
+ru	chinese	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+ru	chinese	yMv	MM.y v
+ru	dangi	yMdHmsv	d.M.y HH:mm:ss v
+si	chinese	Ez	ccc z
+si	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+si	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+si	chinese	yMMMMdv	r(U) MMMM d v
+sk	buddhist	yMdHmsv	d. M. y GGGGG, H:mm:ss v
+sk	chinese	yMdHmsv	r-MM-dd H:mm:ss v
+sk	coptic	EEEEv	cccc, v
+sk	dangi	yMMMMdv	r(U) MMMM d v
+sk	japanese	yMdHmsv	d. M. y GGGGG, H:mm:ss v
+sk	persian	yMv	M/y GGGGG, v
+sl	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+so	buddhist	yMMMMdhmsvvvv	MMMM d, y G, h:mm:ss a vvvv
+so	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+so	ethiopic	yMMMMEEEEdvvvv	EEEE, MMMM d, y, vvvv
+so	islamic	yMMMdv	MMM d, y G, v
+sq	chinese	hmss	h:mm:ss a
+sq	chinese	yMdHmsv	d.M.r HH:mm:ss, v
+sq	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a, vvvv
+sw	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ta	chinese	yMdHmsv	d-M-y HH:mm:ss v
+ta	dangi	yMMMdv	r MMM d v
+ta	islamic-tbla	yMMMMEEEEdvvvv	EEEE, d MMMM, y G vvvv
+te	islamic	yMMMMEEEEdvvvv	EEEE, d, MMMM y G vvvv
+tk	chinese	EEEEv	cccc v
+tk	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+uk	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+uk	chinese	yMMMMdhmsvvvv	r(U) MMMM d h:mm:ss a vvvv
+ur	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+ur	islamic-civil	yMMMMdv	d MMMM، y G کو v
+uz	chinese	yMdHmsv	r-MM-dd H:mm:ss (v)
+uz_Latn	chinese	yMdHmsv	r-MM-dd H:mm:ss (v)
+vi	chinese	EEEEv	cccc v
+vi	chinese	Ez	ccc z
+vi	chinese	yMdHmsv	dd-MM-r HH:mm:ss v
+vi	chinese	yMEdz	EEE, d/M/r z
+vi	chinese	yMMMdv	'ngày' d 'tháng' M 'năm' r v
+vi	chinese	yMMMMdhmsvvvv	'ngày' d 'tháng' M 'năm' U r h:mm:ss a vvvv
+vi	chinese	yMMMMdv	'ngày' d 'tháng' M 'năm' U r v
+vi	chinese	yMMMMEEEEdvvvv	EEEE, 'ngày' d 'tháng' M 'năm' U r vvvv
+vi	chinese	yMv	M/r v
+vi	dangi	yMdHmsv	dd-MM-r HH:mm:ss v
+yo	chinese	yMdHmsv	r-MM-dd HH:mm:ss v
+yo	chinese	yMEdz	r-MM-dd, EEE z
+yo	dangi	yMMMMEEEEdvvvv	r(U) MMMM d, EEEE vvvv
+yue	buddhist	yMdHmsv	Gy/M/d H:mm:ss (v)
+yue	chinese	yMdHmsv	r年MMMd HH:mm:ss (v)
+yue	ethiopic	EEEEv	cccc v
+yue	ethiopic	yMv	G y/M v
+yue_Hant	buddhist	yMdHmsv	Gy/M/d H:mm:ss (v)
+yue_Hant	chinese	yMdHmsv	r年MMMd HH:mm:ss (v)
+yue_Hant	hebrew	yMv	G y/M v
+yue_Hant	islamic-umalqura	EEEEv	cccc v
+yue_Hant	islamic-umalqura	yMv	Gy/M v
+yue_Hant	japanese	yMdHmsv	Gy/M/d HH:mm:ss (v)
+yue	islamic-umalqura	EEEEv	cccc v
+yue	islamic-umalqura	yMv	Gy/M v
+yue	japanese	yMdHmsv	Gy/M/d HH:mm:ss (v)

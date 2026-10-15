@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_CHAIN       2048
+#define MAX_CHAIN       cldrMaxChain
 #define MAX_STEPS       32
 #define MAX_ATTRIBUTES  8
 #define MAX_NAME        64
@@ -489,6 +489,29 @@ static int Fallback(const LdmlFile* root, const Chain* chain, Chain* next)
 // CLDR's own resolution (XMLSource.ResolvingSource.getPathLocation): the
 // chain along the parent chain, skipping inheritance markers; then the
 // fallback chain, looked up again from the locale asked for.
+// Removes the attributes whose values are their DTD defaults, which a
+// file never needs to spell; returns whether any was.
+static bool StripDefaults(const Dtd* dtd, Chain* chain)
+{
+    bool any = false;
+    for (int s = 0; s < chain->count; s++)
+    {
+        Step* step = &chain->steps[s];
+        for (int a = 0; a < step->attributeCount; a++)
+        {
+            const char* value = step->attributeNames[a][0] == '\0'
+                                    ? nullptr
+                                    : DtdDefault(dtd, step->name, step->attributeNames[a]);
+            if (value != nullptr && strcmp(value, step->attributeValues[a]) == 0)
+            {
+                step->attributeNames[a][0] = '\0';
+                any = true;
+            }
+        }
+    }
+    return any;
+}
+
 static const Leaf* Locate(const Search* search, Chain* chain, int depth)
 {
     if (depth > MAX_ALIAS_DEPTH)
@@ -500,6 +523,11 @@ static const Leaf* Locate(const Search* search, Chain* chain, int depth)
     {
         return nullptr;
     }
+    // The same element, its attributes of default values not spelled.
+    char bare[MAX_CHAIN];
+    Chain stripped = *chain;
+    bool other = StripDefaults(&search->cldr->dtd, &stripped) &&
+                 FormatChain(&stripped, stripped.count, bare);
     const LdmlFile* root = nullptr;
     for (const char* at = search->locale; at != nullptr;
          at = CldrParent(search->cldr, at, search->component))
@@ -507,6 +535,10 @@ static const Leaf* Locate(const Search* search, Chain* chain, int depth)
         const LdmlFile* file = File(search->cldr, at, search->component);
         const Leaf* leaf =
             file == nullptr ? nullptr : Accept(search->cldr, MapGet(&file->leaves, text));
+        if (leaf == nullptr && other && file != nullptr)
+        {
+            leaf = Accept(search->cldr, MapGet(&file->leaves, bare));
+        }
         if (leaf != nullptr)
         {
             return leaf;
@@ -526,6 +558,19 @@ const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Compo
     }
     Search search = {cldr, locale, component};
     return Locate(&search, &parsed, 0);
+}
+
+int CldrAliasOf(Cldr* cldr, const char* chain, char* out, Component component)
+{
+    Chain parsed = {0};
+    Chain target;
+    const LdmlFile* root = File(cldr, "root", component);
+    if (!ParseSteps(chain, &parsed))
+    {
+        Die("a chain cannot be read: %s", chain);
+    }
+    return root != nullptr && Alias(root, &parsed, &target) &&
+           FormatChain(&target, target.count, out);
 }
 
 static void FreeFile(const char* key, void* value, void* context)
