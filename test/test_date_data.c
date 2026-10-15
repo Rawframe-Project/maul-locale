@@ -130,38 +130,51 @@ static void TestUnit(void)
           "a locale's dates of its size");
 }
 
-// Builds a names unit: names "", "a" and "{0}x"; lists of months,
-// weekdays and quarters of "a", an empty one and leap patterns of "{0}x";
-// one set of them. Its size.
+// The sections of the names unit built here.
+static uint32_t s_listsAt;
+static uint32_t s_itemsAt;
+static uint32_t s_setsAt;
+static uint32_t s_textAt;
+
+// Builds a names unit: names "", "a", "{0}x" and "b"; lists of months,
+// weekdays and quarters of "a", an empty one, leap patterns of "{0}x" and
+// three of "{0}x"; one set of the first five. Its size.
 static uint32_t BuildNames(void)
 {
     memset(s_unit, 0, sizeof(s_unit));
-    static const uint32_t s_sizes[5] = {dateMonthListSize, dateWeekdayListSize, dateQuarterListSize,
-                                        0, dateLeapListSize};
-    Put(s_unit, 3, 4);
-    Put(s_unit + 4, 5, 4);
+    static const uint32_t s_sizes[6] = {
+        dateMonthListSize, dateWeekdayListSize, dateQuarterListSize, 0, dateLeapListSize, 3};
+    static const uint16_t s_names[6] = {1, 1, 1, 0, 2, 2};
+    static const uint32_t s_offsets[5] = {0, 0, 1, 5, 6};
+    Put(s_unit, 4, 4);
+    Put(s_unit + 4, 6, 4);
     Put(s_unit + 8, 1, 4);
-    Put(s_unit + 12, 5, 4);
-    Put(s_unit + 20, 0, 4);
-    Put(s_unit + 24, 1, 4);
-    Put(s_unit + 28, 5, 4);
-    uint32_t item = 0;
-    for (uint32_t l = 0; l <= 5; l++)
+    Put(s_unit + 12, 6, 4);
+    for (uint32_t i = 0; i < 5; i++)
     {
-        Put(s_unit + 32 + 4 * l, item, 4);
-        for (uint32_t i = 0; l < 5 && i < s_sizes[l]; i++)
-        {
-            Put(s_unit + 56 + 2 * (item + i), l == 4 ? 2 : 1, 2);
-        }
-        item += l < 5 ? s_sizes[l] : 0;
+        Put(s_unit + dateNamesHeaderSize + 4 * i, s_offsets[i], 4);
     }
+    s_listsAt = (dateNamesHeaderSize + 4 * 5 + 7) / 8 * 8;
+    s_itemsAt = s_listsAt + 4 * 7;
+    uint32_t item = 0;
+    for (uint32_t l = 0; l <= 6; l++)
+    {
+        Put(s_unit + s_listsAt + 4 * l, item, 4);
+        for (uint32_t i = 0; l < 6 && i < s_sizes[l]; i++)
+        {
+            Put(s_unit + s_itemsAt + 2 * (item + i), s_names[l], 2);
+        }
+        item += l < 6 ? s_sizes[l] : 0;
+    }
+    s_setsAt = (s_itemsAt + 2 * item + 7) / 8 * 8;
     static const uint16_t s_set[dateNameKindCount] = {0, 1, 2, 3, 3, 4};
     for (uint32_t k = 0; k < dateNameKindCount; k++)
     {
-        Put(s_unit + 408 + 2 * k, s_set[k], 2);
+        Put(s_unit + s_setsAt + 2 * k, s_set[k], 2);
     }
-    memcpy(s_unit + 424, "a{0}x", 5);
-    return 429;
+    s_textAt = (s_setsAt + dateNameSetSize + 7) / 8 * 8;
+    memcpy(s_unit + s_textAt, "a{0}xb", 6);
+    return s_textAt + 6;
 }
 
 static bool ValidNames(uint32_t size)
@@ -174,7 +187,7 @@ static bool ValidNames(uint32_t size)
 static bool RefusedWith(uint32_t kind, uint32_t list)
 {
     uint32_t size = BuildNames();
-    Put(s_unit + 408 + 2 * kind, list, 2);
+    Put(s_unit + s_setsAt + 2 * kind, list, 2);
     return !ValidNames(size);
 }
 
@@ -188,27 +201,55 @@ static void TestNamesUnit(void)
     CHECK(!ValidNames(size - 1) && !ValidNames(size + 1) && !ValidNames(12),
           "a size that is not the layout's");
     BuildNames();
-    Put(s_unit + 24, 2, 4);
+    Put(s_unit + dateNamesHeaderSize + 8, 6, 4);
     CHECK(!ValidNames(size), "string offsets out of order");
     BuildNames();
-    Put(s_unit + 16, 1, 4);
+    Put(s_unit + dateNamesHeaderSize, 1, 4);
     CHECK(!ValidNames(size), "a first string offset that is not 0");
     BuildNames();
-    Put(s_unit + 56, 3, 2);
+    Put(s_unit + s_itemsAt, 4, 2);
     CHECK(!ValidNames(size), "an item past the names");
     BuildNames();
-    s_unit[424] = 0x05;
+    s_unit[s_textAt] = 0x05;
     CHECK(!ValidNames(size), "a control byte in a name");
     BuildNames();
-    Put(s_unit + 56 + 2 * (dateMonthListSize + dateWeekdayListSize + dateQuarterListSize), 1, 2);
+    Put(s_unit + s_itemsAt + 2 * (dateMonthListSize + dateWeekdayListSize + dateQuarterListSize), 1,
+        2);
     CHECK(!ValidNames(size), "a leap pattern without {0}");
     CHECK(RefusedWith(dateNamesMonths, 1), "months of the weekdays' size");
     CHECK(RefusedWith(dateNamesWeekdays, 2), "weekdays of the quarters' size");
     CHECK(RefusedWith(dateNamesQuarters, 3), "no quarters");
     CHECK(RefusedWith(dateNamesEras, 0), "more eras than dateMaxEras");
+    CHECK(!RefusedWith(dateNamesEras, 5), "three eras of one width");
     CHECK(RefusedWith(dateNamesCyclic, 2), "cyclic years of the quarters' size");
-    CHECK(RefusedWith(dateNamesLeap, 2), "leap patterns of the quarters' size");
-    CHECK(RefusedWith(dateNamesMonths, 5), "a list past the lists");
+    CHECK(RefusedWith(dateNamesLeap, 5), "three leap patterns");
+    CHECK(RefusedWith(dateNamesMonths, 6), "a list past the lists");
+}
+
+// A root pack whose dates unit names name set 0 for the Gregorian
+// calendar and set 1, past the names unit's one set, for the Buddhist.
+static void TestNamesPastUnit(void)
+{
+    alignas(8) static uint8_t s_patterns[256];
+    uint32_t patterns = BuildUnit();
+    memcpy(s_patterns, s_unit, patterns);
+    uint32_t names = BuildNames();
+    uint8_t dates[dateLocaleSize] = {0};
+    Put(dates + 2 * (dateCalendarCount + 2), 1, 2);
+    PackUnit units[] = {{kindDatePatterns, {s_patterns, patterns}, false},
+                        {kindDates, {dates, sizeof(dates)}, true},
+                        {kindDateNames, {s_unit, names}, false}};
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    CHECK(OpenRootPack(units, 3, &sources[1]), "a pack of date units and names");
+    mlocDataSet data = {sources, 2};
+    mlocLocale fr;
+    DateNameTables t;
+    const uint8_t* set = nullptr;
+    CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
+              mlocFindDateNames(&data, &fr, 0, &t, &set) && set == t.sets,
+          "root's Gregorian names");
+    CHECK(!mlocFindDateNames(&data, &fr, 2, &t, &set), "a name set past the unit's");
 }
 
 static mlocData s_sources[2];
@@ -384,6 +425,7 @@ int main(void)
     TestUnit();
     TestSetPastUnit();
     TestNamesUnit();
+    TestNamesPastUnit();
     alignas(8) static uint8_t s_dates[1 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};

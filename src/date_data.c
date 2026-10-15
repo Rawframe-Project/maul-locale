@@ -69,22 +69,18 @@ bool mlocValidDatePattern(const uint8_t* text, uint32_t length)
     return length > 0;
 }
 
-// The section offsets of a unit of these counts, or false when they
-// overflow or pass its size.
+// The section offsets of a unit of these counts, and whether they end at
+// its size.
 static bool Layout(uint32_t patterns, uint32_t rows, uint32_t sets, uint32_t text, uint32_t size,
                    uint32_t out[3])
 {
     uint64_t rowsAt = ((uint64_t)datePatternsHeaderSize + 4 * ((uint64_t)patterns + 1) + 7) & ~7ULL;
     uint64_t setsAt = (rowsAt + (uint64_t)dateRowSize * rows + 7) & ~7ULL;
     uint64_t textAt = (setsAt + (uint64_t)dateSetSize * sets + 7) & ~7ULL;
-    if (textAt + text != size)
-    {
-        return false;
-    }
     out[0] = (uint32_t)rowsAt;
     out[1] = (uint32_t)setsAt;
     out[2] = (uint32_t)textAt;
-    return true;
+    return textAt + text == size;
 }
 
 DatePatterns mlocReadDatePatterns(DataSpan unit)
@@ -157,8 +153,8 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
     return true;
 }
 
-// The section offsets of a names unit (lists, items, sets, text), or
-// false when its counts do not fit its size.
+// The section offsets of a names unit (lists, items, sets, text), and
+// whether its counts end at its size.
 static bool NamesLayout(DataSpan unit, uint32_t out[4])
 {
     if (unit.size < dateNamesHeaderSize)
@@ -178,15 +174,11 @@ static bool NamesLayout(DataSpan unit, uint32_t out[4])
     uint64_t items = mlocLoad32(unit.bytes + itemsAt - 4);
     uint64_t setsAt = (itemsAt + 2 * items + 7) & ~7ULL;
     uint64_t textAt = (setsAt + (uint64_t)dateNameSetSize * sets + 7) & ~7ULL;
-    if (textAt + text != unit.size)
-    {
-        return false;
-    }
     out[0] = (uint32_t)listsAt;
     out[1] = (uint32_t)itemsAt;
     out[2] = (uint32_t)setsAt;
     out[3] = (uint32_t)textAt;
-    return true;
+    return textAt + text == unit.size;
 }
 
 DateNameTables mlocReadDateNames(DataSpan unit)
