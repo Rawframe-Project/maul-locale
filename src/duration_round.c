@@ -180,13 +180,8 @@ static bool ComputeWindow(int sign, const mlocDateDuration* d, const mlocDate* o
     else
     {
         // Weeks: the weeks the days hold from where the years and months
-        // reach, counted on the calendar.
-        mlocDateDuration yearsMonths = {d->years, d->months, 0, 0};
-        int64_t weeksStart = 0;
-        if (!Reach(one, &yearsMonths, &weeksStart))
-        {
-            return false;
-        }
+        // reach, which every calendar counts as seven days (that date lies
+        // between the two, so reaching it cannot fail).
         int64_t weeks = d->weeks + d->days / 7;
         w->r1 = Truncated(weeks, increment);
         w->r2 = w->r1 + step;

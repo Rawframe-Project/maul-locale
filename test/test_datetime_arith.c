@@ -74,6 +74,10 @@ static void TestUntil(void)
     CHECK(mlocDateTimeUntil(&one, &two, &r, &d) == mloc_success && d.date.months == 0 &&
               d.date.days == 28 && d.time.seconds == 18 * 3600 + 1800,
           "the day before when the times run back");
+    r = (mlocDateTimeRounding){mloc_unitDay, mloc_unitNanosecond, 1, mloc_roundTrunc};
+    CHECK(mlocDateTimeUntil(&one, &two, &r, &d) == mloc_success && d.date.days == 28 &&
+              d.time.seconds == 18 * 3600 + 1800,
+          "days stay days when the largest unit is a day");
     r = (mlocDateTimeRounding){mloc_unitHour, mloc_unitNanosecond, 1, mloc_roundTrunc};
     CHECK(mlocDateTimeUntil(&one, &two, &r, &d) == mloc_success && d.date.days == 0 &&
               d.time.seconds == (28 * 24 + 18) * 3600 + 1800,
@@ -116,6 +120,23 @@ static void TestUntil(void)
           "10^9 days; two calendars, null pointers");
 }
 
+// BubbleRelativeDuration adds the next month and year to the first date,
+// and a date past the range refuses the difference, as ECMA-262's
+// CalendarDateAdd throws there.
+static void TestBubblePastRange(void)
+{
+    mlocDateTime one = At(mloc_calendarGregorian, 275758, 1, 1, 0, 0, 0, 0);
+    mlocDateTime two = At(mloc_calendarGregorian, 275760, 9, 12, 12, 0, 0, 0);
+    mlocDateTimeRounding r = {mloc_unitYear, mloc_unitDay, 1, mloc_roundCeil};
+    mlocDateTimeDuration d = {0};
+    CHECK(mlocDateTimeUntil(&one, &two, &r, &d) == mloc_errorInvalid,
+          "the next month past the range");
+    r.mode = mloc_roundFloor;
+    CHECK(mlocDateTimeUntil(&one, &two, &r, &d) == mloc_success && d.date.years == 2 &&
+              d.date.months == 8 && d.date.days == 11,
+          "floor does not bubble");
+}
+
 static void TestRound(void)
 {
     mlocDateTime late = At(mloc_calendarGregorian, 275760, 9, 13, 23, 59, 59, 900000000);
@@ -149,6 +170,7 @@ int main(void)
 {
     TestAdd();
     TestUntil();
+    TestBubblePastRange();
     TestRound();
     return s_failures == 0 ? 0 : 1;
 }
