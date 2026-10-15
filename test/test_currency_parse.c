@@ -521,6 +521,31 @@ static void TestAppendedShownSymbol(void)
               AppendedReadsBack("fr-CA", "USD", s_displays[i], mloc_signAuto, &d, mloc_parseStrict);
     }
     CHECK(all, "the narrow symbol, then the appended code, read back");
+
+    // The narrow formatter still reads the symbol where the code does not
+    // follow the narrow symbol ("$ US USD" whole), and the narrow symbol
+    // ending the text.
+    mlocCurrencyOptions narrow = {.display = mloc_currencyNarrowSymbol, .appendCode = 1};
+    mlocCurrencyOptions symbol = {.display = mloc_currencySymbol, .appendCode = 1};
+    mlocCurrencyFormatter n;
+    mlocCurrencyFormatter w;
+    char text[64];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocDecimal back;
+    char read[3];
+    size_t end = 0;
+    all = Init(&s_withNames, "fr-CA", "USD", &narrow, &n) >= 0 &&
+          Init(&s_withNames, "fr-CA", "USD", &symbol, &w) >= 0 &&
+          mlocFormatCurrency(&w, &d, &output) == mloc_success &&
+          ParseCopy(&n, text, output.length, mloc_parseLenient, 0, &back, read, &end) ==
+              mloc_success &&
+          end == output.length && memcmp(read, "USD", 3) == 0;
+    static const char s_ending[] = "0,00 $";
+    all = all &&
+          ParseCopy(&n, s_ending, sizeof(s_ending) - 1, mloc_parseLenient, 0, &back, read, &end) ==
+              mloc_success &&
+          end == sizeof(s_ending) - 1;
+    CHECK(all, "the symbol where the code does not follow the narrow symbol, and one ending");
 }
 
 // Strict mode wants a long name formatter's name, in each category's
