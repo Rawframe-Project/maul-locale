@@ -135,12 +135,12 @@ ZoneOffset mlocZoneOffsetAt(uint32_t zone, int64_t seconds)
     {
         return offset;
     }
-    // Past the table: the latest change at or before the time, among the
-    // years either side of the time's year.
+    // Past the table: the latest change at or before the time, of its
+    // year or the year before, else the table's last offset.
     const ZoneClosing* c = &mlocZoneClosings[z->closing - 1];
-    int64_t latest = count == 0 ? INT64_MIN : TimeOf(z, count - 1);
+    int64_t latest = INT64_MIN;
     int32_t year = YearOf(seconds);
-    for (int32_t y = year - 1; y <= year + 1; y++)
+    for (int32_t y = year - 1; y <= year; y++)
     {
         for (int k = 0; y >= c->firstYear && k < 2; k++)
         {
@@ -169,12 +169,13 @@ bool mlocZoneNextTransition(uint32_t zone, int64_t seconds, int64_t* atOut, Zone
     else if (z->closing != 0)
     {
         // The changes come in time order: within a year by month, and
-        // the years in turn; three years always hold the next one.
+        // the years in turn; the time's year and the next hold the next
+        // one.
         const ZoneClosing* c = &mlocZoneClosings[z->closing - 1];
-        int32_t year = YearOf(seconds) - 1;
+        int32_t year = YearOf(seconds);
         year = year < c->firstYear ? c->firstYear : year;
         at = INT64_MAX;
-        for (int i = 0; at == INT64_MAX && i < 6; i++)
+        for (int i = 0; at == INT64_MAX && i < 4; i++)
         {
             int64_t candidate = ChangeTime(&c->changes[i % 2], year + i / 2);
             if (candidate > seconds)

@@ -47,7 +47,8 @@ typedef struct ZoneChange
 } ZoneChange;
 
 // The changes apply every year from firstYear on, in this order within a
-// year.
+// year. They are in February to November, so a year's changes fall within
+// that year in universal time, and every change changes the offset.
 typedef struct ZoneClosing
 {
     int32_t firstYear;

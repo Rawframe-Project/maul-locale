@@ -561,10 +561,16 @@ static int Compile(Builder* b, const Tzdb* t, const TzdbZone* z, CompiledZone* o
     {
         out->changes[0] = Change(t, last, rules[0], rules[1], shift);
         out->changes[1] = Change(t, last, rules[1], rules[0], shift);
-        if ((out->changes[0].month == 1 && out->changes[0].dayOfMonth == 29) ||
-            (out->changes[1].month == 1 && out->changes[1].dayOfMonth == 29))
+        // February to November, so that a year's changes fall within it
+        // in universal time (a day rule moves a week at most, a time a
+        // week at most), and never on Feb 29.
+        for (int k = 0; k < 2; k++)
         {
-            return Fail(b, "a closing change on Feb 29");
+            const CompiledChange* c = &out->changes[k];
+            if (c->month < 1 || c->month > 10 || (c->month == 1 && c->dayOfMonth == 29))
+            {
+                return Fail(b, "a closing change outside February to November, or on Feb 29");
+            }
         }
         return CheckClosing(b, out);
     }

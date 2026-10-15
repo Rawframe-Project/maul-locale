@@ -59,8 +59,9 @@ typedef struct CompiledZone
 
 // Compiles a zone of a read source. Returns 0 and a message on failure:
 // two rules at one instant, a rule on Feb 29 of a common year, a closing
-// rule set of other than two rules in two months, or a closing rule that
-// does not give the two years after the table as the source does.
+// rule set of other than two rules in two months from February to
+// November, or a closing rule that does not give the two years after the
+// table as the source does.
 int ZoneCompile(const Tzdb* tzdb, int zone, CompiledZone* out, char* errorOut,
                 size_t errorCapacity);
 
