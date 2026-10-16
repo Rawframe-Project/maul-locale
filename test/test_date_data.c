@@ -424,14 +424,14 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         times = 104,
         text = 176,
     };
-    static const char s_text[] = "\x01y\x01\x01H\x01{1} {0}{1} x{0} x\x01Q\x01";
-    static const uint32_t s_offsets[7] = {0, 3, 6, 13, 18, 23, 26};
+    static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
+    static const uint32_t s_offsets[7] = {0, 3, 6, 14, 19, 24, 27};
     memset(s_unit, 0, sizeof(s_unit));
     Put(s_unit, 6, 4);
     Put(s_unit + 4, 1, 4);
     Put(s_unit + 8, 1, 4);
     Put(s_unit + 12, 1, 4);
-    Put(s_unit + 16, 26, 4);
+    Put(s_unit + 16, 27, 4);
     for (uint32_t i = 0; i < 7; i++)
     {
         Put(s_unit + offsets + 4 * i, s_offsets[i], 4);
@@ -449,8 +449,8 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         }
         Put(s_unit + times + 2 * i, index, 2);
     }
-    memcpy(s_unit + text, s_text, 26);
-    return text + 26;
+    memcpy(s_unit + text, s_text, 27);
+    return text + 27;
 }
 
 // The date-time formatter on a pack of the composite unit built here.
@@ -505,7 +505,8 @@ static void TestCompositeData(void)
 {
     char text[64];
     size_t length = 0;
-    CHECK(CompositeIs(2, 1, mloc_dateFieldSetYearMonthDay, "2026 16"), "a date and time glued");
+    CHECK(CompositeIs(2, 1, mloc_dateFieldSetYearMonthDay, "2026 {16"),
+          "a date and time glued, a brace of no slot written");
     CHECK(MakeComposite(3, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData &&
               MakeComposite(4, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData,
           "glue without {0} or without {1}");
