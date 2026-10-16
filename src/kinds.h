@@ -142,5 +142,11 @@ constexpr uint32_t kindZoneCodes = 0x00080002;
 constexpr uint32_t kindDatePatterns = 0x00090001;
 constexpr uint32_t kindDates = 0x00090002;
 constexpr uint32_t kindDateNames = 0x00090003;
+// The zone names data file: the zones' regions and metazone periods and
+// the metazones' golden and preferred zones, a unit of no locale; the
+// zone and metazone names and formats, a unit per locale key (record
+// mloc-0042, src/zone_name_tables.h).
+constexpr uint32_t kindZoneMeta = 0x00090004;
+constexpr uint32_t kindZoneNames = 0x00090005;
 
 #endif

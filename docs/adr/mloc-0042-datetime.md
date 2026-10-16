@@ -109,6 +109,22 @@ cycle, time precision, zone style).
   at their instant, looked up by cutting the id's last subtag until a
   rule list is found, as ICU's DayPeriodRules does (zh_Hant takes zh's,
   where CLDR's parent locales would give root's), root's at the end.
+- **The zone names data file, `zone-names.mloc`**
+  (`src/zone_name_tables.h`), which a program adds for zone names: a
+  unit of no locale holds each BCP 47 id's region (TR35's first two
+  letters of a five-letter id, or its region attribute), whether the
+  location format names the region (its only zone, or a primary zone),
+  and its metazone periods in minutes since 1970 with the offsets CLDR
+  gives some, and each metazone's golden zone and preferred zones by
+  region; a unit per locale key holds its zone formats (the hour
+  format's halves apart), Etc/Unknown's city and each zone's and
+  metazone's names, filed where the chain would give others, as the
+  names are, "∅∅∅" as an empty name that ends the chain. Root's unit
+  holds the city each identifier implies (its last part, '_' as
+  spaces), as ICU4C derives it, so the run time derives nothing. Both
+  units index the zone codes unit's ids, which one CLDR release gives
+  both; a zones file of another tzdb release reaches them through its
+  identifiers' names.
 - **The standard formats are CLDR's, resolved per path**: ICU's data
   holds a calendar's time, date and glue patterns as one array, owned
   by the first locale giving any of them, and differs from CLDR's
@@ -293,6 +309,12 @@ cycle, time precision, zone style).
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,
   whose rules UTS #35 describes.
+- **The zone names data file:** 468 BCP 47 ids (451 live), 636
+  metazone periods of 419 zones over 155 metazones, 155 golden and 128
+  preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes
+  of names, the file 2,858,565 bytes. The validators refuse each field
+  spoiled in a whitebox test, and the fuzz target keeps every read of
+  an accepted unit inside it.
 
 ## Consequences
 

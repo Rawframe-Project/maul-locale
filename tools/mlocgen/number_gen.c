@@ -25,6 +25,7 @@
 #include "unit_names_gen.h"
 #include "unit_patterns_gen.h"
 #include "xml.h"
+#include "zone_names_gen.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -1513,7 +1514,8 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* 
              GenerateDateUnits(&dates, &names->dates, errorOut, errorCapacity) &&
              GenerateUnitNames(&units, &names->units, errorOut, errorCapacity) &&
              GenerateNames(&localeNamesInput, &names->locales, &names->subdivisions, errorOut,
-                           errorCapacity);
+                           errorCapacity) &&
+             GenerateZoneNames(&localeNamesInput, &names->zones, errorOut, errorCapacity);
     if (ok)
     {
         GenerateUnitPatterns(&units, &names->units);

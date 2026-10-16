@@ -155,6 +155,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/time_arith.c
     src/zone.c
     src/zone_code_tables.c
+    src/zone_name_tables.c
     src/zone_codes.c
     src/zone_handle.c
     src/zone_local.c
@@ -323,6 +324,23 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_date_data PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}")
     endif()
+    # And the zone names (record mloc-0042).
+    set(MLOC_ZONE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc)
+    set(MLOC_ZONE_NAMES_PATH ${MLOC_ZONE_NAMES_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_ZONE_NAMES_PATH /zone-names.mloc)
+    endif()
+    maul_add_test(zone_names WHITEBOX)
+    if(TARGET test_zone_names)
+        if(EMSCRIPTEN)
+            target_link_options(test_zone_names PRIVATE
+                                "SHELL:--embed-file ${MLOC_ZONE_NAMES_FILE}@/zone-names.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_zone_names PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
+    endif()
     # The date formatter reads the dates and the spell-out rules.
     maul_add_test(date_format)
     if(TARGET test_date_format)
@@ -412,7 +430,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal ixdtf locale parse spellout zone_codes zones)
+    foreach(area data date_data decimal ixdtf locale parse spellout zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -446,7 +464,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_names_gen.c tools/mlocgen/unit_names_model.c
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
-                                    tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c
+                                    tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c tools/mlocgen/zone_names_gen.c
                                     tools/mlocgen/date_gen.c tools/mlocgen/date_names_gen.c tools/mlocgen/date_source.c tools/mlocgen/day_periods_gen.c tools/mlocgen/semantic.c tools/mlocgen/time_gen.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
