@@ -94,4 +94,9 @@ typedef void (*GlueSlotWriter)(void* context, uint32_t slot, NumberWriter* w);
 void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
                    NumberWriter* w);
 
+// As mlocWriteGlue, the text between the two slots written as between's
+// (a range's value whose parts run across the glue).
+void mlocWriteGlueBetween(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
+                          uint32_t between, NumberWriter* w);
+
 #endif

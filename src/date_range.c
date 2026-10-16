@@ -56,6 +56,29 @@ uint32_t mlocDateDifference(const mlocDateFields* a, const mlocDateFields* b)
     return a->day != b->day ? rangeDay : rangeNone;
 }
 
+uint32_t mlocTimeDifference(const mlocTime* a, const mlocTime* b, uint32_t fractionDigits)
+{
+    if (a->hour / 12 != b->hour / 12)
+    {
+        return rangeAmPm;
+    }
+    if (a->hour != b->hour)
+    {
+        return rangeHour;
+    }
+    if (a->minute != b->minute)
+    {
+        return rangeMinute;
+    }
+    uint32_t unit = 1000000000;
+    for (uint32_t i = 0; i < fractionDigits; i++)
+    {
+        unit /= 10;
+    }
+    bool fraction = fractionDigits > 0 && a->nanosecond / unit != b->nanosecond / unit;
+    return a->second != b->second || fraction ? rangeSecond : rangeNone;
+}
+
 // The part kind a field letter writes; the literal kind for none.
 static uint32_t LetterPart(uint8_t letter)
 {
@@ -257,4 +280,74 @@ void mlocWriteRange(const RangeChoice* c, NumberWriter* w)
     {
         WriteFallback(c, c->own, w);
     }
+}
+
+typedef struct JoinWriting
+{
+    const RangeJoin* j;
+    uint32_t value;
+    PatternSpan spans[2];
+} JoinWriting;
+
+// The glue's slots: {0} the time, {1} the date.
+static void WriteJoinSlot(void* context, uint32_t slot, NumberWriter* w)
+{
+    const JoinWriting* g = context;
+    const RangeJoin* j = g->j;
+    if (slot == 0)
+    {
+        j->writeTime(j->context, g->value, j->time.bytes, j->time.size, &g->spans[0], w);
+        return;
+    }
+    j->writeDate(j->context, g->value, j->date.bytes, j->date.size, &g->spans[1], w);
+}
+
+// A joined value: its parts' spans run from the first part's first field
+// of the kinds to the second part's last.
+static void WriteJoined(const RangeJoin* j, uint32_t value, bool parts, NumberWriter* w)
+{
+    JoinWriting g = {j, value, {{0, 0, 0}, {0, 0, 0}}};
+    uint32_t source = value == 0 ? mloc_dateRangeStart : mloc_dateRangeEnd;
+    if (parts)
+    {
+        uint32_t kinds = PatternKinds(j->date) | PatternKinds(j->time);
+        PatternSpan time = SpanOf(j->time, kinds, source);
+        PatternSpan date = SpanOf(j->date, kinds, source);
+        bool dateFirst = false;
+        for (uint32_t at = 0; at + 3 <= j->glue.size; at++)
+        {
+            if (j->glue.bytes[at] == '{' && j->glue.bytes[at + 2] == '}')
+            {
+                dateFirst = j->glue.bytes[at + 1] == '1';
+                break;
+            }
+        }
+        // The first part's span runs to its end, the second's from its
+        // start.
+        PatternSpan* first = dateFirst ? &date : &time;
+        PatternSpan* second = dateFirst ? &time : &date;
+        first->end = (dateFirst ? j->date : j->time).size;
+        second->first = 0;
+        g.spans[0] = time;
+        g.spans[1] = date;
+    }
+    mlocWriteGlueBetween(j->glue.bytes, j->glue.size, WriteJoinSlot, &g, parts ? source : 0, w);
+}
+
+typedef struct JoinedFallback
+{
+    const RangeJoin* j;
+    bool parts;
+} JoinedFallback;
+
+static void WriteJoinedSlot(void* context, uint32_t slot, NumberWriter* w)
+{
+    const JoinedFallback* g = context;
+    WriteJoined(g->j, slot, g->parts, w);
+}
+
+void mlocWriteJoinedFallback(const RangeJoin* j, DataSpan fallback, NumberWriter* w)
+{
+    JoinedFallback g = {j, w->parts != nullptr};
+    mlocWriteGlue(fallback.bytes, fallback.size, WriteJoinedSlot, &g, w);
 }

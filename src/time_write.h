@@ -22,10 +22,30 @@ enum
     timeFormatPatterns = 2,
 };
 
+// A time formatter's interval patterns (research 40): the table their
+// indexes resolve in, the pair of each pattern the formatter keeps, a
+// standard format's own pattern (null for the others, whose own are
+// their patterns), the fallback, and for a time in a zone whose dates
+// differ the short date with the full year and with the era (yMd, GyMd)
+// and the short atTime glue that joins either to the time.
+typedef struct TimeRange
+{
+    PatternTable table;
+    const uint8_t* pairs[timeFormatPatterns];
+    const uint8_t* own;
+    uint32_t ownLength;
+    const uint8_t* fallback;
+    uint32_t fallbackLength;
+    uint16_t shortDate;
+    uint16_t shortEraDate;
+    uint16_t glue;
+} TimeRange;
+
 typedef struct TimeFormat
 {
     const uint8_t* pattern[timeFormatPatterns];
     uint32_t patternLength[timeFormatPatterns];
+    TimeRange range;
     DateNameTables names;
     // The day periods of the calendar's names, by context, width and
     // DateDayPeriod.
@@ -58,5 +78,10 @@ void mlocWriteTimeFields(const TimeFormat* f, const uint8_t* pattern, uint32_t l
 void mlocWriteTimeFieldsWith(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
                              const mlocTime* time, TimeOtherField other, void* context,
                              NumberWriter* w);
+
+// As mlocWriteTimeFieldsWith, the span's parts marked as one value's.
+void mlocWriteTimeFieldsIn(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
+                           const mlocTime* time, TimeOtherField other, void* context,
+                           const PatternSpan* span, NumberWriter* w);
 
 #endif

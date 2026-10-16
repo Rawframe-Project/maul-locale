@@ -104,3 +104,7 @@ format.
   (`mloc_dateRangeStart`, `mloc_dateRangeEnd`); `dates.mloc` holds
   every locale's interval patterns for each date and time option, and
   `mlocDateFormatter` grows to hold a formatter's (mloc-0042).
+- Time ranges: `mlocFormatTimeRange` and `mlocFormatTimeRangeInZone`
+  write two times of day, or two instants in a zone (across dates each
+  with its short date), by a time formatter ("10:00 – 11:30 AM"); the
+  time and date-time formatters' values grow (mloc-0042).

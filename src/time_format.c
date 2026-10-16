@@ -9,6 +9,8 @@
 #include "time_format.h"
 
 #include "bytes.h"
+#include "date_format.h"
+#include "date_range.h"
 #include "date_time.h"
 #include "locale_keyword.h"
 
@@ -128,7 +130,8 @@ static uint32_t StandardEntry(const uint8_t* set, mlocTimeStyle style, bool twel
 }
 
 static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
-                         const mlocTimeOptions* o, mlocHourCycle cycle, bool asked)
+                         const mlocTimeOptions* o, mlocHourCycle cycle, bool asked,
+                         uint32_t entries[timeFormatPatterns])
 {
     bool twelve =
         cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 || cycle == mloc_hourCycleClock12;
@@ -137,7 +140,8 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
     {
         base = dateTimeZoned + 6 * ((uint32_t)o->zone - 1) + (twelve ? 0 : 3);
     }
-    uint32_t entries[timeFormatPatterns] = {base + 2, base + 2};
+    entries[0] = base + 2;
+    entries[1] = base + 2;
     if (o->style != mloc_timeStyleNone)
     {
         entries[0] = StandardEntry(set, o->style, twelve, asked);
@@ -165,6 +169,94 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
     return true;
 }
 
+// The interval entry a time set's entry was matched for (research 40):
+// a clock's hour, minute or second, alone or with a zone form; a
+// standard format's own (dateIntervalTimeStyle on), or one matched anew
+// for another clock, its minutes or seconds, the full and long with
+// their zones.
+static uint32_t IntervalEntry(uint32_t entry)
+{
+    if (entry < dateTimeStandard)
+    {
+        return dateIntervalTime + entry;
+    }
+    if (entry < dateTimeGlue)
+    {
+        return dateIntervalTimeStyle + entry - dateTimeStandard;
+    }
+    if (entry < dateTimeWeekday)
+    {
+        uint32_t k = entry - dateTimeStyle12;
+        return dateIntervalTime + k / 2 * 3 + 1 + k % 2;
+    }
+    if (entry < dateTimeZoneStyle12)
+    {
+        return dateIntervalTime + 6 + entry - dateTimeZoned;
+    }
+    uint32_t k = entry - dateTimeZoneStyle12;
+    return dateIntervalTime + 6 * (1 + k % 2) + k / 2 * 3 + 2;
+}
+
+static bool WritableHalf(const uint8_t* pattern, uint32_t length)
+{
+    bool zoned = false;
+    return mlocWritableTime(pattern, length, &zoned);
+}
+
+// The formatter's interval patterns: each kept pattern's pair, a
+// standard format's own pattern, the fallback, and what a range in a
+// zone across dates joins.
+static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
+                      const uint8_t* intervals, const uint32_t entries[timeFormatPatterns])
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    TimeRange* r = &f->range;
+    r->table = (PatternTable){p->offsets, p->text, p->patternCount};
+    const uint8_t* part = p->timeParts + (size_t)mlocLoad16(intervals + 2) * dateIntervalTimeSize;
+    DataSpan fallback;
+    DataSpan date;
+    DataSpan era;
+    r->shortDate = (uint16_t)mlocLoad16(intervals + 6);
+    r->shortEraDate = (uint16_t)mlocLoad16(intervals + 8);
+    r->glue = (uint16_t)mlocLoad16(set + 2 * (dateTimeAtGlue + dateStandardCount - 1));
+    if (!mlocTablePattern(&r->table, mlocLoad16(intervals + 4), &fallback) ||
+        !mlocTablePattern(&r->table, r->shortDate, &date) ||
+        !mlocWritableDate(date.bytes, date.size) ||
+        !mlocTablePattern(&r->table, r->shortEraDate, &era) ||
+        !mlocWritableDate(era.bytes, era.size))
+    {
+        return false;
+    }
+    r->fallback = fallback.bytes;
+    r->fallbackLength = fallback.size;
+    for (uint32_t i = 0; i < timeFormatPatterns; i++)
+    {
+        uint32_t entry = IntervalEntry(entries[i]);
+        const uint8_t* at = part + 2 * (size_t)(entry - dateIntervalTime);
+        if (entry >= dateIntervalTimeStyle)
+        {
+            at = part + 2 * times + 4 * (size_t)(entry - dateIntervalTimeStyle);
+            DataSpan own;
+            if (!mlocTablePattern(&r->table, mlocLoad16(at + 2), &own) ||
+                !WritableHalf(own.bytes, own.size))
+            {
+                return false;
+            }
+            r->own = own.bytes;
+            r->ownLength = own.size;
+        }
+        r->pairs[i] = p->pairs + (size_t)mlocLoad16(at) * dateIntervalPairSize;
+        if (!mlocValidRangePair(&r->table, r->pairs[i], WritableHalf))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
                           const mlocTimeOptions* o, TimeChoice* choice)
 {
@@ -172,8 +264,10 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     NumberCore core;
     DatePatterns patterns;
     const uint8_t* set = nullptr;
+    const uint8_t* intervals = nullptr;
     const uint8_t* nameSet = nullptr;
     const uint8_t* rules = nullptr;
+    uint32_t entries[timeFormatPatterns];
     if (mlocGetLocalePreferences(data, locale, &preferences) != mloc_success)
     {
         return mloc_errorNotFound;
@@ -181,7 +275,7 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     mlocResult digits = mlocInitNumberCore(&core, data, locale, mloc_numberDecimal);
     // The ISO calendar's time set and names are the Gregorian ones.
     uint32_t calendar = preferences.calendar;
-    if (digits < 0 || !mlocFindTimeSet(data, locale, calendar, &patterns, &set) ||
+    if (digits < 0 || !mlocFindTimeSet(data, locale, calendar, &patterns, &set, &intervals) ||
         !mlocFindDateNames(data, locale, calendar, &f->names, &nameSet) ||
         !mlocFindDayPeriodRules(data, locale, &rules))
     {
@@ -189,7 +283,8 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     }
     bool asked = false;
     mlocHourCycle cycle = CycleOf(o, locale, &preferences, &asked);
-    if (!FindPatterns(f, &patterns, set, o, cycle, asked))
+    if (!FindPatterns(f, &patterns, set, o, cycle, asked, entries) ||
+        !FindRange(f, &patterns, set, intervals, entries))
     {
         return mloc_errorData;
     }
@@ -252,8 +347,10 @@ mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocData
 bool mlocTimeFormatSound(const TimeFormat* f)
 {
     return f->stamp == timeStamp && f->pattern[0] != nullptr && f->pattern[1] != nullptr &&
-           f->digitLength > 0 && f->digitLength <= numberDigitSize &&
-           f->decimalLength <= sizeof(f->decimal) && f->fractionDigits <= 9 && f->zoned <= 1;
+           f->range.pairs[0] != nullptr && f->range.pairs[1] != nullptr &&
+           f->range.fallback != nullptr && f->digitLength > 0 &&
+           f->digitLength <= numberDigitSize && f->decimalLength <= sizeof(f->decimal) &&
+           f->fractionDigits <= 9 && f->zoned <= 1;
 }
 
 // A formatter the library made, copied out, with a zone or without as
@@ -318,4 +415,163 @@ mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter, const mlocTi
     }
     ZoneWriting writing = {&f.zone, zone, instant};
     return Write(&f.time, &local.time, &writing, output);
+}
+
+// A range of times: the formatter, both values and their zones' writing
+// (null without a zone), and with dates that differ the date state and
+// both dates.
+typedef struct TimeRangeWriting
+{
+    const ZonedTimeFormat* f;
+    const mlocTime* times[2];
+    const ZoneWriting* zones[2];
+    const DateFormat* date;
+    const DateValue* dates[2];
+    const RangeChoice* choice;
+    const RangeJoin* join;
+    DataSpan fallback;
+} TimeRangeWriting;
+
+static void WriteTimeValue(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const TimeRangeWriting* g = context;
+    mlocWriteTimeFieldsIn(&g->f->time, pattern, length, g->times[value], mlocWriteZoneField,
+                          (void*)g->zones[value], span, w);
+}
+
+static void WriteDateValue(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const TimeRangeWriting* g = context;
+    const DateValue* v = g->dates[value];
+    mlocWriteDateFieldsIn(g->date, pattern, length, &v->fields, v->related, span, w);
+}
+
+static void WriteRange(const TimeRangeWriting* g, NumberWriter* w)
+{
+    if (g->join != nullptr)
+    {
+        mlocWriteJoinedFallback(g->join, g->fallback, w);
+        return;
+    }
+    mlocWriteRange(g->choice, w);
+}
+
+static mlocResult WriteRangeOut(const TimeRangeWriting* g, mlocOutput* output)
+{
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    WriteRange(g, &w);
+    output->length = w.length;
+    if (output->buffer == nullptr || w.length > output->capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (output->part != nullptr)
+    {
+        NumberWriter parts = {.parts = output};
+        WriteRange(g, &parts);
+        mlocEndParts(&parts);
+    }
+    return mloc_success;
+}
+
+// What a range of times writes: the pattern both times' minutes pick
+// (the hour's when both are zero under minute-optional precision), its
+// pair for their difference.
+static RangeChoice TimeChoiceOf(const TimeRangeWriting* g, const TimeRange* r)
+{
+    const TimeFormat* t = &g->f->time;
+    uint32_t p = g->times[0]->minute == 0 && g->times[1]->minute == 0 ? 1 : 0;
+    return (RangeChoice){
+        .write = WriteTimeValue,
+        .context = g,
+        .table = &r->table,
+        .pair = r->pairs[p],
+        .difference = mlocTimeDifference(g->times[0], g->times[1], t->fractionDigits),
+        .own = r->own != nullptr ? (DataSpan){r->own, r->ownLength}
+                                 : (DataSpan){t->pattern[p], t->patternLength[p]},
+        .fallback = {r->fallback, r->fallbackLength},
+    };
+}
+
+mlocResult mlocFormatTimeRange(const mlocTimeFormatter* formatter, const mlocTime* start,
+                               const mlocTime* end, mlocOutput* output)
+{
+    ZonedTimeFormat f;
+    if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
+        !mlocTimeValid(start) || !mlocTimeValid(end) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0))
+    {
+        return mloc_errorInvalid;
+    }
+    TimeRangeWriting g = {.f = &f, .times = {start, end}};
+    RangeChoice choice = TimeChoiceOf(&g, &f.time.range);
+    g.choice = &choice;
+    return WriteRangeOut(&g, output);
+}
+
+// The date state a range in a zone across dates writes its dates by: a
+// short date in the locale's calendar, made where the zone's state keeps
+// the data and the locale.
+static mlocResult MakeRangeDate(const ZonedTimeFormat* f, DateFormat* date)
+{
+    mlocDateOptions options = {.length = mloc_dateLengthShort, .yearStyle = mloc_yearStyleFull};
+    return mlocMakeDateFormat(date, f->zone.data, &f->zone.locale, &options);
+}
+
+mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
+                                     const mlocInstant* start, const mlocInstant* end,
+                                     mlocOutput* output)
+{
+    ZonedTimeFormat f;
+    mlocDateTime local[2];
+    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || start == nullptr ||
+        end == nullptr || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        mlocGetDateTimeFor(zone, start, mloc_calendarIso8601, &local[0]) != mloc_success ||
+        mlocGetDateTimeFor(zone, end, mloc_calendarIso8601, &local[1]) != mloc_success)
+    {
+        return mloc_errorInvalid;
+    }
+    ZoneWriting zones[2] = {{&f.zone, zone, start}, {&f.zone, zone, end}};
+    TimeRangeWriting g = {
+        .f = &f, .times = {&local[0].time, &local[1].time}, .zones = {&zones[0], &zones[1]}};
+    const TimeRange* r = &f.time.range;
+    RangeChoice choice = TimeChoiceOf(&g, r);
+    g.choice = &choice;
+    if (local[0].date.day == local[1].date.day)
+    {
+        return WriteRangeOut(&g, output);
+    }
+    DateFormat date;
+    DateValue dates[2];
+    mlocResult made = MakeRangeDate(&f, &date);
+    if (made < 0)
+    {
+        return made;
+    }
+    if (!mlocReadDateValue(&date, &local[0].date, &dates[0]) ||
+        !mlocReadDateValue(&date, &local[1].date, &dates[1]))
+    {
+        return mloc_errorInvalid;
+    }
+    // The fallback around each whole: yMd (GyMd across eras), the short
+    // atTime glue, the time.
+    uint32_t shortDate = mlocDateDifference(&dates[0].fields, &dates[1].fields) == rangeEra
+                             ? r->shortEraDate
+                             : r->shortDate;
+    RangeJoin join = {.writeDate = WriteDateValue, .writeTime = WriteTimeValue, .context = &g};
+    if (!mlocTablePattern(&r->table, r->glue, &join.glue) ||
+        !mlocTablePattern(&r->table, shortDate, &join.date))
+    {
+        return mloc_errorData;
+    }
+    join.time = choice.own;
+    g.date = &date;
+    g.dates[0] = &dates[0];
+    g.dates[1] = &dates[1];
+    g.join = &join;
+    g.fallback = choice.fallback;
+    return WriteRangeOut(&g, output);
 }

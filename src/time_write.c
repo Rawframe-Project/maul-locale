@@ -168,10 +168,19 @@ void mlocWriteTimeFieldsWith(const TimeFormat* f, const uint8_t* pattern, uint32
                              const mlocTime* time, TimeOtherField write, void* context,
                              NumberWriter* w)
 {
+    PatternSpan none = {0, 0, 0};
+    mlocWriteTimeFieldsIn(f, pattern, length, time, write, context, &none, w);
+}
+
+void mlocWriteTimeFieldsIn(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
+                           const mlocTime* time, TimeOtherField write, void* context,
+                           const PatternSpan* span, NumberWriter* w)
+{
     Other other = {write, context};
     uint32_t at = 0;
     while (at < length)
     {
+        w->source = at >= span->first && at < span->end ? span->source : 0;
         if (pattern[at] == datePatternField)
         {
             WriteField(f, pattern, length, time, pattern + at, &other, w);
@@ -186,4 +195,5 @@ void mlocWriteTimeFieldsWith(const TimeFormat* f, const uint8_t* pattern, uint32
         mlocWritePart(w, mloc_datePartLiteral, pattern + at, end - at);
         at = end;
     }
+    w->source = 0;
 }

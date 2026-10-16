@@ -449,9 +449,10 @@ static void TestNamesPastUnit(void)
               mlocFindDateNames(&data, &fr, 0, &t, &set) && set == t.sets,
           "root's Gregorian names");
     CHECK(!mlocFindDateNames(&data, &fr, 2, &t, &set), "a name set past the unit's");
-    CHECK(mlocFindTimeSet(&data, &fr, 0, &p, &set) && set == p.timeSets, "root's Gregorian times");
-    CHECK(!mlocFindTimeSet(&data, &fr, 2, &p, &set) &&
-              !mlocFindTimeSet(&data, &fr, dateCalendarCount, &p, &set),
+    CHECK(mlocFindTimeSet(&data, &fr, 0, &p, &set, nullptr) && set == p.timeSets,
+          "root's Gregorian times");
+    CHECK(!mlocFindTimeSet(&data, &fr, 2, &p, &set, nullptr) &&
+              !mlocFindTimeSet(&data, &fr, dateCalendarCount, &p, &set, nullptr),
           "a time set past the unit's, a calendar past MlocCalendar's");
     const uint8_t* intervals = nullptr;
     CHECK(mlocFindDateSet(&data, &fr, 0, &p, &set, &intervals) && set == p.sets &&
@@ -518,18 +519,23 @@ static void TestUnwritablePattern(void)
 // Builds a patterns unit for the date-time formatter: patterns "y", "H",
 // "{1} {{0}", "{1} x", "{0} x" and "Q"; one row and set of "y"; one time
 // set of "H" whose atTime glue and weekday-with-time patterns are the
-// given ones, on the 24-hour clock; one of each interval record, every
-// half "y" and the fallback pattern 2. Its size.
+// given ones, on the 24-hour clock; one of each interval record but two
+// pairs, a date's of "y" and a time's of "H", and the fallback pattern 2.
+// Its size.
 static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 {
     enum
     {
         // The rows (at 72), the set (at 80) and the interval records past
-        // the set hold zeros: row 0, pattern 0, record 0.
+        // the set hold zeros, row 0, pattern 0, record 0, but the time
+        // part's pairs.
         offsets = datePatternsHeaderSize,
         times = 128,
         intervals = 320,
-        text = 592,
+        timePart = 416,
+        timePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
+        pairs = 560,
+        text = 624,
     };
     static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
     static const uint32_t s_offsets[7] = {0, 3, 6, 14, 19, 24, 27};
@@ -539,8 +545,21 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
     {
         Put(s_unit + 4 * i, 1, 4);
     }
+    Put(s_unit + 36, 2, 4);
     Put(s_unit + 40, 27, 4);
     Put(s_unit + intervals + 4, 2, 2);
+    for (uint32_t i = 0; i < timePairs; i++)
+    {
+        Put(s_unit + timePart + 2 * i, 1, 2);
+    }
+    for (uint32_t i = 0; i < 2 * dateStandardCount; i++)
+    {
+        Put(s_unit + timePart + 2 * timePairs + 2 * i, 1, 2);
+    }
+    for (uint32_t h = 0; h < 2 * dateIntervalFields; h++)
+    {
+        Put(s_unit + pairs + dateIntervalPairSize + 2 * h, 1, 2);
+    }
     for (uint32_t i = 0; i < 7; i++)
     {
         Put(s_unit + offsets + 4 * i, s_offsets[i], 4);
@@ -664,7 +683,7 @@ static bool TimePatternIs(const char* id, uint32_t calendar, uint32_t entry, con
     const uint8_t* set = nullptr;
     DataSpan pattern;
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocFindTimeSet(&s_data, &locale, calendar, &p, &set) &&
+           mlocFindTimeSet(&s_data, &locale, calendar, &p, &set, nullptr) &&
            mlocDatePattern(&p, mlocLoad16(set + 2 * (size_t)entry), &pattern) &&
            pattern.size == wantLength && memcmp(pattern.bytes, want, wantLength) == 0;
 }
@@ -675,7 +694,7 @@ static bool TimeFlagsAre(const char* id, uint32_t mask, uint32_t flags)
     DatePatterns p;
     const uint8_t* set = nullptr;
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocFindTimeSet(&s_data, &locale, 0, &p, &set) &&
+           mlocFindTimeSet(&s_data, &locale, 0, &p, &set, nullptr) &&
            (mlocLoad16(set + 2 * dateTimeFlags) & mask) == flags;
 }
 

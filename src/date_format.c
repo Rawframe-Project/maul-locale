@@ -107,8 +107,7 @@ static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id,
     return false;
 }
 
-// Whether a pattern holds only fields the formatter writes.
-static bool Writable(const uint8_t* pattern, uint32_t length)
+bool mlocWritableDate(const uint8_t* pattern, uint32_t length)
 {
     for (uint32_t at = 0; at < length;)
     {
@@ -146,7 +145,7 @@ static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* se
             index = mlocLoad16(p->rows + (size_t)row * dateRowSize + 2 * (size_t)o->length);
         }
         DataSpan pattern;
-        if (!mlocDatePattern(p, index, &pattern) || !Writable(pattern.bytes, pattern.size))
+        if (!mlocDatePattern(p, index, &pattern) || !mlocWritableDate(pattern.bytes, pattern.size))
         {
             return false;
         }
@@ -192,7 +191,7 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
         DataSpan own;
         size_t at = 2 * dateEntryCount + 6 * (size_t)(o->style - 1) + 4;
         if (!mlocTablePattern(&r->table, mlocLoad16(part + at), &own) ||
-            !Writable(own.bytes, own.size))
+            !mlocWritableDate(own.bytes, own.size))
         {
             return false;
         }
@@ -202,7 +201,7 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
     for (uint32_t i = 0; i < dateFormatPatterns; i++)
     {
         r->pairs[i] = p->pairs + (size_t)PairOf(p, part, o, i) * dateIntervalPairSize;
-        if (!mlocValidRangePair(&r->table, r->pairs[i], Writable))
+        if (!mlocValidRangePair(&r->table, r->pairs[i], mlocWritableDate))
         {
             return false;
         }
@@ -315,7 +314,7 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
     const uint8_t* set = nullptr;
     DataSpan glue;
     DataSpan zone;
-    if (!mlocFindTimeSet(data, locale, f->date.calendar, &patterns, &set))
+    if (!mlocFindTimeSet(data, locale, f->date.calendar, &patterns, &set, nullptr))
     {
         return mloc_errorNotFound;
     }

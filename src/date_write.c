@@ -353,12 +353,20 @@ static bool IsGlueSlot(const uint8_t* glue, uint32_t length, uint32_t at)
 void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
                    NumberWriter* w)
 {
+    mlocWriteGlueBetween(glue, length, write, context, 0, w);
+}
+
+void mlocWriteGlueBetween(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
+                          uint32_t between, NumberWriter* w)
+{
     uint32_t at = 0;
+    uint32_t slots = 0;
     while (at < length)
     {
         if (IsGlueSlot(glue, length, at))
         {
             write(context, glue[at + 1] == '0' ? 0 : 1, w);
+            slots++;
             at += 3;
             continue;
         }
@@ -367,7 +375,9 @@ void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, v
         {
             end++;
         }
+        w->source = slots == 1 && end < length ? between : 0;
         mlocWritePart(w, mloc_datePartLiteral, glue + at, end - at);
+        w->source = 0;
         at = end;
     }
 }

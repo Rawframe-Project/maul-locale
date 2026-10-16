@@ -6,8 +6,9 @@
 // each date, checked against ICU4C 79's DateIntervalFormat made from
 // each option's skeleton; where the library differs on purpose (a leap
 // month, fa's month items, a calendar ICU lacks), its own answer. Then
-// ICU's answers kept in test/date_ranges_icu.tsv, with the library's own
-// where it differs and why.
+// ICU's answers kept in test/date_ranges_icu.tsv and
+// test/time_ranges_icu.tsv, with the library's own where it differs and
+// why.
 
 // fopen is the portable way to read the data file; MSVC's CRT deprecates
 // it.
@@ -55,8 +56,9 @@ static mlocDate Iso(int32_t year, uint32_t month, uint32_t day)
 }
 
 // The parts written, each as its kind's letter (L literal, G era, y year,
-// M month, E weekday, d day), its date ('=' both, '<' the start, '>' the
-// end) and its text in brackets.
+// r related year, U year name, M month, E weekday, d day, h hour, m
+// minute, s second, f fraction, a day period, z zone), its value ('='
+// both, '<' the start, '>' the end) and its text in brackets.
 typedef struct Parts
 {
     const char* text;
@@ -66,7 +68,7 @@ typedef struct Parts
 
 static void Part(void* context, uint32_t part, size_t start, size_t length)
 {
-    static const char s_kinds[] = "LGyrUMEd";
+    static const char s_kinds[] = "LGyrUMEdhmsfaz";
     Parts* p = context;
     uint32_t kind = part & 0xFF;
     char side = (part & 0x300) == mloc_dateRangeStart ? '<'
@@ -176,6 +178,145 @@ static void TestOneDateAndFallback(void)
           "kek's fallback, \"{1} \xE2\x80\x93 {0}\": the end first");
 }
 
+// Whether a locale writes the range of two times as want, and its parts
+// (letters as Part's: h hour, m minute, s second, f fraction, a day
+// period, z zone) as parts when given.
+static bool TimeIs(const char* id, mlocTimeOptions options, mlocTime start, mlocTime end,
+                   const char* want, const char* parts)
+{
+    mlocLocale locale;
+    mlocTimeFormatter formatter;
+    char text[256];
+    Parts p = {.text = text};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
+    if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
+        mlocInitTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
+        mlocFormatTimeRange(&formatter, &start, &end, &output) != mloc_success)
+    {
+        printf("  %s: not formatted\n", id);
+        return false;
+    }
+    bool same = output.length == strlen(want) && memcmp(text, want, output.length) == 0 &&
+                (parts == nullptr || strcmp(p.out, parts) == 0);
+    if (!same)
+    {
+        printf("  %s: got \"%.*s\" %s, want \"%s\"\n", id, (int)output.length, text, p.out, want);
+    }
+    return same;
+}
+
+// As TimeIs, two instants in a zone.
+static bool ZonedIs(const char* id, mlocTimeOptions options, const char* zoneId, int64_t start,
+                    int64_t end, const char* want, const char* parts)
+{
+    mlocLocale locale;
+    mlocTimeFormatter formatter;
+    mlocTimeZone zone;
+    char text[256];
+    Parts p = {.text = text};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
+    mlocInstant a = {.seconds = start};
+    mlocInstant b = {.seconds = end};
+    if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
+        mlocFindTimeZone(&s_data, zoneId, strlen(zoneId), &zone) < 0 ||
+        mlocInitTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
+        mlocFormatTimeRangeInZone(&formatter, &zone, &a, &b, &output) != mloc_success)
+    {
+        printf("  %s: not formatted\n", id);
+        return false;
+    }
+    bool same = output.length == strlen(want) && memcmp(text, want, output.length) == 0 &&
+                (parts == nullptr || strcmp(p.out, parts) == 0);
+    if (!same)
+    {
+        printf("  %s: got \"%.*s\" %s, want \"%s\"\n", id, (int)output.length, text, p.out, want);
+    }
+    return same;
+}
+
+#define NNBSP "\xE2\x80\xAF"
+
+static mlocTime At(uint8_t hour, uint8_t minute, uint8_t second, uint32_t nanosecond)
+{
+    return (mlocTime){.hour = hour, .minute = minute, .second = second, .nanosecond = nanosecond};
+}
+
+static mlocTimeOptions Clock(mlocHourCycle cycle, mlocTimePrecision precision)
+{
+    return (mlocTimeOptions){.hourCycle = cycle, .precision = precision};
+}
+
+static void TestTimes(void)
+{
+    mlocTimeOptions minute = Clock(mloc_hourCycleClock12, mloc_timePrecisionMinute);
+    CHECK(TimeIs("en", minute, At(10, 0, 0, 0), At(10, 30, 0, 0), "10:00" DASH "10:30" NNBSP "AM",
+                 "h<[10]L<[:]m<[00]L=[" DASH "]h>[10]L>[:]m>[30]L=[" NNBSP "]a=[AM]"),
+          "a minute's pair: am once");
+    CHECK(TimeIs("en", minute, At(10, 0, 0, 0), At(12, 0, 0, 0),
+                 "10:00" NNBSP "AM" DASH "12:00" NNBSP "PM", nullptr),
+          "am or pm's pair");
+    CHECK(TimeIs("en", minute, At(12, 0, 0, 0), At(10, 0, 0, 0),
+                 "12:00" NNBSP "PM" DASH "10:00" NNBSP "AM", nullptr),
+          "a start past its end");
+    CHECK(TimeIs("en", minute, At(10, 0, 0, 0), At(10, 0, 0, 0), "10:00" NNBSP "AM", nullptr),
+          "equal times: one");
+    CHECK(TimeIs("en", Clock(mloc_hourCycleClock24, mloc_timePrecisionMinute), At(10, 0, 0, 0),
+                 At(12, 0, 0, 0), "10:00" DASH "12:00", nullptr),
+          "the 24-hour clock's hour pair");
+    CHECK(TimeIs("en", Clock(mloc_hourCycleClock12, mloc_timePrecisionSecond), At(10, 0, 0, 0),
+                 At(10, 0, 45, 0), "10:00:00" NNBSP "AM" DASH "10:00:45" NNBSP "AM", nullptr),
+          "a second's difference: the fallback, seconds having no pair");
+    mlocTimeOptions fraction = Clock(mloc_hourCycleClock12, mloc_timePrecisionFraction3);
+    CHECK(TimeIs("en", fraction, At(10, 0, 0, 123000000), At(10, 0, 0, 456000000),
+                 "10:00:00.123" NNBSP "AM" DASH "10:00:00.456" NNBSP "AM", nullptr) &&
+              TimeIs("en", fraction, At(10, 0, 0, 123000000), At(10, 0, 0, 123999999),
+                     "10:00:00.123" NNBSP "AM", nullptr),
+          "a fraction's difference to the digits shown, past them none");
+    // ICU4C has no precision that leaves zero minutes out.
+    mlocTimeOptions optional = Clock(mloc_hourCycleClock12, mloc_timePrecisionMinuteOptional);
+    CHECK(TimeIs("en", optional, At(10, 0, 0, 0), At(11, 0, 0, 0), "10" DASH "11" NNBSP "AM",
+                 nullptr) &&
+              TimeIs("en", optional, At(10, 0, 0, 0), At(11, 30, 0, 0),
+                     "10:00" DASH "11:30" NNBSP "AM", nullptr),
+          "minute-optional: the hour's pattern when both minutes are zero");
+}
+
+static void TestTimesInZone(void)
+{
+    // 2026-01-05T10:00Z.
+    int64_t at = 1767607200;
+    mlocTimeOptions zoned = Clock(mloc_hourCycleClock12, mloc_timePrecisionMinute);
+    zoned.zone = mloc_zoneStyleSpecificShort;
+    CHECK(ZonedIs("en", zoned, "America/Los_Angeles", at, at + 7200,
+                  "2:00" DASH "4:00" NNBSP "AM PST",
+                  "h<[2]L<[:]m<[00]L=[" DASH "]h>[4]L>[:]m>[00]L=[" NNBSP "]a=[AM]L=[ ]z=[PST]"),
+          "a zone written once");
+    CHECK(ZonedIs("en", zoned, "America/Los_Angeles", at, at + 86400,
+                  "1/5/2026, 2:00" NNBSP "AM PST" DASH "1/6/2026, 2:00" NNBSP "AM PST",
+                  "M<[1]L<[/]d<[5]L<[/]y<[2026]L<[, ]h<[2]L<[:]m<[00]L<[" NNBSP "]a<[AM]L<[ ]"
+                  "z<[PST]L=[" DASH "]M>[1]L>[/]d>[6]L>[/]y>[2026]L>[, ]h>[2]L>[:]m>[00]L>[" NNBSP
+                  "]a>[AM]L>[ ]z>[PST]"),
+          "two dates: each whole, the date and the time joined by the short glue");
+    mlocTimeOptions generic = zoned;
+    generic.zone = mloc_zoneStyleGenericShort;
+    CHECK(ZonedIs("en", generic, "America/Los_Angeles", 1772962200, 1772965800,
+                  "1:30" DASH "3:30" NNBSP "AM PT", nullptr),
+          "across the change to daylight time");
+    CHECK(ZonedIs("en", (mlocTimeOptions){.style = mloc_timeStyleFull}, "America/Los_Angeles", at,
+                  at + 7200,
+                  "2:00:00" NNBSP "AM Pacific Standard Time" DASH "4:00:00" NNBSP
+                  "AM Pacific Standard Time",
+                  nullptr),
+          "the full format: seconds, so the fallback");
+    CHECK(ZonedIs("ja-u-ca-japanese", zoned, "Asia/Tokyo", 1556600400, 1556686800,
+                  "H31/4/30 \xE5\x8D\x88\xE5\xBE\x8C"
+                  "2:00 JST\xEF\xBD\x9E"
+                  "R1/5/1 \xE5\x8D\x88\xE5\xBE\x8C"
+                  "2:00 JST",
+                  nullptr),
+          "two eras: the short date with the era");
+}
+
 // Where the library writes the range ICU4C 79 does not.
 static void TestOwnAnswers(void)
 {
@@ -234,6 +375,50 @@ static void TestRefusals(void)
           "a formatter the library did not make");
 }
 
+static void TestTimeRefusals(void)
+{
+    mlocLocale en;
+    mlocTimeFormatter plain;
+    mlocTimeFormatter zoned;
+    mlocTimeZone zone;
+    mlocTimeOptions zoneOptions = Clock(mloc_hourCycleClock12, mloc_timePrecisionMinute);
+    zoneOptions.zone = mloc_zoneStyleSpecificShort;
+    mlocTime a = At(10, 0, 0, 0);
+    mlocTime b = At(11, 0, 0, 0);
+    mlocTime bad = At(24, 0, 0, 0);
+    mlocInstant x = {.seconds = 0};
+    mlocInstant far = {.seconds = INT64_MAX};
+    char text[8];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput broken = {.buffer = nullptr, .capacity = 4};
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitTimeFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
+              mlocInitTimeFormatter(&zoned, &s_data, &en, &zoneOptions) >= 0 &&
+              mlocFindTimeZone(&s_data, "Europe/Berlin", 13, &zone) >= 0,
+          "formatters and a zone");
+    CHECK(mlocFormatTimeRange(&plain, &a, &b, &output) == mloc_errorCapacity &&
+              mlocFormatTimeRange(nullptr, &a, &b, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, nullptr, &b, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, &a, &b, nullptr) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, &a, &b, &broken) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, &bad, &b, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRange(&zoned, &a, &b, &output) == mloc_errorInvalid,
+          "a time range: too small, null pointers, an hour of 24, a formatter with a zone");
+    CHECK(mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
+              mlocFormatTimeRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, nullptr, &x, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, &x, nullptr, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
+              mlocFormatTimeRangeInZone(&plain, &zone, &x, &x, &output) == mloc_errorInvalid,
+          "a range in a zone: too small, null pointers, instants out of range, no zone");
+}
+
 // The parts' spans in UTF-16 units, as ICU counts them: the start's from
 // its first part to its last, then the end's ("0:4:5,1:8:9"), or "-".
 typedef struct Spans
@@ -269,13 +454,9 @@ static void Span(void* context, uint32_t part, size_t start, size_t length)
     s->last[i] = b > s->last[i] ? b : s->last[i];
 }
 
-// One line of the table: locale, the options' fields, length, year style
-// and style, the start and the end (ISO year, month, day), ICU's text
-// and spans, and where the library answers otherwise its text and spans
-// and the cause.
-static bool TableLine(char* line, size_t number)
+// A table line's tab-separated fields; their count.
+static size_t Split(char* line, char* field[11])
 {
-    char* field[11] = {0};
     size_t count = 0;
     for (char* at = line; count < 11 && at != nullptr; count++)
     {
@@ -286,6 +467,40 @@ static bool TableLine(char* line, size_t number)
             *at++ = '\0';
         }
     }
+    return count;
+}
+
+// Whether a range written matches a table line's answer: ICU's text and
+// spans (fields at from), or the library's where the line has them (the
+// two fields after, then the cause).
+static bool Matches(size_t number, char* const field[11], size_t count, size_t from,
+                    const char* text, size_t length, const Spans* s)
+{
+    const char* want = count >= from + 5 ? field[from + 2] : field[from];
+    const char* spans = count >= from + 5 ? field[from + 3] : field[from + 1];
+    char got[64] = "-";
+    if (s->first[0] >= 0 || s->first[1] >= 0)
+    {
+        snprintf(got, sizeof(got), "0:%ld:%ld,1:%ld:%ld", s->first[0], s->last[0], s->first[1],
+                 s->last[1]);
+    }
+    bool same =
+        length == strlen(want) && memcmp(text, want, length) == 0 && strcmp(got, spans) == 0;
+    if (!same)
+    {
+        printf("  line %zu: %s got \"%.*s\" %s, want \"%s\" %s\n", number, field[0], (int)length,
+               text, got, want, spans);
+    }
+    return same;
+}
+
+// A date line: locale, the options' fields, length, year style and style
+// (mlocDateOptions' values), the start and the end (ISO dates), then the
+// answers.
+static bool DateLine(char* line, size_t number)
+{
+    char* field[11] = {0};
+    size_t count = Split(line, field);
     int o[4] = {0};
     int d[6] = {0};
     if (count < 6 || sscanf(field[1], "%d %d %d %d", &o[0], &o[1], &o[2], &o[3]) != 4 ||
@@ -295,8 +510,6 @@ static bool TableLine(char* line, size_t number)
         printf("  line %zu: unreadable\n", number);
         return false;
     }
-    const char* want = count >= 9 ? field[6] : field[4];
-    const char* spans = count >= 9 ? field[7] : field[5];
     mlocDateOptions options = {.fields = (mlocDateFieldSet)o[0],
                                .length = (mlocDateLength)o[1],
                                .yearStyle = (mlocYearStyle)o[2],
@@ -307,32 +520,80 @@ static bool TableLine(char* line, size_t number)
     char text[512];
     Spans s = {text, {-1, -1}, {0, 0}};
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Span, .context = &s};
-    char got[64] = "-";
     if (!Formatter(field[0], options, &formatter) ||
         mlocFormatDateRange(&formatter, &start, &end, &output) != mloc_success)
     {
         printf("  line %zu: %s not formatted\n", number, field[0]);
         return false;
     }
-    if (s.first[0] >= 0 || s.first[1] >= 0)
-    {
-        snprintf(got, sizeof(got), "0:%ld:%ld,1:%ld:%ld", s.first[0], s.last[0], s.first[1],
-                 s.last[1]);
-    }
-    bool same = output.length == strlen(want) && memcmp(text, want, output.length) == 0 &&
-                strcmp(got, spans) == 0;
-    if (!same)
-    {
-        printf("  line %zu: %s got \"%.*s\" %s, want \"%s\" %s\n", number, field[0],
-               (int)output.length, text, got, want, spans);
-    }
-    return same;
+    return Matches(number, field, count, 4, text, output.length, &s);
 }
 
-static void TestTable(void)
+// A time of day from seconds since 1970, in UTC.
+static mlocTime TimeOf(long long seconds)
 {
-    FILE* file = fopen(MLOC_DATE_RANGES_FILE, "rb");
-    CHECK(file != nullptr, "the table of ICU's ranges");
+    long long s = (seconds % 86400 + 86400) % 86400;
+    return At((uint8_t)(s / 3600), (uint8_t)(s / 60 % 60), (uint8_t)(s % 60), 0);
+}
+
+// A time line: locale, the options' hour cycle, precision, style and zone
+// (mlocTimeOptions' values), the zone (UTC for times without one), the
+// start and the end (seconds since 1970), then the answers.
+static bool TimeLine(char* line, size_t number)
+{
+    char* field[11] = {0};
+    size_t count = Split(line, field);
+    int o[4] = {0};
+    long long a = 0;
+    long long b = 0;
+    if (count < 7 || sscanf(field[1], "%d %d %d %d", &o[0], &o[1], &o[2], &o[3]) != 4 ||
+        sscanf(field[3], "%lld", &a) != 1 || sscanf(field[4], "%lld", &b) != 1)
+    {
+        printf("  line %zu: unreadable\n", number);
+        return false;
+    }
+    mlocTimeOptions options = {.hourCycle = (mlocHourCycle)o[0],
+                               .precision = (mlocTimePrecision)o[1],
+                               .style = (mlocTimeStyle)o[2],
+                               .zone = (mlocZoneStyle)o[3]};
+    mlocLocale locale;
+    mlocTimeFormatter formatter;
+    mlocTimeZone zone;
+    char text[512];
+    Spans s = {text, {-1, -1}, {0, 0}};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Span, .context = &s};
+    mlocTime x = TimeOf(a);
+    mlocTime y = TimeOf(b);
+    mlocInstant from = {.seconds = a};
+    mlocInstant to = {.seconds = b};
+    bool zoned = strcmp(field[2], "UTC") != 0;
+    mlocResult result =
+        mlocCanonicalizeLocale(&s_data, field[0], strlen(field[0]), &locale, nullptr).status ==
+                mloc_success
+            ? mlocInitTimeFormatter(&formatter, &s_data, &locale, &options)
+            : mloc_errorSyntax;
+    if (result >= 0 && zoned)
+    {
+        result = mlocFindTimeZone(&s_data, field[2], strlen(field[2]), &zone);
+        result =
+            result < 0 ? result : mlocFormatTimeRangeInZone(&formatter, &zone, &from, &to, &output);
+    }
+    else if (result >= 0)
+    {
+        result = mlocFormatTimeRange(&formatter, &x, &y, &output);
+    }
+    if (result != mloc_success)
+    {
+        printf("  line %zu: %s not formatted (%d)\n", number, field[0], result);
+        return false;
+    }
+    return Matches(number, field, count, 5, text, output.length, &s);
+}
+
+static void TestTable(const char* path, bool (*check)(char* line, size_t number))
+{
+    FILE* file = fopen(path, "rb");
+    CHECK(file != nullptr, "a table of ICU's ranges");
     if (file == nullptr)
     {
         return;
@@ -350,11 +611,11 @@ static void TestTable(void)
             continue;
         }
         lines++;
-        failed += TableLine(line, number) ? 0 : 1;
+        failed += check(line, number) ? 0 : 1;
     }
     fclose(file);
-    printf("%zu of %zu ranges as the table has them\n", lines - failed, lines);
-    CHECK(lines > 0 && failed == 0, "every range of the table");
+    printf("%s: %zu of %zu ranges as the table has them\n", path, lines - failed, lines);
+    CHECK(lines > 0 && failed == 0, "every range of a table");
 }
 
 int main(void)
@@ -373,6 +634,10 @@ int main(void)
     TestOneDateAndFallback();
     TestOwnAnswers();
     TestRefusals();
-    TestTable();
+    TestTimes();
+    TestTimesInZone();
+    TestTimeRefusals();
+    TestTable(MLOC_DATE_RANGES_FILE, DateLine);
+    TestTable(MLOC_TIME_RANGES_FILE, TimeLine);
     return s_failures == 0 ? 0 : 1;
 }

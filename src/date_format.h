@@ -40,6 +40,9 @@ bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateValue
 // short) by a time set's flags, as ICU4C chooses it.
 uint32_t mlocDateGlueStyle(const mlocDateOptions* options, uint32_t flags);
 
+// Whether a pattern holds only fields the date formatter writes.
+bool mlocWritableDate(const uint8_t* pattern, uint32_t length);
+
 // Whether glue holds {0} and {1}.
 bool mlocValidGlue(const uint8_t* glue, uint32_t length);
 

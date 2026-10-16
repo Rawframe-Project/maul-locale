@@ -556,7 +556,7 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
 }
 
 bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set)
+                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals)
 {
     DataSpan unit;
     const uint8_t* dates = nullptr;
@@ -566,7 +566,10 @@ bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
     }
     *patterns = mlocReadDatePatterns(unit);
     return RecordOf(dates, 2 * dateCalendarCount + calendar, patterns->timeSets,
-                    patterns->timeSetCount, dateTimeSetSize, set);
+                    patterns->timeSetCount, dateTimeSetSize, set) &&
+           (intervals == nullptr ||
+            RecordOf(dates, 3 * dateCalendarCount + calendar, patterns->intervalSets,
+                     patterns->intervalSetCount, dateIntervalSetSize, intervals));
 }
 
 bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,

@@ -314,8 +314,28 @@ cycle, time precision, zone style).
   - **The validator** refuses a pair's first half without its second
     and a fallback without both values, so a formatter checks only that
     it writes every half of its pairs.
-- **Still to come in this part** (research 39's slices): time and
-  date-time ranges; relative time; durations; speed.
+- **Time ranges** (`mlocFormatTimeRange`, `mlocFormatTimeRangeInZone`):
+  two times of day, or two instants in one zone, by a time formatter, as
+  its patterns' interval entries give them (each kept pattern's clock,
+  precision and zone form; a standard format's own entry, or its
+  minutes or seconds where another clock was matched anew). The
+  greatest difference: am or pm, the hour, the minute, the second, the
+  fraction to the digits shown (with the seconds, which have no pair).
+  Under minute-optional precision both take the hour's pattern only when
+  both minutes are zero. Two instants on different local dates are each
+  written whole around the fallback: the short date with the full year
+  (with the era across eras) and the time joined by the calendar's short
+  atTime glue, as ICU's fallback of the matched yMd plus the time; the
+  date is written by a date formatter's state made at that call from the
+  data and the locale the zone's state keeps, so a zoned time formatter's
+  init costs nothing more and a range across dates can fail as a date
+  formatter's init does. Parts run across the glue: a value's from its
+  date's first field to its time's last.
+  - **One more choice of our own.** Across dates the offset zone forms
+    (`O`, `OOOO`) stay in the time: ICU's skeleton split keeps no `O`, so
+    its fallback drops the offset the formatter was asked for.
+- **Still to come in this part** (research 39's slices): date-time
+  ranges and dates in a zone; relative time; durations; speed.
 
 ## Proof
 
@@ -466,6 +486,18 @@ cycle, time precision, zone style).
   adds to the first date's span. Kept for every push:
   `test/date_ranges_icu.tsv`, 6,000 ranges in 30 locale-calendars, the
   316 where the library answers otherwise with its answer and cause.
+- **Time ranges against ICU4C 79, once:** 866,136 (906 locales; each
+  clock, precision and zone form and the four standard formats; UTC, Los
+  Angeles and Kolkata; equal times, differing in the minute, the hour, am
+  or pm, the second, one day and 400 days, reversed, and across the
+  change to daylight time). Spans all equal; texts equal but 49,750: the
+  offset forms kept across dates (43,488); the time's own pattern where
+  one time already differs (5,498: zoned times matched among the items
+  alone, as above); the Persian calendar's own glue and fr_ML's (760);
+  fr_BE's long format, whose time ICU's generator matches anew inside
+  the date fallback (4). Kept for every push:
+  `test/time_ranges_icu.tsv`, 3,168 ranges in 12 locales, the 115 where
+  the library answers otherwise with its answer and cause.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

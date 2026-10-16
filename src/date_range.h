@@ -62,7 +62,31 @@ bool mlocValidRangePair(const PatternTable* table, const uint8_t* pair,
 // leap month differs from the month it follows), the day.
 uint32_t mlocDateDifference(const mlocDateFields* a, const mlocDateFields* b);
 
+// The greatest time field two times of day differ in, rangeAmPm to
+// rangeSecond (a fraction's difference shown with the seconds is the
+// seconds'), or rangeNone: am or pm, the hour, the minute, the second, the
+// fraction to the digits shown.
+uint32_t mlocTimeDifference(const mlocTime* a, const mlocTime* b, uint32_t fractionDigits);
+
 // Writes a range by its choice.
 void mlocWriteRange(const RangeChoice* c, NumberWriter* w);
+
+// A value written as a date and a time joined by glue ({1} the date, {0}
+// the time), each part by its pattern and writer.
+typedef struct RangeJoin
+{
+    DataSpan glue;
+    DataSpan date;
+    DataSpan time;
+    RangeValueWriter writeDate;
+    RangeValueWriter writeTime;
+    const void* context;
+} RangeJoin;
+
+// Writes a range of two values joined so, each whole, around the
+// fallback ({0} the start, {1} the end): a value's parts run from its
+// first part's first field to its second part's last, the glue between
+// them its own.
+void mlocWriteJoinedFallback(const RangeJoin* j, DataSpan fallback, NumberWriter* w);
 
 #endif

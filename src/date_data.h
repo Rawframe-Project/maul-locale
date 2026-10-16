@@ -97,11 +97,11 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
                      DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals);
 
 // A locale's time patterns in a calendar along its main chain: the time
-// set's bytes (dateTimeSetSize) and the unit they index. False when the
-// data has no dates, the calendar is unknown or the set is past the
-// unit's.
+// set's bytes (dateTimeSetSize), when intervals is not null the interval
+// set's, and the unit they index. False when the data has no dates, the
+// calendar is unknown or a set is past the unit's.
 bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set);
+                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals);
 
 // A locale's date names in a calendar along its main chain: the name
 // set's bytes (dateNameSetSize) and the unit they index. False when the
