@@ -6,6 +6,7 @@
 #include "date_source.h"
 
 #include "day_periods_gen.h"
+#include "interval_match.h"
 #include "semantic.h"
 #include "xml.h"
 
@@ -347,6 +348,107 @@ static void AddItems(Cldr* cldr, const char* locale, const char* calendar, Patte
     }
 }
 
+typedef struct IntervalWalk
+{
+    Cldr* cldr;
+    const char* locale;
+    const char* prefix;
+    size_t prefixLength;
+    IntervalItems* items;
+    // Each file's greatest difference chains, gathered before sorting.
+    char** chains;
+    int count;
+    int capacity;
+} IntervalWalk;
+
+// Collects a file's greatest difference chains under the prefix.
+static void CollectInterval(const char* key, void* value, void* context)
+{
+    (void)value;
+    IntervalWalk* walk = context;
+    if (strncmp(key, walk->prefix, walk->prefixLength) != 0 || strstr(key, "[@alt=") != nullptr ||
+        strstr(key, "/greatestDifference[@id=\"") == nullptr)
+    {
+        return;
+    }
+    if (walk->count == walk->capacity)
+    {
+        walk->capacity = walk->capacity == 0 ? 256 : 2 * walk->capacity;
+        walk->chains = realloc(walk->chains, sizeof(char*) * (size_t)walk->capacity);
+        if (walk->chains == nullptr)
+        {
+            fputs("mlocgen: out of memory\n", stderr);
+            exit(1);
+        }
+    }
+    walk->chains[walk->count++] = Copy(key);
+}
+
+// One file's interval patterns, items in the byte order of their ids
+// (ICU's table order), each kept unless an earlier file gave it. The
+// patterns are resolved from the locale asked for, as ICU's data holds
+// each locale's resolved values.
+static void AddFileIntervals(IntervalWalk* walk, const LdmlFile* file, const char* prefix)
+{
+    walk->count = 0;
+    MapEach(&file->leaves, CollectInterval, walk);
+    qsort(walk->chains, (size_t)walk->count, sizeof(char*), CompareIds);
+    for (int i = 0; i < walk->count; i++)
+    {
+        const char* chain = walk->chains[i];
+        // The prefix ends inside the item's first bracket.
+        const char* id = strstr(chain + strlen(prefix) - 1, "[@id=\"") + 6;
+        static const char s_difference[] = "/greatestDifference[@id=\"";
+        const char* letter = strstr(chain, s_difference) + sizeof(s_difference) - 1;
+        char skeleton[64];
+        char difference[8];
+        Format(skeleton, sizeof(skeleton), "%.*s", (int)strcspn(id, "\""), id);
+        Format(difference, sizeof(difference), "%.*s", (int)strcspn(letter, "\""), letter);
+        const char* pattern = Resolve(walk->cldr, walk->locale, chain);
+        if (pattern != nullptr)
+        {
+            IntervalItemsPut(walk->items, skeleton, difference, pattern);
+        }
+        free(walk->chains[i]);
+    }
+}
+
+void DateSourceLoadIntervals(Cldr* cldr, const char* locale, const char* calendar,
+                             IntervalItems* items)
+{
+    memset(items, 0, sizeof(*items));
+    const char* fallback = CalendarValue(cldr, locale, calendar,
+                                         "dateTimeFormats/intervalFormats/intervalFormatFallback");
+    items->fallback = fallback != nullptr ? Copy(fallback) : nullptr;
+    char prefix[cldrMaxChain];
+    Format(prefix, sizeof(prefix), s_calendarChain, calendar,
+           "dateTimeFormats/intervalFormats/intervalFormatRanges");
+    IntervalWalk walk = {.cldr = cldr, .locale = locale, .items = items};
+    for (int depth = 0; depth < 8; depth++)
+    {
+        char itemsPrefix[cldrMaxChain];
+        Format(itemsPrefix, sizeof(itemsPrefix), "%.*s/intervalFormatItem[",
+               (int)(strlen(prefix) - strlen("/intervalFormatRanges")), prefix);
+        walk.prefix = itemsPrefix;
+        walk.prefixLength = strlen(itemsPrefix);
+        for (const char* at = locale; at != nullptr; at = CldrParent(cldr, at, componentMain))
+        {
+            const LdmlFile* file = CldrFile(cldr, at, componentMain);
+            if (file != nullptr)
+            {
+                AddFileIntervals(&walk, file, itemsPrefix);
+            }
+        }
+        char target[cldrMaxChain];
+        if (!CldrAliasOf(cldr, prefix, target, componentMain))
+        {
+            break;
+        }
+        memcpy(prefix, target, sizeof(prefix));
+    }
+    free(walk.chains);
+}
+
 static void AddStandard(Cldr* cldr, const char* locale, const char* calendar, PatternGenerator* g,
                         bool patterns)
 {
@@ -467,6 +569,92 @@ int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapa
         puts(pattern);
         free(pattern);
     }
+    PatternGeneratorFree(&g);
+    DateSupplementFree(&supplement);
+    CldrClose(&cldr);
+    return 1;
+}
+
+static void PrintPart(const char* text)
+{
+    fputs(text == nullptr || text[0] == '\0' ? "-" : text, stdout);
+}
+
+static void PrintInterval(const char* locale, const char* skeleton, const IntervalPatterns* p,
+                          const IntervalItems* items)
+{
+    printf("%s\t%s", locale, skeleton);
+    for (int f = 0; f < intervalFieldCount; f++)
+    {
+        putchar('\t');
+        PrintPart(p->pairs[f].first);
+        putchar('|');
+        PrintPart(p->pairs[f].second);
+        printf("|%d", p->pairs[f].laterFirst ? 1 : 0);
+    }
+    putchar('\t');
+    PrintPart(items->fallback);
+    putchar('\t');
+    PrintPart(p->pattern);
+    putchar('\n');
+}
+
+int PrintIntervals(const char* commonDirectory, char* errorOut, size_t errorCapacity)
+{
+    Cldr cldr;
+    DateSupplement supplement;
+    if (!CldrOpen(&cldr, commonDirectory, errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    if (!DateSupplementLoad(&supplement, commonDirectory, errorOut, errorCapacity))
+    {
+        CldrClose(&cldr);
+        return 0;
+    }
+    PatternGenerator g;
+    PatternGeneratorInit(&g);
+    IntervalItems* items = calloc(1, sizeof(IntervalItems));
+    if (items == nullptr)
+    {
+        fputs("mlocgen: out of memory\n", stderr);
+        exit(1);
+    }
+    char loaded[1024] = "";
+    char line[512];
+    while (fgets(line, sizeof(line), stdin) != nullptr)
+    {
+        line[strcspn(line, "\r\n")] = '\0';
+        char* calendar = strchr(line, '\t');
+        char* skeleton = calendar == nullptr ? nullptr : strchr(calendar + 1, '\t');
+        if (skeleton == nullptr)
+        {
+            puts("?");
+            continue;
+        }
+        *calendar++ = '\0';
+        *skeleton++ = '\0';
+        char key[1024];
+        Format(key, sizeof(key), "%s\t%s", line, calendar);
+        if (strcmp(key, loaded) != 0)
+        {
+            PatternGeneratorFree(&g);
+            PatternGeneratorInit(&g);
+            DateSourceLoad(&cldr, &supplement, line, calendar, &g);
+            IntervalItemsFree(items);
+            DateSourceLoadIntervals(&cldr, line, calendar, items);
+            Format(loaded, sizeof(loaded), "%s", key);
+        }
+        const char* glue = CalendarValue(
+            &cldr, line, "gregorian",
+            "dateTimeFormats/dateTimeFormatLength[@type=\"medium\"]/dateTimeFormat/pattern");
+        IntervalPatterns p;
+        IntervalResolve(&g, items, glue, skeleton, &p);
+        PrintInterval(line, skeleton, &p, items);
+        IntervalPatternsFree(&p);
+    }
+    IntervalItemsFree(items);
+    free(items);
     PatternGeneratorFree(&g);
     DateSupplementFree(&supplement);
     CldrClose(&cldr);

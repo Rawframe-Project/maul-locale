@@ -397,6 +397,15 @@ cycle, time precision, zone style).
   months and tok's long date (368 each) and fr_ML's glue (230), as in
   the composites; fr_CA's `Hv` item, `HH 'h' v`, which ICU's data
   lacks (184).
+- **Interval patterns against ICU4C 79** (CLDR 49.0), on every push:
+  `tools/check_intervals.py` asks `mlocgen intervals` the 4,437
+  questions of `test/intervals_icu.tsv` (the date and time options alone
+  in 44 locales and 8 locales' own calendars, en's and ja's date-times)
+  and compares each greatest difference's pattern halves with ICU's
+  DateIntervalFormat's, read from its fields; 94 differ by the
+  skeleton matcher's listed causes (`tools/interval-exceptions.txt`).
+  Once: 415,854 (906 locales, 459 skeletons), all equal but 338 of the
+  same causes.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

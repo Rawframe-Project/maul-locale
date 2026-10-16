@@ -480,7 +480,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
                                     tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c tools/mlocgen/zone_names_gen.c
-                                    tools/mlocgen/date_gen.c tools/mlocgen/date_names_gen.c tools/mlocgen/date_source.c tools/mlocgen/day_periods_gen.c tools/mlocgen/semantic.c tools/mlocgen/time_gen.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
+                                    tools/mlocgen/date_gen.c tools/mlocgen/date_names_gen.c tools/mlocgen/date_source.c tools/mlocgen/day_periods_gen.c tools/mlocgen/interval_match.c tools/mlocgen/semantic.c tools/mlocgen/time_gen.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
     # the versions of the public base header.

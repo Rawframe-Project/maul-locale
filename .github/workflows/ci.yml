@@ -162,6 +162,13 @@ jobs:
         run: |
           python3 tools/check_skeletons.py build/mlocgen ~/cldr-cache/cldr/common \
             test/skeletons_icu.tsv tools/skeleton-exceptions.txt
+      - name: Interval patterns against ICU
+        # Record mloc-0042: mlocgen's interval patterns for each question
+        # of the table equal ICU4C 79's DateIntervalFormat's, or the listed.
+        timeout-minutes: 5
+        run: |
+          python3 tools/check_intervals.py build/mlocgen ~/cldr-cache/cldr/common \
+            test/intervals_icu.tsv tools/interval-exceptions.txt
       - name: Semantic skeletons and dates against CLDR's test data
         # Record mloc-0042: each semantic skeleton of datetime.json maps to
         # its classical skeleton, and each date case gives its text.

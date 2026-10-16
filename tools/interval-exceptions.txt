@@ -1,0 +1,102 @@
+# Where mlocgen's interval patterns differ from ICU4C 79's
+# (test/intervals_icu.tsv) on purpose, with mlocgen's answer. All come
+# from the patterns the skeleton matcher gives (tools/skeleton-exceptions.txt):
+# - a calendar's own date-time glue where ICU takes the Gregorian one
+#   (the time ranges' date fallbacks of ar's Islamic and fa's Persian
+#   calendars) and fr_ML's per-path glue;
+# - fr_CA's Hv item, HH 'h' v, which ICU's data lacks (the skeleton's
+#   own pattern only).
+fr_CA	gregorian	HO	-|y-MM-dd GGGGG HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	H 'h' – |H 'h'|0	H 'h' – |H 'h'|0	-|-|0	{0} – {1}	HH 'h' O
+fr_CA	gregorian	Hv	-|y-MM-dd GGGGG HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	H 'h' – |H 'h' v|0	H 'h' – |H 'h' v|0	-|-|0	{0} – {1}	HH 'h' v
+fr_CA	gregorian	HVVVV	-|y-MM-dd GGGGG HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH 'h' VVVV
+fr_CA	gregorian	Hz	-|y-MM-dd GGGGG HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	H 'h' – |H 'h' z|0	H 'h' – |H 'h' z|0	-|-|0	{0} – {1}	HH 'h' z
+fr_ML	gregorian	h	-|dd/MM/y GGGGG, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	h a – |h a|0	h – |h a|0	-|-|0	{0} – {1}	h a
+fr_ML	gregorian	H	-|dd/MM/y GGGGG, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	HH – |HH|0	HH – |HH|0	-|-|0	{0} – {1}	HH
+fr_ML	gregorian	hm	-|dd/MM/y GGGGG, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	h:mm a – |h:mm a|0	h:mm – |h:mm a|0	h:mm – |h:mm a|0	{0} – {1}	h:mm a
+fr_ML	gregorian	Hm	-|dd/MM/y GGGGG, HH:mm|0	-|dd/MM/y, HH:mm|0	-|dd/MM/y, HH:mm|0	-|dd/MM/y, HH:mm|0	HH:mm – |HH:mm|0	HH:mm – |HH:mm|0	HH:mm – |HH:mm|0	{0} – {1}	HH:mm
+fr_ML	gregorian	hmO	-|dd/MM/y GGGGG, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	h:mm a – |h:mm a|0	h:mm – |h:mm a|0	h:mm – |h:mm a|0	{0} – {1}	h:mm a O
+fr_ML	gregorian	HmO	-|dd/MM/y GGGGG, HH:mm|0	-|dd/MM/y, HH:mm|0	-|dd/MM/y, HH:mm|0	-|dd/MM/y, HH:mm|0	HH:mm – |HH:mm|0	HH:mm – |HH:mm|0	HH:mm – |HH:mm|0	{0} – {1}	HH:mm O
+fr_ML	gregorian	hms	-|dd/MM/y GGGGG, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a
+fr_ML	gregorian	Hms	-|dd/MM/y GGGGG, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss
+fr_ML	gregorian	hmsO	-|dd/MM/y GGGGG, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|dd/MM/y, h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a O
+fr_ML	gregorian	HmsO	-|dd/MM/y GGGGG, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|dd/MM/y, HH:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss O
+fr_ML	gregorian	hmsv	-|dd/MM/y GGGGG, h:mm:ss a v|0	-|dd/MM/y, h:mm:ss a v|0	-|dd/MM/y, h:mm:ss a v|0	-|dd/MM/y, h:mm:ss a v|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a v
+fr_ML	gregorian	Hmsv	-|dd/MM/y GGGGG, HH:mm:ss v|0	-|dd/MM/y, HH:mm:ss v|0	-|dd/MM/y, HH:mm:ss v|0	-|dd/MM/y, HH:mm:ss v|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss v
+fr_ML	gregorian	hmsVVVV	-|dd/MM/y GGGGG, h:mm:ss a VVVV|0	-|dd/MM/y, h:mm:ss a VVVV|0	-|dd/MM/y, h:mm:ss a VVVV|0	-|dd/MM/y, h:mm:ss a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a VVVV
+fr_ML	gregorian	HmsVVVV	-|dd/MM/y GGGGG, HH:mm:ss VVVV|0	-|dd/MM/y, HH:mm:ss VVVV|0	-|dd/MM/y, HH:mm:ss VVVV|0	-|dd/MM/y, HH:mm:ss VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss VVVV
+fr_ML	gregorian	hmsz	-|dd/MM/y GGGGG, h:mm:ss a z|0	-|dd/MM/y, h:mm:ss a z|0	-|dd/MM/y, h:mm:ss a z|0	-|dd/MM/y, h:mm:ss a z|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a z
+fr_ML	gregorian	Hmsz	-|dd/MM/y GGGGG, HH:mm:ss z|0	-|dd/MM/y, HH:mm:ss z|0	-|dd/MM/y, HH:mm:ss z|0	-|dd/MM/y, HH:mm:ss z|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss z
+fr_ML	gregorian	hmv	-|dd/MM/y GGGGG, h:mm a v|0	-|dd/MM/y, h:mm a v|0	-|dd/MM/y, h:mm a v|0	-|dd/MM/y, h:mm a v|0	h:mm a – |h:mm a v|0	h:mm – |h:mm a v|0	h:mm – |h:mm a v|0	{0} – {1}	h:mm a v
+fr_ML	gregorian	Hmv	-|dd/MM/y GGGGG, HH:mm v|0	-|dd/MM/y, HH:mm v|0	-|dd/MM/y, HH:mm v|0	-|dd/MM/y, HH:mm v|0	HH:mm – |HH:mm v|0	HH:mm – |HH:mm v|0	HH:mm – |HH:mm v|0	{0} – {1}	HH:mm v
+fr_ML	gregorian	hmVVVV	-|dd/MM/y GGGGG, h:mm a VVVV|0	-|dd/MM/y, h:mm a VVVV|0	-|dd/MM/y, h:mm a VVVV|0	-|dd/MM/y, h:mm a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm a VVVV
+fr_ML	gregorian	HmVVVV	-|dd/MM/y GGGGG, HH:mm VVVV|0	-|dd/MM/y, HH:mm VVVV|0	-|dd/MM/y, HH:mm VVVV|0	-|dd/MM/y, HH:mm VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm VVVV
+fr_ML	gregorian	hmz	-|dd/MM/y GGGGG, h:mm a z|0	-|dd/MM/y, h:mm a z|0	-|dd/MM/y, h:mm a z|0	-|dd/MM/y, h:mm a z|0	h:mm a – |h:mm a z|0	h:mm – |h:mm a z|0	h:mm – |h:mm a z|0	{0} – {1}	h:mm a z
+fr_ML	gregorian	Hmz	-|dd/MM/y GGGGG, HH:mm z|0	-|dd/MM/y, HH:mm z|0	-|dd/MM/y, HH:mm z|0	-|dd/MM/y, HH:mm z|0	HH:mm – |HH:mm z|0	HH:mm – |HH:mm z|0	HH:mm – |HH:mm z|0	{0} – {1}	HH:mm z
+fr_ML	gregorian	hO	-|dd/MM/y GGGGG, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	h a – |h a|0	h – |h a|0	-|-|0	{0} – {1}	h a O
+fr_ML	gregorian	HO	-|dd/MM/y GGGGG, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	HH – |HH|0	HH – |HH|0	-|-|0	{0} – {1}	HH O
+fr_ML	gregorian	hv	-|dd/MM/y GGGGG, h a v|0	-|dd/MM/y, h a v|0	-|dd/MM/y, h a v|0	-|dd/MM/y, h a v|0	h a – |h a v|0	h – |h a v|0	-|-|0	{0} – {1}	h a v
+fr_ML	gregorian	Hv	-|dd/MM/y GGGGG, HH v|0	-|dd/MM/y, HH v|0	-|dd/MM/y, HH v|0	-|dd/MM/y, HH v|0	HH – |HH v|0	HH – |HH v|0	-|-|0	{0} – {1}	HH v
+fr_ML	gregorian	hVVVV	-|dd/MM/y GGGGG, h a VVVV|0	-|dd/MM/y, h a VVVV|0	-|dd/MM/y, h a VVVV|0	-|dd/MM/y, h a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h a VVVV
+fr_ML	gregorian	HVVVV	-|dd/MM/y GGGGG, HH VVVV|0	-|dd/MM/y, HH VVVV|0	-|dd/MM/y, HH VVVV|0	-|dd/MM/y, HH VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH VVVV
+fr_ML	gregorian	hz	-|dd/MM/y GGGGG, h a z|0	-|dd/MM/y, h a z|0	-|dd/MM/y, h a z|0	-|dd/MM/y, h a z|0	h a – |h a z|0	h – |h a z|0	-|-|0	{0} – {1}	h a z
+fr_ML	gregorian	Hz	-|dd/MM/y GGGGG, HH z|0	-|dd/MM/y, HH z|0	-|dd/MM/y, HH z|0	-|dd/MM/y, HH z|0	HH – |HH z|0	HH – |HH z|0	-|-|0	{0} – {1}	HH z
+ar	islamic-civil	h	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	h a – |h a|0	h–|h a|0	-|-|0	{0} – {1}	h a
+ar	islamic-civil	H	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	HH–|HH|0	HH–|HH|0	-|-|0	{0} – {1}	HH
+ar	islamic-civil	hm	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	h:mm a – |h:mm a|0	h:mm–|h:mm a|0	h:mm–|h:mm a|0	{0} – {1}	h:mm a
+ar	islamic-civil	Hm	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	HH:mm–|HH:mm|0	HH:mm–|HH:mm|0	HH:mm–|HH:mm|0	{0} – {1}	HH:mm
+ar	islamic-civil	hmO	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	-|d‏/M‏/y G, h:mm a|0	h:mm a – |h:mm a|0	h:mm–|h:mm a|0	h:mm–|h:mm a|0	{0} – {1}	h:mm a O
+ar	islamic-civil	HmO	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	-|d‏/M‏/y G, HH:mm|0	HH:mm–|HH:mm|0	HH:mm–|HH:mm|0	HH:mm–|HH:mm|0	{0} – {1}	HH:mm O
+ar	islamic-civil	hms	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a
+ar	islamic-civil	Hms	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss
+ar	islamic-civil	hmsO	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|d‏/M‏/y G, h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a O
+ar	islamic-civil	HmsO	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|d‏/M‏/y G, HH:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss O
+ar	islamic-civil	hmsv	-|d‏/M‏/y G, h:mm:ss a v|0	-|d‏/M‏/y G, h:mm:ss a v|0	-|d‏/M‏/y G, h:mm:ss a v|0	-|d‏/M‏/y G, h:mm:ss a v|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a v
+ar	islamic-civil	Hmsv	-|d‏/M‏/y G, HH:mm:ss v|0	-|d‏/M‏/y G, HH:mm:ss v|0	-|d‏/M‏/y G, HH:mm:ss v|0	-|d‏/M‏/y G, HH:mm:ss v|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss v
+ar	islamic-civil	hmsVVVV	-|d‏/M‏/y G, h:mm:ss a VVVV|0	-|d‏/M‏/y G, h:mm:ss a VVVV|0	-|d‏/M‏/y G, h:mm:ss a VVVV|0	-|d‏/M‏/y G, h:mm:ss a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a VVVV
+ar	islamic-civil	HmsVVVV	-|d‏/M‏/y G, HH:mm:ss VVVV|0	-|d‏/M‏/y G, HH:mm:ss VVVV|0	-|d‏/M‏/y G, HH:mm:ss VVVV|0	-|d‏/M‏/y G, HH:mm:ss VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss VVVV
+ar	islamic-civil	hmsz	-|d‏/M‏/y G, h:mm:ss a z|0	-|d‏/M‏/y G, h:mm:ss a z|0	-|d‏/M‏/y G, h:mm:ss a z|0	-|d‏/M‏/y G, h:mm:ss a z|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm:ss a z
+ar	islamic-civil	Hmsz	-|d‏/M‏/y G, HH:mm:ss z|0	-|d‏/M‏/y G, HH:mm:ss z|0	-|d‏/M‏/y G, HH:mm:ss z|0	-|d‏/M‏/y G, HH:mm:ss z|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm:ss z
+ar	islamic-civil	hmv	-|d‏/M‏/y G, h:mm a v|0	-|d‏/M‏/y G, h:mm a v|0	-|d‏/M‏/y G, h:mm a v|0	-|d‏/M‏/y G, h:mm a v|0	h:mm a – |h:mm a v|0	h:mm–|h:mm a v|0	h:mm–|h:mm a v|0	{0} – {1}	h:mm a v
+ar	islamic-civil	Hmv	-|d‏/M‏/y G, HH:mm v|0	-|d‏/M‏/y G, HH:mm v|0	-|d‏/M‏/y G, HH:mm v|0	-|d‏/M‏/y G, HH:mm v|0	HH:mm–|HH:mm v|0	HH:mm–|HH:mm v|0	HH:mm–|HH:mm v|0	{0} – {1}	HH:mm v
+ar	islamic-civil	hmVVVV	-|d‏/M‏/y G, h:mm a VVVV|0	-|d‏/M‏/y G, h:mm a VVVV|0	-|d‏/M‏/y G, h:mm a VVVV|0	-|d‏/M‏/y G, h:mm a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h:mm a VVVV
+ar	islamic-civil	HmVVVV	-|d‏/M‏/y G, HH:mm VVVV|0	-|d‏/M‏/y G, HH:mm VVVV|0	-|d‏/M‏/y G, HH:mm VVVV|0	-|d‏/M‏/y G, HH:mm VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH:mm VVVV
+ar	islamic-civil	hmz	-|d‏/M‏/y G, h:mm a z|0	-|d‏/M‏/y G, h:mm a z|0	-|d‏/M‏/y G, h:mm a z|0	-|d‏/M‏/y G, h:mm a z|0	h:mm a – |h:mm a z|0	h:mm–|h:mm a z|0	h:mm–|h:mm a z|0	{0} – {1}	h:mm a z
+ar	islamic-civil	Hmz	-|d‏/M‏/y G, HH:mm z|0	-|d‏/M‏/y G, HH:mm z|0	-|d‏/M‏/y G, HH:mm z|0	-|d‏/M‏/y G, HH:mm z|0	HH:mm–|HH:mm z|0	HH:mm–|HH:mm z|0	HH:mm–|HH:mm z|0	{0} – {1}	HH:mm z
+ar	islamic-civil	hO	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	-|d‏/M‏/y G, h a|0	h a – |h a|0	h–|h a|0	-|-|0	{0} – {1}	h a O
+ar	islamic-civil	HO	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	-|d‏/M‏/y G, HH|0	HH–|HH|0	HH–|HH|0	-|-|0	{0} – {1}	HH O
+ar	islamic-civil	hv	-|d‏/M‏/y G, h a v|0	-|d‏/M‏/y G, h a v|0	-|d‏/M‏/y G, h a v|0	-|d‏/M‏/y G, h a v|0	h a – |h a v|0	h–|h a v|0	-|-|0	{0} – {1}	h a v
+ar	islamic-civil	Hv	-|d‏/M‏/y G, HH v|0	-|d‏/M‏/y G, HH v|0	-|d‏/M‏/y G, HH v|0	-|d‏/M‏/y G, HH v|0	HH–|HH v|0	HH–|HH v|0	-|-|0	{0} – {1}	HH v
+ar	islamic-civil	hVVVV	-|d‏/M‏/y G, h a VVVV|0	-|d‏/M‏/y G, h a VVVV|0	-|d‏/M‏/y G, h a VVVV|0	-|d‏/M‏/y G, h a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h a VVVV
+ar	islamic-civil	HVVVV	-|d‏/M‏/y G, HH VVVV|0	-|d‏/M‏/y G, HH VVVV|0	-|d‏/M‏/y G, HH VVVV|0	-|d‏/M‏/y G, HH VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH VVVV
+ar	islamic-civil	hz	-|d‏/M‏/y G, h a z|0	-|d‏/M‏/y G, h a z|0	-|d‏/M‏/y G, h a z|0	-|d‏/M‏/y G, h a z|0	h a – |h a z|0	h–|h a z|0	-|-|0	{0} – {1}	h a z
+ar	islamic-civil	Hz	-|d‏/M‏/y G, HH z|0	-|d‏/M‏/y G, HH z|0	-|d‏/M‏/y G, HH z|0	-|d‏/M‏/y G, HH z|0	HH–|HH z|0	HH–|HH z|0	-|-|0	{0} – {1}	HH z
+fa	persian	h	-|M/d/y GGGGG،‏ h a|0	-|y/M/d،‏ h a|0	-|y/M/d،‏ h a|0	-|y/M/d،‏ h a|0	h a تا |h a|0	h تا |h a|0	-|-|0	{0} تا {1}	h a
+fa	persian	H	-|M/d/y GGGGG،‏ H|0	-|y/M/d،‏ H|0	-|y/M/d،‏ H|0	-|y/M/d،‏ H|0	H تا |H|0	H تا |H|0	-|-|0	{0} تا {1}	H
+fa	persian	hm	-|M/d/y GGGGG،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	h:mm a تا |h:mm a|0	h:mm تا |h:mm a|0	h:mm تا |h:mm a|0	{0} تا {1}	h:mm a
+fa	persian	Hm	-|M/d/y GGGGG،‏ H:mm|0	-|y/M/d،‏ H:mm|0	-|y/M/d،‏ H:mm|0	-|y/M/d،‏ H:mm|0	H:mm تا |H:mm|0	H:mm تا |H:mm|0	H:mm تا |H:mm|0	{0} تا {1}	H:mm
+fa	persian	hmO	-|M/d/y GGGGG،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	-|y/M/d،‏ h:mm a|0	h:mm a تا |h:mm a|0	h:mm تا |h:mm a|0	h:mm تا |h:mm a|0	{0} تا {1}	h:mm a (O)
+fa	persian	HmO	-|M/d/y GGGGG،‏ H:mm|0	-|y/M/d،‏ H:mm|0	-|y/M/d،‏ H:mm|0	-|y/M/d،‏ H:mm|0	H:mm تا |H:mm|0	H:mm تا |H:mm|0	H:mm تا |H:mm|0	{0} تا {1}	HH:mm (O)
+fa	persian	hms	-|M/d/y GGGGG،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm:ss a
+fa	persian	Hms	-|M/d/y GGGGG،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H:mm:ss
+fa	persian	hmsO	-|M/d/y GGGGG،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|y/M/d،‏ h:mm:ss a|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm:ss a (O)
+fa	persian	HmsO	-|M/d/y GGGGG،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|y/M/d،‏ H:mm:ss|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H:mm:ss (O)
+fa	persian	hmsv	-|M/d/y GGGGG،‏ h:mm:ss a (v)|0	-|y/M/d،‏ h:mm:ss a (v)|0	-|y/M/d،‏ h:mm:ss a (v)|0	-|y/M/d،‏ h:mm:ss a (v)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm:ss a (v)
+fa	persian	Hmsv	-|M/d/y GGGGG،‏ H:mm:ss (v)|0	-|y/M/d،‏ H:mm:ss (v)|0	-|y/M/d،‏ H:mm:ss (v)|0	-|y/M/d،‏ H:mm:ss (v)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H:mm:ss (v)
+fa	persian	hmsVVVV	-|M/d/y GGGGG،‏ h:mm:ss a (VVVV)|0	-|y/M/d،‏ h:mm:ss a (VVVV)|0	-|y/M/d،‏ h:mm:ss a (VVVV)|0	-|y/M/d،‏ h:mm:ss a (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm:ss a (VVVV)
+fa	persian	HmsVVVV	-|M/d/y GGGGG،‏ H:mm:ss (VVVV)|0	-|y/M/d،‏ H:mm:ss (VVVV)|0	-|y/M/d،‏ H:mm:ss (VVVV)|0	-|y/M/d،‏ H:mm:ss (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H:mm:ss (VVVV)
+fa	persian	hmsz	-|M/d/y GGGGG،‏ h:mm:ss a (z)|0	-|y/M/d،‏ h:mm:ss a (z)|0	-|y/M/d،‏ h:mm:ss a (z)|0	-|y/M/d،‏ h:mm:ss a (z)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm:ss a (z)
+fa	persian	Hmsz	-|M/d/y GGGGG،‏ H:mm:ss (z)|0	-|y/M/d،‏ H:mm:ss (z)|0	-|y/M/d،‏ H:mm:ss (z)|0	-|y/M/d،‏ H:mm:ss (z)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H:mm:ss (z)
+fa	persian	hmv	-|M/d/y GGGGG،‏ h:mm a (v)|0	-|y/M/d،‏ h:mm a (v)|0	-|y/M/d،‏ h:mm a (v)|0	-|y/M/d،‏ h:mm a (v)|0	h:mm a تا |h:mm a (v)|0	h:mm تا |h:mm a (v)|0	h:mm تا |h:mm a (v)|0	{0} تا {1}	h:mm a (v)
+fa	persian	Hmv	-|M/d/y GGGGG،‏ HH:mm (v)|0	-|y/M/d،‏ HH:mm (v)|0	-|y/M/d،‏ HH:mm (v)|0	-|y/M/d،‏ HH:mm (v)|0	H:mm تا |H:mm (v)|0	H:mm تا |H:mm (v)|0	H:mm تا |H:mm (v)|0	{0} تا {1}	HH:mm (v)
+fa	persian	hmVVVV	-|M/d/y GGGGG،‏ h:mm a (VVVV)|0	-|y/M/d،‏ h:mm a (VVVV)|0	-|y/M/d،‏ h:mm a (VVVV)|0	-|y/M/d،‏ h:mm a (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h:mm a (VVVV)
+fa	persian	HmVVVV	-|M/d/y GGGGG،‏ HH:mm (VVVV)|0	-|y/M/d،‏ HH:mm (VVVV)|0	-|y/M/d،‏ HH:mm (VVVV)|0	-|y/M/d،‏ HH:mm (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	HH:mm (VVVV)
+fa	persian	hmz	-|M/d/y GGGGG،‏ h:mm a (z)|0	-|y/M/d،‏ h:mm a (z)|0	-|y/M/d،‏ h:mm a (z)|0	-|y/M/d،‏ h:mm a (z)|0	h:mm a تا |h:mm a (z)|0	h:mm تا |h:mm a (z)|0	h:mm تا |h:mm a (z)|0	{0} تا {1}	h:mm a (z)
+fa	persian	Hmz	-|M/d/y GGGGG،‏ HH:mm (z)|0	-|y/M/d،‏ HH:mm (z)|0	-|y/M/d،‏ HH:mm (z)|0	-|y/M/d،‏ HH:mm (z)|0	H:mm تا |H:mm (z)|0	H:mm تا |H:mm (z)|0	H:mm تا |H:mm (z)|0	{0} تا {1}	HH:mm (z)
+fa	persian	hO	-|M/d/y GGGGG،‏ h a|0	-|y/M/d،‏ h a|0	-|y/M/d،‏ h a|0	-|y/M/d،‏ h a|0	h a تا |h a|0	h تا |h a|0	-|-|0	{0} تا {1}	h a O
+fa	persian	HO	-|M/d/y GGGGG،‏ H|0	-|y/M/d،‏ H|0	-|y/M/d،‏ H|0	-|y/M/d،‏ H|0	H تا |H|0	H تا |H|0	-|-|0	{0} تا {1}	H (O)
+fa	persian	hv	-|M/d/y GGGGG،‏ h a v|0	-|y/M/d،‏ h a v|0	-|y/M/d،‏ h a v|0	-|y/M/d،‏ h a v|0	h a تا |h a (v)|0	h تا |h a (v)|0	-|-|0	{0} تا {1}	h a v
+fa	persian	Hv	-|M/d/y GGGGG،‏ H (v)|0	-|y/M/d،‏ H (v)|0	-|y/M/d،‏ H (v)|0	-|y/M/d،‏ H (v)|0	H تا |H (v)|0	H تا |H (v)|0	-|-|0	{0} تا {1}	H (v)
+fa	persian	hVVVV	-|M/d/y GGGGG،‏ h a VVVV|0	-|y/M/d،‏ h a VVVV|0	-|y/M/d،‏ h a VVVV|0	-|y/M/d،‏ h a VVVV|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	h a VVVV
+fa	persian	HVVVV	-|M/d/y GGGGG،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H (VVVV)
+fa	persian	hz	-|M/d/y GGGGG،‏ h a z|0	-|y/M/d،‏ h a z|0	-|y/M/d،‏ h a z|0	-|y/M/d،‏ h a z|0	h a تا |h a (z)|0	h تا |h a (z)|0	-|-|0	{0} تا {1}	h a z
+fa	persian	Hz	-|M/d/y GGGGG،‏ H (z)|0	-|y/M/d،‏ H (z)|0	-|y/M/d،‏ H (z)|0	-|y/M/d،‏ H (z)|0	H تا |H (z)|0	H تا |H (z)|0	-|-|0	{0} تا {1}	H (z)

@@ -49,6 +49,16 @@ void DateSourceLoadItems(Cldr* cldr, const DateSupplement* s, const char* locale
 
 // Prints the pattern of each line of standard input, "locale<TAB>calendar
 // <TAB>skeleton", for tools/check_skeletons.py.
+// A locale's intervalFormats in a calendar, along its chain and root's
+// aliases as ICU's DateIntervalInfo loads them.
+typedef struct IntervalItems IntervalItems;
+void DateSourceLoadIntervals(Cldr* cldr, const char* locale, const char* calendar,
+                             IntervalItems* items);
+
+// Answers lines "locale\tcalendar\tskeleton" with the skeleton's interval
+// patterns per greatest difference (research 40), as mlocgen intervals.
+int PrintIntervals(const char* commonDirectory, char* errorOut, size_t errorCapacity);
+
 int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapacity);
 
 // The datetimeSkeleton of a date length (0 long, 1 medium, 2 short).
