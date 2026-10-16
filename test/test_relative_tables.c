@@ -103,16 +103,16 @@ static void TestUnit(void)
     CHECK(Refuses(builtOffsets, 1, 4) && Refuses(builtOffsets + 8, 15, 4),
           "the offsets' first and last");
     CHECK(Refuses(builtOffsets + 4, 17, 4), "offsets out of order");
-    CHECK(Refuses(builtKeys + 2, Key(relativeDay, 0, 2), 2) &&
-              Refuses(builtKeys + 2, Key(relativeDay, 0, 1), 2),
+    CHECK(Refuses(builtKeys + 4, Key(relativeDay, 0, relativeFuture + 5), 2) &&
+              Refuses(builtKeys + 4, Key(relativeDay, 0, relativeFuture), 2),
           "keys not ascending");
     CHECK(Refuses(builtKeys + 4, relativeKeyCount, 2), "a key past the layout");
     CHECK(Refuses(builtIndexes + 4, builtStrings, 2), "a string past the strings");
     CHECK(Refuses(builtIndexes, 1, 2), "a name given a pattern");
     CHECK(TextRefused("t\x01"
                       "dayin {0} days") &&
-              TextRefused("today{0} {0}days"),
-          "a control byte, a pattern's {0} twice");
+              TextRefused("today{0} {0}days") && TextRefused("to{0}in {0} days"),
+          "a control byte, a pattern's {0} twice, a name ending in {0}");
     CHECK(!TextRefused("todayin one days") && TextRefused("{0}ayin {0} days"),
           "a pattern without {0} (ar's \"in one year\"), a name with it");
 }

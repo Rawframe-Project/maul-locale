@@ -23,9 +23,9 @@ static uint32_t Placeholders(const uint8_t* text, uint32_t length)
 }
 
 // The strings: offsets ascending from 0 to the text's end, each text
-// well-formed; each one's "{0}" count, at most two, in counts.
+// well-formed.
 static bool ValidStrings(const uint8_t* offsets, uint32_t stringCount, const uint8_t* text,
-                         uint32_t textSize, uint8_t* counts)
+                         uint32_t textSize)
 {
     if (mlocLoad32(offsets) != 0 || mlocLoad32(offsets + 4 * (size_t)stringCount) != textSize)
     {
@@ -39,7 +39,6 @@ static bool ValidStrings(const uint8_t* offsets, uint32_t stringCount, const uin
         {
             return false;
         }
-        counts[i] = (uint8_t)Placeholders(text + start, end - start);
     }
     return true;
 }
@@ -64,9 +63,8 @@ bool mlocValidRelative(const DataView* view, DataSpan payload)
     const uint8_t* keys = payload.bytes + relativeHeaderSize;
     const uint8_t* strings = keys + 2 * (size_t)count;
     const uint8_t* offsets = strings + 2 * (size_t)count;
-    uint8_t counts[relativeKeyCount];
-    if (!ValidStrings(offsets, stringCount, offsets + 4 * ((size_t)stringCount + 1), textSize,
-                      counts))
+    const uint8_t* text = offsets + 4 * ((size_t)stringCount + 1);
+    if (!ValidStrings(offsets, stringCount, text, textSize))
     {
         return false;
     }
@@ -74,9 +72,15 @@ bool mlocValidRelative(const DataView* view, DataSpan payload)
     {
         uint32_t key = mlocLoad16(keys + 2 * (size_t)i);
         uint32_t string = mlocLoad16(strings + 2 * (size_t)i);
-        bool pattern = key % relativeSlots >= relativeFuture;
         if (key >= relativeKeyCount || (i > 0 && key <= mlocLoad16(keys + 2 * (size_t)i - 2)) ||
-            string >= stringCount || counts[string] > (pattern ? 1U : 0U))
+            string >= stringCount)
+        {
+            return false;
+        }
+        uint32_t start = mlocLoad32(offsets + 4 * (size_t)string);
+        uint32_t end = mlocLoad32(offsets + 4 * (size_t)string + 4);
+        bool pattern = key % relativeSlots >= relativeFuture;
+        if (Placeholders(text + start, end - start) > (pattern ? 1U : 0U))
         {
             return false;
         }
