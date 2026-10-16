@@ -15,7 +15,7 @@
 #include <stdint.h>
 
 // Whether a date patterns unit's sizes hold, each pattern is well formed
-// and every row and set indexes within the unit.
+// and every row, set and time set indexes within the unit.
 bool mlocValidDatePatterns(const DataView* view, DataSpan payload);
 
 // Whether a locale's dates unit has its size.
@@ -31,9 +31,11 @@ typedef struct DatePatterns
     uint32_t patternCount;
     uint32_t rowCount;
     uint32_t setCount;
+    uint32_t timeSetCount;
     const uint8_t* offsets;
     const uint8_t* rows;
     const uint8_t* sets;
+    const uint8_t* timeSets;
     const uint8_t* text;
 } DatePatterns;
 
@@ -41,8 +43,9 @@ DatePatterns mlocReadDatePatterns(DataSpan unit);
 
 // Whether a date names unit's sizes hold, each name is UTF-8 without
 // control bytes, each list indexes its names and each set's lists have
-// their kinds' sizes. A leap month pattern's "{0}" is the user's to
-// check: the validator stays linear in the unit's size.
+// their kinds' sizes and each day period rule gives every hour a period.
+// A leap month pattern's "{0}" is the user's to check: the validator
+// stays linear in the unit's size.
 bool mlocValidDateNames(const DataView* view, DataSpan payload);
 
 // The parts of a valid date names unit.
@@ -51,10 +54,12 @@ typedef struct DateNameTables
     uint32_t stringCount;
     uint32_t listCount;
     uint32_t setCount;
+    uint32_t ruleCount;
     const uint8_t* strings;
     const uint8_t* lists;
     const uint8_t* items;
     const uint8_t* sets;
+    const uint8_t* rules;
     const uint8_t* text;
 } DateNameTables;
 
@@ -79,6 +84,12 @@ DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item)
 bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                      DatePatterns* patterns, const uint8_t** set);
 
+// A locale's time patterns in a calendar along its main chain: the time
+// set's bytes (dateTimeSetSize) and the unit they index. False when the
+// data has no dates, the calendar is unknown or the set is past the
+// unit's.
+bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                     DatePatterns* patterns, const uint8_t** set);
 // A locale's date names in a calendar along its main chain: the name
 // set's bytes (dateNameSetSize) and the unit they index. False when the
 // data has no names, the calendar is unknown or the set is past the
@@ -86,6 +97,11 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
 bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                        DateNameTables* names, const uint8_t** set);
 
+// A locale's day period rules along its main chain (dateRuleSize
+// bytes). False when the data has no names or the rules are past the
+// unit's.
+bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
+                            const uint8_t** rules);
 // A pattern of a valid unit by index; false past its patterns.
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
 

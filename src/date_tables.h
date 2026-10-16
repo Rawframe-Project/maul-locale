@@ -7,8 +7,8 @@
 // are little-endian.
 //
 // Date patterns, a unit of no locale. The payload is a header (u32
-// pattern count, u32 row count, u32 set count, u32 text size), then these
-// sections, each starting on an 8-byte boundary:
+// pattern count, u32 row count, u32 set count, u32 time set count, u32
+// text size), then these sections, each starting on an 8-byte boundary:
 //   offsets  each pattern's offset in the text (u32), count + 1 of them,
 //            from 0 to the text size
 //   rows     a field set's patterns at the three lengths, long, medium
@@ -17,6 +17,9 @@
 //            the row index (u16) of each entry of DateSetEntry, then the
 //            pattern index (u16) of the standard full, long, medium and
 //            short date formats
+//   time sets a calendar's time patterns in a locale (dateTimeSetSize
+//            bytes): the pattern index (u16) of each entry of
+//            DateTimeEntry
 //   text     the compiled patterns
 // A compiled pattern is literal UTF-8 text (no byte below 0x20, quotes
 // already resolved) and field items: datePatternField, the field's
@@ -27,14 +30,18 @@
 // carries to a length's semantic patterns).
 //
 // Date names, a unit of no locale. The payload is a header (u32 string
-// count, u32 list count, u32 set count, u32 text size), then these
-// sections, each starting on an 8-byte boundary:
+// count, u32 list count, u32 set count, u32 rule count, u32 text size),
+// then these sections, each starting on an 8-byte boundary:
 //   strings  each name's offset in the text (u32), count + 1 of them,
 //            from 0 to the text size
 //   lists    each list's offset in the list items (u32, in items), count
 //            + 1 of them; then the items, string indexes (u16)
 //   sets     a calendar's names in a locale (dateNameSetSize bytes): the
 //            list index (u16) of each kind of DateNameKind
+//   rules    a locale's day period rules (dateRuleSize bytes): the
+//            DateDayPeriod of each hour from 0 to 23 (am, pm or a
+//            flexible one), then flags: dateRuleNoon when the rules name
+//            noon at 12:00, dateRuleMidnight when they name midnight
 //   text     the names, UTF-8 without bytes below 0x20 (empty for a name
 //            CLDR does not give)
 // A list holds, in order: months, by context (format, stand-alone), width
@@ -46,12 +53,15 @@
 // calendar without them); leap month patterns, by context (format,
 // stand-alone, numeric) and width, each holding "{0}" as the generator
 // writes them, which their user checks (empty for a calendar without
-// them).
+// them); day periods, by context (format, stand-alone), width
+// (abbreviated, wide, narrow) and DateDayPeriod.
 //
 // A locale's dates, a unit per locale filed where the resolved data
 // differs from its chain's: the pattern set index (u16) of each
 // calendar, in the order of MlocCalendar (the ISO calendar's is the
-// Gregorian one's), then the name set index (u16) of each calendar.
+// Gregorian one's), then the name set index (u16) of each calendar, the
+// time set index (u16) of each calendar, and the index (u16) of the
+// locale's day period rules in the names unit.
 
 #ifndef MLOC_DATE_TABLES_H
 #define MLOC_DATE_TABLES_H
@@ -74,9 +84,41 @@ typedef enum DateSetEntry
     dateEntryCount = 18,
 } DateSetEntry;
 
+// The time entries of a time set: the hour, minute and second patterns
+// of the 12-hour and 24-hour clocks as matched, the standard full, long,
+// medium and short time formats, then the standard and atTime date-time
+// glue at those lengths ("{1}, {0}", "{1} 'at' {0}").
+typedef enum DateTimeEntry
+{
+    dateTimeClock12 = 0,
+    dateTimeClock24 = 3,
+    dateTimeStandard = 6,
+    dateTimeGlue = 10,
+    dateTimeAtGlue = 14,
+    dateTimeEntryCount = 18,
+} DateTimeEntry;
+
+// The day periods, as CLDR names them.
+typedef enum DateDayPeriod
+{
+    dateDayPeriodAm = 0,
+    dateDayPeriodPm = 1,
+    dateDayPeriodMidnight = 2,
+    dateDayPeriodNoon = 3,
+    dateDayPeriodMorning1 = 4,
+    dateDayPeriodMorning2 = 5,
+    dateDayPeriodAfternoon1 = 6,
+    dateDayPeriodAfternoon2 = 7,
+    dateDayPeriodEvening1 = 8,
+    dateDayPeriodEvening2 = 9,
+    dateDayPeriodNight1 = 10,
+    dateDayPeriodNight2 = 11,
+    dateDayPeriodCount = 12,
+} DateDayPeriod;
+
 enum
 {
-    datePatternsHeaderSize = 16,
+    datePatternsHeaderSize = 20,
     // Added to a year entry for the year style.
     dateStyleFull = 1,
     dateStyleEra = 2,
@@ -84,15 +126,20 @@ enum
     dateRowSize = 2 * dateLengthCount,
     dateStandardCount = 4,
     dateSetSize = 2 * (dateEntryCount + dateStandardCount),
+    dateTimeSetSize = 2 * dateTimeEntryCount,
     dateCalendarCount = 18,
-    dateLocaleSize = 4 * dateCalendarCount,
-    dateNamesHeaderSize = 16,
+    dateLocaleSize = 6 * dateCalendarCount + 2,
+    dateNamesHeaderSize = 20,
     dateMonthCount = 14,
     dateMonthListSize = 2 * 3 * dateMonthCount,
     dateWeekdayListSize = 2 * 4 * 7,
     dateQuarterListSize = 2 * 3 * 4,
     dateCyclicListSize = 3 * 60,
     dateLeapListSize = 3 * 3,
+    dateDayPeriodListSize = 2 * 3 * dateDayPeriodCount,
+    dateRuleSize = 25,
+    dateRuleNoon = 1,
+    dateRuleMidnight = 2,
     dateMaxEras = 8,
     datePatternField = 1,
     datePatternOverride = 2,
@@ -109,7 +156,8 @@ typedef enum DateNameKind
     dateNamesEras = 3,
     dateNamesCyclic = 4,
     dateNamesLeap = 5,
-    dateNameKindCount = 6,
+    dateNamesDayPeriods = 6,
+    dateNameKindCount = 7,
 } DateNameKind;
 
 enum

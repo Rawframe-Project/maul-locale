@@ -235,6 +235,31 @@ static uint16_t Cyclic(DateNames* n, Cldr* cldr, const char* locale, const char*
     return AddList(n, items, count);
 }
 
+static uint16_t DayPeriods(DateNames* n, Cldr* cldr, const char* locale, const char* type)
+{
+    static const char* const s_periods[dateDayPeriodCount] = {
+        "am",         "pm",         "midnight", "noon",     "morning1", "morning2",
+        "afternoon1", "afternoon2", "evening1", "evening2", "night1",   "night2"};
+    uint16_t items[dateDayPeriodListSize];
+    uint32_t count = 0;
+    for (int c = 0; c < 2; c++)
+    {
+        for (int w = 0; w < 3; w++)
+        {
+            for (int p = 0; p < dateDayPeriodCount; p++)
+            {
+                char rest[256];
+                snprintf(rest, sizeof(rest),
+                         "dayPeriods/dayPeriodContext[@type=\"%s\"]/dayPeriodWidth[@type=\"%s\"]/"
+                         "dayPeriod[@type=\"%s\"]",
+                         s_contexts[c], s_widths[w], s_periods[p]);
+                items[count++] = Name(n, cldr, locale, type, rest);
+            }
+        }
+    }
+    return AddList(n, items, count);
+}
+
 static uint16_t Leap(DateNames* n, Cldr* cldr, const char* locale, const char* type, bool has)
 {
     uint16_t items[dateLeapListSize];
@@ -272,6 +297,7 @@ uint16_t DateNamesSet(DateNames* n, Cldr* cldr, const DateSupplement* supplement
         Eras(n, cldr, supplement, locale, calendar, type),
         Cyclic(n, cldr, locale, type, lunisolar),
         Leap(n, cldr, locale, type, lunisolar),
+        DayPeriods(n, cldr, locale, type),
     };
     char key[5 + 4 * dateNameKindCount + 1];
     RecordKey(set, dateNameKindCount, key);
@@ -290,6 +316,38 @@ uint16_t DateNamesSet(DateNames* n, Cldr* cldr, const DateSupplement* supplement
     return (uint16_t)n->setCount++;
 }
 
+uint16_t DateNamesRules(DateNames* n, const DateSupplement* supplement, const char* locale)
+{
+    // By truncation, as ICU's DayPeriodRules looks them up: zh_Hant takes
+    // zh's, where CLDR's parent locales would give root's.
+    char id[64];
+    snprintf(id, sizeof(id), "%s", locale);
+    const uint8_t* rules = MapGet(&supplement->dayPeriods, id);
+    for (char* cut = strrchr(id, '_'); rules == nullptr && cut != nullptr; cut = strrchr(id, '_'))
+    {
+        *cut = '\0';
+        rules = MapGet(&supplement->dayPeriods, id);
+    }
+    if (rules == nullptr)
+    {
+        rules = MapGet(&supplement->dayPeriods, "root");
+    }
+    char key[2 * dateRuleSize + 1];
+    for (int i = 0; i < dateRuleSize; i++)
+    {
+        snprintf(key + 2 * i, 3, "%02x", rules[i]);
+    }
+    void* found = MapGet(&n->rules, key);
+    if (found != nullptr)
+    {
+        return (uint16_t)((uintptr_t)found - 1);
+    }
+    n->ruleData = Grown(n->ruleData, &n->ruleCapacity, n->ruleCount, dateRuleSize);
+    memcpy(n->ruleData + (size_t)n->ruleCount * dateRuleSize, rules, dateRuleSize);
+    MapPut(&n->rules, key, (void*)(uintptr_t)(n->ruleCount + 1));
+    return (uint16_t)n->ruleCount++;
+}
+
 static size_t Align8(size_t n)
 {
     return (n + 7) & ~(size_t)7;
@@ -306,12 +364,15 @@ void DateNamesFinish(DateNames* n, DataFile* file)
     size_t lists = Align8(strings + 4 * ((size_t)n->stringCount + 1));
     size_t items = lists + 4 * ((size_t)n->listCount + 1);
     size_t sets = Align8(items + 2 * (size_t)n->itemCount);
-    size_t texts = Align8(sets + (size_t)dateNameSetSize * (size_t)n->setCount);
+    size_t rules = Align8(sets + (size_t)dateNameSetSize * (size_t)n->setCount);
+    size_t texts = Align8(rules + (size_t)dateRuleSize * (size_t)n->ruleCount);
     uint8_t* unit = GenAllocate(texts + text);
     GenPut(unit, (uint64_t)n->stringCount, 4);
     GenPut(unit + 4, (uint64_t)n->listCount, 4);
     GenPut(unit + 8, (uint64_t)n->setCount, 4);
-    GenPut(unit + 12, text, 4);
+    GenPut(unit + 12, (uint64_t)n->ruleCount, 4);
+    GenPut(unit + 16, text, 4);
+    memcpy(unit + rules, n->ruleData, (size_t)dateRuleSize * (size_t)n->ruleCount);
     size_t at = 0;
     for (int i = 0; i <= n->stringCount; i++)
     {
@@ -342,6 +403,8 @@ void DateNamesFinish(DateNames* n, DataFile* file)
     free(n->items);
     free(n->listStarts);
     free(n->setData);
+    free(n->ruleData);
+    MapFree(&n->rules);
     MapFree(&n->strings);
     MapFree(&n->lists);
     MapFree(&n->sets);

@@ -5,6 +5,7 @@
 
 #include "date_source.h"
 
+#include "day_periods_gen.h"
 #include "semantic.h"
 #include "xml.h"
 
@@ -134,7 +135,8 @@ int DateSupplementLoad(DateSupplement* s, const char* commonDirectory, char* err
         }
     }
     XmlFree(likely);
-    return list != nullptr;
+    return list != nullptr &&
+           DayPeriodRulesLoad(&s->dayPeriods, commonDirectory, errorOut, errorCapacity);
 }
 
 static void FreeValue(const char* key, void* value, void* context)
@@ -152,6 +154,7 @@ void DateSupplementFree(DateSupplement* s)
     MapFree(&s->hours);
     MapFree(&s->likely);
     MapFree(&s->eras);
+    DayPeriodRulesFree(&s->dayPeriods);
 }
 
 // The language and region of a CLDR id, the region by likely subtags

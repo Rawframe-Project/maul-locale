@@ -17,7 +17,8 @@
 
 #include <stddef.h>
 
-// timeData and likelySubtags, read once.
+// timeData, likelySubtags, calendarData's eras and the day period
+// rules, read once.
 typedef struct DateSupplement
 {
     // A region or locale to its hours: "preferred allowed allowed...".
@@ -26,6 +27,8 @@ typedef struct DateSupplement
     Map likely;
     // "calendar code" ("japanese reiwa") to the era's CLDR type ("236").
     Map eras;
+    // A locale id to its day period rules (day_periods_gen.h).
+    Map dayPeriods;
 } DateSupplement;
 
 int DateSupplementLoad(DateSupplement* s, const char* commonDirectory, char* errorOut,

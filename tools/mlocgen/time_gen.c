@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// A calendar's time patterns (time_gen.h).
+
+#include "time_gen.h"
+
+#include "date_source.h"
+#include "semantic.h"
+#include "table_gen.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static const char* const s_lengths[4] = {"full", "long", "medium", "short"};
+
+static char* Copy(const char* text)
+{
+    size_t length = strlen(text);
+    char* copy = GenAllocate(length + 1);
+    memcpy(copy, text, length + 1);
+    return copy;
+}
+
+// Whether glue is literal text but its two placeholders, each once.
+static bool ValidGlue(const char* glue)
+{
+    bool quoted = false;
+    for (const char* p = glue; *p != '\0'; p++)
+    {
+        if (*p == '\'')
+        {
+            quoted = !quoted;
+        }
+        else if (!quoted && ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')))
+        {
+            return false;
+        }
+    }
+    const char* zero = strstr(glue, "{0}");
+    const char* one = strstr(glue, "{1}");
+    return !quoted && zero != nullptr && one != nullptr && strstr(zero + 3, "{0}") == nullptr &&
+           strstr(one + 3, "{1}") == nullptr;
+}
+
+static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int length, bool at)
+{
+    char rest[256];
+    snprintf(rest, sizeof(rest),
+             "dateTimeFormats/dateTimeFormatLength[@type=\"%s\"]/dateTimeFormat%s/pattern",
+             s_lengths[length], at ? "[@type=\"atTime\"]" : "");
+    const char* glue = DateCalendarValue(cldr, locale, calendar, rest);
+    if (glue == nullptr && at)
+    {
+        return Glue(cldr, locale, calendar, length, false);
+    }
+    if (glue == nullptr || !ValidGlue(glue))
+    {
+        GenDie("date-time glue missing or not plain", locale);
+    }
+    return Copy(glue);
+}
+
+void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, const char* locale, const char* calendar,
+                     char* out[dateTimeEntryCount])
+{
+    for (int clock = 0; clock < 2; clock++)
+    {
+        for (int precision = 0; precision < 3; precision++)
+        {
+            SemanticSkeleton s = {
+                .fields = semanticTime,
+                .hourCycle = clock == 0 ? semanticHourClock12 : semanticHourClock24,
+                .precision = precision,
+            };
+            char classical[64];
+            if (!SemanticClassical(&s, "", classical, sizeof(classical)))
+            {
+                GenDie("a time skeleton UTS #35 does not define", locale);
+            }
+            out[(clock == 0 ? dateTimeClock12 : dateTimeClock24) + precision] =
+                PatternGeneratorBest(g, classical);
+        }
+    }
+    for (int length = 0; length < 4; length++)
+    {
+        char rest[256];
+        snprintf(rest, sizeof(rest),
+                 "timeFormats/timeFormatLength[@type=\"%s\"]/timeFormat/pattern",
+                 s_lengths[length]);
+        const char* pattern = DateCalendarValue(cldr, locale, calendar, rest);
+        if (pattern == nullptr)
+        {
+            GenDie("a standard time format missing", locale);
+        }
+        out[dateTimeStandard + length] = Copy(pattern);
+        out[dateTimeGlue + length] = Glue(cldr, locale, calendar, length, false);
+        out[dateTimeAtGlue + length] = Glue(cldr, locale, calendar, length, true);
+    }
+}

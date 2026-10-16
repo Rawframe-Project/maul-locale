@@ -4,8 +4,9 @@
 // libFuzzer target for the date patterns and date names units'
 // validators (record mloc-0042). The input is a payload of either; a
 // patterns unit the validator accepts must give every pattern from inside
-// its text, well formed, and every row's and set's pattern by index; a
-// names unit, every name of every set's lists from inside its text.
+// its text, well formed, and every row's, set's and time set's pattern
+// by index; a names unit, every name of every set's lists from inside
+// its text and a period of every hour from its rules.
 
 #include "bytes.h"
 #include "date_data.h"
@@ -37,6 +38,15 @@ static void CheckNames(DataSpan span)
                 Require(name.bytes >= span.bytes &&
                         name.bytes + name.size <= span.bytes + span.size);
             }
+        }
+    }
+    for (uint32_t r = 0; r < t.ruleCount; r++)
+    {
+        const uint8_t* rule = t.rules + (size_t)r * dateRuleSize;
+        Require(rule + dateRuleSize <= span.bytes + span.size);
+        for (uint32_t hour = 0; hour < 24; hour++)
+        {
+            Require(rule[hour] < dateDayPeriodCount);
         }
     }
 }
@@ -88,6 +98,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
             Require(
                 mlocDatePattern(&p, mlocLoad16(set + 2 * (dateEntryCount + (size_t)i)), &pattern));
         }
+    }
+    for (uint32_t i = 0; i < p.timeSetCount * dateTimeEntryCount; i++)
+    {
+        DataSpan pattern;
+        Require(mlocDatePattern(&p, mlocLoad16(p.timeSets + 2 * (size_t)i), &pattern));
     }
     return 0;
 }

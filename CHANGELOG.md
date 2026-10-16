@@ -72,3 +72,7 @@ format.
   patterns and standard date formats in the 18 calendars, compiled, and
   its calendar names (months, weekdays, quarters, eras, cyclic years,
   leap month patterns), for the date formatter (mloc-0042).
+- Times in `dates.mloc`: each locale's time patterns per calendar (hour,
+  minutes and seconds on both clocks, the standard time formats, the
+  date-time glue), its day period names and its day period rules
+  (mloc-0042).

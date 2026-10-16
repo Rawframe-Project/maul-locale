@@ -91,7 +91,24 @@ cycle, time precision, zone style).
   order, cyclic years and leap month patterns of the Chinese and Dangi
   calendars), lists of them by kind and name sets, each name CLDR's
   value of its path (root's aliases followed from the locale); a name
-  no path gives is empty. Day periods come with the times.
+  no path gives is empty; day period names likewise, by context, width
+  and CLDR's twelve periods.
+- **Times in the same file:** per locale and calendar a time set holds
+  the time field set matched at the hour, minute and second on the
+  12-hour (`h`) and 24-hour (`H`) clocks (the `j` pattern is always one
+  of the two), the four standard time formats and the standard and
+  atTime glue of each length, as CLDR resolves them under the calendar
+  (am's Gregorian minutes are its own "a h:mm", its Chinese ones root's
+  "h:mm a", as ICU4C reads them; ICU4X takes the generic calendar's for
+  every calendar). Fractional seconds are not stored: the run time
+  writes them after the seconds with the locale's decimal separator, as
+  ICU4C writes them from its numbering system's symbols. Glue holds
+  only literal text, `{0}` and `{1}`, which the generator checks.
+- **Day period rules** (`dayPeriods.xml`'s format rules) are stored per
+  locale as each hour's period and whether noon and midnight are named
+  at their instant, looked up by cutting the id's last subtag until a
+  rule list is found, as ICU's DayPeriodRules does (zh_Hant takes zh's,
+  where CLDR's parent locales would give root's), root's at the end.
 - **The standard formats are CLDR's, resolved per path**: ICU's data
   holds a calendar's time, date and glue patterns as one array, owned
   by the first locale giving any of them, and differs from CLDR's
@@ -129,10 +146,9 @@ cycle, time precision, zone style).
   year of AH), a Persian year before its epoch a negative year of AP;
   dates before 1582 are proleptic Gregorian, as Temporal and ICU4X have
   them (ICU4C's Gregorian calendar turns Julian).
-- **Still to come in this part** (research 39's slices): the data units
-  of compiled patterns per locale and calendar; dates in all 18
-  calendars; times, hour cycles and day periods; time zone names by
-  metazone; intervals; relative time; durations; speed.
+- **Still to come in this part** (research 39's slices): the time and
+  date-time formatters with hour cycles and day periods; time zone
+  names by metazone; intervals; relative time; durations; speed.
 
 ## Proof
 
