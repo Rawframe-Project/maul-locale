@@ -218,6 +218,8 @@ static void TestDigits(void)
     mlocDateOptions shortDate = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthShort);
     CHECK(Is("fa", shortDate, Iso(2026, 10, 15), "۱۴۰۵/۷/۲۳"), "the locale's own digits");
     CHECK(Is("en-u-nu-arab", shortDate, Iso(2026, 10, 15), "١٠/١٥/٢٦"), "nu's digits");
+    CHECK(Is("en-u-nu-adlm", shortDate, Iso(2026, 10, 15), "𞥑𞥐/𞥑𞥕/𞥒𞥖"),
+          "digits of four bytes each");
     CHECK(Is("zh-u-ca-chinese", (mlocDateOptions){.style = mloc_dateStyleLong}, Iso(2026, 10, 15),
              "2026丙午年九月初六"),
           "a day written by hanidays");

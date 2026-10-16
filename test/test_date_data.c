@@ -526,7 +526,9 @@ enum
 {
     compositeTimes = 128,
     compositeIntervals = 328,
+    compositeDateParts = 344,
     compositeTimePart = 424,
+    compositePrefixes = 552,
     compositeTimePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
     compositePairs = 568,
 };
@@ -592,8 +594,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 
 // The date-time formatter of the options on a pack of the composite unit
 // in s_unit, of its size.
-static mlocResult InitComposite(uint32_t patterns, const mlocDateTimeOptions* options,
-                                mlocDateTimeFormatter* formatter)
+static const mlocDataSet* PackComposite(uint32_t patterns, mlocLocale* fr)
 {
     alignas(8) static uint8_t s_patterns[1024];
     alignas(8) static uint8_t s_names[1024];
@@ -607,13 +608,21 @@ static mlocResult InitComposite(uint32_t patterns, const mlocDateTimeOptions* op
     static mlocData s_packed[2];
     mlocOpenBuiltinData(&s_packed[0]);
     static mlocDataSet s_set = {s_packed, 2};
-    mlocLocale fr;
     if (!OpenRootPack(units, 3, &s_packed[1]) ||
-        mlocParseLocale("fr", 2, &fr).status != mloc_success)
+        mlocParseLocale("fr", 2, fr).status != mloc_success)
     {
-        return mloc_errorInvalid;
+        return nullptr;
     }
-    return mlocInitDateTimeFormatter(formatter, &s_set, &fr, options);
+    return &s_set;
+}
+
+static mlocResult InitComposite(uint32_t patterns, const mlocDateTimeOptions* options,
+                                mlocDateTimeFormatter* formatter)
+{
+    mlocLocale fr;
+    const mlocDataSet* set = PackComposite(patterns, &fr);
+    return set != nullptr ? mlocInitDateTimeFormatter(formatter, set, &fr, options)
+                          : mloc_errorInvalid;
 }
 
 // The date-time formatter on a pack of the composite unit built here.
@@ -683,6 +692,7 @@ static void TestCompositeRanges(void)
         notDate = 1,
         notTime = 0,
         owns = compositeTimePart + 2 * compositeTimePairs,
+        dateOwn = compositeDateParts + 2 * dateEntryCount + 6 * (mloc_dateStyleShort - 1) + 4,
     };
     CHECK(SpoiledComposite(compositeIntervals + 6, 0, mloc_timeStyleNone) == mloc_success &&
               SpoiledComposite(owns + 2, 1, mloc_timeStyleFull) == mloc_success,
@@ -694,6 +704,13 @@ static void TestCompositeRanges(void)
     CHECK(SpoiledComposite(compositePairs + dateIntervalPairSize, notTime, mloc_timeStyleNone) ==
               mloc_errorData,
           "a time pair's half the formatter cannot write");
+    CHECK(SpoiledComposite(compositePrefixes, 0, mloc_timeStyleNone) == mloc_success &&
+              SpoiledComposite(compositePrefixes + 6, notDate, mloc_timeStyleNone) ==
+                  mloc_errorData,
+          "a date pattern's prefixed pattern the formatter cannot write");
+    CHECK(SpoiledComposite(dateOwn, 0, mloc_timeStyleShort) == mloc_success &&
+              SpoiledComposite(dateOwn, notDate, mloc_timeStyleShort) == mloc_errorData,
+          "the short date's own interval pattern the formatter cannot write");
     CHECK(SpoiledComposite(owns + 2, notTime, mloc_timeStyleFull) == mloc_errorData &&
               SpoiledComposite(owns + 4 * 3 + 2, notTime, mloc_timeStyleShort) == mloc_errorData,
           "a standard format's own interval pattern the formatter cannot write");
@@ -707,6 +724,49 @@ static void TestCompositeRanges(void)
     CHECK(glues && SpoiledComposite(compositeTimes + 2 * (dateTimeGlue + 2), 3,
                                     mloc_timeStyleNone) == mloc_errorData,
           "a range's glue of any length, or the Gregorian medium one of a day, no glue");
+}
+
+// The composite unit with its fifth pattern a zone's, "z x", for the
+// zone alone of the specific short form, and a 16-bit index at an offset
+// spoiled to a pattern; a date formatter's result for that zone.
+static mlocResult SpoiledZone(uint32_t at, uint16_t pattern)
+{
+    enum
+    {
+        zonePattern = 4,
+    };
+    uint32_t size = BuildComposite(2, 1);
+    // Pattern 4 is the five bytes at 19 of the text.
+    memcpy(s_unit + size - 27 + 19, "\x01z\x01 x", 5);
+    Put(s_unit + compositeTimes + 2 * (dateTimeZoneAlone + mloc_zoneStyleSpecificShort - 1),
+        zonePattern, 2);
+    Put(s_unit + at, pattern, 2);
+    mlocLocale fr;
+    const mlocDataSet* set = PackComposite(size, &fr);
+    mlocDateOptions options = {.fields = mloc_dateFieldSetYearMonthDay,
+                               .zone = mloc_zoneStyleSpecificShort};
+    mlocDateFormatter formatter;
+    return set != nullptr ? mlocInitDateFormatter(&formatter, set, &fr, &options)
+                          : mloc_errorInvalid;
+}
+
+static void TestCompositeZone(void)
+{
+    enum
+    {
+        zone = compositeTimes + 2 * (dateTimeZoneAlone + mloc_zoneStyleSpecificShort - 1),
+    };
+    // A zone pattern of a space and a letter as text beside its field.
+    CHECK(SpoiledZone(zone, 4) != mloc_errorData, "a zone alone of a field and text");
+    CHECK(SpoiledZone(zone, 0) == mloc_errorData && SpoiledZone(zone, 1) == mloc_errorData,
+          "a zone alone of a date field or a time field");
+    bool glues = true;
+    for (uint32_t length = 0; length < dateStandardCount; length++)
+    {
+        glues = glues &&
+                SpoiledZone(compositeTimes + 2 * (dateTimeAtGlue + length), 3) == mloc_errorData;
+    }
+    CHECK(glues, "an atTime glue of any length, no glue");
 }
 
 static mlocData s_sources[2];
@@ -1119,6 +1179,7 @@ int main(void)
     TestUnwritablePattern();
     TestCompositeData();
     TestCompositeRanges();
+    TestCompositeZone();
     alignas(8) static uint8_t s_dates[4 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};

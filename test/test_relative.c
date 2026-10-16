@@ -266,6 +266,32 @@ static void TestDayTime(void)
           "a day after the time is not capitalized");
 }
 
+// The time formatter's hour pattern at a whole hour, its own otherwise.
+static void TestDayTimeHour(void)
+{
+    mlocLocale en;
+    mlocRelativeFormatter relative;
+    mlocTimeFormatter time;
+    mlocTimeOptions optional = {.precision = mloc_timePrecisionMinuteOptional};
+    mlocDecimal one;
+    char text[64];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitRelativeFormatter(&relative, &s_data, &en, nullptr) == mloc_success &&
+              mlocInitTimeFormatter(&time, &s_data, &en, &optional) >= 0 &&
+              mlocMakeDecimal(1, &one) == mloc_success &&
+              mlocFormatRelativeDayTime(&relative, &time, &one, &(mlocTime){.hour = 15}, &output) ==
+                  mloc_success &&
+              output.length == strlen("in 1 day at 3" NNBSP "PM") &&
+              memcmp(text, "in 1 day at 3" NNBSP "PM", output.length) == 0,
+          "a whole hour without its minutes");
+    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &(mlocTime){.hour = 15, .minute = 30},
+                                    &output) == mloc_success &&
+              output.length == strlen("in 1 day at 3:30" NNBSP "PM") &&
+              memcmp(text, "in 1 day at 3:30" NNBSP "PM", output.length) == 0,
+          "a time with its minutes");
+}
+
 static void TestDayTimeRefusals(void)
 {
     mlocLocale en;
@@ -291,6 +317,16 @@ static void TestDayTimeRefusals(void)
     CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &noon, &output) == mloc_errorCapacity &&
               output.length > 5,
           "the length needed when the text does not fit");
+    mlocRelativeOptions coarse = {.number = {.precision = {.kind = mloc_precisionSignificant,
+                                                           .minSignificantDigits = 1,
+                                                           .maxSignificantDigits = 1}}};
+    mlocDecimal huge;
+    output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
+    CHECK(mlocInitRelativeFormatter(&relative, &s_data, &en, &coarse) == mloc_success &&
+              mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
+              mlocFormatRelativeDayTime(&relative, &time, &huge, &noon, &output) ==
+                  mloc_errorCapacity,
+          "a day rounded past the decimal's limits");
 }
 
 int main(void)
@@ -310,6 +346,7 @@ int main(void)
     TestCapitalization();
     TestRefusals();
     TestDayTime();
+    TestDayTimeHour();
     TestDayTimeRefusals();
     return s_failures == 0 ? 0 : 1;
 }

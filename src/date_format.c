@@ -335,21 +335,14 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
 {
     DatePatterns patterns;
     const uint8_t* set = nullptr;
-    DataSpan glue;
+    DataSpan glue = {0};
     DataSpan zone;
     if (!mlocFindTimeSet(data, locale, f->date.calendar, &patterns, &set, nullptr))
     {
         return mloc_errorNotFound;
     }
+    // Every length's glue checked: the formatter writes its own length's.
     uint32_t style = mlocDateGlueStyle(o, mlocLoad16(set + 2 * dateTimeFlags));
-    uint32_t form = (uint32_t)o->zone - 1;
-    if (!mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeAtGlue + style)), &glue) ||
-        !mlocValidGlue(glue.bytes, glue.size) ||
-        !mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeZoneAlone + form)), &zone) ||
-        !ZoneOnly(zone.bytes, zone.size))
-    {
-        return mloc_errorData;
-    }
     for (uint32_t length = 0; length < dateStandardCount; length++)
     {
         DataSpan other;
@@ -358,6 +351,16 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
         {
             return mloc_errorData;
         }
+        if (length == style)
+        {
+            glue = other;
+        }
+    }
+    uint32_t form = (uint32_t)o->zone - 1;
+    if (!mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeZoneAlone + form)), &zone) ||
+        !ZoneOnly(zone.bytes, zone.size))
+    {
+        return mloc_errorData;
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
