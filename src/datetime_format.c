@@ -157,18 +157,15 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     }
     uint32_t style = mlocDateGlueStyle(&o->date, mlocLoad16(choice.set + 2 * dateTimeFlags));
     uint32_t kind = o->glue == mloc_dateTimeGlueStandard ? dateTimeGlue : dateTimeAtGlue;
+    // The range's glues hold every length's of the kind, checked.
     DataSpan glue;
-    if (!mlocDatePattern(&choice.patterns, mlocLoad16(choice.set + 2 * (kind + style)), &glue) ||
-        !mlocValidGlue(glue.bytes, glue.size))
+    if (!FindRangeGlues(f, data, locale, &choice, kind) ||
+        !mlocDatePattern(&choice.patterns, mlocLoad16(choice.set + 2 * (kind + style)), &glue))
     {
         return mloc_errorData;
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
-    if (!FindRangeGlues(f, data, locale, &choice, kind))
-    {
-        return mloc_errorData;
-    }
     if (o->date.style == mloc_dateStyleNone && o->date.fields == mloc_dateFieldSetWeekday &&
         !f->time.zoned && !FindWhole(f, o, &choice))
     {

@@ -524,6 +524,7 @@ static void TestUnwritablePattern(void)
 // Its size.
 enum
 {
+    compositeTimes = 128,
     compositeIntervals = 320,
     compositeTimePart = 416,
     compositeTimePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
@@ -538,7 +539,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         // the set hold zeros, row 0, pattern 0, record 0, but the time
         // part's pairs.
         offsets = datePatternsHeaderSize,
-        times = 128,
+        times = compositeTimes,
         intervals = compositeIntervals,
         timePart = compositeTimePart,
         timePairs = compositeTimePairs,
@@ -696,6 +697,16 @@ static void TestCompositeRanges(void)
     CHECK(SpoiledComposite(owns + 2, notTime, mloc_timeStyleFull) == mloc_errorData &&
               SpoiledComposite(owns + 4 * 3 + 2, notTime, mloc_timeStyleShort) == mloc_errorData,
           "a standard format's own interval pattern the formatter cannot write");
+    // Pattern 3, "{1} x", is no glue.
+    bool glues = true;
+    for (uint32_t length = 0; length < dateStandardCount; length++)
+    {
+        glues = glues && SpoiledComposite(compositeTimes + 2 * (dateTimeAtGlue + length), 3,
+                                          mloc_timeStyleNone) == mloc_errorData;
+    }
+    CHECK(glues && SpoiledComposite(compositeTimes + 2 * (dateTimeGlue + 2), 3,
+                                    mloc_timeStyleNone) == mloc_errorData,
+          "a range's glue of any length, or the Gregorian medium one of a day, no glue");
 }
 
 static mlocData s_sources[2];
