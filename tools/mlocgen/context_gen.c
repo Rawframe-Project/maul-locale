@@ -25,8 +25,9 @@ enum
 };
 
 // CLDR's usage of each of the unit's bytes.
-static const char* const s_usages[contextUsageCount] = {
-    "number-spellout", "languages", "script", "territory", "variant", "key", "keyValue"};
+static const char* const s_usages[contextUsageCount] = {"number-spellout", "languages", "script",
+                                                        "territory",       "variant",   "key",
+                                                        "keyValue",        "relative"};
 
 typedef struct Contexts
 {

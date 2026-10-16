@@ -26,32 +26,65 @@ value takes the wider one's along the chain.
 
 - **The data:** a file of its own, `relative.mloc`, a unit per locale
   key: entries keyed by unit, width and slot (the names of -2 to 2, the
-  future patterns zero to other, the past ones), CLDR's values resolved
-  along the chain and through root's aliases in the generator, filed
-  where the library's lookup would give another, an empty text where
-  CLDR has none but the lookup would. The lookup takes a width's slot
-  from the first key along the chain that files it, else the next wider
-  width's (narrow, short, long), as root's aliases send them; a
-  category's pattern equal to other's is left out, the formatter taking
-  other's, as ICU does. Each distinct text of a unit is stored once.
-  `relative.mloc` is 2,810,104 bytes filed width by width with each text
-  per entry, and 652,792 with the width lookup and shared texts. A
-  pattern holds "{0}" at most once (ar's "خلال سنة واحدة", "in one
+  future patterns zero to other, the past ones), each distinct text of a
+  unit stored once. The lookup takes a width's slot from the first key
+  along the locale's chain that files it, else the next wider width's
+  (narrow, short, long), as root's aliases send them; an empty text ends
+  it. The generator files a slot where that lookup would give another
+  value than the one it should:
+  - a name or other's pattern: CLDR's value resolved along the chain and
+    through root's aliases;
+  - a plural category's pattern: as ICU's data and fallback give it, the
+    first width from the slot's to the long one where a file along the
+    chain gives that category (a value, or the inheritance marker CLDR
+    resolves, count fallback included); none when no width does, the
+    formatter then taking other's. CLDR's own resolution would send a
+    short "many" the locale lacks to long's "other" through its count
+    fallback (ca's "d'aquí a 1.000.000 setmanes" where ICU writes
+    "setm.").
+  A pattern holds "{0}" at most once (ar's "خلال سنة واحدة", "in one
   year", writes no number) and a name none, which the validator checks
   with the layout; the fuzz target keeps every read of an accepted unit
-  inside it.
-- **The formatter** (research 41's decisions, built in the next slice):
-  a decimal and a unit in, never a clock; width, numeric always or auto,
-  capitalization, the number's options; auto exactly as ECMA-402 (the
-  value equal to a named offset; no epsilon); the pattern by the plural
-  of the number as written; parts kept when capitalized; a relative day
-  and a time joined by CLDR's relative glue.
+  inside it. `relative.mloc` was 2,810,104 bytes filed width by width
+  with each text per entry; it is 631,696 with the width lookup and
+  shared texts. A titlecase unit holds the letters its texts begin with.
+- **The formatter** (`mlocInitRelativeFormatter`, `mlocFormatRelative`,
+  `maul-locale/relative.h`): a decimal and a unit in (ECMA-402's eight
+  and the weekdays), never a clock. Negative amounts, -0 included, are
+  past. The magnitude is written by the formatter's number options
+  (decimal style, sign display auto) in the pattern of its direction and
+  the plural category of the number as written, which ECMA-402's plural
+  of the value agrees with under its defaults. Auto takes a name for an
+  amount equal to -2 to 2 where the width chain has one, exactly as
+  ECMA-402 (no 1% epsilon as ICU's; "1.0" is 1, -0 is 0). The patterns
+  of a call are copied to the stack with the number marked and written
+  by the number part's outer pattern, so parts come for free: the
+  number's, and literal for the rest.
+  - **Capitalization** at a sentence's start always, in a list or menu
+    or standing alone by CLDR's `relative` context transforms (a usage
+    the context unit now holds), the first letter titlecased in the
+    copy, parts kept. ICU's RelativeDateTimeFormatter titlecases only
+    at a sentence's start and refuses parts then.
+- **Still to come:** a relative day joined with a time by CLDR's
+  relative glue (research 41's sixth decision).
 
 ## Proof
 
-- The whitebox test refuses each field of a built unit spoiled and reads
-  en's, es's and en_GB's names and patterns along their chains as CLDR
-  gives them.
+- **Against ICU4C 79's RelativeDateTimeFormatter, once:** 1,060,020
+  texts (906 locales, three widths, numeric always and auto, the 15
+  units, amounts -2, -1, -0, 0, 1, 2, 3, 21, 100, 1.5, -1.5, 1,000,000
+  and 0.5): all equal but 53, where ICU's data resolves an inheritance
+  marker in the bundle that holds it, which a child then inherits, and
+  through draft values, where CLDR resolves it from the locale asked for
+  at the draft threshold, as the generator does: ur_IN's short and
+  narrow weeks (ur's long pattern in ICU, ur_IN's in CLDR, 31), ckb's
+  short and narrow years and fr_CA's short quarter (unconfirmed values,
+  22).
+- The tests check each kind of unit, width and mode against ICU's text,
+  auto's cases without the epsilon, capitalization with parts, the
+  refusals; the whitebox test refuses each field of a built unit
+  spoiled and reads en's, es's and en_GB's names and patterns along
+  their chains.
 
 ## Consequences
 

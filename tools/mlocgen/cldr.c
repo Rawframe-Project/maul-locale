@@ -565,6 +565,31 @@ const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Compo
     return Locate(&search, &parsed, 0);
 }
 
+bool CldrGiven(Cldr* cldr, const char* locale, const char* chain, Component component)
+{
+    Chain parsed = {0};
+    char text[MAX_CHAIN];
+    char bare[MAX_CHAIN];
+    if (!ParseSteps(chain, &parsed) || !FormatChain(&parsed, parsed.count, text))
+    {
+        Die("a chain cannot be read: %s", chain);
+    }
+    Chain stripped = parsed;
+    bool other =
+        StripDefaults(&cldr->dtd, &stripped) && FormatChain(&stripped, stripped.count, bare);
+    for (const char* at = locale; at != nullptr; at = CldrParent(cldr, at, component))
+    {
+        const LdmlFile* file = File(cldr, at, component);
+        const Leaf* leaf = file == nullptr ? nullptr : MapGet(&file->leaves, text);
+        leaf = leaf == nullptr && other && file != nullptr ? MapGet(&file->leaves, bare) : leaf;
+        if (leaf != nullptr && leaf->draft <= cldr->threshold)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 int CldrAliasOf(Cldr* cldr, const char* chain, char* out, Component component)
 {
     Chain parsed = {0};

@@ -21,8 +21,9 @@
 // chain that files it, else the next wider width's the same way (narrow,
 // short, long), as root's aliases send them; an empty string ends it. An
 // entry is CLDR's value resolved along the chain, filed where that lookup
-// would give another; a category's pattern equal to other's is not, the
-// formatter taking other's where a category has none.
+// would give another; a plural category's pattern only where a file
+// along the chain gives that category of that width, as ICU's data has
+// it, the formatter taking other's where the widths have none.
 
 #ifndef MLOC_RELATIVE_TABLES_H
 #define MLOC_RELATIVE_TABLES_H

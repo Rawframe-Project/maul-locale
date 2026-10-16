@@ -152,5 +152,8 @@ constexpr uint32_t kindZoneNames = 0x00090005;
 // past patterns of each unit and width, a unit per locale key (record
 // mloc-0043, src/relative_tables.h).
 constexpr uint32_t kindRelative = 0x00090006;
+// The lowercase letters relative time's texts begin with and their
+// titlecase, a unit of no locale (spellout_tables.h's layout).
+constexpr uint32_t kindRelativeTitlecase = 0x00090007;
 
 #endif

@@ -10,6 +10,7 @@
 #include "kinds.h"
 #include "relative_tables.h"
 #include "table_gen.h"
+#include "titlecase_gen.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -45,6 +46,8 @@ typedef struct Filed
 typedef struct Relative
 {
     const NamesInput* input;
+    // The first letters of the texts filed.
+    Titlecase titlecase;
     // Locale id to Filed.
     Map filed;
 } Relative;
@@ -78,20 +81,32 @@ static const char* Resolved(const Relative* r, const char* locale, uint32_t key)
     return leaf != nullptr ? leaf->text : nullptr;
 }
 
-// The value a key files at a locale, or null: a category's pattern equal
-// to other's is left to the run time's fallback to other (CLDR's count
-// inheritance gives every category other's where the locale has none).
+// The value a key files at a locale, or null. A plural category's
+// pattern is read as ICU's data and fallback give it: the first width,
+// from the key's to the long one, where a file along the chain gives
+// that category (a value, or the inheritance marker CLDR resolves, count
+// fallback included); none when no width does, the run time then taking
+// other's (a short "many" the locale lacks is short's "other", not long's
+// "other" through CLDR's count fallback).
 static const char* Target(const Relative* r, const char* locale, uint32_t key)
 {
-    const char* value = Resolved(r, locale, key);
     uint32_t slot = key % relativeSlots;
-    uint32_t other = slot < relativePast ? relativePast - 1 : relativeSlots - 1;
-    if (value != nullptr && slot >= relativeFuture && slot != other)
+    bool category = slot >= relativeFuture && slot != relativePast - 1 && slot != relativeSlots - 1;
+    if (!category)
     {
-        const char* fallback = Resolved(r, locale, key - slot + other);
-        return fallback != nullptr && strcmp(fallback, value) == 0 ? nullptr : value;
+        return Resolved(r, locale, key);
     }
-    return value;
+    uint32_t width = key / relativeSlots % relativeWidthCount;
+    for (uint32_t w = 0; w <= width; w++)
+    {
+        char chain[maxChain];
+        ChainOf(key - w * relativeSlots, chain, sizeof(chain));
+        if (CldrGiven(r->input->cldr, locale, chain, componentMain))
+        {
+            return Resolved(r, locale, key - w * relativeSlots);
+        }
+    }
+    return nullptr;
 }
 
 // Whether a value is text the unit holds: no control byte, a pattern's
@@ -144,8 +159,7 @@ static const char* LookedValue(const Relative* r, const char* locale, uint32_t k
 
 // Files a value at a locale, or checks a locale that files nothing. A
 // value CLDR leaves out where the chain gives one is filed as empty.
-static void Take(const Relative* r, Filed* filed, const char* locale, uint32_t key,
-                 const char* value)
+static void Take(Relative* r, Filed* filed, const char* locale, uint32_t key, const char* value)
 {
     const char* looked = LookedValue(r, locale, key);
     bool none = value == nullptr || value[0] == '\0';
@@ -165,6 +179,10 @@ static void Take(const Relative* r, Filed* filed, const char* locale, uint32_t k
                value);
     }
     filed->values[key] = value != nullptr ? value : "";
+    if (value != nullptr)
+    {
+        TitlecaseNote(&r->titlecase, value, strlen(value), true);
+    }
 }
 
 // The index of a value among a unit's strings, added when new.
@@ -278,5 +296,6 @@ int GenerateRelative(const NamesInput* input, DataFile* file, char* errorOut, si
     {
         TakeChain(&s_relative, input->ids[i], file);
     }
+    TitlecaseAdd(&s_relative.titlecase, kindRelativeTitlecase, file);
     return 1;
 }

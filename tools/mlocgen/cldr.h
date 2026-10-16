@@ -67,6 +67,11 @@ const char* CldrParent(Cldr* cldr, const char* locale, Component component);
 // aliases that loop.
 const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Component component);
 
+// Whether a file along a locale's chain gives the chain itself, a value
+// or the inheritance marker at or above the draft threshold, no alias
+// followed: ICU's data has the item there.
+bool CldrGiven(Cldr* cldr, const char* locale, const char* chain, Component component);
+
 // A locale's own file, loaded when first asked for, or null when CLDR has
 // none. Fails the program on a file CLDR cannot read.
 const LdmlFile* CldrFile(Cldr* cldr, const char* locale, Component component);

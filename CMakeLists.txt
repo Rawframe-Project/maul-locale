@@ -158,6 +158,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone_code_tables.c
     src/zone_name_tables.c
     src/relative_tables.c
+    src/relative.c
     src/zone_format.c
     src/zone_codes.c
     src/zone_handle.c
@@ -360,6 +361,17 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_relative_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_relative_tables PRIVATE MLOC_RELATIVE_FILE="${MLOC_RELATIVE_PATH}")
+    endif()
+    maul_add_test(relative)
+    if(TARGET test_relative)
+        if(EMSCRIPTEN)
+            target_link_options(test_relative PRIVATE
+                                "SHELL:--embed-file ${MLOC_RELATIVE_FILE}@/relative.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_relative PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_relative PRIVATE MLOC_RELATIVE_FILE="${MLOC_RELATIVE_PATH}")
     endif()
     # The zone formatter reads the zone names and the region names, and
     # the dates for a date or time in a zone.

@@ -496,6 +496,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralCategories(const mlocPluralRules
 ```
 Gives the categories a locale's rules use, as bits 1 << category: one and other for English cardinals, all six for Arabic's.  @param rules          Rules from mlocInitPluralRules. @param categoriesOut  Receives the bits. @return mloc_success; mloc_errorInvalid for a null pointer or rules the library did not make. @par Thread safety Safe from any thread.
 
+## `relative.h`
+
+Relative time (record mloc-0043): a signed amount of a unit written as a locale says it ("in 3 days", "2 hr. ago", "yesterday", "next Monday"), as ECMA-402's Intl.RelativeTimeFormat and ICU4C's RelativeDateTimeFormatter write it. The amount is the caller's: the library never reads a clock. The names and patterns are a data file of their own, src/generated/relative.mloc.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocRelativeOptions* options);
+```
+Makes a locale's relative time formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the number units, the plural rules and relative time (relative.mloc). @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the number units or relative time; mloc_errorData for a chain of more relative units than the formatter holds; mloc_errorInvalid for a null pointer or options out of range or in conflict (a style other than decimal, a sign display other than auto). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter, const mlocDecimal* amount, mlocRelativeUnit unit, mlocOutput* output);
+```
+Writes an amount of a unit relative to now: negative amounts (-0 included) in the past, the others in the future; the amount's magnitude by the formatter's number options in the pattern of its plural category as written ("in 1 day", "in 1.5 days"), a category the locale lacks taking the other category's, a pattern without the number writing none (Arabic's "in one year"); under auto, an amount equal to a named one writes the name ("yesterday", "now").  @param formatter  A formatter from mlocInitRelativeFormatter. @param amount     The amount, finite. @param unit       The unit. @param output     Receives the text; its part function, when set, receives mlocNumberPart values: the number's, and literal for the pattern's text and for a name. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorNotFound for a unit whose patterns the locale's chain lacks; mloc_errorInvalid for a null pointer, an amount not finite, a unit out of range, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
+
 ## `spellout.h`
 
 Numbers in words, ordinal suffixes and the algorithmic numbering systems (UTS #35 Part 3, record mloc-0034): CLDR's rule-based number formats, as ICU4C reads and runs them, on the exact decimal. The rules are in a data file of their own, spellout.mloc, which a program adds to its data set.
@@ -780,4 +794,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-143 functions across 15 headers.
+145 functions across 16 headers.

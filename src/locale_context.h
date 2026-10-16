@@ -29,7 +29,9 @@ typedef enum ContextUsage
     contextVariant = 4,
     contextKey = 5,
     contextKeyValue = 6,
-    contextUsageCount = 7,
+    // relative: relative time's names and patterns ("tomorrow").
+    contextRelative = 7,
+    contextUsageCount = 8,
 } ContextUsage;
 
 // The contexts of a usage's byte.

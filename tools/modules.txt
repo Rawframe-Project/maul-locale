@@ -94,6 +94,7 @@ calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 relative_tables: bytes data_view number_data
+relative: bytes currency_tables data_view decimal kinds locale_context locale_fallback number_core number_format plural plural_rules relative_tables spellout_data
 zone_name_tables: bytes data_view number_data
 zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_name_tables zone_rules zone_tables
 zone_codes: data_view zone_code_tables zone_handle zone_tables

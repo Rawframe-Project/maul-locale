@@ -120,3 +120,8 @@ format.
   locale's names of near offsets ("yesterday", "next Monday") and future
   and past patterns by plural category, for every unit and width, filed
   per key along the chain (mloc-0043).
+- Relative time: `mlocInitRelativeFormatter` and `mlocFormatRelative`
+  write a signed amount of a unit (year to second, quarter, week, the
+  weekdays) in three widths, numeric always or auto ("yesterday"),
+  capitalized by context, with parts (`maul-locale/relative.h`,
+  mloc-0043).

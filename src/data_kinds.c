@@ -84,6 +84,7 @@ static const DataKind s_kinds[] = {
     {kindZoneMeta, mlocValidZoneMeta},
     {kindZoneNames, mlocValidZoneNames},
     {kindRelative, mlocValidRelative},
+    {kindRelativeTitlecase, mlocValidSpelloutTitlecase},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;
