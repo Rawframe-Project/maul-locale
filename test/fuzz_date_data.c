@@ -107,7 +107,12 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
             DataSpan pattern;
             Require(mlocDatePattern(&p, mlocLoad16(set + 2 * (size_t)i), &pattern));
         }
-        Require(mlocLoad16(set + 2 * dateTimeFlags) <= dateTimeOwnTwelve);
+        uint32_t flags = mlocLoad16(set + 2 * dateTimeFlags);
+        Require(flags <= dateTimeFlagsMax);
+        for (uint32_t length = 0; length < dateLengthCount; length++)
+        {
+            Require((flags >> (dateTimeMonthShift + 2 * length) & 3) != 3);
+        }
     }
     return 0;
 }

@@ -303,6 +303,15 @@ static void TestDateTimes(void)
                                    mloc_timePrecisionMinute),
                          time, "Donnerstag, 15. Oktober 2026 um 16:03"),
           "the full glue: a month written out with a weekday");
+    CHECK(DateTimeIs("es",
+                     Composite(mloc_dateFieldSetYearMonthDayWeekday, mloc_dateLengthLong,
+                               mloc_timePrecisionMinute),
+                     time, "jueves, 15 de octubre de 2026, 16:03") &&
+              DateTimeIs("es",
+                         Composite(mloc_dateFieldSetYearMonthDay, mloc_dateLengthLong,
+                                   mloc_timePrecisionMinute),
+                         time, "15 de octubre de 2026 a las 16:03"),
+          "es's full and long glue, which differ");
     CHECK(DateTimeIs(
               "en",
               Composite(mloc_dateFieldSetMonthDay, mloc_dateLengthMedium, mloc_timePrecisionMinute),
@@ -332,7 +341,11 @@ static void TestDateTimes(void)
               DateTimeIs("ja",
                          Composite(mloc_dateFieldSetWeekday, mloc_dateLengthLong,
                                    mloc_timePrecisionMinute),
-                         time, "16:03 (木曜日)"),
+                         time, "16:03 (木曜日)") &&
+              DateTimeIs("en",
+                         Composite(mloc_dateFieldSetWeekday, mloc_dateLengthLong,
+                                   mloc_timePrecisionMinuteOptional),
+                         Time(16, 0, 0, 0), "Thursday 4" NNBSP "PM"),
           "a weekday with a time, matched whole");
     CHECK(DateTimeIs("en", Styles(mloc_dateStyleFull, mloc_timeStyleMedium), time,
                      "Thursday, October 15, 2026 at 4:03:07" NNBSP "PM") &&

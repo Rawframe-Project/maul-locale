@@ -411,6 +411,109 @@ static void TestUnwritablePattern(void)
           "a time pattern the time formatter cannot write");
 }
 
+// Builds a patterns unit for the date-time formatter: patterns "y", "H",
+// "{1} {0}", "{1} x", "{0} x" and "Q"; one row and set of "y"; one time
+// set of "H" whose atTime glue and weekday-with-time patterns are the
+// given ones, on the 24-hour clock. Its size.
+static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
+{
+    enum
+    {
+        // The rows (at 48) and the set (at 56) hold zeros: row 0, pattern 0.
+        offsets = datePatternsHeaderSize,
+        times = 104,
+        text = 176,
+    };
+    static const char s_text[] = "\x01y\x01\x01H\x01{1} {0}{1} x{0} x\x01Q\x01";
+    static const uint32_t s_offsets[7] = {0, 3, 6, 13, 18, 23, 26};
+    memset(s_unit, 0, sizeof(s_unit));
+    Put(s_unit, 6, 4);
+    Put(s_unit + 4, 1, 4);
+    Put(s_unit + 8, 1, 4);
+    Put(s_unit + 12, 1, 4);
+    Put(s_unit + 16, 26, 4);
+    for (uint32_t i = 0; i < 7; i++)
+    {
+        Put(s_unit + offsets + 4 * i, s_offsets[i], 4);
+    }
+    for (uint32_t i = 0; i < dateTimePatternCount; i++)
+    {
+        uint16_t index = 1;
+        if (i >= dateTimeGlue && i < dateTimeStyle12)
+        {
+            index = i >= dateTimeAtGlue ? glue : 2;
+        }
+        else if (i >= dateTimeWeekday)
+        {
+            index = weekday;
+        }
+        Put(s_unit + times + 2 * i, index, 2);
+    }
+    memcpy(s_unit + text, s_text, 26);
+    return text + 26;
+}
+
+// The date-time formatter on a pack of the composite unit built here.
+static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields,
+                                char* text, size_t* length)
+{
+    alignas(8) static uint8_t s_patterns[256];
+    alignas(8) static uint8_t s_names[1024];
+    uint32_t patterns = BuildComposite(glue, weekday);
+    memcpy(s_patterns, s_unit, patterns);
+    uint32_t names = BuildNames();
+    memcpy(s_names, s_unit, names);
+    static const uint8_t s_dates[dateLocaleSize] = {0};
+    PackUnit units[] = {{kindDatePatterns, {s_patterns, patterns}, false},
+                        {kindDates, {s_dates, dateLocaleSize}, true},
+                        {kindDateNames, {s_names, names}, false}};
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet data = {sources, 2};
+    mlocLocale fr;
+    mlocDateTimeFormatter formatter;
+    mlocDateTimeOptions options = {.date = {.fields = fields}};
+    if (!OpenRootPack(units, 3, &sources[1]) ||
+        mlocParseLocale("fr", 2, &fr).status != mloc_success)
+    {
+        return mloc_errorInvalid;
+    }
+    mlocResult result = mlocInitDateTimeFormatter(&formatter, &data, &fr, &options);
+    mlocDateTime value = {.time = {.hour = 16, .minute = 3}};
+    mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
+    mlocOutput output = {.buffer = text, .capacity = 64};
+    if (result < 0 ||
+        mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) !=
+            mloc_success ||
+        mlocFormatDateTime(&formatter, &value, &output) != mloc_success)
+    {
+        return result < 0 ? result : mloc_errorInvalid;
+    }
+    *length = output.length;
+    return result;
+}
+
+static bool CompositeIs(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields, const char* want)
+{
+    char text[64];
+    size_t length = 0;
+    return MakeComposite(glue, weekday, fields, text, &length) == mloc_success &&
+           length == strlen(want) && memcmp(text, want, length) == 0;
+}
+
+static void TestCompositeData(void)
+{
+    char text[64];
+    size_t length = 0;
+    CHECK(CompositeIs(2, 1, mloc_dateFieldSetYearMonthDay, "2026 16"), "a date and time glued");
+    CHECK(MakeComposite(3, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData &&
+              MakeComposite(4, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData,
+          "glue without {0} or without {1}");
+    CHECK(CompositeIs(2, 1, mloc_dateFieldSetWeekday, "16") &&
+              MakeComposite(2, 5, mloc_dateFieldSetWeekday, text, &length) == mloc_errorData,
+          "a weekday-with-time pattern, and one the formatter cannot write");
+}
+
 static mlocData s_sources[2];
 static mlocDataSet s_data;
 
@@ -678,8 +781,9 @@ static void TestDayPeriods(void)
 
 // A time written by a compiled pattern with a locale's Gregorian day
 // periods and rules, a rule set's byte changed where at < dateRuleSize.
-static bool PeriodText(const char* id, const char* pattern, uint8_t hour, uint8_t minute,
-                       uint8_t second, uint32_t at, uint8_t value, const char* want)
+static bool PeriodTextOf(const char* id, const char* pattern, uint32_t length, uint8_t hour,
+                         uint8_t minute, uint8_t second, uint32_t at, uint8_t value,
+                         const char* want)
 {
     mlocLocale locale;
     TimeFormat f;
@@ -706,13 +810,20 @@ static bool PeriodText(const char* id, const char* pattern, uint8_t hour, uint8_
     char text[128];
     NumberWriter w = {.buffer = text, .capacity = sizeof(text)};
     mlocTime time = {.hour = hour, .minute = minute, .second = second};
-    mlocWriteTimeFields(&f, (const uint8_t*)pattern, (uint32_t)strlen(pattern), &time, &w);
+    mlocWriteTimeFields(&f, (const uint8_t*)pattern, length, &time, &w);
     bool same = w.length == strlen(want) && memcmp(text, want, w.length) == 0;
     if (!same)
     {
         printf("  %s %s: got \"%.*s\", want \"%s\"\n", id, pattern, (int)w.length, text, want);
     }
     return same;
+}
+
+static bool PeriodText(const char* id, const char* pattern, uint8_t hour, uint8_t minute,
+                       uint8_t second, uint32_t at, uint8_t value, const char* want)
+{
+    return PeriodTextOf(id, pattern, (uint32_t)strlen(pattern), hour, minute, second, at, value,
+                        want);
 }
 
 #define NO_CHANGE dateRuleSize, 0
@@ -760,6 +871,11 @@ static void TestDayPeriodFields(void)
                      "b\x01",
                      12, 1, 0, NO_CHANGE, "12::01 PM"),
           "the minutes found past a literal of two bytes");
+    CHECK(PeriodTextOf("en",
+                       "\x01h\x01 \x01"
+                       "b\x01\x01m\x02",
+                       7, 12, 5, 0, NO_CHANGE, "12 noon"),
+          "no minutes looked for past the pattern's end");
     CHECK(PeriodText("en",
                      "\x01"
                      "a\x04",
@@ -803,6 +919,7 @@ int main(void)
     TestNamesUnit();
     TestNamesPastUnit();
     TestUnwritablePattern();
+    TestCompositeData();
     alignas(8) static uint8_t s_dates[1 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
