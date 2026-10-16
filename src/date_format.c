@@ -322,8 +322,8 @@ mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocData
     mlocResult result = mlocMakeDateFormat(&f.date, data, locale, &o);
     if (result >= 0 && o.zone != mloc_zoneStyleNone)
     {
-        mlocResult zone = ResolveZone(&f, data, locale, &o);
-        result = zone < 0 ? zone : result;
+        // The zone reads the locale's digits as the date does: one result.
+        result = ResolveZone(&f, data, locale, &o);
     }
     if (result < 0)
     {
