@@ -13,6 +13,7 @@
 #include "zone_format.h"
 
 #include "bytes.h"
+#include "date_tables.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "names_data.h"
@@ -612,17 +613,16 @@ static void WriteCity(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
     Write(w, city.bytes, city.length);
 }
 
-static bool WriteStyle(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
+static bool WriteStyle(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a, NumberWriter* w)
 {
-    switch ((mlocZoneStyle)f->style)
+    switch (style)
     {
     case mloc_zoneStyleSpecificLong:
     case mloc_zoneStyleSpecificShort:
-        return WriteSpecific(f, a, f->style == mloc_zoneStyleSpecificLong, w);
+        return WriteSpecific(f, a, style == mloc_zoneStyleSpecificLong, w);
     case mloc_zoneStyleGenericLong:
     case mloc_zoneStyleGenericShort:
-        return WriteGeneric(f, a, f->style == mloc_zoneStyleGenericLong, w) ||
-               WriteLocation(f, a, w);
+        return WriteGeneric(f, a, style == mloc_zoneStyleGenericLong, w) || WriteLocation(f, a, w);
     case mloc_zoneStyleLocation:
         return WriteLocation(f, a, w);
     case mloc_zoneStyleCity:
@@ -633,20 +633,67 @@ static bool WriteStyle(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
     }
 }
 
-void mlocWriteZone(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
-                   NumberWriter* w)
+void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const mlocTimeZone* zone,
+                   const mlocInstant* instant, NumberWriter* w)
 {
     ZoneAt a;
     if (!ReadZone(f, zone, instant, &a))
     {
         return;
     }
-    if (!WriteStyle(f, &a, w))
+    if (!WriteStyle(f, style, &a, w))
     {
-        bool shortForm = f->style == mloc_zoneStyleSpecificShort ||
-                         f->style == mloc_zoneStyleGenericShort ||
-                         f->style == mloc_zoneStyleOffsetShort;
+        bool shortForm = style == mloc_zoneStyleSpecificShort ||
+                         style == mloc_zoneStyleGenericShort || style == mloc_zoneStyleOffsetShort;
         WriteOffset(f, w, TotalOffset(&a), shortForm);
+    }
+}
+
+mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width)
+{
+    switch (letter)
+    {
+    case 'z':
+        return width == 4  ? mloc_zoneStyleSpecificLong
+               : width < 4 ? mloc_zoneStyleSpecificShort
+                           : mloc_zoneStyleNone;
+    case 'v':
+        return width == 4   ? mloc_zoneStyleGenericLong
+               : width == 1 ? mloc_zoneStyleGenericShort
+                            : mloc_zoneStyleNone;
+    case 'V':
+        return width == 4   ? mloc_zoneStyleLocation
+               : width == 3 ? mloc_zoneStyleCity
+                            : mloc_zoneStyleNone;
+    case 'O':
+        return width == 4   ? mloc_zoneStyleOffsetLong
+               : width == 1 ? mloc_zoneStyleOffsetShort
+                            : mloc_zoneStyleNone;
+    default:
+        return mloc_zoneStyleNone;
+    }
+}
+
+void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
+                          const mlocTimeZone* zone, const mlocInstant* instant, NumberWriter* w)
+{
+    uint32_t at = 0;
+    while (at < length)
+    {
+        if (pattern[at] == datePatternField)
+        {
+            mlocWriteZone(f, mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]), zone, instant,
+                          w);
+            at += 3;
+            continue;
+        }
+        uint32_t end = at;
+        while (end < length && pattern[end] >= 0x20)
+        {
+            end++;
+        }
+        mlocWritePart(w, mloc_datePartLiteral, pattern + at, end - at);
+        at = end;
     }
 }
 
@@ -765,7 +812,7 @@ mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone
         return mloc_errorInvalid;
     }
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteZone(&f, zone, instant, &w);
+    mlocWriteZone(&f, (mlocZoneStyle)f.style, zone, instant, &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -774,7 +821,7 @@ mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteZone(&f, zone, instant, &parts);
+        mlocWriteZone(&f, (mlocZoneStyle)f.style, zone, instant, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;

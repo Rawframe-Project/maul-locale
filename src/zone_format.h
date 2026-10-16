@@ -47,8 +47,18 @@ mlocResult mlocMakeZoneFormat(ZoneFormat* f, const mlocDataSet* data, const mloc
 // Whether a zone format holds what the library made.
 bool mlocZoneFormatSound(const ZoneFormat* f);
 
-// Writes a zone the library made at an instant in range, as one part.
-void mlocWriteZone(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
-                   NumberWriter* w);
+// Writes a zone the library made at an instant in range by a style other
+// than none, as one part.
+void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const mlocTimeZone* zone,
+                   const mlocInstant* instant, NumberWriter* w);
+
+// The style of a pattern's zone field (zzzz, z, vvvv, v, VVVV, VVV, OOOO,
+// O; zz and zzz as z), or none for another letter or width.
+mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width);
+
+// Writes a compiled pattern of literal text and zone fields, which
+// mlocZoneFieldStyle names.
+void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
+                          const mlocTimeZone* zone, const mlocInstant* instant, NumberWriter* w);
 
 #endif

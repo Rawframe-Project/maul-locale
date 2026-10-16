@@ -68,9 +68,9 @@ cycle, time precision, zone style).
 - **A date with a time is joined by the atTime glue**, as UTS #35 makes
   it the default, as ICU4C 79 and ICU4X do ("January 1 at 12:00:00 AM
   GMT"). CLDR's `datetime.json` expects the standard glue for its
-  composites ("January 1, 12:00:00 AM GMT"); those cases are checked
-  for their classical skeleton, and their text will be listed where
-  it differs.
+  composites ("January 1, 12:00:00 AM GMT"); the check asks those
+  cases for the standard glue (`mloc_dateTimeGlueStandard`), which
+  gives the file's text.
 - **A chain names one element however it spells its defaults.** The
   generator's CLDR resolver looks a chain up both as written and
   without the attributes whose values are their DTD defaults, so
@@ -177,13 +177,14 @@ cycle, time precision, zone style).
     hour's pattern), second, or 1 to 9 fraction digits written after the
     seconds with the locale's decimal separator (its numbering
     system's, fa's "٫"), truncated as ICU4C truncates.
-  - **Standard formats:** the medium and short ones; full and long name
-    a zone, which a time of day lacks, and are refused (the zoned
-    formatter writes them). As ICU4C builds them, a cycle asked for (the
+  - **Standard formats:** all four; full and long name a zone, which a
+    time of day lacks, so a formatter of them writes a time in a zone
+    only (below). As ICU4C builds them, a cycle asked for (the
     option, -u-hc) or a region (-u-rg), or a region whose clock is not
     the one the locale's data was written for (de-US: de's 24-hour
     data, the US's 12-hour clock), takes the clock's minutes or seconds
-    matched as `hmm`, `hmmss`, `Hmm` or `Hmmss` without the standard
+    matched as `hmm`, `hmmss`, `Hmm` or `Hmmss` (full and long:
+    `hmmsszzzz`, `hmmssz`, `Hmmsszzzz`, `Hmmssz`) without the standard
     formats (ICU's createInstanceNoStdPat: am's "a h:mm", seh's
     "HH:mm"). A time set records whether the locale's own hour (j) is
     on the 12-hour clock for this. ICU also rematches when only its
@@ -247,8 +248,33 @@ cycle, time precision, zone style).
     the zone's offset is read by them (Punta Arenas's permanent -03 is
     Chile Summer Time, Winnipeg's under tzdb 2026e Central Daylight
     Time), as ICU4C writes them.
-- **Still to come in this part** (research 39's slices): zoned dates
-  and times; intervals; relative time; durations; speed.
+- **Dates and times in a zone** (`mlocFormatDateInZone`,
+  `mlocFormatTimeInZone`, `mlocFormatDateTimeInZone`): an instant's
+  local date-time in the zone, in the formatter's calendar, written with
+  the zone by the zone formatter above. A zone style in the time
+  options (with a precision), or in the date options of a date alone
+  (a field set up to the weekday), or a full or long time format, makes
+  a formatter that writes through these functions only; the plain ones
+  refuse it, and they refuse a formatter without a zone.
+  - **A time with a zone** is matched as one skeleton (`hmz`, `Hmsv`,
+    `hVVVV`: each clock, precision and of the eight forms), among the
+    locale's items alone: CLDR's datetime test data writes th's `Hmsz`
+    as its `Hmsv` item gives (`HH:mm:ss z`) and ja's Japanese-calendar
+    `HmsVVVV` as `H:mm:ss VVVV`, where ICU4C's generator, which holds
+    the standard formats too, takes th's long time format and ja's full
+    one. Its zone field is written in the pattern's own form, so a full
+    time format's `zzzz` stays long whatever the style asked.
+  - **A date with a zone** is the date's pattern and the zone's alone
+    pattern (bg's `z 'ч'.`) joined by the atTime glue of the date's
+    length, as ICU4C's generator joins them.
+  - **A weekday with a time and a zone** is the lone weekday, the glue
+    and the time with its zone: no item covers the three, and ICU4C's
+    generator splits them so.
+  - **The data:** 8 zone-alone patterns, 48 zoned time patterns and the
+    4 full and long rematches per time set; `dates.mloc` grows from
+    724,308 to 817,900 bytes, nearly all of it the time sets' entries.
+- **Still to come in this part** (research 39's slices): intervals;
+  relative time; durations; speed.
 
 ## Proof
 
@@ -352,6 +378,25 @@ cycle, time precision, zone style).
   before, at, 100, 183 and 185 days after): all equal but the British
   and Irish winter names and 1,474 that follow tzdb 2026e's Manitoba
   change, which ICU's 2026d lacks.
+- **Dates and times in a zone against datetime.json:** its 88 cases
+  (a month and day with a time in each zone style at both lengths, in
+  four calendars, and a short date with a full time) give the file's
+  text, on every push; its semantic composites take the standard glue,
+  as the file writes them.
+- **Dates and times in a zone against ICU4C 79, once:** 1,783,008 (the
+  906 locales, 12 zones, July and January 2026: the full and long time
+  formats, the four date styles with each, a time in each zone form at
+  each clock and precision, and a date at each length with a zone).
+  All equal but 23,856: the British winter names (10,473) and
+  sr_Cyrl_ME (902) above; the zoned times matched among the items alone
+  (6,493; the generator holding the standard formats too, as before
+  this choice, agrees with ICU on every one); the non-Gregorian
+  calendars' own glue and ckb_IR's Persian months (4,838 in fa, ps,
+  ckb_IR, uz_Arab_AF and shn_TH; rerun with their calendars' skeletons,
+  th's differences vanish and these remain); haw's Roman-numeral
+  months and tok's long date (368 each) and fr_ML's glue (230), as in
+  the composites; fr_CA's `Hv` item, `HH 'h' v`, which ICU's data
+  lacks (184).
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

@@ -12,7 +12,8 @@
 # the standard time formats alone) and every date-time case without a
 # zone (standard date and time formats, either glue) must also give the
 # file's text; given the zone names and the region names too, so must
-# every lone zone.
+# every lone zone, every month and day with a time in a zone, and every
+# standard date with a full or long time.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
 #            [<conform_datetime> <dates.mloc> <spellout.mloc>
@@ -168,7 +169,8 @@ ZONE_STYLES = {("specific", "long"): 1, ("specific", "medium"): 1, ("specific", 
                ("offset", "long"): 8, ("offset", "medium"): 8, ("offset", "short"): 8}
 
 
-def zone_line(case):
+def zone_instant(case):
+    """A zoned case's zone identifier and instant in seconds since 1970."""
     found = re.match(r"(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)(?::(\d\d))?"
                      r"(Z|([+-])(\d\d):(\d\d))\[([^\]]+)\]", case["input"])
     seconds = calendar.timegm((int(found.group(1)), int(found.group(2)), int(found.group(3)),
@@ -177,8 +179,13 @@ def zone_line(case):
     if found.group(7) != "Z":
         sign = -1 if found.group(8) == "+" else 1
         seconds += sign * (int(found.group(9)) * 3600 + int(found.group(10)) * 60)
+    return found.group(11), seconds
+
+
+def zone_line(case):
+    zone, seconds = zone_instant(case)
     style = ZONE_STYLES[(case["zoneStyle"], case.get("semanticSkeletonLength", "medium"))]
-    return " ".join(["Z", case["locale"], found.group(11), str(seconds), str(style)])
+    return " ".join(["Z", case["locale"], zone, str(seconds), str(style)])
 
 
 def check_zones(cases, tool, dates, spellout, zones, names):
@@ -193,6 +200,43 @@ def check_zones(cases, tool, dates, spellout, zones, names):
     for line, want, have in wrong[:20]:
         print(f"{line}: want {want}, got {have}")
     print(f"{len(chosen) - len(wrong)} of {len(chosen)} zones agree")
+    return len(wrong)
+
+
+# A zone with other fields is short whatever the length (the classical
+# skeletons' z, v, VVVV and O), and a semantic skeleton's glue is the
+# standard one.
+JOINED_ZONES = {"specific": 2, "generic": 4, "location": 5, "offset": 8}
+
+
+def zoned_line(case):
+    locale = "%s-u-ca-%s" % (case["locale"], BCP47[case["calendar"]])
+    zone, seconds = zone_instant(case)
+    if "semanticSkeleton" in case:
+        options = ["2", str(LENGTHS[case.get("semanticSkeletonLength", "medium")]), "0", "0",
+                   "0", str(HOURS[case.get("hourCycle")]), "0", "0",
+                   str(JOINED_ZONES[case["zoneStyle"]]), "1"]
+    else:
+        glue = "1" if case.get("dateTimeFormatType") == "standard" else "0"
+        options = ["0", "0", "0", str(STYLES[case["dateLength"]]), "0", "0", "0",
+                   str(STYLES[case["timeLength"]]), "0", glue]
+    return " ".join(["ZDT", locale, zone, str(seconds)] + options)
+
+
+def check_zoned(cases, tool, dates, spellout, zones, names):
+    """The formatted text of every month and day with a time in a zone,
+    and of every standard date with a full or long time."""
+    chosen = [c for c in cases if c.get("semanticSkeleton") == "MDTZ" or
+              ("dateLength" in c and c.get("timeLength") in ("full", "long"))]
+    asked = "".join(zoned_line(c) + "\n" for c in chosen)
+    run = subprocess.run([tool, dates, spellout, zones, names], input=asked,
+                         capture_output=True, text=True, check=True)
+    got = run.stdout.split("\n")[:len(chosen)]
+    wrong = [(zoned_line(c), c["expected"], g) for c, g in zip(chosen, got)
+             if g != c["expected"]]
+    for line, want, have in wrong[:20]:
+        print(f"{line}: want {want}, got {have}")
+    print(f"{len(chosen) - len(wrong)} of {len(chosen)} date-times in a zone agree")
     return len(wrong)
 
 
@@ -227,7 +271,8 @@ def main():
     times = check_times(every, *files) if len(sys.argv) >= 6 else 0
     both = check_date_times(every, *files) if len(sys.argv) >= 6 else 0
     zones = check_zones(every, *sys.argv[3:8]) if len(sys.argv) == 8 else 0
-    sys.exit(1 if wrong or dates or times or both or zones else 0)
+    zoned = check_zoned(every, *sys.argv[3:8]) if len(sys.argv) == 8 else 0
+    sys.exit(1 if wrong or dates or times or both or zones or zoned else 0)
 
 
 if __name__ == "__main__":

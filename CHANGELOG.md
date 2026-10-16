@@ -89,6 +89,11 @@ format.
   zone at an instant by its specific or generic name, location, city or
   offset, falling back and qualifying generic names as ICU4C does, with
   CLDR's daylight offsets read over the zones unit's (mloc-0042).
+- Dates and times in a zone: `mlocFormatDateInZone`,
+  `mlocFormatTimeInZone` and `mlocFormatDateTimeInZone` write an
+  instant's local date, time or both with its zone in any of the zone
+  styles, and the full and long standard time formats, which name the
+  zone, are now taken (mloc-0042).
 - The zone names data file, `zone-names.mloc`: each BCP 47 zone id's
   region and metazone periods, each metazone's golden and preferred
   zones, and every locale's zone formats, exemplar cities and zone and

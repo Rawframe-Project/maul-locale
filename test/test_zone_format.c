@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static mlocData s_sources[3];
+static mlocData s_sources[4];
 static mlocDataSet s_data;
 
 static bool OpenFile(const char* path, mlocData* out)
@@ -202,6 +202,95 @@ static void TestOutput(void)
           "measuring");
 }
 
+// Whether an instant's local date, time or date-time in a zone is want
+// in a locale, by date options (a zone's in them for a date alone), time
+// options, or both.
+static bool InZone(const char* id, const char* zoneId, int64_t seconds,
+                   const mlocDateTimeOptions* o, char kind, const char* want)
+{
+    mlocLocale locale;
+    mlocTimeZone zone = {0};
+    char text[256];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocInstant instant = {.seconds = seconds};
+    mlocDateFormatter date;
+    mlocTimeFormatter time;
+    mlocDateTimeFormatter both;
+    mlocResult result =
+        mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status == mloc_success
+            ? mlocFindTimeZone(&s_data, zoneId, strlen(zoneId), &zone)
+            : mloc_errorSyntax;
+    if (result >= 0 && kind == 'D')
+    {
+        result = mlocInitDateFormatter(&date, &s_data, &locale, &o->date);
+        result = result < 0 ? result : mlocFormatDateInZone(&date, &zone, &instant, &output);
+    }
+    else if (result >= 0 && kind == 'T')
+    {
+        result = mlocInitTimeFormatter(&time, &s_data, &locale, &o->time);
+        result = result < 0 ? result : mlocFormatTimeInZone(&time, &zone, &instant, &output);
+    }
+    else if (result >= 0)
+    {
+        result = mlocInitDateTimeFormatter(&both, &s_data, &locale, o);
+        result = result < 0 ? result : mlocFormatDateTimeInZone(&both, &zone, &instant, &output);
+    }
+    bool same = result == mloc_success && output.length == strlen(want) &&
+                memcmp(text, want, output.length) == 0;
+    if (!same)
+    {
+        printf("  %s %s: %d \"%.*s\", want \"%s\"\n", id, zoneId, result, (int)output.length, text,
+               want);
+    }
+    return same;
+}
+
+#define NNBSP "\xE2\x80\xAF"
+
+static void TestInZone(void)
+{
+    mlocDateTimeOptions full = {.time = {.style = mloc_timeStyleFull}};
+    mlocDateTimeOptions longTime = {.time = {.style = mloc_timeStyleLong}};
+    CHECK(InZone("en", "America/Los_Angeles", july, &full, 'T',
+                 "8:33:20" NNBSP "PM Pacific Daylight Time") &&
+              InZone("en", "America/Los_Angeles", july, &longTime, 'T', "8:33:20" NNBSP "PM PDT") &&
+              InZone("ja", "Asia/Tokyo", january, &full, 'T',
+                     "8\xE6\x99\x82"
+                     "06\xE5\x88\x86"
+                     "40\xE7\xA7\x92 "
+                     "\xE6\x97\xA5\xE6\x9C\xAC\xE6\xA8\x99\xE6\xBA\x96\xE6\x99\x82"),
+          "the full and long time formats, which name the zone");
+    mlocDateTimeOptions styles = {.date = {.style = mloc_dateStyleFull},
+                                  .time = {.style = mloc_timeStyleFull}};
+    CHECK(InZone("en", "America/Los_Angeles", july, &styles, 'B',
+                 "Monday, July 13, 2026 at 8:33:20" NNBSP "PM Pacific Daylight Time"),
+          "a full date and time");
+    mlocDateTimeOptions minute = {
+        .date = {.length = mloc_dateLengthMedium},
+        .time = {.precision = mloc_timePrecisionMinute, .zone = mloc_zoneStyleSpecificShort}};
+    mlocDateTimeOptions weekday = {
+        .date = {.fields = mloc_dateFieldSetWeekday, .length = mloc_dateLengthMedium},
+        .time = {.precision = mloc_timePrecisionMinute, .zone = mloc_zoneStyleGenericShort}};
+    mlocDateTimeOptions berlin = {
+        .date = {.fields = mloc_dateFieldSetYearMonthDayWeekday},
+        .time = {.precision = mloc_timePrecisionMinute, .zone = mloc_zoneStyleSpecificLong}};
+    CHECK(InZone("en", "America/Los_Angeles", july, &minute, 'B',
+                 "Jul 13, 2026, 8:33" NNBSP "PM PDT") &&
+              InZone("en", "America/Los_Angeles", july, &weekday, 'B', "Mon, 8:33" NNBSP "PM PT") &&
+              InZone("de", "Europe/Berlin", january, &berlin, 'B',
+                     "Samstag, 10. Januar 2026 um 00:06 Mitteleurop\xC3\xA4ische Normalzeit"),
+          "field sets with a zone: the glue, a lone weekday, the local date");
+    mlocDateTimeOptions generic = {
+        .date = {.length = mloc_dateLengthMedium, .zone = mloc_zoneStyleGenericShort}};
+    mlocDateTimeOptions sofia = {
+        .date = {.length = mloc_dateLengthShort, .zone = mloc_zoneStyleSpecificShort}};
+    CHECK(InZone("en", "America/Los_Angeles", july, &generic, 'D', "Jul 13, 2026, PT") &&
+              InZone("bg", "Europe/Sofia", january, &sofia, 'D',
+                     "10.01.26" NNBSP "\xD0\xB3., \xD0\x93\xD1\x80\xD0\xB8\xD0\xBD\xD1\x83"
+                     "\xD0\xB8\xD1\x87+2 \xD1\x87."),
+          "a date with a zone, the zone's pattern's literals kept");
+}
+
 static void TestRefused(void)
 {
     mlocLocale en;
@@ -253,9 +342,10 @@ static void TestRefused(void)
 int main(void)
 {
     mlocOpenBuiltinData(&s_sources[0]);
-    s_data = (mlocDataSet){s_sources, 3};
+    s_data = (mlocDataSet){s_sources, 4};
     if (!OpenFile(MLOC_ZONE_NAMES_FILE, &s_sources[1]) ||
-        !OpenFile(MLOC_LOCALE_NAMES_FILE, &s_sources[2]))
+        !OpenFile(MLOC_LOCALE_NAMES_FILE, &s_sources[2]) ||
+        !OpenFile(MLOC_DATES_FILE, &s_sources[3]))
     {
         fputs("test_zone_format: cannot open the data files\n", stderr);
         return 2;
@@ -265,6 +355,7 @@ int main(void)
     TestGeneric();
     TestOffsets();
     TestOutput();
+    TestInZone();
     TestRefused();
     return s_failures == 0 ? 0 : 1;
 }

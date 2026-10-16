@@ -342,16 +342,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
     endif()
-    # The zone formatter reads the zone names and the region names.
+    # The zone formatter reads the zone names and the region names, and
+    # the dates for a date or time in a zone.
     maul_add_test(zone_format)
     if(TARGET test_zone_format)
         if(EMSCRIPTEN)
             target_link_options(test_zone_format PRIVATE
                                 "SHELL:--embed-file ${MLOC_ZONE_NAMES_FILE}@/zone-names.mloc"
-                                "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
+                                "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc"
+                                "SHELL:--embed-file ${MLOC_DATES_FILE}@/dates.mloc")
         endif()
         target_compile_definitions(test_zone_format PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}"
-                                   MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}")
+                                   MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}"
+                                   MLOC_DATES_FILE="${MLOC_DATES_PATH}")
     endif()
     # The date formatter reads the dates and the spell-out rules.
     maul_add_test(date_format)

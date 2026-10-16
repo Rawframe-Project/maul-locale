@@ -8,6 +8,7 @@
 #define MLOC_DATE_FORMAT_H
 
 #include "date_write.h"
+#include "zone_format.h"
 
 // A date read for a formatter: its fields in the formatter's calendar,
 // the Gregorian year its year begins in, and the pattern its year needs.
@@ -32,5 +33,21 @@ bool mlocDateFormatSound(const DateFormat* format);
 // Reads a date for a sound state; false for a date outside Temporal's
 // range.
 bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateValue* value);
+
+// The glue's style of date options (glueFull to glueShort): a standard
+// format's length, or by the field set's month at its length (four
+// letters with a weekday full, four letters long, three medium, else
+// short) by a time set's flags, as ICU4C chooses it.
+uint32_t mlocDateGlueStyle(const mlocDateOptions* options, uint32_t flags);
+
+// Whether glue holds {0} and {1}.
+bool mlocValidGlue(const uint8_t* glue, uint32_t length);
+
+// Writes a glue's slot: 0 for the time (or zone), 1 for the date.
+typedef void (*GlueSlotWriter)(void* context, uint32_t slot, NumberWriter* w);
+
+// Writes glue: its text, and each {0} and {1} by the writer.
+void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
+                   NumberWriter* w);
 
 #endif

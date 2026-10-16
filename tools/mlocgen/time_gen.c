@@ -129,10 +129,32 @@ void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, PatternGenerator* items, c
                 PatternGeneratorBest(g, classical);
         }
     }
+    // A zone alone, and a time with a zone, in each form, matched among
+    // the items alone: CLDR's datetime test data writes th's Hmsz as
+    // its Hmsv item gives (HH:mm:ss z), where ICU4C's generator, which
+    // also holds the standard formats, takes th's long time format.
+    static const char* const s_zones[8] = {"zzzz", "z", "vvvv", "v", "VVVV", "VVV", "OOOO", "O"};
+    for (int form = 0; form < 8; form++)
+    {
+        out[dateTimeZoneAlone + form] = PatternGeneratorBest(items, s_zones[form]);
+        for (int clock = 0; clock < 2; clock++)
+        {
+            for (int precision = 0; precision < 3; precision++)
+            {
+                char skeleton[16];
+                snprintf(skeleton, sizeof(skeleton), "%s%s", s_times[clock][precision],
+                         s_zones[form]);
+                out[dateTimeZoned + 6 * form + 3 * clock + precision] =
+                    PatternGeneratorBest(items, skeleton);
+            }
+        }
+    }
     static const char* const s_styles[4] = {"hmm", "hmmss", "Hmm", "Hmmss"};
+    static const char* const s_zoneStyles[4] = {"hmmsszzzz", "hmmssz", "Hmmsszzzz", "Hmmssz"};
     for (int i = 0; i < 4; i++)
     {
         out[dateTimeStyle12 + i] = PatternGeneratorBest(items, s_styles[i]);
+        out[dateTimeZoneStyle12 + i] = PatternGeneratorBest(items, s_zoneStyles[i]);
     }
     for (int length = 0; length < 4; length++)
     {

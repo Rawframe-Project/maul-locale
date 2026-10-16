@@ -91,7 +91,12 @@ typedef enum DateSetEntry
 // seconds of each clock as ICU matches them for a standard format on
 // another clock (hmm, hmmss, Hmm, Hmmss), a weekday with a time, which
 // one item covers (the 12-hour, then the 24-hour clock; EEEE, then EEE;
-// the hour, minute and second); then flags, not a pattern:
+// the hour, minute and second), a zone alone in each of the eight zone
+// forms (zzzz, z, vvvv, v, VVVV, VVV, OOOO, O: mlocZoneStyle's order), a
+// time with a zone (each form; the 12-hour, then the 24-hour clock; the
+// hour, minute and second), as ICU matches them, the full and long
+// formats on each clock as ICU matches them for another clock (hmmsszzzz,
+// hmmssz, Hmmsszzzz, Hmmssz); then flags, not a pattern:
 // dateTimeOwnTwelve when the locale's own hour (UTS #35's j, by its
 // region) is on the 12-hour clock, and from bit dateTimeMonthShift two
 // bits a length (long, medium, short) for the month of its
@@ -107,9 +112,13 @@ typedef enum DateTimeEntry
     dateTimeStyle12 = 18,
     dateTimeStyle24 = 20,
     dateTimeWeekday = 22,
-    dateTimePatternCount = 34,
-    dateTimeFlags = 34,
-    dateTimeEntryCount = 35,
+    dateTimeZoneAlone = 34,
+    dateTimeZoned = 42,
+    dateTimeZoneStyle12 = 90,
+    dateTimeZoneStyle24 = 92,
+    dateTimePatternCount = 94,
+    dateTimeFlags = 94,
+    dateTimeEntryCount = 95,
 } DateTimeEntry;
 
 // The day periods, as CLDR names them.

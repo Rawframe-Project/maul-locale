@@ -5,7 +5,7 @@
 // date formatter's state, a time formatter's, and the calendar's atTime
 // glue between them, as ICU4C's DateTimePatternGenerator composes a
 // skeleton it has no single item for; or a weekday with a time, which
-// one item covers, matched whole.
+// one item covers, matched whole unless a zone follows the time.
 
 #include "bytes.h"
 #include "date_format.h"
@@ -20,17 +20,14 @@ enum
 {
     // Marks a date-time formatter the library made.
     dateTimeStamp = 0x4D,
-    // The glue's styles, as the standard date formats' lengths.
-    glueFull = 0,
-    glueLong = 1,
-    glueMedium = 2,
-    glueShort = 3,
 };
 
 typedef struct DateTimeFormat
 {
     DateFormat date;
     TimeFormat time;
+    // The zone's state when the time's patterns hold a zone.
+    ZoneFormat zone;
     // The glue, literal text with {0} for the time and {1} for the date.
     const uint8_t* glue;
     uint32_t glueLength;
@@ -48,44 +45,9 @@ static bool ValidOptions(const mlocDateTimeOptions* o)
 {
     bool standard = o->date.style != mloc_dateStyleNone;
     return mlocValidDateOptions(&o->date) && mlocValidTimeOptions(&o->time) &&
-           (uint32_t)o->glue <= mloc_dateTimeGlueStandard &&
+           o->date.zone == mloc_zoneStyleNone && (uint32_t)o->glue <= mloc_dateTimeGlueStandard &&
            standard == (o->time.style != mloc_timeStyleNone) &&
            (standard || o->date.fields <= mloc_dateFieldSetWeekday);
-}
-
-// The glue's style: a standard date format's length, or by the field
-// set's month at its length (four letters with a weekday full, four
-// letters long, three medium, else short), as ICU4C chooses it.
-static uint32_t GlueStyle(const mlocDateOptions* o, uint32_t flags)
-{
-    if (o->style != mloc_dateStyleNone)
-    {
-        return (uint32_t)o->style - 1;
-    }
-    mlocDateFieldSet s = o->fields;
-    bool month = s == mloc_dateFieldSetYearMonthDay || s == mloc_dateFieldSetYearMonthDayWeekday ||
-                 s == mloc_dateFieldSetMonthDay || s == mloc_dateFieldSetMonthDayWeekday;
-    bool weekday = s == mloc_dateFieldSetYearMonthDayWeekday ||
-                   s == mloc_dateFieldSetMonthDayWeekday || s == mloc_dateFieldSetDayWeekday;
-    uint32_t code = flags >> (dateTimeMonthShift + 2 * (uint32_t)o->length) & 3;
-    if (!month || code == 0)
-    {
-        return glueShort;
-    }
-    return code == 1 ? glueMedium : weekday ? glueFull : glueLong;
-}
-
-// Whether glue holds {0} and {1}.
-static bool ValidGlue(const uint8_t* glue, uint32_t length)
-{
-    bool time = false;
-    bool date = false;
-    for (uint32_t at = 0; at + 3 <= length; at++)
-    {
-        time = time || memcmp(glue + at, "{0}", 3) == 0;
-        date = date || memcmp(glue + at, "{1}", 3) == 0;
-    }
-    return time && date;
 }
 
 // Whether a weekday-with-time pattern holds only a weekday and the
@@ -147,20 +109,28 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     {
         return time;
     }
-    uint32_t style = GlueStyle(&o->date, mlocLoad16(choice.set + 2 * dateTimeFlags));
+    uint32_t style = mlocDateGlueStyle(&o->date, mlocLoad16(choice.set + 2 * dateTimeFlags));
     uint32_t kind = o->glue == mloc_dateTimeGlueStandard ? dateTimeGlue : dateTimeAtGlue;
     DataSpan glue;
     if (!mlocDatePattern(&choice.patterns, mlocLoad16(choice.set + 2 * (kind + style)), &glue) ||
-        !ValidGlue(glue.bytes, glue.size))
+        !mlocValidGlue(glue.bytes, glue.size))
     {
         return mloc_errorData;
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
     if (o->date.style == mloc_dateStyleNone && o->date.fields == mloc_dateFieldSetWeekday &&
-        !FindWhole(f, o, &choice))
+        !f->time.zoned && !FindWhole(f, o, &choice))
     {
         return mloc_errorData;
+    }
+    mlocZoneStyle zoneStyle =
+        o->time.zone != mloc_zoneStyleNone ? o->time.zone : mloc_zoneStyleSpecificShort;
+    mlocResult zone =
+        f->time.zoned ? mlocMakeZoneFormat(&f->zone, data, locale, zoneStyle) : mloc_success;
+    if (zone < 0)
+    {
+        return zone;
     }
     return date < time ? date : time;
 }
@@ -186,8 +156,9 @@ mlocResult mlocInitDateTimeFormatter(mlocDateTimeFormatter* formatterOut, const 
     return result;
 }
 
-// A formatter the library made, copied out; false for any other.
-static bool ReadFormatter(const mlocDateTimeFormatter* opaque, DateTimeFormat* f)
+// A formatter the library made, copied out, with a zone or without as
+// asked; false for any other.
+static bool ReadFormatter(const mlocDateTimeFormatter* opaque, bool zoned, DateTimeFormat* f)
 {
     if (opaque == nullptr)
     {
@@ -196,7 +167,8 @@ static bool ReadFormatter(const mlocDateTimeFormatter* opaque, DateTimeFormat* f
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == dateTimeStamp && mlocDateFormatSound(&f->date) &&
            mlocTimeFormatSound(&f->time) && f->glue != nullptr &&
-           (f->whole[0] == nullptr) == (f->whole[1] == nullptr);
+           (f->whole[0] == nullptr) == (f->whole[1] == nullptr) && f->time.zoned == zoned &&
+           (!zoned || (mlocZoneFormatSound(&f->zone) && f->whole[0] == nullptr));
 }
 
 typedef struct Writing
@@ -206,27 +178,32 @@ typedef struct Writing
     const mlocTime* time;
     // The time's pattern: 1 for a minute of zero.
     uint32_t pattern;
+    // The zone's, or null for a date-time without one.
+    const ZoneWriting* zone;
 } Writing;
 
-// A weekday field of a pattern matched whole.
+// A field of a pattern matched whole other than the time's: its weekday.
 static void WriteWeekday(void* context, const uint8_t* item, NumberWriter* w)
 {
     const Writing* g = context;
     mlocWriteDateFields(&g->f->date, item, 3, &g->date->fields, g->date->related, w);
 }
 
-static void WriteDate(const Writing* g, NumberWriter* w)
+// The glue's slots: the time, with its zone, and the date.
+static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
 {
+    const Writing* g = context;
+    if (slot == 0)
+    {
+        const TimeFormat* t = &g->f->time;
+        mlocWriteTimeFieldsWith(t, t->pattern[g->pattern], t->patternLength[g->pattern], g->time,
+                                mlocWriteZoneField, (void*)g->zone, w);
+        return;
+    }
     const DateFormat* d = &g->f->date;
     uint32_t p = g->date->pattern;
     mlocWriteDateFields(d, d->pattern[p], d->patternLength[p], &g->date->fields, g->date->related,
                         w);
-}
-
-static void WriteTime(const Writing* g, NumberWriter* w)
-{
-    const TimeFormat* t = &g->f->time;
-    mlocWriteTimeFields(t, t->pattern[g->pattern], t->patternLength[g->pattern], g->time, w);
 }
 
 // The date and time by the glue, or the whole pattern.
@@ -239,48 +216,13 @@ static void Write(const Writing* g, NumberWriter* w)
                                 WriteWeekday, (void*)g, w);
         return;
     }
-    uint32_t at = 0;
-    while (at < f->glueLength)
-    {
-        bool slot = at + 3 <= f->glueLength && f->glue[at] == '{' && f->glue[at + 2] == '}' &&
-                    (f->glue[at + 1] == '0' || f->glue[at + 1] == '1');
-        if (slot)
-        {
-            if (f->glue[at + 1] == '0')
-            {
-                WriteTime(g, w);
-            }
-            else
-            {
-                WriteDate(g, w);
-            }
-            at += 3;
-            continue;
-        }
-        uint32_t end = at + 1;
-        while (end < f->glueLength && f->glue[end] != '{')
-        {
-            end++;
-        }
-        mlocWritePart(w, mloc_datePartLiteral, f->glue + at, end - at);
-        at = end;
-    }
+    mlocWriteGlue(f->glue, f->glueLength, WriteSlot, (void*)g, w);
 }
 
-mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime,
-                              mlocOutput* output)
+static mlocResult WriteOut(const Writing* g, mlocOutput* output)
 {
-    DateTimeFormat f;
-    DateValue date;
-    if (!ReadFormatter(formatter, &f) || dateTime == nullptr || !mlocDateTimeValid(dateTime) ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
-        !mlocReadDateValue(&f.date, &dateTime->date, &date))
-    {
-        return mloc_errorInvalid;
-    }
-    Writing g = {&f, &date, &dateTime->time, dateTime->time.minute == 0 ? 1 : 0};
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    Write(&g, &w);
+    Write(g, &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -289,8 +231,43 @@ mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mloc
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        Write(&g, &parts);
+        Write(g, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;
+}
+
+mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime,
+                              mlocOutput* output)
+{
+    DateTimeFormat f;
+    DateValue date;
+    if (!ReadFormatter(formatter, false, &f) || dateTime == nullptr ||
+        !mlocDateTimeValid(dateTime) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocReadDateValue(&f.date, &dateTime->date, &date))
+    {
+        return mloc_errorInvalid;
+    }
+    Writing g = {&f, &date, &dateTime->time, dateTime->time.minute == 0 ? 1 : 0, nullptr};
+    return WriteOut(&g, output);
+}
+
+mlocResult mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter,
+                                    const mlocTimeZone* zone, const mlocInstant* instant,
+                                    mlocOutput* output)
+{
+    DateTimeFormat f;
+    DateValue date;
+    mlocDateTime local;
+    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || instant == nullptr ||
+        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+        mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &local) != mloc_success ||
+        !mlocReadDateValue(&f.date, &local.date, &date))
+    {
+        return mloc_errorInvalid;
+    }
+    ZoneWriting writing = {&f.zone, zone, instant};
+    Writing g = {&f, &date, &local.time, local.time.minute == 0 ? 1 : 0, &writing};
+    return WriteOut(&g, output);
 }

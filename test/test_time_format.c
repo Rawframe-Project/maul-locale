@@ -214,9 +214,14 @@ static void TestRefusals(void)
     mlocTimeOptions cycle = Cycle((mlocHourCycle)7);
     mlocTimeOptions precision = Precision((mlocTimePrecision)13);
     mlocTimeOptions style = Style((mlocTimeStyle)5);
-    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &full) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, &s_data, &en, &longTime) == mloc_errorInvalid,
-          "the full and long styles, which name a zone");
+    mlocTimeOptions styledZone = {.style = mloc_timeStyleFull, .zone = mloc_zoneStyleCity};
+    mlocTimeOptions zone = {.zone = (mlocZoneStyle)9};
+    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &full) == mloc_errorNotFound &&
+              mlocInitTimeFormatter(&formatter, &s_data, &en, &longTime) == mloc_errorNotFound,
+          "the full and long styles, which name a zone, without the zone names");
+    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &styledZone) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(&formatter, &s_data, &en, &zone) == mloc_errorInvalid,
+          "a zone style with a time style, an unknown zone style");
     CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &cycle) == mloc_errorInvalid &&
               mlocInitTimeFormatter(&formatter, &s_data, &en, &precision) == mloc_errorInvalid &&
               mlocInitTimeFormatter(&formatter, &s_data, &en, &style) == mloc_errorInvalid,
@@ -395,13 +400,15 @@ static void TestDateTimeOutput(void)
     mlocDateTimeOptions period =
         Composite(mloc_dateFieldSetMonth, mloc_dateLengthLong, mloc_timePrecisionMinute);
     mlocDateTimeOptions oneSided = {.date = {.style = mloc_dateStyleShort}};
-    mlocDateTimeOptions zone = Styles(mloc_dateStyleShort, mloc_timeStyleLong);
+    mlocDateTimeOptions zone =
+        Composite(mloc_dateFieldSetDay, mloc_dateLengthShort, mloc_timePrecisionMinute);
+    zone.date.zone = mloc_zoneStyleGenericShort;
     mlocDateTimeOptions glue = {.glue = (mlocDateTimeGlue)2};
     CHECK(mlocInitDateTimeFormatter(&formatter, &s_data, &en, &period) == mloc_errorInvalid &&
               mlocInitDateTimeFormatter(&formatter, &s_data, &en, &oneSided) == mloc_errorInvalid &&
               mlocInitDateTimeFormatter(&formatter, &s_data, &en, &zone) == mloc_errorInvalid &&
               mlocInitDateTimeFormatter(&formatter, &s_data, &en, &glue) == mloc_errorInvalid,
-          "a calendar period, a standard format on one side, a zone, an unknown glue");
+          "a calendar period, a standard format on one side, a zone on the date, an unknown glue");
     CHECK(mlocInitDateTimeFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
               mlocInitDateTimeFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
               mlocInitDateTimeFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,

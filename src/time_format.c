@@ -22,19 +22,28 @@ enum
     timeStamp = 0x54,
 };
 
-static_assert(sizeof(TimeFormat) <= sizeof(mlocTimeFormatter), "a time formatter fits its value");
+// A time formatter: its state, and the zone's when a pattern holds one.
+typedef struct ZonedTimeFormat
+{
+    TimeFormat time;
+    ZoneFormat zone;
+} ZonedTimeFormat;
+
+static_assert(sizeof(ZonedTimeFormat) <= sizeof(mlocTimeFormatter),
+              "a time formatter fits its value");
 
 bool mlocValidTimeOptions(const mlocTimeOptions* o)
 {
     return (uint32_t)o->hourCycle <= mloc_hourCycleClock24 &&
            (uint32_t)o->precision <= mloc_timePrecisionFraction9 &&
-           (uint32_t)o->style <= mloc_timeStyleShort && o->style != mloc_timeStyleFull &&
-           o->style != mloc_timeStyleLong;
+           (uint32_t)o->style <= mloc_timeStyleShort &&
+           (uint32_t)o->zone <= mloc_zoneStyleOffsetShort &&
+           (o->zone == mloc_zoneStyleNone || o->style == mloc_timeStyleNone);
 }
 
-// Whether a pattern holds only fields the formatter writes.
-static bool Writable(const uint8_t* pattern, uint32_t length)
+bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut)
 {
+    *zonedOut = false;
     for (uint32_t at = 0; at < length;)
     {
         if (pattern[at] >= 0x20)
@@ -42,13 +51,27 @@ static bool Writable(const uint8_t* pattern, uint32_t length)
             at++;
             continue;
         }
-        if (pattern[at] != datePatternField || strchr("hHKkmsabB", pattern[at + 1]) == nullptr)
+        bool zone = pattern[at] == datePatternField &&
+                    mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]) != mloc_zoneStyleNone;
+        if (pattern[at] != datePatternField ||
+            (!zone && strchr("hHKkmsabB", pattern[at + 1]) == nullptr))
         {
             return false;
         }
+        *zonedOut = *zonedOut || zone;
         at += 3;
     }
     return true;
+}
+
+void mlocWriteZoneField(void* context, const uint8_t* item, NumberWriter* w)
+{
+    const ZoneWriting* z = context;
+    mlocZoneStyle style = mlocZoneFieldStyle(item[1], item[2]);
+    if (z != nullptr && style != mloc_zoneStyleNone)
+    {
+        mlocWriteZone(z->zone, style, z->timeZone, z->instant, w);
+    }
 }
 
 static bool KeywordIs(const char* value, size_t length, const char* want)
@@ -87,36 +110,55 @@ static mlocHourCycle CycleOf(const mlocTimeOptions* o, const mlocLocale* locale,
 // when a cycle or region is asked for, or the locale's region (as for
 // de-US, de's data) keeps the other clock, the cycle's clock's minutes
 // (short) or seconds (medium) stand instead, as ICU4C matches them.
+// A standard format's entry in a time set, else the clock's match.
+static uint32_t StandardEntry(const uint8_t* set, mlocTimeStyle style, bool twelve, bool asked)
+{
+    uint32_t standard = dateTimeStandard + (uint32_t)style - 1;
+    bool other = ((mlocLoad16(set + 2 * dateTimeFlags) & dateTimeOwnTwelve) != 0) != twelve;
+    if (!asked && !other)
+    {
+        return standard;
+    }
+    if (style == mloc_timeStyleFull || style == mloc_timeStyleLong)
+    {
+        return (twelve ? dateTimeZoneStyle12 : dateTimeZoneStyle24) +
+               (style == mloc_timeStyleFull ? 0 : 1);
+    }
+    return (twelve ? dateTimeStyle12 : dateTimeStyle24) + (style == mloc_timeStyleShort ? 0 : 1);
+}
+
 static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
                          const mlocTimeOptions* o, mlocHourCycle cycle, bool asked)
 {
     bool twelve =
         cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 || cycle == mloc_hourCycleClock12;
-    uint32_t clock = twelve ? dateTimeClock12 : dateTimeClock24;
-    uint32_t entries[timeFormatPatterns] = {clock + 2, clock + 2};
+    uint32_t base = twelve ? dateTimeClock12 : dateTimeClock24;
+    if (o->zone != mloc_zoneStyleNone)
+    {
+        base = dateTimeZoned + 6 * ((uint32_t)o->zone - 1) + (twelve ? 0 : 3);
+    }
+    uint32_t entries[timeFormatPatterns] = {base + 2, base + 2};
     if (o->style != mloc_timeStyleNone)
     {
-        uint32_t standard = dateTimeStandard + (uint32_t)o->style - 1;
-        bool other = ((mlocLoad16(set + 2 * dateTimeFlags) & dateTimeOwnTwelve) != 0) != twelve;
-        uint32_t own = (twelve ? dateTimeStyle12 : dateTimeStyle24) +
-                       (o->style == mloc_timeStyleShort ? 0 : 1);
-        entries[0] = asked || other ? own : standard;
+        entries[0] = StandardEntry(set, o->style, twelve, asked);
         entries[1] = entries[0];
     }
     else if (o->precision >= mloc_timePrecisionHour &&
              o->precision <= mloc_timePrecisionMinuteOptional)
     {
-        entries[0] = clock + (o->precision == mloc_timePrecisionHour ? 0 : 1);
-        entries[1] = o->precision == mloc_timePrecisionMinuteOptional ? clock : entries[0];
+        entries[0] = base + (o->precision == mloc_timePrecisionHour ? 0 : 1);
+        entries[1] = o->precision == mloc_timePrecisionMinuteOptional ? base : entries[0];
     }
     for (uint32_t i = 0; i < timeFormatPatterns; i++)
     {
         DataSpan pattern;
+        bool zoned = false;
         if (!mlocDatePattern(p, mlocLoad16(set + 2 * (size_t)entries[i]), &pattern) ||
-            !Writable(pattern.bytes, pattern.size))
+            !mlocWritableTime(pattern.bytes, pattern.size, &zoned))
         {
             return false;
         }
+        f->zoned = (uint8_t)(f->zoned || zoned);
         f->pattern[i] = pattern.bytes;
         f->patternLength[i] = pattern.size;
     }
@@ -189,8 +231,15 @@ mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocData
     {
         return mloc_errorInvalid;
     }
-    TimeFormat f;
-    mlocResult result = mlocMakeTimeFormat(&f, data, locale, &o, nullptr);
+    ZonedTimeFormat f;
+    memset(&f, 0, sizeof(f));
+    mlocResult result = mlocMakeTimeFormat(&f.time, data, locale, &o, nullptr);
+    if (result >= 0 && f.time.zoned)
+    {
+        mlocZoneStyle style = o.zone != mloc_zoneStyleNone ? o.zone : mloc_zoneStyleSpecificShort;
+        mlocResult zone = mlocMakeZoneFormat(&f.zone, data, locale, style);
+        result = zone < 0 ? zone : result;
+    }
     if (result < 0)
     {
         return result;
@@ -204,32 +253,31 @@ bool mlocTimeFormatSound(const TimeFormat* f)
 {
     return f->stamp == timeStamp && f->pattern[0] != nullptr && f->pattern[1] != nullptr &&
            f->digitLength > 0 && f->digitLength <= numberDigitSize &&
-           f->decimalLength <= sizeof(f->decimal) && f->fractionDigits <= 9;
+           f->decimalLength <= sizeof(f->decimal) && f->fractionDigits <= 9 && f->zoned <= 1;
 }
 
-// A formatter the library made, copied out; false for any other.
-static bool ReadFormatter(const mlocTimeFormatter* opaque, TimeFormat* f)
+// A formatter the library made, copied out, with a zone or without as
+// asked; false for any other.
+static bool ReadFormatter(const mlocTimeFormatter* opaque, bool zoned, ZonedTimeFormat* f)
 {
     if (opaque == nullptr)
     {
         return false;
     }
     memcpy(f, opaque, sizeof(*f));
-    return mlocTimeFormatSound(f);
+    return mlocTimeFormatSound(&f->time) && f->time.zoned == zoned &&
+           (!zoned || mlocZoneFormatSound(&f->zone));
 }
 
-mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* time,
-                          mlocOutput* output)
+// Writes a time by the pattern its minute picks, its zone field by the
+// zone writing (null for none).
+static mlocResult Write(const TimeFormat* f, const mlocTime* time, const ZoneWriting* zone,
+                        mlocOutput* output)
 {
-    TimeFormat f;
-    if (!ReadFormatter(formatter, &f) || time == nullptr || !mlocTimeValid(time) ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0))
-    {
-        return mloc_errorInvalid;
-    }
     uint32_t p = time->minute == 0 ? 1 : 0;
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteTimeFields(&f, f.pattern[p], f.patternLength[p], time, &w);
+    mlocWriteTimeFieldsWith(f, f->pattern[p], f->patternLength[p], time, mlocWriteZoneField,
+                            (void*)zone, &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -238,8 +286,36 @@ mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* ti
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteTimeFields(&f, f.pattern[p], f.patternLength[p], time, &parts);
+        mlocWriteTimeFieldsWith(f, f->pattern[p], f->patternLength[p], time, mlocWriteZoneField,
+                                (void*)zone, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;
+}
+
+mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* time,
+                          mlocOutput* output)
+{
+    ZonedTimeFormat f;
+    if (!ReadFormatter(formatter, false, &f) || time == nullptr || !mlocTimeValid(time) ||
+        output == nullptr || (output->buffer == nullptr && output->capacity != 0))
+    {
+        return mloc_errorInvalid;
+    }
+    return Write(&f.time, time, nullptr, output);
+}
+
+mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
+                                const mlocInstant* instant, mlocOutput* output)
+{
+    ZonedTimeFormat f;
+    mlocDateTime local;
+    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || instant == nullptr ||
+        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+        mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &local) != mloc_success)
+    {
+        return mloc_errorInvalid;
+    }
+    ZoneWriting writing = {&f.zone, zone, instant};
+    return Write(&f.time, &local.time, &writing, output);
 }

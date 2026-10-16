@@ -73,6 +73,35 @@ extern "C"
         mloc_dateStyleShort = 4,
     } mlocDateStyle;
 
+    // How a time zone is written (UTS #35's zone formats, chosen as
+    // ICU4X's zone field sets choose them), each falling back as ICU4C
+    // falls back where the locale has no name.
+    typedef enum mlocZoneStyle
+    {
+        mloc_zoneStyleNone = 0,
+        // "Pacific Daylight Time": the zone's standard or daylight name
+        // at the instant (zzzz); else the long offset.
+        mloc_zoneStyleSpecificLong = 1,
+        // "PDT" (z); else the short offset.
+        mloc_zoneStyleSpecificShort = 2,
+        // "Pacific Time": the wall-clock name (vvvv), qualified by a
+        // city or country where the locale's region names another zone
+        // ("Pacific Time (Canada)"); else the location; else the long
+        // offset.
+        mloc_zoneStyleGenericLong = 3,
+        // "PT" (v); else the location; else the short offset.
+        mloc_zoneStyleGenericShort = 4,
+        // "Los Angeles Time", "Japan Time" (VVVV); else the long offset.
+        mloc_zoneStyleLocation = 5,
+        // "Los Angeles" (VVV); else the locale's name of an unknown
+        // city.
+        mloc_zoneStyleCity = 6,
+        // "GMT-07:00" (OOOO).
+        mloc_zoneStyleOffsetLong = 7,
+        // "GMT-7" (O).
+        mloc_zoneStyleOffsetShort = 8,
+    } mlocZoneStyle;
+
     // The options of a date formatter; zeroed, a year, month and day at
     // the long length.
     typedef struct mlocDateOptions
@@ -83,6 +112,10 @@ extern "C"
         // A standard format, which the fields, length and year style then
         // do not change.
         mlocDateStyle style;
+        // A zone after the date, joined by the calendar's glue as a time
+        // is ("January 5, 2026 at PT"), for mlocFormatDateInZone; none for
+        // a date alone.
+        mlocZoneStyle zone;
     } mlocDateOptions;
 
     // The parts of a formatted date or time.
@@ -115,7 +148,7 @@ extern "C"
     // Opaque; make it with mlocInitDateFormatter.
     typedef struct mlocDateFormatter
     {
-        uint64_t opaque[64];
+        uint64_t opaque[112];
     } mlocDateFormatter;
 
     /// Makes a locale's date formatter. The calendar is the locale's
@@ -129,16 +162,18 @@ extern "C"
     /// @param data          The data with the dates (dates.mloc), the
     ///                      number units, the preferences, the parents
     ///                      and, for a pattern naming an algorithmic
-    ///                      numbering system, the spell-out rules.
+    ///                      numbering system, the spell-out rules; with a
+    ///                      zone, what mlocInitZoneFormatter reads too.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the dates, the number
     ///         units or the preferences, or a numbering system the
-    ///         spell-out rules lack; mloc_errorData for a pattern the
-    ///         formatter cannot write; mloc_errorInvalid for a null
-    ///         pointer or options out of range.
+    ///         spell-out rules lack, or with a zone without the zone
+    ///         names; mloc_errorData for a pattern the formatter cannot
+    ///         write; mloc_errorInvalid for a null pointer, options out of
+    ///         range, or a zone with a calendar period (a month, a year).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut,
@@ -155,11 +190,33 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date outside Temporal's range, or a
-    ///         formatter the library did not make.
+    ///         formatter the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatDate(const mlocDateFormatter* formatter,
                                                       const mlocDate* date, mlocOutput* output);
+
+    /// Writes the date in a zone at an instant, and the zone, by a
+    /// formatter made with a zone (mlocDateOptions' zone): the zone's
+    /// local date in the formatter's calendar, the zone as
+    /// mlocFormatZone writes it. Parts: mlocDatePart.
+    ///
+    /// @param formatter  A formatter from mlocInitDateFormatter, with a
+    ///                   zone.
+    /// @param zone       The zone.
+    /// @param instant    The instant, in Temporal's range.
+    /// @param output     Where the text goes (record mloc-0015).
+    /// @return mloc_success; mloc_errorCapacity when the text does not
+    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         for a null pointer, a zone the library did not make, an
+    ///         instant out of range, or a formatter the library did not
+    ///         make or made without a zone.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateInZone(const mlocDateFormatter* formatter,
+                                                            const mlocTimeZone* zone,
+                                                            const mlocInstant* instant,
+                                                            mlocOutput* output);
 
     // How hours are numbered (UTS #35's hour cycle). Auto takes -u-hc as
     // the cycle when the locale gives one, else the clock of the locale's
@@ -200,7 +257,8 @@ extern "C"
     } mlocTimePrecision;
 
     // One of the locale's four standard time formats instead of a
-    // precision, or none. The full and long ones name a time zone.
+    // precision, or none. The full and long ones name a time zone, so
+    // they write a zoned time only (mlocFormatTimeInZone).
     typedef enum mlocTimeStyle
     {
         mloc_timeStyleNone = 0,
@@ -219,8 +277,13 @@ extern "C"
         // A standard format, which the precision then does not change.
         // An hour cycle asked for (here or by -u-hc) or a region by -u-rg
         // takes the locale's minutes (short) or seconds (medium) on that
-        // clock instead, as ICU4C does.
+        // clock instead, as ICU4C does. The full and long formats name
+        // their zone themselves.
         mlocTimeStyle style;
+        // A zone after the time ("4:03 PM PT"), as the locale's patterns
+        // join them, for mlocFormatTimeInZone; none for a time alone, and
+        // with a standard format.
+        mlocZoneStyle zone;
     } mlocTimeOptions;
 
     // A time formatter: a locale's time patterns for the options in its
@@ -228,7 +291,7 @@ extern "C"
     // Opaque; make it with mlocInitTimeFormatter.
     typedef struct mlocTimeFormatter
     {
-        uint64_t opaque[24];
+        uint64_t opaque[72];
     } mlocTimeFormatter;
 
     /// Makes a locale's time formatter. The patterns are those of the
@@ -240,16 +303,18 @@ extern "C"
     ///                      failure.
     /// @param data          The data with the dates (dates.mloc), the
     ///                      number units, the preferences and the
-    ///                      parents.
+    ///                      parents; with a zone (a zone style, or the
+    ///                      full or long format), what
+    ///                      mlocInitZoneFormatter reads too.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the dates, the number
-    ///         units or the preferences; mloc_errorData for a pattern the
-    ///         formatter cannot write; mloc_errorInvalid for a null
-    ///         pointer, options out of range, or the full or long style,
-    ///         which names a zone a time of day does not have.
+    ///         units or the preferences, or with a zone without the zone
+    ///         names; mloc_errorData for a pattern the formatter cannot
+    ///         write; mloc_errorInvalid for a null pointer, options out of
+    ///         range, or a zone style with a standard format.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut,
@@ -265,11 +330,33 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a time out of range, or a formatter the
-    ///         library did not make.
+    ///         library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatTime(const mlocTimeFormatter* formatter,
                                                       const mlocTime* time, mlocOutput* output);
+
+    /// Writes the time of day in a zone at an instant, and the zone, by a
+    /// formatter made with one (a zone style, or the full or long format):
+    /// the zone's local time, the zone as mlocFormatZone writes it in the
+    /// form the pattern names. Parts: mlocDatePart.
+    ///
+    /// @param formatter  A formatter from mlocInitTimeFormatter, with a
+    ///                   zone.
+    /// @param zone       The zone.
+    /// @param instant    The instant, in Temporal's range.
+    /// @param output     Where the text goes (record mloc-0015).
+    /// @return mloc_success; mloc_errorCapacity when the text does not
+    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         for a null pointer, a zone the library did not make, an
+    ///         instant out of range, or a formatter the library did not
+    ///         make or made without a zone.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter,
+                                                            const mlocTimeZone* zone,
+                                                            const mlocInstant* instant,
+                                                            mlocOutput* output);
 
     // Which of the calendar's glue joins a date and a time: atTime ("{1}
     // 'at' {0}", UTS #35's default since CLDR 48, as ICU4C 79 and ICU4X
@@ -283,9 +370,10 @@ extern "C"
 
     // The options of a date-time formatter: a date field set that shows
     // a day or a weekday (not a calendar period) with a time, or a
-    // standard date format with a standard time format. Zeroed, a year,
-    // month and day at the long length with the time to the second,
-    // joined by the atTime glue.
+    // standard date format with a standard time format; the zone is the
+    // time's (the date's is none). Zeroed, a year, month and day at the
+    // long length with the time to the second, joined by the atTime
+    // glue.
     typedef struct mlocDateTimeOptions
     {
         mlocDateOptions date;
@@ -297,7 +385,7 @@ extern "C"
     // glue between them. Opaque; make it with mlocInitDateTimeFormatter.
     typedef struct mlocDateTimeFormatter
     {
-        uint64_t opaque[96];
+        uint64_t opaque[144];
     } mlocDateTimeFormatter;
 
     /// Makes a locale's date-time formatter: the date as
@@ -307,7 +395,8 @@ extern "C"
     /// its month: written out with a weekday full, written out long,
     /// abbreviated medium, else short; a standard date format by its own
     /// length). A weekday with a time is matched whole where the locale
-    /// has a pattern for both ("Thursday 4:03 PM").
+    /// has a pattern for both ("Thursday 4:03 PM"), unless a zone follows
+    /// ("Thu, 4:03 PM PT", as ICU4C composes it).
     ///
     /// @param formatterOut  Receives the formatter; left unchanged on
     ///                      failure.
@@ -316,7 +405,8 @@ extern "C"
     /// @param options       The options, or null for the defaults.
     /// @return As mlocInitDateFormatter and mlocInitTimeFormatter;
     ///         mloc_errorInvalid also for a calendar period (a month, a
-    ///         year) or a standard format on one side only.
+    ///         year), a standard format on one side only, or a zone in
+    ///         the date's options.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
@@ -332,41 +422,32 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date-time out of range, or a formatter
-    ///         the library did not make.
+    ///         the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter,
                                                           const mlocDateTime* dateTime,
                                                           mlocOutput* output);
 
-    // How a time zone is written (UTS #35's zone formats, chosen as
-    // ICU4X's zone field sets choose them), each falling back as ICU4C
-    // falls back where the locale has no name.
-    typedef enum mlocZoneStyle
-    {
-        mloc_zoneStyleNone = 0,
-        // "Pacific Daylight Time": the zone's standard or daylight name
-        // at the instant (zzzz); else the long offset.
-        mloc_zoneStyleSpecificLong = 1,
-        // "PDT" (z); else the short offset.
-        mloc_zoneStyleSpecificShort = 2,
-        // "Pacific Time": the wall-clock name (vvvv), qualified by a
-        // city or country where the locale's region names another zone
-        // ("Pacific Time (Canada)"); else the location; else the long
-        // offset.
-        mloc_zoneStyleGenericLong = 3,
-        // "PT" (v); else the location; else the short offset.
-        mloc_zoneStyleGenericShort = 4,
-        // "Los Angeles Time", "Japan Time" (VVVV); else the long offset.
-        mloc_zoneStyleLocation = 5,
-        // "Los Angeles" (VVV); else the locale's name of an unknown
-        // city.
-        mloc_zoneStyleCity = 6,
-        // "GMT-07:00" (OOOO).
-        mloc_zoneStyleOffsetLong = 7,
-        // "GMT-7" (O).
-        mloc_zoneStyleOffsetShort = 8,
-    } mlocZoneStyle;
+    /// Writes the date and time of day in a zone at an instant, and the
+    /// zone, by a formatter made with one: the zone's local date-time,
+    /// the date read in the formatter's calendar. Parts: mlocDatePart.
+    ///
+    /// @param formatter  A formatter from mlocInitDateTimeFormatter, with
+    ///                   a zone.
+    /// @param zone       The zone.
+    /// @param instant    The instant, in Temporal's range.
+    /// @param output     Where the text goes (record mloc-0015).
+    /// @return mloc_success; mloc_errorCapacity when the text does not
+    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         for a null pointer, a zone the library did not make, an
+    ///         instant out of range, or a formatter the library did not
+    ///         make or made without a zone.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone,
+                             const mlocInstant* instant, mlocOutput* output);
 
     // A zone formatter: a locale's zone names and formats in the data it
     // was made from, which must outlive it, as must the data set.

@@ -81,7 +81,7 @@ enum
     unitRows = 32,
     unitSets = 40,
     unitTimes = 88,
-    unitText = 160,
+    unitText = 280,
 };
 
 // Builds a unit of two patterns, one row, one set and one time set; its
@@ -105,7 +105,7 @@ static uint32_t BuildUnit(void)
     {
         Put(s_unit + unitSets + 2 * dateEntryCount + 2 * i, 1, 2);
     }
-    // The time set: pattern 1 for the last glue.
+    // The time set: pattern 1 for the last entry.
     Put(s_unit + unitTimes + 2 * (dateTimePatternCount - 1), 1, 2);
     Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeOwnTwelve, 2);
     memcpy(s_unit + unitText, s_text, 6);
@@ -331,7 +331,7 @@ static void TestNamesUnit(void)
 // unit.
 static bool OpenDatesPack(const uint8_t dates[dateLocaleSize], mlocData sources[2])
 {
-    alignas(8) static uint8_t s_patterns[256];
+    alignas(8) static uint8_t s_patterns[512];
     alignas(8) static uint8_t s_names[1024];
     uint32_t patterns = BuildUnit();
     memcpy(s_patterns, s_unit, patterns);
@@ -385,7 +385,7 @@ static void TestNamesPastUnit(void)
 // which a compiled pattern may hold but CLDR's date patterns do not).
 static void TestUnwritablePattern(void)
 {
-    alignas(8) static uint8_t s_patterns[256];
+    alignas(8) static uint8_t s_patterns[512];
     uint32_t patterns = BuildUnit();
     s_unit[unitText + 1] = 'Q';
     memcpy(s_patterns, s_unit, patterns);
@@ -422,7 +422,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         // The rows (at 48) and the set (at 56) hold zeros: row 0, pattern 0.
         offsets = datePatternsHeaderSize,
         times = 104,
-        text = 176,
+        text = 296,
     };
     static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
     static const uint32_t s_offsets[7] = {0, 3, 6, 14, 19, 24, 27};
@@ -457,7 +457,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields,
                                 char* text, size_t* length)
 {
-    alignas(8) static uint8_t s_patterns[256];
+    alignas(8) static uint8_t s_patterns[512];
     alignas(8) static uint8_t s_names[1024];
     uint32_t patterns = BuildComposite(glue, weekday);
     memcpy(s_patterns, s_unit, patterns);

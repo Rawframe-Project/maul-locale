@@ -290,12 +290,18 @@ static void TestRefusals(void)
     mlocDateOptions bad[] = {{.fields = (mlocDateFieldSet)10},
                              {.length = (mlocDateLength)3},
                              {.yearStyle = (mlocYearStyle)3},
-                             {.style = (mlocDateStyle)5}};
+                             {.style = (mlocDateStyle)5},
+                             {.zone = (mlocZoneStyle)9},
+                             {.style = mloc_dateStyleShort, .zone = mloc_zoneStyleCity},
+                             {.fields = mloc_dateFieldSetMonth, .zone = mloc_zoneStyleCity}};
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
         CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &bad[i]) == mloc_errorInvalid,
-              "options out of range");
+              "options out of range, a zone with a style or a calendar period");
     }
+    mlocDateOptions zoned = {.zone = mloc_zoneStyleGenericShort};
+    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &zoned) == mloc_errorNotFound,
+          "a zone without the zone names");
     mlocDataSet builtin = {s_sources, 1};
     CHECK(mlocInitDateFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
           "data without the dates");

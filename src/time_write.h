@@ -40,6 +40,9 @@ typedef struct TimeFormat
     uint8_t hourLetter;
     // The fraction digits written after the seconds, 0 to 9.
     uint8_t fractionDigits;
+    // Whether a pattern holds a zone field, which only a zoned writing
+    // fills.
+    uint8_t zoned;
     uint8_t stamp;
 } TimeFormat;
 

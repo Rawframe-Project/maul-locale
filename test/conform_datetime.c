@@ -12,6 +12,10 @@
 // options' four numbers, the time options' three, the glue, the date and
 // the time. A zone's line is "Z", the locale, the zone's identifier, the
 // instant's seconds since 1970 and the style as mlocZoneStyle's number.
+// A date, time or date-time in a zone is "ZD", "ZT" or "ZDT", the
+// locale, the zone's identifier, the instant's seconds, and the options'
+// numbers: the date's five (the zone's last), the time's four (likewise),
+// or the date's five, the time's four and the glue.
 // The output line is the formatted text, or "error N" with the library's
 // result.
 //
@@ -85,7 +89,7 @@ static mlocResult FormatTime(const mlocDataSet* set, const char* line, char* out
     mlocLocale locale;
     mlocTimeFormatter formatter;
     mlocTimeOptions options = {(mlocHourCycle)cycle, (mlocTimePrecision)precision,
-                               (mlocTimeStyle)style};
+                               (mlocTimeStyle)style, mloc_zoneStyleNone};
     mlocTime time = {.hour = (uint8_t)hour,
                      .minute = (uint8_t)minute,
                      .second = (uint8_t)second,
@@ -124,8 +128,9 @@ static mlocResult FormatDateTime(const mlocDataSet* set, const char* line, char*
         return mloc_errorSyntax;
     }
     mlocDateTimeOptions options = {
-        {(mlocDateFieldSet)n[0], (mlocDateLength)n[1], (mlocYearStyle)n[2], (mlocDateStyle)n[3]},
-        {(mlocHourCycle)n[4], (mlocTimePrecision)n[5], (mlocTimeStyle)n[6]},
+        {(mlocDateFieldSet)n[0], (mlocDateLength)n[1], (mlocYearStyle)n[2], (mlocDateStyle)n[3],
+         mloc_zoneStyleNone},
+        {(mlocHourCycle)n[4], (mlocTimePrecision)n[5], (mlocTimeStyle)n[6], mloc_zoneStyleNone},
         (mlocDateTimeGlue)n[7]};
     mlocDateTime value = {.time = {.hour = (uint8_t)hour,
                                    .minute = (uint8_t)minute,
@@ -202,6 +207,63 @@ static mlocResult FormatZone(const mlocDataSet* set, const char* line, char* out
     return result;
 }
 
+// The options of a "ZD", "ZT" or "ZDT" line after its instant.
+static bool ReadInZone(const char* rest, int kind, mlocDateTimeOptions* o)
+{
+    int n[10] = {0};
+    int want = kind == 'D' ? 5 : kind == 'T' ? 4 : 10;
+    int read = kind == 'T' ? sscanf(rest, "%d %d %d %d", &n[5], &n[6], &n[7], &n[8])
+                           : sscanf(rest, "%d %d %d %d %d %d %d %d %d %d", &n[0], &n[1], &n[2],
+                                    &n[3], &n[4], &n[5], &n[6], &n[7], &n[8], &n[9]);
+    *o = (mlocDateTimeOptions){
+        {(mlocDateFieldSet)n[0], (mlocDateLength)n[1], (mlocYearStyle)n[2], (mlocDateStyle)n[3],
+         (mlocZoneStyle)n[4]},
+        {(mlocHourCycle)n[5], (mlocTimePrecision)n[6], (mlocTimeStyle)n[7], (mlocZoneStyle)n[8]},
+        (mlocDateTimeGlue)n[9]};
+    return read == want;
+}
+
+static mlocResult FormatInZone(const mlocDataSet* set, const char* line, char* out, size_t* length)
+{
+    char kind[4];
+    char id[256];
+    char zoneId[256];
+    long long seconds = 0;
+    int used = 0;
+    mlocDateTimeOptions o;
+    mlocLocale locale;
+    mlocTimeZone zone;
+    if (sscanf(line, "%3s %255s %255s %lld%n", kind, id, zoneId, &seconds, &used) != 4 ||
+        !ReadInZone(line + used, kind[2] == 'T' ? 'B' : kind[1], &o) ||
+        mlocCanonicalizeLocale(set, id, strlen(id), &locale, nullptr).status != mloc_success)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocInstant instant = {.seconds = seconds};
+    mlocOutput output = {.buffer = out, .capacity = 1024};
+    mlocResult result = mlocFindTimeZone(set, zoneId, strlen(zoneId), &zone);
+    if (result >= 0 && strcmp(kind, "ZD") == 0)
+    {
+        mlocDateFormatter f;
+        result = mlocInitDateFormatter(&f, set, &locale, &o.date);
+        result = result < 0 ? result : mlocFormatDateInZone(&f, &zone, &instant, &output);
+    }
+    else if (result >= 0 && strcmp(kind, "ZT") == 0)
+    {
+        mlocTimeFormatter f;
+        result = mlocInitTimeFormatter(&f, set, &locale, &o.time);
+        result = result < 0 ? result : mlocFormatTimeInZone(&f, &zone, &instant, &output);
+    }
+    else if (result >= 0)
+    {
+        mlocDateTimeFormatter f;
+        result = mlocInitDateTimeFormatter(&f, set, &locale, &o);
+        result = result < 0 ? result : mlocFormatDateTimeInZone(&f, &zone, &instant, &output);
+    }
+    *length = output.length;
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 3 && argc != 5)
@@ -236,7 +298,9 @@ int main(int argc, char** argv)
         size_t written = 0;
         if (line[0] == 'T' || line[0] == 'Z' || (line[0] == 'D' && line[1] == 'T'))
         {
-            mlocResult result = line[0] == 'T'   ? FormatTime(&set, line, out, &written)
+            bool inZone = line[0] == 'Z' && (line[1] == 'D' || line[1] == 'T');
+            mlocResult result = inZone           ? FormatInZone(&set, line, out, &written)
+                                : line[0] == 'T' ? FormatTime(&set, line, out, &written)
                                 : line[0] == 'Z' ? FormatZone(&set, line, out, &written)
                                                  : FormatDateTime(&set, line, out, &written);
             if (result < 0)
@@ -254,7 +318,8 @@ int main(int argc, char** argv)
             continue;
         }
         mlocDateOptions options = {(mlocDateFieldSet)fields, (mlocDateLength)length,
-                                   (mlocYearStyle)yearStyle, (mlocDateStyle)style};
+                                   (mlocYearStyle)yearStyle, (mlocDateStyle)style,
+                                   mloc_zoneStyleNone};
         mlocResult result = Format(&set, id, &options, year, month, day, out, &written);
         if (result < 0)
         {
