@@ -108,3 +108,8 @@ format.
   write two times of day, or two instants in a zone (across dates each
   with its short date), by a time formatter ("10:00 – 11:30 AM"); the
   time and date-time formatters' values grow (mloc-0042).
+- Date-time ranges and dates in a zone: `mlocFormatDateTimeRange`,
+  `mlocFormatDateTimeRangeInZone` and `mlocFormatDateRangeInZone`: on
+  one day the date once and the time's range, on two each whole, a date
+  that lacks the greatest difference's field written with it
+  (mloc-0042).

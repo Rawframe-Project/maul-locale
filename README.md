@@ -96,10 +96,10 @@ data file of their own, `src/generated/dates.mloc`); and time zones
 written by their specific or generic names, locations, cities or
 offsets at an instant, falling back as ICU4C's TimeZoneFormat does,
 alone or with a date, a time or both (the zone names are a data file of
-their own, `src/generated/zone-names.mloc`); and ranges of two dates or
-two times ("Jan 5 – 8, 2026", "10:00 – 11:30 AM"), in a zone too, as
-ICU4C's DateIntervalFormat writes them.
-The library has 140 public functions.
+their own, `src/generated/zone-names.mloc`); and ranges of two dates,
+times or date-times ("Jan 5 – 8, 2026", "Jan 5, 2026, 10:00 – 11:30
+AM"), in a zone too, as ICU4C's DateIntervalFormat writes them.
+The library has 143 public functions.
 
 ## Building
 

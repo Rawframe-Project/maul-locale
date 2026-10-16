@@ -6,9 +6,9 @@
 // each date, checked against ICU4C 79's DateIntervalFormat made from
 // each option's skeleton; where the library differs on purpose (a leap
 // month, fa's month items, a calendar ICU lacks), its own answer. Then
-// ICU's answers kept in test/date_ranges_icu.tsv and
-// test/time_ranges_icu.tsv, with the library's own where it differs and
-// why.
+// ICU's answers kept in test/date_ranges_icu.tsv,
+// test/time_ranges_icu.tsv and test/datetime_ranges_icu.tsv, with the
+// library's own where it differs and why.
 
 // fopen is the portable way to read the data file; MSVC's CRT deprecates
 // it.
@@ -263,6 +263,9 @@ static void TestTimes(void)
     CHECK(TimeIs("en", Clock(mloc_hourCycleClock24, mloc_timePrecisionMinute), At(10, 0, 0, 0),
                  At(12, 0, 0, 0), "10:00" DASH "12:00", nullptr),
           "the 24-hour clock's hour pair");
+    mlocTimeOptions rematched = {.hourCycle = mloc_hourCycleClock24, .style = mloc_timeStyleShort};
+    CHECK(TimeIs("en", rematched, At(10, 0, 0, 0), At(11, 30, 0, 0), "10:00" DASH "11:30", nullptr),
+          "a standard format on a clock asked for: the minutes' pairs of that clock");
     CHECK(TimeIs("en", Clock(mloc_hourCycleClock12, mloc_timePrecisionSecond), At(10, 0, 0, 0),
                  At(10, 0, 45, 0), "10:00:00" NNBSP "AM" DASH "10:00:45" NNBSP "AM", nullptr),
           "a second's difference: the fallback, seconds having no pair");
@@ -317,9 +320,132 @@ static void TestTimesInZone(void)
           "two eras: the short date with the era");
 }
 
+// A range of two instants (seconds since 1970) by a date-time formatter:
+// kind 'T' their date-times in UTC, 'Z' in the zone; or by a date
+// formatter with a zone, 'D'.
+static bool BothIs(const char* id, char kind, mlocDateTimeOptions options, const char* zoneId,
+                   int64_t start, int64_t end, const char* want, const char* parts)
+{
+    mlocLocale locale;
+    mlocTimeZone zone;
+    mlocTimeZone utc;
+    char text[256];
+    Parts p = {.text = text};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
+    mlocInstant a = {.seconds = start};
+    mlocInstant b = {.seconds = end};
+    mlocResult result =
+        mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status == mloc_success
+            ? mlocFindTimeZone(&s_data, zoneId, strlen(zoneId), &zone)
+            : mloc_errorSyntax;
+    result = result < 0 ? result : mlocFindTimeZone(&s_data, "UTC", 3, &utc);
+    if (result >= 0 && kind == 'D')
+    {
+        mlocDateFormatter formatter;
+        result = mlocInitDateFormatter(&formatter, &s_data, &locale, &options.date);
+        result =
+            result < 0 ? result : mlocFormatDateRangeInZone(&formatter, &zone, &a, &b, &output);
+    }
+    else if (result >= 0)
+    {
+        mlocDateTimeFormatter formatter;
+        mlocDateTime x;
+        mlocDateTime y;
+        result = mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options);
+        if (result >= 0 && kind == 'Z')
+        {
+            result = mlocFormatDateTimeRangeInZone(&formatter, &zone, &a, &b, &output);
+        }
+        else if (result >= 0)
+        {
+            result = mlocGetDateTimeFor(&utc, &a, mloc_calendarIso8601, &x) == mloc_success &&
+                             mlocGetDateTimeFor(&utc, &b, mloc_calendarIso8601, &y) == mloc_success
+                         ? mlocFormatDateTimeRange(&formatter, &x, &y, &output)
+                         : mloc_errorInvalid;
+        }
+    }
+    bool same = result == mloc_success && output.length == strlen(want) &&
+                memcmp(text, want, output.length) == 0 &&
+                (parts == nullptr || strcmp(p.out, parts) == 0);
+    if (!same)
+    {
+        printf("  %s %c: %d \"%.*s\" %s, want \"%s\"\n", id, kind, result, (int)output.length, text,
+               p.out, want);
+    }
+    return same;
+}
+
+static mlocDateTimeOptions DateTime(mlocDateFieldSet fields, mlocTimePrecision precision)
+{
+    return (mlocDateTimeOptions){
+        .date = {.fields = fields, .length = mloc_dateLengthMedium},
+        .time = {.hourCycle = mloc_hourCycleClock12, .precision = precision}};
+}
+
+static void TestDateTimes(void)
+{
+    // 2026-01-05T10:00Z.
+    int64_t at = 1767607200;
+    int64_t day = 86400;
+    mlocDateTimeOptions ymd = DateTime(mloc_dateFieldSetYearMonthDay, mloc_timePrecisionMinute);
+    CHECK(BothIs("en", 'T', ymd, "UTC", at, at + 5400, "Jan 5, 2026, 10:00" DASH "11:30" NNBSP "AM",
+                 "M=[Jan]L=[ ]d=[5]L=[, ]y=[2026]L=[, ]h<[10]L<[:]m<[00]L=[" DASH
+                 "]h>[11]L>[:]m>[30]L=[" NNBSP "]a=[AM]"),
+          "one day: the date once, the time's pair in the Gregorian glue");
+    CHECK(BothIs("en", 'T', ymd, "UTC", at, at, "Jan 5, 2026, 10:00" NNBSP "AM", nullptr) &&
+              BothIs("en", 'T', ymd, "UTC", at, at + 30, "Jan 5, 2026, 10:00" NNBSP "AM", nullptr),
+          "equal, or differing below the minute: one date-time");
+    CHECK(BothIs("en", 'T', ymd, "UTC", at, at + 3 * day,
+                 "Jan 5, 2026, 10:00" NNBSP "AM" DASH "Jan 8, 2026, 10:00" NNBSP "AM",
+                 "M<[Jan]L<[ ]d<[5]L<[, ]y<[2026]L<[, ]h<[10]L<[:]m<[00]L<[" NNBSP "]a<[AM]L=[" DASH
+                 "]M>[Jan]L>[ ]d>[8]L>[, ]y>[2026]L>[, ]h>[10]L>[:]m>[00]L>[" NNBSP "]a>[AM]"),
+          "two days: each whole, the glue between a date-time's own");
+    mlocDateTimeOptions md = DateTime(mloc_dateFieldSetMonthDay, mloc_timePrecisionMinute);
+    CHECK(BothIs("en", 'T', md, "UTC", at, at + 400 * day,
+                 "Jan 5, 2026, 10:00" NNBSP "AM" DASH "Feb 9, 2027, 10:00" NNBSP "AM", nullptr),
+          "two years: the month and day with the year prefixed");
+    mlocDateTimeOptions weekday = DateTime(mloc_dateFieldSetWeekday, mloc_timePrecisionMinute);
+    weekday.date.length = mloc_dateLengthLong;
+    CHECK(BothIs("en", 'T', weekday, "UTC", at, at + 3 * day,
+                 "5 Monday, 10:00" NNBSP "AM" DASH "8 Thursday, 10:00" NNBSP "AM", nullptr),
+          "a weekday: the day prefixed");
+    CHECK(BothIs("en", 'T', DateTime(mloc_dateFieldSetYearMonthDay, mloc_timePrecisionSecond),
+                 "UTC", at, at + 1800,
+                 "Jan 5, 2026, 10:00:00" NNBSP "AM" DASH "10:30:00" NNBSP "AM", nullptr),
+          "seconds on one day: the date once, the time's fallback");
+    mlocDateTimeOptions zoned = ymd;
+    zoned.time.zone = mloc_zoneStyleSpecificShort;
+    CHECK(BothIs("en", 'Z', zoned, "America/Los_Angeles", at, at + 5400,
+                 "Jan 5, 2026, 2:00" DASH "3:30" NNBSP "AM PST", nullptr),
+          "in a zone, one day");
+    mlocDateTimeOptions date = {.date = {.fields = mloc_dateFieldSetYearMonthDay,
+                                         .length = mloc_dateLengthMedium,
+                                         .zone = mloc_zoneStyleSpecificShort}};
+    CHECK(BothIs("en", 'D', date, "America/Los_Angeles", at, at + 3600, "Jan 5, 2026, PST",
+                 nullptr) &&
+              BothIs("en", 'D', date, "America/Los_Angeles", at, at + 3 * day,
+                     "Jan 5, 2026, PST" DASH "Jan 8, 2026, PST", nullptr),
+          "a date in a zone: one day one date, two days each whole");
+}
+
 // Where the library writes the range ICU4C 79 does not.
 static void TestOwnAnswers(void)
 {
+    // ICU leaves the year out: its date-times with seconds find no
+    // interval skeleton and take no prefixed fallback ("Jan 5, 10:00:00
+    // AM – Feb 9, 10:00:00 AM"); its dates with a zone neither.
+    int64_t at = 1767607200;
+    CHECK(BothIs("en", 'T', DateTime(mloc_dateFieldSetMonthDay, mloc_timePrecisionSecond), "UTC",
+                 at, at + 400 * 86400,
+                 "Jan 5, 2026, 10:00:00" NNBSP "AM" DASH "Feb 9, 2027, 10:00:00" NNBSP "AM",
+                 nullptr),
+          "seconds two years apart: the year prefixed");
+    mlocDateTimeOptions md = {.date = {.fields = mloc_dateFieldSetMonthDay,
+                                       .length = mloc_dateLengthMedium,
+                                       .zone = mloc_zoneStyleSpecificShort}};
+    CHECK(BothIs("en", 'D', md, "America/Los_Angeles", at, at + 400 * 86400,
+                 "Jan 5, 2026, PST" DASH "Feb 9, 2027, PST", nullptr),
+          "a month and day in a zone two years apart: the year prefixed");
     // ICU compares the month number alone and writes one date.
     CHECK(Is("zh-u-ca-chinese", Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthMedium),
              Iso(2025, 6, 29), Iso(2025, 7, 29),
@@ -417,6 +543,72 @@ static void TestTimeRefusals(void)
               mlocFormatTimeRangeInZone(&zoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
               mlocFormatTimeRangeInZone(&plain, &zone, &x, &x, &output) == mloc_errorInvalid,
           "a range in a zone: too small, null pointers, instants out of range, no zone");
+}
+
+static void TestDateTimeRefusals(void)
+{
+    mlocLocale en;
+    mlocDateTimeFormatter plain;
+    mlocDateTimeFormatter zoned;
+    mlocDateFormatter date;
+    mlocDateFormatter dateZoned;
+    mlocTimeZone zone;
+    mlocDateTimeOptions zoneOptions =
+        DateTime(mloc_dateFieldSetYearMonthDay, mloc_timePrecisionMinute);
+    zoneOptions.time.zone = mloc_zoneStyleSpecificShort;
+    mlocDateOptions dateZone = {.zone = mloc_zoneStyleSpecificShort};
+    mlocDateTime a = {.date = Iso(2026, 1, 5), .time = At(10, 0, 0, 0)};
+    mlocDateTime bad = {.date = Iso(2026, 1, 5), .time = At(25, 0, 0, 0)};
+    mlocInstant x = {.seconds = 0};
+    mlocInstant far = {.seconds = INT64_MAX};
+    char text[8];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput broken = {.buffer = nullptr, .capacity = 4};
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitDateTimeFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
+              mlocInitDateTimeFormatter(&zoned, &s_data, &en, &zoneOptions) >= 0 &&
+              mlocInitDateFormatter(&date, &s_data, &en, nullptr) >= 0 &&
+              mlocInitDateFormatter(&dateZoned, &s_data, &en, &dateZone) >= 0 &&
+              mlocFindTimeZone(&s_data, "Europe/Berlin", 13, &zone) >= 0,
+          "formatters and a zone");
+    CHECK(mlocFormatDateTimeRange(&plain, &a, &a, &output) == mloc_errorCapacity &&
+              mlocFormatDateTimeRange(nullptr, &a, &a, &output) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, nullptr, &a, &output) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, &a, &a, nullptr) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, &a, &a, &broken) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, &bad, &a, &output) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
+              mlocFormatDateTimeRange(&zoned, &a, &a, &output) == mloc_errorInvalid,
+          "a date-time range: too small, null pointers, a time out of range, a zone");
+    CHECK(
+        mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
+            mlocFormatDateTimeRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, nullptr, &x, &output) ==
+                mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, nullptr, &output) ==
+                mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&plain, &zone, &x, &x, &output) == mloc_errorInvalid,
+        "a date-time range in a zone: as the date-time's");
+    CHECK(
+        mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
+            mlocFormatDateRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, nullptr, &x, &output) ==
+                mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, nullptr, &output) ==
+                mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&date, &zone, &x, &x, &output) == mloc_errorInvalid,
+        "a date range in a zone: as the date's");
 }
 
 // The parts' spans in UTF-16 units, as ICU counts them: the start's from
@@ -590,6 +782,79 @@ static bool TimeLine(char* line, size_t number)
     return Matches(number, field, count, 5, text, output.length, &s);
 }
 
+// A date-time line: kind (T date-times in UTC, Z in a zone, D dates in a
+// zone), locale, the options' date fields, length and year style and
+// time hour cycle, precision and zone, the zone, the start and the end
+// (seconds since 1970), then the answers.
+static bool DateTimeLine(char* line, size_t number)
+{
+    char* field[11] = {0};
+    size_t count = Split(line, field);
+    int o[6] = {0};
+    long long a = 0;
+    long long b = 0;
+    if (count < 8 ||
+        sscanf(field[2], "%d %d %d %d %d %d", &o[0], &o[1], &o[2], &o[3], &o[4], &o[5]) != 6 ||
+        sscanf(field[4], "%lld", &a) != 1 || sscanf(field[5], "%lld", &b) != 1)
+    {
+        printf("  line %zu: unreadable\n", number);
+        return false;
+    }
+    char kind = field[0][0];
+    mlocDateTimeOptions options = {
+        .date = {.fields = (mlocDateFieldSet)o[0],
+                 .length = (mlocDateLength)o[1],
+                 .yearStyle = (mlocYearStyle)o[2],
+                 .zone = kind == 'D' ? (mlocZoneStyle)o[5] : mloc_zoneStyleNone},
+        .time = {.hourCycle = (mlocHourCycle)o[3],
+                 .precision = (mlocTimePrecision)o[4],
+                 .zone = kind == 'D' ? mloc_zoneStyleNone : (mlocZoneStyle)o[5]}};
+    mlocLocale locale;
+    mlocTimeZone zone;
+    mlocTimeZone utc;
+    char text[512];
+    Spans s = {text, {-1, -1}, {0, 0}};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Span, .context = &s};
+    mlocInstant from = {.seconds = a};
+    mlocInstant to = {.seconds = b};
+    mlocResult result =
+        mlocCanonicalizeLocale(&s_data, field[1], strlen(field[1]), &locale, nullptr).status ==
+                mloc_success
+            ? mlocFindTimeZone(&s_data, field[3], strlen(field[3]), &zone)
+            : mloc_errorSyntax;
+    result = result < 0 ? result : mlocFindTimeZone(&s_data, "UTC", 3, &utc);
+    if (result >= 0 && kind == 'D')
+    {
+        mlocDateFormatter formatter;
+        result = mlocInitDateFormatter(&formatter, &s_data, &locale, &options.date);
+        result =
+            result < 0 ? result : mlocFormatDateRangeInZone(&formatter, &zone, &from, &to, &output);
+    }
+    else if (result >= 0)
+    {
+        mlocDateTimeFormatter formatter;
+        mlocDateTime x;
+        mlocDateTime y;
+        result = mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options);
+        if (result >= 0 && kind == 'Z')
+        {
+            result = mlocFormatDateTimeRangeInZone(&formatter, &zone, &from, &to, &output);
+        }
+        else if (result >= 0 &&
+                 mlocGetDateTimeFor(&utc, &from, mloc_calendarIso8601, &x) == mloc_success &&
+                 mlocGetDateTimeFor(&utc, &to, mloc_calendarIso8601, &y) == mloc_success)
+        {
+            result = mlocFormatDateTimeRange(&formatter, &x, &y, &output);
+        }
+    }
+    if (result != mloc_success)
+    {
+        printf("  line %zu: %s not formatted (%d)\n", number, field[1], result);
+        return false;
+    }
+    return Matches(number, field, count, 6, text, output.length, &s);
+}
+
 static void TestTable(const char* path, bool (*check)(char* line, size_t number))
 {
     FILE* file = fopen(path, "rb");
@@ -637,7 +902,10 @@ int main(void)
     TestTimes();
     TestTimesInZone();
     TestTimeRefusals();
+    TestDateTimes();
+    TestDateTimeRefusals();
     TestTable(MLOC_DATE_RANGES_FILE, DateLine);
     TestTable(MLOC_TIME_RANGES_FILE, TimeLine);
+    TestTable(MLOC_DATETIME_RANGES_FILE, DateTimeLine);
     return s_failures == 0 ? 0 : 1;
 }

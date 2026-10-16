@@ -174,6 +174,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateRange(const mlocDateFormatter* 
 Writes a range of two dates by the formatter (ECMA-402's formatRange), as ICU4C's DateIntervalFormat writes the formatter's skeleton: the locale's interval pattern for the greatest field the dates differ in ("Jan 5 – 8, 2026", "Jan 5 – Feb 8, 2026"), else the locale's fallback around both dates ("1/5/2026 – 1/8/2026"); one date when they differ in no field shown. Both are read in the formatter's calendar and written in the year style the one that needs more asks; the start may pass the end.  @param formatter  A formatter from mlocInitDateFormatter, without a zone. @param start      The range's start. @param end        Its end. @param output     Where the text goes (record mloc-0015); its part function, when set, receives mlocDatePart values with the date each belongs to (mloc_dateRangeStart, mloc_dateRangeEnd, or 0 for both). @return As mlocFormatDate. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateRangeInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start, const mlocInstant* end, mlocOutput* output);
+```
+Writes a range of two instants' dates in a zone, each with the zone, by a formatter made with one: on one local day the start's date and zone; on two, each whole around the fallback, the date by the pattern with the greatest difference's field prefixed where the date lacks it ("Jan 5 at PST – Feb 8 at PST" as "Jan 5, 2026 at PST – Feb 8, 2027 at PST" across years), as ICU4C's DateIntervalFormat writes the date's skeleton with the zone's.  @param formatter  A formatter from mlocInitDateFormatter, with a zone. @param zone       The zone. @param start      The range's start, in Temporal's range. @param end        Its end, likewise. @param output     Where the text goes (record mloc-0015); parts as mlocFormatDateRange's. @return As mlocFormatDateInZone. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocTimeOptions* options);
 ```
 Makes a locale's time formatter. The patterns are those of the locale's calendar (mlocLocalePreferences), the digits and the decimal separator its numbering system's (-u-nu, else its default).  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the dates (dates.mloc), the number units, the preferences and the parents; with a zone (a zone style, or the full or long format), what mlocInitZoneFormatter reads too. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the dates, the number units or the preferences, or with a zone without the zone names; mloc_errorData for a pattern the formatter cannot write; mloc_errorInvalid for a null pointer, options out of range, or a zone style with a standard format. @par Thread safety Safe from any thread.
@@ -212,6 +217,16 @@ Writes a date and time of day by the formatter, the date read in the formatter's
 MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* instant, mlocOutput* output);
 ```
 Writes the date and time of day in a zone at an instant, and the zone, by a formatter made with one: the zone's local date-time, the date read in the formatter's calendar. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitDateTimeFormatter, with a zone. @param zone       The zone. @param instant    The instant, in Temporal's range. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a zone the library did not make, an instant out of range, or a formatter the library did not make or made without a zone. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTimeRange(const mlocDateTimeFormatter* formatter, const mlocDateTime* start, const mlocDateTime* end, mlocOutput* output);
+```
+Writes a range of two date-times by the formatter, as ICU4C's DateIntervalFormat writes the formatter's skeleton: on one day the date once and the time's range inside the Gregorian medium date-time glue ("Jan 5, 2026, 10:00 – 11:30 AM"), or one date-time where the time shows no difference; on two days each whole around the fallback, the date by the pattern with the greatest difference's field prefixed where the date lacks it, joined by the formatter's glue of that pattern's length. The start may pass the end.  @param formatter  A formatter from mlocInitDateTimeFormatter, without a zone. @param start      The range's start. @param end        Its end. @param output     Where the text goes (record mloc-0015); parts as mlocFormatDateRange's. @return As mlocFormatDateTime. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTimeRangeInZone( const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start, const mlocInstant* end, mlocOutput* output);
+```
+Writes a range of two instants' date-times in a zone by a formatter made with one, as mlocFormatDateTimeRange writes the zone's local date-times, each time with its zone as the pattern names it.  @param formatter  A formatter from mlocInitDateTimeFormatter, with a zone. @param zone       The zone. @param start      The range's start, in Temporal's range. @param end        Its end, likewise. @param output     Where the text goes (record mloc-0015); parts as mlocFormatDateRange's. @return As mlocFormatDateTimeInZone. @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, mlocZoneStyle style);
@@ -765,4 +780,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-140 functions across 15 headers.
+143 functions across 15 headers.

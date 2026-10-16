@@ -334,8 +334,31 @@ cycle, time precision, zone style).
   - **One more choice of our own.** Across dates the offset zone forms
     (`O`, `OOOO`) stay in the time: ICU's skeleton split keeps no `O`, so
     its fallback drops the offset the formatter was asked for.
-- **Still to come in this part** (research 39's slices): date-time
-  ranges and dates in a zone; relative time; durations; speed.
+- **Date-time ranges and dates in a zone** (`mlocFormatDateTimeRange`,
+  `mlocFormatDateTimeRangeInZone`, `mlocFormatDateRangeInZone`): a
+  difference in the day or more writes each value whole around the
+  fallback, its date by the formatter's pattern with that field
+  prefixed where the date lacks it (the stored prefixes) and joined by
+  the glue of the prefix's style, else by the formatter's own pattern
+  and glue. A difference in the time only writes the date once and the
+  time's range inside the Gregorian medium standard glue, or one value
+  where the time shows no difference; a date in a zone on one local day
+  is the start's. Parts run across the glue, as in times.
+  - **Two choices of our own.** ICU sets no date-time pattern where the
+    time's skeleton has no interval item (seconds, a zone alone) and
+    then writes the whole skeleton twice, dropping the field that
+    differs ("Jan 5, 10:00:00 AM – Feb 9, 10:00:00 AM" a year apart):
+    the library writes the prefixed date always. ICU writes a day's
+    date by its skeleton normalized (de's "5.1.2026" beside "05.01.26"
+    for the same date-time alone): the library writes it as the
+    formatter writes its date, so a range and its ends agree.
+  - **A weekday alone at the short length** is narrow, but abbreviated
+    with a time: the date-time formatter takes the weekday's medium
+    patterns there ("Mon, 2:00 AM PST", where it wrote "M, 2:00 AM
+    PST"), and its prefixes are those of the abbreviated skeleton, as
+    ICU's.
+- **Still to come in this part** (research 39's slices): relative time;
+  durations; speed.
 
 ## Proof
 
@@ -498,6 +521,21 @@ cycle, time precision, zone style).
   the date fallback (4). Kept for every push:
   `test/time_ranges_icu.tsv`, 3,168 ranges in 12 locales, the 115 where
   the library answers otherwise with its answer and cause.
+- **Date-time ranges and dates in a zone against ICU4C 79, once:**
+  3,044,160 (906 locales in the Gregorian calendar; each date field set
+  and length with each clock and precision, three zone forms with the
+  minutes, and each zone form with the date alone; UTC and Los Angeles;
+  equal, 30 minutes, 5 hours, 45 seconds, 3 days, 34 days and 400 days
+  apart, reversed). Spans all equal; texts equal but 332,948: on two
+  days the prefixed date where ICU drops the field or the offset
+  (303,899); on one day the formatter's date where ICU writes its
+  normalized one (24,488); the single date-time's differences already
+  known, fr_ML's glue, sr_Cyrl_ME's and es_HN's per-path names, haw's
+  months, tok's long date (4,456, and 85 more of fr_ML's and tok's on
+  two days); en_JM's dates with the month prefixed (20), where the
+  generator kept a draft item's place in the item order. Kept for every
+  push: `test/datetime_ranges_icu.tsv`, 3,920 ranges in 10 locales, the
+  44 where the library answers otherwise with its answer and cause.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

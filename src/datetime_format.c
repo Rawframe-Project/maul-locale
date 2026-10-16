@@ -9,6 +9,7 @@
 
 #include "bytes.h"
 #include "date_format.h"
+#include "date_range.h"
 #include "date_time.h"
 #include "time_format.h"
 
@@ -35,6 +36,14 @@ typedef struct DateTimeFormat
     // kept (the second for minute-optional precision is the hour's).
     const uint8_t* whole[timeFormatPatterns];
     uint32_t wholeLength[timeFormatPatterns];
+    // A range's glues: the calendar's time set and the glue's kind
+    // (dateTimeGlue or dateTimeAtGlue), whose length a prefixed date's
+    // style picks, and the Gregorian medium standard glue that holds a
+    // time's range on one day (ICU's DateTimePatterns[kDateTime]).
+    const uint8_t* timeSet;
+    uint32_t glueKind;
+    const uint8_t* dayGlue;
+    uint32_t dayGlueLength;
     uint8_t stamp;
 } DateTimeFormat;
 
@@ -98,11 +107,48 @@ static bool FindWhole(DateTimeFormat* f, const mlocDateTimeOptions* o, const Tim
     return true;
 }
 
+// A range's glues: each length's of the formatter's kind, checked, and
+// the Gregorian medium standard glue.
+static bool FindRangeGlues(DateTimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
+                           const TimeChoice* c, uint32_t kind)
+{
+    DatePatterns gregorian;
+    const uint8_t* set = nullptr;
+    DataSpan glue;
+    for (uint32_t length = 0; length < dateStandardCount; length++)
+    {
+        if (!mlocDatePattern(&c->patterns, mlocLoad16(c->set + 2 * (kind + length)), &glue) ||
+            !mlocValidGlue(glue.bytes, glue.size))
+        {
+            return false;
+        }
+    }
+    if (!mlocFindTimeSet(data, locale, mloc_calendarGregorian, &gregorian, &set, nullptr) ||
+        !mlocDatePattern(&gregorian, mlocLoad16(set + 2 * (dateTimeGlue + 2)), &glue) ||
+        !mlocValidGlue(glue.bytes, glue.size))
+    {
+        return false;
+    }
+    f->timeSet = c->set;
+    f->glueKind = kind;
+    f->dayGlue = glue.bytes;
+    f->dayGlueLength = glue.size;
+    return true;
+}
+
 static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
                           const mlocDateTimeOptions* o)
 {
     TimeChoice choice;
-    mlocResult date = mlocMakeDateFormat(&f->date, data, locale, &o->date);
+    // A weekday alone at the short length is narrow, with a time
+    // abbreviated (UTS #35's semantic skeletons): its medium patterns.
+    mlocDateOptions dateOptions = o->date;
+    if (dateOptions.style == mloc_dateStyleNone && dateOptions.fields == mloc_dateFieldSetWeekday &&
+        dateOptions.length == mloc_dateLengthShort)
+    {
+        dateOptions.length = mloc_dateLengthMedium;
+    }
+    mlocResult date = mlocMakeDateFormat(&f->date, data, locale, &dateOptions);
     mlocResult time =
         date < 0 ? date : mlocMakeTimeFormat(&f->time, data, locale, &o->time, &choice);
     if (time < 0)
@@ -119,6 +165,10 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
+    if (!FindRangeGlues(f, data, locale, &choice, kind))
+    {
+        return mloc_errorData;
+    }
     if (o->date.style == mloc_dateStyleNone && o->date.fields == mloc_dateFieldSetWeekday &&
         !f->time.zoned && !FindWhole(f, o, &choice))
     {
@@ -162,8 +212,9 @@ static bool ReadFormatter(const mlocDateTimeFormatter* opaque, bool zoned, DateT
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == dateTimeStamp && mlocDateFormatSound(&f->date) &&
-           mlocTimeFormatSound(&f->time) && f->glue != nullptr &&
-           (f->whole[0] == nullptr) == (f->whole[1] == nullptr) && f->time.zoned == zoned &&
+           mlocTimeFormatSound(&f->time) && f->glue != nullptr && f->dayGlue != nullptr &&
+           f->timeSet != nullptr && (f->whole[0] == nullptr) == (f->whole[1] == nullptr) &&
+           f->time.zoned == zoned &&
            (!zoned || (mlocZoneFormatSound(&f->zone) && f->whole[0] == nullptr));
 }
 
@@ -266,4 +317,196 @@ mlocResult mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter,
     ZoneWriting writing = {&f.zone, zone, instant};
     Writing g = {&f, &date, &local.time, local.time.minute == 0 ? 1 : 0, &writing};
     return WriteOut(&g, output);
+}
+
+// A range of date-times: the formatter, both dates, times and zones
+// (null without one), the time's pattern both minutes pick.
+typedef struct RangeWriting
+{
+    const DateTimeFormat* f;
+    const DateValue* dates[2];
+    const mlocTime* times[2];
+    const ZoneWriting* zones[2];
+    uint32_t pattern;
+    // What it writes: one date-time (one), the time's range in the day's
+    // glue (day), or each whole around the fallback (join).
+    const Writing* one;
+    const RangeChoice* day;
+    const RangeJoin* join;
+    DataSpan date;
+    DataSpan fallback;
+} RangeWriting;
+
+static void WriteRangeDate(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const RangeWriting* g = context;
+    const DateValue* v = g->dates[value];
+    mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
+}
+
+static void WriteRangeTime(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const RangeWriting* g = context;
+    mlocWriteTimeFieldsIn(&g->f->time, pattern, length, g->times[value], mlocWriteZoneField,
+                          (void*)g->zones[value], span, w);
+}
+
+// The day's glue: {1} the date once, both values', {0} the time's range.
+static void WriteDaySlot(void* context, uint32_t slot, NumberWriter* w)
+{
+    const RangeWriting* g = context;
+    if (slot == 0)
+    {
+        mlocWriteRange(g->day, w);
+        return;
+    }
+    PatternSpan none = {0, 0, 0};
+    WriteRangeDate(g, 0, g->date.bytes, g->date.size, &none, w);
+}
+
+static void WriteDateTimeRange(const RangeWriting* g, NumberWriter* w)
+{
+    if (g->join != nullptr)
+    {
+        mlocWriteJoinedFallback(g->join, g->fallback, w);
+    }
+    else if (g->day != nullptr)
+    {
+        mlocWriteGlue(g->f->dayGlue, g->f->dayGlueLength, WriteDaySlot, (void*)g, w);
+    }
+    else
+    {
+        Write(g->one, w);
+    }
+}
+
+static mlocResult WriteRangeOut(const RangeWriting* g, mlocOutput* output)
+{
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    WriteDateTimeRange(g, &w);
+    output->length = w.length;
+    if (output->buffer == nullptr || w.length > output->capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (output->part != nullptr)
+    {
+        NumberWriter parts = {.parts = output};
+        WriteDateTimeRange(g, &parts);
+        mlocEndParts(&parts);
+    }
+    return mloc_success;
+}
+
+// Writes a range of date-times read already: on one day the time's range
+// inside the day's glue, the date once (one date-time where the time
+// shows no difference); on two days each whole around the fallback, the
+// date the prefixed pattern where it lacks the greatest difference's
+// field, joined by the formatter's glue of that pattern's length.
+static mlocResult WriteRangeOf(RangeWriting* g, Writing* one, bool sameDay, mlocOutput* output)
+{
+    const DateTimeFormat* f = g->f;
+    const DateRange* r = &f->date.range;
+    const TimeRange* t = &f->time.range;
+    uint32_t p =
+        g->dates[0]->pattern > g->dates[1]->pattern ? g->dates[0]->pattern : g->dates[1]->pattern;
+    DataSpan time = t->own != nullptr ? (DataSpan){t->own, t->ownLength}
+                                      : (DataSpan){f->time.pattern[g->pattern],
+                                                   f->time.patternLength[g->pattern]};
+    g->date = r->own != nullptr ? (DataSpan){r->own, r->ownLength}
+                                : (DataSpan){f->date.pattern[p], f->date.patternLength[p]};
+    g->fallback = (DataSpan){r->fallback, r->fallbackLength};
+    g->one = one;
+    RangeChoice day = {.write = WriteRangeTime,
+                       .context = g,
+                       .table = &t->table,
+                       .pair = t->pairs[g->pattern],
+                       .difference =
+                           mlocTimeDifference(g->times[0], g->times[1], f->time.fractionDigits),
+                       .own = time,
+                       .fallback = g->fallback};
+    if (sameDay)
+    {
+        g->day = mlocRangeWritesTwo(&day) ? &day : nullptr;
+        mlocResult result = WriteRangeOut(g, output);
+        g->day = nullptr;
+        return result;
+    }
+    RangeJoin join = {.glue = {f->glue, f->glueLength},
+                      .date = g->date,
+                      .time = time,
+                      .writeDate = WriteRangeDate,
+                      .writeTime = WriteRangeTime,
+                      .context = g};
+    uint32_t style = 0;
+    DataSpan prefixed;
+    if (mlocRangePrefix(&r->table, r->prefixes[p],
+                        mlocDateDifference(&g->dates[0]->fields, &g->dates[1]->fields), &prefixed,
+                        &style))
+    {
+        join.date = prefixed;
+        if (!mlocTablePattern(&r->table, mlocLoad16(f->timeSet + 2 * (f->glueKind + style)),
+                              &join.glue))
+        {
+            return mloc_errorData;
+        }
+    }
+    // The writing's pointers to this frame are cleared before it returns.
+    g->join = &join;
+    mlocResult result = WriteRangeOut(g, output);
+    g->join = nullptr;
+    return result;
+}
+
+mlocResult mlocFormatDateTimeRange(const mlocDateTimeFormatter* formatter,
+                                   const mlocDateTime* start, const mlocDateTime* end,
+                                   mlocOutput* output)
+{
+    DateTimeFormat f;
+    DateValue dates[2];
+    if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
+        !mlocDateTimeValid(start) || !mlocDateTimeValid(end) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocReadDateValue(&f.date, &start->date, &dates[0]) ||
+        !mlocReadDateValue(&f.date, &end->date, &dates[1]))
+    {
+        return mloc_errorInvalid;
+    }
+    uint32_t pattern = start->time.minute == 0 && end->time.minute == 0 ? 1 : 0;
+    Writing one = {&f, &dates[0], &start->time, start->time.minute == 0 ? 1 : 0, nullptr};
+    RangeWriting g = {.f = &f,
+                      .dates = {&dates[0], &dates[1]},
+                      .times = {&start->time, &end->time},
+                      .pattern = pattern};
+    return WriteRangeOf(&g, &one, start->date.day == end->date.day, output);
+}
+
+mlocResult mlocFormatDateTimeRangeInZone(const mlocDateTimeFormatter* formatter,
+                                         const mlocTimeZone* zone, const mlocInstant* start,
+                                         const mlocInstant* end, mlocOutput* output)
+{
+    DateTimeFormat f;
+    DateValue dates[2];
+    mlocDateTime local[2];
+    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || start == nullptr ||
+        end == nullptr || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        mlocGetDateTimeFor(zone, start, mloc_calendarIso8601, &local[0]) != mloc_success ||
+        mlocGetDateTimeFor(zone, end, mloc_calendarIso8601, &local[1]) != mloc_success ||
+        !mlocReadDateValue(&f.date, &local[0].date, &dates[0]) ||
+        !mlocReadDateValue(&f.date, &local[1].date, &dates[1]))
+    {
+        return mloc_errorInvalid;
+    }
+    ZoneWriting zones[2] = {{&f.zone, zone, start}, {&f.zone, zone, end}};
+    uint32_t pattern = local[0].time.minute == 0 && local[1].time.minute == 0 ? 1 : 0;
+    Writing one = {&f, &dates[0], &local[0].time, local[0].time.minute == 0 ? 1 : 0, &zones[0]};
+    RangeWriting g = {.f = &f,
+                      .dates = {&dates[0], &dates[1]},
+                      .times = {&local[0].time, &local[1].time},
+                      .zones = {&zones[0], &zones[1]},
+                      .pattern = pattern};
+    return WriteRangeOf(&g, &one, local[0].date.day == local[1].date.day, output);
 }

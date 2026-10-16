@@ -522,6 +522,14 @@ static void TestUnwritablePattern(void)
 // given ones, on the 24-hour clock; one of each interval record but two
 // pairs, a date's of "y" and a time's of "H", and the fallback pattern 2.
 // Its size.
+enum
+{
+    compositeIntervals = 320,
+    compositeTimePart = 416,
+    compositeTimePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
+    compositePairs = 560,
+};
+
 static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 {
     enum
@@ -531,10 +539,10 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         // part's pairs.
         offsets = datePatternsHeaderSize,
         times = 128,
-        intervals = 320,
-        timePart = 416,
-        timePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
-        pairs = 560,
+        intervals = compositeIntervals,
+        timePart = compositeTimePart,
+        timePairs = compositeTimePairs,
+        pairs = compositePairs,
         text = 624,
     };
     static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
@@ -581,13 +589,13 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
     return text + 27;
 }
 
-// The date-time formatter on a pack of the composite unit built here.
-static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields,
-                                char* text, size_t* length)
+// The date-time formatter of the options on a pack of the composite unit
+// in s_unit, of its size.
+static mlocResult InitComposite(uint32_t patterns, const mlocDateTimeOptions* options,
+                                mlocDateTimeFormatter* formatter)
 {
     alignas(8) static uint8_t s_patterns[1024];
     alignas(8) static uint8_t s_names[1024];
-    uint32_t patterns = BuildComposite(glue, weekday);
     memcpy(s_patterns, s_unit, patterns);
     uint32_t names = BuildNames();
     memcpy(s_names, s_unit, names);
@@ -595,18 +603,25 @@ static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSe
     PackUnit units[] = {{kindDatePatterns, {s_patterns, patterns}, false},
                         {kindDates, {s_dates, dateLocaleSize}, true},
                         {kindDateNames, {s_names, names}, false}};
-    mlocData sources[2];
-    mlocOpenBuiltinData(&sources[0]);
-    mlocDataSet data = {sources, 2};
+    static mlocData s_packed[2];
+    mlocOpenBuiltinData(&s_packed[0]);
+    static mlocDataSet s_set = {s_packed, 2};
     mlocLocale fr;
-    mlocDateTimeFormatter formatter;
-    mlocDateTimeOptions options = {.date = {.fields = fields}};
-    if (!OpenRootPack(units, 3, &sources[1]) ||
+    if (!OpenRootPack(units, 3, &s_packed[1]) ||
         mlocParseLocale("fr", 2, &fr).status != mloc_success)
     {
         return mloc_errorInvalid;
     }
-    mlocResult result = mlocInitDateTimeFormatter(&formatter, &data, &fr, &options);
+    return mlocInitDateTimeFormatter(formatter, &s_set, &fr, options);
+}
+
+// The date-time formatter on a pack of the composite unit built here.
+static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields,
+                                char* text, size_t* length)
+{
+    mlocDateTimeFormatter formatter;
+    mlocDateTimeOptions options = {.date = {.fields = fields}};
+    mlocResult result = InitComposite(BuildComposite(glue, weekday), &options, &formatter);
     mlocDateTime value = {.time = {.hour = 16, .minute = 3}};
     mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
     mlocOutput output = {.buffer = text, .capacity = 64};
@@ -641,6 +656,46 @@ static void TestCompositeData(void)
     CHECK(CompositeIs(2, 1, mloc_dateFieldSetWeekday, "16") &&
               MakeComposite(2, 5, mloc_dateFieldSetWeekday, text, &length) == mloc_errorData,
           "a weekday-with-time pattern, and one the formatter cannot write");
+}
+
+// The composite unit with a 16-bit index at an offset spoiled to a
+// pattern, its formatter's result for a time of the style.
+static mlocResult SpoiledComposite(uint32_t at, uint16_t pattern, mlocTimeStyle style)
+{
+    uint32_t size = BuildComposite(2, 1);
+    Put(s_unit + at, pattern, 2);
+    mlocDateTimeFormatter formatter;
+    mlocDateTimeOptions options = {.date = {.fields = mloc_dateFieldSetYearMonthDay}};
+    if (style != mloc_timeStyleNone)
+    {
+        options =
+            (mlocDateTimeOptions){.date = {.style = mloc_dateStyleShort}, .time = {.style = style}};
+    }
+    return InitComposite(size, &options, &formatter);
+}
+
+static void TestCompositeRanges(void)
+{
+    enum
+    {
+        // Pattern 1, "H", is no date; pattern 0, "y", no time.
+        notDate = 1,
+        notTime = 0,
+        owns = compositeTimePart + 2 * compositeTimePairs,
+    };
+    CHECK(SpoiledComposite(compositeIntervals + 6, 0, mloc_timeStyleNone) == mloc_success &&
+              SpoiledComposite(owns + 2, 1, mloc_timeStyleFull) == mloc_success,
+          "the unit as built, an index spoiled to its own value");
+    CHECK(SpoiledComposite(compositeIntervals + 6, notDate, mloc_timeStyleNone) == mloc_errorData &&
+              SpoiledComposite(compositeIntervals + 8, notDate, mloc_timeStyleNone) ==
+                  mloc_errorData,
+          "a time range's short date or era date the formatter cannot write");
+    CHECK(SpoiledComposite(compositePairs + dateIntervalPairSize, notTime, mloc_timeStyleNone) ==
+              mloc_errorData,
+          "a time pair's half the formatter cannot write");
+    CHECK(SpoiledComposite(owns + 2, notTime, mloc_timeStyleFull) == mloc_errorData &&
+              SpoiledComposite(owns + 4 * 3 + 2, notTime, mloc_timeStyleShort) == mloc_errorData,
+          "a standard format's own interval pattern the formatter cannot write");
 }
 
 static mlocData s_sources[2];
@@ -1052,6 +1107,7 @@ int main(void)
     TestNamesPastUnit();
     TestUnwritablePattern();
     TestCompositeData();
+    TestCompositeRanges();
     alignas(8) static uint8_t s_dates[4 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};

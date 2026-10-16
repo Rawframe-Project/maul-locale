@@ -38,6 +38,9 @@ typedef struct ZonedDateFormat
     uint32_t glueLength;
     const uint8_t* zonePattern;
     uint32_t zonePatternLength;
+    // The calendar's time set, whose atTime glue of each length joins a
+    // range's prefixed dates to the zone.
+    const uint8_t* timeSet;
 } ZonedDateFormat;
 
 static_assert(sizeof(ZonedDateFormat) <= sizeof(mlocDateFormatter),
@@ -155,19 +158,36 @@ static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* se
     return true;
 }
 
-// The pair index of a kept pattern (i, the year style for a field set
-// with a year) in an interval date part.
-static uint32_t PairOf(const DatePatterns* p, const uint8_t* part, const mlocDateOptions* o,
-                       uint32_t i)
+// A kept pattern's pair and prefix indexes (i, the year style for a
+// field set with a year) in an interval date part: a standard format's,
+// or its row's at its length.
+static const uint8_t* IndexesOf(const DatePatterns* p, const uint8_t* part,
+                                const mlocDateOptions* o, uint32_t i)
 {
     if (o->style != mloc_dateStyleNone)
     {
-        return mlocLoad16(part + 2 * dateEntryCount + 6 * (size_t)(o->style - 1));
+        return part + 2 * dateEntryCount + 6 * (size_t)(o->style - 1);
     }
     uint32_t entry = s_entries[o->fields];
     bool year = entry >= dateYearMonthDay;
     uint32_t row = mlocLoad16(part + 2 * (size_t)(entry + (year ? i : 0)));
-    return mlocLoad16(p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length);
+    return p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length;
+}
+
+// Whether each prefixed pattern of a prefix is one the formatter writes.
+static bool WritablePrefix(const PatternTable* table, const uint8_t* prefix)
+{
+    for (uint32_t level = 0; level < dateIntervalPrefixes; level++)
+    {
+        DataSpan pattern;
+        uint32_t index = mlocLoad16(prefix + 2 * (size_t)level);
+        if (index != dateIntervalNone && (!mlocTablePattern(table, index, &pattern) ||
+                                          !mlocWritableDate(pattern.bytes, pattern.size)))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 // The formatter's interval patterns (research 40): each kept pattern's
@@ -200,8 +220,11 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
     }
     for (uint32_t i = 0; i < dateFormatPatterns; i++)
     {
-        r->pairs[i] = p->pairs + (size_t)PairOf(p, part, o, i) * dateIntervalPairSize;
-        if (!mlocValidRangePair(&r->table, r->pairs[i], mlocWritableDate))
+        const uint8_t* at = IndexesOf(p, part, o, i);
+        r->pairs[i] = p->pairs + (size_t)mlocLoad16(at) * dateIntervalPairSize;
+        r->prefixes[i] = p->prefixes + (size_t)mlocLoad16(at + 2) * dateIntervalPrefixSize;
+        if (!mlocValidRangePair(&r->table, r->pairs[i], mlocWritableDate) ||
+            !WritablePrefix(&r->table, r->prefixes[i]))
         {
             return false;
         }
@@ -327,10 +350,20 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
     {
         return mloc_errorData;
     }
+    for (uint32_t length = 0; length < dateStandardCount; length++)
+    {
+        DataSpan other;
+        if (!mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeAtGlue + length)), &other) ||
+            !mlocValidGlue(other.bytes, other.size))
+        {
+            return mloc_errorData;
+        }
+    }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
     f->zonePattern = zone.bytes;
     f->zonePatternLength = zone.size;
+    f->timeSet = set;
     return mlocMakeZoneFormat(&f->zone, data, locale, o->zone);
 }
 
@@ -476,8 +509,9 @@ static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
                             g->value->related, w);
         return;
     }
+    PatternSpan none = {0, 0, 0};
     mlocWriteZonePattern(&g->f->zone, g->f->zonePattern, g->f->zonePatternLength, g->zone,
-                         g->instant, w);
+                         g->instant, &none, w);
 }
 
 static void Write(const DateWriting* g, NumberWriter* w)
@@ -581,4 +615,107 @@ mlocResult mlocFormatDateRange(const mlocDateFormatter* formatter, const mlocDat
     };
     g.range = &c;
     return WriteOut(&g, output);
+}
+
+// A range in a zone: the formatter, both dates, both instants and the zone.
+typedef struct ZonedRangeWriting
+{
+    const ZonedDateFormat* f;
+    const DateValue* dates[2];
+    const mlocInstant* instants[2];
+    const mlocTimeZone* zone;
+} ZonedRangeWriting;
+
+static void WriteZonedDate(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const ZonedRangeWriting* g = context;
+    const DateValue* v = g->dates[value];
+    mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
+}
+
+static void WriteZonedZone(const void* context, uint32_t value, const uint8_t* pattern,
+                           uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const ZonedRangeWriting* g = context;
+    mlocWriteZonePattern(&g->f->zone, pattern, length, g->zone, g->instants[value], span, w);
+}
+
+typedef struct JoinedOut
+{
+    const RangeJoin* join;
+    DataSpan fallback;
+} JoinedOut;
+
+static void WriteJoinedOut(const JoinedOut* g, NumberWriter* w)
+{
+    mlocWriteJoinedFallback(g->join, g->fallback, w);
+}
+
+static mlocResult WriteJoinedRange(const RangeJoin* join, DataSpan fallback, mlocOutput* output)
+{
+    JoinedOut g = {join, fallback};
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    WriteJoinedOut(&g, &w);
+    output->length = w.length;
+    if (output->buffer == nullptr || w.length > output->capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (output->part != nullptr)
+    {
+        NumberWriter parts = {.parts = output};
+        WriteJoinedOut(&g, &parts);
+        mlocEndParts(&parts);
+    }
+    return mloc_success;
+}
+
+mlocResult mlocFormatDateRangeInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone,
+                                     const mlocInstant* start, const mlocInstant* end,
+                                     mlocOutput* output)
+{
+    ZonedDateFormat f;
+    DateValue v[2];
+    mlocDateTime local[2];
+    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || start == nullptr ||
+        end == nullptr || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        mlocGetDateTimeFor(zone, start, mloc_calendarIso8601, &local[0]) != mloc_success ||
+        mlocGetDateTimeFor(zone, end, mloc_calendarIso8601, &local[1]) != mloc_success ||
+        !mlocReadDateValue(&f.date, &local[0].date, &v[0]) ||
+        !mlocReadDateValue(&f.date, &local[1].date, &v[1]))
+    {
+        return mloc_errorInvalid;
+    }
+    if (local[0].date.day == local[1].date.day)
+    {
+        // One day: the start's date and zone, as ICU writes a range the
+        // pattern shows no difference of.
+        DateWriting one = {&f, &v[0], zone, start, nullptr, nullptr};
+        return WriteOut(&one, output);
+    }
+    uint32_t p = v[0].pattern > v[1].pattern ? v[0].pattern : v[1].pattern;
+    const DateRange* r = &f.date.range;
+    ZonedRangeWriting g = {&f, {&v[0], &v[1]}, {start, end}, zone};
+    RangeJoin join = {.date = {f.date.pattern[p], f.date.patternLength[p]},
+                      .glue = {f.glue, f.glueLength},
+                      .time = {f.zonePattern, f.zonePatternLength},
+                      .writeDate = WriteZonedDate,
+                      .writeTime = WriteZonedZone,
+                      .context = &g};
+    join.date = r->own != nullptr ? (DataSpan){r->own, r->ownLength} : join.date;
+    uint32_t style = 0;
+    DataSpan prefixed;
+    if (mlocRangePrefix(&r->table, r->prefixes[p], mlocDateDifference(&v[0].fields, &v[1].fields),
+                        &prefixed, &style))
+    {
+        join.date = prefixed;
+        if (!mlocTablePattern(&r->table, mlocLoad16(f.timeSet + 2 * (dateTimeAtGlue + style)),
+                              &join.glue))
+        {
+            return mloc_errorData;
+        }
+    }
+    return WriteJoinedRange(&join, (DataSpan){r->fallback, r->fallbackLength}, output);
 }

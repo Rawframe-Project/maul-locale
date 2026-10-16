@@ -63,7 +63,7 @@ date_format: bytes date_data date_range date_write locale_prefs number_core numb
 date_write: bytes date_data decimal number_core number_tables
 date_range: bytes date_data date_write number_core
 time_format: bytes date_data date_format date_range date_time locale_keyword locale_prefs number_core number_tables time_write zone_format
-datetime_format: bytes date_data date_format date_time date_write time_format time_write number_core number_tables zone_format
+datetime_format: bytes date_data date_format date_range date_time date_write time_format time_write number_core number_tables zone_format
 time_write: date_data date_write number_core number_tables
 unit_usage: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
 unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
@@ -94,7 +94,7 @@ calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 zone_name_tables: bytes data_view number_data
-zone_format: bytes data_view date_tables kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_name_tables zone_rules zone_tables
+zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_name_tables zone_rules zone_tables
 zone_codes: data_view zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith zone_tables
 zone_handle: zone_rules zone_tables

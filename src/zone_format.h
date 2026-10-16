@@ -11,6 +11,7 @@
 #define MLOC_ZONE_FORMAT_H
 
 #include "data_view.h"
+#include "date_data.h"
 #include "number_core.h"
 #include "number_tables.h"
 
@@ -57,8 +58,9 @@ void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const mlocTimeZone*
 mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width);
 
 // Writes a compiled pattern of literal text and zone fields, which
-// mlocZoneFieldStyle names.
+// mlocZoneFieldStyle names, the span's parts marked as one value's.
 void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
-                          const mlocTimeZone* zone, const mlocInstant* instant, NumberWriter* w);
+                          const mlocTimeZone* zone, const mlocInstant* instant,
+                          const PatternSpan* span, NumberWriter* w);
 
 #endif

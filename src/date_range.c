@@ -129,6 +129,13 @@ static uint32_t LetterPart(uint8_t letter)
     }
 }
 
+// Whether a pattern's byte starts a field, with or without its
+// numbering system.
+static bool IsField(uint8_t byte)
+{
+    return byte == datePatternField || byte == datePatternOverride;
+}
+
 // The size of the item at a pattern's byte: a field's, a field with its
 // numbering system's, or one byte of literal text.
 static uint32_t ItemSize(const uint8_t* item)
@@ -142,7 +149,7 @@ static uint32_t PatternKinds(DataSpan pattern)
     uint32_t kinds = 0;
     for (uint32_t at = 0; at < pattern.size; at += ItemSize(pattern.bytes + at))
     {
-        uint32_t kind = pattern.bytes[at] < 0x20 ? LetterPart(pattern.bytes[at + 1]) : 0;
+        uint32_t kind = IsField(pattern.bytes[at]) ? LetterPart(pattern.bytes[at + 1]) : 0;
         kinds |= kind != mloc_datePartLiteral ? 1u << kind : 0;
     }
     return kinds;
@@ -156,7 +163,7 @@ static PatternSpan SpanOf(DataSpan pattern, uint32_t kinds, uint32_t source)
     bool found = false;
     for (uint32_t at = 0; at < pattern.size; at += ItemSize(pattern.bytes + at))
     {
-        if (pattern.bytes[at] < 0x20 && (kinds >> LetterPart(pattern.bytes[at + 1]) & 1) != 0)
+        if (IsField(pattern.bytes[at]) && (kinds >> LetterPart(pattern.bytes[at + 1]) & 1) != 0)
         {
             span.first = found ? span.first : at;
             span.end = at + ItemSize(pattern.bytes + at);
@@ -186,7 +193,7 @@ static bool Ignores(DataSpan pattern, uint32_t difference)
 {
     for (uint32_t at = 0; at < pattern.size; at += ItemSize(pattern.bytes + at))
     {
-        if (pattern.bytes[at] < 0x20 &&
+        if (IsField(pattern.bytes[at]) &&
             LetterLevel(pattern.bytes[at + 1]) >= 10 * (int32_t)difference)
         {
             return false;
@@ -243,6 +250,27 @@ static void WriteFallback(const RangeChoice* c, DataSpan pattern, NumberWriter* 
         g.spans[1] = SpanOf(pattern, kinds, mloc_dateRangeEnd);
     }
     mlocWriteGlue(c->fallback.bytes, c->fallback.size, WriteFallbackSlot, &g, w);
+}
+
+bool mlocRangeWritesTwo(const RangeChoice* c)
+{
+    if (c->difference == rangeNone)
+    {
+        return false;
+    }
+    uint32_t second = c->difference < dateIntervalFields
+                          ? mlocLoad16(c->pair + 4 * (size_t)c->difference + 2)
+                          : dateIntervalNone;
+    return second != dateIntervalNone || !Ignores(c->own, c->difference);
+}
+
+bool mlocRangePrefix(const PatternTable* table, const uint8_t* prefix, uint32_t difference,
+                     DataSpan* pattern, uint32_t* style)
+{
+    // The levels prefix d, M, y and G: the day's difference first.
+    uint32_t level = rangeDay - difference;
+    *style = mlocLoad16(prefix + 2 * dateIntervalPrefixes) >> (2 * level) & 3;
+    return mlocTablePattern(table, mlocLoad16(prefix + 2 * (size_t)level), pattern);
 }
 
 void mlocWriteRange(const RangeChoice* c, NumberWriter* w)

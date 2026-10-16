@@ -665,11 +665,13 @@ mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width)
 }
 
 void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
-                          const mlocTimeZone* zone, const mlocInstant* instant, NumberWriter* w)
+                          const mlocTimeZone* zone, const mlocInstant* instant,
+                          const PatternSpan* span, NumberWriter* w)
 {
     uint32_t at = 0;
     while (at < length)
     {
+        w->source = at >= span->first && at < span->end ? span->source : 0;
         if (pattern[at] == datePatternField)
         {
             mlocWriteZone(f, mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]), zone, instant,
@@ -685,6 +687,7 @@ void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t 
         mlocWritePart(w, mloc_datePartLiteral, pattern + at, end - at);
         at = end;
     }
+    w->source = 0;
 }
 
 typedef struct ChainWalk

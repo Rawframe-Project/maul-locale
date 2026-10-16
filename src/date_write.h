@@ -24,7 +24,7 @@ enum
 };
 
 // A formatter's interval patterns (research 40): the table their indexes
-// resolve in, the pair of each pattern the formatter keeps
+// resolve in, the pair and prefixes of each pattern the formatter keeps
 // (dateIntervalPairSize bytes), a standard format's own pattern (the
 // generator's match of its skeleton, which a range of one value writes;
 // a field set's are its patterns), and the fallback.
@@ -32,6 +32,10 @@ typedef struct DateRange
 {
     PatternTable table;
     const uint8_t* pairs[dateFormatPatterns];
+    // Each kept pattern's prefixes (dateIntervalPrefixSize bytes): its
+    // skeleton with d, M, y and G prefixed where it lacks them, which a
+    // date-time's date differences write.
+    const uint8_t* prefixes[dateFormatPatterns];
     const uint8_t* own;
     uint32_t ownLength;
     const uint8_t* fallback;
