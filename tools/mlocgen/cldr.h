@@ -71,6 +71,10 @@ const Leaf* CldrResolve(Cldr* cldr, const char* locale, const char* chain, Compo
 // none. Fails the program on a file CLDR cannot read.
 const LdmlFile* CldrFile(Cldr* cldr, const char* locale, Component component);
 
+// Whether a file's own leaf counts: at or above the draft threshold and
+// not the inheritance marker, as CLDR's data built for ICU keeps it.
+bool CldrAccepts(const Cldr* cldr, const Leaf* leaf);
+
 enum
 {
     // The longest chain, with its NUL.

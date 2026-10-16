@@ -34,7 +34,10 @@ cycle, time precision, zone style).
   distances, the pattern map in ICU's order (canonical single fields,
   then the standard time and date formats, then `availableFormats`
   from the locale up its parents and through root's calendar aliases,
-  each skeleton the first time it is met), ties to the larger missing
+  each file's in the byte order of their ids, each skeleton the first
+  time a file gives it: an item below the draft threshold or inherited
+  (`↑↑↑`) is the parent's, in the parent's place, as ICU's data, which
+  drops such items, orders it), ties to the larger missing
   mask, field lengths adjusted as ICU adjusts them (hours, minutes and
   seconds keep the pattern's length, numeric and text never swap),
   `j`, `J` and `C` from the region's `timeData`, fractions appended
@@ -436,7 +439,8 @@ cycle, time precision, zone style).
   (the 902 locales ICU and CLDR share, 4 calendars, the 7 field sets
   that take a time at 3 lengths, 3 clocks, 3 precisions). All equal but
   87,654. In the Gregorian calendar 195: fr_ML's glue, tok's long date
-  and es_HN's per-path pattern above, and haw's month in Roman numerals
+  and es_HN's `MMMMdd` (the item order, since corrected: the generator
+  above), and haw's month in Roman numerals
   (the numbering override ICU4X carries to semantic patterns and ICU's
   matcher drops). In the other calendars 87,459: 81,140 are the glue
   alone (ICU's data takes the Gregorian glue; CLDR gives each calendar
@@ -495,14 +499,15 @@ cycle, time precision, zone style).
   calendars, every date option's skeleton and the four standard
   formats, each with equal dates and dates differing in the day, the
   month, the year, the era of Japan, in order and reversed). All texts
-  equal but 9,400: the formats' numbering overrides (Hebrew numerals,
+  equal but 9,363 (37 fewer since the item order's correction, sr's
+  and one of es_HN's): the formats' numbering overrides (Hebrew numerals,
   hanidays, jpanyear's 元), which ICU's interval patterns drop (6,480,
   zh, yue, ja, he, yi); haw's Roman-numeral months (1,848); fa's split
   months (318); kok's and gl's `Y` (237), which ICU writes as the
   Gregorian year; the one-date differences already known, ckb_IR's
   Persian and cs's Dangi months, id's Islamic weekdays, tok's long date
   (336), and CLDR's per-path names and patterns in es_PY, es_VE, es_HN,
-  ms_ID, ms_BN, nl_BE, sr, sv_AX and zh_Hans_HK, _MO and _SG (181).
+  ms_ID, ms_BN, nl_BE, sv_AX and zh_Hans_HK, _MO and _SG (144).
   Spans differ in 2,526, from
   the stand-alone month (fa), the `Y` (kok) and patterns that write a
   field three times (sv, en_JP, tr, yo, qu), whose third ICU's pairing
@@ -526,14 +531,15 @@ cycle, time precision, zone style).
   and length with each clock and precision, three zone forms with the
   minutes, and each zone form with the date alone; UTC and Los Angeles;
   equal, 30 minutes, 5 hours, 45 seconds, 3 days, 34 days and 400 days
-  apart, reversed). Spans all equal; texts equal but 332,948: on two
+  apart, reversed). Spans all equal; texts equal but 332,810: on two
   days the prefixed date where ICU drops the field or the offset
-  (303,899); on one day the formatter's date where ICU writes its
-  normalized one (24,488); the single date-time's differences already
-  known, fr_ML's glue, sr_Cyrl_ME's and es_HN's per-path names, haw's
-  months, tok's long date (4,456, and 85 more of fr_ML's and tok's on
-  two days); en_JM's dates with the month prefixed (20), where the
-  generator kept a draft item's place in the item order. Kept for every
+  (303,913); on one day the formatter's date where ICU writes its
+  normalized one (24,496); the single date-time's differences already
+  known, fr_ML's glue, sr_Cyrl_ME's per-path names, haw's months, tok's
+  long date (4,316, and 85 more of fr_ML's and tok's on two days). The
+  sweep found the item order's fault: en_JM's `Mdd` was "dd/MM" where
+  ICU's is "dd/M", es_HN's `MMMMdd` "dd 'de' MMMM" for "dd-MMMM" (138
+  ranges); the time sweep is unchanged by it. Kept for every
   push: `test/datetime_ranges_icu.tsv`, 3,920 ranges in 10 locales, the
   44 where the library answers otherwise with its answer and cause.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636

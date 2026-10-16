@@ -1,7 +1,9 @@
 # ICU4C 79.1 DateTimePatternGenerator (CLDR 49.0) over the questions of
 # CLDR 49's testData/datetime/skeletons*.tsv: locale, calendar, skeleton,
 # the best pattern; then every field letter at each length it takes,
-# alone and with others, in eight locales of the Gregorian calendar.
+# alone and with others, in eight locales of the Gregorian calendar; last,
+# skeletons whose best item a child's draft or inherited item would move
+# (ICU's data drops those, so the parent's item order holds).
 # tools/check_skeletons.py compares mlocgen with it.
 af	buddhist	Bh	h B
 af	buddhist	CCCC	HH
@@ -26973,3 +26975,5 @@ bg	gregorian	zzzzz	zzzzz
 bg	gregorian	zzzzzHm	HH:mm 'ч'. zzzzz
 bg	gregorian	zzzzzz	zzzzzz
 bg	gregorian	zzzzzzHm	HH:mm 'ч'. zzzzzz
+en_JM	gregorian	Mdd	dd/M
+es_HN	gregorian	MMMMdd	dd-MMMM

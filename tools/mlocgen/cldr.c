@@ -363,6 +363,11 @@ static const Leaf* Accept(const Cldr* cldr, const Leaf* leaf)
     return leaf;
 }
 
+bool CldrAccepts(const Cldr* cldr, const Leaf* leaf)
+{
+    return Accept(cldr, leaf) != nullptr;
+}
+
 typedef struct Search
 {
     Cldr* cldr;

@@ -246,18 +246,21 @@ static const char* const s_standardLengths[4] = {"full", "long", "medium", "shor
 
 typedef struct Ids
 {
+    const Cldr* cldr;
     const char* prefix;
     size_t prefixLength;
     char* ids[maxItems];
     int count;
 } Ids;
 
-// Collects the id of an availableFormats item without alt.
+// Collects the id of an availableFormats item without alt that the file
+// gives: one below the draft threshold or inherited is the parent's, in
+// the parent's place (ICU's table order).
 static void CollectId(const char* key, void* value, void* context)
 {
-    (void)value;
     Ids* ids = context;
-    if (strncmp(key, ids->prefix, ids->prefixLength) != 0 || strstr(key, "[@alt=") != nullptr)
+    if (strncmp(key, ids->prefix, ids->prefixLength) != 0 || strstr(key, "[@alt=") != nullptr ||
+        !CldrAccepts(ids->cldr, value))
     {
         return;
     }
@@ -297,6 +300,7 @@ static void AddFileItems(Cldr* cldr, const char* locale, const LdmlFile* file, c
         fputs("mlocgen: out of memory\n", stderr);
         exit(1);
     }
+    ids->cldr = cldr;
     ids->prefix = itemPrefix;
     ids->prefixLength = strlen(itemPrefix);
     MapEach(&file->leaves, CollectId, ids);

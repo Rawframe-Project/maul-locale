@@ -113,3 +113,6 @@ format.
   one day the date once and the time's range, on two each whole, a date
   that lacks the greatest difference's field written with it
   (mloc-0042).
+- Date patterns follow ICU's item order where a locale's own file has
+  a draft or inherited item: en_JM's month and day "05/1" and es_HN's
+  "05-enero", as ICU writes them (mloc-0042).
