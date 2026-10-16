@@ -30,8 +30,11 @@ static bool OpenFile(const char* path, mlocData* out)
     {
         return false;
     }
-    uint8_t* bytes = malloc((size_t)8 << 20);
-    size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)8 << 20, file);
+    // Each file's own size: four files of 8 MiB outgrow the web build's
+    // memory.
+    long size = fseek(file, 0, SEEK_END) == 0 ? ftell(file) : -1;
+    uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
+    size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
     return read > 0 && mlocOpenData(out, bytes, read) == mloc_success;
 }
