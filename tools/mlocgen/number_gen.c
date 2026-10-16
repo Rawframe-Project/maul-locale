@@ -21,6 +21,7 @@
 #include "names_gen.h"
 #include "number_tables.h"
 #include "parse_gen.h"
+#include "relative_gen.h"
 #include "table_gen.h"
 #include "unit_names_gen.h"
 #include "unit_patterns_gen.h"
@@ -1515,7 +1516,8 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* 
              GenerateUnitNames(&units, &names->units, errorOut, errorCapacity) &&
              GenerateNames(&localeNamesInput, &names->locales, &names->subdivisions, errorOut,
                            errorCapacity) &&
-             GenerateZoneNames(&localeNamesInput, &names->zones, errorOut, errorCapacity);
+             GenerateZoneNames(&localeNamesInput, &names->zones, errorOut, errorCapacity) &&
+             GenerateRelative(&localeNamesInput, &names->relative, errorOut, errorCapacity);
     if (ok)
     {
         GenerateUnitPatterns(&units, &names->units);

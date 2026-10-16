@@ -47,3 +47,4 @@ are listed in [README.md](README.md).
 | [mloc-0040](mloc-0040-calendars.md) | Calendars: Temporal's values, computed in code, astronomical years as tables | Accepted |
 | [mloc-0041](mloc-0041-time-zones.md) | Time zones: the library's own tzdb compiler, Temporal's exact time | Accepted |
 | [mloc-0042](mloc-0042-datetime.md) | Dates and times formatted: semantic skeletons, patterns compiled by the generator | Accepted |
+| [mloc-0043](mloc-0043-relative-time.md) | Relative time: CLDR's fields filed per key, a decimal and a unit in | Accepted |

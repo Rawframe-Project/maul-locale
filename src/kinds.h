@@ -148,5 +148,9 @@ constexpr uint32_t kindDateNames = 0x00090003;
 // mloc-0042, src/zone_name_tables.h).
 constexpr uint32_t kindZoneMeta = 0x00090004;
 constexpr uint32_t kindZoneNames = 0x00090005;
+// The relative time data file: a locale's names of offsets and future and
+// past patterns of each unit and width, a unit per locale key (record
+// mloc-0043, src/relative_tables.h).
+constexpr uint32_t kindRelative = 0x00090006;
 
 #endif

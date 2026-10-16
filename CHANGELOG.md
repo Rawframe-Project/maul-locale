@@ -116,3 +116,7 @@ format.
 - Date patterns follow ICU's item order where a locale's own file has
   a draft or inherited item: en_JM's month and day "05/1" and es_HN's
   "05-enero", as ICU writes them (mloc-0042).
+- The relative time data file, `src/generated/relative.mloc`: each
+  locale's names of near offsets ("yesterday", "next Monday") and future
+  and past patterns by plural category, for every unit and width, filed
+  per key along the chain (mloc-0043).

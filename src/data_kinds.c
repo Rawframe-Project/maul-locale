@@ -19,6 +19,7 @@
 #include "number_data.h"
 #include "number_parse.h"
 #include "plural.h"
+#include "relative_tables.h"
 #include "spellout_data.h"
 #include "unit_data.h"
 #include "unit_names.h"
@@ -82,6 +83,7 @@ static const DataKind s_kinds[] = {
     {kindDateNames, mlocValidDateNames},
     {kindZoneMeta, mlocValidZoneMeta},
     {kindZoneNames, mlocValidZoneNames},
+    {kindRelative, mlocValidRelative},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

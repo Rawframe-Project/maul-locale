@@ -157,6 +157,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone.c
     src/zone_code_tables.c
     src/zone_name_tables.c
+    src/relative_tables.c
     src/zone_format.c
     src/zone_codes.c
     src/zone_handle.c
@@ -343,6 +344,23 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
     endif()
+    # And relative time (record mloc-0043).
+    set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
+    set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_RELATIVE_PATH /relative.mloc)
+    endif()
+    maul_add_test(relative_tables WHITEBOX)
+    if(TARGET test_relative_tables)
+        if(EMSCRIPTEN)
+            target_link_options(test_relative_tables PRIVATE
+                                "SHELL:--embed-file ${MLOC_RELATIVE_FILE}@/relative.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_relative_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_relative_tables PRIVATE MLOC_RELATIVE_FILE="${MLOC_RELATIVE_PATH}")
+    endif()
     # The zone formatter reads the zone names and the region names, and
     # the dates for a date or time in a zone.
     maul_add_test(zone_format)
@@ -474,7 +492,8 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal ixdtf locale parse spellout zone_codes zone_names zones)
+    foreach(area data date_data decimal ixdtf locale parse relative spellout zone_codes zone_names
+                 zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -509,6 +528,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/unit_derivations_gen.c tools/mlocgen/unit_patterns_gen.c
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
                                     tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c tools/mlocgen/zone_names_gen.c
+                                    tools/mlocgen/relative_gen.c
                                     tools/mlocgen/date_gen.c tools/mlocgen/date_names_gen.c tools/mlocgen/date_source.c tools/mlocgen/day_periods_gen.c tools/mlocgen/interval_gen.c tools/mlocgen/interval_match.c tools/mlocgen/semantic.c tools/mlocgen/time_gen.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c)
     # The generator writes the layout src/data_format.h defines and reads
