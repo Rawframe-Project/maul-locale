@@ -284,6 +284,10 @@ static void TestNamesUnit(void)
     Put(s_unit + dateNamesHeaderSize, 1, 4);
     CHECK(!ValidNames(size), "a first string offset that is not 0");
     BuildNames();
+    Put(s_unit + dateNamesHeaderSize, 1, 4);
+    Put(s_unit + dateNamesHeaderSize + 4, 1, 4);
+    CHECK(!ValidNames(size), "strings from offset 1, each of them well formed");
+    BuildNames();
     Put(s_unit + s_itemsAt, 4, 2);
     CHECK(!ValidNames(size), "an item past the names");
     BuildNames();
@@ -355,6 +359,12 @@ static void TestNamesPastUnit(void)
     Put(s_dates + 6 * dateCalendarCount, 1, 2);
     CHECK(OpenDatesPack(s_dates, sources) && !mlocFindDayPeriodRules(&data, &fr, &rules),
           "rules past the unit's");
+    CHECK(!mlocFindDateSet(&data, &fr, dateCalendarCount, &p, &set),
+          "a calendar past MlocCalendar's, its index that of a set the unit has");
+    mlocDataSet builtin = {sources, 1};
+    rules = nullptr;
+    CHECK(!mlocFindDayPeriodRules(&builtin, &fr, &rules) && rules == nullptr,
+          "no rules in data without the dates");
 }
 
 // A formatter refuses a pattern with a field it does not write ("Q",
