@@ -237,8 +237,8 @@ mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocData
     if (result >= 0 && f.time.zoned)
     {
         mlocZoneStyle style = o.zone != mloc_zoneStyleNone ? o.zone : mloc_zoneStyleSpecificShort;
-        mlocResult zone = mlocMakeZoneFormat(&f.zone, data, locale, style);
-        result = zone < 0 ? zone : result;
+        // The zone reads the locale's digits as the time does: one result.
+        result = mlocMakeZoneFormat(&f.zone, data, locale, style);
     }
     if (result < 0)
     {

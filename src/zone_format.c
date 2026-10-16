@@ -86,10 +86,11 @@ static Meta ReadMeta(DataSpan unit)
     return m;
 }
 
-// A code's metazone period at an instant, or null.
+// A code's metazone period at an instant, or null; the code is below
+// the count (the formatter's own, or one the validator bounded) or -1.
 static const uint8_t* PeriodAt(const Meta* m, int32_t code, int64_t seconds)
 {
-    if (code < 0 || (uint32_t)code >= m->codeCount)
+    if (code < 0)
     {
         return nullptr;
     }
@@ -118,11 +119,7 @@ static ZoneOffset Classify(const uint8_t* period, ZoneOffset offset)
     int32_t total = offset.standard + offset.save;
     int32_t standard = (int16_t)mlocLoad16(period + 20) * 60;
     int32_t daylight = (int16_t)mlocLoad16(period + 22) * 60;
-    if (total == daylight)
-    {
-        return (ZoneOffset){standard, daylight - standard};
-    }
-    return total == standard ? (ZoneOffset){standard, 0} : offset;
+    return total == daylight ? (ZoneOffset){standard, daylight - standard} : offset;
 }
 
 // A metazone's preferred zone in a region, else its golden zone.
@@ -144,14 +141,13 @@ static int32_t ReferenceZone(const Meta* m, int32_t metazone, const char* region
 static bool CodeRegion(const ZoneAt* a, char region[3])
 {
     region[0] = '\0';
-    if (a->code < 0)
+    if (a->code >= 0)
     {
-        return false;
+        const uint8_t* c = a->meta.codes + (size_t)a->code * zoneMetaCodeSize;
+        region[0] = (char)c[0];
+        region[1] = (char)c[1];
+        region[2] = '\0';
     }
-    const uint8_t* c = a->meta.codes + (size_t)a->code * zoneMetaCodeSize;
-    region[0] = (char)c[0];
-    region[1] = (char)c[1];
-    region[2] = '\0';
     return region[0] != '\0';
 }
 
@@ -171,16 +167,21 @@ static bool FindKey(const ZoneFormat* f, uint32_t key, ZoneText* out)
         while (low < high)
         {
             uint32_t middle = low + (high - low) / 2;
-            uint32_t at = mlocLoad16(keys + 2 * (size_t)middle);
-            if (at == key)
+            if (mlocLoad16(keys + 2 * (size_t)middle) < key)
             {
-                uint32_t start = mlocLoad32(offsets + 4 * (size_t)middle);
-                out->bytes = offsets + 4 * ((size_t)count + 1) + start;
-                out->length = mlocLoad32(offsets + 4 * (size_t)middle + 4) - start;
-                return out->length > 0;
+                low = middle + 1;
             }
-            low = at < key ? middle + 1 : low;
-            high = at < key ? high : middle;
+            else
+            {
+                high = middle;
+            }
+        }
+        if (low < count && mlocLoad16(keys + 2 * (size_t)low) == key)
+        {
+            uint32_t start = mlocLoad32(offsets + 4 * (size_t)low);
+            out->bytes = offsets + 4 * ((size_t)count + 1) + start;
+            out->length = mlocLoad32(offsets + 4 * (size_t)low + 4) - start;
+            return out->length > 0;
         }
     }
     return false;
@@ -416,10 +417,6 @@ static bool StandardAround(const ZoneAt* a)
     {
         return false;
     }
-    if (!a->named)
-    {
-        return true;
-    }
     if (mlocZonePreviousTransition(&a->t, a->index, a->seconds, &at, &offset) &&
         a->seconds - at < daylightReach && mlocZoneOffsetAt(&a->t, a->index, at - 1).save != 0)
     {
@@ -465,15 +462,12 @@ static ZoneOffset OffsetAtLocal(const ZoneTables* t, uint32_t zone, int64_t loca
 }
 
 // Whether the metazone's preferred zone for the region shows the zone's
-// wall time with another offset, which qualifies its generic name.
+// wall time with another offset, which qualifies its generic name (a
+// zone in a metazone is a named one).
 static bool OtherReference(const ZoneFormat* f, const ZoneAt* a)
 {
     int32_t reference = ReferenceZone(&a->meta, a->metazone, f->region);
     if (reference == a->code || (uint32_t)reference >= a->codes.codeCount)
-    {
-        return false;
-    }
-    if (!a->named)
     {
         return false;
     }

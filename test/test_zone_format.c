@@ -149,6 +149,27 @@ static void TestGeneric(void)
     CHECK(Is("en", "America/Indiana/Knox", 1143961200, mloc_zoneStyleGenericLong,
              "Central Time (Knox, Indiana)"),
           "the reference zone read at a skipped wall time by the offset before");
+    CHECK(Is("en", "Africa/Algiers", 309740399, mloc_zoneStyleGenericLong,
+             "Central European Standard Time") &&
+              Is("en", "Africa/Algiers", 246236400, mloc_zoneStyleGenericLong,
+                 "Central European Time") &&
+              Is("en", "Africa/Algiers", 357523199, mloc_zoneStyleGenericLong,
+                 "Western European Time (Algiers)"),
+          "the standard name only with no daylight time within 184 days either side");
+    CHECK(Is("en", "Africa/Casablanca", 1540691999, mloc_zoneStyleGenericLong,
+             "Western European Time (Casablanca)"),
+          "qualified where the offset changes at the instant");
+    CHECK(Is("en_GB", "Africa/Algiers", july, mloc_zoneStyleGenericShort, "CET (Algiers)") &&
+              Is("de", "Africa/Algiers", july, mloc_zoneStyleGenericShort, "MEZ (Algier)"),
+          "a standard name equal to the generic one ignoring case is not taken");
+    CHECK(Is("ja", "Africa/Algiers", 246236399, mloc_zoneStyleGenericLong,
+             "\xE8\xA5\xBF\xE3\x83\xA8\xE3\x83\xBC\xE3\x83\xAD\xE3\x83\x83\xE3\x83\x91"
+             "\xE6\x99\x82\xE9\x96\x93\xEF\xBC\x88\xE3\x82\xA2\xE3\x83\xAB\xE3\x82\xB8"
+             "\xE3\x82\xA7\xEF\xBC\x89") &&
+              Is("ar", "Africa/Tripoli", 875916000, mloc_zoneStyleGenericLong,
+                 "\xD8\xAA\xD9\x88\xD9\x82\xD9\x8A\xD8\xAA \xD8\xB4\xD8\xB1\xD9\x82 "
+                 "\xD8\xA3\xD9\x88\xD8\xB1\xD9\x88\xD8\xA8\xD8\xA7"),
+          "the locale's fallback format; a locale without a region by its likely one");
 }
 
 static void TestOffsets(void)
@@ -165,6 +186,24 @@ static void TestOffsets(void)
            "\xDA\x86") &&
             Is("fr", "Asia/Kolkata", july, mloc_zoneStyleOffsetLong, "UTC+05:30"),
         "the locale's digits and format");
+}
+
+// Cases found by the mutants, as ICU4C 79 writes them.
+static void TestEdges(void)
+{
+    CHECK(Is("en", "Europe/Andorra", july, mloc_zoneStyleSpecificLong,
+             "Central European Summer Time") &&
+              Is("en", "Europe/Andorra", july, mloc_zoneStyleGenericShort, "Andorra Time") &&
+              Is("en", "Europe/Andorra", july, mloc_zoneStyleCity, "Andorra"),
+          "the first zone code (Andorra's)");
+    CHECK(Is("en", "America/Eirunepe", july, mloc_zoneStyleSpecificLong, "Acre Standard Time") &&
+              Is("en", "America/Eirunepe", july, mloc_zoneStyleGenericLong, "Acre Standard Time"),
+          "the first metazone (Acre)");
+    CHECK(Is("en", "America/Adak", january, mloc_zoneStyleOffsetShort, "GMT-10"),
+          "an offset of ten hours");
+    CHECK(Is("en", "Europe/Kaliningrad", 606870000, mloc_zoneStyleGenericLong,
+             "Eastern European Time (Kaliningrad)"),
+          "a region's preferred zone, the last of its metazone's");
 }
 
 static uint32_t s_partKind;
@@ -283,6 +322,22 @@ static void TestInZone(void)
               InZone("de", "Europe/Berlin", january, &berlin, 'B',
                      "Samstag, 10. Januar 2026 um 00:06 Mitteleurop\xC3\xA4ische Normalzeit"),
           "field sets with a zone: the glue, a lone weekday, the local date");
+    mlocDateTimeOptions hour = {.date = {.length = mloc_dateLengthMedium},
+                                .time = {.precision = mloc_timePrecisionMinuteOptional,
+                                         .zone = mloc_zoneStyleSpecificShort}};
+    mlocDateTimeOptions offset = {.time = {.hourCycle = mloc_hourCycleClock12,
+                                           .precision = mloc_timePrecisionMinute,
+                                           .zone = mloc_zoneStyleOffsetShort}};
+    CHECK(InZone("en", "America/Los_Angeles", july - 2000, &hour, 'B',
+                 "Jul 13, 2026, 8" NNBSP "PM PDT") &&
+              InZone("en", "America/Los_Angeles", july, &hour, 'B',
+                     "Jul 13, 2026, 8:33" NNBSP "PM PDT") &&
+              InZone("en", "America/Los_Angeles", july, &offset, 'T', "8:33" NNBSP "PM GMT-7"),
+          "minutes unless zero, with a zone; the short offset");
+    CHECK(InZone("en-u-hc-h23", "America/Los_Angeles", july, &full, 'T',
+                 "20:33:20 Pacific Daylight Time") &&
+              InZone("en-u-hc-h23", "America/Los_Angeles", july, &longTime, 'T', "20:33:20 PDT"),
+          "the full and long formats under an hour cycle asked for");
     mlocDateTimeOptions generic = {
         .date = {.length = mloc_dateLengthMedium, .zone = mloc_zoneStyleGenericShort}};
     mlocDateTimeOptions sofia = {
@@ -357,6 +412,7 @@ int main(void)
     TestFallbacks();
     TestGeneric();
     TestOffsets();
+    TestEdges();
     TestOutput();
     TestInZone();
     TestRefused();

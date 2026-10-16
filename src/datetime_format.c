@@ -124,15 +124,11 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     {
         return mloc_errorData;
     }
+    // The date, the time and the zone read the locale's digits alike, so
+    // their results agree.
     mlocZoneStyle zoneStyle =
         o->time.zone != mloc_zoneStyleNone ? o->time.zone : mloc_zoneStyleSpecificShort;
-    mlocResult zone =
-        f->time.zoned ? mlocMakeZoneFormat(&f->zone, data, locale, zoneStyle) : mloc_success;
-    if (zone < 0)
-    {
-        return zone;
-    }
-    return date < time ? date : time;
+    return f->time.zoned ? mlocMakeZoneFormat(&f->zone, data, locale, zoneStyle) : time;
 }
 
 mlocResult mlocInitDateTimeFormatter(mlocDateTimeFormatter* formatterOut, const mlocDataSet* data,
