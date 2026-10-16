@@ -70,8 +70,8 @@ typedef struct ZoneCode
 typedef struct Period
 {
     int code;
-    int32_t from;
-    int32_t to;
+    int64_t from;
+    int64_t to;
     int metazone;
     uint8_t flags;
     int standard;
@@ -234,16 +234,19 @@ static int ReadCodes(Zones* z, char* errorOut, size_t errorCapacity)
     return 1;
 }
 
-// Minutes since 1970 of "YYYY-MM-DD HH:MM" in universal time.
-static int32_t MinutesOf(const char* text)
+// Seconds since 1970 of "YYYY-MM-DD HH:MM", or with ":SS", in universal
+// time.
+static int64_t SecondsOf(const char* text)
 {
     int year = 0;
     int month = 0;
     int day = 0;
     int hour = 0;
     int minute = 0;
-    if (sscanf(text, "%d-%d-%d %d:%d", &year, &month, &day, &hour, &minute) != 5 || month < 1 ||
-        month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59)
+    int second = 0;
+    int read = sscanf(text, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second);
+    if (read < 5 || month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 ||
+        second > 59)
     {
         GenDie("a metazone period's time the generator cannot read", text);
     }
@@ -254,7 +257,7 @@ static int32_t MinutesOf(const char* text)
     int dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
     int dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
     int64_t days = (int64_t)era * 146097 + dayOfEra - 719468;
-    return (int32_t)(days * 1440 + hour * 60 + minute);
+    return days * 86400 + hour * 3600 + minute * 60 + second;
 }
 
 // Minutes of "+01", "-07" or "+05:30".
@@ -302,8 +305,8 @@ static void AddPeriod(Zones* z, int code, const XmlNode* uses)
     Period* p = &z->periods[z->periodCount++];
     p->code = code;
     p->metazone = MetazoneOf(z, metazone);
-    p->from = from != nullptr ? MinutesOf(from) : INT32_MIN;
-    p->to = to != nullptr ? MinutesOf(to) : INT32_MAX;
+    p->from = from != nullptr ? SecondsOf(from) : INT64_MIN;
+    p->to = to != nullptr ? SecondsOf(to) : INT64_MAX;
     if (standard != nullptr || daylight != nullptr)
     {
         p->flags = zoneMetaOffsets;
@@ -519,12 +522,12 @@ static void AddMetaUnit(const Zones* z, DataFile* file)
     for (int i = 0; i < z->periodCount; i++, at += zoneMetaPeriodSize)
     {
         const Period* p = &z->periods[i];
-        GenPut(at, (uint32_t)p->from, 4);
-        GenPut(at + 4, (uint32_t)p->to, 4);
-        GenPut(at + 8, (uint64_t)p->metazone, 2);
-        GenPut(at + 10, p->flags, 1);
-        GenPut(at + 12, (uint16_t)p->standard, 2);
-        GenPut(at + 14, (uint16_t)p->daylight, 2);
+        GenPut(at, (uint64_t)p->from, 8);
+        GenPut(at + 8, (uint64_t)p->to, 8);
+        GenPut(at + 16, (uint64_t)p->metazone, 2);
+        GenPut(at + 18, p->flags, 1);
+        GenPut(at + 20, (uint16_t)p->standard, 2);
+        GenPut(at + 22, (uint16_t)p->daylight, 2);
     }
     for (int i = 0; i < z->metazoneCount; i++, at += zoneMetaZoneSize)
     {
@@ -648,9 +651,15 @@ static bool ValidValue(int item, int field, const char* value)
         }
         at += length;
     }
+    // A format holds no quotes, so placeholders are all the run time reads
+    // in it (ICU's SimpleFormatter would read quotes).
     if (item != zoneNameFormats)
     {
         return true;
+    }
+    if (strchr(value, '\'') != nullptr)
+    {
+        return false;
     }
     bool zero = strstr(value, "{0}") != nullptr;
     bool one = strstr(value, "{1}") != nullptr;

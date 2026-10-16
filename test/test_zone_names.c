@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void Put(uint8_t* p, uint32_t value, int bytes)
+static void Put(uint8_t* p, uint64_t value, int bytes)
 {
     for (int i = 0; i < bytes; i++)
     {
@@ -53,13 +53,14 @@ static void BuildMeta(void)
     memcpy(s_meta + metaCodes, "US", 2);
     s_meta[metaCodes + 2] = zoneMetaCountry;
     s_meta[metaCodes + 3] = 2;
-    Put(s_meta + metaPeriods, (uint32_t)INT32_MIN, 4);
-    Put(s_meta + metaPeriods + 4, 1000, 4);
+    Put(s_meta + metaPeriods + 4, 0x80000000, 4);
+    Put(s_meta + metaPeriods + 8, 1000, 4);
     Put(s_meta + metaPeriods + zoneMetaPeriodSize, 1000, 4);
-    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 4, INT32_MAX, 4);
-    s_meta[metaPeriods + zoneMetaPeriodSize + 10] = zoneMetaOffsets;
-    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 12, (uint16_t)-420, 2);
-    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 14, (uint16_t)-360, 2);
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 8, UINT32_MAX, 4);
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 12, INT32_MAX, 4);
+    s_meta[metaPeriods + zoneMetaPeriodSize + 18] = zoneMetaOffsets;
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 20, (uint16_t)-420, 2);
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 22, (uint16_t)-360, 2);
     Put(s_meta + metaZones + 4, 1, 2);
     memcpy(s_meta + metaPreferred, "CA", 2);
     Put(s_meta + metaPreferred + 2, 1, 2);
@@ -72,7 +73,7 @@ static bool MetaValid(uint32_t size)
 }
 
 // Whether the unit with bytes at an offset spoiled is refused.
-static bool MetaRefuses(uint32_t at, uint32_t value, int bytes)
+static bool MetaRefuses(uint32_t at, uint64_t value, int bytes)
 {
     BuildMeta();
     Put(s_meta + at, value, bytes);
@@ -89,6 +90,14 @@ static void TestMeta(void)
           "a size other than the counts give");
     CHECK(MetaRefuses(0, zoneNameMaxCodes + 1, 4) && MetaRefuses(8, zoneNameMaxMetazones + 1, 4),
           "more codes or metazones than the keys hold");
+    alignas(8) static uint8_t s_most[zoneMetaHeaderSize + zoneNameMaxCodes * zoneMetaCodeSize];
+    memset(s_most, 0, sizeof(s_most));
+    Put(s_most, zoneNameMaxCodes, 4);
+    DataView view = {0};
+    CHECK(mlocValidZoneMeta(&view, (DataSpan){s_most, sizeof(s_most)}) &&
+              mlocValidZoneMeta(&view, (DataSpan){s_most + sizeof(s_most) - zoneMetaHeaderSize,
+                                                  zoneMetaHeaderSize}),
+          "the most codes the keys hold, and a unit of none");
     CHECK(MetaRefuses(metaCodes, 'u', 1) && MetaRefuses(metaCodes + 1, 0, 1) &&
               MetaRefuses(metaCodes, '@', 1) && MetaRefuses(metaCodes + 1, '[', 1),
           "a region not two upper-case letters");
@@ -97,20 +106,19 @@ static void TestMeta(void)
     CHECK(MetaRefuses(metaCodes + 3, 3, 1) && MetaRefuses(metaCodes + 4, 1, 2) &&
               MetaRefuses(metaCodes + zoneMetaCodeSize + 4, 1, 2),
           "periods past the section, or a first period without any");
-    CHECK(MetaRefuses(metaPeriods + 4, (uint32_t)INT32_MIN, 4) &&
-              MetaRefuses(metaPeriods + 4, 1001, 4),
+    CHECK(MetaRefuses(metaPeriods, 1000, 8) && MetaRefuses(metaPeriods + 8, 1001, 4),
           "a period ending before it starts, or overlapping the next");
-    CHECK(MetaRefuses(metaPeriods + 8, 1, 2) && MetaRefuses(metaPeriods + 10, 2, 1) &&
-              MetaRefuses(metaPeriods + 11, 1, 1),
+    CHECK(MetaRefuses(metaPeriods + 16, 1, 2) && MetaRefuses(metaPeriods + 18, 2, 1) &&
+              MetaRefuses(metaPeriods + 19, 1, 1),
           "a period's metazone past the metazones, an unknown flag, a nonzero pad");
-    CHECK(MetaRefuses(metaPeriods + 12, 60, 2) && MetaRefuses(metaPeriods + 14, 60, 2),
+    CHECK(MetaRefuses(metaPeriods + 20, 60, 2) && MetaRefuses(metaPeriods + 22, 60, 2),
           "offsets on a period without the flag");
-    CHECK(MetaRefuses(metaPeriods + zoneMetaPeriodSize + 12, 18 * 60 + 1, 2) &&
-              MetaRefuses(metaPeriods + zoneMetaPeriodSize + 14, (uint16_t)(-18 * 60 - 1), 2),
+    CHECK(MetaRefuses(metaPeriods + zoneMetaPeriodSize + 20, 18 * 60 + 1, 2) &&
+              MetaRefuses(metaPeriods + zoneMetaPeriodSize + 22, (uint16_t)(-18 * 60 - 1), 2),
           "an offset past 18 hours");
     BuildMeta();
-    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 12, 18 * 60, 2);
-    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 14, (uint16_t)(-18 * 60), 2);
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 20, 18 * 60, 2);
+    Put(s_meta + metaPeriods + zoneMetaPeriodSize + 22, (uint16_t)(-18 * 60), 2);
     CHECK(MetaValid(metaSize), "offsets of 18 hours");
     CHECK(MetaRefuses(metaZones, 2, 2) && MetaRefuses(metaZones + 6, 1, 2) &&
               MetaRefuses(metaZones + 4, 2, 2) && MetaRefuses(metaZones + 2, 1, 2),
@@ -187,6 +195,9 @@ static void TestNames(void)
     CHECK(NamesValid(size), "a zone names unit, an empty name among them");
     CHECK(!NamesValid(size + 1) && !NamesValid(size - 1) && !NamesValid(4),
           "a size other than the counts give");
+    memset(s_names, 0, zoneNameHeaderSize + 4);
+    CHECK(NamesValid(zoneNameHeaderSize + 4) && !NamesValid(zoneNameHeaderSize + 3),
+          "a unit without entries, and one without its offset");
     CHECK(NamesRefuse(zoneNameHeaderSize + 6, 1, 4) && NamesRefuse(zoneNameHeaderSize + 18, 16, 4),
           "a first offset not 0, or a last not the text's size");
     CHECK(NamesRefuse(zoneNameHeaderSize + 10, 18, 4) && NamesRefuse(zoneNameHeaderSize + 14, 5, 4),
@@ -259,11 +270,11 @@ static void TestFile(void)
     const uint8_t* periods =
         meta.bytes + zoneMetaHeaderSize + (size_t)t.codeCount * zoneMetaCodeSize;
     const uint8_t* zones = periods + (size_t)mlocLoad32(meta.bytes + 4) * zoneMetaPeriodSize;
-    uint32_t pacific =
-        la != nullptr ? mlocLoad16(periods + (size_t)mlocLoad16(la + 4) * zoneMetaPeriodSize + 8)
-                      : metazones;
-    CHECK(pacific < metazones && (int32_t)mlocLoad32(periods + (size_t)mlocLoad16(la + 4) *
-                                                                   zoneMetaPeriodSize) == INT32_MIN,
+    const uint8_t* period =
+        la != nullptr ? periods + (size_t)mlocLoad16(la + 4) * zoneMetaPeriodSize : nullptr;
+    uint32_t pacific = period != nullptr ? mlocLoad16(period + 16) : metazones;
+    CHECK(pacific < metazones && (int64_t)mlocLoad64(period) == INT64_MIN &&
+              (int64_t)mlocLoad64(period + 8) == INT64_MAX,
           "Los Angeles's period open at both ends");
     CHECK(pacific < metazones && mlocLoad16(zones + (size_t)pacific * zoneMetaZoneSize) ==
                                      (uint32_t)mlocZoneCodeFind(&t, "uslax", 5),

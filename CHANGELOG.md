@@ -85,6 +85,10 @@ format.
   minutes and seconds on both clocks, the standard time formats, the
   date-time glue), its day period names and its day period rules
   (mloc-0042).
+- Zones formatted: `mlocInitZoneFormatter` and `mlocFormatZone` write a
+  zone at an instant by its specific or generic name, location, city or
+  offset, falling back and qualifying generic names as ICU4C does, with
+  CLDR's daylight offsets read over the zones unit's (mloc-0042).
 - The zone names data file, `zone-names.mloc`: each BCP 47 zone id's
   region and metazone periods, each metazone's golden and preferred
   zones, and every locale's zone formats, exemplar cities and zone and

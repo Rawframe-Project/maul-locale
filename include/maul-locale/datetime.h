@@ -106,6 +106,8 @@ extern "C"
         mloc_datePartFraction = 11,
         // AM or PM, noon, or a period of the day ("in the evening").
         mloc_datePartDayPeriod = 12,
+        // A time zone's name, city or offset ("Pacific Time", "GMT-7").
+        mloc_datePartTimeZone = 13,
     } mlocDatePart;
 
     // A date formatter: a locale's patterns for the options in its
@@ -336,6 +338,92 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter,
                                                           const mlocDateTime* dateTime,
                                                           mlocOutput* output);
+
+    // How a time zone is written (UTS #35's zone formats, chosen as
+    // ICU4X's zone field sets choose them), each falling back as ICU4C
+    // falls back where the locale has no name.
+    typedef enum mlocZoneStyle
+    {
+        mloc_zoneStyleNone = 0,
+        // "Pacific Daylight Time": the zone's standard or daylight name
+        // at the instant (zzzz); else the long offset.
+        mloc_zoneStyleSpecificLong = 1,
+        // "PDT" (z); else the short offset.
+        mloc_zoneStyleSpecificShort = 2,
+        // "Pacific Time": the wall-clock name (vvvv), qualified by a
+        // city or country where the locale's region names another zone
+        // ("Pacific Time (Canada)"); else the location; else the long
+        // offset.
+        mloc_zoneStyleGenericLong = 3,
+        // "PT" (v); else the location; else the short offset.
+        mloc_zoneStyleGenericShort = 4,
+        // "Los Angeles Time", "Japan Time" (VVVV); else the long offset.
+        mloc_zoneStyleLocation = 5,
+        // "Los Angeles" (VVV); else the locale's name of an unknown
+        // city.
+        mloc_zoneStyleCity = 6,
+        // "GMT-07:00" (OOOO).
+        mloc_zoneStyleOffsetLong = 7,
+        // "GMT-7" (O).
+        mloc_zoneStyleOffsetShort = 8,
+    } mlocZoneStyle;
+
+    // A zone formatter: a locale's zone names and formats in the data it
+    // was made from, which must outlive it, as must the data set.
+    // Opaque; make it with mlocInitZoneFormatter.
+    typedef struct mlocZoneFormatter
+    {
+        uint64_t opaque[48];
+    } mlocZoneFormatter;
+
+    /// Makes a locale's zone formatter. The names are its zone names
+    /// (zone-names.mloc) along its chain, the countries' its region names
+    /// (names.mloc, else the region code), the offset's digits its
+    /// numbering system's (-u-nu, else its default; an algorithmic one
+    /// writes ASCII digits). A generic name is qualified where the
+    /// metazone's preferred zone for the locale's region (its likely
+    /// region when it names none) is another zone of another offset.
+    ///
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
+    /// @param data          The data with the zone names (zone-names.mloc),
+    ///                      the zone codes, the number units, the likely
+    ///                      subtags and the parents; the region names
+    ///                      (names.mloc) for the location formats.
+    /// @param locale        The locale, canonicalized.
+    /// @param style         How zones are written.
+    /// @return mloc_success; mloc_fellBack when the numbering system asked
+    ///         for has no digits and the default stands instead;
+    ///         mloc_errorNotFound for data without the zone names, the
+    ///         zone codes or the number units; mloc_errorInvalid for a null
+    ///         pointer or a style out of range or none.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut,
+                                                             const mlocDataSet* data,
+                                                             const mlocLocale* locale,
+                                                             mlocZoneStyle style);
+
+    /// Writes a time zone at an instant by the formatter (the instant
+    /// picks the metazone, standard or daylight time and the offset). A
+    /// zone CLDR does not know, an offset zone and a zone without a
+    /// region fall back to the offset. Parts: mlocDatePart.
+    ///
+    /// @param formatter  A formatter from mlocInitZoneFormatter.
+    /// @param zone       The zone.
+    /// @param instant    The instant, in Temporal's range.
+    /// @param output     Where the text goes (record mloc-0015).
+    /// @return mloc_success; mloc_errorCapacity when the text does not
+    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         for a null pointer, a zone the library did not make, an
+    ///         instant out of range, or a formatter the library did not
+    ///         make.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatZone(const mlocZoneFormatter* formatter,
+                                                      const mlocTimeZone* zone,
+                                                      const mlocInstant* instant,
+                                                      mlocOutput* output);
 
 #ifdef __cplusplus
 }

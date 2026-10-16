@@ -183,6 +183,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTime(const mlocDateTimeFormatte
 ```
 Writes a date and time of day by the formatter, the date read in the formatter's calendar. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitDateTimeFormatter. @param dateTime   The date and time. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a date-time out of range, or a formatter the library did not make. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, mlocZoneStyle style);
+```
+Makes a locale's zone formatter. The names are its zone names (zone-names.mloc) along its chain, the countries' its region names (names.mloc, else the region code), the offset's digits its numbering system's (-u-nu, else its default; an algorithmic one writes ASCII digits). A generic name is qualified where the metazone's preferred zone for the locale's region (its likely region when it names none) is another zone of another offset.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the zone names (zone-names.mloc), the zone codes, the number units, the likely subtags and the parents; the region names (names.mloc) for the location formats. @param locale        The locale, canonicalized. @param style         How zones are written. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the zone names, the zone codes or the number units; mloc_errorInvalid for a null pointer or a style out of range or none. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* instant, mlocOutput* output);
+```
+Writes a time zone at an instant by the formatter (the instant picks the metazone, standard or daylight time and the offset). A zone CLDR does not know, an offset zone and a zone without a region fall back to the offset. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitZoneFormatter. @param zone       The zone. @param instant    The instant, in Temporal's range. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a zone the library did not make, an instant out of range, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
 ## `decimal.h`
 
 Decimal values and their plural operands (record mloc-0019): a number is formatted from its decimal digits, never from a binary value, so the digits a user typed are the digits shown.
@@ -725,4 +735,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-132 functions across 15 headers.
+134 functions across 15 headers.

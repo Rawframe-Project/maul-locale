@@ -10,10 +10,13 @@
 // precision and standard style as mlocTimeOptions' numbers, and the time
 // (HH:MM:SS.nnnnnnnnn). A date-time's line is "DT", the locale, the date
 // options' four numbers, the time options' three, the glue, the date and
-// the time. The output line is the formatted text, or "error N" with the
-// library's result.
+// the time. A zone's line is "Z", the locale, the zone's identifier, the
+// instant's seconds since 1970 and the style as mlocZoneStyle's number.
+// The output line is the formatted text, or "error N" with the library's
+// result.
 //
-// usage: conform_datetime dates.mloc spellout.mloc < lines
+// usage: conform_datetime dates.mloc spellout.mloc [zone-names.mloc
+//        names.mloc] < lines
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -25,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static mlocData s_sources[3];
+static mlocData s_sources[5];
 
 // Reads a data file into memory and opens it as source index.
 static bool Open(const char* path, int index)
@@ -148,20 +151,76 @@ static mlocResult FormatDateTime(const mlocDataSet* set, const char* line, char*
     return result;
 }
 
+static mlocResult FormatZone(const mlocDataSet* set, const char* line, char* out, size_t* length)
+{
+    char id[256];
+    char zoneId[256];
+    long long seconds = 0;
+    int style = 0;
+    if (sscanf(line, "Z %255s %255s %lld %d", id, zoneId, &seconds, &style) != 4)
+    {
+        return mloc_errorSyntax;
+    }
+    // The formatters of the last locale, by style, kept for the lines that
+    // follow (a sweep's lines come grouped by locale).
+    static char s_id[256];
+    static mlocLocale s_locale;
+    static mlocZoneFormatter s_formatters[mloc_zoneStyleOffsetShort + 1];
+    static mlocResult s_results[mloc_zoneStyleOffsetShort + 1];
+    static bool s_made[mloc_zoneStyleOffsetShort + 1];
+    if (style < 0 || style > mloc_zoneStyleOffsetShort)
+    {
+        return mloc_errorInvalid;
+    }
+    if (strcmp(id, s_id) != 0)
+    {
+        memset(s_made, 0, sizeof(s_made));
+        snprintf(s_id, sizeof(s_id), "%s", id);
+        if (mlocCanonicalizeLocale(set, id, strlen(id), &s_locale, nullptr).status != mloc_success)
+        {
+            s_id[0] = '\0';
+            return mloc_errorSyntax;
+        }
+    }
+    if (!s_made[style])
+    {
+        s_results[style] =
+            mlocInitZoneFormatter(&s_formatters[style], set, &s_locale, (mlocZoneStyle)style);
+        s_made[style] = true;
+    }
+    mlocTimeZone zone;
+    mlocResult result = mlocFindTimeZone(set, zoneId, strlen(zoneId), &zone);
+    result = result < 0 ? result : s_results[style];
+    if (result < 0)
+    {
+        return result;
+    }
+    mlocInstant instant = {.seconds = seconds};
+    mlocOutput output = {.buffer = out, .capacity = 1024};
+    result = mlocFormatZone(&s_formatters[style], &zone, &instant, &output);
+    *length = output.length;
+    return result;
+}
+
 int main(int argc, char** argv)
 {
-    if (argc != 3)
+    if (argc != 3 && argc != 5)
     {
-        fputs("usage: conform_datetime dates.mloc spellout.mloc < lines\n", stderr);
+        fputs("usage: conform_datetime dates.mloc spellout.mloc [zone-names.mloc names.mloc] < "
+              "lines\n",
+              stderr);
         return 2;
     }
     mlocOpenBuiltinData(&s_sources[0]);
-    if (!Open(argv[1], 1) || !Open(argv[2], 2))
+    for (int i = 1; i < argc; i++)
     {
-        fputs("conform_datetime: cannot open the data files\n", stderr);
-        return 2;
+        if (!Open(argv[i], i))
+        {
+            fputs("conform_datetime: cannot open the data files\n", stderr);
+            return 2;
+        }
     }
-    mlocDataSet set = {s_sources, 3};
+    mlocDataSet set = {s_sources, (size_t)argc};
     char line[1024];
     while (fgets(line, sizeof(line), stdin) != nullptr)
     {
@@ -175,10 +234,11 @@ int main(int argc, char** argv)
         int day = 0;
         char out[1024];
         size_t written = 0;
-        if (line[0] == 'T' || (line[0] == 'D' && line[1] == 'T'))
+        if (line[0] == 'T' || line[0] == 'Z' || (line[0] == 'D' && line[1] == 'T'))
         {
-            mlocResult result = line[0] == 'T' ? FormatTime(&set, line, out, &written)
-                                               : FormatDateTime(&set, line, out, &written);
+            mlocResult result = line[0] == 'T'   ? FormatTime(&set, line, out, &written)
+                                : line[0] == 'Z' ? FormatZone(&set, line, out, &written)
+                                                 : FormatDateTime(&set, line, out, &written);
             if (result < 0)
             {
                 printf("error %d\n", result);

@@ -92,8 +92,12 @@ cycle and precision or a standard format, with day periods, and both
 joined by the calendar's glue, as ICU4X's
 semantic skeletons and ICU4C's patterns write them (CLDR's datetime
 test data passes on every push; the patterns and calendar names are a
-data file of their own, `src/generated/dates.mloc`).
-The library has 132 public functions.
+data file of their own, `src/generated/dates.mloc`); and time zones
+written by their specific or generic names, locations, cities or
+offsets at an instant, falling back as ICU4C's TimeZoneFormat does
+(the zone names are a data file of their own,
+`src/generated/zone-names.mloc`).
+The library has 134 public functions.
 
 ## Building
 

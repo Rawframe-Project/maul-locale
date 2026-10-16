@@ -93,6 +93,7 @@ calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 zone_name_tables: bytes data_view number_data
+zone_format: bytes data_view kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_name_tables zone_rules zone_tables
 zone_codes: data_view zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith zone_tables
 zone_handle: zone_rules zone_tables

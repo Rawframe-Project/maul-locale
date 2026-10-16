@@ -156,6 +156,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone.c
     src/zone_code_tables.c
     src/zone_name_tables.c
+    src/zone_format.c
     src/zone_codes.c
     src/zone_handle.c
     src/zone_local.c
@@ -340,6 +341,17 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_zone_names PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
+    endif()
+    # The zone formatter reads the zone names and the region names.
+    maul_add_test(zone_format)
+    if(TARGET test_zone_format)
+        if(EMSCRIPTEN)
+            target_link_options(test_zone_format PRIVATE
+                                "SHELL:--embed-file ${MLOC_ZONE_NAMES_FILE}@/zone-names.mloc"
+                                "SHELL:--embed-file ${MLOC_LOCALE_NAMES_FILE}@/locale-names.mloc")
+        endif()
+        target_compile_definitions(test_zone_format PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}"
+                                   MLOC_LOCALE_NAMES_FILE="${MLOC_LOCALE_NAMES_PATH}")
     endif()
     # The date formatter reads the dates and the spell-out rules.
     maul_add_test(date_format)

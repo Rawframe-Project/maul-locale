@@ -30,14 +30,14 @@ static bool ValidOffset(int32_t minutes)
 
 static bool ValidPeriod(const uint8_t* p, uint32_t metazoneCount)
 {
-    int32_t from = (int32_t)mlocLoad32(p);
-    int32_t to = (int32_t)mlocLoad32(p + 4);
-    uint8_t flags = p[10];
-    int32_t standard = (int16_t)mlocLoad16(p + 12);
-    int32_t daylight = (int16_t)mlocLoad16(p + 14);
+    int64_t from = (int64_t)mlocLoad64(p);
+    int64_t to = (int64_t)mlocLoad64(p + 8);
+    uint8_t flags = p[18];
+    int32_t standard = (int16_t)mlocLoad16(p + 20);
+    int32_t daylight = (int16_t)mlocLoad16(p + 22);
     bool offsets = flags == zoneMetaOffsets ? ValidOffset(standard) && ValidOffset(daylight)
                                             : flags == 0 && standard == 0 && daylight == 0;
-    return from < to && mlocLoad16(p + 8) < metazoneCount && p[11] == 0 && offsets;
+    return from < to && mlocLoad16(p + 16) < metazoneCount && p[19] == 0 && offsets;
 }
 
 // Each code's region, flags and periods, ascending without overlap.
@@ -58,7 +58,7 @@ static bool ValidCodes(const uint8_t* codes, uint32_t codeCount, const uint8_t* 
         {
             const uint8_t* p = periods + (size_t)(first + k) * zoneMetaPeriodSize;
             if (!ValidPeriod(p, metazoneCount) ||
-                (k > 0 && (int32_t)mlocLoad32(p - zoneMetaPeriodSize + 4) > (int32_t)mlocLoad32(p)))
+                (k > 0 && (int64_t)mlocLoad64(p - zoneMetaPeriodSize + 8) > (int64_t)mlocLoad64(p)))
             {
                 return false;
             }
@@ -127,9 +127,10 @@ static bool ValidKey(uint32_t key)
 {
     uint32_t item = key / zoneNameFieldsPerItem;
     uint32_t field = key % zoneNameFieldsPerItem;
+    // The formats hold eight fields, every field a key can name.
     if (item == zoneNameFormats)
     {
-        return field < zoneFormatCount;
+        return true;
     }
     if (item < zoneNameMetazoneBase)
     {
@@ -142,7 +143,8 @@ static bool ValidKey(uint32_t key)
 bool mlocValidZoneNames(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (payload.size < zoneNameHeaderSize)
+    // The header and the one offset of a unit without entries.
+    if (payload.size < zoneNameHeaderSize + 4)
     {
         return false;
     }

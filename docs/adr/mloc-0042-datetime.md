@@ -114,8 +114,8 @@ cycle, time precision, zone style).
   unit of no locale holds each BCP 47 id's region (TR35's first two
   letters of a five-letter id, or its region attribute), whether the
   location format names the region (its only zone, or a primary zone),
-  and its metazone periods in minutes since 1970 with the offsets CLDR
-  gives some, and each metazone's golden zone and preferred zones by
+  and its metazone periods in seconds since 1970 (one of CLDR's starts
+  falls at 00:44:30) with the offsets CLDR gives some, and each metazone's golden zone and preferred zones by
   region; a unit per locale key holds its zone formats (the hour
   format's halves apart), Etc/Unknown's city and each zone's and
   metazone's names, filed where the chain would give others, as the
@@ -218,8 +218,37 @@ cycle, time precision, zone style).
     stored in the time set ("Thursday 4:03 PM", ja's "16:03 (木曜日)").
   - Calendar periods take no time and a standard format on one side
     only is refused.
-- **Still to come in this part** (research 39's slices): time zone
-  names by metazone; intervals; relative time; durations; speed.
+- **The zone formatter** (`mlocInitZoneFormatter`, `mlocFormatZone`):
+  a zone at an instant in one of eight styles, ICU4X's zone field sets
+  (specific and generic long and short, location, city, offset long and
+  short), each falling back as ICU4C's TimeZoneFormat and
+  TimeZoneGenericNames do:
+  - a specific name is the zone's own of its time at the instant, else
+    its metazone's; else the offset;
+  - a generic name is the zone's own, else, in standard time with no
+    daylight time within 184 days either way, the standard name (unless
+    it is the generic one), else the metazone's generic name, qualified
+    by the fallback format where the metazone's preferred zone for the
+    locale's region (its likely one, else 001) shows the same wall time
+    with another standard offset or saving: by the zone's country where
+    it is the metazone's preferred zone there, else by its city; else
+    the location; else the offset;
+  - the location is the region format around the country for a
+    country's only or primary zone, else around the city; a zone of no
+    region falls back to the offset; the city falls back to
+    Etc/Unknown's;
+  - the offset is gmtFormat around the hour format's half, two-digit
+    hours long, seconds where they are not zero, minutes in the short
+    form only where they are not zero, in the locale's digits;
+  - the reference zone's offset at a wall time is the later where the
+    time repeats and the earlier where it is skipped, as ICU4C reads
+    one;
+  - where CLDR gives a metazone period standard and daylight offsets,
+    the zone's offset is read by them (Punta Arenas's permanent -03 is
+    Chile Summer Time, Winnipeg's under tzdb 2026e Central Daylight
+    Time), as ICU4C writes them.
+- **Still to come in this part** (research 39's slices): zoned dates
+  and times; intervals; relative time; durations; speed.
 
 ## Proof
 
@@ -309,6 +338,20 @@ cycle, time precision, zone style).
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,
   whose rules UTS #35 describes.
+- **The zone formatter against ICU4C 79, once:** 20,120,448 zones (the
+  906 locales ICU ships, the 450 zones CLDR names, 8 styles, 4 instants
+  in 1990 and 2026 and each metazone change and the second before it).
+  All equal but 23,514, of three causes: sr_Cyrl_ME (10,712; ICU's data
+  reaches sr_Latn_ME's names through its sr_ME alias, CLDR's parent is
+  sr_Cyrl); the British and Irish metazones' winter names (10,910; CLDR
+  resolves root's alias to the GMT metazone per path, ICU's data takes
+  en's British table whole and falls back to the offset); Africa/
+  Monrovia in the 30 seconds after 1972-01-07 00:44:30, where CLDR's
+  period starts and ICU's data starts it at 00:45. And 8,221,200 zones
+  around every transition from 1990 to 2030 (15 locales; one second
+  before, at, 100, 183 and 185 days after): all equal but the British
+  and Irish winter names and 1,474 that follow tzdb 2026e's Manitoba
+  change, which ICU's 2026d lacks.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

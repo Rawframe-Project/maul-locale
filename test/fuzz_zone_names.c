@@ -37,14 +37,14 @@ static void CheckMeta(DataSpan span)
     for (uint32_t i = 0; i < codeCount; i++)
     {
         const uint8_t* c = codes + (size_t)i * zoneMetaCodeSize;
-        int32_t previous = INT32_MIN;
+        int64_t previous = INT64_MIN;
         for (uint32_t k = 0; k < c[3]; k++)
         {
             const uint8_t* p = periods + (size_t)(mlocLoad16(c + 4) + k) * zoneMetaPeriodSize;
             Require(p + zoneMetaPeriodSize <= metazones);
-            Require((int32_t)mlocLoad32(p) >= previous);
-            Require(mlocLoad16(p + 8) < metazoneCount);
-            previous = (int32_t)mlocLoad32(p + 4);
+            Require((int64_t)mlocLoad64(p) >= previous);
+            Require(mlocLoad16(p + 16) < metazoneCount);
+            previous = (int64_t)mlocLoad64(p + 8);
         }
     }
     for (uint32_t i = 0; i < metazoneCount; i++)

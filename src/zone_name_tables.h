@@ -17,9 +17,9 @@
 //              its flags (u8, zoneMetaCountry), its period count (u8),
 //              its first period (u16), two zero bytes. A deprecated id
 //              has no region and no periods.
-//   periods    zoneMetaPeriodSize bytes each: from and to, minutes since
-//              1970 in universal time (i32, to exclusive; INT32_MIN and
-//              INT32_MAX for open ends), the metazone (u16), its flags
+//   periods    zoneMetaPeriodSize bytes each: from and to, seconds since
+//              1970 in universal time (i64, to exclusive; INT64_MIN and
+//              INT64_MAX for open ends), the metazone (u16), its flags
 //              (u8, zoneMetaOffsets), a zero byte, the standard and the
 //              daylight offset CLDR gives (i16 minutes each, zero unless
 //              flagged). A code's periods ascend and do not overlap.
@@ -57,7 +57,7 @@ enum
 {
     zoneMetaHeaderSize = 16,
     zoneMetaCodeSize = 8,
-    zoneMetaPeriodSize = 16,
+    zoneMetaPeriodSize = 24,
     zoneMetaZoneSize = 8,
     zoneMetaPreferredSize = 4,
     // A code's flag: the location format names its region (the only
