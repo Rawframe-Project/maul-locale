@@ -101,6 +101,10 @@ static void TestPrecisions(void)
               Is("en", Precision(mloc_timePrecisionFraction9), Time(16, 3, 7, 5),
                  "4:03:07.000000005" NNBSP "PM"),
           "fractions truncated, nine digits");
+    CHECK(Is("ff-Adlm", (mlocTimeOptions){0}, time,
+             "\xF0\x9E\xA5\x91\xF0\x9E\xA5\x96:\xF0\x9E\xA5\x90\xF0\x9E\xA5\x93:"
+             "\xF0\x9E\xA5\x90\xF0\x9E\xA5\x97"),
+          "digits of four bytes");
     CHECK(Is("fa", Precision(mloc_timePrecisionFraction2), time,
              "\xDB\xB1\xDB\xB6:\xDB\xB0\xDB\xB3:\xDB\xB0\xDB\xB7\xD9\xAB\xDB\xB2\xDB\xB5"),
           "fa's digits and decimal separator");
@@ -125,6 +129,8 @@ static void TestHourCycles(void)
               Is("de-US", (mlocTimeOptions){0}, time, "4:03:07" NNBSP "PM"),
           "the region's clock");
     CHECK(Is("en", Cycle(mloc_hourCycleClock24), time, "16:03:07"), "en's 24-hour clock");
+    CHECK(Is("en-u-ca-iso8601", (mlocTimeOptions){0}, time, "4:03:07" NNBSP "PM"),
+          "the ISO calendar's times, the Gregorian ones");
 }
 
 static void TestStyles(void)

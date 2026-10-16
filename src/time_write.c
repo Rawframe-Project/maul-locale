@@ -92,7 +92,8 @@ static void WriteDayPeriod(const TimeFormat* f, const uint8_t* pattern, uint32_t
     // pattern shows them, zero.
     bool noon = time->hour == 12 && (time->minute == 0 || !HasField(pattern, length, 'm')) &&
                 (time->second == 0 || !HasField(pattern, length, 's'));
-    uint32_t period = time->hour < 12 ? dateDayPeriodAm : dateDayPeriodPm;
+    // Am stands for am or pm, which WritePeriod tells by the hour.
+    uint32_t period = dateDayPeriodAm;
     if (letter == 'b')
     {
         period = noon ? dateDayPeriodNoon : period;

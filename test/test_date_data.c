@@ -14,6 +14,7 @@
 #include "kinds.h"
 #include "test_harness.h"
 #include "test_pack.h"
+#include "time_write.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/datetime.h"
@@ -399,6 +400,9 @@ static void TestUnwritablePattern(void)
     mlocDateOptions month = {.fields = mloc_dateFieldSetMonth, .length = mloc_dateLengthMedium};
     CHECK(mlocInitDateFormatter(&formatter, &data, &fr, &month) == mloc_success,
           "another of the pack's patterns");
+    mlocTimeFormatter times;
+    CHECK(mlocInitTimeFormatter(&times, &data, &fr, nullptr) == mloc_errorData,
+          "a time pattern the time formatter cannot write");
 }
 
 static mlocData s_sources[2];
@@ -656,6 +660,109 @@ static void TestDayPeriods(void)
     CHECK(RulesAre("yo", 13, dateDayPeriodPm, 0), "root's am and pm where the language has none");
 }
 
+// A time written by a compiled pattern with a locale's Gregorian day
+// periods and rules, a rule set's byte changed where at < dateRuleSize.
+static bool PeriodText(const char* id, const char* pattern, uint8_t hour, uint8_t minute,
+                       uint8_t second, uint32_t at, uint8_t value, const char* want)
+{
+    mlocLocale locale;
+    TimeFormat f;
+    memset(&f, 0, sizeof(f));
+    const uint8_t* set = nullptr;
+    const uint8_t* rules = nullptr;
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
+        !mlocFindDateNames(&s_data, &locale, 0, &f.names, &set) ||
+        !mlocFindDayPeriodRules(&s_data, &locale, &rules))
+    {
+        return false;
+    }
+    f.dayPeriods = mlocDateNameList(&f.names, mlocLoad16(set + 2 * dateNamesDayPeriods));
+    memcpy(f.rules, rules, dateRuleSize);
+    if (at < dateRuleSize)
+    {
+        f.rules[at] = value;
+    }
+    for (uint32_t d = 0; d < 10; d++)
+    {
+        f.digits[numberDigitSize * d] = (uint8_t)('0' + d);
+    }
+    f.digitLength = 1;
+    char text[128];
+    NumberWriter w = {.buffer = text, .capacity = sizeof(text)};
+    mlocTime time = {.hour = hour, .minute = minute, .second = second};
+    mlocWriteTimeFields(&f, (const uint8_t*)pattern, (uint32_t)strlen(pattern), &time, &w);
+    bool same = w.length == strlen(want) && memcmp(text, want, w.length) == 0;
+    if (!same)
+    {
+        printf("  %s %s: got \"%.*s\", want \"%s\"\n", id, pattern, (int)w.length, text, want);
+    }
+    return same;
+}
+
+#define NO_CHANGE dateRuleSize, 0
+
+// Day period fields as ICU4C 79 writes them, by en's and de's names and
+// rules (no CLDR time pattern has b, and only zh_Hant's B).
+static void TestDayPeriodFields(void)
+{
+    static const char s_hmB[] = "\x01h\x01:\x01m\x02 \x01"
+                                "B\x01";
+    static const char s_hmb[] = "\x01h\x01:\x01m\x02 \x01"
+                                "b\x01";
+    static const char s_hmsb[] = "\x01h\x01:\x01m\x02:\x01s\x02 \x01"
+                                 "b\x01";
+    static const char s_hmsB[] = "\x01h\x01:\x01m\x02:\x01s\x02 \x01"
+                                 "B\x01";
+    static const char s_hB[] = "\x01h\x01 \x01"
+                               "B\x01";
+    CHECK(PeriodText("en",
+                     "\x01"
+                     "B\x01",
+                     12, 0, 0, NO_CHANGE, "noon") &&
+              PeriodText("en",
+                         "\x01"
+                         "B\x04",
+                         12, 0, 0, NO_CHANGE, "noon"),
+          "B at noon, no minutes shown");
+    CHECK(PeriodText("en", s_hmB, 12, 30, 0, NO_CHANGE, "12:30 in the afternoon") &&
+              PeriodText("en", s_hmsB, 12, 0, 30, NO_CHANGE, "12:00:30 in the afternoon") &&
+              PeriodText("en", s_hB, 13, 0, 0, NO_CHANGE, "1 in the afternoon"),
+          "B past noon as shown: the hour's period");
+    CHECK(PeriodText("en", s_hmB, 0, 0, 0, NO_CHANGE, "12:00 in the morning"),
+          "B at midnight: the hour's period, midnight left out");
+    CHECK(PeriodText("en", s_hB, 21, 0, 0, NO_CHANGE, "9 at night") &&
+              PeriodText("en", s_hB, 19, 0, 0, NO_CHANGE, "7 in the evening"),
+          "en's evening and night");
+    CHECK(PeriodText("en", s_hmb, 12, 0, 0, NO_CHANGE, "12:00 noon") &&
+              PeriodText("en", s_hmb, 12, 1, 0, NO_CHANGE, "12:01 PM") &&
+              PeriodText("en", s_hmsb, 12, 0, 30, NO_CHANGE, "12:00:30 PM") &&
+              PeriodText("en", s_hmb, 12, 0, 30, NO_CHANGE, "12:00 noon") &&
+              PeriodText("en", s_hmb, 9, 0, 0, NO_CHANGE, "9:00 AM"),
+          "b: noon exactly as shown, else AM or PM");
+    CHECK(PeriodText("en",
+                     "\x01"
+                     "a\x04",
+                     9, 0, 0, NO_CHANGE, "AM") &&
+              PeriodText("en",
+                         "\x01"
+                         "a\x05",
+                         9, 0, 0, NO_CHANGE, "a") &&
+              PeriodText("en",
+                         "\x01"
+                         "b\x05",
+                         12, 0, 0, NO_CHANGE, "n"),
+          "wide and narrow names");
+    CHECK(PeriodText("de", s_hmb, 12, 0, 0, NO_CHANGE, "12:00 PM") &&
+              PeriodText("de", s_hmB, 12, 0, 0, NO_CHANGE, "12:00 mittags"),
+          "b without a noon name: PM; B by de's rules");
+    CHECK(PeriodText("en", s_hB, 12, 0, 0, 24, dateRuleMidnight, "12 in the afternoon"),
+          "rules naming no noon");
+    CHECK(PeriodText("de", s_hB, 12, 0, 0, 24, dateRuleNoon | dateRuleMidnight, "12 mittags"),
+          "rules naming noon without a noon name: the hour's period");
+    CHECK(PeriodText("en", s_hB, 9, 0, 0, 9, dateDayPeriodMorning2, "9 AM"),
+          "a period without a name: AM");
+}
+
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
     FILE* file = fopen(path, "rb");
@@ -687,5 +794,6 @@ int main(void)
     TestTimes();
     TestNames();
     TestDayPeriods();
+    TestDayPeriodFields();
     return s_failures == 0 ? 0 : 1;
 }

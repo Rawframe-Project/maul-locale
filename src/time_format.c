@@ -136,8 +136,8 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
         return mloc_errorNotFound;
     }
     mlocResult digits = mlocInitNumberCore(&core, data, locale, mloc_numberDecimal);
-    uint32_t calendar = preferences.calendar == mloc_calendarIso8601 ? mloc_calendarGregorian
-                                                                     : preferences.calendar;
+    // The ISO calendar's time set and names are the Gregorian ones.
+    uint32_t calendar = preferences.calendar;
     if (digits < 0 || !mlocFindTimeSet(data, locale, calendar, &patterns, &set) ||
         !mlocFindDateNames(data, locale, calendar, &f->names, &nameSet) ||
         !mlocFindDayPeriodRules(data, locale, &rules))
