@@ -123,6 +123,11 @@ static void CheckIntervals(const DatePatterns* p)
         const uint8_t* pair = p->pairs + (size_t)i * dateIntervalPairSize;
         RequirePatterns(p, pair, 2 * dateIntervalFields);
         Require(mlocLoad16(pair + 4 * dateIntervalFields) >> dateIntervalFields == 0);
+        for (uint32_t f = 0; f < dateIntervalFields; f++)
+        {
+            Require(mlocLoad16(pair + 4 * f) == dateIntervalNone ||
+                    mlocLoad16(pair + 4 * f + 2) != dateIntervalNone);
+        }
     }
 }
 

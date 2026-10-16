@@ -6,6 +6,9 @@
 #   calendars) and fr_ML's per-path glue;
 # - fr_CA's Hv item, HH 'h' v, which ICU's data lacks (the skeleton's
 #   own pattern only).
+# - fa's month items written with LLL or LLLL and MMM or MMMM ("LLLL تا
+#   MMMM y"), split where the month is met again, which ICU reads as two
+#   fields and leaves whole, writing one month twice.
 fr_CA	gregorian	HO	-|y-MM-dd GGGGG HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	H 'h' – |H 'h'|0	H 'h' – |H 'h'|0	-|-|0	{0} – {1}	HH 'h' O
 fr_CA	gregorian	Hv	-|y-MM-dd GGGGG HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	H 'h' – |H 'h' v|0	H 'h' – |H 'h' v|0	-|-|0	{0} – {1}	HH 'h' v
 fr_CA	gregorian	HVVVV	-|y-MM-dd GGGGG HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH 'h' VVVV
@@ -100,3 +103,9 @@ fa	persian	hVVVV	-|M/d/y GGGGG،‏ h a VVVV|0	-|y/M/d،‏ h a VVVV|0	-|y/M
 fa	persian	HVVVV	-|M/d/y GGGGG،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|y/M/d،‏ H (VVVV)|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	H (VVVV)
 fa	persian	hz	-|M/d/y GGGGG،‏ h a z|0	-|y/M/d،‏ h a z|0	-|y/M/d،‏ h a z|0	-|y/M/d،‏ h a z|0	h a تا |h a (z)|0	h تا |h a (z)|0	-|-|0	{0} تا {1}	h a z
 fa	persian	Hz	-|M/d/y GGGGG،‏ H (z)|0	-|y/M/d،‏ H (z)|0	-|y/M/d،‏ H (z)|0	-|y/M/d،‏ H (z)|0	H تا |H (z)|0	H تا |H (z)|0	-|-|0	{0} تا {1}	H (z)
+fa	gregorian	GyMMM	MMM y G تا |MMM y G|0	MMM y تا |MMM y G|0	LLL تا |MMM y G|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	MMM y G
+fa	gregorian	GyMMMM	MMMM y G تا |MMMM y G|0	MMMM y تا |MMMM y G|0	LLLL تا |MMMM y G|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	MMMM y G
+fa	persian	GyMMM	MMM y G تا |MMM y G|0	MMM y تا |MMM y G|0	LLL تا |MMM y G|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	MMM y G
+fa	persian	GyMMMM	MMMM y G تا |MMMM y G|0	MMMM y تا |MMMM y G|0	LLLL تا |MMMM y G|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	MMMM y G
+fa	persian	yMMM	MMM y G تا |MMM y G|0	MMM y تا |MMM y|0	LLL تا |MMM y|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	MMM y
+fa	persian	yMMMM	MMMM y G تا |MMMM y G|0	MMMM y تا |MMMM y|0	LLLL تا |MMMM y|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} تا {1}	y MMMM

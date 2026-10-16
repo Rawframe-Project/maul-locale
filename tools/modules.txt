@@ -59,8 +59,9 @@ list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
 list: list_data list_join number_core
-date_format: bytes date_data date_write locale_prefs number_core number_tables zone_format
+date_format: bytes date_data date_range date_write locale_prefs number_core number_tables zone_format
 date_write: bytes date_data decimal number_core number_tables
+date_range: bytes date_data date_write number_core
 time_format: bytes date_data date_time locale_keyword locale_prefs number_core number_tables time_write zone_format
 datetime_format: bytes date_data date_format date_time date_write time_format time_write number_core number_tables zone_format
 time_write: date_data date_write number_core number_tables

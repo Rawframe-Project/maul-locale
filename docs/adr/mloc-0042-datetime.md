@@ -288,8 +288,34 @@ cycle, time precision, zone style).
   date and the time matched whole, which the run time joins as a
   date-time, so the time pairs are the same in every calendar. Sets,
   date and time parts, rows, prefixes and pairs are each kept once.
-- **Still to come in this part** (research 39's slices): the interval
-  formatter; relative time; durations; speed.
+- **Date ranges** (`mlocFormatDateRange`, research 40's run-time form):
+  two dates written by a date formatter as ICU4C's DateIntervalFormat
+  writes the formatter's skeleton, from the interval set the locale
+  unit names beside the date set (one more index at init). The greatest
+  difference (the era's code, the year in its era, the month's code, the
+  day) picks its pair: both halves, the start by the first and the end
+  by the second (the end first where the pattern or the fallback says
+  so); the second alone, the fallback around that pattern written for
+  each date; neither, one date where the formatter's pattern shows no
+  field as small, else the fallback around it. Both dates take the year
+  style the one that needs more asks; a standard format's one date is
+  its skeleton's own match, as ICU's is. Parts carry the date they
+  belong to (`mloc_dateRangeStart`, `mloc_dateRangeEnd`): a date's from
+  its first field of a kind the other date also writes to its last,
+  the rest both's.
+  - **Two choices of our own.** The month compares its code, so a leap
+    month differs from the month it follows (ICU compares the number
+    and writes one date). A pattern is split where a field is met again
+    by its kind, a stand-alone month as a format one: fa's
+    `LLLL تا MMMM y` items, which ICU leaves whole and writes with the
+    first month twice ("ژانویه تا ژانویه"), give "ژانویه تا فوریه". For
+    the same reason a stand-alone and a format month are one kind of
+    part where ICU's spans take them as two fields.
+  - **The validator** refuses a pair's first half without its second
+    and a fallback without both values, so a formatter checks only that
+    it writes every half of its pairs.
+- **Still to come in this part** (research 39's slices): time and
+  date-time ranges; relative time; durations; speed.
 
 ## Proof
 
@@ -417,10 +443,29 @@ cycle, time precision, zone style).
   questions of `test/intervals_icu.tsv` (the date and time options alone
   in 44 locales and 8 locales' own calendars, en's and ja's date-times)
   and compares each greatest difference's pattern halves with ICU's
-  DateIntervalFormat's, read from its fields; 94 differ by the
-  skeleton matcher's listed causes (`tools/interval-exceptions.txt`).
+  DateIntervalFormat's, read from its fields; 100 differ by the
+  listed causes (`tools/interval-exceptions.txt`): the skeleton
+  matcher's, and fa's month items split where the month is met again.
   Once: 415,854 (906 locales, 459 skeletons), all equal but 338 of the
   same causes.
+- **Date ranges against ICU4C 79, once:** 4,781,868 (906 locales, 13
+  calendars, every date option's skeleton and the four standard
+  formats, each with equal dates and dates differing in the day, the
+  month, the year, the era of Japan, in order and reversed). All texts
+  equal but 9,400: the formats' numbering overrides (Hebrew numerals,
+  hanidays, jpanyear's 元), which ICU's interval patterns drop (6,480,
+  zh, yue, ja, he, yi); haw's Roman-numeral months (1,848); fa's split
+  months (318); kok's and gl's `Y` (237), which ICU writes as the
+  Gregorian year; the one-date differences already known, ckb_IR's
+  Persian and cs's Dangi months, id's Islamic weekdays, tok's long date
+  (336), and CLDR's per-path names and patterns in es_PY, es_VE, es_HN,
+  ms_ID, ms_BN, nl_BE, sr, sv_AX and zh_Hans_HK, _MO and _SG (181).
+  Spans differ in 2,526, from
+  the stand-alone month (fa), the `Y` (kok) and patterns that write a
+  field three times (sv, en_JP, tr, yo, qu), whose third ICU's pairing
+  adds to the first date's span. Kept for every push:
+  `test/date_ranges_icu.tsv`, 6,000 ranges in 30 locale-calendars, the
+  316 where the library answers otherwise with its answer and cause.
 - **The zone names data file:** 468 BCP 47 ids (451 live), 636
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes

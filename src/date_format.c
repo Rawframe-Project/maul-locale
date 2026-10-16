@@ -10,6 +10,7 @@
 #include "date_format.h"
 
 #include "bytes.h"
+#include "date_range.h"
 
 #include "maul-locale/datetime.h"
 
@@ -90,35 +91,6 @@ bool mlocValidGlue(const uint8_t* glue, uint32_t length)
     return time && date;
 }
 
-// Whether a glue's slot, {0} or {1}, starts at a byte.
-static bool IsGlueSlot(const uint8_t* glue, uint32_t length, uint32_t at)
-{
-    return at + 3 <= length && glue[at] == '{' && glue[at + 2] == '}' &&
-           (glue[at + 1] == '0' || glue[at + 1] == '1');
-}
-
-void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
-                   NumberWriter* w)
-{
-    uint32_t at = 0;
-    while (at < length)
-    {
-        if (IsGlueSlot(glue, length, at))
-        {
-            write(context, glue[at + 1] == '0' ? 0 : 1, w);
-            at += 3;
-            continue;
-        }
-        uint32_t end = at + 1;
-        while (end < length && !IsGlueSlot(glue, length, end))
-        {
-            end++;
-        }
-        mlocWritePart(w, mloc_datePartLiteral, glue + at, end - at);
-        at = end;
-    }
-}
-
 // The numbering system a pattern names for its fields, or none.
 static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id, size_t* idLength)
 {
@@ -184,6 +156,60 @@ static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* se
     return true;
 }
 
+// The pair index of a kept pattern (i, the year style for a field set
+// with a year) in an interval date part.
+static uint32_t PairOf(const DatePatterns* p, const uint8_t* part, const mlocDateOptions* o,
+                       uint32_t i)
+{
+    if (o->style != mloc_dateStyleNone)
+    {
+        return mlocLoad16(part + 2 * dateEntryCount + 6 * (size_t)(o->style - 1));
+    }
+    uint32_t entry = s_entries[o->fields];
+    bool year = entry >= dateYearMonthDay;
+    uint32_t row = mlocLoad16(part + 2 * (size_t)(entry + (year ? i : 0)));
+    return mlocLoad16(p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length);
+}
+
+// The formatter's interval patterns (research 40): each kept pattern's
+// pair, a standard format's own pattern, and the fallback.
+static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* intervals,
+                      const mlocDateOptions* o)
+{
+    DateRange* r = &f->range;
+    r->table = (PatternTable){p->offsets, p->text, p->patternCount};
+    const uint8_t* part = p->dateParts + (size_t)mlocLoad16(intervals) * dateIntervalDateSize;
+    // The validator saw the fallback hold both values.
+    DataSpan fallback;
+    if (!mlocTablePattern(&r->table, mlocLoad16(intervals + 4), &fallback))
+    {
+        return false;
+    }
+    r->fallback = fallback.bytes;
+    r->fallbackLength = fallback.size;
+    if (o->style != mloc_dateStyleNone)
+    {
+        DataSpan own;
+        size_t at = 2 * dateEntryCount + 6 * (size_t)(o->style - 1) + 4;
+        if (!mlocTablePattern(&r->table, mlocLoad16(part + at), &own) ||
+            !Writable(own.bytes, own.size))
+        {
+            return false;
+        }
+        r->own = own.bytes;
+        r->ownLength = own.size;
+    }
+    for (uint32_t i = 0; i < dateFormatPatterns; i++)
+    {
+        r->pairs[i] = p->pairs + (size_t)PairOf(p, part, o, i) * dateIntervalPairSize;
+        if (!mlocValidRangePair(&r->table, r->pairs[i], Writable))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // The digits of the system the patterns name, or its spell-out rules.
 static mlocResult FindOverride(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale)
 {
@@ -218,6 +244,7 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     NumberCore core;
     DatePatterns patterns;
     const uint8_t* set = nullptr;
+    const uint8_t* intervals = nullptr;
     if (mlocGetLocalePreferences(data, locale, &preferences) != mloc_success)
     {
         return mloc_errorNotFound;
@@ -225,13 +252,13 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     mlocResult digits = mlocInitNumberCore(&core, data, locale, mloc_numberDecimal);
     uint32_t calendar = preferences.calendar;
     uint32_t names = calendar == mloc_calendarIso8601 ? mloc_calendarGregorian : calendar;
-    if (digits < 0 || !mlocFindDateSet(data, locale, names, &patterns, &set) ||
+    if (digits < 0 || !mlocFindDateSet(data, locale, names, &patterns, &set, &intervals) ||
         !mlocFindDateNames(data, locale, names, &f->names, &f->nameSet) ||
         !mlocFindDateNames(data, locale, mloc_calendarGregorian, &f->names, &f->gregorianSet))
     {
         return mloc_errorNotFound;
     }
-    if (!FindPatterns(f, &patterns, set, o))
+    if (!FindPatterns(f, &patterns, set, o) || !FindRange(f, &patterns, intervals, o))
     {
         return mloc_errorData;
     }
@@ -392,7 +419,9 @@ static int32_t GregorianYear(int32_t day, int32_t otherwise)
 bool mlocDateFormatSound(const DateFormat* f)
 {
     return f->stamp == dateStamp && f->calendar < dateCalendarCount && f->pattern[0] != nullptr &&
-           f->pattern[1] != nullptr && f->pattern[2] != nullptr && f->digitLength > 0 &&
+           f->pattern[1] != nullptr && f->pattern[2] != nullptr && f->range.pairs[0] != nullptr &&
+           f->range.pairs[1] != nullptr && f->range.pairs[2] != nullptr &&
+           f->range.fallback != nullptr && f->digitLength > 0 &&
            f->digitLength <= numberDigitSize && f->overrideDigitLength <= numberDigitSize &&
            f->minusLength <= sizeof(f->minus);
 }
@@ -431,6 +460,9 @@ typedef struct DateWriting
     const DateValue* value;
     const mlocTimeZone* zone;
     const mlocInstant* instant;
+    // A range's end and what it writes; null for one date.
+    const DateValue* end;
+    const RangeChoice* range;
 } DateWriting;
 
 // The glue's slots: the date, and the zone by its pattern.
@@ -451,6 +483,11 @@ static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
 
 static void Write(const DateWriting* g, NumberWriter* w)
 {
+    if (g->range != nullptr)
+    {
+        mlocWriteRange(g->range, w);
+        return;
+    }
     if (g->zone != nullptr)
     {
         mlocWriteGlue(g->f->glue, g->f->glueLength, WriteSlot, (void*)g, w);
@@ -488,7 +525,7 @@ mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* da
     {
         return mloc_errorInvalid;
     }
-    DateWriting g = {&f, &v, nullptr, nullptr};
+    DateWriting g = {&f, &v, nullptr, nullptr, nullptr, nullptr};
     return WriteOut(&g, output);
 }
 
@@ -505,6 +542,44 @@ mlocResult mlocFormatDateInZone(const mlocDateFormatter* formatter, const mlocTi
     {
         return mloc_errorInvalid;
     }
-    DateWriting g = {&f, &v, zone, instant};
+    DateWriting g = {&f, &v, zone, instant, nullptr, nullptr};
+    return WriteOut(&g, output);
+}
+
+// A range's value by a pattern.
+static void WriteRangeValue(const void* context, uint32_t value, const uint8_t* pattern,
+                            uint32_t length, const PatternSpan* span, NumberWriter* w)
+{
+    const DateWriting* g = context;
+    const DateValue* v = value == 0 ? g->value : g->end;
+    mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
+}
+
+mlocResult mlocFormatDateRange(const mlocDateFormatter* formatter, const mlocDate* start,
+                               const mlocDate* end, mlocOutput* output)
+{
+    ZonedDateFormat f;
+    DateValue v[2];
+    if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
+        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocReadDateValue(&f.date, start, &v[0]) || !mlocReadDateValue(&f.date, end, &v[1]))
+    {
+        return mloc_errorInvalid;
+    }
+    // One pattern writes both: the year style the larger year needs.
+    uint32_t p = v[0].pattern > v[1].pattern ? v[0].pattern : v[1].pattern;
+    const DateRange* r = &f.date.range;
+    DateWriting g = {&f, &v[0], nullptr, nullptr, &v[1], nullptr};
+    RangeChoice c = {
+        .write = WriteRangeValue,
+        .context = &g,
+        .table = &r->table,
+        .pair = r->pairs[p],
+        .difference = mlocDateDifference(&v[0].fields, &v[1].fields),
+        .own = r->own != nullptr ? (DataSpan){r->own, r->ownLength}
+                                 : (DataSpan){f.date.pattern[p], f.date.patternLength[p]},
+        .fallback = {r->fallback, r->fallbackLength},
+    };
+    g.range = &c;
     return WriteOut(&g, output);
 }

@@ -90,11 +90,11 @@ DateNameList mlocDateNameList(const DateNameTables* t, uint32_t list);
 DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item);
 
 // A locale's date patterns in a calendar (MlocCalendar's value) along its
-// main chain: the set's bytes (dateSetSize) and the unit they index.
-// False when the data has no dates, the calendar is unknown or the
-// locale's set is past the unit's.
+// main chain: the set's bytes (dateSetSize), the interval set's
+// (dateIntervalSetSize) and the unit they index. False when the data has
+// no dates, the calendar is unknown or a set is past the unit's.
 bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set);
+                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals);
 
 // A locale's time patterns in a calendar along its main chain: the time
 // set's bytes (dateTimeSetSize) and the unit they index. False when the
@@ -103,12 +103,6 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
 bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                      DatePatterns* patterns, const uint8_t** set);
 
-// A locale's interval patterns in a calendar along its main chain: the
-// interval set's bytes (dateIntervalSetSize) and the unit they index.
-// False when the data has no dates, the calendar is unknown or the set
-// is past the unit's.
-bool mlocFindIntervalSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                         DatePatterns* patterns, const uint8_t** set);
 // A locale's date names in a calendar along its main chain: the name
 // set's bytes (dateNameSetSize) and the unit they index. False when the
 // data has no names, the calendar is unknown or the set is past the
@@ -123,5 +117,27 @@ bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
                             const uint8_t** rules);
 // A pattern of a valid unit by index; false past its patterns.
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
+
+// A patterns unit's pattern views, which a formatter keeps to resolve
+// its interval indexes.
+typedef struct PatternTable
+{
+    const uint8_t* offsets;
+    const uint8_t* text;
+    uint32_t count;
+} PatternTable;
+
+// The items of a pattern from the byte offset first to end whose parts
+// are one value's: source (mloc_dateRangeStart or mloc_dateRangeEnd) is
+// added to their kinds, the others' 0.
+typedef struct PatternSpan
+{
+    uint32_t first;
+    uint32_t end;
+    uint32_t source;
+} PatternSpan;
+
+// A table's pattern by index; false past its patterns.
+bool mlocTablePattern(const PatternTable* table, uint32_t index, DataSpan* out);
 
 #endif

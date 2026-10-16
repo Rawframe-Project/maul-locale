@@ -98,3 +98,9 @@ format.
   region and metazone periods, each metazone's golden and preferred
   zones, and every locale's zone formats, exemplar cities and zone and
   metazone names, as CLDR resolves them (mloc-0042).
+- Date ranges: `mlocFormatDateRange` writes two dates by a date
+  formatter as ICU4C's DateIntervalFormat writes its skeleton ("Jan
+  5 – 8, 2026"), with parts marking each date's own
+  (`mloc_dateRangeStart`, `mloc_dateRangeEnd`); `dates.mloc` holds
+  every locale's interval patterns for each date and time option, and
+  `mlocDateFormatter` grows to hold a formatter's (mloc-0042).

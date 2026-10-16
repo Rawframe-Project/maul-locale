@@ -23,10 +23,26 @@ enum
     dateFormatPatterns = 3,
 };
 
+// A formatter's interval patterns (research 40): the table their indexes
+// resolve in, the pair of each pattern the formatter keeps
+// (dateIntervalPairSize bytes), a standard format's own pattern (the
+// generator's match of its skeleton, which a range of one value writes;
+// a field set's are its patterns), and the fallback.
+typedef struct DateRange
+{
+    PatternTable table;
+    const uint8_t* pairs[dateFormatPatterns];
+    const uint8_t* own;
+    uint32_t ownLength;
+    const uint8_t* fallback;
+    uint32_t fallbackLength;
+} DateRange;
+
 typedef struct DateFormat
 {
     const uint8_t* pattern[dateFormatPatterns];
     uint32_t patternLength[dateFormatPatterns];
+    DateRange range;
     DateNameTables names;
     // The calendar's name set, and the Gregorian one's (Japanese dates
     // before Meiji take its eras).
@@ -64,5 +80,18 @@ size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value
 // date's year begins in.
 void mlocWriteDateFields(const DateFormat* f, const uint8_t* pattern, uint32_t length,
                          const mlocDateFields* fields, int32_t relatedYear, NumberWriter* w);
+
+// As mlocWriteDateFields, the span's parts marked as one value's.
+void mlocWriteDateFieldsIn(const DateFormat* f, const uint8_t* pattern, uint32_t length,
+                           const mlocDateFields* fields, int32_t relatedYear,
+                           const PatternSpan* span, NumberWriter* w);
+
+// Writes a glue's slot: 0 for the time (or zone, or a range's start), 1
+// for the date (or a range's end).
+typedef void (*GlueSlotWriter)(void* context, uint32_t slot, NumberWriter* w);
+
+// Writes glue: its text, and each {0} and {1} by the writer.
+void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
+                   NumberWriter* w);
 
 #endif

@@ -71,6 +71,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/data_kinds.c
     src/date_data.c
     src/date_format.c
+    src/date_range.c
     src/date_write.c
     src/datetime_format.c
     src/time_format.c
@@ -368,6 +369,26 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_date_format PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}"
                                    MLOC_SPELLOUT_FILE="${MLOC_DATE_SPELLOUT_PATH}")
+    endif()
+    # The date ranges read the dates, the spell-out rules and, for a
+    # formatter with a zone, the zone names.
+    maul_add_test(date_range)
+    if(TARGET test_date_range)
+        set(MLOC_RANGE_SPELLOUT_PATH ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+        set(MLOC_DATE_RANGES_PATH ${PROJECT_SOURCE_DIR}/test/date_ranges_icu.tsv)
+        if(EMSCRIPTEN)
+            target_link_options(test_date_range PRIVATE "SHELL:--embed-file ${MLOC_DATES_FILE}@/dates.mloc"
+                                "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc@/spellout.mloc"
+                                "SHELL:--embed-file ${MLOC_ZONE_NAMES_FILE}@/zone-names.mloc"
+                                "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/test/date_ranges_icu.tsv@/date_ranges_icu.tsv"
+                                "-sSTACK_SIZE=262144")
+            set(MLOC_RANGE_SPELLOUT_PATH /spellout.mloc)
+            set(MLOC_DATE_RANGES_PATH /date_ranges_icu.tsv)
+        endif()
+        target_compile_definitions(test_date_range PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}"
+                                   MLOC_SPELLOUT_FILE="${MLOC_RANGE_SPELLOUT_PATH}"
+                                   MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}"
+                                   MLOC_DATE_RANGES_FILE="${MLOC_DATE_RANGES_PATH}")
     endif()
     # The time formatter reads the dates.
     maul_add_test(time_format)

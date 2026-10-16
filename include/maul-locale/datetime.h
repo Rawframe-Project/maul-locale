@@ -143,12 +143,23 @@ extern "C"
         mloc_datePartTimeZone = 13,
     } mlocDatePart;
 
+    // In a range's parts, the value a part belongs to, added to its
+    // mlocDatePart: the start, the end, or neither for what both share
+    // (a field written once for both, the text around the values), as
+    // ICU4C's interval spans mark them: a value's parts run from its
+    // first field of a kind the other value also writes to its last.
+    enum
+    {
+        mloc_dateRangeStart = 0x100,
+        mloc_dateRangeEnd = 0x200,
+    };
+
     // A date formatter: a locale's patterns for the options in its
     // calendar, in the data it was made from, which must outlive it.
     // Opaque; make it with mlocInitDateFormatter.
     typedef struct mlocDateFormatter
     {
-        uint64_t opaque[112];
+        uint64_t opaque[128];
     } mlocDateFormatter;
 
     /// Makes a locale's date formatter. The calendar is the locale's
@@ -217,6 +228,30 @@ extern "C"
                                                             const mlocTimeZone* zone,
                                                             const mlocInstant* instant,
                                                             mlocOutput* output);
+
+    /// Writes a range of two dates by the formatter (ECMA-402's
+    /// formatRange), as ICU4C's DateIntervalFormat writes the formatter's
+    /// skeleton: the locale's interval pattern for the greatest field the
+    /// dates differ in ("Jan 5 – 8, 2026", "Jan 5 – Feb 8, 2026"), else
+    /// the locale's fallback around both dates ("1/5/2026 – 1/8/2026");
+    /// one date when they differ in no field shown. Both are read in the
+    /// formatter's calendar and written in the year style the one that
+    /// needs more asks; the start may pass the end.
+    ///
+    /// @param formatter  A formatter from mlocInitDateFormatter, without a
+    ///                   zone.
+    /// @param start      The range's start.
+    /// @param end        Its end.
+    /// @param output     Where the text goes (record mloc-0015); its part
+    ///                   function, when set, receives mlocDatePart values
+    ///                   with the date each belongs to (mloc_dateRangeStart,
+    ///                   mloc_dateRangeEnd, or 0 for both).
+    /// @return As mlocFormatDate.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateRange(const mlocDateFormatter* formatter,
+                                                           const mlocDate* start,
+                                                           const mlocDate* end, mlocOutput* output);
 
     // How hours are numbered (UTS #35's hour cycle). Auto takes -u-hc as
     // the cycle when the locale gives one, else the clock of the locale's

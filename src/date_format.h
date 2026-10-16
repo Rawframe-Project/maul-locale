@@ -43,11 +43,4 @@ uint32_t mlocDateGlueStyle(const mlocDateOptions* options, uint32_t flags);
 // Whether glue holds {0} and {1}.
 bool mlocValidGlue(const uint8_t* glue, uint32_t length);
 
-// Writes a glue's slot: 0 for the time (or zone), 1 for the date.
-typedef void (*GlueSlotWriter)(void* context, uint32_t slot, NumberWriter* w);
-
-// Writes glue: its text, and each {0} and {1} by the writer.
-void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
-                   NumberWriter* w);
-
 #endif

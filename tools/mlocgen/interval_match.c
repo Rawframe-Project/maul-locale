@@ -475,8 +475,17 @@ static char* AdjustWidths(const char* input, const char* best, const char* patte
     return out;
 }
 
+// The letter a field's repetition is read by: a stand-alone month,
+// weekday or quarter as its format form, which ICU reads as another
+// field (fa's "LLLL تا MMMM y" is one month met twice, which ICU leaves
+// whole and writes with the first value alone).
+static char FieldLetter(char c)
+{
+    return c == 'L' ? 'M' : c == 'c' || c == 'e' ? 'E' : c == 'q' ? 'Q' : c;
+}
+
 // DateIntervalFormat::splitPatternInto2Part: where the second value's
-// half starts, at the first field letter met again.
+// half starts, at the first field met again.
 static size_t SplitPoint(const char* pattern)
 {
     bool seen[letterCount] = {false};
@@ -490,12 +499,12 @@ static size_t SplitPoint(const char* pattern)
         char c = pattern[i];
         if (c != previous && count > 0)
         {
-            if (seen[previous - letterBase])
+            if (seen[FieldLetter(previous) - letterBase])
             {
                 repeated = true;
                 break;
             }
-            seen[previous - letterBase] = true;
+            seen[FieldLetter(previous) - letterBase] = true;
             count = 0;
         }
         if (c == '\'' && pattern[i + 1] == '\'')
@@ -512,7 +521,7 @@ static size_t SplitPoint(const char* pattern)
             count++;
         }
     }
-    if (count > 0 && !repeated && !seen[previous - letterBase])
+    if (count > 0 && !repeated && !seen[FieldLetter(previous) - letterBase])
     {
         count = 0;
     }

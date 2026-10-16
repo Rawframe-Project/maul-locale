@@ -314,9 +314,18 @@ static void WriteField(const DateFormat* f, const mlocDateFields* fields, int32_
 void mlocWriteDateFields(const DateFormat* f, const uint8_t* pattern, uint32_t length,
                          const mlocDateFields* fields, int32_t relatedYear, NumberWriter* w)
 {
+    PatternSpan none = {0, 0, 0};
+    mlocWriteDateFieldsIn(f, pattern, length, fields, relatedYear, &none, w);
+}
+
+void mlocWriteDateFieldsIn(const DateFormat* f, const uint8_t* pattern, uint32_t length,
+                           const mlocDateFields* fields, int32_t relatedYear,
+                           const PatternSpan* span, NumberWriter* w)
+{
     uint32_t at = 0;
     while (at < length)
     {
+        w->source = at >= span->first && at < span->end ? span->source : 0;
         if (pattern[at] == datePatternField || pattern[at] == datePatternOverride)
         {
             WriteField(f, fields, relatedYear, pattern + at, w);
@@ -329,6 +338,36 @@ void mlocWriteDateFields(const DateFormat* f, const uint8_t* pattern, uint32_t l
             end++;
         }
         mlocWritePart(w, mloc_datePartLiteral, pattern + at, end - at);
+        at = end;
+    }
+    w->source = 0;
+}
+
+// Whether a glue's slot, {0} or {1}, starts at a byte.
+static bool IsGlueSlot(const uint8_t* glue, uint32_t length, uint32_t at)
+{
+    return at + 3 <= length && glue[at] == '{' && glue[at + 2] == '}' &&
+           (glue[at + 1] == '0' || glue[at + 1] == '1');
+}
+
+void mlocWriteGlue(const uint8_t* glue, uint32_t length, GlueSlotWriter write, void* context,
+                   NumberWriter* w)
+{
+    uint32_t at = 0;
+    while (at < length)
+    {
+        if (IsGlueSlot(glue, length, at))
+        {
+            write(context, glue[at + 1] == '0' ? 0 : 1, w);
+            at += 3;
+            continue;
+        }
+        uint32_t end = at + 1;
+        while (end < length && !IsGlueSlot(glue, length, end))
+        {
+            end++;
+        }
+        mlocWritePart(w, mloc_datePartLiteral, glue + at, end - at);
         at = end;
     }
 }
