@@ -11,6 +11,7 @@
 #ifndef MAUL_LOCALE_RELATIVE_H
 #define MAUL_LOCALE_RELATIVE_H
 
+#include "maul-locale/datetime.h"
 #include "maul-locale/number.h"
 
 #ifdef __cplusplus
@@ -129,6 +130,37 @@ extern "C"
                                                           const mlocDecimal* amount,
                                                           mlocRelativeUnit unit,
                                                           mlocOutput* output);
+
+    /// Writes a day relative to today and a time of day joined by the
+    /// locale's relative date-time glue ("tomorrow at 3:00 PM", "in 3 days,
+    /// 10:00"): the day as mlocFormatRelative writes an amount of days, the
+    /// time as the time formatter writes it, joined by the glue of the
+    /// time formatter's calendar at the length the relative width gives
+    /// (long the long glue, short the medium, narrow the short; ICU4C takes
+    /// the medium atTime glue whatever the width). The day is capitalized
+    /// as the relative formatter asks only where the glue writes it first.
+    ///
+    /// @param relative   A formatter from mlocInitRelativeFormatter.
+    /// @param time       A formatter from mlocInitTimeFormatter, without a
+    ///                   zone; its data holds the glue.
+    /// @param days       The day's distance from today, finite.
+    /// @param timeOfDay  The time.
+    /// @param output     Receives the text; its part function, when set,
+    ///                   receives mlocDatePart values: the day whole as
+    ///                   mloc_datePartRelativeDay, the time's fields, and
+    ///                   literal for the glue's text.
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed) or rounding
+    ///         passes the decimal's limits; mloc_errorNotFound for a day
+    ///         whose patterns the locale's chain lacks; mloc_errorInvalid
+    ///         for a null pointer, an amount not finite, a time out of
+    ///         range, or a formatter the library did not make (a time
+    ///         formatter with a zone among them).
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelativeDayTime(
+        const mlocRelativeFormatter* relative, const mlocTimeFormatter* time,
+        const mlocDecimal* days, const mlocTime* timeOfDay, mlocOutput* output);
 
 #ifdef __cplusplus
 }

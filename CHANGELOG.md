@@ -128,3 +128,8 @@ format.
 - A compact number's unit, currency or relative time name takes the
   plural category of its whole value, as ICU4C does ("1M meters", "1
   million US dollars"; it took the category of "1").
+- A relative day with a time: `mlocFormatRelativeDayTime` joins the
+  relative formatter's day and a time formatter's time by CLDR's
+  relative date-time glue ("tomorrow at 3:00 PM"), the day one part
+  (`mloc_datePartRelativeDay`); `dates.mloc`'s time sets hold that glue
+  (mloc-0043).

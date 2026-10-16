@@ -141,6 +141,9 @@ extern "C"
         mloc_datePartDayPeriod = 12,
         // A time zone's name, city or offset ("Pacific Time", "GMT-7").
         mloc_datePartTimeZone = 13,
+        // A day relative to today, whole ("tomorrow", "in 3 days";
+        // mlocFormatRelativeDayTime).
+        mloc_datePartRelativeDay = 14,
     } mlocDatePart;
 
     // In a range's parts, the value a part belongs to, added to its

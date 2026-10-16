@@ -65,8 +65,20 @@ value takes the wider one's along the chain.
     the context unit now holds), the first letter titlecased in the
     copy, parts kept. ICU's RelativeDateTimeFormatter titlecases only
     at a sentence's start and refuses parts then.
-- **Still to come:** a relative day joined with a time by CLDR's
-  relative glue (research 41's sixth decision).
+- **A relative day with a time** (`mlocFormatRelativeDayTime`): the
+  relative formatter's day and a time formatter's time joined by CLDR's
+  `relative` date-time glue of the time formatter's calendar ("tomorrow
+  at 3:00 PM"), which the time sets of `dates.mloc` now hold beside the
+  standard and atTime glues (atTime's where a calendar has none), at the
+  length the relative width gives: long the long glue, short the
+  medium, narrow the short. ICU4C 79 takes the medium atTime glue
+  whatever the style ("for compatibility with pre-CLDR-42 data", its
+  source says). The day is one part, `mloc_datePartRelativeDay`, among
+  the time's date parts; it is capitalized only where the glue writes
+  it first (gd's "{0} {1}" puts the time first). A glue is read as ICU
+  reads it, a SimpleFormatter whose letters are text: da's generic
+  calendar has "{1} kl. {0}" beside "{1} 'kl'. {0}", and the generator
+  quotes such letters.
 
 ## Proof
 

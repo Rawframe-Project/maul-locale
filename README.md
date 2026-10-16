@@ -101,8 +101,9 @@ times or date-times ("Jan 5 – 8, 2026", "Jan 5, 2026, 10:00 – 11:30
 AM"), in a zone too, as ICU4C's DateIntervalFormat writes them; and
 relative time ("in 3 days", "2 hr. ago", "yesterday", "next Monday")
 of an amount the caller gives, as ECMA-402's Intl.RelativeTimeFormat
-writes it (a data file of its own, `src/generated/relative.mloc`).
-The library has 145 public functions.
+writes it, alone or with a time ("tomorrow at 3:00 PM"; a data file of
+its own, `src/generated/relative.mloc`).
+The library has 146 public functions.
 
 ## Building
 

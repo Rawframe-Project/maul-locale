@@ -63,22 +63,67 @@ static bool TwelveHour(const char* pattern)
     return false;
 }
 
-static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int length, bool at)
+// A glue with its unquoted letters quoted: ICU reads a glue as a
+// SimpleFormatter, where letters are text (da's generic calendar has
+// "{1} kl. {0}" beside "{1} 'kl'. {0}").
+static char* QuoteLetters(const char* glue)
 {
+    char* out = GenAllocate(2 * strlen(glue) + 1);
+    size_t at = 0;
+    // Inside the glue's own quotes; inside quotes added here.
+    bool quoted = false;
+    bool added = false;
+    for (const char* p = glue; *p != '\0'; p++)
+    {
+        bool letter = (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z');
+        if (added && !letter)
+        {
+            out[at++] = '\'';
+            added = false;
+        }
+        if (!quoted && letter && !added)
+        {
+            out[at++] = '\'';
+            added = true;
+        }
+        quoted = *p == '\'' ? !quoted : quoted;
+        out[at++] = *p;
+    }
+    if (added)
+    {
+        out[at++] = '\'';
+    }
+    out[at] = '\0';
+    return out;
+}
+
+// The kinds of date-time glue: standard, atTime, relative; a kind the
+// calendar lacks takes the one before.
+typedef enum GlueKind
+{
+    glueStandard = 0,
+    glueAtTime = 1,
+    glueRelative = 2,
+} GlueKind;
+
+static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int length, GlueKind kind)
+{
+    static const char* const s_types[] = {"", "[@type=\"atTime\"]", "[@type=\"relative\"]"};
     char rest[256];
     snprintf(rest, sizeof(rest),
              "dateTimeFormats/dateTimeFormatLength[@type=\"%s\"]/dateTimeFormat%s/pattern",
-             s_lengths[length], at ? "[@type=\"atTime\"]" : "");
+             s_lengths[length], s_types[kind]);
     const char* glue = DateCalendarValue(cldr, locale, calendar, rest);
-    if (glue == nullptr && at)
+    if (glue == nullptr && kind != glueStandard)
     {
-        return Glue(cldr, locale, calendar, length, false);
+        return Glue(cldr, locale, calendar, length, (GlueKind)(kind - 1));
     }
-    if (glue == nullptr || !ValidGlue(glue))
+    char* quoted = glue != nullptr ? QuoteLetters(glue) : nullptr;
+    if (quoted == nullptr || !ValidGlue(quoted))
     {
         GenDie("date-time glue missing or not plain", locale);
     }
-    return Copy(glue);
+    return quoted;
 }
 
 void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, PatternGenerator* items, const char* locale,
@@ -168,7 +213,8 @@ void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, PatternGenerator* items, c
             GenDie("a standard time format missing", locale);
         }
         out[dateTimeStandard + length] = Copy(pattern);
-        out[dateTimeGlue + length] = Glue(cldr, locale, calendar, length, false);
-        out[dateTimeAtGlue + length] = Glue(cldr, locale, calendar, length, true);
+        out[dateTimeGlue + length] = Glue(cldr, locale, calendar, length, glueStandard);
+        out[dateTimeAtGlue + length] = Glue(cldr, locale, calendar, length, glueAtTime);
+        out[dateTimeRelativeGlue + length] = Glue(cldr, locale, calendar, length, glueRelative);
     }
 }

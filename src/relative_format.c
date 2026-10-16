@@ -6,7 +6,7 @@
 // direction and plural category, the patterns read along the locale's
 // chain from relative.mloc (relative_tables.h), or a near amount's name.
 
-#include "maul-locale/relative.h"
+#include "relative_format.h"
 
 #include "bytes.h"
 #include "currency_tables.h"
@@ -24,32 +24,6 @@
 
 #include <stddef.h>
 #include <string.h>
-
-enum
-{
-    relativeStamp = 0x52,
-    // The most relative units a locale's chain files.
-    relativeChainMost = 8,
-    // The room for a text read and its titlecase.
-    relativeTextMost = 256,
-    // The room for a direction's six patterns.
-    relativePatternsMost = 6 * relativeTextMost,
-};
-
-typedef struct RelativeFormat
-{
-    Formatter formatter;
-    // The chain's relative units, the locale's first.
-    DataSpan units[relativeChainMost];
-    // The titlecase unit; empty when the formatter does not capitalize.
-    DataSpan titlecase;
-    uint8_t unitCount;
-    uint8_t width;
-    uint8_t numeric;
-    uint8_t capitalize;
-    // 1 for Turkish and Azerbaijani, whose i titlecases to İ.
-    uint8_t turkic;
-} RelativeFormat;
 
 static_assert(sizeof(RelativeFormat) <= sizeof(mlocRelativeFormatter),
               "a relative time formatter fits its opaque value");
@@ -151,9 +125,7 @@ mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const 
     return result;
 }
 
-// The formatter of an opaque value, or false when the library did not
-// make it.
-static bool ReadRelative(const mlocRelativeFormatter* opaque, RelativeFormat* f)
+bool mlocReadRelativeFormat(const mlocRelativeFormatter* opaque, RelativeFormat* f)
 {
     if (opaque == nullptr ||
         !mlocReadFormatter(opaque, sizeof(*opaque), relativeStamp, &f->formatter))
@@ -353,34 +325,87 @@ static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t bas
     return mloc_success;
 }
 
-mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter, const mlocDecimal* amount,
-                              mlocRelativeUnit unit, mlocOutput* output)
+// What an amount of a unit writes: a name, copied into nameRoom (its
+// length in nameLength), or a pattern of its direction filled into outer
+// from patternRoom with the magnitude to write in it (nameLength 0).
+typedef struct RelativeChoice
 {
-    RelativeFormat f;
-    if (!ReadRelative(formatter, &f) || amount == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) || !mlocValidDecimal(amount) ||
-        amount->kind != mloc_decimalFinite || (uint32_t)unit >= relativeUnitCount)
-    {
-        return mloc_errorInvalid;
-    }
+    uint8_t nameRoom[relativeTextMost];
+    size_t nameLength;
+    uint8_t patternRoom[relativePatternsMost];
+    Outer outer;
+    mlocDecimal magnitude;
+} RelativeChoice;
+
+static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uint32_t unit,
+                         RelativeChoice* c)
+{
     int32_t offset = 0;
     DataSpan name;
-    if (f.numeric == mloc_relativeNumericAuto && NamedOffset(amount, &offset) &&
-        Lookup(&f, (uint32_t)unit, (uint32_t)(offset + 2), &name))
+    c->nameLength = 0;
+    if (f->numeric == mloc_relativeNumericAuto && NamedOffset(amount, &offset) &&
+        Lookup(f, unit, (uint32_t)(offset + 2), &name))
     {
-        uint8_t room[relativeTextMost];
-        size_t length = CopyText(&f, name, room, sizeof(room));
-        return length == 0 ? mloc_errorData : WriteName(room, length, output);
+        c->nameLength = CopyText(f, name, c->nameRoom, sizeof(c->nameRoom));
+        return c->nameLength == 0 ? mloc_errorData : mloc_success;
     }
-    uint8_t room[relativePatternsMost];
-    Outer outer;
     uint32_t base = amount->negative != 0 ? relativePast : relativeFuture;
-    mlocResult r = FillOuter(&f, (uint32_t)unit, base, room, &outer);
+    c->magnitude = *amount;
+    c->magnitude.negative = 0;
+    return FillOuter(f, unit, base, c->patternRoom, &c->outer);
+}
+
+bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit)
+{
+    return amount != nullptr && mlocValidDecimal(amount) && amount->kind == mloc_decimalFinite &&
+           unit < relativeUnitCount;
+}
+
+mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount, uint32_t unit,
+                             uint32_t kind, NumberWriter* w)
+{
+    RelativeChoice c;
+    mlocResult r = Choose(f, amount, unit, &c);
     if (r != mloc_success)
     {
         return r;
     }
-    mlocDecimal magnitude = *amount;
-    magnitude.negative = 0;
-    return mlocFormatWith(&f.formatter, &outer, &magnitude, output);
+    if (c.nameLength > 0)
+    {
+        mlocWritePart(w, kind, c.nameRoom, c.nameLength);
+        return mloc_success;
+    }
+    // The pattern's text first, then as one part.
+    uint8_t text[relativePatternsMost];
+    NumberWriter room = {.buffer = (char*)text, .capacity = sizeof(text)};
+    r = mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, &room);
+    if (r == mloc_success && room.length > room.capacity)
+    {
+        r = mloc_errorData;
+    }
+    if (r == mloc_success)
+    {
+        mlocWritePart(w, kind, text, room.length);
+    }
+    return r;
+}
+
+mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter, const mlocDecimal* amount,
+                              mlocRelativeUnit unit, mlocOutput* output)
+{
+    RelativeFormat f;
+    if (!mlocReadRelativeFormat(formatter, &f) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocValidRelativeAmount(amount, (uint32_t)unit))
+    {
+        return mloc_errorInvalid;
+    }
+    RelativeChoice c;
+    mlocResult r = Choose(&f, amount, (uint32_t)unit, &c);
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    return c.nameLength > 0 ? WriteName(c.nameRoom, c.nameLength, output)
+                            : mlocFormatWith(&f.formatter, &c.outer, &c.magnitude, output);
 }

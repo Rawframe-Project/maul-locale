@@ -31,6 +31,10 @@ mlocResult mlocMakeTimeFormat(TimeFormat* format, const mlocDataSet* data, const
 // Whether a state is one mlocMakeTimeFormat made.
 bool mlocTimeFormatSound(const TimeFormat* format);
 
+// The state of a formatter the library made without a zone; false for
+// any other.
+bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format);
+
 // Whether a pattern's fields are those a time writer writes, a zone's
 // among them.
 bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);

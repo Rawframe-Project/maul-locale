@@ -133,7 +133,9 @@ typedef enum DateSetEntry
 // time with a zone (each form; the 12-hour, then the 24-hour clock; the
 // hour, minute and second), as ICU matches them, the full and long
 // formats on each clock as ICU matches them for another clock (hmmsszzzz,
-// hmmssz, Hmmsszzzz, Hmmssz); then flags, not a pattern:
+// hmmssz, Hmmsszzzz, Hmmssz), the relative date-time glue at the four
+// lengths ("{1} 'at' {0}" after "tomorrow"; atTime's where the calendar
+// has none); then flags, not a pattern:
 // dateTimeOwnTwelve when the locale's own hour (UTS #35's j, by its
 // region) is on the 12-hour clock, and from bit dateTimeMonthShift two
 // bits a length (long, medium, short) for the month of its
@@ -153,9 +155,10 @@ typedef enum DateTimeEntry
     dateTimeZoned = 42,
     dateTimeZoneStyle12 = 90,
     dateTimeZoneStyle24 = 92,
-    dateTimePatternCount = 94,
-    dateTimeFlags = 94,
-    dateTimeEntryCount = 95,
+    dateTimeRelativeGlue = 94,
+    dateTimePatternCount = 98,
+    dateTimeFlags = 98,
+    dateTimeEntryCount = 99,
 } DateTimeEntry;
 
 // The options an interval set answers, each the skeleton the generator

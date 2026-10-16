@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static mlocData s_sources[2];
+static mlocData s_sources[3];
 static mlocDataSet s_data;
 
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
@@ -213,19 +213,103 @@ static void TestRefusals(void)
           "a formatter the library did not make");
 }
 
+// Whether a relative day and a time write want (and the parts, when
+// given).
+static bool DayTimeIs(const char* id, mlocRelativeOptions options, const char* days, uint8_t hour,
+                      uint8_t minute, const char* want, const char* parts)
+{
+    mlocLocale locale;
+    mlocRelativeFormatter relative;
+    mlocTimeFormatter time;
+    mlocTimeOptions timeOptions = {.precision = mloc_timePrecisionMinute};
+    mlocDecimal d;
+    mlocTime at = {.hour = hour, .minute = minute};
+    char text[256];
+    Parts p = {.text = text};
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
+    if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
+        mlocInitRelativeFormatter(&relative, &s_data, &locale, &options) < 0 ||
+        mlocInitTimeFormatter(&time, &s_data, &locale, &timeOptions) < 0 ||
+        mlocParseDecimal(days, strlen(days), &d).status != mloc_success ||
+        mlocFormatRelativeDayTime(&relative, &time, &d, &at, &output) != mloc_success)
+    {
+        printf("  %s %s: not formatted\n", id, days);
+        return false;
+    }
+    bool same = output.length == strlen(want) && memcmp(text, want, output.length) == 0 &&
+                (parts == nullptr || strcmp(p.out, parts) == 0);
+    if (!same)
+    {
+        printf("  %s %s: got \"%.*s\" %s, want \"%s\"\n", id, days, (int)output.length, text, p.out,
+               want);
+    }
+    return same;
+}
+
+#define NNBSP "\xE2\x80\xAF"
+
+static void TestDayTime(void)
+{
+    mlocRelativeOptions automatic = Options(mloc_relativeWidthLong, mloc_relativeNumericAuto);
+    CHECK(DayTimeIs("en", automatic, "1", 15, 0, "tomorrow at 3:00" NNBSP "PM",
+                    "14[tomorrow]0[ at ]8[3]0[:]9[00]0[" NNBSP "]12[PM]"),
+          "the long relative glue, the day whole as one part");
+    CHECK(DayTimeIs("en", Options(mloc_relativeWidthShort, mloc_relativeNumericAuto), "-1", 9, 30,
+                    "yesterday, 9:30" NNBSP "AM", nullptr) &&
+              DayTimeIs("en", Options(mloc_relativeWidthLong, mloc_relativeNumericAlways), "3", 9,
+                        30, "in 3 days at 9:30" NNBSP "AM", nullptr),
+          "the medium glue for short, a numeric day");
+    automatic.capitalization = mloc_capitalizationSentence;
+    CHECK(DayTimeIs("en", automatic, "0", 15, 0, "Today at 3:00" NNBSP "PM", nullptr),
+          "the day capitalized where it comes first");
+    CHECK(DayTimeIs("gd", automatic, "1", 15, 0, "15:00 a-màireach", nullptr),
+          "a day after the time is not capitalized");
+}
+
+static void TestDayTimeRefusals(void)
+{
+    mlocLocale en;
+    mlocRelativeFormatter relative;
+    mlocTimeFormatter time;
+    mlocDecimal one;
+    mlocTime noon = {.hour = 12};
+    mlocTime bad = {.hour = 24};
+    char text[64];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitRelativeFormatter(&relative, &s_data, &en, nullptr) == mloc_success &&
+              mlocInitTimeFormatter(&time, &s_data, &en, nullptr) >= 0 &&
+              mlocMakeDecimal(1, &one) == mloc_success,
+          "formatters made");
+    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &bad, &output) == mloc_errorInvalid &&
+              mlocFormatRelativeDayTime(nullptr, &time, &one, &noon, &output) ==
+                  mloc_errorInvalid &&
+              mlocFormatRelativeDayTime(&relative, &time, nullptr, &noon, &output) ==
+                  mloc_errorInvalid,
+          "a time out of range, null pointers");
+    output = (mlocOutput){.buffer = text, .capacity = 5};
+    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &noon, &output) == mloc_errorCapacity &&
+              output.length > 5,
+          "the length needed when the text does not fit");
+}
+
 int main(void)
 {
     alignas(8) static uint8_t s_file[1 << 20];
+    alignas(8) static uint8_t s_dates[1 << 21];
     mlocOpenBuiltinData(&s_sources[0]);
-    s_data = (mlocDataSet){s_sources, 2};
-    if (!OpenFile(MLOC_RELATIVE_FILE, s_file, sizeof(s_file), &s_sources[1]))
+    s_data = (mlocDataSet){s_sources, 3};
+    if (!OpenFile(MLOC_RELATIVE_FILE, s_file, sizeof(s_file), &s_sources[1]) ||
+        !OpenFile(MLOC_DATES_FILE, s_dates, sizeof(s_dates), &s_sources[2]))
     {
-        fputs("test_relative: cannot open " MLOC_RELATIVE_FILE "\n", stderr);
+        fputs("test_relative: cannot open " MLOC_RELATIVE_FILE " or " MLOC_DATES_FILE "\n", stderr);
         return 2;
     }
     TestNumeric();
     TestAuto();
     TestCapitalization();
     TestRefusals();
+    TestDayTime();
+    TestDayTimeRefusals();
     return s_failures == 0 ? 0 : 1;
 }

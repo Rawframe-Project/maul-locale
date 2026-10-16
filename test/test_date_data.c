@@ -81,13 +81,13 @@ enum
     unitRows = 64,
     unitSets = 72,
     unitTimes = 120,
-    unitIntervals = 312,
-    unitDateParts = 328,
-    unitIntervalRows = 392,
-    unitTimeParts = 408,
-    unitPrefixes = 536,
-    unitPairs = 552,
-    unitText = 584,
+    unitIntervals = 320,
+    unitDateParts = 336,
+    unitIntervalRows = 400,
+    unitTimeParts = 416,
+    unitPrefixes = 544,
+    unitPairs = 560,
+    unitText = 592,
     unitTextSize = 13,
 };
 
@@ -525,10 +525,10 @@ static void TestUnwritablePattern(void)
 enum
 {
     compositeTimes = 128,
-    compositeIntervals = 320,
-    compositeTimePart = 416,
+    compositeIntervals = 328,
+    compositeTimePart = 424,
     compositeTimePairs = (dateIntervalTimeSize - 4 * dateStandardCount) / 2,
-    compositePairs = 560,
+    compositePairs = 568,
 };
 
 static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
@@ -544,7 +544,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
         timePart = compositeTimePart,
         timePairs = compositeTimePairs,
         pairs = compositePairs,
-        text = 624,
+        text = 632,
     };
     static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
     static const uint32_t s_offsets[7] = {0, 3, 6, 14, 19, 24, 27};
@@ -576,7 +576,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
     for (uint32_t i = 0; i < dateTimePatternCount; i++)
     {
         uint16_t index = 1;
-        if (i >= dateTimeGlue && i < dateTimeStyle12)
+        if ((i >= dateTimeGlue && i < dateTimeStyle12) || i >= dateTimeRelativeGlue)
         {
             index = i >= dateTimeAtGlue ? glue : 2;
         }

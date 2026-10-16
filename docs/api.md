@@ -510,6 +510,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelative(const mlocRelativeFormatte
 ```
 Writes an amount of a unit relative to now: negative amounts (-0 included) in the past, the others in the future; the amount's magnitude by the formatter's number options in the pattern of its plural category as written ("in 1 day", "in 1.5 days"), a category the locale lacks taking the other category's, a pattern without the number writing none (Arabic's "in one year"); under auto, an amount equal to a named one writes the name ("yesterday", "now").  @param formatter  A formatter from mlocInitRelativeFormatter. @param amount     The amount, finite. @param unit       The unit. @param output     Receives the text; its part function, when set, receives mlocNumberPart values: the number's, and literal for the pattern's text and for a name. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorNotFound for a unit whose patterns the locale's chain lacks; mloc_errorInvalid for a null pointer, an amount not finite, a unit out of range, or a formatter or decimal the library did not make. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelativeDayTime( const mlocRelativeFormatter* relative, const mlocTimeFormatter* time, const mlocDecimal* days, const mlocTime* timeOfDay, mlocOutput* output);
+```
+Writes a day relative to today and a time of day joined by the locale's relative date-time glue ("tomorrow at 3:00 PM", "in 3 days, 10:00"): the day as mlocFormatRelative writes an amount of days, the time as the time formatter writes it, joined by the glue of the time formatter's calendar at the length the relative width gives (long the long glue, short the medium, narrow the short; ICU4C takes the medium atTime glue whatever the width). The day is capitalized as the relative formatter asks only where the glue writes it first.  @param relative   A formatter from mlocInitRelativeFormatter. @param time       A formatter from mlocInitTimeFormatter, without a zone; its data holds the glue. @param days       The day's distance from today, finite. @param timeOfDay  The time. @param output     Receives the text; its part function, when set, receives mlocDatePart values: the day whole as mloc_datePartRelativeDay, the time's fields, and literal for the glue's text. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorNotFound for a day whose patterns the locale's chain lacks; mloc_errorInvalid for a null pointer, an amount not finite, a time out of range, or a formatter the library did not make (a time formatter with a zone among them). @par Thread safety Safe from any thread.
+
 ## `spellout.h`
 
 Numbers in words, ordinal suffixes and the algorithmic numbering systems (UTS #35 Part 3, record mloc-0034): CLDR's rule-based number formats, as ICU4C reads and runs them, on the exact decimal. The rules are in a data file of their own, spellout.mloc, which a program adds to its data set.
@@ -794,4 +799,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-145 functions across 16 headers.
+146 functions across 16 headers.

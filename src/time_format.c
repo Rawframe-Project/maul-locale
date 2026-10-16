@@ -203,6 +203,22 @@ static bool WritableHalf(const uint8_t* pattern, uint32_t length)
     return mlocWritableTime(pattern, length, &zoned);
 }
 
+// The relative date-time glue of each length, each holding {0} and {1}.
+static bool FindRelativeGlues(TimeRange* r, const uint8_t* set)
+{
+    for (uint32_t i = 0; i < dateStandardCount; i++)
+    {
+        DataSpan glue;
+        r->relativeGlue[i] = (uint16_t)mlocLoad16(set + 2 * (dateTimeRelativeGlue + i));
+        if (!mlocTablePattern(&r->table, r->relativeGlue[i], &glue) ||
+            !mlocValidGlue(glue.bytes, glue.size))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // The formatter's interval patterns: each kept pattern's pair, a
 // standard format's own pattern, the fallback, and what a range in a
 // zone across dates joins.
@@ -284,7 +300,7 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     bool asked = false;
     mlocHourCycle cycle = CycleOf(o, locale, &preferences, &asked);
     if (!FindPatterns(f, &patterns, set, o, cycle, asked, entries) ||
-        !FindRange(f, &patterns, set, intervals, entries))
+        !FindRange(f, &patterns, set, intervals, entries) || !FindRelativeGlues(&f->range, set))
     {
         return mloc_errorData;
     }
@@ -351,6 +367,18 @@ bool mlocTimeFormatSound(const TimeFormat* f)
            f->range.fallback != nullptr && f->digitLength > 0 &&
            f->digitLength <= numberDigitSize && f->decimalLength <= sizeof(f->decimal) &&
            f->fractionDigits <= 9 && f->zoned <= 1;
+}
+
+bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format)
+{
+    ZonedTimeFormat f;
+    if (opaque == nullptr)
+    {
+        return false;
+    }
+    memcpy(&f, opaque, sizeof(f));
+    *format = f.time;
+    return mlocTimeFormatSound(&f.time) && f.time.zoned == 0;
 }
 
 // A formatter the library made, copied out, with a zone or without as

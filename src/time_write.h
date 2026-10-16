@@ -22,12 +22,11 @@ enum
     timeFormatPatterns = 2,
 };
 
-// A time formatter's interval patterns (research 40): the table their
-// indexes resolve in, the pair of each pattern the formatter keeps, a
-// standard format's own pattern (null for the others, whose own are
-// their patterns), the fallback, and for a time in a zone whose dates
-// differ the short date with the full year and with the era (yMd, GyMd)
-// and the short atTime glue that joins either to the time.
+// A time formatter's interval patterns (research 40) and its relative
+// glue (record mloc-0043): the table their indexes resolve in, the pair of each pattern the
+// formatter keeps, a standard format's own pattern (null for the others, whose own are their
+// patterns), the fallback, and for a time in a zone whose dates differ the short date with the full
+// year and with the era (yMd, GyMd) and the short atTime glue that joins either to the time.
 typedef struct TimeRange
 {
     PatternTable table;
@@ -39,6 +38,9 @@ typedef struct TimeRange
     uint16_t shortDate;
     uint16_t shortEraDate;
     uint16_t glue;
+    // The relative date-time glue of each standard length, full to short,
+    // which a relative day and the time take ("tomorrow at 3:00 PM").
+    uint16_t relativeGlue[dateStandardCount];
 } TimeRange;
 
 typedef struct TimeFormat
