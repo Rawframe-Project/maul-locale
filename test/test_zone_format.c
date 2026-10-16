@@ -201,6 +201,9 @@ static void TestEdges(void)
           "the first metazone (Acre)");
     CHECK(Is("en", "America/Adak", january, mloc_zoneStyleOffsetShort, "GMT-10"),
           "an offset of ten hours");
+    CHECK(Is("en-u-nu-mathbold", "America/Los_Angeles", july, mloc_zoneStyleOffsetShort,
+             "GMT-\xF0\x9D\x9F\x95"),
+          "digits of four bytes");
     CHECK(Is("en", "Europe/Kaliningrad", 606870000, mloc_zoneStyleGenericLong,
              "Eastern European Time (Kaliningrad)"),
           "a region's preferred zone, the last of its metazone's");
@@ -334,6 +337,15 @@ static void TestInZone(void)
                      "Jul 13, 2026, 8:33" NNBSP "PM PDT") &&
               InZone("en", "America/Los_Angeles", july, &offset, 'T', "8:33" NNBSP "PM GMT-7"),
           "minutes unless zero, with a zone; the short offset");
+    mlocDateTimeOptions location = {.time = {.hourCycle = mloc_hourCycleClock12,
+                                             .precision = mloc_timePrecisionMinute,
+                                             .zone = mloc_zoneStyleLocation}};
+    mlocDateTimeOptions city = location;
+    city.time.zone = mloc_zoneStyleCity;
+    CHECK(InZone("en", "America/Los_Angeles", july, &location, 'T',
+                 "8:33" NNBSP "PM Los Angeles Time") &&
+              InZone("en", "America/Los_Angeles", july, &city, 'T', "8:33" NNBSP "PM Los Angeles"),
+          "a time with the location, with the city");
     CHECK(InZone("en-u-hc-h23", "America/Los_Angeles", july, &full, 'T',
                  "20:33:20 Pacific Daylight Time") &&
               InZone("en-u-hc-h23", "America/Los_Angeles", july, &longTime, 'T', "20:33:20 PDT"),
