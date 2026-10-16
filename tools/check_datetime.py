@@ -11,11 +11,14 @@
 # standard date formats alone), every time case (the time field set, and
 # the standard time formats alone) and every date-time case without a
 # zone (standard date and time formats, either glue) must also give the
-# file's text.
+# file's text; given the zone names and the region names too, so must
+# every lone zone.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
-#            [<conform_datetime> <dates.mloc> <spellout.mloc>]
+#            [<conform_datetime> <dates.mloc> <spellout.mloc>
+#             [<zone-names.mloc> <names.mloc>]]
 
+import calendar
 import json
 import os
 import re
@@ -156,10 +159,48 @@ def check_date_times(cases, tool, dates, spellout):
     return len(wrong)
 
 
+# A lone zone's mlocZoneStyle by its style and length: UTS #35's table
+# writes long and medium alone as zzzz and vvvv, short as z and v, the
+# location as VVVV and the offset as O.
+ZONE_STYLES = {("specific", "long"): 1, ("specific", "medium"): 1, ("specific", "short"): 2,
+               ("generic", "long"): 3, ("generic", "medium"): 3, ("generic", "short"): 4,
+               ("location", "long"): 5, ("location", "medium"): 5, ("location", "short"): 5,
+               ("offset", "long"): 8, ("offset", "medium"): 8, ("offset", "short"): 8}
+
+
+def zone_line(case):
+    found = re.match(r"(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)(?::(\d\d))?"
+                     r"(Z|([+-])(\d\d):(\d\d))\[([^\]]+)\]", case["input"])
+    seconds = calendar.timegm((int(found.group(1)), int(found.group(2)), int(found.group(3)),
+                               int(found.group(4)), int(found.group(5)),
+                               int(found.group(6) or 0)))
+    if found.group(7) != "Z":
+        sign = -1 if found.group(8) == "+" else 1
+        seconds += sign * (int(found.group(9)) * 3600 + int(found.group(10)) * 60)
+    style = ZONE_STYLES[(case["zoneStyle"], case.get("semanticSkeletonLength", "medium"))]
+    return " ".join(["Z", case["locale"], found.group(11), str(seconds), str(style)])
+
+
+def check_zones(cases, tool, dates, spellout, zones, names):
+    """The formatted text of every lone zone case."""
+    chosen = [c for c in cases if c.get("semanticSkeleton") == "Z"]
+    asked = "".join(zone_line(c) + "\n" for c in chosen)
+    run = subprocess.run([tool, dates, spellout, zones, names], input=asked,
+                         capture_output=True, text=True, check=True)
+    got = run.stdout.split("\n")[:len(chosen)]
+    wrong = [(zone_line(c), c["expected"], g) for c, g in zip(chosen, got)
+             if g != c["expected"]]
+    for line, want, have in wrong[:20]:
+        print(f"{line}: want {want}, got {have}")
+    print(f"{len(chosen) - len(wrong)} of {len(chosen)} zones agree")
+    return len(wrong)
+
+
 def main():
-    if len(sys.argv) not in (3, 6):
+    if len(sys.argv) not in (3, 6, 8):
         sys.exit("usage: check_datetime.py <mlocgen> <CLDR common directory> "
-                 "[<conform_datetime> <dates.mloc> <spellout.mloc>]")
+                 "[<conform_datetime> <dates.mloc> <spellout.mloc> "
+                 "[<zone-names.mloc> <names.mloc>]]")
     path = os.path.join(sys.argv[2], "testData", "datetime", "datetime.json")
     with open(path, encoding="utf-8") as f:
         every = json.load(f)
@@ -181,10 +222,12 @@ def main():
         print(f"{asked_line}: want {want}, got {got}")
     print(f"{len(questions) - len(wrong)} of {len(questions)} semantic skeletons agree "
           f"({len(OWN)} of them the check's own)")
-    dates = check_dates(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
-    times = check_times(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
-    both = check_date_times(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
-    sys.exit(1 if wrong or dates or times or both else 0)
+    files = sys.argv[3:6]
+    dates = check_dates(every, *files) if len(sys.argv) >= 6 else 0
+    times = check_times(every, *files) if len(sys.argv) >= 6 else 0
+    both = check_date_times(every, *files) if len(sys.argv) >= 6 else 0
+    zones = check_zones(every, *sys.argv[3:8]) if len(sys.argv) == 8 else 0
+    sys.exit(1 if wrong or dates or times or both or zones else 0)
 
 
 if __name__ == "__main__":

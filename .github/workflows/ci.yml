@@ -168,7 +168,8 @@ jobs:
         timeout-minutes: 5
         run: |
           python3 tools/check_datetime.py build/mlocgen ~/cldr-cache/cldr/common \
-            build/conform_datetime src/generated/dates.mloc src/generated/spellout.mloc
+            build/conform_datetime src/generated/dates.mloc src/generated/spellout.mloc \
+            src/generated/zone-names.mloc src/generated/names.mloc
       - name: BCP 47 ids and Windows names against CLDR
         # Record mloc-0041: every id, identifier and Windows mapping, as
         # check_zone_codes.py reads CLDR's files.
