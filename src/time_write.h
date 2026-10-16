@@ -43,8 +43,17 @@ typedef struct TimeFormat
     uint8_t stamp;
 } TimeFormat;
 
+// Writes a field a time pattern holds beside its own (a weekday's E).
+typedef void (*TimeOtherField)(void* context, const uint8_t* item, NumberWriter* w);
+
 // Writes a time's fields by a compiled pattern.
 void mlocWriteTimeFields(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
                          const mlocTime* time, NumberWriter* w);
+
+// Writes a time's fields by a compiled pattern, any field but a time's
+// and a day period's by other.
+void mlocWriteTimeFieldsWith(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
+                             const mlocTime* time, TimeOtherField other, void* context,
+                             NumberWriter* w);
 
 #endif

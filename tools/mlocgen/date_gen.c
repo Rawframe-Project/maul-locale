@@ -306,11 +306,11 @@ static uint16_t TimeSet(Cldr* cldr, const DateSupplement* supplement, PatternGen
                         DateBuilder* b, const char* locale, const char* calendar)
 {
     char* patterns[dateTimePatternCount];
-    bool ownTwelve = false;
+    uint16_t flags = 0;
     PatternGenerator items;
     PatternGeneratorInit(&items);
     DateSourceLoadItems(cldr, supplement, locale, calendar, &items);
-    TimeSetPatterns(cldr, g, &items, locale, calendar, patterns, &ownTwelve);
+    TimeSetPatterns(cldr, g, &items, locale, calendar, patterns, &flags);
     PatternGeneratorFree(&items);
     uint16_t set[dateTimeEntryCount];
     for (int i = 0; i < dateTimePatternCount; i++)
@@ -318,7 +318,7 @@ static uint16_t TimeSet(Cldr* cldr, const DateSupplement* supplement, PatternGen
         set[i] = AddPattern(b, patterns[i], nullptr);
         free(patterns[i]);
     }
-    set[dateTimeFlags] = ownTwelve ? dateTimeOwnTwelve : 0;
+    set[dateTimeFlags] = flags;
     return AddTimeSet(b, set);
 }
 

@@ -6,10 +6,11 @@
 // options and keywords ask for, its digits, decimal separator, day period
 // names and rules.
 
+#include "time_format.h"
+
 #include "bytes.h"
 #include "date_time.h"
 #include "locale_keyword.h"
-#include "time_write.h"
 
 #include "maul-locale/datetime.h"
 
@@ -23,7 +24,7 @@ enum
 
 static_assert(sizeof(TimeFormat) <= sizeof(mlocTimeFormatter), "a time formatter fits its value");
 
-static bool ValidOptions(const mlocTimeOptions* o)
+bool mlocValidTimeOptions(const mlocTimeOptions* o)
 {
     return (uint32_t)o->hourCycle <= mloc_hourCycleClock24 &&
            (uint32_t)o->precision <= mloc_timePrecisionFraction9 &&
@@ -96,7 +97,7 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
     if (o->style != mloc_timeStyleNone)
     {
         uint32_t standard = dateTimeStandard + (uint32_t)o->style - 1;
-        bool other = (mlocLoad16(set + 2 * dateTimeFlags) == dateTimeOwnTwelve) != twelve;
+        bool other = ((mlocLoad16(set + 2 * dateTimeFlags) & dateTimeOwnTwelve) != 0) != twelve;
         uint32_t own = (twelve ? dateTimeStyle12 : dateTimeStyle24) +
                        (o->style == mloc_timeStyleShort ? 0 : 1);
         entries[0] = asked || other ? own : standard;
@@ -123,7 +124,7 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
 }
 
 static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                          const mlocTimeOptions* o)
+                          const mlocTimeOptions* o, TimeChoice* choice)
 {
     mlocLocalePreferences preferences;
     NumberCore core;
@@ -150,6 +151,9 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     {
         return mloc_errorData;
     }
+    *choice = (TimeChoice){patterns, set,
+                           cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 ||
+                               cycle == mloc_hourCycleClock12};
     static const uint8_t s_letters[] = {0, 'K', 'h', 'H', 'k', 0, 0};
     f->hourLetter = s_letters[cycle];
     f->dayPeriods = mlocDateNameList(&f->names, mlocLoad16(nameSet + 2 * dateNamesDayPeriods));
@@ -166,25 +170,41 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
     return digits;
 }
 
+mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
+                              const mlocTimeOptions* options, TimeChoice* choice)
+{
+    TimeChoice unused;
+    memset(f, 0, sizeof(*f));
+    mlocResult result = Resolve(f, data, locale, options, choice != nullptr ? choice : &unused);
+    f->stamp = result < 0 ? 0 : timeStamp;
+    return result;
+}
+
 mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocDataSet* data,
                                  const mlocLocale* locale, const mlocTimeOptions* options)
 {
     mlocTimeOptions o = options != nullptr ? *options : (mlocTimeOptions){0};
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || !ValidOptions(&o))
+    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+        !mlocValidTimeOptions(&o))
     {
         return mloc_errorInvalid;
     }
     TimeFormat f;
-    memset(&f, 0, sizeof(f));
-    mlocResult result = Resolve(&f, data, locale, &o);
+    mlocResult result = mlocMakeTimeFormat(&f, data, locale, &o, nullptr);
     if (result < 0)
     {
         return result;
     }
-    f.stamp = timeStamp;
     memset(formatterOut, 0, sizeof(*formatterOut));
     memcpy(formatterOut, &f, sizeof(f));
     return result;
+}
+
+bool mlocTimeFormatSound(const TimeFormat* f)
+{
+    return f->stamp == timeStamp && f->pattern[0] != nullptr && f->pattern[1] != nullptr &&
+           f->digitLength > 0 && f->digitLength <= numberDigitSize &&
+           f->decimalLength <= sizeof(f->decimal) && f->fractionDigits <= 9;
 }
 
 // A formatter the library made, copied out; false for any other.
@@ -195,9 +215,7 @@ static bool ReadFormatter(const mlocTimeFormatter* opaque, TimeFormat* f)
         return false;
     }
     memcpy(f, opaque, sizeof(*f));
-    return f->stamp == timeStamp && f->pattern[0] != nullptr && f->pattern[1] != nullptr &&
-           f->digitLength > 0 && f->digitLength <= numberDigitSize &&
-           f->decimalLength <= sizeof(f->decimal) && f->fractionDigits <= 9;
+    return mlocTimeFormatSound(f);
 }
 
 mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* time,

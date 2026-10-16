@@ -8,8 +8,10 @@
 # must map to its classicalSkeleton, and the matcher must give a pattern;
 # so must the check's own questions below. Given the formatter's tool and
 # data files, every date case (field sets without a time, and the
-# standard date formats alone) and every time case (the time field set,
-# and the standard time formats alone) must also give the file's text.
+# standard date formats alone), every time case (the time field set, and
+# the standard time formats alone) and every date-time case without a
+# zone (standard date and time formats, either glue) must also give the
+# file's text.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
 #            [<conform_datetime> <dates.mloc> <spellout.mloc>]
@@ -128,6 +130,32 @@ def check_times(cases, tool, dates, spellout):
     return len(wrong)
 
 
+def date_time_line(case):
+    locale = "%s-u-ca-%s" % (case["locale"], BCP47[case["calendar"]])
+    found = re.search(r"(\d{4}-\d\d-\d\d)T(\d\d):(\d\d)(?::(\d\d))?", case["input"])
+    when = "%s %s:%s:%s.0" % (found.group(1), found.group(2), found.group(3),
+                              found.group(4) or "00")
+    glue = "1" if case.get("dateTimeFormatType") == "standard" else "0"
+    return " ".join(["DT", locale, "0", "0", "0", str(STYLES[case["dateLength"]]), "0", "0",
+                     str(STYLES[case["timeLength"]]), glue, when])
+
+
+def check_date_times(cases, tool, dates, spellout):
+    """The formatted text of every date-time case without a zone."""
+    chosen = [c for c in cases if "dateLength" in c and "timeLength" in c and
+              c["timeLength"] in ("medium", "short")]
+    asked = "".join(date_time_line(c) + "\n" for c in chosen)
+    run = subprocess.run([tool, dates, spellout], input=asked, capture_output=True, text=True,
+                         check=True)
+    got = run.stdout.split("\n")[:len(chosen)]
+    wrong = [(date_time_line(c), c["expected"], g) for c, g in zip(chosen, got)
+             if g != c["expected"]]
+    for line, want, have in wrong[:20]:
+        print(f"{line}: want {want}, got {have}")
+    print(f"{len(chosen) - len(wrong)} of {len(chosen)} date-times agree")
+    return len(wrong)
+
+
 def main():
     if len(sys.argv) not in (3, 6):
         sys.exit("usage: check_datetime.py <mlocgen> <CLDR common directory> "
@@ -155,7 +183,8 @@ def main():
           f"({len(OWN)} of them the check's own)")
     dates = check_dates(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
     times = check_times(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
-    sys.exit(1 if wrong or dates or times else 0)
+    both = check_date_times(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
+    sys.exit(1 if wrong or dates or times or both else 0)
 
 
 if __name__ == "__main__":

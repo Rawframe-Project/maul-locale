@@ -120,6 +120,19 @@ static bool ValidIndexes(const uint8_t* bytes, uint32_t count, uint32_t limit)
     return true;
 }
 
+// Whether time set flags name only known bits, each month code 0 to 2.
+static bool ValidTimeFlags(uint32_t flags)
+{
+    for (uint32_t length = 0; length < dateLengthCount; length++)
+    {
+        if (((flags >> (dateTimeMonthShift + 2 * length)) & 3) == 3)
+        {
+            return false;
+        }
+    }
+    return flags <= dateTimeFlagsMax;
+}
+
 bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -160,7 +173,7 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
     {
         const uint8_t* set = p.timeSets + (size_t)s * dateTimeSetSize;
         if (!ValidIndexes(set, dateTimePatternCount, p.patternCount) ||
-            mlocLoad16(set + 2 * dateTimeFlags) > dateTimeOwnTwelve)
+            !ValidTimeFlags(mlocLoad16(set + 2 * dateTimeFlags)))
         {
             return false;
         }

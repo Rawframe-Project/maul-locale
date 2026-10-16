@@ -89,9 +89,14 @@ typedef enum DateSetEntry
 // medium and short time formats, then the standard and atTime date-time
 // glue at those lengths ("{1}, {0}", "{1} 'at' {0}"), the minutes and
 // seconds of each clock as ICU matches them for a standard format on
-// another clock (hmm, hmmss, Hmm, Hmmss); then flags, not a pattern:
+// another clock (hmm, hmmss, Hmm, Hmmss), a weekday with a time, which
+// one item covers (the 12-hour, then the 24-hour clock; EEEE, then EEE;
+// the hour, minute and second); then flags, not a pattern:
 // dateTimeOwnTwelve when the locale's own hour (UTS #35's j, by its
-// region) is on the 12-hour clock.
+// region) is on the 12-hour clock, and from bit dateTimeMonthShift two
+// bits a length (long, medium, short) for the month of its
+// datetimeSkeleton: 0 for one or two letters or none, 1 for three, 2 for
+// four, which pick a date-time's glue.
 typedef enum DateTimeEntry
 {
     dateTimeClock12 = 0,
@@ -101,9 +106,10 @@ typedef enum DateTimeEntry
     dateTimeAtGlue = 14,
     dateTimeStyle12 = 18,
     dateTimeStyle24 = 20,
-    dateTimePatternCount = 22,
-    dateTimeFlags = 22,
-    dateTimeEntryCount = 23,
+    dateTimeWeekday = 22,
+    dateTimePatternCount = 34,
+    dateTimeFlags = 34,
+    dateTimeEntryCount = 35,
 } DateTimeEntry;
 
 // The day periods, as CLDR names them.
@@ -136,6 +142,9 @@ enum
     dateSetSize = 2 * (dateEntryCount + dateStandardCount),
     dateTimeSetSize = 2 * dateTimeEntryCount,
     dateTimeOwnTwelve = 1,
+    dateTimeMonthShift = 1,
+    // The flags' largest value: every month code 2.
+    dateTimeFlagsMax = 1 | 0x2A << 1,
     dateCalendarCount = 18,
     dateLocaleSize = 6 * dateCalendarCount + 2,
     dateNamesHeaderSize = 20,

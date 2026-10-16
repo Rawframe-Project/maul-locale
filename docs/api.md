@@ -173,6 +173,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatTime(const mlocTimeFormatter* forma
 ```
 Writes a time of day by the formatter. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitTimeFormatter. @param time       The time. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a time out of range, or a formatter the library did not make. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitDateTimeFormatter(mlocDateTimeFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocDateTimeOptions* options);
+```
+Makes a locale's date-time formatter: the date as mlocInitDateFormatter writes it, the time as mlocInitTimeFormatter does, joined by the calendar's glue ("October 15, 2026 at 4:03 PM") of the date's length as ICU4C chooses it (a field set by its month: written out with a weekday full, written out long, abbreviated medium, else short; a standard date format by its own length). A weekday with a time is matched whole where the locale has a pattern for both ("Thursday 4:03 PM").  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          As mlocInitDateFormatter's. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return As mlocInitDateFormatter and mlocInitTimeFormatter; mloc_errorInvalid also for a calendar period (a month, a year) or a standard format on one side only. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime, mlocOutput* output);
+```
+Writes a date and time of day by the formatter, the date read in the formatter's calendar. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitDateTimeFormatter. @param dateTime   The date and time. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a date-time out of range, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
 ## `decimal.h`
 
 Decimal values and their plural operands (record mloc-0019): a number is formatted from its decimal digits, never from a binary value, so the digits a user typed are the digits shown.
@@ -715,4 +725,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-130 functions across 15 headers.
+132 functions across 15 headers.

@@ -88,11 +88,12 @@ their BCP 47 ids and Windows names as CLDR maps them; and dates
 written in a locale by what they should show (a field set at a length,
 the year with its century or era as it needs) or by its standard
 formats, in its calendar and digits, and times of day by their hour
-cycle and precision or a standard format, with day periods, as ICU4X's
+cycle and precision or a standard format, with day periods, and both
+joined by the calendar's glue, as ICU4X's
 semantic skeletons and ICU4C's patterns write them (CLDR's datetime
 test data passes on every push; the patterns and calendar names are a
 data file of their own, `src/generated/dates.mloc`).
-The library has 130 public functions.
+The library has 132 public functions.
 
 ## Building
 

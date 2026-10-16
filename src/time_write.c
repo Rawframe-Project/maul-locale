@@ -108,8 +108,15 @@ static void WriteDayPeriod(const TimeFormat* f, const uint8_t* pattern, uint32_t
     WritePeriod(f, width, period, time->hour, w);
 }
 
+typedef struct Other
+{
+    TimeOtherField write;
+    void* context;
+} Other;
+
 static void WriteField(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
-                       const mlocTime* time, const uint8_t* item, NumberWriter* w)
+                       const mlocTime* time, const uint8_t* item, const Other* other,
+                       NumberWriter* w)
 {
     char letter = (char)item[1];
     uint32_t width = item[2];
@@ -132,21 +139,42 @@ static void WriteField(const TimeFormat* f, const uint8_t* pattern, uint32_t len
             WriteFraction(f, time->nanosecond, w);
         }
         break;
-    default:
+    case 'a':
+    case 'b':
+    case 'B':
         WriteDayPeriod(f, pattern, length, time, letter, width, w);
         break;
+    default:
+        other->write(other->context, item, w);
+        break;
     }
+}
+
+// Nothing for a field the pattern should not hold.
+static void WriteNothing(void* context, const uint8_t* item, NumberWriter* w)
+{
+    (void)context;
+    (void)item;
+    (void)w;
 }
 
 void mlocWriteTimeFields(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
                          const mlocTime* time, NumberWriter* w)
 {
+    mlocWriteTimeFieldsWith(f, pattern, length, time, WriteNothing, nullptr, w);
+}
+
+void mlocWriteTimeFieldsWith(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
+                             const mlocTime* time, TimeOtherField write, void* context,
+                             NumberWriter* w)
+{
+    Other other = {write, context};
     uint32_t at = 0;
     while (at < length)
     {
         if (pattern[at] == datePatternField)
         {
-            WriteField(f, pattern, length, time, pattern + at, w);
+            WriteField(f, pattern, length, time, pattern + at, &other, w);
             at += 3;
             continue;
         }

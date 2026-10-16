@@ -185,8 +185,24 @@ cycle, time precision, zone style).
     resolves them and ICU4C writes them); the file expects th's wide
     names. Its nine Thai Clock12 cases are listed in
     `tools/check_datetime.py`.
-- **Still to come in this part** (research 39's slices): the date-time
-  formatter with its glue; time zone
+- **The date-time formatter** (`mlocInitDateTimeFormatter`,
+  `mlocFormatDateTime` on `mlocDateTime`): a date field set showing a
+  day or a weekday, or a standard date format, with a time's options.
+  - **Composed as ICU4C composes a skeleton it has no single item for:**
+    the date's pattern, the calendar's glue, the time's pattern, each
+    written as when alone. The glue's style comes from the field set's
+    month in its length's datetimeSkeleton (four letters with a weekday
+    full, four letters long, three medium, else short), a standard date
+    format's from its length; the time set records each length's month
+    for this. atTime by default, the standard glue when asked
+    (`mloc_dateTimeGlueStandard`, CLDR's dateTimeFormatType).
+  - **A weekday with a time** is the one composite CLDR 49's items cover
+    whole (Eh, Ehm, Ehms, EHm, EHms and their B forms): matched as such
+    at the time's clock, the weekday's width and the precision, and
+    stored in the time set ("Thursday 4:03 PM", ja's "16:03 (木曜日)").
+  - Calendar periods take no time and a standard format on one side
+    only is refused.
+- **Still to come in this part** (research 39's slices): time zone
   names by metazone; intervals; relative time; durations; speed.
 
 ## Proof
@@ -258,6 +274,21 @@ cycle, time precision, zone style).
   it has a file for). The time patterns add 314 compiled patterns and
   399 time sets; day periods 257 name lists and 65 rule sets; the file
   is 701,316 bytes.
+- **The date-time formatter against datetime.json:** its 24 standard
+  date-time cases without a zone (full date, short time, either glue)
+  give the file's text, on every push.
+- **Against ICU4C 79's skeleton composites, once:** 684,936 date-times
+  (the 902 locales ICU and CLDR share, 4 calendars, the 7 field sets
+  that take a time at 3 lengths, 3 clocks, 3 precisions). All equal but
+  87,654. In the Gregorian calendar 195: fr_ML's glue, tok's long date
+  and es_HN's per-path pattern above, and haw's month in Roman numerals
+  (the numbering override ICU4X carries to semantic patterns and ICU's
+  matcher drops). In the other calendars 87,459: 81,140 are the glue
+  alone (ICU's data takes the Gregorian glue; CLDR gives each calendar
+  its own, above), confirmed by gluing the formatter's own date and
+  time with the Gregorian glue; the rest are the per-path inheritance
+  of the calendars' items (the Chinese calendar's EHm, which ICU's
+  data lacks) and the Chinese calendar's numbering overrides.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

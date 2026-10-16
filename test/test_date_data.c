@@ -81,7 +81,7 @@ enum
     unitRows = 32,
     unitSets = 40,
     unitTimes = 88,
-    unitText = 136,
+    unitText = 160,
 };
 
 // Builds a unit of two patterns, one row, one set and one time set; its
@@ -176,8 +176,14 @@ static void TestUnit(void)
     Put(s_unit + unitTimes + 2 * (dateTimePatternCount - 1), 2, 2);
     CHECK(!ValidUnit(size), "a time set's last pattern past the patterns");
     BuildUnit();
-    Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeOwnTwelve + 1, 2);
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeFlagsMax + 1, 2);
     CHECK(!ValidUnit(size), "a time set's unknown flag");
+    BuildUnit();
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, 3 << (dateTimeMonthShift + 2), 2);
+    CHECK(!ValidUnit(size), "a month code past four letters");
+    BuildUnit();
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeFlagsMax, 2);
+    CHECK(ValidUnit(size), "every flag at its largest");
     BuildUnit();
     Put(s_unit + unitTimes + 2 * dateTimeFlags, 0, 2);
     CHECK(ValidUnit(size), "a time set on the 24-hour clock");
@@ -449,14 +455,14 @@ static bool TimePatternIs(const char* id, uint32_t calendar, uint32_t entry, con
            pattern.size == wantLength && memcmp(pattern.bytes, want, wantLength) == 0;
 }
 
-static bool TimeFlagsAre(const char* id, uint32_t flags)
+static bool TimeFlagsAre(const char* id, uint32_t mask, uint32_t flags)
 {
     mlocLocale locale;
     DatePatterns p;
     const uint8_t* set = nullptr;
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
            mlocFindTimeSet(&s_data, &locale, 0, &p, &set) &&
-           mlocLoad16(set + 2 * dateTimeFlags) == flags;
+           (mlocLoad16(set + 2 * dateTimeFlags) & mask) == flags;
 }
 
 #define TIME_PATTERN(id, calendar, entry, text)                                                    \
@@ -494,9 +500,19 @@ static void TestTimes(void)
           "en's glue, standard and atTime");
     CHECK(TIME_PATTERN("en", 1, dateTimeClock24 + 1, "\x01H\x02:\x01m\x02"),
           "the ISO calendar takes the Gregorian times");
-    CHECK(TimeFlagsAre("en", dateTimeOwnTwelve) && TimeFlagsAre("ja", 0) &&
-              TimeFlagsAre("ku_Latn_IQ", dateTimeOwnTwelve),
+    CHECK(TimeFlagsAre("en", dateTimeOwnTwelve, dateTimeOwnTwelve) &&
+              TimeFlagsAre("ja", dateTimeOwnTwelve, 0) &&
+              TimeFlagsAre("ku_Latn_IQ", dateTimeOwnTwelve, dateTimeOwnTwelve),
           "the locale's own clock, by its region");
+    CHECK(TimeFlagsAre("en", 0x7E, 2 << 1 | 1 << 3), "en's months by length: MMMM, MMM, M");
+    CHECK(TIME_PATTERN("en", 0, dateTimeWeekday + 1,
+                       "\x01"
+                       "E\x04 \x01h\x01:\x01m\x02\xE2\x80\xAF\x01"
+                       "a\x01") &&
+              TIME_PATTERN("ja", 0, dateTimeWeekday + 6 + 3 + 1,
+                           "\x01H\x01:\x01m\x02 (\x01"
+                           "E\x03)"),
+          "a weekday with a time, matched whole");
 }
 
 static void TestFile(void)
@@ -739,6 +755,11 @@ static void TestDayPeriodFields(void)
               PeriodText("en", s_hmb, 12, 0, 30, NO_CHANGE, "12:00 noon") &&
               PeriodText("en", s_hmb, 9, 0, 0, NO_CHANGE, "9:00 AM"),
           "b: noon exactly as shown, else AM or PM");
+    CHECK(PeriodText("en",
+                     "\x01h\x01::\x01m\x02 \x01"
+                     "b\x01",
+                     12, 1, 0, NO_CHANGE, "12::01 PM"),
+          "the minutes found past a literal of two bytes");
     CHECK(PeriodText("en",
                      "\x01"
                      "a\x04",

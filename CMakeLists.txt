@@ -72,6 +72,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/date_data.c
     src/date_format.c
     src/date_write.c
+    src/datetime_format.c
     src/time_format.c
     src/time_write.c
     src/decimal.c

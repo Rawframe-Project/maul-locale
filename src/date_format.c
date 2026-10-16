@@ -7,8 +7,9 @@
 // date read in that calendar and written by the pattern of the year
 // style its year needs.
 
+#include "date_format.h"
+
 #include "bytes.h"
-#include "date_write.h"
 
 #include "maul-locale/datetime.h"
 
@@ -30,7 +31,7 @@ static const uint8_t s_entries[] = {
     dateYear,         dateYearMonth,
 };
 
-static bool ValidOptions(const mlocDateOptions* o)
+bool mlocValidDateOptions(const mlocDateOptions* o)
 {
     return (uint32_t)o->fields <= mloc_dateFieldSetYearMonth &&
            (uint32_t)o->length <= mloc_dateLengthShort &&
@@ -167,23 +168,31 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     return override < 0 ? override : digits;
 }
 
+mlocResult mlocMakeDateFormat(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale,
+                              const mlocDateOptions* o)
+{
+    static_assert(sizeof(s_entries) == mloc_dateFieldSetYearMonth + 1, "an entry per field set");
+    memset(f, 0, sizeof(*f));
+    mlocResult result = Resolve(f, data, locale, o);
+    f->stamp = result < 0 ? 0 : dateStamp;
+    return result;
+}
+
 mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocDataSet* data,
                                  const mlocLocale* locale, const mlocDateOptions* options)
 {
     mlocDateOptions o = options != nullptr ? *options : (mlocDateOptions){0};
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || !ValidOptions(&o))
+    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+        !mlocValidDateOptions(&o))
     {
         return mloc_errorInvalid;
     }
-    static_assert(sizeof(s_entries) == mloc_dateFieldSetYearMonth + 1, "an entry per field set");
     DateFormat f;
-    memset(&f, 0, sizeof(f));
-    mlocResult result = Resolve(&f, data, locale, &o);
+    mlocResult result = mlocMakeDateFormat(&f, data, locale, &o);
     if (result < 0)
     {
         return result;
     }
-    f.stamp = dateStamp;
     memset(formatterOut, 0, sizeof(*formatterOut));
     memcpy(formatterOut, &f, sizeof(f));
     return result;
@@ -244,6 +253,28 @@ static int32_t GregorianYear(int32_t day, int32_t otherwise)
     return gregorian.year;
 }
 
+bool mlocDateFormatSound(const DateFormat* f)
+{
+    return f->stamp == dateStamp && f->calendar < dateCalendarCount && f->pattern[0] != nullptr &&
+           f->pattern[1] != nullptr && f->pattern[2] != nullptr && f->digitLength > 0 &&
+           f->digitLength <= numberDigitSize && f->overrideDigitLength <= numberDigitSize &&
+           f->minusLength <= sizeof(f->minus);
+}
+
+bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateValue* value)
+{
+    mlocDate in;
+    if (mlocMakeDateFromDay((mlocCalendar)f->calendar, date->day, &in) != mloc_success ||
+        mlocGetDateFields(&in, &value->fields) != mloc_success)
+    {
+        return false;
+    }
+    // The Gregorian year the date's year begins in, and its own.
+    value->related = GregorianYear(in.day - value->fields.dayOfYear + 1, value->fields.year);
+    value->pattern = PatternFor(f, &value->fields, GregorianYear(in.day, value->fields.year));
+    return true;
+}
+
 // A formatter the library made, copied out; false for any other.
 static bool ReadFormatter(const mlocDateFormatter* opaque, DateFormat* f)
 {
@@ -252,33 +283,22 @@ static bool ReadFormatter(const mlocDateFormatter* opaque, DateFormat* f)
         return false;
     }
     memcpy(f, opaque, sizeof(*f));
-    return f->stamp == dateStamp && f->calendar < dateCalendarCount && f->pattern[0] != nullptr &&
-           f->pattern[1] != nullptr && f->pattern[2] != nullptr && f->digitLength > 0 &&
-           f->digitLength <= numberDigitSize && f->overrideDigitLength <= numberDigitSize &&
-           f->minusLength <= sizeof(f->minus);
+    return mlocDateFormatSound(f);
 }
 
 mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* date,
                           mlocOutput* output)
 {
     DateFormat f;
+    DateValue v;
     if (!ReadFormatter(formatter, &f) || date == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0))
+        (output->buffer == nullptr && output->capacity != 0) || !mlocReadDateValue(&f, date, &v))
     {
         return mloc_errorInvalid;
     }
-    mlocDate in;
-    mlocDateFields fields;
-    if (mlocMakeDateFromDay((mlocCalendar)f.calendar, date->day, &in) != mloc_success ||
-        mlocGetDateFields(&in, &fields) != mloc_success)
-    {
-        return mloc_errorInvalid;
-    }
-    // The Gregorian year the date's year begins in, and its own.
-    int32_t related = GregorianYear(in.day - fields.dayOfYear + 1, fields.year);
-    uint32_t p = PatternFor(&f, &fields, GregorianYear(in.day, fields.year));
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteDateFields(&f, f.pattern[p], f.patternLength[p], &fields, related, &w);
+    mlocWriteDateFields(&f, f.pattern[v.pattern], f.patternLength[v.pattern], &v.fields, v.related,
+                        &w);
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -287,7 +307,8 @@ mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* da
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteDateFields(&f, f.pattern[p], f.patternLength[p], &fields, related, &parts);
+        mlocWriteDateFields(&f, f.pattern[v.pattern], f.patternLength[v.pattern], &v.fields,
+                            v.related, &parts);
         mlocEndParts(&parts);
     }
     return mloc_success;

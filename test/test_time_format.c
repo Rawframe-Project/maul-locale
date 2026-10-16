@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The time formatter (maul-locale/datetime.h) on the compiled-in data and
-// dates.mloc: precisions and fractions, hour cycles from the options,
-// -u-hc and the region, the standard formats, day periods, digits,
-// parts, measuring, and the arguments refused. The texts are ICU4C 79's.
+// The time and date-time formatters (maul-locale/datetime.h) on the
+// compiled-in data and dates.mloc: precisions and fractions, hour cycles
+// from the options, -u-hc and the region, the standard formats, day
+// periods, digits, the glue and a weekday with a time, parts, measuring,
+// and the arguments refused. The texts are ICU4C 79's.
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -248,6 +249,172 @@ static void TestRefusals(void)
           "a formatter the library did not make, null arguments, a capacity without a buffer");
 }
 
+// Whether a locale formats the fifteenth of October 2026 at a time as
+// want with the options.
+static bool DateTimeIs(const char* id, mlocDateTimeOptions options, mlocTime time, const char* want)
+{
+    mlocLocale locale;
+    mlocDateTimeFormatter formatter;
+    mlocDateTime value = {.time = time};
+    mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
+    char text[256];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
+        mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) !=
+            mloc_success ||
+        mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
+        mlocFormatDateTime(&formatter, &value, &output) != mloc_success)
+    {
+        printf("  %s: refused\n", id);
+        return false;
+    }
+    bool same = output.length == strlen(want) && memcmp(text, want, output.length) == 0;
+    if (!same)
+    {
+        printf("  %s: got \"%.*s\", want \"%s\"\n", id, (int)output.length, text, want);
+    }
+    return same;
+}
+
+static mlocDateTimeOptions Composite(mlocDateFieldSet fields, mlocDateLength length,
+                                     mlocTimePrecision precision)
+{
+    return (mlocDateTimeOptions){.date = {.fields = fields, .length = length},
+                                 .time = {.precision = precision}};
+}
+
+static mlocDateTimeOptions Styles(mlocDateStyle date, mlocTimeStyle time)
+{
+    return (mlocDateTimeOptions){.date = {.style = date}, .time = {.style = time}};
+}
+
+static void TestDateTimes(void)
+{
+    mlocTime time = Time(16, 3, 7, 0);
+    CHECK(
+        DateTimeIs("en", (mlocDateTimeOptions){0}, time, "October 15, 2026 at 4:03:07" NNBSP "PM"),
+        "the defaults: the long glue");
+    CHECK(DateTimeIs("en",
+                     Composite(mloc_dateFieldSetYearMonthDayWeekday, mloc_dateLengthLong,
+                               mloc_timePrecisionMinute),
+                     time, "Thursday, October 15, 2026 at 4:03" NNBSP "PM") &&
+              DateTimeIs("de",
+                         Composite(mloc_dateFieldSetYearMonthDayWeekday, mloc_dateLengthLong,
+                                   mloc_timePrecisionMinute),
+                         time, "Donnerstag, 15. Oktober 2026 um 16:03"),
+          "the full glue: a month written out with a weekday");
+    CHECK(DateTimeIs(
+              "en",
+              Composite(mloc_dateFieldSetMonthDay, mloc_dateLengthMedium, mloc_timePrecisionMinute),
+              time, "Oct 15, 4:03" NNBSP "PM") &&
+              DateTimeIs(
+                  "en",
+                  Composite(mloc_dateFieldSetDay, mloc_dateLengthShort, mloc_timePrecisionMinute),
+                  time, "15, 4:03" NNBSP "PM") &&
+              DateTimeIs("en",
+                         Composite(mloc_dateFieldSetDayWeekday, mloc_dateLengthMedium,
+                                   mloc_timePrecisionMinute),
+                         time, "15 Thu, 4:03" NNBSP "PM"),
+          "the medium and short glue");
+    CHECK(DateTimeIs("en",
+                     Composite(mloc_dateFieldSetMonthDay, mloc_dateLengthLong,
+                               mloc_timePrecisionMinuteOptional),
+                     Time(16, 0, 0, 0), "October 15 at 4" NNBSP "PM"),
+          "minute-optional precision with a date");
+    CHECK(DateTimeIs(
+              "en",
+              Composite(mloc_dateFieldSetWeekday, mloc_dateLengthLong, mloc_timePrecisionMinute),
+              time, "Thursday 4:03" NNBSP "PM") &&
+              DateTimeIs("en",
+                         Composite(mloc_dateFieldSetWeekday, mloc_dateLengthShort,
+                                   mloc_timePrecisionSecond),
+                         time, "Thu 4:03:07" NNBSP "PM") &&
+              DateTimeIs("ja",
+                         Composite(mloc_dateFieldSetWeekday, mloc_dateLengthLong,
+                                   mloc_timePrecisionMinute),
+                         time, "16:03 (木曜日)"),
+          "a weekday with a time, matched whole");
+    CHECK(DateTimeIs("en", Styles(mloc_dateStyleFull, mloc_timeStyleMedium), time,
+                     "Thursday, October 15, 2026 at 4:03:07" NNBSP "PM") &&
+              DateTimeIs("en", Styles(mloc_dateStyleShort, mloc_timeStyleShort), time,
+                         "10/15/26, 4:03" NNBSP "PM") &&
+              DateTimeIs("fr", Styles(mloc_dateStyleLong, mloc_timeStyleShort), time,
+                         "15 octobre 2026 à 16:03"),
+          "standard formats glued by the date's length");
+    mlocDateTimeOptions standard = Styles(mloc_dateStyleFull, mloc_timeStyleShort);
+    standard.glue = mloc_dateTimeGlueStandard;
+    CHECK(DateTimeIs("en", standard, time, "Thursday, October 15, 2026, 4:03" NNBSP "PM"),
+          "the standard glue asked for");
+}
+
+static void ReportDateTimePart(void* context, uint32_t part, size_t start, size_t length)
+{
+    char* parts = context;
+    char item[32];
+    snprintf(item, sizeof(item), "%u:%zu:%zu ", part, start, length);
+    strcat(parts, item);
+}
+
+static void TestDateTimeOutput(void)
+{
+    mlocLocale en;
+    mlocDateTimeFormatter formatter;
+    mlocDateTimeOptions options =
+        Composite(mloc_dateFieldSetMonthDay, mloc_dateLengthMedium, mloc_timePrecisionHour);
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+          "a date-time formatter");
+    mlocDateTime value = {.date = {0}, .time = Time(16, 3, 7, 0)};
+    mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
+    char parts[256] = "";
+    char text[64];
+    mlocOutput output = {
+        .buffer = text, .capacity = sizeof(text), .part = ReportDateTimePart, .context = parts};
+    CHECK(mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) ==
+                  mloc_success &&
+              mlocFormatDateTime(&formatter, &value, &output) == mloc_success &&
+              strcmp(parts, "5:0:3 0:3:1 7:4:2 0:6:2 8:8:1 0:9:3 12:12:2 ") == 0,
+          "the parts of \"Oct 15, 4 PM\"");
+    mlocOutput measure = {0};
+    CHECK(mlocFormatDateTime(&formatter, &value, &measure) == mloc_errorCapacity &&
+              measure.length == output.length,
+          "measuring");
+    mlocDateTimeOptions period =
+        Composite(mloc_dateFieldSetMonth, mloc_dateLengthLong, mloc_timePrecisionMinute);
+    mlocDateTimeOptions oneSided = {.date = {.style = mloc_dateStyleShort}};
+    mlocDateTimeOptions zone = Styles(mloc_dateStyleShort, mloc_timeStyleLong);
+    mlocDateTimeOptions glue = {.glue = (mlocDateTimeGlue)2};
+    CHECK(mlocInitDateTimeFormatter(&formatter, &s_data, &en, &period) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &oneSided) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &zone) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &glue) == mloc_errorInvalid,
+          "a calendar period, a standard format on one side, a zone, an unknown glue");
+    CHECK(mlocInitDateTimeFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+          "null arguments");
+    mlocDataSet builtin = {s_sources, 1};
+    CHECK(mlocInitDateTimeFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
+          "data without the dates");
+    CHECK(mlocInitDateTimeFormatter(&formatter, &s_data, &en, nullptr) == mloc_success,
+          "the defaults");
+    mlocDateTime late = value;
+    late.time.hour = 24;
+    mlocDateTime far = value;
+    far.date.day = mlocDateMaxDay + 1;
+    mlocDateTimeFormatter blank = {0};
+    mlocOutput noBuffer = {.capacity = 4};
+    output.part = nullptr;
+    CHECK(mlocFormatDateTime(&formatter, &late, &output) == mloc_errorInvalid &&
+              mlocFormatDateTime(&formatter, &far, &output) == mloc_errorInvalid &&
+              mlocFormatDateTime(&blank, &value, &output) == mloc_errorInvalid &&
+              mlocFormatDateTime(nullptr, &value, &output) == mloc_errorInvalid &&
+              mlocFormatDateTime(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocFormatDateTime(&formatter, &value, nullptr) == mloc_errorInvalid &&
+              mlocFormatDateTime(&formatter, &value, &noBuffer) == mloc_errorInvalid,
+          "refused values and arguments");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_sources[0]);
@@ -263,5 +430,7 @@ int main(void)
     TestDayPeriods();
     TestOutput();
     TestRefusals();
+    TestDateTimes();
+    TestDateTimeOutput();
     return s_failures == 0 ? 0 : 1;
 }

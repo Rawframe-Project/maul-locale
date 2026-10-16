@@ -8,8 +8,10 @@
 // year style and standard style as mlocDateOptions' numbers, and an ISO
 // date (YYYY-MM-DD). A time's line is "T", the locale, the hour cycle,
 // precision and standard style as mlocTimeOptions' numbers, and the time
-// (HH:MM:SS.nnnnnnnnn). The output line is the formatted text, or
-// "error N" with the library's result.
+// (HH:MM:SS.nnnnnnnnn). A date-time's line is "DT", the locale, the date
+// options' four numbers, the time options' three, the glue, the date and
+// the time. The output line is the formatted text, or "error N" with the
+// library's result.
 //
 // usage: conform_datetime dates.mloc spellout.mloc < lines
 
@@ -100,6 +102,52 @@ static mlocResult FormatTime(const mlocDataSet* set, const char* line, char* out
     return result;
 }
 
+static mlocResult FormatDateTime(const mlocDataSet* set, const char* line, char* out,
+                                 size_t* length)
+{
+    char id[256];
+    int n[8] = {0};
+    int year = 0;
+    unsigned month = 0;
+    unsigned day = 0;
+    unsigned hour = 0;
+    unsigned minute = 0;
+    unsigned second = 0;
+    unsigned long nanosecond = 0;
+    if (sscanf(line, "DT %255s %d %d %d %d %d %d %d %d %d-%u-%u %u:%u:%u.%lu", id, &n[0], &n[1],
+               &n[2], &n[3], &n[4], &n[5], &n[6], &n[7], &year, &month, &day, &hour, &minute,
+               &second, &nanosecond) != 16)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocDateTimeOptions options = {
+        {(mlocDateFieldSet)n[0], (mlocDateLength)n[1], (mlocYearStyle)n[2], (mlocDateStyle)n[3]},
+        {(mlocHourCycle)n[4], (mlocTimePrecision)n[5], (mlocTimeStyle)n[6]},
+        (mlocDateTimeGlue)n[7]};
+    mlocDateTime value = {.time = {.hour = (uint8_t)hour,
+                                   .minute = (uint8_t)minute,
+                                   .second = (uint8_t)second,
+                                   .nanosecond = (uint32_t)nanosecond}};
+    mlocDateInput input = {.year = year, .month = month, .day = day};
+    mlocLocale locale;
+    mlocDateTimeFormatter formatter;
+    if (mlocCanonicalizeLocale(set, id, strlen(id), &locale, nullptr).status != mloc_success)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocResult result =
+        mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date);
+    result = result < 0 ? result : mlocInitDateTimeFormatter(&formatter, set, &locale, &options);
+    if (result < 0)
+    {
+        return result;
+    }
+    mlocOutput output = {.buffer = out, .capacity = 1024};
+    result = mlocFormatDateTime(&formatter, &value, &output);
+    *length = output.length;
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -127,9 +175,10 @@ int main(int argc, char** argv)
         int day = 0;
         char out[1024];
         size_t written = 0;
-        if (line[0] == 'T')
+        if (line[0] == 'T' || (line[0] == 'D' && line[1] == 'T'))
         {
-            mlocResult result = FormatTime(&set, line, out, &written);
+            mlocResult result = line[0] == 'T' ? FormatTime(&set, line, out, &written)
+                                               : FormatDateTime(&set, line, out, &written);
             if (result < 0)
             {
                 printf("error %d\n", result);

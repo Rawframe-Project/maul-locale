@@ -82,11 +82,35 @@ static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int leng
 }
 
 void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, PatternGenerator* items, const char* locale,
-                     const char* calendar, char* out[dateTimePatternCount], bool* ownTwelve)
+                     const char* calendar, char* out[dateTimePatternCount], uint16_t* flags)
 {
     char* own = PatternGeneratorBest(g, "j");
-    *ownTwelve = TwelveHour(own);
+    *flags = TwelveHour(own) ? dateTimeOwnTwelve : 0;
     free(own);
+    for (int length = 0; length < dateLengthCount; length++)
+    {
+        const char* skeleton = DateSkeletonOf(cldr, locale, calendar, length);
+        size_t month = strspn(skeleton + strcspn(skeleton, "ML"), "ML");
+        uint16_t code = month >= 4 ? 2 : month == 3 ? 1 : 0;
+        *flags |= (uint16_t)(code << (dateTimeMonthShift + 2 * length));
+    }
+    // A weekday with a time, which one item covers (Ehm).
+    static const char* const s_weekdays[2] = {"EEEE", "EEE"};
+    static const char* const s_times[2][3] = {{"h", "hm", "hms"}, {"H", "Hm", "Hms"}};
+    for (int clock = 0; clock < 2; clock++)
+    {
+        for (int width = 0; width < 2; width++)
+        {
+            for (int precision = 0; precision < 3; precision++)
+            {
+                char skeleton[16];
+                snprintf(skeleton, sizeof(skeleton), "%s%s", s_weekdays[width],
+                         s_times[clock][precision]);
+                out[dateTimeWeekday + 6 * clock + 3 * width + precision] =
+                    PatternGeneratorBest(g, skeleton);
+            }
+        }
+    }
     for (int clock = 0; clock < 2; clock++)
     {
         for (int precision = 0; precision < 3; precision++)

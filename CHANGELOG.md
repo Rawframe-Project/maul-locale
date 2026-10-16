@@ -71,6 +71,10 @@ format.
   clock) and precision (hour, minute, minute unless zero, second, 1 to 9
   fraction digits) or a standard format, with day periods (am and pm,
   noon, the locale's flexible periods) and parts (mloc-0042).
+- Dates with times: `mlocInitDateTimeFormatter` and `mlocFormatDateTime`
+  join a date field set or standard date format and a time by the
+  calendar's atTime or standard glue of the date's length, a weekday
+  with a time matched whole (mloc-0042).
 - Regional preferences give the calendar: the region's first in CLDR's
   calendarPreferenceData, or -u-ca's whole value (mloc-0018).
 - The dates data file, `dates.mloc`: every locale's semantic date
