@@ -31,10 +31,12 @@ static void SkeletonOfPattern(const char* pattern, char out[maxSkeleton])
     size_t n = 0;
     for (int f = 0; f < skeletonFieldCount; f++)
     {
-        for (int i = 0; i < s.original.lengths[f] && n + 1 < maxSkeleton; i++)
-        {
-            out[n++] = s.original.chars[f];
-        }
+        // A bounded fill: GCC 14 on arm64 took the letter loop's vector
+        // stores past the buffer.
+        size_t room = maxSkeleton - 1 - n;
+        size_t take = s.original.lengths[f] < room ? s.original.lengths[f] : room;
+        memset(out + n, s.original.chars[f], take);
+        n += take;
     }
     out[n] = '\0';
 }
