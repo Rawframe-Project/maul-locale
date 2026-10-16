@@ -32,10 +32,22 @@ typedef struct DatePatterns
     uint32_t rowCount;
     uint32_t setCount;
     uint32_t timeSetCount;
+    uint32_t intervalSetCount;
+    uint32_t datePartCount;
+    uint32_t intervalRowCount;
+    uint32_t timePartCount;
+    uint32_t prefixCount;
+    uint32_t pairCount;
     const uint8_t* offsets;
     const uint8_t* rows;
     const uint8_t* sets;
     const uint8_t* timeSets;
+    const uint8_t* intervalSets;
+    const uint8_t* dateParts;
+    const uint8_t* intervalRows;
+    const uint8_t* timeParts;
+    const uint8_t* prefixes;
+    const uint8_t* pairs;
     const uint8_t* text;
 } DatePatterns;
 
@@ -90,6 +102,13 @@ bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
 // unit's.
 bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                      DatePatterns* patterns, const uint8_t** set);
+
+// A locale's interval patterns in a calendar along its main chain: the
+// interval set's bytes (dateIntervalSetSize) and the unit they index.
+// False when the data has no dates, the calendar is unknown or the set
+// is past the unit's.
+bool mlocFindIntervalSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                         DatePatterns* patterns, const uint8_t** set);
 // A locale's date names in a calendar along its main chain: the name
 // set's bytes (dateNameSetSize) and the unit they index. False when the
 // data has no names, the calendar is unknown or the set is past the

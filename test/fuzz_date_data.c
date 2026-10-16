@@ -4,8 +4,9 @@
 // libFuzzer target for the date patterns and date names units'
 // validators (record mloc-0042). The input is a payload of either; a
 // patterns unit the validator accepts must give every pattern from inside
-// its text, well formed, and every row's, set's and time set's pattern
-// by index; a names unit, every name of every set's lists from inside
+// its text, well formed, every row's, set's and time set's pattern by
+// index, and every interval set's pairs and fallback and every pair's
+// halves (or none); a names unit, every name of every set's lists from inside
 // its text and a period of every hour from its rules.
 
 #include "bytes.h"
@@ -48,6 +49,80 @@ static void CheckNames(DataSpan span)
         {
             Require(rule[hour] < dateDayPeriodCount);
         }
+    }
+}
+
+// Every u16 of a record from a byte offset below a limit.
+static void RequireBelow(const uint8_t* record, uint32_t offset, uint32_t values, uint32_t limit)
+{
+    for (uint32_t i = 0; i < values; i++)
+    {
+        Require(mlocLoad16(record + offset + 2 * (size_t)i) < limit);
+    }
+}
+
+// Every pattern index of a record a pattern or none.
+static void RequirePatterns(const DatePatterns* p, const uint8_t* record, uint32_t values)
+{
+    for (uint32_t i = 0; i < values; i++)
+    {
+        uint32_t index = mlocLoad16(record + 2 * (size_t)i);
+        DataSpan pattern;
+        Require(index == dateIntervalNone || mlocDatePattern(p, index, &pattern));
+    }
+}
+
+static void CheckIntervals(const DatePatterns* p)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    for (uint32_t s = 0; s < p->intervalSetCount; s++)
+    {
+        const uint8_t* set = p->intervalSets + (size_t)s * dateIntervalSetSize;
+        Require(mlocLoad16(set) < p->datePartCount && mlocLoad16(set + 2) < p->timePartCount);
+        RequirePatterns(p, set + 4, 3);
+    }
+    for (uint32_t i = 0; i < p->datePartCount; i++)
+    {
+        const uint8_t* part = p->dateParts + (size_t)i * dateIntervalDateSize;
+        RequireBelow(part, 0, dateEntryCount, p->intervalRowCount);
+        for (uint32_t f = 0; f < dateStandardCount; f++)
+        {
+            RequireBelow(part, 2 * dateEntryCount + 6 * f, 1, p->pairCount);
+            RequireBelow(part, 2 * dateEntryCount + 6 * f + 2, 1, p->prefixCount);
+            RequirePatterns(p, part + 2 * dateEntryCount + 6 * f + 4, 1);
+        }
+    }
+    for (uint32_t i = 0; i < p->intervalRowCount; i++)
+    {
+        const uint8_t* row = p->intervalRows + (size_t)i * dateIntervalRowSize;
+        for (uint32_t l = 0; l < dateLengthCount; l++)
+        {
+            RequireBelow(row, 4 * l, 1, p->pairCount);
+            RequireBelow(row, 4 * l + 2, 1, p->prefixCount);
+        }
+    }
+    for (uint32_t i = 0; i < p->timePartCount; i++)
+    {
+        const uint8_t* part = p->timeParts + (size_t)i * dateIntervalTimeSize;
+        RequireBelow(part, 0, times, p->pairCount);
+        for (uint32_t f = 0; f < dateStandardCount; f++)
+        {
+            RequireBelow(part, 2 * times + 4 * f, 1, p->pairCount);
+            RequirePatterns(p, part + 2 * times + 4 * f + 2, 1);
+        }
+    }
+    for (uint32_t i = 0; i < p->prefixCount; i++)
+    {
+        RequirePatterns(p, p->prefixes + (size_t)i * dateIntervalPrefixSize, dateIntervalPrefixes);
+    }
+    for (uint32_t i = 0; i < p->pairCount; i++)
+    {
+        const uint8_t* pair = p->pairs + (size_t)i * dateIntervalPairSize;
+        RequirePatterns(p, pair, 2 * dateIntervalFields);
+        Require(mlocLoad16(pair + 4 * dateIntervalFields) >> dateIntervalFields == 0);
     }
 }
 
@@ -114,5 +189,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
             Require((flags >> (dateTimeMonthShift + 2 * length) & 3) != 3);
         }
     }
+    CheckIntervals(&p);
     return 0;
 }

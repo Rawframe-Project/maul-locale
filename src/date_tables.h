@@ -6,9 +6,11 @@
 // locale's patterns as ICU's DateTimePatternGenerator does. All integers
 // are little-endian.
 //
-// Date patterns, a unit of no locale. The payload is a header (u32
-// pattern count, u32 row count, u32 set count, u32 time set count, u32
-// text size), then these sections, each starting on an 8-byte boundary:
+// Date patterns, a unit of no locale. The payload is a header (the u32
+// counts of patterns, rows, sets, time sets, interval sets, interval date
+// parts, interval rows, interval time parts, interval prefixes and
+// interval pairs, then the u32 text size), then these sections, each
+// starting on an 8-byte boundary:
 //   offsets  each pattern's offset in the text (u32), count + 1 of them,
 //            from 0 to the text size
 //   rows     a field set's patterns at the three lengths, long, medium
@@ -20,6 +22,40 @@
 //   time sets a calendar's time patterns in a locale (dateTimeSetSize
 //            bytes): the pattern index (u16) of each entry of
 //            DateTimeEntry, then its flags (u16)
+//   interval sets a calendar's interval patterns in a locale
+//            (dateIntervalSetSize bytes, research 40): the date part's
+//            and the time part's index (u16), then pattern indexes
+//            (u16): the fallback ("{0} – {1}", its two values in literal
+//            text), the short date with the full year (yMd) and with the
+//            era (GyMd) that a time's date differences write
+//   interval date parts the dates' pairs (dateIntervalDateSize bytes): the
+//            interval row index (u16) of each entry of DateSetEntry; then
+//            for each standard date format, full to short, its pair's
+//            index, its prefix's index and its own pattern's index (u16)
+//   interval rows a date entry's pair and prefix indexes (u16) at the
+//            lengths long, medium and short (dateIntervalRowSize bytes)
+//   interval time parts the times' pairs (dateIntervalTimeSize bytes): the
+//            pair index (u16) of a time without a zone and with each of
+//            mlocZoneStyle's eight forms, on the 12-hour then the 24-hour
+//            clock, at the hour, minute and second; then for each
+//            standard time format, full to short, its pair's index and
+//            its own pattern's index (u16)
+//   interval prefixes a date's patterns with the larger fields it lacks
+//            (dateIntervalPrefixSize bytes), which a date-time's date
+//            differences write: the pattern index (u16) of its skeleton
+//            with d, with M and d, with y, M and d and with G, y, M and d
+//            prefixed, each that adds a missing field (dateIntervalNone
+//            for one present), then the glue style of each (u16, two bits
+//            each from bit 0: 0 full, 1 long, 2 medium, 3 short)
+//   interval pairs the halves of an interval's patterns by its greatest
+//            difference (dateIntervalPairSize bytes): for era, year,
+//            month, day, am or pm, hour and minute, the first half's and
+//            the second half's pattern index (u16; dateIntervalNone for
+//            none): both, the earlier value writes the first and the
+//            later the second; the second alone, a fallback, the whole
+//            pattern written for each value in the fallback; neither,
+//            none; then flags (u16), bit dateIntervalLaterFirst + the
+//            difference when the later value writes the first half
 //   text     the compiled patterns
 // A compiled pattern is literal UTF-8 text (no byte below 0x20, quotes
 // already resolved) and field items: datePatternField, the field's
@@ -60,8 +96,9 @@
 // differs from its chain's: the pattern set index (u16) of each
 // calendar, in the order of MlocCalendar (the ISO calendar's is the
 // Gregorian one's), then the name set index (u16) of each calendar, the
-// time set index (u16) of each calendar, and the index (u16) of the
-// locale's day period rules in the names unit.
+// time set index (u16) of each calendar, the interval set index (u16) of
+// each calendar, and the index (u16) of the locale's day period rules in
+// the names unit.
 
 #ifndef MLOC_DATE_TABLES_H
 #define MLOC_DATE_TABLES_H
@@ -121,6 +158,25 @@ typedef enum DateTimeEntry
     dateTimeEntryCount = 95,
 } DateTimeEntry;
 
+// The options an interval set answers, each the skeleton the generator
+// resolves as ICU4C's DateIntervalFormat does (research 40): a date field
+// set (DateSetEntry) at each length, long, medium and short; the standard
+// date formats, full to short; a time without or with a zone (none, then
+// mlocZoneStyle's eight forms; the 12-hour, then the 24-hour clock; the
+// hour, minute and second); the standard time formats, full to short. A
+// time's date differences are left out (none): ICU writes them as
+// fallbacks of the short date with the full year, and the era for an era
+// difference, and the time, matched whole, which the run time joins as a
+// date-time.
+typedef enum DateIntervalEntry
+{
+    dateIntervalDate = 0,
+    dateIntervalDateStyle = 54,
+    dateIntervalTime = 58,
+    dateIntervalTimeStyle = 112,
+    dateIntervalEntryCount = 116,
+} DateIntervalEntry;
+
 // The day periods, as CLDR names them.
 typedef enum DateDayPeriod
 {
@@ -141,7 +197,7 @@ typedef enum DateDayPeriod
 
 enum
 {
-    datePatternsHeaderSize = 20,
+    datePatternsHeaderSize = 44,
     // Added to a year entry for the year style.
     dateStyleFull = 1,
     dateStyleEra = 2,
@@ -155,7 +211,20 @@ enum
     // The flags' largest value: every month code 2.
     dateTimeFlagsMax = 1 | 0x2A << 1,
     dateCalendarCount = 18,
-    dateLocaleSize = 6 * dateCalendarCount + 2,
+    dateIntervalSetSize = 10,
+    dateIntervalDateSize = 2 * dateEntryCount + 6 * dateStandardCount,
+    dateIntervalRowSize = 4 * dateLengthCount,
+    dateIntervalTimeSize = 2 * (dateIntervalTimeStyle - dateIntervalTime) + 4 * dateStandardCount,
+    dateIntervalPrefixSize = 10,
+    // The prefixes: d, M, y and G.
+    dateIntervalPrefixes = 4,
+    // The greatest differences of a pair: era, year, month, day, am or
+    // pm, hour, minute.
+    dateIntervalFields = 7,
+    dateIntervalPairSize = 4 * dateIntervalFields + 2,
+    dateIntervalNone = 0xFFFF,
+    dateIntervalLaterFirst = 0,
+    dateLocaleSize = 8 * dateCalendarCount + 2,
     dateNamesHeaderSize = 20,
     dateMonthCount = 14,
     dateMonthListSize = 2 * 3 * dateMonthCount,

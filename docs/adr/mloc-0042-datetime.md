@@ -273,8 +273,23 @@ cycle, time precision, zone style).
   - **The data:** 8 zone-alone patterns, 48 zoned time patterns and the
     4 full and long rematches per time set; `dates.mloc` grows from
     724,308 to 817,900 bytes, nearly all of it the time sets' entries.
-- **Still to come in this part** (research 39's slices): intervals;
-  relative time; durations; speed.
+- **Intervals, the data** (research 40): `dates.mloc` holds, per locale
+  and calendar, an interval set: the interval patterns of every date
+  option's skeleton (each field set, length and year variant; each
+  standard date format) and every time option's (each clock, precision
+  and zone form; each standard time format), resolved in the generator
+  as ICU4C's DateIntervalFormat resolves them, each greatest
+  difference's pair of halves kept as two compiled patterns; for each
+  date option that joins a time, its patterns with the larger fields it
+  lacks prefixed (d, then M, y, G) and their glue styles, which a
+  date-time's date differences write; the short dates yMd and GyMd a
+  time's date differences write; the fallback. A time's date
+  differences are not stored: ICU writes them as fallbacks of the short
+  date and the time matched whole, which the run time joins as a
+  date-time, so the time pairs are the same in every calendar. Sets,
+  date and time parts, rows, prefixes and pairs are each kept once.
+- **Still to come in this part** (research 39's slices): the interval
+  formatter; relative time; durations; speed.
 
 ## Proof
 

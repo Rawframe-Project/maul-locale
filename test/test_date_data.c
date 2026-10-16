@@ -78,23 +78,32 @@ static void TestPatterns(void)
 enum
 {
     unitOffsets = datePatternsHeaderSize,
-    unitRows = 32,
-    unitSets = 40,
-    unitTimes = 88,
-    unitText = 280,
+    unitRows = 56,
+    unitSets = 64,
+    unitTimes = 112,
+    unitIntervals = 304,
+    unitDateParts = 320,
+    unitIntervalRows = 384,
+    unitTimeParts = 400,
+    unitPrefixes = 528,
+    unitPairs = 544,
+    unitText = 576,
 };
 
-// Builds a unit of two patterns, one row, one set and one time set; its
-// size.
+// Builds a unit of two patterns, one row, one set, one time set, and one
+// of each interval record: a set whose fallback is pattern 1, a prefix
+// with M alone (pattern 1), a pair with the day's halves (patterns 0 and
+// 1), every other index 0 or none; its size.
 static uint32_t BuildUnit(void)
 {
     memset(s_unit, 0, sizeof(s_unit));
     static const char s_text[] = "\x01y\x01\x01M\x01";
     Put(s_unit, 2, 4);
-    Put(s_unit + 4, 1, 4);
-    Put(s_unit + 8, 1, 4);
-    Put(s_unit + 12, 1, 4);
-    Put(s_unit + 16, 6, 4);
+    for (int i = 1; i < 10; i++)
+    {
+        Put(s_unit + 4 * i, 1, 4);
+    }
+    Put(s_unit + 40, 6, 4);
     Put(s_unit + unitOffsets, 0, 4);
     Put(s_unit + unitOffsets + 4, 3, 4);
     Put(s_unit + unitOffsets + 8, 6, 4);
@@ -108,6 +117,17 @@ static uint32_t BuildUnit(void)
     // The time set: pattern 1 for the last entry.
     Put(s_unit + unitTimes + 2 * (dateTimePatternCount - 1), 1, 2);
     Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeOwnTwelve, 2);
+    Put(s_unit + unitIntervals + 4, 1, 2);
+    for (int level = 0; level < dateIntervalPrefixes; level++)
+    {
+        Put(s_unit + unitPrefixes + 2 * level, level == 1 ? 1 : dateIntervalNone, 2);
+    }
+    for (int h = 0; h < 2 * dateIntervalFields; h++)
+    {
+        Put(s_unit + unitPairs + 2 * h, dateIntervalNone, 2);
+    }
+    Put(s_unit + unitPairs + 4 * 3, 0, 2);
+    Put(s_unit + unitPairs + 4 * 3 + 2, 1, 2);
     memcpy(s_unit + unitText, s_text, 6);
     return unitText + 6;
 }
@@ -132,6 +152,40 @@ static bool ValidUnit(uint32_t size)
     return ValidCopy(mlocValidDatePatterns, size);
 }
 
+// An index of each interval record past what it names.
+static void TestIntervalRefusals(uint32_t size)
+{
+    static const struct
+    {
+        uint32_t at;
+        uint32_t value;
+        const char* what;
+    } s_cases[] = {
+        {unitIntervals, 1, "a set's date part"},
+        {unitIntervals + 2, 1, "a set's time part"},
+        {unitIntervals + 8, 2, "a set's short era date"},
+        {unitDateParts + 2 * (dateEntryCount - 1), 1, "a date part's last row"},
+        {unitDateParts + 2 * dateEntryCount + 2, 1, "a date format's prefix"},
+        {unitDateParts + dateIntervalDateSize - 2, 2, "the last date format's pattern"},
+        {unitIntervalRows + dateIntervalRowSize - 4, 1, "a row's last pair"},
+        {unitIntervalRows + dateIntervalRowSize - 2, 1, "a row's last prefix"},
+        {unitTimeParts + 2 * (dateIntervalTimeStyle - dateIntervalTime) - 2, 1,
+         "a time part's last pair"},
+        {unitTimeParts + dateIntervalTimeSize - 2, 2, "the last time format's pattern"},
+        {unitPrefixes + 6, 2, "a prefix's last pattern"},
+        {unitPrefixes + 8, 1u << (2 * dateIntervalPrefixes), "a prefix's style past its four"},
+    };
+    for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
+    {
+        BuildUnit();
+        Put(s_unit + s_cases[i].at, s_cases[i].value, 2);
+        CHECK(!ValidUnit(size), s_cases[i].what);
+    }
+    BuildUnit();
+    Put(s_unit + unitPrefixes + 8, 0xFF, 2);
+    CHECK(ValidUnit(size), "every prefix's style short");
+}
+
 static void TestUnit(void)
 {
     uint32_t size = BuildUnit();
@@ -142,6 +196,12 @@ static void TestUnit(void)
           "a pattern by index");
     CHECK(!mlocDatePattern(&p, 2, &pattern), "an index past the patterns");
     CHECK(p.timeSetCount == 1 && p.timeSets == s_unit + unitTimes, "the time sets");
+    CHECK(p.intervalSetCount == 1 && p.intervalSets == s_unit + unitIntervals &&
+              p.dateParts == s_unit + unitDateParts &&
+              p.intervalRows == s_unit + unitIntervalRows &&
+              p.timeParts == s_unit + unitTimeParts && p.prefixes == s_unit + unitPrefixes &&
+              p.pairCount == 1 && p.pairs == s_unit + unitPairs,
+          "the interval sections");
     CHECK(!ValidUnit(size - 1) && !ValidUnit(size + 1) && !ValidUnit(8) &&
               !ValidUnit(datePatternsHeaderSize - 1),
           "a size that is not the layout's");
@@ -187,6 +247,21 @@ static void TestUnit(void)
     BuildUnit();
     Put(s_unit + unitTimes + 2 * dateTimeFlags, 0, 2);
     CHECK(ValidUnit(size), "a time set on the 24-hour clock");
+    BuildUnit();
+    Put(s_unit + 16, 2, 4);
+    CHECK(!ValidUnit(size), "an interval set count past the unit");
+    TestIntervalRefusals(size);
+    BuildUnit();
+    Put(s_unit + unitPairs + 4 * dateIntervalFields - 2, 2, 2);
+    CHECK(!ValidUnit(size), "a pair's last half past the patterns");
+    BuildUnit();
+    Put(s_unit + unitPairs, dateIntervalNone - 1, 2);
+    CHECK(!ValidUnit(size), "a pair's first half just below none");
+    BuildUnit();
+    Put(s_unit + unitPairs + 4 * dateIntervalFields, 1u << (dateIntervalFields - 1), 2);
+    CHECK(ValidUnit(size), "the minute's half later first");
+    Put(s_unit + unitPairs + 4 * dateIntervalFields, 1u << dateIntervalFields, 2);
+    CHECK(!ValidUnit(size), "a pair's flag past its differences");
     CHECK(mlocValidDates(nullptr, (DataSpan){s_unit, dateLocaleSize}) &&
               !mlocValidDates(nullptr, (DataSpan){s_unit, dateLocaleSize - 2}),
           "a locale's dates of its size");
@@ -331,7 +406,7 @@ static void TestNamesUnit(void)
 // unit.
 static bool OpenDatesPack(const uint8_t dates[dateLocaleSize], mlocData sources[2])
 {
-    alignas(8) static uint8_t s_patterns[512];
+    alignas(8) static uint8_t s_patterns[1024];
     alignas(8) static uint8_t s_names[1024];
     uint32_t patterns = BuildUnit();
     memcpy(s_patterns, s_unit, patterns);
@@ -344,14 +419,15 @@ static bool OpenDatesPack(const uint8_t dates[dateLocaleSize], mlocData sources[
     return OpenRootPack(units, 3, &sources[1]);
 }
 
-// The dates unit names name set 0 and time set 0 for the Gregorian
-// calendar, set 1 of each, past the units' one, for the Buddhist, and
-// rules 0, then rules 1, past the names unit's one.
+// The dates unit names name set 0, time set 0 and interval set 0 for the
+// Gregorian calendar, set 1 of each, past the units' one, for the
+// Buddhist, and rules 0, then rules 1, past the names unit's one.
 static void TestNamesPastUnit(void)
 {
     static uint8_t s_dates[dateLocaleSize];
     Put(s_dates + 2 * (dateCalendarCount + 2), 1, 2);
     Put(s_dates + 2 * (2 * dateCalendarCount + 2), 1, 2);
+    Put(s_dates + 2 * (3 * dateCalendarCount + 2), 1, 2);
     mlocData sources[2];
     CHECK(OpenDatesPack(s_dates, sources), "a pack of date units and names");
     mlocDataSet data = {sources, 2};
@@ -368,9 +444,14 @@ static void TestNamesPastUnit(void)
     CHECK(!mlocFindTimeSet(&data, &fr, 2, &p, &set) &&
               !mlocFindTimeSet(&data, &fr, dateCalendarCount, &p, &set),
           "a time set past the unit's, a calendar past MlocCalendar's");
+    CHECK(mlocFindIntervalSet(&data, &fr, 0, &p, &set) && set == p.intervalSets,
+          "root's Gregorian intervals");
+    CHECK(!mlocFindIntervalSet(&data, &fr, 2, &p, &set) &&
+              !mlocFindIntervalSet(&data, &fr, dateCalendarCount, &p, &set),
+          "an interval set past the unit's, a calendar past MlocCalendar's");
     CHECK(mlocFindDayPeriodRules(&data, &fr, &rules) && rules[24] == dateRuleNoon,
           "root's day period rules");
-    Put(s_dates + 6 * dateCalendarCount, 1, 2);
+    Put(s_dates + 8 * dateCalendarCount, 1, 2);
     CHECK(OpenDatesPack(s_dates, sources) && !mlocFindDayPeriodRules(&data, &fr, &rules),
           "rules past the unit's");
     CHECK(!mlocFindDateSet(&data, &fr, dateCalendarCount, &p, &set),
@@ -385,7 +466,7 @@ static void TestNamesPastUnit(void)
 // which a compiled pattern may hold but CLDR's date patterns do not).
 static void TestUnwritablePattern(void)
 {
-    alignas(8) static uint8_t s_patterns[512];
+    alignas(8) static uint8_t s_patterns[1024];
     uint32_t patterns = BuildUnit();
     s_unit[unitText + 1] = 'Q';
     memcpy(s_patterns, s_unit, patterns);
@@ -419,10 +500,10 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 {
     enum
     {
-        // The rows (at 48) and the set (at 56) hold zeros: row 0, pattern 0.
+        // The rows (at 72) and the set (at 80) hold zeros: row 0, pattern 0.
         offsets = datePatternsHeaderSize,
-        times = 104,
-        text = 296,
+        times = 128,
+        text = 320,
     };
     static const char s_text[] = "\x01y\x01\x01H\x01{1} {{0}{1} x{0} x\x01Q\x01";
     static const uint32_t s_offsets[7] = {0, 3, 6, 14, 19, 24, 27};
@@ -431,7 +512,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
     Put(s_unit + 4, 1, 4);
     Put(s_unit + 8, 1, 4);
     Put(s_unit + 12, 1, 4);
-    Put(s_unit + 16, 27, 4);
+    Put(s_unit + 40, 27, 4);
     for (uint32_t i = 0; i < 7; i++)
     {
         Put(s_unit + offsets + 4 * i, s_offsets[i], 4);
@@ -457,7 +538,7 @@ static uint32_t BuildComposite(uint16_t glue, uint16_t weekday)
 static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSet fields,
                                 char* text, size_t* length)
 {
-    alignas(8) static uint8_t s_patterns[512];
+    alignas(8) static uint8_t s_patterns[1024];
     alignas(8) static uint8_t s_names[1024];
     uint32_t patterns = BuildComposite(glue, weekday);
     memcpy(s_patterns, s_unit, patterns);
@@ -921,7 +1002,7 @@ int main(void)
     TestNamesPastUnit();
     TestUnwritablePattern();
     TestCompositeData();
-    alignas(8) static uint8_t s_dates[1 << 20];
+    alignas(8) static uint8_t s_dates[4 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
     if (!OpenFile(MLOC_DATES_FILE, s_dates, sizeof(s_dates), &s_sources[1]))

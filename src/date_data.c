@@ -69,42 +69,67 @@ bool mlocValidDatePattern(const uint8_t* text, uint32_t length)
     return length > 0;
 }
 
-// The section offsets of a patterns unit (rows, sets, time sets, text),
-// and whether its counts end at its size.
-static bool Layout(DataSpan unit, uint32_t out[4])
+enum
 {
+    // The sections after the offsets: rows, sets, time sets, interval
+    // sets, date parts, rows, time parts, prefixes and pairs.
+    dateSectionCount = 9,
+};
+
+// The section offsets of a patterns unit (its sections, then the text),
+// and whether its counts end at its size.
+static bool Layout(DataSpan unit, uint32_t out[dateSectionCount + 1])
+{
+    static const uint32_t s_sizes[dateSectionCount] = {
+        dateRowSize,          dateSetSize,         dateTimeSetSize,      dateIntervalSetSize,
+        dateIntervalDateSize, dateIntervalRowSize, dateIntervalTimeSize, dateIntervalPrefixSize,
+        dateIntervalPairSize};
     if (unit.size < datePatternsHeaderSize)
     {
         return false;
     }
-    uint64_t patterns = mlocLoad32(unit.bytes);
-    uint64_t rowsAt = (datePatternsHeaderSize + 4 * (patterns + 1) + 7) & ~7ULL;
-    uint64_t setsAt = (rowsAt + (uint64_t)dateRowSize * mlocLoad32(unit.bytes + 4) + 7) & ~7ULL;
-    uint64_t timesAt = (setsAt + (uint64_t)dateSetSize * mlocLoad32(unit.bytes + 8) + 7) & ~7ULL;
-    uint64_t textAt =
-        (timesAt + (uint64_t)dateTimeSetSize * mlocLoad32(unit.bytes + 12) + 7) & ~7ULL;
-    out[0] = (uint32_t)rowsAt;
-    out[1] = (uint32_t)setsAt;
-    out[2] = (uint32_t)timesAt;
-    out[3] = (uint32_t)textAt;
-    return textAt + mlocLoad32(unit.bytes + 16) == unit.size;
+    uint64_t at = (datePatternsHeaderSize + 4 * ((uint64_t)mlocLoad32(unit.bytes) + 1) + 7) & ~7ULL;
+    for (uint32_t i = 0; i < dateSectionCount; i++)
+    {
+        out[i] = (uint32_t)at;
+        at = (at + (uint64_t)s_sizes[i] * mlocLoad32(unit.bytes + 4 + 4 * (size_t)i) + 7) & ~7ULL;
+    }
+    out[dateSectionCount] = (uint32_t)at;
+    return at + mlocLoad32(unit.bytes + 4 + 4 * dateSectionCount) == unit.size;
 }
 
 DatePatterns mlocReadDatePatterns(DataSpan unit)
 {
     DatePatterns p = {0};
-    p.patternCount = mlocLoad32(unit.bytes);
-    p.rowCount = mlocLoad32(unit.bytes + 4);
-    p.setCount = mlocLoad32(unit.bytes + 8);
-    p.timeSetCount = mlocLoad32(unit.bytes + 12);
+    uint32_t counts[dateSectionCount + 1];
+    for (uint32_t i = 0; i <= dateSectionCount; i++)
+    {
+        counts[i] = mlocLoad32(unit.bytes + 4 * (size_t)i);
+    }
+    p.patternCount = counts[0];
+    p.rowCount = counts[1];
+    p.setCount = counts[2];
+    p.timeSetCount = counts[3];
+    p.intervalSetCount = counts[4];
+    p.datePartCount = counts[5];
+    p.intervalRowCount = counts[6];
+    p.timePartCount = counts[7];
+    p.prefixCount = counts[8];
+    p.pairCount = counts[9];
     // A valid unit's layout holds; the offsets stay 0 for any other.
-    uint32_t at[4] = {0};
+    uint32_t at[dateSectionCount + 1] = {0};
     (void)Layout(unit, at);
     p.offsets = unit.bytes + datePatternsHeaderSize;
     p.rows = unit.bytes + at[0];
     p.sets = unit.bytes + at[1];
     p.timeSets = unit.bytes + at[2];
-    p.text = unit.bytes + at[3];
+    p.intervalSets = unit.bytes + at[3];
+    p.dateParts = unit.bytes + at[4];
+    p.intervalRows = unit.bytes + at[5];
+    p.timeParts = unit.bytes + at[6];
+    p.prefixes = unit.bytes + at[7];
+    p.pairs = unit.bytes + at[8];
+    p.text = unit.bytes + at[dateSectionCount];
     return p;
 }
 
@@ -133,16 +158,92 @@ static bool ValidTimeFlags(uint32_t flags)
     return flags <= dateTimeFlagsMax;
 }
 
+// Whether each record of a section holds, from a byte offset, values
+// u16 indexes below their limits: the i-th below limits[i % groups].
+static bool ValidGroups(const uint8_t* records, uint32_t recordCount, uint32_t size,
+                        uint32_t offset, uint32_t values, const uint32_t* limits, uint32_t groups)
+{
+    for (uint32_t r = 0; r < recordCount; r++)
+    {
+        const uint8_t* record = records + (size_t)r * size + offset;
+        for (uint32_t i = 0; i < values; i++)
+        {
+            if (mlocLoad16(record + 2 * (size_t)i) >= limits[i % groups])
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Whether each record holds u16 pattern indexes or none, then flags with
+// no bit from a shift up.
+static bool ValidPatternsOrNone(const uint8_t* records, uint32_t recordCount, uint32_t size,
+                                uint32_t values, uint32_t patterns, uint32_t shift)
+{
+    for (uint32_t r = 0; r < recordCount; r++)
+    {
+        const uint8_t* record = records + (size_t)r * size;
+        for (uint32_t i = 0; i < values; i++)
+        {
+            uint32_t index = mlocLoad16(record + 2 * (size_t)i);
+            if (index != dateIntervalNone && index >= patterns)
+            {
+                return false;
+            }
+        }
+        if (mlocLoad16(record + 2 * (size_t)values) >> shift != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Whether the interval sections index what they name: sets their parts
+// and patterns, date parts their rows and the formats' pairs, prefixes
+// and patterns, rows their pairs and prefixes, time parts their pairs and
+// the formats' pairs and patterns, prefixes and pairs their patterns or
+// none.
+static bool ValidIntervals(const DatePatterns* p)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    const uint32_t sets[5] = {p->datePartCount, p->timePartCount, p->patternCount, p->patternCount,
+                              p->patternCount};
+    const uint32_t styles[3] = {p->pairCount, p->prefixCount, p->patternCount};
+    const uint32_t rows[2] = {p->pairCount, p->prefixCount};
+    const uint32_t timeStyles[2] = {p->pairCount, p->patternCount};
+    return ValidGroups(p->intervalSets, p->intervalSetCount, dateIntervalSetSize, 0, 5, sets, 5) &&
+           ValidGroups(p->dateParts, p->datePartCount, dateIntervalDateSize, 0, dateEntryCount,
+                       &p->intervalRowCount, 1) &&
+           ValidGroups(p->dateParts, p->datePartCount, dateIntervalDateSize, 2 * dateEntryCount,
+                       3 * dateStandardCount, styles, 3) &&
+           ValidGroups(p->intervalRows, p->intervalRowCount, dateIntervalRowSize, 0,
+                       2 * dateLengthCount, rows, 2) &&
+           ValidGroups(p->timeParts, p->timePartCount, dateIntervalTimeSize, 0, times,
+                       &p->pairCount, 1) &&
+           ValidGroups(p->timeParts, p->timePartCount, dateIntervalTimeSize, 2 * times,
+                       2 * dateStandardCount, timeStyles, 2) &&
+           ValidPatternsOrNone(p->prefixes, p->prefixCount, dateIntervalPrefixSize,
+                               dateIntervalPrefixes, p->patternCount, 2 * dateIntervalPrefixes) &&
+           ValidPatternsOrNone(p->pairs, p->pairCount, dateIntervalPairSize, 2 * dateIntervalFields,
+                               p->patternCount, dateIntervalFields);
+}
+
 bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
 {
     (void)view;
-    uint32_t at[4] = {0};
+    uint32_t at[dateSectionCount + 1] = {0};
     if (!Layout(payload, at))
     {
         return false;
     }
     DatePatterns p = mlocReadDatePatterns(payload);
-    uint32_t text = mlocLoad32(payload.bytes + 16);
+    uint32_t text = mlocLoad32(payload.bytes + 4 + 4 * dateSectionCount);
     if (mlocLoad32(p.offsets) != 0 || mlocLoad32(p.offsets + 4 * (size_t)p.patternCount) != text)
     {
         return false;
@@ -178,7 +279,7 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
             return false;
         }
     }
-    return true;
+    return ValidIntervals(&p);
 }
 
 // The section offsets of a names unit (lists, items, sets, rules, text),
@@ -410,6 +511,25 @@ bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t
     return true;
 }
 
+bool mlocFindIntervalSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                         DatePatterns* patterns, const uint8_t** set)
+{
+    DataSpan unit;
+    uint32_t index = 0;
+    if (calendar >= dateCalendarCount ||
+        !FindDates(data, locale, kindDatePatterns, 3 * dateCalendarCount + calendar, &unit, &index))
+    {
+        return false;
+    }
+    *patterns = mlocReadDatePatterns(unit);
+    if (index >= patterns->intervalSetCount)
+    {
+        return false;
+    }
+    *set = patterns->intervalSets + (size_t)index * dateIntervalSetSize;
+    return true;
+}
+
 bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                        DateNameTables* names, const uint8_t** set)
 {
@@ -434,7 +554,7 @@ bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
 {
     DataSpan unit;
     uint32_t index = 0;
-    if (!FindDates(data, locale, kindDateNames, 3 * dateCalendarCount, &unit, &index))
+    if (!FindDates(data, locale, kindDateNames, 4 * dateCalendarCount, &unit, &index))
     {
         return false;
     }

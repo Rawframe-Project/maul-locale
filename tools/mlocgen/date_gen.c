@@ -15,6 +15,7 @@
 #include "date_names_gen.h"
 #include "date_source.h"
 #include "date_tables.h"
+#include "interval_gen.h"
 #include "kinds.h"
 #include "semantic.h"
 #include "skeleton.h"
@@ -53,6 +54,31 @@ static const unsigned s_fields[] = {
     semanticYear | semanticMonth,
 };
 
+// Records of u16 values kept once each, by index.
+typedef struct RecordTable
+{
+    Map map;
+    uint16_t* data;
+    int count;
+    int capacity;
+} RecordTable;
+
+enum
+{
+    intervalSets = 0,
+    intervalDateParts = 1,
+    intervalRows = 2,
+    intervalTimeParts = 3,
+    intervalPrefixes = 4,
+    intervalPairs = 5,
+    intervalTableCount = 6,
+};
+
+// Each interval table's record size in bytes.
+static const int s_intervalSizes[intervalTableCount] = {
+    dateIntervalSetSize,  dateIntervalDateSize,   dateIntervalRowSize,
+    dateIntervalTimeSize, dateIntervalPrefixSize, dateIntervalPairSize};
+
 typedef struct DateBuilder
 {
     Map patterns;
@@ -68,6 +94,9 @@ typedef struct DateBuilder
     Map timeSets;
     uint16_t* timeSetData;
     int timeSetCount;
+    // The interval sections: sets, date parts, rows, time parts, prefixes
+    // and pairs, in their order in the unit.
+    RecordTable intervals[intervalTableCount];
     int capacity;
 } DateBuilder;
 
@@ -76,6 +105,7 @@ typedef struct DateLocale
     uint16_t sets[dateCalendarCount];
     uint16_t names[dateCalendarCount];
     uint16_t times[dateCalendarCount];
+    uint16_t intervals[dateCalendarCount];
     uint16_t rules;
 } DateLocale;
 
@@ -322,6 +352,127 @@ static uint16_t TimeSet(Cldr* cldr, const DateSupplement* supplement, PatternGen
     return AddTimeSet(b, set);
 }
 
+// Keeps a record once in an interval table; its index.
+static uint16_t AddRecord(DateBuilder* b, int table, const uint16_t* record)
+{
+    RecordTable* t = &b->intervals[table];
+    int values = s_intervalSizes[table] / 2;
+    if (t->count == t->capacity)
+    {
+        t->capacity = t->capacity == 0 ? 256 : 2 * t->capacity;
+        t->data = realloc(t->data, 2 * (size_t)values * (size_t)t->capacity);
+        if (t->data == nullptr)
+        {
+            GenDie("out of memory", "date intervals");
+        }
+    }
+    char key[4 * (dateIntervalTimeSize / 2) + 1];
+    RecordKey(record, values, key);
+    bool added = false;
+    int index = t->count;
+    uint16_t found = Intern(&t->map, key, &t->count, &added);
+    if (added)
+    {
+        memcpy(t->data + (size_t)index * (size_t)values, record, 2 * (size_t)values);
+    }
+    return found;
+}
+
+static uint16_t PatternOrNone(DateBuilder* b, const char* pattern, const char* numbers)
+{
+    return pattern != nullptr && pattern[0] != '\0' ? AddPattern(b, pattern, numbers)
+                                                    : dateIntervalNone;
+}
+
+// An interval entry's pair: each greatest difference's halves compiled.
+static uint16_t AddPair(DateBuilder* b, const IntervalPatterns* p, const char* numbers)
+{
+    uint16_t pair[dateIntervalPairSize / 2] = {0};
+    for (int f = 0; f < dateIntervalFields; f++)
+    {
+        const IntervalPair* half = &p->pairs[f];
+        pair[2 * f] = PatternOrNone(b, half->first, numbers);
+        pair[2 * f + 1] = PatternOrNone(b, half->second, numbers);
+        pair[2 * dateIntervalFields] |= (uint16_t)(half->laterFirst ? 1u << f : 0u);
+    }
+    return AddRecord(b, intervalPairs, pair);
+}
+
+static uint16_t AddPrefix(DateBuilder* b, const IntervalPrefix* p, const char* numbers)
+{
+    uint16_t prefix[dateIntervalPrefixSize / 2] = {0};
+    for (int level = 0; level < dateIntervalPrefixes; level++)
+    {
+        prefix[level] = PatternOrNone(b, p->patterns[level], numbers);
+        prefix[dateIntervalPrefixes] |= (uint16_t)(p->styles[level] << (2 * level));
+    }
+    return AddRecord(b, intervalPrefixes, prefix);
+}
+
+// The date part: each date entry's row of pairs and prefixes by length,
+// then each standard date format's pair, prefix and own pattern.
+static uint16_t AddDatePart(DateBuilder* b, const IntervalSet* r,
+                            const char* const numbers[dateIntervalTime])
+{
+    uint16_t part[dateIntervalDateSize / 2];
+    for (int entry = 0; entry < dateEntryCount; entry++)
+    {
+        uint16_t row[dateIntervalRowSize / 2];
+        for (int length = 0; length < dateLengthCount; length++)
+        {
+            int e = dateIntervalDate + entry * dateLengthCount + length;
+            row[2 * length] = AddPair(b, &r->entries[e], numbers[e]);
+            row[2 * length + 1] = AddPrefix(b, &r->prefixes[e], numbers[e]);
+        }
+        part[entry] = AddRecord(b, intervalRows, row);
+    }
+    for (int i = 0; i < dateStandardCount; i++)
+    {
+        int e = dateIntervalDateStyle + i;
+        part[dateEntryCount + 3 * i] = AddPair(b, &r->entries[e], numbers[e]);
+        part[dateEntryCount + 3 * i + 1] = AddPrefix(b, &r->prefixes[e], numbers[e]);
+        part[dateEntryCount + 3 * i + 2] = AddPattern(b, r->entries[e].pattern, numbers[e]);
+    }
+    return AddRecord(b, intervalDateParts, part);
+}
+
+// The time part: each time entry's pair, then each standard time
+// format's pair and own pattern.
+static uint16_t AddTimePart(DateBuilder* b, const IntervalSet* r)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    uint16_t part[dateIntervalTimeSize / 2];
+    for (int t = 0; t < times; t++)
+    {
+        part[t] = AddPair(b, &r->entries[dateIntervalTime + t], nullptr);
+    }
+    for (int i = 0; i < dateStandardCount; i++)
+    {
+        const IntervalPatterns* p = &r->entries[dateIntervalTimeStyle + i];
+        part[times + 2 * i] = AddPair(b, p, nullptr);
+        part[times + 2 * i + 1] = AddPattern(b, p->pattern, nullptr);
+    }
+    return AddRecord(b, intervalTimeParts, part);
+}
+
+// A calendar's interval set: its date and time parts, the fallback and
+// the short dates a time's date differences write.
+static uint16_t AddIntervalSet(DateBuilder* b, const IntervalSet* r,
+                               const char* const numbers[dateIntervalTime])
+{
+    uint16_t set[dateIntervalSetSize / 2] = {
+        AddDatePart(b, r, numbers),
+        AddTimePart(b, r),
+        AddPattern(b, r->fallback, nullptr),
+        AddPattern(b, r->shortDate, nullptr),
+        AddPattern(b, r->shortEraDate, nullptr),
+    };
+    return AddRecord(b, intervalSets, set);
+}
+
 // A calendar's datetimeSkeleton and numbering override at each length,
 // read once.
 typedef struct LengthData
@@ -330,14 +481,15 @@ typedef struct LengthData
     const char* numbers[dateLengthCount];
 } LengthData;
 
-// The semantic pattern of a field set at a length and year style.
+// The semantic pattern of a field set at a length and year style; its
+// classical skeleton into classical.
 static uint16_t SemanticPattern(PatternGenerator* g, DateBuilder* b, const LengthData* lengths,
-                                const char* locale, unsigned fields, int length, int style)
+                                const char* locale, unsigned fields, int length, int style,
+                                char classical[64])
 {
     SemanticSkeleton s = {
         .fields = fields, .length = (SemanticLength)length, .yearStyle = (SemanticYearStyle)style};
-    char classical[64];
-    if (!SemanticClassical(&s, lengths->skeleton[length], classical, sizeof(classical)))
+    if (!SemanticClassical(&s, lengths->skeleton[length], classical, 64))
     {
         GenDie("a date field set UTS #35 does not define", locale);
     }
@@ -348,9 +500,36 @@ static uint16_t SemanticPattern(PatternGenerator* g, DateBuilder* b, const Lengt
     return index;
 }
 
-// A calendar's date set, and its time set into times.
+// A calendar's interval set: the date entries' classical skeletons as
+// matched for the date set, each length's numbering override with them.
+static uint16_t CalendarIntervals(const DateInput* in, DateBuilder* b, PatternGenerator* g,
+                                  const LengthData* lengths, const char* locale,
+                                  const char* calendar, char classical[dateIntervalDateStyle][64])
+{
+    const char* dates[dateIntervalDateStyle];
+    const char* numbers[dateIntervalTime] = {0};
+    for (int e = 0; e < dateIntervalDateStyle; e++)
+    {
+        dates[e] = classical[e];
+        numbers[e] = lengths->numbers[e % dateLengthCount];
+    }
+    for (int i = 0; i < dateStandardCount; i++)
+    {
+        numbers[dateIntervalDateStyle + i] = DateNumbersOf(in->cldr, locale, calendar, i);
+    }
+    IntervalSet* resolved = GenAllocate(sizeof(IntervalSet));
+    IntervalSetResolve(in->cldr, g, locale, calendar, dates, resolved);
+    uint16_t index = AddIntervalSet(b, resolved, numbers);
+    IntervalSetFree(resolved);
+    free(resolved);
+    return index;
+}
+
+// A calendar's date set, and its time and interval sets into times and
+// intervals.
 static uint16_t CalendarSet(const DateInput* in, const DateSupplement* supplement, DateBuilder* b,
-                            const char* locale, const char* calendar, uint16_t* times)
+                            const char* locale, const char* calendar, uint16_t* times,
+                            uint16_t* intervals)
 {
     PatternGenerator g;
     PatternGeneratorInit(&g);
@@ -362,6 +541,7 @@ static uint16_t CalendarSet(const DateInput* in, const DateSupplement* supplemen
         lengths.numbers[length] = DateNumbersOf(in->cldr, locale, calendar, length + 1);
     }
     uint16_t set[dateSetSize / 2];
+    char classical[dateIntervalDateStyle][64];
     int entry = 0;
     for (size_t f = 0; f < sizeof(s_fields) / sizeof(s_fields[0]); f++)
     {
@@ -371,7 +551,8 @@ static uint16_t CalendarSet(const DateInput* in, const DateSupplement* supplemen
             uint16_t row[dateLengthCount];
             for (int length = 0; length < dateLengthCount; length++)
             {
-                row[length] = SemanticPattern(&g, b, &lengths, locale, s_fields[f], length, style);
+                row[length] = SemanticPattern(&g, b, &lengths, locale, s_fields[f], length, style,
+                                              classical[entry * dateLengthCount + length]);
             }
             set[entry++] = AddRow(b, row);
         }
@@ -386,6 +567,7 @@ static uint16_t CalendarSet(const DateInput* in, const DateSupplement* supplemen
         set[entry++] = AddPattern(b, pattern, DateNumbersOf(in->cldr, locale, calendar, i));
     }
     *times = TimeSet(in->cldr, supplement, &g, b, locale, calendar);
+    *intervals = CalendarIntervals(in, b, &g, &lengths, locale, calendar, classical);
     PatternGeneratorFree(&g);
     return AddSet(b, set);
 }
@@ -435,13 +617,24 @@ static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
     size_t rows = Align8(offsets + 4 * ((size_t)b->patternCount + 1));
     size_t sets = Align8(rows + (size_t)dateRowSize * (size_t)b->rowCount);
     size_t times = Align8(sets + (size_t)dateSetSize * (size_t)b->setCount);
-    size_t texts = Align8(times + (size_t)dateTimeSetSize * (size_t)b->timeSetCount);
+    size_t intervals[intervalTableCount + 1];
+    intervals[0] = Align8(times + (size_t)dateTimeSetSize * (size_t)b->timeSetCount);
+    for (int t = 0; t < intervalTableCount; t++)
+    {
+        intervals[t + 1] =
+            Align8(intervals[t] + (size_t)s_intervalSizes[t] * (size_t)b->intervals[t].count);
+    }
+    size_t texts = intervals[intervalTableCount];
     uint8_t* unit = GenAllocate(texts + text);
     GenPut(unit, (uint64_t)b->patternCount, 4);
     GenPut(unit + 4, (uint64_t)b->rowCount, 4);
     GenPut(unit + 8, (uint64_t)b->setCount, 4);
     GenPut(unit + 12, (uint64_t)b->timeSetCount, 4);
-    GenPut(unit + 16, text, 4);
+    for (int t = 0; t < intervalTableCount; t++)
+    {
+        GenPut(unit + 16 + 4 * (size_t)t, (uint64_t)b->intervals[t].count, 4);
+    }
+    GenPut(unit + 16 + 4 * intervalTableCount, text, 4);
     size_t at = 0;
     for (int i = 0; i <= b->patternCount; i++)
     {
@@ -463,6 +656,13 @@ static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
     for (int i = 0; i < b->timeSetCount * dateTimeEntryCount; i++)
     {
         GenPut(unit + times + 2 * (size_t)i, b->timeSetData[i], 2);
+    }
+    for (int t = 0; t < intervalTableCount; t++)
+    {
+        for (int i = 0; i < b->intervals[t].count * (s_intervalSizes[t] / 2); i++)
+        {
+            GenPut(unit + intervals[t] + 2 * (size_t)i, b->intervals[t].data[i], 2);
+        }
     }
     DataFileAdd(file, kindDatePatterns, nullptr, unit, texts + text);
     free(unit);
@@ -497,8 +697,9 @@ static void FileLocales(const DateInput* in, const DateLocale* all, DataFile* fi
                 GenPut(unit + 2 * c, all[i].sets[c], 2);
                 GenPut(unit + 2 * (dateCalendarCount + c), all[i].names[c], 2);
                 GenPut(unit + 2 * (2 * dateCalendarCount + c), all[i].times[c], 2);
+                GenPut(unit + 2 * (3 * dateCalendarCount + c), all[i].intervals[c], 2);
             }
-            GenPut(unit + 6 * dateCalendarCount, all[i].rules, 2);
+            GenPut(unit + 8 * dateCalendarCount, all[i].rules, 2);
             DataFileAdd(file, kindDates, key, unit, sizeof(unit));
         }
     }
@@ -526,14 +727,15 @@ int GenerateDateUnits(const DateInput* in, DataFile* file, char* errorOut, size_
             int from = c == 1 ? 0 : c;
             if (from == c)
             {
-                all[i].sets[c] =
-                    CalendarSet(in, &supplement, b, in->ids[i], s_calendars[c], &all[i].times[c]);
+                all[i].sets[c] = CalendarSet(in, &supplement, b, in->ids[i], s_calendars[c],
+                                             &all[i].times[c], &all[i].intervals[c]);
                 all[i].names[c] =
                     DateNamesSet(&s_names, in->cldr, &supplement, in->ids[i], c, s_calendars[c]);
             }
             all[i].sets[c] = all[i].sets[from];
             all[i].names[c] = all[i].names[from];
             all[i].times[c] = all[i].times[from];
+            all[i].intervals[c] = all[i].intervals[from];
         }
         all[i].rules = DateNamesRules(&s_names, &supplement, in->ids[i]);
     }
@@ -549,6 +751,11 @@ int GenerateDateUnits(const DateInput* in, DataFile* file, char* errorOut, size_
     free(b->rowData);
     free(b->setData);
     free(b->timeSetData);
+    for (int t = 0; t < intervalTableCount; t++)
+    {
+        free(b->intervals[t].data);
+        MapFree(&b->intervals[t].map);
+    }
     MapFree(&b->patterns);
     MapFree(&b->rows);
     MapFree(&b->sets);
