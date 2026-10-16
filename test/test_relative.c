@@ -106,6 +106,14 @@ static void TestNumeric(void)
           "a pattern without the number writes none");
     CHECK(Is("en", always, "1", mloc_relativeMonday, "in 1 Monday", nullptr),
           "a weekday's numeric pattern");
+    CHECK(Is("ha", always, "3", mloc_relativeDay, "a cikin kwanaki 3", "13[a cikin kwanaki ]0[3]"),
+          "a pattern ending in its number");
+    mlocRelativeOptions compact = always;
+    compact.number.notation = mloc_notationCompactShort;
+    CHECK(Is("en", compact, "1000000", mloc_relativeDay, "in 1M days", nullptr), "compact short");
+    compact.number.notation = mloc_notationCompactLong;
+    CHECK(Is("en", compact, "1000000", mloc_relativeDay, "in 1 million days", nullptr),
+          "compact long");
 }
 
 static void TestAuto(void)
@@ -139,6 +147,12 @@ static void TestCapitalization(void)
     CHECK(Is("en", o, "1", mloc_relativeDay, "Tomorrow", nullptr) &&
               Is("de", o, "1", mloc_relativeDay, "morgen", nullptr),
           "a menu by the locale's relative transforms");
+    o.capitalization = mloc_capitalizationStandAlone;
+    CHECK(Is("en", o, "1", mloc_relativeDay, "Tomorrow", nullptr) &&
+              Is("de", o, "1", mloc_relativeDay, "morgen", nullptr),
+          "standing alone by the locale's relative transforms");
+    o.capitalization = mloc_capitalizationNone;
+    CHECK(Is("en", o, "1", mloc_relativeDay, "tomorrow", nullptr), "none");
     o.capitalization = mloc_capitalizationSentence;
     CHECK(Is("tr", o, "1", mloc_relativeDay, "Yarın", nullptr), "Turkish");
 }
@@ -178,6 +192,20 @@ static void TestRefusals(void)
     CHECK(mlocFormatRelative(&f, &one, mloc_relativeDay, &output) == mloc_errorCapacity &&
               output.length == strlen("in 1 day"),
           "the length needed when the text does not fit");
+    mlocRelativeFormatter named;
+    mlocRelativeOptions automatic = {.numeric = mloc_relativeNumericAuto};
+    mlocDecimal minusOne;
+    char exact[9];
+    output = (mlocOutput){.buffer = exact, .capacity = sizeof(exact)};
+    CHECK(mlocInitRelativeFormatter(&named, &s_data, &en, &automatic) == mloc_success &&
+              mlocMakeDecimal(-1, &minusOne) == mloc_success &&
+              mlocFormatRelative(&named, &minusOne, mloc_relativeDay, &output) == mloc_success &&
+              output.length == 9 && memcmp(exact, "yesterday", 9) == 0,
+          "a name that fills the room exactly");
+    output = (mlocOutput){.buffer = exact, .capacity = 8};
+    CHECK(mlocFormatRelative(&named, &minusOne, mloc_relativeDay, &output) == mloc_errorCapacity &&
+              output.length == 9,
+          "a name one byte past the room");
     mlocRelativeFormatter forged = f;
     memset(&forged, 0x5A, sizeof(forged));
     output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};

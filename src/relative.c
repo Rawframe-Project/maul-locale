@@ -220,25 +220,23 @@ static bool Lookup(const RelativeFormat* f, uint32_t unit, uint32_t slot, DataSp
 }
 
 // The titlecase of text's first code point when the formatter
-// capitalizes and it is a lowercase letter: the bytes it replaces, 0 for
-// none.
+// capitalizes and it is a lowercase letter, and the bytes it replaces;
+// else no bytes for none.
 static size_t TitleOf(const RelativeFormat* f, DataSpan text, const uint8_t** title,
                       uint32_t* titleLength)
 {
     static const uint8_t s_dottedI[] = {0xC4, 0xB0};
+    static const uint8_t s_masks[] = {0, 0x7F, 0x1F, 0x0F, 0x07};
+    *title = text.bytes;
+    *titleLength = 0;
     if (!f->capitalize || text.size == 0)
     {
         return 0;
     }
     uint8_t lead = text.bytes[0];
     size_t size = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
-    if (size > text.size)
-    {
-        return 0;
-    }
-    static const uint8_t s_masks[] = {0, 0x7F, 0x1F, 0x0F, 0x07};
     uint32_t cp = lead & s_masks[size];
-    for (size_t i = 1; i < size; i++)
+    for (size_t i = 1; i < size && i < text.size; i++)
     {
         cp = cp << 6 | (text.bytes[i] & 0x3Fu);
     }
@@ -248,7 +246,13 @@ static size_t TitleOf(const RelativeFormat* f, DataSpan text, const uint8_t** ti
         *titleLength = sizeof(s_dottedI);
         return size;
     }
-    return mlocSpelloutTitlecase(f->titlecase, cp, title, titleLength) ? size : 0;
+    if (!mlocSpelloutTitlecase(f->titlecase, cp, title, titleLength))
+    {
+        *title = text.bytes;
+        *titleLength = 0;
+        return 0;
+    }
+    return size;
 }
 
 // Copies text into room, its first letter titlecased when the formatter
@@ -258,17 +262,13 @@ static size_t CopyText(const RelativeFormat* f, DataSpan text, uint8_t* room, si
     const uint8_t* title = nullptr;
     uint32_t titleLength = 0;
     size_t old = TitleOf(f, text, &title, &titleLength);
-    size_t head = old > 0 ? titleLength : 0;
-    size_t length = text.size - old + head;
+    size_t length = text.size - old + titleLength;
     if (length > capacity)
     {
         return 0;
     }
-    if (head > 0)
-    {
-        memcpy(room, title, head);
-    }
-    memcpy(room + head, text.bytes + old, text.size - old);
+    memcpy(room, title, titleLength);
+    memcpy(room + titleLength, text.bytes + old, text.size - old);
     return length;
 }
 

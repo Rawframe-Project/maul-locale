@@ -152,14 +152,24 @@ static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepar
 }
 
 // The plural category of a prepared number, other for infinity and NaN.
+// A compact number's operands are those of its whole value with its
+// exponent (UTS #35: "1.2c6" has i 1200000 and c 6), so "1M" takes
+// "days" as ICU writes it, though its pattern took the one of "1".
 static uint32_t Category(const Formatter* f, const Prepared* p)
 {
     if (p->decimal.kind != mloc_decimalFinite)
     {
         return mloc_pluralOther;
     }
+    mlocDecimal whole = p->decimal;
+    if (whole.count > 0 && p->exponent > 0)
+    {
+        whole.exponent += p->exponent;
+        whole.fractionDigits =
+            whole.fractionDigits > p->exponent ? whole.fractionDigits - p->exponent : 0;
+    }
     mlocPluralOperands operands;
-    mlocFillPluralOperands(&p->decimal, &operands);
+    mlocFillPluralOperands(&whole, &operands);
     operands.c = p->exponent > 0 ? (uint32_t)p->exponent : 0;
     return mlocSelectPluralRule(f->pluralRule, &operands);
 }

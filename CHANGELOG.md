@@ -125,3 +125,6 @@ format.
   weekdays) in three widths, numeric always or auto ("yesterday"),
   capitalized by context, with parts (`maul-locale/relative.h`,
   mloc-0043).
+- A compact number's unit, currency or relative time name takes the
+  plural category of its whole value, as ICU4C does ("1M meters", "1
+  million US dollars"; it took the category of "1").

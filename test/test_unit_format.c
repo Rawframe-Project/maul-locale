@@ -116,6 +116,10 @@ static void TestPercent(void)
     CHECK(Formats("en", "percent", &compact, "1234", "1.2K%") &&
               Formats("en", "meter", &compact, "1234", "1.2K m"),
           "compact notation within the unit's pattern");
+    mlocUnitOptions longCompact = {.number = {.notation = mloc_notationCompactShort},
+                                   .width = mloc_unitWidthLong};
+    CHECK(Formats("en", "meter", &longCompact, "1000000", "1M meters"),
+          "the name in the whole value's category, as ICU4C 79");
 }
 
 static void TestCompounds(void)

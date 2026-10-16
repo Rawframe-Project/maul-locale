@@ -240,6 +240,10 @@ static void TestNames(void)
                                        .number.notation = mloc_notationCompactLong};
     CHECK(Named("en", "USD", &longCompact, "1234567", "1.2 million US dollars"),
           "compact long with a name: the decimal compact table");
+    // ICU4C 79: the name's category is the whole value's, "1 million"'s
+    // pattern the one of 1.
+    CHECK(Named("en", "USD", &longCompact, "1000000", "1 million US dollars"),
+          "a compact number's name in its whole value's category");
     mlocCurrencyOptions append = {.display = mloc_currencyNarrowSymbol, .appendCode = 1};
     CHECK(Formats("en", "USD", &append, "1432", "$1,432.00" NBSP "USD"), "the ISO append");
     mlocCurrencyOptions badAppend = {.display = mloc_currencyCode, .appendCode = 1};
