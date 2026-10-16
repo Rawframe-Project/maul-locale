@@ -189,6 +189,35 @@ static bool NamesRefuse(uint32_t at, uint32_t value, int bytes)
     return !NamesValid(size);
 }
 
+// Whether a unit holding one format, its text as given, is valid.
+static bool FormatValid(ZoneNameFormat field, const char* text)
+{
+    uint32_t length = (uint32_t)strlen(text);
+    memset(s_names, 0, sizeof(s_names));
+    Put(s_names, 1, 4);
+    Put(s_names + 4, length, 4);
+    Put(s_names + zoneNameHeaderSize, zoneNameFormats * zoneNameFieldsPerItem + field, 2);
+    Put(s_names + zoneNameHeaderSize + 6, length, 4);
+    memcpy(s_names + zoneNameHeaderSize + 10, text, length);
+    return NamesValid(zoneNameHeaderSize + 10 + length);
+}
+
+static void TestFormats(void)
+{
+    CHECK(FormatValid(zoneFormatGmt, "GMT{0}") && FormatValid(zoneFormatGmt, "{0} UTC") &&
+              FormatValid(zoneFormatGmt, "") && !FormatValid(zoneFormatGmt, "GMT") &&
+              !FormatValid(zoneFormatGmt, "GMT{0") && !FormatValid(zoneFormatGmt, "GMT{1}"),
+          "the GMT format holds {0}");
+    CHECK(FormatValid(zoneFormatHourPositive, "+HH:mm") &&
+              FormatValid(zoneFormatHourNegative, "-H.mm") &&
+              !FormatValid(zoneFormatHourPositive, "+mm:HH") &&
+              !FormatValid(zoneFormatHourNegative, "-HH:m") &&
+              !FormatValid(zoneFormatHourPositive, "+HH"),
+          "an hour format holds an H before its first mm");
+    CHECK(FormatValid(zoneFormatRegion, "x") && FormatValid(zoneFormatFallback, "y"),
+          "the other formats are text");
+}
+
 static void TestNames(void)
 {
     uint32_t size = BuildNames();
@@ -286,6 +315,7 @@ int main(void)
     TestMeta();
     TestPreferredOrder();
     TestNames();
+    TestFormats();
     alignas(8) static uint8_t s_file[1 << 23];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};

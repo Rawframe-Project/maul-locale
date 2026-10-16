@@ -11,6 +11,8 @@
 #include "bytes.h"
 #include "number_data.h"
 
+#include <string.h>
+
 enum
 {
     // The largest offset CLDR gives a metazone period, in minutes.
@@ -140,6 +142,33 @@ static bool ValidKey(uint32_t key)
            field < zoneFieldCount;
 }
 
+// Whether a format the formatter takes apart holds its parts: the GMT
+// format its {0}, an hour format an H before its first mm.
+static bool ValidFormat(uint32_t key, const uint8_t* text, uint32_t length)
+{
+    uint32_t field = key - zoneNameFormats * zoneNameFieldsPerItem;
+    bool hour = field == zoneFormatHourPositive || field == zoneFormatHourNegative;
+    if (key / zoneNameFieldsPerItem != zoneNameFormats || length == 0 ||
+        (field != zoneFormatGmt && !hour))
+    {
+        return true;
+    }
+    bool seenHour = false;
+    for (uint32_t i = 0; i + 1 < length; i++)
+    {
+        seenHour = seenHour || text[i] == 'H';
+        if (hour && memcmp(text + i, "mm", 2) == 0)
+        {
+            return seenHour;
+        }
+        if (!hour && i + 2 < length && memcmp(text + i, "{0}", 3) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool mlocValidZoneNames(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -168,7 +197,8 @@ bool mlocValidZoneNames(const DataView* view, DataSpan payload)
         uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);
         uint32_t end = mlocLoad32(offsets + 4 * (size_t)i + 4);
         if (!ValidKey(key) || (i > 0 && key <= mlocLoad16(keys + 2 * (size_t)i - 2)) ||
-            end < start || end > textSize || !mlocValidDataText(text + start, end - start, 0))
+            end < start || end > textSize || !mlocValidDataText(text + start, end - start, 0) ||
+            !ValidFormat(key, text + start, end - start))
         {
             return false;
         }

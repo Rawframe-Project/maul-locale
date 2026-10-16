@@ -401,7 +401,9 @@ cycle, time precision, zone style).
   metazone periods of 419 zones over 155 metazones, 155 golden and 128
   preferred zones, 11 primary zones; 296 locale units, 2,836,588 bytes
   of names, the file 2,858,565 bytes. The validators refuse each field
-  spoiled in a whitebox test, and the fuzz target keeps every read of
+  spoiled in a whitebox test, and a GMT format without its {0} or an
+  hour format without an H before its first mm, which the formatter
+  takes apart, and the fuzz target keeps every read of
   an accepted unit inside it.
 
 ## Consequences

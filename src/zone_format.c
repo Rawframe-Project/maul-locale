@@ -263,25 +263,23 @@ typedef struct OffsetPattern
     uint32_t minutes;
 } OffsetPattern;
 
-static bool ReadOffsetPattern(ZoneText text, OffsetPattern* out)
+// An hour format's parts; the validator saw an H before its first mm.
+static void ReadOffsetPattern(ZoneText text, OffsetPattern* out)
 {
     out->text = text;
-    for (uint32_t i = 0; i + 1 < text.length; i++)
+    uint32_t i = 0;
+    while (memcmp(text.bytes + i, "mm", 2) != 0)
     {
-        if (text.bytes[i] == 'm' && text.bytes[i + 1] == 'm')
-        {
-            uint32_t h = i;
-            while (h > 0 && text.bytes[h - 1] != 'H')
-            {
-                h--;
-            }
-            out->minutes = i;
-            out->hourEnd = h;
-            out->hourStart = h >= 2 && text.bytes[h - 2] == 'H' ? h - 2 : h - 1;
-            return h > 0;
-        }
+        i++;
     }
-    return false;
+    uint32_t h = i;
+    while (text.bytes[h - 1] != 'H')
+    {
+        h--;
+    }
+    out->minutes = i;
+    out->hourEnd = h;
+    out->hourStart = h >= 2 && text.bytes[h - 2] == 'H' ? h - 2 : h - 1;
 }
 
 // Writes an offset by a half of the hour format, as ICU4C expands and
@@ -321,22 +319,20 @@ static void WriteOffset(const ZoneFormat* f, NumberWriter* w, int32_t offset, bo
     {
         gmt = Literal("GMT{0}");
     }
-    if (!FormatText(f, negative ? zoneFormatHourNegative : zoneFormatHourPositive, &half) ||
-        !ReadOffsetPattern(half, &p))
+    if (!FormatText(f, negative ? zoneFormatHourNegative : zoneFormatHourPositive, &half))
     {
-        ReadOffsetPattern(Literal(negative ? "-HH:mm" : "+HH:mm"), &p);
+        half = Literal(negative ? "-HH:mm" : "+HH:mm");
     }
+    ReadOffsetPattern(half, &p);
+    // The validator saw the GMT format's {0}.
     uint32_t at = 0;
-    while (at + 3 <= gmt.length && memcmp(gmt.bytes + at, "{0}", 3) != 0)
+    while (memcmp(gmt.bytes + at, "{0}", 3) != 0)
     {
         at++;
     }
     Write(w, gmt.bytes, at);
     WriteOffsetFields(f, w, &p, (uint32_t)(negative ? -(int64_t)offset : offset), shortForm);
-    if (at + 3 <= gmt.length)
-    {
-        Write(w, gmt.bytes + at + 3, gmt.length - at - 3);
-    }
+    Write(w, gmt.bytes + at + 3, gmt.length - at - 3);
 }
 
 // The zone's code: its identifier's id, else its primary identifier's.
