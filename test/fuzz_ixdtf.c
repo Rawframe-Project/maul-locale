@@ -40,7 +40,7 @@ static void RoundTrips(int64_t offset, const mlocDurationValues* values)
     }
     // Compared by value: "-PT0S" reads as zeros of either sign.
     mlocDurationValues again;
-    Require(mlocFormatDuration(values, nullptr, &out) == mloc_success &&
+    Require(mlocFormatTemporalDuration(values, nullptr, &out) == mloc_success &&
             mlocParseDuration(text, out.length, &again) == mloc_success &&
             again.years == values->years && again.months == values->months &&
             again.weeks == values->weeks && again.days == values->days &&

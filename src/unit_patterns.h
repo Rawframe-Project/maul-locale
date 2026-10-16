@@ -105,12 +105,35 @@ mlocResult mlocNormalUnitName(const mlocDataSet* data, const char* unit, size_t 
 mlocResult mlocLoadUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
                              size_t length, uint32_t kind, uint32_t gcase, UnitForms* out);
 
-// Copies a slot's patterns into the pool, a category without its own
+// A pool that patterns are copied into, and the bytes used of it.
+typedef struct PatternPool
+{
+    uint8_t* bytes;
+    size_t capacity;
+    size_t* used;
+} PatternPool;
+
+// A slot's patterns in a pool, by plural category.
+typedef struct PatternSlot
+{
+    uint16_t start[unitCategories];
+    uint16_t length[unitCategories];
+} PatternSlot;
+
+// Copies a unit's patterns into a pool, a category without its own
 // taking other's: mloc_success, mloc_errorNotFound for forms without
 // other, mloc_errorCapacity when the pool is full.
+mlocResult mlocPoolUnitPatterns(const PatternPool* pool, PatternSlot* slot, const UnitForms* forms);
+
+// mlocPoolUnitPatterns into a formatter's slot.
 mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t slot, size_t* used, const UnitForms* forms);
 
 // The pattern around a slot's number.
 void mlocUnitOuter(const UnitFormat* u, uint32_t slot, Outer* out);
+
+// The pattern around a number of a slot's patterns in a pool, by the
+// plural rules.
+void mlocSlotOuter(const uint8_t* patterns, const uint16_t start[unitCategories],
+                   const uint16_t length[unitCategories], const mlocPluralRules* rules, Outer* out);
 
 #endif

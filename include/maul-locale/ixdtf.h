@@ -341,9 +341,9 @@ extern "C"
     ///         the limits or of mixed signs, or options out of range.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationValues* values,
-                                                          const mlocTemporalStringOptions* options,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocFormatTemporalDuration(const mlocDurationValues* values,
+                               const mlocTemporalStringOptions* options, mlocOutput* output);
 
     /// Writes a UTC offset (ECMA-262's FormatUTCOffsetNanoseconds):
     /// ±HH:MM, with seconds and as many digits of a fraction as it needs.

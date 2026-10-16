@@ -133,3 +133,11 @@ format.
   relative date-time glue ("tomorrow at 3:00 PM"), the day one part
   (`mloc_datePartRelativeDay`); `dates.mloc`'s time sets hold that glue
   (mloc-0043).
+- Durations: `mlocInitDurationFormatter`, `mlocGetDurationOptions` and
+  `mlocFormatDuration` write a Temporal duration's fields as ECMA-402's
+  Intl.DurationFormat does, each field's style and display, the
+  fractions exact and truncated, the locale's digital separators and
+  hour padding, with parts (`maul-locale/duration.h`, mloc-0044).
+- The IXDTF duration writer is `mlocFormatTemporalDuration`, beside
+  `mlocFormatTemporalDate` and the others (it was `mlocFormatDuration`,
+  which now names the locale's duration formatter; mloc-0044).

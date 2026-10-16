@@ -282,6 +282,25 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralOperands(const mlocDecimal* deci
 ```
 Computes the plural operands of a finite decimal; c is 0.  @param decimal      The decimal. @param operandsOut  Receives the operands. @return mloc_success; mloc_errorInvalid for a null pointer, a decimal that is not finite, or one the library did not make. @par Thread safety Safe from any thread.
 
+## `duration.h`
+
+Durations (record mloc-0044): a Temporal duration's fields written as a locale says them ("1 hr, 2 min, 3 sec", "1:02:03", "2 days and 3 hours"), as ECMA-402's Intl.DurationFormat writes them. The fields are written as given, never balanced ("90 min"); the zone part's arithmetic balances and rounds them (mlocGetDurationValues). The unit names, lists and duration patterns are those of the unit and list parts.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitDurationFormatter(mlocDurationFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocDurationOptions* options);
+```
+Makes a locale's duration formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the number units, the plural rules, the unit names and the lists. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without those parts; mloc_errorData for a locale whose duration pattern is not hours, minutes and seconds between two separators; mloc_errorCapacity when the names do not fit the formatter; mloc_errorInvalid for a null pointer or options out of range or in conflict, as ECMA-402 refuses them (a field's style it does not take, display always on a fraction, a field not numeric after a numeric one, a field not a fraction after one). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetDurationOptions(const mlocDurationFormatter* formatter, mlocDurationOptions* optionsOut);
+```
+Gives a formatter's options as resolved: every field's style and display (numeric for a fraction), never the defaults.  @param formatter   A formatter from mlocInitDurationFormatter. @param optionsOut  Receives the options. @return mloc_success; mloc_errorInvalid for a null pointer or a formatter the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationFormatter* formatter, const mlocDurationValues* duration, mlocOutput* output);
+```
+Writes a duration as ECMA-402's PartitionDurationFormatPattern does: the fields in order up to the first numeric one, each shown by its display as a number with the unit's name in its plural category, the numeric fields as one item joined by the locale's separators, the items joined by the locale's unit list of the style (short for digital). The first field shown carries the sign (-0 for a field of 0 in a negative duration). Each field is its exact value, and the fractions' sum is exact.  @param formatter  A formatter from mlocInitDurationFormatter. @param duration   The fields: integers of one sign, valid as mlocMakeDuration takes them. @param output     Receives the text; its part function, when set, receives the parts (mloc_durationPartField). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorInvalid for a null pointer, a duration mlocMakeDuration refuses, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
 ## `ixdtf.h`
 
 Temporal's strings (record mloc-0041): ISO 8601 date-times with RFC 9557's annotations, durations, UTC offsets, and time zone and calendar strings, read as ECMA-262's grammar reads them. The text is UTF-8; every terminal of the grammar is ASCII.
@@ -347,7 +366,7 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatZonedDateTime(const mlocTimeZone* z
 Writes a zoned date-time (ECMA-262's TemporalZonedDateTimeToString): its local date-time, the offset rounded to the minute, the zone's identifier and the calendar annotation, each as the options show them.  @param zone     The zone. @param instant  The instant. @param options  The precision, calendar and what is shown; may be null. @param output   Receives the string. @return As mlocFormatInstant. @par Thread safety Safe from any thread.
 
 ```c
-MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationValues* values, const mlocTemporalStringOptions* options, mlocOutput* output);
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatTemporalDuration(const mlocDurationValues* values, const mlocTemporalStringOptions* options, mlocOutput* output);
 ```
 Writes a duration (ECMA-262's TemporalDurationToString): each field not zero with its designator, the seconds from the exact sum of seconds and the sub-second fields to the options' precision, truncated (mloc_secondsMinute is refused).  @param values   The fields, which pass Temporal's limits. @param options  The precision; may be null. @param output   Receives the string. @return mloc_success; mloc_errorCapacity when the buffer is too short; mloc_errorInvalid for a null pointer, fields past the limits or of mixed signs, or options out of range. @par Thread safety Safe from any thread.
 
@@ -799,4 +818,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-146 functions across 16 headers.
+149 functions across 17 headers.

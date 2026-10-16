@@ -24,7 +24,7 @@
 //   winst SEC NS ZONE PREC            mlocFormatInstant, the zone an offset
 //                                     in minutes or '-' for none
 //   wzdt ZONE SEC NS CAL PREC SHOW TZ HIDE  mlocFormatZonedDateTime
-//   wdur F0 ... F9 PREC               mlocFormatDuration
+//   wdur F0 ... F9 PREC               mlocFormatTemporalDuration
 //   woffset NS                        mlocFormatUTCOffset
 //
 // usage: conform_ixdtf < questions
@@ -258,7 +258,7 @@ static bool Write(char** t, int count, mlocOutput* out, mlocResult* r)
         }
         mlocDurationValues values = {f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9]};
         o = Options("iso8601", v[11], 0, 0, 0);
-        *r = mlocFormatDuration(&values, &o, out);
+        *r = mlocFormatTemporalDuration(&values, &o, out);
         return true;
     }
     if (strcmp(t[0], "woffset") == 0 && count == 2)

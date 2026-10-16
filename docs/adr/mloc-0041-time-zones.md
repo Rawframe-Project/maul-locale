@@ -261,8 +261,8 @@ nanoseconds.
   `mlocFormatMonthDay`, `mlocFormatTemporalTime`,
   `mlocFormatTemporalDateTime`, `mlocFormatInstant` (Z, or a zone's
   local time and its offset rounded to the minute),
-  `mlocFormatZonedDateTime`, `mlocFormatDuration` and
-  `mlocFormatUTCOffset`.
+  `mlocFormatZonedDateTime`, `mlocFormatTemporalDuration` (named
+  `mlocFormatDuration` until mloc-0044) and `mlocFormatUTCOffset`.
   - `mlocTemporalStringOptions` carries what a toString reads: the
     precision (`mlocSecondsPrecision` and the fraction's digits), the
     calendar id as the caller keeps it with when its annotation shows,

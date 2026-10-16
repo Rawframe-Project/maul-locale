@@ -427,7 +427,7 @@ static const char* DurationText(mlocDurationValues v, int precision)
 {
     mlocTemporalStringOptions o = WithPrecision(precision);
     mlocOutput out = Out();
-    return Text(mlocFormatDuration(&v, &o, &out), &out);
+    return Text(mlocFormatTemporalDuration(&v, &o, &out), &out);
 }
 
 static void TestDurationWriters(void)
@@ -500,7 +500,7 @@ static void TestRoundTrips(void)
         mlocDurationValues v = {.seconds = (double)(s < 0 ? -s : s), .nanoseconds = 123};
         mlocDurationValues back;
         mlocOutput out = {.buffer = text, .capacity = sizeof text};
-        if (mlocFormatDuration(&v, nullptr, &out) != mloc_success ||
+        if (mlocFormatTemporalDuration(&v, nullptr, &out) != mloc_success ||
             mlocParseDuration(text, out.length, &back) != mloc_success ||
             back.seconds != v.seconds || back.nanoseconds != 123)
         {

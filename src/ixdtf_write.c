@@ -427,8 +427,8 @@ static bool ReadDuration(const mlocDurationValues* v, Fields* f)
     return true;
 }
 
-mlocResult mlocFormatDuration(const mlocDurationValues* values,
-                              const mlocTemporalStringOptions* options, mlocOutput* output)
+mlocResult mlocFormatTemporalDuration(const mlocDurationValues* values,
+                                      const mlocTemporalStringOptions* options, mlocOutput* output)
 {
     static const char s_designators[6] = {'Y', 'M', 'W', 'D', 'H', 'M'};
     Start s;

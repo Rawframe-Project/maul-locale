@@ -160,6 +160,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/relative_tables.c
     src/relative_format.c
     src/relative_datetime.c
+    src/duration_options.c
+    src/duration_format.c
+    src/duration_write.c
+    src/duration_fields.c
     src/zone_format.c
     src/zone_codes.c
     src/zone_handle.c
@@ -234,6 +238,17 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     target_compile_definitions(test_unit_format PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
     add_test(NAME unit_format COMMAND test_unit_format)
+    # Durations read the unit names (record mloc-0044).
+    maul_add_test(duration MANUAL)
+    if(EMSCRIPTEN)
+        target_link_options(test_duration PRIVATE
+                            "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/units.mloc@/units.mloc")
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_duration PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_duration PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
+    add_test(NAME duration COMMAND test_duration)
     if(TARGET test_unit_names)
         if(EMSCRIPTEN)
             target_link_options(test_unit_names PRIVATE "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/units.mloc@/units.mloc")
@@ -507,8 +522,8 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal ixdtf locale parse relative spellout zone_codes zone_names
-                 zones)
+    foreach(area data date_data decimal duration ixdtf locale parse relative spellout zone_codes
+                 zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -520,6 +535,8 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
+    target_compile_definitions(fuzz_duration PRIVATE
+        MLOC_UNITS_FILE="${PROJECT_SOURCE_DIR}/src/generated/units.mloc")
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its

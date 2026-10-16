@@ -102,8 +102,10 @@ AM"), in a zone too, as ICU4C's DateIntervalFormat writes them; and
 relative time ("in 3 days", "2 hr. ago", "yesterday", "next Monday")
 of an amount the caller gives, as ECMA-402's Intl.RelativeTimeFormat
 writes it, alone or with a time ("tomorrow at 3:00 PM"; a data file of
-its own, `src/generated/relative.mloc`).
-The library has 146 public functions.
+its own, `src/generated/relative.mloc`); and durations ("1 hr, 2 min, 3
+sec", "1:02:03.456") of Temporal's fields, as ECMA-402's
+Intl.DurationFormat writes them, exactly.
+The library has 149 public functions.
 
 ## Building
 
