@@ -151,7 +151,7 @@ Returns one locale a source has data for, as CLDR names it ("de_AT", "sr_Latn"),
 
 ## `datetime.h`
 
-Dates formatted (UTS #35 Part 4, record mloc-0042): a date written in a locale by what it should show, a semantic field set at a length ("Jan 5, 2026" for year, month and day, medium), as ICU4X's semantic skeletons and CLDR's datetime conformance data name them, or by the locale's four standard formats. The patterns were matched to the locale's data by the generator as ICU4C's DateTimePatternGenerator matches them; they and the calendar names are in a data file of their own, dates.mloc, which a program adds to its data set.
+Dates and times formatted (UTS #35 Part 4, record mloc-0042): a date written in a locale by what it should show, a semantic field set at a length ("Jan 5, 2026" for year, month and day, medium), as ICU4X's semantic skeletons and CLDR's datetime conformance data name them, or by the locale's four standard formats; a time of day by its hour cycle and precision ("4:03 PM"), or by a standard format. The patterns were matched to the locale's data by the generator as ICU4C's DateTimePatternGenerator matches them; they and the calendar names are in a data file of their own, dates.mloc, which a program adds to its data set.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocDateOptions* options);
@@ -162,6 +162,16 @@ Makes a locale's date formatter. The calendar is the locale's (mlocLocalePrefere
 MLOC_NODISCARD MLOC_API mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* date, mlocOutput* output);
 ```
 Writes a date by the formatter, read in the formatter's calendar (the same day). Parts: mlocDatePart.  @param formatter  A formatter from mlocInitDateFormatter. @param date       The date. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a date outside Temporal's range, or a formatter the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocTimeOptions* options);
+```
+Makes a locale's time formatter. The patterns are those of the locale's calendar (mlocLocalePreferences), the digits and the decimal separator its numbering system's (-u-nu, else its default).  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data with the dates (dates.mloc), the number units, the preferences and the parents. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_fellBack when the numbering system asked for has no digits and the default stands instead; mloc_errorNotFound for data without the dates, the number units or the preferences; mloc_errorData for a pattern the formatter cannot write; mloc_errorInvalid for a null pointer, options out of range, or the full or long style, which names a zone a time of day does not have. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* time, mlocOutput* output);
+```
+Writes a time of day by the formatter. Parts: mlocDatePart.  @param formatter  A formatter from mlocInitTimeFormatter. @param time       The time. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a null pointer, a time out of range, or a formatter the library did not make. @par Thread safety Safe from any thread.
 
 ## `decimal.h`
 
@@ -705,4 +715,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-128 functions across 15 headers.
+130 functions across 15 headers.

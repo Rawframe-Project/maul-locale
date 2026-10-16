@@ -19,7 +19,7 @@
 //            short date formats
 //   time sets a calendar's time patterns in a locale (dateTimeSetSize
 //            bytes): the pattern index (u16) of each entry of
-//            DateTimeEntry
+//            DateTimeEntry, then its flags (u16)
 //   text     the compiled patterns
 // A compiled pattern is literal UTF-8 text (no byte below 0x20, quotes
 // already resolved) and field items: datePatternField, the field's
@@ -87,7 +87,11 @@ typedef enum DateSetEntry
 // The time entries of a time set: the hour, minute and second patterns
 // of the 12-hour and 24-hour clocks as matched, the standard full, long,
 // medium and short time formats, then the standard and atTime date-time
-// glue at those lengths ("{1}, {0}", "{1} 'at' {0}").
+// glue at those lengths ("{1}, {0}", "{1} 'at' {0}"), the minutes and
+// seconds of each clock as ICU matches them for a standard format on
+// another clock (hmm, hmmss, Hmm, Hmmss); then flags, not a pattern:
+// dateTimeOwnTwelve when the locale's own hour (UTS #35's j, by its
+// region) is on the 12-hour clock.
 typedef enum DateTimeEntry
 {
     dateTimeClock12 = 0,
@@ -95,7 +99,11 @@ typedef enum DateTimeEntry
     dateTimeStandard = 6,
     dateTimeGlue = 10,
     dateTimeAtGlue = 14,
-    dateTimeEntryCount = 18,
+    dateTimeStyle12 = 18,
+    dateTimeStyle24 = 20,
+    dateTimePatternCount = 22,
+    dateTimeFlags = 22,
+    dateTimeEntryCount = 23,
 } DateTimeEntry;
 
 // The day periods, as CLDR names them.
@@ -127,6 +135,7 @@ enum
     dateStandardCount = 4,
     dateSetSize = 2 * (dateEntryCount + dateStandardCount),
     dateTimeSetSize = 2 * dateTimeEntryCount,
+    dateTimeOwnTwelve = 1,
     dateCalendarCount = 18,
     dateLocaleSize = 6 * dateCalendarCount + 2,
     dateNamesHeaderSize = 20,

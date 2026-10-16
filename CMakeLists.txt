@@ -72,6 +72,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/date_data.c
     src/date_format.c
     src/date_write.c
+    src/time_format.c
+    src/time_write.c
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
@@ -332,6 +334,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_date_format PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}"
                                    MLOC_SPELLOUT_FILE="${MLOC_DATE_SPELLOUT_PATH}")
+    endif()
+    # The time formatter reads the dates.
+    maul_add_test(time_format)
+    if(TARGET test_time_format)
+        if(EMSCRIPTEN)
+            target_link_options(test_time_format PRIVATE "SHELL:--embed-file ${MLOC_DATES_FILE}@/dates.mloc")
+        endif()
+        target_compile_definitions(test_time_format PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}")
     endif()
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build

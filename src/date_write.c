@@ -42,9 +42,8 @@ static void WriteName(const DateFormat* f, uint32_t kind, const uint8_t* set, ui
                   name.bytes, name.size);
 }
 
-// A number in digits (each of digitLength bytes), at least width of them.
-static size_t Digits(const uint8_t* digits, uint8_t digitLength, uint64_t value, uint32_t width,
-                     char* out)
+size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value, uint32_t width,
+                      char* out)
 {
     char reversed[24];
     uint32_t n = 0;
@@ -86,11 +85,11 @@ static void WriteNumber(const DateFormat* f, bool overridden, uint32_t kind, uin
     }
     if (overridden && f->overrideDigitLength > 0)
     {
-        length = Digits(f->overrideDigits, f->overrideDigitLength, value, width, text);
+        length = mlocDateDigits(f->overrideDigits, f->overrideDigitLength, value, width, text);
     }
     else
     {
-        length = Digits(f->digits, f->digitLength, value, width, text);
+        length = mlocDateDigits(f->digits, f->digitLength, value, width, text);
     }
     mlocWritePart(w, kind, (const uint8_t*)text, length);
 }

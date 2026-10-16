@@ -54,6 +54,11 @@ typedef struct DateFormat
     mlocSpelloutFormatter spellout;
 } DateFormat;
 
+// A number in digits (each of digitLength bytes), at least width of
+// them (at most 24), into out.
+size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value, uint32_t width,
+                      char* out);
+
 // Writes a date's fields by a compiled pattern; the date is read in the
 // formatter's calendar already. relatedYear is the Gregorian year the
 // date's year begins in.

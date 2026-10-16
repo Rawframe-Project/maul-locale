@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Formats dates read one per line from standard input, for
+// Formats dates and times read one per line from standard input, for
 // tools/check_datetime.py to compare with CLDR's datetime conformance
-// data (record mloc-0042). Each line is tab-separated: the locale (its
-// -u-ca key naming the calendar), the field set, length, year style and
-// standard style as mlocDateOptions' numbers, and an ISO date
-// (YYYY-MM-DD); the output line is the formatted date, or "error N"
-// with the library's result.
+// data and ICU4C (record mloc-0042). A date's line is tab-separated: the
+// locale (its -u-ca key naming the calendar), the field set, length,
+// year style and standard style as mlocDateOptions' numbers, and an ISO
+// date (YYYY-MM-DD). A time's line is "T", the locale, the hour cycle,
+// precision and standard style as mlocTimeOptions' numbers, and the time
+// (HH:MM:SS.nnnnnnnnn). The output line is the formatted text, or
+// "error N" with the library's result.
 //
 // usage: conform_datetime dates.mloc spellout.mloc < lines
 
@@ -60,6 +62,44 @@ static mlocResult Format(const mlocDataSet* set, const char* id, const mlocDateO
     return result;
 }
 
+static mlocResult FormatTime(const mlocDataSet* set, const char* line, char* out, size_t* length)
+{
+    char id[256];
+    int cycle = 0;
+    int precision = 0;
+    int style = 0;
+    unsigned hour = 0;
+    unsigned minute = 0;
+    unsigned second = 0;
+    unsigned long nanosecond = 0;
+    if (sscanf(line, "T %255s %d %d %d %u:%u:%u.%lu", id, &cycle, &precision, &style, &hour,
+               &minute, &second, &nanosecond) != 8)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocLocale locale;
+    mlocTimeFormatter formatter;
+    mlocTimeOptions options = {(mlocHourCycle)cycle, (mlocTimePrecision)precision,
+                               (mlocTimeStyle)style};
+    mlocTime time = {.hour = (uint8_t)hour,
+                     .minute = (uint8_t)minute,
+                     .second = (uint8_t)second,
+                     .nanosecond = (uint32_t)nanosecond};
+    if (mlocCanonicalizeLocale(set, id, strlen(id), &locale, nullptr).status != mloc_success)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocResult result = mlocInitTimeFormatter(&formatter, set, &locale, &options);
+    if (result < 0)
+    {
+        return result;
+    }
+    mlocOutput output = {.buffer = out, .capacity = 1024};
+    result = mlocFormatTime(&formatter, &time, &output);
+    *length = output.length;
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -87,6 +127,17 @@ int main(int argc, char** argv)
         int day = 0;
         char out[1024];
         size_t written = 0;
+        if (line[0] == 'T')
+        {
+            mlocResult result = FormatTime(&set, line, out, &written);
+            if (result < 0)
+            {
+                printf("error %d\n", result);
+                continue;
+            }
+            printf("%.*s\n", (int)written, out);
+            continue;
+        }
         if (sscanf(line, "%255s %d %d %d %d %d-%d-%d", id, &fields, &length, &yearStyle, &style,
                    &year, &month, &day) != 8)
         {

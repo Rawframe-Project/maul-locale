@@ -80,7 +80,7 @@ enum
     unitRows = 32,
     unitSets = 40,
     unitTimes = 88,
-    unitText = 128,
+    unitText = 136,
 };
 
 // Builds a unit of two patterns, one row, one set and one time set; its
@@ -105,7 +105,8 @@ static uint32_t BuildUnit(void)
         Put(s_unit + unitSets + 2 * dateEntryCount + 2 * i, 1, 2);
     }
     // The time set: pattern 1 for the last glue.
-    Put(s_unit + unitTimes + 2 * (dateTimeEntryCount - 1), 1, 2);
+    Put(s_unit + unitTimes + 2 * (dateTimePatternCount - 1), 1, 2);
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeOwnTwelve, 2);
     memcpy(s_unit + unitText, s_text, 6);
     return unitText + 6;
 }
@@ -171,8 +172,14 @@ static void TestUnit(void)
     Put(s_unit + unitSets + 2 * (dateEntryCount + dateStandardCount - 1), 2, 2);
     CHECK(!ValidUnit(size), "a set's standard pattern past the patterns");
     BuildUnit();
-    Put(s_unit + unitTimes + 2 * (dateTimeEntryCount - 1), 2, 2);
+    Put(s_unit + unitTimes + 2 * (dateTimePatternCount - 1), 2, 2);
     CHECK(!ValidUnit(size), "a time set's last pattern past the patterns");
+    BuildUnit();
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, dateTimeOwnTwelve + 1, 2);
+    CHECK(!ValidUnit(size), "a time set's unknown flag");
+    BuildUnit();
+    Put(s_unit + unitTimes + 2 * dateTimeFlags, 0, 2);
+    CHECK(ValidUnit(size), "a time set on the 24-hour clock");
     CHECK(mlocValidDates(nullptr, (DataSpan){s_unit, dateLocaleSize}) &&
               !mlocValidDates(nullptr, (DataSpan){s_unit, dateLocaleSize - 2}),
           "a locale's dates of its size");
@@ -438,6 +445,16 @@ static bool TimePatternIs(const char* id, uint32_t calendar, uint32_t entry, con
            pattern.size == wantLength && memcmp(pattern.bytes, want, wantLength) == 0;
 }
 
+static bool TimeFlagsAre(const char* id, uint32_t flags)
+{
+    mlocLocale locale;
+    DatePatterns p;
+    const uint8_t* set = nullptr;
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+           mlocFindTimeSet(&s_data, &locale, 0, &p, &set) &&
+           mlocLoad16(set + 2 * dateTimeFlags) == flags;
+}
+
 #define TIME_PATTERN(id, calendar, entry, text)                                                    \
     TimePatternIs(id, calendar, entry, text, sizeof(text) - 1)
 
@@ -473,6 +490,9 @@ static void TestTimes(void)
           "en's glue, standard and atTime");
     CHECK(TIME_PATTERN("en", 1, dateTimeClock24 + 1, "\x01H\x02:\x01m\x02"),
           "the ISO calendar takes the Gregorian times");
+    CHECK(TimeFlagsAre("en", dateTimeOwnTwelve) && TimeFlagsAre("ja", 0) &&
+              TimeFlagsAre("ku_Latn_IQ", dateTimeOwnTwelve),
+          "the locale's own clock, by its region");
 }
 
 static void TestFile(void)

@@ -40,6 +40,13 @@ void DateSupplementFree(DateSupplement* s);
 void DateSourceLoad(Cldr* cldr, const DateSupplement* s, const char* locale, const char* calendar,
                     PatternGenerator* g);
 
+// Fills an initialized generator as DateSourceLoad does but without the
+// standard time and date formats, as ICU's createInstanceNoStdPat, which
+// ICU's standard time formats match their skeletons in when the locale
+// asks for another hour cycle or region.
+void DateSourceLoadItems(Cldr* cldr, const DateSupplement* s, const char* locale,
+                         const char* calendar, PatternGenerator* g);
+
 // Prints the pattern of each line of standard input, "locale<TAB>calendar
 // <TAB>skeleton", for tools/check_skeletons.py.
 int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapacity);

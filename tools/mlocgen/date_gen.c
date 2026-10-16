@@ -302,17 +302,23 @@ static uint16_t AddTimeSet(DateBuilder* b, const uint16_t* set)
 }
 
 // The time set of a loaded generator's locale and calendar.
-static uint16_t TimeSet(Cldr* cldr, PatternGenerator* g, DateBuilder* b, const char* locale,
-                        const char* calendar)
+static uint16_t TimeSet(Cldr* cldr, const DateSupplement* supplement, PatternGenerator* g,
+                        DateBuilder* b, const char* locale, const char* calendar)
 {
-    char* patterns[dateTimeEntryCount];
-    TimeSetPatterns(cldr, g, locale, calendar, patterns);
+    char* patterns[dateTimePatternCount];
+    bool ownTwelve = false;
+    PatternGenerator items;
+    PatternGeneratorInit(&items);
+    DateSourceLoadItems(cldr, supplement, locale, calendar, &items);
+    TimeSetPatterns(cldr, g, &items, locale, calendar, patterns, &ownTwelve);
+    PatternGeneratorFree(&items);
     uint16_t set[dateTimeEntryCount];
-    for (int i = 0; i < dateTimeEntryCount; i++)
+    for (int i = 0; i < dateTimePatternCount; i++)
     {
         set[i] = AddPattern(b, patterns[i], nullptr);
         free(patterns[i]);
     }
+    set[dateTimeFlags] = ownTwelve ? dateTimeOwnTwelve : 0;
     return AddTimeSet(b, set);
 }
 
@@ -379,7 +385,7 @@ static uint16_t CalendarSet(const DateInput* in, const DateSupplement* supplemen
         }
         set[entry++] = AddPattern(b, pattern, DateNumbersOf(in->cldr, locale, calendar, i));
     }
-    *times = TimeSet(in->cldr, &g, b, locale, calendar);
+    *times = TimeSet(in->cldr, supplement, &g, b, locale, calendar);
     PatternGeneratorFree(&g);
     return AddSet(b, set);
 }

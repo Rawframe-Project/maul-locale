@@ -8,13 +8,15 @@
 # must map to its classicalSkeleton, and the matcher must give a pattern;
 # so must the check's own questions below. Given the formatter's tool and
 # data files, every date case (field sets without a time, and the
-# standard date formats alone) must also give the file's text.
+# standard date formats alone) and every time case (the time field set,
+# and the standard time formats alone) must also give the file's text.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
 #            [<conform_datetime> <dates.mloc> <spellout.mloc>]
 
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -88,6 +90,44 @@ def check_dates(cases, tool, dates, spellout):
     return len(wrong)
 
 
+# Time cases whose text CLDR's own data and ICU4C 79 both give otherwise:
+# th's abbreviated am and pm are "↑↑↑" in CLDR 49, root's "AM" and "PM"
+# (as the JSON resolves them and ICU4C writes them), where the file
+# expects th's wide names.
+KNOWN_TIMES = {("th-TH", "AM"), ("th-TH", "PM")}
+
+
+def known(case, got):
+    return (case["locale"], got[-2:]) in KNOWN_TIMES and "\u0e40\u0e17\u0e35\u0e48\u0e22\u0e07" in case["expected"]
+
+
+def time_line(case):
+    locale = "%s-u-ca-%s" % (case["locale"], BCP47[case["calendar"]])
+    found = re.search(r"T(\d\d):(\d\d)(?::(\d\d))?", case["input"])
+    time = "%s:%s:%s.0" % (found.group(1), found.group(2), found.group(3) or "00")
+    if "semanticSkeleton" in case:
+        return " ".join(["T", locale, str(HOURS[case.get("hourCycle")]), "0", "0", time])
+    return " ".join(["T", locale, "0", "0", str(STYLES[case["timeLength"]]), time])
+
+
+def check_times(cases, tool, dates, spellout):
+    """The formatted text of every time case; the count of differences."""
+    chosen = [c for c in cases if c.get("semanticSkeleton") == "T" or
+              ("timeLength" in c and "dateLength" not in c)]
+    asked = "".join(time_line(c) + "\n" for c in chosen)
+    run = subprocess.run([tool, dates, spellout], input=asked, capture_output=True, text=True,
+                         check=True)
+    got = run.stdout.split("\n")[:len(chosen)]
+    wrong = [(time_line(c), c["expected"], g) for c, g in zip(chosen, got)
+             if g != c["expected"] and not known(c, g)]
+    listed = sum(1 for c, g in zip(chosen, got) if g != c["expected"] and known(c, g))
+    for line, want, have in wrong[:20]:
+        print(f"{line}: want {want}, got {have}")
+    print(f"{len(chosen) - len(wrong) - listed} of {len(chosen)} times agree, "
+          f"{listed} listed as known")
+    return len(wrong)
+
+
 def main():
     if len(sys.argv) not in (3, 6):
         sys.exit("usage: check_datetime.py <mlocgen> <CLDR common directory> "
@@ -114,7 +154,8 @@ def main():
     print(f"{len(questions) - len(wrong)} of {len(questions)} semantic skeletons agree "
           f"({len(OWN)} of them the check's own)")
     dates = check_dates(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
-    sys.exit(1 if wrong or dates else 0)
+    times = check_times(every, *sys.argv[3:]) if len(sys.argv) == 6 else 0
+    sys.exit(1 if wrong or dates or times else 0)
 
 
 if __name__ == "__main__":

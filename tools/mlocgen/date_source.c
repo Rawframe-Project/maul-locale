@@ -347,9 +347,10 @@ static void AddItems(Cldr* cldr, const char* locale, const char* calendar, Patte
     }
 }
 
-static void AddStandard(Cldr* cldr, const char* locale, const char* calendar, PatternGenerator* g)
+static void AddStandard(Cldr* cldr, const char* locale, const char* calendar, PatternGenerator* g,
+                        bool patterns)
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; patterns && i < 8; i++)
     {
         const char* kind = i < 4 ? "time" : "date";
         char rest[256];
@@ -409,7 +410,16 @@ static void AddNames(Cldr* cldr, const char* locale, const char* calendar, Patte
 void DateSourceLoad(Cldr* cldr, const DateSupplement* s, const char* locale, const char* calendar,
                     PatternGenerator* g)
 {
-    AddStandard(cldr, locale, calendar, g);
+    AddStandard(cldr, locale, calendar, g, true);
+    AddItems(cldr, locale, calendar, g);
+    AddNames(cldr, locale, calendar, g);
+    Hours(s, locale, g);
+}
+
+void DateSourceLoadItems(Cldr* cldr, const DateSupplement* s, const char* locale,
+                         const char* calendar, PatternGenerator* g)
+{
+    AddStandard(cldr, locale, calendar, g, false);
     AddItems(cldr, locale, calendar, g);
     AddNames(cldr, locale, calendar, g);
     Hours(s, locale, g);

@@ -146,8 +146,47 @@ cycle, time precision, zone style).
   year of AH), a Persian year before its epoch a negative year of AP;
   dates before 1582 are proleptic Gregorian, as Temporal and ICU4X have
   them (ICU4C's Gregorian calendar turns Julian).
-- **Still to come in this part** (research 39's slices): the time and
-  date-time formatters with hour cycles and day periods; time zone
+- **The time formatter** (`mlocInitTimeFormatter`, `mlocFormatTime` on
+  `mlocTime`): an hour cycle and a precision, or a standard format.
+  - **Hour cycles** as UTS #35's semantic options: Clock12 and Clock24
+    take the locale's pattern of that clock as matched; H11 to H24 take
+    it with the hour letter replaced by K, h, H or k, its width kept
+    (en's "HH:mm" under h24 is "kk:mm"). Auto takes -u-hc's h11 to h24
+    exactly, else the clock of the preferences' cycle (-u-hc's c12 and
+    c24, -u-rg, the region subtag, the likely region). ICU4C answers h24
+    by matching a `k` skeleton, which can find another item than the
+    24-hour pattern (fur's "kk:mm" where its `Hm` is "H:mm"); UTS #35's
+    substitution is kept, a known difference.
+  - **Precision:** hour, minute, minute unless it is zero (then the
+    hour's pattern), second, or 1 to 9 fraction digits written after the
+    seconds with the locale's decimal separator (its numbering
+    system's, fa's "٫"), truncated as ICU4C truncates.
+  - **Standard formats:** the medium and short ones; full and long name
+    a zone, which a time of day lacks, and are refused (the zoned
+    formatter writes them). As ICU4C builds them, a cycle asked for (the
+    option, -u-hc) or a region (-u-rg), or a region whose clock is not
+    the one the locale's data was written for (de-US: de's 24-hour
+    data, the US's 12-hour clock), takes the clock's minutes or seconds
+    matched as `hmm`, `hmmss`, `Hmm` or `Hmmss` without the standard
+    formats (ICU's createInstanceNoStdPat: am's "a h:mm", seh's
+    "HH:mm"). A time set records whether the locale's own hour (j) is
+    on the 12-hour clock for this. ICU also rematches when only its
+    valid locale differs with the same clock (fr-DE); the stored format
+    stays there.
+  - **Day periods** as ICU4C writes them: `a` by the half of the day;
+    `b` as noon at 12:00 exactly as the pattern shows it; `B` by the
+    rules, noon at its instant where the rules and names have it,
+    midnight never (ICU leaves it out), the hour's period otherwise, and
+    am or pm where the period is one of them or has no name. Names are
+    format names: abbreviated up to three letters, wide at four, narrow
+    at five.
+  - **Known differences with CLDR's datetime.json:** th's abbreviated am
+    and pm are "↑↑↑" in CLDR 49 (root's "AM" and "PM", as the JSON
+    resolves them and ICU4C writes them); the file expects th's wide
+    names. Its nine Thai Clock12 cases are listed in
+    `tools/check_datetime.py`.
+- **Still to come in this part** (research 39's slices): the date-time
+  formatter with its glue; time zone
   names by metazone; intervals; relative time; durations; speed.
 
 ## Proof
@@ -203,6 +242,22 @@ cycle, time precision, zone style).
   zh_Hans_HK and its siblings), ckb_IR's Persian months, and gl's
   Buddhist and ROC patterns, whose week-based year ICU4C counts in
   Gregorian years.
+- **The time formatter against CLDR's datetime.json:** its 72 time
+  cases (the time field set under Clock12, Clock24 and the locale's own
+  cycle at three lengths, the standard short time) give the file's text
+  but the nine Thai cases listed above, on every push.
+- **Against ICU4C 79, once:** 761,040 times (the 906 locales ICU ships,
+  7 calendars, 8 times from midnight to 23:59:59.999, 15 options: each
+  precision under the locale's cycle, both clocks, h11, h12, h23 and
+  h24, the short and medium formats with and without -u-hc). All equal
+  but 15,745: 315 are h24's minutes, where ICU matches a `k` skeleton;
+  15,430 are the standard formats of non-Gregorian calendars in 992
+  locale-calendars, where CLDR's per-path inheritance gives the
+  locale's own Gregorian times and ICU's array ownership a parent's or
+  root's (CLDR's JSON agrees with the generator on all 13,633 of them
+  it has a file for). The time patterns add 314 compiled patterns and
+  399 time sets; day periods 257 name lists and 65 rule sets; the file
+  is 701,316 bytes.
 - **CLDR's own TSVs** agree with ICU on 18,812 of their 21,182 lines;
   where they differ from both (minutes kept at the requested length,
   E kept short, older data in some locales) the generator follows ICU,

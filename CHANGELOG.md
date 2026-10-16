@@ -66,6 +66,11 @@ format.
   and `mlocFormatDate` write a date by a field set, length and year
   style or a standard format, in the locale's calendar and digits, with
   parts (mloc-0042).
+- Times formatted: `mlocInitTimeFormatter` and `mlocFormatTime` write a
+  time of day by its hour cycle (the locale's, -u-hc, H11 to H24, either
+  clock) and precision (hour, minute, minute unless zero, second, 1 to 9
+  fraction digits) or a standard format, with day periods (am and pm,
+  noon, the locale's flexible periods) and parts (mloc-0042).
 - Regional preferences give the calendar: the region's first in CLDR's
   calendarPreferenceData, or -u-ca's whole value (mloc-0018).
 - The dates data file, `dates.mloc`: every locale's semantic date

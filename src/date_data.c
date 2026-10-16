@@ -156,7 +156,16 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
             return false;
         }
     }
-    return ValidIndexes(p.timeSets, p.timeSetCount * dateTimeEntryCount, p.patternCount);
+    for (uint32_t s = 0; s < p.timeSetCount; s++)
+    {
+        const uint8_t* set = p.timeSets + (size_t)s * dateTimeSetSize;
+        if (!ValidIndexes(set, dateTimePatternCount, p.patternCount) ||
+            mlocLoad16(set + 2 * dateTimeFlags) > dateTimeOwnTwelve)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 // The section offsets of a names unit (lists, items, sets, rules, text),

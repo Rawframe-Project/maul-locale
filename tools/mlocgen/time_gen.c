@@ -44,6 +44,25 @@ static bool ValidGlue(const char* glue)
            strstr(one + 3, "{1}") == nullptr;
 }
 
+// Whether a pattern's hour, outside its quoted text, is on the 12-hour
+// clock (hsb's "HH 'hodź'." is not).
+static bool TwelveHour(const char* pattern)
+{
+    bool quoted = false;
+    for (const char* p = pattern; *p != '\0'; p++)
+    {
+        if (*p == '\'')
+        {
+            quoted = !quoted;
+        }
+        else if (!quoted && strchr("hHKk", *p) != nullptr)
+        {
+            return *p == 'h' || *p == 'K';
+        }
+    }
+    return false;
+}
+
 static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int length, bool at)
 {
     char rest[256];
@@ -62,9 +81,12 @@ static char* Glue(Cldr* cldr, const char* locale, const char* calendar, int leng
     return Copy(glue);
 }
 
-void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, const char* locale, const char* calendar,
-                     char* out[dateTimeEntryCount])
+void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, PatternGenerator* items, const char* locale,
+                     const char* calendar, char* out[dateTimePatternCount], bool* ownTwelve)
 {
+    char* own = PatternGeneratorBest(g, "j");
+    *ownTwelve = TwelveHour(own);
+    free(own);
     for (int clock = 0; clock < 2; clock++)
     {
         for (int precision = 0; precision < 3; precision++)
@@ -82,6 +104,11 @@ void TimeSetPatterns(Cldr* cldr, PatternGenerator* g, const char* locale, const 
             out[(clock == 0 ? dateTimeClock12 : dateTimeClock24) + precision] =
                 PatternGeneratorBest(g, classical);
         }
+    }
+    static const char* const s_styles[4] = {"hmm", "hmmss", "Hmm", "Hmmss"};
+    for (int i = 0; i < 4; i++)
+    {
+        out[dateTimeStyle12 + i] = PatternGeneratorBest(items, s_styles[i]);
     }
     for (int length = 0; length < 4; length++)
     {
