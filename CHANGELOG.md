@@ -138,6 +138,12 @@ format.
   Intl.DurationFormat does, each field's style and display, the
   fractions exact and truncated, the locale's digital separators and
   hour padding, with parts (`maul-locale/duration.h`, mloc-0044).
+- Dates: e and c of one or two letters write the day's number in the
+  locale's week, as ICU4C does (kek's interval patterns, whose
+  formatters were refused); `dates.mloc`'s interval patterns are
+  checked once when the file is opened (the date side's pairs written
+  first), which makes date and date-time formatters about a third faster
+  to make and opening the file about a quarter slower (mloc-0042).
 - The IXDTF duration writer is `mlocFormatTemporalDuration`, beside
   `mlocFormatTemporalDate` and the others (it was `mlocFormatDuration`,
   which now names the locale's duration formatter; mloc-0044).

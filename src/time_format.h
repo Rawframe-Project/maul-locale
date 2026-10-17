@@ -35,10 +35,6 @@ bool mlocTimeFormatSound(const TimeFormat* format);
 // any other.
 bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format);
 
-// Whether a pattern's fields are those a time writer writes, a zone's
-// among them.
-bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);
-
 // Writes a zone field of a pattern: the context is a ZoneWriting.
 typedef struct ZoneWriting
 {

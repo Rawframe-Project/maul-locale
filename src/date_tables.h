@@ -56,6 +56,8 @@
 //            pattern written for each value in the fallback; neither,
 //            none; then flags (u16), bit dateIntervalLaterFirst + the
 //            difference when the later value writes the first half
+//            (the date parts' and rows' pairs first, then the time
+//            parts', which the validator relies on to read each once)
 //   text     the compiled patterns
 // A compiled pattern is literal UTF-8 text (no byte below 0x20, quotes
 // already resolved) and field items: datePatternField, the field's

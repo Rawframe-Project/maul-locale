@@ -13,11 +13,37 @@
 
 #include <string.h>
 
+// A letter's bit in a set of pattern letters, 'A' to 'z'.
+#define LETTER(c) (1ULL << ((c) - 'A'))
+
+// datePatternLetters as a set.
+static const uint64_t s_patternLetters =
+    LETTER('G') | LETTER('y') | LETTER('Y') | LETTER('u') | LETTER('U') | LETTER('r') |
+    LETTER('Q') | LETTER('q') | LETTER('M') | LETTER('L') | LETTER('l') | LETTER('w') |
+    LETTER('W') | LETTER('d') | LETTER('D') | LETTER('F') | LETTER('g') | LETTER('E') |
+    LETTER('e') | LETTER('c') | LETTER('a') | LETTER('b') | LETTER('B') | LETTER('h') |
+    LETTER('H') | LETTER('K') | LETTER('k') | LETTER('m') | LETTER('s') | LETTER('S') |
+    LETTER('A') | LETTER('z') | LETTER('Z') | LETTER('O') | LETTER('v') | LETTER('V') |
+    LETTER('X') | LETTER('x');
+
+// The letters the date writer writes, and the time writer's other than
+// a zone's.
+static const uint64_t s_dateLetters = LETTER('G') | LETTER('y') | LETTER('Y') | LETTER('r') |
+                                      LETTER('U') | LETTER('M') | LETTER('L') | LETTER('d') |
+                                      LETTER('E') | LETTER('c') | LETTER('e');
+static const uint64_t s_timeLetters = LETTER('h') | LETTER('H') | LETTER('K') | LETTER('k') |
+                                      LETTER('m') | LETTER('s') | LETTER('a') | LETTER('b') |
+                                      LETTER('B');
+
+static bool InLetters(uint64_t letters, uint8_t c)
+{
+    return c >= 'A' && c <= 'z' && (letters >> (c - 'A') & 1) != 0;
+}
+
 // A field item's length at text, or 0 when it is malformed.
 static uint32_t FieldLength(const uint8_t* text, uint32_t left)
 {
-    if (left < 3 || text[1] == '\0' || strchr(datePatternLetters, text[1]) == nullptr ||
-        text[2] < 1 || text[2] > dateMaxWidth)
+    if (left < 3 || !InLetters(s_patternLetters, text[1]) || text[2] < 1 || text[2] > dateMaxWidth)
     {
         return 0;
     }
@@ -255,11 +281,201 @@ static bool ValidPairs(const DatePatterns* p)
     return true;
 }
 
+enum
+{
+    // The patterns whose kinds are read at a time: two bits each, so 2
+    // KiB of stack.
+    kindWindow = 8192,
+};
+
+// Which of a window of patterns the date writer and the time writer
+// take, so that a pattern many interval records name is read once.
+typedef struct PatternKinds
+{
+    uint32_t first;
+    uint64_t date[kindWindow / 64];
+    uint64_t time[kindWindow / 64];
+} PatternKinds;
+
+static void ReadKinds(const DatePatterns* p, uint32_t first, PatternKinds* k)
+{
+    memset(k, 0, sizeof(*k));
+    k->first = first;
+    uint32_t end = p->patternCount - first < kindWindow ? p->patternCount : first + kindWindow;
+    for (uint32_t i = first; i < end; i++)
+    {
+        DataSpan pattern;
+        bool zoned = false;
+        if (!mlocDatePattern(p, i, &pattern))
+        {
+            continue;
+        }
+        uint64_t bit = 1ULL << ((i - first) % 64);
+        k->date[(i - first) / 64] |= mlocWritableDate(pattern.bytes, pattern.size) ? bit : 0;
+        k->time[(i - first) / 64] |=
+            mlocWritableTime(pattern.bytes, pattern.size, &zoned) ? bit : 0;
+    }
+}
+
+// Whether a pattern index is none, outside the window, or a pattern the
+// side's writer takes.
+static bool KindOrNone(const PatternKinds* k, uint32_t index, bool time)
+{
+    if (index == dateIntervalNone || index < k->first || index - k->first >= kindWindow)
+    {
+        return true;
+    }
+    uint32_t i = index - k->first;
+    const uint64_t* bits = time ? k->time : k->date;
+    return (bits[i / 64] >> (i % 64) & 1) != 0;
+}
+
+// Whether a run of pattern indexes are each none or of a side's writer.
+static bool KindsOrNone(const PatternKinds* k, const uint8_t* indexes, uint32_t count, bool time)
+{
+    for (uint32_t i = 0; i < count; i++)
+    {
+        if (!KindOrNone(k, mlocLoad16(indexes + 2 * (size_t)i), time))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The greatest pair the date side names (a row's or a date format's)
+// and the least the time side names (a time part's), so that each pair
+// is checked once for each side whose span it lies in.
+static void PairSpans(const DatePatterns* p, uint32_t* dateMost, uint32_t* timeLeast)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    uint32_t most = 0;
+    uint32_t least = p->pairCount;
+    for (uint32_t r = 0; r < p->intervalRowCount; r++)
+    {
+        const uint8_t* row = p->intervalRows + (size_t)r * dateIntervalRowSize;
+        for (uint32_t l = 0; l < dateLengthCount; l++)
+        {
+            uint32_t pair = mlocLoad16(row + 4 * (size_t)l);
+            most = pair > most ? pair : most;
+        }
+    }
+    for (uint32_t d = 0; d < p->datePartCount; d++)
+    {
+        const uint8_t* part = p->dateParts + (size_t)d * dateIntervalDateSize + 2 * dateEntryCount;
+        for (uint32_t s = 0; s < dateStandardCount; s++)
+        {
+            uint32_t pair = mlocLoad16(part + 6 * (size_t)s);
+            most = pair > most ? pair : most;
+        }
+    }
+    for (uint32_t t = 0; t < p->timePartCount; t++)
+    {
+        const uint8_t* part = p->timeParts + (size_t)t * dateIntervalTimeSize;
+        for (uint32_t i = 0; i < times + 2 * dateStandardCount; i += i < times ? 1 : 2)
+        {
+            uint32_t pair = mlocLoad16(part + 2 * (size_t)i);
+            least = pair < least ? pair : least;
+        }
+    }
+    *dateMost = most;
+    *timeLeast = least;
+}
+
+// Whether each pair holds only patterns of the sides whose spans it lies
+// in, and each prefix only date patterns.
+static bool WritablePairs(const DatePatterns* p, const PatternKinds* k, uint32_t dateMost,
+                          uint32_t timeLeast)
+{
+    for (uint32_t pair = 0; pair < p->pairCount; pair++)
+    {
+        const uint8_t* record = p->pairs + (size_t)pair * dateIntervalPairSize;
+        if ((pair <= dateMost && !KindsOrNone(k, record, 2 * dateIntervalFields, false)) ||
+            (pair >= timeLeast && !KindsOrNone(k, record, 2 * dateIntervalFields, true)))
+        {
+            return false;
+        }
+    }
+    for (uint32_t prefix = 0; prefix < p->prefixCount; prefix++)
+    {
+        const uint8_t* record = p->prefixes + (size_t)prefix * dateIntervalPrefixSize;
+        if (!KindsOrNone(k, record, dateIntervalPrefixes, false))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Whether the formats' own patterns are their writers': a date part's of
+// dates and a time part's of times; and each set's short dates dates.
+static bool WritableOwn(const DatePatterns* p, const PatternKinds* k)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+    };
+    for (uint32_t d = 0; d < p->datePartCount; d++)
+    {
+        const uint8_t* part = p->dateParts + (size_t)d * dateIntervalDateSize + 2 * dateEntryCount;
+        for (uint32_t s = 0; s < dateStandardCount; s++)
+        {
+            if (!KindOrNone(k, mlocLoad16(part + 6 * (size_t)s + 4), false))
+            {
+                return false;
+            }
+        }
+    }
+    for (uint32_t t = 0; t < p->timePartCount; t++)
+    {
+        const uint8_t* part = p->timeParts + (size_t)t * dateIntervalTimeSize + 2 * times;
+        for (uint32_t s = 0; s < dateStandardCount; s++)
+        {
+            if (!KindOrNone(k, mlocLoad16(part + 4 * (size_t)s + 2), true))
+            {
+                return false;
+            }
+        }
+    }
+    for (uint32_t i = 0; i < p->intervalSetCount; i++)
+    {
+        const uint8_t* set = p->intervalSets + (size_t)i * dateIntervalSetSize;
+        if (!KindsOrNone(k, set + 6, 2, false))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Whether every interval pattern is one its writer takes, a window of
+// patterns' kinds at a time.
+static bool WritableIntervals(const DatePatterns* p)
+{
+    uint32_t dateMost = 0;
+    uint32_t timeLeast = 0;
+    PairSpans(p, &dateMost, &timeLeast);
+    PatternKinds k;
+    for (uint32_t first = 0; first < p->patternCount; first += kindWindow)
+    {
+        ReadKinds(p, first, &k);
+        if (!WritablePairs(p, &k, dateMost, timeLeast) || !WritableOwn(p, &k))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Whether the interval sections index what they name: sets their parts
 // and patterns, date parts their rows and the formats' pairs, prefixes
 // and patterns, rows their pairs and prefixes, time parts their pairs and
 // the formats' pairs and patterns, prefixes and pairs their patterns or
-// none (ValidPairs), and each fallback both values.
+// none (ValidPairs), each fallback both values, and each pattern one its
+// writer takes, so that a formatter need not check the patterns it keeps.
 static bool ValidIntervals(const DatePatterns* p)
 {
     enum
@@ -284,7 +500,7 @@ static bool ValidIntervals(const DatePatterns* p)
                        2 * dateStandardCount, timeStyles, 2) &&
            ValidPatternsOrNone(p->prefixes, p->prefixCount, dateIntervalPrefixSize,
                                dateIntervalPrefixes, p->patternCount, 2 * dateIntervalPrefixes) &&
-           ValidPairs(p) && ValidFallbacks(p);
+           ValidPairs(p) && ValidFallbacks(p) && WritableIntervals(p);
 }
 
 bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
@@ -609,6 +825,72 @@ bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out)
     uint32_t start = mlocLoad32(p->offsets + 4 * (size_t)index);
     out->bytes = p->text + start;
     out->size = mlocLoad32(p->offsets + 4 * (size_t)index + 4) - start;
+    return true;
+}
+
+mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width)
+{
+    switch (letter)
+    {
+    case 'z':
+        return width == 4  ? mloc_zoneStyleSpecificLong
+               : width < 4 ? mloc_zoneStyleSpecificShort
+                           : mloc_zoneStyleNone;
+    case 'v':
+        return width == 4   ? mloc_zoneStyleGenericLong
+               : width == 1 ? mloc_zoneStyleGenericShort
+                            : mloc_zoneStyleNone;
+    case 'V':
+        return width == 4   ? mloc_zoneStyleLocation
+               : width == 3 ? mloc_zoneStyleCity
+                            : mloc_zoneStyleNone;
+    case 'O':
+        return width == 4   ? mloc_zoneStyleOffsetLong
+               : width == 1 ? mloc_zoneStyleOffsetShort
+                            : mloc_zoneStyleNone;
+    default:
+        return mloc_zoneStyleNone;
+    }
+}
+
+bool mlocWritableDate(const uint8_t* pattern, uint32_t length)
+{
+    for (uint32_t at = 0; at < length;)
+    {
+        if (pattern[at] >= 0x20)
+        {
+            at++;
+            continue;
+        }
+        if (!InLetters(s_dateLetters, pattern[at + 1]))
+        {
+            return false;
+        }
+        at += pattern[at] == datePatternField ? 3 : 4u + pattern[at + 3];
+    }
+    return true;
+}
+
+bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut)
+{
+    *zonedOut = false;
+    for (uint32_t at = 0; at < length;)
+    {
+        if (pattern[at] >= 0x20)
+        {
+            at++;
+            continue;
+        }
+        bool zone = pattern[at] == datePatternField &&
+                    mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]) != mloc_zoneStyleNone;
+        if (pattern[at] != datePatternField ||
+            (!zone && !InLetters(s_timeLetters, pattern[at + 1])))
+        {
+            return false;
+        }
+        *zonedOut = *zonedOut || zone;
+        at += 3;
+    }
     return true;
 }
 

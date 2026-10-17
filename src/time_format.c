@@ -43,29 +43,6 @@ bool mlocValidTimeOptions(const mlocTimeOptions* o)
            (o->zone == mloc_zoneStyleNone || o->style == mloc_timeStyleNone);
 }
 
-bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut)
-{
-    *zonedOut = false;
-    for (uint32_t at = 0; at < length;)
-    {
-        if (pattern[at] >= 0x20)
-        {
-            at++;
-            continue;
-        }
-        bool zone = pattern[at] == datePatternField &&
-                    mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]) != mloc_zoneStyleNone;
-        if (pattern[at] != datePatternField ||
-            (!zone && strchr("hHKkmsabB", pattern[at + 1]) == nullptr))
-        {
-            return false;
-        }
-        *zonedOut = *zonedOut || zone;
-        at += 3;
-    }
-    return true;
-}
-
 void mlocWriteZoneField(void* context, const uint8_t* item, NumberWriter* w)
 {
     const ZoneWriting* z = context;
@@ -197,12 +174,6 @@ static uint32_t IntervalEntry(uint32_t entry)
     return dateIntervalTime + 6 * (1 + k % 2) + k / 2 * 3 + 2;
 }
 
-static bool WritableHalf(const uint8_t* pattern, uint32_t length)
-{
-    bool zoned = false;
-    return mlocWritableTime(pattern, length, &zoned);
-}
-
 // The relative date-time glue of each length, each holding {0} and {1}.
 static bool FindRelativeGlues(TimeRange* r, const uint8_t* set)
 {
@@ -240,9 +211,7 @@ static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
     r->glue = (uint16_t)mlocLoad16(set + 2 * (dateTimeAtGlue + dateStandardCount - 1));
     if (!mlocTablePattern(&r->table, mlocLoad16(intervals + 4), &fallback) ||
         !mlocTablePattern(&r->table, r->shortDate, &date) ||
-        !mlocWritableDate(date.bytes, date.size) ||
-        !mlocTablePattern(&r->table, r->shortEraDate, &era) ||
-        !mlocWritableDate(era.bytes, era.size))
+        !mlocTablePattern(&r->table, r->shortEraDate, &era))
     {
         return false;
     }
@@ -256,8 +225,7 @@ static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
         {
             at = part + 2 * times + 4 * (size_t)(entry - dateIntervalTimeStyle);
             DataSpan own;
-            if (!mlocTablePattern(&r->table, mlocLoad16(at + 2), &own) ||
-                !WritableHalf(own.bytes, own.size))
+            if (!mlocTablePattern(&r->table, mlocLoad16(at + 2), &own))
             {
                 return false;
             }
@@ -265,10 +233,6 @@ static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
             r->ownLength = own.size;
         }
         r->pairs[i] = p->pairs + (size_t)mlocLoad16(at) * dateIntervalPairSize;
-        if (!mlocValidRangePair(&r->table, r->pairs[i], WritableHalf))
-        {
-            return false;
-        }
     }
     return true;
 }

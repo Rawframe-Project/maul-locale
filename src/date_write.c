@@ -216,9 +216,18 @@ static void WriteMonth(const DateFormat* f, const mlocDateFields* fields, char l
     mlocWritePart(w, mloc_datePartMonth, name.bytes, name.size);
 }
 
+// A weekday: e and c of one or two letters the day's number in the
+// locale's week (1 for its first day), e at least its width in digits, as
+// ICU4C writes them; else its name, c's the standalone one.
 static void WriteWeekday(const DateFormat* f, const mlocDateFields* fields, char letter,
-                         uint32_t width, NumberWriter* w)
+                         uint32_t width, bool overridden, NumberWriter* w)
 {
+    if (letter != 'E' && width < 3)
+    {
+        uint32_t local = (uint32_t)((fields->dayOfWeek - f->firstDay + 7) % 7) + 1;
+        WriteNumber(f, overridden, mloc_datePartWeekday, local, letter == 'e' ? width : 1, w);
+        return;
+    }
     uint32_t context = letter == 'c' ? 1 : 0;
     uint32_t day = fields->dayOfWeek % 7;
     WriteName(f, dateNamesWeekdays, f->nameSet, (context * 4 + Width(width, 3)) * 7 + day, w);
@@ -306,7 +315,7 @@ static void WriteField(const DateFormat* f, const mlocDateFields* fields, int32_
         WriteNumber(f, overridden, mloc_datePartDay, fields->day, width, w);
         break;
     default:
-        WriteWeekday(f, fields, letter, width, w);
+        WriteWeekday(f, fields, letter, width, overridden, w);
         break;
     }
 }

@@ -15,29 +15,6 @@
 
 #include <string.h>
 
-static bool ValidHalf(const PatternTable* table, uint32_t index,
-                      bool (*writable)(const uint8_t* pattern, uint32_t length))
-{
-    DataSpan pattern;
-    return index == dateIntervalNone ||
-           (mlocTablePattern(table, index, &pattern) && writable(pattern.bytes, pattern.size));
-}
-
-bool mlocValidRangePair(const PatternTable* table, const uint8_t* pair,
-                        bool (*writable)(const uint8_t* pattern, uint32_t length))
-{
-    for (uint32_t field = 0; field < dateIntervalFields; field++)
-    {
-        uint32_t first = mlocLoad16(pair + 4 * (size_t)field);
-        uint32_t second = mlocLoad16(pair + 4 * (size_t)field + 2);
-        if (!ValidHalf(table, first, writable) || !ValidHalf(table, second, writable))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 uint32_t mlocDateDifference(const mlocDateFields* a, const mlocDateFields* b)
 {
     if (a->eraLength != b->eraLength || memcmp(a->era, b->era, a->eraLength) != 0)

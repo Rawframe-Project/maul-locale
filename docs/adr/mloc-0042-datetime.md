@@ -149,8 +149,10 @@ cycle, time precision, zone style).
   override writes its fields by its system (hanidec's digits, or the
   spell-out part's hebr, jpanyear, hanidays and romanlow rules).
   `mlocFormatDate` writes the fields CLDR 49's date patterns hold (G,
-  y, Y, r, U, M, L, d, E, c) with parts, refusing a pattern with any
-  other when made.
+  y, Y, r, U, M, L, d, E, c, e) with parts, refusing a pattern with any
+  other when made; e and c of one or two letters are the day's number in
+  the locale's week (kek's interval patterns hold e), e padded to its
+  width, as ICU4C writes them.
 - **Year style auto:** a year of a calendar counted from the Gregorian
   (Gregorian, Buddhist, ROC, Japanese) is written as its pattern writes
   it when its Gregorian year is from 1950 to 2049, as CLDR's datetime
@@ -290,7 +292,16 @@ cycle, time precision, zone style).
   differences are not stored: ICU writes them as fallbacks of the short
   date and the time matched whole, which the run time joins as a
   date-time, so the time pairs are the same in every calendar. Sets,
-  date and time parts, rows, prefixes and pairs are each kept once.
+  date and time parts, rows, prefixes and pairs are each kept once. The
+  validator checks that each interval pattern holds only the fields its
+  writer takes (a date part's, a row's and a set's short dates a date
+  formatter's, a time part's a time formatter's), once per file, so a
+  formatter keeps its interval patterns unchecked (a quarter of a
+  date-time formatter's making, research 43). The generator writes the
+  date side's pairs before the time side's, so each pair is checked for
+  the side whose span it lies in, and each pattern's kinds are read once
+  (in windows of 8,192 patterns, 2 KiB of stack): opening `dates.mloc`
+  costs about a quarter more.
 - **Date ranges** (`mlocFormatDateRange`, research 40's run-time form):
   two dates written by a date formatter as ICU4C's DateIntervalFormat
   writes the formatter's skeleton, from the interval set the locale

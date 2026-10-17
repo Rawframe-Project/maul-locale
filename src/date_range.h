@@ -52,11 +52,6 @@ typedef struct RangeChoice
     DataSpan fallback;
 } RangeChoice;
 
-// Whether every half of a pair is a pattern of the table that the
-// writer takes.
-bool mlocValidRangePair(const PatternTable* table, const uint8_t* pair,
-                        bool (*writable)(const uint8_t* pattern, uint32_t length));
-
 // The greatest date field two dates differ in, rangeEra to rangeDay, or
 // rangeNone: the era's code, the year in its era, the month's code (a
 // leap month differs from the month it follows), the day.

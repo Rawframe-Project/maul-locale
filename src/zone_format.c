@@ -612,31 +612,6 @@ void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a, Nu
     }
 }
 
-mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width)
-{
-    switch (letter)
-    {
-    case 'z':
-        return width == 4  ? mloc_zoneStyleSpecificLong
-               : width < 4 ? mloc_zoneStyleSpecificShort
-                           : mloc_zoneStyleNone;
-    case 'v':
-        return width == 4   ? mloc_zoneStyleGenericLong
-               : width == 1 ? mloc_zoneStyleGenericShort
-                            : mloc_zoneStyleNone;
-    case 'V':
-        return width == 4   ? mloc_zoneStyleLocation
-               : width == 3 ? mloc_zoneStyleCity
-                            : mloc_zoneStyleNone;
-    case 'O':
-        return width == 4   ? mloc_zoneStyleOffsetLong
-               : width == 1 ? mloc_zoneStyleOffsetShort
-                            : mloc_zoneStyleNone;
-    default:
-        return mloc_zoneStyleNone;
-    }
-}
-
 void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
                           const ZoneAt* zone, const PatternSpan* span, NumberWriter* w)
 {

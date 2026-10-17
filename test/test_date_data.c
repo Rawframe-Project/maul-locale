@@ -62,6 +62,13 @@ static void TestPatterns(void)
     CHECK(!Valid("\x01y\x00", 3), "width 0");
     CHECK(!Valid("\x01S\x0A", 3), "width 10");
     CHECK(!Valid("\x01j\x01", 3), "a letter no pattern holds");
+    bool letters = true;
+    for (int c = 1; c < 256; c++)
+    {
+        char field[3] = {1, (char)c, 1};
+        letters = letters && Valid(field, 3) == (strchr(datePatternLetters, c) != nullptr);
+    }
+    CHECK(letters, "a field of each letter UTS #35 names, and of no other byte");
     CHECK(!Valid("\x01\x00\x01", 3), "a NUL letter");
     CHECK(!Valid("\x01y", 2), "a field cut short");
     CHECK(!Valid("\x02y\x01\x00", 4), "an override's id of length 0");
@@ -87,15 +94,17 @@ enum
     unitTimeParts = 416,
     unitPrefixes = 544,
     unitPairs = 560,
-    unitText = 592,
+    unitText = 624,
     unitTextSize = 13,
 };
 
 // Builds a unit of three patterns ("y", "M" and the fallback "{0}-{1}"),
-// one row, one set, one time set, and one of each interval record: a set
-// whose fallback is pattern 2, a prefix with M alone (pattern 1), a pair
-// with the day's halves (patterns 0 and 1), every other index 0 or none;
-// its size.
+// one row, one set, one time set, and one of each interval record but
+// two pairs: a set whose fallback is pattern 2, a prefix with M alone
+// (pattern 1), a date's pair with the day's halves (patterns 0 and 1), a
+// time's pair of no halves, which the time part names, its formats' own
+// patterns the fallback (no field, so a time's), every other index 0 or
+// none; its size.
 static uint32_t BuildUnit(void)
 {
     memset(s_unit, 0, sizeof(s_unit));
@@ -105,6 +114,7 @@ static uint32_t BuildUnit(void)
     {
         Put(s_unit + 4 * i, 1, 4);
     }
+    Put(s_unit + 36, 2, 4);
     Put(s_unit + 40, unitTextSize, 4);
     Put(s_unit + unitOffsets, 0, 4);
     Put(s_unit + unitOffsets + 4, 3, 4);
@@ -128,6 +138,17 @@ static uint32_t BuildUnit(void)
     for (int h = 0; h < 2 * dateIntervalFields; h++)
     {
         Put(s_unit + unitPairs + 2 * h, dateIntervalNone, 2);
+        Put(s_unit + unitPairs + dateIntervalPairSize + 2 * h, dateIntervalNone, 2);
+    }
+    for (int i = 0; i < dateIntervalTimeStyle - dateIntervalTime; i++)
+    {
+        Put(s_unit + unitTimeParts + 2 * i, 1, 2);
+    }
+    for (int i = 0; i < dateStandardCount; i++)
+    {
+        uint8_t* format = s_unit + unitTimeParts + 2 * (dateIntervalTimeStyle - dateIntervalTime);
+        Put(format + 4 * i, 1, 2);
+        Put(format + 4 * i + 2, 2, 2);
     }
     Put(s_unit + unitPairs + 4 * 3, 0, 2);
     Put(s_unit + unitPairs + 4 * 3 + 2, 1, 2);
@@ -171,15 +192,17 @@ static void TestIntervalRefusals(uint32_t size)
         {unitDateParts + 2 * (dateEntryCount - 1), 1, "a date part's last row"},
         {unitDateParts + 2 * dateEntryCount + 2, 1, "a date format's prefix"},
         {unitDateParts + dateIntervalDateSize - 2, 3, "the last date format's pattern"},
-        {unitIntervalRows + dateIntervalRowSize - 4, 1, "a row's last pair"},
+        {unitIntervalRows + dateIntervalRowSize - 4, 2, "a row's last pair"},
         {unitIntervalRows + dateIntervalRowSize - 2, 1, "a row's last prefix"},
-        {unitTimeParts + 2 * (dateIntervalTimeStyle - dateIntervalTime) - 2, 1,
+        {unitTimeParts + 2 * (dateIntervalTimeStyle - dateIntervalTime) - 2, 2,
          "a time part's last pair"},
         {unitTimeParts + dateIntervalTimeSize - 2, 3, "the last time format's pattern"},
         {unitPrefixes + 6, 3, "a prefix's last pattern"},
         {unitPrefixes + 8, 1u << (2 * dateIntervalPrefixes), "a prefix's style past its four"},
         {unitPairs + 4 * 3 + 2, dateIntervalNone, "a pair's first half without its second"},
         {unitPairs + 4 * 3 + 2, 3, "a pair's second half past the patterns"},
+        {unitTimeParts, 0, "a time part's pair of a date's halves"},
+        {unitTimeParts + dateIntervalTimeSize - 2, 0, "a time format's own pattern a date's"},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
@@ -209,7 +232,7 @@ static void TestUnit(void)
               p.dateParts == s_unit + unitDateParts &&
               p.intervalRows == s_unit + unitIntervalRows &&
               p.timeParts == s_unit + unitTimeParts && p.prefixes == s_unit + unitPrefixes &&
-              p.pairCount == 1 && p.pairs == s_unit + unitPairs,
+              p.pairCount == 2 && p.pairs == s_unit + unitPairs,
           "the interval sections");
     CHECK(!ValidUnit(size - 1) && !ValidUnit(size + 1) && !ValidUnit(8) &&
               !ValidUnit(datePatternsHeaderSize - 1),
@@ -473,15 +496,29 @@ static void TestNamesPastUnit(void)
           "no rules in data without the dates");
 }
 
+// Puts "M" (pattern 1) for the unit's interval patterns of "y": the day's
+// pair, which every entry shares, the date formats' own patterns and the
+// set's short dates.
+static void IntervalsOnMonth(void)
+{
+    Put(s_unit + unitPairs + 4 * 3, 1, 2);
+    for (int i = 0; i < dateStandardCount; i++)
+    {
+        Put(s_unit + unitDateParts + 2 * dateEntryCount + 6 * i + 4, 1, 2);
+    }
+    Put(s_unit + unitIntervals + 6, 1, 2);
+    Put(s_unit + unitIntervals + 8, 1, 2);
+}
+
 // A formatter refuses a pattern with a field it does not write ("Q",
-// which a compiled pattern may hold but CLDR's date patterns do not).
+// which a compiled pattern may hold but CLDR's date patterns do not);
+// the validator refuses an interval pattern its writer does not take.
 static void TestUnwritablePattern(void)
 {
     alignas(8) static uint8_t s_patterns[1024];
     uint32_t patterns = BuildUnit();
     s_unit[unitText + 1] = 'Q';
-    // The day's pair, which every entry shares, in "M" alone.
-    Put(s_unit + unitPairs + 4 * 3, 1, 2);
+    IntervalsOnMonth();
     memcpy(s_patterns, s_unit, patterns);
     uint32_t names = BuildNames();
     uint8_t dates[dateLocaleSize] = {0};
@@ -503,17 +540,59 @@ static void TestUnwritablePattern(void)
     mlocTimeFormatter times;
     CHECK(mlocInitTimeFormatter(&times, &data, &fr, nullptr) == mloc_errorData,
           "a time pattern the time formatter cannot write");
-    // The day's pair on "Q" too: the month's interval patterns hold it.
+    // The day's pair on "Q" too.
     patterns = BuildUnit();
     s_unit[unitText + 1] = 'Q';
+    IntervalsOnMonth();
+    Put(s_unit + unitPairs + 4 * 3, 0, 2);
+    CHECK(!ValidUnit(patterns), "an interval pattern the formatter cannot write");
+    BuildUnit();
+    s_unit[unitText + 1] = 'e';
+    CHECK(ValidUnit(patterns), "an interval pattern of e, which the formatter writes");
+}
+
+// Whether a date formatter on a pack of the unit, its first pattern the
+// field of a letter and width, writes 15 October 2026, a Thursday, as
+// wanted in fr, whose week starts on Monday.
+static bool WeekdayIs(char letter, uint8_t width, const char* want)
+{
+    alignas(8) static uint8_t s_patterns[1024];
+    alignas(8) static uint8_t s_names[1024];
+    uint32_t patterns = BuildUnit();
+    s_unit[unitText + 1] = (uint8_t)letter;
+    s_unit[unitText + 2] = width;
     memcpy(s_patterns, s_unit, patterns);
-    BuildNames();
-    mlocData second[2];
-    mlocOpenBuiltinData(&second[0]);
-    mlocDataSet pairs = {second, 2};
-    CHECK(OpenRootPack(units, 3, &second[1]) &&
-              mlocInitDateFormatter(&formatter, &pairs, &fr, &month) == mloc_errorData,
-          "an interval pattern the formatter cannot write");
+    uint32_t names = BuildNames();
+    memcpy(s_names, s_unit, names);
+    static const uint8_t s_dates[dateLocaleSize] = {0};
+    PackUnit units[] = {{kindDatePatterns, {s_patterns, patterns}, false},
+                        {kindDates, {s_dates, dateLocaleSize}, true},
+                        {kindDateNames, {s_names, names}, false}};
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet data = {sources, 2};
+    mlocLocale fr;
+    mlocDateFormatter formatter;
+    mlocDate date;
+    mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
+    char text[16];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    return OpenRootPack(units, 3, &sources[1]) &&
+           mlocParseLocale("fr", 2, &fr).status == mloc_success &&
+           mlocInitDateFormatter(&formatter, &data, &fr, nullptr) >= 0 &&
+           mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &date) == mloc_success &&
+           mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+           output.length == strlen(want) && memcmp(text, want, output.length) == 0;
+}
+
+static void TestLocalWeekday(void)
+{
+    CHECK(WeekdayIs('e', 1, "4") && WeekdayIs('e', 2, "04"),
+          "e of one or two letters: the day's number in the locale's week, padded");
+    CHECK(WeekdayIs('c', 1, "4") && WeekdayIs('c', 2, "4"),
+          "c of one or two letters: the day's number, one digit");
+    CHECK(WeekdayIs('e', 3, "a") && WeekdayIs('E', 1, "a") && WeekdayIs('c', 3, "a"),
+          "e and c of three letters and E of one: the day's name");
 }
 
 // Builds a patterns unit for the date-time formatter: patterns "y", "H",
@@ -684,6 +763,15 @@ static mlocResult SpoiledComposite(uint32_t at, uint16_t pattern, mlocTimeStyle 
     return InitComposite(size, &options, &formatter);
 }
 
+// Whether the composite unit with a 16-bit index at an offset spoiled to
+// a pattern is valid.
+static bool SpoiledCompositeValid(uint32_t at, uint16_t pattern)
+{
+    uint32_t size = BuildComposite(2, 1);
+    Put(s_unit + at, pattern, 2);
+    return ValidUnit(size);
+}
+
 static void TestCompositeRanges(void)
 {
     enum
@@ -697,22 +785,20 @@ static void TestCompositeRanges(void)
     CHECK(SpoiledComposite(compositeIntervals + 6, 0, mloc_timeStyleNone) == mloc_success &&
               SpoiledComposite(owns + 2, 1, mloc_timeStyleFull) == mloc_success,
           "the unit as built, an index spoiled to its own value");
-    CHECK(SpoiledComposite(compositeIntervals + 6, notDate, mloc_timeStyleNone) == mloc_errorData &&
-              SpoiledComposite(compositeIntervals + 8, notDate, mloc_timeStyleNone) ==
-                  mloc_errorData,
+    CHECK(!SpoiledCompositeValid(compositeIntervals + 6, notDate) &&
+              !SpoiledCompositeValid(compositeIntervals + 8, notDate),
           "a time range's short date or era date the formatter cannot write");
-    CHECK(SpoiledComposite(compositePairs + dateIntervalPairSize, notTime, mloc_timeStyleNone) ==
-              mloc_errorData,
-          "a time pair's half the formatter cannot write");
+    CHECK(!SpoiledCompositeValid(compositePairs + dateIntervalPairSize, notTime) &&
+              !SpoiledCompositeValid(compositePairs + 2 * dateIntervalFields - 2, notDate),
+          "a time pair's half or a date pair's the formatter cannot write");
     CHECK(SpoiledComposite(compositePrefixes, 0, mloc_timeStyleNone) == mloc_success &&
-              SpoiledComposite(compositePrefixes + 6, notDate, mloc_timeStyleNone) ==
-                  mloc_errorData,
+              !SpoiledCompositeValid(compositePrefixes + 6, notDate),
           "a date pattern's prefixed pattern the formatter cannot write");
     CHECK(SpoiledComposite(dateOwn, 0, mloc_timeStyleShort) == mloc_success &&
-              SpoiledComposite(dateOwn, notDate, mloc_timeStyleShort) == mloc_errorData,
+              !SpoiledCompositeValid(dateOwn, notDate),
           "the short date's own interval pattern the formatter cannot write");
-    CHECK(SpoiledComposite(owns + 2, notTime, mloc_timeStyleFull) == mloc_errorData &&
-              SpoiledComposite(owns + 4 * 3 + 2, notTime, mloc_timeStyleShort) == mloc_errorData,
+    CHECK(!SpoiledCompositeValid(owns + 2, notTime) &&
+              !SpoiledCompositeValid(owns + 4 * 3 + 2, notTime),
           "a standard format's own interval pattern the formatter cannot write");
     // Pattern 3, "{1} x", is no glue.
     bool glues = true;
@@ -1177,6 +1263,7 @@ int main(void)
     TestNamesUnit();
     TestNamesPastUnit();
     TestUnwritablePattern();
+    TestLocalWeekday();
     TestCompositeData();
     TestCompositeRanges();
     TestCompositeZone();

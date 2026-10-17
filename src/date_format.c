@@ -111,24 +111,6 @@ static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id,
     return false;
 }
 
-bool mlocWritableDate(const uint8_t* pattern, uint32_t length)
-{
-    for (uint32_t at = 0; at < length;)
-    {
-        if (pattern[at] >= 0x20)
-        {
-            at++;
-            continue;
-        }
-        if (strchr("GyYrUMLdEc", pattern[at + 1]) == nullptr)
-        {
-            return false;
-        }
-        at += pattern[at] == datePatternField ? 3 : 4u + pattern[at + 3];
-    }
-    return true;
-}
-
 // The formatter's patterns: the standard format's, or the field set's at
 // its length in the three year styles (one for a set without a year).
 static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* set,
@@ -175,22 +157,6 @@ static const uint8_t* IndexesOf(const DatePatterns* p, const uint8_t* part,
     return p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length;
 }
 
-// Whether each prefixed pattern of a prefix is one the formatter writes.
-static bool WritablePrefix(const PatternTable* table, const uint8_t* prefix)
-{
-    for (uint32_t level = 0; level < dateIntervalPrefixes; level++)
-    {
-        DataSpan pattern;
-        uint32_t index = mlocLoad16(prefix + 2 * (size_t)level);
-        if (index != dateIntervalNone && (!mlocTablePattern(table, index, &pattern) ||
-                                          !mlocWritableDate(pattern.bytes, pattern.size)))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 // The formatter's interval patterns (research 40): each kept pattern's
 // pair, a standard format's own pattern, and the fallback.
 static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* intervals,
@@ -211,8 +177,7 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
     {
         DataSpan own;
         size_t at = 2 * dateEntryCount + 6 * (size_t)(o->style - 1) + 4;
-        if (!mlocTablePattern(&r->table, mlocLoad16(part + at), &own) ||
-            !mlocWritableDate(own.bytes, own.size))
+        if (!mlocTablePattern(&r->table, mlocLoad16(part + at), &own))
         {
             return false;
         }
@@ -224,11 +189,6 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
         const uint8_t* at = IndexesOf(p, part, o, i);
         r->pairs[i] = p->pairs + (size_t)mlocLoad16(at) * dateIntervalPairSize;
         r->prefixes[i] = p->prefixes + (size_t)mlocLoad16(at + 2) * dateIntervalPrefixSize;
-        if (!mlocValidRangePair(&r->table, r->pairs[i], mlocWritableDate) ||
-            !WritablePrefix(&r->table, r->prefixes[i]))
-        {
-            return false;
-        }
     }
     return true;
 }

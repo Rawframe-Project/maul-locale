@@ -95,10 +95,6 @@ bool mlocReadZonedLocal(const ZoneFormat* f, const mlocTimeZone* zone, const mlo
 // part.
 void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* zone, NumberWriter* w);
 
-// The style of a pattern's zone field (zzzz, z, vvvv, v, VVVV, VVV, OOOO,
-// O; zz and zzz as z), or none for another letter or width.
-mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width);
-
 // Writes a compiled pattern of literal text and zone fields, which
 // mlocZoneFieldStyle names, the span's parts marked as one value's.
 void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,

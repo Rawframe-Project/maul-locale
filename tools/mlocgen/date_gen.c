@@ -72,12 +72,17 @@ enum
     intervalPrefixes = 4,
     intervalPairs = 5,
     intervalTableCount = 6,
+    // The time parts' pairs, kept apart and written after the date
+    // side's in the pairs section, so that the validator checks each
+    // pair for one side.
+    intervalTimePairs = 6,
+    intervalBuilderTables = 7,
 };
 
 // Each interval table's record size in bytes.
-static const int s_intervalSizes[intervalTableCount] = {
-    dateIntervalSetSize,  dateIntervalDateSize,   dateIntervalRowSize,
-    dateIntervalTimeSize, dateIntervalPrefixSize, dateIntervalPairSize};
+static const int s_intervalSizes[intervalBuilderTables] = {
+    dateIntervalSetSize,    dateIntervalDateSize, dateIntervalRowSize, dateIntervalTimeSize,
+    dateIntervalPrefixSize, dateIntervalPairSize, dateIntervalPairSize};
 
 typedef struct DateBuilder
 {
@@ -96,7 +101,7 @@ typedef struct DateBuilder
     int timeSetCount;
     // The interval sections: sets, date parts, rows, time parts, prefixes
     // and pairs, in their order in the unit.
-    RecordTable intervals[intervalTableCount];
+    RecordTable intervals[intervalBuilderTables];
     int capacity;
 } DateBuilder;
 
@@ -384,8 +389,9 @@ static uint16_t PatternOrNone(DateBuilder* b, const char* pattern, const char* n
                                                     : dateIntervalNone;
 }
 
-// An interval entry's pair: each greatest difference's halves compiled.
-static uint16_t AddPair(DateBuilder* b, const IntervalPatterns* p, const char* numbers)
+// An interval entry's pair in a table (the date side's or the time
+// side's): each greatest difference's halves compiled.
+static uint16_t AddPair(DateBuilder* b, int table, const IntervalPatterns* p, const char* numbers)
 {
     uint16_t pair[dateIntervalPairSize / 2] = {0};
     for (int f = 0; f < dateIntervalFields; f++)
@@ -395,7 +401,7 @@ static uint16_t AddPair(DateBuilder* b, const IntervalPatterns* p, const char* n
         pair[2 * f + 1] = PatternOrNone(b, half->second, numbers);
         pair[2 * dateIntervalFields] |= (uint16_t)(half->laterFirst ? 1u << f : 0u);
     }
-    return AddRecord(b, intervalPairs, pair);
+    return AddRecord(b, table, pair);
 }
 
 static uint16_t AddPrefix(DateBuilder* b, const IntervalPrefix* p, const char* numbers)
@@ -421,7 +427,7 @@ static uint16_t AddDatePart(DateBuilder* b, const IntervalSet* r,
         for (int length = 0; length < dateLengthCount; length++)
         {
             int e = dateIntervalDate + entry * dateLengthCount + length;
-            row[2 * length] = AddPair(b, &r->entries[e], numbers[e]);
+            row[2 * length] = AddPair(b, intervalPairs, &r->entries[e], numbers[e]);
             row[2 * length + 1] = AddPrefix(b, &r->prefixes[e], numbers[e]);
         }
         part[entry] = AddRecord(b, intervalRows, row);
@@ -429,7 +435,7 @@ static uint16_t AddDatePart(DateBuilder* b, const IntervalSet* r,
     for (int i = 0; i < dateStandardCount; i++)
     {
         int e = dateIntervalDateStyle + i;
-        part[dateEntryCount + 3 * i] = AddPair(b, &r->entries[e], numbers[e]);
+        part[dateEntryCount + 3 * i] = AddPair(b, intervalPairs, &r->entries[e], numbers[e]);
         part[dateEntryCount + 3 * i + 1] = AddPrefix(b, &r->prefixes[e], numbers[e]);
         part[dateEntryCount + 3 * i + 2] = AddPattern(b, r->entries[e].pattern, numbers[e]);
     }
@@ -447,12 +453,12 @@ static uint16_t AddTimePart(DateBuilder* b, const IntervalSet* r)
     uint16_t part[dateIntervalTimeSize / 2];
     for (int t = 0; t < times; t++)
     {
-        part[t] = AddPair(b, &r->entries[dateIntervalTime + t], nullptr);
+        part[t] = AddPair(b, intervalTimePairs, &r->entries[dateIntervalTime + t], nullptr);
     }
     for (int i = 0; i < dateStandardCount; i++)
     {
         const IntervalPatterns* p = &r->entries[dateIntervalTimeStyle + i];
-        part[times + 2 * i] = AddPair(b, p, nullptr);
+        part[times + 2 * i] = AddPair(b, intervalTimePairs, p, nullptr);
         part[times + 2 * i + 1] = AddPattern(b, p->pattern, nullptr);
     }
     return AddRecord(b, intervalTimeParts, part);
@@ -606,6 +612,24 @@ static size_t Align8(size_t n)
     return (n + 7) & ~(size_t)7;
 }
 
+// The i-th value of an interval table as written: a time part's pair
+// indexes past the date side's pairs, which the pairs section holds
+// first.
+static uint16_t IntervalValue(const DateBuilder* b, int table, int i)
+{
+    enum
+    {
+        times = dateIntervalTimeStyle - dateIntervalTime,
+        values = dateIntervalTimeSize / 2,
+    };
+    uint16_t value = b->intervals[table].data[i];
+    int at = i % values;
+    bool pair = at < times || (at - times) % 2 == 0;
+    return table == intervalTimeParts && pair
+               ? (uint16_t)(value + b->intervals[intervalPairs].count)
+               : value;
+}
+
 static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
 {
     size_t text = 0;
@@ -617,12 +641,18 @@ static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
     size_t rows = Align8(offsets + 4 * ((size_t)b->patternCount + 1));
     size_t sets = Align8(rows + (size_t)dateRowSize * (size_t)b->rowCount);
     size_t times = Align8(sets + (size_t)dateSetSize * (size_t)b->setCount);
+    // The pairs section: the date side's pairs, then the time side's.
+    int counts[intervalTableCount];
+    for (int t = 0; t < intervalTableCount; t++)
+    {
+        counts[t] = b->intervals[t].count;
+    }
+    counts[intervalPairs] += b->intervals[intervalTimePairs].count;
     size_t intervals[intervalTableCount + 1];
     intervals[0] = Align8(times + (size_t)dateTimeSetSize * (size_t)b->timeSetCount);
     for (int t = 0; t < intervalTableCount; t++)
     {
-        intervals[t + 1] =
-            Align8(intervals[t] + (size_t)s_intervalSizes[t] * (size_t)b->intervals[t].count);
+        intervals[t + 1] = Align8(intervals[t] + (size_t)s_intervalSizes[t] * (size_t)counts[t]);
     }
     size_t texts = intervals[intervalTableCount];
     uint8_t* unit = GenAllocate(texts + text);
@@ -632,7 +662,7 @@ static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
     GenPut(unit + 12, (uint64_t)b->timeSetCount, 4);
     for (int t = 0; t < intervalTableCount; t++)
     {
-        GenPut(unit + 16 + 4 * (size_t)t, (uint64_t)b->intervals[t].count, 4);
+        GenPut(unit + 16 + 4 * (size_t)t, (uint64_t)counts[t], 4);
     }
     GenPut(unit + 16 + 4 * intervalTableCount, text, 4);
     size_t at = 0;
@@ -661,8 +691,15 @@ static void AddPatternsUnit(const DateBuilder* b, DataFile* file)
     {
         for (int i = 0; i < b->intervals[t].count * (s_intervalSizes[t] / 2); i++)
         {
-            GenPut(unit + intervals[t] + 2 * (size_t)i, b->intervals[t].data[i], 2);
+            GenPut(unit + intervals[t] + 2 * (size_t)i, IntervalValue(b, t, i), 2);
         }
+    }
+    const RecordTable* timePairs = &b->intervals[intervalTimePairs];
+    size_t timePairsAt = intervals[intervalPairs] +
+                         (size_t)dateIntervalPairSize * (size_t)b->intervals[intervalPairs].count;
+    for (int i = 0; i < timePairs->count * (dateIntervalPairSize / 2); i++)
+    {
+        GenPut(unit + timePairsAt + 2 * (size_t)i, timePairs->data[i], 2);
     }
     DataFileAdd(file, kindDatePatterns, nullptr, unit, texts + text);
     free(unit);
@@ -751,7 +788,7 @@ int GenerateDateUnits(const DateInput* in, DataFile* file, char* errorOut, size_
     free(b->rowData);
     free(b->setData);
     free(b->timeSetData);
-    for (int t = 0; t < intervalTableCount; t++)
+    for (int t = 0; t < intervalBuilderTables; t++)
     {
         free(b->intervals[t].data);
         MapFree(&b->intervals[t].map);

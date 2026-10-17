@@ -10,6 +10,7 @@
 #include "data_view.h"
 #include "date_tables.h"
 
+#include "maul-locale/datetime.h"
 #include "maul-locale/locale.h"
 
 #include <stdint.h>
@@ -117,6 +118,17 @@ bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
                             const uint8_t** rules);
 // A pattern of a valid unit by index; false past its patterns.
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
+
+// The style of a pattern's zone field (zzzz, z, vvvv, v, VVVV, VVV, OOOO,
+// O; zz and zzz as z), or none for another letter or width.
+mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width);
+
+// Whether a pattern holds only fields the date formatter writes.
+bool mlocWritableDate(const uint8_t* pattern, uint32_t length);
+
+// Whether a pattern's fields are those a time writer writes, a zone's
+// among them.
+bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);
 
 // A patterns unit's pattern views, which a formatter keeps to resolve
 // its interval indexes.
