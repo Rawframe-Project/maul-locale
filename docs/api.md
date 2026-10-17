@@ -443,6 +443,15 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetLocalePreferences( const mlocDataSet* 
 ```
 Returns a locale's regional preferences (UTS #35), the region's values from CLDR's supplemental data. The region is the -u-rg key's ("en-GB-u-rg-uszzzz" takes the US's), else the locale's region, else the -u-sd key's, else the likely one ("en" takes the US's), else 001; a region without data takes 001's. Keys override: -u-hc the hour cycle (c12 and c24 resolve to the cycle the allowed formats list first), -u-fw the first day, -u-ms the measurement system, -u-ca the calendar; -u-ca-iso8601 also begins weeks on Monday with four days in the first unless -u-fw or -u-rg give the first day. The hour data is looked up for the language in the region first (ca-ES has its own). A key with a value it does not take is left out.  @param data          The data with the preferences and likely subtags. @param locale        The locale, canonicalized. @param preferencesOut Receives the preferences; left unchanged on failure. @return mloc_success; mloc_errorNotFound for data without the preferences; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+## `message.h`
+
+Messages (record mloc-0045): Unicode MessageFormat 2 (UTS #35 Part 9) compiled once into caller memory, bound once to a locale, and formatted many times. A compiled message is locale-free: it holds the message's declarations, selectors, variants and patterns with their names resolved, keys and names in NFC, and every syntax and data model check done. It is the form a catalog stores; it is valid only for this library's version.
+
+```c
+MLOC_NODISCARD MLOC_API mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer, size_t capacity, size_t* sizeOut, mlocMessageError* errorOut);
+```
+Compiles a message from its MF2 text into caller memory. Call it with a null buffer and a capacity of 0 to learn the capacity needed. Syntax errors, a variant's key count and a missing fallback variant are found while measuring; the data model errors that compare names or keys need the compiled form, so they are found only once the buffer is large enough.  @param text      The message, UTF-8. May be null when length is 0. @param length    The number of bytes. @param buffer    Receives the compiled message; any alignment. @param capacity  The buffer's size in bytes. @param sizeOut   Receives the compiled message's size on success, or the capacity needed with mloc_errorCapacity, which may be a little more than the size. @param errorOut  Receives what failed with mloc_errorSyntax, else mloc_messageErrorNone; may be null. @return mloc_success and the length read; mloc_errorSyntax and the byte offset where the error is found; mloc_errorCapacity when the buffer is too small, nothing then being written that the caller can use; mloc_errorInvalid for a null pointer, or a text of 2^32 bytes or more. @par Thread safety Safe from any thread.
+
 ## `names.h`
 
 Display names (UTS #35 Part 2, records mloc-0036 to mloc-0039): a locale's name for a language, script, region, variant, key, key's value or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's Intl.DisplayNames give them, for a subdivision, and for a whole locale. The names are in a data file of their own, names.mloc, and the subdivision names in another, subdivisions.mloc, which a program adds to its data set.
@@ -818,4 +827,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-149 functions across 17 headers.
+150 functions across 18 headers.

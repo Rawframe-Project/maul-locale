@@ -104,8 +104,9 @@ of an amount the caller gives, as ECMA-402's Intl.RelativeTimeFormat
 writes it, alone or with a time ("tomorrow at 3:00 PM"; a data file of
 its own, `src/generated/relative.mloc`); and durations ("1 hr, 2 min, 3
 sec", "1:02:03.456") of Temporal's fields, as ECMA-402's
-Intl.DurationFormat writes them, exactly.
-The library has 149 public functions.
+Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
+messages compiled into caller memory, checked for syntax.
+The library has 150 public functions.
 
 ## Building
 
@@ -136,6 +137,7 @@ notice is in `LICENSES/Unicode-3.0.txt`. That covers:
 - the tables taken from CLDR's supplemental data;
 - the skeleton test table `test/skeletons_icu.tsv` (CLDR's test
   questions with ICU4C's answers, ICU being under the same license).
+- the MessageFormat 2 test suite's cases, `test/mf2_suite.inc`.
 
 The library's code is its own, written from the specifications and
 from Reingold and Dershowitz's Calendrical Calculations. The Persian

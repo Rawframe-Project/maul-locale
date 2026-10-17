@@ -138,6 +138,11 @@ format.
   Intl.DurationFormat does, each field's style and display, the
   fractions exact and truncated, the locale's digital separators and
   hour padding, with parts (`maul-locale/duration.h`, mloc-0044).
+- Messages: `mlocCompileMessage` parses Unicode MessageFormat 2 (UTS
+  #35 Part 9) into a compiled message in caller memory, its names and
+  keys in NFC, refusing syntax errors, a variant's wrong key count and a
+  missing fallback variant at their offset (`maul-locale/message.h`,
+  mloc-0045). The library now links Maul Unicode 0.3.0.
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

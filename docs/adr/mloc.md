@@ -49,3 +49,4 @@ are listed in [README.md](README.md).
 | [mloc-0042](mloc-0042-datetime.md) | Dates and times formatted: semantic skeletons, patterns compiled by the generator | Accepted |
 | [mloc-0043](mloc-0043-relative-time.md) | Relative time: CLDR's fields filed per key, a decimal and a unit in | Accepted |
 | [mloc-0044](mloc-0044-durations.md) | Durations: ECMA-402's algorithm on Temporal's fields, exact | Accepted |
+| [mloc-0045](mloc-0045-messages.md) | Messages: MessageFormat 2, compiled once, bound once, formatted without allocation | Accepted |

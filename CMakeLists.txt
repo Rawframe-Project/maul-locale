@@ -30,21 +30,28 @@ option(MAUL_LOCALE_SANITIZE "Instrument with AddressSanitizer and UBSan" OFF)
 option(MAUL_LOCALE_COVERAGE "Instrument for gcov coverage" OFF)
 option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 
-# The generator asks Maul Unicode which currency symbols start or end in
-# letters (record mloc-0022); the library itself does not link it.
-# Fetched before the family modules, so that ours, included after its
-# copies, serve this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds
-# a local copy instead, offline.
-if(MAUL_LOCALE_BUILD_TOOLS)
+# Maul Unicode: the message part calls it at run time (UTF-8, NFC and
+# bidi classes; record mloc-0045), the generator for the currency
+# symbols' letters (record mloc-0022) and the unit names' case. An
+# installed package serves; else the pinned release is fetched, before
+# the family modules, so that ours, included after its copies, serve
+# this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds a local copy
+# instead, offline.
+set(MAUL_LOCALE_UNICODE_VERSION 0.3.0)
+find_package(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION} CONFIG QUIET)
+if(NOT maul-unicode_FOUND)
     include(FetchContent)
-    set(MAUL_UNICODE_NORMALIZATION OFF)
-    # The generator lowercases the unit names' patterns.
-    set(MAUL_UNICODE_CASE ON)
+    set(MAUL_UNICODE_NORMALIZATION ON)
+    set(MAUL_UNICODE_CASE ${MAUL_LOCALE_BUILD_TOOLS})
     set(MAUL_UNICODE_SECURITY OFF)
-    set(MAUL_UNICODE_INSTALL OFF)
+    set(MAUL_UNICODE_INSTALL ${MAUL_LOCALE_INSTALL})
+    if(MAUL_LOCALE_BUILD_SHARED)
+        # Its static library goes into ours.
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    endif()
     FetchContent_Declare(maul-unicode
         GIT_REPOSITORY https://github.com/Rawframe-Project/maul-unicode.git
-        GIT_TAG v0.3.0
+        GIT_TAG v${MAUL_LOCALE_UNICODE_VERSION}
         GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(maul-unicode)
 endif()
@@ -93,6 +100,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
+    src/message.c
+    src/message_emit.c
+    src/message_parse.c
+    src/message_text.c
     src/calendar.c
     src/calendar_add.c
     src/calendar_arith.c
@@ -175,12 +186,16 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/generated/calendar_eras.c
     src/generated/calendar_years.c)
 maul_configure_library(maul-locale)
+target_link_libraries(maul-locale PRIVATE maul-unicode::maul-unicode)
+set(MAUL_PACKAGE_DEPENDENCIES "find_dependency(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION})")
+set(MAUL_PKG_REQUIRES_PRIVATE "maul-unicode >= ${MAUL_LOCALE_UNICODE_VERSION}")
 
 if(MAUL_LOCALE_BUILD_TESTS)
     enable_testing()
     maul_add_test(base)
     maul_add_test(data WHITEBOX)
     maul_add_test(locale)
+    maul_add_test(message WHITEBOX)
     maul_add_test(likely)
     maul_add_test(likely_tables WHITEBOX)
     maul_add_test(canonical)
