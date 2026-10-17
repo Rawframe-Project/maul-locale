@@ -332,7 +332,7 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
     } defaults[] = {
         {"string", messageFunctionString},   {"number", messageFunctionNumber},
         {"integer", messageFunctionInteger}, {"offset", messageFunctionOffset},
-        {"percent", messageFunctionPercent},
+        {"percent", messageFunctionPercent}, {"currency", messageFunctionCurrency},
     };
     for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++)
     {

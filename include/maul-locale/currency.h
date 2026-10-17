@@ -49,6 +49,16 @@ extern "C"
         mloc_currencyUsageCash = 1,
     } mlocCurrencyUsage;
 
+    // Which currency pattern: the locale's choice (its -u-cf keyword),
+    // the standard one, or the accounting one ("($3.00)"), as ECMA-402's
+    // currencySign.
+    typedef enum mlocCurrencySign
+    {
+        mloc_currencySignLocale = 0,
+        mloc_currencySignStandard = 1,
+        mloc_currencySignAccounting = 2,
+    } mlocCurrencySign;
+
     // A currency formatter's options; the zero value is the default.
     typedef struct mlocCurrencyOptions
     {
@@ -68,6 +78,7 @@ extern "C"
         // which UTS #35 recommends where a narrow symbol is ambiguous; 0
         // not to.
         uint8_t appendCode;
+        mlocCurrencySign sign;
     } mlocCurrencyOptions;
 
     // A locale's formatter of one currency: a value that points into the
@@ -80,7 +91,8 @@ extern "C"
 
     /// Makes a locale's formatter of a currency. The numbering system is
     /// the locale's, as for numbers; the locale's -u-cf-account keyword
-    /// asks for its accounting pattern ("($3.00)"). The symbol meets the
+    /// asks for its accounting pattern ("($3.00)") unless the options'
+    /// sign says otherwise. The symbol meets the
     /// digits as UTS #35 prefers: a locale's alphaNextToNumber pattern
     /// spaces a symbol whose character next to the digits is a letter
     /// ("USD 3.00", "$3.00"). A code the data does not know shows as its

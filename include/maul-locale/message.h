@@ -107,7 +107,10 @@ extern "C"
 
     // An argument's kind of value. A string is UTF-8; a decimal is
     // given by pointer and must outlive the call; an object is the
-    // program's, for its own functions, with a type id of its choice.
+    // program's, for its own functions, with a type id of its choice; a
+    // currency amount is a decimal by pointer and an ISO 4217 code (three
+    // ASCII letters, any case), which :currency formats and the number
+    // functions read as its amount.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -115,6 +118,7 @@ extern "C"
         mloc_messageValueDouble = 2,
         mloc_messageValueDecimal = 3,
         mloc_messageValueObject = 4,
+        mloc_messageValueCurrency = 5,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -134,6 +138,11 @@ extern "C"
             double number;
             const mlocDecimal* decimal;
             const void* object;
+            struct
+            {
+                const mlocDecimal* amount;
+                char code[3];
+            } currency;
         } as;
     } mlocMessageValue;
 
@@ -185,11 +194,17 @@ extern "C"
 
     // A function's resolved value: 64 bytes its resolve entry fills as it
     // likes, which its format and match entries read back. As an
-    // accessor's storage it may hold a number value's decimal instead.
+    // accessor's storage it may hold a number value's decimal, or a
+    // currency value's amount and code, instead.
     typedef union mlocMessageResolved
     {
         uint64_t opaque[8];
         mlocDecimal decimal;
+        struct
+        {
+            mlocDecimal amount;
+            char code[4];
+        } currency;
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
@@ -209,9 +224,12 @@ extern "C"
         // the expression's text is then its fallback.
         mloc_messageOperandFallback = 4,
         // A number function's value (:number, :integer, :offset,
-        // :percent): its decimal,
-        // unrounded; its options stay the formatter's.
+        // :percent): its decimal, unrounded; its options stay the
+        // formatter's.
         mloc_messageOperandNumber = 5,
+        // A :currency value: its amount as number, unrounded, and its
+        // currency's code as text, three upper-case ASCII letters.
+        mloc_messageOperandCurrency = 6,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -355,7 +373,9 @@ extern "C"
     /// each text written, each placeholder resolved where it stands and
     /// written, markup writing nothing. An expression that fails is
     /// written as its fallback ("{$name}", "{|literal|}", "{:function}")
-    /// and reported as a fault.
+    /// and reported as a fault. A numeric argument without a function is
+    /// written plainly ("1234.5"), a currency amount as its amount and
+    /// code ("42.5 EUR").
     ///
     /// @param bound          A bound message from mlocBindMessage.
     /// @param arguments      The arguments; may be null when count is 0.
@@ -367,8 +387,9 @@ extern "C"
     ///         fault, nothing written; mloc_errorCapacity when the text does
     ///         not fit (output->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,
-    ///         string or decimal among them), a decimal that is not one
-    ///         the library makes, an unknown kind, or a bound message the
+    ///         string, decimal or amount among them), a decimal that is
+    ///         not one the library makes, a currency code that is not
+    ///         three ASCII letters, an unknown kind, or a bound message the
     ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.

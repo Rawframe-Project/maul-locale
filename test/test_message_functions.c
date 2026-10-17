@@ -58,6 +58,11 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
         snprintf(shown, sizeof shown, "N%d", operand->number->count);
         Add(e, shown, strlen(shown));
         break;
+    case mloc_messageOperandCurrency:
+        snprintf(shown, sizeof shown, "C%d%.*s", operand->number->count, (int)operand->length,
+                 operand->text);
+        Add(e, shown, strlen(shown));
+        break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
         Add(e, shown, strlen(shown));
@@ -361,6 +366,9 @@ static void TestCalls(void)
     CHECK(Formats(".local $n = {7.25 :number maximumFractionDigits=0} {{{$n :x:echo k=$n}}}", a, 4,
                   "N3;k=N3", NULL),
           "a number value is passed as its decimal, unrounded");
+    CHECK(Formats(".local $c = {7.25 :currency currency=eur} {{{$c :x:echo k=$c}}}", a, 4,
+                  "C3EUR;k=C3EUR", NULL),
+          "a currency value is passed as its amount and code");
     static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable,
                                                       mloc_messageFaultBadOption, 0};
     CHECK(Formats("{|a| :x:echo k=$missing}", a, 4, "a;k=?", unresolved),

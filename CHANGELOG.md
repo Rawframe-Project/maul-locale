@@ -177,6 +177,13 @@ format.
 - Messages format and select with `:offset` (exact sums, an overflow
   unsupported) and `:percent` (the value times 100, its operand's minimum
   integer digits, increment and `select` dropped) (mloc-0045).
+- Messages format with `:currency`: a new argument kind,
+  `mloc_messageValueCurrency` (an amount and an ISO 4217 code), or a
+  number with the `currency` option; its displays, `currencySign` and
+  `fractionDigits`; program functions receive its values as
+  `mloc_messageOperandCurrency` (mloc-0045).
+- `mlocCurrencyOptions` gains `sign` (ECMA-402's `currencySign`):
+  standard or accounting over the locale's `-u-cf` choice (mloc-0022).
 - Fixed: `mlocFormatMessage` read a decimal argument without checking
   it; one the library does not make (an exponent past its limits) is now
   `mloc_errorInvalid`, where `:offset` could write past its work area.

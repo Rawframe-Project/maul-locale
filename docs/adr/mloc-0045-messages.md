@@ -176,6 +176,24 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   increment and `select` without a fault, shows 0 fraction digits by
   default, and formats and selects (plural categories and exact keys)
   on its value times 100, the value itself kept for a later function.
+- **`:currency`:** its operand is a currency amount (an argument kind of
+  its own, a decimal and an ISO 4217 code, as ICU4J's `CurrencyAmount`),
+  a `:currency` value, or a numeric operand with the `currency` option
+  (three ASCII letters, any case; well-formed, not checked as known).
+  Without a currency it is a Bad Operand; the option over an amount's
+  or a value's currency is a Bad Option and the operand's stands. Its
+  options are the specification's list: `currencyDisplay` maps onto
+  `mlocCurrencyDisplay` (`never` is hidden), `currencySign` onto
+  `mlocCurrencyOptions`' new `sign` (its zero value the locale's `-u-cf`
+  choice), `fractionDigits` `auto` or a digit size; with no digit
+  option the currency formatter rounds by the currency's own digits and
+  increment. It drops an operand's `select` and fraction digits without
+  a fault and passes the rest on; it does not select (a Bad Selector).
+  The number functions read an amount or a currency value as its
+  number, `:offset` keeping the currency; written with no function an
+  amount is its digits and code ("42.5 EUR", as ICU4J writes one), and
+  a program function receives a currency value as
+  `mloc_messageOperandCurrency`.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -211,12 +229,13 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   into a buffer of exactly the size measured.
 - Formatting: every case of the suite the functions built so far reach
   formats to its text with its errors in order, or, where the suite
-  gives no text, with its errors (267, isolated as each case says, the
+  gives no text, with its errors (279, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
   `test_message_numbers` checks `:number` and `:integer`'s defaults,
   options and their refusals, operands, inheritance and selection,
-  `:offset`'s sums, refusals and overflow, and `:percent`'s scaling,
-  dropped options and selection; `test_message_functions` checks the function
+  `:offset`'s sums, refusals and overflow, `:percent`'s scaling,
+  dropped options and selection, and `:currency`'s operands, options,
+  displays, signs, inheritance, amounts and refusals; `test_message_functions` checks the function
   table's refusals, each operand kind, the accessors, a function's
   faults in resolve and format, `:string`'s operands, selection with and
   without better entries, the selector limit, and the resolution limit

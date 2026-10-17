@@ -349,6 +349,87 @@ static void TestPercent(void)
           "an operand's select is dropped without a fault");
 }
 
+static void TestCurrency(void)
+{
+    mlocMessageArgument x = {"x", 1, {mloc_messageValueInteger, 0, {.integer = 41}}};
+    CHECK(Formats("{42 :currency currency=EUR} {42.5 :currency currency=jpy}", NULL, 0,
+                  "\xE2\x82\xAC"
+                  "42.00 \xC2\xA5"
+                  "43",
+                  NULL) &&
+              Formats("{$x :currency currency=USD}", &x, 1, "$41.00", NULL),
+          "a number with a currency, in its digits, the code in any case");
+    CHECK(Formats("{42 :currency currency=USD fractionDigits=0} {42 :currency currency=USD "
+                  "fractionDigits=3}",
+                  NULL, 0, "$42 $42.000", NULL) &&
+              Formats(".local $c = {42 :currency currency=USD fractionDigits=0} "
+                      "{{{$c :currency fractionDigits=auto}}}",
+                      NULL, 0, "$42.00", NULL),
+          "fractionDigits, and auto over the operand's");
+    CHECK(Formats(
+              "{1 :currency currency=CAD} {1 :currency currency=CAD currencyDisplay=narrowSymbol} "
+              "{1 :currency currency=CAD currencyDisplay=code} "
+              "{1 :currency currency=CAD currencyDisplay=never}",
+              NULL, 0,
+              "CA$1.00 $1.00 CAD\xC2\xA0"
+              "1.00 1.00",
+              NULL),
+          "the displays");
+    CHECK(Formats("{-5 :currency currency=USD currencySign=accounting} {-5 :currency currency=USD "
+                  "currencySign=standard}",
+                  NULL, 0, "($5.00) -$5.00", NULL),
+          "the currency sign");
+    mlocMessageArgument n = {"n", 1, {mloc_messageValueInteger, 0, {.integer = -5}}};
+    CHECK(Formats(".input {$n :currency currency=USD trailingZeroDisplay=stripIfInteger} "
+                  "{{{$n :currency currencySign=accounting}}}",
+                  &n, 1, "($5)", NULL) &&
+              Formats("{5.01 :currency currency=USD trailingZeroDisplay=stripIfInteger}", NULL, 0,
+                      "$5.01", NULL),
+          "a currency value's options pass on");
+    CHECK(Formats(".local $n = {1 :number select=exact minimumFractionDigits=3 "
+                  "signDisplay=always} {{{$n :currency currency=EUR}}}",
+                  NULL, 0,
+                  "+\xE2\x82\xAC"
+                  "1.00",
+                  NULL),
+          "a number's select and fraction digits are dropped, its sign kept");
+    CHECK(Formats(".local $c = {1 :currency currency=EUR} .local $n = {$c :number} "
+                  ".match $n one {{one {$n}}} * {{other}}",
+                  NULL, 0, "one 1", NULL),
+          "a number from a currency value selects");
+    mlocDecimal amount = {0};
+    CHECK(mlocParseDecimal("42.5", 4, &amount).status == mloc_success, "an amount is read");
+    mlocMessageArgument a[] = {
+        {"a", 1, {mloc_messageValueCurrency, 0, {.currency = {&amount, {'e', 'u', 'r'}}}}},
+        {"c", 1, {mloc_messageValueString, 0, {.string = {"usd", 3}}}},
+    };
+    CHECK(Formats("{$a :currency} {$a} {$a :number} {$a :string} {$a :offset add=1}", a, 2,
+                  "\xE2\x82\xAC"
+                  "42.50 42.5 EUR 42.5 42.5 EUR \xE2\x82\xAC"
+                  "43.50",
+                  NULL),
+          "a currency amount: formatted, bare, as a number, as text, offset");
+    CHECK(Formats("{$a :currency currency=USD}", a, 2,
+                  "\xE2\x82\xAC"
+                  "42.50",
+                  s_badOption) &&
+              Formats("{42 :currency currency=$c}", a, 2, "$42.00", NULL),
+          "an amount's currency stands; a code from a variable");
+    static const mlocMessageFaultKind noCode[] = {mloc_messageFaultBadOption,
+                                                  mloc_messageFaultBadOperand, 0};
+    CHECK(Formats("{42 :currency currency=EURO}", NULL, 0, "{|42|}", noCode) &&
+              Formats("{42 :currency currency=E1R}", NULL, 0, "{|42|}", noCode) &&
+              Formats("{42 :currency currency=EUR currencyDisplay=formal}", NULL, 0,
+                      "\xE2\x82\xAC"
+                      "42.00",
+                      s_badOption) &&
+              Formats("{42 :currency currency=EUR fractionDigits=100}", NULL, 0,
+                      "\xE2\x82\xAC"
+                      "42.00",
+                      s_badOption),
+          "bad option values; no currency is a bad operand");
+}
+
 static void TestDirection(void)
 {
     static mlocMessageFormatter isolatingEn;
@@ -363,6 +444,11 @@ static void TestDirection(void)
                   "1\xE2\x81\xA9",
                   NULL),
           "an Arabic one is right to left");
+    CHECK(Formats("{1 :currency currency=EUR}", NULL, 0,
+                  "\xE2\x81\xA7\xE2\x80\x8F"
+                  "1.00\xC2\xA0\xE2\x82\xAC\xE2\x81\xA9",
+                  NULL),
+          "and a currency");
     s_using = &s_en;
 }
 
@@ -381,6 +467,7 @@ int main(void)
     TestSelection();
     TestOffset();
     TestPercent();
+    TestCurrency();
     TestDirection();
     return s_failures == 0 ? 0 : 1;
 }

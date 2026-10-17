@@ -25,6 +25,7 @@ typedef enum NumberFunction
     numberFunctionPercent = 2,
     // Not a value's function: :offset keeps its operand's.
     numberFunctionOffset = 3,
+    numberFunctionCurrency = 4,
 } NumberFunction;
 
 // How a number value selects.
@@ -50,6 +51,10 @@ enum
     numberGivenPriority = 1u << 9,
     numberGivenIncrement = 1u << 10,
     numberGivenMode = 1u << 11,
+    numberGivenCurrency = 1u << 12,
+    numberGivenDisplay = 1u << 13,
+    numberGivenCurrencySign = 1u << 14,
+    numberGivenFractionDigits = 1u << 15,
 };
 
 // A number value: its decimal and the options given to it, each read
@@ -74,6 +79,14 @@ typedef struct NumberValue
     uint8_t trailingZeros;
     uint8_t priority;
     uint8_t mode;
+    // A currency value's: its code (upper case), mlocCurrencyDisplay,
+    // mlocCurrencySign, its fractionDigits option, and the currency's
+    // own digits, found when the value is made.
+    char code[3];
+    uint8_t display;
+    uint8_t currencySign;
+    uint8_t fractionDigits;
+    uint8_t currencyDigits;
 } NumberValue;
 
 // An option's value as a number function reads it: text (a literal's,
@@ -98,11 +111,21 @@ NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* deci
 // Starts a value from an operand that is a number value: its decimal
 // (for :integer, rounded to an integer), and the options the function
 // passes on (:offset all, its function kept; :percent drops minimum
-// integer digits, increment and select). Returns
-// mloc_messageFaultBadOption when the operand's select may not pass on
-// (the value then cannot select), else none.
+// integer digits, increment and select; :currency select, as it does
+// not select). Returns mloc_messageFaultBadOption when the operand's
+// select may not pass on (the value then cannot select), else none.
 mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberValue* operand,
                                          NumberValue* out);
+
+// Writes a currency code of three ASCII letters in upper case.
+void mlocUpperCode(const char* code, char* out);
+
+// Gives a value its operand's currency (a currency amount's code).
+void mlocSetCurrencyCode(NumberValue* value, const char* code);
+
+// Finds a currency value's own digits once its code is known: false for
+// data without the currencies' fractions.
+bool mlocFindCurrencyDigits(NumberValue* value, const mlocDataSet* data);
 
 // Rounds a fresh :integer value's decimal to an integer (half-expand).
 // Returns false when rounding passes the decimal's limits.
@@ -112,8 +135,8 @@ bool mlocMakeInteger(NumberValue* value);
 // expression it is: mloc_messageFaultNone, also for a name the function
 // does not take (ignored);
 // mloc_messageFaultBadOption for a value that is not one of the option's
-// (ignored), or a select that is not a literal (the value then cannot
-// select).
+// (ignored), a select that is not a literal (the value then cannot
+// select), or a currency over the operand's.
 mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction function,
                                          const uint8_t* name, size_t length,
                                          const NumberOption* option);

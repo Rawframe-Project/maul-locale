@@ -53,8 +53,10 @@ CLDR's test data has no currency formatting cases.
   symbol, a symbol it lacks the code) and hidden, which takes the
   `noCurrency` pattern (ICU's hidden display keeps the standard pattern
   without its symbol, and its spaces). Accounting comes from the
-  locale's `-u-cf-account` alone, as the numbering system from `-u-nu`
-  (mloc-0021). A currency's own pattern replaces the standard pattern;
+  locale's `-u-cf-account`, as the numbering system from `-u-nu`
+  (mloc-0021), unless the options' `sign` (ECMA-402's `currencySign`,
+  which messages' `:currency` takes) asks for the standard or the
+  accounting pattern; its zero value keeps the locale's choice. A currency's own pattern replaces the standard pattern;
   its own separators, or else the locale's currency separators, replace
   the decimal and group separators. Negative affixes without a minus
   sign's place (accounting's parentheses) stand for the sign.

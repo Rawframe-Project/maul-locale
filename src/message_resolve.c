@@ -22,6 +22,7 @@ enum
 };
 
 static_assert(sizeof(CallState) <= sizeof(mlocMessageCall), "a call's state fits its value");
+static_assert(sizeof(mlocMessageResolved) == 64, "a resolved value is 64 bytes");
 
 uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
 {
@@ -204,6 +205,16 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
         out->kind = mloc_messageOperandResolved;
         out->function = v->function;
         out->resolved = storage;
+    }
+    else if (kind == valueNumber && v->number.function == numberFunctionCurrency)
+    {
+        storage->currency.amount = v->number.decimal;
+        memcpy(storage->currency.code, v->number.code, 3);
+        storage->currency.code[3] = 0;
+        out->kind = mloc_messageOperandCurrency;
+        out->number = &storage->currency.amount;
+        out->text = storage->currency.code;
+        out->length = 3;
     }
     else if (kind == valueNumber)
     {
@@ -480,6 +491,27 @@ static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool*
     return o;
 }
 
+// A numeric argument's decimal (a currency amount's amount); false for
+// another kind or a number past a decimal's limits.
+static bool ArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
+{
+    switch (argument->kind)
+    {
+    case mloc_messageValueInteger:
+        return mlocMakeDecimal(argument->as.integer, out) == mloc_success;
+    case mloc_messageValueDouble:
+        return mlocMakeShortestDecimal(argument->as.number, out) == mloc_success;
+    case mloc_messageValueDecimal:
+        *out = *argument->as.decimal;
+        return true;
+    case mloc_messageValueCurrency:
+        *out = *argument->as.currency.amount;
+        return true;
+    default:
+        return false;
+    }
+}
+
 // The number a number function's operand gives: a number literal (or a
 // string argument that is one), a numeric argument, or a number value,
 // whose options pass on. mloc_messageFaultBadOperand for anything else.
@@ -514,30 +546,24 @@ static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function
             return mloc_messageFaultUnsupportedOperation;
         }
     }
-    else if (kind == valueArgument)
-    {
-        const mlocMessageValue* a = operand->argument;
-        mlocResult made =
-            a->kind == mloc_messageValueInteger  ? mlocMakeDecimal(a->as.integer, &decimal)
-            : a->kind == mloc_messageValueDouble ? mlocMakeShortestDecimal(a->as.number, &decimal)
-                                                 : mloc_errorInvalid;
-        if (a->kind == mloc_messageValueDecimal)
-        {
-            decimal = *a->as.decimal;
-            made = mloc_success;
-        }
-        if (made != mloc_success)
-        {
-            return mloc_messageFaultBadOperand;
-        }
-    }
-    else
+    else if (kind != valueArgument || !ArgumentDecimal(operand->argument, &decimal))
     {
         return mloc_messageFaultBadOperand;
     }
-    // :offset over a plain number formats as :number does.
-    *out = mlocMakeNumberValue(function == numberFunctionOffset ? numberFunctionNumber : function,
-                               &decimal);
+    // :offset over a plain number formats as :number does, over a
+    // currency amount as :currency does; the number functions read an
+    // amount's number alone.
+    bool amount = kind == valueArgument && operand->argument->kind == mloc_messageValueCurrency;
+    NumberFunction made = function;
+    if (function == numberFunctionOffset)
+    {
+        made = amount ? numberFunctionCurrency : numberFunctionNumber;
+    }
+    *out = mlocMakeNumberValue(made, &decimal);
+    if (amount && made == numberFunctionCurrency)
+    {
+        mlocSetCurrencyCode(out, operand->argument->as.currency.code);
+    }
     return mloc_messageFaultNone;
 }
 
@@ -600,7 +626,7 @@ static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* oper
     return v;
 }
 
-// A :number, :integer or :percent value: its operand's number, the options passed
+// A :number, :integer, :percent or :currency value: its operand's number, the options passed
 // on, then the expression's own (u: options aside), checked together.
 static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction function,
                            const Value* operand)
@@ -642,6 +668,19 @@ static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction fu
         if (fault != mloc_messageFaultNone)
         {
             mlocReportFault(r, fault, at);
+        }
+    }
+    if (n.function == numberFunctionCurrency)
+    {
+        // A number without a currency is no currency's amount.
+        fault = (n.given & numberGivenCurrency) == 0 ? mloc_messageFaultBadOperand
+                : !mlocFindCurrencyDigits(&n, r->formatter.data)
+                    ? mloc_messageFaultUnsupportedOperation
+                    : mloc_messageFaultNone;
+        if (fault != mloc_messageFaultNone)
+        {
+            mlocReportFault(r, fault, at);
+            return mlocExpressionFallback(r, expression);
         }
     }
     for (uint32_t i = mlocCheckNumberOptions(&n); i > 0; i--)
@@ -709,12 +748,15 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
         v = ResolveOffset(r, expression, given);
     }
     else if (slot == messageFunctionNumber || slot == messageFunctionInteger ||
-             slot == messageFunctionPercent)
+             slot == messageFunctionPercent || slot == messageFunctionCurrency)
     {
-        NumberFunction function = slot == messageFunctionNumber    ? numberFunctionNumber
-                                  : slot == messageFunctionInteger ? numberFunctionInteger
-                                                                   : numberFunctionPercent;
-        v = ResolveNumber(r, expression, function, given);
+        static const NumberFunction functions[] = {
+            [messageFunctionNumber] = numberFunctionNumber,
+            [messageFunctionInteger] = numberFunctionInteger,
+            [messageFunctionPercent] = numberFunctionPercent,
+            [messageFunctionCurrency] = numberFunctionCurrency,
+        };
+        v = ResolveNumber(r, expression, functions[slot], given);
     }
     else
     {
@@ -733,24 +775,21 @@ bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t c
                         size_t* lengthOut)
 {
     mlocDecimal decimal;
-    mlocResult made = mloc_errorInvalid;
-    if (argument->kind == mloc_messageValueInteger)
-    {
-        made = mlocMakeDecimal(argument->as.integer, &decimal);
-    }
-    else if (argument->kind == mloc_messageValueDouble)
-    {
-        made = mlocMakeShortestDecimal(argument->as.number, &decimal);
-    }
-    else if (argument->kind == mloc_messageValueDecimal)
-    {
-        decimal = *argument->as.decimal;
-        made = mloc_success;
-    }
     mlocOutput out = {digits, capacity, 0, NULL, NULL};
-    if (made != mloc_success || mlocFormatDecimal(&decimal, &out) != mloc_success)
+    if (!ArgumentDecimal(argument, &decimal) || mlocFormatDecimal(&decimal, &out) != mloc_success)
     {
         return false;
+    }
+    if (argument->kind == mloc_messageValueCurrency)
+    {
+        // The amount and the code, as ICU4J writes a CurrencyAmount.
+        if (out.length + 4 > capacity)
+        {
+            return false;
+        }
+        digits[out.length] = ' ';
+        mlocUpperCode(argument->as.currency.code, digits + out.length + 1);
+        out.length += 4;
     }
     *lengthOut = out.length;
     return true;

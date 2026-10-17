@@ -131,9 +131,18 @@ static bool FuzzBetter(void* context, const mlocMessageResolved* value, const ch
     return length1 < length2;
 }
 
+// -12.5 as a decimal: digits 1, 2, 5, exponent -1, one fraction digit.
+static const mlocDecimal s_amount = {.kind = mloc_decimalFinite,
+                                     .negative = 1,
+                                     .count = 3,
+                                     .exponent = -1,
+                                     .fractionDigits = 1,
+                                     .digits = {1, 2, 5}};
+
 static const mlocMessageArgument s_arguments[] = {
     {"s", 1, {mloc_messageValueString, 0, {.string = {"1", 1}}}},
     {"n", 1, {mloc_messageValueInteger, 0, {.integer = -7}}},
+    {"c", 1, {mloc_messageValueCurrency, 0, {.currency = {&s_amount, {'c', 'h', 'f'}}}}},
 };
 
 static const mlocMessageFunction s_functions[] = {
@@ -170,10 +179,10 @@ static void Format(const uint8_t* message, size_t size)
         return;
     }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, s_arguments, 2, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 3, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, s_arguments, 2, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 3, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);

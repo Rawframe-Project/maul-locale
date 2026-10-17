@@ -828,7 +828,7 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":currency", ":unit", ":date", ":time"};
+    static const char* const later[] = {":unit", ":date", ":time"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)
@@ -1141,7 +1141,7 @@ static void TestSuiteFormat(void)
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 267, "every case the functions built so far reach formats");
+    CHECK(formatted >= 279, "every case the functions built so far reach formats");
 }
 
 static mlocMessageFormatter s_formatter;
@@ -1297,6 +1297,19 @@ static void TestBindAndFormat(void)
     mlocMessageArgument wrong = {"d", 1, {mloc_messageValueDecimal, 0, {.decimal = &far}}};
     CHECK(mlocFormatMessage(s_bound, &wrong, 1, &output, NULL) == mloc_errorInvalid,
           "a decimal the library does not make is refused");
+    mlocMessageArgument amounts[3] = {
+        {"a", 1, {mloc_messageValueCurrency, 0, {.currency = {NULL, {'E', 'U', 'R'}}}}},
+        {"a", 1, {mloc_messageValueCurrency, 0, {.currency = {&far, {'E', 'U', 'R'}}}}},
+        {"a", 1, {mloc_messageValueCurrency, 0, {.currency = {&half, {'E', '@', 'R'}}}}},
+    };
+    for (size_t i = 0; i < 3; i++)
+    {
+        CHECK(mlocFormatMessage(s_bound, &amounts[i], 1, &output, NULL) == mloc_errorInvalid,
+              "an amount null or not the library's, or a code not of letters, is refused");
+    }
+    amounts[0].value.as.currency.amount = &half;
+    CHECK(mlocFormatMessage(s_bound, &amounts[0], 1, &output, NULL) != mloc_errorInvalid,
+          "a good amount is taken");
     mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
     CHECK(mlocFormatMessage(s_bound, &unknown, 1, &output, NULL) == mloc_errorInvalid,
           "an unknown kind is refused");

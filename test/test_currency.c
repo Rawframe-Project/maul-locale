@@ -142,6 +142,16 @@ static void TestPatterns(void)
     CHECK(Formats("en-u-cf-account", "USD", &always, "5", "+$5.00") &&
               Formats("en-u-cf-account", "USD", &always, "-5", "($5.00)"),
           "accounting's parentheses are the minus sign");
+    mlocCurrencyOptions accounting = {.sign = mloc_currencySignAccounting};
+    mlocCurrencyOptions standard = {.sign = mloc_currencySignStandard};
+    CHECK(Formats("en", "USD", &accounting, "-5", "($5.00)") &&
+              Formats("en-u-cf-account", "USD", &standard, "-5", "-$5.00") &&
+              Formats("en-u-cf-standard", "USD", &accounting, "-5", "($5.00)"),
+          "the options' currency sign over the locale's");
+    mlocCurrencyFormatter formatter;
+    mlocCurrencyOptions badSign = {.sign = (mlocCurrencySign)3};
+    CHECK(Init(&formatter, "en", "USD", &badSign) == mloc_errorInvalid,
+          "a currency sign out of range is refused");
     CHECK(Plain("de-CH", "CHF", "-1234.567", "CHF-1'234.57"),
           "Swiss German puts the minus after the symbol");
     CHECK(Plain("nl", "EUR", "-5", "\xE2\x82\xAC" NBSP "-5,00"), "Dutch");

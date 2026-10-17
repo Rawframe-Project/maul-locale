@@ -136,6 +136,7 @@ static bool ValidOptions(const mlocCurrencyOptions* o)
     return mlocValidFormatOptions(n) && n->style == mloc_numberDecimal &&
            (uint32_t)o->display <= mloc_currencyName &&
            (uint32_t)o->usage <= mloc_currencyUsageCash && o->appendCode <= 1 &&
+           (uint32_t)o->sign <= mloc_currencySignAccounting &&
            (o->appendCode == 0 || IsSymbolDisplay(o->display));
 }
 
@@ -170,9 +171,14 @@ static bool CurrencyPrecision(const mlocDataSet* data, uint16_t code, mlocCurren
     return true;
 }
 
-// Whether the locale asks for accounting: -u-cf-account.
-static bool Accounting(const mlocLocale* locale)
+// Whether the options, or else the locale (-u-cf-account), ask for
+// accounting.
+static bool Accounting(const mlocLocale* locale, mlocCurrencySign sign)
 {
+    if (sign != mloc_currencySignLocale)
+    {
+        return sign == mloc_currencySignAccounting;
+    }
     const char* value = nullptr;
     size_t length = mlocFindKeyword(locale, "cf", &value);
     return length == 7 && memcmp(value, "account", 7) == 0;
@@ -372,7 +378,7 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
     // A code shows as three letters.
     uint32_t shown = ShownField(&fields, o->display);
     CurrencyStyle style = {
-        .accounting = Accounting(locale),
+        .accounting = Accounting(locale, o->sign),
         .hidden = o->display == mloc_currencyHidden,
         .name = name,
         .longLength = o->number.notation == mloc_notationCompactLong,

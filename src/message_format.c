@@ -393,8 +393,27 @@ static uint32_t SelectVariant(Formatting* f)
     return best;
 }
 
+static bool GoodDecimal(const mlocDecimal* decimal)
+{
+    return decimal != NULL && mlocValidDecimal(decimal);
+}
+
+static bool GoodCurrency(const mlocMessageValue* v)
+{
+    const char* code = v->as.currency.code;
+    for (int i = 0; i < 3; i++)
+    {
+        if (!((code[i] >= 'A' && code[i] <= 'Z') || (code[i] >= 'a' && code[i] <= 'z')))
+        {
+            return false;
+        }
+    }
+    return GoodDecimal(v->as.currency.amount);
+}
+
 // Whether the arguments hold what their kinds say: a name and a string
-// where their lengths ask, a decimal, a known kind.
+// where their lengths ask, a decimal, an amount and its code, a known
+// kind.
 static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
 {
     for (size_t i = 0; i < count; i++)
@@ -402,11 +421,11 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
         const mlocMessageArgument* a = &arguments[i];
         const mlocMessageValue* v = &a->value;
         bool good = (a->name != NULL || a->nameLength == 0) &&
-                    (uint32_t)v->kind <= mloc_messageValueObject &&
+                    (uint32_t)v->kind <= mloc_messageValueCurrency &&
                     (v->kind != mloc_messageValueString || v->as.string.text != NULL ||
                      v->as.string.length == 0) &&
-                    (v->kind != mloc_messageValueDecimal ||
-                     (v->as.decimal != NULL && mlocValidDecimal(v->as.decimal)));
+                    (v->kind != mloc_messageValueDecimal || GoodDecimal(v->as.decimal)) &&
+                    (v->kind != mloc_messageValueCurrency || GoodCurrency(v));
         if (!good)
         {
             return false;

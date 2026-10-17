@@ -111,8 +111,9 @@ Value mlocExpressionFallback(const Resolution* r, uint32_t expression);
 bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
                        mlocMessageFaultKind* faultOut);
 
-// An argument written with no function as its plain decimal; false for
-// a kind that has none (an object).
+// An argument written with no function as its plain decimal (a currency
+// amount's followed by a space and its code); false for a kind that has
+// none (an object).
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut);
 
