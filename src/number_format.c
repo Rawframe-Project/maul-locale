@@ -217,10 +217,10 @@ static void WriteOuterSide(const Outer* o, uint32_t category, size_t split, bool
     mlocWriteTrimmed(w, o->patternKind, pattern + literal, end - literal);
 }
 
-// Writes a prepared number, within an outer pattern when there is one.
-static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, NumberWriter* w)
+// Writes a prepared number, within an outer pattern's of its category
+// when there is one.
+static void WriteIn(const Outer* o, const Prepared* p, uint32_t category, NumberWriter* w)
 {
-    uint32_t category = o == nullptr ? 0 : Category(f, p);
     size_t split = o == nullptr ? 0 : NumberAt(o, category);
     if (o != nullptr)
     {
@@ -234,6 +234,12 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     {
         WriteOuterSide(o, category, split, false, w);
     }
+}
+
+// Writes a prepared number, within an outer pattern when there is one.
+static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, NumberWriter* w)
+{
+    WriteIn(o, p, o == nullptr ? 0 : Category(f, p), w);
 }
 
 mlocResult mlocFormattedCategory(const Formatter* f, const mlocDecimal* decimal,
@@ -271,17 +277,18 @@ static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
                                                                      : mloc_success;
 }
 
-// Writes a prepared number into an output: the text, then the parts.
-static mlocResult WritePrepared(const Formatter* f, const Outer* outer, const Prepared* p,
+// Writes a prepared number into an output, within the outer pattern's of
+// the category: the text, then the parts.
+static mlocResult WritePrepared(const Outer* outer, const Prepared* p, uint32_t category,
                                 mlocOutput* output)
 {
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteOne(f, outer, p, &w);
+    WriteIn(outer, p, category, &w);
     mlocResult r = Finish(&w, output);
     if (r == mloc_success && output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        WriteOne(f, outer, p, &parts);
+        WriteIn(outer, p, category, &parts);
         mlocEndParts(&parts);
     }
     return r;
@@ -300,7 +307,7 @@ mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDeci
     {
         return r;
     }
-    return WritePrepared(f, outer, &p, output);
+    return WritePrepared(outer, &p, outer == nullptr ? 0 : Category(f, &p), output);
 }
 
 mlocResult mlocFormatChosen(const Formatter* f, OuterChooser choose, void* context,
@@ -308,12 +315,13 @@ mlocResult mlocFormatChosen(const Formatter* f, OuterChooser choose, void* conte
 {
     Prepared p;
     mlocResult r = Prepare(f, decimal, &p);
-    const Outer* outer = r == mloc_success ? choose(context, Category(f, &p), &r) : nullptr;
+    uint32_t category = r == mloc_success ? Category(f, &p) : 0;
+    const Outer* outer = r == mloc_success ? choose(context, category, &r) : nullptr;
     if (r != mloc_success)
     {
         return r;
     }
-    return WritePrepared(f, outer, &p, output);
+    return WritePrepared(outer, &p, category, output);
 }
 
 // Whether two ends share their affixes: one sign, one pattern. The rest
