@@ -12,6 +12,8 @@
 #ifndef MLOC_MESSAGE_FORM_H
 #define MLOC_MESSAGE_FORM_H
 
+#include "bytes.h"
+
 #include <stdint.h>
 
 // The first four bytes.
@@ -51,7 +53,7 @@ enum
 
 // Each kind's record size; keys have no count of their own (selectors
 // times variants), so they follow the variants' count in the sizes.
-static const uint32_t messageRecordSizes[messageCount] = {12, 32, 24, 20, 4, 8, 12, 12, 1};
+static const uint32_t messageRecordSizes[messageCount] = {12, 32, 24, 20, 8, 12, 12, 12, 1};
 static const uint32_t messageKeySize = 12;
 
 // A declaration: kind, variable, expression.
@@ -89,6 +91,8 @@ enum
     parameterAttributeLiteral = 3,
 };
 
+// A selector: its variable, and the variable's byte offset in the source.
+
 // A key: kind, string (nothing for the catch-all).
 enum
 {
@@ -96,8 +100,8 @@ enum
     keyLiteral = 1,
 };
 
-// A variant: its pattern's first piece and count. Without variants the
-// body is every piece.
+// A variant: its pattern's first piece and count, and its byte offset in
+// the source. Without variants the body is every piece.
 
 // A piece: kind, then a string for text or an index for the others.
 enum
@@ -115,5 +119,24 @@ enum
     variableInput = 1,
     variableLocal = 2,
 };
+
+// Each kind's first byte in a message whose counts are known to fit (one
+// compiled here), and the keys'.
+static inline void mlocMessageStarts(const uint8_t* message, uint32_t* starts, uint32_t* keyStart)
+{
+    uint32_t at = messageHeaderSize;
+    uint32_t selectors = mlocLoad32(message + messageCounts + messageSelectors * 4);
+    uint32_t variants = mlocLoad32(message + messageCounts + messageVariants * 4);
+    for (uint32_t kind = 0; kind < messageCount; kind++)
+    {
+        if (kind == messageVariants)
+        {
+            *keyStart = at;
+            at += selectors * variants * messageKeySize;
+        }
+        starts[kind] = at;
+        at += mlocLoad32(message + messageCounts + kind * 4) * messageRecordSizes[kind];
+    }
+}
 
 #endif

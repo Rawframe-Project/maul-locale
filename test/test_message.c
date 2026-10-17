@@ -62,22 +62,9 @@ static mlocMessageError ExpectedError(const char* errors)
     return mloc_messageErrorNone;
 }
 
-// The errors this slice finds; the others come with the data model's
-// checks on the compiled form.
-static bool Found(mlocMessageError error)
-{
-    return error == mloc_messageErrorNone || error == mloc_messageErrorSyntax ||
-           error == mloc_messageErrorVariantKeyMismatch ||
-           error == mloc_messageErrorMissingFallbackVariant;
-}
-
 static void CheckCase(const SuiteCase* c)
 {
     mlocMessageError expected = ExpectedError(c->errors);
-    if (!Found(expected))
-    {
-        return;
-    }
     size_t needed = 0;
     mlocMessageError error = mloc_messageErrorNone;
     mlocTextResult measured = mlocCompileMessage(c->source, c->length, NULL, 0, &needed, &error);
@@ -94,8 +81,12 @@ static void CheckCase(const SuiteCase* c)
     }
     else
     {
-        good = measured.status == mloc_errorSyntax && compiled.status == mloc_errorSyntax &&
-               error == expected && compiled.offset <= c->length;
+        // The checks that compare names or keys run on the compiled form,
+        // so measuring passes them.
+        bool late = expected >= mloc_messageErrorMissingSelectorAnnotation;
+        good = measured.status == (late ? mloc_errorCapacity : mloc_errorSyntax) &&
+               compiled.status == mloc_errorSyntax && error == expected &&
+               compiled.offset <= c->length;
     }
     if (!good)
     {
@@ -192,8 +183,9 @@ static void TestLayout(void)
     const char* text = "{$x}{$y}";
     mlocTextResult result = mlocCompileMessage(text, 8, NULL, 0, &needed, &error);
     // The header, two expressions, two pieces, two variables and their
-    // names, rounded to 4, then four slots of the variables' table.
-    CHECK(result.status == mloc_errorCapacity && needed == 172 + 16,
+    // names, rounded to 8, then four slots of the table and two words a
+    // variable.
+    CHECK(result.status == mloc_errorCapacity && needed == 176 + 32 + 16,
           "the capacity is the message's records and the table");
     size_t size;
     CHECK(Compile(text, &size) && size == 170, "the message is its records alone");
@@ -272,6 +264,93 @@ static void TestMarks(void)
     }
 }
 
+// A compile's error and offset.
+static bool Refused(const char* text, mlocMessageError expected, size_t at)
+{
+    size_t size = 0;
+    mlocMessageError error = mloc_messageErrorNone;
+    mlocTextResult result =
+        mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
+    return result.status == mloc_errorSyntax && error == expected && result.offset == at;
+}
+
+static void TestDataModel(void)
+{
+    CHECK(Refused(".input {$x :f} .input {$x :g} {{}}", mloc_messageErrorDuplicateDeclaration, 22),
+          "an input declared twice, at the second");
+    CHECK(Refused(".input {$x :f o=$y} .local $y = {1} {{}}", mloc_messageErrorDuplicateDeclaration,
+                  32),
+          "a variable an earlier declaration used");
+    CHECK(Refused(".local $x = {$x :f} {{}}", mloc_messageErrorDuplicateDeclaration, 12),
+          "a local naming itself");
+    CHECK(Refused(".input {$x :f o=$x} {{}}", mloc_messageErrorDuplicateDeclaration, 7),
+          "an input naming itself in an option");
+    size_t size;
+    CHECK(Compile(".input {$x :f} .local $y = {$x :g o=$z} {{{$y}}}", &size),
+          "an input used by a later local is fine");
+    CHECK(Field(messageVariables, 0, 2) == variableInput &&
+              Field(messageVariables, 1, 2) == variableLocal &&
+              Field(messageVariables, 2, 2) == variableExternal,
+          "each variable is marked by its declaration");
+
+    CHECK(Refused("{$x :f a=1 b=2 a=3}", mloc_messageErrorDuplicateOptionName, 0),
+          "an option named twice");
+    CHECK(Refused("{#b a=1 a=2 @a}", mloc_messageErrorDuplicateOptionName, 0),
+          "a markup's option named twice");
+    CHECK(Compile("{$x :f a=1 @a @a=2}{$y :f a=2}", &size),
+          "an attribute and other expressions do not count");
+
+    CHECK(Refused(".input {$x} .match $x * {{}}", mloc_messageErrorMissingSelectorAnnotation, 19),
+          "an input without a function");
+    CHECK(Refused(".local $y = {$x} .match $y * {{}}", mloc_messageErrorMissingSelectorAnnotation,
+                  24),
+          "a local of an external variable");
+    CHECK(Refused(".local $y = {|a|} .match $y * {{}}", mloc_messageErrorMissingSelectorAnnotation,
+                  25),
+          "a local of a literal");
+    CHECK(Compile(".input {$x :f} .local $y = {$x} .local $z = {$y} .match $z * {{}}", &size),
+          "a chain of locals to a function");
+
+    CHECK(Refused(".input {$x :f} .input {$y :f} .match $x $y a * {{}} |a| |*| {{}} a |*| {{}} * * "
+                  "{{}}",
+                  mloc_messageErrorDuplicateVariant, 65),
+          "keys equal as literals, quoted or not");
+    CHECK(Compile(".input {$x :f} .match $x |*| {{}} * {{}}", &size),
+          "a literal star differs from the catch-all");
+    CHECK(Refused(".input {$x :f} .match $x \303\251 {{}} e\314\201 {{}} * {{}}",
+                  mloc_messageErrorDuplicateVariant, 33),
+          "keys equal in NFC");
+}
+
+// Many names, options and variants: each check is linear, so this takes
+// a moment (a quadratic one would take minutes).
+static void TestLinear(void)
+{
+    enum
+    {
+        many = 40000
+    };
+    static char text[many * 24];
+    static uint8_t big[many * 160];
+    size_t at = 0;
+    for (int i = 0; i < many; i++)
+    {
+        at += (size_t)snprintf(text + at, sizeof text - at, "{$v%d :f o%d=1}", i, i);
+    }
+    size_t size = 0;
+    mlocMessageError error;
+    mlocTextResult result = mlocCompileMessage(text, at, big, sizeof big, &size, &error);
+    CHECK(result.status == mloc_success, "forty thousand names and options compile");
+    at = (size_t)snprintf(text, sizeof text, ".input {$x :f} .match $x\n");
+    for (int i = 0; i < many; i++)
+    {
+        at += (size_t)snprintf(text + at, sizeof text - at, "k%d {{}}", i);
+    }
+    at += (size_t)snprintf(text + at, sizeof text - at, "* {{}}");
+    result = mlocCompileMessage(text, at, big, sizeof big, &size, &error);
+    CHECK(result.status == mloc_success, "forty thousand variants compile");
+}
+
 static void TestRefused(void)
 {
     size_t size = 0;
@@ -345,6 +424,8 @@ int main(void)
     TestLayout();
     TestCut();
     TestMarks();
+    TestDataModel();
+    TestLinear();
     TestRefused();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;

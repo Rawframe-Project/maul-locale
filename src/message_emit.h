@@ -3,14 +3,16 @@
 //
 // Writes a compiled message's records (message_form.h) in two passes
 // over the same parse: the first counts them and the bytes of their
-// strings, the second writes them where the counts place them. Variables
-// are written once per name, through a hash table kept past the message
-// in the caller's buffer while compiling.
+// strings, the second writes them where the counts place them. Past the
+// message, the caller's buffer holds scratch while compiling: a hash
+// table (variables once per name, then message_check's duplicates) and
+// two words a variable for message_check.
 
 #ifndef MLOC_SRC_MESSAGE_EMIT_H
 #define MLOC_SRC_MESSAGE_EMIT_H
 
 #include "message_form.h"
+#include "message_table.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -30,13 +32,14 @@ typedef struct MessageEmit
     // Records written of each kind (bytes for the pool), and keys.
     uint32_t used[messageCount];
     uint32_t keys;
-    // While writing: each kind's byte offset, the keys', and the hash
-    // table's (a power of two of slots, each a variable index plus one).
+    // While writing: each kind's byte offset, the keys', the pool's end,
+    // and the scratch: the table's slots, then the variables' words.
     uint32_t start[messageCount];
     uint32_t keyStart;
     uint32_t poolEnd;
-    uint32_t slotStart;
     uint32_t slotCount;
+    uint32_t wordStart;
+    MessageTable table;
 } MessageEmit;
 
 // The counts of a counting pass, as upper bounds for writing.
@@ -50,14 +53,15 @@ typedef struct MessageCounts
 void mlocEmitCount(MessageEmit* emit);
 
 // The capacity a writing pass needs for what a counting pass counted:
-// the message at its largest and the hash table; 0 past 2^32 - 1.
+// the message at its largest and the scratch; 0 past 2^32 - 1.
 size_t mlocEmitNeeded(const MessageCounts* counts);
 
 // Starts a writing pass into out, which holds mlocEmitNeeded bytes.
 void mlocEmitWrite(MessageEmit* emit, uint8_t* out, const MessageCounts* counts);
 
 // Ends a writing pass: moves the pool down over the variables it did not
-// need, writes the header, and returns the message's size.
+// need, writes the header, and returns the message's size. The scratch
+// stays where it was, for message_check.
 uint32_t mlocEmitFinish(MessageEmit* emit, uint32_t flags, uint32_t unicode);
 
 // Appends a record of a kind (not the pool), its fields as 32-bit words,

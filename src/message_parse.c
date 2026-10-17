@@ -618,12 +618,12 @@ static bool ParseSelectors(Parser* p, uint32_t* countOut)
         {
             break;
         }
-        uint32_t variable;
-        if (!ParseVariable(p, &variable))
+        uint32_t selector[2] = {0, (uint32_t)p->at};
+        if (!ParseVariable(p, &selector[0]))
         {
             return false;
         }
-        mlocEmitRecord(p->emit, messageSelectors, &variable);
+        mlocEmitRecord(p->emit, messageSelectors, selector);
         count++;
     }
     if (count == 0)
@@ -647,17 +647,17 @@ static bool ParseMatcher(Parser* p)
     while (p->at < p->end)
     {
         bool catchAll;
-        uint32_t pieces[2];
+        uint32_t variant[3] = {0, 0, (uint32_t)p->at};
         if (!ParseKeys(p, selectors, p->at, &catchAll))
         {
             return false;
         }
         p->at += 2;
-        if (!ParsePattern(p, true, pieces))
+        if (!ParsePattern(p, true, variant))
         {
             return false;
         }
-        mlocEmitRecord(p->emit, messageVariants, pieces);
+        mlocEmitRecord(p->emit, messageVariants, variant);
         fallback = fallback || catchAll;
         SkipSpace(p);
     }

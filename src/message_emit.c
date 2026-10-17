@@ -23,16 +23,14 @@ void mlocEmitCount(MessageEmit* emit)
     memset(emit, 0, sizeof *emit);
 }
 
-// The hash table's slots for up to count variables: at least twice as
-// many, a power of two.
-static uint64_t SlotCount(uint32_t count)
+// The table's slots: enough for the variables, for the parameters of an
+// expression or a markup, and for the variants.
+static uint64_t SlotCount(const MessageCounts* counts)
 {
-    uint64_t slots = 4;
-    while (slots < (uint64_t)count * 2)
-    {
-        slots *= 2;
-    }
-    return slots;
+    uint32_t most = counts->used[messageVariables];
+    most = counts->used[messageParameters] > most ? counts->used[messageParameters] : most;
+    most = counts->used[messageVariants] > most ? counts->used[messageVariants] : most;
+    return mlocTableSlots(most);
 }
 
 // The bytes of the records before the variables.
@@ -52,8 +50,8 @@ size_t mlocEmitNeeded(const MessageCounts* counts)
         RecordBytes(counts) +
         (uint64_t)counts->used[messageVariables] * messageRecordSizes[messageVariables] +
         counts->used[messagePool];
-    total = (total + 3) & ~(uint64_t)3;
-    total += SlotCount(counts->used[messageVariables]) * 4;
+    total = (total + 7) & ~(uint64_t)7;
+    total += SlotCount(counts) * messageSlotSize + (uint64_t)counts->used[messageVariables] * 8;
     return total > UINT32_MAX ? 0 : (size_t)total;
 }
 
@@ -73,9 +71,10 @@ void mlocEmitWrite(MessageEmit* emit, uint8_t* out, const MessageCounts* counts)
         at += counts->used[kind] * messageRecordSizes[kind];
     }
     emit->poolEnd = at;
-    emit->slotStart = (at + 3) & ~3u;
-    emit->slotCount = (uint32_t)SlotCount(counts->used[messageVariables]);
-    memset(out + emit->slotStart, 0, (size_t)emit->slotCount * 4);
+    uint32_t slots = (at + 7) & ~7u;
+    emit->slotCount = (uint32_t)SlotCount(counts);
+    emit->wordStart = slots + emit->slotCount * messageSlotSize;
+    mlocTableInit(&emit->table, out + slots, emit->slotCount);
 }
 
 uint32_t mlocEmitFinish(MessageEmit* emit, uint32_t flags, uint32_t unicode)
@@ -180,14 +179,24 @@ MessageString mlocEmitEndString(const MessageEmit* emit, MessageString string)
     return string;
 }
 
-static uint32_t Hash(const uint8_t* bytes, uint32_t length)
+// A variable's name, while its record is not written yet.
+typedef struct NameSearch
 {
-    uint32_t hash = 2166136261u;
-    for (uint32_t i = 0; i < length; i++)
-    {
-        hash = (hash ^ bytes[i]) * 16777619u;
-    }
-    return hash;
+    const MessageEmit* emit;
+    MessageString name;
+} NameSearch;
+
+static bool SameName(const void* context, uint32_t entry, uint32_t candidate)
+{
+    (void)candidate;
+    const NameSearch* search = context;
+    const MessageEmit* emit = search->emit;
+    const uint8_t* pool = emit->out + emit->start[messagePool];
+    const uint8_t* record =
+        emit->out + emit->start[messageVariables] + entry * messageRecordSizes[messageVariables];
+    uint32_t length = mlocLoad32(record + 4);
+    return length == search->name.length &&
+           memcmp(pool + mlocLoad32(record), pool + search->name.offset, length) == 0;
 }
 
 bool mlocEmitVariable(MessageEmit* emit, const uint8_t* name, size_t length, uint32_t* indexOut)
@@ -204,31 +213,19 @@ bool mlocEmitVariable(MessageEmit* emit, const uint8_t* name, size_t length, uin
         return true;
     }
     const uint8_t* pool = emit->out + emit->start[messagePool];
-    uint32_t mask = emit->slotCount - 1;
-    uint32_t slot = Hash(pool + string.offset, string.length) & mask;
-    for (;;)
+    NameSearch search = {emit, string};
+    uint32_t next = emit->used[messageVariables];
+    uint32_t found = mlocTableFindOrAdd(
+        &emit->table, mlocTableHash(2166136261u, pool + string.offset, string.length), next,
+        SameName, &search);
+    if (found != UINT32_MAX)
     {
-        uint8_t* p = emit->out + emit->slotStart + slot * 4;
-        uint32_t entry = mlocLoad32(p);
-        if (entry == 0)
-        {
-            uint32_t fields[3] = {string.offset, string.length, variableExternal};
-            uint32_t index = mlocEmitRecord(emit, messageVariables, fields);
-            Store32(p, index + 1);
-            *indexOut = index;
-            return true;
-        }
-        const uint8_t* record = emit->out + emit->start[messageVariables] +
-                                (entry - 1) * messageRecordSizes[messageVariables];
-        uint32_t offset = mlocLoad32(record);
-        uint32_t known = mlocLoad32(record + 4);
-        if (known == string.length && memcmp(pool + offset, pool + string.offset, known) == 0)
-        {
-            // Known: the name's copy is dropped from the pool.
-            emit->used[messagePool] = string.offset;
-            *indexOut = entry - 1;
-            return true;
-        }
-        slot = (slot + 1) & mask;
+        // Known: the name's copy is dropped from the pool.
+        emit->used[messagePool] = string.offset;
+        *indexOut = found;
+        return true;
     }
+    uint32_t fields[3] = {string.offset, string.length, variableExternal};
+    *indexOut = mlocEmitRecord(emit, messageVariables, fields);
+    return true;
 }
