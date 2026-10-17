@@ -487,7 +487,14 @@ static bool PreparedAs(const char* message, const char* wanted)
     {
         PreparedNumber storage;
         const PreparedNumber* p = mlocPreparedFor(&r, e, &storage);
-        char got = p == NULL ? '-' : p->currency ? 'c' : 'p';
+        // The bound message is aligned, so its values are read in place;
+        // 'o' and 'r' for cardinal and ordinal rules prepared.
+        char got = p == NULL           ? '-'
+                   : p == &storage     ? '!'
+                   : p->currency       ? 'c'
+                   : p->rulesType == 1 ? 'o'
+                   : p->rulesType == 2 ? 'r'
+                                       : 'p';
         if (got != wanted[e])
         {
             printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
@@ -501,12 +508,14 @@ static void TestPrepared(void)
 {
     CHECK(PreparedAs("{$n :number} {$n :integer maximumSignificantDigits=2} {$n :percent} "
                      "{$n :currency currency=EUR} {$n :offset add=1} {$n :string} {$n}",
-                     "pppcp--"),
+                     "oooco--"),
           "each number function's expression is prepared, :string's and a bare one's not");
+    CHECK(PreparedAs("{$n :number select=ordinal} {$n :number select=exact} {$n :integer}", "rpo"),
+          "the plural rules a value selects with are prepared with it");
     CHECK(PreparedAs("{$n :number maximumFractionDigits=$d}", "-") &&
-              PreparedAs(".local $d = {2} {{{$n :number maximumFractionDigits=$d}}}", "-p") &&
+              PreparedAs(".local $d = {2} {{{$n :number maximumFractionDigits=$d}}}", "-o") &&
               PreparedAs(".local $d = {$x :number} {{{$n :number maximumFractionDigits=$d}}}",
-                         "p-") &&
+                         "o-") &&
               PreparedAs("{$a :currency}", "-"),
           "an option from an argument, or no currency, leaves an expression unprepared");
     // A bound message at each alignment, and moved to another: the
@@ -550,6 +559,14 @@ static void TestPrepared(void)
                   "43",
                   s_badOption),
           "a call whose options are not the prepared ones makes its own formatter");
+    mlocMessageArgument given[] = {
+        {"n", 1, {mloc_messageValueInteger, 0, {.integer = 1}}},
+        {"d", 1, {mloc_messageValueInteger, 0, {.integer = 0}}},
+    };
+    CHECK(Formats(".local $x = {$n :number minimumFractionDigits=$d} .match $x one {{one}} * "
+                  "{{other}}",
+                  given, 2, "one", NULL),
+          "a value not prepared selects with rules made in the call");
 }
 
 static void TestDirection(void)
