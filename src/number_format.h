@@ -92,6 +92,15 @@ void mlocWriteRangeSeparator(const NumberCore* core, bool spaced, NumberWriter* 
 mlocResult mlocFormatWith(const Formatter* formatter, const Outer* outer,
                           const mlocDecimal* decimal, mlocOutput* output);
 
+// Chooses the outer pattern of a number written in a plural category:
+// the pattern, or null with the failure in resultOut.
+typedef const Outer* (*OuterChooser)(void* context, uint32_t category, mlocResult* resultOut);
+
+// Formats a valid decimal into a checked output within the outer pattern
+// choose gives for the category the number is written in, rounding once.
+mlocResult mlocFormatChosen(const Formatter* formatter, OuterChooser choose, void* context,
+                            const mlocDecimal* decimal, mlocOutput* output);
+
 // Formats a range of two decimals, within an outer pattern when one is
 // given, once around both ends, in the category the plural ranges give
 // theirs. Checks the decimals and the output first.

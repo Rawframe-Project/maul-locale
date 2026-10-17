@@ -271,6 +271,22 @@ static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
                                                                      : mloc_success;
 }
 
+// Writes a prepared number into an output: the text, then the parts.
+static mlocResult WritePrepared(const Formatter* f, const Outer* outer, const Prepared* p,
+                                mlocOutput* output)
+{
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    WriteOne(f, outer, p, &w);
+    mlocResult r = Finish(&w, output);
+    if (r == mloc_success && output->part != nullptr)
+    {
+        NumberWriter parts = {.parts = output};
+        WriteOne(f, outer, p, &parts);
+        mlocEndParts(&parts);
+    }
+    return r;
+}
+
 mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
                           mlocOutput* output)
 {
@@ -284,16 +300,20 @@ mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDeci
     {
         return r;
     }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteOne(f, outer, &p, &w);
-    r = Finish(&w, output);
-    if (r == mloc_success && output->part != nullptr)
+    return WritePrepared(f, outer, &p, output);
+}
+
+mlocResult mlocFormatChosen(const Formatter* f, OuterChooser choose, void* context,
+                            const mlocDecimal* decimal, mlocOutput* output)
+{
+    Prepared p;
+    mlocResult r = Prepare(f, decimal, &p);
+    const Outer* outer = r == mloc_success ? choose(context, Category(f, &p), &r) : nullptr;
+    if (r != mloc_success)
     {
-        NumberWriter parts = {.parts = output};
-        WriteOne(f, outer, &p, &parts);
-        mlocEndParts(&parts);
+        return r;
     }
-    return r;
+    return WritePrepared(f, outer, &p, output);
 }
 
 // Whether two ends share their affixes: one sign, one pattern. The rest

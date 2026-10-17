@@ -280,20 +280,13 @@ static mlocResult WriteName(const uint8_t* text, size_t length, mlocOutput* outp
     return mloc_success;
 }
 
-// Fills an outer pattern with a direction's pattern of the category the
-// magnitude is written in (other's where the chain lacks it), copied into
-// room with its "{0}" as currencyTextNumber, every category pointing at
-// it.
+// Fills an outer pattern with a direction's pattern of a category
+// (other's where the chain lacks it), copied into room with its "{0}" as
+// currencyTextNumber, every category pointing at it.
 static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t base,
-                            const mlocDecimal* magnitude, uint8_t* room, Outer* outer)
+                            uint32_t category, uint8_t* room, Outer* outer)
 {
-    uint32_t category = mloc_pluralOther;
-    mlocResult r = mlocFormattedCategory(&f->formatter, magnitude, &category);
     DataSpan text;
-    if (r != mloc_success)
-    {
-        return r;
-    }
     if (!Lookup(f, unit, base + category, &text) && !Lookup(f, unit, base + 5, &text))
     {
         return mloc_errorNotFound;
@@ -334,6 +327,10 @@ typedef struct RelativeChoice
     uint8_t patternRoom[relativeTextMost];
     Outer outer;
     mlocDecimal magnitude;
+    // The formatter, unit and direction a pattern is chosen in.
+    const RelativeFormat* format;
+    uint32_t unit;
+    uint32_t base;
 } RelativeChoice;
 
 static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uint32_t unit,
@@ -342,16 +339,26 @@ static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uin
     int32_t offset = 0;
     DataSpan name;
     c->nameLength = 0;
+    c->format = f;
+    c->unit = unit;
     if (f->numeric == mloc_relativeNumericAuto && NamedOffset(amount, &offset) &&
         Lookup(f, unit, (uint32_t)(offset + 2), &name))
     {
         c->nameLength = CopyText(f, name, c->nameRoom, sizeof(c->nameRoom));
         return c->nameLength == 0 ? mloc_errorData : mloc_success;
     }
-    uint32_t base = amount->negative != 0 ? relativePast : relativeFuture;
+    c->base = amount->negative != 0 ? relativePast : relativeFuture;
     c->magnitude = *amount;
     c->magnitude.negative = 0;
-    return FillOuter(f, unit, base, &c->magnitude, c->patternRoom, &c->outer);
+    return mloc_success;
+}
+
+// A choice's outer pattern for the category its magnitude is written in.
+static const Outer* ChooseOuter(void* context, uint32_t category, mlocResult* resultOut)
+{
+    RelativeChoice* c = context;
+    *resultOut = FillOuter(c->format, c->unit, c->base, category, c->patternRoom, &c->outer);
+    return *resultOut == mloc_success ? &c->outer : nullptr;
 }
 
 bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit)
@@ -373,6 +380,13 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
     {
         mlocWritePart(w, kind, c.nameRoom, c.nameLength);
         return mloc_success;
+    }
+    uint32_t category = mloc_pluralOther;
+    r = mlocFormattedCategory(&f->formatter, &c.magnitude, &category);
+    r = r == mloc_success ? FillOuter(f, unit, c.base, category, c.patternRoom, &c.outer) : r;
+    if (r != mloc_success)
+    {
+        return r;
     }
     // The pattern's text first, then as one part.
     uint8_t text[relativePatternsMost];
@@ -406,5 +420,5 @@ mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter, const mloc
         return r;
     }
     return c.nameLength > 0 ? WriteName(c.nameRoom, c.nameLength, output)
-                            : mlocFormatWith(&f.formatter, &c.outer, &c.magnitude, output);
+                            : mlocFormatChosen(&f.formatter, ChooseOuter, &c, &c.magnitude, output);
 }
