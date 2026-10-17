@@ -1210,6 +1210,12 @@ static void TestBindAndFormat(void)
     CHECK(Format(&x, 1, &length, &none) == mloc_withFallbacks && none.count == 4,
           "faults are counted without room for them");
 
+    // Each literal's own bytes are escaped, not the pool's next one.
+    CHECK(Bind(&s_formatter, "{|z| :f}{|a| :f}{|\\|| :f}") == mloc_success &&
+              Format(&x, 1, &length, NULL) == mloc_withFallbacks &&
+              TextIs(length, "{|z|}{|a|}{|\\||}"),
+          "a literal's fallback escapes only its own bytes");
+
     mlocDecimal half;
     CHECK(mlocParseDecimal("0.50", 4, &half).status == mloc_success, "a decimal parses");
     mlocMessageArgument numbers[4] = {
