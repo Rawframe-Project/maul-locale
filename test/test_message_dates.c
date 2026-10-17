@@ -286,7 +286,10 @@ static void TestZones(void)
               Formats("{|2006-01-02T15:04:06+05:30:15| :time}", NULL, 0,
                       "{|2006-01-02T15:04:06+05:30:15|}", s_badOperand) &&
               Formats("{|2006-01-02[u-ca=hebrew]| :date}", NULL, 0, "{|2006-01-02[u-ca=hebrew]|}",
-                      s_badOperand),
+                      s_badOperand) &&
+              Formats("{|2006-01-02[u-ca=persian]| :date}", NULL, 0, "{|2006-01-02[u-ca=persian]|}",
+                      s_badOperand) &&
+              Formats("{|2006-01-02[u-ca=ISO8601]| :date}", NULL, 0, "Jan 2, 2006", NULL),
           "an offset the zone did not have, an unknown zone, an offset of seconds, a calendar");
     CHECK(Formats("{|2006-01-02T15:04:06| :time timeZoneStyle=short}", NULL, 0, "3:04" NNBSP "PM",
                   s_badOption) &&
@@ -362,6 +365,22 @@ static void TestZonedArguments(void)
                   "2006-01-02T10:04:06-05:00[America/New_York]",
                   NULL),
           "with no function, or as a string, as Temporal writes them");
+    mlocTimeZone london;
+    CHECK(mlocFindTimeZone(&s_data, "Europe/London", 13, &london) == mloc_success,
+          "a zone is found");
+    mlocMessageValue zoned = {
+        mloc_messageValueZonedDateTime, 0, {.zoned = {{1136214246, 0}, &london}}};
+    // "2006-01-02T15:04:06+00:00[Europe/London]": 40 bytes, written in a
+    // room of 41 or more; at 39 the identifier fits but not its bracket.
+    char text[64];
+    char tight[39];
+    CHECK(mlocWriteIsoDateTime(&zoned, text, sizeof text) == 40 &&
+              memcmp(text, "2006-01-02T15:04:06+00:00[Europe/London]", 40) == 0 &&
+              mlocWriteIsoDateTime(&zoned, text, 41) == 40 &&
+              mlocWriteIsoDateTime(&zoned, text, 40) == 0 &&
+              mlocWriteIsoDateTime(&zoned, tight, sizeof tight) == 0 &&
+              mlocWriteIsoDateTime(&zoned, text, 26) == 0,
+          "an offset of 0 is +00:00; a zoned text fits its room with its end or is none");
 }
 
 // Whether a format call refuses an argument as mloc_errorInvalid.
