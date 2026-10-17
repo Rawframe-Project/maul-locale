@@ -24,7 +24,9 @@ static void Put(Writer* w, const uint8_t* bytes, size_t length)
         size_t room = w->capacity - w->length;
         memcpy(w->buffer + w->length, bytes, length < room ? length : room);
     }
-    w->length += length;
+    // Saturating: a variable's name written at each of its references
+    // can exceed a 32-bit size_t, which then reports the capacity short.
+    w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
 }
 
 static void PutText(Writer* w, const char* text)

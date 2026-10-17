@@ -61,6 +61,10 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   64 bits, and every record's kind, indexes, ranges and strings (each in
   the pool, well-formed UTF-8, names and identifiers MF2 names), so
   nothing read leaves the bytes and every string can be written as MF2.
+  The strings the records name must fit the pool together (the
+  compiler never shares one; a variable's name counts once), so writing
+  a message back costs no more than its size, and the length written
+  saturates rather than wraps.
   The data model's rules stay the compiler's. It then writes the
   canonical text: a simple message when there are no declarations and
   the pattern does not start with "." past its spaces; else each

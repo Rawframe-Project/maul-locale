@@ -155,7 +155,8 @@ static void TestRecords(void)
 }
 
 // A record's 32-bit field.
-static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
+// A record's field's byte offset in s_buffer.
+static uint32_t FieldAt(uint32_t kind, uint32_t index, uint32_t field)
 {
     uint32_t at = messageHeaderSize;
     for (uint32_t k = 0; k < kind; k++)
@@ -166,7 +167,12 @@ static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
         }
         at += Count(k) * messageRecordSizes[k];
     }
-    return mlocLoad32(s_buffer + at + index * messageRecordSizes[kind] + field * 4);
+    return at + index * messageRecordSizes[kind] + field * 4;
+}
+
+static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
+{
+    return mlocLoad32(s_buffer + FieldAt(kind, index, field));
 }
 
 // A pool string's bytes compared with text.
@@ -435,6 +441,82 @@ static void TestCanonical(void)
     CHECK(Canonical(".input {$x :f}.match $x |*| {{a}} |1 2| {{b}} * {{c}}",
                     ".input {$x :f}\n.match $x\n|*| {{a}}\n|1 2| {{b}}\n* {{c}}"),
           "keys quoted where they must be");
+    CHECK(Canonical("{{  }}", "  ") && Canonical("a{|{|}", "a{|{|}"),
+          "a pattern of spaces stands alone; a brace after text stays the literal's");
+}
+
+static void Store(uint8_t* p, uint32_t value)
+{
+    p[0] = (uint8_t)value;
+    p[1] = (uint8_t)(value >> 8);
+    p[2] = (uint8_t)(value >> 16);
+    p[3] = (uint8_t)(value >> 24);
+}
+
+// The message in s_buffer with one field set: refused as not a message.
+static bool RefusedWith(size_t size, uint32_t kind, uint32_t index, uint32_t field, uint32_t value)
+{
+    static uint8_t copy[4096];
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(kind, index, field), value);
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    return mlocWriteMessageText(copy, size, &output) == mloc_errorData;
+}
+
+// Each field one past what it may hold, refused.
+static void TestFieldsRefused(void)
+{
+    size_t size;
+    CHECK(Compile(".input {$x :f o=|v|} .match $x 1 {{a {#b}}} * {{b}}", &size), "it compiles");
+    uint32_t variables = Count(messageVariables);
+    CHECK(RefusedWith(size, messageDeclarations, 0, 0, declarationLocal + 1) &&
+              RefusedWith(size, messageDeclarations, 0, 1, variables) &&
+              RefusedWith(size, messageDeclarations, 0, 2, Count(messageExpressions)),
+          "a declaration's kind, variable and expression");
+    CHECK(RefusedWith(size, messageExpressions, 0, 0, operandVariable + 1) &&
+              RefusedWith(size, messageExpressions, 0, 1, variables) &&
+              RefusedWith(size, messageExpressions, 0, 6, Count(messageParameters) + 1),
+          "an expression's operand and parameters");
+    CHECK(RefusedWith(size, messageParameters, 0, 0, parameterAttributeLiteral + 1) &&
+              RefusedWith(size, messageParameters, 0, 2, 0),
+          "a parameter's kind and name");
+    CHECK(RefusedWith(size, messageSelectors, 0, 0, variables) &&
+              RefusedWith(size, messageVariants, 0, 1, Count(messagePieces) + 1),
+          "a selector's variable and a variant's pieces");
+    CHECK(RefusedWith(size, messagePieces, 0, 0, pieceMarkup + 1) &&
+              RefusedWith(size, messagePieces, 1, 1, Count(messageMarkups)) &&
+              RefusedWith(size, messageMarkups, 0, 0, markupClose + 1),
+          "a piece's kind and markup, a markup's kind");
+    CHECK(RefusedWith(size, messageVariables, 0, 2, variableLocal + 1) &&
+              RefusedWith(size, messageVariables, 0, 1, 0),
+          "a variable's kind and name");
+    // A name holding a space is no MF2 name.
+    static uint8_t copy[4096];
+    memcpy(copy, s_buffer, size);
+    uint32_t pool = (uint32_t)size - Count(messagePool);
+    copy[pool + Field(messageVariables, 0, 0)] = ' ';
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData, "a name with a space");
+
+    // Two text pieces naming one string: more string bytes than the pool.
+    CHECK(Compile("abcd{$x}e", &size), "a message with two texts compiles");
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(messagePieces, 2, 1), Field(messagePieces, 0, 1));
+    Store(copy + FieldAt(messagePieces, 2, 2), 4);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+          "strings overlapping past the pool");
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(messagePieces, 2, 1), Field(messagePieces, 0, 1));
+    Store(copy + FieldAt(messagePieces, 2, 2), 1);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_success,
+          "strings sharing bytes within the pool's size are read");
+
+    CHECK(Compile("hello", &size), "a simple message compiles");
+    char exact[5];
+    mlocOutput fit = {exact, sizeof exact, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(s_buffer, size, &fit) == mloc_success && fit.length == 5 &&
+              memcmp(exact, "hello", 5) == 0,
+          "a text that fills the buffer exactly");
 }
 
 // One complex message with every byte changed in turn: written back
@@ -568,6 +650,7 @@ int main(void)
     TestRoundTrip();
     TestCanonical();
     TestCorrupted();
+    TestFieldsRefused();
     TestRefused();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;

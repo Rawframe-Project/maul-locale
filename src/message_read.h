@@ -6,8 +6,10 @@
 // counts against the size, and every record's fields (kinds, indexes,
 // ranges, strings in the pool as well-formed UTF-8, names as MF2 names),
 // so that nothing read through the view leaves the bytes and every
-// string can be written back as MF2 text. The data model's rules are the
-// compiler's and are not checked again.
+// string can be written back as MF2 text; the strings the records name
+// must fit the pool, as the compiler never shares one, so that writing
+// a message back costs no more than its size. The data model's rules are
+// the compiler's and are not checked again.
 
 #ifndef MLOC_SRC_MESSAGE_READ_H
 #define MLOC_SRC_MESSAGE_READ_H

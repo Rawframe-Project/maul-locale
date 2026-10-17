@@ -244,6 +244,55 @@ static bool GoodRecords(const MessageView* v)
            GoodPieces(v);
 }
 
+// The bytes of every string the records name, a variable's name once
+// (its references name the variable, not the string). The compiler
+// never shares a string, so they fit in the pool; a message whose
+// strings overlap to exceed it would make writing it back cost more
+// than its size, and is refused.
+static uint64_t StringBytes(const MessageView* v)
+{
+    uint64_t total = 0;
+    for (uint32_t i = 0; i < v->count[messageExpressions]; i++)
+    {
+        total += Field(v, messageExpressions, i, 4);
+        if (Field(v, messageExpressions, i, 0) == operandLiteral)
+        {
+            total += Field(v, messageExpressions, i, 2);
+        }
+    }
+    for (uint32_t i = 0; i < v->count[messageMarkups]; i++)
+    {
+        total += Field(v, messageMarkups, i, 2);
+    }
+    for (uint32_t i = 0; i < v->count[messageParameters]; i++)
+    {
+        total += Field(v, messageParameters, i, 2);
+        if (Field(v, messageParameters, i, 0) != parameterOptionVariable)
+        {
+            total += Field(v, messageParameters, i, 4);
+        }
+    }
+    for (uint32_t i = 0; i < v->count[messagePieces]; i++)
+    {
+        total += Field(v, messagePieces, i, 0) == pieceText ? Field(v, messagePieces, i, 2) : 0;
+    }
+    for (uint32_t i = 0; i < v->count[messageVariables]; i++)
+    {
+        total += Field(v, messageVariables, i, 1);
+    }
+    for (uint32_t i = 0; i < v->count[messageVariants]; i++)
+    {
+        for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
+        {
+            uint32_t offset;
+            uint32_t length;
+            mlocMessageKey(v, i, s, &offset, &length);
+            total += length;
+        }
+    }
+    return total;
+}
+
 static uint32_t UnicodeVersion(void)
 {
     muniVersion version = muniGetUnicodeVersion();
@@ -297,7 +346,7 @@ mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view)
     {
         return result;
     }
-    if (!GoodRecords(&v))
+    if (!GoodRecords(&v) || StringBytes(&v) > v.count[messagePool])
     {
         return mloc_errorData;
     }
