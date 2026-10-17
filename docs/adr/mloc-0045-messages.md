@@ -139,6 +139,27 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   reporting their faults, `u:dir` on it a Bad Option; binding counts
   those resolutions too. ICU4C 79 writes fallbacks bare and reports no
   bad `u:dir` value; the library follows the specification there.
+- **`:number` and `:integer`:** their operands are number literals (and
+  string arguments that are one), numeric arguments and number values;
+  their options ECMA-402's, with ECMA-402's defaults where the
+  specification leaves them open (`:number` 0 to 3 fraction digits,
+  `:integer` the value rounded half away from zero, as `:number`
+  rounds); a value outside an option's range, or a maximum under its
+  minimum, is a Bad Option and ignored. A number value passes its
+  options on (`:integer` without its fraction digits); a `select` from a
+  variable or an operand is a Bad Option and the value cannot select.
+  Match compares a number-literal key with the value rounded as it
+  formats, written plainly (`1e3` matches `1000`, zero unsigned), and a
+  keyword with its plural or ordinal category; another key is a Bad
+  Variant Key (a program's match entry may return that fault too,
+  without breaking the selector), and a literal beats a keyword. A
+  number reads in its locale's direction; a program function receives
+  a number value as `mloc_messageOperandNumber`, its decimal unrounded.
+  ICU4C 79 differs on the defaults (6 digits, half-even), on `1e3`, and
+  fails the call on digit sizes past its limits. Call-by-name resolves a
+  declaration at each reference; its faults are reported the first
+  time, a bit a declaration on the stack, so a bound message has at
+  most 1,024 declarations.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -172,10 +193,12 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   variable, the refusals of ill-formed UTF-8, NUL and arguments, the
   capacity measured exactly, and compiles every prefix of every case
   into a buffer of exactly the size measured.
-- Formatting: every case of the suite without the default number and
-  date functions formats to its text with its errors in order (175,
-  isolated as each case says, the `:test:` functions defined in the
-  test as the suite describes them); `test_message_functions` checks the function
+- Formatting: every case of the suite the functions built so far reach
+  formats to its text with its errors in order, or, where the suite
+  gives no text, with its errors (238, isolated as each case says, the
+  `:test:` functions defined in the test as the suite describes them);
+  `test_message_numbers` checks `:number` and `:integer`'s defaults,
+  options and their refusals, operands, inheritance and selection; `test_message_functions` checks the function
   table's refusals, each operand kind, the accessors, a function's
   faults in resolve and format, `:string`'s operands, selection with and
   without better entries, the selector limit, and the resolution limit

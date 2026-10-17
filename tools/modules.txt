@@ -132,6 +132,7 @@ message_parse: message_emit message_form message_text
 message_read: bytes message_form message_text
 message_write: message_form message_read message_text
 message_bind: bytes message_form message_read message_text
-message_resolve: message_bind message_form message_read
-message_format: message_bind message_form message_read message_resolve
+message_number: number_precision
+message_resolve: message_bind message_form message_number message_read
+message_format: message_bind message_form message_number message_read message_resolve
 message: message_check message_emit message_form message_parse message_read message_table message_write

@@ -98,18 +98,34 @@ static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
     return true;
 }
 
-// A program function's value, written by its format entry into the room
-// left; a fault, or no format entry, is reported, false.
-static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
+// The output over the writer's room left.
+static mlocOutput Room(const Writer* w)
 {
-    const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
-    Writer* w = &f->w;
     bool room = w->buffer != NULL && w->length < w->capacity;
     mlocOutput out = {room ? w->buffer + w->length : NULL, room ? w->capacity - w->length : 0, 0,
                       NULL, NULL};
-    mlocMessageFaultKind fault = function->format == NULL
-                                     ? mloc_messageFaultUnsupportedOperation
-                                     : function->format(function->context, &v->resolved, &out);
+    return out;
+}
+
+// A function's value, written into the room left by its program
+// function's format entry or by the number formatter; a fault, or no
+// format entry, is reported, false.
+static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
+{
+    Writer* w = &f->w;
+    mlocOutput out = Room(w);
+    mlocMessageFaultKind fault;
+    if (v->kind == valueNumber)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        fault = mlocWriteNumberValue(&v->number, formatter->data, &formatter->locale, &out);
+    }
+    else
+    {
+        const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
+        fault = function->format == NULL ? mloc_messageFaultUnsupportedOperation
+                                         : function->format(function->context, &v->resolved, &out);
+    }
     if (fault != mloc_messageFaultNone)
     {
         mlocReportFault(&f->r, fault, Field(f, messageExpressions, expression, 7));
@@ -134,7 +150,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
     {
         return PutArgument(f, v, expression);
     }
-    if (kind == valueResolved)
+    if (kind == valueResolved || kind == valueNumber)
     {
         return PutResolved(f, v, expression);
     }
@@ -216,16 +232,18 @@ typedef struct Selector
     bool broken;
 } Selector;
 
-// Whether a selector's value can select: a :string value, or a program
+// Whether a selector's value can select: a :string value, a number
+// value whose select was not a variable's or an operand's, or a program
 // function's with a match entry.
 static bool Selectable(const Formatting* f, const Value* v)
 {
-    return v->kind == valueString ||
+    return v->kind == valueString || (v->kind == valueNumber && v->number.selectable) ||
            (v->kind == valueResolved && f->r.formatter.functions[v->function].match != NULL);
 }
 
-// Whether a key matches a selector; a fault breaks the selector, reported
-// once as a bad selector.
+// Whether a key matches a selector. A bad variant key is reported and
+// matches nothing; another fault breaks the selector, reported once as a
+// bad selector.
 static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* key, size_t length)
 {
     if (s->broken)
@@ -238,11 +256,22 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     {
         matched = mlocStringMatches(&s->value, key, length, &fault);
     }
+    else if (s->value.kind == valueNumber)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        fault = mlocMatchNumber(&s->value.number, formatter->data, &formatter->locale, key, length,
+                                &matched);
+    }
     else
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[s->value.function];
         fault = function->match(function->context, &s->value.resolved, (const char*)key, length,
                                 &matched);
+    }
+    if (fault == mloc_messageFaultBadVariantKey)
+    {
+        mlocReportFault(&f->r, fault, at);
+        return false;
     }
     if (fault != mloc_messageFaultNone)
     {
@@ -294,9 +323,22 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
             return all2;
         }
         const Value* value = &selectors[s].value;
-        if (all1 || value->kind != valueResolved ||
+        if (all1 || (value->kind != valueResolved && value->kind != valueNumber) ||
             (length1 == length2 && memcmp(Pool(f, offset1), Pool(f, offset2), length1) == 0))
         {
+            continue;
+        }
+        if (value->kind == valueNumber)
+        {
+            // A number literal beats a plural keyword.
+            if (mlocNumberKeyBetter(Pool(f, offset1), length1, Pool(f, offset2), length2))
+            {
+                return true;
+            }
+            if (mlocNumberKeyBetter(Pool(f, offset2), length2, Pool(f, offset1), length1))
+            {
+                return false;
+            }
             continue;
         }
         const mlocMessageFunction* function = &f->r.formatter.functions[value->function];

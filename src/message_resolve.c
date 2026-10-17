@@ -150,7 +150,18 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
     uint32_t d = BoundBy(r, variable);
     if (d != messageUnbound && Field(r, messageDeclarations, d, 2) != within)
     {
+        // Call-by-name resolves a declaration at each reference; its
+        // faults are reported the first time it is resolved aloud, and
+        // quietly after.
+        uint8_t bit = (uint8_t)(1u << (d % 8));
+        bool again = (r->reported[d / 8] & bit) != 0;
+        if (r->quiet == 0)
+        {
+            r->reported[d / 8] |= bit;
+        }
+        r->quiet += again;
         Value v = mlocResolveExpression(r, Field(r, messageDeclarations, d, 2));
+        r->quiet -= again;
         return IsFallback(v.kind) ? FallbackVariable(variable) : v;
     }
     const mlocMessageValue* argument = Argument(r, variable);
@@ -193,6 +204,12 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
         out->kind = mloc_messageOperandResolved;
         out->function = v->function;
         out->resolved = storage;
+    }
+    else if (kind == valueNumber)
+    {
+        storage->decimal = v->number.decimal;
+        out->kind = mloc_messageOperandNumber;
+        out->number = &storage->decimal;
     }
     else
     {
@@ -337,13 +354,13 @@ void mlocResolveMarkup(Resolution* r, uint32_t markup)
 }
 
 // :string: the string value of its operand (text, an argument other than
-// an object, another :string's); over a failed operand a value that
-// matches no key and is written as that fallback.
+// an object, another :string's; not a function's value); over a failed
+// operand a value that matches no key and is written as that fallback.
 static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     bool good =
-        operand != NULL && operand->kind != valueResolved &&
+        operand != NULL && operand->kind != valueResolved && operand->kind != valueNumber &&
         !(operand->kind == valueArgument && operand->argument->kind == mloc_messageValueObject);
     if (!good)
     {
@@ -396,6 +413,187 @@ static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot, cons
     return v;
 }
 
+// A whole number an option's value holds, for a digit size: an integer
+// argument, or a double, decimal or number value that is whole.
+static bool WholeValue(const Value* v, int64_t* out)
+{
+    mlocDecimal decimal;
+    if (v->kind == valueNumber)
+    {
+        decimal = v->number.decimal;
+    }
+    else if (v->kind == valueArgument && v->argument->kind == mloc_messageValueInteger)
+    {
+        *out = v->argument->as.integer;
+        return true;
+    }
+    else if (v->kind == valueArgument && v->argument->kind == mloc_messageValueDouble)
+    {
+        double d = v->argument->as.number;
+        bool whole = d >= -1e15 && d <= 1e15 && d == (double)(int64_t)d;
+        *out = whole ? (int64_t)d : 0;
+        return whole;
+    }
+    else if (v->kind == valueArgument && v->argument->kind == mloc_messageValueDecimal)
+    {
+        decimal = *v->argument->as.decimal;
+    }
+    else
+    {
+        return false;
+    }
+    // A small whole decimal: no fraction shown, few digits.
+    if (decimal.kind != mloc_decimalFinite || decimal.fractionDigits != 0 ||
+        decimal.exponent + decimal.count > 15)
+    {
+        return false;
+    }
+    int64_t value = 0;
+    for (int64_t power = decimal.exponent + decimal.count - 1; power >= 0; power--)
+    {
+        int64_t index = decimal.exponent + decimal.count - 1 - power;
+        value = value * 10 + (index < decimal.count ? decimal.digits[index] : 0);
+    }
+    *out = decimal.negative ? -value : value;
+    return true;
+}
+
+// An option's value as a number function reads it.
+static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool* failedOut)
+{
+    NumberOption o;
+    memset(&o, 0, sizeof o);
+    o.literal = Field(r, messageParameters, p, 0) == parameterOptionLiteral;
+    Value v = OptionValue(r, p, at);
+    *failedOut = IsFallback(v.kind);
+    bool textual = v.kind == valueText || (v.kind == valueString && v.behind == valueText);
+    if (textual)
+    {
+        o.hasText = true;
+        o.text = v.text;
+        o.length = v.length;
+    }
+    else
+    {
+        o.hasInteger = WholeValue(&v, &o.integer);
+    }
+    return o;
+}
+
+// The number a number function's operand gives: a number literal (or a
+// string argument that is one), a numeric argument, or a number value,
+// whose options pass on. mloc_messageFaultBadOperand for anything else.
+static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function,
+                                          const Value* operand, uint32_t at, NumberValue* out)
+{
+    if (operand == NULL)
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    ValueKind kind = operand->kind == valueString ? operand->behind : operand->kind;
+    mlocDecimal decimal;
+    if (kind == valueNumber)
+    {
+        mlocMessageFaultKind fault = mlocNumberFromValue(function, &operand->number, out);
+        if (fault != mloc_messageFaultNone)
+        {
+            mlocReportFault(r, fault, at);
+        }
+        return mloc_messageFaultNone;
+    }
+    if (kind == valueText)
+    {
+        if (!mlocNumberLiteral(operand->text, operand->length))
+        {
+            return mloc_messageFaultBadOperand;
+        }
+        if (mlocParseDecimal((const char*)operand->text, operand->length, &decimal).status !=
+            mloc_success)
+        {
+            // A literal past the decimal's 40 digits or its exponent.
+            return mloc_messageFaultUnsupportedOperation;
+        }
+    }
+    else if (kind == valueArgument)
+    {
+        const mlocMessageValue* a = operand->argument;
+        mlocResult made =
+            a->kind == mloc_messageValueInteger  ? mlocMakeDecimal(a->as.integer, &decimal)
+            : a->kind == mloc_messageValueDouble ? mlocMakeShortestDecimal(a->as.number, &decimal)
+                                                 : mloc_errorInvalid;
+        if (a->kind == mloc_messageValueDecimal)
+        {
+            decimal = *a->as.decimal;
+            made = mloc_success;
+        }
+        if (made != mloc_success)
+        {
+            return mloc_messageFaultBadOperand;
+        }
+    }
+    else
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    *out = mlocMakeNumberValue(function, &decimal);
+    return mloc_messageFaultNone;
+}
+
+// A :number or :integer value: its operand's number, the options passed
+// on, then the expression's own (u: options aside), checked together.
+static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction function,
+                           const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    NumberValue n;
+    mlocMessageFaultKind fault = NumberOperand(r, function, operand, at, &n);
+    if (fault == mloc_messageFaultNone && function == numberFunctionInteger && !mlocMakeInteger(&n))
+    {
+        fault = mloc_messageFaultUnsupportedOperation;
+    }
+    if (fault != mloc_messageFaultNone)
+    {
+        mlocReportFault(r, fault, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        uint32_t kind = Field(r, messageParameters, p, 0);
+        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
+            UnicodeOption(r, p))
+        {
+            continue;
+        }
+        bool failed = false;
+        NumberOption option = NumberOptionAt(r, p, at, &failed);
+        const uint8_t* name = Pool(r, Field(r, messageParameters, p, 1));
+        size_t length = Field(r, messageParameters, p, 2);
+        if (failed)
+        {
+            // Reported in option resolution; a select still counts as
+            // set from a variable.
+            n.selectable = n.selectable && !(length == 6 && memcmp(name, "select", 6) == 0);
+            continue;
+        }
+        fault = mlocSetNumberOption(&n, name, length, &option);
+        if (fault != mloc_messageFaultNone)
+        {
+            mlocReportFault(r, fault, at);
+        }
+    }
+    for (uint32_t i = mlocCheckNumberOptions(&n); i > 0; i--)
+    {
+        mlocReportFault(r, mloc_messageFaultBadOption, at);
+    }
+    Value v = Make(valueNumber);
+    v.number = n;
+    // A number reads in its locale's direction.
+    v.direction = r->formatter.direction;
+    return v;
+}
+
 Value mlocResolveExpression(Resolution* r, uint32_t expression)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
@@ -440,8 +638,21 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
                     Field(r, messageExpressions, expression, 6), at);
     Directed d = UnicodeOptions(r, expression);
     const Value* given = operandKind == operandNone ? NULL : &operand;
-    Value v = slot == messageFunctionString ? StringOf(r, expression, given)
-                                            : CallProgram(r, expression, slot, given);
+    Value v;
+    if (slot == messageFunctionString)
+    {
+        v = StringOf(r, expression, given);
+    }
+    else if (slot == messageFunctionNumber || slot == messageFunctionInteger)
+    {
+        NumberFunction function =
+            slot == messageFunctionNumber ? numberFunctionNumber : numberFunctionInteger;
+        v = ResolveNumber(r, expression, function, given);
+    }
+    else
+    {
+        v = CallProgram(r, expression, slot, given);
+    }
     if (d.set && !IsFallback(v.kind))
     {
         // u:dir replaces the direction (inherit keeps it) and isolates.

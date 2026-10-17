@@ -182,10 +182,12 @@ extern "C"
     } mlocMessageFaults;
 
     // A function's resolved value: 64 bytes its resolve entry fills as it
-    // likes, which its format and match entries read back.
-    typedef struct mlocMessageResolved
+    // likes, which its format and match entries read back. As an
+    // accessor's storage it may hold a number value's decimal instead.
+    typedef union mlocMessageResolved
     {
         uint64_t opaque[8];
+        mlocDecimal decimal;
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
@@ -204,6 +206,9 @@ extern "C"
         // mloc_messageFaultBadOperand, or resolve something of its own;
         // the expression's text is then its fallback.
         mloc_messageOperandFallback = 4,
+        // A number function's value (:number, :integer): its decimal,
+        // unrounded; its options stay the formatter's.
+        mloc_messageOperandNumber = 5,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -215,6 +220,7 @@ extern "C"
         size_t length;
         const mlocMessageValue* argument;
         const mlocMessageResolved* resolved;
+        const mlocDecimal* number;
     } mlocMessageOperand;
 
     // A function call's options and locale, read with the accessors

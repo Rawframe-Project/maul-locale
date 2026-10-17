@@ -167,6 +167,13 @@ format.
   function's from its new `direction` entry) and `u:dir` sets it;
   `u:` options are hidden from functions, bad `u:dir` and `u:id` values
   are bad options, and markup resolves its options (mloc-0045).
+- Messages format and select with `:number` and `:integer`: ECMA-402's
+  options and defaults, options passed on from number values, exact and
+  plural selection with bad variant keys reported; program functions
+  receive number values as `mloc_messageOperandNumber`
+  (`mlocMessageResolved` is now a union that can hold its decimal), and
+  a declaration's faults are reported once however often it is named
+  (mloc-0045).
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

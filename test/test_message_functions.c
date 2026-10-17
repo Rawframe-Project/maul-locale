@@ -38,7 +38,8 @@ static void Add(Echo* e, const char* text, size_t length)
 }
 
 // An operand as echo shows it: "_" none, its text, "#" an argument,
-// "@" and the function's index a resolved value, "?" a fallback.
+// "N" and its digit count a number value, "@" and the function's index a
+// resolved value, "?" a fallback.
 static void AddOperand(Echo* e, const mlocMessageOperand* operand)
 {
     char shown[8];
@@ -52,6 +53,10 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
         break;
     case mloc_messageOperandArgument:
         Add(e, "#", 1);
+        break;
+    case mloc_messageOperandNumber:
+        snprintf(shown, sizeof shown, "N%d", operand->number->count);
+        Add(e, shown, strlen(shown));
         break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
@@ -353,6 +358,9 @@ static void TestCalls(void)
           "a resolved value is passed with its function's index");
     CHECK(Formats(".local $v = {|t| :string} {{{$v :x:echo k=$v}}}", a, 4, "t;k=t", NULL),
           "a :string value is passed as text");
+    CHECK(Formats(".local $n = {7.25 :number maximumFractionDigits=0} {{{$n :x:echo k=$n}}}", a, 4,
+                  "N3;k=N3", NULL),
+          "a number value is passed as its decimal, unrounded");
     static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable,
                                                       mloc_messageFaultBadOption, 0};
     CHECK(Formats("{|a| :x:echo k=$missing}", a, 4, "a;k=?", unresolved),

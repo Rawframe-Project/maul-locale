@@ -315,8 +315,8 @@ static uint64_t MessageCost(const MessageView* v, const uint8_t* words)
     return total + costliest;
 }
 
-// An expression's function slot: none, :string, a program function by
-// its name, or unknown.
+// An expression's function slot: none, a default function, a program
+// function by its name, or unknown.
 static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t e)
 {
     uint32_t length = Field(v, messageExpressions, e, 4);
@@ -325,9 +325,21 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
         return messageFunctionNone;
     }
     const uint8_t* name = v->pool + Field(v, messageExpressions, e, 3);
-    if (length == 6 && memcmp(name, "string", 6) == 0)
+    static const struct
     {
-        return messageFunctionString;
+        const char* name;
+        uint32_t slot;
+    } defaults[] = {
+        {"string", messageFunctionString},
+        {"number", messageFunctionNumber},
+        {"integer", messageFunctionInteger},
+    };
+    for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++)
+    {
+        if (length == strlen(defaults[i].name) && memcmp(name, defaults[i].name, length) == 0)
+        {
+            return defaults[i].slot;
+        }
     }
     for (size_t i = 0; i < f->functionCount; i++)
     {
@@ -389,7 +401,8 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
     {
         return result;
     }
-    if (h.view.count[messageSelectors] > messageSelectorLimit)
+    if (h.view.count[messageSelectors] > messageSelectorLimit ||
+        h.view.count[messageDeclarations] > messageDeclarationLimit)
     {
         return mloc_errorInvalid;
     }

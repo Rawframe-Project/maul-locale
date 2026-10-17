@@ -44,13 +44,16 @@ typedef struct BoundHeader
 static const uint32_t messageUnbound = UINT32_MAX;
 
 // An expression's function slot: none, a function the formatter does not
-// have, :string, or a program function (its index past the first).
+// have, one of the default functions, or a program function (its index
+// past the first).
 enum
 {
     messageFunctionNone = 0,
     messageFunctionUnknown = 1,
     messageFunctionString = 2,
-    messageFunctionProgram = 3,
+    messageFunctionNumber = 3,
+    messageFunctionInteger = 4,
+    messageFunctionProgram = 5,
 };
 
 // Slots take 24 bits: the program's functions are fewer.
@@ -59,6 +62,13 @@ static const uint32_t messageFunctionLimit = (1u << 24) - messageFunctionProgram
 // The most selectors a bound message has: their values are kept on the
 // stack while a variant is chosen.
 static const uint32_t messageSelectorLimit = 32;
+
+// The most declarations a bound message has: a format call keeps a bit
+// for each, whether its faults were reported.
+enum
+{
+    messageDeclarationLimit = 1024,
+};
 
 // The longest chain of expressions, each naming the next through a
 // declaration, that a bound message resolves on the stack.

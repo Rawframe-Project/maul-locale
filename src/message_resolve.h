@@ -13,6 +13,7 @@
 #define MLOC_SRC_MESSAGE_RESOLVE_H
 
 #include "message_bind.h"
+#include "message_number.h"
 
 #include "maul-locale/message.h"
 
@@ -31,6 +32,8 @@ typedef enum ValueKind
     valueString,
     // A program function's value.
     valueResolved,
+    // A number function's value.
+    valueNumber,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -54,7 +57,11 @@ typedef struct Value
     // fallback), and whether a u:dir other than inherit isolates it.
     mlocDirection direction;
     bool isolate;
-    mlocMessageResolved resolved;
+    union
+    {
+        mlocMessageResolved resolved;
+        NumberValue number;
+    };
 } Value;
 
 // The state of one format call that resolution reads and reports to.
@@ -73,6 +80,8 @@ typedef struct Resolution
     // whether running out has been reported.
     uint32_t budget;
     bool exhausted;
+    // A bit per declaration whose faults were reported.
+    uint8_t reported[messageDeclarationLimit / 8];
 } Resolution;
 
 // A record's field.

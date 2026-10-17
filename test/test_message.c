@@ -774,6 +774,8 @@ static const char* FaultName(mlocMessageFaultKind kind)
         return "bad-operand";
     case mloc_messageFaultBadOption:
         return "bad-option";
+    case mloc_messageFaultBadVariantKey:
+        return "bad-variant-key";
     default:
         return "other";
     }
@@ -782,8 +784,9 @@ static const char* FaultName(mlocMessageFaultKind kind)
 // Whether a case's expected errors are only those this slice reports.
 static bool FormatsNow(const SuiteCase* c)
 {
-    static const char* const known[] = {"unresolved-variable", "unknown-function", "bad-selector",
-                                        "bad-operand", "bad-option"};
+    static const char* const known[] = {"unresolved-variable", "unknown-function",
+                                        "bad-selector",        "bad-operand",
+                                        "bad-option",          "bad-variant-key"};
     const char* at = c->errors;
     while (*at != 0)
     {
@@ -800,8 +803,8 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":number",  ":integer", ":offset", ":currency",
-                                        ":percent", ":unit",    ":date",   ":time"};
+    static const char* const later[] = {":offset", ":currency", ":percent",
+                                        ":unit",   ":date",     ":time"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)
@@ -809,7 +812,8 @@ static bool FormatsNow(const SuiteCase* c)
             return false;
         }
     }
-    return c->expected != NULL && strcmp(c->locale, "fr") != 0;
+    // A case without a text checks only its faults.
+    return strcmp(c->locale, "fr") != 0;
 }
 
 // Appends text to a NUL-terminated string, as much as fits.
@@ -1101,18 +1105,19 @@ static void TestSuiteFormat(void)
         FaultNames(&faults, names, sizeof names);
         bool good = (result == mloc_success || result == mloc_withFallbacks) &&
                     (result == mloc_withFallbacks) == (faults.count > 0) &&
-                    output.length == strlen(c->expected) &&
-                    memcmp(s_text, c->expected, output.length) == 0 &&
+                    (c->expected == NULL || (output.length == strlen(c->expected) &&
+                                             memcmp(s_text, c->expected, output.length) == 0)) &&
                     strcmp(names, c->errors) == 0;
         if (!good)
         {
             printf("  %s: [%s] -> [%.*s] errors [%s] expected [%s] [%s]\n", c->file, c->source,
-                   (int)output.length, s_text, names, c->expected, c->errors);
+                   (int)output.length, s_text, names, c->expected ? c->expected : "(any)",
+                   c->errors);
         }
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 175, "every case without the default functions formats");
+    CHECK(formatted >= 238, "every case the functions built so far reach formats");
 }
 
 static mlocMessageFormatter s_formatter;
