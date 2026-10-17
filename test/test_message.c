@@ -154,6 +154,13 @@ static void TestRecords(void)
     CHECK(Compile("{$\303\251}{$e\314\201}{$\342\200\216\303\251\342\200\216}", &size),
           "names in either form compile");
     CHECK(Count(messageVariables) == 1 && Count(messagePool) == 2, "they are one variable");
+
+    // Names of three and four bytes (Devanagari ka, U+0915, after an E0
+    // lead; U+10FFFD, the last name character); noncharacters refused.
+    CHECK(Compile("{$\340\244\225}{$\364\217\277\275}", &size) && Count(messagePool) == 7,
+          "names past two bytes compile");
+    CHECK(!Compile("{$\357\277\276}", &size) && !Compile("{$\357\267\220}", &size),
+          "a noncharacter starts no name");
 }
 
 // A record's 32-bit field.
