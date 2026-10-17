@@ -785,6 +785,10 @@ static void TestCompositeRanges(void)
     CHECK(SpoiledComposite(compositeIntervals + 6, 0, mloc_timeStyleNone) == mloc_success &&
               SpoiledComposite(owns + 2, 1, mloc_timeStyleFull) == mloc_success,
           "the unit as built, an index spoiled to its own value");
+    // Patterns 3, "{1} x", and 4, "{0} x", hold one value each.
+    CHECK(!SpoiledCompositeValid(compositeIntervals + 4, 3) &&
+              !SpoiledCompositeValid(compositeIntervals + 4, 4),
+          "a fallback holding one of the values");
     CHECK(!SpoiledCompositeValid(compositeIntervals + 6, notDate) &&
               !SpoiledCompositeValid(compositeIntervals + 8, notDate),
           "a time range's short date or era date the formatter cannot write");
