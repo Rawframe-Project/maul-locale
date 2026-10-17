@@ -229,13 +229,9 @@ mlocResult mlocReadDateLocale(DateLocale* l, const mlocDataSet* data, const mloc
     l->digits = mlocInitNumberCore(&l->core, data, locale, mloc_numberDecimal);
     uint32_t calendar = l->preferences.calendar;
     l->calendar = calendar == mloc_calendarIso8601 ? mloc_calendarGregorian : calendar;
-    if (l->digits < 0 || !mlocFindDateNames(data, locale, l->calendar, &l->names, &l->nameSet))
-    {
-        return mloc_errorNotFound;
-    }
-    l->gregorianSet = l->nameSet;
-    if (l->calendar != mloc_calendarGregorian &&
-        !mlocFindDateNames(data, locale, mloc_calendarGregorian, &l->names, &l->gregorianSet))
+    if (l->digits < 0 || !mlocFindDateUnits(data, locale, &l->units) ||
+        !mlocDateNamesOf(&l->units, l->calendar, &l->nameSet) ||
+        !mlocDateNamesOf(&l->units, mloc_calendarGregorian, &l->gregorianSet))
     {
         return mloc_errorNotFound;
     }
@@ -245,18 +241,18 @@ mlocResult mlocReadDateLocale(DateLocale* l, const mlocDataSet* data, const mloc
 static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale,
                           const DateLocale* l, const mlocDateOptions* o)
 {
-    DatePatterns patterns;
+    const DatePatterns* patterns = &l->units.patterns;
     const uint8_t* set = nullptr;
     const uint8_t* intervals = nullptr;
-    if (!mlocFindDateSet(data, locale, l->calendar, &patterns, &set, &intervals))
+    if (!mlocDateSetOf(&l->units, l->calendar, &set, &intervals))
     {
         return mloc_errorNotFound;
     }
-    if (!FindPatterns(f, &patterns, set, o) || !FindRange(f, &patterns, intervals, o))
+    if (!FindPatterns(f, patterns, set, o) || !FindRange(f, patterns, intervals, o))
     {
         return mloc_errorData;
     }
-    f->names = l->names;
+    f->names = l->units.names;
     f->nameSet = l->nameSet;
     f->gregorianSet = l->gregorianSet;
     memcpy(f->digits, l->core.digits, sizeof(f->digits));

@@ -756,64 +756,131 @@ static bool RecordOf(const uint8_t* dates, uint32_t at, const uint8_t* section, 
     return true;
 }
 
-bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals)
+bool mlocFindDateUnits(const mlocDataSet* data, const mlocLocale* locale, DateUnits* units)
 {
+    DataSpan found;
     DataSpan unit;
-    const uint8_t* dates = nullptr;
-    if (calendar >= dateCalendarCount || !FindDates(data, locale, kindDatePatterns, &unit, &dates))
+    bool fellBack = false;
+    DataView view;
+    memset(units, 0, sizeof(*units));
+    if (!mlocFindLocaleUnit(data, mloc_componentMain, kindDates, locale, &found, &fellBack, &view))
     {
         return false;
     }
-    *patterns = mlocReadDatePatterns(unit);
-    return RecordOf(dates, calendar, patterns->sets, patterns->setCount, dateSetSize, set) &&
-           RecordOf(dates, 3 * dateCalendarCount + calendar, patterns->intervalSets,
-                    patterns->intervalSetCount, dateIntervalSetSize, intervals);
+    units->dates = found.bytes;
+    units->hasPatterns = mlocFindDataUnit(&view, kindDatePatterns, dataNoLocale, &unit);
+    if (units->hasPatterns)
+    {
+        units->patterns = mlocReadDatePatterns(unit);
+    }
+    units->hasNames = mlocFindDataUnit(&view, kindDateNames, dataNoLocale, &unit);
+    if (units->hasNames)
+    {
+        units->names = mlocReadDateNames(unit);
+    }
+    return true;
+}
+
+bool mlocDateSetOf(const DateUnits* u, uint32_t calendar, const uint8_t** set,
+                   const uint8_t** intervals)
+{
+    const DatePatterns* p = &u->patterns;
+    return u->hasPatterns && calendar < dateCalendarCount &&
+           RecordOf(u->dates, calendar, p->sets, p->setCount, dateSetSize, set) &&
+           RecordOf(u->dates, 3 * dateCalendarCount + calendar, p->intervalSets,
+                    p->intervalSetCount, dateIntervalSetSize, intervals);
+}
+
+bool mlocTimeSetOf(const DateUnits* u, uint32_t calendar, const uint8_t** set,
+                   const uint8_t** intervals)
+{
+    const DatePatterns* p = &u->patterns;
+    return u->hasPatterns && calendar < dateCalendarCount &&
+           RecordOf(u->dates, 2 * dateCalendarCount + calendar, p->timeSets, p->timeSetCount,
+                    dateTimeSetSize, set) &&
+           (intervals == nullptr ||
+            RecordOf(u->dates, 3 * dateCalendarCount + calendar, p->intervalSets,
+                     p->intervalSetCount, dateIntervalSetSize, intervals));
+}
+
+bool mlocDateNamesOf(const DateUnits* u, uint32_t calendar, const uint8_t** set)
+{
+    return u->hasNames && calendar < dateCalendarCount &&
+           RecordOf(u->dates, dateCalendarCount + calendar, u->names.sets, u->names.setCount,
+                    dateNameSetSize, set);
+}
+
+bool mlocDayPeriodRulesOf(const DateUnits* u, const uint8_t** rules)
+{
+    return u->hasNames && RecordOf(u->dates, 4 * dateCalendarCount, u->names.rules,
+                                   u->names.ruleCount, dateRuleSize, rules);
+}
+
+// The units of a locale's dates beside a unit of one kind, found along
+// its main chain.
+static bool FindDatesOf(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
+                        DateUnits* u)
+{
+    DataSpan unit;
+    memset(u, 0, sizeof(*u));
+    if (!FindDates(data, locale, kind, &unit, &u->dates))
+    {
+        return false;
+    }
+    if (kind == kindDatePatterns)
+    {
+        u->hasPatterns = true;
+        u->patterns = mlocReadDatePatterns(unit);
+    }
+    else
+    {
+        u->hasNames = true;
+        u->names = mlocReadDateNames(unit);
+    }
+    return true;
+}
+
+bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
+                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals)
+{
+    DateUnits u;
+    if (!FindDatesOf(data, locale, kindDatePatterns, &u))
+    {
+        return false;
+    }
+    *patterns = u.patterns;
+    return mlocDateSetOf(&u, calendar, set, intervals);
 }
 
 bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                      DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals)
 {
-    DataSpan unit;
-    const uint8_t* dates = nullptr;
-    if (calendar >= dateCalendarCount || !FindDates(data, locale, kindDatePatterns, &unit, &dates))
+    DateUnits u;
+    if (!FindDatesOf(data, locale, kindDatePatterns, &u))
     {
         return false;
     }
-    *patterns = mlocReadDatePatterns(unit);
-    return RecordOf(dates, 2 * dateCalendarCount + calendar, patterns->timeSets,
-                    patterns->timeSetCount, dateTimeSetSize, set) &&
-           (intervals == nullptr ||
-            RecordOf(dates, 3 * dateCalendarCount + calendar, patterns->intervalSets,
-                     patterns->intervalSetCount, dateIntervalSetSize, intervals));
+    *patterns = u.patterns;
+    return mlocTimeSetOf(&u, calendar, set, intervals);
 }
 
 bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
                        DateNameTables* names, const uint8_t** set)
 {
-    DataSpan unit;
-    const uint8_t* dates = nullptr;
-    if (calendar >= dateCalendarCount || !FindDates(data, locale, kindDateNames, &unit, &dates))
+    DateUnits u;
+    if (!FindDatesOf(data, locale, kindDateNames, &u))
     {
         return false;
     }
-    *names = mlocReadDateNames(unit);
-    return RecordOf(dates, dateCalendarCount + calendar, names->sets, names->setCount,
-                    dateNameSetSize, set);
+    *names = u.names;
+    return mlocDateNamesOf(&u, calendar, set);
 }
 
 bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
                             const uint8_t** rules)
 {
-    DataSpan unit;
-    const uint8_t* dates = nullptr;
-    if (!FindDates(data, locale, kindDateNames, &unit, &dates))
-    {
-        return false;
-    }
-    DateNameTables names = mlocReadDateNames(unit);
-    return RecordOf(dates, 4 * dateCalendarCount, names.rules, names.ruleCount, dateRuleSize,
-                    rules);
+    DateUnits u;
+    return FindDatesOf(data, locale, kindDateNames, &u) && mlocDayPeriodRulesOf(&u, rules);
 }
 
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out)

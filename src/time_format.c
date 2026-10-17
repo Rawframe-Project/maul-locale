@@ -237,29 +237,29 @@ static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
     return true;
 }
 
-static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                          const DateLocale* l, const mlocTimeOptions* o, TimeChoice* choice)
+static mlocResult Resolve(TimeFormat* f, const mlocLocale* locale, const DateLocale* l,
+                          const mlocTimeOptions* o, TimeChoice* choice)
 {
-    DatePatterns patterns;
+    const DatePatterns* patterns = &l->units.patterns;
     const uint8_t* set = nullptr;
     const uint8_t* intervals = nullptr;
     const uint8_t* rules = nullptr;
     uint32_t entries[timeFormatPatterns];
     // The ISO calendar's time set and names are the Gregorian ones.
-    if (!mlocFindTimeSet(data, locale, l->calendar, &patterns, &set, &intervals) ||
-        !mlocFindDayPeriodRules(data, locale, &rules))
+    if (!mlocTimeSetOf(&l->units, l->calendar, &set, &intervals) ||
+        !mlocDayPeriodRulesOf(&l->units, &rules))
     {
         return mloc_errorNotFound;
     }
-    f->names = l->names;
+    f->names = l->units.names;
     bool asked = false;
     mlocHourCycle cycle = CycleOf(o, locale, &l->preferences, &asked);
-    if (!FindPatterns(f, &patterns, set, o, cycle, asked, entries) ||
-        !FindRange(f, &patterns, set, intervals, entries) || !FindRelativeGlues(&f->range, set))
+    if (!FindPatterns(f, patterns, set, o, cycle, asked, entries) ||
+        !FindRange(f, patterns, set, intervals, entries) || !FindRelativeGlues(&f->range, set))
     {
         return mloc_errorData;
     }
-    *choice = (TimeChoice){patterns, set,
+    *choice = (TimeChoice){*patterns, set,
                            cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 ||
                                cycle == mloc_hourCycleClock12};
     static const uint8_t s_letters[] = {0, 'K', 'h', 'H', 'k', 0, 0};
@@ -287,7 +287,7 @@ mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mloc
     DateLocale own;
     mlocResult result = shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale);
     result = result < 0 ? result
-                        : Resolve(f, data, locale, shared != nullptr ? shared : &own, options,
+                        : Resolve(f, locale, shared != nullptr ? shared : &own, options,
                                   choice != nullptr ? choice : &unused);
     f->stamp = result < 0 ? 0 : timeStamp;
     return result;

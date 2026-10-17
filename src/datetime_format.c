@@ -109,10 +109,10 @@ static bool FindWhole(DateTimeFormat* f, const mlocDateTimeOptions* o, const Tim
 
 // A range's glues: each length's of the formatter's kind, checked, and
 // the Gregorian medium standard glue.
-static bool FindRangeGlues(DateTimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                           const TimeChoice* c, uint32_t kind)
+static bool FindRangeGlues(DateTimeFormat* f, const DateLocale* shared, const TimeChoice* c,
+                           uint32_t kind)
 {
-    DatePatterns gregorian;
+    const DatePatterns* gregorian = &shared->units.patterns;
     const uint8_t* set = nullptr;
     DataSpan glue;
     for (uint32_t length = 0; length < dateStandardCount; length++)
@@ -123,8 +123,8 @@ static bool FindRangeGlues(DateTimeFormat* f, const mlocDataSet* data, const mlo
             return false;
         }
     }
-    if (!mlocFindTimeSet(data, locale, mloc_calendarGregorian, &gregorian, &set, nullptr) ||
-        !mlocDatePattern(&gregorian, mlocLoad16(set + 2 * (dateTimeGlue + 2)), &glue) ||
+    if (!mlocTimeSetOf(&shared->units, mloc_calendarGregorian, &set, nullptr) ||
+        !mlocDatePattern(gregorian, mlocLoad16(set + 2 * (dateTimeGlue + 2)), &glue) ||
         !mlocValidGlue(glue.bytes, glue.size))
     {
         return false;
@@ -164,7 +164,7 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     uint32_t kind = o->glue == mloc_dateTimeGlueStandard ? dateTimeGlue : dateTimeAtGlue;
     // The range's glues hold every length's of the kind, checked.
     DataSpan glue;
-    if (!FindRangeGlues(f, data, locale, &choice, kind) ||
+    if (!FindRangeGlues(f, &shared, &choice, kind) ||
         !mlocDatePattern(&choice.patterns, mlocLoad16(choice.set + 2 * (kind + style)), &glue))
     {
         return mloc_errorData;

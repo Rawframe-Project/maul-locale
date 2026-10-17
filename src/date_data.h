@@ -116,6 +116,29 @@ bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32
 // unit's.
 bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
                             const uint8_t** rules);
+// A locale's dates unit along its main chain and the patterns and names
+// units beside it (each when the data has it), found once for every set
+// a formatter reads. False when the data has no dates.
+typedef struct DateUnits
+{
+    const uint8_t* dates;
+    DatePatterns patterns;
+    DateNameTables names;
+    bool hasPatterns;
+    bool hasNames;
+} DateUnits;
+
+bool mlocFindDateUnits(const mlocDataSet* data, const mlocLocale* locale, DateUnits* units);
+
+// The sets of found units, as mlocFindDateSet, mlocFindTimeSet,
+// mlocFindDateNames and mlocFindDayPeriodRules give them.
+bool mlocDateSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
+                   const uint8_t** intervals);
+bool mlocTimeSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
+                   const uint8_t** intervals);
+bool mlocDateNamesOf(const DateUnits* units, uint32_t calendar, const uint8_t** set);
+bool mlocDayPeriodRulesOf(const DateUnits* units, const uint8_t** rules);
+
 // A pattern of a valid unit by index; false past its patterns.
 bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
 

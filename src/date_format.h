@@ -21,16 +21,16 @@ typedef struct DateValue
 
 // What a locale's date and time formatters both read: its preferences,
 // its number symbols with their result (a fallback of the numbering
-// system asked for), and the names of its calendar (the ISO calendar's
-// the Gregorian's) and of the Gregorian; read once for a date-time
-// formatter.
+// system asked for), its date units, and the names of its calendar (the
+// ISO calendar's the Gregorian's) and of the Gregorian; read once for a
+// date-time formatter.
 typedef struct DateLocale
 {
     mlocLocalePreferences preferences;
     NumberCore core;
     mlocResult digits;
     uint32_t calendar;
-    DateNameTables names;
+    DateUnits units;
     const uint8_t* nameSet;
     const uint8_t* gregorianSet;
 } DateLocale;
