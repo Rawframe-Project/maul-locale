@@ -148,9 +148,14 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     {
         dateOptions.length = mloc_dateLengthMedium;
     }
-    mlocResult date = mlocMakeDateFormat(&f->date, data, locale, &dateOptions);
+    // The date and the time read the locale's preferences, digits and
+    // names once.
+    DateLocale shared;
+    mlocResult read = mlocReadDateLocale(&shared, data, locale);
+    mlocResult date =
+        read < 0 ? read : mlocMakeDateFormat(&f->date, data, locale, &shared, &dateOptions);
     mlocResult time =
-        date < 0 ? date : mlocMakeTimeFormat(&f->time, data, locale, &o->time, &choice);
+        date < 0 ? date : mlocMakeTimeFormat(&f->time, data, locale, &shared, &o->time, &choice);
     if (time < 0)
     {
         return time;

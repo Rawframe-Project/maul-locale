@@ -220,24 +220,35 @@ static mlocResult FindOverride(DateFormat* f, const mlocDataSet* data, const mlo
     return mloc_success;
 }
 
-static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                          const mlocDateOptions* o)
+mlocResult mlocReadDateLocale(DateLocale* l, const mlocDataSet* data, const mlocLocale* locale)
 {
-    mlocLocalePreferences preferences;
-    NumberCore core;
-    DatePatterns patterns;
-    const uint8_t* set = nullptr;
-    const uint8_t* intervals = nullptr;
-    if (mlocGetLocalePreferences(data, locale, &preferences) != mloc_success)
+    if (mlocGetLocalePreferences(data, locale, &l->preferences) != mloc_success)
     {
         return mloc_errorNotFound;
     }
-    mlocResult digits = mlocInitNumberCore(&core, data, locale, mloc_numberDecimal);
-    uint32_t calendar = preferences.calendar;
-    uint32_t names = calendar == mloc_calendarIso8601 ? mloc_calendarGregorian : calendar;
-    if (digits < 0 || !mlocFindDateSet(data, locale, names, &patterns, &set, &intervals) ||
-        !mlocFindDateNames(data, locale, names, &f->names, &f->nameSet) ||
-        !mlocFindDateNames(data, locale, mloc_calendarGregorian, &f->names, &f->gregorianSet))
+    l->digits = mlocInitNumberCore(&l->core, data, locale, mloc_numberDecimal);
+    uint32_t calendar = l->preferences.calendar;
+    l->calendar = calendar == mloc_calendarIso8601 ? mloc_calendarGregorian : calendar;
+    if (l->digits < 0 || !mlocFindDateNames(data, locale, l->calendar, &l->names, &l->nameSet))
+    {
+        return mloc_errorNotFound;
+    }
+    l->gregorianSet = l->nameSet;
+    if (l->calendar != mloc_calendarGregorian &&
+        !mlocFindDateNames(data, locale, mloc_calendarGregorian, &l->names, &l->gregorianSet))
+    {
+        return mloc_errorNotFound;
+    }
+    return l->digits;
+}
+
+static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale,
+                          const DateLocale* l, const mlocDateOptions* o)
+{
+    DatePatterns patterns;
+    const uint8_t* set = nullptr;
+    const uint8_t* intervals = nullptr;
+    if (!mlocFindDateSet(data, locale, l->calendar, &patterns, &set, &intervals))
     {
         return mloc_errorNotFound;
     }
@@ -245,25 +256,30 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     {
         return mloc_errorData;
     }
-    memcpy(f->digits, core.digits, sizeof(f->digits));
-    f->digitLength = core.digitLength;
-    uint32_t minus = core.symbolLength[numberMinus];
+    f->names = l->names;
+    f->nameSet = l->nameSet;
+    f->gregorianSet = l->gregorianSet;
+    memcpy(f->digits, l->core.digits, sizeof(f->digits));
+    f->digitLength = l->core.digitLength;
+    uint32_t minus = l->core.symbolLength[numberMinus];
     f->minusLength = (uint8_t)(minus <= sizeof(f->minus) ? minus : 0);
-    memcpy(f->minus, core.symbolText + core.symbolStart[numberMinus], f->minusLength);
-    f->calendar = (uint8_t)names;
-    f->firstDay = preferences.firstDay;
-    f->minimalDays = preferences.minimalDays;
+    memcpy(f->minus, l->core.symbolText + l->core.symbolStart[numberMinus], f->minusLength);
+    f->calendar = (uint8_t)l->calendar;
+    f->firstDay = l->preferences.firstDay;
+    f->minimalDays = l->preferences.minimalDays;
     f->yearStyle = o->style != mloc_dateStyleNone ? dateStandard : (uint8_t)o->yearStyle;
     mlocResult override = FindOverride(f, data, locale);
-    return override < 0 ? override : digits;
+    return override < 0 ? override : l->digits;
 }
 
 mlocResult mlocMakeDateFormat(DateFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                              const mlocDateOptions* o)
+                              const DateLocale* shared, const mlocDateOptions* o)
 {
     static_assert(sizeof(s_entries) == mloc_dateFieldSetYearMonth + 1, "an entry per field set");
     memset(f, 0, sizeof(*f));
-    mlocResult result = Resolve(f, data, locale, o);
+    DateLocale own;
+    mlocResult result = shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale);
+    result = result < 0 ? result : Resolve(f, data, locale, shared != nullptr ? shared : &own, o);
     f->stamp = result < 0 ? 0 : dateStamp;
     return result;
 }
@@ -342,7 +358,7 @@ mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocData
     }
     ZonedDateFormat f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocMakeDateFormat(&f.date, data, locale, &o);
+    mlocResult result = mlocMakeDateFormat(&f.date, data, locale, nullptr, &o);
     if (result >= 0 && o.zone != mloc_zoneStyleNone)
     {
         // The zone reads the locale's digits as the date does: one result.

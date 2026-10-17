@@ -19,13 +19,36 @@ typedef struct DateValue
     uint32_t pattern;
 } DateValue;
 
+// What a locale's date and time formatters both read: its preferences,
+// its number symbols with their result (a fallback of the numbering
+// system asked for), and the names of its calendar (the ISO calendar's
+// the Gregorian's) and of the Gregorian; read once for a date-time
+// formatter.
+typedef struct DateLocale
+{
+    mlocLocalePreferences preferences;
+    NumberCore core;
+    mlocResult digits;
+    uint32_t calendar;
+    DateNameTables names;
+    const uint8_t* nameSet;
+    const uint8_t* gregorianSet;
+} DateLocale;
+
+// Reads what a locale's date and time formatters share: the number
+// core's result; mloc_errorNotFound for data without the preferences,
+// the number units or the names.
+mlocResult mlocReadDateLocale(DateLocale* shared, const mlocDataSet* data,
+                              const mlocLocale* locale);
+
 // Whether date options are in range.
 bool mlocValidDateOptions(const mlocDateOptions* options);
 
-// Makes a formatter's state from valid options; its result as
+// Makes a formatter's state from valid options and what the locale's
+// formatters share (null to read it); its result as
 // mlocInitDateFormatter's.
 mlocResult mlocMakeDateFormat(DateFormat* format, const mlocDataSet* data, const mlocLocale* locale,
-                              const mlocDateOptions* options);
+                              const DateLocale* shared, const mlocDateOptions* options);
 
 // Whether a state is one mlocMakeDateFormat made.
 bool mlocDateFormatSound(const DateFormat* format);

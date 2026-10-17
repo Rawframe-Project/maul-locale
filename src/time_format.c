@@ -238,31 +238,22 @@ static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
 }
 
 static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                          const mlocTimeOptions* o, TimeChoice* choice)
+                          const DateLocale* l, const mlocTimeOptions* o, TimeChoice* choice)
 {
-    mlocLocalePreferences preferences;
-    NumberCore core;
     DatePatterns patterns;
     const uint8_t* set = nullptr;
     const uint8_t* intervals = nullptr;
-    const uint8_t* nameSet = nullptr;
     const uint8_t* rules = nullptr;
     uint32_t entries[timeFormatPatterns];
-    if (mlocGetLocalePreferences(data, locale, &preferences) != mloc_success)
-    {
-        return mloc_errorNotFound;
-    }
-    mlocResult digits = mlocInitNumberCore(&core, data, locale, mloc_numberDecimal);
     // The ISO calendar's time set and names are the Gregorian ones.
-    uint32_t calendar = preferences.calendar;
-    if (digits < 0 || !mlocFindTimeSet(data, locale, calendar, &patterns, &set, &intervals) ||
-        !mlocFindDateNames(data, locale, calendar, &f->names, &nameSet) ||
+    if (!mlocFindTimeSet(data, locale, l->calendar, &patterns, &set, &intervals) ||
         !mlocFindDayPeriodRules(data, locale, &rules))
     {
         return mloc_errorNotFound;
     }
+    f->names = l->names;
     bool asked = false;
-    mlocHourCycle cycle = CycleOf(o, locale, &preferences, &asked);
+    mlocHourCycle cycle = CycleOf(o, locale, &l->preferences, &asked);
     if (!FindPatterns(f, &patterns, set, o, cycle, asked, entries) ||
         !FindRange(f, &patterns, set, intervals, entries) || !FindRelativeGlues(&f->range, set))
     {
@@ -273,26 +264,31 @@ static mlocResult Resolve(TimeFormat* f, const mlocDataSet* data, const mlocLoca
                                cycle == mloc_hourCycleClock12};
     static const uint8_t s_letters[] = {0, 'K', 'h', 'H', 'k', 0, 0};
     f->hourLetter = s_letters[cycle];
-    f->dayPeriods = mlocDateNameList(&f->names, mlocLoad16(nameSet + 2 * dateNamesDayPeriods));
+    f->dayPeriods = mlocDateNameList(&f->names, mlocLoad16(l->nameSet + 2 * dateNamesDayPeriods));
     memcpy(f->rules, rules, dateRuleSize);
-    memcpy(f->digits, core.digits, sizeof(f->digits));
-    f->digitLength = core.digitLength;
-    uint32_t decimal = core.symbolLength[numberDecimal];
+    memcpy(f->digits, l->core.digits, sizeof(f->digits));
+    f->digitLength = l->core.digitLength;
+    uint32_t decimal = l->core.symbolLength[numberDecimal];
     f->decimalLength = (uint8_t)(decimal <= sizeof(f->decimal) ? decimal : 0);
-    memcpy(f->decimal, core.symbolText + core.symbolStart[numberDecimal], f->decimalLength);
+    memcpy(f->decimal, l->core.symbolText + l->core.symbolStart[numberDecimal], f->decimalLength);
     f->fractionDigits =
         o->style == mloc_timeStyleNone && o->precision >= mloc_timePrecisionFraction1
             ? (uint8_t)(o->precision - mloc_timePrecisionFraction1 + 1)
             : 0;
-    return digits;
+    return l->digits;
 }
 
 mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                              const mlocTimeOptions* options, TimeChoice* choice)
+                              const DateLocale* shared, const mlocTimeOptions* options,
+                              TimeChoice* choice)
 {
     TimeChoice unused;
     memset(f, 0, sizeof(*f));
-    mlocResult result = Resolve(f, data, locale, options, choice != nullptr ? choice : &unused);
+    DateLocale own;
+    mlocResult result = shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale);
+    result = result < 0 ? result
+                        : Resolve(f, data, locale, shared != nullptr ? shared : &own, options,
+                                  choice != nullptr ? choice : &unused);
     f->stamp = result < 0 ? 0 : timeStamp;
     return result;
 }
@@ -308,7 +304,7 @@ mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocData
     }
     ZonedTimeFormat f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocMakeTimeFormat(&f.time, data, locale, &o, nullptr);
+    mlocResult result = mlocMakeTimeFormat(&f.time, data, locale, nullptr, &o, nullptr);
     if (result >= 0 && f.time.zoned)
     {
         mlocZoneStyle style = o.zone != mloc_zoneStyleNone ? o.zone : mloc_zoneStyleSpecificShort;
@@ -510,7 +506,7 @@ mlocResult mlocFormatTimeRange(const mlocTimeFormatter* formatter, const mlocTim
 static mlocResult MakeRangeDate(const ZonedTimeFormat* f, DateFormat* date)
 {
     mlocDateOptions options = {.length = mloc_dateLengthShort, .yearStyle = mloc_yearStyleFull};
-    return mlocMakeDateFormat(date, f->zone.data, &f->zone.locale, &options);
+    return mlocMakeDateFormat(date, f->zone.data, &f->zone.locale, nullptr, &options);
 }
 
 mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,

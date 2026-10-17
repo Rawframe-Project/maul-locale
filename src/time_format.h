@@ -7,6 +7,7 @@
 #ifndef MLOC_TIME_FORMAT_H
 #define MLOC_TIME_FORMAT_H
 
+#include "date_format.h"
 #include "time_write.h"
 #include "zone_format.h"
 
@@ -22,11 +23,13 @@ typedef struct TimeChoice
 // Whether time options are in range.
 bool mlocValidTimeOptions(const mlocTimeOptions* options);
 
-// Makes a formatter's state from valid options; its result as
+// Makes a formatter's state from valid options and what the locale's
+// formatters share (null to read it); its result as
 // mlocInitTimeFormatter's. choice, when not null, receives what it was
 // made from.
 mlocResult mlocMakeTimeFormat(TimeFormat* format, const mlocDataSet* data, const mlocLocale* locale,
-                              const mlocTimeOptions* options, TimeChoice* choice);
+                              const DateLocale* shared, const mlocTimeOptions* options,
+                              TimeChoice* choice);
 
 // Whether a state is one mlocMakeTimeFormat made.
 bool mlocTimeFormatSound(const TimeFormat* format);
