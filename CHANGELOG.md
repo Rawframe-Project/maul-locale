@@ -202,6 +202,10 @@ format.
   `mloc_messageOperandCurrency` (mloc-0045).
 - `mlocCurrencyOptions` gains `sign` (ECMA-402's `currencySign`):
   standard or accounting over the locale's `-u-cf` choice (mloc-0022).
+- Fixed: `:string` over a date function's value (`.local $d = {|2006-01-02|
+  :date} {{{$d :string}}}`) took it for a program function's and called
+  through the function table at an index it never set; it is now a bad
+  operand, as over a number function's value.
 - Fixed: `mlocFormatMessage` read a decimal argument without checking
   it; one the library does not make (an exponent past its limits) is now
   `mloc_errorInvalid`, where `:offset` could write past its work area.

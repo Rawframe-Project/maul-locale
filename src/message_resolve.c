@@ -404,9 +404,11 @@ void mlocResolveMarkup(Resolution* r, uint32_t markup)
 MLOC_NOINLINE static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
-    bool good =
-        operand != NULL && operand->kind != valueResolved && operand->kind != valueNumber &&
-        !(operand->kind == valueArgument && operand->argument->kind == mloc_messageValueObject);
+    // Only the kinds it can stand behind: a function's value never.
+    ValueKind kind = operand == NULL ? valueResolved : operand->kind;
+    bool good = kind == valueText || kind == valueString || kind == valueFallbackVariable ||
+                kind == valueFallbackLiteral || kind == valueFallbackFunction ||
+                (kind == valueArgument && operand->argument->kind != mloc_messageValueObject);
     if (!good)
     {
         mlocReportFault(r, mloc_messageFaultBadOperand, at);

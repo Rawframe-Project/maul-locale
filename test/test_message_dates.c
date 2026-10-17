@@ -192,6 +192,10 @@ static void TestOperands(void)
     CHECK(Formats(".local $d = {|2006-01-02| :date} .match $d * {{other}}", NULL, 0, "other",
                   selector),
           "a date value does not select");
+    CHECK(Formats(".local $d = {|2006-01-02| :date} {{{$d :string}}}", NULL, 0, "{$d}",
+                  s_badOperand) &&
+              Formats(".local $u = {$t :time} {{{$u :string}}}", a, 4, "{$u}", s_badOperand),
+          "a date value is no string");
 }
 
 // Whether binding prepared each expression's value as wanted says, in

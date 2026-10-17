@@ -136,11 +136,16 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         const PreparedDate* prepared = mlocPreparedFor(&f->r, v->date.origin);
         fault = mlocWriteDateValue(&v->date, prepared, formatter->data, &formatter->locale, &out);
     }
-    else
+    else if (v->kind == valueResolved)
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
         fault = function->format == NULL ? mloc_messageFaultUnsupportedOperation
                                          : function->format(function->context, &v->resolved, &out);
+    }
+    else
+    {
+        // No function's value stands behind :string.
+        fault = mloc_messageFaultUnsupportedOperation;
     }
     if (fault != mloc_messageFaultNone)
     {
