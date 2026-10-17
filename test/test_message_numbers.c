@@ -7,6 +7,7 @@
 // options passed on from a number value, and selection by exact value
 // and plural category, with the faults of each.
 
+#include "message_prepare.h"
 #include "test_harness.h"
 
 #include "maul-locale/message.h"
@@ -461,6 +462,96 @@ static void TestCurrency(void)
     s_using = &s_en;
 }
 
+// Whether binding prepared a value for each expression of a message as
+// wanted says, in order ('p' prepared, '-' not); a currency formatter
+// where 'c'.
+static bool PreparedAs(const char* message, const char* wanted)
+{
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    Resolution r;
+    memset(&r, 0, sizeof r);
+    if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
+                .status != mloc_success ||
+        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success ||
+        !mlocReadBound(s_bound, &r.h, &r.formatter) ||
+        r.h.view.count[messageExpressions] != strlen(wanted))
+    {
+        printf("  [%s] does not bind as wanted\n", message);
+        return false;
+    }
+    r.words = mlocBoundWords(s_bound);
+    for (uint32_t e = 0; wanted[e] != '\0'; e++)
+    {
+        PreparedNumber storage;
+        const PreparedNumber* p = mlocPreparedFor(&r, e, &storage);
+        char got = p == NULL ? '-' : p->currency ? 'c' : 'p';
+        if (got != wanted[e])
+        {
+            printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
+            return false;
+        }
+    }
+    return true;
+}
+
+static void TestPrepared(void)
+{
+    CHECK(PreparedAs("{$n :number} {$n :integer maximumSignificantDigits=2} {$n :percent} "
+                     "{$n :currency currency=EUR} {$n :offset add=1} {$n :string} {$n}",
+                     "pppcp--"),
+          "each number function's expression is prepared, :string's and a bare one's not");
+    CHECK(PreparedAs("{$n :number maximumFractionDigits=$d}", "-") &&
+              PreparedAs(".local $d = {2} {{{$n :number maximumFractionDigits=$d}}}", "-p") &&
+              PreparedAs(".local $d = {$x :number} {{{$n :number maximumFractionDigits=$d}}}",
+                         "p-") &&
+              PreparedAs("{$a :currency}", "-"),
+          "an option from an argument, or no currency, leaves an expression unprepared");
+    // A bound message at each alignment, and moved to another: the
+    // values prepared in it read in place or copied out.
+    static const char plural[] = ".input {$n :number select=ordinal} .match $n one {{st}} two "
+                                 "{{nd}} few {{rd}} * {{th}}";
+    size_t size = 0;
+    mlocMessageError error;
+    CHECK(
+        mlocCompileMessage(plural, sizeof plural - 1, s_compiled, sizeof s_compiled, &size, &error)
+                .status == mloc_success,
+        "the message compiles");
+    static uint8_t room[1 << 14];
+    mlocMessageArgument n = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 22}}};
+    size_t measured = 0;
+    CHECK(mlocBindMessage(s_using, s_compiled, size, NULL, 0, &measured) == mloc_errorCapacity,
+          "the bound size is measured");
+    bool good = true;
+    for (size_t at = 0; at < 8; at++)
+    {
+        size_t bound = 0;
+        good = good &&
+               mlocBindMessage(s_using, s_compiled, size, room + at, measured, &bound) ==
+                   mloc_success &&
+               bound == measured;
+        for (size_t to = 0; good && to < 8; to++)
+        {
+            memmove(room + 4096 + to, room + at, bound);
+            mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+            good = mlocFormatMessage(room + 4096 + to, &n, 1, &output, NULL) == mloc_success &&
+                   output.length == 2 && memcmp(s_text, "nd", 2) == 0;
+        }
+    }
+    CHECK(good, "a bound message at any alignment, moved to any other, selects alike");
+    mlocDecimal amount = {0};
+    CHECK(mlocParseDecimal("42.5", 4, &amount).status == mloc_success, "an amount is read");
+    mlocMessageArgument yen = {
+        "a", 1, {mloc_messageValueCurrency, 0, {.currency = {&amount, {'J', 'P', 'Y'}}}}};
+    CHECK(Formats("{$a :currency currency=EUR}", &yen, 1,
+                  "\xC2\xA5"
+                  "43",
+                  s_badOption),
+          "a call whose options are not the prepared ones makes its own formatter");
+}
+
 static void TestDirection(void)
 {
     static mlocMessageFormatter isolatingEn;
@@ -499,6 +590,7 @@ int main(void)
     TestOffset();
     TestPercent();
     TestCurrency();
+    TestPrepared();
     TestDirection();
     return s_failures == 0 ? 0 : 1;
 }

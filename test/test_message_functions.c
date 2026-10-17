@@ -76,11 +76,14 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
 // x:echo: its operand, then each option as ";name=value"; "fail" as
 // its operand is refused with a function fault, the option fail=format
 // makes its format fail.
+static size_t s_echoes;
+
 static mlocMessageFaultKind EchoResolve(void* context, const mlocMessageCall* call,
                                         const mlocMessageOperand* operand,
                                         mlocMessageResolved* valueOut)
 {
     (void)context;
+    s_echoes++;
     if (operand->kind == mloc_messageOperandText && operand->length == 4 &&
         memcmp(operand->text, "fail", 4) == 0)
     {
@@ -371,6 +374,12 @@ static void TestCalls(void)
                 "C3EUR;k=C3EUR", NULL) &&
             Formats(".local $c = {7 :currency currency=czk} {{{$c :x:echo}}}", a, 4, "C1CZK", NULL),
         "a currency value is passed as its amount and code");
+    static const mlocMessageFaultKind badOperand[] = {mloc_messageFaultBadOperand, 0};
+    s_echoes = 0;
+    CHECK(Formats(".local $x = {|7| :x:echo} .local $y = {$x :number} {{{$y}}}", a, 4, "{$y}",
+                  badOperand) &&
+              s_echoes == 1,
+          "binding never calls a program function, while preparing a number");
     static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable,
                                                       mloc_messageFaultBadOption, 0};
     CHECK(Formats("{|a| :x:echo k=$missing}", a, 4, "a;k=?", unresolved),

@@ -82,6 +82,14 @@ typedef struct Resolution
     bool exhausted;
     // A bit per declaration whose faults were reported.
     uint8_t reported[messageDeclarationLimit / 8];
+    // Set while binding probes an expression: an argument stands for a
+    // plain number, and dynamic is set when an option's value comes from
+    // an argument or a program function is reached (the value then
+    // changes from call to call). optionDepth counts the options being
+    // resolved.
+    bool probe;
+    bool dynamic;
+    uint32_t optionDepth;
 } Resolution;
 
 // A record's field.

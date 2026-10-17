@@ -108,6 +108,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_format.c
     src/message_number.c
     src/message_parse.c
+    src/message_prepare.c
     src/message_read.c
     src/message_resolve.c
     src/message_table.c
@@ -207,7 +208,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(locale)
     maul_add_test(message WHITEBOX)
     maul_add_test(message_functions)
-    maul_add_test(message_numbers)
+    maul_add_test(message_numbers WHITEBOX)
     maul_add_test(likely)
     maul_add_test(likely_tables WHITEBOX)
     maul_add_test(canonical)

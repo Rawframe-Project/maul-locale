@@ -177,6 +177,10 @@ format.
 - Messages format and select with `:offset` (exact sums, an overflow
   unsupported) and `:percent` (the value times 100, its operand's minimum
   integer digits, increment and `select` dropped) (mloc-0045).
+- Binding a message prepares each number function's formatter and
+  plural rules where its options do not come from arguments, so a format
+  call no longer makes them (mloc-0045); a bound message grows by up to
+  0.9 KB per such expression.
 - Messages format with `:currency`: a new argument kind,
   `mloc_messageValueCurrency` (an amount and an ISO 4217 code), or a
   number with the `currency` option; its displays, `currencySign` and

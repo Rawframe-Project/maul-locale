@@ -134,5 +134,6 @@ message_write: message_form message_read message_text
 message_bind: bytes message_form message_read message_text
 message_number: number_precision
 message_resolve: message_bind message_form message_number message_read
-message_format: decimal message_bind message_form message_number message_read message_resolve
+message_prepare: bytes message_bind message_form message_number message_read message_resolve
+message_format: decimal message_bind message_form message_number message_prepare message_read message_resolve
 message: message_check message_emit message_form message_parse message_read message_table message_write

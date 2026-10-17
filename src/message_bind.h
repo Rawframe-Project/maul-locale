@@ -7,7 +7,9 @@
 // declaration binding it, or none) and a word per expression (its
 // function's slot, and in the top byte the length of its chain of
 // declarations), then a word per expression for the resolutions it
-// makes. It points into the compiled message and the formatter.
+// makes, then a word per expression for its prepared value, and the
+// prepared values. It points into the compiled message and the
+// formatter.
 
 #ifndef MLOC_SRC_MESSAGE_BIND_H
 #define MLOC_SRC_MESSAGE_BIND_H
@@ -92,7 +94,27 @@ bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter, MessageForm
 bool mlocReadBound(const void* bound, BoundHeader* headerOut, MessageFormatter* formatterOut);
 
 // A bound message's words: the variables', then the expressions', then
-// the expressions' resolution counts.
+// the expressions' resolution counts, then where each expression's
+// prepared value is (record mloc-0045; message_prepare.h).
 const uint8_t* mlocBoundWords(const void* bound);
+
+// Reads and checks what a bind is given: the formatter, and the compiled
+// message within a bound message's limits; mloc_errorInvalid, or the
+// compiled message's error.
+mlocResult mlocOpenBind(const mlocMessageFormatter* formatter, const void* message, size_t size,
+                        MessageFormatter* formatterOut, BoundHeader* headerOut);
+
+// The bytes of a bound message's header and words.
+uint64_t mlocBoundBase(const MessageView* view);
+
+// An expression's function slot.
+uint32_t mlocExpressionSlot(const MessageView* view, const MessageFormatter* formatter,
+                            uint32_t expression);
+
+// Writes the header and the words of a bound message of size bytes,
+// no value prepared; mloc_errorInvalid past the chain or resolution
+// limit, mloc_errorData for a declaration naming a later one.
+mlocResult mlocWriteBound(const mlocMessageFormatter* formatter, const MessageFormatter* f,
+                          BoundHeader* h, void* buffer, uint32_t size);
 
 #endif

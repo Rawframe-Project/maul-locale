@@ -385,48 +385,57 @@ static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, ui
     return MessageCost(v, words) > messageResolutionLimit ? mloc_errorInvalid : mloc_success;
 }
 
-mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size,
-                           void* buffer, size_t capacity, size_t* sizeOut)
+uint32_t mlocExpressionSlot(const MessageView* view, const MessageFormatter* formatter,
+                            uint32_t expression)
 {
-    MessageFormatter f;
-    if (!mlocReadMessageFormatter(formatter, &f) || message == NULL || sizeOut == NULL ||
-        (buffer == NULL && capacity > 0))
+    return SlotOf(view, formatter, expression);
+}
+
+mlocResult mlocOpenBind(const mlocMessageFormatter* formatter, const void* message, size_t size,
+                        MessageFormatter* formatterOut, BoundHeader* headerOut)
+{
+    if (!mlocReadMessageFormatter(formatter, formatterOut) || message == NULL)
     {
         return mloc_errorInvalid;
     }
-    BoundHeader h;
-    memset(&h, 0, sizeof h);
-    mlocResult result = mlocReadMessage(message, size, &h.view);
+    memset(headerOut, 0, sizeof *headerOut);
+    mlocResult result = mlocReadMessage(message, size, &headerOut->view);
     if (result != mloc_success)
     {
         return result;
     }
-    if (h.view.count[messageSelectors] > messageSelectorLimit ||
-        h.view.count[messageDeclarations] > messageDeclarationLimit)
-    {
-        return mloc_errorInvalid;
-    }
-    uint64_t needed = sizeof h + 4 * ((uint64_t)h.view.count[messageVariables] +
-                                      2 * (uint64_t)h.view.count[messageExpressions]);
-    if (buffer == NULL || capacity < needed)
-    {
-        *sizeOut = (size_t)needed;
-        return mloc_errorCapacity;
-    }
+    const MessageView* v = &headerOut->view;
+    return v->count[messageSelectors] > messageSelectorLimit ||
+                   v->count[messageDeclarations] > messageDeclarationLimit
+               ? mloc_errorInvalid
+               : mloc_success;
+}
+
+uint64_t mlocBoundBase(const MessageView* view)
+{
+    return sizeof(BoundHeader) + 4 * ((uint64_t)view->count[messageVariables] +
+                                      3 * (uint64_t)view->count[messageExpressions]);
+}
+
+mlocResult mlocWriteBound(const mlocMessageFormatter* formatter, const MessageFormatter* f,
+                          BoundHeader* h, void* buffer, uint32_t size)
+{
     // The old header goes first: a bind that fails below must not leave
     // an earlier bound message's header over words that are no longer
     // its own.
-    memset(buffer, 0, sizeof h);
-    uint8_t* words = (uint8_t*)buffer + sizeof h;
-    result = WriteWords(&h.view, &f, words);
+    memset(buffer, 0, sizeof *h);
+    uint8_t* words = (uint8_t*)buffer + sizeof *h;
+    mlocResult result = WriteWords(&h->view, f, words);
     if (result != mloc_success)
     {
         return result;
     }
-    h.magic = boundMagic;
-    h.size = (uint32_t)needed;
-    h.formatter = formatter;
-    memcpy(buffer, &h, sizeof h);
-    *sizeOut = (size_t)needed;
+    size_t expressions = h->view.count[messageExpressions];
+    memset(words + 4 * ((size_t)h->view.count[messageVariables] + 2 * expressions), 0,
+           4 * expressions);
+    h->magic = boundMagic;
+    h->size = size;
+    h->formatter = formatter;
+    memcpy(buffer, h, sizeof *h);
     return mloc_success;
 }

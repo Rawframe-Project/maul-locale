@@ -10,8 +10,10 @@
 #ifndef MLOC_SRC_MESSAGE_NUMBER_H
 #define MLOC_SRC_MESSAGE_NUMBER_H
 
+#include "maul-locale/currency.h"
 #include "maul-locale/message.h"
 #include "maul-locale/number.h"
+#include "maul-locale/plural.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -57,11 +59,13 @@ enum
     numberGivenFractionDigits = 1u << 15,
 };
 
-// A number value: its decimal and the options given to it, each read
-// only where its bit is set in given.
+// A number value: its decimal, the expression that made it, and the
+// options given to it, each read only where its bit is set in given.
+// Without padding, so two values' options compare by their bytes.
 typedef struct NumberValue
 {
     mlocDecimal decimal;
+    uint32_t origin;
     uint16_t given;
     uint16_t increment;
     uint8_t function;
@@ -88,6 +92,35 @@ typedef struct NumberValue
     uint8_t fractionDigits;
     uint8_t currencyDigits;
 } NumberValue;
+
+// What binding prepares for a number function's expression (record
+// mloc-0045): the options of the value it makes (number, origin and
+// selectability cleared), the plural rules its selection reads (rulesType
+// 1 plus the mlocPluralType, or 0 for none), and its formatter, a
+// currency formatter when currency is set. A bound message holds the
+// bytes up to the end of the formatter it has.
+typedef struct PreparedNumber
+{
+    NumberValue key;
+    mlocPluralRules rules;
+    uint8_t rulesType;
+    uint8_t currency;
+    uint8_t reserved[6];
+    union
+    {
+        mlocNumberFormatter number;
+        mlocCurrencyFormatter currency;
+    } formatter;
+} PreparedNumber;
+
+// The bytes a prepared value takes in a bound message: with a currency
+// formatter, or a number formatter.
+size_t mlocPreparedSize(bool currency);
+
+// Prepares a value as its expression makes it; false when its formatter
+// cannot be made (the expression is then not prepared).
+bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
+                       PreparedNumber* out);
 
 // An option's value as a number function reads it: text (a literal's,
 // a string argument's), or an integer (a numeric argument's or a number
@@ -156,18 +189,22 @@ uint32_t mlocCheckNumberOptions(NumberValue* value);
 // The number formatter's options for a checked value.
 mlocNumberOptions mlocNumberFormatOptions(const NumberValue* value);
 
-// Writes a value in a locale; mloc_messageFaultUnsupportedOperation when
-// the locale's numbers cannot be made, else none (the output saying
-// what it needs, as mlocOutput does).
-mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const mlocDataSet* data,
-                                          const mlocLocale* locale, mlocOutput* output);
+// Writes a value in a locale, with the formatter prepared for it when
+// prepared (which may be null) has its options, else one made here;
+// mloc_messageFaultUnsupportedOperation when the locale's numbers cannot
+// be made, else none (the output saying what it needs, as mlocOutput
+// does).
+mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const PreparedNumber* prepared,
+                                          const mlocDataSet* data, const mlocLocale* locale,
+                                          mlocOutput* output);
 
 // Whether a key matches a value: a number literal its exact
-// serialization, a plural keyword its category (not in exact mode).
-// mloc_messageFaultBadVariantKey for another key (no match).
-mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const mlocDataSet* data,
-                                     const mlocLocale* locale, const uint8_t* key, size_t length,
-                                     bool* matchOut);
+// serialization, a plural keyword its category (not in exact mode, with
+// the prepared rules when prepared, which may be null, has the value's
+// options). mloc_messageFaultBadVariantKey for another key (no match).
+mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNumber* prepared,
+                                     const mlocDataSet* data, const mlocLocale* locale,
+                                     const uint8_t* key, size_t length, bool* matchOut);
 
 // Whether key1 is a better match than key2, both matching: a number
 // literal over a keyword.

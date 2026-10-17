@@ -339,7 +339,10 @@ extern "C"
 
     /// Binds a compiled message to a formatter in caller memory: the
     /// message is read as mlocWriteMessageText reads it, each function
-    /// found, each chain of declarations measured. The bound message
+    /// found, each chain of declarations measured, and each number
+    /// function's formatter and plural rules made once where its options
+    /// do not come from arguments (a format call makes its own when its
+    /// options differ). No program function is called. The bound message
     /// points into the compiled one and the formatter, which must outlive
     /// it; it is read-only, so threads may format with it at once. Call it
     /// with a null buffer and a capacity of 0 to learn the capacity. A

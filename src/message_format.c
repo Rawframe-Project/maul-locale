@@ -8,6 +8,7 @@
 #include "message_format.h"
 
 #include "decimal.h"
+#include "message_prepare.h"
 #include "message_resolve.h"
 
 #include <string.h>
@@ -119,7 +120,10 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
     if (v->kind == valueNumber)
     {
         const MessageFormatter* formatter = &f->r.formatter;
-        fault = mlocWriteNumberValue(&v->number, formatter->data, &formatter->locale, &out);
+        PreparedNumber storage;
+        const PreparedNumber* prepared = mlocPreparedFor(&f->r, v->number.origin, &storage);
+        fault =
+            mlocWriteNumberValue(&v->number, prepared, formatter->data, &formatter->locale, &out);
     }
     else
     {
@@ -260,8 +264,10 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     else if (s->value.kind == valueNumber)
     {
         const MessageFormatter* formatter = &f->r.formatter;
-        fault = mlocMatchNumber(&s->value.number, formatter->data, &formatter->locale, key, length,
-                                &matched);
+        PreparedNumber storage;
+        const PreparedNumber* prepared = mlocPreparedFor(&f->r, s->value.number.origin, &storage);
+        fault = mlocMatchNumber(&s->value.number, prepared, formatter->data, &formatter->locale,
+                                key, length, &matched);
     }
     else
     {

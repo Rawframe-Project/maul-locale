@@ -98,8 +98,17 @@ static bool SameName(const mlocMessageArgument* a, const uint8_t* name, size_t l
 }
 
 // The argument of a variable's name, or null.
-static const mlocMessageValue* Argument(const Resolution* r, uint32_t variable)
+// In a probe, what an argument stands for: a plain number as an operand.
+static const mlocMessageValue s_probe = {mloc_messageValueInteger, 0, {.integer = 0}};
+
+static const mlocMessageValue* Argument(Resolution* r, uint32_t variable)
 {
+    if (r->probe)
+    {
+        // An option's value from an argument changes from call to call.
+        r->dynamic = r->dynamic || r->optionDepth > 0;
+        return r->optionDepth > 0 ? NULL : &s_probe;
+    }
     const uint8_t* name = Pool(r, Field(r, messageVariables, variable, 0));
     size_t length = Field(r, messageVariables, variable, 1);
     for (size_t i = 0; i < r->argumentCount; i++)
@@ -275,7 +284,9 @@ static Value OptionValue(Resolution* r, uint32_t p, uint32_t at)
         return v;
     }
     r->quiet++;
+    r->optionDepth++;
     Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3), at, UINT32_MAX);
+    r->optionDepth--;
     r->quiet--;
     return v;
 }
@@ -392,6 +403,12 @@ static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
 
 static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot, const Value* operand)
 {
+    if (r->probe)
+    {
+        // A probe never calls the program.
+        r->dynamic = true;
+        return mlocExpressionFallback(r, expression);
+    }
     const mlocMessageFunction* function = &r->formatter.functions[slot - messageFunctionProgram];
     mlocMessageOperand given;
     mlocMessageResolved storage;
@@ -622,6 +639,7 @@ static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* oper
     }
     Value v = Make(valueNumber);
     v.number = n;
+    v.number.origin = expression;
     v.direction = r->formatter.direction;
     return v;
 }
@@ -689,6 +707,7 @@ static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction fu
     }
     Value v = Make(valueNumber);
     v.number = n;
+    v.number.origin = expression;
     // A number reads in its locale's direction.
     v.direction = r->formatter.direction;
     return v;

@@ -112,14 +112,15 @@ const BenchCase g_messageCases[] = {
 const size_t g_messageCaseCount = sizeof(g_messageCases) / sizeof(g_messageCases[0]);
 
 // Compiles and binds a message into its slot; false when it fails.
-static bool Make(const char* source, uint8_t* compiled, size_t* compiledSize, uint8_t* bound,
-                 size_t capacity)
+static bool Make(const char* source, uint8_t* compiled, size_t compiledCapacity,
+                 size_t* compiledSize, uint8_t* bound, size_t boundCapacity)
 {
     size_t size = 0;
     mlocMessageError error;
-    return mlocCompileMessage(source, strlen(source), compiled, capacity, compiledSize, &error)
+    return mlocCompileMessage(source, strlen(source), compiled, compiledCapacity, compiledSize,
+                              &error)
                    .status == mloc_success &&
-           mlocBindMessage(&s_formatter, compiled, *compiledSize, bound, capacity, &size) ==
+           mlocBindMessage(&s_formatter, compiled, *compiledSize, bound, boundCapacity, &size) ==
                mloc_success;
 }
 
@@ -137,7 +138,8 @@ bool PrepareMessageBench(void)
     }
     for (int i = 0; i < messageCount; i++)
     {
-        if (!Make(s_sources[i], s_compiled[i], &s_compiledSize[i], s_bound[i], messageRoom))
+        if (!Make(s_sources[i], s_compiled[i], messageRoom, &s_compiledSize[i], s_bound[i],
+                  messageRoom))
         {
             fprintf(stderr, "bench: cannot make [%s]\n", s_sources[i]);
             return false;
@@ -216,9 +218,10 @@ bool PrintMessageStack(void)
     }
     snprintf(source + length, sizeof(source) - length, " {{{$a62 :number}}}");
     static uint8_t compiled[16384];
-    static uint8_t bound[16384];
+    // Each :number's value is prepared in the bound message.
+    static uint8_t bound[65536];
     size_t compiledSize = 0;
-    if (!Make(source, compiled, &compiledSize, bound, sizeof(compiled)))
+    if (!Make(source, compiled, sizeof(compiled), &compiledSize, bound, sizeof(bound)))
     {
         return false;
     }

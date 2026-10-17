@@ -10,6 +10,7 @@
 #include "maul-locale/currency.h"
 #include "maul-locale/plural.h"
 
+#include <stddef.h>
 #include <string.h>
 
 enum
@@ -687,8 +688,34 @@ mlocNumberOptions mlocNumberFormatOptions(const NumberValue* v)
 }
 
 // Writes a currency value with the currency formatter.
-static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* data,
-                                const mlocLocale* locale, mlocOutput* output)
+static_assert(sizeof(NumberValue) == offsetof(NumberValue, currencyDigits) + 1,
+              "a number value has no padding");
+static_assert(offsetof(PreparedNumber, formatter) % 8 == 0 && sizeof(PreparedNumber) % 8 == 0,
+              "a prepared value's parts stay 8-aligned");
+
+// A value's options as a prepared value keeps them.
+static NumberValue KeyOf(const NumberValue* value)
+{
+    NumberValue key = *value;
+    memset(&key.decimal, 0, sizeof key.decimal);
+    key.origin = 0;
+    key.selectable = false;
+    return key;
+}
+
+// Whether a prepared value was made with a value's options.
+static bool Fits(const PreparedNumber* prepared, const NumberValue* value)
+{
+    if (prepared == NULL)
+    {
+        return false;
+    }
+    NumberValue key = KeyOf(value);
+    return memcmp(&key, &prepared->key, sizeof key) == 0;
+}
+
+// A currency formatter's options for a currency value.
+static mlocCurrencyOptions CurrencyOptions(const NumberValue* value)
 {
     mlocCurrencyOptions options;
     memset(&options, 0, sizeof options);
@@ -698,16 +725,59 @@ static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* dat
     options.sign = (value->given & numberGivenCurrencySign) != 0
                        ? (mlocCurrencySign)(value->currencySign + 1)
                        : mloc_currencySignLocale;
+    return options;
+}
+
+static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* data,
+                                const mlocLocale* locale, mlocOutput* output)
+{
+    mlocCurrencyOptions options = CurrencyOptions(value);
     mlocCurrencyFormatter formatter;
     mlocResult made = mlocInitCurrencyFormatter(&formatter, data, locale, value->code, 3, &options);
     return made < 0 ? made : mlocFormatCurrency(&formatter, &value->decimal, output);
 }
 
-mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const mlocDataSet* data,
-                                          const mlocLocale* locale, mlocOutput* output)
+size_t mlocPreparedSize(bool currency)
+{
+    return offsetof(PreparedNumber, formatter) +
+           (currency ? sizeof(mlocCurrencyFormatter) : sizeof(mlocNumberFormatter));
+}
+
+bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
+                       PreparedNumber* out)
+{
+    memset(out, 0, offsetof(PreparedNumber, formatter));
+    out->key = KeyOf(value);
+    out->currency = value->function == numberFunctionCurrency;
+    if (value->selectable && value->select != numberSelectExact)
+    {
+        mlocPluralType type =
+            value->select == numberSelectOrdinal ? mloc_pluralOrdinal : mloc_pluralCardinal;
+        out->rulesType =
+            mlocInitPluralRules(&out->rules, data, locale, type) < 0 ? 0 : (uint8_t)(1 + type);
+    }
+    if (out->currency)
+    {
+        mlocCurrencyOptions options = CurrencyOptions(value);
+        return mlocInitCurrencyFormatter(&out->formatter.currency, data, locale, value->code, 3,
+                                         &options) >= 0;
+    }
+    mlocNumberOptions options = mlocNumberFormatOptions(value);
+    return mlocInitNumberFormatter(&out->formatter.number, data, locale, &options) >= 0;
+}
+
+mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const PreparedNumber* prepared,
+                                          const mlocDataSet* data, const mlocLocale* locale,
+                                          mlocOutput* output)
 {
     mlocResult result;
-    if (value->function == numberFunctionCurrency)
+    if (Fits(prepared, value))
+    {
+        result = prepared->currency
+                     ? mlocFormatCurrency(&prepared->formatter.currency, &value->decimal, output)
+                     : mlocFormatNumber(&prepared->formatter.number, &value->decimal, output);
+    }
+    else if (value->function == numberFunctionCurrency)
     {
         result = WriteCurrency(value, data, locale, output);
     }
@@ -760,9 +830,9 @@ static bool ExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t le
            memcmp(&written, &value, sizeof value) == 0;
 }
 
-mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const mlocDataSet* data,
-                                     const mlocLocale* locale, const uint8_t* key, size_t length,
-                                     bool* matchOut)
+mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNumber* prepared,
+                                     const mlocDataSet* data, const mlocLocale* locale,
+                                     const uint8_t* key, size_t length, bool* matchOut)
 {
     *matchOut = false;
     mlocPluralCategory wanted = mloc_pluralOther;
@@ -790,12 +860,20 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const mlocDataSet
     {
         return mloc_messageFaultNone;
     }
-    mlocPluralRules rules;
     mlocPluralType type =
         value->select == numberSelectOrdinal ? mloc_pluralOrdinal : mloc_pluralCardinal;
     mlocPluralCategory category = mloc_pluralOther;
-    if (mlocInitPluralRules(&rules, data, locale, type) < 0 ||
-        mlocSelectPlural(&rules, &rounded, &category) != mloc_success)
+    mlocPluralRules made;
+    const mlocPluralRules* rules = &made;
+    if (Fits(prepared, value) && prepared->rulesType == 1 + type)
+    {
+        rules = &prepared->rules;
+    }
+    else if (mlocInitPluralRules(&made, data, locale, type) < 0)
+    {
+        return mloc_messageFaultUnsupportedOperation;
+    }
+    if (mlocSelectPlural(rules, &rounded, &category) != mloc_success)
     {
         return mloc_messageFaultUnsupportedOperation;
     }

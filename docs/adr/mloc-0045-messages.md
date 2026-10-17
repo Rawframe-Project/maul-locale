@@ -106,7 +106,20 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   functions read), and
   (`mloc_errorData`) one naming a later declaration (crafted bytes,
   which could loop); the bound message points into the compiled one and
-  the formatter and is read-only.
+  the formatter and is read-only. Binding also prepares each number
+  function's expression: it resolves it once with probe arguments (an
+  argument stands for a plain number as an operand; an option's value
+  from an argument, or a program function reached, leaves the
+  expression unprepared, and no program function is called), and keeps
+  the value's options with its number or currency formatter and the
+  plural rules its selection reads, 8-aligned for the buffer bound into.
+  A call resolves as before and uses them only when its value's options
+  are the prepared ones byte for byte, reading them in place, or copied
+  out when the bound message has been moved to an address that leaves
+  them unaligned; so correctness never rests on the probe. A bound
+  message keeps room for every number function's expression (a
+  currency formatter's for `:currency` and `:offset`), so its size does
+  not depend on the probe or the buffer's address.
   `mlocFormatMessage` resolves each placeholder and selector where it
   stands, a local through its declaration on the stack (call-by-name: no
   memory per call), an argument by its name after NFC; it writes text,
