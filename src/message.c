@@ -106,5 +106,19 @@ mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* ou
     {
         return result;
     }
+    // Measured first: a variable's name is written at each reference, so
+    // a crafted message of a few megabytes could ask for terabytes. A
+    // text the compiler would refuse is not a message's text.
+    mlocOutput measure = {NULL, 0, 0, NULL, NULL};
+    (void)mlocWriteMessage(&view, &measure);
+    if (measure.length >= longestMessage)
+    {
+        return mloc_errorData;
+    }
+    if (output->capacity < measure.length)
+    {
+        output->length = measure.length;
+        return mloc_errorCapacity;
+    }
     return mlocWriteMessage(&view, output);
 }

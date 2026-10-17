@@ -69,6 +69,10 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   pieces'), and the parameter and piece ranges together fit their
   records; these bounds are checked first, from the counts alone, so
   reading costs no more than the size either.
+  The text is measured before it is written: a variable's name is
+  written at each reference, so a crafted message could ask for far more
+  than its size; a text of 1 GiB or more, which the compiler would
+  refuse, is `mloc_errorData`.
   The data model's rules stay the compiler's. It then writes the
   canonical text: a simple message when there are no declarations and
   the pattern does not start with "." past its spaces; else each

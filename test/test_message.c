@@ -544,6 +544,54 @@ static void TestFieldsRefused(void)
           "a text that fills the buffer exactly");
 }
 
+// A crafted message whose one variable, named at each of 20,000
+// references, has a name of 60,000 bytes: its text would pass 1 GiB, and
+// it is refused without being written.
+static void TestAmplified(void)
+{
+    enum
+    {
+        references = 20000,
+        name = 60000
+    };
+    static char text[references * 4 + name];
+    size_t at = 0;
+    for (int i = 0; i < references; i++)
+    {
+        memcpy(text + at, "{$x}", 4);
+        at += 4;
+    }
+    memset(text + at, 'a', name);
+    at += name;
+    size_t needed = 0;
+    mlocMessageError error;
+    mlocTextResult result = mlocCompileMessage(text, at, NULL, 0, &needed, &error);
+    uint8_t* message = malloc(needed);
+    size_t size = 0;
+    result = mlocCompileMessage(text, at, message, needed, &size, &error);
+    CHECK(result.status == mloc_success, "the message compiles");
+    // The text piece shrinks to one byte; the variable's name takes the
+    // text's bytes, so the strings still fit the pool.
+    uint32_t starts[messageCount];
+    uint32_t keys;
+    mlocMessageStarts(message, starts, &keys);
+    uint8_t* piece =
+        message + starts[messagePieces] + references * messageRecordSizes[messagePieces];
+    uint8_t* variable = message + starts[messageVariables];
+    Store(variable, mlocLoad32(piece + 4));
+    Store(variable + 4, name);
+    Store(piece + 8, 1);
+    mlocOutput output = {NULL, 0, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(message, size, &output) == mloc_errorData,
+          "a text past 1 GiB is refused");
+    // The same with a name of 600 bytes: 12 MB, measured.
+    Store(variable + 4, 600);
+    CHECK(mlocWriteMessageText(message, size, &output) == mloc_errorCapacity &&
+              output.length > (size_t)references * 600,
+          "a text under 1 GiB is measured");
+    free(message);
+}
+
 // One complex message with every byte changed in turn: written back
 // or refused, never read past.
 static void TestCorrupted(void)
@@ -676,6 +724,7 @@ int main(void)
     TestCanonical();
     TestCorrupted();
     TestFieldsRefused();
+    TestAmplified();
     TestRefused();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;

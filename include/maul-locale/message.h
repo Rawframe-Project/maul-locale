@@ -87,7 +87,8 @@ extern "C"
     /// @param output   Receives the text.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed); mloc_errorData
-    ///         when the bytes are not a compiled message;
+    ///         when the bytes are not a compiled message, or one whose text
+    ///         would be 1 GiB or more, which could not compile again;
     ///         mloc_errorDataVersion for one of another library or Unicode
     ///         version; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
