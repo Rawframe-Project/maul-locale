@@ -97,6 +97,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_keyword.c
     src/locale_likely.c
     src/locale_lsr.c
+    src/locale_direction.c
     src/locale_match.c
     src/locale_parse.c
     src/locale_prefs.c
@@ -191,7 +192,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/generated/builtin_data.c
     src/generated/plural_rules.c
     src/generated/calendar_eras.c
-    src/generated/calendar_years.c)
+    src/generated/calendar_years.c
+    src/generated/script_directions.c)
 maul_configure_library(maul-locale)
 target_link_libraries(maul-locale PRIVATE maul-unicode::maul-unicode)
 set(MAUL_PACKAGE_DEPENDENCIES "find_dependency(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION})")
@@ -483,7 +485,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     # CLDR's conformance files and ICU's matcher test, which the cldr CI
     # job runs on the pinned releases; built here so that every build
     # compiles them.
-    foreach(name likely canonical parents match numbers plurals preferences currency units unit_prefs
+    foreach(name likely canonical parents direction match numbers plurals preferences currency units
+                 unit_prefs
                  spellout names locale_names)
         add_executable(conform_${name} test/conform_${name}.c)
         target_link_libraries(conform_${name} PRIVATE maul-locale)
@@ -569,6 +572,7 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
+                                    tools/mlocgen/direction_gen.c
                                     tools/mlocgen/cldr.c
                                     tools/mlocgen/context_gen.c
                                     tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c
@@ -636,6 +640,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_include_directories(test_gencalendar PRIVATE test src)
             maul_apply_flags(test_gencalendar)
             add_test(NAME gencalendar COMMAND test_gencalendar ${PROJECT_SOURCE_DIR})
+            add_executable(test_gendirection test/test_gendirection.c)
+            target_link_libraries(test_gendirection PRIVATE mlocgen_core maul-locale)
+            target_include_directories(test_gendirection PRIVATE test src)
+            maul_apply_flags(test_gendirection)
+            add_test(NAME gendirection COMMAND test_gendirection ${PROJECT_SOURCE_DIR})
         endif()
     endif()
 endif()

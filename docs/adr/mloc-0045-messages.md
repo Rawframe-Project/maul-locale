@@ -124,6 +124,14 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   Until the number and date functions come (the next slices), they are
   unknown, and a number argument without a function is written as its
   plain decimal.
+- **A locale's direction,** which the message's own isolation needs,
+  is public: `mlocGetLocaleDirection` takes the locale's script, or its
+  likely script, and finds it among the scripts CLDR's
+  `scriptMetadata.txt` marks right to left, a table the generator
+  writes (`src/generated/script_directions.c`). For every locale of
+  CLDR's `common/main` this is the character order the locale inherits
+  (Mongolian's vertical order being left to right in a line); CI checks
+  all of them (`tools/cldr_directions.py`, `conform_direction`).
 - **Maul Unicode** becomes a run-time dependency (UTF-8 validation,
   NFC, bidi classes), at 0.3.0: an installed package, else the pinned
   release fetched.

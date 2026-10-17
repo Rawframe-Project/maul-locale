@@ -3,8 +3,10 @@
 //
 // Likely subtags on the compiled-in data: adding and removing them, the
 // lookup order of UTS #35, und, Zzzz and ZZ, the variants and extensions
-// kept, and the refusals. CLDR's whole conformance file runs in CI
-// (conform_likely).
+// kept, and the refusals; a locale's direction from its script or its
+// likely script. CLDR's whole conformance file runs in CI
+// (conform_likely), and every locale's character order
+// (conform_direction).
 
 #include "test_harness.h"
 
@@ -106,6 +108,49 @@ static void TestRefusals(void)
           "a null data set to minimize");
 }
 
+static bool Direction(const char* text, mlocDirection expected)
+{
+    mlocLocale locale = Parse(text);
+    mlocDirection direction = mloc_directionUnknown;
+    return mlocGetLocaleDirection(&s_data, &locale, &direction) == mloc_success &&
+           direction == expected;
+}
+
+static void TestDirection(void)
+{
+    const mlocDirection ltr = mloc_directionLeftToRight;
+    const mlocDirection rtl = mloc_directionRightToLeft;
+    CHECK(Direction("ar", rtl) && Direction("he", rtl) && Direction("fa-IR", rtl) &&
+              Direction("dv", rtl) && Direction("nqo", rtl) && Direction("ff-Adlm", rtl),
+          "Arabic, Hebrew, Thaana, N'Ko and Adlam are right to left");
+    CHECK(Direction("en", ltr) && Direction("und", ltr) && Direction("ja", ltr) &&
+              Direction("mn-Mong", ltr),
+          "Latin, Japanese and Mongolian are left to right");
+    CHECK(Direction("ar-Latn", ltr) && Direction("ks-Deva", ltr) && Direction("en-Arab", rtl) &&
+              Direction("pa-Arab", rtl) && Direction("ar-Zzzz", rtl),
+          "a script named decides; Zzzz is none");
+    CHECK(Direction("qaa-Hebr", rtl) && Direction("qaa-Adlm-US", rtl) &&
+              Direction("en-Avst", rtl) && Direction("en-Yezi", rtl) && Direction("en-Adlm", rtl) &&
+              Direction("en-Zyyy", ltr),
+          "the first and last scripts of the list, and a script without likely data");
+    mlocLocale unknown = Parse("qaa");
+    mlocDirection direction = mloc_directionUnknown;
+    CHECK(mlocGetLocaleDirection(&s_data, &unknown, &direction) == mloc_errorNotFound &&
+              direction == mloc_directionUnknown,
+          "a language without a likely script has no direction, the result untouched");
+    mlocDataSet empty = {nullptr, 0};
+    mlocLocale en = Parse("en");
+    mlocLocale enLatn = Parse("en-Latn");
+    CHECK(mlocGetLocaleDirection(&empty, &en, &direction) == mloc_errorNotFound &&
+              mlocGetLocaleDirection(&empty, &enLatn, &direction) == mloc_success &&
+              direction == mloc_directionLeftToRight,
+          "without data only a named script gives a direction");
+    CHECK(mlocGetLocaleDirection(nullptr, &en, &direction) == mloc_errorInvalid &&
+              mlocGetLocaleDirection(&s_data, nullptr, &direction) == mloc_errorInvalid &&
+              mlocGetLocaleDirection(&s_data, &en, nullptr) == mloc_errorInvalid,
+          "null pointers are refused");
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -114,5 +159,6 @@ int main(void)
     TestMaximize();
     TestMinimize();
     TestRefusals();
+    TestDirection();
     return s_failures == 0 ? 0 : 1;
 }

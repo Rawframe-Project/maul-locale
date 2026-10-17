@@ -121,6 +121,15 @@ extern "C"
         void* context;
     } mlocOutput;
 
+    // A text's direction: a locale's (CLDR's character order), or a
+    // message part's, which may be unknown.
+    typedef enum mlocDirection
+    {
+        mloc_directionUnknown = 0,
+        mloc_directionLeftToRight = 1,
+        mloc_directionRightToLeft = 2,
+    } mlocDirection;
+
     // Where a formatted text stands, which decides whether its first word
     // is capitalized (CLDR's context transforms): mid-sentence as the data
     // writes it; at the beginning of a sentence, titlecased; an item of a

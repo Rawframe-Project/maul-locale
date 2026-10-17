@@ -140,6 +140,28 @@ extern "C"
                                                           const mlocLocale* locale,
                                                           mlocLocale* localeOut);
 
+    /// A locale's direction, CLDR's character order: right to left when
+    /// its script, or its likely script when it names none (or "Zzzz"),
+    /// is written right to left (Arabic, Hebrew, Thaana, N'Ko, Adlam and
+    /// the other scripts CLDR's script metadata marks so), else left to
+    /// right. This agrees with every CLDR locale's own character order
+    /// (Mongolian's, top to bottom, is left to right in a horizontal
+    /// line, its letters being of bidi class L).
+    ///
+    /// @param data          The data to read the likely subtags from.
+    /// @param locale        The locale.
+    /// @param directionOut  Receives mloc_directionLeftToRight or
+    ///                      mloc_directionRightToLeft; left unchanged on
+    ///                      failure.
+    /// @return mloc_success; mloc_errorNotFound when the locale names no
+    ///         script and the data has no likely script for it;
+    ///         mloc_errorInvalid for a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetLocaleDirection(const mlocDataSet* data,
+                                                              const mlocLocale* locale,
+                                                              mlocDirection* directionOut);
+
     /// Removes likely subtags (UTS #35): the shortest of the language
     /// alone, then with its region or script (in the order favor gives),
     /// that adds back to the same locale; "zh-Hant-TW" gives "zh-TW", or

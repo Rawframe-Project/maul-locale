@@ -414,6 +414,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocMaximizeLocale(const mlocDataSet* data, c
 Adds likely subtags (UTS #35): "zh-TW" gives "zh-Hant-TW", "und" gives "en-Latn-US". A script "Zzzz" and a region "ZZ" are dropped first; the variants and extensions are kept. Aliases are not replaced, so give a canonicalized locale.  @param data       The data to read the likely subtags from. @param locale     The locale. @param localeOut  Receives the result; may be locale itself; left unchanged on failure. @return mloc_success; mloc_errorNotFound when the data has no likely subtags for the locale or has no likely subtags table; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetLocaleDirection(const mlocDataSet* data, const mlocLocale* locale, mlocDirection* directionOut);
+```
+A locale's direction, CLDR's character order: right to left when its script, or its likely script when it names none (or "Zzzz"), is written right to left (Arabic, Hebrew, Thaana, N'Ko, Adlam and the other scripts CLDR's script metadata marks so), else left to right. This agrees with every CLDR locale's own character order (Mongolian's, top to bottom, is left to right in a horizontal line, its letters being of bidi class L).  @param data          The data to read the likely subtags from. @param locale        The locale. @param directionOut  Receives mloc_directionLeftToRight or mloc_directionRightToLeft; left unchanged on failure. @return mloc_success; mloc_errorNotFound when the locale names no script and the data has no likely script for it; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocFavor favor, mlocLocale* localeOut);
 ```
 Removes likely subtags (UTS #35): the shortest of the language alone, then with its region or script (in the order favor gives), that adds back to the same locale; "zh-Hant-TW" gives "zh-TW", or "zh-Hant" when the script is favored. The variants and extensions are kept.  @param data       The data to read the likely subtags from. @param locale     The locale. @param favor      mloc_favorRegion or mloc_favorScript. @param localeOut  Receives the result; may be locale itself; left unchanged on failure. @return mloc_success; mloc_errorNotFound as mlocMaximizeLocale; mloc_errorInvalid for a null pointer or another favor. @par Thread safety Safe from any thread.
@@ -867,4 +872,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-158 functions across 18 headers.
+159 functions across 18 headers.

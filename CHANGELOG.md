@@ -156,6 +156,11 @@ format.
   specification's order. The library now
   links Maul Unicode 0.3.0; `mloc_withFallbacks` and `mloc_errorFormat`
   join the results.
+- A locale's direction: `mlocGetLocaleDirection` gives right to left
+  or left to right from the locale's script or its likely script, the
+  scripts written right to left generated from CLDR's script metadata
+  (`mlocDirection` in `maul-locale/base.h`, mloc-0045); it agrees with
+  the character order of every CLDR locale, which CI checks.
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

@@ -121,7 +121,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
@@ -214,6 +214,7 @@ jobs:
           ls ~/cldr-cache/cldr/common/main | grep '\.xml$' | sed 's/\.xml$//' |
             awk '{ print "main\t" $0; print "collation\t" $0 }' |
             build/mlocgen chains ~/cldr-cache/cldr/common | build/conform_parents
+          python3 tools/cldr_directions.py ~/cldr-cache/cldr/common | build/conform_direction
           build/mlocgen plural-samples ~/cldr-cache/cldr/common | build/conform_plurals
           cat ~/cldr-cache/cldr/common/testData/decimal/*.tsv |
             build/conform_numbers tools/number-exceptions.txt
