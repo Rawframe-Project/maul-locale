@@ -1,0 +1,487 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// A program's message functions (maul-locale/message.h): the table a
+// formatter is made with and what it refuses; a call's options and
+// locale through the accessors; operands of each kind; a function's
+// faults, falling back; :string's operands; selection through match and
+// better entries, and a selector that cannot select.
+
+#include "test_harness.h"
+
+#include "maul-locale/message.h"
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
+static mlocLocale s_locale;
+static mlocDataSet s_data;
+static uint8_t s_compiled[1 << 16];
+static uint8_t s_bound[1 << 16];
+static char s_text[1 << 12];
+
+// What echo resolves to: a short text it writes back.
+typedef struct Echo
+{
+    char text[62];
+    uint8_t length;
+    bool failFormat;
+} Echo;
+
+static void Add(Echo* e, const char* text, size_t length)
+{
+    for (size_t i = 0; i < length && e->length < sizeof e->text; i++)
+    {
+        e->text[e->length++] = text[i];
+    }
+}
+
+// An operand as echo shows it: "_" none, its text, "#" an argument,
+// "@" and the function's index a resolved value, "?" a fallback.
+static void AddOperand(Echo* e, const mlocMessageOperand* operand)
+{
+    char shown[8];
+    switch (operand->kind)
+    {
+    case mloc_messageOperandNone:
+        Add(e, "_", 1);
+        break;
+    case mloc_messageOperandText:
+        Add(e, operand->text, operand->length);
+        break;
+    case mloc_messageOperandArgument:
+        Add(e, "#", 1);
+        break;
+    case mloc_messageOperandResolved:
+        snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
+        Add(e, shown, strlen(shown));
+        break;
+    default:
+        Add(e, "?", 1);
+        break;
+    }
+}
+
+// x:echo: its operand, then each option as ";name=value"; "fail" as
+// its operand is refused with a function fault, the option fail=format
+// makes its format fail.
+static mlocMessageFaultKind EchoResolve(void* context, const mlocMessageCall* call,
+                                        const mlocMessageOperand* operand,
+                                        mlocMessageResolved* valueOut)
+{
+    (void)context;
+    if (operand->kind == mloc_messageOperandText && operand->length == 4 &&
+        memcmp(operand->text, "fail", 4) == 0)
+    {
+        return mloc_messageFaultFunction;
+    }
+    Echo e;
+    memset(&e, 0, sizeof e);
+    AddOperand(&e, operand);
+    size_t count = mlocGetMessageOptionCount(call);
+    for (size_t i = 0; i < count; i++)
+    {
+        const char* name;
+        size_t length;
+        mlocMessageOperand value;
+        mlocMessageResolved storage;
+        if (mlocGetMessageOption(call, i, &name, &length, &value, &storage) != mloc_success)
+        {
+            return mloc_messageFaultFunction;
+        }
+        Add(&e, ";", 1);
+        Add(&e, name, length);
+        Add(&e, "=", 1);
+        AddOperand(&e, &value);
+    }
+    mlocMessageOperand fail;
+    mlocMessageResolved storage;
+    e.failFormat = mlocFindMessageOption(call, "fail", 4, &fail, &storage) == mloc_success;
+    memset(valueOut, 0, sizeof *valueOut);
+    memcpy(valueOut, &e, sizeof e);
+    return mloc_messageFaultNone;
+}
+
+static mlocMessageFaultKind EchoFormat(void* context, const mlocMessageResolved* value,
+                                       mlocOutput* output)
+{
+    (void)context;
+    Echo e;
+    memcpy(&e, value, sizeof e);
+    if (e.failFormat)
+    {
+        return mloc_messageFaultFunction;
+    }
+    output->length = e.length;
+    if (output->buffer != NULL)
+    {
+        memcpy(output->buffer, e.text, e.length < output->capacity ? e.length : output->capacity);
+    }
+    return mloc_messageFaultNone;
+}
+
+// x:any matches every key, or none when its operand is "none"; with
+// the operand "broken" its match fails.
+static mlocMessageFaultKind AnyMatch(void* context, const mlocMessageResolved* value,
+                                     const char* key, size_t length, bool* matchOut)
+{
+    (void)context;
+    (void)key;
+    (void)length;
+    Echo e;
+    memcpy(&e, value, sizeof e);
+    if (e.length == 6 && memcmp(e.text, "broken", 6) == 0)
+    {
+        return mloc_messageFaultUnsupportedOperation;
+    }
+    *matchOut = !(e.length == 4 && memcmp(e.text, "none", 4) == 0);
+    return mloc_messageFaultNone;
+}
+
+// x:short prefers the shorter key.
+static bool ShortBetter(void* context, const mlocMessageResolved* value, const char* key1,
+                        size_t length1, const char* key2, size_t length2)
+{
+    (void)context;
+    (void)value;
+    (void)key1;
+    (void)key2;
+    return length1 < length2;
+}
+
+// x:locale writes the call's locale.
+static mlocMessageFaultKind LocaleResolve(void* context, const mlocMessageCall* call,
+                                          const mlocMessageOperand* operand,
+                                          mlocMessageResolved* valueOut)
+{
+    (void)context;
+    (void)operand;
+    mlocLocale locale;
+    Echo e;
+    memset(&e, 0, sizeof e);
+    char tag[32];
+    mlocOutput out = {tag, sizeof tag, 0, NULL, NULL};
+    if (mlocGetMessageLocale(call, &locale) != mloc_success ||
+        mlocFormatLocale(&locale, &out) != mloc_success)
+    {
+        return mloc_messageFaultFunction;
+    }
+    Add(&e, tag, out.length);
+    memset(valueOut, 0, sizeof *valueOut);
+    memcpy(valueOut, &e, sizeof e);
+    return mloc_messageFaultNone;
+}
+
+// x:greedy reads its option k 40000 times: "ok", or "short" when a read
+// fell back.
+static mlocMessageFaultKind GreedyResolve(void* context, const mlocMessageCall* call,
+                                          const mlocMessageOperand* operand,
+                                          mlocMessageResolved* valueOut)
+{
+    (void)context;
+    (void)operand;
+    bool short_ = false;
+    for (int i = 0; i < 40000; i++)
+    {
+        mlocMessageOperand value;
+        mlocMessageResolved storage;
+        short_ = short_ || mlocFindMessageOption(call, "k", 1, &value, &storage) != mloc_success ||
+                 value.kind == mloc_messageOperandFallback;
+    }
+    Echo e;
+    memset(&e, 0, sizeof e);
+    Add(&e, short_ ? "short" : "ok", short_ ? 5 : 2);
+    memset(valueOut, 0, sizeof *valueOut);
+    memcpy(valueOut, &e, sizeof e);
+    return mloc_messageFaultNone;
+}
+
+static const mlocMessageFunction s_functions[] = {
+    {"x:echo", 6, NULL, EchoResolve, EchoFormat, NULL, NULL},
+    {"x:any", 5, NULL, EchoResolve, NULL, AnyMatch, NULL},
+    {"x:short", 7, NULL, EchoResolve, EchoFormat, AnyMatch, ShortBetter},
+    {"x:locale", 8, NULL, LocaleResolve, EchoFormat, NULL, NULL},
+    {"x:greedy", 8, NULL, GreedyResolve, EchoFormat, NULL, NULL},
+};
+
+static mlocMessageFormatter s_formatter;
+
+static void MakeFormatter(void)
+{
+    static mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    s_data = (mlocDataSet){&builtin, 1};
+    mlocMessageOptions options = {false, s_functions, 5};
+    CHECK(mlocParseLocale("de-CH", 5, &s_locale).status == mloc_success &&
+              mlocInitMessageFormatter(&s_formatter, &s_data, &s_locale, &options) == mloc_success,
+          "a formatter with functions is made");
+}
+
+static bool Refused(const char* name)
+{
+    mlocMessageFunction function = {name, strlen(name), NULL, EchoResolve, NULL, NULL, NULL};
+    mlocMessageOptions options = {false, &function, 1};
+    mlocMessageFormatter formatter;
+    return mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid;
+}
+
+static void TestTable(void)
+{
+    static const char* const bad[] = {
+        "echo", "u:echo", "mloc:echo", ":echo", "x:", "x:1a", "1x:a", "x:a:b", "x:\xff", ""};
+    for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++)
+    {
+        CHECK(Refused(bad[i]), "a name that is not namespaced or is the library's is refused");
+    }
+    CHECK(!Refused("x:echo") && !Refused("ns-1:a.b_c") && !Refused("u2:a"),
+          "a namespaced name is taken");
+    mlocMessageFormatter formatter;
+    mlocMessageFunction twice[2] = {s_functions[0], s_functions[0]};
+    mlocMessageOptions options = {false, twice, 2};
+    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+          "two functions of one name are refused");
+    twice[1].resolve = NULL;
+    twice[1].name = "x:other";
+    twice[1].nameLength = 7;
+    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+          "a function without a resolve entry is refused");
+    options.functions = NULL;
+    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+          "a null table with a count is refused");
+    options.functionCount = 0;
+    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_success,
+          "a null table without a count is taken");
+}
+
+// Compiles and binds a message, then formats it; the result.
+static mlocResult Run(const char* message, const mlocMessageArgument* arguments, size_t count,
+                      mlocMessageFaults* faults, size_t* lengthOut)
+{
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
+                .status != mloc_success ||
+        mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success)
+    {
+        return mloc_errorSyntax;
+    }
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    mlocResult result = mlocFormatMessage(s_bound, arguments, count, &output, faults);
+    *lengthOut = output.length;
+    return result;
+}
+
+// Whether a message formats to a text with the faults given in order
+// (0 ending the list).
+static bool Formats(const char* message, const mlocMessageArgument* arguments, size_t count,
+                    const char* text, const mlocMessageFaultKind* expected)
+{
+    mlocMessageFault list[8];
+    mlocMessageFaults faults = {list, 8, 0};
+    size_t length = 0;
+    mlocResult result = Run(message, arguments, count, &faults, &length);
+    size_t expectedCount = 0;
+    while (expected != NULL && expected[expectedCount] != mloc_messageFaultNone)
+    {
+        expectedCount++;
+    }
+    bool good = result == (expectedCount > 0 ? mloc_withFallbacks : mloc_success) &&
+                length == strlen(text) && memcmp(s_text, text, length) == 0 &&
+                faults.count == expectedCount;
+    for (size_t i = 0; good && i < expectedCount; i++)
+    {
+        good = list[i].kind == expected[i];
+    }
+    if (!good)
+    {
+        printf("  [%s] -> %d [%.*s], %zu faults\n", message, (int)result, (int)length, s_text,
+               faults.count);
+    }
+    return good;
+}
+
+static const mlocMessageArgument s_arguments[] = {
+    {"s", 1, {mloc_messageValueString, 0, {.string = {"S", 1}}}},
+    {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},
+    {"o", 1, {mloc_messageValueObject, 3, {.object = &s_locale}}},
+    {"e", 1, {mloc_messageValueString, 0, {.string = {"e\xcc\x81", 3}}}},
+};
+
+static void TestCalls(void)
+{
+    const mlocMessageArgument* a = s_arguments;
+    CHECK(Formats("{|a| :x:echo k=v n=$n s=$s}", a, 4, "a;k=v;n=#;s=S", NULL),
+          "options are read in order, a literal and arguments");
+    CHECK(Formats("{:x:echo}", a, 4, "_", NULL) && Formats("{$n :x:echo}", a, 4, "#", NULL) &&
+              Formats("{$s :x:echo}", a, 4, "S", NULL),
+          "no operand, an argument, a string argument");
+    CHECK(Formats(".local $v = {|a| :x:echo} {{{$v :x:echo} {$v :x:short}}}", a, 4, "@0 @0", NULL),
+          "a resolved value is passed with its function's index");
+    CHECK(Formats(".local $v = {|t| :string} {{{$v :x:echo k=$v}}}", a, 4, "t;k=t", NULL),
+          "a :string value is passed as text");
+    static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable,
+                                                      mloc_messageFaultBadOption, 0};
+    CHECK(Formats("{|a| :x:echo k=$missing}", a, 4, "a;k=?", unresolved),
+          "an option that fails is a bad option, reported once, read as a fallback");
+    static const mlocMessageFaultKind function[] = {mloc_messageFaultFunction, 0};
+    CHECK(Formats("{|fail| :x:echo}", a, 4, "{|fail|}", function) &&
+              Formats("{|a| :x:echo fail=1}", a, 4, "{|a|}", function),
+          "a function's faults fall back, in resolve and in format");
+    static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
+    CHECK(Formats("{$s :x:any}", a, 4, "{$s}", unsupported),
+          "a function without a format entry falls back");
+    CHECK(Formats("{:x:locale}", a, 4, "de-CH", NULL), "a call's locale is the formatter's");
+
+    size_t length = 0;
+    char small[4];
+    mlocOutput output = {small, sizeof small, 0, NULL, NULL};
+    CHECK(Run("{|abcdef| :x:echo}!", a, 4, NULL, &length) == mloc_success &&
+              mlocFormatMessage(s_bound, a, 4, &output, NULL) == mloc_errorCapacity &&
+              output.length == 7 && memcmp(small, "abcd", 4) == 0,
+          "a function's text past the buffer counts its length");
+    output.capacity = 0;
+    output.buffer = NULL;
+    CHECK(mlocFormatMessage(s_bound, a, 4, &output, NULL) == mloc_errorCapacity &&
+              output.length == 7,
+          "a function's text is measured with no buffer");
+}
+
+static void TestAccessors(void)
+{
+    mlocMessageCall call;
+    memset(&call, 0, sizeof call);
+    const char* name;
+    size_t length;
+    mlocMessageOperand value;
+    mlocMessageResolved storage;
+    mlocLocale locale;
+    CHECK(mlocGetMessageOptionCount(NULL) == 0 && mlocGetMessageOptionCount(&call) == 0 &&
+              mlocGetMessageOption(&call, 0, &name, &length, &value, &storage) ==
+                  mloc_errorInvalid &&
+              mlocFindMessageOption(&call, "k", 1, &value, &storage) == mloc_errorInvalid &&
+              mlocGetMessageLocale(&call, &locale) == mloc_errorInvalid &&
+              mlocGetMessageLocale(NULL, &locale) == mloc_errorInvalid,
+          "a call the library did not make is refused");
+}
+
+static void TestString(void)
+{
+    const mlocMessageArgument* a = s_arguments;
+    static const mlocMessageFaultKind operand[] = {mloc_messageFaultBadOperand, 0};
+    CHECK(Formats("{$s :string}{$n :string}", a, 4, "S5", NULL),
+          ":string writes a string, and a number as its plain decimal");
+    CHECK(Formats("{$o :string}", a, 4, "{$o}", operand) &&
+              Formats("{:string}", a, 4, "{:string}", operand) &&
+              Formats(".local $v = {|a| :x:echo} {{{$v :string}}}", a, 4, "{$v}", operand),
+          ":string refuses an object, no operand, a function's value");
+    static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable, 0};
+    CHECK(Formats("{$missing :string}", a, 4, "{$missing}", unresolved),
+          ":string over a fallback adds no fault");
+    CHECK(Formats(".input {$n :string} .match $n 5 {{five}} * {{other}}", a, 4, "five", NULL) &&
+              Formats(".input {$e :string} .match $e \xc3\xa9 {{nfc}} * {{other}}", a, 4, "nfc",
+                      NULL) &&
+              Formats(".input {$s :string} .match $s s {{s}} * {{other}}", a, 4, "other", NULL),
+          ":string matches a number's decimal and a key in NFC, case and all");
+}
+
+static void TestSelection(void)
+{
+    const mlocMessageArgument* a = s_arguments;
+    static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
+    CHECK(Formats(".local $v = {|a| :x:echo} .match $v a {{A}} * {{other}}", a, 4, "other", bad),
+          "a function without a match entry is a bad selector");
+    CHECK(Formats(".local $v = {|broken| :x:any} .match $v a {{A}} b {{B}} * {{other}}", a, 4,
+                  "other", bad),
+          "a match fault breaks the selector, reported once");
+    CHECK(
+        Formats(".local $v = {|a| :x:any} .match $v bb {{B}} a {{A}} * {{other}}", a, 4, "B", NULL),
+        "without a better entry, the first matching variant");
+    CHECK(Formats(".local $v = {|a| :x:short} .match $v bb {{B}} a {{A}} * {{other}}", a, 4, "A",
+                  NULL),
+          "the better key wins");
+    CHECK(Formats(".local $v = {|a| :x:short} .local $w = {|none| :x:short}"
+                  " .match $v $w bb * {{B}} a x {{AX}} a * {{A}} * * {{other}}",
+                  a, 4, "A", NULL),
+          "the better key at the first selector whose keys differ");
+
+    // 32 selectors bind; 33 are refused.
+    for (int count = 32; count <= 33; count++)
+    {
+        char text[512];
+        size_t at = (size_t)snprintf(text, sizeof text, ".local $v = {|a| :x:any} .match");
+        for (int i = 0; i < count; i++)
+        {
+            at += (size_t)snprintf(text + at, sizeof text - at, " $v");
+        }
+        for (int i = 0; i < count; i++)
+        {
+            at += (size_t)snprintf(text + at, sizeof text - at, " *");
+        }
+        snprintf(text + at, sizeof text - at, " {{all}}");
+        size_t size = 0;
+        size_t bound = 0;
+        mlocMessageError error;
+        CHECK(mlocCompileMessage(text, strlen(text), s_compiled, sizeof s_compiled, &size, &error)
+                          .status == mloc_success &&
+                  mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound,
+                                  &bound) == (count == 32 ? mloc_success : mloc_errorInvalid),
+              "32 selectors bind, 33 are refused");
+    }
+}
+
+// Binds a message; the result.
+static mlocResult BindOnly(const char* message)
+{
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
+            .status != mloc_success)
+    {
+        return mloc_errorSyntax;
+    }
+    return mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound, &bound);
+}
+
+static void TestResolutionLimit(void)
+{
+    // Each local named by the next as operand and option: 1 + 3c
+    // resolutions, 29524 for $a10, so two references bind (59048) and
+    // three (88572) pass 65536.
+    char text[2048];
+    size_t at = (size_t)snprintf(text, sizeof text, ".local $a1 = {|x| :string}");
+    for (int i = 2; i <= 10; i++)
+    {
+        at += (size_t)snprintf(text + at, sizeof text - at, " .local $a%d = {$a%d :string k=$a%d}",
+                               i, i - 1, i - 1);
+    }
+    snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}}}");
+    CHECK(BindOnly(text) == mloc_success, "a message within the resolution limit binds");
+    snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}{$a10}}}");
+    CHECK(BindOnly(text) == mloc_errorInvalid, "one past it is refused");
+    snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}}} * {{{$a10}{$a10}}}");
+    CHECK(BindOnly(text) == mloc_errorInvalid, "a selector counts with the costliest variant");
+    snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}}} * {{x}}");
+    CHECK(BindOnly(text) == mloc_success, "and a cheaper one binds");
+
+    const mlocMessageArgument* a = s_arguments;
+    static const mlocMessageFaultKind out[] = {mloc_messageFaultUnsupportedOperation, 0};
+    CHECK(Formats(".local $a = {|v| :x:echo} {{{|g| :x:greedy k=$a}{|h| :x:greedy k=$a}}}", a, 4,
+                  "okshort", out),
+          "a call stops resolving at the limit, reported once");
+}
+
+int main(void)
+{
+    MakeFormatter();
+    TestTable();
+    TestCalls();
+    TestAccessors();
+    TestString();
+    TestSelection();
+    TestResolutionLimit();
+    return s_failures == 0 ? 0 : 1;
+}

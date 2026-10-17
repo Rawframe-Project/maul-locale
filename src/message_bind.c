@@ -7,6 +7,9 @@
 #include "message_bind.h"
 
 #include "bytes.h"
+#include "message_text.h"
+
+#include "maul-unicode/encoding.h"
 
 #include <assert.h>
 #include <string.h>
@@ -30,6 +33,80 @@ static void Store32(uint8_t* p, uint32_t value)
     p[3] = (uint8_t)(value >> 24);
 }
 
+// Whether a function's name is an MF2 identifier with a namespace other
+// than the library's.
+static bool GoodFunctionName(const mlocMessageFunction* function)
+{
+    const uint8_t* name = (const uint8_t*)function->name;
+    size_t length = function->nameLength;
+    if (name == NULL || length == 0 ||
+        muniValidateUtf8(function->name, length).status != muni_success)
+    {
+        return false;
+    }
+    const uint8_t* colon = memchr(name, ':', length);
+    if (colon == NULL)
+    {
+        return false;
+    }
+    size_t space = (size_t)(colon - name);
+    if ((space == 1 && name[0] == 'u') || (space == 4 && memcmp(name, "mloc", 4) == 0))
+    {
+        return false;
+    }
+    // Each side one name: a name-start, then name characters.
+    bool start = true;
+    for (size_t at = 0; at < length;)
+    {
+        size_t size;
+        uint32_t c = mlocMessageDecode(name, at, length, &size);
+        if (at == space)
+        {
+            if (start)
+            {
+                return false;
+            }
+            start = true;
+        }
+        else if (start ? !mlocMessageIsNameStart(c) : !mlocMessageIsNameChar(c))
+        {
+            return false;
+        }
+        else
+        {
+            start = false;
+        }
+        at += size;
+    }
+    return !start;
+}
+
+// Whether the program's functions are well made: each with a resolve
+// entry and a good name, no name twice.
+static bool GoodFunctions(const mlocMessageFunction* functions, size_t count)
+{
+    if ((functions == NULL && count > 0) || count >= messageFunctionLimit)
+    {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++)
+    {
+        if (functions[i].resolve == NULL || !GoodFunctionName(&functions[i]))
+        {
+            return false;
+        }
+        for (size_t j = 0; j < i; j++)
+        {
+            if (functions[j].nameLength == functions[i].nameLength &&
+                memcmp(functions[j].name, functions[i].name, functions[i].nameLength) == 0)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const mlocDataSet* data,
                                     const mlocLocale* locale, const mlocMessageOptions* options)
 {
@@ -37,10 +114,19 @@ mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const ml
     {
         return mloc_errorInvalid;
     }
+    if (options != NULL && !GoodFunctions(options->functions, options->functionCount))
+    {
+        return mloc_errorInvalid;
+    }
     MessageFormatter f;
     memset(&f, 0, sizeof f);
     f.stamp = formatterStamp;
     f.strict = options != NULL && options->strict;
+    if (options != NULL)
+    {
+        f.functions = options->functions;
+        f.functionCount = options->functionCount;
+    }
     f.data = data;
     f.locale = *locale;
     memset(formatterOut, 0, sizeof *formatterOut);
@@ -79,15 +165,31 @@ static uint32_t Field(const MessageView* v, uint32_t kind, uint32_t index, uint3
     return mlocMessageField(v, kind, index, field);
 }
 
-// The chain an expression starts: one more than the longest chain of a
-// declaration whose variable it names (as operand or option value).
-// Declarations name only earlier ones, so their expressions' lengths are
-// known; one naming a later expression (only in crafted bytes, which
-// could loop) is refused with 0.
-static uint32_t ChainLength(const MessageView* v, const uint8_t* words, uint32_t e)
+static uint32_t Saturate(uint64_t count)
+{
+    return count > messageResolutionLimit ? messageResolutionLimit + 1 : (uint32_t)count;
+}
+
+// What an expression costs: the chain it starts, one more than the
+// longest chain of a declaration whose variable it names (as operand or
+// option value), and the resolutions it makes, its own and each named
+// declaration's again, an option's twice (checked, then read). Each
+// saturates past its limit.
+typedef struct Cost
+{
+    uint32_t chain;
+    uint32_t resolutions;
+} Cost;
+
+// An expression's cost. Declarations name only earlier ones, so theirs
+// are known; one naming a later expression (only in crafted bytes, which
+// could loop) gives a chain of 0.
+static Cost CostOf(const MessageView* v, const uint8_t* words, uint32_t e)
 {
     const uint8_t* expressionWords = words + (size_t)v->count[messageVariables] * 4;
-    uint32_t longest = 0;
+    const uint8_t* costWords = expressionWords + (size_t)v->count[messageExpressions] * 4;
+    Cost cost = {0, 1};
+    uint64_t resolutions = 1;
     uint32_t first = Field(v, messageExpressions, e, 5);
     uint32_t count = Field(v, messageExpressions, e, 6);
     for (uint32_t i = 0; i <= count; i++)
@@ -122,18 +224,102 @@ static uint32_t ChainLength(const MessageView* v, const uint8_t* words, uint32_t
         }
         if (named >= e)
         {
-            return 0;
+            cost.chain = 0;
+            return cost;
         }
         uint32_t length = mlocLoad32(expressionWords + (size_t)named * 4) >> 24;
-        longest = length > longest ? length : longest;
+        cost.chain = length > cost.chain ? length : cost.chain;
+        resolutions += (uint64_t)(i == count ? 1 : 2) * mlocLoad32(costWords + (size_t)named * 4);
+        resolutions = Saturate(resolutions);
     }
-    return longest + 1;
+    cost.chain++;
+    cost.resolutions = (uint32_t)resolutions;
+    return cost;
+}
+
+// The resolutions a variable's reference makes.
+static uint64_t VariableCost(const MessageView* v, const uint8_t* words, uint32_t variable)
+{
+    uint32_t d = mlocLoad32(words + (size_t)variable * 4);
+    if (d == messageUnbound)
+    {
+        return 0;
+    }
+    const uint8_t* costWords =
+        words + ((size_t)v->count[messageVariables] + v->count[messageExpressions]) * 4;
+    return mlocLoad32(costWords + (size_t)Field(v, messageDeclarations, d, 2) * 4);
+}
+
+// The resolutions a pattern's expressions make.
+static uint64_t PatternCost(const MessageView* v, const uint8_t* words, uint32_t first,
+                            uint32_t count)
+{
+    const uint8_t* costWords =
+        words + ((size_t)v->count[messageVariables] + v->count[messageExpressions]) * 4;
+    uint64_t total = 0;
+    for (uint32_t i = first; i < first + count; i++)
+    {
+        if (Field(v, messagePieces, i, 0) == pieceExpression)
+        {
+            total += mlocLoad32(costWords + (size_t)Field(v, messagePieces, i, 1) * 4);
+        }
+    }
+    return total;
+}
+
+// The most resolutions a format call makes: its selectors', then the
+// costliest pattern's.
+static uint64_t MessageCost(const MessageView* v, const uint8_t* words)
+{
+    uint64_t total = 0;
+    for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
+    {
+        total += VariableCost(v, words, Field(v, messageSelectors, s, 0));
+    }
+    if (v->count[messageVariants] == 0)
+    {
+        return total + PatternCost(v, words, 0, v->count[messagePieces]);
+    }
+    uint64_t costliest = 0;
+    for (uint32_t i = 0; i < v->count[messageVariants]; i++)
+    {
+        uint64_t cost =
+            PatternCost(v, words, Field(v, messageVariants, i, 0), Field(v, messageVariants, i, 1));
+        costliest = cost > costliest ? cost : costliest;
+    }
+    return total + costliest;
+}
+
+// An expression's function slot: none, :string, a program function by
+// its name, or unknown.
+static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t e)
+{
+    uint32_t length = Field(v, messageExpressions, e, 4);
+    if (length == 0)
+    {
+        return messageFunctionNone;
+    }
+    const uint8_t* name = v->pool + Field(v, messageExpressions, e, 3);
+    if (length == 6 && memcmp(name, "string", 6) == 0)
+    {
+        return messageFunctionString;
+    }
+    for (size_t i = 0; i < f->functionCount; i++)
+    {
+        if (f->functions[i].nameLength == length && memcmp(f->functions[i].name, name, length) == 0)
+        {
+            return messageFunctionProgram + (uint32_t)i;
+        }
+    }
+    return messageFunctionUnknown;
 }
 
 // Writes the words: each variable's declaration, then each expression's
-// function slot and chain length; mloc_errorCapacity past the chain
-// limit, mloc_errorData for a declaration naming a later one.
-static mlocResult WriteWords(const MessageView* v, uint8_t* words)
+// function slot and chain length, then its resolutions;
+// mloc_errorInvalid past the chain or resolution limit (not a capacity
+// error: no buffer would do), mloc_errorData for a declaration naming a
+// later one.
+static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, uint8_t* words)
 {
     for (uint32_t i = 0; i < v->count[messageVariables]; i++)
     {
@@ -144,22 +330,22 @@ static mlocResult WriteWords(const MessageView* v, uint8_t* words)
         Store32(words + (size_t)Field(v, messageDeclarations, d, 1) * 4, d);
     }
     uint8_t* expressionWords = words + (size_t)v->count[messageVariables] * 4;
+    uint8_t* costWords = expressionWords + (size_t)v->count[messageExpressions] * 4;
     for (uint32_t e = 0; e < v->count[messageExpressions]; e++)
     {
-        uint32_t length = ChainLength(v, words, e);
-        if (length == 0)
+        Cost cost = CostOf(v, words, e);
+        if (cost.chain == 0)
         {
             return mloc_errorData;
         }
-        if (length > messageChainLimit)
+        if (cost.chain > messageChainLimit)
         {
-            return mloc_errorCapacity;
+            return mloc_errorInvalid;
         }
-        uint32_t slot =
-            Field(v, messageExpressions, e, 4) > 0 ? messageFunctionUnknown : messageFunctionNone;
-        Store32(expressionWords + (size_t)e * 4, slot | length << 24);
+        Store32(expressionWords + (size_t)e * 4, SlotOf(v, f, e) | cost.chain << 24);
+        Store32(costWords + (size_t)e * 4, cost.resolutions);
     }
-    return mloc_success;
+    return MessageCost(v, words) > messageResolutionLimit ? mloc_errorInvalid : mloc_success;
 }
 
 mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size,
@@ -178,8 +364,12 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
     {
         return result;
     }
+    if (h.view.count[messageSelectors] > messageSelectorLimit)
+    {
+        return mloc_errorInvalid;
+    }
     uint64_t needed = sizeof h + 4 * ((uint64_t)h.view.count[messageVariables] +
-                                      h.view.count[messageExpressions]);
+                                      2 * (uint64_t)h.view.count[messageExpressions]);
     if (buffer == NULL || capacity < needed)
     {
         *sizeOut = (size_t)needed;
@@ -190,7 +380,7 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
     // its own.
     memset(buffer, 0, sizeof h);
     uint8_t* words = (uint8_t*)buffer + sizeof h;
-    result = WriteWords(&h.view, words);
+    result = WriteWords(&h.view, &f, words);
     if (result != mloc_success)
     {
         return result;

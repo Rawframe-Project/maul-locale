@@ -83,12 +83,23 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   text with "\", "{" and "}" escaped. Compiling it gives the same
   counts, and writing that again gives the same text.
 - **Bind and format:** `mlocInitMessageFormatter` keeps the data set,
-  the locale and the options (strict or not); `mlocBindMessage` reads the
-  compiled message as the writer does, finds each expression's function,
-  and measures each chain of declarations, refusing (`mloc_errorCapacity`)
-  one of more than 64 expressions each naming the next, and one naming a
-  later declaration (crafted bytes, which could loop); the bound message
-  points into the compiled one and the formatter and is read-only.
+  the locale and the options: strict or not, and the program's
+  functions, each a namespaced name (not `u:` or `mloc:`, the
+  library's) with resolve, format, match and better entries, refused
+  when a name is ill-formed or given twice or resolve is missing.
+  `mlocBindMessage` reads the compiled message as the writer does, finds
+  each expression's function (none, `:string`, the program's by name, or
+  unknown), and measures each chain of declarations, refusing
+  (`mloc_errorInvalid`, which no buffer would cure) one of more than 64
+  expressions each naming the next, more than 32 selectors, and a
+  message whose format call would resolve more than 65536 expressions
+  (call-by-name resolves a local again at each reference, an option's
+  twice, so locals each named twice by the next grow as a power of two;
+  a call also stops there, with an unsupported operation, whatever its
+  functions read), and
+  (`mloc_errorData`) one naming a later declaration (crafted bytes,
+  which could loop); the bound message points into the compiled one and
+  the formatter and is read-only.
   `mlocFormatMessage` resolves each placeholder and selector where it
   stands, a local through its declaration on the stack (call-by-name: no
   memory per call), an argument by its name after NFC; it writes text,
@@ -97,9 +108,21 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   `{:function}`), each fault (kind and source offset) kept in an optional
   caller array and counted, the call returning `mloc_withFallbacks`; in
   strict mode the first fault returns `mloc_errorFormat` and nothing is
-  written. Until the functions come (the next slices), every function is
-  unknown, every selector a bad selector, the first variant of catch-all
-  keys chosen, and a number argument without a function written as its
+  written. A function's options are each resolved first, one that fails
+  a bad option; its resolve entry gets the operand (none, text, an
+  argument, another function's 64-byte value, or a fallback it may
+  refuse) and reads the options and locale through
+  `mlocGetMessageOption`, `mlocFindMessageOption` and
+  `mlocGetMessageLocale` while the call lasts; a fault it returns makes
+  the expression fall back. Selection follows the specification: a
+  selector that cannot select (no match entry, a fallback) or whose
+  match fails is a bad selector matching only `*`; of the variants whose
+  keys all match, the best by key over `*` and the better entry, at the
+  first selector whose keys differ, the first of those that tie.
+  `:string` takes text and number arguments, matches keys in NFC, and
+  over a failed operand matches nothing without a fault of its own.
+  Until the number and date functions come (the next slices), they are
+  unknown, and a number argument without a function is written as its
   plain decimal.
 - **Maul Unicode** becomes a run-time dependency (UTF-8 validation,
   NFC, bidi classes), at 0.3.0: an installed package, else the pinned
@@ -126,6 +149,15 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   variable, the refusals of ill-formed UTF-8, NUL and arguments, the
   capacity measured exactly, and compiles every prefix of every case
   into a buffer of exactly the size measured.
+- Formatting: every case of the suite without bidi isolation or the
+  default number and date functions formats to its text with its errors
+  in order (149, the `:test:` functions defined in the test as the
+  suite describes them); `test_message_functions` checks the function
+  table's refusals, each operand kind, the accessors, a function's
+  faults in resolve and format, `:string`'s operands, selection with and
+  without better entries, the selector limit, and the resolution limit
+  at bind and in a call whose function reads an option 40000 times. `fuzz_message` binds
+  and formats each text with two arguments and two functions.
 
 ## Consequences
 

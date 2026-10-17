@@ -460,17 +460,37 @@ Writes a compiled message back as MF2 text, in a canonical form: a simple messag
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocMessageOptions* options);
 ```
-Makes a locale's message formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data its functions read. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+Makes a locale's message formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data its functions read. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorInvalid for a null pointer, or a function without a resolve entry, a name that is not an MF2 identifier with a namespace, a namespace of u: or mloc:, or two functions of one name. @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size, void* buffer, size_t capacity, size_t* sizeOut);
 ```
-Binds a compiled message to a formatter in caller memory: the message is read as mlocWriteMessageText reads it, each function found, each chain of declarations measured. The bound message points into the compiled one and the formatter, which must outlive it; it is read-only, so threads may format with it at once. Call it with a null buffer and a capacity of 0 to learn the capacity. A bind that fails leaves the buffer holding no bound message, even one bound there before.  @param formatter  A formatter from mlocInitMessageFormatter. @param message    A compiled message from mlocCompileMessage. @param size       Its size in bytes. @param buffer     Receives the bound message; any alignment. @param capacity   The buffer's size in bytes. @param sizeOut    Receives the size written, or needed with mloc_errorCapacity. @return mloc_success; mloc_errorCapacity when the buffer is too small, or for a chain of more than 64 expressions each naming the next through a declaration; mloc_errorData and mloc_errorDataVersion as mlocWriteMessageText; mloc_errorInvalid for a null pointer or a formatter the library did not make. @par Thread safety Safe from any thread.
+Binds a compiled message to a formatter in caller memory: the message is read as mlocWriteMessageText reads it, each function found, each chain of declarations measured. The bound message points into the compiled one and the formatter, which must outlive it; it is read-only, so threads may format with it at once. Call it with a null buffer and a capacity of 0 to learn the capacity. A bind that fails leaves the buffer holding no bound message, even one bound there before.  @param formatter  A formatter from mlocInitMessageFormatter. @param message    A compiled message from mlocCompileMessage. @param size       Its size in bytes. @param buffer     Receives the bound message; any alignment. @param capacity   The buffer's size in bytes. @param sizeOut    Receives the size written, or needed with mloc_errorCapacity. @return mloc_success; mloc_errorCapacity when the buffer is too small; mloc_errorData and mloc_errorDataVersion as mlocWriteMessageText; mloc_errorInvalid for a null pointer, a formatter the library did not make, more than 32 selectors, a chain of more than 64 expressions each naming the next through a declaration, or a message whose format call would resolve more than 65536 expressions (a local is resolved again at each reference, an option's twice; these two found only when binding, not when measuring). @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments, size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults);
 ```
 Formats a bound message with its arguments: the pattern selected, each text written, each placeholder resolved where it stands and written, markup writing nothing. An expression that fails is written as its fallback ("{$name}", "{|literal|}", "{:function}") and reported as a fault.  @param bound          A bound message from mlocBindMessage. @param arguments      The arguments; may be null when count is 0. @param argumentCount  Their number. @param output         Receives the text. @param faults         Receives the faults; may be null. @return mloc_success; mloc_withFallbacks when the text holds fallbacks; in strict mode mloc_errorFormat at the first fault, nothing written; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorInvalid for a null pointer (an argument's name, string or decimal among them), an unknown kind, or a bound message the library did not make. @par Thread safety Safe from any thread.
+
+```c
+size_t mlocGetMessageOptionCount(const mlocMessageCall* call);
+```
+The number of options a function's call has (its attributes aside), for mlocGetMessageOption.  @param call  The call a function's resolve entry received, read only while that entry runs. @return The count; 0 for a null pointer. @par Thread safety Safe from any thread; the call is used by one thread at a time.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageOption(const mlocMessageCall* call, size_t index, const char** nameOut, size_t* lengthOut, mlocMessageOperand* valueOut, mlocMessageResolved* storage);
+```
+Reads one of a call's options: its name and its value, resolved now (a variable's value resolved through its declaration).  @param call        The call a function's resolve entry received. @param index       Below mlocGetMessageOptionCount. @param nameOut     Receives the name (UTF-8, NFC, not terminated). @param lengthOut   Receives its length. @param valueOut    Receives the value; mloc_messageOperandFallback for one that failed (the formatter has reported a bad option), which the function ignores. @param storage     Holds a resolved value valueOut points to; it must live as long as valueOut is read. @return mloc_success; mloc_errorInvalid for a null pointer or an index past the count. @par Thread safety Safe from any thread; the call is used by one thread at a time.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindMessageOption(const mlocMessageCall* call, const char* name, size_t length, mlocMessageOperand* valueOut, mlocMessageResolved* storage);
+```
+Finds a call's option by name and reads its value as mlocGetMessageOption does.  @param call      The call a function's resolve entry received. @param name      The option's name, UTF-8 in NFC. @param length    Its length. @param valueOut  Receives the value. @param storage   As for mlocGetMessageOption. @return mloc_success; mloc_errorNotFound when the call has no such option; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread; the call is used by one thread at a time.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageLocale(const mlocMessageCall* call, mlocLocale* localeOut);
+```
+The locale a call formats for: the formatter's.  @param call        The call a function's resolve entry received. @param localeOut   Receives the locale. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread; the call is used by one thread at a time.
 
 ## `names.h`
 
@@ -847,4 +867,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-154 functions across 18 headers.
+158 functions across 18 headers.

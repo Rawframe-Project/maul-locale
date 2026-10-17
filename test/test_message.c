@@ -782,7 +782,8 @@ static const char* FaultName(mlocMessageFaultKind kind)
 // Whether a case's expected errors are only those this slice reports.
 static bool FormatsNow(const SuiteCase* c)
 {
-    static const char* const known[] = {"unresolved-variable", "unknown-function", "bad-selector"};
+    static const char* const known[] = {"unresolved-variable", "unknown-function", "bad-selector",
+                                        "bad-operand", "bad-option"};
     const char* at = c->errors;
     while (*at != 0)
     {
@@ -799,8 +800,8 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":test:",    ":number",  ":integer", ":string", ":offset",
-                                        ":currency", ":percent", ":unit",    ":date",   ":time"};
+    static const char* const later[] = {":number",  ":integer", ":offset", ":currency",
+                                        ":percent", ":unit",    ":date",   ":time"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)
@@ -838,6 +839,224 @@ static void FaultNames(const mlocMessageFaults* faults, char* out, size_t capaci
     }
 }
 
+// The suite's test functions (its README, "Test functions"): a value of
+// one is its input, decimal places and failures, and which it is.
+typedef struct TestValue
+{
+    double input;
+    int decimalPlaces;
+    bool failsFormat;
+    bool failsSelect;
+} TestValue;
+
+// Whether text is an MF2 number-literal.
+static bool NumberLiteral(const char* text, size_t length)
+{
+    size_t at = 0;
+    at += at < length && text[at] == '-';
+    if (at < length && text[at] == '0')
+    {
+        at++;
+    }
+    else if (at < length && text[at] >= '1' && text[at] <= '9')
+    {
+        while (at < length && text[at] >= '0' && text[at] <= '9')
+        {
+            at++;
+        }
+    }
+    else
+    {
+        return false;
+    }
+    if (at < length && text[at] == '.')
+    {
+        size_t digits = ++at;
+        while (at < length && text[at] >= '0' && text[at] <= '9')
+        {
+            at++;
+        }
+        if (at == digits)
+        {
+            return false;
+        }
+    }
+    if (at < length && (text[at] == 'e' || text[at] == 'E'))
+    {
+        at++;
+        at += at < length && (text[at] == '-' || text[at] == '+');
+        size_t digits = at;
+        while (at < length && text[at] >= '0' && text[at] <= '9')
+        {
+            at++;
+        }
+        if (at == digits)
+        {
+            return false;
+        }
+    }
+    return at == length;
+}
+
+// An operand's number: a number literal, a numeric argument, or a test
+// function's input; false for anything else.
+static bool TestNumber(const mlocMessageOperand* operand, double* out)
+{
+    char text[128];
+    size_t length = 0;
+    if (operand->kind == mloc_messageOperandResolved)
+    {
+        TestValue v;
+        memcpy(&v, operand->resolved, sizeof v);
+        *out = v.input;
+        return true;
+    }
+    if (operand->kind == mloc_messageOperandText)
+    {
+        if (operand->length >= sizeof text || !NumberLiteral(operand->text, operand->length))
+        {
+            return false;
+        }
+        memcpy(text, operand->text, operand->length);
+        length = operand->length;
+    }
+    else if (operand->kind == mloc_messageOperandArgument)
+    {
+        const mlocMessageValue* a = operand->argument;
+        if (a->kind == mloc_messageValueInteger || a->kind == mloc_messageValueDouble)
+        {
+            *out = a->kind == mloc_messageValueInteger ? (double)a->as.integer : a->as.number;
+            return true;
+        }
+        mlocOutput o = {text, sizeof text - 1, 0, NULL, NULL};
+        if (a->kind != mloc_messageValueDecimal || mlocFormatDecimal(a->as.decimal, &o) != 0)
+        {
+            return false;
+        }
+        length = o.length;
+    }
+    else
+    {
+        return false;
+    }
+    text[length] = 0;
+    *out = strtod(text, NULL);
+    return true;
+}
+
+static bool OperandIs(const mlocMessageOperand* operand, const char* text)
+{
+    return operand->kind == mloc_messageOperandText && operand->length == strlen(text) &&
+           memcmp(operand->text, text, operand->length) == 0;
+}
+
+static mlocMessageFaultKind TestResolve(void* context, const mlocMessageCall* call,
+                                        const mlocMessageOperand* operand,
+                                        mlocMessageResolved* valueOut)
+{
+    (void)context;
+    TestValue v = {0, 0, false, false};
+    if (operand->kind == mloc_messageOperandResolved)
+    {
+        memcpy(&v, operand->resolved, sizeof v);
+    }
+    else if (!TestNumber(operand, &v.input))
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    mlocMessageOperand option;
+    mlocMessageResolved storage;
+    if (mlocFindMessageOption(call, "decimalPlaces", 13, &option, &storage) == 0 &&
+        option.kind != mloc_messageOperandFallback)
+    {
+        double places = -1;
+        if (!TestNumber(&option, &places) || (places != 0 && places != 1))
+        {
+            return mloc_messageFaultBadOption;
+        }
+        v.decimalPlaces = (int)places;
+    }
+    if (mlocFindMessageOption(call, "fails", 5, &option, &storage) == 0 &&
+        option.kind != mloc_messageOperandFallback)
+    {
+        bool always = OperandIs(&option, "always");
+        v.failsFormat = v.failsFormat || always || OperandIs(&option, "format");
+        v.failsSelect = v.failsSelect || always || OperandIs(&option, "select");
+        if (!always && !OperandIs(&option, "format") && !OperandIs(&option, "select") &&
+            !OperandIs(&option, "never"))
+        {
+            return mloc_messageFaultBadOption;
+        }
+    }
+    memset(valueOut, 0, sizeof *valueOut);
+    memcpy(valueOut, &v, sizeof v);
+    return mloc_messageFaultNone;
+}
+
+static mlocMessageFaultKind TestFormat(void* context, const mlocMessageResolved* value,
+                                       mlocOutput* output)
+{
+    (void)context;
+    TestValue v;
+    memcpy(&v, value, sizeof v);
+    if (v.failsFormat)
+    {
+        return mloc_messageFaultBadOption;
+    }
+    double magnitude = v.input < 0 ? -v.input : v.input;
+    char text[64];
+    int length =
+        snprintf(text, sizeof text, "%s%.0f", v.input < 0 ? "-" : "", (double)(long long)magnitude);
+    if (v.decimalPlaces == 1)
+    {
+        int digit = (int)((long long)(magnitude * 10) % 10);
+        length += snprintf(text + length, sizeof text - (size_t)length, ".%d", digit);
+    }
+    output->length = (size_t)length;
+    if (output->buffer != NULL)
+    {
+        memcpy(output->buffer, text,
+               (size_t)length < output->capacity ? (size_t)length : output->capacity);
+    }
+    return mloc_messageFaultNone;
+}
+
+static bool KeyIs(const char* key, size_t length, const char* text)
+{
+    return length == strlen(text) && memcmp(key, text, length) == 0;
+}
+
+static mlocMessageFaultKind TestMatch(void* context, const mlocMessageResolved* value,
+                                      const char* key, size_t length, bool* matchOut)
+{
+    (void)context;
+    TestValue v;
+    memcpy(&v, value, sizeof v);
+    if (v.failsSelect)
+    {
+        return mloc_messageFaultBadSelector;
+    }
+    *matchOut = v.input == 1 &&
+                (KeyIs(key, length, "1") || (v.decimalPlaces == 1 && KeyIs(key, length, "1.0")));
+    return mloc_messageFaultNone;
+}
+
+static bool TestBetter(void* context, const mlocMessageResolved* value, const char* key1,
+                       size_t length1, const char* key2, size_t length2)
+{
+    (void)context;
+    (void)value;
+    (void)key2;
+    (void)length2;
+    return KeyIs(key1, length1, "1.0");
+}
+
+static const mlocMessageFunction s_testFunctions[] = {
+    {"test:function", 13, NULL, TestResolve, TestFormat, TestMatch, TestBetter},
+    {"test:select", 11, NULL, TestResolve, NULL, TestMatch, TestBetter},
+    {"test:format", 11, NULL, TestResolve, TestFormat, NULL, NULL},
+};
+
 // Every suite case this slice can format formats to its text, with its
 // errors in order.
 static void TestSuiteFormat(void)
@@ -848,8 +1067,9 @@ static void TestSuiteFormat(void)
     mlocLocale locale;
     mlocTextResult parsed = mlocParseLocale("en-US", 5, &locale);
     mlocMessageFormatter formatter;
+    mlocMessageOptions options = {false, s_testFunctions, 3};
     CHECK(parsed.status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &data, &locale, NULL) == mloc_success,
+              mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success,
           "a formatter is made");
     static uint8_t bound[1 << 16];
     size_t count = sizeof s_suite / sizeof s_suite[0];
@@ -891,7 +1111,7 @@ static void TestSuiteFormat(void)
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 100, "most of the syntax cases format");
+    CHECK(formatted >= 149, "every case without bidi or the default functions formats");
 }
 
 static mlocMessageFormatter s_formatter;
@@ -904,7 +1124,7 @@ static void MakeFormatters(void)
     mlocOpenBuiltinData(&builtin);
     data = (mlocDataSet){&builtin, 1};
     mlocLocale locale;
-    mlocMessageOptions strict = {true};
+    mlocMessageOptions strict = {true, NULL, 0};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitMessageFormatter(&s_formatter, &data, &locale, NULL) == mloc_success &&
               mlocInitMessageFormatter(&s_strict, &data, &locale, &strict) == mloc_success,
@@ -961,12 +1181,12 @@ static void TestBindAndFormat(void)
             at += (size_t)snprintf(text + at, sizeof text - at, ".local $v%d = {$v%d}", i, i - 1);
         }
         snprintf(text + at, sizeof text - at, "{{{$v%d}}}", limit - 1);
-        CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorCapacity),
+        CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorInvalid),
               "a chain of 64 binds, of 65 is refused");
     }
     // A bind refused after the buffer held a bound message leaves none.
     CHECK(Bind(&s_formatter, "{$x}") == mloc_success, "a message binds");
-    CHECK(Bind(&s_formatter, text) == mloc_errorCapacity, "the long chain is refused again");
+    CHECK(Bind(&s_formatter, text) == mloc_errorInvalid, "the long chain is refused again");
     mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(mlocFormatMessage(s_bound, NULL, 0, &stale, NULL) == mloc_errorInvalid,
           "a failed bind leaves no bound message behind");

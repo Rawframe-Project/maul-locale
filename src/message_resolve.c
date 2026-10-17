@@ -1,0 +1,515 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+
+#include "message_resolve.h"
+
+#include "maul-unicode/normalize.h"
+
+#include <assert.h>
+#include <string.h>
+
+// What an mlocMessageCall holds while a program function is called.
+typedef struct CallState
+{
+    Resolution* r;
+    uint32_t expression;
+    uint32_t stamp;
+} CallState;
+
+enum
+{
+    callStamp = 0x4D43414C,
+};
+
+static_assert(sizeof(CallState) <= sizeof(mlocMessageCall), "a call's state fits its value");
+
+uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
+{
+    return mlocMessageField(&r->h.view, kind, index, field);
+}
+
+static uint32_t Field(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
+{
+    return mlocMessageField(&r->h.view, kind, index, field);
+}
+
+static uint32_t Word(const uint8_t* words, uint32_t index)
+{
+    const uint8_t* p = words + (size_t)index * 4;
+    return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+static uint32_t BoundBy(const Resolution* r, uint32_t variable)
+{
+    uint32_t d = Word(r->words, variable);
+    return d < r->h.view.count[messageDeclarations] ? d : messageUnbound;
+}
+
+static uint32_t SlotOf(const Resolution* r, uint32_t expression)
+{
+    return Word(r->words, r->h.view.count[messageVariables] + expression) & 0xFFFFFF;
+}
+
+static const uint8_t* Pool(const Resolution* r, uint32_t offset)
+{
+    return r->h.view.pool + offset;
+}
+
+void mlocReportFault(Resolution* r, mlocMessageFaultKind kind, uint32_t at)
+{
+    if (r->quiet > 0)
+    {
+        return;
+    }
+    if (r->faults != NULL && r->faultCount < r->faults->capacity)
+    {
+        r->faults->faults[r->faultCount].kind = kind;
+        r->faults->faults[r->faultCount].at = at;
+    }
+    r->faultCount++;
+}
+
+// Whether an argument's name is the variable's (NFC, from the compiled
+// message): byte for byte when the argument's is NFC, as it usually is,
+// else normalized on the stack first; a name longer than the stack's
+// buffer that is not NFC is not found.
+static bool SameName(const mlocMessageArgument* a, const uint8_t* name, size_t length)
+{
+    if (a->name == NULL)
+    {
+        return false;
+    }
+    if (a->nameLength == length && memcmp(a->name, name, length) == 0)
+    {
+        return true;
+    }
+    muniQuickCheck answer = muni_quickCheckNo;
+    if (muniCheckNormalization(a->name, a->nameLength, muni_nfc, &answer).status != muni_success ||
+        answer == muni_quickCheckYes)
+    {
+        return false;
+    }
+    char normal[256];
+    size_t needed = 0;
+    muniTextResult result = muniNormalize(a->name, a->nameLength, muni_nfc, muni_convertStrict,
+                                          normal, sizeof normal, &needed);
+    return result.status == muni_success && needed == length && memcmp(normal, name, length) == 0;
+}
+
+// The argument of a variable's name, or null.
+static const mlocMessageValue* Argument(const Resolution* r, uint32_t variable)
+{
+    const uint8_t* name = Pool(r, Field(r, messageVariables, variable, 0));
+    size_t length = Field(r, messageVariables, variable, 1);
+    for (size_t i = 0; i < r->argumentCount; i++)
+    {
+        if (SameName(&r->arguments[i], name, length))
+        {
+            return &r->arguments[i].value;
+        }
+    }
+    return NULL;
+}
+
+static Value Make(ValueKind kind)
+{
+    Value v;
+    memset(&v, 0, sizeof v);
+    v.kind = kind;
+    return v;
+}
+
+static Value FallbackVariable(uint32_t variable)
+{
+    Value v = Make(valueFallbackVariable);
+    v.variable = variable;
+    return v;
+}
+
+static bool IsFallback(ValueKind kind)
+{
+    return kind >= valueFallbackVariable;
+}
+
+Value mlocExpressionFallback(const Resolution* r, uint32_t expression)
+{
+    uint32_t operand = Field(r, messageExpressions, expression, 0);
+    if (operand == operandVariable)
+    {
+        return FallbackVariable(Field(r, messageExpressions, expression, 1));
+    }
+    Value v = Make(operand == operandLiteral ? valueFallbackLiteral : valueFallbackFunction);
+    uint32_t field = operand == operandLiteral ? 1 : 3;
+    v.text = Pool(r, Field(r, messageExpressions, expression, field));
+    v.length = Field(r, messageExpressions, expression, field + 1);
+    return v;
+}
+
+Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_t within)
+{
+    uint32_t d = BoundBy(r, variable);
+    if (d != messageUnbound && Field(r, messageDeclarations, d, 2) != within)
+    {
+        Value v = mlocResolveExpression(r, Field(r, messageDeclarations, d, 2));
+        return IsFallback(v.kind) ? FallbackVariable(variable) : v;
+    }
+    const mlocMessageValue* argument = Argument(r, variable);
+    if (argument == NULL)
+    {
+        mlocReportFault(r, mloc_messageFaultUnresolvedVariable, at);
+        return FallbackVariable(variable);
+    }
+    Value v = Make(valueArgument);
+    v.argument = argument;
+    v.variable = variable;
+    if (argument->kind == mloc_messageValueString)
+    {
+        v.kind = valueText;
+        v.text = (const uint8_t*)argument->as.string.text;
+        v.length = argument->as.string.length;
+    }
+    return v;
+}
+
+// A value as a function receives it; storage holds a resolved value.
+static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage)
+{
+    memset(out, 0, sizeof *out);
+    ValueKind kind = v->kind == valueString ? v->behind : v->kind;
+    if (kind == valueText)
+    {
+        out->kind = mloc_messageOperandText;
+        out->text = (const char*)v->text;
+        out->length = v->length;
+    }
+    else if (kind == valueArgument)
+    {
+        out->kind = mloc_messageOperandArgument;
+        out->argument = v->argument;
+    }
+    else if (kind == valueResolved)
+    {
+        *storage = v->resolved;
+        out->kind = mloc_messageOperandResolved;
+        out->function = v->function;
+        out->resolved = storage;
+    }
+    else
+    {
+        out->kind = mloc_messageOperandFallback;
+    }
+}
+
+// Option resolution's report: each option whose variable fails to
+// resolve is a bad option (and is read as a fallback later).
+static void CheckOptions(Resolution* r, uint32_t expression)
+{
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        if (Field(r, messageParameters, p, 0) != parameterOptionVariable)
+        {
+            continue;
+        }
+        Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3), at, UINT32_MAX);
+        if (IsFallback(v.kind))
+        {
+            mlocReportFault(r, mloc_messageFaultBadOption, at);
+        }
+    }
+}
+
+// :string: the string value of its operand (text, an argument other than
+// an object, another :string's); over a failed operand a value that
+// matches no key and is written as that fallback.
+static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    bool good =
+        operand != NULL && operand->kind != valueResolved &&
+        !(operand->kind == valueArgument && operand->argument->kind == mloc_messageValueObject);
+    if (!good)
+    {
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    Value v = *operand;
+    if (v.kind != valueString)
+    {
+        v.behind = v.kind;
+        v.kind = valueString;
+    }
+    return v;
+}
+
+static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot, const Value* operand)
+{
+    const mlocMessageFunction* function = &r->formatter.functions[slot - messageFunctionProgram];
+    mlocMessageOperand given;
+    mlocMessageResolved storage;
+    if (operand != NULL)
+    {
+        ToOperand(operand, &given, &storage);
+    }
+    else
+    {
+        memset(&given, 0, sizeof given);
+    }
+    CallState state = {r, expression, callStamp};
+    mlocMessageCall call;
+    memset(&call, 0, sizeof call);
+    memcpy(&call, &state, sizeof state);
+    Value v = Make(valueResolved);
+    v.function = slot - messageFunctionProgram;
+    mlocMessageFaultKind fault = function->resolve(function->context, &call, &given, &v.resolved);
+    if (fault != mloc_messageFaultNone)
+    {
+        mlocReportFault(r, fault, Field(r, messageExpressions, expression, 7));
+        return mlocExpressionFallback(r, expression);
+    }
+    return v;
+}
+
+Value mlocResolveExpression(Resolution* r, uint32_t expression)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    if (r->budget == 0)
+    {
+        // Past the limit (functions reading options again and again):
+        // reported once, even while quiet.
+        if (!r->exhausted)
+        {
+            r->exhausted = true;
+            uint32_t quiet = r->quiet;
+            r->quiet = 0;
+            mlocReportFault(r, mloc_messageFaultUnsupportedOperation, at);
+            r->quiet = quiet;
+        }
+        return mlocExpressionFallback(r, expression);
+    }
+    r->budget--;
+    uint32_t operandKind = Field(r, messageExpressions, expression, 0);
+    Value operand = Make(valueText);
+    if (operandKind == operandVariable)
+    {
+        operand =
+            mlocResolveVariable(r, Field(r, messageExpressions, expression, 1), at, expression);
+    }
+    else if (operandKind == operandLiteral)
+    {
+        operand.text = Pool(r, Field(r, messageExpressions, expression, 1));
+        operand.length = Field(r, messageExpressions, expression, 2);
+    }
+    uint32_t slot = SlotOf(r, expression);
+    if (slot == messageFunctionNone)
+    {
+        return operand;
+    }
+    if (slot == messageFunctionUnknown)
+    {
+        mlocReportFault(r, mloc_messageFaultUnknownFunction, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    CheckOptions(r, expression);
+    const Value* given = operandKind == operandNone ? NULL : &operand;
+    if (slot == messageFunctionString)
+    {
+        return StringOf(r, expression, given);
+    }
+    return CallProgram(r, expression, slot, given);
+}
+
+bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
+                        size_t* lengthOut)
+{
+    mlocDecimal decimal;
+    mlocResult made = mloc_errorInvalid;
+    if (argument->kind == mloc_messageValueInteger)
+    {
+        made = mlocMakeDecimal(argument->as.integer, &decimal);
+    }
+    else if (argument->kind == mloc_messageValueDouble)
+    {
+        made = mlocMakeShortestDecimal(argument->as.number, &decimal);
+    }
+    else if (argument->kind == mloc_messageValueDecimal)
+    {
+        decimal = *argument->as.decimal;
+        made = mloc_success;
+    }
+    mlocOutput out = {digits, capacity, 0, NULL, NULL};
+    if (made != mloc_success || mlocFormatDecimal(&decimal, &out) != mloc_success)
+    {
+        return false;
+    }
+    *lengthOut = out.length;
+    return true;
+}
+
+bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
+                       mlocMessageFaultKind* faultOut)
+{
+    *faultOut = mloc_messageFaultNone;
+    const char* text = (const char*)value->text;
+    size_t size = value->length;
+    char digits[64];
+    if (value->behind == valueArgument)
+    {
+        if (!mlocArgumentDigits(value->argument, digits, sizeof digits, &size))
+        {
+            return false;
+        }
+        text = digits;
+    }
+    else if (value->behind != valueText)
+    {
+        // Over a failed operand: no key matches.
+        return false;
+    }
+    if (size == length && (size == 0 || memcmp(text, key, length) == 0))
+    {
+        return true;
+    }
+    muniQuickCheck answer = muni_quickCheckNo;
+    if (size == 0 || muniCheckNormalization(text, size, muni_nfc, &answer).status != muni_success ||
+        answer == muni_quickCheckYes)
+    {
+        return false;
+    }
+    char normal[256];
+    size_t needed = 0;
+    muniTextResult result =
+        muniNormalize(text, size, muni_nfc, muni_convertStrict, normal, sizeof normal, &needed);
+    if (result.status != muni_success)
+    {
+        *faultOut = mloc_messageFaultUnsupportedOperation;
+        return false;
+    }
+    return needed == length && memcmp(normal, key, length) == 0;
+}
+
+// The call a function's entry received, or false.
+static bool ReadCall(const mlocMessageCall* call, CallState* out)
+{
+    if (call == NULL)
+    {
+        return false;
+    }
+    memcpy(out, call, sizeof *out);
+    return out->stamp == callStamp && out->r != NULL;
+}
+
+// The parameter of a call's index-th option, or UINT32_MAX.
+static uint32_t OptionAt(const CallState* s, size_t index)
+{
+    const Resolution* r = s->r;
+    uint32_t first = Field(r, messageExpressions, s->expression, 5);
+    uint32_t count = Field(r, messageExpressions, s->expression, 6);
+    size_t seen = 0;
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        uint32_t kind = Field(r, messageParameters, p, 0);
+        if (kind != parameterOptionLiteral && kind != parameterOptionVariable)
+        {
+            continue;
+        }
+        if (seen++ == index)
+        {
+            return p;
+        }
+    }
+    return UINT32_MAX;
+}
+
+size_t mlocGetMessageOptionCount(const mlocMessageCall* call)
+{
+    CallState s;
+    if (!ReadCall(call, &s))
+    {
+        return 0;
+    }
+    size_t count = 0;
+    while (OptionAt(&s, count) != UINT32_MAX)
+    {
+        count++;
+    }
+    return count;
+}
+
+// An option's value, resolved now without reporting faults again.
+static void ReadOption(const CallState* s, uint32_t p, mlocMessageOperand* valueOut,
+                       mlocMessageResolved* storage)
+{
+    Resolution* r = s->r;
+    if (Field(r, messageParameters, p, 0) == parameterOptionLiteral)
+    {
+        memset(valueOut, 0, sizeof *valueOut);
+        valueOut->kind = mloc_messageOperandText;
+        valueOut->text = (const char*)Pool(r, Field(r, messageParameters, p, 3));
+        valueOut->length = Field(r, messageParameters, p, 4);
+        return;
+    }
+    r->quiet++;
+    Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3),
+                                  Field(r, messageExpressions, s->expression, 7), UINT32_MAX);
+    r->quiet--;
+    ToOperand(&v, valueOut, storage);
+}
+
+mlocResult mlocGetMessageOption(const mlocMessageCall* call, size_t index, const char** nameOut,
+                                size_t* lengthOut, mlocMessageOperand* valueOut,
+                                mlocMessageResolved* storage)
+{
+    CallState s;
+    if (!ReadCall(call, &s) || nameOut == NULL || lengthOut == NULL || valueOut == NULL ||
+        storage == NULL)
+    {
+        return mloc_errorInvalid;
+    }
+    uint32_t p = OptionAt(&s, index);
+    if (p == UINT32_MAX)
+    {
+        return mloc_errorInvalid;
+    }
+    *nameOut = (const char*)Pool(s.r, Field(s.r, messageParameters, p, 1));
+    *lengthOut = Field(s.r, messageParameters, p, 2);
+    ReadOption(&s, p, valueOut, storage);
+    return mloc_success;
+}
+
+mlocResult mlocFindMessageOption(const mlocMessageCall* call, const char* name, size_t length,
+                                 mlocMessageOperand* valueOut, mlocMessageResolved* storage)
+{
+    CallState s;
+    if (!ReadCall(call, &s) || name == NULL || valueOut == NULL || storage == NULL)
+    {
+        return mloc_errorInvalid;
+    }
+    for (size_t i = 0;; i++)
+    {
+        uint32_t p = OptionAt(&s, i);
+        if (p == UINT32_MAX)
+        {
+            return mloc_errorNotFound;
+        }
+        if (Field(s.r, messageParameters, p, 2) == length &&
+            memcmp(Pool(s.r, Field(s.r, messageParameters, p, 1)), name, length) == 0)
+        {
+            ReadOption(&s, p, valueOut, storage);
+            return mloc_success;
+        }
+    }
+}
+
+mlocResult mlocGetMessageLocale(const mlocMessageCall* call, mlocLocale* localeOut)
+{
+    CallState s;
+    if (!ReadCall(call, &s) || localeOut == NULL)
+    {
+        return mloc_errorInvalid;
+    }
+    *localeOut = s.r->formatter.locale;
+    return mloc_success;
+}

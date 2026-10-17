@@ -148,7 +148,12 @@ format.
   MF2 text; `mlocInitMessageFormatter`, `mlocBindMessage` and
   `mlocFormatMessage` bind a compiled message to a locale and format it
   with named arguments, each placeholder resolved where it stands, with
-  fallbacks and fault records or, strict, an error. The library now
+  fallbacks and fault records or, strict, an error; a program adds its
+  own functions (resolve, format, match, better), which read their
+  options and locale through `mlocGetMessageOptionCount`,
+  `mlocGetMessageOption`, `mlocFindMessageOption` and
+  `mlocGetMessageLocale`; `:string` and pattern selection by the
+  specification's order. The library now
   links Maul Unicode 0.3.0; `mloc_withFallbacks` and `mloc_errorFormat`
   join the results.
 - Dates: e and c of one or two letters write the day's number in the

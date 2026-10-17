@@ -3,11 +3,11 @@
 //
 // libFuzzer target for messages (record mloc-0045). The input's first
 // byte chooses: even, the rest is MF2 text, which, when it compiles, is
-// bound and formatted without arguments, written back, compiles again, and writes back the same
-// text (the canonical form is a fixed point) with the same counts; odd, the rest is taken as a
-// compiled message (its magic and versions made this library's), which mlocWriteMessageText reads
-// or refuses without reading past it, and whose text, when it reads it, writes the same twice and
-// measures its own length.
+// bound and formatted (two arguments, two functions), written back, compiles again, and writes back
+// the same text (the canonical form is a fixed point) with the same counts; odd, the rest is taken
+// as a compiled message (its magic and versions made this library's), which mlocWriteMessageText
+// reads or refuses without reading past it, and whose text, when it reads it, writes the same twice
+// and measures its own length.
 
 #include "bytes.h"
 #include "message_form.h"
@@ -62,8 +62,88 @@ static char* Write(const uint8_t* message, size_t size, size_t* lengthOut)
     return text;
 }
 
-// Binds a message and formats it with no arguments: every variable
-// unresolved, every function unknown, the text measured then written.
+// f:x: reads every option through the accessors, refuses a fallback
+// operand, and resolves to its operand's text (up to 63 bytes), which it
+// writes, matches a key equal to, and prefers shorter keys for.
+static mlocMessageFaultKind FuzzResolve(void* context, const mlocMessageCall* call,
+                                        const mlocMessageOperand* operand,
+                                        mlocMessageResolved* valueOut)
+{
+    (void)context;
+    if (operand->kind == mloc_messageOperandFallback)
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    size_t count = mlocGetMessageOptionCount(call);
+    for (size_t i = 0; i < count; i++)
+    {
+        const char* name;
+        size_t length;
+        mlocMessageOperand value;
+        mlocMessageResolved storage;
+        Require(mlocGetMessageOption(call, i, &name, &length, &value, &storage) == mloc_success);
+        Require(mlocFindMessageOption(call, name, length, &value, &storage) == mloc_success);
+    }
+    mlocLocale locale;
+    Require(mlocGetMessageLocale(call, &locale) == mloc_success);
+    uint8_t value[64] = {0};
+    if (operand->kind == mloc_messageOperandText)
+    {
+        value[0] = (uint8_t)(operand->length < 63 ? operand->length : 63);
+        memcpy(value + 1, operand->text, value[0]);
+    }
+    memcpy(valueOut, value, sizeof value);
+    return mloc_messageFaultNone;
+}
+
+static mlocMessageFaultKind FuzzFormat(void* context, const mlocMessageResolved* value,
+                                       mlocOutput* output)
+{
+    (void)context;
+    uint8_t bytes[64];
+    memcpy(bytes, value, sizeof bytes);
+    output->length = bytes[0];
+    if (output->buffer != NULL)
+    {
+        memcpy(output->buffer, bytes + 1,
+               bytes[0] < output->capacity ? bytes[0] : output->capacity);
+    }
+    return mloc_messageFaultNone;
+}
+
+static mlocMessageFaultKind FuzzMatch(void* context, const mlocMessageResolved* value,
+                                      const char* key, size_t length, bool* matchOut)
+{
+    (void)context;
+    uint8_t bytes[64];
+    memcpy(bytes, value, sizeof bytes);
+    *matchOut = length <= bytes[0] && memcmp(bytes + 1, key, length) == 0;
+    return length == 0 ? mloc_messageFaultUnsupportedOperation : mloc_messageFaultNone;
+}
+
+static bool FuzzBetter(void* context, const mlocMessageResolved* value, const char* key1,
+                       size_t length1, const char* key2, size_t length2)
+{
+    (void)context;
+    (void)value;
+    (void)key1;
+    (void)key2;
+    return length1 < length2;
+}
+
+static const mlocMessageArgument s_arguments[] = {
+    {"s", 1, {mloc_messageValueString, 0, {.string = {"1", 1}}}},
+    {"n", 1, {mloc_messageValueInteger, 0, {.integer = -7}}},
+};
+
+static const mlocMessageFunction s_functions[] = {
+    {"f:x", 3, NULL, FuzzResolve, FuzzFormat, FuzzMatch, FuzzBetter},
+    {"f:y", 3, NULL, FuzzResolve, NULL, NULL, NULL},
+};
+
+// Binds a message and formats it with two arguments ($s a string, $n a
+// number): the other variables unresolved, the functions other than
+// :string, f:x and f:y unknown, the text measured then written.
 static void Format(const uint8_t* message, size_t size)
 {
     mlocData builtin;
@@ -71,8 +151,9 @@ static void Format(const uint8_t* message, size_t size)
     mlocDataSet data = {&builtin, 1};
     mlocLocale locale;
     mlocMessageFormatter formatter;
+    mlocMessageOptions options = {false, s_functions, 2};
     Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-            mlocInitMessageFormatter(&formatter, &data, &locale, NULL) == mloc_success);
+            mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success);
     size_t needed = 0;
     if (mlocBindMessage(&formatter, message, size, NULL, 0, &needed) != mloc_errorCapacity)
     {
@@ -80,12 +161,19 @@ static void Format(const uint8_t* message, size_t size)
     }
     uint8_t* bound = malloc(needed);
     size_t boundSize;
-    Require(mlocBindMessage(&formatter, message, size, bound, needed, &boundSize) == mloc_success);
+    mlocResult bind = mlocBindMessage(&formatter, message, size, bound, needed, &boundSize);
+    // A chain past the limit is found only when binding.
+    Require(bind == mloc_success || bind == mloc_errorInvalid);
+    if (bind != mloc_success)
+    {
+        free(bound);
+        return;
+    }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, NULL, 0, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 2, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, NULL, 0, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 2, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);

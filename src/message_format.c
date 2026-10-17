@@ -3,38 +3,13 @@
 //
 // Formatting a bound message (maul-locale/message.h, record mloc-0045):
 // the pattern selected, then each piece written, each placeholder
-// resolved where it stands (a variable through its declaration, on the
-// stack, at most the bound message's chain limit deep).
+// resolved where it stands (message_resolve).
 
 #include "message_format.h"
 
-#include "message_bind.h"
-
-#include "maul-unicode/normalize.h"
+#include "message_resolve.h"
 
 #include <string.h>
-
-// A resolved value: text (a literal's, or a string argument's), an
-// argument of another kind, or a fallback with the string it shows.
-typedef enum ValueKind
-{
-    valueText,
-    valueArgument,
-    valueFallbackVariable,
-    valueFallbackLiteral,
-    valueFallbackFunction,
-} ValueKind;
-
-typedef struct Value
-{
-    ValueKind kind;
-    // Text, a fallback's literal, or a fallback function's identifier.
-    const uint8_t* text;
-    size_t length;
-    // An argument; a fallback variable's index.
-    const mlocMessageValue* argument;
-    uint32_t variable;
-} Value;
 
 // The bytes that fit go to the buffer; length counts them all.
 typedef struct Writer
@@ -46,36 +21,13 @@ typedef struct Writer
 
 typedef struct Formatting
 {
-    BoundHeader h;
-    MessageFormatter formatter;
-    const uint8_t* words;
-    const mlocMessageArgument* arguments;
-    size_t argumentCount;
+    Resolution r;
     Writer w;
-    mlocMessageFaults* faults;
-    size_t faultCount;
 } Formatting;
 
 static uint32_t Field(const Formatting* f, uint32_t kind, uint32_t index, uint32_t field)
 {
-    return mlocMessageField(&f->h.view, kind, index, field);
-}
-
-static uint32_t Word(const uint8_t* words, uint32_t index)
-{
-    const uint8_t* p = words + (size_t)index * 4;
-    return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
-}
-
-static uint32_t BoundBy(const Formatting* f, uint32_t variable)
-{
-    uint32_t d = Word(f->words, variable);
-    return d < f->h.view.count[messageDeclarations] ? d : messageUnbound;
-}
-
-static uint32_t SlotOf(const Formatting* f, uint32_t expression)
-{
-    return Word(f->words, f->h.view.count[messageVariables] + expression) & 0xFFFFFF;
+    return mlocResolutionField(&f->r, kind, index, field);
 }
 
 static void Put(Writer* w, const void* bytes, size_t length)
@@ -88,132 +40,9 @@ static void Put(Writer* w, const void* bytes, size_t length)
     w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
 }
 
-static void Fault(Formatting* f, mlocMessageFaultKind kind, uint32_t at)
-{
-    if (f->faults != NULL && f->faultCount < f->faults->capacity)
-    {
-        f->faults->faults[f->faultCount].kind = kind;
-        f->faults->faults[f->faultCount].at = at;
-    }
-    f->faultCount++;
-}
-
 static const uint8_t* Pool(const Formatting* f, uint32_t offset)
 {
-    return f->h.view.pool + offset;
-}
-
-// Whether an argument's name is the variable's (NFC, from the compiled
-// message): byte for byte when the argument's is NFC, as it usually is,
-// else normalized on the stack first; a name longer than the stack's
-// buffer that is not NFC is not found.
-static bool SameName(const mlocMessageArgument* a, const uint8_t* name, size_t length)
-{
-    if (a->name == NULL)
-    {
-        return false;
-    }
-    if (a->nameLength == length && memcmp(a->name, name, length) == 0)
-    {
-        return true;
-    }
-    muniQuickCheck answer = muni_quickCheckNo;
-    if (muniCheckNormalization(a->name, a->nameLength, muni_nfc, &answer).status != muni_success ||
-        answer == muni_quickCheckYes)
-    {
-        return false;
-    }
-    char normal[256];
-    size_t needed = 0;
-    muniTextResult result = muniNormalize(a->name, a->nameLength, muni_nfc, muni_convertStrict,
-                                          normal, sizeof normal, &needed);
-    return result.status == muni_success && needed == length && memcmp(normal, name, length) == 0;
-}
-
-// The argument of a variable's name, or null.
-static const mlocMessageValue* Argument(const Formatting* f, uint32_t variable)
-{
-    const uint8_t* name = Pool(f, Field(f, messageVariables, variable, 0));
-    size_t length = Field(f, messageVariables, variable, 1);
-    for (size_t i = 0; i < f->argumentCount; i++)
-    {
-        if (SameName(&f->arguments[i], name, length))
-        {
-            return &f->arguments[i].value;
-        }
-    }
-    return NULL;
-}
-
-static Value Fallback(ValueKind kind, const uint8_t* text, size_t length, uint32_t variable)
-{
-    Value v = {kind, text, length, NULL, variable};
-    return v;
-}
-
-static Value ResolveExpression(Formatting* f, uint32_t expression);
-
-// A variable's value: its declaration's, or the argument of its name
-// (the argument too for the operand of the .input that declares it).
-static Value ResolveVariable(Formatting* f, uint32_t variable, uint32_t at, uint32_t within)
-{
-    uint32_t d = BoundBy(f, variable);
-    if (d != messageUnbound && Field(f, messageDeclarations, d, 2) != within)
-    {
-        Value v = ResolveExpression(f, Field(f, messageDeclarations, d, 2));
-        if (v.kind >= valueFallbackVariable)
-        {
-            return Fallback(valueFallbackVariable, NULL, 0, variable);
-        }
-        return v;
-    }
-    const mlocMessageValue* argument = Argument(f, variable);
-    if (argument == NULL)
-    {
-        Fault(f, mloc_messageFaultUnresolvedVariable, at);
-        return Fallback(valueFallbackVariable, NULL, 0, variable);
-    }
-    Value v = {valueArgument, NULL, 0, argument, variable};
-    if (argument->kind == mloc_messageValueString)
-    {
-        v.kind = valueText;
-        v.text = (const uint8_t*)argument->as.string.text;
-        v.length = argument->as.string.length;
-    }
-    return v;
-}
-
-static Value ResolveExpression(Formatting* f, uint32_t expression)
-{
-    uint32_t at = Field(f, messageExpressions, expression, 7);
-    uint32_t operand = Field(f, messageExpressions, expression, 0);
-    Value v = {valueText, NULL, 0, NULL, 0};
-    if (operand == operandVariable)
-    {
-        v = ResolveVariable(f, Field(f, messageExpressions, expression, 1), at, expression);
-    }
-    else if (operand == operandLiteral)
-    {
-        v.text = Pool(f, Field(f, messageExpressions, expression, 1));
-        v.length = Field(f, messageExpressions, expression, 2);
-    }
-    if (SlotOf(f, expression) == messageFunctionNone)
-    {
-        return v;
-    }
-    // The formatter has no functions yet: each is unknown.
-    Fault(f, mloc_messageFaultUnknownFunction, at);
-    if (operand == operandVariable)
-    {
-        return Fallback(valueFallbackVariable, NULL, 0,
-                        Field(f, messageExpressions, expression, 1));
-    }
-    if (operand == operandLiteral)
-    {
-        return Fallback(valueFallbackLiteral, v.text, v.length, 0);
-    }
-    return Fallback(valueFallbackFunction, Pool(f, Field(f, messageExpressions, expression, 3)),
-                    Field(f, messageExpressions, expression, 4), 0);
+    return f->r.h.view.pool + offset;
 }
 
 // A fallback's string in braces: "{$name}", "{|literal|}" with "\" and
@@ -254,46 +83,64 @@ static void PutFallback(Formatting* f, const Value* v)
 
 // An argument written with no function: a number as its plain decimal
 // (the number functions come with their slice); an object cannot be.
-static void PutArgument(Formatting* f, const Value* v, uint32_t at)
+static void PutArgument(Formatting* f, const Value* v, uint32_t expression)
 {
-    mlocDecimal decimal;
-    mlocResult made = mloc_errorInvalid;
-    const mlocMessageValue* a = v->argument;
-    if (a->kind == mloc_messageValueInteger)
-    {
-        made = mlocMakeDecimal(a->as.integer, &decimal);
-    }
-    else if (a->kind == mloc_messageValueDouble)
-    {
-        made = mlocMakeShortestDecimal(a->as.number, &decimal);
-    }
-    else if (a->kind == mloc_messageValueDecimal && a->as.decimal != NULL)
-    {
-        decimal = *a->as.decimal;
-        made = mloc_success;
-    }
     char digits[64];
-    mlocOutput out = {digits, sizeof digits, 0, NULL, NULL};
-    if (made != mloc_success || mlocFormatDecimal(&decimal, &out) != mloc_success)
+    size_t length = 0;
+    if (!mlocArgumentDigits(v->argument, digits, sizeof digits, &length))
     {
-        Fault(f, mloc_messageFaultUnsupportedOperation, at);
-        Value fallback = Fallback(valueFallbackVariable, NULL, 0, v->variable);
+        mlocReportFault(&f->r, mloc_messageFaultUnsupportedOperation,
+                        Field(f, messageExpressions, expression, 7));
+        Value fallback = mlocExpressionFallback(&f->r, expression);
         PutFallback(f, &fallback);
         return;
     }
-    Put(&f->w, digits, out.length);
+    Put(&f->w, digits, length);
+}
+
+// A program function's value, written by its format entry into the room
+// left; a fault, or no format entry, writes the expression's fallback.
+static void PutResolved(Formatting* f, const Value* v, uint32_t expression)
+{
+    const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
+    Writer* w = &f->w;
+    bool room = w->buffer != NULL && w->length < w->capacity;
+    mlocOutput out = {room ? w->buffer + w->length : NULL, room ? w->capacity - w->length : 0, 0,
+                      NULL, NULL};
+    mlocMessageFaultKind fault = function->format == NULL
+                                     ? mloc_messageFaultUnsupportedOperation
+                                     : function->format(function->context, &v->resolved, &out);
+    if (fault != mloc_messageFaultNone)
+    {
+        mlocReportFault(&f->r, fault, Field(f, messageExpressions, expression, 7));
+        Value fallback = mlocExpressionFallback(&f->r, expression);
+        PutFallback(f, &fallback);
+        return;
+    }
+    w->length = out.length > SIZE_MAX - w->length ? SIZE_MAX : w->length + out.length;
 }
 
 static void PutExpression(Formatting* f, uint32_t expression)
 {
-    Value v = ResolveExpression(f, expression);
-    if (v.kind == valueText)
+    Value v = mlocResolveExpression(&f->r, expression);
+    ValueKind kind = v.kind == valueString ? v.behind : v.kind;
+    if (kind == valueText)
     {
         Put(&f->w, v.text, v.length);
     }
-    else if (v.kind == valueArgument)
+    else if (kind == valueArgument)
     {
-        PutArgument(f, &v, Field(f, messageExpressions, expression, 7));
+        PutArgument(f, &v, expression);
+    }
+    else if (kind == valueResolved)
+    {
+        PutResolved(f, &v, expression);
+    }
+    else if (v.kind == valueString)
+    {
+        // :string over a failed operand shows its own fallback.
+        Value fallback = mlocExpressionFallback(&f->r, expression);
+        PutFallback(f, &fallback);
     }
     else
     {
@@ -318,35 +165,146 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
     }
 }
 
-// The variant selected. No selector supports selection yet (the
-// formatter has no functions), so each is resolved, reported as a bad
-// selector, and only a variant of catch-all keys matches: the first.
-static uint32_t SelectVariant(Formatting* f)
+// A selector's value, and whether a fault has stopped its matching (it
+// then matches only "*").
+typedef struct Selector
 {
-    const MessageView* v = &f->h.view;
+    Value value;
+    bool broken;
+} Selector;
+
+// Whether a selector's value can select: a :string value, or a program
+// function's with a match entry.
+static bool Selectable(const Formatting* f, const Value* v)
+{
+    return v->kind == valueString ||
+           (v->kind == valueResolved && f->r.formatter.functions[v->function].match != NULL);
+}
+
+// Whether a key matches a selector; a fault breaks the selector, reported
+// once as a bad selector.
+static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* key, size_t length)
+{
+    if (s->broken)
+    {
+        return false;
+    }
+    bool matched = false;
+    mlocMessageFaultKind fault = mloc_messageFaultNone;
+    if (s->value.kind == valueString)
+    {
+        matched = mlocStringMatches(&s->value, key, length, &fault);
+    }
+    else
+    {
+        const mlocMessageFunction* function = &f->r.formatter.functions[s->value.function];
+        fault = function->match(function->context, &s->value.resolved, (const char*)key, length,
+                                &matched);
+    }
+    if (fault != mloc_messageFaultNone)
+    {
+        s->broken = true;
+        mlocReportFault(&f->r, mloc_messageFaultBadSelector, at);
+        return false;
+    }
+    return matched;
+}
+
+// Whether each of a variant's keys matches its selector.
+static bool VariantMatches(Formatting* f, Selector* selectors, uint32_t variant)
+{
+    const MessageView* v = &f->r.h.view;
     for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
     {
-        uint32_t variable = Field(f, messageSelectors, s, 0);
-        uint32_t at = Field(f, messageSelectors, s, 1);
-        Value value = ResolveVariable(f, variable, at, UINT32_MAX);
-        (void)value;
-        Fault(f, mloc_messageFaultBadSelector, at);
+        uint32_t offset;
+        uint32_t length;
+        if (mlocMessageKey(v, variant, s, &offset, &length) == keyCatchAll)
+        {
+            continue;
+        }
+        if (!KeyMatches(f, &selectors[s], Field(f, messageSelectors, s, 1), Pool(f, offset),
+                        length))
+        {
+            return false;
+        }
     }
+    return true;
+}
+
+// Whether a matching variant is a better match than another: at the first
+// selector whose keys differ, a key beats "*", and of two keys the one
+// the function calls better; keys neither of which is better tie there.
+static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32_t variant,
+                          uint32_t than)
+{
+    const MessageView* v = &f->r.h.view;
+    for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
+    {
+        uint32_t offset1;
+        uint32_t length1;
+        uint32_t offset2;
+        uint32_t length2;
+        bool all1 = mlocMessageKey(v, variant, s, &offset1, &length1) == keyCatchAll;
+        bool all2 = mlocMessageKey(v, than, s, &offset2, &length2) == keyCatchAll;
+        if (all1 != all2)
+        {
+            return all2;
+        }
+        const Value* value = &selectors[s].value;
+        if (all1 || value->kind != valueResolved ||
+            (length1 == length2 && memcmp(Pool(f, offset1), Pool(f, offset2), length1) == 0))
+        {
+            continue;
+        }
+        const mlocMessageFunction* function = &f->r.formatter.functions[value->function];
+        if (function->better == NULL)
+        {
+            continue;
+        }
+        const char* key1 = (const char*)Pool(f, offset1);
+        const char* key2 = (const char*)Pool(f, offset2);
+        if (function->better(function->context, &value->resolved, key1, length1, key2, length2))
+        {
+            return true;
+        }
+        if (function->better(function->context, &value->resolved, key2, length2, key1, length1))
+        {
+            return false;
+        }
+    }
+    return false;
+}
+
+// The variant selected (UTS #35 Part 9, "Pattern Selection"): each
+// selector resolved, a value that cannot select reported as a bad
+// selector and matching only "*"; of the variants whose keys all match,
+// the best, the first of those that tie.
+static uint32_t SelectVariant(Formatting* f)
+{
+    const MessageView* v = &f->r.h.view;
+    Selector selectors[messageSelectorLimit];
+    uint32_t count = v->count[messageSelectors];
+    for (uint32_t s = 0; s < count; s++)
+    {
+        uint32_t at = Field(f, messageSelectors, s, 1);
+        selectors[s].value =
+            mlocResolveVariable(&f->r, Field(f, messageSelectors, s, 0), at, UINT32_MAX);
+        selectors[s].broken = !Selectable(f, &selectors[s].value);
+        if (selectors[s].broken)
+        {
+            mlocReportFault(&f->r, mloc_messageFaultBadSelector, at);
+        }
+    }
+    uint32_t best = UINT32_MAX;
     for (uint32_t variant = 0; variant < v->count[messageVariants]; variant++)
     {
-        bool catchAll = true;
-        for (uint32_t s = 0; s < v->count[messageSelectors] && catchAll; s++)
+        if (VariantMatches(f, selectors, variant) &&
+            (best == UINT32_MAX || BetterVariant(f, selectors, variant, best)))
         {
-            uint32_t offset;
-            uint32_t length;
-            catchAll = mlocMessageKey(v, variant, s, &offset, &length) == keyCatchAll;
-        }
-        if (catchAll)
-        {
-            return variant;
+            best = variant;
         }
     }
-    return UINT32_MAX;
+    return best;
 }
 
 // Whether the arguments hold what their kinds say: a name and a string
@@ -375,20 +333,21 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
 {
     Formatting f;
     memset(&f, 0, sizeof f);
-    if (!mlocReadBound(bound, &f.h, &f.formatter) || output == NULL ||
+    if (!mlocReadBound(bound, &f.r.h, &f.r.formatter) || output == NULL ||
         (output->buffer == NULL && output->capacity > 0) ||
         (arguments == NULL && argumentCount > 0) || !GoodArguments(arguments, argumentCount) ||
         (faults != NULL && faults->faults == NULL && faults->capacity > 0))
     {
         return mloc_errorInvalid;
     }
-    f.words = mlocBoundWords(bound);
-    f.arguments = arguments;
-    f.argumentCount = argumentCount;
+    f.r.words = mlocBoundWords(bound);
+    f.r.arguments = arguments;
+    f.r.argumentCount = argumentCount;
     f.w.buffer = output->buffer;
     f.w.capacity = output->capacity;
-    f.faults = faults;
-    const MessageView* v = &f.h.view;
+    f.r.faults = faults;
+    f.r.budget = messageResolutionLimit;
+    const MessageView* v = &f.r.h.view;
     if (v->count[messageVariants] == 0)
     {
         PutPattern(&f, 0, v->count[messagePieces]);
@@ -405,9 +364,9 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     }
     if (faults != NULL)
     {
-        faults->count = f.faultCount;
+        faults->count = f.r.faultCount;
     }
-    if (f.faultCount > 0 && f.formatter.strict)
+    if (f.r.faultCount > 0 && f.r.formatter.strict)
     {
         output->length = 0;
         return mloc_errorFormat;
@@ -417,5 +376,5 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     {
         return mloc_errorCapacity;
     }
-    return f.faultCount > 0 ? mloc_withFallbacks : mloc_success;
+    return f.r.faultCount > 0 ? mloc_withFallbacks : mloc_success;
 }
