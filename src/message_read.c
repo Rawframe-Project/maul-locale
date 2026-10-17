@@ -293,6 +293,56 @@ static uint64_t StringBytes(const MessageView* v)
     return total;
 }
 
+// Whether each expression and markup is named at most once, in the
+// compiler's order (the declarations', then the pieces'), and the
+// parameter and piece ranges together fit their records: so writing a
+// message back visits each record a bounded number of times.
+static bool BoundedReferences(const MessageView* v)
+{
+    uint64_t next = 0;
+    for (uint32_t d = 0; d < v->count[messageDeclarations]; d++)
+    {
+        uint32_t e = Field(v, messageDeclarations, d, 2);
+        if (e < next)
+        {
+            return false;
+        }
+        next = (uint64_t)e + 1;
+    }
+    uint64_t nextMarkup = 0;
+    for (uint32_t i = 0; i < v->count[messagePieces]; i++)
+    {
+        uint32_t kind = Field(v, messagePieces, i, 0);
+        uint32_t a = Field(v, messagePieces, i, 1);
+        uint64_t* order = kind == pieceExpression ? &next
+                          : kind == pieceMarkup   ? &nextMarkup
+                                                  : NULL;
+        if (order != NULL)
+        {
+            if (a < *order)
+            {
+                return false;
+            }
+            *order = (uint64_t)a + 1;
+        }
+    }
+    uint64_t parameters = 0;
+    for (uint32_t i = 0; i < v->count[messageExpressions]; i++)
+    {
+        parameters += Field(v, messageExpressions, i, 6);
+    }
+    for (uint32_t i = 0; i < v->count[messageMarkups]; i++)
+    {
+        parameters += Field(v, messageMarkups, i, 4);
+    }
+    uint64_t pieces = 0;
+    for (uint32_t i = 0; i < v->count[messageVariants]; i++)
+    {
+        pieces += Field(v, messageVariants, i, 1);
+    }
+    return parameters <= v->count[messageParameters] && pieces <= v->count[messagePieces];
+}
+
 static uint32_t UnicodeVersion(void)
 {
     muniVersion version = muniGetUnicodeVersion();
@@ -346,7 +396,9 @@ mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view)
     {
         return result;
     }
-    if (!GoodRecords(&v) || StringBytes(&v) > v.count[messagePool])
+    // The bounds first, from the counts alone, so that checking the
+    // strings costs no more than the pool.
+    if (StringBytes(&v) > v.count[messagePool] || !BoundedReferences(&v) || !GoodRecords(&v))
     {
         return mloc_errorData;
     }

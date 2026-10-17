@@ -64,7 +64,11 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   The strings the records name must fit the pool together (the
   compiler never shares one; a variable's name counts once), so writing
   a message back costs no more than its size, and the length written
-  saturates rather than wraps.
+  saturates rather than wraps. Each expression and markup is named at
+  most once, in the compiler's order (the declarations', then the
+  pieces'), and the parameter and piece ranges together fit their
+  records; these bounds are checked first, from the counts alone, so
+  reading costs no more than the size either.
   The data model's rules stay the compiler's. It then writes the
   canonical text: a simple message when there are no declarations and
   the pattern does not start with "." past its spaces; else each

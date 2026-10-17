@@ -511,6 +511,31 @@ static void TestFieldsRefused(void)
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_success,
           "strings sharing bytes within the pool's size are read");
 
+    // A record named twice, or ranges past their records: writing would
+    // visit them again and again.
+    CHECK(Compile("{$x :f a=1}{$y :f b=2}", &size), "two expressions compile");
+    CHECK(RefusedWith(size, messagePieces, 1, 1, 0), "an expression named twice");
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(messageExpressions, 1, 5), 0);
+    Store(copy + FieldAt(messageExpressions, 1, 6), 2);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+          "parameter ranges together past the parameters");
+    CHECK(Compile(".input {$x :f} .match $x 1 {{a}} * {{b}}", &size), "a matcher compiles");
+    CHECK(RefusedWith(size, messageVariants, 1, 0, 0) == false, "a variant's own range is fine");
+    CHECK(RefusedWith(size, messageVariants, 1, 1, 2), "variant ranges past the pieces");
+    // Literal operands and option values overlapping past the pool.
+    CHECK(Compile("{|abcd| :f}{|e| :f}", &size), "two literals compile");
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(messageExpressions, 1, 1), Field(messageExpressions, 0, 1));
+    Store(copy + FieldAt(messageExpressions, 1, 2), 4);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+          "literal operands overlapping past the pool");
+    CHECK(Compile("{:f a=|abcd|}{:f b=|e|}", &size), "two option values compile");
+    memcpy(copy, s_buffer, size);
+    Store(copy + FieldAt(messageParameters, 1, 3), Field(messageParameters, 0, 3));
+    Store(copy + FieldAt(messageParameters, 1, 4), 4);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+          "option values overlapping past the pool");
     CHECK(Compile("hello", &size), "a simple message compiles");
     char exact[5];
     mlocOutput fit = {exact, sizeof exact, 0, NULL, NULL};
