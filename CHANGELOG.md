@@ -181,6 +181,12 @@ format.
   specification's fields, lengths, precisions, `hour12` and `calendar`
   over the date formatters; new date, time and date-time argument kinds
   and operand kinds; date/time literals (mloc-0045).
+- Messages show exact times in zones: instant and zoned date-time
+  argument kinds, literals with Z, an offset or a zone annotation,
+  `timeZone` (an identifier, an offset, `UTC` or `input`),
+  `timeZoneStyle` long and short, a default zone in
+  `mlocMessageOptions`, and program functions receiving a value's
+  instant and zone (mloc-0045).
 - Messages format with `:unit` (Draft): a new argument kind,
   `mloc_messageValueUnit` (an amount and a unit identifier), or a number
   with the `unit` option; `unitDisplay`, `usage` with the locale's

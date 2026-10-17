@@ -72,9 +72,9 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut)
 {
-    if (argument->kind >= mloc_messageValueDate && argument->kind <= mloc_messageValueDateTime)
+    if (argument->kind >= mloc_messageValueDate && argument->kind <= mloc_messageValueZonedDateTime)
     {
-        // A date, time or date-time in ISO 8601.
+        // A date, time, date-time, instant or zoned date-time in ISO 8601.
         *lengthOut = mlocWriteIsoDateTime(argument, digits, capacity);
         return *lengthOut > 0;
     }
@@ -106,7 +106,7 @@ bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
     *faultOut = mloc_messageFaultNone;
     const char* text = (const char*)value->text;
     size_t size = value->length;
-    char digits[64];
+    char digits[128];
     if (value->behind == valueArgument)
     {
         if (!mlocArgumentDigits(value->argument, digits, sizeof digits, &size))

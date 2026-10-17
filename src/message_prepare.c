@@ -77,8 +77,9 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     uint8_t* words = bytes + sizeof *h;
     // What an argument stands for in each kind of expression.
     static const mlocMessageValue number = {mloc_messageValueInteger, 0, {.integer = 0}};
+    // An instant, which every date function takes with every option.
     static const mlocMessageValue dateTime = {
-        mloc_messageValueDateTime, 0, {.dateTime = {{730120, mloc_calendarIso8601, {0}}, {0}}}};
+        mloc_messageValueInstant, 0, {.instant = {946684800, 0}}};
     union
     {
         PreparedNumber number;

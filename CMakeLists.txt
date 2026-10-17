@@ -230,14 +230,22 @@ if(MAUL_LOCALE_BUILD_TESTS)
     # with the shared library.
     if(TARGET test_message_dates)
         set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
+        set(MLOC_MESSAGE_ZONE_NAMES ${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc)
+        set(MLOC_MESSAGE_LOCALE_NAMES ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
         if(EMSCRIPTEN)
-            target_link_options(test_message_dates PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_DATES}@/dates.mloc")
+            target_link_options(test_message_dates PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_DATES}@/dates.mloc"
+                                "SHELL:--embed-file ${MLOC_MESSAGE_ZONE_NAMES}@/zone-names.mloc"
+                                "SHELL:--embed-file ${MLOC_MESSAGE_LOCALE_NAMES}@/locale-names.mloc")
             set(MLOC_MESSAGE_DATES /dates.mloc)
+            set(MLOC_MESSAGE_ZONE_NAMES /zone-names.mloc)
+            set(MLOC_MESSAGE_LOCALE_NAMES /locale-names.mloc)
         endif()
         if(WIN32)
             target_compile_definitions(test_message_dates PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
-        target_compile_definitions(test_message_dates PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}")
+        target_compile_definitions(test_message_dates PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}"
+                                   MLOC_ZONE_NAMES_FILE="${MLOC_MESSAGE_ZONE_NAMES}"
+                                   MLOC_LOCALE_NAMES_FILE="${MLOC_MESSAGE_LOCALE_NAMES}")
     endif()
     # :unit reads the unit names (record mloc-0045); a white-box test, so
     # not built with the shared library.

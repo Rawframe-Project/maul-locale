@@ -3,11 +3,11 @@
 //
 // libFuzzer target for messages (record mloc-0045). The input's first
 // byte chooses: even, the rest is MF2 text, which, when it compiles, is
-// bound and formatted (two arguments, two functions), written back, compiles again, and writes back
-// the same text (the canonical form is a fixed point) with the same counts; odd, the rest is taken
-// as a compiled message (its magic and versions made this library's), which mlocWriteMessageText
-// reads or refuses without reading past it, and whose text, when it reads it, writes the same twice
-// and measures its own length.
+// bound and formatted (seven arguments, two functions), written back, compiles again, and writes
+// back the same text (the canonical form is a fixed point) with the same counts; odd, the rest is
+// taken as a compiled message (its magic and versions made this library's), which
+// mlocWriteMessageText reads or refuses without reading past it, and whose text, when it reads it,
+// writes the same twice and measures its own length.
 
 #include "bytes.h"
 #include "message_form.h"
@@ -139,12 +139,17 @@ static const mlocDecimal s_amount = {.kind = mloc_decimalFinite,
                                      .fractionDigits = 1,
                                      .digits = {1, 2, 5}};
 
+// An offset zone of five hours west.
+static const mlocTimeZone s_zone = {NULL, 0, 0, -300};
+
 static const mlocMessageArgument s_arguments[] = {
     {"s", 1, {mloc_messageValueString, 0, {.string = {"1", 1}}}},
     {"n", 1, {mloc_messageValueInteger, 0, {.integer = -7}}},
     {"c", 1, {mloc_messageValueCurrency, 0, {.currency = {&s_amount, {'c', 'h', 'f'}}}}},
     {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&s_amount, "foot-and-inch", 13}}}},
     {"d", 1, {mloc_messageValueDateTime, 0, {.dateTime = {{732313, 0, {0}}, {15, 4, 6, 0, 7}}}}},
+    {"i", 1, {mloc_messageValueInstant, 0, {.instant = {1136214246, 7}}}},
+    {"z", 1, {mloc_messageValueZonedDateTime, 0, {.zoned = {{1136214246, 0}, &s_zone}}}},
 };
 
 static const mlocMessageFunction s_functions[] = {
@@ -152,9 +157,11 @@ static const mlocMessageFunction s_functions[] = {
     {"f:y", 3, NULL, FuzzResolve, NULL, NULL, NULL, NULL},
 };
 
-// Binds a message and formats it with two arguments ($s a string, $n a
-// number): the other variables unresolved, the functions other than
-// :string, f:x and f:y unknown, the text measured then written.
+// Binds a message and formats it with seven arguments ($s a string, $n
+// a number, $c a currency amount, $u a unit amount, $d a date-time, $i
+// an instant, $z a zoned date-time): the other variables unresolved, the
+// functions other than the default ones, f:x and f:y unknown, the text
+// measured then written.
 static void Format(const uint8_t* message, size_t size)
 {
     mlocData builtin;
@@ -162,7 +169,7 @@ static void Format(const uint8_t* message, size_t size)
     mlocDataSet data = {&builtin, 1};
     mlocLocale locale;
     mlocMessageFormatter formatter;
-    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, 2};
+    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, 2, NULL};
     Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
             mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success);
     size_t needed = 0;
@@ -181,10 +188,10 @@ static void Format(const uint8_t* message, size_t size)
         return;
     }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, s_arguments, 5, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 7, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, s_arguments, 5, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 7, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);

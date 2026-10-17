@@ -7,6 +7,7 @@
 
 #include "maul-locale/calendar.h"
 #include "maul-locale/ixdtf.h"
+#include "maul-locale/zone.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -19,8 +20,7 @@
 #define MLOC_NOINLINE __attribute__((noinline))
 #endif
 
-static_assert(sizeof(DateValue) == offsetof(DateValue, reserved) + 1,
-              "a date value has no padding");
+static_assert(sizeof(DateKey) == offsetof(DateKey, reserved) + 1, "a date key has no padding");
 static_assert(offsetof(PreparedDate, formatter) % 8 == 0, "a prepared date's formatter is aligned");
 
 // The first day of 1970, the date of a time alone.
@@ -29,27 +29,107 @@ enum
     epochDay = 719163,
 };
 
-bool mlocDateLiteral(const uint8_t* text, size_t length, mlocDateTime* valueOut, uint8_t* hasOut)
+// Nanoseconds a minute.
+static const int64_t minuteNanoseconds = 60000000000;
+
+// UTC's zone in the data, or an offset zone of 0 when it has none.
+static mlocTimeZone Utc(const mlocDataSet* data)
 {
+    mlocTimeZone zone;
+    memset(&zone, 0, sizeof zone);
+    if (data == NULL || mlocFindTimeZone(data, "UTC", 3, &zone) != mloc_success)
+    {
+        memset(&zone, 0, sizeof zone);
+    }
+    return zone;
+}
+
+// Whether a span of text is "iso8601", in any case.
+static bool IsIso(const char* text, mlocTextSpan span)
+{
+    static const char iso[] = "iso8601";
+    if (span.length != sizeof iso - 1)
+    {
+        return false;
+    }
+    for (size_t i = 0; i < span.length; i++)
+    {
+        char c = text[span.start + i];
+        if ((c >= 'A' && c <= 'Z' ? (char)(c + 32) : c) != iso[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The instant and zone of a literal with Z, an offset or a zone, its
+// local date-time already read; out's local becomes the zone's.
+static bool ZonedLiteral(const mlocTemporalParse* p, const char* text, const mlocDataSet* data,
+                         DateMoment* out)
+{
+    // Z or the offset as a zone of its own.
+    mlocTimeZone fixed;
+    memset(&fixed, 0, sizeof fixed);
+    mlocResult result = mloc_success;
+    if (p->timeZone.length > 0)
+    {
+        if (data == NULL || mlocFindTimeZone(data, text + p->timeZone.start, p->timeZone.length,
+                                             &out->zone) != mloc_success)
+        {
+            return false;
+        }
+        result = p->hasOffset
+                     ? mlocGetInstantForOffset(&out->zone, &out->local, p->offsetNanoseconds,
+                                               mloc_offsetReject, mloc_disambiguationCompatible,
+                                               !p->offsetHasSeconds, &out->instant)
+                 : p->utc ? mlocGetInstantFor(&fixed, &out->local, mloc_disambiguationCompatible,
+                                              &out->instant)
+                          : mlocGetInstantFor(&out->zone, &out->local,
+                                              mloc_disambiguationCompatible, &out->instant);
+    }
+    else
+    {
+        if (p->offsetNanoseconds % minuteNanoseconds != 0)
+        {
+            // No zone holds an offset of seconds.
+            return false;
+        }
+        fixed.offsetMinutes = (int16_t)(p->offsetNanoseconds / minuteNanoseconds);
+        out->zone = p->utc ? Utc(data) : fixed;
+        result =
+            mlocGetInstantFor(&fixed, &out->local, mloc_disambiguationCompatible, &out->instant);
+    }
+    out->has |= dateHasZone;
+    return result == mloc_success &&
+           mlocGetDateTimeFor(&out->zone, &out->instant, mloc_calendarIso8601, &out->local) ==
+               mloc_success;
+}
+
+bool mlocDateLiteral(const uint8_t* text, size_t length, const mlocDataSet* data, DateMoment* out)
+{
+    memset(out, 0, sizeof *out);
     mlocTemporalParse p;
     uint32_t goals = mloc_formatDateTime | mloc_formatInstant | mloc_formatZonedDateTime;
-    if (mlocParseTemporalString((const char*)text, length, goals, &p) != mloc_success || !p.hasYear)
+    const char* chars = (const char*)text;
+    if (mlocParseTemporalString(chars, length, goals, &p) != mloc_success || !p.hasYear ||
+        (p.calendar.length > 0 && !IsIso(chars, p.calendar)))
     {
         return false;
     }
     mlocDateInput input = {NULL, 0, p.year, NULL, 0, p.month, p.day};
-    if (mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &valueOut->date) !=
+    if (mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &out->local.date) !=
         mloc_success)
     {
         return false;
     }
-    memset(&valueOut->time, 0, sizeof valueOut->time);
     if (p.hasTime)
     {
-        valueOut->time = p.time;
+        out->local.time = p.time;
     }
-    *hasOut = (uint8_t)(dateHasDate | (p.hasTime ? dateHasTime : 0));
-    return true;
+    out->has = (uint8_t)(dateHasDate | (p.hasTime ? dateHasTime : 0));
+    bool zoned = p.utc || p.hasOffset || p.timeZone.length > 0;
+    return !zoned || ZonedLiteral(&p, chars, data, out);
 }
 
 bool mlocGoodDate(const mlocDate* date)
@@ -65,37 +145,72 @@ bool mlocGoodTime(const mlocTime* time)
            time->nanosecond < 1000000000;
 }
 
-bool mlocArgumentDateTime(const mlocMessageValue* argument, mlocDateTime* valueOut, uint8_t* hasOut)
+bool mlocGoodInstant(const mlocInstant* instant)
 {
-    memset(valueOut, 0, sizeof *valueOut);
+    static const int64_t most = 8640000000000;
+    return instant->seconds >= -most && instant->nanoseconds >= 0 &&
+           instant->nanoseconds < 1000000000 &&
+           (instant->seconds < most || (instant->seconds == most && instant->nanoseconds == 0));
+}
+
+bool mlocGoodZoned(const mlocMessageValue* argument)
+{
+    int32_t offset = 0;
+    return argument->as.zoned.zone != NULL && mlocGoodInstant(&argument->as.zoned.instant) &&
+           mlocGetTimeZoneOffset(argument->as.zoned.zone, &argument->as.zoned.instant, &offset) ==
+               mloc_success;
+}
+
+// An exact time in a zone: its local date-time there.
+static bool AtInstant(const mlocInstant* instant, const mlocTimeZone* zone, DateMoment* out)
+{
+    out->instant = *instant;
+    out->zone = *zone;
+    out->has = dateHasDate | dateHasTime | dateHasZone;
+    return mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &out->local) == mloc_success;
+}
+
+bool mlocArgumentDateTime(const mlocMessageValue* argument, const mlocDataSet* data,
+                          DateMoment* out)
+{
+    memset(out, 0, sizeof *out);
     switch (argument->kind)
     {
     case mloc_messageValueDate:
-        valueOut->date = argument->as.date;
-        *hasOut = dateHasDate;
+        out->local.date = argument->as.date;
+        out->has = dateHasDate;
         return true;
     case mloc_messageValueTime:
-        valueOut->date.day = epochDay;
-        valueOut->date.calendar = mloc_calendarIso8601;
-        valueOut->time = argument->as.time;
-        *hasOut = dateHasTime;
+        out->local.date.day = epochDay;
+        out->local.date.calendar = mloc_calendarIso8601;
+        out->local.time = argument->as.time;
+        out->has = dateHasTime;
         return true;
     case mloc_messageValueDateTime:
-        *valueOut = argument->as.dateTime;
-        *hasOut = dateHasDate | dateHasTime;
+        out->local = argument->as.dateTime;
+        out->has = dateHasDate | dateHasTime;
         return true;
+    case mloc_messageValueInstant:
+    {
+        mlocTimeZone utc = Utc(data);
+        return AtInstant(&argument->as.instant, &utc, out);
+    }
+    case mloc_messageValueZonedDateTime:
+        return AtInstant(&argument->as.zoned.instant, argument->as.zoned.zone, out);
     default:
         return false;
     }
 }
 
-DateValue mlocMakeDateValue(DateFunction function, const mlocDateTime* value, uint8_t has)
+DateValue mlocMakeDateValue(DateFunction function, const DateMoment* moment)
 {
     DateValue v;
     memset(&v, 0, sizeof v);
-    v.value = *value;
+    v.value = moment->local;
+    v.instant = moment->instant;
+    v.zone = moment->zone;
     v.function = (uint8_t)function;
-    v.has = has;
+    v.has = moment->has;
     v.fields = mloc_dateFieldSetYearMonthDay;
     v.length = mloc_dateLengthMedium;
     v.precision = mloc_timePrecisionMinute;
@@ -105,11 +220,14 @@ DateValue mlocMakeDateValue(DateFunction function, const mlocDateTime* value, ui
 
 DateValue mlocDateFromValue(DateFunction function, const DateValue* operand)
 {
-    DateValue v = mlocMakeDateValue(function, &operand->value, operand->has);
+    DateMoment moment = {operand->value, operand->instant, operand->zone, operand->has};
+    DateValue v = mlocMakeDateValue(function, &moment);
     // The override options alone pass on.
-    v.given = operand->given & (dateGivenHour12 | dateGivenCalendar);
+    v.given = operand->given & (dateGivenHour12 | dateGivenCalendar | dateGivenTimeZone);
     v.hourCycle = operand->hourCycle;
     v.calendar = operand->calendar;
+    v.zoneMode = operand->zoneMode;
+    v.timeZone = operand->timeZone;
     return v;
 }
 
@@ -177,27 +295,75 @@ static uint32_t OptionBit(DateFunction function, const uint8_t* name, size_t len
     {
         return dateGivenHour12;
     }
+    if (time && NameIs(name, length, "timeZoneStyle"))
+    {
+        return dateGivenZoneStyle;
+    }
+    if (NameIs(name, length, "timeZone"))
+    {
+        return dateGivenTimeZone;
+    }
     return NameIs(name, length, "calendar") ? dateGivenCalendar : 0;
 }
 
+// Sets the timeZone option: input (the operand's zone), or a zone the
+// data has by identifier or offset ("UTC" one of them).
+static mlocMessageFaultKind SetTimeZone(DateValue* value, const NumberOption* option,
+                                        const mlocDataSet* data)
+{
+    if (!option->hasText)
+    {
+        return mloc_messageFaultBadOption;
+    }
+    if (NameIs(option->text, option->length, "input"))
+    {
+        if ((value->has & dateHasZone) == 0)
+        {
+            return mloc_messageFaultBadOperand;
+        }
+        value->zoneMode = dateZoneInput;
+    }
+    else
+    {
+        mlocTimeZone zone;
+        if (data == NULL || mlocFindTimeZone(data, (const char*)option->text, option->length,
+                                             &zone) != mloc_success)
+        {
+            return mloc_messageFaultBadOption;
+        }
+        value->zoneMode = dateZoneGiven;
+        value->timeZone = zone;
+    }
+    value->given |= dateGivenTimeZone;
+    return mloc_messageFaultNone;
+}
+
 mlocMessageFaultKind mlocSetDateOption(DateValue* value, DateFunction function, const uint8_t* name,
-                                       size_t length, const NumberOption* option)
+                                       size_t length, const NumberOption* option,
+                                       const mlocDataSet* data)
 {
     uint32_t bit = OptionBit(function, name, length);
     if (bit == 0)
     {
         return mloc_messageFaultNone;
     }
-    if ((bit & (dateGivenHour12 | dateGivenCalendar)) == 0 && !option->literal)
+    if ((bit & (dateGivenHour12 | dateGivenCalendar | dateGivenTimeZone)) == 0 && !option->literal)
     {
         // Only the override options may come from a variable.
         return mloc_messageFaultBadOption;
     }
+    if (bit == dateGivenTimeZone)
+    {
+        return SetTimeZone(value, option, data);
+    }
     static const char* const s_hour12[] = {"true", "false"};
+    // In mlocZoneStyle's order from its specific long name.
+    static const char* const s_zoneStyles[] = {"long", "short"};
     int index = bit == dateGivenFields      ? Choice(option, s_fields, 7)
                 : bit == dateGivenLength    ? Choice(option, s_lengths, 3)
                 : bit == dateGivenPrecision ? Choice(option, s_precisions, 3)
                 : bit == dateGivenHour12    ? Choice(option, s_hour12, 2)
+                : bit == dateGivenZoneStyle ? Choice(option, s_zoneStyles, 2)
                                             : Choice(option, s_calendars, 18);
     if (index < 0)
     {
@@ -218,12 +384,56 @@ mlocMessageFaultKind mlocSetDateOption(DateValue* value, DateFunction function, 
     case dateGivenHour12:
         value->hourCycle = index == 0 ? mloc_hourCycleClock12 : mloc_hourCycleClock24;
         break;
+    case dateGivenZoneStyle:
+        value->zoneStyle = (uint8_t)(mloc_zoneStyleSpecificLong + index);
+        break;
     default:
         value->calendar = chosen;
         break;
     }
     value->given |= bit;
     return mloc_messageFaultNone;
+}
+
+mlocMessageFaultKind mlocCheckDateZone(DateValue* value, bool hasDefault)
+{
+    bool zoned = (value->has & dateHasZone) != 0;
+    bool shown = zoned || value->zoneMode == dateZoneGiven || hasDefault;
+    if ((value->given & dateGivenZoneStyle) == 0 ||
+        (shown && (zoned || (value->has & dateHasDate) != 0)))
+    {
+        return mloc_messageFaultNone;
+    }
+    value->given &= ~(uint32_t)dateGivenZoneStyle;
+    value->zoneStyle = mloc_zoneStyleNone;
+    return mloc_messageFaultBadOption;
+}
+
+bool mlocDateZone(const DateValue* value, const mlocDataSet* data, const mlocTimeZone* defaultZone,
+                  mlocTimeZone* zoneOut)
+{
+    bool zoned = (value->has & dateHasZone) != 0;
+    if (value->zoneMode == dateZoneGiven)
+    {
+        *zoneOut = value->timeZone;
+    }
+    else if (value->zoneMode == dateZoneInput && zoned)
+    {
+        *zoneOut = value->zone;
+    }
+    else if (defaultZone != NULL)
+    {
+        *zoneOut = *defaultZone;
+    }
+    else if (zoned)
+    {
+        *zoneOut = Utc(data);
+    }
+    else
+    {
+        return false;
+    }
+    return true;
 }
 
 // The locale a value is written in: the formatter's, with the calendar
@@ -254,16 +464,23 @@ static mlocTimeOptions TimeOptions(const DateValue* value)
     memset(&options, 0, sizeof options);
     options.hourCycle = (mlocHourCycle)value->hourCycle;
     options.precision = (mlocTimePrecision)value->precision;
+    options.zone = (mlocZoneStyle)value->zoneStyle;
     return options;
 }
 
-// A value's options as a prepared value keeps them.
-static DateValue KeyOf(const DateValue* value)
+// A value's options as a prepared value keeps them: those its formatter
+// is made with (the zone it is shown in is not one).
+static DateKey KeyOf(const DateValue* value)
 {
-    DateValue key = *value;
-    memset(&key.value, 0, sizeof key.value);
-    key.origin = 0;
-    key.has = 0;
+    DateKey key = {value->given & ~(uint32_t)dateGivenTimeZone,
+                   value->function,
+                   value->fields,
+                   value->length,
+                   value->precision,
+                   value->hourCycle,
+                   value->calendar,
+                   value->zoneStyle,
+                   0};
     return key;
 }
 
@@ -308,38 +525,77 @@ bool mlocPrepareDate(const DateValue* value, const mlocDataSet* data, const mloc
     return Make(value, data, locale, out) >= 0;
 }
 
-// Writes a value with a formatter that has its options.
-static mlocResult WriteWith(const DateValue* value, const PreparedDate* prepared,
-                            mlocOutput* output)
+// What a value is written as: its local date-time in the zone it is
+// shown in, and for a zone style that zone and the instant.
+typedef struct Shown
 {
+    mlocDateTime local;
+    mlocInstant instant;
+    mlocTimeZone zone;
+} Shown;
+
+// Writes a value as shown with a formatter that has its options.
+static mlocResult WriteWith(const DateValue* value, const Shown* shown,
+                            const PreparedDate* prepared, mlocOutput* output)
+{
+    bool inZone = value->zoneStyle != mloc_zoneStyleNone;
     if (value->function == dateFunctionDate)
     {
-        return mlocFormatDate(&prepared->formatter.date, &value->value.date, output);
+        return mlocFormatDate(&prepared->formatter.date, &shown->local.date, output);
     }
     if (value->function == dateFunctionTime)
     {
-        return mlocFormatTime(&prepared->formatter.time, &value->value.time, output);
+        return inZone ? mlocFormatTimeInZone(&prepared->formatter.time, &shown->zone,
+                                             &shown->instant, output)
+                      : mlocFormatTime(&prepared->formatter.time, &shown->local.time, output);
     }
-    return mlocFormatDateTime(&prepared->formatter.dateTime, &value->value, output);
+    return inZone ? mlocFormatDateTimeInZone(&prepared->formatter.dateTime, &shown->zone,
+                                             &shown->instant, output)
+                  : mlocFormatDateTime(&prepared->formatter.dateTime, &shown->local, output);
 }
 
 // Writes a value with a formatter made here, off the resolver's frames.
-MLOC_NOINLINE static mlocResult WriteMade(const DateValue* value, const mlocDataSet* data,
-                                          const mlocLocale* locale, mlocOutput* output)
+MLOC_NOINLINE static mlocResult WriteMade(const DateValue* value, const Shown* shown,
+                                          const mlocDataSet* data, const mlocLocale* locale,
+                                          mlocOutput* output)
 {
     PreparedDate made;
     mlocResult result = Make(value, data, locale, &made);
-    return result < 0 ? result : WriteWith(value, &made, output);
+    return result < 0 ? result : WriteWith(value, shown, &made, output);
+}
+
+// How a value is shown: a zoned one at its instant in the zone it is
+// shown in; a floating one as it is, at the instant its date-time names
+// in the zone for a zone style.
+static bool ShownOf(const DateValue* value, const mlocDataSet* data,
+                    const mlocTimeZone* defaultZone, Shown* out)
+{
+    out->local = value->value;
+    out->instant = value->instant;
+    bool zoned = mlocDateZone(value, data, defaultZone, &out->zone);
+    if ((value->has & dateHasZone) != 0)
+    {
+        return mlocGetDateTimeFor(&out->zone, &out->instant, mloc_calendarIso8601, &out->local) ==
+               mloc_success;
+    }
+    return value->zoneStyle == mloc_zoneStyleNone ||
+           (zoned && mlocGetInstantFor(&out->zone, &out->local, mloc_disambiguationCompatible,
+                                       &out->instant) == mloc_success);
 }
 
 mlocMessageFaultKind mlocWriteDateValue(const DateValue* value, const PreparedDate* prepared,
                                         const mlocDataSet* data, const mlocLocale* locale,
-                                        mlocOutput* output)
+                                        const mlocTimeZone* defaultZone, mlocOutput* output)
 {
-    DateValue key = KeyOf(value);
+    Shown shown;
+    if (!ShownOf(value, data, defaultZone, &shown))
+    {
+        return mloc_messageFaultUnsupportedOperation;
+    }
+    DateKey key = KeyOf(value);
     mlocResult result = prepared != NULL && memcmp(&key, &prepared->key, sizeof key) == 0
-                            ? WriteWith(value, prepared, output)
-                            : WriteMade(value, data, locale, output);
+                            ? WriteWith(value, &shown, prepared, output)
+                            : WriteMade(value, &shown, data, locale, output);
     // A text past the room reports the length it needs.
     return result == mloc_success || (result == mloc_errorCapacity && output->length > 0)
                ? mloc_messageFaultNone
@@ -386,31 +642,89 @@ static int WriteIsoTime(const mlocTime* time, char* text, size_t capacity)
     return more < 0 ? more : n + more;
 }
 
+// Writes a date-time: its date, T and its time.
+static int WriteIsoDateTimeOf(const mlocDateTime* value, char* text, size_t capacity)
+{
+    int n = WriteIsoDate(&value->date, text, capacity);
+    if (n < 0 || (size_t)n + 1 >= capacity)
+    {
+        return -1;
+    }
+    text[n] = 'T';
+    int time = WriteIsoTime(&value->time, text + n + 1, capacity - (size_t)n - 1);
+    return time < 0 ? time : n + 1 + time;
+}
+
+// Writes an instant's local date-time in a zone: with Z for UTC, else
+// with the zone's offset then (its seconds where it has any, as Temporal
+// writes it) and the zone's identifier in brackets.
+static int WriteZoned(const mlocInstant* instant, const mlocTimeZone* zone, bool utc, char* text,
+                      size_t capacity)
+{
+    mlocDateTime local;
+    int32_t offset = 0;
+    if (mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &local) != mloc_success ||
+        mlocGetTimeZoneOffset(zone, instant, &offset) != mloc_success)
+    {
+        return -1;
+    }
+    int n = WriteIsoDateTimeOf(&local, text, capacity);
+    if (n < 0 || (size_t)n >= capacity)
+    {
+        return -1;
+    }
+    size_t left = capacity - (size_t)n;
+    if (utc)
+    {
+        int z = snprintf(text + n, left, "Z");
+        return z < 0 ? z : n + z;
+    }
+    unsigned size = (unsigned)(offset < 0 ? -(int64_t)offset : offset);
+    char sign = offset < 0 ? '-' : '+';
+    int more = size % 60 != 0
+                   ? snprintf(text + n, left, "%c%02u:%02u:%02u[", sign, size / 3600,
+                              size / 60 % 60, size % 60)
+                   : snprintf(text + n, left, "%c%02u:%02u[", sign, size / 3600, size / 60 % 60);
+    if (more < 0 || (size_t)more + 1 >= left)
+    {
+        return -1;
+    }
+    n += more;
+    // Room for the identifier and the closing bracket.
+    mlocOutput out = {text + n, capacity - (size_t)n - 1, 0, NULL, NULL};
+    if (mlocFormatTimeZoneId(zone, &out) != mloc_success)
+    {
+        return -1;
+    }
+    n += (int)out.length;
+    text[n] = ']';
+    return n + 1;
+}
+
 size_t mlocWriteIsoDateTime(const mlocMessageValue* argument, char* text, size_t capacity)
 {
     int n = -1;
-    if (argument->kind == mloc_messageValueDate)
+    mlocTimeZone utc;
+    memset(&utc, 0, sizeof utc);
+    switch (argument->kind)
     {
+    case mloc_messageValueDate:
         n = WriteIsoDate(&argument->as.date, text, capacity);
-    }
-    else if (argument->kind == mloc_messageValueTime)
-    {
+        break;
+    case mloc_messageValueTime:
         n = WriteIsoTime(&argument->as.time, text, capacity);
-    }
-    else if (argument->kind == mloc_messageValueDateTime)
-    {
-        n = WriteIsoDate(&argument->as.dateTime.date, text, capacity);
-        if (n >= 0 && (size_t)n + 1 < capacity)
-        {
-            text[n] = 'T';
-            int time =
-                WriteIsoTime(&argument->as.dateTime.time, text + n + 1, capacity - (size_t)n - 1);
-            n = time < 0 ? time : n + 1 + time;
-        }
-        else
-        {
-            n = -1;
-        }
+        break;
+    case mloc_messageValueDateTime:
+        n = WriteIsoDateTimeOf(&argument->as.dateTime, text, capacity);
+        break;
+    case mloc_messageValueInstant:
+        n = WriteZoned(&argument->as.instant, &utc, true, text, capacity);
+        break;
+    case mloc_messageValueZonedDateTime:
+        n = WriteZoned(&argument->as.zoned.instant, argument->as.zoned.zone, false, text, capacity);
+        break;
+    default:
+        break;
     }
     return n < 0 || (size_t)n >= capacity ? 0 : (size_t)n;
 }

@@ -88,7 +88,8 @@ static void PutFallback(Formatting* f, const Value* v)
 // which is reported, false.
 static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
 {
-    char digits[64];
+    // A zoned date-time's text is the longest.
+    char digits[128];
     size_t length = 0;
     if (!mlocArgumentDigits(v->argument, digits, sizeof digits, &length))
     {
@@ -134,7 +135,8 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
     {
         const MessageFormatter* formatter = &f->r.formatter;
         const PreparedDate* prepared = mlocPreparedFor(&f->r, v->date.origin);
-        fault = mlocWriteDateValue(&v->date, prepared, formatter->data, &formatter->locale, &out);
+        fault = mlocWriteDateValue(&v->date, prepared, formatter->data, &formatter->locale,
+                                   formatter->hasZone ? &formatter->zone : NULL, &out);
     }
     else if (v->kind == valueResolved)
     {
@@ -432,29 +434,49 @@ static bool GoodCurrency(const mlocMessageValue* v)
     return GoodDecimal(v->as.currency.amount);
 }
 
-// Whether the arguments hold what their kinds say: a name and a string
-// where their lengths ask, a decimal, an amount and its code, a known
-// kind.
+// Whether a value holds what its kind says: a string where its length
+// asks, a decimal, an amount and its code, a date, time or instant the
+// library makes, a zone it made, a known kind.
+static bool GoodValue(const mlocMessageValue* v)
+{
+    switch (v->kind)
+    {
+    case mloc_messageValueString:
+        return v->as.string.text != NULL || v->as.string.length == 0;
+    case mloc_messageValueInteger:
+    case mloc_messageValueDouble:
+    case mloc_messageValueObject:
+        return true;
+    case mloc_messageValueDecimal:
+        return GoodDecimal(v->as.decimal);
+    case mloc_messageValueCurrency:
+        return GoodCurrency(v);
+    case mloc_messageValueUnit:
+        return GoodDecimal(v->as.unit.amount) &&
+               (v->as.unit.unit != NULL || v->as.unit.unitLength == 0);
+    case mloc_messageValueDate:
+        return mlocGoodDate(&v->as.date);
+    case mloc_messageValueTime:
+        return mlocGoodTime(&v->as.time);
+    case mloc_messageValueDateTime:
+        return mlocGoodDate(&v->as.dateTime.date) && mlocGoodTime(&v->as.dateTime.time);
+    case mloc_messageValueInstant:
+        return mlocGoodInstant(&v->as.instant);
+    case mloc_messageValueZonedDateTime:
+        return mlocGoodZoned(v);
+    default:
+        return false;
+    }
+}
+
+// Whether the arguments have names where their lengths ask and hold
+// what their kinds say.
 static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
 {
     for (size_t i = 0; i < count; i++)
     {
-        const mlocMessageArgument* a = &arguments[i];
-        const mlocMessageValue* v = &a->value;
-        bool good = (a->name != NULL || a->nameLength == 0) &&
-                    (uint32_t)v->kind <= mloc_messageValueDateTime &&
-                    (v->kind != mloc_messageValueDate || mlocGoodDate(&v->as.date)) &&
-                    (v->kind != mloc_messageValueTime || mlocGoodTime(&v->as.time)) &&
-                    (v->kind != mloc_messageValueDateTime ||
-                     (mlocGoodDate(&v->as.dateTime.date) && mlocGoodTime(&v->as.dateTime.time))) &&
-                    (v->kind != mloc_messageValueString || v->as.string.text != NULL ||
-                     v->as.string.length == 0) &&
-                    (v->kind != mloc_messageValueDecimal || GoodDecimal(v->as.decimal)) &&
-                    (v->kind != mloc_messageValueCurrency || GoodCurrency(v)) &&
-                    (v->kind != mloc_messageValueUnit ||
-                     (GoodDecimal(v->as.unit.amount) &&
-                      (v->as.unit.unit != NULL || v->as.unit.unitLength == 0)));
-        if (!good)
+        if ((arguments[i].name == NULL && arguments[i].nameLength != 0) ||
+            !GoodValue(&arguments[i].value))
         {
             return false;
         }

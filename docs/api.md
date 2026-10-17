@@ -465,7 +465,7 @@ Writes a compiled message back as MF2 text, in a canonical form: a simple messag
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocMessageOptions* options);
 ```
-Makes a locale's message formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data its functions read. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorInvalid for a null pointer, an unknown isolation, or a function without a resolve entry, a name that is not an MF2 identifier with a namespace, a namespace of u: or mloc:, or two functions of one name. @par Thread safety Safe from any thread.
+Makes a locale's message formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data its functions read. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorInvalid for a null pointer, an unknown isolation, a time zone the library did not make, or a function without a resolve entry, a name that is not an MF2 identifier with a namespace, a namespace of u: or mloc:, or two functions of one name. @par Thread safety Safe from any thread.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size, void* buffer, size_t capacity, size_t* sizeOut);

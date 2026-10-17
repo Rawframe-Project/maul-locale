@@ -32,6 +32,9 @@ typedef struct MessageFormatter
     const mlocMessageFunction* functions;
     size_t functionCount;
     mlocLocale locale;
+    // The default time zone, when hasZone.
+    bool hasZone;
+    mlocTimeZone zone;
 } MessageFormatter;
 
 typedef struct BoundHeader

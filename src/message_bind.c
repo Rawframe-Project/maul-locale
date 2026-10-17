@@ -82,6 +82,14 @@ static bool GoodFunctionName(const mlocMessageFunction* function)
     return !start;
 }
 
+// Whether a zone is one the library made: it has an offset.
+static bool GoodZone(const mlocTimeZone* zone)
+{
+    mlocInstant epoch = {0, 0};
+    int32_t offset = 0;
+    return mlocGetTimeZoneOffset(zone, &epoch, &offset) == mloc_success;
+}
+
 // Whether the program's functions are well made: each with a resolve
 // entry and a good name, no name twice.
 static bool GoodFunctions(const mlocMessageFunction* functions, size_t count)
@@ -116,7 +124,8 @@ mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const ml
         return mloc_errorInvalid;
     }
     if (options != NULL && ((uint32_t)options->isolation > mloc_messageIsolationNone ||
-                            !GoodFunctions(options->functions, options->functionCount)))
+                            !GoodFunctions(options->functions, options->functionCount) ||
+                            (options->timeZone != NULL && !GoodZone(options->timeZone))))
     {
         return mloc_errorInvalid;
     }
@@ -136,6 +145,11 @@ mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const ml
     {
         f.functions = options->functions;
         f.functionCount = options->functionCount;
+        f.hasZone = options->timeZone != NULL;
+        if (f.hasZone)
+        {
+            f.zone = *options->timeZone;
+        }
     }
     f.data = data;
     f.locale = *locale;

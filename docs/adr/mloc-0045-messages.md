@@ -238,20 +238,41 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   onto `mlocTimePrecision` (the minute by default), `hour12` the
   locale's own 12- or 24-hour clock, `calendar` the locale's `-u-ca`;
   the date and time joined by the "at" glue. Options other than the
-  overrides (`hour12`, `calendar`) set by a variable are Bad Options and
-  ignored. Operands: date/time literals and string arguments, read by
-  `mlocParseTemporalString` (date-times, instants and zoned date-times
-  with a year; an impossible day or a time alone a Bad Operand), new
-  date, time and date-time argument kinds, and another date function's
-  value, whose override options alone pass on. `:date` and `:datetime`
-  need a date; `:time` over a date alone writes its midnight. A date
-  value does not select, reads in its locale's direction, and is
-  prepared at bind (the probe gives date functions a date-time); with
-  no function a date argument is written in ISO 8601, and a program
-  function receives a date value as `mloc_messageOperandDate`, `Time`
-  or `DateTime`. The dates are a data file of their own (`dates.mloc`);
-  without it a date function is an Unsupported Operation. ICU4C 79's
-  MF2 is of the older Draft (it ignores these options) and no oracle.
+  overrides (`hour12`, `calendar`, `timeZone`) set by a variable are
+  Bad Options and ignored. Operands: date/time literals and string
+  arguments, read by `mlocParseTemporalString` (date-times, instants and
+  zoned date-times with a year; an impossible day, a time alone, a zone
+  the data lacks, an offset the zone did not have, an offset of seconds
+  with no zone, or a calendar annotation other than `iso8601` a Bad
+  Operand), new date, time, date-time, instant and zoned date-time
+  argument kinds, and another date function's value, whose override
+  options alone pass on. `:date` and `:datetime` need a date; `:time`
+  over a date alone writes its midnight.
+- **Zones:** a literal with Z, an offset or a zone annotation, an
+  instant (its zone UTC's) and a zoned date-time argument are exact
+  times; the rest are floating. `timeZone` takes an identifier or offset
+  the data has (`UTC` among them) or `input`, the operand's own zone
+  (over a floating value a Bad Operand, the default used);
+  `mlocMessageOptions.timeZone` is the default zone, and with none an
+  exact time shows in UTC. An exact time is shown at its instant in that
+  zone; a floating one as it is, read in the zone only to name it.
+  `timeZoneStyle` (`:time`, `:datetime`) long and short are the zone's
+  specific names ("Eastern Standard Time", "EST"), named at the instant;
+  over a floating value with no zone given and no default, or a time
+  alone, it is a Bad Option and the zone is left out. The zone names
+  are a data file of their own (`zone-names.mloc`).
+- **Date values** do not select, read in their locale's direction, and
+  are prepared at bind (the probe gives date functions an instant; the
+  zone shown is not part of the formatter, so a timeZone literal is
+  prepared too); with no function a date argument is written in ISO
+  8601 (an instant with Z, a zoned date-time with its offset and zone in
+  brackets, as Temporal writes them), and a program function receives a
+  date value as `mloc_messageOperandDate`, `Time` or `DateTime`, an
+  exact one with its instant and zone (the timeZone option's, else its
+  operand's) and its date-time there. The dates are a data file of
+  their own (`dates.mloc`); without it a date function is an Unsupported
+  Operation. ICU4C 79's MF2 is of the older Draft (it ignores these
+  options) and no oracle.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -290,7 +311,8 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   gives no text, with its errors (299, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
   `test_message_dates` checks the date functions' options, operands,
-  refusals, inheritance and preparation, with `dates.mloc` in the set;
+  refusals, zones, inheritance and preparation, with `dates.mloc`,
+  `zone-names.mloc` and the locale names in the set;
   `test_message_numbers` checks `:number` and `:integer`'s defaults,
   options and their refusals, operands, inheritance and selection,
   `:offset`'s sums, refusals and overflow, `:percent`'s scaling,

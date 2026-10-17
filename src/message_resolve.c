@@ -197,6 +197,30 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
     return v;
 }
 
+// A date value as a function receives it: a zoned one in the timeZone
+// option's zone, else its operand's.
+static void DateOperandOf(const DateValue* d, mlocMessageOperand* out, mlocMessageResolved* storage)
+{
+    uint8_t has = d->has & (dateHasDate | dateHasTime);
+    out->kind = has == dateHasDate   ? mloc_messageOperandDate
+                : has == dateHasTime ? mloc_messageOperandTime
+                                     : mloc_messageOperandDateTime;
+    storage->zoned.dateTime = d->value;
+    out->dateTime = &storage->zoned.dateTime;
+    if ((d->has & dateHasZone) != 0)
+    {
+        storage->zoned.instant = d->instant;
+        storage->zoned.zone = d->zoneMode == dateZoneGiven ? d->timeZone : d->zone;
+        if (mlocGetDateTimeFor(&storage->zoned.zone, &d->instant, mloc_calendarIso8601,
+                               &storage->zoned.dateTime) != mloc_success)
+        {
+            storage->zoned.dateTime = d->value;
+        }
+        out->instant = &storage->zoned.instant;
+        out->zone = &storage->zoned.zone;
+    }
+}
+
 // A value as a function receives it; storage holds a resolved value.
 void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage)
 {
@@ -246,12 +270,7 @@ void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved*
     }
     else if (kind == valueDate)
     {
-        storage->dateTime = v->date.value;
-        uint8_t has = v->date.has;
-        out->kind = has == dateHasDate   ? mloc_messageOperandDate
-                    : has == dateHasTime ? mloc_messageOperandTime
-                                         : mloc_messageOperandDateTime;
-        out->dateTime = &storage->dateTime;
+        DateOperandOf(&v->date, out, storage);
     }
     else
     {
@@ -746,29 +765,30 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
 // (or a string argument that is one), a date, time or date-time
 // argument, or another date function's value, whose override options
 // pass on; false for anything else or parts the function cannot take.
-static bool DateOperand(DateFunction function, const Value* operand, DateValue* out)
+static bool DateOperand(const Resolution* r, DateFunction function, const Value* operand,
+                        DateValue* out)
 {
     if (operand == NULL)
     {
         return false;
     }
     ValueKind kind = operand->kind == valueString ? operand->behind : operand->kind;
-    mlocDateTime value;
-    uint8_t has = 0;
     if (kind == valueDate)
     {
         *out = mlocDateFromValue(function, &operand->date);
         return mlocDateTakes(function, out->has);
     }
+    const mlocDataSet* data = r->formatter.data;
+    DateMoment moment;
     bool read =
-        (kind == valueText && mlocDateLiteral(operand->text, operand->length, &value, &has)) ||
-        (kind == valueArgument && mlocArgumentDateTime(operand->argument, &value, &has));
+        (kind == valueText && mlocDateLiteral(operand->text, operand->length, data, &moment)) ||
+        (kind == valueArgument && mlocArgumentDateTime(operand->argument, data, &moment));
     if (!read)
     {
         return false;
     }
-    *out = mlocMakeDateValue(function, &value, has);
-    return mlocDateTakes(function, has);
+    *out = mlocMakeDateValue(function, &moment);
+    return mlocDateTakes(function, moment.has);
 }
 
 // A :date, :time or :datetime value: its operand's date and time, the
@@ -779,7 +799,7 @@ MLOC_NOINLINE static Value ResolveDate(Resolution* r, uint32_t expression, DateF
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     DateValue d;
-    if (!DateOperand(function, operand, &d))
+    if (!DateOperand(r, function, operand, &d))
     {
         mlocReportFault(r, mloc_messageFaultBadOperand, at);
         return mlocExpressionFallback(r, expression);
@@ -797,13 +817,18 @@ MLOC_NOINLINE static Value ResolveDate(Resolution* r, uint32_t expression, DateF
         bool failed = false;
         NumberOption option = NumberOptionAt(r, p, at, &failed);
         mlocMessageFaultKind fault =
-            failed ? mloc_messageFaultNone
-                   : mlocSetDateOption(&d, function, Pool(r, Field(r, messageParameters, p, 1)),
-                                       Field(r, messageParameters, p, 2), &option);
+            failed
+                ? mloc_messageFaultNone
+                : mlocSetDateOption(&d, function, Pool(r, Field(r, messageParameters, p, 1)),
+                                    Field(r, messageParameters, p, 2), &option, r->formatter.data);
         if (fault != mloc_messageFaultNone)
         {
             mlocReportFault(r, fault, at);
         }
+    }
+    if (mlocCheckDateZone(&d, r->formatter.hasZone) != mloc_messageFaultNone)
+    {
+        mlocReportFault(r, mloc_messageFaultBadOption, at);
     }
     d.origin = expression;
     Value v = Make(valueDate);

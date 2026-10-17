@@ -827,15 +827,6 @@ static bool FormatsNow(const SuiteCase* c)
         }
         at += length + (at[length] == ',' ? 1 : 0);
     }
-    // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {"timeZone"};
-    for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
-    {
-        if (strstr(c->source, later[i]) != NULL)
-        {
-            return false;
-        }
-    }
     // A case without a text checks only its faults.
     return strcmp(c->locale, "fr") != 0;
 }
@@ -1142,7 +1133,7 @@ static void TestSuiteFormat(void)
         mlocMessageFormatter formatter;
         mlocMessageOptions options = {
             false, c->bidi ? mloc_messageIsolationDefault : mloc_messageIsolationNone,
-            s_testFunctions, 3};
+            s_testFunctions, 3, NULL};
         size_t boundSize = 0;
         CHECK(mlocParseLocale(c->locale, strlen(c->locale), &locale).status == mloc_success &&
                   mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success &&
@@ -1186,8 +1177,8 @@ static void MakeFormatters(void)
     data = (mlocDataSet){&builtin, 1};
     mlocLocale locale;
     // Isolation is tested with the functions (test_message_functions).
-    mlocMessageOptions plain = {false, mloc_messageIsolationNone, NULL, 0};
-    mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0};
+    mlocMessageOptions plain = {false, mloc_messageIsolationNone, NULL, 0, NULL};
+    mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitMessageFormatter(&s_formatter, &data, &locale, &plain) == mloc_success &&
               mlocInitMessageFormatter(&s_strict, &data, &locale, &strict) == mloc_success,

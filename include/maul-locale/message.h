@@ -115,8 +115,9 @@ extern "C"
     // and a unit identifier ("meter", "kilometer-per-hour"), which :unit
     // formats and the number functions read as its amount, both to
     // outlive the call; a date, a time of day and a date-time are
-    // floating values (no zone), which the date and time functions
-    // format.
+    // floating values (no zone), an instant an exact time (its zone UTC),
+    // and a zoned date-time an instant and a zone by pointer (to outlive
+    // the call), which the date and time functions format.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -129,6 +130,8 @@ extern "C"
         mloc_messageValueDate = 7,
         mloc_messageValueTime = 8,
         mloc_messageValueDateTime = 9,
+        mloc_messageValueInstant = 10,
+        mloc_messageValueZonedDateTime = 11,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -162,6 +165,12 @@ extern "C"
             mlocDate date;
             mlocTime time;
             mlocDateTime dateTime;
+            mlocInstant instant;
+            struct
+            {
+                mlocInstant instant;
+                const mlocTimeZone* zone;
+            } zoned;
         } as;
     } mlocMessageValue;
 
@@ -213,8 +222,9 @@ extern "C"
 
     // A function's resolved value: 64 bytes its resolve entry fills as it
     // likes, which its format and match entries read back. As an
-    // accessor's storage it may hold a number value's decimal, or a
-    // currency value's amount and code, instead.
+    // accessor's storage it may hold a number value's decimal, a
+    // currency value's amount and code, or a date value's date-time and
+    // its instant and zone, instead.
     typedef union mlocMessageResolved
     {
         uint64_t opaque[8];
@@ -225,6 +235,12 @@ extern "C"
             char code[4];
         } currency;
         mlocDateTime dateTime;
+        struct
+        {
+            mlocDateTime dateTime;
+            mlocInstant instant;
+            mlocTimeZone zone;
+        } zoned;
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
@@ -255,7 +271,10 @@ extern "C"
         mloc_messageOperandUnit = 7,
         // A date and time function's value (:date, :time, :datetime) as
         // dateTime: of a date alone (its time midnight), a time alone (its
-        // date the first day of 1970), or both.
+        // date the first day of 1970), or both. A value with an exact time
+        // also has its instant and zone (the timeZone option's, else its
+        // operand's), dateTime then the zone's local date-time; a
+        // floating value has neither.
         mloc_messageOperandDate = 8,
         mloc_messageOperandTime = 9,
         mloc_messageOperandDateTime = 10,
@@ -272,6 +291,8 @@ extern "C"
         const mlocMessageResolved* resolved;
         const mlocDecimal* number;
         const mlocDateTime* dateTime;
+        const mlocInstant* instant;
+        const mlocTimeZone* zone;
     } mlocMessageOperand;
 
     // A function call's options and locale, read with the accessors
@@ -339,6 +360,10 @@ extern "C"
         // be null when count is 0.
         const mlocMessageFunction* functions;
         size_t functionCount;
+        // The default time zone the date and time functions show exact
+        // times in (UTC when null), copied; a floating value has none
+        // unless its expression names one.
+        const mlocTimeZone* timeZone;
     } mlocMessageOptions;
 
     // A locale's message formatter: a value that points into the data it
@@ -357,9 +382,10 @@ extern "C"
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, an
-    ///         unknown isolation, or a function without a resolve entry, a
-    ///         name that is not an MF2 identifier with a namespace, a
-    ///         namespace of u: or mloc:, or two functions of one name.
+    ///         unknown isolation, a time zone the library did not make,
+    ///         or a function without a resolve entry, a name that is not
+    ///         an MF2 identifier with a namespace, a namespace of u: or
+    ///         mloc:, or two functions of one name.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut,

@@ -28,7 +28,7 @@ static char s_text[1 << 12];
 static void Make(mlocMessageFormatter* formatter, const char* tag, mlocMessageIsolation isolation)
 {
     mlocLocale locale;
-    mlocMessageOptions options = {false, isolation, NULL, 0};
+    mlocMessageOptions options = {false, isolation, NULL, 0, NULL};
     CHECK(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
               mlocInitMessageFormatter(formatter, &s_data, &locale, &options) == mloc_success,
           "a formatter is made");
@@ -429,30 +429,33 @@ static void TestCurrency(void)
                       "42.00",
                       s_badOption),
           "bad option values; no currency is a bad operand");
-    // 60 and 61 bytes of digits: with " EUR", 64 fit the writer's room
-    // and 65 do not.
+    // 124 and 125 bytes of digits: with " EUR", 128 fit the writer's room
+    // and 129 do not.
     mlocDecimal wide = {0};
     mlocDecimal wider = {0};
-    CHECK(mlocParseDecimal("1111111111222222222233333333334444444444e-58", 44, &wide).status ==
-                  mloc_success &&
-              mlocParseDecimal("1111111111222222222233333333334444444444e-59", 44, &wider).status ==
-                  mloc_success,
-          "long amounts are read");
+    CHECK(
+        mlocParseDecimal("1111111111222222222233333333334444444444e-122", 45, &wide).status ==
+                mloc_success &&
+            mlocParseDecimal("1111111111222222222233333333334444444444e-123", 45, &wider).status ==
+                mloc_success,
+        "long amounts are read");
     mlocMessageArgument long1 = {
         "a", 1, {mloc_messageValueCurrency, 0, {.currency = {&wide, {'E', 'U', 'R'}}}}};
     mlocMessageArgument long2 = {
         "a", 1, {mloc_messageValueCurrency, 0, {.currency = {&wider, {'E', 'U', 'R'}}}}};
     static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
     CHECK(Formats("{$a}", &long1, 1,
-                  "0.000000000000000000111111111122222222223333333333444444444"
-                  "4 EUR",
+                  "0.0000000000000000000000000000000000000000000000000000000000"
+                  "000000000000000000000000111111111122222222223333333333444444"
+                  "4444"
+                  " EUR",
                   NULL) &&
               Formats("{$a}", &long2, 1, "{$a}", unsupported),
           "an amount written bare fits its room or falls back");
     static mlocMessageFormatter bare;
     mlocLocale en;
     mlocDataSet none = {NULL, 0};
-    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
               mlocInitMessageFormatter(&bare, &none, &en, &options) == mloc_success,
           "a formatter is made without data");
@@ -634,7 +637,7 @@ static void TestUnit(void)
     mlocOpenBuiltinData(&builtin);
     static mlocDataSet without;
     without = (mlocDataSet){&builtin, 1};
-    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
               mlocInitMessageFormatter(&bare, &without, &en, &options) == mloc_success,
           "a formatter is made without the unit names");

@@ -74,6 +74,18 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
         snprintf(shown, sizeof shown, "%c%d:%u", "DTB"[operand->kind - mloc_messageOperandDate],
                  (int)operand->dateTime->date.day, (unsigned)operand->dateTime->time.hour);
         Add(e, shown, strlen(shown));
+        if (operand->instant != NULL)
+        {
+            // A zoned value's instant and zone.
+            char zone[64];
+            mlocOutput out = {zone, sizeof zone, 0, NULL, NULL};
+            snprintf(shown, sizeof shown, "z%lld", (long long)operand->instant->seconds);
+            Add(e, shown, strlen(shown));
+            if (mlocFormatTimeZoneId(operand->zone, &out) == mloc_success)
+            {
+                Add(e, zone, out.length);
+            }
+        }
         break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
@@ -269,7 +281,8 @@ static void MakeFormatter(void)
     static mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     s_data = (mlocDataSet){&builtin, 1};
-    mlocMessageOptions options = {false, mloc_messageIsolationNone, s_functions, functionCount};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, s_functions, functionCount,
+                                  NULL};
     CHECK(mlocParseLocale("de-CH", 5, &s_locale).status == mloc_success &&
               mlocInitMessageFormatter(&s_formatter, &s_data, &s_locale, &options) == mloc_success,
           "a formatter with functions is made");
@@ -278,7 +291,7 @@ static void MakeFormatter(void)
 static bool Refused(const char* name)
 {
     mlocMessageFunction function = {name, strlen(name), NULL, EchoResolve, NULL, NULL, NULL, NULL};
-    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
     mlocMessageFormatter formatter;
     return mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid;
 }
@@ -295,7 +308,7 @@ static void TestTable(void)
           "a namespaced name is taken");
     mlocMessageFormatter formatter;
     mlocMessageFunction twice[2] = {s_functions[0], s_functions[0]};
-    mlocMessageOptions options = {false, mloc_messageIsolationNone, twice, 2};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, twice, 2, NULL};
     CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
           "two functions of one name are refused");
     twice[1].resolve = NULL;
@@ -392,6 +405,10 @@ static void TestCalls(void)
                   ":x:echo}{$t :x:echo}}}",
                   a, 4, "D732313:0B732313:15", NULL),
           "a date value is passed as its date and time, and which it had");
+    CHECK(Formats(".local $z = {|2006-01-02T15:04:06Z| :datetime timeZone=|America/New_York|} "
+                  ".local $o = {|2006-01-02T15:04:06-05:00| :time} {{{$z :x:echo}|{$o :x:echo}}}",
+                  a, 4, "B732313:10z1136214246America/New_York|B732313:15z1136232246-05:00", NULL),
+          "a zoned date value is passed with its instant and zone");
     mlocMessageArgument named[] = {
         {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
         {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},
@@ -645,7 +662,8 @@ static void TestResolutionLimit(void)
 static void MakeIsolating(mlocMessageFormatter* formatter, const char* tag)
 {
     mlocLocale locale;
-    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, functionCount};
+    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, functionCount,
+                                  NULL};
     CHECK(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
               mlocInitMessageFormatter(formatter, &s_data, &locale, &options) == mloc_success,
           "an isolating formatter is made");
@@ -720,7 +738,7 @@ static void TestIsolation(void)
 
     mlocLocale locale;
     mlocMessageFormatter formatter;
-    mlocMessageOptions options = {false, (mlocMessageIsolation)2, NULL, 0};
+    mlocMessageOptions options = {false, (mlocMessageIsolation)2, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) == mloc_errorInvalid,
           "an unknown isolation is refused");
