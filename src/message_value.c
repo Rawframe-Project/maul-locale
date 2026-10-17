@@ -61,6 +61,9 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
     case mloc_messageValueCurrency:
         *out = *argument->as.currency.amount;
         return true;
+    case mloc_messageValueUnit:
+        *out = *argument->as.unit.amount;
+        return true;
     default:
         return false;
     }
@@ -105,6 +108,14 @@ bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
             return false;
         }
         text = digits;
+        const mlocMessageValue* a = value->argument;
+        if (a->kind == mloc_messageValueUnit)
+        {
+            // Digits, a space and the unit, all compared by their bytes.
+            return length == size + 1 + a->as.unit.unitLength && memcmp(key, digits, size) == 0 &&
+                   key[size] == ' ' &&
+                   memcmp(key + size + 1, a->as.unit.unit, a->as.unit.unitLength) == 0;
+        }
     }
     else if (value->behind != valueText)
     {

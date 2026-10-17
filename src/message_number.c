@@ -13,6 +13,14 @@
 #include <stddef.h>
 #include <string.h>
 
+// Keeps a formatter made in a call (a unit formatter is 3.5 KB) in its
+// own frame, not in every write's.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define MLOC_NOINLINE __declspec(noinline)
+#else
+#define MLOC_NOINLINE __attribute__((noinline))
+#endif
+
 enum
 {
     // The number part's limits (record mloc-0021).
@@ -74,8 +82,8 @@ NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* deci
     memset(&v, 0, sizeof v);
     v.decimal = *decimal;
     v.function = (uint8_t)function;
-    // A currency value does not select.
-    v.selectable = function != numberFunctionCurrency;
+    // A currency or unit value does not select.
+    v.selectable = function != numberFunctionCurrency && function != numberFunctionUnit;
     v.select = numberSelectPlural;
     v.increment = 1;
     return v;
@@ -87,28 +95,34 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
     *out = *operand;
     // :offset keeps its operand's function and so its defaults.
     out->function = function == numberFunctionOffset ? operand->function : (uint8_t)function;
-    out->selectable = out->function != numberFunctionCurrency;
+    out->selectable =
+        out->function != numberFunctionCurrency && out->function != numberFunctionUnit;
     out->select = numberSelectPlural;
-    out->given &= (uint16_t)~numberGivenSelect;
+    out->given &= (uint32_t)~numberGivenSelect;
+    if (out->function == numberFunctionUnit && function != numberFunctionOffset)
+    {
+        // :unit takes no select either, so drops one without a fault.
+        return mloc_messageFaultNone;
+    }
     if (out->function == numberFunctionCurrency && function != numberFunctionOffset)
     {
         // :currency takes no select, so drops one without a fault, and
         // its fraction digits are the currency's or its own option's.
-        out->given &= (uint16_t)~(numberGivenMinFraction | numberGivenMaxFraction);
+        out->given &= (uint32_t)~(numberGivenMinFraction | numberGivenMaxFraction);
         return mloc_messageFaultNone;
     }
     if (function == numberFunctionInteger)
     {
         // :integer keeps none of the operand's fraction digits or its
         // minimum significant digits.
-        out->given &= (uint16_t)~(numberGivenMinFraction | numberGivenMaxFraction |
+        out->given &= (uint32_t)~(numberGivenMinFraction | numberGivenMaxFraction |
                                   numberGivenMinSignificant);
     }
     if (function == numberFunctionPercent)
     {
         // :percent drops these, select without a fault: it always
         // selects by plural rules.
-        out->given &= (uint16_t)~(numberGivenMinInteger | numberGivenIncrement);
+        out->given &= (uint32_t)~(numberGivenMinInteger | numberGivenIncrement);
         out->increment = 1;
         return mloc_messageFaultNone;
     }
@@ -118,129 +132,6 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
         return mloc_messageFaultBadOption;
     }
     return mloc_messageFaultNone;
-}
-
-enum
-{
-    // The digits an offset sum is worked in: a decimal's 40 and room for
-    // a carry; a sum needing more is refused when read back.
-    offsetDigits = 48,
-};
-
-// Adds b to a (little-endian digit arrays of offsetDigits, the top one
-// of each zero, so nothing carries out).
-static void AddDigits(uint8_t* a, const uint8_t* b)
-{
-    unsigned carry = 0;
-    for (int i = 0; i < offsetDigits; i++)
-    {
-        unsigned sum = a[i] + b[i] + carry;
-        a[i] = (uint8_t)(sum % 10);
-        carry = sum / 10;
-    }
-}
-
-// Subtracts b from a, a not less than b.
-static void SubtractDigits(uint8_t* a, const uint8_t* b)
-{
-    int borrow = 0;
-    for (int i = 0; i < offsetDigits; i++)
-    {
-        int difference = a[i] - b[i] - borrow;
-        borrow = difference < 0;
-        a[i] = (uint8_t)(difference + (borrow ? 10 : 0));
-    }
-}
-
-static int CompareDigits(const uint8_t* a, const uint8_t* b)
-{
-    for (int i = offsetDigits - 1; i >= 0; i--)
-    {
-        if (a[i] != b[i])
-        {
-            return a[i] < b[i] ? -1 : 1;
-        }
-    }
-    return 0;
-}
-
-bool mlocOffsetNumber(NumberValue* value, int32_t delta)
-{
-    mlocDecimal* d = &value->decimal;
-    if (d->kind != mloc_decimalFinite || delta == 0)
-    {
-        return true;
-    }
-    // The value as an integer of digits from its last power (or the
-    // units, if lower) up: a sum needs every power between them.
-    int64_t low = d->exponent < 0 ? d->exponent : 0;
-    // The delta, at most 99, reaches the tens.
-    int64_t top = d->count > 0 ? (int64_t)d->exponent + d->count - 1 : 0;
-    top = top > 1 ? top : 1;
-    if (top - low + 2 > offsetDigits)
-    {
-        return false;
-    }
-    uint8_t a[offsetDigits] = {0};
-    uint8_t b[offsetDigits] = {0};
-    for (int i = 0; i < d->count; i++)
-    {
-        a[d->exponent + d->count - 1 - i - low] = d->digits[i];
-    }
-    uint32_t magnitude = (uint32_t)(delta < 0 ? -(int64_t)delta : delta);
-    for (int64_t at = -low; magnitude > 0; at++, magnitude /= 10)
-    {
-        b[at] = (uint8_t)(magnitude % 10);
-    }
-    bool negative = d->negative != 0 && d->count > 0;
-    bool subtract = negative != (delta < 0);
-    if (!subtract)
-    {
-        AddDigits(a, b);
-    }
-    else if (CompareDigits(a, b) >= 0)
-    {
-        SubtractDigits(a, b);
-    }
-    else
-    {
-        SubtractDigits(b, a);
-        memcpy(a, b, sizeof a);
-        negative = !negative;
-    }
-    // Written plainly and read back, so the decimal stays the library's.
-    char text[offsetDigits + 4];
-    size_t length = 0;
-    int first = offsetDigits - 1;
-    while (first > -low && a[first] == 0)
-    {
-        first--;
-    }
-    if (negative)
-    {
-        text[length++] = '-';
-    }
-    for (int i = first; i >= 0; i--)
-    {
-        if (i == -low - 1)
-        {
-            text[length++] = '.';
-        }
-        text[length++] = (char)('0' + a[i]);
-    }
-    mlocDecimal sum;
-    if (mlocParseDecimal(text, length, &sum).status != mloc_success)
-    {
-        return false;
-    }
-    // A zero sum keeps no sign; the fraction digits shown stay.
-    sum.negative = sum.count == 0 ? 0 : sum.negative;
-    if (mlocShowFractionDigits(&sum, d->fractionDigits) != mloc_success)
-    {
-        return false;
-    }
-    *d = sum;
-    return true;
 }
 
 void mlocUpperCode(const char* code, char* out)
@@ -255,6 +146,35 @@ void mlocSetCurrencyCode(NumberValue* value, const char* code)
 {
     mlocUpperCode(code, value->code);
     value->given |= numberGivenCurrency;
+}
+
+bool mlocUnitText(const char* text, size_t length)
+{
+    bool start = true;
+    for (size_t i = 0; i < length; i++)
+    {
+        char c = text[i];
+        if (c == '-' && !start)
+        {
+            start = true;
+        }
+        else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+        {
+            start = false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return length > 0 && !start;
+}
+
+void mlocSetUnit(NumberValue* value, const char* unit, size_t length)
+{
+    value->unit = unit;
+    value->unitLength = (uint32_t)length;
+    value->given |= numberGivenUnit;
 }
 
 bool mlocFindCurrencyDigits(NumberValue* value, const mlocDataSet* data)
@@ -352,7 +272,7 @@ static bool NameIs(const uint8_t* name, size_t length, const char* text)
 }
 
 // Sets a digit size field and its bit; false for a bad value.
-static bool SetDigits(NumberValue* v, uint8_t* field, uint16_t bit, const NumberOption* option)
+static bool SetDigits(NumberValue* v, uint8_t* field, uint32_t bit, const NumberOption* option)
 {
     int digits = mlocDigitSize(option);
     if (digits < 0)
@@ -365,7 +285,7 @@ static bool SetDigits(NumberValue* v, uint8_t* field, uint16_t bit, const Number
 }
 
 // Sets an enumerated field and its bit; false for a bad value.
-static bool SetChoice(NumberValue* v, uint8_t* field, uint16_t bit, const NumberOption* option,
+static bool SetChoice(NumberValue* v, uint8_t* field, uint32_t bit, const NumberOption* option,
                       const char* const* names, int count)
 {
     int index = Choice(option, names, count);
@@ -392,6 +312,8 @@ static const mlocCurrencyDisplay s_displayKinds[] = {mloc_currencySymbol, mloc_c
                                                      mloc_currencyName};
 // In mlocCurrencySign's order after its locale choice.
 static const char* const s_currencySigns[] = {"standard", "accounting"};
+// In mlocUnitWidth's order.
+static const char* const s_widths[] = {"short", "narrow", "long"};
 // In mlocRoundingMode's order.
 static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
                                       "halfCeil",   "halfFloor", "ceil",
@@ -402,7 +324,7 @@ static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
 static const struct
 {
     const char* name;
-    uint16_t bit;
+    uint32_t bit;
 } s_options[] = {
     {"select", numberGivenSelect},
     {"signDisplay", numberGivenSign},
@@ -420,10 +342,13 @@ static const struct
     {"currencyDisplay", numberGivenDisplay},
     {"currencySign", numberGivenCurrencySign},
     {"fractionDigits", numberGivenFractionDigits},
+    {"unit", numberGivenUnit},
+    {"usage", numberGivenUsage},
+    {"unitDisplay", numberGivenWidth},
 };
 
 // The options a function takes (UTS #35 Part 9's lists), as given bits.
-static uint16_t OptionsOf(NumberFunction function)
+static uint32_t OptionsOf(NumberFunction function)
 {
     switch (function)
     {
@@ -436,6 +361,11 @@ static uint16_t OptionsOf(NumberFunction function)
                numberGivenTrailingZeros | numberGivenPriority | numberGivenMode;
     case numberFunctionNumber:
         return 0xFFF;
+    case numberFunctionUnit:
+        return numberGivenUnit | numberGivenUsage | numberGivenWidth | numberGivenSign |
+               numberGivenGrouping | numberGivenMinInteger | numberGivenMinFraction |
+               numberGivenMaxFraction | numberGivenMinSignificant | numberGivenMaxSignificant |
+               numberGivenPriority | numberGivenIncrement | numberGivenMode;
     case numberFunctionCurrency:
         return numberGivenCurrency | numberGivenDisplay | numberGivenCurrencySign |
                numberGivenGrouping | numberGivenMinInteger | numberGivenFractionDigits |
@@ -466,8 +396,28 @@ static bool SetCode(NumberValue* v, const NumberOption* option)
     return true;
 }
 
+// Sets a unit or a usage from text that is lexically one; false for
+// another value.
+static bool SetUnitText(NumberValue* v, uint32_t bit, const NumberOption* option)
+{
+    const char* text = (const char*)option->text;
+    if (!option->hasText || !mlocUnitText(text, option->length) || option->length > UINT32_MAX)
+    {
+        return false;
+    }
+    if (bit == numberGivenUnit)
+    {
+        mlocSetUnit(v, text, option->length);
+        return true;
+    }
+    v->usage = text;
+    v->usageLength = (uint32_t)option->length;
+    v->given |= bit;
+    return true;
+}
+
 // Sets one option by its bit; whether its value was good.
-static bool SetByBit(NumberValue* v, uint16_t bit, const NumberOption* option)
+static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
 {
     switch (bit)
     {
@@ -495,6 +445,11 @@ static bool SetByBit(NumberValue* v, uint16_t bit, const NumberOption* option)
         return SetChoice(v, &v->mode, bit, option, s_modes, 9);
     case numberGivenCurrency:
         return SetCode(v, option);
+    case numberGivenUnit:
+    case numberGivenUsage:
+        return SetUnitText(v, bit, option);
+    case numberGivenWidth:
+        return SetChoice(v, &v->width, bit, option, s_widths, 3);
     case numberGivenDisplay:
         return SetChoice(v, &v->display, bit, option, s_displays, 5);
     case numberGivenCurrencySign:
@@ -503,7 +458,7 @@ static bool SetByBit(NumberValue* v, uint16_t bit, const NumberOption* option)
         if (option->hasText && NameIs(option->text, option->length, "auto"))
         {
             // The currency's digits, over the operand's option.
-            v->given &= (uint16_t)~bit;
+            v->given &= (uint32_t)~bit;
             return true;
         }
         return SetDigits(v, &v->fractionDigits, bit, option);
@@ -525,18 +480,18 @@ mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction func
                                          const uint8_t* name, size_t length,
                                          const NumberOption* option)
 {
-    uint16_t taken = OptionsOf(function);
+    uint32_t taken = OptionsOf(function);
     for (size_t i = 0; i < sizeof s_options / sizeof s_options[0]; i++)
     {
-        uint16_t bit = s_options[i].bit;
+        uint32_t bit = s_options[i].bit;
         if ((taken & bit) == 0 || !NameIs(name, length, s_options[i].name))
         {
             continue;
         }
-        if (bit == numberGivenCurrency && (value->given & bit) != 0)
+        if ((bit == numberGivenCurrency || bit == numberGivenUnit) && (value->given & bit) != 0)
         {
-            // The operand's currency stands (UTS #35: the option must not
-            // override it).
+            // The operand's currency or unit stands (UTS #35: the option
+            // must not override it).
             return mloc_messageFaultBadOption;
         }
         if (bit == numberGivenSelect && !option->literal)
@@ -576,7 +531,8 @@ static mlocPrecision PrecisionOf(const NumberValue* v)
     uint8_t minDefault = 0;
     // ECMA-402's defaults: three for decimals, none for integers and
     // percents; a currency's own digits, or its fractionDigits option.
-    uint8_t maxDefault = v->function == numberFunctionNumber ? 3 : 0;
+    uint8_t maxDefault =
+        v->function == numberFunctionNumber || v->function == numberFunctionUnit ? 3 : 0;
     if (v->function == numberFunctionCurrency)
     {
         minDefault =
@@ -622,29 +578,29 @@ uint32_t mlocCheckNumberOptions(NumberValue* v)
     uint32_t faults = 0;
     if ((v->given & numberGivenMinInteger) != 0 && v->minInteger > integerDigitsLimit)
     {
-        v->given &= (uint16_t)~numberGivenMinInteger;
+        v->given &= (uint32_t)~numberGivenMinInteger;
         faults++;
     }
-    static const uint16_t significant[] = {numberGivenMinSignificant, numberGivenMaxSignificant};
+    static const uint32_t significant[] = {numberGivenMinSignificant, numberGivenMaxSignificant};
     uint8_t* fields[] = {&v->minSignificant, &v->maxSignificant};
     for (int i = 0; i < 2; i++)
     {
         if ((v->given & significant[i]) != 0 && (*fields[i] == 0 || *fields[i] > significantLimit))
         {
-            v->given &= (uint16_t)~significant[i];
+            v->given &= (uint32_t)~significant[i];
             faults++;
         }
     }
-    uint16_t both = numberGivenMinSignificant | numberGivenMaxSignificant;
+    uint32_t both = numberGivenMinSignificant | numberGivenMaxSignificant;
     if ((v->given & both) == both && v->minSignificant > v->maxSignificant)
     {
-        v->given &= (uint16_t)~numberGivenMaxSignificant;
+        v->given &= (uint32_t)~numberGivenMaxSignificant;
         faults++;
     }
     both = numberGivenMinFraction | numberGivenMaxFraction;
     if ((v->given & both) == both && v->minFraction > v->maxFraction)
     {
-        v->given &= (uint16_t)~numberGivenMaxFraction;
+        v->given &= (uint32_t)~numberGivenMaxFraction;
         faults++;
     }
     if ((v->given & numberGivenIncrement) != 0 && v->increment != 1)
@@ -654,7 +610,7 @@ uint32_t mlocCheckNumberOptions(NumberValue* v)
         {
             // ECMA-402 takes an increment with fraction digits alone, the
             // minimum and maximum equal.
-            v->given &= (uint16_t)~numberGivenIncrement;
+            v->given &= (uint32_t)~numberGivenIncrement;
             v->increment = 1;
             faults++;
         }
@@ -672,23 +628,27 @@ mlocNumberOptions mlocNumberFormatOptions(const NumberValue* v)
     o.minIntegerDigits = (v->given & numberGivenMinInteger) != 0 ? v->minInteger : 0;
     o.precision = PrecisionOf(v);
     o.style = v->function == numberFunctionPercent ? mloc_numberPercent : mloc_numberDecimal;
-    uint16_t digits = numberGivenFractionDigits | numberGivenMinSignificant |
-                      numberGivenMaxSignificant | numberGivenPriority | numberGivenIncrement;
-    if (v->function == numberFunctionCurrency && (v->given & digits) == 0)
+    uint32_t digits = numberGivenFractionDigits | numberGivenMinFraction | numberGivenMaxFraction |
+                      numberGivenMinSignificant | numberGivenMaxSignificant | numberGivenPriority |
+                      numberGivenIncrement;
+    bool own = v->function == numberFunctionCurrency ||
+               (v->function == numberFunctionUnit && (v->given & numberGivenUsage) != 0);
+    if (own && (v->given & digits) == 0)
     {
-        // The currency formatter's own: the currency's digits and its
-        // rounding increment, the mode and trailing zeros as given.
-        mlocPrecision own;
-        memset(&own, 0, sizeof own);
-        own.mode = o.precision.mode;
-        own.trailingZeros = o.precision.trailingZeros;
-        o.precision = own;
+        // The formatter's own: a currency's digits and rounding increment,
+        // or a unit preference's rounding; the mode and trailing zeros as
+        // given.
+        mlocPrecision zero;
+        memset(&zero, 0, sizeof zero);
+        zero.mode = o.precision.mode;
+        zero.trailingZeros = o.precision.trailingZeros;
+        o.precision = zero;
     }
     return o;
 }
 
 // Writes a currency value with the currency formatter.
-static_assert(sizeof(NumberValue) == offsetof(NumberValue, currencyDigits) + 1,
+static_assert(sizeof(NumberValue) == offsetof(NumberValue, reserved) + 5,
               "a number value has no padding");
 static_assert(offsetof(PreparedNumber, formatter) % 8 == 0 && sizeof(PreparedNumber) % 8 == 0,
               "a prepared value's parts stay 8-aligned");
@@ -728,8 +688,36 @@ static mlocCurrencyOptions CurrencyOptions(const NumberValue* value)
     return options;
 }
 
-static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* data,
-                                const mlocLocale* locale, mlocOutput* output)
+// A unit formatter's options for a unit value.
+static mlocUnitOptions UnitOptions(const NumberValue* value)
+{
+    mlocUnitOptions options;
+    memset(&options, 0, sizeof options);
+    options.number = mlocNumberFormatOptions(value);
+    options.width =
+        (value->given & numberGivenWidth) != 0 ? (mlocUnitWidth)value->width : mloc_unitWidthShort;
+    if ((value->given & numberGivenUsage) != 0)
+    {
+        options.usage = value->usage;
+        options.usageLength = value->usageLength;
+    }
+    return options;
+}
+
+// Writes a unit value with a unit formatter made here: 3.5 KB, off the
+// resolver's frames.
+MLOC_NOINLINE static mlocResult WriteUnit(const NumberValue* value, const mlocDataSet* data,
+                                          const mlocLocale* locale, mlocOutput* output)
+{
+    mlocUnitOptions options = UnitOptions(value);
+    mlocUnitFormatter formatter;
+    mlocResult made =
+        mlocInitUnitFormatter(&formatter, data, locale, value->unit, value->unitLength, &options);
+    return made < 0 ? made : mlocFormatUnit(&formatter, &value->decimal, output);
+}
+
+MLOC_NOINLINE static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* data,
+                                              const mlocLocale* locale, mlocOutput* output)
 {
     mlocCurrencyOptions options = CurrencyOptions(value);
     mlocCurrencyFormatter formatter;
@@ -737,10 +725,11 @@ static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* dat
     return made < 0 ? made : mlocFormatCurrency(&formatter, &value->decimal, output);
 }
 
-size_t mlocPreparedSize(bool currency)
+size_t mlocPreparedSize(PreparedKind kind)
 {
-    return offsetof(PreparedNumber, formatter) +
-           (currency ? sizeof(mlocCurrencyFormatter) : sizeof(mlocNumberFormatter));
+    static const size_t sizes[] = {sizeof(mlocNumberFormatter), sizeof(mlocCurrencyFormatter),
+                                   sizeof(mlocUnitFormatter)};
+    return offsetof(PreparedNumber, formatter) + sizes[kind];
 }
 
 bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
@@ -748,7 +737,9 @@ bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const 
 {
     memset(out, 0, offsetof(PreparedNumber, formatter));
     out->key = KeyOf(value);
-    out->currency = value->function == numberFunctionCurrency;
+    out->kind = value->function == numberFunctionCurrency ? preparedCurrency
+                : value->function == numberFunctionUnit   ? preparedUnit
+                                                          : preparedNumber;
     if (value->selectable && value->select != numberSelectExact)
     {
         mlocPluralType type =
@@ -756,7 +747,13 @@ bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const 
         out->rulesType =
             mlocInitPluralRules(&out->rules, data, locale, type) < 0 ? 0 : (uint8_t)(1 + type);
     }
-    if (out->currency)
+    if (out->kind == preparedUnit)
+    {
+        mlocUnitOptions options = UnitOptions(value);
+        return mlocInitUnitFormatter(&out->formatter.unit, data, locale, value->unit,
+                                     value->unitLength, &options) >= 0;
+    }
+    if (out->kind == preparedCurrency)
     {
         mlocCurrencyOptions options = CurrencyOptions(value);
         return mlocInitCurrencyFormatter(&out->formatter.currency, data, locale, value->code, 3,
@@ -773,9 +770,15 @@ mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const Prepar
     mlocResult result;
     if (Fits(prepared, value))
     {
-        result = prepared->currency
+        result = prepared->kind == preparedUnit
+                     ? mlocFormatUnit(&prepared->formatter.unit, &value->decimal, output)
+                 : prepared->kind == preparedCurrency
                      ? mlocFormatCurrency(&prepared->formatter.currency, &value->decimal, output)
                      : mlocFormatNumber(&prepared->formatter.number, &value->decimal, output);
+    }
+    else if (value->function == numberFunctionUnit)
+    {
+        result = WriteUnit(value, data, locale, output);
     }
     else if (value->function == numberFunctionCurrency)
     {

@@ -14,6 +14,7 @@
 #include "maul-locale/message.h"
 #include "maul-locale/number.h"
 #include "maul-locale/plural.h"
+#include "maul-locale/unit.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -28,6 +29,7 @@ typedef enum NumberFunction
     // Not a value's function: :offset keeps its operand's.
     numberFunctionOffset = 3,
     numberFunctionCurrency = 4,
+    numberFunctionUnit = 5,
 } NumberFunction;
 
 // How a number value selects.
@@ -57,6 +59,9 @@ enum
     numberGivenDisplay = 1u << 13,
     numberGivenCurrencySign = 1u << 14,
     numberGivenFractionDigits = 1u << 15,
+    numberGivenUnit = 1u << 16,
+    numberGivenUsage = 1u << 17,
+    numberGivenWidth = 1u << 18,
 };
 
 // A number value: its decimal, the expression that made it, and the
@@ -66,7 +71,13 @@ typedef struct NumberValue
 {
     mlocDecimal decimal;
     uint32_t origin;
-    uint16_t given;
+    // A :unit value's unit and usage, as text in the compiled message or
+    // an argument, which outlive the call.
+    const char* unit;
+    const char* usage;
+    uint32_t unitLength;
+    uint32_t usageLength;
+    uint32_t given;
     uint16_t increment;
     uint8_t function;
     uint8_t select;
@@ -91,31 +102,43 @@ typedef struct NumberValue
     uint8_t currencySign;
     uint8_t fractionDigits;
     uint8_t currencyDigits;
+    // A :unit value's mlocUnitWidth.
+    uint8_t width;
+    // Zero, so values compare by their bytes.
+    uint8_t reserved[5];
 } NumberValue;
+
+// Which formatter a prepared value has.
+typedef enum PreparedKind
+{
+    preparedNumber = 0,
+    preparedCurrency = 1,
+    preparedUnit = 2,
+} PreparedKind;
 
 // What binding prepares for a number function's expression (record
 // mloc-0045): the options of the value it makes (number, origin and
 // selectability cleared), the plural rules its selection reads (rulesType
-// 1 plus the mlocPluralType, or 0 for none), and its formatter, a
-// currency formatter when currency is set. A bound message holds the
-// bytes up to the end of the formatter it has.
+// 1 plus the mlocPluralType, or 0 for none), and its formatter, of the
+// PreparedKind kind. A bound message holds the bytes up to the end of the
+// formatter it has.
 typedef struct PreparedNumber
 {
     NumberValue key;
     mlocPluralRules rules;
     uint8_t rulesType;
-    uint8_t currency;
+    uint8_t kind;
     uint8_t reserved[6];
     union
     {
         mlocNumberFormatter number;
         mlocCurrencyFormatter currency;
+        mlocUnitFormatter unit;
     } formatter;
 } PreparedNumber;
 
-// The bytes a prepared value takes in a bound message: with a currency
-// formatter, or a number formatter.
-size_t mlocPreparedSize(bool currency);
+// The bytes a prepared value of a kind takes in a bound message.
+size_t mlocPreparedSize(PreparedKind kind);
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made (the expression is then not prepared).
@@ -156,6 +179,13 @@ void mlocUpperCode(const char* code, char* out);
 // Gives a value its operand's currency (a currency amount's code).
 void mlocSetCurrencyCode(NumberValue* value, const char* code);
 
+// Whether text is lexically a unit identifier or a usage: lower-case
+// ASCII letters and digits in parts joined by single hyphens.
+bool mlocUnitText(const char* text, size_t length);
+
+// Gives a value its operand's unit (a unit amount's identifier).
+void mlocSetUnit(NumberValue* value, const char* unit, size_t length);
+
 // Finds a currency value's own digits once its code is known: false for
 // data without the currencies' fractions.
 bool mlocFindCurrencyDigits(NumberValue* value, const mlocDataSet* data);
@@ -173,10 +203,6 @@ bool mlocMakeInteger(NumberValue* value);
 mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction function,
                                          const uint8_t* name, size_t length,
                                          const NumberOption* option);
-
-// Adds a small integer to a value (:offset), keeping the fraction digits
-// it shows; false when the sum needs more digits than a decimal holds.
-bool mlocOffsetNumber(NumberValue* value, int32_t delta);
 
 // A digit size option's value, 0 to 99, or -1.
 int mlocDigitSize(const NumberOption* option);

@@ -68,8 +68,9 @@ bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t leng
 bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
 
 // An argument written with no function as its plain decimal (a currency
-// amount's followed by a space and its code); false for a kind that has
-// none (an object).
+// amount's followed by a space and its code; a unit amount's digits
+// alone, its unit written after them and a space by the caller); false
+// for a kind that has none (an object).
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut);
 

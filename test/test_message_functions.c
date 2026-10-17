@@ -63,6 +63,11 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
                  operand->text);
         Add(e, shown, strlen(shown));
         break;
+    case mloc_messageOperandUnit:
+        snprintf(shown, sizeof shown, "U%d%.*s", operand->number->count, (int)operand->length,
+                 operand->text);
+        Add(e, shown, strlen(shown));
+        break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
         Add(e, shown, strlen(shown));
@@ -374,6 +379,8 @@ static void TestCalls(void)
                 "C3EUR;k=C3EUR", NULL) &&
             Formats(".local $c = {7 :currency currency=czk} {{{$c :x:echo}}}", a, 4, "C1CZK", NULL),
         "a currency value is passed as its amount and code");
+    CHECK(Formats(".local $u = {7.5 :unit unit=meter} {{{$u :x:echo}}}", a, 4, "U2meter", NULL),
+          "a unit value is passed as its amount and unit");
     mlocMessageArgument named[] = {
         {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
         {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},

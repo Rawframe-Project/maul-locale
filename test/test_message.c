@@ -828,7 +828,7 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":unit", ":date", ":time"};
+    static const char* const later[] = {":date", ":time"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)

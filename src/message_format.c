@@ -97,6 +97,12 @@ static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
         return false;
     }
     Put(&f->w, digits, length);
+    if (v->argument->kind == mloc_messageValueUnit)
+    {
+        // The amount and the unit, as ICU4J writes a Measure.
+        Put(&f->w, " ", 1);
+        Put(&f->w, v->argument->as.unit.unit, v->argument->as.unit.unitLength);
+    }
     return true;
 }
 
@@ -120,8 +126,7 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
     if (v->kind == valueNumber)
     {
         const MessageFormatter* formatter = &f->r.formatter;
-        PreparedNumber storage;
-        const PreparedNumber* prepared = mlocPreparedFor(&f->r, v->number.origin, &storage);
+        const PreparedNumber* prepared = mlocPreparedFor(&f->r, v->number.origin);
         fault =
             mlocWriteNumberValue(&v->number, prepared, formatter->data, &formatter->locale, &out);
     }
@@ -264,8 +269,7 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     else if (s->value.kind == valueNumber)
     {
         const MessageFormatter* formatter = &f->r.formatter;
-        PreparedNumber storage;
-        const PreparedNumber* prepared = mlocPreparedFor(&f->r, s->value.number.origin, &storage);
+        const PreparedNumber* prepared = mlocPreparedFor(&f->r, s->value.number.origin);
         fault = mlocMatchNumber(&s->value.number, prepared, formatter->data, &formatter->locale,
                                 key, length, &matched);
     }
@@ -427,11 +431,14 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
         const mlocMessageArgument* a = &arguments[i];
         const mlocMessageValue* v = &a->value;
         bool good = (a->name != NULL || a->nameLength == 0) &&
-                    (uint32_t)v->kind <= mloc_messageValueCurrency &&
+                    (uint32_t)v->kind <= mloc_messageValueUnit &&
                     (v->kind != mloc_messageValueString || v->as.string.text != NULL ||
                      v->as.string.length == 0) &&
                     (v->kind != mloc_messageValueDecimal || GoodDecimal(v->as.decimal)) &&
-                    (v->kind != mloc_messageValueCurrency || GoodCurrency(v));
+                    (v->kind != mloc_messageValueCurrency || GoodCurrency(v)) &&
+                    (v->kind != mloc_messageValueUnit ||
+                     (GoodDecimal(v->as.unit.amount) &&
+                      (v->as.unit.unit != NULL || v->as.unit.unitLength == 0)));
         if (!good)
         {
             return false;

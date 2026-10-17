@@ -485,16 +485,15 @@ static bool PreparedAs(const char* message, const char* wanted)
     r.words = mlocBoundWords(s_bound);
     for (uint32_t e = 0; wanted[e] != '\0'; e++)
     {
-        PreparedNumber storage;
-        const PreparedNumber* p = mlocPreparedFor(&r, e, &storage);
+        const PreparedNumber* p = mlocPreparedFor(&r, e);
         // The bound message is aligned, so its values are read in place;
         // 'o' and 'r' for cardinal and ordinal rules prepared.
-        char got = p == NULL           ? '-'
-                   : p == &storage     ? '!'
-                   : p->currency       ? 'c'
-                   : p->rulesType == 1 ? 'o'
-                   : p->rulesType == 2 ? 'r'
-                                       : 'p';
+        char got = p == NULL                     ? '-'
+                   : p->kind == preparedUnit     ? 'u'
+                   : p->kind == preparedCurrency ? 'c'
+                   : p->rulesType == 1           ? 'o'
+                   : p->rulesType == 2           ? 'r'
+                                                 : 'p';
         if (got != wanted[e])
         {
             printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
@@ -519,7 +518,8 @@ static void TestPrepared(void)
               PreparedAs("{$a :currency}", "-"),
           "an option from an argument, or no currency, leaves an expression unprepared");
     // A bound message at each alignment, and moved to another: the
-    // values prepared in it read in place or copied out.
+    // values prepared in it read in place, or made in the call when moved
+    // out of alignment.
     static const char plural[] = ".input {$n :number select=ordinal} .match $n one {{st}} two "
                                  "{{nd}} few {{rd}} * {{th}}";
     size_t size = 0;
@@ -569,6 +569,78 @@ static void TestPrepared(void)
           "a value not prepared selects with rules made in the call");
 }
 
+static void TestUnit(void)
+{
+    CHECK(Formats("{3 :unit unit=meter} {3 :unit unit=meter unitDisplay=long} {3 :unit unit=meter "
+                  "unitDisplay=narrow} {1.23456 :unit unit=meter}",
+                  NULL, 0, "3 m 3 meters 3m 1.235 m", NULL),
+          "units in their widths, 0 to 3 fraction digits");
+    static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
+    CHECK(Formats("{1234.5 :unit unit=meter usage=road} {1234.5 :unit unit=meter usage=road "
+                  "maximumFractionDigits=3}",
+                  NULL, 0, "0.77 mi 0.767 mi", NULL) &&
+              Formats("{1234.5 :unit unit=meter usage=fluid}", NULL, 0, "4,050 ft", NULL),
+          "a usage converts to the locale's unit, its rounding unless the options' wins; one "
+          "the unit's quantity lacks takes its default, as ICU's");
+    static const mlocMessageFaultKind noUnit[] = {mloc_messageFaultBadOption,
+                                                  mloc_messageFaultBadOperand, 0};
+    CHECK(Formats("{3 :unit}", NULL, 0, "{|3|}", s_badOperand) &&
+              Formats("{3 :unit unit=Meter}", NULL, 0, "{|3|}", noUnit) &&
+              Formats("{3 :unit unit=meter-}", NULL, 0, "{|3|}", noUnit) &&
+              Formats("{3 :unit unit=foo}", NULL, 0, "{|3|}", unsupported) &&
+              Formats("{3 :unit unit=meter usage=Road}", NULL, 0, "3 m", s_badOption) &&
+              Formats("{3 :unit unit=meter unitDisplay=wide}", NULL, 0, "3 m", s_badOption),
+          "no unit, a unit or usage not well-formed, one the data lacks, a bad display");
+    CHECK(Formats(".local $u = {3 :unit unit=meter} {{{$u :unit unitDisplay=long}}}", NULL, 0,
+                  "3 meters", NULL) &&
+              Formats(".local $u = {3 :unit unit=meter} {{{$u :unit unit=foot}}}", NULL, 0, "3 m",
+                      s_badOption) &&
+              Formats(".local $n = {3.14159 :number maximumFractionDigits=1 select=exact} "
+                      "{{{$n :unit unit=meter}}}",
+                      NULL, 0, "3.1 m", NULL),
+          "a unit value's options pass on, its unit stands; a number's pass on, select dropped");
+    static const mlocMessageFaultKind selector[] = {mloc_messageFaultBadSelector, 0};
+    CHECK(Formats(".local $u = {1 :unit unit=meter} .match $u one {{one}} * {{other}}", NULL, 0,
+                  "other", selector),
+          "a unit value does not select");
+    mlocDecimal amount = {0};
+    CHECK(mlocParseDecimal("3.5", 3, &amount).status == mloc_success, "an amount is read");
+    mlocMessageArgument a[] = {
+        {"m", 1, {mloc_messageValueUnit, 0, {.unit = {&amount, "kilometer", 9}}}},
+        {"x", 1, {mloc_messageValueString, 0, {.string = {"foot", 4}}}},
+        {"b", 1, {mloc_messageValueUnit, 0, {.unit = {&amount, "Kilo meter", 10}}}},
+    };
+    CHECK(Formats("{$m :unit} {$m} {$m :number} {$m :string} {$m :offset add=1}", a, 3,
+                  "3.5 km 3.5 kilometer 3.5 3.5 kilometer 4.5 km", NULL),
+          "a unit amount: formatted, bare, as a number, as text, offset");
+    CHECK(Formats(".local $s = {$m :string} .match $s |3.5 kilometer| {{=}} * {{other}}", a, 3, "=",
+                  NULL) &&
+              Formats(".local $s = {$m :string} .match $s |3.5 kilometers| {{=}} |3.5 kilomete| "
+                      "{{-}} * {{other}}",
+                      a, 3, "other", NULL),
+          ":string matches an amount's digits and unit");
+    CHECK(Formats("{$m :unit unit=meter}", a, 3, "3.5 km", s_badOption) &&
+              Formats("{2 :unit unit=$x unitDisplay=long}", a, 3, "2 feet", NULL) &&
+              Formats("{$b :unit}", a, 3, "{$b}", s_badOperand),
+          "an amount's unit stands; a unit from a variable; an amount's ill-formed unit");
+    CHECK(PreparedAs("{$n :unit unit=meter} {$n :unit unit=$x}", "u-"),
+          "a :unit expression is prepared with a unit formatter");
+    static mlocMessageFormatter bare;
+    mlocLocale en;
+    static mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    static mlocDataSet without;
+    without = (mlocDataSet){&builtin, 1};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitMessageFormatter(&bare, &without, &en, &options) == mloc_success,
+          "a formatter is made without the unit names");
+    s_using = &bare;
+    CHECK(Formats("{3 :unit unit=meter}", NULL, 0, "{|3|}", unsupported),
+          "without the unit names :unit cannot format");
+    s_using = &s_en;
+}
+
 static void TestDirection(void)
 {
     static mlocMessageFormatter isolatingEn;
@@ -593,9 +665,22 @@ static void TestDirection(void)
 
 int main(void)
 {
-    static mlocData builtin;
-    mlocOpenBuiltinData(&builtin);
-    s_data = (mlocDataSet){&builtin, 1};
+    // The compiled-in data and the unit names, which :unit reads.
+    static mlocData sources[2];
+    alignas(8) static uint8_t names[8 << 20];
+    mlocOpenBuiltinData(&sources[0]);
+    FILE* file = fopen(MLOC_UNITS_FILE, "rb");
+    size_t size = file == NULL ? 0 : fread(names, 1, sizeof names, file);
+    if (file != NULL)
+    {
+        fclose(file);
+    }
+    if (size == 0 || size >= sizeof names || mlocOpenData(&sources[1], names, size) != mloc_success)
+    {
+        fputs("test_message_numbers: cannot open " MLOC_UNITS_FILE "\n", stderr);
+        return 2;
+    }
+    s_data = (mlocDataSet){sources, 2};
     Make(&s_en, "en", mloc_messageIsolationNone);
     Make(&s_fr, "fr", mloc_messageIsolationNone);
     Make(&s_ar, "ar", mloc_messageIsolationNone);
@@ -608,6 +693,7 @@ int main(void)
     TestPercent();
     TestCurrency();
     TestPrepared();
+    TestUnit();
     TestDirection();
     return s_failures == 0 ? 0 : 1;
 }

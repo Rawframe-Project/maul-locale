@@ -3,6 +3,8 @@
 
 #include "message_resolve.h"
 
+#include "message_offset.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -233,6 +235,14 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
         out->kind = mloc_messageOperandResolved;
         out->function = v->function;
         out->resolved = storage;
+    }
+    else if (kind == valueNumber && v->number.function == numberFunctionUnit)
+    {
+        storage->decimal = v->number.decimal;
+        out->kind = mloc_messageOperandUnit;
+        out->number = &storage->decimal;
+        out->text = v->number.unit;
+        out->length = v->number.unitLength;
     }
     else if (kind == valueNumber && v->number.function == numberFunctionCurrency)
     {
@@ -529,6 +539,38 @@ static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool*
     return o;
 }
 
+// A value of a number function from its operand's number and, when the
+// operand is an argument, its amount's currency or unit: :offset over a
+// plain number formats as :number does, over a currency or unit amount
+// as :currency or :unit does; the number functions read an amount's
+// number alone. mloc_messageFaultBadOperand for a unit amount whose unit
+// is not lexically one.
+static mlocMessageFaultKind MakeValue(NumberFunction function, const mlocMessageValue* a,
+                                      const mlocDecimal* decimal, NumberValue* out)
+{
+    bool money = a != NULL && a->kind == mloc_messageValueCurrency;
+    bool measure = a != NULL && a->kind == mloc_messageValueUnit;
+    if (measure && !mlocUnitText(a->as.unit.unit, a->as.unit.unitLength))
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    NumberFunction made = function;
+    if (function == numberFunctionOffset)
+    {
+        made = money ? numberFunctionCurrency : measure ? numberFunctionUnit : numberFunctionNumber;
+    }
+    *out = mlocMakeNumberValue(made, decimal);
+    if (money && made == numberFunctionCurrency)
+    {
+        mlocSetCurrencyCode(out, a->as.currency.code);
+    }
+    if (measure && made == numberFunctionUnit)
+    {
+        mlocSetUnit(out, a->as.unit.unit, a->as.unit.unitLength);
+    }
+    return mloc_messageFaultNone;
+}
+
 // The number a number function's operand gives: a number literal (or a
 // string argument that is one), a numeric argument, or a number value,
 // whose options pass on. mloc_messageFaultBadOperand for anything else.
@@ -567,21 +609,7 @@ static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function
     {
         return mloc_messageFaultBadOperand;
     }
-    // :offset over a plain number formats as :number does, over a
-    // currency amount as :currency does; the number functions read an
-    // amount's number alone.
-    bool amount = kind == valueArgument && operand->argument->kind == mloc_messageValueCurrency;
-    NumberFunction made = function;
-    if (function == numberFunctionOffset)
-    {
-        made = amount ? numberFunctionCurrency : numberFunctionNumber;
-    }
-    *out = mlocMakeNumberValue(made, &decimal);
-    if (amount && made == numberFunctionCurrency)
-    {
-        mlocSetCurrencyCode(out, operand->argument->as.currency.code);
-    }
-    return mloc_messageFaultNone;
+    return MakeValue(function, kind == valueArgument ? operand->argument : NULL, &decimal, out);
 }
 
 // An :offset value: its operand's number, function and options, plus or
@@ -688,6 +716,12 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
             mlocReportFault(r, fault, at);
         }
     }
+    if (n.function == numberFunctionUnit && (n.given & numberGivenUnit) == 0)
+    {
+        // A number without a unit is no unit's amount.
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
     if (n.function == numberFunctionCurrency)
     {
         // A number without a currency is no currency's amount.
@@ -739,13 +773,15 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
         v = ResolveOffset(r, expression, given);
     }
     else if (slot == messageFunctionNumber || slot == messageFunctionInteger ||
-             slot == messageFunctionPercent || slot == messageFunctionCurrency)
+             slot == messageFunctionPercent || slot == messageFunctionCurrency ||
+             slot == messageFunctionUnit)
     {
         static const NumberFunction functions[] = {
             [messageFunctionNumber] = numberFunctionNumber,
             [messageFunctionInteger] = numberFunctionInteger,
             [messageFunctionPercent] = numberFunctionPercent,
             [messageFunctionCurrency] = numberFunctionCurrency,
+            [messageFunctionUnit] = numberFunctionUnit,
         };
         v = ResolveNumber(r, expression, functions[slot], given);
     }

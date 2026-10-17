@@ -110,7 +110,10 @@ extern "C"
     // program's, for its own functions, with a type id of its choice; a
     // currency amount is a decimal by pointer and an ISO 4217 code (three
     // ASCII letters, any case), which :currency formats and the number
-    // functions read as its amount.
+    // functions read as its amount; a unit amount is a decimal by pointer
+    // and a unit identifier ("meter", "kilometer-per-hour"), which :unit
+    // formats and the number functions read as its amount, both to
+    // outlive the call.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -119,6 +122,7 @@ extern "C"
         mloc_messageValueDecimal = 3,
         mloc_messageValueObject = 4,
         mloc_messageValueCurrency = 5,
+        mloc_messageValueUnit = 6,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -143,6 +147,12 @@ extern "C"
                 const mlocDecimal* amount;
                 char code[3];
             } currency;
+            struct
+            {
+                const mlocDecimal* amount;
+                const char* unit;
+                size_t unitLength;
+            } unit;
         } as;
     } mlocMessageValue;
 
@@ -230,6 +240,9 @@ extern "C"
         // A :currency value: its amount as number, unrounded, and its
         // currency's code as text, three upper-case ASCII letters.
         mloc_messageOperandCurrency = 6,
+        // A :unit value: its amount as number, unrounded, and its unit
+        // identifier as text.
+        mloc_messageOperandUnit = 7,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -378,7 +391,8 @@ extern "C"
     /// written as its fallback ("{$name}", "{|literal|}", "{:function}")
     /// and reported as a fault. A numeric argument without a function is
     /// written plainly ("1234.5"), a currency amount as its amount and
-    /// code ("42.5 EUR").
+    /// code ("42.5 EUR"), a unit amount as its amount and unit ("3.5
+    /// meter").
     ///
     /// @param bound          A bound message from mlocBindMessage.
     /// @param arguments      The arguments; may be null when count is 0.
@@ -390,8 +404,8 @@ extern "C"
     ///         fault, nothing written; mloc_errorCapacity when the text does
     ///         not fit (output->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,
-    ///         string, decimal or amount among them), a decimal that is
-    ///         not one the library makes, a currency code that is not
+    ///         string, decimal, amount or unit among them), a decimal that
+    ///         is not one the library makes, a currency code that is not
     ///         three ASCII letters, an unknown kind, or a bound message the
     ///         library did not make.
     /// @par Thread safety

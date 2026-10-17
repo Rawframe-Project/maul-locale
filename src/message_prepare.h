@@ -13,9 +13,9 @@
 #include "message_number.h"
 #include "message_resolve.h"
 
-// The value prepared for an expression, or null: in the bound message
-// when its address is 8-aligned there, else copied into storage.
-const PreparedNumber* mlocPreparedFor(const Resolution* r, uint32_t expression,
-                                      PreparedNumber* storage);
+// The value prepared for an expression, in the bound message, or null:
+// none prepared, or the bound message moved to an address that leaves it
+// unaligned.
+const PreparedNumber* mlocPreparedFor(const Resolution* r, uint32_t expression);
 
 #endif

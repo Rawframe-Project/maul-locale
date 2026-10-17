@@ -114,10 +114,11 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   the value's options with its number or currency formatter and the
   plural rules its selection reads, 8-aligned for the buffer bound into.
   A call resolves as before and uses them only when its value's options
-  are the prepared ones byte for byte, reading them in place, or copied
-  out when the bound message has been moved to an address that leaves
-  them unaligned; so correctness never rests on the probe. A bound
-  message keeps room for every number function's expression (a
+  are the prepared ones byte for byte, reading them in place (a bound
+  message moved to an address that leaves them unaligned makes its own,
+  as a copy would take a unit formatter's 3.5 KB of stack); so
+  correctness never rests on the probe. A bound message keeps room for
+  every number function's expression (a unit formatter's for `:unit`, a
   currency formatter's for `:currency` and `:offset`), so its size does
   not depend on the probe or the buffer's address.
   `mlocFormatMessage` resolves each placeholder and selector where it
@@ -210,6 +211,26 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   amount is its digits and code ("42.5 EUR", as ICU4J writes one), and
   a program function receives a currency value as
   `mloc_messageOperandCurrency`.
+- **`:unit` (Draft):** its operand is a unit amount (an argument kind
+  of its own, a decimal and a unit identifier, as ICU4J's `Measure`), a
+  `:unit` value, or a numeric operand with the `unit` option; without a
+  unit it is a Bad Operand, the option over an amount's or a value's
+  unit a Bad Option. A unit or usage that is not lexically an
+  identifier (lower-case letters and digits joined by single hyphens)
+  is a Bad Option; a well-formed unit the data cannot name, or data
+  without `units.mloc`, is an Unsupported Operation when the value is
+  written. Its options are the specification's list, `unitDisplay`
+  mapping onto `mlocUnitWidth`, ECMA-402's 0 to 3 fraction digits, and
+  `usage` converting by the unit part's preferences, whose rounding
+  stands unless a digit option is given; a usage the unit's quantity
+  lacks takes that quantity's default, as the unit part and ICU's
+  NumberFormatter do, where the specification suggests (SHOULD) an
+  Unsupported Operation. It drops an operand's `select` and does not
+  select. The number functions read an amount or a `:unit` value as its
+  number, `:offset` keeping the unit; an amount written with no
+  function is its digits and unit ("3.5 kilometer"), and a program
+  function receives a `:unit` value as `mloc_messageOperandUnit`. ICU4C
+  79 has no `:unit`.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -250,8 +271,10 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   `test_message_numbers` checks `:number` and `:integer`'s defaults,
   options and their refusals, operands, inheritance and selection,
   `:offset`'s sums, refusals and overflow, `:percent`'s scaling,
-  dropped options and selection, and `:currency`'s operands, options,
-  displays, signs, inheritance, amounts and refusals; `test_message_functions` checks the function
+  dropped options and selection, `:currency`'s operands, options,
+  displays, signs, inheritance, amounts and refusals, and `:unit`'s
+  widths, usage, refusals, inheritance, amounts and data, with
+  `units.mloc` in the set; `test_message_functions` checks the function
   table's refusals, each operand kind, the accessors, a function's
   faults in resolve and format, `:string`'s operands, selection with and
   without better entries, the selector limit, and the resolution limit

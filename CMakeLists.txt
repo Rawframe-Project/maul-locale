@@ -107,6 +107,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_emit.c
     src/message_format.c
     src/message_number.c
+    src/message_offset.c
     src/message_parse.c
     src/message_prepare.c
     src/message_read.c
@@ -210,6 +211,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(message WHITEBOX)
     maul_add_test(message_functions)
     maul_add_test(message_numbers WHITEBOX)
+    # :unit reads the unit names (record mloc-0045); a white-box test, so
+    # not built with the shared library.
+    if(TARGET test_message_numbers)
+        set(MLOC_MESSAGE_UNITS ${PROJECT_SOURCE_DIR}/src/generated/units.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_message_numbers PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_UNITS}@/units.mloc")
+            set(MLOC_MESSAGE_UNITS /units.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_message_numbers PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_message_numbers PRIVATE MLOC_UNITS_FILE="${MLOC_MESSAGE_UNITS}")
+    endif()
     maul_add_test(likely)
     maul_add_test(likely_tables WHITEBOX)
     maul_add_test(canonical)
