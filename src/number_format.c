@@ -54,14 +54,11 @@ bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter
     }
     memcpy(f, opaque, sizeof(*f));
     const NumberCore* c = &f->core;
-    return f->stamp == stamp && c->symbolText != nullptr && c->affixText != nullptr &&
-           c->decimalText != nullptr && c->groupText != nullptr && c->digitLength >= 1 &&
-           c->digitLength <= numberDigitSize &&
-           (c->currencyText != nullptr || c->currencyLength == 0) && f->minInteger >= 1 &&
-           f->minInteger <= maxMinInteger && f->grouping <= mloc_groupingOff &&
-           f->signDisplay <= mloc_signNegative && f->notation <= mloc_notationCompactLong &&
-           f->style <= mloc_numberPerMille && f->unscaled <= 1 &&
-           (c->primary == 0) == (c->secondary == 0) &&
+    return f->stamp == stamp && c->digitLength >= 1 && c->digitLength <= numberDigitSize &&
+           f->minInteger >= 1 && f->minInteger <= maxMinInteger &&
+           f->grouping <= mloc_groupingOff && f->signDisplay <= mloc_signNegative &&
+           f->notation <= mloc_notationCompactLong && f->style <= mloc_numberPerMille &&
+           f->unscaled <= 1 && (c->primary == 0) == (c->secondary == 0) &&
            IsCompact(f->notation) == (f->compactTable != nullptr) &&
            (f->compactTable == nullptr ||
             (f->compactPatterns != nullptr && f->pluralRule < mlocPluralRuleSetCount)) &&

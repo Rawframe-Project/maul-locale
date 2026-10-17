@@ -43,7 +43,10 @@ bool mlocValidFormatOptions(const mlocNumberOptions* options);
 void mlocSetFormatOptions(Formatter* formatter, const mlocNumberOptions* options, uint8_t stamp);
 
 // Reads a formatter from an opaque value of a size; false when the
-// library did not make it as a formatter of the stamp's kind.
+// library did not make it as a formatter of the stamp's kind. The stamp
+// refuses a zeroed or unmade value, so the fields checked are those that
+// bound a read or a write or pick a branch (lengths, counts, options);
+// the core's texts are the data's whenever the stamp is.
 bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter* formatterOut);
 
 // A pattern around a formatted number, by the plural category of the
