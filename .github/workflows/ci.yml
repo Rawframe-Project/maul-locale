@@ -252,14 +252,24 @@ jobs:
           cmake --build build
       - name: Run
         run: |
+          mkdir -p fuzz-crashes
           for target in build/fuzz_*; do
             mkdir -p "corpus-$(basename $target)"
             # Seeds start from valid files, which random bytes never form.
             if [ -d "test/seeds/$(basename $target)" ]; then
               cp test/seeds/"$(basename $target)"/* "corpus-$(basename $target)"/
             fi
-            "$target" -max_total_time=60 -max_len=512 "corpus-$(basename $target)"
+            "$target" -max_total_time=60 -max_len=512 -artifact_prefix=fuzz-crashes/ \
+              "corpus-$(basename $target)"
           done
+      - name: Keep a crash's input
+        # libFuzzer writes the input that failed; without it a crash found
+        # here cannot be reproduced.
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashes
+          path: fuzz-crashes/
 
   # The API reference is generated from the headers; it must match them,
   # and the README must give its function count.
