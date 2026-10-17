@@ -395,29 +395,39 @@ bool mlocFindDataUnitOrKind(const DataView* view, uint32_t kind, uint32_t locale
     return false;
 }
 
+static inline bool HasKind(const DataView* view, uint32_t kind)
+{
+    // The first unit at or after the kind's first key.
+    uint32_t low = 0;
+    uint32_t high = view->unitCount;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        const uint8_t* entry = view->bytes + dataHeaderSize + (size_t)middle * dataUnitSize;
+        if (mlocLoad32(entry) < kind)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return low < view->unitCount &&
+           mlocLoad32(view->bytes + dataHeaderSize + (size_t)low * dataUnitSize) == kind;
+}
+
+bool mlocDataHasKind(const DataView* view, uint32_t kind)
+{
+    return HasKind(view, kind);
+}
+
 bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind)
 {
     for (size_t i = 0; i < set->count; i++)
     {
         DataView view = mlocViewOf(&set->sources[i]);
-        // The first unit at or after the kind's first key.
-        uint32_t low = 0;
-        uint32_t high = view.unitCount;
-        while (low < high)
-        {
-            uint32_t middle = low + (high - low) / 2;
-            const uint8_t* entry = view.bytes + dataHeaderSize + (size_t)middle * dataUnitSize;
-            if (mlocLoad32(entry) < kind)
-            {
-                low = middle + 1;
-            }
-            else
-            {
-                high = middle;
-            }
-        }
-        if (low < view.unitCount &&
-            mlocLoad32(view.bytes + dataHeaderSize + (size_t)low * dataUnitSize) == kind)
+        if (HasKind(&view, kind))
         {
             return true;
         }

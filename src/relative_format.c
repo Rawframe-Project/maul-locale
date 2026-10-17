@@ -88,7 +88,7 @@ mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const 
     RelativeFormat f;
     memset(&f, 0, sizeof(f));
     ChainWalk walk = {&f, false};
-    if (!mlocVisitLocaleChain(data, mloc_componentMain, locale, TakeStep, &walk) ||
+    if (!mlocVisitLocaleChainOf(data, mloc_componentMain, kindRelative, locale, TakeStep, &walk) ||
         f.unitCount == 0)
     {
         return mloc_errorNotFound;

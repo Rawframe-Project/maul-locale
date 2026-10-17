@@ -739,7 +739,7 @@ mlocResult mlocMakeZoneFormat(ZoneFormat* f, const mlocDataSet* data, const mloc
     if (digits < 0 || !mlocFindDataSetUnit(data, kindZoneMeta, nullptr, 0, &f->meta) ||
         !mlocFindZoneCodeTables(data, &codes) ||
         !mlocFindDataSetUnit(data, kindZoneCodes, nullptr, 0, &f->codes) ||
-        !mlocVisitLocaleChain(data, mloc_componentMain, locale, TakeStep, &walk) ||
+        !mlocVisitLocaleChainOf(data, mloc_componentMain, kindZoneNames, locale, TakeStep, &walk) ||
         f->nameCount == 0)
     {
         return mloc_errorNotFound;

@@ -490,8 +490,10 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
     return ok;
 }
 
-bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
-                          const mlocLocale* locale, LocaleStepVisitor visit, void* context)
+// The chain's steps in the sources not in without (the first 32's bits).
+static inline bool VisitChain(const mlocDataSet* data, mlocComponent component,
+                              const mlocLocale* locale, uint32_t without, LocaleStepVisitor visit,
+                              void* context)
 {
     ChainWalk w;
     WalkStart(&w, data, component, locale);
@@ -502,7 +504,8 @@ bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
         {
             DataView view = mlocViewOf(&data->sources[s]);
             uint32_t index = 0;
-            if (mlocFindDataLocale(&view, w.key, w.length, &index) &&
+            if ((s >= 32 || (without >> s & 1) == 0) &&
+                mlocFindDataLocale(&view, w.key, w.length, &index) &&
                 visit(context, &view, index, w.depth))
             {
                 return true;
@@ -510,6 +513,24 @@ bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
         }
     } while (WalkNext(&w, &ok));
     return ok;
+}
+
+bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
+                          const mlocLocale* locale, LocaleStepVisitor visit, void* context)
+{
+    return VisitChain(data, component, locale, 0, visit, context);
+}
+
+bool mlocVisitLocaleChainOf(const mlocDataSet* data, mlocComponent component, uint32_t kind,
+                            const mlocLocale* locale, LocaleStepVisitor visit, void* context)
+{
+    uint32_t without = 0;
+    for (size_t s = 0; s < data->count && s < 32; s++)
+    {
+        DataView view = mlocViewOf(&data->sources[s]);
+        without |= mlocDataHasKind(&view, kind) ? 0 : 1u << s;
+    }
+    return VisitChain(data, component, locale, without, visit, context);
 }
 
 typedef struct Found

@@ -48,4 +48,10 @@ typedef bool (*LocaleStepVisitor)(void* context, const DataView* view, uint32_t 
 bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
                           const mlocLocale* locale, LocaleStepVisitor visit, void* context);
 
+// mlocVisitLocaleChain in the sources that hold a unit of a kind alone,
+// for a part whose units are all of one kind: the others are not
+// searched for the locale.
+bool mlocVisitLocaleChainOf(const mlocDataSet* data, mlocComponent component, uint32_t kind,
+                            const mlocLocale* locale, LocaleStepVisitor visit, void* context);
+
 #endif
