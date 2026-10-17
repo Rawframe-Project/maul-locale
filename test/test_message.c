@@ -811,6 +811,19 @@ static bool FormatsNow(const SuiteCase* c)
     return c->expected != NULL && !c->bidi && strcmp(c->locale, "fr") != 0;
 }
 
+// Appends text to a NUL-terminated string, as much as fits.
+static void Append(char* out, size_t capacity, const char* text)
+{
+    size_t at = strlen(out);
+    size_t length = strlen(text);
+    if (at + length >= capacity)
+    {
+        length = capacity - at - 1;
+    }
+    memcpy(out + at, text, length);
+    out[at + length] = 0;
+}
+
 // The faults' names in order, joined by commas, as the suite lists them.
 static void FaultNames(const mlocMessageFaults* faults, char* out, size_t capacity)
 {
@@ -819,9 +832,9 @@ static void FaultNames(const mlocMessageFaults* faults, char* out, size_t capaci
     {
         if (i > 0)
         {
-            strncat(out, ",", capacity - strlen(out) - 1);
+            Append(out, capacity, ",");
         }
-        strncat(out, FaultName(faults->faults[i].kind), capacity - strlen(out) - 1);
+        Append(out, capacity, FaultName(faults->faults[i].kind));
     }
 }
 
