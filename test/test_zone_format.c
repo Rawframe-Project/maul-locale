@@ -409,6 +409,41 @@ static void TestRefused(void)
           "a formatter the library did not make");
 }
 
+// The zoned formatters refuse a zone the library did not make, alone and
+// at either end of a range, before reading the zone at the instant.
+static void TestForgedInZone(void)
+{
+    mlocLocale en;
+    mlocTimeZone zone = {0};
+    mlocDateFormatter date;
+    mlocTimeFormatter time;
+    mlocDateTimeFormatter both;
+    mlocDateOptions dateOptions = {.zone = mloc_zoneStyleSpecificShort};
+    mlocTimeOptions timeOptions = {.zone = mloc_zoneStyleSpecificShort};
+    mlocDateTimeOptions bothOptions = {.time = timeOptions};
+    bool made = mlocParseLocale("en", 2, &en).status == mloc_success &&
+                mlocFindTimeZone(&s_data, "America/New_York", 16, &zone) == mloc_success &&
+                mlocInitDateFormatter(&date, &s_data, &en, &dateOptions) >= 0 &&
+                mlocInitTimeFormatter(&time, &s_data, &en, &timeOptions) >= 0 &&
+                mlocInitDateTimeFormatter(&both, &s_data, &en, &bothOptions) >= 0;
+    mlocTimeZone forged = zone;
+    forged.offsetMinutes = 30;
+    mlocInstant at = {.seconds = 1792263845};
+    mlocInstant later = {.seconds = 1792263845 + 90000};
+    char text[128];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    CHECK(
+        made && mlocFormatDateInZone(&date, &zone, &at, &output) == mloc_success &&
+            mlocFormatDateInZone(&date, &forged, &at, &output) == mloc_errorInvalid &&
+            mlocFormatTimeInZone(&time, &forged, &at, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeInZone(&both, &forged, &at, &output) == mloc_errorInvalid &&
+            mlocFormatDateRangeInZone(&date, &forged, &at, &later, &output) == mloc_errorInvalid &&
+            mlocFormatTimeRangeInZone(&time, &forged, &at, &later, &output) == mloc_errorInvalid &&
+            mlocFormatDateTimeRangeInZone(&both, &forged, &at, &later, &output) ==
+                mloc_errorInvalid,
+        "a zone the library did not make, to each zoned formatter");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_sources[0]);
@@ -428,5 +463,6 @@ int main(void)
     TestOutput();
     TestInZone();
     TestRefused();
+    TestForgedInZone();
     return s_failures == 0 ? 0 : 1;
 }
