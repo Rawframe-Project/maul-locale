@@ -515,6 +515,9 @@ static void TestFieldsRefused(void)
     // visit them again and again.
     CHECK(Compile("{$x :f a=1}{$y :f b=2}", &size), "two expressions compile");
     CHECK(RefusedWith(size, messagePieces, 1, 1, 0), "an expression named twice");
+    CHECK(Compile(".input {$x :f} .input {$y :f} {{}}", &size), "two declarations compile");
+    CHECK(RefusedWith(size, messageDeclarations, 1, 2, 0),
+          "two declarations naming one expression");
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messageExpressions, 1, 5), 0);
     Store(copy + FieldAt(messageExpressions, 1, 6), 2);
