@@ -13,7 +13,8 @@
 // and words parsed back; display names (a language, a region, a key's
 // value, a language at a sentence's start) and whole locales' names in
 // dialect and standard form; then the datetime part's cases
-// (bench_dates.c). The inputs are the ones the
+// (bench_dates.c) and the message part's (bench_messages.c), with the
+// stack a message's format call takes. The inputs are the ones the
 // ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well. With BENCH_SHOW
@@ -25,6 +26,7 @@
 #endif
 
 #include "bench_dates.h"
+#include "bench_messages.h"
 
 #include "maul-locale/currency.h"
 #include "maul-locale/decimal.h"
@@ -593,9 +595,15 @@ int main(int argc, char** argv)
         fputs("bench: cannot make the datetime formatters\n", stderr);
         return 1;
     }
+    if (!PrepareMessageBench())
+    {
+        fputs("bench: cannot make the messages\n", stderr);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
         ShowDateBench();
+        ShowMessageBench();
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
                                       ScientificFormat, CurrencyFormat, UnitFormat};
         for (size_t i = 0; i < 6; i++)
@@ -665,9 +673,12 @@ int main(int argc, char** argv)
     };
     size_t count = sizeof(s_cases) / sizeof(s_cases[0]);
     const char* only = getenv("BENCH_ONLY");
-    for (size_t i = 0; i < count + g_dateCaseCount; i++)
+    size_t dates = count + g_dateCaseCount;
+    for (size_t i = 0; i < dates + g_messageCaseCount; i++)
     {
-        const Case* c = i < count ? &s_cases[i] : &g_dateCases[i - count];
+        const Case* c = i < count   ? &s_cases[i]
+                        : i < dates ? &g_dateCases[i - count]
+                                    : &g_messageCases[i - dates];
         if (only != nullptr && !Listed(only, c->name))
         {
             continue;
@@ -686,6 +697,11 @@ int main(int argc, char** argv)
     if (baseline != nullptr)
     {
         fclose(baseline);
+    }
+    if ((only == nullptr || Listed(only, "stack")) && !PrintMessageStack())
+    {
+        fputs("bench: cannot measure the stack\n", stderr);
+        return 1;
     }
     return 0;
 }
