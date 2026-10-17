@@ -185,6 +185,10 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
         *sizeOut = (size_t)needed;
         return mloc_errorCapacity;
     }
+    // The old header goes first: a bind that fails below must not leave
+    // an earlier bound message's header over words that are no longer
+    // its own.
+    memset(buffer, 0, sizeof h);
     uint8_t* words = (uint8_t*)buffer + sizeof h;
     result = WriteWords(&h.view, words);
     if (result != mloc_success)

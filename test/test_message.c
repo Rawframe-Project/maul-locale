@@ -951,6 +951,12 @@ static void TestBindAndFormat(void)
         CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorCapacity),
               "a chain of 64 binds, of 65 is refused");
     }
+    // A bind refused after the buffer held a bound message leaves none.
+    CHECK(Bind(&s_formatter, "{$x}") == mloc_success, "a message binds");
+    CHECK(Bind(&s_formatter, text) == mloc_errorCapacity, "the long chain is refused again");
+    mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(mlocFormatMessage(s_bound, NULL, 0, &stale, NULL) == mloc_errorInvalid,
+          "a failed bind leaves no bound message behind");
     mlocMessageArgument x = {"x", 1, {mloc_messageValueString, 0, {.string = {"X", 1}}}};
     size_t length;
     CHECK(Bind(&s_formatter, ".local $a = {$x} .local $b = {$a} {{{$b}{$a}{$x}}}") ==
@@ -1026,6 +1032,32 @@ static void TestBindAndFormat(void)
               mlocBindMessage(&s_formatter, s_buffer, 4, s_bound, sizeof s_bound, &size) ==
                   mloc_errorData,
           "a formatter never made and bytes not a message are refused");
+    CHECK(mlocBindMessage(NULL, s_buffer, size, s_bound, sizeof s_bound, &size) ==
+              mloc_errorInvalid,
+          "a null formatter is refused");
+
+    // A local naming itself, possible only in crafted bytes, would loop.
+    CHECK(Compile(".local $a = {$x} {{{$a}}}", &size), "a local compiles");
+    static uint8_t crafted[4096];
+    memcpy(crafted, s_buffer, size);
+    Store(crafted + FieldAt(messageExpressions, 0, 1), Field(messageDeclarations, 0, 1));
+    CHECK(mlocBindMessage(&s_formatter, crafted, size, s_bound, sizeof s_bound, &size) ==
+              mloc_errorData,
+          "a local naming itself is refused");
+
+    CHECK(Bind(&s_formatter, ".local $a = {$x} {{{$a}}}") == mloc_success &&
+              Format(NULL, 0, &length, &faults) == mloc_withFallbacks && TextIs(length, "{$a}") &&
+              faults.count == 1 && list[0].kind == mloc_messageFaultUnresolvedVariable,
+          "a local whose value fell back is written as itself");
+    CHECK(Bind(&s_formatter, ".input {$x :f} .match $x a {{A}} * {{other}}") == mloc_success &&
+              Format(&x, 1, &length, &faults) == mloc_withFallbacks && TextIs(length, "other"),
+          "the first variant of catch-alls is chosen");
+    char fit[2];
+    mlocOutput exact = {fit, 2, 0, NULL, NULL};
+    CHECK(Bind(&s_formatter, "{$x}!") == mloc_success &&
+              mlocFormatMessage(s_bound, &x, 1, &exact, NULL) == mloc_success &&
+              exact.length == 2 && memcmp(fit, "X!", 2) == 0,
+          "a text that fills the buffer exactly");
 }
 
 int main(void)

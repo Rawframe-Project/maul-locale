@@ -69,7 +69,8 @@ static uint32_t Word(const uint8_t* words, uint32_t index)
 
 static uint32_t BoundBy(const Formatting* f, uint32_t variable)
 {
-    return Word(f->words, variable);
+    uint32_t d = Word(f->words, variable);
+    return d < f->h.view.count[messageDeclarations] ? d : messageUnbound;
 }
 
 static uint32_t SlotOf(const Formatting* f, uint32_t expression)
