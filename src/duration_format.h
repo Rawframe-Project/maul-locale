@@ -60,6 +60,12 @@ bool mlocResolveDurationOptions(const mlocDurationOptions* options,
                                 uint8_t style[mloc_durationFieldCount],
                                 uint8_t display[mloc_durationFieldCount]);
 
+// The separators and hour padding of an hms pattern, "h" or "hh", a
+// separator, "m" or "mm", a separator, "s" or "ss", into a formatter's
+// state: false for another.
+bool mlocReadDurationDigital(const char* text, size_t length, DurationFormat* format,
+                             bool* twoDigitOut);
+
 // Whether a formatter's state is one the library made: its styles,
 // displays, digits, separators, list and patterns within their bounds.
 bool mlocValidDurationFormat(const DurationFormat* format);

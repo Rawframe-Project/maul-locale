@@ -9,6 +9,7 @@
 // Cyrillic where ICU's falls back to the Latin script); V8 agrees but
 // for the differences the record lists.
 
+#include "duration_format.h"
 #include "test_harness.h"
 
 #include "maul-locale/duration.h"
@@ -453,6 +454,69 @@ static void TestRefusals(void)
           "a formatter the library did not make");
 }
 
+static bool Digital(const char* pattern, bool twoDigit, const char* first, const char* second)
+{
+    static const DurationFormat s_zero;
+    DurationFormat f = s_zero;
+    bool padded = false;
+    return mlocReadDurationDigital(pattern, strlen(pattern), &f, &padded) && padded == twoDigit &&
+           f.separatorLength[0] == strlen(first) &&
+           memcmp(f.separator[0], first, strlen(first)) == 0 &&
+           f.separatorLength[1] == strlen(second) &&
+           memcmp(f.separator[1], second, strlen(second)) == 0;
+}
+
+static bool NotDigital(const char* pattern)
+{
+    static const DurationFormat s_zero;
+    DurationFormat f = s_zero;
+    bool padded = false;
+    return !mlocReadDurationDigital(pattern, strlen(pattern), &f, &padded);
+}
+
+static void TestDigitalPatterns(void)
+{
+    CHECK(Digital("h:mm:ss", false, ":", ":") && Digital("hh.mm.ss", true, ".", ".") &&
+              Digital("h m s", false, " ", " ") && Digital("h:m:s", false, ":", ":") &&
+              Digital("h--------------mm|ss", false, "--------------", "|") &&
+              Digital("h:mm---------------s", false, ":", "---------------"),
+          "an hms pattern's separators, a separator of 15 bytes, and its hour padding");
+    CHECK(NotDigital("") && NotDigital("mm:ss") && NotDigital("hhh:mm:ss") &&
+              NotDigital("h:mmm:ss") && NotDigital("h:mm:sss") && NotDigital("hmm:ss") &&
+              NotDigital("h:mmss") && NotDigital("h:mm") && NotDigital("h:mm:ss ") &&
+              NotDigital("h----------------mm:ss") && NotDigital("h:mm----------------ss"),
+          "an hms pattern of another shape, or a separator past 15 bytes");
+}
+
+static void TestBounds(void)
+{
+    mlocLocale en;
+    mlocDurationFormatter formatter;
+    DurationFormat f;
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitDurationFormatter(&formatter, &s_data, &en, nullptr) == mloc_success,
+          "a formatter to spoil");
+    memcpy(&f, &formatter, sizeof(f));
+    CHECK(mlocValidDurationFormat(&f), "the formatter as made");
+    f.separatorLength[1] = durationSeparatorMost;
+    bool most = mlocValidDurationFormat(&f);
+    f.separatorLength[1] = durationSeparatorMost + 1;
+    CHECK(most && !mlocValidDurationFormat(&f), "a separator of the most bytes, and one past");
+    memcpy(&f, &formatter, sizeof(f));
+    f.slots[9].start[5] = durationPool;
+    f.slots[9].length[5] = 0;
+    bool end = mlocValidDurationFormat(&f);
+    f.slots[9].start[5] = durationPool - 1;
+    f.slots[9].length[5] = 1;
+    bool last = mlocValidDurationFormat(&f);
+    f.slots[9].length[5] = 2;
+    bool past = mlocValidDurationFormat(&f);
+    f.slots[9].start[5] = durationPool + 1;
+    f.slots[9].length[5] = 0;
+    CHECK(end && last && !past && !mlocValidDurationFormat(&f),
+          "patterns at the pool's end, and past it");
+}
+
 // The compiled-in data, and with it the unit names data file.
 static bool OpenData(void)
 {
@@ -482,5 +546,7 @@ int main(void)
     TestResolved();
     TestOptionRefusals();
     TestRefusals();
+    TestDigitalPatterns();
+    TestBounds();
     return s_failures == 0 ? 0 : 1;
 }

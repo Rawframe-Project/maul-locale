@@ -33,9 +33,7 @@ static size_t Run(const char* text, size_t length, size_t at, char letter)
     return n;
 }
 
-// The separators and hour padding of an hms pattern, "h" or "hh", a
-// separator, "m" or "mm", a separator, "s" or "ss": false for another.
-static bool ReadDigital(const char* text, size_t length, DurationFormat* f, bool* twoDigitOut)
+bool mlocReadDurationDigital(const char* text, size_t length, DurationFormat* f, bool* twoDigitOut)
 {
     static const char s_letters[3] = {'h', 'm', 's'};
     size_t at = 0;
@@ -114,7 +112,7 @@ static mlocResult Load(DurationFormat* f, const mlocDataSet* data, const mlocLoc
         return mloc_errorNotFound;
     }
     bool twoDigit = false;
-    if (!ReadDigital(p.text[unitPatternHms], p.length[unitPatternHms], f, &twoDigit))
+    if (!mlocReadDurationDigital(p.text[unitPatternHms], p.length[unitPatternHms], f, &twoDigit))
     {
         return mloc_errorData;
     }
