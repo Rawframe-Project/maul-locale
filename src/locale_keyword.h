@@ -9,11 +9,17 @@
 
 #include "maul-locale/locale.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 
 // The value of the -u key (two letters), and its length: its type
 // subtags joined by hyphens ("islamic-civil"); an empty value of length 0
 // when the locale has none. The value is not NUL-ended.
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut);
+
+// Sets the -u key (two letters) to a value (its type subtags, lowercase,
+// joined by hyphens), replacing the key's value if it has one: false
+// when the locale with it is no locale id or does not fit.
+bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size_t length);
 
 #endif

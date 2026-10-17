@@ -828,7 +828,7 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":date", ":time"};
+    static const char* const later[] = {"timeZone"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)
@@ -1085,13 +1085,44 @@ static const mlocMessageFunction s_testFunctions[] = {
     {"test:format", 11, NULL, TestResolve, TestFormat, NULL, NULL, NULL},
 };
 
+// The compiled-in data and the dates (dates.mloc, at the path the build
+// gives), which the date and time functions read; null when the file
+// cannot be read.
+static const mlocDataSet* DatesData(void)
+{
+    static mlocData sources[2];
+    static mlocDataSet data;
+    alignas(8) static uint8_t dates[8 << 20];
+    if (data.count > 0)
+    {
+        return &data;
+    }
+    mlocOpenBuiltinData(&sources[0]);
+    FILE* file = fopen(MLOC_DATES_FILE, "rb");
+    size_t size = file == NULL ? 0 : fread(dates, 1, sizeof dates, file);
+    if (file != NULL)
+    {
+        fclose(file);
+    }
+    if (size == 0 || size >= sizeof dates || mlocOpenData(&sources[1], dates, size) != mloc_success)
+    {
+        return NULL;
+    }
+    data = (mlocDataSet){sources, 2};
+    return &data;
+}
+
 // Every suite case this slice can format formats to its text, with its
 // errors in order.
 static void TestSuiteFormat(void)
 {
-    mlocData builtin;
-    mlocOpenBuiltinData(&builtin);
-    mlocDataSet data = {&builtin, 1};
+    const mlocDataSet* dates = DatesData();
+    CHECK(dates != NULL, "the dates are read");
+    if (dates == NULL)
+    {
+        return;
+    }
+    mlocDataSet data = *dates;
     static uint8_t bound[1 << 16];
     size_t count = sizeof s_suite / sizeof s_suite[0];
     size_t formatted = 0;
@@ -1141,7 +1172,7 @@ static void TestSuiteFormat(void)
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 279, "every case the functions built so far reach formats");
+    CHECK(formatted >= 299, "every case the functions built so far reach formats");
 }
 
 static mlocMessageFormatter s_formatter;
@@ -1324,7 +1355,7 @@ static void TestBindAndFormat(void)
     }
     CHECK(mlocFormatMessage(s_bound, &units[3], 1, &output, NULL) != mloc_errorInvalid,
           "an empty unit is taken (and is no unit)");
-    mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
+    mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)99, 0, {.integer = 0}}};
     CHECK(mlocFormatMessage(s_bound, &unknown, 1, &output, NULL) == mloc_errorInvalid,
           "an unknown kind is refused");
     size_t size = 0;

@@ -72,6 +72,12 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut)
 {
+    if (argument->kind >= mloc_messageValueDate && argument->kind <= mloc_messageValueDateTime)
+    {
+        // A date, time or date-time in ISO 8601.
+        *lengthOut = mlocWriteIsoDateTime(argument, digits, capacity);
+        return *lengthOut > 0;
+    }
     mlocDecimal decimal;
     mlocOutput out = {digits, capacity, 0, NULL, NULL};
     if (!mlocArgumentDecimal(argument, &decimal) ||

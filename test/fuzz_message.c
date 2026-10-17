@@ -144,6 +144,7 @@ static const mlocMessageArgument s_arguments[] = {
     {"n", 1, {mloc_messageValueInteger, 0, {.integer = -7}}},
     {"c", 1, {mloc_messageValueCurrency, 0, {.currency = {&s_amount, {'c', 'h', 'f'}}}}},
     {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&s_amount, "foot-and-inch", 13}}}},
+    {"d", 1, {mloc_messageValueDateTime, 0, {.dateTime = {{732313, 0, {0}}, {15, 4, 6, 0, 7}}}}},
 };
 
 static const mlocMessageFunction s_functions[] = {
@@ -180,10 +181,10 @@ static void Format(const uint8_t* message, size_t size)
         return;
     }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, s_arguments, 4, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 5, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, s_arguments, 4, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 5, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);

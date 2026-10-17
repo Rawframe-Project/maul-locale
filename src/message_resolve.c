@@ -8,19 +8,6 @@
 #include <assert.h>
 #include <string.h>
 
-// What an mlocMessageCall holds while a program function is called.
-typedef struct CallState
-{
-    Resolution* r;
-    uint32_t expression;
-    uint32_t stamp;
-} CallState;
-
-enum
-{
-    callStamp = 0x4D43414C,
-};
-
 // Keeps a function off the resolver's recursion: a chain of declarations
 // nests 64 levels deep, and what a leaf needs should not be on the stack
 // at each level.
@@ -74,9 +61,6 @@ void mlocReportFault(Resolution* r, mlocMessageFaultKind kind, uint32_t at)
     r->faultCount++;
 }
 
-// In a probe, what an argument stands for: a plain number as an operand.
-static const mlocMessageValue s_probe = {mloc_messageValueInteger, 0, {.integer = 0}};
-
 // The argument of a variable's name, or null.
 MLOC_NOINLINE static const mlocMessageValue* Argument(Resolution* r, uint32_t variable)
 {
@@ -84,7 +68,7 @@ MLOC_NOINLINE static const mlocMessageValue* Argument(Resolution* r, uint32_t va
     {
         // An option's value from an argument changes from call to call.
         r->dynamic = r->dynamic || r->optionDepth > 0;
-        return r->optionDepth > 0 ? NULL : &s_probe;
+        return r->optionDepth > 0 ? NULL : r->probeArgument;
     }
     const uint8_t* name = Pool(r, Field(r, messageVariables, variable, 0));
     size_t length = Field(r, messageVariables, variable, 1);
@@ -214,7 +198,7 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
 }
 
 // A value as a function receives it; storage holds a resolved value.
-static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage)
+void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage)
 {
     memset(out, 0, sizeof *out);
     ValueKind kind = v->kind == valueString ? v->behind : v->kind;
@@ -260,6 +244,15 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
         out->kind = mloc_messageOperandNumber;
         out->number = &storage->decimal;
     }
+    else if (kind == valueDate)
+    {
+        storage->dateTime = v->date.value;
+        uint8_t has = v->date.has;
+        out->kind = has == dateHasDate   ? mloc_messageOperandDate
+                    : has == dateHasTime ? mloc_messageOperandTime
+                                         : mloc_messageOperandDateTime;
+        out->dateTime = &storage->dateTime;
+    }
     else
     {
         out->kind = mloc_messageOperandFallback;
@@ -296,7 +289,7 @@ static bool OptionNamed(const Resolution* r, uint32_t p, const char* name, size_
 }
 
 // Whether a parameter's name is in the u: namespace, the library's.
-static bool UnicodeOption(const Resolution* r, uint32_t p)
+bool mlocUnicodeOption(const Resolution* r, uint32_t p)
 {
     return Field(r, messageParameters, p, 2) > 2 &&
            memcmp(Pool(r, Field(r, messageParameters, p, 1)), "u:", 2) == 0;
@@ -304,7 +297,7 @@ static bool UnicodeOption(const Resolution* r, uint32_t p)
 
 // An option's value: a literal's text, or its variable's value resolved
 // again without reporting faults (option resolution reported them).
-static Value OptionValue(Resolution* r, uint32_t p, uint32_t at)
+Value mlocOptionValue(Resolution* r, uint32_t p, uint32_t at)
 {
     if (Field(r, messageParameters, p, 0) == parameterOptionLiteral)
     {
@@ -354,7 +347,7 @@ MLOC_NOINLINE static Directed UnicodeOptions(Resolution* r, uint32_t expression)
         {
             continue;
         }
-        Value v = OptionValue(r, p, at);
+        Value v = mlocOptionValue(r, p, at);
         bool good = true;
         if (IsFallback(v.kind))
         {
@@ -445,7 +438,7 @@ MLOC_NOINLINE static Value CallProgram(Resolution* r, uint32_t expression, uint3
     mlocMessageResolved storage;
     if (operand != NULL)
     {
-        ToOperand(operand, &given, &storage);
+        mlocToOperand(operand, &given, &storage);
     }
     else
     {
@@ -523,7 +516,7 @@ static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool*
     NumberOption o;
     memset(&o, 0, sizeof o);
     o.literal = Field(r, messageParameters, p, 0) == parameterOptionLiteral;
-    Value v = OptionValue(r, p, at);
+    Value v = mlocOptionValue(r, p, at);
     *failedOut = IsFallback(v.kind);
     bool textual = v.kind == valueText || (v.kind == valueString && v.behind == valueText);
     if (textual)
@@ -695,7 +688,7 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
     {
         uint32_t kind = Field(r, messageParameters, p, 0);
         if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
-            UnicodeOption(r, p))
+            mlocUnicodeOption(r, p))
         {
             continue;
         }
@@ -747,6 +740,77 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
     return v;
 }
 
+// The date value a date function's operand gives: a date/time literal
+// (or a string argument that is one), a date, time or date-time
+// argument, or another date function's value, whose override options
+// pass on; false for anything else or parts the function cannot take.
+static bool DateOperand(DateFunction function, const Value* operand, DateValue* out)
+{
+    if (operand == NULL)
+    {
+        return false;
+    }
+    ValueKind kind = operand->kind == valueString ? operand->behind : operand->kind;
+    mlocDateTime value;
+    uint8_t has = 0;
+    if (kind == valueDate)
+    {
+        *out = mlocDateFromValue(function, &operand->date);
+        return mlocDateTakes(function, out->has);
+    }
+    bool read =
+        (kind == valueText && mlocDateLiteral(operand->text, operand->length, &value, &has)) ||
+        (kind == valueArgument && mlocArgumentDateTime(operand->argument, &value, &has));
+    if (!read)
+    {
+        return false;
+    }
+    *out = mlocMakeDateValue(function, &value, has);
+    return mlocDateTakes(function, has);
+}
+
+// A :date, :time or :datetime value: its operand's date and time, the
+// override options passed on, then the expression's own (u: options
+// aside).
+MLOC_NOINLINE static Value ResolveDate(Resolution* r, uint32_t expression, DateFunction function,
+                                       const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    DateValue d;
+    if (!DateOperand(function, operand, &d))
+    {
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        uint32_t kind = Field(r, messageParameters, p, 0);
+        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
+            mlocUnicodeOption(r, p))
+        {
+            continue;
+        }
+        bool failed = false;
+        NumberOption option = NumberOptionAt(r, p, at, &failed);
+        mlocMessageFaultKind fault =
+            failed ? mloc_messageFaultNone
+                   : mlocSetDateOption(&d, function, Pool(r, Field(r, messageParameters, p, 1)),
+                                       Field(r, messageParameters, p, 2), &option);
+        if (fault != mloc_messageFaultNone)
+        {
+            mlocReportFault(r, fault, at);
+        }
+    }
+    d.origin = expression;
+    Value v = Make(valueDate);
+    v.date = d;
+    // A date reads in its locale's direction.
+    v.direction = r->formatter.direction;
+    return v;
+}
+
 // An expression's function applied to its resolved operand (null for
 // none), into out: off the recursion's frames, as only options recurse
 // from here.
@@ -784,6 +848,10 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
             [messageFunctionUnit] = numberFunctionUnit,
         };
         v = ResolveNumber(r, expression, functions[slot], given);
+    }
+    else if (slot >= messageFunctionDate && slot <= messageFunctionDateTime)
+    {
+        v = ResolveDate(r, expression, (DateFunction)(slot - messageFunctionDate), given);
     }
     else
     {
@@ -854,117 +922,4 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
     Value v;
     ResolveInto(r, expression, &v);
     return v;
-}
-
-// The call a function's entry received, or false.
-static bool ReadCall(const mlocMessageCall* call, CallState* out)
-{
-    if (call == NULL)
-    {
-        return false;
-    }
-    memcpy(out, call, sizeof *out);
-    return out->stamp == callStamp && out->r != NULL;
-}
-
-// The parameter of a call's index-th option, or UINT32_MAX.
-static uint32_t OptionAt(const CallState* s, size_t index)
-{
-    const Resolution* r = s->r;
-    uint32_t first = Field(r, messageExpressions, s->expression, 5);
-    uint32_t count = Field(r, messageExpressions, s->expression, 6);
-    size_t seen = 0;
-    for (uint32_t p = first; p < first + count; p++)
-    {
-        uint32_t kind = Field(r, messageParameters, p, 0);
-        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
-            UnicodeOption(r, p))
-        {
-            continue;
-        }
-        if (seen++ == index)
-        {
-            return p;
-        }
-    }
-    return UINT32_MAX;
-}
-
-size_t mlocGetMessageOptionCount(const mlocMessageCall* call)
-{
-    CallState s;
-    if (!ReadCall(call, &s))
-    {
-        return 0;
-    }
-    size_t count = 0;
-    while (OptionAt(&s, count) != UINT32_MAX)
-    {
-        count++;
-    }
-    return count;
-}
-
-// An option's value, resolved now without reporting faults again.
-static void ReadOption(const CallState* s, uint32_t p, mlocMessageOperand* valueOut,
-                       mlocMessageResolved* storage)
-{
-    Value v = OptionValue(s->r, p, Field(s->r, messageExpressions, s->expression, 7));
-    ToOperand(&v, valueOut, storage);
-}
-
-mlocResult mlocGetMessageOption(const mlocMessageCall* call, size_t index, const char** nameOut,
-                                size_t* lengthOut, mlocMessageOperand* valueOut,
-                                mlocMessageResolved* storage)
-{
-    CallState s;
-    if (!ReadCall(call, &s) || nameOut == NULL || lengthOut == NULL || valueOut == NULL ||
-        storage == NULL)
-    {
-        return mloc_errorInvalid;
-    }
-    uint32_t p = OptionAt(&s, index);
-    if (p == UINT32_MAX)
-    {
-        return mloc_errorInvalid;
-    }
-    *nameOut = (const char*)Pool(s.r, Field(s.r, messageParameters, p, 1));
-    *lengthOut = Field(s.r, messageParameters, p, 2);
-    ReadOption(&s, p, valueOut, storage);
-    return mloc_success;
-}
-
-mlocResult mlocFindMessageOption(const mlocMessageCall* call, const char* name, size_t length,
-                                 mlocMessageOperand* valueOut, mlocMessageResolved* storage)
-{
-    CallState s;
-    if (!ReadCall(call, &s) || name == NULL || valueOut == NULL || storage == NULL)
-    {
-        return mloc_errorInvalid;
-    }
-    for (size_t i = 0;; i++)
-    {
-        uint32_t p = OptionAt(&s, i);
-        if (p == UINT32_MAX)
-        {
-            return mloc_errorNotFound;
-        }
-        if (Field(s.r, messageParameters, p, 2) == length &&
-            memcmp(Pool(s.r, Field(s.r, messageParameters, p, 1)), name, length) == 0)
-        {
-            ReadOption(&s, p, valueOut, storage);
-            return mloc_success;
-        }
-    }
-}
-
-mlocResult mlocGetMessageLocale(const mlocMessageCall* call, mlocLocale* localeOut)
-{
-    CallState s;
-    if (!ReadCall(call, &s) || localeOut == NULL)
-    {
-        return mloc_errorInvalid;
-    }
-    *localeOut = s.r->formatter.locale;
-    return mloc_success;
 }

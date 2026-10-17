@@ -16,6 +16,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/decimal.h"
 #include "maul-locale/locale.h"
+#include "maul-locale/zone.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -113,7 +114,9 @@ extern "C"
     // functions read as its amount; a unit amount is a decimal by pointer
     // and a unit identifier ("meter", "kilometer-per-hour"), which :unit
     // formats and the number functions read as its amount, both to
-    // outlive the call.
+    // outlive the call; a date, a time of day and a date-time are
+    // floating values (no zone), which the date and time functions
+    // format.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -123,6 +126,9 @@ extern "C"
         mloc_messageValueObject = 4,
         mloc_messageValueCurrency = 5,
         mloc_messageValueUnit = 6,
+        mloc_messageValueDate = 7,
+        mloc_messageValueTime = 8,
+        mloc_messageValueDateTime = 9,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -153,6 +159,9 @@ extern "C"
                 const char* unit;
                 size_t unitLength;
             } unit;
+            mlocDate date;
+            mlocTime time;
+            mlocDateTime dateTime;
         } as;
     } mlocMessageValue;
 
@@ -215,6 +224,7 @@ extern "C"
             mlocDecimal amount;
             char code[4];
         } currency;
+        mlocDateTime dateTime;
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
@@ -243,6 +253,12 @@ extern "C"
         // A :unit value: its amount as number, unrounded, and its unit
         // identifier as text.
         mloc_messageOperandUnit = 7,
+        // A date and time function's value (:date, :time, :datetime) as
+        // dateTime: of a date alone (its time midnight), a time alone (its
+        // date the first day of 1970), or both.
+        mloc_messageOperandDate = 8,
+        mloc_messageOperandTime = 9,
+        mloc_messageOperandDateTime = 10,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -255,6 +271,7 @@ extern "C"
         const mlocMessageValue* argument;
         const mlocMessageResolved* resolved;
         const mlocDecimal* number;
+        const mlocDateTime* dateTime;
     } mlocMessageOperand;
 
     // A function call's options and locale, read with the accessors
@@ -392,7 +409,9 @@ extern "C"
     /// and reported as a fault. A numeric argument without a function is
     /// written plainly ("1234.5"), a currency amount as its amount and
     /// code ("42.5 EUR"), a unit amount as its amount and unit ("3.5
-    /// meter").
+    /// meter"), a date, time or date-time in ISO 8601's extended form
+    /// (year, month and day joined by hyphens, a time's fields by colons,
+    /// a "T" between them, the fraction of a second as needed).
     ///
     /// @param bound          A bound message from mlocBindMessage.
     /// @param arguments      The arguments; may be null when count is 0.
@@ -406,8 +425,9 @@ extern "C"
     ///         mloc_errorInvalid for a null pointer (an argument's name,
     ///         string, decimal, amount or unit among them), a decimal that
     ///         is not one the library makes, a currency code that is not
-    ///         three ASCII letters, an unknown kind, or a bound message the
-    ///         library did not make.
+    ///         three ASCII letters, a date or time the library does not
+    ///         make, an unknown kind, or a bound message the library did
+    ///         not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

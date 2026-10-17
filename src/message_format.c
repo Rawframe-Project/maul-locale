@@ -130,6 +130,12 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         fault =
             mlocWriteNumberValue(&v->number, prepared, formatter->data, &formatter->locale, &out);
     }
+    else if (v->kind == valueDate)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        const PreparedDate* prepared = mlocPreparedFor(&f->r, v->date.origin);
+        fault = mlocWriteDateValue(&v->date, prepared, formatter->data, &formatter->locale, &out);
+    }
     else
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
@@ -160,7 +166,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
     {
         return PutArgument(f, v, expression);
     }
-    if (kind == valueResolved || kind == valueNumber)
+    if (kind == valueResolved || kind == valueNumber || kind == valueDate)
     {
         return PutResolved(f, v, expression);
     }
@@ -431,7 +437,11 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
         const mlocMessageArgument* a = &arguments[i];
         const mlocMessageValue* v = &a->value;
         bool good = (a->name != NULL || a->nameLength == 0) &&
-                    (uint32_t)v->kind <= mloc_messageValueUnit &&
+                    (uint32_t)v->kind <= mloc_messageValueDateTime &&
+                    (v->kind != mloc_messageValueDate || mlocGoodDate(&v->as.date)) &&
+                    (v->kind != mloc_messageValueTime || mlocGoodTime(&v->as.time)) &&
+                    (v->kind != mloc_messageValueDateTime ||
+                     (mlocGoodDate(&v->as.dateTime.date) && mlocGoodTime(&v->as.dateTime.time))) &&
                     (v->kind != mloc_messageValueString || v->as.string.text != NULL ||
                      v->as.string.length == 0) &&
                     (v->kind != mloc_messageValueDecimal || GoodDecimal(v->as.decimal)) &&
@@ -469,6 +479,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.budget = messageResolutionLimit;
     f.r.exhausted = false;
     f.r.probe = false;
+    f.r.probeArgument = NULL;
     f.r.dynamic = false;
     f.r.optionDepth = 0;
     const MessageView* v = &f.r.h.view;

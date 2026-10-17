@@ -10,12 +10,15 @@
 #ifndef MLOC_SRC_MESSAGE_PREPARE_H
 #define MLOC_SRC_MESSAGE_PREPARE_H
 
+#include "message_date.h"
 #include "message_number.h"
 #include "message_resolve.h"
 
 // The value prepared for an expression, in the bound message, or null:
 // none prepared, or the bound message moved to an address that leaves it
 // unaligned.
-const PreparedNumber* mlocPreparedFor(const Resolution* r, uint32_t expression);
+// A PreparedNumber for a number function's value, a PreparedDate for a
+// date function's.
+const void* mlocPreparedFor(const Resolution* r, uint32_t expression);
 
 #endif

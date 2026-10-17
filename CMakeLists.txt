@@ -103,7 +103,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_prefs.c
     src/message.c
     src/message_bind.c
+    src/message_call.c
     src/message_check.c
+    src/message_date.c
     src/message_emit.c
     src/message_format.c
     src/message_number.c
@@ -209,8 +211,34 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(data WHITEBOX)
     maul_add_test(locale)
     maul_add_test(message WHITEBOX)
+    # The suite's date cases read the dates (record mloc-0045).
+    if(TARGET test_message)
+        set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_message PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_DATES}@/dates.mloc")
+            set(MLOC_MESSAGE_DATES /dates.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_message PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_message PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}")
+    endif()
     maul_add_test(message_functions)
     maul_add_test(message_numbers WHITEBOX)
+    maul_add_test(message_dates WHITEBOX)
+    # It reads the dates (record mloc-0045); a white-box test, so not built
+    # with the shared library.
+    if(TARGET test_message_dates)
+        set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_message_dates PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_DATES}@/dates.mloc")
+            set(MLOC_MESSAGE_DATES /dates.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_message_dates PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_message_dates PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}")
+    endif()
     # :unit reads the unit names (record mloc-0045); a white-box test, so
     # not built with the shared library.
     if(TARGET test_message_numbers)

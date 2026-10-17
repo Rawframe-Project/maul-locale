@@ -48,7 +48,39 @@ typedef struct Resolution
     bool probe;
     bool dynamic;
     uint32_t optionDepth;
+    // What an argument stands for in a probe: a plain number for a
+    // number function's expression, a date-time for a date function's.
+    const mlocMessageValue* probeArgument;
 } Resolution;
+
+// What an mlocMessageCall holds while a program function is called.
+typedef struct CallState
+{
+    Resolution* r;
+    uint32_t expression;
+    uint32_t stamp;
+} CallState;
+
+enum
+{
+    callStamp = 0x4D43414C,
+};
+
+// A string in the message's pool.
+static inline const uint8_t* mlocResolutionPool(const Resolution* r, uint32_t offset)
+{
+    return r->h.view.pool + offset;
+}
+
+// A value as a function receives it; storage holds a resolved value.
+void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage);
+
+// Whether a parameter is a u: option, hidden from functions.
+bool mlocUnicodeOption(const Resolution* r, uint32_t p);
+
+// An option's value, its variable resolved quietly (its faults are
+// reported once, when the expression's options are checked).
+Value mlocOptionValue(Resolution* r, uint32_t p, uint32_t at);
 
 // A record's field.
 static inline uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index,

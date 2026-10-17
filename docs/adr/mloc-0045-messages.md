@@ -231,6 +231,27 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   function is its digits and unit ("3.5 kilometer"), and a program
   function receives a `:unit` value as `mloc_messageOperandUnit`. ICU4C
   79 has no `:unit`.
+- **`:date`, `:time` and `:datetime` (Draft):** the specification's
+  options over the library's date, time and date-time formatters:
+  `fields`/`dateFields` onto `mlocDateFieldSet`, `length`/`dateLength`
+  onto `mlocDateLength` (medium by default), `precision`/`timePrecision`
+  onto `mlocTimePrecision` (the minute by default), `hour12` the
+  locale's own 12- or 24-hour clock, `calendar` the locale's `-u-ca`;
+  the date and time joined by the "at" glue. Options other than the
+  overrides (`hour12`, `calendar`) set by a variable are Bad Options and
+  ignored. Operands: date/time literals and string arguments, read by
+  `mlocParseTemporalString` (date-times, instants and zoned date-times
+  with a year; an impossible day or a time alone a Bad Operand), new
+  date, time and date-time argument kinds, and another date function's
+  value, whose override options alone pass on. `:date` and `:datetime`
+  need a date; `:time` over a date alone writes its midnight. A date
+  value does not select, reads in its locale's direction, and is
+  prepared at bind (the probe gives date functions a date-time); with
+  no function a date argument is written in ISO 8601, and a program
+  function receives a date value as `mloc_messageOperandDate`, `Time`
+  or `DateTime`. The dates are a data file of their own (`dates.mloc`);
+  without it a date function is an Unsupported Operation. ICU4C 79's
+  MF2 is of the older Draft (it ignores these options) and no oracle.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -266,8 +287,10 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   into a buffer of exactly the size measured.
 - Formatting: every case of the suite the functions built so far reach
   formats to its text with its errors in order, or, where the suite
-  gives no text, with its errors (279, isolated as each case says, the
+  gives no text, with its errors (299, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
+  `test_message_dates` checks the date functions' options, operands,
+  refusals, inheritance and preparation, with `dates.mloc` in the set;
   `test_message_numbers` checks `:number` and `:integer`'s defaults,
   options and their refusals, operands, inheritance and selection,
   `:offset`'s sums, refusals and overflow, `:percent`'s scaling,

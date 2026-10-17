@@ -20,18 +20,29 @@ static void Store32(uint8_t* p, uint32_t value)
     p[3] = (uint8_t)(value >> 24);
 }
 
-// Whether a slot is a number function's, and so prepared.
+// Whether a slot is a number function's or a date function's, and so
+// prepared.
 static bool Prepared(uint32_t slot)
 {
-    return slot >= messageFunctionNumber && slot <= messageFunctionUnit;
+    return slot >= messageFunctionNumber && slot <= messageFunctionDateTime;
 }
 
-// The bytes kept for an expression's prepared value: a unit formatter's
+static bool DateSlot(uint32_t slot)
+{
+    return slot >= messageFunctionDate && slot <= messageFunctionDateTime;
+}
+
+// The bytes kept for an expression's prepared value: its date function's
+// formatter's for a date function, a unit formatter's
 // room for :unit, a currency formatter's for :currency and for :offset
 // (whose value may be a currency's; an offset of a unit value is made in
 // the call), a number formatter's for the rest.
 static size_t RoomOf(uint32_t slot)
 {
+    if (DateSlot(slot))
+    {
+        return mlocPreparedDateSize((DateFunction)(slot - messageFunctionDate));
+    }
     return mlocPreparedSize(slot == messageFunctionUnit ? preparedUnit
                             : slot == messageFunctionCurrency || slot == messageFunctionOffset
                                 ? preparedCurrency
@@ -64,7 +75,15 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     uint64_t base = mlocBoundBase(&h->view);
     size_t at = (size_t)base + (size_t)((8 - ((uintptr_t)bytes + base) % 8) % 8);
     uint8_t* words = bytes + sizeof *h;
-    PreparedNumber prepared;
+    // What an argument stands for in each kind of expression.
+    static const mlocMessageValue number = {mloc_messageValueInteger, 0, {.integer = 0}};
+    static const mlocMessageValue dateTime = {
+        mloc_messageValueDateTime, 0, {.dateTime = {{730120, mloc_calendarIso8601, {0}}, {0}}}};
+    union
+    {
+        PreparedNumber number;
+        PreparedDate date;
+    } prepared;
     for (uint32_t e = 0; e < h->view.count[messageExpressions]; e++)
     {
         uint32_t slot =
@@ -75,16 +94,26 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         }
         size_t room = RoomOf(slot);
         r.dynamic = false;
+        r.probeArgument = DateSlot(slot) ? &dateTime : &number;
         Value v = mlocResolveExpression(&r, e);
         if (r.exhausted)
         {
             return;
         }
+        size_t size = 0;
         if (!r.dynamic && v.kind == valueNumber && v.number.origin == e &&
-            mlocPrepareNumber(&v.number, f->data, &f->locale, &prepared) &&
-            mlocPreparedSize((PreparedKind)prepared.kind) <= room)
+            mlocPrepareNumber(&v.number, f->data, &f->locale, &prepared.number))
         {
-            memcpy(bytes + at, &prepared, mlocPreparedSize((PreparedKind)prepared.kind));
+            size = mlocPreparedSize((PreparedKind)prepared.number.kind);
+        }
+        if (!r.dynamic && v.kind == valueDate && v.date.origin == e &&
+            mlocPrepareDate(&v.date, f->data, &f->locale, &prepared.date))
+        {
+            size = mlocPreparedDateSize((DateFunction)v.date.function);
+        }
+        if (size > 0 && size <= room)
+        {
+            memcpy(bytes + at, &prepared, size);
             Store32(words + PreparedWord(&h->view, e), (uint32_t)at);
         }
         at += room;
@@ -131,12 +160,12 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
     return mloc_success;
 }
 
-const PreparedNumber* mlocPreparedFor(const Resolution* r, uint32_t expression)
+const void* mlocPreparedFor(const Resolution* r, uint32_t expression)
 {
     uint32_t at = mlocLoad32(r->words + PreparedWord(&r->h.view, expression));
     const uint8_t* place = r->words - sizeof(BoundHeader) + at;
     // A bound message moved to an address that leaves its values
     // unaligned makes its own (a copy would take a unit formatter's
     // 3.5 KB of stack at every write).
-    return at == 0 || (uintptr_t)place % 8 != 0 ? NULL : (const PreparedNumber*)place;
+    return at == 0 || (uintptr_t)place % 8 != 0 ? NULL : place;
 }

@@ -177,6 +177,10 @@ format.
 - Messages format and select with `:offset` (exact sums, an overflow
   unsupported) and `:percent` (the value times 100, its operand's minimum
   integer digits, increment and `select` dropped) (mloc-0045).
+- Messages format with `:date`, `:time` and `:datetime` (Draft): the
+  specification's fields, lengths, precisions, `hour12` and `calendar`
+  over the date formatters; new date, time and date-time argument kinds
+  and operand kinds; date/time literals (mloc-0045).
 - Messages format with `:unit` (Draft): a new argument kind,
   `mloc_messageValueUnit` (an amount and a unit identifier), or a number
   with the `unit` option; `unitDisplay`, `usage` with the locale's

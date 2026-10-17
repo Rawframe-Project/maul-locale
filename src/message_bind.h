@@ -59,7 +59,10 @@ enum
     messageFunctionPercent = 6,
     messageFunctionCurrency = 7,
     messageFunctionUnit = 8,
-    messageFunctionProgram = 9,
+    messageFunctionDate = 9,
+    messageFunctionTime = 10,
+    messageFunctionDateTime = 11,
+    messageFunctionProgram = 12,
 };
 
 // Slots take 24 bits: the program's functions are fewer.

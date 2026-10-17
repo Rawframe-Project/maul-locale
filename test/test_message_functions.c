@@ -42,7 +42,7 @@ static void Add(Echo* e, const char* text, size_t length)
 // resolved value, "?" a fallback.
 static void AddOperand(Echo* e, const mlocMessageOperand* operand)
 {
-    char shown[8];
+    char shown[32];
     switch (operand->kind)
     {
     case mloc_messageOperandNone:
@@ -66,6 +66,13 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
     case mloc_messageOperandUnit:
         snprintf(shown, sizeof shown, "U%d%.*s", operand->number->count, (int)operand->length,
                  operand->text);
+        Add(e, shown, strlen(shown));
+        break;
+    case mloc_messageOperandDate:
+    case mloc_messageOperandTime:
+    case mloc_messageOperandDateTime:
+        snprintf(shown, sizeof shown, "%c%d:%u", "DTB"[operand->kind - mloc_messageOperandDate],
+                 (int)operand->dateTime->date.day, (unsigned)operand->dateTime->time.hour);
         Add(e, shown, strlen(shown));
         break;
     case mloc_messageOperandResolved:
@@ -381,6 +388,10 @@ static void TestCalls(void)
         "a currency value is passed as its amount and code");
     CHECK(Formats(".local $u = {7.5 :unit unit=meter} {{{$u :x:echo}}}", a, 4, "U2meter", NULL),
           "a unit value is passed as its amount and unit");
+    CHECK(Formats(".local $d = {|2006-01-02| :date} .local $t = {|2006-01-02T15:04| :time} {{{$d "
+                  ":x:echo}{$t :x:echo}}}",
+                  a, 4, "D732313:0B732313:15", NULL),
+          "a date value is passed as its date and time, and which it had");
     mlocMessageArgument named[] = {
         {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
         {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},

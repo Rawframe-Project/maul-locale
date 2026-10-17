@@ -8,6 +8,7 @@
 #ifndef MLOC_SRC_MESSAGE_VALUE_H
 #define MLOC_SRC_MESSAGE_VALUE_H
 
+#include "message_date.h"
 #include "message_number.h"
 
 #include "maul-locale/message.h"
@@ -29,6 +30,8 @@ typedef enum ValueKind
     valueResolved,
     // A number function's value.
     valueNumber,
+    // A date and time function's value.
+    valueDate,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -56,6 +59,7 @@ typedef struct Value
     {
         mlocMessageResolved resolved;
         NumberValue number;
+        DateValue date;
     };
 } Value;
 
@@ -69,8 +73,9 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
 
 // An argument written with no function as its plain decimal (a currency
 // amount's followed by a space and its code; a unit amount's digits
-// alone, its unit written after them and a space by the caller); false
-// for a kind that has none (an object).
+// alone, its unit written after them and a space by the caller), or a
+// date, time or date-time in ISO 8601; false for a kind that has none
+// (an object).
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut);
 
