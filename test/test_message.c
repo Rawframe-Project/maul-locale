@@ -648,6 +648,31 @@ static void TestCorrupted(void)
           "another library's message is refused as such");
 }
 
+// Names stored in NFC must still be names: U+037E becomes ";" and U+1FEF
+// "`", so names holding them are refused at the code point; U+2126 (Ohm,
+// Omega in NFC) and U+0387 (a middle dot) stay names and write back.
+static void TestNfcNames(void)
+{
+    const mlocMessageError syntax = mloc_messageErrorSyntax;
+    CHECK(Refused("{$a\xCD\xBE}", syntax, 3) && Refused("{$\xE1\xBF\xAFx}", syntax, 2) &&
+              Refused(".local $a\xE1\xBF\xAF = {1} {{}}", syntax, 9),
+          "a variable's name whose NFC form is no name");
+    CHECK(Refused("{|a| :ns:f\xE1\xBF\xAF}", syntax, 10) &&
+              Refused("{|a| :f o\xCD\xBE=1}", syntax, 9) && Refused("{#b\xCD\xBE}", syntax, 3) &&
+              Refused("{#b \xE1\xBF\xAF=1}", syntax, 4),
+          "a function's, an option's, a markup's and an attribute's");
+    static const char* const kept[] = {"{$\xE2\x84\xA6}", "{$\xCE\x87x}", "{$x\xCE\x87}"};
+    for (size_t i = 0; i < 3; i++)
+    {
+        size_t size = 0;
+        mlocMessageError error;
+        CHECK(mlocCompileMessage(kept[i], strlen(kept[i]), s_buffer, sizeof s_buffer, &size, &error)
+                          .status == mloc_success &&
+                  WriteBack(s_buffer, size) > 0,
+              "names that NFC changes but keeps names compile and write back");
+    }
+}
+
 static void TestRefused(void)
 {
     size_t size = 0;
@@ -1322,6 +1347,7 @@ int main(void)
     TestFieldsRefused();
     TestAmplified();
     TestRefused();
+    TestNfcNames();
     TestSuiteFormat();
     TestBindAndFormat();
     TestPrefixes();

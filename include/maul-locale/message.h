@@ -68,7 +68,9 @@ extern "C"
     /// @return mloc_success and the length read; mloc_errorSyntax and the
     ///         byte offset where the error is found (also for a name or key
     ///         with a run of more than 30 combining marks, which UAX #15's
-    ///         stream-safe form bounds and NFC here does not take); mloc_errorCapacity
+    ///         stream-safe form bounds and NFC here does not take, and for
+    ///         a name whose NFC form is no name: U+037E and U+1FEF become
+    ///         ";" and "`"); mloc_errorCapacity
     ///         when the buffer is too small, nothing then being written
     ///         that the caller can use; mloc_errorInvalid for a null
     ///         pointer, or a text of 1 GiB or more.

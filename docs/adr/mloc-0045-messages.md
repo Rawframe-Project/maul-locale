@@ -40,6 +40,11 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   (options and attributes), selectors, keys, variants, pattern pieces,
   variables and the string pool. Text and literals are stored unescaped;
   names and keys in NFC; a name is one variable however it is composed.
+  A name whose NFC form is no name is a syntax error at the code point
+  that breaks it (U+037E and U+1FEF, which NFC makes ";" and "`"; a
+  composition never breaks a name, checked over every canonical
+  composite), so a compiled message always writes back; the CI fuzz job
+  found a message compiled and then refused by the reader this way.
   Parsing runs twice over the text, counting then writing, so the
   library allocates nothing: syntax errors, a variant's key count and a
   missing fallback variant are found while measuring, the checks that

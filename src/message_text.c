@@ -3,6 +3,8 @@
 
 #include "message_text.h"
 
+#include "maul-unicode/normalize.h"
+
 uint32_t mlocMessageDecode(const uint8_t* text, size_t at, size_t end, size_t* sizeOut)
 {
     uint32_t lead = text[at];
@@ -59,4 +61,42 @@ bool mlocMessageIsNameStart(uint32_t c)
 bool mlocMessageIsNameChar(uint32_t c)
 {
     return mlocMessageIsNameStart(c) || (c >= '0' && c <= '9') || c == '-' || c == '.';
+}
+
+size_t mlocMessageNfcNameBreak(const uint8_t* name, size_t length)
+{
+    for (size_t at = 0; at < length;)
+    {
+        size_t size;
+        uint32_t c = mlocMessageDecode(name, at, length, &size);
+        muniQuickCheck answer = muni_quickCheckYes;
+        if (c >= 0x80 &&
+            muniCheckNormalization((const char*)name + at, size, muni_nfc, &answer).status ==
+                muni_success &&
+            answer != muni_quickCheckYes)
+        {
+            // A code point's NFC is a few code points at most.
+            uint8_t normal[32];
+            size_t needed = 0;
+            if (muniNormalize((const char*)name + at, size, muni_nfc, muni_convertStrict,
+                              (char*)normal, sizeof normal, &needed)
+                    .status != muni_success)
+            {
+                return at;
+            }
+            for (size_t i = 0; i < needed;)
+            {
+                size_t part;
+                uint32_t d = mlocMessageDecode(normal, i, needed, &part);
+                bool first = at == 0 && i == 0;
+                if (first ? !mlocMessageIsNameStart(d) : !mlocMessageIsNameChar(d))
+                {
+                    return at;
+                }
+                i += part;
+            }
+        }
+        at += size;
+    }
+    return length;
 }

@@ -87,7 +87,7 @@ static bool SkipSpace(Parser* p)
 }
 
 // name = [bidi] name-start *name-char [bidi]: sets the name's bytes,
-// without the marks.
+// without the marks; a name whose NFC form is no name is refused.
 static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
 {
     size_t size;
@@ -109,6 +109,13 @@ static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
     } while (mlocMessageIsNameChar(c));
     *startOut = start;
     *lengthOut = p->at - start;
+    // Stored in NFC, it must still be a name (record mloc-0045).
+    size_t broken = mlocMessageNfcNameBreak(p->text + start, *lengthOut);
+    if (broken < *lengthOut)
+    {
+        p->at = start + broken;
+        return Fail(p);
+    }
     if (mlocMessageIsBidi(c))
     {
         p->at += size;

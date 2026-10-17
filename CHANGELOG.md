@@ -174,6 +174,9 @@ format.
   (`mlocMessageResolved` is now a union that can hold its decimal), and
   a declaration's faults are reported once however often it is named
   (mloc-0045).
+- Fixed: a message whose name holds U+037E or U+1FEF compiled, but its
+  NFC name (";" or "`") is no name, so `mlocWriteMessageText` refused it;
+  such names are now a syntax error at that code point (mloc-0045).
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are
