@@ -113,6 +113,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_resolve.c
     src/message_table.c
     src/message_text.c
+    src/message_value.c
     src/message_write.c
     src/calendar.c
     src/calendar_add.c

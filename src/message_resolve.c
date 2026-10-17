@@ -3,8 +3,6 @@
 
 #include "message_resolve.h"
 
-#include "maul-unicode/normalize.h"
-
 #include <assert.h>
 #include <string.h>
 
@@ -20,6 +18,15 @@ enum
 {
     callStamp = 0x4D43414C,
 };
+
+// Keeps a function off the resolver's recursion: a chain of declarations
+// nests 64 levels deep, and what a leaf needs should not be on the stack
+// at each level.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define MLOC_NOINLINE __declspec(noinline)
+#else
+#define MLOC_NOINLINE __attribute__((noinline))
+#endif
 
 static_assert(sizeof(CallState) <= sizeof(mlocMessageCall), "a call's state fits its value");
 static_assert(sizeof(mlocMessageResolved) == 64, "a resolved value is 64 bytes");
@@ -70,38 +77,11 @@ void mlocReportFault(Resolution* r, mlocMessageFaultKind kind, uint32_t at)
     r->faultCount++;
 }
 
-// Whether an argument's name is the variable's (NFC, from the compiled
-// message): byte for byte when the argument's is NFC, as it usually is,
-// else normalized on the stack first; a name longer than the stack's
-// buffer that is not NFC is not found.
-static bool SameName(const mlocMessageArgument* a, const uint8_t* name, size_t length)
-{
-    if (a->name == NULL)
-    {
-        return false;
-    }
-    if (a->nameLength == length && memcmp(a->name, name, length) == 0)
-    {
-        return true;
-    }
-    muniQuickCheck answer = muni_quickCheckNo;
-    if (muniCheckNormalization(a->name, a->nameLength, muni_nfc, &answer).status != muni_success ||
-        answer == muni_quickCheckYes)
-    {
-        return false;
-    }
-    char normal[256];
-    size_t needed = 0;
-    muniTextResult result = muniNormalize(a->name, a->nameLength, muni_nfc, muni_convertStrict,
-                                          normal, sizeof normal, &needed);
-    return result.status == muni_success && needed == length && memcmp(normal, name, length) == 0;
-}
-
-// The argument of a variable's name, or null.
 // In a probe, what an argument stands for: a plain number as an operand.
 static const mlocMessageValue s_probe = {mloc_messageValueInteger, 0, {.integer = 0}};
 
-static const mlocMessageValue* Argument(Resolution* r, uint32_t variable)
+// The argument of a variable's name, or null.
+MLOC_NOINLINE static const mlocMessageValue* Argument(Resolution* r, uint32_t variable)
 {
     if (r->probe)
     {
@@ -113,7 +93,7 @@ static const mlocMessageValue* Argument(Resolution* r, uint32_t variable)
     size_t length = Field(r, messageVariables, variable, 1);
     for (size_t i = 0; i < r->argumentCount; i++)
     {
-        if (SameName(&r->arguments[i], name, length))
+        if (mlocSameName(&r->arguments[i], name, length))
         {
             return &r->arguments[i].value;
         }
@@ -127,6 +107,20 @@ static Value Make(ValueKind kind)
     memset(&v, 0, sizeof v);
     v.kind = kind;
     return v;
+}
+
+// Makes a value of a kind in place, its other fields zero (no copy on
+// the recursion's frames).
+static void SetKind(Value* v, ValueKind kind)
+{
+    memset(v, 0, sizeof *v);
+    v->kind = kind;
+}
+
+static void SetFallbackVariable(Value* v, uint32_t variable)
+{
+    SetKind(v, valueFallbackVariable);
+    v->variable = variable;
 }
 
 static Value FallbackVariable(uint32_t variable)
@@ -155,40 +149,62 @@ Value mlocExpressionFallback(const Resolution* r, uint32_t expression)
     return v;
 }
 
-Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_t within)
+static void ResolveInto(Resolution* r, uint32_t expression, Value* out);
+
+// An argument's value, or a fallback with the fault reported.
+MLOC_NOINLINE static void ArgumentInto(Resolution* r, uint32_t variable, uint32_t at, Value* out)
 {
-    uint32_t d = BoundBy(r, variable);
-    if (d != messageUnbound && Field(r, messageDeclarations, d, 2) != within)
-    {
-        // Call-by-name resolves a declaration at each reference; its
-        // faults are reported the first time it is resolved aloud, and
-        // quietly after.
-        uint8_t bit = (uint8_t)(1u << (d % 8));
-        bool again = (r->reported[d / 8] & bit) != 0;
-        if (r->quiet == 0)
-        {
-            r->reported[d / 8] |= bit;
-        }
-        r->quiet += again;
-        Value v = mlocResolveExpression(r, Field(r, messageDeclarations, d, 2));
-        r->quiet -= again;
-        return IsFallback(v.kind) ? FallbackVariable(variable) : v;
-    }
     const mlocMessageValue* argument = Argument(r, variable);
     if (argument == NULL)
     {
         mlocReportFault(r, mloc_messageFaultUnresolvedVariable, at);
-        return FallbackVariable(variable);
+        *out = FallbackVariable(variable);
+        return;
     }
-    Value v = Make(valueArgument);
-    v.argument = argument;
-    v.variable = variable;
+    *out = Make(valueArgument);
+    out->argument = argument;
+    out->variable = variable;
     if (argument->kind == mloc_messageValueString)
     {
-        v.kind = valueText;
-        v.text = (const uint8_t*)argument->as.string.text;
-        v.length = argument->as.string.length;
+        out->kind = valueText;
+        out->text = (const uint8_t*)argument->as.string.text;
+        out->length = argument->as.string.length;
     }
+}
+
+// A variable's value into out, the recursion's half that stays small:
+// a declaration's expression is resolved straight into the caller's
+// value.
+static void VariableInto(Resolution* r, uint32_t variable, uint32_t at, uint32_t within, Value* out)
+{
+    uint32_t d = BoundBy(r, variable);
+    if (d == messageUnbound || Field(r, messageDeclarations, d, 2) == within)
+    {
+        ArgumentInto(r, variable, at, out);
+        return;
+    }
+    // Call-by-name resolves a declaration at each reference; its faults
+    // are reported the first time it is resolved aloud, and quietly
+    // after.
+    uint8_t bit = (uint8_t)(1u << (d % 8));
+    bool again = (r->reported[d / 8] & bit) != 0;
+    if (r->quiet == 0)
+    {
+        r->reported[d / 8] |= bit;
+    }
+    r->quiet += again;
+    ResolveInto(r, Field(r, messageDeclarations, d, 2), out);
+    r->quiet -= again;
+    if (IsFallback(out->kind))
+    {
+        SetFallbackVariable(out, variable);
+    }
+}
+
+Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_t within)
+{
+    Value v;
+    VariableInto(r, variable, at, within, &v);
     return v;
 }
 
@@ -240,7 +256,8 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
 // Option resolution's report for a run of parameters: each option
 // whose variable fails to resolve is a bad option (and is read as a
 // fallback later).
-static void CheckParameters(Resolution* r, uint32_t first, uint32_t count, uint32_t at)
+MLOC_NOINLINE static void CheckParameters(Resolution* r, uint32_t first, uint32_t count,
+                                          uint32_t at)
 {
     for (uint32_t p = first; p < first + count; p++)
     {
@@ -311,7 +328,7 @@ static bool TextIs(const Value* v, const char* text)
 // of ltr, rtl, auto and inherit, u:id anything with a string; another
 // value is a bad option and ignored (a failed variable already was).
 // Other u: options are ignored.
-static Directed UnicodeOptions(Resolution* r, uint32_t expression)
+MLOC_NOINLINE static Directed UnicodeOptions(Resolution* r, uint32_t expression)
 {
     uint32_t first = Field(r, messageExpressions, expression, 5);
     uint32_t count = Field(r, messageExpressions, expression, 6);
@@ -378,7 +395,7 @@ void mlocResolveMarkup(Resolution* r, uint32_t markup)
 // :string: the string value of its operand (text, an argument other than
 // an object, another :string's; not a function's value); over a failed
 // operand a value that matches no key and is written as that fallback.
-static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
+MLOC_NOINLINE static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     bool good =
@@ -401,7 +418,8 @@ static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
     return v;
 }
 
-static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot, const Value* operand)
+MLOC_NOINLINE static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot,
+                                       const Value* operand)
 {
     if (r->probe)
     {
@@ -508,27 +526,6 @@ static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool*
     return o;
 }
 
-// A numeric argument's decimal (a currency amount's amount); false for
-// another kind or a number past a decimal's limits.
-static bool ArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
-{
-    switch (argument->kind)
-    {
-    case mloc_messageValueInteger:
-        return mlocMakeDecimal(argument->as.integer, out) == mloc_success;
-    case mloc_messageValueDouble:
-        return mlocMakeShortestDecimal(argument->as.number, out) == mloc_success;
-    case mloc_messageValueDecimal:
-        *out = *argument->as.decimal;
-        return true;
-    case mloc_messageValueCurrency:
-        *out = *argument->as.currency.amount;
-        return true;
-    default:
-        return false;
-    }
-}
-
 // The number a number function's operand gives: a number literal (or a
 // string argument that is one), a numeric argument, or a number value,
 // whose options pass on. mloc_messageFaultBadOperand for anything else.
@@ -563,7 +560,7 @@ static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function
             return mloc_messageFaultUnsupportedOperation;
         }
     }
-    else if (kind != valueArgument || !ArgumentDecimal(operand->argument, &decimal))
+    else if (kind != valueArgument || !mlocArgumentDecimal(operand->argument, &decimal))
     {
         return mloc_messageFaultBadOperand;
     }
@@ -587,7 +584,7 @@ static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function
 // An :offset value: its operand's number, function and options, plus or
 // minus its one add or subtract option (a digit size). None of them,
 // both, or a bad value is a bad option and the expression falls back.
-static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* operand)
+MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* operand)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     NumberValue n;
@@ -646,8 +643,8 @@ static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* oper
 
 // A :number, :integer, :percent or :currency value: its operand's number, the options passed
 // on, then the expression's own (u: options aside), checked together.
-static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction function,
-                           const Value* operand)
+MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
+                                         NumberFunction function, const Value* operand)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     NumberValue n;
@@ -713,50 +710,22 @@ static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction fu
     return v;
 }
 
-Value mlocResolveExpression(Resolution* r, uint32_t expression)
+// An expression's function applied to its resolved operand (null for
+// none), into out: off the recursion's frames, as only options recurse
+// from here.
+MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slot,
+                                const Value* given, Value* out)
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
-    if (r->budget == 0)
-    {
-        // Past the limit (functions reading options again and again):
-        // reported once, even while quiet.
-        if (!r->exhausted)
-        {
-            r->exhausted = true;
-            uint32_t quiet = r->quiet;
-            r->quiet = 0;
-            mlocReportFault(r, mloc_messageFaultUnsupportedOperation, at);
-            r->quiet = quiet;
-        }
-        return mlocExpressionFallback(r, expression);
-    }
-    r->budget--;
-    uint32_t operandKind = Field(r, messageExpressions, expression, 0);
-    Value operand = Make(valueText);
-    if (operandKind == operandVariable)
-    {
-        operand =
-            mlocResolveVariable(r, Field(r, messageExpressions, expression, 1), at, expression);
-    }
-    else if (operandKind == operandLiteral)
-    {
-        operand.text = Pool(r, Field(r, messageExpressions, expression, 1));
-        operand.length = Field(r, messageExpressions, expression, 2);
-    }
-    uint32_t slot = SlotOf(r, expression);
-    if (slot == messageFunctionNone)
-    {
-        return operand;
-    }
     if (slot == messageFunctionUnknown)
     {
         mlocReportFault(r, mloc_messageFaultUnknownFunction, at);
-        return mlocExpressionFallback(r, expression);
+        *out = mlocExpressionFallback(r, expression);
+        return;
     }
     CheckParameters(r, Field(r, messageExpressions, expression, 5),
                     Field(r, messageExpressions, expression, 6), at);
     Directed d = UnicodeOptions(r, expression);
-    const Value* given = operandKind == operandNone ? NULL : &operand;
     Value v;
     if (slot == messageFunctionString)
     {
@@ -787,73 +756,65 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
         v.direction = d.isolate ? d.direction : v.direction;
         v.isolate = d.isolate;
     }
+    *out = v;
+}
+
+// Past the resolution limit (functions reading options again and
+// again): reported once, even while quiet.
+MLOC_NOINLINE static void ExhaustedInto(Resolution* r, uint32_t expression, Value* out)
+{
+    if (!r->exhausted)
+    {
+        r->exhausted = true;
+        uint32_t quiet = r->quiet;
+        r->quiet = 0;
+        mlocReportFault(r, mloc_messageFaultUnsupportedOperation,
+                        Field(r, messageExpressions, expression, 7));
+        r->quiet = quiet;
+    }
+    *out = mlocExpressionFallback(r, expression);
+}
+
+// An expression's value into out. A chain of declarations recurses
+// through here and VariableInto, so each level holds its operand alone.
+static void ResolveInto(Resolution* r, uint32_t expression, Value* out)
+{
+    if (r->budget == 0)
+    {
+        ExhaustedInto(r, expression, out);
+        return;
+    }
+    r->budget--;
+    uint32_t operandKind = Field(r, messageExpressions, expression, 0);
+    uint32_t slot = SlotOf(r, expression);
+    // With no function the operand is the value, resolved into out.
+    Value operand;
+    Value* into = slot == messageFunctionNone ? out : &operand;
+    if (operandKind == operandVariable)
+    {
+        VariableInto(r, Field(r, messageExpressions, expression, 1),
+                     Field(r, messageExpressions, expression, 7), expression, into);
+    }
+    else
+    {
+        SetKind(into, valueText);
+        if (operandKind == operandLiteral)
+        {
+            into->text = Pool(r, Field(r, messageExpressions, expression, 1));
+            into->length = Field(r, messageExpressions, expression, 2);
+        }
+    }
+    if (slot != messageFunctionNone)
+    {
+        Apply(r, expression, slot, operandKind == operandNone ? NULL : &operand, out);
+    }
+}
+
+Value mlocResolveExpression(Resolution* r, uint32_t expression)
+{
+    Value v;
+    ResolveInto(r, expression, &v);
     return v;
-}
-
-bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
-                        size_t* lengthOut)
-{
-    mlocDecimal decimal;
-    mlocOutput out = {digits, capacity, 0, NULL, NULL};
-    if (!ArgumentDecimal(argument, &decimal) || mlocFormatDecimal(&decimal, &out) != mloc_success)
-    {
-        return false;
-    }
-    if (argument->kind == mloc_messageValueCurrency)
-    {
-        // The amount and the code, as ICU4J writes a CurrencyAmount.
-        if (out.length + 4 > capacity)
-        {
-            return false;
-        }
-        digits[out.length] = ' ';
-        mlocUpperCode(argument->as.currency.code, digits + out.length + 1);
-        out.length += 4;
-    }
-    *lengthOut = out.length;
-    return true;
-}
-
-bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
-                       mlocMessageFaultKind* faultOut)
-{
-    *faultOut = mloc_messageFaultNone;
-    const char* text = (const char*)value->text;
-    size_t size = value->length;
-    char digits[64];
-    if (value->behind == valueArgument)
-    {
-        if (!mlocArgumentDigits(value->argument, digits, sizeof digits, &size))
-        {
-            return false;
-        }
-        text = digits;
-    }
-    else if (value->behind != valueText)
-    {
-        // Over a failed operand: no key matches.
-        return false;
-    }
-    if (size == length && (size == 0 || memcmp(text, key, length) == 0))
-    {
-        return true;
-    }
-    muniQuickCheck answer = muni_quickCheckNo;
-    if (size == 0 || muniCheckNormalization(text, size, muni_nfc, &answer).status != muni_success ||
-        answer == muni_quickCheckYes)
-    {
-        return false;
-    }
-    char normal[256];
-    size_t needed = 0;
-    muniTextResult result =
-        muniNormalize(text, size, muni_nfc, muni_convertStrict, normal, sizeof normal, &needed);
-    if (result.status != muni_success)
-    {
-        *faultOut = mloc_messageFaultUnsupportedOperation;
-        return false;
-    }
-    return needed == length && memcmp(normal, key, length) == 0;
 }
 
 // The call a function's entry received, or false.

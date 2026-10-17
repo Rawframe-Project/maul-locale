@@ -227,5 +227,21 @@ bool PrintMessageStack(void)
     }
     printf("%-18s %10zu bytes\n", "stack-plural", StackOf(s_bound[2]));
     printf("%-18s %10zu bytes\n", "stack-chain-64", StackOf(bound));
+    // Through options: .local $a1 = {1 :number maximumFractionDigits=$a0}
+    // and so on, as long a chain as binding takes (an option is resolved
+    // twice, so the resolutions double at each level).
+    length = (size_t)snprintf(source, sizeof(source), ".local $a0 = {1 :number}");
+    for (int i = 1; i < 14; i++)
+    {
+        length +=
+            (size_t)snprintf(source + length, sizeof(source) - length,
+                             " .local $a%d = {1 :number maximumFractionDigits=$a%d}", i, i - 1);
+    }
+    snprintf(source + length, sizeof(source) - length, " {{{$a13 :number}}}");
+    if (!Make(source, compiled, sizeof(compiled), &compiledSize, bound, sizeof(bound)))
+    {
+        return false;
+    }
+    printf("%-18s %10zu bytes\n", "stack-options-15", StackOf(bound));
     return true;
 }

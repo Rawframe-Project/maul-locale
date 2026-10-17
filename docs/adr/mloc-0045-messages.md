@@ -122,7 +122,10 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   not depend on the probe or the buffer's address.
   `mlocFormatMessage` resolves each placeholder and selector where it
   stands, a local through its declaration on the stack (call-by-name: no
-  memory per call), an argument by its name after NFC; it writes text,
+  memory per call; a level of a chain holds its operand alone, the
+  functions' work off the recursion, so a chain of 64 takes about 24 KB
+  and the longest chain through options binding allows, 14, about
+  26 KB), an argument by its name after NFC; it writes text,
   writes markup as nothing, and writes a failed expression as its
   fallback (`{$x}`, `{|literal|}` with "\" and "|" escaped,
   `{:function}`), each fault (kind and source offset) kept in an optional
