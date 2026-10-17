@@ -196,6 +196,10 @@ static const Case s_cases[] = {
     {"ga", "short ---------- ---------- -", "2 - - 1 11 - - - - -", "2 bl, 1 lá, 11 u"},
     {"es", "long ---------- ---------- -", "- - - 1 11 - - - - -", "1 día y 11 horas"},
     {"he", "long ---------- ---------- -", "- - - 2 1 - - - - -", "יומיים, 1 שעה"},
+    // An item longer than the room the text pass keeps it in (75 bytes
+    // of Myanmar digits and name), written again where it goes.
+    {"my", "long ---------- ---------- -", "- - - - 1 - 9007199254737391 - - -",
+     "၁ နာရီ၊ ၉,၀၀၇,၁၉၉,၂၅၄,၇၃၇,၃၉၁ စက္ကန့်"},
 };
 
 static mlocDurationFieldStyle FieldStyle(char c)

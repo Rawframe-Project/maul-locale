@@ -18,6 +18,9 @@ enum
 {
     // The bytes of an item's start the contextual changes read.
     itemLead = 16,
+    // The bytes of an item's text kept for the text pass, which writes
+    // each item once; a longer item is written again where it goes.
+    itemText = 64,
 };
 
 // An item of the list: a unit-style field, or the numeric fields.
@@ -206,22 +209,33 @@ static void WriteItem(void* context, uint32_t index, NumberWriter* w)
 }
 
 // Writes the items joined by the list, each item's start read first for
-// the contextual changes.
+// the contextual changes. The text pass keeps each item's text and joins
+// the texts, so that each is formatted once; the parts pass, or an item
+// longer than its room, writes them again where they go.
 static void WriteItems(Writing* g, NumberWriter* w)
 {
     if (g->count == 0)
     {
         return;
     }
-    char leads[mloc_durationFieldCount][itemLead];
+    char texts[mloc_durationFieldCount][itemText];
     ListItem items[mloc_durationFieldCount];
+    bool kept = w->parts == nullptr;
     for (uint32_t i = 0; i < g->count; i++)
     {
-        NumberWriter lead = {.buffer = leads[i], .capacity = itemLead};
-        WriteItem(g, i, &lead);
-        items[i] = (ListItem){leads[i], lead.length < itemLead ? lead.length : itemLead};
+        NumberWriter text = {.buffer = texts[i], .capacity = kept ? itemText : itemLead};
+        WriteItem(g, i, &text);
+        kept = kept && text.length <= itemText;
+        items[i] = (ListItem){texts[i], text.length < itemText ? text.length : itemText};
     }
-    mlocWriteList(&g->format->list, items, g->count, WriteItem, g, w);
+    if (!kept)
+    {
+        for (uint32_t i = 0; i < g->count; i++)
+        {
+            items[i].length = items[i].length < itemLead ? items[i].length : itemLead;
+        }
+    }
+    mlocWriteList(&g->format->list, items, g->count, kept ? nullptr : WriteItem, g, w);
 }
 
 // The duration formatter of an opaque value, its pool read in place, or
