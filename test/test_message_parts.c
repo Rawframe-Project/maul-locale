@@ -346,8 +346,13 @@ static void TestAccess(void)
     CHECK(mlocFindMessagePartOption(s_bound, number, "u:dir", 5, &p) == mloc_errorNotFound &&
               mlocFindMessagePartOption(s_bound, number, "translate", 9, &p) ==
                   mloc_errorNotFound &&
-              mlocFindMessagePartOption(s_bound, number, NULL, 0, &p) == mloc_errorNotFound,
-          "an option the expression lacks, an attribute's name, no name");
+              mlocFindMessagePartOption(s_bound, number, NULL, 0, &p) == mloc_errorNotFound &&
+              mlocFindMessagePartOption(s_bound, number, "u:ix", 4, &p) == mloc_errorNotFound &&
+              mlocFindMessagePartOption(s_bound, number, "href", 4, &p) == mloc_errorNotFound &&
+              mlocGetMessagePartInfo(s_bound, parts.list[6].kind, &info) == mloc_success &&
+              info.nameLength == 1 && memcmp(info.name, "a", 1) == 0,
+          "an option the expression lacks or the next one has, an attribute's name, no name; a "
+          "closing markup's name");
     CHECK(mlocGetMessagePartInfo(s_bound, mloc_messagePartText, &info) == mloc_errorInvalid &&
               mlocGetMessagePartInfo(s_bound, mloc_messagePartIsolation, &info) ==
                   mloc_errorInvalid &&
