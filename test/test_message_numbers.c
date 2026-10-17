@@ -143,6 +143,10 @@ static void TestOptions(void)
               Formats("{1 :number select=up}", NULL, 0, "1", s_badOption) &&
               Formats("{1 :number frobnicate=up @attr=1}", NULL, 0, "1", NULL),
           "a bad value is a bad option; an unknown option and attributes are ignored");
+    CHECK(Formats("{1 :number select=plural signDisplay=auto useGrouping=auto "
+                  "trailingZeroDisplay=auto roundingPriority=auto roundingMode=halfExpand}",
+                  NULL, 0, "1", NULL),
+          "each option's first value is taken");
     mlocDecimal two;
     mlocDecimal half;
     CHECK(mlocParseDecimal("2", 1, &two).status == mloc_success &&
@@ -163,6 +167,14 @@ static void TestOptions(void)
                   "1.00", NULL) &&
               Formats("{1 :number minimumFractionDigits=$h}", values, 5, "1", s_badOption),
           "from a number value; not from a fraction");
+    int object = 1;
+    mlocMessageArgument limits[2] = {
+        {"n", 1, {mloc_messageValueInteger, 0, {.integer = 99}}},
+        {"o", 1, {mloc_messageValueObject, 1, {.object = &object}}},
+    };
+    CHECK(Formats("{1 :number maximumFractionDigits=$n}", limits, 2, "1", NULL) &&
+              Formats("{1 :number minimumFractionDigits=$o}", limits, 2, "1", s_badOption),
+          "99 is a digit size; an object is none");
 }
 
 static void TestOperands(void)
@@ -222,7 +234,7 @@ static void TestSelection(void)
               Formats(".local $n = {2 :number} .match $n one {{one}} 1 {{=1}} * {{other}}", NULL, 0,
                       "other", NULL),
           "an exact key beats a keyword");
-    CHECK(Formats(".local $n = {1e3 :number} .match $n 1000 {{=1000}} 1e3 {{e}} * {{other}}", NULL,
+    CHECK(Formats(".local $n = {1e3 :number} .match $n 1e3 {{e}} 1000 {{=1000}} * {{other}}", NULL,
                   0, "=1000", NULL) &&
               Formats(".local $n = {1.50 :number} .match $n 1.50 {{a}} 1.5 {{b}} * {{other}}", NULL,
                       0, "b", NULL) &&
@@ -252,6 +264,16 @@ static void TestSelection(void)
     CHECK(Formats(".local $n = {1 :number select=$e} .match $n 1 {{one}} * {{other}}", &exact, 1,
                   "other", variable),
           "select from a variable cannot select");
+    static const mlocMessageFaultKind missing[] = {mloc_messageFaultUnresolvedVariable,
+                                                   mloc_messageFaultBadOption,
+                                                   mloc_messageFaultBadSelector, 0};
+    static const mlocMessageFaultKind other[] = {mloc_messageFaultUnresolvedVariable,
+                                                 mloc_messageFaultBadOption, 0};
+    CHECK(Formats(".local $n = {1 :number select=$missing} .match $n 1 {{one}} * {{other}}", NULL,
+                  0, "other", missing) &&
+              Formats(".local $n = {1 :number selectX=$missing} .match $n 1 {{one}} * {{other}}",
+                      NULL, 0, "one", other),
+          "a select whose variable failed cannot select; another option can fail");
     char text[256];
     snprintf(text, sizeof text, ".local $n = {1e60 :number} .match $n 1%060d {{big}} * {{other}}",
              0);

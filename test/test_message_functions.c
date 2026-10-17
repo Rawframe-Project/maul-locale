@@ -17,8 +17,8 @@
 
 static mlocLocale s_locale;
 static mlocDataSet s_data;
-static uint8_t s_compiled[1 << 16];
-static uint8_t s_bound[1 << 16];
+static uint8_t s_compiled[1 << 18];
+static uint8_t s_bound[1 << 18];
 static char s_text[1 << 12];
 
 // What echo resolves to: a short text it writes back.
@@ -555,6 +555,20 @@ static void TestResolutionLimit(void)
     CHECK(BindOnly(text) == mloc_errorInvalid, "and pass the limit");
     snprintf(text + at, sizeof text - at, " {{{#b k=$a1}{|x| :string k=$a10}}}");
     CHECK(BindOnly(text) == mloc_success, "a markup counts only its own options");
+
+    // 1024 declarations bind, 1025 are refused.
+    static char many[32768];
+    for (int count = 1024; count <= 1025; count++)
+    {
+        size_t used = 0;
+        for (int i = 0; i < count; i++)
+        {
+            used += (size_t)snprintf(many + used, sizeof many - used, ".local $d%d={1}", i);
+        }
+        snprintf(many + used, sizeof many - used, "{{}}");
+        CHECK(BindOnly(many) == (count == 1024 ? mloc_success : mloc_errorInvalid),
+              "1024 declarations bind, 1025 are refused");
+    }
 
     // A bind writes exactly the size it measured, nothing past it.
     size_t size = 0;
