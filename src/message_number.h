@@ -22,6 +22,9 @@ typedef enum NumberFunction
 {
     numberFunctionNumber = 0,
     numberFunctionInteger = 1,
+    numberFunctionPercent = 2,
+    // Not a value's function: :offset keeps its operand's.
+    numberFunctionOffset = 3,
 } NumberFunction;
 
 // How a number value selects.
@@ -94,8 +97,10 @@ NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* deci
 
 // Starts a value from an operand that is a number value: its decimal
 // (for :integer, rounded to an integer), and the options the function
-// passes on. Returns mloc_messageFaultBadOption when the operand's
-// select may not pass on (the value then cannot select), else none.
+// passes on (:offset all, its function kept; :percent drops minimum
+// integer digits, increment and select). Returns
+// mloc_messageFaultBadOption when the operand's select may not pass on
+// (the value then cannot select), else none.
 mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberValue* operand,
                                          NumberValue* out);
 
@@ -103,13 +108,22 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
 // Returns false when rounding passes the decimal's limits.
 bool mlocMakeInteger(NumberValue* value);
 
-// Sets an option the expression gives by name: mloc_messageFaultNone,
-// also for a name the function does not know (ignored);
+// Sets an option the expression gives by name, for the function whose
+// expression it is: mloc_messageFaultNone, also for a name the function
+// does not take (ignored);
 // mloc_messageFaultBadOption for a value that is not one of the option's
 // (ignored), or a select that is not a literal (the value then cannot
 // select).
-mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, const uint8_t* name, size_t length,
+mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction function,
+                                         const uint8_t* name, size_t length,
                                          const NumberOption* option);
+
+// Adds a small integer to a value (:offset), keeping the fraction digits
+// it shows; false when the sum needs more digits than a decimal holds.
+bool mlocOffsetNumber(NumberValue* value, int32_t delta);
+
+// A digit size option's value, 0 to 99, or -1.
+int mlocDigitSize(const NumberOption* option);
 
 // Checks the options together as ECMA-402's digit options do: a maximum
 // under its minimum, or an increment without equal fraction limits, is

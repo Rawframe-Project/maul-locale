@@ -82,7 +82,8 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
                                          NumberValue* out)
 {
     *out = *operand;
-    out->function = (uint8_t)function;
+    // :offset keeps its operand's function and so its defaults.
+    out->function = function == numberFunctionOffset ? operand->function : (uint8_t)function;
     out->selectable = true;
     out->select = numberSelectPlural;
     out->given &= (uint16_t)~numberGivenSelect;
@@ -93,12 +94,147 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
         out->given &= (uint16_t)~(numberGivenMinFraction | numberGivenMaxFraction |
                                   numberGivenMinSignificant);
     }
+    if (function == numberFunctionPercent)
+    {
+        // :percent drops these, select without a fault: it always
+        // selects by plural rules.
+        out->given &= (uint16_t)~(numberGivenMinInteger | numberGivenIncrement);
+        out->increment = 1;
+        return mloc_messageFaultNone;
+    }
     if ((operand->given & numberGivenSelect) != 0)
     {
         out->selectable = false;
         return mloc_messageFaultBadOption;
     }
     return mloc_messageFaultNone;
+}
+
+enum
+{
+    // The digits an offset sum is worked in: a decimal's 40 and room for
+    // a carry; a sum needing more is refused when read back.
+    offsetDigits = 48,
+};
+
+// Adds b to a (little-endian digit arrays of offsetDigits); false on a
+// carry out.
+static bool AddDigits(uint8_t* a, const uint8_t* b)
+{
+    unsigned carry = 0;
+    for (int i = 0; i < offsetDigits; i++)
+    {
+        unsigned sum = a[i] + b[i] + carry;
+        a[i] = (uint8_t)(sum % 10);
+        carry = sum / 10;
+    }
+    return carry == 0;
+}
+
+// Subtracts b from a, a not less than b.
+static void SubtractDigits(uint8_t* a, const uint8_t* b)
+{
+    int borrow = 0;
+    for (int i = 0; i < offsetDigits; i++)
+    {
+        int difference = a[i] - b[i] - borrow;
+        borrow = difference < 0;
+        a[i] = (uint8_t)(difference + (borrow ? 10 : 0));
+    }
+}
+
+static int CompareDigits(const uint8_t* a, const uint8_t* b)
+{
+    for (int i = offsetDigits - 1; i >= 0; i--)
+    {
+        if (a[i] != b[i])
+        {
+            return a[i] < b[i] ? -1 : 1;
+        }
+    }
+    return 0;
+}
+
+bool mlocOffsetNumber(NumberValue* value, int32_t delta)
+{
+    mlocDecimal* d = &value->decimal;
+    if (d->kind != mloc_decimalFinite || delta == 0)
+    {
+        return true;
+    }
+    // The value as an integer of digits from its last power (or the
+    // units, if lower) up: a sum needs every power between them.
+    int64_t low = d->exponent < 0 ? d->exponent : 0;
+    // The delta, at most 99, reaches the tens.
+    int64_t top = d->count > 0 ? d->exponent + d->count - 1 : 0;
+    top = top > 1 ? top : 1;
+    if (top - low + 2 > offsetDigits)
+    {
+        return false;
+    }
+    uint8_t a[offsetDigits] = {0};
+    uint8_t b[offsetDigits] = {0};
+    for (int i = 0; i < d->count; i++)
+    {
+        a[d->exponent + d->count - 1 - i - low] = d->digits[i];
+    }
+    uint32_t magnitude = (uint32_t)(delta < 0 ? -(int64_t)delta : delta);
+    for (int64_t at = -low; magnitude > 0; at++, magnitude /= 10)
+    {
+        b[at] = (uint8_t)(magnitude % 10);
+    }
+    bool negative = d->negative != 0 && d->count > 0;
+    bool subtract = negative != (delta < 0);
+    if (!subtract)
+    {
+        if (!AddDigits(a, b))
+        {
+            return false;
+        }
+    }
+    else if (CompareDigits(a, b) >= 0)
+    {
+        SubtractDigits(a, b);
+    }
+    else
+    {
+        SubtractDigits(b, a);
+        memcpy(a, b, sizeof a);
+        negative = !negative;
+    }
+    // Written plainly and read back, so the decimal stays the library's.
+    char text[offsetDigits + 4];
+    size_t length = 0;
+    int first = offsetDigits - 1;
+    while (first > -low && a[first] == 0)
+    {
+        first--;
+    }
+    if (negative)
+    {
+        text[length++] = '-';
+    }
+    for (int i = first; i >= 0; i--)
+    {
+        if (i == -low - 1)
+        {
+            text[length++] = '.';
+        }
+        text[length++] = (char)('0' + a[i]);
+    }
+    mlocDecimal sum;
+    if (mlocParseDecimal(text, length, &sum).status != mloc_success)
+    {
+        return false;
+    }
+    // A zero sum keeps no sign; the fraction digits shown stay.
+    sum.negative = sum.count == 0 ? 0 : sum.negative;
+    if (mlocShowFractionDigits(&sum, d->fractionDigits) != mloc_success)
+    {
+        return false;
+    }
+    *d = sum;
+    return true;
 }
 
 bool mlocMakeInteger(NumberValue* value)
@@ -127,7 +263,7 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
 
 // A digit size option's value, 0 to 99, or -1: "0" or one or two digits
 // not starting with 0, or a whole number of that range.
-static int DigitSize(const NumberOption* option)
+int mlocDigitSize(const NumberOption* option)
 {
     if (option->hasText)
     {
@@ -185,7 +321,7 @@ static bool NameIs(const uint8_t* name, size_t length, const char* text)
 // Sets a digit size field and its bit; false for a bad value.
 static bool SetDigits(NumberValue* v, uint8_t* field, uint16_t bit, const NumberOption* option)
 {
-    int digits = DigitSize(option);
+    int digits = mlocDigitSize(option);
     if (digits < 0)
     {
         return false;
@@ -221,60 +357,74 @@ static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
                                       "halfCeil",   "halfFloor", "ceil",
                                       "floor",      "expand",    "trunc"};
 
-// Sets the options :number and :integer share; -1 for a name they do
-// not, else whether the value was good.
-static int SetSharedOption(NumberValue* v, const uint8_t* name, size_t length,
-                           const NumberOption* option)
+// The options each function takes, by name and the bit they set;
+// another name is ignored.
+static const struct
 {
-    if (NameIs(name, length, "signDisplay"))
+    const char* name;
+    uint16_t bit;
+} s_options[] = {
+    {"select", numberGivenSelect},
+    {"signDisplay", numberGivenSign},
+    {"useGrouping", numberGivenGrouping},
+    {"minimumIntegerDigits", numberGivenMinInteger},
+    {"minimumFractionDigits", numberGivenMinFraction},
+    {"maximumFractionDigits", numberGivenMaxFraction},
+    {"minimumSignificantDigits", numberGivenMinSignificant},
+    {"maximumSignificantDigits", numberGivenMaxSignificant},
+    {"trailingZeroDisplay", numberGivenTrailingZeros},
+    {"roundingPriority", numberGivenPriority},
+    {"roundingIncrement", numberGivenIncrement},
+    {"roundingMode", numberGivenMode},
+};
+
+// The options a function takes (UTS #35 Part 9's lists), as given bits.
+static uint16_t OptionsOf(NumberFunction function)
+{
+    switch (function)
     {
-        return SetChoice(v, &v->sign, numberGivenSign, option, s_signs, 5);
+    case numberFunctionInteger:
+        return numberGivenSelect | numberGivenSign | numberGivenGrouping | numberGivenMinInteger |
+               numberGivenMaxSignificant;
+    case numberFunctionPercent:
+        return numberGivenSign | numberGivenGrouping | numberGivenMinFraction |
+               numberGivenMaxFraction | numberGivenMinSignificant | numberGivenMaxSignificant |
+               numberGivenTrailingZeros | numberGivenPriority | numberGivenMode;
+    case numberFunctionNumber:
+        return 0xFFF;
+    default:
+        return 0;
     }
-    if (NameIs(name, length, "useGrouping"))
-    {
-        return SetChoice(v, &v->grouping, numberGivenGrouping, option, s_groupings, 4);
-    }
-    if (NameIs(name, length, "minimumIntegerDigits"))
-    {
-        return SetDigits(v, &v->minInteger, numberGivenMinInteger, option);
-    }
-    if (NameIs(name, length, "maximumSignificantDigits"))
-    {
-        return SetDigits(v, &v->maxSignificant, numberGivenMaxSignificant, option);
-    }
-    return -1;
 }
 
-// Sets the options only :number has; -1 for a name it does not.
-static int SetNumberOnlyOption(NumberValue* v, const uint8_t* name, size_t length,
-                               const NumberOption* option)
+// Sets one option by its bit; whether its value was good.
+static bool SetByBit(NumberValue* v, uint16_t bit, const NumberOption* option)
 {
-    if (NameIs(name, length, "minimumFractionDigits"))
+    switch (bit)
     {
-        return SetDigits(v, &v->minFraction, numberGivenMinFraction, option);
-    }
-    if (NameIs(name, length, "maximumFractionDigits"))
-    {
-        return SetDigits(v, &v->maxFraction, numberGivenMaxFraction, option);
-    }
-    if (NameIs(name, length, "minimumSignificantDigits"))
-    {
-        return SetDigits(v, &v->minSignificant, numberGivenMinSignificant, option);
-    }
-    if (NameIs(name, length, "trailingZeroDisplay"))
-    {
-        return SetChoice(v, &v->trailingZeros, numberGivenTrailingZeros, option, s_trailingZeros,
-                         2);
-    }
-    if (NameIs(name, length, "roundingPriority"))
-    {
-        return SetChoice(v, &v->priority, numberGivenPriority, option, s_priorities, 3);
-    }
-    if (NameIs(name, length, "roundingMode"))
-    {
-        return SetChoice(v, &v->mode, numberGivenMode, option, s_modes, 9);
-    }
-    if (NameIs(name, length, "roundingIncrement"))
+    case numberGivenSelect:
+        return SetChoice(v, &v->select, bit, option, s_selects, 3);
+    case numberGivenSign:
+        return SetChoice(v, &v->sign, bit, option, s_signs, 5);
+    case numberGivenGrouping:
+        return SetChoice(v, &v->grouping, bit, option, s_groupings, 4);
+    case numberGivenMinInteger:
+        return SetDigits(v, &v->minInteger, bit, option);
+    case numberGivenMinFraction:
+        return SetDigits(v, &v->minFraction, bit, option);
+    case numberGivenMaxFraction:
+        return SetDigits(v, &v->maxFraction, bit, option);
+    case numberGivenMinSignificant:
+        return SetDigits(v, &v->minSignificant, bit, option);
+    case numberGivenMaxSignificant:
+        return SetDigits(v, &v->maxSignificant, bit, option);
+    case numberGivenTrailingZeros:
+        return SetChoice(v, &v->trailingZeros, bit, option, s_trailingZeros, 2);
+    case numberGivenPriority:
+        return SetChoice(v, &v->priority, bit, option, s_priorities, 3);
+    case numberGivenMode:
+        return SetChoice(v, &v->mode, bit, option, s_modes, 9);
+    default:
     {
         uint16_t increment = Increment(option);
         if (increment == 0)
@@ -282,35 +432,33 @@ static int SetNumberOnlyOption(NumberValue* v, const uint8_t* name, size_t lengt
             return false;
         }
         v->increment = increment;
-        v->given |= numberGivenIncrement;
+        v->given |= bit;
         return true;
     }
-    return -1;
+    }
 }
 
-mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, const uint8_t* name, size_t length,
+mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction function,
+                                         const uint8_t* name, size_t length,
                                          const NumberOption* option)
 {
-    int good = -1;
-    if (NameIs(name, length, "select"))
+    uint16_t taken = OptionsOf(function);
+    for (size_t i = 0; i < sizeof s_options / sizeof s_options[0]; i++)
     {
-        if (!option->literal)
+        uint16_t bit = s_options[i].bit;
+        if ((taken & bit) == 0 || !NameIs(name, length, s_options[i].name))
+        {
+            continue;
+        }
+        if (bit == numberGivenSelect && !option->literal)
         {
             // Keys depend on it, so a translator must see it.
             value->selectable = false;
             return mloc_messageFaultBadOption;
         }
-        good = SetChoice(value, &value->select, numberGivenSelect, option, s_selects, 3);
+        return SetByBit(value, bit, option) ? mloc_messageFaultNone : mloc_messageFaultBadOption;
     }
-    if (good < 0)
-    {
-        good = SetSharedOption(value, name, length, option);
-    }
-    if (good < 0 && value->function == numberFunctionNumber)
-    {
-        good = SetNumberOnlyOption(value, name, length, option);
-    }
-    return good == 0 ? mloc_messageFaultBadOption : mloc_messageFaultNone;
+    return mloc_messageFaultNone;
 }
 
 // Sets a precision's fraction digits as ECMA-402 does from the
@@ -337,6 +485,8 @@ static void FractionDigits(const NumberValue* v, uint8_t minDefault, uint8_t max
 static mlocPrecision PrecisionOf(const NumberValue* v)
 {
     uint8_t minDefault = 0;
+    // ECMA-402's defaults: three for decimals, none for integers and
+    // percents.
     uint8_t maxDefault = v->function == numberFunctionNumber ? 3 : 0;
     bool increment = (v->given & numberGivenIncrement) != 0 && v->increment != 1;
     if (increment)
@@ -426,6 +576,7 @@ mlocNumberOptions mlocNumberFormatOptions(const NumberValue* v)
     o.signDisplay = (v->given & numberGivenSign) != 0 ? (mlocSignDisplay)v->sign : mloc_signAuto;
     o.minIntegerDigits = (v->given & numberGivenMinInteger) != 0 ? v->minInteger : 0;
     o.precision = PrecisionOf(v);
+    o.style = v->function == numberFunctionPercent ? mloc_numberPercent : mloc_numberDecimal;
     return o;
 }
 
@@ -491,8 +642,11 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const mlocDataSet
     }
     mlocDecimal rounded = value->decimal;
     mlocPrecision precision = PrecisionOf(value);
+    // A percent selects on its value times 100, as it formats.
     if (rounded.kind == mloc_decimalFinite &&
-        mlocApplyPrecision(&precision, &rounded) != mloc_success)
+        ((value->function == numberFunctionPercent &&
+          mlocScaleDecimal(&rounded, 2) != mloc_success) ||
+         mlocApplyPrecision(&precision, &rounded) != mloc_success))
     {
         return mloc_messageFaultUnsupportedOperation;
     }

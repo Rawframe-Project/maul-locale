@@ -167,6 +167,15 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   declaration at each reference; its faults are reported the first
   time, a bit a declaration on the stack, so a bound message has at
   most 1,024 declarations.
+- **`:offset` and `:percent`:** `:offset` takes exactly one of `add`
+  and `subtract`, a digit size (none, both or a bad value is a Bad
+  Option and a fallback), ignores other options, and keeps its
+  operand's function and options; its value is the exact sum, and a sum
+  past a decimal's 40 digits is an Unsupported Operation and a
+  fallback. `:percent` drops its operand's minimum integer digits,
+  increment and `select` without a fault, shows 0 fraction digits by
+  default, and formats and selects (plural categories and exact keys)
+  on its value times 100, the value itself kept for a later function.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -202,10 +211,12 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   into a buffer of exactly the size measured.
 - Formatting: every case of the suite the functions built so far reach
   formats to its text with its errors in order, or, where the suite
-  gives no text, with its errors (238, isolated as each case says, the
+  gives no text, with its errors (267, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
   `test_message_numbers` checks `:number` and `:integer`'s defaults,
-  options and their refusals, operands, inheritance and selection; `test_message_functions` checks the function
+  options and their refusals, operands, inheritance and selection,
+  `:offset`'s sums, refusals and overflow, and `:percent`'s scaling,
+  dropped options and selection; `test_message_functions` checks the function
   table's refusals, each operand kind, the accessors, a function's
   faults in resolve and format, `:string`'s operands, selection with and
   without better entries, the selector limit, and the resolution limit

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The number functions of messages (maul-locale/message.h, record
-// mloc-0045): :number and :integer formatting with ECMA-402's defaults
+// mloc-0045): :number, :integer, :offset and :percent formatting with ECMA-402's defaults
 // and options, the operands and option values they take and refuse,
 // options passed on from a number value, and selection by exact value
 // and plural category, with the faults of each.
@@ -280,6 +280,68 @@ static void TestSelection(void)
     CHECK(Formats(text, NULL, 0, "big", NULL), "a long key of few digits matches");
 }
 
+static void TestOffset(void)
+{
+    CHECK(Formats("{41 :offset add=1} {1 :offset subtract=3} {-1 :offset add=1}", NULL, 0,
+                  "42 -2 0", NULL) &&
+              Formats("{0.25 :offset subtract=1} {41 :offset add=1 foo=13}", NULL, 0, "-0.75 42",
+                      NULL),
+          "an offset adds or subtracts, across zero, other options ignored");
+    CHECK(Formats(".local $x = {1.5 :number minimumFractionDigits=2 signDisplay=always} "
+                  "{{{$x :offset add=1}}}",
+                  NULL, 0, "+2.50", NULL) &&
+              Formats(".local $x = {0.5 :percent} {{{$x :offset add=1}}}", NULL, 0, "150%", NULL),
+          "the value keeps its operand's options and function");
+    mlocMessageArgument arguments[] = {
+        {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},
+        {"d", 1, {mloc_messageValueString, 0, {.string = {"2", 1}}}},
+        {"x", 1, {mloc_messageValueString, 0, {.string = {"x", 1}}}},
+    };
+    CHECK(Formats("{$n :offset subtract=1} {$n :offset add=$d}", arguments, 3, "4 7", NULL),
+          "an argument operand, and a digit size from a variable");
+    CHECK(Formats("{1 :offset}", NULL, 0, "{|1|}", s_badOption) &&
+              Formats("{1 :offset add=1 subtract=1}", NULL, 0, "{|1|}", s_badOption) &&
+              Formats("{1 :offset add=100}", NULL, 0, "{|1|}", s_badOption) &&
+              Formats("{1 :offset add=01}", NULL, 0, "{|1|}", s_badOption) &&
+              Formats("{$n :offset add=$x}", arguments, 3, "{$n}", s_badOption),
+          "none, both, or a bad value is a bad option and a fallback");
+    static const mlocMessageFaultKind missing[] = {mloc_messageFaultUnresolvedVariable,
+                                                   mloc_messageFaultBadOption, 0};
+    CHECK(Formats("{1 :offset add=$missing}", NULL, 0, "{|1|}", missing) &&
+              Formats("{foo :offset add=1}", NULL, 0, "{|foo|}", s_badOperand),
+          "a failed variable is reported once; a bad operand falls back");
+    static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
+    CHECK(Formats("{1e-50 :offset add=1}", NULL, 0, "{|1e-50|}", unsupported),
+          "a sum past a decimal's digits is unsupported");
+    CHECK(Formats(".local $o = {$n :offset subtract=4} .match $o 1 {{=1}} one {{one}} * {{other}}",
+                  arguments, 3, "=1", NULL) &&
+              Formats(".local $o = {$n :offset subtract=4} .match $o one {{one}} * {{other}}",
+                      arguments, 3, "one", NULL),
+          "an offset value selects on its sum");
+}
+
+static void TestPercent(void)
+{
+    CHECK(Formats("{0.5 :percent} {0.123 :percent} {0.1234 :percent maximumFractionDigits=1}", NULL,
+                  0, "50% 12% 12.3%", NULL),
+          "a percent is its value times 100, no fraction digits by default");
+    CHECK(Formats(".local $x = {0.5 :number minimumIntegerDigits=3} {{{$x :percent}}}", NULL, 0,
+                  "50%", NULL) &&
+              Formats("{0.5 :percent minimumIntegerDigits=3}", NULL, 0, "50%", NULL),
+          ":percent drops and ignores minimum integer digits");
+    CHECK(Formats(".local $p = {0.01 :percent} .match $p one {{one}} * {{other}}", NULL, 0, "one",
+                  NULL) &&
+              Formats(".local $p = {1 :percent} .match $p one {{one}} * {{other}}", NULL, 0,
+                      "other", NULL) &&
+              Formats(".local $p = {0.07 :percent} .match $p 7 {{=7}} * {{other}}", NULL, 0, "=7",
+                      NULL),
+          "a percent selects on its value times 100");
+    CHECK(Formats(".local $x = {0.01 :number select=exact} .local $p = {$x :percent} "
+                  ".match $p one {{one}} * {{other}}",
+                  NULL, 0, "one", NULL),
+          "an operand's select is dropped without a fault");
+}
+
 static void TestDirection(void)
 {
     static mlocMessageFormatter isolatingEn;
@@ -310,6 +372,8 @@ int main(void)
     TestOperands();
     TestInheritance();
     TestSelection();
+    TestOffset();
+    TestPercent();
     TestDirection();
     return s_failures == 0 ? 0 : 1;
 }

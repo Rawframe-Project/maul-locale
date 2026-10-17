@@ -53,7 +53,9 @@ enum
     messageFunctionString = 2,
     messageFunctionNumber = 3,
     messageFunctionInteger = 4,
-    messageFunctionProgram = 5,
+    messageFunctionOffset = 5,
+    messageFunctionPercent = 6,
+    messageFunctionProgram = 7,
 };
 
 // Slots take 24 bits: the program's functions are fewer.

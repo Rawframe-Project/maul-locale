@@ -828,8 +828,7 @@ static bool FormatsNow(const SuiteCase* c)
         at += length + (at[length] == ',' ? 1 : 0);
     }
     // The default functions, and numbers written by locale, come later.
-    static const char* const later[] = {":offset", ":currency", ":percent",
-                                        ":unit",   ":date",     ":time"};
+    static const char* const later[] = {":currency", ":unit", ":date", ":time"};
     for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
     {
         if (strstr(c->source, later[i]) != NULL)
@@ -1142,7 +1141,7 @@ static void TestSuiteFormat(void)
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 238, "every case the functions built so far reach formats");
+    CHECK(formatted >= 267, "every case the functions built so far reach formats");
 }
 
 static mlocMessageFormatter s_formatter;

@@ -535,11 +535,72 @@ static mlocMessageFaultKind NumberOperand(Resolution* r, NumberFunction function
     {
         return mloc_messageFaultBadOperand;
     }
-    *out = mlocMakeNumberValue(function, &decimal);
+    // :offset over a plain number formats as :number does.
+    *out = mlocMakeNumberValue(function == numberFunctionOffset ? numberFunctionNumber : function,
+                               &decimal);
     return mloc_messageFaultNone;
 }
 
-// A :number or :integer value: its operand's number, the options passed
+// An :offset value: its operand's number, function and options, plus or
+// minus its one add or subtract option (a digit size). None of them,
+// both, or a bad value is a bad option and the expression falls back.
+static Value ResolveOffset(Resolution* r, uint32_t expression, const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    NumberValue n;
+    mlocMessageFaultKind fault = NumberOperand(r, numberFunctionOffset, operand, at, &n);
+    if (fault != mloc_messageFaultNone)
+    {
+        mlocReportFault(r, fault, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t found = 0;
+    int32_t delta = 0;
+    bool reported = false;
+    bool bad = false;
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        uint32_t kind = Field(r, messageParameters, p, 0);
+        const uint8_t* name = Pool(r, Field(r, messageParameters, p, 1));
+        size_t length = Field(r, messageParameters, p, 2);
+        bool add = length == 3 && memcmp(name, "add", 3) == 0;
+        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
+            (!add && !(length == 8 && memcmp(name, "subtract", 8) == 0)))
+        {
+            continue;
+        }
+        found++;
+        bool failed = false;
+        NumberOption option = NumberOptionAt(r, p, at, &failed);
+        int digits = failed ? -1 : mlocDigitSize(&option);
+        // A failed variable was reported as a bad option already.
+        reported = reported || failed;
+        bad = bad || digits < 0;
+        delta = add ? digits : -digits;
+    }
+    if (found != 1 || bad)
+    {
+        if (!reported)
+        {
+            mlocReportFault(r, mloc_messageFaultBadOption, at);
+        }
+        return mlocExpressionFallback(r, expression);
+    }
+    if (!mlocOffsetNumber(&n, delta))
+    {
+        // A sum past a decimal's digits, which UTS #35 lets refuse.
+        mlocReportFault(r, mloc_messageFaultUnsupportedOperation, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    Value v = Make(valueNumber);
+    v.number = n;
+    v.direction = r->formatter.direction;
+    return v;
+}
+
+// A :number, :integer or :percent value: its operand's number, the options passed
 // on, then the expression's own (u: options aside), checked together.
 static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction function,
                            const Value* operand)
@@ -577,7 +638,7 @@ static Value ResolveNumber(Resolution* r, uint32_t expression, NumberFunction fu
             n.selectable = n.selectable && !(length == 6 && memcmp(name, "select", 6) == 0);
             continue;
         }
-        fault = mlocSetNumberOption(&n, name, length, &option);
+        fault = mlocSetNumberOption(&n, function, name, length, &option);
         if (fault != mloc_messageFaultNone)
         {
             mlocReportFault(r, fault, at);
@@ -643,10 +704,16 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
     {
         v = StringOf(r, expression, given);
     }
-    else if (slot == messageFunctionNumber || slot == messageFunctionInteger)
+    else if (slot == messageFunctionOffset)
     {
-        NumberFunction function =
-            slot == messageFunctionNumber ? numberFunctionNumber : numberFunctionInteger;
+        v = ResolveOffset(r, expression, given);
+    }
+    else if (slot == messageFunctionNumber || slot == messageFunctionInteger ||
+             slot == messageFunctionPercent)
+    {
+        NumberFunction function = slot == messageFunctionNumber    ? numberFunctionNumber
+                                  : slot == messageFunctionInteger ? numberFunctionInteger
+                                                                   : numberFunctionPercent;
         v = ResolveNumber(r, expression, function, given);
     }
     else
