@@ -120,7 +120,8 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
 }
 
 // Writes a value; false when the expression's own fallback must stand
-// in its place (a fault reported, or :string over a failed operand).
+// in its place (a fault reported, a fallback value, which is the
+// expression's, or :string over a failed operand).
 static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
 {
     ValueKind kind = v->kind == valueString ? v->behind : v->kind;
@@ -137,12 +138,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
     {
         return PutResolved(f, v, expression);
     }
-    if (v->kind == valueString)
-    {
-        return false;
-    }
-    PutFallback(f, v);
-    return true;
+    return false;
 }
 
 // The isolate a placeholder opens with by the Default Bidi Strategy

@@ -545,6 +545,29 @@ static void TestResolutionLimit(void)
     CHECK(BindOnly(text) == mloc_success, "markup's options count");
     snprintf(text + at, sizeof text - at, " {{{#b k1=$a10 k2=$a10}{/b k=$a10}}}");
     CHECK(BindOnly(text) == mloc_errorInvalid, "and pass the limit");
+    snprintf(text + at, sizeof text - at, " {{{#b k=$a1}{|x| :string k=$a10}}}");
+    CHECK(BindOnly(text) == mloc_success, "a markup counts only its own options");
+
+    // A bind writes exactly the size it measured, nothing past it.
+    size_t size = 0;
+    size_t needed = 0;
+    mlocMessageError error;
+    static uint8_t guarded[256];
+    CHECK(mlocCompileMessage("{#b k=$x}", 9, s_compiled, sizeof s_compiled, &size, &error).status ==
+                  mloc_success &&
+              mlocBindMessage(s_using, s_compiled, size, NULL, 0, &needed) == mloc_errorCapacity &&
+              needed + 8 <= sizeof guarded,
+          "a message of markup alone measures");
+    memset(guarded, 0xA5, sizeof guarded);
+    size_t bound = 0;
+    bool untouched = true;
+    CHECK(mlocBindMessage(s_using, s_compiled, size, guarded, needed, &bound) == mloc_success,
+          "it binds into that size");
+    for (size_t i = needed; i < sizeof guarded; i++)
+    {
+        untouched = untouched && guarded[i] == 0xA5;
+    }
+    CHECK(untouched, "no byte past the bound message is written");
 
     const mlocMessageArgument* a = s_arguments;
     static const mlocMessageFaultKind out[] = {mloc_messageFaultUnsupportedOperation, 0};
@@ -614,6 +637,11 @@ static void TestIsolation(void)
               Formats("{#b k=$missing}x{/b u:id=$s}", a, 4, "x", markupVariable) &&
               Formats("{#b u:id=x k=$s}x{/b}{#c/}", a, 4, "x", NULL),
           "markup's options resolve, and u:dir on it is a bad option");
+    CHECK(Formats("{#b}{|a| :x:ltr u:dir=rtl}", a, 4, RLI "a" PDI, NULL),
+          "markup reads only its own options");
+    static const mlocMessageFaultKind failed[] = {mloc_messageFaultFunction, 0};
+    CHECK(Formats("{|fail| :x:echo u:dir=rtl}", a, 4, FSI "{|fail|}" PDI, failed),
+          "u:dir does not direct a fallback");
 
     s_using = &ar;
     CHECK(Formats("{|a| :x:ltr}{|b| :x:rtl}{$s}", a, 4, LRI "a" PDI RLI "b" PDI FSI "S" PDI, NULL),
