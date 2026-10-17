@@ -122,7 +122,7 @@ static int ReadScripts(const char* metadata, char (*codes)[4], char* errorOut, s
 int ScriptDirectionsSource(const char* metadata, char** sourceOut, size_t* sourceSizeOut,
                            char* errorOut, size_t errorCapacity)
 {
-    static char codes[maxScripts][4];
+    char codes[maxScripts][4];
     int count = ReadScripts(metadata, codes, errorOut, errorCapacity);
     if (count == 0)
     {

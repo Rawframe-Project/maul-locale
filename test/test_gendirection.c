@@ -57,7 +57,9 @@ static void TestTable(void)
 
 static void TestRefusals(void)
 {
-    CHECK(Refused("Arab; 3; 0628; SA; 1; RECOMMENDED\n"), "a line without the RTL field");
+    CHECK(Refused("Arab; 3; 0628; SA; 1; RECOMMENDED\n") &&
+              Refused("Arab; 3; 0628; SA; 1; RECOMMENDED; YES\nLatn; 2; 004C\n"),
+          "a line without the RTL field");
     CHECK(Refused("arab; 3; 0628; SA; 1; RECOMMENDED; YES\n") &&
               Refused("Arabic; 3; 0628; SA; 1; RECOMMENDED; YES\n") &&
               Refused("ArAb; 3; 0628; SA; 1; RECOMMENDED; YES\n"),
@@ -77,6 +79,13 @@ int main(int argc, char** argv)
         char* source = nullptr;
         size_t size = 0;
         char common[4096];
+        snprintf(common, sizeof(common), "%s/test/gendirection", argv[1]);
+        CHECK(GenerateScriptDirections(common, &source, &size, s_error, sizeof(s_error)) &&
+                  strstr(source, "    {'H', 'e', 'b', 'r'},\n    {'T', 'h', 'a', 'a'},\n};") !=
+                      nullptr,
+              "the file is read whole");
+        free(source);
+        source = nullptr;
         snprintf(common, sizeof(common), "%s/no-such-directory", argv[1]);
         CHECK(!GenerateScriptDirections(common, &source, &size, s_error, sizeof(s_error)) &&
                   strstr(s_error, "cannot open") != nullptr,

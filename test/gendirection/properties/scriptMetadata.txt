@@ -1,0 +1,5 @@
+# A fixture for test_gendirection: three scripts, two right to left.
+
+Latn; 2; 004C; IT; 1; RECOMMENDED; NO; NO; MIN; NO; YES
+Thaa; 9; 0780; MV; 1; RECOMMENDED; YES; NO; YES; NO; NO
+Hebr; 9; 05D0; IL; 1; RECOMMENDED; YES; NO; MIN; NO; NO
