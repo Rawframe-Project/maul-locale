@@ -232,6 +232,8 @@ static mlocMessageFaultKind PartsFormat(void* context, const mlocMessageResolved
     if (output->part != NULL)
     {
         output->part(output->context, 0x105, 0, 1);
+        output->part(output->context, 0x7F, 0, 1);
+        output->part(output->context, 0x80, 1, 1);
         output->part(output->context, 0x81, 1, 1);
     }
     return mloc_messageFaultNone;
@@ -249,9 +251,10 @@ static void TestProgramParts(void)
           "a formatter with x:parts is made");
     Part wanted[] = {{mloc_messagePartText, 0, 1},
                      {Message(mloc_messagePartPlaceholder, 0), 1, 2},
-                     {0x105, 1, 1}};
+                     {0x105, 1, 1},
+                     {0x7F, 1, 1}};
     s_formats = 0;
-    CHECK(PartsAre(&formatter, "<{|z| :x:parts}", NULL, 0, "<ab", wanted, 3) && s_formats == 3,
+    CHECK(PartsAre(&formatter, "<{|z| :x:parts}", NULL, 0, "<ab", wanted, 4) && s_formats == 3,
           "a program function's parts are passed on but those of a message part's kind, its "
           "format entry called again to measure and to report");
     Parts parts;
@@ -265,6 +268,9 @@ static void TestProgramParts(void)
 static void TestNoParts(void)
 {
     Parts parts;
+    Part hello[] = {{mloc_messagePartText, 0, 5}};
+    CHECK(PartsAre(&s_strict, "Hello", NULL, 0, "Hello", hello, 1),
+          "a strict formatter reports parts when nothing fails");
     CHECK(Format(&s_plain, "Hello {|World|}", NULL, 0, 5, &parts) == mloc_errorCapacity &&
               parts.count == 0,
           "no parts when the text does not fit");
@@ -286,6 +292,86 @@ static void TestNoParts(void)
               mlocFormatMessage(s_bound, NULL, 0, &output, &faults) == mloc_withFallbacks &&
               faults.count == 2 && parts.count == 3,
           "faults are counted once though the text is written twice");
+}
+
+// Whether a parameter is as wanted (a null value for none).
+static bool ParameterIs(const mlocMessageParameter* p, bool attribute, bool variable,
+                        const char* name, const char* value)
+{
+    return p->attribute == attribute && p->variable == variable && p->nameLength == strlen(name) &&
+           memcmp(p->name, name, p->nameLength) == 0 &&
+           (value == NULL
+                ? p->value == NULL && p->valueLength == 0
+                : p->valueLength == strlen(value) && memcmp(p->value, value, p->valueLength) == 0);
+}
+
+static void TestAccess(void)
+{
+    mlocMessageArgument t = {"t", 1, {mloc_messageValueString, 0, {.string = {"T", 1}}}};
+    Parts parts;
+    CHECK(Format(&s_plain,
+                 "{|1| :number u:id=total minimumFractionDigits=2 @translate=no}{#a href=|u| "
+                 "title=$t @k}{$t}{/a}{$x}",
+                 &t, 1, sizeof s_text, &parts) == mloc_withFallbacks &&
+              parts.count == 8,
+          "a message with options, attributes and markup formats");
+    uint32_t number = parts.list[0].kind;
+    uint32_t open = parts.list[4].kind;
+    uint32_t bare = parts.list[5].kind;
+    uint32_t fallback = parts.list[7].kind;
+    mlocMessagePartInfo info;
+    mlocMessageParameter p;
+    CHECK(mlocGetMessagePartInfo(s_bound, number, &info) == mloc_success && info.nameLength == 6 &&
+              memcmp(info.name, "number", 6) == 0 && info.parameterCount == 3 &&
+              mlocFindMessagePartOption(s_bound, number, "u:id", 4, &p) == mloc_success &&
+              ParameterIs(&p, false, false, "u:id", "total") &&
+              mlocGetMessagePartParameter(s_bound, number, 1, &p) == mloc_success &&
+              ParameterIs(&p, false, false, "minimumFractionDigits", "2") &&
+              mlocGetMessagePartParameter(s_bound, number, 2, &p) == mloc_success &&
+              ParameterIs(&p, true, false, "translate", "no"),
+          "a placeholder's function, options and attributes, u:id found by name");
+    CHECK(mlocGetMessagePartInfo(s_bound, open, &info) == mloc_success && info.nameLength == 1 &&
+              memcmp(info.name, "a", 1) == 0 && info.parameterCount == 3 &&
+              mlocGetMessagePartParameter(s_bound, open, 0, &p) == mloc_success &&
+              ParameterIs(&p, false, false, "href", "u") &&
+              mlocGetMessagePartParameter(s_bound, open, 1, &p) == mloc_success &&
+              ParameterIs(&p, false, true, "title", "t") &&
+              mlocGetMessagePartParameter(s_bound, open, 2, &p) == mloc_success &&
+              ParameterIs(&p, true, false, "k", NULL),
+          "a markup's name, a literal and a variable option, a bare attribute");
+    CHECK(mlocGetMessagePartInfo(s_bound, bare, &info) == mloc_success && info.name == NULL &&
+              info.nameLength == 0 && info.parameterCount == 0 &&
+              mlocGetMessagePartInfo(s_bound, fallback, &info) == mloc_success && info.name == NULL,
+          "an expression without a function, and a fallback's");
+    CHECK(mlocFindMessagePartOption(s_bound, number, "u:dir", 5, &p) == mloc_errorNotFound &&
+              mlocFindMessagePartOption(s_bound, number, "translate", 9, &p) ==
+                  mloc_errorNotFound &&
+              mlocFindMessagePartOption(s_bound, number, NULL, 0, &p) == mloc_errorNotFound,
+          "an option the expression lacks, an attribute's name, no name");
+    CHECK(mlocGetMessagePartInfo(s_bound, mloc_messagePartText, &info) == mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_bound, mloc_messagePartIsolation, &info) ==
+                  mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_bound, mloc_numberPartInteger, &info) == mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_bound, Message(mloc_messagePartPlaceholder, 3), &info) ==
+                  mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_bound, Message(mloc_messagePartPlaceholder, 2), &info) ==
+                  mloc_success &&
+              mlocGetMessagePartInfo(s_bound, Message(mloc_messagePartMarkupClose, 2), &info) ==
+                  mloc_errorInvalid &&
+              mlocGetMessagePartInfo(NULL, number, &info) == mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_bound, number, NULL) == mloc_errorInvalid &&
+              mlocGetMessagePartInfo(s_compiled, number, &info) == mloc_errorInvalid,
+          "parts that name nothing, indices past the records, null pointers, no bound message");
+    CHECK(mlocGetMessagePartParameter(s_bound, number, 3, &p) == mloc_errorInvalid &&
+              mlocGetMessagePartParameter(s_bound, bare, 0, &p) == mloc_errorInvalid &&
+              mlocGetMessagePartParameter(s_bound, number, 0, NULL) == mloc_errorInvalid &&
+              mlocGetMessagePartParameter(s_bound, mloc_messagePartText, 0, &p) ==
+                  mloc_errorInvalid &&
+              mlocFindMessagePartOption(s_bound, number, NULL, 1, &p) == mloc_errorInvalid &&
+              mlocFindMessagePartOption(s_bound, number, "u:id", 4, NULL) == mloc_errorInvalid &&
+              mlocFindMessagePartOption(s_bound, mloc_messagePartText, "u:id", 4, &p) ==
+                  mloc_errorInvalid,
+          "parameter indices past the count, and the other refusals");
 }
 
 static void TestTiling(void)
@@ -346,6 +432,7 @@ int main(void)
     TestInner();
     TestProgramParts();
     TestNoParts();
+    TestAccess();
     TestTiling();
     return s_failures == 0 ? 0 : 1;
 }

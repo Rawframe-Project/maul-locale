@@ -108,7 +108,7 @@ Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
 messages compiled into caller memory, checked for syntax and the data
 model, written back as canonical text, and bound and formatted with
 named arguments.
-The library has 159 public functions.
+The library has 162 public functions.
 
 ## Building
 

@@ -557,6 +557,78 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageLocale(const mlocMessageCall* call,
                                                             mlocLocale* localeOut);
 
+    // What a placeholder's or markup's part names, as the message wrote
+    // it: an expression's function (none for an expression without one)
+    // or a markup's name, and how many options and attributes it has.
+    typedef struct mlocMessagePartInfo
+    {
+        const char* name;
+        size_t nameLength;
+        uint32_t parameterCount;
+    } mlocMessagePartInfo;
+
+    // An option or attribute as the message wrote it: its name, and its
+    // value, a literal's text or a variable's name (variable then set),
+    // none (null, 0) for an attribute without one. A value from a
+    // variable is the call's; the bound message keeps only the name.
+    typedef struct mlocMessageParameter
+    {
+        bool attribute;
+        bool variable;
+        const char* name;
+        size_t nameLength;
+        const char* value;
+        size_t valueLength;
+    } mlocMessageParameter;
+
+    /// Reads what a part of a formatted message names: a placeholder's or
+    /// fallback's expression, or a markup, by the index its kind holds
+    /// (mlocMessagePart).
+    ///
+    /// @param bound    The bound message the part came from.
+    /// @param part     The part's kind, as reported.
+    /// @param infoOut  Receives what it names; its texts point into the
+    ///                 compiled message.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a bound
+    ///         message the library did not make, a part of another kind,
+    ///         or an index the message does not have.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartInfo(const void* bound, uint32_t part,
+                                                              mlocMessagePartInfo* infoOut);
+
+    /// Reads a placeholder's or markup's option or attribute by index, the
+    /// options first, in the message's order.
+    ///
+    /// @param bound         The bound message the part came from.
+    /// @param part          The part's kind, as reported.
+    /// @param index         The parameter's index, under its count.
+    /// @param parameterOut  Receives it; its texts point into the
+    ///                      compiled message.
+    /// @return mloc_success; mloc_errorInvalid as mlocGetMessagePartInfo,
+    ///         or for an index past the count.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartParameter(
+        const void* bound, uint32_t part, uint32_t index, mlocMessageParameter* parameterOut);
+
+    /// Finds a placeholder's or markup's option by name ("u:id" for its
+    /// identifier, which formatting to parts serves), as
+    /// mlocGetMessagePartParameter reads it.
+    ///
+    /// @param bound         The bound message the part came from.
+    /// @param part          The part's kind, as reported.
+    /// @param name          The option's name, UTF-8 in NFC.
+    /// @param length        Its length.
+    /// @param parameterOut  Receives it.
+    /// @return mloc_success; mloc_errorNotFound when it has no such
+    ///         option; mloc_errorInvalid as mlocGetMessagePartInfo.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocFindMessagePartOption(const void* bound, uint32_t part, const char* name, size_t length,
+                              mlocMessageParameter* parameterOut);
+
 #ifdef __cplusplus
 }
 #endif

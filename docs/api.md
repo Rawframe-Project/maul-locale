@@ -497,6 +497,21 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageLocale(const mlocMessageCall* c
 ```
 The locale a call formats for: the formatter's.  @param call        The call a function's resolve entry received. @param localeOut   Receives the locale. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread; the call is used by one thread at a time.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartInfo(const void* bound, uint32_t part, mlocMessagePartInfo* infoOut);
+```
+Reads what a part of a formatted message names: a placeholder's or fallback's expression, or a markup, by the index its kind holds (mlocMessagePart).  @param bound    The bound message the part came from. @param part     The part's kind, as reported. @param infoOut  Receives what it names; its texts point into the compiled message. @return mloc_success; mloc_errorInvalid for a null pointer, a bound message the library did not make, a part of another kind, or an index the message does not have. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartParameter( const void* bound, uint32_t part, uint32_t index, mlocMessageParameter* parameterOut);
+```
+Reads a placeholder's or markup's option or attribute by index, the options first, in the message's order.  @param bound         The bound message the part came from. @param part          The part's kind, as reported. @param index         The parameter's index, under its count. @param parameterOut  Receives it; its texts point into the compiled message. @return mloc_success; mloc_errorInvalid as mlocGetMessagePartInfo, or for an index past the count. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindMessagePartOption(const void* bound, uint32_t part, const char* name, size_t length, mlocMessageParameter* parameterOut);
+```
+Finds a placeholder's or markup's option by name ("u:id" for its identifier, which formatting to parts serves), as mlocGetMessagePartParameter reads it.  @param bound         The bound message the part came from. @param part          The part's kind, as reported. @param name          The option's name, UTF-8 in NFC. @param length        Its length. @param parameterOut  Receives it. @return mloc_success; mloc_errorNotFound when it has no such option; mloc_errorInvalid as mlocGetMessagePartInfo. @par Thread safety Safe from any thread.
+
 ## `names.h`
 
 Display names (UTS #35 Part 2, records mloc-0036 to mloc-0039): a locale's name for a language, script, region, variant, key, key's value or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's Intl.DisplayNames give them, for a subdivision, and for a whole locale. The names are in a data file of their own, names.mloc, and the subdivision names in another, subdivisions.mloc, which a program adds to its data set.
@@ -872,4 +887,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-159 functions across 18 headers.
+162 functions across 18 headers.

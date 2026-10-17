@@ -286,6 +286,11 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   2^24 expressions or markups, so an index fits. Program functions must
   give the same text each time: their format entry is called once more
   to measure and once more to report.
+  `mlocGetMessagePartInfo`, `mlocGetMessagePartParameter` and
+  `mlocFindMessagePartOption` read what a placeholder's, fallback's or
+  markup's part names from the bound message, as written: the function
+  or markup name, the options (a literal's text or a variable's name)
+  and attributes, `u:id` found by name.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -325,7 +330,7 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   `:test:` functions defined in the test as the suite describes them);
   `test_message_parts` checks parts of every piece, isolation marks,
   numbers' and dates' parts at their place, a program function's,
-  none on failure, faults counted once, and tiling;
+  none on failure, faults counted once, tiling, and the accessors;
   `test_message_dates` checks the date functions' options, operands,
   refusals, zones, inheritance and preparation, with `dates.mloc`,
   `zone-names.mloc` and the locale names in the set;

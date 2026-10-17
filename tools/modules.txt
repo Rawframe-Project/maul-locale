@@ -137,6 +137,7 @@ message_offset: message_number
 message_date: locale_keyword message_number
 message_value: message_date message_number
 message_resolve: message_bind message_date message_form message_number message_offset message_read message_value
+message_access: message_bind message_form message_read
 message_call: message_bind message_form message_read message_resolve
 message_prepare: bytes message_bind message_date message_form message_number message_read message_resolve
 message_format: decimal message_bind message_date message_form message_number message_prepare message_read message_resolve

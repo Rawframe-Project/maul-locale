@@ -185,7 +185,9 @@ format.
   reports text, placeholders, fallbacks, markup and isolation marks
   (`mlocMessagePart`, the expression's or markup's index in the upper
   24 bits) and, inside each placeholder, its number's or date's own
-  parts (mloc-0045).
+  parts; `mlocGetMessagePartInfo`, `mlocGetMessagePartParameter` and
+  `mlocFindMessagePartOption` read a part's function or markup name,
+  options and attributes, `u:id` among them (mloc-0045).
 - Messages show exact times in zones: instant and zoned date-time
   argument kinds, literals with Z, an offset or a zone annotation,
   `timeZone` (an identifier, an offset, `UTC` or `input`),
