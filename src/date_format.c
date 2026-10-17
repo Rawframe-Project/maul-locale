@@ -435,9 +435,13 @@ bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateValue* val
     {
         return false;
     }
-    // The Gregorian year the date's year begins in, and its own.
-    value->related = GregorianYear(in.day - value->fields.dayOfYear + 1);
-    value->pattern = PatternFor(f, &value->fields, GregorianYear(in.day));
+    // The Gregorian year the date's year begins in, and its own: the
+    // date's year in the Gregorian calendar.
+    bool gregorian = f->calendar == mloc_calendarGregorian;
+    value->related =
+        gregorian ? value->fields.year : GregorianYear(in.day - value->fields.dayOfYear + 1);
+    value->pattern =
+        PatternFor(f, &value->fields, gregorian ? value->fields.year : GregorianYear(in.day));
     return true;
 }
 
