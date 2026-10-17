@@ -177,6 +177,9 @@ format.
 - Messages format and select with `:offset` (exact sums, an overflow
   unsupported) and `:percent` (the value times 100, its operand's minimum
   integer digits, increment and `select` dropped) (mloc-0045).
+- A format call costs less: no clearing of its whole state or of each
+  value, record fields read inline, ASCII argument names compared
+  without an NFC check (mloc-0045).
 - A format call takes less stack: a chain of 64 declarations about
   24 KB instead of 108 KB (mloc-0045).
 - Binding a message prepares each number function's formatter and

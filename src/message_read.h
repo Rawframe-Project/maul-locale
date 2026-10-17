@@ -40,7 +40,12 @@ typedef struct MessageView
 mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view);
 
 // A record's 32-bit field.
-uint32_t mlocMessageField(const MessageView* view, uint32_t kind, uint32_t index, uint32_t field);
+static inline uint32_t mlocMessageField(const MessageView* view, uint32_t kind, uint32_t index,
+                                        uint32_t field)
+{
+    return mlocLoad32(view->bytes + view->start[kind] + index * messageRecordSizes[kind] +
+                      field * 4);
+}
 
 // The key of a variant for a selector: its kind and string.
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,

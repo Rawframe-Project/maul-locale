@@ -21,6 +21,17 @@ bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t leng
     {
         return true;
     }
+    // An ASCII name is NFC already, so it is the variable's only when the
+    // same bytes.
+    bool ascii = true;
+    for (size_t i = 0; i < a->nameLength && ascii; i++)
+    {
+        ascii = (uint8_t)a->name[i] < 0x80;
+    }
+    if (ascii)
+    {
+        return false;
+    }
     muniQuickCheck answer = muni_quickCheckNo;
     if (muniCheckNormalization(a->name, a->nameLength, muni_nfc, &answer).status != muni_success ||
         answer == muni_quickCheckYes)

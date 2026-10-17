@@ -11,12 +11,6 @@
 
 #include <string.h>
 
-uint32_t mlocMessageField(const MessageView* view, uint32_t kind, uint32_t index, uint32_t field)
-{
-    return mlocLoad32(view->bytes + view->start[kind] + index * messageRecordSizes[kind] +
-                      field * 4);
-}
-
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,
                         uint32_t* offsetOut, uint32_t* lengthOut)
 {

@@ -31,11 +31,6 @@ enum
 static_assert(sizeof(CallState) <= sizeof(mlocMessageCall), "a call's state fits its value");
 static_assert(sizeof(mlocMessageResolved) == 64, "a resolved value is 64 bytes");
 
-uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
-{
-    return mlocMessageField(&r->h.view, kind, index, field);
-}
-
 static uint32_t Field(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
 {
     return mlocMessageField(&r->h.view, kind, index, field);
@@ -109,12 +104,20 @@ static Value Make(ValueKind kind)
     return v;
 }
 
-// Makes a value of a kind in place, its other fields zero (no copy on
-// the recursion's frames).
+// Makes a value of a kind that holds no number or resolved value, in
+// place: its fields zero but the union, which such a kind never reads
+// (clearing all 128 bytes cost more than a short message's formatting).
 static void SetKind(Value* v, ValueKind kind)
 {
-    memset(v, 0, sizeof *v);
     v->kind = kind;
+    v->behind = valueText;
+    v->text = NULL;
+    v->length = 0;
+    v->argument = NULL;
+    v->variable = 0;
+    v->function = 0;
+    v->direction = mloc_directionUnknown;
+    v->isolate = false;
 }
 
 static void SetFallbackVariable(Value* v, uint32_t variable)
@@ -158,10 +161,10 @@ MLOC_NOINLINE static void ArgumentInto(Resolution* r, uint32_t variable, uint32_
     if (argument == NULL)
     {
         mlocReportFault(r, mloc_messageFaultUnresolvedVariable, at);
-        *out = FallbackVariable(variable);
+        SetFallbackVariable(out, variable);
         return;
     }
-    *out = Make(valueArgument);
+    SetKind(out, valueArgument);
     out->argument = argument;
     out->variable = variable;
     if (argument->kind == mloc_messageValueString)

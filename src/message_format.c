@@ -443,8 +443,9 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
 mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments,
                              size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults)
 {
+    // Each field set below rather than the whole state cleared: the
+    // clearing cost more than a short message's formatting.
     Formatting f;
-    memset(&f, 0, sizeof f);
     if (!mlocReadBound(bound, &f.r.h, &f.r.formatter) || output == NULL ||
         (output->buffer == NULL && output->capacity > 0) ||
         (arguments == NULL && argumentCount > 0) || !GoodArguments(arguments, argumentCount) ||
@@ -455,11 +456,18 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.words = mlocBoundWords(bound);
     f.r.arguments = arguments;
     f.r.argumentCount = argumentCount;
-    f.w.buffer = output->buffer;
-    f.w.capacity = output->capacity;
     f.r.faults = faults;
+    f.r.faultCount = 0;
+    f.r.quiet = 0;
     f.r.budget = messageResolutionLimit;
+    f.r.exhausted = false;
+    f.r.probe = false;
+    f.r.dynamic = false;
+    f.r.optionDepth = 0;
     const MessageView* v = &f.r.h.view;
+    // The reported bits of the declarations there are.
+    memset(f.r.reported, 0, (v->count[messageDeclarations] + 7) / 8);
+    f.w = (Writer){output->buffer, output->capacity, 0};
     if (v->count[messageVariants] == 0)
     {
         PutPattern(&f, 0, v->count[messagePieces]);

@@ -51,7 +51,11 @@ typedef struct Resolution
 } Resolution;
 
 // A record's field.
-uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field);
+static inline uint32_t mlocResolutionField(const Resolution* r, uint32_t kind, uint32_t index,
+                                           uint32_t field)
+{
+    return mlocMessageField(&r->h.view, kind, index, field);
+}
 
 // Reports a fault at a source offset.
 void mlocReportFault(Resolution* r, mlocMessageFaultKind kind, uint32_t at);
