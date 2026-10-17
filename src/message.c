@@ -14,6 +14,12 @@
 
 #include <string.h>
 
+// The longest text compiled. Its compiled form's counters are 32 bits:
+// the pool holds the text at most three times over (NFC expands a name
+// or key at most threefold), so a text under 1 GiB keeps every count and
+// offset, and the capacity measured, exact.
+static const size_t longestMessage = (size_t)1 << 30;
+
 static uint32_t UnicodeVersion(void)
 {
     muniVersion version = muniGetUnicodeVersion();
@@ -39,7 +45,7 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
         *errorOut = mloc_messageErrorNone;
     }
     if ((text == NULL && length > 0) || (buffer == NULL && capacity > 0) || sizeOut == NULL ||
-        length > UINT32_MAX)
+        length >= longestMessage)
     {
         return result;
     }

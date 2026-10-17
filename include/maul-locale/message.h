@@ -62,7 +62,7 @@ extern "C"
     ///         byte offset where the error is found; mloc_errorCapacity
     ///         when the buffer is too small, nothing then being written
     ///         that the caller can use; mloc_errorInvalid for a null
-    ///         pointer, or a text of 2^32 bytes or more.
+    ///         pointer, or a text of 1 GiB or more.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocTextResult mlocCompileMessage(const char* text, size_t length,

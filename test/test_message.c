@@ -186,6 +186,9 @@ static void TestRefused(void)
     CHECK(result.status == mloc_errorInvalid, "a null buffer with a capacity is refused");
     result = mlocCompileMessage("a", 1, s_buffer, sizeof s_buffer, NULL, &error);
     CHECK(result.status == mloc_errorInvalid, "a null size is refused");
+    // Refused before a byte is read: the text here is one byte long.
+    result = mlocCompileMessage("a", (size_t)1 << 30, s_buffer, sizeof s_buffer, &size, &error);
+    CHECK(result.status == mloc_errorInvalid, "a text of 1 GiB is refused");
     result = mlocCompileMessage("", 0, s_buffer, sizeof s_buffer, &size, NULL);
     CHECK(result.status == mloc_success, "the empty message compiles, without an error out");
 }
