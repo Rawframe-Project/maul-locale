@@ -221,6 +221,10 @@ static void TestLayout(void)
               PoolIs(Field(messageParameters, 0, 1), Field(messageParameters, 0, 2), "k") &&
               PoolIs(Field(messageParameters, 0, 3), Field(messageParameters, 0, 4), "v"),
           "its function, option and offset are kept");
+    CHECK(Compile("{:ns:fn}", &size) &&
+              PoolIs(Field(messageExpressions, 0, 3), Field(messageExpressions, 0, 4), "ns:fn") &&
+              Field(messageExpressions, 0, 0) == operandNone,
+          "a function's namespace is kept with its name");
 }
 
 // Texts cut short of bytes that would continue them: nothing past the
