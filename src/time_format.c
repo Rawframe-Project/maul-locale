@@ -72,7 +72,7 @@ void mlocWriteZoneField(void* context, const uint8_t* item, NumberWriter* w)
     mlocZoneStyle style = mlocZoneFieldStyle(item[1], item[2]);
     if (z != nullptr && style != mloc_zoneStyleNone)
     {
-        mlocWriteZone(z->zone, style, z->timeZone, z->instant, w);
+        mlocWriteZone(z->zone, style, z->at, w);
     }
 }
 
@@ -434,14 +434,15 @@ mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter, const mlocTi
                                 const mlocInstant* instant, mlocOutput* output)
 {
     ZonedTimeFormat f;
+    ZoneAt at;
     mlocDateTime local;
-    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || instant == nullptr ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
-        mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &local) != mloc_success)
+    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocReadZonedLocal(&f.zone, zone, instant, &at, &local))
     {
         return mloc_errorInvalid;
     }
-    ZoneWriting writing = {&f.zone, zone, instant};
+    ZoneWriting writing = {&f.zone, &at};
     return Write(&f.time, &local.time, &writing, output);
 }
 
@@ -553,16 +554,16 @@ mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter, const m
                                      mlocOutput* output)
 {
     ZonedTimeFormat f;
+    ZoneAt at[2];
     mlocDateTime local[2];
-    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || start == nullptr ||
-        end == nullptr || output == nullptr ||
+    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
         (output->buffer == nullptr && output->capacity != 0) ||
-        mlocGetDateTimeFor(zone, start, mloc_calendarIso8601, &local[0]) != mloc_success ||
-        mlocGetDateTimeFor(zone, end, mloc_calendarIso8601, &local[1]) != mloc_success)
+        !mlocReadZonedLocal(&f.zone, zone, start, &at[0], &local[0]) ||
+        !mlocReadZonedLocal(&f.zone, zone, end, &at[1], &local[1]))
     {
         return mloc_errorInvalid;
     }
-    ZoneWriting zones[2] = {{&f.zone, zone, start}, {&f.zone, zone, end}};
+    ZoneWriting zones[2] = {{&f.zone, &at[0]}, {&f.zone, &at[1]}};
     TimeRangeWriting g = {
         .f = &f, .times = {&local[0].time, &local[1].time}, .zones = {&zones[0], &zones[1]}};
     const TimeRange* r = &f.time.range;

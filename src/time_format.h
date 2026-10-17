@@ -43,8 +43,7 @@ bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);
 typedef struct ZoneWriting
 {
     const ZoneFormat* zone;
-    const mlocTimeZone* timeZone;
-    const mlocInstant* instant;
+    const ZoneAt* at;
 } ZoneWriting;
 
 void mlocWriteZoneField(void* context, const uint8_t* item, NumberWriter* w);

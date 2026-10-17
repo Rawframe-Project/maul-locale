@@ -303,15 +303,16 @@ mlocResult mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter,
 {
     DateTimeFormat f;
     DateValue date;
+    ZoneAt at;
     mlocDateTime local;
-    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || instant == nullptr ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
-        mlocGetDateTimeFor(zone, instant, mloc_calendarIso8601, &local) != mloc_success ||
+    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
+        (output->buffer == nullptr && output->capacity != 0) ||
+        !mlocReadZonedLocal(&f.zone, zone, instant, &at, &local) ||
         !mlocReadDateValue(&f.date, &local.date, &date))
     {
         return mloc_errorInvalid;
     }
-    ZoneWriting writing = {&f.zone, zone, instant};
+    ZoneWriting writing = {&f.zone, &at};
     Writing g = {&f, &date, &local.time, local.time.minute == 0 ? 1 : 0, &writing};
     return WriteOut(&g, output);
 }
@@ -486,18 +487,18 @@ mlocResult mlocFormatDateTimeRangeInZone(const mlocDateTimeFormatter* formatter,
 {
     DateTimeFormat f;
     DateValue dates[2];
+    ZoneAt at[2];
     mlocDateTime local[2];
-    if (!ReadFormatter(formatter, true, &f) || zone == nullptr || start == nullptr ||
-        end == nullptr || output == nullptr ||
+    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
         (output->buffer == nullptr && output->capacity != 0) ||
-        mlocGetDateTimeFor(zone, start, mloc_calendarIso8601, &local[0]) != mloc_success ||
-        mlocGetDateTimeFor(zone, end, mloc_calendarIso8601, &local[1]) != mloc_success ||
+        !mlocReadZonedLocal(&f.zone, zone, start, &at[0], &local[0]) ||
+        !mlocReadZonedLocal(&f.zone, zone, end, &at[1], &local[1]) ||
         !mlocReadDateValue(&f.date, &local[0].date, &dates[0]) ||
         !mlocReadDateValue(&f.date, &local[1].date, &dates[1]))
     {
         return mloc_errorInvalid;
     }
-    ZoneWriting zones[2] = {{&f.zone, zone, start}, {&f.zone, zone, end}};
+    ZoneWriting zones[2] = {{&f.zone, &at[0]}, {&f.zone, &at[1]}};
     uint32_t pattern = local[0].time.minute == 0 && local[1].time.minute == 0 ? 1 : 0;
     Writing one = {&f, &dates[0], &local[0].time, local[0].time.minute == 0 ? 1 : 0, &zones[0]};
     RangeWriting g = {.f = &f,

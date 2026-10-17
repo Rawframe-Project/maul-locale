@@ -60,18 +60,29 @@ static int Folded(uint8_t c)
     return c >= 'A' && c <= 'Z' ? c + 32 : c;
 }
 
+// The order of two names, letters folded, known to share their first
+// from bytes: negative, zero or positive, and the length they share.
+static int OrderFrom(const uint8_t* a, size_t aLength, const char* b, size_t bLength, size_t from,
+                     size_t* sharedOut)
+{
+    size_t i = from;
+    while (i < aLength && i < bLength && Folded(a[i]) == Folded((uint8_t)b[i]))
+    {
+        i++;
+    }
+    *sharedOut = i;
+    if (i < aLength && i < bLength)
+    {
+        return Folded(a[i]) - Folded((uint8_t)b[i]);
+    }
+    return aLength < bLength ? -1 : aLength > bLength;
+}
+
 // The order of two names, letters folded: negative, zero or positive.
 static int Order(const uint8_t* a, size_t aLength, const char* b, size_t bLength)
 {
-    for (size_t i = 0; i < aLength && i < bLength; i++)
-    {
-        int difference = Folded(a[i]) - Folded((uint8_t)b[i]);
-        if (difference != 0)
-        {
-            return difference;
-        }
-    }
-    return aLength < bLength ? -1 : aLength > bLength;
+    size_t shared = 0;
+    return OrderFrom(a, aLength, b, bLength, 0, &shared);
 }
 
 // Whether a name lies in the text and is printable ASCII, spaces allowed
@@ -235,16 +246,22 @@ bool mlocFindZoneCodeTables(const mlocDataSet* data, ZoneCodeTables* out)
 // The entry of a sorted section of 8-byte or 16-byte entries whose name
 // (at the entry's start, its length at byte 4 or 8) equals one, letters
 // folded; -1 when none does.
+// Every entry between the bounds shares with the name the shorter of
+// the prefixes the bounds share with it, so a comparison starts there.
 static int32_t Search(const ZoneCodeTables* t, const uint8_t* entries, uint32_t count,
                       uint32_t size, uint32_t lengthAt, const char* name, size_t length)
 {
     uint32_t low = 0;
     uint32_t high = count;
+    size_t lowShared = 0;
+    size_t highShared = 0;
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;
         const uint8_t* p = entries + (size_t)middle * size;
-        int order = Order(t->text + mlocLoad32(p), p[lengthAt], name, length);
+        size_t shared = 0;
+        int order = OrderFrom(t->text + mlocLoad32(p), p[lengthAt], name, length,
+                              lowShared < highShared ? lowShared : highShared, &shared);
         if (order == 0)
         {
             return (int32_t)middle;
@@ -252,10 +269,12 @@ static int32_t Search(const ZoneCodeTables* t, const uint8_t* entries, uint32_t 
         if (order < 0)
         {
             low = middle + 1;
+            lowShared = shared;
         }
         else
         {
             high = middle;
+            highShared = shared;
         }
     }
     return -1;

@@ -19,6 +19,7 @@
 #include "names_data.h"
 #include "zone_code_tables.h"
 #include "zone_handle.h"
+#include "zone_local.h"
 #include "zone_name_tables.h"
 #include "zone_rules.h"
 #include "zone_tables.h"
@@ -42,39 +43,9 @@ typedef struct ZoneText
     uint32_t length;
 } ZoneText;
 
-// The metazone unit's sections.
-typedef struct Meta
+static ZoneMeta ReadMeta(DataSpan unit)
 {
-    const uint8_t* codes;
-    const uint8_t* periods;
-    const uint8_t* metazones;
-    const uint8_t* preferred;
-    uint32_t codeCount;
-    uint32_t periodCount;
-    uint32_t metazoneCount;
-    uint32_t preferredCount;
-} Meta;
-
-// A zone at an instant: its code, metazone and offset.
-typedef struct ZoneAt
-{
-    ZoneTables t;
-    ZoneCodeTables codes;
-    Meta meta;
-    // The zone's place in the zones unit, for a named zone.
-    uint32_t index;
-    bool named;
-    // Its BCP 47 id's place, or -1 for a zone CLDR does not know.
-    int32_t code;
-    // Its metazone at the instant, or -1.
-    int32_t metazone;
-    ZoneOffset offset;
-    int64_t seconds;
-} ZoneAt;
-
-static Meta ReadMeta(DataSpan unit)
-{
-    Meta m;
+    ZoneMeta m;
     m.codeCount = mlocLoad32(unit.bytes);
     m.periodCount = mlocLoad32(unit.bytes + 4);
     m.metazoneCount = mlocLoad32(unit.bytes + 8);
@@ -88,7 +59,7 @@ static Meta ReadMeta(DataSpan unit)
 
 // A code's metazone period at an instant, or null; the code is below
 // the count (the formatter's own, or one the validator bounded) or -1.
-static const uint8_t* PeriodAt(const Meta* m, int32_t code, int64_t seconds)
+static const uint8_t* PeriodAt(const ZoneMeta* m, int32_t code, int64_t seconds)
 {
     if (code < 0)
     {
@@ -123,7 +94,7 @@ static ZoneOffset Classify(const uint8_t* period, ZoneOffset offset)
 }
 
 // A metazone's preferred zone in a region, else its golden zone.
-static int32_t ReferenceZone(const Meta* m, int32_t metazone, const char* region)
+static int32_t ReferenceZone(const ZoneMeta* m, int32_t metazone, const char* region)
 {
     const uint8_t* z = m->metazones + (size_t)metazone * zoneMetaZoneSize;
     for (uint32_t k = 0; k < mlocLoad16(z + 4); k++)
@@ -354,9 +325,8 @@ static int32_t CodeOf(const ZoneAt* a, const mlocTimeZone* zone)
     return code >= 0 && (uint32_t)code < a->meta.codeCount ? code : -1;
 }
 
-// Reads a zone at an instant; false for units that disagree.
-static bool ReadZone(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
-                     ZoneAt* a)
+bool mlocReadZoneAt(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
+                    ZoneAt* a)
 {
     memset(a, 0, sizeof(*a));
     if (!mlocReadTimeZone(zone, &a->t, &a->named) || !mlocZoneCodeTablesOf(f->codes, &a->codes))
@@ -623,19 +593,22 @@ static bool WriteStyle(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a
     }
 }
 
-void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const mlocTimeZone* zone,
-                   const mlocInstant* instant, NumberWriter* w)
+bool mlocReadZonedLocal(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
+                        ZoneAt* at, mlocDateTime* localOut)
 {
-    ZoneAt a;
-    if (!ReadZone(f, zone, instant, &a))
-    {
-        return;
-    }
-    if (!WriteStyle(f, style, &a, w))
+    return zone != nullptr && instant != nullptr && mlocValidInstant(instant) &&
+           mlocReadZoneAt(f, zone, instant, at) &&
+           mlocLocalDateTime(instant, TotalOffset(at), mloc_calendarIso8601, localOut) ==
+               mloc_success;
+}
+
+void mlocWriteZone(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a, NumberWriter* w)
+{
+    if (!WriteStyle(f, style, a, w))
     {
         bool shortForm = style == mloc_zoneStyleSpecificShort ||
                          style == mloc_zoneStyleGenericShort || style == mloc_zoneStyleOffsetShort;
-        WriteOffset(f, w, TotalOffset(&a), shortForm);
+        WriteOffset(f, w, TotalOffset(a), shortForm);
     }
 }
 
@@ -665,8 +638,7 @@ mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width)
 }
 
 void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t length,
-                          const mlocTimeZone* zone, const mlocInstant* instant,
-                          const PatternSpan* span, NumberWriter* w)
+                          const ZoneAt* zone, const PatternSpan* span, NumberWriter* w)
 {
     uint32_t at = 0;
     while (at < length)
@@ -674,8 +646,7 @@ void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t 
         w->source = at >= span->first && at < span->end ? span->source : 0;
         if (pattern[at] == datePatternField)
         {
-            mlocWriteZone(f, mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]), zone, instant,
-                          w);
+            mlocWriteZone(f, mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]), zone, w);
             at += 3;
             continue;
         }
@@ -804,8 +775,14 @@ mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone
     {
         return mloc_errorInvalid;
     }
+    // Zone names units that disagree with the zone write nothing.
+    ZoneAt a;
+    bool read = mlocReadZoneAt(&f, zone, instant, &a);
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteZone(&f, (mlocZoneStyle)f.style, zone, instant, &w);
+    if (read)
+    {
+        mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &w);
+    }
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
@@ -814,7 +791,10 @@ mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone
     if (output->part != nullptr)
     {
         NumberWriter parts = {.parts = output};
-        mlocWriteZone(&f, (mlocZoneStyle)f.style, zone, instant, &parts);
+        if (read)
+        {
+            mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &parts);
+        }
         mlocEndParts(&parts);
     }
     return mloc_success;

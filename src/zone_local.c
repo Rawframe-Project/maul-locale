@@ -5,6 +5,8 @@
 // instants a date-time names, the one a disambiguation chooses, the
 // start of a day, and the date-time at an instant.
 
+#include "zone_local.h"
+
 #include "date_time.h"
 #include "zone_handle.h"
 #include "zone_rules.h"
@@ -184,7 +186,14 @@ mlocResult mlocGetDateTimeFor(const mlocTimeZone* zone, const mlocInstant* insta
     {
         return mloc_errorInvalid;
     }
-    int64_t local = instant->seconds + mlocTimeZoneOffsetAt(zone, &t, named, instant->seconds);
+    return mlocLocalDateTime(instant, mlocTimeZoneOffsetAt(zone, &t, named, instant->seconds),
+                             calendar, dateTimeOut);
+}
+
+mlocResult mlocLocalDateTime(const mlocInstant* instant, int32_t offset, mlocCalendar calendar,
+                             mlocDateTime* dateTimeOut)
+{
+    int64_t local = instant->seconds + offset;
     int64_t days = FloorDiv(local, secondsPerDay);
     int64_t second = local - days * secondsPerDay;
     mlocDate date;
