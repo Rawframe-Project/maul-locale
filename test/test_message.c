@@ -809,7 +809,7 @@ static bool FormatsNow(const SuiteCase* c)
             return false;
         }
     }
-    return c->expected != NULL && !c->bidi && strcmp(c->locale, "fr") != 0;
+    return c->expected != NULL && strcmp(c->locale, "fr") != 0;
 }
 
 // Appends text to a NUL-terminated string, as much as fits.
@@ -1052,9 +1052,9 @@ static bool TestBetter(void* context, const mlocMessageResolved* value, const ch
 }
 
 static const mlocMessageFunction s_testFunctions[] = {
-    {"test:function", 13, NULL, TestResolve, TestFormat, TestMatch, TestBetter},
-    {"test:select", 11, NULL, TestResolve, NULL, TestMatch, TestBetter},
-    {"test:format", 11, NULL, TestResolve, TestFormat, NULL, NULL},
+    {"test:function", 13, NULL, TestResolve, TestFormat, TestMatch, TestBetter, NULL},
+    {"test:select", 11, NULL, TestResolve, NULL, TestMatch, TestBetter, NULL},
+    {"test:format", 11, NULL, TestResolve, TestFormat, NULL, NULL, NULL},
 };
 
 // Every suite case this slice can format formats to its text, with its
@@ -1064,13 +1064,6 @@ static void TestSuiteFormat(void)
     mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     mlocDataSet data = {&builtin, 1};
-    mlocLocale locale;
-    mlocTextResult parsed = mlocParseLocale("en-US", 5, &locale);
-    mlocMessageFormatter formatter;
-    mlocMessageOptions options = {false, s_testFunctions, 3};
-    CHECK(parsed.status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success,
-          "a formatter is made");
     static uint8_t bound[1 << 16];
     size_t count = sizeof s_suite / sizeof s_suite[0];
     size_t formatted = 0;
@@ -1085,9 +1078,17 @@ static void TestSuiteFormat(void)
         {
             continue;
         }
+        // Each case's locale, isolated when the suite says.
+        mlocLocale locale;
+        mlocMessageFormatter formatter;
+        mlocMessageOptions options = {
+            false, c->bidi ? mloc_messageIsolationDefault : mloc_messageIsolationNone,
+            s_testFunctions, 3};
         size_t boundSize = 0;
-        CHECK(mlocBindMessage(&formatter, s_buffer, size, bound, sizeof bound, &boundSize) ==
-                  mloc_success,
+        CHECK(mlocParseLocale(c->locale, strlen(c->locale), &locale).status == mloc_success &&
+                  mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success &&
+                  mlocBindMessage(&formatter, s_buffer, size, bound, sizeof bound, &boundSize) ==
+                      mloc_success,
               "a case binds");
         mlocMessageArgument arguments[8];
         mlocDecimal decimals[8];
@@ -1111,7 +1112,7 @@ static void TestSuiteFormat(void)
         CHECK(good, "a case formats as the suite says");
         formatted++;
     }
-    CHECK(formatted >= 149, "every case without bidi or the default functions formats");
+    CHECK(formatted >= 175, "every case without the default functions formats");
 }
 
 static mlocMessageFormatter s_formatter;
@@ -1124,9 +1125,11 @@ static void MakeFormatters(void)
     mlocOpenBuiltinData(&builtin);
     data = (mlocDataSet){&builtin, 1};
     mlocLocale locale;
-    mlocMessageOptions strict = {true, NULL, 0};
+    // Isolation is tested with the functions (test_message_functions).
+    mlocMessageOptions plain = {false, mloc_messageIsolationNone, NULL, 0};
+    mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitMessageFormatter(&s_formatter, &data, &locale, NULL) == mloc_success &&
+              mlocInitMessageFormatter(&s_formatter, &data, &locale, &plain) == mloc_success &&
               mlocInitMessageFormatter(&s_strict, &data, &locale, &strict) == mloc_success,
           "formatters are made");
     CHECK(mlocInitMessageFormatter(NULL, &data, &locale, NULL) == mloc_errorInvalid &&

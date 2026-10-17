@@ -137,8 +137,8 @@ static const mlocMessageArgument s_arguments[] = {
 };
 
 static const mlocMessageFunction s_functions[] = {
-    {"f:x", 3, NULL, FuzzResolve, FuzzFormat, FuzzMatch, FuzzBetter},
-    {"f:y", 3, NULL, FuzzResolve, NULL, NULL, NULL},
+    {"f:x", 3, NULL, FuzzResolve, FuzzFormat, FuzzMatch, FuzzBetter, NULL},
+    {"f:y", 3, NULL, FuzzResolve, NULL, NULL, NULL, NULL},
 };
 
 // Binds a message and formats it with two arguments ($s a string, $n a
@@ -151,7 +151,7 @@ static void Format(const uint8_t* message, size_t size)
     mlocDataSet data = {&builtin, 1};
     mlocLocale locale;
     mlocMessageFormatter formatter;
-    mlocMessageOptions options = {false, s_functions, 2};
+    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, 2};
     Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
             mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success);
     size_t needed = 0;

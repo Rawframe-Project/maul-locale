@@ -200,13 +200,11 @@ static void ToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolv
     }
 }
 
-// Option resolution's report: each option whose variable fails to
-// resolve is a bad option (and is read as a fallback later).
-static void CheckOptions(Resolution* r, uint32_t expression)
+// Option resolution's report for a run of parameters: each option
+// whose variable fails to resolve is a bad option (and is read as a
+// fallback later).
+static void CheckParameters(Resolution* r, uint32_t first, uint32_t count, uint32_t at)
 {
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
-    uint32_t at = Field(r, messageExpressions, expression, 7);
     for (uint32_t p = first; p < first + count; p++)
     {
         if (Field(r, messageParameters, p, 0) != parameterOptionVariable)
@@ -215,6 +213,123 @@ static void CheckOptions(Resolution* r, uint32_t expression)
         }
         Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3), at, UINT32_MAX);
         if (IsFallback(v.kind))
+        {
+            mlocReportFault(r, mloc_messageFaultBadOption, at);
+        }
+    }
+}
+
+// Whether a parameter is an option of a name.
+static bool OptionNamed(const Resolution* r, uint32_t p, const char* name, size_t length)
+{
+    uint32_t kind = Field(r, messageParameters, p, 0);
+    return (kind == parameterOptionLiteral || kind == parameterOptionVariable) &&
+           Field(r, messageParameters, p, 2) == length &&
+           memcmp(Pool(r, Field(r, messageParameters, p, 1)), name, length) == 0;
+}
+
+// Whether a parameter's name is in the u: namespace, the library's.
+static bool UnicodeOption(const Resolution* r, uint32_t p)
+{
+    return Field(r, messageParameters, p, 2) > 2 &&
+           memcmp(Pool(r, Field(r, messageParameters, p, 1)), "u:", 2) == 0;
+}
+
+// An option's value: a literal's text, or its variable's value resolved
+// again without reporting faults (option resolution reported them).
+static Value OptionValue(Resolution* r, uint32_t p, uint32_t at)
+{
+    if (Field(r, messageParameters, p, 0) == parameterOptionLiteral)
+    {
+        Value v = Make(valueText);
+        v.text = Pool(r, Field(r, messageParameters, p, 3));
+        v.length = Field(r, messageParameters, p, 4);
+        return v;
+    }
+    r->quiet++;
+    Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3), at, UINT32_MAX);
+    r->quiet--;
+    return v;
+}
+
+// What an expression's u:dir asks: nothing, or a direction and whether
+// to isolate.
+typedef struct Directed
+{
+    bool set;
+    mlocDirection direction;
+    bool isolate;
+} Directed;
+
+static bool TextIs(const Value* v, const char* text)
+{
+    size_t length = strlen(text);
+    bool textual = v->kind == valueText || (v->kind == valueString && v->behind == valueText);
+    return textual && v->length == length && memcmp(v->text, text, length) == 0;
+}
+
+// The u: options of an expression's call (record mloc-0045): u:dir one
+// of ltr, rtl, auto and inherit, u:id anything with a string; another
+// value is a bad option and ignored (a failed variable already was).
+// Other u: options are ignored.
+static Directed UnicodeOptions(Resolution* r, uint32_t expression)
+{
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    Directed d = {false, mloc_directionUnknown, false};
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        bool dir = OptionNamed(r, p, "u:dir", 5);
+        if (!dir && !OptionNamed(r, p, "u:id", 4))
+        {
+            continue;
+        }
+        Value v = OptionValue(r, p, at);
+        bool good = true;
+        if (IsFallback(v.kind))
+        {
+            continue;
+        }
+        if (dir)
+        {
+            static const char* const values[] = {"ltr", "rtl", "auto", "inherit"};
+            static const mlocDirection directions[] = {
+                mloc_directionLeftToRight, mloc_directionRightToLeft, mloc_directionUnknown,
+                mloc_directionUnknown};
+            good = false;
+            for (int i = 0; i < 4 && !good; i++)
+            {
+                if (TextIs(&v, values[i]))
+                {
+                    good = true;
+                    d.set = true;
+                    d.direction = directions[i];
+                    d.isolate = i < 3;
+                }
+            }
+        }
+        else
+        {
+            good = !(v.kind == valueArgument && v.argument->kind == mloc_messageValueObject);
+        }
+        if (!good)
+        {
+            mlocReportFault(r, mloc_messageFaultBadOption, at);
+        }
+    }
+    return d;
+}
+
+void mlocResolveMarkup(Resolution* r, uint32_t markup)
+{
+    uint32_t first = Field(r, messageMarkups, markup, 3);
+    uint32_t count = Field(r, messageMarkups, markup, 4);
+    uint32_t at = Field(r, messageMarkups, markup, 5);
+    CheckParameters(r, first, count, at);
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        if (OptionNamed(r, p, "u:dir", 5))
         {
             mlocReportFault(r, mloc_messageFaultBadOption, at);
         }
@@ -241,6 +356,9 @@ static Value StringOf(Resolution* r, uint32_t expression, const Value* operand)
         v.behind = v.kind;
         v.kind = valueString;
     }
+    // A new value: its operand's u:dir is not its own.
+    v.direction = mloc_directionUnknown;
+    v.isolate = false;
     return v;
 }
 
@@ -268,6 +386,12 @@ static Value CallProgram(Resolution* r, uint32_t expression, uint32_t slot, cons
     {
         mlocReportFault(r, fault, Field(r, messageExpressions, expression, 7));
         return mlocExpressionFallback(r, expression);
+    }
+    if (function->direction != NULL)
+    {
+        mlocDirection direction = function->direction(function->context, &v.resolved);
+        v.direction =
+            (uint32_t)direction <= mloc_directionRightToLeft ? direction : mloc_directionUnknown;
     }
     return v;
 }
@@ -312,13 +436,19 @@ Value mlocResolveExpression(Resolution* r, uint32_t expression)
         mlocReportFault(r, mloc_messageFaultUnknownFunction, at);
         return mlocExpressionFallback(r, expression);
     }
-    CheckOptions(r, expression);
+    CheckParameters(r, Field(r, messageExpressions, expression, 5),
+                    Field(r, messageExpressions, expression, 6), at);
+    Directed d = UnicodeOptions(r, expression);
     const Value* given = operandKind == operandNone ? NULL : &operand;
-    if (slot == messageFunctionString)
+    Value v = slot == messageFunctionString ? StringOf(r, expression, given)
+                                            : CallProgram(r, expression, slot, given);
+    if (d.set && !IsFallback(v.kind))
     {
-        return StringOf(r, expression, given);
+        // u:dir replaces the direction (inherit keeps it) and isolates.
+        v.direction = d.isolate ? d.direction : v.direction;
+        v.isolate = d.isolate;
     }
-    return CallProgram(r, expression, slot, given);
+    return v;
 }
 
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
@@ -411,7 +541,8 @@ static uint32_t OptionAt(const CallState* s, size_t index)
     for (uint32_t p = first; p < first + count; p++)
     {
         uint32_t kind = Field(r, messageParameters, p, 0);
-        if (kind != parameterOptionLiteral && kind != parameterOptionVariable)
+        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
+            UnicodeOption(r, p))
         {
             continue;
         }
@@ -442,19 +573,7 @@ size_t mlocGetMessageOptionCount(const mlocMessageCall* call)
 static void ReadOption(const CallState* s, uint32_t p, mlocMessageOperand* valueOut,
                        mlocMessageResolved* storage)
 {
-    Resolution* r = s->r;
-    if (Field(r, messageParameters, p, 0) == parameterOptionLiteral)
-    {
-        memset(valueOut, 0, sizeof *valueOut);
-        valueOut->kind = mloc_messageOperandText;
-        valueOut->text = (const char*)Pool(r, Field(r, messageParameters, p, 3));
-        valueOut->length = Field(r, messageParameters, p, 4);
-        return;
-    }
-    r->quiet++;
-    Value v = mlocResolveVariable(r, Field(r, messageParameters, p, 3),
-                                  Field(r, messageExpressions, s->expression, 7), UINT32_MAX);
-    r->quiet--;
+    Value v = OptionValue(s->r, p, Field(s->r, messageExpressions, s->expression, 7));
     ToOperand(&v, valueOut, storage);
 }
 

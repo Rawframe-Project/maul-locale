@@ -197,22 +197,54 @@ static mlocMessageFaultKind GreedyResolve(void* context, const mlocMessageCall* 
     return mloc_messageFaultNone;
 }
 
+// x:ltr and x:rtl give their values a direction; x:odd one out of range.
+static mlocDirection LeftToRight(void* context, const mlocMessageResolved* value)
+{
+    (void)context;
+    (void)value;
+    return mloc_directionLeftToRight;
+}
+
+static mlocDirection RightToLeft(void* context, const mlocMessageResolved* value)
+{
+    (void)context;
+    (void)value;
+    return mloc_directionRightToLeft;
+}
+
+static mlocDirection Odd(void* context, const mlocMessageResolved* value)
+{
+    (void)context;
+    (void)value;
+    return (mlocDirection)7;
+}
+
 static const mlocMessageFunction s_functions[] = {
-    {"x:echo", 6, NULL, EchoResolve, EchoFormat, NULL, NULL},
-    {"x:any", 5, NULL, EchoResolve, NULL, AnyMatch, NULL},
-    {"x:short", 7, NULL, EchoResolve, EchoFormat, AnyMatch, ShortBetter},
-    {"x:locale", 8, NULL, LocaleResolve, EchoFormat, NULL, NULL},
-    {"x:greedy", 8, NULL, GreedyResolve, EchoFormat, NULL, NULL},
+    {"x:echo", 6, NULL, EchoResolve, EchoFormat, NULL, NULL, NULL},
+    {"x:any", 5, NULL, EchoResolve, NULL, AnyMatch, NULL, NULL},
+    {"x:short", 7, NULL, EchoResolve, EchoFormat, AnyMatch, ShortBetter, NULL},
+    {"x:locale", 8, NULL, LocaleResolve, EchoFormat, NULL, NULL, NULL},
+    {"x:greedy", 8, NULL, GreedyResolve, EchoFormat, NULL, NULL, NULL},
+    {"x:ltr", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, LeftToRight},
+    {"x:rtl", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, RightToLeft},
+    {"x:odd", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, Odd},
+};
+
+enum
+{
+    functionCount = sizeof s_functions / sizeof s_functions[0],
 };
 
 static mlocMessageFormatter s_formatter;
+// The formatter Run and BindOnly use.
+static const mlocMessageFormatter* s_using = &s_formatter;
 
 static void MakeFormatter(void)
 {
     static mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     s_data = (mlocDataSet){&builtin, 1};
-    mlocMessageOptions options = {false, s_functions, 5};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, s_functions, functionCount};
     CHECK(mlocParseLocale("de-CH", 5, &s_locale).status == mloc_success &&
               mlocInitMessageFormatter(&s_formatter, &s_data, &s_locale, &options) == mloc_success,
           "a formatter with functions is made");
@@ -220,8 +252,8 @@ static void MakeFormatter(void)
 
 static bool Refused(const char* name)
 {
-    mlocMessageFunction function = {name, strlen(name), NULL, EchoResolve, NULL, NULL, NULL};
-    mlocMessageOptions options = {false, &function, 1};
+    mlocMessageFunction function = {name, strlen(name), NULL, EchoResolve, NULL, NULL, NULL, NULL};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1};
     mlocMessageFormatter formatter;
     return mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid;
 }
@@ -238,7 +270,7 @@ static void TestTable(void)
           "a namespaced name is taken");
     mlocMessageFormatter formatter;
     mlocMessageFunction twice[2] = {s_functions[0], s_functions[0]};
-    mlocMessageOptions options = {false, twice, 2};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, twice, 2};
     CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
           "two functions of one name are refused");
     twice[1].resolve = NULL;
@@ -263,8 +295,7 @@ static mlocResult Run(const char* message, const mlocMessageArgument* arguments,
     mlocMessageError error;
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
-            mloc_success)
+        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) != mloc_success)
     {
         return mloc_errorSyntax;
     }
@@ -470,7 +501,7 @@ static mlocResult BindOnly(const char* message)
     {
         return mloc_errorSyntax;
     }
-    return mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound, &bound);
+    return mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound);
 }
 
 static void TestResolutionLimit(void)
@@ -510,12 +541,96 @@ static void TestResolutionLimit(void)
     size_t end = strlen(input) - strlen(" .match $a10 x {{{$a10}{$a10}}} * {{{$a10}}}");
     snprintf(input + end, sizeof input - end, " .match $s x {{{$a10}{$a10}}} * {{{$a10}}}");
     CHECK(BindOnly(input) == mloc_success, "the costliest variant counts, not their sum");
+    snprintf(text + at, sizeof text - at, " {{{#b k1=$a10 k2=$a10}{/b k=$a1}}}");
+    CHECK(BindOnly(text) == mloc_success, "markup's options count");
+    snprintf(text + at, sizeof text - at, " {{{#b k1=$a10 k2=$a10}{/b k=$a10}}}");
+    CHECK(BindOnly(text) == mloc_errorInvalid, "and pass the limit");
 
     const mlocMessageArgument* a = s_arguments;
     static const mlocMessageFaultKind out[] = {mloc_messageFaultUnsupportedOperation, 0};
     CHECK(Formats(".local $a = {|v| :x:echo} {{{|g| :x:greedy k=$a}{|h| :x:greedy k=$a}}}", a, 4,
                   "okshort", out),
           "a call stops resolving at the limit, reported once");
+}
+
+// A formatter isolating by the Default Bidi Strategy, for a locale.
+static void MakeIsolating(mlocMessageFormatter* formatter, const char* tag)
+{
+    mlocLocale locale;
+    mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, functionCount};
+    CHECK(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
+              mlocInitMessageFormatter(formatter, &s_data, &locale, &options) == mloc_success,
+          "an isolating formatter is made");
+}
+
+#define LRI "\xE2\x81\xA6"
+#define RLI "\xE2\x81\xA7"
+#define FSI "\xE2\x81\xA8"
+#define PDI "\xE2\x81\xA9"
+
+static void TestIsolation(void)
+{
+    static mlocMessageFormatter en;
+    static mlocMessageFormatter ar;
+    static mlocMessageFormatter unknown;
+    MakeIsolating(&en, "en");
+    MakeIsolating(&ar, "ar");
+    MakeIsolating(&unknown, "qaa");
+    const mlocMessageArgument* a = s_arguments;
+    s_using = &en;
+    CHECK(Formats("{$s} and {|a| :x:echo}", a, 4, FSI "S" PDI " and " FSI "a" PDI, NULL),
+          "an argument and a function without a direction are isolated as unknown");
+    CHECK(Formats("{|a| :x:ltr}{|b| :x:rtl}{|c| :x:odd}", a, 4, "a" RLI "b" PDI FSI "c" PDI, NULL),
+          "a left-to-right value is bare in a left-to-right message");
+    CHECK(Formats("{|a| :x:ltr u:dir=ltr}{|b| :x:echo u:dir=rtl}{|c| :x:ltr u:dir=auto}"
+                  "{|d| :x:ltr u:dir=inherit}{|e| :x:rtl u:dir=inherit}",
+                  a, 4, LRI "a" PDI RLI "b" PDI FSI "c" PDI "d" RLI "e" PDI, NULL),
+          "u:dir replaces the direction and isolates; inherit keeps it");
+    static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadOption, 0};
+    static const mlocMessageFaultKind bad2[] = {mloc_messageFaultBadOption,
+                                                mloc_messageFaultBadOption, 0};
+    CHECK(Formats("{|a| :x:ltr u:dir=up}", a, 4, "a", bad) &&
+              Formats("{|a| :x:ltr u:dir=$o u:id=$o}", a, 4, "a", bad2),
+          "a bad u:dir or u:id is a bad option, ignored");
+    mlocMessageArgument rtl = {"d", 1, {mloc_messageValueString, 0, {.string = {"rtl", 3}}}};
+    CHECK(Formats("{|a| :x:ltr u:dir=$d u:id=$d u:locale=fr}", &rtl, 1, RLI "a" PDI, NULL),
+          "u:dir from a variable; u:id and other u: options take no part");
+    CHECK(Formats("{|a| :x:echo k=v u:dir=ltr u:id=z u:other=1}", a, 4, LRI "a;k=v" PDI, NULL),
+          "a function does not see the u: options");
+    CHECK(Formats(".local $v = {|a| :x:echo u:dir=rtl} {{{$v} {$v :x:echo}}}", a, 4,
+                  RLI "a" PDI " " FSI "@0" PDI, NULL),
+          "a local keeps its u:dir; a new call does not");
+    CHECK(Formats(".local $v = {|a| :string u:dir=ltr} {{{$v :string}}}", a, 4, FSI "a" PDI, NULL),
+          ":string's value is its own");
+    static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable, 0};
+    static const mlocMessageFaultKind function[] = {mloc_messageFaultFunction, 0};
+    CHECK(Formats("{$missing}", a, 4, FSI "{$missing}" PDI, unresolved) &&
+              Formats("{|a| :x:ltr fail=1}", a, 4, FSI "{|a|}" PDI, function),
+          "a fallback is isolated as unknown, also where a bare value failed to format");
+    static const mlocMessageFaultKind markup[] = {mloc_messageFaultBadOption, 0};
+    static const mlocMessageFaultKind markupVariable[] = {mloc_messageFaultUnresolvedVariable,
+                                                          mloc_messageFaultBadOption, 0};
+    CHECK(Formats("{#b u:dir=rtl}x{/b}", a, 4, "x", markup) &&
+              Formats("{#b k=$missing}x{/b u:id=$s}", a, 4, "x", markupVariable) &&
+              Formats("{#b u:id=x k=$s}x{/b}{#c/}", a, 4, "x", NULL),
+          "markup's options resolve, and u:dir on it is a bad option");
+
+    s_using = &ar;
+    CHECK(Formats("{|a| :x:ltr}{|b| :x:rtl}{$s}", a, 4, LRI "a" PDI RLI "b" PDI FSI "S" PDI, NULL),
+          "a right-to-left message isolates a left-to-right value");
+    CHECK(Formats("{|a| :x:ltr fail=1}", a, 4, FSI "{|a|}" PDI, function),
+          "a fallback's isolate replaces the value's");
+    s_using = &unknown;
+    CHECK(Formats("{|a| :x:ltr}", a, 4, LRI "a" PDI, NULL),
+          "a message of unknown direction isolates a left-to-right value");
+    s_using = &s_formatter;
+
+    mlocLocale locale;
+    mlocMessageFormatter formatter;
+    mlocMessageOptions options = {false, (mlocMessageIsolation)2, NULL, 0};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) == mloc_errorInvalid,
+          "an unknown isolation is refused");
 }
 
 int main(void)
@@ -527,5 +642,6 @@ int main(void)
     TestString();
     TestSelection();
     TestResolutionLimit();
+    TestIsolation();
     return s_failures == 0 ? 0 : 1;
 }

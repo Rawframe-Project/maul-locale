@@ -161,6 +161,12 @@ format.
   scripts written right to left generated from CLDR's script metadata
   (`mlocDirection` in `maul-locale/base.h`, mloc-0045); it agrees with
   the character order of every CLDR locale, which CI checks.
+- Messages isolate their placeholders by MF2's Default Bidi Strategy
+  (`mlocMessageOptions.isolation`, on by default), the message's
+  direction its locale's; values carry a direction (a program
+  function's from its new `direction` entry) and `u:dir` sets it;
+  `u:` options are hidden from functions, bad `u:dir` and `u:id` values
+  are bad options, and markup resolves its options (mloc-0045).
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

@@ -23,6 +23,9 @@ typedef struct MessageFormatter
 {
     uint8_t stamp;
     bool strict;
+    // Whether placeholders are isolated, and the message's direction.
+    bool isolate;
+    mlocDirection direction;
     const mlocDataSet* data;
     const mlocMessageFunction* functions;
     size_t functionCount;

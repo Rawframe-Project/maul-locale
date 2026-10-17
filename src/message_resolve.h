@@ -5,8 +5,9 @@
 // "Expression and Markup Resolution"), each where it stands: a variable
 // through its declaration on the stack, a function through its slot
 // (:string here, a program function through its entries), with the
-// fallbacks and faults of the specification. Also the accessors a
-// program function reads its call's options with.
+// fallbacks and faults of the specification, and each value's direction
+// with the u: options. Also the accessors a program function reads its
+// call's options with, which hide the u: options.
 
 #ifndef MLOC_SRC_MESSAGE_RESOLVE_H
 #define MLOC_SRC_MESSAGE_RESOLVE_H
@@ -49,6 +50,10 @@ typedef struct Value
     // A fallback variable; a program function's index.
     uint32_t variable;
     uint32_t function;
+    // Its direction (unknown for a literal, an argument, :string and a
+    // fallback), and whether a u:dir other than inherit isolates it.
+    mlocDirection direction;
+    bool isolate;
     mlocMessageResolved resolved;
 } Value;
 
@@ -83,6 +88,11 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
 
 // An expression's value.
 Value mlocResolveExpression(Resolution* r, uint32_t expression);
+
+// Resolves a markup's options for their faults (record mloc-0045:
+// markup has no value, but option resolution reports a failed option,
+// and u:dir on markup is a bad option).
+void mlocResolveMarkup(Resolution* r, uint32_t markup);
 
 // The fallback an expression shows when its value cannot be written.
 Value mlocExpressionFallback(const Resolution* r, uint32_t expression);

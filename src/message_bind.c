@@ -9,6 +9,7 @@
 #include "bytes.h"
 #include "message_text.h"
 
+#include "maul-locale/locale.h"
 #include "maul-unicode/encoding.h"
 
 #include <assert.h>
@@ -114,7 +115,8 @@ mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const ml
     {
         return mloc_errorInvalid;
     }
-    if (options != NULL && !GoodFunctions(options->functions, options->functionCount))
+    if (options != NULL && ((uint32_t)options->isolation > mloc_messageIsolationNone ||
+                            !GoodFunctions(options->functions, options->functionCount)))
     {
         return mloc_errorInvalid;
     }
@@ -122,6 +124,14 @@ mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const ml
     memset(&f, 0, sizeof f);
     f.stamp = formatterStamp;
     f.strict = options != NULL && options->strict;
+    f.isolate = options == NULL || options->isolation == mloc_messageIsolationDefault;
+    // A locale without a direction (no script, no likely one) leaves the
+    // message's unknown.
+    f.direction = mloc_directionUnknown;
+    if (mlocGetLocaleDirection(data, locale, &f.direction) != mloc_success)
+    {
+        f.direction = mloc_directionUnknown;
+    }
     if (options != NULL)
     {
         f.functions = options->functions;
@@ -250,7 +260,7 @@ static uint64_t VariableCost(const MessageView* v, const uint8_t* words, uint32_
     return mlocLoad32(costWords + (size_t)Field(v, messageDeclarations, d, 2) * 4);
 }
 
-// The resolutions a pattern's expressions make.
+// The resolutions a pattern's expressions and markups make.
 static uint64_t PatternCost(const MessageView* v, const uint8_t* words, uint32_t first,
                             uint32_t count)
 {
@@ -259,9 +269,24 @@ static uint64_t PatternCost(const MessageView* v, const uint8_t* words, uint32_t
     uint64_t total = 0;
     for (uint32_t i = first; i < first + count; i++)
     {
-        if (Field(v, messagePieces, i, 0) == pieceExpression)
+        uint32_t kind = Field(v, messagePieces, i, 0);
+        uint32_t index = Field(v, messagePieces, i, 1);
+        if (kind == pieceExpression)
         {
-            total += mlocLoad32(costWords + (size_t)Field(v, messagePieces, i, 1) * 4);
+            total += mlocLoad32(costWords + (size_t)index * 4);
+        }
+        else if (kind == pieceMarkup)
+        {
+            // A markup's options are resolved for their faults.
+            uint32_t parameter = Field(v, messageMarkups, index, 3);
+            uint32_t end = parameter + Field(v, messageMarkups, index, 4);
+            for (; parameter < end; parameter++)
+            {
+                if (Field(v, messageParameters, parameter, 0) == parameterOptionVariable)
+                {
+                    total += VariableCost(v, words, Field(v, messageParameters, parameter, 3));
+                }
+            }
         }
     }
     return total;

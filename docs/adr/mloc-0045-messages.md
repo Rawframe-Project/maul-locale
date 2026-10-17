@@ -124,6 +124,21 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   Until the number and date functions come (the next slices), they are
   unknown, and a number argument without a function is written as its
   plain decimal.
+- **Bidi isolation and the `u:` options:** a formatter isolates by the
+  Default Bidi Strategy unless `mloc_messageIsolationNone` turns it off,
+  the message's direction its locale's (unknown when the locale has
+  none). Each value carries a direction and an isolate flag: literals,
+  arguments and `:string` unknown, a program function's from its
+  optional `direction` entry, a valid `u:dir` replacing it and
+  isolating (`inherit` keeping it unisolated), an unannotated variable
+  passing its declaration's on; a fallback is unknown, so in FSI and
+  PDI, also where a value failed to format (what it wrote is taken
+  back). `u:` options are the formatter's, hidden from a function's
+  accessors; a `u:dir` or `u:id` value that is not one is a Bad Option
+  and ignored, other `u:` options ignored. Markup resolves its options,
+  reporting their faults, `u:dir` on it a Bad Option; binding counts
+  those resolutions too. ICU4C 79 writes fallbacks bare and reports no
+  bad `u:dir` value; the library follows the specification there.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -157,14 +172,17 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   variable, the refusals of ill-formed UTF-8, NUL and arguments, the
   capacity measured exactly, and compiles every prefix of every case
   into a buffer of exactly the size measured.
-- Formatting: every case of the suite without bidi isolation or the
-  default number and date functions formats to its text with its errors
-  in order (149, the `:test:` functions defined in the test as the
-  suite describes them); `test_message_functions` checks the function
+- Formatting: every case of the suite without the default number and
+  date functions formats to its text with its errors in order (175,
+  isolated as each case says, the `:test:` functions defined in the
+  test as the suite describes them); `test_message_functions` checks the function
   table's refusals, each operand kind, the accessors, a function's
   faults in resolve and format, `:string`'s operands, selection with and
   without better entries, the selector limit, and the resolution limit
-  at bind and in a call whose function reads an option 40000 times. `fuzz_message` binds
+  at bind and in a call whose function reads an option 40000 times;
+  isolation in left-to-right, right-to-left and unknown messages with
+  every `u:dir` value, a fallback's isolate replacing a value's, and
+  markup's options. `fuzz_message` binds
   and formats each text with two arguments and two functions.
 
 ## Consequences

@@ -82,8 +82,9 @@ static void PutFallback(Formatting* f, const Value* v)
 }
 
 // An argument written with no function: a number as its plain decimal
-// (the number functions come with their slice); an object cannot be.
-static void PutArgument(Formatting* f, const Value* v, uint32_t expression)
+// (the number functions come with their slice); an object cannot be,
+// which is reported, false.
+static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
 {
     char digits[64];
     size_t length = 0;
@@ -91,16 +92,15 @@ static void PutArgument(Formatting* f, const Value* v, uint32_t expression)
     {
         mlocReportFault(&f->r, mloc_messageFaultUnsupportedOperation,
                         Field(f, messageExpressions, expression, 7));
-        Value fallback = mlocExpressionFallback(&f->r, expression);
-        PutFallback(f, &fallback);
-        return;
+        return false;
     }
     Put(&f->w, digits, length);
+    return true;
 }
 
 // A program function's value, written by its format entry into the room
-// left; a fault, or no format entry, writes the expression's fallback.
-static void PutResolved(Formatting* f, const Value* v, uint32_t expression)
+// left; a fault, or no format entry, is reported, false.
+static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
 {
     const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
     Writer* w = &f->w;
@@ -113,38 +113,81 @@ static void PutResolved(Formatting* f, const Value* v, uint32_t expression)
     if (fault != mloc_messageFaultNone)
     {
         mlocReportFault(&f->r, fault, Field(f, messageExpressions, expression, 7));
-        Value fallback = mlocExpressionFallback(&f->r, expression);
-        PutFallback(f, &fallback);
-        return;
+        return false;
     }
     w->length = out.length > SIZE_MAX - w->length ? SIZE_MAX : w->length + out.length;
+    return true;
+}
+
+// Writes a value; false when the expression's own fallback must stand
+// in its place (a fault reported, or :string over a failed operand).
+static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
+{
+    ValueKind kind = v->kind == valueString ? v->behind : v->kind;
+    if (kind == valueText)
+    {
+        Put(&f->w, v->text, v->length);
+        return true;
+    }
+    if (kind == valueArgument)
+    {
+        return PutArgument(f, v, expression);
+    }
+    if (kind == valueResolved)
+    {
+        return PutResolved(f, v, expression);
+    }
+    if (v->kind == valueString)
+    {
+        return false;
+    }
+    PutFallback(f, v);
+    return true;
+}
+
+// The isolate a placeholder opens with by the Default Bidi Strategy
+// (LRI, RLI or FSI in UTF-8, closed by PDI), or null: left to right in
+// a left-to-right message without u:dir, or isolation off.
+static const char* Opening(const Formatting* f, const Value* v)
+{
+    const MessageFormatter* formatter = &f->r.formatter;
+    if (!formatter->isolate)
+    {
+        return NULL;
+    }
+    if (v->direction == mloc_directionLeftToRight)
+    {
+        bool bare = formatter->direction == mloc_directionLeftToRight && !v->isolate;
+        return bare ? NULL : "\xE2\x81\xA6";
+    }
+    return v->direction == mloc_directionRightToLeft ? "\xE2\x81\xA7" : "\xE2\x81\xA8";
 }
 
 static void PutExpression(Formatting* f, uint32_t expression)
 {
     Value v = mlocResolveExpression(&f->r, expression);
-    ValueKind kind = v.kind == valueString ? v.behind : v.kind;
-    if (kind == valueText)
+    size_t start = f->w.length;
+    const char* open = Opening(f, &v);
+    if (open != NULL)
     {
-        Put(&f->w, v.text, v.length);
+        Put(&f->w, open, 3);
     }
-    else if (kind == valueArgument)
+    if (!PutValue(f, &v, expression))
     {
-        PutArgument(f, &v, expression);
-    }
-    else if (kind == valueResolved)
-    {
-        PutResolved(f, &v, expression);
-    }
-    else if (v.kind == valueString)
-    {
-        // :string over a failed operand shows its own fallback.
+        // What was written goes; the fallback, of unknown direction,
+        // takes its place.
+        f->w.length = start;
         Value fallback = mlocExpressionFallback(&f->r, expression);
+        open = Opening(f, &fallback);
+        if (open != NULL)
+        {
+            Put(&f->w, open, 3);
+        }
         PutFallback(f, &fallback);
     }
-    else
+    if (open != NULL)
     {
-        PutFallback(f, &v);
+        Put(&f->w, "\xE2\x81\xA9", 3);
     }
 }
 
@@ -161,7 +204,11 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
         {
             PutExpression(f, Field(f, messagePieces, i, 1));
         }
-        // Markup writes nothing in text.
+        else
+        {
+            // Markup writes nothing in text; its options still resolve.
+            mlocResolveMarkup(&f->r, Field(f, messagePieces, i, 1));
+        }
     }
 }
 

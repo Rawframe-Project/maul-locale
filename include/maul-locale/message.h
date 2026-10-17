@@ -232,9 +232,12 @@ extern "C"
     // it does not fit), or returns a fault; match tells whether a key (in
     // NFC) matches a value, a fault making the selector match only "*";
     // better tells whether key1 is a better match than key2, both
-    // matching. A null format or match means the function cannot format
-    // or select (an unsupported operation, a bad selector); a null better
-    // means no key is better than another.
+    // matching; direction gives the direction of a value's text, for
+    // bidi isolation. A null format or match means the function cannot
+    // format or select (an unsupported operation, a bad selector); a null
+    // better means no key is better than another; a null direction, an
+    // unknown direction. The call's u: options are the formatter's
+    // (u:dir replaces the direction and isolates), not the function's.
     typedef struct mlocMessageFunction
     {
         const char* name;
@@ -249,7 +252,20 @@ extern "C"
                                       const char* key, size_t keyLength, bool* matchOut);
         bool (*better)(void* context, const mlocMessageResolved* value, const char* key1,
                        size_t length1, const char* key2, size_t length2);
+        mlocDirection (*direction)(void* context, const mlocMessageResolved* value);
     } mlocMessageFunction;
+
+    // How a formatted message isolates its placeholders (UTS #35 Part 9,
+    // "Handling Bidirectional Text").
+    typedef enum mlocMessageIsolation
+    {
+        // The Default Bidi Strategy: each placeholder in FSI, LRI or RLI
+        // and PDI by its direction, a left-to-right one left bare in a
+        // left-to-right message unless its u:dir asks.
+        mloc_messageIsolationDefault = 0,
+        // No isolation: the text as the placeholders format.
+        mloc_messageIsolationNone = 1,
+    } mlocMessageIsolation;
 
     // A message formatter's options; the zero value is the default.
     typedef struct mlocMessageOptions
@@ -258,6 +274,10 @@ extern "C"
         // returns mloc_errorFormat; else it writes the message with
         // fallbacks.
         bool strict;
+        // Isolation, by the Default Bidi Strategy unless turned off; the
+        // message's own direction is its locale's
+        // (mlocGetLocaleDirection), unknown when that has none.
+        mlocMessageIsolation isolation;
         // The program's functions, which must outlive the formatter; may
         // be null when count is 0.
         const mlocMessageFunction* functions;
@@ -279,10 +299,10 @@ extern "C"
     /// @param data          The data its functions read.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
-    /// @return mloc_success; mloc_errorInvalid for a null pointer, or a
-    ///         function without a resolve entry, a name that is not an MF2
-    ///         identifier with a namespace, a namespace of u: or mloc:, or
-    ///         two functions of one name.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, an
+    ///         unknown isolation, or a function without a resolve entry, a
+    ///         name that is not an MF2 identifier with a namespace, a
+    ///         namespace of u: or mloc:, or two functions of one name.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut,
@@ -347,8 +367,9 @@ extern "C"
                                                          size_t argumentCount, mlocOutput* output,
                                                          mlocMessageFaults* faults);
 
-    /// The number of options a function's call has (its attributes
-    /// aside), for mlocGetMessageOption.
+    /// The number of options a function's call has (its attributes and
+    /// its u: options aside, which are the formatter's), for
+    /// mlocGetMessageOption.
     ///
     /// @param call  The call a function's resolve entry received, read
     ///              only while that entry runs.
