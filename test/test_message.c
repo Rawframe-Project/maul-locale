@@ -351,6 +351,145 @@ static void TestLinear(void)
     CHECK(result.status == mloc_success, "forty thousand variants compile");
 }
 
+static char s_text[1 << 16];
+
+// A compiled message written back; its length, or -1 when refused.
+static long WriteBack(const uint8_t* message, size_t size)
+{
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    mlocResult result = mlocWriteMessageText(message, size, &output);
+    return result == mloc_success ? (long)output.length : -1;
+}
+
+// Every case that compiles writes a text that compiles to the same
+// counts and writes the same text again.
+static void TestRoundTrip(void)
+{
+    static uint8_t second[1 << 16];
+    size_t count = sizeof s_suite / sizeof s_suite[0];
+    for (size_t i = 0; i < count; i++)
+    {
+        size_t size = 0;
+        mlocMessageError error;
+        mlocTextResult result = mlocCompileMessage(s_suite[i].source, s_suite[i].length, s_buffer,
+                                                   sizeof s_buffer, &size, &error);
+        if (result.status != mloc_success)
+        {
+            continue;
+        }
+        long length = WriteBack(s_buffer, size);
+        CHECK(length >= 0, "a compiled case writes back");
+        static char canonical[1 << 16];
+        memcpy(canonical, s_text, (size_t)length);
+        size_t again = 0;
+        result =
+            mlocCompileMessage(canonical, (size_t)length, second, sizeof second, &again, &error);
+        bool same =
+            result.status == mloc_success &&
+            memcmp(s_buffer + messageCounts, second + messageCounts, messageCount * 4) == 0 &&
+            WriteBack(second, again) == length && memcmp(s_text, canonical, (size_t)length) == 0;
+        if (!same)
+        {
+            printf("  %s: [%s] -> [%.*s]\n", s_suite[i].file, s_suite[i].source, (int)length,
+                   canonical);
+        }
+        CHECK(same, "the canonical text is a fixed point");
+    }
+}
+
+// A message's canonical text.
+static bool Canonical(const char* text, const char* expected)
+{
+    size_t size;
+    if (!Compile(text, &size))
+    {
+        return false;
+    }
+    long length = WriteBack(s_buffer, size);
+    bool same = length == (long)strlen(expected) && memcmp(s_text, expected, (size_t)length) == 0;
+    if (!same)
+    {
+        printf("  [%s] -> [%.*s]\n", text, (int)length, s_text);
+    }
+    return same;
+}
+
+static void TestCanonical(void)
+{
+    CHECK(Canonical("  Hello, {$name}! \\{x\\}", "  Hello, {$name}! \\{x\\}"),
+          "a simple message keeps its spaces and escapes");
+    CHECK(Canonical("{{hi}}", "hi") && Canonical("{{ .x}}", "{{ .x}}"),
+          "a quoted pattern stands alone unless it starts with a dot");
+    CHECK(Canonical(".input {$n :number minimumFractionDigits=2 @a=|b c|} .match $n 1 {{one}} "
+                    "* {{other}}",
+                    ".input {$n :number minimumFractionDigits=2 @a=|b c|}\n.match $n\n1 {{one}}\n* "
+                    "{{other}}"),
+          "declarations, selectors and variants on lines of their own");
+    CHECK(Canonical(".local $x = {1}{{{$x}}}", ".local $x = {1}\n{{{$x}}}"),
+          "a local and a quoted body");
+    CHECK(Canonical("{|a b| :f}{|ab|}{|a\\|b|}{||}", "{|a b| :f}{ab}{|a\\|b|}{||}"),
+          "literals quoted only where they must be");
+    CHECK(Canonical("{ #b k = v @x }{/b}{#i/}{ :f k=$v @a @b=c }",
+                    "{#b k=v @x}{/b}{#i /}{:f k=$v @a @b=c}"),
+          "markup and parameters spaced canonically");
+    CHECK(Canonical(".input {$x :f}.match $x |*| {{a}} |1 2| {{b}} * {{c}}",
+                    ".input {$x :f}\n.match $x\n|*| {{a}}\n|1 2| {{b}}\n* {{c}}"),
+          "keys quoted where they must be");
+}
+
+// One complex message with every byte changed in turn: written back
+// or refused, never read past.
+static void TestCorrupted(void)
+{
+    size_t size;
+    CHECK(Compile(".input {$n :f o=$m @a=|x|} .local $k = {|lit| :g}\n.match $n $k\n"
+                  "1 * {{one {#b}{$n}{/b}}} * * {{ {$k} \\{ }}",
+                  &size),
+          "the message compiles");
+    static uint8_t copy[1024];
+    CHECK(size <= sizeof copy && WriteBack(s_buffer, size) > 0, "it writes back");
+    uint32_t refused = 0;
+    for (size_t at = 0; at < size; at++)
+    {
+        static const uint8_t values[] = {0x00, 0x01, 0x7F, 0x80, 0xFF};
+        for (size_t v = 0; v < sizeof values; v++)
+        {
+            memcpy(copy, s_buffer, size);
+            if (copy[at] == values[v])
+            {
+                continue;
+            }
+            copy[at] = values[v];
+            uint8_t* exact = malloc(size);
+            memcpy(exact, copy, size);
+            mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+            mlocResult result = mlocWriteMessageText(exact, size, &output);
+            CHECK(result == mloc_success || result == mloc_errorData ||
+                      result == mloc_errorDataVersion,
+                  "a changed byte is written or refused");
+            refused += result != mloc_success;
+            free(exact);
+        }
+    }
+    CHECK(refused > 0, "changes are refused");
+    for (size_t cut = 0; cut < size; cut++)
+    {
+        CHECK(WriteBack(s_buffer, cut) < 0, "a cut message is refused");
+    }
+
+    mlocOutput output = {NULL, 0, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(s_buffer, size, &output) == mloc_errorCapacity &&
+              output.length == (size_t)WriteBack(s_buffer, size),
+          "measuring gives the length");
+    CHECK(mlocWriteMessageText(NULL, size, &output) == mloc_errorInvalid &&
+              mlocWriteMessageText(s_buffer, size, NULL) == mloc_errorInvalid,
+          "null pointers are refused");
+    memcpy(copy, s_buffer, size);
+    copy[messageLibrary] ^= 1;
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorDataVersion,
+          "another library's message is refused as such");
+}
+
 static void TestRefused(void)
 {
     size_t size = 0;
@@ -426,6 +565,9 @@ int main(void)
     TestMarks();
     TestDataModel();
     TestLinear();
+    TestRoundTrip();
+    TestCanonical();
+    TestCorrupted();
     TestRefused();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;

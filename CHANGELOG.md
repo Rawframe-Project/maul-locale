@@ -143,8 +143,9 @@ format.
   keys in NFC, refusing syntax errors and every data model error
   (variant key count, fallback variant, selector annotation, duplicate
   declarations, options and variants) at their offset
-  (`maul-locale/message.h`, mloc-0045). The library now links Maul
-  Unicode 0.3.0.
+  (`maul-locale/message.h`, mloc-0045); `mlocWriteMessageText` checks
+  a compiled message, from a file too, and writes it back as canonical
+  MF2 text. The library now links Maul Unicode 0.3.0.
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

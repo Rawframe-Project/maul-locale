@@ -54,6 +54,22 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   each is linear, through the table (cleared by a stamp per group) and
   two words a variable. A selector and a variant keep their source
   offsets, so every error has its offset. The compiled form is a format of the library's version.
+- **Reading and writing back:** `mlocWriteMessageText` reads a compiled
+  message as a catalog would, from bytes that may come from a file: the
+  magic, format and size, this library's and this Unicode's versions
+  (another's is `mloc_errorDataVersion`), the counts against the size in
+  64 bits, and every record's kind, indexes, ranges and strings (each in
+  the pool, well-formed UTF-8, names and identifiers MF2 names), so
+  nothing read leaves the bytes and every string can be written as MF2.
+  The data model's rules stay the compiler's. It then writes the
+  canonical text: a simple message when there are no declarations and
+  the pattern does not start with "." past its spaces; else each
+  declaration, `.match` with its selectors and each variant on a line of
+  its own, `{{...}}` for a quoted body; one space between an expression's
+  parts, the options before the attributes; literals bare when they are
+  one or more name characters, else quoted with "\" and "|" escaped;
+  text with "\", "{" and "}" escaped. Compiling it gives the same
+  counts, and writing that again gives the same text.
 - **Bind and format** (later slices): a message formatter (data set,
   locale, function table, bidi and error options) binds a compiled
   message in caller memory, making once every function whose options
@@ -73,7 +89,15 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   refuses are refused with that error (syntax, a key count and a
   missing fallback while measuring; the comparing checks once written).
   Each data model rule has cases of its own with their offsets, and
-  forty thousand names, options and variants compile in milliseconds. It counts the records
+  forty thousand names, options and variants compile in milliseconds.
+- The writer: every case of the suite that compiles writes a text that
+  compiles to the same counts and writes the same text again; canonical
+  texts of each construct; a complex message with every byte changed to
+  five values in turn is written back or refused, and every cut of it
+  refused; measuring, null pointers and another library's version.
+- `fuzz_message` compiles any text and checks the round trip's fixed
+  point, and reads any bytes as a compiled message (made this library's
+  version) without reading past them: 34 million runs clean. It counts the records
   of known messages, checks names composed and decomposed are one
   variable, the refusals of ill-formed UTF-8, NUL and arguments, the
   capacity measured exactly, and compiles every prefix of every case

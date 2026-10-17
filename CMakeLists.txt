@@ -104,8 +104,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_check.c
     src/message_emit.c
     src/message_parse.c
+    src/message_read.c
     src/message_table.c
     src/message_text.c
+    src/message_write.c
     src/calendar.c
     src/calendar_add.c
     src/calendar_arith.c
@@ -542,7 +544,7 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal duration ixdtf locale parse relative spellout zone_codes
+    foreach(area data date_data decimal duration ixdtf locale message parse relative spellout zone_codes
                  zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)

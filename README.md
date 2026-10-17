@@ -105,8 +105,9 @@ writes it, alone or with a time ("tomorrow at 3:00 PM"; a data file of
 its own, `src/generated/relative.mloc`); and durations ("1 hr, 2 min, 3
 sec", "1:02:03.456") of Temporal's fields, as ECMA-402's
 Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
-messages compiled into caller memory, checked for syntax.
-The library has 150 public functions.
+messages compiled into caller memory, checked for syntax and the data
+model, and written back as canonical text.
+The library has 151 public functions.
 
 ## Building
 

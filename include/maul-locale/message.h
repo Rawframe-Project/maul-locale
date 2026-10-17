@@ -72,6 +72,29 @@ extern "C"
                                                               size_t* sizeOut,
                                                               mlocMessageError* errorOut);
 
+    /// Writes a compiled message back as MF2 text, in a canonical form: a
+    /// simple message where its pattern can stand alone; else each
+    /// declaration, the selectors and each variant on a line of their
+    /// own; one space between an expression's parts; literals quoted
+    /// only where they must be. Compiling the text gives the same
+    /// records, and writing them again the same text. The message is
+    /// checked first, so bytes from a file are safe to give: every
+    /// count, index and string must hold, the strings well-formed UTF-8
+    /// and the names MF2 names.
+    ///
+    /// @param message  A compiled message from mlocCompileMessage.
+    /// @param size     Its size in bytes.
+    /// @param output   Receives the text.
+    /// @return mloc_success; mloc_errorCapacity when the text does not fit
+    ///         (output->length is then the length needed); mloc_errorData
+    ///         when the bytes are not a compiled message;
+    ///         mloc_errorDataVersion for one of another library or Unicode
+    ///         version; mloc_errorInvalid for a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocWriteMessageText(const void* message, size_t size,
+                                                            mlocOutput* output);
+
 #ifdef __cplusplus
 }
 #endif

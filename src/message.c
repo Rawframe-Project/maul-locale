@@ -2,13 +2,16 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Messages (maul-locale/message.h, record mloc-0045): compiling, in two
-// passes of message_parse through message_emit, then message_check.
+// passes of message_parse through message_emit, then message_check; and
+// writing back, through message_read and message_write.
 
 #include "maul-locale/message.h"
 
 #include "message_check.h"
 #include "message_emit.h"
 #include "message_parse.h"
+#include "message_read.h"
+#include "message_write.h"
 
 #include "maul-unicode/base.h"
 #include "maul-unicode/encoding.h"
@@ -89,4 +92,19 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     result.status = mloc_success;
     result.offset = length;
     return result;
+}
+
+mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* output)
+{
+    if (message == NULL || output == NULL || (output->buffer == NULL && output->capacity > 0))
+    {
+        return mloc_errorInvalid;
+    }
+    MessageView view;
+    mlocResult result = mlocReadMessage(message, size, &view);
+    if (result != mloc_success)
+    {
+        return result;
+    }
+    return mlocWriteMessage(&view, output);
 }
