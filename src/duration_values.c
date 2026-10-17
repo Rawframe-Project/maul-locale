@@ -7,7 +7,8 @@
 // TemporalDurationFromInternal with CreateTemporalDuration's check. The
 // doubles are read and made from their bits; every sum is exact.
 
-#include "binary64.h"
+#include "duration_values.h"
+
 #include "time_arith.h"
 
 #include "maul-locale/zone.h"
@@ -62,41 +63,56 @@ static bool Total(const Wide* f, Wide* totalOut)
     return mlocWideBelow(total, Limit());
 }
 
-mlocResult mlocMakeDuration(const mlocDurationValues* values, mlocDateTimeDuration* durationOut)
+// Reads the fields as magnitudes, their sign, and the time's total in
+// nanoseconds, as IsValidDuration checks them; false for a duration it
+// refuses.
+static bool ReadValid(const mlocDurationValues* values, Wide* f, int* signOut, Wide* total)
 {
-    if (values == nullptr || durationOut == nullptr)
-    {
-        return mloc_errorInvalid;
-    }
     const double given[fieldCount] = {
         values->years,        values->months,     values->weeks,   values->days,
         values->hours,        values->minutes,    values->seconds, values->milliseconds,
         values->microseconds, values->nanoseconds};
-    Wide f[fieldCount];
     int sign = 0;
     for (int i = 0; i < fieldCount; i += 1)
     {
         bool negative = false;
         if (!mlocWideOfDouble(given[i], &negative, &f[i]))
         {
-            return mloc_errorInvalid;
+            return false;
         }
         int fieldSign = IsZero(f[i]) ? 0 : negative ? -1 : 1;
         if (fieldSign != 0 && sign != 0 && fieldSign != sign)
         {
-            return mloc_errorInvalid;
+            return false;
         }
         sign = sign != 0 ? sign : fieldSign;
     }
-    Wide total;
     for (int i = 0; i < 3; i += 1)
     {
         if (f[i].high != 0 || f[i].low >= s_dateLimit)
         {
-            return mloc_errorInvalid;
+            return false;
         }
     }
-    if (!Total(f, &total))
+    *signOut = sign;
+    return Total(f, total);
+}
+
+bool mlocReadValidDuration(const mlocDurationValues* values, Wide* magnitudes, bool* negativeOut)
+{
+    int sign = 0;
+    Wide total;
+    bool valid = values != nullptr && ReadValid(values, magnitudes, &sign, &total);
+    *negativeOut = sign < 0;
+    return valid;
+}
+
+mlocResult mlocMakeDuration(const mlocDurationValues* values, mlocDateTimeDuration* durationOut)
+{
+    Wide f[fieldCount];
+    int sign = 0;
+    Wide total;
+    if (values == nullptr || durationOut == nullptr || !ReadValid(values, f, &sign, &total))
     {
         return mloc_errorInvalid;
     }

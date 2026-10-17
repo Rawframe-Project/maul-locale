@@ -36,8 +36,8 @@ typedef struct Item
 typedef struct Writing
 {
     const DurationFormat* format;
-    const mlocDurationValues* duration;
-    bool negative;
+    // The duration's fields, read once.
+    DurationFields fields;
     Item items[mloc_durationFieldCount];
     uint32_t count;
     // The numeric fields shown, their values, and whether hours or
@@ -62,7 +62,7 @@ static void ValueWithFractions(const Writing* g, uint32_t field, mlocDecimal* ou
     {
         fractions++;
     }
-    mlocDurationValue(g->duration, field, fractions, g->negative, out);
+    mlocDurationValue(&g->fields, field, fractions, out);
 }
 
 static bool IsZero(const mlocDecimal* d)
@@ -84,7 +84,7 @@ static bool PlanClock(Writing* g, uint32_t first)
         }
         else
         {
-            mlocDurationValue(g->duration, field, 0, g->negative, &g->clock[i]);
+            mlocDurationValue(&g->fields, field, 0, &g->clock[i]);
         }
     }
     const bool always[3] = {f->display[mloc_durationHours] == mloc_durationDisplayAlways,
@@ -121,7 +121,7 @@ static void Plan(Writing* g)
         }
         else
         {
-            mlocDurationValue(g->duration, i, 0, g->negative, &item.value);
+            mlocDurationValue(&g->fields, i, 0, &item.value);
         }
         if (f->display[i] == mloc_durationDisplayAlways || !IsZero(&item.value))
         {
@@ -260,16 +260,13 @@ mlocResult mlocFormatDuration(const mlocDurationFormatter* formatter,
     DurationFormat f;
     static const Writing s_zero;
     Writing g = s_zero;
-    mlocDateTimeDuration checked;
     if (!ReadDuration(formatter, &f) || duration == nullptr || output == nullptr ||
         (output->buffer == nullptr && output->capacity != 0) ||
-        mlocMakeDuration(duration, &checked) != mloc_success)
+        !mlocReadDurationFields(duration, &g.fields))
     {
         return mloc_errorInvalid;
     }
     g.format = &f;
-    g.duration = duration;
-    g.negative = mlocDurationNegative(duration);
     Plan(&g);
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
     WriteItems(&g, &w);

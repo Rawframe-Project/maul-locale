@@ -7,7 +7,7 @@
 
 #include "duration_fields.h"
 
-#include "binary64.h"
+#include "duration_values.h"
 
 #include <string.h>
 
@@ -17,29 +17,19 @@ enum
     chunkDigits = 19,
 };
 
-static Wide Magnitude(const mlocDurationValues* d, uint32_t field, bool* negative)
+bool mlocReadDurationFields(const mlocDurationValues* d, DurationFields* out)
 {
-    const double given[mloc_durationFieldCount] = {
-        d->years,   d->months,  d->weeks,        d->days,         d->hours,
-        d->minutes, d->seconds, d->milliseconds, d->microseconds, d->nanoseconds};
-    Wide magnitude = {0, 0};
-    *negative = false;
-    (void)mlocWideOfDouble(given[field], negative, &magnitude);
-    return magnitude;
-}
-
-bool mlocDurationNegative(const mlocDurationValues* d)
-{
+    Wide magnitudes[mloc_durationFieldCount];
+    if (!mlocReadValidDuration(d, magnitudes, &out->negative))
+    {
+        return false;
+    }
     for (uint32_t i = 0; i < mloc_durationFieldCount; i++)
     {
-        bool negative = false;
-        Wide m = Magnitude(d, i, &negative);
-        if (negative && (m.high != 0 || m.low != 0))
-        {
-            return true;
-        }
+        out->high[i] = magnitudes[i].high;
+        out->low[i] = magnitudes[i].low;
     }
-    return false;
+    return true;
 }
 
 // Writes a value's digits before end, least significant first, at least
@@ -91,14 +81,14 @@ static void DecimalOf(Wide magnitude, uint32_t places, bool negative, mlocDecima
     out->fractionDigits = exponent < 0 ? -exponent : 0;
 }
 
-void mlocDurationValue(const mlocDurationValues* d, uint32_t field, uint32_t fractions,
-                       bool negative, mlocDecimal* out)
+void mlocDurationValue(const DurationFields* f, uint32_t field, uint32_t fractions,
+                       mlocDecimal* out)
 {
-    bool ignored = false;
-    Wide total = Magnitude(d, field, &ignored);
+    Wide total = {f->high[field], f->low[field]};
     for (uint32_t i = 1; i <= fractions; i++)
     {
-        total = mlocWideSum(mlocWideScaled(total, 1000), Magnitude(d, field + i, &ignored));
+        Wide next = {f->high[field + i], f->low[field + i]};
+        total = mlocWideSum(mlocWideScaled(total, 1000), next);
     }
-    DecimalOf(total, 3 * fractions, negative, out);
+    DecimalOf(total, 3 * fractions, f->negative, out);
 }
