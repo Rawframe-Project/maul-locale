@@ -181,6 +181,11 @@ format.
   specification's fields, lengths, precisions, `hour12` and `calendar`
   over the date formatters; new date, time and date-time argument kinds
   and operand kinds; date/time literals (mloc-0045).
+- Messages format to parts: with a part function, `mlocFormatMessage`
+  reports text, placeholders, fallbacks, markup and isolation marks
+  (`mlocMessagePart`, the expression's or markup's index in the upper
+  24 bits) and, inside each placeholder, its number's or date's own
+  parts (mloc-0045).
 - Messages show exact times in zones: instant and zoned date-time
   argument kinds, literals with Z, an offset or a zone annotation,
   `timeZone` (an identifier, an offset, `UTC` or `input`),

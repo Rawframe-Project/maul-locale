@@ -157,11 +157,40 @@ static const mlocMessageFunction s_functions[] = {
     {"f:y", 3, NULL, FuzzResolve, NULL, NULL, NULL, NULL},
 };
 
+// What the parts of a text told so far: where the message's own parts
+// end, the last one's range, and whether every part kept the rules.
+typedef struct Tiling
+{
+    size_t end;
+    size_t outerStart;
+    size_t outerEnd;
+    bool good;
+} Tiling;
+
+// The message's own parts tile the text in order; the others lie inside
+// the one before them.
+static void CheckPart(void* context, uint32_t part, size_t start, size_t length)
+{
+    Tiling* t = context;
+    if ((part & 0xFF) >= mloc_messagePartText)
+    {
+        t->good = t->good && start == t->end && (part & 0xFF) <= mloc_messagePartIsolation;
+        t->end = start + length;
+        t->outerStart = start;
+        t->outerEnd = t->end;
+    }
+    else
+    {
+        t->good = t->good && start >= t->outerStart && start + length <= t->outerEnd;
+    }
+}
+
 // Binds a message and formats it with seven arguments ($s a string, $n
 // a number, $c a currency amount, $u a unit amount, $d a date-time, $i
 // an instant, $z a zoned date-time): the other variables unresolved, the
 // functions other than the default ones, f:x and f:y unknown, the text
-// measured then written.
+// measured, written, then written again with its parts, which must tile
+// it.
 static void Format(const uint8_t* message, size_t size)
 {
     mlocData builtin;
@@ -195,6 +224,14 @@ static void Format(const uint8_t* message, size_t size)
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);
+    // Again with its parts: the same text, tiled by them.
+    Tiling tiling = {0, 0, 0, true};
+    char* again = malloc(measure.length + 1);
+    mlocOutput parts = {again, measure.length, 0, CheckPart, &tiling};
+    Require(mlocFormatMessage(bound, s_arguments, 7, &parts, NULL) == result &&
+            parts.length == output.length && memcmp(again, text, output.length) == 0 &&
+            tiling.good && tiling.end == output.length);
+    free(again);
     free(text);
     free(bound);
 }

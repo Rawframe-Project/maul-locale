@@ -13,12 +13,15 @@
 
 #include <string.h>
 
-// The bytes that fit go to the buffer; length counts them all.
+// The bytes that fit go to the buffer; length counts them all. In the
+// pass that reports parts, part is the caller's.
 typedef struct Writer
 {
     char* buffer;
     size_t capacity;
     size_t length;
+    mlocPartFunction part;
+    void* context;
 } Writer;
 
 typedef struct Formatting
@@ -40,6 +43,33 @@ static void Put(Writer* w, const void* bytes, size_t length)
         memcpy(w->buffer + w->length, bytes, length < room ? length : room);
     }
     w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
+}
+
+// Reports a message part of a kind and index, in the pass that reports.
+static void Report(const Writer* w, uint32_t kind, uint32_t index, size_t start, size_t length)
+{
+    if (w->part != NULL)
+    {
+        w->part(w->context, index << 8 | kind, start, length);
+    }
+}
+
+// What a function's parts are moved by: the place its text starts.
+typedef struct Inner
+{
+    const Writer* w;
+    size_t start;
+} Inner;
+
+// Passes on a function's part at its place in the message; a kind whose
+// low byte is a message part's is not the function's to give.
+static void PassPart(void* context, uint32_t part, size_t start, size_t length)
+{
+    const Inner* inner = context;
+    if ((part & 0xFF) < mloc_messagePartText)
+    {
+        inner->w->part(inner->w->context, part, inner->start + start, length);
+    }
 }
 
 static const uint8_t* Pool(const Formatting* f, uint32_t offset)
@@ -107,12 +137,15 @@ static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
     return true;
 }
 
-// The output over the writer's room left.
-static mlocOutput Room(const Writer* w)
+// The output over the writer's room left, passing parts on through
+// inner when the writer reports them.
+static mlocOutput Room(const Writer* w, Inner* inner)
 {
     bool room = w->buffer != NULL && w->length < w->capacity;
+    inner->w = w;
+    inner->start = w->length;
     mlocOutput out = {room ? w->buffer + w->length : NULL, room ? w->capacity - w->length : 0, 0,
-                      NULL, NULL};
+                      w->part != NULL ? PassPart : NULL, inner};
     return out;
 }
 
@@ -122,7 +155,8 @@ static mlocOutput Room(const Writer* w)
 static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
 {
     Writer* w = &f->w;
-    mlocOutput out = Room(w);
+    Inner inner;
+    mlocOutput out = Room(w, &inner);
     mlocMessageFaultKind fault;
     if (v->kind == valueNumber)
     {
@@ -198,16 +232,44 @@ static const char* Opening(const Formatting* f, const Value* v)
     return v->direction == mloc_directionRightToLeft ? "\xE2\x81\xA7" : "\xE2\x81\xA8";
 }
 
+// Writes an isolation mark, reported as a part.
+static void PutMark(Writer* w, const char* mark)
+{
+    Report(w, mloc_messagePartIsolation, 0, w->length, 3);
+    Put(w, mark, 3);
+}
+
+// Measures a value's text, for the pass that reports parts: false when
+// it falls back.
+static bool Measure(Formatting* f, const Value* v, uint32_t expression, size_t* lengthOut)
+{
+    Writer saved = f->w;
+    f->w = (Writer){NULL, 0, 0, NULL, NULL};
+    bool good = PutValue(f, v, expression);
+    *lengthOut = f->w.length;
+    f->w = saved;
+    return good;
+}
+
 static void PutExpression(Formatting* f, uint32_t expression)
 {
     Value v = mlocResolveExpression(&f->r, expression);
     size_t start = f->w.length;
+    size_t length = 0;
+    // The pass that reports parts reports the value's range before the
+    // parts inside it, so it measures first.
+    bool good = f->w.part == NULL || Measure(f, &v, expression, &length);
     const char* open = Opening(f, &v);
-    if (open != NULL)
+    if (good)
     {
-        Put(&f->w, open, 3);
+        if (open != NULL)
+        {
+            PutMark(&f->w, open);
+        }
+        Report(&f->w, mloc_messagePartPlaceholder, expression, f->w.length, length);
+        good = PutValue(f, &v, expression);
     }
-    if (!PutValue(f, &v, expression))
+    if (!good)
     {
         // What was written goes; the fallback, of unknown direction,
         // takes its place.
@@ -216,13 +278,15 @@ static void PutExpression(Formatting* f, uint32_t expression)
         open = Opening(f, &fallback);
         if (open != NULL)
         {
-            Put(&f->w, open, 3);
+            PutMark(&f->w, open);
         }
+        size_t at = f->w.length;
         PutFallback(f, &fallback);
+        Report(&f->w, mloc_messagePartFallback, expression, at, f->w.length - at);
     }
     if (open != NULL)
     {
-        Put(&f->w, "\xE2\x81\xA9", 3);
+        PutMark(&f->w, "\xE2\x81\xA9");
     }
 }
 
@@ -233,7 +297,12 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
         uint32_t kind = Field(f, messagePieces, i, 0);
         if (kind == pieceText)
         {
-            Put(&f->w, Pool(f, Field(f, messagePieces, i, 1)), Field(f, messagePieces, i, 2));
+            uint32_t length = Field(f, messagePieces, i, 2);
+            if (length > 0)
+            {
+                Report(&f->w, mloc_messagePartText, 0, f->w.length, length);
+            }
+            Put(&f->w, Pool(f, Field(f, messagePieces, i, 1)), length);
         }
         else if (kind == pieceExpression)
         {
@@ -242,7 +311,10 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
         else
         {
             // Markup writes nothing in text; its options still resolve.
-            mlocResolveMarkup(&f->r, Field(f, messagePieces, i, 1));
+            uint32_t markup = Field(f, messagePieces, i, 1);
+            mlocResolveMarkup(&f->r, markup);
+            Report(&f->w, mloc_messagePartMarkupOpen + Field(f, messageMarkups, markup, 0), markup,
+                   f->w.length, 0);
         }
     }
 }
@@ -484,6 +556,29 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
     return true;
 }
 
+// Writes the selected pattern, faults reported unless quiet.
+static void Run(Formatting* f, uint32_t quiet)
+{
+    f->r.quiet = quiet;
+    f->r.budget = messageResolutionLimit;
+    f->r.exhausted = false;
+    f->r.optionDepth = 0;
+    const MessageView* v = &f->r.h.view;
+    // The reported bits of the declarations there are.
+    memset(f->r.reported, 0, (v->count[messageDeclarations] + 7) / 8);
+    if (v->count[messageVariants] == 0)
+    {
+        PutPattern(f, 0, v->count[messagePieces]);
+        return;
+    }
+    uint32_t variant = SelectVariant(f);
+    // A compiled message always has a variant of catch-all keys.
+    if (variant != UINT32_MAX)
+    {
+        PutPattern(f, Field(f, messageVariants, variant, 0), Field(f, messageVariants, variant, 1));
+    }
+}
+
 mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments,
                              size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults)
 {
@@ -502,30 +597,20 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.argumentCount = argumentCount;
     f.r.faults = faults;
     f.r.faultCount = 0;
-    f.r.quiet = 0;
-    f.r.budget = messageResolutionLimit;
-    f.r.exhausted = false;
     f.r.probe = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
-    f.r.optionDepth = 0;
-    const MessageView* v = &f.r.h.view;
-    // The reported bits of the declarations there are.
-    memset(f.r.reported, 0, (v->count[messageDeclarations] + 7) / 8);
-    f.w = (Writer){output->buffer, output->capacity, 0};
-    if (v->count[messageVariants] == 0)
+    f.w = (Writer){output->buffer, output->capacity, 0, NULL, NULL};
+    Run(&f, 0);
+    if (output->part != NULL && f.w.length <= f.w.capacity &&
+        !(f.r.faultCount > 0 && f.r.formatter.strict))
     {
-        PutPattern(&f, 0, v->count[messagePieces]);
-    }
-    else
-    {
-        uint32_t variant = SelectVariant(&f);
-        // A compiled message always has a variant of catch-all keys.
-        if (variant != UINT32_MAX)
-        {
-            PutPattern(&f, Field(&f, messageVariants, variant, 0),
-                       Field(&f, messageVariants, variant, 1));
-        }
+        // The same text again, its parts reported, its faults already
+        // counted.
+        size_t faultCount = f.r.faultCount;
+        f.w = (Writer){output->buffer, output->capacity, 0, output->part, output->context};
+        Run(&f, 1);
+        f.r.faultCount = faultCount;
     }
     if (faults != NULL)
     {

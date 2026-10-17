@@ -416,7 +416,8 @@ extern "C"
     ///         small; mloc_errorData and mloc_errorDataVersion as
     ///         mlocWriteMessageText; mloc_errorInvalid for a null pointer,
     ///         a formatter the library did not make, more than 32
-    ///         selectors, a chain of more than 64 expressions each naming
+    ///         selectors, 1024 declarations, or 2^24 expressions or
+    ///         markups, a chain of more than 64 expressions each naming
     ///         the next through a declaration, or a message whose format
     ///         call would resolve more than 65536 expressions (a local
     ///         is resolved again at each reference, an option's twice;
@@ -428,6 +429,33 @@ extern "C"
                                                        void* buffer, size_t capacity,
                                                        size_t* sizeOut);
 
+    // A formatted message's parts, as the output's part function receives
+    // them (record mloc-0045). A part whose kind's low byte is 0x80 or
+    // more is the message's own: the byte is one of these, and the bits
+    // above it the expression's or markup's index in the message (0 for
+    // text and an isolation mark). A part whose low byte is under 0x80
+    // belongs to the placeholder around it, which reported its range
+    // first: its kind is the function's own (mlocNumberPart for the number
+    // functions, mlocDatePart for the date functions), its range inside
+    // the placeholder's. The message's own parts tile its text in order.
+    typedef enum mlocMessagePart
+    {
+        // A text of the pattern.
+        mloc_messagePartText = 0x80,
+        // A placeholder's value: its text, the isolation marks around it
+        // being parts of their own.
+        mloc_messagePartPlaceholder = 0x81,
+        // A placeholder's fallback ("{$name}") in place of its value.
+        mloc_messagePartFallback = 0x82,
+        // Markup, at its place, of no length.
+        mloc_messagePartMarkupOpen = 0x83,
+        mloc_messagePartMarkupStandalone = 0x84,
+        mloc_messagePartMarkupClose = 0x85,
+        // An isolation mark: LRI, RLI or FSI before a placeholder, PDI
+        // after it.
+        mloc_messagePartIsolation = 0x86,
+    } mlocMessagePart;
+
     /// Formats a bound message with its arguments: the pattern selected,
     /// each text written, each placeholder resolved where it stands and
     /// written, markup writing nothing. An expression that fails is
@@ -437,7 +465,15 @@ extern "C"
     /// code ("42.5 EUR"), a unit amount as its amount and unit ("3.5
     /// meter"), a date, time or date-time in ISO 8601's extended form
     /// (year, month and day joined by hyphens, a time's fields by colons,
-    /// a "T" between them, the fraction of a second as needed).
+    /// a "T" between them, the fraction of a second as needed), an
+    /// instant the same in UTC followed by "Z", a zoned date-time its
+    /// local date-time followed by its offset and its zone in brackets.
+    ///
+    /// When output->part is set, the call reports the text's parts
+    /// (mlocMessagePart) once it is written, on mloc_success or
+    /// mloc_withFallbacks: it formats a second time to report them, so a
+    /// program function's entries must give the same results for the
+    /// same values.
     ///
     /// @param bound          A bound message from mlocBindMessage.
     /// @param arguments      The arguments; may be null when count is 0.
@@ -451,9 +487,9 @@ extern "C"
     ///         mloc_errorInvalid for a null pointer (an argument's name,
     ///         string, decimal, amount or unit among them), a decimal that
     ///         is not one the library makes, a currency code that is not
-    ///         three ASCII letters, a date or time the library does not
-    ///         make, an unknown kind, or a bound message the library did
-    ///         not make.
+    ///         three ASCII letters, a date, time or instant the library
+    ///         does not make, a zone it did not make, an unknown kind, or
+    ///         a bound message the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

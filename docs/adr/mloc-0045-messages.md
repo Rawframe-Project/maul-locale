@@ -273,6 +273,19 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   their own (`dates.mloc`); without it a date function is an Unsupported
   Operation. ICU4C 79's MF2 is of the older Draft (it ignores these
   options) and no oracle.
+- **Parts:** with the output's part function set, a format call that
+  succeeds (or falls back) writes the text a second time to report its
+  parts, storing nothing: text, placeholder, fallback, markup open,
+  standalone and close (no length, at their place) and isolation marks,
+  `mlocMessagePart` 0x80 to 0x86 in a kind's low byte with the
+  expression's or markup's index above it; they tile the text in order.
+  A placeholder's range comes first (its value measured for it), then
+  its function's own parts inside it, their kinds the function's
+  (`mlocNumberPart`, `mlocDatePart`; a program function's passed on
+  unless the low byte is a message part's). Binding refuses more than
+  2^24 expressions or markups, so an index fits. Program functions must
+  give the same text each time: their format entry is called once more
+  to measure and once more to report.
 - **A locale's direction,** which the message's own isolation needs,
   is public: `mlocGetLocaleDirection` takes the locale's script, or its
   likely script, and finds it among the scripts CLDR's
@@ -310,6 +323,9 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   formats to its text with its errors in order, or, where the suite
   gives no text, with its errors (299, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
+  `test_message_parts` checks parts of every piece, isolation marks,
+  numbers' and dates' parts at their place, a program function's,
+  none on failure, faults counted once, and tiling;
   `test_message_dates` checks the date functions' options, operands,
   refusals, zones, inheritance and preparation, with `dates.mloc`,
   `zone-names.mloc` and the locale names in the set;

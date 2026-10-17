@@ -86,6 +86,10 @@ enum
 // declaration, that a bound message resolves on the stack.
 static const uint32_t messageChainLimit = 64;
 
+// The expressions and markups a message may have: a part's kind holds an
+// index in 24 bits.
+static const uint32_t messageIndexLimit = 1u << 24;
+
 // The most expression resolutions a format call makes. Each reference to
 // a local resolves it again (call-by-name), so a message whose locals are
 // each named twice by the next grows as a power of two; binding refuses

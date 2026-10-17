@@ -422,7 +422,9 @@ mlocResult mlocOpenBind(const mlocMessageFormatter* formatter, const void* messa
     }
     const MessageView* v = &headerOut->view;
     return v->count[messageSelectors] > messageSelectorLimit ||
-                   v->count[messageDeclarations] > messageDeclarationLimit
+                   v->count[messageDeclarations] > messageDeclarationLimit ||
+                   v->count[messageExpressions] > messageIndexLimit ||
+                   v->count[messageMarkups] > messageIndexLimit
                ? mloc_errorInvalid
                : mloc_success;
 }
