@@ -374,6 +374,12 @@ static void TestCalls(void)
                 "C3EUR;k=C3EUR", NULL) &&
             Formats(".local $c = {7 :currency currency=czk} {{{$c :x:echo}}}", a, 4, "C1CZK", NULL),
         "a currency value is passed as its amount and code");
+    mlocMessageArgument named[] = {
+        {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
+        {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},
+    };
+    CHECK(Formats("{$n}", named, 2, "5", NULL),
+          "an argument's name already in NFC is another variable's when its bytes differ");
     static const mlocMessageFaultKind badOperand[] = {mloc_messageFaultBadOperand, 0};
     s_echoes = 0;
     CHECK(Formats(".local $x = {|7| :x:echo} .local $y = {$x :number} {{{$y}}}", a, 4, "{$y}",
