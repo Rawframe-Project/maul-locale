@@ -575,6 +575,9 @@ static void TestUnit(void)
                   "unitDisplay=narrow} {1.23456 :unit unit=meter}",
                   NULL, 0, "3 m 3 meters 3m 1.235 m", NULL),
           "units in their widths, 0 to 3 fraction digits");
+    CHECK(Formats("{3 :unit unit=megahertz} {3 :unit unit=liter-per-100-kilometer}", NULL, 0,
+                  "3 MHz 3 L/100 km", NULL),
+          "identifiers of every letter and digits");
     static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
     CHECK(Formats("{1234.5 :unit unit=meter usage=road} {1234.5 :unit unit=meter usage=road "
                   "maximumFractionDigits=3}",

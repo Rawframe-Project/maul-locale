@@ -1311,6 +1311,19 @@ static void TestBindAndFormat(void)
     memcpy(amounts[0].value.as.currency.code, "CZK", 3);
     CHECK(mlocFormatMessage(s_bound, &amounts[0], 1, &output, NULL) != mloc_errorInvalid,
           "a good amount is taken");
+    mlocMessageArgument units[4] = {
+        {"u", 1, {mloc_messageValueUnit, 0, {.unit = {NULL, "meter", 5}}}},
+        {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&far, "meter", 5}}}},
+        {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&half, NULL, 3}}}},
+        {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&half, NULL, 0}}}},
+    };
+    for (size_t i = 0; i < 3; i++)
+    {
+        CHECK(mlocFormatMessage(s_bound, &units[i], 1, &output, NULL) == mloc_errorInvalid,
+              "a unit amount null or not the library's, or a null unit of a length, is refused");
+    }
+    CHECK(mlocFormatMessage(s_bound, &units[3], 1, &output, NULL) != mloc_errorInvalid,
+          "an empty unit is taken (and is no unit)");
     mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
     CHECK(mlocFormatMessage(s_bound, &unknown, 1, &output, NULL) == mloc_errorInvalid,
           "an unknown kind is refused");
