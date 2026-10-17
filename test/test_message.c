@@ -714,6 +714,320 @@ static void TestPrefixes(void)
     }
 }
 
+// A case's arguments, from the suite's encoding; strings point into it.
+static size_t Arguments(const SuiteCase* c, mlocMessageArgument* out, size_t capacity,
+                        mlocDecimal* decimals)
+{
+    size_t count = 0;
+    const char* at = c->arguments;
+    while (*at != 0 && count < capacity)
+    {
+        const char* end = strchr(at, 0x1E);
+        size_t length = end != NULL ? (size_t)(end - at) : strlen(at);
+        const char* type = memchr(at, 0x1F, length);
+        const char* value =
+            type != NULL ? memchr(type + 1, 0x1F, length - (size_t)(type + 1 - at)) : NULL;
+        if (type == NULL || value == NULL)
+        {
+            break;
+        }
+        mlocMessageArgument* a = &out[count];
+        memset(a, 0, sizeof *a);
+        a->name = at;
+        a->nameLength = (size_t)(type - at);
+        size_t valueLength = length - (size_t)(value + 1 - at);
+        char kind = type[1];
+        if (kind == 'i' || kind == 'd')
+        {
+            mlocTextResult parsed = mlocParseDecimal(value + 1, valueLength, &decimals[count]);
+            a->value.kind = mloc_messageValueDecimal;
+            a->value.as.decimal = &decimals[count];
+            if (parsed.status != mloc_success)
+            {
+                break;
+            }
+        }
+        else
+        {
+            a->value.kind = mloc_messageValueString;
+            a->value.as.string.text = value + 1;
+            a->value.as.string.length = valueLength;
+        }
+        count++;
+        at += length + (end != NULL ? 1 : 0);
+    }
+    return count;
+}
+
+// The suite's name of a fault.
+static const char* FaultName(mlocMessageFaultKind kind)
+{
+    switch (kind)
+    {
+    case mloc_messageFaultUnresolvedVariable:
+        return "unresolved-variable";
+    case mloc_messageFaultUnknownFunction:
+        return "unknown-function";
+    case mloc_messageFaultBadSelector:
+        return "bad-selector";
+    case mloc_messageFaultBadOperand:
+        return "bad-operand";
+    case mloc_messageFaultBadOption:
+        return "bad-option";
+    default:
+        return "other";
+    }
+}
+
+// Whether a case's expected errors are only those this slice reports.
+static bool FormatsNow(const SuiteCase* c)
+{
+    static const char* const known[] = {"unresolved-variable", "unknown-function", "bad-selector"};
+    const char* at = c->errors;
+    while (*at != 0)
+    {
+        size_t length = strcspn(at, ",");
+        bool found = false;
+        for (size_t i = 0; i < sizeof known / sizeof known[0]; i++)
+        {
+            found = found || (strlen(known[i]) == length && memcmp(known[i], at, length) == 0);
+        }
+        if (!found)
+        {
+            return false;
+        }
+        at += length + (at[length] == ',' ? 1 : 0);
+    }
+    // The default functions, and numbers written by locale, come later.
+    static const char* const later[] = {":test:",    ":number",  ":integer", ":string", ":offset",
+                                        ":currency", ":percent", ":unit",    ":date",   ":time"};
+    for (size_t i = 0; i < sizeof later / sizeof later[0]; i++)
+    {
+        if (strstr(c->source, later[i]) != NULL)
+        {
+            return false;
+        }
+    }
+    return c->expected != NULL && !c->bidi && strcmp(c->locale, "fr") != 0;
+}
+
+// The faults' names in order, joined by commas, as the suite lists them.
+static void FaultNames(const mlocMessageFaults* faults, char* out, size_t capacity)
+{
+    out[0] = 0;
+    for (size_t i = 0; i < faults->count && i < faults->capacity; i++)
+    {
+        if (i > 0)
+        {
+            strncat(out, ",", capacity - strlen(out) - 1);
+        }
+        strncat(out, FaultName(faults->faults[i].kind), capacity - strlen(out) - 1);
+    }
+}
+
+// Every suite case this slice can format formats to its text, with its
+// errors in order.
+static void TestSuiteFormat(void)
+{
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet data = {&builtin, 1};
+    mlocLocale locale;
+    mlocTextResult parsed = mlocParseLocale("en-US", 5, &locale);
+    mlocMessageFormatter formatter;
+    CHECK(parsed.status == mloc_success &&
+              mlocInitMessageFormatter(&formatter, &data, &locale, NULL) == mloc_success,
+          "a formatter is made");
+    static uint8_t bound[1 << 16];
+    size_t count = sizeof s_suite / sizeof s_suite[0];
+    size_t formatted = 0;
+    for (size_t i = 0; i < count; i++)
+    {
+        const SuiteCase* c = &s_suite[i];
+        size_t size = 0;
+        mlocMessageError error;
+        if (!FormatsNow(c) ||
+            mlocCompileMessage(c->source, c->length, s_buffer, sizeof s_buffer, &size, &error)
+                    .status != mloc_success)
+        {
+            continue;
+        }
+        size_t boundSize = 0;
+        CHECK(mlocBindMessage(&formatter, s_buffer, size, bound, sizeof bound, &boundSize) ==
+                  mloc_success,
+              "a case binds");
+        mlocMessageArgument arguments[8];
+        mlocDecimal decimals[8];
+        size_t argumentCount = Arguments(c, arguments, 8, decimals);
+        mlocMessageFault list[8];
+        mlocMessageFaults faults = {list, 8, 0};
+        mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+        mlocResult result = mlocFormatMessage(bound, arguments, argumentCount, &output, &faults);
+        char names[256];
+        FaultNames(&faults, names, sizeof names);
+        bool good = (result == mloc_success || result == mloc_withFallbacks) &&
+                    (result == mloc_withFallbacks) == (faults.count > 0) &&
+                    output.length == strlen(c->expected) &&
+                    memcmp(s_text, c->expected, output.length) == 0 &&
+                    strcmp(names, c->errors) == 0;
+        if (!good)
+        {
+            printf("  %s: [%s] -> [%.*s] errors [%s] expected [%s] [%s]\n", c->file, c->source,
+                   (int)output.length, s_text, names, c->expected, c->errors);
+        }
+        CHECK(good, "a case formats as the suite says");
+        formatted++;
+    }
+    CHECK(formatted >= 100, "most of the syntax cases format");
+}
+
+static mlocMessageFormatter s_formatter;
+static mlocMessageFormatter s_strict;
+
+static void MakeFormatters(void)
+{
+    static mlocData builtin;
+    static mlocDataSet data;
+    mlocOpenBuiltinData(&builtin);
+    data = (mlocDataSet){&builtin, 1};
+    mlocLocale locale;
+    mlocMessageOptions strict = {true};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitMessageFormatter(&s_formatter, &data, &locale, NULL) == mloc_success &&
+              mlocInitMessageFormatter(&s_strict, &data, &locale, &strict) == mloc_success,
+          "formatters are made");
+    CHECK(mlocInitMessageFormatter(NULL, &data, &locale, NULL) == mloc_errorInvalid &&
+              mlocInitMessageFormatter(&s_strict, NULL, &locale, NULL) == mloc_errorInvalid,
+          "null pointers are refused");
+}
+
+static uint8_t s_bound[1 << 16];
+
+// Compiles and binds a message; the bind's result.
+static mlocResult Bind(const mlocMessageFormatter* formatter, const char* text)
+{
+    size_t size;
+    if (!Compile(text, &size))
+    {
+        return mloc_errorSyntax;
+    }
+    size_t needed = 0;
+    mlocResult measured = mlocBindMessage(formatter, s_buffer, size, NULL, 0, &needed);
+    size_t bound = 0;
+    mlocResult result = mlocBindMessage(formatter, s_buffer, size, s_bound, sizeof s_bound, &bound);
+    CHECK(result != mloc_success || (measured == mloc_errorCapacity && needed == bound),
+          "binding measures what it writes");
+    return result;
+}
+
+// Formats s_bound; the text in s_text.
+static mlocResult Format(const mlocMessageArgument* arguments, size_t count, size_t* lengthOut,
+                         mlocMessageFaults* faults)
+{
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    mlocResult result = mlocFormatMessage(s_bound, arguments, count, &output, faults);
+    *lengthOut = output.length;
+    return result;
+}
+
+static bool TextIs(size_t length, const char* text)
+{
+    return length == strlen(text) && memcmp(s_text, text, length) == 0;
+}
+
+static void TestBindAndFormat(void)
+{
+    MakeFormatters();
+    char text[4096];
+    // A chain of 64 expressions binds; of 65, it is refused.
+    for (int limit = 63; limit <= 64; limit++)
+    {
+        size_t at = (size_t)snprintf(text, sizeof text, ".local $v0 = {$x}");
+        for (int i = 1; i < limit; i++)
+        {
+            at += (size_t)snprintf(text + at, sizeof text - at, ".local $v%d = {$v%d}", i, i - 1);
+        }
+        snprintf(text + at, sizeof text - at, "{{{$v%d}}}", limit - 1);
+        CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorCapacity),
+              "a chain of 64 binds, of 65 is refused");
+    }
+    mlocMessageArgument x = {"x", 1, {mloc_messageValueString, 0, {.string = {"X", 1}}}};
+    size_t length;
+    CHECK(Bind(&s_formatter, ".local $a = {$x} .local $b = {$a} {{{$b}{$a}{$x}}}") ==
+                  mloc_success &&
+              Format(&x, 1, &length, NULL) == mloc_success && TextIs(length, "XXX"),
+          "locals resolve through their chain");
+
+    CHECK(Bind(&s_formatter, "{$x} and {$y :f} and {|a\\|b| :f} and {:ns:g}") == mloc_success,
+          "fallbacks bind");
+    mlocMessageFault list[2];
+    mlocMessageFaults faults = {list, 2, 0};
+    CHECK(Format(&x, 1, &length, &faults) == mloc_withFallbacks &&
+              TextIs(length, "X and {$y} and {|a\\|b|} and {:ns:g}") && faults.count == 4 &&
+              list[0].kind == mloc_messageFaultUnresolvedVariable && list[0].at == 9 &&
+              list[1].kind == mloc_messageFaultUnknownFunction && list[1].at == 9,
+          "fallbacks are written and the first faults kept, all counted");
+    mlocMessageFaults none = {NULL, 0, 0};
+    CHECK(Format(&x, 1, &length, &none) == mloc_withFallbacks && none.count == 4,
+          "faults are counted without room for them");
+
+    mlocDecimal half;
+    CHECK(mlocParseDecimal("0.50", 4, &half).status == mloc_success, "a decimal parses");
+    mlocMessageArgument numbers[4] = {
+        {"a", 1, {mloc_messageValueInteger, 0, {.integer = -42}}},
+        {"b", 1, {mloc_messageValueDouble, 0, {.number = 0.25}}},
+        {"c", 1, {mloc_messageValueDecimal, 0, {.decimal = &half}}},
+        {"d", 1, {mloc_messageValueObject, 7, {.object = &half}}},
+    };
+    CHECK(Bind(&s_formatter, "{$a} {$b} {$c} {$d}") == mloc_success &&
+              Format(numbers, 4, &length, &faults) == mloc_withFallbacks &&
+              TextIs(length, "-42 0.25 0.50 {$d}") && faults.count == 1 &&
+              list[0].kind == mloc_messageFaultUnsupportedOperation,
+          "numbers as plain decimals; an object has no text without a function");
+
+    CHECK(Bind(&s_strict, "{$x}{$y}") == mloc_success &&
+              Format(&x, 1, &length, &faults) == mloc_errorFormat && length == 0 &&
+              faults.count == 1,
+          "strict mode writes nothing at a fault");
+    CHECK(Bind(&s_strict, "{$x}!") == mloc_success &&
+              Format(&x, 1, &length, NULL) == mloc_success && TextIs(length, "X!"),
+          "strict mode writes a message without faults");
+
+    mlocOutput small = {s_text, 1, 0, NULL, NULL};
+    CHECK(mlocFormatMessage(s_bound, &x, 1, &small, NULL) == mloc_errorCapacity &&
+              small.length == 2,
+          "a short buffer gives the length needed");
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    static uint8_t junk[256];
+    CHECK(mlocFormatMessage(NULL, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+              mlocFormatMessage(junk, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+              mlocFormatMessage(s_bound, NULL, 1, &output, NULL) == mloc_errorInvalid &&
+              mlocFormatMessage(s_bound, NULL, 0, NULL, NULL) == mloc_errorInvalid,
+          "null pointers and bytes never bound are refused");
+    mlocMessageArgument bad[3] = {
+        {NULL, 1, {mloc_messageValueInteger, 0, {.integer = 1}}},
+        {"s", 1, {mloc_messageValueString, 0, {.string = {NULL, 2}}}},
+        {"d", 1, {mloc_messageValueDecimal, 0, {.decimal = NULL}}},
+    };
+    for (size_t i = 0; i < 3; i++)
+    {
+        CHECK(mlocFormatMessage(s_bound, &bad[i], 1, &output, NULL) == mloc_errorInvalid,
+              "an argument's null name, string or decimal is refused");
+    }
+    mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
+    CHECK(mlocFormatMessage(s_bound, &unknown, 1, &output, NULL) == mloc_errorInvalid,
+          "an unknown kind is refused");
+    size_t size = 0;
+    mlocMessageFormatter unmade;
+    memset(&unmade, 0, sizeof unmade);
+    CHECK(Compile("{$x}", &size) &&
+              mlocBindMessage(&unmade, s_buffer, size, s_bound, sizeof s_bound, &size) ==
+                  mloc_errorInvalid &&
+              mlocBindMessage(&s_formatter, s_buffer, 4, s_bound, sizeof s_bound, &size) ==
+                  mloc_errorData,
+          "a formatter never made and bytes not a message are refused");
+}
+
 int main(void)
 {
     TestSuite();
@@ -729,6 +1043,8 @@ int main(void)
     TestFieldsRefused();
     TestAmplified();
     TestRefused();
+    TestSuiteFormat();
+    TestBindAndFormat();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;
 }

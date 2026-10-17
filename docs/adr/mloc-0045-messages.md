@@ -82,13 +82,25 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   one or more name characters, else quoted with "\" and "|" escaped;
   text with "\", "{" and "}" escaped. Compiling it gives the same
   counts, and writing that again gives the same text.
-- **Bind and format** (later slices): a message formatter (data set,
-  locale, function table, bidi and error options) binds a compiled
-  message in caller memory, making once every function whose options
-  are literals; formatting takes typed arguments by name and writes one
-  `mlocOutput`, best effort with an optional array of error records, or
-  strict. Functions are one table for the defaults, the library's
-  namespace `mloc:` and the program's.
+- **Bind and format:** `mlocInitMessageFormatter` keeps the data set,
+  the locale and the options (strict or not); `mlocBindMessage` reads the
+  compiled message as the writer does, finds each expression's function,
+  and measures each chain of declarations, refusing (`mloc_errorCapacity`)
+  one of more than 64 expressions each naming the next, and one naming a
+  later declaration (crafted bytes, which could loop); the bound message
+  points into the compiled one and the formatter and is read-only.
+  `mlocFormatMessage` resolves each placeholder and selector where it
+  stands, a local through its declaration on the stack (call-by-name: no
+  memory per call), an argument by its name after NFC; it writes text,
+  writes markup as nothing, and writes a failed expression as its
+  fallback (`{$x}`, `{|literal|}` with "\" and "|" escaped,
+  `{:function}`), each fault (kind and source offset) kept in an optional
+  caller array and counted, the call returning `mloc_withFallbacks`; in
+  strict mode the first fault returns `mloc_errorFormat` and nothing is
+  written. Until the functions come (the next slices), every function is
+  unknown, every selector a bad selector, the first variant of catch-all
+  keys chosen, and a number argument without a function written as its
+  plain decimal.
 - **Maul Unicode** becomes a run-time dependency (UTF-8 validation,
   NFC, bidi classes), at 0.3.0: an installed package, else the pinned
   release fetched.

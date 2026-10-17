@@ -3,11 +3,10 @@
 //
 // libFuzzer target for messages (record mloc-0045). The input's first
 // byte chooses: even, the rest is MF2 text, which, when it compiles, is
-// written back, compiles again, and writes back the same text (the
-// canonical form is a fixed point) with the same counts; odd, the rest
-// is taken as a compiled message (its magic and versions made this
-// library's), which mlocWriteMessageText reads or refuses without reading
-// past it, and whose text, when it reads it, writes the same twice and
+// bound and formatted without arguments, written back, compiles again, and writes back the same
+// text (the canonical form is a fixed point) with the same counts; odd, the rest is taken as a
+// compiled message (its magic and versions made this library's), which mlocWriteMessageText reads
+// or refuses without reading past it, and whose text, when it reads it, writes the same twice and
 // measures its own length.
 
 #include "bytes.h"
@@ -63,6 +62,37 @@ static char* Write(const uint8_t* message, size_t size, size_t* lengthOut)
     return text;
 }
 
+// Binds a message and formats it with no arguments: every variable
+// unresolved, every function unknown, the text measured then written.
+static void Format(const uint8_t* message, size_t size)
+{
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet data = {&builtin, 1};
+    mlocLocale locale;
+    mlocMessageFormatter formatter;
+    Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+            mlocInitMessageFormatter(&formatter, &data, &locale, NULL) == mloc_success);
+    size_t needed = 0;
+    if (mlocBindMessage(&formatter, message, size, NULL, 0, &needed) != mloc_errorCapacity)
+    {
+        return;
+    }
+    uint8_t* bound = malloc(needed);
+    size_t boundSize;
+    Require(mlocBindMessage(&formatter, message, size, bound, needed, &boundSize) == mloc_success);
+    mlocOutput measure = {NULL, 0, 0, NULL, NULL};
+    mlocResult measured = mlocFormatMessage(bound, NULL, 0, &measure, NULL);
+    char* text = malloc(measure.length + 1);
+    mlocOutput output = {text, measure.length, 0, NULL, NULL};
+    mlocResult result = mlocFormatMessage(bound, NULL, 0, &output, NULL);
+    Require((measured == mloc_errorCapacity || measure.length == 0) &&
+            (result == mloc_success || result == mloc_withFallbacks) &&
+            output.length == measure.length);
+    free(text);
+    free(bound);
+}
+
 static void RoundTrip(const char* text, size_t length)
 {
     size_t size;
@@ -71,6 +101,7 @@ static void RoundTrip(const char* text, size_t length)
     {
         return;
     }
+    Format(first, size);
     size_t written;
     char* canonical = Write(first, size, &written);
     Require(canonical != NULL);

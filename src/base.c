@@ -21,6 +21,10 @@ const char* mlocResultName(mlocResult result)
     {
     case mloc_success:
         return "mloc_success";
+    case mloc_fellBack:
+        return "mloc_fellBack";
+    case mloc_withFallbacks:
+        return "mloc_withFallbacks";
     case mloc_errorInvalid:
         return "mloc_errorInvalid";
     case mloc_errorCapacity:
@@ -33,6 +37,8 @@ const char* mlocResultName(mlocResult result)
         return "mloc_errorSyntax";
     case mloc_errorNotFound:
         return "mloc_errorNotFound";
+    case mloc_errorFormat:
+        return "mloc_errorFormat";
     default:
         return "unknown result";
     }

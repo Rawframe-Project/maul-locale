@@ -129,4 +129,6 @@ message_check: bytes message_form message_table
 message_parse: message_emit message_form message_text
 message_read: bytes message_form message_text
 message_write: message_form message_read message_text
+message_bind: bytes message_form message_read
+message_format: message_bind message_form message_read
 message: message_check message_emit message_form message_parse message_read message_table message_write

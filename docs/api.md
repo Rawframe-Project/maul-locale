@@ -457,6 +457,21 @@ MLOC_NODISCARD MLOC_API mlocResult mlocWriteMessageText(const void* message, siz
 ```
 Writes a compiled message back as MF2 text, in a canonical form: a simple message where its pattern can stand alone; else each declaration, the selectors and each variant on a line of their own; one space between an expression's parts; literals quoted only where they must be. Compiling the text gives the same records, and writing them again the same text. The message is checked first, so bytes from a file are safe to give: every count, index and string must hold, the strings well-formed UTF-8 and the names MF2 names.  @param message  A compiled message from mlocCompileMessage. @param size     Its size in bytes. @param output   Receives the text. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorData when the bytes are not a compiled message, or one whose text would be 1 GiB or more, which could not compile again; mloc_errorDataVersion for one of another library or Unicode version; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale, const mlocMessageOptions* options);
+```
+Makes a locale's message formatter.  @param formatterOut  Receives the formatter; left unchanged on failure. @param data          The data its functions read. @param locale        The locale, canonicalized. @param options       The options, or null for the defaults. @return mloc_success; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size, void* buffer, size_t capacity, size_t* sizeOut);
+```
+Binds a compiled message to a formatter in caller memory: the message is read as mlocWriteMessageText reads it, each function found, each chain of declarations measured. The bound message points into the compiled one and the formatter, which must outlive it; it is read-only, so threads may format with it at once. Call it with a null buffer and a capacity of 0 to learn the capacity.  @param formatter  A formatter from mlocInitMessageFormatter. @param message    A compiled message from mlocCompileMessage. @param size       Its size in bytes. @param buffer     Receives the bound message; any alignment. @param capacity   The buffer's size in bytes. @param sizeOut    Receives the size written, or needed with mloc_errorCapacity. @return mloc_success; mloc_errorCapacity when the buffer is too small, or for a chain of more than 64 expressions each naming the next through a declaration; mloc_errorData and mloc_errorDataVersion as mlocWriteMessageText; mloc_errorInvalid for a null pointer or a formatter the library did not make. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments, size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults);
+```
+Formats a bound message with its arguments: the pattern selected, each text written, each placeholder resolved where it stands and written, markup writing nothing. An expression that fails is written as its fallback ("{$name}", "{|literal|}", "{:function}") and reported as a fault.  @param bound          A bound message from mlocBindMessage. @param arguments      The arguments; may be null when count is 0. @param argumentCount  Their number. @param output         Receives the text. @param faults         Receives the faults; may be null. @return mloc_success; mloc_withFallbacks when the text holds fallbacks; in strict mode mloc_errorFormat at the first fault, nothing written; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorInvalid for a null pointer (an argument's name, string or decimal among them), an unknown kind, or a bound message the library did not make. @par Thread safety Safe from any thread.
+
 ## `names.h`
 
 Display names (UTS #35 Part 2, records mloc-0036 to mloc-0039): a locale's name for a language, script, region, variant, key, key's value or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's Intl.DisplayNames give them, for a subdivision, and for a whole locale. The names are in a data file of their own, names.mloc, and the subdivision names in another, subdivisions.mloc, which a program adds to its data set.
@@ -832,4 +847,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-151 functions across 18 headers.
+154 functions across 18 headers.

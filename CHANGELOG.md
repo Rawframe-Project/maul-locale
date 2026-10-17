@@ -145,7 +145,12 @@ format.
   declarations, options and variants) at their offset
   (`maul-locale/message.h`, mloc-0045); `mlocWriteMessageText` checks
   a compiled message, from a file too, and writes it back as canonical
-  MF2 text. The library now links Maul Unicode 0.3.0.
+  MF2 text; `mlocInitMessageFormatter`, `mlocBindMessage` and
+  `mlocFormatMessage` bind a compiled message to a locale and format it
+  with named arguments, each placeholder resolved where it stands, with
+  fallbacks and fault records or, strict, an error. The library now
+  links Maul Unicode 0.3.0; `mloc_withFallbacks` and `mloc_errorFormat`
+  join the results.
 - Dates: e and c of one or two letters write the day's number in the
   locale's week, as ICU4C does (kek's interval patterns, whose
   formatters were refused); `dates.mloc`'s interval patterns are

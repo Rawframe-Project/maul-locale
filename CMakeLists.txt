@@ -101,8 +101,10 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_parse.c
     src/locale_prefs.c
     src/message.c
+    src/message_bind.c
     src/message_check.c
     src/message_emit.c
+    src/message_format.c
     src/message_parse.c
     src/message_read.c
     src/message_table.c

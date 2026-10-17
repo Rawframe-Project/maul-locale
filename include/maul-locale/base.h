@@ -66,6 +66,9 @@ extern "C"
         // The call did what was asked with the data of a locale the asked
         // one falls back to (record mloc-0016).
         mloc_fellBack = 1,
+        // The call wrote its result with fallbacks where parts of it
+        // failed, which it reports apart (a message's expressions).
+        mloc_withFallbacks = 2,
         // An argument is invalid: a null pointer where one is required, a
         // value out of range.
         mloc_errorInvalid = -1,
@@ -83,6 +86,9 @@ extern "C"
         // The data has no answer: no likely subtags for a language, or a
         // data set without the table asked for.
         mloc_errorNotFound = -6,
+        // A part of the result failed and the call was asked to write
+        // nothing then (a message formatter in strict mode).
+        mloc_errorFormat = -7,
     };
 
     // The result of a call that reads text: the status and, on failure,
