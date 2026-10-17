@@ -41,7 +41,6 @@ typedef struct Writing
     // minutes carry the sign; the seconds with the fractions.
     bool shown[3];
     mlocDecimal clock[3];
-    mlocResult result;
 } Writing;
 
 // Whether a field's next smaller one is a fraction (NextUnitFractional).
@@ -85,11 +84,9 @@ static bool PlanClock(Writing* g, uint32_t first)
             mlocDurationValue(g->duration, field, 0, g->negative, &g->clock[i]);
         }
     }
-    bool always[3];
-    for (uint32_t i = 0; i < 3; i++)
-    {
-        always[i] = f->display[mloc_durationHours + i] == mloc_durationDisplayAlways;
-    }
+    const bool always[3] = {f->display[mloc_durationHours] == mloc_durationDisplayAlways,
+                            f->display[mloc_durationMinutes] == mloc_durationDisplayAlways,
+                            f->display[mloc_durationSeconds] == mloc_durationDisplayAlways};
     g->shown[0] = first == mloc_durationHours && (!IsZero(&g->clock[0]) || always[0]);
     g->shown[2] = !IsZero(&g->clock[2]) || always[2];
     g->shown[1] = first <= mloc_durationMinutes &&
@@ -155,9 +152,12 @@ static Formatter FormatterOf(const Writing* g, uint32_t field, bool clock, bool 
     return n;
 }
 
-static void Note(Writing* g, mlocResult r)
+// Writes a field's number. A field is below 2^84 and a fraction of at
+// most 9 digits is truncated, so no rounding passes a decimal's limits.
+static void WriteNumber(const Formatter* n, const Outer* outer, const mlocDecimal* value,
+                        NumberWriter* w)
 {
-    g->result = g->result == mloc_success ? r : g->result;
+    (void)mlocWriteFormatted(n, outer, value, w);
 }
 
 // Writes the numeric fields shown, the sign on the first, with the
@@ -180,7 +180,7 @@ static void WriteClock(Writing* g, bool signShown, NumberWriter* w)
         uint32_t field = mloc_durationHours + i;
         Formatter n = FormatterOf(g, field, true, sign);
         w->source = (field + 1) * mloc_durationPartField;
-        Note(g, mlocWriteFormatted(&n, nullptr, &g->clock[i], w));
+        WriteNumber(&n, nullptr, &g->clock[i], w);
         sign = false;
     }
     w->source = 0;
@@ -201,7 +201,7 @@ static void WriteItem(void* context, uint32_t index, NumberWriter* w)
                   &outer);
     Formatter n = FormatterOf(g, item->field, false, index == 0);
     w->source = (item->field + 1U) * mloc_durationPartField;
-    Note(g, mlocWriteFormatted(&n, &outer, &item->value, w));
+    WriteNumber(&n, &outer, &item->value, w);
     w->source = 0;
 }
 
@@ -256,15 +256,10 @@ mlocResult mlocFormatDuration(const mlocDurationFormatter* formatter,
     g.format = &f;
     g.duration = duration;
     g.negative = mlocDurationNegative(duration);
-    g.result = mloc_success;
     Plan(&g);
     NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
     WriteItems(&g, &w);
     output->length = w.length;
-    if (g.result != mloc_success)
-    {
-        return g.result;
-    }
     if (output->buffer == nullptr || w.length > output->capacity)
     {
         return mloc_errorCapacity;

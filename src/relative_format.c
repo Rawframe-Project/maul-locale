@@ -280,47 +280,46 @@ static mlocResult WriteName(const uint8_t* text, size_t length, mlocOutput* outp
     return mloc_success;
 }
 
-// Fills an outer pattern with a direction's six patterns, copied into
-// room with their "{0}" as currencyTextNumber, a category the chain lacks
-// taking other's.
-static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t base, uint8_t* room,
-                            Outer* outer)
+// Fills an outer pattern with a direction's pattern of the category the
+// magnitude is written in (other's where the chain lacks it), copied into
+// room with its "{0}" as currencyTextNumber, every category pointing at
+// it.
+static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t base,
+                            const mlocDecimal* magnitude, uint8_t* room, Outer* outer)
 {
+    uint32_t category = mloc_pluralOther;
+    mlocResult r = mlocFormattedCategory(&f->formatter, magnitude, &category);
+    DataSpan text;
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    if (!Lookup(f, unit, base + category, &text) && !Lookup(f, unit, base + 5, &text))
+    {
+        return mloc_errorNotFound;
+    }
     memset(outer, 0, sizeof(*outer));
     outer->patternText = room;
     outer->textKind = mloc_numberPartLiteral;
     outer->patternKind = mloc_numberPartLiteral;
-    DataSpan other;
-    if (!Lookup(f, unit, base + 5, &other))
+    size_t length = CopyText(f, text, room, relativeTextMost);
+    if (length == 0)
     {
-        return mloc_errorNotFound;
+        return mloc_errorData;
     }
-    size_t at = 0;
+    for (size_t i = 0; i + 3 <= length; i++)
+    {
+        if (memcmp(room + i, "{0}", 3) == 0)
+        {
+            room[i] = currencyTextNumber;
+            memmove(room + i + 1, room + i + 3, length - i - 3);
+            length -= 2;
+            break;
+        }
+    }
     for (uint32_t c = 0; c < 6; c++)
     {
-        DataSpan text;
-        if (!Lookup(f, unit, base + c, &text))
-        {
-            text = other;
-        }
-        size_t length = CopyText(f, text, room + at, relativeTextMost);
-        if (length == 0)
-        {
-            return mloc_errorData;
-        }
-        for (size_t i = 0; i + 3 <= length; i++)
-        {
-            if (memcmp(room + at + i, "{0}", 3) == 0)
-            {
-                room[at + i] = currencyTextNumber;
-                memmove(room + at + i + 1, room + at + i + 3, length - i - 3);
-                length -= 2;
-                break;
-            }
-        }
-        outer->patternStart[c] = (uint16_t)at;
         outer->patternLength[c] = (uint16_t)length;
-        at += length;
     }
     return mloc_success;
 }
@@ -332,7 +331,7 @@ typedef struct RelativeChoice
 {
     uint8_t nameRoom[relativeTextMost];
     size_t nameLength;
-    uint8_t patternRoom[relativePatternsMost];
+    uint8_t patternRoom[relativeTextMost];
     Outer outer;
     mlocDecimal magnitude;
 } RelativeChoice;
@@ -352,7 +351,7 @@ static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uin
     uint32_t base = amount->negative != 0 ? relativePast : relativeFuture;
     c->magnitude = *amount;
     c->magnitude.negative = 0;
-    return FillOuter(f, unit, base, c->patternRoom, &c->outer);
+    return FillOuter(f, unit, base, &c->magnitude, c->patternRoom, &c->outer);
 }
 
 bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit)

@@ -12,15 +12,19 @@
 // numbers in words (an integer, a fraction, an ordinal), a Roman numeral
 // and words parsed back; display names (a language, a region, a key's
 // value, a language at a sentence's start) and whole locales' names in
-// dialect and standard form. The inputs are the ones the
+// dialect and standard form; then the datetime part's cases
+// (bench_dates.c). The inputs are the ones the
 // ICU4C and ICU4X baselines time (record mloc-0004). Given a
 // file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well. With BENCH_SHOW
-// set in the environment it first prints the texts the formatters write.
+// set in the environment it first prints the texts the formatters write;
+// BENCH_ONLY, a comma-separated list of case names, times those alone.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+
+#include "bench_dates.h"
 
 #include "maul-locale/currency.h"
 #include "maul-locale/decimal.h"
@@ -493,12 +497,7 @@ static bool PrepareNames(void)
            mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
 }
 
-typedef struct Case
-{
-    const char* name;
-    Body body;
-    long iterations;
-} Case;
+typedef BenchCase Case;
 
 static double Time(const Case* c)
 {
@@ -518,6 +517,22 @@ static double Time(const Case* c)
         best = ns < best ? ns : best;
     }
     return best;
+}
+
+// Whether a case's name is in a comma-separated list.
+static bool Listed(const char* list, const char* name)
+{
+    size_t length = strlen(name);
+    for (const char* at = list; *at != '\0';)
+    {
+        size_t item = strcspn(at, ",");
+        if (item == length && strncmp(at, name, length) == 0)
+        {
+            return true;
+        }
+        at += item + (at[item] == ',');
+    }
+    return false;
 }
 
 // The recorded time of a case, or 0.
@@ -573,8 +588,14 @@ int main(int argc, char** argv)
         fprintf(stderr, "bench: cannot read the names (%s)\n", MLOC_LOCALE_NAMES_FILE);
         return 1;
     }
+    if (!PrepareDateBench())
+    {
+        fputs("bench: cannot make the datetime formatters\n", stderr);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
+        ShowDateBench();
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
                                       ScientificFormat, CurrencyFormat, UnitFormat};
         for (size_t i = 0; i < 6; i++)
@@ -642,17 +663,24 @@ int main(int argc, char** argv)
         {"locale-name", LocaleNameDialect, 500000},
         {"locale-name-std", LocaleNameStandard, 500000},
     };
-    for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
+    size_t count = sizeof(s_cases) / sizeof(s_cases[0]);
+    const char* only = getenv("BENCH_ONLY");
+    for (size_t i = 0; i < count + g_dateCaseCount; i++)
     {
-        double ns = Time(&s_cases[i]);
-        double was = Baseline(baseline, s_cases[i].name);
+        const Case* c = i < count ? &s_cases[i] : &g_dateCases[i - count];
+        if (only != nullptr && !Listed(only, c->name))
+        {
+            continue;
+        }
+        double ns = Time(c);
+        double was = Baseline(baseline, c->name);
         if (was > 0)
         {
-            printf("%-18s %10.1f ns  (%.2fx the baseline)\n", s_cases[i].name, ns, ns / was);
+            printf("%-18s %10.1f ns  (%.2fx the baseline)\n", c->name, ns, ns / was);
         }
         else
         {
-            printf("%-18s %10.1f ns\n", s_cases[i].name, ns);
+            printf("%-18s %10.1f ns\n", c->name, ns);
         }
     }
     if (baseline != nullptr)

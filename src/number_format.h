@@ -70,6 +70,12 @@ typedef struct Outer
     mlocPluralRules rules;
 } Outer;
 
+// The plural category of a valid decimal as the formatter writes it, the
+// one an outer pattern is chosen by: mloc_success, or mloc_errorCapacity
+// when rounding passes the decimal's limits (the category then other).
+mlocResult mlocFormattedCategory(const Formatter* formatter, const mlocDecimal* decimal,
+                                 uint32_t* categoryOut);
+
 // Writes a valid decimal as mlocFormatWith does, into a writer of the
 // caller's: mloc_success, or mloc_errorCapacity when rounding passes the
 // decimal's limits.

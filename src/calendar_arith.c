@@ -69,11 +69,15 @@ static bool GregorianLeap(int64_t year)
     return FloorMod(year, 4) == 0 && (FloorMod(year, 100) != 0 || FloorMod(year, 400) == 0);
 }
 
+// Hinnant's days_from_civil for a month 1 to 12: the year begun in March
+// in 400-year eras, the day of that year from its month.
 static int64_t GregorianDay(int64_t year, int64_t month, int64_t day)
 {
-    int64_t correction = month <= 2 ? 0 : GregorianLeap(year) ? -1 : -2;
-    return 365 * (year - 1) + FloorDiv(year - 1, 4) - FloorDiv(year - 1, 100) +
-           FloorDiv(year - 1, 400) + FloorDiv(367 * month - 362, 12) + correction + day;
+    int64_t march = year - (month <= 2 ? 1 : 0);
+    int64_t era = FloorDiv(march, 400);
+    int64_t yearOfEra = march - era * 400;
+    int64_t ofYear = (153 * (month > 2 ? month - 3 : month + 9) + 2) / 5 + day - 1;
+    return era * 146097 + yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + ofYear - 305;
 }
 
 static int64_t GregorianYear(int64_t day)
@@ -90,14 +94,22 @@ static int64_t GregorianYear(int64_t day)
     return n100 == 4 || n1 == 4 ? year : year + 1;
 }
 
+// Hinnant's civil_from_days: the days since 1 March of year 0 (day 1
+// is 1 January of year 1) in 400-year eras, a year that begins in March, its month
+// from the day of that year. Equal to the year search for every day
+// within 4 * 10^8 of the epoch.
 static CalendarDate GregorianFromDay(int64_t day, int64_t offset)
 {
-    int64_t year = GregorianYear(day);
-    int64_t prior = day - GregorianDay(year, 1, 1);
-    int64_t correction = day < GregorianDay(year, 3, 1) ? 0 : GregorianLeap(year) ? 1 : 2;
-    int64_t month = FloorDiv(12 * (prior + correction) + 373, 367);
+    int64_t z = day + 305;
+    int64_t era = FloorDiv(z, 146097);
+    int64_t ofEra = z - era * 146097;
+    int64_t yearOfEra = (ofEra - ofEra / 1460 + ofEra / 36524 - ofEra / 146096) / 365;
+    int64_t ofYear = ofEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100);
+    int64_t fromMarch = (5 * ofYear + 2) / 153;
+    int64_t month = fromMarch < 10 ? fromMarch + 3 : fromMarch - 9;
+    int64_t year = yearOfEra + era * 400 + (month <= 2 ? 1 : 0);
     return (CalendarDate){(int32_t)(year + offset), (uint8_t)month,
-                          (uint8_t)(day - GregorianDay(year, month, 1) + 1)};
+                          (uint8_t)(ofYear - (153 * fromMarch + 2) / 5 + 1)};
 }
 
 // Coptic and Ethiopic: twelve months of 30 days and a thirteenth of 5,

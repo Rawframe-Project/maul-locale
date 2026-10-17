@@ -236,6 +236,15 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     }
 }
 
+mlocResult mlocFormattedCategory(const Formatter* f, const mlocDecimal* decimal,
+                                 uint32_t* categoryOut)
+{
+    Prepared p;
+    mlocResult r = Prepare(f, decimal, &p);
+    *categoryOut = r == mloc_success ? Category(f, &p) : mloc_pluralOther;
+    return r;
+}
+
 mlocResult mlocWriteFormatted(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
                               NumberWriter* writer)
 {

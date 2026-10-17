@@ -10,6 +10,7 @@
 #include "date_format.h"
 
 #include "bytes.h"
+#include "calendar_arith.h"
 #include "date_range.h"
 
 #include "maul-locale/datetime.h"
@@ -438,17 +439,10 @@ static uint32_t PatternFor(const DateFormat* f, const mlocDateFields* fields, in
     return f->yearStyle == mloc_yearStyleAuto && clear ? 0 : dateStyleFull;
 }
 
-// The Gregorian year of a day.
-static int32_t GregorianYear(int32_t day, int32_t otherwise)
+// The Gregorian year of a day of a valid date.
+static int32_t GregorianYear(int32_t day)
 {
-    mlocDate date;
-    mlocDateFields gregorian;
-    if (mlocMakeDateFromDay(mloc_calendarGregorian, day, &date) != mloc_success ||
-        mlocGetDateFields(&date, &gregorian) != mloc_success)
-    {
-        return otherwise;
-    }
-    return gregorian.year;
+    return mlocArithmeticFromDay(mloc_calendarGregorian, day).year;
 }
 
 bool mlocDateFormatSound(const DateFormat* f)
@@ -470,8 +464,8 @@ bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateValue* val
         return false;
     }
     // The Gregorian year the date's year begins in, and its own.
-    value->related = GregorianYear(in.day - value->fields.dayOfYear + 1, value->fields.year);
-    value->pattern = PatternFor(f, &value->fields, GregorianYear(in.day, value->fields.year));
+    value->related = GregorianYear(in.day - value->fields.dayOfYear + 1);
+    value->pattern = PatternFor(f, &value->fields, GregorianYear(in.day));
     return true;
 }
 

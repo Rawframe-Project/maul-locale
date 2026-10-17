@@ -42,31 +42,42 @@ bool mlocDurationNegative(const mlocDurationValues* d)
     return false;
 }
 
-// The decimal of magnitude / 10^places.
+// Writes a value's digits before end, least significant first, at least
+// width of them (zeros before); the first digit written.
+static uint8_t* Digits(uint64_t value, uint32_t width, uint8_t* end)
+{
+    uint8_t* at = end;
+    for (uint32_t n = 0; value != 0 || n < width; n++)
+    {
+        *--at = (uint8_t)(value % 10);
+        value /= 10;
+    }
+    return at;
+}
+
+// The decimal of magnitude / 10^places: the low 19 digits and, past
+// 2^64, the rest by one division.
 static void DecimalOf(Wide magnitude, uint32_t places, bool negative, mlocDecimal* out)
 {
     static const Wide s_chunk = {0, UINT64_C(10000000000000000000)};
     uint8_t digits[2 * chunkDigits];
-    Wide rest;
-    uint64_t parts[2] = {mlocWideQuotient(magnitude, s_chunk, &rest), 0};
-    parts[1] = rest.low;
-    for (uint32_t p = 0; p < 2; p++)
+    uint8_t* end = digits + sizeof(digits);
+    uint8_t* first = nullptr;
+    if (magnitude.high == 0)
     {
-        for (uint32_t i = chunkDigits; i > 0; i--)
-        {
-            digits[p * chunkDigits + i - 1] = (uint8_t)(parts[p] % 10);
-            parts[p] /= 10;
-        }
+        first = Digits(magnitude.low, 0, end);
     }
-    uint32_t first = 0;
-    uint32_t end = 2 * chunkDigits;
-    while (first < end && digits[first] == 0)
+    else
     {
-        first++;
+        Wide rest;
+        uint64_t high = mlocWideQuotient(magnitude, s_chunk, &rest);
+        first = Digits(high, 0, Digits(rest.low, chunkDigits, end));
     }
-    while (end > first && digits[end - 1] == 0)
+    int32_t exponent = -(int32_t)places;
+    while (end > first && end[-1] == 0)
     {
         end--;
+        exponent++;
     }
     memset(out, 0, sizeof(*out));
     out->negative = negative ? 1 : 0;
@@ -75,9 +86,9 @@ static void DecimalOf(Wide magnitude, uint32_t places, bool negative, mlocDecima
         return;
     }
     out->count = (uint8_t)(end - first);
-    memcpy(out->digits, digits + first, out->count);
-    out->exponent = (int32_t)(2 * chunkDigits - end) - (int32_t)places;
-    out->fractionDigits = out->exponent < 0 ? -out->exponent : 0;
+    memcpy(out->digits, first, out->count);
+    out->exponent = exponent;
+    out->fractionDigits = exponent < 0 ? -exponent : 0;
 }
 
 void mlocDurationValue(const mlocDurationValues* d, uint32_t field, uint32_t fractions,

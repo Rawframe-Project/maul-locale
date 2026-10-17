@@ -142,20 +142,23 @@ static bool Latest(const ZoneTables* t, const ZoneRecord* z, int64_t seconds, in
     if (count == z->transitionCount && z->closing != 0)
     {
         // Past the table: the latest change at or before the time, of its
-        // year or the year before.
+        // year or the year before. The changes come in time order (within
+        // a year by month), so the first one at or before the time,
+        // counting back, is the latest.
         int32_t first = mlocZoneClosingYear(t, z->closing - 1U);
         int32_t year = YearOf(seconds);
-        for (int32_t y = year - 1; y <= year; y++)
+        for (uint32_t i = 0; i < 4 && year - (int32_t)(i / 2) >= first; i++)
         {
-            for (uint32_t k = 0; y >= first && k < 2; k++)
+            ZoneChange c = mlocZoneClosingChange(t, z->closing - 1U, 1 - i % 2);
+            int64_t candidate = ChangeTime(&c, year - (int32_t)(i / 2));
+            if (candidate <= seconds)
             {
-                ZoneChange c = mlocZoneClosingChange(t, z->closing - 1U, k);
-                int64_t candidate = ChangeTime(&c, y);
-                if (candidate <= seconds && candidate > at)
+                if (candidate > at)
                 {
                     at = candidate;
                     offset = mlocZoneOffsetOf(t, c.offset);
                 }
+                break;
             }
         }
     }
