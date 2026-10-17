@@ -385,6 +385,22 @@ static void TestString(void)
                       NULL) &&
               Formats(".input {$s :string} .match $s s {{s}} * {{other}}", a, 4, "other", NULL),
           ":string matches a number's decimal and a key in NFC, case and all");
+    // A string not in NFC and longer than the stack's buffer cannot be
+    // compared: the selector is bad, matching only "*".
+    static char decomposed[600];
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(decomposed + 3 * i, "e\xcc\x81", 3);
+    }
+    mlocMessageArgument longer = {
+        "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, 600}}}};
+    static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
+    CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", bad),
+          "a long string not in NFC is a bad selector");
+    mlocMessageArgument unnamed = {NULL, 0, {mloc_messageValueInteger, 0, {.integer = 1}}};
+    static const mlocMessageFaultKind unresolved2[] = {mloc_messageFaultUnresolvedVariable, 0};
+    CHECK(Formats("{$x}", &unnamed, 1, "{$x}", unresolved2),
+          "an argument without a name matches no variable");
 }
 
 static void TestSelection(void)
@@ -402,6 +418,17 @@ static void TestSelection(void)
     CHECK(Formats(".local $v = {|a| :x:short} .match $v bb {{B}} a {{A}} * {{other}}", a, 4, "A",
                   NULL),
           "the better key wins");
+    CHECK(Formats(".local $v = {|a| :x:short} .match $v ab {{AB}} a {{A}} * {{other}}", a, 4, "A",
+                  NULL),
+          "the better key wins over one it begins");
+    CHECK(Formats(".local $v = {|a| :x:any} .match $v a {{A}} * {{other}} b {{B}} c {{C}}", a, 4,
+                  "A", NULL) &&
+              Formats(".local $v = {|a| :x:any} .match $v * {{other}}", a, 4, "other", NULL),
+          "a tie at the last selector keeps the first variant; one variant alone");
+    CHECK(Formats(".local $v = {|a| :x:any} .local $w = {|none| :x:any}"
+                  " .match $w $v a a {{AA}} * * {{other}}",
+                  a, 4, "other", NULL),
+          "only the message's variants are chosen from");
     CHECK(Formats(".local $v = {|a| :x:short} .local $w = {|none| :x:short}"
                   " .match $v $w bb * {{B}} a x {{AX}} a * {{A}} * * {{other}}",
                   a, 4, "A", NULL),
@@ -466,6 +493,23 @@ static void TestResolutionLimit(void)
     CHECK(BindOnly(text) == mloc_errorInvalid, "a selector counts with the costliest variant");
     snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}}} * {{x}}");
     CHECK(BindOnly(text) == mloc_success, "and a cheaper one binds");
+    // Exactly the limit: 1 + 9841 + 2 * 27847 resolutions in one
+    // expression binds.
+    snprintf(text + at, sizeof text - at,
+             " {{{$a9 :string k1=$a9 k2=$a9 k3=$a8 k4=$a8 k5=$a7 k6=$a6 k7=$a5 k8=$a3 k9=$a3"
+             " k10=$a1}}}");
+    CHECK(BindOnly(text) == mloc_success, "a message at the limit binds");
+    snprintf(text + at, sizeof text - at,
+             " {{{$a9 :string k1=$a9 k2=$a9 k3=$a8 k4=$a8 k5=$a7 k6=$a6 k7=$a5 k8=$a3 k9=$a3"
+             " k10=$a2}}}");
+    CHECK(BindOnly(text) == mloc_errorInvalid, "one more resolution is refused");
+    snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}{$a10}}} * {{{$a10}}}");
+    CHECK(BindOnly(text) == mloc_errorInvalid, "each variant's pieces are its own");
+    char input[4096];
+    snprintf(input, sizeof input, ".input {$s :string} %s", text);
+    size_t end = strlen(input) - strlen(" .match $a10 x {{{$a10}{$a10}}} * {{{$a10}}}");
+    snprintf(input + end, sizeof input - end, " .match $s x {{{$a10}{$a10}}} * {{{$a10}}}");
+    CHECK(BindOnly(input) == mloc_success, "the costliest variant counts, not their sum");
 
     const mlocMessageArgument* a = s_arguments;
     static const mlocMessageFaultKind out[] = {mloc_messageFaultUnsupportedOperation, 0};
