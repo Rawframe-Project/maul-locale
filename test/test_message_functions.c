@@ -366,9 +366,11 @@ static void TestCalls(void)
     CHECK(Formats(".local $n = {7.25 :number maximumFractionDigits=0} {{{$n :x:echo k=$n}}}", a, 4,
                   "N3;k=N3", NULL),
           "a number value is passed as its decimal, unrounded");
-    CHECK(Formats(".local $c = {7.25 :currency currency=eur} {{{$c :x:echo k=$c}}}", a, 4,
-                  "C3EUR;k=C3EUR", NULL),
-          "a currency value is passed as its amount and code");
+    CHECK(
+        Formats(".local $c = {7.25 :currency currency=eur} {{{$c :x:echo k=$c}}}", a, 4,
+                "C3EUR;k=C3EUR", NULL) &&
+            Formats(".local $c = {7 :currency currency=czk} {{{$c :x:echo}}}", a, 4, "C1CZK", NULL),
+        "a currency value is passed as its amount and code");
     static const mlocMessageFaultKind unresolved[] = {mloc_messageFaultUnresolvedVariable,
                                                       mloc_messageFaultBadOption, 0};
     CHECK(Formats("{|a| :x:echo k=$missing}", a, 4, "a;k=?", unresolved),

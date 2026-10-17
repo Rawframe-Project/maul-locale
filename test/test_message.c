@@ -1308,6 +1308,7 @@ static void TestBindAndFormat(void)
               "an amount null or not the library's, or a code not of letters, is refused");
     }
     amounts[0].value.as.currency.amount = &half;
+    memcpy(amounts[0].value.as.currency.code, "CZK", 3);
     CHECK(mlocFormatMessage(s_bound, &amounts[0], 1, &output, NULL) != mloc_errorInvalid,
           "a good amount is taken");
     mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
