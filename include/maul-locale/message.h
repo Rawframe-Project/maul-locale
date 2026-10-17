@@ -208,7 +208,8 @@ extern "C"
         // mloc_messageFaultBadOperand, or resolve something of its own;
         // the expression's text is then its fallback.
         mloc_messageOperandFallback = 4,
-        // A number function's value (:number, :integer): its decimal,
+        // A number function's value (:number, :integer, :offset,
+        // :percent): its decimal,
         // unrounded; its options stay the formatter's.
         mloc_messageOperandNumber = 5,
     } mlocMessageOperandKind;
@@ -366,8 +367,9 @@ extern "C"
     ///         fault, nothing written; mloc_errorCapacity when the text does
     ///         not fit (output->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,
-    ///         string or decimal among them), an unknown kind, or a bound
-    ///         message the library did not make.
+    ///         string or decimal among them), a decimal that is not one
+    ///         the library makes, an unknown kind, or a bound message the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

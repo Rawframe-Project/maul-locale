@@ -117,9 +117,9 @@ enum
     offsetDigits = 48,
 };
 
-// Adds b to a (little-endian digit arrays of offsetDigits); false on a
-// carry out.
-static bool AddDigits(uint8_t* a, const uint8_t* b)
+// Adds b to a (little-endian digit arrays of offsetDigits, the top one
+// of each zero, so nothing carries out).
+static void AddDigits(uint8_t* a, const uint8_t* b)
 {
     unsigned carry = 0;
     for (int i = 0; i < offsetDigits; i++)
@@ -128,7 +128,6 @@ static bool AddDigits(uint8_t* a, const uint8_t* b)
         a[i] = (uint8_t)(sum % 10);
         carry = sum / 10;
     }
-    return carry == 0;
 }
 
 // Subtracts b from a, a not less than b.
@@ -166,7 +165,7 @@ bool mlocOffsetNumber(NumberValue* value, int32_t delta)
     // units, if lower) up: a sum needs every power between them.
     int64_t low = d->exponent < 0 ? d->exponent : 0;
     // The delta, at most 99, reaches the tens.
-    int64_t top = d->count > 0 ? d->exponent + d->count - 1 : 0;
+    int64_t top = d->count > 0 ? (int64_t)d->exponent + d->count - 1 : 0;
     top = top > 1 ? top : 1;
     if (top - low + 2 > offsetDigits)
     {
@@ -187,10 +186,7 @@ bool mlocOffsetNumber(NumberValue* value, int32_t delta)
     bool subtract = negative != (delta < 0);
     if (!subtract)
     {
-        if (!AddDigits(a, b))
-        {
-            return false;
-        }
+        AddDigits(a, b);
     }
     else if (CompareDigits(a, b) >= 0)
     {

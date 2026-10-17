@@ -7,6 +7,7 @@
 
 #include "message_format.h"
 
+#include "decimal.h"
 #include "message_resolve.h"
 
 #include <string.h>
@@ -404,7 +405,8 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
                     (uint32_t)v->kind <= mloc_messageValueObject &&
                     (v->kind != mloc_messageValueString || v->as.string.text != NULL ||
                      v->as.string.length == 0) &&
-                    (v->kind != mloc_messageValueDecimal || v->as.decimal != NULL);
+                    (v->kind != mloc_messageValueDecimal ||
+                     (v->as.decimal != NULL && mlocValidDecimal(v->as.decimal)));
         if (!good)
         {
             return false;

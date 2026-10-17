@@ -311,8 +311,15 @@ static void TestOffset(void)
               Formats("{foo :offset add=1}", NULL, 0, "{|foo|}", s_badOperand),
           "a failed variable is reported once; a bad operand falls back");
     static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
-    CHECK(Formats("{1e-50 :offset add=1}", NULL, 0, "{|1e-50|}", unsupported),
-          "a sum past a decimal's digits is unsupported");
+    CHECK(Formats("{1e-50 :offset add=1}", NULL, 0, "{|1e-50|}", unsupported) &&
+              Formats("{1e-40 :offset add=1}", NULL, 0, "{|1e-40|}", unsupported) &&
+              Formats("{1e-39 :offset subtract=1 maximumFractionDigits=3}", NULL, 0, "-1", NULL),
+          "a sum past a decimal's digits is unsupported, one of 40 digits is not");
+    mlocDecimal infinity = {0};
+    infinity.kind = mloc_decimalInfinity;
+    mlocMessageArgument endless = {"i", 1, {mloc_messageValueDecimal, 0, {.decimal = &infinity}}};
+    CHECK(Formats("{1.5 :offset add=0} {$i :offset add=1}", &endless, 1, "1.5 \xE2\x88\x9E", NULL),
+          "adding zero keeps the value; infinity stays");
     CHECK(Formats(".local $o = {$n :offset subtract=4} .match $o 1 {{=1}} one {{one}} * {{other}}",
                   arguments, 3, "=1", NULL) &&
               Formats(".local $o = {$n :offset subtract=4} .match $o one {{one}} * {{other}}",

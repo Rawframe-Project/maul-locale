@@ -1291,6 +1291,12 @@ static void TestBindAndFormat(void)
         CHECK(mlocFormatMessage(s_bound, &bad[i], 1, &output, NULL) == mloc_errorInvalid,
               "an argument's null name, string or decimal is refused");
     }
+    mlocDecimal far = {0};
+    CHECK(mlocParseDecimal("5", 1, &far).status == mloc_success, "a decimal is read");
+    far.exponent = INT32_MAX - 1;
+    mlocMessageArgument wrong = {"d", 1, {mloc_messageValueDecimal, 0, {.decimal = &far}}};
+    CHECK(mlocFormatMessage(s_bound, &wrong, 1, &output, NULL) == mloc_errorInvalid,
+          "a decimal the library does not make is refused");
     mlocMessageArgument unknown = {"u", 1, {(mlocMessageValueKind)9, 0, {.integer = 0}}};
     CHECK(mlocFormatMessage(s_bound, &unknown, 1, &output, NULL) == mloc_errorInvalid,
           "an unknown kind is refused");

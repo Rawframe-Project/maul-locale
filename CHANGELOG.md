@@ -177,6 +177,9 @@ format.
 - Messages format and select with `:offset` (exact sums, an overflow
   unsupported) and `:percent` (the value times 100, its operand's minimum
   integer digits, increment and `select` dropped) (mloc-0045).
+- Fixed: `mlocFormatMessage` read a decimal argument without checking
+  it; one the library does not make (an exponent past its limits) is now
+  `mloc_errorInvalid`, where `:offset` could write past its work area.
 - Fixed: a message whose name holds U+037E or U+1FEF compiled, but its
   NFC name (";" or "`") is no name, so `mlocWriteMessageText` refused it;
   such names are now a syntax error at that code point (mloc-0045).
