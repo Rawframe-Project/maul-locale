@@ -156,6 +156,111 @@ static void TestRecords(void)
     CHECK(Count(messageVariables) == 1 && Count(messagePool) == 2, "they are one variable");
 }
 
+// A record's 32-bit field.
+static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
+{
+    uint32_t at = messageHeaderSize;
+    for (uint32_t k = 0; k < kind; k++)
+    {
+        if (k + 1 == messageVariants)
+        {
+            at += Count(messageSelectors) * Count(messageVariants) * messageKeySize;
+        }
+        at += Count(k) * messageRecordSizes[k];
+    }
+    return mlocLoad32(s_buffer + at + index * messageRecordSizes[kind] + field * 4);
+}
+
+// A pool string's bytes compared with text.
+static bool PoolIs(uint32_t offset, uint32_t length, const char* text)
+{
+    uint32_t pool = (uint32_t)(mlocLoad32(s_buffer + messageSize) - Count(messagePool));
+    return length == strlen(text) && memcmp(s_buffer + pool + offset, text, length) == 0;
+}
+
+static void TestLayout(void)
+{
+    size_t needed = 0;
+    mlocMessageError error;
+    const char* text = "{$x}{$y}";
+    mlocTextResult result = mlocCompileMessage(text, 8, NULL, 0, &needed, &error);
+    // The header, two expressions, two pieces, two variables and their
+    // names, rounded to 4, then four slots of the variables' table.
+    CHECK(result.status == mloc_errorCapacity && needed == 172 + 16,
+          "the capacity is the message's records and the table");
+    size_t size;
+    CHECK(Compile(text, &size) && size == 170, "the message is its records alone");
+    CHECK(mlocLoad16(s_buffer + messageFormat) == messageFormatVersion &&
+              mlocLoad16(s_buffer + messageFlags) == 0 &&
+              mlocLoad32(s_buffer + messageLibrary) ==
+                  ((uint32_t)MLOC_VERSION_MAJOR << 16 | (uint32_t)MLOC_VERSION_MINOR << 8 |
+                   MLOC_VERSION_PATCH) &&
+              mlocLoad32(s_buffer + messageUnicode) >> 16 >= 18,
+          "the header names the format and the versions");
+    CHECK(Field(messageExpressions, 0, 0) == operandVariable &&
+              Field(messageExpressions, 0, 1) == 0 && Field(messageExpressions, 1, 1) == 1 &&
+              Field(messageExpressions, 0, 4) == 0 && Field(messageExpressions, 1, 7) == 4,
+          "each expression names its variable, no function, its offset");
+    CHECK(Field(messagePieces, 0, 0) == pieceExpression && Field(messagePieces, 1, 1) == 1,
+          "each piece names its expression");
+    CHECK(PoolIs(Field(messageVariables, 0, 0), Field(messageVariables, 0, 1), "x") &&
+              PoolIs(Field(messageVariables, 1, 0), Field(messageVariables, 1, 1), "y") &&
+              Field(messageVariables, 1, 2) == variableExternal,
+          "each variable has its name");
+
+    CHECK(Compile("ab{$x :f k=|v|}", &size), "an expression with an option compiles");
+    CHECK(Field(messageExpressions, 0, 7) == 2 && Field(messageExpressions, 0, 6) == 1 &&
+              PoolIs(Field(messageExpressions, 0, 3), Field(messageExpressions, 0, 4), "f") &&
+              PoolIs(Field(messageParameters, 0, 1), Field(messageParameters, 0, 2), "k") &&
+              PoolIs(Field(messageParameters, 0, 3), Field(messageParameters, 0, 4), "v"),
+          "its function, option and offset are kept");
+}
+
+// Texts cut short of bytes that would continue them: nothing past the
+// length is read.
+static void TestCut(void)
+{
+    size_t size = 0;
+    mlocMessageError error;
+    mlocTextResult result = mlocCompileMessage("{$ab", 3, s_buffer, sizeof s_buffer, &size, &error);
+    CHECK(result.status == mloc_errorSyntax && result.offset == 3, "a name ends at the length");
+    result = mlocCompileMessage("a\\{", 2, s_buffer, sizeof s_buffer, &size, &error);
+    CHECK(result.status == mloc_errorSyntax && result.offset == 2, "an escape ends at the length");
+    result = mlocCompileMessage("{|a\\|}", 4, s_buffer, sizeof s_buffer, &size, &error);
+    CHECK(result.status == mloc_errorSyntax && result.offset == 4,
+          "a quoted escape ends at the length");
+    result = mlocCompileMessage("ab", 1, s_buffer, sizeof s_buffer, &size, &error);
+    CHECK(result.status == mloc_success && Count(messagePool) == 1, "text ends at the length");
+}
+
+// A run of more than 30 combining marks, in a name or a key.
+static void TestMarks(void)
+{
+    char text[200];
+    for (int marks = 30; marks <= 32; marks += 2)
+    {
+        size_t at = (size_t)snprintf(text, sizeof text, "{$a");
+        for (int i = 0; i < marks; i++)
+        {
+            at += (size_t)snprintf(text + at, sizeof text - at, "\314\201");
+        }
+        snprintf(text + at, sizeof text - at, "}");
+        size_t size = 0;
+        mlocMessageError error;
+        mlocTextResult result =
+            mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
+        CHECK((result.status == mloc_success) == (marks == 30), "a name's marks up to 30");
+        at = (size_t)snprintf(text, sizeof text, ".input {$x :f}.match $x |a");
+        for (int i = 0; i < marks; i++)
+        {
+            at += (size_t)snprintf(text + at, sizeof text - at, "\314\201");
+        }
+        snprintf(text + at, sizeof text - at, "| {{}} * {{}}");
+        result = mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
+        CHECK((result.status == mloc_success) == (marks == 30), "a key's marks up to 30");
+    }
+}
+
 static void TestRefused(void)
 {
     size_t size = 0;
@@ -226,6 +331,9 @@ int main(void)
 {
     TestSuite();
     TestRecords();
+    TestLayout();
+    TestCut();
+    TestMarks();
     TestRefused();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;

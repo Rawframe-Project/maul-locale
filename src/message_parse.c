@@ -797,7 +797,9 @@ MessageParse mlocParseMessage(const uint8_t* text, size_t length, MessageEmit* e
         p.at = 0;
         parsed = ParsePattern(&p, false, pieces);
     }
-    if (!parsed)
+    // An error recorded anywhere stands, whatever the calls above it
+    // made of it.
+    if (!parsed || p.syntaxAt != SIZE_MAX)
     {
         result.error = mloc_messageErrorSyntax;
         result.errorAt = p.syntaxAt;
