@@ -99,8 +99,9 @@ the engine per language would drift apart.
 - apertium-kir over 3,916 names and 4,353 nouns: 99.5 to 99.9% agree;
   the rest are its words with a lexical stem ("мурдуна"), lowercased
   forms and abbreviations its lexicon gives no form.
-- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz or Azerbaijani; the Turkish tests and the
-  Turkish oracle give the same forms as before the engine was shared.
+- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz or Azerbaijani; the
+  Turkish tests and the Turkish oracle give the same forms as before the
+  engine was shared.
 
 ## Consequences
 

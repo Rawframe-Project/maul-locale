@@ -385,11 +385,12 @@ static void TestAzerbaijani(void)
     mlocInflection commonDative = Common(mloc_caseDative);
     CHECK(Gives(&s_az, "çörək", &commonThird, "çörəyi") &&
               Gives(&s_az, "ayaq", &commonThird, "ayağı") &&
+              Gives(&s_az, "obelisk", &commonThird, "obeliski") &&
               Gives(&s_az, "ok", &commonThird, "oku") &&
               Gives(&s_az, "çörək", &commonDative, "çörəyə") &&
               Gives(&s_az, "Tofiq", &third, "Tofiqi"),
-          "a common noun's k and q after a vowel in two syllables written y and ğ; one syllable "
-          "and names keep them");
+          "a common noun's k and q after a vowel in two syllables written y and ğ; one syllable, "
+          "a k after a consonant and names keep them");
     mlocInflection plural = Common(mloc_caseNominative);
     plural.plural = true;
     mlocInflection theirs = plural;
@@ -414,6 +415,7 @@ static void TestAzerbaijani(void)
     letters.reading = mloc_readingLetters;
     CHECK(Gives(&s_az, "ə", &letters, "ə-yə") && Gives(&s_az, "Q", &letters, "Q-yə") &&
               Gives(&s_az, "x", &letters, "x-yə") && Gives(&s_az, "Ğ", &letters, "Ğ-yə") &&
+              Gives(&s_az, "Z", &letters, "Z-yə") &&
               mlocInflectText(&s_az, "W", 1, &letters, &output) == mloc_errorInvalid,
           "letters by their names; W has none");
 }
