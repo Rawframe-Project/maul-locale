@@ -14,6 +14,7 @@
 
 #include "maul-locale/message.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -214,6 +215,22 @@ static void TestDuration(void)
                       NULL, 0, "90 minutes|{$d}", s_badOperand),
           "no duration is a bad operand; a number value's seconds; a duration value's "
           "options pass on, and it is no number");
+    mlocMessageArgument huge[] = {
+        {"i", 1, {mloc_messageValueDouble, 0, {.number = (double)INFINITY}}},
+        {"t", 1, {mloc_messageValueInteger, 0, {.integer = (int64_t)1 << 53}}},
+        {"u", 1, {mloc_messageValueInteger, 0, {.integer = ((int64_t)1 << 53) - 1}}},
+    };
+    CHECK(Formats("en", "{$i :mloc:duration}", huge, 3, "{$i}", s_badOperand) &&
+              Formats("en", "{$t :mloc:duration}", huge, 3, "{$t}", s_badOperand) &&
+              Formats("en", "{1e16 :mloc:duration}", huge, 3, "{|1e16|}", s_badOperand) &&
+              Formats("en", "{$u :mloc:duration style=digital}", huge, 3, "2501999792983:36:31",
+                      NULL),
+          "seconds past a duration's 2^53 are a bad operand, the last whole second is not");
+    CHECK(Formats("en",
+                  "{|PT1M5S| :mloc:duration minutes=numeric seconds=2-digit}|{|PT1H| "
+                  ":mloc:duration minutesDisplay=auto}",
+                  NULL, 0, "1:05|1 hr", NULL),
+          "seconds take 2-digit; a display auto");
     static const mlocMessageFaultKind selector[] = {mloc_messageFaultBadSelector, 0};
     CHECK(Formats("en", ".local $d = {|PT1H| :mloc:duration} .match $d * {{other}}", NULL, 0,
                   "other", selector),
