@@ -227,8 +227,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(message_functions)
     maul_add_test(message_parts)
-    maul_add_test(message_words)
-    # It reads the spell-out rules and relative times.
+    maul_add_test(message_words WHITEBOX)
+    # It reads the spell-out rules and relative times; a white-box test, so
+    # not built with the shared library.
     if(TARGET test_message_words)
         set(MLOC_WORDS_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
         set(MLOC_WORDS_RELATIVE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)

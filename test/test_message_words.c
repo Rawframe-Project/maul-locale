@@ -7,6 +7,7 @@
 // by unit, style and numeric with number options; their refusals, their
 // operands passed on, their parts, and that neither selects.
 
+#include "message_prepare.h"
 #include "test_harness.h"
 
 #include "maul-locale/message.h"
@@ -166,6 +167,68 @@ static void TestOperands(void)
           "neither selects");
 }
 
+// Whether binding in English prepared each expression's value as
+// wanted says, in order ('s' or 'r' for a spell-out or relative
+// formatter, 'n' for a number formatter, '-' for none).
+static bool PreparedAs(const char* message, const char* wanted)
+{
+    static mlocMessageFormatter formatter;
+    mlocLocale en;
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    Resolution r;
+    memset(&r, 0, sizeof r);
+    if (mlocParseLocale("en", 2, &en).status != mloc_success ||
+        mlocInitMessageFormatter(&formatter, &s_data, &en, &options) != mloc_success ||
+        mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
+                .status != mloc_success ||
+        mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success ||
+        !mlocReadBound(s_bound, &r.h, &r.formatter) ||
+        r.h.view.count[messageExpressions] != strlen(wanted))
+    {
+        printf("  [%s] does not bind as wanted\n", message);
+        return false;
+    }
+    r.words = mlocBoundWords(s_bound);
+    for (uint32_t e = 0; wanted[e] != '\0'; e++)
+    {
+        const PreparedNumber* p = mlocPreparedFor(&r, e);
+        char got = p == NULL                     ? '-'
+                   : p->kind == preparedSpellout ? 's'
+                   : p->kind == preparedRelative ? 'r'
+                   : p->kind == preparedNumber   ? 'n'
+                                                 : '?';
+        if (got != wanted[e])
+        {
+            printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
+            return false;
+        }
+    }
+    return true;
+}
+
+static void TestPrepared(void)
+{
+    CHECK(PreparedAs("{$n :mloc:spellout} {$n :mloc:relative unit=day} {$n :mloc:relative "
+                     "unit=day maximumFractionDigits=$d} {$n :mloc:spellout rules=xyz-abc}",
+                     "sr--"),
+          "both are prepared, unless an option comes from an argument or the formatter "
+          "cannot be made");
+    mlocMessageArgument a[] = {
+        {"n", 1, {mloc_messageValueDecimal, 0, {.decimal = NULL}}},
+        {"d", 1, {mloc_messageValueInteger, 0, {.integer = 0}}},
+    };
+    mlocDecimal amount;
+    CHECK(mlocParseDecimal("1.25", 4, &amount).status == mloc_success, "a decimal is read");
+    a[0].value.as.decimal = &amount;
+    CHECK(Formats("en", "{$n :mloc:relative unit=hour maximumFractionDigits=$d}", a, 2, "in 1 hour",
+                  NULL),
+          "a relative time made in the call");
+}
+
 // The parts a call reported.
 typedef struct Parts
 {
@@ -250,5 +313,6 @@ int main(void)
     TestRelative();
     TestOperands();
     TestParts();
+    TestPrepared();
     return s_failures == 0 ? 0 : 1;
 }
