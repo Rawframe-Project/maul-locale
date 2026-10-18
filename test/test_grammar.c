@@ -243,6 +243,8 @@ static void TestCommonNouns(void)
               Gives("katedral", &accusative, "katedrali"),
           "softening by Zemberek's rule and the lexicon's marks: t in two syllables, og and nk "
           "in any; one syllable that softens, words that keep, inverse harmony");
+    CHECK(Gives("aba", &dative, "abaya") && Gives("aa", &dative, "aaya"),
+          "words before the table's first, under its first byte");
     CHECK(Gives("hak", &accusative, "hakk\xC4\xB1") && Gives("ret", &accusative, "reddi") &&
               Gives("burun", &accusative, "burnu") &&
               Gives("\xC5\x9F"
