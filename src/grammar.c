@@ -637,7 +637,10 @@ static mlocResult InflectFinnish(const Inflector* f, const uint8_t* text, size_t
     }
     // An ordinal's endings follow its digits, not its period (5:nnen).
     bool whole = form.mark != 0 || form.length + form.tailLength == 0;
-    out->kept = !whole ? e->start + form.kept : t.ordinal && form.length > 0 ? e->end : length;
+    // An ordinal's period gives way to the colon when it ends the text
+    // ("5:nnen"); after a closing mark the text stays whole.
+    bool period = t.ordinal && form.length > 0 && e->end + 1 == length;
+    out->kept = !whole ? e->start + form.kept : period ? e->end : length;
     memcpy(out->tail, form.tail, form.tailLength);
     out->tailLength = whole ? 0 : form.tailLength;
     out->mark = form.mark;

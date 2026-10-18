@@ -754,7 +754,8 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
 {
     *out = (FinnishForm){.kept = t->wordLength};
     FinnishWord spoken;
-    mlocFinnishReadWord(t->spoken, t->spokenLength, &spoken);
+    size_t spokenFrom = 0;
+    mlocFinnishReadWord(t->spoken, t->spokenLength, &spoken, &spokenFrom);
     if (!HasVowel(&spoken))
     {
         return false;
@@ -764,7 +765,8 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
         return InflectMarked(t, &spoken, r, out);
     }
     FinnishWord word;
-    mlocFinnishReadWord(t->word, t->wordLength, &word);
+    size_t wordFrom = 0;
+    mlocFinnishReadWord(t->word, t->wordLength, &word, &wordFrom);
     if (word.count == 0)
     {
         return false;
@@ -810,7 +812,7 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
         return true;
     }
     char kept[finnishLetterRoom * 4];
-    out->kept = Encode(&word, 0, same, kept, sizeof(kept));
+    out->kept = wordFrom + Encode(&word, 0, same, kept, sizeof(kept));
     size_t split = start > same ? start : same;
     out->tailLength = Encode(&form, same, split, out->tail, sizeof(out->tail));
     out->length = Encode(&form, split, form.count, out->suffixes, sizeof(out->suffixes));

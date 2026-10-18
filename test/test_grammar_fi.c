@@ -102,6 +102,12 @@ static void TestTypes(void)
     CHECK(Gives("viikunanlehti", &inside, "viikunanlehdessä") &&
               Gives("ajoneuvokäsi", &inside, "ajoneuvokädessä"),
           "a compound's harmony is its last word's");
+    CHECK(Gives("raaka-aine", &inside, "raaka-aineessa") &&
+              Gives("Kalevala-seura", &inside, "Kalevala-seurassa") &&
+              Gives("kolmesataakuusikymmentäviisipäiväinenkalenterivuosijärjestelmäsuunnitelma",
+                    &inside,
+                    "kolmesataakuusikymmentäviisipäiväinenkalenterivuosijärjestelmäsuunnitelmassa"),
+          "the word after a hyphen, and a word longer than the letters read");
     CHECK(Gives("vaaka", &inside, "vaa'assa") && Gives("aika", &inside, "ajassa") &&
               Gives("poika", &inside, "pojassa") && Gives("koko", &inside, "koossa") &&
               Gives("liuku", &inside, "liu'ussa"),

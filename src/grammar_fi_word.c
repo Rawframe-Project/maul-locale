@@ -33,11 +33,12 @@ uint32_t mlocFinnishSmall(uint32_t c)
     return (c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDE && c != 0xD7) ? c + 0x20 : c;
 }
 
-// Reads the letters after a text's last space or hyphen.
-void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out)
+// Reads the letters after a text's last space or hyphen, the last
+// finnishLettersRead of them at most; fromOut receives where they begin.
+void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out, size_t* fromOut)
 {
     size_t start = length;
-    while (start > 0)
+    for (size_t letters = 0; start > 0 && letters < finnishLettersRead; letters++)
     {
         size_t before = 0;
         uint32_t c = mlocFinnishPrevious(text, start, &before);
@@ -47,6 +48,7 @@ void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out)
         }
         start = before;
     }
+    *fromOut = start;
     out->count = 0;
     for (size_t at = start; at < length && out->count < finnishLetterRoom;)
     {

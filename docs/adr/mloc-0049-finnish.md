@@ -61,6 +61,10 @@ and CC BY 3.0.
   refused in the plural, with a possessor, in the instructive and the
   comitative. A hinted name whose written end is not said takes an
   apostrophe ("Bordeaux'ssa").
+- An ordinal's period gives way to the colon only when it ends the text;
+  after a closing mark the text stays whole (`"5.":nnen`).
+- A word's last 40 letters are read (its stems and endings need its
+  last few); a longer word keeps its beginning as written.
 - No copula (refused).
 
 ## Proof

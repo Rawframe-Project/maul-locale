@@ -14,6 +14,9 @@
 enum
 {
     finnishLetterRoom = 64,
+    // The letters of a word read: its stems and endings need its last
+    // few; the rest of the room holds a stem's change and the endings.
+    finnishLettersRead = 40,
 };
 
 // A word as code points.
@@ -31,8 +34,9 @@ uint32_t mlocFinnishPrevious(const uint8_t* text, size_t end, size_t* startOut);
 // are.
 uint32_t mlocFinnishSmall(uint32_t c);
 
-// Reads the letters after a text's last space or hyphen.
-void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out);
+// Reads the letters after a text's last space or hyphen, the last
+// finnishLettersRead of them at most; fromOut receives where they begin.
+void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out, size_t* fromOut);
 
 bool mlocFinnishIsVowel(uint32_t c);
 
