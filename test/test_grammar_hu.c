@@ -118,6 +118,11 @@ static void TestStems(void)
     CHECK(Gives("út", &third, "útja") && Gives("út", &accusative, "utat") &&
               Gives("víz", &third, "vize") && Gives("ló", &third, "lova"),
           "the third person's possessive on the word as it is, or on the changed stem");
+    mlocInflection dative = Case(mloc_caseDative);
+    CHECK(Gives("Út", &accusative, "Utat") && Gives("Víz", &accusative, "Vizet") &&
+              Gives("napló", &accusative, "naplót") && Gives("Űr", &dative, "Űrnek"),
+          "a capital kept where the stem changes; a compound's last word of three letters or "
+          "more; a capital vowel read as a vowel");
     CHECK(Gives("számítógép", &plural, "számítógépek") && Gives("étterem", &plural, "éttermek") &&
               Gives("könyvtár", &plural, "könyvtárak") && Gives("ellenfél", &plural, "ellenfelek"),
           "a common noun's compound by its last word");
@@ -168,7 +173,7 @@ static void TestPossessives(void)
     CHECK(good, "the possessives of a lowering stem, back and front rounded");
     r.possessorPerson = 3;
     r.possessorPlural = false;
-    CHECK(Gives("kert", &r, "kertje") && Gives("nap", &r, "napja") &&
+    CHECK(Gives("kert", &r, "kertje") && Gives("nap", &r, "napja") && Gives("toll", &r, "tolla") &&
               Gives("asztal", &r, "asztala") && Gives("alma", &r, "almája") &&
               Gives("kulcs", &r, "kulcsa"),
           "the third person's j by the word's end");
@@ -178,7 +183,13 @@ static void TestPossessives(void)
     inside.possessorPerson = 3;
     mlocInflection mine = Common(mloc_caseAccusative);
     mine.possessorPerson = 1;
+    mlocInflection yours = Common(mloc_caseNominative);
+    yours.plural = true;
+    yours.possessorPerson = 2;
+    yours.possessorPlural = true;
     CHECK(Gives("ház", &r, "házaim") && Gives("alma", &r, "almáim") &&
+              Gives("kert", &r, "kertjeim") && Gives("ház", &yours, "házaitok") &&
+              Gives("kert", &yours, "kertjeitek") && Gives("könyv", &yours, "könyveitek") &&
               Gives("ház", &inside, "házában") && Gives("ház", &mine, "házamat"),
           "the possessed plural, and the cases after a possessive");
 }
@@ -198,7 +209,7 @@ static void TestMarked(void)
     mlocInflection on = Case(mloc_caseSuperessive);
     CHECK(Gives("MTA", &on, "MTA-n") && Gives("ENSZ", &with, "ENSZ-szel") &&
               Gives("DNS", &with, "DNS-sel") && Gives("BKK", &dative, "BKK-nak") &&
-              Gives("ELTE", &on, "ELTE-n"),
+              Gives("ELTE", &on, "ELTE-n") && Gives("XYZ", &with, "XYZ-vel"),
           "abbreviations after a hyphen by their letters, not lengthened (AkH 288)");
     mlocInflection hinted = Case(mloc_caseInstrumental);
     hinted.hint = "russzó";

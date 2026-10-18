@@ -104,7 +104,7 @@ uint32_t mlocHungarianPrevious(const uint8_t* text, size_t end, size_t* startOut
 
 // The small letter of a Latin capital (ASCII, Latin-1, Latin Extended-A:
 // Ő, Ű); other code points as they are.
-static uint32_t Small(uint32_t c)
+uint32_t mlocHungarianSmall(uint32_t c)
 {
     if ((c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDE && c != 0xD7))
     {
@@ -117,6 +117,15 @@ static uint32_t Small(uint32_t c)
         return c + 1;
     }
     return c;
+}
+
+uint32_t mlocHungarianCapital(uint32_t c)
+{
+    if ((c >= 'a' && c <= 'z') || (c >= 0xE0 && c <= 0xFE && c != 0xF7))
+    {
+        return c - 0x20;
+    }
+    return mlocHungarianSmall(c - 1) == c ? c - 1 : c;
 }
 
 // Reads the letters that end a text (after its last hyphen or space).
@@ -134,7 +143,7 @@ void mlocHungarianReadLetters(const uint8_t* text, size_t length, HungarianLette
         {
             break;
         }
-        reversed[n] = Small(c);
+        reversed[n] = mlocHungarianSmall(c);
         at[n] = start;
         n++;
         end = start;

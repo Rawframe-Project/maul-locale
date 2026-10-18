@@ -84,6 +84,11 @@ uint32_t mlocHungarianLongVowel(uint32_t c);
 // byte's index in startOut.
 uint32_t mlocHungarianPrevious(const uint8_t* text, size_t end, size_t* startOut);
 
+// The small letter of a Latin capital (ASCII, Latin-1, Latin Extended-A:
+// Ő, Ű), and the capital of a small one; other code points as they are.
+uint32_t mlocHungarianSmall(uint32_t c);
+uint32_t mlocHungarianCapital(uint32_t c);
+
 // Reads the letters that end a text (after its last hyphen or space).
 void mlocHungarianReadLetters(const uint8_t* text, size_t length, HungarianLetters* out);
 

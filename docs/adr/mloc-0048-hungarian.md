@@ -40,7 +40,7 @@ not MIT-compatible).
   person's j by the word's end, as the oracle counts it: after a vowel
   and two consonants, never after a sibilant, a palatal, j, h or v,
   after one consonant n, d, b, p (and m, t, k, l in one syllable).
-- **The table** (217 words, written from the grammars and the rules and
+- **The table** (220 words, written from the grammars and the rules and
   each checked against the oracle): lowering stems ("ház", "könyv",
   "ló"), stems that shorten, drop a vowel or take a v before a linking
   vowel ("víz": "vizet", "bokor": "bokrot", "ló": "lovat"), which also

@@ -31,8 +31,10 @@ typedef struct Builder
     bool linking;
     // Whether the stem's final vowel is lengthened.
     bool lengthen;
-    // The third person's possessive is -ja on the word as it is (útja).
+    // The third person's possessive is -ja on the word as it is (útja), or
+    // -a where the rule says -ja (tolla).
     bool ownJ;
+    bool noJ;
     // The word is a name.
     bool name;
     bool started;
@@ -217,7 +219,7 @@ static void ThirdPossessive(Builder* b, bool owners)
 {
     static const char* const s_forms[2][2][2] = {{{"a", "e"}, {"uk", "\xC3\xBCk"}},
                                                  {{"ja", "je"}, {"juk", "j\xC3\xBCk"}}};
-    bool j = b->ownJ || TakesJ(&b->sound);
+    bool j = b->ownJ || (!b->noJ && TakesJ(&b->sound));
     bool front = b->sound.harmony != hungarianHarmonyBack;
     Lengthen(b, false);
     Start(b);
@@ -255,7 +257,7 @@ static void PluralPossessive(Builder* b, const mlocInflection* r)
 {
     HungarianHarmony h = b->sound.harmony;
     bool vowel = b->sound.vowelEnd;
-    bool j = !vowel && (b->ownJ || TakesJ(&b->sound));
+    bool j = !vowel && (b->ownJ || (!b->noJ && TakesJ(&b->sound)));
     Lengthen(b, false);
     const char* s = vowel ? "i"
                     : j   ? (h == hungarianHarmonyBack ? "jai" : "jei")
@@ -548,6 +550,46 @@ static bool Unsaid(const HungarianText* t, const HungarianSound* spoken)
     return !spoken->vowelEnd || !same;
 }
 
+// Replaces a table word's letters from the first that its stem changes
+// (víz: v kept, iz written), a capital written as a capital (Út, Utat).
+static void ChangedEnd(const HungarianText* t, const Stem* stem, const HungarianLetters* written,
+                       HungarianForm* out)
+{
+    HungarianLetters changed;
+    size_t length = strlen(stem->changedStem);
+    mlocHungarianReadLetters((const uint8_t*)stem->changedStem, length, &changed);
+    size_t part = stem->letters.count - stem->from;
+    size_t same = 0;
+    while (same < part && same < changed.count &&
+           stem->letters.c[stem->from + same] == changed.c[same])
+    {
+        same++;
+    }
+    size_t letter = written->count - part + same;
+    out->kept = letter < written->count ? written->at[letter] : t->wordLength;
+    size_t from = same < changed.count ? changed.at[same] : length;
+    size_t n = length - from < hungarianTailRoom ? length - from : hungarianTailRoom;
+    memcpy(out->tail, stem->changedStem + from, n);
+    out->tailLength = (uint8_t)n;
+    if (letter < written->count && same < changed.count)
+    {
+        size_t next = letter + 1 < written->count ? written->at[letter + 1] : t->wordLength;
+        size_t start = 0;
+        uint32_t original = mlocHungarianPrevious(t->word, next, &start);
+        char capital[4];
+        size_t used = 0;
+        size_t rest = (same + 1 < changed.count ? changed.at[same + 1] : length) - from;
+        if (mlocHungarianSmall(original) != original &&
+            muniEncodeUtf8(mlocHungarianCapital(changed.c[same]), capital, &used) == muni_success &&
+            used + n - rest <= hungarianTailRoom)
+        {
+            memmove(out->tail + used, out->tail + rest, n - rest);
+            memcpy(out->tail, capital, used);
+            out->tailLength = (uint8_t)(used + n - rest);
+        }
+    }
+}
+
 // Sets a joined word's changed end: the table's stem, or its last vowel
 // lengthened.
 static void JoinedStem(const HungarianText* t, const Stem* stem, const Builder* b,
@@ -557,13 +599,7 @@ static void JoinedStem(const HungarianText* t, const Stem* stem, const Builder* 
     mlocHungarianReadLetters(t->word, t->wordLength, &written);
     if (stem->changed && written.count >= stem->letters.count - stem->from)
     {
-        // The part's letters are replaced by its stem.
-        size_t partLetters = stem->letters.count - stem->from;
-        size_t at = written.at[written.count - partLetters];
-        size_t n = strlen(stem->changedStem);
-        out->kept = at;
-        memcpy(out->tail, stem->changedStem, n < hungarianTailRoom ? n : hungarianTailRoom);
-        out->tailLength = (uint8_t)(n < hungarianTailRoom ? n : hungarianTailRoom);
+        ChangedEnd(t, stem, &written, out);
         return;
     }
     if (b->lengthen && t->wordLength > 0)
@@ -639,6 +675,7 @@ bool mlocHungarianInflect(const HungarianText* t, const mlocInflection* r, Hunga
     }
     b.linking = stem.changed || (stem.flags & hungarianLinking) != 0;
     b.ownJ = (stem.flags & hungarianOwnJ) != 0;
+    b.noJ = (stem.flags & hungarianNoJ) != 0;
     if (stem.changed)
     {
         // A changed stem takes the third person without j (vize, lova).

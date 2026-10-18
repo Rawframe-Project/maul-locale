@@ -72,7 +72,8 @@ bool mlocHungarianInflect(const HungarianText* text, const mlocInflection* reque
 // linking vowel (mézet), and one whose stem changes before a linking
 // vowel (víz, vizet; bokor, bokrot; ló, lovat), which also changes it
 // in the superessive (bokron, lovon; but vízen) or not in the third
-// person's possessive, which is -ja on the word as it is (útja).
+// person's possessive, which is -ja on the word as it is (útja), or -a
+// where the rule would say -ja (tolla).
 enum
 {
     hungarianLowering = 0x01,
@@ -80,6 +81,7 @@ enum
     hungarianLinking = 0x04,
     hungarianSuperessive = 0x08,
     hungarianOwnJ = 0x10,
+    hungarianNoJ = 0x20,
 };
 
 typedef struct HungarianWord
