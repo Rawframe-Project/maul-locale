@@ -8,6 +8,7 @@
 #include "calendar_gen.h"
 #include "data_format.h"
 #include "direction_gen.h"
+#include "gender_gen.h"
 #include "locale_gen.h"
 #include "number_gen.h"
 #include "plural_gen.h"
@@ -264,6 +265,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     Text eras = {0};
     Text years = {0};
     Text directions = {0};
+    Text genders = {0};
     char release[9] = "";
     memcpy(release, version.tzdb, sizeof(version.tzdb));
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
@@ -275,6 +277,8 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
         !GenerateScriptDirections(commonDirectory, &directions.bytes, &directions.size, errorOut,
                                   errorCapacity) ||
+        !GenerateListGenders(commonDirectory, &genders.bytes, &genders.size, errorOut,
+                             errorCapacity) ||
         !GenerateCalendarYears(root, &years.bytes, &years.size, errorOut, errorCapacity) ||
         !GenerateZones(tzdbDirectory, commonDirectory, release, &data, errorOut, errorCapacity) ||
         !GenerateZoneCodes(commonDirectory, &data, errorOut, errorCapacity))
@@ -283,6 +287,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         free(eras.bytes);
         free(years.bytes);
         free(directions.bytes);
+        free(genders.bytes);
         DataFileFree(&data);
         FreeNameFiles(&names);
         DataFileFree(&spellout);
@@ -316,6 +321,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
              WriteFile(root, "calendar_eras.c", &eras, errorOut, errorCapacity) &&
              WriteFile(root, "calendar_years.c", &years, errorOut, errorCapacity) &&
              WriteFile(root, "script_directions.c", &directions, errorOut, errorCapacity) &&
+             WriteFile(root, "list_genders.c", &genders, errorOut, errorCapacity) &&
              WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     for (size_t i = 0; ok && i < sizeof(nameFiles) / sizeof(nameFiles[0]); i++)
     {
@@ -334,6 +340,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     free(eras.bytes);
     free(years.bytes);
     free(directions.bytes);
+    free(genders.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;

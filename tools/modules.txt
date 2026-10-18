@@ -61,6 +61,8 @@ list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
 list: list_data list_join number_core
+list_genders:
+list_gender: list_genders
 date_format: bytes calendar_arith date_data date_range date_write locale_prefs number_core number_tables zone_format
 date_write: bytes date_data decimal number_core number_tables
 date_range: bytes date_data date_write number_core

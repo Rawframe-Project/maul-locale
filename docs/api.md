@@ -408,6 +408,11 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatList(const mlocListFormatter* forma
 ```
 Writes items joined by a formatter's patterns: none as no text, one as itself, two by the locale's pattern for two, more by its start, middle and end patterns. Parts are mlocListPart values.  @param formatter  A formatter mlocInitListFormatter made. @param items      The items, count of them; may be null when count is 0. @param count      The number of items, at most UINT32_MAX. @param output     Where the text goes (record mloc-0015). @return mloc_success; mloc_errorCapacity when the text does not fit (output's length then the size needed); mloc_errorInvalid for a formatter the library did not make, a null pointer, an item with a null text and a length, or a count past UINT32_MAX. @par Thread safety Safe from any thread.
 
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetListGender(const mlocDataSet* data, const mlocLocale* locale, const mlocPersonGender* genders, size_t count, mlocPersonGender* genderOut);
+```
+Gives the gender of a list of persons ("Tom and Mary") by the locale's rule in CLDR's genderList.xml (record mloc-0051); the rules are built in. The locale is canonicalized with the data set's aliases first (iw is he), then read by its language and script ("zh_Hant"), then its language; a locale CLDR does not list is neutral. An empty list is other and a list of one its person's gender; a longer list is other in a neutral locale (en, de), in a mixed neutral one (el, is) male or female when every person is, else other, and in a male-taints one (fr, es, ar) female when every person is, else male.  @param data       The data set the locale's aliases come from. @param locale     The locale. @param genders    The persons' genders; null when count is 0. @param count      The number of persons. @param genderOut  Receives the list's gender. @return mloc_success; mloc_errorInvalid for a null pointer or a gender past mloc_personFemale. @par Thread safety Safe from any thread.
+
 ## `locale.h`
 
 Locale identifiers (UTS #35 Part 1): a parsed locale is a fixed-size value in canonical syntax (record mloc-0015).
@@ -906,4 +911,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-165 functions across 19 headers.
+166 functions across 19 headers.

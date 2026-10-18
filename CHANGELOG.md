@@ -233,6 +233,9 @@ format.
   Sino-Korean reading, capitals by their letters' Korean names, Hanja
   by Unihan's readings, a hint; both forms ("은(는)") where the end
   cannot be read, or a refusal when the request is exact (mloc-0050).
+- `mlocGetListGender`: the gender of a list of persons by the locale's
+  rule in CLDR's genderList.xml (neutral, mixed neutral, male taints),
+  the locale canonicalized first (mloc-0051).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

@@ -102,6 +102,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/grammar_turkic.c
     src/grammar_uz.c
     src/list.c
+    src/list_gender.c
     src/list_data.c
     src/list_join.c
     src/locale_canonical.c
@@ -219,7 +220,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/generated/plural_rules.c
     src/generated/calendar_eras.c
     src/generated/calendar_years.c
-    src/generated/script_directions.c)
+    src/generated/script_directions.c
+    src/generated/list_genders.c)
 maul_configure_library(maul-locale)
 target_link_libraries(maul-locale PRIVATE maul-unicode::maul-unicode)
 set(MAUL_PACKAGE_DEPENDENCIES "find_dependency(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION})")
@@ -454,6 +456,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(calendar_oracle)
     maul_add_test(calendar_test262)
     maul_add_test(list_format)
+    maul_add_test(list_gender)
     # So are the names of languages and the rest (record mloc-0036), and
     # the subdivision names (record mloc-0039).
     set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
@@ -699,6 +702,7 @@ endif()
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
                                     tools/mlocgen/direction_gen.c
+                                    tools/mlocgen/gender_gen.c
                                     tools/mlocgen/cldr.c
                                     tools/mlocgen/context_gen.c
                                     tools/mlocgen/currency_gen.c tools/mlocgen/datafile.c

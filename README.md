@@ -63,7 +63,7 @@ on the exact decimal, by rule set or numbering system, capitalized as
 the context asks, and read back as ICU's strict parse reads them (CLDR's rule-based test data passes on every push;
 the rules are a data file of their own, `src/generated/spellout.mloc`);
 lists of any items ("a, b, and c", "a, b, or c") in each width, as
-ICU joins them; and the display names of languages, scripts, regions,
+ICU joins them, and the gender of a list of persons by CLDR's rules; and the display names of languages, scripts, regions,
 variants, keys and their values and measurement systems, in every form
 CLDR has and each capitalization context, as ICU4C's LocaleDisplayNames
 gives them, and of whole locales by UTS #35's algorithm, dialect names,
@@ -114,7 +114,7 @@ names, numbers, abbreviations and common nouns, read from how their end
 is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның",
 "АКШнын", "BMT-yə", "qishloqqa", "BMG-niň", "Kodállyal", "5-tel",
 "Helsingissä", "EU:hun", "책은", "URL로").
-The library has 165 public functions.
+The library has 166 public functions.
 
 ## Building
 

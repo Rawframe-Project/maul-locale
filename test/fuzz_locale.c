@@ -11,6 +11,7 @@
 // of both types whose category for 21 is one they name, and a number
 // formatter that writes -1234.5 measured and written alike, compact too.
 
+#include "maul-locale/list.h"
 #include "maul-locale/locale.h"
 #include "maul-locale/number.h"
 #include "maul-locale/plural.h"
@@ -141,6 +142,27 @@ static void Canonicalize(const uint8_t* data, size_t size)
     }
 }
 
+// The gender of a list of the input's first bytes as genders (3 a value
+// past female): refused for one, else one of the three.
+static void ListGender(const mlocLocale* locale, const uint8_t* data, size_t size)
+{
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet set = {&builtin, 1};
+    mlocPersonGender genders[4];
+    size_t count = size < 4 ? size : 4;
+    bool valid = true;
+    for (size_t i = 0; i < count; i++)
+    {
+        genders[i] = (mlocPersonGender)(data[i] & 3);
+        valid = valid && genders[i] <= mloc_personFemale;
+    }
+    mlocPersonGender gender = mloc_personOther;
+    mlocResult result = mlocGetListGender(&set, locale, genders, count, &gender);
+    Require(valid ? result == mloc_success && gender <= mloc_personFemale
+                  : result == mloc_errorInvalid);
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     Canonicalize(data, size);
@@ -162,5 +184,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     mlocOutput secondOutput = {.buffer = second, .capacity = sizeof(second)};
     Require(mlocFormatLocale(&again, &secondOutput) == mloc_success);
     Require(secondOutput.length == output.length && memcmp(tag, second, output.length) == 0);
+    ListGender(&locale, data, size);
     return 0;
 }
