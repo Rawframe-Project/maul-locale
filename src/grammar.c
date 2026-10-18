@@ -28,6 +28,7 @@ enum
     languageKyrgyz = 3,
     languageAzerbaijani = 4,
     languageUzbek = 5,
+    languageTurkmen = 6,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -80,6 +81,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageUzbek;
     }
+    else if (strcmp(locale->language, "tk") == 0 && latin)
+    {
+        f.language = languageTurkmen;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -110,14 +115,14 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageUzbek && f->spoken <= 1;
+           f->language <= languageTurkmen && f->spoken <= 1;
 }
 
 // An inflector's language.
 static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
-    static const TurkicLanguage* const s_languages[] = {&mlocTurkish, &mlocKazakh, &mlocKyrgyz,
-                                                        &mlocAzerbaijani, &mlocUzbek};
+    static const TurkicLanguage* const s_languages[] = {
+        &mlocTurkish, &mlocKazakh, &mlocKyrgyz, &mlocAzerbaijani, &mlocUzbek, &mlocTurkmen};
     return s_languages[f->language - languageTurkish];
 }
 

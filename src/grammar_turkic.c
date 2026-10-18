@@ -317,6 +317,7 @@ static void Put(const TurkicLanguage* language, uint32_t c, TurkicSound* sound, 
     if (sound->final == turkicVowel)
     {
         Harmony(info, false, sound);
+        sound->vowels = (uint8_t)(sound->vowels < 255 ? sound->vowels + 1 : 255);
     }
 }
 
@@ -331,6 +332,35 @@ static const TurkicOnset* OnsetOf(const TurkicLanguage* language, uint32_t symbo
         }
     }
     return nullptr;
+}
+
+// The language's own vowel a symbol stands for, or null.
+static const TurkicVowel* VowelOf(const TurkicLanguage* language, uint32_t symbol)
+{
+    for (size_t i = 0; i < language->vowelCount; i++)
+    {
+        if ((uint32_t)language->vowels[i].symbol == symbol)
+        {
+            return &language->vowels[i];
+        }
+    }
+    return nullptr;
+}
+
+// Appends a language's own vowel archiphoneme.
+static void PutVowelOf(const TurkicLanguage* language, const TurkicVowel* v, TurkicSound* sound,
+                       TurkicSuffixes* out)
+{
+    bool afterVowel = sound->final == turkicVowel;
+    if (v->afterConsonant && afterVowel)
+    {
+        return;
+    }
+    size_t front = sound->back ? 0 : 1;
+    bool rounds = sound->round && (!language->roundsFirstOnly || sound->vowels == 0);
+    uint16_t form =
+        afterVowel && v->afterVowel[front] != 0 ? v->afterVowel[front] : v->forms[front][rounds];
+    Put(language, form, sound, out);
 }
 
 // Decodes the code point at text[*at] (UTF-8, valid) and moves past it.
@@ -354,7 +384,12 @@ static void AppendOne(const TurkicLanguage* language, uint32_t c, TurkicSound* s
     size_t front = sound->back ? 0 : 1;
     size_t round = sound->round ? 1 : 0;
     const TurkicOnset* onset = OnsetOf(language, c);
-    if (c == 'A')
+    const TurkicVowel* vowel = VowelOf(language, c);
+    if (vowel != nullptr)
+    {
+        PutVowelOf(language, vowel, sound, out);
+    }
+    else if (c == 'A')
     {
         Put(language, language->a[front][sound->flat ? 0 : round], sound, out);
     }

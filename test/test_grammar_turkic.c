@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The other Turkic languages' suffixes (maul-locale/grammar.h, record
-// mloc-0047): Kazakh, Kyrgyz, Azerbaijani and Uzbek cases, plural,
-// possessives and question particle on names, common nouns, numbers and
-// abbreviations, as apertium-kaz and apertium-kir generate them and the
-// Azerbaijani norms and Uzbek rules write them; their marks, their stems
-// and their refusals.
+// mloc-0047): Kazakh, Kyrgyz, Azerbaijani, Uzbek and Turkmen cases,
+// plural, possessives and question particle on names, common nouns,
+// numbers and abbreviations, as apertium-kaz, apertium-kir and
+// apertium-tuk generate them and the Azerbaijani norms and Uzbek rules
+// write them; their marks, their stems and their refusals.
 
 #include "test_harness.h"
 
@@ -20,6 +20,7 @@ static mlocInflector s_kk;
 static mlocInflector s_ky;
 static mlocInflector s_az;
 static mlocInflector s_uz;
+static mlocInflector s_tk;
 static char s_text[512];
 
 static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
@@ -488,6 +489,82 @@ static void TestUzbek(void)
           "letters by their names, C none; no instrumental");
 }
 
+static void TestTurkmen(void)
+{
+    CHECK(CasesOf(&s_tk, "kitap", true,
+                  (const char* const[]){"kitabyň", "kitaba", "kitaby", "kitapda", "kitapdan"}, 5) &&
+              CasesOf(&s_tk, "göz", true,
+                      (const char* const[]){"gözüň", "göze", "gözi", "gözde", "gözden"}, 5) &&
+              CasesOf(&s_tk, "ene", true,
+                      (const char* const[]){"eneniň", "enä", "eneni", "enede", "eneden"}, 5) &&
+              CasesOf(
+                  &s_tk, "okuwçy", true,
+                  (const char* const[]){"okuwçynyň", "okuwça", "okuwçyny", "okuwçyda", "okuwçydan"},
+                  5),
+          "the cases; the genitive rounded after ö and ü, the accusative never; the "
+          "dative fused with a final vowel (enä, okuwça)");
+    mlocInflection r = Common(mloc_caseNominative);
+    r.possessorPerson = 1;
+    bool good = Gives(&s_tk, "ýol", &r, "ýolum") && Gives(&s_tk, "göz", &r, "gözüm") &&
+                Gives(&s_tk, "direktor", &r, "direktorum") && Gives(&s_tk, "el", &r, "elim") &&
+                Gives(&s_tk, "ene", &r, "enem") && Gives(&s_tk, "ýürek", &r, "ýüregim");
+    r.possessorPerson = 2;
+    good = Gives(&s_tk, "ýol", &r, "ýoluň") && good;
+    r.possessorPerson = 3;
+    good = Gives(&s_tk, "göz", &r, "gözü") && Gives(&s_tk, "ýol", &r, "ýoly") &&
+           Gives(&s_tk, "ene", &r, "enesi") && good;
+    r.possessorPlural = true;
+    r.possessorPerson = 1;
+    good = Gives(&s_tk, "göz", &r, "gözümiz") && good;
+    CHECK(good, "the possessives rounded after any rounded vowel, the first suffix vowel only "
+                "(gözümiz); the third person's after ö and ü");
+    mlocInflection accusative = Common(mloc_caseAccusative);
+    CHECK(Gives(&s_tk, "baýlyk", &accusative, "baýlygy") &&
+              Gives(&s_tk, "agaç", &accusative, "agajy") &&
+              Gives(&s_tk, "gazet", &accusative, "gazeti") &&
+              Gives(&s_tk, "ýurt", &accusative, "ýurty") &&
+              Gives(&s_tk, "halk", &accusative, "halky") && Gives(&s_tk, "ok", &accusative, "oky"),
+          "p, ç and k after a vowel in two syllables voiced; t, a cluster and one syllable "
+          "kept");
+    mlocInflection theirs = Common(mloc_caseNominative);
+    theirs.plural = true;
+    theirs.possessorPerson = 3;
+    theirs.possessorPlural = true;
+    mlocInflection copula = Common(mloc_caseLocative);
+    copula.copula = true;
+    mlocInflection question = Common(mloc_caseNominative);
+    question.question = true;
+    CHECK(Gives(&s_tk, "kitap", &theirs, "kitaplary") && Gives(&s_tk, "öý", &copula, "öýdedir") &&
+              Gives(&s_tk, "kitap", &question, "kitapmy"),
+          "the third plural once; the copula and question joined");
+    mlocInflection genitive = Case(mloc_caseGenitive);
+    mlocInflection dative = Case(mloc_caseDative);
+    mlocInflection ablative = Case(mloc_caseAblative);
+    CHECK(Gives(&s_tk, "Aşgabat", &dative, "Aşgabada") &&
+              Gives(&s_tk, "Türkmenabat", &genitive, "Türkmenabadyň") &&
+              Gives(&s_tk, "Merw", &dative, "Merwe") && Gives(&s_tk, "BMG", &genitive, "BMG-niň") &&
+              Gives(&s_tk, "AFK", &genitive, "AFK-nyň") && Gives(&s_tk, "BMG", &dative, "BMG-ä"),
+          "names joined, the t of -abat voiced; abbreviations by their letters after a hyphen");
+    CHECK(Gives(&s_tk, "1700", &ablative, "1700-den") && Gives(&s_tk, "5", &dative, "5-e") &&
+              Gives(&s_tk, "40", &genitive, "40-yň") && Gives(&s_tk, "100", &genitive, "100-üň") &&
+              Gives(&s_tk, "0", &dative, "0-a") && Gives(&s_tk, "60", &dative, "60-a") &&
+              Gives(&s_tk, "1000000", &dative, "1000000-a"),
+          "numbers by their last word (müň, bäş, kyrk, ýüz, "
+          "nol, altmyş, million) after a hyphen");
+    mlocDecimal huge;
+    mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
+    CHECK(mlocParseDecimal("1e21", 4, &huge).status == mloc_success &&
+              mlocInflectNumber(&s_tk, nullptr, &huge, &dative, &output) == mloc_errorNotFound,
+          "a power with no Turkmen word is refused");
+    mlocInflection letters = Case(mloc_caseDative);
+    letters.reading = mloc_readingLetters;
+    mlocInflection instrumental = Case(mloc_caseInstrumental);
+    CHECK(Gives(&s_tk, "K", &letters, "K-a") && Gives(&s_tk, "Ž", &letters, "Ž-ä") &&
+              mlocInflectText(&s_tk, "Q", 1, &letters, &output) == mloc_errorInvalid &&
+              mlocInflectText(&s_tk, "el", 2, &instrumental, &output) == mloc_errorInvalid,
+          "letters by their names, Q none; no instrumental");
+}
+
 int main(void)
 {
     static mlocData sources[2];
@@ -533,6 +610,13 @@ int main(void)
         fputs("test_grammar_turkic: cannot make the Uzbek inflector\n", stderr);
         return 2;
     }
+    mlocLocale tk;
+    if (mlocParseLocale("tk", 2, &tk).status != mloc_success ||
+        mlocInitInflector(&s_tk, &s_data, &tk) != mloc_success)
+    {
+        fputs("test_grammar_turkic: cannot make the Turkmen inflector\n", stderr);
+        return 2;
+    }
     TestKazakhCases();
     TestKazakhPossessives();
     TestKazakhWords();
@@ -543,5 +627,6 @@ int main(void)
     TestKyrgyzWords();
     TestAzerbaijani();
     TestUzbek();
+    TestTurkmen();
     return s_failures == 0 ? 0 : 1;
 }

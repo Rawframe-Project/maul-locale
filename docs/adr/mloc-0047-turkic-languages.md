@@ -19,7 +19,7 @@ the engine per language would drift apart.
 
 - **One engine** (`grammar_turkic.c`) and **a table per language**
   (`grammar_tr.c`, `grammar_kk.c`, `grammar_ky.c`,
-  `grammar_az.c`, `grammar_uz.c`): the language's letters with their
+  `grammar_az.c`, `grammar_uz.c`, `grammar_tk.c`): the language's letters with their
   class (vowel with its backness and rounding, glide, liquid, nasal,
   other voiced, voiceless), its A and I vowels by harmony, its onsets
   (an archiphoneme's consonant after each class of sound, back and
@@ -93,7 +93,27 @@ the engine per language would drift apart.
   ellik, "40qa" by qirq); a size past 10^35 is refused. ʻ and ʼ are
   signs, and a sign's class bits now say a consonant, which a count of
   vowels had misread.
-- The order of the rest: Turkmen, a table and an amendment here.
+- **Turkmen** (Latin; amended 2026-10-18), as apertium-tuk generates
+  it: two-way A (a, e) and I (y, i); a language's own vowels, each with
+  its forms by backness and rounding and its fused form after a vowel,
+  for the high vowels rounded by some suffixes only (the possessives
+  after any rounded vowel: "ýolum", "gözüm", "direktorum"; the genitive
+  and third person's possessive after ö and ü: "gözüň", "gözü"; the
+  accusative never: "gözi") and only as the suffixes' first vowel
+  ("gözümiz"); no assimilation of d; the buffers n and s after a vowel;
+  the dative fused with a final vowel ("enä", "okuwça"); no
+  instrumental case; the copula -dIr and the question particle joined;
+  a hyphen after an abbreviation read by its letters and after digits,
+  as the Turkmen press writes ("BMG-niň", "AFK-nyň", "1700-den"), a
+  name joined ("Aşgabada"). A final p, ç or k after a vowel in a word of
+  two syllables or more is voiced before a vowel, in names too
+  ("kitaby", "agajy", "baýlygy"); a final t only in -abat
+  ("Aşgabada"), the loans in t keeping it ("döwleti", "gazeti"); the
+  words that keep a stop ("tarapy"), voice a one-syllable word's t
+  ("ýurdy") or drop a vowel ("ogly") are not told apart, no free
+  dictionary marking them. Numbers are read by number words in code, a
+  size past 10^20 refused. Letters are named with e and a (be, ka, el,
+  že; C, Q, V, X none).
 
 ## Proof
 
@@ -105,7 +125,8 @@ the engine per language would drift apart.
   cases, the fused ю, the dropped ь, the joined marks and particle;
   Azerbaijani with every example the norms give for abbreviations and
   numbers; Uzbek with the rules' examples, the k, q and stem cases and
-  the number words. apertium-uzb over 23,958 names and 18,416 nouns:
+  the number words; Turkmen with the press's marks, the fused dative,
+  the rounding and the stops. apertium-uzb over 23,958 names and 18,416 nouns:
   99.6 to 99.9% agree, the rest its softening of one-syllable words the
   rules keep ("toki") and Turkish-spelled names. apertium-aze is no
   oracle (it writes "evde" for "evdə" and
@@ -120,7 +141,14 @@ the engine per language would drift apart.
 - apertium-kir over 3,916 names and 4,353 nouns: 99.5 to 99.9% agree;
   the rest are its words with a lexical stem ("мурдуна"), lowercased
   forms and abbreviations its lexicon gives no form.
-- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz, Azerbaijani or Uzbek;
+- apertium-tuk over its 106 names and 1,871 nouns: 95 to 100% of
+  names and 76 to 98% of nouns agree; set apart the stops it keeps
+  where the rule voices (most of them "-lyk", which Turkmen writes
+  "-lygy"), 93 to 98.8%; the rest its lexicon's one-syllable voicing
+  ("ýurdy") and dropped vowels ("ogly"), and its first person's
+  possessive written without a vowel after a cluster ("halkmy").
+- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek or
+  Turkmen;
   the Turkish tests and the Turkish oracle give the same forms as before
   the engine was shared.
 

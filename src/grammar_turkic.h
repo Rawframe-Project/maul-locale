@@ -5,7 +5,8 @@
 // spoken end into its last vowel's harmony and its final sound's class,
 // and writes the suffixes a request asks for from archiphonemes; each
 // language is a table of letters, vowels, onsets and suffix templates
-// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c, grammar_uz.c).
+// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c, grammar_uz.c,
+// grammar_tk.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H
@@ -86,7 +87,21 @@ typedef struct TurkicSound
     // A rounded vowel that leaves A unrounded (turkicFlat).
     bool flat;
     uint8_t final;
+    // The vowels the suffixes have written so far (up to 255).
+    uint8_t vowels;
 } TurkicSound;
+
+// A language's own vowel archiphoneme (Turkmen's): its forms by
+// [front][round], written only after a consonant when afterConsonant
+// (a possessive's linking vowel), and after a vowel by [front] when
+// afterVowel holds a form (Turkmen's dative, enä).
+typedef struct TurkicVowel
+{
+    char symbol;
+    bool afterConsonant;
+    uint16_t forms[2][2];
+    uint16_t afterVowel[2];
+} TurkicVowel;
 
 // The suffixes written for a request: the bytes before the particle and
 // the particle's (with its space).
@@ -164,6 +179,12 @@ typedef struct TurkicLanguage
     uint16_t i[2][2];
     const TurkicOnset* onsets;
     uint8_t onsetCount;
+    // The language's own vowel archiphonemes, and whether they round
+    // only as the suffixes' first vowel, after the stem's (Turkmen:
+    // gözüm, gözümiz; direktorum).
+    const TurkicVowel* vowels;
+    uint8_t vowelCount;
+    bool roundsFirstOnly;
     // The boundary mark (' or -) and where it goes besides numbers and
     // abbreviations read by their letters.
     char mark;
@@ -191,7 +212,7 @@ typedef struct TurkicLanguage
     // does not name.
     const char* (*letterName)(uint32_t codePoint);
     // The last word of a number spoken, for a language without spell-out
-    // rules (Uzbek): the number's lowest nonzero digit and its power of
+    // rules (Uzbek, Turkmen): the number's lowest nonzero digit and its power of
     // ten (0 and 0 for zero); null for a power it has no word for, and
     // null for a language that reads numbers by spell-out.
     const char* (*numberWord)(uint8_t digit, int32_t power);
@@ -208,6 +229,7 @@ extern const TurkicLanguage mlocKazakh;
 extern const TurkicLanguage mlocKyrgyz;
 extern const TurkicLanguage mlocAzerbaijani;
 extern const TurkicLanguage mlocUzbek;
+extern const TurkicLanguage mlocTurkmen;
 
 // A letter's information in a language.
 uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);

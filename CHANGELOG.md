@@ -213,6 +213,10 @@ format.
 - Uzbek suffixes by the 1995 spelling rules: -ka after k and -qa after
   q, every suffix joined, k and q written g and gʻ before a possessive,
   numbers read by Uzbek number words in code (mloc-0047).
+- Turkmen suffixes: two-way harmony with a high vowel rounded by some
+  suffixes only, the dative fused with a final vowel, a hyphen after
+  abbreviations and digits, p, ç and k voiced before a vowel, numbers
+  read by Turkmen number words in code (mloc-0047).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).
