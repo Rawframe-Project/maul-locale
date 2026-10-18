@@ -72,14 +72,19 @@ bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out
     {
         return false;
     }
-    double sign = seconds->negative ? -1.0 : 1.0;
-    mlocDurationValues values;
-    memset(&values, 0, sizeof values);
-    values.seconds = sign * (double)whole;
-    values.nanoseconds = sign * (double)nanoseconds;
-    mlocDateTimeDuration record;
-    return mlocMakeDuration(&values, &record) == mloc_success &&
-           mlocGetDurationValues(&record, mloc_unitHour, out) == mloc_success;
+    // Balanced up to hours as Temporal balances a time duration, each
+    // field below 2^53 and so exact, a zero field +0 as Temporal's.
+    bool negative = seconds->negative != 0;
+    uint64_t fields[6] = {whole / 3600,          whole / 60 % 60,           whole % 60,
+                          nanoseconds / 1000000, nanoseconds / 1000 % 1000, nanoseconds % 1000};
+    double values[6];
+    for (int i = 0; i < 6; i++)
+    {
+        values[i] = fields[i] == 0 ? 0.0 : negative ? -(double)fields[i] : (double)fields[i];
+    }
+    *out = (mlocDurationValues){0,         0,         0,         0,         values[0],
+                                values[1], values[2], values[3], values[4], values[5]};
+    return true;
 }
 
 static bool NameIs(const uint8_t* name, size_t length, const char* text)

@@ -399,6 +399,17 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   every `u:dir` value, a fallback's isolate replacing a value's, and
   markup's options. `fuzz_message` binds
   and formats each text with two arguments and two functions.
+- **Speed:** the benchmark's `message-*` cases format a message of each
+  function family, the plural message with its parts, a match naming
+  six functions it does not reach, and the hello message on a formatter
+  of 64 program functions; ICU4C 79 runs the same messages. Against its
+  MessageFormat 2 every message is 25 to 200 times faster; against its
+  MessageFormat 1 every family it can say is faster or level (currency
+  ten times, dates two to three times, spell-out level) but
+  `mloc:duration`, 1.4 times (its formatter writes each field as a
+  decimal); relative times and lists are level with ICU's own
+  formatters. A call does no work for a function it does not reach or
+  a program function the formatter holds.
 
 ## Consequences
 
