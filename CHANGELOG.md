@@ -210,6 +210,9 @@ format.
 - Azerbaijani suffixes: harmony with ə, no d to t, a hyphen after
   abbreviations, digits and hinted foreign names as the orthography
   norms write them, k and q written y and ğ before a vowel (mloc-0047).
+- Uzbek suffixes by the 1995 spelling rules: -ka after k and -qa after
+  q, every suffix joined, k and q written g and gʻ before a possessive,
+  numbers read by Uzbek number words in code (mloc-0047).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

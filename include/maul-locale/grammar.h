@@ -4,9 +4,10 @@
 // Grammatical suffixes on runtime text and numbers (records mloc-0046,
 // mloc-0047): a word, a name, an abbreviation or a number inflected for
 // case, number, possessor and copula by the rules of its language, read
-// from how its end is spoken. Turkish, Kazakh, Kyrgyz and Azerbaijani;
-// the rules are code, the spoken form of a number comes from the
-// spell-out rules (spellout.mloc).
+// from how its end is spoken. Turkish, Kazakh, Kyrgyz, Azerbaijani and
+// Uzbek; the rules are code, the spoken form of a number comes from the
+// spell-out rules (spellout.mloc) or, for Uzbek, which has none, from
+// its number words in code.
 
 #ifndef MAUL_LOCALE_GRAMMAR_H
 #define MAUL_LOCALE_GRAMMAR_H
@@ -75,9 +76,9 @@ extern "C"
 
     // The parts of an inflected text: the text as given, the boundary
     // mark (Turkish's apostrophe, Kazakh's and Azerbaijani's hyphen,
-    // none in Kyrgyz; the part keeps the name apostrophe), the suffixes, and the space and particle
-    // of a question. Their values differ from a number's parts (mlocNumberPart), which a number's
-    // stem holds inside it.
+    // none in Kyrgyz and Uzbek; the part keeps the name apostrophe), the suffixes, and the space
+    // and particle of a question. Their values differ from a number's parts (mlocNumberPart), which
+    // a number's stem holds inside it.
     typedef enum mlocInflectionPart
     {
         mloc_inflectionPartStem = 0x60,
@@ -96,9 +97,9 @@ extern "C"
     ///                      numbers, the spell-out rules.
     /// @param locale        The locale, canonicalized.
     /// @return mloc_success; mloc_errorNotFound for a language the library
-    ///         has no rules for (Turkish, Kazakh, Kyrgyz and
-    ///         Azerbaijani now, Kazakh and Kyrgyz in their Cyrillic
-    ///         script, Azerbaijani in its Latin one) or data without the number units;
+    ///         has no rules for (Turkish, Kazakh, Kyrgyz, Azerbaijani
+    ///         and Uzbek now, Kazakh and Kyrgyz in their Cyrillic script,
+    ///         Azerbaijani and Uzbek in their Latin one) or data without the number units;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -129,7 +130,10 @@ extern "C"
     /// "китеппи") and has no instrumental case. Azerbaijani writes no d
     /// to t ("kitabda"), a hyphen after letters, digits and a name a hint
     /// says is foreign ("BMT-yə", "3-də", "Microsoft-un"), the question
-    /// particle joined, and has no instrumental case.
+    /// particle joined, and has no instrumental case. Uzbek has no
+    /// harmony, writes -ka after k and -qa after q ("tilakka",
+    /// "qishloqqa", "50ka"), joins every suffix ("ToshDUning", "5ga")
+    /// and has no instrumental case.
     /// What the text cannot say (a foreign name, an abbreviation read as
     /// a word) the request's hint or reading says.
     ///
@@ -143,7 +147,8 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output->length is then the length needed);
     ///         mloc_errorNotFound for a number when the inflector has no
-    ///         spell-out rules; mloc_errorInvalid for a null pointer, an
+    ///         spell-out rules or no word for its size (Uzbek past
+    ///         10^35); mloc_errorInvalid for a null pointer, an
     ///         empty text or one that is not UTF-8, a request the
     ///         language does not have (a case, a person past 3), a text
     ///         with nothing to read (no letter or digit at its end), or a

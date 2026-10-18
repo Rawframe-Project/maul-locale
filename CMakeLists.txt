@@ -93,6 +93,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/grammar_lexicon.c
     src/grammar_tr.c
     src/grammar_turkic.c
+    src/grammar_uz.c
     src/list.c
     src/list_data.c
     src/list_join.c

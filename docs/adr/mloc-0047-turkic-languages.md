@@ -19,7 +19,7 @@ the engine per language would drift apart.
 
 - **One engine** (`grammar_turkic.c`) and **a table per language**
   (`grammar_tr.c`, `grammar_kk.c`, `grammar_ky.c`,
-  `grammar_az.c`): the language's letters with their
+  `grammar_az.c`, `grammar_uz.c`): the language's letters with their
   class (vowel with its backness and rounding, glide, liquid, nasal,
   other voiced, voiceless), its A and I vowels by harmony, its onsets
   (an archiphoneme's consonant after each class of sound, back and
@@ -75,8 +75,25 @@ the engine per language would drift apart.
   with e (be, qe, xe; W none). A common noun's final k or q after a
   vowel in a word of two syllables or more is written y or ğ before a
   vowel ("çörəyi", "ayağı"; "oku"); names keep it.
-- The order of the rest: Uzbek, Turkmen, each a table and an amendment
-  here.
+- **Uzbek** (Latin; amended 2026-10-18), by the 1995 spelling rules
+  (Cabinet decree 339): no harmony; the dative -ga written -ka after k
+  and -qa after q, g after every other sound (item 37: "tilakka",
+  "qishloqqa", "togʻga"; a new sound class, uvular, for q); no
+  pronominal n ("uyiga"); no instrumental case; the copula -dir and the
+  question particle -mi joined; abbreviations joined (item 49:
+  "ToshDUning"; kun.uz writes "BMTdagi") and digits joined too, a hyphen
+  after digits being the ordinal's (item 56: "7-sinf"); a final k or q
+  after a vowel in a word of two syllables or more, and bek and yoʻq,
+  written g or gʻ before a possessive (item 34: "yuragim",
+  "qishlogʻi"), in names too as apertium-uzb writes ("Ulugʻbegi"); one
+  syllable and a cluster keep it ("toʻqi", "xalqi"); the loans the rule
+  exempts ("ishtiroki") are not told apart. Uzbek has no spell-out rules
+  in CLDR, so its numbers are read by number words in code: the lowest
+  nonzero digit's unit or ten, yuz, or the scale's word ("50ka" by
+  ellik, "40qa" by qirq); a size past 10^35 is refused. ʻ and ʼ are
+  signs, and a sign's class bits now say a consonant, which a count of
+  vowels had misread.
+- The order of the rest: Turkmen, a table and an amendment here.
 
 ## Proof
 
@@ -87,7 +104,11 @@ the engine per language would drift apart.
   Latin word, a formatted number, the refusals; Kyrgyz the same in five
   cases, the fused ю, the dropped ь, the joined marks and particle;
   Azerbaijani with every example the norms give for abbreviations and
-  numbers. apertium-aze is no oracle (it writes "evde" for "evdə" and
+  numbers; Uzbek with the rules' examples, the k, q and stem cases and
+  the number words. apertium-uzb over 23,958 names and 18,416 nouns:
+  99.6 to 99.9% agree, the rest its softening of one-syllable words the
+  rules keep ("toki") and Turkish-spelled names. apertium-aze is no
+  oracle (it writes "evde" for "evdə" and
   lacks common words), so Azerbaijani rests on the norms' examples and a
   native review.
 - apertium-kaz's generator (GPL, run in the private research only) over
@@ -99,9 +120,9 @@ the engine per language would drift apart.
 - apertium-kir over 3,916 names and 4,353 nouns: 99.5 to 99.9% agree;
   the rest are its words with a lexical stem ("мурдуна"), lowercased
   forms and abbreviations its lexicon gives no form.
-- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz or Azerbaijani; the
-  Turkish tests and the Turkish oracle give the same forms as before the
-  engine was shared.
+- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz, Azerbaijani or Uzbek;
+  the Turkish tests and the Turkish oracle give the same forms as before
+  the engine was shared.
 
 ## Consequences
 

@@ -5,7 +5,7 @@
 // spoken end into its last vowel's harmony and its final sound's class,
 // and writes the suffixes a request asks for from archiphonemes; each
 // language is a table of letters, vowels, onsets and suffix templates
-// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c).
+// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c, grammar_uz.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H
@@ -25,8 +25,9 @@ enum
 
 // The class of a sound, which chooses a suffix's first consonant: a
 // vowel; a glide (Kazakh р, й, у); a liquid (л); a nasal (м, н, ң); any
-// other voiced consonant; a voiceless one. A language without such
-// choices uses vowel, voiced and voiceless alone.
+// other voiced consonant; a voiceless one; a uvular stop (Uzbek q, which
+// takes -qa where k takes -ka). A language uses the classes its onsets
+// tell apart, its table saying which letters fall in each.
 typedef enum TurkicClass
 {
     turkicVowel = 0,
@@ -35,7 +36,8 @@ typedef enum TurkicClass
     turkicNasal = 3,
     turkicVoiced = 4,
     turkicVoiceless = 5,
-    turkicClasses = 6,
+    turkicUvular = 6,
+    turkicClasses = 7,
 } TurkicClass;
 
 // A letter's information: its class in the low bits, and these.
@@ -49,7 +51,8 @@ enum
     // A glide, which gives the harmony only when the word has no other
     // vowel (Kazakh и, у, ю).
     turkicWeak = 0x20,
-    // A sign that is no sound (Kazakh ь, ъ).
+    // A sign that is no sound (Kazakh ь, ъ); its class bits say a
+    // consonant, so no count of vowels takes it for one.
     turkicSign = 0x40,
     // On a sign or a word's final consonant: the suffixes are front
     // (Kazakh ь; к in паркке).
@@ -187,6 +190,11 @@ typedef struct TurkicLanguage
     // The name of a letter as the language reads it, or null for one it
     // does not name.
     const char* (*letterName)(uint32_t codePoint);
+    // The last word of a number spoken, for a language without spell-out
+    // rules (Uzbek): the number's lowest nonzero digit and its power of
+    // ten (0 and 0 for zero); null for a power it has no word for, and
+    // null for a language that reads numbers by spell-out.
+    const char* (*numberWord)(uint8_t digit, int32_t power);
     // A stem's changed end (UTF-8, valid) before the suffixes written for
     // it, with the lexicon's marks; false when it stays as it is. It may
     // change the suffixes' first letter where the two fuse (Kyrgyz той
@@ -199,6 +207,7 @@ extern const TurkicLanguage mlocTurkish;
 extern const TurkicLanguage mlocKazakh;
 extern const TurkicLanguage mlocKyrgyz;
 extern const TurkicLanguage mlocAzerbaijani;
+extern const TurkicLanguage mlocUzbek;
 
 // A letter's information in a language.
 uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);

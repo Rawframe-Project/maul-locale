@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // libFuzzer target for the inflector (records mloc-0046, mloc-0047),
-// Turkish, Kazakh, Kyrgyz or Azerbaijani, with the spell-out file beside
-// the compiled-in data.
+// Turkish, Kazakh, Kyrgyz, Azerbaijani or Uzbek, with the spell-out file
+// beside the compiled-in data.
 // The first two bytes choose the request (case, plural, possessor,
 // copula, question, common noun, reading) and the language, the third
 // where the text ends and the hint begins (0 for no hint); the rest is
@@ -65,15 +65,24 @@ static bool Utf8(const uint8_t* s, size_t n)
     return true;
 }
 
-// The languages drawn, by two bits of the request.
-static const char* const s_languages[4] = {"tr", "kk", "ky", "az"};
+// The languages drawn, by three bits of the request (Turkish in the
+// slots not yet given to a language), and whether each changes a name's
+// stem.
+enum
+{
+    languageSlots = 8,
+};
+static const char* const s_languages[languageSlots] = {"tr", "kk", "ky", "az",
+                                                       "uz", "tr", "tr", "tr"};
+static const bool s_stemsNames[languageSlots] = {false, true,  true,  false,
+                                                 true,  false, false, false};
 
 // A language's inflector, with the spell-out rules when the file opens.
 static const mlocInflector* Inflector(size_t language)
 {
     static mlocData s_sources[2];
     alignas(8) static uint8_t s_rules[4 << 20];
-    static mlocInflector s_inflectors[4];
+    static mlocInflector s_inflectors[languageSlots];
     static int s_state;
     if (s_state == 0)
     {
@@ -91,7 +100,7 @@ static const mlocInflector* Inflector(size_t language)
             }
         }
         mlocDataSet set = {s_sources, count};
-        for (size_t i = 0; i < 4; i++)
+        for (size_t i = 0; i < languageSlots; i++)
         {
             mlocLocale locale;
             Require(mlocParseLocale(s_languages[i], 2, &locale).status == mloc_success &&
@@ -171,7 +180,7 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     Require(again.length == out.length && memcmp(s_again, s_out, out.length) == 0);
     Require(tiling.good && tiling.next == out.length);
     // The text begins the output, but a stem's changed end (a common
-    // noun's, a Kazakh or Kyrgyz name's): its final stop, its dropped vowel and what
+    // noun's, a Kazakh, Kyrgyz or Uzbek name's): its final stop, its dropped vowel and what
     // follows it, or a compound's possessive, at most 8 bytes.
     if (text != nullptr)
     {
@@ -186,8 +195,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     {
         return 0;
     }
-    size_t language = (size_t)(data[1] >> 4 & 3);
-    bool stemsNames = language == 1 || language == 2;
+    size_t language = (size_t)(data[1] >> 4 & 7);
+    bool stemsNames = s_stemsNames[language];
     const mlocInflector* f = Inflector(language);
     mlocInflection r = RequestOf(data);
     const char* text = (const char*)data + 3;

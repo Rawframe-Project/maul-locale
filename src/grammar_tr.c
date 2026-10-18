@@ -215,5 +215,6 @@ const TurkicLanguage mlocTurkish = {
     .copula = "DIr",
     .question = " mI",
     .letterName = TurkishLetterName,
+    .numberWord = nullptr,
     .stem = TurkishStem,
 };

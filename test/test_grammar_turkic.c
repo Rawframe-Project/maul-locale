@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The other Turkic languages' suffixes (maul-locale/grammar.h, record
-// mloc-0047): Kazakh, Kyrgyz and Azerbaijani cases, plural, possessives
-// and question particle on names, common nouns, numbers and
+// mloc-0047): Kazakh, Kyrgyz, Azerbaijani and Uzbek cases, plural,
+// possessives and question particle on names, common nouns, numbers and
 // abbreviations, as apertium-kaz and apertium-kir generate them and the
-// Azerbaijani orthography norms write them; their marks, their stems and
-// their refusals.
+// Azerbaijani norms and Uzbek rules write them; their marks, their stems
+// and their refusals.
 
 #include "test_harness.h"
 
@@ -19,6 +19,7 @@ static mlocDataSet s_data;
 static mlocInflector s_kk;
 static mlocInflector s_ky;
 static mlocInflector s_az;
+static mlocInflector s_uz;
 static char s_text[512];
 
 static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
@@ -420,6 +421,73 @@ static void TestAzerbaijani(void)
           "letters by their names; W has none");
 }
 
+static void TestUzbek(void)
+{
+    CHECK(
+        CasesOf(&s_uz, "kitob", true,
+                (const char* const[]){"kitobning", "kitobga", "kitobni", "kitobda", "kitobdan"},
+                5) &&
+            CasesOf(&s_uz, "tilak", true,
+                    (const char* const[]){"tilakning", "tilakka", "tilakni", "tilakda", "tilakdan"},
+                    5) &&
+            CasesOf(&s_uz, "qishloq", true,
+                    (const char* const[]){"qishloqning", "qishloqqa", "qishloqni", "qishloqda",
+                                          "qishloqdan"},
+                    5) &&
+            CasesOf(&s_uz, "togʻ", true,
+                    (const char* const[]){"togʻning", "togʻga", "togʻni", "togʻda", "togʻdan"}, 5),
+        "no harmony; -ka after k, -qa after q, -ga after gʻ (item 37)");
+    mlocInflection r = Common(mloc_caseNominative);
+    r.possessorPerson = 1;
+    bool good = Gives(&s_uz, "yurak", &r, "yuragim") && Gives(&s_uz, "bola", &r, "bolam");
+    r.possessorPerson = 2;
+    good = Gives(&s_uz, "tilak", &r, "tilaging") && Gives(&s_uz, "bola", &r, "bolang") && good;
+    r.possessorPerson = 3;
+    good = Gives(&s_uz, "qishloq", &r, "qishlogʻi") && Gives(&s_uz, "bola", &r, "bolasi") &&
+           Gives(&s_uz, "bek", &r, "begi") && Gives(&s_uz, "yoʻq", &r, "yoʻgʻi") &&
+           Gives(&s_uz, "toʻq", &r, "toʻqi") && Gives(&s_uz, "xalq", &r, "xalqi") &&
+           Gives(&s_uz, "oʻrtoq", &r, "oʻrtogʻi") && good;
+    CHECK(good, "the possessives; k and q after a vowel in two syllables written g and gʻ "
+                "(item 34), bek and yoʻq too, one syllable and a cluster keeping them");
+    mlocInflection third = Common(mloc_caseDative);
+    third.possessorPerson = 3;
+    mlocInflection theirs = Common(mloc_caseNominative);
+    theirs.plural = true;
+    theirs.possessorPerson = 3;
+    theirs.possessorPlural = true;
+    mlocInflection copula = Common(mloc_caseLocative);
+    copula.copula = true;
+    mlocInflection question = Common(mloc_caseNominative);
+    question.question = true;
+    CHECK(Gives(&s_uz, "uy", &third, "uyiga") && Gives(&s_uz, "kitob", &theirs, "kitoblari") &&
+              Gives(&s_uz, "uy", &copula, "uydadir") && Gives(&s_uz, "kitob", &question, "kitobmi"),
+          "no pronominal n; the third plural once; the copula and question joined");
+    mlocInflection genitive = Case(mloc_caseGenitive);
+    mlocInflection dative = Case(mloc_caseDative);
+    mlocInflection name = Case(mloc_caseNominative);
+    name.possessorPerson = 3;
+    CHECK(Gives(&s_uz, "ToshDU", &genitive, "ToshDUning") &&
+              Gives(&s_uz, "BMT", &dative, "BMTga") && Gives(&s_uz, "Ulugʻbek", &name, "Ulugʻbegi"),
+          "abbreviations joined (item 49); a name's stop written g");
+    CHECK(Gives(&s_uz, "5", &dative, "5ga") && Gives(&s_uz, "50", &dative, "50ka") &&
+              Gives(&s_uz, "2", &name, "2si") && Gives(&s_uz, "100", &dative, "100ga") &&
+              Gives(&s_uz, "3000", &name, "3000i") && Gives(&s_uz, "0", &name, "0i") &&
+              Gives(&s_uz, "1,5", &dative, "1,5ga") && Gives(&s_uz, "40", &dative, "40qa"),
+          "numbers by their last word (ellik, ikki, yuz, ming, nol, besh, qirq), joined");
+    mlocDecimal huge;
+    mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
+    CHECK(mlocParseDecimal("1e36", 4, &huge).status == mloc_success &&
+              mlocInflectNumber(&s_uz, nullptr, &huge, &dative, &output) == mloc_errorNotFound,
+          "a power with no Uzbek word is refused");
+    mlocInflection letters = Case(mloc_caseDative);
+    letters.reading = mloc_readingLetters;
+    mlocInflection instrumental = Case(mloc_caseInstrumental);
+    CHECK(Gives(&s_uz, "Z", &letters, "Zga") && Gives(&s_uz, "q", &letters, "qga") &&
+              mlocInflectText(&s_uz, "C", 1, &letters, &output) == mloc_errorInvalid &&
+              mlocInflectText(&s_uz, "uy", 2, &instrumental, &output) == mloc_errorInvalid,
+          "letters by their names, C none; no instrumental");
+}
+
 int main(void)
 {
     static mlocData sources[2];
@@ -458,6 +526,13 @@ int main(void)
         fputs("test_grammar_turkic: cannot make the Azerbaijani inflector\n", stderr);
         return 2;
     }
+    mlocLocale uz;
+    if (mlocParseLocale("uz", 2, &uz).status != mloc_success ||
+        mlocInitInflector(&s_uz, &s_data, &uz) != mloc_success)
+    {
+        fputs("test_grammar_turkic: cannot make the Uzbek inflector\n", stderr);
+        return 2;
+    }
     TestKazakhCases();
     TestKazakhPossessives();
     TestKazakhWords();
@@ -467,5 +542,6 @@ int main(void)
     TestKyrgyzPossessives();
     TestKyrgyzWords();
     TestAzerbaijani();
+    TestUzbek();
     return s_failures == 0 ? 0 : 1;
 }

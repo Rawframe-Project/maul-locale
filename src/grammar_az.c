@@ -153,5 +153,6 @@ const TurkicLanguage mlocAzerbaijani = {
     .copula = "dIr",
     .question = "mI",
     .letterName = AzerbaijaniLetterName,
+    .numberWord = nullptr,
     .stem = AzerbaijaniStem,
 };

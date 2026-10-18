@@ -27,6 +27,7 @@ enum
     languageKazakh = 2,
     languageKyrgyz = 3,
     languageAzerbaijani = 4,
+    languageUzbek = 5,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -75,6 +76,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageAzerbaijani;
     }
+    else if (strcmp(locale->language, "uz") == 0 && latin)
+    {
+        f.language = languageUzbek;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -105,14 +110,14 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageAzerbaijani && f->spoken <= 1;
+           f->language <= languageUzbek && f->spoken <= 1;
 }
 
 // An inflector's language.
 static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
     static const TurkicLanguage* const s_languages[] = {&mlocTurkish, &mlocKazakh, &mlocKyrgyz,
-                                                        &mlocAzerbaijani};
+                                                        &mlocAzerbaijani, &mlocUzbek};
     return s_languages[f->language - languageTurkish];
 }
 
@@ -292,10 +297,29 @@ static bool LastWord(const char* text, size_t length, char* spoken, size_t* spok
 // The spoken form of a written number: its last word in words, read from
 // the fraction digits it shows when it has them ("2,20" is iki virgül
 // yirmi), from the ordinal when a period follows it.
+// The last word of an integer by a language's own number words (a
+// language without spell-out rules); false when it has none for it.
+static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value, char* spoken,
+                       size_t* spokenLength)
+{
+    const char* word = value->count == 0 ? language->numberWord(0, 0)
+                       : value->exponent < 0
+                           ? nullptr
+                           : language->numberWord(value->digits[value->count - 1], value->exponent);
+    if (word == nullptr)
+    {
+        return false;
+    }
+    *spokenLength = strlen(word);
+    memcpy(spoken, word, *spokenLength);
+    return true;
+}
+
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
                                size_t* spokenLength)
 {
-    if (f->spoken == 0)
+    const TurkicLanguage* language = LanguageOf(f);
+    if (f->spoken == 0 && language->numberWord == nullptr)
     {
         return mloc_errorNotFound;
     }
@@ -329,6 +353,11 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
         {
             return mloc_errorInvalid;
         }
+    }
+    if (language->numberWord != nullptr)
+    {
+        return NumberWord(language, &value, spoken, spokenLength) ? mloc_success
+                                                                  : mloc_errorNotFound;
     }
     char words[spokenRoom];
     mlocOutput out = {words, sizeof(words), 0, nullptr, nullptr};
