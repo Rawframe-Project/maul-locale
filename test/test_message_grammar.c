@@ -184,6 +184,9 @@ static void TestGender(void)
               Formats("he", s_select, &a, 1, "He", NULL),
           "male taints, an unknown person among them");
     mlocMessageArgument single = Text("p", "female");
+    mlocMessageArgument neither = Text("p", "other");
+    CHECK(Formats("fr", s_select, &neither, 1, "They", NULL),
+          "one person of neither gender stays other in a male-taints locale");
     CHECK(Formats("fr", s_select, &single, 1, "She", NULL) &&
               Formats("en", ".local $g = {female :mloc:gender} .match $g female {{She}} * {{?}}",
                       NULL, 0, "She", NULL),
