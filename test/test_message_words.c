@@ -286,6 +286,13 @@ static void TestList(void)
               Formats("en", ".local $n = {$l :mloc:list} .match $n 1.0 {{a}} 1e0 {{b}} * {{c}}",
                       &one, 1, "c", NULL),
           "a list selects by its count: an exact count first, then its plural category");
+    mlocMessageArgument unprepared[] = {
+        one,
+        {"s", 1, {mloc_messageValueString, 0, {.string = {"short", 5}}}},
+    };
+    CHECK(Formats("en", ".local $n = {$l :mloc:list style=$s} .match $n one {{is}} * {{are}}",
+                  unprepared, 2, "is", s_badOption),
+          "a list not prepared selects with rules made in the call");
     static const mlocMessageFaultKind badKey[] = {mloc_messageFaultBadVariantKey, 0};
     CHECK(Formats("en", ".local $n = {$l :mloc:list} .match $n horse {{a}} * {{b}}", &one, 1, "b",
                   badKey),
@@ -336,8 +343,8 @@ static void TestOperands(void)
 
 // Whether binding in English prepared each expression's value as
 // wanted says, in order ('s' or 'r' for a spell-out or relative
-// formatter, 'n' for a number formatter, 'D' or 'L' for a duration's or
-// list's, '-' for none).
+// formatter, 'n' for a number formatter, 'D' for a duration's, 'L' for a
+// list's with its cardinal rules, '-' for none).
 static bool PreparedAs(const char* message, const char* wanted)
 {
     static mlocMessageFormatter formatter;
@@ -369,8 +376,9 @@ static bool PreparedAs(const char* message, const char* wanted)
                    : p->kind == preparedSpellout ? 's'
                    : p->kind == preparedRelative ? 'r'
                    : p->kind == preparedNumber   ? 'n'
-                   : wanted[e] == 'L'            ? 'L'
-                                                 : '?';
+                   : wanted[e] == 'L'
+                       ? (((const PreparedList*)(const void*)p)->rulesMade ? 'L' : 'x')
+                       : '?';
         if (got != wanted[e])
         {
             printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
