@@ -2,13 +2,14 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The inflector (maul-locale/grammar.h, records mloc-0046 to
-// mloc-0048): a text's end found and read (a number by its spoken form,
+// mloc-0049): a text's end found and read (a number by its spoken form,
 // capitals by their letters' names, a word as written or as the hint
 // says), and the language's suffixes written after it with the boundary
 // mark its spelling asks for.
 
 #include "maul-locale/grammar.h"
 
+#include "grammar_fi.h"
 #include "grammar_hu.h"
 #include "grammar_hu_sound.h"
 #include "grammar_lexicon.h"
@@ -32,6 +33,7 @@ enum
     languageUzbek = 5,
     languageTurkmen = 6,
     languageHungarian = 7,
+    languageFinnish = 8,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -92,6 +94,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageHungarian;
     }
+    else if (strcmp(locale->language, "fi") == 0 && latin)
+    {
+        f.language = languageFinnish;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -122,7 +128,7 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageHungarian && f->spoken <= 1;
+           f->language <= languageFinnish && f->spoken <= 1;
 }
 
 static bool IsTurkic(const Inflector* f)
@@ -403,7 +409,8 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
     {
         size_t previous = 0;
         const char* name = IsTurkic(f) ? LanguageOf(f)->letterName(Before(text, e->end, &previous))
-                                       : mlocHungarianLetterName(text, e->end);
+                           : f->language == languageFinnish ? mlocFinnishLetterName(text, e->end)
+                                                            : mlocHungarianLetterName(text, e->end);
         if (name == nullptr)
         {
             return mloc_errorInvalid;
@@ -448,7 +455,9 @@ static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
            (r->hint != nullptr || r->hintLength == 0) &&
-           (IsTurkic(f) ? mlocTurkicRequestValid(LanguageOf(f), r) : mlocHungarianRequestValid(r));
+           (IsTurkic(f)                      ? mlocTurkicRequestValid(LanguageOf(f), r)
+            : f->language == languageFinnish ? mlocFinnishRequestValid(r)
+                                             : mlocHungarianRequestValid(r));
 }
 
 // A compound that ends in a third person's possessive (zeytinyağı): its
@@ -596,11 +605,58 @@ static mlocResult InflectHungarian(const Inflector* f, const uint8_t* text, size
     return mloc_success;
 }
 
+// Finnish: the end read as the others read it, then the endings after a
+// colon (digits, capitals, a period or a closing mark), after an
+// apostrophe (a hinted name's unsaid end), or joined to the word's
+// changed stem.
+static mlocResult InflectFinnish(const Inflector* f, const uint8_t* text, size_t length,
+                                 const mlocInflection* r, Inflected* out)
+{
+    Reading reading;
+    mlocResult result = Read(f, text, length, r, &reading);
+    if (result != mloc_success)
+    {
+        return result;
+    }
+    const End* e = &reading.e;
+    FinnishText t = {
+        .word = text + e->start,
+        .wordLength = e->end - e->start,
+        .spoken = (const uint8_t*)reading.spoken,
+        .spokenLength = reading.spokenLength,
+        .marked = e->kind != endWord || e->closed || e->period || e->capitals || e->end != length,
+        .number = reading.spokenEnd.kind == endNumber || reading.spokenEnd.kind == endOrdinal,
+        .ordinal = reading.spokenEnd.kind == endOrdinal,
+        .name = !r->commonNoun,
+        .hinted = reading.spokenText != text,
+    };
+    FinnishForm form;
+    if (!mlocFinnishInflect(&t, r, &form))
+    {
+        return mloc_errorInvalid;
+    }
+    // An ordinal's endings follow its digits, not its period (5:nnen).
+    bool whole = form.mark != 0 || form.length + form.tailLength == 0;
+    out->kept = !whole ? e->start + form.kept : t.ordinal && form.length > 0 ? e->end : length;
+    memcpy(out->tail, form.tail, form.tailLength);
+    out->tailLength = whole ? 0 : form.tailLength;
+    out->mark = form.mark;
+    out->suffixes = (TurkicSuffixes){0};
+    memcpy(out->suffixes.text, form.suffixes, form.length);
+    out->suffixes.length = form.length;
+    out->suffixes.particle = form.length;
+    return mloc_success;
+}
+
 // Reads the spoken end (the hint's when there is one) and writes the
 // suffixes; the text's end decides the boundary mark.
 static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length,
                           const mlocInflection* r, Inflected* out)
 {
+    if (f->language == languageFinnish)
+    {
+        return InflectFinnish(f, text, length, r, out);
+    }
     if (!IsTurkic(f))
     {
         return InflectHungarian(f, text, length, r, out);

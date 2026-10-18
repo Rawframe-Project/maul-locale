@@ -1,0 +1,8 @@
+# Kotus's word list of modern Finnish (nykysuomen sanalista), version 1
+# (record mloc-0049), which tools/gen_finnish_types.py reads into
+# src/generated/finnish_types.h: the commit of the GitHub copy it is
+# fetched from (hugovk/everyfinnishword), then the file with its
+# SHA-256. Kotus publishes it under GNU LGPL, EUPL 1.1 and CC BY 3.0;
+# the library takes it under CC BY 3.0 (LICENSES/CC-BY-3.0-kotus.txt).
+commit d4df6e4efdce54c10197cf151a5cd0638d99860a
+file kotus-sanalista_v1.xml 6e6350d55b1b47511e9a9e54543cee8454e016cfea51c24ec16891a8e3142a3e

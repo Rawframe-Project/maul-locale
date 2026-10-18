@@ -5,7 +5,8 @@
 // mloc-0048): a word, a name, an abbreviation or a number inflected for
 // case, number, possessor and copula by the rules of its language, read
 // from how its end is spoken. Turkish, Kazakh, Kyrgyz, Azerbaijani,
-// Uzbek, Turkmen and Hungarian; the rules are code, the spoken form of a
+// Uzbek, Turkmen, Hungarian and Finnish; the rules are code (Finnish's
+// inflection types from Kotus's word list, mloc-0049), the spoken form of a
 // number comes from the spell-out rules (spellout.mloc) or, for Uzbek and
 // Turkmen, which have none, from their number words in code.
 
@@ -76,7 +77,8 @@ extern "C"
 
     // The parts of an inflected text: the text as given, the boundary
     // mark (Turkish's apostrophe, Kazakh's, Azerbaijani's, Turkmen's and
-    // Hungarian's hyphen, none in Kyrgyz and Uzbek; the part keeps the
+    // Hungarian's hyphen, Finnish's colon or apostrophe, none in Kyrgyz
+    // and Uzbek; the part keeps the
     // name apostrophe), the suffixes, and the space
     // and particle of a question. Their values differ from a number's parts (mlocNumberPart), which
     // a number's stem holds inside it.
@@ -99,7 +101,7 @@ extern "C"
     /// @param locale        The locale, canonicalized.
     /// @return mloc_success; mloc_errorNotFound for a language the library
     ///         has no rules for (Turkish, Kazakh, Kyrgyz, Azerbaijani,
-    ///         Uzbek, Turkmen and Hungarian now, Kazakh and Kyrgyz in
+    ///         Uzbek, Turkmen, Hungarian and Finnish now, Kazakh and Kyrgyz in
     ///         their Cyrillic script, the others in their Latin one) or
     ///         data without the number units;
     ///         mloc_errorInvalid for a null pointer.
@@ -151,6 +153,16 @@ extern "C"
     /// name's doubled final letter met by the same letter ("5-tel",
     /// "3.-at", "ENSZ-szel", "Papp-pal") and an end the hint says is not
     /// said ("Rousseau-val"); no genitive, copula or question suffix.
+    /// Finnish builds its 14 cases in both numbers, possessives and the
+    /// question clitic on a word's inflection type and consonant
+    /// gradation (Kotus's types 1 to 49: the word list's table, else the
+    /// ending; a compound by its last word in the table, a name by its
+    /// ending): "kadun", "käteen", "renkaan", "kalleuden", "vaa'an",
+    /// "Helsingissä", "Virtasen"; a colon after digits, capitals and an
+    /// ordinal's period, the ending as said ("5:een", "EU:hun",
+    /// "5:nnen"), refused in the plural and with a possessor; an
+    /// apostrophe after an end the hint says is not said
+    /// ("Bordeaux'ssa"); no copula.
     /// What the text cannot say (a foreign name, an abbreviation read as
     /// a word) the request's hint or reading says.
     ///

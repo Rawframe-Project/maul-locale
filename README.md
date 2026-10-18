@@ -108,10 +108,11 @@ Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
 messages compiled into caller memory, checked for syntax and the data
 model, written back as canonical text, and bound and formatted with
 named arguments; and Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek,
-Turkmen and Hungarian case, plural, possessive and copula suffixes on
+Turkmen, Hungarian and Finnish case, plural, possessive and copula suffixes on
 names, numbers, abbreviations and common nouns, read from how their end
 is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның",
-"АКШнын", "BMT-yə", "qishloqqa", "BMG-niň", "Kodállyal", "5-tel").
+"АКШнын", "BMT-yə", "qishloqqa", "BMG-niň", "Kodállyal", "5-tel",
+"Helsingissä", "EU:hun").
 The library has 165 public functions.
 
 ## Building
@@ -157,6 +158,13 @@ their final consonant, drop their last vowel or end in a compound's
 possessive), are generated from Zemberek-NLP's dictionaries
 (`tools/zemberek-release.txt` pins them) under the Apache License 2.0;
 its notice is in `LICENSES/Apache-2.0-zemberek.txt`.
+
+The Finnish inflection types, `src/generated/finnish_types.h` (each
+nominal's type and consonant gradation where its ending does not tell
+them), are generated from Kotus's word list of modern Finnish, version 1
+(`tools/kotus-release.txt` pins it), under the Creative Commons
+Attribution 3.0 licence; the attribution is in
+`LICENSES/CC-BY-3.0-kotus.txt`.
 
 The test cases in `test/test262_calendar.inc`,
 `test/test262_zone.inc`, `test/test262_time.inc`,

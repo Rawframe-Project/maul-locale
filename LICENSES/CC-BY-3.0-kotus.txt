@@ -1,0 +1,16 @@
+src/generated/finnish_types.h is derived from:
+
+  Kotimaisten kielten keskuksen nykysuomen sanalista, versio 1
+  (Kotus's word list of modern Finnish, version 1), 2006.
+  Copyright (C) Kotimaisten kielten tutkimuskeskus (Research Institute
+  for the Languages of Finland).
+  https://kaino.kotus.fi/sanat/nykysuomi/
+
+Kotus publishes the list under the GNU LGPL, the EUPL 1.1 and the
+Creative Commons Attribution 3.0 Unported licence. This library uses it
+under Creative Commons Attribution 3.0 Unported:
+https://creativecommons.org/licenses/by/3.0/legalcode
+
+Changes: only each nominal's inflection type and consonant gradation
+letter are taken, reduced to the endings that decide them and the words
+those endings do not.

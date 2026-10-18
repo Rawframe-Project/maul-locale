@@ -46,6 +46,7 @@ not MIT-compatible).
   vowel ("víz": "vizet", "bokor": "bokrot", "ló": "lovat"), which also
   change in the superessive where it says ("bokron", "lovon"; but
   "vízen"), or keep the word with -ja in the third person ("útja"),
+  or take -a where the rule says -ja ("tolla"),
   back stems of front vowels ("híd": "hídon") and stems whose
   accusative takes a linking vowel ("méz": "mézet"). A common noun is
   looked up whole, then by its last word of three letters or more

@@ -65,16 +65,15 @@ static bool Utf8(const uint8_t* s, size_t n)
     return true;
 }
 
-// The languages drawn, by three bits of the request (Turkish in the
-// slots not yet given to a language), and whether each changes a name's
-// stem.
+// The languages drawn, by three bits of the request, and whether each
+// changes a name's stem.
 enum
 {
     languageSlots = 8,
 };
 static const char* const s_languages[languageSlots] = {"tr", "kk", "ky", "az",
-                                                       "uz", "tk", "hu", "tr"};
-static const bool s_stemsNames[languageSlots] = {false, true, true, false, true, true, true, false};
+                                                       "uz", "tk", "hu", "fi"};
+static const bool s_stemsNames[languageSlots] = {false, true, true, false, true, true, true, true};
 
 // A language's inflector, with the spell-out rules when the file opens.
 static const mlocInflector* Inflector(size_t language)
@@ -204,6 +203,15 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     bool stemsNames = s_stemsNames[language];
     const mlocInflector* f = Inflector(language);
     mlocInflection r = RequestOf(data);
+    // Finnish has no dative, locative or vocative: its partitive, abessive
+    // and comitative take their places.
+    if (language == 7)
+    {
+        r.grammaticalCase = r.grammaticalCase == mloc_caseDative     ? mloc_casePartitive
+                            : r.grammaticalCase == mloc_caseLocative ? mloc_caseAbessive
+                            : r.grammaticalCase == mloc_caseVocative ? mloc_caseComitative
+                                                                     : r.grammaticalCase;
+    }
     const char* text = (const char*)data + 3;
     size_t length = size - 3;
     size_t split = data[2];

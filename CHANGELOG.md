@@ -222,6 +222,12 @@ format.
   the assimilated v of -val and -vá; a table of the stems the rules
   cannot tell; hyphens after digits, abbreviations and as the rules
   ask for names (mloc-0048).
+- Finnish suffixes: 14 cases in both numbers, possessives and the
+  question clitic on Kotus's inflection types and consonant gradation,
+  a table generated from Kotus's word list (CC BY 3.0) at a pinned
+  commit and checked in CI; names by their ending; a colon after
+  digits, abbreviations and ordinals, an apostrophe after an unsaid
+  end (mloc-0049).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).
