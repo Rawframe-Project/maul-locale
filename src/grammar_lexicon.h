@@ -36,8 +36,10 @@ typedef struct TurkicMarks
     uint8_t possessive;
 } TurkicMarks;
 
-// Looks a word up (UTF-8, valid; read in Turkish lowercase without the
-// circumflex); false, with no marks, for a word the table does not hold.
+// Looks a word up (UTF-8, valid; read in Turkish lowercase, a
+// circumflexed spelling first as it is written, then without its
+// circumflexes); false, with no marks, for a word the table does not
+// hold.
 bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out);
 
 #endif

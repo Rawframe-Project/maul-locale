@@ -258,6 +258,12 @@ static void TestCommonNouns(void)
               Gives("zeytinya\xC4\x9F\xC4\xB1", &ours, "zeytinya\xC4\x9F\xC4\xB1m") &&
               Gives("Zeytinya\xC4\x9F\xC4\xB1", &dative, "Zeytinya\xC4\x9F\xC4\xB1na"),
           "a compound's possessive: the pronominal n, a plural or possessive on its roots");
+    CHECK(Gives("h\xC3\xA2l", &accusative, "h\xC3\xA2li") && Gives("hal", &accusative, "halli") &&
+              Gives("met\xC3\xAEn", &accusative, "met\xC3\xAEni") &&
+              Gives("metin", &accusative, "metni") &&
+              Gives("hel\xC3\xA2k", &accusative, "hel\xC3\xA2ki") &&
+              Gives("helak", &accusative, "helaki"),
+          "a circumflexed spelling looked up as it is written, then without its circumflex");
     CHECK(Gives("zeytinya\xC4\x9FI", &plural, "zeytinya\xC4\x9Flar\xC4\xB1") &&
               Gives("zeytiny\xC3\xA2\xC4\x9F\xC4\xB1", &plural,
                     "zeytiny\xC3\xA2\xC4\x9Flar\xC4\xB1") &&

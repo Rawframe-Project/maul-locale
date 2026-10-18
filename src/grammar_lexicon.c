@@ -43,8 +43,8 @@ static bool Put(uint32_t c, uint8_t* key, size_t* length)
     return true;
 }
 
-// A letter in Turkish lowercase without the circumflex, or 0 for a code
-// point no Turkish word holds.
+// A letter in Turkish lowercase, or 0 for a code point no Turkish word
+// holds.
 static uint32_t Lower(uint32_t c)
 {
     if (c >= 'a' && c <= 'z')
@@ -64,46 +64,61 @@ static uint32_t Lower(uint32_t c)
     case 0xF6:
     case 0x15F:
     case 0xFC:
+    case 0xE2:
+    case 0xEE:
+    case 0xFB:
         return c;
     case 0xC7:
     case 0xD6:
     case 0xDC:
+    case 0xC2:
+    case 0xCE:
+    case 0xDB:
         return c + 32;
     case 0x11E:
     case 0x15E:
         return c + 1;
     case 0x130:
         return 'i';
-    case 0xE2:
-    case 0xC2:
-        return 'a';
-    case 0xEE:
-    case 0xCE:
-        return 'i';
-    case 0xFB:
-    case 0xDB:
-        return 'u';
     default:
         return 0;
     }
 }
 
-// The key of a word; false when it holds a letter no Turkish word has.
-static bool KeyOf(const uint8_t* word, size_t length, uint8_t* key, size_t* keyLength)
+// A lowercase letter without its circumflex.
+static uint32_t Plain(uint32_t c)
+{
+    return c == 0xE2 ? 'a' : c == 0xEE ? 'i' : c == 0xFB ? 'u' : c;
+}
+
+// Decodes the code point at word[*at] and moves past it.
+static uint32_t Next(const uint8_t* word, size_t length, size_t* at)
+{
+    size_t i = *at;
+    uint32_t c = word[i];
+    size_t extra = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
+    c &= extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F;
+    for (size_t k = 1; k <= extra && i + k < length; k++)
+    {
+        c = c << 6 | (word[i + k] & 0x3F);
+    }
+    *at = i + extra + 1;
+    return c;
+}
+
+// The key of a word, without its circumflexes when plain; false when it
+// holds a letter no Turkish word has. Whether the word had a circumflex
+// goes in circumflexOut.
+static bool KeyOf(const uint8_t* word, size_t length, bool plain, uint8_t* key, size_t* keyLength,
+                  bool* circumflexOut)
 {
     *keyLength = 0;
+    *circumflexOut = false;
     for (size_t i = 0; i < length;)
     {
-        uint32_t c = word[i];
-        size_t extra = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
-        c &= extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F;
-        for (size_t k = 1; k <= extra && i + k < length; k++)
-        {
-            c = c << 6 | (word[i + k] & 0x3F);
-        }
-        i += extra + 1;
-        uint32_t lower = Lower(c);
-        if (lower == 0 || !Put(lower, key, keyLength))
+        uint32_t lower = Lower(Next(word, length, &i));
+        *circumflexOut = *circumflexOut || Plain(lower) != lower;
+        if (lower == 0 || !Put(plain ? Plain(lower) : lower, key, keyLength))
         {
             return false;
         }
@@ -121,15 +136,9 @@ static int CompareHead(const uint8_t* key, size_t length, size_t block)
     return c != 0 ? c : (int)(length > own) - (int)(length < own);
 }
 
-bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out)
+// Finds a key's marks in the table.
+static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
 {
-    *out = (TurkicMarks){0};
-    uint8_t key[keyRoom];
-    size_t keyLength = 0;
-    if (!KeyOf(word, length, key, &keyLength))
-    {
-        return false;
-    }
     // The last block whose first word is at most the key.
     size_t low = 0;
     size_t high = turkishMarkBlocks;
@@ -168,4 +177,24 @@ bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out)
         at += 3 + own + (compound ? 1 : 0);
     }
     return false;
+}
+
+bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out)
+{
+    *out = (TurkicMarks){0};
+    uint8_t key[keyRoom];
+    size_t keyLength = 0;
+    bool circumflex = false;
+    // A circumflexed spelling as it is written first (hâl, beside hal),
+    // then without its circumflexes (helâk, filed as helak).
+    if (!KeyOf(word, length, false, key, &keyLength, &circumflex))
+    {
+        return false;
+    }
+    if (Find(key, keyLength, out))
+    {
+        return true;
+    }
+    return circumflex && KeyOf(word, length, true, key, &keyLength, &circumflex) &&
+           Find(key, keyLength, out);
 }

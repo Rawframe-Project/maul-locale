@@ -17,7 +17,8 @@
 #     that possessive (a caller's spelling may differ in bytes: I, â).
 # Verbs are left out; a word with several entries takes its first one
 # without an index. Words are keyed in Turkish lowercase without the
-# circumflex.
+# circumflex, and a circumflexed spelling whose marks differ from its
+# plain one's (hâl: hâli; hal: halli) as it is written too.
 #
 # The table is front-coded: each entry is the bytes it shares with the
 # one before, its own length and bytes, its marks, and for a compound
@@ -55,9 +56,16 @@ def pins():
     return out
 
 
+def lower(word):
+    return word.replace("I", "ı").replace("İ", "i").lower()
+
+
+def plain(word):
+    return word.replace("â", "a").replace("î", "i").replace("û", "u")
+
+
 def key(word):
-    w = word.replace("I", "ı").replace("İ", "i").lower()
-    return w.replace("â", "a").replace("î", "i").replace("û", "u")
+    return plain(lower(word))
 
 
 def read(directory):
@@ -81,8 +89,8 @@ def read(directory):
             roots = re.search(r"Roots:([^;\]]*)", meta)
             if "P:Verb" in meta.replace(" ", "") or attrs & VERB_ATTRS:
                 continue
-            k = key(word)
-            if not all(c in VOWELS or c.isalpha() for c in k) or not k.isalpha():
+            k = lower(word)
+            if not key(k).isalpha():
                 continue
             if k in entries and "Index:" in meta:
                 continue
@@ -120,11 +128,28 @@ def marks_of(word, attrs, roots):
 
 
 def table(entries):
+    # A word is filed without its circumflex, by its own spelling when
+    # the dictionary has one, else by its first circumflexed one; a
+    # circumflexed spelling whose marks differ (hâl beside hal) is filed
+    # as it is written too, even without marks, and looked up first.
+    filed = {}
+    for word in entries:
+        if word == plain(word):
+            filed[word] = entries[word]
+    for word in entries:
+        filed.setdefault(plain(word), entries[word])
+    found = {}
+    for word, (attrs, roots) in filed.items():
+        found[word] = marks_of(word, attrs, roots)
+    for word, (attrs, roots) in entries.items():
+        if word != plain(word):
+            own = marks_of(plain(word), attrs, roots)
+            if own != found[plain(word)]:
+                found[word] = own
     rows = []
-    for word in sorted(entries, key=lambda w: w.encode()):
-        attrs, roots = entries[word]
-        marks, strip = marks_of(word, attrs, roots)
-        if marks:
+    for word in sorted(found, key=lambda w: w.encode()):
+        marks, strip = found[word]
+        if marks or word != plain(word):
             rows.append((word.encode(), marks, strip))
     data = bytearray()
     blocks = []
