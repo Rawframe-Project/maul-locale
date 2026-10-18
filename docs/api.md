@@ -301,6 +301,25 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationFormatte
 ```
 Writes a duration as ECMA-402's PartitionDurationFormatPattern does: the fields in order up to the first numeric one, each shown by its display as a number with the unit's name in its plural category, the numeric fields as one item joined by the locale's separators, the items joined by the locale's unit list of the style (short for digital). The first field shown carries the sign (-0 for a field of 0 in a negative duration). Each field is its exact value, and the fractions' sum is exact.  @param formatter  A formatter from mlocInitDurationFormatter. @param duration   The fields: integers of one sign, valid as mlocMakeDuration takes them. @param output     Receives the text; its part function, when set, receives the parts (mloc_durationPartField). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorInvalid for a null pointer, a duration mlocMakeDuration refuses, or a formatter the library did not make. @par Thread safety Safe from any thread.
 
+## `grammar.h`
+
+Grammatical suffixes on runtime text and numbers (record mloc-0046): a word, a name, an abbreviation or a number inflected for case, number, possessor and copula by the rules of its language, read from how its end is spoken. Turkish first; the rules are code, the spoken form of a number comes from the spell-out rules (spellout.mloc).
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* data, const mlocLocale* locale);
+```
+Makes a locale's inflector. Its numbers are read by the locale's spell-out rules when the data has them (spellout.mloc); without them the inflector is made, and a number it meets is refused.  @param inflectorOut  Receives the inflector; left unchanged on failure. @param data          The data with the number units and, for numbers, the spell-out rules. @param locale        The locale, canonicalized. @return mloc_success; mloc_errorNotFound for a language the library has no rules for (Turkish now) or data without the number units; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInflectText(const mlocInflector* inflector, const char* text, size_t length, const mlocInflection* request, mlocOutput* output);
+```
+Writes a text inflected as asked: in Turkish its suffixes in order (plural, possessive, case, copula) by vowel harmony, the assimilation of d to t after a voiceless consonant and the buffer consonants, after an apostrophe on a name, a number or an abbreviation (none after a final period or closing quotation mark; none on a name's plural, which TDK joins, "Ahmetlere", unless the name is foreign, which a hint says, "Nice'ler"), then the question particle as a word of its own. The last word decides: its digits by how the number is spoken ("1985'te", bin dokuz yüz seksen beş; "2,5'e"; "5.'ye", beşinci), capitals by their letters' names ("TDK'ye"), otherwise its letters as written, with the loanwords that break harmony in their spoken form ("saate"). What the text cannot say (a foreign name, an abbreviation read as a word) the request's hint or reading says.  @param inflector  An inflector from mlocInitInflector. @param text       The text, UTF-8. @param length     Its length in bytes. @param request    What to inflect it for. @param output     Receives the text with its suffixes and, when output->part is set, its parts (mlocInflectionPart). @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed); mloc_errorNotFound for a number when the inflector has no spell-out rules; mloc_errorInvalid for a null pointer, an empty text or one that is not UTF-8, a request the language does not have (a case, a person past 3), or a text with nothing to read (no letter or digit at its end). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFormatter* formatter, const mlocDecimal* decimal, const mlocInflection* request, mlocOutput* output);
+```
+Writes a number as a formatter writes it, inflected as asked by how the number is spoken ("5'e", "1.985'te", "%50'ye").  @param inflector  An inflector from mlocInitInflector. @param formatter  The number's formatter, or null for the locale's default one. @param decimal    The number. @param request    What to inflect it for (its reading and hint are not read). @param output     Receives the text and its parts, the number's own parts (mlocNumberPart) inside the stem. @return As mlocInflectText; mloc_errorInvalid also for a decimal the library did not make or a formatter it did not make. @par Thread safety Safe from any thread.
+
 ## `ixdtf.h`
 
 Temporal's strings (record mloc-0041): ISO 8601 date-times with RFC 9557's annotations, durations, UTC offsets, and time zone and calendar strings, read as ECMA-262's grammar reads them. The text is UTF-8; every terminal of the grammar is ASCII.
@@ -887,4 +906,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-162 functions across 18 headers.
+165 functions across 19 headers.

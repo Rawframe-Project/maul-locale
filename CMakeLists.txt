@@ -86,6 +86,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/decimal.c
     src/decimal_round.c
     src/decimal_shortest.c
+    src/grammar.c
+    src/grammar_turkic.c
     src/list.c
     src/list_data.c
     src/list_join.c
@@ -251,6 +253,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(test_message_words PRIVATE MLOC_SPELLOUT_FILE="${MLOC_WORDS_SPELLOUT}"
                                    MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}"
                                    MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
+    endif()
+    maul_add_test(grammar)
+    # It reads the spell-out rules, which numbers are spoken by.
+    if(TARGET test_grammar)
+        set(MLOC_GRAMMAR_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_grammar PRIVATE "SHELL:--embed-file ${MLOC_GRAMMAR_SPELLOUT}@/spellout.mloc")
+            set(MLOC_GRAMMAR_SPELLOUT /spellout.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_grammar PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_grammar PRIVATE MLOC_SPELLOUT_FILE="${MLOC_GRAMMAR_SPELLOUT}")
     endif()
     # It reads the dates for a date's parts.
     if(TARGET test_message_parts)
@@ -645,8 +660,8 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal duration ixdtf locale message parse relative spellout zone_codes
-                 zone_names zones)
+    foreach(area data date_data decimal duration grammar ixdtf locale message parse relative spellout
+                 zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
@@ -657,6 +672,8 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
+        MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
+    target_compile_definitions(fuzz_grammar PRIVATE
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
     target_compile_definitions(fuzz_duration PRIVATE
         MLOC_UNITS_FILE="${PROJECT_SOURCE_DIR}/src/generated/units.mloc")

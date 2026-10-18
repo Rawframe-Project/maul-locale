@@ -186,6 +186,10 @@ format.
   DurationFormat options; program functions receive
   `mloc_messageOperandDuration`, and `mlocMessageResolved` is 96 bytes
   (mloc-0045).
+- Grammatical suffixes (`maul-locale/grammar.h`): an inflector per
+  locale, Turkish cases, plural, possessives, copula and question
+  particle on text and numbers by their spoken end, with TDK's
+  apostrophe and parts (mloc-0046).
 - `mloc:duration` over seconds splits them by integer division, and
   binary64 and 128-bit quotients of 64-bit integers convert natively:
   the duration message costs 40% less (mloc-0045).

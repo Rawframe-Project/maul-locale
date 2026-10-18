@@ -1,0 +1,88 @@
+# mloc-0046. Grammar: suffixes by the spoken end, an inflector per locale
+
+Status: Accepted
+
+## Context
+
+A message that puts a runtime value into a Turkish sentence needs the
+value's case suffix: "Ayşe'ye", "Ahmet'e", "1985'te", "TDK'nin". CLDR
+lists each language's cases (`grammaticalFeatures.xml`) but has no rule
+for attaching a suffix to a runtime word, and ICU has no such API; the
+suffix follows how the word's end is spoken (vowel harmony, d to t after
+a voiceless consonant, buffer consonants), so a number needs its spoken
+form and an abbreviation its letters' names. Turkic languages,
+Hungarian and Finnish share the mechanism; Korean particles follow the
+last syllable's final consonant.
+
+The only generators to check against are Apertium's morphological
+transducers (GPL-3.0), which also err: apertium-tur writes "roli" for
+the spelling guide's "rolü", leaves "-lık" unsoftened ("bozukluku"),
+and reads a final y as a consonant ("Harry'a").
+
+## Decision
+
+- **An inflector per locale** (`mlocInitInflector`, 800 bytes, refused
+  with `mloc_errorNotFound` for a language without rules: Turkish now).
+  It holds the locale's number formatter and, when the data has
+  spellout.mloc, its `%spellout-numbering` and `%spellout-ordinal`
+  formatters; without them a number is refused, never guessed.
+- **A request** (`mlocInflection`): the case (`mlocGrammaticalCase`,
+  CLDR's names), plural, possessor's person and number, copula,
+  question particle, whether the text is a common noun, a reading
+  (auto, word, letters) and a hint (the text as it is spoken). A
+  request the language lacks is `mloc_errorInvalid`.
+- **The end is read** after any closing quotation marks or brackets:
+  digits (with separators between them) by the last word of their
+  spoken form, a fraction by its digits' number ("2,20" is iki virgül
+  yirmi), digits and a period as an ordinal ("5." is beşinci); capitals
+  by the last letter's name ("TDK" ends in ke); a word as written, a
+  final y after a consonant said as i ("Harry'ye"), a word without a
+  vowel by its letters ("PwC'ye"), and a short table of the loanwords
+  the spelling guides name as breaking harmony ("saate", "rolü").
+- **Turkish suffixes** in order (plural, possessive, case, copula),
+  written from archiphonemes (A, I, D and the buffers y, n, s) with the
+  pronominal n after a third person's possessive ("Ali'sine"); the
+  question particle a word of its own ("Ankara'ya mı").
+- **The apostrophe** (TDK) before the suffixes of a name, number or
+  abbreviation; none on a common noun, after a closing quotation mark
+  ("“Hamlet”e") or a final period ("Dr.a"), or on a name's plural,
+  which TDK joins ("Ahmetlere") unless the name is foreign, which a hint
+  says ("Nice'ler"). A common noun's final p, ç, k softens before a
+  vowel when it has two syllables or more ("kitabı", "ağacı",
+  "köpeğe").
+- **Numbers** (`mlocInflectNumber`) are formatted by the caller's
+  formatter or the locale's, then read as text: rounding, grouping and
+  a percent's scaling are what is spoken ("%50'ye"). A number whose text
+  passes 1,024 bytes is refused.
+- **Parts** (`mlocInflectionPart`, 0x60 to 0x63): stem, apostrophe,
+  suffix, particle; a number's own parts inside the stem.
+
+## Proof
+
+- `test_grammar`: the six cases on names of every vowel class, the
+  possessives, copula, question particle, plural; numbers by their
+  spoken end (units, tens, hundreds, thousands, millions, zero,
+  grouped, fractions, percent, ordinal, digits after letters);
+  abbreviations; readings and hints; common nouns' softening and the
+  loanwords; quotation marks and periods; parts, with a number's inside
+  its stem; refusals; capacity; a set without spell-out rules.
+- An oracle run against apertium-tur's generator over its lexicon's
+  7,437 names and 7,665 nouns (in the private research): names agree on
+  every case but 26 to 32 per case, all the transducer's errors (a final
+  y, letters, accented vowels); nouns agree for 87 to 97%, where the
+  transducer does not soften "-lık" and the library does not know the
+  loanwords and Arabic words a lexicon marks.
+- `fuzz_grammar`: requests, texts and hints of any bytes; the call
+  measures what it writes, writes the same twice, writes UTF-8 that
+  begins with the text, and its parts tile it.
+
+## Consequences
+
+- Common nouns are right by rule, not by lexicon: one-syllable words
+  that soften ("rengi", "kalbi"), words that do not ("tahakkuku"),
+  doubling ("hakkı") and loanwords outside the table ("katedrali") need
+  a hint until a lexicon of those marks is added.
+- An abbreviation read as a word ("NATO") or a foreign name read
+  otherwise than written ("Jacques") needs the reading or a hint; the
+  library cannot tell.
+- Native speakers review each language's table before a release.
