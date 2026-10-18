@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // libFuzzer target for the inflector (records mloc-0046, mloc-0047),
-// Turkish, Kazakh or Kyrgyz, with the spell-out file beside the
-// compiled-in data.
+// Turkish, Kazakh, Kyrgyz or Azerbaijani, with the spell-out file beside
+// the compiled-in data.
 // The first two bytes choose the request (case, plural, possessor,
 // copula, question, common noun, reading) and the language, the third
 // where the text ends and the hint begins (0 for no hint); the rest is
@@ -65,8 +65,8 @@ static bool Utf8(const uint8_t* s, size_t n)
     return true;
 }
 
-// The languages drawn, by two bits of the request (the fourth Turkish).
-static const char* const s_languages[4] = {"tr", "kk", "ky", "tr"};
+// The languages drawn, by two bits of the request.
+static const char* const s_languages[4] = {"tr", "kk", "ky", "az"};
 
 // A language's inflector, with the spell-out rules when the file opens.
 static const mlocInflector* Inflector(size_t language)

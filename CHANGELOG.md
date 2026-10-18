@@ -207,6 +207,9 @@ format.
 - Kyrgyz suffixes: four-way harmony, the onsets by the last sound, the
   possessives and the cases after them, the question particle and every
   suffix joined, a soft sign dropped, й and у written ю (mloc-0047).
+- Azerbaijani suffixes: harmony with ə, no d to t, a hyphen after
+  abbreviations, digits and hinted foreign names as the orthography
+  norms write them, k and q written y and ğ before a vowel (mloc-0047).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

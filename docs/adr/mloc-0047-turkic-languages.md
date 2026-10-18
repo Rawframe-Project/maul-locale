@@ -18,7 +18,8 @@ the engine per language would drift apart.
 ## Decision
 
 - **One engine** (`grammar_turkic.c`) and **a table per language**
-  (`grammar_tr.c`, `grammar_kk.c`, `grammar_ky.c`): the language's letters with their
+  (`grammar_tr.c`, `grammar_kk.c`, `grammar_ky.c`,
+  `grammar_az.c`): the language's letters with their
   class (vowel with its backness and rounding, glide, liquid, nasal,
   other voiced, voiceless), its A and I vowels by harmony, its onsets
   (an archiphoneme's consonant after each class of sound, back and
@@ -61,8 +62,21 @@ the engine per language would drift apart.
   ("китеби", "Айбеги"). Letters are named the Russian way (ка, эл, эр,
   ша). A stem rule now sees the suffixes written for it, to change their
   first letter where the two fuse.
-- The order of the rest: Azerbaijani, Uzbek, Turkmen, each a table and
-  an amendment here.
+- **Azerbaijani** (Latin; another script refused; amended 2026-10-18):
+  two-way A (a, ə) and four-way I; no assimilation of d ("kitabda",
+  "3-də"); the buffers y, n, s after a vowel, the accusative's n
+  ("almanı"); no instrumental case (CLDR); the copula -dIr and the
+  question particle joined ("evəmi"); a hyphen after an abbreviation
+  read by its letters and after digits, as the orthography norms write
+  ("AMEA-dan", "MDB-nin", "BMT-yə", "BDU-ya", "2-yə", "6-nın",
+  "17-si", "20-dən"), and after a name its hint says is foreign, as
+  Microsoft's Azerbaijani style guide writes a product's name
+  ("Microsoft-un"); a native name joins ("Bakıya"). Letters are named
+  with e (be, qe, xe; W none). A common noun's final k or q after a
+  vowel in a word of two syllables or more is written y or ğ before a
+  vowel ("çörəyi", "ayağı"; "oku"); names keep it.
+- The order of the rest: Uzbek, Turkmen, each a table and an amendment
+  here.
 
 ## Proof
 
@@ -71,7 +85,11 @@ the engine per language would drift apart.
   three onsets, the possessives and the cases after them, loans (к, ь),
   a name's voiced stop, the question particle, abbreviations, digits, a
   Latin word, a formatted number, the refusals; Kyrgyz the same in five
-  cases, the fused ю, the dropped ь, the joined marks and particle.
+  cases, the fused ю, the dropped ь, the joined marks and particle;
+  Azerbaijani with every example the norms give for abbreviations and
+  numbers. apertium-aze is no oracle (it writes "evde" for "evdə" and
+  lacks common words), so Azerbaijani rests on the norms' examples and a
+  native review.
 - apertium-kaz's generator (GPL, run in the private research only) over
   its lexicon's 6,664 names and 13,565 nouns, nine requests each: 97 to
   99.8% agree; the rest are loans its lexicon marks one by one
@@ -81,7 +99,7 @@ the engine per language would drift apart.
 - apertium-kir over 3,916 names and 4,353 nouns: 99.5 to 99.9% agree;
   the rest are its words with a lexical stem ("мурдуна"), lowercased
   forms and abbreviations its lexicon gives no form.
-- `fuzz_grammar` draws Turkish, Kazakh or Kyrgyz; the Turkish tests and the
+- `fuzz_grammar` draws Turkish, Kazakh, Kyrgyz or Azerbaijani; the Turkish tests and the
   Turkish oracle give the same forms as before the engine was shared.
 
 ## Consequences

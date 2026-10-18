@@ -107,10 +107,10 @@ sec", "1:02:03.456") of Temporal's fields, as ECMA-402's
 Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
 messages compiled into caller memory, checked for syntax and the data
 model, written back as canonical text, and bound and formatted with
-named arguments; and Turkish, Kazakh and Kyrgyz case, plural,
-possessive and copula suffixes on names, numbers, abbreviations and
-common nouns, read from how their end is spoken ("Ayşe'ye", "1985'te",
-"TDK'nin", "Алматыға", "ТМД-ның", "АКШнын").
+named arguments; and Turkish, Kazakh, Kyrgyz and Azerbaijani case,
+plural, possessive and copula suffixes on names, numbers, abbreviations
+and common nouns, read from how their end is spoken ("Ayşe'ye",
+"1985'te", "TDK'nin", "Алматыға", "ТМД-ның", "АКШнын", "BMT-yə").
 The library has 165 public functions.
 
 ## Building

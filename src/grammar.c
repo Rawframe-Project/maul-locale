@@ -26,6 +26,7 @@ enum
     languageTurkish = 1,
     languageKazakh = 2,
     languageKyrgyz = 3,
+    languageAzerbaijani = 4,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -70,6 +71,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageKyrgyz;
     }
+    else if (strcmp(locale->language, "az") == 0 && latin)
+    {
+        f.language = languageAzerbaijani;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -100,13 +105,14 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageKyrgyz && f->spoken <= 1;
+           f->language <= languageAzerbaijani && f->spoken <= 1;
 }
 
 // An inflector's language.
 static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
-    static const TurkicLanguage* const s_languages[] = {&mlocTurkish, &mlocKazakh, &mlocKyrgyz};
+    static const TurkicLanguage* const s_languages[] = {&mlocTurkish, &mlocKazakh, &mlocKyrgyz,
+                                                        &mlocAzerbaijani};
     return s_languages[f->language - languageTurkish];
 }
 
@@ -425,11 +431,11 @@ static void InflectCompound(const uint8_t* text, size_t length, const mlocInflec
 }
 
 // The boundary mark a text's end takes before its suffixes, or 0: the
-// language's after a number or letters, and after a name or a word in
-// another script where it marks them; none on a common noun, after a
-// closing mark or a period, or on a native Turkish name's plural (a
-// name joins its plural, Ahmetler, unless it is foreign, which a hint,
-// its spoken form, says: Nice'ler).
+// language's after a number or letters, and after a name, a word in
+// another script or a hinted (foreign) name where it marks them; none
+// on a common noun, after a closing mark or a period, or on a native
+// Turkish name's plural (a name joins its plural, Ahmetler, unless it
+// is foreign, which a hint, its spoken form, says: Nice'ler).
 static char Mark(const TurkicLanguage* language, const uint8_t* text, const End* e,
                  const mlocInflection* r, bool hinted, const TurkicSuffixes* suffixes)
 {
@@ -445,7 +451,9 @@ static char Mark(const TurkicLanguage* language, const uint8_t* text, const End*
     uint32_t last = Before(text, e->end, &previous);
     bool foreign = last < language->scriptFirst || last > language->scriptLast;
     bool name = (language->markOn & turkicMarkNames) != 0 && !(r->plural && !hinted);
-    return name || ((language->markOn & turkicMarkForeign) != 0 && foreign) ? language->mark : 0;
+    bool marked = name || ((language->markOn & turkicMarkForeign) != 0 && foreign) ||
+                  ((language->markOn & turkicMarkHinted) != 0 && hinted);
+    return marked ? language->mark : 0;
 }
 
 // Reads the spoken end (the hint's when there is one) and writes the

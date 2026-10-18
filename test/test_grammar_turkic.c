@@ -2,10 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The other Turkic languages' suffixes (maul-locale/grammar.h, record
-// mloc-0047): Kazakh and Kyrgyz cases, plural, possessives and question
-// particle on names, common nouns, numbers and abbreviations, as
-// apertium-kaz and apertium-kir generate them; their marks, their stems
-// and their refusals.
+// mloc-0047): Kazakh, Kyrgyz and Azerbaijani cases, plural, possessives
+// and question particle on names, common nouns, numbers and
+// abbreviations, as apertium-kaz and apertium-kir generate them and the
+// Azerbaijani orthography norms write them; their marks, their stems and
+// their refusals.
 
 #include "test_harness.h"
 
@@ -17,6 +18,7 @@
 static mlocDataSet s_data;
 static mlocInflector s_kk;
 static mlocInflector s_ky;
+static mlocInflector s_az;
 static char s_text[512];
 
 static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
@@ -344,6 +346,78 @@ static void TestKyrgyzWords(void)
           "no instrumental case and no copula suffix in Kyrgyz");
 }
 
+static void TestAzerbaijani(void)
+{
+    CHECK(CasesOf(&s_az, "ev", true, (const char* const[]){"evin", "evə", "evi", "evdə", "evdən"},
+                  5) &&
+              CasesOf(&s_az, "kitab", true,
+                      (const char* const[]){"kitabın", "kitaba", "kitabı", "kitabda", "kitabdan"},
+                      5) &&
+              CasesOf(&s_az, "Bakı", false,
+                      (const char* const[]){"Bakının", "Bakıya", "Bakını", "Bakıda", "Bakıdan"},
+                      5) &&
+              CasesOf(&s_az, "Əli", false,
+                      (const char* const[]){"Əlinin", "Əliyə", "Əlini", "Əlidə", "Əlidən"}, 5),
+          "two-way A with ə, no d to t, the buffers; names joined");
+    mlocInflection genitive = Case(mloc_caseGenitive);
+    mlocInflection dative = Case(mloc_caseDative);
+    mlocInflection accusative = Case(mloc_caseAccusative);
+    mlocInflection locative = Case(mloc_caseLocative);
+    mlocInflection ablative = Case(mloc_caseAblative);
+    mlocInflection third = Case(mloc_caseNominative);
+    third.possessorPerson = 3;
+    CHECK(Gives(&s_az, "AMEA", &ablative, "AMEA-dan") &&
+              Gives(&s_az, "MDB", &genitive, "MDB-nin") && Gives(&s_az, "BMT", &dative, "BMT-yə") &&
+              Gives(&s_az, "BDU", &dative, "BDU-ya"),
+          "the norms' abbreviations: a hyphen, the last letter's name");
+    CHECK(Gives(&s_az, "2", &dative, "2-yə") && Gives(&s_az, "3", &locative, "3-də") &&
+              Gives(&s_az, "5", &accusative, "5-i") && Gives(&s_az, "6", &genitive, "6-nın") &&
+              Gives(&s_az, "17", &third, "17-si") && Gives(&s_az, "20", &ablative, "20-dən"),
+          "the norms' numbers: a hyphen, the spoken last word");
+    mlocInflection hinted = Case(mloc_caseGenitive);
+    hinted.hint = "maykrosoft";
+    hinted.hintLength = strlen("maykrosoft");
+    CHECK(Gives(&s_az, "Microsoft", &hinted, "Microsoft-un") &&
+              Gives(&s_az, "Microsoft", &genitive, "Microsoftun"),
+          "a name a hint says is foreign takes the hyphen");
+    mlocInflection commonThird = Common(mloc_caseNominative);
+    commonThird.possessorPerson = 3;
+    mlocInflection commonDative = Common(mloc_caseDative);
+    CHECK(Gives(&s_az, "çörək", &commonThird, "çörəyi") &&
+              Gives(&s_az, "ayaq", &commonThird, "ayağı") &&
+              Gives(&s_az, "ok", &commonThird, "oku") &&
+              Gives(&s_az, "çörək", &commonDative, "çörəyə") &&
+              Gives(&s_az, "Tofiq", &third, "Tofiqi"),
+          "a common noun's k and q after a vowel in two syllables written y and ğ; one syllable "
+          "and names keep them");
+    mlocInflection plural = Common(mloc_caseNominative);
+    plural.plural = true;
+    mlocInflection theirs = plural;
+    theirs.possessorPerson = 3;
+    theirs.possessorPlural = true;
+    mlocInflection copula = Common(mloc_caseLocative);
+    copula.copula = true;
+    mlocInflection question = Common(mloc_caseDative);
+    question.question = true;
+    CHECK(Gives(&s_az, "ev", &plural, "evlər") && Gives(&s_az, "ev", &theirs, "evləri") &&
+              Gives(&s_az, "ev", &copula, "evdədir") && Gives(&s_az, "ev", &question, "evəmi"),
+          "the plural, the third plural's possessive once, the copula, the joined question");
+    mlocInflection instrumental = Case(mloc_caseInstrumental);
+    mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
+    mlocLocale cyrillic;
+    mlocInflector inflector;
+    CHECK(mlocInflectText(&s_az, "ev", 2, &instrumental, &output) == mloc_errorInvalid &&
+              mlocParseLocale("az-Cyrl", 7, &cyrillic).status == mloc_success &&
+              mlocInitInflector(&inflector, &s_data, &cyrillic) == mloc_errorNotFound,
+          "no instrumental case; Azerbaijani in Cyrillic refused");
+    mlocInflection letters = Case(mloc_caseDative);
+    letters.reading = mloc_readingLetters;
+    CHECK(Gives(&s_az, "ə", &letters, "ə-yə") && Gives(&s_az, "Q", &letters, "Q-yə") &&
+              Gives(&s_az, "x", &letters, "x-yə") && Gives(&s_az, "Ğ", &letters, "Ğ-yə") &&
+              mlocInflectText(&s_az, "W", 1, &letters, &output) == mloc_errorInvalid,
+          "letters by their names; W has none");
+}
+
 int main(void)
 {
     static mlocData sources[2];
@@ -375,6 +449,13 @@ int main(void)
         fputs("test_grammar_turkic: cannot make the Kyrgyz inflector\n", stderr);
         return 2;
     }
+    mlocLocale az;
+    if (mlocParseLocale("az", 2, &az).status != mloc_success ||
+        mlocInitInflector(&s_az, &s_data, &az) != mloc_success)
+    {
+        fputs("test_grammar_turkic: cannot make the Azerbaijani inflector\n", stderr);
+        return 2;
+    }
     TestKazakhCases();
     TestKazakhPossessives();
     TestKazakhWords();
@@ -383,5 +464,6 @@ int main(void)
     TestKyrgyzCases();
     TestKyrgyzPossessives();
     TestKyrgyzWords();
+    TestAzerbaijani();
     return s_failures == 0 ? 0 : 1;
 }

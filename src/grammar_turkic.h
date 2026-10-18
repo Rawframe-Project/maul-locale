@@ -5,7 +5,7 @@
 // spoken end into its last vowel's harmony and its final sound's class,
 // and writes the suffixes a request asks for from archiphonemes; each
 // language is a table of letters, vowels, onsets and suffix templates
-// (grammar_tr.c, grammar_kk.c, grammar_ky.c).
+// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H
@@ -138,6 +138,9 @@ enum
     turkicMarkNames = 1,
     // A word whose last letter is outside the language's script.
     turkicMarkForeign = 2,
+    // A name read by a hint, which says it is foreign (Azerbaijani
+    // Microsoft-un).
+    turkicMarkHinted = 4,
 };
 
 // A Turkic language. Templates are UTF-8: A is the two-way (or
@@ -195,6 +198,7 @@ typedef struct TurkicLanguage
 extern const TurkicLanguage mlocTurkish;
 extern const TurkicLanguage mlocKazakh;
 extern const TurkicLanguage mlocKyrgyz;
+extern const TurkicLanguage mlocAzerbaijani;
 
 // A letter's information in a language.
 uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);
