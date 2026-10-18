@@ -132,6 +132,12 @@ static void TestNames(void)
               Gives("Hämeenlinna", &inside, "Hämeenlinnassa") &&
               Gives("Malmö", &inside, "Malmössä"),
           "names by their ending, graded where a double stop or nk ends them; harmony");
+    mlocInflection into = Case(mloc_caseIllative);
+    CHECK(Gives("Espoo", &into, "Espooseen") && Gives("Nokia", &partitive, "Nokiaa") &&
+              Gives("Jaana", &partitive, "Jaanaa") && Gives("Kuopio", &into, "Kuopioon") &&
+              Gives("Lappi", &into, "Lappiin") && Gives("Sirkka", &genitive, "Sirkan") &&
+              Gives("Öljymäki", &genitive, "Öljymäen"),
+          "names by a long vowel, -ia, -a, a diphthong's end, -i; grades; a capital Ö");
     mlocInflection hinted = Case(mloc_caseInessive);
     hinted.hint = "bordoo";
     hinted.hintLength = strlen(hinted.hint);
@@ -148,6 +154,12 @@ static void TestPossessives(void)
     into.possessorPerson = 2;
     mlocInflection question = Common(mloc_caseInessive);
     question.question = true;
+    mlocInflection with = Common(mloc_caseComitative);
+    with.possessorPerson = 1;
+    mlocInflection withTheirs = Common(mloc_caseComitative);
+    withTheirs.possessorPerson = 3;
+    CHECK(Gives("vaimo", &with, "vaimoineni") && Gives("vaimo", &withTheirs, "vaimoineen"),
+          "the comitative's possessives");
     CHECK(Gives("katu", &r, "katuni") && Gives("talo", &inside, "talossaan") &&
               Gives("talo", &into, "taloosi") && Gives("talo", &question, "talossako") &&
               Gives("kylä", &question, "kylässäkö"),
@@ -170,6 +182,9 @@ static void TestMarked(void)
     CHECK(Gives("5.", &genitive, "5:nnen") && Gives("5.", &into, "5:nteen") &&
               Gives("3.", &partitive, "3:tta"),
           "ordinals");
+    CHECK(Gives("1.", &inside, "1:sessä") && Gives("5.", &inside, "5:nnessä") &&
+              Gives("Ä", &inside, "Ä:ssä") && Gives("Å", &inside, "Å:ssa"),
+          "an ordinal's other cases; the letters ä and å");
     CHECK(Gives("EU", &inside, "EU:ssa") && Gives("EU", &into, "EU:hun") &&
               Gives("YK", &genitive, "YK:n") && Gives("BBC", &inside, "BBC:ssä") &&
               Gives("EU", &partitive, "EU:ta"),

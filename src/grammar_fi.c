@@ -277,6 +277,66 @@ static char NameGrade(const FinnishWord* w)
 
 static Kind NameKind(const FinnishWord* w)
 {
+    // The common words place names end in, and the -lanti of countries: a
+    // name ending in one declines as the word does (Öljymäki: Öljymäen,
+    // Lappeenranta: Lappeenrannan, Islanti: Islannin), as Kielitoimisto's
+    // guidance has a name decline as its last word.
+    static const char* const s_places[] = {
+        "aho",
+        "harju",
+        "joki",
+        "j\xC3\xA4rvi",
+        "kallio",
+        "kangas",
+        "lanti",
+        "koski",
+        "kumpu",
+        "kyl\xC3\xA4",
+        "lahti",
+        "lampi",
+        "lehto",
+        "linna",
+        "luoto",
+        "meri",
+        "m\xC3\xA4ki",
+        "niemi",
+        "nummi",
+        "oja",
+        "pelto",
+        "puro",
+        "p\xC3\xA4\xC3\xA4",
+        "ranta",
+        "rinne",
+        "saari",
+        "salmi",
+        "salo",
+        "sel\xC3\xA4",
+        "suo",
+        "suomi",
+        "vaara",
+        "vesi",
+        "virta",
+        "vuori",
+    };
+    uint8_t key[finnishLetterRoom * 4];
+    for (size_t from = 0; from + 3 <= w->count; from++)
+    {
+        size_t n = Key(w, from, key, sizeof(key));
+        for (size_t i = 0; i < sizeof(s_places) / sizeof(s_places[0]); i++)
+        {
+            if (n == strlen(s_places[i]) && memcmp(key, s_places[i], n) == 0)
+            {
+                FinnishWord last = {.count = 0};
+                for (size_t at = from; at < w->count; at++)
+                {
+                    mlocFinnishPush(&last, w->c[at]);
+                }
+                Kind kind = CommonKind(&last);
+                kind.from = from;
+                return kind;
+            }
+        }
+    }
     Kind kind = {NameType(w), NameGrade(w), 0};
     return kind;
 }

@@ -34,10 +34,14 @@ and CC BY 3.0.
 - **A word's kind**: a common noun whole, then by its last word of
   three letters or more after two or more ("viikunanlehti" by
   "lehti"), then by its longest ending; a word no ending knows and not
-  in -nen as a name. A name by its ending only (the table's words are
-  common nouns): a final consonant takes i ("Bush": "Bushin"), a
-  double stop or nk grades ("Pekka": "Pekan", "Helsinki":
-  "Helsingissä").
+  in -nen as a name. A name ending in one of 34 common words place
+  names end in, or a country's -lanti, as that word declines
+  ("Öljymäki": "Öljymäen", "Lappeenranta": "Lappeenrannan",
+  "Islanti": "Islannin"; Kielitoimisto has a name decline as its last
+  word); else by its ending only (the table's words are common nouns,
+  and a foreign name does not grade as they do: "Vivaldin"): a final
+  consonant takes i ("Bush": "Bushin"), a double stop or nk grades
+  ("Pekka": "Pekan", "Helsinki": "Helsingissä").
 - **The stems** by the type's row: the letters dropped, the vowel stem,
   the partitive's, the illative's and the plural's endings; the strong
   grade before an open syllable, the weak before a closed one, the
@@ -84,7 +88,10 @@ and CC BY 3.0.
   and the inessive, 95.8% in the illative. A third of the rest is a
   compound whose last word has only i and e and the table lacks
   ("kuunsirppi": "kuunsirpissä"); the others are words Kotus lacks,
-  plural nouns and loanwords said otherwise than written.
+  plural nouns and loanwords said otherwise than written. Names
+  (Wiktionary's proper nouns, 228,960 forms): 93.3 to 95.6% in the
+  singular cases; their plural (a family's: "Virtasten") is left to a
+  later amendment.
 - `fuzz_grammar` draws Finnish in its eighth slot, its partitive,
   abessive and comitative in the places of cases it lacks.
 
