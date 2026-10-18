@@ -378,7 +378,13 @@ static void InflectCompound(const uint8_t* text, size_t length, const mlocInflec
         mlocTurkicSuffixes(sound, r, true, &out->suffixes);
         return;
     }
-    size_t roots = length - marks->possessive;
+    // The possessive is counted in code points: the text's spelling may
+    // differ from the lexicon's key in bytes (ZEYTİNYAĞI, zeytinyâğı).
+    size_t roots = length;
+    for (size_t i = 0; i < marks->possessive && roots > 0; i++)
+    {
+        (void)Before(text, roots, &roots);
+    }
     mlocInflection onRoots = *r;
     onRoots.possessorPerson = r->possessorPerson == 0 ? 3 : r->possessorPerson;
     TurkicSound rootSound;

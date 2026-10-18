@@ -13,16 +13,16 @@
 #     final nk or og in any word;
 #   - inverse harmony (rol, saat, katedral), doubling (hak: hakkı), the
 #     last vowel dropped (burun: burnu), and a compound that ends in a
-#     third person's possessive (zeytinyağı), with the bytes of that
-#     possessive.
+#     third person's possessive (zeytinyağı), with the code points of
+#     that possessive (a caller's spelling may differ in bytes: I, â).
 # Verbs are left out; a word with several entries takes its first one
 # without an index. Words are keyed in Turkish lowercase without the
 # circumflex.
 #
 # The table is front-coded: each entry is the bytes it shares with the
 # one before, its own length and bytes, its marks, and for a compound
-# the possessive's length; every 16th shares nothing, and their offsets
-# are searched first.
+# the possessive's length in code points; every 16th shares nothing,
+# and their offsets are searched first.
 #
 # usage: gen_turkish_marks.py DIR [--check]
 #   DIR      holds master-dictionary.dict and proper.dict at the pinned
@@ -115,7 +115,7 @@ def marks_of(word, attrs, roots):
         # Only a compound whose roots stand whole before its possessive.
         if word.startswith(root) and 0 < len(word) - len(root) <= 3:
             marks |= MARKS["CompoundP3sg"]
-            strip = len(word.encode()) - len(root.encode())
+            strip = len(word) - len(root)
     return marks, strip
 
 

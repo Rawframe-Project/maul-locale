@@ -31,7 +31,8 @@ enum
 typedef struct TurkicMarks
 {
     uint8_t marks;
-    // A compound's possessive, in bytes at the word's end.
+    // A compound's possessive, in code points at the word's end (the
+    // caller's spelling may differ from the key in bytes: I, â).
     uint8_t possessive;
 } TurkicMarks;
 

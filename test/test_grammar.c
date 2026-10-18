@@ -258,6 +258,12 @@ static void TestCommonNouns(void)
               Gives("zeytinya\xC4\x9F\xC4\xB1", &ours, "zeytinya\xC4\x9F\xC4\xB1m") &&
               Gives("Zeytinya\xC4\x9F\xC4\xB1", &dative, "Zeytinya\xC4\x9F\xC4\xB1na"),
           "a compound's possessive: the pronominal n, a plural or possessive on its roots");
+    CHECK(Gives("zeytinya\xC4\x9FI", &plural, "zeytinya\xC4\x9Flar\xC4\xB1") &&
+              Gives("zeytiny\xC3\xA2\xC4\x9F\xC4\xB1", &plural,
+                    "zeytiny\xC3\xA2\xC4\x9Flar\xC4\xB1") &&
+              Gives("zeytinya\xC4\x9FI", &ours, "zeytinya\xC4\x9F\xC4\xB1m"),
+          "a compound's possessive cut by code points: a spelling longer or shorter in bytes "
+          "than the lexicon's key");
     mlocInflection nameDative = Case(mloc_caseDative);
     mlocInflection nameGenitive = Case(mloc_caseGenitive);
     CHECK(Gives("Kemal", &nameGenitive, "Kemal'in") && Gives("Senegal", &nameDative, "Senegal'e") &&
