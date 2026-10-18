@@ -208,7 +208,7 @@ static uint32_t Capital(uint32_t c)
     {
         return c - 0x20;
     }
-    if (c >= 0x450 && c <= 0x45F)
+    if (c == 0x451 || c == 0x456)
     {
         return c - 0x50;
     }

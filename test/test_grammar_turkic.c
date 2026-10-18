@@ -160,6 +160,11 @@ static void TestKazakhWords(void)
               Gives(&s_kk, "жүрек", &third, "жүрегі"),
           "loans: a final k makes the suffixes front, a soft sign after a voiceless consonant "
           "is said as a vowel and after another as l, and is dropped before a vowel");
+    mlocInflection dativeWord = Common(mloc_caseDative);
+    CHECK(Gives(&s_kk, "акведук", &third, "акведугі") && Gives(&s_kk, "ту", &dativeWord, "туға") &&
+              Gives(&s_kk, "бетъ", &dativeWord, "бетъке"),
+          "a stop voiced after a glide; a word whose only vowel is a glide; a final hard sign "
+          "read past");
     mlocInflection name = Case(mloc_caseNominative);
     name.possessorPerson = 3;
     CHECK(Gives(&s_kk, "Айтбек", &name, "Айтбегі"), "a name's stop is voiced too");
@@ -183,6 +188,11 @@ static void TestKazakhMarks(void)
               Gives(&s_kk, "ЖОО", &genitive, "ЖОО-ның"),
           "an abbreviation by its letters' names, a consonant read with ы, a hyphen before "
           "the suffix");
+    mlocInflection letters = Case(mloc_caseDative);
+    letters.reading = mloc_readingLetters;
+    CHECK(Gives(&s_kk, "я", &letters, "я-ға") && Gives(&s_kk, "і", &letters, "і-ге") &&
+              Gives(&s_kk, "қ", &letters, "қ-ға") && Gives(&s_kk, "ё", &letters, "ё-ға"),
+          "lowercase letters read by their names");
     CHECK(Gives(&s_kk, "5", &dative, "5-ке") && Gives(&s_kk, "2020", &dative, "2020-ға") &&
               Gives(&s_kk, "10", &genitive, "10-ның"),
           "digits by their spoken last word, a hyphen before the suffix");
