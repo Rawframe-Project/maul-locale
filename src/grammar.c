@@ -21,6 +21,7 @@
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/properties.h"
 
+#include <stddef.h>
 #include <string.h>
 
 enum
@@ -41,7 +42,8 @@ enum
     numberRoom = 1024,
 };
 
-typedef struct Inflector
+// An inflector as its value stores it.
+typedef struct StoredInflector
 {
     // The locale's default number formatter: numbers written and read.
     mlocNumberFormatter number;
@@ -52,9 +54,21 @@ typedef struct Inflector
     uint8_t language;
     // Whether the spell-out formatters were made, 1 or 0.
     uint8_t spoken;
-} Inflector;
+} StoredInflector;
 
-static_assert(sizeof(Inflector) <= sizeof(mlocInflector), "an inflector fits its value");
+static_assert(sizeof(StoredInflector) <= sizeof(mlocInflector), "an inflector fits its value");
+
+// An inflector as a call reads it: its few bytes copied, its formatters
+// read in place (each is a value of uint64_t words, as its home is).
+typedef struct Inflector
+{
+    const mlocNumberFormatter* number;
+    const mlocSpelloutFormatter* cardinal;
+    const mlocSpelloutFormatter* ordinal;
+    uint8_t stamp;
+    uint8_t language;
+    uint8_t spoken;
+} Inflector;
 
 // The language whose rules a locale reads, in the script they read; 0
 // for none.
@@ -97,7 +111,7 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         return mloc_errorInvalid;
     }
-    Inflector f;
+    StoredInflector f;
     memset(&f, 0, sizeof(f));
     f.language = LanguageOfLocale(locale);
     if (f.language == 0)
@@ -129,7 +143,13 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     {
         return false;
     }
-    memcpy(f, opaque, sizeof(*f));
+    const uint8_t* stored = (const uint8_t*)opaque;
+    memcpy(&f->stamp, stored + offsetof(StoredInflector, stamp), 1);
+    memcpy(&f->language, stored + offsetof(StoredInflector, language), 1);
+    memcpy(&f->spoken, stored + offsetof(StoredInflector, spoken), 1);
+    f->number = (const mlocNumberFormatter*)(stored + offsetof(StoredInflector, number));
+    f->cardinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, cardinal));
+    f->ordinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, ordinal));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
            f->language <= languageKorean && f->spoken <= 1;
 }
@@ -190,11 +210,25 @@ static uint32_t Before(const uint8_t* text, size_t end, size_t* startOut)
     return c;
 }
 
-static bool IsLetter(uint32_t c)
+// A code point's general category, ASCII's letters and digits without a
+// lookup.
+static muniGeneralCategory CategoryOf(uint32_t c)
 {
-    muniGeneralCategory g = muniGetGeneralCategory(c);
+    return c >= 'a' && c <= 'z'   ? muni_gcLl
+           : c >= 'A' && c <= 'Z' ? muni_gcLu
+           : c >= '0' && c <= '9' ? muni_gcNd
+                                  : muniGetGeneralCategory(c);
+}
+
+static bool IsLetterCategory(muniGeneralCategory g)
+{
     return g == muni_gcLu || g == muni_gcLl || g == muni_gcLt || g == muni_gcLm || g == muni_gcLo ||
            g == muni_gcMn || g == muni_gcMc;
+}
+
+static bool IsLetter(uint32_t c)
+{
+    return IsLetterCategory(CategoryOf(c));
 }
 
 static bool IsDigit(uint32_t c)
@@ -206,7 +240,7 @@ static bool IsDigit(uint32_t c)
 // without an apostrophe.
 static bool IsCloser(uint32_t c)
 {
-    muniGeneralCategory g = muniGetGeneralCategory(c);
+    muniGeneralCategory g = CategoryOf(c);
     return g == muni_gcPe || g == muni_gcPf || c == '"' || c == '\'';
 }
 
@@ -249,12 +283,11 @@ static size_t WordStart(const uint8_t* text, size_t end, bool* capitalsOut)
     while (at > 0)
     {
         size_t previous = 0;
-        uint32_t c = Before(text, at, &previous);
-        if (!IsLetter(c))
+        muniGeneralCategory g = CategoryOf(Before(text, at, &previous));
+        if (!IsLetterCategory(g))
         {
             break;
         }
-        muniGeneralCategory g = muniGetGeneralCategory(c);
         capitals = capitals && (g == muni_gcLu || g == muni_gcMn || g == muni_gcMc);
         letters++;
         at = previous;
@@ -357,7 +390,7 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     size_t used = 0;
     size_t length = e->end - e->start;
     const char* digits = (const char*)text + e->start;
-    if (mlocParseNumber(&f->number, digits, length, mloc_parseLenient, &value, &used) !=
+    if (mlocParseNumber(f->number, digits, length, mloc_parseLenient, &value, &used) !=
             mloc_success ||
         used != length)
     {
@@ -392,7 +425,7 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     char words[spokenRoom];
     mlocOutput out = {words, sizeof(words), 0, nullptr, nullptr};
     mlocResult r =
-        mlocFormatSpellout(e->kind == endOrdinal ? &f->ordinal : &f->cardinal, &value, &out);
+        mlocFormatSpellout(e->kind == endOrdinal ? f->ordinal : f->cardinal, &value, &out);
     if (r != mloc_success || !LastWord(words, out.length, spoken, spokenLength))
     {
         return r == mloc_success || r == mloc_errorCapacity ? mloc_errorInvalid : r;
@@ -851,7 +884,7 @@ static void ReportNumberParts(const Inflector* f, const mlocNumberFormatter* for
 {
     char scratch[numberRoom];
     mlocOutput parts = {scratch, sizeof(scratch), 0, output->part, output->context};
-    (void)mlocFormatNumber(formatter != nullptr ? formatter : &f->number, decimal, &parts);
+    (void)mlocFormatNumber(formatter != nullptr ? formatter : f->number, decimal, &parts);
 }
 
 mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFormatter* formatter,
@@ -866,8 +899,7 @@ mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFor
     }
     char text[numberRoom];
     mlocOutput written = {text, sizeof(text), 0, nullptr, nullptr};
-    mlocResult r =
-        mlocFormatNumber(formatter != nullptr ? formatter : &f.number, decimal, &written);
+    mlocResult r = mlocFormatNumber(formatter != nullptr ? formatter : f.number, decimal, &written);
     if (r != mloc_success)
     {
         // A number whose text passes the room is refused.

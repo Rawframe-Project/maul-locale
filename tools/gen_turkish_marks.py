@@ -200,6 +200,14 @@ def render(rows, data, blocks):
     ]
     for i in range(0, len(blocks), 12):
         lines.append("    " + ", ".join(str(b) for b in blocks[i:i + 12]) + ",")
+    # For each first byte, the blocks whose first word begins below it:
+    # a key's block lies at or after the count for its byte, less one,
+    # and before the count for the next byte.
+    heads = [rows[i * BLOCK][0][0] for i in range(len(blocks))]
+    first = [sum(1 for h in heads if h < b) for b in range(257)]
+    lines += ["};", "", "static const uint8_t s_turkishMarkFirst[257] = {"]
+    for i in range(0, 257, 16):
+        lines.append("    " + ", ".join(str(n) for n in first[i:i + 16]) + ",")
     lines += ["};", "", "static const uint8_t s_turkishMarks[turkishMarkBytes] = {"]
     for i in range(0, len(data), 16):
         lines.append("    " + ", ".join(f"0x{b:02X}" for b in data[i:i + 16]) + ",")

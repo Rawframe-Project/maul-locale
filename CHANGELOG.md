@@ -243,6 +243,11 @@ format.
 - Messages: `mloc:gender` selects on the gender of a list of persons
   ("male", "female", "other" items) by the locale's rule: keys male,
   female and other (mloc-0052).
+- The inflector reads its formatters in place instead of copying them,
+  reads ASCII letters' sounds by index and the Turkish table's blocks by
+  their first byte: a short Turkish name inflects in about 0.7 of the
+  time it took. The benchmark times inflection in each language, a
+  list's gender and mloc:case.
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

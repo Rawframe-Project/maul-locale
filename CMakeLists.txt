@@ -458,6 +458,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(calendar_test262)
     maul_add_test(list_format)
     maul_add_test(list_gender)
+    maul_add_test(turkic_letters WHITEBOX)
     # So are the names of languages and the rest (record mloc-0036), and
     # the subdivision names (record mloc-0039).
     set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)

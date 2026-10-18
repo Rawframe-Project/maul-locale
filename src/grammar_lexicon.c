@@ -139,9 +139,16 @@ static int CompareHead(const uint8_t* key, size_t length, size_t block)
 // Finds a key's marks in the table.
 static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
 {
-    // The last block whose first word is at most the key.
-    size_t low = 0;
-    size_t high = turkishMarkBlocks;
+    // The last block whose first word is at most the key, among the
+    // blocks whose first words begin with the key's first byte or below
+    // it, past the last of those below it but one.
+    size_t below = s_turkishMarkFirst[key[0]];
+    size_t low = below > 0 ? below - 1 : 0;
+    size_t high = s_turkishMarkFirst[key[0] + 1];
+    if (high == 0)
+    {
+        return false;
+    }
     while (high - low > 1)
     {
         size_t middle = low + (high - low) / 2;
@@ -168,11 +175,19 @@ static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
         size_t total = shared + own;
         uint8_t marks = s_turkishMarks[at + 2 + own];
         bool compound = (marks & turkicCompound) != 0;
-        if (total == keyLength && memcmp(current, key, total) == 0)
+        size_t n = total < keyLength ? total : keyLength;
+        int order = memcmp(current, key, n);
+        order = order != 0 ? order : (int)(total > keyLength) - (int)(total < keyLength);
+        if (order == 0)
         {
             out->marks = marks;
             out->possessive = compound ? s_turkishMarks[at + 3 + own] : 0;
             return true;
+        }
+        if (order > 0)
+        {
+            // Past the key in the sorted block.
+            return false;
         }
         at += 3 + own + (compound ? 1 : 0);
     }

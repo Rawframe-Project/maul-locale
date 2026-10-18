@@ -100,6 +100,46 @@ static const TurkicLetter s_latin[] = {
     {0x15F, turkicVoiceless},
 };
 
+// s_latin's ASCII letters by code point, the other ASCII code points a
+// voiced consonant as s_latin's absence makes them (a test checks the
+// two agree).
+// clang-format off
+static const uint16_t s_ascii[128] = {
+    // 0x00
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x08
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x10
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x18
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x20
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x28
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x30
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x38
+    turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x40
+    turkicVoiced, turkicVowel | turkicBack, turkicVoiced, turkicVoiced, turkicVoiced, turkicVowel, turkicVoiceless, turkicVoiced,
+    // 0x48
+    turkicVoiceless, turkicVowel | turkicBack, turkicVoiced, turkicVoiceless, turkicVoiced, turkicVoiced, turkicVoiced, turkicVowel | turkicBack | turkicRound,
+    // 0x50
+    turkicVoiceless, turkicVoiceless, turkicVoiced, turkicVoiceless, turkicVoiceless, turkicVowel | turkicBack | turkicRound, turkicVoiced, turkicVoiced,
+    // 0x58
+    turkicVoiceless, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+    // 0x60
+    turkicVoiced, turkicVowel | turkicBack, turkicVoiced, turkicVoiced, turkicVoiced, turkicVowel, turkicVoiceless, turkicVoiced,
+    // 0x68
+    turkicVoiceless, turkicVowel, turkicVoiced, turkicVoiceless, turkicVoiced, turkicVoiced, turkicVoiced, turkicVowel | turkicBack | turkicRound,
+    // 0x70
+    turkicVoiceless, turkicVoiceless, turkicVoiced, turkicVoiceless, turkicVoiceless, turkicVowel | turkicBack | turkicRound, turkicVoiced, turkicVoiced,
+    // 0x78
+    turkicVoiceless, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced, turkicVoiced,
+};
+// clang-format on
+
 // A letter in a table sorted by code point, or false.
 static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint16_t* infoOut)
 {
@@ -127,6 +167,12 @@ static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint16_t* 
 
 uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t c)
 {
+    // A language whose own letters are all past ASCII reads ASCII as
+    // s_latin does, by index.
+    if (c < 128 && (language->letters == nullptr || language->letters[0].codePoint >= 128))
+    {
+        return s_ascii[c];
+    }
     uint16_t info = turkicVoiced;
     if (!Find(language->letters, language->letterCount, c, &info))
     {

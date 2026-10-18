@@ -26,6 +26,7 @@
 #endif
 
 #include "bench_dates.h"
+#include "bench_grammar.h"
 #include "bench_messages.h"
 
 #include "maul-locale/currency.h"
@@ -600,10 +601,16 @@ int main(int argc, char** argv)
         fputs("bench: cannot make the messages\n", stderr);
         return 1;
     }
+    if (!PrepareGrammarBench())
+    {
+        fputs("bench: cannot make the inflectors\n", stderr);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
         ShowDateBench();
         ShowMessageBench();
+        ShowGrammarBench();
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
                                       ScientificFormat, CurrencyFormat, UnitFormat};
         for (size_t i = 0; i < 6; i++)
@@ -674,11 +681,13 @@ int main(int argc, char** argv)
     size_t count = sizeof(s_cases) / sizeof(s_cases[0]);
     const char* only = getenv("BENCH_ONLY");
     size_t dates = count + g_dateCaseCount;
-    for (size_t i = 0; i < dates + g_messageCaseCount; i++)
+    size_t messages = dates + g_messageCaseCount;
+    for (size_t i = 0; i < messages + g_grammarCaseCount; i++)
     {
-        const Case* c = i < count   ? &s_cases[i]
-                        : i < dates ? &g_dateCases[i - count]
-                                    : &g_messageCases[i - dates];
+        const Case* c = i < count      ? &s_cases[i]
+                        : i < dates    ? &g_dateCases[i - count]
+                        : i < messages ? &g_messageCases[i - dates]
+                                       : &g_grammarCases[i - messages];
         if (only != nullptr && !Listed(only, c->name))
         {
             continue;
