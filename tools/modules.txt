@@ -147,5 +147,7 @@ message_prepare: bytes message_bind message_date message_duration message_form m
 message_format: decimal message_bind message_date message_duration message_form message_list message_number message_prepare message_read message_resolve message_words
 message: message_check message_emit message_form message_parse message_read message_table message_write
 grammar_lexicon:
-grammar_turkic: grammar_lexicon
+grammar_turkic:
+grammar_tr: grammar_lexicon grammar_turkic
+grammar_kk: grammar_turkic
 grammar: grammar_lexicon grammar_turkic number_core

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The inflector (maul-locale/grammar.h, record mloc-0046): a text's end
-// found and read (a number by its spoken form, capitals by their
-// letters' names, a word as written or as the hint says), and the
-// language's suffixes written after it with the apostrophe its spelling
-// asks for.
+// The inflector (maul-locale/grammar.h, records mloc-0046 and
+// mloc-0047): a text's end found and read (a number by its spoken form,
+// capitals by their letters' names, a word as written or as the hint
+// says), and the language's suffixes written after it with the boundary
+// mark its spelling asks for.
 
 #include "maul-locale/grammar.h"
 
@@ -24,6 +24,7 @@ enum
     // Marks an inflector the library made.
     inflectorStamp = 0x49,
     languageTurkish = 1,
+    languageKazakh = 2,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -53,11 +54,21 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     }
     Inflector f;
     memset(&f, 0, sizeof(f));
-    if (strcmp(locale->language, "tr") != 0)
+    // Each language in the script its rules read.
+    bool latin = locale->script[0] == '\0' || memcmp(locale->script, "Latn", 4) == 0;
+    bool cyrillic = locale->script[0] == '\0' || memcmp(locale->script, "Cyrl", 4) == 0;
+    if (strcmp(locale->language, "tr") == 0 && latin)
+    {
+        f.language = languageTurkish;
+    }
+    else if (strcmp(locale->language, "kk") == 0 && cyrillic)
+    {
+        f.language = languageKazakh;
+    }
+    else
     {
         return mloc_errorNotFound;
     }
-    f.language = languageTurkish;
     if (mlocInitNumberFormatter(&f.number, data, locale, nullptr) < 0)
     {
         return mloc_errorNotFound;
@@ -83,7 +94,14 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
         return false;
     }
     memcpy(f, opaque, sizeof(*f));
-    return f->stamp == inflectorStamp && f->language == languageTurkish && f->spoken <= 1;
+    return f->stamp == inflectorStamp &&
+           (f->language == languageTurkish || f->language == languageKazakh) && f->spoken <= 1;
+}
+
+// An inflector's language.
+static const TurkicLanguage* LanguageOf(const Inflector* f)
+{
+    return f->language == languageKazakh ? &mlocKazakh : &mlocTurkish;
 }
 
 // What a text's end is.
@@ -202,7 +220,8 @@ static size_t WordStart(const uint8_t* text, size_t end, bool* capitalsOut)
 
 // Finds and classifies a text's end; false when nothing ends it that can
 // be read.
-static bool FindEnd(const uint8_t* text, size_t length, mlocInflectionReading reading, End* out)
+static bool FindEnd(const TurkicLanguage* language, const uint8_t* text, size_t length,
+                    mlocInflectionReading reading, End* out)
 {
     *out = (End){0};
     size_t end = length;
@@ -223,7 +242,8 @@ static bool FindEnd(const uint8_t* text, size_t length, mlocInflectionReading re
     if (IsDigit(c))
     {
         out->start = NumberStart(text, last);
-        out->kind = dot ? endOrdinal : endNumber;
+        out->kind = dot && language->periodOrdinals ? endOrdinal : endNumber;
+        out->period = dot && !language->periodOrdinals;
         return true;
     }
     if (!IsLetter(c))
@@ -320,7 +340,7 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
     if (e->kind == endLetters)
     {
         size_t previous = 0;
-        const char* name = mlocTurkicLetterName(Before(text, e->end, &previous));
+        const char* name = LanguageOf(f)->letterName(Before(text, e->end, &previous));
         if (name == nullptr)
         {
             return mloc_errorInvalid;
@@ -349,21 +369,22 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
     return mloc_success;
 }
 
-// What a request writes after a text: its suffixes, the apostrophe
+// What a request writes after a text: its suffixes, the boundary mark
 // before them, and the stem's changed end (the bytes kept, then a tail).
 typedef struct Inflected
 {
     TurkicSuffixes suffixes;
-    bool apostrophe;
+    // The mark, or 0 for none.
+    char mark;
     size_t kept;
     char tail[12];
     uint8_t tailLength;
 } Inflected;
 
-static bool ValidRequest(const mlocInflection* r)
+static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
-           (r->hint != nullptr || r->hintLength == 0) && mlocTurkicRequestValid(r);
+           (r->hint != nullptr || r->hintLength == 0) && mlocTurkicRequestValid(LanguageOf(f), r);
 }
 
 // A compound that ends in a third person's possessive (zeytinyağı): its
@@ -375,7 +396,7 @@ static void InflectCompound(const uint8_t* text, size_t length, const mlocInflec
 {
     if (!r->plural && r->possessorPerson == 0)
     {
-        mlocTurkicSuffixes(sound, r, true, &out->suffixes);
+        mlocTurkicSuffixes(&mlocTurkish, sound, r, true, &out->suffixes);
         return;
     }
     // The possessive is counted in code points: the text's spelling may
@@ -388,21 +409,47 @@ static void InflectCompound(const uint8_t* text, size_t length, const mlocInflec
     mlocInflection onRoots = *r;
     onRoots.possessorPerson = r->possessorPerson == 0 ? 3 : r->possessorPerson;
     TurkicSound rootSound;
-    if (!mlocTurkicSound(text, roots, (marks->marks & turkicInverse) != 0, &rootSound))
+    if (!mlocTurkicSound(&mlocTurkish, text, roots, (marks->marks & turkicInverse) != 0,
+                         &rootSound))
     {
         rootSound = sound;
     }
-    mlocTurkicSuffixes(rootSound, &onRoots, false, &out->suffixes);
+    mlocTurkicSuffixes(&mlocTurkish, rootSound, &onRoots, false, &out->suffixes);
     out->kept = roots;
 }
 
+// The boundary mark a text's end takes before its suffixes, or 0: the
+// language's after a number or letters, and after a name or a word in
+// another script where it marks them; none on a common noun, after a
+// closing mark or a period, or on a native Turkish name's plural (a
+// name joins its plural, Ahmetler, unless it is foreign, which a hint,
+// its spoken form, says: Nice'ler).
+static char Mark(const TurkicLanguage* language, const uint8_t* text, const End* e,
+                 const mlocInflection* r, bool hinted, const TurkicSuffixes* suffixes)
+{
+    if (r->commonNoun || e->closed || e->period || suffixes->particle == 0)
+    {
+        return 0;
+    }
+    if (e->kind != endWord)
+    {
+        return language->mark;
+    }
+    size_t previous = 0;
+    uint32_t last = Before(text, e->end, &previous);
+    bool foreign = last < language->scriptFirst || last > language->scriptLast;
+    bool name = (language->markOn & turkicMarkNames) != 0 && !(r->plural && !hinted);
+    return name || ((language->markOn & turkicMarkForeign) != 0 && foreign) ? language->mark : 0;
+}
+
 // Reads the spoken end (the hint's when there is one) and writes the
-// suffixes; the text's end decides the apostrophe.
+// suffixes; the text's end decides the boundary mark.
 static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length,
                           const mlocInflection* r, Inflected* out)
 {
+    const TurkicLanguage* language = LanguageOf(f);
     End e;
-    if (!FindEnd(text, length, r->reading, &e))
+    if (!FindEnd(language, text, length, r->reading, &e))
     {
         return mloc_errorInvalid;
     }
@@ -412,7 +459,7 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
     {
         spokenText = (const uint8_t*)r->hint;
         if (muniValidateUtf8(r->hint, r->hintLength).status != muni_success ||
-            !FindEnd(spokenText, r->hintLength, r->reading, &spokenEnd))
+            !FindEnd(language, spokenText, r->hintLength, r->reading, &spokenEnd))
         {
             return mloc_errorInvalid;
         }
@@ -425,29 +472,27 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
         return result;
     }
     TurkicMarks marks = {0};
-    if (spokenEnd.kind == endWord)
+    if (spokenEnd.kind == endWord && language->lexicon)
     {
         (void)mlocTurkicMarks((const uint8_t*)spoken, spokenLength, &marks);
     }
     bool inverse = (marks.marks & turkicInverse) != 0;
     TurkicSound sound;
-    if (!mlocTurkicSound((const uint8_t*)spoken, spokenLength, inverse, &sound))
+    if (!mlocTurkicSound(language, (const uint8_t*)spoken, spokenLength, inverse, &sound))
     {
         // A word without a vowel is read by its letters (PwC, Brr).
         End letters = spokenEnd;
         letters.kind = endLetters;
         if (spokenEnd.kind != endWord ||
             Spoken(f, spokenText, &letters, spoken, &spokenLength) != mloc_success ||
-            !mlocTurkicSound((const uint8_t*)spoken, spokenLength, false, &sound))
+            !mlocTurkicSound(language, (const uint8_t*)spoken, spokenLength, false, &sound))
         {
             return mloc_errorInvalid;
         }
         marks = (TurkicMarks){0};
     }
-    // A name joins its plural (Ahmetler) unless it is foreign, which a
-    // hint, its spoken form, says (Nice'ler).
-    bool name = e.kind == endWord && !r->commonNoun && spokenText == text;
-    bool stemmed = r->commonNoun && e.kind == endWord && e.end == length && spokenText == text;
+    bool stemmed = (r->commonNoun || language->stemNames) && e.kind == endWord && e.end == length &&
+                   spokenText == text;
     out->kept = length;
     out->tailLength = 0;
     if (stemmed && (marks.marks & turkicCompound) != 0)
@@ -456,30 +501,29 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
     }
     else
     {
-        mlocTurkicSuffixes(sound, r, false, &out->suffixes);
+        mlocTurkicSuffixes(language, sound, r, false, &out->suffixes);
         TurkicStem stem;
         if (stemmed && out->suffixes.vowelFirst &&
-            mlocTurkicStem(text + e.start, e.end - e.start, marks.marks, &stem))
+            language->stem(text + e.start, e.end - e.start, marks.marks, &stem))
         {
             out->kept = e.start + stem.kept;
             memcpy(out->tail, stem.tail, stem.tailLength);
             out->tailLength = stem.tailLength;
         }
     }
-    out->apostrophe = !r->commonNoun && !e.closed && !e.period && out->suffixes.particle > 0 &&
-                      !(name && r->plural);
+    out->mark = Mark(language, text, &e, r, spokenText != text, &out->suffixes);
     return mloc_success;
 }
 
 // Writes the inflected text: the stem (kept, then its changed end), the
-// apostrophe, the suffixes and the particle.
+// boundary mark, the suffixes and the particle.
 static void Write(const uint8_t* text, const Inflected* in, NumberWriter* w)
 {
     mlocWritePart(w, mloc_inflectionPartStem, text, in->kept);
     mlocWritePart(w, mloc_inflectionPartStem, (const uint8_t*)in->tail, in->tailLength);
-    if (in->apostrophe)
+    if (in->mark != 0)
     {
-        mlocWritePart(w, mloc_inflectionPartApostrophe, (const uint8_t*)"'", 1);
+        mlocWritePart(w, mloc_inflectionPartApostrophe, (const uint8_t*)&in->mark, 1);
     }
     const TurkicSuffixes* s = &in->suffixes;
     mlocWritePart(w, mloc_inflectionPartSuffix, (const uint8_t*)s->text, s->particle);
@@ -517,7 +561,7 @@ mlocResult mlocInflectText(const mlocInflector* inflector, const char* text, siz
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || text == nullptr || length == 0 || request == nullptr ||
-        !ValidOutput(output) || !ValidRequest(request) ||
+        !ValidOutput(output) || !ValidRequest(&f, request) ||
         muniValidateUtf8(text, length).status != muni_success)
     {
         return mloc_errorInvalid;
@@ -542,7 +586,7 @@ mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFor
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || decimal == nullptr || request == nullptr ||
-        !ValidOutput(output) || !ValidRequest(request))
+        !ValidOutput(output) || !ValidRequest(&f, request))
     {
         return mloc_errorInvalid;
     }
@@ -575,7 +619,7 @@ mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFor
         // The stem, then the number's parts inside it, then the rest.
         Inflected stem = in;
         stem.suffixes = (TurkicSuffixes){0};
-        stem.apostrophe = false;
+        stem.mark = 0;
         NumberWriter parts = {.parts = output};
         Write((const uint8_t*)text, &stem, &parts);
         mlocEndParts(&parts);

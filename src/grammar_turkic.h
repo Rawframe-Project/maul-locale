@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Turkish suffixes (record mloc-0046): a spoken end read into its last
-// vowel and final sound, and the suffixes a request asks for written by
-// vowel harmony, assimilation and buffer consonants.
+// Turkic suffixes (records mloc-0046, mloc-0047): one engine reads a
+// spoken end into its last vowel's harmony and its final sound's class,
+// and writes the suffixes a request asks for from archiphonemes; each
+// language is a table of letters, vowels, onsets and suffix templates
+// (grammar_tr.c, grammar_kk.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H
-
-#include "grammar_lexicon.h"
 
 #include "maul-locale/grammar.h"
 
@@ -23,13 +23,61 @@ enum
     turkicSuffixRoom = 48,
 };
 
-// How a spoken end sounds: its last vowel ('a', 'e', 'i' for ı, 'I' for
-// i, 'o', 'O' for ö, 'u', 'U' for ü; 0 for none) and its final sound.
+// The class of a sound, which chooses a suffix's first consonant: a
+// vowel; a glide (Kazakh р, й, у); a liquid (л); a nasal (м, н, ң); any
+// other voiced consonant; a voiceless one. A language without such
+// choices uses vowel, voiced and voiceless alone.
+typedef enum TurkicClass
+{
+    turkicVowel = 0,
+    turkicGlide = 1,
+    turkicLiquid = 2,
+    turkicNasal = 3,
+    turkicVoiced = 4,
+    turkicVoiceless = 5,
+    turkicClasses = 6,
+} TurkicClass;
+
+// A letter's information: its class in the low bits, and these.
+enum
+{
+    turkicClassMask = 0x07,
+    // A back vowel (a, ı, o, u).
+    turkicBack = 0x08,
+    // A rounded vowel (o, ö, u, ü).
+    turkicRound = 0x10,
+    // A glide, which gives the harmony only when the word has no other
+    // vowel (Kazakh и, у, ю).
+    turkicWeak = 0x20,
+    // A sign that is no sound (Kazakh ь, ъ).
+    turkicSign = 0x40,
+    // On a sign or a word's final consonant: the suffixes are front
+    // (Kazakh ь; к in паркке).
+    turkicFront = 0x80,
+};
+
+typedef struct TurkicLetter
+{
+    uint16_t codePoint;
+    uint8_t info;
+} TurkicLetter;
+
+// An archiphoneme of consonants: the letter it is after each class of
+// sound, back and front (0 for none: a buffer letter after a consonant).
+typedef struct TurkicOnset
+{
+    char symbol;
+    uint16_t forms[turkicClasses][2];
+} TurkicOnset;
+
+// How a spoken end sounds: whether it has a vowel, its last vowel's
+// harmony and its final sound's class.
 typedef struct TurkicSound
 {
-    char vowel;
-    bool finalVowel;
-    bool voiceless;
+    bool vowel;
+    bool back;
+    bool round;
+    uint8_t final;
 } TurkicSound;
 
 // The suffixes written for a request: the bytes before the particle and
@@ -44,24 +92,6 @@ typedef struct TurkicSuffixes
     bool vowelFirst;
 } TurkicSuffixes;
 
-// Whether a request is one Turkish has.
-bool mlocTurkicRequestValid(const mlocInflection* request);
-
-// Reads the sound of a spoken word's end (UTF-8, valid), or false when
-// it has no vowel; with inverse, its last vowel reads front (a word of
-// inverse harmony: "saat" as "saet").
-bool mlocTurkicSound(const uint8_t* word, size_t length, bool inverse, TurkicSound* out);
-
-// The name of a letter as Turkish reads it ("ke" for K, "çift ve" for
-// W), or null for a code point that is no letter Turkish names.
-const char* mlocTurkicLetterName(uint32_t codePoint);
-
-// Writes the suffixes a request asks for after a sound; endsThird for a
-// word that already ends in a third person's possessive (a compound:
-// zeytinyağı), whose cases then take the pronominal n.
-void mlocTurkicSuffixes(TurkicSound sound, const mlocInflection* request, bool endsThird,
-                        TurkicSuffixes* out);
-
 // A common noun's stem before a suffix that begins with a vowel: the
 // bytes of the word kept, then a tail (its final stop softened, its
 // final consonant doubled, the consonants after its dropped last
@@ -73,11 +103,110 @@ typedef struct TurkicStem
     uint8_t tailLength;
 } TurkicStem;
 
-// The stem of a common noun (UTF-8, valid) with a lexicon's marks
-// (grammar_lexicon.h): by the rule the marks are written against, a
-// final ç, k, p or t softens in a word of two syllables or more without
-// inverse harmony and a final nk or og in any word, the marks saying
-// otherwise; false when the word stays as it is.
-bool mlocTurkicStem(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out);
+// The case templates' variants: after a stem, after a third person's
+// possessive (Turkish's pronominal n), after a first or second person's.
+enum
+{
+    turkicAfterStem = 0,
+    turkicAfterThird = 1,
+    turkicAfterPossessive = 2,
+    turkicVariants = 3,
+};
+
+// The cases a Turkic language may have, as template rows.
+enum
+{
+    turkicNominative = 0,
+    turkicGenitive = 1,
+    turkicDative = 2,
+    turkicAccusative = 3,
+    turkicLocative = 4,
+    turkicAblative = 5,
+    turkicInstrumental = 6,
+    turkicCases = 7,
+};
+
+// Where a language writes its boundary mark before suffixes.
+enum
+{
+    // Names (Turkish: Ahmet'e).
+    turkicMarkNames = 1,
+    // A word whose last letter is outside the language's script.
+    turkicMarkForeign = 2,
+};
+
+// A Turkic language. Templates are UTF-8: A is the two-way (or
+// four-way) vowel, I the four-way (or two-way) one, V the I after a
+// consonant only, an onset's symbol its consonant, anything else
+// itself.
+typedef struct TurkicLanguage
+{
+    // Letters sorted by code point; a letter not here is read by the
+    // Latin table, and a letter neither has is a voiced consonant.
+    const TurkicLetter* letters;
+    uint16_t letterCount;
+    // The script's code points, for the foreign-word mark.
+    uint16_t scriptFirst;
+    uint16_t scriptLast;
+    // A and I by [front][round].
+    uint16_t a[2][2];
+    uint16_t i[2][2];
+    const TurkicOnset* onsets;
+    uint8_t onsetCount;
+    // The boundary mark (' or -) and where it goes besides numbers and
+    // abbreviations read by their letters.
+    char mark;
+    uint8_t markOn;
+    // Whether digits and a period are an ordinal (Turkish 5.).
+    bool periodOrdinals;
+    // Whether a final y after a consonant is said as i (Harry).
+    bool finalYAsI;
+    // Whether common nouns are looked up in the lexicon of marks.
+    bool lexicon;
+    // Whether names change their stem as common nouns do (Kazakh
+    // Айтбегі).
+    bool stemNames;
+    // Whether a plural's third person plural possessive is written once
+    // (Turkish evleri).
+    bool pluralInThirdPlural;
+    const char* plural;
+    const char* possessives[2][3];
+    // Null for a case the language does not have.
+    const char* cases[turkicCases][turkicVariants];
+    // Null when the language has no copula suffix.
+    const char* copula;
+    const char* question;
+    // The name of a letter as the language reads it, or null for one it
+    // does not name.
+    const char* (*letterName)(uint32_t codePoint);
+    // A common noun's stem before a vowel (UTF-8, valid) with the
+    // lexicon's marks; false when it stays as it is.
+    bool (*stem)(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out);
+} TurkicLanguage;
+
+extern const TurkicLanguage mlocTurkish;
+extern const TurkicLanguage mlocKazakh;
+
+// A letter's information in a language.
+uint8_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);
+
+// Decodes the code point that ends at text[end] (UTF-8, valid); its
+// first byte's index in startOut.
+uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut);
+
+// Whether a request is one the language has.
+bool mlocTurkicRequestValid(const TurkicLanguage* language, const mlocInflection* request);
+
+// Reads the sound of a spoken word's end (UTF-8, valid), or false when
+// it has no vowel; with inverse, its harmony is front (a word of
+// inverse harmony: saat as saet).
+bool mlocTurkicSound(const TurkicLanguage* language, const uint8_t* word, size_t length,
+                     bool inverse, TurkicSound* out);
+
+// Writes the suffixes a request asks for after a sound; endsThird for a
+// word that already ends in a third person's possessive (a compound:
+// zeytinyağı), whose cases then take the variant after it.
+void mlocTurkicSuffixes(const TurkicLanguage* language, TurkicSound sound,
+                        const mlocInflection* request, bool endsThird, TurkicSuffixes* out);
 
 #endif

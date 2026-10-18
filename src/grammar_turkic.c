@@ -1,80 +1,141 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Turkish suffixes (grammar_turkic.h, record mloc-0046), as the TDK
-// spelling guide gives them: two-way and four-way vowel harmony, d to t
-// after a voiceless consonant, the buffer consonants y, n and s after a
-// vowel, and the n a third person's possessive puts before a case.
+// The Turkic suffix engine (grammar_turkic.h, records mloc-0046 and
+// mloc-0047): a spoken end read by a language's letters, and templates
+// written by its vowels and onsets.
 
 #include "grammar_turkic.h"
 
 #include <string.h>
 
-// The vowels as one byte: back a, ı, o, u ('a', 'i', 'o', 'u') and front
-// e, i, ö, ü ('e', 'I', 'O', 'U').
-static bool IsBack(char vowel)
-{
-    return vowel == 'a' || vowel == 'i' || vowel == 'o' || vowel == 'u';
-}
-
-static bool IsRounded(char vowel)
-{
-    return vowel == 'o' || vowel == 'u' || vowel == 'O' || vowel == 'U';
-}
-
-// The vowels Turkish reads, as one byte each, and the accented Latin
-// vowels read as the Turkish vowel nearest them.
-typedef struct VowelOf
-{
-    uint16_t codePoint;
-    char vowel;
-} VowelOf;
-
-static const VowelOf s_vowels[] = {
-    {'a', 'a'},  {'A', 'a'},   {0xE2, 'a'}, {0xC2, 'a'},  {0xE1, 'a'},  {0xC1, 'a'},  {0xE0, 'a'},
-    {0xC0, 'a'}, {0xE3, 'a'},  {0xC3, 'a'}, {0xE5, 'a'},  {0xC5, 'a'},  {'e', 'e'},   {'E', 'e'},
-    {0xE9, 'e'}, {0xC9, 'e'},  {0xE8, 'e'}, {0xC8, 'e'},  {0xEA, 'e'},  {0xCA, 'e'},  {0xEB, 'e'},
-    {0xCB, 'e'}, {0xE4, 'e'},  {0xC4, 'e'}, {0xE6, 'e'},  {0xC6, 'e'},  {0x131, 'i'}, {'I', 'i'},
-    {'i', 'I'},  {0x130, 'I'}, {0xEE, 'I'}, {0xCE, 'I'},  {0xED, 'I'},  {0xCD, 'I'},  {0xEC, 'I'},
-    {0xCC, 'I'}, {0xEF, 'I'},  {0xCF, 'I'}, {'o', 'o'},   {'O', 'o'},   {0xF3, 'o'},  {0xD3, 'o'},
-    {0xF2, 'o'}, {0xD2, 'o'},  {0xF4, 'o'}, {0xD4, 'o'},  {0xF5, 'o'},  {0xD5, 'o'},  {0xF6, 'O'},
-    {0xD6, 'O'}, {0xF8, 'O'},  {0xD8, 'O'}, {0x153, 'O'}, {0x152, 'O'}, {'u', 'u'},   {'U', 'u'},
-    {0xFB, 'u'}, {0xDB, 'u'},  {0xFA, 'u'}, {0xDA, 'u'},  {0xF9, 'u'},  {0xD9, 'u'},  {0xFC, 'U'},
-    {0xDC, 'U'},
+// The Latin letters any Turkic language reads as Turkish does, the
+// accented vowels as the Turkish vowel nearest them; a Latin letter not
+// here is a voiced consonant.
+static const TurkicLetter s_latin[] = {
+    {'A', turkicVowel | turkicBack},
+    {'E', turkicVowel},
+    {'F', turkicVoiceless},
+    {'H', turkicVoiceless},
+    {'I', turkicVowel | turkicBack},
+    {'K', turkicVoiceless},
+    {'O', turkicVowel | turkicBack | turkicRound},
+    {'P', turkicVoiceless},
+    {'Q', turkicVoiceless},
+    {'S', turkicVoiceless},
+    {'T', turkicVoiceless},
+    {'U', turkicVowel | turkicBack | turkicRound},
+    {'X', turkicVoiceless},
+    {'a', turkicVowel | turkicBack},
+    {'e', turkicVowel},
+    {'f', turkicVoiceless},
+    {'h', turkicVoiceless},
+    {'i', turkicVowel},
+    {'k', turkicVoiceless},
+    {'o', turkicVowel | turkicBack | turkicRound},
+    {'p', turkicVoiceless},
+    {'q', turkicVoiceless},
+    {'s', turkicVoiceless},
+    {'t', turkicVoiceless},
+    {'u', turkicVowel | turkicBack | turkicRound},
+    {'x', turkicVoiceless},
+    {0xC0, turkicVowel | turkicBack},
+    {0xC1, turkicVowel | turkicBack},
+    {0xC2, turkicVowel | turkicBack},
+    {0xC3, turkicVowel | turkicBack},
+    {0xC4, turkicVowel},
+    {0xC5, turkicVowel | turkicBack},
+    {0xC6, turkicVowel},
+    {0xC7, turkicVoiceless},
+    {0xC8, turkicVowel},
+    {0xC9, turkicVowel},
+    {0xCA, turkicVowel},
+    {0xCB, turkicVowel},
+    {0xCC, turkicVowel},
+    {0xCD, turkicVowel},
+    {0xCE, turkicVowel},
+    {0xCF, turkicVowel},
+    {0xD2, turkicVowel | turkicBack | turkicRound},
+    {0xD3, turkicVowel | turkicBack | turkicRound},
+    {0xD4, turkicVowel | turkicBack | turkicRound},
+    {0xD5, turkicVowel | turkicBack | turkicRound},
+    {0xD6, turkicVowel | turkicRound},
+    {0xD8, turkicVowel | turkicRound},
+    {0xD9, turkicVowel | turkicBack | turkicRound},
+    {0xDA, turkicVowel | turkicBack | turkicRound},
+    {0xDB, turkicVowel | turkicBack | turkicRound},
+    {0xDC, turkicVowel | turkicRound},
+    {0xDF, turkicVoiceless},
+    {0xE0, turkicVowel | turkicBack},
+    {0xE1, turkicVowel | turkicBack},
+    {0xE2, turkicVowel | turkicBack},
+    {0xE3, turkicVowel | turkicBack},
+    {0xE4, turkicVowel},
+    {0xE5, turkicVowel | turkicBack},
+    {0xE6, turkicVowel},
+    {0xE7, turkicVoiceless},
+    {0xE8, turkicVowel},
+    {0xE9, turkicVowel},
+    {0xEA, turkicVowel},
+    {0xEB, turkicVowel},
+    {0xEC, turkicVowel},
+    {0xED, turkicVowel},
+    {0xEE, turkicVowel},
+    {0xEF, turkicVowel},
+    {0xF2, turkicVowel | turkicBack | turkicRound},
+    {0xF3, turkicVowel | turkicBack | turkicRound},
+    {0xF4, turkicVowel | turkicBack | turkicRound},
+    {0xF5, turkicVowel | turkicBack | turkicRound},
+    {0xF6, turkicVowel | turkicRound},
+    {0xF8, turkicVowel | turkicRound},
+    {0xF9, turkicVowel | turkicBack | turkicRound},
+    {0xFA, turkicVowel | turkicBack | turkicRound},
+    {0xFB, turkicVowel | turkicBack | turkicRound},
+    {0xFC, turkicVowel | turkicRound},
+    {0x130, turkicVowel},
+    {0x131, turkicVowel | turkicBack},
+    {0x152, turkicVowel | turkicRound},
+    {0x153, turkicVowel | turkicRound},
+    {0x15E, turkicVoiceless},
+    {0x15F, turkicVoiceless},
 };
 
-// The voiceless consonants (fıstıkçı şahap), x and q, said with k, and ß.
-static const uint16_t s_voiceless[] = {'f', 'F', 's', 'S', 't', 'T',  'k',  'K',   'h',   'H', 'p',
-                                       'P', 'x', 'X', 'q', 'Q', 0xE7, 0xC7, 0x15F, 0x15E, 0xDF};
-
-// A code point read as a Turkish letter: its vowel byte, or 0 for a
-// consonant, with whether the consonant is voiceless. The caller has
-// kept only letters, so any other is a voiced consonant.
-static void Letter(uint32_t c, char* vowelOut, bool* voicelessOut)
+// A letter in a table sorted by code point, or false.
+static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint8_t* infoOut)
 {
-    *vowelOut = 0;
-    *voicelessOut = false;
-    for (size_t i = 0; i < sizeof(s_vowels) / sizeof(s_vowels[0]); i++)
+    size_t low = 0;
+    size_t high = count;
+    while (low < high)
     {
-        if (s_vowels[i].codePoint == c)
+        size_t middle = low + (high - low) / 2;
+        if (table[middle].codePoint < c)
         {
-            *vowelOut = s_vowels[i].vowel;
-            return;
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
         }
     }
-    for (size_t i = 0; i < sizeof(s_voiceless) / sizeof(s_voiceless[0]); i++)
+    if (low < count && table[low].codePoint == c)
     {
-        if (s_voiceless[i] == c)
-        {
-            *voicelessOut = true;
-            return;
-        }
+        *infoOut = table[low].info;
+        return true;
     }
+    return false;
 }
 
-// Decodes the code point that ends at text[end], valid UTF-8; its first
-// byte's index in startOut.
-static uint32_t Previous(const uint8_t* text, size_t end, size_t* startOut)
+uint8_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t c)
+{
+    uint8_t info = turkicVoiced;
+    if (!Find(language->letters, language->letterCount, c, &info))
+    {
+        (void)Find(s_latin, sizeof(s_latin) / sizeof(s_latin[0]), c, &info);
+    }
+    return info;
+}
+
+uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut)
 {
     size_t at = end - 1;
     while (at > 0 && (text[at] & 0xC0) == 0x80)
@@ -92,355 +153,259 @@ static uint32_t Previous(const uint8_t* text, size_t end, size_t* startOut)
     return c;
 }
 
-static char Front(char vowel)
+// A request's case as a template row, or turkicCases for one no Turkic
+// language has.
+static size_t CaseRow(mlocGrammaticalCase grammaticalCase)
 {
-    return vowel == 'a'   ? 'e'
-           : vowel == 'i' ? 'I'
-           : vowel == 'o' ? 'O'
-           : vowel == 'u' ? 'U'
-                          : vowel;
+    switch (grammaticalCase)
+    {
+    case mloc_caseNominative:
+        return turkicNominative;
+    case mloc_caseGenitive:
+        return turkicGenitive;
+    case mloc_caseDative:
+        return turkicDative;
+    case mloc_caseAccusative:
+        return turkicAccusative;
+    case mloc_caseLocative:
+        return turkicLocative;
+    case mloc_caseAblative:
+        return turkicAblative;
+    case mloc_caseInstrumental:
+        return turkicInstrumental;
+    default:
+        return turkicCases;
+    }
 }
 
-bool mlocTurkicSound(const uint8_t* word, size_t length, bool inverse, TurkicSound* out)
+bool mlocTurkicRequestValid(const TurkicLanguage* language, const mlocInflection* r)
+{
+    size_t row = CaseRow(r->grammaticalCase);
+    return row < turkicCases && language->cases[row][turkicAfterStem] != nullptr &&
+           (!r->copula || language->copula != nullptr) && r->possessorPerson <= 3 &&
+           (r->possessorPerson != 0 || !r->possessorPlural);
+}
+
+// Whether a final y after a consonant is said as i (Harry, Kennedy): no
+// Turkish word ends so.
+static bool FinalYAsI(const TurkicLanguage* language, const uint8_t* word, size_t start, uint32_t c)
+{
+    if (!language->finalYAsI || (c != 'y' && c != 'Y') || start == 0)
+    {
+        return false;
+    }
+    size_t before = 0;
+    uint8_t info = mlocTurkicLetterInfo(language, mlocTurkicPrevious(word, start, &before));
+    return (info & turkicClassMask) != turkicVowel;
+}
+
+// Takes a vowel's harmony; front makes it front.
+static void Harmony(uint8_t info, bool front, TurkicSound* out)
+{
+    out->vowel = true;
+    out->back = (info & turkicBack) != 0 && !front;
+    out->round = (info & turkicRound) != 0;
+}
+
+// The class a final soft sign leaves (apertium-kaz's reading of loans):
+// a vowel's after a voiceless consonant (повестьнің, повестьлер), a
+// liquid's after another (князьдің, князьмен).
+static uint8_t SoftClass(uint8_t before)
+{
+    return (before & turkicClassMask) == turkicVoiceless ? turkicVowel : turkicLiquid;
+}
+
+bool mlocTurkicSound(const TurkicLanguage* language, const uint8_t* word, size_t length,
+                     bool inverse, TurkicSound* out)
 {
     *out = (TurkicSound){0};
     bool first = true;
-    bool previousConsonant = false;
+    bool soft = false;
+    bool front = inverse;
+    uint8_t weak = 0;
     size_t end = length;
     while (end > 0)
     {
         size_t start = 0;
-        uint32_t c = Previous(word, end, &start);
-        char vowel = 0;
-        bool voiceless = false;
-        Letter(c, &vowel, &voiceless);
+        uint32_t c = mlocTurkicPrevious(word, end, &start);
+        uint8_t info = mlocTurkicLetterInfo(language, c);
+        end = start;
+        if ((info & turkicSign) != 0)
+        {
+            // A sign after the last vowel: ь makes the suffixes front.
+            bool fronts = (info & turkicFront) != 0 && weak == 0;
+            front = front || fronts;
+            soft = soft || (first && fronts);
+            continue;
+        }
         if (first)
         {
-            out->finalVowel = vowel != 0;
-            out->voiceless = voiceless;
             first = false;
-            // A final y after a consonant is said as i (Harry, Kennedy):
-            // no Turkish word ends so.
-            if ((c == 'y' || c == 'Y') && start > 0)
+            out->final = soft ? SoftClass(info) : (uint8_t)(info & turkicClassMask);
+            // A final consonant that makes the suffixes front (Kazakh к).
+            front = front || ((info & turkicFront) != 0 && !soft);
+            if (FinalYAsI(language, word, start, c))
             {
-                size_t before = 0;
-                char v = 0;
-                bool unvoiced = false;
-                Letter(Previous(word, start, &before), &v, &unvoiced);
-                previousConsonant = v == 0;
-                if (previousConsonant)
-                {
-                    out->vowel = 'I';
-                    out->finalVowel = true;
-                    return true;
-                }
+                out->final = turkicVowel;
+                Harmony(turkicVowel, false, out);
+                return true;
             }
         }
-        if (vowel != 0)
+        if ((info & turkicWeak) != 0)
         {
-            out->vowel = inverse ? Front(vowel) : vowel;
+            weak = weak != 0 ? weak : info;
+        }
+        else if ((info & turkicClassMask) == turkicVowel)
+        {
+            Harmony(info, front, out);
             return true;
         }
-        end = start;
+    }
+    if (weak != 0)
+    {
+        Harmony(weak, front, out);
+        return true;
     }
     return false;
 }
 
-const char* mlocTurkicLetterName(uint32_t c)
+// Appends a code point and takes its sound.
+static void Put(const TurkicLanguage* language, uint32_t c, TurkicSound* sound, TurkicSuffixes* out)
 {
-    static const char* const s_latin[26] = {"a",
-                                            "be",
-                                            "ce",
-                                            "de",
-                                            "e",
-                                            "fe",
-                                            "ge",
-                                            "he",
-                                            "\xC4\xB1",
-                                            "je",
-                                            "ke",
-                                            "le",
-                                            "me",
-                                            "ne",
-                                            "o",
-                                            "pe",
-                                            "k\xC3\xBB",
-                                            "re",
-                                            "se",
-                                            "te",
-                                            "u",
-                                            "ve",
-                                            "\xC3\xA7ift ve",
-                                            "iks",
-                                            "ye",
-                                            "ze"};
-    if (c >= 'A' && c <= 'Z')
+    uint8_t* at = (uint8_t*)out->text + out->length;
+    size_t n = c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+    if (n == 1)
     {
-        return s_latin[c - 'A'];
+        at[0] = (uint8_t)c;
     }
-    if (c >= 'a' && c <= 'z')
+    else if (n == 2)
     {
-        return c == 'i' ? "i" : s_latin[c - 'a'];
+        at[0] = (uint8_t)(0xC0 | c >> 6);
+        at[1] = (uint8_t)(0x80 | (c & 0x3F));
     }
-    switch (c)
+    else
     {
-    case 0xC7:
-    case 0xE7:
-        return "\xC3\xA7"
-               "e";
-    case 0x11E:
-    case 0x11F:
-        return "yumu\xC5\x9F"
-               "ak ge";
-    case 0x130:
-        return "i";
-    case 0x131:
-        return "\xC4\xB1";
-    case 0xD6:
-    case 0xF6:
-        return "\xC3\xB6";
-    case 0x15E:
-    case 0x15F:
-        return "\xC5\x9F"
-               "e";
-    case 0xDC:
-    case 0xFC:
-        return "\xC3\xBC";
-    default:
-        return nullptr;
+        at[0] = (uint8_t)(0xE0 | c >> 12);
+        at[1] = (uint8_t)(0x80 | (c >> 6 & 0x3F));
+        at[2] = (uint8_t)(0x80 | (c & 0x3F));
+    }
+    out->length = (uint8_t)(out->length + n);
+    if (c == ' ')
+    {
+        return;
+    }
+    uint8_t info = mlocTurkicLetterInfo(language, c);
+    sound->final = (uint8_t)(info & turkicClassMask);
+    if (sound->final == turkicVowel)
+    {
+        Harmony(info, false, sound);
     }
 }
 
-bool mlocTurkicRequestValid(const mlocInflection* r)
+// The onset a symbol stands for, or null.
+static const TurkicOnset* OnsetOf(const TurkicLanguage* language, uint32_t symbol)
 {
-    switch (r->grammaticalCase)
+    for (size_t i = 0; i < language->onsetCount; i++)
     {
-    case mloc_caseNominative:
-    case mloc_caseGenitive:
-    case mloc_caseDative:
-    case mloc_caseAccusative:
-    case mloc_caseInstrumental:
-    case mloc_caseAblative:
-    case mloc_caseLocative:
-        break;
-    default:
+        if ((uint32_t)language->onsets[i].symbol == symbol)
+        {
+            return &language->onsets[i];
+        }
+    }
+    return nullptr;
+}
+
+// Decodes the code point at text[*at] (UTF-8, valid) and moves past it.
+static uint32_t Next(const char* text, size_t* at)
+{
+    const uint8_t* s = (const uint8_t*)text + *at;
+    size_t extra = s[0] >= 0xF0 ? 3 : s[0] >= 0xE0 ? 2 : s[0] >= 0xC0 ? 1 : 0;
+    uint32_t c = s[0] & (extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F);
+    for (size_t i = 1; i <= extra; i++)
+    {
+        c = c << 6 | (s[i] & 0x3F);
+    }
+    *at += extra + 1;
+    return c;
+}
+
+// Appends one template symbol or letter.
+static void AppendOne(const TurkicLanguage* language, uint32_t c, TurkicSound* sound,
+                      TurkicSuffixes* out)
+{
+    size_t front = sound->back ? 0 : 1;
+    size_t round = sound->round ? 1 : 0;
+    const TurkicOnset* onset = OnsetOf(language, c);
+    if (c == 'A')
+    {
+        Put(language, language->a[front][round], sound, out);
+    }
+    else if (c == 'I' || (c == 'V' && sound->final != turkicVowel))
+    {
+        Put(language, language->i[front][round], sound, out);
+    }
+    else if (onset != nullptr)
+    {
+        uint16_t form = onset->forms[sound->final][front];
+        if (form != 0)
+        {
+            Put(language, form, sound, out);
+        }
+    }
+    else if (c != 'V')
+    {
+        Put(language, c, sound, out);
+    }
+}
+
+// Appends a template.
+static void Append(const TurkicLanguage* language, const char* morpheme, TurkicSound* sound,
+                   TurkicSuffixes* out)
+{
+    for (size_t at = 0; morpheme[at] != '\0';)
+    {
+        AppendOne(language, Next(morpheme, &at), sound, out);
+    }
+}
+
+// Whether the suffixes before the particle begin with a vowel.
+static bool BeginsWithVowel(const TurkicLanguage* language, const TurkicSuffixes* s)
+{
+    if (s->particle == 0)
+    {
         return false;
     }
-    return r->possessorPerson <= 3 && (r->possessorPerson != 0 || !r->possessorPlural);
+    size_t at = 0;
+    uint32_t c = Next(s->text, &at);
+    return (mlocTurkicLetterInfo(language, c) & turkicClassMask) == turkicVowel;
 }
 
-// Appends bytes that end in a vowel.
-static void PutVowel(const char* bytes, TurkicSound* sound, TurkicSuffixes* out)
-{
-    size_t n = strlen(bytes);
-    memcpy(out->text + out->length, bytes, n);
-    out->length = (uint8_t)(out->length + n);
-    sound->finalVowel = true;
-    sound->voiceless = false;
-}
-
-// Appends the two-way vowel: a after a back vowel, e after a front one.
-static void PutA(TurkicSound* sound, TurkicSuffixes* out)
-{
-    sound->vowel = IsBack(sound->vowel) ? 'a' : 'e';
-    PutVowel(sound->vowel == 'a' ? "a" : "e", sound, out);
-}
-
-// Appends the four-way vowel: ı, i, u or ü by backness and rounding.
-static void PutI(TurkicSound* sound, TurkicSuffixes* out)
-{
-    bool back = IsBack(sound->vowel);
-    bool round = IsRounded(sound->vowel);
-    sound->vowel = back ? (round ? 'u' : 'i') : (round ? 'U' : 'I');
-    PutVowel(back ? (round ? "u" : "\xC4\xB1") : (round ? "\xC3\xBC" : "i"), sound, out);
-}
-
-// Appends a consonant (D as d or t) or a space.
-static void PutConsonant(char c, TurkicSound* sound, TurkicSuffixes* out)
-{
-    char letter = c == 'D' ? (sound->voiceless ? 't' : 'd') : c;
-    out->text[out->length++] = letter;
-    if (letter != ' ')
-    {
-        sound->finalVowel = false;
-        sound->voiceless = strchr("fstkhp", letter) != nullptr;
-    }
-}
-
-// Appends a suffix written in archiphonemes: A for a or e, I for ı, i,
-// u or ü, D for d or t; Y, N and S for y, n and s after a vowel only, V
-// for the four-way vowel after a consonant only; a space; and the
-// consonants as they are.
-static void Append(const char* morpheme, TurkicSound* sound, TurkicSuffixes* out)
-{
-    for (const char* m = morpheme; *m != '\0'; m++)
-    {
-        char c = *m;
-        bool buffer = c == 'Y' || c == 'N' || c == 'S';
-        if (c == 'A')
-        {
-            PutA(sound, out);
-        }
-        else if (c == 'I' || (c == 'V' && !sound->finalVowel))
-        {
-            PutI(sound, out);
-        }
-        else if (buffer && sound->finalVowel)
-        {
-            PutConsonant(c == 'Y' ? 'y' : c == 'N' ? 'n' : 's', sound, out);
-        }
-        else if (c != 'V' && !buffer)
-        {
-            PutConsonant(c, sound, out);
-        }
-    }
-}
-
-// A case's suffix, after a third person's possessive (pronominal n) or
-// not.
-static const char* CaseSuffix(mlocGrammaticalCase grammaticalCase, bool afterThird)
-{
-    switch (grammaticalCase)
-    {
-    case mloc_caseGenitive:
-        return afterThird ? "nIn" : "NIn";
-    case mloc_caseDative:
-        return afterThird ? "nA" : "YA";
-    case mloc_caseAccusative:
-        return afterThird ? "nI" : "YI";
-    case mloc_caseLocative:
-        return afterThird ? "nDA" : "DA";
-    case mloc_caseAblative:
-        return afterThird ? "nDAn" : "DAn";
-    case mloc_caseInstrumental:
-        return "YlA";
-    default:
-        return "";
-    }
-}
-
-void mlocTurkicSuffixes(TurkicSound sound, const mlocInflection* r, bool endsThird,
-                        TurkicSuffixes* out)
+void mlocTurkicSuffixes(const TurkicLanguage* language, TurkicSound sound, const mlocInflection* r,
+                        bool endsThird, TurkicSuffixes* out)
 {
     *out = (TurkicSuffixes){0};
     bool third = r->possessorPerson == 3 || endsThird;
-    // A third person plural's possessive after a plural is written once
-    // (evleri: their houses).
-    if (r->plural && !(third && r->possessorPlural))
+    if (r->plural && !(language->pluralInThirdPlural && third && r->possessorPlural))
     {
-        Append("lAr", &sound, out);
+        Append(language, language->plural, &sound, out);
     }
     if (r->possessorPerson != 0)
     {
-        static const char* const s_possessives[2][3] = {{"Vm", "Vn", "SI"},
-                                                        {"VmIz", "VnIz", "lArI"}};
-        Append(s_possessives[r->possessorPlural ? 1 : 0][r->possessorPerson - 1], &sound, out);
+        Append(language, language->possessives[r->possessorPlural ? 1 : 0][r->possessorPerson - 1],
+               &sound, out);
     }
-    Append(CaseSuffix(r->grammaticalCase, third), &sound, out);
+    size_t variant = third                     ? turkicAfterThird
+                     : r->possessorPerson != 0 ? turkicAfterPossessive
+                                               : turkicAfterStem;
+    Append(language, language->cases[CaseRow(r->grammaticalCase)][variant], &sound, out);
     if (r->copula)
     {
-        Append("DIr", &sound, out);
+        Append(language, language->copula, &sound, out);
     }
     out->particle = out->length;
     if (r->question)
     {
-        Append(" mI", &sound, out);
+        Append(language, language->question, &sound, out);
     }
-    // Every suffix but the plural's (l), a consonant possessive's after a
-    // vowel (s, m, n) and the case's d, t or y after a vowel begins with a
-    // vowel when the stem ends in a consonant.
-    out->vowelFirst =
-        out->particle > 0 && out->text[0] != 'l' && out->text[0] != 'd' && out->text[0] != 't';
-}
-
-// The softened form of a final stop before a vowel: b for p, c for ç, d
-// for t, ğ for k and g, g for k after n.
-static const char* Softened(uint32_t last, uint32_t before)
-{
-    switch (last)
-    {
-    case 'p':
-        return "b";
-    case 0xE7:
-        return "c";
-    case 't':
-        return "d";
-    case 'k':
-        return before == 'n' ? "g" : "\xC4\x9F";
-    case 'g':
-        return "\xC4\x9F";
-    default:
-        return nullptr;
-    }
-}
-
-// Appends bytes to a stem's tail, when they fit.
-static void Tail(TurkicStem* stem, const char* bytes, size_t n)
-{
-    if (stem->tailLength + n <= sizeof(stem->tail))
-    {
-        memcpy(stem->tail + stem->tailLength, bytes, n);
-        stem->tailLength = (uint8_t)(stem->tailLength + n);
-    }
-}
-
-bool mlocTurkicStem(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out)
-{
-    *out = (TurkicStem){.kept = length};
-    int vowels = 0;
-    size_t lastVowel = length;
-    size_t lastVowelEnd = length;
-    for (size_t end = length; end > 0;)
-    {
-        size_t start = 0;
-        char vowel = 0;
-        bool voiceless = false;
-        Letter(Previous(word, end, &start), &vowel, &voiceless);
-        if (vowel != 0 && vowels++ == 0)
-        {
-            lastVowel = start;
-            lastVowelEnd = end;
-        }
-        end = start;
-    }
-    if (length == 0 || vowels == 0)
-    {
-        return false;
-    }
-    size_t finalStart = 0;
-    uint32_t last = Previous(word, length, &finalStart);
-    size_t beforeStart = 0;
-    uint32_t before = finalStart > 0 ? Previous(word, finalStart, &beforeStart) : 0;
-    const char* softened = Softened(last, before);
-    // Zemberek's rule, which the marks are written against: a final ç, k,
-    // p or t softens in a word of two syllables or more without inverse
-    // harmony, a final nk or og in any word.
-    bool stop = last == 'p' || last == 0xE7 || last == 't' || last == 'k';
-    bool byRule = (stop && vowels >= 2 && (marks & turkicInverse) == 0) ||
-                  (last == 'k' && before == 'n') || (last == 'g' && before == 'o');
-    bool softens =
-        softened != nullptr && (byRule ? (marks & turkicKeeps) == 0 : (marks & turkicSoftens) != 0);
-    const char* finalBytes = softens ? softened : (const char*)word + finalStart;
-    size_t finalLength = softens ? strlen(softened) : length - finalStart;
-    bool drops = (marks & turkicDropsVowel) != 0 && vowels >= 2 && lastVowelEnd < length;
-    if (!softens && !drops && (marks & turkicDoubles) == 0)
-    {
-        return false;
-    }
-    if (drops)
-    {
-        // The consonants after the dropped vowel, the final one softened.
-        out->kept = lastVowel;
-        Tail(out, (const char*)word + lastVowelEnd, finalStart - lastVowelEnd);
-    }
-    else
-    {
-        out->kept = finalStart;
-    }
-    Tail(out, finalBytes, finalLength);
-    if ((marks & turkicDoubles) != 0)
-    {
-        Tail(out, finalBytes, finalLength);
-    }
-    return true;
+    out->vowelFirst = BeginsWithVowel(language, out);
 }

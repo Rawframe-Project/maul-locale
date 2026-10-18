@@ -51,3 +51,4 @@ are listed in [README.md](README.md).
 | [mloc-0044](mloc-0044-durations.md) | Durations: ECMA-402's algorithm on Temporal's fields, exact | Accepted |
 | [mloc-0045](mloc-0045-messages.md) | Messages: MessageFormat 2, compiled once, bound once, formatted without allocation | Accepted |
 | [mloc-0046](mloc-0046-grammar.md) | Grammar: suffixes by the spoken end, an inflector per locale | Accepted |
+| [mloc-0047](mloc-0047-turkic-languages.md) | Grammar: the other Turkic languages by tables of one engine | Accepted |

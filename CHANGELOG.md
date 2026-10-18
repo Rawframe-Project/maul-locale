@@ -199,6 +199,11 @@ format.
 - `mloc:duration` over seconds splits them by integer division, and
   binary64 and 128-bit quotients of 64-bit integers convert natively:
   the duration message costs 40% less (mloc-0045).
+- Kazakh suffixes on text and numbers: its harmony, the first consonant
+  of a suffix by the last sound, the possessives and the cases after
+  them, a stop voiced before a vowel, a hyphen after abbreviations,
+  digits and Latin words; the Turkic engine shared by Turkish and
+  Kazakh, each a table (mloc-0047).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

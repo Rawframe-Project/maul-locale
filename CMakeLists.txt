@@ -87,7 +87,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/decimal_round.c
     src/decimal_shortest.c
     src/grammar.c
+    src/grammar_kk.c
     src/grammar_lexicon.c
+    src/grammar_tr.c
     src/grammar_turkic.c
     src/list.c
     src/list_data.c
@@ -255,19 +257,21 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                    MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}"
                                    MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
     endif()
-    maul_add_test(grammar)
-    # It reads the spell-out rules, which numbers are spoken by.
-    if(TARGET test_grammar)
-        set(MLOC_GRAMMAR_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
-        if(EMSCRIPTEN)
-            target_link_options(test_grammar PRIVATE "SHELL:--embed-file ${MLOC_GRAMMAR_SPELLOUT}@/spellout.mloc")
-            set(MLOC_GRAMMAR_SPELLOUT /spellout.mloc)
+    # They read the spell-out rules, which numbers are spoken by.
+    foreach(test grammar grammar_turkic)
+        maul_add_test(${test})
+        if(TARGET test_${test})
+            set(MLOC_GRAMMAR_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+            if(EMSCRIPTEN)
+                target_link_options(test_${test} PRIVATE "SHELL:--embed-file ${MLOC_GRAMMAR_SPELLOUT}@/spellout.mloc")
+                set(MLOC_GRAMMAR_SPELLOUT /spellout.mloc)
+            endif()
+            if(WIN32)
+                target_compile_definitions(test_${test} PRIVATE _CRT_SECURE_NO_WARNINGS)
+            endif()
+            target_compile_definitions(test_${test} PRIVATE MLOC_SPELLOUT_FILE="${MLOC_GRAMMAR_SPELLOUT}")
         endif()
-        if(WIN32)
-            target_compile_definitions(test_grammar PRIVATE _CRT_SECURE_NO_WARNINGS)
-        endif()
-        target_compile_definitions(test_grammar PRIVATE MLOC_SPELLOUT_FILE="${MLOC_GRAMMAR_SPELLOUT}")
-    endif()
+    endforeach()
     # It reads the dates for a date's parts.
     if(TARGET test_message_parts)
         set(MLOC_PARTS_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
