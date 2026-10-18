@@ -87,6 +87,11 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
             }
         }
         break;
+    case mloc_messageOperandDuration:
+        snprintf(shown, sizeof shown, "P%dh%dm", (int)operand->duration->hours,
+                 (int)operand->duration->minutes);
+        Add(e, shown, strlen(shown));
+        break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
         Add(e, shown, strlen(shown));
@@ -409,6 +414,8 @@ static void TestCalls(void)
                   ".local $o = {|2006-01-02T15:04:06-05:00| :time} {{{$z :x:echo}|{$o :x:echo}}}",
                   a, 4, "B732313:10z1136214246America/New_York|B732313:15z1136232246-05:00", NULL),
           "a zoned date value is passed with its instant and zone");
+    CHECK(Formats(".local $d = {|PT2H30M| :mloc:duration} {{{$d :x:echo}}}", a, 4, "P2h30m", NULL),
+          "a duration value is passed as its fields");
     mlocMessageArgument named[] = {
         {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
         {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},

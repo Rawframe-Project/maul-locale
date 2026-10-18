@@ -72,9 +72,6 @@ static inline const uint8_t* mlocResolutionPool(const Resolution* r, uint32_t of
     return r->h.view.pool + offset;
 }
 
-// A value as a function receives it; storage holds a resolved value.
-void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage);
-
 // Whether a parameter is a u: option, hidden from functions.
 bool mlocUnicodeOption(const Resolution* r, uint32_t p);
 

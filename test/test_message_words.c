@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The mloc: functions over numbers (maul-locale/message.h, record
-// mloc-0045): mloc:spellout by rule set or numbering system, MF1's
-// spellout and ordinal texts as ICU4C 79 writes them, and mloc:relative
-// by unit, style and numeric with number options; their refusals, their
-// operands passed on, their parts, and that neither selects.
+// The mloc: functions over numbers and durations (maul-locale/message.h,
+// record mloc-0045): mloc:spellout by rule set or numbering system,
+// MF1's spellout and ordinal texts as ICU4C 79 writes them;
+// mloc:relative by unit, style and numeric with number options;
+// mloc:duration over durations, ISO 8601 literals and seconds with
+// ECMA-402's options; their refusals, their operands passed on, their
+// parts and preparation, and that none selects.
 
 #include "message_prepare.h"
 #include "test_harness.h"
@@ -145,6 +147,79 @@ static void TestRelative(void)
           "no unit is a bad operand; a bad value a bad option; signDisplay is not its option");
 }
 
+static void TestDuration(void)
+{
+    // MF1's {0,duration} writes 3723 as "1:02:03" in en alone.
+    CHECK(Formats("en",
+                  "{3723 :mloc:duration}|{3723 :mloc:duration style=digital}|{59.5 "
+                  ":mloc:duration}|{-5 :mloc:duration}|{90061 :mloc:duration style=digital}",
+                  NULL, 0, "1 hr, 2 min, 3 sec|1:02:03|59 sec, 500 ms|-5 sec|25:01:01", NULL),
+          "seconds balanced up to hours, as MF1's duration takes them");
+    CHECK(Formats("en",
+                  "{|PT1H30M| :mloc:duration style=long}|{|P2DT3H| :mloc:duration "
+                  "style=narrow}|{|PT90M| :mloc:duration}|{|PT1H| :mloc:duration "
+                  "minutesDisplay=always}",
+                  NULL, 0, "1 hour, 30 minutes|2d 3h|90 min|1 hr, 0 min", NULL),
+          "ISO 8601 literals, unbalanced, with styles and displays");
+    CHECK(Formats("en",
+                  "{|PT1H2M3.456S| :mloc:duration hours=numeric}|{|PT59.5S| :mloc:duration "
+                  "style=digital fractionalDigits=2}|{|PT2H| :mloc:duration hours=2-digit}",
+                  NULL, 0, "1:02:03.456|0:00:59.50|02:00:00", NULL),
+          "numeric fields and fractional digits");
+    mlocDurationValues values = {0, 0, 0, 2, 3, 0, 0, 0, 0, 0};
+    mlocMessageArgument d = {"d", 1, {mloc_messageValueDuration, 0, {.duration = &values}}};
+    CHECK(Formats("en", "{$d :mloc:duration}|{$d}|{$d :string}", &d, 1,
+                  "2 days, 3 hr|P2DT3H|P2DT3H", NULL),
+          "a duration argument, and its ISO 8601 text bare or as a string");
+    mlocMessageArgument s = {"s", 1, {mloc_messageValueString, 0, {.string = {"long", 4}}}};
+    CHECK(
+        Formats("en", "{|PT1H| :mloc:duration style=wide}", NULL, 0, "1 hr", s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration years=numeric}", NULL, 0, "1 hr", s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration milliseconds=2-digit}", NULL, 0, "1 hr",
+                    s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration style=$s}", &s, 1, "1 hr", s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration fractionalDigits=10}", NULL, 0, "1 hr",
+                    s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration hoursDisplay=never}", NULL, 0, "1 hr",
+                    s_badOption) &&
+            Formats("en", "{|PT1H| :mloc:duration hours=numeric minutes=long}", NULL, 0, "{|PT1H|}",
+                    s_unsupported),
+        "bad values and variables are bad options; options ECMA-402 refuses together, an "
+        "unsupported operation");
+    mlocDurationValues mixed = {0, 0, 0, 1, -1, 0, 0, 0, 0, 0};
+    mlocMessageArgument bad = {"d", 1, {mloc_messageValueDuration, 0, {.duration = &mixed}}};
+    mlocMessageArgument none = {"d", 1, {mloc_messageValueDuration, 0, {.duration = NULL}}};
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    static mlocMessageFormatter formatter;
+    mlocLocale en;
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+              mlocCompileMessage("{$d}", 4, s_compiled, sizeof s_compiled, &size, &error).status ==
+                  mloc_success &&
+              mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
+                  mloc_success &&
+              mlocFormatMessage(s_bound, &bad, 1, &output, NULL) == mloc_errorInvalid &&
+              mlocFormatMessage(s_bound, &none, 1, &output, NULL) == mloc_errorInvalid,
+          "a duration of two signs or none is refused");
+    CHECK(Formats("en", "{horse :mloc:duration}", NULL, 0, "{|horse|}", s_badOperand) &&
+              Formats("en", ".local $n = {90 :number} {{{$n :mloc:duration}}}", NULL, 0,
+                      "1 min, 30 sec", NULL) &&
+              Formats("en",
+                      ".local $d = {|PT90M| :mloc:duration style=long} {{{$d :mloc:duration}|{$d "
+                      ":number}}}",
+                      NULL, 0, "90 minutes|{$d}", s_badOperand),
+          "no duration is a bad operand; a number value's seconds; a duration value's "
+          "options pass on, and it is no number");
+    static const mlocMessageFaultKind selector[] = {mloc_messageFaultBadSelector, 0};
+    CHECK(Formats("en", ".local $d = {|PT1H| :mloc:duration} .match $d * {{other}}", NULL, 0,
+                  "other", selector),
+          "a duration does not select");
+}
+
 static void TestOperands(void)
 {
     CHECK(Formats("en",
@@ -197,6 +272,7 @@ static bool PreparedAs(const char* message, const char* wanted)
     {
         const PreparedNumber* p = mlocPreparedFor(&r, e);
         char got = p == NULL                     ? '-'
+                   : wanted[e] == 'D'            ? 'D'
                    : p->kind == preparedSpellout ? 's'
                    : p->kind == preparedRelative ? 'r'
                    : p->kind == preparedNumber   ? 'n'
@@ -214,7 +290,10 @@ static void TestPrepared(void)
 {
     CHECK(PreparedAs("{$n :mloc:spellout} {$n :mloc:relative unit=day} {$n :mloc:relative "
                      "unit=day maximumFractionDigits=$d} {$n :mloc:spellout rules=xyz-abc}",
-                     "sr--"),
+                     "sr--") &&
+              PreparedAs("{$d :mloc:duration style=long} {$d :mloc:duration hours=numeric "
+                         "minutes=long}",
+                         "D-"),
           "both are prepared, unless an option comes from an argument or the formatter "
           "cannot be made");
     mlocMessageArgument a[] = {
@@ -273,7 +352,7 @@ static void TestParts(void)
     // a literal, the integer and a literal.
     uint32_t wanted[] = {0x81, 0x80, 0x181, 13, 0, 13};
     bool good = parts.count == 6;
-    for (size_t i = 0; good && i < 6; i++)
+    for (size_t i = 0; good && i < sizeof wanted / sizeof wanted[0]; i++)
     {
         good = parts.kinds[i] == wanted[i];
     }
@@ -299,18 +378,21 @@ static bool Open(const char* path, uint8_t* buffer, size_t capacity, mlocData* o
 
 int main(void)
 {
-    static mlocData sources[3];
+    static mlocData sources[4];
     alignas(8) static uint8_t spellout[8 << 20];
     alignas(8) static uint8_t relative[8 << 20];
+    alignas(8) static uint8_t units[8 << 20];
     mlocOpenBuiltinData(&sources[0]);
     if (!Open(MLOC_SPELLOUT_FILE, spellout, sizeof spellout, &sources[1]) ||
-        !Open(MLOC_RELATIVE_FILE, relative, sizeof relative, &sources[2]))
+        !Open(MLOC_RELATIVE_FILE, relative, sizeof relative, &sources[2]) ||
+        !Open(MLOC_UNITS_FILE, units, sizeof units, &sources[3]))
     {
         return 2;
     }
-    s_data = (mlocDataSet){sources, 3};
+    s_data = (mlocDataSet){sources, 4};
     TestSpellout();
     TestRelative();
+    TestDuration();
     TestOperands();
     TestParts();
     TestPrepared();

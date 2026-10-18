@@ -288,6 +288,23 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   that choose a formatter are literals only; both are prepared at bind,
   neither selects, number functions read their numbers, and they need
   `spellout.mloc` and `relative.mloc`.
+- **`mloc:duration`:** a duration value: a new argument kind
+  (`mloc_messageValueDuration`, `mlocDurationValues` by pointer, checked
+  by `mlocMakeDuration`), an ISO 8601 duration literal or string
+  (`mlocParseDuration`, as written: PT90M stays 90 minutes), a number of
+  seconds (MF1's operand) balanced up to hours with its fraction
+  truncated to nanoseconds, or another `mloc:duration` value, whose
+  options pass on. ECMA-402's DurationFormat options: `style` (short,
+  long, narrow, digital), each field's style (years to days long, short
+  or narrow; hours to seconds also numeric and 2-digit; the smaller ones
+  also numeric) and `...Display` (auto, always), `fractionalDigits` (0
+  to 9); literals only; options ECMA-402 refuses together are an
+  Unsupported Operation, found when the formatter is made. Prepared at
+  bind (4 KB of room where one stands), it does not select, number
+  functions refuse it, a bare duration is written as Temporal writes it
+  ("P2DT3H"), program functions receive `mloc_messageOperandDuration`
+  (`mlocMessageResolved` grew to 96 bytes to hold its fields), and it
+  needs `units.mloc`.
 - **Parts:** with the output's part function set, a format call that
   succeeds (or falls back) writes the text a second time to report its
   parts, storing nothing: text, placeholder, fallback, markup open,
@@ -343,9 +360,11 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   formats to its text with its errors in order, or, where the suite
   gives no text, with its errors (299, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
-  `test_message_words` checks the two `mloc:` number functions against
-  ICU4C 79's MF1 texts and the formatters', their refusals, operands
-  and parts; `test_message_parts` checks parts of every piece, isolation marks,
+  `test_message_words` checks the `mloc:` functions, the two over
+  numbers against ICU4C 79's MF1 texts and the formatters', durations
+  against the duration formatter's, their refusals, operands, parts and
+  preparation; `test_message_parts` checks parts of every piece,
+  isolation marks,
   numbers' and dates' parts at their place, a program function's,
   none on failure, faults counted once, tiling, and the accessors;
   `test_message_dates` checks the date functions' options, operands,

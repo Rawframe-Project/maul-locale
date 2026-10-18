@@ -117,7 +117,9 @@ extern "C"
     // outlive the call; a date, a time of day and a date-time are
     // floating values (no zone), an instant an exact time (its zone UTC),
     // and a zoned date-time an instant and a zone by pointer (to outlive
-    // the call), which the date and time functions format.
+    // the call), which the date and time functions format; a duration is
+    // its fields by pointer (to outlive the call), which mloc:duration
+    // formats.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -132,6 +134,7 @@ extern "C"
         mloc_messageValueDateTime = 9,
         mloc_messageValueInstant = 10,
         mloc_messageValueZonedDateTime = 11,
+        mloc_messageValueDuration = 12,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -171,6 +174,7 @@ extern "C"
                 mlocInstant instant;
                 const mlocTimeZone* zone;
             } zoned;
+            const mlocDurationValues* duration;
         } as;
     } mlocMessageValue;
 
@@ -220,14 +224,14 @@ extern "C"
         size_t count;
     } mlocMessageFaults;
 
-    // A function's resolved value: 64 bytes its resolve entry fills as it
+    // A function's resolved value: 96 bytes its resolve entry fills as it
     // likes, which its format and match entries read back. As an
     // accessor's storage it may hold a number value's decimal, a
-    // currency value's amount and code, or a date value's date-time and
-    // its instant and zone, instead.
+    // currency value's amount and code, a date value's date-time and its
+    // instant and zone, or a duration's fields, instead.
     typedef union mlocMessageResolved
     {
-        uint64_t opaque[8];
+        uint64_t opaque[12];
         mlocDecimal decimal;
         struct
         {
@@ -241,6 +245,7 @@ extern "C"
             mlocInstant instant;
             mlocTimeZone zone;
         } zoned;
+        mlocDurationValues duration;
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
@@ -278,6 +283,8 @@ extern "C"
         mloc_messageOperandDate = 8,
         mloc_messageOperandTime = 9,
         mloc_messageOperandDateTime = 10,
+        // A mloc:duration value as duration, its fields.
+        mloc_messageOperandDuration = 11,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -293,6 +300,7 @@ extern "C"
         const mlocDateTime* dateTime;
         const mlocInstant* instant;
         const mlocTimeZone* zone;
+        const mlocDurationValues* duration;
     } mlocMessageOperand;
 
     // A function call's options and locale, read with the accessors
@@ -467,7 +475,8 @@ extern "C"
     /// (year, month and day joined by hyphens, a time's fields by colons,
     /// a "T" between them, the fraction of a second as needed), an
     /// instant the same in UTC followed by "Z", a zoned date-time its
-    /// local date-time followed by its offset and its zone in brackets.
+    /// local date-time followed by its offset and its zone in brackets, a
+    /// duration as Temporal writes it ("P2DT3H").
     ///
     /// When output->part is set, the call reports the text's parts
     /// (mlocMessagePart) once it is written, on mloc_success or
@@ -487,9 +496,9 @@ extern "C"
     ///         mloc_errorInvalid for a null pointer (an argument's name,
     ///         string, decimal, amount or unit among them), a decimal that
     ///         is not one the library makes, a currency code that is not
-    ///         three ASCII letters, a date, time or instant the library
-    ///         does not make, a zone it did not make, an unknown kind, or
-    ///         a bound message the library did not make.
+    ///         three ASCII letters, a date, time, instant or duration the
+    ///         library does not make, a zone it did not make, an unknown
+    ///         kind, or a bound message the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

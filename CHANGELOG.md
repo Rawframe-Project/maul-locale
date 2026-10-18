@@ -181,6 +181,11 @@ format.
   specification's fields, lengths, precisions, `hour12` and `calendar`
   over the date formatters; new date, time and date-time argument kinds
   and operand kinds; date/time literals (mloc-0045).
+- Messages format durations with `mloc:duration`: a duration argument
+  kind, ISO 8601 literals, or seconds as MF1's duration, with ECMA-402's
+  DurationFormat options; program functions receive
+  `mloc_messageOperandDuration`, and `mlocMessageResolved` is 96 bytes
+  (mloc-0045).
 - Messages format with `mloc:spellout` (`rules`, `numberingSystem`;
   MF1's spellout and ordinal) and `mloc:relative` (`unit`, `style`,
   `numeric` and number options) (mloc-0045).

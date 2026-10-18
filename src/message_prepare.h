@@ -11,6 +11,7 @@
 #define MLOC_SRC_MESSAGE_PREPARE_H
 
 #include "message_date.h"
+#include "message_duration.h"
 #include "message_number.h"
 #include "message_resolve.h"
 #include "message_words.h"

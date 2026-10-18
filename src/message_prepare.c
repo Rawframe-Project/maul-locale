@@ -24,7 +24,7 @@ static void Store32(uint8_t* p, uint32_t value)
 // prepared.
 static bool Prepared(uint32_t slot)
 {
-    return slot >= messageFunctionNumber && slot <= messageFunctionRelative;
+    return slot >= messageFunctionNumber && slot <= messageFunctionDuration;
 }
 
 static bool DateSlot(uint32_t slot)
@@ -42,6 +42,10 @@ static size_t RoomOf(uint32_t slot)
     if (DateSlot(slot))
     {
         return mlocPreparedDateSize((DateFunction)(slot - messageFunctionDate));
+    }
+    if (slot == messageFunctionDuration)
+    {
+        return sizeof(PreparedDuration);
     }
     return mlocPreparedSize(slot == messageFunctionUnit       ? preparedUnit
                             : slot == messageFunctionSpellout ? preparedSpellout
@@ -82,10 +86,14 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     // An instant, which every date function takes with every option.
     static const mlocMessageValue dateTime = {
         mloc_messageValueInstant, 0, {.instant = {946684800, 0}}};
+    // A duration of nothing.
+    static const mlocDurationValues none = {0};
+    static const mlocMessageValue duration = {mloc_messageValueDuration, 0, {.duration = &none}};
     union
     {
         PreparedNumber number;
         PreparedDate date;
+        PreparedDuration duration;
     } prepared;
     for (uint32_t e = 0; e < h->view.count[messageExpressions]; e++)
     {
@@ -97,7 +105,9 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         }
         size_t room = RoomOf(slot);
         r.dynamic = false;
-        r.probeArgument = DateSlot(slot) ? &dateTime : &number;
+        r.probeArgument = DateSlot(slot)                    ? &dateTime
+                          : slot == messageFunctionDuration ? &duration
+                                                            : &number;
         Value v = mlocResolveExpression(&r, e);
         if (r.exhausted)
         {
@@ -115,6 +125,11 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
             mlocPrepareDate(&v.date, f->data, &f->locale, &prepared.date))
         {
             size = mlocPreparedDateSize((DateFunction)v.date.function);
+        }
+        if (!r.dynamic && v.kind == valueDuration && v.duration.origin == e &&
+            mlocPrepareDuration(&v.duration, f->data, &f->locale, &prepared.duration))
+        {
+            size = sizeof(PreparedDuration);
         }
         if (size > 0 && size <= room)
         {

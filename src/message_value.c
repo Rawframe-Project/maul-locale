@@ -72,6 +72,12 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
 bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
                         size_t* lengthOut)
 {
+    if (argument->kind == mloc_messageValueDuration)
+    {
+        // A duration in ISO 8601, as Temporal writes it.
+        *lengthOut = mlocWriteIsoDuration(argument->as.duration, digits, capacity);
+        return *lengthOut > 0;
+    }
     if (argument->kind >= mloc_messageValueDate && argument->kind <= mloc_messageValueZonedDateTime)
     {
         // A date, time, date-time, instant or zoned date-time in ISO 8601.

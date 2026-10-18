@@ -9,6 +9,7 @@
 #define MLOC_SRC_MESSAGE_VALUE_H
 
 #include "message_date.h"
+#include "message_duration.h"
 #include "message_number.h"
 
 #include "maul-locale/message.h"
@@ -32,6 +33,8 @@ typedef enum ValueKind
     valueNumber,
     // A date and time function's value.
     valueDate,
+    // A mloc:duration value.
+    valueDuration,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -60,6 +63,7 @@ typedef struct Value
         mlocMessageResolved resolved;
         NumberValue number;
         DateValue date;
+        DurationValue duration;
     };
 } Value;
 

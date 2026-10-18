@@ -4,6 +4,7 @@
 #include "message_resolve.h"
 
 #include "message_offset.h"
+#include "message_operand.h"
 
 #include <assert.h>
 #include <string.h>
@@ -18,7 +19,7 @@
 #endif
 
 static_assert(sizeof(CallState) <= sizeof(mlocMessageCall), "a call's state fits its value");
-static_assert(sizeof(mlocMessageResolved) == 64, "a resolved value is 64 bytes");
+static_assert(sizeof(mlocMessageResolved) == 96, "a resolved value is 96 bytes");
 
 static uint32_t Field(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
 {
@@ -195,87 +196,6 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
     Value v;
     VariableInto(r, variable, at, within, &v);
     return v;
-}
-
-// A date value as a function receives it: a zoned one in the timeZone
-// option's zone, else its operand's.
-static void DateOperandOf(const DateValue* d, mlocMessageOperand* out, mlocMessageResolved* storage)
-{
-    uint8_t has = d->has & (dateHasDate | dateHasTime);
-    out->kind = has == dateHasDate   ? mloc_messageOperandDate
-                : has == dateHasTime ? mloc_messageOperandTime
-                                     : mloc_messageOperandDateTime;
-    storage->zoned.dateTime = d->value;
-    out->dateTime = &storage->zoned.dateTime;
-    if ((d->has & dateHasZone) != 0)
-    {
-        storage->zoned.instant = d->instant;
-        storage->zoned.zone = d->zoneMode == dateZoneGiven ? d->timeZone : d->zone;
-        if (mlocGetDateTimeFor(&storage->zoned.zone, &d->instant, mloc_calendarIso8601,
-                               &storage->zoned.dateTime) != mloc_success)
-        {
-            storage->zoned.dateTime = d->value;
-        }
-        out->instant = &storage->zoned.instant;
-        out->zone = &storage->zoned.zone;
-    }
-}
-
-// A value as a function receives it; storage holds a resolved value.
-void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage)
-{
-    memset(out, 0, sizeof *out);
-    ValueKind kind = v->kind == valueString ? v->behind : v->kind;
-    if (kind == valueText)
-    {
-        out->kind = mloc_messageOperandText;
-        out->text = (const char*)v->text;
-        out->length = v->length;
-    }
-    else if (kind == valueArgument)
-    {
-        out->kind = mloc_messageOperandArgument;
-        out->argument = v->argument;
-    }
-    else if (kind == valueResolved)
-    {
-        *storage = v->resolved;
-        out->kind = mloc_messageOperandResolved;
-        out->function = v->function;
-        out->resolved = storage;
-    }
-    else if (kind == valueNumber && v->number.function == numberFunctionUnit)
-    {
-        storage->decimal = v->number.decimal;
-        out->kind = mloc_messageOperandUnit;
-        out->number = &storage->decimal;
-        out->text = v->number.unit;
-        out->length = v->number.unitLength;
-    }
-    else if (kind == valueNumber && v->number.function == numberFunctionCurrency)
-    {
-        storage->currency.amount = v->number.decimal;
-        memcpy(storage->currency.code, v->number.code, 3);
-        storage->currency.code[3] = 0;
-        out->kind = mloc_messageOperandCurrency;
-        out->number = &storage->currency.amount;
-        out->text = storage->currency.code;
-        out->length = 3;
-    }
-    else if (kind == valueNumber)
-    {
-        storage->decimal = v->number.decimal;
-        out->kind = mloc_messageOperandNumber;
-        out->number = &storage->decimal;
-    }
-    else if (kind == valueDate)
-    {
-        DateOperandOf(&v->date, out, storage);
-    }
-    else
-    {
-        out->kind = mloc_messageOperandFallback;
-    }
 }
 
 // Option resolution's report for a run of parameters: each option
@@ -686,6 +606,34 @@ MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, con
     return v;
 }
 
+// Passes each option an expression gives (its u: options aside) to set,
+// reporting the faults it returns; a variable's option that failed to
+// resolve was reported there and reaches set as null.
+static void SetOptions(Resolution* r, uint32_t expression, uint32_t at, OptionSetter set,
+                       void* context)
+{
+    uint32_t first = Field(r, messageExpressions, expression, 5);
+    uint32_t count = Field(r, messageExpressions, expression, 6);
+    for (uint32_t p = first; p < first + count; p++)
+    {
+        uint32_t kind = Field(r, messageParameters, p, 0);
+        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
+            mlocUnicodeOption(r, p))
+        {
+            continue;
+        }
+        bool failed = false;
+        NumberOption option = NumberOptionAt(r, p, at, &failed);
+        mlocMessageFaultKind fault =
+            set(context, Pool(r, Field(r, messageParameters, p, 1)),
+                Field(r, messageParameters, p, 2), failed ? NULL : &option);
+        if (fault != mloc_messageFaultNone)
+        {
+            mlocReportFault(r, fault, at);
+        }
+    }
+}
+
 // What a value its options have set still lacks: a unit's amount, a
 // relative time or a currency's amount without its unit or currency is
 // a bad operand; a currency whose digits the data lacks unsupported.
@@ -719,33 +667,8 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
         mlocReportFault(r, fault, at);
         return mlocExpressionFallback(r, expression);
     }
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
-    for (uint32_t p = first; p < first + count; p++)
-    {
-        uint32_t kind = Field(r, messageParameters, p, 0);
-        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
-            mlocUnicodeOption(r, p))
-        {
-            continue;
-        }
-        bool failed = false;
-        NumberOption option = NumberOptionAt(r, p, at, &failed);
-        const uint8_t* name = Pool(r, Field(r, messageParameters, p, 1));
-        size_t length = Field(r, messageParameters, p, 2);
-        if (failed)
-        {
-            // Reported in option resolution; a select still counts as
-            // set from a variable.
-            n.selectable = n.selectable && !(length == 6 && memcmp(name, "select", 6) == 0);
-            continue;
-        }
-        fault = mlocSetNumberOption(&n, function, name, length, &option);
-        if (fault != mloc_messageFaultNone)
-        {
-            mlocReportFault(r, fault, at);
-        }
-    }
+    NumberSetting setting = {&n, function};
+    SetOptions(r, expression, at, mlocSetNumberFrom, &setting);
     fault = Completed(r, &n);
     if (fault != mloc_messageFaultNone)
     {
@@ -764,34 +687,24 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
     return v;
 }
 
-// The date value a date function's operand gives: a date/time literal
-// (or a string argument that is one), a date, time or date-time
-// argument, or another date function's value, whose override options
-// pass on; false for anything else or parts the function cannot take.
-static bool DateOperand(const Resolution* r, DateFunction function, const Value* operand,
-                        DateValue* out)
+// A mloc:duration value: its operand's duration, the options passed on,
+// then the expression's own.
+MLOC_NOINLINE static Value ResolveDuration(Resolution* r, uint32_t expression, const Value* operand)
 {
-    if (operand == NULL)
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    DurationValue d;
+    if (!mlocDurationOperand(operand, &d))
     {
-        return false;
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
     }
-    ValueKind kind = operand->kind == valueString ? operand->behind : operand->kind;
-    if (kind == valueDate)
-    {
-        *out = mlocDateFromValue(function, &operand->date);
-        return mlocDateTakes(function, out->has);
-    }
-    const mlocDataSet* data = r->formatter.data;
-    DateMoment moment;
-    bool read =
-        (kind == valueText && mlocDateLiteral(operand->text, operand->length, data, &moment)) ||
-        (kind == valueArgument && mlocArgumentDateTime(operand->argument, data, &moment));
-    if (!read)
-    {
-        return false;
-    }
-    *out = mlocMakeDateValue(function, &moment);
-    return mlocDateTakes(function, moment.has);
+    SetOptions(r, expression, at, mlocSetDurationFrom, &d);
+    d.origin = expression;
+    Value v = Make(valueDuration);
+    v.duration = d;
+    // A duration reads in its locale's direction.
+    v.direction = r->formatter.direction;
+    return v;
 }
 
 // A :date, :time or :datetime value: its operand's date and time, the
@@ -802,33 +715,13 @@ MLOC_NOINLINE static Value ResolveDate(Resolution* r, uint32_t expression, DateF
 {
     uint32_t at = Field(r, messageExpressions, expression, 7);
     DateValue d;
-    if (!DateOperand(r, function, operand, &d))
+    if (!mlocDateOperand(r->formatter.data, function, operand, &d))
     {
         mlocReportFault(r, mloc_messageFaultBadOperand, at);
         return mlocExpressionFallback(r, expression);
     }
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
-    for (uint32_t p = first; p < first + count; p++)
-    {
-        uint32_t kind = Field(r, messageParameters, p, 0);
-        if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
-            mlocUnicodeOption(r, p))
-        {
-            continue;
-        }
-        bool failed = false;
-        NumberOption option = NumberOptionAt(r, p, at, &failed);
-        mlocMessageFaultKind fault =
-            failed
-                ? mloc_messageFaultNone
-                : mlocSetDateOption(&d, function, Pool(r, Field(r, messageParameters, p, 1)),
-                                    Field(r, messageParameters, p, 2), &option, r->formatter.data);
-        if (fault != mloc_messageFaultNone)
-        {
-            mlocReportFault(r, fault, at);
-        }
-    }
+    DateSetting setting = {&d, function, r->formatter.data};
+    SetOptions(r, expression, at, mlocSetDateFrom, &setting);
     if (mlocCheckDateZone(&d, r->formatter.hasZone) != mloc_messageFaultNone)
     {
         mlocReportFault(r, mloc_messageFaultBadOption, at);
@@ -885,6 +778,10 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
     else if (slot >= messageFunctionDate && slot <= messageFunctionDateTime)
     {
         v = ResolveDate(r, expression, (DateFunction)(slot - messageFunctionDate), given);
+    }
+    else if (slot == messageFunctionDuration)
+    {
+        v = ResolveDuration(r, expression, given);
     }
     else
     {

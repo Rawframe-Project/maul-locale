@@ -107,10 +107,12 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_call.c
     src/message_check.c
     src/message_date.c
+    src/message_duration.c
     src/message_emit.c
     src/message_format.c
     src/message_number.c
     src/message_offset.c
+    src/message_operand.c
     src/message_parse.c
     src/message_prepare.c
     src/message_read.c
@@ -228,22 +230,26 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(message_functions)
     maul_add_test(message_parts)
     maul_add_test(message_words WHITEBOX)
-    # It reads the spell-out rules and relative times; a white-box test, so
-    # not built with the shared library.
+    # It reads the spell-out rules, relative times and unit names; a
+    # white-box test, so not built with the shared library.
     if(TARGET test_message_words)
         set(MLOC_WORDS_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
         set(MLOC_WORDS_RELATIVE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
+        set(MLOC_WORDS_UNITS ${PROJECT_SOURCE_DIR}/src/generated/units.mloc)
         if(EMSCRIPTEN)
             target_link_options(test_message_words PRIVATE "SHELL:--embed-file ${MLOC_WORDS_SPELLOUT}@/spellout.mloc"
-                                "SHELL:--embed-file ${MLOC_WORDS_RELATIVE}@/relative.mloc")
+                                "SHELL:--embed-file ${MLOC_WORDS_RELATIVE}@/relative.mloc"
+                                "SHELL:--embed-file ${MLOC_WORDS_UNITS}@/units.mloc")
             set(MLOC_WORDS_SPELLOUT /spellout.mloc)
             set(MLOC_WORDS_RELATIVE /relative.mloc)
+            set(MLOC_WORDS_UNITS /units.mloc)
         endif()
         if(WIN32)
             target_compile_definitions(test_message_words PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_message_words PRIVATE MLOC_SPELLOUT_FILE="${MLOC_WORDS_SPELLOUT}"
-                                   MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}")
+                                   MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}"
+                                   MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
     endif()
     # It reads the dates for a date's parts.
     if(TARGET test_message_parts)

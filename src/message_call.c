@@ -4,6 +4,7 @@
 // The accessors a program function reads its call's options and locale
 // with (maul-locale/message.h, record mloc-0045); the u: options hidden.
 
+#include "message_operand.h"
 #include "message_resolve.h"
 
 #include <string.h>

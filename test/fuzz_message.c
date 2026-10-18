@@ -3,7 +3,7 @@
 //
 // libFuzzer target for messages (record mloc-0045). The input's first
 // byte chooses: even, the rest is MF2 text, which, when it compiles, is
-// bound and formatted (seven arguments, two functions), written back, compiles again, and writes
+// bound and formatted (eight arguments, two functions), written back, compiles again, and writes
 // back the same text (the canonical form is a fixed point) with the same counts; odd, the rest is
 // taken as a compiled message (its magic and versions made this library's), which
 // mlocWriteMessageText reads or refuses without reading past it, and whose text, when it reads it,
@@ -139,6 +139,9 @@ static const mlocDecimal s_amount = {.kind = mloc_decimalFinite,
                                      .fractionDigits = 1,
                                      .digits = {1, 2, 5}};
 
+// A duration of a day and a half hour.
+static const mlocDurationValues s_duration = {0, 0, 0, 1, 0, 30, 0, 0, 0, 0};
+
 // An offset zone of five hours west.
 static const mlocTimeZone s_zone = {NULL, 0, 0, -300};
 
@@ -150,6 +153,7 @@ static const mlocMessageArgument s_arguments[] = {
     {"d", 1, {mloc_messageValueDateTime, 0, {.dateTime = {{732313, 0, {0}}, {15, 4, 6, 0, 7}}}}},
     {"i", 1, {mloc_messageValueInstant, 0, {.instant = {1136214246, 7}}}},
     {"z", 1, {mloc_messageValueZonedDateTime, 0, {.zoned = {{1136214246, 0}, &s_zone}}}},
+    {"p", 1, {mloc_messageValueDuration, 0, {.duration = &s_duration}}},
 };
 
 static const mlocMessageFunction s_functions[] = {
@@ -185,9 +189,9 @@ static void CheckPart(void* context, uint32_t part, size_t start, size_t length)
     }
 }
 
-// Binds a message and formats it with seven arguments ($s a string, $n
+// Binds a message and formats it with eight arguments ($s a string, $n
 // a number, $c a currency amount, $u a unit amount, $d a date-time, $i
-// an instant, $z a zoned date-time): the other variables unresolved, the
+// an instant, $z a zoned date-time, $p a duration): the other variables unresolved, the
 // functions other than the default ones, f:x and f:y unknown, the text
 // measured, written, then written again with its parts, which must tile
 // it.
@@ -217,10 +221,10 @@ static void Format(const uint8_t* message, size_t size)
         return;
     }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, s_arguments, 7, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 8, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, s_arguments, 7, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 8, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);
@@ -228,7 +232,7 @@ static void Format(const uint8_t* message, size_t size)
     Tiling tiling = {0, 0, 0, true};
     char* again = malloc(measure.length + 1);
     mlocOutput parts = {again, measure.length, 0, CheckPart, &tiling};
-    Require(mlocFormatMessage(bound, s_arguments, 7, &parts, NULL) == result &&
+    Require(mlocFormatMessage(bound, s_arguments, 8, &parts, NULL) == result &&
             parts.length == output.length && memcmp(again, text, output.length) == 0 &&
             tiling.good && tiling.end == output.length);
     free(again);

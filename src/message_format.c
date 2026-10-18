@@ -175,6 +175,13 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         fault = mlocWriteDateValue(&v->date, prepared, formatter->data, &formatter->locale,
                                    formatter->hasZone ? &formatter->zone : NULL, &out);
     }
+    else if (v->kind == valueDuration)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        const PreparedDuration* prepared = mlocPreparedFor(&f->r, v->duration.origin);
+        fault = mlocWriteDurationValue(&v->duration, prepared, formatter->data, &formatter->locale,
+                                       &out);
+    }
     else if (v->kind == valueResolved)
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
@@ -210,7 +217,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
     {
         return PutArgument(f, v, expression);
     }
-    if (kind == valueResolved || kind == valueNumber || kind == valueDate)
+    if (kind == valueResolved || kind == valueNumber || kind == valueDate || kind == valueDuration)
     {
         return PutResolved(f, v, expression);
     }
@@ -539,6 +546,8 @@ static bool GoodValue(const mlocMessageValue* v)
         return mlocGoodInstant(&v->as.instant);
     case mloc_messageValueZonedDateTime:
         return mlocGoodZoned(v);
+    case mloc_messageValueDuration:
+        return mlocGoodDuration(v->as.duration);
     default:
         return false;
     }

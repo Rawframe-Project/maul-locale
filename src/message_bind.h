@@ -67,7 +67,8 @@ enum
     messageFunctionDateTime = 11,
     messageFunctionSpellout = 12,
     messageFunctionRelative = 13,
-    messageFunctionProgram = 14,
+    messageFunctionDuration = 14,
+    messageFunctionProgram = 15,
 };
 
 // Slots take 24 bits: the program's functions are fewer.
