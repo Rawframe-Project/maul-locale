@@ -321,6 +321,13 @@ static void TestKyrgyzWords(void)
               Gives(&s_ky, "УКМК", &nameDative, "УКМКга") &&
               Gives(&s_ky, "350", &ablative, "350дөн") && Gives(&s_ky, "5", &nameDative, "5ке"),
           "abbreviations and digits joined, as the press writes them");
+    mlocInflection letters = Case(mloc_caseDative);
+    letters.reading = mloc_readingLetters;
+    mlocOutput signOutput = {s_text, sizeof(s_text), 0, nullptr, nullptr};
+    CHECK(Gives(&s_ky, "я", &letters, "яга") && Gives(&s_ky, "ө", &letters, "өгө") &&
+              Gives(&s_ky, "ё", &letters, "ёго") && Gives(&s_ky, "к", &letters, "кга") &&
+              mlocInflectText(&s_ky, "Ь", strlen("Ь"), &letters, &signOutput) == mloc_errorInvalid,
+          "lowercase letters read by their names; a sign has none");
     mlocInflection question = Common(mloc_caseNominative);
     question.question = true;
     CHECK(Gives(&s_ky, "китеп", &question, "китеппи") &&

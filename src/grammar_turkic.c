@@ -153,6 +153,23 @@ uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut)
     return c;
 }
 
+uint32_t mlocTurkicCyrillicCapital(uint32_t c)
+{
+    if (c >= 0x430 && c <= 0x44F)
+    {
+        return c - 0x20;
+    }
+    if (c >= 0x450 && c <= 0x45F)
+    {
+        return c - 0x50;
+    }
+    if (c >= 0x490 && c <= 0x4FF && (c & 1) != 0)
+    {
+        return c - 1;
+    }
+    return c;
+}
+
 // A request's case as a template row, or turkicCases for one no Turkic
 // language has.
 static size_t CaseRow(mlocGrammaticalCase grammaticalCase)

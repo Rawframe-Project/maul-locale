@@ -203,6 +203,10 @@ uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint
 // first byte's index in startOut.
 uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut);
 
+// The capital of a Cyrillic letter (Russian's and the Turkic extensions'),
+// any other code point as it is.
+uint32_t mlocTurkicCyrillicCapital(uint32_t codePoint);
+
 // Whether a request is one the language has.
 bool mlocTurkicRequestValid(const TurkicLanguage* language, const mlocInflection* request);
 

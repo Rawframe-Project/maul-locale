@@ -201,27 +201,9 @@ static const TurkicOnset s_onsets[] = {
     {'S', {{0x441, 0x441}}},
 };
 
-// The capital of a Kazakh letter.
-static uint32_t Capital(uint32_t c)
-{
-    if (c >= 0x430 && c <= 0x44F)
-    {
-        return c - 0x20;
-    }
-    if (c == 0x451 || c == 0x456)
-    {
-        return c - 0x50;
-    }
-    if (c >= 0x490 && c <= 0x4FF && (c & 1) != 0)
-    {
-        return c - 1;
-    }
-    return c;
-}
-
 static const char* KazakhLetterName(uint32_t c)
 {
-    uint32_t capital = Capital(c);
+    uint32_t capital = mlocTurkicCyrillicCapital(c);
     for (size_t i = 0; i < sizeof(s_names) / sizeof(s_names[0]); i++)
     {
         if (s_names[i].capital == capital)
