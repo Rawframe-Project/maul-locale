@@ -7,10 +7,6 @@
 // writes them; the apostrophe, the readings and hints, the parts and the
 // refusals.
 
-#ifdef _WIN32
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "test_harness.h"
 
 #include "maul-locale/grammar.h"
