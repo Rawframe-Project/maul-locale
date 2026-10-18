@@ -138,6 +138,10 @@ static void TestNames(void)
               Gives("Lappi", &into, "Lappiin") && Gives("Sirkka", &genitive, "Sirkan") &&
               Gives("Öljymäki", &genitive, "Öljymäen"),
           "names by a long vowel, -ia, -a, a diphthong's end, -i; grades; a capital Ö");
+    mlocInflection many = Case(mloc_casePartitive);
+    many.plural = true;
+    CHECK(Gives("Nokia", &many, "Nokioita") && Gives("Jaana", &many, "Jaanoja"),
+          "the plural of -ia and of -a names");
     mlocInflection hinted = Case(mloc_caseInessive);
     hinted.hint = "bordoo";
     hinted.hintLength = strlen(hinted.hint);
@@ -160,6 +164,10 @@ static void TestPossessives(void)
     withTheirs.possessorPerson = 3;
     CHECK(Gives("vaimo", &with, "vaimoineni") && Gives("vaimo", &withTheirs, "vaimoineen"),
           "the comitative's possessives");
+    mlocInflection becoming = Common(mloc_caseTranslative);
+    becoming.possessorPerson = 1;
+    CHECK(Gives("talo", &becoming, "talokseni"),
+          "the translative's -ksi as -kse before a possessive");
     CHECK(Gives("katu", &r, "katuni") && Gives("talo", &inside, "talossaan") &&
               Gives("talo", &into, "taloosi") && Gives("talo", &question, "talossako") &&
               Gives("kylä", &question, "kylässäkö"),
@@ -183,7 +191,8 @@ static void TestMarked(void)
               Gives("3.", &partitive, "3:tta"),
           "ordinals");
     CHECK(Gives("1.", &inside, "1:sessä") && Gives("5.", &inside, "5:nnessä") &&
-              Gives("Ä", &inside, "Ä:ssä") && Gives("Å", &inside, "Å:ssa"),
+              Gives("Ä", &inside, "Ä:ssä") && Gives("Å", &inside, "Å:ssa") &&
+              Gives("Ö", &inside, "Ö:ssä"),
           "an ordinal's other cases; the letters ä and å");
     CHECK(Gives("EU", &inside, "EU:ssa") && Gives("EU", &into, "EU:hun") &&
               Gives("YK", &genitive, "YK:n") && Gives("BBC", &inside, "BBC:ssä") &&
