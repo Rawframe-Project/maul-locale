@@ -193,13 +193,13 @@ static void CheckPart(void* context, uint32_t part, size_t start, size_t length)
     }
 }
 
-// Binds a message and formats it with nine arguments ($s a string, $n
+// Binds a message in a locale and formats it with nine arguments ($s a string, $n
 // a number, $c a currency amount, $u a unit amount, $d a date-time, $i
 // an instant, $z a zoned date-time, $p a duration, $l a list): the
 // other variables unresolved, the functions other than the default
 // ones, f:x and f:y unknown, the text measured, written, then written
 // again with its parts, which must tile it.
-static void Format(const uint8_t* message, size_t size)
+static void FormatIn(const uint8_t* message, size_t size, const char* tag)
 {
     mlocData builtin;
     mlocOpenBuiltinData(&builtin);
@@ -207,7 +207,7 @@ static void Format(const uint8_t* message, size_t size)
     mlocLocale locale;
     mlocMessageFormatter formatter;
     mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, 2, NULL};
-    Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+    Require(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
             mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success);
     size_t needed = 0;
     if (mlocBindMessage(&formatter, message, size, NULL, 0, &needed) != mloc_errorCapacity)
@@ -242,6 +242,23 @@ static void Format(const uint8_t* message, size_t size)
     free(again);
     free(text);
     free(bound);
+}
+
+// Formats in English, and in Turkish and Korean too when the message
+// names a mloc: function, whose grammar ones inflect there.
+static void Format(const uint8_t* message, size_t size)
+{
+    FormatIn(message, size, "en");
+    bool grammar = false;
+    for (size_t i = 0; i + 5 <= size && !grammar; i++)
+    {
+        grammar = memcmp(message + i, "mloc:", 5) == 0;
+    }
+    if (grammar)
+    {
+        FormatIn(message, size, "tr");
+        FormatIn(message, size, "ko");
+    }
 }
 
 static void RoundTrip(const char* text, size_t length)

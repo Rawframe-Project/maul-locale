@@ -188,6 +188,13 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         const PreparedList* prepared = mlocPreparedFor(&f->r, v->list.origin);
         fault = mlocWriteListValue(&v->list, prepared, formatter->data, &formatter->locale, &out);
     }
+    else if (v->kind == valueGrammar)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        const PreparedGrammar* prepared = mlocPreparedFor(&f->r, v->grammar.origin);
+        fault =
+            mlocWriteGrammarValue(&v->grammar, prepared, formatter->data, &formatter->locale, &out);
+    }
     else if (v->kind == valueResolved)
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
@@ -224,7 +231,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
         return PutArgument(f, v, expression);
     }
     if (kind == valueResolved || kind == valueNumber || kind == valueDate ||
-        kind == valueDuration || kind == valueList)
+        kind == valueDuration || kind == valueList || kind == valueGrammar)
     {
         return PutResolved(f, v, expression);
     }

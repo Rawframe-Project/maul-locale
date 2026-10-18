@@ -24,7 +24,7 @@ static void Store32(uint8_t* p, uint32_t value)
 // prepared.
 static bool Prepared(uint32_t slot)
 {
-    return slot >= messageFunctionNumber && slot <= messageFunctionList;
+    return slot >= messageFunctionNumber && slot <= messageFunctionParticle;
 }
 
 static bool DateSlot(uint32_t slot)
@@ -50,6 +50,10 @@ static size_t RoomOf(uint32_t slot)
     if (slot == messageFunctionList)
     {
         return sizeof(PreparedList);
+    }
+    if (slot == messageFunctionCase || slot == messageFunctionParticle)
+    {
+        return sizeof(PreparedGrammar);
     }
     return mlocPreparedSize(slot == messageFunctionUnit       ? preparedUnit
                             : slot == messageFunctionSpellout ? preparedSpellout
@@ -77,10 +81,12 @@ static const mlocMessageValue* ProbeFor(uint32_t slot)
     static const mlocDurationValues none = {0};
     static const mlocMessageValue duration = {mloc_messageValueDuration, 0, {.duration = &none}};
     static const mlocMessageValue list = {mloc_messageValueList, 0, {.list = {NULL, 0}}};
-    return DateSlot(slot)                    ? &dateTime
-           : slot == messageFunctionDuration ? &duration
-           : slot == messageFunctionList     ? &list
-                                             : &number;
+    static const mlocMessageValue text = {mloc_messageValueString, 0, {.string = {"a", 1}}};
+    return DateSlot(slot)                                                   ? &dateTime
+           : slot == messageFunctionDuration                                ? &duration
+           : slot == messageFunctionList                                    ? &list
+           : slot == messageFunctionCase || slot == messageFunctionParticle ? &text
+                                                                            : &number;
 }
 
 // A value prepared at bind, of any function.
@@ -90,6 +96,7 @@ typedef union PreparedValue
     PreparedDate date;
     PreparedDuration duration;
     PreparedList list;
+    PreparedGrammar grammar;
 } PreparedValue;
 
 // Prepares the value an expression made; its size, or 0 when it keeps
@@ -118,6 +125,11 @@ static size_t PrepareValue(const Value* v, uint32_t expression, const MessageFor
         mlocPrepareList(&v->list, f->data, &f->locale, &out->list))
     {
         return sizeof(PreparedList);
+    }
+    if (v->kind == valueGrammar && v->grammar.origin == expression &&
+        mlocPrepareGrammar(f->data, &f->locale, &out->grammar))
+    {
+        return sizeof(PreparedGrammar);
     }
     return 0;
 }

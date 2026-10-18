@@ -127,6 +127,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_emit.c
     src/message_format.c
     src/message_list.c
+    src/message_grammar.c
     src/message_number.c
     src/message_offset.c
     src/message_operand.c
@@ -270,7 +271,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                    MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
     endif()
     # They read the spell-out rules, which numbers are spoken by.
-    foreach(test grammar grammar_turkic grammar_hu grammar_fi grammar_ko)
+    foreach(test grammar grammar_turkic grammar_hu grammar_fi grammar_ko message_grammar)
         maul_add_test(${test})
         if(TARGET test_${test})
             set(MLOC_GRAMMAR_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)

@@ -10,6 +10,7 @@
 
 #include "message_date.h"
 #include "message_duration.h"
+#include "message_grammar.h"
 #include "message_list.h"
 #include "message_number.h"
 
@@ -38,6 +39,8 @@ typedef enum ValueKind
     valueDuration,
     // A mloc:list value.
     valueList,
+    // A mloc:case or mloc:particle value.
+    valueGrammar,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -68,6 +71,7 @@ typedef struct Value
         DateValue date;
         DurationValue duration;
         ListValue list;
+        GrammarValue grammar;
     };
 } Value;
 

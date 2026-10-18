@@ -727,6 +727,55 @@ MLOC_NOINLINE static Value ResolveList(Resolution* r, uint32_t expression, const
     return v;
 }
 
+// A mloc:case or mloc:particle value: a text (a literal, a string
+// argument, :string over one) or a number (:number, :integer, :percent,
+// or a numeric argument read as :number), and the expression's options.
+MLOC_NOINLINE static Value ResolveGrammar(Resolution* r, uint32_t expression, uint8_t function,
+                                          const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    ValueKind kind = operand == NULL                ? valueResolved
+                     : operand->kind == valueString ? operand->behind
+                                                    : operand->kind;
+    GrammarValue g;
+    NumberValue n;
+    if (kind == valueText)
+    {
+        g = mlocMakeGrammarText(function, operand->text, operand->length);
+    }
+    else if (kind == valueArgument && operand->argument->kind == mloc_messageValueString)
+    {
+        g = mlocMakeGrammarText(function, (const uint8_t*)operand->argument->as.string.text,
+                                operand->argument->as.string.length);
+    }
+    else if (kind == valueNumber && (operand->number.function == numberFunctionNumber ||
+                                     operand->number.function == numberFunctionInteger ||
+                                     operand->number.function == numberFunctionPercent))
+    {
+        g = mlocMakeGrammarNumber(function, &operand->number);
+    }
+    else if (kind == valueArgument &&
+             (operand->argument->kind == mloc_messageValueInteger ||
+              operand->argument->kind == mloc_messageValueDouble ||
+              operand->argument->kind == mloc_messageValueDecimal) &&
+             NumberOperand(r, numberFunctionNumber, operand, at, &n) == mloc_messageFaultNone &&
+             Completed(r, &n) == mloc_messageFaultNone)
+    {
+        n.origin = expression;
+        g = mlocMakeGrammarNumber(function, &n);
+    }
+    else
+    {
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    SetOptions(r, expression, at, mlocSetGrammarFrom, &g);
+    g.origin = expression;
+    Value v = Make(valueGrammar);
+    v.grammar = g;
+    return v;
+}
+
 // A :date, :time or :datetime value: its operand's date and time, the
 // override options passed on, then the expression's own (u: options
 // aside).
@@ -806,6 +855,11 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
     else if (slot == messageFunctionList)
     {
         v = ResolveList(r, expression, given);
+    }
+    else if (slot == messageFunctionCase || slot == messageFunctionParticle)
+    {
+        v = ResolveGrammar(r, expression,
+                           slot == messageFunctionCase ? grammarCase : grammarParticle, given);
     }
     else
     {

@@ -236,6 +236,10 @@ format.
 - `mlocGetListGender`: the gender of a list of persons by the locale's
   rule in CLDR's genderList.xml (neutral, mixed neutral, male taints),
   the locale canonicalized first (mloc-0051).
+- Messages: `mloc:case` and `mloc:particle` inflect a text or a number
+  value by the locale's inflector ("{$name :mloc:case case=dative}"
+  gives "Rodrigo'ya"), with the request's options and a hint that may
+  be a variable (mloc-0052).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

@@ -69,7 +69,9 @@ enum
     messageFunctionRelative = 13,
     messageFunctionDuration = 14,
     messageFunctionList = 15,
-    messageFunctionProgram = 16,
+    messageFunctionCase = 16,
+    messageFunctionParticle = 17,
+    messageFunctionProgram = 18,
 };
 
 // Slots take 24 bits: the program's functions are fewer.

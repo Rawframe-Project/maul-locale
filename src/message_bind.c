@@ -358,6 +358,8 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
         {"mloc:relative", messageFunctionRelative},
         {"mloc:duration", messageFunctionDuration},
         {"mloc:list", messageFunctionList},
+        {"mloc:case", messageFunctionCase},
+        {"mloc:particle", messageFunctionParticle},
     };
     for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++)
     {
