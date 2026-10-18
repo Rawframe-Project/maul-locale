@@ -186,11 +186,12 @@ format.
   DurationFormat options; program functions receive
   `mloc_messageOperandDuration`, and `mlocMessageResolved` is 96 bytes
   (mloc-0045).
-- Turkish common nouns inflect by a lexicon of 2,593 words generated
+- Turkish common nouns inflect by a lexicon of 2,615 words generated
   from Zemberek-NLP's dictionaries (20 KB): stops kept or softened
   (ahlakı, kalbi, kanadı, psikoloğu), inverse harmony (katedrali,
   Kemal'in), doubling (hakkı), the dropped vowel (burnu), compounds
-  (zeytinyağına, zeytinyağları) (mloc-0046).
+  (zeytinyağına, zeytinyağları), a circumflexed spelling apart from its
+  plain one (hâli, halli) (mloc-0046).
 - Grammatical suffixes (`maul-locale/grammar.h`): an inflector per
   locale, Turkish cases, plural, possessives, copula and question
   particle on text and numbers by their spoken end, with TDK's
@@ -198,6 +199,9 @@ format.
 - `mloc:duration` over seconds splits them by integer division, and
   binary64 and 128-bit quotients of 64-bit integers convert natively:
   the duration message costs 40% less (mloc-0045).
+- The profile states that a part function or a program function may
+  call the library back, the call it is inside of included: every
+  object is read only once made (mloc-0001).
 - Messages format lists with `mloc:list` (`type`, `style`), selecting
   by the count as `:integer` does: a list argument kind of item texts;
   program functions receive `mloc_messageOperandList` (mloc-0045).

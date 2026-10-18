@@ -102,7 +102,9 @@ extern "C"
 
     // Receives one part of a formatted text, such as a number's integer
     // digits: the part's kind (each formatting part names its own), and
-    // its byte range in the output.
+    // its byte range in the output. It may call the library back, the
+    // call it is inside of included, but not make again an object that
+    // call uses or write its output (record mloc-0001).
     typedef void (*mlocPartFunction)(void* context, uint32_t part, size_t start, size_t length);
 
     // Where every formatting call writes its UTF-8 text (record

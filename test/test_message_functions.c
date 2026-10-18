@@ -764,6 +764,101 @@ static void TestIsolation(void)
           "an unknown isolation is refused");
 }
 
+// x:nest formats the message it stands in again, from inside the call,
+// two levels down, then writes "x": "a{$n :x:nest}b" is "aaaxbbb".
+typedef struct Nest
+{
+    const void* bound;
+    int depth;
+} Nest;
+
+static mlocMessageFaultKind NestFormat(void* context, const mlocMessageResolved* value,
+                                       mlocOutput* output)
+{
+    (void)value;
+    Nest* nest = context;
+    if (nest->depth == 2)
+    {
+        output->length = 1;
+        if (output->buffer != NULL && output->capacity > 0)
+        {
+            output->buffer[0] = 'x';
+        }
+        return mloc_messageFaultNone;
+    }
+    nest->depth++;
+    mlocMessageArgument argument = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}};
+    mlocResult result = mlocFormatMessage(nest->bound, &argument, 1, output, NULL);
+    nest->depth--;
+    return result == mloc_success ? mloc_messageFaultNone : mloc_messageFaultFunction;
+}
+
+// Formats the message it reports parts of again, from inside the part
+// function, and checks the text is the same.
+typedef struct Again
+{
+    const void* bound;
+    const char* text;
+    size_t length;
+    int calls;
+    bool same;
+} Again;
+
+static void AgainPart(void* context, uint32_t part, size_t start, size_t length)
+{
+    (void)part;
+    (void)start;
+    (void)length;
+    Again* again = context;
+    char text[64];
+    mlocOutput output = {text, sizeof text, 0, NULL, NULL};
+    mlocMessageArgument argument = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 1234}}};
+    again->same = again->same &&
+                  mlocFormatMessage(again->bound, &argument, 1, &output, NULL) == mloc_success &&
+                  output.length == again->length && memcmp(text, again->text, again->length) == 0;
+    again->calls++;
+}
+
+// The library's callbacks may call it back (record mloc-0001): every
+// object is read only after it is made, and a call keeps its state on
+// its stack.
+static void TestCallingBack(void)
+{
+    static uint8_t compiled[1024];
+    static uint8_t bound[1 << 16];
+    Nest nest = {bound, 0};
+    mlocMessageFunction function = {"x:nest", 6, &nest, EchoResolve, NestFormat, NULL, NULL, NULL};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
+    mlocMessageFormatter formatter;
+    const char* message = "a{$n :x:nest}b";
+    size_t size = 0;
+    size_t boundSize = 0;
+    mlocMessageError error;
+    char text[64];
+    mlocOutput output = {text, sizeof text, 0, NULL, NULL};
+    mlocMessageArgument argument = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}};
+    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_success &&
+              mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocBindMessage(&formatter, compiled, size, bound, sizeof bound, &boundSize) ==
+                  mloc_success &&
+              mlocFormatMessage(bound, &argument, 1, &output, NULL) == mloc_success &&
+              output.length == 7 && memcmp(text, "aaaxbbb", 7) == 0 && nest.depth == 0,
+          "a program function formats the message it stands in, from inside its call");
+    const char* number = "{$n :number}";
+    Again again = {bound, "1'234", 5, 0, true};
+    mlocOutput parts = {text, sizeof text, 0, AgainPart, &again};
+    argument.value.as.integer = 1234;
+    CHECK(mlocCompileMessage(number, strlen(number), compiled, sizeof compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocBindMessage(&formatter, compiled, size, bound, sizeof bound, &boundSize) ==
+                  mloc_success &&
+              mlocFormatMessage(bound, &argument, 1, &parts, NULL) == mloc_success &&
+              parts.length == again.length && memcmp(text, again.text, again.length) == 0 &&
+              again.calls > 0 && again.same,
+          "a part function formats the message it is given parts of, from inside its call");
+}
+
 int main(void)
 {
     MakeFormatter();
@@ -774,5 +869,6 @@ int main(void)
     TestSelection();
     TestResolutionLimit();
     TestIsolation();
+    TestCallingBack();
     return s_failures == 0 ? 0 : 1;
 }

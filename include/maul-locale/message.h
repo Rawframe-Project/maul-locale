@@ -336,6 +336,9 @@ extern "C"
     // better means no key is better than another; a null direction, an
     // unknown direction. The call's u: options are the formatter's
     // (u:dir replaces the direction and isolates), not the function's.
+    // An entry may call the library back, the format call it is inside
+    // of included, but not make again an object that call uses or write
+    // its output or faults (record mloc-0001).
     typedef struct mlocMessageFunction
     {
         const char* name;

@@ -22,6 +22,12 @@ compiler does.
   Nothing else touches floating point.
 - **Threads:** none. Every function runs on the caller's thread; data
   is immutable and every function is safe from any thread.
+- **Callbacks:** a part function (`mlocOutput`) or a program function
+  (`mlocMessageFunction`) may call any function of the library, the
+  call it is inside of included (conventions section 10): every object
+  is read only once it is made and a call keeps its state on its stack.
+  It must not make again an object the call is using, or write the
+  output or faults the call is writing (amended 2026-10-18).
 - **Memory:** there are no owner objects and nothing is allocated. Data
   is compiled into the library or held by the caller as the bytes of a
   data file, which is validated once when opened. Formatters,
