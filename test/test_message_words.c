@@ -6,8 +6,9 @@
 // MF1's spellout and ordinal texts as ICU4C 79 writes them;
 // mloc:relative by unit, style and numeric with number options;
 // mloc:duration over durations, ISO 8601 literals and seconds with
-// ECMA-402's options; their refusals, their operands passed on, their
-// parts and preparation, and that none selects.
+// ECMA-402's options; mloc:list by type and style, selecting by its
+// count; their refusals, their operands passed on, their
+// parts and preparation, and that none but mloc:list selects.
 
 #include "message_prepare.h"
 #include "test_harness.h"
@@ -237,6 +238,80 @@ static void TestDuration(void)
           "a duration does not select");
 }
 
+static void TestList(void)
+{
+    static const mlocListItem three[] = {{"Ann", 3}, {"Bob", 3}, {"Cem", 3}};
+    mlocMessageArgument l = {"l", 1, {mloc_messageValueList, 0, {.list = {three, 3}}}};
+    CHECK(Formats("en",
+                  "{$l :mloc:list}|{$l :mloc:list style=short}|{$l :mloc:list "
+                  "type=disjunction}|{$l :mloc:list type=unit style=narrow}",
+                  &l, 1, "Ann, Bob, and Cem|Ann, Bob, & Cem|Ann, Bob, or Cem|Ann Bob Cem", NULL) &&
+              Formats("tr", "{$l :mloc:list}|{$l :mloc:list type=disjunction}", &l, 1,
+                      "Ann, Bob ve Cem|Ann, Bob veya Cem", NULL),
+          "a list by type and style, in its locale");
+    static const mlocListItem spanish[] = {{"Pedro", 5}, {"Ignacio", 7}};
+    mlocMessageArgument es = {"l", 1, {mloc_messageValueList, 0, {.list = {spanish, 2}}}};
+    CHECK(Formats("es", "{$l :mloc:list}", &es, 1, "Pedro e Ignacio", NULL),
+          "a list's joining word as its next item asks");
+    mlocMessageArgument s[] = {
+        l,
+        {"s", 1, {mloc_messageValueString, 0, {.string = {"short", 5}}}},
+    };
+    CHECK(
+        Formats("en", "{$l :mloc:list type=and}", &l, 1, "Ann, Bob, and Cem", s_badOption) &&
+            Formats("en", "{$l :mloc:list style=wide}", &l, 1, "Ann, Bob, and Cem", s_badOption) &&
+            Formats("en", "{$l :mloc:list style=$s}", s, 2, "Ann, Bob, and Cem", s_badOption),
+        "bad values and variables are bad options");
+    CHECK(Formats("en", "{horse :mloc:list}", NULL, 0, "{|horse|}", s_badOperand) &&
+              Formats("en", "{$s :mloc:list}", s, 2, "{$s}", s_badOperand) &&
+              Formats("en", "{$l}|{$l :string}", &l, 1, "{$l}|{$l}",
+                      (const mlocMessageFaultKind[]){mloc_messageFaultUnsupportedOperation,
+                                                     mloc_messageFaultUnsupportedOperation, 0}),
+          "no list is a bad operand; a bare list is not written");
+    CHECK(Formats("en",
+                  ".local $o = {$l :mloc:list type=disjunction} {{{$o :mloc:list "
+                  "style=short}|{$o :number}}}",
+                  &l, 1, "Ann, Bob, or Cem|{$o}", s_badOperand),
+          "a list value's options pass on, and it is no number");
+    const char* select = ".local $n = {$l :mloc:list} .match $n 0 {{none}} 1 {{only {$n}}} one "
+                         "{{{$n} is}} * {{{$n} are}}";
+    mlocMessageArgument none = {"l", 1, {mloc_messageValueList, 0, {.list = {NULL, 0}}}};
+    mlocMessageArgument one = {"l", 1, {mloc_messageValueList, 0, {.list = {three, 1}}}};
+    mlocMessageArgument two = {"l", 1, {mloc_messageValueList, 0, {.list = {three, 2}}}};
+    CHECK(Formats("en", select, &none, 1, "none", NULL) &&
+              Formats("en", select, &one, 1, "only Ann", NULL) &&
+              Formats("en", select, &two, 1, "Ann and Bob are", NULL) &&
+              Formats("en", ".local $n = {$l :mloc:list} .match $n one {{{$n} is}} * {{are}}", &one,
+                      1, "Ann is", NULL) &&
+              Formats("en", ".local $n = {$l :mloc:list} .match $n 1.0 {{a}} 1e0 {{b}} * {{c}}",
+                      &one, 1, "c", NULL),
+          "a list selects by its count: an exact count first, then its plural category");
+    static const mlocMessageFaultKind badKey[] = {mloc_messageFaultBadVariantKey, 0};
+    CHECK(Formats("en", ".local $n = {$l :mloc:list} .match $n horse {{a}} * {{b}}", &one, 1, "b",
+                  badKey),
+          "a key neither a count nor a plural keyword is a bad variant key");
+    static const mlocListItem holes[] = {{NULL, 1}};
+    mlocMessageArgument hole = {"l", 1, {mloc_messageValueList, 0, {.list = {holes, 1}}}};
+    mlocMessageArgument lost = {"l", 1, {mloc_messageValueList, 0, {.list = {NULL, 1}}}};
+    static mlocMessageFormatter formatter;
+    mlocLocale en;
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(
+        mlocParseLocale("en", 2, &en).status == mloc_success &&
+            mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+            mlocCompileMessage("{$l :mloc:list}", 15, s_compiled, sizeof s_compiled, &size, &error)
+                    .status == mloc_success &&
+            mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
+                mloc_success &&
+            mlocFormatMessage(s_bound, &hole, 1, &output, NULL) == mloc_errorInvalid &&
+            mlocFormatMessage(s_bound, &lost, 1, &output, NULL) == mloc_errorInvalid,
+        "a list with an item's text or its items missing is refused");
+}
+
 static void TestOperands(void)
 {
     CHECK(Formats("en",
@@ -261,7 +336,8 @@ static void TestOperands(void)
 
 // Whether binding in English prepared each expression's value as
 // wanted says, in order ('s' or 'r' for a spell-out or relative
-// formatter, 'n' for a number formatter, '-' for none).
+// formatter, 'n' for a number formatter, 'D' or 'L' for a duration's or
+// list's, '-' for none).
 static bool PreparedAs(const char* message, const char* wanted)
 {
     static mlocMessageFormatter formatter;
@@ -293,6 +369,7 @@ static bool PreparedAs(const char* message, const char* wanted)
                    : p->kind == preparedSpellout ? 's'
                    : p->kind == preparedRelative ? 'r'
                    : p->kind == preparedNumber   ? 'n'
+                   : wanted[e] == 'L'            ? 'L'
                                                  : '?';
         if (got != wanted[e])
         {
@@ -310,7 +387,10 @@ static void TestPrepared(void)
                      "sr--") &&
               PreparedAs("{$d :mloc:duration style=long} {$d :mloc:duration hours=numeric "
                          "minutes=long}",
-                         "D-"),
+                         "D-") &&
+              PreparedAs("{$l :mloc:list} {$l :mloc:list type=unit style=narrow} {$l :mloc:list "
+                         "style=$s}",
+                         "LL-"),
           "both are prepared, unless an option comes from an argument or the formatter "
           "cannot be made");
     mlocMessageArgument a[] = {
@@ -374,6 +454,25 @@ static void TestParts(void)
         good = parts.kinds[i] == wanted[i];
     }
     CHECK(good, "a spelled-out number has no parts of its own, a relative time its number's");
+    static const mlocListItem two[] = {{"Ann", 3}, {"Bob", 3}};
+    mlocMessageArgument l = {"l", 1, {mloc_messageValueList, 0, {.list = {two, 2}}}};
+    parts.count = 0;
+    output.length = 0;
+    CHECK(mlocCompileMessage("{$l :mloc:list}", 15, s_compiled, sizeof s_compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
+                  mloc_success &&
+              mlocFormatMessage(s_bound, &l, 1, &output, NULL) == mloc_success &&
+              output.length == 11 && memcmp(s_text, "Ann and Bob", 11) == 0,
+          "a list writes with parts asked for");
+    // The list, then its item, the literal and the item.
+    uint32_t listed[] = {0x81, 0, 1, 0};
+    good = parts.count == 4;
+    for (size_t i = 0; good && i < sizeof listed / sizeof listed[0]; i++)
+    {
+        good = parts.kinds[i] == listed[i];
+    }
+    CHECK(good, "a list's items and literals nest in its placeholder");
 }
 
 // Opens a data file into a buffer as a source; false when it cannot.
@@ -410,6 +509,7 @@ int main(void)
     TestSpellout();
     TestRelative();
     TestDuration();
+    TestList();
     TestOperands();
     TestParts();
     TestPrepared();

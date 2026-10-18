@@ -39,14 +39,20 @@ typedef struct DateSetting
 void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved* storage);
 
 // The setters of a number value (a NumberSetting), a date value (a
-// DateSetting) and a duration value (the value), for resolution's
-// option loop.
+// DateSetting), a duration value and a list value (the values), for
+// resolution's option loop.
 mlocMessageFaultKind mlocSetNumberFrom(void* context, const uint8_t* name, size_t length,
                                        const NumberOption* option);
 mlocMessageFaultKind mlocSetDateFrom(void* context, const uint8_t* name, size_t length,
                                      const NumberOption* option);
 mlocMessageFaultKind mlocSetDurationFrom(void* context, const uint8_t* name, size_t length,
                                          const NumberOption* option);
+mlocMessageFaultKind mlocSetListFrom(void* context, const uint8_t* name, size_t length,
+                                     const NumberOption* option);
+
+// The list a mloc:list operand gives: a list argument, or another
+// mloc:list value, whose options pass on; false for anything else.
+bool mlocListOperand(const Value* operand, ListValue* out);
 
 // The date value a date function's operand gives: a date/time literal
 // (or a string argument that is one), a date, time, date-time, instant

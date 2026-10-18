@@ -879,7 +879,7 @@ static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categ
 // exponent; zero unsigned. The key, a number literal, is read as a
 // decimal, which compares by its bytes (the same value showing the same
 // digits); a key of more digits than a decimal holds matches nothing.
-static bool ExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length)
+bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length)
 {
     if (rounded->kind != mloc_decimalFinite || memchr(key, 'e', length) != NULL ||
         memchr(key, 'E', length) != NULL)
@@ -916,7 +916,7 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNum
     }
     if (literal)
     {
-        *matchOut = ExactlyKey(&rounded, key, length);
+        *matchOut = mlocExactlyKey(&rounded, key, length);
         return mloc_messageFaultNone;
     }
     if (value->select == numberSelectExact)

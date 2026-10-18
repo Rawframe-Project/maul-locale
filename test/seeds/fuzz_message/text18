@@ -1,0 +1,1 @@
+.local $o = {$l :mloc:list type=disjunction style=short} .match $o 0 {{none}} 3 {{{$o}}} one {{{$l :mloc:list}}} * {{{$o :mloc:list type=unit style=$s} {$l} {$n :mloc:list}}}

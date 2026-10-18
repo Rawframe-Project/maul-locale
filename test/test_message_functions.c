@@ -92,6 +92,14 @@ static void AddOperand(Echo* e, const mlocMessageOperand* operand)
                  (int)operand->duration->minutes);
         Add(e, shown, strlen(shown));
         break;
+    case mloc_messageOperandList:
+        snprintf(shown, sizeof shown, "L%zu", operand->itemCount);
+        Add(e, shown, strlen(shown));
+        if (operand->itemCount > 0)
+        {
+            Add(e, operand->items[0].text, operand->items[0].length);
+        }
+        break;
     case mloc_messageOperandResolved:
         snprintf(shown, sizeof shown, "@%u", (unsigned)operand->function);
         Add(e, shown, strlen(shown));
@@ -416,6 +424,11 @@ static void TestCalls(void)
           "a zoned date value is passed with its instant and zone");
     CHECK(Formats(".local $d = {|PT2H30M| :mloc:duration} {{{$d :x:echo}}}", a, 4, "P2h30m", NULL),
           "a duration value is passed as its fields");
+    static const mlocListItem names[] = {{"Ann", 3}, {"Bob", 3}};
+    mlocMessageArgument list = {"l", 1, {mloc_messageValueList, 0, {.list = {names, 2}}}};
+    CHECK(Formats(".local $o = {$l :mloc:list type=disjunction} {{{$o :x:echo}}}", &list, 1,
+                  "L2Ann", NULL),
+          "a list value is passed as its items");
     mlocMessageArgument named[] = {
         {"\xC3\xA9", 2, {mloc_messageValueString, 0, {.string = {"wrong", 5}}}},
         {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}},

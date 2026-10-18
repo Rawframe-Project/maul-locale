@@ -10,6 +10,7 @@
 
 #include "message_date.h"
 #include "message_duration.h"
+#include "message_list.h"
 #include "message_number.h"
 
 #include "maul-locale/message.h"
@@ -35,6 +36,8 @@ typedef enum ValueKind
     valueDate,
     // A mloc:duration value.
     valueDuration,
+    // A mloc:list value.
+    valueList,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -64,6 +67,7 @@ typedef struct Value
         NumberValue number;
         DateValue date;
         DurationValue duration;
+        ListValue list;
     };
 } Value;
 

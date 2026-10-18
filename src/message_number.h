@@ -191,6 +191,10 @@ typedef struct NumberOption
 // Whether text matches MF2's number-literal production.
 bool mlocNumberLiteral(const uint8_t* text, size_t length);
 
+// Whether a decimal (as it formats) is written plainly as a number
+// literal key: no exponent, zero unsigned, the fraction zeros it shows.
+bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length);
+
 // A number value of a function for a decimal, no option given.
 NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* decimal);
 

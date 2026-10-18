@@ -15,6 +15,7 @@
 #include "maul-locale/base.h"
 #include "maul-locale/data.h"
 #include "maul-locale/decimal.h"
+#include "maul-locale/list.h"
 #include "maul-locale/locale.h"
 #include "maul-locale/zone.h"
 
@@ -119,7 +120,8 @@ extern "C"
     // and a zoned date-time an instant and a zone by pointer (to outlive
     // the call), which the date and time functions format; a duration is
     // its fields by pointer (to outlive the call), which mloc:duration
-    // formats.
+    // formats; a list is its items' texts by pointer (to outlive the
+    // call), which mloc:list formats and selects by its count.
     typedef enum mlocMessageValueKind
     {
         mloc_messageValueString = 0,
@@ -135,6 +137,7 @@ extern "C"
         mloc_messageValueInstant = 10,
         mloc_messageValueZonedDateTime = 11,
         mloc_messageValueDuration = 12,
+        mloc_messageValueList = 13,
     } mlocMessageValueKind;
 
     // A value given to a message: one of the kinds, its fields by kind.
@@ -175,6 +178,11 @@ extern "C"
                 const mlocTimeZone* zone;
             } zoned;
             const mlocDurationValues* duration;
+            struct
+            {
+                const mlocListItem* items;
+                size_t count;
+            } list;
         } as;
     } mlocMessageValue;
 
@@ -285,6 +293,8 @@ extern "C"
         mloc_messageOperandDateTime = 10,
         // A mloc:duration value as duration, its fields.
         mloc_messageOperandDuration = 11,
+        // A mloc:list value as its items, itemCount of them.
+        mloc_messageOperandList = 12,
     } mlocMessageOperandKind;
 
     typedef struct mlocMessageOperand
@@ -301,6 +311,8 @@ extern "C"
         const mlocInstant* instant;
         const mlocTimeZone* zone;
         const mlocDurationValues* duration;
+        const mlocListItem* items;
+        size_t itemCount;
     } mlocMessageOperand;
 
     // A function call's options and locale, read with the accessors
@@ -476,7 +488,8 @@ extern "C"
     /// a "T" between them, the fraction of a second as needed), an
     /// instant the same in UTC followed by "Z", a zoned date-time its
     /// local date-time followed by its offset and its zone in brackets, a
-    /// duration as Temporal writes it ("P2DT3H").
+    /// duration as Temporal writes it ("P2DT3H"); a list only through
+    /// mloc:list (bare, an Unsupported Operation).
     ///
     /// When output->part is set, the call reports the text's parts
     /// (mlocMessagePart) once it is written, on mloc_success or
@@ -497,8 +510,10 @@ extern "C"
     ///         string, decimal, amount or unit among them), a decimal that
     ///         is not one the library makes, a currency code that is not
     ///         three ASCII letters, a date, time, instant or duration the
-    ///         library does not make, a zone it did not make, an unknown
-    ///         kind, or a bound message the library did not make.
+    ///         library does not make, a zone it did not make, a list whose
+    ///         items or an item's text are missing or of more than
+    ///         UINT32_MAX items, an unknown kind, or a bound message the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

@@ -186,6 +186,9 @@ format.
   DurationFormat options; program functions receive
   `mloc_messageOperandDuration`, and `mlocMessageResolved` is 96 bytes
   (mloc-0045).
+- Messages format lists with `mloc:list` (`type`, `style`), selecting
+  by the count as `:integer` does: a list argument kind of item texts;
+  program functions receive `mloc_messageOperandList` (mloc-0045).
 - Messages format with `mloc:spellout` (`rules`, `numberingSystem`;
   MF1's spellout and ordinal) and `mloc:relative` (`unit`, `style`,
   `numeric` and number options) (mloc-0045).

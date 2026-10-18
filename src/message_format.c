@@ -182,6 +182,12 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         fault = mlocWriteDurationValue(&v->duration, prepared, formatter->data, &formatter->locale,
                                        &out);
     }
+    else if (v->kind == valueList)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        const PreparedList* prepared = mlocPreparedFor(&f->r, v->list.origin);
+        fault = mlocWriteListValue(&v->list, prepared, formatter->data, &formatter->locale, &out);
+    }
     else if (v->kind == valueResolved)
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
@@ -217,7 +223,8 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
     {
         return PutArgument(f, v, expression);
     }
-    if (kind == valueResolved || kind == valueNumber || kind == valueDate || kind == valueDuration)
+    if (kind == valueResolved || kind == valueNumber || kind == valueDate ||
+        kind == valueDuration || kind == valueList)
     {
         return PutResolved(f, v, expression);
     }
@@ -337,12 +344,13 @@ typedef struct Selector
     bool broken;
 } Selector;
 
-// Whether a selector's value can select: a :string value, a number
-// value whose select was not a variable's or an operand's, or a program
+// Whether a selector's value can select: a :string value, a mloc:list
+// value, a number value whose select was not a variable's or an operand's, or a program
 // function's with a match entry.
 static bool Selectable(const Formatting* f, const Value* v)
 {
-    return v->kind == valueString || (v->kind == valueNumber && v->number.selectable) ||
+    return v->kind == valueString || v->kind == valueList ||
+           (v->kind == valueNumber && v->number.selectable) ||
            (v->kind == valueResolved && f->r.formatter.functions[v->function].match != NULL);
 }
 
@@ -360,6 +368,13 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     if (s->value.kind == valueString)
     {
         matched = mlocStringMatches(&s->value, key, length, &fault);
+    }
+    else if (s->value.kind == valueList)
+    {
+        const MessageFormatter* formatter = &f->r.formatter;
+        const PreparedList* prepared = mlocPreparedFor(&f->r, s->value.list.origin);
+        fault = mlocMatchList(&s->value.list, prepared, formatter->data, &formatter->locale, key,
+                              length, &matched);
     }
     else if (s->value.kind == valueNumber)
     {
@@ -429,12 +444,13 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
             return all2;
         }
         const Value* value = &selectors[s].value;
-        if (all1 || (value->kind != valueResolved && value->kind != valueNumber) ||
+        bool numeric = value->kind == valueNumber || value->kind == valueList;
+        if (all1 || (value->kind != valueResolved && !numeric) ||
             (length1 == length2 && memcmp(Pool(f, offset1), Pool(f, offset2), length1) == 0))
         {
             continue;
         }
-        if (value->kind == valueNumber)
+        if (numeric)
         {
             // A number literal beats a plural keyword.
             if (mlocNumberKeyBetter(Pool(f, offset1), length1, Pool(f, offset2), length2))
@@ -548,6 +564,8 @@ static bool GoodValue(const mlocMessageValue* v)
         return mlocGoodZoned(v);
     case mloc_messageValueDuration:
         return mlocGoodDuration(v->as.duration);
+    case mloc_messageValueList:
+        return mlocGoodList(v);
     default:
         return false;
     }

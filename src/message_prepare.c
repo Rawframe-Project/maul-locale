@@ -24,7 +24,7 @@ static void Store32(uint8_t* p, uint32_t value)
 // prepared.
 static bool Prepared(uint32_t slot)
 {
-    return slot >= messageFunctionNumber && slot <= messageFunctionDuration;
+    return slot >= messageFunctionNumber && slot <= messageFunctionList;
 }
 
 static bool DateSlot(uint32_t slot)
@@ -47,6 +47,10 @@ static size_t RoomOf(uint32_t slot)
     {
         return sizeof(PreparedDuration);
     }
+    if (slot == messageFunctionList)
+    {
+        return sizeof(PreparedList);
+    }
     return mlocPreparedSize(slot == messageFunctionUnit       ? preparedUnit
                             : slot == messageFunctionSpellout ? preparedSpellout
                             : slot == messageFunctionRelative ? preparedRelative
@@ -60,6 +64,62 @@ static size_t PreparedWord(const MessageView* v, uint32_t expression)
 {
     return 4 * ((size_t)v->count[messageVariables] + 2 * (size_t)v->count[messageExpressions] +
                 expression);
+}
+
+// What an argument stands for in an expression of a slot: an instant
+// for the date functions, which every one takes with every option, a
+// duration of nothing, a list of no items, else an integer.
+static const mlocMessageValue* ProbeFor(uint32_t slot)
+{
+    static const mlocMessageValue number = {mloc_messageValueInteger, 0, {.integer = 0}};
+    static const mlocMessageValue dateTime = {
+        mloc_messageValueInstant, 0, {.instant = {946684800, 0}}};
+    static const mlocDurationValues none = {0};
+    static const mlocMessageValue duration = {mloc_messageValueDuration, 0, {.duration = &none}};
+    static const mlocMessageValue list = {mloc_messageValueList, 0, {.list = {NULL, 0}}};
+    return DateSlot(slot)                    ? &dateTime
+           : slot == messageFunctionDuration ? &duration
+           : slot == messageFunctionList     ? &list
+                                             : &number;
+}
+
+// A value prepared at bind, of any function.
+typedef union PreparedValue
+{
+    PreparedNumber number;
+    PreparedDate date;
+    PreparedDuration duration;
+    PreparedList list;
+} PreparedValue;
+
+// Prepares the value an expression made; its size, or 0 when it keeps
+// none (another expression's value, or a formatter that cannot be made).
+static size_t PrepareValue(const Value* v, uint32_t expression, const MessageFormatter* f,
+                           PreparedValue* out)
+{
+    if (v->kind == valueNumber && v->number.origin == expression &&
+        (mlocWordsValue(&v->number)
+             ? mlocPrepareWords(&v->number, f->data, &f->locale, &out->number)
+             : mlocPrepareNumber(&v->number, f->data, &f->locale, &out->number)))
+    {
+        return mlocPreparedSize((PreparedKind)out->number.kind);
+    }
+    if (v->kind == valueDate && v->date.origin == expression &&
+        mlocPrepareDate(&v->date, f->data, &f->locale, &out->date))
+    {
+        return mlocPreparedDateSize((DateFunction)v->date.function);
+    }
+    if (v->kind == valueDuration && v->duration.origin == expression &&
+        mlocPrepareDuration(&v->duration, f->data, &f->locale, &out->duration))
+    {
+        return sizeof(PreparedDuration);
+    }
+    if (v->kind == valueList && v->list.origin == expression &&
+        mlocPrepareList(&v->list, f->data, &f->locale, &out->list))
+    {
+        return sizeof(PreparedList);
+    }
+    return 0;
 }
 
 // Resolves each number function's expression with probe arguments and
@@ -81,20 +141,7 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     uint64_t base = mlocBoundBase(&h->view);
     size_t at = (size_t)base + (size_t)((8 - ((uintptr_t)bytes + base) % 8) % 8);
     uint8_t* words = bytes + sizeof *h;
-    // What an argument stands for in each kind of expression.
-    static const mlocMessageValue number = {mloc_messageValueInteger, 0, {.integer = 0}};
-    // An instant, which every date function takes with every option.
-    static const mlocMessageValue dateTime = {
-        mloc_messageValueInstant, 0, {.instant = {946684800, 0}}};
-    // A duration of nothing.
-    static const mlocDurationValues none = {0};
-    static const mlocMessageValue duration = {mloc_messageValueDuration, 0, {.duration = &none}};
-    union
-    {
-        PreparedNumber number;
-        PreparedDate date;
-        PreparedDuration duration;
-    } prepared;
+    PreparedValue prepared;
     for (uint32_t e = 0; e < h->view.count[messageExpressions]; e++)
     {
         uint32_t slot =
@@ -105,32 +152,13 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         }
         size_t room = RoomOf(slot);
         r.dynamic = false;
-        r.probeArgument = DateSlot(slot)                    ? &dateTime
-                          : slot == messageFunctionDuration ? &duration
-                                                            : &number;
+        r.probeArgument = ProbeFor(slot);
         Value v = mlocResolveExpression(&r, e);
         if (r.exhausted)
         {
             return;
         }
-        size_t size = 0;
-        if (!r.dynamic && v.kind == valueNumber && v.number.origin == e &&
-            (mlocWordsValue(&v.number)
-                 ? mlocPrepareWords(&v.number, f->data, &f->locale, &prepared.number)
-                 : mlocPrepareNumber(&v.number, f->data, &f->locale, &prepared.number)))
-        {
-            size = mlocPreparedSize((PreparedKind)prepared.number.kind);
-        }
-        if (!r.dynamic && v.kind == valueDate && v.date.origin == e &&
-            mlocPrepareDate(&v.date, f->data, &f->locale, &prepared.date))
-        {
-            size = mlocPreparedDateSize((DateFunction)v.date.function);
-        }
-        if (!r.dynamic && v.kind == valueDuration && v.duration.origin == e &&
-            mlocPrepareDuration(&v.duration, f->data, &f->locale, &prepared.duration))
-        {
-            size = sizeof(PreparedDuration);
-        }
+        size_t size = r.dynamic ? 0 : PrepareValue(&v, e, f, &prepared);
         if (size > 0 && size <= room)
         {
             memcpy(bytes + at, &prepared, size);

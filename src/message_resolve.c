@@ -707,6 +707,26 @@ MLOC_NOINLINE static Value ResolveDuration(Resolution* r, uint32_t expression, c
     return v;
 }
 
+// A mloc:list value: its operand's items, the options passed on, then
+// the expression's own.
+MLOC_NOINLINE static Value ResolveList(Resolution* r, uint32_t expression, const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    ListValue l;
+    if (!mlocListOperand(operand, &l))
+    {
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    SetOptions(r, expression, at, mlocSetListFrom, &l);
+    l.origin = expression;
+    Value v = Make(valueList);
+    v.list = l;
+    // A list reads in its locale's direction.
+    v.direction = r->formatter.direction;
+    return v;
+}
+
 // A :date, :time or :datetime value: its operand's date and time, the
 // override options passed on, then the expression's own (u: options
 // aside).
@@ -782,6 +802,10 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
     else if (slot == messageFunctionDuration)
     {
         v = ResolveDuration(r, expression, given);
+    }
+    else if (slot == messageFunctionList)
+    {
+        v = ResolveList(r, expression, given);
     }
     else
     {

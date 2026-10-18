@@ -305,6 +305,20 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   ("P2DT3H"), program functions receive `mloc_messageOperandDuration`
   (`mlocMessageResolved` grew to 96 bytes to hold its fields), and it
   needs `units.mloc`.
+- **`mloc:list`:** a list value: a new argument kind
+  (`mloc_messageValueList`, the items' texts as `mlocListItem` by
+  pointer and their count; the caller formats each item, as a list
+  formatter takes texts), or another `mloc:list` value, whose options
+  pass on. ECMA-402's ListFormat options: `type` (conjunction,
+  disjunction, unit) and `style` (long, short, narrow), literals only.
+  It selects by its count as `:integer` does: a number literal key
+  matches the count written plainly ("2", not "2.0" or "2e0"), a plural
+  keyword the count's cardinal category, a literal beating a keyword;
+  another key is a Bad Variant Key. Prepared at bind (the formatter and
+  the cardinal rules), its parts are the list formatter's items and
+  literals, number functions refuse it, a bare list is an Unsupported
+  Operation (no text stands for it), program functions receive
+  `mloc_messageOperandList`, and its data is built in.
 - **Parts:** with the output's part function set, a format call that
   succeeds (or falls back) writes the text a second time to report its
   parts, storing nothing: text, placeholder, fallback, markup open,
@@ -362,8 +376,8 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   `:test:` functions defined in the test as the suite describes them);
   `test_message_words` checks the `mloc:` functions, the two over
   numbers against ICU4C 79's MF1 texts and the formatters', durations
-  against the duration formatter's, their refusals, operands, parts and
-  preparation; `test_message_parts` checks parts of every piece,
+  and lists against their formatters', a list's selection by count and
+  category, their refusals, operands, parts and preparation; `test_message_parts` checks parts of every piece,
   isolation marks,
   numbers' and dates' parts at their place, a program function's,
   none on failure, faults counted once, tiling, and the accessors;

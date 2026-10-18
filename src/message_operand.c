@@ -80,6 +80,12 @@ void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved*
     {
         DateOperandOf(&v->date, out, storage);
     }
+    else if (kind == valueList)
+    {
+        out->kind = mloc_messageOperandList;
+        out->items = v->list.items;
+        out->itemCount = v->list.count;
+    }
     else if (kind == valueDuration)
     {
         storage->duration = v->duration.values;
@@ -183,4 +189,29 @@ bool mlocDurationOperand(const Value* operand, DurationValue* out)
         *out = mlocMakeDurationValue(&values);
     }
     return read;
+}
+
+mlocMessageFaultKind mlocSetListFrom(void* context, const uint8_t* name, size_t length,
+                                     const NumberOption* option)
+{
+    return option == NULL ? mloc_messageFaultNone
+                          : mlocSetListOption(context, name, length, option);
+}
+
+bool mlocListOperand(const Value* operand, ListValue* out)
+{
+    ValueKind kind = operand == NULL                ? valueResolved
+                     : operand->kind == valueString ? operand->behind
+                                                    : operand->kind;
+    if (kind == valueList)
+    {
+        *out = operand->list;
+        return true;
+    }
+    if (kind != valueArgument || operand->argument->kind != mloc_messageValueList)
+    {
+        return false;
+    }
+    *out = mlocMakeListValue(operand->argument);
+    return true;
 }

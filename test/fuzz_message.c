@@ -142,6 +142,9 @@ static const mlocDecimal s_amount = {.kind = mloc_decimalFinite,
 // A duration of a day and a half hour.
 static const mlocDurationValues s_duration = {0, 0, 0, 1, 0, 30, 0, 0, 0, 0};
 
+// A list of three names, one empty.
+static const mlocListItem s_items[] = {{"Ann", 3}, {"", 0}, {"Cem", 3}};
+
 // An offset zone of five hours west.
 static const mlocTimeZone s_zone = {NULL, 0, 0, -300};
 
@@ -154,6 +157,7 @@ static const mlocMessageArgument s_arguments[] = {
     {"i", 1, {mloc_messageValueInstant, 0, {.instant = {1136214246, 7}}}},
     {"z", 1, {mloc_messageValueZonedDateTime, 0, {.zoned = {{1136214246, 0}, &s_zone}}}},
     {"p", 1, {mloc_messageValueDuration, 0, {.duration = &s_duration}}},
+    {"l", 1, {mloc_messageValueList, 0, {.list = {s_items, 3}}}},
 };
 
 static const mlocMessageFunction s_functions[] = {
@@ -189,12 +193,12 @@ static void CheckPart(void* context, uint32_t part, size_t start, size_t length)
     }
 }
 
-// Binds a message and formats it with eight arguments ($s a string, $n
+// Binds a message and formats it with nine arguments ($s a string, $n
 // a number, $c a currency amount, $u a unit amount, $d a date-time, $i
-// an instant, $z a zoned date-time, $p a duration): the other variables unresolved, the
-// functions other than the default ones, f:x and f:y unknown, the text
-// measured, written, then written again with its parts, which must tile
-// it.
+// an instant, $z a zoned date-time, $p a duration, $l a list): the
+// other variables unresolved, the functions other than the default
+// ones, f:x and f:y unknown, the text measured, written, then written
+// again with its parts, which must tile it.
 static void Format(const uint8_t* message, size_t size)
 {
     mlocData builtin;
@@ -221,10 +225,10 @@ static void Format(const uint8_t* message, size_t size)
         return;
     }
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
-    mlocResult measured = mlocFormatMessage(bound, s_arguments, 8, &measure, NULL);
+    mlocResult measured = mlocFormatMessage(bound, s_arguments, 9, &measure, NULL);
     char* text = malloc(measure.length + 1);
     mlocOutput output = {text, measure.length, 0, NULL, NULL};
-    mlocResult result = mlocFormatMessage(bound, s_arguments, 8, &output, NULL);
+    mlocResult result = mlocFormatMessage(bound, s_arguments, 9, &output, NULL);
     Require((measured == mloc_errorCapacity || measure.length == 0) &&
             (result == mloc_success || result == mloc_withFallbacks) &&
             output.length == measure.length);
@@ -232,7 +236,7 @@ static void Format(const uint8_t* message, size_t size)
     Tiling tiling = {0, 0, 0, true};
     char* again = malloc(measure.length + 1);
     mlocOutput parts = {again, measure.length, 0, CheckPart, &tiling};
-    Require(mlocFormatMessage(bound, s_arguments, 8, &parts, NULL) == result &&
+    Require(mlocFormatMessage(bound, s_arguments, 9, &parts, NULL) == result &&
             parts.length == output.length && memcmp(again, text, output.length) == 0 &&
             tiling.good && tiling.end == output.length);
     free(again);
