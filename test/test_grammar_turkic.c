@@ -548,6 +548,7 @@ static void TestTurkmen(void)
     CHECK(Gives(&s_tk, "1700", &ablative, "1700-den") && Gives(&s_tk, "5", &dative, "5-e") &&
               Gives(&s_tk, "40", &genitive, "40-yň") && Gives(&s_tk, "100", &genitive, "100-üň") &&
               Gives(&s_tk, "0", &dative, "0-a") && Gives(&s_tk, "60", &dative, "60-a") &&
+              Gives(&s_tk, "3000", &dative, "3000-e") &&
               Gives(&s_tk, "1000000", &dative, "1000000-a"),
           "numbers by their last word (müň, bäş, kyrk, ýüz, "
           "nol, altmyş, million) after a hyphen");
@@ -559,7 +560,8 @@ static void TestTurkmen(void)
     mlocInflection letters = Case(mloc_caseDative);
     letters.reading = mloc_readingLetters;
     mlocInflection instrumental = Case(mloc_caseInstrumental);
-    CHECK(Gives(&s_tk, "K", &letters, "K-a") && Gives(&s_tk, "Ž", &letters, "Ž-ä") &&
+    CHECK(Gives(&s_tk, "K", &letters, "K-a") && Gives(&s_tk, "Z", &letters, "Z-ä") &&
+              Gives(&s_tk, "Ž", &letters, "Ž-ä") &&
               mlocInflectText(&s_tk, "Q", 1, &letters, &output) == mloc_errorInvalid &&
               mlocInflectText(&s_tk, "el", 2, &instrumental, &output) == mloc_errorInvalid,
           "letters by their names, Q none; no instrumental");
