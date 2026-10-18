@@ -21,7 +21,7 @@
 static mlocDataSet s_data;
 static mlocDataSet s_builtin;
 static mlocInflector s_tr;
-static char s_text[256];
+static char s_text[512];
 
 // A request for a case alone.
 static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
@@ -165,6 +165,13 @@ static void TestNumbers(void)
     mlocInflection plural = locative;
     plural.plural = true;
     CHECK(Gives("1990", &plural, "1990'larda"), "a number's plural keeps the apostrophe");
+    CHECK(Gives("9", &dative, "9'a") && Gives("1999", &locative, "1999'da") &&
+              Gives("1.000", &dative, "1.000'e"),
+          "a nine, and a grouped thousand read whole");
+    CHECK(Gives("1.2.10", &dative, "1.2.10'a") && Gives("1,000.5", &dative, "1,000.5'e") &&
+              Gives("iOS 17.4", &dative, "iOS 17.4'e"),
+          "a version and a number written otherwise than the locale writes them, by their last "
+          "digits");
 }
 
 static void TestAbbreviations(void)
@@ -176,6 +183,10 @@ static void TestAbbreviations(void)
               Gives("AB", &dative, "AB'ye") && Gives("PTT", &dative, "PTT'ye") &&
               Gives("PwC", &dative, "PwC'ye"),
           "capitals by their last letter's name; a word without a vowel by its letters");
+    mlocInflection lettersDative = dative;
+    lettersDative.reading = mloc_readingLetters;
+    CHECK(Gives("AZ", &dative, "AZ'ye") && Gives("xyz", &lettersDative, "xyz'ye"),
+          "the last letter of the alphabet, as a capital and as a small letter");
     mlocInflection word = dative;
     word.reading = mloc_readingWord;
     mlocInflection letters = dative;
@@ -214,6 +225,8 @@ static void TestCommonNouns(void)
                     "e") &&
               Gives("ev", &dative, "eve") && Gives("ev", &locative, "evde"),
           "a common noun: no apostrophe, its final stop softened before a vowel");
+    CHECK(Gives("top", &accusative, "topu") && Gives("ahenk", &accusative, "ahengi"),
+          "one syllable keeps its stop; nk softens to ng");
     CHECK(Gives("saat", &dative, "saate") && Gives("saat", &accusative, "saati") &&
               Gives("rol", &accusative, "rol\xC3\xBC") && Gives("alkol", &dative, "alkole") &&
               Gives("harf", &accusative, "harfi"),
@@ -318,6 +331,31 @@ static void TestRefusals(void)
               mlocInflectText(&s_tr, "Ali", 3, &fourth, &output) == mloc_errorInvalid &&
               mlocInflectText(nullptr, "Ali", 3, &dative, &output) == mloc_errorInvalid,
           "empty text, bad UTF-8, nothing to read, a case or person Turkish lacks");
+    CHECK(mlocInflectText(&s_tr, "Ali\xF0\x9F\x98\x80", 7, &dative, &output) == mloc_errorInvalid &&
+              mlocInflectText(&s_tr, "Ali!", 4, &dative, &output) == mloc_errorInvalid &&
+              mlocInflectText(&s_tr, "\xE2\x80\x9D", 3, &dative, &output) == mloc_errorInvalid &&
+              mlocInflectText(&s_tr, ".", 1, &dative, &output) == mloc_errorInvalid,
+          "an emoji, punctuation, a closing mark or a period alone end nothing to read");
+    static const char s_long[] = "12345678901234567890123456789012345678901234567890";
+    CHECK(mlocInflectText(&s_tr, s_long, sizeof(s_long) - 1, &dative, &output) == mloc_errorInvalid,
+          "a number past a decimal's 40 digits is refused");
+    static char s_word[301];
+    memset(s_word, 'a', 300);
+    output.length = 0;
+    CHECK(mlocInflectText(&s_tr, s_word, 300, &dative, &output) == mloc_success &&
+              output.length == 303 && memcmp(s_text + 300, "'ya", 3) == 0 && s_text[299] == 'a',
+          "a word past the spoken room is read by its last letters");
+    mlocOutput measure = {nullptr, 0, 0, nullptr, nullptr};
+    CHECK(mlocInflectText(&s_tr, "Ali", 3, &dative, &measure) == mloc_errorCapacity &&
+              measure.length == 6,
+          "a null buffer of no capacity measures");
+    mlocDecimal five;
+    mlocDecimal huge;
+    CHECK(mlocParseDecimal("5", 1, &five).status == mloc_success &&
+              mlocParseDecimal("1e2000", 6, &huge).status == mloc_success &&
+              mlocInflectNumber(&s_tr, nullptr, &five, &dative, nullptr) == mloc_errorInvalid &&
+              mlocInflectNumber(&s_tr, nullptr, &huge, &dative, &output) == mloc_errorInvalid,
+          "a number without an output, or whose text passes 1,024 bytes, is refused");
     mlocOutput small = {s_text, 4, 0, nullptr, nullptr};
     CHECK(mlocInflectText(&s_tr, "Ankara", 6, &dative, &small) == mloc_errorCapacity &&
               small.length == 9,

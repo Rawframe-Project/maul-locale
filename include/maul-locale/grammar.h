@@ -128,8 +128,9 @@ extern "C"
     ///         mloc_errorNotFound for a number when the inflector has no
     ///         spell-out rules; mloc_errorInvalid for a null pointer, an
     ///         empty text or one that is not UTF-8, a request the
-    ///         language does not have (a case, a person past 3), or a
-    ///         text with nothing to read (no letter or digit at its end).
+    ///         language does not have (a case, a person past 3), a text
+    ///         with nothing to read (no letter or digit at its end), or a
+    ///         number of more digits than a decimal holds (40).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInflectText(const mlocInflector* inflector,
