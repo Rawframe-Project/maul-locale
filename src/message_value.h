@@ -41,6 +41,8 @@ typedef enum ValueKind
     valueList,
     // A mloc:case or mloc:particle value.
     valueGrammar,
+    // A mloc:gender value.
+    valueGender,
     // Fallbacks, showing "$name", "|literal|" or ":function".
     valueFallbackVariable,
     valueFallbackLiteral,
@@ -72,6 +74,7 @@ typedef struct Value
         DurationValue duration;
         ListValue list;
         GrammarValue grammar;
+        GenderValue gender;
     };
 } Value;
 

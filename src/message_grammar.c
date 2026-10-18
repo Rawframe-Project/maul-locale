@@ -247,3 +247,74 @@ mlocMessageFaultKind mlocWriteGrammarValue(const GrammarValue* value,
     return FaultOf(mlocInflectNumber(&prepared->inflector, &number.formatter.number,
                                      &value->number.decimal, &value->request, output));
 }
+
+// A person's gender by its name; -1 for another text.
+static int PersonGender(const uint8_t* text, size_t length)
+{
+    static const char* const s_genders[3] = {"other", "male", "female"};
+    for (int i = 0; i < 3; i++)
+    {
+        if (text != nullptr && NameIs(text, length, s_genders[i]))
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool mlocMakeGenderValue(const mlocListItem* items, size_t count, const uint8_t* text,
+                         size_t length, const mlocDataSet* data, const mlocLocale* locale,
+                         GenderValue* out)
+{
+    // The list's gender reads its count and whether every person is
+    // male or female, so a list of any length stands as one of two.
+    size_t persons = items != nullptr ? count : 1;
+    size_t males = 0;
+    size_t females = 0;
+    int first = 0;
+    for (size_t i = 0; i < persons; i++)
+    {
+        int g = items != nullptr ? PersonGender((const uint8_t*)items[i].text, items[i].length)
+                                 : PersonGender(text, length);
+        if (g < 0)
+        {
+            return false;
+        }
+        first = i == 0 ? g : first;
+        males += g == mloc_personMale ? 1 : 0;
+        females += g == mloc_personFemale ? 1 : 0;
+    }
+    mlocPersonGender genders[2] = {(mlocPersonGender)first, (mlocPersonGender)first};
+    if (persons > 1)
+    {
+        // Two of one gender stand for a list all of it, a male and a
+        // female for any other.
+        mlocPersonGender all = males == persons     ? mloc_personMale
+                               : females == persons ? mloc_personFemale
+                                                    : mloc_personOther;
+        genders[0] = all == mloc_personOther ? mloc_personMale : all;
+        genders[1] = all == mloc_personOther ? mloc_personFemale : all;
+    }
+    mlocPersonGender gender;
+    if (mlocGetListGender(data, locale, genders, persons < 2 ? persons : 2, &gender) !=
+        mloc_success)
+    {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->gender = (uint8_t)gender;
+    return true;
+}
+
+mlocMessageFaultKind mlocMatchGender(const GenderValue* value, const uint8_t* key, size_t length,
+                                     bool* matchOut)
+{
+    int g = PersonGender(key, length);
+    if (g < 0)
+    {
+        *matchOut = false;
+        return mloc_messageFaultBadVariantKey;
+    }
+    *matchOut = g == value->gender;
+    return mloc_messageFaultNone;
+}

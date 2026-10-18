@@ -240,6 +240,9 @@ format.
   value by the locale's inflector ("{$name :mloc:case case=dative}"
   gives "Rodrigo'ya"), with the request's options and a hint that may
   be a variable (mloc-0052).
+- Messages: `mloc:gender` selects on the gender of a list of persons
+  ("male", "female", "other" items) by the locale's rule: keys male,
+  female and other (mloc-0052).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

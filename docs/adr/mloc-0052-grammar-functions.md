@@ -1,4 +1,4 @@
-# mloc-0052. Messages: mloc:case and mloc:particle
+# mloc-0052. Messages: mloc:case, mloc:particle and mloc:gender
 
 Status: Accepted
 
@@ -71,5 +71,23 @@ makes one when none is prepared.
 - A number is inflected only through `:number`, `:integer` or
   `:percent`. A currency or unit amount has no reading in the inflector
   and is a Bad Operand.
-- mloc:gender, the selector on a list of persons (record mloc-0051), is
-  the next amendment.
+
+## Amendment: mloc:gender
+
+- **mloc:gender** selects on the gender of a list of persons
+  (`mlocGetListGender`, record mloc-0051). Its operand is a list
+  argument whose items are "male", "female" or "other", or one person's
+  text (a string argument or a literal). It is read at resolution. Any
+  other item is a Bad Operand, which breaks the selector (Bad
+  Selector) so that the catch-all variant is chosen.
+- **Keys:** male, female, other and `*`. Any other key is a Bad Variant
+  Key.
+- **Formatting** a mloc:gender value is an Unsupported Operation, since
+  a gender has no text.
+- **Nothing is prepared.** The answer reads only a list's count and
+  whether every person is male or female, so a list of any length is
+  passed to `mlocGetListGender` as two persons who stand for it.
+- **Proof:** `test_message_grammar` selects in en, el, fr and he over
+  lists of one to three persons, an unknown person among them, one
+  person's text and a literal, and checks the faults. `fuzz_message`
+  has a seed that selects on a gender.

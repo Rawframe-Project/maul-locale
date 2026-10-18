@@ -195,6 +195,11 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
         fault =
             mlocWriteGrammarValue(&v->grammar, prepared, formatter->data, &formatter->locale, &out);
     }
+    else if (v->kind == valueGender)
+    {
+        // A gender has no text: it only selects.
+        fault = mloc_messageFaultUnsupportedOperation;
+    }
     else if (v->kind == valueResolved)
     {
         const mlocMessageFunction* function = &f->r.formatter.functions[v->function];
@@ -231,7 +236,7 @@ static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
         return PutArgument(f, v, expression);
     }
     if (kind == valueResolved || kind == valueNumber || kind == valueDate ||
-        kind == valueDuration || kind == valueList || kind == valueGrammar)
+        kind == valueDuration || kind == valueList || kind == valueGrammar || kind == valueGender)
     {
         return PutResolved(f, v, expression);
     }
@@ -356,7 +361,7 @@ typedef struct Selector
 // function's with a match entry.
 static bool Selectable(const Formatting* f, const Value* v)
 {
-    return v->kind == valueString || v->kind == valueList ||
+    return v->kind == valueString || v->kind == valueList || v->kind == valueGender ||
            (v->kind == valueNumber && v->number.selectable) ||
            (v->kind == valueResolved && f->r.formatter.functions[v->function].match != NULL);
 }
@@ -382,6 +387,10 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
         const PreparedList* prepared = mlocPreparedFor(&f->r, s->value.list.origin);
         fault = mlocMatchList(&s->value.list, prepared, formatter->data, &formatter->locale, key,
                               length, &matched);
+    }
+    else if (s->value.kind == valueGender)
+    {
+        fault = mlocMatchGender(&s->value.gender, key, length, &matched);
     }
     else if (s->value.kind == valueNumber)
     {

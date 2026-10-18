@@ -776,6 +776,43 @@ MLOC_NOINLINE static Value ResolveGrammar(Resolution* r, uint32_t expression, ui
     return v;
 }
 
+// A mloc:gender value: the gender, in the locale, of a list argument's
+// persons ("male", "female", "other") or of one person's text.
+MLOC_NOINLINE static Value ResolveGender(Resolution* r, uint32_t expression, const Value* operand)
+{
+    uint32_t at = Field(r, messageExpressions, expression, 7);
+    ValueKind kind = operand == NULL                ? valueResolved
+                     : operand->kind == valueString ? operand->behind
+                                                    : operand->kind;
+    const mlocMessageValue* a = kind == valueArgument ? operand->argument : NULL;
+    GenderValue g;
+    bool read = false;
+    if (kind == valueText)
+    {
+        read = mlocMakeGenderValue(NULL, 0, operand->text, operand->length, r->formatter.data,
+                                   &r->formatter.locale, &g);
+    }
+    else if (a != NULL && a->kind == mloc_messageValueString)
+    {
+        read = mlocMakeGenderValue(NULL, 0, (const uint8_t*)a->as.string.text, a->as.string.length,
+                                   r->formatter.data, &r->formatter.locale, &g);
+    }
+    else if (a != NULL && a->kind == mloc_messageValueList && mlocGoodList(a))
+    {
+        read = mlocMakeGenderValue(a->as.list.items, a->as.list.count, NULL, 0, r->formatter.data,
+                                   &r->formatter.locale, &g);
+    }
+    if (!read)
+    {
+        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        return mlocExpressionFallback(r, expression);
+    }
+    g.origin = expression;
+    Value v = Make(valueGender);
+    v.gender = g;
+    return v;
+}
+
 // A :date, :time or :datetime value: its operand's date and time, the
 // override options passed on, then the expression's own (u: options
 // aside).
@@ -855,6 +892,10 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
     else if (slot == messageFunctionList)
     {
         v = ResolveList(r, expression, given);
+    }
+    else if (slot == messageFunctionGender)
+    {
+        v = ResolveGender(r, expression, given);
     }
     else if (slot == messageFunctionCase || slot == messageFunctionParticle)
     {

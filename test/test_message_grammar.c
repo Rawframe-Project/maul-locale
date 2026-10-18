@@ -5,7 +5,8 @@
 // names, common nouns, literals, hints by variable and numbers as their
 // formatters write them in Turkish, Finnish and Hungarian; Korean
 // particles; the faults of a bad or refused request, a locale without
-// rules and an operand neither text nor number.
+// rules and an operand neither text nor number; mloc:gender selecting
+// on a list of persons by each rule (record mloc-0051).
 
 #include "test_harness.h"
 
@@ -148,6 +149,56 @@ static void TestFaults(void)
           "a locale without rules; an operand neither text nor number");
 }
 
+// The message that selects on a list of persons' gender.
+static const char s_select[] =
+    ".input {$p :mloc:gender} .match $p male {{He}} female {{She}} other {{They}} * {{?}}";
+
+static mlocMessageArgument Persons(const mlocListItem* items, size_t count)
+{
+    return (mlocMessageArgument){"p", 1, {mloc_messageValueList, 0, {.list = {items, count}}}};
+}
+
+static void TestGender(void)
+{
+    static const mlocListItem mixed[] = {{"male", 4}, {"female", 6}};
+    static const mlocListItem men[] = {{"male", 4}, {"male", 4}, {"male", 4}};
+    static const mlocListItem women[] = {{"female", 6}, {"female", 6}};
+    static const mlocListItem one[] = {{"male", 4}};
+    static const mlocListItem unknown[] = {{"other", 5}, {"female", 6}};
+    mlocMessageArgument a = Persons(mixed, 2);
+    mlocMessageArgument m = Persons(men, 3);
+    mlocMessageArgument w = Persons(women, 2);
+    mlocMessageArgument o = Persons(one, 1);
+    mlocMessageArgument u = Persons(unknown, 2);
+    CHECK(Formats("en", s_select, &a, 1, "They", NULL) &&
+              Formats("en", s_select, &m, 1, "They", NULL) &&
+              Formats("en", s_select, &o, 1, "He", NULL),
+          "neutral: a list is other, one person that person");
+    CHECK(Formats("el", s_select, &m, 1, "He", NULL) &&
+              Formats("el", s_select, &w, 1, "She", NULL) &&
+              Formats("el", s_select, &a, 1, "They", NULL),
+          "mixed neutral");
+    CHECK(Formats("fr", s_select, &a, 1, "He", NULL) &&
+              Formats("fr", s_select, &w, 1, "She", NULL) &&
+              Formats("fr", s_select, &u, 1, "He", NULL) &&
+              Formats("he", s_select, &a, 1, "He", NULL),
+          "male taints, an unknown person among them");
+    mlocMessageArgument single = Text("p", "female");
+    CHECK(Formats("fr", s_select, &single, 1, "She", NULL) &&
+              Formats("en", ".local $g = {female :mloc:gender} .match $g female {{She}} * {{?}}",
+                      NULL, 0, "She", NULL),
+          "one person's text, a literal");
+    static const mlocListItem bad[] = {{"male", 4}, {"man", 3}};
+    mlocMessageArgument b = Persons(bad, 2);
+    CHECK(Formats("en", s_select, &b, 1, "?",
+                  (const mlocMessageFaultKind[]){mloc_messageFaultBadOperand,
+                                                 mloc_messageFaultBadSelector, 0}) &&
+              Formats("en", ".input {$p :mloc:gender} .match $p woman {{W}} * {{?}}", &a, 1, "?",
+                      (const mlocMessageFaultKind[]){mloc_messageFaultBadVariantKey, 0}) &&
+              Formats("en", "{$p :mloc:gender}", &a, 1, "{$p}", s_unsupported),
+          "a bad person, a bad key; a gender has no text");
+}
+
 static bool Open(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
     FILE* file = fopen(path, "rb");
@@ -177,5 +228,6 @@ int main(void)
     TestCase();
     TestParticle();
     TestFaults();
+    TestGender();
     return s_failures == 0 ? 0 : 1;
 }
