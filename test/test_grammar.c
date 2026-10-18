@@ -262,8 +262,14 @@ static void TestCommonNouns(void)
               Gives("met\xC3\xAEn", &accusative, "met\xC3\xAEni") &&
               Gives("metin", &accusative, "metni") &&
               Gives("hel\xC3\xA2k", &accusative, "hel\xC3\xA2ki") &&
-              Gives("helak", &accusative, "helaki"),
-          "a circumflexed spelling looked up as it is written, then without its circumflex");
+              Gives("helak", &accusative, "helaki") &&
+              Gives("\xC5\x9E"
+                    "ehir",
+                    &accusative,
+                    "\xC5\x9E"
+                    "ehri"),
+          "a circumflexed spelling looked up as it is written, then without its circumflex; a "
+          "capital looked up in lowercase");
     CHECK(Gives("zeytinya\xC4\x9FI", &plural, "zeytinya\xC4\x9Flar\xC4\xB1") &&
               Gives("zeytiny\xC3\xA2\xC4\x9F\xC4\xB1", &plural,
                     "zeytiny\xC3\xA2\xC4\x9Flar\xC4\xB1") &&
