@@ -9,6 +9,7 @@
 
 #include "maul-locale/grammar.h"
 
+#include "grammar_lexicon.h"
 #include "grammar_turkic.h"
 #include "number_core.h"
 
@@ -349,19 +350,44 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
 }
 
 // What a request writes after a text: its suffixes, the apostrophe
-// before them and the stem's softened end.
+// before them, and the stem's changed end (the bytes kept, then a tail).
 typedef struct Inflected
 {
     TurkicSuffixes suffixes;
     bool apostrophe;
     size_t kept;
-    const char* softened;
+    char tail[12];
+    uint8_t tailLength;
 } Inflected;
 
 static bool ValidRequest(const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
            (r->hint != nullptr || r->hintLength == 0) && mlocTurkicRequestValid(r);
+}
+
+// A compound that ends in a third person's possessive (zeytinyağı): its
+// cases take the pronominal n (zeytinyağına); a plural or another
+// possessive goes on its roots, the plural keeping the third person's
+// (zeytinyağları, zeytinyağım).
+static void InflectCompound(const uint8_t* text, size_t length, const mlocInflection* r,
+                            const TurkicMarks* marks, TurkicSound sound, Inflected* out)
+{
+    if (!r->plural && r->possessorPerson == 0)
+    {
+        mlocTurkicSuffixes(sound, r, true, &out->suffixes);
+        return;
+    }
+    size_t roots = length - marks->possessive;
+    mlocInflection onRoots = *r;
+    onRoots.possessorPerson = r->possessorPerson == 0 ? 3 : r->possessorPerson;
+    TurkicSound rootSound;
+    if (!mlocTurkicSound(text, roots, (marks->marks & turkicInverse) != 0, &rootSound))
+    {
+        rootSound = sound;
+    }
+    mlocTurkicSuffixes(rootSound, &onRoots, false, &out->suffixes);
+    out->kept = roots;
 }
 
 // Reads the spoken end (the hint's when there is one) and writes the
@@ -392,47 +418,59 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
     {
         return result;
     }
+    TurkicMarks marks = {0};
+    if (spokenEnd.kind == endWord)
+    {
+        (void)mlocTurkicMarks((const uint8_t*)spoken, spokenLength, &marks);
+    }
+    bool inverse = (marks.marks & turkicInverse) != 0;
     TurkicSound sound;
-    if (!mlocTurkicSound((const uint8_t*)spoken, spokenLength, &sound))
+    if (!mlocTurkicSound((const uint8_t*)spoken, spokenLength, inverse, &sound))
     {
         // A word without a vowel is read by its letters (PwC, Brr).
         End letters = spokenEnd;
         letters.kind = endLetters;
         if (spokenEnd.kind != endWord ||
             Spoken(f, spokenText, &letters, spoken, &spokenLength) != mloc_success ||
-            !mlocTurkicSound((const uint8_t*)spoken, spokenLength, &sound))
+            !mlocTurkicSound((const uint8_t*)spoken, spokenLength, false, &sound))
         {
             return mloc_errorInvalid;
         }
+        marks = (TurkicMarks){0};
     }
-    mlocTurkicSuffixes(sound, r, &out->suffixes);
     // A name joins its plural (Ahmetler) unless it is foreign, which a
     // hint, its spoken form, says (Nice'ler).
     bool name = e.kind == endWord && !r->commonNoun && spokenText == text;
+    bool stemmed = r->commonNoun && e.kind == endWord && e.end == length && spokenText == text;
+    out->kept = length;
+    out->tailLength = 0;
+    if (stemmed && (marks.marks & turkicCompound) != 0)
+    {
+        InflectCompound(text, length, r, &marks, sound, out);
+    }
+    else
+    {
+        mlocTurkicSuffixes(sound, r, false, &out->suffixes);
+        TurkicStem stem;
+        if (stemmed && out->suffixes.vowelFirst &&
+            mlocTurkicStem(text + e.start, e.end - e.start, marks.marks, &stem))
+        {
+            out->kept = e.start + stem.kept;
+            memcpy(out->tail, stem.tail, stem.tailLength);
+            out->tailLength = stem.tailLength;
+        }
+    }
     out->apostrophe = !r->commonNoun && !e.closed && !e.period && out->suffixes.particle > 0 &&
                       !(name && r->plural);
-    out->kept = length;
-    out->softened = nullptr;
-    size_t replaced = 0;
-    if (r->commonNoun && e.kind == endWord && e.end == length && spokenText == text &&
-        out->suffixes.vowelFirst &&
-        mlocTurkicSoften(text + e.start, e.end - e.start, &out->softened, &replaced))
-    {
-        out->kept = length - replaced;
-    }
     return mloc_success;
 }
 
-// Writes the inflected text: the stem (kept, then its softened end), the
+// Writes the inflected text: the stem (kept, then its changed end), the
 // apostrophe, the suffixes and the particle.
 static void Write(const uint8_t* text, const Inflected* in, NumberWriter* w)
 {
     mlocWritePart(w, mloc_inflectionPartStem, text, in->kept);
-    if (in->softened != nullptr)
-    {
-        mlocWritePart(w, mloc_inflectionPartStem, (const uint8_t*)in->softened,
-                      strlen(in->softened));
-    }
+    mlocWritePart(w, mloc_inflectionPartStem, (const uint8_t*)in->tail, in->tailLength);
     if (in->apostrophe)
     {
         mlocWritePart(w, mloc_inflectionPartApostrophe, (const uint8_t*)"'", 1);

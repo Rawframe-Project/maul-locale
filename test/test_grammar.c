@@ -227,6 +227,42 @@ static void TestCommonNouns(void)
               Gives("rol", &accusative, "rol\xC3\xBC") && Gives("alkol", &dative, "alkole") &&
               Gives("harf", &accusative, "harfi"),
           "the loanwords that break harmony");
+    mlocInflection genitive = Case(mloc_caseGenitive);
+    genitive.commonNoun = true;
+    mlocInflection plural = Case(mloc_caseNominative);
+    plural.commonNoun = true;
+    plural.plural = true;
+    mlocInflection ours = Case(mloc_caseNominative);
+    ours.commonNoun = true;
+    ours.possessorPerson = 1;
+    CHECK(Gives("kanat", &accusative, "kanad\xC4\xB1") &&
+              Gives("psikolog", &accusative, "psikolo\xC4\x9Fu") &&
+              Gives("renk", &accusative, "rengi") && Gives("tank", &accusative, "tank\xC4\xB1") &&
+              Gives("kalp", &accusative, "kalbi") && Gives("ahlak", &accusative, "ahlak\xC4\xB1") &&
+              Gives("tahakkuk", &accusative, "tahakkuku") &&
+              Gives("katedral", &accusative, "katedrali"),
+          "softening by Zemberek's rule and the lexicon's marks: t in two syllables, og and nk "
+          "in any; one syllable that softens, words that keep, inverse harmony");
+    CHECK(Gives("hak", &accusative, "hakk\xC4\xB1") && Gives("ret", &accusative, "reddi") &&
+              Gives("burun", &accusative, "burnu") &&
+              Gives("\xC5\x9F"
+                    "ehir",
+                    &dative,
+                    "\xC5\x9F"
+                    "ehre") &&
+              Gives("burun", &plural, "burunlar") && Gives("hak", &genitive, "hakk\xC4\xB1n"),
+          "doubling and the dropped vowel before a vowel, not before a consonant");
+    CHECK(Gives("zeytinya\xC4\x9F\xC4\xB1", &dative, "zeytinya\xC4\x9F\xC4\xB1na") &&
+              Gives("zeytinya\xC4\x9F\xC4\xB1", &accusative, "zeytinya\xC4\x9F\xC4\xB1n\xC4\xB1") &&
+              Gives("zeytinya\xC4\x9F\xC4\xB1", &plural, "zeytinya\xC4\x9Flar\xC4\xB1") &&
+              Gives("zeytinya\xC4\x9F\xC4\xB1", &ours, "zeytinya\xC4\x9F\xC4\xB1m") &&
+              Gives("Zeytinya\xC4\x9F\xC4\xB1", &dative, "Zeytinya\xC4\x9F\xC4\xB1na"),
+          "a compound's possessive: the pronominal n, a plural or possessive on its roots");
+    mlocInflection nameDative = Case(mloc_caseDative);
+    mlocInflection nameGenitive = Case(mloc_caseGenitive);
+    CHECK(Gives("Kemal", &nameGenitive, "Kemal'in") && Gives("Senegal", &nameDative, "Senegal'e") &&
+              Gives("Ahlat", &nameDative, "Ahlat'a"),
+          "a name takes a word's inverse harmony, never its softening");
     mlocInflection mine = Case(mloc_caseNominative);
     mine.commonNoun = true;
     mine.possessorPerson = 1;

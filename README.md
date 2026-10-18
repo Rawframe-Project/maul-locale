@@ -149,6 +149,13 @@ calendar's corrections, KACST's Umm al-Qura month lengths and the Qing
 calendar's years 1900 to 1911 are published facts. Maul Locale takes
 them as ICU4C and ICU4X list them, under the same notice.
 
+The Turkish lexicon's marks, `src/generated/turkish_marks.h` (which
+words keep or soften their final stop, take inverse harmony, double
+their final consonant, drop their last vowel or end in a compound's
+possessive), are generated from Zemberek-NLP's dictionaries
+(`tools/zemberek-release.txt` pins them) under the Apache License 2.0;
+its notice is in `LICENSES/Apache-2.0-zemberek.txt`.
+
 The test cases in `test/test262_calendar.inc`,
 `test/test262_zone.inc`, `test/test262_time.inc`,
 `test/test262_datetime.inc`, `test/test262_instant.inc`,

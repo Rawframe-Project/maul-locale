@@ -8,7 +8,7 @@
 // hint); the rest is the text. An inflection refuses with invalid input,
 // a missing number reading or capacity alone; it measures what it then
 // writes, writes the same twice, writes valid UTF-8 that begins with the
-// text (but a common noun's softened stop), and its parts tile it. The
+// text (but a common noun's changed end), and its parts tile it. The
 // text read as a decimal is inflected as a number too.
 
 #include "maul-locale/data.h"
@@ -162,11 +162,12 @@ static void Check(const mlocInflector* f, const char* text, size_t length,
                              : mlocInflectNumber(f, nullptr, number, r, &again)) == mloc_success);
     Require(again.length == out.length && memcmp(s_again, s_out, out.length) == 0);
     Require(tiling.good && tiling.next == out.length);
-    // The text begins the output, but a common noun's final stop of one
-    // or two bytes.
+    // The text begins the output, but a common noun's changed end: its
+    // final stop, its dropped vowel and what follows it, or a compound's
+    // possessive, at most 8 bytes.
     if (text != nullptr)
     {
-        size_t kept = r->commonNoun && length >= 2 ? length - 2 : length;
+        size_t kept = !r->commonNoun ? length : length >= 8 ? length - 8 : 0;
         Require(out.length >= kept && memcmp(s_out, text, kept) == 0);
     }
 }

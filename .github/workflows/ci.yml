@@ -39,6 +39,14 @@ jobs:
           python3 tools/check_lengths.py
           python3 tools/check_guide.py
           python3 tools/gen_pow5_tables.py --check
+          # The Turkish lexicon's marks against the dictionaries pinned.
+          commit=$(awk '$1 == "commit" { print $2 }' tools/zemberek-release.txt)
+          mkdir -p zemberek
+          for name in $(awk '$1 == "file" { print $2 }' tools/zemberek-release.txt); do
+            curl -sfL -o "zemberek/$name" \
+              "https://raw.githubusercontent.com/ahmetaa/zemberek-nlp/$commit/morphology/src/main/resources/tr/$name"
+          done
+          python3 tools/gen_turkish_marks.py zemberek --check
       - name: clang-tidy
         run: |
           cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \

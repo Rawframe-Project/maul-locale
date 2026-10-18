@@ -92,40 +92,6 @@ static uint32_t Previous(const uint8_t* text, size_t end, size_t* startOut)
     return c;
 }
 
-// The loanwords the spelling guides name whose suffixes take front
-// vowels after a back last vowel (saate, rolü, alkolü, harfi, hali), as
-// ASCII lowercase.
-static const char* const s_frontLoans[] = {"alkol",   "gol",    "hal", "harf",
-                                           "kontrol", "petrol", "rol", "saat"};
-
-static bool FrontLoan(const uint8_t* word, size_t length)
-{
-    char lower[8];
-    if (length > sizeof(lower))
-    {
-        return false;
-    }
-    for (size_t i = 0; i < length; i++)
-    {
-        uint8_t b = word[i];
-        // Only ASCII letters; an uppercase I is Turkish's ı, which no
-        // entry has.
-        if (b >= 0x80 || b == 'I')
-        {
-            return false;
-        }
-        lower[i] = (char)(b >= 'A' && b <= 'Z' ? b + 32 : b);
-    }
-    for (size_t i = 0; i < sizeof(s_frontLoans) / sizeof(s_frontLoans[0]); i++)
-    {
-        if (strlen(s_frontLoans[i]) == length && memcmp(s_frontLoans[i], lower, length) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 static char Front(char vowel)
 {
     return vowel == 'a'   ? 'e'
@@ -135,7 +101,7 @@ static char Front(char vowel)
                           : vowel;
 }
 
-bool mlocTurkicSound(const uint8_t* word, size_t length, TurkicSound* out)
+bool mlocTurkicSound(const uint8_t* word, size_t length, bool inverse, TurkicSound* out)
 {
     *out = (TurkicSound){0};
     bool first = true;
@@ -172,7 +138,7 @@ bool mlocTurkicSound(const uint8_t* word, size_t length, TurkicSound* out)
         }
         if (vowel != 0)
         {
-            out->vowel = FrontLoan(word, length) ? Front(vowel) : vowel;
+            out->vowel = inverse ? Front(vowel) : vowel;
             return true;
         }
         end = start;
@@ -353,10 +319,11 @@ static const char* CaseSuffix(mlocGrammaticalCase grammaticalCase, bool afterThi
     }
 }
 
-void mlocTurkicSuffixes(TurkicSound sound, const mlocInflection* r, TurkicSuffixes* out)
+void mlocTurkicSuffixes(TurkicSound sound, const mlocInflection* r, bool endsThird,
+                        TurkicSuffixes* out)
 {
     *out = (TurkicSuffixes){0};
-    bool third = r->possessorPerson == 3;
+    bool third = r->possessorPerson == 3 || endsThird;
     // A third person plural's possessive after a plural is written once
     // (evleri: their houses).
     if (r->plural && !(third && r->possessorPlural))
@@ -386,56 +353,94 @@ void mlocTurkicSuffixes(TurkicSound sound, const mlocInflection* r, TurkicSuffix
         out->particle > 0 && out->text[0] != 'l' && out->text[0] != 'd' && out->text[0] != 't';
 }
 
-bool mlocTurkicSoften(const uint8_t* word, size_t length, const char** replacementOut,
-                      size_t* replacedOut)
+// The softened form of a final stop before a vowel: b for p, c for ç, d
+// for t, ğ for k and g, g for k after n.
+static const char* Softened(uint32_t last, uint32_t before)
 {
+    switch (last)
+    {
+    case 'p':
+        return "b";
+    case 0xE7:
+        return "c";
+    case 't':
+        return "d";
+    case 'k':
+        return before == 'n' ? "g" : "\xC4\x9F";
+    case 'g':
+        return "\xC4\x9F";
+    default:
+        return nullptr;
+    }
+}
+
+// Appends bytes to a stem's tail, when they fit.
+static void Tail(TurkicStem* stem, const char* bytes, size_t n)
+{
+    if (stem->tailLength + n <= sizeof(stem->tail))
+    {
+        memcpy(stem->tail + stem->tailLength, bytes, n);
+        stem->tailLength = (uint8_t)(stem->tailLength + n);
+    }
+}
+
+bool mlocTurkicStem(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out)
+{
+    *out = (TurkicStem){.kept = length};
     int vowels = 0;
+    size_t lastVowel = length;
+    size_t lastVowelEnd = length;
     for (size_t end = length; end > 0;)
     {
         size_t start = 0;
         char vowel = 0;
         bool voiceless = false;
         Letter(Previous(word, end, &start), &vowel, &voiceless);
-        vowels += vowel != 0 ? 1 : 0;
+        if (vowel != 0 && vowels++ == 0)
+        {
+            lastVowel = start;
+            lastVowelEnd = end;
+        }
         end = start;
     }
-    if (vowels < 2 || length < 2)
+    if (length == 0 || vowels == 0)
     {
         return false;
     }
-    uint8_t last = word[length - 1];
-    if (last == 'p')
-    {
-        *replacementOut = "b";
-        *replacedOut = 1;
-        return true;
-    }
-    if (length >= 2 && word[length - 2] == 0xC3 && last == 0xA7)
-    {
-        *replacementOut = "c";
-        *replacedOut = 2;
-        return true;
-    }
-    if (last != 'k')
+    size_t finalStart = 0;
+    uint32_t last = Previous(word, length, &finalStart);
+    size_t beforeStart = 0;
+    uint32_t before = finalStart > 0 ? Previous(word, finalStart, &beforeStart) : 0;
+    const char* softened = Softened(last, before);
+    // Zemberek's rule, which the marks are written against: a final ç, k,
+    // p or t softens in a word of two syllables or more without inverse
+    // harmony, a final nk or og in any word.
+    bool stop = last == 'p' || last == 0xE7 || last == 't' || last == 'k';
+    bool byRule = (stop && vowels >= 2 && (marks & turkicInverse) == 0) ||
+                  (last == 'k' && before == 'n') || (last == 'g' && before == 'o');
+    bool softens =
+        softened != nullptr && (byRule ? (marks & turkicKeeps) == 0 : (marks & turkicSoftens) != 0);
+    const char* finalBytes = softens ? softened : (const char*)word + finalStart;
+    size_t finalLength = softens ? strlen(softened) : length - finalStart;
+    bool drops = (marks & turkicDropsVowel) != 0 && vowels >= 2 && lastVowelEnd < length;
+    if (!softens && !drops && (marks & turkicDoubles) == 0)
     {
         return false;
     }
-    size_t before = 0;
-    char vowel = 0;
-    bool voiceless = false;
-    uint32_t previous = Previous(word, length - 1, &before);
-    Letter(previous, &vowel, &voiceless);
-    if (previous == 'n')
+    if (drops)
     {
-        *replacementOut = "g";
-        *replacedOut = 1;
-        return true;
+        // The consonants after the dropped vowel, the final one softened.
+        out->kept = lastVowel;
+        Tail(out, (const char*)word + lastVowelEnd, finalStart - lastVowelEnd);
     }
-    if (vowel != 0)
+    else
     {
-        *replacementOut = "\xC4\x9F";
-        *replacedOut = 1;
-        return true;
+        out->kept = finalStart;
     }
-    return false;
+    Tail(out, finalBytes, finalLength);
+    if ((marks & turkicDoubles) != 0)
+    {
+        Tail(out, finalBytes, finalLength);
+    }
+    return true;
 }

@@ -186,6 +186,11 @@ format.
   DurationFormat options; program functions receive
   `mloc_messageOperandDuration`, and `mlocMessageResolved` is 96 bytes
   (mloc-0045).
+- Turkish common nouns inflect by a lexicon of 2,593 words generated
+  from Zemberek-NLP's dictionaries (20 KB): stops kept or softened
+  (ahlakı, kalbi, kanadı, psikoloğu), inverse harmony (katedrali,
+  Kemal'in), doubling (hakkı), the dropped vowel (burnu), compounds
+  (zeytinyağına, zeytinyağları) (mloc-0046).
 - Grammatical suffixes (`maul-locale/grammar.h`): an inflector per
   locale, Turkish cases, plural, possessives, copula and question
   particle on text and numbers by their spoken end, with TDK's
