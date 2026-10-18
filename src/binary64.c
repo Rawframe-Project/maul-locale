@@ -83,6 +83,11 @@ bool mlocWideBelow(Wide a, Wide b)
 // quotient fits 64 bits here.
 uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut)
 {
+    if (n.high == 0 && d.high == 0)
+    {
+        *remainderOut = (Wide){0, n.low % d.low};
+        return n.low / d.low;
+    }
     uint64_t quotient = 0;
     Wide r = {0, 0};
     for (int i = BitLength(n) - 1; i >= 0; i -= 1)
@@ -102,6 +107,13 @@ uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut)
 
 double mlocBinary64Of(bool negative, Wide numerator, Wide denominator)
 {
+    if (numerator.high == 0 && denominator.high == 0 && denominator.low == 1 &&
+        numerator.low != 0 && numerator.low >> 53 == 0)
+    {
+        // An integer below 2^53 converts exactly, in any rounding mode.
+        double whole = (double)numerator.low;
+        return negative ? -whole : whole;
+    }
     uint64_t bits = 0;
     double out;
     if (numerator.high != 0 || numerator.low != 0)
