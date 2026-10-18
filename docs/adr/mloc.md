@@ -52,3 +52,4 @@ are listed in [README.md](README.md).
 | [mloc-0045](mloc-0045-messages.md) | Messages: MessageFormat 2, compiled once, bound once, formatted without allocation | Accepted |
 | [mloc-0046](mloc-0046-grammar.md) | Grammar: suffixes by the spoken end, an inflector per locale | Accepted |
 | [mloc-0047](mloc-0047-turkic-languages.md) | Grammar: the other Turkic languages by tables of one engine | Accepted |
+| [mloc-0048](mloc-0048-hungarian.md) | Grammar: Hungarian by the Academy's rules and a small table | Accepted |

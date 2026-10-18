@@ -217,6 +217,11 @@ format.
   suffixes only, the dative fused with a final vowel, a hyphen after
   abbreviations and digits, p, ç and k voiced before a vowel, numbers
   read by Turkmen number words in code (mloc-0047).
+- Hungarian suffixes by the Academy's rules: 16 cases, plural and
+  possessives on the word's harmony, lengthening, linking vowels and
+  the assimilated v of -val and -vá; a table of the stems the rules
+  cannot tell; hyphens after digits, abbreviations and as the rules
+  ask for names (mloc-0048).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the inflector (records mloc-0046, mloc-0047),
-// Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek or Turkmen, with the
-// spell-out file beside the compiled-in data.
+// libFuzzer target for the inflector (records mloc-0046 to mloc-0048),
+// Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek, Turkmen or Hungarian, with
+// the spell-out file beside the compiled-in data.
 // The first two bytes choose the request (case, plural, possessor,
 // copula, question, common noun, reading) and the language, the third
 // where the text ends and the hint begins (0 for no hint); the rest is
@@ -73,9 +73,8 @@ enum
     languageSlots = 8,
 };
 static const char* const s_languages[languageSlots] = {"tr", "kk", "ky", "az",
-                                                       "uz", "tk", "tr", "tr"};
-static const bool s_stemsNames[languageSlots] = {false, true, true,  false,
-                                                 true,  true, false, false};
+                                                       "uz", "tk", "hu", "tr"};
+static const bool s_stemsNames[languageSlots] = {false, true, true, false, true, true, true, false};
 
 // A language's inflector, with the spell-out rules when the file opens.
 static const mlocInflector* Inflector(size_t language)
@@ -133,14 +132,19 @@ static void Tile(void* context, uint32_t part, size_t start, size_t length)
     t->stemEnd = part == mloc_inflectionPartStem ? t->next : t->stemEnd;
 }
 
+// The request: the case by three bits of the first byte and the second
+// byte's last (Hungarian's cases in the upper eight, so the seeds written
+// before them keep their meaning).
 static mlocInflection RequestOf(const uint8_t* bytes)
 {
-    static const mlocGrammaticalCase s_cases[8] = {
-        mloc_caseNominative, mloc_caseGenitive, mloc_caseDative,       mloc_caseAccusative,
-        mloc_caseLocative,   mloc_caseAblative, mloc_caseInstrumental, mloc_caseVocative};
+    static const mlocGrammaticalCase s_cases[16] = {
+        mloc_caseNominative,  mloc_caseGenitive,    mloc_caseDative,       mloc_caseAccusative,
+        mloc_caseLocative,    mloc_caseAblative,    mloc_caseInstrumental, mloc_caseVocative,
+        mloc_caseInessive,    mloc_caseSuperessive, mloc_caseAdessive,     mloc_caseIllative,
+        mloc_caseTranslative, mloc_caseEssive,      mloc_caseAllative,     mloc_caseElative};
     mlocInflection r;
     memset(&r, 0, sizeof(r));
-    r.grammaticalCase = s_cases[bytes[0] & 7];
+    r.grammaticalCase = s_cases[(bytes[0] & 7) | (bytes[1] >> 7) << 3];
     r.plural = (bytes[0] & 8) != 0;
     r.possessorPerson = (uint8_t)(bytes[0] >> 4 & 3);
     r.possessorPlural = (bytes[0] & 0x40) != 0 && r.possessorPerson != 0;
@@ -180,8 +184,9 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     Require(again.length == out.length && memcmp(s_again, s_out, out.length) == 0);
     Require(tiling.good && tiling.next == out.length);
     // The text begins the output, but a stem's changed end (a common
-    // noun's, a Kazakh, Kyrgyz, Uzbek or Turkmen name's): its final stop, its dropped vowel and
-    // what follows it, or a compound's possessive, at most 8 bytes.
+    // noun's, a Kazakh, Kyrgyz, Uzbek, Turkmen or Hungarian name's): its final stop, its
+    // dropped or lengthened vowel and what follows it, or a compound's possessive, at most 8
+    // bytes.
     if (text != nullptr)
     {
         size_t kept = !r->commonNoun && !stemsNames ? length : length >= 8 ? length - 8 : 0;

@@ -149,9 +149,12 @@ message: message_check message_emit message_form message_parse message_read mess
 grammar_lexicon:
 grammar_turkic:
 grammar_tk: grammar_turkic
+grammar_hu_sound:
+grammar_hu: grammar_hu_sound
+grammar_hu_words: grammar_hu
 grammar_tr: grammar_lexicon grammar_turkic
 grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
-grammar: grammar_lexicon grammar_turkic number_core
+grammar: grammar_hu grammar_hu_sound grammar_lexicon grammar_turkic number_core

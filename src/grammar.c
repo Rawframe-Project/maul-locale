@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The inflector (maul-locale/grammar.h, records mloc-0046 and
-// mloc-0047): a text's end found and read (a number by its spoken form,
+// The inflector (maul-locale/grammar.h, records mloc-0046 to
+// mloc-0048): a text's end found and read (a number by its spoken form,
 // capitals by their letters' names, a word as written or as the hint
 // says), and the language's suffixes written after it with the boundary
 // mark its spelling asks for.
 
 #include "maul-locale/grammar.h"
 
+#include "grammar_hu.h"
+#include "grammar_hu_sound.h"
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
 #include "number_core.h"
@@ -29,6 +31,7 @@ enum
     languageAzerbaijani = 4,
     languageUzbek = 5,
     languageTurkmen = 6,
+    languageHungarian = 7,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -85,6 +88,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageTurkmen;
     }
+    else if (strcmp(locale->language, "hu") == 0 && latin)
+    {
+        f.language = languageHungarian;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -115,10 +122,15 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageTurkmen && f->spoken <= 1;
+           f->language <= languageHungarian && f->spoken <= 1;
 }
 
-// An inflector's language.
+static bool IsTurkic(const Inflector* f)
+{
+    return f->language <= languageTurkmen;
+}
+
+// A Turkic inflector's language.
 static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
     static const TurkicLanguage* const s_languages[] = {
@@ -145,6 +157,8 @@ typedef struct End
     // letters: no apostrophe then.
     bool closed;
     bool period;
+    // Its letters are all capitals.
+    bool capitals;
 } End;
 
 // Decodes the code point that ends at text[end], valid UTF-8; its first
@@ -242,7 +256,7 @@ static size_t WordStart(const uint8_t* text, size_t end, bool* capitalsOut)
 
 // Finds and classifies a text's end; false when nothing ends it that can
 // be read.
-static bool FindEnd(const TurkicLanguage* language, const uint8_t* text, size_t length,
+static bool FindEnd(bool periodOrdinals, const uint8_t* text, size_t length,
                     mlocInflectionReading reading, End* out)
 {
     *out = (End){0};
@@ -264,8 +278,8 @@ static bool FindEnd(const TurkicLanguage* language, const uint8_t* text, size_t 
     if (IsDigit(c))
     {
         out->start = NumberStart(text, last);
-        out->kind = dot && language->periodOrdinals ? endOrdinal : endNumber;
-        out->period = dot && !language->periodOrdinals;
+        out->kind = dot && periodOrdinals ? endOrdinal : endNumber;
+        out->period = dot && !periodOrdinals;
         return true;
     }
     if (!IsLetter(c))
@@ -275,6 +289,7 @@ static bool FindEnd(const TurkicLanguage* language, const uint8_t* text, size_t 
     bool capitals = false;
     out->start = WordStart(text, last, &capitals);
     out->period = dot;
+    out->capitals = capitals;
     out->kind = reading == mloc_readingLetters                    ? endLetters
                 : reading == mloc_readingAuto && capitals && !dot ? endLetters
                                                                   : endWord;
@@ -323,8 +338,9 @@ static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value,
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
                                size_t* spokenLength)
 {
-    const TurkicLanguage* language = LanguageOf(f);
-    if (f->spoken == 0 && language->numberWord == nullptr)
+    const TurkicLanguage* language = IsTurkic(f) ? LanguageOf(f) : nullptr;
+    bool coded = language != nullptr && language->numberWord != nullptr;
+    if (f->spoken == 0 && !coded)
     {
         return mloc_errorNotFound;
     }
@@ -359,7 +375,7 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
             return mloc_errorInvalid;
         }
     }
-    if (language->numberWord != nullptr)
+    if (coded)
     {
         return NumberWord(language, &value, spoken, spokenLength) ? mloc_success
                                                                   : mloc_errorNotFound;
@@ -386,7 +402,8 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
     if (e->kind == endLetters)
     {
         size_t previous = 0;
-        const char* name = LanguageOf(f)->letterName(Before(text, e->end, &previous));
+        const char* name = IsTurkic(f) ? LanguageOf(f)->letterName(Before(text, e->end, &previous))
+                                       : mlocHungarianLetterName(text, e->end);
         if (name == nullptr)
         {
             return mloc_errorInvalid;
@@ -423,14 +440,15 @@ typedef struct Inflected
     // The mark, or 0 for none.
     char mark;
     size_t kept;
-    char tail[12];
+    char tail[16];
     uint8_t tailLength;
 } Inflected;
 
 static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
-           (r->hint != nullptr || r->hintLength == 0) && mlocTurkicRequestValid(LanguageOf(f), r);
+           (r->hint != nullptr || r->hintLength == 0) &&
+           (IsTurkic(f) ? mlocTurkicRequestValid(LanguageOf(f), r) : mlocHungarianRequestValid(r));
 }
 
 // A compound that ends in a third person's possessive (zeytinyağı): its
@@ -490,35 +508,115 @@ static char Mark(const TurkicLanguage* language, const uint8_t* text, const End*
     return marked ? language->mark : 0;
 }
 
+// A text's end and how it is said: the hint's end when there is one.
+typedef struct Reading
+{
+    End e;
+    End spokenEnd;
+    const uint8_t* spokenText;
+    char spoken[spokenRoom];
+    size_t spokenLength;
+} Reading;
+
+static mlocResult Read(const Inflector* f, const uint8_t* text, size_t length,
+                       const mlocInflection* r, Reading* out)
+{
+    bool periodOrdinals = IsTurkic(f) ? LanguageOf(f)->periodOrdinals : true;
+    if (!FindEnd(periodOrdinals, text, length, r->reading, &out->e))
+    {
+        return mloc_errorInvalid;
+    }
+    out->spokenEnd = out->e;
+    out->spokenText = text;
+    if (r->hint != nullptr && r->hintLength > 0)
+    {
+        out->spokenText = (const uint8_t*)r->hint;
+        if (muniValidateUtf8(r->hint, r->hintLength).status != muni_success ||
+            !FindEnd(periodOrdinals, out->spokenText, r->hintLength, r->reading, &out->spokenEnd))
+        {
+            return mloc_errorInvalid;
+        }
+    }
+    return Spoken(f, out->spokenText, &out->spokenEnd, out->spoken, &out->spokenLength);
+}
+
+// Hungarian: the end read as the Turkic languages read it, then the
+// suffixes after a hyphen (digits, capitals, a period or a closing mark)
+// or joined to the word, whose end they may change.
+static mlocResult InflectHungarian(const Inflector* f, const uint8_t* text, size_t length,
+                                   const mlocInflection* r, Inflected* out)
+{
+    Reading reading;
+    mlocResult result = Read(f, text, length, r, &reading);
+    if (result != mloc_success)
+    {
+        return result;
+    }
+    const End* e = &reading.e;
+    HungarianText t = {
+        .word = text + e->start,
+        .wordLength = e->end - e->start,
+        .spoken = (const uint8_t*)reading.spoken,
+        .spokenLength = reading.spokenLength,
+        .marked = e->kind != endWord || e->closed || e->period || e->capitals || e->end != length,
+        .name = !r->commonNoun,
+        .hinted = reading.spokenText != text,
+    };
+    HungarianForm form;
+    if (!mlocHungarianInflect(&t, r, &form))
+    {
+        // A word without a vowel is read by its letters (Brr, PwC).
+        End letters = reading.spokenEnd;
+        letters.kind = endLetters;
+        if (reading.spokenEnd.kind != endWord ||
+            Spoken(f, reading.spokenText, &letters, reading.spoken, &reading.spokenLength) !=
+                mloc_success)
+        {
+            return mloc_errorInvalid;
+        }
+        t.spokenLength = reading.spokenLength;
+        t.marked = true;
+        if (!mlocHungarianInflect(&t, r, &form))
+        {
+            return mloc_errorInvalid;
+        }
+    }
+    // A hyphen or no suffix keeps the whole text; a joined suffix may
+    // change the word's end, which is then the text's end.
+    bool hyphen = form.hyphen && form.length > 0;
+    bool whole = hyphen || form.length == 0;
+    out->kept = whole ? length : e->start + form.kept;
+    memcpy(out->tail, form.tail, form.tailLength);
+    out->tailLength = whole ? 0 : form.tailLength;
+    out->mark = hyphen ? '-' : 0;
+    out->suffixes = (TurkicSuffixes){0};
+    memcpy(out->suffixes.text, form.suffixes, form.length);
+    out->suffixes.length = form.length;
+    out->suffixes.particle = form.length;
+    return mloc_success;
+}
+
 // Reads the spoken end (the hint's when there is one) and writes the
 // suffixes; the text's end decides the boundary mark.
 static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length,
                           const mlocInflection* r, Inflected* out)
 {
+    if (!IsTurkic(f))
+    {
+        return InflectHungarian(f, text, length, r, out);
+    }
     const TurkicLanguage* language = LanguageOf(f);
-    End e;
-    if (!FindEnd(language, text, length, r->reading, &e))
-    {
-        return mloc_errorInvalid;
-    }
-    End spokenEnd = e;
-    const uint8_t* spokenText = text;
-    if (r->hint != nullptr && r->hintLength > 0)
-    {
-        spokenText = (const uint8_t*)r->hint;
-        if (muniValidateUtf8(r->hint, r->hintLength).status != muni_success ||
-            !FindEnd(language, spokenText, r->hintLength, r->reading, &spokenEnd))
-        {
-            return mloc_errorInvalid;
-        }
-    }
-    char spoken[spokenRoom];
-    size_t spokenLength = 0;
-    mlocResult result = Spoken(f, spokenText, &spokenEnd, spoken, &spokenLength);
+    Reading reading;
+    mlocResult result = Read(f, text, length, r, &reading);
     if (result != mloc_success)
     {
         return result;
     }
+    End e = reading.e;
+    End spokenEnd = reading.spokenEnd;
+    const uint8_t* spokenText = reading.spokenText;
+    char* spoken = reading.spoken;
+    size_t spokenLength = reading.spokenLength;
     TurkicMarks marks = {0};
     if (spokenEnd.kind == endWord && language->lexicon)
     {

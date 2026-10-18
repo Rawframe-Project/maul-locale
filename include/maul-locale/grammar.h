@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Grammatical suffixes on runtime text and numbers (records mloc-0046,
-// mloc-0047): a word, a name, an abbreviation or a number inflected for
+// Grammatical suffixes on runtime text and numbers (records mloc-0046 to
+// mloc-0048): a word, a name, an abbreviation or a number inflected for
 // case, number, possessor and copula by the rules of its language, read
 // from how its end is spoken. Turkish, Kazakh, Kyrgyz, Azerbaijani,
-// Uzbek and Turkmen; the rules are code, the spoken form of a number
-// comes from the spell-out rules (spellout.mloc) or, for Uzbek and
+// Uzbek, Turkmen and Hungarian; the rules are code, the spoken form of a
+// number comes from the spell-out rules (spellout.mloc) or, for Uzbek and
 // Turkmen, which have none, from their number words in code.
 
 #ifndef MAUL_LOCALE_GRAMMAR_H
@@ -75,9 +75,9 @@ extern "C"
     } mlocInflection;
 
     // The parts of an inflected text: the text as given, the boundary
-    // mark (Turkish's apostrophe, Kazakh's, Azerbaijani's and Turkmen's
-    // hyphen, none in Kyrgyz and Uzbek; the part keeps the name
-    // apostrophe), the suffixes, and the space
+    // mark (Turkish's apostrophe, Kazakh's, Azerbaijani's, Turkmen's and
+    // Hungarian's hyphen, none in Kyrgyz and Uzbek; the part keeps the
+    // name apostrophe), the suffixes, and the space
     // and particle of a question. Their values differ from a number's parts (mlocNumberPart), which
     // a number's stem holds inside it.
     typedef enum mlocInflectionPart
@@ -99,9 +99,9 @@ extern "C"
     /// @param locale        The locale, canonicalized.
     /// @return mloc_success; mloc_errorNotFound for a language the library
     ///         has no rules for (Turkish, Kazakh, Kyrgyz, Azerbaijani,
-    ///         Uzbek and Turkmen now, Kazakh and Kyrgyz in their Cyrillic
-    ///         script, Azerbaijani, Uzbek and Turkmen in their Latin one)
-    ///         or data without the number units;
+    ///         Uzbek, Turkmen and Hungarian now, Kazakh and Kyrgyz in
+    ///         their Cyrillic script, the others in their Latin one) or
+    ///         data without the number units;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -141,7 +141,16 @@ extern "C"
     /// final vowel ("enä"), voices a final p, ç or k after a vowel in a
     /// word of two syllables or more ("kitaby", "baýlygy"), writes a
     /// hyphen after letters and digits ("BMG-niň", "1700-den"), joins a
-    /// name ("Aşgabada") and has no instrumental case.
+    /// name ("Aşgabada") and has no instrumental case. Hungarian builds
+    /// its 16 case suffixes, plural and possessives on the word's harmony
+    /// and end as the Academy's rules write them: a linking vowel, a final
+    /// a or e lengthened ("almát"), the v of -val and -vá assimilated
+    /// ("Kodállyal", "Kossuthtal"), a stem the table changes ("vizet",
+    /// "bokrot", "lovak"), a common noun's compound by its last word
+    /// ("számítógépek"); a hyphen after digits, capitals, a period, a
+    /// name's doubled final letter met by the same letter ("5-tel",
+    /// "3.-at", "ENSZ-szel", "Papp-pal") and an end the hint says is not
+    /// said ("Rousseau-val"); no genitive, copula or question suffix.
     /// What the text cannot say (a foreign name, an abbreviation read as
     /// a word) the request's hint or reading says.
     ///
