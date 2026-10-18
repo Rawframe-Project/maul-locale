@@ -326,6 +326,16 @@ static void TestParts(void)
               parts.kinds[3] == mloc_inflectionPartParticle && parts.starts[3] == 7 &&
               parts.lengths[3] == 3,
           "the stem, apostrophe, suffix and particle as parts");
+    parts.count = 0;
+    output.length = 0;
+    mlocInflection compound = Case(mloc_caseDative);
+    compound.commonNoun = true;
+    CHECK(mlocInflectText(&s_tr, "zeytinya\xC4\x9F\xC4\xB1", 12, &compound, &output) ==
+                  mloc_success &&
+              output.length == 14 && parts.count == 2 && parts.lengths[0] == 12 &&
+              parts.kinds[1] == mloc_inflectionPartSuffix && parts.starts[1] == 12 &&
+              parts.lengths[1] == 2,
+          "a compound's case after its possessive, which stays in the stem");
     mlocDecimal year;
     CHECK(mlocParseDecimal("1985", 4, &year).status == mloc_success, "a decimal is read");
     parts.count = 0;
