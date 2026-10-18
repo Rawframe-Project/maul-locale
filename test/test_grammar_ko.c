@@ -85,6 +85,9 @@ static void TestHangul(void)
               Gives("서울(Seoul)", &topic, "서울(Seoul)은") && Gives("ㅋ", &topic, "ㅋ은") &&
               Gives("ㅏ", &topic, "ㅏ는") && Gives("한국 사람", &topic, "한국 사람은"),
           "no particle; closing marks, a gloss, jamo, the last word");
+    CHECK(Gives("가", &topic, "가는") && Gives("힣", &topic, "힣은") &&
+              Gives("ㄱ", &topic, "ㄱ은") && Gives("ㆎ", &topic, "ㆎ는"),
+          "the first and last syllables and jamo");
     mlocInflection subject = Particle(mloc_particleSubject);
     CHECK(Gives("나", &subject, "내가") && Gives("너", &subject, "네가") &&
               Gives("저", &subject, "제가") && Gives("누구", &subject, "누가") &&
@@ -118,6 +121,7 @@ static void TestLetters(void)
               Gives("IBM", &topic, "IBM은") && Gives("URL", &direction, "URL로") &&
               Gives("BBC", &topic, "BBC는") && Gives("PDF", &topic, "PDF는"),
           "capitals by their letters' Korean names");
+    CHECK(Gives("A", &topic, "A는") && Gives("XYZ", &topic, "XYZ는"), "the first and last letters");
     mlocInflection hinted = Particle(mloc_particleTopic);
     hinted.hint = "애플";
     hinted.hintLength = strlen(hinted.hint);
