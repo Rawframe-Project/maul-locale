@@ -18,7 +18,7 @@ the engine per language would drift apart.
 ## Decision
 
 - **One engine** (`grammar_turkic.c`) and **a table per language**
-  (`grammar_tr.c`, `grammar_kk.c`): the language's letters with their
+  (`grammar_tr.c`, `grammar_kk.c`, `grammar_ky.c`): the language's letters with their
   class (vowel with its backness and rounding, glide, liquid, nasal,
   other voiced, voiceless), its A and I vowels by harmony, its onsets
   (an archiphoneme's consonant after each class of sound, back and
@@ -47,8 +47,22 @@ the engine per language would drift apart.
   ("Google-ге"); a name joins.
 - The part 0x61 keeps its name (`mloc_inflectionPartApostrophe`) and is
   documented as the boundary mark, whichever character it is.
-- The order of the rest: Kyrgyz, Azerbaijani, Uzbek, Turkmen, each a
-  table and an amendment here.
+- **Kyrgyz** (Cyrillic, amended 2026-10-18): four-way A (а, о, е, ө)
+  and I (ы, у, и, ү), A rounded after о and ө but not after у
+  ("кулдар", "кулдун"; the letter flag `turkicFlat`); onsets by four
+  classes (a vowel, a glide, another voiced consonant, a voiceless one:
+  "кардын", "тоолор"), the dative's onset dropped after a first or
+  second person's possessive ("китебиме"); no instrumental case (CLDR)
+  and no copula suffix; the question particle joined ("китеппи"); no
+  mark at all, abbreviations and digits joined as the Kyrgyz press
+  writes them ("АКШнын", "УКМКга", "350дөн"); a final ь dropped before
+  any suffix ("княздын", "лагерге"), a final й and a suffix's у written
+  ю ("тоюм"), a final п or к voiced before a vowel, names too
+  ("китеби", "Айбеги"). Letters are named the Russian way (ка, эл, эр,
+  ша). A stem rule now sees the suffixes written for it, to change their
+  first letter where the two fuse.
+- The order of the rest: Azerbaijani, Uzbek, Turkmen, each a table and
+  an amendment here.
 
 ## Proof
 
@@ -56,14 +70,18 @@ the engine per language would drift apart.
   cases, common nouns after a voiceless consonant and ж, the plural's
   three onsets, the possessives and the cases after them, loans (к, ь),
   a name's voiced stop, the question particle, abbreviations, digits, a
-  Latin word, a formatted number, the refusals.
+  Latin word, a formatted number, the refusals; Kyrgyz the same in five
+  cases, the fused ю, the dropped ь, the joined marks and particle.
 - apertium-kaz's generator (GPL, run in the private research only) over
   its lexicon's 6,664 names and 13,565 nouns, nine requests each: 97 to
   99.8% agree; the rest are loans its lexicon marks one by one
   (harmony after a middle и, a double consonant written once, a final
   consonant cluster read front) and its own disagreements between
   cases of one word ("каминге" but "каминнан").
-- `fuzz_grammar` draws Turkish or Kazakh; the Turkish tests and the
+- apertium-kir over 3,916 names and 4,353 nouns: 99.5 to 99.9% agree;
+  the rest are its words with a lexical stem ("мурдуна"), lowercased
+  forms and abbreviations its lexicon gives no form.
+- `fuzz_grammar` draws Turkish, Kazakh or Kyrgyz; the Turkish tests and the
   Turkish oracle give the same forms as before the engine was shared.
 
 ## Consequences

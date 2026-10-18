@@ -204,6 +204,9 @@ format.
   them, a stop voiced before a vowel, a hyphen after abbreviations,
   digits and Latin words; the Turkic engine shared by Turkish and
   Kazakh, each a table (mloc-0047).
+- Kyrgyz suffixes: four-way harmony, the onsets by the last sound, the
+  possessives and the cases after them, the question particle and every
+  suffix joined, a soft sign dropped, й and у written ю (mloc-0047).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

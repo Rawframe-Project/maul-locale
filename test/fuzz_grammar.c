@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // libFuzzer target for the inflector (records mloc-0046, mloc-0047),
-// Turkish or Kazakh, with the spell-out file beside the compiled-in data.
+// Turkish, Kazakh or Kyrgyz, with the spell-out file beside the
+// compiled-in data.
 // The first two bytes choose the request (case, plural, possessor,
 // copula, question, common noun, reading) and the language, the third
 // where the text ends and the hint begins (0 for no hint); the rest is
@@ -64,13 +65,15 @@ static bool Utf8(const uint8_t* s, size_t n)
     return true;
 }
 
-// The Turkish or Kazakh inflector, with the spell-out rules when the file
-// opens.
-static const mlocInflector* Inflector(bool kazakh)
+// The languages drawn, by two bits of the request (the fourth Turkish).
+static const char* const s_languages[4] = {"tr", "kk", "ky", "tr"};
+
+// A language's inflector, with the spell-out rules when the file opens.
+static const mlocInflector* Inflector(size_t language)
 {
     static mlocData s_sources[2];
     alignas(8) static uint8_t s_rules[4 << 20];
-    static mlocInflector s_inflectors[2];
+    static mlocInflector s_inflectors[4];
     static int s_state;
     if (s_state == 0)
     {
@@ -88,15 +91,15 @@ static const mlocInflector* Inflector(bool kazakh)
             }
         }
         mlocDataSet set = {s_sources, count};
-        mlocLocale tr;
-        mlocLocale kk;
-        Require(mlocParseLocale("tr", 2, &tr).status == mloc_success &&
-                mlocInitInflector(&s_inflectors[0], &set, &tr) == mloc_success &&
-                mlocParseLocale("kk", 2, &kk).status == mloc_success &&
-                mlocInitInflector(&s_inflectors[1], &set, &kk) == mloc_success);
+        for (size_t i = 0; i < 4; i++)
+        {
+            mlocLocale locale;
+            Require(mlocParseLocale(s_languages[i], 2, &locale).status == mloc_success &&
+                    mlocInitInflector(&s_inflectors[i], &set, &locale) == mloc_success);
+        }
         s_state = 1;
     }
-    return &s_inflectors[kazakh ? 1 : 0];
+    return &s_inflectors[language];
 }
 
 // The parts a call reported: the inflection's must tile its text, a
@@ -168,7 +171,7 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     Require(again.length == out.length && memcmp(s_again, s_out, out.length) == 0);
     Require(tiling.good && tiling.next == out.length);
     // The text begins the output, but a stem's changed end (a common
-    // noun's, a Kazakh name's): its final stop, its dropped vowel and what
+    // noun's, a Kazakh or Kyrgyz name's): its final stop, its dropped vowel and what
     // follows it, or a compound's possessive, at most 8 bytes.
     if (text != nullptr)
     {
@@ -183,8 +186,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     {
         return 0;
     }
-    bool kazakh = (data[1] & 0x10) != 0;
-    const mlocInflector* f = Inflector(kazakh);
+    size_t language = (size_t)(data[1] >> 4 & 3);
+    bool stemsNames = language == 1 || language == 2;
+    const mlocInflector* f = Inflector(language);
     mlocInflection r = RequestOf(data);
     const char* text = (const char*)data + 3;
     size_t length = size - 3;
@@ -195,11 +199,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         r.hintLength = length - split;
         length = split;
     }
-    Check(f, kazakh, text, length, nullptr, &r);
+    Check(f, stemsNames, text, length, nullptr, &r);
     mlocDecimal number;
     if (mlocParseDecimal(text, length, &number).status == mloc_success)
     {
-        Check(f, kazakh, nullptr, 0, &number, &r);
+        Check(f, stemsNames, nullptr, 0, &number, &r);
     }
     return 0;
 }

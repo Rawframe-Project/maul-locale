@@ -150,4 +150,5 @@ grammar_lexicon:
 grammar_turkic:
 grammar_tr: grammar_lexicon grammar_turkic
 grammar_kk: grammar_turkic
+grammar_ky: grammar_turkic
 grammar: grammar_lexicon grammar_turkic number_core

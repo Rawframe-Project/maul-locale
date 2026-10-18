@@ -5,7 +5,7 @@
 // spoken end into its last vowel's harmony and its final sound's class,
 // and writes the suffixes a request asks for from archiphonemes; each
 // language is a table of letters, vowels, onsets and suffix templates
-// (grammar_tr.c, grammar_kk.c).
+// (grammar_tr.c, grammar_kk.c, grammar_ky.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H
@@ -54,12 +54,15 @@ enum
     // On a sign or a word's final consonant: the suffixes are front
     // (Kazakh ь; к in паркке).
     turkicFront = 0x80,
+    // A rounded vowel after which the two-way-or-four-way A stays
+    // unrounded while I rounds (Kyrgyz у: кулдар, кулдун).
+    turkicFlat = 0x100,
 };
 
 typedef struct TurkicLetter
 {
     uint16_t codePoint;
-    uint8_t info;
+    uint16_t info;
 } TurkicLetter;
 
 // An archiphoneme of consonants: the letter it is after each class of
@@ -77,6 +80,8 @@ typedef struct TurkicSound
     bool vowel;
     bool back;
     bool round;
+    // A rounded vowel that leaves A unrounded (turkicFlat).
+    bool flat;
     uint8_t final;
 } TurkicSound;
 
@@ -179,16 +184,20 @@ typedef struct TurkicLanguage
     // The name of a letter as the language reads it, or null for one it
     // does not name.
     const char* (*letterName)(uint32_t codePoint);
-    // A common noun's stem before a vowel (UTF-8, valid) with the
-    // lexicon's marks; false when it stays as it is.
-    bool (*stem)(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out);
+    // A stem's changed end (UTF-8, valid) before the suffixes written for
+    // it, with the lexicon's marks; false when it stays as it is. It may
+    // change the suffixes' first letter where the two fuse (Kyrgyz той
+    // and у: тоюм).
+    bool (*stem)(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
+                 TurkicStem* out);
 } TurkicLanguage;
 
 extern const TurkicLanguage mlocTurkish;
 extern const TurkicLanguage mlocKazakh;
+extern const TurkicLanguage mlocKyrgyz;
 
 // A letter's information in a language.
-uint8_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);
+uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t codePoint);
 
 // Decodes the code point that ends at text[end] (UTF-8, valid); its
 // first byte's index in startOut.

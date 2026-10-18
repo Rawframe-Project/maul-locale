@@ -88,6 +88,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/decimal_shortest.c
     src/grammar.c
     src/grammar_kk.c
+    src/grammar_ky.c
     src/grammar_lexicon.c
     src/grammar_tr.c
     src/grammar_turkic.c

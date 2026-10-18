@@ -123,8 +123,13 @@ static void Tail(TurkicStem* stem, const char* bytes, size_t n)
 // inverse harmony and a final nk or og in any word, the marks saying
 // otherwise; a marked word doubles its final consonant or drops its
 // last vowel.
-static bool TurkishStem(const uint8_t* word, size_t length, uint8_t marks, TurkicStem* out)
+static bool TurkishStem(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
+                        TurkicStem* out)
 {
+    if (!suffixes->vowelFirst)
+    {
+        return false;
+    }
     *out = (TurkicStem){.kept = length};
     int vowels = 0;
     size_t lastVowel = length;
@@ -132,7 +137,7 @@ static bool TurkishStem(const uint8_t* word, size_t length, uint8_t marks, Turki
     for (size_t end = length; end > 0;)
     {
         size_t start = 0;
-        uint8_t info = mlocTurkicLetterInfo(&mlocTurkish, mlocTurkicPrevious(word, end, &start));
+        uint16_t info = mlocTurkicLetterInfo(&mlocTurkish, mlocTurkicPrevious(word, end, &start));
         if ((info & turkicClassMask) == turkicVowel && vowels++ == 0)
         {
             lastVowel = start;

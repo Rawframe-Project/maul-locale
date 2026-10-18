@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The other Turkic languages' suffixes (maul-locale/grammar.h, record
-// mloc-0047): Kazakh cases, plural, possessives and question particle
-// on names, common nouns, numbers and abbreviations, as apertium-kaz
-// generates them; its hyphen, its stems, and its refusals.
+// mloc-0047): Kazakh and Kyrgyz cases, plural, possessives and question
+// particle on names, common nouns, numbers and abbreviations, as
+// apertium-kaz and apertium-kir generate them; their marks, their stems
+// and their refusals.
 
 #include "test_harness.h"
 
@@ -15,6 +16,7 @@
 
 static mlocDataSet s_data;
 static mlocInflector s_kk;
+static mlocInflector s_ky;
 static char s_text[512];
 
 static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
@@ -47,20 +49,32 @@ static bool Gives(const mlocInflector* inflector, const char* text, const mlocIn
     return good;
 }
 
-// Whether a text takes the six cases' suffixes given, genitive, dative,
-// accusative, locative, ablative and instrumental.
-static bool Cases(const char* text, bool common, const char* const forms[6])
+// Whether a text takes the cases' suffixes given, genitive, dative,
+// accusative, locative, ablative and (count 6) instrumental.
+static bool CasesOf(const mlocInflector* inflector, const char* text, bool common,
+                    const char* const* forms, int count)
 {
     static const mlocGrammaticalCase s_cases[6] = {mloc_caseGenitive,   mloc_caseDative,
                                                    mloc_caseAccusative, mloc_caseLocative,
                                                    mloc_caseAblative,   mloc_caseInstrumental};
     bool good = true;
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < count; i++)
     {
         mlocInflection r = common ? Common(s_cases[i]) : Case(s_cases[i]);
-        good = Gives(&s_kk, text, &r, forms[i]) && good;
+        good = Gives(inflector, text, &r, forms[i]) && good;
     }
     return good;
+}
+
+static bool Cases(const char* text, bool common, const char* const forms[6])
+{
+    return CasesOf(&s_kk, text, common, forms, 6);
+}
+
+// Kyrgyz has no instrumental case: five forms.
+static bool KyrgyzCases(const char* text, bool common, const char* const forms[5])
+{
+    return CasesOf(&s_ky, text, common, forms, 5);
 }
 
 static void TestKazakhCases(void)
@@ -233,6 +247,96 @@ static void TestKazakhRefusals(void)
           "a sign has no name to read");
 }
 
+static void TestKyrgyzCases(void)
+{
+    CHECK(KyrgyzCases("тоо", true,
+                      (const char* const[]){"тоонун", "тоого", "тоону", "тоодо", "тоодон"}) &&
+              KyrgyzCases("кул", true,
+                          (const char* const[]){"кулдун", "кулга", "кулду", "кулда", "кулдан"}) &&
+              KyrgyzCases("көл", true,
+                          (const char* const[]){"көлдүн", "көлгө", "көлдү", "көлдө", "көлдөн"}) &&
+              KyrgyzCases(
+                  "китеп", true,
+                  (const char* const[]){"китептин", "китепке", "китепти", "китепте", "китептен"}) &&
+              KyrgyzCases("кар", true,
+                          (const char* const[]){"кардын", "карга", "карды", "карда", "кардан"}),
+          "four-way harmony, A unrounded after у; the onsets by the last sound");
+    mlocInflection plural = Common(mloc_caseNominative);
+    plural.plural = true;
+    CHECK(Gives(&s_ky, "тоо", &plural, "тоолор") && Gives(&s_ky, "кул", &plural, "кулдар") &&
+              Gives(&s_ky, "көл", &plural, "көлдөр") && Gives(&s_ky, "үй", &plural, "үйлөр") &&
+              Gives(&s_ky, "булут", &plural, "булуттар") && Gives(&s_ky, "ай", &plural, "айлар"),
+          "the plural's l, d, t and four vowels");
+}
+
+static void TestKyrgyzPossessives(void)
+{
+    mlocInflection r = Common(mloc_caseNominative);
+    r.possessorPerson = 1;
+    bool good = Gives(&s_ky, "китеп", &r, "китебим") && Gives(&s_ky, "той", &r, "тоюм");
+    r.possessorPerson = 3;
+    good = Gives(&s_ky, "китеп", &r, "китеби") && Gives(&s_ky, "тоо", &r, "тоосу") && good;
+    r.possessorPerson = 1;
+    r.possessorPlural = true;
+    good = Gives(&s_ky, "бала", &r, "балабыз") && Gives(&s_ky, "китеп", &r, "китебибиз") && good;
+    r.possessorPerson = 2;
+    good = Gives(&s_ky, "тоо", &r, "тооңор") && Gives(&s_ky, "көл", &r, "көлүңөр") && good;
+    CHECK(good, "the possessives; й and у written ю");
+    mlocInflection mine = Common(mloc_caseDative);
+    mine.possessorPerson = 1;
+    mlocInflection mineOf = Common(mloc_caseGenitive);
+    mineOf.possessorPerson = 1;
+    mlocInflection ours = Common(mloc_caseDative);
+    ours.possessorPerson = 1;
+    ours.possessorPlural = true;
+    mlocInflection third = Common(mloc_caseDative);
+    third.possessorPerson = 3;
+    CHECK(Gives(&s_ky, "китеп", &mine, "китебиме") && Gives(&s_ky, "тоо", &mine, "тоомо") &&
+              Gives(&s_ky, "бала", &mineOf, "баламдын") &&
+              Gives(&s_ky, "бала", &ours, "балабызга") && Gives(&s_ky, "тоо", &third, "тоосуна") &&
+              Gives(&s_ky, "той", &third, "тоюна"),
+          "the cases after a possessive");
+}
+
+static void TestKyrgyzWords(void)
+{
+    mlocInflection genitive = Common(mloc_caseGenitive);
+    mlocInflection dative = Common(mloc_caseDative);
+    mlocInflection third = Common(mloc_caseNominative);
+    third.possessorPerson = 3;
+    CHECK(Gives(&s_ky, "князь", &genitive, "княздын") &&
+              Gives(&s_ky, "лагерь", &dative, "лагерге") &&
+              Gives(&s_ky, "автомобиль", &third, "автомобили") &&
+              Gives(&s_ky, "ми", &genitive, "минин"),
+          "a soft sign dropped before any suffix; и a front vowel");
+    mlocInflection nameDative = Case(mloc_caseDative);
+    mlocInflection name = Case(mloc_caseNominative);
+    name.possessorPerson = 3;
+    CHECK(Gives(&s_ky, "Бишкек", &nameDative, "Бишкекке") && Gives(&s_ky, "Айбек", &name, "Айбеги"),
+          "names joined, their stop voiced");
+    mlocInflection nameGenitive = Case(mloc_caseGenitive);
+    mlocInflection ablative = Case(mloc_caseAblative);
+    CHECK(Gives(&s_ky, "АКШ", &nameGenitive, "АКШнын") &&
+              Gives(&s_ky, "БУУ", &nameGenitive, "БУУнун") &&
+              Gives(&s_ky, "УКМК", &nameDative, "УКМКга") &&
+              Gives(&s_ky, "350", &ablative, "350дөн") && Gives(&s_ky, "5", &nameDative, "5ке"),
+          "abbreviations and digits joined, as the press writes them");
+    mlocInflection question = Common(mloc_caseNominative);
+    question.question = true;
+    CHECK(Gives(&s_ky, "китеп", &question, "китеппи") &&
+              Gives(&s_ky, "бала", &question, "балабы") &&
+              Gives(&s_ky, "тоо", &question, "тообу") && Gives(&s_ky, "көл", &question, "көлбү"),
+          "the question particle joined");
+    mlocInflection instrumental = Case(mloc_caseInstrumental);
+    mlocInflection copula = Case(mloc_caseNominative);
+    copula.copula = true;
+    mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
+    CHECK(mlocInflectText(&s_ky, "тоо", strlen("тоо"), &instrumental, &output) ==
+                  mloc_errorInvalid &&
+              mlocInflectText(&s_ky, "тоо", strlen("тоо"), &copula, &output) == mloc_errorInvalid,
+          "no instrumental case and no copula suffix in Kyrgyz");
+}
+
 int main(void)
 {
     static mlocData sources[2];
@@ -257,10 +361,20 @@ int main(void)
         fputs("test_grammar_turkic: cannot make the inflector\n", stderr);
         return 2;
     }
+    mlocLocale ky;
+    if (mlocParseLocale("ky", 2, &ky).status != mloc_success ||
+        mlocInitInflector(&s_ky, &s_data, &ky) != mloc_success)
+    {
+        fputs("test_grammar_turkic: cannot make the Kyrgyz inflector\n", stderr);
+        return 2;
+    }
     TestKazakhCases();
     TestKazakhPossessives();
     TestKazakhWords();
     TestKazakhMarks();
     TestKazakhRefusals();
+    TestKyrgyzCases();
+    TestKyrgyzPossessives();
+    TestKyrgyzWords();
     return s_failures == 0 ? 0 : 1;
 }

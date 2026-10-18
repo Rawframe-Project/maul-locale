@@ -25,6 +25,7 @@ enum
     inflectorStamp = 0x49,
     languageTurkish = 1,
     languageKazakh = 2,
+    languageKyrgyz = 3,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -65,6 +66,10 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         f.language = languageKazakh;
     }
+    else if (strcmp(locale->language, "ky") == 0 && cyrillic)
+    {
+        f.language = languageKyrgyz;
+    }
     else
     {
         return mloc_errorNotFound;
@@ -94,14 +99,15 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
         return false;
     }
     memcpy(f, opaque, sizeof(*f));
-    return f->stamp == inflectorStamp &&
-           (f->language == languageTurkish || f->language == languageKazakh) && f->spoken <= 1;
+    return f->stamp == inflectorStamp && f->language >= languageTurkish &&
+           f->language <= languageKyrgyz && f->spoken <= 1;
 }
 
 // An inflector's language.
 static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
-    return f->language == languageKazakh ? &mlocKazakh : &mlocTurkish;
+    static const TurkicLanguage* const s_languages[] = {&mlocTurkish, &mlocKazakh, &mlocKyrgyz};
+    return s_languages[f->language - languageTurkish];
 }
 
 // What a text's end is.
@@ -503,8 +509,8 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
     {
         mlocTurkicSuffixes(language, sound, r, false, &out->suffixes);
         TurkicStem stem;
-        if (stemmed && out->suffixes.vowelFirst &&
-            language->stem(text + e.start, e.end - e.start, marks.marks, &stem))
+        if (stemmed && out->suffixes.particle > 0 &&
+            language->stem(text + e.start, e.end - e.start, marks.marks, &out->suffixes, &stem))
         {
             out->kept = e.start + stem.kept;
             memcpy(out->tail, stem.tail, stem.tailLength);

@@ -101,7 +101,7 @@ static const TurkicLetter s_latin[] = {
 };
 
 // A letter in a table sorted by code point, or false.
-static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint8_t* infoOut)
+static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint16_t* infoOut)
 {
     size_t low = 0;
     size_t high = count;
@@ -125,9 +125,9 @@ static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint8_t* i
     return false;
 }
 
-uint8_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t c)
+uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t c)
 {
-    uint8_t info = turkicVoiced;
+    uint16_t info = turkicVoiced;
     if (!Find(language->letters, language->letterCount, c, &info))
     {
         (void)Find(s_latin, sizeof(s_latin) / sizeof(s_latin[0]), c, &info);
@@ -195,22 +195,23 @@ static bool FinalYAsI(const TurkicLanguage* language, const uint8_t* word, size_
         return false;
     }
     size_t before = 0;
-    uint8_t info = mlocTurkicLetterInfo(language, mlocTurkicPrevious(word, start, &before));
+    uint16_t info = mlocTurkicLetterInfo(language, mlocTurkicPrevious(word, start, &before));
     return (info & turkicClassMask) != turkicVowel;
 }
 
 // Takes a vowel's harmony; front makes it front.
-static void Harmony(uint8_t info, bool front, TurkicSound* out)
+static void Harmony(uint16_t info, bool front, TurkicSound* out)
 {
     out->vowel = true;
     out->back = (info & turkicBack) != 0 && !front;
     out->round = (info & turkicRound) != 0;
+    out->flat = (info & turkicFlat) != 0;
 }
 
 // The class a final soft sign leaves (apertium-kaz's reading of loans):
 // a vowel's after a voiceless consonant (повестьнің, повестьлер), a
 // liquid's after another (князьдің, князьмен).
-static uint8_t SoftClass(uint8_t before)
+static uint8_t SoftClass(uint16_t before)
 {
     return (before & turkicClassMask) == turkicVoiceless ? turkicVowel : turkicLiquid;
 }
@@ -222,13 +223,13 @@ bool mlocTurkicSound(const TurkicLanguage* language, const uint8_t* word, size_t
     bool first = true;
     bool soft = false;
     bool front = inverse;
-    uint8_t weak = 0;
+    uint16_t weak = 0;
     size_t end = length;
     while (end > 0)
     {
         size_t start = 0;
         uint32_t c = mlocTurkicPrevious(word, end, &start);
-        uint8_t info = mlocTurkicLetterInfo(language, c);
+        uint16_t info = mlocTurkicLetterInfo(language, c);
         end = start;
         if ((info & turkicSign) != 0)
         {
@@ -294,7 +295,7 @@ static void Put(const TurkicLanguage* language, uint32_t c, TurkicSound* sound, 
     {
         return;
     }
-    uint8_t info = mlocTurkicLetterInfo(language, c);
+    uint16_t info = mlocTurkicLetterInfo(language, c);
     sound->final = (uint8_t)(info & turkicClassMask);
     if (sound->final == turkicVowel)
     {
@@ -338,7 +339,7 @@ static void AppendOne(const TurkicLanguage* language, uint32_t c, TurkicSound* s
     const TurkicOnset* onset = OnsetOf(language, c);
     if (c == 'A')
     {
-        Put(language, language->a[front][round], sound, out);
+        Put(language, language->a[front][sound->flat ? 0 : round], sound, out);
     }
     else if (c == 'I' || (c == 'V' && sound->final != turkicVowel))
     {
