@@ -40,6 +40,9 @@
 #ifndef MLOC_UNITS_FILE
 #define MLOC_UNITS_FILE "src/generated/units.mloc"
 #endif
+#ifndef MLOC_SPELLOUT_FILE
+#define MLOC_SPELLOUT_FILE "src/generated/spellout.mloc"
+#endif
 
 static volatile int s_sink;
 static mlocDataSet s_set;
@@ -171,19 +174,26 @@ static bool OpenFile(const char* path, mlocData* out, uint8_t* bytes, size_t cap
 
 static bool OpenFiles(void)
 {
-    static mlocData s_sources[6];
+    static mlocData s_sources[7];
     alignas(8) static uint8_t s_dates[4 << 20];
     alignas(8) static uint8_t s_zones[8 << 20];
     alignas(8) static uint8_t s_names[8 << 20];
     alignas(8) static uint8_t s_relativeBytes[2 << 20];
     alignas(8) static uint8_t s_units[8 << 20];
+    alignas(8) static uint8_t s_rules[8 << 20];
     mlocOpenBuiltinData(&s_sources[0]);
-    s_set = (mlocDataSet){s_sources, 6};
+    s_set = (mlocDataSet){s_sources, 7};
     return OpenFile(MLOC_DATES_FILE, &s_sources[1], s_dates, sizeof(s_dates)) &&
            OpenFile(MLOC_ZONE_NAMES_FILE, &s_sources[2], s_zones, sizeof(s_zones)) &&
            OpenFile(MLOC_LOCALE_NAMES_FILE, &s_sources[3], s_names, sizeof(s_names)) &&
            OpenFile(MLOC_RELATIVE_FILE, &s_sources[4], s_relativeBytes, sizeof(s_relativeBytes)) &&
-           OpenFile(MLOC_UNITS_FILE, &s_sources[5], s_units, sizeof(s_units));
+           OpenFile(MLOC_UNITS_FILE, &s_sources[5], s_units, sizeof(s_units)) &&
+           OpenFile(MLOC_SPELLOUT_FILE, &s_sources[6], s_rules, sizeof(s_rules));
+}
+
+const mlocDataSet* BenchDataSet(void)
+{
+    return &s_set;
 }
 
 static bool MakeValues(void)

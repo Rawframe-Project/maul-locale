@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The message part's benchmark cases (record mloc-0045): a message
-// compiled and bound, and four messages formatted, the ones research
-// times in ICU4C's MF2 and, where MF1 can say them, its MF1; and the
-// stack a format call takes.
+// compiled and bound, four messages and one of each function family
+// formatted, the ones ICU4C's MF2 and, where MF1 can say them, its MF1
+// are timed on; parts, unreached functions and a formatter with
+// program functions; and the stack a format call takes.
 
 #ifndef MLOC_BENCH_MESSAGES_H
 #define MLOC_BENCH_MESSAGES_H

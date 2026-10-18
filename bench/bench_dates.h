@@ -8,6 +8,8 @@
 #ifndef MLOC_BENCH_DATES_H
 #define MLOC_BENCH_DATES_H
 
+#include "maul-locale/data.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -23,6 +25,10 @@ typedef struct BenchCase
 // Reads the data files and makes the formatters; false when a file cannot
 // be read or a formatter made.
 bool PrepareDateBench(void);
+
+// Every data file the benchmark reads, as one set, once
+// PrepareDateBench has opened them.
+const mlocDataSet* BenchDataSet(void);
 
 // Prints each case's text, as BENCH_SHOW asks.
 void ShowDateBench(void);
