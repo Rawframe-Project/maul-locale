@@ -151,6 +151,7 @@ grammar_turkic:
 grammar_tk: grammar_turkic
 grammar_fi: grammar_fi_word
 grammar_fi_word:
+grammar_ko:
 grammar_hu_sound:
 grammar_hu: grammar_hu_sound
 grammar_hu_words: grammar_hu
@@ -159,4 +160,4 @@ grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
-grammar: grammar_fi grammar_hu grammar_hu_sound grammar_lexicon grammar_turkic number_core
+grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic number_core

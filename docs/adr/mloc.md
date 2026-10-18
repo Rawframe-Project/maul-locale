@@ -54,3 +54,4 @@ are listed in [README.md](README.md).
 | [mloc-0047](mloc-0047-turkic-languages.md) | Grammar: the other Turkic languages by tables of one engine | Accepted |
 | [mloc-0048](mloc-0048-hungarian.md) | Grammar: Hungarian by the Academy's rules and a small table | Accepted |
 | [mloc-0049](mloc-0049-finnish.md) | Grammar: Finnish by Kotus's inflection types | Accepted |
+| [mloc-0050](mloc-0050-korean.md) | Grammar: Korean particles by the final of the spoken end | Accepted |

@@ -12,6 +12,7 @@
 #include "grammar_fi.h"
 #include "grammar_hu.h"
 #include "grammar_hu_sound.h"
+#include "grammar_ko.h"
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
 #include "number_core.h"
@@ -34,6 +35,7 @@ enum
     languageTurkmen = 6,
     languageHungarian = 7,
     languageFinnish = 8,
+    languageKorean = 9,
     // The room for a spoken number's text and a formatted number's.
     spokenRoom = 256,
     numberRoom = 1024,
@@ -54,6 +56,40 @@ typedef struct Inflector
 
 static_assert(sizeof(Inflector) <= sizeof(mlocInflector), "an inflector fits its value");
 
+// The language whose rules a locale reads, in the script they read; 0
+// for none.
+static uint8_t LanguageOfLocale(const mlocLocale* locale)
+{
+    static const struct
+    {
+        char language[4];
+        // The scripts the rules read, the first the default's.
+        char scripts[2][5];
+        uint8_t id;
+    } s_languages[9] = {
+        {"tr", {"Latn", ""}, languageTurkish},    {"kk", {"Cyrl", ""}, languageKazakh},
+        {"ky", {"Cyrl", ""}, languageKyrgyz},     {"az", {"Latn", ""}, languageAzerbaijani},
+        {"uz", {"Latn", ""}, languageUzbek},      {"tk", {"Latn", ""}, languageTurkmen},
+        {"hu", {"Latn", ""}, languageHungarian},  {"fi", {"Latn", ""}, languageFinnish},
+        {"ko", {"Kore", "Hang"}, languageKorean},
+    };
+    for (size_t i = 0; i < 9; i++)
+    {
+        if (strcmp(locale->language, s_languages[i].language) != 0)
+        {
+            continue;
+        }
+        bool script = locale->script[0] == '\0';
+        for (size_t k = 0; k < 2 && !script; k++)
+        {
+            script = s_languages[i].scripts[k][0] != '\0' &&
+                     memcmp(locale->script, s_languages[i].scripts[k], 4) == 0;
+        }
+        return script ? s_languages[i].id : 0;
+    }
+    return 0;
+}
+
 mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* data,
                              const mlocLocale* locale)
 {
@@ -63,42 +99,8 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     }
     Inflector f;
     memset(&f, 0, sizeof(f));
-    // Each language in the script its rules read.
-    bool latin = locale->script[0] == '\0' || memcmp(locale->script, "Latn", 4) == 0;
-    bool cyrillic = locale->script[0] == '\0' || memcmp(locale->script, "Cyrl", 4) == 0;
-    if (strcmp(locale->language, "tr") == 0 && latin)
-    {
-        f.language = languageTurkish;
-    }
-    else if (strcmp(locale->language, "kk") == 0 && cyrillic)
-    {
-        f.language = languageKazakh;
-    }
-    else if (strcmp(locale->language, "ky") == 0 && cyrillic)
-    {
-        f.language = languageKyrgyz;
-    }
-    else if (strcmp(locale->language, "az") == 0 && latin)
-    {
-        f.language = languageAzerbaijani;
-    }
-    else if (strcmp(locale->language, "uz") == 0 && latin)
-    {
-        f.language = languageUzbek;
-    }
-    else if (strcmp(locale->language, "tk") == 0 && latin)
-    {
-        f.language = languageTurkmen;
-    }
-    else if (strcmp(locale->language, "hu") == 0 && latin)
-    {
-        f.language = languageHungarian;
-    }
-    else if (strcmp(locale->language, "fi") == 0 && latin)
-    {
-        f.language = languageFinnish;
-    }
-    else
+    f.language = LanguageOfLocale(locale);
+    if (f.language == 0)
     {
         return mloc_errorNotFound;
     }
@@ -112,7 +114,8 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
                                               sizeof(s_cardinal) - 1, nullptr) == mloc_success;
     bool ordinal = mlocInitSpelloutFormatter(&f.ordinal, data, locale, s_ordinal,
                                              sizeof(s_ordinal) - 1, nullptr) == mloc_success;
-    f.spoken = cardinal && ordinal ? 1 : 0;
+    // Korean writes no ordinal with a period, so it reads only cardinals.
+    f.spoken = cardinal && (ordinal || f.language == languageKorean) ? 1 : 0;
     f.stamp = inflectorStamp;
     memset(inflectorOut, 0, sizeof(*inflectorOut));
     memcpy(inflectorOut, &f, sizeof(f));
@@ -128,7 +131,7 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     }
     memcpy(f, opaque, sizeof(*f));
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
-           f->language <= languageFinnish && f->spoken <= 1;
+           f->language <= languageKorean && f->spoken <= 1;
 }
 
 static bool IsTurkic(const Inflector* f)
@@ -410,6 +413,7 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
         size_t previous = 0;
         const char* name = IsTurkic(f) ? LanguageOf(f)->letterName(Before(text, e->end, &previous))
                            : f->language == languageFinnish ? mlocFinnishLetterName(text, e->end)
+                           : f->language == languageKorean  ? mlocKoreanLetterName(text, e->end)
                                                             : mlocHungarianLetterName(text, e->end);
         if (name == nullptr)
         {
@@ -455,8 +459,10 @@ static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
            (r->hint != nullptr || r->hintLength == 0) &&
+           (f->language == languageKorean || r->particle == mloc_particleNone) &&
            (IsTurkic(f)                      ? mlocTurkicRequestValid(LanguageOf(f), r)
             : f->language == languageFinnish ? mlocFinnishRequestValid(r)
+            : f->language == languageKorean  ? mlocKoreanRequestValid(r)
                                              : mlocHungarianRequestValid(r));
 }
 
@@ -530,7 +536,8 @@ typedef struct Reading
 static mlocResult Read(const Inflector* f, const uint8_t* text, size_t length,
                        const mlocInflection* r, Reading* out)
 {
-    bool periodOrdinals = IsTurkic(f) ? LanguageOf(f)->periodOrdinals : true;
+    bool periodOrdinals =
+        IsTurkic(f) ? LanguageOf(f)->periodOrdinals : f->language != languageKorean;
     if (!FindEnd(periodOrdinals, text, length, r->reading, &out->e))
     {
         return mloc_errorInvalid;
@@ -651,11 +658,73 @@ static mlocResult InflectFinnish(const Inflector* f, const uint8_t* text, size_t
     return mloc_success;
 }
 
+// The particle on a Korean text, by the final its spoken end is read
+// with; a parenthesized gloss after a word leaves the word to read
+// ("서울(Seoul)은"), a percent sign reads 퍼센트. The text stays whole.
+static mlocResult InflectKorean(const Inflector* f, const uint8_t* text, size_t length,
+                                const mlocInflection* r, Inflected* out)
+{
+    size_t read = length;
+    if (length > 0 && text[length - 1] == ')')
+    {
+        size_t open = length - 1;
+        while (open > 0 && text[open - 1] != '(')
+        {
+            open--;
+        }
+        read = open > 1 && text[open - 2] != ' ' ? open - 1 : length;
+    }
+    KoreanFinal final = koreanVowel;
+    if (read == 0 || text[read - 1] != '%')
+    {
+        Reading reading;
+        mlocResult result = Read(f, text, read, r, &reading);
+        if (result != mloc_success)
+        {
+            return result;
+        }
+        final = mlocKoreanFinal((const uint8_t*)reading.spoken, reading.spokenLength);
+    }
+    if (final == koreanUnknown && r->exact)
+    {
+        return mloc_errorNotFound;
+    }
+    out->kept = length;
+    out->tailLength = 0;
+    out->mark = 0;
+    out->suffixes = (TurkicSuffixes){0};
+    // A pronoun's own stem before 가 (내가, 누가), the word alone after a
+    // space or the text's start.
+    size_t word = length;
+    while (word > 0 && text[word - 1] != ' ')
+    {
+        word--;
+    }
+    const char* stem = r->particle == mloc_particleSubject && r->hint == nullptr
+                           ? mlocKoreanSubjectStem(text + word, length - word)
+                           : nullptr;
+    if (stem != nullptr)
+    {
+        out->kept = word;
+        out->tailLength = (uint8_t)strlen(stem);
+        memcpy(out->tail, stem, out->tailLength);
+    }
+    size_t n =
+        mlocKoreanParticleText(r->particle, final, out->suffixes.text, sizeof(out->suffixes.text));
+    out->suffixes.length = (uint8_t)n;
+    out->suffixes.particle = (uint8_t)n;
+    return mloc_success;
+}
+
 // Reads the spoken end (the hint's when there is one) and writes the
 // suffixes; the text's end decides the boundary mark.
 static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length,
                           const mlocInflection* r, Inflected* out)
 {
+    if (f->language == languageKorean)
+    {
+        return InflectKorean(f, text, length, r, out);
+    }
     if (f->language == languageFinnish)
     {
         return InflectFinnish(f, text, length, r, out);

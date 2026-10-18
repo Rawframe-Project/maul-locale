@@ -5,8 +5,9 @@
 // mloc-0048): a word, a name, an abbreviation or a number inflected for
 // case, number, possessor and copula by the rules of its language, read
 // from how its end is spoken. Turkish, Kazakh, Kyrgyz, Azerbaijani,
-// Uzbek, Turkmen, Hungarian and Finnish; the rules are code (Finnish's
-// inflection types from Kotus's word list, mloc-0049), the spoken form of a
+// Uzbek, Turkmen, Hungarian, Finnish and Korean; the rules are code
+// (Finnish's inflection types from Kotus's word list, mloc-0049; Hanja's
+// readings from Unihan, mloc-0050), the spoken form of a
 // number comes from the spell-out rules (spellout.mloc) or, for Uzbek and
 // Turkmen, which have none, from their number words in code.
 
@@ -45,6 +46,45 @@ extern "C"
         mloc_readingLetters = 2,
     } mlocInflectionReading;
 
+    // A Korean particle, each written in its form after a final consonant
+    // or after a vowel (the (으)로 family's after a vowel also after ㄹ).
+    typedef enum mlocKoreanParticle
+    {
+        mloc_particleNone = 0,
+        // 은/는.
+        mloc_particleTopic = 1,
+        // 이/가.
+        mloc_particleSubject = 2,
+        // 을/를.
+        mloc_particleObject = 3,
+        // 과/와.
+        mloc_particleComitative = 4,
+        // 이랑/랑, the spoken comitative.
+        mloc_particleComitativeSpoken = 5,
+        // 아/야.
+        mloc_particleVocative = 6,
+        // 이에요/예요.
+        mloc_particleCopulaPolite = 7,
+        // 이다/다.
+        mloc_particleCopula = 8,
+        // 으로/로.
+        mloc_particleDirection = 9,
+        // 으로서/로서.
+        mloc_particleCapacity = 10,
+        // 으로써/로써.
+        mloc_particleMeans = 11,
+        // 으로부터/로부터.
+        mloc_particleSource = 12,
+        // 이나/나.
+        mloc_particleChoice = 13,
+        // 이든/든.
+        mloc_particleAny = 14,
+        // 이라/라.
+        mloc_particleQuotation = 15,
+        // 이란/란.
+        mloc_particleDefinition = 16,
+    } mlocKoreanParticle;
+
     // What a text is inflected for; zero is the text as it is.
     typedef struct mlocInflection
     {
@@ -67,6 +107,12 @@ extern "C"
         // and its final stop softens (kitap, kitabı). A name, a number or
         // an abbreviation otherwise.
         bool commonNoun;
+        // Korean's particle; refused in another language, and Korean
+        // refuses the fields above.
+        mlocKoreanParticle particle;
+        // Refuse (mloc_errorNotFound) a text whose end cannot be read,
+        // where Korean would write both forms ("은(는)").
+        bool exact;
         // How the text's end is read.
         mlocInflectionReading reading;
         // The text as it is spoken, read instead of the text where they
@@ -101,7 +147,7 @@ extern "C"
     /// @param locale        The locale, canonicalized.
     /// @return mloc_success; mloc_errorNotFound for a language the library
     ///         has no rules for (Turkish, Kazakh, Kyrgyz, Azerbaijani,
-    ///         Uzbek, Turkmen, Hungarian and Finnish now, Kazakh and Kyrgyz in
+    ///         Uzbek, Turkmen, Hungarian, Finnish and Korean now, Kazakh and Kyrgyz in
     ///         their Cyrillic script, the others in their Latin one) or
     ///         data without the number units;
     ///         mloc_errorInvalid for a null pointer.
@@ -163,6 +209,18 @@ extern "C"
     /// "5:nnen"), refused in the plural and with a possessor; an
     /// apostrophe after an end the hint says is not said
     /// ("Bordeaux'ssa"); no copula.
+    /// Korean appends the request's particle (mlocKoreanParticle) in its
+    /// form after the final of the text's spoken end: a Hangul
+    /// syllable's ("책은", "사과는"; ㄹ a vowel to the (으)로 family:
+    /// "지하철로"), a number's Sino-Korean reading ("1은", "2는"), a
+    /// capital's Korean name ("URL로", "KBS는"), a Hanja's reading
+    /// ("學校는"), a hint's; a parenthesized gloss leaves the word before
+    /// it to read ("서울(Seoul)은"), and 나, 너, 저 and 누구 take their
+    /// own stems before 가 ("내가"). An end it cannot read (a Latin word
+    /// without a hint, kana, a Hanja of readings that differ) takes both
+    /// forms ("Apple은(는)", "(으)로"), or is refused when the request is
+    /// exact. Korean refuses a case, the plural, a possessor, the copula
+    /// and the question; other languages refuse a particle.
     /// What the text cannot say (a foreign name, an abbreviation read as
     /// a word) the request's hint or reading says.
     ///

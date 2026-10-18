@@ -228,6 +228,11 @@ format.
   commit and checked in CI; names by their ending; a colon after
   digits, abbreviations and ordinals, an apostrophe after an unsaid
   end (mloc-0049).
+- Korean particles (`mlocKoreanParticle`: 은/는, 이/가, 을/를 and 13
+  more) by the final of the text's spoken end: Hangul, numbers by their
+  Sino-Korean reading, capitals by their letters' Korean names, Hanja
+  by Unihan's readings, a hint; both forms ("은(는)") where the end
+  cannot be read, or a refusal when the request is exact (mloc-0050).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

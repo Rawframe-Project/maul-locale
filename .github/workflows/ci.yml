@@ -55,6 +55,11 @@ jobs:
               "https://raw.githubusercontent.com/hugovk/everyfinnishword/$commit/kotus-sanalista_v1/$name"
           done
           python3 tools/gen_finnish_types.py kotus --check
+          # The Hanja readings' finals against the Unihan database pinned.
+          version=$(awk '$1 == "version" { print $2 }' tools/unihan-release.txt)
+          mkdir -p unihan
+          curl -sfL -o unihan/Unihan.zip "https://www.unicode.org/Public/$version/ucd/Unihan.zip"
+          python3 tools/gen_hanja_finals.py unihan --check
       - name: clang-tidy
         run: |
           cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \

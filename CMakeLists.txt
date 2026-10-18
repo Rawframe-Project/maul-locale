@@ -94,6 +94,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/grammar_tk.c
     src/grammar_fi.c
     src/grammar_fi_word.c
+    src/grammar_ko.c
     src/grammar_hu.c
     src/grammar_hu_sound.c
     src/grammar_hu_words.c
@@ -267,7 +268,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                    MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
     endif()
     # They read the spell-out rules, which numbers are spoken by.
-    foreach(test grammar grammar_turkic grammar_hu grammar_fi)
+    foreach(test grammar grammar_turkic grammar_hu grammar_fi grammar_ko)
         maul_add_test(${test})
         if(TARGET test_${test})
             set(MLOC_GRAMMAR_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)

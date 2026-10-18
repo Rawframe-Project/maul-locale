@@ -65,15 +65,18 @@ static bool Utf8(const uint8_t* s, size_t n)
     return true;
 }
 
-// The languages drawn, by three bits of the request, and whether each
-// changes a name's stem.
+// The languages drawn, by three bits of the request, and Korean in the
+// ninth slot for the reading's value 3, which no language has (seeds
+// with it only tested its refusal); whether each changes a name's stem
+// (Korean a pronoun's before 가).
 enum
 {
-    languageSlots = 8,
+    languageSlots = 9,
 };
-static const char* const s_languages[languageSlots] = {"tr", "kk", "ky", "az",
-                                                       "uz", "tk", "hu", "fi"};
-static const bool s_stemsNames[languageSlots] = {false, true, true, false, true, true, true, true};
+static const char* const s_languages[languageSlots] = {"tr", "kk", "ky", "az", "uz",
+                                                       "tk", "hu", "fi", "ko"};
+static const bool s_stemsNames[languageSlots] = {false, true, true, false, true,
+                                                 true,  true, true, true};
 
 // A language's inflector, with the spell-out rules when the file opens.
 static const mlocInflector* Inflector(size_t language)
@@ -200,9 +203,20 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         return 0;
     }
     size_t language = (size_t)(data[1] >> 4 & 7);
+    mlocInflection r = RequestOf(data);
+    // Korean: a particle (17 and above refused) and whether to be exact
+    // from the first byte; the question bit kept, which Korean refuses.
+    if (r.reading == 3)
+    {
+        language = 8;
+        bool question = r.question;
+        memset(&r, 0, sizeof(r));
+        r.particle = (mlocKoreanParticle)(data[0] & 31);
+        r.exact = (data[0] & 0x20) != 0;
+        r.question = question;
+    }
     bool stemsNames = s_stemsNames[language];
     const mlocInflector* f = Inflector(language);
-    mlocInflection r = RequestOf(data);
     // Finnish has no dative, locative or vocative: its partitive, abessive
     // and comitative take their places.
     if (language == 7)
