@@ -162,8 +162,11 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
     {
         const MessageFormatter* formatter = &f->r.formatter;
         const PreparedNumber* prepared = mlocPreparedFor(&f->r, v->number.origin);
-        fault =
-            mlocWriteNumberValue(&v->number, prepared, formatter->data, &formatter->locale, &out);
+        fault = mlocWordsValue(&v->number)
+                    ? mlocWriteWordsValue(&v->number, prepared, formatter->data, &formatter->locale,
+                                          &out)
+                    : mlocWriteNumberValue(&v->number, prepared, formatter->data,
+                                           &formatter->locale, &out);
     }
     else if (v->kind == valueDate)
     {

@@ -13,6 +13,7 @@
 #include "message_date.h"
 #include "message_number.h"
 #include "message_resolve.h"
+#include "message_words.h"
 
 // The value prepared for an expression, in the bound message, or null:
 // none prepared, or the bound message moved to an address that leaves it

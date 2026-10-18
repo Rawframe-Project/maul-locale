@@ -82,12 +82,14 @@ NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* deci
     memset(&v, 0, sizeof v);
     v.decimal = *decimal;
     v.function = (uint8_t)function;
-    // A currency or unit value does not select.
-    v.selectable = function != numberFunctionCurrency && function != numberFunctionUnit;
+    // A currency, unit, spelled-out or relative value does not select.
+    v.selectable = function <= numberFunctionOffset;
     v.select = numberSelectPlural;
     v.increment = 1;
     return v;
 }
+
+static uint32_t OptionsOf(NumberFunction function);
 
 mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberValue* operand,
                                          NumberValue* out)
@@ -95,10 +97,16 @@ mlocMessageFaultKind mlocNumberFromValue(NumberFunction function, const NumberVa
     *out = *operand;
     // :offset keeps its operand's function and so its defaults.
     out->function = function == numberFunctionOffset ? operand->function : (uint8_t)function;
-    out->selectable =
-        out->function != numberFunctionCurrency && out->function != numberFunctionUnit;
+    out->selectable = out->function <= numberFunctionOffset;
     out->select = numberSelectPlural;
     out->given &= (uint32_t)~numberGivenSelect;
+    if (out->function >= numberFunctionSpellout || operand->function >= numberFunctionSpellout)
+    {
+        // Into or out of a mloc: function, only the options the function
+        // takes pass on.
+        out->given &= OptionsOf((NumberFunction)out->function);
+        return mloc_messageFaultNone;
+    }
     if (out->function == numberFunctionUnit && function != numberFunctionOffset)
     {
         // :unit takes no select either, so drops one without a fault.
@@ -314,6 +322,13 @@ static const mlocCurrencyDisplay s_displayKinds[] = {mloc_currencySymbol, mloc_c
 static const char* const s_currencySigns[] = {"standard", "accounting"};
 // In mlocUnitWidth's order.
 static const char* const s_widths[] = {"short", "narrow", "long"};
+// In mlocRelativeWidth's, mlocRelativeNumeric's and mlocRelativeUnit's
+// orders.
+static const char* const s_styles[] = {"long", "short", "narrow"};
+static const char* const s_numerics[] = {"always", "auto"};
+static const char* const s_relativeUnits[] = {
+    "year",   "quarter", "month",   "week",      "day",      "hour",   "minute",  "second",
+    "sunday", "monday",  "tuesday", "wednesday", "thursday", "friday", "saturday"};
 // In mlocRoundingMode's order.
 static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
                                       "halfCeil",   "halfFloor", "ceil",
@@ -345,6 +360,11 @@ static const struct
     {"unit", numberGivenUnit},
     {"usage", numberGivenUsage},
     {"unitDisplay", numberGivenWidth},
+    {"rules", numberGivenRules},
+    {"numberingSystem", numberGivenSystem},
+    {"unit", numberGivenRelativeUnit},
+    {"style", numberGivenStyle},
+    {"numeric", numberGivenNumeric},
 };
 
 // The options a function takes (UTS #35 Part 9's lists), as given bits.
@@ -371,6 +391,15 @@ static uint32_t OptionsOf(NumberFunction function)
                numberGivenGrouping | numberGivenMinInteger | numberGivenFractionDigits |
                numberGivenMinSignificant | numberGivenMaxSignificant | numberGivenTrailingZeros |
                numberGivenPriority | numberGivenIncrement | numberGivenMode;
+    case numberFunctionSpellout:
+        return numberGivenRules | numberGivenSystem;
+    case numberFunctionRelative:
+        // The relative formatter's number options: no sign, the sign
+        // being the direction.
+        return numberGivenRelativeUnit | numberGivenStyle | numberGivenNumeric |
+               numberGivenGrouping | numberGivenMinInteger | numberGivenMinFraction |
+               numberGivenMaxFraction | numberGivenMinSignificant | numberGivenMaxSignificant |
+               numberGivenTrailingZeros | numberGivenPriority | numberGivenMode;
     default:
         return 0;
     }
@@ -416,6 +445,22 @@ static bool SetUnitText(NumberValue* v, uint32_t bit, const NumberOption* option
     return true;
 }
 
+// Sets a mloc:spellout value's rule set or numbering system from text
+// that is lexically one (as a unit identifier is), the other dropped;
+// false for another value.
+static bool SetRulesText(NumberValue* v, uint32_t bit, const NumberOption* option)
+{
+    const char* text = (const char*)option->text;
+    if (!option->hasText || !mlocUnitText(text, option->length) || option->length > UINT32_MAX)
+    {
+        return false;
+    }
+    v->unit = text;
+    v->unitLength = (uint32_t)option->length;
+    v->given = (v->given & (uint32_t)~(numberGivenRules | numberGivenSystem)) | bit;
+    return true;
+}
+
 // Sets one option by its bit; whether its value was good.
 static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
 {
@@ -450,6 +495,15 @@ static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
         return SetUnitText(v, bit, option);
     case numberGivenWidth:
         return SetChoice(v, &v->width, bit, option, s_widths, 3);
+    case numberGivenRules:
+    case numberGivenSystem:
+        return SetRulesText(v, bit, option);
+    case numberGivenRelativeUnit:
+        return SetChoice(v, &v->relativeUnit, bit, option, s_relativeUnits, 15);
+    case numberGivenStyle:
+        return SetChoice(v, &v->width, bit, option, s_styles, 3);
+    case numberGivenNumeric:
+        return SetChoice(v, &v->numeric, bit, option, s_numerics, 2);
     case numberGivenDisplay:
         return SetChoice(v, &v->display, bit, option, s_displays, 5);
     case numberGivenCurrencySign:
@@ -494,6 +548,11 @@ mlocMessageFaultKind mlocSetNumberOption(NumberValue* value, NumberFunction func
             // must not override it).
             return mloc_messageFaultBadOption;
         }
+        if ((bit & numberGivenWords) != 0 && !option->literal)
+        {
+            // They choose the formatter, made once at bind.
+            return mloc_messageFaultBadOption;
+        }
         if (bit == numberGivenSelect && !option->literal)
         {
             // Keys depend on it, so a translator must see it.
@@ -531,8 +590,10 @@ static mlocPrecision PrecisionOf(const NumberValue* v)
     uint8_t minDefault = 0;
     // ECMA-402's defaults: three for decimals, none for integers and
     // percents; a currency's own digits, or its fractionDigits option.
-    uint8_t maxDefault =
-        v->function == numberFunctionNumber || v->function == numberFunctionUnit ? 3 : 0;
+    uint8_t maxDefault = v->function == numberFunctionNumber || v->function == numberFunctionUnit ||
+                                 v->function == numberFunctionRelative
+                             ? 3
+                             : 0;
     if (v->function == numberFunctionCurrency)
     {
         minDefault =
@@ -648,13 +709,12 @@ mlocNumberOptions mlocNumberFormatOptions(const NumberValue* v)
 }
 
 // Writes a currency value with the currency formatter.
-static_assert(sizeof(NumberValue) == offsetof(NumberValue, reserved) + 5,
+static_assert(sizeof(NumberValue) == offsetof(NumberValue, reserved) + 3,
               "a number value has no padding");
 static_assert(offsetof(PreparedNumber, formatter) % 8 == 0 && sizeof(PreparedNumber) % 8 == 0,
               "a prepared value's parts stay 8-aligned");
 
-// A value's options as a prepared value keeps them.
-static NumberValue KeyOf(const NumberValue* value)
+NumberValue mlocNumberKey(const NumberValue* value)
 {
     NumberValue key = *value;
     memset(&key.decimal, 0, sizeof key.decimal);
@@ -663,14 +723,13 @@ static NumberValue KeyOf(const NumberValue* value)
     return key;
 }
 
-// Whether a prepared value was made with a value's options.
-static bool Fits(const PreparedNumber* prepared, const NumberValue* value)
+bool mlocNumberFits(const PreparedNumber* prepared, const NumberValue* value)
 {
     if (prepared == NULL)
     {
         return false;
     }
-    NumberValue key = KeyOf(value);
+    NumberValue key = mlocNumberKey(value);
     return memcmp(&key, &prepared->key, sizeof key) == 0;
 }
 
@@ -728,7 +787,8 @@ MLOC_NOINLINE static mlocResult WriteCurrency(const NumberValue* value, const ml
 size_t mlocPreparedSize(PreparedKind kind)
 {
     static const size_t sizes[] = {sizeof(mlocNumberFormatter), sizeof(mlocCurrencyFormatter),
-                                   sizeof(mlocUnitFormatter)};
+                                   sizeof(mlocUnitFormatter), sizeof(mlocSpelloutFormatter),
+                                   sizeof(mlocRelativeFormatter)};
     return offsetof(PreparedNumber, formatter) + sizes[kind];
 }
 
@@ -736,7 +796,7 @@ bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const 
                        PreparedNumber* out)
 {
     memset(out, 0, offsetof(PreparedNumber, formatter));
-    out->key = KeyOf(value);
+    out->key = mlocNumberKey(value);
     out->kind = value->function == numberFunctionCurrency ? preparedCurrency
                 : value->function == numberFunctionUnit   ? preparedUnit
                                                           : preparedNumber;
@@ -768,7 +828,7 @@ mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const Prepar
                                           mlocOutput* output)
 {
     mlocResult result;
-    if (Fits(prepared, value))
+    if (mlocNumberFits(prepared, value))
     {
         result = prepared->kind == preparedUnit
                      ? mlocFormatUnit(&prepared->formatter.unit, &value->decimal, output)
@@ -868,7 +928,7 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNum
     mlocPluralCategory category = mloc_pluralOther;
     mlocPluralRules made;
     const mlocPluralRules* rules = &made;
-    if (Fits(prepared, value) && prepared->rulesType == 1 + type)
+    if (mlocNumberFits(prepared, value) && prepared->rulesType == 1 + type)
     {
         rules = &prepared->rules;
     }

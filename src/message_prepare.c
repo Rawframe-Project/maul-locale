@@ -24,7 +24,7 @@ static void Store32(uint8_t* p, uint32_t value)
 // prepared.
 static bool Prepared(uint32_t slot)
 {
-    return slot >= messageFunctionNumber && slot <= messageFunctionDateTime;
+    return slot >= messageFunctionNumber && slot <= messageFunctionRelative;
 }
 
 static bool DateSlot(uint32_t slot)
@@ -43,7 +43,9 @@ static size_t RoomOf(uint32_t slot)
     {
         return mlocPreparedDateSize((DateFunction)(slot - messageFunctionDate));
     }
-    return mlocPreparedSize(slot == messageFunctionUnit ? preparedUnit
+    return mlocPreparedSize(slot == messageFunctionUnit       ? preparedUnit
+                            : slot == messageFunctionSpellout ? preparedSpellout
+                            : slot == messageFunctionRelative ? preparedRelative
                             : slot == messageFunctionCurrency || slot == messageFunctionOffset
                                 ? preparedCurrency
                                 : preparedNumber);
@@ -103,7 +105,9 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         }
         size_t size = 0;
         if (!r.dynamic && v.kind == valueNumber && v.number.origin == e &&
-            mlocPrepareNumber(&v.number, f->data, &f->locale, &prepared.number))
+            (mlocWordsValue(&v.number)
+                 ? mlocPrepareWords(&v.number, f->data, &f->locale, &prepared.number)
+                 : mlocPrepareNumber(&v.number, f->data, &f->locale, &prepared.number)))
         {
             size = mlocPreparedSize((PreparedKind)prepared.number.kind);
         }

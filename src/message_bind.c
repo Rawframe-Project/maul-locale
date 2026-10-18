@@ -344,11 +344,18 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
         const char* name;
         uint32_t slot;
     } defaults[] = {
-        {"string", messageFunctionString},   {"number", messageFunctionNumber},
-        {"integer", messageFunctionInteger}, {"offset", messageFunctionOffset},
-        {"percent", messageFunctionPercent}, {"currency", messageFunctionCurrency},
-        {"unit", messageFunctionUnit},       {"date", messageFunctionDate},
-        {"time", messageFunctionTime},       {"datetime", messageFunctionDateTime},
+        {"string", messageFunctionString},
+        {"number", messageFunctionNumber},
+        {"integer", messageFunctionInteger},
+        {"offset", messageFunctionOffset},
+        {"percent", messageFunctionPercent},
+        {"currency", messageFunctionCurrency},
+        {"unit", messageFunctionUnit},
+        {"date", messageFunctionDate},
+        {"time", messageFunctionTime},
+        {"datetime", messageFunctionDateTime},
+        {"mloc:spellout", messageFunctionSpellout},
+        {"mloc:relative", messageFunctionRelative},
     };
     for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++)
     {

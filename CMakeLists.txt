@@ -118,6 +118,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_table.c
     src/message_text.c
     src/message_value.c
+    src/message_words.c
     src/message_write.c
     src/calendar.c
     src/calendar_add.c
@@ -226,6 +227,23 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(message_functions)
     maul_add_test(message_parts)
+    maul_add_test(message_words)
+    # It reads the spell-out rules and relative times.
+    if(TARGET test_message_words)
+        set(MLOC_WORDS_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+        set(MLOC_WORDS_RELATIVE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_message_words PRIVATE "SHELL:--embed-file ${MLOC_WORDS_SPELLOUT}@/spellout.mloc"
+                                "SHELL:--embed-file ${MLOC_WORDS_RELATIVE}@/relative.mloc")
+            set(MLOC_WORDS_SPELLOUT /spellout.mloc)
+            set(MLOC_WORDS_RELATIVE /relative.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_message_words PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_message_words PRIVATE MLOC_SPELLOUT_FILE="${MLOC_WORDS_SPELLOUT}"
+                                   MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}")
+    endif()
     # It reads the dates for a date's parts.
     if(TARGET test_message_parts)
         set(MLOC_PARTS_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)

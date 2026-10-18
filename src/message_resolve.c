@@ -686,6 +686,22 @@ MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, con
     return v;
 }
 
+// What a value its options have set still lacks: a unit's amount, a
+// relative time or a currency's amount without its unit or currency is
+// a bad operand; a currency whose digits the data lacks unsupported.
+static mlocMessageFaultKind Completed(const Resolution* r, NumberValue* n)
+{
+    if ((n->function == numberFunctionUnit && (n->given & numberGivenUnit) == 0) ||
+        (n->function == numberFunctionRelative && (n->given & numberGivenRelativeUnit) == 0) ||
+        (n->function == numberFunctionCurrency && (n->given & numberGivenCurrency) == 0))
+    {
+        return mloc_messageFaultBadOperand;
+    }
+    return n->function == numberFunctionCurrency && !mlocFindCurrencyDigits(n, r->formatter.data)
+               ? mloc_messageFaultUnsupportedOperation
+               : mloc_messageFaultNone;
+}
+
 // A :number, :integer, :percent or :currency value: its operand's number, the options passed
 // on, then the expression's own (u: options aside), checked together.
 MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
@@ -730,24 +746,11 @@ MLOC_NOINLINE static Value ResolveNumber(Resolution* r, uint32_t expression,
             mlocReportFault(r, fault, at);
         }
     }
-    if (n.function == numberFunctionUnit && (n.given & numberGivenUnit) == 0)
+    fault = Completed(r, &n);
+    if (fault != mloc_messageFaultNone)
     {
-        // A number without a unit is no unit's amount.
-        mlocReportFault(r, mloc_messageFaultBadOperand, at);
+        mlocReportFault(r, fault, at);
         return mlocExpressionFallback(r, expression);
-    }
-    if (n.function == numberFunctionCurrency)
-    {
-        // A number without a currency is no currency's amount.
-        fault = (n.given & numberGivenCurrency) == 0 ? mloc_messageFaultBadOperand
-                : !mlocFindCurrencyDigits(&n, r->formatter.data)
-                    ? mloc_messageFaultUnsupportedOperation
-                    : mloc_messageFaultNone;
-        if (fault != mloc_messageFaultNone)
-        {
-            mlocReportFault(r, fault, at);
-            return mlocExpressionFallback(r, expression);
-        }
     }
     for (uint32_t i = mlocCheckNumberOptions(&n); i > 0; i--)
     {
@@ -865,7 +868,8 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
     }
     else if (slot == messageFunctionNumber || slot == messageFunctionInteger ||
              slot == messageFunctionPercent || slot == messageFunctionCurrency ||
-             slot == messageFunctionUnit)
+             slot == messageFunctionUnit || slot == messageFunctionSpellout ||
+             slot == messageFunctionRelative)
     {
         static const NumberFunction functions[] = {
             [messageFunctionNumber] = numberFunctionNumber,
@@ -873,6 +877,8 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
             [messageFunctionPercent] = numberFunctionPercent,
             [messageFunctionCurrency] = numberFunctionCurrency,
             [messageFunctionUnit] = numberFunctionUnit,
+            [messageFunctionSpellout] = numberFunctionSpellout,
+            [messageFunctionRelative] = numberFunctionRelative,
         };
         v = ResolveNumber(r, expression, functions[slot], given);
     }

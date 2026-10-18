@@ -181,6 +181,9 @@ format.
   specification's fields, lengths, precisions, `hour12` and `calendar`
   over the date formatters; new date, time and date-time argument kinds
   and operand kinds; date/time literals (mloc-0045).
+- Messages format with `mloc:spellout` (`rules`, `numberingSystem`;
+  MF1's spellout and ordinal) and `mloc:relative` (`unit`, `style`,
+  `numeric` and number options) (mloc-0045).
 - Messages format to parts: with a part function, `mlocFormatMessage`
   reports text, placeholders, fallbacks, markup and isolation marks
   (`mlocMessagePart`, the expression's or markup's index in the upper

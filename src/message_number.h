@@ -14,6 +14,8 @@
 #include "maul-locale/message.h"
 #include "maul-locale/number.h"
 #include "maul-locale/plural.h"
+#include "maul-locale/relative.h"
+#include "maul-locale/spellout.h"
 #include "maul-locale/unit.h"
 
 #include <stdbool.h>
@@ -30,6 +32,8 @@ typedef enum NumberFunction
     numberFunctionOffset = 3,
     numberFunctionCurrency = 4,
     numberFunctionUnit = 5,
+    numberFunctionSpellout = 6,
+    numberFunctionRelative = 7,
 } NumberFunction;
 
 // How a number value selects.
@@ -62,7 +66,18 @@ enum
     numberGivenUnit = 1u << 16,
     numberGivenUsage = 1u << 17,
     numberGivenWidth = 1u << 18,
+    numberGivenRules = 1u << 19,
+    numberGivenSystem = 1u << 20,
+    numberGivenRelativeUnit = 1u << 21,
+    numberGivenStyle = 1u << 22,
+    numberGivenNumeric = 1u << 23,
 };
+
+// The options that choose a mloc:spellout or mloc:relative formatter:
+// literals only.
+static const uint32_t numberGivenWords = numberGivenRules | numberGivenSystem |
+                                         numberGivenRelativeUnit | numberGivenStyle |
+                                         numberGivenNumeric;
 
 // A number value: its decimal, the expression that made it, and the
 // options given to it, each read only where its bit is set in given.
@@ -72,7 +87,8 @@ typedef struct NumberValue
     mlocDecimal decimal;
     uint32_t origin;
     // A :unit value's unit and usage, as text in the compiled message or
-    // an argument, which outlive the call.
+    // an argument, which outlive the call; a mloc:spellout value's rule
+    // set (without its "%") and numbering system.
     const char* unit;
     const char* usage;
     uint32_t unitLength;
@@ -102,10 +118,14 @@ typedef struct NumberValue
     uint8_t currencySign;
     uint8_t fractionDigits;
     uint8_t currencyDigits;
-    // A :unit value's mlocUnitWidth.
+    // A :unit value's mlocUnitWidth, a mloc:relative value's
+    // mlocRelativeWidth.
     uint8_t width;
+    // A mloc:relative value's mlocRelativeUnit and mlocRelativeNumeric.
+    uint8_t relativeUnit;
+    uint8_t numeric;
     // Zero, so values compare by their bytes.
-    uint8_t reserved[5];
+    uint8_t reserved[3];
 } NumberValue;
 
 // Which formatter a prepared value has.
@@ -114,6 +134,8 @@ typedef enum PreparedKind
     preparedNumber = 0,
     preparedCurrency = 1,
     preparedUnit = 2,
+    preparedSpellout = 3,
+    preparedRelative = 4,
 } PreparedKind;
 
 // What binding prepares for a number function's expression (record
@@ -134,11 +156,19 @@ typedef struct PreparedNumber
         mlocNumberFormatter number;
         mlocCurrencyFormatter currency;
         mlocUnitFormatter unit;
+        mlocSpelloutFormatter spellout;
+        mlocRelativeFormatter relative;
     } formatter;
 } PreparedNumber;
 
 // The bytes a prepared value of a kind takes in a bound message.
 size_t mlocPreparedSize(PreparedKind kind);
+
+// A value's options as a prepared value keeps them (its number, origin
+// and selectability cleared), and whether a prepared value, which may be
+// null, was made with a value's options.
+NumberValue mlocNumberKey(const NumberValue* value);
+bool mlocNumberFits(const PreparedNumber* prepared, const NumberValue* value);
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made (the expression is then not prepared).

@@ -273,6 +273,21 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   their own (`dates.mloc`); without it a date function is an Unsupported
   Operation. ICU4C 79's MF2 is of the older Draft (it ignores these
   options) and no oracle.
+- **`mloc:spellout` and `mloc:relative`:** number values of their own
+  functions. `mloc:spellout` writes the spell-out rules' text of the
+  exact number: `rules` names a public rule set without its "%"
+  (`spellout-ordinal`, `digits-ordinal`; MF1's `spellout` and `ordinal`),
+  `spellout-numbering` by default as MF1, or `numberingSystem` an
+  algorithmic system ("roman"), the later of the two standing; a rule
+  set or system the locale lacks is an Unsupported Operation and a
+  fallback (MF1 silently writes its default). `mloc:relative` writes an
+  amount of a `unit` (year to second, the weekdays; none is a Bad
+  Operand) relative to now, with `style` (long, short, narrow),
+  `numeric` (always, auto) and `:number`'s digit and grouping options
+  (0 to 3 fraction digits by default), no sign display. Their options
+  that choose a formatter are literals only; both are prepared at bind,
+  neither selects, number functions read their numbers, and they need
+  `spellout.mloc` and `relative.mloc`.
 - **Parts:** with the output's part function set, a format call that
   succeeds (or falls back) writes the text a second time to report its
   parts, storing nothing: text, placeholder, fallback, markup open,
@@ -328,7 +343,9 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   formats to its text with its errors in order, or, where the suite
   gives no text, with its errors (299, isolated as each case says, the
   `:test:` functions defined in the test as the suite describes them);
-  `test_message_parts` checks parts of every piece, isolation marks,
+  `test_message_words` checks the two `mloc:` number functions against
+  ICU4C 79's MF1 texts and the formatters', their refusals, operands
+  and parts; `test_message_parts` checks parts of every piece, isolation marks,
   numbers' and dates' parts at their place, a program function's,
   none on failure, faults counted once, tiling, and the accessors;
   `test_message_dates` checks the date functions' options, operands,
