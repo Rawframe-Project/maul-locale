@@ -433,6 +433,12 @@ static void TestCompileFailures(void)
     CHECK(CatalogCompile(s_directory, goodPaths, 2, to), "a set with a section kept whole");
     if (report != nullptr)
     {
+        char said[4096] = {0};
+        rewind(report);
+        size_t read = fread(said, 1, sizeof(said) - 1, report);
+        said[read] = '\0';
+        CHECK(strstr(said, "no-such-directory/de.mloc: cannot write") != nullptr,
+              "the report names the catalog it could not write");
         fclose(report);
     }
     mlocData data;

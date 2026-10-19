@@ -87,6 +87,10 @@ half a byte a key.
     the empty key, the orphan).
   - Every byte after the header changed in turn: most such catalogs are
     refused. The rest changed only a message's literal text or padding.
+- `test_catalog_tables`: each unit alone in memory of its own size, so
+  that a check left out reads past it under the sanitizers: remap
+  entries, offsets, a key changed or holding a NUL, units cut short,
+  unknown flags.
 - `fuzz_catalog`, with the compiled catalogs as seeds: a catalog that
   opens finds every stored key at its own index, and gives every
   message from inside its own bytes. 16 million runs were clean.
