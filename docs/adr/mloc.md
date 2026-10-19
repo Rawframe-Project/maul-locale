@@ -68,3 +68,4 @@ are listed in [README.md](README.md).
 | [mloc-0061](mloc-0061-xliff-pgs.md) | XLIFF's Plural, Gender and Select module: selection messages by case | Accepted |
 | [mloc-0062](mloc-0062-catalog-speed.md) | Catalog speed: lookup against gettext, formatting against a bound message | Accepted |
 | [mloc-0063](mloc-0063-code-point-trie.md) | A code point trie of 32-bit values | Accepted |
+| [mloc-0064](mloc-0064-collation-root.md) | The root collation, read from FractionalUCA.txt as ICU's runtime holds it | Accepted |

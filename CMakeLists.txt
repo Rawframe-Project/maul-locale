@@ -716,6 +716,7 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
+                                    tools/mlocgen/collation_root.c
                                     tools/mlocgen/direction_gen.c
                                     tools/mlocgen/gender_gen.c
                                     tools/mlocgen/cldr.c
@@ -848,6 +849,17 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_genxml PRIVATE test)
         maul_apply_flags(test_genxml)
         add_test(NAME genxml COMMAND test_genxml)
+        add_executable(test_gencollation test/test_gencollation.c)
+        target_link_libraries(test_gencollation PRIVATE mlocgen_core)
+        target_include_directories(test_gencollation PRIVATE test)
+        maul_apply_flags(test_gencollation)
+        add_test(NAME gencollation COMMAND test_gencollation
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        # The root against allkeys_CLDR.txt of the same release, which the
+        # cldr CI job runs.
+        add_executable(conform_collation_root test/conform_collation_root.c)
+        target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
+        maul_apply_flags(conform_collation_root)
         add_executable(test_trie test/test_trie.c)
         target_link_libraries(test_trie PRIVATE mlocgen_core)
         target_include_directories(test_trie PRIVATE test)
