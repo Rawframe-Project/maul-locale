@@ -268,6 +268,13 @@ format.
   draft's data model, written back, and checked as a catalog (a locale,
   keys given once, messages that compile, the properties it reads);
   `mloccat read` and `mloccat check` (mloc-0053).
+- Catalogs: `mloccat compile` writes a source and its translations as
+  catalogs (a data file per locale) sharing one key order under a
+  minimal perfect hash (XXH64, PTHash's pilots); `mlocOpenCatalog`,
+  `mlocGetCatalogInfo`, `mlocFindCatalogKey` and `mlocGetCatalogMessage`
+  find a message by key or by an index the same in every catalog of the
+  set; obsolete entries, orphaned keys and `@translate no` handled; keys
+  not in NFC refused (mloc-0054).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

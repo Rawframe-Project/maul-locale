@@ -7,6 +7,7 @@
 
 #include "maul-locale/locale.h"
 #include "maul-locale/message.h"
+#include "maul-unicode/normalize.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -269,6 +270,17 @@ static void CheckTwice(Checker* c, Seen* seen)
     }
 }
 
+// Whether a key is its own NFC form.
+static int IsNfc(const char* key)
+{
+    size_t length = strlen(key);
+    char normal[keyRoom * 3];
+    size_t needed = 0;
+    muniTextResult r =
+        muniNormalize(key, length, muni_nfc, muni_convertStrict, normal, sizeof(normal), &needed);
+    return r.status == muni_success && needed == length && memcmp(normal, key, length) == 0;
+}
+
 static void CheckEntry(Checker* c, const ResSection* s, const ResItem* item, Seen* seen)
 {
     char key[keyRoom];
@@ -277,6 +289,10 @@ static void CheckEntry(Checker* c, const ResSection* s, const ResItem* item, See
     {
         Problem(c, item->line, "a key with a dot inside a part, a NUL, or past 1,023 bytes", "");
         return;
+    }
+    if (!IsNfc(key))
+    {
+        Problem(c, item->line, "a key not in NFC, which lookups compare as bytes", key);
     }
     AddSeen(seen, key, item->line);
     CheckMessage(c, item, key);

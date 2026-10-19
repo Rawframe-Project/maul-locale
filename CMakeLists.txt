@@ -140,6 +140,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_value.c
     src/message_words.c
     src/message_write.c
+    src/catalog.c
+    src/catalog_tables.c
     src/calendar.c
     src/calendar_add.c
     src/calendar_arith.c
@@ -680,7 +682,8 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area data date_data decimal duration grammar ixdtf locale message parse relative spellout
+    foreach(area catalog data date_data decimal duration grammar ixdtf locale message parse relative
+                 spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
@@ -754,10 +757,14 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     maul_apply_flags(mlocgen)
     # The catalog tool, mloccat (record mloc-0053): its parts are a static
     # library so that their tests link them alone.
-    add_library(mloccat_core STATIC tools/mloccat/resource.c tools/mloccat/resource_check.c
-                             tools/mloccat/resource_write.c)
-    target_include_directories(mloccat_core PUBLIC tools/mloccat)
-    target_link_libraries(mloccat_core PUBLIC maul-locale maul-unicode)
+    add_library(mloccat_core STATIC tools/mloccat/compile.c tools/mloccat/file.c
+                             tools/mloccat/resource.c tools/mloccat/resource_check.c
+                             tools/mloccat/resource_write.c tools/mloccat/table.c)
+    # The compiler writes the data layout and the catalog units the library
+    # reads (src/data_format.h, src/catalog_tables.h), with the generator's
+    # data file writer.
+    target_include_directories(mloccat_core PUBLIC tools/mloccat src)
+    target_link_libraries(mloccat_core PUBLIC mlocgen_core maul-locale maul-unicode)
     maul_apply_flags(mloccat_core)
     if(WIN32)
         target_compile_definitions(mloccat_core PUBLIC _CRT_SECURE_NO_WARNINGS)
@@ -766,6 +773,14 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     target_link_libraries(mloccat PRIVATE mloccat_core)
     maul_apply_flags(mloccat)
     if(MAUL_LOCALE_BUILD_TESTS)
+        # Catalogs compiled by the tool and read by the library, in a
+        # directory of the build.
+        add_executable(test_catalog test/test_catalog.c)
+        target_link_libraries(test_catalog PRIVATE mloccat_core)
+        target_include_directories(test_catalog PRIVATE test)
+        maul_apply_flags(test_catalog)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/catalog-test)
+        add_test(NAME catalog COMMAND test_catalog ${CMAKE_CURRENT_BINARY_DIR}/catalog-test)
         add_executable(test_resource test/test_resource.c)
         target_link_libraries(test_resource PRIVATE mloccat_core)
         target_include_directories(test_resource PRIVATE test)

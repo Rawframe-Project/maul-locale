@@ -7,43 +7,18 @@
 //   mloccat check FILE  reads the resource and checks it as a catalog
 //                       source: a locale, unique keys, messages that
 //                       compile
+//   mloccat compile DIRECTORY SOURCE [TRANSLATION...]
+//                       compiles a source and its translations into
+//                       catalogs, LOCALE.mloc each (compile.h)
 
+#include "compile.h"
+#include "file.h"
 #include "resource.h"
 #include "resource_check.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static char* ReadFile(const char* path, size_t* lengthOut)
-{
-    FILE* f = fopen(path, "rb");
-    if (f == nullptr)
-    {
-        return nullptr;
-    }
-    size_t capacity = 1 << 16;
-    size_t length = 0;
-    char* text = malloc(capacity);
-    while (text != nullptr)
-    {
-        length += fread(text + length, 1, capacity - length, f);
-        if (length < capacity)
-        {
-            break;
-        }
-        capacity *= 2;
-        char* grown = realloc(text, capacity);
-        if (grown == nullptr)
-        {
-            free(text);
-        }
-        text = grown;
-    }
-    fclose(f);
-    *lengthOut = length;
-    return text;
-}
 
 static void WriteString(const ResText* t)
 {
@@ -146,7 +121,7 @@ static void WriteResource(const Resource* r)
 static int Run(const char* command, const char* path)
 {
     size_t length = 0;
-    char* text = ReadFile(path, &length);
+    char* text = FileRead(path, &length);
     if (text == nullptr)
     {
         fprintf(stderr, "mloccat: cannot read %s\n", path);
@@ -174,9 +149,15 @@ static int Run(const char* command, const char* path)
 
 int main(int argc, char** argv)
 {
+    if (argc >= 4 && strcmp(argv[1], "compile") == 0)
+    {
+        return CatalogCompile(argv[2], argv + 3, (size_t)(argc - 3), stderr) ? 0 : 1;
+    }
     if (argc != 3 || (strcmp(argv[1], "read") != 0 && strcmp(argv[1], "check") != 0))
     {
-        fputs("usage: mloccat read FILE | mloccat check FILE\n", stderr);
+        fputs("usage: mloccat read FILE | mloccat check FILE\n"
+              "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n",
+              stderr);
         return 2;
     }
     return Run(argv[1], argv[2]);

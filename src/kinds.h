@@ -155,5 +155,10 @@ constexpr uint32_t kindRelative = 0x00090006;
 // The lowercase letters relative time's texts begin with and their
 // titlecase, a unit of no locale (spellout_tables.h's layout).
 constexpr uint32_t kindRelativeTitlecase = 0x00090007;
+// The catalog part: a catalog's keys under a minimal perfect hash and
+// its compiled messages, two units of its one locale (record mloc-0054,
+// src/catalog_tables.h).
+constexpr uint32_t kindCatalogKeys = 0x000A0001;
+constexpr uint32_t kindCatalogMessages = 0x000A0002;
 
 #endif

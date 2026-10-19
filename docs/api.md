@@ -66,6 +66,30 @@ MLOC_NODISCARD MLOC_API mlocResult mlocMakeMonthDay(mlocCalendar calendar, const
 ```
 Finds a month and day's reference date, as Temporal's PlainMonthDay.from does in the Intl Era and Month Code proposal: a month code (or, with a year, a month or month code of that year) and a day, clamped to the month's longest length (30 in Chinese and Dangi, the given year's month with a year) or refused; then the latest date from 1900 to 1972 in the ISO calendar with that month code and day, else the earliest from 1973 to 2035. Chinese and Dangi take the proposal's table of reference years, a month and day it lacks becoming the month of the same number (or refused).  @param calendar      The calendar. @param fields        A day, and a month code, or a year (or era and era year) and a month or month code. @param overflow      What a month or day past the calendar's does. @param referenceOut  Receives the reference date, in the calendar; left unchanged on failure. @return mloc_success; mloc_errorInvalid for a null pointer, missing or disagreeing fields (a month's place without a year among them), or a value refused; mloc_errorSyntax for an era or month code not of the calendar. @par Thread safety Safe from any thread.
 
+## `catalog.h`
+
+Catalogs (records mloc-0053 and mloc-0054): a program's messages of one locale, compiled by the catalog tool (mloccat) into a data file, found by key through a minimal perfect hash or by an index resolved once. The catalogs of one set (a source and its translations) share one key order, so an index means the same message in each.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data);
+```
+Opens a catalog the catalog tool compiled: the data must hold one locale with a catalog's keys and messages. Its tables were checked when the data was opened (mlocOpenData); this checks that they agree.  @param catalogOut  Receives the catalog; left unchanged on failure. @param data        The catalog's data. @return mloc_success; mloc_errorNotFound for data with no catalog; mloc_errorData for data whose keys and messages disagree or that holds more than one catalog; mloc_errorInvalid for a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoOut);
+```
+Reads what a catalog holds.  @param catalog  A catalog mlocOpenCatalog opened. @param infoOut  Receives its set id, counts, kind and locale. @return mloc_success; mloc_errorInvalid for a catalog the library did not open or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindCatalogKey(const mlocCatalog* catalog, const char* key, size_t length, uint32_t* indexOut);
+```
+Finds a key's index: a hash, a table read and one comparison. Keys are compared as bytes; the tool stores them in NFC.  @param catalog   A catalog mlocOpenCatalog opened. @param key       The key, UTF-8; may be null when length is 0. @param length    Its length in bytes. @param indexOut  Receives the index, below the key count. @return mloc_success; mloc_errorNotFound for a key the set does not have; mloc_errorInvalid for a catalog the library did not open or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetCatalogMessage(const mlocCatalog* catalog, uint32_t index, const void** messageOut, size_t* sizeOut);
+```
+Gives a key's compiled message, as mlocCompileMessage writes one, to bind and format (message.h).  @param catalog     A catalog mlocOpenCatalog opened. @param index       A key's index (mlocFindCatalogKey), the same in every catalog of the set. @param messageOut  Receives the message's first byte, in the catalog's data. @param sizeOut     Receives its size in bytes. @return mloc_success; mloc_errorNotFound when this catalog has no message for the key (a translation not yet made); mloc_errorInvalid for an index past the key count, a catalog the library did not open or a null pointer. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -911,4 +935,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-166 functions across 19 headers.
+170 functions across 20 headers.

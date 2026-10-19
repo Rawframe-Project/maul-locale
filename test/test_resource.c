@@ -201,6 +201,8 @@ static void TestChecks(void)
         {"@locale tr\n---\n@x-own anything\nk = v\n", 1},
         {"@locale tr\n---\n@allow-empty yes\nk = v\n", 0},
         {"@locale tr\n---\n@obsolete now\nk = v\n", 0},
+        {"@locale tr\n---\ne\xCC\x81 = v\n", 0},
+        {"@locale tr\n---\n\xC3\xA9 = v\n", 1},
     };
     FILE* sink = tmpfile();
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
@@ -226,13 +228,13 @@ static void TestColumnsAndCharacters(void)
           "a refusal's column counts from 1");
     ResourceFree(&r);
     CHECK(Read("@locale tr\r\n---\r\n"
-               "\xC3\xA7\xEF\xBF\xBD = [a]\xC3\xA7\xF0\x9F\x98\x80 \\x39\\x66\\u00FF\r\n",
+               "\xC3\xA7\xEF\xBF\xBD = [a]\xC3\xA7\xF0\x9F\x98\x80 \\x39\\x66\\x6f\\u00FF\r\n",
                &r, &e) &&
               r.hasFrontmatter && r.sections[0].itemCount == 1,
           "CRLF lines, a frontmatter among them");
     const ResItem* item = &r.sections[0].items[0];
     CHECK(Is(&item->id.parts[0], "\xC3\xA7\xEF\xBF\xBD") &&
-              Is(&item->value, "[a]\xC3\xA7\xF0\x9F\x98\x80 9f\xC3\xBF"),
+              Is(&item->value, "[a]\xC3\xA7\xF0\x9F\x98\x80 9fo\xC3\xBF"),
           "characters of two to four bytes, [ in a value, U+FFFD in an id, hex digits 9 and f");
     ResourceFree(&r);
 }
