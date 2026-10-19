@@ -318,7 +318,7 @@ Writes a text inflected as asked: in Turkish its suffixes in order (plural, poss
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFormatter* formatter, const mlocDecimal* decimal, const mlocInflection* request, mlocOutput* output);
 ```
-Writes a number as a formatter writes it, inflected as asked by how the number is spoken ("5'e", "1.985'te", "%50'ye").  @param inflector  An inflector from mlocInitInflector. @param formatter  The number's formatter, or null for the locale's default one. @param decimal    The number. @param request    What to inflect it for (its reading and hint are not read). @param output     Receives the text and its parts, the number's own parts (mlocNumberPart) inside the stem. @return As mlocInflectText; mloc_errorInvalid also for a decimal the library did not make or a formatter it did not make. @par Thread safety Safe from any thread.
+Writes a number as a formatter writes it, inflected as asked by how the number is spoken ("5'e", "1.985'te", "%50'ye"): the value the text shows (rounded, a percent scaled), whatever the formatter's locale; in scientific or compact notation, the text.  @param inflector  An inflector from mlocInitInflector. @param formatter  The number's formatter, or null for the locale's default one. @param decimal    The number. @param request    What to inflect it for (its reading and hint are not read). @param output     Receives the text and its parts, the number's own parts (mlocNumberPart) inside the stem. @return As mlocInflectText; mloc_errorInvalid also for a decimal the library did not make or a formatter it did not make. @par Thread safety Safe from any thread.
 
 ## `ixdtf.h`
 

@@ -13,12 +13,6 @@
 
 #include <string.h>
 
-enum
-{
-    // Marks a number formatter the library made.
-    formatterStamp = 0x4E,
-};
-
 static_assert(sizeof(Formatter) <= sizeof(mlocNumberFormatter),
               "a formatter fits its opaque value");
 
@@ -49,7 +43,7 @@ mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mloc
     {
         return result;
     }
-    mlocSetFormatOptions(&f, o, formatterStamp);
+    mlocSetFormatOptions(&f, o, numberFormatterStamp);
     memcpy(formatterOut, &f, sizeof(f));
     memset((uint8_t*)formatterOut + sizeof(f), 0, sizeof(*formatterOut) - sizeof(f));
     return result;
@@ -59,7 +53,7 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
                             mlocOutput* output)
 {
     Formatter f;
-    if (!mlocReadFormatter(formatter, sizeof(*formatter), formatterStamp, &f))
+    if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
     {
         return mloc_errorInvalid;
     }
@@ -70,7 +64,7 @@ mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlo
                                  const mlocDecimal* end, mlocOutput* output)
 {
     Formatter f;
-    if (!mlocReadFormatter(formatter, sizeof(*formatter), formatterStamp, &f))
+    if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
     {
         return mloc_errorInvalid;
     }
@@ -81,7 +75,7 @@ mlocResult mlocParseNumber(const mlocNumberFormatter* formatter, const char* tex
                            mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut)
 {
     Formatter f;
-    if (!mlocReadFormatter(formatter, sizeof(*formatter), formatterStamp, &f) ||
+    if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f) ||
         (text == nullptr && length > 0) || decimalOut == nullptr || endOut == nullptr ||
         (uint32_t)mode > mloc_parseStrict || f.compactTable != nullptr)
     {

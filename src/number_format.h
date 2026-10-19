@@ -36,6 +36,12 @@ typedef struct Formatter
     uint8_t stamp;
 } Formatter;
 
+enum
+{
+    // Marks a number formatter the library made.
+    numberFormatterStamp = 0x4E,
+};
+
 // Whether a number formatter's options are in range and agree.
 bool mlocValidFormatOptions(const mlocNumberOptions* options);
 
@@ -110,5 +116,10 @@ mlocResult mlocFormatChosen(const Formatter* formatter, OuterChooser choose, voi
 mlocResult mlocFormatRangeWith(const Formatter* formatter, const Outer* outer,
                                const mlocDecimal* start, const mlocDecimal* end,
                                mlocOutput* output);
+
+// The decimal a formatter's text shows for a valid finite decimal:
+// rounded, scaled for a percent or per mille, without its sign; false in
+// scientific or compact notation, whose text shows another number.
+bool mlocShownDecimal(const Formatter* formatter, const mlocDecimal* decimal, mlocDecimal* out);
 
 #endif

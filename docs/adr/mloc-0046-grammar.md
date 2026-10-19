@@ -69,9 +69,14 @@ and reads a final y as a consonant ("Harry'a").
   whole ("ZEYTİNYAĞI", "zeytinyâğı"). A name takes a word's inverse harmony ("Kemal'in",
   "Senegal'e") but never its softening, which TDK does not write.
 - **Numbers** (`mlocInflectNumber`) are formatted by the caller's
-  formatter or the locale's, then read as text: rounding, grouping and
-  a percent's scaling are what is spoken ("%50'ye"). A number whose text
-  passes 1,024 bytes is refused.
+  formatter or the locale's. The value the text shows is what is
+  spoken: rounded, and scaled for a percent ("%50'ye"). The formatter
+  gives that value; the text is not parsed back. So another locale's
+  formatter reads right ("1,000'de" in Turkish for English's
+  thousand, where the Turkish parse read 1.000), and the call does
+  half the work. Scientific and compact notation show another number
+  than the value, so they are read from their text ("1E3'e"). A number
+  whose text passes 1,024 bytes is refused.
 - **Parts** (`mlocInflectionPart`, 0x60 to 0x63): stem, apostrophe,
   suffix, particle; a number's own parts inside the stem.
 

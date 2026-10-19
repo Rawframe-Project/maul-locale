@@ -16,6 +16,7 @@
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
 #include "number_core.h"
+#include "number_format.h"
 
 #include "maul-locale/spellout.h"
 #include "maul-unicode/encoding.h"
@@ -65,6 +66,9 @@ typedef struct Inflector
     const mlocNumberFormatter* number;
     const mlocSpelloutFormatter* cardinal;
     const mlocSpelloutFormatter* ordinal;
+    // The value a number's text shows, when the caller gave it
+    // (mlocInflectNumber): read instead of the text.
+    const mlocDecimal* shown;
     uint8_t stamp;
     uint8_t language;
     uint8_t spoken;
@@ -150,6 +154,7 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     f->number = (const mlocNumberFormatter*)(stored + offsetof(StoredInflector, number));
     f->cardinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, cardinal));
     f->ordinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, ordinal));
+    f->shown = nullptr;
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
            f->language <= languageKorean && f->spoken <= 1;
 }
@@ -382,6 +387,28 @@ static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value,
     return true;
 }
 
+// Reads the number a text's end writes, by the locale's lenient parse;
+// false when it is not one.
+static bool ReadNumber(const Inflector* f, const uint8_t* text, const End* e, mlocDecimal* value)
+{
+    size_t used = 0;
+    size_t length = e->end - e->start;
+    const char* digits = (const char*)text + e->start;
+    if (mlocParseNumber(f->number, digits, length, mloc_parseLenient, value, &used) ==
+            mloc_success &&
+        used == length)
+    {
+        return true;
+    }
+    // Separators the locale does not read: the last run of digits.
+    size_t run = e->end;
+    while (run > e->start && IsDigit(text[run - 1]))
+    {
+        run--;
+    }
+    return mlocParseDecimal((const char*)text + run, e->end - run, value).status == mloc_success;
+}
+
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
                                size_t* spokenLength)
 {
@@ -391,26 +418,16 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     {
         return mloc_errorNotFound;
     }
+    // A number the caller gave is read from its value, the text from its
+    // characters.
     mlocDecimal value;
-    size_t used = 0;
-    size_t length = e->end - e->start;
-    const char* digits = (const char*)text + e->start;
-    if (mlocParseNumber(f->number, digits, length, mloc_parseLenient, &value, &used) !=
-            mloc_success ||
-        used != length)
+    if (f->shown != nullptr && e->kind == endNumber)
     {
-        // Separators the locale does not read: the last run of digits.
-        size_t run = e->end;
-        while (run > e->start && IsDigit(text[run - 1]))
-        {
-            run--;
-        }
-        digits = (const char*)text + run;
-        length = e->end - run;
-        if (mlocParseDecimal(digits, length, &value).status != mloc_success)
-        {
-            return mloc_errorInvalid;
-        }
+        value = *f->shown;
+    }
+    else if (!ReadNumber(f, text, e, &value))
+    {
+        return mloc_errorInvalid;
     }
     if (value.kind == mloc_decimalFinite && value.fractionDigits > 0 && e->kind == endNumber)
     {
@@ -902,9 +919,20 @@ mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFor
     {
         return mloc_errorInvalid;
     }
+    // The formatter read once: it writes the text and gives the value the
+    // text shows, which is spoken without parsing the text back.
+    Formatter numberFormat;
+    const mlocNumberFormatter* chosen = formatter != nullptr ? formatter : f.number;
+    if (!mlocReadFormatter(chosen, sizeof(*chosen), numberFormatterStamp, &numberFormat))
+    {
+        return mloc_errorInvalid;
+    }
     char text[numberRoom];
     mlocOutput written = {text, sizeof(text), 0, nullptr, nullptr};
-    mlocResult r = mlocFormatNumber(formatter != nullptr ? formatter : f.number, decimal, &written);
+    mlocResult r = mlocFormatWith(&numberFormat, nullptr, decimal, &written);
+    mlocDecimal shown;
+    f.shown =
+        r == mloc_success && mlocShownDecimal(&numberFormat, decimal, &shown) ? &shown : nullptr;
     if (r != mloc_success)
     {
         // A number whose text passes the room is refused.

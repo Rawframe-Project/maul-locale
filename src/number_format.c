@@ -307,6 +307,20 @@ mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDeci
     return WritePrepared(outer, &p, outer == nullptr ? 0 : Category(f, &p), output);
 }
 
+bool mlocShownDecimal(const Formatter* f, const mlocDecimal* decimal, mlocDecimal* out)
+{
+    Prepared p;
+    if (decimal->kind != mloc_decimalFinite || f->compactTable != nullptr ||
+        f->notation == mloc_notationScientific || f->notation == mloc_notationEngineering ||
+        Prepare(f, decimal, &p) != mloc_success)
+    {
+        return false;
+    }
+    *out = p.decimal;
+    out->negative = 0;
+    return true;
+}
+
 mlocResult mlocFormatChosen(const Formatter* f, OuterChooser choose, void* context,
                             const mlocDecimal* decimal, mlocOutput* output)
 {

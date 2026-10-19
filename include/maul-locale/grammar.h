@@ -248,7 +248,9 @@ extern "C"
                                                        mlocOutput* output);
 
     /// Writes a number as a formatter writes it, inflected as asked by
-    /// how the number is spoken ("5'e", "1.985'te", "%50'ye").
+    /// how the number is spoken ("5'e", "1.985'te", "%50'ye"): the value
+    /// the text shows (rounded, a percent scaled), whatever the
+    /// formatter's locale; in scientific or compact notation, the text.
     ///
     /// @param inflector  An inflector from mlocInitInflector.
     /// @param formatter  The number's formatter, or null for the locale's

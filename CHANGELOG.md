@@ -257,6 +257,11 @@ format.
   letters without decoding (about 0.77 of the cycles); the Turkish
   lexicon skips front-coded entries by the bytes they share, and the
   end of a text reads ASCII without decoding.
+- `mlocInflectNumber` speaks the value the formatter shows instead of
+  parsing its text back: half the work, and another locale's formatter
+  now reads right (Turkish "1,000'de" for English's thousand, which
+  read 1.000 before). Scientific and compact notation are still read
+  from their text (mloc-0046).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

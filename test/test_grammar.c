@@ -377,6 +377,21 @@ static void TestParts(void)
               mlocInflectNumber(&s_tr, &percent, &half, &dative, &output) == mloc_success &&
               output.length == 6 && memcmp(s_text, "%50'ye", 6) == 0,
           "a percent by its own formatter, read as it is written");
+    mlocNumberFormatter english;
+    mlocNumberFormatter scientific;
+    mlocNumberOptions powers = {.notation = mloc_notationScientific};
+    mlocLocale en;
+    mlocDecimal thousand;
+    CHECK(mlocParseDecimal("1000", 4, &thousand).status == mloc_success &&
+              mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitNumberFormatter(&english, &s_builtin, &en, nullptr) == mloc_success &&
+              mlocInflectNumber(&s_tr, &english, &thousand, &locative, &output) == mloc_success &&
+              output.length == 8 && memcmp(s_text, "1,000'de", 8) == 0,
+          "another locale's number read by its value: English's thousand, not 1.000");
+    CHECK(mlocInitNumberFormatter(&scientific, &s_builtin, &tr, &powers) == mloc_success &&
+              mlocInflectNumber(&s_tr, &scientific, &thousand, &dative, &output) == mloc_success &&
+              output.length == 5 && memcmp(s_text, "1E3'e", 5) == 0,
+          "scientific notation read from its text, the exponent last");
 }
 
 static void TestRefusals(void)
