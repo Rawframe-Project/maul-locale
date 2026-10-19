@@ -78,12 +78,17 @@ static void TestStrings(void)
               IS(3, ruleRelation, rulePrimary, 0xFDD0, 'A') &&
               IS(4, ruleRelation, rulePrimary, '\\'),
           "\\u takes four digits, \\U eight, \\x{} up to six, \\\\ a backslash, in quotes too");
+    CHECK(Parse("&\\x30<\\x7") && IS(0, ruleReset, ruleIdentical, '0') &&
+              IS(1, ruleRelation, rulePrimary, 0x07),
+          "\\x takes one or two digits, a 0 among them");
     CHECK(Parse("# a comment\n&a<b # another\n<c\n!") && s_rules.count == 3 &&
               IS(2, ruleRelation, rulePrimary, 'c'),
           "comments to the line's end, between relations too, and ! ignored");
     CHECK(Parse("&a<*bcd-fh") && s_rules.count == 7 && IS(1, ruleRelation, rulePrimary, 'b') &&
               IS(4, ruleRelation, rulePrimary, 'e') && IS(6, ruleRelation, rulePrimary, 'h') &&
-              Parse("&a=*xy") && IS(2, ruleRelation, ruleIdentical, 'y'),
+              Parse("&a=*xy") && IS(2, ruleRelation, ruleIdentical, 'y') &&
+              Parse("&a<*\\u0000-\\u0002") && s_rules.count == 4 &&
+              IS(3, ruleRelation, rulePrimary, 2),
           "starred relations one code point each, a range expanded");
 }
 
@@ -97,6 +102,9 @@ static void TestSettings(void)
               Parse("[strength I]@") && s_rules.strength == ruleIdentical &&
               s_rules.backwards == 1 && s_rules.caseFirst == ruleUnset,
           "every setting and value, @ as [backwards 2], unset ones left so");
+    CHECK(Parse("[reorder Zyyy]") && s_rules.reorderCount == 1 &&
+              s_rules.reorder[0] == MUNI_SCRIPT('Z', 'y', 'y', 'y'),
+          "a script code with a z");
     CHECK(Parse("[reorder Grek digit others latn][hiraganaQ off]") && s_rules.reorderCount == 4 &&
               s_rules.reorder[0] == MUNI_SCRIPT('G', 'r', 'e', 'k') &&
               s_rules.reorder[1] == ruleReorderDigit &&
@@ -124,38 +132,43 @@ static void TestRefusals(void)
     {
         const char* rules;
         size_t byte;
+        const char* reason;
     } bad[] = {
-        {"&a", 2},
-        {"&[before 1]a<<b", 12},
-        {"&[before 2]a<<b<c", 15},
-        {"&a<'b", 5},
-        {"&a<b\\", 5},
-        {"&a<\\uD800", 3},
-        {"&a<\\uFFFD", 3},
-        {"&a<\\u12", 3},
-        {"&[first nothing]<a", 1},
-        {"&a<*\\u00E0", 4},
-        {"&a<*c-a", 6},
-        {"&a<*-c", 4},
-        {"&a<\\u0300|b", 3},
-        {"[strength 5]", 0},
-        {"[colour on]", 0},
-        {"[hiraganaQ on]", 0},
-        {"[reorder Latin]", 0},
-        {"[import ]", 0},
-        {"[optimize [[:L:]]]", 11},
-        {"[optimize [a-c]", 15},
-        {"x", 0},
-        {"&", 1},
-        {"&a<\xC3", 3},
-        {"[caseFirst upper][import de]", 17},
-        {"@[import de]", 1},
+        {"&a", 2, nullptr},
+        {"&[before 1]a<<b", 12, nullptr},
+        {"&[before 2]a<<b<c", 15, nullptr},
+        {"&a<'b", 5, nullptr},
+        {"&a<b\\", 5, nullptr},
+        {"&a<\\uD800", 3, nullptr},
+        {"&a<\\uFFFD", 3, nullptr},
+        {"&a<\\u12", 3, nullptr},
+        {"&[first nothing]<a", 1, nullptr},
+        {"&a<*\\u00E0", 4, nullptr},
+        {"&a<*c-a", 6, nullptr},
+        {"&a<*-c", 4, nullptr},
+        {"&a<\\u0300|b", 3, nullptr},
+        {"[strength 5]", 0, nullptr},
+        {"[colour on]", 0, nullptr},
+        {"[hiraganaQ on]", 0, "hiraganaQ on"},
+        {"[hiraganaQ maybe]", 0, "not a setting"},
+        {"&a<\\uDFFF", 3, nullptr},
+        {"[optimize [a", 12, nullptr},
+        {"[reorder Latin]", 0, nullptr},
+        {"[import ]", 0, nullptr},
+        {"[optimize [[:L:]]]", 11, nullptr},
+        {"[optimize [a-c]", 15, nullptr},
+        {"x", 0, nullptr},
+        {"&", 1, "without a position"},
+        {"&a<\xC3", 3, nullptr},
+        {"[caseFirst upper][import de]", 17, nullptr},
+        {"@[import de]", 1, nullptr},
     };
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
         char want[32];
         snprintf(want, sizeof(want), "byte %zu: ", bad[i].byte);
-        bool refused = !Parse(bad[i].rules) && strncmp(s_error, want, strlen(want)) == 0;
+        bool refused = !Parse(bad[i].rules) && strncmp(s_error, want, strlen(want)) == 0 &&
+                       (bad[i].reason == nullptr || strstr(s_error, bad[i].reason) != nullptr);
         if (!refused)
         {
             printf("%s: %s\n", bad[i].rules, s_error);
@@ -203,6 +216,37 @@ static void TestWriteBack(void)
     }
 }
 
+static void TestSame(void)
+{
+    static const char* const pairs[][2] = {
+        {"[reorder Latn]&a<b", "[reorder Grek]&a<b"},
+        {"[optimize [a]]", "[optimize [b]]"},
+        {"[suppressContractions [a]]", "[suppressContractions [b]]"},
+        {"&a<x|b", "&a<y|b"},
+        {"&a<b/x", "&a<b/y"},
+        {"&a<b", "&a<c"},
+        {"[import de]", "[import fr]"},
+        {"[caseFirst upper]", "[caseFirst lower]"},
+    };
+    for (size_t i = 0; i < sizeof(pairs) / sizeof(pairs[0]); i++)
+    {
+        CollationRules a;
+        CollationRules b;
+        char error[128];
+        bool parsed =
+            CollationRulesParse(pairs[i][0], strlen(pairs[i][0]), &a, error, sizeof(error)) == 1;
+        parsed = parsed && CollationRulesParse(pairs[i][1], strlen(pairs[i][1]), &b, error,
+                                               sizeof(error)) == 1;
+        CHECK(parsed && CollationRulesSame(&a, &a) && !CollationRulesSame(&a, &b),
+              "lists that differ in one part are not the same");
+        if (parsed)
+        {
+            CollationRulesFree(&a);
+            CollationRulesFree(&b);
+        }
+    }
+}
+
 int main(void)
 {
     TestRelations();
@@ -210,6 +254,7 @@ int main(void)
     TestSettings();
     TestRefusals();
     TestWriteBack();
+    TestSame();
     CollationRulesFree(&s_rules);
     return s_failures == 0 ? 0 : 1;
 }
