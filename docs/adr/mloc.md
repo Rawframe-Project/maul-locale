@@ -62,3 +62,4 @@ are listed in [README.md](README.md).
 | [mloc-0055](mloc-0055-catalog-chains.md) | Catalog chains: messages bound once, every failure stated | Accepted |
 | [mloc-0056](mloc-0056-stale-translations.md) | Stale translations: the hash of the source message answered | Accepted |
 | [mloc-0057](mloc-0057-catalog-report.md) | The catalog report: coverage and findings per locale | Accepted |
+| [mloc-0058](mloc-0058-pseudo-locales.md) | Pseudo-locales: en-XA and ar-XB written from the source | Accepted |

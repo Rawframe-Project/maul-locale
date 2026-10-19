@@ -293,6 +293,10 @@ format.
   keys, and messages longer than their `@mloc-max-length` formatted
   with their `@mloc-example` arguments; text or JSON, failing on the
   kinds chosen (mloc-0057).
+- `mloccat pseudo DIRECTORY SOURCE` writes the pseudo-locales `en-XA`
+  (letters accented, each pattern bracketed and padded by 40%) and
+  `ar-XB` (text runs between RLO and PDF) as catalog sources of the
+  set, changing only pattern text (mloc-0058).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

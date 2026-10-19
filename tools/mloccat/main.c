@@ -14,6 +14,9 @@
 //                       records in the translation the source messages its
 //                       entries answer, so that a later change shows them
 //                       stale (accept.h)
+//   mloccat pseudo DIRECTORY SOURCE
+//                       writes the pseudo-locales en-XA.mf2 and ar-XB.mf2
+//                       from the source, to compile with its set (pseudo.h)
 //   mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]
 //                       the set's coverage and findings per locale
 //                       (report.h); exits 1 when a finding of KINDS (a
@@ -23,6 +26,7 @@
 #include "compile.h"
 #include "file.h"
 #include "json.h"
+#include "pseudo.h"
 #include "report.h"
 #include "resource.h"
 #include "resource_check.h"
@@ -188,6 +192,10 @@ static int RunReport(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+    if (argc == 4 && strcmp(argv[1], "pseudo") == 0)
+    {
+        return CatalogPseudo(argv[2], argv[3], stderr) ? 0 : 1;
+    }
     if (argc >= 3 && strcmp(argv[1], "report") == 0)
     {
         return RunReport(argc, argv);
@@ -205,6 +213,7 @@ int main(int argc, char** argv)
         fputs("usage: mloccat read FILE | mloccat check FILE\n"
               "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n"
               "       mloccat accept SOURCE TRANSLATION [KEY...]\n"
+              "       mloccat pseudo DIRECTORY SOURCE\n"
               "       mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]\n",
               stderr);
         return 2;
