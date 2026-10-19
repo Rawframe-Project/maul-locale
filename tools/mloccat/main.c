@@ -14,10 +14,16 @@
 //                       records in the translation the source messages its
 //                       entries answer, so that a later change shows them
 //                       stale (accept.h)
+//   mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]
+//                       the set's coverage and findings per locale
+//                       (report.h); exits 1 when a finding of KINDS (a
+//                       comma-separated list) is found
 
 #include "accept.h"
 #include "compile.h"
 #include "file.h"
+#include "json.h"
+#include "report.h"
 #include "resource.h"
 #include "resource_check.h"
 
@@ -27,28 +33,7 @@
 
 static void WriteString(const ResText* t)
 {
-    putchar('"');
-    for (size_t i = 0; i < t->length; i++)
-    {
-        unsigned char c = (unsigned char)t->bytes[i];
-        if (c == '"' || c == '\\')
-        {
-            printf("\\%c", c);
-        }
-        else if (c == '\n')
-        {
-            fputs("\\n", stdout);
-        }
-        else if (c < 0x20 || c == 0x7F)
-        {
-            printf("\\u%04x", c);
-        }
-        else
-        {
-            putchar(c);
-        }
-    }
-    putchar('"');
+    JsonString(stdout, t->bytes, t->length);
 }
 
 static void WriteId(const ResId* id)
@@ -152,8 +137,61 @@ static int Run(const char* command, const char* path)
     return ok ? 0 : 1;
 }
 
+// mloccat report: 0, 1 for a finding of the kinds to fail on, 2 for a
+// set that does not read or a usage error.
+static int RunReport(int argc, char** argv)
+{
+    int json = 0;
+    unsigned failOn = 0;
+    int at = 2;
+    for (; at < argc && strncmp(argv[at], "--", 2) == 0; at++)
+    {
+        if (strcmp(argv[at], "--json") == 0)
+        {
+            json = 1;
+            continue;
+        }
+        int kinds = strcmp(argv[at], "--fail-on") == 0 && at + 1 < argc;
+        if (kinds)
+        {
+            at++;
+        }
+        if (!kinds || !ReportReadKinds(argv[at], &failOn))
+        {
+            fprintf(stderr, "mloccat report: unknown option or kinds: %s\n", argv[at]);
+            return 2;
+        }
+    }
+    CatalogSet set;
+    Report report = {0};
+    int ok = at < argc && CatalogSetRead(&set, argv + at, (size_t)(argc - at), stderr) &&
+             ReportBuild(&set, &report);
+    if (ok)
+    {
+        if (json)
+        {
+            ReportWriteJson(&report, stdout);
+        }
+        else
+        {
+            ReportWriteText(&report, stdout);
+        }
+    }
+    unsigned found = ok ? ReportKindsFound(&report) : 0;
+    ReportFree(&report);
+    if (at < argc)
+    {
+        CatalogSetFree(&set);
+    }
+    return !ok ? 2 : (found & failOn) != 0 ? 1 : 0;
+}
+
 int main(int argc, char** argv)
 {
+    if (argc >= 3 && strcmp(argv[1], "report") == 0)
+    {
+        return RunReport(argc, argv);
+    }
     if (argc >= 4 && strcmp(argv[1], "compile") == 0)
     {
         return CatalogCompile(argv[2], argv + 3, (size_t)(argc - 3), stderr) ? 0 : 1;
@@ -166,7 +204,8 @@ int main(int argc, char** argv)
     {
         fputs("usage: mloccat read FILE | mloccat check FILE\n"
               "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n"
-              "       mloccat accept SOURCE TRANSLATION [KEY...]\n",
+              "       mloccat accept SOURCE TRANSLATION [KEY...]\n"
+              "       mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]\n",
               stderr);
         return 2;
     }

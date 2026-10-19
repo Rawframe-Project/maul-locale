@@ -87,6 +87,7 @@ static const Property s_properties[] = {
     {"allow-empty", whereEntry},
     {"mloc-max-length", whereEntry},
     {"mloc-source", whereEntry},
+    {"mloc-example", whereEntry},
 };
 
 static int AllDigits(const ResText* t, int hex)
@@ -131,6 +132,12 @@ static const char* ValueProblem(const ResMeta* m)
     {
         return AllDigits(v, 1) && v->length == 16 ? nullptr
                                                   : "@mloc-source takes 16 small hex digits";
+    }
+    if (TextIs(&m->key, "mloc-example"))
+    {
+        return v->length > 1 && v->bytes[0] == '$' && memchr(v->bytes, '=', v->length) != nullptr
+                   ? nullptr
+                   : "@mloc-example takes $name=value parts";
     }
     int bare = TextIs(&m->key, "obsolete") || TextIs(&m->key, "allow-empty") ||
                TextIs(&m->key, "do-not-translate");

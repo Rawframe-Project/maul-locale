@@ -288,6 +288,11 @@ format.
   answers (`@mloc-source`, XXH64 of the canonical text), and
   `mloccat compile` counts the translations whose source changed since
   (mloc-0056).
+- `mloccat report [--json] [--fail-on KINDS]` gives a set's coverage
+  per locale and its missing, stale, unrecorded, orphaned and differing
+  keys, and messages longer than their `@mloc-max-length` formatted
+  with their `@mloc-example` arguments; text or JSON, failing on the
+  kinds chosen (mloc-0057).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

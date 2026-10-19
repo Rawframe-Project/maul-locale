@@ -759,7 +759,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # The catalog tool, mloccat (record mloc-0053): its parts are a static
     # library so that their tests link them alone.
     add_library(mloccat_core STATIC tools/mloccat/accept.c tools/mloccat/catalog_set.c
-                             tools/mloccat/compile.c tools/mloccat/file.c
+                             tools/mloccat/compile.c tools/mloccat/file.c tools/mloccat/json.c
+                             tools/mloccat/report.c tools/mloccat/report_write.c
                              tools/mloccat/resource.c tools/mloccat/resource_check.c
                              tools/mloccat/resource_write.c tools/mloccat/stale.c
                              tools/mloccat/table.c)
@@ -790,6 +791,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         maul_apply_flags(test_accept)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/accept-test)
         add_test(NAME accept COMMAND test_accept ${CMAKE_CURRENT_BINARY_DIR}/accept-test)
+        add_executable(test_report test/test_report.c)
+        target_link_libraries(test_report PRIVATE mloccat_core)
+        target_include_directories(test_report PRIVATE test)
+        maul_apply_flags(test_report)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/report-test)
+        add_test(NAME report COMMAND test_report ${CMAKE_CURRENT_BINARY_DIR}/report-test)
         add_executable(test_catalog_chain test/test_catalog_chain.c)
         target_link_libraries(test_catalog_chain PRIVATE mloccat_core)
         target_include_directories(test_catalog_chain PRIVATE test)
