@@ -701,14 +701,15 @@ static void TestScripts(void)
     char error[128] = "";
     uint8_t* bytes = Unit(root, &t, &r, error, sizeof(error));
     static const uint32_t starts[] = {0,      0x0300, 0x0506, 0x2800, 0x2A00,
-                                      0x5F00, 0x6200, 0x7D00, 0xFE04, 0xFF00};
+                                      0x5F00, 0x6200, 0x7D00, 0xFE00, 0xFF00};
     bool ok = bytes != nullptr && r.startCount == 10;
     for (uint32_t i = 0; ok && i < 10; i++)
     {
         ok = mlocCollationStart(&r, i) == starts[i];
     }
     CHECK(ok, "starts in primary order, a lead byte's lowest second byte put back, plain and "
-              "compressible, the unassigned range's, then the trailing range's");
+              "compressible, the unassigned range's (its byte compressible, as ICU counts it), "
+              "then the trailing range's");
     CHECK(ok && mlocCollationScriptIndex(&r, collationReservedBeforeLatin) == 3 &&
               mlocCollationScriptIndex(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) == 4 &&
               mlocCollationScriptIndex(&r, collationReservedAfterLatin) == 5 &&

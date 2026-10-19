@@ -451,7 +451,10 @@ static int ScriptTable(Builder* b, const RootTable* t)
     for (size_t i = 0; i < n; i++)
     {
         uint32_t p = starts[i].primary >> 16;
-        uint32_t lowest = t->compressible[p >> 8] ? 4 : 2;
+        // As ICU's CollationBaseDataBuilder, the unassigned implicit byte
+        // counts as compressible here, so its start (FE 04) is the byte's.
+        bool compressible = t->compressible[p >> 8] || p >> 8 == collationUnassignedByte;
+        uint32_t lowest = compressible ? 4 : 2;
         p = (p & 0xFF) == lowest ? p & 0xFF00 : p;
         size_t last = b->starts.count - 1;
         size_t index = b->starts.items[last] == p ? last : Push(&b->starts, p);

@@ -32,6 +32,8 @@ typedef struct Builder
     uint8_t table[256];
     uint32_t lowStart;
     uint32_t highLimit;
+    // The end ranges met the front ones.
+    bool overflow;
 } Builder;
 
 // Puts the range at the index after the ranges at the front, as ICU's
@@ -46,20 +48,28 @@ static void AddLow(Builder* b, uint32_t index)
     }
     b->table[index] = (uint8_t)(b->lowStart >> 8);
     uint32_t limit = mlocCollationStart(b->root, index + 1);
-    b->lowStart = ((b->lowStart & 0xFF00) + ((limit & 0xFF00) - (start & 0xFF00))) | (limit & 0xFF);
+    // ICU masks with 0xFF00 here, so a front that passes the last lead
+    // byte wraps to the first and the check after misses it; the bits
+    // above are kept, so the check sees the overflow.
+    b->lowStart = ((b->lowStart & ~0xFFU) + ((limit & 0xFF00) - (start & 0xFF00))) | (limit & 0xFF);
 }
 
 // Puts the range before the ranges at the end (ICU's addHighScriptRange).
+// An end that would pass below the first start is an overflow, where
+// ICU's int arithmetic goes negative.
 static void AddHigh(Builder* b, uint32_t index)
 {
     uint32_t limit = mlocCollationStart(b->root, index + 1);
-    if ((limit & 0xFF) > (b->highLimit & 0xFF))
-    {
-        b->highLimit -= 0x100;
-    }
     uint32_t start = mlocCollationStart(b->root, index);
-    b->highLimit =
-        ((b->highLimit & 0xFF00) - ((limit & 0xFF00) - (start & 0xFF00))) | (start & 0xFF);
+    uint32_t high = b->highLimit - ((limit & 0xFF) > (b->highLimit & 0xFF) ? 0x100 : 0);
+    uint32_t span = (limit & 0xFF00) - (start & 0xFF00);
+    b->table[index] = 1;
+    if (b->overflow || (high & 0xFF00) < span + mlocCollationStart(b->root, 1))
+    {
+        b->overflow = true;
+        return;
+    }
+    b->highLimit = ((high & 0xFF00) - span) | (start & 0xFF);
     b->table[index] = (uint8_t)(b->highLimit >> 8);
 }
 
@@ -246,7 +256,7 @@ static mlocResult Make(const CollationRoot* root, const uint32_t* codes, size_t 
         b.lowStart = !toEnd && start > b.lowStart ? start : b.lowStart;
         AddLow(&b, i);
     }
-    if (b.lowStart > b.highLimit)
+    if (b.overflow || b.lowStart > b.highLimit)
     {
         if (!latinMustMove && b.lowStart - (skippedReserved & 0xFF00) <= b.highLimit)
         {

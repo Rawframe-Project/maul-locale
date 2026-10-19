@@ -61,6 +61,10 @@ static void TestRoot(const mlocData* data)
               r.numericPrimary == 0x10000000,
           "punctuation ends at 0B FF FF FF as FractionalUCA.txt's variable top, the groups in "
           "order, Hrkt with Hira and Hans with Hani, numeric order's lead byte 10");
+    uint32_t unknown = found ? mlocCollationScriptIndex(&r, MUNI_SCRIPT('Z', 'z', 'z', 'z')) : 0;
+    CHECK(unknown != 0 && mlocCollationStart(&r, unknown) == 0xFE00 &&
+              mlocCollationStart(&r, unknown + 1) == 0xFF00,
+          "the unassigned range starts at its lead byte FE, which ICU counts as compressible");
     if (!found)
     {
         return;

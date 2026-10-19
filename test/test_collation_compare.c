@@ -302,6 +302,23 @@ static void TestReorder(void)
            mlocCollationMakeReorder(&s_root, nullptr, 0, &reorder, &changes) == mloc_success &&
            !changes;
     CHECK(none, "Zzzz alone, nothing, and codes the root has no range for change nothing");
+    // ICU4C 79 on CLDR 49 refuses the first and takes the second; the
+    // third it takes with its front wrapped past the last lead byte,
+    // unassigned code points then sorting before Latin, and is refused.
+    const uint32_t full[] = {Script('E', 't', 'h', 'i'), Script('G', 'r', 'a', 'n'),
+                             Script('K', 'a', 'w', 'i'), Script('B', 'u', 'g', 'i'),
+                             Script('N', 'e', 'w', 'a')};
+    const uint32_t wrap[] = {Script('B', 'h', 'k', 's'), Script('O', 'r', 'k', 'h'),
+                             Script('M', 'a', 'r', 'c'), Script('P', 'a', 'u', 'c'),
+                             collationGroupSymbol,       Script('S', 'i', 'd', 't')};
+    bool capacity =
+        mlocCollationMakeReorder(&s_root, full, 5, &reorder, &changes) == mloc_errorCapacity &&
+        mlocCollationMakeReorder(&s_root, full, 4, &reorder, &changes) == mloc_success && changes &&
+        mlocCollationMakeReorder(&s_root, wrap, 6, &reorder, &changes) == mloc_errorCapacity;
+    CHECK(capacity && Reordered("\xCD\xB8", "a", full, 4) == 1 &&
+              Reordered("\xE4\xB8\x80", "a", full, 4) == 1,
+          "an order past the lead bytes refused, ICU's wrap too; one that fits keeps "
+          "unassigned and Han after Latin");
 }
 
 static void TestTexts(void)

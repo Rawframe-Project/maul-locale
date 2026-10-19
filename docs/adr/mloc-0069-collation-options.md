@@ -106,6 +106,22 @@ For punctuation, CLDR's default maxVariable, that is
     level and as quaternary weights, as ICU's `CollationCompare`.
   - The validator now also holds the starts to at most 256, the
     tables' index.
+  - **One deliberate difference from ICU.** ICU masks its front with
+    0xFF00 while it places ranges. So an order that passes the last
+    lead byte wraps to the first, and its overflow check misses it;
+    ICU then takes the order, and unassigned code points and Han sort
+    before Latin (ICU4C 79: U+0378 before "a"). Here the front keeps
+    its high bits and an end below the first start is flagged, so such
+    an order is refused with `mloc_errorCapacity`. An order beginning
+    with Latin is first retried with Latin placed like any other
+    script, as ICU does when its own check fails.
+- **The unassigned range starts at FE00.** ICU's base data builder
+  counts the unassigned implicit byte as compressible when it rounds a
+  script start, so FE 04 (the first unassigned primary) is the byte's
+  start. The generator rounded it as an uncompressible byte, to FE04,
+  so the root split FE between Han and the unassigned range. Every
+  reordering then spent a byte more than ICU's, and orders that ICU
+  fits were refused. The script starts now equal ICU 79's on CLDR 49.
 - **The identical level** compares the two texts' NFD code points.
   U+FFFE ranks below every other code point and the end of a text below
   that, as ICU's `compareNFDIter` does, so segments compare first.
@@ -167,10 +183,25 @@ For punctuation, CLDR's default maxVariable, that is
   Cyrillic, Han and kana letters, symbols and currency signs. All 19
   sets agree on 200,000 pairs, on two seeds. Each reorder set changes
   between 1,438 and 57,078 answers of the same set without it.
+- **Reordering against ICU4C 79 on CLDR 49**
+  (`icu4c_collation_reorder.cpp` and `reorder_lists.py` in the docs
+  repository, `conform_collation_reorder` here): random lists of one to
+  forty codes, with Zzzz, Latin first, duplicates and codes of one
+  range, each checked by its result and by the primary of a code point
+  from each of the root's 165 sampled ranges. On two seeds of 20,000
+  lists, the ICU arithmetic (with the 0xFF00 mask) gives ICU's result
+  and order for every list. With the fix above, the only differences
+  are ICU's wrapped orders: 1,954 of seed 9's lists, every one of them
+  wrapped in ICU's arithmetic. One code point's primary differs between
+  the two roots and is left out: U+2E80, a Han radical CLDR maps to
+  U+4E36's implicit primary (FA 02 6E here, FA 05 3E in ICU 79), an
+  open point for the tailoring slices.
 - **`test_collation_compare`, reordering:** named scripts first; the
   groups not named before them; Zzzz sending the rest to the end; the
   refusals; Zzzz alone, no codes, and codes without a range changing
-  nothing.
+  nothing; an order past the lead bytes and one ICU wraps refused, one
+  that fits keeping unassigned code points and Han after Latin.
+- **`test_collation_data`:** the unassigned range starts at FE00.
 - **`test_collation_compare`, numeric:** values across one, two and
   three bytes and the pairs; leading zeros; digits of other scripts in
   one run; runs past a segment.
