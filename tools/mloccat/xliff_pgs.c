@@ -258,7 +258,8 @@ static char* Note(const XliffPgsUnit* u, const XliffPgsSegment* s, const mlocPlu
                                        : nullptr;
         if (examples != nullptr)
         {
-            size_t add = strlen(examples) + strlen(sel->name) + 5;
+            size_t add =
+                strlen(examples) + (length > 0 ? 2 : 0) + (plurals > 1 ? strlen(sel->name) + 3 : 0);
             char* grown = realloc(note, length + add + 1);
             if (grown == nullptr)
             {

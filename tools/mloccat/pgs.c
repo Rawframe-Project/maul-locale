@@ -284,7 +284,7 @@ char* PgsWrite(const char* head, char* const* const* keys, char* const* patterns
         {
             length += strlen(keys[v][k]) + 1;
         }
-        length += strlen(patterns[v]) + 5;
+        length += strlen(patterns[v]) + 4 + (v + 1 < count);
     }
     char* text = malloc(length + 1);
     if (text == nullptr)

@@ -292,7 +292,17 @@ static const char s_selection[] =
     " one {{One {#b}file{/b}}}\n * {{{$n} files}}\n"
     "place = .input {$p :number select=ordinal}\n .input {$g :string}\n .match $p $g\n"
     " one fem {{First, she}}\n * * {{{$p}th}}\n"
-    "spaced = .input {$g :string}\n .match $g\n |a b| {{x}}\n * {{y}}\n";
+    "spaced = .input {$g :string}\n .match $g\n |a b| {{x}}\n * {{y}}\n"
+    "exact = .input {$n :number select=exact}\n .match $n\n 1 {{one}}\n * {{many}}\n"
+    "pair = .input {$n :integer}\n .input {$m :integer}\n .match $n $m\n 0 0 {{none}}\n"
+    " 0 * {{n none}}\n zero * {{z}}\n * * {{rest}}\n"
+    "sel = .input {$s :string}\n .match $s\n 9 {{nine}}\n 10 {{ten}}\n |a\\|b| {{pipe}}\n"
+    " * {{other}}\n"
+    "four = .input {$a :string}\n .input {$b :string}\n .input {$c :string}\n"
+    " .input {$d :string}\n .match $a $b $c $d\n * * * * {{x}}\n"
+    "five = .input {$a :string}\n .input {$b :string}\n .input {$c :string}\n"
+    " .input {$d :string}\n .input {$e :string}\n .match $a $b $c $d $e\n * * * * * {{x}}\n"
+    "plain = .input {$x :string}\n {{Hi {$x}}}\n";
 
 // Whether each text is found after the one before.
 static bool InOrder(const char* text, const char* const* parts, size_t count)
@@ -345,6 +355,37 @@ static void TestSelectionExport(void)
           "a selection message expanded to the target's categories: exact numbers first, "
           "CLDR's order, examples as notes, a missing category from '*', select keys and "
           "other, a key with a space left as one segment");
+    static const char* const more[] = {
+        "ref=\"s7\" category=\"plural_examples\">100~102, 200~202, 300~302, 400~402, "
+        "500~502, 600~602, …, 0.1~0.9, 1.1~1.9, 2.1~2.5</note>",
+        "name=\"place\" pgs:switch=\"ordinal:p select:g\">\n      <notes>\n        <note "
+        "appliesTo=\"target\" ref=\"s1\" category=\"plural_examples\">0~1000, 10000, 100000, "
+        "1000000</note>",
+        "name=\"exact\" pgs:switch=\"select:n\">",
+        "pgs:case=\"1\"",
+        "pgs:case=\"other\"",
+        "name=\"pair\" pgs:switch=\"plural:n plural:m\">",
+        "ref=\"s8\" category=\"plural_examples\">$n: 0, 0.0</note>",
+        "ref=\"s9\" category=\"plural_examples\">$n: 0, 0.0; $m: 0, 0.0</note>",
+        "<segment id=\"s8\" pgs:case=\"zero 0\">\n        <source>z</source>",
+        "<segment id=\"s49\" pgs:case=\"other other\">",
+        "name=\"sel\" pgs:switch=\"select:s\">",
+        "pgs:case=\"10\"",
+        "pgs:case=\"9\"",
+        "pgs:case=\"a|b\"",
+        "pgs:case=\"other\"",
+        "name=\"four\" pgs:switch=\"select:a select:b select:c select:d\">",
+        "<segment id=\"s1\" pgs:case=\"other other other other\">",
+        "<unit id=\"u8\" "
+        "name=\"five\">\n      <originalData>",
+        "<unit id=\"u9\" name=\"plain\">\n      <originalData>"};
+    char* y = Read("ar.xlf");
+    CHECK(y != nullptr && InOrder(y, more, sizeof(more) / sizeof(more[0])) &&
+              strstr(y, "s50") == nullptr,
+          "notes to their runs' ends; exact selection; two plurals, each value once, zero "
+          "kept, notes naming each variable; select keys in byte order, unquoted; four "
+          "selectors carried, five and none not");
+    free(y);
     free(x);
 }
 
@@ -413,9 +454,11 @@ static void TestSelectionKeys(void)
     // A case value MF2 cannot write bare is quoted; one ending in an
     // exponent's mark is no number (read to its end, not past it).
     char* x = Read("ar.xlf");
-    static const char* const values[] = {"1e", "1e-", "1.", "a b|c"};
-    static const char* const keys[] = {"|1e|", "|1e-|", "|1.|", "|a b\\|c|"};
-    for (size_t i = 0; x != nullptr && i < 4; i++)
+    static const char* const values[] = {"1e",  "1e-", "1.", "9",   "1.5", "1e-5",
+                                         "x-y", "_a",  "Ab", "a/b", "a|b", "a b|c"};
+    static const char* const keys[] = {"|1e|", "|1e-|", "|1.|", "9",     "1.5",     "1e-5",
+                                       "x-y",  "_a",    "Ab",   "|a/b|", "|a\\|b|", ""};
+    for (size_t i = 0; x != nullptr && i < 12; i++)
     {
         char to[64];
         snprintf(to, sizeof(to), "pgs:case=\"%s\"", values[i]);
@@ -423,7 +466,7 @@ static void TestSelectionKeys(void)
         char* t = Read("ar.mf2");
         char want[64];
         snprintf(want, sizeof(want), "\n  %s {{la milaffat}}", keys[i]);
-        CHECK(i == 3 ? refused : !refused && t != nullptr && strstr(t, want) != nullptr,
+        CHECK(i == 11 ? refused : !refused && t != nullptr && strstr(t, want) != nullptr,
               "a case value written as a key: quoted when not a name or a number");
         free(t);
     }
