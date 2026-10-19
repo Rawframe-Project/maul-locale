@@ -142,6 +142,9 @@ static void TestNames(void)
     many.plural = true;
     CHECK(Gives("Nokia", &many, "Nokioita") && Gives("Jaana", &many, "Jaanoja"),
           "the plural of -ia and of -a names");
+    CHECK(Gives("Isokangas", &genitive, "Isokankaan") &&
+              Gives("Kotij\xC3\xA4rvi", &genitive, "Kotij\xC3\xA4rven"),
+          "the place words of six bytes, the longest");
     mlocInflection hinted = Case(mloc_caseInessive);
     hinted.hint = "bordoo";
     hinted.hintLength = strlen(hinted.hint);

@@ -150,6 +150,9 @@ static void TestAssimilation(void)
     mlocInflection plainName = Case(mloc_caseDative);
     CHECK(Gives("Mann", &plainName, "Mann-nak"),
           "a name's double letter keeps a hyphen before a suffix that begins with it");
+    // \xC3\x80 (À): a letter whose last byte is 0x80, read whole.
+    CHECK(Gives("Voil\xC3\x80", &with, "Voil\xC3\x80val"),
+          "a last letter of two bytes ending in 0x80 is one vowel");
 }
 
 static void TestPossessives(void)
