@@ -7,14 +7,11 @@
 
 #include "catalog_set.h"
 #include "resource_check.h"
-#include "resource_write.h"
+#include "resource_edit.h"
 #include "stale.h"
 
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 // The source's entries by key, for a binary search.
 typedef struct Hashed
@@ -49,37 +46,6 @@ static int Named(char* const* keys, size_t keyCount, const char* key)
     return keyCount == 0;
 }
 
-static ResText Copy(const char* text)
-{
-    size_t length = strlen(text);
-    char* bytes = malloc(length + 1);
-    if (bytes == nullptr)
-    {
-        exit(1);
-    }
-    memcpy(bytes, text, length + 1);
-    return (ResText){bytes, length};
-}
-
-// Sets the item's @mloc-source to the hash.
-static void Record(ResItem* item, uint64_t hash)
-{
-    char text[sourceHashDigits + 1];
-    SourceHashText(hash, text);
-    ResMeta* m = (ResMeta*)CatalogFindMeta(item->meta, item->metaCount, "mloc-source");
-    if (m == nullptr)
-    {
-        item->meta = CatalogGrow(item->meta, item->metaCount, sizeof(ResMeta));
-        m = &item->meta[item->metaCount++];
-        m->key = Copy("mloc-source");
-    }
-    else
-    {
-        free(m->value.bytes);
-    }
-    m->value = Copy(text);
-}
-
 // Records the hashes in the translation's entries; the count, and the
 // keys named that were found, counted in found.
 static size_t RecordAll(Resource* r, const Hashed* hashed, size_t hashedCount, char* const* keys,
@@ -103,7 +69,9 @@ static size_t RecordAll(Resource* r, const Hashed* hashed, size_t hashedCount, c
             const Hashed* h = FindSource(hashed, hashedCount, key);
             if (h != nullptr && !h->entry->keep)
             {
-                Record(item, h->hash);
+                char text[sourceHashDigits + 1];
+                SourceHashText(h->hash, text);
+                ResourceSetMeta(item, "mloc-source", text);
                 accepted++;
                 for (size_t k = 0; k < keyCount; k++)
                 {
@@ -113,33 +81,6 @@ static size_t RecordAll(Resource* r, const Hashed* hashed, size_t hashedCount, c
         }
     }
     return accepted;
-}
-
-static int WriteOver(const char* path, const Resource* r)
-{
-    char temporary[4096];
-    if ((size_t)snprintf(temporary, sizeof(temporary), "%s.tmp", path) >= sizeof(temporary))
-    {
-        return 0;
-    }
-    FILE* f = fopen(temporary, "wb");
-    if (f == nullptr)
-    {
-        return 0;
-    }
-    ResourceWrite(r, f);
-    int ok = fclose(f) == 0;
-#ifdef _WIN32
-    // rename does not replace a file there; this does, at once.
-    ok = ok && MoveFileExA(temporary, path, MOVEFILE_REPLACE_EXISTING) != 0;
-#else
-    ok = ok && rename(temporary, path) == 0;
-#endif
-    if (!ok)
-    {
-        (void)remove(temporary);
-    }
-    return ok;
 }
 
 int CatalogAccept(const char* source, const char* translation, char* const* keys, size_t keyCount,
@@ -174,7 +115,7 @@ int CatalogAccept(const char* source, const char* translation, char* const* keys
                 ok = 0;
             }
         }
-        if (ok && !WriteOver(translation, &set.inputs[1].resource))
+        if (ok && !ResourceWriteFile(translation, &set.inputs[1].resource))
         {
             fprintf(report, "%s: cannot write\n", translation);
             ok = 0;

@@ -72,6 +72,7 @@ static void CollectEntries(CatalogInput* in)
             }
             memcpy(e->key, key, e->length + 1);
             e->item = item;
+            e->section = section;
             e->keep = KeepsSource(section, item);
         }
     }
@@ -99,6 +100,37 @@ static void CanonicalLocale(CatalogInput* in)
     }
 }
 
+static int CompareEntries(const void* a, const void* b)
+{
+    return strcmp((*(const CatalogEntry* const*)a)->key, (*(const CatalogEntry* const*)b)->key);
+}
+
+static void IndexEntries(CatalogInput* in)
+{
+    in->byKey = (const CatalogEntry**)calloc(in->count + (size_t)1, sizeof(CatalogEntry*));
+    if (in->byKey == nullptr)
+    {
+        exit(1);
+    }
+    for (uint32_t i = 0; i < in->count; i++)
+    {
+        in->byKey[i] = &in->entries[i];
+    }
+    qsort((void*)in->byKey, in->count, sizeof(CatalogEntry*), CompareEntries);
+}
+
+const CatalogEntry* CatalogFindEntry(const CatalogInput* in, const char* key)
+{
+    CatalogEntry probe = {.key = (char*)key};
+    const CatalogEntry* wanted = &probe;
+    const CatalogEntry** found =
+        in->count == 0
+            ? nullptr
+            : (const CatalogEntry**)bsearch((const void*)&wanted, (const void*)in->byKey, in->count,
+                                            sizeof(CatalogEntry*), CompareEntries);
+    return found != nullptr ? *found : nullptr;
+}
+
 static int ReadInput(CatalogInput* in, const char* path, FILE* report)
 {
     *in = (CatalogInput){.path = path};
@@ -121,6 +153,7 @@ static int ReadInput(CatalogInput* in, const char* path, FILE* report)
     }
     CollectEntries(in);
     CanonicalLocale(in);
+    IndexEntries(in);
     return in->locale[0] != '\0';
 }
 
@@ -131,6 +164,7 @@ static void FreeInput(CatalogInput* in)
         free(in->entries[i].key);
     }
     free(in->entries);
+    free((void*)in->byKey);
     ResourceFree(&in->resource);
     free(in->text);
 }

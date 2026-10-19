@@ -148,17 +148,6 @@ typedef struct Messages
     uint32_t stale;
 } Messages;
 
-// Whether a translation's entry was made from another source message
-// than the source's now (stale.h).
-static int IsStale(const CatalogEntry* entry, const ResText* source)
-{
-    const ResMeta* m = CatalogFindMeta(entry->item->meta, entry->item->metaCount, "mloc-source");
-    uint64_t made = 0;
-    uint64_t now = 0;
-    return m != nullptr && SourceHashRead(m->value.bytes, m->value.length, &made) &&
-           SourceHash(source->bytes, source->length, &now) && made != now;
-}
-
 // Each index's message text for one input: its own, the source's where
 // the source keeps it, none where it has none.
 static Messages ChooseMessages(const CatalogInput* in, const CatalogInput* source,
@@ -188,7 +177,9 @@ static Messages ChooseMessages(const CatalogInput* in, const CatalogInput* sourc
             continue;
         }
         m.values[index] = &in->entries[i].item->value;
-        m.stale += in != source && IsStale(&in->entries[i], sources[index]);
+        m.stale +=
+            in != source && SourceStateOf(in->entries[i].item->meta, in->entries[i].item->metaCount,
+                                          sources[index]) == sourceStale;
     }
     free((void*)sources);
     for (uint32_t i = 0; i < source->count; i++)

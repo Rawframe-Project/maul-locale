@@ -14,6 +14,10 @@
 //                       records in the translation the source messages its
 //                       entries answer, so that a later change shows them
 //                       stale (accept.h)
+//   mloccat export-po SOURCE TRANSLATION PO
+//   mloccat import-po SOURCE TRANSLATION PO
+//                       a translation to and from a PO file
+//                       (exchange_po.h)
 //   mloccat pseudo DIRECTORY SOURCE
 //                       writes the pseudo-locales en-XA.mf2 and ar-XB.mf2
 //                       from the source, to compile with its set (pseudo.h)
@@ -24,6 +28,7 @@
 
 #include "accept.h"
 #include "compile.h"
+#include "exchange_po.h"
 #include "file.h"
 #include "json.h"
 #include "pseudo.h"
@@ -192,6 +197,14 @@ static int RunReport(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+    if (argc == 5 && strcmp(argv[1], "export-po") == 0)
+    {
+        return CatalogExportPo(argv[2], argv[3], argv[4], stderr) ? 0 : 1;
+    }
+    if (argc == 5 && strcmp(argv[1], "import-po") == 0)
+    {
+        return CatalogImportPo(argv[2], argv[3], argv[4], stderr) ? 0 : 1;
+    }
     if (argc == 4 && strcmp(argv[1], "pseudo") == 0)
     {
         return CatalogPseudo(argv[2], argv[3], stderr) ? 0 : 1;
@@ -213,6 +226,8 @@ int main(int argc, char** argv)
         fputs("usage: mloccat read FILE | mloccat check FILE\n"
               "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n"
               "       mloccat accept SOURCE TRANSLATION [KEY...]\n"
+              "       mloccat export-po SOURCE TRANSLATION PO\n"
+              "       mloccat import-po SOURCE TRANSLATION PO\n"
               "       mloccat pseudo DIRECTORY SOURCE\n"
               "       mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]\n",
               stderr);

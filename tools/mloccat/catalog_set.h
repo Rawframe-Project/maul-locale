@@ -27,6 +27,7 @@ typedef struct CatalogEntry
     char* key;
     size_t length;
     const ResItem* item;
+    const ResSection* section;
     // Whether it or its section says @translate no.
     int keep;
 } CatalogEntry;
@@ -38,6 +39,8 @@ typedef struct CatalogInput
     Resource resource;
     CatalogEntry* entries;
     uint32_t count;
+    // The entries sorted by key, for CatalogFindEntry.
+    const CatalogEntry** byKey;
     char locale[localeRoom];
 } CatalogInput;
 
@@ -56,6 +59,9 @@ void CatalogSetFree(CatalogSet* set);
 
 // Whether metadata holds key (with value, unless value is null).
 int CatalogHasMeta(const ResMeta* meta, size_t count, const char* key, const char* value);
+
+// An input's entry of a key, or null.
+const CatalogEntry* CatalogFindEntry(const CatalogInput* in, const char* key);
 
 // The first metadata of key, or null.
 const ResMeta* CatalogFindMeta(const ResMeta* meta, size_t count, const char* key);

@@ -12,6 +12,8 @@
 #ifndef MLOCCAT_STALE_H
 #define MLOCCAT_STALE_H
 
+#include "resource.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -28,5 +30,17 @@ void SourceHashText(uint64_t hash, char out[sourceHashDigits + 1]);
 
 // Reads 16 lowercase hex digits; 0 for anything else.
 int SourceHashRead(const char* text, size_t length, uint64_t* out);
+
+typedef enum SourceState
+{
+    // No @mloc-source: nothing says which source it answers.
+    sourceUnrecorded,
+    sourceFresh,
+    sourceStale,
+} SourceState;
+
+// A translation entry's state against its source message now, by its
+// metadata.
+SourceState SourceStateOf(const ResMeta* meta, size_t count, const ResText* source);
 
 #endif

@@ -297,6 +297,11 @@ format.
   (letters accented, each pattern bracketed and padded by 40%) and
   `ar-XB` (text runs between RLO and PDF) as catalog sources of the
   set, changing only pattern text (mloc-0058).
+- PO exchange: `mloccat export-po` writes a translation as a PO file
+  (msgctxt the key, MF2 in msgid and msgstr, `mf2-format`, `fuzzy` when
+  stale, comments and `@param` extracted) and `mloccat import-po` reads
+  one back, adding keys where the source has them and recording the
+  source each translation answers (mloc-0059).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

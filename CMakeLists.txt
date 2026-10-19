@@ -759,11 +759,13 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # The catalog tool, mloccat (record mloc-0053): its parts are a static
     # library so that their tests link them alone.
     add_library(mloccat_core STATIC tools/mloccat/accept.c tools/mloccat/catalog_set.c
-                             tools/mloccat/compile.c tools/mloccat/file.c tools/mloccat/json.c
-                             tools/mloccat/pseudo.c tools/mloccat/report.c
+                             tools/mloccat/compile.c tools/mloccat/exchange_po.c
+                             tools/mloccat/file.c tools/mloccat/json.c
+                             tools/mloccat/po.c tools/mloccat/pseudo.c tools/mloccat/report.c
                              tools/mloccat/report_write.c
                              tools/mloccat/resource.c tools/mloccat/resource_check.c
-                             tools/mloccat/resource_write.c tools/mloccat/stale.c
+                             tools/mloccat/resource_edit.c tools/mloccat/resource_write.c
+                             tools/mloccat/stale.c
                              tools/mloccat/table.c)
     # The compiler writes the data layout and the catalog units the library
     # reads (src/data_format.h, src/catalog_tables.h), with the generator's
@@ -804,6 +806,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         maul_apply_flags(test_pseudo)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pseudo-test)
         add_test(NAME pseudo COMMAND test_pseudo ${CMAKE_CURRENT_BINARY_DIR}/pseudo-test)
+        add_executable(test_po test/test_po.c)
+        target_link_libraries(test_po PRIVATE mloccat_core)
+        target_include_directories(test_po PRIVATE test)
+        maul_apply_flags(test_po)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/po-test)
+        add_test(NAME po COMMAND test_po ${CMAKE_CURRENT_BINARY_DIR}/po-test)
         add_executable(test_catalog_chain test/test_catalog_chain.c)
         target_link_libraries(test_catalog_chain PRIVATE mloccat_core)
         target_include_directories(test_catalog_chain PRIVATE test)

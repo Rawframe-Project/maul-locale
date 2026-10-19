@@ -6,6 +6,7 @@
 #include "stale.h"
 
 #include "catalog_hash.h"
+#include "catalog_set.h"
 
 #include "maul-locale/message.h"
 
@@ -84,4 +85,19 @@ int SourceHashRead(const char* text, size_t length, uint64_t* out)
     }
     *out = hash;
     return 1;
+}
+
+SourceState SourceStateOf(const ResMeta* meta, size_t count, const ResText* source)
+{
+    const ResMeta* m = CatalogFindMeta(meta, count, "mloc-source");
+    uint64_t made = 0;
+    uint64_t now = 0;
+    if (m == nullptr)
+    {
+        return sourceUnrecorded;
+    }
+    return SourceHashRead(m->value.bytes, m->value.length, &made) &&
+                   SourceHash(source->bytes, source->length, &now) && made != now
+               ? sourceStale
+               : sourceFresh;
 }

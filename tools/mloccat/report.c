@@ -20,39 +20,6 @@ enum
     exampleRoom = 32,
 };
 
-static int CompareEntries(const void* a, const void* b)
-{
-    return strcmp((*(const CatalogEntry* const*)a)->key, (*(const CatalogEntry* const*)b)->key);
-}
-
-// An input's entries sorted by key, for a binary search.
-static const CatalogEntry** ByKey(const CatalogInput* in)
-{
-    const CatalogEntry** sorted =
-        (const CatalogEntry**)calloc(in->count + (size_t)1, sizeof(CatalogEntry*));
-    if (sorted == nullptr)
-    {
-        exit(1);
-    }
-    for (uint32_t i = 0; i < in->count; i++)
-    {
-        sorted[i] = &in->entries[i];
-    }
-    qsort((void*)sorted, in->count, sizeof(CatalogEntry*), CompareEntries);
-    return sorted;
-}
-
-static const CatalogEntry* Find(const CatalogEntry** sorted, uint32_t count, const char* key)
-{
-    CatalogEntry probe = {.key = (char*)key};
-    const CatalogEntry* wanted = &probe;
-    const CatalogEntry** found =
-        count == 0 ? nullptr
-                   : (const CatalogEntry**)bsearch((const void*)&wanted, (const void*)sorted, count,
-                                                   sizeof(CatalogEntry*), CompareEntries);
-    return found != nullptr ? *found : nullptr;
-}
-
 static void Add(LocaleReport* r, ReportKind kind, const char* key, uint32_t length, uint32_t most)
 {
     r->findings = CatalogGrow(r->findings, r->count, sizeof(Finding));
@@ -176,14 +143,13 @@ static void CheckLength(LocaleReport* r, const mlocMessageFormatter* f, const Ca
 
 // A translation's findings against the source.
 static void CheckTranslation(LocaleReport* r, const CatalogInput* source,
-                             const CatalogEntry** sources, const mlocMessageFormatter* f)
+                             const mlocMessageFormatter* f)
 {
     const CatalogInput* in = r->input;
-    const CatalogEntry** entries = ByKey(in);
     for (uint32_t i = 0; i < source->count; i++)
     {
         const CatalogEntry* s = &source->entries[i];
-        const CatalogEntry* t = Find(entries, in->count, s->key);
+        const CatalogEntry* t = CatalogFindEntry(in, s->key);
         if (s->keep)
         {
             if (t != nullptr &&
@@ -201,28 +167,20 @@ static void CheckTranslation(LocaleReport* r, const CatalogInput* source,
             continue;
         }
         r->translated++;
-        const ResText* made = MetaValue(t, "mloc-source");
-        uint64_t then = 0;
-        uint64_t now = 0;
-        if (made == nullptr)
+        SourceState state = SourceStateOf(t->item->meta, t->item->metaCount, &s->item->value);
+        if (state != sourceFresh)
         {
-            Add(r, reportUnrecorded, s->key, 0, 0);
-        }
-        else if (SourceHashRead(made->bytes, made->length, &then) &&
-                 SourceHash(s->item->value.bytes, s->item->value.length, &now) && then != now)
-        {
-            Add(r, reportStale, s->key, 0, 0);
+            Add(r, state == sourceStale ? reportStale : reportUnrecorded, s->key, 0, 0);
         }
         CheckLength(r, f, s, t);
     }
     for (uint32_t i = 0; i < in->count; i++)
     {
-        if (Find(sources, source->count, in->entries[i].key) == nullptr)
+        if (CatalogFindEntry(source, in->entries[i].key) == nullptr)
         {
             Add(r, reportOrphaned, in->entries[i].key, 0, 0);
         }
     }
-    free((void*)entries);
 }
 
 int ReportBuild(const CatalogSet* set, Report* out)
@@ -233,7 +191,6 @@ int ReportBuild(const CatalogSet* set, Report* out)
         exit(1);
     }
     const CatalogInput* source = &set->inputs[0];
-    const CatalogEntry** sources = ByKey(source);
     int ok = 1;
     for (size_t i = 0; i < set->count; i++)
     {
@@ -247,7 +204,7 @@ int ReportBuild(const CatalogSet* set, Report* out)
         }
         if (i > 0)
         {
-            CheckTranslation(r, source, sources, &f);
+            CheckTranslation(r, source, &f);
             continue;
         }
         for (uint32_t k = 0; k < source->count; k++)
@@ -257,7 +214,6 @@ int ReportBuild(const CatalogSet* set, Report* out)
             CheckLength(r, &f, &source->entries[k], &source->entries[k]);
         }
     }
-    free((void*)sources);
     return ok;
 }
 
