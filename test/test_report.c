@@ -24,6 +24,11 @@ static void Write(const char* name, const char* text, char* path, size_t capacit
     (void)FileWrite(path, text, strlen(text));
 }
 
+static bool StartsWith(const char* text, const char* prefix)
+{
+    return text != nullptr && strncmp(text, prefix, strlen(prefix)) == 0;
+}
+
 static bool Has(const LocaleReport* r, ReportKind kind, const char* key, uint32_t length)
 {
     for (size_t i = 0; i < r->count; i++)
@@ -74,7 +79,9 @@ static void TestFindings(void)
     Write("en.mf2",
           "@locale en\n---\n@mloc-max-length 12\n@mloc-example $name=Alexandra Smith $n=3\n"
           "hello = Hello {$name}\nbye = Bye\nnew = New\n@translate no\nbrand = Maul\n"
-          "@translate no\nsame = Same\n@mloc-max-length 30\nshort = Hi\n",
+          "@translate no\nsame = Same\n@mloc-max-length 30\nshort = Hi\n"
+          "@translate no\n@mloc-max-length 9\n@mloc-example $flag $n=3\nexact = {$flag}{$n} "
+          "items!!\n",
           en, sizeof(en));
     Write("tr.mf2",
           "@locale tr\n---\nhello = Merhaba {$name}\nbye = Ho\xC5\x9F\xC3\xA7\x61 kal\n"
@@ -90,7 +97,9 @@ static void TestFindings(void)
     Write("en.mf2",
           "@locale en\n---\n@mloc-max-length 12\n@mloc-example $name=Alexandra Smith $n=3\n"
           "hello = Hello {$name}\nbye = Goodbye\nnew = New\n@translate no\nbrand = Maul\n"
-          "@translate no\nsame = Same\n@mloc-max-length 30\nshort = Hi\n",
+          "@translate no\nsame = Same\n@mloc-max-length 30\nshort = Hi\n"
+          "@translate no\n@mloc-max-length 9\n@mloc-example $flag $n=3\nexact = {$flag}{$n} "
+          "items!!\n",
           en, sizeof(en));
     char* paths[] = {en, tr, fi};
     CatalogSet set;
@@ -110,8 +119,9 @@ static void TestFindings(void)
     const LocaleReport* s = &report.locales[0];
     const LocaleReport* t = &report.locales[1];
     const LocaleReport* f = &report.locales[2];
-    CHECK(s->count == 1 && Has(s, reportLong, "hello", 21) && s->translated == 6,
-          "the source: its own long message, measured with the example");
+    CHECK(s->count == 1 && Has(s, reportLong, "hello", 21) && s->translated == 7,
+          "the source: its own long message, measured with the example; one at its limit, measured "
+          "with its second example after one with no value, is not");
     CHECK(t->translatable == 4 && t->translated == 3 && t->count == 6 &&
               Has(t, reportMissing, "new", 0) && Has(t, reportStale, "bye", 0) &&
               Has(t, reportUnrecorded, "hello", 0) && Has(t, reportOrphaned, "extra", 0) &&
@@ -124,6 +134,9 @@ static void TestFindings(void)
           "another locale's count and length");
     CHECK(ReportKindsFound(&report) == 0x3FU, "every kind found");
     char* text = Written(&report, false);
+    CHECK(StartsWith(text, "locale      translated    missing      stale unrecorded   "
+                           "orphaned    differs       long\n"),
+          "the text's head: a column per kind");
     CHECK(text != nullptr &&
               strstr(text, "tr                 3/4          1          1          1"
                            "          1          1          1\n") != nullptr &&
@@ -132,13 +145,13 @@ static void TestFindings(void)
           "the text: the table and a line per finding");
     free(text);
     char* json = Written(&report, true);
-    CHECK(
-        json != nullptr && strncmp(json, "{\"source\":\"en\",\"keys\":6,\"locales\":[", 35) == 0 &&
-            strstr(json, "\"translated\":3,\"translatable\":4,\"missing\":[\"new\"],"
-                         "\"stale\":[\"bye\"],\"unrecorded\":[\"hello\"],\"orphaned\":[\"extra\"],"
-                         "\"differs\":[\"brand\"],\"long\":[{\"key\":\"hello\",\"length\":23,"
-                         "\"most\":12}]}") != nullptr,
-        "the JSON: each kind's keys, a long message's length");
+    CHECK(StartsWith(json, "{\"source\":\"en\",\"keys\":7,\"locales\":[{\"locale\":\"en\"") &&
+              strstr(json,
+                     "\"translated\":3,\"translatable\":4,\"missing\":[\"new\"],"
+                     "\"stale\":[\"bye\"],\"unrecorded\":[\"hello\"],\"orphaned\":[\"extra\"],"
+                     "\"differs\":[\"brand\"],\"long\":[{\"key\":\"hello\",\"length\":23,"
+                     "\"most\":12}]}") != nullptr,
+          "the JSON: each kind's keys, a long message's length");
     free(json);
     ReportFree(&report);
     CatalogSetFree(&set);
