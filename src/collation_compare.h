@@ -10,17 +10,17 @@
 // case level between the secondary and tertiary levels when asked;
 // tertiaries without the case bits unless case first asks for them,
 // upper case then first or last; with numeric on, runs of digits by
-// their value. The identical level compares the texts' NFD code
-// points, U+FFFE below every other as ICU ranks it.
-// With the alternate setting shifted, a variable element (a primary
-// above the merge separator, up to the variable top) keeps only its
-// primary, for the quaternary level, and the primary ignorables after
-// it are passed over at every level. Nothing is buffered: a level that
-// the one before leaves equal reads both texts again.
+// their value; primaries through the script reordering, if any. The identical level compares the
+// texts' NFD code points, U+FFFE below every other as ICU ranks it. With the alternate setting
+// shifted, a variable element (a primary above the merge separator, up to the variable top) keeps
+// only its primary, for the quaternary level, and the primary ignorables after it are passed over
+// at every level. Nothing is buffered: a level that the one before leaves equal reads both texts
+// again.
 
 #ifndef MLOC_SRC_COLLATION_COMPARE_H
 #define MLOC_SRC_COLLATION_COMPARE_H
 
+#include "collation_reorder.h"
 #include "collation_tables.h"
 
 #include <stddef.h>
@@ -51,6 +51,8 @@ typedef struct CollationSettings
     uint32_t caseFirst;
     // Digits as numbers (numeric ordering, CLDR's kn).
     bool numeric;
+    // The script reordering (CLDR's kr), or null; the caller keeps it.
+    const CollationReorder* reorder;
 } CollationSettings;
 
 // CLDR's root defaults: tertiary, non-ignorable, the variable top at the

@@ -249,6 +249,61 @@ static void TestNumeric(void)
           "numeric: runs past a segment of 254 digits");
 }
 
+#define Script(a, b, c, d) ((uint32_t)(a) << 24 | (uint32_t)(b) << 16 | (uint32_t)(c) << 8 | (d))
+
+// The order at the tertiary strength with the codes' reordering; 3 when
+// the codes are refused.
+static int Reordered(const char* a, const char* b, const uint32_t* codes, size_t count)
+{
+    static CollationReorder reorder;
+    bool changes = false;
+    if (mlocCollationMakeReorder(&s_root, codes, count, &reorder, &changes) != mloc_success)
+    {
+        return 3;
+    }
+    CollationSettings settings = mlocCollationDefaults(&s_root);
+    settings.reorder = changes ? &reorder : nullptr;
+    return Compare(a, strlen(a), b, strlen(b), &settings);
+}
+
+static void TestReorder(void)
+{
+    const uint32_t greek[] = {Script('G', 'r', 'e', 'k')};
+    const uint32_t others[] = {Script('C', 'y', 'r', 'l'), Script('Z', 'z', 'z', 'z'),
+                               Script('L', 'a', 't', 'n')};
+    const uint32_t digits[] = {collationGroupDigit, collationGroupPunctuation};
+    CHECK(Reordered("a", "\xCE\xB1", nullptr, 0) == -1 &&
+              Reordered("\xCE\xB1", "a", greek, 1) == -1 &&
+              Reordered("\xCE\xB1", "\xCE\xB2", greek, 1) == -1 &&
+              Reordered("\xD0\xB4", "\xCE\xB1", others, 3) == -1 &&
+              Reordered("\xCE\xB1", "a", others, 3) == -1 && Reordered("1", ".", digits, 2) == -1 &&
+              Reordered("$", "1", digits, 2) == -1 && Reordered(".", "a", digits, 2) == -1,
+          "reordering: named scripts first, the groups not named before them, Zzzz sending "
+          "the rest to the end");
+    const uint32_t twice[] = {Script('G', 'r', 'e', 'k'), Script('G', 'r', 'e', 'k')};
+    const uint32_t shared[] = {Script('H', 'i', 'r', 'a'), Script('K', 'a', 'n', 'a')};
+    const uint32_t alias[] = {Script('H', 'a', 'n', 'i'), Script('H', 'a', 'n', 's')};
+    const uint32_t unknownTwice[] = {Script('Z', 'z', 'z', 'z'), Script('L', 'a', 't', 'n'),
+                                     Script('Z', 'z', 'z', 'z')};
+    CHECK(Reordered("a", "b", twice, 2) == 3 && Reordered("a", "b", shared, 2) == 3 &&
+              Reordered("a", "b", alias, 2) == 3 && Reordered("a", "b", unknownTwice, 3) == 3,
+          "reordering refuses duplicates, codes of one range and Zzzz twice");
+    static CollationReorder reorder;
+    bool changes = true;
+    const uint32_t unknown[] = {Script('Z', 'z', 'z', 'z')};
+    const uint32_t absent[] = {Script('Q', 'a', 'a', 'a'), collationReservedBeforeLatin,
+                               collationReservedAfterLatin};
+    bool none = mlocCollationMakeReorder(&s_root, unknown, 1, &reorder, &changes) == mloc_success &&
+                !changes;
+    none = none &&
+           mlocCollationMakeReorder(&s_root, absent, 3, &reorder, &changes) == mloc_success &&
+           !changes;
+    none = none &&
+           mlocCollationMakeReorder(&s_root, nullptr, 0, &reorder, &changes) == mloc_success &&
+           !changes;
+    CHECK(none, "Zzzz alone, nothing, and codes the root has no range for change nothing");
+}
+
 static void TestTexts(void)
 {
     CHECK(Order("", "a", collationPrimary) == -1 && Order("a", "ab", collationTertiary) == -1 &&
@@ -298,5 +353,6 @@ int main(void)
     TestShifted();
     TestOptions();
     TestNumeric();
+    TestReorder();
     return s_failures == 0 ? 0 : 1;
 }

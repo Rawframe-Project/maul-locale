@@ -318,10 +318,11 @@ static inline uint32_t mlocCollationStart(const CollationRoot* r, uint32_t index
 }
 
 // The scripts rising by code, each naming a start that has one after it;
-// the starts rising from 0, 16-bit, the last 0xFF00 (the trailing range).
+// the starts rising from 0, 16-bit, the last 0xFF00 (the trailing range),
+// at most 256 (reordering's tables are indexed by start).
 static inline bool mlocCollationScriptsValid(const CollationRoot* r)
 {
-    bool ok = r->startCount >= 2 && mlocCollationStart(r, 0) == 0 &&
+    bool ok = r->startCount >= 2 && r->startCount <= 256 && mlocCollationStart(r, 0) == 0 &&
               mlocCollationStart(r, r->startCount - 1) == 0xFF00;
     for (uint32_t i = 1; ok && i < r->startCount; i++)
     {

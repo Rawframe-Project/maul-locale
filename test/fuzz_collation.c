@@ -4,8 +4,9 @@
 // libFuzzer target for the general compare (records mloc-0067 and
 // mloc-0069) over the generated root. The first byte chooses the
 // strength and the alternate setting, the second backwards, the case
-// level, case first and numeric; the third where the rest is cut into
-// two texts. Each text equals itself, and the order of two is the
+// level, case first and numeric; the third and fourth up to three
+// reorder codes, which may be refused; the fifth where the rest is cut
+// into two texts. Each text equals itself, and the order of two is the
 // mirror of their order the other way.
 
 #include "collation_compare.h"
@@ -62,7 +63,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     const CollationRoot* root = Root();
     Require(root != nullptr);
-    if (size < 3)
+    if (size < 5)
     {
         return 0;
     }
@@ -73,9 +74,29 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     s.caseLevel = (data[1] & 2) != 0;
     s.caseFirst = (data[1] >> 2) % 3;
     s.numeric = (data[1] & 0x10) != 0;
-    const uint8_t* text = data + 3;
-    size_t length = size - 3;
-    size_t cut = length == 0 ? 0 : data[2] % (length + 1);
+    static const uint32_t codes[8] = {
+        'G' << 24 | 'r' << 16 | 'e' << 8 | 'k',
+        'L' << 24 | 'a' << 16 | 't' << 8 | 'n',
+        'C' << 24 | 'y' << 16 | 'r' << 8 | 'l',
+        'H' << 24 | 'a' << 16 | 'n' << 8 | 'i',
+        'Z' << 24 | 'z' << 16 | 'z' << 8 | 'z',
+        collationGroupDigit,
+        collationGroupPunctuation,
+        collationGroupSpace,
+    };
+    uint32_t chosen[3];
+    size_t count = (size_t)(data[2] >> 6);
+    for (size_t i = 0; i < count; i++)
+    {
+        chosen[i] = codes[(i == 0 ? data[2] : data[3] >> (3 * (i - 1))) & 7];
+    }
+    static CollationReorder reorder;
+    bool changes = false;
+    mlocResult made = mlocCollationMakeReorder(root, chosen, count, &reorder, &changes);
+    s.reorder = made == mloc_success && changes ? &reorder : nullptr;
+    const uint8_t* text = data + 5;
+    size_t length = size - 5;
+    size_t cut = length == 0 ? 0 : data[4] % (length + 1);
     const uint8_t* b = text + cut;
     size_t bLength = length - cut;
     int ab = mlocCollationCompare(root, &s, text, cut, b, bLength);

@@ -109,6 +109,12 @@ static uint32_t Case(const CollationSettings* s, uint32_t primary, uint32_t lowe
     return (s->caseFirst == collationUpperFirst ? 0xC000 - c : c) | 0x10000;
 }
 
+// A primary with the script reordering, if any.
+static uint32_t Reordered(const CollationSettings* s, uint32_t primary)
+{
+    return s->reorder == nullptr ? primary : mlocCollationReorderPrimary(s->reorder, primary);
+}
+
 // The weight of an element at the level, 0 for none.
 static uint32_t Weight(const Level* l, uint64_t element, bool variable)
 {
@@ -117,7 +123,7 @@ static uint32_t Weight(const Level* l, uint64_t element, bool variable)
     switch (l->level)
     {
     case collationPrimary:
-        return variable ? 0 : primary;
+        return variable ? 0 : Reordered(l->settings, primary);
     case collationSecondary:
         return lower >> 16;
     case collationTertiary:
@@ -129,7 +135,7 @@ static uint32_t Weight(const Level* l, uint64_t element, bool variable)
         // ICU's quaternary: a variable element's primary, else the
         // weight in the tertiary's bits 7..6 above every primary.
         uint32_t q = lower & 0xFFFF;
-        return q <= 0x0100 ? primary : q | 0xFFFFFF3F;
+        return q <= 0x0100 ? Reordered(l->settings, primary) : q | 0xFFFFFF3F;
     }
     }
 }

@@ -107,7 +107,8 @@ code_point_trie: bytes data_view
 collation_tables: bytes code_point_trie data_view
 nfd_stream:
 collation_iterator: bytes code_point_trie collation_tables data_view nfd_stream
-collation_compare: collation_iterator collation_tables nfd_stream
+collation_compare: collation_iterator collation_reorder collation_tables nfd_stream
+collation_reorder: collation_tables
 relative_format: bytes currency_tables data_view decimal kinds locale_context locale_fallback number_core number_format plural plural_rules relative_tables spellout_data
 relative_datetime: date_data date_time date_write number_core relative_format relative_tables time_format time_write
 duration_options: duration_format

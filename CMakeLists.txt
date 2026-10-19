@@ -141,6 +141,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/collation_tables.c
     src/collation_iterator.c
     src/collation_compare.c
+    src/collation_reorder.c
     src/message_value.c
     src/message_words.c
     src/message_write.c

@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define Script(a, b, c, d) ((uint32_t)(a) << 24 | (uint32_t)(b) << 16 | (uint32_t)(c) << 8 | (d))
+
 alignas(8) static uint8_t s_file[1 << 19];
 
 static size_t Bytes(const char* hex, size_t n, uint8_t* out)
@@ -62,6 +64,15 @@ int main(int argc, char** argv)
         fputs("conform_collation_options: no root unit\n", stderr);
         return 2;
     }
+    // Maul Unicode's packed script codes.
+    enum : uint32_t
+    {
+        greek = Script('G', 'r', 'e', 'k'),
+        latin = Script('L', 'a', 't', 'n'),
+        cyrillic = Script('C', 'y', 'r', 'l'),
+        han = Script('H', 'a', 'n', 'i'),
+        unknown = Script('Z', 'z', 'z', 'z'),
+    };
     CollationSettings d = mlocCollationDefaults(&root);
     const struct
     {
@@ -71,22 +82,48 @@ int main(int argc, char** argv)
         uint32_t caseFirst;
         bool caseLevel;
         bool numeric;
+        // Reorder codes, 0-ended.
+        uint32_t reorder[5];
     } sets[] = {
-        {collationTertiary, false, false, collationCaseFirstOff, false, false},
-        {collationTertiary, false, true, collationCaseFirstOff, false, false},
-        {collationTertiary, false, false, collationUpperFirst, false, false},
-        {collationTertiary, false, false, collationLowerFirst, false, false},
-        {collationPrimary, false, false, collationCaseFirstOff, true, false},
-        {collationSecondary, false, false, collationUpperFirst, true, false},
-        {collationTertiary, false, false, collationUpperFirst, true, false},
-        {collationQuaternary, true, false, collationCaseFirstOff, false, false},
-        {collationQuaternary, true, true, collationLowerFirst, false, false},
-        {collationIdentical, false, false, collationCaseFirstOff, false, false},
-        {collationIdentical, true, true, collationUpperFirst, true, false},
-        {collationTertiary, false, false, collationCaseFirstOff, false, true},
-        {collationQuaternary, true, false, collationUpperFirst, false, true},
-        {collationIdentical, false, true, collationCaseFirstOff, true, true},
+        {collationTertiary, false, false, collationCaseFirstOff, false, false, {0}},
+        {collationTertiary, false, true, collationCaseFirstOff, false, false, {0}},
+        {collationTertiary, false, false, collationUpperFirst, false, false, {0}},
+        {collationTertiary, false, false, collationLowerFirst, false, false, {0}},
+        {collationPrimary, false, false, collationCaseFirstOff, true, false, {0}},
+        {collationSecondary, false, false, collationUpperFirst, true, false, {0}},
+        {collationTertiary, false, false, collationUpperFirst, true, false, {0}},
+        {collationQuaternary, true, false, collationCaseFirstOff, false, false, {0}},
+        {collationQuaternary, true, true, collationLowerFirst, false, false, {0}},
+        {collationIdentical, false, false, collationCaseFirstOff, false, false, {0}},
+        {collationIdentical, true, true, collationUpperFirst, true, false, {0}},
+        {collationTertiary, false, false, collationCaseFirstOff, false, true, {0}},
+        {collationQuaternary, true, false, collationUpperFirst, false, true, {0}},
+        {collationIdentical, false, true, collationCaseFirstOff, true, true, {0}},
+        {collationTertiary, false, false, collationCaseFirstOff, false, false, {greek}},
+        {collationTertiary, false, false, collationCaseFirstOff, false, false, {latin, han}},
+        {collationTertiary,
+         false,
+         false,
+         collationCaseFirstOff,
+         false,
+         true,
+         {collationGroupDigit, collationGroupPunctuation}},
+        {collationTertiary,
+         false,
+         false,
+         collationCaseFirstOff,
+         false,
+         false,
+         {cyrillic, unknown, latin}},
+        {collationQuaternary,
+         true,
+         false,
+         collationCaseFirstOff,
+         false,
+         false,
+         {collationGroupSpace, han, unknown, collationGroupDigit}},
     };
+    static CollationReorder reorders[32];
     static char line[131072];
     static uint8_t a[65536];
     static uint8_t b[65536];
@@ -108,6 +145,19 @@ int main(int argc, char** argv)
             s.caseFirst = sets[i].caseFirst;
             s.caseLevel = sets[i].caseLevel;
             s.numeric = sets[i].numeric;
+            size_t codes = 0;
+            while (codes < 5 && sets[i].reorder[codes] != 0)
+            {
+                codes++;
+            }
+            bool changes = false;
+            if (mlocCollationMakeReorder(&root, sets[i].reorder, codes, &reorders[i], &changes) !=
+                mloc_success)
+            {
+                fprintf(stderr, "conform_collation_options: set %zu refused\n", i);
+                return 1;
+            }
+            s.reorder = changes ? &reorders[i] : nullptr;
             printf(i == 0 ? "%d" : "\t%d", mlocCollationCompare(&root, &s, a, aLength, b, bLength));
         }
         printf("\n");

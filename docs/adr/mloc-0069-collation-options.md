@@ -1,4 +1,4 @@
-# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, numeric ordering, the script table
+# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, numeric ordering, reordering, the script table
 
 Status: Accepted
 
@@ -85,6 +85,27 @@ For punctuation, CLDR's default maxVariable, that is
     element, with trailing zero pairs dropped.
   - A segment is buffered as digits, 254 bytes, and its elements
     (at most 43) in the iterator's element array.
+- **Reordering** (CLDR's `kr`, `[reorder ...]`), as ICU4C's
+  `CollationData::makeReorderRanges` and
+  `CollationSettings::setReordering`, in `collation_reorder.c`:
+  - The groups not named come first, in their order. Then the named
+    codes, in order. Codes after Zzzz go to the end, the last named
+    last. Then the remaining ranges in the root's order.
+  - Latin first, with no group named, keeps Latin's bytes: the space
+    before it is skipped, unless the order would then not fit.
+  - The reserved ranges either side of Latin keep their place and are
+    never named, as `getScriptIndex` does not reach them. A code the
+    root has no range for is passed over.
+  - Refused with `mloc_errorInvalid`: a duplicate, two codes of one
+    range (Hira with Kana, Hani with Hans), and a second Zzzz. An order
+    that does not fit the lead bytes is refused with
+    `mloc_errorCapacity`.
+  - `CollationReorder` holds a 256-byte lead byte table and the ranges
+    from the first lead byte two ranges share. `CollationSettings`
+    points at one, or null. Primaries are reordered at the primary
+    level and as quaternary weights, as ICU's `CollationCompare`.
+  - The validator now also holds the starts to at most 256, the
+    tables' index.
 - **The identical level** compares the two texts' NFD code points.
   U+FFFE ranks below every other code point and the end of a text below
   that, as ICU's `compareNFDIter` does, so segments compare first.
@@ -139,16 +160,28 @@ For punctuation, CLDR's default maxVariable, that is
   ASCII, Arabic-Indic, Devanagari and fullwidth digits mixed). All 14
   sets agree on 200,000 pairs, on two seeds. Numeric order changes
   20,253 of the tertiary set's answers, so it is seen.
+- **Reordering against ICU4C 74,** the differential with five
+  reorder sets more (19 in all): Grek; Latn and Hani; digits and
+  punctuation, numeric; Cyrl, Zzzz and Latn; and space, Hani, Zzzz and
+  digits, shifted at the quaternary strength. The pairs add Greek,
+  Cyrillic, Han and kana letters, symbols and currency signs. All 19
+  sets agree on 200,000 pairs, on two seeds. Each reorder set changes
+  between 1,438 and 57,078 answers of the same set without it.
+- **`test_collation_compare`, reordering:** named scripts first; the
+  groups not named before them; Zzzz sending the rest to the end; the
+  refusals; Zzzz alone, no codes, and codes without a range changing
+  nothing.
 - **`test_collation_compare`, numeric:** values across one, two and
   three bytes and the pairs; leading zeros; digits of other scripts in
   one run; runs past a segment.
-- **`fuzz_collation`,** in the fuzz job: any settings and two texts;
-  each text equals itself, and each order mirrors the other. Five
-  minutes, about 465,000 inputs, found nothing.
+- **`fuzz_collation`,** in the fuzz job: any settings, up to three
+  reorder codes, and two texts. Each text equals itself, and each order
+  mirrors the other. Five minutes, about 465,000 inputs, found nothing;
+  with reordering, five minutes more, about 212,000.
 - **`conform_collation_options`** prints our order for the oracle's
   pairs, in its sets' order.
 
 ## Consequences
 
-- Still to come in slice (b): reordering, and the public collator from
-  a locale and its `-u-` keys. Each amends this record.
+- Still to come in slice (b): the public collator from a locale and
+  its `-u-` keys, which amends this record.
