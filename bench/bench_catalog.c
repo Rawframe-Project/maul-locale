@@ -27,11 +27,9 @@ enum
 
 static uint8_t* s_bytes[2];
 static size_t s_sizes[2];
-static mlocData s_files[2];
 static mlocCatalog s_catalogs[2];
 static mlocMessageFormatter s_formatters[2];
 static mlocCatalogChain s_chain;
-static uint8_t* s_cache;
 static uint8_t* s_bindCache;
 static size_t s_cacheSize;
 static uint32_t s_formatIndex;
@@ -121,6 +119,9 @@ const BenchCase g_catalogCases[] = {
 };
 
 #ifdef MLOC_BENCH_CATALOG_DIR
+
+static mlocData s_files[2];
+static uint8_t* s_cache;
 
 static uint8_t* ReadFile(const char* path, size_t* sizeOut)
 {
