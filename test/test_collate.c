@@ -1,0 +1,177 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Sirac Ozmen
+//
+// The public collator (record mloc-0069) over the collation data file:
+// the root's defaults, each -u- key, options over the keys, values
+// passed over, and the refusals.
+
+#ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include "test_harness.h"
+
+#include "maul-locale/collate.h"
+#include "maul-locale/data.h"
+
+#include <stdio.h>
+#include <string.h>
+
+alignas(8) static uint8_t s_file[1 << 19];
+static mlocData s_source;
+static mlocDataSet s_data = {&s_source, 1};
+
+// A collator for the locale with the options; false when not made.
+static bool Make(const char* id, const mlocCollatorOptions* options, mlocCollator* out)
+{
+    mlocLocale locale;
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
+           mlocInitCollator(out, &s_data, &locale, options) == mloc_success;
+}
+
+// The order of a and b under the locale and options, checked against its
+// mirror; 2 when the collator is not made or the two disagree.
+static int Order(const char* id, const mlocCollatorOptions* options, const char* a, const char* b)
+{
+    mlocCollator c;
+    int ab = 2;
+    int ba = 2;
+    if (!Make(id, options, &c) ||
+        mlocCompare(&c, a, strlen(a), b, strlen(b), &ab) != mloc_success ||
+        mlocCompare(&c, b, strlen(b), a, strlen(a), &ba) != mloc_success)
+    {
+        return 2;
+    }
+    return ab == -ba ? ab : 2;
+}
+
+static void TestDefaults(void)
+{
+    CHECK(Order("en", nullptr, "a", "b") == -1 && Order("en", nullptr, "a", "A") == -1 &&
+              Order("en", nullptr, "a", "\xC3\xA1") == -1 &&
+              Order("en", nullptr, "a b", "ab") == -1 && Order("en", nullptr, "a2", "a10") == 1 &&
+              Order("en", nullptr, "\xCE\xB1", "a") == 1 && Order("en", nullptr, "", "") == 0,
+          "the root's defaults: tertiary, non-ignorable, digits as text, no reordering");
+    mlocCollator c;
+    int order = 2;
+    CHECK(Make("en", nullptr, &c) && mlocCompare(&c, nullptr, 0, "a", 1, &order) == mloc_success &&
+              order == -1 &&
+              mlocCompare(&c, "a\xFF", 2, "a\xEF\xBF\xBD", 4, &order) == mloc_success && order == 0,
+          "an empty text as null, a bad byte as U+FFFD");
+}
+
+static void TestKeys(void)
+{
+    CHECK(Order("en-u-ks-level1", nullptr, "a", "\xC3\x81") == 0 &&
+              Order("en-u-ks-level2", nullptr, "a", "A") == 0 &&
+              Order("en-u-ks-level2", nullptr, "a", "\xC3\xA1") == -1 &&
+              Order("en-u-ks-identic", nullptr, "\xC3\xA1", "a\xCC\x81") == 0,
+          "ks: the strength");
+    CHECK(Order("en-u-ka-shifted", nullptr, "a-b", "ab") == 0 &&
+              Order("en-u-ka-shifted-ks-level4", nullptr, "a-b", "ab") == -1 &&
+              Order("en-u-ka-shifted", nullptr, "a$b", "ab") == -1 &&
+              Order("en-u-ka-shifted-kv-currency", nullptr, "a$b", "ab") == 0 &&
+              Order("en-u-ka-shifted-kv-space", nullptr, "a-b", "ab") == -1,
+          "ka and kv: shifted up to the max variable");
+    CHECK(Order("en-u-kf-upper", nullptr, "A", "a") == -1 &&
+              Order("en-u-kf-lower", nullptr, "a", "A") == -1 &&
+              Order("en-u-kc-ks-level1", nullptr, "a", "A") == -1 &&
+              Order("en-u-kc-false-ks-level1", nullptr, "a", "A") == 0,
+          "kf and kc: case first and the case level, a key alone being true");
+    CHECK(Order("en-u-kn", nullptr, "a2", "a10") == -1 &&
+              Order("en-u-kn-false", nullptr, "a2", "a10") == 1 &&
+              Order("fr-u-kb", nullptr, "cot\xC3\xA9", "c\xC3\xB4te") == 1 &&
+              Order("fr", nullptr, "cot\xC3\xA9", "c\xC3\xB4te") == -1,
+          "kn and kb: numeric and backwards secondaries");
+    CHECK(Order("en-u-kr-grek-latn", nullptr, "\xCE\xB1", "a") == -1 &&
+              Order("en-u-kr-digit-punct", nullptr, "1", ".") == -1 &&
+              Order("en-u-kr-cyrl-others-latn", nullptr, "\xCE\xB1", "a") == -1,
+          "kr: the scripts and groups reordered");
+    CHECK(Order("en-u-ks-level9", nullptr, "a", "A") == -1 &&
+              Order("en-u-kf-other", nullptr, "a", "A") == -1 &&
+              Order("en-u-kr-grek-grek", nullptr, "\xCE\xB1", "a") == 1 &&
+              Order("en-u-kr-qaaa", nullptr, "\xCE\xB1", "a") == 1,
+          "values not a key's, or a kr the root cannot order, passed over");
+}
+
+static void TestOptions(void)
+{
+    mlocCollatorOptions o = {.strength = mloc_strengthPrimary};
+    CHECK(Order("en-u-ks-level3", &o, "a", "A") == 0, "the options over the keys: strength");
+    o = (mlocCollatorOptions){.numeric = mloc_switchOff};
+    CHECK(Order("en-u-kn", &o, "a2", "a10") == 1, "the options over the keys: numeric off");
+    o = (mlocCollatorOptions){.alternate = mloc_alternateShifted,
+                              .maxVariable = mloc_maxVariableSymbol,
+                              .caseFirst = mloc_caseFirstUpper,
+                              .caseLevel = mloc_switchOn,
+                              .backwards = mloc_switchOn};
+    CHECK(Order("en", &o, "a+b", "ab") == 0 && Order("en", &o, "A", "a") == -1 &&
+              Order("en", &o, "cot\xC3\xA9", "c\xC3\xB4te") == 1,
+          "alternate, max variable, case first, case level and backwards as options");
+    o = (mlocCollatorOptions){.reorder = "Grek-LATN", .reorderLength = 9};
+    CHECK(Order("en", &o, "\xCE\xB1", "a") == -1, "a reorder option in any case");
+    o = (mlocCollatorOptions){.reorder = "", .reorderLength = 0};
+    CHECK(Order("en-u-kr-grek", &o, "\xCE\xB1", "a") == 1, "an empty reorder option: none");
+}
+
+static void TestRefusals(void)
+{
+    mlocLocale en;
+    mlocCollator c;
+    memset(&c, 0x5A, sizeof(c));
+    mlocCollator before = c;
+    bool ok = mlocParseLocale("en", 2, &en).status == mloc_success;
+    static const char* const bad[] = {
+        "grek-", "-grek", "zz", "grek--latn", "grek-grek", "hira-kana", "others-latn-others",
+        "spaces"};
+    for (size_t i = 0; ok && i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        mlocCollatorOptions o = {.reorder = bad[i], .reorderLength = strlen(bad[i])};
+        ok = mlocInitCollator(&c, &s_data, &en, &o) == mloc_errorInvalid;
+    }
+    CHECK(ok && memcmp(&c, &before, sizeof(c)) == 0,
+          "reorder texts that are no list of codes, or name one twice, refused, the collator "
+          "left as it was");
+    mlocCollatorOptions full = {.reorder = "ethi-gran-kawi-bugi-newa", .reorderLength = 24};
+    mlocCollatorOptions far = {.strength = (mlocCollationStrength)6};
+    mlocCollatorOptions hollow = {.reorder = nullptr, .reorderLength = 3};
+    mlocDataSet none = {nullptr, 0};
+    CHECK(mlocInitCollator(&c, &s_data, &en, &full) == mloc_errorCapacity &&
+              mlocInitCollator(&c, &s_data, &en, &far) == mloc_errorInvalid &&
+              mlocInitCollator(&c, &s_data, &en, &hollow) == mloc_errorInvalid &&
+              mlocInitCollator(&c, &none, &en, nullptr) == mloc_errorNotFound &&
+              mlocInitCollator(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
+              mlocInitCollator(&c, nullptr, &en, nullptr) == mloc_errorInvalid &&
+              mlocInitCollator(&c, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+          "a reordering too large, options out of range, data without the root, null pointers");
+    int order = 7;
+    mlocCollator made;
+    CHECK(Make("en", nullptr, &made) &&
+              mlocCompare(&before, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCompare(nullptr, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCompare(&made, nullptr, 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCompare(&made, "a", 1, nullptr, 1, &order) == mloc_errorInvalid &&
+              mlocCompare(&made, "a", 1, "b", 1, nullptr) == mloc_errorInvalid && order == 7,
+          "compare refuses a collator the library did not make and null pointers");
+}
+
+int main(void)
+{
+    FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
+    size_t size = f == nullptr ? 0 : fread(s_file, 1, sizeof(s_file), f);
+    if (f != nullptr)
+    {
+        fclose(f);
+    }
+    if (size == 0 || size == sizeof(s_file) ||
+        mlocOpenData(&s_source, s_file, size) != mloc_success)
+    {
+        fputs("test_collate: cannot open " MLOC_COLLATION_FILE "\n", stderr);
+        return 2;
+    }
+    TestDefaults();
+    TestKeys();
+    TestOptions();
+    TestRefusals();
+    return s_failures == 0 ? 0 : 1;
+}

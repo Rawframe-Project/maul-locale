@@ -1,4 +1,4 @@
-# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, numeric ordering, reordering, the script table
+# mloc-0069. Collation options and the public collator: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, numeric ordering, reordering, the script table
 
 Status: Accepted
 
@@ -122,6 +122,31 @@ For punctuation, CLDR's default maxVariable, that is
   so the root split FE between Han and the unassigned range. Every
   reordering then spent a byte more than ICU's, and orders that ICU
   fits were refused. The script starts now equal ICU 79's on CLDR 49.
+- **The public collator** (`include/maul-locale/collate.h`):
+  - `mlocInitCollator(collatorOut, data, locale, options)` finds the
+    root in the first source of the set that has it and makes a
+    fixed-size value (768 bytes): the root's view, the settings and the
+    reordering. A copy works: the settings point at the reordering only
+    for the length of a compare.
+  - The locale's keys set the options over the root's defaults: `ks`
+    (level1 to level4, identic), `ka` (noignore, shifted), `kv`,
+    `kf` (upper, lower, false), `kc`, `kn` and `kb` (true or false; a
+    key alone is true, which canonical form leaves out) and `kr`. A
+    value that is not one of a key's is passed over, as is a `kr` the
+    root cannot order; ICU does the same with an unknown value.
+  - `mlocCollatorOptions` overrides them; its zero value takes the
+    locale's. Its reorder text is written as `kr`'s value, in any case
+    (`others` for Zzzz); a text that is not a list of codes, or names
+    one twice, is refused, and an empty text means none.
+  - `kk` is not read: text is always compared in NFD (record mloc-0066),
+    where ICU leaves text that is not FCD unreordered with kk off.
+  - `co` waits for the tailorings (slice d), which also bring the
+    locales' own defaults.
+  - `mlocCompare` gives -1, 0 or 1; a byte that is not UTF-8 compares
+    as U+FFFD.
+  - The reordering keeps at most 64 ranges past the first shared lead
+    byte. 40,000 random orders of up to 40 codes needed at most 24; an
+    order needing more is refused with `mloc_errorCapacity`.
 - **The identical level** compares the two texts' NFD code points.
   U+FFFE ranks below every other code point and the end of a text below
   that, as ICU's `compareNFDIter` does, so segments compare first.
@@ -202,6 +227,10 @@ For punctuation, CLDR's default maxVariable, that is
   nothing; an order past the lead bytes and one ICU wraps refused, one
   that fits keeping unassigned code points and Han after Latin.
 - **`test_collation_data`:** the unassigned range starts at FE00.
+- **`test_collate`:** the root's defaults; each key, a key alone, values
+  passed over; options over the keys; reorder texts refused; a
+  reordering too large; data without the root; null pointers and a
+  collator the library did not make.
 - **`test_collation_compare`, numeric:** values across one, two and
   three bytes and the pairs; leading zeros; digits of other scripts in
   one run; runs past a segment.
@@ -214,5 +243,6 @@ For punctuation, CLDR's default maxVariable, that is
 
 ## Consequences
 
-- Still to come in slice (b): the public collator from a locale and
-  its `-u-` keys, which amends this record.
+- Slice (b) is complete. `co`, the locales' own defaults and their
+  rules come with the tailorings in slice (d); sort keys and the
+  version in slice (c).

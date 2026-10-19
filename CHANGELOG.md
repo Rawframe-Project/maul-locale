@@ -379,3 +379,10 @@ format.
   code point trie with their expansions, contractions and prefixes,
   checked at open (mloc-0064, mloc-0065); the element iterator reads it
   through NFD with no limit on marks (mloc-0066).
+- Collation: `include/maul-locale/collate.h`, with `mlocInitCollator`
+  and `mlocCompare` over the collation data file, in CLDR's root order.
+  A locale's `-u-ks`, `ka`, `kv`, `kf`, `kc`, `kn`, `kb` and `kr` keys
+  set the options and `mlocCollatorOptions` overrides them: every
+  strength to identical, shifted alternates, case first and the case
+  level, numeric ordering, backwards secondaries and script reordering,
+  as ICU4C orders them (mloc-0067, mloc-0069).

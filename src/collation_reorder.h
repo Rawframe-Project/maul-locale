@@ -22,7 +22,9 @@
 
 enum
 {
-    collationMaxReorderRanges = 256,
+    // The ranges kept, from the first shared lead byte on. Random orders
+    // of up to 40 codes need at most 24; more is refused as capacity.
+    collationMaxReorderRanges = 64,
 };
 
 typedef struct CollationReorder
@@ -39,7 +41,9 @@ typedef struct CollationReorder
 
 // Builds the reordering for the codes. Duplicates, two codes of one
 // range and a second Zzzz are refused with mloc_errorInvalid, an order
-// whose ranges do not fit the lead bytes with mloc_errorCapacity. Codes
+// whose ranges do not fit the lead bytes, or need more than
+// collationMaxReorderRanges past the first shared byte, with
+// mloc_errorCapacity. Codes
 // the root has no range for are passed over. *changes is false when the
 // order is the root's (nothing named, or Zzzz alone).
 mlocResult mlocCollationMakeReorder(const CollationRoot* root, const uint32_t* codes, size_t count,

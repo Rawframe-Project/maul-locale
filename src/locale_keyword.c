@@ -9,6 +9,9 @@
 
 // The value of a -u key, or an empty one: the tail is canonical, so the
 // u extension's keys follow its attributes, each with its value.
+// The value given for a key the locale has not.
+static const char s_absent[] = "";
+
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut)
 {
     const char* tail = locale->tail;
@@ -55,8 +58,14 @@ size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** v
         }
         at = next;
     }
-    *valueOut = "";
+    *valueOut = s_absent;
     return 0;
+}
+
+bool mlocHasKeyword(const mlocLocale* locale, const char* key)
+{
+    const char* value = nullptr;
+    return mlocFindKeyword(locale, key, &value) > 0 || value != s_absent;
 }
 
 // The length of a field up to its first NUL byte or its size (strnlen

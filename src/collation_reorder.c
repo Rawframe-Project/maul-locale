@@ -183,8 +183,9 @@ static uint32_t Ranges(const Builder* b, uint32_t* ranges)
 }
 
 // The lead byte table and the shared bytes' ranges from the ranges, as
-// ICU's setReordering.
-static void Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
+// ICU's setReordering; false when the shared bytes need more ranges than
+// the reordering holds.
+static bool Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
 {
     out->minHighNoReorder = ranges[n - 1] & 0xFFFF0000;
     uint32_t b = 0;
@@ -208,8 +209,13 @@ static void Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
         out->table[b] = (uint8_t)b;
     }
     out->rangeCount = n - (firstSplit == n ? n : firstSplit);
+    if (out->rangeCount > collationMaxReorderRanges)
+    {
+        return false;
+    }
     memcpy(out->ranges, ranges + (firstSplit == n ? 0 : firstSplit),
            out->rangeCount * sizeof(uint32_t));
+    return true;
 }
 
 static mlocResult Make(const CollationRoot* root, const uint32_t* codes, size_t count,
@@ -276,14 +282,19 @@ mlocResult mlocCollationMakeReorder(const CollationRoot* root, const uint32_t* c
     {
         return mloc_success;
     }
-    uint32_t ranges[collationMaxReorderRanges];
+    uint32_t ranges[256];
     uint32_t n = 0;
     mlocResult result = Make(root, codes, count, false, ranges, &n);
     if (result != mloc_success || n == 0)
     {
         return result;
     }
-    Arrays(ranges, n, out);
+    CollationReorder made;
+    if (!Arrays(ranges, n, &made))
+    {
+        return mloc_errorCapacity;
+    }
+    *out = made;
     *changes = true;
     return mloc_success;
 }

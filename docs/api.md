@@ -115,6 +115,20 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatCatalogKey( const mlocCatalogChain*
 ```
 Finds a key in the chain's set and formats its message, as mlocFormatCatalogMessage; a key the set does not have is written as itself (mloc_catalogMissingKey).  @param chain          A chain from mlocInitCatalogChain. @param key            The key, UTF-8; may be null when length is 0. @param length         Its length in bytes. @param arguments      The arguments; may be null when count is 0. @param argumentCount  Their number. @param output         Receives the text. @param faults         Receives the faults; may be null. @param resultOut      Receives the reason and position; may be null. @return As mlocFormatCatalogMessage. @par Thread safety Safe from any thread; the chain is used by one thread at a time, until mlocBindCatalogChain has succeeded; then by any number at once.
 
+## `collate.h`
+
+Collation (UTS #10 and UTS #35 Part 5, records mloc-0064 to mloc-0069): text compared in a locale's order, as ICU4C's Collator compares it, from CLDR's root collation in the collation data file (src/generated/collation.mloc). A locale's -u- keys set the options (ks, ka, kv, kf, kc, kn, kb, kr); the options of the call override them. Text is always compared in NFD, whatever kk asks.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data, const mlocLocale* locale, const mlocCollatorOptions* options);
+```
+Makes a locale's collator. A -u- key's value that is not one of its values is passed over, as is a kr value the root cannot order.  @param collatorOut  Receives the collator; left unchanged on failure. @param data         The data with the collation root (the collation data file). @param locale       The locale, canonicalized. @param options      The options, or null for the locale's. @return mloc_success; mloc_errorNotFound for data without the collation root; mloc_errorInvalid for a null pointer, an option out of range, or a reorder text that is not a list of codes, names a code twice or two codes of one range; mloc_errorCapacity for a reordering too large for the root's lead bytes. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b, size_t bLength, int* orderOut);
+```
+Compares two UTF-8 texts in a collator's order. A byte that is not UTF-8 compares as U+FFFD.  @param collator  A collator mlocInitCollator made. @param a         The first text; may be null when aLength is 0. @param aLength   Its length in bytes. @param b         The second text; may be null when bLength is 0. @param bLength   Its length in bytes. @param orderOut  Receives -1 when a sorts first, 1 when b does, 0 when they are equal up to the strength. @return mloc_success; mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
+
 ## `currency.h`
 
 Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an ISO 4217 currency in a locale's currency pattern, with its symbol or code, rounded to the currency's digits unless the options say otherwise. The options follow ECMA-402's NumberFormat with the currency style; their zero value is the default. Lookups give a currency's symbol, name and digits, and the currency a locale or a region uses on a day.
@@ -960,4 +974,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-175 functions across 20 headers.
+177 functions across 21 headers.

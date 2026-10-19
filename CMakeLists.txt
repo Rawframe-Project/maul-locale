@@ -142,6 +142,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/collation_iterator.c
     src/collation_compare.c
     src/collation_reorder.c
+    src/collate.c
     src/message_value.c
     src/message_words.c
     src/message_write.c
@@ -560,6 +561,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                 "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
         endif()
         target_compile_definitions(test_collation_compare PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
+    # The public collator over the same file.
+    maul_add_test(collate)
+    if(TARGET test_collate)
+        if(EMSCRIPTEN)
+            target_link_options(test_collate PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collate PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
     # And relative time (record mloc-0043).
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)

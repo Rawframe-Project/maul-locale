@@ -17,6 +17,10 @@
 // when the locale has none. The value is not NUL-ended.
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut);
 
+// Whether the locale has the -u key, with a value or without one (a key
+// alone stands for "true", which canonical form leaves out).
+bool mlocHasKeyword(const mlocLocale* locale, const char* key);
+
 // Sets the -u key (two letters) to a value (its type subtags, lowercase,
 // joined by hyphens), replacing the key's value if it has one: false
 // when the locale with it is no locale id or does not fit.

@@ -62,6 +62,10 @@ algorithmic numerals by CLDR's rule-based formats, as ICU runs them but
 on the exact decimal, by rule set or numbering system, capitalized as
 the context asks, and read back as ICU's strict parse reads them (CLDR's rule-based test data passes on every push;
 the rules are a data file of their own, `src/generated/spellout.mloc`);
+text compared in CLDR's root collation order (UCA 18) with each of
+ICU's options, the locale's -u- keys and script reordering (CLDR's
+conformance files pass on every push; the collation is a data file of
+its own, `src/generated/collation.mloc`);
 lists of any items ("a, b, and c", "a, b, or c") in each width, as
 ICU joins them, and the gender of a list of persons by CLDR's rules; and the display names of languages, scripts, regions,
 variants, keys and their values and measurement systems, in every form
@@ -120,7 +124,7 @@ looks messages up in by key or index. A chain formats them through a
 locale's fallbacks with a stated result for every failure. The tool
 records which source message a translation answers, so a changed
 source shows the translation stale.
-The library has 175 public functions.
+The library has 177 public functions.
 
 ## Building
 
