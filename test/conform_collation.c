@@ -3,13 +3,14 @@
 //
 // The general compare against CLDR's CollationTest files (records
 // mloc-0067 and mloc-0069): every line, read as code points, compares no
-// greater than the next at the quaternary strength, non-ignorable or,
-// after --shifted, shifted with the variable top at the end of
-// punctuation, the root read from the collation data file. As ICU4X's
+// greater than the next at the quaternary strength (the identical one
+// after --identical), non-ignorable or, after --shifted, shifted with the
+// variable top at the end of punctuation, the root read from the
+// collation data file. As ICU4X's
 // conformance test does, a line holding a surrogate is passed over, since
 // UTF-8 cannot carry one; the next line is compared with the last read.
 //
-// usage: conform_collation collation.mloc [--shifted] CollationTest_CLDR_*.txt...
+// usage: conform_collation collation.mloc [--shifted] [--identical] CollationTest_CLDR_*.txt...
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -124,8 +125,8 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
         current = previous;
     }
     fclose(f);
-    printf("%s: %zu lines, %zu with a surrogate passed over, %zu equal to the one above at the "
-           "quaternary strength, %zu out of order\n",
+    printf("%s: %zu lines, %zu with a surrogate passed over, %zu equal to the one above, "
+           "%zu out of order\n",
            path, lines, skipped, ties, wrong);
     return wrong == 0 && lines > skipped;
 }
@@ -134,7 +135,8 @@ int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        fputs("usage: conform_collation collation.mloc [--shifted] CollationTest_CLDR_*.txt...\n",
+        fputs("usage: conform_collation collation.mloc [--shifted] [--identical] "
+              "CollationTest_CLDR_*.txt...\n",
               stderr);
         return 2;
     }
@@ -163,10 +165,11 @@ int main(int argc, char** argv)
     CollationSettings settings = mlocCollationDefaults(&root);
     settings.strength = collationQuaternary;
     int first = 2;
-    if (strcmp(argv[2], "--shifted") == 0)
+    for (; first < argc && strncmp(argv[first], "--", 2) == 0; first++)
     {
-        settings.shifted = true;
-        first = 3;
+        settings.shifted = settings.shifted || strcmp(argv[first], "--shifted") == 0;
+        settings.strength =
+            strcmp(argv[first], "--identical") == 0 ? collationIdentical : settings.strength;
     }
     bool ok = first < argc;
     for (int i = first; i < argc; i++)

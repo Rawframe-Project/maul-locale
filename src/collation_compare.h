@@ -5,13 +5,17 @@
 // mloc-0067 and mloc-0069): UCA's levels one at a time, as ICU4C's
 // CollationCompare orders them. At each level the elements whose weight
 // there is zero are passed over, and a text that ends first is the
-// lesser. Primaries are compared whole, secondaries forwards, tertiaries
-// without the case bits. With the alternate setting shifted, a variable
-// element (a primary above the merge separator, up to the variable top)
-// keeps only its primary, for the quaternary level, and the primary
-// ignorables after it are passed over at every level. Nothing is
-// buffered: a level that the one before leaves equal reads both texts
-// again.
+// lesser. Primaries are compared whole; secondaries forwards, or
+// backwards within the segments the merge separator (U+FFFE) parts; a
+// case level between the secondary and tertiary levels when asked;
+// tertiaries without the case bits unless case first asks for them,
+// upper case then first or last. The identical level compares the
+// texts' NFD code points, U+FFFE below every other as ICU ranks it.
+// With the alternate setting shifted, a variable element (a primary
+// above the merge separator, up to the variable top) keeps only its
+// primary, for the quaternary level, and the primary ignorables after
+// it are passed over at every level. Nothing is buffered: a level that
+// the one before leaves equal reads both texts again.
 
 #ifndef MLOC_SRC_COLLATION_COMPARE_H
 #define MLOC_SRC_COLLATION_COMPARE_H
@@ -27,6 +31,11 @@ enum
     collationSecondary = 2,
     collationTertiary = 3,
     collationQuaternary = 4,
+    collationIdentical = 5,
+    // caseFirst
+    collationCaseFirstOff = 0,
+    collationLowerFirst = 1,
+    collationUpperFirst = 2,
 };
 
 typedef struct CollationSettings
@@ -35,6 +44,10 @@ typedef struct CollationSettings
     bool shifted;
     // The last variable primary, when shifted.
     uint32_t variableTop;
+    // Secondaries backwards (French, [backwards 2]).
+    bool backwards;
+    bool caseLevel;
+    uint32_t caseFirst;
 } CollationSettings;
 
 // CLDR's root defaults: tertiary, non-ignorable, the variable top at the

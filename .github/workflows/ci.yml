@@ -157,6 +157,12 @@ jobs:
           build/conform_collation src/generated/collation.mloc --shifted \
             ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED_SHORT.txt \
             ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED.txt
+          build/conform_collation src/generated/collation.mloc --identical \
+            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt \
+            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt
+          build/conform_collation src/generated/collation.mloc --shifted --identical \
+            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED_SHORT.txt \
+            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED.txt
       - name: Compare with the JSON
         run: |
           python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json

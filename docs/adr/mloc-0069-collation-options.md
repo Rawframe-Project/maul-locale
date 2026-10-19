@@ -1,4 +1,4 @@
-# mloc-0069. Collation options: shifted, maxVariable, the quaternary level, the script table
+# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, the script table
 
 Status: Accepted
 
@@ -53,6 +53,26 @@ For punctuation, CLDR's default maxVariable, that is
     primary. A text that ends first is the lesser.
   - With nothing buffered, each level applies the shifting again to the
     stream it reads.
+- **Backwards secondaries** (French, `[backwards 2]`), as ICU's
+  `CollationCompare`: the texts are cut into segments at the merge
+  separator (U+FFFE, primary 02). In each pair of segments the
+  secondaries are compared from the end. The longer segment's extra
+  secondaries at its start are passed over, and the last differing pair
+  decides; if none differs, the shorter segment is the lesser. Each
+  segment is counted, then read again from a copy of the iterators, so
+  nothing is buffered.
+- **The case level** comes between the secondary and tertiary levels.
+  Its weight is the tertiary's case bits (7..6), inverted for upper
+  first. At the primary strength only elements with a primary weigh;
+  otherwise any element with a tertiary does.
+- **Case first** keeps the case bits in the tertiary (mask 0xFF3F, as
+  `CollationSettings::getTertiaryMask` gives it when the case level is
+  off). For upper first, a tertiary above 0x100 has its case bits
+  inverted when the element has a primary, or 0x4000 added when not, as
+  ICU does.
+- **The identical level** compares the two texts' NFD code points.
+  U+FFFE ranks below every other code point and the end of a text below
+  that, as ICU's `compareNFDIter` does, so segments compare first.
 
 ## Proof
 
@@ -64,6 +84,19 @@ For punctuation, CLDR's default maxVariable, that is
     out of order, 27,966 equal to the line above.
   - Each file in the other mode puts thousands out of order (5,394 and
     3,287 for the short files), so each mode's work is seen.
+- **`conform_collation --identical`, in the cldr CI job:** the four
+  files in their modes at the identical strength: none out of order,
+  4,357 equal to the line above (texts with the same NFD).
+- **The options against ICU4C 74's sort keys**
+  (`docs/locale/research/oracle/collation` in the docs repository):
+  200,000 random pairs of Latin letters, accents, punctuation, U+00AD
+  and U+FFFE, under 11 sets of options: every strength, shifted,
+  backwards, the case level, lower and upper first. The sets agree on
+  every pair, and on a second seed. ICU's collator has normalization
+  on there: the root's default leaves text that is not FCD as it is,
+  where UCA orders the NFD. The order is the keys': ICU 74's
+  `ucol_strcollUTF8` disagrees with them when a common prefix ends in a
+  shifted variable and U+00AD and a mark follows.
 - **`test_gencollation`:**
   - a small root's scripts, starts and numeric lead byte;
   - seven refusals: a start not from 0, a last start not 0xFF00,
@@ -80,10 +113,16 @@ For punctuation, CLDR's default maxVariable, that is
     ordered there;
   - an accent after a variable element ignored;
   - a currency sign not variable under punct.
+  - backwards: cote < côte < coté < côté, and the segments U+FFFE parts
+    compared one by one;
+  - the case level at the primary strength;
+  - lower and upper first;
+  - the identical level, U+FFFE ranked below U+0001.
+- **`conform_collation_options`** prints our order for the oracle's
+  pairs, in its sets' order.
 
 ## Consequences
 
-- Still to come in slice (b): the identical level, backwards
-  secondaries, case first and the case level, numeric order (its digit
-  CE32s in the unit), reordering, and the public collator from a locale
-  and its `-u-` keys. Each amends this record.
+- Still to come in slice (b): numeric order (its digit CE32s in the
+  unit), reordering, and the public collator from a locale and its
+  `-u-` keys. Each amends this record.

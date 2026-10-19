@@ -100,6 +100,101 @@ static void TestShifted(void)
           "equal texts equal at the fourth level");
 }
 
+// The order with the settings changed by one function.
+static int With(const char* a, const char* b, uint32_t strength, void (*change)(CollationSettings*))
+{
+    CollationSettings settings = mlocCollationDefaults(&s_root);
+    settings.strength = strength;
+    change(&settings);
+    return Compare(a, strlen(a), b, strlen(b), &settings);
+}
+
+static void Backward(CollationSettings* s)
+{
+    s->backwards = true;
+}
+
+static void CaseLevel(CollationSettings* s)
+{
+    s->caseLevel = true;
+}
+
+static void UpperFirst(CollationSettings* s)
+{
+    s->caseFirst = collationUpperFirst;
+}
+
+static void LowerFirst(CollationSettings* s)
+{
+    s->caseFirst = collationLowerFirst;
+}
+
+static void UpperLevel(CollationSettings* s)
+{
+    s->caseLevel = true;
+    s->caseFirst = collationUpperFirst;
+}
+
+static void Nothing(CollationSettings* s)
+{
+    (void)s;
+}
+
+static void TestOptions(void)
+{
+    // cote, côte, coté, côté as French orders them; forwards côte follows
+    // coté.
+    static const char* const french[] = {"cote", "c\xC3\xB4te", "cot\xC3\xA9",
+                                         "c\xC3\xB4t\xC3\xA9"};
+    bool ordered = true;
+    for (size_t i = 0; i + 1 < 4; i++)
+    {
+        ordered = ordered && With(french[i], french[i + 1], collationTertiary, Backward) == -1;
+    }
+    CHECK(ordered && Order("c\xC3\xB4te", "cot\xC3\xA9", collationTertiary) == 1 &&
+              With("c\xC3\xB4te", "c\xC3\xB4te", collationTertiary, Backward) == 0,
+          "backwards secondaries: cote, c\xC3\xB4te, cot\xC3\xA9, c\xC3\xB4t\xC3\xA9");
+    CHECK(With("\xC3\xA9\xEF\xBF\xBE"
+               "e",
+               "e\xEF\xBF\xBE\xC3\xA9", collationSecondary, Backward) == 1 &&
+              With("ab\xCC\x81",
+                   "a\xCC\x81"
+                   "b",
+                   collationSecondary, Backward) == 1 &&
+              With("a\xCC\x81\xCC\x81", "a\xCC\x81", collationSecondary, Backward) == 1,
+          "backwards within segments the merge separator parts, from the end, the longer "
+          "greater");
+    CHECK(With("a", "A", collationPrimary, CaseLevel) == -1 &&
+              With("a", "\xC3\xA1", collationPrimary, CaseLevel) == 0 &&
+              With("A", "\xC3\xA1", collationPrimary, CaseLevel) == 1 &&
+              With("A", "a", collationPrimary, UpperLevel) == -1 &&
+              With("a", "A", collationPrimary, Nothing) == 0,
+          "a case level at the primary strength: case, not accents; upper first reversing it");
+    CHECK(With("A", "a", collationTertiary, UpperFirst) == -1 &&
+              With("a", "A", collationTertiary, LowerFirst) == -1 &&
+              With("ab", "Ab", collationTertiary, UpperFirst) == 1 &&
+              With("a", "\xC3\xA1", collationTertiary, UpperFirst) == -1,
+          "case first: upper or lower before the other, after the accents' order");
+    CHECK(Order("a\xC3\xA0", "a\xC3\xA0", collationIdentical) == 0 &&
+              Order("\xC3\xA0", "a\xCC\x80", collationIdentical) == 0 &&
+              Order("ab",
+                    "a\xC2\xAD"
+                    "b",
+                    collationQuaternary) == 0 &&
+              Order("ab",
+                    "a\xC2\xAD"
+                    "b",
+                    collationIdentical) == -1 &&
+              Order("a", "a\xC2\xAD", collationIdentical) == -1 &&
+              Order("l\xEF\xBF\xBE"
+                    "f",
+                    "l\x01\xEF\xBF\xBE"
+                    "f",
+                    collationIdentical) == -1,
+          "the identical level: NFD code points, canonical equivalents equal, ignorables "
+          "counted, U+FFFE below the others");
+}
+
 static void TestTexts(void)
 {
     CHECK(Order("", "a", collationPrimary) == -1 && Order("a", "ab", collationTertiary) == -1 &&
@@ -147,5 +242,6 @@ int main(void)
     TestLevels();
     TestTexts();
     TestShifted();
+    TestOptions();
     return s_failures == 0 ? 0 : 1;
 }
