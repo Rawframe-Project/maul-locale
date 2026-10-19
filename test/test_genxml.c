@@ -136,6 +136,17 @@ static void TestDepthLimit(void)
     CHECK(root == nullptr && strstr(error, "deeper than") != nullptr, "nesting is bounded");
 }
 
+static void TestMixedContent(void)
+{
+    char error[256] = "";
+    XmlNode* root = Parse("<a>x<b/>y&amp;z<c>in</c><![CDATA[<w>]]></a>", error, sizeof(error));
+    CHECK(root != nullptr && strcmp(root->text, "xy&z<w>") == 0 && root->childCount == 2 &&
+              root->children[0]->textAt == 1 && root->children[1]->textAt == 4 &&
+              root->textAt == 0 && strcmp(root->children[1]->text, "in") == 0,
+          "each child stands where it began in its parent's text");
+    XmlFree(root);
+}
+
 int main(void)
 {
     TestElementsAttributesAndText();
@@ -143,5 +154,6 @@ int main(void)
     TestBomAndDoctypeWithSubset();
     TestRefusals();
     TestDepthLimit();
+    TestMixedContent();
     return s_failures == 0 ? 0 : 1;
 }

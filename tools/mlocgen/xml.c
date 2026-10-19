@@ -464,6 +464,7 @@ static void ParseContent(Parser* parser, XmlNode* node, Buffer* text, int depth)
         XmlNode* child = ParseElement(parser, node, depth + 1);
         if (child != nullptr)
         {
+            child->textAt = text->length;
             AddChild(node, child);
         }
     }

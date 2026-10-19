@@ -73,3 +73,5 @@ reference. Nothing was copied.
 - The 40 percent padding is applied to short text as well. Android pads
   short strings more, but one ratio keeps the length report (record
   mloc-0057) predictable.
+- The scan of a message into pattern text, codes and syntax moved to
+  `mf2_parts.c` (record mloc-0060), shared with the XLIFF exchange.

@@ -6,6 +6,7 @@
 #include "pseudo.h"
 
 #include "catalog_set.h"
+#include "mf2_parts.h"
 #include "resource_write.h"
 
 #include "maul-locale/message.h"
@@ -56,73 +57,6 @@ static void Put(Text* t, const char* bytes, size_t length)
     t->bytes[t->length] = '\0';
 }
 
-// The length of MF2's optional space at at (o: s or bidi): space, tab,
-// CR, LF, U+3000, ALM, LRM, RLM and the isolates LRI to PDI; 0 for none.
-static size_t SpaceAt(const char* t, size_t n, size_t at)
-{
-    const unsigned char* u = (const unsigned char*)t + at;
-    size_t left = n - at;
-    if (left >= 1 && (u[0] == ' ' || u[0] == '\t' || u[0] == '\r' || u[0] == '\n'))
-    {
-        return 1;
-    }
-    if (left >= 2 && u[0] == 0xD8 && u[1] == 0x9C)
-    {
-        return 2;
-    }
-    if (left >= 3 && ((u[0] == 0xE3 && u[1] == 0x80 && u[2] == 0x80) ||
-                      (u[0] == 0xE2 && u[1] == 0x80 && (u[2] == 0x8E || u[2] == 0x8F)) ||
-                      (u[0] == 0xE2 && u[1] == 0x81 && u[2] >= 0xA6 && u[2] <= 0xA9)))
-    {
-        return 3;
-    }
-    return 0;
-}
-
-// The index after the '}' that closes the '{' at at: quoted literals and
-// escapes inside are skipped.
-static size_t SkipBraces(const char* t, size_t n, size_t at)
-{
-    int quoted = 0;
-    for (size_t i = at + 1; i < n; i++)
-    {
-        if (t[i] == '\\')
-        {
-            i++;
-        }
-        else if (t[i] == '|')
-        {
-            quoted = !quoted;
-        }
-        else if (!quoted && t[i] == '}')
-        {
-            return i + 1;
-        }
-    }
-    return n;
-}
-
-// The end of a pattern from at: the text's end, or the "}}" closing a
-// quoted pattern; counts its text's code points.
-static size_t PatternEnd(const char* t, size_t n, size_t at, int quoted, size_t* pointsOut)
-{
-    size_t points = 0;
-    size_t i = at;
-    while (i < n && !(quoted && t[i] == '}'))
-    {
-        if (t[i] == '{')
-        {
-            i = SkipBraces(t, n, i);
-            continue;
-        }
-        size_t step = t[i] == '\\' && i + 1 < n ? 2 : 1;
-        points += t[i] == '\\' || ((unsigned char)t[i] & 0xC0) != 0x80;
-        i += step;
-    }
-    *pointsOut = points;
-    return i;
-}
-
 // One character of pattern text, accented when an ASCII letter.
 static void PutAccented(Text* out, char c)
 {
@@ -140,90 +74,40 @@ static void PutAccented(Text* out, char c)
     }
 }
 
-// Writes the pattern from at to end in its pseudo form.
-static void Pattern(const char* t, size_t at, size_t end, size_t points, PseudoKind kind, Text* out)
+// The code points of a text part, an escape counted as one.
+static size_t Points(const char* t, size_t length)
 {
-    int inRun = 0;
-    if (kind == pseudoAccented)
+    size_t points = 0;
+    for (size_t i = 0; i < length; i++)
     {
-        Put(out, "[", 1);
+        points += ((unsigned char)t[i] & 0xC0) != 0x80;
+        i += t[i] == '\\';
     }
-    for (size_t i = at; i < end;)
+    return points;
+}
+
+// A text part in its pseudo form: letters accented, escapes kept; or the
+// run between RLO and PDF.
+static void PutText(Text* out, const char* t, size_t length, PseudoKind kind)
+{
+    if (kind == pseudoBidi)
     {
-        if (t[i] == '{')
+        Put(out, s_rlo, sizeof(s_rlo) - 1);
+        Put(out, t, length);
+        Put(out, s_pdf, sizeof(s_pdf) - 1);
+        return;
+    }
+    for (size_t i = 0; i < length; i++)
+    {
+        if (t[i] == '\\' && i + 1 < length)
         {
-            size_t close = SkipBraces(t, end, i);
-            if (inRun)
-            {
-                Put(out, s_pdf, sizeof(s_pdf) - 1);
-                inRun = 0;
-            }
-            Put(out, t + i, close - i);
-            i = close;
-            continue;
-        }
-        if (kind == pseudoBidi && !inRun)
-        {
-            Put(out, s_rlo, sizeof(s_rlo) - 1);
-            inRun = 1;
-        }
-        size_t step = t[i] == '\\' && i + 1 < end ? 2 : 1;
-        if (step == 2 || kind == pseudoBidi)
-        {
-            Put(out, t + i, step);
+            Put(out, t + i, 2);
+            i++;
         }
         else
         {
             PutAccented(out, t[i]);
         }
-        i += step;
-    }
-    if (inRun)
-    {
-        Put(out, s_pdf, sizeof(s_pdf) - 1);
-    }
-    if (kind == pseudoAccented)
-    {
-        for (size_t p = 0; p < (points * 2 + 4) / 5; p++)
-        {
-            Put(out, s_dot, sizeof(s_dot) - 1);
-        }
-        Put(out, "]", 1);
-    }
-}
-
-// A complex message: each quoted pattern in its pseudo form, the rest as
-// written.
-static void Complex(const char* t, size_t n, PseudoKind kind, Text* out)
-{
-    size_t i = 0;
-    while (i < n)
-    {
-        if (t[i] == '{' && i + 1 < n && t[i + 1] == '{')
-        {
-            size_t points = 0;
-            size_t end = PatternEnd(t, n, i + 2, 1, &points);
-            Put(out, "{{", 2);
-            Pattern(t, i + 2, end, points, kind, out);
-            i = end;
-            continue;
-        }
-        size_t next = i + 1;
-        if (t[i] == '{')
-        {
-            next = SkipBraces(t, n, i);
-        }
-        else if (t[i] == '|')
-        {
-            next = i + 1;
-            while (next < n && t[next] != '|')
-            {
-                next += t[next] == '\\' ? 2 : 1;
-            }
-            next = next < n ? next + 1 : n;
-        }
-        Put(out, t + i, next - i);
-        i = next;
     }
 }
 
@@ -236,29 +120,42 @@ static int Compiles(const char* text, size_t length)
 
 char* PseudoMessage(const char* text, size_t length, PseudoKind kind, size_t* lengthOut)
 {
-    if (!Compiles(text, length))
+    Mf2Part* parts = nullptr;
+    size_t count = 0;
+    if (!Mf2Split(text, length, &parts, &count))
     {
         return nullptr;
     }
     Text out = {0};
     Put(&out, "", 0);
-    size_t start = 0;
-    for (size_t step = SpaceAt(text, length, 0); step > 0; step = SpaceAt(text, length, start))
+    size_t points = 0;
+    for (size_t i = 0; i < count; i++)
     {
-        start += step;
+        const char* at = text + parts[i].start;
+        if (parts[i].kind == mf2PatternStart && kind == pseudoAccented)
+        {
+            Put(&out, "[", 1);
+            points = 0;
+        }
+        else if (parts[i].kind == mf2PatternEnd && kind == pseudoAccented)
+        {
+            for (size_t p = 0; p < (points * 2 + 4) / 5; p++)
+            {
+                Put(&out, s_dot, sizeof(s_dot) - 1);
+            }
+            Put(&out, "]", 1);
+        }
+        else if (parts[i].kind == mf2Text)
+        {
+            points += Points(at, parts[i].length);
+            PutText(&out, at, parts[i].length, kind);
+        }
+        else
+        {
+            Put(&out, at, parts[i].length);
+        }
     }
-    Put(&out, text, start);
-    if (start < length && (text[start] == '.' ||
-                           (text[start] == '{' && start + 1 < length && text[start + 1] == '{')))
-    {
-        Complex(text + start, length - start, kind, &out);
-    }
-    else
-    {
-        size_t points = 0;
-        size_t end = PatternEnd(text, length, start, 0, &points);
-        Pattern(text, start, end, points, kind, &out);
-    }
+    free(parts);
     if (!Compiles(out.bytes, out.length))
     {
         free(out.bytes);

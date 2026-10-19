@@ -302,6 +302,10 @@ format.
   stale, comments and `@param` extracted) and `mloccat import-po` reads
   one back, adding keys where the source has them and recording the
   source each translation answers (mloc-0059).
+- XLIFF 2.2 exchange: `mloccat export-xliff` writes a translation as
+  XLIFF (a unit per key, placeholders, markup and syntax as codes over
+  the unit's original data, notes, the size restriction, states) and
+  `mloccat import-xliff` reads a CAT tool's file back (mloc-0060).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

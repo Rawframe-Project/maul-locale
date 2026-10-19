@@ -30,6 +30,9 @@ struct XmlNode
     char* text;
     size_t textLength;
     XmlNode* parent;
+    // Where in its parent's text the element stands: the parent's text
+    // length when it began, so mixed content keeps its order.
+    size_t textAt;
     // The line of the element's start tag, from 1.
     int line;
 };
