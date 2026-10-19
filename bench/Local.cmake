@@ -13,3 +13,24 @@ target_compile_definitions(${PROJECT_NAME}_bench
             MLOC_DATES_FILE="${PROJECT_SOURCE_DIR}/src/generated/dates.mloc"
             MLOC_ZONE_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc"
             MLOC_RELATIVE_FILE="${PROJECT_SOURCE_DIR}/src/generated/relative.mloc")
+# The catalog cases read a set of 2,000 keys that the catalog tool
+# compiles at build time (record mloc-0062); without the tools the
+# benchmark has no catalog cases.
+target_sources(${PROJECT_NAME}_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bench_catalog.c)
+if(TARGET mloccat)
+    set(MLOC_BENCH_CATALOG ${CMAKE_CURRENT_BINARY_DIR}/catalog)
+    add_custom_command(
+        OUTPUT ${MLOC_BENCH_CATALOG}/en.mloc ${MLOC_BENCH_CATALOG}/fr.mloc
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${MLOC_BENCH_CATALOG}
+        COMMAND ${CMAKE_COMMAND} -DDIR=${MLOC_BENCH_CATALOG} -P
+                ${CMAKE_CURRENT_SOURCE_DIR}/catalog_set.cmake
+        COMMAND mloccat compile ${MLOC_BENCH_CATALOG} ${MLOC_BENCH_CATALOG}/en.mf2
+                ${MLOC_BENCH_CATALOG}/fr.mf2
+        DEPENDS mloccat ${CMAKE_CURRENT_SOURCE_DIR}/catalog_set.cmake
+        VERBATIM)
+    add_custom_target(${PROJECT_NAME}_bench_catalog
+                      DEPENDS ${MLOC_BENCH_CATALOG}/en.mloc ${MLOC_BENCH_CATALOG}/fr.mloc)
+    add_dependencies(${PROJECT_NAME}_bench ${PROJECT_NAME}_bench_catalog)
+    target_compile_definitions(${PROJECT_NAME}_bench
+                               PRIVATE MLOC_BENCH_CATALOG_DIR="${MLOC_BENCH_CATALOG}")
+endif()

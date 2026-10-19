@@ -66,3 +66,4 @@ are listed in [README.md](README.md).
 | [mloc-0059](mloc-0059-po-exchange.md) | PO exchange: one translation per file, the key in msgctxt | Accepted |
 | [mloc-0060](mloc-0060-xliff-exchange.md) | XLIFF 2.2 exchange: codes over original data | Accepted |
 | [mloc-0061](mloc-0061-xliff-pgs.md) | XLIFF's Plural, Gender and Select module: selection messages by case | Accepted |
+| [mloc-0062](mloc-0062-catalog-speed.md) | Catalog speed: lookup against gettext, formatting against a bound message | Accepted |

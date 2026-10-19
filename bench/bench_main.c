@@ -25,6 +25,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include "bench_catalog.h"
 #include "bench_dates.h"
 #include "bench_grammar.h"
 #include "bench_messages.h"
@@ -606,6 +607,11 @@ int main(int argc, char** argv)
         fputs("bench: cannot make the inflectors\n", stderr);
         return 1;
     }
+    if (!PrepareCatalogBench())
+    {
+        fputs("bench: cannot read the catalogs\n", stderr);
+        return 1;
+    }
     if (getenv("BENCH_SHOW") != nullptr)
     {
         ShowDateBench();
@@ -682,12 +688,14 @@ int main(int argc, char** argv)
     const char* only = getenv("BENCH_ONLY");
     size_t dates = count + g_dateCaseCount;
     size_t messages = dates + g_messageCaseCount;
-    for (size_t i = 0; i < messages + g_grammarCaseCount; i++)
+    size_t grammar = messages + g_grammarCaseCount;
+    for (size_t i = 0; i < grammar + g_catalogCaseCount; i++)
     {
         const Case* c = i < count      ? &s_cases[i]
                         : i < dates    ? &g_dateCases[i - count]
                         : i < messages ? &g_messageCases[i - dates]
-                                       : &g_grammarCases[i - messages];
+                        : i < grammar  ? &g_grammarCases[i - messages]
+                                       : &g_catalogCases[i - grammar];
         if (only != nullptr && !Listed(only, c->name))
         {
             continue;
