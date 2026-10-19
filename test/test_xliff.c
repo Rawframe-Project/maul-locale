@@ -138,14 +138,15 @@ static const char s_tool[] =
     "<xlf:xliff xmlns:xlf=\"urn:oasis:names:tc:xliff:document:2.2\" version=\"2.2\" "
     "srcLang=\"en\" trgLang=\"tr\"><xlf:file id=\"f\">\n"
     "<xlf:unit id=\"a\" name=\"hello\"><xlf:originalData>"
-    "<xlf:data id=\"d1\">{$name}</xlf:data><xlf:data id=\"d2\">{#b}</xlf:data>"
+    "<xlf:data id=\"d1\">{<xlf:cp hex=\"24\"/>name}</xlf:data><xlf:data id=\"d2\">{#b}</xlf:data>"
     "<xlf:data id=\"d3\">{/b}</xlf:data></xlf:originalData>"
     "<xlf:segment state=\"final\"><xlf:source>Hi <xlf:ph id=\"1\" dataRef=\"d1\"/> &amp; "
     "</xlf:source><xlf:target><xlf:mrk id=\"m\" translate=\"yes\">Selam</xlf:mrk> "
     "<xlf:ph id=\"1\" dataRef=\"d1\"/> </xlf:target></xlf:segment>"
     "<xlf:segment state=\"final\"><xlf:source><xlf:pc id=\"2\" dataRefStart=\"d2\" "
     "dataRefEnd=\"d3\">you</xlf:pc> {x}</xlf:source><xlf:target><xlf:pc id=\"2\" "
-    "dataRefStart=\"d2\" dataRefEnd=\"d3\">sen</xlf:pc> {<xlf:cp hex=\"E9\"/>}</xlf:target>"
+    "dataRefStart=\"d2\" dataRefEnd=\"d3\">sen</xlf:pc> {<xlf:cp hex=\"E9\"/><xlf:cp "
+    "hex=\"80\"/>}</xlf:target>"
     "</xlf:segment></xlf:unit>\n"
     "<xlf:unit id=\"b\" name=\"bye\"><xlf:segment state=\"initial\"><xlf:source>Bye</xlf:source>"
     "<xlf:target>Ho\xC5\x9F\xC3\xA7\x61 kal</xlf:target></xlf:segment></xlf:unit>\n"
@@ -163,11 +164,12 @@ static void TestImport(void)
     char* tr = Exchange(true, "empty.mf2", "tool.xlf") ? Read("empty.mf2") : nullptr;
     CHECK(tr != nullptr &&
               strstr(tr, "@mloc-source bd63af3bf1889f78\nhello = Selam {$name} {#b}sen{/b} "
-                         "\\{\xC3\xA9\\}\n") != nullptr &&
+                         "\\{\xC3\xA9\\x80\\}\n") != nullptr &&
               strstr(tr, "\nbye = Ho\xC5\x9F\xC3\xA7\x61 kal\n") != nullptr &&
               strstr(tr, "@mloc-source bd63af3bf1889f78\nbye") == nullptr &&
               strstr(tr, "Moul") == nullptr && strstr(tr, "multi") == nullptr,
-          "a tool's file: its prefix, <mrk>, <pc>, <cp> and two segments read back, the source's "
+          "a tool's file: its prefix, <mrk>, <pc>, <cp> (in data, of two bytes) and two segments "
+          "read back, the source's "
           "hash recorded; an initial one unrecorded; a kept key and an untranslated unit left");
     free(tr);
 }
@@ -205,11 +207,49 @@ static void TestRefusals(void)
             !Exchange(true, "empty.mf2", "broken.xlf") && !Exchange(true, "empty.mf2", "none.xlf"),
         "a unit without a name, a code naming no data, a target that does not compile, another "
         "document, broken XML, a file that is not");
+    char s[1024];
+    char t[1024];
+    char x[1024];
+    Path(s, sizeof(s), "en.mf2");
+    Path(t, sizeof(t), "empty.mf2");
+    Path(x, sizeof(x), "other.xlf");
+    FILE* report = tmpfile();
+    char said[512] = {0};
+    if (report != nullptr)
+    {
+        (void)CatalogImportXliff(s, t, x, report);
+        rewind(report);
+        size_t read = fread(said, 1, sizeof(said) - 1, report);
+        said[read] = '\0';
+        fclose(report);
+    }
+    CHECK(strstr(said, "other.xlf: not an XLIFF document\n") != nullptr,
+          "another document, reported as such");
     char* after = Read("empty.mf2");
     CHECK(before != nullptr && after != nullptr && strcmp(before, after) == 0,
           "a refused import writes nothing");
     free(before);
     free(after);
+}
+
+// An export with no size restriction, a note of a parameter alone, a
+// control character written as <cp>, and a target code the source does
+// not have, numbered anew.
+static void TestExportEdges(void)
+{
+    Write("en.mf2", "@locale en\n---\n@param $name The user\nhello = Hi\\u0001 {$name}\n");
+    Write("tr.mf2", "@locale tr\n---\nhello = {$name} {$name}\n");
+    char* xliff = Exchange(false, "tr.mf2", "edge.xlf") ? Read("edge.xlf") : nullptr;
+    CHECK(xliff != nullptr && strstr(xliff, "slr:profiles") == nullptr &&
+              strstr(xliff, "category=\"comment\"") == nullptr &&
+              strstr(xliff, "<note category=\"param\">$name The user</note>") != nullptr &&
+              strstr(xliff, "<source>Hi<cp hex=\"0001\"/> <ph id=\"1\" dataRef=\"d1\"/>") !=
+                  nullptr &&
+              strstr(xliff, "<target><ph id=\"1\" dataRef=\"d1\"/> <ph id=\"2\" dataRef=\"d1\"/>"
+                            "</target>") != nullptr,
+          "no restriction, no profiles; a parameter's note alone; a control character as <cp>; a "
+          "second use of a code numbered anew");
+    free(xliff);
 }
 
 static void TestRoundTrip(void)
@@ -241,6 +281,7 @@ int main(int argc, char** argv)
     TestExport();
     TestImport();
     TestRefusals();
+    TestExportEdges();
     TestRoundTrip();
     return s_failures == 0 ? 0 : 1;
 }
