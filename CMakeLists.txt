@@ -756,6 +756,14 @@ if(MAUL_LOCALE_FUZZ)
     maul_apply_flags(fuzz_resource)
     target_compile_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
     target_link_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
+    # The generator's collation rule parser, from its source likewise.
+    add_executable(fuzz_collation_rules test/fuzz_collation_rules.c
+                                        tools/mlocgen/collation_rules.c)
+    target_link_libraries(fuzz_collation_rules PRIVATE maul-unicode)
+    target_include_directories(fuzz_collation_rules PRIVATE tools/mlocgen)
+    maul_apply_flags(fuzz_collation_rules)
+    target_compile_options(fuzz_collation_rules PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_link_options(fuzz_collation_rules PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
@@ -763,6 +771,7 @@ endif()
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
                                     tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
+                                    tools/mlocgen/collation_rules.c
                                     tools/mlocgen/collation_unit.c
                                     tools/mlocgen/direction_gen.c
                                     tools/mlocgen/gender_gen.c
@@ -896,6 +905,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_genxml PRIVATE test)
         maul_apply_flags(test_genxml)
         add_test(NAME genxml COMMAND test_genxml)
+        add_executable(test_collation_rules test/test_collation_rules.c)
+        target_link_libraries(test_collation_rules PRIVATE mlocgen_core)
+        target_include_directories(test_collation_rules PRIVATE test)
+        maul_apply_flags(test_collation_rules)
+        add_test(NAME collation_rules COMMAND test_collation_rules)
         add_executable(test_gencollation test/test_gencollation.c)
         target_link_libraries(test_gencollation PRIVATE mlocgen_core)
         target_include_directories(test_gencollation PRIVATE test)
@@ -909,6 +923,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             add_executable(conform_collation_root test/conform_collation_root.c)
             target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_root)
+            add_executable(conform_collation_rules test/conform_collation_rules.c)
+            target_link_libraries(conform_collation_rules PRIVATE mlocgen_core)
+            maul_apply_flags(conform_collation_rules)
             add_executable(test_collation_iterator test/test_collation_iterator.c)
             target_link_libraries(test_collation_iterator PRIVATE mlocgen_core)
             target_include_directories(test_collation_iterator PRIVATE test)
