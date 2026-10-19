@@ -193,13 +193,15 @@ static void TestWriteBack(void)
     CHECK(ok, "written back, the rules parse the same");
     free(written);
     CollationRulesFree(&first);
-    // Syntax, a backslash and white space in sets and strings, the first a
-    // set beginning with '-' (found by the fuzz target).
+    // Syntax, a backslash and white space in sets and strings, a set
+    // beginning with '-' and one holding surrogates (both found by the fuzz
+    // target).
     static const char* const tricky[] = {
         "[optimize [-ac \\u0300]]",
         "[suppressContractions [\\\\ \\] \\- a]]&'\\'<\\'<'\xC2\x85'<'a b'",
+        "[suppressContractions [a \\ude00 \\uD800-\\uDBFF]]",
     };
-    for (size_t i = 0; i < 2; i++)
+    for (size_t i = 0; i < 3; i++)
     {
         ok = CollationRulesParse(tricky[i], strlen(tricky[i]), &first, error, sizeof(error)) == 1;
         written = ok ? CollationRulesWrite(&first, &length) : nullptr;
@@ -210,7 +212,8 @@ static void TestWriteBack(void)
         {
             CollationRulesFree(&again);
         }
-        CHECK(same, "sets and strings with syntax, backslashes and spaces written back the same");
+        CHECK(same, "sets and strings with syntax, backslashes, spaces and surrogates written "
+                    "back the same");
         free(written);
         CollationRulesFree(&first);
     }

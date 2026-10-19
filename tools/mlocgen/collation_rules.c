@@ -1027,11 +1027,12 @@ static void PutText(Text* t, const char* text)
 }
 
 // A code point as the parser reads it back, in a string or a set: raw
-// UTF-8, syntax and white space after a backslash, and a backslash as
-// four, which the escape pass makes two and the parser one.
+// UTF-8, syntax and white space after a backslash, a backslash as four,
+// which the escape pass makes two and the parser one, and a surrogate
+// (a set may hold one) as \uhhhh, which UTF-8 cannot carry.
 static void PutPoint(Text* t, uint32_t c)
 {
-    char bytes[4];
+    char bytes[16];
     size_t size = 0;
     if (c == '\\')
     {
@@ -1045,7 +1046,10 @@ static void PutPoint(Text* t, uint32_t c)
     if (muniEncodeUtf8(c, bytes, &size) == muni_success)
     {
         Put(t, bytes, size);
+        return;
     }
+    snprintf(bytes, sizeof(bytes), "\\u%04X", (unsigned)c);
+    PutText(t, bytes);
 }
 
 static void PutString(Text* t, const CollationRules* r, uint32_t start, uint32_t count)

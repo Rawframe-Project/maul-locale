@@ -63,7 +63,8 @@ special between apostrophes").
   - **Sets beyond CLDR's form:** properties, nesting, negation and
     strings. A set here is code points and ranges.
 - **`CollationRulesWrite`** writes the list back as rules: raw UTF-8,
-  syntax and white space after a backslash, and a backslash as four.
+  syntax and white space after a backslash, a backslash as four, and
+  a surrogate, which a set may hold and UTF-8 cannot, as `\uhhhh`.
   The rules come first and the settings after, so the output parses
   into the same list (`CollationRulesSame`).
 
@@ -86,14 +87,16 @@ special between apostrophes").
   - imports in their place;
   - sets;
   - 25 refusals, each with the byte it names;
-  - write-back of strings and sets holding syntax, backslashes and white
-    space.
+  - write-back of strings and sets holding syntax, backslashes, white
+    space and surrogates.
 - **`fuzz_collation_rules`,** in the fuzz job. Any bytes are parsed or
   refused at a byte inside them; what parses is written back and must
   parse the same. Its first run found a set beginning with `-` that
   was written back quoted, which sets do not read. It was fixed before
   this record. Six minutes since, about six million inputs, found
-  nothing.
+  nothing. A later CI run found a set holding `\ude00`, whose
+  surrogate the writer dropped; it is now written as an escape. Five
+  minutes after the fix, about eight million inputs, found nothing.
 
 ## Consequences
 
