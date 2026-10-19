@@ -195,6 +195,11 @@ typedef struct End
 static uint32_t Before(const uint8_t* text, size_t end, size_t* startOut)
 {
     size_t at = end - 1;
+    if (text[at] < 0x80)
+    {
+        *startOut = at;
+        return text[at];
+    }
     while (at > 0 && (text[at] & 0xC0) == 0x80)
     {
         at--;

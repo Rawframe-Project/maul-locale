@@ -136,6 +136,58 @@ static int CompareHead(const uint8_t* key, size_t length, size_t block)
     return c != 0 ? c : (int)(length > own) - (int)(length < own);
 }
 
+// The length of the prefix two byte strings share.
+static size_t Common(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
+{
+    size_t k = 0;
+    while (k < aLength && k < bLength && a[k] == b[k])
+    {
+        k++;
+    }
+    return k;
+}
+
+// Finds a key in a block of the table, whose entries are sorted.
+static bool ScanBlock(const uint8_t* key, size_t keyLength, size_t block, TurkicMarks* out)
+{
+    // Front coding: an entry sharing more with the one before than that
+    // one shared with the key is below the key too, one sharing less is
+    // past it; only an entry sharing as much is compared, from there on.
+    size_t matched = 0;
+    size_t at = s_turkishMarkBlocks[block];
+    for (size_t i = 0; i < turkishMarkBlock && at < turkishMarkBytes; i++)
+    {
+        size_t shared = s_turkishMarks[at];
+        size_t own = s_turkishMarks[at + 1];
+        if (shared + own > keyRoom || shared < matched)
+        {
+            return false;
+        }
+        const uint8_t* bytes = s_turkishMarks + at + 2;
+        uint8_t marks = bytes[own];
+        bool compound = (marks & turkicCompound) != 0;
+        if (shared == matched)
+        {
+            size_t rest = keyLength - matched;
+            size_t k = Common(bytes, own, key + matched, rest);
+            if (k == own && k == rest)
+            {
+                out->marks = marks;
+                out->possessive = compound ? bytes[own + 1] : 0;
+                return true;
+            }
+            if (k == rest || (k < own && bytes[k] > key[matched + k]))
+            {
+                // Past the key in the sorted block.
+                return false;
+            }
+            matched += k;
+        }
+        at += 3 + own + (compound ? 1 : 0);
+    }
+    return false;
+}
+
 // Finds a key's marks in the table.
 static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
 {
@@ -161,37 +213,7 @@ static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
             low = middle;
         }
     }
-    uint8_t current[keyRoom];
-    size_t at = s_turkishMarkBlocks[low];
-    for (size_t i = 0; i < turkishMarkBlock && at < turkishMarkBytes; i++)
-    {
-        size_t shared = s_turkishMarks[at];
-        size_t own = s_turkishMarks[at + 1];
-        if (shared + own > keyRoom)
-        {
-            return false;
-        }
-        memcpy(current + shared, s_turkishMarks + at + 2, own);
-        size_t total = shared + own;
-        uint8_t marks = s_turkishMarks[at + 2 + own];
-        bool compound = (marks & turkicCompound) != 0;
-        size_t n = total < keyLength ? total : keyLength;
-        int order = memcmp(current, key, n);
-        order = order != 0 ? order : (int)(total > keyLength) - (int)(total < keyLength);
-        if (order == 0)
-        {
-            out->marks = marks;
-            out->possessive = compound ? s_turkishMarks[at + 3 + own] : 0;
-            return true;
-        }
-        if (order > 0)
-        {
-            // Past the key in the sorted block.
-            return false;
-        }
-        at += 3 + own + (compound ? 1 : 0);
-    }
-    return false;
+    return ScanBlock(key, keyLength, low, out);
 }
 
 bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out)

@@ -252,6 +252,11 @@ format.
   word's letters encoded once, the type tables from an index by first
   byte, and copies only a stem's letters: a word inflects in about 0.55
   of the cycles it took, a name in about 0.65.
+- Hungarian inflection encodes a word once for its compound search,
+  rejects consonant spellings by their last letter and reads ASCII
+  letters without decoding (about 0.77 of the cycles); the Turkish
+  lexicon skips front-coded entries by the bytes they share, and the
+  end of a text reads ASCII without decoding.
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

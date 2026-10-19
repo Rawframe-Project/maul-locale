@@ -137,8 +137,8 @@ void mlocHungarianReadLetters(const uint8_t* text, size_t length, HungarianLette
     size_t end = length;
     while (end > 0 && n < hungarianLetters)
     {
-        size_t start = 0;
-        uint32_t c = mlocHungarianPrevious(text, end, &start);
+        size_t start = end - 1;
+        uint32_t c = text[start] < 0x80 ? text[start] : mlocHungarianPrevious(text, end, &start);
         if (c == '-' || c == ' ')
         {
             break;
@@ -160,6 +160,12 @@ void mlocHungarianReadLetters(const uint8_t* text, size_t length, HungarianLette
 bool mlocHungarianEndsWith(const HungarianLetters* w, size_t end, const char* s)
 {
     size_t at = strlen(s);
+    // Most strings end in an ASCII letter: their last byte decides at once.
+    if (at > 0 && end > 0 && ((uint8_t)s[at - 1] < 0x80 || w->c[end - 1] < 0x80) &&
+        w->c[end - 1] != (uint8_t)s[at - 1])
+    {
+        return false;
+    }
     while (at > 0)
     {
         if (end == 0)
@@ -263,7 +269,10 @@ static void ReadConsonant(const HungarianLetters* w, HungarianSound* s)
     const char* sound = nullptr;
     size_t written = 1;
     s->modern = true;
-    for (size_t i = 0; i < sizeof(s_spellings) / sizeof(s_spellings[0]); i++)
+    // Every spelling ends in one of these letters.
+    uint32_t end = w->c[w->count - 1];
+    bool spelled = end < 0x80 && strchr("hkqswxyz", (int)end) != nullptr;
+    for (size_t i = 0; spelled && i < sizeof(s_spellings) / sizeof(s_spellings[0]); i++)
     {
         if (mlocHungarianEndsWith(w, w->count, s_spellings[i].written))
         {

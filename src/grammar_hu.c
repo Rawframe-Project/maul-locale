@@ -422,19 +422,37 @@ static size_t Encode(const HungarianLetters* w, size_t from, size_t to, char* te
 // A word's entry in the table: the whole word, or the longest last part
 // of at least shortest letters (none for 0) that has one, after at least
 // two letters (a compound's last word: színház, étterem; a number's:
-// huszonhárom); fromOut receives where the part starts.
+// huszonhárom); fromOut receives where the part starts. The letters are
+// encoded once, from the end, so each part is the key's tail; a part
+// with a letter UTF-8 cannot hold is not looked up.
 static const HungarianWord* Lookup(const HungarianLetters* w, size_t shortest, size_t* fromOut)
 {
     char key[hungarianLetters * 4];
+    size_t at[hungarianLetters];
+    size_t first = w->count;
+    size_t start = sizeof(key);
+    while (first > 0)
+    {
+        char bytes[4];
+        size_t used = 0;
+        if (muniEncodeUtf8(w->c[first - 1], bytes, &used) != muni_success || used > start)
+        {
+            break;
+        }
+        start -= used;
+        memcpy(key + start, bytes, used);
+        first--;
+        at[first] = start;
+    }
     size_t last = shortest > 0 && w->count >= shortest ? w->count - shortest + 1 : 1;
-    for (size_t from = 0; from < last && from < w->count; from++)
+    for (size_t from = first; from < last && from < w->count; from++)
     {
         if (from == 1)
         {
             continue;
         }
-        size_t n = Encode(w, from, w->count, key, sizeof(key));
-        const HungarianWord* word = n > 0 ? mlocHungarianFindWord((const uint8_t*)key, n) : nullptr;
+        const HungarianWord* word =
+            mlocHungarianFindWord((const uint8_t*)key + at[from], sizeof(key) - at[from]);
         if (word != nullptr)
         {
             *fromOut = from;
