@@ -25,12 +25,14 @@ static const char s_root[] = "[UCA version = 18.0.1]\n"
                              "0063; [2D, 05, 05]\n"
                              "0068; [2E, 05, 05]\n"
                              "0063 0068; [2F, 05, 05]\n"
+                             "0063 004C; [31, 05, 05]\n"
                              "004C; [30, 05, 05]\n"
                              "00B7; [, 8C, 05]\n"
                              "004C | 00B7; [, FB B6, 05]\n"
                              "0300; [, 8A, 05]\n"
                              "0301; [, 88, 05]\n"
                              "0323; [, 90, 05]\n"
+                             "0323 0301; [, 92, 05]\n"
                              "0061 0300; [2B 80, 05, 05]\n"
                              "1100; [3A, 05, 05]\n"
                              "1161; [3B, 05, 05]\n"
@@ -88,6 +90,8 @@ constexpr uint64_t b = 0x2C00000005000500ULL;
 constexpr uint64_t c = 0x2D00000005000500ULL;
 constexpr uint64_t h = 0x2E00000005000500ULL;
 constexpr uint64_t ch = 0x2F00000005000500ULL;
+constexpr uint64_t cL = 0x3100000005000500ULL;
+constexpr uint64_t dotBelowAcute = 0x0000000092000500ULL;
 constexpr uint64_t capitalL = 0x3000000005000500ULL;
 constexpr uint64_t dot = 0x000000008C000500ULL;
 constexpr uint64_t dotAfterL = 0x00000000FBB60500ULL;
@@ -147,6 +151,14 @@ static void TestContexts(void)
     CHECK(GIVES("a\xCC\x81\xCC\x80", a, acute, grave),
           "a mark of the same class as one skipped is blocked");
     CHECK(GIVES("ab\xCC\x80", a, b, grave), "a starter ends a contraction");
+    CHECK(GIVES("cL\xC2\xB7", cL, dotAfterL),
+          "a prefix matched on the last code point of a contraction before");
+    CHECK(GIVES("a\xCC\xA3\xCC\x80"
+                "b\xCC\x81",
+                aGrave, dotBelow, b, acute) &&
+              GIVES("\xCC\xA3\xCC\x81", dotBelowAcute),
+          "a mark left by a discontiguous match keeps its class: no match past the starter "
+          "after it");
 }
 
 static void TestLookahead(void)
