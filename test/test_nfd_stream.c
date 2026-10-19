@@ -194,6 +194,26 @@ static void TestLongRuns(void)
     }
     CHECK(same, "a starter and 62 to 1,000 marks, decomposing ones among them, in canonical "
                 "order across windows, and the text after them");
+    // Runs that end where a window does (the first holds the starter and
+    // 63 marks, the next 64 each), and the text after them.
+    static const size_t ends[] = {127, 191};
+    for (size_t e = 0; e < 2; e++)
+    {
+        size_t at = Append(text, 0, 0x61);
+        for (size_t i = 0; i < ends[e]; i++)
+        {
+            at = Append(text, at, 0x301);
+        }
+        at = Append(text, at, 0x62);
+        size_t n = Stream(text, at, got);
+        bool acutes = true;
+        for (size_t i = 1; i <= ends[e] && i < n; i++)
+        {
+            acutes = acutes && got[i] == 0x301;
+        }
+        CHECK(n == ends[e] + 2 && got[0] == 0x61 && acutes && got[n - 1] == 0x62,
+              "a long run ending with a window, and the starter after it");
+    }
     // A long run ending the text, in a buffer of the text's own size.
     size_t end = Append(text, 0, 0x61);
     for (int i = 0; i < 100; i++)
