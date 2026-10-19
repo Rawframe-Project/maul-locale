@@ -682,6 +682,59 @@ static void TestLeftOut(void)
               "UTF-8 bytes left out; the code points around them kept");
 }
 
+static void TestScripts(void)
+{
+    static const char root[] = "[UCA version = 18.0.1]\n[Unified_Ideograph 4E00]\n"
+                               "[top_byte\t62\tCyrl\tCOMPRESS]\n"
+                               "FDD1 00A0;\t[03 02 02, 05, 05]\n"
+                               "FDD1 201C;\t[05 06 02, 05, 05]\n"
+                               "FDD0 FF21;\t[28 02 02, 05, 05]\n"
+                               "FDD1 0061;\t[2A 02 02, 05, 05]\n"
+                               "FDD0 FF3A;\t[5F 02 02, 05, 05]\n"
+                               "FDD1 0430;\t[62 04 02, 05, 05]\n"
+                               "FDD1 3042;\t[7D 02 02, 05, 05]\n"
+                               "FDD1 30A2;\t[7D 02 02, 05, 05]\n"
+                               "FDD1 FDD0;\t[FE 04 02, 05, 05]\n"
+                               "0061;\t[2A 02 02, 05, 05]\n";
+    RootTable t;
+    CollationRoot r;
+    char error[128] = "";
+    uint8_t* bytes = Unit(root, &t, &r, error, sizeof(error));
+    static const uint32_t starts[] = {0,      0x0300, 0x0506, 0x2800, 0x2A00,
+                                      0x5F00, 0x6200, 0x7D00, 0xFE04, 0xFF00};
+    bool ok = bytes != nullptr && r.startCount == 10;
+    for (uint32_t i = 0; ok && i < 10; i++)
+    {
+        ok = mlocCollationStart(&r, i) == starts[i];
+    }
+    CHECK(ok, "starts in primary order, a lead byte's lowest second byte put back, plain and "
+              "compressible, the unassigned range's, then the trailing range's");
+    CHECK(ok && mlocCollationScriptIndex(&r, collationReservedBeforeLatin) == 3 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) == 4 &&
+              mlocCollationScriptIndex(&r, collationReservedAfterLatin) == 5 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'i', 'r', 'a')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('K', 'a', 'n', 'a')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'r', 'k', 't')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('Z', 'z', 'z', 'z')) == 8 &&
+              mlocCollationLastPrimary(&r, collationGroupSpace) == 0x0505FFFF &&
+              mlocCollationLastPrimary(&r, collationGroupPunctuation) == 0x27FFFFFF,
+          "the reserved ranges either side of Latin, Hiragana and Katakana sharing a range with "
+          "Hrkt, the groups' last primaries");
+    free(bytes);
+    if (bytes != nullptr)
+    {
+        RootFree(&t);
+    }
+    error[0] = '\0';
+    bytes = Unit("[UCA version = 18.0.1]\n[Unified_Ideograph 4E00]\nFDD1 0021;\t[05 02, 05, 05]\n"
+                 "0021;\t[05 02, 05, 05]\n",
+                 &t, &r, error, sizeof(error));
+    CHECK(bytes == nullptr && strstr(error, "no script") != nullptr,
+          "a script start whose sample has no script refused");
+    free(bytes);
+    RootFree(&t);
+}
+
 int main(void)
 {
     TestRead();
@@ -690,6 +743,7 @@ int main(void)
     TestOffsetRuns();
     TestUnitShapes();
     TestLeftOut();
+    TestScripts();
     TestUnassigned();
     TestHanLeadBytes();
     TestRefusals();

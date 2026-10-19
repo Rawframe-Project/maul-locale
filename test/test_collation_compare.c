@@ -90,6 +90,8 @@ static void TestShifted(void)
                       "b",
                       collationQuaternary) == 0,
           "an accent after a variable element ignored when shifted");
+    CHECK(Shifted("a-b", "a-b\xCC\x81", collationSecondary) == -1,
+          "an accent after a letter after a variable element counted");
     CHECK(Shifted("a$b", "ab", collationPrimary) == -1 &&
               Shifted("a\xC3\xA1", "a-a", collationQuaternary) == 1,
           "a currency sign not variable; a variable element only at the fourth level");
