@@ -12,8 +12,9 @@ Most localization bugs show before any translation exists:
 
 Pseudo-locales make them visible with the source language still
 readable. `en-XA` (accented) and `ar-XB` (bidi) are the usual names: XA
-and XB are private-use regions, and Android's `aapt2` writes both. Its pseudo-localizer (Apache-2.0)
-was read for its ratios and kept as the reference. Nothing was copied.
+and XB are private-use regions, and Android's `aapt2` writes both. Its
+pseudo-localizer (Apache-2.0) was read for its ratios and kept as the
+reference. Nothing was copied.
 
 ## Decision
 

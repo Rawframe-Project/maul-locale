@@ -76,6 +76,17 @@ static void TestForms(void)
         "escapes kept as escapes and counted as one character; a literal untouched");
     CHECK(Gives("\xE2\x80\x8E  {{x}}", pseudoAccented, "\xE2\x80\x8E  {{[\xE1\xBA\x8B\xC2\xB7]}}"),
           "a quoted pattern after a mark and spaces");
+    CHECK(Gives("\xD8\x9CZz", pseudoAccented, "\xD8\x9C[\xC5\xBD\xC5\xBE\xC2\xB7]") &&
+              Gives("\xE3\x80\x80{{Az}}", pseudoAccented,
+                    "\xE3\x80\x80{{[\xC3\x85\xC5\xBE\xC2\xB7]}}"),
+          "an ALM and an ideographic space before the pattern; Z and z, the map's last letters");
+    CHECK(Gives("\xC3\x87\xC3\x87\xC3\x87\xC3\x87\xC3\x87", pseudoAccented,
+                "[\xC3\x87\xC3\x87\xC3\x87\xC3\x87\xC3\x87\xC2\xB7\xC2\xB7]"),
+          "padding by code points, not bytes");
+    CHECK(Gives(".input {$x :string}\n.match $x\n|a{{k}}| {{K}}\n* {{O}}", pseudoAccented,
+                ".input {$x :string}\n.match $x\n|a{{k}}| {{[\xC4\xB6\xC2\xB7]}}\n* "
+                "{{[\xC3\x96\xC2\xB7]}}"),
+          "a key quoting double braces is not a pattern");
     size_t length = 0;
     CHECK(PseudoMessage("{$", 2, pseudoAccented, &length) == nullptr,
           "a message that does not compile has no pseudo form");
@@ -190,7 +201,7 @@ static void TestTool(void)
     char source[1024];
     snprintf(source, sizeof(source), "%s/en.mf2", s_directory);
     const char* text = "@locale en\n---\nhello = Hello {$name}\n@translate no\nbrand = Maul\n"
-                       "@obsolete\nold = {$\n";
+                       "@obsolete\nold = {$\n@translate no\n[kept]\nname = Maul Locale\n";
     (void)FileWrite(source, text, strlen(text));
     FILE* report = tmpfile();
     FILE* to = report != nullptr ? report : stderr;
@@ -204,10 +215,12 @@ static void TestTool(void)
     char* written = FileRead(xa, &size);
     CHECK(ok && written != nullptr && strstr(written, "@locale en-XA\n") != nullptr &&
               strstr(written, "brand = Maul\n") != nullptr &&
+              strstr(written, "name = Maul Locale\n") != nullptr &&
               strstr(written, "old = {$\n") != nullptr &&
               strstr(written, "hello = [\xC4\xA4\xC3\xA9\xC4\xBC\xC4\xBC\xC3\xB6 {$name}") !=
                   nullptr,
-          "mloccat pseudo: the locale set, the kept and the obsolete as written, the set compiles");
+          "mloccat pseudo: the locale set, the kept (an entry, a section) and the obsolete as "
+          "written, the set compiles");
     free(written);
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/none/x", s_directory);
