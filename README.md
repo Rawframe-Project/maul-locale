@@ -117,7 +117,7 @@ is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның"
 reads catalog sources in the W3C's draft message resource syntax,
 checks them and compiles them into catalogs the library opens and
 looks messages up in by key or index.
-The library has 170 public functions.
+The library has 175 public functions.
 
 ## Building
 

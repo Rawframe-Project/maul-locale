@@ -7,46 +7,10 @@
 
 #include "bytes.h"
 #include "catalog_tables.h"
+#include "catalog_view.h"
 #include "kinds.h"
 
 #include <string.h>
-
-enum
-{
-    // Marks a catalog the library opened.
-    catalogStamp = 0x43,
-};
-
-// The opaque catalog's fields.
-typedef struct Catalog
-{
-    const uint8_t* keys;
-    const uint8_t* messages;
-    const char* locale;
-    uint32_t keysSize;
-    uint32_t messagesSize;
-    uint32_t localeLength;
-    uint8_t stamp;
-} Catalog;
-
-static_assert(sizeof(Catalog) <= sizeof(mlocCatalog), "a catalog fits its public struct");
-
-static bool ReadCatalog(const mlocCatalog* catalog, Catalog* out)
-{
-    if (catalog == nullptr)
-    {
-        return false;
-    }
-    memcpy(out, catalog, sizeof(*out));
-    return out->stamp == catalogStamp;
-}
-
-// A catalog's keys; false only for a catalog whose data was not
-// validated, which mlocOpenCatalog does not make.
-static bool KeysOf(const Catalog* c, CatalogKeys* keys)
-{
-    return mlocReadCatalogKeys((DataSpan){c->keys, c->keysSize}, keys);
-}
 
 // The one locale with both units, as locale index and spans.
 static mlocResult FindUnits(const DataView* view, uint32_t* localeOut, DataSpan* keys,
@@ -82,8 +46,8 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
     }
     DataView view = mlocViewOf(data);
     uint32_t locale = 0;
-    DataSpan keysSpan;
-    DataSpan messagesSpan;
+    DataSpan keysSpan = {0};
+    DataSpan messagesSpan = {0};
     mlocResult r = FindUnits(&view, &locale, &keysSpan, &messagesSpan);
     if (r != mloc_success)
     {
@@ -95,9 +59,16 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
     {
         return mloc_errorData;
     }
+    // A catalog's locale is one the library reads, so its info never
+    // fails.
     const char* id = nullptr;
     size_t length = 0;
-    (void)mlocGetDataLocale(data, locale, &id, &length);
+    mlocLocale parsed;
+    if (mlocGetDataLocale(data, locale, &id, &length) != mloc_success ||
+        mlocParseLocale(id, length, &parsed).status != mloc_success)
+    {
+        return mloc_errorData;
+    }
     Catalog c = {keysSpan.bytes,    messagesSpan.bytes, id,          keysSpan.size,
                  messagesSpan.size, (uint32_t)length,   catalogStamp};
     memset(catalogOut, 0, sizeof(*catalogOut));
@@ -108,12 +79,12 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
 mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoOut)
 {
     Catalog c;
-    if (!ReadCatalog(catalog, &c) || infoOut == nullptr)
+    if (!mlocReadCatalog(catalog, &c) || infoOut == nullptr)
     {
         return mloc_errorInvalid;
     }
     CatalogKeys keys;
-    if (!KeysOf(&c, &keys))
+    if (!mlocCatalogKeysOf(&c, &keys))
     {
         return mloc_errorData;
     }
@@ -141,12 +112,12 @@ mlocResult mlocFindCatalogKey(const mlocCatalog* catalog, const char* key, size_
                               uint32_t* indexOut)
 {
     Catalog c;
-    if (!ReadCatalog(catalog, &c) || (key == nullptr && length > 0) || indexOut == nullptr)
+    if (!mlocReadCatalog(catalog, &c) || (key == nullptr && length > 0) || indexOut == nullptr)
     {
         return mloc_errorInvalid;
     }
     CatalogKeys keys;
-    if (!KeysOf(&c, &keys))
+    if (!mlocCatalogKeysOf(&c, &keys))
     {
         return mloc_errorData;
     }
@@ -170,7 +141,7 @@ mlocResult mlocGetCatalogMessage(const mlocCatalog* catalog, uint32_t index,
                                  const void** messageOut, size_t* sizeOut)
 {
     Catalog c;
-    if (!ReadCatalog(catalog, &c) || messageOut == nullptr || sizeOut == nullptr)
+    if (!mlocReadCatalog(catalog, &c) || messageOut == nullptr || sizeOut == nullptr)
     {
         return mloc_errorInvalid;
     }

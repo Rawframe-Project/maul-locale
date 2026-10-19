@@ -372,9 +372,16 @@ static int WriteCatalog(const char* directory, const Input* in, const Bytes* key
         .tables = own.tables,
     };
     memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
+    // The container names locales as CLDR's files do ("fr_CA"); the file
+    // keeps the BCP 47 id.
+    char id[sizeof(in->locale)];
+    for (size_t i = 0; i < sizeof(id); i++)
+    {
+        id[i] = in->locale[i] == '-' ? '_' : in->locale[i];
+    }
     DataFile file = {0};
-    DataFileAdd(&file, kindCatalogKeys, in->locale, keys->data, keys->size);
-    DataFileAdd(&file, kindCatalogMessages, in->locale, messages->data, messages->size);
+    DataFileAdd(&file, kindCatalogKeys, id, keys->data, keys->size);
+    DataFileAdd(&file, kindCatalogMessages, id, messages->data, messages->size);
     size_t size = 0;
     uint8_t* bytes = DataFileWrite(&file, &version, &size);
     char path[4096];

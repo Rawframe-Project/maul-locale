@@ -141,6 +141,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_words.c
     src/message_write.c
     src/catalog.c
+    src/catalog_chain.c
     src/catalog_tables.c
     src/calendar.c
     src/calendar_add.c
@@ -781,6 +782,13 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         maul_apply_flags(test_catalog)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/catalog-test)
         add_test(NAME catalog COMMAND test_catalog ${CMAKE_CURRENT_BINARY_DIR}/catalog-test)
+        add_executable(test_catalog_chain test/test_catalog_chain.c)
+        target_link_libraries(test_catalog_chain PRIVATE mloccat_core)
+        target_include_directories(test_catalog_chain PRIVATE test)
+        maul_apply_flags(test_catalog_chain)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/catalog-chain-test)
+        add_test(NAME catalog_chain COMMAND test_catalog_chain
+                 ${CMAKE_CURRENT_BINARY_DIR}/catalog-chain-test)
         # The units' validators alone, which a shared build hides.
         if(NOT MAUL_LOCALE_BUILD_SHARED)
             add_executable(test_catalog_tables test/test_catalog_tables.c)

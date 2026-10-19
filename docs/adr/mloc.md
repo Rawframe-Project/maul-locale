@@ -59,3 +59,4 @@ are listed in [README.md](README.md).
 | [mloc-0052](mloc-0052-grammar-functions.md) | Messages: mloc:case, mloc:particle and mloc:gender | Accepted |
 | [mloc-0053](mloc-0053-catalog-source.md) | The catalog source: the W3C message resource syntax | Accepted |
 | [mloc-0054](mloc-0054-compiled-catalogs.md) | Compiled catalogs: a perfect hash and one key order per set | Accepted |
+| [mloc-0055](mloc-0055-catalog-chains.md) | Catalog chains: messages bound once, every failure stated | Accepted |

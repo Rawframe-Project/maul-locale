@@ -275,6 +275,14 @@ format.
   find a message by key or by an index the same in every catalog of the
   set; obsolete entries, orphaned keys and `@translate no` handled; keys
   not in NFC refused (mloc-0054).
+- Catalog chains: `mlocInitCatalogChain`, `mlocMeasureCatalogChain`,
+  `mlocBindCatalogChain`, `mlocFormatCatalogMessage` and
+  `mlocFormatCatalogKey` format a set's messages through catalogs in
+  fallback order, bound once into a cache of the caller's memory, with
+  a stated text and reason for every failure (mloc-0055).
+- `mloccat compile` writes a regional catalog's locale as the data
+  container names it (`fr_CA`); such catalogs did not open before
+  (mloc-0055).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).
