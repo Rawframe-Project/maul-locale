@@ -129,16 +129,14 @@ static uint32_t Encode(Builder* b, const uint64_t* elements, uint32_t count)
     return Special(small ? collationTagExpansion32 : collationTagExpansion, index, count);
 }
 
-// ICU's diffThreeBytePrimaries: how many steps of AddToPrimary lead from
-// one primary to another under one lead byte's counting.
-static int64_t Distance(uint32_t p1, uint32_t p2, bool compressible)
+// ICU's diffThreeBytePrimaries under one lead byte: how many steps of
+// AddToPrimary lead from one primary to another. A second byte step is
+// 254 third byte steps whether the lead byte compresses or not, so only
+// the lead byte's own count, never needed here, depends on it.
+static int64_t Distance(uint32_t p1, uint32_t p2)
 {
-    uint32_t low = compressible ? 4 : 2;
-    int64_t count = compressible ? 251 : 254;
-    int64_t a = (int64_t)((p1 >> 8) & 0xFF) - 2 + 254 * ((int64_t)((p1 >> 16) & 0xFF) - low) +
-                254 * count * (int64_t)(p1 >> 24);
-    int64_t b = (int64_t)((p2 >> 8) & 0xFF) - 2 + 254 * ((int64_t)((p2 >> 16) & 0xFF) - low) +
-                254 * count * (int64_t)(p2 >> 24);
+    int64_t a = (int64_t)((p1 >> 8) & 0xFF) + 254 * (int64_t)((p1 >> 16) & 0xFF);
+    int64_t b = (int64_t)((p2 >> 8) & 0xFF) + 254 * (int64_t)((p2 >> 16) & 0xFF);
     return b - a;
 }
 
@@ -187,7 +185,7 @@ static void OffsetRanges(Builder* b, const RootTable* t)
         bool joins = false;
         if (open && longPrimary && c == last + 1 && p > lastP && (p >> 24) == (lastP >> 24))
         {
-            int64_t d = Distance(lastP, p, t->compressible[p >> 24] != 0);
+            int64_t d = Distance(lastP, p);
             joins = first == last ? d >= 2 : d == step;
             step = first == last && joins ? d : step;
         }

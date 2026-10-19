@@ -593,7 +593,7 @@ static void TestUnitShapes(void)
     bytes = Unit(text, &t, &r, error, sizeof(error));
     uint32_t a = bytes != nullptr ? mlocTrieValue(&r.trie, 0x61) : 0;
     CHECK(bytes != nullptr && mlocCe32Tag(a) == collationTagExpansion32 &&
-              mlocCe32Length(a) == collationMaxExpansion,
+              mlocCe32Length(a) == collationMaxExpansion && r.ce32Count == collationMaxExpansion,
           "an expansion of the most elements built");
     free(bytes);
     if (bytes != nullptr)
