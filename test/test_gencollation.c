@@ -256,6 +256,13 @@ static void TestUnit(void)
                   RootHanElement(&t, 0x3400) &&
               mlocCollationOffsetElement(mlocCollationCe(&r, mlocCe32Index(han)), 0x33FF) == 0,
           "Han through an offset, nothing for a code point before its range");
+    uint32_t han2 = ok ? mlocTrieValue(&r.trie, 0x4E01) : 0;
+    CHECK(ok && mlocCe32Tag(han2) == collationTagOffset &&
+              mlocCollationOffsetElement(mlocCollationCe(&r, mlocCe32Index(han2)), 0x4E01) ==
+                  RootHanElement(&t, 0x4E01) &&
+              mlocTrieValue(&r.trie, 0) == collationImplicitCe32 &&
+              mlocTrieValue(&r.trie, 0x10FFFF) == collationImplicitCe32,
+          "a Han range's last code point through its offset; U+0000 and U+10FFFF implicit");
     uint32_t c = ok ? mlocTrieValue(&r.trie, 0x63) : 0;
     uint32_t dot = ok ? mlocTrieValue(&r.trie, 0xB7) : 0;
     CHECK(ok && mlocCe32Tag(c) == collationTagContraction &&
@@ -457,11 +464,186 @@ static void TestValidator(void)
     }
 }
 
+// The unit of a root text, read back; null when it does not build.
+static uint8_t* Unit(const char* text, RootTable* t, CollationRoot* r, char* error, size_t size)
+{
+    size_t bytesSize = 0;
+    if (!Read(text, t, error, size))
+    {
+        return nullptr;
+    }
+    uint8_t* bytes = CollationRootUnit(t, &bytesSize, error, size);
+    if (bytes != nullptr && !mlocReadCollationRoot((DataSpan){bytes, (uint32_t)bytesSize}, r))
+    {
+        free(bytes);
+        bytes = nullptr;
+    }
+    return bytes;
+}
+
+// Appends a run of code points whose three-byte primaries rise by step;
+// private use ones, so that none decomposes.
+static size_t Run(char* out, size_t at, size_t size, uint32_t first, uint32_t last,
+                  uint32_t primary, bool compressible, uint32_t step)
+{
+    for (uint32_t c = first; c <= last && at < size; c++)
+    {
+        uint32_t p = mlocAddToPrimary(primary, compressible, (c - first) * step);
+        int n =
+            snprintf(out + at, size - at, "%04X; [%02X %02X %02X, 05, 05]\n", (unsigned)c,
+                     (unsigned)(p >> 24), (unsigned)(p >> 16 & 0xFF), (unsigned)(p >> 8 & 0xFF));
+        at += n > 0 ? (size_t)n : 0;
+    }
+    return at;
+}
+
+// Whether every code point of a range reads through one offset, giving
+// the reader's element.
+static bool OneOffset(const RootTable* t, const CollationRoot* r, uint32_t first, uint32_t last)
+{
+    uint32_t ce32 = mlocTrieValue(&r->trie, first);
+    bool ok = mlocCe32IsSpecial(ce32) && mlocCe32Tag(ce32) == collationTagOffset;
+    for (uint32_t c = first; ok && c <= last; c++)
+    {
+        const RootMapping* m = Single(t, c);
+        ok = mlocTrieValue(&r->trie, c) == ce32 && m != nullptr &&
+             mlocCollationOffsetElement(mlocCollationCe(r, mlocCe32Index(ce32)), c) ==
+                 m->elements[0];
+    }
+    return ok;
+}
+
+static void TestOffsetRuns(void)
+{
+    enum
+    {
+        textSize = 1 << 16,
+    };
+    char* text = malloc(textSize);
+    if (text == nullptr)
+    {
+        CHECK(false, "memory for the runs");
+        return;
+    }
+    size_t at = (size_t)snprintf(text, textSize,
+                                 "[UCA version = 18.0.1]\n"
+                                 "[Unified_Ideograph 4E00]\n"
+                                 "[top_byte\t60\tCyrl]\n"
+                                 "[top_byte\t62\tGrek\tCOMPRESS]\n");
+    at = Run(text, at, textSize, 0xE000, 0xE0C0, 0x60100200, false, 2);
+    at = Run(text, at, textSize, 0xE13C, 0xE143, 0x60600200, false, 4);
+    at = Run(text, at, textSize, 0xE17C, 0xE182, 0x60700200, false, 4);
+    at = Run(text, at, textSize, 0xE200, 0xE32B, 0x62100200, true, 2);
+    at = Run(text, at, textSize, 0x10FF00, 0x10FFFF, 0x60800200, false, 2);
+    CHECK(at < textSize, "the runs fit their text");
+    RootTable t;
+    CollationRoot r;
+    char error[128] = "";
+    uint8_t* bytes = Unit(text, &t, &r, error, sizeof(error));
+    bool ok = bytes != nullptr;
+    uint32_t short4 = ok ? mlocTrieValue(&r.trie, 0xE17C) : 0;
+    CHECK(ok && OneOffset(&t, &r, 0xE000, 0xE0C0) && OneOffset(&t, &r, 0xE13C, 0xE143) &&
+              OneOffset(&t, &r, 0xE200, 0xE32B) && OneOffset(&t, &r, 0x10FF00, 0x10FFFF) &&
+              mlocCe32Tag(short4) == collationTagLongPrimary &&
+              mlocCe32Tag(mlocTrieValue(&r.trie, 0xE182)) == collationTagLongPrimary,
+          "runs of long primaries as one offset each: a step of 2 over three blocks, one "
+          "boundary with 4 code points on either side, a compressible lead byte's second byte "
+          "carried, a run to U+10FFFF; a run with 3 code points after its boundary kept");
+    free(bytes);
+    free(text);
+    if (ok)
+    {
+        RootFree(&t);
+    }
+}
+
+static void TestUnitShapes(void)
+{
+    static const char head[] = "[UCA version = 18.0.1]\n[Unified_Ideograph 4E00]\n";
+    char text[2048];
+    snprintf(text, sizeof(text),
+             "%s0063 0062; [2D, 05, 05]\n0063 0068 0061; [2F, 05, 05]\n"
+             "0063 0061; [2C, 05, 05]\n0063 0068; [2E, 05, 05]\n",
+             head);
+    RootTable t;
+    CollationRoot r;
+    char error[128] = "";
+    uint8_t* bytes = Unit(text, &t, &r, error, sizeof(error));
+    // The entries in increasing order: a, b, h, then h a.
+    static const uint32_t order[] = {1, 0x61, 0, 1, 0x62, 0, 1, 0x68, 0, 2, 0x68, 0x61, 0};
+    bool ok = bytes != nullptr && r.listCount == 1 && r.contextCount == 2 + 13 &&
+              mlocCollationContext(&r, 1) == 4;
+    for (size_t i = 0; ok && i < sizeof(order) / sizeof(order[0]); i++)
+    {
+        ok = order[i] == 0 || mlocCollationContext(&r, 2 + (uint32_t)i) == order[i];
+    }
+    CHECK(ok, "a contraction's entries by their code points, the shorter first");
+    free(bytes);
+    if (bytes != nullptr)
+    {
+        RootFree(&t);
+    }
+    char line[1024];
+    size_t n = 0;
+    for (int i = 0; i < collationMaxExpansion; i++)
+    {
+        n += (size_t)snprintf(line + n, sizeof(line) - n, "[2B, 05, 05]");
+    }
+    snprintf(text, sizeof(text), "%s0061; %s\n", head, line);
+    bytes = Unit(text, &t, &r, error, sizeof(error));
+    uint32_t a = bytes != nullptr ? mlocTrieValue(&r.trie, 0x61) : 0;
+    CHECK(bytes != nullptr && mlocCe32Tag(a) == collationTagExpansion32 &&
+              mlocCe32Length(a) == collationMaxExpansion,
+          "an expansion of the most elements built");
+    free(bytes);
+    if (bytes != nullptr)
+    {
+        RootFree(&t);
+    }
+    static const char* const refused[] = {
+        "0063 0068; [2E, 05, 05]\n004C | 0063; [2F, 05, 05]\n",
+        "004C | 0063 0068; [2F, 05, 05]\n",
+    };
+    for (size_t i = 0; i < 2; i++)
+    {
+        snprintf(text, sizeof(text), "%s%s", head, refused[i]);
+        error[0] = '\0';
+        bytes = Unit(text, &t, &r, error, sizeof(error));
+        CHECK(bytes == nullptr && error[0] != '\0',
+              "a prefix with a contraction on one code point, and a prefix before two code "
+              "points, refused with a message");
+        free(bytes);
+        RootFree(&t);
+    }
+}
+
+static void TestLeftOut(void)
+{
+    static const uint32_t out[] = {0xAC00, 0xD7A3, 0xD800,  0xDFFF, 0xC0,
+                                   0x100,  0x1E00, 0x1D15E, 0x2F800};
+    static const uint32_t kept[] = {0x41,   0x7F,   0x80,    0x180,   0xD7A4,
+                                    0xE000, 0x1E9C, 0x1D15D, 0x20000, 0x10FFFF};
+    bool ok = true;
+    for (size_t i = 0; i < sizeof(out) / sizeof(out[0]); i++)
+    {
+        ok = ok && CollationLeftOut(out[i]);
+    }
+    for (size_t i = 0; i < sizeof(kept) / sizeof(kept[0]); i++)
+    {
+        ok = ok && !CollationLeftOut(kept[i]);
+    }
+    CHECK(ok, "Hangul syllables, surrogates and decomposable code points of two, three and four "
+              "UTF-8 bytes left out; the code points around them kept");
+}
+
 int main(void)
 {
     TestRead();
     TestUnit();
     TestValidator();
+    TestOffsetRuns();
+    TestUnitShapes();
+    TestLeftOut();
     TestUnassigned();
     TestHanLeadBytes();
     TestRefusals();
