@@ -201,18 +201,57 @@ static void TestReasons(Set* s)
 
 static void TestWithoutSource(Set* s)
 {
+    // The two catalogs alone in memory of their own size, so that a look
+    // past them shows under the sanitizers.
+    mlocCatalog* catalogs = malloc(2 * sizeof(mlocCatalog));
+    mlocMessageFormatter* formatters = malloc(2 * sizeof(mlocMessageFormatter));
+    if (catalogs == nullptr || formatters == nullptr)
+    {
+        CHECK(false, "the arrays are made");
+        free(catalogs);
+        free(formatters);
+        return;
+    }
+    memcpy(catalogs, s->catalogs, 2 * sizeof(mlocCatalog));
+    memcpy(formatters, s->formatters, 2 * sizeof(mlocMessageFormatter));
     size_t size = 0;
     mlocCatalogChain chain;
-    CHECK(mlocMeasureCatalogChain(s->catalogs, s->formatters, 2, &size) == mloc_success,
+    CHECK(mlocMeasureCatalogChain(catalogs, formatters, 2, &size) == mloc_success,
           "a chain without its source is measured");
     uint8_t* cache = malloc(size);
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, 2, cache, size) ==
-                  mloc_success &&
+              mlocInitCatalogChain(&chain, catalogs, formatters, 2, cache, size) == mloc_success &&
               Says(&chain, "bye", 0, "bye", mloc_success, mloc_catalogAbsent, 2) &&
               Says(&chain, "wide", 0, "wide", mloc_success, mloc_catalogFailed, 2) &&
               Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0),
           "without the source: an absent message and one that fails are their keys");
+    free(cache);
+    free(catalogs);
+    free(formatters);
+}
+
+// The most catalogs a chain takes: the set's three, then the source
+// again to fill it.
+static void TestLongest(Set* s)
+{
+    mlocCatalog catalogs[MLOC_CATALOG_CHAIN_MAX];
+    mlocMessageFormatter formatters[MLOC_CATALOG_CHAIN_MAX];
+    for (int i = 0; i < MLOC_CATALOG_CHAIN_MAX; i++)
+    {
+        catalogs[i] = s->catalogs[i < chainCount ? i : chainCount - 1];
+        formatters[i] = s->formatters[i < chainCount ? i : chainCount - 1];
+    }
+    size_t size = 0;
+    (void)mlocMeasureCatalogChain(catalogs, formatters, MLOC_CATALOG_CHAIN_MAX, &size);
+    uint8_t* cache = malloc(size > 0 ? size : 1);
+    mlocCatalogChain chain;
+    CHECK(cache != nullptr &&
+              mlocInitCatalogChain(&chain, catalogs, formatters, MLOC_CATALOG_CHAIN_MAX, cache,
+                                   size) == mloc_success &&
+              Says(&chain, "bye", 0, "Goodbye", mloc_success, mloc_catalogFallback, 2) &&
+              Says(&chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed,
+                   MLOC_CATALOG_CHAIN_MAX),
+          "a chain of eight catalogs");
     free(cache);
 }
 
@@ -347,6 +386,7 @@ int main(int argc, char** argv)
     }
     TestReasons(&set);
     TestWithoutSource(&set);
+    TestLongest(&set);
     TestCacheFull(&set);
     TestOutputs(&set);
     TestRefusals(&set);
