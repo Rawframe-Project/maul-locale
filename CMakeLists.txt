@@ -140,6 +140,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/nfd_stream.c
     src/collation_tables.c
     src/collation_iterator.c
+    src/collation_compare.c
     src/message_value.c
     src/message_words.c
     src/message_write.c
@@ -550,6 +551,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_collation_data PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    maul_add_test(collation_compare WHITEBOX)
+    if(TARGET test_collation_compare)
+        if(EMSCRIPTEN)
+            target_link_options(test_collation_compare PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collation_compare PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # And relative time (record mloc-0043).
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
@@ -660,6 +669,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endforeach()
     # The zones against zic and zdump (tools/check_zones.py), on the
     # library's internal tables.
+    # The general compare against CLDR's CollationTest files
+    # (record mloc-0067), on the library's internal compare.
+    if(NOT MAUL_LOCALE_BUILD_SHARED)
+        add_executable(conform_collation test/conform_collation.c)
+        target_link_libraries(conform_collation PRIVATE maul-locale)
+        target_include_directories(conform_collation PRIVATE src)
+        maul_apply_flags(conform_collation)
+    endif()
     if(NOT MAUL_LOCALE_BUILD_SHARED)
         add_executable(conform_zones test/conform_zones.c)
         target_link_libraries(conform_zones PRIVATE maul-locale)
