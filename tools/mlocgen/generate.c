@@ -6,6 +6,7 @@
 #include "generate.h"
 
 #include "calendar_gen.h"
+#include "collation_gen.h"
 #include "data_format.h"
 #include "direction_gen.h"
 #include "gender_gen.h"
@@ -261,6 +262,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     DataFile data = {0};
     NameFiles names = {0};
     DataFile spellout = {0};
+    DataFile collation = {0};
     Text rules = {0};
     Text eras = {0};
     Text years = {0};
@@ -274,6 +276,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         !GenerateNumberUnits(commonDirectory, &data, &names, errorOut, errorCapacity) ||
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
+        !GenerateCollation(commonDirectory, &collation, errorOut, errorCapacity) ||
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
         !GenerateScriptDirections(commonDirectory, &directions.bytes, &directions.size, errorOut,
                                   errorCapacity) ||
@@ -291,6 +294,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         DataFileFree(&data);
         FreeNameFiles(&names);
         DataFileFree(&spellout);
+        DataFileFree(&collation);
         return 0;
     }
     // The compiled rules are code tables the data's indexes name, so they
@@ -306,12 +310,12 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     // its data set (records mloc-0022, mloc-0024, mloc-0036 and
     // mloc-0039), and so do the spell-out rules (record mloc-0034), the
     // date patterns and the zone names (record mloc-0042) and relative time
-    // (record mloc-0043).
+    // (record mloc-0043), and the collation units (record mloc-0065).
     static const char* const s_nameFiles[] = {
-        "currency-names.mloc", "units.mloc",      "names.mloc",   "subdivisions.mloc",
-        "dates.mloc",          "zone-names.mloc", "relative.mloc"};
-    DataFile* nameFiles[] = {&names.currencies, &names.units, &names.locales, &names.subdivisions,
-                             &names.dates,      &names.zones, &names.relative};
+        "currency-names.mloc", "units.mloc",      "names.mloc",    "subdivisions.mloc",
+        "dates.mloc",          "zone-names.mloc", "relative.mloc", "collation.mloc"};
+    DataFile* nameFiles[] = {&names.currencies, &names.units, &names.locales,  &names.subdivisions,
+                             &names.dates,      &names.zones, &names.relative, &collation};
     size_t spelloutSize = 0;
     uint8_t* spelloutBytes = DataFileWrite(&spellout, &version, &spelloutSize);
     Text spelloutFile = {.bytes = (char*)spelloutBytes, .size = spelloutSize};
@@ -334,6 +338,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     free(spelloutBytes);
     FreeNameFiles(&names);
     DataFileFree(&spellout);
+    DataFileFree(&collation);
     free(header.bytes);
     free(builtin.bytes);
     free(rules.bytes);

@@ -160,5 +160,10 @@ constexpr uint32_t kindRelativeTitlecase = 0x00090007;
 // src/catalog_tables.h).
 constexpr uint32_t kindCatalogKeys = 0x000A0001;
 constexpr uint32_t kindCatalogMessages = 0x000A0002;
+// The collation part: CLDR's root collation, its elements in a code
+// point trie with their expansions and context lists, a unit of no
+// locale in the collation data file (record mloc-0065,
+// src/collation_tables.h).
+constexpr uint32_t kindCollationRoot = 0x000B0001;
 
 #endif

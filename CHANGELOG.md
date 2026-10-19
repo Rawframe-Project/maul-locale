@@ -374,3 +374,8 @@ format.
 - The IXDTF duration writer is `mlocFormatTemporalDuration`, beside
   `mlocFormatTemporalDate` and the others (it was `mlocFormatDuration`,
   which now names the locale's duration formatter; mloc-0044).
+- The collation data file, `src/generated/collation.mloc`: CLDR 49's
+  root collation (UCA 18) as ICU's runtime holds it, its elements in a
+  code point trie with their expansions, contractions and prefixes,
+  checked at open (mloc-0064, mloc-0065); the element iterator reads it
+  through NFD with no limit on marks (mloc-0066).

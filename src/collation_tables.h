@@ -333,4 +333,7 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     return ok;
 }
 
+// The root unit's validator, as data files are opened.
+bool mlocValidCollationRoot(const DataView* view, DataSpan payload);
+
 #endif

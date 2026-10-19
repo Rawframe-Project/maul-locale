@@ -116,8 +116,11 @@ proved over a decade.
     where ICU's are 16.
   - Smaller supplementary blocks, or overlapping blocks, are the next
     lever. They are measured before speed work (slice g).
+- **The file:** `mlocgen generate` writes the unit into
+  `src/generated/collation.mloc`, a data file of its own that a program
+  adds to its data set, as kind `kindCollationRoot` (0x000B0001), a
+  unit of no locale. Opening the file runs this validator. It is
+  190,576 bytes.
 - **Not yet in the unit:**
-  - the unit file and its kind, written by `mlocgen generate`, come
-    with the element iterator that reads them;
   - the script starts and specials for reordering, in slice (b);
   - digits for numeric order, in slice (b).

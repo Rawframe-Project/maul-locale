@@ -138,6 +138,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_table.c
     src/message_text.c
     src/nfd_stream.c
+    src/collation_tables.c
     src/collation_iterator.c
     src/message_value.c
     src/message_words.c
@@ -535,6 +536,20 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
     endif()
+    # The collation data file (record mloc-0065).
+    set(MLOC_COLLATION_FILE ${PROJECT_SOURCE_DIR}/src/generated/collation.mloc)
+    set(MLOC_COLLATION_PATH ${MLOC_COLLATION_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_COLLATION_PATH /collation.mloc)
+    endif()
+    maul_add_test(collation_data WHITEBOX)
+    if(TARGET test_collation_data)
+        if(EMSCRIPTEN)
+            target_link_options(test_collation_data PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collation_data PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # And relative time (record mloc-0043).
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
@@ -730,7 +745,8 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
-                                    tools/mlocgen/collation_root.c tools/mlocgen/collation_unit.c
+                                    tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
+                                    tools/mlocgen/collation_unit.c
                                     tools/mlocgen/direction_gen.c
                                     tools/mlocgen/gender_gen.c
                                     tools/mlocgen/cldr.c

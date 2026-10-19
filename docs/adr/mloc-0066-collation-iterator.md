@@ -86,5 +86,5 @@ nothing and must accept any text.
 - **Speed is open** for slice (g). Each code point at or above U+00C0
   costs two calls into Maul Unicode. Contraction lists are searched in
   order, where ICU4X uses flags and tries.
-- The unit file and its kind, written by `mlocgen generate`, come next.
-  The general compare follows (slice a4).
+- The general compare follows (slice a4). `test_collation_data` reads
+  the generated file's root through the iterator.
