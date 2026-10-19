@@ -10,7 +10,12 @@
 //   mloccat compile DIRECTORY SOURCE [TRANSLATION...]
 //                       compiles a source and its translations into
 //                       catalogs, LOCALE.mloc each (compile.h)
+//   mloccat accept SOURCE TRANSLATION [KEY...]
+//                       records in the translation the source messages its
+//                       entries answer, so that a later change shows them
+//                       stale (accept.h)
 
+#include "accept.h"
 #include "compile.h"
 #include "file.h"
 #include "resource.h"
@@ -153,10 +158,15 @@ int main(int argc, char** argv)
     {
         return CatalogCompile(argv[2], argv + 3, (size_t)(argc - 3), stderr) ? 0 : 1;
     }
+    if (argc >= 4 && strcmp(argv[1], "accept") == 0)
+    {
+        return CatalogAccept(argv[2], argv[3], argv + 4, (size_t)(argc - 4), stderr) ? 0 : 1;
+    }
     if (argc != 3 || (strcmp(argv[1], "read") != 0 && strcmp(argv[1], "check") != 0))
     {
         fputs("usage: mloccat read FILE | mloccat check FILE\n"
-              "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n",
+              "       mloccat compile DIRECTORY SOURCE [TRANSLATION...]\n"
+              "       mloccat accept SOURCE TRANSLATION [KEY...]\n",
               stderr);
         return 2;
     }

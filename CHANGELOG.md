@@ -283,6 +283,11 @@ format.
 - `mloccat compile` writes a regional catalog's locale as the data
   container names it (`fr_CA`); such catalogs did not open before
   (mloc-0055).
+- Stale translations: `mloccat accept SOURCE TRANSLATION [KEY...]`
+  records in a translation the hash of the source message each entry
+  answers (`@mloc-source`, XXH64 of the canonical text), and
+  `mloccat compile` counts the translations whose source changed since
+  (mloc-0056).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

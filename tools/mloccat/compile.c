@@ -5,13 +5,13 @@
 
 #include "compile.h"
 
+#include "catalog_set.h"
 #include "catalog_tables.h"
 #include "data_format.h"
 #include "datafile.h"
 #include "file.h"
 #include "kinds.h"
-#include "resource.h"
-#include "resource_check.h"
+#include "stale.h"
 #include "table.h"
 
 #include "maul-locale/locale.h"
@@ -20,154 +20,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-enum
-{
-    keyRoom = 1024,
-    localeRoom = 128,
-};
-
-// An entry that compiles: its key and the item it came from.
-typedef struct Entry
-{
-    char* key;
-    size_t length;
-    const ResItem* item;
-    // Whether it or its section says @translate no.
-    int keep;
-} Entry;
-
-typedef struct Input
-{
-    const char* path;
-    char* text;
-    Resource resource;
-    Entry* entries;
-    uint32_t count;
-    char locale[localeRoom];
-} Input;
-
-static void* Grow(void* items, size_t count, size_t size)
-{
-    void* grown = realloc(items, (count + 1) * size);
-    if (grown == nullptr)
-    {
-        fputs("mloccat: out of memory\n", stderr);
-        exit(1);
-    }
-    return grown;
-}
-
-static int HasMeta(const ResMeta* meta, size_t count, const char* key, const char* value)
-{
-    for (size_t i = 0; i < count; i++)
-    {
-        size_t length = strlen(key);
-        if (meta[i].key.length == length && memcmp(meta[i].key.bytes, key, length) == 0 &&
-            (value == nullptr || (meta[i].value.length == strlen(value) &&
-                                  memcmp(meta[i].value.bytes, value, strlen(value)) == 0)))
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static int KeepsSource(const ResSection* s, const ResItem* item)
-{
-    return HasMeta(item->meta, item->metaCount, "translate", "no") ||
-           HasMeta(item->meta, item->metaCount, "do-not-translate", nullptr) ||
-           HasMeta(s->meta, s->metaCount, "translate", "no") ||
-           HasMeta(s->meta, s->metaCount, "do-not-translate", nullptr);
-}
-
-static void CollectEntries(Input* in)
-{
-    for (size_t s = 0; s < in->resource.sectionCount; s++)
-    {
-        const ResSection* section = &in->resource.sections[s];
-        for (size_t i = 0; i < section->itemCount; i++)
-        {
-            const ResItem* item = &section->items[i];
-            char key[keyRoom];
-            if (item->kind != resEntry ||
-                HasMeta(item->meta, item->metaCount, "obsolete", nullptr) ||
-                !ResourceKey(&section->id, &item->id, key, sizeof(key)))
-            {
-                continue;
-            }
-            in->entries = Grow(in->entries, in->count, sizeof(in->entries[0]));
-            Entry* e = &in->entries[in->count++];
-            e->length = strlen(key);
-            e->key = malloc(e->length + 1);
-            if (e->key == nullptr)
-            {
-                exit(1);
-            }
-            memcpy(e->key, key, e->length + 1);
-            e->item = item;
-            e->keep = KeepsSource(section, item);
-        }
-    }
-}
-
-// The locale's canonical id, from @locale (which the check parsed).
-static void CanonicalLocale(Input* in)
-{
-    const ResMeta* m = nullptr;
-    for (size_t i = 0; i < in->resource.metaCount; i++)
-    {
-        if (in->resource.meta[i].key.length == 6 &&
-            memcmp(in->resource.meta[i].key.bytes, "locale", 6) == 0)
-        {
-            m = &in->resource.meta[i];
-        }
-    }
-    mlocLocale locale;
-    mlocOutput out = {in->locale, sizeof(in->locale) - 1, 0, nullptr, nullptr};
-    if (m != nullptr &&
-        mlocParseLocale(m->value.bytes, m->value.length, &locale).status == mloc_success &&
-        mlocFormatLocale(&locale, &out) == mloc_success)
-    {
-        in->locale[out.length] = '\0';
-    }
-}
-
-static int ReadInput(Input* in, const char* path, FILE* report)
-{
-    *in = (Input){.path = path};
-    size_t length = 0;
-    in->text = FileRead(path, &length);
-    if (in->text == nullptr)
-    {
-        fprintf(report, "%s: cannot read\n", path);
-        return 0;
-    }
-    ResError error;
-    if (!ResourceRead(in->text, length, &in->resource, &error))
-    {
-        fprintf(report, "%s:%zu:%zu: %s\n", path, error.line, error.column, error.reason);
-        return 0;
-    }
-    if (!ResourceCheck(&in->resource, path, report))
-    {
-        return 0;
-    }
-    CollectEntries(in);
-    CanonicalLocale(in);
-    return in->locale[0] != '\0';
-}
-
-static void FreeInput(Input* in)
-{
-    for (uint32_t i = 0; i < in->count; i++)
-    {
-        free(in->entries[i].key);
-    }
-    free(in->entries);
-    ResourceFree(&in->resource);
-    free(in->text);
-}
 
 // A growing byte buffer for a unit.
 typedef struct Bytes
@@ -212,7 +64,7 @@ static void Set64(Bytes* b, size_t at, uint64_t v)
 }
 
 // The keys unit, the keys in index order, its set id filled in.
-static Bytes KeysUnit(const Input* source, const KeyTable* t, uint32_t* byIndex)
+static Bytes KeysUnit(const CatalogInput* source, const KeyTable* t, uint32_t* byIndex)
 {
     Bytes b = {0};
     Put32(&b, t->count);
@@ -293,18 +145,37 @@ typedef struct Messages
     const ResText** values;
     uint32_t orphans;
     uint32_t present;
+    uint32_t stale;
 } Messages;
+
+// Whether a translation's entry was made from another source message
+// than the source's now (stale.h).
+static int IsStale(const CatalogEntry* entry, const ResText* source)
+{
+    const ResMeta* m = CatalogFindMeta(entry->item->meta, entry->item->metaCount, "mloc-source");
+    uint64_t made = 0;
+    uint64_t now = 0;
+    return m != nullptr && SourceHashRead(m->value.bytes, m->value.length, &made) &&
+           SourceHash(source->bytes, source->length, &now) && made != now;
+}
 
 // Each index's message text for one input: its own, the source's where
 // the source keeps it, none where it has none.
-static Messages ChooseMessages(const Input* in, const Input* source, const CatalogKeys* keys,
-                               FILE* report)
+static Messages ChooseMessages(const CatalogInput* in, const CatalogInput* source,
+                               const CatalogKeys* keys, FILE* report)
 {
     Messages m = {(const ResText**)calloc(keys->count == 0 ? 1 : keys->count, sizeof(ResText*)), 0,
-                  0};
-    if (m.values == nullptr)
+                  0, 0};
+    const ResText** sources =
+        (const ResText**)calloc(keys->count == 0 ? 1 : keys->count, sizeof(ResText*));
+    if (m.values == nullptr || sources == nullptr)
     {
         exit(1);
+    }
+    for (uint32_t i = 0; i < source->count; i++)
+    {
+        uint32_t index = IndexOf(keys, source->entries[i].key, source->entries[i].length);
+        sources[index] = &source->entries[i].item->value;
     }
     for (uint32_t i = 0; i < in->count; i++)
     {
@@ -317,7 +188,9 @@ static Messages ChooseMessages(const Input* in, const Input* source, const Catal
             continue;
         }
         m.values[index] = &in->entries[i].item->value;
+        m.stale += in != source && IsStale(&in->entries[i], sources[index]);
     }
+    free((void*)sources);
     for (uint32_t i = 0; i < source->count; i++)
     {
         if (source->entries[i].keep)
@@ -329,8 +202,8 @@ static Messages ChooseMessages(const Input* in, const Input* source, const Catal
     return m;
 }
 
-static Bytes MessagesUnit(const Input* in, const Input* source, const CatalogKeys* keys,
-                          FILE* report, int* okOut)
+static Bytes MessagesUnit(const CatalogInput* in, const CatalogInput* source,
+                          const CatalogKeys* keys, FILE* report, int* okOut)
 {
     Messages m = ChooseMessages(in, source, keys, report);
     Bytes head = {0};
@@ -354,13 +227,13 @@ static Bytes MessagesUnit(const Input* in, const Input* source, const CatalogKey
     Put32(&head, (uint32_t)text.size);
     Put(&head, text.data, text.size);
     free(text.data);
-    fprintf(report, "%s: %s, %u of %u messages, %u keys left out\n", in->path, in->locale,
-            m.present, keys->count, m.orphans);
+    fprintf(report, "%s: %s, %u of %u messages, %u keys left out, %u stale\n", in->path, in->locale,
+            m.present, keys->count, m.orphans, m.stale);
     free((void*)m.values);
     return head;
 }
 
-static int WriteCatalog(const char* directory, const Input* in, const Bytes* keys,
+static int WriteCatalog(const char* directory, const CatalogInput* in, const Bytes* keys,
                         const Bytes* messages, FILE* report)
 {
     mlocDataVersion own;
@@ -397,7 +270,7 @@ static int WriteCatalog(const char* directory, const Input* in, const Bytes* key
 }
 
 // The keys of the source, as the table builder takes them.
-static int BuildTable(const Input* source, KeyTable* table)
+static int BuildTable(const CatalogInput* source, KeyTable* table)
 {
     const char** keys = (const char**)calloc(source->count + (size_t)1, sizeof(char*));
     size_t* lengths = calloc(source->count + (size_t)1, sizeof(size_t));
@@ -416,7 +289,7 @@ static int BuildTable(const Input* source, KeyTable* table)
     return ok;
 }
 
-static int CompileAll(const char* directory, Input* inputs, size_t count, FILE* report)
+static int CompileAll(const char* directory, CatalogInput* inputs, size_t count, FILE* report)
 {
     KeyTable table;
     if (!BuildTable(&inputs[0], &table))
@@ -446,29 +319,9 @@ static int CompileAll(const char* directory, Input* inputs, size_t count, FILE* 
 
 int CatalogCompile(const char* directory, char* const* paths, size_t count, FILE* report)
 {
-    Input* inputs = calloc(count + 1, sizeof(Input));
-    if (inputs == nullptr)
-    {
-        exit(1);
-    }
-    int ok = count > 0;
-    for (size_t i = 0; i < count; i++)
-    {
-        ok = ReadInput(&inputs[i], paths[i], report) && ok;
-        for (size_t j = 0; ok && j < i; j++)
-        {
-            if (strcmp(inputs[i].locale, inputs[j].locale) == 0)
-            {
-                fprintf(report, "%s: a second catalog of %s\n", paths[i], inputs[i].locale);
-                ok = 0;
-            }
-        }
-    }
-    ok = ok && CompileAll(directory, inputs, count, report);
-    for (size_t i = 0; i < count; i++)
-    {
-        FreeInput(&inputs[i]);
-    }
-    free(inputs);
+    CatalogSet set;
+    int ok = CatalogSetRead(&set, paths, count, report);
+    ok = ok && CompileAll(directory, set.inputs, count, report);
+    CatalogSetFree(&set);
     return ok;
 }

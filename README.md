@@ -116,7 +116,10 @@ is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның"
 "Helsingissä", "EU:hun", "책은", "URL로"). The catalog tool, `mloccat`,
 reads catalog sources in the W3C's draft message resource syntax,
 checks them and compiles them into catalogs the library opens and
-looks messages up in by key or index.
+looks messages up in by key or index. A chain formats them through a
+locale's fallbacks with a stated result for every failure. The tool
+records which source message a translation answers, so a changed
+source shows the translation stale.
 The library has 175 public functions.
 
 ## Building
