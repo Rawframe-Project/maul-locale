@@ -7,8 +7,7 @@
 // implicit primaries, script starts and special lines kept apart, the
 // runtime's fixed code points left out, and the lines it refuses.
 
-// The C runtime of Windows reports fopen as deprecated.
-#define _CRT_SECURE_NO_WARNINGS
+// mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_root.h"
 #include "test_harness.h"
@@ -45,12 +44,15 @@ static const RootMapping* Single(const RootTable* t, uint32_t c)
 
 static const char s_file[] = "\xEF\xBB\xBF# FractionalUCA.txt, shortened\n"
                              "[UCA version = 18.0.1]\n"
-                             "[Unified_Ideograph 4E00..4E01 3400]\n"
-                             "[top_byte\t2A\tLatn]\n"
+                             "[Unified_Ideograph 4E00..4E01 3400..3400]\n"
+                             "[top_byte\t03\tSPACE]\n"
+                             "[top_byte\t2A\tLatn] COMPRESS\n"
                              "[top_byte\t62\tCyrl\tCOMPRESS]\n"
                              "[first variable [03 04, 05, 05]] # ignored\n"
                              "0061; [2B, 05, 05]\t# Latn Ll\n"
                              "0041; [2B, 05, 9C]\n"
+                             "0062; [2c, 05, 0f]\n"
+                             "2F01; [U+0061, 9C]\n"
                              "00E0; [2B, 05, 05][, 8A, 05]\n"
                              "0300; [, 8A, 05]\n"
                              "0430; [62 0A, 05, 05]\n"
@@ -60,6 +62,7 @@ static const char s_file[] = "\xEF\xBB\xBF# FractionalUCA.txt, shortened\n"
                              "2F00; [U+4E01, 70, 20]\n"
                              "1F600; [0D 4C 5C, 05, 05]\n"
                              "FDD1 0061; [2B, 05, 05]\n"
+                             "FDD1 0430; [62 0A, 05, 05]\n"
                              "FDD0 0034; [10, 05, 05]\n"
                              "FFFD;\t[EF FD, 05, 05]\n"
                              "FFFE;\t[02, 05, 05]\n"
@@ -100,6 +103,12 @@ static void TestRead(void)
                   m->text[0] == 0xB7 && m->elements[0] == 0x00000000FBB60500ULL;
     }
     CHECK(contraction && prefix, "a contraction, and a prefix before '|' kept apart from the text");
+    const RootMapping* b = ok ? Single(&t, 0x62) : nullptr;
+    const RootMapping* named = ok ? Single(&t, 0x2F01) : nullptr;
+    CHECK(b != nullptr && b->elements[0] == 0x2C00000005000F00ULL && named != nullptr &&
+              named->elements[0] == 0x2B00000005009C00ULL && t.compressible[0x03] == 0,
+          "lowercase hex, an element naming a code point that is not Han, a top byte of 0x, "
+          "COMPRESS only inside the brackets");
     const RootMapping* paren = ok ? Single(&t, 0x3220) : nullptr;
     const RootMapping* radical = ok ? Single(&t, 0x2F00) : nullptr;
     CHECK(paren != nullptr && paren->elementCount == 3 &&
@@ -107,16 +116,16 @@ static void TestRead(void)
               radical->elements[0] == 0xFD02040070002000ULL,
           "an element naming a Han code point: its tertiary, or its secondary and tertiary, "
           "replaced");
-    CHECK(ok && t.scriptStartCount == 1 && t.scriptStarts[0].codePoint == 0x61 &&
-              t.specialCount == 1 && t.specials[0].element == 0x1000000005000500ULL &&
-              Single(&t, 0xFDD1) == nullptr,
+    CHECK(ok && t.scriptStartCount == 2 && t.scriptStarts[0].codePoint == 0x61 &&
+              t.scriptStarts[1].codePoint == 0x430 && t.specialCount == 1 &&
+              t.specials[0].element == 0x1000000005000500ULL && Single(&t, 0xFDD1) == nullptr,
           "FDD1 and FDD0 lines kept apart, not as mappings");
     CHECK(ok && Single(&t, 0xFFFD) == nullptr && Single(&t, 0xFFFF) == nullptr &&
               Single(&t, 0xFFFE) != nullptr && Single(&t, 0xFFFE)->elements[0] >> 32 == 0x02000000,
           "U+FFFD and U+FFFF left to the runtime, U+FFFE kept");
     CHECK(ok && RootHanElement(&t, 0x4E00) == 0xFD02020005000500ULL &&
               RootHanElement(&t, 0x3400) == 0xFD02060005000500ULL &&
-              RootHanElement(&t, 0x4E02) == 0,
+              RootHanElement(&t, 0x4E02) == 0 && RootHanElement(&t, 0) == 0,
           "Han primaries a step of 2 apart in the ranges' order, none outside them");
     if (ok)
     {
@@ -130,6 +139,29 @@ static void TestUnassigned(void)
               RootUnassignedPrimary(0x10FFFF) == 0xFEF7AF1E,
           "unassigned primaries as ICU makes them, for the first, an unassigned and the last "
           "code point");
+}
+
+// Han's lead bytes at the bound of one: 254 x 254 primaries hold twice
+// 32,256 Han code points and 4 more, and no more.
+static void TestHanLeadBytes(void)
+{
+    RootTable t;
+    char error[128] = "";
+    int one =
+        Read("[Unified_Ideograph 4E00..CBFF]\n0061; [2B, 05, 05]\n", &t, error, sizeof(error));
+    uint32_t first = one ? t.firstHanPrimary : 0;
+    if (one)
+    {
+        RootFree(&t);
+    }
+    int two =
+        Read("[Unified_Ideograph 4E00..CC00]\n0061; [2B, 05, 05]\n", &t, error, sizeof(error));
+    CHECK(one && first == 0xFD020200 && two && t.firstHanPrimary == 0xFC020200,
+          "32,256 Han code points in one lead byte, one more in two");
+    if (two)
+    {
+        RootFree(&t);
+    }
 }
 
 static void TestRefusals(void)
@@ -146,6 +178,12 @@ static void TestRefusals(void)
         "0061; [2B, 05, 05]\n",
         "[Unified_Ideograph 4E05..4E00]\n0061; [2B, 05, 05]\n",
         "[Unified_Ideograph 4E00]\n0061; [U+4E00, 10\n",
+        "[Unified_Ideograph 4E00]\n ; [2B, 05, 05]\n",
+        "[Unified_Ideograph 4E00]\n0061; [U+0378, 10]\n",
+        "[Unified_Ideograph 4E00]\n00E0; [2B, 05, 05][, 8A, 05]\n0062; [U+00E0, 10]\n",
+        "[Unified_Ideograph 1 2 3 4 5 6 7 8 9 A B C D E F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C "
+        "1D "
+        "1E 1F 20 21]\n0061; [2B, 05, 05]\n",
     };
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
@@ -154,7 +192,9 @@ static void TestRefusals(void)
         CHECK(!Read(bad[i], &t, error, sizeof(error)) && error[0] != '\0' && t.count == 0,
               "a bad weight, too many bytes, no ';', no elements, a code point past U+10FFFF, a "
               "three-byte secondary, a wrong separator, a short version, no Han line, a Han "
-              "range ending before it starts, an unclosed element: refused with a message");
+              "range ending before it starts, an unclosed element, no code points, an element "
+              "naming a code point with no element or with two, 33 Han ranges: refused with a "
+              "message");
     }
     RootTable t;
     char error[128] = "";
@@ -167,6 +207,7 @@ int main(void)
 {
     TestRead();
     TestUnassigned();
+    TestHanLeadBytes();
     TestRefusals();
     remove(s_path);
     return s_failures == 0 ? 0 : 1;

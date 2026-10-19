@@ -106,6 +106,8 @@ static int CodePoint(Reader* r, const char** at, uint32_t* out)
     return 1;
 }
 
+// A code point's one element, as ICU's getSingleCE gives it: Han's, or
+// that of a mapping of the code point alone to one element; 0 for none.
 static uint64_t SingleElement(const RootTable* t, uint32_t codePoint)
 {
     uint64_t han = RootHanElement(t, codePoint);
@@ -116,13 +118,12 @@ static uint64_t SingleElement(const RootTable* t, uint32_t codePoint)
     for (size_t i = 0; i < t->count; i++)
     {
         const RootMapping* m = &t->mappings[i];
-        if (m->textLength == 1 && m->prefixLength == 0 && m->text[0] == codePoint &&
-            m->elementCount == 1)
+        if (m->textLength == 1 && m->prefixLength == 0 && m->text[0] == codePoint)
         {
-            return m->elements[0];
+            return m->elementCount == 1 ? m->elements[0] : 0;
         }
     }
-    return (uint64_t)RootUnassignedPrimary(codePoint) << 32 | commonSecondaryTertiary;
+    return 0;
 }
 
 // An element: [p, s, t], or [U+XXXX] with an optional tertiary, or
@@ -140,6 +141,10 @@ static int Element(Reader* r, const char** at, uint64_t* out)
             return 0;
         }
         uint64_t element = SingleElement(r->table, c);
+        if (element == 0)
+        {
+            return Fail(r, "an element naming a code point without one element of its own");
+        }
         if (*s == ',')
         {
             s = Space(s + 1);

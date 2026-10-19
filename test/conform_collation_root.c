@@ -20,8 +20,7 @@
 //
 // usage: conform_collation_root <FractionalUCA.txt> <allkeys_CLDR.txt>
 
-// The C runtime of Windows reports fopen as deprecated.
-#define _CRT_SECURE_NO_WARNINGS
+// mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_root.h"
 
