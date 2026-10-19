@@ -113,7 +113,9 @@ Korean particles on
 names, numbers, abbreviations and common nouns, read from how their end
 is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның",
 "АКШнын", "BMT-yə", "qishloqqa", "BMG-niň", "Kodállyal", "5-tel",
-"Helsingissä", "EU:hun", "책은", "URL로").
+"Helsingissä", "EU:hun", "책은", "URL로"). The catalog tool, `mloccat`,
+reads catalog sources in the W3C's draft message resource syntax and
+checks them.
 The library has 166 public functions.
 
 ## Building

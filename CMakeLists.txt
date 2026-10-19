@@ -697,6 +697,15 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
     target_compile_definitions(fuzz_duration PRIVATE
         MLOC_UNITS_FILE="${PROJECT_SOURCE_DIR}/src/generated/units.mloc")
+    # The catalog tool's resource reader, built from its sources since the
+    # fuzz build leaves the tools out.
+    add_executable(fuzz_resource test/fuzz_resource.c tools/mloccat/resource.c
+                                 tools/mloccat/resource_check.c tools/mloccat/resource_write.c)
+    target_link_libraries(fuzz_resource PRIVATE maul-locale maul-unicode)
+    target_include_directories(fuzz_resource PRIVATE tools/mloccat)
+    maul_apply_flags(fuzz_resource)
+    target_compile_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_link_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()
 
 # The generator, mlocgen, writes the library's data from CLDR's XML. Its
@@ -743,7 +752,25 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     add_executable(mlocgen tools/mlocgen/main.c)
     target_link_libraries(mlocgen PRIVATE mlocgen_core)
     maul_apply_flags(mlocgen)
+    # The catalog tool, mloccat (record mloc-0053): its parts are a static
+    # library so that their tests link them alone.
+    add_library(mloccat_core STATIC tools/mloccat/resource.c tools/mloccat/resource_check.c
+                             tools/mloccat/resource_write.c)
+    target_include_directories(mloccat_core PUBLIC tools/mloccat)
+    target_link_libraries(mloccat_core PUBLIC maul-locale maul-unicode)
+    maul_apply_flags(mloccat_core)
+    if(WIN32)
+        target_compile_definitions(mloccat_core PUBLIC _CRT_SECURE_NO_WARNINGS)
+    endif()
+    add_executable(mloccat tools/mloccat/main.c)
+    target_link_libraries(mloccat PRIVATE mloccat_core)
+    maul_apply_flags(mloccat)
     if(MAUL_LOCALE_BUILD_TESTS)
+        add_executable(test_resource test/test_resource.c)
+        target_link_libraries(test_resource PRIVATE mloccat_core)
+        target_include_directories(test_resource PRIVATE test)
+        maul_apply_flags(test_resource)
+        add_test(NAME resource COMMAND test_resource)
         add_executable(test_genxml test/test_genxml.c)
         target_link_libraries(test_genxml PRIVATE mlocgen_core)
         target_include_directories(test_genxml PRIVATE test)

@@ -262,6 +262,12 @@ format.
   now reads right (Turkish "1,000'de" for English's thousand, which
   read 1.000 before). Scientific and compact notation are still read
   from their text (mloc-0046).
+- The catalog tool `mloccat` begins: catalog sources in the W3C
+  Internationalization WG's message resource syntax (an Editor's Draft,
+  pinned in `tools/resource-release.txt`), read rule by rule into the
+  draft's data model, written back, and checked as a catalog (a locale,
+  keys given once, messages that compile, the properties it reads);
+  `mloccat read` and `mloccat check` (mloc-0053).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

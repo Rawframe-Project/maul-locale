@@ -1,0 +1,16 @@
+# The resource-level locale is the only required property.
+@locale en-US
+---
+
+one = A plain, simple message.
+
+@param $placeholder - A comment on the placeholder value.
+two = Another message with a {$placeholder}.
+
+[section]
+
+four =
+  .input {$count :integer}
+  .match $count
+  one {{You have {$count} message.}}
+  *   {{You have {$count} messages.}}

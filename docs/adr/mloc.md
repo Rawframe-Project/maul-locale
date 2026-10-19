@@ -57,3 +57,4 @@ are listed in [README.md](README.md).
 | [mloc-0050](mloc-0050-korean.md) | Grammar: Korean particles by the final of the spoken end | Accepted |
 | [mloc-0051](mloc-0051-list-gender.md) | The gender of a list of persons | Accepted |
 | [mloc-0052](mloc-0052-grammar-functions.md) | Messages: mloc:case, mloc:particle and mloc:gender | Accepted |
+| [mloc-0053](mloc-0053-catalog-source.md) | The catalog source: the W3C message resource syntax | Accepted |
