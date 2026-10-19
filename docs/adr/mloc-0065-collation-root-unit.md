@@ -103,9 +103,9 @@ proved over a decade.
     list starts short of the contexts, and a list its entries overfill
     or underfill.
 - **Size, CLDR 49:**
-  - The unit is 190,496 bytes: a 149,684-byte trie, 1,068 64-bit
+  - The unit is 192,688 bytes: a 149,684-byte trie, 1,068 64-bit
     elements, 4,927 expansion words and 3,061 context words, with the
-    list starts.
+    list starts and the script table (record mloc-0069).
   - Before the offset runs it was 310,576 bytes.
 
 ## Consequences
@@ -120,7 +120,8 @@ proved over a decade.
   `src/generated/collation.mloc`, a data file of its own that a program
   adds to its data set, as kind `kindCollationRoot` (0x000B0001), a
   unit of no locale. Opening the file runs this validator. It is
-  190,576 bytes.
-- **Not yet in the unit:**
-  - the script starts and specials for reordering, in slice (b);
-  - digits for numeric order, in slice (b).
+  192,768 bytes.
+- **The script table and numeric order's lead byte** joined the unit
+  with the options (record mloc-0069).
+- **Not yet in the unit:** the digit CE32s for numeric order, in slice
+  (b).

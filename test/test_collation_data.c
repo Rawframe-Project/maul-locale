@@ -17,6 +17,7 @@
 #include "test_harness.h"
 
 #include "maul-locale/data.h"
+#include "maul-unicode/properties.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +48,19 @@ static void TestRoot(const mlocData* data)
     bool found = mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&
                  mlocReadCollationRoot(span, &r);
     CHECK(found && r.version == (18U << 16), "the root unit found, UCA 18.0.0");
+    CHECK(found && mlocCollationLastPrimary(&r, collationGroupPunctuation) == 0x0BFFFFFF &&
+              mlocCollationLastPrimary(&r, collationGroupSpace) <
+                  mlocCollationLastPrimary(&r, collationGroupPunctuation) &&
+              mlocCollationLastPrimary(&r, collationGroupSymbol) <
+                  mlocCollationLastPrimary(&r, collationGroupCurrency) &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) != 0 &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'r', 'k', 't')) ==
+                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'i', 'r', 'a')) &&
+              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'a', 'n', 's')) ==
+                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'a', 'n', 'i')) &&
+              r.numericPrimary == 0x10000000,
+          "punctuation ends at 0B FF FF FF as FractionalUCA.txt's variable top, the groups in "
+          "order, Hrkt with Hira and Hans with Hani, numeric order's lead byte 10");
     if (!found)
     {
         return;

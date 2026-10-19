@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The general compare against CLDR's CollationTest files of the
-// non-ignorable alternate (record mloc-0067): every line, read as
-// code points, compares no greater than the next at the tertiary
-// strength, the root read from the collation data file. As ICU4X's
+// The general compare against CLDR's CollationTest files (records
+// mloc-0067 and mloc-0069): every line, read as code points, compares no
+// greater than the next at the quaternary strength, non-ignorable or,
+// after --shifted, shifted with the variable top at the end of
+// punctuation, the root read from the collation data file. As ICU4X's
 // conformance test does, a line holding a surrogate is passed over, since
 // UTF-8 cannot carry one; the next line is compared with the last read.
 //
-// usage: conform_collation collation.mloc CollationTest_CLDR_NON_IGNORABLE*.txt...
+// usage: conform_collation collation.mloc [--shifted] CollationTest_CLDR_*.txt...
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -77,7 +78,8 @@ static bool Text(const char* line, uint8_t* out, size_t* lengthOut)
     return n > 0;
 }
 
-static bool CheckFile(const CollationRoot* root, const char* path)
+static bool CheckFile(const CollationRoot* root, const CollationSettings* settings,
+                      const char* path)
 {
     FILE* f = fopen(path, "rb");
     if (f == nullptr)
@@ -107,8 +109,8 @@ static bool CheckFile(const CollationRoot* root, const char* path)
             continue;
         }
         int previous = 1 - current;
-        int order = have ? mlocCollationCompare(root, collationTertiary, texts[previous],
-                                                lengths[previous], texts[current], lengths[current])
+        int order = have ? mlocCollationCompare(root, settings, texts[previous], lengths[previous],
+                                                texts[current], lengths[current])
                          : -1;
         ties += order == 0;
         if (order > 0)
@@ -123,7 +125,7 @@ static bool CheckFile(const CollationRoot* root, const char* path)
     }
     fclose(f);
     printf("%s: %zu lines, %zu with a surrogate passed over, %zu equal to the one above at the "
-           "tertiary strength, %zu out of order\n",
+           "quaternary strength, %zu out of order\n",
            path, lines, skipped, ties, wrong);
     return wrong == 0 && lines > skipped;
 }
@@ -132,7 +134,7 @@ int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        fputs("usage: conform_collation collation.mloc CollationTest_CLDR_NON_IGNORABLE*.txt...\n",
+        fputs("usage: conform_collation collation.mloc [--shifted] CollationTest_CLDR_*.txt...\n",
               stderr);
         return 2;
     }
@@ -158,10 +160,18 @@ int main(int argc, char** argv)
         fprintf(stderr, "conform_collation: cannot read the root from %s\n", argv[1]);
         return 2;
     }
-    bool ok = true;
-    for (int i = 2; i < argc; i++)
+    CollationSettings settings = mlocCollationDefaults(&root);
+    settings.strength = collationQuaternary;
+    int first = 2;
+    if (strcmp(argv[2], "--shifted") == 0)
     {
-        ok = CheckFile(&root, argv[i]) && ok;
+        settings.shifted = true;
+        first = 3;
+    }
+    bool ok = first < argc;
+    for (int i = first; i < argc; i++)
+    {
+        ok = CheckFile(&root, &settings, argv[i]) && ok;
     }
     return ok ? 0 : 1;
 }

@@ -9,13 +9,23 @@
 //   4  u32 ce32Count, the expansion words below
 //   8  u32 ceCount, the 64-bit elements below
 //  12  u32 contextCount, the context words below
-//  16  u32 listCount, the context lists, and zero bytes to 24
-//  24  the code point trie of CE32s (record mloc-0063), padded to 8
+//  16  u32 listCount, the context lists
+//  20  u32 scriptCount, the scripts and groups below
+//  24  u32 startCount, the script starts below
+//  28  u32 numericPrimary, the lead byte of numeric order's primaries
+//  32  the code point trie of CE32s (record mloc-0063), padded to 8
 //      u64 ces[ceCount]
 //      u32 ce32s[ce32Count]
 //      u32 listStarts[listCount + 1]: where each context list starts in
 //      the context words, rising, the last contextCount
 //      u32 contexts[contextCount]
+//      u32 scripts[scriptCount][2]: a script (Maul Unicode's packed
+//      code) or group (collationGroupSpace and on), rising, and the
+//      index of its start
+//      u32 starts[startCount]: ICU's script starts, the top 16 bits of
+//      the first primary of each range in order, rising from 0 and ending
+//      with the trailing range's 0xFF00; a range ends where the next
+//      starts
 //
 // A CE32 is ICU's compressed element. Its low byte below 0xC0 makes it a
 // simple element: the primary's two bytes in bits 31..16, the secondary
@@ -57,7 +67,7 @@
 
 enum
 {
-    collationHead = 24,
+    collationHead = 32,
     collationSpecialByte = 0xC0,
     collationTagLongPrimary = 1,
     collationTagLongSecondary = 2,
@@ -69,6 +79,16 @@ enum
     collationMaxExpansion = 31,
     collationMaxContext = 8,
     collationUnassignedByte = 0xFE,
+    // The groups among the scripts, as ICU's UCOL_REORDER_CODE_SPACE and
+    // on, and its two reserved ranges either side of Latin.
+    collationGroupSpace = 0x1000,
+    collationGroupPunctuation = 0x1001,
+    collationGroupSymbol = 0x1002,
+    collationGroupCurrency = 0x1003,
+    collationGroupDigit = 0x1004,
+    collationReservedBeforeLatin = 0x100E,
+    collationReservedAfterLatin = 0x100F,
+    collationMergeSeparator = 0x02000000,
 };
 
 constexpr uint32_t collationImplicitCe32 = 0xFFFFFFFF;
@@ -84,11 +104,16 @@ typedef struct CollationRoot
     const uint8_t* ce32s;
     const uint8_t* listStarts;
     const uint8_t* contexts;
+    const uint8_t* scripts;
+    const uint8_t* starts;
     uint32_t version;
     uint32_t ceCount;
     uint32_t ce32Count;
     uint32_t contextCount;
     uint32_t listCount;
+    uint32_t scriptCount;
+    uint32_t startCount;
+    uint32_t numericPrimary;
 } CollationRoot;
 
 static inline bool mlocCe32IsSpecial(uint32_t ce32)
@@ -275,6 +300,76 @@ static inline bool mlocCollationTrieValueValid(const CollationRoot* r, uint32_t 
     return mlocCollationCe32Valid(r, ce32, true);
 }
 
+// A script's or group's code at an index of the scripts, and its start's
+// index.
+static inline uint32_t mlocCollationScriptCode(const CollationRoot* r, uint32_t index)
+{
+    return mlocLoad32(r->scripts + (size_t)index * 8);
+}
+
+static inline uint32_t mlocCollationScriptStart(const CollationRoot* r, uint32_t index)
+{
+    return mlocLoad32(r->scripts + (size_t)index * 8 + 4);
+}
+
+static inline uint32_t mlocCollationStart(const CollationRoot* r, uint32_t index)
+{
+    return mlocLoad32(r->starts + (size_t)index * 4);
+}
+
+// The scripts rising by code, each naming a start that has one after it;
+// the starts rising from 0, 16-bit, the last 0xFF00 (the trailing range).
+static inline bool mlocCollationScriptsValid(const CollationRoot* r)
+{
+    bool ok = r->startCount >= 2 && mlocCollationStart(r, 0) == 0 &&
+              mlocCollationStart(r, r->startCount - 1) == 0xFF00;
+    for (uint32_t i = 1; ok && i < r->startCount; i++)
+    {
+        ok = mlocCollationStart(r, i - 1) < mlocCollationStart(r, i);
+    }
+    for (uint32_t i = 0; ok && i < r->scriptCount; i++)
+    {
+        uint32_t start = mlocCollationScriptStart(r, i);
+        ok = start > 0 && start + 1 < r->startCount &&
+             (i == 0 || mlocCollationScriptCode(r, i - 1) < mlocCollationScriptCode(r, i));
+    }
+    return ok;
+}
+
+// The index of a script's or group's start, or 0 when the root has none
+// (ICU's getScriptIndex).
+static inline uint32_t mlocCollationScriptIndex(const CollationRoot* r, uint32_t code)
+{
+    uint32_t low = 0;
+    uint32_t high = r->scriptCount;
+    while (low < high)
+    {
+        uint32_t middle = low + (high - low) / 2;
+        uint32_t found = mlocCollationScriptCode(r, middle);
+        if (found == code)
+        {
+            return mlocCollationScriptStart(r, middle);
+        }
+        if (found < code)
+        {
+            low = middle + 1;
+        }
+        else
+        {
+            high = middle;
+        }
+    }
+    return 0;
+}
+
+// The last primary of a group or script, ICU's getLastPrimaryForGroup: the
+// variable top for maxVariable's group; 0 when the root has none.
+static inline uint32_t mlocCollationLastPrimary(const CollationRoot* r, uint32_t code)
+{
+    uint32_t index = mlocCollationScriptIndex(r, code);
+    return index == 0 ? 0 : (mlocCollationStart(r, index + 1) << 16) - 1;
+}
+
 // Reads and checks a root unit: its trie, its arrays inside the payload,
 // every context list once, every trie value and every expansion word.
 static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
@@ -290,11 +385,10 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
         .ceCount = mlocLoad32(p + 8),
         .contextCount = mlocLoad32(p + 12),
         .listCount = mlocLoad32(p + 16),
+        .scriptCount = mlocLoad32(p + 20),
+        .startCount = mlocLoad32(p + 24),
+        .numericPrimary = mlocLoad32(p + 28),
     };
-    if (mlocLoad32(p + 20) != 0)
-    {
-        return false;
-    }
     if (!mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r.trie))
     {
         return false;
@@ -303,7 +397,9 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     uint64_t ce32s = ces + (uint64_t)r.ceCount * 8;
     uint64_t starts = ce32s + (uint64_t)r.ce32Count * 4;
     uint64_t contexts = starts + ((uint64_t)r.listCount + 1) * 4;
-    if (contexts + (uint64_t)r.contextCount * 4 > span.size)
+    uint64_t scripts = contexts + (uint64_t)r.contextCount * 4;
+    uint64_t scriptStarts = scripts + (uint64_t)r.scriptCount * 8;
+    if (scriptStarts + (uint64_t)r.startCount * 4 > span.size)
     {
         return false;
     }
@@ -311,7 +407,9 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     r.ce32s = p + ce32s;
     r.listStarts = p + starts;
     r.contexts = p + contexts;
-    bool ok = mlocCollationListStart(&r, 0) == 0 &&
+    r.scripts = p + scripts;
+    r.starts = p + scriptStarts;
+    bool ok = mlocCollationScriptsValid(&r) && mlocCollationListStart(&r, 0) == 0 &&
               mlocCollationListStart(&r, r.listCount) == r.contextCount;
     for (uint32_t i = 0; ok && i < r.listCount; i++)
     {

@@ -18,6 +18,8 @@
 #include "test_harness.h"
 #include "trie_gen.h"
 
+#include "maul-unicode/properties.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -305,7 +307,7 @@ static void TestUnit(void)
                   "a trie value with an unknown tag, an expansion past its array or a context "
                   "past the contexts refused");
         }
-        // The lists: a nonzero reserved word, an empty list, a last start short
+        // The lists: an empty list, a last start short
         // of the contexts, and a first list's entry count one more or one less
         // than fills it.
         size_t starts = (size_t)(r.listStarts - bytes);
@@ -316,7 +318,6 @@ static void TestUnit(void)
             size_t at;
             uint32_t value;
         } lists[] = {
-            {20, 1},
             {starts + 4, 0},
             {starts + (size_t)r.listCount * 4, r.contextCount - 1},
             {first, count + 1},
@@ -332,6 +333,43 @@ static void TestUnit(void)
             CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken),
                   "list starts not rising to the contexts, or a list its entries do not fill, "
                   "refused");
+        }
+        // The scripts: Cyrillic and Latin, by code, from the FDD1 lines, numeric
+        // order's lead byte from FDD0 0034; then a start not from 0, a last
+        // start not the trailing range's, starts not rising, a script naming
+        // start 0 or the last, scripts not rising, and one script too many.
+        CHECK(r.scriptCount == 2 && r.startCount == 4 &&
+                  mlocCollationScriptCode(&r, 0) == MUNI_SCRIPT('C', 'y', 'r', 'l') &&
+                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('C', 'y', 'r', 'l')) == 2 &&
+                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('G', 'r', 'e', 'k')) == 0 &&
+                  mlocCollationLastPrimary(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) ==
+                      (mlocCollationStart(&r, 2) << 16) - 1 &&
+                  mlocCollationStart(&r, 3) == 0xFF00 && r.numericPrimary == 0x10000000,
+              "the scripts and their starts from the FDD1 lines, numeric order's lead byte");
+        size_t scripts = (size_t)(r.scripts - bytes);
+        size_t scriptStarts = (size_t)(r.starts - bytes);
+        const struct
+        {
+            size_t at;
+            uint32_t value;
+        } tables[] = {
+            {scriptStarts, 1},
+            {scriptStarts + 12, 0xFE00},
+            {scriptStarts + 8, mlocCollationStart(&r, 1)},
+            {scripts + 4, 0},
+            {scripts + 4, 3},
+            {scripts + 8, MUNI_SCRIPT('C', 'y', 'r', 'l')},
+            {20, 3},
+        };
+        for (size_t i = 0; i < sizeof(tables) / sizeof(tables[0]); i++)
+        {
+            memcpy(copy, bytes, size);
+            for (int k = 0; k < 4; k++)
+            {
+                copy[tables[i].at + k] = (uint8_t)(tables[i].value >> (8 * k));
+            }
+            CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken),
+                  "a script table out of order or past its arrays refused");
         }
         free(copy);
     }
@@ -380,8 +418,9 @@ static bool Opens(Crafted c)
     uint8_t* trie = TrieBuild(values, &trieSize);
     free(values);
     size_t padded = (trieSize + 7) / 8 * 8;
-    size_t size =
-        collationHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) + sizeof(c.contexts);
+    static const uint32_t scriptStarts[] = {0, 0xFF00};
+    size_t size = collationHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) +
+                  sizeof(c.contexts) + sizeof(scriptStarts);
     uint8_t* bytes = calloc(1, size);
     if (trie == nullptr || bytes == nullptr)
     {
@@ -389,9 +428,9 @@ static bool Opens(Crafted c)
         free(bytes);
         return false;
     }
-    uint32_t words[] = {18U << 16, 2, 2, 7, 2};
+    uint32_t words[] = {18U << 16, 2, 2, 7, 2, 0, 2, 0};
     uint8_t* p = bytes;
-    for (size_t i = 0; i < 5; i++, p += 4)
+    for (size_t i = 0; i < 8; i++, p += 4)
     {
         GenPut(p, words[i], 4);
     }
@@ -412,6 +451,10 @@ static bool Opens(Crafted c)
     for (size_t i = 0; i < 7; i++, p += 4)
     {
         GenPut(p, c.contexts[i], 4);
+    }
+    for (size_t i = 0; i < 2; i++, p += 4)
+    {
+        GenPut(p, scriptStarts[i], 4);
     }
     if (c.patchAt == craftAfterTrie)
     {

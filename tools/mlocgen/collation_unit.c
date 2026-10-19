@@ -10,6 +10,7 @@
 #include "trie_gen.h"
 
 #include "maul-unicode/normalize.h"
+#include "maul-unicode/properties.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,9 @@ typedef struct Builder
     Words ce32s;
     Words contexts;
     Words listStarts;
+    Words scripts;
+    Words starts;
+    uint32_t numericPrimary;
     uint32_t* values;
     char* error;
     size_t errorSize;
@@ -349,18 +353,161 @@ static int Contexts(Builder* b, const RootTable* t, bool prefixes)
     return ok;
 }
 
+// A script start in the file's order: its first primary and the script
+// or group it starts.
+typedef struct Start
+{
+    uint32_t primary;
+    uint32_t code;
+    uint32_t order;
+} Start;
+
+static int ByPrimary(const void* x, const void* y)
+{
+    const Start* a = x;
+    const Start* b = y;
+    return a->primary != b->primary ? (a->primary < b->primary ? -1 : 1)
+           : a->order != b->order   ? (a->order < b->order ? -1 : 1)
+                                    : 0;
+}
+
+// Script entries are two words, the code first.
+static int ByCode(const void* x, const void* y)
+{
+    const uint64_t* a = x;
+    const uint64_t* b = y;
+    return a[0] != b[0] ? (a[0] < b[0] ? -1 : 1) : 0;
+}
+
+// The script or group an FDD1 line's sample code point names, as ICU's
+// genuca reads it: five samples name the groups, FDD0 the unassigned
+// range, any other its script; 0 for a sample of no script.
+static uint32_t SampleScript(uint32_t sample)
+{
+    static const uint32_t groups[][2] = {
+        {0x00A0, collationGroupSpace},  {0x201C, collationGroupPunctuation},
+        {0x263A, collationGroupSymbol}, {0x20AC, collationGroupCurrency},
+        {0x0034, collationGroupDigit},  {0xFDD0, MUNI_SCRIPT('Z', 'z', 'z', 'z')},
+    };
+    for (size_t i = 0; i < sizeof(groups) / sizeof(groups[0]); i++)
+    {
+        if (groups[i][0] == sample)
+        {
+            return groups[i][1];
+        }
+    }
+    uint32_t script = muniGetScript(sample);
+    return script == MUNI_SCRIPT('Z', 'y', 'y', 'y') || script == MUNI_SCRIPT('Z', 'i', 'n', 'h') ||
+                   script == MUNI_SCRIPT('Z', 'z', 'z', 'z')
+               ? 0
+               : script;
+}
+
+static void AddScript(Builder* b, uint32_t code, uint32_t index)
+{
+    Push(&b->scripts, code);
+    Push(&b->scripts, index);
+}
+
+// ICU's addScriptStart: a start is the primary's top 16 bits, put back to
+// its lead byte when it is that byte's lowest; scripts of one range share
+// it; the trailing range's start closes them.
+static int ScriptTable(Builder* b, const RootTable* t)
+{
+    size_t count = t->scriptStartCount + t->specialCount;
+    Start* starts = GenAllocate(count * sizeof(Start) + sizeof(Start));
+    size_t n = 0;
+    for (size_t i = 0; i < t->scriptStartCount; i++)
+    {
+        const RootMarker* m = &t->scriptStarts[i];
+        uint32_t code = SampleScript(m->codePoint);
+        if (code == 0)
+        {
+            free(starts);
+            return Fail(b, "a script start whose sample has no script", m->codePoint);
+        }
+        uint32_t primary = code == MUNI_SCRIPT('Z', 'z', 'z', 'z')
+                               ? (uint32_t)collationUnassignedByte << 24 | 0x040200
+                               : (uint32_t)(m->element >> 32);
+        starts[n++] = (Start){primary, code, (uint32_t)i};
+    }
+    for (size_t i = 0; i < t->specialCount; i++)
+    {
+        const RootMarker* m = &t->specials[i];
+        uint32_t primary = (uint32_t)(m->element >> 32);
+        if (m->codePoint == 0x34)
+        {
+            b->numericPrimary = primary;
+        }
+        else if (m->codePoint == 0xFF21 || m->codePoint == 0xFF3A)
+        {
+            uint32_t code =
+                m->codePoint == 0xFF21 ? collationReservedBeforeLatin : collationReservedAfterLatin;
+            starts[n++] = (Start){primary, code, (uint32_t)(t->scriptStartCount + i)};
+        }
+    }
+    qsort(starts, n, sizeof(Start), ByPrimary);
+    Push(&b->starts, 0);
+    for (size_t i = 0; i < n; i++)
+    {
+        uint32_t p = starts[i].primary >> 16;
+        uint32_t lowest = t->compressible[p >> 8] ? 4 : 2;
+        p = (p & 0xFF) == lowest ? p & 0xFF00 : p;
+        size_t last = b->starts.count - 1;
+        size_t index = b->starts.items[last] == p ? last : Push(&b->starts, p);
+        uint32_t code = starts[i].code;
+        AddScript(b, code, (uint32_t)index);
+        if (code == MUNI_SCRIPT('H', 'i', 'r', 'a'))
+        {
+            AddScript(b, MUNI_SCRIPT('H', 'r', 'k', 't'), (uint32_t)index);
+        }
+        else if (code == MUNI_SCRIPT('H', 'a', 'n', 'i'))
+        {
+            AddScript(b, MUNI_SCRIPT('H', 'a', 'n', 's'), (uint32_t)index);
+            AddScript(b, MUNI_SCRIPT('H', 'a', 'n', 't'), (uint32_t)index);
+        }
+        if (code == MUNI_SCRIPT('Z', 'z', 'z', 'z'))
+        {
+            Push(&b->starts, 0xFF00);
+        }
+    }
+    free(starts);
+    if (b->scripts.count > 2)
+    {
+        qsort(b->scripts.items, b->scripts.count / 2, 2 * sizeof(uint64_t), ByCode);
+    }
+    for (size_t i = 2; i < b->scripts.count; i += 2)
+    {
+        if (b->scripts.items[i] == b->scripts.items[i - 2])
+        {
+            return Fail(b, "two script starts for one script", (uint32_t)b->scripts.items[i]);
+        }
+    }
+    // The trailing range closes the starts, as the unassigned range's
+    // start adds it in CLDR's root; a root without one still ends there.
+    if (b->starts.items[b->starts.count - 1] != 0xFF00)
+    {
+        Push(&b->starts, 0xFF00);
+    }
+    return 1;
+}
+
 static uint8_t* Write(const Builder* b, size_t* sizeOut)
 {
     size_t trieSize = 0;
     uint8_t* trie = TrieBuild(b->values, &trieSize);
     size_t padded = (trieSize + 7) / 8 * 8;
     size_t size = collationHead + padded + b->ces.count * 8 + b->ce32s.count * 4 +
-                  (b->listStarts.count + 1) * 4 + b->contexts.count * 4;
+                  (b->listStarts.count + 1) * 4 + b->contexts.count * 4 + b->scripts.count * 4 +
+                  b->starts.count * 4;
     uint8_t* out = GenAllocate(size);
     GenPut(out + 4, b->ce32s.count, 4);
     GenPut(out + 8, b->ces.count, 4);
     GenPut(out + 12, b->contexts.count, 4);
     GenPut(out + 16, b->listStarts.count, 4);
+    GenPut(out + 20, b->scripts.count / 2, 4);
+    GenPut(out + 24, b->starts.count, 4);
+    GenPut(out + 28, b->numericPrimary, 4);
     memcpy(out + collationHead, trie, trieSize);
     uint8_t* p = out + collationHead + padded;
     for (size_t i = 0; i < b->ces.count; i++, p += 8)
@@ -380,6 +527,14 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     for (size_t i = 0; i < b->contexts.count; i++, p += 4)
     {
         GenPut(p, b->contexts.items[i], 4);
+    }
+    for (size_t i = 0; i < b->scripts.count; i++, p += 4)
+    {
+        GenPut(p, b->scripts.items[i], 4);
+    }
+    for (size_t i = 0; i < b->starts.count; i++, p += 4)
+    {
+        GenPut(p, b->starts.items[i], 4);
     }
     free(trie);
     *sizeOut = size;
@@ -413,7 +568,7 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
     }
     OffsetRanges(&b, table);
     uint8_t* out = nullptr;
-    if (Contexts(&b, table, false) && Contexts(&b, table, true))
+    if (Contexts(&b, table, false) && Contexts(&b, table, true) && ScriptTable(&b, table))
     {
         out = Write(&b, sizeOut);
         GenPut(out, (uint64_t)table->version[0] << 16 | table->version[1] << 8 | table->version[2],
@@ -424,5 +579,7 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
     free(b.ce32s.items);
     free(b.contexts.items);
     free(b.listStarts.items);
+    free(b.scripts.items);
+    free(b.starts.items);
     return out;
 }

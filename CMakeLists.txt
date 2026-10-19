@@ -545,6 +545,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(collation_data WHITEBOX)
     if(TARGET test_collation_data)
+        target_link_libraries(test_collation_data PRIVATE maul-unicode::maul-unicode)
         if(EMSCRIPTEN)
             target_link_options(test_collation_data PRIVATE
                                 "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")

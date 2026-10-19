@@ -25,14 +25,32 @@
 alignas(8) static uint8_t s_file[1 << 19];
 static CollationRoot s_root;
 
-// The order of a and b up to the strength, checked against its mirror.
+// The order of a and b with the settings, checked against its mirror.
+static int Compare(const char* a, size_t aLength, const char* b, size_t bLength,
+                   const CollationSettings* settings)
+{
+    int ab = mlocCollationCompare(&s_root, settings, (const uint8_t*)a, aLength, (const uint8_t*)b,
+                                  bLength);
+    int ba = mlocCollationCompare(&s_root, settings, (const uint8_t*)b, bLength, (const uint8_t*)a,
+                                  aLength);
+    return ab == -ba ? ab : 2;
+}
+
+// The order up to the strength, non-ignorable.
 static int Order(const char* a, const char* b, uint32_t strength)
 {
-    int ab = mlocCollationCompare(&s_root, strength, (const uint8_t*)a, strlen(a),
-                                  (const uint8_t*)b, strlen(b));
-    int ba = mlocCollationCompare(&s_root, strength, (const uint8_t*)b, strlen(b),
-                                  (const uint8_t*)a, strlen(a));
-    return ab == -ba ? ab : 2;
+    CollationSettings settings = mlocCollationDefaults(&s_root);
+    settings.strength = strength;
+    return Compare(a, strlen(a), b, strlen(b), &settings);
+}
+
+// The order up to the strength, shifted.
+static int Shifted(const char* a, const char* b, uint32_t strength)
+{
+    CollationSettings settings = mlocCollationDefaults(&s_root);
+    settings.strength = strength;
+    settings.shifted = true;
+    return Compare(a, strlen(a), b, strlen(b), &settings);
 }
 
 static void TestLevels(void)
@@ -51,6 +69,35 @@ static void TestLevels(void)
           "secondaries forwards: cot\xC3\xA9 before c\xC3\xB4te");
 }
 
+static void TestShifted(void)
+{
+    CollationSettings settings = mlocCollationDefaults(&s_root);
+    CHECK(settings.variableTop == 0x0BFFFFFF && settings.strength == collationTertiary &&
+              !settings.shifted,
+          "the root's defaults: tertiary, non-ignorable, the variable top 0B FF FF FF");
+    CHECK(Order("a-b", "ab", collationTertiary) == -1 &&
+              Shifted("a-b", "ab", collationTertiary) == 0 &&
+              Shifted("a-b", "ab", collationQuaternary) == -1 &&
+              Shifted("a b", "a-b", collationQuaternary) == -1,
+          "punctuation and spaces ignored when shifted until the fourth level, there by their "
+          "primaries");
+    CHECK(Order("a-b",
+                "a-\xCC\x81"
+                "b",
+                collationSecondary) == -1 &&
+              Shifted("a-b",
+                      "a-\xCC\x81"
+                      "b",
+                      collationQuaternary) == 0,
+          "an accent after a variable element ignored when shifted");
+    CHECK(Shifted("a$b", "ab", collationPrimary) == -1 &&
+              Shifted("a\xC3\xA1", "a-a", collationQuaternary) == 1,
+          "a currency sign not variable; a variable element only at the fourth level");
+    CHECK(Order("a", "a", collationQuaternary) == 0 &&
+              Shifted("ab", "ab", collationQuaternary) == 0,
+          "equal texts equal at the fourth level");
+}
+
 static void TestTexts(void)
 {
     CHECK(Order("", "a", collationPrimary) == -1 && Order("a", "ab", collationTertiary) == -1 &&
@@ -60,11 +107,10 @@ static void TestTexts(void)
               Order("\xE1\xBB\x87", "e\xCC\xA3\xCC\x82", collationTertiary) == 0 &&
               Order("\xE1\xBB\x87", "e\xCC\x82\xCC\xA3", collationTertiary) == 0,
           "canonically equal texts equal");
-    CHECK(mlocCollationCompare(&s_root, collationTertiary, (const uint8_t*)"a\0b", 3,
-                               (const uint8_t*)"ab", 2) == 0 &&
-              Order("a\xC2\xAD"
-                    "b",
-                    "ab", collationTertiary) == 0,
+    CollationSettings tertiary = mlocCollationDefaults(&s_root);
+    CHECK(Compare("a\0b", 3, "ab", 2, &tertiary) == 0 && Order("a\xC2\xAD"
+                                                               "b",
+                                                               "ab", collationTertiary) == 0,
           "U+0000 and a soft hyphen completely ignorable");
     CHECK(Order("\xE4\xB8\x80", "\xE4\xB8\x81", collationPrimary) == -1 &&
               Order("z", "\xE4\xB8\x80", collationPrimary) == -1 &&
@@ -98,5 +144,6 @@ int main(void)
     }
     TestLevels();
     TestTexts();
+    TestShifted();
     return s_failures == 0 ? 0 : 1;
 }

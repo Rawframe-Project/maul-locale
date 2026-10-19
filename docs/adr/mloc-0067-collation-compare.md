@@ -32,7 +32,7 @@ on the heap past a few elements.
   level, so the second and third passes are rare. Whether a small
   buffer pays is measured in slice (g).
 - **The alternate setting is non-ignorable,** CLDR's root default. The
-  options come in slice (b): shifted with the variable top (CLDR's
+  options come in slice (b), record mloc-0069: shifted with the variable top (CLDR's
   `[variable top = 0B FF FF FF]` for punctuation), quaternary and
   identical strengths, case first, case level, backwards secondaries,
   numeric order and reordering. The SHIFTED conformance files come with
