@@ -137,6 +137,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_resolve.c
     src/message_table.c
     src/message_text.c
+    src/nfd_stream.c
     src/message_value.c
     src/message_words.c
     src/message_write.c
@@ -248,6 +249,18 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_message PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_message PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}")
+    endif()
+    # The NFD stream against Maul Unicode's NFD, and against its
+    # NormalizationTest.txt when the sources were fetched.
+    maul_add_test(nfd_stream WHITEBOX MANUAL)
+    if(TARGET test_nfd_stream)
+        target_link_libraries(test_nfd_stream PRIVATE maul-unicode::maul-unicode)
+        set(MLOC_NORMALIZATION_TEST "${maul-unicode_SOURCE_DIR}/test/data/NormalizationTest.txt")
+        if(maul-unicode_SOURCE_DIR AND EXISTS "${MLOC_NORMALIZATION_TEST}" AND NOT EMSCRIPTEN)
+            add_test(NAME nfd_stream COMMAND test_nfd_stream "${MLOC_NORMALIZATION_TEST}")
+        else()
+            add_test(NAME nfd_stream COMMAND test_nfd_stream)
+        endif()
     endif()
     maul_add_test(message_functions)
     maul_add_test(message_parts)
