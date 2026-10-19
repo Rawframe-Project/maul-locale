@@ -60,6 +60,27 @@ static void TestXxh64(void)
     CHECK(mlocXxh64(ramp, 100, 0) == 0x6AC1E58032166597U &&
               mlocXxh64(ramp, 100, 0x9E3779B97F4A7C15U) == 0x3B97D91EBA03E785U,
           "XXH64 of 100 bytes: stripes, lanes of 8 and 4, and single bytes");
+    static const struct
+    {
+        size_t length;
+        uint64_t hash;
+    } s_lanes[] = {{8, 0xF3844DCDA4EEABBFU},
+                   {16, 0x0572AC5BED1C5A11U},
+                   {40, 0x926F564E1B3E18D5U},
+                   {64, 0xA97161D5402F516EU}};
+    memset(text, 'x', sizeof(text));
+    for (size_t i = 0; i < sizeof(s_lanes) / sizeof(s_lanes[0]); i++)
+    {
+        CHECK(mlocXxh64(text, s_lanes[i].length, 0) == s_lanes[i].hash,
+              "XXH64 at a lane's end: 8, 16, 40 and 64 bytes");
+    }
+    // The places and buckets are the format: these values never change
+    // within a data version.
+    CHECK(mlocCatalogPlace(0x0123456789ABCDEFU, 7, 0, 1000) == 310 &&
+              mlocCatalogPlace(0xFEDCBA9876543210U, 0, 3, 1U << 20) == 977421 &&
+              mlocCatalogPlace(42, 65535, 0xFFFFFFFFFFFFFFFFU, 5) == 2 &&
+              mlocCatalogBucket(0xFEDCBA9876543210U, 250001) == 248889,
+          "the perfect hash's places and buckets as the format fixes them");
     memcpy(text, "hello.world", 11);
     CHECK(mlocXxh64(text, 11, 0) == 0xBF333E98D7B058E1U, "XXH64 of a key");
 }
@@ -244,6 +265,190 @@ static void TestDamage(void)
     free(bytes);
 }
 
+// A catalog's bytes with one 32-bit word set, opened again.
+static mlocResult Reopen(uint8_t* bytes, size_t size, size_t at, uint32_t value)
+{
+    uint8_t saved[4];
+    memcpy(saved, bytes + at, 4);
+    for (int i = 0; i < 4; i++)
+    {
+        bytes[at + (size_t)i] = (uint8_t)(value >> (8 * i));
+    }
+    mlocData data;
+    mlocCatalog catalog;
+    mlocResult r = mlocOpenData(&data, bytes, size);
+    r = r == mloc_success ? mlocOpenCatalog(&catalog, &data) : mloc_errorData;
+    memcpy(bytes + at, saved, 4);
+    return r;
+}
+
+static uint32_t Word(const uint8_t* p)
+{
+    return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+// Each table check refuses its own damage.
+static void TestEachRefusal(void)
+{
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/en.mloc", s_directory);
+    size_t size = 0;
+    uint8_t* bytes = (uint8_t*)FileRead(path, &size);
+    mlocData data;
+    if (bytes == nullptr || mlocOpenData(&data, bytes, size) != mloc_success)
+    {
+        CHECK(false, "the catalog opens");
+        free(bytes);
+        return;
+    }
+    // The units are found by the set id each stores (at 24 in the keys,
+    // at 8 in the messages), as a shared build hides the data's directory.
+    mlocCatalog opened;
+    mlocCatalogInfo info;
+    size_t at[2] = {0, 0};
+    int seen = 0;
+    if (mlocOpenCatalog(&opened, &data) == mloc_success &&
+        mlocGetCatalogInfo(&opened, &info) == mloc_success)
+    {
+        uint8_t id[8];
+        for (int i = 0; i < 8; i++)
+        {
+            id[i] = (uint8_t)(info.setId >> (8 * i));
+        }
+        for (size_t i = 0; seen < 2 && i + 8 <= size; i += 4)
+        {
+            if (memcmp(bytes + i, id, 8) == 0)
+            {
+                at[seen++] = i;
+            }
+        }
+    }
+    DataSpan keys = {0};
+    DataSpan messages = {0};
+    if (seen == 2 && at[0] >= 24 && at[1] >= 8)
+    {
+        keys.bytes = bytes + at[0] - 24;
+        keys.size = (uint32_t)(at[1] - 8 - (at[0] - 24));
+        messages.bytes = bytes + at[1] - 8;
+        messages.size = (uint32_t)(size - (at[1] - 8));
+    }
+    CatalogKeys k;
+    if (keys.bytes == nullptr || !mlocReadCatalogKeys(keys, &k) || k.places <= k.count ||
+        k.count < 2)
+    {
+        CHECK(false, "the catalog's units");
+        free(bytes);
+        return;
+    }
+    size_t K = (size_t)(keys.bytes - bytes);
+    size_t M = (size_t)(messages.bytes - bytes);
+    size_t remap = (size_t)(k.remap - bytes);
+    size_t offsets = (size_t)(k.offsets - bytes);
+    size_t text = (size_t)(k.text - bytes);
+    uint32_t firstMessage = Word(messages.bytes + 16);
+    size_t messageText = M + 16 + ((size_t)k.count + 1) * 4 + firstMessage;
+    CHECK(Reopen(bytes, size, K + 12, 1) == mloc_errorData &&
+              Reopen(bytes, size, K + 4, 0) == mloc_errorData &&
+              Reopen(bytes, size, K + 8, k.count - 1) == mloc_errorData &&
+              Reopen(bytes, size, remap, k.count) == mloc_errorData &&
+              Reopen(bytes, size, offsets, 1) == mloc_errorData &&
+              Reopen(bytes, size, offsets + 4, Word(bytes + offsets + 8) + 1) == mloc_errorData &&
+              Reopen(bytes, size, offsets + (size_t)k.count * 4, k.textSize + 1) == mloc_errorData,
+          "keys: the reserved word, no buckets, too few places, a remap past the count, offsets "
+          "not from 0, falling or past the text");
+    CHECK(Reopen(bytes, size, text, Word(bytes + text) ^ 0x20) == mloc_errorData &&
+              Reopen(bytes, size, text, Word(bytes + text) & 0xFFFFFF00U) == mloc_errorData,
+          "keys: a key changed is not at its index; a key holding a NUL");
+    CHECK(Reopen(bytes, size, M + 4, 2) == mloc_errorData &&
+              Reopen(bytes, size, M, 0xFFFF) == mloc_errorData &&
+              Reopen(bytes, size, M + 16, 1) == mloc_errorData &&
+              Reopen(bytes, size, messageText, Word(bytes + messageText) ^ 0xFF) == mloc_errorData,
+          "messages: an unknown flag, a count past the unit, offsets not from 0, a message that "
+          "is not one");
+    CHECK(Reopen(bytes, size, M + 8, Word(bytes + M + 8) ^ 1) == mloc_errorData &&
+              Reopen(bytes, size, K + 24, Word(bytes + K + 24) ^ 1) == mloc_errorData,
+          "the set ids disagree, or the keys' own is not theirs");
+    mlocCatalog catalog;
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    CHECK(mlocOpenCatalog(&catalog, &builtin) == mloc_errorNotFound &&
+              mlocOpenCatalog(nullptr, &data) == mloc_errorInvalid &&
+              mlocOpenCatalog(&catalog, nullptr) == mloc_errorInvalid,
+          "data without a catalog; null pointers");
+    free(bytes);
+}
+
+static void TestArguments(void)
+{
+    mlocCatalog zero;
+    memset(&zero, 0, sizeof(zero));
+    mlocCatalogInfo info;
+    uint32_t index = 0;
+    const void* message = nullptr;
+    size_t size = 0;
+    CHECK(mlocGetCatalogInfo(&zero, &info) == mloc_errorInvalid &&
+              mlocGetCatalogInfo(nullptr, &info) == mloc_errorInvalid &&
+              mlocFindCatalogKey(&zero, "a", 1, &index) == mloc_errorInvalid &&
+              mlocGetCatalogMessage(&zero, 0, &message, &size) == mloc_errorInvalid,
+          "a catalog the library did not open is refused");
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/en.mloc", s_directory);
+    uint8_t* bytes = (uint8_t*)FileRead(path, &size);
+    mlocData data;
+    mlocCatalog catalog;
+    if (bytes != nullptr && mlocOpenData(&data, bytes, size) == mloc_success &&
+        mlocOpenCatalog(&catalog, &data) == mloc_success)
+    {
+        CHECK(mlocGetCatalogInfo(&catalog, nullptr) == mloc_errorInvalid &&
+                  mlocFindCatalogKey(&catalog, "a", 1, nullptr) == mloc_errorInvalid &&
+                  mlocFindCatalogKey(&catalog, nullptr, 0, &index) == mloc_errorNotFound &&
+                  mlocGetCatalogMessage(&catalog, 0, nullptr, &size) == mloc_errorInvalid &&
+                  mlocGetCatalogMessage(&catalog, 0, &message, nullptr) == mloc_errorInvalid,
+              "null outputs refused; a null empty key is no key");
+    }
+    free(bytes);
+}
+
+static void TestCompileFailures(void)
+{
+    Write("bad.mf2", "@locale fr\n---\nk = {$x\n");
+    Write("de.mf2", "@locale de\n---\n@translate no\n[brand]\nname = Maul\nother = X\n");
+    Write("de-tr.mf2", "@locale tr\n---\n[brand]\nname = Moul\nother = Y\n");
+    char bad[1024];
+    char de[1024];
+    char deTr[1024];
+    char missing[1024];
+    snprintf(bad, sizeof(bad), "%s/bad.mf2", s_directory);
+    snprintf(de, sizeof(de), "%s/de.mf2", s_directory);
+    snprintf(deTr, sizeof(deTr), "%s/de-tr.mf2", s_directory);
+    snprintf(missing, sizeof(missing), "%s/no-such-directory", s_directory);
+    FILE* report = tmpfile();
+    FILE* to = report != nullptr ? report : stderr;
+    char* badPaths[] = {de, bad};
+    char* goodPaths[] = {de, deTr};
+    CHECK(!CatalogCompile(s_directory, badPaths, 2, to) &&
+              !CatalogCompile(s_directory, badPaths, 0, to) &&
+              !CatalogCompile(missing, goodPaths, 2, to),
+          "a message that does not compile, no resources, a directory that is not");
+    CHECK(CatalogCompile(s_directory, goodPaths, 2, to), "a set with a section kept whole");
+    if (report != nullptr)
+    {
+        fclose(report);
+    }
+    mlocData data;
+    mlocCatalog catalog;
+    mlocResult opened = mloc_errorInvalid;
+    uint8_t* bytes = Open("tr", &data, &catalog, &opened);
+    uint32_t name = 0;
+    uint32_t other = 0;
+    CHECK(opened == mloc_success &&
+              mlocFindCatalogKey(&catalog, "brand.name", 10, &name) == mloc_success &&
+              mlocFindCatalogKey(&catalog, "brand.other", 11, &other) == mloc_success &&
+              SameMessage(&catalog, name, "Maul") && SameMessage(&catalog, other, "X"),
+          "@translate no on a section keeps every message of it");
+    free(bytes);
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -251,5 +456,8 @@ int main(int argc, char** argv)
     TestManyKeys();
     TestCompiledSet();
     TestDamage();
+    TestEachRefusal();
+    TestArguments();
+    TestCompileFailures();
     return s_failures == 0 ? 0 : 1;
 }
