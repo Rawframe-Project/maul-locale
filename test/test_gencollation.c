@@ -209,7 +209,7 @@ static void TestRefusals(void)
 // The CE32 a context list gives for a string, or 0.
 static uint32_t Entry(const CollationRoot* r, uint32_t ce32, uint32_t c)
 {
-    uint32_t index = mlocCe32Index(ce32);
+    uint32_t index = mlocCollationListStart(r, mlocCe32Index(ce32));
     uint32_t count = mlocCollationContext(r, index + 1);
     for (uint32_t e = 0, at = index + 2; e < count; e++)
     {
@@ -255,7 +255,8 @@ static void TestUnit(void)
     uint32_t c = ok ? mlocTrieValue(&r.trie, 0x63) : 0;
     uint32_t dot = ok ? mlocTrieValue(&r.trie, 0xB7) : 0;
     CHECK(ok && mlocCe32Tag(c) == collationTagContraction &&
-              mlocCollationContext(&r, mlocCe32Index(c)) == collationImplicitCe32 &&
+              mlocCollationContext(&r, mlocCollationListStart(&r, mlocCe32Index(c))) ==
+                  collationImplicitCe32 &&
               mlocCe32Element(Entry(&r, c, 0x68)) == 0x2F02000005000500ULL &&
               mlocCe32Tag(dot) == collationTagPrefix &&
               mlocCe32Tag(Entry(&r, dot, 0x4C)) == collationTagLongSecondary &&
@@ -291,6 +292,34 @@ static void TestUnit(void)
             CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken),
                   "a trie value with an unknown tag, an expansion past its array or a context "
                   "past the contexts refused");
+        }
+        // The lists: a nonzero reserved word, an empty list, a last start short
+        // of the contexts, and a first list's entry count one more or one less
+        // than fills it.
+        size_t starts = (size_t)(r.listStarts - bytes);
+        size_t first = (size_t)(r.contexts - bytes) + 4;
+        uint32_t count = mlocCollationContext(&r, 1);
+        const struct
+        {
+            size_t at;
+            uint32_t value;
+        } lists[] = {
+            {20, 1},
+            {starts + 4, 0},
+            {starts + (size_t)r.listCount * 4, r.contextCount - 1},
+            {first, count + 1},
+            {first, count - 1},
+        };
+        for (size_t i = 0; i < sizeof(lists) / sizeof(lists[0]); i++)
+        {
+            memcpy(copy, bytes, size);
+            for (int k = 0; k < 4; k++)
+            {
+                copy[lists[i].at + k] = (uint8_t)(lists[i].value >> (8 * k));
+            }
+            CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken),
+                  "list starts not rising to the contexts, or a list its entries do not fill, "
+                  "refused");
         }
         free(copy);
     }

@@ -21,6 +21,7 @@ proved over a decade.
   - the code point trie of CE32s (record mloc-0063);
   - the 64-bit elements;
   - the CE32 expansion words;
+  - where each context list starts;
   - the context words.
 - **A CE32 is ICU's:**
   - **Simple:** a low byte below 0xC0. It holds a two-byte primary,
@@ -61,17 +62,25 @@ proved over a decade.
     follows it, the prefix read backwards.
   - Each list has a default (the code point's own CE32) and entries in
     increasing order.
+  - A prefix or contraction CE32 holds the list's number, not its
+    place in the words; the list starts are an array of their own.
   - A context is at most 8 code points. A prefix together with a
     contraction on one code point is refused at build, since the root
     has none.
 - **Validation at open** (`mlocReadCollationRoot`):
   - the trie;
   - the arrays inside the payload;
-  - every trie value, expansion word and context list: tags known, low
-    bytes 0xC0 and their tag, expansions and offsets inside their
-    arrays, context lists inside the contexts with valid CE32s;
+  - the list starts rising from 0 to the end of the contexts, and each
+    list filled exactly by its entries, with valid CE32s; each list is
+    checked once;
+  - every trie value and expansion word: tags known, low bytes 0xC0
+    and their tag, expansions and offsets inside their arrays, a
+    context naming a list that exists;
   - expansions hold elements only.
-  A unit that reads can be looked up without further checks.
+  A unit that reads can be looked up without further checks. Opening
+  costs the unit's size. With lists named by their place, each of the
+  trie's values would check its list again: a crafted unit with many
+  code points on one long list would take quadratic time to open.
 
 ## Proof
 
@@ -90,10 +99,13 @@ proved over a decade.
     elements;
   - refusals: a header longer than the payload, a payload cut short,
     a trie value with an unknown tag, an expansion past its array, a
-    context past the contexts.
+    context naming no list, a nonzero reserved word, an empty list,
+    list starts short of the contexts, and a list its entries overfill
+    or underfill.
 - **Size, CLDR 49:**
-  - The unit is 190,200 bytes: a 149,684-byte trie, 1,068 64-bit
-    elements, 4,927 expansion words and 3,061 context words.
+  - The unit is 190,496 bytes: a 149,684-byte trie, 1,068 64-bit
+    elements, 4,927 expansion words and 3,061 context words, with the
+    list starts.
   - Before the offset runs it was 310,576 bytes.
 
 ## Consequences

@@ -195,7 +195,7 @@ static uint32_t Expand(const CollationRoot* r, uint32_t ce32, uint32_t codePoint
     if (mlocCe32IsSpecial(ce32) &&
         (mlocCe32Tag(ce32) == collationTagPrefix || mlocCe32Tag(ce32) == collationTagContraction))
     {
-        ce32 = mlocCollationContext(r, mlocCe32Index(ce32));
+        ce32 = mlocCollationContext(r, mlocCollationListStart(r, mlocCe32Index(ce32)));
     }
     uint64_t one = mlocCe32Element(ce32);
     if (!mlocCe32IsSpecial(ce32) || one != 0)
@@ -225,7 +225,7 @@ static uint32_t Expand(const CollationRoot* r, uint32_t ce32, uint32_t codePoint
 // The CE32 a context list gives for a string, or 0 when none matches.
 static uint32_t Lookup(const CollationRoot* r, uint32_t ce32, const uint32_t* text, uint32_t length)
 {
-    uint32_t index = mlocCe32Index(ce32);
+    uint32_t index = mlocCollationListStart(r, mlocCe32Index(ce32));
     uint32_t count = mlocCollationContext(r, index + 1);
     uint32_t at = index + 2;
     for (uint32_t e = 0; e < count; e++)

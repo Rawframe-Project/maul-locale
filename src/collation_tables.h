@@ -9,9 +9,12 @@
 //   4  u32 ce32Count, the expansion words below
 //   8  u32 ceCount, the 64-bit elements below
 //  12  u32 contextCount, the context words below
-//  16  the code point trie of CE32s (record mloc-0063), padded to 8
+//  16  u32 listCount, the context lists, and zero bytes to 24
+//  24  the code point trie of CE32s (record mloc-0063), padded to 8
 //      u64 ces[ceCount]
 //      u32 ce32s[ce32Count]
+//      u32 listStarts[listCount + 1]: where each context list starts in
+//      the context words, rising, the last contextCount
 //      u32 contexts[contextCount]
 //
 // A CE32 is ICU's compressed element. Its low byte below 0xC0 makes it a
@@ -24,7 +27,7 @@
 //      tertiary byte in 15..8
 //   5  expansion of CE32s: index in bits 31..13, length 1 to 31 in 12..8
 //   6  expansion of CEs: the same into ces
-//   8  prefix: index in bits 31..13 into contexts
+//   8  prefix: a context list's number in bits 31..13
 //   9  contraction: the same
 //  14  offset: index in bits 31..13 of a ce whose bits 63..32 are a
 //      three-byte primary and 31..8 its first code point, bit 7 set when
@@ -33,12 +36,15 @@
 //  15  implicit, the whole word 0xFFFFFFFF: an unassigned code point's
 //      primary is computed from the code point
 //
-// A context list (contexts[index]):
+// A context list (contexts[listStarts[number]] up to the next start):
 //   u32 default, the CE32 when no entry matches (never a context tag)
 //   u32 count, then count entries in increasing order of their strings,
-//   each u32 length (1 to 8), the code points, u32 CE32. For a prefix
-//   the strings are the prefixes read backwards from the code point; for
-//   a contraction, the code points after the first.
+//   each u32 length (1 to 8), the code points, u32 CE32; the entries
+//   fill the list exactly. For a prefix the strings are the prefixes read
+//   backwards from the code point; for a contraction, the code points
+//   after the first. The lists are checked once each at open and a trie
+//   value only names one, so opening costs the unit's size, however many
+//   code points name a list.
 
 #ifndef MLOC_COLLATION_TABLES_H
 #define MLOC_COLLATION_TABLES_H
@@ -51,7 +57,7 @@
 
 enum
 {
-    collationHead = 16,
+    collationHead = 24,
     collationSpecialByte = 0xC0,
     collationTagLongPrimary = 1,
     collationTagLongSecondary = 2,
@@ -72,11 +78,13 @@ typedef struct CollationRoot
     CodePointTrie trie;
     const uint8_t* ces;
     const uint8_t* ce32s;
+    const uint8_t* listStarts;
     const uint8_t* contexts;
     uint32_t version;
     uint32_t ceCount;
     uint32_t ce32Count;
     uint32_t contextCount;
+    uint32_t listCount;
 } CollationRoot;
 
 static inline bool mlocCe32IsSpecial(uint32_t ce32)
@@ -165,6 +173,13 @@ static inline uint32_t mlocCollationContext(const CollationRoot* r, uint32_t ind
     return mlocLoad32(r->contexts + (size_t)index * 4);
 }
 
+// Where a context list starts in the context words; number at most
+// listCount, which gives the end of the last.
+static inline uint32_t mlocCollationListStart(const CollationRoot* r, uint32_t number)
+{
+    return mlocLoad32(r->listStarts + (size_t)number * 4);
+}
+
 // Whether a CE32 is valid where it is found: one element anywhere; with
 // mayRefer (a trie value, a context list's default or entry) also an
 // expansion inside its array, an offset whose element exists, or the
@@ -201,48 +216,48 @@ static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32,
     }
 }
 
-// A context list's words from index: true when its default, count and
-// entries fit the contexts and every CE32 in it is valid.
-static inline bool mlocCollationContextValid(const CollationRoot* r, uint32_t index)
+// The context list from start to end: a valid default, then entries
+// that fill it exactly, each with a length from 1 to 8 and a valid CE32.
+static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start, uint32_t end)
 {
-    if ((uint64_t)index + 2 > r->contextCount ||
-        !mlocCollationCe32Valid(r, mlocCollationContext(r, index), true))
+    if (end - start < 2 || !mlocCollationCe32Valid(r, mlocCollationContext(r, start), true))
     {
         return false;
     }
-    uint32_t count = mlocCollationContext(r, index + 1);
-    uint64_t at = (uint64_t)index + 2;
+    uint32_t count = mlocCollationContext(r, start + 1);
+    uint32_t at = start + 2;
     for (uint32_t e = 0; e < count; e++)
     {
-        if (at >= r->contextCount)
+        if (end - at < 3)
         {
             return false;
         }
-        uint32_t length = mlocCollationContext(r, (uint32_t)at);
-        if (length == 0 || length > collationMaxContext || at + 1 + length >= r->contextCount ||
-            !mlocCollationCe32Valid(r, mlocCollationContext(r, (uint32_t)(at + 1 + length)), true))
+        uint32_t length = mlocCollationContext(r, at);
+        if (length == 0 || length > collationMaxContext || end - at < 2 + length ||
+            !mlocCollationCe32Valid(r, mlocCollationContext(r, at + 1 + length), true))
         {
             return false;
         }
         at += 2 + length;
     }
-    return true;
+    return at == end;
 }
 
 // A trie value: anything a context list or an expansion may hold, or a
-// context whose list is valid.
+// context naming a list that exists.
 static inline bool mlocCollationTrieValueValid(const CollationRoot* r, uint32_t ce32)
 {
-    if (mlocCe32IsSpecial(ce32) &&
+    if (mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 &&
+        (ce32 & 0xF0) == collationSpecialByte &&
         (mlocCe32Tag(ce32) == collationTagPrefix || mlocCe32Tag(ce32) == collationTagContraction))
     {
-        return mlocCollationContextValid(r, mlocCe32Index(ce32));
+        return mlocCe32Index(ce32) < r->listCount;
     }
     return mlocCollationCe32Valid(r, ce32, true);
 }
 
 // Reads and checks a root unit: its trie, its arrays inside the payload,
-// every trie value and every expansion word.
+// every context list once, every trie value and every expansion word.
 static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
 {
     if (span.size < collationHead)
@@ -255,22 +270,37 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
         .ce32Count = mlocLoad32(p + 4),
         .ceCount = mlocLoad32(p + 8),
         .contextCount = mlocLoad32(p + 12),
+        .listCount = mlocLoad32(p + 16),
     };
+    if (mlocLoad32(p + 20) != 0)
+    {
+        return false;
+    }
     if (!mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r.trie))
     {
         return false;
     }
     uint64_t ces = collationHead + ((uint64_t)r.trie.size + 7) / 8 * 8;
     uint64_t ce32s = ces + (uint64_t)r.ceCount * 8;
-    uint64_t contexts = ce32s + (uint64_t)r.ce32Count * 4;
+    uint64_t starts = ce32s + (uint64_t)r.ce32Count * 4;
+    uint64_t contexts = starts + ((uint64_t)r.listCount + 1) * 4;
     if (contexts + (uint64_t)r.contextCount * 4 > span.size)
     {
         return false;
     }
     r.ces = p + ces;
     r.ce32s = p + ce32s;
+    r.listStarts = p + starts;
     r.contexts = p + contexts;
-    bool ok = mlocCollationTrieValueValid(&r, r.trie.highValue);
+    bool ok = mlocCollationListStart(&r, 0) == 0 &&
+              mlocCollationListStart(&r, r.listCount) == r.contextCount;
+    for (uint32_t i = 0; ok && i < r.listCount; i++)
+    {
+        uint32_t start = mlocCollationListStart(&r, i);
+        uint32_t end = mlocCollationListStart(&r, i + 1);
+        ok = start < end && end <= r.contextCount && mlocCollationListValid(&r, start, end);
+    }
+    ok = ok && mlocCollationTrieValueValid(&r, r.trie.highValue);
     for (uint32_t i = 0; ok && i < r.trie.dataLength; i++)
     {
         ok = mlocCollationTrieValueValid(&r, mlocLoad32(r.trie.data + (size_t)i * 4));

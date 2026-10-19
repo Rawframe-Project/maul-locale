@@ -43,6 +43,7 @@ typedef struct Builder
     Words ces;
     Words ce32s;
     Words contexts;
+    Words listStarts;
     uint32_t* values;
     char* error;
     size_t errorSize;
@@ -249,11 +250,12 @@ static int ByText(const void* x, const void* y)
 }
 
 // A context list for the code point: its default, then its entries in
-// order; the trie value becomes its tag.
+// order; the trie value becomes its tag with the list's number.
 static void Context(Builder* b, uint32_t codePoint, uint32_t tag, Entry* entries, size_t count)
 {
     qsort(entries, count, sizeof(Entry), ByText);
-    size_t index = Push(&b->contexts, b->values[codePoint]);
+    size_t number = Push(&b->listStarts, b->contexts.count);
+    Push(&b->contexts, b->values[codePoint]);
     Push(&b->contexts, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -264,7 +266,7 @@ static void Context(Builder* b, uint32_t codePoint, uint32_t tag, Entry* entries
         }
         Push(&b->contexts, entries[i].ce32);
     }
-    b->values[codePoint] = Special(tag, index, 0);
+    b->values[codePoint] = Special(tag, number, 0);
 }
 
 // A mapping's place among those of one code point's contexts.
@@ -354,12 +356,13 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     size_t trieSize = 0;
     uint8_t* trie = TrieBuild(b->values, &trieSize);
     size_t padded = (trieSize + 7) / 8 * 8;
-    size_t size =
-        collationHead + padded + b->ces.count * 8 + b->ce32s.count * 4 + b->contexts.count * 4;
+    size_t size = collationHead + padded + b->ces.count * 8 + b->ce32s.count * 4 +
+                  (b->listStarts.count + 1) * 4 + b->contexts.count * 4;
     uint8_t* out = GenAllocate(size);
     GenPut(out + 4, b->ce32s.count, 4);
     GenPut(out + 8, b->ces.count, 4);
     GenPut(out + 12, b->contexts.count, 4);
+    GenPut(out + 16, b->listStarts.count, 4);
     memcpy(out + collationHead, trie, trieSize);
     uint8_t* p = out + collationHead + padded;
     for (size_t i = 0; i < b->ces.count; i++, p += 8)
@@ -370,6 +373,12 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     {
         GenPut(p, b->ce32s.items[i], 4);
     }
+    for (size_t i = 0; i < b->listStarts.count; i++, p += 4)
+    {
+        GenPut(p, b->listStarts.items[i], 4);
+    }
+    GenPut(p, b->contexts.count, 4);
+    p += 4;
     for (size_t i = 0; i < b->contexts.count; i++, p += 4)
     {
         GenPut(p, b->contexts.items[i], 4);
@@ -414,5 +423,6 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
     free(b.ces.items);
     free(b.ce32s.items);
     free(b.contexts.items);
+    free(b.listStarts.items);
     return out;
 }
