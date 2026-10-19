@@ -15,13 +15,19 @@
 // and above), as for a CJK radical or a Meroitic hieroglyph's variant,
 // FractionalUCA.txt has one element with its own secondary, whose
 // primaries are still compared; and U+FFFD and U+FFFF take the
-// runtime's fixed weights. CI runs it on
-// the pinned release.
+// runtime's fixed weights. Then the unit built from the root reads back
+// every mapping it keeps, and the element iterator gives, for every
+// mapping spelled as text (a prefix mapping after its prefix's own
+// elements), the elements the file lists, completely ignorable ones
+// aside: the kept ones through the
+// unit's paths, the left-out ones through NFD. CI runs it on the pinned
+// release.
 //
 // usage: conform_collation_root <FractionalUCA.txt> <allkeys_CLDR.txt>
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
+#include "collation_iterator.h"
 #include "collation_root.h"
 #include "collation_tables.h"
 #include "collation_unit.h"
@@ -246,6 +252,107 @@ static uint32_t Lookup(const CollationRoot* r, uint32_t ce32, const uint32_t* te
 }
 
 // Every mapping the unit keeps, its elements read back from the unit.
+// The iterator's elements of code points spelled as UTF-8, without the
+// completely ignorable ones, which no level sees: NFD can add some, as
+// U+1D165's after U+1D15E's notehead.
+static uint32_t Iterate(const CollationRoot* r, const uint32_t* text, uint32_t length,
+                        uint64_t* out, uint32_t capacity)
+{
+    uint8_t bytes[4 * 2 * rootMaxText];
+    size_t size = 0;
+    for (uint32_t i = 0; i < length; i++)
+    {
+        uint32_t c = text[i];
+        if (c < 0x80)
+        {
+            bytes[size++] = (uint8_t)c;
+        }
+        else if (c < 0x800)
+        {
+            bytes[size++] = (uint8_t)(0xC0 | c >> 6);
+            bytes[size++] = (uint8_t)(0x80 | (c & 0x3F));
+        }
+        else if (c < 0x10000)
+        {
+            bytes[size++] = (uint8_t)(0xE0 | c >> 12);
+            bytes[size++] = (uint8_t)(0x80 | (c >> 6 & 0x3F));
+            bytes[size++] = (uint8_t)(0x80 | (c & 0x3F));
+        }
+        else
+        {
+            bytes[size++] = (uint8_t)(0xF0 | c >> 18);
+            bytes[size++] = (uint8_t)(0x80 | (c >> 12 & 0x3F));
+            bytes[size++] = (uint8_t)(0x80 | (c >> 6 & 0x3F));
+            bytes[size++] = (uint8_t)(0x80 | (c & 0x3F));
+        }
+    }
+    CollationIterator it;
+    mlocCollationIteratorStart(&it, r, bytes, size);
+    uint32_t n = 0;
+    uint64_t e = 0;
+    while (n < capacity && mlocCollationNextElement(&it, &e))
+    {
+        out[n] = e;
+        n += e != 0;
+    }
+    return n;
+}
+
+// Every mapping through the iterator; the counts of those that differ,
+// kept and left out.
+static bool CheckIterator(const RootTable* t, const CollationRoot* r)
+{
+    enum
+    {
+        capacity = 4 * rootMaxElements,
+    };
+    size_t wrong[2] = {0, 0};
+    size_t seen[2] = {0, 0};
+    for (size_t i = 0; i < t->count; i++)
+    {
+        const RootMapping* m = &t->mappings[i];
+        uint32_t text[2 * rootMaxText];
+        uint32_t length = 0;
+        for (uint32_t k = 0; k < m->prefixLength; k++)
+        {
+            text[length++] = m->prefix[k];
+        }
+        uint64_t want[capacity];
+        uint32_t wanted = Iterate(r, text, length, want, capacity);
+        for (uint32_t k = 0; k < m->textLength; k++)
+        {
+            text[length++] = m->text[k];
+        }
+        for (uint32_t k = 0; k < m->elementCount && wanted < capacity; k++)
+        {
+            want[wanted] = m->elements[k];
+            wanted += m->elements[k] != 0;
+        }
+        uint64_t got[capacity];
+        uint32_t n = Iterate(r, text, length, got, capacity);
+        int out = CollationLeftOut(m->text[0]) ? 1 : 0;
+        seen[out]++;
+        if (n != wanted || memcmp(got, want, n * 8) != 0)
+        {
+            if (wrong[out]++ < 8)
+            {
+                printf("iterator: U+%04X%s (%u code points) gives otherwise\n",
+                       (unsigned)m->text[0], out ? ", left out," : "", (unsigned)length);
+            }
+        }
+    }
+    uint64_t fffd[2];
+    static const uint32_t replacement[] = {0xFFFD, 0xFFFF};
+    bool fixed = Iterate(r, replacement, 1, fffd, 2) == 1 &&
+                 fffd[0] == (0xFFFD000000000000ULL | collationCommonSecondaryTertiary) &&
+                 Iterate(r, replacement + 1, 1, fffd, 2) == 1 &&
+                 fffd[0] == (0xFFFF000000000000ULL | collationCommonSecondaryTertiary);
+    printf("iterator: %zu kept mappings, %zu otherwise; %zu left out, %zu otherwise; U+FFFD "
+           "and U+FFFF %s\n",
+           seen[0], wrong[0], seen[1], wrong[1], fixed ? "fixed" : "wrong");
+    return wrong[0] == 0 && wrong[1] == 0 && fixed;
+}
+
 static bool CheckUnit(const RootTable* t)
 {
     size_t size = 0;
@@ -292,8 +399,9 @@ static bool CheckUnit(const RootTable* t)
     printf("unit: %zu bytes, %zu mappings kept, %zu read back otherwise, trie %u bytes, %u "
            "elements, %u expansion words, %u context words\n",
            size, kept, wrong, r.trie.size, r.ceCount, r.ce32Count, r.contextCount);
+    bool iterated = CheckIterator(t, &r);
     free(bytes);
-    return wrong == 0;
+    return wrong == 0 && iterated;
 }
 
 int main(int argc, char** argv)

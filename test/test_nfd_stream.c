@@ -194,6 +194,22 @@ static void TestLongRuns(void)
     }
     CHECK(same, "a starter and 62 to 1,000 marks, decomposing ones among them, in canonical "
                 "order across windows, and the text after them");
+    // A long run ending the text, in a buffer of the text's own size.
+    size_t end = Append(text, 0, 0x61);
+    for (int i = 0; i < 100; i++)
+    {
+        end = Append(text, end, i % 2 == 0 ? 0x301 : 0x323);
+    }
+    char* exact = malloc(end);
+    if (exact != nullptr)
+    {
+        memcpy(exact, text, end);
+        size_t n = Stream(exact, end, got);
+        CHECK(n == 101 && got[0] == 0x61 && got[1] == 0x323 && got[50] == 0x323 &&
+                  got[51] == 0x301 && got[100] == 0x301,
+              "a long run ending the text read within it");
+        free(exact);
+    }
     // Marks of different classes swapped make a canonically equal text,
     // which reads the same.
     size_t at = Append(text, 0, 0x61);

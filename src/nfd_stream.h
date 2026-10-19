@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// UTF-8 text read as its NFD, a code point at a time, through Maul
-// Unicode's decomposition and combining classes; ill-formed bytes read
-// as U+FFFD, one for each maximal ill-formed subpart. Nothing is
+// UTF-8 text read as its NFD (record mloc-0066), a code point at a time,
+// through Maul Unicode's decomposition and combining classes; ill-formed
+// bytes read as U+FFFD, one for each maximal ill-formed subpart. Nothing is
 // allocated and nothing limits the marks after a starter.
 //
 // The stream fills a window: a segment (code points up to the next one
@@ -67,6 +67,19 @@ static inline bool mlocNfdNext(NfdStream* s, uint32_t* codePointOut)
     {
         return false;
     }
+    *codePointOut = s->window[s->next++];
+    return true;
+}
+
+// The next code point of the NFD and its combining class; false at the
+// end.
+static inline bool mlocNfdNextClass(NfdStream* s, uint32_t* codePointOut, uint8_t* classOut)
+{
+    if (s->next == s->count && !mlocNfdFill(s))
+    {
+        return false;
+    }
+    *classOut = s->classes[s->next];
     *codePointOut = s->window[s->next++];
     return true;
 }

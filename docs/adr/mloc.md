@@ -70,3 +70,4 @@ are listed in [README.md](README.md).
 | [mloc-0063](mloc-0063-code-point-trie.md) | A code point trie of 32-bit values | Accepted |
 | [mloc-0064](mloc-0064-collation-root.md) | The root collation, read from FractionalUCA.txt as ICU's runtime holds it | Accepted |
 | [mloc-0065](mloc-0065-collation-root-unit.md) | The root collation unit: CE32s in the trie, offsets, expansions, contexts | Accepted |
+| [mloc-0066](mloc-0066-collation-iterator.md) | The collation element iterator, and NFD read as a stream | Accepted |

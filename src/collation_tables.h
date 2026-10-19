@@ -68,10 +68,14 @@ enum
     collationTagOffset = 14,
     collationMaxExpansion = 31,
     collationMaxContext = 8,
+    collationUnassignedByte = 0xFE,
 };
 
 constexpr uint32_t collationImplicitCe32 = 0xFFFFFFFF;
 constexpr uint64_t collationCommonSecondaryTertiary = 0x05000500;
+// U+FFFD and U+FFFF: fixed primaries FFFD and FFFF, as simple CE32s.
+constexpr uint32_t collationFffdCe32 = 0xFFFD0505;
+constexpr uint32_t collationFfffCe32 = 0xFFFF0505;
 
 typedef struct CollationRoot
 {
@@ -141,6 +145,21 @@ static inline uint32_t mlocAddToPrimary(uint32_t primary, bool compressible, uin
     uint32_t second = offset % count + low;
     offset /= count;
     return ((primary & 0xFF000000) + (offset << 24)) | second << 16 | third << 8;
+}
+
+// ICU's unassignedPrimaryFromCodePoint: the four-byte primary, lead byte
+// FE, of a code point the trie gives the implicit word. A gap before
+// U+0000; 18 fourth bytes 14 apart, 254 third bytes, 251 second bytes
+// from 04.
+static inline uint32_t mlocCollationUnassignedPrimary(uint32_t codePoint)
+{
+    uint32_t c = codePoint + 1;
+    uint32_t primary = 2 + (c % 18) * 14;
+    c /= 18;
+    primary |= (2 + c % 254) << 8;
+    c /= 254;
+    primary |= (4 + c % 251) << 16;
+    return primary | (uint32_t)collationUnassignedByte << 24;
 }
 
 // The element an offset gives a code point: its range's first primary

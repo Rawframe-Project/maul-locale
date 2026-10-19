@@ -395,6 +395,8 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
         b.values[c] = collationImplicitCe32;
     }
     HanRanges(&b, table);
+    b.values[0xFFFD] = collationFffdCe32;
+    b.values[0xFFFF] = collationFfffCe32;
     for (size_t i = 0; i < table->count; i++)
     {
         const RootMapping* m = &table->mappings[i];

@@ -142,8 +142,9 @@ static void TestRead(void)
 
 static void TestUnassigned(void)
 {
-    CHECK(RootUnassignedPrimary(0x378) == 0xFE043364 && RootUnassignedPrimary(0) == 0xFE040210 &&
-              RootUnassignedPrimary(0x10FFFF) == 0xFEF7AF1E,
+    CHECK(mlocCollationUnassignedPrimary(0x378) == 0xFE043364 &&
+              mlocCollationUnassignedPrimary(0) == 0xFE040210 &&
+              mlocCollationUnassignedPrimary(0x10FFFF) == 0xFEF7AF1E,
           "unassigned primaries as ICU makes them, for the first, an unassigned and the last "
           "code point");
 }

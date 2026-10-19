@@ -138,6 +138,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_table.c
     src/message_text.c
     src/nfd_stream.c
+    src/collation_iterator.c
     src/message_value.c
     src/message_words.c
     src/message_write.c
@@ -868,11 +869,20 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         maul_apply_flags(test_gencollation)
         add_test(NAME gencollation COMMAND test_gencollation
                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        # The root against allkeys_CLDR.txt of the same release, which the
-        # cldr CI job runs.
-        add_executable(conform_collation_root test/conform_collation_root.c)
-        target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
-        maul_apply_flags(conform_collation_root)
+        # The root against allkeys_CLDR.txt of the same release, and the
+        # element iterator against the root, which the cldr CI job runs;
+        # the iterator is internal, which a shared build hides.
+        if(NOT MAUL_LOCALE_BUILD_SHARED)
+            add_executable(conform_collation_root test/conform_collation_root.c)
+            target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
+            maul_apply_flags(conform_collation_root)
+            add_executable(test_collation_iterator test/test_collation_iterator.c)
+            target_link_libraries(test_collation_iterator PRIVATE mlocgen_core)
+            target_include_directories(test_collation_iterator PRIVATE test)
+            maul_apply_flags(test_collation_iterator)
+            add_test(NAME collation_iterator COMMAND test_collation_iterator
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        endif()
         add_executable(test_trie test/test_trie.c)
         target_link_libraries(test_trie PRIVATE mlocgen_core)
         target_include_directories(test_trie PRIVATE test)

@@ -7,6 +7,7 @@
 
 #include "collation_root.h"
 
+#include "collation_tables.h"
 #include "table_gen.h"
 
 #include <inttypes.h>
@@ -325,7 +326,7 @@ static int HanRanges(Reader* r, const char* s)
     }
     uint32_t han = count * hanStep + hanStep + 2;
     uint32_t leadBytes = (han + hanPerLeadByte - 1) / hanPerLeadByte;
-    t->firstHanPrimary = (rootUnassignedByte - leadBytes) << 24 | 0x20200;
+    t->firstHanPrimary = (collationUnassignedByte - leadBytes) << 24 | 0x20200;
     return 1;
 }
 
@@ -454,17 +455,4 @@ uint64_t RootHanElement(const RootTable* table, uint32_t codePoint)
         index += end - start + 1;
     }
     return 0;
-}
-
-uint32_t RootUnassignedPrimary(uint32_t codePoint)
-{
-    // A gap before U+0000; 18 fourth bytes 14 apart, 254 third bytes, 251
-    // second bytes from 04, one lead byte for every code point.
-    uint32_t c = codePoint + 1;
-    uint32_t primary = 2 + (c % 18) * 14;
-    c /= 18;
-    primary |= (2 + c % 254) << 8;
-    c /= 254;
-    primary |= (4 + c % 251) << 16;
-    return primary | (uint32_t)rootUnassignedByte << 24;
 }

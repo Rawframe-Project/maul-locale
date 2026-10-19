@@ -21,8 +21,7 @@ enum
     rootMaxText = 8,
     rootMaxElements = 32,
     rootMaxHanRanges = 32,
-    // ICU's lead bytes: unassigned implicit, trailing.
-    rootUnassignedByte = 0xFE,
+    // ICU's trailing lead byte; the unassigned one is collation_tables.h's.
     rootTrailingByte = 0xFF,
 };
 
@@ -75,8 +74,5 @@ void RootFree(RootTable* table);
 // A Han code point's element (common secondary and tertiary), or 0 when
 // the code point is in no [Unified_Ideograph] range.
 uint64_t RootHanElement(const RootTable* table, uint32_t codePoint);
-
-// ICU's primary for a code point with no mapping and no Han primary.
-uint32_t RootUnassignedPrimary(uint32_t codePoint);
 
 #endif
