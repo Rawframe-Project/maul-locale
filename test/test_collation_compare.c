@@ -135,6 +135,11 @@ static void UpperLevel(CollationSettings* s)
     s->caseFirst = collationUpperFirst;
 }
 
+static void Numeric(CollationSettings* s)
+{
+    s->numeric = true;
+}
+
 static void Nothing(CollationSettings* s)
 {
     (void)s;
@@ -195,6 +200,55 @@ static void TestOptions(void)
           "counted, U+FFFE below the others");
 }
 
+// A run of count copies of digit after head, NUL-ended.
+static const char* Run(char* out, const char* head, char digit, size_t count)
+{
+    size_t n = strlen(head);
+    memcpy(out, head, n);
+    memset(out + n, digit, count);
+    out[n + count] = '\0';
+    return out;
+}
+
+static void TestNumeric(void)
+{
+    CHECK(With("a2", "a10", collationTertiary, Nothing) == 1 &&
+              With("a2", "a10", collationTertiary, Numeric) == -1 &&
+              With("9", "10", collationPrimary, Numeric) == -1 &&
+              With("73", "74", collationPrimary, Numeric) == -1 &&
+              With("10233", "10234", collationPrimary, Numeric) == -1 &&
+              With("9999999", "10000000", collationPrimary, Numeric) == -1 &&
+              With("12345678", "12345679", collationPrimary, Numeric) == -1 &&
+              With("1200", "1201", collationPrimary, Numeric) == -1 &&
+              With("123000000", "1230000000", collationPrimary, Numeric) == -1,
+          "numeric: digits by value, across one, two and three bytes and the pairs");
+    CHECK(With("007", "7", collationTertiary, Numeric) == 0 &&
+              With("0", "000", collationTertiary, Numeric) == 0 &&
+              With("007", "7", collationIdentical, Numeric) == -1 &&
+              With("a0", "a", collationPrimary, Numeric) == 1,
+          "numeric: leading zeros dropped, one kept for zero");
+    CHECK(With("\xD9\xA1\xD9\xA0", "9", collationPrimary, Numeric) == 1 &&
+              With("\xEF\xBC\x91"
+                   "2",
+                   "11", collationPrimary, Numeric) == 1 &&
+              With("\xEF\xBC\x91"
+                   "2",
+                   "12", collationPrimary, Numeric) == 0,
+          "numeric: any decimal digits, mixed in one run");
+    static char a[600];
+    static char b[600];
+    // 254 nines then 5 against 254 nines then 40: the second segment
+    // decides.
+    Run(a, "", '9', 254);
+    Run(b, "", '9', 254);
+    strcat(a, "5");
+    strcat(b, "40");
+    CHECK(With(a, b, collationPrimary, Numeric) == -1 &&
+              With(Run(a, "1", '0', 300), Run(b, "9", '9', 250), collationPrimary, Numeric) == 1 &&
+              With(Run(a, "x", '0', 400), "x0", collationTertiary, Numeric) == 0,
+          "numeric: runs past a segment of 254 digits");
+}
+
 static void TestTexts(void)
 {
     CHECK(Order("", "a", collationPrimary) == -1 && Order("a", "ab", collationTertiary) == -1 &&
@@ -243,5 +297,6 @@ int main(void)
     TestTexts();
     TestShifted();
     TestOptions();
+    TestNumeric();
     return s_failures == 0 ? 0 : 1;
 }

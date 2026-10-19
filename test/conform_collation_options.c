@@ -70,22 +70,26 @@ int main(int argc, char** argv)
         bool backwards;
         uint32_t caseFirst;
         bool caseLevel;
+        bool numeric;
     } sets[] = {
-        {collationTertiary, false, false, collationCaseFirstOff, false},
-        {collationTertiary, false, true, collationCaseFirstOff, false},
-        {collationTertiary, false, false, collationUpperFirst, false},
-        {collationTertiary, false, false, collationLowerFirst, false},
-        {collationPrimary, false, false, collationCaseFirstOff, true},
-        {collationSecondary, false, false, collationUpperFirst, true},
-        {collationTertiary, false, false, collationUpperFirst, true},
-        {collationQuaternary, true, false, collationCaseFirstOff, false},
-        {collationQuaternary, true, true, collationLowerFirst, false},
-        {collationIdentical, false, false, collationCaseFirstOff, false},
-        {collationIdentical, true, true, collationUpperFirst, true},
+        {collationTertiary, false, false, collationCaseFirstOff, false, false},
+        {collationTertiary, false, true, collationCaseFirstOff, false, false},
+        {collationTertiary, false, false, collationUpperFirst, false, false},
+        {collationTertiary, false, false, collationLowerFirst, false, false},
+        {collationPrimary, false, false, collationCaseFirstOff, true, false},
+        {collationSecondary, false, false, collationUpperFirst, true, false},
+        {collationTertiary, false, false, collationUpperFirst, true, false},
+        {collationQuaternary, true, false, collationCaseFirstOff, false, false},
+        {collationQuaternary, true, true, collationLowerFirst, false, false},
+        {collationIdentical, false, false, collationCaseFirstOff, false, false},
+        {collationIdentical, true, true, collationUpperFirst, true, false},
+        {collationTertiary, false, false, collationCaseFirstOff, false, true},
+        {collationQuaternary, true, false, collationUpperFirst, false, true},
+        {collationIdentical, false, true, collationCaseFirstOff, true, true},
     };
-    static char line[8192];
-    static uint8_t a[4096];
-    static uint8_t b[4096];
+    static char line[131072];
+    static uint8_t a[65536];
+    static uint8_t b[65536];
     while (fgets(line, sizeof(line), stdin) != nullptr)
     {
         char* tab = strchr(line, '\t');
@@ -103,6 +107,7 @@ int main(int argc, char** argv)
             s.backwards = sets[i].backwards;
             s.caseFirst = sets[i].caseFirst;
             s.caseLevel = sets[i].caseLevel;
+            s.numeric = sets[i].numeric;
             printf(i == 0 ? "%d" : "\t%d", mlocCollationCompare(&root, &s, a, aLength, b, bLength));
         }
         printf("\n");

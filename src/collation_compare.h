@@ -9,8 +9,9 @@
 // backwards within the segments the merge separator (U+FFFE) parts; a
 // case level between the secondary and tertiary levels when asked;
 // tertiaries without the case bits unless case first asks for them,
-// upper case then first or last. The identical level compares the
-// texts' NFD code points, U+FFFE below every other as ICU ranks it.
+// upper case then first or last; with numeric on, runs of digits by
+// their value. The identical level compares the texts' NFD code
+// points, U+FFFE below every other as ICU ranks it.
 // With the alternate setting shifted, a variable element (a primary
 // above the merge separator, up to the variable top) keeps only its
 // primary, for the quaternary level, and the primary ignorables after
@@ -48,6 +49,8 @@ typedef struct CollationSettings
     bool backwards;
     bool caseLevel;
     uint32_t caseFirst;
+    // Digits as numbers (numeric ordering, CLDR's kn).
+    bool numeric;
 } CollationSettings;
 
 // CLDR's root defaults: tertiary, non-ignorable, the variable top at the

@@ -15,6 +15,10 @@
 //   the match. The marks matched are taken out; the skipped ones follow.
 //   The rule looks at most collationLookahead code points ahead.
 // Hangul syllables reach the trie as jamo, which NFD gives.
+// With numeric on, a run of decimal digits (General_Category Nd) gives
+// the primaries of its value, as ICU4C's appendNumericCEs: leading
+// zeros dropped, the digits in segments of at most 254, each segment one
+// element up to seven digits, else a length byte and digit pairs.
 
 #ifndef MLOC_SRC_COLLATION_ITERATOR_H
 #define MLOC_SRC_COLLATION_ITERATOR_H
@@ -29,14 +33,21 @@
 enum
 {
     collationLookahead = 72,
+    // A numeric segment's digits, and its most elements: a length byte
+    // and two pairs, then three pairs an element, for 127 pairs.
+    collationNumericDigits = 254,
+    collationNumericElements = 43,
 };
 
 typedef struct CollationIterator
 {
     const CollationRoot* root;
     NfdStream nfd;
+    // Digits as numbers (UCA's numeric ordering, CLDR's kn); false after
+    // start.
+    bool numeric;
     // Elements still to be given: [ceNext, ceCount).
-    uint64_t ces[collationMaxExpansion + 1];
+    uint64_t ces[collationNumericElements];
     uint32_t ceCount;
     uint32_t ceNext;
     // Code points read from the stream ahead of the one being given.

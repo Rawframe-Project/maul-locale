@@ -1,4 +1,4 @@
-# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, the script table
+# mloc-0069. Collation options: shifted, maxVariable, the quaternary and identical levels, backwards, the case level, case first, numeric ordering, the script table
 
 Status: Accepted
 
@@ -70,6 +70,21 @@ For punctuation, CLDR's default maxVariable, that is
   off). For upper first, a tertiary above 0x100 has its case bits
   inverted when the element has a primary, or 0x4000 added when not, as
   ICU does.
+- **Numeric ordering** (CLDR's `kn`), as ICU4C's `appendNumericCEs`:
+  - A decimal digit (General_Category Nd, by Maul Unicode's
+    `muniGetDecimalDigitValue`) starts a run, unless its trie value is a
+    prefix or contraction list. ICU marks the same code points with its
+    digit tag; here the unit needs no digit values of its own.
+  - Leading zeros are dropped, keeping one when all are zeros. The run
+    is cut into segments of at most 254 digits, and each segment drops
+    its own leading zeros.
+  - A value below 74 + 40 × 254 + 16 × 254² (at most seven digits) is
+    one element of one, two or three bytes after the numeric lead byte.
+    Any other value is a length byte (128 plus the pairs), then the
+    digit pairs (11 + 2 × pair, the last one less one), three bytes an
+    element, with trailing zero pairs dropped.
+  - A segment is buffered as digits, 254 bytes, and its elements
+    (at most 43) in the iterator's element array.
 - **The identical level** compares the two texts' NFD code points.
   U+FFFE ranks below every other code point and the end of a text below
   that, as ICU's `compareNFDIter` does, so segments compare first.
@@ -118,11 +133,22 @@ For punctuation, CLDR's default maxVariable, that is
   - the case level at the primary strength;
   - lower and upper first;
   - the identical level, U+FFFE ranked below U+0001.
+- **Numeric ordering against ICU4C 74,** the same differential with
+  three numeric sets more (14 in all): the pairs also hold runs of
+  digits (zeros, long numbers, 8,708 pairs past a 254-digit segment;
+  ASCII, Arabic-Indic, Devanagari and fullwidth digits mixed). All 14
+  sets agree on 200,000 pairs, on two seeds. Numeric order changes
+  20,253 of the tertiary set's answers, so it is seen.
+- **`test_collation_compare`, numeric:** values across one, two and
+  three bytes and the pairs; leading zeros; digits of other scripts in
+  one run; runs past a segment.
+- **`fuzz_collation`,** in the fuzz job: any settings and two texts;
+  each text equals itself, and each order mirrors the other. Five
+  minutes, about 465,000 inputs, found nothing.
 - **`conform_collation_options`** prints our order for the oracle's
   pairs, in its sets' order.
 
 ## Consequences
 
-- Still to come in slice (b): numeric order (its digit CE32s in the
-  unit), reordering, and the public collator from a locale and its
-  `-u-` keys. Each amends this record.
+- Still to come in slice (b): reordering, and the public collator from
+  a locale and its `-u-` keys. Each amends this record.

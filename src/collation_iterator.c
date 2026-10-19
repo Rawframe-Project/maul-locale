@@ -6,10 +6,16 @@
 #include "bytes.h"
 #include "code_point_trie.h"
 
+#include "maul-unicode/properties.h"
+
+static_assert((int)collationNumericElements > (int)collationMaxExpansion,
+              "an expansion fits the elements");
+
 void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root,
                                 const uint8_t* text, size_t length)
 {
     it->root = root;
+    it->numeric = false;
     it->ceCount = 0;
     it->ceNext = 0;
     it->upcomingCount = 0;
@@ -229,6 +235,123 @@ static void Expand(CollationIterator* it, uint32_t codePoint, uint32_t ce32)
     }
 }
 
+static uint64_t NumericElement(uint32_t primary)
+{
+    return (uint64_t)primary << 32 | collationCommonSecondaryTertiary;
+}
+
+// A value below 74 + 40 * 254 + 16 * 254 * 254 in one element: one
+// byte below 74, two below 74 + 40 * 254, else three.
+static void ShortSegment(CollationIterator* it, uint32_t value)
+{
+    uint32_t lead = it->root->numericPrimary;
+    if (value < 74)
+    {
+        it->ces[0] = NumericElement(lead | (2 + value) << 16);
+        return;
+    }
+    value -= 74;
+    if (value < 40 * 254)
+    {
+        it->ces[0] = NumericElement(lead | (76 + value / 254) << 16 | (2 + value % 254) << 8);
+        return;
+    }
+    value -= 40 * 254;
+    uint32_t primary = lead | (2 + value % 254);
+    value /= 254;
+    primary |= (2 + value % 254) << 8;
+    value /= 254;
+    it->ces[0] = NumericElement(primary | (116 + value % 254) << 16);
+}
+
+// A segment's elements, as ICU4C's appendNumericSegmentCEs: values below
+// 74 + 40 * 254 + 16 * 254 * 254 in one element, others a length byte of
+// 128 plus the pairs, then the pairs (11 + 2 * pair, the last odd), with
+// trailing zero pairs dropped, three bytes an element.
+static void NumericSegment(CollationIterator* it, const uint8_t* digits, uint32_t length)
+{
+    it->ceCount = 1;
+    it->ceNext = 0;
+    if (length <= 7)
+    {
+        uint32_t value = 0;
+        for (uint32_t i = 0; i < length; i++)
+        {
+            value = value * 10 + digits[i];
+        }
+        if (value < 74 + 40 * 254 + 16 * 254 * 254)
+        {
+            ShortSegment(it, value);
+            return;
+        }
+    }
+    uint32_t lead = it->root->numericPrimary;
+    uint32_t primary = lead | (128 + (length + 1) / 2) << 16;
+    while (digits[length - 1] == 0 && digits[length - 2] == 0)
+    {
+        length -= 2;
+    }
+    uint32_t pos = length % 2 == 1 ? 1 : 2;
+    uint32_t pair = length % 2 == 1 ? digits[0] : digits[0] * 10U + digits[1];
+    uint32_t shift = 8;
+    pair = 11 + 2 * pair;
+    while (pos < length)
+    {
+        if (shift == 0)
+        {
+            it->ces[it->ceCount - 1] = NumericElement(primary | pair);
+            it->ceCount++;
+            primary = lead;
+            shift = 16;
+        }
+        else
+        {
+            primary |= pair << shift;
+            shift -= 8;
+        }
+        pair = 11 + 2 * (digits[pos] * 10U + digits[pos + 1]);
+        pos += 2;
+    }
+    it->ces[it->ceCount - 1] = NumericElement(primary | (pair - 1) << shift);
+}
+
+// A decimal digit's value, or -1; one with a prefix or contraction list
+// keeps its elements.
+static int32_t Digit(const CollationIterator* it, uint32_t codePoint, uint32_t ce32)
+{
+    uint32_t tag = mlocCe32Tag(ce32);
+    bool listed = mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 &&
+                  (tag == collationTagPrefix || tag == collationTagContraction);
+    return it->numeric && !listed ? muniGetDecimalDigitValue(codePoint) : -1;
+}
+
+// A run of digits from the first, as ICU4C's appendNumericCEs: leading
+// zeros dropped (one kept when all are), a segment ending at 254 digits;
+// the next segment is the next call's.
+static void Numeric(CollationIterator* it, int32_t first)
+{
+    uint8_t digits[collationNumericDigits];
+    uint32_t length = 1;
+    digits[0] = (uint8_t)first;
+    while (length < collationNumericDigits && Upcoming(it, 0))
+    {
+        uint32_t c = it->upcoming[0];
+        int32_t digit = Digit(it, c, mlocTrieValue(&it->root->trie, c));
+        if (digit < 0)
+        {
+            break;
+        }
+        Remove(it, 0);
+        Remember(it, c);
+        if (length == 1 && digits[0] == 0)
+        {
+            length = 0;
+        }
+        digits[length++] = (uint8_t)digit;
+    }
+    NumericSegment(it, digits, length);
+}
+
 bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
 {
     if (it->ceNext == it->ceCount)
@@ -240,6 +363,14 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         uint32_t c = it->upcoming[0];
         Remove(it, 0);
         uint32_t ce32 = mlocTrieValue(&it->root->trie, c);
+        int32_t digit = Digit(it, c, ce32);
+        if (digit >= 0)
+        {
+            Remember(it, c);
+            Numeric(it, digit);
+            *elementOut = it->ces[it->ceNext++];
+            return true;
+        }
         bool special = mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32;
         if (special && mlocCe32Tag(ce32) == collationTagPrefix)
         {

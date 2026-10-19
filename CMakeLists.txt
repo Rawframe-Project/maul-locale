@@ -734,7 +734,8 @@ if(MAUL_LOCALE_FUZZ)
     # the sanitizers watch its code, not only the targets'.
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area catalog data date_data decimal duration grammar ixdtf locale message parse relative
+    foreach(area catalog collation data date_data decimal duration grammar ixdtf locale message parse
+                 relative
                  spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
@@ -744,6 +745,8 @@ if(MAUL_LOCALE_FUZZ)
         target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
         target_link_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
     endforeach()
+    target_compile_definitions(fuzz_collation PRIVATE
+        MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
