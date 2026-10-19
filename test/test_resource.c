@@ -7,6 +7,7 @@
 
 #include "resource.h"
 #include "resource_check.h"
+#include "resource_write.h"
 #include "test_harness.h"
 
 #include <stdio.h>
@@ -160,13 +161,16 @@ static void TestRefusals(void)
         {"k = v \\\nnext = w\n", 2, "not followed by an indent"},
         {"[a] b\n", 1, "more on a line"},
         {"\\\n = v\n", 2, "an identifier is expected"},
+        {"a\\qb = v\n", 1, "does not have"},
+        {"k = a\\.b\n", 1, "does not have"},
     };
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
     {
         Resource r;
         ResError e;
         int ok = Read(s_cases[i].text, &r, &e);
-        CHECK(!ok && e.line == s_cases[i].line && strstr(e.reason, s_cases[i].reason) != nullptr,
+        CHECK(!ok && e.line == s_cases[i].line && e.column >= 1 &&
+                  strstr(e.reason, s_cases[i].reason) != nullptr,
               s_cases[i].reason);
         ResourceFree(&r);
     }
@@ -195,6 +199,8 @@ static void TestChecks(void)
         {"@locale tr\n---\n@param count\nk = v\n", 0},
         {"@locale tr\n---\n@locale tr\nk = v\n", 0},
         {"@locale tr\n---\n@x-own anything\nk = v\n", 1},
+        {"@locale tr\n---\n@allow-empty yes\nk = v\n", 0},
+        {"@locale tr\n---\n@obsolete now\nk = v\n", 0},
     };
     FILE* sink = tmpfile();
     for (size_t i = 0; i < sizeof(s_cases) / sizeof(s_cases[0]); i++)
@@ -212,6 +218,125 @@ static void TestChecks(void)
     }
 }
 
+static void TestColumnsAndCharacters(void)
+{
+    Resource r;
+    ResError e;
+    CHECK(!Read("k = ab\x01\n", &r, &e) && e.line == 1 && e.column == 7,
+          "a refusal's column counts from 1");
+    ResourceFree(&r);
+    CHECK(Read("@locale tr\r\n---\r\n"
+               "\xC3\xA7\xEF\xBF\xBD = [a]\xC3\xA7\xF0\x9F\x98\x80 \\x39\\x66\\u00FF\r\n",
+               &r, &e) &&
+              r.hasFrontmatter && r.sections[0].itemCount == 1,
+          "CRLF lines, a frontmatter among them");
+    const ResItem* item = &r.sections[0].items[0];
+    CHECK(Is(&item->id.parts[0], "\xC3\xA7\xEF\xBF\xBD") &&
+              Is(&item->value, "[a]\xC3\xA7\xF0\x9F\x98\x80 9f\xC3\xBF"),
+          "characters of two to four bytes, [ in a value, U+FFFD in an id, hex digits 9 and f");
+    ResourceFree(&r);
+}
+
+// Writes a resource and reads it back.
+static int RoundTrip(const char* text, char* written, size_t room)
+{
+    Resource first;
+    Resource second;
+    ResError e;
+    if (!Read(text, &first, &e))
+    {
+        ResourceFree(&first);
+        return 0;
+    }
+    FILE* f = tmpfile();
+    if (f == nullptr)
+    {
+        ResourceFree(&first);
+        return 0;
+    }
+    ResourceWrite(&first, f);
+    rewind(f);
+    size_t n = fread(written, 1, room - 1, f);
+    written[n] = '\0';
+    fclose(f);
+    int ok = ResourceRead(written, n, &second, &e);
+    if (ok)
+    {
+        FILE* a = tmpfile();
+        FILE* b = tmpfile();
+        ResourceWrite(&first, a);
+        ResourceWrite(&second, b);
+        ok = a != nullptr && b != nullptr && ftell(a) == ftell(b);
+        if (a != nullptr)
+        {
+            fclose(a);
+        }
+        if (b != nullptr)
+        {
+            fclose(b);
+        }
+    }
+    ResourceFree(&first);
+    ResourceFree(&second);
+    return ok;
+}
+
+static void TestWriter(void)
+{
+    char written[2048];
+    CHECK(RoundTrip("# file\n@locale tr\n---\n# alone\n\n# about k\n@param $x\nk = a {$x}\n"
+                    "  b\n\n[s.t]\n#\n\n@mloc-max-length 5\nv = \\{x\\}\n",
+                    written, sizeof(written)) &&
+              strcmp(written, "# file\n@locale tr\n---\n\n# alone\n\n\n# about k\n@param $x\n"
+                              "k = a {$x}\n  b\n\n[s.t]\n\n#\n\n\n@mloc-max-length 5\n"
+                              "v = \\{x\\}\n") == 0,
+          "the written form: comments, metadata, an indented line, a section, a lone #");
+    CHECK(RoundTrip("---x = \\ a\\ \\n\\nb\\n\\x00\\x7F\\r\\x5Cq\\u2028\n", written,
+                    sizeof(written)) == 0,
+          "three hyphens refused before writing");
+    CHECK(RoundTrip("-\\-\\- = \\ a\\ \\n\\nb\\n\\x00\\x7F\\r\\x5Cq\\u2028\\t\n"
+                    "\\x2e\\u0020\\U01F600 = \\x20\n",
+                    written, sizeof(written)) &&
+              strstr(written, "--\\x2D = \\ a\\ \n  \n  b\n  \\x00\\x7F\\r\\x5Cq\\u2028\\t\n") !=
+                  nullptr &&
+              strstr(written, "\\x2E\\x20\xF0\x9F\x98\x80 = \\ \n") != nullptr,
+          "escapes written: inner newlines as lines, edge whitespace, controls, a lone "
+          "backslash, a third hyphen, id symbols");
+}
+
+static void TestEdgesKeysAndReport(void)
+{
+    char written[256];
+    CHECK(RoundTrip("k = \\n\\na\\n\\n\n", written, sizeof(written)) &&
+              strcmp(written, "\nk = \\n\\na\\n\\n\n") == 0,
+          "newlines at a value's ends written as escapes, which reading would drop");
+    Resource r;
+    ResError e;
+    CHECK(Read("[a]\nb.c = v\n", &r, &e), "a dotted key in a section");
+    char key[8];
+    CHECK(ResourceKey(&r.sections[1].id, &r.sections[1].items[0].id, key, 6) &&
+              strcmp(key, "a.b.c") == 0 &&
+              !ResourceKey(&r.sections[1].id, &r.sections[1].items[0].id, key, 5),
+          "a key's parts joined by dots, refused past its room");
+    ResourceFree(&r);
+    FILE* report = tmpfile();
+    CHECK(report != nullptr && Read("@locale tr\n---\nk = v\nk = w\nk = x\n", &r, &e) &&
+              !ResourceCheck(&r, "t", report),
+          "keys given twice");
+    char text[256] = "";
+    if (report != nullptr)
+    {
+        rewind(report);
+        size_t n = fread(text, 1, sizeof(text) - 1, report);
+        text[n] = '\0';
+        fclose(report);
+    }
+    CHECK(strcmp(text, "t:4: a key given twice: k, first on line 3\n"
+                       "t:5: a key given twice: k, first on line 4\n") == 0,
+          "each later one reported with the line before it");
+    ResourceFree(&r);
+}
+
 int main(void)
 {
     TestTheDraftsExample();
@@ -219,5 +344,8 @@ int main(void)
     TestComments();
     TestRefusals();
     TestChecks();
+    TestColumnsAndCharacters();
+    TestWriter();
+    TestEdgesKeysAndReport();
     return s_failures == 0 ? 0 : 1;
 }
