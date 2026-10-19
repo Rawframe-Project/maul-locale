@@ -408,6 +408,28 @@ static bool ImportEdited(const char* x, const char* from, const char* to)
     return ok;
 }
 
+static void TestSelectionKeys(void)
+{
+    // A case value MF2 cannot write bare is quoted; one ending in an
+    // exponent's mark is no number (read to its end, not past it).
+    char* x = Read("ar.xlf");
+    static const char* const values[] = {"1e", "1e-", "1.", "a b|c"};
+    static const char* const keys[] = {"|1e|", "|1e-|", "|1.|", "|a b\\|c|"};
+    for (size_t i = 0; x != nullptr && i < 4; i++)
+    {
+        char to[64];
+        snprintf(to, sizeof(to), "pgs:case=\"%s\"", values[i]);
+        bool refused = ImportEdited(x, "pgs:case=\"0\"", to) == false;
+        char* t = Read("ar.mf2");
+        char want[64];
+        snprintf(want, sizeof(want), "\n  %s {{la milaffat}}", keys[i]);
+        CHECK(i == 3 ? refused : !refused && t != nullptr && strstr(t, want) != nullptr,
+              "a case value written as a key: quoted when not a name or a number");
+        free(t);
+    }
+    free(x);
+}
+
 static void TestSelectionRefusals(void)
 {
     char* x = Read("ar.xlf");
@@ -432,6 +454,7 @@ int main(int argc, char** argv)
     TestRoundTrip();
     TestSelectionExport();
     TestSelectionImport();
+    TestSelectionKeys();
     TestSelectionRefusals();
     return s_failures == 0 ? 0 : 1;
 }

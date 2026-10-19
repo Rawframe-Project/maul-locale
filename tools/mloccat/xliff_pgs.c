@@ -420,7 +420,11 @@ static int IsNumberLiteral(const char* s)
     {
         s += 1 + (s[1] == '-' || s[1] == '+');
         size_t n = strspn(s, "0123456789");
-        s += n > 0 ? n : 1;
+        if (n == 0)
+        {
+            return 0;
+        }
+        s += n;
     }
     return *s == '\0';
 }
