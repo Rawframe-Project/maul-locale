@@ -562,7 +562,7 @@ static void TestUnitShapes(void)
     static const char head[] = "[UCA version = 18.0.1]\n[Unified_Ideograph 4E00]\n";
     char text[2048];
     snprintf(text, sizeof(text),
-             "%s0063 0062; [2D, 05, 05]\n0063 0068 0061; [2F, 05, 05]\n"
+             "%s0063; [30 05 06, 05, 05]\n0063 0062; [2D, 05, 05]\n0063 0068 0061; [2F, 05, 05]\n"
              "0063 0061; [2C, 05, 05]\n0063 0068; [2E, 05, 05]\n",
              head);
     RootTable t;
@@ -572,12 +572,14 @@ static void TestUnitShapes(void)
     // The entries in increasing order: a, b, h, then h a.
     static const uint32_t order[] = {1, 0x61, 0, 1, 0x62, 0, 1, 0x68, 0, 2, 0x68, 0x61, 0};
     bool ok = bytes != nullptr && r.listCount == 1 && r.contextCount == 2 + 13 &&
-              mlocCollationContext(&r, 1) == 4;
+              mlocCollationContext(&r, 1) == 4 &&
+              mlocCe32Tag(mlocCollationContext(&r, 0)) == collationTagLongPrimary;
     for (size_t i = 0; ok && i < sizeof(order) / sizeof(order[0]); i++)
     {
         ok = order[i] == 0 || mlocCollationContext(&r, 2 + (uint32_t)i) == order[i];
     }
-    CHECK(ok, "a contraction's entries by their code points, the shorter first");
+    CHECK(ok, "a contraction on a long primary, its entries by their code points, the shorter "
+              "first");
     free(bytes);
     if (bytes != nullptr)
     {
