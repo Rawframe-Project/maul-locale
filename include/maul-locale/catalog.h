@@ -178,7 +178,8 @@ extern "C"
     /// @param cache       The cache's memory; any alignment.
     /// @param cacheSize   Its size: at least 16 bytes and 8 per key of the
     ///                    set; mlocMeasureCatalogChain gives the size with
-    ///                    room for every message.
+    ///                    room for every message. Bound messages use at
+    ///                    most 4 GiB of it.
     /// @return mloc_success; mloc_errorCapacity for a cache smaller than
     ///         its head and slots; mloc_errorInvalid for a null pointer, a
     ///         count out of range, a catalog the library did not open, or

@@ -258,10 +258,12 @@ mlocResult mlocInitCatalogChain(mlocCatalogChain* chainOut, const mlocCatalog* c
     return mloc_success;
 }
 
+// The arena: its offsets are 32 bits, so room past 4 GiB goes unused.
 static Binder BinderOf(const Chain* c)
 {
     size_t start = SlotsEnd(c->keyCount);
-    return (Binder){c->cache + start, c->cacheSize - start, LoadUsed(c)};
+    size_t room = c->cacheSize - start;
+    return (Binder){c->cache + start, room < UINT32_MAX ? room : UINT32_MAX, LoadUsed(c)};
 }
 
 mlocResult mlocBindCatalogChain(const mlocCatalogChain* chain)

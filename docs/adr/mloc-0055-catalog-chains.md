@@ -110,5 +110,7 @@ translation, so every failure needs a defined text.
 
 - The cache costs eight bytes per key plus the bound messages. A
   program that wants no key text for want of room measures it once.
+- A slot's offset is 32 bits, so the bound messages use at most 4 GiB
+  of a cache; room past that is left unused, never wrapped.
 - A chain is built per locale the program shows. Several chains may
   share catalogs and formatters, but not a cache.
