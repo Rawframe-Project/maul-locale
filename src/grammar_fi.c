@@ -112,19 +112,32 @@ typedef struct Kind
     size_t from;
 } Kind;
 
-// Finds a key in a table blob of records (length, bytes, type, grade).
-static bool Find(const uint8_t* blob, const uint16_t* offsets, size_t count, const uint8_t* key,
-                 size_t length, Kind* out)
+// Finds a key in a table blob of records (length, bytes, type, grade),
+// among those that begin with its first byte.
+static bool Find(const uint8_t* blob, const uint16_t* offsets, const uint16_t* starts,
+                 const uint8_t* key, size_t length, Kind* out)
 {
-    size_t low = 0;
-    size_t high = count;
+    if (length == 0)
+    {
+        return false;
+    }
+    size_t low = starts[key[0]];
+    size_t high = starts[key[0] + 1];
     while (low < high)
     {
         size_t mid = low + (high - low) / 2;
         const uint8_t* record = blob + offsets[mid];
         size_t n = record[0];
-        int order = memcmp(record + 1, key, n < length ? n : length);
-        order = order != 0 ? order : n < length ? -1 : n > length ? 1 : 0;
+        size_t shorter = n < length ? n : length;
+        size_t i = 0;
+        while (i < shorter && record[1 + i] == key[i])
+        {
+            i++;
+        }
+        int order = i < shorter  ? (int)record[1 + i] - (int)key[i]
+                    : n < length ? -1
+                    : n > length ? 1
+                                 : 0;
         if (order == 0)
         {
             out->type = record[n + 1];
@@ -143,23 +156,30 @@ static bool Find(const uint8_t* blob, const uint16_t* offsets, size_t count, con
     return false;
 }
 
-// Encodes the small letters w[from, count) as UTF-8; the length, or 0.
-static size_t Key(const FinnishWord* w, size_t from, uint8_t* key, size_t room)
+// A word's small letters as UTF-8, and where each letter's bytes begin
+// (at[count] the end): the keys of its endings are its suffixes.
+typedef struct KeyText
+{
+    uint8_t bytes[finnishLetterRoom * 4];
+    uint16_t at[finnishLetterRoom + 1];
+} KeyText;
+
+// Encodes a word's small letters; false for a letter UTF-8 cannot hold.
+static bool MakeKeyText(const FinnishWord* w, KeyText* out)
 {
     size_t n = 0;
-    for (size_t i = from; i < w->count; i++)
+    for (size_t i = 0; i < w->count; i++)
     {
-        char bytes[4];
         size_t used = 0;
-        if (muniEncodeUtf8(mlocFinnishSmall(w->c[i]), bytes, &used) != muni_success ||
-            n + used > room)
+        out->at[i] = (uint16_t)n;
+        if (muniEncodeUtf8(mlocFinnishSmall(w->c[i]), (char*)out->bytes + n, &used) != muni_success)
         {
-            return 0;
+            return false;
         }
-        memcpy(key + n, bytes, used);
         n += used;
     }
-    return n;
+    out->at[w->count] = (uint16_t)n;
+    return true;
 }
 
 // A common noun's kind by Kotus: the word, a compound's last word of
@@ -169,14 +189,17 @@ static Kind NameKind(const FinnishWord* w);
 
 static Kind CommonKind(const FinnishWord* w)
 {
-    uint8_t key[finnishLetterRoom * 4];
+    KeyText key;
     Kind kind = {finnishDefaultType, (char)finnishDefaultGrade, 0};
-    size_t words = sizeof(s_finnishWordsOffsets) / sizeof(s_finnishWordsOffsets[0]);
-    size_t endings = sizeof(s_finnishEndingsOffsets) / sizeof(s_finnishEndingsOffsets[0]);
+    if (!MakeKeyText(w, &key))
+    {
+        return kind;
+    }
+    size_t end = key.at[w->count];
     for (size_t from = 0; from + 3 <= w->count; from = from == 0 ? 2 : from + 1)
     {
-        size_t n = Key(w, from, key, sizeof(key));
-        if (n > 0 && Find(s_finnishWords, s_finnishWordsOffsets, words, key, n, &kind))
+        if (Find(s_finnishWords, s_finnishWordsOffsets, s_finnishWordsStarts,
+                 key.bytes + key.at[from], end - key.at[from], &kind))
         {
             kind.from = from;
             return kind;
@@ -185,8 +208,9 @@ static Kind CommonKind(const FinnishWord* w)
     size_t longest = w->count < finnishLongestEnding ? w->count : finnishLongestEnding;
     for (size_t k = longest; k > 0; k--)
     {
-        size_t n = Key(w, w->count - k, key, sizeof(key));
-        if (n > 0 && Find(s_finnishEndings, s_finnishEndingsOffsets, endings, key, n, &kind))
+        size_t from = key.at[w->count - k];
+        if (Find(s_finnishEndings, s_finnishEndingsOffsets, s_finnishEndingsStarts,
+                 key.bytes + from, end - from, &kind))
         {
             return kind;
         }
@@ -275,13 +299,19 @@ static char NameGrade(const FinnishWord* w)
     return third == 'n' && before == 'k' ? 'G' : 0;
 }
 
-static Kind NameKind(const FinnishWord* w)
+// Where the longest place word a name ends in begins; count for none.
+static size_t PlaceWordFrom(const FinnishWord* w)
 {
     // The common words place names end in, and the -lanti of countries: a
     // name ending in one declines as the word does (Öljymäki: Öljymäen,
     // Lappeenranta: Lappeenrannan, Islanti: Islannin), as Kielitoimisto's
-    // guidance has a name decline as its last word.
-    static const char* const s_places[] = {
+    // guidance has a name decline as its last word. The longest is six
+    // bytes.
+    enum
+    {
+        placeLongest = 6,
+    };
+    static const char s_places[][placeLongest + 1] = {
         "aho",
         "harju",
         "joki",
@@ -318,24 +348,47 @@ static Kind NameKind(const FinnishWord* w)
         "virta",
         "vuori",
     };
-    uint8_t key[finnishLetterRoom * 4];
-    for (size_t from = 0; from + 3 <= w->count; from++)
+    // The longest place word the name ends in, at a letter of its own:
+    // the letters from the first whose bytes to the end are few enough.
+    KeyText key;
+    size_t from = w->count;
+    if (MakeKeyText(w, &key))
     {
-        size_t n = Key(w, from, key, sizeof(key));
-        for (size_t i = 0; i < sizeof(s_places) / sizeof(s_places[0]); i++)
+        size_t end = key.at[w->count];
+        size_t k = 0;
+        while (k < w->count && end - key.at[k] > placeLongest)
         {
-            if (n == strlen(s_places[i]) && memcmp(key, s_places[i], n) == 0)
+            k++;
+        }
+        for (; k + 3 <= w->count && from == w->count; k++)
+        {
+            size_t n = end - key.at[k];
+            for (size_t i = 0; i < sizeof(s_places) / sizeof(s_places[0]); i++)
             {
-                FinnishWord last = {.count = 0};
-                for (size_t at = from; at < w->count; at++)
+                if (s_places[i][n] == '\0' && memcmp(key.bytes + key.at[k], s_places[i], n) == 0)
                 {
-                    mlocFinnishPush(&last, w->c[at]);
+                    from = k;
                 }
-                Kind kind = CommonKind(&last);
-                kind.from = from;
-                return kind;
             }
         }
+    }
+    return from;
+}
+
+static Kind NameKind(const FinnishWord* w)
+{
+    size_t from = PlaceWordFrom(w);
+    if (from + 3 <= w->count)
+    {
+        FinnishWord last;
+        last.count = 0;
+        for (size_t at = from; at < w->count; at++)
+        {
+            mlocFinnishPush(&last, w->c[at]);
+        }
+        Kind kind = CommonKind(&last);
+        kind.from = from;
+        return kind;
     }
     Kind kind = {NameType(w), NameGrade(w), 0};
     return kind;
@@ -343,6 +396,13 @@ static Kind NameKind(const FinnishWord* w)
 
 // The stems of a word of a kind: the base, the vowel stem in each grade,
 // the plural stem in each grade.
+// Copies a word's letters, not its whole room.
+static void CopyWord(FinnishWord* to, const FinnishWord* from)
+{
+    to->count = from->count;
+    memcpy(to->c, from->c, from->count * sizeof(from->c[0]));
+}
+
 typedef struct Stems
 {
     const FinnishType* type;
@@ -365,7 +425,7 @@ static void MakeStems(const FinnishWord* word, Kind kind, bool back, Stems* s)
     s->grade = kind.grade != 0 ? kind.grade : s->type->grade;
     s->back = back;
     s->last = word->count > 0 ? mlocFinnishSmall(word->c[word->count - 1]) : 'a';
-    s->base = *word;
+    CopyWord(&s->base, word);
     // A type 5 or 6 word that ends in a consonant takes an i (Bush, Bushin).
     bool consonant = (type == 5 || type == 6) && !mlocFinnishIsVowel(s->last);
     size_t drop = consonant ? 0 : s->type->drop;
@@ -377,32 +437,32 @@ static void MakeStems(const FinnishWord* word, Kind kind, bool back, Stems* s)
         drop = 0;
     }
     s->base.count = word->count > drop ? word->count - drop : 0;
-    s->strong = s->base;
+    CopyWord(&s->strong, &s->base);
     if (strcmp(s->type->vowel, "_") == 0)
     {
-        s->strong = *word;
+        CopyWord(&s->strong, word);
     }
     else
     {
         mlocFinnishAppend(&s->strong, s->type->vowel, back, s->last);
     }
-    s->pluralStrong = s->base;
+    CopyWord(&s->pluralStrong, &s->base);
     mlocFinnishAppend(&s->pluralStrong, s->type->plural, back, s->last);
-    s->weak = s->strong;
-    s->pluralWeak = s->pluralStrong;
+    CopyWord(&s->weak, &s->strong);
+    CopyWord(&s->pluralWeak, &s->pluralStrong);
     if (IsInverse(type))
     {
         mlocFinnishGrade(&s->strong, s->grade, false);
         mlocFinnishGrade(&s->pluralStrong, s->grade, false);
-        s->weak = s->strong;
-        s->pluralWeak = s->pluralStrong;
+        CopyWord(&s->weak, &s->strong);
+        CopyWord(&s->pluralWeak, &s->pluralStrong);
         return;
     }
     mlocFinnishGrade(&s->weak, s->grade, true);
     mlocFinnishGrade(&s->pluralWeak, s->grade, true);
     if (s->type->weakPlural)
     {
-        s->pluralStrong = s->pluralWeak;
+        CopyWord(&s->pluralStrong, &s->pluralWeak);
     }
 }
 
@@ -468,7 +528,7 @@ static void SingularForm(const Stems* s, mlocGrammaticalCase c, FinnishWord* out
     const CaseEnding* e = EndingOf(c);
     if (c == mloc_casePartitive && t->partitive[0] != '+')
     {
-        *out = s->base;
+        CopyWord(out, &s->base);
         const char* p = t->partitive;
         if (p[0] == '-')
         {
@@ -480,7 +540,7 @@ static void SingularForm(const Stems* s, mlocGrammaticalCase c, FinnishWord* out
         return;
     }
     bool strong = c == mloc_casePartitive || c == mloc_caseIllative || (e != nullptr && e->strong);
-    *out = strong ? s->strong : s->weak;
+    CopyWord(out, strong ? &s->strong : &s->weak);
     *start = out->count;
     const char* ending = c == mloc_casePartitive  ? t->partitive + 1
                          : c == mloc_caseIllative ? t->illative
@@ -502,12 +562,12 @@ static void PluralForm(const Stems* s, mlocGrammaticalCase c, FinnishWord* out, 
                                                   : TableEnding(e);
     if (ending[0] == '~')
     {
-        *out = s->base;
+        CopyWord(out, &s->base);
         ending++;
     }
     else
     {
-        *out = strong ? s->pluralStrong : s->pluralWeak;
+        CopyWord(out, strong ? &s->pluralStrong : &s->pluralWeak);
     }
     if (strcmp(ending, "j") == 0 || strcmp(ending, "jen") == 0)
     {
@@ -525,7 +585,7 @@ static void Form(const Stems* s, const FinnishWord* word, mlocGrammaticalCase c,
 {
     if (c == mloc_caseNominative)
     {
-        *out = plural ? s->weak : *word;
+        CopyWord(out, plural ? &s->weak : word);
         *start = out->count;
         mlocFinnishAppend(out, plural ? "t" : "", s->back, 0);
     }
@@ -550,7 +610,7 @@ static void Possessive(const Stems* s, const mlocInflection* r, FinnishWord* for
     bool bare = c == mloc_caseNominative || (c == mloc_caseGenitive && !r->plural);
     if (bare)
     {
-        *form = s->strong;
+        CopyWord(form, &s->strong);
         *start = form->count;
     }
     else if (c == mloc_caseIllative || (c == mloc_caseGenitive && r->plural))
@@ -614,8 +674,9 @@ static const char* const s_multiples[][2] = {
 
 static const Numeral* NumeralOf(const FinnishWord* spoken)
 {
-    uint8_t text[finnishLetterRoom * 4];
-    size_t n = Key(spoken, 0, text, sizeof(text));
+    KeyText key;
+    uint8_t* text = key.bytes;
+    size_t n = MakeKeyText(spoken, &key) ? key.at[spoken->count] : 0;
     static const char s_teen[] = "toista";
     if (n > sizeof(s_teen) - 1 && memcmp(text + n - (sizeof(s_teen) - 1), s_teen, 6) == 0)
     {
@@ -839,7 +900,8 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
     Kind kind = t->name ? NameKind(&spoken) : CommonKind(&spoken);
     Stems s;
     // A compound's harmony is its last word's (meriherkkusienessä).
-    FinnishWord last = {.count = 0};
+    FinnishWord last;
+    last.count = 0;
     for (size_t i = kind.from; i < spoken.count; i++)
     {
         last.c[last.count++] = spoken.c[i];

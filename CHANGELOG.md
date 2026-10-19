@@ -248,6 +248,10 @@ format.
   their first byte: a short Turkish name inflects in about 0.7 of the
   time it took. The benchmark times inflection in each language, a
   list's gender and mloc:case.
+- Finnish inflection searches its compound and place words on the
+  word's letters encoded once, the type tables from an index by first
+  byte, and copies only a stem's letters: a word inflects in about 0.55
+  of the cycles it took, a name in about 0.65.
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

@@ -112,8 +112,11 @@ def table(rules, rows):
 def blob(name, entries):
     data = bytearray()
     offsets = []
+    starts = [0] * 257
     for key, (kind, grade) in sorted(entries, key=lambda e: e[0].encode("utf-8")):
         raw = key.encode("utf-8")
+        for b in range(raw[0] + 1, 257):
+            starts[b] = len(offsets) + 1
         offsets.append(len(data))
         data += bytes([len(raw)]) + raw + bytes([kind, ord(grade) if grade else 0])
     lines = ["static const uint8_t s_%s[%d] = {" % (name, len(data))]
@@ -123,6 +126,11 @@ def blob(name, entries):
     lines.append("static const uint16_t s_%sOffsets[%d] = {" % (name, len(offsets)))
     for i in range(0, len(offsets), 12):
         lines.append("    " + ", ".join(str(o) for o in offsets[i:i + 12]) + ",")
+    lines.append("};")
+    lines.append("// The first entry whose first byte is b or more, at [b].")
+    lines.append("static const uint16_t s_%sStarts[257] = {" % name)
+    for i in range(0, 257, 12):
+        lines.append("    " + ", ".join(str(o) for o in starts[i:i + 12]) + ",")
     lines.append("};")
     assert len(data) < 65536
     return "\n".join(lines)
