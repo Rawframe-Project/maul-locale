@@ -23,6 +23,8 @@
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_root.h"
+#include "collation_tables.h"
+#include "collation_unit.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -187,6 +189,113 @@ static const RootMapping* FindFast(const RootTable* t, const Key* k)
     return Find(t, k);
 }
 
+// The elements a CE32 of the unit stands for, a context's default taken.
+static uint32_t Expand(const CollationRoot* r, uint32_t ce32, uint32_t codePoint, uint64_t* out)
+{
+    if (mlocCe32IsSpecial(ce32) &&
+        (mlocCe32Tag(ce32) == collationTagPrefix || mlocCe32Tag(ce32) == collationTagContraction))
+    {
+        ce32 = mlocCollationContext(r, mlocCe32Index(ce32));
+    }
+    uint64_t one = mlocCe32Element(ce32);
+    if (!mlocCe32IsSpecial(ce32) || one != 0)
+    {
+        out[0] = one;
+        return 1;
+    }
+    uint32_t tag = mlocCe32Tag(ce32);
+    uint32_t index = mlocCe32Index(ce32);
+    uint32_t length = mlocCe32Length(ce32);
+    if (tag == collationTagOffset)
+    {
+        out[0] = mlocCollationOffsetElement(mlocCollationCe(r, index), codePoint);
+        return 1;
+    }
+    for (uint32_t i = 0; i < length && tag == collationTagExpansion32; i++)
+    {
+        out[i] = mlocCe32Element(mlocCollationCe32(r, index + i));
+    }
+    for (uint32_t i = 0; i < length && tag == collationTagExpansion; i++)
+    {
+        out[i] = mlocCollationCe(r, index + i);
+    }
+    return tag == collationTagExpansion32 || tag == collationTagExpansion ? length : 0;
+}
+
+// The CE32 a context list gives for a string, or 0 when none matches.
+static uint32_t Lookup(const CollationRoot* r, uint32_t ce32, const uint32_t* text, uint32_t length)
+{
+    uint32_t index = mlocCe32Index(ce32);
+    uint32_t count = mlocCollationContext(r, index + 1);
+    uint32_t at = index + 2;
+    for (uint32_t e = 0; e < count; e++)
+    {
+        uint32_t n = mlocCollationContext(r, at);
+        bool same = n == length;
+        for (uint32_t k = 0; same && k < n; k++)
+        {
+            same = mlocCollationContext(r, at + 1 + k) == text[k];
+        }
+        if (same)
+        {
+            return mlocCollationContext(r, at + 1 + n);
+        }
+        at += 2 + n;
+    }
+    return 0;
+}
+
+// Every mapping the unit keeps, its elements read back from the unit.
+static bool CheckUnit(const RootTable* t)
+{
+    size_t size = 0;
+    char error[256] = "";
+    uint8_t* bytes = CollationRootUnit(t, &size, error, sizeof(error));
+    CollationRoot r;
+    if (bytes == nullptr || !mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size}, &r))
+    {
+        printf("unit: %s\n", bytes == nullptr ? error : "does not read back");
+        free(bytes);
+        return false;
+    }
+    size_t kept = 0;
+    size_t wrong = 0;
+    for (size_t i = 0; i < t->count; i++)
+    {
+        const RootMapping* m = &t->mappings[i];
+        if (CollationLeftOut(m->text[0]))
+        {
+            continue;
+        }
+        uint32_t ce32 = mlocTrieValue(&r.trie, m->text[0]);
+        if (m->prefixLength > 0 || m->textLength > 1)
+        {
+            uint32_t context[rootMaxText];
+            uint32_t n = m->prefixLength > 0 ? m->prefixLength : m->textLength - 1;
+            for (uint32_t k = 0; k < n; k++)
+            {
+                context[k] = m->prefixLength > 0 ? m->prefix[n - 1 - k] : m->text[1 + k];
+            }
+            ce32 = Lookup(&r, ce32, context, n);
+        }
+        uint64_t elements[rootMaxElements];
+        uint32_t count = Expand(&r, ce32, m->text[0], elements);
+        kept++;
+        if (count != m->elementCount || memcmp(elements, m->elements, count * 8) != 0)
+        {
+            if (wrong++ < 5)
+            {
+                printf("unit: U+%04X reads back otherwise\n", (unsigned)m->text[0]);
+            }
+        }
+    }
+    printf("unit: %zu bytes, %zu mappings kept, %zu read back otherwise, trie %u bytes, %u "
+           "elements, %u expansion words, %u context words\n",
+           size, kept, wrong, r.trie.size, r.ceCount, r.ce32Count, r.contextCount);
+    free(bytes);
+    return wrong == 0;
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -309,6 +418,7 @@ int main(int argc, char** argv)
     printf("%zu mappings of allkeys, %zu folded pairs set aside, %zu missing, %zu of another "
            "length: %s\n",
            keys, folded, missing, counts, ok ? "the same order at every level" : "FAILED");
+    ok = CheckUnit(&t) && ok;
     free(s_single);
     RootFree(&t);
     return ok ? 0 : 1;

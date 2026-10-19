@@ -716,7 +716,7 @@ endif()
 # parts are a static library so that their tests link them alone.
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
-                                    tools/mlocgen/collation_root.c
+                                    tools/mlocgen/collation_root.c tools/mlocgen/collation_unit.c
                                     tools/mlocgen/direction_gen.c
                                     tools/mlocgen/gender_gen.c
                                     tools/mlocgen/cldr.c

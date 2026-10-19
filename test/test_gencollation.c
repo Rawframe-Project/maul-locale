@@ -10,9 +10,12 @@
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_root.h"
+#include "collation_tables.h"
+#include "collation_unit.h"
 #include "test_harness.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char* s_path = "gencollation.txt";
@@ -203,9 +206,105 @@ static void TestRefusals(void)
           "a missing file refused");
 }
 
+// The CE32 a context list gives for a string, or 0.
+static uint32_t Entry(const CollationRoot* r, uint32_t ce32, uint32_t c)
+{
+    uint32_t index = mlocCe32Index(ce32);
+    uint32_t count = mlocCollationContext(r, index + 1);
+    for (uint32_t e = 0, at = index + 2; e < count; e++)
+    {
+        uint32_t n = mlocCollationContext(r, at);
+        if (n == 1 && mlocCollationContext(r, at + 1) == c)
+        {
+            return mlocCollationContext(r, at + 2);
+        }
+        at += 2 + n;
+    }
+    return 0;
+}
+
+static void TestUnit(void)
+{
+    RootTable t;
+    char error[128] = "";
+    size_t size = 0;
+    uint8_t* bytes = Read(s_file, &t, error, sizeof(error))
+                         ? CollationRootUnit(&t, &size, error, sizeof(error))
+                         : nullptr;
+    CollationRoot r;
+    bool ok = bytes != nullptr && mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size}, &r);
+    CHECK(ok && r.version == (18U << 16 | 1), "the unit reads back with its version");
+    uint32_t a = ok ? mlocTrieValue(&r.trie, 0x61) : 0;
+    uint32_t face = ok ? mlocTrieValue(&r.trie, 0x1F600) : 0;
+    uint32_t combining = ok ? mlocTrieValue(&r.trie, 0x300) : 0;
+    CHECK(ok && !mlocCe32IsSpecial(a) && mlocCe32Element(a) == 0x2B00000005000500ULL &&
+              mlocCe32Tag(face) == collationTagLongPrimary &&
+              mlocCe32Element(face) == 0x0D4C5C0005000500ULL && !mlocCe32IsSpecial(combining) &&
+              mlocCe32Element(combining) == 0x000000008A000500ULL,
+          "simple CE32s for one-byte weights, a long primary for three bytes");
+    CHECK(ok && mlocTrieValue(&r.trie, 0xE0) == collationImplicitCe32 &&
+              mlocTrieValue(&r.trie, 0xAC00) == collationImplicitCe32 &&
+              mlocTrieValue(&r.trie, 0x378) == collationImplicitCe32,
+          "a decomposable code point and a Hangul syllable left out, an unassigned one implicit");
+    uint32_t han = ok ? mlocTrieValue(&r.trie, 0x3400) : 0;
+    CHECK(ok && mlocCe32Tag(han) == collationTagOffset &&
+              mlocCollationOffsetElement(mlocCollationCe(&r, mlocCe32Index(han)), 0x3400) ==
+                  RootHanElement(&t, 0x3400) &&
+              mlocCollationOffsetElement(mlocCollationCe(&r, mlocCe32Index(han)), 0x33FF) == 0,
+          "Han through an offset, nothing for a code point before its range");
+    uint32_t c = ok ? mlocTrieValue(&r.trie, 0x63) : 0;
+    uint32_t dot = ok ? mlocTrieValue(&r.trie, 0xB7) : 0;
+    CHECK(ok && mlocCe32Tag(c) == collationTagContraction &&
+              mlocCollationContext(&r, mlocCe32Index(c)) == collationImplicitCe32 &&
+              mlocCe32Element(Entry(&r, c, 0x68)) == 0x2F02000005000500ULL &&
+              mlocCe32Tag(dot) == collationTagPrefix &&
+              mlocCe32Tag(Entry(&r, dot, 0x4C)) == collationTagLongSecondary &&
+              mlocCe32Element(Entry(&r, dot, 0x4C)) == 0x00000000FBB60500ULL,
+          "a contraction and a prefix as context lists with their defaults, a two-byte "
+          "secondary as a long secondary");
+    uint32_t paren = ok ? mlocTrieValue(&r.trie, 0x3220) : 0;
+    uint32_t index = mlocCe32Index(paren);
+    CHECK(ok && mlocCe32Tag(paren) == collationTagExpansion && mlocCe32Length(paren) == 3 &&
+              mlocCollationCe(&r, index + 1) == 0xFD02020005001000ULL,
+          "three elements, one not a CE32, as an expansion of 64-bit elements");
+    uint8_t* copy = ok ? malloc(size) : nullptr;
+    if (copy != nullptr)
+    {
+        CollationRoot broken;
+        memcpy(copy, bytes, size);
+        copy[4] = (uint8_t)(copy[4] + 1);
+        CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken) &&
+                  !mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size - 1}, &broken) &&
+                  !mlocReadCollationRoot((DataSpan){bytes, collationHead - 1}, &broken),
+              "a unit longer than its payload, or a payload cut short, refused");
+        // A trie value with an unknown tag, an expansion past its array, and a
+        // context list longer than the contexts.
+        static const uint32_t bad[] = {0xFFFFFFC3, 0xFFFFE3C6, 0xFFFFE0C9};
+        for (size_t i = 0; i < 3; i++)
+        {
+            memcpy(copy, bytes, size);
+            size_t at = (size_t)(r.trie.data - bytes) + (size_t)mlocLoad32(r.trie.bmp) * 4;
+            for (int k = 0; k < 4; k++)
+            {
+                copy[at + k] = (uint8_t)(bad[i] >> (8 * k));
+            }
+            CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken),
+                  "a trie value with an unknown tag, an expansion past its array or a context "
+                  "past the contexts refused");
+        }
+        free(copy);
+    }
+    free(bytes);
+    if (ok)
+    {
+        RootFree(&t);
+    }
+}
+
 int main(void)
 {
     TestRead();
+    TestUnit();
     TestUnassigned();
     TestHanLeadBytes();
     TestRefusals();
