@@ -12,6 +12,7 @@
 #include "file.h"
 #include "stale.h"
 #include "test_harness.h"
+#include "xliff_pgs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -487,6 +488,34 @@ static void TestSelectionRefusals(void)
     free(x);
 }
 
+// A select of count keys and '*' as a resource entry.
+static void AppendSelect(char* out, size_t room, const char* key, int count)
+{
+    size_t at = strlen(out);
+    at += (size_t)snprintf(out + at, room - at, "%s = .input {$s :string}\n .match $s\n", key);
+    for (int i = 0; i < count; i++)
+    {
+        at += (size_t)snprintf(out + at, room - at, " k%d {{%d}}\n", i, i);
+    }
+    (void)snprintf(out + at, room - at, " * {{x}}\n");
+}
+
+static void TestSelectionBound(void)
+{
+    static char source[16384];
+    snprintf(source, sizeof(source), "@locale en\n---\n");
+    AppendSelect(source, sizeof(source), "most", xliffPgsMaxSegments - 1);
+    AppendSelect(source, sizeof(source), "over", xliffPgsMaxSegments);
+    Write("en.mf2", source);
+    Write("ar.mf2", "@locale ar\n---\n");
+    char* x = Exchange(false, "ar.mf2", "big.xlf") ? Read("big.xlf") : nullptr;
+    CHECK(x != nullptr && strstr(x, "name=\"most\" pgs:switch=\"select:s\"") != nullptr &&
+              strstr(x, "<segment id=\"s256\"") != nullptr &&
+              strstr(x, "name=\"over\">") != nullptr,
+          "256 segments carried, 257 left as one segment");
+    free(x);
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -499,5 +528,6 @@ int main(int argc, char** argv)
     TestSelectionImport();
     TestSelectionKeys();
     TestSelectionRefusals();
+    TestSelectionBound();
     return s_failures == 0 ? 0 : 1;
 }
