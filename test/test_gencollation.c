@@ -5,14 +5,18 @@
 // FractionalUCA.txt's form: weights left-aligned into 64-bit elements,
 // prefixes and contractions, elements naming a code point's own, Han's
 // implicit primaries, script starts and special lines kept apart, the
-// runtime's fixed code points left out, and the lines it refuses.
+// runtime's fixed code points left out, and the lines it refuses. Then
+// the root unit (record mloc-0065) built from them and read back, and
+// its validator on units written by hand.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_root.h"
 #include "collation_tables.h"
 #include "collation_unit.h"
+#include "table_gen.h"
 #include "test_harness.h"
+#include "trie_gen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -330,10 +334,134 @@ static void TestUnit(void)
     }
 }
 
+// A unit written by hand: U+0061's trie value, two elements, two CE32
+// words (a simple one and a long primary), two context lists (an empty
+// one, and one whose entry's code point has a special CE32's low byte),
+// and one word set anywhere after the build.
+typedef struct Crafted
+{
+    uint32_t value;
+    uint32_t contexts[7];
+    size_t patchAt;
+    uint32_t patch;
+} Crafted;
+
+enum
+{
+    craftNoPatch = 0,
+    craftAfterTrie = 1,
+    craftTrieLength = 2,
+};
+
+static bool Opens(Crafted c)
+{
+    static const uint64_t ces[] = {0x2B00000005000500ULL, 0xFA02020000000000ULL};
+    static const uint32_t ce32s[] = {0x2B000500, 0x0D4C5CC1};
+    static const uint32_t starts[] = {0, 2, 7};
+    uint32_t* values = malloc((size_t)trieCodePoints * 4);
+    if (values == nullptr)
+    {
+        return false;
+    }
+    for (uint32_t cp = 0; cp <= trieMaxCodePoint; cp++)
+    {
+        values[cp] = collationImplicitCe32;
+    }
+    values[0x61] = c.value;
+    size_t trieSize = 0;
+    uint8_t* trie = TrieBuild(values, &trieSize);
+    free(values);
+    size_t padded = (trieSize + 7) / 8 * 8;
+    size_t size =
+        collationHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) + sizeof(c.contexts);
+    uint8_t* bytes = calloc(1, size);
+    if (trie == nullptr || bytes == nullptr)
+    {
+        free(trie);
+        free(bytes);
+        return false;
+    }
+    uint32_t words[] = {18U << 16, 2, 2, 7, 2};
+    uint8_t* p = bytes;
+    for (size_t i = 0; i < 5; i++, p += 4)
+    {
+        GenPut(p, words[i], 4);
+    }
+    memcpy(bytes + collationHead, trie, trieSize);
+    p = bytes + collationHead + padded;
+    for (size_t i = 0; i < 2; i++, p += 8)
+    {
+        GenPut(p, ces[i], 8);
+    }
+    for (size_t i = 0; i < 2; i++, p += 4)
+    {
+        GenPut(p, ce32s[i], 4);
+    }
+    for (size_t i = 0; i < 3; i++, p += 4)
+    {
+        GenPut(p, starts[i], 4);
+    }
+    for (size_t i = 0; i < 7; i++, p += 4)
+    {
+        GenPut(p, c.contexts[i], 4);
+    }
+    if (c.patchAt == craftAfterTrie)
+    {
+        GenPut(bytes + collationHead + trieSize, c.patch, 4);
+    }
+    else if (c.patchAt == craftTrieLength)
+    {
+        GenPut(bytes + collationHead + 12, c.patch, 4);
+    }
+    CollationRoot r;
+    bool ok = mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size}, &r);
+    free(trie);
+    free(bytes);
+    return ok;
+}
+
+static void TestValidator(void)
+{
+    const uint32_t implicit = collationImplicitCe32;
+    // A contraction on the second list, whose entry is a code point with
+    // 0xC3 for its low byte and a simple CE32.
+    Crafted good = {
+        .value = 1U << 13 | 0xC0 | collationTagContraction,
+        .contexts = {implicit, 0, implicit, 1, 1, 0xC3, 0x2B000500},
+    };
+    Crafted lastExpansion = good;
+    lastExpansion.value = 1U << 13 | 1U << 8 | 0xC0 | collationTagExpansion32;
+    Crafted lastOffset = good;
+    lastOffset.value = 1U << 13 | 0xC0 | collationTagOffset;
+    Crafted padding = good;
+    padding.patchAt = craftAfterTrie;
+    padding.patch = 0xC3;
+    CHECK(Opens(good) && Opens(lastExpansion) && Opens(lastOffset) && Opens(padding),
+          "an empty list, an entry's code point read as text, an expansion of a long "
+          "primary ending at its array's end, the last offset, and the word after the "
+          "trie's data, all accepted");
+    Crafted bad[] = {good, good, good, good, good, good, good};
+    bad[0].value = 0xC0;
+    bad[1].value = 0x00000BD1;
+    bad[2].value = 2U << 13 | 0xC0 | collationTagOffset;
+    bad[3].value = 2U << 13 | 0xC0 | collationTagContraction;
+    bad[4].contexts[0] = 0xFFFFFFC3;
+    bad[5].contexts[6] = 0xC3;
+    bad[6].patchAt = craftTrieLength;
+    bad[6].patch = 0xFFFFFFFF;
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        CHECK(!Opens(bad[i]), "a low byte 0xC0 with tag 0, a low byte 0xD1, an offset past "
+                              "the elements, a context naming no list, a list's default or "
+                              "entry not a CE32, or a broken trie, refused");
+    }
+}
+
 int main(void)
 {
     TestRead();
     TestUnit();
+    TestValidator();
     TestUnassigned();
     TestHanLeadBytes();
     TestRefusals();
