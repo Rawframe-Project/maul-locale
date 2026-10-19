@@ -68,11 +68,10 @@ An MF2 message has things a translator must not change:
 - The XML reader of the generator (`tools/mlocgen/xml.c`) now records
   where each element stands in its parent's text, so mixed content
   keeps its order.
-- **Not this step:** the Plural, Gender and Select module.
-  - Its expansion of selection messages to the target's plural
-    categories, with CLDR's examples as notes, is catalog slice (g2).
-  - Until then a selection message is one segment with its syntax
-    protected.
+- **Not this step:** the Plural, Gender and Select module. Record
+  mloc-0061 takes it: a selection message it can carry becomes a
+  segment per case. Any other message stays one segment with its syntax
+  protected.
 
 ## Proof
 

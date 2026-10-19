@@ -5,6 +5,8 @@
 
 #include "xliff_codes.h"
 
+#include "catalog_set.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,9 +76,11 @@ static void* Allocate(size_t count, size_t size)
     return p;
 }
 
-static int IsCode(Mf2PartKind kind)
+static int IsCode(const XliffMessage* m, size_t i)
 {
-    return kind != mf2Text && kind != mf2PatternStart && kind != mf2PatternEnd;
+    Mf2PartKind kind = m->parts[i].kind;
+    return kind != mf2Text && kind != mf2PatternStart && kind != mf2PatternEnd &&
+           (m->owned == nullptr || kind != mf2Syntax);
 }
 
 // The data of a code's text, added when new.
@@ -125,13 +129,12 @@ static void Pair(XliffMessage* m)
     free(open);
 }
 
-// A target code's number: the first source code of its data not taken.
-static size_t Number(XliffCodes* codes, size_t data, unsigned char* taken)
+// A target code's number: the first code of its source's data not taken.
+static size_t Number(XliffCodes* codes, const XliffMessage* s, size_t data, unsigned char* taken)
 {
-    const XliffMessage* s = &codes->messages[0];
     for (size_t i = 0; i < s->count; i++)
     {
-        if (IsCode(s->parts[i].kind) && s->data[i] == data && !taken[i])
+        if (IsCode(s, i) && s->data[i] == data && !taken[i])
         {
             taken[i] = 1;
             return s->number[i];
@@ -140,28 +143,50 @@ static size_t Number(XliffCodes* codes, size_t data, unsigned char* taken)
     return ++codes->numbers;
 }
 
-void XliffCodesAdd(XliffCodes* codes, const ResText* message, int which)
+static size_t Add(XliffCodes* codes, const char* text, size_t length, char* owned, size_t source)
 {
-    XliffMessage* m = &codes->messages[which];
-    if (!Mf2Split(message->bytes, message->length, &m->parts, &m->count))
+    codes->messages = CatalogGrow(codes->messages, codes->messageCount, sizeof(XliffMessage));
+    size_t index = codes->messageCount++;
+    XliffMessage* m = &codes->messages[index];
+    *m = (XliffMessage){0};
+    m->owned = owned;
+    if (!Mf2Split(text, length, &m->parts, &m->count))
     {
-        return;
+        return index;
     }
-    m->text = message->bytes;
+    m->text = text;
     m->data = Allocate(m->count, sizeof(size_t));
     m->number = Allocate(m->count, sizeof(size_t));
     m->partner = Allocate(m->count, sizeof(size_t));
-    unsigned char* taken = Allocate(codes->messages[0].count, 1);
+    const XliffMessage* s = source == xliffSource ? nullptr : &codes->messages[source];
+    unsigned char* taken = Allocate(s != nullptr ? s->count : 0, 1);
     for (size_t i = 0; i < m->count; i++)
     {
-        if (IsCode(m->parts[i].kind))
+        if (IsCode(m, i))
         {
             m->data[i] = DataOf(codes, m->text + m->parts[i].start, m->parts[i].length);
-            m->number[i] = which == 0 ? ++codes->numbers : Number(codes, m->data[i], taken);
+            m->number[i] = s == nullptr ? ++codes->numbers : Number(codes, s, m->data[i], taken);
         }
     }
     free(taken);
     Pair(m);
+    return index;
+}
+
+size_t XliffCodesAdd(XliffCodes* codes, const ResText* message, size_t source)
+{
+    return Add(codes, message->bytes, message->length, nullptr, source);
+}
+
+size_t XliffCodesAddPattern(XliffCodes* codes, const char* pattern, size_t length, size_t source)
+{
+    char* quoted = malloc(length + 5);
+    if (quoted == nullptr)
+    {
+        exit(1);
+    }
+    (void)snprintf(quoted, length + 5, "{{%.*s}}", (int)length, pattern);
+    return Add(codes, quoted, length + 4, quoted, source);
 }
 
 void XliffCodesWriteData(const XliffCodes* codes, FILE* out)
@@ -227,16 +252,16 @@ static void WriteCode(const XliffMessage* m, size_t i, FILE* out)
     }
 }
 
-void XliffCodesWriteMessage(const XliffCodes* codes, int which, FILE* out)
+void XliffCodesWriteMessage(const XliffCodes* codes, size_t index, FILE* out)
 {
-    const XliffMessage* m = &codes->messages[which];
+    const XliffMessage* m = &codes->messages[index];
     for (size_t i = 0; i < m->count; i++)
     {
         if (m->parts[i].kind == mf2Text)
         {
             WriteText(out, m->text + m->parts[i].start, m->parts[i].length);
         }
-        else if (IsCode(m->parts[i].kind))
+        else if (IsCode(m, i))
         {
             WriteCode(m, i, out);
         }
@@ -245,13 +270,15 @@ void XliffCodesWriteMessage(const XliffCodes* codes, int which, FILE* out)
 
 void XliffCodesFree(XliffCodes* codes)
 {
-    for (int w = 0; w < 2; w++)
+    for (size_t i = 0; i < codes->messageCount; i++)
     {
-        free(codes->messages[w].parts);
-        free(codes->messages[w].data);
-        free(codes->messages[w].number);
-        free(codes->messages[w].partner);
+        free(codes->messages[i].parts);
+        free(codes->messages[i].data);
+        free(codes->messages[i].number);
+        free(codes->messages[i].partner);
+        free(codes->messages[i].owned);
     }
+    free(codes->messages);
     free(codes->data);
     *codes = (XliffCodes){0};
 }

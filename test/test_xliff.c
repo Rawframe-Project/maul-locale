@@ -10,6 +10,7 @@
 
 #include "exchange_xliff.h"
 #include "file.h"
+#include "stale.h"
 #include "test_harness.h"
 
 #include <stdio.h>
@@ -62,16 +63,18 @@ static int Exchange(bool import, const char* translation, const char* xliff)
     return ok;
 }
 
-static const char s_source[] = "@locale en\n---\n# A greeting.\n@param $name The user\n"
-                               "@mloc-max-length 30\nhello = Hi {$name} & {#b}you{/b} \\{x\\}\n"
-                               "bye = Bye\n@translate no\nbrand = Maul\n"
-                               "multi = .input {$n :integer}\n .match $n\n one {{One {#i}file}}\n"
-                               " * {{{$n} files}}\n";
+static const char s_source[] =
+    "@locale en\n---\n# A greeting.\n@param $name The user\n"
+    "@mloc-max-length 30\nhello = Hi {$name} & {#b}you{/b} \\{x\\}\n"
+    "bye = Bye\n@translate no\nbrand = Maul\n"
+    "multi = .local $c = {$n :integer}\n .match $c\n one {{One {#i}file}}\n"
+    " * {{{$n} files}}\n";
 
 static const char s_exported[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.2\"\n"
     "       xmlns:slr=\"urn:oasis:names:tc:xliff:sizerestriction:2.0\"\n"
+    "       xmlns:pgs=\"urn:oasis:names:tc:xliff:pgs:1.0\"\n"
     "       version=\"2.2\" srcLang=\"en\" trgLang=\"tr\">\n"
     "  <file id=\"f1\" original=\"en.mf2\" canResegment=\"no\" xml:space=\"preserve\">\n"
     "    <slr:profiles generalProfile=\"xliff:codepoints\"/>\n"
@@ -99,7 +102,7 @@ static const char s_exported[] =
     "    </unit>\n"
     "    <unit id=\"u3\" name=\"multi\">\n"
     "      <originalData>\n"
-    "        <data id=\"d1\">.input {$n :integer}\n.match $n\none {{</data>\n"
+    "        <data id=\"d1\">.local $c = {$n :integer}\n.match $c\none {{</data>\n"
     "        <data id=\"d2\">{#i}</data>\n"
     "        <data id=\"d3\">}}\n* {{</data>\n"
     "        <data id=\"d4\">{$n}</data>\n"
@@ -199,6 +202,15 @@ static void TestRefusals(void)
              "</target></segment></unit></file></xliff>",
              head);
     Write("bad.xlf", text);
+    snprintf(text, sizeof(text),
+             "%s<unit id=\"a\" name=\"bye\"><originalData><data id=\"d1\">.input {$x :string} "
+             ".input {$x :string} {{</data><data id=\"d2\">}}</data></originalData><segment>"
+             "<source>x</source><target><ph id=\"1\" dataRef=\"d1\"/>a<ph id=\"2\" "
+             "dataRef=\"d2\"/></target></segment></unit></file></xliff>",
+             head);
+    Write("twice.xlf", text);
+    CHECK(!Exchange(true, "empty.mf2", "twice.xlf"),
+          "a target whose data model is wrong (a variable declared twice) refused");
     Write("other.xlf", "<?xml version=\"1.0\"?><html/>");
     Write("broken.xlf", "<xliff><file>");
     CHECK(
@@ -275,6 +287,141 @@ static void TestRoundTrip(void)
     free(copy);
 }
 
+static const char s_selection[] =
+    "@locale en\n---\nfiles = .input {$n :integer}\n .match $n\n 0 {{No files}}\n"
+    " one {{One {#b}file{/b}}}\n * {{{$n} files}}\n"
+    "place = .input {$p :number select=ordinal}\n .input {$g :string}\n .match $p $g\n"
+    " one fem {{First, she}}\n * * {{{$p}th}}\n"
+    "spaced = .input {$g :string}\n .match $g\n |a b| {{x}}\n * {{y}}\n";
+
+// Whether each text is found after the one before.
+static bool InOrder(const char* text, const char* const* parts, size_t count)
+{
+    const char* at = text;
+    for (size_t i = 0; at != nullptr && i < count; i++)
+    {
+        at = strstr(at, parts[i]);
+        at = at != nullptr ? at + strlen(parts[i]) : nullptr;
+    }
+    return at != nullptr;
+}
+
+static void TestSelectionExport(void)
+{
+    Write("en.mf2", s_selection);
+    Write("ar.mf2", "@locale ar\n---\nfiles = .input {$n :integer}\n .match $n\n"
+                    " 0 {{la milaffat}}\n one {{milaff}}\n two {{milaffan}}\n"
+                    " few {{{$n} milaffat}}\n * {{{$n} milaff}}\n");
+    char* x = Exchange(false, "ar.mf2", "ar.xlf") ? Read("ar.xlf") : nullptr;
+    static const char* const cases[] = {
+        "<unit id=\"u1\" name=\"files\" pgs:switch=\"plural:n\">",
+        "ref=\"s2\" category=\"plural_examples\">0, 0.0</note>",
+        "ref=\"s3\" category=\"plural_examples\">1, 1.0</note>",
+        "ref=\"s5\" category=\"plural_examples\">3~10, 103~110, 203~210, 303~310, 403~410, "
+        "503~510, …</note>",
+        "<segment id=\"s1\" pgs:case=\"0\" state=\"translated\">\n"
+        "        <source>No files</source>\n        <target>la milaffat</target>",
+        "<segment id=\"s2\" pgs:case=\"zero\" state=\"translated\">\n"
+        "        <source><ph id=\"1\" dataRef=\"d1\"/> files</source>\n"
+        "        <target><ph id=\"1\" dataRef=\"d1\"/> milaff</target>",
+        "<segment id=\"s3\" pgs:case=\"one\" state=\"translated\">\n"
+        "        <source>One <sc id=\"2\" dataRef=\"d2\"/>file<ec startRef=\"2\" "
+        "dataRef=\"d3\"/></source>\n        <target>milaff</target>",
+        "pgs:case=\"two\"",
+        "<target>milaffan</target>",
+        "pgs:case=\"few\"",
+        "<target><ph id=\"5\" dataRef=\"d1\"/> milaffat</target>",
+        "<segment id=\"s6\" pgs:case=\"many\" state=\"translated\">",
+        "<target><ph id=\"6\" dataRef=\"d1\"/> milaff</target>",
+        "pgs:case=\"other\"",
+        "<unit id=\"u2\" name=\"place\" pgs:switch=\"ordinal:p select:g\">",
+        "<segment id=\"s1\" pgs:case=\"other fem\">\n        <source><ph id=\"1\" "
+        "dataRef=\"d1\"/>th</source>",
+        "<segment id=\"s2\" pgs:case=\"other other\">",
+        "<unit id=\"u3\" name=\"spaced\">",
+        "<segment>"};
+    CHECK(x != nullptr && InOrder(x, cases, sizeof(cases) / sizeof(cases[0])) &&
+              strstr(x, "pgs:case=\"one fem\"") == nullptr,
+          "a selection message expanded to the target's categories: exact numbers first, "
+          "CLDR's order, examples as notes, a missing category from '*', select keys and "
+          "other, a key with a space left as one segment");
+    free(x);
+}
+
+static void TestSelectionImport(void)
+{
+    // ar.xlf from the export above, with the many segment translated anew.
+    char* x = Read("ar.xlf");
+    char* many = x != nullptr ? strstr(x, "pgs:case=\"many\"") : nullptr;
+    char* target = many != nullptr ? strstr(many, "milaff</target>") : nullptr;
+    if (target != nullptr)
+    {
+        memcpy(target, "MILAFF", 6);
+        Write("ar-many.xlf", x);
+    }
+    Write("ar.mf2", "@locale ar\n---\n");
+    char* t = Exchange(true, "ar.mf2", "ar-many.xlf") ? Read("ar.mf2") : nullptr;
+    uint64_t hash = 0;
+    const char* files = strstr(s_selection, ".input {$n");
+    const char* end = strstr(s_selection, "place =");
+    char record[64] = "";
+    if (SourceHash(files, (size_t)(end - files), &hash))
+    {
+        char digits[sourceHashDigits + 1];
+        SourceHashText(hash, digits);
+        snprintf(record, sizeof(record), "@mloc-source %s\nfiles = ", digits);
+    }
+    CHECK(t != nullptr && strstr(t, record) != nullptr &&
+              strstr(t, ".input {$n :integer}\n  .match $n\n  0 {{la milaffat}}\n"
+                        "  zero {{{$n} milaff}}\n  one {{milaff}}\n  two {{milaffan}}\n"
+                        "  few {{{$n} milaffat}}\n  many {{{$n} MILAFF}}\n"
+                        "  * {{{$n} milaff}}\n") != nullptr &&
+              strstr(t, "place") == nullptr,
+          "segments folded into one message in their order, other as '*', the source's "
+          "hash recorded, untranslated units left out");
+    free(t);
+    free(x);
+}
+
+// Replaces the first from in an export with to and imports it.
+static bool ImportEdited(const char* x, const char* from, const char* to)
+{
+    const char* at = x != nullptr ? strstr(x, from) : nullptr;
+    if (at == nullptr)
+    {
+        return true;
+    }
+    size_t head = (size_t)(at - x);
+    char* edited = malloc(strlen(x) + strlen(to) + 1);
+    if (edited == nullptr)
+    {
+        return true;
+    }
+    snprintf(edited, strlen(x) + strlen(to) + 1, "%.*s%s%s", (int)head, x, to, at + strlen(from));
+    Write("edited.xlf", edited);
+    free(edited);
+    Write("ar.mf2", "@locale ar\n---\n");
+    bool ok = Exchange(true, "ar.mf2", "edited.xlf");
+    char* t = Read("ar.mf2");
+    ok = ok || t == nullptr || strcmp(t, "@locale ar\n---\n") != 0;
+    free(t);
+    return ok;
+}
+
+static void TestSelectionRefusals(void)
+{
+    char* x = Read("ar.xlf");
+    CHECK(x != nullptr && !ImportEdited(x, "pgs:switch=\"plural:n\"", "pgs:switch=\"plural:m\""),
+          "a switch other than the source's refused, nothing written");
+    CHECK(!ImportEdited(x, "name=\"files\"", "name=\"spaced\""),
+          "a switch for a source PGS cannot carry refused");
+    CHECK(!ImportEdited(x, " pgs:case=\"zero\"", ""), "a segment without a case refused");
+    CHECK(!ImportEdited(x, "pgs:case=\"zero\"", "pgs:case=\"zero one\""),
+          "a case of two values for one selector refused");
+    CHECK(!ImportEdited(x, "<target>milaffan</target>", ""), "a unit translated in part refused");
+    free(x);
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -283,5 +430,8 @@ int main(int argc, char** argv)
     TestRefusals();
     TestExportEdges();
     TestRoundTrip();
+    TestSelectionExport();
+    TestSelectionImport();
+    TestSelectionRefusals();
     return s_failures == 0 ? 0 : 1;
 }

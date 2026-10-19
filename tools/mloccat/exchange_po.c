@@ -7,11 +7,10 @@
 
 #include "catalog_set.h"
 #include "file.h"
+#include "message_text.h"
 #include "po.h"
 #include "resource_edit.h"
 #include "stale.h"
-
-#include "maul-locale/message.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -127,13 +126,6 @@ typedef struct Import
     const PoEntry* entry;
 } Import;
 
-static int Compiles(const char* text)
-{
-    size_t size = 0;
-    mlocTextResult r = mlocCompileMessage(text, strlen(text), nullptr, 0, &size, nullptr);
-    return r.status == mloc_success || r.status == mloc_errorCapacity;
-}
-
 // The entries to import: each translated, of a key the source asks to
 // translate, compiling; 0 for an entry without msgctxt or one that does
 // not compile.
@@ -154,7 +146,7 @@ static int Choose(const CatalogInput* s, const PoFile* file, const char* po, Imp
         {
             fprintf(report, "%s:%zu: not a key to translate: %s\n", po, e->line, e->context);
         }
-        else if (e->string[0] != '\0' && !Compiles(e->string))
+        else if (e->string[0] != '\0' && !MessageCompiles(e->string, strlen(e->string)))
         {
             fprintf(report, "%s:%zu: a translation that does not compile: %s\n", po, e->line,
                     e->context);

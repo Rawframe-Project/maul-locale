@@ -7,46 +7,16 @@
 
 #include "catalog_hash.h"
 #include "catalog_set.h"
+#include "message_text.h"
 
 #include "maul-locale/message.h"
 
 #include <stdlib.h>
 
-// Compiles the message and writes it back canonically; the caller frees
-// the text.
-static char* Canonical(const char* text, size_t length, size_t* lengthOut)
-{
-    size_t size = 0;
-    mlocTextResult r = mlocCompileMessage(text, length, nullptr, 0, &size, nullptr);
-    uint8_t* compiled = r.status == mloc_errorCapacity || r.status == mloc_success
-                            ? malloc(size == 0 ? 1 : size)
-                            : nullptr;
-    char* canonical = nullptr;
-    if (compiled != nullptr &&
-        mlocCompileMessage(text, length, compiled, size, &size, nullptr).status == mloc_success)
-    {
-        mlocOutput out = {nullptr, 0, 0, nullptr, nullptr};
-        (void)mlocWriteMessageText(compiled, size, &out);
-        canonical = malloc(out.length == 0 ? 1 : out.length);
-        out = (mlocOutput){canonical, out.length, 0, nullptr, nullptr};
-        if (canonical != nullptr && mlocWriteMessageText(compiled, size, &out) == mloc_success)
-        {
-            *lengthOut = out.length;
-        }
-        else
-        {
-            free(canonical);
-            canonical = nullptr;
-        }
-    }
-    free(compiled);
-    return canonical;
-}
-
 int SourceHash(const char* text, size_t length, uint64_t* out)
 {
     size_t canonicalLength = 0;
-    char* canonical = Canonical(text, length, &canonicalLength);
+    char* canonical = CanonicalMessage(text, length, &canonicalLength);
     if (canonical == nullptr)
     {
         return 0;

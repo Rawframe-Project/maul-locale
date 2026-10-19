@@ -760,12 +760,15 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # library so that their tests link them alone.
     add_library(mloccat_core STATIC tools/mloccat/accept.c tools/mloccat/catalog_set.c
                              tools/mloccat/compile.c tools/mloccat/exchange_po.c
-                             tools/mloccat/file.c tools/mloccat/json.c tools/mloccat/mf2_parts.c
-                             tools/mloccat/po.c tools/mloccat/pseudo.c tools/mloccat/report.c
+                             tools/mloccat/file.c tools/mloccat/json.c tools/mloccat/message_text.c
+                             tools/mloccat/mf2_parts.c
+                             tools/mloccat/pgs.c tools/mloccat/po.c tools/mloccat/pseudo.c
+                             tools/mloccat/report.c
                              tools/mloccat/report_write.c
                              tools/mloccat/resource.c tools/mloccat/resource_check.c
                              tools/mloccat/resource_edit.c tools/mloccat/resource_write.c
                              tools/mloccat/stale.c tools/mloccat/xliff_codes.c
+                             tools/mloccat/xliff_pgs.c
                              tools/mloccat/xliff_read.c tools/mloccat/xliff_write.c
                              tools/mloccat/table.c)
     # The compiler writes the data layout and the catalog units the library

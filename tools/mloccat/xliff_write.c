@@ -8,6 +8,7 @@
 #include "mf2_parts.h"
 #include "stale.h"
 #include "xliff_codes.h"
+#include "xliff_pgs.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,9 +18,16 @@ static void Line(FILE* out, int indent, const char* text)
     fprintf(out, "%*s%s", indent, "", text);
 }
 
-static void WriteNotes(FILE* out, const CatalogEntry* e)
+// The source entry's comment and parameters, and a PGS unit's plural
+// examples for the segments they apply to.
+static void WriteNotes(FILE* out, const CatalogEntry* e, const XliffPgsUnit* pgs)
 {
-    int any = e->item->comment.length > 0 ||
+    int examples = 0;
+    for (size_t i = 0; pgs != nullptr && i < pgs->segmentCount; i++)
+    {
+        examples |= pgs->segments[i].examples != nullptr;
+    }
+    int any = e->item->comment.length > 0 || examples ||
               CatalogFindMeta(e->item->meta, e->item->metaCount, "param") != nullptr;
     if (!any)
     {
@@ -42,17 +50,87 @@ static void WriteNotes(FILE* out, const CatalogEntry* e)
             fputs("</note>\n", out);
         }
     }
+    for (size_t i = 0; pgs != nullptr && i < pgs->segmentCount; i++)
+    {
+        const char* text = pgs->segments[i].examples;
+        if (text != nullptr)
+        {
+            fprintf(out,
+                    "        <note appliesTo=\"target\" ref=\"s%zu\" "
+                    "category=\"plural_examples\">",
+                    i + 1);
+            XliffWriteText(out, text, strlen(text), 0);
+            fputs("</note>\n", out);
+        }
+    }
     Line(out, 6, "</notes>\n");
 }
 
-static void WriteUnit(FILE* out, size_t number, const CatalogEntry* e, const CatalogEntry* done)
+// A segment: its source and, with a translation, its target.
+static void WriteSegment(FILE* out, const XliffCodes* codes, size_t source, size_t target,
+                         const CatalogEntry* done)
 {
-    XliffCodes codes = {0};
-    XliffCodesAdd(&codes, &e->item->value, 0);
+    Line(out, 8, "<source>");
+    XliffCodesWriteMessage(codes, source, out);
+    fputs("</source>\n", out);
     if (done != nullptr)
     {
-        XliffCodesAdd(&codes, &done->item->value, 1);
+        Line(out, 8, "<target>");
+        XliffCodesWriteMessage(codes, target, out);
+        fputs("</target>\n", out);
     }
+    Line(out, 6, "</segment>\n");
+}
+
+static const char* StateOf(const CatalogEntry* e, const CatalogEntry* done)
+{
+    int stale = done != nullptr && SourceStateOf(done->item->meta, done->item->metaCount,
+                                                 &e->item->value) == sourceStale;
+    return done == nullptr ? "" : stale ? " state=\"initial\"" : " state=\"translated\"";
+}
+
+// A selection message's segments, one per tuple of case values.
+static void WritePgsSegments(FILE* out, XliffCodes* codes, const XliffPgsUnit* u,
+                             const CatalogEntry* done, const char* state)
+{
+    size_t* indices = calloc(2 * u->segmentCount + 1, sizeof(size_t));
+    if (indices == nullptr)
+    {
+        exit(1);
+    }
+    for (size_t i = 0; i < u->segmentCount; i++)
+    {
+        const XliffPgsSegment* g = &u->segments[i];
+        indices[2 * i] = XliffCodesAddPattern(codes, g->source->pattern, strlen(g->source->pattern),
+                                              xliffSource);
+        if (g->target != nullptr)
+        {
+            indices[2 * i + 1] = XliffCodesAddPattern(codes, g->target->pattern,
+                                                      strlen(g->target->pattern), indices[2 * i]);
+        }
+    }
+    XliffCodesWriteData(codes, out);
+    for (size_t i = 0; i < u->segmentCount; i++)
+    {
+        fprintf(out, "      <segment id=\"s%zu\" pgs:case=\"", i + 1);
+        for (size_t k = 0; k < u->source.selectorCount; k++)
+        {
+            fputs(k > 0 ? " " : "", out);
+            XliffWriteText(out, u->segments[i].cases[k], strlen(u->segments[i].cases[k]), 1);
+        }
+        fprintf(out, "\"%s>\n", state);
+        WriteSegment(out, codes, indices[2 * i], indices[2 * i + 1],
+                     u->segments[i].target != nullptr ? done : nullptr);
+    }
+    free(indices);
+}
+
+static void WriteUnit(FILE* out, size_t number, const CatalogEntry* e, const CatalogEntry* done,
+                      const char* locale)
+{
+    XliffPgsUnit pgs;
+    int selection =
+        XliffPgsPlan(&pgs, &e->item->value, done != nullptr ? &done->item->value : nullptr, locale);
     fprintf(out, "    <unit id=\"u%zu\" name=\"", number);
     XliffWriteText(out, e->key, e->length, 1);
     const ResMeta* most = CatalogFindMeta(e->item->meta, e->item->metaCount, "mloc-max-length");
@@ -60,25 +138,28 @@ static void WriteUnit(FILE* out, size_t number, const CatalogEntry* e, const Cat
     {
         fprintf(out, "\" slr:sizeRestriction=\"%.*s", (int)most->value.length, most->value.bytes);
     }
-    fputs("\">\n", out);
-    WriteNotes(out, e);
-    XliffCodesWriteData(&codes, out);
-    int stale = done != nullptr && SourceStateOf(done->item->meta, done->item->metaCount,
-                                                 &e->item->value) == sourceStale;
-    Line(out, 6,
-         done == nullptr ? "<segment>\n"
-         : stale         ? "<segment state=\"initial\">\n"
-                         : "<segment state=\"translated\">\n");
-    Line(out, 8, "<source>");
-    XliffCodesWriteMessage(&codes, 0, out);
-    fputs("</source>\n", out);
-    if (done != nullptr)
+    if (selection)
     {
-        Line(out, 8, "<target>");
-        XliffCodesWriteMessage(&codes, 1, out);
-        fputs("</target>\n", out);
+        fputs("\" pgs:switch=\"", out);
+        XliffWriteText(out, pgs.switchText, strlen(pgs.switchText), 1);
     }
-    Line(out, 6, "</segment>\n");
+    fputs("\">\n", out);
+    WriteNotes(out, e, selection ? &pgs : nullptr);
+    XliffCodes codes = {0};
+    const char* state = StateOf(e, done);
+    if (selection)
+    {
+        WritePgsSegments(out, &codes, &pgs, done, state);
+        XliffPgsFree(&pgs);
+    }
+    else
+    {
+        size_t source = XliffCodesAdd(&codes, &e->item->value, xliffSource);
+        size_t target = done != nullptr ? XliffCodesAdd(&codes, &done->item->value, source) : 0;
+        XliffCodesWriteData(&codes, out);
+        fprintf(out, "      <segment%s>\n", state);
+        WriteSegment(out, &codes, source, target, done);
+    }
     Line(out, 4, "</unit>\n");
     XliffCodesFree(&codes);
 }
@@ -103,6 +184,7 @@ static void WriteFile(FILE* out, const char* source, const CatalogInput* s, cons
     fputs("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           "<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.2\"\n"
           "       xmlns:slr=\"urn:oasis:names:tc:xliff:sizerestriction:2.0\"\n"
+          "       xmlns:pgs=\"urn:oasis:names:tc:xliff:pgs:1.0\"\n"
           "       version=\"2.2\" srcLang=\"",
           out);
     XliffWriteText(out, s->locale, strlen(s->locale), 1);
@@ -120,7 +202,8 @@ static void WriteFile(FILE* out, const char* source, const CatalogInput* s, cons
     {
         if (!s->entries[i].keep)
         {
-            WriteUnit(out, ++number, &s->entries[i], CatalogFindEntry(t, s->entries[i].key));
+            WriteUnit(out, ++number, &s->entries[i], CatalogFindEntry(t, s->entries[i].key),
+                      t->locale);
         }
     }
     fputs("  </file>\n</xliff>\n", out);

@@ -10,11 +10,11 @@
 
 #include "catalog_set.h"
 #include "exchange_xliff.h"
+#include "message_text.h"
 #include "resource_edit.h"
 #include "stale.h"
+#include "xliff_pgs.h"
 #include "xml.h"
-
-#include "maul-locale/message.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -203,11 +203,179 @@ static Unit ReadUnit(Reader* r, const XmlNode* unit)
     return u;
 }
 
-static int Compiles(const Str* s)
+// An attribute of a module, by its local name whatever its prefix.
+static const char* ModuleAttribute(const XmlNode* node, const char* name)
 {
-    size_t size = 0;
-    mlocTextResult r = mlocCompileMessage(s->bytes, s->length, nullptr, 0, &size, nullptr);
-    return r.status == mloc_success || r.status == mloc_errorCapacity;
+    for (int i = 0; i < node->attributeCount; i++)
+    {
+        const char* full = node->attributes[i].name;
+        if (strchr(full, ':') != nullptr && strcmp(Local(full), name) == 0)
+        {
+            return node->attributes[i].value;
+        }
+    }
+    return nullptr;
+}
+
+// A PGS unit's segments: each case's values, its source and its target.
+typedef struct PgsSegments
+{
+    char** cases[xliffPgsMaxSegments];
+    char* sources[xliffPgsMaxSegments];
+    char* targets[xliffPgsMaxSegments];
+    size_t count;
+    size_t translated;
+} PgsSegments;
+
+// A case's values, as many as the selectors; 0 for another count.
+static int CaseValues(const char* text, size_t selectors, char*** out)
+{
+    *out = (char**)calloc(selectors + 1, sizeof(char*));
+    if (*out == nullptr)
+    {
+        exit(1);
+    }
+    size_t count = 0;
+    for (const char* s = text; *s != '\0';)
+    {
+        size_t n = strcspn(s, " ");
+        if (n > 0 && count < selectors)
+        {
+            Str value = {0};
+            Append(&value, s, n);
+            (*out)[count] = value.bytes;
+        }
+        count += n > 0;
+        s += n + (s[n] == ' ');
+    }
+    return count == selectors;
+}
+
+static void ReadSegments(Reader* r, const XmlNode* unit, const PgsMessage* source, PgsSegments* p,
+                         int* initial)
+{
+    for (int i = 0; r->problem == nullptr && i < unit->childCount; i++)
+    {
+        const XmlNode* s = unit->children[i];
+        const char* values = ModuleAttribute(s, "case");
+        const char* state = XmlGetAttribute(s, "state");
+        if (!Is(s, "segment"))
+        {
+            continue;
+        }
+        if (values == nullptr || p->count == xliffPgsMaxSegments)
+        {
+            r->problem = values == nullptr ? "a selection segment without a case"
+                                           : "a selection unit of too many segments";
+            break;
+        }
+        size_t at = p->count++;
+        if (!CaseValues(values, source->selectorCount, &p->cases[at]))
+        {
+            r->problem = "a case whose values are not one per selector";
+        }
+        Str text = {0};
+        Append(&text, "", 0);
+        const XmlNode* from = Child(s, "source");
+        Content(r, from != nullptr ? from : s, &text);
+        p->sources[at] = text.bytes;
+        const XmlNode* target = Child(s, "target");
+        if (target != nullptr)
+        {
+            Str t = {0};
+            Append(&t, "", 0);
+            Content(r, target, &t);
+            p->targets[at] = t.bytes;
+            p->translated++;
+        }
+        *initial = *initial || state == nullptr || strcmp(state, "initial") == 0;
+    }
+}
+
+static void FreePgsSegments(PgsSegments* p, size_t selectors)
+{
+    for (size_t i = 0; i < p->count; i++)
+    {
+        for (size_t k = 0; k < selectors; k++)
+        {
+            free(p->cases[i][k]);
+        }
+        free((void*)p->cases[i]);
+        free(p->sources[i]);
+        free(p->targets[i]);
+    }
+}
+
+// The source the segments show: the source's own text when they are its
+// segments now, else the message they fold to, whose hash is another.
+static void SourceShown(const XliffPgsUnit* plan, const ResText* now, const PgsSegments* p,
+                        Str* out)
+{
+    size_t length = 0;
+    char* shown =
+        XliffPgsFold(&plan->source, (char* const* const*)p->cases, p->sources, p->count, &length);
+    char** patterns = (char**)calloc(plan->segmentCount + 1, sizeof(char*));
+    char*** tuples = (char***)calloc(plan->segmentCount + 1, sizeof(char**));
+    if (patterns == nullptr || tuples == nullptr)
+    {
+        exit(1);
+    }
+    for (size_t i = 0; i < plan->segmentCount; i++)
+    {
+        tuples[i] = (char**)plan->segments[i].cases;
+        patterns[i] = plan->segments[i].source->pattern;
+    }
+    size_t planLength = 0;
+    char* planned = XliffPgsFold(&plan->source, (char* const* const*)tuples, patterns,
+                                 plan->segmentCount, &planLength);
+    size_t a = 0;
+    size_t b = 0;
+    char* x = CanonicalMessage(shown, length, &a);
+    char* y = CanonicalMessage(planned, planLength, &b);
+    int same = x != nullptr && y != nullptr && a == b && memcmp(x, y, a) == 0;
+    Append(out, same ? now->bytes : shown, same ? now->length : length);
+    free(x);
+    free(y);
+    free(shown);
+    free(planned);
+    free((void*)patterns);
+    free((void*)tuples);
+}
+
+// A unit of the PGS module: its segments folded back into one message.
+static Unit ReadPgsUnit(Reader* r, const XmlNode* unit, const ResText* now, const char* locale,
+                        const char* switchText)
+{
+    Unit u = {{0}, {0}, 0, 0};
+    r->data = Child(unit, "originalData");
+    XliffPgsUnit plan;
+    if (!XliffPgsPlan(&plan, now, nullptr, locale))
+    {
+        r->problem = "a selection unit whose switch is not the source's";
+        return u;
+    }
+    if (strcmp(plan.switchText, switchText) != 0)
+    {
+        r->problem = "a selection unit whose switch is not the source's";
+        XliffPgsFree(&plan);
+        return u;
+    }
+    PgsSegments p = {0};
+    ReadSegments(r, unit, &plan.source, &p, &u.initial);
+    if (r->problem == nullptr && p.translated > 0 && p.translated < p.count)
+    {
+        r->problem = "a selection unit translated in part";
+    }
+    if (r->problem == nullptr && p.translated > 0)
+    {
+        u.hasTarget = 1;
+        u.target.bytes = XliffPgsFold(&plan.source, (char* const* const*)p.cases, p.targets,
+                                      p.count, &u.target.length);
+        SourceShown(&plan, now, &p, &u.source);
+    }
+    FreePgsSegments(&p, plan.source.selectorCount);
+    XliffPgsFree(&plan);
+    return u;
 }
 
 // An import: the source's entry, the target's MF2 and the hash to record.
@@ -227,8 +395,8 @@ typedef struct Imports
 } Imports;
 
 // One unit into the imports; 0 for one that cannot be read back.
-static int Choose(const CatalogInput* s, const XmlNode* unit, const char* path, Imports* out,
-                  FILE* report)
+static int Choose(const CatalogInput* s, const XmlNode* unit, const char* path, const char* locale,
+                  Imports* out, FILE* report)
 {
     const char* name = XmlGetAttribute(unit, "name");
     const CatalogEntry* key = name != nullptr ? CatalogFindEntry(s, name) : nullptr;
@@ -243,13 +411,15 @@ static int Choose(const CatalogInput* s, const XmlNode* unit, const char* path, 
         return 1;
     }
     Reader r = {nullptr, nullptr};
-    Unit u = ReadUnit(&r, unit);
+    const char* switchText = ModuleAttribute(unit, "switch");
+    Unit u = switchText != nullptr ? ReadPgsUnit(&r, unit, &key->item->value, locale, switchText)
+                                   : ReadUnit(&r, unit);
     int ok = r.problem == nullptr;
     if (!ok)
     {
         fprintf(report, "%s:%d: %s\n", path, unit->line, r.problem);
     }
-    else if (u.hasTarget && !Compiles(&u.target))
+    else if (u.hasTarget && !MessageCompiles(u.target.bytes, u.target.length))
     {
         fprintf(report, "%s:%d: a translation that does not compile: %s\n", path, unit->line, name);
         ok = 0;
@@ -284,8 +454,8 @@ static void Apply(Resource* r, const Imports* imports)
 }
 
 // Every unit of every file.
-static int ChooseAll(const CatalogInput* s, const XmlNode* root, const char* path, Imports* out,
-                     FILE* report)
+static int ChooseAll(const CatalogInput* s, const XmlNode* root, const char* path,
+                     const char* locale, Imports* out, FILE* report)
 {
     int ok = Is(root, "xliff");
     for (int f = 0; ok && f < root->childCount; f++)
@@ -295,7 +465,7 @@ static int ChooseAll(const CatalogInput* s, const XmlNode* root, const char* pat
         {
             if (Is(file->children[u], "unit"))
             {
-                ok = Choose(s, file->children[u], path, out, report) && ok;
+                ok = Choose(s, file->children[u], path, locale, out, report) && ok;
             }
         }
     }
@@ -315,7 +485,7 @@ int CatalogImportXliff(const char* source, const char* translation, const char* 
         ok = 0;
     }
     Imports imports = {0};
-    if (ok && !ChooseAll(&set.inputs[0], root, xliff, &imports, report))
+    if (ok && !ChooseAll(&set.inputs[0], root, xliff, set.inputs[1].locale, &imports, report))
     {
         if (!Is(root, "xliff"))
         {

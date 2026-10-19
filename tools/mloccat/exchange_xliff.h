@@ -10,8 +10,10 @@
 // source entry's comment and @param lines are notes; @mloc-max-length is
 // the Size and Length Restriction module's sizeRestriction in code points.
 // A translation is the segment's target, state "translated", or
-// "initial" when stale. An import reads each target back, as PO's does
-// (exchange_po.h).
+// "initial" when stale. A selection message the Plural, Gender and
+// Select module can carry is instead a segment per case (record
+// mloc-0061, xliff_pgs.h). An import reads each target back, as PO's
+// does (exchange_po.h), folding a PGS unit's segments into one message.
 
 #ifndef MLOCCAT_EXCHANGE_XLIFF_H
 #define MLOCCAT_EXCHANGE_XLIFF_H
@@ -25,7 +27,9 @@ int CatalogExportXliff(const char* source, const char* translation, const char* 
 
 // Reads an XLIFF file into the translation; 0, and nothing written, when
 // the set or the file does not read, a unit has no name, a code names no
-// data, or a translation does not compile.
+// data, a translation does not compile, or a PGS unit does not fold (a
+// switch not the source's, a segment without a case or of another count
+// of values, a unit translated in part).
 int CatalogImportXliff(const char* source, const char* translation, const char* xliff,
                        FILE* report);
 

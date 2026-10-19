@@ -215,6 +215,10 @@ static void TestImport(void)
     Write("bad.po", "msgctxt \"bye\"\nmsgid \"Bye\"\nmsgstr \"{$\"\n");
     Write("bare.po", "msgid \"Bye\"\nmsgstr \"x\"\n");
     Write("plural.po", "msgctxt \"bye\"\nmsgid \"Bye\"\nmsgid_plural \"Byes\"\nmsgstr[0] \"x\"\n");
+    Write("twice.po", "msgctxt \"bye\"\nmsgid \"Bye\"\nmsgstr \".input {$x :string} .input "
+                      "{$x :string} {{a}}\"\n");
+    CHECK(!Exchange(true, "empty.mf2", "twice.po"),
+          "a translation whose data model is wrong (a variable declared twice) refused");
     CHECK(!Exchange(true, "empty.mf2", "bad.po") && !Exchange(true, "empty.mf2", "bare.po") &&
               !Exchange(true, "empty.mf2", "plural.po") && !Exchange(true, "empty.mf2", "none.po"),
           "a translation that does not compile, an entry without msgctxt, a plural entry, a file "

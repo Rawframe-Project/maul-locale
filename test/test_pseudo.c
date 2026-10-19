@@ -90,6 +90,9 @@ static void TestForms(void)
     size_t length = 0;
     CHECK(PseudoMessage("{$", 2, pseudoAccented, &length) == nullptr,
           "a message that does not compile has no pseudo form");
+    const char twice[] = ".input {$x :string}\n.input {$x :string}\n{{a}}";
+    CHECK(PseudoMessage(twice, strlen(twice), pseudoAccented, &length) == nullptr,
+          "nor one whose data model is wrong, which only the full compile refuses");
 }
 
 // The canonical text of a message, accents undone and pseudo marks

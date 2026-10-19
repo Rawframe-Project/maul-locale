@@ -306,6 +306,12 @@ format.
   XLIFF (a unit per key, placeholders, markup and syntax as codes over
   the unit's original data, notes, the size restriction, states) and
   `mloccat import-xliff` reads a CAT tool's file back (mloc-0060).
+- XLIFF selection messages by PGS: a plural, ordinal or select message
+  becomes a segment per case (`pgs:switch`, `pgs:case`), expanded to
+  the target locale's plural categories with example numbers as notes,
+  and folds back into one message on import. Imports and pseudo-locales
+  now refuse a message whose data model is wrong, as the catalog
+  compiler does (mloc-0061).
 - The profile states that a part function or a program function may
   call the library back, the call it is inside of included: every
   object is read only once made (mloc-0001).

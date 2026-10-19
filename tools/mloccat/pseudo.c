@@ -6,10 +6,9 @@
 #include "pseudo.h"
 
 #include "catalog_set.h"
+#include "message_text.h"
 #include "mf2_parts.h"
 #include "resource_write.h"
-
-#include "maul-locale/message.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -111,13 +110,6 @@ static void PutText(Text* out, const char* t, size_t length, PseudoKind kind)
     }
 }
 
-static int Compiles(const char* text, size_t length)
-{
-    size_t size = 0;
-    mlocTextResult r = mlocCompileMessage(text, length, nullptr, 0, &size, nullptr);
-    return r.status == mloc_success || r.status == mloc_errorCapacity;
-}
-
 char* PseudoMessage(const char* text, size_t length, PseudoKind kind, size_t* lengthOut)
 {
     Mf2Part* parts = nullptr;
@@ -156,7 +148,7 @@ char* PseudoMessage(const char* text, size_t length, PseudoKind kind, size_t* le
         }
     }
     free(parts);
-    if (!Compiles(out.bytes, out.length))
+    if (!MessageCompiles(out.bytes, out.length))
     {
         free(out.bytes);
         return nullptr;
