@@ -110,6 +110,26 @@ static void TestOptions(void)
           "alternate, max variable, case first, case level and backwards as options");
     o = (mlocCollatorOptions){.reorder = "Grek-LATN", .reorderLength = 9};
     CHECK(Order("en", &o, "\xCE\xB1", "a") == -1, "a reorder option in any case");
+    o = (mlocCollatorOptions){.reorder = "GREK-ZZZZ-LATN", .reorderLength = 14};
+    mlocCollatorOptions groups = {.reorder = "currency-digit", .reorderLength = 14};
+    CHECK(Order("en", &o, "\xCE\xB1", "\xD0\xB4") == -1 && Order("en", &o, "\xD0\xB4", "a") == -1 &&
+              Order("en", &groups, "$", ".") == 1 && Order("en", &groups, "$", "1") == -1,
+          "Zzzz written as a script, and the eight letters of currency");
+    o = (mlocCollatorOptions){.strength = mloc_strengthIdentical};
+    CHECK(Order("en-u-ks-level1", &o, "\xC3\xA1", "a\xCC\x81") == 0 &&
+              Order("en-u-ks-level1", &o, "a", "A") == -1,
+          "the identical strength as an option");
+    o = (mlocCollatorOptions){.alternate = mloc_alternateShifted,
+                              .maxVariable = mloc_maxVariablePunctuation};
+    mlocCollatorOptions currency = {.alternate = mloc_alternateShifted,
+                                    .maxVariable = mloc_maxVariableCurrency};
+    CHECK(Order("en-u-kv-symbol", &o, "a+b", "ab") == -1 &&
+              Order("en-u-kv-symbol", &o, "a-b", "ab") == 0 &&
+              Order("en", &currency, "a$b", "ab") == 0,
+          "the max variable as an option, over the locale's, up to currency");
+    o = (mlocCollatorOptions){.caseLevel = mloc_switchOff};
+    CHECK(Order("en-u-kc-ks-level1", &o, "a", "A") == 0,
+          "the case level switched off as an option");
     o = (mlocCollatorOptions){.reorder = "", .reorderLength = 0};
     CHECK(Order("en-u-kr-grek", &o, "\xCE\xB1", "a") == 1, "an empty reorder option: none");
 }
