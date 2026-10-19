@@ -38,12 +38,14 @@ static const char* Refusal(const char* text)
 
 static void TestReader(void)
 {
-    const char* text = "# translator\n#: src/a.c:1\nmsgid \"\"\nmsgstr \"Language: tr\\n\"\n"
-                       "\"X: y\\n\"\n\n"
-                       "#. first\n#.\n#. third\n#, c-format, fuzzy,mf2-format\n#| msgid \"old\"\n"
-                       "msgctxt \"k\"\nmsgid \"a\\tb\\\"c\\\\d\\101\\x42\\n\"\n\"next\"\n"
-                       "msgstr \"\"\n\"x\"\r\n\n#~ msgid \"gone\"\n#~ msgstr \"x\"\n"
-                       "msgid \"bare\"\nmsgstr \"\"\n";
+    const char* text =
+        "# translator\n#: src/a.c:1\nmsgid \"\"\nmsgstr \"Language: tr\\n\"\n"
+        "\"X: y\\n\"\n\n"
+        "#. first\n#.\n#. third\n#, c-format, fuzzy,mf2-format\n#| msgid \"old\"\n"
+        "msgctxt \"k\"\nmsgid "
+        "\"a\\tb\\\"c\\\\d\\101\\x42\\x39\\x6f\\x4F\\x40\\77\\107\\377\\n\"\n\"next\"\n"
+        "msgstr \"\"\n\"x\" \t\r\n\n#~ msgid \"gone\"\n#~ msgstr \"x\"\n"
+        "msgid \"bare\"\nmsgstr \"\"\n";
     PoFile po = {0};
     bool read = Reads(text, &po);
     CHECK(read && po.header != nullptr && strcmp(po.header, "Language: tr\nX: y\n") == 0 &&
@@ -52,7 +54,7 @@ static void TestReader(void)
     if (read && po.count == 2)
     {
         const PoEntry* e = &po.entries[0];
-        CHECK(strcmp(e->context, "k") == 0 && strcmp(e->id, "a\tb\"c\\dAB\nnext") == 0 &&
+        CHECK(strcmp(e->context, "k") == 0 && strcmp(e->id, "a\tb\"c\\dAB9oO@?G\377\nnext") == 0 &&
                   strcmp(e->string, "x") == 0 && strcmp(e->comments, "first\n\nthird") == 0 &&
                   e->fuzzy && e->mf2 && e->line == 13,
               "escapes, strings over lines, extracted comments, flags, the msgid's line");
@@ -84,8 +86,10 @@ static void TestReader(void)
               strcmp(back.entries[0].id, po.entries[0].id) == 0 &&
               strcmp(back.entries[0].comments, po.entries[0].comments) == 0 &&
               back.entries[0].fuzzy && back.entries[0].mf2 &&
-              strstr(written, "msgid \"\"\n\"a\\tb\\\"c\\\\dAB\\n\"\n\"next\"\n") != nullptr,
-          "the writer read back, a string split after its LF");
+              strstr(written, "msgid \"\"\n\"a\\tb\\\"c\\\\dAB9oO@?G\xFF\\n\"\n\"next\"\n") !=
+                  nullptr &&
+              strstr(written, "#. first\n#.\n#. third\n") != nullptr,
+          "the writer read back, a string split after its LF, an empty comment line bare");
     free(written);
     PoFree(&back);
     PoFree(&po);
@@ -95,6 +99,12 @@ static void TestRefusals(void)
 {
     const char* plural = Refusal("msgid \"a\"\nmsgid_plural \"b\"\nmsgstr[0] \"\"\n");
     CHECK(plural != nullptr && strstr(plural, "plural") != nullptr, "a plural entry is refused");
+    const char* twice = Refusal("msgid \"a\"\nmsgid \"b\"\nmsgstr \"\"\n");
+    const char* unknown = Refusal("msgfoo \"a\"\n");
+    CHECK(twice != nullptr && strstr(twice, "twice") != nullptr && unknown != nullptr &&
+              strstr(unknown, "does not have") != nullptr &&
+              Refusal("msgid \"\\400\"\nmsgstr \"\"\n") != nullptr,
+          "each refusal its reason; an octal escape past a byte");
     CHECK(Refusal("msgid \"a\nmsgstr \"\"\n") != nullptr &&
               Refusal("msgid \"a\\q\"\nmsgstr \"\"\n") != nullptr &&
               Refusal("\"a\"\nmsgid \"a\"\nmsgstr \"\"\n") != nullptr &&
@@ -238,6 +248,53 @@ static void TestRoundTrip(void)
     free(copy);
 }
 
+static size_t Count(const char* text, const char* needle)
+{
+    size_t count = 0;
+    for (const char* at = text != nullptr ? strstr(text, needle) : nullptr; at != nullptr;
+         at = strstr(at + 1, needle))
+    {
+        count++;
+    }
+    return count;
+}
+
+// Keys added where the source has them: a section made once and filled,
+// entries replaced on a second import rather than added again.
+static void TestSections(void)
+{
+    Write("en.mf2", "@locale en\n---\ntop = Top\n[menu]\nopen = Open\nclose = Close\n");
+    Write("sec.mf2", "@locale tr\n---\ntop = \xC3\x9Cst\n");
+    Write("sec.po", "msgctxt \"menu.open\"\nmsgid \"Open\"\nmsgstr \"A\xC3\xA7\"\n\n"
+                    "msgctxt \"menu.close\"\nmsgid \"Close\"\nmsgstr \"Kapat\"\n\n"
+                    "msgctxt \"top\"\nmsgid \"Top\"\nmsgstr \"Tepe\"\n");
+    bool once = Exchange(true, "sec.mf2", "sec.po");
+    bool twice = once && Exchange(true, "sec.mf2", "sec.po");
+    char* text = Read("sec.mf2");
+    CHECK(twice && Count(text, "[menu]") == 1 && Count(text, "open = ") == 1 &&
+              Count(text, "close = Kapat") == 1 && Count(text, "top = ") == 1 &&
+              Count(text, "top = Tepe") == 1 && Count(text, "\n\n[") == 1,
+          "a section added once, its keys in it, an entry replaced not added, twice over");
+    free(text);
+    char s[1024];
+    char t[1024];
+    char missing[1024];
+    Path(s, sizeof(s), "en.mf2");
+    Path(t, sizeof(t), "sec.mf2");
+    Path(missing, sizeof(missing), "none.po");
+    FILE* report = tmpfile();
+    char said[512] = {0};
+    if (report != nullptr)
+    {
+        (void)CatalogImportPo(s, t, missing, report);
+        rewind(report);
+        size_t read = fread(said, 1, sizeof(said) - 1, report);
+        said[read] = '\0';
+        fclose(report);
+    }
+    CHECK(strstr(said, "none.po: cannot read\n") != nullptr, "a PO file that is not, reported");
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -246,5 +303,6 @@ int main(int argc, char** argv)
     TestExport();
     TestImport();
     TestRoundTrip();
+    TestSections();
     return s_failures == 0 ? 0 : 1;
 }
