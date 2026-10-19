@@ -727,6 +727,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/map.c tools/mlocgen/names_gen.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
                                     tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
+                                    tools/mlocgen/trie_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/spellout_compile.c
                                     tools/mlocgen/spellout_gen.c tools/mlocgen/spellout_lead.c tools/mlocgen/titlecase_gen.c
@@ -847,6 +848,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_genxml PRIVATE test)
         maul_apply_flags(test_genxml)
         add_test(NAME genxml COMMAND test_genxml)
+        add_executable(test_trie test/test_trie.c)
+        target_link_libraries(test_trie PRIVATE mlocgen_core)
+        target_include_directories(test_trie PRIVATE test)
+        maul_apply_flags(test_trie)
+        add_test(NAME trie COMMAND test_trie)
         add_executable(test_genresolve test/test_genresolve.c)
         target_link_libraries(test_genresolve PRIVATE mlocgen_core)
         target_include_directories(test_genresolve PRIVATE test)

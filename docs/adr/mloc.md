@@ -67,3 +67,4 @@ are listed in [README.md](README.md).
 | [mloc-0060](mloc-0060-xliff-exchange.md) | XLIFF 2.2 exchange: codes over original data | Accepted |
 | [mloc-0061](mloc-0061-xliff-pgs.md) | XLIFF's Plural, Gender and Select module: selection messages by case | Accepted |
 | [mloc-0062](mloc-0062-catalog-speed.md) | Catalog speed: lookup against gettext, formatting against a bound message | Accepted |
+| [mloc-0063](mloc-0063-code-point-trie.md) | A code point trie of 32-bit values | Accepted |
