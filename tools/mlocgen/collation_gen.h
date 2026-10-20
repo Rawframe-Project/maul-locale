@@ -5,7 +5,9 @@
 // mloc-0071): CLDR's root, read from common/uca/FractionalUCA.txt and
 // built into the root unit, and each common/collation file's types built
 // over it into a unit of the file's locale key. A type kept for imports
-// (CLDR's "private-") or an alt is left out.
+// (CLDR's "private-") is left out; a type the file also gives as
+// alt="short" (zh's) takes that form, as ICU4C's data does, and other
+// alts are left out.
 
 #ifndef MLOCGEN_COLLATION_GEN_H
 #define MLOCGEN_COLLATION_GEN_H

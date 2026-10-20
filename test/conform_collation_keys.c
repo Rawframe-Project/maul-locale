@@ -3,8 +3,9 @@
 //
 // Tailored locales' sort keys through the public collator (record
 // mloc-0071) against ICU4C 79's. Reads conform_collation_builder
-// --queries on standard input: for each locale file's selectable type
-// (no alt, not "private-"), its tag (the file's locale, -u-co and the
+// --queries on standard input: for each locale file's type (not
+// "private-", no alt but "short", the long form's strings keyed too),
+// its tag (the file's locale, -u-co and the
 // type's BCP 47 name) under four sets of options (none; kf upper; ka
 // shifted with ks level4; kc), and the file's locale alone for its
 // default type, with the strings the type's rules name and a fixed list
@@ -301,8 +302,8 @@ int main(int argc, char** argv)
             s_count = 0;
             s_pointCount = 0;
             int fields = sscanf(line + 5, "%63s %63s %63s", file, type, alt);
-            selectable =
-                fields == 2 && strncmp(type, "private-", 8) != 0 && strcmp(file, "crafted") != 0;
+            selectable = (fields == 2 || strcmp(alt, "short") == 0) &&
+                         strncmp(type, "private-", 8) != 0 && strcmp(file, "crafted") != 0;
         }
         else if (strncmp(line, "q ", 2) == 0 && selectable)
         {

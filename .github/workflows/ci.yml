@@ -167,7 +167,7 @@ jobs:
           set -o pipefail
           build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
             --queries ~/cldr-cache/cldr/common/collation/*.xml |
-            build/conform_collation_keys src/generated/collation.mloc --expect 66bc7cfca0a083fa
+            build/conform_collation_keys src/generated/collation.mloc --expect 430f1cbb30b5260e
       - name: Every collation rule string parsed
         run: build/conform_collation_rules ~/cldr-cache/cldr/common/collation/*.xml
       - name: The general compare against CollationTest

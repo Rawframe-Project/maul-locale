@@ -159,8 +159,11 @@ the oracle for every type.
   - The generator builds every type of every file in
     `common/collation`, with `[import]` resolved among the files
     (`tools/mlocgen/collation_catalog.c`, shared with the conformance
-    tool). It leaves out the types kept for imports (`private-`) and
-    the `alt` types (zh's `short`; slice d4 weighs them).
+    tool). It leaves out the types kept for imports (`private-`). Where
+    a file also gives a type as `alt="short"`, it takes that form, as
+    ICU4C's data does: zh's `pinyin`, `stroke` and `zhuyin` list fewer
+    Han characters, and the rest follow the root's Han order (slice
+    d4b). Other `alt` types are left out.
   - A tailoring's head word 24 counts the code points its trie maps. A
     type of settings or `[reorder]` alone maps none, and the runtime
     then reads the root alone, with no lookup in an empty trie.
@@ -179,9 +182,9 @@ the oracle for every type.
     bytes join the keys' version (record mloc-0070).
   - `mlocCollator` grew from 768 to 1,024 bytes to hold the tailoring's
     view beside the root's.
-  - Size: 2,636,010 bytes for the file, 117 units. zh's four types are
-    1,136,896 bytes of it, ko's 253,856, ja's 119,128 and root's
-    `emoji`, `eor` and `search` 73,184. The smallest tailoring is about
+  - Size: 2,115,122 bytes for the file, 117 units. zh's four types are
+    610,896 bytes of it (1,136,896 from the long forms), ko's 256,160,
+    ja's 119,152 and root's `emoji`, `eor` and `search` 73,184. The smallest tailoring is about
     4,700 bytes, nearly all trie index; a type of a few code points
     could take a smaller form, measured with the speed work (slice
     g).
@@ -270,21 +273,20 @@ the oracle for every type.
   `--queries`): each selectable type's tag (`-u-co` and its BCP 47
   name) and each file's locale alone, under no options, `kf-upper`,
   `ka-shifted` with `ks-level4`, and `kc`, give public sort keys for the
-  strings the rules name and 30 probes: 958,487 keys over 727 tags. CI
-  checks their hash. In the docs repository's oracle, ICU4C 79 makes
+  strings the rules name and 30 probes, zh's long forms' strings too:
+  1,239,403 keys over 727 tags. CI checks their hash. In the docs repository's oracle, ICU4C 79 makes
   each tag's collator through its own loader and writes the keys:
   - 56 tags ICU's data cannot check: it has no collation for aa, bal,
     cu, dz, sgs, ssy, vo and wae, no `digits-after` for cs and no `eor`
     for de (its loader falls back), and leaves ca and de-AT to their
     parents.
-  - The other 671 tags give ICU's keys byte for byte, every option set
-    included, except:
-    - the Han probes (U+4E00, U+963F) outside zh, by the root's
-      code-point Han order (record mloc-0070), 1,328 keys left out;
-    - zh's `unihan` on U+963F: ICU's `private-unihan` import reorders
-      its radical-stroke root (slice d4c);
-    - zh's `pinyin`, `stroke` and `zhuyin`: ICU's data takes CLDR's
-      `alt="short"` rule strings, which give other weights (slice d4b).
+  - The other 671 tags give ICU's keys byte for byte, 725,264 keys,
+    every option set included. Left out are the keys the root's
+    code-point Han order decides (record mloc-0070): the Han probes
+    (U+4E00, U+963F) outside zh, 1,328 keys, and in zh 506,245 strings
+    of Han and CJK radicals that the `short` rules do not name. Before
+    zh took the `short` forms, its three types differed in nearly every
+    key.
   So `co` and the default along the chain, the tailorings' settings
   and reordering, imports and suppression read as ICU's loader reads
   them.
@@ -297,8 +299,6 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - zh's types from CLDR's `alt="short"` rule strings, as ICU's data
-    takes them (slice d4b);
   - the `unihan` types over a radical-stroke Han order (slice d4c);
   - every CLDR type, with the differential against ICU4C 79.
 

@@ -16,11 +16,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Whether a type is one a locale's co may name: not an alt and not one
-// kept for imports (CLDR's "private-").
-static bool Selectable(const CollationType* t)
+// Whether the file of a type also gives it as alt="short".
+static bool HasShort(const CollationCatalog* catalog, const CollationType* t)
 {
-    return t->alt[0] == '\0' && strncmp(t->type, "private-", 8) != 0;
+    for (size_t i = 0; i < catalog->count; i++)
+    {
+        const CollationType* other = &catalog->types[i];
+        if (strcmp(other->file, t->file) == 0 && strcmp(other->type, t->type) == 0 &&
+            strcmp(other->alt, "short") == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Whether a type is one a locale's co may name: not one kept for imports
+// (CLDR's "private-"), and its alt="short" form where the file has one,
+// as ICU4C's data takes it, else the type without an alt.
+static bool Selectable(const CollationCatalog* catalog, const CollationType* t)
+{
+    return strncmp(t->type, "private-", 8) != 0 &&
+           (strcmp(t->alt, "short") == 0 || (t->alt[0] == '\0' && !HasShort(catalog, t)));
 }
 
 // One type built over the root and written; the program stops on a
@@ -69,7 +86,7 @@ static void AddTailorings(CollationCatalog* catalog, const RootTable* root, cons
         for (; next < catalog->count && strcmp(catalog->types[next].file, source->name) == 0;
              next++)
         {
-            if (Selectable(&catalog->types[next]))
+            if (Selectable(catalog, &catalog->types[next]))
             {
                 built[count++] = Build(&catalog->types[next], root, catalog);
             }
