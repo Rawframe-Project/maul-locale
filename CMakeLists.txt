@@ -1001,6 +1001,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         maul_apply_flags(test_collation_root_elements)
         add_test(NAME collation_root_elements COMMAND test_collation_root_elements
                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        add_executable(test_collation_fast_table test/test_collation_fast_table.c)
+        target_link_libraries(test_collation_fast_table PRIVATE mlocgen_core)
+        target_include_directories(test_collation_fast_table PRIVATE test)
+        maul_apply_flags(test_collation_fast_table)
+        add_test(NAME collation_fast_table COMMAND test_collation_fast_table
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_executable(test_gencollation test/test_gencollation.c)
         target_link_libraries(test_gencollation PRIVATE mlocgen_core)
         target_include_directories(test_gencollation PRIVATE test)

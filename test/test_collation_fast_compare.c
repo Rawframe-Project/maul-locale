@@ -6,7 +6,8 @@
 // through mlocCompare must order as their sort keys do (the keys never
 // read the table), under tailorings with contractions and under every
 // option the fast compare reads; and over the root's table it answers
-// most such pairs itself, as the general compare does.
+// every pair of characters the table holds itself, as the general
+// compare does, unless the settings make it bail out.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -14,6 +15,7 @@
 
 #include "collation_compare.h"
 #include "collation_fast_compare.h"
+#include "collation_reorder.h"
 #include "collation_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -226,47 +228,182 @@ static void TestOptions(void)
               "first and level, backwards, numeric, reorderings, identical");
 }
 
-// Over the root's table with the root's settings, the fast compare
-// answers most pairs of fast characters and agrees with the general one.
-static void TestAnswers(void)
+// Characters the root's table holds every one of, U+FFFE and U+FFFF
+// too: over them the fast compare answers every pair.
+static const char* const s_held[] = {"a",
+                                     "b",
+                                     "e",
+                                     "l",
+                                     "s",
+                                     "z",
+                                     "A",
+                                     "L",
+                                     "Z",
+                                     "0",
+                                     "5",
+                                     "9",
+                                     " ",
+                                     "-",
+                                     ",",
+                                     ".",
+                                     "'",
+                                     "$",
+                                     "+",
+                                     "\xC3\xA9",
+                                     "\xC3\x89",
+                                     "\xC3\x9F",
+                                     "\xC3\xA6",
+                                     "\xC5\x82",
+                                     "\xE2\x80\x90",
+                                     "\xE2\x80\x93",
+                                     "\xE2\x80\xA0",
+                                     "\xE2\x80\xA2",
+                                     "\xEF\xBF\xBE",
+                                     "\xEF\xBF\xBF"};
+
+static CollationRoot s_root;
+
+static size_t HeldText(char* out)
 {
-    DataView view = mlocViewOf(&s_sources[1]);
-    DataSpan span = {0};
-    CollationRoot root;
-    FastLatinOptions o;
-    CollationSettings s = {0};
-    bool ready = mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&
-                 mlocReadCollationRoot(span, &root);
-    if (ready)
+    size_t length = 0;
+    uint32_t count = Next(8);
+    for (uint32_t i = 0; i < count; i++)
     {
-        s = mlocCollationDefaults(&root);
-        ready = mlocFastLatinOptions(&root, &s, root.fastLatin, root.fastLatinCount, &o);
+        for (const char* c = s_held[Next(sizeof(s_held) / sizeof(s_held[0]))]; *c != '\0'; c++)
+        {
+            out[length++] = *c;
+        }
     }
-    CHECK(ready, "the root's table serves the root's settings");
-    if (!ready)
+    return length;
+}
+
+// Over held characters under settings: how many pairs the fast compare
+// answers, -1 when one answer differs from the general compare's.
+static int Answered(const CollationSettings* s)
+{
+    FastLatinOptions o;
+    if (!mlocFastLatinOptions(&s_root, s, s_root.fastLatin, s_root.fastLatinCount, &o))
     {
-        return;
+        return -2;
     }
     static char a[maxText];
     static char b[maxText];
     int answered = 0;
-    bool same = true;
     for (int i = 0; i < pairs; i++)
     {
-        size_t aLength = Text(a);
-        size_t bLength = Text(b);
+        size_t aLength = HeldText(a);
+        size_t bLength = aLength;
+        memcpy(b, a, aLength);
+        if (i % 3 == 0)
+        {
+            bLength = HeldText(b);
+        }
+        else if (aLength > 0)
+        {
+            // One character changed for another, or a case or accent
+            // changed: later levels decide.
+            size_t at = Next((uint32_t)aLength);
+            b[at] = (char)(b[at] >= 'a' && b[at] <= 'z' ? b[at] - 32 : b[at] == 'e' ? 'E' : 'e');
+            b[at] = (unsigned char)a[at] >= 0x80 ? a[at] : b[at];
+        }
         int fast = mlocFastLatinCompare(&o, (const uint8_t*)a, aLength, (const uint8_t*)b, bLength);
-        int general =
-            mlocCollationCompare(&root, &s, (const uint8_t*)a, aLength, (const uint8_t*)b, bLength);
+        int general = mlocCollationCompare(&s_root, s, (const uint8_t*)a, aLength,
+                                           (const uint8_t*)b, bLength);
+        if (fast != fastLatinBail && fast != general)
+        {
+            fprintf(stderr, "  \"%.*s\" and \"%.*s\": fast %d, general %d\n", (int)aLength, a,
+                    (int)bLength, b, fast, general);
+            return -1;
+        }
         answered += fast != fastLatinBail;
-        same = same && (fast == fastLatinBail || fast == general);
     }
-    CHECK(same && answered > pairs / 4, "the fast compare answers as the general one, often");
-    s.strength = collationIdentical;
-    CHECK(!mlocFastLatinOptions(&root, &s, root.fastLatin, root.fastLatinCount, &o) &&
-              !mlocFastLatinOptions(&root, &(CollationSettings){.strength = collationTertiary},
-                                    nullptr, 0, &o),
-          "no fast compare at the identical strength or without a table");
+    return answered;
+}
+
+static void TestAnswers(void)
+{
+    CollationSettings s = mlocCollationDefaults(&s_root);
+    CollationSettings shifted = s;
+    shifted.shifted = true;
+    shifted.strength = collationQuaternary;
+    CollationSettings symbol = shifted;
+    symbol.variableTop = mlocCollationLastPrimary(&s_root, collationGroupSymbol);
+    CollationSettings level1 = s;
+    level1.strength = collationPrimary;
+    level1.caseLevel = true;
+    CollationSettings level2 = s;
+    level2.strength = collationSecondary;
+    CollationSettings upper = s;
+    upper.caseFirst = collationUpperFirst;
+    CollationSettings lower = s;
+    lower.caseFirst = collationLowerFirst;
+    CollationSettings upperLevel = upper;
+    upperLevel.caseLevel = true;
+    CHECK(Answered(&s) == pairs && Answered(&shifted) == pairs && Answered(&symbol) == pairs,
+          "every pair of held characters answered, as the general compare does: the root's "
+          "settings, shifted to punctuation and to symbols");
+    CHECK(Answered(&level1) == pairs && Answered(&level2) == pairs && Answered(&upper) == pairs &&
+              Answered(&lower) == pairs && Answered(&upperLevel) == pairs,
+          "and at the primary strength with the case level, the secondary strength, case first "
+          "upper and lower, upper first with the case level");
+    CollationSettings numeric = s;
+    numeric.numeric = true;
+    CollationSettings backwards = s;
+    backwards.backwards = true;
+    int digits = Answered(&numeric);
+    int french = Answered(&backwards);
+    FastLatinOptions plain;
+    FastLatinOptions french2;
+    bool served =
+        mlocFastLatinOptions(&s_root, &s, s_root.fastLatin, s_root.fastLatinCount, &plain) &&
+        mlocFastLatinOptions(&s_root, &backwards, s_root.fastLatin, s_root.fastLatinCount,
+                             &french2);
+    const uint8_t* e = (const uint8_t*)"e";
+    const uint8_t* acute = (const uint8_t*)"\xC3\xA9";
+    CHECK(digits > 0 && digits < pairs && french == pairs && served &&
+              mlocFastLatinCompare(&plain, e, 1, acute, 2) == -1 &&
+              mlocFastLatinCompare(&french2, e, 1, acute, 2) == fastLatinBail,
+          "numeric ordering bails out on digits, backwards secondaries on secondaries that "
+          "differ (e and e acute); the rest answered");
+    CollationSettings custom = shifted;
+    custom.variableTop = 0x0A000000;
+    CollationSettings identical = s;
+    identical.strength = collationIdentical;
+    FastLatinOptions o;
+    CHECK(Answered(&custom) == -2 && Answered(&identical) == -2 &&
+              !mlocFastLatinOptions(&s_root, &s, nullptr, 0, &o) &&
+              !mlocFastLatinOptions(&s_root, &s, s_root.fastLatin,
+                                    fastLatinHeader + fastLatinChars - 1, &o),
+          "none for a variable top that ends no group, the identical strength, or no table");
+}
+
+// Reorderings (script codes as four letters, Grek and Latn): one that
+// leaves the groups before Latin in their order is
+// served; digits after Latin bail out; Latin before the groups is not.
+static void TestReorderings(void)
+{
+    static CollationReorder greek;
+    static CollationReorder digitsLast;
+    static CollationReorder latinFirst;
+    static const uint32_t greekCodes[] = {0x4772656Bu};
+    static const uint32_t digitCodes[] = {0x4C61746Eu, collationGroupDigit};
+    static const uint32_t latinCodes[] = {0x4C61746Eu, collationGroupSpace};
+    bool changes = false;
+    bool made =
+        mlocCollationMakeReorder(&s_root, greekCodes, 1, &greek, &changes) == mloc_success &&
+        mlocCollationMakeReorder(&s_root, digitCodes, 2, &digitsLast, &changes) == mloc_success &&
+        mlocCollationMakeReorder(&s_root, latinCodes, 2, &latinFirst, &changes) == mloc_success;
+    CollationSettings s = mlocCollationDefaults(&s_root);
+    CollationSettings g = s;
+    g.reorder = &greek;
+    CollationSettings d = s;
+    d.reorder = &digitsLast;
+    CollationSettings l = s;
+    l.reorder = &latinFirst;
+    int digits = made ? Answered(&d) : 0;
+    CHECK(made && Answered(&g) == pairs && digits > 0 && digits < pairs && Answered(&l) == -2,
+          "Greek first served; digits after Latin bail out on digits; Latin before spaces not "
+          "served");
 }
 
 int main(void)
@@ -284,8 +421,17 @@ int main(void)
         fputs("test_collation_fast_compare: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;
     }
+    DataView view = mlocViewOf(&s_sources[1]);
+    DataSpan span = {0};
+    if (!mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) ||
+        !mlocReadCollationRoot(span, &s_root))
+    {
+        fputs("test_collation_fast_compare: no root\n", stderr);
+        return 2;
+    }
     TestTailorings();
     TestOptions();
     TestAnswers();
+    TestReorderings();
     return s_failures == 0 ? 0 : 1;
 }
