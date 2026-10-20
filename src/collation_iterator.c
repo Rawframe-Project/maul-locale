@@ -15,6 +15,7 @@ void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root
                                 const uint8_t* text, size_t length)
 {
     it->root = root;
+    it->tailoring = nullptr;
     it->numeric = false;
     it->ceCount = 0;
     it->ceNext = 0;
@@ -59,6 +60,29 @@ static void Remember(CollationIterator* it, uint32_t codePoint)
     it->historyCount += it->historyCount < collationMaxContext;
 }
 
+// A code point's CE32 and the unit that gave it: the tailoring's, or
+// the root's where the tailoring falls back.
+static uint32_t Value(const CollationIterator* it, uint32_t codePoint,
+                      const CollationRoot** unitOut)
+{
+    if (it->tailoring != nullptr)
+    {
+        uint32_t ce32 = mlocTrieValue(&it->tailoring->trie, codePoint);
+        if (ce32 != collationFallbackCe32)
+        {
+            *unitOut = it->tailoring;
+            return ce32;
+        }
+    }
+    *unitOut = it->root;
+    return mlocTrieValue(&it->root->trie, codePoint);
+}
+
+static bool IsContext(uint32_t ce32, uint32_t tag)
+{
+    return mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 && mlocCe32Tag(ce32) == tag;
+}
+
 // The code point given back steps before the latest, back 0 the latest.
 static uint32_t Before(const CollationIterator* it, uint32_t back)
 {
@@ -67,9 +91,8 @@ static uint32_t Before(const CollationIterator* it, uint32_t back)
 
 // The CE32 of the longest prefix entry the history spells, or the list's
 // default.
-static uint32_t MatchPrefix(const CollationIterator* it, uint32_t number)
+static uint32_t MatchPrefix(const CollationIterator* it, const CollationRoot* r, uint32_t number)
 {
-    const CollationRoot* r = it->root;
     uint32_t at = mlocCollationListStart(r, number);
     uint32_t ce32 = mlocCollationContext(r, at);
     uint32_t count = mlocCollationContext(r, at + 1);
@@ -134,9 +157,8 @@ static bool Lookup(const CollationRoot* r, uint32_t number, const Match* m, bool
 // The CE32 of the longest contraction entry the upcoming code points
 // spell, contiguous or not, its code points taken out and remembered;
 // the list's default when none matches.
-static uint32_t MatchContraction(CollationIterator* it, uint32_t number)
+static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, uint32_t number)
 {
-    const CollationRoot* r = it->root;
     uint32_t ce32 = mlocCollationContext(r, mlocCollationListStart(r, number));
     Match grown = {.length = 0};
     Match best = {.length = 0};
@@ -185,9 +207,8 @@ static uint32_t MatchContraction(CollationIterator* it, uint32_t number)
 }
 
 // Puts the elements of a CE32 that is not a context in the buffer.
-static void Expand(CollationIterator* it, uint32_t codePoint, uint32_t ce32)
+static void Expand(CollationIterator* it, const CollationRoot* r, uint32_t codePoint, uint32_t ce32)
 {
-    const CollationRoot* r = it->root;
     it->ceCount = 1;
     it->ceNext = 0;
     if (!mlocCe32IsSpecial(ce32))
@@ -319,9 +340,7 @@ static void NumericSegment(CollationIterator* it, const uint8_t* digits, uint32_
 // keeps its elements.
 static int32_t Digit(const CollationIterator* it, uint32_t codePoint, uint32_t ce32)
 {
-    uint32_t tag = mlocCe32Tag(ce32);
-    bool listed = mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 &&
-                  (tag == collationTagPrefix || tag == collationTagContraction);
+    bool listed = IsContext(ce32, collationTagPrefix) || IsContext(ce32, collationTagContraction);
     return it->numeric && !listed ? muniGetDecimalDigitValue(codePoint) : -1;
 }
 
@@ -336,7 +355,8 @@ static void Numeric(CollationIterator* it, int32_t first)
     while (length < collationNumericDigits && Upcoming(it, 0))
     {
         uint32_t c = it->upcoming[0];
-        int32_t digit = Digit(it, c, mlocTrieValue(&it->root->trie, c));
+        const CollationRoot* unit = nullptr;
+        int32_t digit = Digit(it, c, Value(it, c, &unit));
         if (digit < 0)
         {
             break;
@@ -362,7 +382,8 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         }
         uint32_t c = it->upcoming[0];
         Remove(it, 0);
-        uint32_t ce32 = mlocTrieValue(&it->root->trie, c);
+        const CollationRoot* unit = nullptr;
+        uint32_t ce32 = Value(it, c, &unit);
         int32_t digit = Digit(it, c, ce32);
         if (digit >= 0)
         {
@@ -371,18 +392,18 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
             *elementOut = it->ces[it->ceNext++];
             return true;
         }
-        bool special = mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32;
-        if (special && mlocCe32Tag(ce32) == collationTagPrefix)
+        if (IsContext(ce32, collationTagPrefix))
         {
-            ce32 = MatchPrefix(it, mlocCe32Index(ce32));
+            ce32 = MatchPrefix(it, unit, mlocCe32Index(ce32));
         }
         Remember(it, c);
-        special = mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32;
-        if (special && mlocCe32Tag(ce32) == collationTagContraction)
+        // A list's default or entry naming an earlier list: the validator
+        // lets a contraction name only a list before its own.
+        while (IsContext(ce32, collationTagContraction))
         {
-            ce32 = MatchContraction(it, mlocCe32Index(ce32));
+            ce32 = MatchContraction(it, unit, mlocCe32Index(ce32));
         }
-        Expand(it, c, ce32);
+        Expand(it, unit, c, ce32);
     }
     *elementOut = it->ces[it->ceNext++];
     return true;

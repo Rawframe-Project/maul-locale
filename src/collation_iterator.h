@@ -15,6 +15,10 @@
 //   the match. The marks matched are taken out; the skipped ones follow.
 //   The rule looks at most collationLookahead code points ahead.
 // Hangul syllables reach the trie as jamo, which NFD gives.
+// With a tailoring (record mloc-0071), a code point is read from it
+// first and from the root where it gives the fallback word; the lists
+// and expansions are read from the unit that gave the CE32, and a
+// contraction a list names is matched in turn.
 // With numeric on, a run of decimal digits (General_Category Nd) gives
 // the primaries of its value, as ICU4C's appendNumericCEs: leading
 // zeros dropped, the digits in segments of at most 254, each segment one
@@ -42,6 +46,8 @@ enum
 typedef struct CollationIterator
 {
     const CollationRoot* root;
+    // The tailoring read before the root, or null.
+    const CollationRoot* tailoring;
     NfdStream nfd;
     // Digits as numbers (UCA's numeric ordering, CLDR's kn); false after
     // start.
@@ -60,6 +66,8 @@ typedef struct CollationIterator
     uint32_t historyCount;
 } CollationIterator;
 
+// Starts reading text through the root alone; set tailoring after to
+// read through one.
 void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root,
                                 const uint8_t* text, size_t length);
 

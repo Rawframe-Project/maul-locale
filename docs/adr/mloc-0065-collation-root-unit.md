@@ -120,7 +120,7 @@ proved over a decade.
   `src/generated/collation.mloc`, a data file of its own that a program
   adds to its data set, as kind `kindCollationRoot` (0x000B0001), a
   unit of no locale. Opening the file runs this validator. It is
-  192,800 bytes.
+  194,952 bytes.
 - **The script table and numeric order's lead byte** joined the unit
   with the options (record mloc-0069).
 - **Numeric order needs no digit CE32s:** the iterator tells decimal
@@ -129,3 +129,9 @@ proved over a decade.
   (record mloc-0070): 32 bytes after the script starts, a bit a lead
   byte, FractionalUCA's COMPRESS top bytes and the unassigned byte FE,
   as ICU's `compressibleBytes`. The reader checks they fit.
+- **U+FDD1's contractions** joined the unit with the tailorings (record
+  mloc-0071). ICU's root data maps each script start's FDD1 line as a
+  contraction of U+FDD1, and FDD1 FDD0 to the first unassigned primary;
+  U+FDD1 alone stays unassigned. Text holding U+FDD1 now orders as
+  ICU4C's, and the tailoring builder's resets on these markers (emoji's
+  `&[before 1]\uFDD1€`) read the same root as the runtime.

@@ -59,6 +59,31 @@
 //   value only names one, so opening costs the unit's size, however many
 //   code points name a list.
 
+// A tailoring (record mloc-0071) is a unit over the root in the same
+// encoding:
+//
+//   0  u32 ce32Count
+//   4  u32 ceCount
+//   8  u32 contextCount
+//  12  u32 listCount
+//  16  u32 settings: the rules' defaults, each 0 when the rules give
+//      none, else as mlocCollatorOptions numbers them: bits 2..0 the
+//      strength, 4..3 alternate, 7..5 max variable, 9..8 case first,
+//      11..10 case level, 13..12 numeric, 15..14 backwards; bit 16 set
+//      when the rules reorder (an empty [reorder] too); the rest 0
+//  20  u32 reorderCount, the reorder codes below
+//  24  u32 0
+//  28  u32 0
+//  32  the code point trie of CE32s, padded to 8, then ces, ce32s,
+//      listStarts and contexts as the root's, then u32
+//      reorder[reorderCount]: the [reorder] codes (Maul Unicode's packed
+//      scripts and the groups)
+//
+// A trie value may be the fallback word 0xC0 (tag 0), "the root's". A
+// context list's default and entries may also be a contraction naming a
+// list before their own: a prefix's contractions, and a prefix with
+// contractions only falling back to a shorter prefix's.
+
 #ifndef MLOC_COLLATION_TABLES_H
 #define MLOC_COLLATION_TABLES_H
 
@@ -95,6 +120,10 @@ enum
 };
 
 constexpr uint32_t collationImplicitCe32 = 0xFFFFFFFF;
+// A tailoring's trie value for a code point the root gives.
+constexpr uint32_t collationFallbackCe32 = 0xC0;
+// The settings word's fields.
+constexpr uint32_t collationReorderGiven = 0x10000;
 constexpr uint64_t collationCommonSecondaryTertiary = 0x05000500;
 // U+FFFD and U+FFFF: fixed primaries FFFD and FFFF, as simple CE32s.
 constexpr uint32_t collationFffdCe32 = 0xFFFD0505;
@@ -264,11 +293,22 @@ static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32,
     }
 }
 
-// The context list from start to end: a valid default, then entries
-// that fill it exactly, each with a length from 1 to 8 and a valid CE32.
-static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start, uint32_t end)
+// A context list's CE32: valid with mayRefer, or a contraction naming a
+// list before the given one (never, for the root: below is 0).
+static inline bool mlocCollationListCe32Valid(const CollationRoot* r, uint32_t ce32, uint32_t below)
 {
-    if (end - start < 2 || !mlocCollationCe32Valid(r, mlocCollationContext(r, start), true))
+    return mlocCollationCe32Valid(r, ce32, true) ||
+           ((ce32 & 0xFF) == (collationSpecialByte | collationTagContraction) &&
+            mlocCe32Index(ce32) < below);
+}
+
+// The context list from start to end: a valid default, then entries
+// that fill it exactly, each with a length from 1 to 8 and a valid CE32,
+// contractions naming lists below the given number allowed.
+static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start, uint32_t end,
+                                          uint32_t below)
+{
+    if (end - start < 2 || !mlocCollationListCe32Valid(r, mlocCollationContext(r, start), below))
     {
         return false;
     }
@@ -282,7 +322,7 @@ static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start
         }
         uint32_t length = mlocCollationContext(r, at);
         if (length == 0 || length > collationMaxContext || end - at < 2 + length ||
-            !mlocCollationCe32Valid(r, mlocCollationContext(r, at + 1 + length), true))
+            !mlocCollationListCe32Valid(r, mlocCollationContext(r, at + 1 + length), below))
         {
             return false;
         }
@@ -428,7 +468,7 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     {
         uint32_t start = mlocCollationListStart(&r, i);
         uint32_t end = mlocCollationListStart(&r, i + 1);
-        ok = start < end && end <= r.contextCount && mlocCollationListValid(&r, start, end);
+        ok = start < end && end <= r.contextCount && mlocCollationListValid(&r, start, end, 0);
     }
     ok = ok && mlocCollationTrieValueValid(&r, r.trie.highValue);
     for (uint32_t i = 0; ok && i < r.trie.dataLength; i++)
@@ -446,5 +486,84 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
 
 // The root unit's validator, as data files are opened.
 bool mlocValidCollationRoot(const DataView* view, DataSpan payload);
+
+// A tailoring: its elements in the root's form (no scripts), its
+// settings word and its reorder codes.
+typedef struct CollationTailoring
+{
+    CollationRoot view;
+    uint32_t settings;
+    uint32_t reorderCount;
+    const uint8_t* reorder;
+} CollationTailoring;
+
+// Whether a settings word holds only the values its fields may.
+static inline bool mlocCollationSettingsValid(uint32_t s)
+{
+    return (s & 7) <= 5 && (s >> 3 & 3) <= 2 && (s >> 5 & 7) <= 4 && (s >> 10 & 3) <= 2 &&
+           (s >> 12 & 3) <= 2 && (s >> 14 & 3) <= 2 && (s & ~0x1FFFFu) == 0;
+}
+
+// Reads and checks a tailoring as mlocReadCollationRoot reads the root,
+// the fallback word allowed in the trie.
+static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
+{
+    if (span.size < collationHead)
+    {
+        return false;
+    }
+    const uint8_t* p = span.bytes;
+    CollationTailoring t = {
+        .view = {.ce32Count = mlocLoad32(p),
+                 .ceCount = mlocLoad32(p + 4),
+                 .contextCount = mlocLoad32(p + 8),
+                 .listCount = mlocLoad32(p + 12)},
+        .settings = mlocLoad32(p + 16),
+        .reorderCount = mlocLoad32(p + 20),
+    };
+    CollationRoot* r = &t.view;
+    if (!mlocCollationSettingsValid(t.settings) || mlocLoad32(p + 24) != 0 ||
+        mlocLoad32(p + 28) != 0 ||
+        !mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r->trie))
+    {
+        return false;
+    }
+    uint64_t ces = collationHead + ((uint64_t)r->trie.size + 7) / 8 * 8;
+    uint64_t ce32s = ces + (uint64_t)r->ceCount * 8;
+    uint64_t starts = ce32s + (uint64_t)r->ce32Count * 4;
+    uint64_t contexts = starts + ((uint64_t)r->listCount + 1) * 4;
+    uint64_t reorder = contexts + (uint64_t)r->contextCount * 4;
+    if (reorder + (uint64_t)t.reorderCount * 4 > span.size)
+    {
+        return false;
+    }
+    r->ces = p + ces;
+    r->ce32s = p + ce32s;
+    r->listStarts = p + starts;
+    r->contexts = p + contexts;
+    t.reorder = p + reorder;
+    bool ok = mlocCollationListStart(r, 0) == 0 &&
+              mlocCollationListStart(r, r->listCount) == r->contextCount;
+    for (uint32_t i = 0; ok && i < r->listCount; i++)
+    {
+        uint32_t start = mlocCollationListStart(r, i);
+        uint32_t end = mlocCollationListStart(r, i + 1);
+        ok = start < end && end <= r->contextCount && mlocCollationListValid(r, start, end, i);
+    }
+    ok = ok && (r->trie.highValue == collationFallbackCe32 ||
+                mlocCollationTrieValueValid(r, r->trie.highValue));
+    for (uint32_t i = 0; ok && i < r->trie.dataLength; i++)
+    {
+        uint32_t ce32 = mlocLoad32(r->trie.data + (size_t)i * 4);
+        ok = ce32 == collationFallbackCe32 || mlocCollationTrieValueValid(r, ce32);
+    }
+    for (uint32_t i = 0; ok && i < r->ce32Count; i++)
+    {
+        uint32_t ce32 = mlocCollationCe32(r, i);
+        ok = !mlocCe32IsSpecial(ce32) || mlocCollationCe32Valid(r, ce32, false);
+    }
+    *out = t;
+    return ok;
+}
 
 #endif

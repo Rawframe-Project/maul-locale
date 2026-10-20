@@ -108,9 +108,28 @@ the oracle for every type.
   - each refusal is ICU's, with ICU's reason.
 - **The root as ICU's builder sees it** also maps the script starts'
   FDD1 lines as contractions of U+FDD1, and FDD1 FDD0 to the first
-  unassigned primary (emoji's `&[before 1]` resets on one). The
-  runtime's root unit leaves them out; that difference reaches only
-  text with U+FDD1.
+  unassigned primary (emoji's `&[before 1]` resets on one). The root
+  unit holds them too (record mloc-0065).
+- **The tailoring unit** (`src/collation_tables.h`,
+  `tools/mlocgen/collation_tailoring.c`) is the root's encoding over the
+  root:
+  - its trie gives the fallback word 0xC0 for each code point it leaves
+    to the root;
+  - per tailored code point, a prefix list over contraction lists as
+    its mappings ask;
+  - a prefix with contractions only gets a list whose default is the
+    longest shorter prefix's CE32, so a list's default or entry may name
+    a contraction list, but only one before its own, which the reader
+    checks; the iterator matches the named list in turn;
+  - the head holds the rules' settings, numbered as
+    `mlocCollatorOptions` numbers them, and the `[reorder]` codes.
+  The iterator reads a code point from the tailoring first, and from
+  the root on the fallback word. The lists and expansions come from the
+  unit that gave the CE32.
+- **One unit per locale** holds all of the locale's types (slice d2c2):
+  a data file's units are keyed by kind and locale, so a type cannot be
+  a unit of its own. Research 64's "one unit per (locale, type)" is
+  amended.
 
 ## Proof
 
@@ -157,6 +176,18 @@ the oracle for every type.
   root. The quaternary bits are compared later through sort keys,
   since ICU's element iterator drops them. CI checks a hash of every
   answer.
+- **`test_collation_tailoring`:** on a small root, the runtime's
+  iterator over the root and a written unit gives the builder's
+  elements for a contraction, a prefix, a prefix with contractions only
+  falling back to a shorter one's list, marks, and Han from the root.
+  The head holds the settings and codes. The reader refuses a unit cut
+  short, reserved words set, each setting out of range, codes past the
+  end, and a list default that is the fallback word, its own list or a
+  prefix.
+- **`conform_collation_builder --units`** (the cldr CI job): every
+  type's unit reads back. The runtime iterator gives the builder's
+  elements for every string its rules name and for 2,000 random strings
+  of its mappings and marks: 669,984 strings, none different.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
   table equals ICU4C 79's outside Han's section, 6,110 units with the
   indexes. In the docs repository's oracle, its 409,032 queries over
@@ -166,7 +197,7 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - the unit, its validator and the runtime's lookup with `co`;
+  - the locale's unit of its types in the data file, and `co`;
   - `[suppressContractions]` and the rules' settings;
   - every CLDR type, with the differential against ICU4C 79.
 

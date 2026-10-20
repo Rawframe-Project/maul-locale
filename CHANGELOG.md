@@ -390,3 +390,5 @@ format.
   order and options, and `mlocGetCollationVersion` gives the version to
   store beside them, which changes with the key format or the collation
   data (mloc-0070).
+- Collation: text holding U+FDD1 orders as ICU4C's, the root's script
+  start markers mapped as its contractions (mloc-0065).

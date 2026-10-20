@@ -5,6 +5,7 @@
 
 #include "collation_unit.h"
 
+#include "collation_encode.h"
 #include "collation_tables.h"
 #include "table_gen.h"
 #include "trie_gen.h"
@@ -16,37 +17,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct Words
-{
-    uint64_t* items;
-    size_t count;
-    size_t capacity;
-} Words;
-
-static size_t Push(Words* w, uint64_t value)
-{
-    if (w->count == w->capacity)
-    {
-        w->capacity = w->capacity == 0 ? 1024 : w->capacity * 2;
-        uint64_t* grown = realloc(w->items, w->capacity * sizeof(uint64_t));
-        if (grown == nullptr)
-        {
-            GenDie("collation unit", "out of memory");
-        }
-        w->items = grown;
-    }
-    w->items[w->count] = value;
-    return w->count++;
-}
-
 typedef struct Builder
 {
-    Words ces;
-    Words ce32s;
-    Words contexts;
-    Words listStarts;
-    Words scripts;
-    Words starts;
+    CollationWords ces;
+    CollationWords ce32s;
+    CollationWords contexts;
+    CollationWords listStarts;
+    CollationWords scripts;
+    CollationWords starts;
     uint32_t numericPrimary;
     // A bit a lead byte: those sort keys compress.
     uint8_t compressible[32];
@@ -75,64 +53,9 @@ bool CollationLeftOut(uint32_t codePoint)
            answer != muni_quickCheckYes;
 }
 
-// The CE32 of one element, when one holds it: simple, long primary or
-// long secondary.
-static bool OneCe32(uint64_t element, uint32_t* out)
-{
-    uint32_t p = (uint32_t)(element >> 32);
-    uint32_t lower = (uint32_t)element;
-    if ((p & 0xFFFF) == 0 && (lower & 0x00FF00FF) == 0 && ((lower >> 8) & 0xFF) < 0xC0)
-    {
-        *out = p | (lower >> 16 & 0xFF00) | (lower >> 8 & 0xFF);
-        return true;
-    }
-    if ((p & 0xFF) == 0 && p != 0 && lower == collationCommonSecondaryTertiary)
-    {
-        *out = p | collationSpecialByte | collationTagLongPrimary;
-        return true;
-    }
-    if (p == 0 && (lower & 0xFF) == 0)
-    {
-        *out = (lower & 0xFFFF0000) | (lower & 0xFF00) | collationSpecialByte |
-               collationTagLongSecondary;
-        return true;
-    }
-    return false;
-}
-
-static uint32_t Special(uint32_t tag, size_t index, uint32_t length)
-{
-    return (uint32_t)index << 13 | length << 8 | collationSpecialByte | tag;
-}
-
-// The CE32 of a sequence of elements: one element's own when it fits,
-// else an expansion of CE32s when each fits one, else of elements.
 static uint32_t Encode(Builder* b, const uint64_t* elements, uint32_t count)
 {
-    uint32_t one = 0;
-    if (count == 1 && OneCe32(elements[0], &one))
-    {
-        return one;
-    }
-    bool small = true;
-    for (uint32_t i = 0; i < count; i++)
-    {
-        small = small && OneCe32(elements[i], &one);
-    }
-    size_t index = small ? b->ce32s.count : b->ces.count;
-    for (uint32_t i = 0; i < count; i++)
-    {
-        if (small)
-        {
-            (void)OneCe32(elements[i], &one);
-            Push(&b->ce32s, one);
-        }
-        else
-        {
-            Push(&b->ces, elements[i]);
-        }
-    }
-    return Special(small ? collationTagExpansion32 : collationTagExpansion, index, count);
+    return CollationEncode(&b->ces, &b->ce32s, elements, count);
 }
 
 // ICU's diffThreeBytePrimaries under one lead byte: how many steps of
@@ -166,11 +89,11 @@ static void MaybeRange(Builder* b, const RootTable* t, uint32_t start, uint32_t 
         return;
     }
     bool compressible = t->compressible[primary >> 24] != 0;
-    size_t index = Push(&b->ces, (uint64_t)primary << 32 | (uint64_t)start << 8 |
-                                     (compressible ? 0x80 : 0) | (uint64_t)step);
+    size_t index = CollationPush(&b->ces, (uint64_t)primary << 32 | (uint64_t)start << 8 |
+                                              (compressible ? 0x80 : 0) | (uint64_t)step);
     for (uint32_t c = start; c <= end; c++)
     {
-        b->values[c] = Special(collationTagOffset, index, 0);
+        b->values[c] = CollationSpecial(collationTagOffset, index, 0);
     }
 }
 
@@ -224,10 +147,11 @@ static void HanRanges(Builder* b, const RootTable* t)
         uint32_t start = t->hanRanges[2 * i];
         uint32_t end = t->hanRanges[2 * i + 1];
         uint64_t first = RootHanElement(t, start);
-        size_t index = Push(&b->ces, (first & 0xFFFFFFFF00000000ULL) | (uint64_t)start << 8 | 2);
+        size_t index =
+            CollationPush(&b->ces, (first & 0xFFFFFFFF00000000ULL) | (uint64_t)start << 8 | 2);
         for (uint32_t c = start; c <= end; c++)
         {
-            b->values[c] = Special(collationTagOffset, index, 0);
+            b->values[c] = CollationSpecial(collationTagOffset, index, 0);
         }
     }
 }
@@ -258,19 +182,19 @@ static int ByText(const void* x, const void* y)
 static void Context(Builder* b, uint32_t codePoint, uint32_t tag, Entry* entries, size_t count)
 {
     qsort(entries, count, sizeof(Entry), ByText);
-    size_t number = Push(&b->listStarts, b->contexts.count);
-    Push(&b->contexts, b->values[codePoint]);
-    Push(&b->contexts, count);
+    size_t number = CollationPush(&b->listStarts, b->contexts.count);
+    CollationPush(&b->contexts, b->values[codePoint]);
+    CollationPush(&b->contexts, count);
     for (size_t i = 0; i < count; i++)
     {
-        Push(&b->contexts, entries[i].length);
+        CollationPush(&b->contexts, entries[i].length);
         for (uint32_t k = 0; k < entries[i].length; k++)
         {
-            Push(&b->contexts, entries[i].text[k]);
+            CollationPush(&b->contexts, entries[i].text[k]);
         }
-        Push(&b->contexts, entries[i].ce32);
+        CollationPush(&b->contexts, entries[i].ce32);
     }
-    b->values[codePoint] = Special(tag, number, 0);
+    b->values[codePoint] = CollationSpecial(tag, number, 0);
 }
 
 // A mapping's place among those of one code point's contexts.
@@ -355,6 +279,28 @@ static int Contexts(Builder* b, const RootTable* t, bool prefixes)
     return ok;
 }
 
+// ICU's root data maps each script start's FDD1 line as a contraction of
+// U+FDD1, and FDD1 FDD0 to the first unassigned primary (its base
+// builder's init); U+FDD1 alone stays unassigned.
+static void ScriptStartContractions(Builder* b, const RootTable* t)
+{
+    if (t->scriptStartCount == 0)
+    {
+        return;
+    }
+    Entry* entries = GenAllocate(t->scriptStartCount * sizeof(Entry));
+    for (size_t i = 0; i < t->scriptStartCount; i++)
+    {
+        const RootMarker* m = &t->scriptStarts[i];
+        uint64_t element = m->codePoint == 0xFDD0
+                               ? (uint64_t)0xFE040200 << 32 | collationCommonSecondaryTertiary
+                               : m->element;
+        entries[i] = (Entry){.text = {m->codePoint}, .length = 1, .ce32 = Encode(b, &element, 1)};
+    }
+    Context(b, 0xFDD1, collationTagContraction, entries, t->scriptStartCount);
+    free(entries);
+}
+
 // A script start in the file's order: its first primary and the script
 // or group it starts.
 typedef struct Start
@@ -407,8 +353,8 @@ static uint32_t SampleScript(uint32_t sample)
 
 static void AddScript(Builder* b, uint32_t code, uint32_t index)
 {
-    Push(&b->scripts, code);
-    Push(&b->scripts, index);
+    CollationPush(&b->scripts, code);
+    CollationPush(&b->scripts, index);
 }
 
 // ICU's addScriptStart: a start is the primary's top 16 bits, put back to
@@ -449,7 +395,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
         }
     }
     qsort(starts, n, sizeof(Start), ByPrimary);
-    Push(&b->starts, 0);
+    CollationPush(&b->starts, 0);
     for (size_t i = 0; i < n; i++)
     {
         uint32_t p = starts[i].primary >> 16;
@@ -459,7 +405,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
         uint32_t lowest = compressible ? 4 : 2;
         p = (p & 0xFF) == lowest ? p & 0xFF00 : p;
         size_t last = b->starts.count - 1;
-        size_t index = b->starts.items[last] == p ? last : Push(&b->starts, p);
+        size_t index = b->starts.items[last] == p ? last : CollationPush(&b->starts, p);
         uint32_t code = starts[i].code;
         AddScript(b, code, (uint32_t)index);
         if (code == MUNI_SCRIPT('H', 'i', 'r', 'a'))
@@ -473,7 +419,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
         }
         if (code == MUNI_SCRIPT('Z', 'z', 'z', 'z'))
         {
-            Push(&b->starts, 0xFF00);
+            CollationPush(&b->starts, 0xFF00);
         }
     }
     free(starts);
@@ -492,7 +438,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
     // start adds it in CLDR's root; a root without one still ends there.
     if (b->starts.items[b->starts.count - 1] != 0xFF00)
     {
-        Push(&b->starts, 0xFF00);
+        CollationPush(&b->starts, 0xFF00);
     }
     return 1;
 }
@@ -583,6 +529,7 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
     uint8_t* out = nullptr;
     if (Contexts(&b, table, false) && Contexts(&b, table, true) && ScriptTable(&b, table))
     {
+        ScriptStartContractions(&b, table);
         out = Write(&b, sizeOut);
         GenPut(out, (uint64_t)table->version[0] << 16 | table->version[1] << 8 | table->version[2],
                4);
