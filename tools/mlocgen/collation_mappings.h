@@ -11,6 +11,9 @@
 // that its list stays whole, and a mapping of the same prefix and text
 // replaces the one there.
 //
+// The root's mappings are its file's, and the contractions of U+FDD1 that
+// ICU's root data adds from the script starts.
+//
 // A code point's elements: its mappings with the longest prefix that the
 // code points before it end with, then the longest contraction the code
 // points after it spell, contiguous or not (UTS #10's discontiguous
@@ -71,6 +74,10 @@ typedef struct CollationMappings
     // and the mapping's index, sorted.
     uint64_t* rootIndex;
     size_t rootIndexCount;
+    // ICU's root maps the script starts' FDD1 lines as contractions of
+    // U+FDD1, and FDD1 FDD0 to the first unassigned primary.
+    RootMapping* markers;
+    size_t markerCount;
     // The tailoring's mappings, chained by first code point from the
     // slots (an open-addressed table, a power of two long).
     CollationMapping* mappings;

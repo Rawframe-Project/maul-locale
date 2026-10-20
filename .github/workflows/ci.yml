@@ -142,7 +142,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf conform_collation_root conform_collation_root_elements conform_collation_mappings conform_collation conform_collation_rules
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf conform_collation_root conform_collation_root_elements conform_collation_mappings conform_collation_builder conform_collation conform_collation_rules
       - name: Root collation against allkeys
         run: |
           build/conform_collation_root ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
@@ -153,6 +153,10 @@ jobs:
             --expect 6110 ab8be4117eb364f2
       - name: The tailoring builder's lookup against the iterator
         run: build/conform_collation_mappings ~/cldr-cache/cldr/common/uca/FractionalUCA.txt
+      - name: Every collation type built, its answers ICU4C 79's
+        run: |
+          build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
+            ~/cldr-cache/cldr/common/collation --expect f79656fd99ce12a1
       - name: Every collation rule string parsed
         run: build/conform_collation_rules ~/cldr-cache/cldr/common/collation/*.xml
       - name: The general compare against CollationTest

@@ -803,6 +803,7 @@ endif()
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
                                     tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
+                                    tools/mlocgen/collation_builder.c
                                     tools/mlocgen/collation_mappings.c
                                     tools/mlocgen/collation_root_elements.c
                                     tools/mlocgen/collation_rules.c
@@ -950,6 +951,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_collation_weights PRIVATE test)
         maul_apply_flags(test_collation_weights)
         add_test(NAME collation_weights COMMAND test_collation_weights)
+        add_executable(test_collation_builder test/test_collation_builder.c)
+        target_link_libraries(test_collation_builder PRIVATE mlocgen_core)
+        target_include_directories(test_collation_builder PRIVATE test)
+        maul_apply_flags(test_collation_builder)
+        add_test(NAME collation_builder COMMAND test_collation_builder
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_executable(test_collation_mappings test/test_collation_mappings.c)
         target_link_libraries(test_collation_mappings PRIVATE mlocgen_core)
         target_include_directories(test_collation_mappings PRIVATE test)
@@ -975,6 +982,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             add_executable(conform_collation_root test/conform_collation_root.c)
             target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_root)
+            add_executable(conform_collation_builder test/conform_collation_builder.c)
+            target_link_libraries(conform_collation_builder PRIVATE mlocgen_core)
+            maul_apply_flags(conform_collation_builder)
             add_executable(conform_collation_mappings test/conform_collation_mappings.c)
             target_link_libraries(conform_collation_mappings PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_mappings)

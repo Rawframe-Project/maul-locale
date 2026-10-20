@@ -50,8 +50,9 @@ int CollationMappingsInit(CollationMappings* m, const RootTable* root)
 {
     *m = (CollationMappings){.root = root};
     m->rootIndex = malloc((root->count + 1) * sizeof *m->rootIndex);
+    m->markers = calloc(root->scriptStartCount + 1, sizeof *m->markers);
     m->slots = calloc(firstSlots, sizeof *m->slots);
-    if (m->rootIndex == nullptr || m->slots == nullptr)
+    if (m->rootIndex == nullptr || m->markers == nullptr || m->slots == nullptr)
     {
         CollationMappingsFree(m);
         return 0;
@@ -65,6 +66,18 @@ int CollationMappingsInit(CollationMappings* m, const RootTable* root)
         }
     }
     qsort(m->rootIndex, m->rootIndexCount, sizeof *m->rootIndex, ByCodePoint);
+    for (size_t i = 0; i < root->scriptStartCount; i++)
+    {
+        const RootMarker* s = &root->scriptStarts[i];
+        RootMapping* marker = &m->markers[m->markerCount++];
+        marker->text[0] = 0xFDD1;
+        marker->text[1] = s->codePoint;
+        marker->textLength = 2;
+        marker->elements[0] = s->codePoint == 0xFDD0
+                                  ? (uint64_t)0xFE040200 << 32 | collationCommonSecondaryTertiary
+                                  : s->element;
+        marker->elementCount = 1;
+    }
     m->slotCount = firstSlots;
     return 1;
 }
@@ -72,6 +85,7 @@ int CollationMappingsInit(CollationMappings* m, const RootTable* root)
 void CollationMappingsFree(CollationMappings* m)
 {
     free(m->rootIndex);
+    free(m->markers);
     free(m->mappings);
     free(m->slots);
     free(m->elements);
@@ -175,6 +189,15 @@ static size_t GatherRoot(CollationMappings* m, uint32_t codePoint)
         if (!Push(m, &count,
                   (CollationCandidate){r->prefix, r->prefixLength, r->text, r->textLength,
                                        r->elements, r->elementCount}))
+        {
+            return 0;
+        }
+    }
+    for (size_t i = 0; codePoint == 0xFDD1 && i < m->markerCount; i++)
+    {
+        const RootMapping* r = &m->markers[i];
+        if (!Push(m, &count,
+                  (CollationCandidate){r->prefix, 0, r->text, r->textLength, r->elements, 1}))
         {
             return 0;
         }

@@ -95,6 +95,23 @@ the oracle for every type.
     alone, and none of them matches, the next shorter matching prefix
     is used, as ICU's built contexts do.
 
+- **The builder** (`tools/mlocgen/collation_builder.c`) is ICU's
+  `CollationBuilder` without the closure:
+  - a reset's elements through the mappings, a special position, or
+    `[before n]` a level back;
+  - a relation's node inserted in ICU's lists and its string mapped
+    (NFD, with its prefix and extension) to temporary elements, case
+    bits from the root's elements of the string;
+  - at the end, the weight allocator gives each run of tailored nodes
+    its weights, and the temporary elements become them;
+  - `[import]` reads the imported rules in place, through the caller;
+  - each refusal is ICU's, with ICU's reason.
+- **The root as ICU's builder sees it** also maps the script starts'
+  FDD1 lines as contractions of U+FDD1, and FDD1 FDD0 to the first
+  unassigned primary (emoji's `&[before 1]` resets on one). The
+  runtime's root unit leaves them out; that difference reaches only
+  text with U+FDD1.
+
 ## Proof
 
 - **`test_collation_weights`:**
@@ -121,6 +138,20 @@ the oracle for every type.
   tailored, the lookup gives the runtime iterator's elements over the
   root unit for every code point, every mapping's prefix and text, and
   300,000 random strings of mapping pieces and marks.
+- **`test_collation_builder`:** each strength after a reset and before
+  it, sequences, a reset on a tailored code point, a prefix, an
+  extension, a contraction, case bits, the special positions,
+  `[import]`, and seven refusals, each checked by the order of the
+  elements it gives.
+- **`conform_collation_builder`** (the cldr CI job): all 168 CLDR 49
+  types build. In the docs repository's oracle, ICU4C 79 builds each
+  rule string (its escapes decoded as ICU's data build decodes them)
+  and gives the elements of each string the rules name. 291,452 of the
+  291,878 strings have ICU's elements. The other 426 are
+  `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
+  root. The quaternary bits are compared later through sort keys,
+  since ICU's element iterator drops them. CI checks a hash of every
+  answer.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
   table equals ICU4C 79's outside Han's section, 6,110 units with the
   indexes. In the docs repository's oracle, its 409,032 queries over
@@ -130,9 +161,8 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - the nodes and the weights for resets and relations;
   - the unit, its validator and the runtime's lookup with `co`;
-  - extensions, contexts, case bits and settings;
+  - `[suppressContractions]` and the rules' settings;
   - every CLDR type, with the differential against ICU4C 79.
 
   Each amends this record.
