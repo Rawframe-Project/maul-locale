@@ -121,6 +121,35 @@ static void TestNumericAndReorder(void)
           "reordering: Greek's lead byte moved, Latin's kept");
 }
 
+static void TestBocsu(void)
+{
+    // Differences at each of BOCSU's bounds: 80 and 81 from the first
+    // base, -80 and -81, 10,667 and 10,668, -10,668 and -10,669, 192,785
+    // and 192,786, -192,786 and -192,787.
+    static const char* const cases[][2] = {
+        {"\xC2\xA0", "04010501e80101d100"},
+        {"\xC2\xA1", "075c010501050101d25400"},
+        {"\xEE\x84\x80\xEE\x84\x80", "fe109a10109a10010601060101fce65c3100"},
+        {"\xEE\x84\x80\xEE\x83\xBF", "fe109a10109a02010601060101fce65c30af00"},
+        {"\xE2\xA7\xBB", "0cf08b010501050101fc2c00"},
+        {"\xE2\xA7\xBC", "099e010501050101fc2d2d00"},
+        {"\xF3\xB0\x80\x80\xF3\xAD\x9A\xA4", "fedb0564d8b32c010601060101ff125d3a06d600"},
+        {"\xF3\xB0\x80\x80\xF3\xAD\x9A\xA3", "fedb0564d8b31e010601060101ff125d3a06d5d500"},
+        {"\xF0\xAF\x85\xA1", "fe2e30c6010501050101ff05ff00"},
+        {"\xF0\xAF\x85\xA2", "fe2e30d4010501050101ff06060300"},
+        {"\xF4\x8F\xBF\xBF\xF3\xA0\xBA\xBE", "fef7af1ecd822c010601060101ff14694b03fd0300"},
+        {"\xF4\x8F\xBF\xBF\xF3\xA0\xBA\xBD", "fef7af1ecd821e010601060101ff14694b03fcfcff00"},
+    };
+    CollationSettings s = mlocCollationDefaults(&s_root);
+    s.strength = collationIdentical;
+    bool ok = true;
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        ok = Key(cases[i][0], &s, cases[i][1]) && ok;
+    }
+    CHECK(ok, "the identical level's BOCSU at each bound of one, two, three and four bytes");
+}
+
 static void TestCapacity(void)
 {
     CollationSettings s = mlocCollationDefaults(&s_root);
@@ -159,6 +188,7 @@ int main(void)
     TestLevels();
     TestShiftedAndIdentical();
     TestNumericAndReorder();
+    TestBocsu();
     TestCapacity();
     return s_failures == 0 ? 0 : 1;
 }
