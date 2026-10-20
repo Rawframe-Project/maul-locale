@@ -3,7 +3,7 @@
 //
 // The tailoring builder (record mloc-0071) on every rule string of
 // CLDR's common/collation: each builds or is refused, with its imports
-// read from the files beside it. --queries writes, for each type, its
+// read from the files given. --queries writes, for each type, its
 // rule string and the strings its rules name (NFD, a prefix before its
 // string), as the oracle reads them; --answers writes the elements the
 // built tailoring gives each string, as the oracle writes ICU4C's.
@@ -12,8 +12,8 @@
 // the pinned release (the answers ICU4C 79 gives, but for Han's root
 // order in the unihan types and the quaternary bits its iterator drops).
 //
-// usage: conform_collation_builder <FractionalUCA.txt> <common/collation>
-//            [--queries | --answers | --expect HASH]
+// usage: conform_collation_builder <FractionalUCA.txt>
+//            [--queries | --answers | --expect HASH] common/collation/*.xml
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
@@ -23,7 +23,6 @@
 
 #include "maul-unicode/normalize.h"
 
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +39,7 @@ typedef struct Type
     char file[64];
     char type[64];
     char alt[32];
+    size_t order;
     char* text;
     CollationRules rules;
     bool parsed;
@@ -51,16 +51,30 @@ typedef struct Catalog
     size_t count;
 } Catalog;
 
-static int ByName(const void* a, const void* b)
+// The files' order, whatever order the shell gave them in; a file's
+// types in its order.
+static int ByFile(const void* a, const void* b)
 {
-    return strcmp(*(char* const*)a, *(char* const*)b);
+    const Type* x = a;
+    const Type* y = b;
+    int c = strcmp(x->file, y->file);
+    return c != 0 ? c : x->order < y->order ? -1 : x->order > y->order;
 }
 
-static void ReadFile(Catalog* c, const char* directory, const char* name)
+static void ReadFile(Catalog* c, const char* path)
 {
-    char path[1024];
     char error[256] = "";
-    snprintf(path, sizeof(path), "%s/%s", directory, name);
+    const char* slash = strrchr(path, '/');
+    const char* backslash = strrchr(path, '\\');
+    const char* name = backslash != nullptr && (slash == nullptr || backslash > slash)
+                           ? backslash + 1
+                       : slash != nullptr ? slash + 1
+                                          : path;
+    size_t length = strlen(name);
+    if (length <= 4 || strcmp(name + length - 4, ".xml") != 0)
+    {
+        return;
+    }
     XmlNode* root = XmlParseFile(path, error, sizeof(error));
     XmlNode* collations = root == nullptr ? nullptr : XmlFindChild(root, "collations");
     for (int i = 0; collations != nullptr && i < collations->childCount && c->count < maxTypes; i++)
@@ -72,43 +86,23 @@ static void ReadFile(Catalog* c, const char* directory, const char* name)
         {
             continue;
         }
-        Type* t = &c->types[c->count++];
+        Type* t = &c->types[c->count];
+        t->order = c->count++;
         const char* type = XmlGetAttribute(collation, "type");
         const char* alt = XmlGetAttribute(collation, "alt");
         snprintf(t->file, sizeof(t->file), "%.*s", (int)(strlen(name) - 4), name);
         snprintf(t->type, sizeof(t->type), "%s", type == nullptr ? "standard" : type);
         snprintf(t->alt, sizeof(t->alt), "%s", alt == nullptr ? "" : alt);
-        t->text = strdup(cr->text);
+        size_t size = strlen(cr->text) + 1;
+        t->text = malloc(size);
+        if (t->text != nullptr)
+        {
+            memcpy(t->text, cr->text, size);
+        }
         t->parsed = t->text != nullptr &&
                     CollationRulesParse(t->text, strlen(t->text), &t->rules, error, sizeof(error));
     }
     XmlFree(root);
-}
-
-static void ReadCatalog(Catalog* c, const char* directory)
-{
-    DIR* d = opendir(directory);
-    char* names[1024];
-    size_t count = 0;
-    for (struct dirent* e = d == nullptr ? nullptr : readdir(d); e != nullptr && count < 1024;
-         e = readdir(d))
-    {
-        size_t n = strlen(e->d_name);
-        if (n > 4 && strcmp(e->d_name + n - 4, ".xml") == 0)
-        {
-            names[count++] = strdup(e->d_name);
-        }
-    }
-    if (d != nullptr)
-    {
-        closedir(d);
-    }
-    qsort((void*)names, count, sizeof(names[0]), ByName);
-    for (size_t i = 0; i < count; i++)
-    {
-        ReadFile(c, directory, names[i]);
-        free(names[i]);
-    }
 }
 
 // [import tag]: the language's file (und is root) and the -u-co- type,
@@ -310,14 +304,16 @@ int main(int argc, char** argv)
     if (argc < 3)
     {
         fprintf(stderr,
-                "usage: %s <FractionalUCA.txt> <common/collation> [--queries | --answers | "
-                "--expect HASH]\n",
+                "usage: %s <FractionalUCA.txt> [--queries | --answers | --expect HASH] "
+                "common/collation/*.xml\n",
                 argv[0]);
         return 2;
     }
-    bool queries = argc > 3 && strcmp(argv[3], "--queries") == 0;
-    bool answers = argc > 3 && strcmp(argv[3], "--answers") == 0;
-    const char* expected = argc > 4 && strcmp(argv[3], "--expect") == 0 ? argv[4] : nullptr;
+    int first = 2;
+    bool queries = strcmp(argv[2], "--queries") == 0;
+    bool answers = strcmp(argv[2], "--answers") == 0;
+    const char* expected = argc > 3 && strcmp(argv[2], "--expect") == 0 ? argv[3] : nullptr;
+    first += queries || answers ? 1 : expected != nullptr ? 2 : 0;
     s_print = answers;
     RootTable root = {0};
     char error[256] = "";
@@ -327,7 +323,11 @@ int main(int argc, char** argv)
         return 1;
     }
     static Catalog catalog;
-    ReadCatalog(&catalog, argv[2]);
+    for (int i = first; i < argc; i++)
+    {
+        ReadFile(&catalog, argv[i]);
+    }
+    qsort(catalog.types, catalog.count, sizeof(catalog.types[0]), ByFile);
     size_t built = 0;
     size_t refused = 0;
     for (size_t i = 0; i < catalog.count; i++)
