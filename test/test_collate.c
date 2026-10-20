@@ -78,6 +78,11 @@ static void TestTailorings(void)
               Order("zh-u-co-standard", nullptr, HAN_A, HAN_ONE) == -1,
           "zh: pinyin by default, stroke by co, zh-Hant's and yue's default stroke; no "
           "standard gives the default");
+    // U+316B1 before U+25969 in the long pinyin list; the short one
+    // names neither, so the root's code-point order holds.
+    CHECK(Order("zh", nullptr, "\xF0\xA5\xA5\xA9", "\xF0\xB1\x9A\xB1") == -1 &&
+              Order("zh", nullptr, HAN_A, "\xF0\xA5\xA5\xA9") == -1,
+          "zh's short pinyin: Han it does not name after the Han it does, in the root's order");
     CHECK(Order("da", nullptr, "A", "a") == -1 && Order("da-u-kf-lower", nullptr, "a", "A") == -1,
           "da's rules: upper case first, under kf");
     mlocCollatorOptions lower = {.caseFirst = mloc_caseFirstLower};
