@@ -4,8 +4,9 @@
 // The tailoring builder (record mloc-0071) on a small root: relations of
 // each strength after a reset and before it, a reset on a tailored
 // string, a prefix, an extension, a contraction, case bits, the special
-// positions, [import] through the caller, and the rules refused, each
-// by the order of the elements it gives. conform_collation_builder
+// positions, [import] through the caller, [suppressContractions] where
+// it stands, the settings gathered over imports, and the rules refused,
+// each by the order of the elements it gives. conform_collation_builder
 // checks every CLDR type against ICU4C 79.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
@@ -229,6 +230,48 @@ static void TestImport(void)
     }
 }
 
+static void TestSuppress(void)
+{
+    const uint32_t ab[] = {'a', 'b'};
+    const uint32_t quote[] = {0xFDD1, 0x201C};
+    uint64_t out[collationMaxExpansion];
+    CHECK(Build("&a<ab [suppressContractions [a]]", nullptr) &&
+              CollationMappingsElements(&s_b.mappings, ab, 2, 0, out, 0) == 2 &&
+              P(out[0]) == 0x2A100000 && P(out[1]) == 0x2A120000,
+          "a contraction made before the set is suppressed");
+    CollationBuilderFree(&s_b);
+    CHECK(Build("[suppressContractions [a]] &a<ab", nullptr) &&
+              CollationMappingsElements(&s_b.mappings, ab, 2, 0, out, 0) == 1,
+          "one made after it stays");
+    CollationBuilderFree(&s_b);
+    CHECK(Build("[suppressContractions [\\uFDD1]]", nullptr) &&
+              CollationMappingsElements(&s_b.mappings, quote, 2, 0, out, 0) == 2 &&
+              P(out[1]) == 0x05080000 && P(One('a')) == 0x2A100000,
+          "the root's contraction suppressed, the code points after it read alone");
+    CollationBuilderFree(&s_b);
+}
+
+static void TestSettings(void)
+{
+    CollationRules imported;
+    char error[128];
+    const char* text = "[caseFirst upper][strength 2][reorder Grek]&a<x";
+    bool parsed = CollationRulesParse(text, strlen(text), &imported, error, sizeof(error));
+    CHECK(parsed && Build("[import xx][strength 1]", &imported) && s_b.settings.caseFirst == 2 &&
+              s_b.settings.strength == 1 && s_b.settings.numeric == ruleUnset &&
+              s_b.settings.reorderGiven && s_b.settings.reorderCount == 1,
+          "an import's settings, under those of the rules naming it");
+    CollationBuilderFree(&s_b);
+    CHECK(Build("&a<x", nullptr) && s_b.settings.strength == ruleUnset &&
+              !s_b.settings.reorderGiven,
+          "no settings given");
+    CollationBuilderFree(&s_b);
+    if (parsed)
+    {
+        CollationRulesFree(&imported);
+    }
+}
+
 static void TestRefusals(void)
 {
     static const char* const cases[][2] = {
@@ -276,6 +319,8 @@ int main(void)
     TestPositions();
     TestMorePositions();
     TestImport();
+    TestSuppress();
+    TestSettings();
     TestRefusals();
     RootFree(&s_root);
     remove(s_path);

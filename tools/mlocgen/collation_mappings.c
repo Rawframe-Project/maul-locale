@@ -354,6 +354,43 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
     return Rehash(m) && AppendMapping(m, c, &added);
 }
 
+int CollationMappingsSuppress(CollationMappings* m, uint32_t codePoint)
+{
+    int32_t first = CollationMappingsFirst(m, codePoint);
+    if (first < 0)
+    {
+        size_t count = GatherRoot(m, codePoint);
+        size_t alone = 0;
+        while (alone < count &&
+               (m->candidates[alone].prefixLength != 0 || m->candidates[alone].textLength != 1))
+        {
+            alone++;
+        }
+        // The root always has the code point alone, by its file or by rule.
+        return count == 0   ? 0
+               : count == 1 ? 1
+                            : Rehash(m) && AppendMapping(m, codePoint, &m->candidates[alone]);
+    }
+    // The tailoring's own: its other mappings unlinked from the chain.
+    size_t slot = SlotOf(m, codePoint);
+    int32_t kept = -1;
+    for (int32_t i = first; i >= 0; i = m->mappings[i].next)
+    {
+        if (m->mappings[i].prefixLength == 0 && m->mappings[i].textLength == 1)
+        {
+            kept = i;
+        }
+    }
+    // Every chain holds the code point alone: the first mapping copies
+    // the root's, which always does.
+    if (kept >= 0)
+    {
+        m->mappings[kept].next = -1;
+        m->slots[slot].head = kept + 1;
+    }
+    return kept >= 0;
+}
+
 // The code points not yet read, with their classes, and those given.
 typedef struct Reading
 {

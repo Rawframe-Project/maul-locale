@@ -71,14 +71,15 @@
 //      strength, 4..3 alternate, 7..5 max variable, 9..8 case first,
 //      11..10 case level, 13..12 numeric, 15..14 backwards; bit 16 set
 //      when the rules reorder (an empty [reorder] too); the rest 0
-//  20  u32 reorderCount, the reorder codes below
+//  20  u32 reorderCount, the reorder codes below, at most 256
 //  24  u32 mappedCount, the code points the trie maps: 0 when the type
 //      gives the root's elements, with its settings alone
 //  28  u32 0
 //  32  the code point trie of CE32s, padded to 8, then ces, ce32s,
 //      listStarts and contexts as the root's, then u32
-//      reorder[reorderCount]: the [reorder] codes (Maul Unicode's packed
-//      scripts and the groups)
+//      reorder[reorderCount]: the [reorder] codes, each once: Maul
+//      Unicode's packed scripts (four letters, the first upper case) and
+//      the groups
 //
 // A trie value may be the fallback word 0xC0 (tag 0), "the root's". A
 // context list's default and entries may also be a contraction naming a
@@ -118,6 +119,8 @@ enum
     collationTypesHead = 16,
     collationTypeSize = 16,
     collationMaxTypeName = 32,
+    // Codes in a reorder list, more than the root has ranges.
+    collationMaxReorderCodes = 256,
     collationSpecialByte = 0xC0,
     collationTagLongPrimary = 1,
     collationTagLongSecondary = 2,
@@ -527,6 +530,27 @@ static inline bool mlocCollationSettingsValid(uint32_t s)
            (s >> 12 & 3) <= 2 && (s >> 14 & 3) <= 2 && (s & ~0x1FFFFu) == 0;
 }
 
+// Whether reorder codes are scripts' or groups', each once.
+static inline bool mlocCollationReorderValid(const uint8_t* codes, uint32_t count)
+{
+    bool ok = count <= collationMaxReorderCodes;
+    for (uint32_t i = 0; ok && i < count; i++)
+    {
+        uint32_t code = mlocLoad32(codes + (size_t)i * 4);
+        bool letters = (code >> 24) - 'A' < 26;
+        for (int k = 0; letters && k < 3; k++)
+        {
+            letters = (code >> (8 * k) & 0xFF) - 'a' < 26;
+        }
+        ok = letters || code - collationGroupSpace <= collationGroupDigit - collationGroupSpace;
+        for (uint32_t j = 0; ok && j < i; j++)
+        {
+            ok = mlocLoad32(codes + (size_t)j * 4) != code;
+        }
+    }
+    return ok;
+}
+
 // Reads and checks a tailoring as mlocReadCollationRoot reads the root,
 // the fallback word allowed in the trie.
 static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
@@ -566,7 +590,8 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
     r->listStarts = p + starts;
     r->contexts = p + contexts;
     t.reorder = p + reorder;
-    bool ok = mlocCollationListStart(r, 0) == 0 &&
+    bool ok = mlocCollationReorderValid(t.reorder, t.reorderCount) &&
+              mlocCollationListStart(r, 0) == 0 &&
               mlocCollationListStart(r, r->listCount) == r->contextCount;
     for (uint32_t i = 0; ok && i < r->listCount; i++)
     {

@@ -111,6 +111,12 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
                          const uint32_t* text, uint32_t textLength, const uint64_t* elements,
                          uint32_t elementCount);
 
+// Leaves a code point its mapping alone, without prefixes or
+// contractions (ICU's suppressContractions for one code point): the
+// tailoring's own, or the root's when the tailoring has none and the
+// root's has a context; 0 when out of memory.
+int CollationMappingsSuppress(CollationMappings* m, uint32_t codePoint);
+
 // The elements of text[start, length) after text[0, start), its context
 // (ICU's getCEs): appended to out from outLength, as many as fit in
 // collationMaxExpansion; the count they would take, which may be more.

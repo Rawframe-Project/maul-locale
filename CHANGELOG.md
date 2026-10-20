@@ -403,3 +403,7 @@ format.
   as defaults under the `-u-` keys and the options; the keys' version
   covers the tailoring. A tailored locale needs the main data's parents
   in the set. `mlocCollator` is 1,024 bytes (mloc-0071).
+- Collation types honor `[suppressContractions]` where it stands and the
+  settings of the rules they import, as ICU4C builds them: search types
+  read Thai and Lao prevowels alone, and bs-Cyrl orders Cyrillic first
+  as sr does (mloc-0071).

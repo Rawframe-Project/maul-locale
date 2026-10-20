@@ -43,7 +43,11 @@ special between apostrophes").
     caseFirst, caseLevel, normalization, numericOrdering, backwards;
   - reorder codes, as Maul Unicode's packed scripts, the five groups and
     `others`;
-  - the ranges of `[suppressContractions [...]]` and `[optimize [...]]`.
+  - the ranges of `[suppressContractions [...]]` and `[optimize [...]]`,
+    each suppressed range with the count of rules before its setting,
+    where the builder applies it (record mloc-0071). The written rules
+    put the sets last, so a written string keeps their ranges but not
+    their places.
 - **ICU's refusals kept:**
   - a reset with no relation after it;
   - a `[before n]` chain whose first relation has another strength, or

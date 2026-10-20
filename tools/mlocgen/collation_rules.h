@@ -99,12 +99,33 @@ typedef struct CollationRules
     size_t importsLength;
     size_t importCount;
     // [suppressContractions [...]] and [optimize [...]]: code point
-    // ranges, first and last.
+    // ranges, first and last. suppressAt gives each suppressed range the
+    // count of rules before its setting, where the builder applies it
+    // (ICU's parser hands the set to the builder in its place); the
+    // written rules put the sets last.
     uint32_t* suppress;
     size_t suppressCount;
+    size_t* suppressAt;
     uint32_t* optimize;
     size_t optimizeCount;
 } CollationRules;
+
+// A rule list's settings as a builder gathers them over its imports:
+// each field ruleUnset, or the value the rules give last; reorder points
+// into the rules that gave it.
+typedef struct CollationRuleSettings
+{
+    uint8_t strength;
+    uint8_t alternate;
+    uint8_t maxVariable;
+    uint8_t caseFirst;
+    uint8_t caseLevel;
+    uint8_t numeric;
+    uint8_t backwards;
+    bool reorderGiven;
+    const uint32_t* reorder;
+    size_t reorderCount;
+} CollationRuleSettings;
 
 // Parses a rule string (UTF-8); 0 with "byte N: reason" on a refusal.
 int CollationRulesParse(const char* text, size_t length, CollationRules* out, char* error,

@@ -862,6 +862,28 @@ static bool Import(Parser* p, const char* tag, size_t at)
     return true;
 }
 
+// Gives the ranges a [suppressContractions] added from before the count
+// of rules before it.
+static void Place(Parser* p, size_t before)
+{
+    CollationRules* r = p->out;
+    if (r->suppressCount == before)
+    {
+        return;
+    }
+    size_t* at = realloc(r->suppressAt, r->suppressCount * sizeof *at);
+    if (at == nullptr)
+    {
+        Fail(p, p->i, "out of memory");
+        return;
+    }
+    r->suppressAt = at;
+    for (size_t k = before; k < r->suppressCount; k++)
+    {
+        at[k] = r->count;
+    }
+}
+
 static void Setting(Parser* p)
 {
     char raw[1024];
@@ -881,8 +903,10 @@ static void Setting(Parser* p)
             Fail(p, p->i, "not a setting");
             return;
         }
+        size_t before = r->suppressCount;
         p->i = suppress ? Set(p, j, &r->suppress, &r->suppressCount)
                         : Set(p, j, &r->optimize, &r->optimizeCount);
+        Place(p, before);
         return;
     }
     size_t at = p->i;
@@ -1002,6 +1026,7 @@ void CollationRulesFree(CollationRules* rules)
     free(rules->reorder);
     free(rules->imports);
     free(rules->suppress);
+    free(rules->suppressAt);
     free(rules->optimize);
     *rules = (CollationRules){0};
 }

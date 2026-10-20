@@ -40,13 +40,18 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root,
         CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b);
     CollationTypeBody built = {.code = CollationTypeCode(t->type)};
     built.body =
-        ok ? CollationTailoringUnit(&b.mappings, &t->rules, &built.size, error, sizeof(error))
+        ok ? CollationTailoringUnit(&b.mappings, &b.settings, &built.size, error, sizeof(error))
            : nullptr;
     CollationBuilderFree(&b);
     if (built.body == nullptr)
     {
         fprintf(stderr, "%s %s: %s\n", t->file, t->type, error);
         GenDie("a collation type does not build", t->file);
+    }
+    CollationTailoring read;
+    if (!mlocReadCollationTailoring((DataSpan){built.body, (uint32_t)built.size}, &read))
+    {
+        GenDie("a collation type does not read back", t->file);
     }
     return built;
 }

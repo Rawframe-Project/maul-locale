@@ -19,9 +19,10 @@
 #include <stdint.h>
 
 // The unit's bytes, the caller frees them; null with a message when a
-// mapping cannot be held.
-uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const CollationRules* rules,
-                                size_t* sizeOut, char* error, size_t errorSize);
+// mapping cannot be held. settings are the builder's, or null for none.
+uint8_t* CollationTailoringUnit(const CollationMappings* mappings,
+                                const CollationRuleSettings* settings, size_t* sizeOut, char* error,
+                                size_t errorSize);
 
 // A type's written tailoring and its name as BCP 47's co spells it.
 typedef struct CollationTypeBody

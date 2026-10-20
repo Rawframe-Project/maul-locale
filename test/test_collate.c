@@ -86,6 +86,57 @@ static void TestTailorings(void)
           "the options over the rules; ru's rules reorder Cyrillic first, under kr");
 }
 
+// Thai sara e (U+0E40) before ko kai (U+0E01), and after it.
+#define THAI_E_KO "\xE0\xB9\x80\xE0\xB8\x81"
+#define THAI_KO_E "\xE0\xB8\x81\xE0\xB9\x80"
+
+static void TestImportedRules(void)
+{
+    CHECK(Order("bs-Cyrl", nullptr, "\xD1\x8F", "a") == -1 &&
+              Order("bs", nullptr, "a", "\xD1\x8F") == -1,
+          "bs-Cyrl's rules import sr's, its reordering too");
+    CHECK(Order("und", nullptr, THAI_E_KO, THAI_KO_E) == 0 &&
+              Order("und-u-co-search", nullptr, THAI_E_KO, THAI_KO_E) == 1 &&
+              Order("fi-u-co-search", nullptr, THAI_E_KO, THAI_KO_E) == 1,
+          "search suppresses Thai's prevowel contractions, through imports too");
+}
+
+// Every type of every locale the collation file holds makes a collator:
+// its reordering is one the root can make.
+static void TestEveryType(void)
+{
+    static const char* const types[] = {"standard", "search", "searchjl", "phonebk", "trad",
+                                        "dict",     "eor",    "emoji",    "compat",  "pinyin",
+                                        "stroke",   "zhuyin", "unihan",   "phonetic"};
+    size_t made = 0;
+    size_t tried = 0;
+    for (size_t i = 0; i < mlocGetDataLocaleCount(&s_sources[1]); i++)
+    {
+        const char* id = nullptr;
+        size_t length = 0;
+        if (mlocGetDataLocale(&s_sources[1], i, &id, &length) != mloc_success)
+        {
+            continue;
+        }
+        char base[64];
+        bool root = length == 4 && memcmp(id, "root", 4) == 0;
+        snprintf(base, sizeof(base), "%.*s", root ? 3 : (int)length, root ? "und" : id);
+        for (char* p = base; *p != '\0'; p++)
+        {
+            *p = *p == '_' ? '-' : *p;
+        }
+        for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+        {
+            char tag[128];
+            mlocCollator c;
+            snprintf(tag, sizeof(tag), "%s-u-co-%s", base, types[t]);
+            made += Make(tag, nullptr, &c);
+            tried++;
+        }
+    }
+    CHECK(tried > 1000 && made == tried, "every locale's every type makes a collator");
+}
+
 static void TestTailoringVersions(void)
 {
     mlocCollator c;
@@ -348,7 +399,9 @@ int main(void)
     TestKeys();
     TestOptions();
     TestTailorings();
+    TestImportedRules();
     TestTailoringVersions();
+    TestEveryType();
     TestSortKeys();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

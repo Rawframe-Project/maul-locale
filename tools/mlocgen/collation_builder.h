@@ -51,6 +51,9 @@ typedef struct CollationBuilder
     // first primary, for the special positions.
     uint32_t variableTop;
     uint32_t hanFirstPrimary;
+    // The settings of the rules added, an import's before those of the
+    // rules naming it (CLDR writes settings after imports).
+    CollationRuleSettings settings;
     CollationImporter importer;
     void* importContext;
     int importDepth;
@@ -66,8 +69,10 @@ int CollationBuilderInit(CollationBuilder* b, const RootTable* root, CollationIm
 
 void CollationBuilderFree(CollationBuilder* b);
 
-// Adds a rule list's resets and relations (its settings are not read
-// here); 0 with ICU's reason when a rule cannot be built.
+// Adds a rule list's resets and relations, its imports' in their place,
+// and its [suppressContractions] sets where they stand; gathers its
+// settings into b->settings. 0 with ICU's reason when a rule cannot be
+// built.
 int CollationBuilderAdd(CollationBuilder* b, const CollationRules* rules);
 
 // Gives the tailored nodes their weights and the mappings their final

@@ -186,7 +186,14 @@ int CollationBuilderInit(CollationBuilder* b, const RootTable* root, CollationIm
                             .importer = importer,
                             .importContext = importContext,
                             .error = error,
-                            .errorSize = errorSize};
+                            .errorSize = errorSize,
+                            .settings = {.strength = ruleUnset,
+                                         .alternate = ruleUnset,
+                                         .maxVariable = ruleUnset,
+                                         .caseFirst = ruleUnset,
+                                         .caseLevel = ruleUnset,
+                                         .numeric = ruleUnset,
+                                         .backwards = ruleUnset}};
     if (!RootElementsBuild(root, &b->elements, error, errorSize))
     {
         return 0;
@@ -1010,10 +1017,50 @@ static int32_t Strength(uint8_t ruleStrength)
     return ruleStrength == ruleIdentical ? sIdentical : (int32_t)ruleStrength - 1;
 }
 
+// Applies the suppressed ranges that stand before rule i, from *next.
+static void Suppress(CollationBuilder* b, const CollationRules* rules, size_t i, size_t* next)
+{
+    for (; !b->failed && *next < rules->suppressCount && rules->suppressAt[*next] <= i; (*next)++)
+    {
+        for (uint32_t c = rules->suppress[*next * 2]; c <= rules->suppress[*next * 2 + 1]; c++)
+        {
+            if (!CollationMappingsSuppress(&b->mappings, c))
+            {
+                Fail(b, "out of memory");
+                return;
+            }
+        }
+    }
+}
+
+// The rules' settings over those gathered.
+static void Gather(CollationRuleSettings* s, const CollationRules* r)
+{
+    s->strength = r->strength != ruleUnset ? r->strength : s->strength;
+    s->alternate = r->alternate != ruleUnset ? r->alternate : s->alternate;
+    s->maxVariable = r->maxVariable != ruleUnset ? r->maxVariable : s->maxVariable;
+    s->caseFirst = r->caseFirst != ruleUnset ? r->caseFirst : s->caseFirst;
+    s->caseLevel = r->caseLevel != ruleUnset ? r->caseLevel : s->caseLevel;
+    s->numeric = r->numeric != ruleUnset ? r->numeric : s->numeric;
+    s->backwards = r->backwards != ruleUnset ? r->backwards : s->backwards;
+    if (r->reorderGiven)
+    {
+        s->reorderGiven = true;
+        s->reorder = r->reorder;
+        s->reorderCount = r->reorderCount;
+    }
+}
+
 int CollationBuilderAdd(CollationBuilder* b, const CollationRules* rules)
 {
+    size_t suppressed = 0;
     for (size_t i = 0; !b->failed && i < rules->count; i++)
     {
+        Suppress(b, rules, i, &suppressed);
+        if (b->failed)
+        {
+            break;
+        }
         const CollationRule* r = &rules->rules[i];
         const uint32_t* points = rules->points;
         if (r->kind == ruleImport)
@@ -1041,6 +1088,8 @@ int CollationBuilderAdd(CollationBuilder* b, const CollationRules* rules)
                         points + r->text, r->textLength, points + r->extension, r->extensionLength);
         }
     }
+    Suppress(b, rules, rules->count, &suppressed);
+    Gather(&b->settings, rules);
     return !b->failed;
 }
 

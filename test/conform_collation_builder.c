@@ -274,11 +274,12 @@ static void RandomChecks(const CollationType* t, CollationMappings* m,
 
 // The type's unit written, read back and checked; false when it does not
 // read.
-static bool CheckUnit(const CollationType* t, CollationMappings* m)
+static bool CheckUnit(const CollationType* t, CollationBuilder* b)
 {
     char error[256] = "";
     size_t size = 0;
-    uint8_t* bytes = CollationTailoringUnit(m, &t->rules, &size, error, sizeof(error));
+    CollationMappings* m = &b->mappings;
+    uint8_t* bytes = CollationTailoringUnit(m, &b->settings, &size, error, sizeof(error));
     CollationTailoring unit;
     if (bytes == nullptr || !mlocReadCollationTailoring((DataSpan){bytes, (uint32_t)size}, &unit))
     {
@@ -344,7 +345,7 @@ static bool BuildType(const CollationType* t, const RootTable* root, CollationCa
     }
     if (ok && units)
     {
-        ok = CheckUnit(t, &b.mappings);
+        ok = CheckUnit(t, &b);
     }
     else if (ok)
     {

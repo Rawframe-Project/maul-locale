@@ -126,6 +126,27 @@ the oracle for every type.
   The iterator reads a code point from the tailoring first, and from
   the root on the fallback word. The lists and expansions come from the
   unit that gave the CE32.
+- **`[suppressContractions]` and imported settings** (slice d3), as
+  ICU4C's builder takes them:
+  - A suppressed code point keeps its mapping alone: the tailoring's,
+    its prefixes and contractions dropped, or the root's mapping alone
+    when the root's has a context. The set acts where it stands among
+    the rules, so a contraction made before it goes and one made after
+    it stays. An imported string's sets act inside the import. Root's
+    `search` suppresses Thai, Lao and Tai Viet prevowels and the middle
+    dot's prefix in every search type that imports it, and cu, mk and sr
+    suppress И's contractions.
+  - The settings of an imported string count, as ICU's parser reads
+    them: the builder gathers an import's settings, then those of the
+    rules naming it, which CLDR always writes after the imports. bs-Cyrl
+    takes sr's `[reorder Cyrl]` and da's `search` its own
+    `[caseFirst off]` over da's `upper`.
+  - The validator refuses a reorder list with more than 256 codes, a
+    code that is neither a script's four letters (the first upper case)
+    nor a group, or a code given twice. A reordering the root refuses
+    (two codes of one range) depends on the root, so `test_collate`
+    makes a collator of every type of every locale in the file instead;
+    a collator meeting one gives `mloc_errorInvalid`.
 - **One unit per locale** holds all of the locale's types (slice d2c2):
   a data file's units are keyed by kind and locale, so a type cannot be
   a unit of its own. Research 64's "one unit per (locale, type)" is
@@ -194,18 +215,26 @@ the oracle for every type.
 - **`test_collation_builder`:** each strength after a reset and before
   it, sequences, a reset on a tailored code point, a prefix, an
   extension, a contraction, case bits, the special positions,
-  `[import]`, and nine refusals, each checked by the order of the
-  elements it gives.
+  `[import]`, `[suppressContractions]` after and before a contraction
+  and on the root's, an import's settings under the naming rules', and
+  nine refusals, each checked by the order of the elements it gives.
+- **`test_collate`, imports and suppression:** bs-Cyrl's Cyrillic
+  first, and Thai's sara e before ko kai equal to the reverse in the
+  root but ordered apart in root's and fi's `search`; every `co` value
+  of every locale in the collation file makes a collator.
 - **`conform_collation_builder`** (the cldr CI job): all 168 CLDR 49
-  types build, with 44 crafted rule strings (`test/collation/crafted.xml`)
+  types build, with 50 crafted rule strings (`test/collation/crafted.xml`)
   for paths CLDR's rules do not take. These cover `[before 2]` and
   `[before 3]` together, special positions reset on twice or after the
   ignorables were tailored, prefixes with contractions only, the 31-element
-  limits, the Jamo and UTF-8 bounds, and eight refusals. In the docs
+  limits, the Jamo and UTF-8 bounds, `[suppressContractions]` before and
+  after a contraction, on a prefix and on the root's Thai, Cyrillic and
+  middle-dot contexts, and eight refusals. In the docs
   repository's oracle, ICU4C 79 builds each rule string (its escapes
   decoded as ICU's data build decodes them) and gives the elements of
-  each string the rules name. ICU refuses the same eight, and 291,580 of
-  the 292,006 strings have ICU's elements. The other 426 are
+  each string the rules name. ICU refuses the same eight, and 291,600 of
+  the 292,026 strings have ICU's elements; the builder without
+  suppression differs on five of the six suppression strings. The other 426 are
   `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
   root. The quaternary bits are compared later through sort keys,
   since ICU's element iterator drops them. CI checks a hash of every
@@ -216,8 +245,8 @@ the oracle for every type.
   falling back to a shorter one's list, marks, and Han from the root.
   The head holds the settings and codes. The reader refuses a unit cut
   short, reserved words set, each setting out of range, codes past the
-  end, and a list default that is the fallback word, its own list or a
-  prefix.
+  end, a reorder code out of form, given twice or one too many, and a
+  list default that is the fallback word, its own list or a prefix.
 - **`test_collation_tailoring`, the types:** a unit of two types finds
   each by name and no other, with its default; the validator refuses
   no types and no default, too many types, a reserved word set, a unit
@@ -247,7 +276,6 @@ the oracle for every type.
 
 - To come in slice (d):
   - the differential of tailored locales' sort keys against ICU4C;
-  - `[suppressContractions]` and the rules' settings;
   - every CLDR type, with the differential against ICU4C 79.
 
   Each amends this record.

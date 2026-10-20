@@ -25,8 +25,6 @@ enum
     // The sort keys' format, a seed of the version: raised whenever the
     // key writer's bytes change.
     keyFormat = 1,
-    // Codes in a reorder list, more than the root has ranges.
-    maxReorderCodes = 256,
 };
 
 typedef struct Collator
@@ -196,7 +194,7 @@ static bool Code(const char* text, size_t length, uint32_t* codeOut)
 static mlocResult Reorder(const CollationRoot* root, const char* text, size_t length,
                           CollationReorder* out, bool* changes)
 {
-    uint32_t codes[maxReorderCodes];
+    uint32_t codes[collationMaxReorderCodes];
     size_t count = 0;
     for (size_t at = 0; at < length;)
     {
@@ -205,7 +203,7 @@ static mlocResult Reorder(const CollationRoot* root, const char* text, size_t le
         {
             n++;
         }
-        if (count == maxReorderCodes || !Code(text + at, n, &codes[count]))
+        if (count == collationMaxReorderCodes || !Code(text + at, n, &codes[count]))
         {
             return mloc_errorInvalid;
         }
@@ -311,7 +309,7 @@ static mlocResult FromOptions(Collator* c, const mlocCollatorOptions* o)
 static mlocResult FromTailoring(Collator* c, DataSpan span)
 {
     CollationTailoring t;
-    if (!mlocReadCollationTailoring(span, &t) || t.reorderCount > maxReorderCodes)
+    if (!mlocReadCollationTailoring(span, &t))
     {
         return mloc_errorInvalid;
     }
@@ -336,7 +334,7 @@ static mlocResult FromTailoring(Collator* c, DataSpan span)
     {
         return result;
     }
-    uint32_t codes[maxReorderCodes];
+    uint32_t codes[collationMaxReorderCodes];
     for (uint32_t i = 0; i < t.reorderCount; i++)
     {
         codes[i] = mlocLoad32(t.reorder + (size_t)i * 4);

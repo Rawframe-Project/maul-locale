@@ -220,7 +220,7 @@ static bool CodePoint(Writer* w, uint32_t codePoint, uint32_t* valueOut)
 }
 
 // The rules' settings as the head's word (mlocCollatorOptions' numbers).
-static uint32_t Settings(const CollationRules* r)
+static uint32_t Settings(const CollationRuleSettings* r)
 {
     uint32_t s = 0;
     s |= r->strength == ruleUnset ? 0 : r->strength;
@@ -233,13 +233,13 @@ static uint32_t Settings(const CollationRules* r)
     return s | (r->reorderGiven ? collationReorderGiven : 0);
 }
 
-static uint8_t* Write(const Writer* w, const uint32_t* values, const CollationRules* rules,
-                      size_t* sizeOut)
+static uint8_t* Write(const Writer* w, const uint32_t* values,
+                      const CollationRuleSettings* settings, size_t* sizeOut)
 {
     size_t trieSize = 0;
     uint8_t* trie = TrieBuild(values, &trieSize);
     size_t padded = (trieSize + 7) / 8 * 8;
-    size_t reorderCount = rules == nullptr ? 0 : rules->reorderCount;
+    size_t reorderCount = settings == nullptr ? 0 : settings->reorderCount;
     size_t size = collationHead + padded + w->ces.count * 8 + w->ce32s.count * 4 +
                   (w->listStarts.count + 1) * 4 + w->contexts.count * 4 + reorderCount * 4;
     uint8_t* out = GenAllocate(size);
@@ -247,7 +247,7 @@ static uint8_t* Write(const Writer* w, const uint32_t* values, const CollationRu
     GenPut(out + 4, w->ces.count, 4);
     GenPut(out + 8, w->contexts.count, 4);
     GenPut(out + 12, w->listStarts.count, 4);
-    GenPut(out + 16, rules == nullptr ? 0 : Settings(rules), 4);
+    GenPut(out + 16, settings == nullptr ? 0 : Settings(settings), 4);
     GenPut(out + 20, reorderCount, 4);
     GenPut(out + 24, w->mapped, 4);
     memcpy(out + collationHead, trie, trieSize);
@@ -272,15 +272,16 @@ static uint8_t* Write(const Writer* w, const uint32_t* values, const CollationRu
     }
     for (size_t i = 0; i < reorderCount; i++, p += 4)
     {
-        GenPut(p, rules->reorder[i], 4);
+        GenPut(p, settings->reorder[i], 4);
     }
     free(trie);
     *sizeOut = size;
     return out;
 }
 
-uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const CollationRules* rules,
-                                size_t* sizeOut, char* error, size_t errorSize)
+uint8_t* CollationTailoringUnit(const CollationMappings* mappings,
+                                const CollationRuleSettings* settings, size_t* sizeOut, char* error,
+                                size_t errorSize)
 {
     Writer w = {.m = mappings};
     uint32_t* values = GenAllocate((size_t)trieCodePoints * 4);
@@ -303,7 +304,7 @@ uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const Collati
             }
         }
     }
-    uint8_t* out = ok ? Write(&w, values, rules, sizeOut) : nullptr;
+    uint8_t* out = ok ? Write(&w, values, settings, sizeOut) : nullptr;
     free(values);
     free(w.ces.items);
     free(w.ce32s.items);

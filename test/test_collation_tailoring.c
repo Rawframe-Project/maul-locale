@@ -61,8 +61,8 @@ static bool Build(const char* text, Built* out)
         fprintf(stderr, "  %s: %s\n", text, error);
         return false;
     }
-    out->bytes = CollationTailoringUnit(&out->builder.mappings, &out->rules, &out->size, error,
-                                        sizeof(error));
+    out->bytes = CollationTailoringUnit(&out->builder.mappings, &out->builder.settings, &out->size,
+                                        error, sizeof(error));
     return out->bytes != nullptr &&
            mlocReadCollationTailoring((DataSpan){out->bytes, (uint32_t)out->size}, &out->unit);
 }
@@ -242,6 +242,30 @@ static void TestValidator(void)
     Free(&b);
 }
 
+static void TestValidatorReorder(void)
+{
+    Built b;
+    if (!Build("[reorder Grek Latn]&a<x", &b))
+    {
+        CHECK(false, "the rules build");
+        return;
+    }
+    size_t at = (size_t)(b.unit.reorder - b.bytes);
+    uint32_t latin = mlocLoad32(b.bytes + at + 4);
+    CHECK(ReadsWith(&b, at + 4, collationGroupDigit, b.size) &&
+              !ReadsWith(&b, at + 4, collationGroupDigit + 1, b.size) &&
+              !ReadsWith(&b, at + 4, collationGroupSpace - 1, b.size) &&
+              !ReadsWith(&b, at + 4, mlocLoad32(b.bytes + at), b.size),
+          "a group's code, past the groups, below them, a code twice");
+    CHECK(!ReadsWith(&b, at + 4, latin | 0x20000000, b.size) &&
+              !ReadsWith(&b, at + 4, latin & ~0x00200000u, b.size) &&
+              !ReadsWith(&b, at + 4, latin & ~0x00002000u, b.size) &&
+              !ReadsWith(&b, at + 4, latin & ~0x00000020u, b.size) &&
+              !ReadsWith(&b, 20, collationMaxReorderCodes + 1, b.size),
+          "a script's letters in the wrong case, too many codes");
+    Free(&b);
+}
+
 static void TestValidatorSettings(void)
 {
     Built b;
@@ -413,6 +437,7 @@ int main(void)
     TestHead();
     TestValidator();
     TestValidatorSettings();
+    TestValidatorReorder();
     TestValidatorLists();
     TestTypes();
     TestTypesAlone();

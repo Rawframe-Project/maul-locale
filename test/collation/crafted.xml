@@ -48,5 +48,11 @@
 <collation type='c42'><cr><![CDATA[&[before 1]\uFDD1\u00A0<x]]></cr></collation>
 <collation type='c43'><cr><![CDATA[&a<b|x &a<b|xd &a<cb|xe &a<acb|xf &acbx<z &cbx<y]]></cr></collation>
 <collation type='c44'><cr><![CDATA[&a<b|xd &a<ac|xe &acx<z &acxd<v &bx<w]]></cr></collation>
+<collation type='c45'><cr><![CDATA[[suppressContractions [\u0E40]] &\u0E40\u0E01<x]]></cr></collation>
+<collation type='c46'><cr><![CDATA[&a<ab [suppressContractions [a]] &ab<<<y]]></cr></collation>
+<collation type='c47'><cr><![CDATA[[suppressContractions [\u0438]] &\u0438\u0306<z]]></cr></collation>
+<collation type='c48'><cr><![CDATA[[suppressContractions [a]] &a<ab &ab<<<y]]></cr></collation>
+<collation type='c49'><cr><![CDATA[&a<b|x [suppressContractions [x]] &bx<<y &x<<<z]]></cr></collation>
+<collation type='c50'><cr><![CDATA[[suppressContractions [\u00B7]] &l\u00B7<<<w]]></cr></collation>
 </collations>
 </ldml>
