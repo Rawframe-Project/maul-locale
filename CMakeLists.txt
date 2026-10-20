@@ -805,6 +805,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
                                     tools/mlocgen/collation_rules.c
                                     tools/mlocgen/collation_unit.c
+                                    tools/mlocgen/collation_weights.c
                                     tools/mlocgen/direction_gen.c
                                     tools/mlocgen/gender_gen.c
                                     tools/mlocgen/cldr.c
@@ -942,6 +943,11 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_collation_rules PRIVATE test)
         maul_apply_flags(test_collation_rules)
         add_test(NAME collation_rules COMMAND test_collation_rules)
+        add_executable(test_collation_weights test/test_collation_weights.c)
+        target_link_libraries(test_collation_weights PRIVATE mlocgen_core)
+        target_include_directories(test_collation_weights PRIVATE test)
+        maul_apply_flags(test_collation_weights)
+        add_test(NAME collation_weights COMMAND test_collation_weights)
         add_executable(test_gencollation test/test_gencollation.c)
         target_link_libraries(test_gencollation PRIVATE mlocgen_core)
         target_include_directories(test_gencollation PRIVATE test)
