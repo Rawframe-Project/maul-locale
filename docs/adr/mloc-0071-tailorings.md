@@ -141,17 +141,17 @@ the oracle for every type.
 - **`test_collation_builder`:** each strength after a reset and before
   it, sequences, a reset on a tailored code point, a prefix, an
   extension, a contraction, case bits, the special positions,
-  `[import]`, and seven refusals, each checked by the order of the
+  `[import]`, and nine refusals, each checked by the order of the
   elements it gives.
 - **`conform_collation_builder`** (the cldr CI job): all 168 CLDR 49
-  types build, with 41 crafted rule strings (`test/collation/crafted.xml`)
+  types build, with 42 crafted rule strings (`test/collation/crafted.xml`)
   for paths CLDR's rules do not take. These cover `[before 2]` and
   `[before 3]` together, special positions reset on twice or after the
   ignorables were tailored, the 31-element
-  limits, the Jamo and UTF-8 bounds, and seven refusals. In the docs
+  limits, the Jamo and UTF-8 bounds, and eight refusals. In the docs
   repository's oracle, ICU4C 79 builds each rule string (its escapes
   decoded as ICU's data build decodes them) and gives the elements of
-  each string the rules name. ICU refuses the same seven, and 291,558 of
+  each string the rules name. ICU refuses the same eight, and 291,558 of
   the 291,984 strings have ICU's elements. The other 426 are
   `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
   root. The quaternary bits are compared later through sort keys,

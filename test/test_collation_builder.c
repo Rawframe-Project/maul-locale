@@ -233,6 +233,8 @@ static void TestRefusals(void)
 {
     static const char* const cases[][2] = {
         {"&[before 1][first tertiary ignorable]<x", "ignorable not possible"},
+        {"&[before 2][first secondary ignorable]<<x", "secondary-before secondary ignorable"},
+        {"&[before 3][first tertiary ignorable]<<<x", "tertiary-before completely ignorable"},
         {"&[last implicit]<x", "[last implicit] not supported"},
         {"&[last trailing]<x", "U+FFFF"},
         {"&\\u0301<x", "after ignorables not supported"},

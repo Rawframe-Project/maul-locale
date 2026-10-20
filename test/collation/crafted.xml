@@ -45,5 +45,6 @@
 <collation type='c39'><cr><![CDATA[&[before 3][first variable]<<<x &[first variable]<y]]></cr></collation>
 <collation type='c40'><cr><![CDATA[&[before 2][first variable]<<x &[first variable]<y]]></cr></collation>
 <collation type='c41'><cr><![CDATA[&[before 2][first variable]<<x &[before 3][first variable]<<<z &[first variable]<y]]></cr></collation>
+<collation type='c42'><cr><![CDATA[&[before 1]\uFDD1\u00A0<x]]></cr></collation>
 </collations>
 </ldml>
