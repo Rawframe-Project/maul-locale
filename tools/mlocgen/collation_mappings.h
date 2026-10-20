@@ -7,11 +7,9 @@
 // DataBuilderCollationIterator reads them: a code point the tailoring
 // maps is read from the tailoring alone, any other from the root.
 //
-// The first mapping of a code point copies the root's mappings of it
-// when the root has prefixes or contractions for it or the new mapping
-// has a context, so that its list stays whole; otherwise the new
-// mapping replaces the root's. A later mapping of the same prefix and
-// text replaces the earlier one.
+// The first mapping of a code point copies the root's mappings of it, so
+// that its list stays whole, and a mapping of the same prefix and text
+// replaces the one there.
 //
 // A code point's elements: its mappings with the longest prefix that the
 // code points before it end with, then the longest contraction the code

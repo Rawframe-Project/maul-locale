@@ -153,6 +153,18 @@ static void TestReplaceAndLimits(void)
     uint64_t out[collationMaxExpansion];
     CHECK(CollationMappingsElements(&s_m, many, 40, 0, out, 0) == 40 && out[30] == t7,
           "more elements than an expansion holds: counted, 31 written");
+    uint32_t eight[collationMaxContext] = {0x61, 0x62, 0x63, 0x68, 0x6C, 0x61, 0x62, 0x63};
+    uint32_t nine[collationMaxContext + 2] = {0x68, 0x61, 0x62, 0x63, 0x68,
+                                              0x6C, 0x61, 0x62, 0x63, 0x61};
+    const uint64_t t8 = E(0x38000000);
+    const uint64_t t9 = E(0x39000000);
+    CHECK(CollationMappingsAdd(&s_m, eight, collationMaxContext, TEXT(0x6C), &t8, 1) &&
+              Is((const uint32_t[]){0x61, 0x62, 0x63, 0x68, 0x6C, 0x61, 0x62, 0x63, 0x6C}, 9, 8,
+                 ELEMENTS(t8)),
+          "a prefix of eight code points");
+    CHECK(CollationMappingsAdd(&s_m, nullptr, 0, nine, collationMaxContext + 1, &t9, 1) &&
+              Is(nine, collationMaxContext + 2, 0, ELEMENTS(t9, E(0x31000000))),
+          "a contraction of nine code points, then the next");
     uint64_t long32[collationMaxExpansion + 1] = {0};
     CHECK(!CollationMappingsAdd(&s_m, nullptr, 0, many, 0, &t7, 1) &&
               !CollationMappingsAdd(&s_m, nullptr, 0, many, collationMaxContext + 2, &t7, 1) &&

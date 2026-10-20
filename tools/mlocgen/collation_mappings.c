@@ -263,21 +263,15 @@ static int AppendMapping(CollationMappings* m, uint32_t codePoint, const Collati
 }
 
 // ICU's copyFromBaseCE32 on a code point's first mapping: the root's
-// whole list when it or the new mapping has a context.
-static int CopyRoot(CollationMappings* m, uint32_t codePoint, bool context)
+// whole list. ICU copies it only where the root or the new mapping has a
+// context; where neither has, the new mapping replaces the one copied, so
+// the lists are the same.
+static int CopyRoot(CollationMappings* m, uint32_t codePoint)
 {
     size_t count = GatherRoot(m, codePoint);
     if (count == 0)
     {
         return 0;
-    }
-    for (size_t i = 0; i < count && !context; i++)
-    {
-        context = m->candidates[i].prefixLength != 0 || m->candidates[i].textLength > 1;
-    }
-    if (!context)
-    {
-        return 1;
     }
     // The candidates point into the root, which stays put as they are
     // copied; the rule's element is copied before the next gathering.
@@ -306,7 +300,7 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
         return 0;
     }
     uint32_t c = text[0];
-    if (CollationMappingsFirst(m, c) < 0 && !CopyRoot(m, c, prefixLength != 0 || textLength > 1))
+    if (CollationMappingsFirst(m, c) < 0 && !CopyRoot(m, c))
     {
         return 0;
     }
@@ -471,19 +465,17 @@ static const CollationCandidate* Read(CollationMappings* m, Reading* r, uint32_t
     {
         const CollationCandidate* alone = nullptr;
         bool any = false;
-        bool contractions = false;
         for (size_t e = 0; e < count; e++)
         {
             if (in[e] && list[e].prefixLength == (uint32_t)length)
             {
                 any = true;
-                contractions = contractions || list[e].textLength > 1;
                 alone = list[e].textLength == 1 ? &list[e] : alone;
             }
         }
         if (any)
         {
-            found = contractions ? Contraction(list, count, in, (uint32_t)length, r) : nullptr;
+            found = Contraction(list, count, in, (uint32_t)length, r);
             found = found != nullptr ? found : alone;
         }
     }
