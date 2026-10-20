@@ -17,7 +17,6 @@
 
 enum
 {
-    hanStep = 2,
     // Second and third primary bytes a lead byte holds, neither
     // compressible.
     hanPerLeadByte = 254 * 254,
@@ -324,7 +323,7 @@ static int HanRanges(Reader* r, const char* s)
         count += end - start + 1;
         s = Space(s);
     }
-    uint32_t han = count * hanStep + hanStep + 2;
+    uint32_t han = count * rootHanStep + rootHanStep + 2;
     uint32_t leadBytes = (han + hanPerLeadByte - 1) / hanPerLeadByte;
     t->firstHanPrimary = (collationUnassignedByte - leadBytes) << 24 | 0x20200;
     return 1;
@@ -345,8 +344,37 @@ static int TopByte(Reader* r, const char* s)
     return 1;
 }
 
+// [fixed ... byte XX], the name already matched.
+static int FixedByte(Reader* r, const char* s, uint8_t* out)
+{
+    s = Space(s);
+    if (Hex(s[0]) < 0 || Hex(s[1]) < 0 || Space(s + 2)[0] != ']')
+    {
+        return Fail(r, "a fixed byte that is not two hex digits");
+    }
+    *out = (uint8_t)(Hex(s[0]) << 4 | Hex(s[1]));
+    return 1;
+}
+
 static int Option(Reader* r, const char* line)
 {
+    static const char lastCommon[] = "[fixed last secondary common byte";
+    static const char ignorableSecondary[] = "[fixed first ignorable secondary byte";
+    static const char ignorableTertiary[] = "[fixed first ignorable tertiary byte";
+    if (strncmp(line, lastCommon, sizeof lastCommon - 1) == 0)
+    {
+        return FixedByte(r, line + sizeof lastCommon - 1, &r->table->lastCommonSecondaryByte);
+    }
+    if (strncmp(line, ignorableSecondary, sizeof ignorableSecondary - 1) == 0)
+    {
+        return FixedByte(r, line + sizeof ignorableSecondary - 1,
+                         &r->table->firstIgnorableSecondaryByte);
+    }
+    if (strncmp(line, ignorableTertiary, sizeof ignorableTertiary - 1) == 0)
+    {
+        return FixedByte(r, line + sizeof ignorableTertiary - 1,
+                         &r->table->firstIgnorableTertiaryByte);
+    }
     if (strncmp(line, "[UCA version = ", 15) == 0)
     {
         uint32_t* v = r->table->version;
@@ -362,8 +390,8 @@ static int Option(Reader* r, const char* line)
     {
         return TopByte(r, line + 9);
     }
-    // The boundaries, categories, radicals, reordering tokens and fixed
-    // bytes are not part of the root's elements.
+    // The boundaries, categories, radicals, reordering tokens and other
+    // fixed bytes are not part of the root's elements.
     return 1;
 }
 
@@ -449,7 +477,7 @@ uint64_t RootHanElement(const RootTable* table, uint32_t codePoint)
         if (codePoint >= start && codePoint <= end)
         {
             uint32_t p =
-                AddToPrimary(table->firstHanPrimary, (index + codePoint - start) * hanStep);
+                AddToPrimary(table->firstHanPrimary, (index + codePoint - start) * rootHanStep);
             return (uint64_t)p << 32 | commonSecondaryTertiary;
         }
         index += end - start + 1;

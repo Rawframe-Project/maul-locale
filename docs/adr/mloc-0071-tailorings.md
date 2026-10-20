@@ -56,6 +56,30 @@ the oracle for every type.
     ICU, it also refuses limits out of order, equal, or one extending
     the other.
 
+- **The root elements** (`tools/mlocgen/collation_root_elements.c`)
+  are ICU's table, built as its `CollationBaseDataBuilder` builds it
+  and read as its `CollationRootElements` reads it:
+  - every distinct root element without its case bits, in order, from
+    the mappings, the script start and special lines, and ICU's own
+    primaries (the first unassigned and trailing ones, U+FFFD's and
+    U+FFFF's); U+FFFE, the merge separator, has none;
+  - a primary unit, then a delta unit per set of secondary and
+    tertiary weights other than the common one; a run of primaries a
+    fixed step apart is its first and last; Han's primaries are runs
+    around the Han characters with weights of their own;
+  - the queries the builder asks: the primary, secondary and tertiary
+    before and after a root weight, the last element before a primary
+    and the first at or after it.
+  - It refuses an element the table cannot hold, as ICU does: a
+    four-byte primary, a secondary or tertiary of 01 00 or less, a Han
+    primary under weights below the common ones; and a tertiary with
+    the top bits of its second byte, which ICU only asserts.
+  - **Han's section differs from ICU4C's** by the root's Han order
+    (record mloc-0070): ICU4C orders Han by radical and stroke, the
+    root here by code point, so the Han characters with weights of
+    their own (the radicals' variants) split Han's runs elsewhere.
+    The same delta units occur in both.
+
 ## Proof
 
 - **`test_collation_weights`:**
@@ -67,12 +91,21 @@ the oracle for every type.
   - tertiaries in an upper range and capped at 3F;
   - secondaries in a middle range;
   - each refusal.
+- **`test_collation_root_elements`:** a small root's table unit by
+  unit (ignorables, runs of two- and three-byte primaries, the case
+  bits dropped, a common unit after weights below it, Han's runs, the
+  root's own primaries); every query on it; runs across a byte's end
+  written by hand; each refusal.
+- **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
+  table equals ICU4C 79's outside Han's section, 6,110 units with the
+  indexes. In the docs repository's oracle, its 409,032 queries over
+  every root weight outside Han, and about 2,000 primaries that are no root
+  primary, give ICU4C's answers.
 
 ## Consequences
 
 - To come in slice (d):
-  - the root elements, the nodes and the weights for resets and
-    relations;
+  - the nodes and the weights for resets and relations;
   - the unit, its validator and the runtime's lookup with `co`;
   - extensions, contexts, case bits and settings;
   - every CLDR type, with the differential against ICU4C 79.

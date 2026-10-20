@@ -803,6 +803,7 @@ endif()
 if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
                                     tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
+                                    tools/mlocgen/collation_root_elements.c
                                     tools/mlocgen/collation_rules.c
                                     tools/mlocgen/collation_unit.c
                                     tools/mlocgen/collation_weights.c
@@ -948,6 +949,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_collation_weights PRIVATE test)
         maul_apply_flags(test_collation_weights)
         add_test(NAME collation_weights COMMAND test_collation_weights)
+        add_executable(test_collation_root_elements test/test_collation_root_elements.c)
+        target_link_libraries(test_collation_root_elements PRIVATE mlocgen_core)
+        target_include_directories(test_collation_root_elements PRIVATE test)
+        maul_apply_flags(test_collation_root_elements)
+        add_test(NAME collation_root_elements COMMAND test_collation_root_elements
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_executable(test_gencollation test/test_gencollation.c)
         target_link_libraries(test_gencollation PRIVATE mlocgen_core)
         target_include_directories(test_gencollation PRIVATE test)
@@ -961,6 +968,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             add_executable(conform_collation_root test/conform_collation_root.c)
             target_link_libraries(conform_collation_root PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_root)
+            add_executable(conform_collation_root_elements test/conform_collation_root_elements.c)
+            target_link_libraries(conform_collation_root_elements PRIVATE mlocgen_core)
+            maul_apply_flags(conform_collation_root_elements)
             add_executable(conform_collation_rules test/conform_collation_rules.c)
             target_link_libraries(conform_collation_rules PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_rules)

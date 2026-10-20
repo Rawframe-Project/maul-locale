@@ -23,6 +23,8 @@ enum
     rootMaxHanRanges = 32,
     // ICU's trailing lead byte; the unassigned one is collation_tables.h's.
     rootTrailingByte = 0xFF,
+    // The distance between the implicit primaries of two Han characters.
+    rootHanStep = 2,
 };
 
 // One line's mapping: a string, with or without a prefix before it, to
@@ -63,6 +65,13 @@ typedef struct RootTable
     uint8_t compressible[256];
     // [UCA version = a.b.c]
     uint32_t version[3];
+    // [fixed last secondary common byte XX], [fixed first ignorable
+    // secondary byte XX] and [fixed first ignorable tertiary byte XX]:
+    // the bounds between the weights of primary, secondary and tertiary
+    // elements.
+    uint8_t lastCommonSecondaryByte;
+    uint8_t firstIgnorableSecondaryByte;
+    uint8_t firstIgnorableTertiaryByte;
 } RootTable;
 
 // Reads the file; 0 with a message (a line number and what is wrong)
