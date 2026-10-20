@@ -127,6 +127,7 @@
 
 #include "bytes.h"
 #include "code_point_trie.h"
+#include "collation_fast_latin.h"
 #include "data_view.h"
 
 #include <stdint.h>
@@ -192,6 +193,10 @@ typedef struct CollationRoot
     uint32_t startCount;
     uint32_t numericPrimary;
     const uint8_t* compressible;
+    // The fast Latin table (collation_fast_latin.h): its words and their
+    // count, or no words with a count of 0 or fastLatinRootTable.
+    const uint8_t* fastLatin;
+    uint32_t fastLatinCount;
 } CollationRoot;
 
 static inline bool mlocCe32IsSpecial(uint32_t ce32)
@@ -496,7 +501,8 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     uint64_t scripts = contexts + (uint64_t)r.contextCount * 4;
     uint64_t scriptStarts = scripts + (uint64_t)r.scriptCount * 8;
     uint64_t compressible = scriptStarts + (uint64_t)r.startCount * 4;
-    if (compressible + 32 > span.size)
+    if (compressible + 32 > span.size ||
+        !mlocReadFastLatin(p, compressible + 32, span.size, false, &r.fastLatin, &r.fastLatinCount))
     {
         return false;
     }
@@ -601,7 +607,9 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
     uint64_t starts = ce32s + (uint64_t)r->ce32Count * 4;
     uint64_t contexts = starts + ((uint64_t)r->listCount + 1) * 4;
     uint64_t reorder = contexts + (uint64_t)r->contextCount * 4;
-    if (reorder + (uint64_t)t.reorderCount * 4 > span.size)
+    uint64_t tableAt = reorder + (uint64_t)t.reorderCount * 4;
+    if (tableAt > span.size ||
+        !mlocReadFastLatin(p, tableAt, span.size, true, &r->fastLatin, &r->fastLatinCount))
     {
         return false;
     }

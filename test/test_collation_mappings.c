@@ -96,6 +96,42 @@ static void TestRoot(void)
           "Han, U+FFFD, U+FFFF and an unassigned code point by rule");
 }
 
+// Whether a code point is after a prefix and starts a contraction.
+static bool ContextsAre(uint32_t codePoint, bool prefixed, bool contracts)
+{
+    bool p = !prefixed;
+    bool c = !contracts;
+    CollationMappingsContexts(&s_m, codePoint, &p, &c);
+    return p == prefixed && c == contracts;
+}
+
+static void TestContextsRoot(void)
+{
+    CHECK(ContextsAre(0x61, false, true) && ContextsAre(0xB7, true, false) &&
+              ContextsAre(0x62, false, false) && ContextsAre(0x6C, false, false),
+          "the root's contexts: a's contraction, the middle dot's prefix, none for b or l");
+    CHECK(CollationMappingsExtends(&s_m, TEXT(0x61)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x61, 0x301)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x62)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0xB7)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x6C, 0xB7)) &&
+              !CollationMappingsExtends(&s_m, nullptr, 0),
+          "a mapping longer than a text that starts with it: a before a acute alone");
+}
+
+static void TestContextsTailored(void)
+{
+    CHECK(ContextsAre(0x63, false, true) && ContextsAre(0x68, true, true) &&
+              ContextsAre(0x62, false, false),
+          "the tailoring's contexts: c's contraction, h's prefixes with contractions");
+    CHECK(CollationMappingsExtends(&s_m, TEXT(0x63)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x63, 0x68)) &&
+              CollationMappingsExtends(&s_m, TEXT(0x68)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x68, 0x63)) &&
+              !CollationMappingsExtends(&s_m, TEXT(0x68, 0x61)),
+          "longer mappings: ch after c, hc and hb after h, none after hc");
+}
+
 static void TestTailored(void)
 {
     const uint64_t t1 = E(0x30000000);
@@ -198,8 +234,10 @@ int main(void)
         return 1;
     }
     TestRoot();
+    TestContextsRoot();
     TestTailored();
     TestPrefixFallback();
+    TestContextsTailored();
     TestReplaceAndLimits();
     TestManyCodePoints();
     CollationMappingsFree(&s_m);

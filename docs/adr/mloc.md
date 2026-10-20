@@ -76,3 +76,4 @@ are listed in [README.md](README.md).
 | [mloc-0069](mloc-0069-collation-options.md) | Collation options and the public collator: every level, shifted, backwards, the case level, case first, numeric ordering, reordering, the script table | Accepted |
 | [mloc-0070](mloc-0070-sort-keys.md) | Sort keys: ICU4C's bytes, written level by level | Accepted |
 | [mloc-0071](mloc-0071-tailorings.md) | Tailorings: the builder and its weight allocator | Accepted |
+| [mloc-0072](mloc-0072-fast-latin.md) | The fast Latin table: ICU4C's, built for each unit over NFD | Accepted |

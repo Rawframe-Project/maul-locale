@@ -555,6 +555,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_collation_data PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    maul_add_test(collation_fast_latin WHITEBOX)
+    if(TARGET test_collation_fast_latin)
+        if(EMSCRIPTEN)
+            target_link_options(test_collation_fast_latin PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collation_fast_latin PRIVATE
+                                   MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     maul_add_test(collation_compare WHITEBOX)
     if(TARGET test_collation_compare)
         if(EMSCRIPTEN)
@@ -701,6 +710,10 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_link_libraries(conform_collation_options PRIVATE maul-locale)
         target_include_directories(conform_collation_options PRIVATE src)
         maul_apply_flags(conform_collation_options)
+        add_executable(conform_collation_fast test/conform_collation_fast.c)
+        target_link_libraries(conform_collation_fast PRIVATE maul-locale)
+        target_include_directories(conform_collation_fast PRIVATE src)
+        maul_apply_flags(conform_collation_fast)
         add_executable(conform_collation_reorder test/conform_collation_reorder.c)
         target_link_libraries(conform_collation_reorder PRIVATE maul-locale)
         target_include_directories(conform_collation_reorder PRIVATE src)
@@ -811,6 +824,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/collation_builder.c
                                     tools/mlocgen/collation_catalog.c
                                     tools/mlocgen/collation_encode.c
+                                    tools/mlocgen/collation_fast_table.c
                                     tools/mlocgen/collation_mappings.c
                                     tools/mlocgen/collation_root_elements.c
                                     tools/mlocgen/collation_rules.c
@@ -993,6 +1007,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             add_executable(conform_collation_builder test/conform_collation_builder.c)
             target_link_libraries(conform_collation_builder PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_builder)
+            add_executable(conform_collation_fast_builder test/conform_collation_fast_builder.c)
+            target_link_libraries(conform_collation_fast_builder PRIVATE mlocgen_core)
+            maul_apply_flags(conform_collation_fast_builder)
             add_executable(conform_collation_mappings test/conform_collation_mappings.c)
             target_link_libraries(conform_collation_mappings PRIVATE mlocgen_core)
             maul_apply_flags(conform_collation_mappings)

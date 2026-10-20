@@ -354,6 +354,33 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
     return Rehash(m) && AppendMapping(m, c, &added);
 }
 
+void CollationMappingsContexts(CollationMappings* m, uint32_t codePoint, bool* prefixedOut,
+                               bool* contractsOut)
+{
+    size_t count = Gather(m, codePoint);
+    *prefixedOut = false;
+    *contractsOut = false;
+    for (size_t i = 0; i < count; i++)
+    {
+        *prefixedOut = *prefixedOut || m->candidates[i].prefixLength > 0;
+        *contractsOut = *contractsOut || m->candidates[i].textLength > 1;
+    }
+}
+
+bool CollationMappingsExtends(CollationMappings* m, const uint32_t* text, uint32_t length)
+{
+    size_t count = length == 0 ? 0 : Gather(m, text[0]);
+    for (size_t i = 0; i < count; i++)
+    {
+        const CollationCandidate* c = &m->candidates[i];
+        if (c->textLength > length && memcmp(c->text, text, length * sizeof *text) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint)
 {
     return CollationMappingsFirst(m, codePoint) >= 0 || CopyRoot(m, codePoint);

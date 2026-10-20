@@ -79,4 +79,13 @@ int CollationBuilderAdd(CollationBuilder* b, const CollationRules* rules);
 // elements; 0 with a message when a gap is too small.
 int CollationBuilderFinish(CollationBuilder* b);
 
+enum
+{
+    collationNfdMax = 128,
+};
+
+// The NFD code points of a string, at most collationNfdMax in out; -1
+// when longer.
+int32_t CollationNfd(const uint32_t* text, uint32_t length, uint32_t* out);
+
 #endif

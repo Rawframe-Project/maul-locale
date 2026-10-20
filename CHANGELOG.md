@@ -413,3 +413,7 @@ format.
 - The `unihan` collations (ja, ko, zh) order Han by radical and stroke
   as ICU4C does, from a radical-stroke table in the collation data
   file; the root keeps CLDR's code-point order (mloc-0071).
+- The collation data file holds ICU4C's fast Latin table for the root
+  and each collation type, built over NFD and checked as the file is
+  opened, for the fast compare to come (mloc-0072). Collation versions
+  change with it.

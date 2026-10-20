@@ -111,6 +111,15 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
                          const uint32_t* text, uint32_t textLength, const uint64_t* elements,
                          uint32_t elementCount);
 
+// Whether a code point has, through the tailoring or the root, a mapping
+// after a prefix, and one of a contraction (a text longer than itself).
+void CollationMappingsContexts(CollationMappings* m, uint32_t codePoint, bool* prefixedOut,
+                               bool* contractsOut);
+
+// Whether a mapping's text starts with the text given and is longer, so
+// that what follows the text can change its elements.
+bool CollationMappingsExtends(CollationMappings* m, const uint32_t* text, uint32_t length);
+
 // Copies the root's mappings of a code point the tailoring has none of
 // (ICU's copyFromBaseCE32); 0 when out of memory.
 int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint);

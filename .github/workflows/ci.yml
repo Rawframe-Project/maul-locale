@@ -142,7 +142,7 @@ jobs:
       - name: Build the generator
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf conform_collation_root conform_collation_root_elements conform_collation_mappings conform_collation_builder conform_collation conform_collation_rules conform_collation_keys
+          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf conform_collation_root conform_collation_root_elements conform_collation_mappings conform_collation_builder conform_collation_fast_builder conform_collation conform_collation_rules conform_collation_keys
       - name: Root collation against allkeys
         run: |
           build/conform_collation_root ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
@@ -162,6 +162,11 @@ jobs:
         run: |
           build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
             --units ~/cldr-cache/cldr/common/collation/*.xml test/collation/crafted.xml
+      - name: Every type's fast Latin table built, written and read back
+        run: |
+          build/conform_collation_fast_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
+            --expect 09bdaf2dd4a6b003 ~/cldr-cache/cldr/common/collation/*.xml \
+            test/collation/crafted.xml
       - name: Tailored locales' sort keys, as ICU4C 79's where its data has them
         run: |
           set -o pipefail

@@ -5,6 +5,7 @@
 
 #include "collation_builder.h"
 #include "collation_catalog.h"
+#include "collation_fast_table.h"
 #include "collation_root.h"
 #include "collation_tailoring.h"
 #include "collation_unit.h"
@@ -40,9 +41,21 @@ static bool Selectable(const CollationCatalog* catalog, const CollationType* t)
            (strcmp(t->alt, "short") == 0 || (t->alt[0] == '\0' && !HasShort(catalog, t)));
 }
 
+// The two roots a type is built over: the root, and the unihan root
+// (Han in radical-stroke order) for the unihan types; the root's unit
+// read back and its fast Latin table, which a type's may be.
+typedef struct Roots
+{
+    const RootTable* root;
+    const RootTable* unihan;
+    CollationRoot view;
+    const uint16_t* fastLatin;
+    size_t fastLatinCount;
+} Roots;
+
 // One type built over the root and written; the program stops on a
 // refusal, as CLDR's rules all build.
-static CollationTypeBody Build(const CollationType* t, const RootTable* root,
+static CollationTypeBody Build(const CollationType* t, const RootTable* root, const Roots* roots,
                                CollationCatalog* catalog)
 {
     char error[256] = "";
@@ -59,6 +72,11 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root,
     built.body =
         ok ? CollationTailoringUnit(&b.mappings, &b.settings, &built.size, error, sizeof(error))
            : nullptr;
+    if (built.body != nullptr)
+    {
+        built.body = CollationFastLatinSection(built.body, &built.size, &b.mappings, &roots->view,
+                                               roots->fastLatin, roots->fastLatinCount, t->type);
+    }
     CollationBuilderFree(&b);
     if (built.body == nullptr)
     {
@@ -72,14 +90,6 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root,
     }
     return built;
 }
-
-// The two roots a type is built over: the root, and the unihan root
-// (Han in radical-stroke order) for the unihan types.
-typedef struct Roots
-{
-    const RootTable* root;
-    const RootTable* unihan;
-} Roots;
 
 // Each file's selectable types as a unit of its locale's key.
 static void AddTailorings(CollationCatalog* catalog, const Roots* roots, const Keys* keys,
@@ -98,7 +108,7 @@ static void AddTailorings(CollationCatalog* catalog, const Roots* roots, const K
             if (Selectable(catalog, t))
             {
                 bool unihan = strcmp(t->type, "unihan") == 0;
-                built[count++] = Build(t, unihan ? roots->unihan : roots->root, catalog);
+                built[count++] = Build(t, unihan ? roots->unihan : roots->root, roots, catalog);
             }
         }
         if (count > 0 || source->defaultType[0] != '\0')
@@ -163,15 +173,32 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
         RootFree(&unihan);
         return 0;
     }
-    DataFileAdd(file, kindCollationRoot, nullptr, unit, size);
-    free(unit);
+    // The root's table is built over its unit read back without one; the
+    // view then reads the unit with it, kept until the types are built.
+    Roots roots = {.root = &table, .unihan = &unihan};
+    CollationMappings mappings;
+    if (!CollationMappingsInit(&mappings, &table) ||
+        !mlocReadCollationRoot((DataSpan){unit, (uint32_t)size}, &roots.view))
+    {
+        GenDie("the collation root", "does not read back");
+    }
+    uint16_t* fastLatin = CollationFastLatinTable(&mappings, &roots.view, &roots.fastLatinCount);
+    CollationMappingsFree(&mappings);
+    uint8_t* rootUnit = CollationFastLatinAppend(unit, &size, fastLatin, roots.fastLatinCount);
+    roots.fastLatin = fastLatin;
+    if (!mlocReadCollationRoot((DataSpan){rootUnit, (uint32_t)size}, &roots.view))
+    {
+        GenDie("the collation root", "does not read back with its fast Latin table");
+    }
+    DataFileAdd(file, kindCollationRoot, nullptr, rootUnit, size);
     unit = CollationHanUnit(&unihan, &size);
     DataFileAdd(file, kindCollationHanRadical, nullptr, unit, size);
     free(unit);
     CollationCatalog catalog = {0};
     ReadCatalog(commonDirectory, &catalog);
-    Roots roots = {&table, &unihan};
     AddTailorings(&catalog, &roots, &keys, file);
+    free(fastLatin);
+    free(rootUnit);
     CollationCatalogFree(&catalog);
     KeysClose(&keys);
     RootFree(&table);

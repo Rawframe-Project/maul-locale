@@ -661,10 +661,9 @@ static uint64_t SpecialPosition(CollationBuilder* b, int32_t pos)
     return IsTailored(node) ? TempCe(index, strength) : ce;
 }
 
-// NFD code points of a rule's string; -1 when too long.
-static int32_t Nfd(const uint32_t* text, uint32_t length, uint32_t* out)
+int32_t CollationNfd(const uint32_t* text, uint32_t length, uint32_t* out)
 {
-    char utf8[maxString * 4];
+    char utf8[collationNfdMax * 4];
     size_t n = 0;
     for (uint32_t i = 0; i < length; i++)
     {
@@ -696,7 +695,7 @@ static int32_t Nfd(const uint32_t* text, uint32_t length, uint32_t* out)
             utf8[n++] = (char)(0x80 | (c & 0x3F));
         }
     }
-    char nfd[maxString * 4];
+    char nfd[collationNfdMax * 4];
     size_t needed = 0;
     muniTextResult r =
         muniNormalize(utf8, n, muni_nfd, muni_convertReplace, nfd, sizeof(nfd), &needed);
@@ -705,7 +704,7 @@ static int32_t Nfd(const uint32_t* text, uint32_t length, uint32_t* out)
         return -1;
     }
     int32_t count = 0;
-    for (size_t i = 0; i < needed && count < maxString;)
+    for (size_t i = 0; i < needed && count < collationNfdMax;)
     {
         unsigned char lead = (unsigned char)nfd[i];
         size_t extra = lead < 0x80 ? 0 : lead < 0xE0 ? 1 : lead < 0xF0 ? 2 : 3;
@@ -810,7 +809,7 @@ static int AddReset(CollationBuilder* b, int32_t strength, uint8_t position, con
     else
     {
         uint32_t nfd[maxString];
-        int32_t n = Nfd(text, length, nfd);
+        int32_t n = CollationNfd(text, length, nfd);
         if (n < 0)
         {
             return Fail(b, "a reset string too long");
@@ -973,8 +972,8 @@ static int AddRelation(CollationBuilder* b, int32_t strength, const uint32_t* pr
 {
     uint32_t nfdPrefix[maxString];
     uint32_t nfd[maxString];
-    int32_t p = prefixLength == 0 ? 0 : Nfd(prefix, prefixLength, nfdPrefix);
-    int32_t n = Nfd(text, length, nfd);
+    int32_t p = prefixLength == 0 ? 0 : CollationNfd(prefix, prefixLength, nfdPrefix);
+    int32_t n = CollationNfd(text, length, nfd);
     if (p < 0 || n <= 0)
     {
         return Fail(b, "a relation string too long");
@@ -996,7 +995,7 @@ static int AddRelation(CollationBuilder* b, int32_t strength, const uint32_t* pr
     if (extensionLength != 0)
     {
         uint32_t nfdExtension[maxString];
-        int32_t e = Nfd(extension, extensionLength, nfdExtension);
+        int32_t e = CollationNfd(extension, extensionLength, nfdExtension);
         if (e < 0)
         {
             return Fail(b, "an extension string too long");
