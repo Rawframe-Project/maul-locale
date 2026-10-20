@@ -5,7 +5,7 @@
 // whose weights follow from ICU4C's CollationWeights by hand: a middle
 // range, a lower and an upper range that meet, ranges lengthened by one
 // and two bytes, the tertiaries' 3F limit, a compressible lead byte's
-// second byte, and the refusals; and 240 random allocations against
+// second byte, and the refusals; and 245 allocations against
 // ICU4C 79's.
 
 #include "collation_weights.h"
@@ -345,6 +345,13 @@ static const IcuCase s_icu[] = {
     {1, 1, 0xB6800000, 0xF30C3000, 5, true, 0xB7000000, 0xBB000000, 0x1DFEC7C9B9000000ULL},
     {1, 1, 0x7D000000, 0x7D030000, 1000, false, 0, 0, 0},
     {1, 0, 0xCE14F800, 0xCE160000, 50, true, 0xCE150200, 0xCE153300, 0xBDEED31DE5B92100ULL},
+    // Five from a larger random set (30,000), each telling apart a change
+    // to the allocator that the 240 above do not.
+    {1, 0, 0x2F000000, 0xFFB3ED00, 70000, true, 0x30020000, 0xFFB22B00, 0x0FDC26751BF7C900ULL},
+    {1, 1, 0xFF08F200, 0xFF08F500, 3, true, 0xFF08F300, 0xFF08F403, 0xF45E7AAA52385F89ULL},
+    {1, 0, 0x84FF7A9C, 0x84FF7B9C, 10, true, 0x84FF7A9D, 0x84FF7AA6, 0x41CD8C39FA01B669ULL},
+    {1, 1, 0x8CE10800, 0x8CE30000, 300, true, 0x8CE10900, 0x8CE23600, 0xB95B0CB981EAB000ULL},
+    {1, 1, 0x52500000, 0x85C80000, 70000, true, 0x52510000, 0x85C79D00, 0x2837B13FD702E500ULL},
 };
 
 static void TestAgainstIcu(void)
@@ -380,7 +387,7 @@ static void TestAgainstIcu(void)
             fits == c->fits && (!fits || (first == c->first && last == c->last && hash == c->hash));
         wrong += same ? 0 : 1;
     }
-    CHECK(wrong == 0, "240 random allocations of each level as ICU4C 79 makes them");
+    CHECK(wrong == 0, "245 allocations of each level as ICU4C 79 makes them");
 }
 
 static void TestRefusals(void)
