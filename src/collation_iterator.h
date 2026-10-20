@@ -62,7 +62,10 @@ typedef struct CollationIterator
     // Code points read from the stream ahead of the one being given.
     uint32_t upcoming[collationLookahead];
     uint8_t upcomingClasses[collationLookahead];
+    uint32_t upcomingFrom[collationLookahead];
     uint32_t upcomingCount;
+    // The source offset where the last element read with its range ended.
+    uint32_t high;
     // The last code points given, the latest at (historyAt - 1) % 8.
     uint32_t history[collationMaxContext];
     uint32_t historyAt;
@@ -78,6 +81,15 @@ static inline void mlocCollationIteratorStart(CollationIterator* it, const Colla
 {
     mlocCollationIteratorStartText(it, root, mlocNfdUtf8(text, length));
 }
+
+// The next element and the range of the source it comes from, as ICU4C's
+// processed elements place them: the first element of a code point,
+// contraction or numeric run spans from where it starts to where the
+// next code point starts (the end of the text after the last); the rest
+// of an expansion have empty ranges at that end. Inside a segment the
+// NFD changes, only the whole segment has a range (see NfdStream).
+bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut, uint32_t* lowOut,
+                                uint32_t* highOut);
 
 // The next element; false at the end of the text. A completely
 // ignorable element is given as 0.

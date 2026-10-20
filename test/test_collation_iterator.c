@@ -5,7 +5,7 @@
 // element, expansions, an offset, the implicit word, U+FFFD for bad
 // bytes and U+FFFF, Hangul through its jamo, a prefix, contractions
 // contiguous and discontiguous with their blocked marks, and the
-// lookahead's bound.
+// lookahead's bound; each element's source range.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
@@ -197,6 +197,49 @@ static void TestLookahead(void)
     CHECK(first && dots == 70 && far, "a discontiguous match within the lookahead, none past it");
 }
 
+// Whether the text's elements cover the expected source ranges, two
+// numbers (low, high) per element.
+static bool Spans(NfdText text, const uint32_t* want, uint32_t count)
+{
+    CollationIterator it;
+    mlocCollationIteratorStartText(&it, &s_unit, text);
+    uint64_t e = 0;
+    uint32_t low = 0;
+    uint32_t high = 0;
+    uint32_t n = 0;
+    bool same = true;
+    while (mlocCollationNextElementAt(&it, &e, &low, &high))
+    {
+        same = same && n + 1 < count && low == want[n] && high == want[n + 1];
+        n += 2;
+    }
+    return same && n == count;
+}
+
+#define SPANS(text, ...)                                                                           \
+    Spans(mlocNfdUtf8((const uint8_t*)(text), sizeof(text) - 1), (const uint32_t[]){__VA_ARGS__},  \
+          sizeof((const uint32_t[]){__VA_ARGS__}) / sizeof(uint32_t))
+
+static void TestSpans(void)
+{
+    CHECK(SPANS("abc", 0, 1, 1, 2, 2, 3), "each code point its own range");
+    CHECK(SPANS("b\xCC\x81", 0, 1, 1, 3), "a segment NFD leaves alone keeps its code points");
+    CHECK(SPANS("\xC3\xA0", 0, 2) && SPANS("\xC3\xA1", 0, 2, 2, 2) &&
+              SPANS("b\xC3\xA0", 0, 1, 1, 3),
+          "a precomposed letter is one range");
+    CHECK(SPANS("\xE3\x88\xA0", 0, 3, 3, 3, 3, 3),
+          "an expansion's first element spans the code point, the rest are empty at its end");
+    CHECK(SPANS("a\xCC\x81\xCC\xA3"
+                "b",
+                0, 5, 5, 5, 5, 6),
+          "a reordered segment: its first element covers it, the rest are empty at its end");
+    CHECK(SPANS("ch", 0, 2) && SPANS("cb", 0, 1, 1, 2), "a contraction spans its code points");
+    static const uint16_t units[] = {'a', 0xD83D, 0xDE00, 'b'};
+    CHECK(Spans(mlocNfdUtf16(units, 4), (const uint32_t[]){0, 1, 1, 3, 3, 4}, 6),
+          "UTF-16 ranges count code units");
+    CHECK(Spans(mlocNfdUtf8((const uint8_t*)"", 0), nullptr, 0), "an empty text has no ranges");
+}
+
 int main(void)
 {
     bool built = Build();
@@ -206,6 +249,7 @@ int main(void)
         TestElements();
         TestContexts();
         TestLookahead();
+        TestSpans();
     }
     free(s_bytes);
     return s_failures == 0 ? 0 : 1;

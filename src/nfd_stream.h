@@ -58,6 +58,12 @@ typedef struct NfdStream
     // The window: code points [next, count) are still to be given.
     uint32_t window[nfdWindow];
     uint8_t classes[nfdWindow];
+    // Where in the source each window code point comes from, as ICU4C's
+    // FCD iterators place offsets: a segment the NFD leaves as it is gives
+    // each code point its own start; one the NFD changes (decomposed or
+    // reordered) gives its first code point the segment's start and the
+    // rest its end, so that only the whole segment has a range.
+    uint32_t from[nfdWindow];
     uint32_t count;
     uint32_t next;
     // A long segment's marks, given by class: the marks of its first
@@ -93,6 +99,22 @@ static inline bool mlocNfdNext(NfdStream* s, uint32_t* codePointOut)
     {
         return false;
     }
+    *codePointOut = s->window[s->next++];
+    return true;
+}
+
+// The next code point of the NFD, its combining class and where in the
+// source it comes from (a byte or unit offset; texts over 4 GiB give
+// offsets modulo 2^32); false at the end.
+static inline bool mlocNfdNextFrom(NfdStream* s, uint32_t* codePointOut, uint8_t* classOut,
+                                   uint32_t* fromOut)
+{
+    if (s->next == s->count && !mlocNfdFill(s))
+    {
+        return false;
+    }
+    *classOut = s->classes[s->next];
+    *fromOut = s->from[s->next];
     *codePointOut = s->window[s->next++];
     return true;
 }

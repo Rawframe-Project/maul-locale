@@ -22,6 +22,7 @@ void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* 
     it->upcomingCount = 0;
     it->historyAt = 0;
     it->historyCount = 0;
+    it->high = 0;
     mlocNfdStartText(&it->nfd, text);
 }
 
@@ -33,12 +34,14 @@ static bool Upcoming(CollationIterator* it, uint32_t index)
     {
         uint32_t c = 0;
         uint8_t k = 0;
-        if (!mlocNfdNextClass(&it->nfd, &c, &k))
+        uint32_t from = 0;
+        if (!mlocNfdNextFrom(&it->nfd, &c, &k, &from))
         {
             return false;
         }
         it->upcoming[it->upcomingCount] = c;
-        it->upcomingClasses[it->upcomingCount++] = k;
+        it->upcomingClasses[it->upcomingCount] = k;
+        it->upcomingFrom[it->upcomingCount++] = from;
     }
     return index < it->upcomingCount;
 }
@@ -49,6 +52,7 @@ static void Remove(CollationIterator* it, uint32_t index)
     {
         it->upcoming[i - 1] = it->upcoming[i];
         it->upcomingClasses[i - 1] = it->upcomingClasses[i];
+        it->upcomingFrom[i - 1] = it->upcomingFrom[i];
     }
     it->upcomingCount--;
 }
@@ -414,5 +418,26 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         Expand(it, unit, c, ce32);
     }
     *elementOut = it->ces[it->ceNext++];
+    return true;
+}
+
+bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut, uint32_t* lowOut,
+                                uint32_t* highOut)
+{
+    if (it->ceNext < it->ceCount)
+    {
+        *lowOut = it->high;
+        *highOut = it->high;
+        *elementOut = it->ces[it->ceNext++];
+        return true;
+    }
+    if (!Upcoming(it, 0))
+    {
+        return false;
+    }
+    *lowOut = it->upcomingFrom[0];
+    (void)mlocCollationNextElement(it, elementOut);
+    it->high = Upcoming(it, 0) ? it->upcomingFrom[0] : (uint32_t)it->nfd.length;
+    *highOut = it->high;
     return true;
 }

@@ -107,10 +107,21 @@ static bool Mark(const NfdStream* s, size_t at, uint32_t* d, uint32_t* n, size_t
     return true;
 }
 
-static void Put(NfdStream* s, uint32_t codePoint, uint8_t ccc)
+static void Put(NfdStream* s, uint32_t codePoint, uint8_t ccc, size_t from)
 {
     s->window[s->count] = codePoint;
-    s->classes[s->count++] = ccc;
+    s->classes[s->count] = ccc;
+    s->from[s->count++] = (uint32_t)from;
+}
+
+// The window as one changed segment: its first code point from start,
+// the rest from end.
+static void Changed(NfdStream* s, size_t start, size_t end)
+{
+    for (uint32_t i = 0; i < s->count; i++)
+    {
+        s->from[i] = (uint32_t)(i == 0 ? start : end);
+    }
 }
 
 // The smallest class above the current one among a long run's marks, or
@@ -152,7 +163,7 @@ static void FillFromRun(NfdStream* s)
         {
             if (Class(d[s->runSub]) == s->runClass)
             {
-                Put(s, d[s->runSub], s->runClass);
+                Put(s, d[s->runSub], s->runClass, s->runEnd);
             }
         }
         if (s->runSub == n)
@@ -186,7 +197,7 @@ static void FillLong(NfdStream* s)
         {
             if (s->headClasses[s->headAt] == s->runClass)
             {
-                Put(s, s->head[s->headAt], s->runClass);
+                Put(s, s->head[s->headAt], s->runClass, s->runEnd);
             }
         }
         FillFromRun(s);
@@ -194,9 +205,10 @@ static void FillLong(NfdStream* s)
 }
 
 // Puts the marks from the first in canonical order: a stable sort by
-// class.
-static void Order(NfdStream* s, uint32_t first)
+// class; whether any moved.
+static bool Order(NfdStream* s, uint32_t first)
 {
+    bool moved = false;
     for (uint32_t i = first + 1; i < s->count; i++)
     {
         uint32_t c = s->window[i];
@@ -206,10 +218,12 @@ static void Order(NfdStream* s, uint32_t first)
         {
             s->window[j] = s->window[j - 1];
             s->classes[j] = s->classes[j - 1];
+            moved = true;
         }
         s->window[j] = c;
         s->classes[j] = k;
     }
+    return moved;
 }
 
 bool mlocNfdFill(NfdStream* s)
@@ -230,15 +244,18 @@ bool mlocNfdFill(NfdStream* s)
     }
     uint32_t d[nfdMaxDecomposition];
     size_t size = 0;
-    uint32_t n = Decompose(Decode(s, s->at, &size), d);
-    s->at += size;
+    size_t start = s->at;
+    uint32_t source = Decode(s, s->at, &size);
+    uint32_t n = Decompose(source, d);
+    bool changed = n != 1 || d[0] != source;
     uint32_t marks = 0;
     for (uint32_t i = 0; i < n; i++)
     {
         uint8_t ccc = Class(d[i]);
-        Put(s, d[i], ccc);
+        Put(s, d[i], ccc, s->at);
         marks = ccc == 0 ? s->count : marks;
     }
+    s->at += size;
     // The marks that follow, counted before they are read.
     uint32_t total = s->count;
     size_t end = s->at;
@@ -250,13 +267,18 @@ bool mlocNfdFill(NfdStream* s)
     {
         for (uint32_t k = 0; s->at < end; s->at += size)
         {
+            uint32_t mark = Decode(s, s->at, &size);
             (void)Mark(s, s->at, d, &k, &size);
+            changed = changed || k != 1 || d[0] != mark;
             for (uint32_t i = 0; i < k; i++)
             {
-                Put(s, d[i], Class(d[i]));
+                Put(s, d[i], Class(d[i]), s->at);
             }
         }
-        Order(s, marks);
+        if (Order(s, marks) || changed)
+        {
+            Changed(s, start, end);
+        }
         return true;
     }
     s->headCount = (uint8_t)(s->count - marks);
@@ -275,5 +297,6 @@ bool mlocNfdFill(NfdStream* s)
     s->runSub = 0;
     s->at = end;
     FillLong(s);
+    Changed(s, start, end);
     return true;
 }
