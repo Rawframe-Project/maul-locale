@@ -170,8 +170,8 @@ the oracle for every type.
   limits, the Jamo and UTF-8 bounds, and eight refusals. In the docs
   repository's oracle, ICU4C 79 builds each rule string (its escapes
   decoded as ICU's data build decodes them) and gives the elements of
-  each string the rules name. ICU refuses the same eight, and 291,578 of
-  the 292,004 strings have ICU's elements. The other 426 are
+  each string the rules name. ICU refuses the same eight, and 291,580 of
+  the 292,006 strings have ICU's elements. The other 426 are
   `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
   root. The quaternary bits are compared later through sort keys,
   since ICU's element iterator drops them. CI checks a hash of every
@@ -187,7 +187,7 @@ the oracle for every type.
 - **`conform_collation_builder --units`** (the cldr CI job): every
   type's unit reads back. The runtime iterator gives the builder's
   elements for every string its rules name and for 2,000 random strings
-  of its mappings and marks: 674,004 strings, none different.
+  of its mappings and marks: 674,006 strings, none different.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
   table equals ICU4C 79's outside Han's section, 6,110 units with the
   indexes. In the docs repository's oracle, its 409,032 queries over
