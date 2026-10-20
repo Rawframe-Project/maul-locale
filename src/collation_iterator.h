@@ -71,8 +71,13 @@ typedef struct CollationIterator
 
 // Starts reading text through the root alone; set tailoring after to
 // read through one.
-void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root,
-                                const uint8_t* text, size_t length);
+void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* root, NfdText text);
+
+static inline void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root,
+                                              const uint8_t* text, size_t length)
+{
+    mlocCollationIteratorStartText(it, root, mlocNfdUtf8(text, length));
+}
 
 // The next element; false at the end of the text. A completely
 // ignorable element is given as 0.

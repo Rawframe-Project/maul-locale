@@ -468,6 +468,42 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
     return mloc_success;
 }
 
+mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, size_t aLength,
+                            const uint16_t* b, size_t bLength, int* orderOut)
+{
+    Collator c;
+    if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
+        !ReadCollator(collator, &c))
+    {
+        return mloc_errorInvalid;
+    }
+    static const uint16_t none[1] = {0};
+    const uint16_t* x = a != nullptr ? a : none;
+    const uint16_t* y = b != nullptr ? b : none;
+    int order = c.fastLatin != 0 ? mlocFastLatinCompareUtf16(&c.fast, x, aLength, y, bLength)
+                                 : fastLatinBail;
+    *orderOut = order != fastLatinBail
+                    ? order
+                    : mlocCollationCompareText(&c.root, &c.settings, mlocNfdUtf16(x, aLength),
+                                               mlocNfdUtf16(y, bLength));
+    return mloc_success;
+}
+
+mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text, size_t length,
+                               uint8_t* key, size_t capacity, size_t* lengthOut)
+{
+    Collator c;
+    if (lengthOut == nullptr || (text == nullptr && length > 0) ||
+        (key == nullptr && capacity > 0) || !ReadCollator(collator, &c))
+    {
+        return mloc_errorInvalid;
+    }
+    static const uint16_t none[1] = {0};
+    *lengthOut = mlocCollationSortKeyText(
+        &c.root, &c.settings, mlocNfdUtf16(text != nullptr ? text : none, length), key, capacity);
+    return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
+}
+
 mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t length,
                           uint8_t* key, size_t capacity, size_t* lengthOut)
 {

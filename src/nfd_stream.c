@@ -13,8 +13,30 @@ enum
     nfdPlain = 0xC0,
 };
 
+// A UTF-16 code point and its units; U+FFFD for a lone surrogate.
+static uint32_t DecodeUtf16(const NfdStream* s, size_t at, size_t* sizeOut)
+{
+    uint32_t u = s->units[at];
+    *sizeOut = 1;
+    if (u - 0xD800 >= 0x800)
+    {
+        return u;
+    }
+    uint32_t t = at + 1 < s->length ? s->units[at + 1] : 0;
+    if (u < 0xDC00 && t - 0xDC00 < 0x400)
+    {
+        *sizeOut = 2;
+        return 0x10000 + ((u - 0xD800) << 10) + (t - 0xDC00);
+    }
+    return 0xFFFD;
+}
+
 static uint32_t Decode(const NfdStream* s, size_t at, size_t* sizeOut)
 {
+    if (s->units != nullptr)
+    {
+        return DecodeUtf16(s, at, sizeOut);
+    }
     if (s->text[at] < 0x80)
     {
         *sizeOut = 1;
@@ -65,9 +87,9 @@ static uint8_t Class(uint32_t codePoint)
     return codePoint < 0x300 ? 0 : muniGetCombiningClass(codePoint);
 }
 
-void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length)
+void mlocNfdStartText(NfdStream* s, NfdText text)
 {
-    *s = (NfdStream){.text = text, .length = length};
+    *s = (NfdStream){.text = text.bytes, .units = text.units, .length = text.length};
 }
 
 // Whether the code point at the byte is a mark whose decomposition holds

@@ -44,11 +44,14 @@ typedef enum Level
     levelQuaternary,
 } Level;
 
-// One text as a level reads it: the next byte and the pair of mini CEs
-// not yet compared, the current one in the low 16 bits.
+// One text as a level reads it, UTF-8 bytes or UTF-16 units: the next
+// byte or unit and the pair of mini CEs not yet compared, the current one
+// in the low 16 bits.
 typedef struct Side
 {
     const uint8_t* s;
+    const uint16_t* u;
+    bool utf16;
     size_t at;
     size_t length;
     uint32_t pair;
@@ -59,57 +62,25 @@ static uint32_t Word(const uint8_t* words, uint32_t index)
     return mlocFastLatinWord(words, index);
 }
 
-// The mini CE of a character from a lead byte above ASCII: U+2000 to
-// U+203F, U+FFFE and U+FFFF; a bail-out for any other or for bytes that
-// are not one of them.
-static uint32_t LookupThree(const uint8_t* words, uint32_t c, Side* x)
+enum
 {
-    if (x->at + 1 < x->length)
-    {
-        uint32_t t1 = x->s[x->at];
-        uint32_t t2 = x->s[x->at + 1];
-        x->at += 2;
-        if (c == 0xE2 && t1 == 0x80 && t2 >= 0x80 && t2 <= 0xBF)
-        {
-            return Word(words, fastLatinLimit - 0x80 + t2);
-        }
-        if (c == 0xEF && t1 == 0xBF && (t2 == 0xBE || t2 == 0xBF))
-        {
-            return t2 == 0xBE ? fastMergeWeight : maxMini;
-        }
-    }
-    return fastBailOut;
-}
+    // What a reader gives for U+FFFE, U+FFFF and a character the table
+    // does not hold.
+    readMerge = -1,
+    readMax = -2,
+    readOther = fastLatinChars + 1,
+};
 
-// The mini CE of a character the first level read, so known to be one
-// the table holds.
-static uint32_t LookupKnown(const uint8_t* words, uint32_t c, Side* x)
-{
-    if (c <= 0x7F)
-    {
-        return Word(words, c);
-    }
-    if (c <= latinMaxUtf8Lead)
-    {
-        return Word(words, ((c - 0xC2) << 6) + x->s[x->at++]);
-    }
-    uint32_t t2 = x->s[x->at + 1];
-    x->at += 2;
-    return c == 0xE2    ? Word(words, fastLatinLimit - 0x80 + t2)
-           : t2 == 0xBE ? fastMergeWeight
-                        : maxMini;
-}
-
-// The index of the character at the reader in the table, after which
-// *next is; -1 for U+FFFE and U+FFFF, which no contraction holds;
-// fastLatinChars + 1 for one the table does not hold.
-static int32_t NextIndex(const Side* x, size_t* next)
+// The index in the table of the UTF-8 character at the reader, after
+// which *next is: readMerge, readMax, or readOther for one the table
+// does not hold or bytes that are not UTF-8.
+static int32_t ReadUtf8(const Side* x, size_t* next)
 {
     size_t i = x->at;
     uint32_t c = x->s[i++];
+    *next = i;
     if (c <= 0x7F)
     {
-        *next = i;
         return (int32_t)c;
     }
     if (c >= 0xC2 && c <= latinMaxUtf8Lead && i != x->length && x->s[i] >= 0x80 && x->s[i] <= 0xBF)
@@ -128,10 +99,38 @@ static int32_t NextIndex(const Side* x, size_t* next)
         }
         if (c == 0xEF && t1 == 0xBF && (t2 == 0xBE || t2 == 0xBF))
         {
-            return -1;
+            return t2 == 0xBE ? readMerge : readMax;
         }
     }
-    return fastLatinChars + 1;
+    return readOther;
+}
+
+// ReadUtf8 for a UTF-16 unit: a lone surrogate is a character the table
+// does not hold, as U+FFFD is.
+static int32_t ReadUtf16(const Side* x, size_t* next)
+{
+    uint32_t c = x->u[x->at];
+    *next = x->at + 1;
+    return c <= fastLatinMax ? (int32_t)c
+           : c - fastPunctStart < fastPunctLimit - fastPunctStart
+               ? (int32_t)(c - fastPunctStart + fastLatinLimit)
+           : c == 0xFFFE ? readMerge
+           : c == 0xFFFF ? readMax
+                         : readOther;
+}
+
+static int32_t Read(const Side* x, size_t* next)
+{
+    return x->utf16 ? ReadUtf16(x, next) : ReadUtf8(x, next);
+}
+
+// The mini CE of what a reader gave.
+static uint32_t MiniOf(const uint8_t* words, int32_t index)
+{
+    return index >= 0 && index < fastLatinChars ? Word(words, (uint32_t)index)
+           : index == readMerge                 ? fastMergeWeight
+           : index == readMax                   ? maxMini
+                                                : fastBailOut;
 }
 
 // A character's pair of mini CEs from its word: an expansion's two, a
@@ -152,7 +151,7 @@ static uint32_t NextPair(const uint8_t* words, uint32_t mini, Side* x)
     if (x->at != x->length)
     {
         size_t next = 0;
-        int32_t c2 = NextIndex(x, &next);
+        int32_t c2 = Read(x, &next);
         if (c2 > fastLatinChars)
         {
             return fastBailOut;
@@ -314,25 +313,14 @@ static bool NextPrimaries(const FastLatinOptions* o, Side* x)
             x->pair = fastEndOfString;
             return true;
         }
-        uint32_t c = x->s[x->at++];
-        uint32_t mini = 0;
-        if (c <= 0x7F)
+        size_t next = 0;
+        int32_t index = Read(x, &next);
+        x->at = next;
+        if (index >= '0' && index <= '9' && o->digitsBail)
         {
-            if (c - '0' <= 9 && o->digitsBail)
-            {
-                return false;
-            }
-            mini = Word(o->words, c);
+            return false;
         }
-        else if (c >= 0xC2 && c <= latinMaxUtf8Lead && x->at != x->length && x->s[x->at] >= 0x80 &&
-                 x->s[x->at] <= 0xBF)
-        {
-            mini = Word(o->words, ((c - 0xC2) << 6) + x->s[x->at++]);
-        }
-        else
-        {
-            mini = LookupThree(o->words, c, x);
-        }
+        uint32_t mini = MiniOf(o->words, index);
         if (mini >= fastMinShort)
         {
             x->pair = mini & fastShortPrimaryMask;
@@ -364,8 +352,10 @@ static void NextWeights(const FastLatinOptions* o, Level level, Side* x)
             x->pair = fastEndOfString;
             return;
         }
-        uint32_t c = x->s[x->at++];
-        uint32_t mini = LookupKnown(o->words, c, x);
+        size_t next = 0;
+        int32_t index = Read(x, &next);
+        x->at = next;
+        uint32_t mini = MiniOf(o->words, index);
         if (mini < fastMinLong)
         {
             mini = NextPair(o->words, mini, x);
@@ -449,11 +439,9 @@ static int CompareLevel(const FastLatinOptions* o, Level level, Side x, Side y)
     }
 }
 
-int mlocFastLatinCompare(const FastLatinOptions* options, const uint8_t* a, size_t aLength,
-                         const uint8_t* b, size_t bLength)
+// Both texts through every level the options ask for.
+static int CompareSides(const FastLatinOptions* options, Side x, Side y)
 {
-    Side x = {a, 0, aLength, 0};
-    Side y = {b, 0, bLength, 0};
     int order = CompareLevel(options, levelPrimary, x, y);
     if (order == 0 && options->strength >= collationSecondary)
     {
@@ -472,6 +460,20 @@ int mlocFastLatinCompare(const FastLatinOptions* options, const uint8_t* a, size
         order = CompareLevel(options, levelQuaternary, x, y);
     }
     return order;
+}
+
+int mlocFastLatinCompare(const FastLatinOptions* options, const uint8_t* a, size_t aLength,
+                         const uint8_t* b, size_t bLength)
+{
+    return CompareSides(options, (Side){.s = a, .length = aLength},
+                        (Side){.s = b, .length = bLength});
+}
+
+int mlocFastLatinCompareUtf16(const FastLatinOptions* options, const uint16_t* a, size_t aLength,
+                              const uint16_t* b, size_t bLength)
+{
+    return CompareSides(options, (Side){.u = a, .utf16 = true, .length = aLength},
+                        (Side){.u = b, .utf16 = true, .length = bLength});
 }
 
 // A group's or script's first primary after the reordering; 0 when the

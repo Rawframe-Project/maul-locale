@@ -10,7 +10,8 @@
 // marks, Cyrillic, U+FFFE, U+FFFF, the middle dot). mlocCompare, which
 // tries the fast compare first, must order the texts as their sort keys
 // do (the keys never read the table), the mirror the other way, and
-// each text with itself as equal.
+// each text with itself as equal; their UTF-16 forms must compare and
+// key alike.
 
 #include "maul-locale/collate.h"
 #include "maul-locale/data.h"
@@ -149,6 +150,15 @@ static size_t Utf8(const uint8_t* bytes, size_t count, char* out)
     return n;
 }
 
+static size_t Utf16(const uint8_t* bytes, size_t count, uint16_t* out)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        out[i] = (uint16_t)CodePoint(bytes[i]);
+    }
+    return count;
+}
+
 static int KeyOrder(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
 {
     int c = memcmp(a, b, aLength < bLength ? aLength : bLength);
@@ -183,5 +193,15 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     Require(mlocGetSortKey(c, a, aLength, ka, sizeof(ka), &na) == mloc_success &&
             mlocGetSortKey(c, b, bLength, kb, sizeof(kb), &nb) == mloc_success);
     Require(KeyOrder(ka, na, kb, nb) == ab);
+    static uint16_t a16[maxText];
+    static uint16_t b16[maxText];
+    size_t a16Length = Utf16(data + 2, cut, a16);
+    size_t b16Length = Utf16(data + 2 + cut, count - cut, b16);
+    int order16 = 2;
+    size_t n16 = 0;
+    Require(mlocCompareUtf16(c, a16, a16Length, b16, b16Length, &order16) == mloc_success &&
+            order16 == ab);
+    Require(mlocGetSortKeyUtf16(c, a16, a16Length, kb, sizeof(kb), &n16) == mloc_success &&
+            n16 == na && memcmp(ka, kb, na) == 0);
     return 0;
 }

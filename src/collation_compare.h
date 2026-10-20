@@ -22,6 +22,7 @@
 
 #include "collation_reorder.h"
 #include "collation_tables.h"
+#include "nfd_stream.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -65,7 +66,15 @@ typedef struct CollationSettings
 CollationSettings mlocCollationDefaults(const CollationRoot* root);
 
 // -1, 0 or 1 as a sorts before, with or after b.
-int mlocCollationCompare(const CollationRoot* root, const CollationSettings* settings,
-                         const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength);
+int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,
+                             NfdText a, NfdText b);
+
+static inline int mlocCollationCompare(const CollationRoot* root, const CollationSettings* settings,
+                                       const uint8_t* a, size_t aLength, const uint8_t* b,
+                                       size_t bLength)
+{
+    return mlocCollationCompareText(root, settings, mlocNfdUtf8(a, aLength),
+                                    mlocNfdUtf8(b, bLength));
+}
 
 #endif

@@ -15,6 +15,7 @@
 #define MLOC_SRC_COLLATION_KEY_H
 
 #include "collation_compare.h"
+#include "nfd_stream.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -22,7 +23,14 @@
 // Writes the key of a text into out, at most capacity bytes, and returns
 // its length with the final 00. When that is more than capacity, the
 // bytes written are not a key.
-size_t mlocCollationSortKey(const CollationRoot* root, const CollationSettings* settings,
-                            const uint8_t* text, size_t length, uint8_t* out, size_t capacity);
+size_t mlocCollationSortKeyText(const CollationRoot* root, const CollationSettings* settings,
+                                NfdText text, uint8_t* out, size_t capacity);
+
+static inline size_t mlocCollationSortKey(const CollationRoot* root,
+                                          const CollationSettings* settings, const uint8_t* text,
+                                          size_t length, uint8_t* out, size_t capacity)
+{
+    return mlocCollationSortKeyText(root, settings, mlocNfdUtf8(text, length), out, capacity);
+}
 
 #endif

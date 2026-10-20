@@ -12,7 +12,8 @@
 // The two lines' sort keys (record mloc-0070) must order them as the
 // compare does, ties included, and the fast Latin compare (record
 // mloc-0072) must too wherever it does not bail out; it counts its
-// answers.
+// answers. Each line's UTF-16 form must compare as its UTF-8 form, in
+// both compares, and give the same key bytes.
 //
 // usage: conform_collation collation.mloc [--shifted] [--identical] CollationTest_CLDR_*.txt...
 
@@ -93,6 +94,51 @@ static int KeyOrder(const uint8_t* a, size_t aLength, const uint8_t* b, size_t b
     return (r > 0) - (r < 0);
 }
 
+// A well-formed UTF-8 text's UTF-16 form; its length in units.
+static size_t ToUtf16(const uint8_t* text, size_t length, uint16_t* out)
+{
+    size_t n = 0;
+    for (size_t i = 0; i < length;)
+    {
+        uint32_t c = text[i];
+        size_t extra = c < 0x80 ? 0 : c < 0xE0 ? 1 : c < 0xF0 ? 2 : 3;
+        c = extra == 0 ? c : c & (0x3Fu >> extra);
+        for (size_t k = 1; k <= extra; k++)
+        {
+            c = c << 6 | (text[i + k] & 0x3Fu);
+        }
+        i += 1 + extra;
+        if (c >= 0x10000)
+        {
+            out[n++] = (uint16_t)(0xD7C0 + (c >> 10));
+            out[n++] = (uint16_t)(0xDC00 | (c & 0x3FF));
+        }
+        else
+        {
+            out[n++] = (uint16_t)c;
+        }
+    }
+    return n;
+}
+
+// Whether the line's UTF-16 form orders against the one above as its
+// UTF-8 form does, in the general and the fast compare, and keys alike.
+static bool SameInUtf16(const CollationRoot* root, const CollationSettings* settings,
+                        const FastLatinOptions* fast, const uint16_t* a, size_t aLength,
+                        const uint16_t* b, size_t bLength, int order, const uint8_t* key,
+                        size_t keyLength)
+{
+    static uint8_t key16[4096];
+    int order16 = mlocCollationCompareText(root, settings, mlocNfdUtf16(a, aLength),
+                                           mlocNfdUtf16(b, bLength));
+    int fast16 =
+        fast != nullptr ? mlocFastLatinCompareUtf16(fast, a, aLength, b, bLength) : fastLatinBail;
+    size_t n =
+        mlocCollationSortKeyText(root, settings, mlocNfdUtf16(b, bLength), key16, sizeof(key16));
+    return order16 == order && (fast16 == fastLatinBail || fast16 == order) && n == keyLength &&
+           memcmp(key16, key, n) == 0;
+}
+
 static bool CheckFile(const CollationRoot* root, const CollationSettings* settings,
                       const FastLatinOptions* fast, const char* path)
 {
@@ -107,6 +153,7 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
     static uint8_t keys[2][4096];
     size_t lengths[2] = {0, 0};
     size_t keyLengths[2] = {0, 0};
+    size_t unitLengths[2] = {0, 0};
     int current = 0;
     bool have = false;
     size_t lines = 0;
@@ -141,14 +188,21 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
                                                    texts[current], lengths[current])
                             : fastLatinBail;
         fastAnswers += fastOrder != fastLatinBail;
+        static uint16_t units[2][1024];
+        unitLengths[current] = ToUtf16(texts[current], lengths[current], units[current]);
+        bool same16 =
+            !have || SameInUtf16(root, settings, fast, units[previous], unitLengths[previous],
+                                 units[current], unitLengths[current], order, keys[current],
+                                 keyLengths[current]);
         ties += order == 0;
-        if (order > 0 || keyOrder != order || (fastOrder != fastLatinBail && fastOrder != order))
+        if (order > 0 || keyOrder != order || (fastOrder != fastLatinBail && fastOrder != order) ||
+            !same16)
         {
             if (wrong++ < 10)
             {
-                printf("%s: line %zu sorts before the one above (compare %d, keys %d, fast %d): "
-                       "%s",
-                       path, lines, order, keyOrder, fastOrder, line);
+                printf("%s: line %zu sorts before the one above (compare %d, keys %d, fast %d, "
+                       "UTF-16 alike %d): %s",
+                       path, lines, order, keyOrder, fastOrder, same16, line);
             }
         }
         have = true;

@@ -135,6 +135,16 @@ MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKey(const mlocCollator* collator, 
 Writes a UTF-8 text's sort key in a collator's order: bytes whose memcmp order, a shorter key first when it is the other's start, is the order mlocCompare gives, ICU4C's bytes for the same order and options (record mloc-0070). The key ends with a 00 byte, counted in its length. Keys from collators of other options or another version do not compare.  @param collator   A collator mlocInitCollator made. @param text       The text; may be null when length is 0. @param length     Its length in bytes. @param key        Receives the key; may be null when capacity is 0. @param capacity   The room in key, in bytes. @param lengthOut  Receives the key's length, also when it does not fit. @return mloc_success; mloc_errorCapacity when the key does not fit (the bytes written are then no key); mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
 
 ```c
+MLOC_NODISCARD MLOC_API mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, size_t aLength, const uint16_t* b, size_t bLength, int* orderOut);
+```
+Compares two UTF-16 texts in a collator's order, as mlocCompare compares their UTF-8 forms. A lone surrogate compares as U+FFFD.  @param collator  A collator mlocInitCollator made. @param a         The first text; may be null when aLength is 0. @param aLength   Its length in 16-bit units. @param b         The second text; may be null when bLength is 0. @param bLength   Its length in 16-bit units. @param orderOut  Receives -1 when a sorts first, 1 when b does, 0 when they are equal up to the strength. @return mloc_success; mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text, size_t length, uint8_t* key, size_t capacity, size_t* lengthOut);
+```
+Writes a UTF-16 text's sort key: the bytes mlocGetSortKey writes for its UTF-8 form, a lone surrogate read as U+FFFD.  @param collator   A collator mlocInitCollator made. @param text       The text; may be null when length is 0. @param length     Its length in 16-bit units. @param key        Receives the key; may be null when capacity is 0. @param capacity   The room in key, in bytes. @param lengthOut  Receives the key's length, also when it does not fit. @return mloc_success; mloc_errorCapacity when the key does not fit (lengthOut has the length needed); mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
+
+```c
 MLOC_NODISCARD MLOC_API mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut);
 ```
 Gives the version of a collator's keys, to store beside them: it changes whenever the keys of some text could change, with the key format or the collation data the collator reads, and not with the options, which the caller keeps with the keys.  @param collator    A collator mlocInitCollator made. @param versionOut  Receives the version. @return mloc_success; mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
@@ -984,4 +994,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-179 functions across 21 headers.
+181 functions across 21 headers.

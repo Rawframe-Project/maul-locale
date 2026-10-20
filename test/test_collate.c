@@ -338,6 +338,76 @@ static void TestSortKeys(void)
           "a copy");
 }
 
+// UTF-16 compares and keys as UTF-8 does, supplementary characters and
+// the fast compare's range too; a lone surrogate as U+FFFD.
+static void TestUtf16(void)
+{
+    mlocCollator c;
+    static const char* const utf8[] = {"",
+                                       "a",
+                                       "b",
+                                       "A",
+                                       "\xC3\xA9",
+                                       "ch",
+                                       "c",
+                                       "\xE2\x80\x90",
+                                       "\xF0\x9F\x98\x80",
+                                       "\xF0\xA0\x80\x80x",
+                                       "\xEF\xBF\xBDz"};
+    static const uint16_t u0[] = {0};
+    static const uint16_t u1[] = {'a'};
+    static const uint16_t u2[] = {'b'};
+    static const uint16_t u3[] = {'A'};
+    static const uint16_t u4[] = {0xE9};
+    static const uint16_t u5[] = {'c', 'h'};
+    static const uint16_t u6[] = {'c'};
+    static const uint16_t u7[] = {0x2010};
+    static const uint16_t u8[] = {0xD83D, 0xDE00};
+    static const uint16_t u9[] = {0xD840, 0xDC00, 'x'};
+    static const uint16_t u10[] = {0xDC00, 'z'};
+    static const uint16_t* const utf16[] = {u0, u1, u2, u3, u4, u5, u6, u7, u8, u9, u10};
+    static const size_t lengths[] = {0, 1, 1, 1, 1, 2, 1, 1, 2, 3, 2};
+    static const char* const tags[] = {"en", "cs", "en-u-ks-identic", "en-u-ka-shifted"};
+    bool ok = true;
+    for (size_t t = 0; ok && t < sizeof(tags) / sizeof(tags[0]); t++)
+    {
+        ok = Make(tags[t], nullptr, &c);
+        for (size_t i = 0; ok && i < sizeof(utf8) / sizeof(utf8[0]); i++)
+        {
+            uint8_t k8[256];
+            uint8_t k16[256];
+            size_t n8 = 0;
+            size_t n16 = 0;
+            ok =
+                mlocGetSortKey(&c, utf8[i], strlen(utf8[i]), k8, sizeof(k8), &n8) == mloc_success &&
+                mlocGetSortKeyUtf16(&c, utf16[i], lengths[i], k16, sizeof(k16), &n16) ==
+                    mloc_success &&
+                n8 == n16 && memcmp(k8, k16, n8) == 0;
+            for (size_t j = 0; ok && j < sizeof(utf8) / sizeof(utf8[0]); j++)
+            {
+                int o8 = 2;
+                int o16 = 3;
+                ok = mlocCompare(&c, utf8[i], strlen(utf8[i]), utf8[j], strlen(utf8[j]), &o8) ==
+                         mloc_success &&
+                     mlocCompareUtf16(&c, utf16[i], lengths[i], utf16[j], lengths[j], &o16) ==
+                         mloc_success &&
+                     o8 == o16;
+            }
+        }
+    }
+    CHECK(ok, "UTF-16 orders and keys as UTF-8, a lone surrogate as U+FFFD");
+    int order = 0;
+    size_t n = 0;
+    CHECK(Make("en", nullptr, &c) &&
+              mlocCompareUtf16(&c, nullptr, 0, nullptr, 0, &order) == mloc_success && order == 0 &&
+              mlocCompareUtf16(&c, nullptr, 1, u1, 1, &order) == mloc_errorInvalid &&
+              mlocCompareUtf16(&c, u1, 1, u1, 1, nullptr) == mloc_errorInvalid &&
+              mlocGetSortKeyUtf16(&c, nullptr, 0, nullptr, 0, &n) == mloc_errorCapacity &&
+              mlocGetSortKeyUtf16(&c, u1, 1, nullptr, 0, nullptr) == mloc_errorInvalid &&
+              mlocGetSortKeyUtf16(nullptr, u1, 1, nullptr, 0, &n) == mloc_errorInvalid,
+          "UTF-16 refusals: null texts with lengths, null outputs, no collator");
+}
+
 static void TestRefusals(void)
 {
     mlocLocale en;
@@ -413,6 +483,7 @@ int main(void)
     TestTailoringVersions();
     TestEveryType();
     TestSortKeys();
+    TestUtf16();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

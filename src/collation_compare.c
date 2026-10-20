@@ -34,10 +34,10 @@ typedef struct Level
 } Level;
 
 static void Start(Level* l, const CollationRoot* root, const CollationSettings* settings,
-                  uint32_t level, const uint8_t* text, size_t length)
+                  uint32_t level, NfdText text)
 {
     *l = (Level){.settings = settings, .level = level};
-    mlocCollationIteratorStart(&l->it, root, text, length);
+    mlocCollationIteratorStartText(&l->it, root, text);
     l->it.tailoring = settings->tailoring;
     l->it.han = settings->han;
     l->it.numeric = settings->numeric;
@@ -162,13 +162,12 @@ static uint32_t Next(Level* l)
 }
 
 static int CompareLevel(const CollationRoot* root, const CollationSettings* settings,
-                        uint32_t level, const uint8_t* a, size_t aLength, const uint8_t* b,
-                        size_t bLength)
+                        uint32_t level, NfdText a, NfdText b)
 {
     Level left;
     Level right;
-    Start(&left, root, settings, level, a, aLength);
-    Start(&right, root, settings, level, b, bLength);
+    Start(&left, root, settings, level, a);
+    Start(&right, root, settings, level, b);
     uint32_t end = End(level);
     for (;;)
     {
@@ -222,13 +221,13 @@ static uint32_t CountSegment(Level* l, bool* ended)
 // with nothing buffered: each segment's secondaries are counted, then
 // read forwards again with the longer one's surplus skipped, so that
 // the pairs line up from the end, and the last pair that differs decides.
-static int Backwards(const CollationRoot* root, const CollationSettings* settings, const uint8_t* a,
-                     size_t aLength, const uint8_t* b, size_t bLength)
+static int Backwards(const CollationRoot* root, const CollationSettings* settings, NfdText a,
+                     NfdText b)
 {
     Level left;
     Level right;
-    Start(&left, root, settings, collationSecondary, a, aLength);
-    Start(&right, root, settings, collationSecondary, b, bLength);
+    Start(&left, root, settings, collationSecondary, a);
+    Start(&right, root, settings, collationSecondary, b);
     for (;;)
     {
         Level l = left;
@@ -279,12 +278,12 @@ static int64_t Rank(NfdStream* s)
 }
 
 // The identical level: the texts' NFD code points in order.
-static int Identical(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
+static int Identical(NfdText a, NfdText b)
 {
     NfdStream left;
     NfdStream right;
-    mlocNfdStart(&left, a, aLength);
-    mlocNfdStart(&right, b, bLength);
+    mlocNfdStartText(&left, a);
+    mlocNfdStartText(&right, b);
     for (;;)
     {
         int64_t l = Rank(&left);
@@ -300,28 +299,27 @@ static int Identical(const uint8_t* a, size_t aLength, const uint8_t* b, size_t 
     }
 }
 
-int mlocCollationCompare(const CollationRoot* root, const CollationSettings* settings,
-                         const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
+int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,
+                             NfdText a, NfdText b)
 {
-    int order = CompareLevel(root, settings, collationPrimary, a, aLength, b, bLength);
+    int order = CompareLevel(root, settings, collationPrimary, a, b);
     if (order == 0 && settings->strength >= collationSecondary)
     {
-        order = settings->backwards
-                    ? Backwards(root, settings, a, aLength, b, bLength)
-                    : CompareLevel(root, settings, collationSecondary, a, aLength, b, bLength);
+        order = settings->backwards ? Backwards(root, settings, a, b)
+                                    : CompareLevel(root, settings, collationSecondary, a, b);
     }
     if (order == 0 && settings->caseLevel)
     {
-        order = CompareLevel(root, settings, levelCase, a, aLength, b, bLength);
+        order = CompareLevel(root, settings, levelCase, a, b);
     }
     for (uint32_t level = collationTertiary;
          order == 0 && level <= settings->strength && level <= collationQuaternary; level++)
     {
-        order = CompareLevel(root, settings, level, a, aLength, b, bLength);
+        order = CompareLevel(root, settings, level, a, b);
     }
     if (order == 0 && settings->strength == collationIdentical)
     {
-        order = Identical(a, aLength, b, bLength);
+        order = Identical(a, b);
     }
     return order;
 }

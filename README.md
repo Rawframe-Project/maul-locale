@@ -126,7 +126,7 @@ looks messages up in by key or index. A chain formats them through a
 locale's fallbacks with a stated result for every failure. The tool
 records which source message a translation answers, so a changed
 source shows the translation stale.
-The library has 179 public functions.
+The library has 181 public functions.
 
 ## Building
 

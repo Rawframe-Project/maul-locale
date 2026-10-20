@@ -419,3 +419,5 @@ format.
 - `mlocCompare` compares text of the Latin and general punctuation
   ranges through ICU4C's fast Latin table, the general compare taking
   over for any other text (mloc-0072).
+- `mlocCompareUtf16` and `mlocGetSortKeyUtf16`: UTF-16 texts collate
+  and key as their UTF-8 forms, a lone surrogate as U+FFFD (mloc-0073).

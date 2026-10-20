@@ -65,4 +65,9 @@ bool mlocFastLatinOptions(const CollationRoot* root, const CollationSettings* se
 int mlocFastLatinCompare(const FastLatinOptions* options, const uint8_t* a, size_t aLength,
                          const uint8_t* b, size_t bLength);
 
+// mlocFastLatinCompare over UTF-16 (ICU4C's compareUTF16), a lone
+// surrogate bailing out.
+int mlocFastLatinCompareUtf16(const FastLatinOptions* options, const uint16_t* a, size_t aLength,
+                              const uint16_t* b, size_t bLength);
+
 #endif

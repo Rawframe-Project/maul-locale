@@ -98,9 +98,9 @@ typedef struct Stream
 } Stream;
 
 static void Open(Stream* s, const CollationRoot* root, const CollationSettings* settings,
-                 const uint8_t* text, size_t length)
+                 NfdText text)
 {
-    mlocCollationIteratorStart(&s->it, root, text, length);
+    mlocCollationIteratorStartText(&s->it, root, text);
     s->it.tailoring = settings->tailoring;
     s->it.han = settings->han;
     s->it.numeric = settings->numeric;
@@ -543,10 +543,10 @@ static void Difference(Sink* sink, int32_t diff)
     }
 }
 
-static void Identical(Sink* sink, const uint8_t* text, size_t length)
+static void Identical(Sink* sink, NfdText text)
 {
     NfdStream nfd;
-    mlocNfdStart(&nfd, text, length);
+    mlocNfdStartText(&nfd, text);
     int32_t previous = 0;
     uint32_t c = 0;
     while (mlocNfdNext(&nfd, &c))
@@ -572,12 +572,12 @@ static void Identical(Sink* sink, const uint8_t* text, size_t length)
     }
 }
 
-size_t mlocCollationSortKey(const CollationRoot* root, const CollationSettings* settings,
-                            const uint8_t* text, size_t length, uint8_t* out, size_t capacity)
+size_t mlocCollationSortKeyText(const CollationRoot* root, const CollationSettings* settings,
+                                NfdText text, uint8_t* out, size_t capacity)
 {
     Sink sink = {out, capacity, 0};
     Stream st;
-    Open(&st, root, settings, text, length);
+    Open(&st, root, settings, text);
     Primaries(&st, root, &sink);
     uint32_t strength = settings->strength;
     void (*const passes[])(Stream*, Sink*) = {Secondaries, Cases, Tertiaries, Quaternaries};
@@ -590,7 +590,7 @@ size_t mlocCollationSortKey(const CollationRoot* root, const CollationSettings* 
             continue;
         }
         Put(&sink, levelSeparator);
-        Open(&st, root, settings, text, length);
+        Open(&st, root, settings, text);
         passes[i](&st, &sink);
         // Each level but the case level ends with noElement's 01, which
         // ICU leaves out.
@@ -599,7 +599,7 @@ size_t mlocCollationSortKey(const CollationRoot* root, const CollationSettings* 
     if (strength == collationIdentical)
     {
         Put(&sink, levelSeparator);
-        Identical(&sink, text, length);
+        Identical(&sink, text);
     }
     Put(&sink, 0);
     return sink.length;

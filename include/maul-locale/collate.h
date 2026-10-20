@@ -171,6 +171,45 @@ extern "C"
                                                       const char* text, size_t length, uint8_t* key,
                                                       size_t capacity, size_t* lengthOut);
 
+    /// Compares two UTF-16 texts in a collator's order, as mlocCompare
+    /// compares their UTF-8 forms. A lone surrogate compares as U+FFFD.
+    ///
+    /// @param collator  A collator mlocInitCollator made.
+    /// @param a         The first text; may be null when aLength is 0.
+    /// @param aLength   Its length in 16-bit units.
+    /// @param b         The second text; may be null when bLength is 0.
+    /// @param bLength   Its length in 16-bit units.
+    /// @param orderOut  Receives -1 when a sorts first, 1 when b does, 0
+    ///                  when they are equal up to the strength.
+    /// @return mloc_success; mloc_errorInvalid for a collator the library
+    ///         did not make or a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocCompareUtf16(const mlocCollator* collator,
+                                                        const uint16_t* a, size_t aLength,
+                                                        const uint16_t* b, size_t bLength,
+                                                        int* orderOut);
+
+    /// Writes a UTF-16 text's sort key: the bytes mlocGetSortKey writes
+    /// for its UTF-8 form, a lone surrogate read as U+FFFD.
+    ///
+    /// @param collator   A collator mlocInitCollator made.
+    /// @param text       The text; may be null when length is 0.
+    /// @param length     Its length in 16-bit units.
+    /// @param key        Receives the key; may be null when capacity is 0.
+    /// @param capacity   The room in key, in bytes.
+    /// @param lengthOut  Receives the key's length, also when it does not
+    ///                   fit.
+    /// @return mloc_success; mloc_errorCapacity when the key does not fit
+    ///         (lengthOut has the length needed); mloc_errorInvalid for
+    ///         a collator the library did not make or a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator,
+                                                           const uint16_t* text, size_t length,
+                                                           uint8_t* key, size_t capacity,
+                                                           size_t* lengthOut);
+
     /// Gives the version of a collator's keys, to store beside them: it
     /// changes whenever the keys of some text could change, with the key
     /// format or the collation data the collator reads, and not with the

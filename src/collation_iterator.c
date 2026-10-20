@@ -11,8 +11,7 @@
 static_assert((int)collationNumericElements > (int)collationMaxExpansion,
               "an expansion fits the elements");
 
-void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root,
-                                const uint8_t* text, size_t length)
+void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* root, NfdText text)
 {
     it->root = root;
     it->tailoring = nullptr;
@@ -23,7 +22,7 @@ void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root
     it->upcomingCount = 0;
     it->historyAt = 0;
     it->historyCount = 0;
-    mlocNfdStart(&it->nfd, text, length);
+    mlocNfdStartText(&it->nfd, text);
 }
 
 // The upcoming code point at the index, read from the stream when it is

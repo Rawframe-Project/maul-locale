@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// UTF-8 text read as its NFD (record mloc-0066), a code point at a time,
-// through Maul Unicode's decomposition and combining classes; ill-formed
-// bytes read as U+FFFD, one for each maximal ill-formed subpart. Nothing is
+// UTF-8 or UTF-16 text read as its NFD (record mloc-0066), a code point
+// at a time, through Maul Unicode's decomposition and combining classes;
+// ill-formed bytes read as U+FFFD, one for each maximal ill-formed
+// subpart, and so does a lone surrogate. Nothing is
 // allocated and nothing limits the marks after a starter.
 //
 // The stream fills a window: a segment (code points up to the next one
@@ -28,11 +29,31 @@ enum
     nfdMaxDecomposition = 8,
 };
 
+// A text in UTF-8 (bytes) or UTF-16 (units, bytes null); its length in
+// bytes or units.
+typedef struct NfdText
+{
+    const uint8_t* bytes;
+    const uint16_t* units;
+    size_t length;
+} NfdText;
+
+static inline NfdText mlocNfdUtf8(const uint8_t* bytes, size_t length)
+{
+    return (NfdText){bytes, nullptr, length};
+}
+
+static inline NfdText mlocNfdUtf16(const uint16_t* units, size_t length)
+{
+    return (NfdText){nullptr, units, length};
+}
+
 typedef struct NfdStream
 {
     const uint8_t* text;
+    const uint16_t* units;
     size_t length;
-    // The first byte not yet read into a window.
+    // The first byte or unit not yet read into a window.
     size_t at;
     // The window: code points [next, count) are still to be given.
     uint32_t window[nfdWindow];
@@ -54,7 +75,12 @@ typedef struct NfdStream
     uint32_t runSub;
 } NfdStream;
 
-void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length);
+void mlocNfdStartText(NfdStream* s, NfdText text);
+
+static inline void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length)
+{
+    mlocNfdStartText(s, mlocNfdUtf8(text, length));
+}
 
 // Fills the window with the next code points when it is empty; false at
 // the end of the text.

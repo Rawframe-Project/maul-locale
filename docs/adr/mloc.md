@@ -77,3 +77,4 @@ are listed in [README.md](README.md).
 | [mloc-0070](mloc-0070-sort-keys.md) | Sort keys: ICU4C's bytes, written level by level | Accepted |
 | [mloc-0071](mloc-0071-tailorings.md) | Tailorings: the builder and its weight allocator | Accepted |
 | [mloc-0072](mloc-0072-fast-latin.md) | The fast Latin table: ICU4C's, built for each unit over NFD | Accepted |
+| [mloc-0073](mloc-0073-collation-utf16.md) | Collation over UTF-16: one iterator, a lone surrogate as U+FFFD | Accepted |
