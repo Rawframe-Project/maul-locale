@@ -221,7 +221,8 @@ static void TestLowerLevels(void)
               RootElementsSecondaryAfter(&e, 0, 0x8A00) == 0x10000 &&
               RootElementsSecondaryAfter(&e, 13, 0x0500) == 0x8000 &&
               RootElementsSecondaryAfter(&e, 16, 0x0300) == 0x0500 &&
-              RootElementsSecondaryAfter(&e, 8, 0x0500) == 0x8000,
+              RootElementsSecondaryAfter(&e, 8, 0x0500) == 0x8000 &&
+              RootElementsSecondaryAfter(&e, 16, 0x0100) == 0x0300,
           "the secondary after, or the limit of the level");
     CHECK(RootElementsTertiaryBefore(&e, 0, 0, 0x3D02) == 0 &&
               RootElementsTertiaryBefore(&e, 0, 0x8800, 0x0500) == 0x0100 &&
@@ -275,11 +276,15 @@ static void TestRefusals(void)
 // no ignorables, no fixed bytes.
 static void TestWithoutHan(void)
 {
-    RootMapping mappings[2] = {
+    // U+FFFD to U+FFFF are left out whatever their elements.
+    RootMapping mappings[5] = {
         {.text = {0x61}, .textLength = 1, .elements = {0x2A10000005000500ULL}, .elementCount = 1},
         {.text = {0x62}, .textLength = 1, .elements = {0x2A12000005000500ULL}, .elementCount = 1},
+        {.text = {0xFFFD}, .textLength = 1, .elements = {0x3100000005000500ULL}, .elementCount = 1},
+        {.text = {0xFFFE}, .textLength = 1, .elements = {0x3200000005000500ULL}, .elementCount = 1},
+        {.text = {0xFFFF}, .textLength = 1, .elements = {0x3300000005000500ULL}, .elementCount = 1},
     };
-    RootTable t = {.mappings = mappings, .count = 2};
+    RootTable t = {.mappings = mappings, .count = 5};
     RootElements e = {0};
     char error[128] = "";
     int ok = RootElementsBuild(&t, &e, error, sizeof(error));
@@ -292,6 +297,52 @@ static void TestWithoutHan(void)
     RootElementsFree(&e);
 }
 
+// A root of Han 4E00..4E05 (primaries FD 02 02 to FD 02 0E) and U+0061
+// with the given lines added: whether its units are the given ones.
+static bool Units(const char* lines, const uint32_t* units, size_t count)
+{
+    char text[512];
+    snprintf(text, sizeof(text), "[Unified_Ideograph 4E00..4E05]\n0061; [2A 10, 05, 05]\n%s",
+             lines);
+    RootElements e = {0};
+    char error[128] = "";
+    bool same = Build(text, &e, error, sizeof(error)) && Same(&e, units, count);
+    RootElementsFree(&e);
+    return same;
+}
+
+#define UNITS(lines, ...)                                                                          \
+    Units(lines, (const uint32_t[]){__VA_ARGS__},                                                  \
+          sizeof((const uint32_t[]){__VA_ARGS__}) / sizeof(uint32_t))
+
+static void TestHanEdges(void)
+{
+    CHECK(UNITS("2F00; [U+4E00, 70, 20]\n", 5, 5, 5, 0x05000500, 0, 0x2A100000, 0xFD020200,
+                0x70002080, 0xFD020400, 0xFD020E02, 0xFE040200, 0xFF020200, 0xFFFD0000, 0xFFFF0000,
+                0xFFFFFF00),
+          "Han's first character with weights of its own");
+    CHECK(UNITS("2F05; [U+4E05, 70, 20]\n0062; [FD 02 0E, 70, 20]\n", 5, 5, 5, 0x05000500, 0,
+                0x2A100000, 0xFD020200, 0xFD020C02, 0x70002080, 0xFD020E00, 0x70002080, 0xFE040200,
+                0xFF020200, 0xFFFD0000, 0xFFFF0000, 0xFFFFFF00),
+          "Han's last character and the primary past it, each with weights of its own");
+    CHECK(UNITS("0062; [FD 02 0E, 70, 20]\n", 5, 5, 5, 0x05000500, 0, 0x2A100000, 0xFD020200,
+                0xFD020E02, 0x70002080, 0xFE040200, 0xFF020200, 0xFFFD0000, 0xFFFF0000, 0xFFFFFF00),
+          "the primary past Han's last character alone");
+}
+
+static void TestRunLimits(void)
+{
+    CHECK(UNITS("[top_byte\t2A\tLatn\tCOMPRESS]\n"
+                "0062; [0D 50 02, 05, 05]\n0063; [0D 50 81, 05, 05]\n0064; [0D 51 02, 05, 05]\n"
+                "0065; [0D 60 02, 05, 05]\n0066; [0D 60 82, 05, 05]\n0067; [0D 61 04, 05, 05]\n"
+                "0068; [2A FA, 05, 05]\n0069; [2A FC, 05, 05]\n006A; [2A FE, 05, 05]\n"
+                "006B; [2B 05, 05, 05]\n",
+                5, 5, 5, 0x05000500, 0, 0x0D500200, 0x0D51027F, 0x0D600200, 0x0D608200, 0x0D610400,
+                0x2A100000, 0x2AFA0000, 0x2AFE0002, 0x2B050000, 0xFD020200, 0xFD020E02, 0xFE040200,
+                0xFF020200, 0xFFFD0000, 0xFFFF0000, 0xFFFFFF00),
+          "a run of step 127, none of 128, none past a compressible lead byte");
+}
+
 int main(void)
 {
     TestTable();
@@ -301,6 +352,8 @@ int main(void)
     TestLowerLevels();
     TestRefusals();
     TestWithoutHan();
+    TestHanEdges();
+    TestRunLimits();
     remove(s_path);
     return s_failures == 0 ? 0 : 1;
 }
