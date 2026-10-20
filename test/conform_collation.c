@@ -10,7 +10,9 @@
 // conformance test does, a line holding a surrogate is passed over, since
 // UTF-8 cannot carry one; the next line is compared with the last read.
 // The two lines' sort keys (record mloc-0070) must order them as the
-// compare does, ties included.
+// compare does, ties included, and the fast Latin compare (record
+// mloc-0072) must too wherever it does not bail out; it counts its
+// answers.
 //
 // usage: conform_collation collation.mloc [--shifted] [--identical] CollationTest_CLDR_*.txt...
 
@@ -19,6 +21,7 @@
 #endif
 
 #include "collation_compare.h"
+#include "collation_fast_compare.h"
 #include "collation_key.h"
 #include "collation_tables.h"
 #include "data_format.h"
@@ -91,7 +94,7 @@ static int KeyOrder(const uint8_t* a, size_t aLength, const uint8_t* b, size_t b
 }
 
 static bool CheckFile(const CollationRoot* root, const CollationSettings* settings,
-                      const char* path)
+                      const FastLatinOptions* fast, const char* path)
 {
     FILE* f = fopen(path, "rb");
     if (f == nullptr)
@@ -110,6 +113,7 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
     size_t skipped = 0;
     size_t wrong = 0;
     size_t ties = 0;
+    size_t fastAnswers = 0;
     while (fgets(line, sizeof(line), f) != nullptr)
     {
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
@@ -132,13 +136,19 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
         int keyOrder = have ? KeyOrder(keys[previous], keyLengths[previous], keys[current],
                                        keyLengths[current])
                             : -1;
+        int fastOrder = have && fast != nullptr
+                            ? mlocFastLatinCompare(fast, texts[previous], lengths[previous],
+                                                   texts[current], lengths[current])
+                            : fastLatinBail;
+        fastAnswers += fastOrder != fastLatinBail;
         ties += order == 0;
-        if (order > 0 || keyOrder != order)
+        if (order > 0 || keyOrder != order || (fastOrder != fastLatinBail && fastOrder != order))
         {
             if (wrong++ < 10)
             {
-                printf("%s: line %zu sorts before the one above (compare %d, keys %d): %s", path,
-                       lines, order, keyOrder, line);
+                printf("%s: line %zu sorts before the one above (compare %d, keys %d, fast %d): "
+                       "%s",
+                       path, lines, order, keyOrder, fastOrder, line);
             }
         }
         have = true;
@@ -146,8 +156,8 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
     }
     fclose(f);
     printf("%s: %zu lines, %zu with a surrogate passed over, %zu equal to the one above, "
-           "%zu out of order\n",
-           path, lines, skipped, ties, wrong);
+           "%zu out of order; %zu answered by the fast compare\n",
+           path, lines, skipped, ties, wrong, fastAnswers);
     return wrong == 0 && lines > skipped;
 }
 
@@ -191,10 +201,14 @@ int main(int argc, char** argv)
         settings.strength =
             strcmp(argv[first], "--identical") == 0 ? collationIdentical : settings.strength;
     }
-    bool ok = first < argc;
+    // The identical strength has no fast compare.
+    FastLatinOptions fast;
+    bool fastServes =
+        mlocFastLatinOptions(&root, &settings, root.fastLatin, root.fastLatinCount, &fast);
+    bool ok = first < argc && (fastServes || settings.strength == collationIdentical);
     for (int i = first; i < argc; i++)
     {
-        ok = CheckFile(&root, &settings, argv[i]) && ok;
+        ok = CheckFile(&root, &settings, fastServes ? &fast : nullptr, argv[i]) && ok;
     }
     return ok ? 0 : 1;
 }

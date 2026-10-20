@@ -5,6 +5,7 @@
 
 #include "catalog_hash.h"
 #include "collation_compare.h"
+#include "collation_fast_compare.h"
 #include "collation_key.h"
 #include "collation_reorder.h"
 #include "collation_tables.h"
@@ -36,6 +37,8 @@ typedef struct Collator
     uint8_t tailored;
     // 1 when it orders Han by the radical-stroke table.
     uint8_t radical;
+    // 1 when the fast Latin compare serves its settings.
+    uint8_t fastLatin;
     // The keys' version: the format, the root unit's bytes and the
     // tailoring's, hashed.
     uint64_t version;
@@ -45,6 +48,7 @@ typedef struct Collator
     // Its reorder pointer is set at each compare: a collator is copied.
     CollationSettings settings;
     CollationReorder reorder;
+    FastLatinOptions fast;
 } Collator;
 
 static_assert(sizeof(Collator) <= sizeof(mlocCollator), "a collator fits its value");
@@ -371,6 +375,20 @@ static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan s
     return result;
 }
 
+// The fast Latin compare's options for the collator's settings, over
+// its tailoring's table, or the root's when it names the root's or the
+// locale has no tailored mappings.
+static void SetFastLatin(Collator* c)
+{
+    const CollationRoot* unit =
+        c->tailored != 0 && c->tailoring.fastLatinCount != fastLatinRootTable ? &c->tailoring
+                                                                              : &c->root;
+    CollationSettings s = c->settings;
+    s.reorder = c->reordered != 0 ? &c->reorder : nullptr;
+    c->fastLatin =
+        mlocFastLatinOptions(&c->root, &s, unit->fastLatin, unit->fastLatinCount, &c->fast) ? 1 : 0;
+}
+
 mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
                             const mlocLocale* locale, const mlocCollatorOptions* options)
 {
@@ -404,6 +422,7 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     {
         return result;
     }
+    SetFastLatin(&c);
     memset(collatorOut, 0, sizeof(*collatorOut));
     memcpy(collatorOut, &c, sizeof(c));
     return mloc_success;
@@ -439,8 +458,13 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
     {
         return mloc_errorInvalid;
     }
-    *orderOut = mlocCollationCompare(&c.root, &c.settings, (const uint8_t*)(a != nullptr ? a : ""),
-                                     aLength, (const uint8_t*)(b != nullptr ? b : ""), bLength);
+    const uint8_t* x = (const uint8_t*)(a != nullptr ? a : "");
+    const uint8_t* y = (const uint8_t*)(b != nullptr ? b : "");
+    int order =
+        c.fastLatin != 0 ? mlocFastLatinCompare(&c.fast, x, aLength, y, bLength) : fastLatinBail;
+    *orderOut = order != fastLatinBail
+                    ? order
+                    : mlocCollationCompare(&c.root, &c.settings, x, aLength, y, bLength);
     return mloc_success;
 }
 

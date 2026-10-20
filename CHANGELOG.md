@@ -415,5 +415,7 @@ format.
   file; the root keeps CLDR's code-point order (mloc-0071).
 - The collation data file holds ICU4C's fast Latin table for the root
   and each collation type, built over NFD and checked as the file is
-  opened, for the fast compare to come (mloc-0072). Collation versions
-  change with it.
+  opened (mloc-0072). Collation versions change with it.
+- `mlocCompare` compares text of the Latin and general punctuation
+  ranges through ICU4C's fast Latin table, the general compare taking
+  over for any other text (mloc-0072).

@@ -141,6 +141,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/collation_tables.c
     src/collation_iterator.c
     src/collation_compare.c
+    src/collation_fast_compare.c
     src/collation_reorder.c
     src/collate.c
     src/collation_key.c
@@ -562,6 +563,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                 "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
         endif()
         target_compile_definitions(test_collation_fast_latin PRIVATE
+                                   MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
+    maul_add_test(collation_fast_compare WHITEBOX)
+    if(TARGET test_collation_fast_compare)
+        if(EMSCRIPTEN)
+            target_link_options(test_collation_fast_compare PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collation_fast_compare PRIVATE
                                    MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
     maul_add_test(collation_compare WHITEBOX)

@@ -79,7 +79,50 @@ the table cannot be ICU's data copied.
 
 ## Consequences
 
-- To come: the fast compare over UTF-8 with the options and the
-  identical prefix skipped, then the differential against the general
-  compare (sub-slices (e2) and (e3)), each amending this record.
+- To come: the identical prefix skipped before either compare, from a
+  set of the characters a compare may not start at (ICU4C's unsafe
+  backward set: every non-initial character of a contraction, and of
+  four-character ones too, such as Hungarian's ddzs, which the table
+  alone does not show), built by the generator for both compares
+  (sub-slice (g)); the differential fuzz of the two compares (e3).
 - Collation versions change: the root's unit holds the table.
+
+## Amendment (a), 2026-10-20: the fast compare
+
+- **`mlocCompare` tries the fast compare first,** ICU4C's
+  `compareUTF8` over the collator's table (its tailoring's, or the
+  root's when the tailoring names it or maps nothing), and runs the
+  general one when it bails out: a character outside the table, a
+  contraction whose list says so, a digit under numeric ordering, or
+  differing secondaries backwards.
+- **The options** are ICU4C's `getOptions`, made once with the
+  collator: the variable top as the head's group top when shifted
+  (none for a top that ends no group), case bits and upper-first
+  tertiaries from case first unless the case level is on, digits
+  bailing out when a reordering moves them apart, and no fast compare
+  at the identical strength or for a reordering that moves the groups
+  before Latin.
+- **No primaries array:** a character's primary comes from its word,
+  the same two comparisons the array saved ICU (slice (g) measures
+  it). The collator stays 1,024 bytes.
+- **Each level is one reader over both texts,** as the general compare
+  reads them, rather than ICU's copy of the loop for each side and
+  level.
+
+### Proof
+
+- `test_collation_fast_compare`: 2,000 random pairs of fast characters
+  (with a combining acute, Cyrillic a, a middle dot and U+FFFE among
+  them, half the pairs differing in one byte) for each of 35 tags:
+  tailorings with contractions (cs, da, de phonebook, es traditional,
+  hu, vi traditional, sv, pl, lt, cy), French backwards, en_US_POSIX
+  and a search type without a table, and every option: shifted to each
+  group, each strength, case first, the case level, backwards,
+  numeric, reorderings and identical. `mlocCompare` orders each pair as
+  its sort keys do (the keys never read the table). Over the root's
+  table it answers more than a quarter of the pairs itself, as the
+  general compare does. A compare with its tertiary order reversed
+  fails all three checks.
+- `conform_collation`: CollationTest's lines, non-ignorable and shifted,
+  through the fast compare where it answers (1,480 and 1,538 pairs),
+  all as the general compare orders them.
