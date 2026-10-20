@@ -80,6 +80,21 @@ the oracle for every type.
     their own (the radicals' variants) split Han's runs elsewhere.
     The same delta units occur in both.
 
+- **The mappings while the builder makes them**
+  (`tools/mlocgen/collation_mappings.c`) are ICU's
+  `CollationDataBuilder` and its `DataBuilderCollationIterator`, which
+  give a reset's elements and an extension's:
+  - A code point the tailoring maps is read from the tailoring alone,
+    any other from the root.
+  - A code point's first mapping copies the root's mappings of it when
+    the root has a prefix or contraction for it or the new mapping has
+    a context.
+  - The lookup is the runtime iterator's: the longest prefix, then the
+    longest contraction, contiguous or discontiguous.
+  - Where a prefix has contractions but no mapping of the code point
+    alone, and none of them matches, the next shorter matching prefix
+    is used, as ICU's built contexts do.
+
 ## Proof
 
 - **`test_collation_weights`:**
@@ -96,6 +111,16 @@ the oracle for every type.
   bits dropped, a common unit after weights below it, Han's runs, the
   root's own primaries); every query on it; runs across a byte's end
   written by hand; each refusal.
+- **`test_collation_mappings`:** the root's contraction, a
+  discontiguous one, a prefix, and the elements given by rule; then
+  tailored mappings: one replacing the root's, the root's contraction
+  copied, contractions and prefixes added, a prefix's fallback over two
+  lengths, a replacement, ignorable elements, an overlong expansion,
+  1,024 code points, and the refusals.
+- **`conform_collation_mappings`** (the cldr CI job): with nothing
+  tailored, the lookup gives the runtime iterator's elements over the
+  root unit for every code point, every mapping's prefix and text, and
+  300,000 random strings of mapping pieces and marks.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
   table equals ICU4C 79's outside Han's section, 6,110 units with the
   indexes. In the docs repository's oracle, its 409,032 queries over
