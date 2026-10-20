@@ -43,6 +43,13 @@ typedef struct Table
 // Zeroed memory, or the program stops.
 void* GenAllocate(size_t size);
 
+// The names of a CLDR directory's XML files without ".xml", sorted (for
+// "main", common/main's); the program stops when it cannot be listed.
+// GenFreeList frees them.
+char** GenListXml(const char* commonDirectory, const char* subdirectory, int* countOut);
+
+void GenFreeList(char** names, int count);
+
 // Stores a little-endian integer of 1 to 8 bytes.
 void GenPut(uint8_t* p, uint64_t value, int bytes);
 

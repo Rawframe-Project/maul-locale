@@ -24,11 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <dirent.h>
-#endif
 
 static_assert((int)rbnfMultiplier == (int)spelloutMultiplier &&
                   (int)rbnfModulus == (int)spelloutModulus && (int)rbnfSame == (int)spelloutSame &&
@@ -42,7 +37,6 @@ static_assert((int)rbnfNegative == (int)spelloutNegative && (int)rbnfNaN == (int
 
 enum
 {
-    maxFiles = 512,
     maxSystems = 64,
 };
 
@@ -461,62 +455,6 @@ uint8_t* SpelloutPayload(const RbnfGroup* group, size_t* sizeOut)
     return out.bytes;
 }
 
-static int CompareNames(const void* a, const void* b)
-{
-    return strcmp(*(const char* const*)a, *(const char* const*)b);
-}
-
-// The ids of common/rbnf's files, sorted; the caller frees each and the
-// list.
-static char** ListFiles(const char* commonDirectory, int* countOut)
-{
-    char** ids = GenAllocate(sizeof(char*) * maxFiles);
-    int count = 0;
-    char path[4096];
-#ifdef _WIN32
-    snprintf(path, sizeof(path), "%s/rbnf/*.xml", commonDirectory);
-    struct _finddata_t found;
-    intptr_t handle = _findfirst(path, &found);
-    for (int more = handle != -1; more; more = _findnext(handle, &found) == 0)
-    {
-        const char* name = found.name;
-#else
-    snprintf(path, sizeof(path), "%s/rbnf", commonDirectory);
-    DIR* directory = opendir(path);
-    if (directory == nullptr)
-    {
-        GenDie("cannot list", path);
-    }
-    for (struct dirent* item = readdir(directory); item != nullptr; item = readdir(directory))
-    {
-        const char* name = item->d_name;
-#endif
-        size_t length = strlen(name);
-        if (length < 5 || strcmp(name + length - 4, ".xml") != 0)
-        {
-            continue;
-        }
-        if (count == maxFiles)
-        {
-            GenDie("too many files in", path);
-        }
-        ids[count] = GenAllocate(length - 3);
-        memcpy(ids[count], name, length - 4);
-        count++;
-    }
-#ifdef _WIN32
-    if (handle != -1)
-    {
-        _findclose(handle);
-    }
-#else
-    closedir(directory);
-#endif
-    qsort(ids, (size_t)count, sizeof(char*), CompareNames);
-    *countOut = count;
-    return ids;
-}
-
 static const char* const s_groups[spelloutGroupCount] = {"SpelloutRules", "OrdinalRules",
                                                          "NumberingSystemRules"};
 static const uint32_t s_kinds[spelloutGroupCount] = {kindSpelloutRules, kindSpelloutOrdinals,
@@ -757,7 +695,7 @@ int GenerateSpellout(const char* commonDirectory, DataFile* file, char* errorOut
         return 0;
     }
     int count = 0;
-    char** ids = ListFiles(commonDirectory, &count);
+    char** ids = GenListXml(commonDirectory, "rbnf", &count);
     Map sets = {0};
     int ok = 1;
     for (int i = 0; i < count && ok; i++)
@@ -769,11 +707,7 @@ int GenerateSpellout(const char* commonDirectory, DataFile* file, char* errorOut
     {
         TitlecaseAdd(&s_titlecase, kindSpelloutTitlecase, file);
     }
-    for (int i = 0; i < count; i++)
-    {
-        free(ids[i]);
-    }
-    free(ids);
+    GenFreeList(ids, count);
     MapFree(&sets);
     KeysClose(&keys);
     return ok;

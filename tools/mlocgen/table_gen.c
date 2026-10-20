@@ -11,6 +11,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <dirent.h>
+#endif
 
 void GenDie(const char* message, const char* detail)
 {
@@ -221,4 +226,79 @@ void TableAddSparseUnit(const Table* t, const uint16_t* codes, uint8_t* const* r
     }
     DataFileAdd(file, kind, key, unit, size);
     free(unit);
+}
+
+static int CompareNames(const void* a, const void* b)
+{
+    return strcmp(*(const char* const*)a, *(const char* const*)b);
+}
+
+static void AddName(char*** names, int* count, int* capacity, const char* name)
+{
+    size_t length = strlen(name);
+    if (length < 5 || strcmp(name + length - 4, ".xml") != 0)
+    {
+        return;
+    }
+    if (*count == *capacity)
+    {
+        *capacity = *capacity * 2 + 64;
+        char** grown = (char**)realloc((void*)*names, sizeof(char*) * (size_t)*capacity);
+        if (grown == nullptr)
+        {
+            GenDie("out of memory", "listing files");
+        }
+        *names = grown;
+    }
+    (*names)[*count] = GenAllocate(length - 3);
+    memcpy((*names)[*count], name, length - 4);
+    (*count)++;
+}
+
+char** GenListXml(const char* commonDirectory, const char* subdirectory, int* countOut)
+{
+    char** names = nullptr;
+    int count = 0;
+    int capacity = 0;
+    char path[4096];
+#ifdef _WIN32
+    snprintf(path, sizeof(path), "%s/%s/*.xml", commonDirectory, subdirectory);
+    struct _finddata_t found;
+    intptr_t handle = _findfirst(path, &found);
+    for (int more = handle != -1; more; more = _findnext(handle, &found) == 0)
+    {
+        AddName(&names, &count, &capacity, found.name);
+    }
+    if (handle != -1)
+    {
+        _findclose(handle);
+    }
+#else
+    snprintf(path, sizeof(path), "%s/%s", commonDirectory, subdirectory);
+    DIR* directory = opendir(path);
+    if (directory == nullptr)
+    {
+        GenDie("cannot list", path);
+    }
+    for (struct dirent* item = readdir(directory); item != nullptr; item = readdir(directory))
+    {
+        AddName(&names, &count, &capacity, item->d_name);
+    }
+    closedir(directory);
+#endif
+    if (count > 0)
+    {
+        qsort((void*)names, (size_t)count, sizeof(char*), CompareNames);
+    }
+    *countOut = count;
+    return names;
+}
+
+void GenFreeList(char** names, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        free(names[i]);
+    }
+    free((void*)names);
 }

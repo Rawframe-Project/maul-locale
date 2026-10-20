@@ -33,12 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <dirent.h>
-#endif
-
 enum
 {
     // A compact slot's pattern index where CLDR names none, and where it
@@ -46,7 +40,6 @@ enum
     numberCompactAbsent = 0xFFFF,
     numberCompactNone = 0xFFFE,
     maxSystems = 96,
-    maxLocales = 2048,
     maxKey = 64,
     maxAffix = 128,
 };
@@ -1335,62 +1328,6 @@ static void FreeValue(const char* key, void* value, void* context)
     free(value);
 }
 
-static int CompareNames(const void* a, const void* b)
-{
-    return strcmp(*(const char* const*)a, *(const char* const*)b);
-}
-
-// The ids of common/main's files, sorted; the caller frees each and the
-// list.
-static char** ListLocales(const char* commonDirectory, int* countOut)
-{
-    char** ids = GenAllocate(sizeof(char*) * maxLocales);
-    int count = 0;
-    char path[4096];
-#ifdef _WIN32
-    snprintf(path, sizeof(path), "%s/main/*.xml", commonDirectory);
-    struct _finddata_t found;
-    intptr_t handle = _findfirst(path, &found);
-    for (int more = handle != -1; more; more = _findnext(handle, &found) == 0)
-    {
-        const char* name = found.name;
-#else
-    snprintf(path, sizeof(path), "%s/main", commonDirectory);
-    DIR* directory = opendir(path);
-    if (directory == nullptr)
-    {
-        GenDie("cannot list", path);
-    }
-    for (struct dirent* item = readdir(directory); item != nullptr; item = readdir(directory))
-    {
-        const char* name = item->d_name;
-#endif
-        size_t length = strlen(name);
-        if (length < 5 || strcmp(name + length - 4, ".xml") != 0)
-        {
-            continue;
-        }
-        if (count == maxLocales)
-        {
-            GenDie("too many locales in", path);
-        }
-        ids[count] = GenAllocate(length - 3);
-        memcpy(ids[count], name, length - 4);
-        count++;
-    }
-#ifdef _WIN32
-    if (handle != -1)
-    {
-        _findclose(handle);
-    }
-#else
-    closedir(directory);
-#endif
-    qsort(ids, (size_t)count, sizeof(char*), CompareNames);
-    *countOut = count;
-    return ids;
-}
-
 // The nearest locale along a locale's chain whose key differs from its
 // own, or null for root.
 static const char* NextKeyed(Generator* g, const char* locale, const char* key)
@@ -1432,7 +1369,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* 
         return 0;
     }
     int count = 0;
-    char** ids = ListLocales(commonDirectory, &count);
+    char** ids = GenListXml(commonDirectory, "main", &count);
     // Each locale's resolved numbers, by id; root's always filed.
     Map resolved = {0};
     Numbers* all = GenAllocate(sizeof(Numbers) * (size_t)count);
@@ -1529,11 +1466,7 @@ int GenerateNumberUnits(const char* commonDirectory, DataFile* file, NameFiles* 
     TableAddUnit(&g->patterns, kindNumberPatterns, nullptr, file);
     TableAddUnit(&g->compactPatterns, kindNumberCompactPatterns, nullptr, file);
     AddCompactUnit(g, file);
-    for (int i = 0; i < count; i++)
-    {
-        free(ids[i]);
-    }
-    free(ids);
+    GenFreeList(ids, count);
     free(all);
     MapFree(&resolved);
     TableClear(&g->symbols);
