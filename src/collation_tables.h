@@ -26,6 +26,9 @@
 //      the first primary of each range in order, rising from 0 and ending
 //      with the trailing range's 0xFF00; a range ends where the next
 //      starts
+//      u8 compressible[32]: a bit a lead byte (bit b % 8 of byte b / 8),
+//      set for the bytes sort keys compress: FractionalUCA's COMPRESS
+//      top bytes and the unassigned byte FE, as ICU's compressibleBytes
 //
 // A CE32 is ICU's compressed element. Its low byte below 0xC0 makes it a
 // simple element: the primary's two bytes in bits 31..16, the secondary
@@ -114,6 +117,7 @@ typedef struct CollationRoot
     uint32_t scriptCount;
     uint32_t startCount;
     uint32_t numericPrimary;
+    const uint8_t* compressible;
 } CollationRoot;
 
 static inline bool mlocCe32IsSpecial(uint32_t ce32)
@@ -317,6 +321,12 @@ static inline uint32_t mlocCollationStart(const CollationRoot* r, uint32_t index
     return mlocLoad32(r->starts + (size_t)index * 4);
 }
 
+// Whether sort keys compress primaries of the lead byte.
+static inline bool mlocCollationCompressible(const CollationRoot* r, uint32_t leadByte)
+{
+    return (r->compressible[leadByte / 8] >> (leadByte % 8) & 1) != 0;
+}
+
 // The scripts rising by code, each naming a start that has one after it;
 // the starts rising from 0, 16-bit, the last 0xFF00 (the trailing range),
 // at most 256 (reordering's tables are indexed by start).
@@ -400,10 +410,12 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     uint64_t contexts = starts + ((uint64_t)r.listCount + 1) * 4;
     uint64_t scripts = contexts + (uint64_t)r.contextCount * 4;
     uint64_t scriptStarts = scripts + (uint64_t)r.scriptCount * 8;
-    if (scriptStarts + (uint64_t)r.startCount * 4 > span.size)
+    uint64_t compressible = scriptStarts + (uint64_t)r.startCount * 4;
+    if (compressible + 32 > span.size)
     {
         return false;
     }
+    r.compressible = p + compressible;
     r.ces = p + ces;
     r.ce32s = p + ce32s;
     r.listStarts = p + starts;

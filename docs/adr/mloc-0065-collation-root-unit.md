@@ -120,8 +120,12 @@ proved over a decade.
   `src/generated/collation.mloc`, a data file of its own that a program
   adds to its data set, as kind `kindCollationRoot` (0x000B0001), a
   unit of no locale. Opening the file runs this validator. It is
-  192,768 bytes.
+  192,800 bytes.
 - **The script table and numeric order's lead byte** joined the unit
   with the options (record mloc-0069).
-- **Not yet in the unit:** the digit CE32s for numeric order, in slice
-  (b).
+- **Numeric order needs no digit CE32s:** the iterator tells decimal
+  digits by Maul Unicode (record mloc-0069).
+- **The compressible lead bytes** joined the unit with the sort keys
+  (record mloc-0070): 32 bytes after the script starts, a bit a lead
+  byte, FractionalUCA's COMPRESS top bytes and the unassigned byte FE,
+  as ICU's `compressibleBytes`. The reader checks they fit.

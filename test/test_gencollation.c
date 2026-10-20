@@ -282,6 +282,9 @@ static void TestUnit(void)
     CHECK(ok && mlocCe32Tag(paren) == collationTagExpansion && mlocCe32Length(paren) == 3 &&
               mlocCollationCe(&r, index + 1) == 0xFD02020005001000ULL,
           "three elements, one not a CE32, as an expansion of 64-bit elements");
+    CHECK(ok && mlocCollationCompressible(&r, 0x62) && !mlocCollationCompressible(&r, 0x2A) &&
+              !mlocCollationCompressible(&r, 0x03) && mlocCollationCompressible(&r, 0xFE),
+          "the compressible lead bytes: COMPRESS inside the brackets, and the unassigned byte");
     uint8_t* copy = ok ? malloc(size) : nullptr;
     if (copy != nullptr)
     {
@@ -419,8 +422,9 @@ static bool Opens(Crafted c)
     free(values);
     size_t padded = (trieSize + 7) / 8 * 8;
     static const uint32_t scriptStarts[] = {0, 0xFF00};
+    // The compressible lead bytes (32, all clear) end the unit.
     size_t size = collationHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) +
-                  sizeof(c.contexts) + sizeof(scriptStarts);
+                  sizeof(c.contexts) + sizeof(scriptStarts) + 32;
     uint8_t* bytes = calloc(1, size);
     if (trie == nullptr || bytes == nullptr)
     {

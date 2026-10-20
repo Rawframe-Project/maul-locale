@@ -9,6 +9,8 @@
 // collation data file. As ICU4X's
 // conformance test does, a line holding a surrogate is passed over, since
 // UTF-8 cannot carry one; the next line is compared with the last read.
+// The two lines' sort keys (record mloc-0070) must order them as the
+// compare does, ties included.
 //
 // usage: conform_collation collation.mloc [--shifted] [--identical] CollationTest_CLDR_*.txt...
 
@@ -17,6 +19,7 @@
 #endif
 
 #include "collation_compare.h"
+#include "collation_key.h"
 #include "collation_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -79,6 +82,14 @@ static bool Text(const char* line, uint8_t* out, size_t* lengthOut)
     return n > 0;
 }
 
+// The order of two sort keys, as memcmp gives it over the shorter.
+static int KeyOrder(const uint8_t* a, size_t aLength, const uint8_t* b, size_t bLength)
+{
+    int r = memcmp(a, b, aLength < bLength ? aLength : bLength);
+    r = r != 0 ? r : (aLength > bLength) - (aLength < bLength);
+    return (r > 0) - (r < 0);
+}
+
 static bool CheckFile(const CollationRoot* root, const CollationSettings* settings,
                       const char* path)
 {
@@ -90,7 +101,9 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
     }
     static char line[4096];
     static uint8_t texts[2][1024];
+    static uint8_t keys[2][4096];
     size_t lengths[2] = {0, 0};
+    size_t keyLengths[2] = {0, 0};
     int current = 0;
     bool have = false;
     size_t lines = 0;
@@ -113,12 +126,19 @@ static bool CheckFile(const CollationRoot* root, const CollationSettings* settin
         int order = have ? mlocCollationCompare(root, settings, texts[previous], lengths[previous],
                                                 texts[current], lengths[current])
                          : -1;
+        // The sort keys must order the two lines as the compare does.
+        keyLengths[current] = mlocCollationSortKey(root, settings, texts[current], lengths[current],
+                                                   keys[current], sizeof(keys[0]));
+        int keyOrder = have ? KeyOrder(keys[previous], keyLengths[previous], keys[current],
+                                       keyLengths[current])
+                            : -1;
         ties += order == 0;
-        if (order > 0)
+        if (order > 0 || keyOrder != order)
         {
             if (wrong++ < 10)
             {
-                printf("%s: line %zu sorts before the one above: %s", path, lines, line);
+                printf("%s: line %zu sorts before the one above (compare %d, keys %d): %s", path,
+                       lines, order, keyOrder, line);
             }
         }
         have = true;

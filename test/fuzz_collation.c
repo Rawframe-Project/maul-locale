@@ -6,10 +6,12 @@
 // strength and the alternate setting, the second backwards, the case
 // level, case first and numeric; the third and fourth up to three
 // reorder codes, which may be refused; the fifth where the rest is cut
-// into two texts. Each text equals itself, and the order of two is the
-// mirror of their order the other way.
+// into two texts. Each text equals itself, the order of two is the
+// mirror of their order the other way, and their sort keys (record
+// mloc-0070) order them alike.
 
 #include "collation_compare.h"
+#include "collation_key.h"
 #include "collation_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -19,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
 
@@ -102,6 +105,17 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     int ab = mlocCollationCompare(root, &s, text, cut, b, bLength);
     int ba = mlocCollationCompare(root, &s, b, bLength, text, cut);
     Require(ab >= -1 && ab <= 1 && ab == -ba);
+    // The sort keys order the texts as the compare does, and a short
+    // buffer gives the same length.
+    static uint8_t keys[2][1 << 16];
+    size_t n = mlocCollationSortKey(root, &s, text, cut, keys[0], sizeof(keys[0]));
+    size_t m = mlocCollationSortKey(root, &s, b, bLength, keys[1], sizeof(keys[1]));
+    Require(n <= sizeof(keys[0]) && m <= sizeof(keys[1]) &&
+            mlocCollationSortKey(root, &s, text, cut, keys[0], n / 2) == n);
+    mlocCollationSortKey(root, &s, text, cut, keys[0], n);
+    int r = memcmp(keys[0], keys[1], n < m ? n : m);
+    r = r != 0 ? r : (n > m) - (n < m);
+    Require(((r > 0) - (r < 0)) == ab);
     Require(mlocCollationCompare(root, &s, text, cut, text, cut) == 0);
     Require(mlocCollationCompare(root, &s, b, bLength, b, bLength) == 0);
     return 0;

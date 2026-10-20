@@ -143,6 +143,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/collation_compare.c
     src/collation_reorder.c
     src/collate.c
+    src/collation_key.c
     src/message_value.c
     src/message_words.c
     src/message_write.c
@@ -561,6 +562,14 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                 "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
         endif()
         target_compile_definitions(test_collation_compare PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
+    maul_add_test(collation_key WHITEBOX)
+    if(TARGET test_collation_key)
+        if(EMSCRIPTEN)
+            target_link_options(test_collation_key PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_collation_key PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
     # The public collator over the same file.
     maul_add_test(collate)

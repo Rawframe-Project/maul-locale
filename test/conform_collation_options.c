@@ -8,13 +8,17 @@
 // docs/locale/research/oracle/collation/icu4c_collation_options.cpp
 // writes them.
 //
-// usage: conform_collation_options collation.mloc < pairs
+// With --keys, writes instead the first text's sort key under each set,
+// in hex (record mloc-0070).
+//
+// usage: conform_collation_options collation.mloc [--keys] < pairs
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "collation_compare.h"
+#include "collation_key.h"
 #include "collation_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -43,7 +47,8 @@ static size_t Bytes(const char* hex, size_t n, uint8_t* out)
 
 int main(int argc, char** argv)
 {
-    FILE* f = argc == 2 ? fopen(argv[1], "rb") : nullptr;
+    bool keys = argc == 3 && strcmp(argv[2], "--keys") == 0;
+    FILE* f = argc == 2 || keys ? fopen(argv[1], "rb") : nullptr;
     size_t size = f == nullptr ? 0 : fread(s_file, 1, sizeof(s_file), f);
     if (f != nullptr)
     {
@@ -54,7 +59,7 @@ int main(int argc, char** argv)
     CollationRoot root;
     if (size == 0 || size == sizeof(s_file) || mlocOpenData(&data, s_file, size) != mloc_success)
     {
-        fputs("usage: conform_collation_options collation.mloc < pairs\n", stderr);
+        fputs("usage: conform_collation_options collation.mloc [--keys] < pairs\n", stderr);
         return 2;
     }
     DataView view = mlocViewOf(&data);
@@ -158,6 +163,18 @@ int main(int argc, char** argv)
                 return 1;
             }
             s.reorder = changes ? &reorders[i] : nullptr;
+            if (keys)
+            {
+                // The first text's key, with its final 00, in hex.
+                static uint8_t key[1 << 18];
+                size_t n = mlocCollationSortKey(&root, &s, a, aLength, key, sizeof(key));
+                printf(i == 0 ? "" : "\t");
+                for (size_t k = 0; k < n && k < sizeof(key); k++)
+                {
+                    printf("%02x", key[k]);
+                }
+                continue;
+            }
             printf(i == 0 ? "%d" : "\t%d", mlocCollationCompare(&root, &s, a, aLength, b, bLength));
         }
         printf("\n");

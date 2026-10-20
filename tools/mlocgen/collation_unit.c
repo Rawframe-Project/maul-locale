@@ -48,6 +48,8 @@ typedef struct Builder
     Words scripts;
     Words starts;
     uint32_t numericPrimary;
+    // A bit a lead byte: those sort keys compress.
+    uint8_t compressible[32];
     uint32_t* values;
     char* error;
     size_t errorSize;
@@ -502,7 +504,7 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     size_t padded = (trieSize + 7) / 8 * 8;
     size_t size = collationHead + padded + b->ces.count * 8 + b->ce32s.count * 4 +
                   (b->listStarts.count + 1) * 4 + b->contexts.count * 4 + b->scripts.count * 4 +
-                  b->starts.count * 4;
+                  b->starts.count * 4 + sizeof(b->compressible);
     uint8_t* out = GenAllocate(size);
     GenPut(out + 4, b->ce32s.count, 4);
     GenPut(out + 8, b->ces.count, 4);
@@ -539,6 +541,7 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     {
         GenPut(p, b->starts.items[i], 4);
     }
+    memcpy(p, b->compressible, sizeof(b->compressible));
     free(trie);
     *sizeOut = size;
     return out;
@@ -570,6 +573,13 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
         }
     }
     OffsetRanges(&b, table);
+    // FractionalUCA's COMPRESS top bytes, and the unassigned byte, which
+    // ICU's base data builder adds.
+    for (uint32_t byte = 0; byte < 256; byte++)
+    {
+        bool compressible = table->compressible[byte] || byte == collationUnassignedByte;
+        b.compressible[byte / 8] |= (uint8_t)(compressible ? 1U << (byte % 8) : 0);
+    }
     uint8_t* out = nullptr;
     if (Contexts(&b, table, false) && Contexts(&b, table, true) && ScriptTable(&b, table))
     {

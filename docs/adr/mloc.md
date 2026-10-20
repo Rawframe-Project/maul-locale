@@ -73,4 +73,5 @@ are listed in [README.md](README.md).
 | [mloc-0066](mloc-0066-collation-iterator.md) | The collation element iterator, and NFD read as a stream | Accepted |
 | [mloc-0067](mloc-0067-collation-compare.md) | The general compare, level by level, with nothing buffered | Accepted |
 | [mloc-0068](mloc-0068-collation-rules.md) | The collation rule parser, in the generator, as ICU reads rules | Accepted |
-| [mloc-0069](mloc-0069-collation-options.md) | Collation options: shifted, maxVariable, the quaternary level, the script table | Accepted |
+| [mloc-0069](mloc-0069-collation-options.md) | Collation options and the public collator: every level, shifted, backwards, the case level, case first, numeric ordering, reordering, the script table | Accepted |
+| [mloc-0070](mloc-0070-sort-keys.md) | Sort keys: ICU4C's bytes, written level by level | Accepted |
