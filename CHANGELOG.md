@@ -396,4 +396,10 @@ format.
   built from their rules over the root as ICU4C builds them, with each
   locale's default type; import-only and alternate types are left out.
   The file is 2,636,010 bytes, zh's four types 1.1 MB of them
-  (mloc-0071). Collators read them in a later change.
+  (mloc-0071).
+- Collators order by the locale's tailoring: the `-u-co` type along the
+  collation chain, else the chain's default type, else `standard`, as
+  ICU4C's loader picks it, with the tailoring's settings and reordering
+  as defaults under the `-u-` keys and the options; the keys' version
+  covers the tailoring. A tailored locale needs the main data's parents
+  in the set. `mlocCollator` is 1,024 bytes (mloc-0071).

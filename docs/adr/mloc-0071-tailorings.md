@@ -146,6 +146,18 @@ the oracle for every type.
   - The validator checks the names (co's letters, digits and hyphens,
     rising, packed after the default's) and the tailorings (each packed
     from a multiple of 8, each read as above).
+  - `mlocInitCollator` finds the tailoring as ICU4C's
+    `CollationLoader` does: the `-u-co` type along the locale's
+    collation chain (CLDR's collation parents: yue's is zh_Hant), else
+    the first default type along the chain, else `standard`, else the
+    root's order. zh_Hant's default `stroke` thus takes zh's `stroke`.
+    A tailored locale needs the parents table; data without tailorings
+    needs none.
+  - The tailoring's settings and `[reorder]` codes are the collator's
+    defaults; the `-u-` keys and then the options override them. Its
+    bytes join the keys' version (record mloc-0070).
+  - `mlocCollator` grew from 768 to 1,024 bytes to hold the tailoring's
+    view beside the root's.
   - Size: 2,636,010 bytes for the file, 117 units. zh's four types are
     1,136,896 bytes of it, ko's 253,856, ja's 119,128 and root's
     `emoji`, `eor` and `search` 73,184. The smallest tailoring is about
@@ -212,6 +224,14 @@ the oracle for every type.
   cut short, a name with a letter co does not have, names out of order,
   overlapping or too long, and a tailoring out of place, too long or
   unreadable; a default alone reads.
+- **`test_collate`, the tailorings:** es's ñ after n, through es-MX's
+  chain, and en's root order; de's `phonebk` by `co`, and es's
+  standard for a type its chain lacks; zh's pinyin by default, `stroke`
+  by `co`, zh-Hant's and yue's default `stroke`, and `co=standard`
+  giving the default; da's upper case first under `kf` and the options;
+  ru's Cyrillic first under `kr`; the version of es and es-MX alike and
+  apart from root's and ru's; `es` refused without the parents, `und`
+  made.
 - **`conform_collation_builder --units`** (the cldr CI job): every
   type's unit reads back, its head's count of mapped code points equal
   to its trie's. The runtime iterator gives the builder's
@@ -226,7 +246,7 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - `co` along the collation chain, the version over both units;
+  - the differential of tailored locales' sort keys against ICU4C;
   - `[suppressContractions]` and the rules' settings;
   - every CLDR type, with the differential against ICU4C 79.
 

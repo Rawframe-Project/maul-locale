@@ -60,7 +60,8 @@ appends them after the primaries.
     bytes change). It is computed when the collator is made. Any change
     to the data the collator reads changes it, as does a new key
     format; the options do not, as in ICU, since the caller keeps them
-    with the keys. A tailoring's unit joins the hash in slice (d).
+    with the keys. A locale's tailoring joins the hash: XXH64 of its
+    bytes seeded with the root's version (record mloc-0071).
   - A collator is read only after its stamp, a first field read alone,
     so bytes the library did not make are refused without reading
     their other fields.

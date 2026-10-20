@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The public collator (record mloc-0069) over the collation data file:
-// the root's defaults, each -u- key, options over the keys, values
-// passed over, sort keys against the compare, the keys' version, and the
-// refusals.
+// The public collator (records mloc-0069 and mloc-0071) over the
+// built-in data and the collation data file: the root's defaults, each
+// -u- key, options over the keys, values passed over, a locale's
+// tailoring found by co, its default and its chain, the rules' settings
+// under the keys, sort keys against the compare, the keys' version, and
+// the refusals.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -19,8 +21,9 @@
 #include <string.h>
 
 alignas(8) static uint8_t s_file[1 << 22];
-static mlocData s_source;
-static mlocDataSet s_data = {&s_source, 1};
+// The built-in data, for the parents, then the collation file.
+static mlocData s_sources[2];
+static mlocDataSet s_data = {s_sources, 2};
 
 // A collator for the locale with the options; false when not made.
 static bool Make(const char* id, const mlocCollatorOptions* options, mlocCollator* out)
@@ -44,6 +47,67 @@ static int Order(const char* id, const mlocCollatorOptions* options, const char*
         return 2;
     }
     return ab == -ba ? ab : 2;
+}
+
+// Han one (U+4E00, one stroke, yi) and a (U+963F, seven strokes, a).
+#define HAN_ONE "\xE4\xB8\x80"
+#define HAN_A   "\xE9\x98\xBF"
+
+static void TestTailorings(void)
+{
+    CHECK(Order("es", nullptr, "nz",
+                "\xC3\xB1"
+                "a") == -1 &&
+              Order("en", nullptr, "nz",
+                    "\xC3\xB1"
+                    "a") == 1 &&
+              Order("es-MX", nullptr, "nz",
+                    "\xC3\xB1"
+                    "a") == -1,
+          "es: n tilde a letter after n, through es-MX's chain; en the root's");
+    CHECK(Order("de-u-co-phonebk", nullptr, "ad", "\xC3\xA4") == -1 &&
+              Order("de", nullptr, "ad", "\xC3\xA4") == 1 &&
+              Order("es-u-co-phonebk", nullptr, "nz",
+                    "\xC3\xB1"
+                    "a") == -1,
+          "co: de's phonebook a umlaut as ae; a type the chain lacks gives the default");
+    CHECK(Order("zh", nullptr, HAN_A, HAN_ONE) == -1 &&
+              Order("zh-u-co-stroke", nullptr, HAN_ONE, HAN_A) == -1 &&
+              Order("zh-Hant", nullptr, HAN_ONE, HAN_A) == -1 &&
+              Order("yue", nullptr, HAN_ONE, HAN_A) == -1 &&
+              Order("zh-u-co-standard", nullptr, HAN_A, HAN_ONE) == -1,
+          "zh: pinyin by default, stroke by co, zh-Hant's and yue's default stroke; no "
+          "standard gives the default");
+    CHECK(Order("da", nullptr, "A", "a") == -1 && Order("da-u-kf-lower", nullptr, "a", "A") == -1,
+          "da's rules: upper case first, under kf");
+    mlocCollatorOptions lower = {.caseFirst = mloc_caseFirstLower};
+    CHECK(Order("da", &lower, "a", "A") == -1 && Order("ru", nullptr, "\xD1\x8F", "a") == -1 &&
+              Order("ru-u-kr-latn", nullptr, "a", "\xD1\x8F") == -1,
+          "the options over the rules; ru's rules reorder Cyrillic first, under kr");
+}
+
+static void TestTailoringVersions(void)
+{
+    mlocCollator c;
+    uint64_t root = 0;
+    uint64_t en = 1;
+    uint64_t es = 2;
+    uint64_t esMx = 3;
+    uint64_t ru = 4;
+    CHECK(Make("und", nullptr, &c) && mlocGetCollationVersion(&c, &root) == mloc_success &&
+              Make("en", nullptr, &c) && mlocGetCollationVersion(&c, &en) == mloc_success &&
+              Make("es", nullptr, &c) && mlocGetCollationVersion(&c, &es) == mloc_success &&
+              Make("es-MX", nullptr, &c) && mlocGetCollationVersion(&c, &esMx) == mloc_success &&
+              Make("ru", nullptr, &c) && mlocGetCollationVersion(&c, &ru) == mloc_success &&
+              root == en && es == esMx && es != root && ru != root && ru != es,
+          "the version over the tailoring too: es-MX has es's");
+    mlocDataSet alone = {&s_sources[1], 1};
+    mlocLocale locale;
+    CHECK(mlocParseLocale("es", 2, &locale).status == mloc_success &&
+              mlocInitCollator(&c, &alone, &locale, nullptr) == mloc_errorNotFound &&
+              mlocParseLocale("und", 3, &locale).status == mloc_success &&
+              mlocInitCollator(&c, &alone, &locale, nullptr) == mloc_success,
+          "a tailored locale needs the parents, the root does not");
 }
 
 static void TestDefaults(void)
@@ -273,8 +337,9 @@ int main(void)
     {
         fclose(f);
     }
+    mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_source, s_file, size) != mloc_success)
+        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
     {
         fputs("test_collate: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;
@@ -282,6 +347,8 @@ int main(void)
     TestDefaults();
     TestKeys();
     TestOptions();
+    TestTailorings();
+    TestTailoringVersions();
     TestSortKeys();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

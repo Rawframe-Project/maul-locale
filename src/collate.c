@@ -11,6 +11,7 @@
 #include "data_format.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_fallback.h"
 #include "locale_keyword.h"
 
 #include "maul-unicode/properties.h"
@@ -33,9 +34,13 @@ typedef struct Collator
     uint32_t stamp;
     // 1 when the reordering is in use (a byte, read only after the stamp).
     uint8_t reordered;
-    // The keys' version: the format and the root unit's bytes, hashed.
+    // 1 when the locale's tailoring maps code points.
+    uint8_t tailored;
+    // The keys' version: the format, the root unit's bytes and the
+    // tailoring's, hashed.
     uint64_t version;
     CollationRoot root;
+    CollationRoot tailoring;
     // Its reorder pointer is set at each compare: a collator is copied.
     CollationSettings settings;
     CollationReorder reorder;
@@ -59,6 +64,82 @@ static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* ver
         }
     }
     return false;
+}
+
+// A walk along a locale's collation chain for a type, which also finds
+// the chain's first default type.
+typedef struct TypeWalk
+{
+    const char* name;
+    size_t length;
+    DataSpan found;
+    bool hit;
+    const char* defaultName;
+    size_t defaultLength;
+} TypeWalk;
+
+static bool VisitTypes(void* context, DataSpan unit, const DataView* view, int depth)
+{
+    (void)view;
+    (void)depth;
+    TypeWalk* w = context;
+    CollationTypes t = mlocReadCollationTypes(unit);
+    if (w->defaultLength == 0 && t.defaultLength > 0)
+    {
+        w->defaultName = (const char*)t.defaultName;
+        w->defaultLength = t.defaultLength;
+    }
+    w->hit = w->length > 0 && mlocFindCollationType(&t, w->name, w->length, &w->found);
+    return w->hit;
+}
+
+static bool Walk(const mlocDataSet* data, const mlocLocale* locale, TypeWalk* w, const char* name,
+                 size_t length)
+{
+    w->name = name;
+    w->length = length;
+    w->hit = false;
+    return mlocVisitLocaleUnits(data, mloc_componentCollation, kindCollationTailorings, locale,
+                                VisitTypes, w);
+}
+
+// The locale's tailoring as ICU4C's loader finds it: the co type along
+// the collation chain, else the chain's default type, else standard;
+// *found false for the root order. mloc_errorNotFound when the chain
+// needs the parents table and the data has none.
+static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* locale,
+                                DataSpan* tailoringOut, bool* found)
+{
+    *found = false;
+    if (!mlocDataSetHasKind(data, kindCollationTailorings))
+    {
+        return mloc_success;
+    }
+    TypeWalk w = {0};
+    const char* co = nullptr;
+    size_t coLength = mlocFindKeyword(locale, "co", &co);
+    if (!Walk(data, locale, &w, co, coLength))
+    {
+        return mloc_errorNotFound;
+    }
+    static const char s_standard[] = "standard";
+    const char* next = w.defaultLength > 0 ? w.defaultName : s_standard;
+    size_t nextLength = w.defaultLength > 0 ? w.defaultLength : sizeof(s_standard) - 1;
+    for (int tries = 0; !w.hit && tries < 2; tries++)
+    {
+        bool tried = coLength == nextLength && memcmp(co, next, nextLength) == 0;
+        if (!tried && !Walk(data, locale, &w, next, nextLength))
+        {
+            return mloc_errorNotFound;
+        }
+        co = next;
+        coLength = nextLength;
+        next = s_standard;
+        nextLength = sizeof(s_standard) - 1;
+    }
+    *tailoringOut = w.found;
+    *found = w.hit;
+    return mloc_success;
 }
 
 static bool Is(const char* value, size_t length, const char* text)
@@ -225,6 +306,47 @@ static mlocResult FromOptions(Collator* c, const mlocCollatorOptions* o)
     return result;
 }
 
+// The tailoring's settings and reordering over the root's defaults, as
+// the -u- keys and options of the call later override them.
+static mlocResult FromTailoring(Collator* c, DataSpan span)
+{
+    CollationTailoring t;
+    if (!mlocReadCollationTailoring(span, &t) || t.reorderCount > maxReorderCodes)
+    {
+        return mloc_errorInvalid;
+    }
+    c->version = mlocXxh64(span.bytes, span.size, c->version);
+    if (t.mappedCount > 0)
+    {
+        c->tailoring = t.view;
+        c->tailored = 1;
+    }
+    uint32_t w = t.settings;
+    mlocCollatorOptions o = {
+        .strength = (mlocCollationStrength)(w & 7),
+        .alternate = (mlocCollationAlternate)(w >> 3 & 3),
+        .maxVariable = (mlocCollationMaxVariable)(w >> 5 & 7),
+        .caseFirst = (mlocCollationCaseFirst)(w >> 8 & 3),
+        .caseLevel = (mlocCollationSwitch)(w >> 10 & 3),
+        .numeric = (mlocCollationSwitch)(w >> 12 & 3),
+        .backwards = (mlocCollationSwitch)(w >> 14 & 3),
+    };
+    mlocResult result = FromOptions(c, &o);
+    if (result != mloc_success || (w & collationReorderGiven) == 0)
+    {
+        return result;
+    }
+    uint32_t codes[maxReorderCodes];
+    for (uint32_t i = 0; i < t.reorderCount; i++)
+    {
+        codes[i] = mlocLoad32(t.reorder + (size_t)i * 4);
+    }
+    bool changes = false;
+    result = mlocCollationMakeReorder(&c->root, codes, t.reorderCount, &c->reorder, &changes);
+    c->reordered = result == mloc_success && changes ? 1 : 0;
+    return result;
+}
+
 mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
                             const mlocLocale* locale, const mlocCollatorOptions* options)
 {
@@ -241,8 +363,19 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     }
     c.stamp = collatorStamp;
     c.settings = mlocCollationDefaults(&c.root);
+    DataSpan tailoring = {0};
+    bool tailored = false;
+    mlocResult result = FindTailoring(data, locale, &tailoring, &tailored);
+    if (result == mloc_success && tailored)
+    {
+        result = FromTailoring(&c, tailoring);
+    }
+    if (result != mloc_success)
+    {
+        return result;
+    }
     FromLocale(&c, locale);
-    mlocResult result = FromOptions(&c, &o);
+    result = FromOptions(&c, &o);
     if (result != mloc_success)
     {
         return result;
@@ -268,6 +401,7 @@ static bool ReadCollator(const mlocCollator* collator, Collator* c)
     }
     memcpy(c, collator, sizeof(*c));
     c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
+    c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
     return true;
 }
 

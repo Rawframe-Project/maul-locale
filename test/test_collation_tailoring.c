@@ -321,6 +321,20 @@ static void TypesRefused(const uint8_t* unit, size_t size, size_t bSize)
           "a tailoring out of place, too long, or not one");
 }
 
+// A unit whose second name begins with its first.
+static void TypesPrefixed(const Built* a, const Built* b)
+{
+    CollationTypeBody types[] = {{"phonebk", a->bytes, a->size}, {"phone", b->bytes, b->size}};
+    size_t size = 0;
+    uint8_t* unit = CollationTypesUnit(types, 2, "", &size);
+    CollationTypes t = mlocReadCollationTypes((DataSpan){unit, (uint32_t)size});
+    DataSpan found = {0};
+    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){unit, (uint32_t)size}) &&
+              mlocFindCollationType(&t, "phone", 5, &found) && found.size == b->size,
+          "a name before the longer one it begins");
+    free(unit);
+}
+
 static void TestTypes(void)
 {
     Built a;
@@ -349,6 +363,14 @@ static void TestTypes(void)
           "a type found by its name, none for another");
     TypesRefused(unit, size, b.size);
     free(unit);
+    TypesPrefixed(&a, &b);
+    Free(&a);
+    Free(&b);
+}
+
+// Units of a default alone, and names to their bounds.
+static void TestTypesAlone(void)
+{
     uint8_t alone[24] = {0, 0, 0, 0, 6, 0, 0, 0};
     memcpy(alone + collationTypesHead, "stroke\0\0", 8);
     CHECK(mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}),
@@ -356,9 +378,15 @@ static void TestTypes(void)
     alone[4] = 7;
     CHECK(!mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}), "a NUL in its name");
     alone[4] = 0;
-    CHECK(!mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}), "an empty unit");
-    Free(&a);
-    Free(&b);
+    CHECK(!mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}) &&
+              !mlocValidCollationTypes(nullptr, (DataSpan){alone, 16}),
+          "an empty unit");
+    alone[4] = 8;
+    memcpy(alone + collationTypesHead, "standard", 8);
+    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}), "a name to the unit's end");
+    uint8_t longest[48] = {0, 0, 0, 0, 32};
+    memset(longest + collationTypesHead, 'a', 32);
+    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){longest, 48}), "a name of 32 bytes");
 }
 
 int main(void)
@@ -387,6 +415,7 @@ int main(void)
     TestValidatorSettings();
     TestValidatorLists();
     TestTypes();
+    TestTypesAlone();
     free(s_rootBytes);
     RootFree(&s_root);
     remove(s_path);

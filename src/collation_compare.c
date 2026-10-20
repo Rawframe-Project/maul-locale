@@ -38,6 +38,7 @@ static void Start(Level* l, const CollationRoot* root, const CollationSettings* 
 {
     *l = (Level){.settings = settings, .level = level};
     mlocCollationIteratorStart(&l->it, root, text, length);
+    l->it.tailoring = settings->tailoring;
     l->it.numeric = settings->numeric;
 }
 

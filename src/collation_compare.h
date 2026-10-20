@@ -53,6 +53,9 @@ typedef struct CollationSettings
     bool numeric;
     // The script reordering (CLDR's kr), or null; the caller keeps it.
     const CollationReorder* reorder;
+    // The locale's tailoring, read before the root, or null; the caller
+    // keeps it.
+    const CollationRoot* tailoring;
 } CollationSettings;
 
 // CLDR's root defaults: tertiary, non-ignorable, the variable top at the

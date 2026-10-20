@@ -101,6 +101,7 @@ static void Open(Stream* s, const CollationRoot* root, const CollationSettings* 
                  const uint8_t* text, size_t length)
 {
     mlocCollationIteratorStart(&s->it, root, text, length);
+    s->it.tailoring = settings->tailoring;
     s->it.numeric = settings->numeric;
     s->settings = settings;
     s->ended = false;
