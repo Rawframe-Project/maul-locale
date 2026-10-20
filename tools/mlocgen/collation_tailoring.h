@@ -7,7 +7,7 @@
 // over contraction lists as its mappings ask. A prefix whose mappings
 // are contractions only falls back to the longest shorter prefix it ends
 // with, as ICU4C's built contexts do. The rules' settings and reorder
-// codes go in the head.
+// codes go in the head. A locale's types are one unit of its key.
 
 #ifndef MLOCGEN_COLLATION_TAILORING_H
 #define MLOCGEN_COLLATION_TAILORING_H
@@ -22,5 +22,19 @@
 // mapping cannot be held.
 uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const CollationRules* rules,
                                 size_t* sizeOut, char* error, size_t errorSize);
+
+// A type's written tailoring and its name as BCP 47's co spells it.
+typedef struct CollationTypeBody
+{
+    const char* code;
+    uint8_t* body;
+    size_t size;
+} CollationTypeBody;
+
+// A locale's unit of its types (src/collation_tables.h), sorting them by
+// name; defaultCode is "" when the locale names no default. The caller
+// frees the bytes.
+uint8_t* CollationTypesUnit(CollationTypeBody* types, size_t count, const char* defaultCode,
+                            size_t* sizeOut);
 
 #endif

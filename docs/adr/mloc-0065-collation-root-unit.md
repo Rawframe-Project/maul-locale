@@ -119,8 +119,9 @@ proved over a decade.
 - **The file:** `mlocgen generate` writes the unit into
   `src/generated/collation.mloc`, a data file of its own that a program
   adds to its data set, as kind `kindCollationRoot` (0x000B0001), a
-  unit of no locale. Opening the file runs this validator. It is
-  194,952 bytes.
+  unit of no locale. Opening the file runs this validator. It was
+  194,952 bytes with the root alone; with the locales' tailorings
+  (record mloc-0071) it is 2,636,010.
 - **The script table and numeric order's lead byte** joined the unit
   with the options (record mloc-0069).
 - **Numeric order needs no digit CE32s:** the iterator tells decimal

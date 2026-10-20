@@ -165,5 +165,8 @@ constexpr uint32_t kindCatalogMessages = 0x000A0002;
 // locale in the collation data file (record mloc-0065,
 // src/collation_tables.h).
 constexpr uint32_t kindCollationRoot = 0x000B0001;
+// A locale's collation types, each a tailoring over the root, a unit of
+// its key in the collation data file (record mloc-0071).
+constexpr uint32_t kindCollationTailorings = 0x000B0002;
 
 #endif

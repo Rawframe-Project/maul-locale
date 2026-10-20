@@ -130,6 +130,28 @@ the oracle for every type.
   a data file's units are keyed by kind and locale, so a type cannot be
   a unit of its own. Research 64's "one unit per (locale, type)" is
   amended.
+  - Kind `kindCollationTailorings` (0x000B0002), a unit of the
+    collation file's locale key. It lists the types by their BCP 47
+    `co` names (`phonebk`, `trad`), each with its tailoring, and the
+    file's `<defaultCollation>`. A unit may hold a default alone, as
+    zh_Hant's does.
+  - The generator builds every type of every file in
+    `common/collation`, with `[import]` resolved among the files
+    (`tools/mlocgen/collation_catalog.c`, shared with the conformance
+    tool). It leaves out the types kept for imports (`private-`) and
+    the `alt` types (zh's `short`; slice d4 weighs them).
+  - A tailoring's head word 24 counts the code points its trie maps. A
+    type of settings or `[reorder]` alone maps none, and the runtime
+    then reads the root alone, with no lookup in an empty trie.
+  - The validator checks the names (co's letters, digits and hyphens,
+    rising, packed after the default's) and the tailorings (each packed
+    from a multiple of 8, each read as above).
+  - Size: 2,636,010 bytes for the file, 117 units. zh's four types are
+    1,136,896 bytes of it, ko's 253,856, ja's 119,128 and root's
+    `emoji`, `eor` and `search` 73,184. The smallest tailoring is about
+    4,700 bytes, nearly all trie index; a type of a few code points
+    could take a smaller form, measured with the speed work (slice
+    g).
 
 ## Proof
 
@@ -184,8 +206,15 @@ the oracle for every type.
   short, reserved words set, each setting out of range, codes past the
   end, and a list default that is the fallback word, its own list or a
   prefix.
+- **`test_collation_tailoring`, the types:** a unit of two types finds
+  each by name and no other, with its default; the validator refuses
+  no types and no default, too many types, a reserved word set, a unit
+  cut short, a name with a letter co does not have, names out of order,
+  overlapping or too long, and a tailoring out of place, too long or
+  unreadable; a default alone reads.
 - **`conform_collation_builder --units`** (the cldr CI job): every
-  type's unit reads back. The runtime iterator gives the builder's
+  type's unit reads back, its head's count of mapped code points equal
+  to its trie's. The runtime iterator gives the builder's
   elements for every string its rules name and for 2,000 random strings
   of its mappings and marks: 674,006 strings, none different.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
@@ -197,7 +226,7 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - the locale's unit of its types in the data file, and `co`;
+  - `co` along the collation chain, the version over both units;
   - `[suppressContractions]` and the rules' settings;
   - every CLDR type, with the differential against ICU4C 79.
 

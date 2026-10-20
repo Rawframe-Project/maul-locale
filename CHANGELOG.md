@@ -392,3 +392,8 @@ format.
   data (mloc-0070).
 - Collation: text holding U+FDD1 orders as ICU4C's, the root's script
   start markers mapped as its contractions (mloc-0065).
+- The collation data file holds every CLDR 49 locale's collation types,
+  built from their rules over the root as ICU4C builds them, with each
+  locale's default type; import-only and alternate types are left out.
+  The file is 2,636,010 bytes, zh's four types 1.1 MB of them
+  (mloc-0071). Collators read them in a later change.

@@ -8,13 +8,12 @@
 // string), as the oracle reads them; --answers writes the elements the
 // built tailoring gives each string, as the oracle writes ICU4C's.
 // --units writes each built tailoring as a unit, reads it back and checks
-// that the runtime's iterator over the root and it gives the builder's
-// elements for those strings and 2,000 random ones of its mappings and
-// marks. Alone it prints how many types built and a hash of the answers (a
-// refusal counted too), failing on a refusal; with --expect it fails
-// unless the hash is the given one, which CI checks on
-// the pinned release (the answers ICU4C 79 gives, but for Han's root
-// order in the unihan types and the quaternary bits its iterator drops).
+// its count of mapped code points and that the runtime's iterator over the root and it gives the
+// builder's elements for those strings and 2,000 random ones of its mappings and marks. Alone it
+// prints how many types built and a hash of the answers (a refusal counted too), failing on a
+// refusal; with --expect it fails unless the hash is the given one, which CI checks on the pinned
+// release (the answers ICU4C 79 gives, but for Han's root order in the unihan types and the
+// quaternary bits its iterator drops).
 //
 // usage: conform_collation_builder <FractionalUCA.txt>
 //            [--queries | --answers | --units | --expect HASH]
@@ -23,11 +22,11 @@
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "collation_builder.h"
+#include "collation_catalog.h"
 #include "collation_iterator.h"
 #include "collation_rules.h"
 #include "collation_tailoring.h"
 #include "collation_unit.h"
-#include "xml.h"
 
 #include "maul-unicode/normalize.h"
 
@@ -37,126 +36,8 @@
 
 enum
 {
-    maxTypes = 512,
     maxQuery = 64,
 };
-
-// One type's rules, kept for imports.
-typedef struct Type
-{
-    char file[64];
-    char type[64];
-    char alt[32];
-    size_t order;
-    char* text;
-    CollationRules rules;
-    bool parsed;
-} Type;
-
-typedef struct Catalog
-{
-    Type types[maxTypes];
-    size_t count;
-} Catalog;
-
-// The files' order, whatever order the shell gave them in; a file's
-// types in its order.
-static int ByFile(const void* a, const void* b)
-{
-    const Type* x = a;
-    const Type* y = b;
-    int c = strcmp(x->file, y->file);
-    return c != 0 ? c : x->order < y->order ? -1 : x->order > y->order;
-}
-
-static void ReadFile(Catalog* c, const char* path)
-{
-    char error[256] = "";
-    const char* slash = strrchr(path, '/');
-    const char* backslash = strrchr(path, '\\');
-    const char* name = backslash != nullptr && (slash == nullptr || backslash > slash)
-                           ? backslash + 1
-                       : slash != nullptr ? slash + 1
-                                          : path;
-    size_t length = strlen(name);
-    if (length <= 4 || strcmp(name + length - 4, ".xml") != 0)
-    {
-        return;
-    }
-    XmlNode* root = XmlParseFile(path, error, sizeof(error));
-    XmlNode* collations = root == nullptr ? nullptr : XmlFindChild(root, "collations");
-    for (int i = 0; collations != nullptr && i < collations->childCount && c->count < maxTypes; i++)
-    {
-        const XmlNode* collation = collations->children[i];
-        const XmlNode* cr =
-            strcmp(collation->name, "collation") == 0 ? XmlFindChild(collation, "cr") : nullptr;
-        if (cr == nullptr)
-        {
-            continue;
-        }
-        Type* t = &c->types[c->count];
-        t->order = c->count++;
-        const char* type = XmlGetAttribute(collation, "type");
-        const char* alt = XmlGetAttribute(collation, "alt");
-        snprintf(t->file, sizeof(t->file), "%.*s", (int)(strlen(name) - 4), name);
-        snprintf(t->type, sizeof(t->type), "%s", type == nullptr ? "standard" : type);
-        snprintf(t->alt, sizeof(t->alt), "%s", alt == nullptr ? "" : alt);
-        size_t size = strlen(cr->text) + 1;
-        t->text = malloc(size);
-        if (t->text != nullptr)
-        {
-            memcpy(t->text, cr->text, size);
-        }
-        t->parsed = t->text != nullptr &&
-                    CollationRulesParse(t->text, strlen(t->text), &t->rules, error, sizeof(error));
-    }
-    XmlFree(root);
-}
-
-// [import tag]: the language's file (und is root) and the -u-co- type,
-// its BCP 47 values spelled as CLDR's files spell them.
-static const CollationRules* Import(void* context, const char* tag)
-{
-    const Catalog* c = context;
-    char language[64];
-    char type[64] = "standard";
-    const char* u = strstr(tag, "-u-co-");
-    snprintf(language, sizeof(language), "%.*s",
-             (int)(u == nullptr ? strlen(tag) : (size_t)(u - tag)), tag);
-    if (u != nullptr)
-    {
-        static const char* const aliases[][2] = {{"phonebk", "phonebook"},
-                                                 {"trad", "traditional"},
-                                                 {"dict", "dictionary"},
-                                                 {"gb2312", "gb2312han"}};
-        snprintf(type, sizeof(type), "%s", u + 6);
-        for (size_t i = 0; i < sizeof(aliases) / sizeof(aliases[0]); i++)
-        {
-            if (strcmp(type, aliases[i][0]) == 0)
-            {
-                snprintf(type, sizeof(type), "%s", aliases[i][1]);
-            }
-        }
-    }
-    if (strcmp(language, "und") == 0)
-    {
-        snprintf(language, sizeof(language), "root");
-    }
-    for (char* p = language; *p != '\0'; p++)
-    {
-        *p = *p == '-' ? '_' : *p;
-    }
-    for (size_t i = 0; i < c->count; i++)
-    {
-        const Type* t = &c->types[i];
-        if (t->parsed && t->alt[0] == '\0' && strcmp(t->file, language) == 0 &&
-            strcmp(t->type, type) == 0)
-        {
-            return &t->rules;
-        }
-    }
-    return nullptr;
-}
 
 // NFD of code points, through UTF-8; 0 when too long.
 static size_t Nfd(const uint32_t* text, size_t length, uint32_t* out)
@@ -216,7 +97,7 @@ static bool s_print;
 
 // Each string the type's own rules name: a reset's, a relation's prefix
 // and string.
-static void Queries(const Type* t, CollationMappings* m, bool answers)
+static void Queries(const CollationType* t, CollationMappings* m, bool answers)
 {
     const CollationRules* r = &t->rules;
     for (size_t i = 0; i < r->count; i++)
@@ -313,7 +194,7 @@ static size_t Utf8(const uint32_t* text, size_t length, char* out)
 }
 
 // One string (NFD) through both; a difference counted and shown.
-static void Check(const Type* t, CollationMappings* m, const CollationTailoring* unit,
+static void Check(const CollationType* t, CollationMappings* m, const CollationTailoring* unit,
                   const uint32_t* text, size_t length)
 {
     char utf8[maxQuery * 4];
@@ -357,7 +238,8 @@ static uint32_t Random(uint32_t below)
 }
 
 // Random strings of the tailoring's own mappings and marks.
-static void RandomChecks(const Type* t, CollationMappings* m, const CollationTailoring* unit)
+static void RandomChecks(const CollationType* t, CollationMappings* m,
+                         const CollationTailoring* unit)
 {
     static const uint32_t marks[] = {0x0300, 0x0301, 0x0302, 0x0308,
                                      0x0323, 0x0327, 0x0331, 0x3099};
@@ -392,7 +274,7 @@ static void RandomChecks(const Type* t, CollationMappings* m, const CollationTai
 
 // The type's unit written, read back and checked; false when it does not
 // read.
-static bool CheckUnit(const Type* t, CollationMappings* m)
+static bool CheckUnit(const CollationType* t, CollationMappings* m)
 {
     char error[256] = "";
     size_t size = 0;
@@ -405,6 +287,17 @@ static bool CheckUnit(const Type* t, CollationMappings* m)
         free(bytes);
         s_unreadable++;
         return false;
+    }
+    uint32_t mapped = 0;
+    for (uint32_t c = 0; c <= 0x10FFFF; c++)
+    {
+        mapped += mlocTrieValue(&unit.view.trie, c) != collationFallbackCe32;
+    }
+    if (mapped != unit.mappedCount)
+    {
+        printf("%s %s: %u code points mapped, the head says %u\n", t->file, t->type, mapped,
+               unit.mappedCount);
+        s_differ++;
     }
     const CollationRules* r = &t->rules;
     for (size_t i = 0; i < r->count; i++)
@@ -437,13 +330,14 @@ static bool CheckUnit(const Type* t, CollationMappings* m)
 }
 
 // One type built; its answers written or hashed, or its refusal.
-static bool BuildType(const Type* t, const RootTable* root, Catalog* catalog, bool answers,
-                      bool units)
+static bool BuildType(const CollationType* t, const RootTable* root, CollationCatalog* catalog,
+                      bool answers, bool units)
 {
     char error[256] = "";
     CollationBuilder b;
-    bool ok = CollationBuilderInit(&b, root, Import, catalog, error, sizeof(error)) &&
-              CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b);
+    bool ok =
+        CollationBuilderInit(&b, root, CollationCatalogImport, catalog, error, sizeof(error)) &&
+        CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b);
     if (!ok && !answers)
     {
         printf("%s %s%s%s: %s\n", t->file, t->type, t->alt[0] == '\0' ? "" : " ", t->alt, error);
@@ -469,16 +363,50 @@ static bool BuildType(const Type* t, const RootTable* root, Catalog* catalog, bo
     return ok;
 }
 
-static void FreeCatalog(Catalog* catalog)
+// Each parsed type's queries written, or the type built and checked as
+// the mode asks; how many built and how many were refused.
+static void RunTypes(CollationCatalog* catalog, const RootTable* root, bool queries, bool answers,
+                     bool units, size_t* built, size_t* refused)
 {
     for (size_t i = 0; i < catalog->count; i++)
     {
-        free(catalog->types[i].text);
-        if (catalog->types[i].parsed)
+        const CollationType* t = &catalog->types[i];
+        if (!t->parsed)
         {
-            CollationRulesFree(&catalog->types[i].rules);
+            continue;
+        }
+        if (queries || answers)
+        {
+            printf("type %s %s%s%s\n", t->file, t->type, t->alt[0] == '\0' ? "" : " ", t->alt);
+        }
+        if (queries)
+        {
+            printf("rules %zu\n%s\n", strlen(t->text), t->text);
+            Queries(t, nullptr, false);
+            printf("end\n");
+            continue;
+        }
+        bool ok = BuildType(t, root, catalog, answers, units);
+        *built += ok;
+        *refused += !ok;
+    }
+}
+
+// The files' types, sorted; false with a message for a file that does
+// not read.
+static bool ReadCatalog(CollationCatalog* catalog, char** paths, int count)
+{
+    char error[256] = "";
+    for (int i = 0; i < count; i++)
+    {
+        if (!CollationCatalogRead(catalog, paths[i], error, sizeof(error)))
+        {
+            fprintf(stderr, "%s\n", error);
+            return false;
         }
     }
+    CollationCatalogSort(catalog);
+    return true;
 }
 
 int main(int argc, char** argv)
@@ -515,36 +443,17 @@ int main(int argc, char** argv)
         RootFree(&root);
         return 1;
     }
-    static Catalog catalog;
-    for (int i = first; i < argc; i++)
+    CollationCatalog catalog = {0};
+    if (!ReadCatalog(&catalog, argv + first, argc - first))
     {
-        ReadFile(&catalog, argv[i]);
+        CollationCatalogFree(&catalog);
+        free(rootUnit);
+        RootFree(&root);
+        return 1;
     }
-    qsort(catalog.types, catalog.count, sizeof(catalog.types[0]), ByFile);
     size_t built = 0;
     size_t refused = 0;
-    for (size_t i = 0; i < catalog.count; i++)
-    {
-        const Type* t = &catalog.types[i];
-        if (!t->parsed)
-        {
-            continue;
-        }
-        if (queries || answers)
-        {
-            printf("type %s %s%s%s\n", t->file, t->type, t->alt[0] == '\0' ? "" : " ", t->alt);
-        }
-        if (queries)
-        {
-            printf("rules %zu\n%s\n", strlen(t->text), t->text);
-            Queries(t, nullptr, false);
-            printf("end\n");
-            continue;
-        }
-        bool ok = BuildType(t, &root, &catalog, answers, units);
-        built += ok;
-        refused += !ok;
-    }
+    RunTypes(&catalog, &root, queries, answers, units, &built, &refused);
     char hash[32];
     snprintf(hash, sizeof(hash), "%016llx", (unsigned long long)s_hash);
     if (units)
@@ -563,7 +472,7 @@ int main(int argc, char** argv)
     {
         fprintf(stderr, "expected answers %s\n", expected);
     }
-    FreeCatalog(&catalog);
+    CollationCatalogFree(&catalog);
     RootFree(&root);
     return expected != nullptr ? mismatch : units ? s_unreadable + s_differ != 0 : refused != 0;
 }

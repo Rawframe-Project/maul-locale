@@ -72,7 +72,8 @@
 //      11..10 case level, 13..12 numeric, 15..14 backwards; bit 16 set
 //      when the rules reorder (an empty [reorder] too); the rest 0
 //  20  u32 reorderCount, the reorder codes below
-//  24  u32 0
+//  24  u32 mappedCount, the code points the trie maps: 0 when the type
+//      gives the root's elements, with its settings alone
 //  28  u32 0
 //  32  the code point trie of CE32s, padded to 8, then ces, ce32s,
 //      listStarts and contexts as the root's, then u32
@@ -83,6 +84,23 @@
 // context list's default and entries may also be a contraction naming a
 // list before their own: a prefix's contractions, and a prefix with
 // contractions only falling back to a shorter prefix's.
+//
+// A locale's types are one unit of its key (kindCollationTailorings):
+//
+//   0  u32 typeCount
+//   4  u32 defaultLength, the length of the name of the locale's default
+//      type, which the names begin with; 0 when it names none
+//   8  u32 0
+//  12  u32 0
+//  16  types[typeCount], 16 bytes each: u32 the name's offset in the
+//      names, u32 its length, u32 the tailoring's offset from the unit's
+//      start, u32 its size; by name, rising
+//      the names: the default's, then each type's in order, BCP 47's
+//      co values (lowercase letters, digits and hyphens), padded to 8
+//      the tailorings, each from a multiple of 8, in order, padded to 8
+//
+// A unit has a type or a default, or both. Types the locale does not
+// list are its chain's.
 
 #ifndef MLOC_COLLATION_TABLES_H
 #define MLOC_COLLATION_TABLES_H
@@ -92,10 +110,14 @@
 #include "data_view.h"
 
 #include <stdint.h>
+#include <string.h>
 
 enum
 {
     collationHead = 32,
+    collationTypesHead = 16,
+    collationTypeSize = 16,
+    collationMaxTypeName = 32,
     collationSpecialByte = 0xC0,
     collationTagLongPrimary = 1,
     collationTagLongSecondary = 2,
@@ -495,6 +517,7 @@ typedef struct CollationTailoring
     uint32_t settings;
     uint32_t reorderCount;
     const uint8_t* reorder;
+    uint32_t mappedCount;
 } CollationTailoring;
 
 // Whether a settings word holds only the values its fields may.
@@ -520,9 +543,10 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
                  .listCount = mlocLoad32(p + 12)},
         .settings = mlocLoad32(p + 16),
         .reorderCount = mlocLoad32(p + 20),
+        .mappedCount = mlocLoad32(p + 24),
     };
     CollationRoot* r = &t.view;
-    if (!mlocCollationSettingsValid(t.settings) || mlocLoad32(p + 24) != 0 ||
+    if (!mlocCollationSettingsValid(t.settings) || t.mappedCount > 0x110000 ||
         mlocLoad32(p + 28) != 0 ||
         !mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r->trie))
     {
@@ -565,5 +589,42 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
     *out = t;
     return ok;
 }
+
+// A locale's types, read from a unit the validator passed.
+typedef struct CollationTypes
+{
+    const uint8_t* bytes;
+    uint32_t count;
+    // The default type's name, defaultLength 0 for none.
+    const uint8_t* defaultName;
+    uint32_t defaultLength;
+    const uint8_t* names;
+} CollationTypes;
+
+static inline CollationTypes mlocReadCollationTypes(DataSpan unit)
+{
+    uint32_t count = mlocLoad32(unit.bytes);
+    const uint8_t* names = unit.bytes + collationTypesHead + (size_t)count * collationTypeSize;
+    return (CollationTypes){unit.bytes, count, names, mlocLoad32(unit.bytes + 4), names};
+}
+
+// A type's tailoring by its name, or false when the locale lists none.
+static inline bool mlocFindCollationType(const CollationTypes* t, const char* name, size_t length,
+                                         DataSpan* tailoringOut)
+{
+    for (uint32_t i = 0; i < t->count; i++)
+    {
+        const uint8_t* entry = t->bytes + collationTypesHead + (size_t)i * collationTypeSize;
+        if (mlocLoad32(entry + 4) == length &&
+            memcmp(t->names + mlocLoad32(entry), name, length) == 0)
+        {
+            *tailoringOut = (DataSpan){t->bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+            return true;
+        }
+    }
+    return false;
+}
+
+bool mlocValidCollationTypes(const DataView* view, DataSpan payload);
 
 #endif

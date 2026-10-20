@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 static size_t s_size;
 
 static uint32_t Elements(const CollationRoot* r, const char* text, uint64_t* out, uint32_t cap)

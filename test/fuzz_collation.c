@@ -36,7 +36,7 @@ static void Require(bool condition)
 // The root read from the file once; null when it does not open.
 static const CollationRoot* Root(void)
 {
-    alignas(8) static uint8_t s_file[1 << 19];
+    alignas(8) static uint8_t s_file[1 << 22];
     static CollationRoot s_root;
     static int s_state;
     if (s_state == 0)

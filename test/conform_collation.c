@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 
 // A line's code points as UTF-8; false for a surrogate or no code point.
 static bool Text(const char* line, uint8_t* out, size_t* lengthOut)

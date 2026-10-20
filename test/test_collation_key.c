@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 static CollationRoot s_root;
 
 // Whether the text's key under the settings is the hex given.

@@ -37,7 +37,7 @@ enum
     maxCodes = 64,
 };
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 static CollationRoot s_root;
 
 static size_t Utf8(uint32_t c, uint8_t* out)

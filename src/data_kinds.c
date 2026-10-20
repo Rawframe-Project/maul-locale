@@ -90,6 +90,7 @@ static const DataKind s_kinds[] = {
     {kindCatalogKeys, mlocValidCatalogKeys},
     {kindCatalogMessages, mlocValidCatalogMessages},
     {kindCollationRoot, mlocValidCollationRoot},
+    {kindCollationTailorings, mlocValidCollationTypes},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

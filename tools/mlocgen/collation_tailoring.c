@@ -21,6 +21,7 @@ typedef struct Writer
     CollationWords contexts;
     CollationWords listStarts;
     const CollationMappings* m;
+    uint32_t mapped;
 } Writer;
 
 typedef struct Entry
@@ -248,6 +249,7 @@ static uint8_t* Write(const Writer* w, const uint32_t* values, const CollationRu
     GenPut(out + 12, w->listStarts.count, 4);
     GenPut(out + 16, rules == nullptr ? 0 : Settings(rules), 4);
     GenPut(out + 20, reorderCount, 4);
+    GenPut(out + 24, w->mapped, 4);
     memcpy(out + collationHead, trie, trieSize);
     uint8_t* p = out + collationHead + padded;
     for (size_t i = 0; i < w->ces.count; i++, p += 8)
@@ -293,6 +295,7 @@ uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const Collati
         if (slot->head != 0)
         {
             ok = CodePoint(&w, slot->codePoint, &values[slot->codePoint]);
+            w.mapped++;
             if (!ok)
             {
                 snprintf(error, errorSize, "U+%04X: a prefix with no mapping to fall back on",
@@ -306,5 +309,60 @@ uint8_t* CollationTailoringUnit(const CollationMappings* mappings, const Collati
     free(w.ce32s.items);
     free(w.contexts.items);
     free(w.listStarts.items);
+    return out;
+}
+
+static int ByCode(const void* x, const void* y)
+{
+    return strcmp(((const CollationTypeBody*)x)->code, ((const CollationTypeBody*)y)->code);
+}
+
+// Writes a name's bytes, no NUL after, and returns their count.
+static size_t PutName(uint8_t* to, const char* name)
+{
+    size_t length = strlen(name);
+    for (size_t i = 0; i < length; i++)
+    {
+        to[i] = (uint8_t)name[i];
+    }
+    return length;
+}
+
+uint8_t* CollationTypesUnit(CollationTypeBody* types, size_t count, const char* defaultCode,
+                            size_t* sizeOut)
+{
+    if (count > 0)
+    {
+        qsort(types, count, sizeof(CollationTypeBody), ByCode);
+    }
+    size_t names = strlen(defaultCode);
+    for (size_t i = 0; i < count; i++)
+    {
+        names += strlen(types[i].code);
+    }
+    size_t namesAt = collationTypesHead + count * collationTypeSize;
+    size_t at = (namesAt + names + 7) / 8 * 8;
+    size_t size = at;
+    for (size_t i = 0; i < count; i++)
+    {
+        size += (types[i].size + 7) / 8 * 8;
+    }
+    uint8_t* out = GenAllocate(size);
+    size_t name = PutName(out + namesAt, defaultCode);
+    GenPut(out, count, 4);
+    GenPut(out + 4, name, 4);
+    for (size_t i = 0; i < count; i++)
+    {
+        uint8_t* entry = out + collationTypesHead + i * collationTypeSize;
+        size_t length = PutName(out + namesAt + name, types[i].code);
+        GenPut(entry, name, 4);
+        GenPut(entry + 4, length, 4);
+        GenPut(entry + 8, at, 4);
+        GenPut(entry + 12, types[i].size, 4);
+        name += length;
+        memcpy(out + at, types[i].body, types[i].size);
+        at += (types[i].size + 7) / 8 * 8;
+    }
+    *sizeOut = size;
     return out;
 }

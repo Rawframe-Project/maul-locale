@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 static mlocData s_source;
 static mlocDataSet s_data = {&s_source, 1};
 

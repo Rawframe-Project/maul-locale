@@ -804,6 +804,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     add_library(mlocgen_core STATIC tools/mlocgen/alias_gen.c tools/mlocgen/calendar_gen.c
                                     tools/mlocgen/collation_gen.c tools/mlocgen/collation_root.c
                                     tools/mlocgen/collation_builder.c
+                                    tools/mlocgen/collation_catalog.c
                                     tools/mlocgen/collation_encode.c
                                     tools/mlocgen/collation_mappings.c
                                     tools/mlocgen/collation_root_elements.c

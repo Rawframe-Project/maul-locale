@@ -3,12 +3,107 @@
 
 #include "collation_gen.h"
 
+#include "collation_builder.h"
+#include "collation_catalog.h"
 #include "collation_root.h"
+#include "collation_tailoring.h"
 #include "collation_unit.h"
+#include "keys.h"
 #include "kinds.h"
+#include "table_gen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+// Whether a type is one a locale's co may name: not an alt and not one
+// kept for imports (CLDR's "private-").
+static bool Selectable(const CollationType* t)
+{
+    return t->alt[0] == '\0' && strncmp(t->type, "private-", 8) != 0;
+}
+
+// One type built over the root and written; the program stops on a
+// refusal, as CLDR's rules all build.
+static CollationTypeBody Build(const CollationType* t, const RootTable* root,
+                               CollationCatalog* catalog)
+{
+    char error[256] = "";
+    if (!t->parsed)
+    {
+        fprintf(stderr, "%s %s: %s\n", t->file, t->type, t->error);
+        GenDie("a collation type does not parse", t->file);
+    }
+    CollationBuilder b;
+    bool ok =
+        CollationBuilderInit(&b, root, CollationCatalogImport, catalog, error, sizeof(error)) &&
+        CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b);
+    CollationTypeBody built = {.code = CollationTypeCode(t->type)};
+    built.body =
+        ok ? CollationTailoringUnit(&b.mappings, &t->rules, &built.size, error, sizeof(error))
+           : nullptr;
+    CollationBuilderFree(&b);
+    if (built.body == nullptr)
+    {
+        fprintf(stderr, "%s %s: %s\n", t->file, t->type, error);
+        GenDie("a collation type does not build", t->file);
+    }
+    return built;
+}
+
+// Each file's selectable types as a unit of its locale's key.
+static void AddTailorings(CollationCatalog* catalog, const RootTable* root, const Keys* keys,
+                          DataFile* file)
+{
+    CollationTypeBody* built = GenAllocate(sizeof(CollationTypeBody) * (catalog->count + 1));
+    size_t next = 0;
+    for (size_t f = 0; f < catalog->fileCount; f++)
+    {
+        const CollationFile* source = &catalog->files[f];
+        size_t count = 0;
+        for (; next < catalog->count && strcmp(catalog->types[next].file, source->name) == 0;
+             next++)
+        {
+            if (Selectable(&catalog->types[next]))
+            {
+                built[count++] = Build(&catalog->types[next], root, catalog);
+            }
+        }
+        if (count > 0 || source->defaultType[0] != '\0')
+        {
+            char key[64];
+            KeyOf(keys, source->name, key, sizeof(key));
+            size_t size = 0;
+            uint8_t* unit =
+                CollationTypesUnit(built, count, CollationTypeCode(source->defaultType), &size);
+            DataFileAdd(file, kindCollationTailorings, key, unit, size);
+            free(unit);
+        }
+        for (size_t i = 0; i < count; i++)
+        {
+            free(built[i].body);
+        }
+    }
+    free(built);
+}
+
+static void ReadCatalog(const char* commonDirectory, CollationCatalog* catalog)
+{
+    int count = 0;
+    char** names = GenListXml(commonDirectory, "collation", &count);
+    for (int i = 0; i < count; i++)
+    {
+        char path[4096];
+        char error[256] = "";
+        snprintf(path, sizeof(path), "%s/collation/%s.xml", commonDirectory, names[i]);
+        if (!CollationCatalogRead(catalog, path, error, sizeof(error)))
+        {
+            GenDie("cannot read", error);
+        }
+    }
+    GenFreeList(names, count);
+    CollationCatalogSort(catalog);
+}
 
 int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOut,
                       size_t errorCapacity)
@@ -22,12 +117,20 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     }
     size_t size = 0;
     uint8_t* unit = CollationRootUnit(&table, &size, errorOut, errorCapacity);
-    RootFree(&table);
-    if (unit == nullptr)
+    Keys keys;
+    if (unit == nullptr || !KeysOpen(&keys, commonDirectory, errorOut, errorCapacity))
     {
+        free(unit);
+        RootFree(&table);
         return 0;
     }
     DataFileAdd(file, kindCollationRoot, nullptr, unit, size);
     free(unit);
+    CollationCatalog catalog = {0};
+    ReadCatalog(commonDirectory, &catalog);
+    AddTailorings(&catalog, &table, &keys, file);
+    CollationCatalogFree(&catalog);
+    KeysClose(&keys);
+    RootFree(&table);
     return 1;
 }
