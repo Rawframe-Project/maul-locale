@@ -706,6 +706,11 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_include_directories(conform_collation_reorder PRIVATE src)
         maul_apply_flags(conform_collation_reorder)
     endif()
+    # Tailored locales' public sort keys against ICU4C (record
+    # mloc-0071), which the cldr CI job runs on the builder's queries.
+    add_executable(conform_collation_keys test/conform_collation_keys.c)
+    target_link_libraries(conform_collation_keys PRIVATE maul-locale)
+    maul_apply_flags(conform_collation_keys)
     if(NOT MAUL_LOCALE_BUILD_SHARED)
         add_executable(conform_zones test/conform_zones.c)
         target_link_libraries(conform_zones PRIVATE maul-locale)

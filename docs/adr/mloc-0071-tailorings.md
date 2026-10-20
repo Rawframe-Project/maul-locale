@@ -266,6 +266,28 @@ the oracle for every type.
   to its trie's. The runtime iterator gives the builder's
   elements for every string its rules name and for 2,000 random strings
   of its mappings and marks: 674,006 strings, none different.
+- **`conform_collation_keys`** (the cldr CI job, on the builder's
+  `--queries`): each selectable type's tag (`-u-co` and its BCP 47
+  name) and each file's locale alone, under no options, `kf-upper`,
+  `ka-shifted` with `ks-level4`, and `kc`, give public sort keys for the
+  strings the rules name and 30 probes: 958,487 keys over 727 tags. CI
+  checks their hash. In the docs repository's oracle, ICU4C 79 makes
+  each tag's collator through its own loader and writes the keys:
+  - 56 tags ICU's data cannot check: it has no collation for aa, bal,
+    cu, dz, sgs, ssy, vo and wae, no `digits-after` for cs and no `eor`
+    for de (its loader falls back), and leaves ca and de-AT to their
+    parents.
+  - The other 671 tags give ICU's keys byte for byte, every option set
+    included, except:
+    - the Han probes (U+4E00, U+963F) outside zh, by the root's
+      code-point Han order (record mloc-0070), 1,328 keys left out;
+    - zh's `unihan` on U+963F: ICU's `private-unihan` import reorders
+      its radical-stroke root (slice d4c);
+    - zh's `pinyin`, `stroke` and `zhuyin`: ICU's data takes CLDR's
+      `alt="short"` rule strings, which give other weights (slice d4b).
+  So `co` and the default along the chain, the tailorings' settings
+  and reordering, imports and suppression read as ICU's loader reads
+  them.
 - **`conform_collation_root_elements`** (the cldr CI job): CLDR 49's
   table equals ICU4C 79's outside Han's section, 6,110 units with the
   indexes. In the docs repository's oracle, its 409,032 queries over
@@ -275,7 +297,9 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - the differential of tailored locales' sort keys against ICU4C;
+  - zh's types from CLDR's `alt="short"` rule strings, as ICU's data
+    takes them (slice d4b);
+  - the `unihan` types over a radical-stroke Han order (slice d4c);
   - every CLDR type, with the differential against ICU4C 79.
 
   Each amends this record.
