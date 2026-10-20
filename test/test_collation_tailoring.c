@@ -133,8 +133,9 @@ static void TestElements(void)
           "a prefix with contractions only falls back to the shorter prefix's list");
     CHECK(ok && SAME(&b, 'x', 0x301) && SAME(&b, 'x', 0x301, 'c') && SAME(&b, 0x4E01),
           "marks after, and Han from the root");
-    CHECK(ok && mlocTrieValue(&b.unit.view.trie, 'q') == collationFallbackCe32,
-          "a code point not tailored is the fallback word");
+    CHECK(ok && mlocTrieValue(&b.unit.view.trie, 'q') == collationFallbackCe32 &&
+              mlocTrieValue(&b.unit.view.trie, 0x10FFFF) == collationFallbackCe32,
+          "a code point not tailored is the fallback word, the last one too");
     if (ok)
     {
         Free(&b);

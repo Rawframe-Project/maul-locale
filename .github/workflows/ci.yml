@@ -156,7 +156,7 @@ jobs:
       - name: Every collation type built, its answers ICU4C 79's
         run: |
           build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect 4d53eb74eebaf492 ~/cldr-cache/cldr/common/collation/*.xml \
+            --expect 2b44329576744ef4 ~/cldr-cache/cldr/common/collation/*.xml \
             test/collation/crafted.xml
       - name: Every tailoring's unit read through the runtime iterator
         run: |
