@@ -144,10 +144,14 @@ the oracle for every type.
   `[import]`, and seven refusals, each checked by the order of the
   elements it gives.
 - **`conform_collation_builder`** (the cldr CI job): all 168 CLDR 49
-  types build. In the docs repository's oracle, ICU4C 79 builds each
-  rule string (its escapes decoded as ICU's data build decodes them)
-  and gives the elements of each string the rules name. 291,452 of the
-  291,878 strings have ICU's elements. The other 426 are
+  types build, with 34 crafted rule strings (`test/collation/crafted.xml`)
+  for paths CLDR's rules do not take. These cover `[before 2]` and
+  `[before 3]` together, special positions reset on twice, the 31-element
+  limits, the Jamo and UTF-8 bounds, and seven refusals. In the docs
+  repository's oracle, ICU4C 79 builds each rule string (its escapes
+  decoded as ICU's data build decodes them) and gives the elements of
+  each string the rules name. ICU refuses the same seven, and 291,540 of
+  the 291,966 strings have ICU's elements. The other 426 are
   `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
   root. The quaternary bits are compared later through sort keys,
   since ICU's element iterator drops them. CI checks a hash of every

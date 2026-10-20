@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!-- Crafted rule strings for the tailoring builder's differential against
+     ICU4C (record mloc-0071): paths CLDR's own rules do not take. -->
+<ldml>
+<identity><language type='crafted'/></identity>
+<collations>
+<collation type='c01'><cr><![CDATA[&[before 3]a<<<x &[before 2]a<<y &a<<<z &[before 2]a<<w &a<<v]]></cr></collation>
+<collation type='c02'><cr><![CDATA[&[before 2]a<<x &a<<y &a<<<z]]></cr></collation>
+<collation type='c03'><cr><![CDATA[&[before 2]a<<x &[before 3]x<<<y &[before 3]a<<<z]]></cr></collation>
+<collation type='c04'><cr><![CDATA[&a<<x<<<y &[before 3]y<<<z &[before 2]y<<w]]></cr></collation>
+<collation type='c05'><cr><![CDATA[&[before 3]a<<<x &[before 3]a<<<y &[first regular]<z]]></cr></collation>
+<collation type='c06'><cr><![CDATA[&[first primary ignorable]<<x &[first primary ignorable]<<y]]></cr></collation>
+<collation type='c07'><cr><![CDATA[&[before 3][first primary ignorable]<<<x &[first primary ignorable]<<y]]></cr></collation>
+<collation type='c08'><cr><![CDATA[&[first secondary ignorable]<<<x &[first secondary ignorable]<<<y]]></cr></collation>
+<collation type='c09'><cr><![CDATA[&[last primary ignorable]<<x &[last primary ignorable]<<y]]></cr></collation>
+<collation type='c10'><cr><![CDATA[&[last secondary ignorable]<<<x &[last secondary ignorable]<<<y]]></cr></collation>
+<collation type='c11'><cr><![CDATA[&[first tertiary ignorable]=x &[last tertiary ignorable]=y]]></cr></collation>
+<collation type='c12'><cr><![CDATA[&[first variable]<x &[first variable]<y]]></cr></collation>
+<collation type='c13'><cr><![CDATA[&[last variable]<x &[last variable]<y]]></cr></collation>
+<collation type='c14'><cr><![CDATA[&[first regular]<x &[first regular]<y]]></cr></collation>
+<collation type='c15'><cr><![CDATA[&[before 1][first regular]<x]]></cr></collation>
+<collation type='c16'><cr><![CDATA[&[last regular]<x &[last regular]<y]]></cr></collation>
+<collation type='c17'><cr><![CDATA[&[first implicit]<x &[first implicit]<y]]></cr></collation>
+<collation type='c18'><cr><![CDATA[&[first trailing]<x]]></cr></collation>
+<collation type='c19'><cr><![CDATA[&[before 1][first variable]<x]]></cr></collation>
+<collation type='c20'><cr><![CDATA[&[before 2][first secondary ignorable]<<x]]></cr></collation>
+<collation type='c21'><cr><![CDATA[&[before 3][first tertiary ignorable]<<<x]]></cr></collation>
+<collation type='c22'><cr><![CDATA[&[before 1]\u0301<x]]></cr></collation>
+<collation type='c23'><cr><![CDATA[&aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa<x]]></cr></collation>
+<collation type='c24'><cr><![CDATA[&aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa<x]]></cr></collation>
+<collation type='c25'><cr><![CDATA[&a<x/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]]></cr></collation>
+<collation type='c26'><cr><![CDATA[&a<x/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]]></cr></collation>
+<collation type='c27'><cr><![CDATA[&a<x\u1112]]></cr></collation>
+<collation type='c28'><cr><![CDATA[&a<\u1175x]]></cr></collation>
+<collation type='c29'><cr><![CDATA[&a<x\u1161]]></cr></collation>
+<collation type='c30'><cr><![CDATA[&a<\u0080<\u0800<\U00010000<\u07FF<\uFFFC]]></cr></collation>
+<collation type='c31'><cr><![CDATA[&a<b|x &b<c|y]]></cr></collation>
+<collation type='c32'><cr><![CDATA[&[before 1]b<x<<y<<<z=w]]></cr></collation>
+<collation type='c33'><cr><![CDATA[&a<<<\u0301 &a<<\u0302]]></cr></collation>
+<collation type='c34'><cr><![CDATA[&\u00E0<x &a\u0300<y]]></cr></collation>
+</collations>
+</ldml>

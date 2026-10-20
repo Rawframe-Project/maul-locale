@@ -156,7 +156,8 @@ jobs:
       - name: Every collation type built, its answers ICU4C 79's
         run: |
           build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect f79656fd99ce12a1 ~/cldr-cache/cldr/common/collation/*.xml
+            --expect f85fc130ba5d6775 ~/cldr-cache/cldr/common/collation/*.xml \
+            test/collation/crafted.xml
       - name: Every collation rule string parsed
         run: build/conform_collation_rules ~/cldr-cache/cldr/common/collation/*.xml
       - name: The general compare against CollationTest

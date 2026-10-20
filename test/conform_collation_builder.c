@@ -7,8 +7,9 @@
 // rule string and the strings its rules name (NFD, a prefix before its
 // string), as the oracle reads them; --answers writes the elements the
 // built tailoring gives each string, as the oracle writes ICU4C's.
-// Alone it prints how many types built and a hash of the answers; with
-// --expect it fails unless the hash is the given one, which CI checks on
+// Alone it prints how many types built and a hash of the answers (a
+// refusal counted too), failing on a refusal; with --expect it fails
+// unless the hash is the given one, which CI checks on
 // the pinned release (the answers ICU4C 79 gives, but for Han's root
 // order in the unihan types and the quaternary bits its iterator drops).
 //
@@ -279,6 +280,11 @@ static bool BuildType(const Type* t, const RootTable* root, Catalog* catalog, bo
     {
         Queries(t, &b.mappings, true);
     }
+    else
+    {
+        // A refusal counts in the hash, as the oracle's "error" does.
+        s_hash = s_hash * 1000003U + 0xE770;
+    }
     if (answers)
     {
         printf(ok ? "end\n" : "error\nend\n");
@@ -358,12 +364,12 @@ int main(int argc, char** argv)
     {
         printf("builder: %zu types built, %zu refused, answers %s\n", built, refused, hash);
     }
-    if (expected != nullptr && strcmp(expected, hash) != 0)
+    bool mismatch = expected != nullptr && strcmp(expected, hash) != 0;
+    if (mismatch)
     {
         fprintf(stderr, "expected answers %s\n", expected);
-        refused++;
     }
     FreeCatalog(&catalog);
     RootFree(&root);
-    return refused == 0 ? 0 : 1;
+    return expected != nullptr ? mismatch : refused != 0;
 }
