@@ -238,7 +238,7 @@ static const char* const s_held[][6] = {
     {"e", "\xC3\xA9", "\xC3\xA8", "E", "\xC3\x89", "\xC3\x8A"},
     {"a", "A", "\xC3\xA6", "\xC3\x86", "\xC3\xA0", "\xC3\x80"},
     {"l", "L", "\xC5\x82", "\xC5\x81", "l", "L"},
-    {"s", "S", "\xC3\x9F", "s", "S", "\xC5\xA1"},
+    {"s", "S", "\xC3\x9F", "\xC5\xBF", "S", "\xC5\xA1"},
     {"c", "C", "h", "H", "\xC4\x8D", "\xC4\x8C"},
     {"0", "5", "9", "0", "5", "9"},
     {" ", "\t", "\xE2\x80\x82", "\xE2\x80\x87", "\xE2\x80\xAF", "\x7F"},
@@ -278,9 +278,30 @@ static void HeldPair(int i, char* a, size_t* aLength, char* b, size_t* bLength)
     }
 }
 
+// A well-formed UTF-8 text's UTF-16 form (no supplementary characters
+// here); its length in units.
+static size_t ToUtf16(const uint8_t* text, size_t length, uint16_t* out)
+{
+    size_t n = 0;
+    for (size_t i = 0; i < length;)
+    {
+        uint32_t c = text[i];
+        size_t extra = c < 0x80 ? 0 : c < 0xE0 ? 1 : 2;
+        c = extra == 0 ? c : c & (0x3Fu >> extra);
+        for (size_t k = 1; k <= extra; k++)
+        {
+            c = c << 6 | (text[i + k] & 0x3Fu);
+        }
+        i += 1 + extra;
+        out[n++] = (uint16_t)c;
+    }
+    return n;
+}
+
 // Over held characters under settings and a table: how many pairs the
 // fast compare answers, -1 when one answer differs from the general
-// compare's, -2 when it does not serve the settings.
+// compare's or the UTF-16 forms answer otherwise than the UTF-8 ones, -2
+// when it does not serve the settings.
 static int AnsweredOver(const CollationSettings* s, const CollationRoot* unit)
 {
     FastLatinOptions o;
@@ -299,6 +320,16 @@ static int AnsweredOver(const CollationSettings* s, const CollationRoot* unit)
         int fast = mlocFastLatinCompare(&o, (const uint8_t*)a, aLength, (const uint8_t*)b, bLength);
         int general = mlocCollationCompare(&s_root, s, (const uint8_t*)a, aLength,
                                            (const uint8_t*)b, bLength);
+        static uint16_t a16[maxText];
+        static uint16_t b16[maxText];
+        size_t a16Length = ToUtf16((const uint8_t*)a, aLength, a16);
+        size_t b16Length = ToUtf16((const uint8_t*)b, bLength, b16);
+        if (mlocFastLatinCompareUtf16(&o, a16, a16Length, b16, b16Length) != fast)
+        {
+            fprintf(stderr, "  \"%.*s\" and \"%.*s\": UTF-16 unlike UTF-8\n", (int)aLength, a,
+                    (int)bLength, b);
+            return -1;
+        }
         if (fast != fastLatinBail && fast != general)
         {
             fprintf(stderr, "  \"%.*s\" and \"%.*s\": fast %d, general %d\n", (int)aLength, a,

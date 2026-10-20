@@ -343,6 +343,8 @@ static void TestSortKeys(void)
 static void TestUtf16(void)
 {
     mlocCollator c;
+    // The last three: U+E000 just past the surrogates, a lead surrogate
+    // at the end, and two trail surrogates (each a lone one).
     static const char* const utf8[] = {"",
                                        "a",
                                        "b",
@@ -353,7 +355,10 @@ static void TestUtf16(void)
                                        "\xE2\x80\x90",
                                        "\xF0\x9F\x98\x80",
                                        "\xF0\xA0\x80\x80x",
-                                       "\xEF\xBF\xBDz"};
+                                       "\xEF\xBF\xBDz",
+                                       "\xEE\x80\x80",
+                                       "a\xEF\xBF\xBD",
+                                       "\xEF\xBF\xBD\xEF\xBF\xBD"};
     static const uint16_t u0[] = {0};
     static const uint16_t u1[] = {'a'};
     static const uint16_t u2[] = {'b'};
@@ -365,8 +370,12 @@ static void TestUtf16(void)
     static const uint16_t u8[] = {0xD83D, 0xDE00};
     static const uint16_t u9[] = {0xD840, 0xDC00, 'x'};
     static const uint16_t u10[] = {0xDC00, 'z'};
-    static const uint16_t* const utf16[] = {u0, u1, u2, u3, u4, u5, u6, u7, u8, u9, u10};
-    static const size_t lengths[] = {0, 1, 1, 1, 1, 2, 1, 1, 2, 3, 2};
+    static const uint16_t u11[] = {0xE000};
+    static const uint16_t u12[] = {'a', 0xD83D};
+    static const uint16_t u13[] = {0xDC00, 0xDC01};
+    static const uint16_t* const utf16[] = {u0, u1, u2, u3,  u4,  u5,  u6,
+                                            u7, u8, u9, u10, u11, u12, u13};
+    static const size_t lengths[] = {0, 1, 1, 1, 1, 2, 1, 1, 2, 3, 2, 1, 2, 2};
     static const char* const tags[] = {"en", "cs", "en-u-ks-identic", "en-u-ka-shifted"};
     bool ok = true;
     for (size_t t = 0; ok && t < sizeof(tags) / sizeof(tags[0]); t++)
