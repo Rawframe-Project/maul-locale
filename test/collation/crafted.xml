@@ -38,5 +38,12 @@
 <collation type='c32'><cr><![CDATA[&[before 1]b<x<<y<<<z=w]]></cr></collation>
 <collation type='c33'><cr><![CDATA[&a<<<\u0301 &a<<\u0302]]></cr></collation>
 <collation type='c34'><cr><![CDATA[&\u00E0<x &a\u0300<y]]></cr></collation>
+<collation type='c35'><cr><![CDATA[&[first tertiary ignorable]<<<x &[first secondary ignorable]<<<y]]></cr></collation>
+<collation type='c36'><cr><![CDATA[&[first tertiary ignorable]<<x &[first primary ignorable]<<y]]></cr></collation>
+<collation type='c37'><cr><![CDATA[&[first tertiary ignorable]<<x &[before 3]x<<<z &[first primary ignorable]<<y]]></cr></collation>
+<collation type='c38'><cr><![CDATA[&[first tertiary ignorable]<<x<<<w &[first primary ignorable]<<y]]></cr></collation>
+<collation type='c39'><cr><![CDATA[&[before 3][first variable]<<<x &[first variable]<y]]></cr></collation>
+<collation type='c40'><cr><![CDATA[&[before 2][first variable]<<x &[first variable]<y]]></cr></collation>
+<collation type='c41'><cr><![CDATA[&[before 2][first variable]<<x &[before 3][first variable]<<<z &[first variable]<y]]></cr></collation>
 </collations>
 </ldml>
