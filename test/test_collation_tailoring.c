@@ -261,6 +261,8 @@ static void TestValidatorReorder(void)
               !ReadsWith(&b, at + 4, latin & ~0x00200000u, b.size) &&
               !ReadsWith(&b, at + 4, latin & ~0x00002000u, b.size) &&
               !ReadsWith(&b, at + 4, latin & ~0x00000020u, b.size) &&
+              !ReadsWith(&b, at + 4, (latin & 0x00FFFFFFu) | (uint32_t)'[' << 24, b.size) &&
+              !ReadsWith(&b, at + 4, (latin & ~0xFFu) | '{', b.size) &&
               !ReadsWith(&b, 20, collationMaxReorderCodes + 1, b.size),
           "a script's letters in the wrong case, too many codes");
     Free(&b);

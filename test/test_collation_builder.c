@@ -244,6 +244,11 @@ static void TestSuppress(void)
               CollationMappingsElements(&s_b.mappings, ab, 2, 0, out, 0) == 1,
           "one made after it stays");
     CollationBuilderFree(&s_b);
+    CHECK(Build("&b<a<<ab [suppressContractions [a]]", nullptr) && P(One('a')) > 0x2A120000 &&
+              P(One('a')) < 0x2A140000 &&
+              CollationMappingsElements(&s_b.mappings, ab, 2, 0, out, 0) == 2,
+          "a tailored code point keeps its own mapping, its contraction gone");
+    CollationBuilderFree(&s_b);
     CHECK(Build("[suppressContractions [\\uFDD1]]", nullptr) &&
               CollationMappingsElements(&s_b.mappings, quote, 2, 0, out, 0) == 2 &&
               P(out[1]) == 0x05080000 && P(One('a')) == 0x2A100000,
@@ -262,6 +267,20 @@ static void TestSettings(void)
               s_b.settings.reorderGiven && s_b.settings.reorderCount == 1,
           "an import's settings, under those of the rules naming it");
     CollationBuilderFree(&s_b);
+    text = "[alternate shifted][maxVariable symbol][caseLevel on][numericOrdering on]"
+           "[backwards 2]&a<x";
+    CollationRules all;
+    bool allParsed = CollationRulesParse(text, strlen(text), &all, error, sizeof(error));
+    CHECK(allParsed && Build("[import xx]", &all) && s_b.settings.alternate == 1 &&
+              s_b.settings.maxVariable == 2 && s_b.settings.caseLevel == 1 &&
+              s_b.settings.numeric == 1 && s_b.settings.backwards == 1 &&
+              s_b.settings.caseFirst == ruleUnset,
+          "every setting of an import");
+    CollationBuilderFree(&s_b);
+    if (allParsed)
+    {
+        CollationRulesFree(&all);
+    }
     CHECK(Build("&a<x", nullptr) && s_b.settings.strength == ruleUnset &&
               !s_b.settings.reorderGiven,
           "no settings given");
