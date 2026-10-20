@@ -354,6 +354,11 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
     return Rehash(m) && AppendMapping(m, c, &added);
 }
 
+int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint)
+{
+    return CollationMappingsFirst(m, codePoint) >= 0 || CopyRoot(m, codePoint);
+}
+
 int CollationMappingsSuppress(CollationMappings* m, uint32_t codePoint)
 {
     int32_t first = CollationMappingsFirst(m, codePoint);

@@ -156,6 +156,9 @@ static void Queries(const CollationType* t, CollationMappings* m, bool answers)
 // --units: each tailoring written as a unit, read back, and the runtime's
 // iterator over the root and it against the builder's lookup.
 static CollationRoot s_root;
+// The unihan types' Han table, from the unihan root.
+static CollationHan s_han;
+static uint8_t* s_hanUnit;
 static size_t s_checked;
 static size_t s_differ;
 static size_t s_unreadable;
@@ -202,6 +205,7 @@ static void Check(const CollationType* t, CollationMappings* m, const CollationT
     CollationIterator it;
     mlocCollationIteratorStart(&it, &s_root, (const uint8_t*)utf8, size);
     it.tailoring = &unit->view;
+    it.han = (unit->settings & collationHanRadical) != 0 ? &s_han : nullptr;
     uint64_t theirs[collationMaxExpansion];
     uint32_t count = 0;
     uint64_t e = 0;
@@ -366,8 +370,8 @@ static bool BuildType(const CollationType* t, const RootTable* root, CollationCa
 
 // Each parsed type's queries written, or the type built and checked as
 // the mode asks; how many built and how many were refused.
-static void RunTypes(CollationCatalog* catalog, const RootTable* root, bool queries, bool answers,
-                     bool units, size_t* built, size_t* refused)
+static void RunTypes(CollationCatalog* catalog, const RootTable* const roots[2], bool queries,
+                     bool answers, bool units, size_t* built, size_t* refused)
 {
     for (size_t i = 0; i < catalog->count; i++)
     {
@@ -387,7 +391,9 @@ static void RunTypes(CollationCatalog* catalog, const RootTable* root, bool quer
             printf("end\n");
             continue;
         }
-        bool ok = BuildType(t, root, catalog, answers, units);
+        // The unihan types are built over the unihan root.
+        bool unihan = strcmp(t->type, "unihan") == 0 || strcmp(t->type, "private-unihan") == 0;
+        bool ok = BuildType(t, roots[unihan], catalog, answers, units);
         *built += ok;
         *refused += !ok;
     }
@@ -428,12 +434,18 @@ int main(int argc, char** argv)
     first += queries || answers || units ? 1 : expected != nullptr ? 2 : 0;
     s_print = answers;
     RootTable root = {0};
+    RootTable unihan = {0};
     char error[256] = "";
-    if (!RootRead(argv[1], &root, error, sizeof(error)))
+    if (!RootRead(argv[1], &root, error, sizeof(error)) ||
+        !RootReadUnihan(argv[1], &unihan, error, sizeof(error)))
     {
         fprintf(stderr, "%s\n", error);
+        RootFree(&root);
         return 1;
     }
+    size_t hanSize = 0;
+    s_hanUnit = CollationHanUnit(&unihan, &hanSize);
+    s_han = mlocReadCollationHan((DataSpan){s_hanUnit, (uint32_t)hanSize});
     size_t rootSize = 0;
     uint8_t* rootUnit = units ? CollationRootUnit(&root, &rootSize, error, sizeof(error)) : nullptr;
     if (units && (rootUnit == nullptr ||
@@ -442,6 +454,8 @@ int main(int argc, char** argv)
         fprintf(stderr, "the root unit: %s\n", rootUnit == nullptr ? error : "does not read");
         free(rootUnit);
         RootFree(&root);
+        RootFree(&unihan);
+        free(s_hanUnit);
         return 1;
     }
     CollationCatalog catalog = {0};
@@ -450,11 +464,14 @@ int main(int argc, char** argv)
         CollationCatalogFree(&catalog);
         free(rootUnit);
         RootFree(&root);
+        RootFree(&unihan);
+        free(s_hanUnit);
         return 1;
     }
     size_t built = 0;
     size_t refused = 0;
-    RunTypes(&catalog, &root, queries, answers, units, &built, &refused);
+    const RootTable* const roots[2] = {&root, &unihan};
+    RunTypes(&catalog, roots, queries, answers, units, &built, &refused);
     char hash[32];
     snprintf(hash, sizeof(hash), "%016llx", (unsigned long long)s_hash);
     if (units)
@@ -475,5 +492,7 @@ int main(int argc, char** argv)
     }
     CollationCatalogFree(&catalog);
     RootFree(&root);
+    RootFree(&unihan);
+    free(s_hanUnit);
     return expected != nullptr ? mismatch : units ? s_unreadable + s_differ != 0 : refused != 0;
 }

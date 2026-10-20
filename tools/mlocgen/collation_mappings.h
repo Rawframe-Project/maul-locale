@@ -111,6 +111,10 @@ int CollationMappingsAdd(CollationMappings* m, const uint32_t* prefix, uint32_t 
                          const uint32_t* text, uint32_t textLength, const uint64_t* elements,
                          uint32_t elementCount);
 
+// Copies the root's mappings of a code point the tailoring has none of
+// (ICU's copyFromBaseCE32); 0 when out of memory.
+int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint);
+
 // Leaves a code point its mapping alone, without prefixes or
 // contractions (ICU's suppressContractions for one code point): the
 // tailoring's own, or the root's when the tailoring has none and the

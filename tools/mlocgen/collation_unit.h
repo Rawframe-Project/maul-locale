@@ -20,6 +20,10 @@
 // (a context longer than the unit allows, a prefix with a contraction).
 uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error, size_t errorSize);
 
+// The radical-stroke Han table of a root's [radical] ranges
+// (src/collation_tables.h); the caller frees the bytes.
+uint8_t* CollationHanUnit(const RootTable* table, size_t* sizeOut);
+
 // Whether the builder leaves a mapping starting with this code point out.
 bool CollationLeftOut(uint32_t codePoint);
 

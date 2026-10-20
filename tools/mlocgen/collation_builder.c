@@ -9,6 +9,7 @@
 
 #include "collation_builder.h"
 
+#include "collation_unit.h"
 #include "collation_weights.h"
 
 #include "maul-unicode/normalize.h"
@@ -187,7 +188,8 @@ int CollationBuilderInit(CollationBuilder* b, const RootTable* root, CollationIm
                             .importContext = importContext,
                             .error = error,
                             .errorSize = errorSize,
-                            .settings = {.strength = ruleUnset,
+                            .settings = {.hanRadical = root->radicalOrder,
+                                         .strength = ruleUnset,
                                          .alternate = ruleUnset,
                                          .maxVariable = ruleUnset,
                                          .caseFirst = ruleUnset,
@@ -1296,6 +1298,26 @@ static int TailorList(CollationBuilder* b, int32_t i)
     return 1;
 }
 
+// Over the unihan root, the root's mappings that name a Han primary,
+// which the runtime's root gives in code-point order, copied into the
+// tailoring where it has none of the code point.
+static int CopyHanReferences(CollationBuilder* b)
+{
+    const RootTable* root = b->root;
+    for (size_t i = 0; root->radicalOrder && i < root->count; i++)
+    {
+        uint32_t c = root->mappings[i].text[0];
+        // A code point NFD decomposes is never read (CJK compatibility
+        // ideographs).
+        if (root->mappings[i].hanReference && !CollationLeftOut(c) &&
+            !CollationMappingsCopyRoot(&b->mappings, c))
+        {
+            return Fail(b, "out of memory");
+        }
+    }
+    return 1;
+}
+
 int CollationBuilderFinish(CollationBuilder* b)
 {
     if (b->failed)
@@ -1304,7 +1326,7 @@ int CollationBuilderFinish(CollationBuilder* b)
     }
     if (b->mappings.count == 0)
     {
-        return 1;
+        return CopyHanReferences(b);
     }
     for (size_t r = 0; r < b->rootPrimaryCount; r++)
     {
@@ -1327,5 +1349,5 @@ int CollationBuilderFinish(CollationBuilder* b)
             }
         }
     }
-    return 1;
+    return CopyHanReferences(b);
 }

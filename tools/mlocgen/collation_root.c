@@ -29,6 +29,10 @@ typedef struct Reader
     unsigned line;
     char* error;
     size_t errorSize;
+    // The radical ranges' capacity, and whether the mapping being read
+    // named a Han character's element.
+    size_t radicalCapacity;
+    bool namedHan;
 } Reader;
 
 static int Fail(Reader* r, const char* what)
@@ -141,6 +145,7 @@ static int Element(Reader* r, const char** at, uint64_t* out)
             return 0;
         }
         uint64_t element = SingleElement(r->table, c);
+        r->namedHan = r->namedHan || RootHanElement(r->table, c) != 0;
         if (element == 0)
         {
             return Fail(r, "an element naming a code point without one element of its own");
@@ -239,6 +244,7 @@ static int Mapping(Reader* r, const char* line)
 {
     RootMapping m = {0};
     const char* s = line;
+    r->namedHan = false;
     if (!Text(r, &s, ';', m.text, &m.textLength))
     {
         return 0;
@@ -273,6 +279,7 @@ static int Mapping(Reader* r, const char* line)
     {
         return Fail(r, "a mapping without elements");
     }
+    m.hanReference = r->namedHan;
     RootTable* t = r->table;
     uint32_t first = m.text[0];
     if (m.prefixLength == 0 && m.textLength == 2 && (first == 0xFDD1 || first == 0xFDD0))
@@ -326,6 +333,108 @@ static int HanRanges(Reader* r, const char* s)
     uint32_t han = count * rootHanStep + rootHanStep + 2;
     uint32_t leadBytes = (han + hanPerLeadByte - 1) / hanPerLeadByte;
     t->firstHanPrimary = (collationUnassignedByte - leadBytes) << 24 | 0x20200;
+    return 1;
+}
+
+// One UTF-8 character of a [radical] line, or 0 at its end or on a
+// malformed one.
+static uint32_t Utf8(const char** at)
+{
+    const unsigned char* s = (const unsigned char*)*at;
+    int length = GenCharLength(s);
+    if (length == 0 || *s == ']')
+    {
+        return 0;
+    }
+    uint32_t c = length == 1 ? s[0] : s[0] & (0x7Fu >> length);
+    for (int i = 1; i < length; i++)
+    {
+        c = c << 6 | (s[i] & 0x3Fu);
+    }
+    *at += length;
+    return c;
+}
+
+static int AddRadical(Reader* r, uint32_t start, uint32_t end)
+{
+    RootTable* t = r->table;
+    if (t->radicalCount == r->radicalCapacity)
+    {
+        r->radicalCapacity = r->radicalCapacity * 2 + 1024;
+        uint32_t* grown = realloc(t->radicals, r->radicalCapacity * 3 * sizeof *grown);
+        if (grown == nullptr)
+        {
+            return Fail(r, "out of memory");
+        }
+        t->radicals = grown;
+    }
+    uint32_t* range = t->radicals + t->radicalCount++ * 3;
+    range[0] = start;
+    range[1] = end;
+    range[2] = t->radicalCodePoints;
+    t->radicalCodePoints += end - start + 1;
+    return 1;
+}
+
+// [radical N=...:characters and ranges]: the ranges in radical-stroke
+// order, after the radical's own characters before the colon.
+static int Radical(Reader* r, const char* s)
+{
+    const char* colon = strchr(s, ':');
+    if (colon == nullptr)
+    {
+        return Fail(r, "a radical line without its characters");
+    }
+    s = colon + 1;
+    for (uint32_t c = Utf8(&s); c != 0; c = Utf8(&s))
+    {
+        uint32_t end = c;
+        if (*s == '-')
+        {
+            s++;
+            end = Utf8(&s);
+            if (end < c)
+            {
+                return Fail(r, "a radical range that ends before it starts");
+            }
+        }
+        if (!AddRadical(r, c, end))
+        {
+            return 0;
+        }
+    }
+    return *s == ']' ? 1 : Fail(r, "a radical line not ended by ']'");
+}
+
+static int ByStart(const void* x, const void* y)
+{
+    uint32_t a = *(const uint32_t*)x;
+    uint32_t b = *(const uint32_t*)y;
+    return a < b ? -1 : a > b;
+}
+
+// [radical end]: the ranges sorted by start, disjoint; the unihan root's
+// first Han primary from their count.
+static int RadicalsEnd(Reader* r)
+{
+    RootTable* t = r->table;
+    if (t->radicalCount > 0)
+    {
+        qsort(t->radicals, t->radicalCount, 3 * sizeof *t->radicals, ByStart);
+    }
+    for (size_t i = 1; i < t->radicalCount; i++)
+    {
+        if (t->radicals[3 * i] <= t->radicals[3 * i - 2])
+        {
+            return Fail(r, "radical ranges that overlap");
+        }
+    }
+    if (t->radicalOrder)
+    {
+        uint32_t han = t->radicalCodePoints * rootHanStep + rootHanStep + 2;
+        uint32_t leadBytes = (han + hanPerLeadByte - 1) / hanPerLeadByte;
+        t->firstHanPrimary = (collationUnassignedByte - leadBytes) << 24 | 0x20200;
+    }
     return 1;
 }
 
@@ -390,7 +499,15 @@ static int Option(Reader* r, const char* line)
     {
         return TopByte(r, line + 9);
     }
-    // The boundaries, categories, radicals, reordering tokens and other
+    if (strcmp(line, "[radical end]") == 0)
+    {
+        return RadicalsEnd(r);
+    }
+    if (strncmp(line, "[radical ", 9) == 0)
+    {
+        return Radical(r, line + 9);
+    }
+    // The boundaries, categories, reordering tokens and other
     // fixed bytes are not part of the root's elements.
     return 1;
 }
@@ -417,10 +534,10 @@ static int Line(Reader* r, char* line)
     return *s == '\0' ? 1 : *s == '[' ? Option(r, s) : Mapping(r, s);
 }
 
-int RootRead(const char* path, RootTable* out, char* error, size_t errorSize)
+static int Read(const char* path, RootTable* out, bool radicalOrder, char* error, size_t errorSize)
 {
-    *out = (RootTable){0};
-    Reader r = {out, 0, error, errorSize};
+    *out = (RootTable){.radicalOrder = radicalOrder};
+    Reader r = {out, 0, error, errorSize, 0, false};
     FILE* f = fopen(path, "rb");
     if (f == nullptr)
     {
@@ -435,9 +552,11 @@ int RootRead(const char* path, RootTable* out, char* error, size_t errorSize)
         ok = Line(&r, line);
     }
     fclose(f);
-    if (ok && (out->hanRangeCount == 0 || out->count == 0))
+    if (ok &&
+        (out->hanRangeCount == 0 || out->count == 0 || (radicalOrder && out->radicalCount == 0)))
     {
-        snprintf(error, errorSize, "%s: no [Unified_Ideograph] line or no mappings", path);
+        snprintf(error, errorSize, "%s: no [Unified_Ideograph] line, no mappings or no radicals",
+                 path);
         ok = 0;
     }
     if (!ok)
@@ -447,11 +566,22 @@ int RootRead(const char* path, RootTable* out, char* error, size_t errorSize)
     return ok;
 }
 
+int RootRead(const char* path, RootTable* out, char* error, size_t errorSize)
+{
+    return Read(path, out, false, error, errorSize);
+}
+
+int RootReadUnihan(const char* path, RootTable* out, char* error, size_t errorSize)
+{
+    return Read(path, out, true, error, errorSize);
+}
+
 void RootFree(RootTable* table)
 {
     free(table->mappings);
     free(table->scriptStarts);
     free(table->specials);
+    free(table->radicals);
     *table = (RootTable){0};
 }
 
@@ -467,8 +597,43 @@ static uint32_t AddToPrimary(uint32_t primary, uint32_t offset)
     return ((primary & 0xFF000000) + (offset << 24)) | second << 16 | third << 8;
 }
 
+// The radical range holding a code point, or null.
+static const uint32_t* RadicalOf(const RootTable* table, uint32_t codePoint)
+{
+    size_t lo = 0;
+    size_t hi = table->radicalCount;
+    while (lo < hi)
+    {
+        size_t mid = lo + (hi - lo) / 2;
+        const uint32_t* range = table->radicals + 3 * mid;
+        if (codePoint < range[0])
+        {
+            hi = mid;
+        }
+        else if (codePoint > range[1])
+        {
+            lo = mid + 1;
+        }
+        else
+        {
+            return range;
+        }
+    }
+    return nullptr;
+}
+
 uint64_t RootHanElement(const RootTable* table, uint32_t codePoint)
 {
+    if (table->radicalOrder)
+    {
+        const uint32_t* range = RadicalOf(table, codePoint);
+        return range == nullptr
+                   ? 0
+                   : (uint64_t)AddToPrimary(table->firstHanPrimary,
+                                            (range[2] + codePoint - range[0]) * rootHanStep)
+                             << 32 |
+                         commonSecondaryTertiary;
+    }
     uint32_t index = 0;
     for (size_t i = 0; i < table->hanRangeCount; i++)
     {

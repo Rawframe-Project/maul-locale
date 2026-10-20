@@ -125,6 +125,8 @@ typedef struct CollationRuleSettings
     bool reorderGiven;
     const uint32_t* reorder;
     size_t reorderCount;
+    // Set by the builder over the unihan root: Han in radical-stroke order.
+    bool hanRadical;
 } CollationRuleSettings;
 
 // Parses a rule string (UTF-8); 0 with "byte N: reason" on a refusal.

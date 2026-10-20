@@ -16,6 +16,7 @@ void mlocCollationIteratorStart(CollationIterator* it, const CollationRoot* root
 {
     it->root = root;
     it->tailoring = nullptr;
+    it->han = nullptr;
     it->numeric = false;
     it->ceCount = 0;
     it->ceNext = 0;
@@ -61,7 +62,8 @@ static void Remember(CollationIterator* it, uint32_t codePoint)
 }
 
 // A code point's CE32 and the unit that gave it: the tailoring's, or
-// the root's where the tailoring falls back.
+// the root's where the tailoring falls back, Han's from the radical-stroke
+// table when the collator reads one.
 static uint32_t Value(const CollationIterator* it, uint32_t codePoint,
                       const CollationRoot** unitOut)
 {
@@ -75,6 +77,13 @@ static uint32_t Value(const CollationIterator* it, uint32_t codePoint,
         }
     }
     *unitOut = it->root;
+    uint32_t primary = 0;
+    if (it->han != nullptr && mlocCollationHanPrimary(it->han, codePoint, &primary))
+    {
+        // A long primary: the three bytes, the secondary and tertiary
+        // common.
+        return primary | collationSpecialByte | collationTagLongPrimary;
+    }
     return mlocTrieValue(&it->root->trie, codePoint);
 }
 

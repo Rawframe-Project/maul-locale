@@ -395,7 +395,7 @@ format.
 - The collation data file holds every CLDR 49 locale's collation types,
   built from their rules over the root as ICU4C builds them, with each
   locale's default type; import-only and alternate types are left out.
-  The file is 2,115,122 bytes, zh's four types 0.6 MB of them
+  The file is 2,341,666 bytes, zh's four types 0.6 MB of them
   (mloc-0071).
 - Collators order by the locale's tailoring: the `-u-co` type along the
   collation chain, else the chain's default type, else `standard`, as
@@ -410,3 +410,6 @@ format.
 - zh's `pinyin`, `stroke` and `zhuyin` collations come from CLDR's
   `alt="short"` rules, as ICU4C's data takes them, so their keys are
   ICU's (mloc-0071).
+- The `unihan` collations (ja, ko, zh) order Han by radical and stroke
+  as ICU4C does, from a radical-stroke table in the collation data
+  file; the root keeps CLDR's code-point order (mloc-0071).

@@ -48,6 +48,9 @@ typedef struct CollationIterator
     const CollationRoot* root;
     // The tailoring read before the root, or null.
     const CollationRoot* tailoring;
+    // The radical-stroke Han table, read for Han the tailoring leaves to
+    // the root (the unihan types), or null.
+    const CollationHan* han;
     NfdStream nfd;
     // Digits as numbers (UCA's numeric ordering, CLDR's kn); false after
     // start.

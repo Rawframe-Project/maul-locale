@@ -29,7 +29,13 @@
 
 static const char* s_path = "collation_tailoring.txt";
 
+// Two radicals: U+4E00, U+4E03 to U+4E05, then U+4E01 and U+4E02.
 static const char s_file[] = "[Unified_Ideograph 4E00..4E05]\n"
+                             "[radical 1=\xE2\xBC\x80\xE4\xB8\x80:\xE4\xB8\x80"
+                             "\xE4\xB8\x83-\xE4\xB8\x85]\n"
+                             "[radical 2=\xE2\xBC\x81\xE4\xB8\xA8:\xE4\xB8\x81\xE4\xB8\x82]\n"
+                             "[radical end]\n"
+                             "2F00; [U+4E01, 06]\n"
                              "0061; [2A 10, 05, 05]\n"
                              "0062; [2A 12, 05, 05]\n"
                              "0063; [2A 14, 05, 05]\n"
@@ -50,12 +56,15 @@ typedef struct Built
     CollationTailoring unit;
 } Built;
 
-static bool Build(const char* text, Built* out)
+// The Han table the unihan tailorings read, while one is tested.
+static CollationHan s_han;
+
+static bool BuildOn(const RootTable* root, const char* text, Built* out)
 {
     char error[256] = "";
     *out = (Built){0};
     if (!CollationRulesParse(text, strlen(text), &out->rules, error, sizeof(error)) ||
-        !CollationBuilderInit(&out->builder, &s_root, nullptr, nullptr, error, sizeof(error)) ||
+        !CollationBuilderInit(&out->builder, root, nullptr, nullptr, error, sizeof(error)) ||
         !CollationBuilderAdd(&out->builder, &out->rules) || !CollationBuilderFinish(&out->builder))
     {
         fprintf(stderr, "  %s: %s\n", text, error);
@@ -72,6 +81,11 @@ static void Free(Built* b)
     CollationBuilderFree(&b->builder);
     CollationRulesFree(&b->rules);
     free(b->bytes);
+}
+
+static bool Build(const char* text, Built* out)
+{
+    return BuildOn(&s_root, text, out);
 }
 
 // Whether the runtime gives a string of the BMP the
@@ -102,6 +116,7 @@ static bool Same(Built* b, const uint32_t* text, size_t length)
     CollationIterator it;
     mlocCollationIteratorStart(&it, &s_rootUnit, (const uint8_t*)utf8, n);
     it.tailoring = &b->unit.view;
+    it.han = (b->unit.settings & collationHanRadical) != 0 ? &s_han : nullptr;
     uint64_t theirs[collationMaxExpansion];
     uint32_t count = 0;
     uint64_t e = 0;
@@ -279,9 +294,10 @@ static void TestValidatorSettings(void)
     CHECK(!ReadsWith(&b, 16, 6, b.size) && !ReadsWith(&b, 16, 3 << 3, b.size) &&
               !ReadsWith(&b, 16, 5 << 5, b.size) && !ReadsWith(&b, 16, 3 << 10, b.size) &&
               !ReadsWith(&b, 16, 3 << 12, b.size) && !ReadsWith(&b, 16, 3 << 14, b.size) &&
-              !ReadsWith(&b, 16, 1 << 17, b.size) &&
+              !ReadsWith(&b, 16, 1 << 18, b.size) &&
               ReadsWith(&b, 16,
-                        5 | 2 << 3 | 4 << 5 | 3 << 8 | 2 << 10 | 2 << 12 | 2 << 14 | 1 << 16,
+                        5 | 2 << 3 | 4 << 5 | 3 << 8 | 2 << 10 | 2 << 12 | 2 << 14 | 1 << 16 |
+                            1 << 17,
                         b.size),
           "a setting out of range");
     Free(&b);
@@ -415,6 +431,89 @@ static void TestTypesAlone(void)
     CHECK(mlocValidCollationTypes(nullptr, (DataSpan){longest, 48}), "a name of 32 bytes");
 }
 
+// Whether a Han table, with one word changed, still reads.
+static bool HanReads(const uint8_t* bytes, size_t size, size_t at, uint32_t word)
+{
+    uint8_t copy[64];
+    if (size > sizeof(copy))
+    {
+        return false;
+    }
+    memcpy(copy, bytes, size);
+    copy[at] = (uint8_t)word;
+    copy[at + 1] = (uint8_t)(word >> 8);
+    copy[at + 2] = (uint8_t)(word >> 16);
+    copy[at + 3] = (uint8_t)(word >> 24);
+    return mlocValidCollationHan(nullptr, (DataSpan){copy, (uint32_t)size});
+}
+
+static void TestHanTable(const RootTable* unihan)
+{
+    size_t size = 0;
+    uint8_t* bytes = CollationHanUnit(unihan, &size);
+    CollationHan han = mlocReadCollationHan((DataSpan){bytes, (uint32_t)size});
+    uint32_t p[6] = {0};
+    static const uint32_t order[6] = {0x4E00, 0x4E03, 0x4E04, 0x4E05, 0x4E01, 0x4E02};
+    bool found = true;
+    for (int i = 0; i < 6; i++)
+    {
+        found = found && mlocCollationHanPrimary(&han, order[i], &p[i]);
+    }
+    uint32_t none = 0;
+    CHECK(mlocValidCollationHan(nullptr, (DataSpan){bytes, (uint32_t)size}) && size == 48 &&
+              found && p[0] == 0xFD020200 && p[1] == 0xFD020400 && p[3] == 0xFD020800 &&
+              p[4] == 0xFD020A00 && p[5] == 0xFD020C00 &&
+              !mlocCollationHanPrimary(&han, 0x4E06, &none) &&
+              !mlocCollationHanPrimary(&han, 0x4DFF, &none),
+          "Han in radical-stroke order, two steps apart from ICU's first primary");
+    CHECK(unihan->firstHanPrimary == 0xFD020200 &&
+              RootHanElement(unihan, 0x4E01) >> 32 == 0xFD020A00 &&
+              unihan->mappings[0].hanReference &&
+              unihan->mappings[0].elements[0] >> 32 == 0xFD020A00,
+          "the unihan root's Han, and an element naming U+4E01, in that order");
+    // Ranges by start: U+4E00, U+4E01, U+4E02, U+4E03-4E05.
+    CHECK(!HanReads(bytes, size, 8, 1) && !HanReads(bytes, size, 0, 5) &&
+              !HanReads(bytes, size, 4, 7) && !HanReads(bytes, size, 4, 5) &&
+              !HanReads(bytes, size, 24, 0x4E00) && !HanReads(bytes, size, 28, 6) &&
+              !HanReads(bytes, size, 40, 0x4E02 | 2u << 21) &&
+              !HanReads(bytes, size, 40, 0x10FFFF | 2u << 21) && HanReads(bytes, size, 8, 0),
+          "a reserved word, counts that differ, ranges out of order, overlapping, past the "
+          "ordinals or the code points");
+    CHECK(!mlocValidCollationHan(nullptr, (DataSpan){bytes, 16}) &&
+              !mlocValidCollationHan(nullptr, (DataSpan){bytes, (uint32_t)size - 4}),
+          "no ranges, a range cut short");
+    free(bytes);
+}
+
+// A tailoring over the unihan root: its settings bit, the root's element
+// naming U+4E01 copied, and Han read from the table at run time.
+static void TestUnihanUnit(const RootTable* unihan)
+{
+    size_t size = 0;
+    uint8_t* bytes = CollationHanUnit(unihan, &size);
+    s_han = mlocReadCollationHan((DataSpan){bytes, (uint32_t)size});
+    Built b;
+    bool ok = BuildOn(unihan, "&a<x", &b);
+    CHECK(ok && (b.unit.settings & collationHanRadical) != 0 &&
+              mlocTrieValue(&b.unit.view.trie, 0x2F00) != collationFallbackCe32 &&
+              mlocTrieValue(&b.unit.view.trie, 0x4E01) == collationFallbackCe32,
+          "the unihan bit, U+2F00 copied with its radical primary, Han left to the table");
+    CHECK(ok && SAME(&b, 0x4E01) && SAME(&b, 0x4E03, 0x4E01) && SAME(&b, 0x2F00, 'x') &&
+              SAME(&b, 0x4E05, 0x4E02),
+          "the runtime gives the builder's radical-stroke elements");
+    if (ok)
+    {
+        Free(&b);
+    }
+    ok = Build("&a<x", &b);
+    CHECK(ok && (b.unit.settings & collationHanRadical) == 0, "no bit over the root");
+    if (ok)
+    {
+        Free(&b);
+    }
+    free(bytes);
+}
+
 int main(void)
 {
     FILE* f = fopen(s_path, "wb");
@@ -442,6 +541,15 @@ int main(void)
     TestValidatorReorder();
     TestValidatorLists();
     TestTypes();
+    RootTable unihan;
+    bool readUnihan = RootReadUnihan(s_path, &unihan, error, sizeof(error));
+    CHECK(readUnihan, "the unihan root reads");
+    if (readUnihan)
+    {
+        TestHanTable(&unihan);
+        TestUnihanUnit(&unihan);
+        RootFree(&unihan);
+    }
     TestTypesAlone();
     free(s_rootBytes);
     RootFree(&s_root);

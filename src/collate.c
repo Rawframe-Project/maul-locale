@@ -34,11 +34,14 @@ typedef struct Collator
     uint8_t reordered;
     // 1 when the locale's tailoring maps code points.
     uint8_t tailored;
+    // 1 when it orders Han by the radical-stroke table.
+    uint8_t radical;
     // The keys' version: the format, the root unit's bytes and the
     // tailoring's, hashed.
     uint64_t version;
     CollationRoot root;
     CollationRoot tailoring;
+    CollationHan han;
     // Its reorder pointer is set at each compare: a collator is copied.
     CollationSettings settings;
     CollationReorder reorder;
@@ -304,9 +307,28 @@ static mlocResult FromOptions(Collator* c, const mlocCollatorOptions* o)
     return result;
 }
 
+// The radical-stroke Han table in the first source that has one, its
+// bytes joining the version; false when none has.
+static bool FindHan(const mlocDataSet* data, Collator* c)
+{
+    for (size_t i = 0; i < data->count; i++)
+    {
+        DataView view = mlocViewOf(&data->sources[i]);
+        DataSpan span = {0};
+        if (mlocFindDataUnit(&view, kindCollationHanRadical, dataNoLocale, &span))
+        {
+            c->han = mlocReadCollationHan(span);
+            c->radical = 1;
+            c->version = mlocXxh64(span.bytes, span.size, c->version);
+            return true;
+        }
+    }
+    return false;
+}
+
 // The tailoring's settings and reordering over the root's defaults, as
 // the -u- keys and options of the call later override them.
-static mlocResult FromTailoring(Collator* c, DataSpan span)
+static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan span)
 {
     CollationTailoring t;
     if (!mlocReadCollationTailoring(span, &t))
@@ -314,6 +336,10 @@ static mlocResult FromTailoring(Collator* c, DataSpan span)
         return mloc_errorInvalid;
     }
     c->version = mlocXxh64(span.bytes, span.size, c->version);
+    if ((t.settings & collationHanRadical) != 0 && !FindHan(data, c))
+    {
+        return mloc_errorNotFound;
+    }
     if (t.mappedCount > 0)
     {
         c->tailoring = t.view;
@@ -366,7 +392,7 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     mlocResult result = FindTailoring(data, locale, &tailoring, &tailored);
     if (result == mloc_success && tailored)
     {
-        result = FromTailoring(&c, tailoring);
+        result = FromTailoring(&c, data, tailoring);
     }
     if (result != mloc_success)
     {
@@ -400,6 +426,7 @@ static bool ReadCollator(const mlocCollator* collator, Collator* c)
     memcpy(c, collator, sizeof(*c));
     c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
     c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
+    c->settings.han = c->radical != 0 ? &c->han : nullptr;
     return true;
 }
 

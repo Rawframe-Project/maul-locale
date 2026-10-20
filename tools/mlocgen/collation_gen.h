@@ -7,7 +7,8 @@
 // over it into a unit of the file's locale key. A type kept for imports
 // (CLDR's "private-") is left out; a type the file also gives as
 // alt="short" (zh's) takes that form, as ICU4C's data does, and other
-// alts are left out.
+// alts are left out. The unihan types are built over the unihan root,
+// and the radical-stroke Han table they read is a unit of no locale.
 
 #ifndef MLOCGEN_COLLATION_GEN_H
 #define MLOCGEN_COLLATION_GEN_H

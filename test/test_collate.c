@@ -83,6 +83,11 @@ static void TestTailorings(void)
     CHECK(Order("zh", nullptr, "\xF0\xA5\xA5\xA9", "\xF0\xB1\x9A\xB1") == -1 &&
               Order("zh", nullptr, HAN_A, "\xF0\xA5\xA5\xA9") == -1,
           "zh's short pinyin: Han it does not name after the Han it does, in the root's order");
+    // U+2A6D9 just after U+4E00 in radical 1's strokes, U+4E01 after it.
+    CHECK(Order("ja-u-co-unihan", nullptr, "\xF0\xAA\x9B\x99", "\xE4\xB8\x81") == -1 &&
+              Order("ko-u-co-unihan", nullptr, "\xF0\xAA\x9B\x99", "\xE4\xB8\x81") == -1 &&
+              Order("ja", nullptr, "\xF0\xAA\x9B\x99", "\xE4\xB8\x81") == 1,
+          "unihan: Han by radical and stroke; the root by code point");
     CHECK(Order("da", nullptr, "A", "a") == -1 && Order("da-u-kf-lower", nullptr, "a", "A") == -1,
           "da's rules: upper case first, under kf");
     mlocCollatorOptions lower = {.caseFirst = mloc_caseFirstLower};

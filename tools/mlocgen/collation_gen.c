@@ -73,8 +73,16 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root,
     return built;
 }
 
+// The two roots a type is built over: the root, and the unihan root
+// (Han in radical-stroke order) for the unihan types.
+typedef struct Roots
+{
+    const RootTable* root;
+    const RootTable* unihan;
+} Roots;
+
 // Each file's selectable types as a unit of its locale's key.
-static void AddTailorings(CollationCatalog* catalog, const RootTable* root, const Keys* keys,
+static void AddTailorings(CollationCatalog* catalog, const Roots* roots, const Keys* keys,
                           DataFile* file)
 {
     CollationTypeBody* built = GenAllocate(sizeof(CollationTypeBody) * (catalog->count + 1));
@@ -86,9 +94,11 @@ static void AddTailorings(CollationCatalog* catalog, const RootTable* root, cons
         for (; next < catalog->count && strcmp(catalog->types[next].file, source->name) == 0;
              next++)
         {
-            if (Selectable(catalog, &catalog->types[next]))
+            const CollationType* t = &catalog->types[next];
+            if (Selectable(catalog, t))
             {
-                built[count++] = Build(&catalog->types[next], root, catalog);
+                bool unihan = strcmp(t->type, "unihan") == 0;
+                built[count++] = Build(t, unihan ? roots->unihan : roots->root, catalog);
             }
         }
         if (count > 0 || source->defaultType[0] != '\0')
@@ -133,8 +143,14 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     char path[4096];
     snprintf(path, sizeof(path), "%s/uca/FractionalUCA.txt", commonDirectory);
     RootTable table;
+    RootTable unihan;
     if (!RootRead(path, &table, errorOut, errorCapacity))
     {
+        return 0;
+    }
+    if (!RootReadUnihan(path, &unihan, errorOut, errorCapacity))
+    {
+        RootFree(&table);
         return 0;
     }
     size_t size = 0;
@@ -144,15 +160,21 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     {
         free(unit);
         RootFree(&table);
+        RootFree(&unihan);
         return 0;
     }
     DataFileAdd(file, kindCollationRoot, nullptr, unit, size);
     free(unit);
+    unit = CollationHanUnit(&unihan, &size);
+    DataFileAdd(file, kindCollationHanRadical, nullptr, unit, size);
+    free(unit);
     CollationCatalog catalog = {0};
     ReadCatalog(commonDirectory, &catalog);
-    AddTailorings(&catalog, &table, &keys, file);
+    Roots roots = {&table, &unihan};
+    AddTailorings(&catalog, &roots, &keys, file);
     CollationCatalogFree(&catalog);
     KeysClose(&keys);
     RootFree(&table);
+    RootFree(&unihan);
     return 1;
 }

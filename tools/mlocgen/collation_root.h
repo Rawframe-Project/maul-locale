@@ -6,7 +6,9 @@
 // primary in bits 63..32 with its bytes left-aligned, a secondary in
 // 31..16 and a tertiary with its case bits in 15..0. Han takes ICU's
 // implicit primaries from the [Unified_Ideograph] ranges, a step of 2
-// apart; U+FFFD and U+FFFF are left to the fixed weights the runtime
+// apart, or, read as the unihan root, from the [radical] lines' ranges
+// in their radical-stroke order (record mloc-0071); U+FFFD and U+FFFF
+// are left to the fixed weights the runtime
 // gives them; FDD1 lines are script starts and FDD0 lines special
 // primaries, not mappings.
 
@@ -37,6 +39,9 @@ typedef struct RootMapping
     uint32_t prefixLength;
     uint64_t elements[rootMaxElements];
     uint32_t elementCount;
+    // Whether an element names a Han character's ([U+4E00, 10]), whose
+    // primary the Han order gives.
+    bool hanReference;
 } RootMapping;
 
 // An FDD1 or FDD0 line: the code point after it and its first element.
@@ -61,6 +66,15 @@ typedef struct RootTable
     uint32_t hanRanges[2 * rootMaxHanRanges];
     size_t hanRangeCount;
     uint32_t firstHanPrimary;
+    // The [radical N=...:...] ranges, sorted by start: start, end and the
+    // ordinal of start in radical-stroke order, three words a range; the
+    // code points they hold.
+    uint32_t* radicals;
+    size_t radicalCount;
+    uint32_t radicalCodePoints;
+    // Read as the unihan root: Han's primaries in radical-stroke order,
+    // firstHanPrimary for the radicals' code points.
+    bool radicalOrder;
     // [top_byte XX ... COMPRESS]: lead bytes whose primaries compress.
     uint8_t compressible[256];
     // [UCA version = a.b.c]
@@ -78,10 +92,15 @@ typedef struct RootTable
 // when it does not read.
 int RootRead(const char* path, RootTable* out, char* error, size_t errorSize);
 
+// RootRead as ICU4C's unihan root: Han's primaries, and the elements
+// that name them, in radical-stroke order.
+int RootReadUnihan(const char* path, RootTable* out, char* error, size_t errorSize);
+
 void RootFree(RootTable* table);
 
 // A Han code point's element (common secondary and tertiary), or 0 when
-// the code point is in no [Unified_Ideograph] range.
+// the code point is in no [Unified_Ideograph] range (no [radical] range,
+// for the unihan root).
 uint64_t RootHanElement(const RootTable* table, uint32_t codePoint);
 
 #endif

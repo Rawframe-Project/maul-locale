@@ -70,7 +70,9 @@
 //      none, else as mlocCollatorOptions numbers them: bits 2..0 the
 //      strength, 4..3 alternate, 7..5 max variable, 9..8 case first,
 //      11..10 case level, 13..12 numeric, 15..14 backwards; bit 16 set
-//      when the rules reorder (an empty [reorder] too); the rest 0
+//      when the rules reorder (an empty [reorder] too); bit 17 set when
+//      Han the tailoring leaves to the root takes the radical-stroke
+//      table's primaries (the unihan types); the rest 0
 //  20  u32 reorderCount, the reorder codes below, at most 256
 //  24  u32 mappedCount, the code points the trie maps: 0 when the type
 //      gives the root's elements, with its settings alone
@@ -102,6 +104,23 @@
 //
 // A unit has a type or a default, or both. Types the locale does not
 // list are its chain's.
+//
+// The radical-stroke Han table (kindCollationHanRadical), a unit of no
+// locale, gives Han the primaries ICU4C's unihan root gives it:
+//
+//   0  u32 rangeCount
+//   4  u32 codePointCount, the code points the ranges hold
+//   8  u32 0
+//  12  u32 0
+//  16  ranges[rangeCount], 8 bytes each, by start, rising and disjoint:
+//      u32 the start in bits 20..0 and the length less one in 31..21;
+//      u32 the start's ordinal in radical-stroke order, the range within
+//      codePointCount
+//
+// A code point of ordinal n has the primary 2n after the first Han
+// primary, three-byte steps that do not compress; the first is FA 02 02
+// (ICU's initHanRanges: the lead byte FE less the lead bytes that
+// 2 codePointCount + 4 primaries take).
 
 #ifndef MLOC_COLLATION_TABLES_H
 #define MLOC_COLLATION_TABLES_H
@@ -149,6 +168,7 @@ constexpr uint32_t collationImplicitCe32 = 0xFFFFFFFF;
 constexpr uint32_t collationFallbackCe32 = 0xC0;
 // The settings word's fields.
 constexpr uint32_t collationReorderGiven = 0x10000;
+constexpr uint32_t collationHanRadical = 0x20000;
 constexpr uint64_t collationCommonSecondaryTertiary = 0x05000500;
 // U+FFFD and U+FFFF: fixed primaries FFFD and FFFF, as simple CE32s.
 constexpr uint32_t collationFffdCe32 = 0xFFFD0505;
@@ -527,7 +547,7 @@ typedef struct CollationTailoring
 static inline bool mlocCollationSettingsValid(uint32_t s)
 {
     return (s & 7) <= 5 && (s >> 3 & 3) <= 2 && (s >> 5 & 7) <= 4 && (s >> 10 & 3) <= 2 &&
-           (s >> 12 & 3) <= 2 && (s >> 14 & 3) <= 2 && (s & ~0x1FFFFu) == 0;
+           (s >> 12 & 3) <= 2 && (s >> 14 & 3) <= 2 && (s & ~0x3FFFFu) == 0;
 }
 
 // Whether reorder codes are scripts' or groups', each once.
@@ -651,5 +671,59 @@ static inline bool mlocFindCollationType(const CollationTypes* t, const char* na
 }
 
 bool mlocValidCollationTypes(const DataView* view, DataSpan payload);
+
+// The radical-stroke Han table, read from a unit the validator passed.
+typedef struct CollationHan
+{
+    const uint8_t* ranges;
+    uint32_t count;
+    uint32_t firstPrimary;
+} CollationHan;
+
+// ICU's first Han primary for a count of Han code points.
+static inline uint32_t mlocCollationFirstHanPrimary(uint32_t codePoints)
+{
+    uint32_t primaries = codePoints * 2 + 4;
+    uint32_t leadBytes = (primaries + 254 * 254 - 1) / (254 * 254);
+    return (collationUnassignedByte - leadBytes) << 24 | 0x20200;
+}
+
+static inline CollationHan mlocReadCollationHan(DataSpan unit)
+{
+    return (CollationHan){unit.bytes + 16, mlocLoad32(unit.bytes),
+                          mlocCollationFirstHanPrimary(mlocLoad32(unit.bytes + 4))};
+}
+
+// A code point's radical-stroke primary, or false when the table has
+// none for it.
+static inline bool mlocCollationHanPrimary(const CollationHan* han, uint32_t codePoint,
+                                           uint32_t* primaryOut)
+{
+    uint32_t lo = 0;
+    uint32_t hi = han->count;
+    while (lo < hi)
+    {
+        uint32_t mid = lo + (hi - lo) / 2;
+        uint32_t word = mlocLoad32(han->ranges + (size_t)mid * 8);
+        uint32_t start = word & 0x1FFFFF;
+        if (codePoint < start)
+        {
+            hi = mid;
+        }
+        else if (codePoint - start > word >> 21)
+        {
+            lo = mid + 1;
+        }
+        else
+        {
+            uint32_t ordinal = mlocLoad32(han->ranges + (size_t)mid * 8 + 4) + codePoint - start;
+            *primaryOut = mlocAddToPrimary(han->firstPrimary, false, ordinal * 2);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool mlocValidCollationHan(const DataView* view, DataSpan payload);
 
 #endif

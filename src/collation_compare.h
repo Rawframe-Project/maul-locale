@@ -56,6 +56,8 @@ typedef struct CollationSettings
     // The locale's tailoring, read before the root, or null; the caller
     // keeps it.
     const CollationRoot* tailoring;
+    // The radical-stroke Han table a unihan tailoring reads, or null.
+    const CollationHan* han;
 } CollationSettings;
 
 // CLDR's root defaults: tertiary, non-ignorable, the variable top at the

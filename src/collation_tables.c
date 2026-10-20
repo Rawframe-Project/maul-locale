@@ -71,3 +71,31 @@ bool mlocValidCollationTypes(const DataView* view, DataSpan payload)
     }
     return ok && at == payload.size;
 }
+
+bool mlocValidCollationHan(const DataView* view, DataSpan payload)
+{
+    (void)view;
+    if (payload.size < 16 || mlocLoad32(payload.bytes + 8) != 0 ||
+        mlocLoad32(payload.bytes + 12) != 0 ||
+        (payload.size - 16) / 8 != mlocLoad32(payload.bytes) || (payload.size - 16) % 8 != 0)
+    {
+        return false;
+    }
+    uint32_t count = mlocLoad32(payload.bytes);
+    uint32_t codePoints = mlocLoad32(payload.bytes + 4);
+    bool ok = count > 0 && codePoints <= 0x110000;
+    uint64_t held = 0;
+    uint32_t next = 0;
+    for (uint32_t i = 0; ok && i < count; i++)
+    {
+        uint32_t word = mlocLoad32(payload.bytes + 16 + (size_t)i * 8);
+        uint32_t ordinal = mlocLoad32(payload.bytes + 20 + (size_t)i * 8);
+        uint32_t start = word & 0x1FFFFF;
+        uint32_t length = (word >> 21) + 1;
+        ok =
+            start >= next && start + length <= 0x110000 && (uint64_t)ordinal + length <= codePoints;
+        next = start + length;
+        held += length;
+    }
+    return ok && held == codePoints;
+}

@@ -47,8 +47,8 @@ appends them after the primaries.
   orders them by radical and stroke, from FractionalUCA's `[radical]`
   lines: U+4E01 is FA 02 06 there, FA 02 04 here, with U+2A6D9 between
   U+4E00 and U+4E01. ICU4X's default is CLDR's order too. Keys holding
-  Han therefore differ from ICU4C's in those primaries; radical-stroke
-  order belongs to the `unihan` tailoring (slice d).
+  Han therefore differ from ICU4C's in those primaries; the `unihan`
+  types order Han by radical and stroke (record mloc-0071).
 
 - **The public API** (`collate.h`):
   - `mlocGetSortKey(collator, text, length, key, capacity, lengthOut)`

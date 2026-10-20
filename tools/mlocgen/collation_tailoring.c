@@ -230,7 +230,8 @@ static uint32_t Settings(const CollationRuleSettings* r)
     s |= (r->caseLevel == ruleUnset ? 0 : r->caseLevel + 1U) << 10;
     s |= (r->numeric == ruleUnset ? 0 : r->numeric + 1U) << 12;
     s |= (r->backwards == ruleUnset ? 0 : r->backwards + 1U) << 14;
-    return s | (r->reorderGiven ? collationReorderGiven : 0);
+    return s | (r->reorderGiven ? collationReorderGiven : 0) |
+           (r->hanRadical ? collationHanRadical : 0);
 }
 
 static uint8_t* Write(const Writer* w, const uint32_t* values,

@@ -147,6 +147,29 @@ the oracle for every type.
     (two codes of one range) depends on the root, so `test_collate`
     makes a collator of every type of every locale in the file instead;
     a collator meeting one gives `mloc_errorInvalid`.
+- **The unihan types order Han by radical and stroke** (slice d4c),
+  as ICU4C's root does, while the root keeps CLDR's code-point order
+  (record mloc-0070):
+  - The generator reads FractionalUCA's `[radical]` lines (214
+    radicals, 24,005 ranges, 101,997 code points) as the unihan root:
+    the ranges in radical-stroke order take consecutive primaries from
+    FA 02 02, a step of 2, as ICU's `initHanRanges`; the elements that
+    name a Han character (`[U+4E00, 10]`) take that order too.
+  - Kind `kindCollationHanRadical` (0x000B0003), a unit of no locale:
+    the ranges by start, each with its start's ordinal in radical-stroke
+    order, 192,056 bytes. Its validator checks the ranges rising and
+    disjoint, within the code points and their ordinals within the
+    count, the lengths adding up to it.
+  - A unihan type is built over the unihan root; its tailoring's
+    settings word sets bit 17, and it carries the root's 1,579 mappings
+    that name a Han primary (less those NFD decomposes, the
+    compatibility ideographs), about 11,500 bytes a type. A collator of
+    such a tailoring reads the table (its bytes join the version); the
+    iterator gives a Han code point the tailoring leaves to the root
+    the table's primary as a long primary, by a binary search over the
+    ranges. Other collators pay a null test.
+  - Rejected: a second root unit (some 800 KB) and the root in radical
+    order (research 65).
 - **One unit per locale** holds all of the locale's types (slice d2c2):
   a data file's units are keyed by kind and locale, so a type cannot be
   a unit of its own. Research 64's "one unit per (locale, type)" is
@@ -182,9 +205,10 @@ the oracle for every type.
     bytes join the keys' version (record mloc-0070).
   - `mlocCollator` grew from 768 to 1,024 bytes to hold the tailoring's
     view beside the root's.
-  - Size: 2,115,122 bytes for the file, 117 units. zh's four types are
-    610,896 bytes of it (1,136,896 from the long forms), ko's 256,160,
-    ja's 119,152 and root's `emoji`, `eor` and `search` 73,184. The smallest tailoring is about
+  - Size: 2,341,666 bytes for the file, 118 units. zh's four types are
+    622,472 bytes of it (1,136,896 from the long forms), ko's 267,736,
+    the Han table 192,056, ja's 130,472 and root's `emoji`, `eor` and
+    `search` 74,464. The smallest tailoring is about
     4,700 bytes, nearly all trie index; a type of a few code points
     could take a smaller form, measured with the speed work (slice
     g).
@@ -235,13 +259,14 @@ the oracle for every type.
   middle-dot contexts, and eight refusals. In the docs
   repository's oracle, ICU4C 79 builds each rule string (its escapes
   decoded as ICU's data build decodes them) and gives the elements of
-  each string the rules name. ICU refuses the same eight, and 291,600 of
-  the 292,026 strings have ICU's elements; the builder without
-  suppression differs on five of the six suppression strings. The other 426 are
-  `private-unihan`'s, whose Han primaries follow ICU's radical-stroke
-  root. The quaternary bits are compared later through sort keys,
-  since ICU's element iterator drops them. CI checks a hash of every
-  answer.
+  each string the rules name. ICU refuses the same eight, and all
+  292,026 strings have ICU's elements, the unihan types built over the
+  unihan root (`private-unihan`'s 426 strings differed before); the
+  builder without suppression differs on five of the six suppression
+  strings. The other 426 are
+  The quaternary bits are compared through sort keys
+  (`conform_collation_keys`), since ICU's element iterator drops them.
+  CI checks a hash of every answer.
 - **`test_collation_tailoring`:** on a small root, the runtime's
   iterator over the root and a written unit gives the builder's
   elements for a contraction, a prefix, a prefix with contractions only
@@ -250,6 +275,15 @@ the oracle for every type.
   short, reserved words set, each setting out of range, codes past the
   end, a reorder code out of form, given twice or one too many, and a
   list default that is the fallback word, its own list or a prefix.
+- **`test_collation_tailoring`, the Han table:** on a small root of two
+  radicals, the unihan root's Han and an element naming U+4E01 in
+  radical order, the table's primaries two steps apart from ICU's first,
+  none outside it, and the validator's refusals (a reserved word, counts
+  that differ, ranges out of order, overlapping, past the ordinals or
+  the code points, none, one cut short); a tailoring over the unihan
+  root sets the bit, copies the element naming Han, and its runtime
+  elements are the builder's. `test_collate`: U+2A6D9 before U+4E01
+  under ja's and ko's `unihan`, after it under ja.
 - **`test_collation_tailoring`, the types:** a unit of two types finds
   each by name and no other, with its default; the validator refuses
   no types and no default, too many types, a reserved word set, a unit
@@ -273,20 +307,22 @@ the oracle for every type.
   `--queries`): each selectable type's tag (`-u-co` and its BCP 47
   name) and each file's locale alone, under no options, `kf-upper`,
   `ka-shifted` with `ks-level4`, and `kc`, give public sort keys for the
-  strings the rules name and 30 probes, zh's long forms' strings too:
-  1,239,403 keys over 727 tags. CI checks their hash. In the docs repository's oracle, ICU4C 79 makes
+  strings the rules name and 40 probes (ten of them Han from several
+  radicals, a Kangxi radical, a radical supplement and a parenthesized
+  ideograph), zh's long forms' strings too: 1,246,793 keys over 727
+  tags. CI checks their hash. In the docs repository's oracle, ICU4C 79 makes
   each tag's collator through its own loader and writes the keys:
   - 56 tags ICU's data cannot check: it has no collation for aa, bal,
     cu, dz, sgs, ssy, vo and wae, no `digits-after` for cs and no `eor`
     for de (its loader falls back), and leaves ca and de-AT to their
     parents.
-  - The other 671 tags give ICU's keys byte for byte, 725,264 keys,
-    every option set included. Left out are the keys the root's
-    code-point Han order decides (record mloc-0070): the Han probes
-    (U+4E00, U+963F) outside zh, 1,328 keys, and in zh 506,245 strings
-    of Han and CJK radicals that the `short` rules do not name. Before
-    zh took the `short` forms, its three types differed in nearly every
-    key.
+  - The other 671 tags give ICU's keys byte for byte, 725,565 keys,
+    every option set included, the unihan types' Han probes too. Left
+    out are the keys the root's code-point Han order decides (record
+    mloc-0070): the Han probes outside zh and the unihan types, 7,797
+    keys, and in zh 506,305 strings of Han and CJK radicals that the
+    `short` rules do not name. Before zh took the `short` forms, its
+    three types differed in nearly every key.
   So `co` and the default along the chain, the tailorings' settings
   and reordering, imports and suppression read as ICU's loader reads
   them.
@@ -299,7 +335,6 @@ the oracle for every type.
 ## Consequences
 
 - To come in slice (d):
-  - the `unihan` types over a radical-stroke Han order (slice d4c);
   - every CLDR type, with the differential against ICU4C 79.
 
   Each amends this record.

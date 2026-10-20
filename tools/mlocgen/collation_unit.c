@@ -543,3 +543,19 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
     free(b.starts.items);
     return out;
 }
+
+uint8_t* CollationHanUnit(const RootTable* table, size_t* sizeOut)
+{
+    size_t size = 16 + table->radicalCount * 8;
+    uint8_t* out = GenAllocate(size);
+    GenPut(out, table->radicalCount, 4);
+    GenPut(out + 4, table->radicalCodePoints, 4);
+    for (size_t i = 0; i < table->radicalCount; i++)
+    {
+        const uint32_t* range = table->radicals + 3 * i;
+        GenPut(out + 16 + i * 8, range[0] | (range[1] - range[0]) << 21, 4);
+        GenPut(out + 20 + i * 8, range[2], 4);
+    }
+    *sizeOut = size;
+    return out;
+}

@@ -168,5 +168,8 @@ constexpr uint32_t kindCollationRoot = 0x000B0001;
 // A locale's collation types, each a tailoring over the root, a unit of
 // its key in the collation data file (record mloc-0071).
 constexpr uint32_t kindCollationTailorings = 0x000B0002;
+// The radical-stroke Han table the unihan types read, a unit of no locale
+// in the collation data file (record mloc-0071).
+constexpr uint32_t kindCollationHanRadical = 0x000B0003;
 
 #endif
