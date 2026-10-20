@@ -72,7 +72,7 @@ static void Add(const char* format, uint32_t a, uint32_t b, uint32_t c)
 }
 
 // The head and n letters with rising primaries from 2A 10; with digits,
-// ten digits with primaries of their own from 0B 10. The combining
+// ten digits with primaries of their own, 0B then from 0B 12. The combining
 // marks are one secondary, so that precomposed letters take no primary
 // of their own; Greek starts at 2C, after Latin.
 static void Letters(size_t n, bool digits)
@@ -87,9 +87,11 @@ static void Letters(size_t n, bool digits)
     {
         Add("%04X;\t[2A %02X, 05, 05]\n", s_letters[i], (uint32_t)(0x10 + 2 * i), 0);
     }
+    // '0' at the digits' first primary itself.
     for (uint32_t i = 0; digits && i < 10; i++)
     {
-        Add("%04X;\t[0B %02X, 05, 05]\n", 0x30 + i, 0x10 + 2 * i, 0);
+        Add(i == 0 ? "%04X;\t[0B, 05, 05]\n" : "%04X;\t[0B %02X, 05, 05]\n", 0x30 + i, 0x10 + 2 * i,
+            0);
     }
 }
 
@@ -164,6 +166,22 @@ static void TestOverflow(void)
     CHECK(Build(&b) && b.words == nullptr && b.count == 0,
           "64 letters overflow the short primaries even so: no table");
     Free(&b);
+    Letters(59, false);
+    bool fit = Build(&b) && b.words != nullptr;
+    Free(&b);
+    Letters(60, false);
+    CHECK(fit && Build(&b) && b.words == nullptr,
+          "59 short primaries fit, 60 do not (0x1000 to 0xF800)");
+    Free(&b);
+    // With digits long, two digits expand; a digit then punctuation, two
+    // groups, bails out.
+    Letters(52, true);
+    Add("00B1;\t[0B 30, 05, 05][0B 32, 05, 05]\n00F7;\t[0B 34, 05, 05][05 40, 05, 05]\n", 0, 0, 0);
+    built = Build(&b) && b.words != nullptr;
+    CHECK(built && Word(&b, 0xB1) >= fastExpansion && Word(&b, 0xB1) < fastMinLong &&
+              Word(&b, 0xF7) == fastBailOut,
+          "long digits: two expand, a digit then punctuation bails out");
+    Free(&b);
 }
 
 static void TestSecondaries(void)
@@ -234,6 +252,8 @@ static void TestSecondElements(void)
     Add("%04X;\t[05 2A, 06, 05]\n", 0x3B, 0, 0);
     Add("%04X;\t[2A 36, 05, 05][2A 38, 05, 03]\n", 0x111, 0, 0);
     Add("%04X;\t[2A 3A, 05, 05][, 05, 05][, 05, 05]\n", 0x127, 0, 0);
+    Add("%04X;\t[07 22, 05, 05][05 2C, 05, 05]\n", 0x142, 0, 0);
+    Add("%04X;\t[05 2E, 05, 05][2A 3C, 05, 05]\n", 0x14B, 0, 0);
     Built b;
     bool built = Build(&b) && b.words != nullptr;
     uint32_t two = Word(&b, 0xE6);
@@ -246,6 +266,8 @@ static void TestSecondElements(void)
               Word(&b, 0x111) == fastBailOut && Word(&b, 0x127) == fastBailOut,
           "a long primary with an uncommon secondary, first or second, a tertiary below the "
           "common one, and three elements bail out");
+    CHECK(built && Word(&b, 0x142) == fastBailOut && Word(&b, 0x14B) == fastBailOut,
+          "a symbol then punctuation, and punctuation then a letter, bail out");
     Free(&b);
 }
 

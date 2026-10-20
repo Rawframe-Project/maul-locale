@@ -228,61 +228,63 @@ static void TestOptions(void)
               "first and level, backwards, numeric, reorderings, identical");
 }
 
-// Characters the root's table holds every one of, U+FFFE and U+FFFF
-// too: over them the fast compare answers every pair.
-static const char* const s_held[] = {"a",
-                                     "b",
-                                     "e",
-                                     "l",
-                                     "s",
-                                     "z",
-                                     "A",
-                                     "L",
-                                     "Z",
-                                     "0",
-                                     "5",
-                                     "9",
-                                     " ",
-                                     "-",
-                                     ",",
-                                     ".",
-                                     "'",
-                                     "$",
-                                     "+",
-                                     "\xC3\xA9",
-                                     "\xC3\x89",
-                                     "\xC3\x9F",
-                                     "\xC3\xA6",
-                                     "\xC5\x82",
-                                     "\xE2\x80\x90",
-                                     "\xE2\x80\x93",
-                                     "\xE2\x80\xA0",
-                                     "\xE2\x80\xA2",
-                                     "\xEF\xBF\xBE",
-                                     "\xEF\xBF\xBF"};
+// Characters the root's table holds every one of, in families a pair
+// swaps one for another within, so that later levels decide: accents
+// and case (e acute's mini CE has the lowest high secondary), AE (an
+// expansion at index 0), tab (the lowest long mini CE, variable when
+// shifted), DEL (ignorable), spaces of one primary, dashes, U+FFFE and
+// U+FFFF, and c and h, a contraction in cs.
+static const char* const s_held[][6] = {
+    {"e", "\xC3\xA9", "\xC3\xA8", "E", "\xC3\x89", "\xC3\x8A"},
+    {"a", "A", "\xC3\xA6", "\xC3\x86", "\xC3\xA0", "\xC3\x80"},
+    {"l", "L", "\xC5\x82", "\xC5\x81", "l", "L"},
+    {"s", "S", "\xC3\x9F", "s", "S", "\xC5\xA1"},
+    {"c", "C", "h", "H", "\xC4\x8D", "\xC4\x8C"},
+    {"0", "5", "9", "0", "5", "9"},
+    {" ", "\t", "\xE2\x80\x82", "\xE2\x80\x87", "\xE2\x80\xAF", "\x7F"},
+    {"-", "\xE2\x80\x90", "\xE2\x80\x93", ",", ".", "'"},
+    {"$", "+", "\xE2\x80\xA0", "\xE2\x80\xA2", "\xEF\xBF\xBE", "\xEF\xBF\xBF"}};
 
 static CollationRoot s_root;
 
-static size_t HeldText(char* out)
+enum
 {
-    size_t length = 0;
-    uint32_t count = Next(8);
-    for (uint32_t i = 0; i < count; i++)
+    families = sizeof(s_held) / sizeof(s_held[0]),
+};
+
+// A text of held characters, and the same with one character swapped
+// within its family, or a second text of its own every third pair.
+static void HeldPair(int i, char* a, size_t* aLength, char* b, size_t* bLength)
+{
+    uint32_t count = Next(7);
+    uint32_t swap = count == 0 ? 0 : Next(count);
+    *aLength = 0;
+    *bLength = 0;
+    for (uint32_t k = 0; k < count; k++)
     {
-        for (const char* c = s_held[Next(sizeof(s_held) / sizeof(s_held[0]))]; *c != '\0'; c++)
+        uint32_t family = Next(families);
+        uint32_t member = Next(6);
+        uint32_t other = i % 3 == 0 ? Next(families) : family;
+        const char* x = s_held[family][member];
+        const char* y = k == swap || i % 3 == 0 ? s_held[other][Next(6)] : x;
+        for (; *x != '\0'; x++)
         {
-            out[length++] = *c;
+            a[(*aLength)++] = *x;
+        }
+        for (; *y != '\0'; y++)
+        {
+            b[(*bLength)++] = *y;
         }
     }
-    return length;
 }
 
-// Over held characters under settings: how many pairs the fast compare
-// answers, -1 when one answer differs from the general compare's.
-static int Answered(const CollationSettings* s)
+// Over held characters under settings and a table: how many pairs the
+// fast compare answers, -1 when one answer differs from the general
+// compare's, -2 when it does not serve the settings.
+static int AnsweredOver(const CollationSettings* s, const CollationRoot* unit)
 {
     FastLatinOptions o;
-    if (!mlocFastLatinOptions(&s_root, s, s_root.fastLatin, s_root.fastLatinCount, &o))
+    if (!mlocFastLatinOptions(&s_root, s, unit->fastLatin, unit->fastLatinCount, &o))
     {
         return -2;
     }
@@ -291,21 +293,9 @@ static int Answered(const CollationSettings* s)
     int answered = 0;
     for (int i = 0; i < pairs; i++)
     {
-        size_t aLength = HeldText(a);
-        size_t bLength = aLength;
-        memcpy(b, a, aLength);
-        if (i % 3 == 0)
-        {
-            bLength = HeldText(b);
-        }
-        else if (aLength > 0)
-        {
-            // One character changed for another, or a case or accent
-            // changed: later levels decide.
-            size_t at = Next((uint32_t)aLength);
-            b[at] = (char)(b[at] >= 'a' && b[at] <= 'z' ? b[at] - 32 : b[at] == 'e' ? 'E' : 'e');
-            b[at] = (unsigned char)a[at] >= 0x80 ? a[at] : b[at];
-        }
+        size_t aLength = 0;
+        size_t bLength = 0;
+        HeldPair(i, a, &aLength, b, &bLength);
         int fast = mlocFastLatinCompare(&o, (const uint8_t*)a, aLength, (const uint8_t*)b, bLength);
         int general = mlocCollationCompare(&s_root, s, (const uint8_t*)a, aLength,
                                            (const uint8_t*)b, bLength);
@@ -318,6 +308,11 @@ static int Answered(const CollationSettings* s)
         answered += fast != fastLatinBail;
     }
     return answered;
+}
+
+static int Answered(const CollationSettings* s)
+{
+    return AnsweredOver(s, &s_root);
 }
 
 static void TestAnswers(void)
@@ -360,7 +355,7 @@ static void TestAnswers(void)
                              &french2);
     const uint8_t* e = (const uint8_t*)"e";
     const uint8_t* acute = (const uint8_t*)"\xC3\xA9";
-    CHECK(digits > 0 && digits < pairs && french == pairs && served &&
+    CHECK(digits > 0 && digits < pairs && french > 0 && french < pairs && served &&
               mlocFastLatinCompare(&plain, e, 1, acute, 2) == -1 &&
               mlocFastLatinCompare(&french2, e, 1, acute, 2) == fastLatinBail,
           "numeric ordering bails out on digits, backwards secondaries on secondaries that "
@@ -375,6 +370,32 @@ static void TestAnswers(void)
               !mlocFastLatinOptions(&s_root, &s, s_root.fastLatin,
                                     fastLatinHeader + fastLatinChars - 1, &o),
           "none for a variable top that ends no group, the identical strength, or no table");
+}
+
+// Over cs's own table, whose c starts ch: c's list read before every
+// held character, punctuation and U+FFFE among them.
+static void TestTailoredAnswers(void)
+{
+    DataView view = mlocViewOf(&s_sources[1]);
+    uint32_t locale = 0;
+    DataSpan unit = {0};
+    DataSpan body = {0};
+    CollationTailoring cs;
+    bool found = mlocFindDataLocale(&view, "cs", 2, &locale) &&
+                 mlocFindDataUnit(&view, kindCollationTailorings, locale, &unit);
+    if (found)
+    {
+        CollationTypes types = mlocReadCollationTypes(unit);
+        found = mlocFindCollationType(&types, "standard", 8, &body) &&
+                mlocReadCollationTailoring(body, &cs) && cs.view.fastLatin != nullptr;
+    }
+    CollationSettings s = mlocCollationDefaults(&s_root);
+    s.tailoring = found ? &cs.view : nullptr;
+    CollationSettings shifted = s;
+    shifted.shifted = true;
+    shifted.strength = collationQuaternary;
+    CHECK(found && AnsweredOver(&s, &cs.view) == pairs && AnsweredOver(&shifted, &cs.view) == pairs,
+          "cs's table answers every pair, ch among them, as the general compare does");
 }
 
 // Reorderings (script codes as four letters, Grek and Latn): one that
@@ -432,6 +453,7 @@ int main(void)
     TestTailorings();
     TestOptions();
     TestAnswers();
+    TestTailoredAnswers();
     TestReorderings();
     return s_failures == 0 ? 0 : 1;
 }
