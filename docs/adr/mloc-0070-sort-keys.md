@@ -50,6 +50,21 @@ appends them after the primaries.
   Han therefore differ from ICU4C's in those primaries; radical-stroke
   order belongs to the `unihan` tailoring (slice d).
 
+- **The public API** (`collate.h`):
+  - `mlocGetSortKey(collator, text, length, key, capacity, lengthOut)`
+    writes the key and its length, or gives `mloc_errorCapacity` with
+    the length needed.
+  - `mlocGetCollationVersion(collator, versionOut)` gives a 64-bit
+    version: XXH64 (the catalog's, record mloc-0054) of the root unit's
+    bytes, seeded with the key format (1, raised whenever the writer's
+    bytes change). It is computed when the collator is made. Any change
+    to the data the collator reads changes it, as does a new key
+    format; the options do not, as in ICU, since the caller keeps them
+    with the keys. A tailoring's unit joins the hash in slice (d).
+  - A collator is read only after its stamp, a first field read alone,
+    so bytes the library did not make are refused without reading
+    their other fields.
+
 ## Proof
 
 - **Byte for byte against ICU4C 79 on CLDR 49**
@@ -65,13 +80,18 @@ appends them after the primaries.
 - **`test_collation_key`:** keys ICU4C 79 writes for chosen texts at
   each level and mode, and the caller's room (no room, too little,
   nothing written past it).
+- **`test_collate`:** the public keys order texts as `mlocCompare` does
+  under each key and level; the length when a key does not fit and
+  nothing written past the room; an empty text's key; the version the
+  same for any locale and options over the same data and for a copy;
+  the refusals.
 - **`fuzz_collation`:** for any settings and two texts, the keys order
   them as the compare does, and a short buffer gives the same length.
   Five minutes, about 108,000 inputs, found nothing.
 
 ## Consequences
 
-- The public `mlocGetSortKey` and the collation version come next, in
-  slice (c2), and amend this record.
+- Slice (c) is complete; search, UTF-16 and index characters come in
+  slice (f).
 - A key's length grows with the text and the strength; the caller
   sizes the buffer from the returned length.

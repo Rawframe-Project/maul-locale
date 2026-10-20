@@ -117,7 +117,7 @@ Finds a key in the chain's set and formats its message, as mlocFormatCatalogMess
 
 ## `collate.h`
 
-Collation (UTS #10 and UTS #35 Part 5, records mloc-0064 to mloc-0069): text compared in a locale's order, as ICU4C's Collator compares it, from CLDR's root collation in the collation data file (src/generated/collation.mloc). A locale's -u- keys set the options (ks, ka, kv, kf, kc, kn, kb, kr); the options of the call override them. Text is always compared in NFD, whatever kk asks.
+Collation (UTS #10 and UTS #35 Part 5, records mloc-0064 to mloc-0069): text compared in a locale's order, as ICU4C's Collator compares it, from CLDR's root collation in the collation data file (src/generated/collation.mloc). A locale's -u- keys set the options (ks, ka, kv, kf, kc, kn, kb, kr); the options of the call override them. Text is always compared in NFD, whatever kk asks. Sort keys are ICU4C's bytes, with a version to store beside them.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data, const mlocLocale* locale, const mlocCollatorOptions* options);
@@ -128,6 +128,16 @@ Makes a locale's collator. A -u- key's value that is not one of its values is pa
 MLOC_NODISCARD MLOC_API mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b, size_t bLength, int* orderOut);
 ```
 Compares two UTF-8 texts in a collator's order. A byte that is not UTF-8 compares as U+FFFD.  @param collator  A collator mlocInitCollator made. @param a         The first text; may be null when aLength is 0. @param aLength   Its length in bytes. @param b         The second text; may be null when bLength is 0. @param bLength   Its length in bytes. @param orderOut  Receives -1 when a sorts first, 1 when b does, 0 when they are equal up to the strength. @return mloc_success; mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t length, uint8_t* key, size_t capacity, size_t* lengthOut);
+```
+Writes a UTF-8 text's sort key in a collator's order: bytes whose memcmp order, a shorter key first when it is the other's start, is the order mlocCompare gives, ICU4C's bytes for the same order and options (record mloc-0070). The key ends with a 00 byte, counted in its length. Keys from collators of other options or another version do not compare.  @param collator   A collator mlocInitCollator made. @param text       The text; may be null when length is 0. @param length     Its length in bytes. @param key        Receives the key; may be null when capacity is 0. @param capacity   The room in key, in bytes. @param lengthOut  Receives the key's length, also when it does not fit. @return mloc_success; mloc_errorCapacity when the key does not fit (the bytes written are then no key); mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut);
+```
+Gives the version of a collator's keys, to store beside them: it changes whenever the keys of some text could change, with the key format or the collation data the collator reads, and not with the options, which the caller keeps with the keys.  @param collator    A collator mlocInitCollator made. @param versionOut  Receives the version. @return mloc_success; mloc_errorInvalid for a collator the library did not make or a null pointer. @par Thread safety Safe from any thread.
 
 ## `currency.h`
 
@@ -974,4 +984,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-177 functions across 21 headers.
+179 functions across 21 headers.

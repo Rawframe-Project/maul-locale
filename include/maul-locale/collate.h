@@ -6,7 +6,8 @@
 // compares it, from CLDR's root collation in the collation data file
 // (src/generated/collation.mloc). A locale's -u- keys set the options
 // (ks, ka, kv, kf, kc, kn, kb, kr); the options of the call override
-// them. Text is always compared in NFD, whatever kk asks.
+// them. Text is always compared in NFD, whatever kk asks. Sort keys are
+// ICU4C's bytes, with a version to store beside them.
 
 #ifndef MAUL_LOCALE_COLLATE_H
 #define MAUL_LOCALE_COLLATE_H
@@ -137,6 +138,43 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocCompare(const mlocCollator* collator, const char* a,
                                                    size_t aLength, const char* b, size_t bLength,
                                                    int* orderOut);
+
+    /// Writes a UTF-8 text's sort key in a collator's order: bytes whose
+    /// memcmp order, a shorter key first when it is the other's start, is
+    /// the order mlocCompare gives, ICU4C's bytes for the same order and
+    /// options (record mloc-0070). The key ends with a 00 byte, counted in
+    /// its length. Keys from collators of other options or another
+    /// version do not compare.
+    ///
+    /// @param collator   A collator mlocInitCollator made.
+    /// @param text       The text; may be null when length is 0.
+    /// @param length     Its length in bytes.
+    /// @param key        Receives the key; may be null when capacity is 0.
+    /// @param capacity   The room in key, in bytes.
+    /// @param lengthOut  Receives the key's length, also when it does not
+    ///                   fit.
+    /// @return mloc_success; mloc_errorCapacity when the key does not fit
+    ///         (the bytes written are then no key); mloc_errorInvalid for
+    ///         a collator the library did not make or a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKey(const mlocCollator* collator,
+                                                      const char* text, size_t length, uint8_t* key,
+                                                      size_t capacity, size_t* lengthOut);
+
+    /// Gives the version of a collator's keys, to store beside them: it
+    /// changes whenever the keys of some text could change, with the key
+    /// format or the collation data the collator reads, and not with the
+    /// options, which the caller keeps with the keys.
+    ///
+    /// @param collator    A collator mlocInitCollator made.
+    /// @param versionOut  Receives the version.
+    /// @return mloc_success; mloc_errorInvalid for a collator the library
+    ///         did not make or a null pointer.
+    /// @par Thread safety
+    /// Safe from any thread.
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetCollationVersion(const mlocCollator* collator,
+                                                               uint64_t* versionOut);
 
 #ifdef __cplusplus
 }

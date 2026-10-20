@@ -3,7 +3,9 @@
 
 #include "maul-locale/collate.h"
 
+#include "catalog_hash.h"
 #include "collation_compare.h"
+#include "collation_key.h"
 #include "collation_reorder.h"
 #include "collation_tables.h"
 #include "data_format.h"
@@ -13,11 +15,15 @@
 
 #include "maul-unicode/properties.h"
 
+#include <stddef.h>
 #include <string.h>
 
 enum
 {
     collatorStamp = 0x43,
+    // The sort keys' format, a seed of the version: raised whenever the
+    // key writer's bytes change.
+    keyFormat = 1,
     // Codes in a reorder list, more than the root has ranges.
     maxReorderCodes = 256,
 };
@@ -25,7 +31,10 @@ enum
 typedef struct Collator
 {
     uint32_t stamp;
-    bool reordered;
+    // 1 when the reordering is in use (a byte, read only after the stamp).
+    uint8_t reordered;
+    // The keys' version: the format and the root unit's bytes, hashed.
+    uint64_t version;
     CollationRoot root;
     // Its reorder pointer is set at each compare: a collator is copied.
     CollationSettings settings;
@@ -33,9 +42,11 @@ typedef struct Collator
 } Collator;
 
 static_assert(sizeof(Collator) <= sizeof(mlocCollator), "a collator fits its value");
+static_assert(offsetof(Collator, stamp) == 0, "the stamp is read first, alone");
 
-// The collation root in the first source that has one.
-static bool FindRoot(const mlocDataSet* data, CollationRoot* root)
+// The collation root in the first source that has one, and the keys'
+// version over its bytes.
+static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* version)
 {
     for (size_t i = 0; i < data->count; i++)
     {
@@ -43,6 +54,7 @@ static bool FindRoot(const mlocDataSet* data, CollationRoot* root)
         DataSpan span = {0};
         if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span))
         {
+            *version = mlocXxh64(span.bytes, span.size, keyFormat);
             return mlocReadCollationRoot(span, root);
         }
     }
@@ -165,7 +177,7 @@ static void FromLocale(Collator* c, const mlocLocale* locale)
     if (n > 0 && Reorder(&c->root, v, n, &made, &changes) == mloc_success)
     {
         c->reorder = made;
-        c->reordered = changes;
+        c->reordered = changes ? 1 : 0;
     }
 }
 
@@ -208,7 +220,7 @@ static mlocResult FromOptions(Collator* c, const mlocCollatorOptions* o)
     if (result == mloc_success)
     {
         c->reorder = made;
-        c->reordered = changes;
+        c->reordered = changes ? 1 : 0;
     }
     return result;
 }
@@ -223,7 +235,7 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     }
     static Collator s_zero;
     Collator c = s_zero;
-    if (!FindRoot(data, &c.root))
+    if (!FindRoot(data, &c.root, &c.version))
     {
         return mloc_errorNotFound;
     }
@@ -240,22 +252,60 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     return mloc_success;
 }
 
+// A collator the library made, copied out with its settings pointing at
+// its reordering; false for any other.
+static bool ReadCollator(const mlocCollator* collator, Collator* c)
+{
+    uint32_t stamp = 0;
+    if (collator == nullptr)
+    {
+        return false;
+    }
+    memcpy(&stamp, collator, sizeof(stamp));
+    if (stamp != collatorStamp)
+    {
+        return false;
+    }
+    memcpy(c, collator, sizeof(*c));
+    c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
+    return true;
+}
+
 mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b,
                        size_t bLength, int* orderOut)
 {
-    if (collator == nullptr || orderOut == nullptr || (a == nullptr && aLength > 0) ||
-        (b == nullptr && bLength > 0))
-    {
-        return mloc_errorInvalid;
-    }
     Collator c;
-    memcpy(&c, collator, sizeof(c));
-    if (c.stamp != collatorStamp)
+    if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
+        !ReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }
-    c.settings.reorder = c.reordered ? &c.reorder : nullptr;
     *orderOut = mlocCollationCompare(&c.root, &c.settings, (const uint8_t*)(a != nullptr ? a : ""),
                                      aLength, (const uint8_t*)(b != nullptr ? b : ""), bLength);
+    return mloc_success;
+}
+
+mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t length,
+                          uint8_t* key, size_t capacity, size_t* lengthOut)
+{
+    Collator c;
+    if (lengthOut == nullptr || (text == nullptr && length > 0) ||
+        (key == nullptr && capacity > 0) || !ReadCollator(collator, &c))
+    {
+        return mloc_errorInvalid;
+    }
+    *lengthOut = mlocCollationSortKey(
+        &c.root, &c.settings, (const uint8_t*)(text != nullptr ? text : ""), length, key, capacity);
+    return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
+}
+
+mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut)
+{
+    Collator c;
+    if (versionOut == nullptr || !ReadCollator(collator, &c))
+    {
+        return mloc_errorInvalid;
+    }
+    *versionOut = c.version;
     return mloc_success;
 }

@@ -386,3 +386,7 @@ format.
   strength to identical, shifted alternates, case first and the case
   level, numeric ordering, backwards secondaries and script reordering,
   as ICU4C orders them (mloc-0067, mloc-0069).
+- Sort keys: `mlocGetSortKey` writes ICU4C's key bytes for the same
+  order and options, and `mlocGetCollationVersion` gives the version to
+  store beside them, which changes with the key format or the collation
+  data (mloc-0070).

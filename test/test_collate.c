@@ -3,7 +3,8 @@
 //
 // The public collator (record mloc-0069) over the collation data file:
 // the root's defaults, each -u- key, options over the keys, values
-// passed over, and the refusals.
+// passed over, sort keys against the compare, the keys' version, and the
+// refusals.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -134,6 +135,84 @@ static void TestOptions(void)
     CHECK(Order("en-u-kr-grek", &o, "\xCE\xB1", "a") == 1, "an empty reorder option: none");
 }
 
+// The order of two texts' keys under the locale and options, as memcmp
+// gives it; 2 when a key is not made.
+static int KeyOrder(const char* id, const mlocCollatorOptions* options, const char* a,
+                    const char* b)
+{
+    mlocCollator c;
+    uint8_t keys[2][256];
+    size_t lengths[2] = {0, 0};
+    const char* texts[2] = {a, b};
+    if (!Make(id, options, &c))
+    {
+        return 2;
+    }
+    for (int i = 0; i < 2; i++)
+    {
+        if (mlocGetSortKey(&c, texts[i], strlen(texts[i]), keys[i], sizeof(keys[i]), &lengths[i]) !=
+                mloc_success ||
+            lengths[i] == 0 || keys[i][lengths[i] - 1] != 0)
+        {
+            return 2;
+        }
+    }
+    int r = memcmp(keys[0], keys[1], lengths[0] < lengths[1] ? lengths[0] : lengths[1]);
+    r = r != 0 ? r : (lengths[0] > lengths[1]) - (lengths[0] < lengths[1]);
+    return (r > 0) - (r < 0);
+}
+
+static void TestSortKeys(void)
+{
+    static const char* const pairs[][2] = {
+        {"a", "b"},    {"a", "A"},        {"a", "\xC3\xA1"}, {"a-b", "ab"},
+        {"a2", "a10"}, {"\xCE\xB1", "a"}, {"", "a"},         {"cot\xC3\xA9", "c\xC3\xB4te"},
+        {"ab", "ab"},
+    };
+    static const char* const ids[] = {
+        "en",           "en-u-ks-level1", "en-u-ka-shifted-ks-level4", "en-u-kn",
+        "en-u-kr-grek", "fr-u-kb",        "en-u-ks-identic",           "en-u-kc-kf-upper"};
+    bool ok = true;
+    for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++)
+    {
+        for (size_t j = 0; j < sizeof(pairs) / sizeof(pairs[0]); j++)
+        {
+            int compared = Order(ids[i], nullptr, pairs[j][0], pairs[j][1]);
+            ok = ok && compared != 2 &&
+                 KeyOrder(ids[i], nullptr, pairs[j][0], pairs[j][1]) == compared;
+        }
+    }
+    CHECK(ok, "keys order texts as the compare does, under each key and level");
+    mlocCollator c;
+    uint8_t key[64];
+    memset(key, 0xEE, sizeof(key));
+    size_t full = 0;
+    size_t again = 0;
+    size_t empty = 0;
+    CHECK(Make("en", nullptr, &c) &&
+              mlocGetSortKey(&c, "abc", 3, nullptr, 0, &full) == mloc_errorCapacity && full > 3 &&
+              mlocGetSortKey(&c, "abc", 3, key, full - 1, &again) == mloc_errorCapacity &&
+              again == full && key[full - 1] == 0xEE &&
+              mlocGetSortKey(&c, "abc", 3, key, full, &again) == mloc_success && again == full &&
+              key[full - 1] == 0 && key[full] == 0xEE &&
+              mlocGetSortKey(&c, nullptr, 0, key, sizeof(key), &empty) == mloc_success &&
+              empty == 3,
+          "a key's length when it does not fit, nothing past the room, an empty text's key");
+    mlocCollator other;
+    mlocCollator copy;
+    uint64_t version = 0;
+    uint64_t second = 1;
+    uint64_t copied = 2;
+    mlocCollatorOptions numeric = {.numeric = mloc_switchOn};
+    bool made = Make("en", nullptr, &c) && Make("fr-u-kr-grek", &numeric, &other);
+    memcpy(&copy, &c, sizeof(c));
+    CHECK(made && mlocGetCollationVersion(&c, &version) == mloc_success && version != 0 &&
+              mlocGetCollationVersion(&other, &second) == mloc_success && second == version &&
+              mlocGetCollationVersion(&copy, &copied) == mloc_success && copied == version,
+          "the keys' version: the same for any locale and options over the same data, and for "
+          "a copy");
+}
+
 static void TestRefusals(void)
 {
     mlocLocale en;
@@ -173,6 +252,17 @@ static void TestRefusals(void)
               mlocCompare(&made, "a", 1, nullptr, 1, &order) == mloc_errorInvalid &&
               mlocCompare(&made, "a", 1, "b", 1, nullptr) == mloc_errorInvalid && order == 7,
           "compare refuses a collator the library did not make and null pointers");
+    size_t length = 9;
+    uint64_t version = 9;
+    uint8_t key[8];
+    CHECK(mlocGetSortKey(&before, "a", 1, key, sizeof(key), &length) == mloc_errorInvalid &&
+              mlocGetSortKey(&made, "a", 1, key, sizeof(key), nullptr) == mloc_errorInvalid &&
+              mlocGetSortKey(&made, nullptr, 1, key, sizeof(key), &length) == mloc_errorInvalid &&
+              mlocGetSortKey(&made, "a", 1, nullptr, 4, &length) == mloc_errorInvalid &&
+              mlocGetSortKey(nullptr, "a", 1, key, sizeof(key), &length) == mloc_errorInvalid &&
+              length == 9 && mlocGetCollationVersion(&before, &version) == mloc_errorInvalid &&
+              mlocGetCollationVersion(&made, nullptr) == mloc_errorInvalid && version == 9,
+          "keys and the version refuse a collator the library did not make and null pointers");
 }
 
 int main(void)
@@ -192,6 +282,7 @@ int main(void)
     TestDefaults();
     TestKeys();
     TestOptions();
+    TestSortKeys();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }
