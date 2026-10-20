@@ -47,6 +47,11 @@ the table cannot be ICU's data copied.
 - **The validator** reads the head word, rising group tops and every
   character's expansion and contraction list inside the table, each
   list ending where the compare stops; the section must end the unit.
+  No character's, expansion's or contraction result's mini CE may be
+  the end of string mark (2): the compare would end that text early at
+  the first level and its later levels, which trust the first to have
+  checked every character, would read unchecked bytes (found by a
+  review of the compare; ICU's builder never writes it).
 - About 1.1 KB a table: 122 tables of their own and the root's, some
   140 KB of the collation data file.
 
@@ -57,9 +62,9 @@ the table cannot be ICU's data copied.
   encodes them, every type's table read (its own, the root's, or none
   for the search types and en_US_POSIX), and the reader refusing a
   wrong head, falling group tops, a contraction or expansion past the
-  table, a list with no end, a count other than the words there, a
-  table short of its characters, and the root's table named by the
-  root.
+  table, a list with no end, the end of string mark as a mini CE, a
+  count other than the words there, a table short of its characters,
+  and the root's table named by the root.
 - `conform_collation_fast_builder` (the cldr CI job) builds the root's
   and every type's table, writes each after its unit and reads it back;
   CI checks their hash.

@@ -60,6 +60,24 @@ static bool ReadsWithCount(uint32_t count, uint32_t size, CollationRoot* r)
     return mlocReadCollationRoot((DataSpan){s_copy, size}, r);
 }
 
+// The root unit read with a table of its characters' words alone, those
+// of lists and expansions made ignorable.
+static bool ReadsPlain(void)
+{
+    uint32_t count = fastLatinHeader + fastLatinChars;
+    memcpy(s_copy, s_root.bytes, s_root.size);
+    Put32(s_copy + s_words - 4, count);
+    for (uint32_t i = fastLatinHeader; i < count; i++)
+    {
+        uint32_t word = mlocFastLatinWord(s_copy + s_words, i);
+        Put16(s_copy + s_words + (size_t)i * 2,
+              word >= fastContraction && word < fastMinLong ? 0 : word);
+    }
+    CollationRoot r;
+    return mlocReadCollationRoot((DataSpan){s_copy, (uint32_t)s_words + count * 2}, &r) &&
+           r.fastLatinCount == count;
+}
+
 static void TestRoot(const DataView* view)
 {
     CollationRoot r;
@@ -97,13 +115,51 @@ static void TestWordRefusals(void)
     CHECK(!ReadsWithWord(2, 0), "group tops not rising refused");
     CHECK(!ReadsWithWord(fastLatinHeader, fastContraction | fastIndexMask),
           "a contraction past the table refused");
-    CHECK(!ReadsWithWord(fastLatinHeader + 0xE0, fastExpansion | fastIndexMask),
-          "an expansion past the table refused");
     CHECK(mlocFastLatinWord(s_root.bytes + s_words, last) == fastContractionCharMask &&
               !ReadsWithWord(last, 1U << fastContractionLengthShift),
           "a contraction list with no end refused");
     CHECK(!ReadsWithWord(last, 0) && ReadsWithWord(last, fastContractionCharMask),
           "the end read as it is");
+}
+
+// Words at the bounds: an expansion ending at the table's end, a list
+// where none starts, equal group tops.
+static void TestBoundaryWords(void)
+{
+    CHECK(!ReadsWithWord(fastLatinHeader + 0xE0, fastExpansion | fastIndexMask) &&
+              !ReadsWithWord(fastLatinHeader + 0xE0,
+                             fastExpansion | (s_count - fastLatinHeader - fastLatinChars - 1)) &&
+              ReadsWithWord(fastLatinHeader + 0xE0,
+                            fastExpansion | (s_count - fastLatinHeader - fastLatinChars - 2)),
+          "an expansion past the table refused, its last word the table's last");
+    CHECK(!ReadsWithWord(fastLatinHeader + 'a', fastContraction),
+          "a contraction at the first word after the characters, which is no list, refused");
+    CHECK(ReadsWithWord(2, mlocFastLatinWord(s_root.bytes + s_words, 1)),
+          "two groups with the same top read");
+}
+
+// No mini CE may be the end of string mark: it would end a text early
+// and the later levels would read the rest unchecked.
+static void TestEndMarkRefusals(void)
+{
+    const uint8_t* words = s_root.bytes + s_words;
+    uint32_t expansion = 0;
+    for (uint32_t i = 0; expansion == 0 && i < fastLatinChars; i++)
+    {
+        uint32_t word = mlocFastLatinWord(words, fastLatinHeader + i);
+        expansion = word >= fastExpansion && word < fastMinLong
+                        ? fastLatinHeader + fastLatinChars + (word & fastIndexMask)
+                        : 0;
+    }
+    uint32_t nul = mlocFastLatinWord(words, fastLatinHeader);
+    uint32_t list = fastLatinHeader + fastLatinChars + (nul & fastIndexMask);
+    CHECK(!ReadsWithWord(fastLatinHeader + 'a', fastEndOfString) && expansion != 0 &&
+              !ReadsWithWord(expansion, fastEndOfString) &&
+              !ReadsWithWord(expansion + 1, fastEndOfString) &&
+              mlocFastLatinWord(words, list) >> fastContractionLengthShift == 2 &&
+              !ReadsWithWord(list + 1, fastEndOfString) && ReadsWithWord(list + 1, 0),
+          "the end of string mark refused as a character's, an expansion's or a contraction's "
+          "mini CE");
 }
 
 static void TestCountRefusals(void)
@@ -113,6 +169,7 @@ static void TestCountRefusals(void)
     CHECK(!ReadsWithCount(s_count + 1, size, &r) && !ReadsWithCount(s_count - 1, size, &r) &&
               !ReadsWithCount(s_count, size - 1, &r) && !ReadsWithCount(s_count, size + 2, &r),
           "a count other than the words there refused");
+    CHECK(ReadsPlain(), "a table of the characters alone, none a list or expansion, read");
     CHECK(!ReadsWithCount(fastLatinHeader + fastLatinChars - 1,
                           (uint32_t)s_words + (fastLatinHeader + fastLatinChars - 1) * 2, &r),
           "a table short of its characters refused");
@@ -192,6 +249,8 @@ int main(void)
     if (s_count != 0)
     {
         TestWordRefusals();
+        TestBoundaryWords();
+        TestEndMarkRefusals();
         TestCountRefusals();
     }
     TestTypes(&data, &view);

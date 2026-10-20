@@ -81,24 +81,28 @@ enum
     fastLatinRootTable = 1,
 };
 
-// A character's index among the fast characters, or -1.
-static inline int32_t mlocFastLatinIndex(uint32_t c)
-{
-    return c <= fastLatinMax ? (int32_t)c
-           : c >= fastPunctStart && c < fastPunctLimit
-               ? (int32_t)(c - fastPunctStart + fastLatinLimit)
-               : -1;
-}
-
 // The word at an index of a table's bytes.
 static inline uint32_t mlocFastLatinWord(const uint8_t* words, uint32_t at)
 {
     return mlocLoad16(words + (size_t)at * 2);
 }
 
+// Whether words a compare reads as mini CEs are none of them the end of
+// string mark, which would end a text early and leave the rest of it
+// unchecked for the later levels.
+static inline bool mlocFastLatinMinisValid(const uint8_t* words, uint32_t at, uint32_t length)
+{
+    bool ok = true;
+    for (uint32_t i = 0; ok && i < length; i++)
+    {
+        ok = mlocFastLatinWord(words, at + i) != fastEndOfString;
+    }
+    return ok;
+}
+
 // Whether a contraction list stays inside the table: from its default,
 // entries by their lengths up to the next one of character 0x1FF, the
-// word the compare stops on.
+// word the compare stops on; no result the end of string mark.
 static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count, uint32_t at)
 {
     bool ok = at < count &&
@@ -112,7 +116,8 @@ static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count, 
         {
             return true;
         }
-        ok = length >= 1 && length <= 3 && (uint64_t)at + length < count;
+        ok = length >= 1 && length <= 3 && (uint64_t)at + length < count &&
+             mlocFastLatinMinisValid(words, at + 1, length - 1);
         at += length;
         first = false;
     }
@@ -120,7 +125,8 @@ static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count, 
 }
 
 // Whether a table's words hold together: its head word, every
-// character's expansion and contraction list inside it.
+// character's expansion and contraction list inside it, and no mini CE
+// the end of string mark.
 static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
 {
     if (count < fastLatinHeader + fastLatinChars ||
@@ -140,11 +146,15 @@ static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
         uint32_t at = base + (word & fastIndexMask);
         if (word >= fastExpansion && word < fastMinLong)
         {
-            ok = at + 1 < count;
+            ok = at + 1 < count && mlocFastLatinMinisValid(words, at, 2);
         }
         else if (word >= fastContraction && word < fastExpansion)
         {
             ok = mlocFastLatinListValid(words, count, at);
+        }
+        else
+        {
+            ok = word != fastEndOfString;
         }
     }
     return ok;
