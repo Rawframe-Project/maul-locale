@@ -283,9 +283,12 @@ static uint32_t Quaternaries(uint32_t variableTop, uint32_t pair)
             return (mini & fastSecondaryMask) >= fastMinSecHigh ? twoShortPrimariesMask
                                                                 : fastShortPrimaryMask;
         }
-        return mini > variableTop    ? fastShortPrimaryMask
-               : mini >= fastMinLong ? pair & fastLongPrimaryMask
-                                     : pair;
+        // U+FFFE's merge weight is no variable: above every primary, as
+        // the general compare ranks it (ICU4C's fast compare leaves it
+        // lowest, where its sort keys do not).
+        return mini > variableTop || mini == fastMergeWeight ? fastShortPrimaryMask
+               : mini >= fastMinLong                         ? pair & fastLongPrimaryMask
+                                                             : pair;
     }
     return mini > variableTop ? twoShortPrimariesMask : pair & twoLongPrimariesMask;
 }

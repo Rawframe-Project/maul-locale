@@ -360,6 +360,16 @@ static void TestAnswers(void)
               mlocFastLatinCompare(&french2, e, 1, acute, 2) == fastLatinBail,
           "numeric ordering bails out on digits, backwards secondaries on secondaries that "
           "differ (e and e acute); the rest answered");
+    // U+FFFE ranks above every variable at the quaternary level, as the
+    // general compare and the sort keys have it; ICU4C's fast compare
+    // puts it lowest.
+    FastLatinOptions q;
+    const uint8_t* a = (const uint8_t*)" \xE2\x80\x92\xEF\xBF\xBE";
+    const uint8_t* b = (const uint8_t*)"\xC2\xA0\xEF\xBF\xBE\xE2\x80\x92";
+    CHECK(mlocFastLatinOptions(&s_root, &shifted, s_root.fastLatin, s_root.fastLatinCount, &q) &&
+              mlocFastLatinCompare(&q, a, 7, b, 8) == -1 &&
+              mlocCollationCompare(&s_root, &shifted, a, 7, b, 8) == -1,
+          "U+FFFE above a variable at the quaternary level");
     CollationSettings custom = shifted;
     custom.variableTop = 0x0A000000;
     CollationSettings identical = s;

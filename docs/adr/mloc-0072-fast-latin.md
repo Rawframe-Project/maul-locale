@@ -149,5 +149,12 @@ the table cannot be ICU's data copied.
   digits' primaries. ICU's `compareUTF8` orders U+00B3 before Z there,
   its sort keys after. The fast compare now bails out on every mini
   primary from 0's to 9's when digits are reordered, and follows the
-  keys. A test pins the case; six minutes of fuzzing (184,838 runs)
-  found nothing more.
+  keys. A test pins the case.
+- **And a second, in CI's first minute:** at the quaternary level of
+  shifted text, ICU's fast compare keeps U+FFFE's merge weight (3) as
+  its weight, the lowest, while the general compare and the sort keys
+  rank the merge separator above every variable, as any element that
+  is not variable. ICU 79 orders " ‒\uFFFE" after "\u00A0\uFFFE‒"
+  through `compareUTF8` and before it by its keys (its identical
+  prefix and lead byte checks hide most such pairs). The fast compare
+  now gives U+FFFE the highest quaternary, and a test pins the pair.
