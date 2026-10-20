@@ -33,7 +33,8 @@ static const char* s_path = "collation_tailoring.txt";
 static const char s_file[] = "[Unified_Ideograph 4E00..4E05]\n"
                              "[radical 1=\xE2\xBC\x80\xE4\xB8\x80:\xE4\xB8\x80"
                              "\xE4\xB8\x83-\xE4\xB8\x85]\n"
-                             "[radical 2=\xE2\xBC\x81\xE4\xB8\xA8:\xE4\xB8\x81\xE4\xB8\x82]\n"
+                             "[radical 2=\xE2\xBC\x81\xE4\xB8\xA8:\xE4\xB8\x81-\xE4\xB8\x81"
+                             "\xE4\xB8\x82]\n"
                              "[radical end]\n"
                              "2F00; [U+4E01, 06]\n"
                              "0061; [2A 10, 05, 05]\n"
@@ -447,6 +448,34 @@ static bool HanReads(const uint8_t* bytes, size_t size, size_t at, uint32_t word
     return mlocValidCollationHan(nullptr, (DataSpan){copy, (uint32_t)size});
 }
 
+// Radical lines whose ranges overlap at one code point are refused.
+static void TestRadicalOverlap(void)
+{
+    static const char* const path = "collation_tailoring_overlap.txt";
+    FILE* f = fopen(path, "wb");
+    if (f == nullptr)
+    {
+        CHECK(false, "the file opens");
+        return;
+    }
+    fputs("[Unified_Ideograph 4E00..4E05]\n"
+          "[radical 1=\xE2\xBC\x80\xE4\xB8\x80:\xE4\xB8\x80-\xE4\xB8\x82]\n"
+          "[radical 2=\xE2\xBC\x81\xE4\xB8\xA8:\xE4\xB8\x82]\n"
+          "[radical end]\n"
+          "0061; [2A 10, 05, 05]\n",
+          f);
+    fclose(f);
+    RootTable table;
+    char error[256] = "";
+    bool read = RootReadUnihan(path, &table, error, sizeof(error));
+    CHECK(!read && strstr(error, "overlap") != nullptr, "radical ranges that overlap");
+    if (read)
+    {
+        RootFree(&table);
+    }
+    remove(path);
+}
+
 static void TestHanTable(const RootTable* unihan)
 {
     size_t size = 0;
@@ -468,6 +497,11 @@ static void TestHanTable(const RootTable* unihan)
           "Han in radical-stroke order, two steps apart from ICU's first primary");
     CHECK(unihan->firstHanPrimary == 0xFD020200 &&
               RootHanElement(unihan, 0x4E01) >> 32 == 0xFD020A00 &&
+              RootHanElement(unihan, 0x4E05) >> 32 == 0xFD020800 &&
+              RootHanElement(unihan, 0x4E06) == 0 && RootHanElement(unihan, 0x4DFF) == 0 &&
+              RootHanElement(&s_root, 0) == 0 && RootHanElement(&s_root, 0x4E05) != 0 &&
+              mlocCollationFirstHanPrimary(32256) == 0xFD020200 &&
+              mlocCollationFirstHanPrimary(32257) == 0xFC020200 &&
               unihan->mappings[0].hanReference &&
               unihan->mappings[0].elements[0] >> 32 == 0xFD020A00,
           "the unihan root's Han, and an element naming U+4E01, in that order");
@@ -476,7 +510,8 @@ static void TestHanTable(const RootTable* unihan)
               !HanReads(bytes, size, 4, 7) && !HanReads(bytes, size, 4, 5) &&
               !HanReads(bytes, size, 24, 0x4E00) && !HanReads(bytes, size, 28, 6) &&
               !HanReads(bytes, size, 40, 0x4E02 | 2u << 21) &&
-              !HanReads(bytes, size, 40, 0x10FFFF | 2u << 21) && HanReads(bytes, size, 8, 0),
+              !HanReads(bytes, size, 40, 0x10FFFF | 2u << 21) && HanReads(bytes, size, 8, 0) &&
+              HanReads(bytes, size, 40, 0x10FFFD | 2u << 21),
           "a reserved word, counts that differ, ranges out of order, overlapping, past the "
           "ordinals or the code points");
     CHECK(!mlocValidCollationHan(nullptr, (DataSpan){bytes, 16}) &&
@@ -548,6 +583,7 @@ int main(void)
     {
         TestHanTable(&unihan);
         TestUnihanUnit(&unihan);
+        TestRadicalOverlap();
         RootFree(&unihan);
     }
     TestTypesAlone();
