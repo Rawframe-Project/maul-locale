@@ -290,6 +290,16 @@ static uint32_t Quaternaries(uint32_t variableTop, uint32_t pair)
     return mini > variableTop ? twoShortPrimariesMask : pair & twoLongPrimariesMask;
 }
 
+// Whether a pair of primaries holds a digit's under a reordering that
+// moves digits.
+static bool HoldsDigit(const FastLatinOptions* o, uint32_t pair)
+{
+    uint32_t low = pair & 0xFFFF;
+    uint32_t high = pair >> 16;
+    return (low >= o->digitLow && low <= o->digitHigh) ||
+           (high >= o->digitLow && high <= o->digitHigh);
+}
+
 // The first level's next pair of primaries, reading and checking each
 // character; false to bail out.
 static bool NextPrimaries(const FastLatinOptions* o, Side* x)
@@ -338,7 +348,7 @@ static bool NextPrimaries(const FastLatinOptions* o, Side* x)
             x->pair = Primaries(o->variableTop, mini);
         }
     }
-    return true;
+    return !HoldsDigit(o, x->pair);
 }
 
 // A later level's next pair of weights.
@@ -507,6 +517,25 @@ static bool ReorderServed(const CollationRoot* root, const CollationReorder* reo
     return true;
 }
 
+// The mini primaries from 0's to 9's, which every digit's primary in the
+// table is among; false when a digit's word is not a plain primary.
+static bool DigitRange(const uint8_t* table, uint32_t* lowOut, uint32_t* highOut)
+{
+    uint32_t primaries[2];
+    for (int i = 0; i < 2; i++)
+    {
+        uint32_t word = mlocFastLatinWord(table, fastLatinHeader + (i == 0 ? '0' : '9'));
+        if (word < fastMinLong)
+        {
+            return false;
+        }
+        primaries[i] = word & (word >= fastMinShort ? fastShortPrimaryMask : fastLongPrimaryMask);
+    }
+    *lowOut = primaries[0];
+    *highOut = primaries[1];
+    return true;
+}
+
 bool mlocFastLatinOptions(const CollationRoot* root, const CollationSettings* settings,
                           const uint8_t* table, uint32_t count, FastLatinOptions* out)
 {
@@ -535,6 +564,12 @@ bool mlocFastLatinOptions(const CollationRoot* root, const CollationSettings* se
     {
         return false;
     }
+    uint32_t digitLow = 1;
+    uint32_t digitHigh = 0;
+    if (digitsReordered && !DigitRange(table, &digitLow, &digitHigh))
+    {
+        return false;
+    }
     bool upper = settings->caseFirst == collationUpperFirst;
     *out = (FastLatinOptions){
         .words = table + (size_t)fastLatinHeader * 2,
@@ -546,6 +581,8 @@ bool mlocFastLatinOptions(const CollationRoot* root, const CollationSettings* se
         .tertiaryCase = settings->caseFirst != collationCaseFirstOff && !settings->caseLevel,
         .tertiaryUpperFirst = upper && !settings->caseLevel,
         .digitsBail = settings->numeric || digitsReordered,
+        .digitLow = digitLow,
+        .digitHigh = digitHigh,
     };
     return true;
 }

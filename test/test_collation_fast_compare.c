@@ -422,6 +422,18 @@ static void TestReorderings(void)
     CollationSettings l = s;
     l.reorder = &latinFirst;
     int digits = made ? Answered(&d) : 0;
+    // Superscript three shares 3's primary: with digits after Latin it
+    // bails out too, where ICU4C orders it before Z.
+    FastLatinOptions o;
+    bool served =
+        made && mlocFastLatinOptions(&s_root, &d, s_root.fastLatin, s_root.fastLatinCount, &o);
+    CHECK(served &&
+              mlocFastLatinCompare(&o, (const uint8_t*)"Z", 1, (const uint8_t*)"\xC2\xB3", 2) ==
+                  fastLatinBail &&
+              mlocFastLatinCompare(&o, (const uint8_t*)"Z", 1, (const uint8_t*)"Y", 1) == 1 &&
+              mlocCollationCompare(&s_root, &d, (const uint8_t*)"Z", 1, (const uint8_t*)"\xC2\xB3",
+                                   2) == -1,
+          "a superscript digit bails out under digits after Latin, which order it after Z");
     CHECK(made && Answered(&g) == pairs && digits > 0 && digits < pairs && Answered(&l) == -2,
           "Greek first served; digits after Latin bail out on digits; Latin before spaces not "
           "served");

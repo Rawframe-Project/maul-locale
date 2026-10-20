@@ -131,3 +131,23 @@ the table cannot be ICU's data copied.
 - `conform_collation`: CollationTest's lines, non-ignorable and shifted,
   through the fast compare where it answers (1,480 and 1,538 pairs),
   all as the general compare orders them.
+
+## Amendment (b), 2026-10-20: the differential fuzz
+
+- **`fuzz_collate_fast`** (run a minute on every push, as every fuzz
+  target): the first byte picks one of 32 tags (tailorings with
+  contractions, a search type, en_US_POSIX, every option the fast
+  compare reads, two reorderings, identical), the second cuts the rest
+  into two texts, and each byte after them names a character: ASCII,
+  letters and signs to U+015F, general punctuation, or one of ten the
+  table bails out on. `mlocCompare` must order the texts as their sort
+  keys do, the mirror the other way, and each text with itself as
+  equal.
+- **It found a divergence that ICU4C 79 has too:** under a reordering
+  that puts digits after Latin, ICU's fast compare bails out on the
+  ASCII digits alone, while U+00B2, U+00B3 and U+00B9 share their
+  digits' primaries. ICU's `compareUTF8` orders U+00B3 before Z there,
+  its sort keys after. The fast compare now bails out on every mini
+  primary from 0's to 9's when digits are reordered, and follows the
+  keys. A test pins the case; six minutes of fuzzing (184,838 runs)
+  found nothing more.

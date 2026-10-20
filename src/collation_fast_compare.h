@@ -43,6 +43,14 @@ typedef struct FastLatinOptions
     // Digits bail out: numeric ordering, or digits reordered apart from
     // the groups before Latin.
     bool digitsBail;
+    // With digits reordered, every character whose primary is a digit's
+    // bails out too (superscript digits share the digits' primaries):
+    // the mini primaries from 0's to 9's; empty otherwise. ICU4C bails
+    // out on the ASCII digits alone and so orders U+00B3 before Z under
+    // a reordering that puts digits after Latin, which its sort keys
+    // do not.
+    uint32_t digitLow;
+    uint32_t digitHigh;
 } FastLatinOptions;
 
 // The options for a table (its words and count) under settings; false
