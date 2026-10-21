@@ -87,6 +87,10 @@ typedef struct NfdStream
 
 void mlocNfdStartText(NfdStream* s, NfdText text);
 
+// The code point at a byte or unit of a text and its size there: U+FFFD
+// for each maximal ill-formed UTF-8 subpart and each lone surrogate.
+uint32_t mlocNfdDecodeAt(NfdText text, size_t at, size_t* sizeOut);
+
 static inline void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length)
 {
     mlocNfdStartText(s, mlocNfdUtf8(text, length));

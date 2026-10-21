@@ -140,6 +140,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/nfd_stream.c
     src/collation_tables.c
     src/collation_iterator.c
+    src/search_boundary.c
     src/search_elements.c
     src/collation_compare.c
     src/collation_fast_compare.c
@@ -1066,6 +1067,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_include_directories(test_search_elements PRIVATE test)
             maul_apply_flags(test_search_elements)
             add_test(NAME search_elements COMMAND test_search_elements
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+            add_executable(test_search_boundary test/test_search_boundary.c)
+            target_link_libraries(test_search_boundary PRIVATE mlocgen_core)
+            target_include_directories(test_search_boundary PRIVATE test)
+            maul_apply_flags(test_search_boundary)
+            add_test(NAME search_boundary COMMAND test_search_boundary
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()
         add_executable(test_trie test/test_trie.c)

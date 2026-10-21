@@ -182,3 +182,4 @@ grammar_ky: grammar_turkic
 grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic number_core number_format
 search_elements: collation_compare collation_iterator
 collator: collation_compare collation_fast_compare collation_reorder collation_tables
+search_boundary: nfd_stream

@@ -36,6 +36,14 @@ unsafe-backward set.
   root's or the tailoring's ranges (ICU's canonical closure adds the
   precomposed forms, which the library reads as their NFD), and before
   a digit under numeric ordering.
+- **Grapheme boundaries at any position** (`src/search_boundary.c`):
+  Maul Unicode's grapheme iterator, run from the nearest code point
+  before the position whose break is Other, Control, CR or LF, not
+  Extended_Pictographic and without an Indic_Conjunct_Break: no rule
+  reads back past such a code point, so the boundaries after it are the
+  whole text's. UTF-16 goes to the iterator as UTF-8 in pieces, a lone
+  surrogate as U+FFFD (ICU's break iterator reads it as a control; the
+  library reads both forms alike).
 - **No allocation:** the searcher is a fixed-size value; the text's
   elements pass through a fixed ring within each call.
 
@@ -53,8 +61,8 @@ unsafe-backward set.
 ## Sub-slices
 
 (f2b1) the unsafe-backward ranges; (f2b2a) processed elements and
-their ranges; (f2b2b) grapheme boundaries and the forward find;
-(f2b3) the backward find.
+their ranges; (f2b2b1) grapheme boundaries at any position; (f2b2b2)
+the searcher and the forward find; (f2b3) the backward find.
 
 ## Proof
 
@@ -85,6 +93,13 @@ their ranges; (f2b2b) grapheme boundaries and the forward find;
   provisional eor are set apart. `test_search_elements`: the halves,
   each strength, shifted (a continuation half compared alone with the
   variable top, as ICU does), the ranges.
+- (f2b2b1) `test_search_boundary`: 20,000 random texts of the code
+  points the rules read back through (regional indicators, ZWJ
+  sequences, conjuncts and their linkers, Hangul, prepends, spacing
+  marks, CR LF, controls) and ill-formed bytes; at every code point
+  boundary, whether it is a boundary and the next one agree with the
+  iterator over the whole text, in UTF-8 and in UTF-16; regional
+  indicators paired from far back; a cluster longer than a piece.
 - The differential found that numeric ordering passed over digits the
   emoji type gives contractions (the keycaps): ICU4C's builder gives
   every mapped digit its digit tag, which its iterator reads before any

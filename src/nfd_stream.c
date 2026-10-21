@@ -14,15 +14,15 @@ enum
 };
 
 // A UTF-16 code point and its units; U+FFFD for a lone surrogate.
-static uint32_t DecodeUtf16(const NfdStream* s, size_t at, size_t* sizeOut)
+static uint32_t DecodeUtf16(const uint16_t* units, size_t length, size_t at, size_t* sizeOut)
 {
-    uint32_t u = s->units[at];
+    uint32_t u = units[at];
     *sizeOut = 1;
     if (u - 0xD800 >= 0x800)
     {
         return u;
     }
-    uint32_t t = at + 1 < s->length ? s->units[at + 1] : 0;
+    uint32_t t = at + 1 < length ? units[at + 1] : 0;
     if (u < 0xDC00 && t - 0xDC00 < 0x400)
     {
         *sizeOut = 2;
@@ -31,22 +31,27 @@ static uint32_t DecodeUtf16(const NfdStream* s, size_t at, size_t* sizeOut)
     return 0xFFFD;
 }
 
-static uint32_t Decode(const NfdStream* s, size_t at, size_t* sizeOut)
+uint32_t mlocNfdDecodeAt(NfdText text, size_t at, size_t* sizeOut)
 {
-    if (s->units != nullptr)
+    if (text.units != nullptr)
     {
-        return DecodeUtf16(s, at, sizeOut);
+        return DecodeUtf16(text.units, text.length, at, sizeOut);
     }
-    if (s->text[at] < 0x80)
+    if (text.bytes[at] < 0x80)
     {
         *sizeOut = 1;
-        return s->text[at];
+        return text.bytes[at];
     }
     uint32_t codePoint = 0xFFFD;
     *sizeOut = 1;
     // An ill-formed sequence gives U+FFFD and its maximal subpart's size.
-    (void)muniDecodeUtf8((const char*)s->text + at, s->length - at, &codePoint, sizeOut);
+    (void)muniDecodeUtf8((const char*)text.bytes + at, text.length - at, &codePoint, sizeOut);
     return codePoint;
+}
+
+static uint32_t Decode(const NfdStream* s, size_t at, size_t* sizeOut)
+{
+    return mlocNfdDecodeAt((NfdText){s->text, s->units, s->length}, at, sizeOut);
 }
 
 // The full canonical decomposition, one level at a time.
