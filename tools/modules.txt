@@ -113,7 +113,7 @@ collation_compare: collation_iterator collation_reorder collation_tables nfd_str
 collation_reorder: collation_tables
 collation_fast_compare: collation_compare collation_fast_latin collation_reorder collation_tables
 collation_key: collation_compare collation_iterator collation_reorder collation_tables nfd_stream
-collate: catalog_hash collation_compare collation_fast_compare collation_key collation_reorder collation_tables data_format data_view kinds locale_fallback locale_keyword
+collate: catalog_hash collation_compare collation_fast_compare collation_key collation_reorder collation_tables collator data_format data_view kinds locale_fallback locale_keyword
 relative_format: bytes currency_tables data_view decimal kinds locale_context locale_fallback number_core number_format plural plural_rules relative_tables spellout_data
 relative_datetime: date_data date_time date_write number_core relative_format relative_tables time_format time_write
 duration_options: duration_format
@@ -180,3 +180,5 @@ grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
 grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic number_core number_format
+search_elements: collation_compare collation_iterator
+collator: collation_compare collation_fast_compare collation_reorder collation_tables

@@ -207,6 +207,19 @@ static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, 
             ce32 = entry;
         }
     }
+    if (best.length > 0 && best.from[best.length - 1] >= best.length)
+    {
+        // Marks skipped: as ICU4C's iterator, the source is read to the
+        // end of the last code point matched, and the skipped marks are
+        // given from there.
+        uint32_t last = best.from[best.length - 1];
+        uint32_t end =
+            Upcoming(it, last + 1) ? it->upcomingFrom[last + 1] : mlocNfdPeekFrom(&it->nfd);
+        for (uint32_t i = 0; i < last; i++)
+        {
+            it->upcomingFrom[i] = end;
+        }
+    }
     for (uint32_t j = best.length; j-- > 0;)
     {
         Remove(it, best.from[j]);
@@ -348,12 +361,13 @@ static void NumericSegment(CollationIterator* it, const uint8_t* digits, uint32_
     it->ces[it->ceCount - 1] = NumericElement(primary | (pair - 1) << shift);
 }
 
-// A decimal digit's value, or -1; one with a prefix or contraction list
-// keeps its elements.
-static int32_t Digit(const CollationIterator* it, uint32_t codePoint, uint32_t ce32)
+// A decimal digit's value under numeric, or -1: every digit, its prefix
+// or contraction lists passed over, as ICU4C's builder gives each mapped
+// digit the digit tag (setDigitTags) and its iterator reads that tag
+// before any list.
+static int32_t Digit(const CollationIterator* it, uint32_t codePoint)
 {
-    bool listed = IsContext(ce32, collationTagPrefix) || IsContext(ce32, collationTagContraction);
-    return it->numeric && !listed ? muniGetDecimalDigitValue(codePoint) : -1;
+    return it->numeric ? muniGetDecimalDigitValue(codePoint) : -1;
 }
 
 // A run of digits from the first, as ICU4C's appendNumericCEs: leading
@@ -367,8 +381,7 @@ static void Numeric(CollationIterator* it, int32_t first)
     while (length < collationNumericDigits && Upcoming(it, 0))
     {
         uint32_t c = it->upcoming[0];
-        const CollationRoot* unit = nullptr;
-        int32_t digit = Digit(it, c, Value(it, c, &unit));
+        int32_t digit = Digit(it, c);
         if (digit < 0)
         {
             break;
@@ -394,9 +407,7 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         }
         uint32_t c = it->upcoming[0];
         Remove(it, 0);
-        const CollationRoot* unit = nullptr;
-        uint32_t ce32 = Value(it, c, &unit);
-        int32_t digit = Digit(it, c, ce32);
+        int32_t digit = Digit(it, c);
         if (digit >= 0)
         {
             Remember(it, c);
@@ -404,6 +415,8 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
             *elementOut = it->ces[it->ceNext++];
             return true;
         }
+        const CollationRoot* unit = nullptr;
+        uint32_t ce32 = Value(it, c, &unit);
         if (IsContext(ce32, collationTagPrefix))
         {
             ce32 = MatchPrefix(it, unit, mlocCe32Index(ce32));

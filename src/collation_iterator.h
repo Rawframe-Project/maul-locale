@@ -87,7 +87,9 @@ static inline void mlocCollationIteratorStart(CollationIterator* it, const Colla
 // contraction or numeric run spans from where it starts to where the
 // next code point starts (the end of the text after the last); the rest
 // of an expansion have empty ranges at that end. Inside a segment the
-// NFD changes, only the whole segment has a range (see NfdStream).
+// NFD changes, only the whole segment has a range (see NfdStream). A
+// discontiguous contraction spans to the end of its last code point,
+// and the marks it skipped have empty ranges there.
 bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut, uint32_t* lowOut,
                                 uint32_t* highOut);
 

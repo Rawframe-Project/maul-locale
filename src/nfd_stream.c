@@ -205,10 +205,9 @@ static void FillLong(NfdStream* s)
 }
 
 // Puts the marks from the first in canonical order: a stable sort by
-// class; whether any moved.
-static bool Order(NfdStream* s, uint32_t first)
+// class.
+static void Order(NfdStream* s, uint32_t first)
 {
-    bool moved = false;
     for (uint32_t i = first + 1; i < s->count; i++)
     {
         uint32_t c = s->window[i];
@@ -218,12 +217,78 @@ static bool Order(NfdStream* s, uint32_t first)
         {
             s->window[j] = s->window[j - 1];
             s->classes[j] = s->classes[j - 1];
-            moved = true;
         }
         s->window[j] = c;
         s->classes[j] = k;
     }
-    return moved;
+}
+
+// A segment's source code points, at most one for each window code
+// point: where each starts and its first window code point, and the
+// combining classes its NFD starts and ends with.
+typedef struct Sources
+{
+    uint32_t count;
+    size_t start[nfdWindow + 1];
+    uint32_t first[nfdWindow];
+    uint8_t lead[nfdWindow];
+    uint8_t trail[nfdWindow];
+} Sources;
+
+static void AddSource(Sources* q, const NfdStream* s, size_t start, const uint32_t* d, uint32_t n)
+{
+    q->start[q->count] = start;
+    q->first[q->count] = s->count;
+    q->lead[q->count] = Class(d[0]);
+    q->trail[q->count++] = Class(d[n - 1]);
+}
+
+// The first source code point of the part ICU4C's FCD iterator
+// normalizes (with normalization on), or the count when it normalizes
+// none: a part starts after a code point whose NFD ends with a starter;
+// it is normalized from its start when a code point's NFD starts with a
+// class lower than the last's ends with, or is a Tibetan composite vowel
+// (CollationFCD's lead 129, trail 130 or 132).
+static uint32_t Normalized(const Sources* q)
+{
+    uint32_t part = 0;
+    uint8_t last = 0;
+    for (uint32_t j = 0; j < q->count; j++)
+    {
+        uint8_t lead = q->lead[j];
+        bool tibetan = lead == 129 && (q->trail[j] == 130 || q->trail[j] == 132);
+        if (lead != 0 && (last > lead || tibetan))
+        {
+            return part;
+        }
+        last = q->trail[j];
+        part = last == 0 ? j + 1 : part;
+    }
+    return q->count;
+}
+
+// Where each window code point comes from: in the part normalized, the
+// first from its start and the rest from the segment's end; before it,
+// each source code point's first from its start and the rest of its NFD
+// from its end.
+static void Place(NfdStream* s, Sources* q, uint32_t normalized)
+{
+    q->first[q->count] = s->count;
+    for (uint32_t j = 0; j < normalized; j++)
+    {
+        for (uint32_t i = q->first[j]; i < q->first[j + 1]; i++)
+        {
+            s->from[i] = (uint32_t)(i == q->first[j] ? q->start[j] : q->start[j + 1]);
+        }
+    }
+    if (normalized < q->count)
+    {
+        for (uint32_t i = q->first[normalized]; i < s->count; i++)
+        {
+            s->from[i] =
+                (uint32_t)(i == q->first[normalized] ? q->start[normalized] : q->start[q->count]);
+        }
+    }
 }
 
 bool mlocNfdFill(NfdStream* s)
@@ -245,9 +310,9 @@ bool mlocNfdFill(NfdStream* s)
     uint32_t d[nfdMaxDecomposition];
     size_t size = 0;
     size_t start = s->at;
-    uint32_t source = Decode(s, s->at, &size);
-    uint32_t n = Decompose(source, d);
-    bool changed = n != 1 || d[0] != source;
+    Sources q = {.count = 0};
+    uint32_t n = Decompose(Decode(s, s->at, &size), d);
+    AddSource(&q, s, start, d, n);
     uint32_t marks = 0;
     for (uint32_t i = 0; i < n; i++)
     {
@@ -267,18 +332,16 @@ bool mlocNfdFill(NfdStream* s)
     {
         for (uint32_t k = 0; s->at < end; s->at += size)
         {
-            uint32_t mark = Decode(s, s->at, &size);
             (void)Mark(s, s->at, d, &k, &size);
-            changed = changed || k != 1 || d[0] != mark;
+            AddSource(&q, s, s->at, d, k);
             for (uint32_t i = 0; i < k; i++)
             {
                 Put(s, d[i], Class(d[i]), s->at);
             }
         }
-        if (Order(s, marks) || changed)
-        {
-            Changed(s, start, end);
-        }
+        q.start[q.count] = end;
+        Order(s, marks);
+        Place(s, &q, Normalized(&q));
         return true;
     }
     s->headCount = (uint8_t)(s->count - marks);

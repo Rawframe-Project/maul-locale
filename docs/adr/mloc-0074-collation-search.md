@@ -39,10 +39,22 @@ unsafe-backward set.
 - **No allocation:** the searcher is a fixed-size value; the text's
   elements pass through a fixed ring within each call.
 
+- **Source ranges as ICU4C's FCD iterator gives them** with
+  normalization on (the library always reads the NFD): text in
+  canonical order keeps each code point's range, a decomposed one's
+  first element spanning it and the rest empty at its end; the part ICU
+  normalizes (from the start of the part where a mark is out of order,
+  or a Tibetan composite vowel, to the segment's end) has one range. A
+  discontiguous contraction spans to its last code point's end and the
+  marks it skipped are empty there. A segment of more than 64 code
+  points reads as normalized whole (ICU keeps the ranges of one in
+  order); only crafted text has one.
+
 ## Sub-slices
 
-(f2b1) the unsafe-backward ranges; (f2b2) processed elements and the
-forward find; (f2b3) the backward find.
+(f2b1) the unsafe-backward ranges; (f2b2a) processed elements and
+their ranges; (f2b2b) grapheme boundaries and the forward find;
+(f2b3) the backward find.
 
 ## Proof
 
@@ -57,6 +69,27 @@ forward find; (f2b3) the backward find.
   `test_collation_unsafe_table`: a small root and a tailoring (a
   contraction, a prefix's contraction, a prefix left out, a mark among
   the code points), and the readers' refusals.
+
+- (f2b2a) `conform_search_elements` against ICU4C 79's `UCollationPCE`
+  (normalization on), every tag under seven option sets (strengths,
+  shifted, quaternary, numeric, identical), random texts of up to eight
+  code points from a pool of letters, marks of many classes,
+  precomposed letters, Hangul, digits, Thai and Lao, Tibetan composite
+  vowels, controls, noncharacters, emoji and regional indicators:
+  215,600 texts, every element and range alike. Han and U+16D68 are
+  left out of the pool: Han's implicit primaries differ between ICU's
+  UCA 17 root and CLDR 49's UCA 18 root, and ICU reads U+16D68 (whose
+  NFD is U+16D67 twice) as itself where the library reads its NFD,
+  which a contraction before it then takes. The nine tags ICU 79 does
+  not ship (aa, bal, bal-Latn, cu, dz, sgs, ssy, vo, wae) and de's
+  provisional eor are set apart. `test_search_elements`: the halves,
+  each strength, shifted (a continuation half compared alone with the
+  variable top, as ICU does), the ranges.
+- The differential found that numeric ordering passed over digits the
+  emoji type gives contractions (the keycaps): ICU4C's builder gives
+  every mapped digit its digit tag, which its iterator reads before any
+  list, so every digit is numeric under kn. The library now does the
+  same (`test_collate`).
 
 ## Consequences
 

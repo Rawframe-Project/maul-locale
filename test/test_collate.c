@@ -209,6 +209,10 @@ static void TestKeys(void)
               Order("fr-u-kb", nullptr, "cot\xC3\xA9", "c\xC3\xB4te") == 1 &&
               Order("fr", nullptr, "cot\xC3\xA9", "c\xC3\xB4te") == -1,
           "kn and kb: numeric and backwards secondaries");
+    CHECK(Order("und-u-co-emoji-kn", nullptr, "a2", "a10") == -1 &&
+              Order("und-u-co-emoji-kn", nullptr, "a2\xEF\xB8\x8F\xE2\x83\xA3", "a10") == -1 &&
+              Order("und-u-co-emoji", nullptr, "a2", "a10") == 1,
+          "kn over digits the emoji type gives contractions (keycaps), as ICU4C's digit tags");
     CHECK(Order("en-u-kr-grek-latn", nullptr, "\xCE\xB1", "a") == -1 &&
               Order("en-u-kr-digit-punct", nullptr, "1", ".") == -1 &&
               Order("en-u-kr-cyrl-others-latn", nullptr, "\xCE\xB1", "a") == -1,

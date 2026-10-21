@@ -231,13 +231,20 @@ static void TestSpans(void)
           "an expansion's first element spans the code point, the rest are empty at its end");
     CHECK(SPANS("a\xCC\x81\xCC\xA3"
                 "b",
-                0, 5, 5, 5, 5, 6),
-          "a reordered segment: its first element covers it, the rest are empty at its end");
+                0, 1, 1, 5, 5, 6) &&
+              SPANS("\xC3\xA1\xCC\xA3", 0, 4, 4, 4),
+          "marks out of order: the part normalized starts after the last starter's end, or at "
+          "a precomposed letter whose last mark is out of order");
+    CHECK(SPANS("\xC3\xA1\xCC\x81", 0, 2, 2, 2, 2, 4),
+          "a precomposed letter and a mark in order keep their own ranges");
+    CHECK(SPANS("a\xE0\xBD\xB5", 0, 1, 1, 4, 4, 4),
+          "a Tibetan composite vowel is normalized, as ICU4C's FCD iterator does");
     CHECK(SPANS("ch", 0, 2) && SPANS("cb", 0, 1, 1, 2), "a contraction spans its code points");
     CHECK(SPANS("a\xCC\xA3\xCC\x80"
                 "b",
-                0, 1, 1, 5, 5, 6),
-          "a mark a discontiguous match takes leaves the ranges after it in place");
+                0, 5, 5, 5, 5, 6),
+          "a discontiguous match spans to its last code point's end, the skipped mark empty "
+          "there");
     static const uint16_t units[] = {'a', 0xD83D, 0xDE00, 'b'};
     CHECK(Spans(mlocNfdUtf16(units, 4), (const uint32_t[]){0, 1, 1, 3, 3, 4}, 6),
           "UTF-16 ranges count code units");

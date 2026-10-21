@@ -59,10 +59,14 @@ typedef struct NfdStream
     uint32_t window[nfdWindow];
     uint8_t classes[nfdWindow];
     // Where in the source each window code point comes from, as ICU4C's
-    // FCD iterators place offsets: a segment the NFD leaves as it is gives
-    // each code point its own start; one the NFD changes (decomposed or
-    // reordered) gives its first code point the segment's start and the
-    // rest its end, so that only the whole segment has a range.
+    // FCD iterator places offsets with normalization on: where the source
+    // is in canonical order, each source code point's NFD gives its first
+    // code point the source's start and the rest its end; the part ICU
+    // normalizes (from the start of the segment's part with the first
+    // mark out of order, or a Tibetan composite vowel, to the segment's
+    // end) gives its first code point the part's start and the rest the
+    // segment's end. A segment longer than the window reads as normalized
+    // whole.
     uint32_t from[nfdWindow];
     uint32_t count;
     uint32_t next;
@@ -117,6 +121,18 @@ static inline bool mlocNfdNextFrom(NfdStream* s, uint32_t* codePointOut, uint8_t
     *fromOut = s->from[s->next];
     *codePointOut = s->window[s->next++];
     return true;
+}
+
+// Where the next code point comes from in the source, without reading
+// it: the window's next, else where the stream reads on (the rest of a
+// long segment come from its end); the text's length at its end.
+static inline uint32_t mlocNfdPeekFrom(const NfdStream* s)
+{
+    if (s->next < s->count)
+    {
+        return s->from[s->next];
+    }
+    return (uint32_t)(s->longRun ? s->runEnd : s->at);
 }
 
 // The next code point of the NFD and its combining class; false at the

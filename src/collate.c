@@ -9,6 +9,7 @@
 #include "collation_key.h"
 #include "collation_reorder.h"
 #include "collation_tables.h"
+#include "collator.h"
 #include "data_format.h"
 #include "data_view.h"
 #include "kinds.h"
@@ -22,37 +23,10 @@
 
 enum
 {
-    collatorStamp = 0x43,
     // The sort keys' format, a seed of the version: raised whenever the
     // key writer's bytes change.
-    keyFormat = 1,
+    keyFormat = 2,
 };
-
-typedef struct Collator
-{
-    uint32_t stamp;
-    // 1 when the reordering is in use (a byte, read only after the stamp).
-    uint8_t reordered;
-    // 1 when the locale's tailoring maps code points.
-    uint8_t tailored;
-    // 1 when it orders Han by the radical-stroke table.
-    uint8_t radical;
-    // 1 when the fast Latin compare serves its settings.
-    uint8_t fastLatin;
-    // The keys' version: the format, the root unit's bytes and the
-    // tailoring's, hashed.
-    uint64_t version;
-    CollationRoot root;
-    CollationRoot tailoring;
-    CollationHan han;
-    // Its reorder pointer is set at each compare: a collator is copied.
-    CollationSettings settings;
-    CollationReorder reorder;
-    FastLatinOptions fast;
-} Collator;
-
-static_assert(sizeof(Collator) <= sizeof(mlocCollator), "a collator fits its value");
-static_assert(offsetof(Collator, stamp) == 0, "the stamp is read first, alone");
 
 // The collation root in the first source that has one, and the keys'
 // version over its bytes.
@@ -428,33 +402,12 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     return mloc_success;
 }
 
-// A collator the library made, copied out with its settings pointing at
-// its reordering; false for any other.
-static bool ReadCollator(const mlocCollator* collator, Collator* c)
-{
-    uint32_t stamp = 0;
-    if (collator == nullptr)
-    {
-        return false;
-    }
-    memcpy(&stamp, collator, sizeof(stamp));
-    if (stamp != collatorStamp)
-    {
-        return false;
-    }
-    memcpy(c, collator, sizeof(*c));
-    c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
-    c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
-    c->settings.han = c->radical != 0 ? &c->han : nullptr;
-    return true;
-}
-
 mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b,
                        size_t bLength, int* orderOut)
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
-        !ReadCollator(collator, &c))
+        !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }
@@ -473,7 +426,7 @@ mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, siz
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
-        !ReadCollator(collator, &c))
+        !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }
@@ -494,7 +447,7 @@ mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* tex
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !ReadCollator(collator, &c))
+        (key == nullptr && capacity > 0) || !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }
@@ -509,7 +462,7 @@ mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !ReadCollator(collator, &c))
+        (key == nullptr && capacity > 0) || !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }
@@ -521,7 +474,7 @@ mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t
 mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut)
 {
     Collator c;
-    if (versionOut == nullptr || !ReadCollator(collator, &c))
+    if (versionOut == nullptr || !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
     }

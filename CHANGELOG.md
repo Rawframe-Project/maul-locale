@@ -416,6 +416,10 @@ format.
 - The collation data holds each unit's unsafe-backward ranges, the
   code points after the first of its contractions, for search
   (mloc-0074).
+- Numeric ordering (kn) reads every decimal digit by its value, also
+  a digit a collation type gives contractions (the emoji type's
+  keycaps), as ICU4C does (mloc-0074). Collation versions change with
+  it.
 - The collation data file holds ICU4C's fast Latin table for the root
   and each collation type, built over NFD and checked as the file is
   opened (mloc-0072). Collation versions change with it.
