@@ -265,8 +265,8 @@ static const Cei* At(Find* f, uint32_t index)
 
 // Whether the pattern's elements match from an index, and where in the
 // text's elements the match ends (one past its last); the text element
-// compared last.
-static bool Match(Find* f, uint32_t index, uint32_t* endOut, const Cei** lastOut,
+// compared last (searchEnd when none was).
+static bool Match(Find* f, uint32_t index, uint32_t* endOut, uint64_t* lastOut,
                   uint64_t* patternOut)
 {
     int64_t offset = 0;
@@ -278,13 +278,13 @@ static bool Match(Find* f, uint32_t index, uint32_t* endOut, const Cei** lastOut
         t = At(f, (uint32_t)(index + p + offset));
         if (t == nullptr)
         {
-            *lastOut = nullptr;
+            *lastOut = searchEnd;
             return false;
         }
         int m = Compare(t->ce, *patternOut, f->s->comparison);
         if (m == ceNoMatch)
         {
-            *lastOut = t;
+            *lastOut = t->ce;
             return false;
         }
         if (m == ceSkipText)
@@ -297,7 +297,7 @@ static bool Match(Find* f, uint32_t index, uint32_t* endOut, const Cei** lastOut
             offset--;
         }
     }
-    *lastOut = t;
+    *lastOut = t != nullptr ? t->ce : searchEnd;
     *endOut = (uint32_t)(offset + f->s->count);
     return true;
 }
@@ -305,22 +305,29 @@ static bool Match(Find* f, uint32_t index, uint32_t* endOut, const Cei** lastOut
 // Where a match may end: the element after it, past the text's
 // ignorables a wildcard comparison takes; false when the match ends
 // inside an expansion or before an ignorable it cannot take.
-static bool After(Find* f, uint32_t index, uint32_t* end, uint64_t pattern, const Cei** nextOut)
+static bool After(Find* f, uint32_t index, uint32_t* end, uint64_t pattern, Cei* nextOut,
+                  bool* heldOut)
 {
     if (f->s->comparison == mloc_searchExact)
     {
         const Cei* next = At(f, index + *end);
-        *nextOut = next;
-        return next != nullptr && !(next->low == next->high && next->ce != searchEnd);
-    }
-    for (;; ++*end)
-    {
-        const Cei* next = At(f, index + *end);
-        *nextOut = next;
+        *heldOut = next != nullptr;
         if (next == nullptr)
         {
             return false;
         }
+        *nextOut = *next;
+        return !(next->low == next->high && next->ce != searchEnd);
+    }
+    for (;; ++*end)
+    {
+        const Cei* next = At(f, index + *end);
+        *heldOut = next != nullptr;
+        if (next == nullptr)
+        {
+            return false;
+        }
+        *nextOut = *next;
         if (next->ce == searchEnd)
         {
             return true;
@@ -421,25 +428,39 @@ static uint32_t Limit(Find* f, const Cei* last, uint32_t minLimit, uint32_t maxL
 static bool Bounds(Find* f, uint32_t index, uint32_t end, uint64_t pattern, size_t* startOut,
                    size_t* endOut)
 {
-    const Cei* first = At(f, index);
-    const Cei* last = At(f, index + end - 1);
-    const Cei* next = nullptr;
-    bool found = first != nullptr && last != nullptr && After(f, index, &end, pattern, &next);
-    if (first == nullptr || last == nullptr || next == nullptr)
+    // The elements are copied: fetching more may reuse their places.
+    const Cei* held = At(f, index);
+    if (held == nullptr)
     {
         return false;
     }
-    uint32_t start = first->low;
-    uint32_t minLimit = last->low;
-    uint32_t maxLimit = next->low;
-    found = found && mlocSearchIsBoundary(f->text, start) && start != first->high;
-    bool mid = MidCluster(f, last, next, maxLimit);
-    uint32_t limit = Limit(f, last, minLimit, maxLimit, mid);
+    Cei first = *held;
+    held = At(f, index + end - 1);
+    if (held == nullptr)
+    {
+        return false;
+    }
+    Cei last = *held;
+    Cei next = {0};
+    bool nextHeld = false;
+    bool found = After(f, index, &end, pattern, &next, &nextHeld);
+    if (!nextHeld)
+    {
+        return false;
+    }
+    uint32_t start = first.low;
+    uint32_t minLimit = last.low;
+    uint32_t maxLimit = next.low;
+    found = found && mlocSearchIsBoundary(f->text, start) && start != first.high;
+    bool mid = MidCluster(f, &last, &next, maxLimit);
+    uint32_t limit = Limit(f, &last, minLimit, maxLimit, mid);
     if (!mid)
     {
         found = found && limit <= maxLimit && mlocSearchIsBoundary(f->text, limit);
     }
-    found = found && Identical(f, start, limit);
+    // A pattern element skipped against the text can put the last element
+    // before the first: no match then, and no text between to compare.
+    found = found && start <= limit && Identical(f, start, limit);
     *startOut = start;
     *endOut = limit;
     return found;
@@ -450,7 +471,9 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
 {
     const Searcher* s = (const Searcher*)searcher;
     uint32_t stamp = 0;
-    if (searcher == nullptr || startOut == nullptr || endOut == nullptr || from > text.length)
+    // Elements place their ranges in 32 bits.
+    if (searcher == nullptr || startOut == nullptr || endOut == nullptr || from > text.length ||
+        text.length > UINT32_MAX)
     {
         return mloc_errorInvalid;
     }
@@ -467,7 +490,7 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
     for (uint32_t index = 0;; index++)
     {
         uint32_t end = 0;
-        const Cei* last = nullptr;
+        uint64_t last = 0;
         uint64_t pattern = 0;
         const Cei* first = At(f, index);
         if (first == nullptr)
@@ -488,7 +511,7 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
         }
         if (!matched)
         {
-            if (last->ce == searchEnd)
+            if (last == searchEnd)
             {
                 return mloc_errorNotFound;
             }

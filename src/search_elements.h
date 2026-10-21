@@ -50,7 +50,8 @@ void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
 // starts in the root's or the tailoring's unsafe ranges, a digit under
 // numeric), then forward to the last boundary between the elements of
 // what follows that is at or before the position; the iterator starts
-// there, the code points before it its prefix history.
+// there, the code points before it its prefix history. The text holds
+// at most UINT32_MAX bytes or units, as the ranges are 32-bit.
 void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
                                const CollationSettings* settings, NfdText text, size_t from);
 
