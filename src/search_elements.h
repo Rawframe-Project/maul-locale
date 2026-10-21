@@ -38,13 +38,31 @@ typedef struct SearchElements
     // element ended.
     uint32_t otherHalf;
     uint32_t otherAt;
+    // Where in the whole text the iterator's text starts.
+    uint32_t base;
 } SearchElements;
 
 void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
                              const CollationSettings* settings, NfdText text);
 
+// Starts at a position as ICU4C's setOffset places its iterator: back
+// over unsafe code points to a safe one (a mark, a code point whose NFD
+// starts in the root's or the tailoring's unsafe ranges, a digit under
+// numeric), then forward to the last boundary between the elements of
+// what follows that is at or before the position; the iterator starts
+// there, the code points before it its prefix history.
+void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
+                               const CollationSettings* settings, NfdText text, size_t from);
+
 // The next processed element and its range, or searchEnd at the end with
 // the text's length as both.
 uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* highOut);
+
+// Whether a pattern has an element usearch keeps (ICU4C's getCE over its
+// 32-bit halves: masked to the strength, a variable one dropped when
+// shifted below the quaternary strength); usearch refuses a pattern
+// with none.
+bool mlocSearchHasElements(const CollationRoot* root, const CollationSettings* settings,
+                           NfdText text);
 
 #endif

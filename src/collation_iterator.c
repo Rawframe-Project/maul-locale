@@ -102,7 +102,7 @@ static void Remove(CollationIterator* it, uint32_t index)
     it->upcomingCount--;
 }
 
-static void Remember(CollationIterator* it, uint32_t codePoint)
+void mlocCollationIteratorRemember(CollationIterator* it, uint32_t codePoint)
 {
     it->history[it->historyAt] = codePoint;
     it->historyAt = (it->historyAt + 1) % collationMaxContext;
@@ -412,7 +412,7 @@ static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, 
     }
     for (uint32_t j = 0; j < s.best.length; j++)
     {
-        Remember(it, s.best.text[j]);
+        mlocCollationIteratorRemember(it, s.best.text[j]);
     }
     return s.ce32;
 }
@@ -573,7 +573,7 @@ static void Numeric(CollationIterator* it, int32_t first)
             break;
         }
         Remove(it, 0);
-        Remember(it, c);
+        mlocCollationIteratorRemember(it, c);
         if (length == 1 && digits[0] == 0)
         {
             length = 0;
@@ -596,7 +596,7 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         int32_t digit = Digit(it, c);
         if (digit >= 0)
         {
-            Remember(it, c);
+            mlocCollationIteratorRemember(it, c);
             Numeric(it, digit);
             *elementOut = it->ces[it->ceNext++];
             return true;
@@ -607,7 +607,7 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         {
             ce32 = MatchPrefix(it, unit, mlocCe32Index(ce32));
         }
-        Remember(it, c);
+        mlocCollationIteratorRemember(it, c);
         // A list's default or entry naming an earlier list: the validator
         // lets a contraction name only a list before its own.
         while (IsContext(ce32, collationTagContraction))

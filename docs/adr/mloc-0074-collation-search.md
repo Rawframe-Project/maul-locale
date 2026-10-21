@@ -44,6 +44,23 @@ unsafe-backward set.
   whole text's. UTF-16 goes to the iterator as UTF-8 in pieces, a lone
   surrogate as U+FFFD (ICU's break iterator reads it as a control; the
   library reads both forms alike).
+- **The forward find is usearch_search** (`src/search.c`), its loop and
+  bounds as ICU4C 79 writes them, over a ring of the text's elements
+  sized as ICU's CEIBuffer (the pattern's elements, 32, and with a
+  wildcard comparison 3 a UTF-16 unit of the pattern, 8 for a possible
+  leading jamo; at most 512). Where ICU would read past its buffer (a
+  null element it dereferences) the find returns `mloc_errorCapacity`;
+  where ICU loops for ever (a wildcard comparison skipping the
+  pattern's elements against the text's end) the find stops: no match
+  starts at the end.
+- **A start inside the text** is ICU's setOffset: back over unsafe code
+  points, forward to the last element boundary at or before the
+  position; the iterator starts there with the eight code points before
+  it as its prefix history, as ICU's iterator reads them back.
+- **Refused as ICU refuses:** a numeric collator (U_UNSUPPORTED_ERROR)
+  and a pattern none of whose 32-bit halves ICU's getCE keeps (only
+  ignorables, or only variable ones when shifted below the quaternary
+  strength).
 - **No allocation:** the searcher is a fixed-size value; the text's
   elements pass through a fixed ring within each call.
 
@@ -100,6 +117,18 @@ the searcher and the forward find; (f2b3) the backward find.
   boundary, whether it is a boundary and the next one agree with the
   iterator over the whole text, in UTF-8 and in UTF-16; regional
   indicators paired from far back; a cluster longer than a piece.
+- (f2b2b2) `conform_search` against ICU4C 79's `usearch_search`
+  (normalization on; the oracle runs each search in a child process
+  with a time limit, as ICU crashes or hangs on some): every tag under
+  seven option sets, patterns of one to three and texts of up to ten
+  code points from the elements' pool, half of the texts holding the
+  pattern, a random start in 30%, each comparison: 5,040 searches, all
+  alike but the 5 where ICU crashed or never ended (the library finds
+  none there); the UTF-8 find agrees with the UTF-16 one on every line.
+  ICU refuses an empty text, the library finds nothing in it.
+  `test_search`: strengths, a precomposed letter, an accent's cluster,
+  Czech ch never split and a start inside it, the comparisons, UTF-16
+  positions and a start inside a pair, the refusals.
 - The differential found that numeric ordering passed over digits the
   emoji type gives contractions (the keycaps): ICU4C's builder gives
   every mapped digit its digit tag, which its iterator reads before any

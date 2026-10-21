@@ -13,8 +13,7 @@ enum
     pieceBytes = 128,
 };
 
-// The code point boundary before one, past 0.
-static size_t Before(NfdText t, size_t at)
+size_t mlocSearchBefore(NfdText t, size_t at)
 {
     if (t.units != nullptr)
     {
@@ -49,7 +48,7 @@ static size_t SafeStart(NfdText t, size_t at)
     size_t q = at;
     while (q > 0)
     {
-        q = Before(t, q);
+        q = mlocSearchBefore(t, q);
         size_t size = 0;
         if (Safe(mlocNfdDecodeAt(t, q, &size)))
         {

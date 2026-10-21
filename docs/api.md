@@ -710,6 +710,30 @@ MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelativeDayTime( const mlocRelative
 ```
 Writes a day relative to today and a time of day joined by the locale's relative date-time glue ("tomorrow at 3:00 PM", "in 3 days, 10:00"): the day as mlocFormatRelative writes an amount of days, the time as the time formatter writes it, joined by the glue of the time formatter's calendar at the length the relative width gives (long the long glue, short the medium, narrow the short; ICU4C takes the medium atTime glue whatever the width). The day is capitalized as the relative formatter asks only where the glue writes it first.  @param relative   A formatter from mlocInitRelativeFormatter. @param time       A formatter from mlocInitTimeFormatter, without a zone; its data holds the glue. @param days       The day's distance from today, finite. @param timeOfDay  The time. @param output     Receives the text; its part function, when set, receives mlocDatePart values: the day whole as mloc_datePartRelativeDay, the time's fields, and literal for the glue's text. @return mloc_success; mloc_errorCapacity when the text does not fit (output->length is then the length needed) or rounding passes the decimal's limits; mloc_errorNotFound for a day whose patterns the locale's chain lacks; mloc_errorInvalid for a null pointer, an amount not finite, a time out of range, or a formatter the library did not make (a time formatter with a zone among them). @par Thread safety Safe from any thread.
 
+## `search.h`
+
+Collation search (record mloc-0074): a pattern found in a text where a collator holds them equal, as ICU4C's usearch finds it: the pattern's collation elements against the text's, a match starting and ending on grapheme cluster boundaries (or, where ICU allows one, inside a cluster at a normalization boundary), the identical strength also asking for the same NFD. The searcher is a value the caller keeps; it holds a copy of the collator and the pattern's elements, and keeps no pointer to either. A find is a call from a position: to find every match, call again from the last match's end, or from its start plus one code point for overlapping matches.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcher(mlocSearcher* searcherOut, const mlocCollator* collator, const char* pattern, size_t length, const mlocSearchOptions* options);
+```
+Makes a searcher for a UTF-8 pattern in a collator's order.  @param searcherOut  Receives the searcher. @param collator     A collator mlocInitCollator made; copied. @param pattern      The pattern; may be null when length is 0. @param length       Its length in bytes. @param options      The options, or null for exact comparison. @return mloc_success; mloc_errorInvalid for a pattern with no element at the collator's strength (none but ignorables, or only variable ones when shifted), a collator with numeric ordering (as ICU4C refuses one: a number's elements stand for all its digits), an unknown comparison, a collator the library did not make or a null pointer; mloc_errorCapacity for a pattern of more than 480 elements (fewer with a wildcard comparison, which keeps room for the text's ignorables between them). @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcherUtf16(mlocSearcher* searcherOut, const mlocCollator* collator, const uint16_t* pattern, size_t length, const mlocSearchOptions* options);
+```
+Makes a searcher for a UTF-16 pattern, as mlocInitSearcher does for its UTF-8 form. A lone surrogate reads as U+FFFD.  @param searcherOut  Receives the searcher. @param collator     A collator mlocInitCollator made; copied. @param pattern      The pattern; may be null when length is 0. @param length       Its length in 16-bit units. @param options      The options, or null for exact comparison. @return As mlocInitSearcher. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindNext(const mlocSearcher* searcher, const char* text, size_t length, size_t from, size_t* startOut, size_t* endOut);
+```
+Finds the pattern in a UTF-8 text, the first match whose elements start at or after a position, as ICU4C's usearch_search from that offset: the search starts at the last boundary between the text's elements at or before the position, backing up first over code points a contraction may continue to. A position inside a code point counts as its start.  @param searcher  A searcher mlocInitSearcher made. @param text      The text; may be null when length is 0. @param length    Its length in bytes. @param from      The position, at most length. @param startOut  Receives the match's first byte. @param endOut    Receives the byte after the match. @return mloc_success with a match; mloc_errorNotFound when there is none; mloc_errorCapacity when the text's elements between a match's ends outgrow the room kept for them (a run of ignorables too long); mloc_errorInvalid for a searcher the library did not make, a position past the end or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindNextUtf16(const mlocSearcher* searcher, const uint16_t* text, size_t length, size_t from, size_t* startOut, size_t* endOut);
+```
+Finds the pattern in a UTF-16 text, as mlocFindNext does in its UTF-8 form. A lone surrogate reads as U+FFFD; a position on the second unit of a pair counts as the pair's first.  @param searcher  A searcher mlocInitSearcher or mlocInitSearcherUtf16 made. @param text      The text; may be null when length is 0. @param length    Its length in 16-bit units. @param from      The position in units, at most length. @param startOut  Receives the match's first unit. @param endOut    Receives the unit after the match. @return As mlocFindNext. @par Thread safety Safe from any thread.
+
 ## `spellout.h`
 
 Numbers in words, ordinal suffixes and the algorithmic numbering systems (UTS #35 Part 3, record mloc-0034): CLDR's rule-based number formats, as ICU4C reads and runs them, on the exact decimal. The rules are in a data file of their own, spellout.mloc, which a program adds to its data set.
@@ -994,4 +1018,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-181 functions across 21 headers.
+185 functions across 22 headers.

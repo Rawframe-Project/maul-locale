@@ -140,6 +140,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/nfd_stream.c
     src/collation_tables.c
     src/collation_iterator.c
+    src/search.c
     src/search_boundary.c
     src/search_elements.c
     src/collation_compare.c
@@ -601,6 +602,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_collate PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    # Search over the same file (record mloc-0074).
+    maul_add_test(search)
+    if(TARGET test_search)
+        if(EMSCRIPTEN)
+            target_link_options(test_search PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_search PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # And relative time (record mloc-0043).
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
@@ -718,6 +728,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_link_libraries(conform_collation PRIVATE maul-locale)
         target_include_directories(conform_collation PRIVATE src)
         maul_apply_flags(conform_collation)
+        add_executable(conform_search test/conform_search.c)
+        target_link_libraries(conform_search PRIVATE maul-locale)
+        maul_apply_flags(conform_search)
         add_executable(conform_search_elements test/conform_search_elements.c)
         target_link_libraries(conform_search_elements PRIVATE maul-locale)
         target_include_directories(conform_search_elements PRIVATE src)

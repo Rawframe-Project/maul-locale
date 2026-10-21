@@ -21,6 +21,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// The code point boundary before one past 0.
+size_t mlocSearchBefore(NfdText text, size_t at);
+
 // Whether a code point boundary of the text is a grapheme cluster
 // boundary; the text's start and end are.
 bool mlocSearchIsBoundary(NfdText text, size_t at);

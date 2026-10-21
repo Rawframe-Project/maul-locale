@@ -91,6 +91,11 @@ void mlocNfdStartText(NfdStream* s, NfdText text);
 // for each maximal ill-formed UTF-8 subpart and each lone surrogate.
 uint32_t mlocNfdDecodeAt(NfdText text, size_t at, size_t* sizeOut);
 
+// A code point's full canonical decomposition (at most
+// nfdMaxDecomposition code points) and its count, with the combining
+// classes it starts and ends with.
+uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, uint8_t* trailOut);
+
 static inline void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length)
 {
     mlocNfdStartText(s, mlocNfdUtf8(text, length));

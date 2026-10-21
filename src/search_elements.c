@@ -3,6 +3,10 @@
 
 #include "search_elements.h"
 
+#include "search_boundary.h"
+
+#include "maul-unicode/properties.h"
+
 void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
                              const CollationSettings* settings, NfdText text)
 {
@@ -75,10 +79,132 @@ uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* hi
         uint64_t processed = Process(e, half);
         if (processed != 0)
         {
+            *lowOut += e->base;
+            *highOut += e->base;
             return processed;
         }
     }
-    *lowOut = (uint32_t)e->it.nfd.length;
+    *lowOut = e->base + (uint32_t)e->it.nfd.length;
     *highOut = *lowOut;
     return searchEnd;
+}
+
+static bool InRanges(const CollationRoot* unit, uint32_t c)
+{
+    return unit != nullptr && mlocCollationInUnsafe(unit->unsafe, unit->unsafeCount, c);
+}
+
+// Whether a position before the code point may be inside a contraction
+// or a numeric run.
+static bool Unsafe(const CollationRoot* root, const CollationSettings* s, uint32_t c)
+{
+    uint32_t d[nfdMaxDecomposition];
+    uint8_t lead = 0;
+    uint8_t trail = 0;
+    (void)mlocNfdDecompose(c, d, &lead, &trail);
+    return lead != 0 || InRanges(root, c) || InRanges(root, d[0]) || InRanges(s->tailoring, c) ||
+           InRanges(s->tailoring, d[0]) || (s->numeric && muniGetDecimalDigitValue(c) >= 0);
+}
+
+// The text from a position.
+static NfdText From(NfdText text, size_t at)
+{
+    return text.units != nullptr ? mlocNfdUtf16(text.units + at, text.length - at)
+                                 : mlocNfdUtf8(text.bytes + at, text.length - at);
+}
+
+// The last boundary between elements, from a safe position, at or
+// before the position: ICU4C's lastSafeOffset.
+static size_t LastBoundary(const CollationRoot* root, const CollationSettings* settings,
+                           NfdText text, size_t safe, size_t from)
+{
+    SearchElements scan;
+    mlocSearchElementsStart(&scan, root, settings, From(text, safe));
+    size_t last = safe;
+    uint64_t element = 0;
+    uint32_t low = 0;
+    uint32_t high = 0;
+    while (safe + high < from && mlocCollationNextElementAt(&scan.it, &element, &low, &high))
+    {
+        last = safe + high <= from ? safe + high : last;
+    }
+    return last;
+}
+
+void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
+                               const CollationSettings* settings, NfdText text, size_t from)
+{
+    size_t start = from;
+    if (from > 0 && from < text.length)
+    {
+        size_t offset = from;
+        size_t size = 0;
+        while (offset > 0 && Unsafe(root, settings, mlocNfdDecodeAt(text, offset, &size)))
+        {
+            offset = mlocSearchBefore(text, offset);
+        }
+        start = offset < from ? LastBoundary(root, settings, text, offset, from) : from;
+    }
+    mlocSearchElementsStart(e, root, settings, From(text, start));
+    e->base = (uint32_t)start;
+    // The code points before, oldest first, for the prefixes.
+    size_t back[collationMaxContext];
+    uint32_t count = 0;
+    for (size_t at = start; at > 0 && count < collationMaxContext; count++)
+    {
+        at = mlocSearchBefore(text, at);
+        back[count] = at;
+    }
+    while (count-- > 0)
+    {
+        size_t size = 0;
+        uint32_t d[nfdMaxDecomposition];
+        uint8_t lead = 0;
+        uint8_t trail = 0;
+        uint32_t n = mlocNfdDecompose(mlocNfdDecodeAt(text, back[count], &size), d, &lead, &trail);
+        for (uint32_t i = 0; i < n; i++)
+        {
+            mlocCollationIteratorRemember(&e->it, d[i]);
+        }
+    }
+}
+
+// ICU4C's getCE: a half as usearch keeps it for the pattern's elements,
+// 0 for one it drops.
+static uint32_t PatternCe(const SearchElements* e, uint32_t half)
+{
+    uint32_t mask = e->strength == collationPrimary     ? 0xFFFF0000
+                    : e->strength == collationSecondary ? 0xFFFFFF00
+                                                        : 0xFFFFFFFF;
+    half &= mask;
+    if (e->shifted)
+    {
+        if (e->variableTop > half)
+        {
+            half = e->strength >= collationQuaternary ? half & 0xFFFF0000 : 0;
+        }
+    }
+    else if (e->strength >= collationQuaternary && half == 0)
+    {
+        half = 0xFFFF;
+    }
+    return half;
+}
+
+bool mlocSearchHasElements(const CollationRoot* root, const CollationSettings* settings,
+                           NfdText text)
+{
+    SearchElements e;
+    mlocSearchElementsStart(&e, root, settings, text);
+    uint32_t half = 0;
+    uint32_t low = 0;
+    uint32_t high = 0;
+    while (NextHalf(&e, &half, &low, &high))
+    {
+        if (PatternCe(&e, half) != 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }

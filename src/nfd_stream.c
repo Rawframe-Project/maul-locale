@@ -92,6 +92,14 @@ static uint8_t Class(uint32_t codePoint)
     return codePoint < 0x300 ? 0 : muniGetCombiningClass(codePoint);
 }
 
+uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, uint8_t* trailOut)
+{
+    uint32_t n = Decompose(codePoint, out);
+    *leadOut = Class(out[0]);
+    *trailOut = Class(out[n - 1]);
+    return n;
+}
+
 void mlocNfdStartText(NfdStream* s, NfdText text)
 {
     *s = (NfdStream){.text = text.bytes, .units = text.units, .length = text.length};

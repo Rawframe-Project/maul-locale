@@ -114,6 +114,11 @@ static inline void mlocCollationIteratorStart(CollationIterator* it, const Colla
 bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut, uint32_t* lowOut,
                                 uint32_t* highOut);
 
+// Adds a code point to the history prefixes are matched against, as
+// though read before the text: a search started inside a text gives it
+// the code points before, as ICU4C's iterator reads them back.
+void mlocCollationIteratorRemember(CollationIterator* it, uint32_t codePoint);
+
 // The next element; false at the end of the text. A completely
 // ignorable element is given as 0.
 bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut);

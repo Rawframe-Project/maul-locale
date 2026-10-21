@@ -413,6 +413,11 @@ format.
 - The `unihan` collations (ja, ko, zh) order Han by radical and stroke
   as ICU4C does, from a radical-stroke table in the collation data
   file; the root keeps CLDR's code-point order (mloc-0071).
+- Collation search: `include/maul-locale/search.h`, with
+  `mlocInitSearcher` and `mlocFindNext` (and their UTF-16 forms), a
+  pattern found where a collator holds it equal, as ICU4C's usearch
+  finds it: its three element comparisons, match bounds on grapheme
+  clusters, a start anywhere in the text (mloc-0074).
 - The collation data holds each unit's unsafe-backward ranges, the
   code points after the first of its contractions, for search
   (mloc-0074).

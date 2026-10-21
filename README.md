@@ -15,7 +15,7 @@ It covers, from one pinned CLDR release (49, on Unicode 18):
 - **Dates and times:** 18 calendars, time zones from the IANA database,
   date arithmetic, formatting by semantic skeletons, intervals,
   relative times and durations.
-- **Text:** lists, display names, person names, collation, word
+- **Text:** lists, display names, person names, collation and search, word
   breaking for languages written without spaces, and transliteration.
 - **Messages:** MessageFormat 2, grammatical functions for case
   suffixes and particles, and translation catalogs.
@@ -126,7 +126,7 @@ looks messages up in by key or index. A chain formats them through a
 locale's fallbacks with a stated result for every failure. The tool
 records which source message a translation answers, so a changed
 source shows the translation stale.
-The library has 181 public functions.
+The library has 185 public functions.
 
 ## Building
 

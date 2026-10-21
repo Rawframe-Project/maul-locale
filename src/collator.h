@@ -49,6 +49,15 @@ typedef struct Collator
 static_assert(sizeof(Collator) <= sizeof(mlocCollator), "a collator fits its value");
 static_assert(offsetof(Collator, stamp) == 0, "the stamp is read first, alone");
 
+// Points a collator's settings at its own reordering, tailoring and Han
+// table, after it was copied.
+static inline void mlocPointCollator(Collator* c)
+{
+    c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
+    c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
+    c->settings.han = c->radical != 0 ? &c->han : nullptr;
+}
+
 // A collator the library made, copied out with its settings pointing at
 // its reordering; false for any other.
 static inline bool mlocReadCollator(const mlocCollator* collator, Collator* c)
@@ -64,9 +73,7 @@ static inline bool mlocReadCollator(const mlocCollator* collator, Collator* c)
         return false;
     }
     memcpy(c, collator, sizeof(*c));
-    c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
-    c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
-    c->settings.han = c->radical != 0 ? &c->han : nullptr;
+    mlocPointCollator(c);
     return true;
 }
 
