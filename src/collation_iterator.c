@@ -23,7 +23,51 @@ void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* 
     it->historyAt = 0;
     it->historyCount = 0;
     it->high = 0;
+    it->taken = 0;
+    it->droppedCount = 0;
+    it->skipUntil = 0;
+    it->skipEnd = 0;
     mlocNfdStartText(&it->nfd, text);
+}
+
+// Whether a contraction took the code point the stream gives at the
+// count; taken out of the list when reading on (drop).
+static bool Dropped(CollationIterator* it, uint32_t at, bool drop)
+{
+    for (uint32_t i = 0; i < it->droppedCount; i++)
+    {
+        if (it->dropped[i] == at)
+        {
+            if (drop)
+            {
+                it->dropped[i] = it->dropped[--it->droppedCount];
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+// The next code point of a stream that no contraction took, its count
+// advanced past it (*atOut, its own count); a mark a contraction skipped
+// is given from where the contraction ended.
+static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop, uint32_t* c,
+                 uint8_t* k, uint32_t* from, uint32_t* atOut)
+{
+    for (;;)
+    {
+        if (!mlocNfdNextFrom(s, c, k, from))
+        {
+            return false;
+        }
+        uint32_t at = (*count)++;
+        if (!Dropped(it, at, drop))
+        {
+            *from = at < it->skipUntil ? it->skipEnd : *from;
+            *atOut = at;
+            return true;
+        }
+    }
 }
 
 // The upcoming code point at the index, read from the stream when it is
@@ -35,7 +79,8 @@ static bool Upcoming(CollationIterator* it, uint32_t index)
         uint32_t c = 0;
         uint8_t k = 0;
         uint32_t from = 0;
-        if (!mlocNfdNextFrom(&it->nfd, &c, &k, &from))
+        uint32_t at = 0;
+        if (!Read(it, &it->nfd, &it->taken, true, &c, &k, &from, &at))
         {
             return false;
         }
@@ -128,14 +173,99 @@ static uint32_t MatchPrefix(const CollationIterator* it, const CollationRoot* r,
     return ce32;
 }
 
-// A match being grown: the code points after the first, and where each
-// was among the upcoming ones.
+// A match being grown: the code points after the first, where each was
+// among the upcoming ones (from the lookahead on, read through the copy)
+// and its count in the stream; where the last ends in the source.
 typedef struct Match
 {
     uint32_t text[collationMaxContext];
     uint32_t from[collationMaxContext];
+    uint32_t at[collationMaxContext];
     uint32_t length;
+    uint32_t end;
 } Match;
+
+// The code points past the lookahead, read from a copy of the stream, so
+// that a discontiguous contraction sees past any number of marks, as
+// ICU4C's skipped buffer does.
+typedef struct Ahead
+{
+    NfdStream stream;
+    uint32_t count;
+    bool started;
+} Ahead;
+
+// The upcoming code point at the index (one more than the last asked)
+// and its class: from the lookahead, else from the copy; *atOut its
+// count in the stream past the lookahead.
+static bool Next(CollationIterator* it, Ahead* a, uint32_t index, uint32_t* c, uint8_t* k,
+                 uint32_t* atOut)
+{
+    if (Upcoming(it, index))
+    {
+        *c = it->upcoming[index];
+        *k = it->upcomingClasses[index];
+        *atOut = 0;
+        return true;
+    }
+    if (it->upcomingCount < collationLookahead ||
+        it->droppedCount + collationMaxContext > collationMaxDropped)
+    {
+        return false;
+    }
+    if (!a->started)
+    {
+        a->stream = it->nfd;
+        a->count = it->taken;
+        a->started = true;
+    }
+    uint32_t from = 0;
+    return Read(it, &a->stream, &a->count, false, c, k, &from, atOut);
+}
+
+// Where the upcoming code point at the index, the last one read, ends
+// in the source.
+static uint32_t EndOf(CollationIterator* it, const Ahead* a, uint32_t index)
+{
+    if (index < it->upcomingCount)
+    {
+        return Upcoming(it, index + 1) ? it->upcomingFrom[index + 1] : mlocNfdPeekFrom(&it->nfd);
+    }
+    return mlocNfdPeekFrom(&a->stream);
+}
+
+// Takes a match's code points out: from the lookahead, or by their
+// counts past it; the marks it skipped are given from its end.
+static void TakeOut(CollationIterator* it, const Match* best)
+{
+    uint32_t last = best->from[best->length - 1];
+    if (last >= best->length)
+    {
+        // Marks skipped: as ICU4C's iterator, the source is read to the
+        // end of the last code point matched, and the skipped marks are
+        // given from there.
+        for (uint32_t i = 0; i < last && i < it->upcomingCount; i++)
+        {
+            it->upcomingFrom[i] = best->end;
+        }
+        if (last >= it->upcomingCount)
+        {
+            it->skipUntil = best->at[best->length - 1];
+            it->skipEnd = best->end;
+        }
+    }
+    for (uint32_t j = best->length; j-- > 0;)
+    {
+        if (best->from[j] < it->upcomingCount)
+        {
+            Remove(it, best->from[j]);
+        }
+        else
+        {
+            it->dropped[it->droppedCount++] = best->at[j];
+        }
+    }
+}
 
 // Whether some entry starts with the match's text; *exactOut set to the
 // CE32 of the entry that is the text, when one is.
@@ -174,10 +304,14 @@ static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, 
     uint32_t ce32 = mlocCollationContext(r, mlocCollationListStart(r, number));
     Match grown = {.length = 0};
     Match best = {.length = 0};
+    Ahead ahead = {.started = false};
     uint8_t skipped = 0;
-    for (uint32_t i = 0; grown.length < collationMaxContext && Upcoming(it, i); i++)
+    uint32_t c = 0;
+    uint8_t k = 0;
+    uint32_t at = 0;
+    for (uint32_t i = 0; grown.length < collationMaxContext && Next(it, &ahead, i, &c, &k, &at);
+         i++)
     {
-        uint8_t k = it->upcomingClasses[i];
         if (k == 0 && skipped != 0)
         {
             break;
@@ -187,7 +321,8 @@ static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, 
             // Blocked by a skipped mark of the same class.
             continue;
         }
-        grown.text[grown.length] = it->upcoming[i];
+        grown.text[grown.length] = c;
+        grown.at[grown.length] = at;
         grown.from[grown.length++] = i;
         bool exact = false;
         uint32_t entry = 0;
@@ -204,25 +339,13 @@ static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, 
         if (exact)
         {
             best = grown;
+            best.end = EndOf(it, &ahead, i);
             ce32 = entry;
         }
     }
-    if (best.length > 0 && best.from[best.length - 1] >= best.length)
+    if (best.length > 0)
     {
-        // Marks skipped: as ICU4C's iterator, the source is read to the
-        // end of the last code point matched, and the skipped marks are
-        // given from there.
-        uint32_t last = best.from[best.length - 1];
-        uint32_t end =
-            Upcoming(it, last + 1) ? it->upcomingFrom[last + 1] : mlocNfdPeekFrom(&it->nfd);
-        for (uint32_t i = 0; i < last; i++)
-        {
-            it->upcomingFrom[i] = end;
-        }
-    }
-    for (uint32_t j = best.length; j-- > 0;)
-    {
-        Remove(it, best.from[j]);
+        TakeOut(it, &best);
     }
     for (uint32_t j = 0; j < best.length; j++)
     {

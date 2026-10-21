@@ -161,40 +161,64 @@ static void TestContexts(void)
           "after it");
 }
 
-static void TestLookahead(void)
+// The text "a", count dots below and a grave.
+static size_t DotsThenGrave(char* text, int count)
 {
-    // Within the lookahead, a grave after 70 dots below joins the a;
-    // after 80 it is too far.
-    static char text[512];
     size_t n = 0;
     text[n++] = 'a';
-    for (int i = 0; i < 70; i++)
+    for (int i = 0; i < count; i++)
     {
         text[n++] = (char)0xCC;
         text[n++] = (char)0xA3;
     }
     text[n++] = (char)0xCC;
     text[n++] = (char)0x80;
+    return n;
+}
+
+// Whether "a", count dots below and a grave give a-grave and the dots,
+// each with its range: a-grave to the grave's end, the dots empty there.
+static bool JoinsPast(int count)
+{
+    static char text[1 << 13];
+    size_t n = DotsThenGrave(text, count);
     CollationIterator it;
     mlocCollationIteratorStart(&it, &s_unit, (const uint8_t*)text, n);
     uint64_t e = 0;
-    bool first = mlocCollationNextElement(&it, &e) && e == aGrave;
-    uint32_t dots = 0;
+    uint32_t low = 0;
+    uint32_t high = 0;
+    bool ok =
+        mlocCollationNextElementAt(&it, &e, &low, &high) && e == aGrave && low == 0 && high == n;
+    int dots = 0;
+    while (mlocCollationNextElementAt(&it, &e, &low, &high))
+    {
+        ok = ok && e == dotBelow && low == n && high == n;
+        dots++;
+    }
+    return ok && dots == count;
+}
+
+static void TestLookahead(void)
+{
+    CHECK(JoinsPast(70) && JoinsPast(71) && JoinsPast(72) && JoinsPast(80) && JoinsPast(1000),
+          "a discontiguous match past any number of marks, within the lookahead and beyond, "
+          "as ICU4C's skipped buffer");
+    // Two matches past the lookahead in one text: the second "a" starts
+    // after the first's grave was dropped.
+    static char text[1 << 12];
+    size_t n = DotsThenGrave(text, 100);
+    n += DotsThenGrave(text + n, 100);
+    CollationIterator it;
+    mlocCollationIteratorStart(&it, &s_unit, (const uint8_t*)text, n);
+    uint64_t e = 0;
+    int graves = 0;
+    int dots = 0;
     while (mlocCollationNextElement(&it, &e))
     {
+        graves += e == aGrave;
         dots += e == dotBelow;
     }
-    n = 1;
-    for (int i = 0; i < 80; i++)
-    {
-        text[n++] = (char)0xCC;
-        text[n++] = (char)0xA3;
-    }
-    text[n++] = (char)0xCC;
-    text[n++] = (char)0x80;
-    mlocCollationIteratorStart(&it, &s_unit, (const uint8_t*)text, n);
-    bool far = mlocCollationNextElement(&it, &e) && e == a;
-    CHECK(first && dots == 70 && far, "a discontiguous match within the lookahead, none past it");
+    CHECK(graves == 2 && dots == 200, "each match's grave dropped once, past the lookahead");
 }
 
 // Whether the text's elements cover the expected source ranges, two

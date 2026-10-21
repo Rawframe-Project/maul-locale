@@ -48,7 +48,8 @@ nothing and must accept any text.
     skipped mark of an equal or higher class, or a starter, blocks it.
     The marks matched are taken out; the skipped ones follow in order.
   - The rule looks at most 72 code points ahead, a bound that depends
-    only on the NFD.
+    only on the NFD (amended below: past it through a copy of the
+    stream).
   - A completely ignorable element is given as 0; compare skips it.
 
 ## Proof
@@ -88,3 +89,21 @@ nothing and must accept any text.
   order, where ICU4X uses flags and tries.
 - The general compare follows (slice a4). `test_collation_data` reads
   the generated file's root through the iterator.
+
+## Amendment (a), 2026-10-21: no bound on the discontiguous rule
+
+The 72-code-point bound made the general compare and the keys differ
+from the fast Latin compare, which reads a precomposed letter as ICU4C
+does (fuzz_collate_fast in CI, sv: U+00F4 then 72 U+0323 against "U":
+the fast compare said after, the keys before, since the NFD's U+0302
+lay past the bound and the contraction for ô was not matched). ICU4C's
+skipped buffer has no bound. Now a contraction looks past the 72 code
+points through a copy of the NFD stream; the code points it takes from
+there are dropped by their count when the stream reaches them, and the
+marks it skipped there are given from the match's end. At most 32 such
+code points wait at once (only crafted text holds more marks between a
+contraction's parts than that many contractions in a row); past that the
+rule stops at the lookahead again, alike in every path. The test now
+matches past 70, 71, 72, 80 and 1,000 marks and twice in one text, and
+the search elements' oracle gives ICU4C's elements for 648 texts with
+60 to 200 marks before a contraction's last part.

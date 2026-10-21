@@ -420,6 +420,9 @@ format.
   a digit a collation type gives contractions (the emoji type's
   keycaps), as ICU4C does (mloc-0074). Collation versions change with
   it.
+- A discontiguous contraction is matched past any number of marks, as
+  ICU4C does; before, more than 72 code points between its parts made the
+  sort keys disagree with the compare (mloc-0066).
 - The collation data file holds ICU4C's fast Latin table for the root
   and each collation type, built over NFD and checked as the file is
   opened (mloc-0072). Collation versions change with it.

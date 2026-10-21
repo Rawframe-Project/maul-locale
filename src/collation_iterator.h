@@ -36,7 +36,11 @@
 
 enum
 {
+    // Code points read ahead; a discontiguous contraction looks further
+    // through a copy of the stream.
     collationLookahead = 72,
+    // Code points taken past the lookahead and not yet read.
+    collationMaxDropped = 32,
     // A numeric segment's digits, and its most elements: a length byte
     // and two pairs, then three pairs an element, for 127 pairs.
     collationNumericDigits = 254,
@@ -66,6 +70,15 @@ typedef struct CollationIterator
     uint32_t upcomingCount;
     // The source offset where the last element read with its range ended.
     uint32_t high;
+    // Code points read from the stream so far; past the lookahead, those
+    // a discontiguous contraction took (by that count, still to be read
+    // and dropped), and the marks it skipped up to skipUntil, which are
+    // given from skipEnd.
+    uint32_t taken;
+    uint32_t dropped[collationMaxDropped];
+    uint32_t droppedCount;
+    uint32_t skipUntil;
+    uint32_t skipEnd;
     // The last code points given, the latest at (historyAt - 1) % 8.
     uint32_t history[collationMaxContext];
     uint32_t historyAt;
