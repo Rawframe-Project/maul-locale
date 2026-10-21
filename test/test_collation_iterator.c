@@ -234,6 +234,10 @@ static void TestSpans(void)
                 0, 5, 5, 5, 5, 6),
           "a reordered segment: its first element covers it, the rest are empty at its end");
     CHECK(SPANS("ch", 0, 2) && SPANS("cb", 0, 1, 1, 2), "a contraction spans its code points");
+    CHECK(SPANS("a\xCC\xA3\xCC\x80"
+                "b",
+                0, 1, 1, 5, 5, 6),
+          "a mark a discontiguous match takes leaves the ranges after it in place");
     static const uint16_t units[] = {'a', 0xD83D, 0xDE00, 'b'};
     CHECK(Spans(mlocNfdUtf16(units, 4), (const uint32_t[]){0, 1, 1, 3, 3, 4}, 6),
           "UTF-16 ranges count code units");
