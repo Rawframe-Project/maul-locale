@@ -188,6 +188,31 @@ static void TestEdges(void)
     CHECK(!mlocSearchIsBoundary(m, 150) && mlocSearchFollowing(m, 0) == 301 &&
               mlocSearchFollowing(m, 299) == 301,
           "a cluster longer than a piece of the UTF-16 text's UTF-8 form");
+    // Pieces filled to their last byte: four-byte code points, one
+    // cluster (an emoji and variation selectors) and 64 clusters (Han).
+    static uint16_t full[2 * 301];
+    static uint16_t han[2 * 64];
+    full[0] = 0xD83D;
+    full[1] = 0xDE00;
+    for (int i = 1; i <= 300; i++)
+    {
+        full[2 * i] = 0xDB40;
+        full[2 * i + 1] = 0xDD00;
+    }
+    for (int i = 0; i < 64; i++)
+    {
+        han[2 * i] = 0xD840;
+        han[2 * i + 1] = 0xDC00;
+    }
+    NfdText f = mlocNfdUtf16(full, 602);
+    NfdText h = mlocNfdUtf16(han, 128);
+    bool each = true;
+    for (size_t at = 0; at < 128; at += 2)
+    {
+        each = each && mlocSearchIsBoundary(h, at) && mlocSearchFollowing(h, at) == at + 2;
+    }
+    CHECK(mlocSearchFollowing(f, 0) == 602 && !mlocSearchIsBoundary(f, 64) && each,
+          "pieces filled to their last byte, a cluster across them and one ending at each");
 }
 
 int main(void)
