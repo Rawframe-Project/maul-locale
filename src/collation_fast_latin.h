@@ -24,8 +24,8 @@
 // result's words; the list starts with its default.
 //
 // In a unit the table is a section after its arrays: a 32-bit count and
-// that many words. A unit that ends after its arrays has none, nor has
-// one whose count is 0 (the general compare always runs); a tailoring's
+// that many words, then the unsafe-backward ranges (collation_unsafe.h). A unit that ends after its
+// arrays has none, nor has one whose count is 0 (the general compare always runs); a tailoring's
 // count fastLatinRootTable says that its table is the root's.
 
 #ifndef MLOC_COLLATION_FAST_LATIN_H
@@ -162,12 +162,13 @@ static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
 
 // Reads a unit's table section at an offset: none when the unit ends
 // there; a count, which a tailoring may give as fastLatinRootTable, and
-// its words up to the unit's end.
+// its words; where the section ends.
 static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t size, bool tailoring,
-                                     const uint8_t** wordsOut, uint32_t* countOut)
+                                     const uint8_t** wordsOut, uint32_t* countOut, uint64_t* endOut)
 {
     *wordsOut = nullptr;
     *countOut = 0;
+    *endOut = at;
     if (at == size)
     {
         return true;
@@ -180,14 +181,16 @@ static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t siz
     if (count == fastLatinRootTable || count == 0)
     {
         *countOut = count;
-        return at + 4 == size && (tailoring || count == 0);
+        *endOut = at + 4;
+        return tailoring || count == 0;
     }
-    if (at + 4 + (uint64_t)count * 2 != size || !mlocFastLatinValid(p + at + 4, count))
+    if (at + 4 + (uint64_t)count * 2 > size || !mlocFastLatinValid(p + at + 4, count))
     {
         return false;
     }
     *wordsOut = p + at + 4;
     *countOut = count;
+    *endOut = at + 4 + (uint64_t)count * 2;
     return true;
 }
 

@@ -837,6 +837,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/collation_catalog.c
                                     tools/mlocgen/collation_encode.c
                                     tools/mlocgen/collation_fast_table.c
+                                    tools/mlocgen/collation_unsafe_table.c
                                     tools/mlocgen/collation_mappings.c
                                     tools/mlocgen/collation_root_elements.c
                                     tools/mlocgen/collation_rules.c
@@ -1008,6 +1009,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         target_include_directories(test_collation_fast_table PRIVATE test)
         maul_apply_flags(test_collation_fast_table)
         add_test(NAME collation_fast_table COMMAND test_collation_fast_table
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        add_executable(test_collation_unsafe_table test/test_collation_unsafe_table.c)
+        target_link_libraries(test_collation_unsafe_table PRIVATE mlocgen_core)
+        target_include_directories(test_collation_unsafe_table PRIVATE test)
+        maul_apply_flags(test_collation_unsafe_table)
+        add_test(NAME collation_unsafe_table COMMAND test_collation_unsafe_table
                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_executable(test_gencollation test/test_gencollation.c)
         target_link_libraries(test_gencollation PRIVATE mlocgen_core)

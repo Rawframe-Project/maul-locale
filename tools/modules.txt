@@ -105,7 +105,8 @@ catalog: bytes catalog_tables catalog_view data_view kinds
 catalog_chain: catalog_tables catalog_view
 code_point_trie: bytes data_view
 collation_fast_latin: bytes
-collation_tables: bytes code_point_trie collation_fast_latin data_view
+collation_unsafe: bytes
+collation_tables: bytes code_point_trie collation_fast_latin collation_unsafe data_view
 nfd_stream:
 collation_iterator: bytes code_point_trie collation_tables data_view nfd_stream
 collation_compare: collation_iterator collation_reorder collation_tables nfd_stream

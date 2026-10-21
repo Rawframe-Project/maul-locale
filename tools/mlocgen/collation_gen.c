@@ -9,6 +9,7 @@
 #include "collation_root.h"
 #include "collation_tailoring.h"
 #include "collation_unit.h"
+#include "collation_unsafe_table.h"
 #include "keys.h"
 #include "kinds.h"
 #include "table_gen.h"
@@ -87,6 +88,11 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root, co
     if (!mlocReadCollationTailoring((DataSpan){built.body, (uint32_t)built.size}, &read))
     {
         GenDie("a collation type does not read back", t->file);
+    }
+    built.body = CollationUnsafeAppend(built.body, &built.size, &read.view);
+    if (!mlocReadCollationTailoring((DataSpan){built.body, (uint32_t)built.size}, &read))
+    {
+        GenDie("a collation type does not read back with its unsafe ranges", t->file);
     }
     return built;
 }
@@ -189,6 +195,11 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     if (!mlocReadCollationRoot((DataSpan){rootUnit, (uint32_t)size}, &roots.view))
     {
         GenDie("the collation root", "does not read back with its fast Latin table");
+    }
+    rootUnit = CollationUnsafeAppend(rootUnit, &size, &roots.view);
+    if (!mlocReadCollationRoot((DataSpan){rootUnit, (uint32_t)size}, &roots.view))
+    {
+        GenDie("the collation root", "does not read back with its unsafe ranges");
     }
     DataFileAdd(file, kindCollationRoot, nullptr, rootUnit, size);
     unit = CollationHanUnit(&unihan, &size);

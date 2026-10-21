@@ -78,3 +78,4 @@ are listed in [README.md](README.md).
 | [mloc-0071](mloc-0071-tailorings.md) | Tailorings: the builder and its weight allocator | Accepted |
 | [mloc-0072](mloc-0072-fast-latin.md) | The fast Latin table: ICU4C's, built for each unit over NFD | Accepted |
 | [mloc-0073](mloc-0073-collation-utf16.md) | Collation over UTF-16: one iterator, a lone surrogate as U+FFFD | Accepted |
+| [mloc-0074](mloc-0074-collation-search.md) | Collation search: ICU4C's usearch over processed elements | Accepted |
