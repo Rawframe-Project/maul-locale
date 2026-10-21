@@ -25,8 +25,8 @@ void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* 
     it->high = 0;
     it->taken = 0;
     it->droppedCount = 0;
-    it->skipUntil = 0;
-    it->skipEnd = 0;
+    it->scanEnd = 0;
+    it->scanMax = 0;
     mlocNfdStartText(&it->nfd, text);
 }
 
@@ -49,8 +49,7 @@ static bool Dropped(CollationIterator* it, uint32_t at, bool drop)
 }
 
 // The next code point of a stream that no contraction took, its count
-// advanced past it (*atOut, its own count); a mark a contraction skipped
-// is given from where the contraction ended.
+// advanced past it (*atOut, its own count).
 static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop, uint32_t* c,
                  uint8_t* k, uint32_t* from, uint32_t* atOut)
 {
@@ -63,7 +62,6 @@ static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop
         uint32_t at = (*count)++;
         if (!Dropped(it, at, drop))
         {
-            *from = at < it->skipUntil ? it->skipEnd : *from;
             *atOut = at;
             return true;
         }
@@ -86,6 +84,7 @@ static bool Upcoming(CollationIterator* it, uint32_t index)
         }
         it->upcoming[it->upcomingCount] = c;
         it->upcomingClasses[it->upcomingCount] = k;
+        it->upcomingAt[it->upcomingCount] = at;
         it->upcomingFrom[it->upcomingCount++] = from;
     }
     return index < it->upcomingCount;
@@ -98,6 +97,7 @@ static void Remove(CollationIterator* it, uint32_t index)
         it->upcoming[i - 1] = it->upcoming[i];
         it->upcomingClasses[i - 1] = it->upcomingClasses[i];
         it->upcomingFrom[i - 1] = it->upcomingFrom[i];
+        it->upcomingAt[i - 1] = it->upcomingAt[i];
     }
     it->upcomingCount--;
 }
@@ -181,6 +181,7 @@ typedef struct Match
     uint32_t text[collationMaxContext];
     uint32_t from[collationMaxContext];
     uint32_t at[collationMaxContext];
+    uint8_t classes[collationMaxContext];
     uint32_t length;
     uint32_t end;
 } Match;
@@ -193,6 +194,8 @@ typedef struct Ahead
     NfdStream stream;
     uint32_t count;
     bool started;
+    // The copy was not read: too many code points wait to be dropped.
+    bool limited;
 } Ahead;
 
 // The upcoming code point at the index (one more than the last asked)
@@ -205,11 +208,12 @@ static bool Next(CollationIterator* it, Ahead* a, uint32_t index, uint32_t* c, u
     {
         *c = it->upcoming[index];
         *k = it->upcomingClasses[index];
-        *atOut = 0;
+        *atOut = it->upcomingAt[index];
         return true;
     }
-    if (it->upcomingCount < collationLookahead ||
-        it->droppedCount + collationMaxContext > collationMaxDropped)
+    a->limited = it->upcomingCount == collationLookahead &&
+                 it->droppedCount + collationMaxContext > collationMaxDropped;
+    if (it->upcomingCount < collationLookahead || a->limited)
     {
         return false;
     }
@@ -235,7 +239,8 @@ static uint32_t EndOf(CollationIterator* it, const Ahead* a, uint32_t index)
 }
 
 // Takes a match's code points out: from the lookahead, or by their
-// counts past it; the marks it skipped are given from its end.
+// counts past it; the marks it skipped in the lookahead are given from
+// its end.
 static void TakeOut(CollationIterator* it, const Match* best)
 {
     uint32_t last = best->from[best->length - 1];
@@ -247,11 +252,6 @@ static void TakeOut(CollationIterator* it, const Match* best)
         for (uint32_t i = 0; i < last && i < it->upcomingCount; i++)
         {
             it->upcomingFrom[i] = best->end;
-        }
-        if (last >= it->upcomingCount)
-        {
-            it->skipUntil = best->at[best->length - 1];
-            it->skipEnd = best->end;
         }
     }
     for (uint32_t j = best->length; j-- > 0;)
@@ -299,59 +299,122 @@ static bool Lookup(const CollationRoot* r, uint32_t number, const Match* m, bool
 // The CE32 of the longest contraction entry the upcoming code points
 // spell, contiguous or not, its code points taken out and remembered;
 // the list's default when none matches.
-static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, uint32_t number)
+// Remembers a scan that stopped at a starter (the count) or at the end:
+// the highest class among the code points it leaves (those it skipped
+// and those it grew past the best match).
+static void RememberScan(CollationIterator* it, uint32_t end, uint8_t skippedMax,
+                         const Match* grown, uint32_t kept)
 {
-    uint32_t ce32 = mlocCollationContext(r, mlocCollationListStart(r, number));
-    Match grown = {.length = 0};
-    Match best = {.length = 0};
-    Ahead ahead = {.started = false};
-    uint8_t skipped = 0;
+    uint8_t high = skippedMax;
+    for (uint32_t j = kept; j < grown->length; j++)
+    {
+        high = grown->classes[j] > high ? grown->classes[j] : high;
+    }
+    it->scanEnd = end;
+    it->scanMax = high;
+}
+
+// A contraction scan's state: the match grown and the best one, the copy
+// of the stream past the lookahead, the class last skipped and the
+// highest, where the scan stopped (0 for nowhere RememberScan keeps) and
+// the CE32 found.
+typedef struct Scan
+{
+    Match grown;
+    Match best;
+    Ahead ahead;
+    uint8_t skipped;
+    uint8_t skippedMax;
+    uint32_t stop;
+    uint32_t ce32;
+} Scan;
+
+static void Skip(Scan* s, uint8_t k)
+{
+    s->skippedMax = k > s->skippedMax ? k : s->skippedMax;
+}
+
+// One step of the scan over the upcoming code point at the index; false
+// when the scan ends.
+static bool Step(CollationIterator* it, const CollationRoot* r, uint32_t number, Scan* s,
+                 uint32_t i)
+{
     uint32_t c = 0;
     uint8_t k = 0;
     uint32_t at = 0;
-    for (uint32_t i = 0; grown.length < collationMaxContext && Next(it, &ahead, i, &c, &k, &at);
-         i++)
+    if (!Next(it, &s->ahead, i, &c, &k, &at))
     {
-        if (k == 0 && skipped != 0)
-        {
-            break;
-        }
-        if (k != 0 && k <= skipped)
-        {
-            // Blocked by a skipped mark of the same class.
-            continue;
-        }
-        grown.text[grown.length] = c;
-        grown.at[grown.length] = at;
-        grown.from[grown.length++] = i;
-        bool exact = false;
-        uint32_t entry = 0;
-        if (!Lookup(r, number, &grown, &exact, &entry))
-        {
-            grown.length--;
-            if (k == 0)
-            {
-                break;
-            }
-            skipped = k;
-            continue;
-        }
-        if (exact)
-        {
-            best = grown;
-            best.end = EndOf(it, &ahead, i);
-            ce32 = entry;
-        }
+        s->stop = s->ahead.limited ? 0 : UINT32_MAX;
+        return false;
     }
-    if (best.length > 0)
+    if (s->skipped != 0 && at < it->scanEnd && s->skipped >= it->scanMax)
     {
-        TakeOut(it, &best);
+        // Inside the last scan: nothing past here can extend.
+        return false;
     }
-    for (uint32_t j = 0; j < best.length; j++)
+    if (k == 0 && s->skipped != 0)
     {
-        Remember(it, best.text[j]);
+        s->stop = at;
+        return false;
     }
-    return ce32;
+    if (k != 0 && k <= s->skipped)
+    {
+        // Blocked by a skipped mark of the same class.
+        Skip(s, k);
+        return true;
+    }
+    Match* g = &s->grown;
+    g->text[g->length] = c;
+    g->at[g->length] = at;
+    g->classes[g->length] = k;
+    g->from[g->length++] = i;
+    bool exact = false;
+    uint32_t entry = 0;
+    if (!Lookup(r, number, g, &exact, &entry))
+    {
+        g->length--;
+        if (k == 0)
+        {
+            s->stop = at;
+            return false;
+        }
+        s->skipped = k;
+        Skip(s, k);
+        return true;
+    }
+    if (exact)
+    {
+        s->best = *g;
+        s->best.end = EndOf(it, &s->ahead, i);
+        s->ce32 = entry;
+    }
+    return true;
+}
+
+static uint32_t MatchContraction(CollationIterator* it, const CollationRoot* r, uint32_t number)
+{
+    Scan s = {.grown = {.length = 0},
+              .best = {.length = 0},
+              .ahead = {.started = false, .limited = false},
+              .ce32 = mlocCollationContext(r, mlocCollationListStart(r, number))};
+    uint32_t i = 0;
+    while (s.grown.length < collationMaxContext && Step(it, r, number, &s, i))
+    {
+        i++;
+    }
+    if (s.stop != 0 && s.skipped != 0)
+    {
+        RememberScan(it, s.stop, s.skippedMax, &s.grown, s.best.length);
+    }
+    if (s.best.length > 0)
+    {
+        TakeOut(it, &s.best);
+    }
+    for (uint32_t j = 0; j < s.best.length; j++)
+    {
+        Remember(it, s.best.text[j]);
+    }
+    return s.ce32;
 }
 
 // Puts the elements of a CE32 that is not a context in the buffer.

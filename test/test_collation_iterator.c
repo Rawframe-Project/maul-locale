@@ -180,7 +180,7 @@ static size_t DotsThenGrave(char* text, int count)
 // each with its range: a-grave to the grave's end, the dots empty there.
 static bool JoinsPast(int count)
 {
-    static char text[1 << 13];
+    static char text[1 << 16];
     size_t n = DotsThenGrave(text, count);
     CollationIterator it;
     mlocCollationIteratorStart(&it, &s_unit, (const uint8_t*)text, n);
@@ -200,9 +200,11 @@ static bool JoinsPast(int count)
 
 static void TestLookahead(void)
 {
-    CHECK(JoinsPast(70) && JoinsPast(71) && JoinsPast(72) && JoinsPast(80) && JoinsPast(1000),
+    CHECK(JoinsPast(70) && JoinsPast(71) && JoinsPast(72) && JoinsPast(80) && JoinsPast(1000) &&
+              JoinsPast(20000),
           "a discontiguous match past any number of marks, within the lookahead and beyond, "
-          "as ICU4C's skipped buffer");
+          "as ICU4C's skipped buffer; each dot's own contraction list scans no further than "
+          "the first did, so 20,000 dots cost no more than a pass each");
     // Two matches past the lookahead in one text: the second "a" starts
     // after the first's grave was dropped.
     static char text[1 << 12];

@@ -99,11 +99,23 @@ the fast compare said after, the keys before, since the NFD's U+0302
 lay past the bound and the contraction for ô was not matched). ICU4C's
 skipped buffer has no bound. Now a contraction looks past the 72 code
 points through a copy of the NFD stream; the code points it takes from
-there are dropped by their count when the stream reaches them, and the
-marks it skipped there are given from the match's end. At most 32 such
+there are dropped by their count when the stream reaches them (the
+marks it skipped there already come from the segment's end, a segment
+past the lookahead being longer than the NFD window). At most 32 such
 code points wait at once (only crafted text holds more marks between a
 contraction's parts than that many contractions in a row); past that the
 rule stops at the lookahead again, alike in every path. The test now
 matches past 70, 71, 72, 80 and 1,000 marks and twice in one text, and
 the search elements' oracle gives ICU4C's elements for 648 texts with
 60 to 200 marks before a contraction's last part.
+
+Scanning to the end of a run of marks for every mark with a contraction
+list cost the square of the run (the commit's security review: 5,000
+U+0F71 took 72 s under the sanitizers, 15,000 more than 300 s). The
+iterator now remembers the last scan that reached a starter or the end
+and the highest class it left in the stream; a later scan inside it that
+has skipped a mark of that class or higher stops, since the marks there
+are in canonical order and all blocked. The results are unchanged and
+the same texts take 0.15 s and 0.31 s; `test_collation_iterator` runs
+20,000 marks. Runs whose marks really match far apart (U+0F71 then
+U+0F72, each pair a contraction) still scan as ICU4C does.

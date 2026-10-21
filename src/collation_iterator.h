@@ -67,18 +67,26 @@ typedef struct CollationIterator
     uint32_t upcoming[collationLookahead];
     uint8_t upcomingClasses[collationLookahead];
     uint32_t upcomingFrom[collationLookahead];
+    // Each one's count in the stream.
+    uint32_t upcomingAt[collationLookahead];
     uint32_t upcomingCount;
     // The source offset where the last element read with its range ended.
     uint32_t high;
-    // Code points read from the stream so far; past the lookahead, those
-    // a discontiguous contraction took (by that count, still to be read
-    // and dropped), and the marks it skipped up to skipUntil, which are
-    // given from skipEnd.
+    // Code points read from the stream so far, and those a discontiguous
+    // contraction took past the lookahead (by that count), still to be
+    // read and dropped. The marks it skipped there need no new range: a
+    // segment longer than the lookahead is longer than the NFD window,
+    // so they already come from its end.
     uint32_t taken;
     uint32_t dropped[collationMaxDropped];
     uint32_t droppedCount;
-    uint32_t skipUntil;
-    uint32_t skipEnd;
+    // The last discontiguous scan that reached a starter or the end: the
+    // count where it stopped, and the highest class it left in the
+    // stream. A later scan inside it that has skipped a mark of that
+    // class or higher can extend no further and stops, so a run of marks
+    // costs each of its contractions no more than the first did.
+    uint32_t scanEnd;
+    uint8_t scanMax;
     // The last code points given, the latest at (historyAt - 1) % 8.
     uint32_t history[collationMaxContext];
     uint32_t historyAt;
