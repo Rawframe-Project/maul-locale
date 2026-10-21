@@ -103,53 +103,9 @@ static void TestComparisons(void)
     CHECK(accent && upper, "a pattern's own accent or case is no wildcard");
 }
 
-static void TestIdentical(void)
-{
-    static const uint16_t ring[] = {'x', 'a', 0x030A};
-    static const uint16_t ringPattern[] = {0x00E5};
-    static const uint16_t control[] = {'x', 'a', 0x0001, 'b'};
-    static const uint16_t controlPattern[] = {'a', 'b'};
-    mlocLocale locale;
-    size_t s = 0;
-    size_t e = 0;
-    CHECK(Finds("en-u-ks-identic", "ab",
-                "xa\x01"
-                "b",
-                0, -1, -1) &&
-              Finds("en", "ab",
-                    "xa\x01"
-                    "b",
-                    0, 1, 4) &&
-              Finds("en-u-ks-identic", "\xC3\xA5", "xa\xCC\x8A", 0, 1, 4),
-          "the identical strength compares NFD: an ignorable control counts, a decomposed "
-          "letter does not");
-    bool made = mlocParseLocale("en-u-ks-identic", 15, &locale).status == mloc_success &&
-                mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success;
-    bool composed =
-        made &&
-        mlocInitSearcherUtf16(&s_searcher, &s_collator, ringPattern, 1, nullptr) == mloc_success &&
-        mlocFindNextUtf16(&s_searcher, ring, 3, 0, &s, &e) == mloc_success && s == 1 && e == 3;
-    bool ignorable = made &&
-                     mlocInitSearcherUtf16(&s_searcher, &s_collator, controlPattern, 2, nullptr) ==
-                         mloc_success &&
-                     mlocFindNextUtf16(&s_searcher, control, 4, 0, &s, &e) == mloc_errorNotFound;
-    CHECK(composed && ignorable, "the identical check reads UTF-16 text too");
-    static char longPattern[482];
-    memset(longPattern, 1, sizeof(longPattern) - 1);
-    longPattern[0] = 'a';
-    bool tertiary = Make("en", longPattern, mloc_searchExact);
-    bool identical = mlocParseLocale("en-u-ks-identic", 15, &locale).status == mloc_success &&
-                     mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-                     mlocInitSearcher(&s_searcher, &s_collator, longPattern,
-                                      sizeof(longPattern) - 1, nullptr) == mloc_errorCapacity;
-    CHECK(tertiary && identical,
-          "a pattern of one element and many ignorables fits, but not its NFD at the identical "
-          "strength");
-}
-
-// A pattern of a code point repeated, in UTF-8.
-static bool Repeated(const char* utf8, size_t count, mlocSearchComparison comparison,
-                     mlocResult expected)
+// A pattern of a string repeated, in UTF-8.
+static bool Repeated(const char* id, const char* utf8, size_t count,
+                     mlocSearchComparison comparison, mlocResult expected)
 {
     static char pattern[2048];
     size_t size = strlen(utf8);
@@ -159,21 +115,47 @@ static bool Repeated(const char* utf8, size_t count, mlocSearchComparison compar
     {
         pattern[i] = utf8[i % size];
     }
-    return mlocParseLocale("en", 2, &locale).status == mloc_success &&
+    return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
            mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
            mlocInitSearcher(&s_searcher, &s_collator, pattern, count * size, &options) == expected;
 }
 
+static void TestIdentical(void)
+{
+    static const uint16_t text[] = {'x', 0x17A2, 'x', 0x17A3};
+    static const uint16_t pattern[] = {0x17A3};
+    mlocLocale locale;
+    size_t s = 0;
+    size_t e = 0;
+    CHECK(Finds("km-u-ks-identic", "\xE1\x9E\xA3", "x\xE1\x9E\xA2x\xE1\x9E\xA3", 0, 5, 8) &&
+              Finds("km-u-ks-level4", "\xE1\x9E\xA3", "x\xE1\x9E\xA2x\xE1\x9E\xA3", 0, 1, 4) &&
+              Finds("en-u-ks-identic", "\xC3\xA5", "xa\xCC\x8A", 0, 1, 4),
+          "the identical strength compares NFD: Khmer U+17A2 and U+17A3, equal in the "
+          "tailoring, differ; a decomposed letter does not");
+    CHECK(
+        mlocParseLocale("km-u-ks-identic", 15, &locale).status == mloc_success &&
+            mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
+            mlocInitSearcherUtf16(&s_searcher, &s_collator, pattern, 1, nullptr) == mloc_success &&
+            mlocFindNextUtf16(&s_searcher, text, 4, 0, &s, &e) == mloc_success && s == 3 && e == 4,
+        "the identical check reads UTF-16 text too");
+    CHECK(Repeated("cs", "ch", 241, mloc_searchExact, mloc_success) &&
+              Repeated("cs-u-ks-identic", "ch", 240, mloc_searchExact, mloc_success) &&
+              Repeated("cs-u-ks-identic", "ch", 241, mloc_searchExact, mloc_errorCapacity),
+          "Czech ch is one element and two code points: at the identical strength the "
+          "pattern's NFD must fit too");
+}
+
 static void TestCapacity(void)
 {
-    CHECK(Repeated("a", 480, mloc_searchExact, mloc_success) &&
-              Repeated("a", 120, mloc_searchPatternBaseWildcard, mloc_success) &&
-              Repeated("a", 121, mloc_searchPatternBaseWildcard, mloc_errorCapacity),
+    CHECK(Repeated("en", "a", 480, mloc_searchExact, mloc_success) &&
+              Repeated("en", "a", 120, mloc_searchPatternBaseWildcard, mloc_success) &&
+              Repeated("en", "a", 121, mloc_searchPatternBaseWildcard, mloc_errorCapacity),
           "a searcher's ring holds 512 elements: a pattern's and 32, and 3 per code point "
           "with a wildcard");
-    CHECK(Repeated("\xF0\x90\x80\x80", 69, mloc_searchPatternBaseWildcard, mloc_errorCapacity) &&
-              Repeated("\xE1\x85\x9E", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity) &&
-              Repeated("\xE3\x86\x86", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity),
+    CHECK(Repeated("en", "\xF0\x90\x80\x80", 69, mloc_searchPatternBaseWildcard,
+                   mloc_errorCapacity) &&
+              Repeated("en", "\xE1\x85\x9E", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity) &&
+              Repeated("en", "\xE3\x86\x86", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity),
           "with a wildcard a supplementary code point takes 6 places and a leading jamo 8");
 }
 
