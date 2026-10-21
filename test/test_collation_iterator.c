@@ -249,6 +249,22 @@ static void TestSpans(void)
     CHECK(Spans(mlocNfdUtf16(units, 4), (const uint32_t[]){0, 1, 1, 3, 3, 4}, 6),
           "UTF-16 ranges count code units");
     CHECK(Spans(mlocNfdUtf8((const uint8_t*)"", 0), nullptr, 0), "an empty text has no ranges");
+    // A window filled by 64 source code points, a starter and 63 marks.
+    static char full[1 + 63 * 2];
+    full[0] = 'a';
+    for (int i = 0; i < 63; i++)
+    {
+        full[1 + 2 * i] = (char)0xCC;
+        full[2 + 2 * i] = (char)0x81;
+    }
+    uint32_t want[2 * 64];
+    for (uint32_t i = 0; i < 64; i++)
+    {
+        want[2 * i] = i == 0 ? 0 : 2 * i - 1;
+        want[2 * i + 1] = i == 0 ? 1 : 2 * i + 1;
+    }
+    CHECK(Spans(mlocNfdUtf8((const uint8_t*)full, sizeof(full)), want, 128),
+          "a window of 64 source code points keeps each one's range");
 }
 
 int main(void)

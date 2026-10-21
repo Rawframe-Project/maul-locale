@@ -224,13 +224,14 @@ static void Order(NfdStream* s, uint32_t first)
 }
 
 // A segment's source code points, at most one for each window code
-// point: where each starts and its first window code point, and the
-// combining classes its NFD starts and ends with.
+// point: where each starts and its first window code point (after the
+// last, the segment's end and the window's), and the combining classes
+// its NFD starts and ends with.
 typedef struct Sources
 {
     uint32_t count;
     size_t start[nfdWindow + 1];
-    uint32_t first[nfdWindow];
+    uint32_t first[nfdWindow + 1];
     uint8_t lead[nfdWindow];
     uint8_t trail[nfdWindow];
 } Sources;
