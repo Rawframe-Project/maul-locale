@@ -237,12 +237,15 @@ static void TestSpans(void)
           "a precomposed letter whose last mark is out of order");
     CHECK(SPANS("\xC3\xA1\xCC\x81", 0, 2, 2, 2, 2, 4),
           "a precomposed letter and a mark in order keep their own ranges");
-    CHECK(SPANS("a\xE0\xBD\xB5", 0, 1, 1, 4, 4, 4),
+    CHECK(SPANS("a\xE0\xBD\xB5", 0, 1, 1, 4, 4, 4) && SPANS("a\xE0\xBD\xB3", 0, 1, 1, 4, 4, 4),
           "a Tibetan composite vowel is normalized, as ICU4C's FCD iterator does");
+    CHECK(SPANS("a\xE0\xBD\xB2\xE0\xBD\xB2", 0, 1, 1, 4, 4, 7),
+          "marks of class 130 in order keep their ranges: only a composite vowel is normalized");
     CHECK(SPANS("ch", 0, 2) && SPANS("cb", 0, 1, 1, 2), "a contraction spans its code points");
     CHECK(SPANS("a\xCC\xA3\xCC\x80"
                 "b",
-                0, 5, 5, 5, 5, 6),
+                0, 5, 5, 5, 5, 6) &&
+              SPANS("a\xCC\xA3\xCC\x80", 0, 5, 5, 5),
           "a discontiguous match spans to its last code point's end, the skipped mark empty "
           "there");
     static const uint16_t units[] = {'a', 0xD83D, 0xDE00, 'b'};
@@ -265,6 +268,17 @@ static void TestSpans(void)
     }
     CHECK(Spans(mlocNfdUtf8((const uint8_t*)full, sizeof(full)), want, 128),
           "a window of 64 source code points keeps each one's range");
+    // The same window with its last mark out of order: one range from
+    // the first mark (the contraction of U+0323 and U+0301) to the end.
+    full[sizeof(full) - 1] = (char)0xA3;
+    uint32_t normalized[2 * 63] = {0, 1, 1, sizeof(full)};
+    for (uint32_t i = 2; i < 63; i++)
+    {
+        normalized[2 * i] = sizeof(full);
+        normalized[2 * i + 1] = sizeof(full);
+    }
+    CHECK(Spans(mlocNfdUtf8((const uint8_t*)full, sizeof(full)), normalized, 126),
+          "a full window normalized from its first mark");
 }
 
 int main(void)
