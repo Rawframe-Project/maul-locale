@@ -34,6 +34,11 @@ static const char s_root[] = "[UCA version = 18.0.1]\n"
                              "0323; [, 90, 05]\n"
                              "0323 0301; [, 92, 05]\n"
                              "0061 0300; [2B 80, 05, 05]\n"
+                             "0064; [32, 05, 05]\n"
+                             "007A; [33, 05, 05]\n"
+                             "0073; [34, 05, 05]\n"
+                             "0064 007A; [35, 05, 05]\n"
+                             "0064 007A 0073; [36, 05, 05]\n"
                              "1100; [3A, 05, 05]\n"
                              "1161; [3B, 05, 05]\n"
                              "3220; [09 7C, 05, 17][U+4E00, 10][09 7E, 05, 17]\n";
@@ -99,6 +104,10 @@ constexpr uint64_t grave = 0x000000008A000500ULL;
 constexpr uint64_t acute = 0x0000000088000500ULL;
 constexpr uint64_t dotBelow = 0x0000000090000500ULL;
 constexpr uint64_t aGrave = 0x2B80000005000500ULL;
+constexpr uint64_t d = 0x3200000005000500ULL;
+constexpr uint64_t z = 0x3300000005000500ULL;
+constexpr uint64_t dz = 0x3500000005000500ULL;
+constexpr uint64_t dzs = 0x3600000005000500ULL;
 constexpr uint64_t jamoL = 0x3A00000005000500ULL;
 constexpr uint64_t jamoV = 0x3B00000005000500ULL;
 constexpr uint64_t common = 0x05000500ULL;
@@ -151,6 +160,13 @@ static void TestContexts(void)
     CHECK(GIVES("a\xCC\x81\xCC\x80", a, acute, grave),
           "a mark of the same class as one skipped is blocked");
     CHECK(GIVES("ab\xCC\x80", a, b, grave), "a starter ends a contraction");
+    CHECK(GIVES("c\xCC\xA3h", c, dotBelow, h) && GIVES("a\xCC\xA3"
+                                                       "b\xCC\x80",
+                                                       a, dotBelow, b, grave),
+          "a starter after a skipped mark ends a contraction: it neither extends it nor lets a "
+          "mark after it");
+    CHECK(GIVES("dzs", dzs) && GIVES("dz", dz) && GIVES("dzd", dz, d) && GIVES("zd", z, d),
+          "a contraction of three code points through its two-code-point entry");
     CHECK(GIVES("cL\xC2\xB7", cL, dotAfterL),
           "a prefix matched on the last code point of a contraction before");
     CHECK(GIVES("a\xCC\xA3\xCC\x80"
