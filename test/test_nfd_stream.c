@@ -4,7 +4,8 @@
 // The NFD stream against Maul Unicode's whole-string NFD: random texts of
 // decomposable letters, Hangul, marks, marks that decompose and
 // ill-formed bytes; runs of marks past the window against a reference
-// sort; and, given its path, every line of NormalizationTest.txt.
+// sort; the quick path's edges; and, given its path, every line of
+// NormalizationTest.txt.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -324,8 +325,45 @@ static void TestNormalizationFile(const char* path)
           "every column of NormalizationTest.txt reads as its NFD column");
 }
 
+// The quick path (one code point that is its own NFD, or a Hangul
+// syllable, before a code point that is no mark): the last syllable and
+// the code point after it, a mark that starts a text keeping its class,
+// and a syllable's jamo placed at its start and end.
+static void TestQuick(void)
+{
+    static const char s_edge[] = "\xED\x9E\xA3\xED\x9E\xA4";
+    uint32_t got[16];
+    uint32_t want[16];
+    size_t wanted = 0;
+    size_t n = Stream(s_edge, sizeof(s_edge) - 1, got);
+    CHECK(Oracle(s_edge, sizeof(s_edge) - 1, want, &wanted) && n == wanted && n == 4 &&
+              memcmp(got, want, n * sizeof(*got)) == 0,
+          "U+D7A3 as its three jamo, U+D7A4 after it as itself");
+    NfdStream st;
+    static const char s_mark[] = "\xCC\x81"
+                                 "a";
+    mlocNfdStart(&st, (const uint8_t*)s_mark, sizeof(s_mark) - 1);
+    uint32_t c = 0;
+    uint8_t ccc = 0;
+    uint32_t from = 0;
+    bool first = mlocNfdNextFrom(&st, &c, &ccc, &from) && c == 0x301 && ccc == 230 && from == 0;
+    CHECK(first && mlocNfdNextFrom(&st, &c, &ccc, &from) && c == 'a' && ccc == 0 && from == 2,
+          "a mark that starts a text keeps its class");
+    static const char s_syllables[] = "\xEA\xB0\x80\xEB\x82\x98";
+    mlocNfdStart(&st, (const uint8_t*)s_syllables, sizeof(s_syllables) - 1);
+    uint32_t froms[4] = {0};
+    size_t k = 0;
+    while (k < 4 && mlocNfdNextFrom(&st, &c, &ccc, &froms[k]))
+    {
+        k++;
+    }
+    CHECK(k == 4 && froms[0] == 0 && froms[1] == 3 && froms[2] == 3 && froms[3] == 6,
+          "each syllable's first jamo at its start, the second at its end");
+}
+
 int main(int argc, char** argv)
 {
+    TestQuick();
     TestRandom();
     TestLongRuns();
     if (argc > 1)
