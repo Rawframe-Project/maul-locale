@@ -334,8 +334,10 @@ from each callback; review.
   `fabs`, `floor`, `ceil`, `trunc`, `round`, `lround`, `rint`,
   `nearbyint`, `fmin`, `fmax`, `fmod`, `remainder`, `copysign`,
   `frexp`, `ldexp`, `scalbn`, `modf`, `nextafter` and their `f` forms),
-  never `fma` (above). Every other `<math.h>` function is refused in
-  its sources; the library writes its own where it needs one.
+  never `fma` (above; the SIMD header's scalar `fmaf` passes the
+  check in that file alone). Every other `<math.h>` function is
+  refused in its sources; the library writes its own where it needs
+  one.
 
 Checked by: `cmake/` (flags); `tools/check_source.py` (calls the
 profile bans, and `<math.h>` calls against `tools/libm-allowed.txt`);
