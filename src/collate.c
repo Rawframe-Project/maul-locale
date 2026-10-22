@@ -90,42 +90,28 @@ typedef struct Tries
 {
     const char* name;
     size_t length;
-    bool search;
+    // The default tried.
     bool fallback;
-    bool standard;
 } Tries;
 
-static void Tried(Tries* t, const TypeWalk* w)
+// The next type to try after one the chain lacks; the caller stops once
+// standard is tried, so each step is taken at most once (a type equal to
+// one tried before only misses again).
+static void NextType(Tries* t, const TypeWalk* w)
 {
-    t->search = t->search || Is(t->name, t->length, "search");
-    t->fallback = t->fallback || (t->length == w->defaultLength &&
-                                  memcmp(t->name, w->defaultName, t->length) == 0);
-    t->standard = t->standard || Is(t->name, t->length, "standard");
-}
-
-// The next type to try, false when none is left.
-static bool NextType(Tries* t, const TypeWalk* w)
-{
-    if (!t->search && t->length > 6 && memcmp(t->name, "search", 6) == 0)
+    if (t->length > 6 && memcmp(t->name, "search", 6) == 0)
     {
         t->length = 6;
     }
     else if (!t->fallback)
     {
-        t->name = w->defaultName;
-        t->length = w->defaultLength;
+        *t = (Tries){w->defaultName, w->defaultLength, true};
     }
-    else if (!t->standard)
+    else
     {
         t->name = "standard";
         t->length = 8;
     }
-    else
-    {
-        return false;
-    }
-    Tried(t, w);
-    return true;
 }
 
 // The locale's tailoring as ICU4C's CollationLoader finds it: the co
@@ -159,20 +145,18 @@ static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* local
         w.defaultName = "standard";
         w.defaultLength = 8;
     }
-    Tries t = {co, coLength, false, false, false};
+    Tries t = {co, coLength, false};
     if (coLength == 0)
     {
-        t.name = w.defaultName;
-        t.length = w.defaultLength;
-        t.fallback = true;
+        t = (Tries){w.defaultName, w.defaultLength, true};
         if (!Walk(data, locale, &w, t.name, t.length))
         {
             return mloc_errorNotFound;
         }
     }
-    Tried(&t, &w);
-    while (!w.hit && !Is(t.name, t.length, "standard") && NextType(&t, &w))
+    while (!w.hit && !Is(t.name, t.length, "standard"))
     {
+        NextType(&t, &w);
         if (!Walk(data, locale, &w, t.name, t.length))
         {
             return mloc_errorNotFound;

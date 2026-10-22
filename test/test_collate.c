@@ -75,9 +75,10 @@ static void TestTailorings(void)
               Order("zh-u-co-stroke", nullptr, HAN_ONE, HAN_A) == -1 &&
               Order("zh-Hant", nullptr, HAN_ONE, HAN_A) == -1 &&
               Order("yue", nullptr, HAN_ONE, HAN_A) == -1 &&
-              Order("zh-u-co-standard", nullptr, HAN_ONE, HAN_A) == -1,
+              Order("zh-u-co-standard", nullptr, HAN_ONE, HAN_A) == -1 &&
+              Order("zh-u-co-phonebk", nullptr, HAN_A, HAN_ONE) == -1,
           "zh: pinyin by default, stroke by co, zh-Hant's and yue's default stroke; standard, "
-          "which zh lacks, the root's");
+          "which zh lacks, the root's; a type no unit has, the default pinyin");
     // Hiragana and katakana iteration marks (U+309D, U+30FD): equal in
     // ja, apart in the root's search.
     CHECK(Order("ja-u-co-searchjl", nullptr, "\xE3\x82\x9D", "\xE3\x83\xBD") == -1 &&
