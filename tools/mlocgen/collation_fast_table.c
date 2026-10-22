@@ -269,6 +269,46 @@ static void Contexts(Builder* b, int32_t i)
     }
 }
 
+// Whether a contraction of the first code point of a precomposed
+// letter's NFD reads on past the letter's marks with a character outside
+// the table (Danish's a and diaeresis after A with ogonek: A, U+0328,
+// U+0308). ICU's closure then gives the letter a contraction, its list
+// holding the default alone, so that the compare sees the character
+// after it and bails out rather than deciding by the letter.
+static bool ReadsPast(Builder* b, int32_t i, const uint64_t* alone, uint32_t aloneCount)
+{
+    if (aloneCount > collationMaxExpansion)
+    {
+        return true;
+    }
+    size_t at = 0;
+    uint32_t second = 0;
+    while (CollationMappingsNextContraction(b->m, b->nfd[i][0], &at, &second))
+    {
+        if (second < fastLatinLimit || (second >= fastPunctStart && second < fastPunctLimit))
+        {
+            continue;
+        }
+        uint32_t text[maxNfd + 1];
+        uint32_t length = b->nfdLength[i];
+        memcpy(text, b->nfd[i], length * sizeof *text);
+        text[length] = second;
+        uint32_t pair[collationNfdMax];
+        int32_t n = CollationNfd(text, length + 1, pair);
+        uint64_t together[collationMaxExpansion];
+        uint64_t apart[2 * collationMaxExpansion];
+        uint32_t t = n < 0 ? collationMaxExpansion + 1 : Elements(b, pair, (uint32_t)n, together);
+        memcpy(apart, alone, aloneCount * sizeof *apart);
+        uint32_t other = Elements(b, &second, 1, apart + aloneCount);
+        if (t > collationMaxExpansion || other > collationMaxExpansion || t != aloneCount + other ||
+            memcmp(together, apart, t * sizeof *apart) != 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // A contraction character's list: its default, then an entry for each
 // fast character whose pair does not read as the two apart; none for a
 // character after a prefix, which bails out itself (a longer prefix
@@ -308,7 +348,8 @@ static void ContractionList(Builder* b, int32_t i)
             AddEntry(b, (uint32_t)x, pairFits ? b->ce0 : noCe, pairFits ? b->ce1 : 0);
         }
     }
-    if (b->contractionCount == index + 3 && b->nfdLength[i] > 1)
+    if (b->contractionCount == index + 3 && b->nfdLength[i] > 1 &&
+        !ReadsPast(b, i, alone, aloneCount))
     {
         // A precomposed letter after which nothing reads otherwise: the
         // letter alone, as ICU's closure gives it its own elements. A

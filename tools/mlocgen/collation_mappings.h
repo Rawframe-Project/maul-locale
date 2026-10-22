@@ -120,6 +120,12 @@ void CollationMappingsContexts(CollationMappings* m, uint32_t codePoint, bool* p
 // that what follows the text can change its elements.
 bool CollationMappingsExtends(CollationMappings* m, const uint32_t* text, uint32_t length);
 
+// The second code point of a code point's next contraction, through the
+// tailoring or the root, from *at (0 for the first), which it advances;
+// false past the last.
+bool CollationMappingsNextContraction(CollationMappings* m, uint32_t codePoint, size_t* at,
+                                      uint32_t* secondOut);
+
 // Copies the root's mappings of a code point the tailoring has none of
 // (ICU's copyFromBaseCE32); 0 when out of memory.
 int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint);

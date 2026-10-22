@@ -7,7 +7,8 @@
 // read the table), under tailorings with contractions and under every
 // option the fast compare reads; and over the root's table it answers
 // every pair of characters the table holds itself, as the general
-// compare does, unless the settings make it bail out.
+// compare does, unless the settings make it bail out; a precomposed
+// letter whose marks a contraction reads past bails out on the mark.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -195,6 +196,41 @@ static void TestTailorings(void)
         ok = Agrees(tags[i]) && ok;
     }
     CHECK(ok, "tailorings with contractions, French backwards, POSIX and search without a table");
+}
+
+// A letter whose marks a contraction reads past: in da and fi, A with an
+// ogonek then a diaeresis reads as a with a diaeresis, after z, and U
+// with an ogonek then a diaeresis as y. The compare must see the
+// diaeresis and bail out rather than decide by A or U.
+static void TestReadsPast(void)
+{
+    static const char* const tags[] = {"da", "fi"};
+    static const char* const texts[][2] = {
+        {"b", "\xC4\x84\xCC\x88"}, {"v", "\xC5\xB2\xCC\x88"}, {"z", "\xC4\x85\xCC\x88"}};
+    bool ok = true;
+    for (size_t t = 0; t < sizeof(tags) / sizeof(tags[0]); t++)
+    {
+        mlocLocale locale;
+        mlocCollator c;
+        ok = ok && mlocParseLocale(tags[t], strlen(tags[t]), &locale).status == mloc_success &&
+             mlocInitCollator(&c, &s_data, &locale, nullptr) == mloc_success;
+        for (size_t i = 0; ok && i < sizeof(texts) / sizeof(texts[0]); i++)
+        {
+            const char* a = texts[i][0];
+            const char* b = texts[i][1];
+            uint8_t ka[64];
+            uint8_t kb[64];
+            size_t na = 0;
+            size_t nb = 0;
+            int order = 2;
+            ok = mlocCompare(&c, a, strlen(a), b, strlen(b), &order) == mloc_success &&
+                 order == -1 &&
+                 mlocGetSortKey(&c, a, strlen(a), ka, sizeof(ka), &na) == mloc_success &&
+                 mlocGetSortKey(&c, b, strlen(b), kb, sizeof(kb), &nb) == mloc_success &&
+                 KeyOrder(ka, na, kb, nb) == -1;
+        }
+    }
+    CHECK(ok, "a contraction read past a precomposed letter's marks: the compare bails out");
 }
 
 static void TestOptions(void)
@@ -504,6 +540,7 @@ int main(void)
         return 2;
     }
     TestTailorings();
+    TestReadsPast();
     TestOptions();
     TestAnswers();
     TestTailoredAnswers();

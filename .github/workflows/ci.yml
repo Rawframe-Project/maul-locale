@@ -165,7 +165,7 @@ jobs:
       - name: Every type's fast Latin table built, written and read back
         run: |
           build/conform_collation_fast_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect 09bdaf2dd4a6b003 ~/cldr-cache/cldr/common/collation/*.xml \
+            --expect edb9afb552346149 ~/cldr-cache/cldr/common/collation/*.xml \
             test/collation/crafted.xml
       - name: Tailored locales' sort keys, as ICU4C 79's where its data has them
         run: |

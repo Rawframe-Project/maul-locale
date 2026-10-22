@@ -34,7 +34,8 @@ the table cannot be ICU's data copied.
   otherwise than the two apart, a bail-out entry where a longer
   mapping goes on), as in ICU. A precomposed letter after which
   nothing reads otherwise is the letter alone; one after which
-  something does is a list too. A character after a prefix bails out,
+  something does, a character outside the table included (amendment
+  (c)), is a list too. A character after a prefix bails out,
   and so no entry names one: a longer prefix before it may change what
   it reads as.
 - **A section after each unit's arrays:** a 32-bit count, then that
@@ -158,3 +159,39 @@ the table cannot be ICU's data copied.
   through `compareUTF8` and before it by its keys (its identical
   prefix and lead byte checks hide most such pairs). The fast compare
   now gives U+FFFE the highest quaternary, and a test pins the pair.
+
+## Amendment (c), 2026-10-22: a contraction read past a letter's marks
+
+- **The fuzz target found a third divergence, the table's own:** under
+  da, "Ą̈" (A with an ogonek, then a diaeresis) reads as ä, after z,
+  because the contraction of a and a diaeresis reaches past the ogonek
+  (combining class 202, below the diaeresis's 230). The table held Ą as
+  the plain letter, so the compare decided by A against the other
+  text's first letter before it read the diaeresis: "İ" before "Ą̈" by
+  the keys, after by `mlocCompare`. ICU4C's closure gives such a
+  letter a contraction whose list holds its default alone, so that its
+  compare sees the next character and bails out on one outside the
+  table (its builder's own comment: Danish's u and diaeresis).
+- **The builder keeps a precomposed letter's list** when a contraction
+  of its NFD's first code point, continued by that contraction's
+  second code point outside the table, reads otherwise than the letter
+  and the code point apart (the pair taken in NFD). 57 tables grow,
+  1,630 words in all (3.2 KB of the data file).
+- **The comparison with ICU4C's tables now tells a list holding its
+  default alone from the plain character** (the earlier reading of the
+  two as one hid this): every such list of ICU4C 79's is in the
+  library's tables. The library keeps one more in 19 tables, where a
+  contraction's mark sorts before the letter's own in NFD (Ć then a
+  cedilla is c, cedilla, acute: ç in az), which ICU's closure leaves
+  to the letter alone; there the compare bails out where ICU's
+  decides. vi's `trad` keeps its four lists apart, as before.
+
+### Proof
+
+- `test_collation_fast_compare`: under da and fi, b before "Ą̈", v
+  before "Ų̈" (y) and z before "ą̈", by the compare and the keys alike;
+  each fails on the data built before.
+- `fuzz_collate_fast`: CI's input passes, and 135,619 runs here found
+  nothing.
+- `conform_collation_fast_builder` (the cldr CI job) checks the tables'
+  new hash, edb9afb552346149.

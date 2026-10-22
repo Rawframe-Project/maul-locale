@@ -380,6 +380,23 @@ bool CollationMappingsExtends(CollationMappings* m, const uint32_t* text, uint32
     return false;
 }
 
+bool CollationMappingsNextContraction(CollationMappings* m, uint32_t codePoint, size_t* at,
+                                      uint32_t* secondOut)
+{
+    size_t count = Gather(m, codePoint);
+    for (; *at < count; (*at)++)
+    {
+        const CollationCandidate* c = &m->candidates[*at];
+        if (c->prefixLength == 0 && c->textLength > 1)
+        {
+            *secondOut = c->text[1];
+            (*at)++;
+            return true;
+        }
+    }
+    return false;
+}
+
 int CollationMappingsCopyRoot(CollationMappings* m, uint32_t codePoint)
 {
     return CollationMappingsFirst(m, codePoint) >= 0 || CopyRoot(m, codePoint);

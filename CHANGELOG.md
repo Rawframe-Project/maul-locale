@@ -454,3 +454,7 @@ format.
   whole chain, root included, then `search` for a missing search type,
   the default, `standard` and the root; a `private-` type reads as
   none, and nb and nn take no's rules (mloc-0016, mloc-0071).
+- `mlocCompare` no longer decides by a precomposed letter whose marks a
+  contraction reads past (da's "Ą̈" as ä): its fast Latin table entry
+  makes the compare see the next character (mloc-0072). Collation
+  versions change with it.
