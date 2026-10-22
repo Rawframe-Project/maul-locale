@@ -159,6 +159,48 @@ static void TestCapacity(void)
           "with a wildcard a supplementary code point takes 6 places and a leading jamo 8");
 }
 
+// A match of 120 letters whose first ones carry four accents each,
+// accents in all: a pattern-base match spans 120 + accents elements.
+static bool AcrossRing(mlocSearchComparison comparison, size_t accents, mlocResult expected)
+{
+    static const char marks[4][3] = {"\xCC\x81", "\xCC\x80", "\xCC\x82", "\xCC\x83"};
+    static char pattern[120];
+    static char text[1200];
+    size_t size = 0;
+    size_t left = accents;
+    memset(pattern, 'a', sizeof pattern);
+    for (int letter = 0; letter < 120; letter++)
+    {
+        text[size++] = 'a';
+        for (int m = 0; m < 4 && left > 0; m++, left--)
+        {
+            text[size++] = marks[m][0];
+            text[size++] = marks[m][1];
+        }
+    }
+    mlocLocale locale;
+    mlocSearchOptions options = {comparison};
+    size_t start = 0;
+    size_t end = 0;
+    bool made = mlocParseLocale("en", 2, &locale).status == mloc_success &&
+                mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
+                mlocInitSearcher(&s_searcher, &s_collator, pattern, sizeof pattern, &options) ==
+                    mloc_success;
+    mlocResult result = mlocFindNext(&s_searcher, text, size, 0, &start, &end);
+    return made && result == expected && (expected != mloc_success || (start == 0 && end == size));
+}
+
+static void TestRingEdge(void)
+{
+    // ICU4C 79 finds the 512-element match whole; at 513 it returns one
+    // cut at its buffer's end, which the searcher refuses.
+    CHECK(AcrossRing(mloc_searchPatternBaseWildcard, 392, mloc_success) &&
+              AcrossRing(mloc_searchAnyBaseWildcard, 392, mloc_success) &&
+              AcrossRing(mloc_searchPatternBaseWildcard, 393, mloc_errorCapacity) &&
+              AcrossRing(mloc_searchAnyBaseWildcard, 393, mloc_errorCapacity),
+          "a match fills the ring's 512 elements; one more is refused");
+}
+
 static void TestUtf16(void)
 {
     static const uint16_t text[] = {'x', 0x00E1, 'b', 'a', 0x0301, 0xD83D, 0xDE00, 'a'};
@@ -261,6 +303,7 @@ int main(void)
     TestComparisons();
     TestIdentical();
     TestCapacity();
+    TestRingEdge();
     TestUtf16();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

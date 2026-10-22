@@ -193,8 +193,9 @@ static const Cei* Get(Ring* r, uint32_t index)
     {
         return nullptr;
     }
+    // The ring holds size elements: the oldest goes when one more comes.
     r->limit++;
-    if (r->limit - r->first >= r->size)
+    if (r->limit - r->first > r->size)
     {
         r->first++;
     }

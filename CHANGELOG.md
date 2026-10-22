@@ -417,7 +417,10 @@ format.
   `mlocInitSearcher` and `mlocFindNext` (and their UTF-16 forms), a
   pattern found where a collator holds it equal, as ICU4C's usearch
   finds it: its three element comparisons, match bounds on grapheme
-  clusters, a start anywhere in the text (mloc-0074).
+  clusters, a start anywhere in the text; a match whose text elements
+  fill the room ICU4C keeps for them is found whole, and a longer one
+  is refused with mloc_errorCapacity where ICU4C returns it cut short
+  (mloc-0074).
 - The collation data holds each unit's unsafe-backward ranges, the
   code points after the first of its contractions, for search
   (mloc-0074).
