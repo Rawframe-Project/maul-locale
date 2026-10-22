@@ -241,6 +241,11 @@ static void TestUtf16(void)
                                   "a",
                                   6, 5, &s, &e) == mloc_errorNotFound;
     CHECK(bytes, "a UTF-8 position inside a sequence counts as its start, after it does not");
+    CHECK(Finds("en", "a",
+                "xa\x80"
+                "a",
+                2, 3, 4),
+          "a stray continuation byte is a code point of its own: a search from it starts there");
 }
 
 static void TestRefusals(void)
