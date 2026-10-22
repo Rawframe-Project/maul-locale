@@ -82,6 +82,11 @@ unsafe-backward set.
   (backward), ICU4C loops for ever or returns an empty match; the
   library finds none. A match whose elements outgrow the ring is
   refused where ICU4C, its buffer's places reused, returns a wrong one.
+- **A position inside a code point counts as its start**, in both
+  directions and both encodings. ICU4C's backward search keeps the
+  elements of a pair whose second unit it starts on, and caps the
+  match's end there, inside the pair; what it finds then follows its
+  internals, not a boundary the caller can name.
 
 - **Source ranges as ICU4C's FCD iterator gives them** with
   normalization on (the library always reads the NFD): text in
@@ -162,11 +167,14 @@ the searcher and the forward find; (f2b3) the backward find.
   `usearch_searchBackwards`: the forward find's 15,490 inputs walked
   back from the text's end and from their own position, 18,286
   searches. All agree but 1,131: 1,080 empty texts (ICU refuses them),
-  23 where ICU crashed or never ended, 18 where it returns an empty
-  match at 0 for a pattern of one mark under any-base comparison, and
-  10 whose window outgrows the ring, where ICU returns 0 to 5 for a
-  120-letter pattern; the library finds none in the first three and
-  refuses the last. `test_search`: from several positions, a walk from
+  23 where ICU crashed or never ended, 14 where it returns an empty
+  match at 0 for a pattern of marks under any-base comparison, 2 where
+  its match ends before it starts, 2 from inside a pair, and 10 whose
+  window outgrows the ring, where ICU returns 0 to 5 for a 120-letter
+  pattern; the library finds none but in the last, which it refuses.
+  From the second unit of each pair in 3,001 of these searches, 57
+  differ from ICU, each where its walk keeps the pair; from the pair's
+  first unit or its end, only the empty matches and crashes above. `test_search`: from several positions, a walk from
   inside a cluster, a contraction, UTF-16 across a pair, the refusals.
 - The differential found that numeric ordering passed over digits the
   emoji type gives contractions (the keycaps): ICU4C's builder gives

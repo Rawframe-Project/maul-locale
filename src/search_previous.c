@@ -98,7 +98,7 @@ static bool BoundsBack(Find* f, uint32_t index, uint32_t firstIndex, size_t from
         // Nothing after the match: it ends at the boundary after its last
         // element's start, or at the position when that is nearer.
         size_t following = mlocSearchFollowing(f->text, minLimit);
-        limit = (uint32_t)(following > 0 && from > following ? following : from);
+        limit = (uint32_t)(from > following ? following : from);
     }
     found = found && start <= limit && mlocSearchIdentical(f, start, limit);
     *startOut = start;
@@ -136,10 +136,10 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
         return opened;
     }
     SearchBack back;
-    size_t walk = from < text.length
-                      ? mlocSearchStartPosition(&f->collator.root, &f->collator.settings, text,
-                                                mlocSearchFollowing(text, from))
-                      : from;
+    // At the end the walk starts there: the boundary after it and its
+    // start are the end.
+    size_t walk = mlocSearchStartPosition(&f->collator.root, &f->collator.settings, text,
+                                          mlocSearchFollowing(text, from));
     mlocSearchBackStart(&back, &f->collator.root, &f->collator.settings, text, walk);
     f->ring.back = &back;
     uint32_t index = 0;

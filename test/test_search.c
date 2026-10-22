@@ -310,6 +310,16 @@ static void TestBackward(void)
         e == 5 && mlocFindPreviousUtf16(&s_searcher, text, 5, 4, &s, &e) == mloc_success &&
         s == 1 && e == 2;
     CHECK(utf16, "UTF-16 positions in units walking back, past a pair");
+    // ICU4C finds 0 to 3 from 4, keeping the flag's elements before it.
+    static const uint16_t flag[] = {0x660, 0x303, 0x3099, 0xD83C, 0xDDE6};
+    utf16 = mlocParseLocale("cs", 2, &locale).status == mloc_success &&
+            mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
+            mlocInitSearcherUtf16(&s_searcher, &s_collator, flag, 3, nullptr) == mloc_success &&
+            mlocFindPreviousUtf16(&s_searcher, flag, 5, 4, &s, &e) == mloc_errorNotFound &&
+            mlocFindPreviousUtf16(&s_searcher, flag, 5, 3, &s, &e) == mloc_errorNotFound &&
+            mlocFindPreviousUtf16(&s_searcher, flag, 5, 5, &s, &e) == mloc_success && s == 0 &&
+            e == 3;
+    CHECK(utf16, "walking back from a pair's second unit is walking back from its first");
     static char marks[1 + 2 * 130];
     marks[0] = 'a';
     for (size_t i = 0; i < 130; i++)
