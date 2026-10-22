@@ -201,6 +201,23 @@ static void TestRingEdge(void)
           "a match fills the ring's 512 elements; one more is refused");
 }
 
+static void TestStartContext(void)
+{
+    // ja's length mark after KA is a prefix rule's, read as A at the
+    // first level: a search from the mark keeps KA as its context.
+    CHECK(Finds("ja", "\xE3\x83\xBC", "\xE3\x82\xAB\xE3\x83\xBC", 3, -1, -1) &&
+              Finds("ja-u-ks-level1", "\xE3\x82\xA2", "\xE3\x82\xAB\xE3\x83\xBC", 3, 3, 6),
+          "a search from inside a text reads the prefix before its start, as ICU4C 79 does");
+    // An exact-size text searched from its end reads nothing past it.
+    static const char text[2] = {'x', 'a'};
+    size_t s = 0;
+    size_t e = 0;
+    CHECK(Make("en", "a", mloc_searchExact) &&
+              mlocFindNext(&s_searcher, text, sizeof text, sizeof text, &s, &e) ==
+                  mloc_errorNotFound,
+          "a search from the text's end finds nothing");
+}
+
 static void TestUtf16(void)
 {
     static const uint16_t text[] = {'x', 0x00E1, 'b', 'a', 0x0301, 0xD83D, 0xDE00, 'a'};
@@ -309,6 +326,7 @@ int main(void)
     TestIdentical();
     TestCapacity();
     TestRingEdge();
+    TestStartContext();
     TestUtf16();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
