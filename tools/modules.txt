@@ -184,4 +184,5 @@ search_elements: collation_compare collation_iterator collation_tables nfd_strea
 collator: collation_compare collation_fast_compare collation_reorder collation_tables
 search_back: search_elements
 search_boundary: nfd_stream
-search: collator nfd_stream search_boundary search_elements
+search: nfd_stream search_boundary search_find
+search_find: collator nfd_stream search_back search_boundary search_elements

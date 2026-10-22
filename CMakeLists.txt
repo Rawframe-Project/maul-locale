@@ -144,6 +144,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/search_boundary.c
     src/search_back.c
     src/search_elements.c
+    src/search_find.c
     src/collation_compare.c
     src/collation_fast_compare.c
     src/collation_reorder.c
