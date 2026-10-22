@@ -430,6 +430,13 @@ static void TestUtf16(void)
               mlocGetSortKeyUtf16(&c, u1, 1, nullptr, 0, nullptr) == mloc_errorInvalid &&
               mlocGetSortKeyUtf16(nullptr, u1, 1, nullptr, 0, &n) == mloc_errorInvalid,
           "UTF-16 refusals: null texts with lengths, null outputs, no collator");
+    uint8_t exact[64];
+    size_t needed = 0;
+    CHECK(mlocGetSortKeyUtf16(&c, u1, 1, nullptr, 0, &needed) == mloc_errorCapacity && needed > 0 &&
+              needed <= sizeof(exact) &&
+              mlocGetSortKeyUtf16(&c, u1, 1, exact, needed, &n) == mloc_success && n == needed &&
+              mlocGetSortKeyUtf16(&c, u1, 1, exact, needed - 1, &n) == mloc_errorCapacity,
+          "a UTF-16 key in a buffer of its size, refused one byte short");
 }
 
 static void TestRefusals(void)
