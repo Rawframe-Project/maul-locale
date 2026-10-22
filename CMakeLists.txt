@@ -1098,6 +1098,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_link_libraries(test_collation_index PRIVATE mlocgen_core)
             target_include_directories(test_collation_index PRIVATE test)
             maul_apply_flags(test_collation_index)
+            target_compile_definitions(test_collation_index PRIVATE
+                                       MLOC_COLLATION_FILE="${MLOC_COLLATION_FILE}")
             add_test(NAME collation_index COMMAND test_collation_index
                      ${PROJECT_SOURCE_DIR}/test/cldr/common)
             add_executable(test_collation_iterator test/test_collation_iterator.c)

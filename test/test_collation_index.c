@@ -6,13 +6,15 @@
 // into labels (a to z, Hangul and Ethiopic cut, upper-cased), an
 // unconfirmed index set passed over, and locales that match the next
 // keyed one filing nothing; the set pattern reader's escapes, ranges and
-// strings; the validator refusing crafted units.
+// strings; the validator refusing crafted units; of two labels equal at
+// the primary level, the index keeping ICU4C's.
 // conform_index_labels checks every CLDR locale against ICU4C's sets.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 
 #include "cldr.h"
 #include "collation_index.h"
+#include "data_format.h"
 #include "datafile.h"
 #include "index_gen.h"
 #include "keys.h"
@@ -22,6 +24,7 @@
 #include "test_harness.h"
 
 #include "maul-locale/data.h"
+#include "maul-locale/index.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -208,6 +211,67 @@ static void TestLookup(void)
           "no labels without the collation data file");
 }
 
+alignas(8) static uint8_t s_collation[1 << 22];
+static uint8_t s_index[1 << 12];
+
+// A data file holding one locale's index labels.
+static uint8_t* LabelFile(const char* locale, const uint8_t* unit, size_t unitSize, size_t* sizeOut)
+{
+    DataFile file = {0};
+    DataFileAdd(&file, kindCollationIndex, locale, unit, unitSize);
+    mlocDataVersion own;
+    mlocGetDataVersion(&own);
+    DataFileVersion version = {
+        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
+        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
+        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .tables = own.tables,
+    };
+    memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
+    uint8_t* bytes = DataFileWrite(&file, &version, sizeOut);
+    DataFileFree(&file);
+    return bytes;
+}
+
+// ICU4C's isOneLabelBetterThanOther: A with a caron (U+01CD) and with a
+// dot above (U+0226) are equal at the primary level and as many code
+// points in NFKD, so the lower NFKD keeps the dot above, the later label
+// (as ICU4C's addLabels of both under ko shows it). The labels CLDR
+// gives tie only where one is the other and a mark, which fewer code
+// points decide alone.
+static void TestBetterLabel(void)
+{
+    static const uint8_t s_unit[] = {2, 0, 0, 0, 2, 0xC7, 0x8D, 2, 0xC8, 0xA6};
+    FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
+    size_t collationSize = f == nullptr ? 0 : fread(s_collation, 1, sizeof(s_collation), f);
+    if (f != nullptr)
+    {
+        fclose(f);
+    }
+    size_t size = 0;
+    uint8_t* bytes = LabelFile("xx", s_unit, sizeof(s_unit), &size);
+    mlocData sources[3];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet data = {sources, 3};
+    mlocLocale locale;
+    mlocCollator collator;
+    size_t indexSize = 0;
+    uint32_t count = 0;
+    mlocIndexBucket bucket = {0};
+    bool built = collationSize > 0 && collationSize < sizeof(s_collation) &&
+                 mlocOpenData(&sources[1], bytes, size) == mloc_success &&
+                 mlocOpenData(&sources[2], s_collation, collationSize) == mloc_success &&
+                 mlocParseLocale("xx", 2, &locale).status == mloc_success &&
+                 mlocInitCollator(&collator, &data, &locale, nullptr) >= 0 &&
+                 mlocBuildIndex(&collator, &data, &locale, nullptr, s_index, sizeof(s_index),
+                                &indexSize) == mloc_success &&
+                 mlocGetIndexBucketCount(s_index, &count) == mloc_success &&
+                 mlocGetIndexBucket(s_index, 1, &bucket) == mloc_success;
+    CHECK(built && count == 3 && bucket.length == 2 && memcmp(bucket.label, "\xC8\xA6", 2) == 0,
+          "of two labels equal at the primary level with as many code points, the lower NFKD");
+    free(bytes);
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -219,5 +283,6 @@ int main(int argc, char** argv)
     TestUnits(argv[1]);
     TestValidator();
     TestLookup();
+    TestBetterLabel();
     return s_failures == 0 ? 0 : 1;
 }
