@@ -13,27 +13,6 @@ enum
     pieceBytes = 128,
 };
 
-size_t mlocSearchBefore(NfdText t, size_t at)
-{
-    if (t.units != nullptr)
-    {
-        bool pair =
-            at >= 2 && t.units[at - 1] - 0xDC00u < 0x400 && t.units[at - 2] - 0xD800u < 0x400;
-        return at - (pair ? 2 : 1);
-    }
-    // The nearest byte before that is not a continuation byte starts the
-    // code point when its sequence reaches the boundary; else the byte
-    // before is a continuation byte alone, one U+FFFD.
-    size_t q = at - 1;
-    while (q > 0 && at - q < 4 && (t.bytes[q] & 0xC0) == 0x80)
-    {
-        q--;
-    }
-    size_t size = 0;
-    (void)mlocNfdDecodeAt(t, q, &size);
-    return q + size == at ? q : at - 1;
-}
-
 // Whether no grapheme rule reads back past a code point.
 static bool Safe(uint32_t c)
 {
@@ -48,7 +27,7 @@ static size_t SafeStart(NfdText t, size_t at)
     size_t q = at;
     while (q > 0)
     {
-        q = mlocSearchBefore(t, q);
+        q = mlocNfdBefore(t, q);
         size_t size = 0;
         if (Safe(mlocNfdDecodeAt(t, q, &size)))
         {

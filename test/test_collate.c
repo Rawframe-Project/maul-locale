@@ -302,6 +302,29 @@ static int KeyOrder(const char* id, const mlocCollatorOptions* options, const ch
     return (r > 0) - (r < 0);
 }
 
+// Whether a pair orders as expected by the compare, its mirror and its
+// keys.
+static bool Both(const char* id, const char* a, const char* b, int expected)
+{
+    return Order(id, nullptr, a, b) == expected && KeyOrder(id, nullptr, a, b) == expected;
+}
+
+// The identical prefix skipped before the compares (research 68): a
+// prefix context read back past the cut (the middle dot after l), a
+// contraction and a number the cut would split, and the settings that
+// skip none (shifted: an ignorable after a variable element reads as 0;
+// backwards secondaries: the prefix's are read last). Each pair orders
+// otherwise when its rule is left out.
+static void TestIdenticalPrefix(void)
+{
+    CHECK(Both("und", "l\xC2\xB7z", "lb", 1) && Both("cs", "cz", "ch", -1) &&
+              Both("en-u-kn", "a12a", "a123", -1),
+          "a prefix context before the cut, a contraction and a number across it");
+    CHECK(Both("en-u-ka-shifted", "[", "[\x05\xCC\xA3\x0C", 0) &&
+              Both("fr-CA", "\xCC\xA3", "\xCC\xA3\x1F\xCC\xA3\xCC\x88\xCC\x88", 1),
+          "shifted and backwards secondaries: no prefix skipped");
+}
+
 static void TestSortKeys(void)
 {
     static const char* const pairs[][2] = {
@@ -514,6 +537,7 @@ int main(void)
     TestTailoringVersions();
     TestEveryType();
     TestSortKeys();
+    TestIdenticalPrefix();
     TestUtf16();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;

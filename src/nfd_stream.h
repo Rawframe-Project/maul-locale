@@ -96,6 +96,10 @@ uint32_t mlocNfdDecodeAt(NfdText text, size_t at, size_t* sizeOut);
 // classes it starts and ends with.
 uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, uint8_t* trailOut);
 
+// The code point boundary before one past 0, as the decoding reads the
+// text (a continuation byte alone is a code point of its own).
+size_t mlocNfdBefore(NfdText text, size_t at);
+
 static inline void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length)
 {
     mlocNfdStartText(s, mlocNfdUtf8(text, length));

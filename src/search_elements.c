@@ -87,23 +87,6 @@ uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* hi
     return searchEnd;
 }
 
-static bool InRanges(const CollationRoot* unit, uint32_t c)
-{
-    return unit != nullptr && mlocCollationInUnsafe(unit->unsafe, unit->unsafeCount, c);
-}
-
-// Whether a position before the code point may be inside a contraction
-// or a numeric run.
-static bool Unsafe(const CollationRoot* root, const CollationSettings* s, uint32_t c)
-{
-    uint32_t d[nfdMaxDecomposition];
-    uint8_t lead = 0;
-    uint8_t trail = 0;
-    (void)mlocNfdDecompose(c, d, &lead, &trail);
-    return lead != 0 || InRanges(root, c) || InRanges(root, d[0]) || InRanges(s->tailoring, c) ||
-           InRanges(s->tailoring, d[0]) || (s->numeric && muniGetDecimalDigitValue(c) >= 0);
-}
-
 // The text between two positions.
 static NfdText Between(NfdText text, size_t start, size_t limit)
 {
@@ -137,9 +120,10 @@ size_t mlocSearchStartPosition(const CollationRoot* root, const CollationSetting
     {
         size_t offset = from;
         size_t size = 0;
-        while (offset > 0 && Unsafe(root, settings, mlocNfdDecodeAt(text, offset, &size)))
+        while (offset > 0 &&
+               mlocCollationUnsafeBackward(root, settings, mlocNfdDecodeAt(text, offset, &size)))
         {
-            offset = mlocSearchBefore(text, offset);
+            offset = mlocNfdBefore(text, offset);
         }
         start = offset < from ? LastBoundary(root, settings, text, offset, from) : from;
     }
@@ -156,11 +140,12 @@ void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
 size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* settings,
                             NfdText text, size_t end)
 {
-    size_t start = mlocSearchBefore(text, end);
+    size_t start = mlocNfdBefore(text, end);
     size_t size = 0;
-    while (start > 0 && Unsafe(root, settings, mlocNfdDecodeAt(text, start, &size)))
+    while (start > 0 &&
+           mlocCollationUnsafeBackward(root, settings, mlocNfdDecodeAt(text, start, &size)))
     {
-        start = mlocSearchBefore(text, start);
+        start = mlocNfdBefore(text, start);
     }
     return start;
 }
@@ -176,7 +161,7 @@ void mlocSearchElementsStartPiece(SearchElements* e, const CollationRoot* root,
     uint32_t count = 0;
     for (size_t at = start; at > 0 && count < collationMaxContext; count++)
     {
-        at = mlocSearchBefore(text, at);
+        at = mlocNfdBefore(text, at);
         back[count] = at;
     }
     while (count-- > 0)

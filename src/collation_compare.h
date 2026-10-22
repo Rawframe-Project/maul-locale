@@ -65,7 +65,30 @@ typedef struct CollationSettings
 // end of punctuation (maxVariable punct).
 CollationSettings mlocCollationDefaults(const CollationRoot* root);
 
-// -1, 0 or 1 as a sorts before, with or after b.
+// Whether a position before the code point may be inside a contraction,
+// a mark's reordering or a numeric run (ICU4C's unsafe-backward set: a
+// mark, a later code point of a contraction in the root or the
+// tailoring, a digit under numeric).
+bool mlocCollationUnsafeBackward(const CollationRoot* root, const CollationSettings* settings,
+                                 uint32_t codePoint);
+
+// ICU4C's identical prefix: how many bytes or units both texts begin
+// with, backed up to a code point's start and then, where a code point
+// at the cut is unsafe-backward, over the unsafe ones before it, so that
+// what follows reads alone as it reads in the whole text (but for the
+// prefix contexts, which the compare gives it from before the cut).
+// None when one text is UTF-8 and the other UTF-16, when shifted, or
+// with backwards secondaries.
+size_t mlocCollationIdenticalPrefix(const CollationRoot* root, const CollationSettings* settings,
+                                    NfdText a, NfdText b);
+
+// -1, 0 or 1 as a sorts before, with or after b, compared from a prefix
+// mlocCollationIdenticalPrefix gave (0 for the whole texts).
+int mlocCollationCompareFrom(const CollationRoot* root, const CollationSettings* settings,
+                             NfdText a, NfdText b, size_t prefix);
+
+// -1, 0 or 1 as a sorts before, with or after b, the identical prefix
+// skipped.
 int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,
                              NfdText a, NfdText b);
 

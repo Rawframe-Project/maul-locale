@@ -460,6 +460,13 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     return mloc_success;
 }
 
+// The general path's parts read, then the texts' identical prefix.
+static size_t Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdText y)
+{
+    mlocReadCollatorRest(collator, c);
+    return mlocCollationIdenticalPrefix(&c->root, &c->settings, x, y);
+}
+
 mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b,
                        size_t bLength, int* orderOut)
 {
@@ -469,18 +476,27 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
     {
         return mloc_errorInvalid;
     }
-    const uint8_t* x = (const uint8_t*)(a != nullptr ? a : "");
-    const uint8_t* y = (const uint8_t*)(b != nullptr ? b : "");
+    NfdText x = mlocNfdUtf8((const uint8_t*)(a != nullptr ? a : ""), aLength);
+    NfdText y = mlocNfdUtf8((const uint8_t*)(b != nullptr ? b : ""), bLength);
+    // Research 68: the identical prefix skipped before both compares, as
+    // ICU4C's compare does. Its unsafe ranges are the root's and the
+    // tailoring's, read with the general path's parts, so only texts that
+    // begin alike read them before the fast compare.
+    bool alike = aLength > 0 && bLength > 0 && x.bytes[0] == y.bytes[0];
+    size_t p = alike ? Prefix(collator, &c, x, y) : 0;
     int order = fastLatinBail;
     if (c.fastLatin != 0)
     {
         mlocReadCollatorFast(collator, &c);
-        order = mlocFastLatinCompare(&c.fast, x, aLength, y, bLength);
+        order = mlocFastLatinCompare(&c.fast, x.bytes + p, aLength - p, y.bytes + p, bLength - p);
     }
     if (order == fastLatinBail)
     {
-        mlocReadCollatorRest(collator, &c);
-        order = mlocCollationCompare(&c.root, &c.settings, x, aLength, y, bLength);
+        if (!alike)
+        {
+            mlocReadCollatorRest(collator, &c);
+        }
+        order = mlocCollationCompareFrom(&c.root, &c.settings, x, y, p);
     }
     *orderOut = order;
     return mloc_success;
@@ -496,19 +512,24 @@ mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, siz
         return mloc_errorInvalid;
     }
     static const uint16_t none[1] = {0};
-    const uint16_t* x = a != nullptr ? a : none;
-    const uint16_t* y = b != nullptr ? b : none;
+    NfdText x = mlocNfdUtf16(a != nullptr ? a : none, aLength);
+    NfdText y = mlocNfdUtf16(b != nullptr ? b : none, bLength);
+    bool alike = aLength > 0 && bLength > 0 && x.units[0] == y.units[0];
+    size_t p = alike ? Prefix(collator, &c, x, y) : 0;
     int order = fastLatinBail;
     if (c.fastLatin != 0)
     {
         mlocReadCollatorFast(collator, &c);
-        order = mlocFastLatinCompareUtf16(&c.fast, x, aLength, y, bLength);
+        order =
+            mlocFastLatinCompareUtf16(&c.fast, x.units + p, aLength - p, y.units + p, bLength - p);
     }
     if (order == fastLatinBail)
     {
-        mlocReadCollatorRest(collator, &c);
-        order = mlocCollationCompareText(&c.root, &c.settings, mlocNfdUtf16(x, aLength),
-                                         mlocNfdUtf16(y, bLength));
+        if (!alike)
+        {
+            mlocReadCollatorRest(collator, &c);
+        }
+        order = mlocCollationCompareFrom(&c.root, &c.settings, x, y, p);
     }
     *orderOut = order;
     return mloc_success;

@@ -470,3 +470,7 @@ format.
   text: Han, Hangul, Latin without combining marks) without the
   normalizer's segment work: Chinese and Korean compares, sort keys and
   searches about two to three times as fast (mloc-0066).
+- Compares skip the texts' identical prefix, backed up to where a
+  contraction, a mark or a number cannot join it, as ICU4C does (not
+  when shifted or with backwards secondaries, where the prefix can
+  decide): long shared prefixes about 2.5 times as fast (mloc-0072).

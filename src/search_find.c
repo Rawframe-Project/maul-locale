@@ -105,7 +105,7 @@ bool mlocSearchMidCluster(const Find* f, const Cei* last, const Cei* next, uint3
     {
         return true;
     }
-    (void)mlocNfdDecompose(mlocNfdDecodeAt(f->text, mlocSearchBefore(f->text, maxLimit), &size), d,
+    (void)mlocNfdDecompose(mlocNfdDecodeAt(f->text, mlocNfdBefore(f->text, maxLimit), &size), d,
                            &lead, &trail);
     return trail == 0 || (trail == 1 && lead == 0);
 }

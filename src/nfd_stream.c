@@ -100,6 +100,27 @@ uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, u
     return n;
 }
 
+size_t mlocNfdBefore(NfdText t, size_t at)
+{
+    if (t.units != nullptr)
+    {
+        bool pair =
+            at >= 2 && t.units[at - 1] - 0xDC00u < 0x400 && t.units[at - 2] - 0xD800u < 0x400;
+        return at - (pair ? 2 : 1);
+    }
+    // The nearest byte before that is not a continuation byte starts the
+    // code point when its sequence reaches the boundary; else the byte
+    // before is a continuation byte alone, one U+FFFD.
+    size_t q = at - 1;
+    while (q > 0 && at - q < 4 && (t.bytes[q] & 0xC0) == 0x80)
+    {
+        q--;
+    }
+    size_t size = 0;
+    (void)mlocNfdDecodeAt(t, q, &size);
+    return q + size == at ? q : at - 1;
+}
+
 void mlocNfdStartText(NfdStream* s, NfdText text)
 {
     // The fields read before a fill writes them; the window and the long

@@ -5,6 +5,8 @@
 
 #include "collation_iterator.h"
 
+#include "maul-unicode/properties.h"
+
 enum
 {
     // The case level, read between the secondary and tertiary levels.
@@ -23,6 +25,40 @@ CollationSettings mlocCollationDefaults(const CollationRoot* root)
     };
 }
 
+// The code points before a compare's start, which both texts share (the
+// identical prefix), oldest first: the last collationMaxContext of its
+// NFD, which the iterators' prefix contexts read back.
+typedef struct History
+{
+    uint32_t codePoints[collationMaxContext];
+    uint32_t count;
+} History;
+
+static History Before(NfdText text, size_t start)
+{
+    History h = {.count = 0};
+    uint32_t newest[collationMaxContext];
+    uint32_t n = 0;
+    for (size_t at = start; at > 0 && n < collationMaxContext;)
+    {
+        at = mlocNfdBefore(text, at);
+        size_t size = 0;
+        uint32_t d[nfdMaxDecomposition];
+        uint8_t lead = 0;
+        uint8_t trail = 0;
+        uint32_t k = mlocNfdDecompose(mlocNfdDecodeAt(text, at, &size), d, &lead, &trail);
+        for (uint32_t i = k; i-- > 0 && n < collationMaxContext;)
+        {
+            newest[n++] = d[i];
+        }
+    }
+    while (n > 0)
+    {
+        h.codePoints[h.count++] = newest[--n];
+    }
+    return h;
+}
+
 // One text's elements as a level reads them, the shifting applied.
 typedef struct Level
 {
@@ -34,13 +70,17 @@ typedef struct Level
 } Level;
 
 static void Start(Level* l, const CollationRoot* root, const CollationSettings* settings,
-                  uint32_t level, NfdText text)
+                  uint32_t level, NfdText text, const History* h)
 {
     *l = (Level){.settings = settings, .level = level};
     mlocCollationIteratorStartText(&l->it, root, text);
     l->it.tailoring = settings->tailoring;
     l->it.han = settings->han;
     l->it.numeric = settings->numeric;
+    for (uint32_t i = 0; i < h->count; i++)
+    {
+        mlocCollationIteratorRemember(&l->it, h->codePoints[i]);
+    }
 }
 
 // The next element with the shifting applied: a variable element keeps
@@ -162,12 +202,12 @@ static uint32_t Next(Level* l)
 }
 
 static int CompareLevel(const CollationRoot* root, const CollationSettings* settings,
-                        uint32_t level, NfdText a, NfdText b)
+                        uint32_t level, NfdText a, NfdText b, const History* h)
 {
     Level left;
     Level right;
-    Start(&left, root, settings, level, a);
-    Start(&right, root, settings, level, b);
+    Start(&left, root, settings, level, a, h);
+    Start(&right, root, settings, level, b, h);
     uint32_t end = End(level);
     for (;;)
     {
@@ -222,12 +262,12 @@ static uint32_t CountSegment(Level* l, bool* ended)
 // read forwards again with the longer one's surplus skipped, so that
 // the pairs line up from the end, and the last pair that differs decides.
 static int Backwards(const CollationRoot* root, const CollationSettings* settings, NfdText a,
-                     NfdText b)
+                     NfdText b, const History* h)
 {
     Level left;
     Level right;
-    Start(&left, root, settings, collationSecondary, a);
-    Start(&right, root, settings, collationSecondary, b);
+    Start(&left, root, settings, collationSecondary, a, h);
+    Start(&right, root, settings, collationSecondary, b, h);
     for (;;)
     {
         Level l = left;
@@ -299,27 +339,132 @@ static int Identical(NfdText a, NfdText b)
     }
 }
 
-int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,
-                             NfdText a, NfdText b)
+static bool InRanges(const CollationRoot* unit, uint32_t c)
 {
-    int order = CompareLevel(root, settings, collationPrimary, a, b);
+    return unit != nullptr && mlocCollationInUnsafe(unit->unsafe, unit->unsafeCount, c);
+}
+
+bool mlocCollationUnsafeBackward(const CollationRoot* root, const CollationSettings* settings,
+                                 uint32_t codePoint)
+{
+    uint32_t d[nfdMaxDecomposition];
+    uint8_t lead = 0;
+    uint8_t trail = 0;
+    (void)mlocNfdDecompose(codePoint, d, &lead, &trail);
+    return lead != 0 || InRanges(root, codePoint) || InRanges(root, d[0]) ||
+           InRanges(settings->tailoring, codePoint) || InRanges(settings->tailoring, d[0]) ||
+           (settings->numeric && muniGetDecimalDigitValue(codePoint) >= 0);
+}
+
+// Whether the code point at a position of a text, if any, is
+// unsafe-backward.
+static bool UnsafeAt(const CollationRoot* root, const CollationSettings* settings, NfdText text,
+                     size_t at)
+{
+    size_t size = 0;
+    return at < text.length &&
+           mlocCollationUnsafeBackward(root, settings, mlocNfdDecodeAt(text, at, &size));
+}
+
+// Whether a position is inside a code point: a UTF-8 continuation byte,
+// or a UTF-16 trail surrogate after a lead.
+static bool Inside(NfdText text, size_t at)
+{
+    if (at == 0 || at >= text.length)
+    {
+        return false;
+    }
+    return text.units != nullptr
+               ? text.units[at] - 0xDC00u < 0x400 && text.units[at - 1] - 0xD800u < 0x400
+               : (text.bytes[at] & 0xC0) == 0x80;
+}
+
+size_t mlocCollationIdenticalPrefix(const CollationRoot* root, const CollationSettings* settings,
+                                    NfdText a, NfdText b)
+{
+    size_t limit = a.length < b.length ? a.length : b.length;
+    size_t p = 0;
+    // Texts of two encodings (an index's UTF-16 name and its UTF-8
+    // boundaries) share no prefix of units. Shifted, a variable element
+    // before the cut makes the ignorables after it read as 0, a state no
+    // backing up over unsafe code points keeps: "[" against "[" U+0005
+    // U+0323 is equal by the keys, and ICU4C 79's compare, which skips
+    // the prefix there too, orders them apart. With backwards secondaries
+    // the prefix's are the last read, and they decide where one text's
+    // others are the start of the other's (fr-CA: U+0323 against U+0323
+    // U+001F U+0323 U+0308 U+0308). No prefix is skipped in either case.
+    if ((a.units != nullptr) != (b.units != nullptr) || settings->shifted || settings->backwards)
+    {
+        return 0;
+    }
+    if (a.units != nullptr)
+    {
+        while (p < limit && a.units[p] == b.units[p])
+        {
+            p++;
+        }
+    }
+    else
+    {
+        while (p < limit && a.bytes[p] == b.bytes[p])
+        {
+            p++;
+        }
+    }
+    while (p > 0 && (Inside(a, p) || Inside(b, p)))
+    {
+        p--;
+    }
+    if (p > 0 && (UnsafeAt(root, settings, a, p) || UnsafeAt(root, settings, b, p)))
+    {
+        size_t size = 0;
+        do
+        {
+            p = mlocNfdBefore(a, p);
+        } while (p > 0 &&
+                 mlocCollationUnsafeBackward(root, settings, mlocNfdDecodeAt(a, p, &size)));
+    }
+    return p;
+}
+
+// A text from a position.
+static NfdText From(NfdText text, size_t at)
+{
+    return text.units != nullptr ? mlocNfdUtf16(text.units + at, text.length - at)
+                                 : mlocNfdUtf8(text.bytes + at, text.length - at);
+}
+
+int mlocCollationCompareFrom(const CollationRoot* root, const CollationSettings* settings,
+                             NfdText a, NfdText b, size_t prefix)
+{
+    History h = Before(a, prefix);
+    a = From(a, prefix);
+    b = From(b, prefix);
+    int order = CompareLevel(root, settings, collationPrimary, a, b, &h);
     if (order == 0 && settings->strength >= collationSecondary)
     {
-        order = settings->backwards ? Backwards(root, settings, a, b)
-                                    : CompareLevel(root, settings, collationSecondary, a, b);
+        order = settings->backwards ? Backwards(root, settings, a, b, &h)
+                                    : CompareLevel(root, settings, collationSecondary, a, b, &h);
     }
     if (order == 0 && settings->caseLevel)
     {
-        order = CompareLevel(root, settings, levelCase, a, b);
+        order = CompareLevel(root, settings, levelCase, a, b, &h);
     }
     for (uint32_t level = collationTertiary;
          order == 0 && level <= settings->strength && level <= collationQuaternary; level++)
     {
-        order = CompareLevel(root, settings, level, a, b);
+        order = CompareLevel(root, settings, level, a, b, &h);
     }
     if (order == 0 && settings->strength == collationIdentical)
     {
         order = Identical(a, b);
     }
     return order;
+}
+
+int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,
+                             NfdText a, NfdText b)
+{
+    return mlocCollationCompareFrom(root, settings, a, b,
+                                    mlocCollationIdenticalPrefix(root, settings, a, b));
 }

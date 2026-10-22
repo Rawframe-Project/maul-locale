@@ -195,3 +195,40 @@ the table cannot be ICU's data copied.
   nothing.
 - `conform_collation_fast_builder` (the cldr CI job) checks the tables'
   new hash, edb9afb552346149.
+
+## Amendment (d), 2026-10-22: the identical prefix skipped
+
+- **Both compares start after the texts' identical prefix** (research
+  68, slice (g4)), as ICU4C's `compare` does: the bytes or units both
+  begin with, backed up to a code point's start and, where a code point
+  at the cut is unsafe-backward (a mark, a later code point of a
+  contraction in the root's or the tailoring's unsafe ranges, a digit
+  under numeric: `mlocCollationUnsafeBackward`, now shared with search),
+  over the unsafe ones before it. The general compare gives its
+  iterators the prefix's last eight NFD code points as history, so a
+  prefix context before the cut still reads (the middle dot after l).
+  Only texts that begin alike read the collator's general parts first.
+- **No prefix is skipped when shifted or with backwards secondaries.**
+  The fuzz target found both within minutes. Shifted, a variable
+  element before the cut makes the ignorables after it read as 0: "["
+  against "[" U+0005 U+0323 U+000C is equal by the keys, and ICU4C 79's
+  compare, which skips the prefix there too, orders them apart (its
+  keys agree with the library's). With backwards secondaries the
+  prefix's are read last, and they decide where one text's others are
+  the start of the other's (fr-CA). Texts of two encodings (the index's
+  UTF-16 names against its UTF-8 boundaries) share no prefix either.
+- On the bench, back to back against 4c08bc8 (two runs each, load 16 to
+  32): the file names sharing 32 bytes 288 and 289 ns to 116 and 120,
+  de 54 and 52 to 41 and 41, de UTF-16 56 and 54 to 46 and 47, zh 266
+  and 287 to 190 and 198, ko 334 and 339 to 228 and 241; fr (backwards)
+  and the index's bucket unchanged.
+
+### Proof
+
+- `test_collate`: a prefix context before the cut, a contraction (cs
+  ch) and a number (a12a against a123) across it, and the two fuzz
+  findings, each by compare, mirror and keys; leaving out the history,
+  the unsafe backing up, the shifted rule or the backwards rule each
+  fails a check.
+- `fuzz_collate_fast` 536,870 runs and `fuzz_collation` 160,509 here
+  after the fixes, nothing; the suite unchanged.
