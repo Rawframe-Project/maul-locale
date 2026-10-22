@@ -19,8 +19,7 @@ void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
     e->it.numeric = settings->numeric;
 }
 
-// ICU4C's processCE on a 32-bit half: 0 for one passed over.
-static uint64_t Process(SearchElements* e, uint32_t half)
+uint64_t mlocSearchProcess(SearchElements* e, uint32_t half)
 {
     uint64_t primary = half >> 16;
     uint64_t secondary = e->strength >= collationSecondary ? half >> 8 & 0xFF : 0;
@@ -46,8 +45,7 @@ static uint64_t Process(SearchElements* e, uint32_t half)
     return primary << 48 | secondary << 32 | tertiary << 16 | quaternary;
 }
 
-// ICU4C's CollationElementIterator::next: the next half and its range.
-static bool NextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut, uint32_t* highOut)
+bool mlocSearchNextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut, uint32_t* highOut)
 {
     if (e->otherHalf != 0)
     {
@@ -74,9 +72,9 @@ static bool NextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut, uin
 uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* highOut)
 {
     uint32_t half = 0;
-    while (NextHalf(e, &half, lowOut, highOut))
+    while (mlocSearchNextHalf(e, &half, lowOut, highOut))
     {
-        uint64_t processed = Process(e, half);
+        uint64_t processed = mlocSearchProcess(e, half);
         if (processed != 0)
         {
             *lowOut += e->base;
@@ -106,11 +104,11 @@ static bool Unsafe(const CollationRoot* root, const CollationSettings* s, uint32
            InRanges(s->tailoring, d[0]) || (s->numeric && muniGetDecimalDigitValue(c) >= 0);
 }
 
-// The text from a position.
-static NfdText From(NfdText text, size_t at)
+// The text between two positions.
+static NfdText Between(NfdText text, size_t start, size_t limit)
 {
-    return text.units != nullptr ? mlocNfdUtf16(text.units + at, text.length - at)
-                                 : mlocNfdUtf8(text.bytes + at, text.length - at);
+    return text.units != nullptr ? mlocNfdUtf16(text.units + start, limit - start)
+                                 : mlocNfdUtf8(text.bytes + start, limit - start);
 }
 
 // The last boundary between elements, from a safe position, at or
@@ -119,7 +117,7 @@ static size_t LastBoundary(const CollationRoot* root, const CollationSettings* s
                            NfdText text, size_t safe, size_t from)
 {
     SearchElements scan;
-    mlocSearchElementsStart(&scan, root, settings, From(text, safe));
+    mlocSearchElementsStart(&scan, root, settings, Between(text, safe, text.length));
     size_t last = safe;
     uint64_t element = 0;
     uint32_t low = 0;
@@ -145,7 +143,26 @@ void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
         }
         start = offset < from ? LastBoundary(root, settings, text, offset, from) : from;
     }
-    mlocSearchElementsStart(e, root, settings, From(text, start));
+    mlocSearchElementsStartPiece(e, root, settings, text, start, text.length);
+}
+
+size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* settings,
+                            NfdText text, size_t end)
+{
+    size_t start = mlocSearchBefore(text, end);
+    size_t size = 0;
+    while (start > 0 && Unsafe(root, settings, mlocNfdDecodeAt(text, start, &size)))
+    {
+        start = mlocSearchBefore(text, start);
+    }
+    return start;
+}
+
+void mlocSearchElementsStartPiece(SearchElements* e, const CollationRoot* root,
+                                  const CollationSettings* settings, NfdText text, size_t start,
+                                  size_t limit)
+{
+    mlocSearchElementsStart(e, root, settings, Between(text, start, limit));
     e->base = (uint32_t)start;
     // The code points before, oldest first, for the prefixes.
     size_t back[collationMaxContext];
@@ -199,7 +216,7 @@ bool mlocSearchHasElements(const CollationRoot* root, const CollationSettings* s
     uint32_t half = 0;
     uint32_t low = 0;
     uint32_t high = 0;
-    while (NextHalf(&e, &half, &low, &high))
+    while (mlocSearchNextHalf(&e, &half, &low, &high))
     {
         if (PatternCe(&e, half) != 0)
         {

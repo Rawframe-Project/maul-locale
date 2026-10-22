@@ -55,6 +55,27 @@ void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
 void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
                                const CollationSettings* settings, NfdText text, size_t from);
 
+// Starts on the text between two positions, the code points before the
+// start its prefix history; ranges count from the whole text's start.
+void mlocSearchElementsStartPiece(SearchElements* e, const CollationRoot* root,
+                                  const CollationSettings* settings, NfdText text, size_t start,
+                                  size_t limit);
+
+// Where a piece of text that ends at a position may start, read forward
+// as ICU4C's previous reads it: the code point before the end and back
+// over the unsafe ones before it (as mlocSearchElementsStartAt backs
+// up), so no element crosses the start. end is above 0.
+size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* settings,
+                            NfdText text, size_t end);
+
+// ICU4C's CollationElementIterator::next: the next 32-bit half and its
+// range, relative to the iterator's text; false at its end.
+bool mlocSearchNextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut, uint32_t* highOut);
+
+// ICU4C's processCE on a 32-bit half, keeping its shifted state in e: 0
+// for one passed over.
+uint64_t mlocSearchProcess(SearchElements* e, uint32_t half);
+
 // The next processed element and its range, or searchEnd at the end with
 // the text's length as both.
 uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* highOut);

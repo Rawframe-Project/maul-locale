@@ -7,15 +7,18 @@
 // writes for each line its processed elements over the text's UTF-16
 // form, each as "element:low:high" in hex and units, as the oracle
 // docs/locale/research/oracle/collation/icu4c_search_elements.cpp
-// writes them.
+// writes them; with --back, walking back from the text's end as
+// icu4c_search_elements_back.cpp does, "full" when a piece or a chunk
+// did not fit.
 //
-// usage: conform_search_elements collation.mloc < lines
+// usage: conform_search_elements collation.mloc [--back] < lines
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "collator.h"
+#include "search_back.h"
 #include "search_elements.h"
 
 #include "maul-locale/data.h"
@@ -29,6 +32,7 @@ alignas(8) static uint8_t s_file[1 << 22];
 static mlocData s_sources[2];
 static char s_line[1 << 16];
 static uint16_t s_units[1 << 15];
+static SearchBack s_back;
 
 // The code points in hex as UTF-16 units; their count.
 static size_t Units(char* hex)
@@ -53,7 +57,8 @@ static size_t Units(char* hex)
 
 int main(int argc, char** argv)
 {
-    FILE* f = argc == 2 ? fopen(argv[1], "rb") : nullptr;
+    bool back = argc == 3 && strcmp(argv[2], "--back") == 0;
+    FILE* f = argc == 2 || back ? fopen(argv[1], "rb") : nullptr;
     size_t size = f == nullptr ? 0 : fread(s_file, 1, sizeof(s_file), f);
     if (f != nullptr)
     {
@@ -63,7 +68,7 @@ int main(int argc, char** argv)
     if (size == 0 || size == sizeof(s_file) ||
         mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
     {
-        fputs("usage: conform_search_elements collation.mloc < lines\n", stderr);
+        fputs("usage: conform_search_elements collation.mloc [--back] < lines\n", stderr);
         return 2;
     }
     mlocDataSet data = {s_sources, 2};
@@ -82,11 +87,23 @@ int main(int argc, char** argv)
             continue;
         }
         size_t n = Units(tab + 1);
-        SearchElements e;
-        mlocSearchElementsStart(&e, &c.root, &c.settings, mlocNfdUtf16(s_units, n));
         uint32_t low = 0;
         uint32_t high = 0;
         const char* gap = "";
+        if (back)
+        {
+            mlocSearchBackStart(&s_back, &c.root, &c.settings, mlocNfdUtf16(s_units, n), n);
+            for (uint64_t p = mlocSearchPreviousElement(&s_back, &low, &high); p != searchEnd;
+                 p = mlocSearchPreviousElement(&s_back, &low, &high))
+            {
+                printf("%s%llx:%x:%x", gap, (unsigned long long)p, low, high);
+                gap = " ";
+            }
+            printf("%s\n", s_back.full ? "full" : "");
+            continue;
+        }
+        SearchElements e;
+        mlocSearchElementsStart(&e, &c.root, &c.settings, mlocNfdUtf16(s_units, n));
         for (uint64_t p = mlocSearchNextElement(&e, &low, &high); p != searchEnd;
              p = mlocSearchNextElement(&e, &low, &high))
         {
