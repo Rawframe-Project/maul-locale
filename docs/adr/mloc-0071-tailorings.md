@@ -197,7 +197,7 @@ the oracle for every type.
     `CollationLoader` does: the `-u-co` type along the locale's
     collation chain (CLDR's collation parents: yue's is zh_Hant), else
     the first default type along the chain, else `standard`, else the
-    root's order. zh_Hant's default `stroke` thus takes zh's `stroke`.
+    root's order (amendment (a) has ICU's order of these tries). zh_Hant's default `stroke` thus takes zh's `stroke`.
     A tailored locale needs the parents table; data without tailorings
     needs none.
   - The tailoring's settings and `[reorder]` codes are the collator's
@@ -331,6 +331,37 @@ the oracle for every type.
   indexes. In the docs repository's oracle, its 409,032 queries over
   every root weight outside Han, and about 2,000 primaries that are no root
   primary, give ICU4C's answers.
+
+## Amendment (a), 2026-10-22: the type lookup as ICU4C's loader
+
+The alphabetic index's differential against ICU4C (record mloc-0075)
+found three requests whose type this record's lookup took apart from
+ICU's `CollationLoader`.
+
+- **A type is looked up along the whole chain, root included,** and
+  when no unit of the chain has it, the loader tries in turn: for a
+  `search…` type other than `search`, `search`; the locale's default
+  type (the first default along the chain); `standard`; the root's
+  order. Each is tried once. `zh-u-co-standard` thus takes the root's
+  `standard` (zh has none) rather than zh's default `pinyin`, and
+  `ja-u-co-searchjl` the root's `search`.
+- **A `private-` type is no request:** CLDR keeps those for imports
+  (UTS #35), the data leaves them out, and the lookup reads the
+  locale's default. ICU4C refuses the request instead; that refusal is
+  no order to follow.
+- **The collation chain takes the main parents** (record mloc-0016,
+  amendment (a)), so nb and nn reach no's rules.
+
+### Proof
+
+- `test_collate`: zh's `standard` orders Han as the root does, ja's
+  `searchjl` orders the iteration marks apart as the root's `search`
+  does, `private-kana` as ja's default, and nb and nn put a ring after
+  z where the root puts it before.
+- In the docs repository's oracle, the index differential's 16
+  requests that differed for these reasons now give ICU4C's buckets,
+  but dz (ICU has no collation for it) and ja's `private-kana`
+  (refused there).
 
 ## Consequences
 

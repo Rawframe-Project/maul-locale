@@ -198,6 +198,35 @@ static void AddParents(Map* parents, const XmlNode* list)
     }
 }
 
+typedef struct Inherit
+{
+    Cldr* cldr;
+    const char* commonDirectory;
+} Inherit;
+
+// A main parent other than root is a collation parent too for a locale
+// with a collation file that collation's own list does not name, as
+// ICU4C's coll tree takes the main parents (nb and nn reach no's rules);
+// root, the non-likely-script rule's parent, is not: those inherit their
+// language's collation (ICU4C's inheritLanguageSubtag for bs_Cyrl,
+// sr_Latn and zh_Hant).
+static void InheritCollation(const char* child, void* parent, void* context)
+{
+    Inherit* in = context;
+    if (strcmp(parent, "root") == 0 || MapGet(&in->cldr->collationParents, child) != nullptr)
+    {
+        return;
+    }
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/collation/%s.xml", in->commonDirectory, child);
+    FILE* file = fopen(path, "rb");
+    if (file != nullptr)
+    {
+        fclose(file);
+        MapPut(&in->cldr->collationParents, child, Copy(parent));
+    }
+}
+
 // Reads each language's likely script from likelySubtags.xml.
 static int LoadScripts(Cldr* cldr, const char* commonDirectory, char* errorOut,
                        size_t errorCapacity)
@@ -264,6 +293,7 @@ int CldrOpen(Cldr* cldr, const char* commonDirectory, char* errorOut, size_t err
         }
     }
     XmlFree(root);
+    MapEach(&cldr->parents, InheritCollation, &(Inherit){cldr, commonDirectory});
     return LoadScripts(cldr, commonDirectory, errorOut, errorCapacity);
 }
 

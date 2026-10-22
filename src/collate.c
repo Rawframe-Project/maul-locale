@@ -82,10 +82,59 @@ static bool Walk(const mlocDataSet* data, const mlocLocale* locale, TypeWalk* w,
                                 VisitTypes, w);
 }
 
-// The locale's tailoring as ICU4C's loader finds it: the co type along
-// the collation chain, else the chain's default type, else standard;
-// *found false for the root order. mloc_errorNotFound when the chain
-// needs the parents table and the data has none.
+static bool Is(const char* value, size_t length, const char* text);
+
+// ICU4C's CollationLoader's types tried: the asked one, then a
+// "search..." one as "search", then the default, then standard.
+typedef struct Tries
+{
+    const char* name;
+    size_t length;
+    bool search;
+    bool fallback;
+    bool standard;
+} Tries;
+
+static void Tried(Tries* t, const TypeWalk* w)
+{
+    t->search = t->search || Is(t->name, t->length, "search");
+    t->fallback = t->fallback || (t->length == w->defaultLength &&
+                                  memcmp(t->name, w->defaultName, t->length) == 0);
+    t->standard = t->standard || Is(t->name, t->length, "standard");
+}
+
+// The next type to try, false when none is left.
+static bool NextType(Tries* t, const TypeWalk* w)
+{
+    if (!t->search && t->length > 6 && memcmp(t->name, "search", 6) == 0)
+    {
+        t->length = 6;
+    }
+    else if (!t->fallback)
+    {
+        t->name = w->defaultName;
+        t->length = w->defaultLength;
+    }
+    else if (!t->standard)
+    {
+        t->name = "standard";
+        t->length = 8;
+    }
+    else
+    {
+        return false;
+    }
+    Tried(t, w);
+    return true;
+}
+
+// The locale's tailoring as ICU4C's CollationLoader finds it: the co
+// type along the collation chain, where root always has standard (the
+// root order); a missing "search..." type tried as "search", then the
+// chain's default type, then standard. A private type is never chosen
+// (UTS #35: they are for imports). *found false for the root order.
+// mloc_errorNotFound when the chain needs the parents table and the data
+// has none.
 static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* locale,
                                 DataSpan* tailoringOut, bool* found)
 {
@@ -97,24 +146,37 @@ static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* local
     TypeWalk w = {0};
     const char* co = nullptr;
     size_t coLength = mlocFindKeyword(locale, "co", &co);
+    if (coLength >= 8 && memcmp(co, "private-", 8) == 0)
+    {
+        coLength = 0;
+    }
     if (!Walk(data, locale, &w, co, coLength))
     {
         return mloc_errorNotFound;
     }
-    static const char s_standard[] = "standard";
-    const char* next = w.defaultLength > 0 ? w.defaultName : s_standard;
-    size_t nextLength = w.defaultLength > 0 ? w.defaultLength : sizeof(s_standard) - 1;
-    for (int tries = 0; !w.hit && tries < 2; tries++)
+    if (w.defaultLength == 0)
     {
-        bool tried = coLength == nextLength && memcmp(co, next, nextLength) == 0;
-        if (!tried && !Walk(data, locale, &w, next, nextLength))
+        w.defaultName = "standard";
+        w.defaultLength = 8;
+    }
+    Tries t = {co, coLength, false, false, false};
+    if (coLength == 0)
+    {
+        t.name = w.defaultName;
+        t.length = w.defaultLength;
+        t.fallback = true;
+        if (!Walk(data, locale, &w, t.name, t.length))
         {
             return mloc_errorNotFound;
         }
-        co = next;
-        coLength = nextLength;
-        next = s_standard;
-        nextLength = sizeof(s_standard) - 1;
+    }
+    Tried(&t, &w);
+    while (!w.hit && !Is(t.name, t.length, "standard") && NextType(&t, &w))
+    {
+        if (!Walk(data, locale, &w, t.name, t.length))
+        {
+            return mloc_errorNotFound;
+        }
     }
     *tailoringOut = w.found;
     *found = w.hit;

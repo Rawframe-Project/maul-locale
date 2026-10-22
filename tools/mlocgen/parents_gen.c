@@ -4,7 +4,10 @@
 // Parent locales by key (parents_gen.h). The components of
 // supplementalData.xml's parentLocales map to the library's: none is the
 // main one, then collations, plurals, segmentations and
-// grammaticalFeatures, each standing alone (UTS #35).
+// grammaticalFeatures, each standing alone (UTS #35), but that a main
+// parent other than root is a collation parent too for a locale with a
+// collation file that collation's list does not name, as ICU4C's coll
+// tree takes it (cldr.c's InheritCollation).
 
 #include "parents_gen.h"
 
@@ -25,6 +28,8 @@ typedef struct Parent
     int component;
     char child[MAX_KEY];
     char parent[MAX_KEY];
+    // A collation parent inherited from the main list.
+    bool inherited;
 } Parent;
 
 typedef struct Parents
@@ -68,7 +73,8 @@ static unsigned Components(const char* attribute)
     return bits;
 }
 
-static void Add(Parents* parents, int component, const char* child, const char* parent)
+static void Add(Parents* parents, int component, const char* child, const char* parent,
+                bool inherited)
 {
     if (parents->count == parents->capacity)
     {
@@ -83,6 +89,7 @@ static void Add(Parents* parents, int component, const char* child, const char* 
     p->component = component;
     snprintf(p->child, sizeof(p->child), "%s", child);
     snprintf(p->parent, sizeof(p->parent), "%s", parent);
+    p->inherited = inherited;
 }
 
 static int CompareParents(const void* a, const void* b)
@@ -92,7 +99,28 @@ static int CompareParents(const void* a, const void* b)
     return x->component != y->component ? x->component - y->component : strcmp(x->child, y->child);
 }
 
-static void AddList(Parents* parents, const Keys* keys, const XmlNode* list)
+// Explicit entries before inherited ones of the same child.
+static int SortParents(const void* a, const void* b)
+{
+    int order = CompareParents(a, b);
+    return order != 0 ? order
+                      : (int)((const Parent*)a)->inherited - (int)((const Parent*)b)->inherited;
+}
+
+static bool HasCollationFile(const char* commonDirectory, const char* id)
+{
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/collation/%s.xml", commonDirectory, id);
+    FILE* file = fopen(path, "rb");
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    return file != nullptr;
+}
+
+static void AddList(Parents* parents, const Keys* keys, const XmlNode* list,
+                    const char* commonDirectory)
 {
     unsigned components = Components(XmlGetAttribute(list, "component"));
     for (int i = 0; i < list->childCount; i++)
@@ -118,8 +146,13 @@ static void AddList(Parents* parents, const Keys* keys, const XmlNode* list)
             {
                 if (components & 1u << c)
                 {
-                    Add(parents, c, childKey, parentKey);
+                    Add(parents, c, childKey, parentKey, false);
                 }
+            }
+            if ((components & 1u) != 0 && strcmp(parent, "root") != 0 &&
+                HasCollationFile(commonDirectory, id))
+            {
+                Add(parents, 1, childKey, parentKey, true);
             }
             child += length;
             child += strspn(child, " ");
@@ -191,19 +224,24 @@ int GenerateParentUnit(const char* commonDirectory, DataFile* file, char* errorO
     {
         if (strcmp(root->children[i]->name, "parentLocales") == 0)
         {
-            AddList(&parents, &keys, root->children[i]);
+            AddList(&parents, &keys, root->children[i], commonDirectory);
         }
     }
     XmlFree(root);
     KeysClose(&keys);
-    qsort(parents.items, parents.count, sizeof(Parent), CompareParents);
+    qsort(parents.items, parents.count, sizeof(Parent), SortParents);
     // Ids that share a key (yue and yue_Hant) may list the same parent;
-    // it is kept once.
+    // it is kept once. An inherited collation parent yields to an
+    // explicit one.
     size_t kept = 0;
     for (size_t i = 0; i < parents.count; i++)
     {
         if (kept > 0 && CompareParents(&parents.items[kept - 1], &parents.items[i]) == 0)
         {
+            if (parents.items[i].inherited)
+            {
+                continue;
+            }
             if (strcmp(parents.items[kept - 1].parent, parents.items[i].parent) != 0)
             {
                 Die("a locale key with two parents", parents.items[i].child);

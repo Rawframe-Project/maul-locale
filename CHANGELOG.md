@@ -450,3 +450,7 @@ format.
   over for any other text (mloc-0072).
 - `mlocCompareUtf16` and `mlocGetSortKeyUtf16`: UTF-16 texts collate
   and key as their UTF-8 forms, a lone surrogate as U+FFFD (mloc-0073).
+- Collators find their type as ICU4C's loader does: a type along the
+  whole chain, root included, then `search` for a missing search type,
+  the default, `standard` and the root; a `private-` type reads as
+  none, and nb and nn take no's rules (mloc-0016, mloc-0071).

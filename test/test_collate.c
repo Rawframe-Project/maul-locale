@@ -75,9 +75,19 @@ static void TestTailorings(void)
               Order("zh-u-co-stroke", nullptr, HAN_ONE, HAN_A) == -1 &&
               Order("zh-Hant", nullptr, HAN_ONE, HAN_A) == -1 &&
               Order("yue", nullptr, HAN_ONE, HAN_A) == -1 &&
-              Order("zh-u-co-standard", nullptr, HAN_A, HAN_ONE) == -1,
-          "zh: pinyin by default, stroke by co, zh-Hant's and yue's default stroke; no "
-          "standard gives the default");
+              Order("zh-u-co-standard", nullptr, HAN_ONE, HAN_A) == -1,
+          "zh: pinyin by default, stroke by co, zh-Hant's and yue's default stroke; standard, "
+          "which zh lacks, the root's");
+    // Hiragana and katakana iteration marks (U+309D, U+30FD): equal in
+    // ja, apart in the root's search.
+    CHECK(Order("ja-u-co-searchjl", nullptr, "\xE3\x82\x9D", "\xE3\x83\xBD") == -1 &&
+              Order("ja", nullptr, "\xE3\x82\x9D", "\xE3\x83\xBD") == 0 &&
+              Order("ja-u-co-private-kana", nullptr, "\xE3\x82\x9D", "\xE3\x83\xBD") == 0,
+          "a search type the chain lacks as search, the root's; a private type as none");
+    CHECK(Order("nb", nullptr, "z", "\xC3\xA5") == -1 &&
+              Order("nn", nullptr, "z", "\xC3\xA5") == -1 &&
+              Order("und", nullptr, "z", "\xC3\xA5") == 1,
+          "nb and nn: a ring after z, the rules of their parent no");
     // U+316B1 before U+25969 in the long pinyin list; the short one
     // names neither, so the root's code-point order holds.
     CHECK(Order("zh", nullptr, "\xF0\xA5\xA5\xA9", "\xF0\xB1\x9A\xB1") == -1 &&

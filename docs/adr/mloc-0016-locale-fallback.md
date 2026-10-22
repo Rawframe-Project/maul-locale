@@ -37,6 +37,19 @@ files, 29 spell out their language's likely script (`sr_Cyrl`,
   that has their data, and report `mloc_fellBack` when it is not the
   locale's own key.
 
+## Amendment (a), 2026-10-22: the main parents in the collation chain
+
+- **A locale with a collation file of its own that collation's parent
+  list does not name takes its main parent as its collation parent,**
+  unless that parent is root. ICU4C's collation data follows the main
+  parents this way: nb's and nn's files hold no rules, and both reach
+  no's. Root, the main parent the non-likely-script rule gives
+  (`bs_Cyrl`, `sr_Latn`, `zh_Hant`), is not taken: those locales keep
+  their language's collation, as ICU4C's `inheritLanguageSubtag` does.
+- The generator writes these parents after the listed ones, which win
+  where both name a locale; the runtime chain and the generator's
+  check read the one table.
+
 ## Consequences
 
 A lookup never meets a different script than the one asked for in the
