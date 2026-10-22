@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">
+<!--
+SPDX-License-Identifier: MIT
+Copyright (c) 2026 Sirac Ozmen
+-->
+<ldml>
+	<identity>
+		<version number="$Revision$"/>
+		<language type="tr"/>
+	</identity>
+	<characters>
+		<exemplarCharacters>[ç i ı]</exemplarCharacters>
+	</characters>
+</ldml>

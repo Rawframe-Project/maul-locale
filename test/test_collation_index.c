@@ -21,6 +21,8 @@
 #include "table_gen.h"
 #include "test_harness.h"
 
+#include "maul-locale/data.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,6 +74,10 @@ static void TestPattern(void)
           "strings with escapes, a \\U escape and a hyphen at the end");
     CHECK(Reads("[- a - c]", "2D-2D 61-63 "), "a hyphen first, a range written with spaces");
     CHECK(Reads("[a {bc} d]", "61-61 {bc} 64-64 "), "a character before a string kept");
+    CHECK(Reads("[\\u0039 \\u00df b-b]", "39-39 DF-DF 62-62 "),
+          "escapes with every hex digit's kind, a range of one");
+    CHECK(Reads("[\\u0000{a}]", "0-0 {a} ") && Reads("[\\u0000 a \\u0000]", "0-0 61-61 0-0 "),
+          "U+0000 kept before a string, before a character and at the end");
     CHECK(Reads("[]", ""), "the empty set");
 }
 
@@ -146,10 +152,15 @@ static void TestUnits(const char* commonDirectory)
                 "\xED\x95\x98"),
           "a standard set made into labels: upper-cased in full (ß to SS), the 14 Hangul "
           "initials for any syllable, the Ethiopic bases it holds, no a to z");
+    CHECK(Holds(&file, "tr",
+                "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \xC3\x87 \xC4\xB0") &&
+              Holds(&file, "lt", "I"),
+          "Turkic and Lithuanian case rules: i to dotted I, dotless i to I; i with a dot "
+          "above to I");
     CHECK(UnitOf(&file, "xx_YY") == nullptr && UnitOf(&file, "xx_ZZ") == nullptr &&
-              file.unitCount == 3,
-          "an unconfirmed index set passed over, and sets equal to the next keyed one's not "
-          "filed");
+              UnitOf(&file, "xx_Latn") == nullptr && file.unitCount == 5,
+          "an unconfirmed index set passed over, sets equal to the next keyed one's not filed, "
+          "and one under its parent's key checked");
     DataFileFree(&file);
     GenFreeList(ids, count);
     CldrClose(&s_cldr);
@@ -185,6 +196,18 @@ static void TestValidator(void)
           "end, ill-formed UTF-8, labels out of order, twice or after a longer one, no count");
 }
 
+static void TestLookup(void)
+{
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet data = {&builtin, 1};
+    mlocLocale locale;
+    IndexLabels labels;
+    CHECK(mlocParseLocale("de", 2, &locale).status == mloc_success &&
+              !mlocFindIndexLabels(&data, &locale, &labels),
+          "no labels without the collation data file");
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -195,5 +218,6 @@ int main(int argc, char** argv)
     TestPattern();
     TestUnits(argv[1]);
     TestValidator();
+    TestLookup();
     return s_failures == 0 ? 0 : 1;
 }
