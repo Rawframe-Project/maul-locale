@@ -5,7 +5,8 @@
 // underflow and overflow buckets, names found in UTF-8 and UTF-16, the
 // value measured, built, copied to an odd address and still read; the
 // options (fewer labels, own special labels); Swedish's letters after Z,
-// Japanese kana and Chinese pinyin shown as A to Z; the refusals.
+// Japanese kana and Chinese pinyin shown as A to Z, an inflow bucket
+// merged into the overflow bucket; the refusals.
 // conform_index checks every CLDR locale against ICU4C's index.
 
 #ifdef _WIN32
@@ -142,6 +143,12 @@ static void TestOptions(void)
               In(s_index, "\xE4\xB8\xAD", 26) && In(s_index, "\xE4\xB8\x80", 25),
           "Chinese pinyin: the U+FDD0 labels shown as A to Z, a character in its reading's "
           "letter");
+    CHECK(Build("zh-u-kr-latn-grek-hani", nullptr) > 0 &&
+              Shows(s_index, "\xE2\x80\xA6 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z "
+                             "\xE2\x80\xA6") &&
+              In(s_index, "\xCE\xB1", 27) && In(s_index, "\xE4\xB8\xAD", 26),
+          "Greek between Latin and Han: its inflow bucket, before the hidden pinyin ones, "
+          "merged into the overflow bucket");
     CHECK(Build("ko", nullptr) > 0 &&
               Shows(s_index, "\xE2\x80\xA6 \xE3\x84\xB1 \xE3\x84\xB4 \xE3\x84\xB7 "
                              "\xE3\x84\xB9 \xE3\x85\x81 \xE3\x85\x82 \xE3\x85\x85 "
