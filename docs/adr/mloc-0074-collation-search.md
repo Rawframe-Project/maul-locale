@@ -63,6 +63,25 @@ unsafe-backward set.
   strength).
 - **No allocation:** the searcher is a fixed-size value; the text's
   elements pass through a fixed ring within each call.
+- **Backward as ICU4C finds it** (`mlocFindPrevious`): its
+  usearch_searchBackwards over UCollationPCE::previousProcessed. The
+  text's raw halves walking back are gathered to one with a primary
+  that is not a continuation, that chunk processed forward and handed
+  out last first, the shifted state carried on to the chunk before it
+  (so a run without a primary at the text's start is processed as if
+  the chunk after it came first, as ICU does). The library reads them
+  from pieces read forward, each starting at a safe code point (back
+  over the unsafe ranges), so the collation iterator stays one; a piece
+  or a chunk holds at most 128 halves, past which the find answers
+  mloc_errorCapacity. The walk starts after the cluster at the
+  position, at the last boundary between elements at or before its end;
+  a match's last element starts before the position, and one with
+  nothing after it in the walk ends at the position at the latest.
+- **No empty and no endless match:** where a wildcard comparison
+  skips a pattern of marks against the text's end (forward) or start
+  (backward), ICU4C loops for ever or returns an empty match; the
+  library finds none. A match whose elements outgrow the ring is
+  refused where ICU4C, its buffer's places reused, returns a wrong one.
 
 - **Source ranges as ICU4C's FCD iterator gives them** with
   normalization on (the library always reads the NFD): text in
@@ -129,6 +148,26 @@ the searcher and the forward find; (f2b3) the backward find.
   `test_search`: strengths, a precomposed letter, an accent's cluster,
   Czech ch never split and a start inside it, the comparisons, UTF-16
   positions and a start inside a pair, the refusals.
+- (f2b3a) `conform_search_elements --back` against ICU4C 79's
+  `previousProcessed` from the text's end (oracle
+  `icu4c_search_elements_back.cpp`), on the elements' 215,600 texts:
+  all of the 213,742 whose forward elements agree also agree backward
+  but 22 under numeric ordering (ICU's backward walk splits a digit run
+  its forward one keeps whole), which search refuses; ICU's backward
+  elements differ from its forward ones reversed in 1,426 texts, each
+  reproduced. `test_search_elements`: last first, a walk from inside the
+  text, UTF-16, the shifted state carried back, a piece and a chunk too
+  long.
+- (f2b3b) `conform_search` with a backward field against ICU4C 79's
+  `usearch_searchBackwards`: the forward find's 15,490 inputs walked
+  back from the text's end and from their own position, 18,286
+  searches. All agree but 1,131: 1,080 empty texts (ICU refuses them),
+  23 where ICU crashed or never ended, 18 where it returns an empty
+  match at 0 for a pattern of one mark under any-base comparison, and
+  10 whose window outgrows the ring, where ICU returns 0 to 5 for a
+  120-letter pattern; the library finds none in the first three and
+  refuses the last. `test_search`: from several positions, a walk from
+  inside a cluster, a contraction, UTF-16 across a pair, the refusals.
 - The differential found that numeric ordering passed over digits the
   emoji type gives contractions (the keycaps): ICU4C's builder gives
   every mapped digit its digit tag, which its iterator reads before any

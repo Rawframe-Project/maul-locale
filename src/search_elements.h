@@ -55,6 +55,11 @@ void mlocSearchElementsStart(SearchElements* e, const CollationRoot* root,
 void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
                                const CollationSettings* settings, NfdText text, size_t from);
 
+// Where mlocSearchElementsStartAt starts for a position: the last
+// boundary between elements at or before it.
+size_t mlocSearchStartPosition(const CollationRoot* root, const CollationSettings* settings,
+                               NfdText text, size_t from);
+
 // Starts on the text between two positions, the code points before the
 // start its prefix history; ranges count from the whole text's start.
 void mlocSearchElementsStartPiece(SearchElements* e, const CollationRoot* root,

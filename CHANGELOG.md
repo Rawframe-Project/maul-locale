@@ -421,6 +421,9 @@ format.
   fill the room ICU4C keeps for them is found whole, and a longer one
   is refused with mloc_errorCapacity where ICU4C, its first element's
   place reused, returns a wrong match (mloc-0074).
+- Backward collation search: `mlocFindPrevious` and
+  `mlocFindPreviousUtf16`, the match nearest before a position as
+  ICU4C's usearch_searchBackwards finds it (mloc-0074).
 - The collation data holds each unit's unsafe-backward ranges, the
   code points after the first of its contractions, for search
   (mloc-0074).

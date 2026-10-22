@@ -129,8 +129,8 @@ static size_t LastBoundary(const CollationRoot* root, const CollationSettings* s
     return last;
 }
 
-void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
-                               const CollationSettings* settings, NfdText text, size_t from)
+size_t mlocSearchStartPosition(const CollationRoot* root, const CollationSettings* settings,
+                               NfdText text, size_t from)
 {
     size_t start = from;
     if (from > 0 && from < text.length)
@@ -143,7 +143,14 @@ void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
         }
         start = offset < from ? LastBoundary(root, settings, text, offset, from) : from;
     }
-    mlocSearchElementsStartPiece(e, root, settings, text, start, text.length);
+    return start;
+}
+
+void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
+                               const CollationSettings* settings, NfdText text, size_t from)
+{
+    mlocSearchElementsStartPiece(e, root, settings, text,
+                                 mlocSearchStartPosition(root, settings, text, from), text.length);
 }
 
 size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* settings,

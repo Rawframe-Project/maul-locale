@@ -712,7 +712,7 @@ Writes a day relative to today and a time of day joined by the locale's relative
 
 ## `search.h`
 
-Collation search (record mloc-0074): a pattern found in a text where a collator holds them equal, as ICU4C's usearch finds it: the pattern's collation elements against the text's, a match starting and ending on grapheme cluster boundaries (or, where ICU allows one, inside a cluster at a normalization boundary), the identical strength also asking for the same NFD. The searcher is a value the caller keeps; it holds a copy of the collator and the pattern's elements, and keeps no pointer to either. A find is a call from a position: to find every match, call again from the last match's end, or from its start plus one code point for overlapping matches.
+Collation search (record mloc-0074): a pattern found in a text where a collator holds them equal, as ICU4C's usearch finds it: the pattern's collation elements against the text's, a match starting and ending on grapheme cluster boundaries (or, where ICU allows one, inside a cluster at a normalization boundary), the identical strength also asking for the same NFD. The searcher is a value the caller keeps; it holds a copy of the collator and the pattern's elements, and keeps no pointer to either. A find is a call from a position: to find every match, call again from the last match's end, or from its start plus one code point for overlapping matches; walking back, from the last match's start.
 
 ```c
 MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcher(mlocSearcher* searcherOut, const mlocCollator* collator, const char* pattern, size_t length, const mlocSearchOptions* options);
@@ -733,6 +733,16 @@ Finds the pattern in a UTF-8 text, the first match whose elements start at or af
 MLOC_NODISCARD MLOC_API mlocResult mlocFindNextUtf16(const mlocSearcher* searcher, const uint16_t* text, size_t length, size_t from, size_t* startOut, size_t* endOut);
 ```
 Finds the pattern in a UTF-16 text, as mlocFindNext does in its UTF-8 form. A lone surrogate reads as U+FFFD; a position on the second unit of a pair counts as the pair's first.  @param searcher  A searcher mlocInitSearcher or mlocInitSearcherUtf16 made. @param text      The text; may be null when length is 0. @param length    Its length in 16-bit units. @param from      The position in units, at most length. @param startOut  Receives the match's first unit. @param endOut    Receives the unit after the match. @return As mlocFindNext. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindPrevious(const mlocSearcher* searcher, const char* text, size_t length, size_t from, size_t* startOut, size_t* endOut);
+```
+Finds the pattern in a UTF-8 text walking back from a position, the match nearest before it, as ICU4C's usearch_searchBackwards from that offset: the walk starts after the grapheme cluster at the position (at the last boundary between the text's elements at or before that cluster's end), and a match's last element starts before the position. A match with nothing after it in the walk ends at the position at the latest. A position inside a code point counts as its start.  @param searcher  A searcher mlocInitSearcher made. @param text      The text; may be null when length is 0. @param length    Its length in bytes. @param from      The position, at most length. @param startOut  Receives the match's first byte. @param endOut    Receives the byte after the match. @return mloc_success with a match; mloc_errorNotFound when there is none; mloc_errorCapacity when the text's elements between a match's ends outgrow the room kept for them, or a run of more than 128 elements without a primary weight or of unsafe code points lies in the walk; mloc_errorInvalid for a searcher the library did not make, a position past the end or a null pointer. @par Thread safety Safe from any thread.
+
+```c
+MLOC_NODISCARD MLOC_API mlocResult mlocFindPreviousUtf16(const mlocSearcher* searcher, const uint16_t* text, size_t length, size_t from, size_t* startOut, size_t* endOut);
+```
+Finds the pattern in a UTF-16 text walking back, as mlocFindPrevious does in its UTF-8 form. A lone surrogate reads as U+FFFD; a position on the second unit of a pair counts as the pair's first.  @param searcher  A searcher mlocInitSearcher or mlocInitSearcherUtf16 made. @param text      The text; may be null when length is 0. @param length    Its length in 16-bit units. @param from      The position in units, at most length. @param startOut  Receives the match's first unit. @param endOut    Receives the unit after the match. @return As mlocFindPrevious. @par Thread safety Safe from any thread.
 
 ## `spellout.h`
 
@@ -1018,4 +1028,4 @@ Rounds a zoned date-time (Temporal.ZonedDateTime's round): to a day, the nearer 
 
 ---
 
-185 functions across 22 headers.
+187 functions across 22 headers.

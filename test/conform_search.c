@@ -4,8 +4,9 @@
 // Collation search (record mloc-0074) for a differential against
 // ICU4C's usearch: reads lines of a locale tag, a pattern's and a
 // text's code points in hex, a position in UTF-16 units and a
-// comparison (0, 1 or 2), tab-separated, and writes for each line the
-// match's start and end in units, "none" or "error", as the oracle
+// comparison (0, 1 or 2), tab-separated, with a sixth field 1 for a
+// backward find, and writes for each line the match's start and end in
+// units, "none" or "error", as the oracle
 // docs/locale/research/oracle/collation/icu4c_search.cpp writes them.
 // The UTF-8 find must agree, its bytes mapped to units.
 //
@@ -95,6 +96,50 @@ static void Print(mlocResult r, size_t start, size_t end)
     }
 }
 
+// One line's find, in UTF-16 and in UTF-8 at the same position.
+static void Search(const mlocCollator* collator, char** field, int n)
+{
+    mlocSearcher searcher;
+    mlocSearcher searcher8;
+    size_t from = (size_t)strtoul(field[3], nullptr, 10);
+    bool back = n == 6 && strtol(field[5], nullptr, 10) == 1;
+    mlocSearchOptions options = {(mlocSearchComparison)strtol(field[4], nullptr, 10)};
+    Read(&s_pattern, field[1]);
+    Read(&s_text, field[2]);
+    mlocResult r =
+        mlocInitSearcherUtf16(&searcher, collator, s_pattern.units, s_pattern.length, &options);
+    mlocResult r8 =
+        mlocInitSearcher(&searcher8, collator, s_pattern.bytes, s_pattern.size, &options);
+    if (r != mloc_success || r8 != r)
+    {
+        printf(r8 != r ? "differ\n" : "error\n");
+        return;
+    }
+    size_t start = 0;
+    size_t end = 0;
+    r = back ? mlocFindPreviousUtf16(&searcher, s_text.units, s_text.length, from, &start, &end)
+             : mlocFindNextUtf16(&searcher, s_text.units, s_text.length, from, &start, &end);
+    // The same position in bytes: the last byte on that unit or
+    // before, which the find moves to its code point's start, as it
+    // moves a unit inside a pair.
+    size_t byteFrom = 0;
+    for (size_t b = 0; b <= s_text.size; b++)
+    {
+        byteFrom = s_text.unitOf[b] <= from ? b : byteFrom;
+    }
+    size_t start8 = 0;
+    size_t end8 = 0;
+    r8 = back ? mlocFindPrevious(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8, &end8)
+              : mlocFindNext(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8, &end8);
+    if (r8 != r ||
+        (r == mloc_success && (s_text.unitOf[start8] != start || s_text.unitOf[end8] != end)))
+    {
+        printf("differ\n");
+        return;
+    }
+    Print(r, start, end);
+}
+
 int main(int argc, char** argv)
 {
     FILE* f = argc == 2 ? fopen(argv[1], "rb") : nullptr;
@@ -113,9 +158,9 @@ int main(int argc, char** argv)
     mlocDataSet data = {s_sources, 2};
     while (fgets(s_line, sizeof(s_line), stdin) != nullptr)
     {
-        char* field[5] = {s_line};
+        char* field[6] = {s_line};
         int n = 1;
-        for (char* p = s_line; *p != '\0' && n < 5; p++)
+        for (char* p = s_line; *p != '\0' && n < 6; p++)
         {
             if (*p == '\t')
             {
@@ -125,48 +170,13 @@ int main(int argc, char** argv)
         }
         mlocLocale locale;
         mlocCollator collator;
-        mlocSearcher searcher;
-        mlocSearcher searcher8;
         if (n < 5 || mlocParseLocale(field[0], strlen(field[0]), &locale).status != mloc_success ||
             mlocInitCollator(&collator, &data, &locale, nullptr) != mloc_success)
         {
             printf("error\n");
             continue;
         }
-        size_t from = (size_t)strtoul(field[3], nullptr, 10);
-        mlocSearchOptions options = {(mlocSearchComparison)strtol(field[4], nullptr, 10)};
-        Read(&s_pattern, field[1]);
-        Read(&s_text, field[2]);
-        mlocResult r = mlocInitSearcherUtf16(&searcher, &collator, s_pattern.units,
-                                             s_pattern.length, &options);
-        mlocResult r8 =
-            mlocInitSearcher(&searcher8, &collator, s_pattern.bytes, s_pattern.size, &options);
-        if (r != mloc_success || r8 != r)
-        {
-            printf(r8 != r ? "differ\n" : "error\n");
-            continue;
-        }
-        size_t start = 0;
-        size_t end = 0;
-        r = mlocFindNextUtf16(&searcher, s_text.units, s_text.length, from, &start, &end);
-        // The same position in bytes: the last byte on that unit or
-        // before, which the find moves to its code point's start, as it
-        // moves a unit inside a pair.
-        size_t byteFrom = 0;
-        for (size_t b = 0; b <= s_text.size; b++)
-        {
-            byteFrom = s_text.unitOf[b] <= from ? b : byteFrom;
-        }
-        size_t start8 = 0;
-        size_t end8 = 0;
-        r8 = mlocFindNext(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8, &end8);
-        if (r8 != r ||
-            (r == mloc_success && (s_text.unitOf[start8] != start || s_text.unitOf[end8] != end)))
-        {
-            printf("differ\n");
-            continue;
-        }
-        Print(r, start, end);
+        Search(&collator, field, n);
     }
     return 0;
 }

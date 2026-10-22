@@ -54,6 +54,21 @@ static bool Finds(const char* id, const char* pattern, const char* text, size_t 
                      : r == mloc_success && s == (size_t)start && e == (size_t)end;
 }
 
+// As Finds, walking back from the position.
+static bool FindsBack(const char* id, const char* pattern, const char* text, size_t from, int start,
+                      int end)
+{
+    size_t s = 0;
+    size_t e = 0;
+    if (!Make(id, pattern, mloc_searchExact))
+    {
+        return false;
+    }
+    mlocResult r = mlocFindPrevious(&s_searcher, text, strlen(text), from, &s, &e);
+    return start < 0 ? r == mloc_errorNotFound
+                     : r == mloc_success && s == (size_t)start && e == (size_t)end;
+}
+
 static void TestStrengths(void)
 {
     CHECK(Finds("en", "ab", "xAbcab", 0, 4, 6) && Finds("en-u-ks-level2", "ab", "xAbcab", 0, 1, 3),
@@ -265,6 +280,53 @@ static void TestUtf16(void)
           "a stray continuation byte is a code point of its own: a search from it starts there");
 }
 
+static void TestBackward(void)
+{
+    CHECK(FindsBack("en", "a", "xaba", 4, 3, 4) && FindsBack("en", "a", "xaba", 3, 1, 2) &&
+              FindsBack("en", "a", "xaba", 1, -1, -1) && FindsBack("en", "ab", "xAbcab", 6, 4, 6),
+          "walking back finds the match nearest before the position");
+    CHECK(FindsBack("en-u-ks-level1", "a",
+                    "xa\xCC\x81"
+                    "b",
+                    5, 1, 4) &&
+              FindsBack("en-u-ks-level1", "a",
+                        "xa\xCC\x81"
+                        "b",
+                        2, 1, 2),
+          "a match takes its accent, but none past the position: a walk from inside a "
+          "cluster cuts it there, as ICU4C 79 does");
+    CHECK(FindsBack("cs", "c", "cha", 3, -1, -1) && FindsBack("cs", "ch", "acha", 4, 1, 3),
+          "walking back, a contraction is one element too");
+    static const uint16_t text[] = {'x', 'a', 0xD83D, 0xDE00, 'a'};
+    static const uint16_t pattern[] = {'a'};
+    mlocLocale locale;
+    size_t s = 0;
+    size_t e = 0;
+    bool utf16 =
+        mlocParseLocale("en", 2, &locale).status == mloc_success &&
+        mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
+        mlocInitSearcherUtf16(&s_searcher, &s_collator, pattern, 1, nullptr) == mloc_success &&
+        mlocFindPreviousUtf16(&s_searcher, text, 5, 5, &s, &e) == mloc_success && s == 4 &&
+        e == 5 && mlocFindPreviousUtf16(&s_searcher, text, 5, 4, &s, &e) == mloc_success &&
+        s == 1 && e == 2;
+    CHECK(utf16, "UTF-16 positions in units walking back, past a pair");
+    static char marks[1 + 2 * 130];
+    marks[0] = 'a';
+    for (size_t i = 0; i < 130; i++)
+    {
+        marks[1 + 2 * i] = (char)0xCC;
+        marks[2 + 2 * i] = (char)0x81;
+    }
+    CHECK(Make("en", "b", mloc_searchExact) &&
+              mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks, &s, &e) ==
+                  mloc_errorCapacity &&
+              mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks + 1, &s, &e) ==
+                  mloc_errorInvalid &&
+              mlocFindPrevious(nullptr, marks, sizeof marks, 0, &s, &e) == mloc_errorInvalid,
+          "walking back over more unsafe code points than a piece holds is refused, as are a "
+          "position past the end and a null searcher");
+}
+
 static void TestRefusals(void)
 {
     mlocLocale locale;
@@ -328,6 +390,7 @@ int main(void)
     TestRingEdge();
     TestStartContext();
     TestUtf16();
+    TestBackward();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

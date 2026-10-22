@@ -186,3 +186,4 @@ search_back: search_elements
 search_boundary: nfd_stream
 search: nfd_stream search_boundary search_find
 search_find: collator nfd_stream search_back search_boundary search_elements
+search_previous: search_back search_boundary search_find
