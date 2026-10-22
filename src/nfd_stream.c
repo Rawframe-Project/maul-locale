@@ -102,7 +102,16 @@ uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, u
 
 void mlocNfdStartText(NfdStream* s, NfdText text)
 {
-    *s = (NfdStream){.text = text.bytes, .units = text.units, .length = text.length};
+    // The fields read before a fill writes them; the window and the long
+    // run's are written first (research 68: clearing the whole stream
+    // was an eighth of a Chinese compare).
+    s->text = text.bytes;
+    s->units = text.units;
+    s->length = text.length;
+    s->at = 0;
+    s->count = 0;
+    s->next = 0;
+    s->longRun = false;
 }
 
 // Whether the code point at the byte is a mark whose decomposition holds
@@ -305,6 +314,60 @@ static void Place(NfdStream* s, Sources* q, uint32_t normalized)
     }
 }
 
+// Whether a code point is its own NFD with class 0.
+static bool Plain(uint32_t codePoint)
+{
+    uint32_t first = 0;
+    uint32_t second = 0;
+    return codePoint < nfdPlain || (muniGetCombiningClass(codePoint) == 0 &&
+                                    !muniDecomposePair(codePoint, &first, &second));
+}
+
+enum
+{
+    hangulFirst = 0xAC00,
+    hangulCount = 11172,
+};
+
+// A segment of one code point that is its own NFD with class 0, or of a
+// Hangul syllable (its jamo, arithmetically), with no mark after it: the
+// window filled without the segment work, its first code point from the
+// source's start and the rest from its end, as the full path places
+// them. False, the stream unchanged, for any other.
+static bool FillQuick(NfdStream* s)
+{
+    size_t size = 0;
+    uint32_t c = Decode(s, s->at, &size);
+    uint32_t syllable = c - hangulFirst;
+    if (syllable >= hangulCount && !Plain(c))
+    {
+        return false;
+    }
+    size_t end = s->at + size;
+    uint32_t d[nfdMaxDecomposition];
+    uint32_t k = 0;
+    size_t nextSize = 0;
+    if (end < s->length && Mark(s, end, d, &k, &nextSize))
+    {
+        return false;
+    }
+    if (syllable >= hangulCount)
+    {
+        Put(s, c, 0, s->at);
+    }
+    else
+    {
+        Put(s, 0x1100 + syllable / 588, 0, s->at);
+        Put(s, 0x1161 + syllable % 588 / 28, 0, end);
+        if (syllable % 28 != 0)
+        {
+            Put(s, 0x11A7 + syllable % 28, 0, end);
+        }
+    }
+    s->at = end;
+    return true;
+}
+
 bool mlocNfdFill(NfdStream* s)
 {
     s->count = 0;
@@ -320,6 +383,10 @@ bool mlocNfdFill(NfdStream* s)
     if (s->at >= s->length)
     {
         return false;
+    }
+    if (FillQuick(s))
+    {
+        return true;
     }
     uint32_t d[nfdMaxDecomposition];
     size_t size = 0;

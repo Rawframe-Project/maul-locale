@@ -466,3 +466,7 @@ format.
   each collation unit stores its hash, checked once when the data file
   is opened (records mloc-0065, mloc-0070, mloc-0071). Collation
   versions change with the new data.
+- The general collation path reads text that is already in NFD (most
+  text: Han, Hangul, Latin without combining marks) without the
+  normalizer's segment work: Chinese and Korean compares, sort keys and
+  searches about two to three times as fast (mloc-0066).

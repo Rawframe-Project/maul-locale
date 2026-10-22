@@ -119,3 +119,36 @@ are in canonical order and all blocked. The results are unchanged and
 the same texts take 0.15 s and 0.31 s; `test_collation_iterator` runs
 20,000 marks. Runs whose marks really match far apart (U+0F71 then
 U+0F72, each pair a contraction) still scan as ICU4C does.
+
+## Amendment (b), 2026-10-22: a quick path through the NFD stream
+
+Research 68 found the stream's segment work (each code point
+decomposed, its class read, the next code point decoded and decomposed
+to see whether it is a mark, the sources recorded and placed) to be a
+third of a Chinese compare and most of a German key, and clearing the
+whole stream when it starts an eighth more.
+
+- **A segment of one code point that is its own NFD with class 0**
+  (below U+00C0, or a code point with class 0 and no canonical
+  decomposition), **or of a Hangul syllable**, with the text's end or a
+  code point that is not a mark after it, goes into the window without
+  the segment work: the code point, or the syllable's jamo computed
+  arithmetically, the first placed at the source's start and the rest
+  at its end, as the full path places them. Anything else takes the
+  full path, unchanged.
+- **Starting a stream** sets only the fields a fill reads before it
+  writes them.
+- On the bench, back to back against the commit before (two runs each,
+  load 25 to 38): compare zh 599 and 762 ns to 327 and 271, ko 1,143 and
+  1,007 to 378 and 356, German keys 1,051 and 1,280 to 557 and 609, the
+  index's bucket 1,629 and 1,434 to 874 and 1,250, the first search
+  match 1,565 and 1,275 to 779 and 782; compares the fast Latin table
+  answers are unchanged.
+
+### Proof
+
+The stream gives the same code points, classes and places: the suite
+(the conformance files, the fuzz targets' seeds), the 1,246,793 keys of
+the key differential and the 18,286 searches of the search differential
+against ICU4C (both offsets, both directions) are the same, and so are
+the 1,294 indexes of the index differential.
