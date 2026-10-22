@@ -172,8 +172,8 @@ mlocResult mlocSearchOpenFind(Find* f, const mlocSearcher* searcher, NfdText tex
     const Searcher* s = (const Searcher*)searcher;
     f->s = s;
     f->text = text;
-    f->collator = s->collator;
-    mlocPointCollator(&f->collator);
+    (void)mlocReadCollatorHead(&s->collator, &f->collator);
+    mlocReadCollatorRest(&s->collator, &f->collator);
     f->ring.size = s->ring;
     f->ring.first = 0;
     f->ring.limit = 0;

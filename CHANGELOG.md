@@ -458,3 +458,7 @@ format.
   contraction reads past (da's "Ą̈" as ä): its fast Latin table entry
   makes the compare see the next character (mloc-0072). Collation
   versions change with it.
+- Compares, sort keys, index lookups and searches read only the parts
+  of the collator they use instead of copying all 1,024 bytes each
+  call: about twice as fast (research 68). The benchmark has collation
+  cases, the inputs of ICU4C's and ICU4X's baselines.

@@ -453,17 +453,24 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
-        !mlocReadCollator(collator, &c))
+        !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
     const uint8_t* x = (const uint8_t*)(a != nullptr ? a : "");
     const uint8_t* y = (const uint8_t*)(b != nullptr ? b : "");
-    int order =
-        c.fastLatin != 0 ? mlocFastLatinCompare(&c.fast, x, aLength, y, bLength) : fastLatinBail;
-    *orderOut = order != fastLatinBail
-                    ? order
-                    : mlocCollationCompare(&c.root, &c.settings, x, aLength, y, bLength);
+    int order = fastLatinBail;
+    if (c.fastLatin != 0)
+    {
+        mlocReadCollatorFast(collator, &c);
+        order = mlocFastLatinCompare(&c.fast, x, aLength, y, bLength);
+    }
+    if (order == fastLatinBail)
+    {
+        mlocReadCollatorRest(collator, &c);
+        order = mlocCollationCompare(&c.root, &c.settings, x, aLength, y, bLength);
+    }
+    *orderOut = order;
     return mloc_success;
 }
 
@@ -472,19 +479,26 @@ mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, siz
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
-        !mlocReadCollator(collator, &c))
+        !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
     static const uint16_t none[1] = {0};
     const uint16_t* x = a != nullptr ? a : none;
     const uint16_t* y = b != nullptr ? b : none;
-    int order = c.fastLatin != 0 ? mlocFastLatinCompareUtf16(&c.fast, x, aLength, y, bLength)
-                                 : fastLatinBail;
-    *orderOut = order != fastLatinBail
-                    ? order
-                    : mlocCollationCompareText(&c.root, &c.settings, mlocNfdUtf16(x, aLength),
-                                               mlocNfdUtf16(y, bLength));
+    int order = fastLatinBail;
+    if (c.fastLatin != 0)
+    {
+        mlocReadCollatorFast(collator, &c);
+        order = mlocFastLatinCompareUtf16(&c.fast, x, aLength, y, bLength);
+    }
+    if (order == fastLatinBail)
+    {
+        mlocReadCollatorRest(collator, &c);
+        order = mlocCollationCompareText(&c.root, &c.settings, mlocNfdUtf16(x, aLength),
+                                         mlocNfdUtf16(y, bLength));
+    }
+    *orderOut = order;
     return mloc_success;
 }
 
@@ -493,10 +507,11 @@ mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* tex
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !mlocReadCollator(collator, &c))
+        (key == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
+    mlocReadCollatorRest(collator, &c);
     static const uint16_t none[1] = {0};
     *lengthOut = mlocCollationSortKeyText(
         &c.root, &c.settings, mlocNfdUtf16(text != nullptr ? text : none, length), key, capacity);
@@ -508,10 +523,11 @@ mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !mlocReadCollator(collator, &c))
+        (key == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
+    mlocReadCollatorRest(collator, &c);
     *lengthOut = mlocCollationSortKey(
         &c.root, &c.settings, (const uint8_t*)(text != nullptr ? text : ""), length, key, capacity);
     return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
@@ -520,7 +536,7 @@ mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t
 mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut)
 {
     Collator c;
-    if (versionOut == nullptr || !mlocReadCollator(collator, &c))
+    if (versionOut == nullptr || !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }

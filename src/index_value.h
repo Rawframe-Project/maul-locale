@@ -65,11 +65,12 @@ static inline bool mlocReadIndex(const void* index, IndexView* out)
     return true;
 }
 
-// The index's collator, copied out and pointed at its own parts.
+// The index's collator: its head and the general path's parts copied
+// out (the fast compare never serves an index's primary strength).
 static inline void mlocIndexCollator(const IndexView* v, Collator* out)
 {
-    memcpy(out, v->bytes + indexHead, sizeof(*out));
-    mlocPointCollator(out);
+    (void)mlocReadCollatorHead(v->bytes + indexHead, out);
+    mlocReadCollatorRest(v->bytes + indexHead, out);
 }
 
 static inline uint32_t mlocIndexField(const IndexView* v, uint32_t record, uint32_t field)

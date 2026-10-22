@@ -58,21 +58,61 @@ static inline void mlocPointCollator(Collator* c)
     c->settings.han = c->radical != 0 ? &c->han : nullptr;
 }
 
-// A collator the library made, copied out with its settings pointing at
-// its reordering; false for any other.
-static inline bool mlocReadCollator(const mlocCollator* collator, Collator* c)
+// The head of a collator's value (its stamp, flags and version), copied
+// out; false for bytes the library did not make. The value may lie at any
+// alignment (an index holds one), so each part is copied by its bytes.
+static inline bool mlocReadCollatorHead(const void* value, Collator* c)
 {
-    uint32_t stamp = 0;
-    if (collator == nullptr)
+    if (value == nullptr)
     {
         return false;
     }
-    memcpy(&stamp, collator, sizeof(stamp));
-    if (stamp != collatorStamp)
+    memcpy(c, value, offsetof(Collator, root));
+    return c->stamp == collatorStamp;
+}
+
+// The fast Latin compare's options, after the head.
+static inline void mlocReadCollatorFast(const void* value, Collator* c)
+{
+    memcpy(&c->fast, (const uint8_t*)value + offsetof(Collator, fast), sizeof(c->fast));
+}
+
+// The general path's parts, after the head: the root and the settings,
+// and the tailoring, Han table and reordering only where the head says
+// they are in use (the reordering alone is 520 bytes), the settings
+// pointed at them. Research 68: copying the whole value was most of a
+// fast compare's time.
+static inline void mlocReadCollatorRest(const void* value, Collator* c)
+{
+    const uint8_t* b = value;
+    memcpy(&c->root, b + offsetof(Collator, root), sizeof(c->root));
+    memcpy(&c->settings, b + offsetof(Collator, settings), sizeof(c->settings));
+    if (c->tailored != 0)
+    {
+        memcpy(&c->tailoring, b + offsetof(Collator, tailoring), sizeof(c->tailoring));
+    }
+    if (c->radical != 0)
+    {
+        memcpy(&c->han, b + offsetof(Collator, han), sizeof(c->han));
+    }
+    if (c->reordered != 0)
+    {
+        memcpy(&c->reorder, b + offsetof(Collator, reorder), sizeof(c->reorder));
+    }
+    mlocPointCollator(c);
+}
+
+// A collator the library made, copied out whole with its settings
+// pointing at its own parts, for a caller that keeps or copies it on (a
+// searcher, an index); false for any other. A call that only compares
+// reads the parts above instead.
+static inline bool mlocReadCollator(const void* value, Collator* c)
+{
+    if (!mlocReadCollatorHead(value, c))
     {
         return false;
     }
-    memcpy(c, collator, sizeof(*c));
+    memcpy(c, value, sizeof(*c));
     mlocPointCollator(c);
     return true;
 }
