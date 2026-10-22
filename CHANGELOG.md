@@ -462,3 +462,7 @@ format.
   of the collator they use instead of copying all 1,024 bytes each
   call: about twice as fast (research 68). The benchmark has collation
   cases, the inputs of ICU4C's and ICU4X's baselines.
+- Making a collator no longer hashes and checks its data each time:
+  each collation unit stores its hash, checked once when the data file
+  is opened (records mloc-0065, mloc-0070, mloc-0071). Collation
+  versions change with the new data.

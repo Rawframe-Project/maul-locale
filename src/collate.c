@@ -29,7 +29,8 @@ enum
 };
 
 // The collation root in the first source that has one, and the keys'
-// version over its bytes.
+// version: the key format and the root's stored hash, which its
+// validator checked when the data was opened.
 static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* version)
 {
     for (size_t i = 0; i < data->count; i++)
@@ -38,8 +39,12 @@ static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* ver
         DataSpan span = {0};
         if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span))
         {
-            *version = mlocXxh64(span.bytes, span.size, keyFormat);
-            return mlocReadCollationRoot(span, root);
+            if (!mlocViewCollationRoot(span, root))
+            {
+                return false;
+            }
+            *version = mlocXxh64(span.bytes + collationRootHashAt, 8, keyFormat);
+            return true;
         }
     }
     return false;
@@ -52,6 +57,8 @@ typedef struct TypeWalk
     const char* name;
     size_t length;
     DataSpan found;
+    // The unit of types the tailoring was found in.
+    const uint8_t* unit;
     bool hit;
     const char* defaultName;
     size_t defaultLength;
@@ -69,6 +76,7 @@ static bool VisitTypes(void* context, DataSpan unit, const DataView* view, int d
         w->defaultLength = t.defaultLength;
     }
     w->hit = w->length > 0 && mlocFindCollationType(&t, w->name, w->length, &w->found);
+    w->unit = w->hit ? unit.bytes : w->unit;
     return w->hit;
 }
 
@@ -118,11 +126,11 @@ static void NextType(Tries* t, const TypeWalk* w)
 // type along the collation chain, where root always has standard (the
 // root order); a missing "search..." type tried as "search", then the
 // chain's default type, then standard. A private type is never chosen
-// (UTS #35: they are for imports). *found false for the root order.
-// mloc_errorNotFound when the chain needs the parents table and the data
-// has none.
+// (UTS #35: they are for imports). *found false for the root order;
+// *unitOut the unit of types it is in. mloc_errorNotFound when the chain
+// needs the parents table and the data has none.
 static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* locale,
-                                DataSpan* tailoringOut, bool* found)
+                                DataSpan* tailoringOut, const uint8_t** unitOut, bool* found)
 {
     *found = false;
     if (!mlocDataSetHasKind(data, kindCollationTailorings))
@@ -163,6 +171,7 @@ static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* local
         }
     }
     *tailoringOut = w.found;
+    *unitOut = w.unit;
     *found = w.hit;
     return mloc_success;
 }
@@ -343,7 +352,7 @@ static bool FindHan(const mlocDataSet* data, Collator* c)
         {
             c->han = mlocReadCollationHan(span);
             c->radical = 1;
-            c->version = mlocXxh64(span.bytes, span.size, c->version);
+            c->version = mlocXxh64(span.bytes + collationHanHashAt, 8, c->version);
             return true;
         }
     }
@@ -351,15 +360,17 @@ static bool FindHan(const mlocDataSet* data, Collator* c)
 }
 
 // The tailoring's settings and reordering over the root's defaults, as
-// the -u- keys and options of the call later override them.
-static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan span)
+// the -u- keys and options of the call later override them; the version
+// takes the stored hash of its unit of types.
+static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan span,
+                                const uint8_t* unit)
 {
     CollationTailoring t;
-    if (!mlocReadCollationTailoring(span, &t))
+    if (!mlocViewCollationTailoring(span, &t))
     {
         return mloc_errorInvalid;
     }
-    c->version = mlocXxh64(span.bytes, span.size, c->version);
+    c->version = mlocXxh64(unit + collationTypesHashAt, 8, c->version);
     if ((t.settings & collationHanRadical) != 0 && !FindHan(data, c))
     {
         return mloc_errorNotFound;
@@ -426,11 +437,12 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     c.stamp = collatorStamp;
     c.settings = mlocCollationDefaults(&c.root);
     DataSpan tailoring = {0};
+    const uint8_t* unit = nullptr;
     bool tailored = false;
-    mlocResult result = FindTailoring(data, locale, &tailoring, &tailored);
+    mlocResult result = FindTailoring(data, locale, &tailoring, &unit, &tailored);
     if (result == mloc_success && tailored)
     {
-        result = FromTailoring(&c, data, tailoring);
+        result = FromTailoring(&c, data, tailoring, unit);
     }
     if (result != mloc_success)
     {

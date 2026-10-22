@@ -96,3 +96,48 @@ appends them after the primaries.
   slice (f).
 - A key's length grows with the text and the strength; the caller
   sizes the buffer from the returned length.
+
+## Amendment (a), 2026-10-22: the version from stored hashes
+
+Research 68 measured making a collator at 85 µs for de and 203 µs for
+zh against ICU4C's 255 ns: the version hashed the root unit (197,616
+bytes, 30 µs) and the tailoring's bytes each time, and the root and
+tailoring were read through their full checks (96 µs for the root),
+though the validator had already passed them when the data was opened.
+
+- **Each collation unit stores its hash,** XXH64 of its bytes but the
+  64-bit word that holds it, the bytes before it seeding the bytes after
+  (`mlocCollationUnitHash`): the root's head grows from 32 to 40 bytes
+  with the hash at 32 (record mloc-0065); a locale's unit of types holds
+  one hash for all its types at 8, its two reserved words (record
+  mloc-0071); the radical-stroke Han table at 8, its reserved words.
+  The generator writes it last; each unit's validator, which
+  `mlocOpenData` runs, refuses a unit whose bytes do not give it.
+- **The version** is XXH64 of the root's stored hash seeded with the key
+  format, then of the unit of types' stored hash and of the Han table's
+  where the collator reads them. It still changes with any byte of the
+  data the collator reads, and with the key format; a change to any
+  type of a locale now changes the versions of all its types (keys made
+  again when they need not be, never kept when they should not be).
+  Every version changes once, with the units' new bytes.
+- **The runtime lays out units without their checks:** a root or a
+  tailoring is read by `mlocViewCollationRoot` and
+  `mlocViewCollationTailoring` (the head, the trie, the arrays, the fast
+  Latin table and the unsafe ranges fitting their payload), the full
+  readers kept for the validators, the generator and the tests.
+- Making a collator: de 84,852 to 4,273 ns, zh 203,454 to 8,063 ns (the
+  shared runner, load 157 to 197); the rest of the gap to ICU4C is
+  research 68's (g5).
+
+### Proof
+
+- The validators refuse a stale hash: `test_collation_tailoring` changes
+  a name byte of a unit of types and a word of the Han table without
+  sealing them again, and seals again after every other change so that
+  each check it tests still refuses alone; `test_collation_data` spoils
+  a trie value of the data file's root, refused by its hash and, sealed
+  again, by the value.
+- The keys and every CI hash are the same (`conform_collation_keys`
+  5191759b1ca1b666, the builder's afcad9d236469b29, the fast tables'
+  edb9afb552346149, the root elements' ab8be4117eb364f2).
+

@@ -103,7 +103,8 @@ int main(void)
         return 2;
     }
     TestRoot(&data);
-    // A unit whose trie value names no list is refused with the file.
+    // A unit whose trie value names no list is refused with the file:
+    // by its stored hash, and sealed again, by the value.
     DataView view = mlocViewOf(&data);
     DataSpan span = {0};
     CollationRoot r;
@@ -111,11 +112,19 @@ int main(void)
         mlocReadCollationRoot(span, &r))
     {
         size_t at = (size_t)(r.trie.data - s_file);
+        uint8_t* unit = s_file + (span.bytes - s_file);
         static const uint8_t bad[4] = {0xC9, 0xFF, 0xFF, 0xFF};
         memcpy(s_file + at, bad, 4);
         mlocData broken;
-        CHECK(mlocOpenData(&broken, s_file, s_size) != mloc_success,
-              "a file with a spoiled root unit refused at open");
+        bool stale = mlocOpenData(&broken, s_file, s_size) != mloc_success;
+        uint64_t hash = mlocCollationUnitHash(span, collationRootHashAt);
+        for (int i = 0; i < 8; i++)
+        {
+            unit[collationRootHashAt + i] = (uint8_t)(hash >> (8 * i));
+        }
+        CHECK(stale && mlocCollationHashValid(span, collationRootHashAt) &&
+                  mlocOpenData(&broken, s_file, s_size) != mloc_success,
+              "a file with a spoiled root unit refused at open, by its hash and by its values");
     }
     return s_failures == 0 ? 0 : 1;
 }

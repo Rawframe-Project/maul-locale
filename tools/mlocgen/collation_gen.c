@@ -219,6 +219,7 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     {
         GenDie("the collation root", "does not read back with its unsafe ranges");
     }
+    CollationSeal(rootUnit, size, collationRootHashAt);
     DataFileAdd(file, kindCollationRoot, nullptr, rootUnit, size);
     unit = CollationHanUnit(&unihan, &size);
     DataFileAdd(file, kindCollationHanRadical, nullptr, unit, size);

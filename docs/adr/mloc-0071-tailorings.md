@@ -363,6 +363,14 @@ ICU's `CollationLoader`.
   but dz (ICU has no collation for it) and ja's `private-kana`
   (refused there).
 
+## Amendment (b), 2026-10-22: the unit of types' hash
+
+A locale's unit of types holds a 64-bit hash of all its bytes in its two
+reserved words (8 to 15), checked by its validator; a tailored
+collator's version is made of it rather than of the tailoring's bytes
+(record mloc-0070 amendment (a)), and a tailoring is laid out at run
+time without its checks.
+
 ## Consequences
 
 - To come in slice (d):

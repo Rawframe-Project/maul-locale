@@ -136,3 +136,10 @@ proved over a decade.
   U+FDD1 alone stays unassigned. Text holding U+FDD1 now orders as
   ICU4C's, and the tailoring builder's resets on these markers (emoji's
   `&[before 1]\uFDD1€`) read the same root as the runtime.
+
+## Amendment (a), 2026-10-22: the head's hash
+
+The header grows from 32 to 40 bytes: a 64-bit hash of the unit at 32,
+before the trie, which the validator checks and a collator's version is
+made of (record mloc-0070 amendment (a)).
+

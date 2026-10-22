@@ -7,6 +7,7 @@
 
 #include "collation_encode.h"
 #include "collation_tables.h"
+#include "collation_unit.h"
 #include "table_gen.h"
 #include "trie_gen.h"
 
@@ -365,6 +366,7 @@ uint8_t* CollationTypesUnit(CollationTypeBody* types, size_t count, const char* 
         memcpy(out + at, types[i].body, types[i].size);
         at += (types[i].size + 7) / 8 * 8;
     }
+    CollationSeal(out, size, collationTypesHashAt);
     *sizeOut = size;
     return out;
 }

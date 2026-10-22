@@ -464,7 +464,7 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     size_t trieSize = 0;
     uint8_t* trie = TrieBuild(b->values, &trieSize);
     size_t padded = (trieSize + 7) / 8 * 8;
-    size_t size = collationHead + padded + b->ces.count * 8 + b->ce32s.count * 4 +
+    size_t size = collationRootHead + padded + b->ces.count * 8 + b->ce32s.count * 4 +
                   (b->listStarts.count + 1) * 4 + b->contexts.count * 4 + b->scripts.count * 4 +
                   b->starts.count * 4 + sizeof(b->compressible);
     uint8_t* out = GenAllocate(size);
@@ -475,8 +475,8 @@ static uint8_t* Write(const Builder* b, size_t* sizeOut)
     GenPut(out + 20, b->scripts.count / 2, 4);
     GenPut(out + 24, b->starts.count, 4);
     GenPut(out + 28, b->numericPrimary, 4);
-    memcpy(out + collationHead, trie, trieSize);
-    uint8_t* p = out + collationHead + padded;
+    memcpy(out + collationRootHead, trie, trieSize);
+    uint8_t* p = out + collationRootHead + padded;
     for (size_t i = 0; i < b->ces.count; i++, p += 8)
     {
         GenPut(p, b->ces.items[i], 8);
@@ -572,6 +572,12 @@ uint8_t* CollationHanUnit(const RootTable* table, size_t* sizeOut)
         GenPut(out + 16 + i * 8, range[0] | (range[1] - range[0]) << 21, 4);
         GenPut(out + 20 + i * 8, range[2], 4);
     }
+    CollationSeal(out, size, collationHanHashAt);
     *sizeOut = size;
     return out;
+}
+
+void CollationSeal(uint8_t* unit, size_t size, uint32_t at)
+{
+    GenPut(unit + at, mlocCollationUnitHash((DataSpan){unit, (uint32_t)size}, at), 8);
 }

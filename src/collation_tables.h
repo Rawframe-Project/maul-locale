@@ -13,7 +13,9 @@
 //  20  u32 scriptCount, the scripts and groups below
 //  24  u32 startCount, the script starts below
 //  28  u32 numericPrimary, the lead byte of numeric order's primaries
-//  32  the code point trie of CE32s (record mloc-0063), padded to 8
+//  32  u64 the unit's hash (mlocCollationUnitHash), which a collator's
+//      version is made of (record mloc-0070)
+//  40  the code point trie of CE32s (record mloc-0063), padded to 8
 //      u64 ces[ceCount]
 //      u32 ce32s[ce32Count]
 //      u32 listStarts[listCount + 1]: where each context list starts in
@@ -93,8 +95,8 @@
 //   0  u32 typeCount
 //   4  u32 defaultLength, the length of the name of the locale's default
 //      type, which the names begin with; 0 when it names none
-//   8  u32 0
-//  12  u32 0
+//   8  u64 the unit's hash (mlocCollationUnitHash), all its types'
+//      bytes: a tailored collator's version is made of it
 //  16  types[typeCount], 16 bytes each: u32 the name's offset in the
 //      names, u32 its length, u32 the tailoring's offset from the unit's
 //      start, u32 its size; by name, rising
@@ -110,8 +112,7 @@
 //
 //   0  u32 rangeCount
 //   4  u32 codePointCount, the code points the ranges hold
-//   8  u32 0
-//  12  u32 0
+//   8  u64 the unit's hash (mlocCollationUnitHash)
 //  16  ranges[rangeCount], 8 bytes each, by start, rising and disjoint:
 //      u32 the start in bits 20..0 and the length less one in 31..21;
 //      u32 the start's ordinal in radical-stroke order, the range within
@@ -126,6 +127,7 @@
 #define MLOC_COLLATION_TABLES_H
 
 #include "bytes.h"
+#include "catalog_hash.h"
 #include "code_point_trie.h"
 #include "collation_fast_latin.h"
 #include "collation_unsafe.h"
@@ -136,7 +138,13 @@
 
 enum
 {
+    // A tailoring's head; the root's holds its hash too.
     collationHead = 32,
+    collationRootHead = 40,
+    // Where each unit holds its hash.
+    collationRootHashAt = 32,
+    collationTypesHashAt = 8,
+    collationHanHashAt = 8,
     collationTypesHead = 16,
     collationTypeSize = 16,
     collationMaxTypeName = 32,
@@ -475,11 +483,27 @@ static inline uint32_t mlocCollationLastPrimary(const CollationRoot* r, uint32_t
     return index == 0 ? 0 : (mlocCollationStart(r, index + 1) << 16) - 1;
 }
 
-// Reads and checks a root unit: its trie, its arrays inside the payload,
-// every context list once, every trie value and every expansion word.
-static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
+// A collation unit's hash (research 68): XXH64 of its bytes but the
+// 64-bit word at an offset, which holds it, the bytes before seeding the
+// bytes after.
+static inline uint64_t mlocCollationUnitHash(DataSpan unit, uint32_t at)
 {
-    if (span.size < collationHead)
+    return mlocXxh64(unit.bytes + at + 8, unit.size - at - 8, mlocXxh64(unit.bytes, at, 0));
+}
+
+// Whether a unit holds its own hash at an offset.
+static inline bool mlocCollationHashValid(DataSpan unit, uint32_t at)
+{
+    return unit.size >= at + 8 && mlocLoad64(unit.bytes + at) == mlocCollationUnitHash(unit, at);
+}
+
+// Lays out a root unit: its head, trie and arrays inside the payload,
+// its fast Latin table and unsafe ranges, checking only that they fit.
+// The runtime reads a unit the validator passed this way (research 68:
+// the full checks were most of making a collator).
+static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
+{
+    if (span.size < collationRootHead)
     {
         return false;
     }
@@ -494,11 +518,12 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
         .startCount = mlocLoad32(p + 24),
         .numericPrimary = mlocLoad32(p + 28),
     };
-    if (!mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r.trie))
+    if (!mlocReadCodePointTrie((DataSpan){p + collationRootHead, span.size - collationRootHead},
+                               &r.trie))
     {
         return false;
     }
-    uint64_t ces = collationHead + ((uint64_t)r.trie.size + 7) / 8 * 8;
+    uint64_t ces = collationRootHead + ((uint64_t)r.trie.size + 7) / 8 * 8;
     uint64_t ce32s = ces + (uint64_t)r.ceCount * 8;
     uint64_t starts = ce32s + (uint64_t)r.ce32Count * 4;
     uint64_t contexts = starts + ((uint64_t)r.listCount + 1) * 4;
@@ -520,6 +545,19 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     r.contexts = p + contexts;
     r.scripts = p + scripts;
     r.starts = p + scriptStarts;
+    *out = r;
+    return true;
+}
+
+// Reads and checks a root unit: laid out, then its scripts, every
+// context list once, every trie value and every expansion word.
+static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
+{
+    CollationRoot r;
+    if (!mlocViewCollationRoot(span, &r))
+    {
+        return false;
+    }
     bool ok = mlocCollationScriptsValid(&r) && mlocCollationListStart(&r, 0) == 0 &&
               mlocCollationListStart(&r, r.listCount) == r.contextCount;
     for (uint32_t i = 0; ok && i < r.listCount; i++)
@@ -584,9 +622,8 @@ static inline bool mlocCollationReorderValid(const uint8_t* codes, uint32_t coun
     return ok;
 }
 
-// Reads and checks a tailoring as mlocReadCollationRoot reads the root,
-// the fallback word allowed in the trie.
-static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
+// Lays out a tailoring as mlocViewCollationRoot lays out the root.
+static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring* out)
 {
     if (span.size < collationHead)
     {
@@ -628,6 +665,20 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
     r->listStarts = p + starts;
     r->contexts = p + contexts;
     t.reorder = p + reorder;
+    *out = t;
+    return true;
+}
+
+// Reads and checks a tailoring as mlocReadCollationRoot reads the root,
+// the fallback word allowed in the trie.
+static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
+{
+    CollationTailoring t;
+    if (!mlocViewCollationTailoring(span, &t))
+    {
+        return false;
+    }
+    CollationRoot* r = &t.view;
     bool ok = mlocCollationReorderValid(t.reorder, t.reorderCount) &&
               mlocCollationListStart(r, 0) == 0 &&
               mlocCollationListStart(r, r->listCount) == r->contextCount;

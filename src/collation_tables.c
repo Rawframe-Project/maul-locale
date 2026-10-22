@@ -7,7 +7,8 @@ bool mlocValidCollationRoot(const DataView* view, DataSpan payload)
 {
     (void)view;
     CollationRoot root;
-    return mlocReadCollationRoot(payload, &root);
+    return mlocReadCollationRoot(payload, &root) &&
+           mlocCollationHashValid(payload, collationRootHashAt);
 }
 
 // Whether a name is a co value's letters, digits and hyphens.
@@ -34,7 +35,7 @@ bool mlocValidCollationTypes(const DataView* view, DataSpan payload)
     (void)view;
     if (payload.size < collationTypesHead ||
         mlocLoad32(payload.bytes) > (payload.size - collationTypesHead) / collationTypeSize ||
-        mlocLoad32(payload.bytes + 8) != 0 || mlocLoad32(payload.bytes + 12) != 0)
+        !mlocCollationHashValid(payload, collationTypesHashAt))
     {
         return false;
     }
@@ -75,8 +76,7 @@ bool mlocValidCollationTypes(const DataView* view, DataSpan payload)
 bool mlocValidCollationHan(const DataView* view, DataSpan payload)
 {
     (void)view;
-    if (payload.size < 16 || mlocLoad32(payload.bytes + 8) != 0 ||
-        mlocLoad32(payload.bytes + 12) != 0 ||
+    if (payload.size < 16 || !mlocCollationHashValid(payload, collationHanHashAt) ||
         (payload.size - 16) / 8 != mlocLoad32(payload.bytes) || (payload.size - 16) % 8 != 0)
     {
         return false;

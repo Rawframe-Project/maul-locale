@@ -24,6 +24,10 @@ uint8_t* CollationRootUnit(const RootTable* table, size_t* sizeOut, char* error,
 // (src/collation_tables.h); the caller frees the bytes.
 uint8_t* CollationHanUnit(const RootTable* table, size_t* sizeOut);
 
+// Writes a finished unit's hash at an offset (mlocCollationUnitHash), the
+// last step of its bytes.
+void CollationSeal(uint8_t* unit, size_t size, uint32_t at);
+
 // Whether the builder leaves a mapping starting with this code point out.
 bool CollationLeftOut(uint32_t codePoint);
 

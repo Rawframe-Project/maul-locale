@@ -320,7 +320,20 @@ static void TestValidatorLists(void)
     Free(&b);
 }
 
-// Whether a unit of types, with one word changed, still reads.
+// Whether a unit, sealed with its hash at an offset over its first
+// length bytes, is valid by a kind's validator.
+static bool SealedValid(uint8_t* bytes, size_t length, uint32_t at,
+                        bool (*valid)(const DataView*, DataSpan))
+{
+    if (length >= at + 8)
+    {
+        CollationSeal(bytes, length, at);
+    }
+    return valid(nullptr, (DataSpan){bytes, (uint32_t)length});
+}
+
+// Whether a unit of types, with one word changed, still reads: sealed
+// again, unless the word is its hash's.
 static bool TypesRead(const uint8_t* bytes, size_t size, size_t at, uint32_t word, size_t length)
 {
     uint8_t* copy = malloc(size);
@@ -336,7 +349,9 @@ static bool TypesRead(const uint8_t* bytes, size_t size, size_t at, uint32_t wor
         copy[at + 2] = (uint8_t)(word >> 16);
         copy[at + 3] = (uint8_t)(word >> 24);
     }
-    bool reads = mlocValidCollationTypes(nullptr, (DataSpan){copy, (uint32_t)length});
+    bool hash = at + 4 > collationTypesHashAt && at < collationTypesHashAt + 8;
+    bool reads = hash ? mlocValidCollationTypes(nullptr, (DataSpan){copy, (uint32_t)length})
+                      : SealedValid(copy, length, collationTypesHashAt, mlocValidCollationTypes);
     free(copy);
     return reads;
 }
@@ -352,7 +367,7 @@ static void TypesRefused(const uint8_t* unit, size_t size, size_t bSize)
     CHECK(!TypesRead(unit, size, 0, 0, size) && !TypesRead(unit, size, 0, 0x10000000, size) &&
               !TypesRead(unit, size, 8, 1, size) && !TypesRead(unit, size, 12, 1, size) &&
               !TypesRead(unit, size, 0, 2, size - 8) && !TypesRead(unit, size, 0, 2, 8),
-          "no types and no default, too many types, a reserved word, cut short");
+          "no types and no default, too many types, a stale hash, cut short");
     CHECK(!TypesRead(unit, size, names + 7, first ^ 0x20, size) &&
               !TypesRead(unit, size, names + 7, first ^ 0x0E, size) &&
               !TypesRead(unit, size, collationTypesHead + 4, 8, size) &&
@@ -362,6 +377,17 @@ static void TypesRefused(const uint8_t* unit, size_t size, size_t bSize)
               !TypesRead(unit, size, collationTypesHead + 12, (uint32_t)bSize + 8, size) &&
               !TypesRead(unit, size, bodyAt + 28, 1, size),
           "a tailoring out of place, too long, or not one");
+    uint8_t* stale = malloc(size);
+    if (stale != nullptr)
+    {
+        memcpy(stale, unit, size);
+        stale[names] ^= 1;
+        bool refused = !mlocValidCollationTypes(nullptr, (DataSpan){stale, (uint32_t)size});
+        stale[names] ^= 1;
+        CHECK(refused && mlocValidCollationTypes(nullptr, (DataSpan){stale, (uint32_t)size}),
+              "a byte changed under the hash refused, the same bytes again valid");
+        free(stale);
+    }
 }
 
 // A unit whose second name begins with its first.
@@ -416,23 +442,27 @@ static void TestTypesAlone(void)
 {
     uint8_t alone[24] = {0, 0, 0, 0, 6, 0, 0, 0};
     memcpy(alone + collationTypesHead, "stroke\0\0", 8);
-    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}),
+    CHECK(SealedValid(alone, 24, collationTypesHashAt, mlocValidCollationTypes),
           "a default alone, as zh_Hant's unit holds");
     alone[4] = 7;
-    CHECK(!mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}), "a NUL in its name");
+    CHECK(!SealedValid(alone, 24, collationTypesHashAt, mlocValidCollationTypes),
+          "a NUL in its name");
     alone[4] = 0;
-    CHECK(!mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}) &&
-              !mlocValidCollationTypes(nullptr, (DataSpan){alone, 16}),
+    CHECK(!SealedValid(alone, 24, collationTypesHashAt, mlocValidCollationTypes) &&
+              !SealedValid(alone, 16, collationTypesHashAt, mlocValidCollationTypes),
           "an empty unit");
     alone[4] = 8;
     memcpy(alone + collationTypesHead, "standard", 8);
-    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){alone, 24}), "a name to the unit's end");
+    CHECK(SealedValid(alone, 24, collationTypesHashAt, mlocValidCollationTypes),
+          "a name to the unit's end");
     uint8_t longest[48] = {0, 0, 0, 0, 32};
     memset(longest + collationTypesHead, 'a', 32);
-    CHECK(mlocValidCollationTypes(nullptr, (DataSpan){longest, 48}), "a name of 32 bytes");
+    CHECK(SealedValid(longest, 48, collationTypesHashAt, mlocValidCollationTypes),
+          "a name of 32 bytes");
 }
 
-// Whether a Han table, with one word changed, still reads.
+// Whether a Han table, with one word changed, still reads: sealed again,
+// unless the word is its hash's.
 static bool HanReads(const uint8_t* bytes, size_t size, size_t at, uint32_t word)
 {
     uint8_t copy[64];
@@ -445,7 +475,9 @@ static bool HanReads(const uint8_t* bytes, size_t size, size_t at, uint32_t word
     copy[at + 1] = (uint8_t)(word >> 8);
     copy[at + 2] = (uint8_t)(word >> 16);
     copy[at + 3] = (uint8_t)(word >> 24);
-    return mlocValidCollationHan(nullptr, (DataSpan){copy, (uint32_t)size});
+    bool hash = at + 4 > collationHanHashAt && at < collationHanHashAt + 8;
+    return hash ? mlocValidCollationHan(nullptr, (DataSpan){copy, (uint32_t)size})
+                : SealedValid(copy, size, collationHanHashAt, mlocValidCollationHan);
 }
 
 // Radical lines whose ranges overlap at one code point are refused.
@@ -506,13 +538,13 @@ static void TestHanTable(const RootTable* unihan)
               unihan->mappings[0].elements[0] >> 32 == 0xFD020A00,
           "the unihan root's Han, and an element naming U+4E01, in that order");
     // Ranges by start: U+4E00, U+4E01, U+4E02, U+4E03-4E05.
-    CHECK(!HanReads(bytes, size, 8, 1) && !HanReads(bytes, size, 0, 5) &&
-              !HanReads(bytes, size, 4, 7) && !HanReads(bytes, size, 4, 5) &&
-              !HanReads(bytes, size, 24, 0x4E00) && !HanReads(bytes, size, 28, 6) &&
-              !HanReads(bytes, size, 40, 0x4E02 | 2u << 21) &&
-              !HanReads(bytes, size, 40, 0x10FFFF | 2u << 21) && HanReads(bytes, size, 8, 0) &&
+    CHECK(!HanReads(bytes, size, 8, 1) && !HanReads(bytes, size, 12, 0) &&
+              !HanReads(bytes, size, 0, 5) && !HanReads(bytes, size, 4, 7) &&
+              !HanReads(bytes, size, 4, 5) && !HanReads(bytes, size, 24, 0x4E00) &&
+              !HanReads(bytes, size, 28, 6) && !HanReads(bytes, size, 40, 0x4E02 | 2u << 21) &&
+              !HanReads(bytes, size, 40, 0x10FFFF | 2u << 21) &&
               HanReads(bytes, size, 40, 0x10FFFD | 2u << 21),
-          "a reserved word, counts that differ, ranges out of order, overlapping, past the "
+          "a stale hash, counts that differ, ranges out of order, overlapping, past the "
           "ordinals or the code points");
     CHECK(!mlocValidCollationHan(nullptr, (DataSpan){bytes, 16}) &&
               !mlocValidCollationHan(nullptr, (DataSpan){bytes, (uint32_t)size - 4}),

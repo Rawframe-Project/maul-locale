@@ -293,7 +293,7 @@ static void TestUnit(void)
         copy[4] = (uint8_t)(copy[4] + 1);
         CHECK(!mlocReadCollationRoot((DataSpan){copy, (uint32_t)size}, &broken) &&
                   !mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size - 1}, &broken) &&
-                  !mlocReadCollationRoot((DataSpan){bytes, collationHead - 1}, &broken),
+                  !mlocReadCollationRoot((DataSpan){bytes, collationRootHead - 1}, &broken),
               "a unit longer than its payload, or a payload cut short, refused");
         // A trie value with an unknown tag, an expansion past its array, and a
         // context list longer than the contexts.
@@ -423,7 +423,7 @@ static bool Opens(Crafted c)
     size_t padded = (trieSize + 7) / 8 * 8;
     static const uint32_t scriptStarts[] = {0, 0xFF00};
     // The compressible lead bytes (32, all clear) end the unit.
-    size_t size = collationHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) +
+    size_t size = collationRootHead + padded + sizeof(ces) + sizeof(ce32s) + sizeof(starts) +
                   sizeof(c.contexts) + sizeof(scriptStarts) + 32;
     uint8_t* bytes = calloc(1, size);
     if (trie == nullptr || bytes == nullptr)
@@ -438,8 +438,8 @@ static bool Opens(Crafted c)
     {
         GenPut(p, words[i], 4);
     }
-    memcpy(bytes + collationHead, trie, trieSize);
-    p = bytes + collationHead + padded;
+    memcpy(bytes + collationRootHead, trie, trieSize);
+    p = bytes + collationRootHead + padded;
     for (size_t i = 0; i < 2; i++, p += 8)
     {
         GenPut(p, ces[i], 8);
@@ -462,11 +462,11 @@ static bool Opens(Crafted c)
     }
     if (c.patchAt == craftAfterTrie)
     {
-        GenPut(bytes + collationHead + trieSize, c.patch, 4);
+        GenPut(bytes + collationRootHead + trieSize, c.patch, 4);
     }
     else if (c.patchAt == craftTrieLength)
     {
-        GenPut(bytes + collationHead + 12, c.patch, 4);
+        GenPut(bytes + collationRootHead + 12, c.patch, 4);
     }
     CollationRoot r;
     bool ok = mlocReadCollationRoot((DataSpan){bytes, (uint32_t)size}, &r);
