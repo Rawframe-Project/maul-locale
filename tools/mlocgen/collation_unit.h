@@ -27,4 +27,9 @@ uint8_t* CollationHanUnit(const RootTable* table, size_t* sizeOut);
 // Whether the builder leaves a mapping starting with this code point out.
 bool CollationLeftOut(uint32_t codePoint);
 
+// A script start's sample as the runtime reads it, in NFD: a Hangul
+// syllable as its jamo (FractionalUCA's FDD1 AC00, which an NFD text never
+// holds), any other code point as itself. Its length, at most 3.
+uint32_t CollationSampleText(uint32_t sample, uint32_t* textOut);
+
 #endif

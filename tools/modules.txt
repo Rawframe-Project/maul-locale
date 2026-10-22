@@ -188,3 +188,7 @@ search_boundary: nfd_stream
 search: nfd_stream search_boundary search_find
 search_find: collator nfd_stream search_back search_boundary search_elements
 search_previous: search_back search_boundary search_find
+index_labels: bytes code_point_trie collation_index collation_tables collator
+index_value: bytes collator
+index_build: bytes collation_compare collation_iterator collator index_labels index_value nfd_stream
+index: collation_compare index_build index_labels index_value nfd_stream

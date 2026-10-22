@@ -53,6 +53,20 @@ bool CollationLeftOut(uint32_t codePoint)
            answer != muni_quickCheckYes;
 }
 
+uint32_t CollationSampleText(uint32_t sample, uint32_t* textOut)
+{
+    if (sample < 0xAC00 || sample > 0xD7A3)
+    {
+        textOut[0] = sample;
+        return 1;
+    }
+    uint32_t s = sample - 0xAC00;
+    textOut[0] = 0x1100 + s / 588;
+    textOut[1] = 0x1161 + s % 588 / 28;
+    textOut[2] = 0x11A7 + s % 28;
+    return s % 28 == 0 ? 2 : 3;
+}
+
 static uint32_t Encode(Builder* b, const uint64_t* elements, uint32_t count)
 {
     return CollationEncode(&b->ces, &b->ce32s, elements, count);
@@ -280,8 +294,9 @@ static int Contexts(Builder* b, const RootTable* t, bool prefixes)
 }
 
 // ICU's root data maps each script start's FDD1 line as a contraction of
-// U+FDD1, and FDD1 FDD0 to the first unassigned primary (its base
-// builder's init); U+FDD1 alone stays unassigned.
+// U+FDD1 (its sample in NFD, as the runtime reads it), and FDD1 FDD0 to
+// the first unassigned primary (its base builder's init); U+FDD1 alone
+// stays unassigned.
 static void ScriptStartContractions(Builder* b, const RootTable* t)
 {
     if (t->scriptStartCount == 0)
@@ -295,7 +310,8 @@ static void ScriptStartContractions(Builder* b, const RootTable* t)
         uint64_t element = m->codePoint == 0xFDD0
                                ? (uint64_t)0xFE040200 << 32 | collationCommonSecondaryTertiary
                                : m->element;
-        entries[i] = (Entry){.text = {m->codePoint}, .length = 1, .ce32 = Encode(b, &element, 1)};
+        entries[i] = (Entry){.ce32 = Encode(b, &element, 1)};
+        entries[i].length = CollationSampleText(m->codePoint, entries[i].text);
     }
     Context(b, 0xFDD1, collationTagContraction, entries, t->scriptStartCount);
     free(entries);

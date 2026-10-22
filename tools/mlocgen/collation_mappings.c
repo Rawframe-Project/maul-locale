@@ -71,8 +71,7 @@ int CollationMappingsInit(CollationMappings* m, const RootTable* root)
         const RootMarker* s = &root->scriptStarts[i];
         RootMapping* marker = &m->markers[m->markerCount++];
         marker->text[0] = 0xFDD1;
-        marker->text[1] = s->codePoint;
-        marker->textLength = 2;
+        marker->textLength = 1 + CollationSampleText(s->codePoint, marker->text + 1);
         marker->elements[0] = s->codePoint == 0xFDD0
                                   ? (uint64_t)0xFE040200 << 32 | collationCommonSecondaryTertiary
                                   : s->element;

@@ -147,6 +147,9 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/search_elements.c
     src/search_find.c
     src/search_previous.c
+    src/index.c
+    src/index_build.c
+    src/index_labels.c
     src/collation_compare.c
     src/collation_fast_compare.c
     src/collation_reorder.c
@@ -615,6 +618,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_search PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    # The alphabetic index over the same file (record mloc-0075).
+    maul_add_test(index)
+    if(TARGET test_index)
+        if(EMSCRIPTEN)
+            target_link_options(test_index PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_index PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # And relative time (record mloc-0043).
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
@@ -732,6 +744,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_link_libraries(conform_collation PRIVATE maul-locale)
         target_include_directories(conform_collation PRIVATE src)
         maul_apply_flags(conform_collation)
+        add_executable(conform_index test/conform_index.c)
+        target_link_libraries(conform_index PRIVATE maul-locale maul-unicode)
+        maul_apply_flags(conform_index)
         add_executable(conform_index_labels test/conform_index_labels.c)
         target_link_libraries(conform_index_labels PRIVATE maul-locale maul-unicode)
         target_include_directories(conform_index_labels PRIVATE src)

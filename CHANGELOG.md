@@ -424,6 +424,11 @@ format.
 - Backward collation search: `mlocFindPrevious` and
   `mlocFindPreviousUtf16`, the match nearest before a position as
   ICU4C's usearch_searchBackwards finds it (mloc-0074).
+- Alphabetic index: `mlocBuildIndex`, `mlocGetIndexBucketCount`,
+  `mlocGetIndexBucket`, `mlocFindIndexBucket` and
+  `mlocFindIndexBucketUtf16`, a sorted list's section labels and each
+  name's section under a collator, as ICU4C's AlphabeticIndex builds its
+  immutable index (mloc-0075).
 - The collation data holds each locale's alphabetic index labels, its
   index exemplars or labels made from its standard ones as ICU4C's
   AlphabeticIndex makes them (mloc-0075).

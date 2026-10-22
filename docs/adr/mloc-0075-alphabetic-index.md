@@ -51,6 +51,35 @@ index.
   locale's set) are in the root and tailoring units already; (f3b) reads
   them there, as ICU4C does.
 
+- **The index at run time (f3b),** ICU4C's immutable index
+  (`include/maul-locale/index.h`): `mlocBuildIndex` into caller memory of
+  any alignment, measured first with no buffer (an upper bound, as
+  `mlocCompileMessage` measures); the buckets in order with their labels
+  and types; a name's bucket in UTF-8 or UTF-16. The caller keeps and
+  sorts its own names: ICU4C's record lists are a container the
+  library does not need. The value holds a copy of the collator at
+  primary strength, its other settings kept, as ICU4C's clone; its bytes
+  may be moved.
+- **ICU4C's steps as written** (`src/index_labels.c`,
+  `src/index_build.c`): the labels are the collator's U+FDD0
+  contractions (the tailoring's, else the root's; a prefix list's
+  default followed, as `internalAddContractions` finds them) with A to Z
+  after a pinyin one, else the locale's unit; the script boundaries the
+  root's U+FDD1 contractions whose sample is a letter or unassigned,
+  sorted by the collator; `initLabels`' filter, its better label of
+  those equal at the primary level (NFKD length, then NFKD order, then
+  their own) and its thinning to `maxLabelCount`; `createBucketList`'s
+  inflow, invisible (several primaries) and overflow buckets, the
+  pinyin buckets shown as the ASCII ones and the inflow merge;
+  `getBucketIndex`'s search over every bucket, shown or not.
+- **Limits:** 512 labels, 256 script boundaries; the special labels
+  UTF-8 of at most 255 bytes.
+- **The Hangul script boundary in NFD:** FractionalUCA writes it as
+  FDD1 AC00, a string an NFD text never holds, so the root unit now
+  holds it as FDD1 1100 1161, its NFD; the unsafe-backward ranges still
+  count the syllable, as ICU4C's set does. Without it, every Hangul text
+  sorted past the boundary meant to precede it (ko had no labels).
+
 ## Proof
 
 - (f3a) `conform_index_labels` against ICU4C 79
@@ -69,10 +98,28 @@ index.
   other generated file byte for byte), so the parse sets read as before
   through the shared reader.
 
+- (f3b) `conform_index` against ICU4C 79's ImmutableIndex
+  (`icu4c_index.cpp`): 1,294 indexes (every CLDR locale, the zh, ja, ko
+  and yue types, reorderings, shifted, numeric, secondary strength, a
+  label limit of 1, 5 and 30 with own special labels), 216,132 names (the
+  locales' standard, auxiliary and index exemplars, those with a letter
+  after, one code point on, upper-cased, and random strings over 44
+  scripts and specials). 1,113 agree in every bucket and every name;
+  165 differ where ICU4C does not ship the locale (its labels, f3a);
+  the other 16 are the collator's lookup, not the index: nb and nn sort
+  as root (ICU4C gives them no's rules), a missing `search…` type is
+  not tried as `search` and one missing in the locale is not taken
+  from root as ICU4C takes it, ICU4C refuses `private-kana`, and dz has
+  no collation in ICU4C. `test_index`: English, measured and copied to
+  an odd address, five labels with own special labels, Swedish, kana,
+  pinyin, Korean, the refusals. The search differentials (15,490
+  forward, 18,286 backward) give the same answers on the new data.
+
 ## Consequences
 
 - The collation data file grows by 39.5 KB (2,428,978 to 2,468,477
   bytes).
 - The generator reads common/main a second time for the labels (329 s
   to 368 s for a full generation).
-- (f3b) builds the index value over a collator and these labels.
+- The collator's lookup is fixed next, so that nb, nn and the missing
+  types fall back as ICU4C's do.
