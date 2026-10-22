@@ -10,6 +10,7 @@
 #include "collation_tailoring.h"
 #include "collation_unit.h"
 #include "collation_unsafe_table.h"
+#include "index_gen.h"
 #include "keys.h"
 #include "kinds.h"
 #include "table_gen.h"
@@ -153,6 +154,23 @@ static void ReadCatalog(const char* commonDirectory, CollationCatalog* catalog)
     CollationCatalogSort(catalog);
 }
 
+// The index labels, from common/main's exemplars.
+static int AddIndexLabels(const char* commonDirectory, const Keys* keys, DataFile* file,
+                          char* errorOut, size_t errorCapacity)
+{
+    static Cldr s_cldr;
+    if (!CldrOpen(&s_cldr, commonDirectory, errorOut, errorCapacity))
+    {
+        return 0;
+    }
+    int count = 0;
+    char** ids = GenListXml(commonDirectory, "main", &count);
+    GenerateIndexUnits(&(IndexInput){&s_cldr, keys, (const char* const*)ids, count}, file);
+    GenFreeList(ids, count);
+    CldrClose(&s_cldr);
+    return 1;
+}
+
 int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOut,
                       size_t errorCapacity)
 {
@@ -208,11 +226,12 @@ int GenerateCollation(const char* commonDirectory, DataFile* file, char* errorOu
     CollationCatalog catalog = {0};
     ReadCatalog(commonDirectory, &catalog);
     AddTailorings(&catalog, &roots, &keys, file);
+    int added = AddIndexLabels(commonDirectory, &keys, file, errorOut, errorCapacity);
     free(fastLatin);
     free(rootUnit);
     CollationCatalogFree(&catalog);
     KeysClose(&keys);
     RootFree(&table);
     RootFree(&unihan);
-    return 1;
+    return added;
 }

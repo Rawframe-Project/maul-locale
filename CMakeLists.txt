@@ -138,6 +138,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_table.c
     src/message_text.c
     src/nfd_stream.c
+    src/collation_index.c
     src/collation_tables.c
     src/collation_iterator.c
     src/search.c
@@ -731,6 +732,10 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_link_libraries(conform_collation PRIVATE maul-locale)
         target_include_directories(conform_collation PRIVATE src)
         maul_apply_flags(conform_collation)
+        add_executable(conform_index_labels test/conform_index_labels.c)
+        target_link_libraries(conform_index_labels PRIVATE maul-locale maul-unicode)
+        target_include_directories(conform_index_labels PRIVATE src)
+        maul_apply_flags(conform_index_labels)
         add_executable(conform_search test/conform_search.c)
         target_link_libraries(conform_search PRIVATE maul-locale)
         maul_apply_flags(conform_search)
@@ -876,7 +881,9 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/ldml.c tools/mlocgen/list_gen.c tools/mlocgen/locale_gen.c
                                     tools/mlocgen/map.c tools/mlocgen/names_gen.c
                                     tools/mlocgen/match_gen.c tools/mlocgen/match_regions.c
-                                    tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c tools/mlocgen/table_gen.c
+                                    tools/mlocgen/number_gen.c tools/mlocgen/parse_gen.c
+                                    tools/mlocgen/set_pattern.c tools/mlocgen/table_gen.c
+                                    tools/mlocgen/index_gen.c
                                     tools/mlocgen/trie_gen.c
                                     tools/mlocgen/parents_gen.c tools/mlocgen/plural_gen.c
                                     tools/mlocgen/prefs_gen.c tools/mlocgen/spellout_compile.c
@@ -1072,6 +1079,12 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             maul_apply_flags(test_collation_tailoring)
             add_test(NAME collation_tailoring COMMAND test_collation_tailoring
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+            add_executable(test_collation_index test/test_collation_index.c)
+            target_link_libraries(test_collation_index PRIVATE mlocgen_core)
+            target_include_directories(test_collation_index PRIVATE test)
+            maul_apply_flags(test_collation_index)
+            add_test(NAME collation_index COMMAND test_collation_index
+                     ${PROJECT_SOURCE_DIR}/test/cldr/common)
             add_executable(test_collation_iterator test/test_collation_iterator.c)
             target_link_libraries(test_collation_iterator PRIVATE mlocgen_core)
             target_include_directories(test_collation_iterator PRIVATE test)

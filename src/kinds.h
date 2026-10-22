@@ -171,5 +171,8 @@ constexpr uint32_t kindCollationTailorings = 0x000B0002;
 // The radical-stroke Han table the unihan types read, a unit of no locale
 // in the collation data file (record mloc-0071).
 constexpr uint32_t kindCollationHanRadical = 0x000B0003;
+// A locale's index labels, a unit of its key in the collation data file,
+// found along the main chain (record mloc-0075, src/collation_index.h).
+constexpr uint32_t kindCollationIndex = 0x000B0004;
 
 #endif

@@ -10,4 +10,7 @@ Copyright (c) 2026 Sirac Ozmen
 		<language type="xx"/>
 		<script type="Cyrl"/>
 	</identity>
+	<characters>
+		<exemplarCharacters>[ж а {дз} ß 가 각 ሀ ሁ ለ]</exemplarCharacters>
+	</characters>
 </ldml>

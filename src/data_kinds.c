@@ -5,6 +5,7 @@
 // sorted by kind. A part adds its kinds here as it is built.
 
 #include "catalog_tables.h"
+#include "collation_index.h"
 #include "collation_tables.h"
 #include "currency_region.h"
 #include "data_view.h"
@@ -92,6 +93,7 @@ static const DataKind s_kinds[] = {
     {kindCollationRoot, mlocValidCollationRoot},
     {kindCollationTailorings, mlocValidCollationTypes},
     {kindCollationHanRadical, mlocValidCollationHan},
+    {kindCollationIndex, mlocValidIndexLabels},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;

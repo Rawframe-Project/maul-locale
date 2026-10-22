@@ -19,6 +19,9 @@ Copyright (c) 2026 Sirac Ozmen
 	<layout>
 		<orientation characters="right-to-left" lines="top-to-bottom"/>
 	</layout>
+	<characters>
+		<exemplarCharacters type="index">[A B {CH} \u0110 C D-F]</exemplarCharacters>
+	</characters>
 	<dates>
 		<calendars>
 			<calendar type="gregorian">

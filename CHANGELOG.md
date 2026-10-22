@@ -424,6 +424,9 @@ format.
 - Backward collation search: `mlocFindPrevious` and
   `mlocFindPreviousUtf16`, the match nearest before a position as
   ICU4C's usearch_searchBackwards finds it (mloc-0074).
+- The collation data holds each locale's alphabetic index labels, its
+  index exemplars or labels made from its standard ones as ICU4C's
+  AlphabeticIndex makes them (mloc-0075).
 - The collation data holds each unit's unsafe-backward ranges, the
   code points after the first of its contractions, for search
   (mloc-0074).

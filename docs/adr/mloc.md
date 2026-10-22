@@ -79,3 +79,4 @@ are listed in [README.md](README.md).
 | [mloc-0072](mloc-0072-fast-latin.md) | The fast Latin table: ICU4C's, built for each unit over NFD | Accepted |
 | [mloc-0073](mloc-0073-collation-utf16.md) | Collation over UTF-16: one iterator, a lone surrogate as U+FFFD | Accepted |
 | [mloc-0074](mloc-0074-collation-search.md) | Collation search: ICU4C's usearch over processed elements | Accepted |
+| [mloc-0075](mloc-0075-alphabetic-index.md) | Alphabetic index: ICU4C's AlphabeticIndex, its labels in the data | Accepted |

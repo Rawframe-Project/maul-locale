@@ -11,6 +11,7 @@
 
 #include "kinds.h"
 #include "parse_tables.h"
+#include "set_pattern.h"
 #include "table_gen.h"
 
 #include "maul-unicode/case.h"
@@ -129,56 +130,19 @@ static uint32_t Decode(const char* text, int* lengthOut)
     return c;
 }
 
-// Reads a UnicodeSet pattern of literal characters, escapes, ranges and
-// strings ("[\-－﹣ ‐‑]", "[₹ {Rp}]"), spaces ignored.
+static void TakeRange(void* context, uint32_t first, uint32_t last)
+{
+    AddRange(context, first, last);
+}
+
+static void TakeString(void* context, const char* text, size_t length)
+{
+    AddString(context, text, length);
+}
+
 static void ReadPattern(const char* pattern, Set* set)
 {
-    size_t length = strlen(pattern);
-    if (length < 2 || pattern[0] != '[' || pattern[length - 1] != ']')
-    {
-        GenDie("a parse set that is not a bracketed set", pattern);
-    }
-    int64_t previous = -1;
-    for (size_t at = 1; at < length - 1;)
-    {
-        char c = pattern[at];
-        if (c == ' ')
-        {
-            at++;
-            continue;
-        }
-        if (c == '{')
-        {
-            const char* end = strchr(pattern + at, '}');
-            if (end == nullptr)
-            {
-                GenDie("a parse set's string without its end", pattern);
-            }
-            AddString(set, pattern + at + 1, (size_t)(end - pattern) - at - 1);
-            at = (size_t)(end - pattern) + 1;
-            previous = -1;
-            continue;
-        }
-        if (c == '-' && previous >= 0 && at + 2 < length)
-        {
-            int n = 0;
-            uint32_t last = Decode(pattern + at + 1, &n);
-            set->last[set->count - 1] = last;
-            if (last < (uint32_t)previous)
-            {
-                GenDie("a parse set's range backwards", pattern);
-            }
-            at += 1 + (size_t)n;
-            previous = -1;
-            continue;
-        }
-        at += c == '\\' ? 1 : 0;
-        int n = 0;
-        uint32_t cp = Decode(pattern + at, &n);
-        AddRange(set, cp, cp);
-        previous = cp;
-        at += (size_t)n;
-    }
+    GenReadSetPattern(pattern, &(SetSink){TakeRange, TakeString, set});
 }
 
 typedef struct Lenient

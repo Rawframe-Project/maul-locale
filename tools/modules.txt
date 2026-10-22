@@ -4,7 +4,7 @@ base:
 bytes:
 data: bytes data_format data_view kinds
 data_format:
-data_kinds: catalog_tables collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
+data_kinds: catalog_tables collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
 data_view:
 decimal: bytes
 decimal_round: decimal
@@ -106,6 +106,7 @@ catalog_chain: catalog_tables catalog_view
 code_point_trie: bytes data_view
 collation_fast_latin: bytes
 collation_unsafe: bytes
+collation_index: bytes data_view kinds locale_fallback
 collation_tables: bytes code_point_trie collation_fast_latin collation_unsafe data_view
 nfd_stream:
 collation_iterator: bytes code_point_trie collation_tables data_view nfd_stream

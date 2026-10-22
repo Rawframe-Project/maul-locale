@@ -15,6 +15,10 @@ Copyright (c) 2026 Sirac Ozmen
 			<language type="en">∅∅∅</language>
 		</languages>
 	</localeDisplayNames>
+	<characters>
+		<exemplarCharacters>[a b]</exemplarCharacters>
+		<exemplarCharacters type="index" draft="unconfirmed">[Q]</exemplarCharacters>
+	</characters>
 	<dates>
 		<calendars>
 			<calendar type="gregorian">
