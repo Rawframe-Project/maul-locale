@@ -44,7 +44,7 @@ Departures without a file of their own, each stated where its part is documented
 
 - **Spell-out:** a plural block's operand is the exact quotient where ICU casts it to `int32_t`; values past `int64_t` are spelled out, where ICU writes digits; a locale without rules takes root's, not the process's default locale.
 - **Number parsing:** input is UTF-8, so a byte that does not begin a valid sequence is no character.
-- **Currencies:** with the symbol hidden, the space that stood beside it goes too, where ICU4C keeps it (de `1.234,50`, not `1.234,50` and a no-break space); cash rounding keeps the currency's cash digits as CLDR gives them, where ICU4C writes only the digits of the increment (DKK's 0.50 cash increment gives `1.234,50 kr.`, where ICU4C writes `1.234,5 kr.`).
+- **Currencies:** with the symbol hidden, the amount takes the locale's `alt="noCurrency"` currency pattern, which has no symbol and no space beside it (de `1.234,50`), as `mloc_currencyHidden` documents; ICU4C instead deletes `¤` from the standard pattern and keeps the no-break space that stood beside it. Cash rounding keeps the currency's cash digits, which default to its digits when CLDR gives none: DKK's 0.50 cash increment gives `1.234,50 kr.`, as Danish cash prices are written, where ICU4C writes only the digits of the increment, `1.234,5 kr.`.
 - **Collation:** see [collation.md](collation.md#kept-differences).
 - **Calendars:** `islamic` reads as Umm al-Qura, as in ICU4X, where ICU4C estimates it astronomically; Chinese years from the astronomical model where ICU4C's reduced model differs from the observatories.
 
