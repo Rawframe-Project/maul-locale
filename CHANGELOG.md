@@ -154,7 +154,7 @@ format.
   `mlocGetMessageOption`, `mlocFindMessageOption` and
   `mlocGetMessageLocale`; `:string` and pattern selection by the
   specification's order. The library now
-  links Maul Unicode 0.3.0; `mloc_withFallbacks` and `mloc_errorFormat`
+  links Maul Unicode 0.0.1; `mloc_withFallbacks` and `mloc_errorFormat`
   join the results.
 - A locale's direction: `mlocGetLocaleDirection` gives right to left
   or left to right from the locale's script or its likely script, the

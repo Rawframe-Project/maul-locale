@@ -346,7 +346,7 @@ its MessageFormat 1), so the bar is its MessageFormat 1's speed.
   (Mongolian's vertical order being left to right in a line); CI checks
   all of them (`tools/cldr_directions.py`, `conform_direction`).
 - **Maul Unicode** becomes a run-time dependency (UTF-8 validation,
-  NFC, bidi classes), at 0.3.0: an installed package, else the pinned
+  NFC, bidi classes), at 0.0.1: an installed package, else the pinned
   release fetched.
 
 ## Proof
