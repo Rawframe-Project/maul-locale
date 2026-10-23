@@ -5,8 +5,8 @@
 // monthCode day inLeapYear daysInYear daysInMonth monthsInYear dayOfYear
 // dayOfWeek" as the oracle program prints it (era "-" for none), hashed by
 // FNV-1a over every day of the span. The hashes were taken from ICU4X's
-// output by that program, kept in the docs as icu4x_calendar_fields.rs; a
-// mismatch is found day by day by running it.
+// output by that program (tools/oracle/calendar/icu4x_calendar_fields.rs);
+// a mismatch is found day by day by running it.
 
 #include "test_harness.h"
 

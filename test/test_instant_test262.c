@@ -9,8 +9,8 @@
 // where a field passes int64_t, that field formed from the duration's
 // exact decimal; each field as the float64 Temporal keeps. since is until
 // with the mode negated. The rows were recorded by running the tests on
-// the library through a reader of their JavaScript, kept in the docs with
-// the oracle programs.
+// the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

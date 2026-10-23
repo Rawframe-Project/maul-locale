@@ -8,10 +8,10 @@
 // mlocAddToDate, mlocDateUntil, mlocDateUntilRounded, mlocWithDate,
 // mlocMakeMonthDay and mlocGetDateFields. The rows were recorded by
 // running the tests on the library through a reader of their JavaScript,
-// kept in the docs with the oracle programs. A row giving a year as well
-// as an era and its year is refused when the two name different years, as
-// Temporal's field resolution does; the library takes one or the other, so
-// that check is the host's.
+// in tools/oracle/test262/. A row giving a year as well as an era and its
+// year is refused when the two name different years, as Temporal's field
+// resolution does; the library takes one or the other, so that check is
+// the host's.
 
 #include "test_harness.h"
 
