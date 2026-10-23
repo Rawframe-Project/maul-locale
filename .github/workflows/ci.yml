@@ -142,13 +142,14 @@ jobs:
           cmake -S cmake/HeaderCheck -B out/headers
           cmake --build out/headers --config Release
 
-  # The pinned CLDR and tzdb releases: the generated sources regenerated
-  # byte for byte, the generator's resolution against CLDR's JSON, and the
-  # library against CLDR's conformance files, zic, zdump and zoneinfo, the
-  # ICU4C tables in test/ and ICU's matcher test. docs/internals/conformance.md
-  # says what each step proves. The releases are cached by their pins, so a
-  # run downloads them only when a pin moves; main saves the cache.
-  cldr:
+  # The pinned CLDR and tzdb releases, in two jobs that run side by side:
+  # `generated` regenerates src/generated/ byte for byte, and `cldr` runs
+  # tools/check_cldr.sh, the library and the generator against CLDR's JSON
+  # and conformance files, zic, zdump and zoneinfo, the ICU4C tables in
+  # test/ and ICU's matcher test (docs/internals/conformance.md says what
+  # each step proves). The releases are cached by their pins, so a run
+  # downloads them only when a pin moves; main saves the cache.
+  generated:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -183,17 +184,52 @@ jobs:
         with:
           path: .cache
           key: releases-${{ hashFiles('tools/cldr-release.txt', 'tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
-      - name: Build the generator and the conformance programs
+      - name: Build the generator
         run: |
           cmake -B out/cldr -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 \
-            -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_BENCH=OFF
-          cmake --build out/cldr --target conformance
+            -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
+          cmake --build out/cldr --target mlocgen
       - name: The generated sources are current
         # The generator gives the same bytes on every run, so a stale or
         # hand-edited file shows as a difference.
         run: |
           out/cldr/mlocgen generate "$CLDR" . "$TZDB"
           git diff --exit-code --stat src/generated || { echo "::error::src/generated is stale: run mlocgen generate"; exit 1; }
+
+  cldr:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: ghcr.io/rawframe-project/ci-cpp:2026.10.4@sha256:9715ff153db04ba0ed4f520b6d2528ff7860f803de61ab011ba60a4eed572836
+    permissions:
+      contents: read
+    env:
+      CLDR: .cache/cldr/cldr/common
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Environment
+        run: |
+          echo "TZDB=.cache/tzdb/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)" >> "$GITHUB_ENV"
+          echo "TZDB_OLDER=.cache/tzdb/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)" >> "$GITHUB_ENV"
+      - name: Restore the releases
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache
+          key: releases-${{ hashFiles('tools/cldr-release.txt', 'tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
+      - name: Fetch CLDR and the tzdb
+        timeout-minutes: 10
+        run: |
+          bash tools/fetch_cldr.sh .cache/cldr
+          bash tools/fetch_tzdb.sh .cache/tzdb
+          bash tools/fetch_tzdb.sh .cache/tzdb older
+      - name: Build the generator and the conformance programs
+        run: |
+          cmake -B out/cldr -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 \
+            -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_BENCH=OFF
+          cmake --build out/cldr --target conformance
       - name: Conformance
         run: tools/check_cldr.sh out/cldr .cache/cldr "$TZDB" "$TZDB_OLDER"
 
@@ -340,7 +376,7 @@ jobs:
   # renaming a job never touches the ruleset.
   required:
     if: always()
-    needs: [changes, docs, zizmor, checks, build, msvc-headers, cldr, unihan, fuzz, web]
+    needs: [changes, docs, zizmor, checks, build, msvc-headers, generated, cldr, unihan, fuzz, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions: {}

@@ -5,7 +5,7 @@ Releases are made by release-please from the conventional commit titles on `main
 ## Steps
 
 1. release-please keeps a draft pull request titled `chore: release X.Y.Z` open. It moves the version between the markers in `include/maul-locale/base.h`, where CMake reads it, updates `.release-please-manifest.json`, and adds an entry to `CHANGELOG.md` from the `feat`, `fix` and `perf` titles.
-2. A new version changes the data version every data file carries, so regenerate `src/generated/` on the release branch ([updating-data.md](updating-data.md#regenerating-srcgenerated)) and push it to the release pull request; the `cldr` job fails until it is done.
+2. A new version changes the data version every data file carries, so regenerate `src/generated/` on the release branch ([updating-data.md](updating-data.md#regenerating-srcgenerated)) and push it to the release pull request; the `generated` job fails until it is done.
 3. Rewrite the changelog entry in user language before merging: what changed for someone using the library, grouped as Added, Changed, Fixed, Removed and Security. Leave out refactors, tests, CI and documentation. Say what a caller must change for a breaking change, and name any change of results (a new CLDR or tzdb release, a fixed rule), since callers may store formatted text and sort keys.
 4. Check that the `required` CI job passed on the release pull request.
 5. Mark the pull request ready and merge it. release-please tags the merge commit and publishes the GitHub release with the changelog entry as its notes. The Pages workflow publishes the documentation from `main`.
