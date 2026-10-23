@@ -37,7 +37,7 @@ option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 # the family modules, so that ours, included after its copies, serve
 # this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds a local copy
 # instead, offline.
-set(MAUL_LOCALE_UNICODE_VERSION 0.3.0)
+set(MAUL_LOCALE_UNICODE_VERSION 0.0.1)
 find_package(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION} CONFIG QUIET)
 if(NOT maul-unicode_FOUND)
     include(FetchContent)
