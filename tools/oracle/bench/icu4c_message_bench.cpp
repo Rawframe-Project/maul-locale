@@ -7,13 +7,13 @@
 // included) and a call formatting; MF1: the same where MF1 can say it
 // (two selectors as a select holding a plural). Best of five runs after a
 // warm-up of a tenth, nanoseconds per call.
-#include <unicode/messageformat2.h>
-#include <unicode/messageformat2_arguments.h>
-#include <unicode/msgfmt.h>
 #include <cstdio>
 #include <ctime>
 #include <map>
 #include <string>
+#include <unicode/messageformat2.h>
+#include <unicode/messageformat2_arguments.h>
+#include <unicode/msgfmt.h>
 
 using namespace icu;
 namespace m2 = icu::message2;
@@ -76,7 +76,8 @@ int main()
     for (int m = 0; m < 4; ++m)
     {
         UnicodeString source = UnicodeString::fromUTF8(mf2[m]);
-        auto build = [&] {
+        auto build = [&]
+        {
             UErrorCode s = U_ZERO_ERROR;
             UParseError pe;
             m2::MessageFormatter::Builder b(s);
@@ -92,7 +93,8 @@ int main()
         b.setPattern(source, pe, s);
         m2::MessageFormatter f = b.build(s);
         UnicodeString text;
-        auto format = [&] {
+        auto format = [&]
+        {
             UErrorCode s2 = U_ZERO_ERROR;
             text = f.formatToString(arguments, s2);
             sink += (size_t)text.length();
@@ -103,14 +105,16 @@ int main()
         text.toUTF8String(utf8);
         printf("mf2-%-8s build %9.1f ns  format %9.1f ns  [%s]\n", names[m], built, formatted,
                utf8.c_str());
-        auto build1 = [&] {
+        auto build1 = [&]
+        {
             UErrorCode s1 = U_ZERO_ERROR;
             MessageFormat f1(mf1[m], Locale("en"), s1);
             sink += (size_t)s1;
         };
         MessageFormat f1(mf1[m], Locale("en"), s);
         UnicodeString text1;
-        auto format1 = [&] {
+        auto format1 = [&]
+        {
             text1.remove();
             FieldPosition fp;
             UErrorCode s1 = U_ZERO_ERROR;

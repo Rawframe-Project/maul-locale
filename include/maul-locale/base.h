@@ -16,10 +16,17 @@ extern "C"
 {
 #endif
 
-// The library version. CMake reads it from here.
+// The library version. CMake reads it from here, and release-please
+// moves it between the markers.
+// x-release-please-start-major
 #define MLOC_VERSION_MAJOR 0
+// x-release-please-end
+// x-release-please-start-minor
 #define MLOC_VERSION_MINOR 0
+// x-release-please-end
+// x-release-please-start-patch
 #define MLOC_VERSION_PATCH 1
+// x-release-please-end
 
 // The one CLDR release every table in the library comes from.
 #define MLOC_CLDR_VERSION_MAJOR 49

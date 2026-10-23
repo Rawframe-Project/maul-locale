@@ -9,16 +9,16 @@
 // percent, date, spellout, duration), and the formatter itself where
 // neither can (relative time, lists). Best of five runs after a warm-up
 // of a tenth, nanoseconds per call.
+#include <cstdio>
+#include <ctime>
+#include <map>
+#include <string>
 #include <unicode/curramt.h>
 #include <unicode/listformatter.h>
 #include <unicode/messageformat2.h>
 #include <unicode/messageformat2_arguments.h>
 #include <unicode/msgfmt.h>
 #include <unicode/reldatefmt.h>
-#include <cstdio>
-#include <ctime>
-#include <map>
-#include <string>
 
 using namespace icu;
 namespace m2 = icu::message2;
@@ -65,7 +65,8 @@ static const UDate kDate = 1792249445000.0;
 static void Mf2(const char* name, const char* source, const m2::MessageArguments& arguments)
 {
     UnicodeString pattern = UnicodeString::fromUTF8(source);
-    auto build = [&] {
+    auto build = [&]
+    {
         UErrorCode s = U_ZERO_ERROR;
         UParseError pe;
         m2::MessageFormatter::Builder b(s);
@@ -81,7 +82,8 @@ static void Mf2(const char* name, const char* source, const m2::MessageArguments
     b.setPattern(pattern, pe, s);
     m2::MessageFormatter f = b.build(s);
     UnicodeString text;
-    auto format = [&] {
+    auto format = [&]
+    {
         UErrorCode s2 = U_ZERO_ERROR;
         text = f.formatToString(arguments, s2);
         sink += (size_t)text.length();
@@ -93,7 +95,8 @@ static void Mf2(const char* name, const char* source, const m2::MessageArguments
 
 static void Mf1(const char* name, const char16_t* source, const Formattable* args, int count)
 {
-    auto build = [&] {
+    auto build = [&]
+    {
         UErrorCode s = U_ZERO_ERROR;
         MessageFormat f(source, Locale("en"), s);
         sink += (size_t)s;
@@ -101,7 +104,8 @@ static void Mf1(const char* name, const char16_t* source, const Formattable* arg
     UErrorCode s = U_ZERO_ERROR;
     MessageFormat f(source, Locale("en"), s);
     UnicodeString text;
-    auto format = [&] {
+    auto format = [&]
+    {
         text.remove();
         FieldPosition fp;
         UErrorCode s1 = U_ZERO_ERROR;
@@ -142,21 +146,25 @@ int main()
     // would hold them.
     RelativeDateTimeFormatter relative(Locale("en"), status);
     UnicodeString text;
-    double relativeNs = Time(200000, [&] {
-        UErrorCode s = U_ZERO_ERROR;
-        text.remove();
-        relative.formatNumeric(3, UDAT_REL_UNIT_DAY, text, s);
-        sink += (size_t)text.length();
-    });
+    double relativeNs = Time(200000,
+                             [&]
+                             {
+                                 UErrorCode s = U_ZERO_ERROR;
+                                 text.remove();
+                                 relative.formatNumeric(3, UDAT_REL_UNIT_DAY, text, s);
+                                 sink += (size_t)text.length();
+                             });
     Print("fmt-relative", 0, relativeNs, text);
     ListFormatter* list = ListFormatter::createInstance(Locale("en"), status);
     UnicodeString items[] = {u"Ann", u"Bob", u"Cem"};
-    double listNs = Time(200000, [&] {
-        UErrorCode s = U_ZERO_ERROR;
-        text.remove();
-        list->format(items, 3, text, s);
-        sink += (size_t)text.length();
-    });
+    double listNs = Time(200000,
+                         [&]
+                         {
+                             UErrorCode s = U_ZERO_ERROR;
+                             text.remove();
+                             list->format(items, 3, text, s);
+                             sink += (size_t)text.length();
+                         });
     Print("fmt-list", 0, listNs, text);
     delete list;
     return status > U_ZERO_ERROR ? 1 : 0;

@@ -40,7 +40,8 @@ parse_currency: bytes currency_tables data_view number_data parse_match parse_ta
 parse_match: bytes number_core number_format number_tables parse_tables
 currency: bytes currency_tables data_format data_view kinds locale_fallback locale_keyword number_core number_data number_format number_parse parse_currency parse_match plural plural_rules
 currency_region: bytes currency_tables data_view kinds locale_keyword locale_prefs locale_tables
-wide:
+invariant:
+wide: invariant
 unit_tables:
 unit_data: bytes data_view locale_tables unit_tables wide
 unit_id: bytes currency_tables unit_data unit_tables

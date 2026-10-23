@@ -13,11 +13,45 @@
 //       -Wl,-rpath,$ICU/lib -o icu_weights
 // Cases: python3 -I weights_cases.py COUNT SEED.
 #include "collationweights.h"
+
 #include <cstdio>
 using icu::CollationWeights;
-int main(){ unsigned level, comp, lo, hi; int n;
- while(scanf("%u %u %x %x %d",&level,&comp,&lo,&hi,&n)==5){ CollationWeights w;
-  if(level==1) w.initForPrimary(comp); else if(level==2) w.initForSecondary(); else w.initForTertiary();
-  if(!w.allocWeights(lo,hi,n)){ printf("fail\n"); continue; }
-  unsigned long long sum=0; unsigned last=0, first=0; for(int i=0;i<n;i++){ unsigned x=w.nextWeight(); if(i==0) first=x; last=x; sum=sum*1000003ULL+x; }
-  printf("%08x %08x %016llx\n",first,last,sum); } }
+int main()
+{
+    unsigned level, comp, lo, hi;
+    int n;
+    while (scanf("%u %u %x %x %d", &level, &comp, &lo, &hi, &n) == 5)
+    {
+        CollationWeights w;
+        if (level == 1)
+        {
+            w.initForPrimary(comp);
+        }
+        else if (level == 2)
+        {
+            w.initForSecondary();
+        }
+        else
+        {
+            w.initForTertiary();
+        }
+        if (!w.allocWeights(lo, hi, n))
+        {
+            printf("fail\n");
+            continue;
+        }
+        unsigned long long sum = 0;
+        unsigned last = 0, first = 0;
+        for (int i = 0; i < n; i++)
+        {
+            unsigned x = w.nextWeight();
+            if (i == 0)
+            {
+                first = x;
+            }
+            last = x;
+            sum = sum * 1000003ULL + x;
+        }
+        printf("%08x %08x %016llx\n", first, last, sum);
+    }
+}
