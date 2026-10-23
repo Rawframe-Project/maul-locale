@@ -5,6 +5,25 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.1.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.0.1...v0.1.0) (2026-10-23)
+
+The locale data moves from CLDR 49 beta 3 to the final CLDR 49 release.
+
+### Changed
+
+- The data comes from the final CLDR 49 release and is checked against
+  ICU4C 79.1.
+- Windows names of Canadian time zones follow Windows' new zones:
+  `America/Vancouver` is "British Columbia Standard Time",
+  `America/Edmonton` and `America/Inuvik` "Alberta Standard Time", and
+  `America/Winnipeg` "Manitoba Standard Time", and
+  `mlocFindTimeZoneWindows` finds these names. "Pacific Standard Time"
+  with region CA now gives `America/Los_Angeles` instead of
+  `America/Vancouver`.
+- Data files from 0.0.1 do not open with 0.1.0: `mlocOpenData` refuses
+  them with `mloc_errorDataVersion`. Take the data files from the same
+  release as the library, and update the two together.
+
 ## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1) (2026-10-23)
 
 The first release: locale data and formatting from CLDR 49 (beta 3)
