@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Turkic suffixes (records mloc-0046, mloc-0047): one engine reads a
-// spoken end into its last vowel's harmony and its final sound's class,
-// and writes the suffixes a request asks for from archiphonemes; each
-// language is a table of letters, vowels, onsets and suffix templates
-// (grammar_tr.c, grammar_kk.c, grammar_ky.c, grammar_az.c, grammar_uz.c,
-// grammar_tk.c).
+// Turkic suffixes: one engine reads a spoken end into its last vowel's
+// harmony and its final sound's class, and writes the suffixes a request
+// asks for from archiphonemes; each language is a table of letters,
+// vowels, onsets and suffix templates (grammar_tr.c, grammar_kk.c,
+// grammar_ky.c, grammar_az.c, grammar_uz.c, grammar_tk.c).
 
 #ifndef MLOC_GRAMMAR_TURKIC_H
 #define MLOC_GRAMMAR_TURKIC_H

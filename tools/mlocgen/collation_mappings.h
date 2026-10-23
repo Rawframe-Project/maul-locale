@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A tailoring's mappings over the root while the builder makes them
-// (record mloc-0071), and the elements a string has through them, as
-// ICU4C's CollationDataBuilder holds its mappings and its
-// DataBuilderCollationIterator reads them: a code point the tailoring
-// maps is read from the tailoring alone, any other from the root.
+// A tailoring's mappings over the root while the builder makes them, and
+// the elements a string has through them, as ICU4C's CollationDataBuilder
+// holds its mappings and its DataBuilderCollationIterator reads them: a
+// code point the tailoring maps is read from the tailoring alone, any
+// other from the root.
 //
 // The first mapping of a code point copies the root's mappings of it, so
 // that its list stays whole, and a mapping of the same prefix and text

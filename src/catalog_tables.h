@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A compiled catalog's units (record mloc-0054), shared by the library,
-// which reads them, and the catalog tool, which writes them; the readers
-// are inline, so that the tool needs none of the library's internals. A catalog is
-// a data file with one locale and two units of it. All numbers are
-// little-endian.
+// A compiled catalog's units, shared by the library, which reads them, and
+// the catalog tool, which writes them; the readers are inline, so that the
+// tool needs none of the library's internals. A catalog is a data file
+// with one locale and two units of it. All numbers are little-endian.
 //
 // The keys (kindCatalogKeys):
 //   0  u32 count, the keys

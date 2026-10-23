@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The alphabetic index (record mloc-0075): English's A to Z between the
-// underflow and overflow buckets, names found in UTF-8 and UTF-16, the
-// value measured, built, copied to an odd address and still read; the
-// options (fewer labels, own special labels); Swedish's letters after Z,
-// Japanese kana and Chinese pinyin shown as A to Z, an inflow bucket
-// merged into the overflow bucket; the refusals.
-// conform_index checks every CLDR locale against ICU4C's index.
+// The alphabetic index: English's A to Z between the underflow and
+// overflow buckets, names found in UTF-8 and UTF-16, the value measured,
+// built, copied to an odd address and still read; the options (fewer
+// labels, own special labels); Swedish's letters after Z, Japanese kana
+// and Chinese pinyin shown as A to Z, an inflow bucket merged into the
+// overflow bucket; the refusals. conform_index checks every CLDR locale
+// against ICU4C's index.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

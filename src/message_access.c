@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// What a formatted message's parts name (maul-locale/message.h, record
-// mloc-0045): an expression's function or a markup's name, and their
-// options and attributes, read from the compiled message by the index a
-// part's kind holds.
+// What a formatted message's parts name (maul-locale/message.h): an
+// expression's function or a markup's name, and their options and
+// attributes, read from the compiled message by the index a part's kind
+// holds.
 
 #include "message_bind.h"
 #include "message_form.h"

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The public zone values checked before use (record mloc-0041): a zone
-// the library made, an instant in Temporal's range, and a zone's offset
-// at a time whether it is named or an offset.
+// The public zone values checked before use: a zone the library made, an
+// instant in Temporal's range, and a zone's offset at a time whether it is
+// named or an offset.
 
 #ifndef MLOC_ZONE_HANDLE_H
 #define MLOC_ZONE_HANDLE_H

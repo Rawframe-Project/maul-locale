@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The public collator (records mloc-0069 and mloc-0071) over the
-// built-in data and the collation data file: the root's defaults, each
-// -u- key, options over the keys, values passed over, a locale's
-// tailoring found by co, its default and its chain, the rules' settings
-// under the keys, sort keys against the compare, the keys' version, and
-// the refusals.
+// The public collator over the built-in data and the collation data file:
+// the root's defaults, each -u- key, options over the keys, values passed
+// over, a locale's tailoring found by co, its default and its chain, the
+// rules' settings under the keys, sort keys against the compare, the keys'
+// version, and the refusals.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -309,12 +308,12 @@ static bool Both(const char* id, const char* a, const char* b, int expected)
     return Order(id, nullptr, a, b) == expected && KeyOrder(id, nullptr, a, b) == expected;
 }
 
-// The identical prefix skipped before the compares (research 68): a
-// prefix context read back past the cut (the middle dot after l), a
-// contraction and a number the cut would split, and the settings that
-// skip none (shifted: an ignorable after a variable element reads as 0;
-// backwards secondaries: the prefix's are read last). Each pair orders
-// otherwise when its rule is left out.
+// The identical prefix skipped before the compares: a prefix context read
+// back past the cut (the middle dot after l), a contraction and a number
+// the cut would split, and the settings that skip none (shifted: an
+// ignorable after a variable element reads as 0; backwards secondaries:
+// the prefix's are read last). Each pair orders otherwise when its rule is
+// left out.
 static void TestIdenticalPrefix(void)
 {
     CHECK(Both("und", "l\xC2\xB7z", "lb", 1) && Both("cs", "cz", "ch", -1) &&

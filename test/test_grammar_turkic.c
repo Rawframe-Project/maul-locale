@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The other Turkic languages' suffixes (maul-locale/grammar.h, record
-// mloc-0047): Kazakh, Kyrgyz, Azerbaijani, Uzbek and Turkmen cases,
-// plural, possessives and question particle on names, common nouns,
-// numbers and abbreviations, as apertium-kaz, apertium-kir and
-// apertium-tuk generate them and the Azerbaijani norms and Uzbek rules
-// write them; their marks, their stems and their refusals.
+// The other Turkic languages' suffixes (maul-locale/grammar.h): Kazakh,
+// Kyrgyz, Azerbaijani, Uzbek and Turkmen cases, plural, possessives and
+// question particle on names, common nouns, numbers and abbreviations, as
+// apertium-kaz, apertium-kir and apertium-tuk generate them and the
+// Azerbaijani norms and Uzbek rules write them; their marks, their stems
+// and their refusals.
 
 #include "test_harness.h"
 

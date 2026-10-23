@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A calendar's interval set in a locale (research 40, date_tables.h's
+// A calendar's interval set in a locale (date_tables.h's
 // DateIntervalEntry): the interval patterns of every date and time
-// option's skeleton, resolved as ICU4C's DateIntervalFormat resolves
-// them (interval_match.h), and the fallback; the date unit's builder
-// compiles and keeps them.
+// option's skeleton, resolved as ICU4C's DateIntervalFormat resolves them
+// (interval_match.h), and the fallback; the date unit's builder compiles
+// and keeps them.
 
 #ifndef MLOCGEN_INTERVAL_GEN_H
 #define MLOCGEN_INTERVAL_GEN_H

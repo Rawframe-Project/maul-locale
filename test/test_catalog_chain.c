@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalog chains (record mloc-0055): a set of three locales with holes
-// compiled by the catalog tool, formatted through a chain, each failure's
-// stated text and reason, a cache measured, a cache too small, a chain
-// bound at once. Run with a directory to write the catalogs into.
+// Catalog chains: a set of three locales with holes compiled by the
+// catalog tool, formatted through a chain, each failure's stated text and
+// reason, a cache measured, a cache too small, a chain bound at once. Run
+// with a directory to write the catalogs into.
 
 #include "compile.h"
 #include "file.h"

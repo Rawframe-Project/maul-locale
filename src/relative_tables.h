@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The units of the relative time data file, relative.mloc (record
-// mloc-0043), which the generator compiles from the locale files'
-// fields. All integers are little-endian.
+// The units of the relative time data file, relative.mloc, which the
+// generator compiles from the locale files' fields. All integers are
+// little-endian.
 //
 // Relative time, a unit per locale key. The payload is a header (u32
 // entry count, u32 string count, u32 text size), the entries' keys (u16

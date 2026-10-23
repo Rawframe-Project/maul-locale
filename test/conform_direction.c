@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Each locale's direction against the character order CLDR gives it
-// (record mloc-0045): reads "id<TAB>ltr|rtl" lines, as
-// tools/cldr_directions.py writes them from the pinned release's
-// common/main, and checks mlocGetLocaleDirection on the compiled-in
-// data. CI runs it on the pinned release.
+// Each locale's direction against the character order CLDR gives it: reads
+// "id<TAB>ltr|rtl" lines, as tools/cldr_directions.py writes them from the
+// pinned release's common/main, and checks mlocGetLocaleDirection on the
+// compiled-in data. CI runs it on the pinned release.
 //
 // usage: python3 tools/cldr_directions.py <common> | conform_direction
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The root collation unit (record mloc-0065), shared by the library,
-// which reads it, and the generator, which writes it; the readers are
-// inline. All numbers are little-endian.
+// The root collation unit, shared by the library, which reads it, and the
+// generator, which writes it; the readers are inline. All numbers are
+// little-endian.
 //
 //   0  u32 the UCA version: major << 16 | minor << 8 | update
 //   4  u32 ce32Count, the expansion words below
@@ -14,8 +14,8 @@
 //  24  u32 startCount, the script starts below
 //  28  u32 numericPrimary, the lead byte of numeric order's primaries
 //  32  u64 the unit's hash (mlocCollationUnitHash), which a collator's
-//      version is made of (record mloc-0070)
-//  40  the code point trie of CE32s (record mloc-0063), padded to 8
+//      version is made of
+//  40  the code point trie of CE32s, padded to 8
 //      u64 ces[ceCount]
 //      u32 ce32s[ce32Count]
 //      u32 listStarts[listCount + 1]: where each context list starts in
@@ -61,8 +61,7 @@
 //   value only names one, so opening costs the unit's size, however many
 //   code points name a list.
 
-// A tailoring (record mloc-0071) is a unit over the root in the same
-// encoding:
+// A tailoring is a unit over the root in the same encoding:
 //
 //   0  u32 ce32Count
 //   4  u32 ceCount
@@ -483,9 +482,8 @@ static inline uint32_t mlocCollationLastPrimary(const CollationRoot* r, uint32_t
     return index == 0 ? 0 : (mlocCollationStart(r, index + 1) << 16) - 1;
 }
 
-// A collation unit's hash (research 68): XXH64 of its bytes but the
-// 64-bit word at an offset, which holds it, the bytes before seeding the
-// bytes after.
+// A collation unit's hash: XXH64 of its bytes but the 64-bit word at an
+// offset, which holds it, the bytes before seeding the bytes after.
 static inline uint64_t mlocCollationUnitHash(DataSpan unit, uint32_t at)
 {
     return mlocXxh64(unit.bytes + at + 8, unit.size - at - 8, mlocXxh64(unit.bytes, at, 0));
@@ -497,10 +495,10 @@ static inline bool mlocCollationHashValid(DataSpan unit, uint32_t at)
     return unit.size >= at + 8 && mlocLoad64(unit.bytes + at) == mlocCollationUnitHash(unit, at);
 }
 
-// Lays out a root unit: its head, trie and arrays inside the payload,
-// its fast Latin table and unsafe ranges, checking only that they fit.
-// The runtime reads a unit the validator passed this way (research 68:
-// the full checks were most of making a collator).
+// Lays out a root unit: its head, trie and arrays inside the payload, its
+// fast Latin table and unsafe ranges, checking only that they fit. The
+// runtime reads a unit the validator passed this way (the full checks were
+// most of making a collator).
 static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
 {
     if (span.size < collationRootHead)

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Chinese and Korean (Dangi) calendars (record mloc-0040), after
-// Calendrical Calculations: a month begins on the day of a new moon in
-// China's or Korea's time, the eleventh month holds the winter solstice,
-// and in a solstice-to-solstice span of thirteen months the first month
-// with no major solar term is the leap month. Built on calendar_astro.h.
-// A year is numbered by the Gregorian year whose July 1 it holds, as
-// Temporal and ICU4X number it.
+// The Chinese and Korean (Dangi) calendars, after Calendrical
+// Calculations: a month begins on the day of a new moon in China's or
+// Korea's time, the eleventh month holds the winter solstice, and in a
+// solstice-to-solstice span of thirteen months the first month with no
+// major solar term is the leap month. Built on calendar_astro.h. A year is
+// numbered by the Gregorian year whose July 1 it holds, as Temporal and
+// ICU4X number it.
 
 #ifndef MLOC_CALENDAR_CHINESE_H
 #define MLOC_CALENDAR_CHINESE_H

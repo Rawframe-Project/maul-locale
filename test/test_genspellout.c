@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The spell-out rule compiler and its units (record mloc-0034): rules
-// compiled as ICU4C 79 reads them, each case's expected text being
-// ICU's getRules for the same rules (a rule set without a name, implicit
-// bases, brackets with "|", the special rules, fraction rule sets,
-// plural blocks, apostrophes, patterns, ">>>"); the rules ICU refuses,
-// and the one the library refuses that ICU takes (a fraction rule set
-// read before a rule names it); the unit the generator writes opening,
-// every corruption of it refused, and its lead records; and the
-// engine's limits on rules that nest without end.
+// The spell-out rule compiler and its units: rules compiled as ICU4C 79
+// reads them, each case's expected text being ICU's getRules for the same
+// rules (a rule set without a name, implicit bases, brackets with "|", the
+// special rules, fraction rule sets, plural blocks, apostrophes, patterns,
+// ">>>"); the rules ICU refuses, and the one the library refuses that ICU
+// takes (a fraction rule set read before a rule names it); the unit the
+// generator writes opening, every corruption of it refused, and its lead
+// records; and the engine's limits on rules that nest without end.
 
 #include "bytes.h"
 #include "data_format.h"

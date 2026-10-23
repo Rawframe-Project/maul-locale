@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The generator's calendar tables (record mloc-0040): Japanese eras, a
-// well-formed list becoming the table's source with each era's first day
-// by the library's Gregorian arithmetic; the Chinese and Dangi years,
-// the same as the library's compiled tables from the repository's
-// overrides, each override in its own calendar's table; every malformed
-// input refused.
+// The generator's calendar tables: Japanese eras, a well-formed list
+// becoming the table's source with each era's first day by the library's
+// Gregorian arithmetic; the Chinese and Dangi years, the same as the
+// library's compiled tables from the repository's overrides, each override
+// in its own calendar's table; every malformed input refused.
 
 #include "calendar_gen.h"
 #include "calendar_years.h"

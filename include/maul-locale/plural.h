@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Plural rules (UTS #35 Part 3, record mloc-0020): the category a
-// number takes in a locale, cardinal ("1 file", "2 files") or ordinal
-// ("1st", "2nd"), and that of a range of two numbers.
+// Plural rules (UTS #35 Part 3): the category a number takes in a locale,
+// cardinal ("1 file", "2 files") or ordinal ("1st", "2nd"), and that of a
+// range of two numbers.
 
 #ifndef MAUL_LOCALE_PLURAL_H
 #define MAUL_LOCALE_PLURAL_H

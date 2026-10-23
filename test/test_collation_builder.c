@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder (record mloc-0071) on a small root: relations of
-// each strength after a reset and before it, a reset on a tailored
-// string, a prefix, an extension, a contraction, case bits, the special
-// positions, [import] through the caller, [suppressContractions] where
-// it stands, the settings gathered over imports, and the rules refused,
-// each by the order of the elements it gives. conform_collation_builder
-// checks every CLDR type against ICU4C 79.
+// The tailoring builder on a small root: relations of each strength after
+// a reset and before it, a reset on a tailored string, a prefix, an
+// extension, a contraction, case bits, the special positions, [import]
+// through the caller, [suppressContractions] where it stands, the settings
+// gathered over imports, and the rules refused, each by the order of the
+// elements it gives. conform_collation_builder checks every CLDR type
+// against ICU4C 79.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Tailored locales' sort keys through the public collator (record
-// mloc-0071) against ICU4C 79's. Reads conform_collation_builder
-// --queries on standard input: for each locale file's type (not
-// "private-", no alt but "short", the long form's strings keyed too),
-// its tag (the file's locale, -u-co and the
+// Tailored locales' sort keys through the public collator against ICU4C
+// 79's. Reads conform_collation_builder --queries on standard input: for
+// each locale file's type (not "private-", no alt but "short", the long
+// form's strings keyed too), its tag (the file's locale, -u-co and the
 // type's BCP 47 name) under four sets of options (none; kf upper; ka
-// shifted with ks level4; kc), and the file's locale alone for its
-// default type, with the strings the type's rules name and a fixed list
-// of probes. --queries writes the tags and strings as the oracle reads
-// them; --keys writes each string's key in hex, as the oracle writes
-// ICU4C's; alone it prints how many keys it made and a hash of them, and
-// with --expect it fails unless the hash is the given one, which CI
-// checks on the pinned release.
+// shifted with ks level4; kc), and the file's locale alone for its default
+// type, with the strings the type's rules name and a fixed list of probes.
+// --queries writes the tags and strings as the oracle reads them; --keys
+// writes each string's key in hex, as the oracle writes ICU4C's; alone it
+// prints how many keys it made and a hash of them, and with --expect it
+// fails unless the hash is the given one, which CI checks on the pinned
+// release.
 //
 // usage: conform_collation_builder FractionalUCA.txt --queries files |
 //        conform_collation_keys <collation.mloc> [--queries | --keys |

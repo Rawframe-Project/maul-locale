@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The core every number formatter embeds (record mloc-0021): a locale's
-// digits, symbols, pattern and grouping resolved from the data, and the
-// writing of a rounded decimal with them.
+// The core every number formatter embeds: a locale's digits, symbols,
+// pattern and grouping resolved from the data, and the writing of a
+// rounded decimal with them.
 
 #ifndef MLOC_NUMBER_CORE_H
 #define MLOC_NUMBER_CORE_H

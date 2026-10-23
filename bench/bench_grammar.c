@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The grammar part's benchmark cases (records mloc-0047 to mloc-0052).
+// The grammar part's benchmark cases.
 
 #include "bench_grammar.h"
 

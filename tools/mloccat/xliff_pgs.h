@@ -2,14 +2,13 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // A selection message as an XLIFF unit of the Plural, Gender and Select
-// module (record mloc-0061): pgs:switch names its selectors, and a
-// segment per tuple of case values carries the variant that tuple
-// selects. A plural or ordinal selector's values are the source's exact
-// numbers, in numeric order, then the target locale's categories in
-// CLDR's order; a select's are the source's keys in byte order, then
-// other. Each segment's source is the source variant the tuple selects,
-// its target the translation's; a plural segment notes the target's
-// numbers that fall in its categories.
+// module: pgs:switch names its selectors, and a segment per tuple of case
+// values carries the variant that tuple selects. A plural or ordinal
+// selector's values are the source's exact numbers, in numeric order, then
+// the target locale's categories in CLDR's order; a select's are the
+// source's keys in byte order, then other. Each segment's source is the
+// source variant the tuple selects, its target the translation's; a plural
+// segment notes the target's numbers that fall in its categories.
 
 #ifndef MLOCCAT_XLIFF_PGS_H
 #define MLOCCAT_XLIFF_PGS_H

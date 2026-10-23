@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal strings (record mloc-0041), in test262_ixdtf.inc:
-// every string its tests expect a parser to refuse, checked against the
-// parser the reader called (mlocParseTemporalString with the goals given,
-// mlocParseUTCOffset, mlocParseTimeZoneString, mlocParseCalendarString or
-// mlocParseDuration); and every string they expect a toString to write,
-// checked against the writer with the value and options the reader gave
-// it. The strings test262 reads successfully are checked by the rows of
-// the values made from them, and every string is compared with a second
-// reading of the grammar by tools/check_ixdtf.py. The rows were recorded
-// by running the tests on the library through a reader of their
-// JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal strings, in test262_ixdtf.inc: every string its tests
+// expect a parser to refuse, checked against the parser the reader called
+// (mlocParseTemporalString with the goals given, mlocParseUTCOffset,
+// mlocParseTimeZoneString, mlocParseCalendarString or mlocParseDuration);
+// and every string they expect a toString to write, checked against the
+// writer with the value and options the reader gave it. The strings
+// test262 reads successfully are checked by the rows of the values made
+// from them, and every string is compared with a second reading of the
+// grammar by tools/check_ixdtf.py. The rows were recorded by running the
+// tests on the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

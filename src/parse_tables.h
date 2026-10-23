@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The sets number parsing reads (record mloc-0032), shared
-// by the library and the generator. All integers are little-endian.
+// The sets number parsing reads, shared by the library and the generator.
+// All integers are little-endian.
 //
 // The parse sets, a unit of no locale: a header (u16 class count, u16
 // range count, u16 string count, u16 text size, u16 fold count, u16

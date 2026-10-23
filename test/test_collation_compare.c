@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The general compare (record mloc-0067) over the generated root: each
-// level alone, its strength's stop, a text ending first, completely
-// ignorable code points, canonically equal texts, Han and unassigned
-// code points, and every answer's mirror.
+// The general compare over the generated root: each level alone, its
+// strength's stop, a text ending first, completely ignorable code points,
+// canonically equal texts, Han and unassigned code points, and every
+// answer's mirror.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

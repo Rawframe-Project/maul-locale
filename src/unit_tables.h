@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number part's unit tables (record mloc-0023), shared by the library
-// and the generator: units of no locale holding what units.xml gives.
-// All integers are little-endian.
+// The number part's unit tables, shared by the library and the generator:
+// units of no locale holding what units.xml gives. All integers are
+// little-endian.
 //
 // The unit table reads and converts unit identifiers. Its header
 // (unitsHeaderSize bytes): the counts of simple units, prefixes, aliases,
@@ -68,16 +68,15 @@
 //   1 place. A run's last entry has the threshold 0.
 // - The text.
 //
-// The unit names ship as a data file of their own (units.mloc, record
-// mloc-0024). Its unit of no locale lists the identifiers the names
-// units know: a header (u16 count, u16 0, u32 text size), the
-// identifiers' text offsets (u32 each, count + 1, from 0 to the text
-// size, ascending), their kinds (u8 each, the unitId values), then the
-// text: identifiers strictly ascending by their bytes, each of ASCII
-// lowercase letters, digits, '-' and ':'. An identifier is a core unit
-// identifier ("meter", "kilometer-per-hour"), a compound key ("per",
-// "times", "power2", "10p3", "1024p3") or a power of a gender
-// ("power2:feminine"); its index is its code in the names units.
+// The unit names ship as a data file of their own (units.mloc). Its unit
+// of no locale lists the identifiers the names units know: a header (u16
+// count, u16 0, u32 text size), the identifiers' text offsets (u32 each,
+// count + 1, from 0 to the text size, ascending), their kinds (u8 each,
+// the unitId values), then the text: identifiers strictly ascending by
+// their bytes, each of ASCII lowercase letters, digits, '-' and ':'. An
+// identifier is a core unit identifier ("meter", "kilometer-per-hour"), a
+// compound key ("per", "times", "power2", "10p3", "1024p3") or a power of
+// a gender ("power2:feminine"); its index is its code in the names units.
 //
 // The names of a width (long, short, narrow): a unit per locale key in
 // the sparse shape (currency_tables.h, codes from 0) with unitNameFields

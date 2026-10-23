@@ -3,8 +3,8 @@
 //
 // Relative time (maul-locale/relative.h): amounts of each kind of unit
 // in each width and mode, as ICU4C 79's RelativeDateTimeFormatter writes
-// them (its formatNumeric and format), but where record mloc-0043 says
-// otherwise (auto without ICU's 1% epsilon; capitalization by CLDR's
+// them (its formatNumeric and format), but where the library differs on
+// purpose (auto without ICU's 1% epsilon; capitalization by CLDR's
 // relative context transforms; parts kept); parts; refusals.
 
 #include "test_harness.h"

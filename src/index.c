@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The alphabetic index (record mloc-0075): built over a copy of the
-// collator at primary strength (index_build.c), its buckets read and a
-// name's found from the value's bytes (index_value.h).
+// The alphabetic index: built over a copy of the collator at primary
+// strength (index_build.c), its buckets read and a name's found from the
+// value's bytes (index_value.h).
 
 #include "maul-locale/index.h"
 

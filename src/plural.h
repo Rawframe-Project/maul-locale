@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The validators of the plural units (record mloc-0020), for the kind
-// list, and the rule sets by index, for the number part.
+// The validators of the plural units, for the kind list, and the rule sets
+// by index, for the number part.
 
 #ifndef MLOC_PLURAL_H
 #define MLOC_PLURAL_H

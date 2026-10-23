@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Date arithmetic (record mloc-0040): mlocAddToDate and mlocDateUntil
-// against the Intl Era and Month Code proposal's NonISODateAdd and
-// NonISODateUntil transcribed step by step, their BalanceNonISODate loops
-// and one-unit-at-a-time counts included, over the public functions;
-// Temporal's duration limits; and results at the range's ends.
+// Date arithmetic: mlocAddToDate and mlocDateUntil against the Intl Era
+// and Month Code proposal's NonISODateAdd and NonISODateUntil transcribed
+// step by step, their BalanceNonISODate loops and one-unit-at-a-time
+// counts included, over the public functions; Temporal's duration limits;
+// and results at the range's ends.
 
 #include "test_harness.h"
 

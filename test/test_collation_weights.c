@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder's weight allocator (record mloc-0071), on gaps
-// whose weights follow from ICU4C's CollationWeights by hand: a middle
-// range, a lower and an upper range that meet, ranges lengthened by one
-// and two bytes, the tertiaries' 3F limit, a compressible lead byte's
-// second byte, and the refusals; and 245 allocations against
-// ICU4C 79's.
+// The tailoring builder's weight allocator, on gaps whose weights follow
+// from ICU4C's CollationWeights by hand: a middle range, a lower and an
+// upper range that meet, ranges lengthened by one and two bytes, the
+// tertiaries' 3F limit, a compressible lead byte's second byte, and the
+// refusals; and 245 allocations against ICU4C 79's.
 
 #include "collation_weights.h"
 #include "test_harness.h"

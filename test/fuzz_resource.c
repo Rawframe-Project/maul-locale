@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the catalog tool's resource reader (record
-// mloc-0053). Any bytes are read or refused with a line and column inside
-// the text; a resource read is checked as a catalog source, written back
-// and read again to the same data model.
+// libFuzzer target for the catalog tool's resource reader. Any bytes are
+// read or refused with a line and column inside the text; a resource read
+// is checked as a catalog source, written back and read again to the same
+// data model.
 
 // open_memstream is POSIX 2008.
 #define _POSIX_C_SOURCE 200809L

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Uzbek for the Turkic engine (grammar_turkic.h, record mloc-0047), in
-// its Latin alphabet, by the 1995 spelling rules (Cabinet decree 339):
-// no vowel harmony; -ga written -ka after k and -qa after q (item 37);
-// no pronominal n after a third person's possessive (uyiga); no
-// instrumental case; the copula -dir and the question particle -mi
-// joined; abbreviations and their suffixes joined (item 49: ToshDUning)
-// and digits joined too, a hyphen after digits being the ordinal's
-// (item 56: 7-sinf); a common noun's final k or q in a word of two
-// syllables or more (and bek, yoʻq) written g or gʻ before a possessive
-// (item 34: yuragim), in names too (Ulugʻbegi, as apertium-uzb writes). Numbers are read by the
-// coded words below, Uzbek having no spell-out rules in CLDR.
+// Uzbek for the Turkic engine (grammar_turkic.h), in its Latin alphabet,
+// by the 1995 spelling rules (Cabinet decree 339): no vowel harmony; -ga
+// written -ka after k and -qa after q (item 37); no pronominal n after a
+// third person's possessive (uyiga); no instrumental case; the copula -dir
+// and the question particle -mi joined; abbreviations and their suffixes
+// joined (item 49: ToshDUning) and digits joined too, a hyphen after
+// digits being the ordinal's (item 56: 7-sinf); a common noun's final k or
+// q in a word of two syllables or more (and bek, yoʻq) written g or gʻ
+// before a possessive (item 34: yuragim), in names too (Ulugʻbegi, as
+// apertium-uzb writes). Numbers are read by the coded words below, Uzbek
+// having no spell-out rules in CLDR.
 
 #include "grammar_turkic.h"
 

@@ -2,12 +2,12 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Date skeletons matched to patterns (UTS #35, "Matching Skeletons" and
-// "Missing Skeleton Fields"), as ICU's DateTimePatternGenerator does it:
-// a locale's standard formats and availableFormats in a map, the best
-// entry by a distance between fields, its field lengths adjusted to the
-// request, missing fields appended or a date and a time glued by the
-// request's month width. The generator uses it to compile each semantic
-// skeleton's pattern (research 39); patterns are UTF-8.
+// "Missing Skeleton Fields"), as ICU's DateTimePatternGenerator does it: a
+// locale's standard formats and availableFormats in a map, the best entry
+// by a distance between fields, its field lengths adjusted to the request,
+// missing fields appended or a date and a time glued by the request's
+// month width. The generator uses it to compile each semantic skeleton's
+// pattern; patterns are UTF-8.
 
 #ifndef MLOCGEN_SKELETON_H
 #define MLOCGEN_SKELETON_H

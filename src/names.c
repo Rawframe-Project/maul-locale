@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Display names (maul-locale/names.h, record mloc-0037): a code put in
-// its canonical case behind its namespace, looked up along the locale's
-// chain (names_data.h), else written itself, then titlecased as the
-// context asks.
+// Display names (maul-locale/names.h): a code put in its canonical case
+// behind its namespace, looked up along the locale's chain (names_data.h),
+// else written itself, then titlecased as the context asks.
 
 #include "maul-locale/names.h"
 

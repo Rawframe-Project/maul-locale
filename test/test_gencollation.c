@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The root collation reader (record mloc-0064) on small files of
-// FractionalUCA.txt's form: weights left-aligned into 64-bit elements,
-// prefixes and contractions, elements naming a code point's own, Han's
-// implicit primaries, script starts and special lines kept apart, the
-// runtime's fixed code points left out, and the lines it refuses. Then
-// the root unit (record mloc-0065) built from them and read back, and
-// its validator on units written by hand.
+// The root collation reader on small files of FractionalUCA.txt's form:
+// weights left-aligned into 64-bit elements, prefixes and contractions,
+// elements naming a code point's own, Han's implicit primaries, script
+// starts and special lines kept apart, the runtime's fixed code points
+// left out, and the lines it refuses. Then the root unit built from them
+// and read back, and its validator on units written by hand.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

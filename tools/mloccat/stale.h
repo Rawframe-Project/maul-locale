@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Stale translations (record mloc-0056). A translation records the hash
-// of the source message it was made from as @mloc-source; it is stale
-// when the source's hash is now another. The hash is XXH64 (seed 0) of
-// the source message's canonical text, the message compiled and written
-// back by mlocWriteMessageText, so whitespace and quoting do not count,
-// and text, options and variants do. It is written as 16 lowercase hex
-// digits.
+// Stale translations. A translation records the hash of the source message
+// it was made from as @mloc-source; it is stale when the source's hash is
+// now another. The hash is XXH64 (seed 0) of the source message's
+// canonical text, the message compiled and written back by
+// mlocWriteMessageText, so whitespace and quoting do not count, and text,
+// options and variants do. It is written as 16 lowercase hex digits.
 
 #ifndef MLOCCAT_STALE_H
 #define MLOCCAT_STALE_H

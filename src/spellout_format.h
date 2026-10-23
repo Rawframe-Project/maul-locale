@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The spell-out engine (record mloc-0034): a rule set of a compiled
-// group run on an exact decimal, as ICU4C 79's NFRuleSet::format and
-// NFRule::doFormat run it, its int64_t path for integers that fit and
-// its double path, made exact, for the rest.
+// The spell-out engine: a rule set of a compiled group run on an exact
+// decimal, as ICU4C 79's NFRuleSet::format and NFRule::doFormat run it,
+// its int64_t path for integers that fit and its double path, made exact,
+// for the rest.
 
 #ifndef MLOC_SPELLOUT_FORMAT_H
 #define MLOC_SPELLOUT_FORMAT_H

@@ -647,12 +647,11 @@ static bool NameGoesOn(const Parser* r, const Segment* s)
 // ICU's matchCurrency: the symbol as written, the text shown when it is
 // another, the code in any case, then any currency or the long names.
 // Where a name begins with the code, the longer is taken: ICU takes the
-// code, leaving "o" of "Euro" unread (record mloc-0033).
-// Whether the text holds the shown text, then ignorables and the code:
-// what a formatter with the ISO append writes. The symbol may begin
-// with that text and the code's first letters (fr-CA writes USD's
-// narrow symbol as "$" and its symbol as "$ US", so "0,00 $ USD"), and
-// read first it would leave the code unread.
+// code, leaving "o" of "Euro" unread. Whether the text holds the shown
+// text, then ignorables and the code: what a formatter with the ISO append
+// writes. The symbol may begin with that text and the code's first letters
+// (fr-CA writes USD's narrow symbol as "$" and its symbol as "$ US", so
+// "0,00 $ USD"), and read first it would leave the code unread.
 static bool ShownBeforeCode(const Parser* r, const ParseCurrency* c, Segment* s)
 {
     if (!c->appended || !Begins(s, c->shown, c->shownLength))
@@ -694,9 +693,9 @@ static void MatchText(const Parser* r, const ParseCurrency* c, Segment* s, Parse
     s->at += code;
     bool names = code == 0 || NameGoesOn(r, s);
     s->at = initial;
-    // With any currency, the formatter's own long names too where they
-    // read further: the chain's search skips a step's plurals of a
-    // currency an earlier step gives some of (record mloc-0033).
+    // With any currency, the formatter's own long names too where they read
+    // further: the chain's search skips a step's plurals of a currency an
+    // earlier step gives some of.
     size_t own = names ? LongestName(r, c, s) : 0;
     if (names && c->chain != nullptr)
     {

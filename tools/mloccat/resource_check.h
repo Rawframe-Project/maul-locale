@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A resource read as a catalog source (record mloc-0053): a locale in its
-// frontmatter, keys made of its section and entry identifiers and given
-// once, the properties the tool understands on what they may describe,
-// and every message compiling.
+// A resource read as a catalog source: a locale in its frontmatter, keys
+// made of its section and entry identifiers and given once, the properties
+// the tool understands on what they may describe, and every message
+// compiling.
 
 #ifndef MLOCCAT_RESOURCE_CHECK_H
 #define MLOCCAT_RESOURCE_CHECK_H

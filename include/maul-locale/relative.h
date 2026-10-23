@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Relative time (record mloc-0043): a signed amount of a unit written as
-// a locale says it ("in 3 days", "2 hr. ago", "yesterday", "next
-// Monday"), as ECMA-402's Intl.RelativeTimeFormat and ICU4C's
-// RelativeDateTimeFormatter write it. The amount is the caller's: the
-// library never reads a clock. The names and patterns are a data file
-// of their own, src/generated/relative.mloc.
+// Relative time: a signed amount of a unit written as a locale says it
+// ("in 3 days", "2 hr. ago", "yesterday", "next Monday"), as ECMA-402's
+// Intl.RelativeTimeFormat and ICU4C's RelativeDateTimeFormatter write it.
+// The amount is the caller's: the library never reads a clock. The names
+// and patterns are a data file of their own, src/generated/relative.mloc.
 
 #ifndef MAUL_LOCALE_RELATIVE_H
 #define MAUL_LOCALE_RELATIVE_H

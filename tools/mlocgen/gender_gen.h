@@ -2,8 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The gender of a list of persons, from supplemental/genderList.xml's
-// personList rules, as the source of src/generated/list_genders.c
-// (record mloc-0051).
+// personList rules, as the source of src/generated/list_genders.c.
 
 #ifndef MLOCGEN_GENDER_GEN_H
 #define MLOCGEN_GENDER_GEN_H

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Script reordering (record mloc-0069) for a differential against ICU4C:
-// with "samples", writes one code point for each range of the root's
-// script starts, one whose text is a single primary. Otherwise reads the
-// samples from a file and lines of reorder codes from the input (scripts
-// as their four letters; space, punct, symbol, currency and digit for
-// the groups) and writes for each line its result (0, -1 refused as
-// invalid, -2 for capacity) and, when 0, each sample's primary after the
-// reordering, in hex. The oracle
-// tools/oracle/collation/icu4c_collation_reorder.cpp
+// Script reordering for a differential against ICU4C: with "samples",
+// writes one code point for each range of the root's script starts, one
+// whose text is a single primary. Otherwise reads the samples from a file
+// and lines of reorder codes from the input (scripts as their four
+// letters; space, punct, symbol, currency and digit for the groups) and
+// writes for each line its result (0, -1 refused as invalid, -2 for
+// capacity) and, when 0, each sample's primary after the reordering, in
+// hex. The oracle tools/oracle/collation/icu4c_collation_reorder.cpp
 // writes the same from ICU's sort keys.
 //
 // usage: conform_collation_reorder collation.mloc samples > samples.txt

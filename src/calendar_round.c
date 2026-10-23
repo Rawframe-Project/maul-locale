@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Rounding a difference of dates (maul-locale/calendar.h, record
-// mloc-0040): Temporal's RoundRelativeDuration for two dates at midnight
-// and no time zone, which duration_round.h gives for date-times.
+// Rounding a difference of dates (maul-locale/calendar.h): Temporal's
+// RoundRelativeDuration for two dates at midnight and no time zone, which
+// duration_round.h gives for date-times.
 
 #include "duration_round.h"
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A zone formatter's state (maul-locale/datetime.h, record mloc-0042):
-// the zone names units along the locale's chain, the metazone and zone
-// codes units, the region the generic names are qualified for, the
-// offset's digits; and the writing of a zone at an instant by a style,
-// falling back as ICU4C's TimeZoneFormat falls back.
+// A zone formatter's state (maul-locale/datetime.h): the zone names units
+// along the locale's chain, the metazone and zone codes units, the region
+// the generic names are qualified for, the offset's digits; and the
+// writing of a zone at an instant by a style, falling back as ICU4C's
+// TimeZoneFormat falls back.
 
 #ifndef MLOC_ZONE_FORMAT_H
 #define MLOC_ZONE_FORMAT_H

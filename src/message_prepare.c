@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Binding a message (maul-locale/message.h, record mloc-0045): the words,
-// then the number functions' values prepared.
+// Binding a message (maul-locale/message.h): the words, then the number
+// functions' values prepared.
 
 #include "message_prepare.h"
 

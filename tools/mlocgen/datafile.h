@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Writes a data file in the layout of record mloc-0014
-// (src/data_format.h): units are added in any order, each with its
-// kind, its locale id (or none) and its payload; strings the payloads
-// refer to go into the pool. Writing sorts the locales and units,
-// stores identical payloads once, and gives the same bytes for the same
-// strings added in the same order, whatever the order of the units.
+// Writes a data file in the layout of src/data_format.h: units are added
+// in any order, each with its kind, its locale id (or none) and its
+// payload; strings the payloads refer to go into the pool. Writing sorts
+// the locales and units, stores identical payloads once, and gives the
+// same bytes for the same strings added in the same order, whatever the
+// order of the units.
 
 #ifndef MLOCGEN_DATAFILE_H
 #define MLOCGEN_DATAFILE_H

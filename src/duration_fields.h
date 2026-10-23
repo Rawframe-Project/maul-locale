@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A duration's fields as exact decimals (record mloc-0044): each double's
-// value, and a field with the fractions after it added, in 128 bits.
+// A duration's fields as exact decimals: each double's value, and a field
+// with the fractions after it added, in 128 bits.
 
 #ifndef MLOC_DURATION_FIELDS_H
 #define MLOC_DURATION_FIELDS_H

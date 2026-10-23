@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date formatter (maul-locale/datetime.h, record mloc-0042): the
-// locale's calendar from its preferences, the set of its options'
-// patterns from dates.mloc, its digits and those its patterns name; a
-// date read in that calendar and written by the pattern of the year
-// style its year needs.
+// The date formatter (maul-locale/datetime.h): the locale's calendar from
+// its preferences, the set of its options' patterns from dates.mloc, its
+// digits and those its patterns name; a date read in that calendar and
+// written by the pattern of the year style its year needs.
 
 #include "date_format.h"
 
@@ -157,8 +156,8 @@ static const uint8_t* IndexesOf(const DatePatterns* p, const uint8_t* part,
     return p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length;
 }
 
-// The formatter's interval patterns (research 40): each kept pattern's
-// pair, a standard format's own pattern, and the fallback.
+// The formatter's interval patterns: each kept pattern's pair, a standard
+// format's own pattern, and the fallback.
 static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* intervals,
                       const mlocDateOptions* o)
 {

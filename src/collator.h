@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collator a mlocCollator value holds (record mloc-0069), shared by
-// the compare (collate.c) and search (search.c).
+// The collator a mlocCollator value holds, shared by the compare
+// (collate.c) and search (search.c).
 
 #ifndef MLOC_SRC_COLLATOR_H
 #define MLOC_SRC_COLLATOR_H
@@ -77,11 +77,10 @@ static inline void mlocReadCollatorFast(const void* value, Collator* c)
     memcpy(&c->fast, (const uint8_t*)value + offsetof(Collator, fast), sizeof(c->fast));
 }
 
-// The general path's parts, after the head: the root and the settings,
-// and the tailoring, Han table and reordering only where the head says
-// they are in use (the reordering alone is 520 bytes), the settings
-// pointed at them. Research 68: copying the whole value was most of a
-// fast compare's time.
+// The general path's parts, after the head: the root and the settings, and
+// the tailoring, Han table and reordering only where the head says they
+// are in use (the reordering alone is 520 bytes), the settings pointed at
+// them: copying the whole value was most of a fast compare's time.
 static inline void mlocReadCollatorRest(const void* value, Collator* c)
 {
     const uint8_t* b = value;

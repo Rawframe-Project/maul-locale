@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic calendars (record mloc-0040): a day to its year, month
-// and day and back, after Reingold and Dershowitz's Calendrical
-// Calculations, with Persian's 33-year rule and its corrections as both
-// ICUs have them. Days are those of maul-locale/calendar.h; years are
-// counted on across eras. Every function takes a Gregorian-based,
-// Coptic, Ethiopic, Indian, Persian or tabular Islamic calendar (the
-// other calendars' files use the Gregorian) and values in Temporal's
-// range.
+// The arithmetic calendars: a day to its year, month and day and back,
+// after Reingold and Dershowitz's Calendrical Calculations, with Persian's
+// 33-year rule and its corrections as both ICUs have them. Days are those
+// of maul-locale/calendar.h; years are counted on across eras. Every
+// function takes a Gregorian-based, Coptic, Ethiopic, Indian, Persian or
+// tabular Islamic calendar (the other calendars' files use the Gregorian)
+// and values in Temporal's range.
 
 #ifndef MLOC_CALENDAR_ARITH_H
 #define MLOC_CALENDAR_ARITH_H

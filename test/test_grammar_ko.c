@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Korean particles (maul-locale/grammar.h, record mloc-0050): every
-// particle after a vowel, a consonant and ㄹ, numbers by their
-// Sino-Korean reading, Latin capitals by their letters' names, Hanja by
-// their readings, both forms where the end cannot be read, a gloss in
-// parentheses, hints and the refusals.
+// Korean particles (maul-locale/grammar.h): every particle after a vowel,
+// a consonant and ㄹ, numbers by their Sino-Korean reading, Latin capitals
+// by their letters' names, Hanja by their readings, both forms where the
+// end cannot be read, a gloss in parentheses, hints and the refusals.
 
 #include "test_harness.h"
 

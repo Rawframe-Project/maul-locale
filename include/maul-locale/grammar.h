@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Grammatical suffixes on runtime text and numbers (records mloc-0046 to
-// mloc-0048): a word, a name, an abbreviation or a number inflected for
-// case, number, possessor and copula by the rules of its language, read
-// from how its end is spoken. Turkish, Kazakh, Kyrgyz, Azerbaijani,
-// Uzbek, Turkmen, Hungarian, Finnish and Korean; the rules are code
-// (Finnish's inflection types from Kotus's word list, mloc-0049; Hanja's
-// readings from Unihan, mloc-0050), the spoken form of a
-// number comes from the spell-out rules (spellout.mloc) or, for Uzbek and
+// Grammatical suffixes on runtime text and numbers: a word, a name, an
+// abbreviation or a number inflected for case, number, possessor and
+// copula by the rules of its language, read from how its end is spoken.
+// Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek, Turkmen, Hungarian, Finnish
+// and Korean; the rules are code (Finnish's inflection types from Kotus's
+// word list; Hanja's readings from Unihan), the spoken form of a number
+// comes from the spell-out rules (spellout.mloc) or, for Uzbek and
 // Turkmen, which have none, from their number words in code.
 
 #ifndef MAUL_LOCALE_GRAMMAR_H

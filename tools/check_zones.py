@@ -2,17 +2,16 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks the compiled zones (record mloc-0041) against zic and zdump on
-# the same tzdb source: zic compiles the default build's files into fat
-# TZif files (transitions listed through 2037, then the TZ string), and
-# zdump -v gives each zone's transitions from 1800 to 2500 and in the last
-# years of Temporal's range. conform_zones prints the library's. Every
-# change of offset must match in time and offset, and every change of
-# the daylight flag too, except in the zones whose source has negative
-# savings: there the library keeps tzdb's rearguard daylight periods,
-# where zdump shows the main form's. Given a zones file (mlocgen
-# zonesfile), the library reads its zones from it, and its release must
-# be the source's.
+# Checks the compiled zones against zic and zdump on the same tzdb source:
+# zic compiles the default build's files into fat TZif files (transitions
+# listed through 2037, then the TZ string), and zdump -v gives each zone's
+# transitions from 1800 to 2500 and in the last years of Temporal's range.
+# conform_zones prints the library's. Every change of offset must match in
+# time and offset, and every change of the daylight flag too, except in
+# the zones whose source has negative savings: there the library keeps
+# tzdb's rearguard daylight periods, where zdump shows the main form's.
+# Given a zones file (mlocgen zonesfile), the library reads its zones from
+# it, and its release must be the source's.
 #
 # usage: check_zones.py <conform_zones> <tzdb source directory> [zones file]
 

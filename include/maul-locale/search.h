@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation search (record mloc-0074): a pattern found in a text where a
-// collator holds them equal, as ICU4C's usearch finds it: the pattern's
-// collation elements against the text's, a match starting and ending on
-// grapheme cluster boundaries (or, where ICU allows one, inside a
-// cluster at a normalization boundary), the identical strength also
-// asking for the same NFD. The searcher is a value the caller keeps; it
-// holds a copy of the collator and the pattern's elements, and keeps no
-// pointer to either. A find is a call from a position: to find every
-// match, call again from the last match's end, or from its start plus
-// one code point for overlapping matches; walking back, from the last
-// match's start.
+// Collation search: a pattern found in a text where a collator holds them
+// equal, as ICU4C's usearch finds it: the pattern's collation elements
+// against the text's, a match starting and ending on grapheme cluster
+// boundaries (or, where ICU allows one, inside a cluster at a
+// normalization boundary), the identical strength also asking for the same
+// NFD. The searcher is a value the caller keeps; it holds a copy of the
+// collator and the pattern's elements, and keeps no pointer to either. A
+// find is a call from a position: to find every match, call again from the
+// last match's end, or from its start plus one code point for overlapping
+// matches; walking back, from the last match's start.
 
 #ifndef MAUL_LOCALE_SEARCH_H
 #define MAUL_LOCALE_SEARCH_H

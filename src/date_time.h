@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Times of day and date-times (maul-locale/zone.h, record mloc-0041):
-// their checks, and a date-time as seconds since 1970 read as universal
-// time.
+// Times of day and date-times (maul-locale/zone.h): their checks, and a
+// date-time as seconds since 1970 read as universal time.
 
 #ifndef MLOC_DATE_TIME_H
 #define MLOC_DATE_TIME_H

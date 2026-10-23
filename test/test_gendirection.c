@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The generator's scripts written right to left (record mloc-0045): the
-// RTL field of scriptMetadata.txt's lines becoming a sorted table,
-// comments and blank lines skipped; a line without the field, a
-// malformed code, a code twice or no script right to left refused.
+// The generator's scripts written right to left: the RTL field of
+// scriptMetadata.txt's lines becoming a sorted table, comments and blank
+// lines skipped; a line without the field, a malformed code, a code twice
+// or no script right to left refused.
 
 #include "direction_gen.h"
 #include "test_harness.h"

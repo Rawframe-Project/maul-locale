@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Messages (record mloc-0045): Unicode MessageFormat 2 (UTS #35 Part 9)
-// compiled once into caller memory, bound once to a locale, and
-// formatted many times. A compiled message is locale-free: it holds the
-// message's declarations, selectors, variants and patterns with their
-// names resolved, keys and names in NFC, and every syntax and data
-// model check done. It is the form a catalog stores; it is valid only
-// for this library's version.
+// Messages: Unicode MessageFormat 2 (UTS #35 Part 9) compiled once into
+// caller memory, bound once to a locale, and formatted many times. A
+// compiled message is locale-free: it holds the message's declarations,
+// selectors, variants and patterns with their names resolved, keys and
+// names in NFC, and every syntax and data model check done. It is the form
+// a catalog stores; it is valid only for this library's version.
 
 #ifndef MAUL_LOCALE_MESSAGE_H
 #define MAUL_LOCALE_MESSAGE_H
@@ -322,23 +321,22 @@ extern "C"
         uint64_t opaque[4];
     } mlocMessageCall;
 
-    // A program's function. Its name has a namespace ("ns:name"), not u:
-    // or mloc:, which are the library's. Each entry receives context.
-    // resolve turns the operand and the call's options into a value, or
-    // returns the fault that stops it (the expression then falls back);
-    // format writes a value as mlocOutput says (the length needed when
-    // it does not fit), or returns a fault; match tells whether a key (in
-    // NFC) matches a value, a fault making the selector match only "*";
-    // better tells whether key1 is a better match than key2, both
-    // matching; direction gives the direction of a value's text, for
-    // bidi isolation. A null format or match means the function cannot
-    // format or select (an unsupported operation, a bad selector); a null
-    // better means no key is better than another; a null direction, an
-    // unknown direction. The call's u: options are the formatter's
-    // (u:dir replaces the direction and isolates), not the function's.
-    // An entry may call the library back, the format call it is inside
-    // of included, but not make again an object that call uses or write
-    // its output or faults (record mloc-0001).
+    // A program's function. Its name has a namespace ("ns:name"), not u: or
+    // mloc:, which are the library's. Each entry receives context. resolve
+    // turns the operand and the call's options into a value, or returns the
+    // fault that stops it (the expression then falls back); format writes a
+    // value as mlocOutput says (the length needed when it does not fit), or
+    // returns a fault; match tells whether a key (in NFC) matches a value, a
+    // fault making the selector match only "*"; better tells whether key1 is a
+    // better match than key2, both matching; direction gives the direction of
+    // a value's text, for bidi isolation. A null format or match means the
+    // function cannot format or select (an unsupported operation, a bad
+    // selector); a null better means no key is better than another; a null
+    // direction, an unknown direction. The call's u: options are the
+    // formatter's (u:dir replaces the direction and isolates), not the
+    // function's. An entry may call the library back, the format call it is
+    // inside of included, but not make again an object that call uses or write
+    // its output or faults.
     typedef struct mlocMessageFunction
     {
         const char* name;
@@ -453,14 +451,14 @@ extern "C"
                                                        size_t* sizeOut);
 
     // A formatted message's parts, as the output's part function receives
-    // them (record mloc-0045). A part whose kind's low byte is 0x80 or
-    // more is the message's own: the byte is one of these, and the bits
-    // above it the expression's or markup's index in the message (0 for
-    // text and an isolation mark). A part whose low byte is under 0x80
-    // belongs to the placeholder around it, which reported its range
-    // first: its kind is the function's own (mlocNumberPart for the number
-    // functions, mlocDatePart for the date functions), its range inside
-    // the placeholder's. The message's own parts tile its text in order.
+    // them. A part whose kind's low byte is 0x80 or more is the message's own:
+    // the byte is one of these, and the bits above it the expression's or
+    // markup's index in the message (0 for text and an isolation mark). A part
+    // whose low byte is under 0x80 belongs to the placeholder around it, which
+    // reported its range first: its kind is the function's own (mlocNumberPart
+    // for the number functions, mlocDatePart for the date functions), its
+    // range inside the placeholder's. The message's own parts tile its text in
+    // order.
     typedef enum mlocMessagePart
     {
         // A text of the pattern.

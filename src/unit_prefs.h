@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The units a locale prefers for a usage (record mloc-0023), for the
-// unit formatter: the route of an input unit, every output unit the
-// value may choose, and the precision an output takes.
+// The units a locale prefers for a usage, for the unit formatter: the
+// route of an input unit, every output unit the value may choose, and the
+// precision an output takes.
 
 #ifndef MLOC_UNIT_PREFS_H
 #define MLOC_UNIT_PREFS_H

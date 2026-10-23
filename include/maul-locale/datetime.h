@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Dates and times formatted (UTS #35 Part 4, record mloc-0042): a date
-// written in a locale by what it should show, a semantic field set at a
-// length ("Jan 5, 2026" for year, month and day, medium), as ICU4X's
-// semantic skeletons and CLDR's datetime conformance data name them, or
-// by the locale's four standard formats; a time of day by its hour cycle
-// and precision ("4:03 PM"), or by a standard format. The patterns were matched to the
-// locale's data by the generator as ICU4C's DateTimePatternGenerator
-// matches them; they and the calendar names are in a data file of their
-// own, dates.mloc, which a program adds to its data set.
+// Dates and times formatted (UTS #35 Part 4): a date written in a locale
+// by what it should show, a semantic field set at a length ("Jan 5, 2026"
+// for year, month and day, medium), as ICU4X's semantic skeletons and
+// CLDR's datetime conformance data name them, or by the locale's four
+// standard formats; a time of day by its hour cycle and precision ("4:03
+// PM"), or by a standard format. The patterns were matched to the locale's
+// data by the generator as ICU4C's DateTimePatternGenerator matches them;
+// they and the calendar names are in a data file of their own, dates.mloc,
+// which a program adds to its data set.
 
 #ifndef MAUL_LOCALE_DATETIME_H
 #define MAUL_LOCALE_DATETIME_H
@@ -200,7 +200,7 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitDateFormatter.
     /// @param date       The date.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date outside Temporal's range, or a
@@ -219,7 +219,7 @@ extern "C"
     ///                   zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
@@ -245,7 +245,7 @@ extern "C"
     ///                   zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes (record mloc-0015); its part
+    /// @param output     Where the text goes; its part
     ///                   function, when set, receives mlocDatePart values
     ///                   with the date each belongs to (mloc_dateRangeStart,
     ///                   mloc_dateRangeEnd, or 0 for both).
@@ -269,7 +269,7 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes (record mloc-0015); parts as
+    /// @param output     Where the text goes; parts as
     ///                   mlocFormatDateRange's.
     /// @return As mlocFormatDateInZone.
     /// @par Thread safety
@@ -388,7 +388,7 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitTimeFormatter.
     /// @param time       The time.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a time out of range, or a formatter the
@@ -407,7 +407,7 @@ extern "C"
     ///                   zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
@@ -432,7 +432,7 @@ extern "C"
     ///                   zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes (record mloc-0015); parts as
+    /// @param output     Where the text goes; parts as
     ///                   mlocFormatDateRange's.
     /// @return As mlocFormatTime.
     /// @par Thread safety
@@ -456,7 +456,7 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes (record mloc-0015); parts as
+    /// @param output     Where the text goes; parts as
     ///                   mlocFormatDateRange's.
     /// @return As mlocFormatTimeInZone; across dates, also as
     ///         mlocInitDateFormatter for the dates (mloc_errorNotFound for
@@ -530,7 +530,7 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitDateTimeFormatter.
     /// @param dateTime   The date and time.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date-time out of range, or a formatter
@@ -549,7 +549,7 @@ extern "C"
     ///                   a zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
@@ -574,7 +574,7 @@ extern "C"
     ///                   without a zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes (record mloc-0015); parts as
+    /// @param output     Where the text goes; parts as
     ///                   mlocFormatDateRange's.
     /// @return As mlocFormatDateTime.
     /// @par Thread safety
@@ -592,7 +592,7 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes (record mloc-0015); parts as
+    /// @param output     Where the text goes; parts as
     ///                   mlocFormatDateRange's.
     /// @return As mlocFormatDateTimeInZone.
     /// @par Thread safety
@@ -645,7 +645,7 @@ extern "C"
     /// @param formatter  A formatter from mlocInitZoneFormatter.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (output's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an

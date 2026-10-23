@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Hungarian suffixes (record mloc-0048), by the Academy's spelling rules
-// (AkH, 12th edition): the suffixes a request asks for, built on how a
-// word is said (harmony, lengthening, linking vowels, the v of -val and
-// -vá assimilated), the stem a joined word takes before them, and the
-// hyphen where the rules ask for one.
+// Hungarian suffixes, by the Academy's spelling rules (AkH, 12th edition):
+// the suffixes a request asks for, built on how a word is said (harmony,
+// lengthening, linking vowels, the v of -val and -vá assimilated), the
+// stem a joined word takes before them, and the hyphen where the rules ask
+// for one.
 
 #ifndef MLOC_GRAMMAR_HU_H
 #define MLOC_GRAMMAR_HU_H

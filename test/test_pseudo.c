@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Pseudo-locales (record mloc-0058): exact en-XA and ar-XB forms of
-// simple, selecting and escaped messages; every message of the MF2 test
-// suite that compiles keeps compiling in both forms, and its canonical
-// text, with the pseudo marks taken away and accents undone, is the
-// source's; mloccat pseudo writes catalog sources the set compiles. Run
-// with a directory to write into.
+// Pseudo-locales: exact en-XA and ar-XB forms of simple, selecting and
+// escaped messages; every message of the MF2 test suite that compiles
+// keeps compiling in both forms, and its canonical text, with the pseudo
+// marks taken away and accents undone, is the source's; mloccat pseudo
+// writes catalog sources the set compiles. Run with a directory to write
+// into.
 
 #include "compile.h"
 #include "file.h"

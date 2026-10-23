@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Language matching (record mloc-0017): ICU's LocaleMatcher over the
-// LSRs of locale_lsr.h and the distances of locale_distance.h. An entry
-// is an LSR, stored as its bytes.
+// Language matching: ICU's LocaleMatcher over the LSRs of locale_lsr.h and
+// the distances of locale_distance.h. An entry is an LSR, stored as its
+// bytes.
 
 #include "bytes.h"
 #include "locale_distance.h"

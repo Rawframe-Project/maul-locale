@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Hungarian suffixes (maul-locale/grammar.h, record mloc-0048), as the
-// Academy's rules (AkH 12) write them: harmony, lengthening, linking
-// vowels, the assimilated v of -val and -vá, the table's stems, the
-// possessives, compounds, names, numbers, abbreviations and the
-// refusals.
+// Hungarian suffixes (maul-locale/grammar.h), as the Academy's rules (AkH
+// 12) write them: harmony, lengthening, linking vowels, the assimilated v
+// of -val and -vá, the table's stems, the possessives, compounds, names,
+// numbers, abbreviations and the refusals.
 
 #include "test_harness.h"
 

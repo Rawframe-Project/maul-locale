@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The currencies of regions (record mloc-0022): a region's list in
-// CLDR's order, and the currency a locale uses on a day, its -u-cu key's
-// or its region's.
+// The currencies of regions: a region's list in CLDR's order, and the
+// currency a locale uses on a day, its -u-cu key's or its region's.
 
 #include "currency_region.h"
 

@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Turkmen for the Turkic engine (grammar_turkic.h, record mloc-0047), in
-// its Latin alphabet, as apertium-tuk generates it: two-way harmony (a
-// or e; y or i), a high vowel rounded only as the suffixes' first vowel
-// after the stem's last, and only by some suffixes (the possessives
-// after o, ö, u, ü: ýolum, gözüm, direktorum; the genitive and third
-// person's possessive after ö and ü: gözüň, görüşüň, gözü; the
-// accusative never: gözi), no assimilation of d, the buffers n and s
-// after a vowel, the dative fused with a final vowel (ene, enä;
-// okuwçy, okuwça), no instrumental case, the copula and the
-// question particle joined; a hyphen after an abbreviation read by its
-// letters and after digits, as the Turkmen press writes them (BMG-niň,
-// AFK-nyň, 1700-den), a name joined; a final p, ç or k after a vowel in
-// a word of two syllables or more voiced before a vowel (kitaby, agajy,
-// ýüregi, Garaşsyzlygy), a final t only in -abat (Aşgabada; the loans
-// in t keep it: döwleti, gazeti). Numbers are read by the coded words
-// below, Turkmen having no spell-out rules in CLDR.
+// Turkmen for the Turkic engine (grammar_turkic.h), in its Latin alphabet,
+// as apertium-tuk generates it: two-way harmony (a or e; y or i), a high
+// vowel rounded only as the suffixes' first vowel after the stem's last,
+// and only by some suffixes (the possessives after o, ö, u, ü: ýolum,
+// gözüm, direktorum; the genitive and third person's possessive after ö
+// and ü: gözüň, görüşüň, gözü; the accusative never: gözi), no
+// assimilation of d, the buffers n and s after a vowel, the dative fused
+// with a final vowel (ene, enä; okuwçy, okuwça), no instrumental case, the
+// copula and the question particle joined; a hyphen after an abbreviation
+// read by its letters and after digits, as the Turkmen press writes them
+// (BMG-niň, AFK-nyň, 1700-den), a name joined; a final p, ç or k after a
+// vowel in a word of two syllables or more voiced before a vowel (kitaby,
+// agajy, ýüregi, Garaşsyzlygy), a final t only in -abat (Aşgabada; the
+// loans in t keep it: döwleti, gazeti). Numbers are read by the coded
+// words below, Turkmen having no spell-out rules in CLDR.
 
 #include "grammar_turkic.h"
 

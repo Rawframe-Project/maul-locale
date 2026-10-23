@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A whole locale's name (maul-locale/names.h, record mloc-0038), by UTS
-// #35's Locale Display Name Algorithm as CLDR's NameGetter runs it (the
-// generator of CLDR's localeDisplayName.txt): the language's name by the
-// longest match (dialect names) or alone (standard names), then the
-// script, region and variants it left out, the u keys, the t extension
-// and its fields, and the other extensions, joined by the locale's
-// separator and pattern, each name's brackets nested.
+// A whole locale's name (maul-locale/names.h), by UTS #35's Locale Display
+// Name Algorithm as CLDR's NameGetter runs it (the generator of CLDR's
+// localeDisplayName.txt): the language's name by the longest match
+// (dialect names) or alone (standard names), then the script, region and
+// variants it left out, the u keys, the t extension and its fields, and
+// the other extensions, joined by the locale's separator and pattern, each
+// name's brackets nested.
 
 #include "data_view.h"
 #include "kinds.h"
@@ -511,11 +511,11 @@ static void WriteSubdivision(Composer* c, Span code)
 }
 
 // A u key or t field: its value's name when the locale has one (the
-// calendar's whatever its subtags, another key's for one subtag), else
-// the key's name and the value by the key-type pattern: the currency's
-// symbol for cu, the reorder codes' names for kr, the subdivision's for
-// sd and rg (record mloc-0039), the subtags for the rest (time zones as
-// written until their names are in the data).
+// calendar's whatever its subtags, another key's for one subtag), else the
+// key's name and the value by the key-type pattern: the currency's symbol
+// for cu, the reorder codes' names for kr, the subdivision's for sd and
+// rg, the subtags for the rest (time zones as written until their names
+// are in the data).
 static void WriteKeyword(Composer* c, const Item* item)
 {
     NameText name;

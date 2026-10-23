@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A year of any calendar (record mloc-0040), over the calendars' files.
+// A year of any calendar, over the calendars' files.
 
 #include "calendar_year.h"
 

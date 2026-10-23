@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The spell-out rules (record mloc-0034, src/spellout_tables.h): every
-// group of common/rbnf compiled (spellout_compile.h) and filed under its
-// file's locale key, and the algorithmic numbering systems of
-// numberingSystems.xml with the rule set each names, and the titlecase
-// of the rules' lowercase letters. They ship as a data file of their own.
+// The spell-out rules (src/spellout_tables.h): every group of common/rbnf
+// compiled (spellout_compile.h) and filed under its file's locale key, and
+// the algorithmic numbering systems of numberingSystems.xml with the rule
+// set each names, and the titlecase of the rules' lowercase letters. They
+// ship as a data file of their own.
 
 #ifndef MLOCGEN_SPELLOUT_GEN_H
 #define MLOCGEN_SPELLOUT_GEN_H

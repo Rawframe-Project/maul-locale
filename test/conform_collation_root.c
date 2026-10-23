@@ -3,25 +3,23 @@
 //
 // The root collation's elements, as the generator reads them from
 // FractionalUCA.txt, against allkeys_CLDR.txt of the same CLDR release,
-// the same root in UCA's integer weights (record mloc-0064). For every
-// mapping of allkeys, ours has as many elements (an implicit pair
-// [.FBxx][.xxxx] of allkeys being one), and the map from its weights to
-// ours keeps their order and is one-to-one: the primaries; the
-// secondaries under each primary; the tertiaries under each primary and
-// secondary, since FractionalUCA.txt numbers a level within the one
-// above it, and the tertiaries without the two case bits, which are a
-// level of their own. Two shapes are set aside and counted: where
-// allkeys follows an element with a variant's secondary element (011F
-// and above), as for a CJK radical or a Meroitic hieroglyph's variant,
-// FractionalUCA.txt has one element with its own secondary, whose
-// primaries are still compared; and U+FFFD and U+FFFF take the
-// runtime's fixed weights. Then the unit built from the root reads back
-// every mapping it keeps, and the element iterator gives, for every
-// mapping spelled as text (a prefix mapping after its prefix's own
-// elements), the elements the file lists, completely ignorable ones
-// aside: the kept ones through the
-// unit's paths, the left-out ones through NFD. CI runs it on the pinned
-// release.
+// the same root in UCA's integer weights. For every mapping of allkeys,
+// ours has as many elements (an implicit pair [.FBxx][.xxxx] of allkeys
+// being one), and the map from its weights to ours keeps their order and
+// is one-to-one: the primaries; the secondaries under each primary; the
+// tertiaries under each primary and secondary, since FractionalUCA.txt
+// numbers a level within the one above it, and the tertiaries without the
+// two case bits, which are a level of their own. Two shapes are set aside
+// and counted: where allkeys follows an element with a variant's secondary
+// element (011F and above), as for a CJK radical or a Meroitic
+// hieroglyph's variant, FractionalUCA.txt has one element with its own
+// secondary, whose primaries are still compared; and U+FFFD and U+FFFF
+// take the runtime's fixed weights. Then the unit built from the root
+// reads back every mapping it keeps, and the element iterator gives, for
+// every mapping spelled as text (a prefix mapping after its prefix's own
+// elements), the elements the file lists, completely ignorable ones aside:
+// the kept ones through the unit's paths, the left-out ones through NFD.
+// CI runs it on the pinned release.
 //
 // usage: conform_collation_root <FractionalUCA.txt> <allkeys_CLDR.txt>
 

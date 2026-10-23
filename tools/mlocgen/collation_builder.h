@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder (record mloc-0071), ported from ICU4C's
-// CollationBuilder: each reset finds its position's elements through
-// the tailoring's mappings (or a special position, or [before n] a
-// level back); each relation inserts a node after that position in a
-// list per root primary and maps its string (NFD, with its prefix and
-// extension) to temporary elements naming the node, with case bits from
-// the root's elements of the string. At the end the weight allocator
-// gives each run of tailored nodes weights in the gap between the root
-// weights around it, and the temporary elements become those. No
-// canonical closure: the runtime reads NFD (record mloc-0066).
-// [import] reads the imported rules in place, through the caller.
+// The tailoring builder, ported from ICU4C's CollationBuilder: each reset
+// finds its position's elements through the tailoring's mappings (or a
+// special position, or [before n] a level back); each relation inserts a
+// node after that position in a list per root primary and maps its string
+// (NFD, with its prefix and extension) to temporary elements naming the
+// node, with case bits from the root's elements of the string. At the end
+// the weight allocator gives each run of tailored nodes weights in the gap
+// between the root weights around it, and the temporary elements become
+// those. No canonical closure: the runtime reads NFD. [import] reads the
+// imported rules in place, through the caller.
 
 #ifndef MLOCGEN_COLLATION_BUILDER_H
 #define MLOCGEN_COLLATION_BUILDER_H

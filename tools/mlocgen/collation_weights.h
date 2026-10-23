@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder's weight allocator (record mloc-0071), as
-// ICU4C's CollationWeights allocates: n weights strictly between two
-// weights of a level, each of one to four bytes (left-aligned in 32
-// bits), within the bytes each position allows, as short as the gap
-// permits. A gap too small is refused, never wrapped.
+// The tailoring builder's weight allocator, as ICU4C's CollationWeights
+// allocates: n weights strictly between two weights of a level, each of
+// one to four bytes (left-aligned in 32 bits), within the bytes each
+// position allows, as short as the gap permits. A gap too small is
+// refused, never wrapped.
 
 #ifndef MLOCGEN_COLLATION_WEIGHTS_H
 #define MLOCGEN_COLLATION_WEIGHTS_H

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date and time functions of messages (maul-locale/message.h, record
-// mloc-0045): :date, :time and :datetime with the specification's Draft
-// options over the library's formatters, their operands (literals and
-// date, time, date-time, instant and zoned arguments) and refusals,
-// options passed on, calendars, zones, and the formatters prepared at
-// bind.
+// The date and time functions of messages (maul-locale/message.h): :date,
+// :time and :datetime with the specification's Draft options over the
+// library's formatters, their operands (literals and date, time,
+// date-time, instant and zoned arguments) and refusals, options passed on,
+// calendars, zones, and the formatters prepared at bind.
 
 #include "message_prepare.h"
 #include "test_harness.h"

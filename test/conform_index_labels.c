@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The index labels in the data (record mloc-0075) for a differential
-// against ICU4C's AlphabeticIndex: reads a locale tag a line and writes
-// the tag, a tab and the labels the main chain finds, each label's code
-// points in hex joined by "_", space-separated in code point order, as
-// tools/oracle/collation/icu4c_index_labels.cpp writes
-// them; "error" for a tag that does not parse or labels not found.
+// The index labels in the data for a differential against ICU4C's
+// AlphabeticIndex: reads a locale tag a line and writes the tag, a tab and
+// the labels the main chain finds, each label's code points in hex joined
+// by "_", space-separated in code point order, as
+// tools/oracle/collation/icu4c_index_labels.cpp writes them; "error" for a
+// tag that does not parse or labels not found.
 //
 // usage: conform_index_labels collation.mloc < tags
 

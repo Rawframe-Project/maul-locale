@@ -503,8 +503,8 @@ static bool DigitOrSpace(uint32_t cp)
 // A string field's index in the unit's table, checked for the bytes a
 // table may hold. A symbol or a name that parsing reads (read set) does
 // not begin with a digit or an ignorable other than a bidi control (Hebrew
-// writes its yuan after a mark), so that currency parsing passes those
-// at once (record mloc-0033).
+// writes its yuan after a mark), so that currency parsing passes those at
+// once.
 static uint16_t FieldString(Table* t, const char* text, const char* locale, bool read)
 {
     uint32_t points[maxNamePoints];

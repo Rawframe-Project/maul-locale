@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The index labels in the data (record mloc-0075) on the CLDR fixture
-// (test/cldr/common): an index set taken as written, a standard set made
-// into labels (a to z, Hangul and Ethiopic cut, upper-cased), an
-// unconfirmed index set passed over, and locales that match the next
-// keyed one filing nothing; the set pattern reader's escapes, ranges and
-// strings; the validator refusing crafted units; of two labels equal at
-// the primary level, the index keeping ICU4C's, and with no label kept,
-// the underflow bucket alone.
+// The index labels in the data on the CLDR fixture (test/cldr/common): an
+// index set taken as written, a standard set made into labels (a to z,
+// Hangul and Ethiopic cut, upper-cased), an unconfirmed index set passed
+// over, and locales that match the next keyed one filing nothing; the set
+// pattern reader's escapes, ranges and strings; the validator refusing
+// crafted units; of two labels equal at the primary level, the index
+// keeping ICU4C's, and with no label kept, the underflow bucket alone.
 // conform_index_labels checks every CLDR locale against ICU4C's sets.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.

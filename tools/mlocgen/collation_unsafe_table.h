@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A unit's unsafe-backward ranges (src/collation_unsafe.h, record
-// mloc-0074), found in the unit read back: every contraction list a trie
-// value or a prefix list names, each entry's code points (those after
-// the first), merged into ranges.
+// A unit's unsafe-backward ranges (src/collation_unsafe.h), found in the
+// unit read back: every contraction list a trie value or a prefix list
+// names, each entry's code points (those after the first), merged into
+// ranges.
 
 #ifndef MLOCGEN_COLLATION_UNSAFE_TABLE_H
 #define MLOCGEN_COLLATION_UNSAFE_TABLE_H

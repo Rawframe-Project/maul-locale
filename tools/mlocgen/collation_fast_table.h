@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin table of a unit (src/collation_fast_latin.h, record
-// mloc-0072), as ICU4C's CollationFastLatinBuilder builds it, from the
-// elements the builder's lookup gives the NFD of each fast character and
-// of each pair of them: the library reads NFD and has no canonical
-// closure, so a precomposed letter's elements are its NFD's, as ICU's
-// closure makes them. A character whose NFD has a contraction anywhere
-// in the unit is read as a contraction, with an entry for each fast
-// character after it whose pair's elements are not its own and the
-// other's, so that what follows it is always looked at; a character
-// after a prefix, an element the format cannot hold, more than two
-// elements or a contraction that goes on past a pair bails out.
+// The fast Latin table of a unit (src/collation_fast_latin.h), as ICU4C's
+// CollationFastLatinBuilder builds it, from the elements the builder's
+// lookup gives the NFD of each fast character and of each pair of them:
+// the library reads NFD and has no canonical closure, so a precomposed
+// letter's elements are its NFD's, as ICU's closure makes them. A
+// character whose NFD has a contraction anywhere in the unit is read as a
+// contraction, with an entry for each fast character after it whose pair's
+// elements are not its own and the other's, so that what follows it is
+// always looked at; a character after a prefix, an element the format
+// cannot hold, more than two elements or a contraction that goes on past a
+// pair bails out.
 
 #ifndef MLOCGEN_COLLATION_FAST_TABLE_H
 #define MLOCGEN_COLLATION_FAST_TABLE_H

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time zones by their BCP 47 ids and Windows names (record mloc-0041):
-// a code names an identifier, which the set's zones then resolve, so the
-// codes serve zones of any tzdb release.
+// Time zones by their BCP 47 ids and Windows names: a code names an
+// identifier, which the set's zones then resolve, so the codes serve zones
+// of any tzdb release.
 
 #include "zone_code_tables.h"
 #include "zone_handle.h"

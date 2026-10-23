@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The gender of a list of persons (record mloc-0051): the locale's rule
-// from the generated table, then UTS #35's definitions, with ICU's
-// answers for a list of none or one.
+// The gender of a list of persons: the locale's rule from the generated
+// table, then UTS #35's definitions, with ICU's answers for a list of none
+// or one.
 
 #include "list_genders.h"
 

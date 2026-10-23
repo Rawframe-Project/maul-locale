@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.Instant cases (record mloc-0041): every assertion
-// its tests make about an instant plus a duration, a rounded instant, or
-// the rounded difference of two, in test262_instant.inc, checked against
-// mlocAddToInstant, mlocRoundInstant and mlocInstantUntil. A difference
-// is given as a host gives it: balanced by mlocBalanceTimeDuration to the
-// largest unit, or where a field passes int64_t, that field formed from
-// the duration's exact decimal; each field as the float64 Temporal
-// keeps. since is until with the mode negated. The rows were recorded by
-// running the tests on the library through a reader of their
-// JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal.Instant cases: every assertion its tests make about
+// an instant plus a duration, a rounded instant, or the rounded difference
+// of two, in test262_instant.inc, checked against mlocAddToInstant,
+// mlocRoundInstant and mlocInstantUntil. A difference is given as a host
+// gives it: balanced by mlocBalanceTimeDuration to the largest unit, or
+// where a field passes int64_t, that field formed from the duration's
+// exact decimal; each field as the float64 Temporal keeps. since is until
+// with the mode negated. The rows were recorded by running the tests on
+// the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

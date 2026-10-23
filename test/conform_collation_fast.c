@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin tables in a data file (record mloc-0072), as ICU4C 79
-// builds them for the same tags: "und" for the root's, then each
-// locale's types as "locale-u-co-type" and the default as the locale
-// alone, each line the tag, the count of words and the words in hex,
-// the root's words for a type that shares them. Diffed against
-// tools/oracles' ICU4C program reading the same tags. With --unsafe,
-// each tag's unsafe-backward ranges instead (record mloc-0074): the
-// root's and the type's together, each range "first-last" in hex.
+// The fast Latin tables in a data file, as ICU4C 79 builds them for the
+// same tags: "und" for the root's, then each locale's types as
+// "locale-u-co-type" and the default as the locale alone, each line the
+// tag, the count of words and the words in hex, the root's words for a
+// type that shares them. Diffed against tools/oracles' ICU4C program
+// reading the same tags. With --unsafe, each tag's unsafe-backward ranges
+// instead: the root's and the type's together, each range "first-last" in
+// hex.
 //
 // usage: conform_collation_fast [--unsafe] <collation.mloc>
 

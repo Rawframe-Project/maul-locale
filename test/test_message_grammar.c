@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloc:case and mloc:particle (maul-locale/message.h, record mloc-0052):
-// names, common nouns, literals, hints by variable and numbers as their
-// formatters write them in Turkish, Finnish and Hungarian; Korean
-// particles; the faults of a bad or refused request, a locale without
-// rules and an operand neither text nor number; mloc:gender selecting
-// on a list of persons by each rule (record mloc-0051).
+// mloc:case and mloc:particle (maul-locale/message.h): names, common
+// nouns, literals, hints by variable and numbers as their formatters write
+// them in Turkish, Finnish and Hungarian; Korean particles; the faults of
+// a bad or refused request, a locale without rules and an operand neither
+// text nor number; mloc:gender selecting on a list of persons by each
+// rule.
 
 #include "test_harness.h"
 

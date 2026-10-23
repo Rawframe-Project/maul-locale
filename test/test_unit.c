@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit conversion on the compiled-in data (record mloc-0023): UTS #35's
-// worked examples, every form of identifier (prefixes, powers, "per",
-// constants, aliases), temperatures with their offsets, reciprocals,
-// Beaufort, values that are not finite, precisions, and the refusals.
+// Unit conversion on the compiled-in data: UTS #35's worked examples,
+// every form of identifier (prefixes, powers, "per", constants, aliases),
+// temperatures with their offsets, reciprocals, Beaufort, values that are
+// not finite, precisions, and the refusals.
 
 #include "test_harness.h"
 

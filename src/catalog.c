@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalogs (record mloc-0054): the units' validators and the lookups.
+// Catalogs: the units' validators and the lookups.
 
 #include "maul-locale/catalog.h"
 

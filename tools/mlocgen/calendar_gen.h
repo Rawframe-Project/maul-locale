@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Japan's eras (record mloc-0040) from supplemental/supplementalData.xml's
-// calendarData, as the source of src/generated/calendar_eras.c.
+// Japan's eras from supplemental/supplementalData.xml's calendarData, as
+// the source of src/generated/calendar_eras.c.
 
 #ifndef MLOCGEN_CALENDAR_GEN_H
 #define MLOCGEN_CALENDAR_GEN_H

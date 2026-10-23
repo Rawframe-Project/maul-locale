@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Dates from fields given by name (record mloc-0040): mlocMakeMonthDay's
-// clamp and reference date against a scan of every day from 1900 to
-// 2035, for every calendar but Chinese and Dangi (whose reference years
-// are the proposal's table) and every month code and day; and
-// mlocWithDate's merging of fields.
+// Dates from fields given by name: mlocMakeMonthDay's clamp and reference
+// date against a scan of every day from 1900 to 2035, for every calendar
+// but Chinese and Dangi (whose reference years are the proposal's table)
+// and every month code and day; and mlocWithDate's merging of fields.
 
 #include "test_harness.h"
 

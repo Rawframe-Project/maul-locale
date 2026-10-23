@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Fallback chains on the compiled-in data (record mloc-0016): keys made
-// with likely subtags, CLDR's explicit parents, the non-likely script
-// rule in the main component only, variants and extensions, and the
-// refusals. conform_parents checks every CLDR locale in CI.
+// Fallback chains on the compiled-in data: keys made with likely subtags,
+// CLDR's explicit parents, the non-likely script rule in the main
+// component only, variants and extensions, and the refusals.
+// conform_parents checks every CLDR locale in CI.
 
 #include "test_harness.h"
 

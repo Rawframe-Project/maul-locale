@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Search's processed elements (record mloc-0074) for a differential
-// against ICU4C's UCollationPCE: reads lines of a locale tag (its -u-
-// keys set the options), a tab and a text's code points in hex, and
-// writes for each line its processed elements over the text's UTF-16
-// form, each as "element:low:high" in hex and units, as the oracle
-// tools/oracle/collation/icu4c_search_elements.cpp
-// writes them; with --back, walking back from the text's end as
-// icu4c_search_elements_back.cpp does, "full" when a piece or a chunk
-// did not fit.
+// Search's processed elements for a differential against ICU4C's
+// UCollationPCE: reads lines of a locale tag (its -u- keys set the
+// options), a tab and a text's code points in hex, and writes for each
+// line its processed elements over the text's UTF-16 form, each as
+// "element:low:high" in hex and units, as the oracle
+// tools/oracle/collation/icu4c_search_elements.cpp writes them; with
+// --back, walking back from the text's end as
+// icu4c_search_elements_back.cpp does, "full" when a piece or a chunk did
+// not fit.
 //
 // usage: conform_search_elements collation.mloc [--back] < lines
 

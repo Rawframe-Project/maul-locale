@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloccat, the catalog tool (record mloc-0053). Commands:
+// mloccat, the catalog tool. Commands:
 //   mloccat read FILE   writes the resource's data model as JSON, the
 //                       draft's Resource<string> shape
 //   mloccat check FILE  reads the resource and checks it as a catalog

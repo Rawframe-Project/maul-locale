@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// XLIFF 2.2 exchange (record mloc-0060): an export's exact text (notes,
-// the size restriction, codes over original data, markup paired and
-// isolated, syntax protected, escapes undone, states); an import of a
-// CAT tool's file (its own prefix, <pc>, <mrk>, <cp>, segments split,
-// a reordered target) and its records; the refusals; export then import
-// giving the translation back. Run with a directory to write into.
+// XLIFF 2.2 exchange: an export's exact text (notes, the size restriction,
+// codes over original data, markup paired and isolated, syntax protected,
+// escapes undone, states); an import of a CAT tool's file (its own prefix,
+// <pc>, <mrk>, <cp>, segments split, a reordered target) and its records;
+// the refusals; export then import giving the translation back. Run with a
+// directory to write into.
 
 #include "exchange_xliff.h"
 #include "file.h"

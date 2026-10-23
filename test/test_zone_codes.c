@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time zones by BCP 47 id and Windows name (record mloc-0041): the
-// compiled-in zone codes unit, its four functions, and its validator
-// over a small unit with one field changed at a time.
-// tools/check_zone_codes.py compares every id and name with CLDR's files.
+// Time zones by BCP 47 id and Windows name: the compiled-in zone codes
+// unit, its four functions, and its validator over a small unit with one
+// field changed at a time. tools/check_zone_codes.py compares every id and
+// name with CLDR's files.
 
 #include "data_view.h"
 #include "kinds.h"

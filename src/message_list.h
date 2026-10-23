@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloc:list (record mloc-0045): a list value over a list argument (its
-// items' texts), ECMA-402's ListFormat options, its text by the library's
-// list formatter, and its selection by its count: an exact count, else
-// the count's plural category.
+// mloc:list: a list value over a list argument (its items' texts),
+// ECMA-402's ListFormat options, its text by the library's list formatter,
+// and its selection by its count: an exact count, else the count's plural
+// category.
 
 #ifndef MLOC_SRC_MESSAGE_LIST_H
 #define MLOC_SRC_MESSAGE_LIST_H

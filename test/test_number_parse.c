@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number parsing on the compiled-in data (record mloc-0032): cases whose
-// results ICU4C 79's DecimalFormat::parse gives alike (the oracle in the
-// research notes compares over 800,000 more), the round trip of formatted
-// values in both modes, the bounds, and the refusals.
+// Number parsing on the compiled-in data: cases whose results ICU4C 79's
+// DecimalFormat::parse gives alike (tools/oracle/parse compares over
+// 800,000 more), the round trip of formatted values in both modes, the
+// bounds, and the refusals.
 
 #include "test_harness.h"
 
@@ -411,7 +411,7 @@ static void TestBounds(void)
 }
 
 // The except-zero display writes zero without the plus sign the others
-// show: strict mode reads both (record mloc-0032).
+// show: strict mode reads both.
 static void TestExceptZero(void)
 {
     mlocNumberFormatter f;

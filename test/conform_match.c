@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// ICU's data-driven test of its LocaleMatcher (localeMatcherTest.txt,
-// record mloc-0017), run on the compiled-in data as ICU4J's
-// LocaleMatcherTest.dataDriven reads it: "** test:" resets the
-// parameters, "@supported=", "@default=", "@favor=" and "@threshold="
-// set them, and "desired >> match | desired | combined" checks a match.
-// Every locale is canonicalized first, and answers compare as canonical
-// locales. An entry that is no locale id ("50", "91") is to ICU a
-// language no data has, so it stands here as "qaa", which is reserved
-// for local use. A line listed in the exceptions file, with its reason,
-// must differ; any other must agree. CI runs it on the pinned file.
+// ICU's data-driven test of its LocaleMatcher (localeMatcherTest.txt), run
+// on the compiled-in data as ICU4J's LocaleMatcherTest.dataDriven reads
+// it: "** test:" resets the parameters, "@supported=", "@default=",
+// "@favor=" and "@threshold=" set them, and "desired >> match | desired |
+// combined" checks a match. Every locale is canonicalized first, and
+// answers compare as canonical locales. An entry that is no locale id
+// ("50", "91") is to ICU a language no data has, so it stands here as
+// "qaa", which is reserved for local use. A line listed in the exceptions
+// file, with its reason, must differ; any other must agree. CI runs it on
+// the pinned file.
 //
 // usage: conform_match <localeMatcherTest.txt> <match-exceptions.txt>
 

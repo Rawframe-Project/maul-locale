@@ -109,7 +109,7 @@ static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
     } while (mlocMessageIsNameChar(c));
     *startOut = start;
     *lengthOut = p->at - start;
-    // Stored in NFC, it must still be a name (record mloc-0045).
+    // Stored in NFC, it must still be a name.
     size_t broken = mlocMessageNfcNameBreak(p->text + start, *lengthOut);
     if (broken < *lengthOut)
     {

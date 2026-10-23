@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Sort keys (record mloc-0070) over the generated root, against the
-// bytes ICU4C 79 writes for the same texts and options: each level's
-// form, the common weights' runs, backwards secondaries, the case level,
-// shifted quaternaries, the identical level's BOCSU, numeric order and
-// reordering; and the caller's capacity.
+// Sort keys over the generated root, against the bytes ICU4C 79 writes for
+// the same texts and options: each level's form, the common weights' runs,
+// backwards secondaries, the case level, shifted quaternaries, the
+// identical level's BOCSU, numeric order and reordering; and the caller's
+// capacity.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

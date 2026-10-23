@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Turkic suffix engine (grammar_turkic.h, records mloc-0046 and
-// mloc-0047): a spoken end read by a language's letters, and templates
-// written by its vowels and onsets.
+// The Turkic suffix engine (grammar_turkic.h): a spoken end read by a
+// language's letters, and templates written by its vowels and onsets.
 
 #include "grammar_turkic.h"
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A zone's rules compiled as zic compiles them (record mloc-0041): the
-// transitions up to the last year the source names, then a closing rule
-// of two yearly changes, or none when the last offset stays.
+// A zone's rules compiled as zic compiles them: the transitions up to the
+// last year the source names, then a closing rule of two yearly changes,
+// or none when the last offset stays.
 
 #ifndef MLOCGEN_ZONE_COMPILE_H
 #define MLOCGEN_ZONE_COMPILE_H

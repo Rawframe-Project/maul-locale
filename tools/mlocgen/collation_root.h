@@ -2,15 +2,14 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // CLDR's root collation, FractionalUCA.txt, read into 64-bit collation
-// elements as ICU's runtime root holds them (record mloc-0064): a
-// primary in bits 63..32 with its bytes left-aligned, a secondary in
-// 31..16 and a tertiary with its case bits in 15..0. Han takes ICU's
-// implicit primaries from the [Unified_Ideograph] ranges, a step of 2
-// apart, or, read as the unihan root, from the [radical] lines' ranges
-// in their radical-stroke order (record mloc-0071); U+FFFD and U+FFFF
-// are left to the fixed weights the runtime
-// gives them; FDD1 lines are script starts and FDD0 lines special
-// primaries, not mappings.
+// elements as ICU's runtime root holds them: a primary in bits 63..32 with
+// its bytes left-aligned, a secondary in 31..16 and a tertiary with its
+// case bits in 15..0. Han takes ICU's implicit primaries from the
+// [Unified_Ideograph] ranges, a step of 2 apart, or, read as the unihan
+// root, from the [radical] lines' ranges in their radical-stroke order;
+// U+FFFD and U+FFFF are left to the fixed weights the runtime gives them;
+// FDD1 lines are script starts and FDD0 lines special primaries, not
+// mappings.
 
 #ifndef MLOCGEN_COLLATION_ROOT_H
 #define MLOCGEN_COLLATION_ROOT_H

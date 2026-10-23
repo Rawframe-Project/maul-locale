@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder's lookup (record mloc-0071) with no tailored
-// mapping, against the runtime's iterator over the root unit built from
-// the same FractionalUCA.txt: the same elements, completely ignorable
-// ones aside, for every code point alone, every mapping's prefix and
-// text, and random strings of the mappings' code points and the marks
-// among them. CI runs it on the pinned release.
+// The tailoring builder's lookup with no tailored mapping, against the
+// runtime's iterator over the root unit built from the same
+// FractionalUCA.txt: the same elements, completely ignorable ones aside,
+// for every code point alone, every mapping's prefix and text, and random
+// strings of the mappings' code points and the marks among them. CI runs
+// it on the pinned release.
 //
 // usage: conform_collation_mappings <FractionalUCA.txt> [RANDOM]
 

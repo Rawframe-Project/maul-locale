@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The time zone database's source (record mloc-0041), read as zic reads
-// it: Rule, Zone and Link lines from the default build's files. Only the
-// forms the pinned release uses are taken; anything else stops the
-// generator with a message, so a new form is met before it is compiled
-// wrongly.
+// The time zone database's source, read as zic reads it: Rule, Zone and
+// Link lines from the default build's files. Only the forms the pinned
+// release uses are taken; anything else stops the generator with a
+// message, so a new form is met before it is compiled wrongly.
 //
 // The source marks some lines as a vanguard section (negative savings,
 // %z) with a commented-out rearguard alternative. Read in rearguard form,

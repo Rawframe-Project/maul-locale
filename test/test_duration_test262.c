@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.Duration arithmetic (record mloc-0041): every
-// assertion its tests make about rounding a duration, its total, the sum
-// of two, or which of two is longer, in test262_duration.inc, checked by
-// doing what a host does: from no start, mlocRoundTimeDuration,
-// mlocTotalTimeDuration and mlocAddTimeDurations; from a plain date's
-// midnight, mlocAddToDateTime and then mlocDateTimeUntil or
-// mlocDateTimeTotal; from a zoned date-time, mlocAddToZonedDateTime and
-// then mlocZonedDateTimeUntil or mlocZonedDateTimeTotal; comparisons
-// through mlocAddToDate, mlocAddTimeDurations and the zoned sums. Each
-// result's fields come from mlocGetDurationValues. The rows were recorded
-// by running the tests on the library through a reader of their
-// JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal.Duration arithmetic: every assertion its tests make
+// about rounding a duration, its total, the sum of two, or which of two is
+// longer, in test262_duration.inc, checked by doing what a host does: from
+// no start, mlocRoundTimeDuration, mlocTotalTimeDuration and
+// mlocAddTimeDurations; from a plain date's midnight, mlocAddToDateTime
+// and then mlocDateTimeUntil or mlocDateTimeTotal; from a zoned date-time,
+// mlocAddToZonedDateTime and then mlocZonedDateTimeUntil or
+// mlocZonedDateTimeTotal; comparisons through mlocAddToDate,
+// mlocAddTimeDurations and the zoned sums. Each result's fields come from
+// mlocGetDurationValues. The rows were recorded by running the tests on
+// the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

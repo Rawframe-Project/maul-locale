@@ -2,16 +2,16 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks the library's local times (record mloc-0041) against Python's
-# zoneinfo reading zic's fat TZif files for the same tzdb source. For
-# every zone, zdump -v lists the changes of offset from 1800 to 2500;
-# around each one conform_local is asked about the local times at the
-# edges of its gap or fold and in its middle, the start of those days,
-# and the local time at the change and a second before. zoneinfo gives
-# the possible instants (a local time's instant under each fold, kept
-# when the instant's offset agrees), the disambiguations as ECMA-262
-# writes them (in a gap, the time moved by the difference of the two
-# folds' offsets), the start of a day and the local time at an instant.
+# Checks the library's local times against Python's zoneinfo reading zic's
+# fat TZif files for the same tzdb source. For every zone, zdump -v lists
+# the changes of offset from 1800 to 2500; around each one conform_local
+# is asked about the local times at the edges of its gap or fold and in
+# its middle, the start of those days, and the local time at the change
+# and a second before. zoneinfo gives the possible instants (a local
+# time's instant under each fold, kept when the instant's offset agrees),
+# the disambiguations as ECMA-262 writes them (in a gap, the time moved by
+# the difference of the two folds' offsets), the start of a day and the
+# local time at an instant.
 #
 # usage: check_local.py <conform_local> <tzdb source directory>
 

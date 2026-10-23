@@ -1,7 +1,6 @@
-# An older time zone database release, signed by the same key as the
-# pin in tools/tzdb-release.txt, from which CI builds a zones file
-# (mlocgen zonesfile) and checks it against that release's zic (record
-# mloc-0041). It is no source of the library's data, so it stays out of
-# the data version.
+# An older time zone database release, signed by the same key as the pin
+# in tools/tzdb-release.txt, from which CI builds a zones file (mlocgen
+# zonesfile) and checks it against that release's zic. It is no source of
+# the library's data, so it stays out of the data version.
 release 2025b
 sha256 11810413345fc7805017e27ea9fa4885fd74cd61b2911711ad038f5d28d71474

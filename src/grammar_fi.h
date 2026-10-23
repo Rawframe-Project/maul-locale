@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Finnish suffixes (record mloc-0049), as the Kielitoimisto guidance
-// writes them: a word's inflection type and consonant gradation (Kotus's
-// types 1 to 49, from the word list's table or the ending), its stems,
-// the case endings by harmony, the possessive suffixes and the question
-// clitic; a colon before the ending of digits and capitals, an
-// apostrophe after a name's unsaid end.
+// Finnish suffixes, as the Kielitoimisto guidance writes them: a word's
+// inflection type and consonant gradation (Kotus's types 1 to 49, from the
+// word list's table or the ending), its stems, the case endings by
+// harmony, the possessive suffixes and the question clitic; a colon before
+// the ending of digits and capitals, an apostrophe after a name's unsaid
+// end.
 
 #ifndef MLOC_GRAMMAR_FI_H
 #define MLOC_GRAMMAR_FI_H

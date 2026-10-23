@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Currency parsing on the compiled-in data and the currency names data
-// file (record mloc-0033): cases whose results ICU4C 79's
-// DecimalFormat::parse and parseCurrency give alike (the oracle in the
-// research notes compares over 500,000 more), the round trip of each
-// display in both modes, the names file's absence, and the refusals.
+// file: cases whose results ICU4C 79's DecimalFormat::parse and
+// parseCurrency give alike (tools/oracle/parse compares over 500,000
+// more), the round trip of each display in both modes, the names file's
+// absence, and the refusals.
 
 #include "test_harness.h"
 
@@ -40,7 +40,7 @@ static const Case s_cases[] = {
     {"de-CH", "CHF", mloc_parseLenient, 0, "CHF12.50", "12.5", "CHF", 8},
     {"de-CH", "CHF", mloc_parseStrict, 0, "CHF 12.50", nullptr, nullptr, 3},
     {"de", "EUR", mloc_parseLenient, 0, "12,50 \xE2\x82\xAC", "12.5", "EUR", 9},
-    // ICU reads the code, "Eur", and ends at 9 (record mloc-0033).
+    // ICU reads the code, "Eur", and ends at 9.
     {"de", "EUR", mloc_parseLenient, 0, "12,50 Euro", "12.5", "EUR", 10},
     {"de", "EUR", mloc_parseLenient, 1, "12,50 Schweizer Franken", "12.5", "CHF", 23},
     {"de", "EUR", mloc_parseLenient, 1, "12,50 SCHWEIZER FRANKEN", "12.5", "CHF", 23},

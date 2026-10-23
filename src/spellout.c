@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Spell-out formatters (maul-locale/spellout.h, record mloc-0034): a
-// rule set found in the locale's groups, the locale's symbols and plural
-// rules, and the engine (spellout_format.h).
+// Spell-out formatters (maul-locale/spellout.h): a rule set found in the
+// locale's groups, the locale's symbols and plural rules, and the engine
+// (spellout_format.h).
 
 #include "maul-locale/spellout.h"
 

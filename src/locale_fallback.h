@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Fallback for the parts (record mloc-0016): the parents table's
-// validator, and the lookup of a part's unit along a locale's chain.
+// Fallback for the parts: the parents table's validator, and the lookup of
+// a part's unit along a locale's chain.
 
 #ifndef MLOC_LOCALE_FALLBACK_H
 #define MLOC_LOCALE_FALLBACK_H

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The catalog units' validators (record mloc-0054), given each unit alone
-// in memory of its own size, so that a check left out shows as a read
-// past the unit under the sanitizers as well as a unit let through. A
-// white-box test: the validators are internal.
+// The catalog units' validators, given each unit alone in memory of its
+// own size, so that a check left out shows as a read past the unit under
+// the sanitizers as well as a unit let through. A white-box test: the
+// validators are internal.
 
 #include "catalog_tables.h"
 #include "table.h"

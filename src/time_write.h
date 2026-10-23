@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A time formatter's state (maul-locale/datetime.h, record mloc-0042): the
-// compiled patterns of its options, its hour letter, digits and decimal
-// separator, its day period names and rules; and the writing of a time's
-// fields by a pattern.
+// A time formatter's state (maul-locale/datetime.h): the compiled patterns
+// of its options, its hour letter, digits and decimal separator, its day
+// period names and rules; and the writing of a time's fields by a pattern.
 
 #ifndef MLOC_TIME_WRITE_H
 #define MLOC_TIME_WRITE_H
@@ -22,11 +21,12 @@ enum
     timeFormatPatterns = 2,
 };
 
-// A time formatter's interval patterns (research 40) and its relative
-// glue (record mloc-0043): the table their indexes resolve in, the pair of each pattern the
-// formatter keeps, a standard format's own pattern (null for the others, whose own are their
-// patterns), the fallback, and for a time in a zone whose dates differ the short date with the full
-// year and with the era (yMd, GyMd) and the short atTime glue that joins either to the time.
+// A time formatter's interval patterns and its relative glue: the table
+// their indexes resolve in, the pair of each pattern the formatter keeps,
+// a standard format's own pattern (null for the others, whose own are
+// their patterns), the fallback, and for a time in a zone whose dates
+// differ the short date with the full year and with the era (yMd, GyMd)
+// and the short atTime glue that joins either to the time.
 typedef struct TimeRange
 {
     PatternTable table;

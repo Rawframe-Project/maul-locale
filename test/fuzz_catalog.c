@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for catalogs (record mloc-0054). The input is a data
-// file, its version stamped as the library's, so that the fuzzer reaches
-// the catalog units' validators. A catalog that opens finds every key it
-// stores at its own index, refuses the input's tail as a key unless it
-// stores it, and gives every message from inside its own bytes; a chain
-// of it binds in its measured cache and formats every key with a stated
-// result (record mloc-0055).
+// libFuzzer target for catalogs. The input is a data file, its version
+// stamped as the library's, so that the fuzzer reaches the catalog units'
+// validators. A catalog that opens finds every key it stores at its own
+// index, refuses the input's tail as a key unless it stores it, and gives
+// every message from inside its own bytes; a chain of it binds in its
+// measured cache and formats every key with a stated result.
 
 #include "catalog_tables.h"
 #include "data_format.h"

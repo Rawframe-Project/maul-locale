@@ -2,11 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Times of day, date-times and local times in a zone through the public
-// functions (record mloc-0041): making a time with each overflow, a
-// date-time's limits, the instants of a local time in a gap, a fold and
-// an offset zone, each disambiguation, the start of a day skipped at
-// midnight, the local time at an instant, the ends of Temporal's range,
-// and every refusal.
+// functions: making a time with each overflow, a date-time's limits, the
+// instants of a local time in a gap, a fold and an offset zone, each
+// disambiguation, the start of a day skipped at midnight, the local time
+// at an instant, the ends of Temporal's range, and every refusal.
 
 #include "test_harness.h"
 

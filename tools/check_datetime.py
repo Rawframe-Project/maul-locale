@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks mlocgen's semantic skeletons (record mloc-0042, UTS #35 "Mapping
-# to Standard Skeletons") against CLDR's own test data: every case of
+# Checks mlocgen's semantic skeletons (UTS #35 "Mapping to Standard
+# Skeletons") against CLDR's own test data: every case of
 # common/testData/datetime/datetime.json that names a semantic skeleton
 # must map to its classicalSkeleton, and the matcher must give a pattern;
 # so must the check's own questions below. Given the formatter's tool and
-# data files, every date case (field sets without a time, and the
-# standard date formats alone), every time case (the time field set, and
-# the standard time formats alone) and every date-time case without a
-# zone (standard date and time formats, either glue) must also give the
-# file's text; given the zone names and the region names too, so must
-# every lone zone, every month and day with a time in a zone, and every
-# standard date with a full or long time.
+# data files, every date case (field sets without a time, and the standard
+# date formats alone), every time case (the time field set, and the
+# standard time formats alone) and every date-time case without a zone
+# (standard date and time formats, either glue) must also give the file's
+# text; given the zone names and the region names too, so must every lone
+# zone, every month and day with a time in a zone, and every standard date
+# with a full or long time.
 #
 # usage: check_datetime.py <mlocgen> <CLDR common directory>
 #            [<conform_datetime> <dates.mloc> <spellout.mloc>

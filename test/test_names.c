@@ -2,9 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Display names (maul-locale/names.h): each type and form, subdivisions
-// included, a code in any case, the fallbacks, the capitalization contexts, the output protocol
-// and every refusal. Every code of every locale agrees with ICU4C 79's
-// LocaleDisplayNames (conform_names, record mloc-0037).
+// included, a code in any case, the fallbacks, the capitalization
+// contexts, the output protocol and every refusal. Every code of every
+// locale agrees with ICU4C 79's LocaleDisplayNames (conform_names).
 
 #include "test_harness.h"
 

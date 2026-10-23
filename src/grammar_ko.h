@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Korean particles (record mloc-0050): the final a text's end is read
-// with (a Hangul syllable's, a jamo's, a Hanja's by Unihan's kHangul),
-// the Latin letters' Korean names, and each particle's form after a
-// consonant, after a vowel, or both where the end cannot be read.
+// Korean particles: the final a text's end is read with (a Hangul
+// syllable's, a jamo's, a Hanja's by Unihan's kHangul), the Latin letters'
+// Korean names, and each particle's form after a consonant, after a vowel,
+// or both where the end cannot be read.
 
 #ifndef MLOC_GRAMMAR_KO_H
 #define MLOC_GRAMMAR_KO_H

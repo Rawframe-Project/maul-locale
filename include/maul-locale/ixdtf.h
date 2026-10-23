@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Temporal's strings (record mloc-0041): ISO 8601 date-times with RFC
-// 9557's annotations, durations, UTC offsets, and time zone and calendar
-// strings, read as ECMA-262's grammar reads them. The text is UTF-8;
-// every terminal of the grammar is ASCII.
+// Temporal's strings: ISO 8601 date-times with RFC 9557's annotations,
+// durations, UTC offsets, and time zone and calendar strings, read as
+// ECMA-262's grammar reads them. The text is UTF-8; every terminal of the
+// grammar is ASCII.
 
 #ifndef MAUL_LOCALE_IXDTF_H
 #define MAUL_LOCALE_IXDTF_H

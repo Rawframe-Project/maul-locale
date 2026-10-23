@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin table builder (record mloc-0072) on small roots of
-// FractionalUCA.txt's form, where it meets the limits no CLDR data
-// reaches: the head's group tops and the first short primary's case
-// bits, the letters overflowing the short primaries (digits then taking
-// long ones) and overflowing them still (no table), secondaries and
-// tertiaries past their room, second elements in another group or with
-// weights the format cannot hold, a prefix, and contractions with a
-// longer one after them.
+// The fast Latin table builder on small roots of FractionalUCA.txt's form,
+// where it meets the limits no CLDR data reaches: the head's group tops
+// and the first short primary's case bits, the letters overflowing the
+// short primaries (digits then taking long ones) and overflowing them
+// still (no table), secondaries and tertiaries past their room, second
+// elements in another group or with weights the format cannot hold, a
+// prefix, and contractions with a longer one after them.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the zone names data file's validators (record
-// mloc-0042). The input's first byte picks the unit (even: metazones,
-// odd: zone names), the rest is its payload; one the validator accepts
-// must keep every read inside its own bytes: each code's periods
-// ascending, each metazone's golden and preferred zones among the codes,
-// each name's key a field of its item and its text inside the text.
+// libFuzzer target for the zone names data file's validators. The input's
+// first byte picks the unit (even: metazones, odd: zone names), the rest
+// is its payload; one the validator accepts must keep every read inside
+// its own bytes: each code's periods ascending, each metazone's golden and
+// preferred zones among the codes, each name's key a field of its item and
+// its text inside the text.
 
 #include "bytes.h"
 #include "zone_name_tables.h"

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the date patterns and date names units'
-// validators (record mloc-0042). The input is a payload of either; a
-// patterns unit the validator accepts must give every pattern from inside
-// its text, well formed, every row's, set's and time set's pattern by
-// index, and every interval set's pairs and fallback and every pair's
-// halves (or none); a names unit, every name of every set's lists from inside
-// its text and a period of every hour from its rules.
+// libFuzzer target for the date patterns and date names units' validators.
+// The input is a payload of either; a patterns unit the validator accepts
+// must give every pattern from inside its text, well formed, every row's,
+// set's and time set's pattern by index, and every interval set's pairs
+// and fallback and every pair's halves (or none); a names unit, every name
+// of every set's lists from inside its text and a period of every hour
+// from its rules.
 
 #include "bytes.h"
 #include "date_data.h"

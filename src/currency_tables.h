@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number part's currency units (record mloc-0022), shared by the
-// library and the generator. All integers are little-endian.
+// The number part's currency units, shared by the library and the
+// generator. All integers are little-endian.
 //
 // Currency fractions, a unit of no locale (supplementalData.xml's
 // currencyData/fractions): a header (u32 entry count, u32 0), then the

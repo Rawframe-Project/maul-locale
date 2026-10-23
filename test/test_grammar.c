@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Grammatical suffixes (maul-locale/grammar.h, record mloc-0046): Turkish
-// cases, plural, possessives, copula and question particle on names,
-// common nouns, numbers and abbreviations as the TDK spelling guide
-// writes them; the apostrophe, the readings and hints, the parts and the
-// refusals.
+// Grammatical suffixes (maul-locale/grammar.h): Turkish cases, plural,
+// possessives, copula and question particle on names, common nouns,
+// numbers and abbreviations as the TDK spelling guide writes them; the
+// apostrophe, the readings and hints, the parts and the refusals.
 
 #include "test_harness.h"
 

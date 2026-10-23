@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Hebrew calendar (record mloc-0040): the molad and the
-// postponements of Calendrical Calculations, months in civil order from
-// Tishrei, Adar I the leap month (code 'M05L'). Days are those of
-// maul-locale/calendar.h; years are Anno Mundi.
+// The Hebrew calendar: the molad and the postponements of Calendrical
+// Calculations, months in civil order from Tishrei, Adar I the leap month
+// (code 'M05L'). Days are those of maul-locale/calendar.h; years are Anno
+// Mundi.
 
 #ifndef MLOC_CALENDAR_HEBREW_H
 #define MLOC_CALENDAR_HEBREW_H

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Units formatted for a usage (unit_usage.h). The formatter keeps the
-// input unit and every output its route may choose (record mloc-0023's
+// input unit and every output its route may choose (CLDR's unit
 // preferences), each with its patterns; a value chooses the first output
 // whose threshold it reaches (NaN the first), is converted exactly,
 // split across a mixed output's parts, and rounded by the formatter's

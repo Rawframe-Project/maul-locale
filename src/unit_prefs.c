@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit preferences (UTS #35 Part 6, Unit Preferences; record mloc-0023):
-// the unit a locale prefers for a usage, chosen from the input unit's
-// quantity, the usage, the region and the value, and the value split
-// exactly across a mixed unit's parts.
+// Unit preferences (UTS #35 Part 6, Unit Preferences): the unit a locale
+// prefers for a usage, chosen from the input unit's quantity, the usage,
+// the region and the value, and the value split exactly across a mixed
+// unit's parts.
 
 #include "unit_prefs.h"
 

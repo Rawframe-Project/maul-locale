@@ -3,7 +3,7 @@
 //
 // The scripts written right to left, from properties/scriptMetadata.txt's
 // RTL field, as the source of src/generated/script_directions.c (a
-// locale's direction, record mloc-0045).
+// locale's direction).
 
 #ifndef MLOCGEN_DIRECTION_GEN_H
 #define MLOCGEN_DIRECTION_GEN_H

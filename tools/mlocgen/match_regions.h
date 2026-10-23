@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The region partitions of language matching (record mloc-0017), as
-// ICU's cldr-to-icu tool builds them (TerritoryContainment and
-// PartitionInfo): the leaf regions of the territory containment, every
-// group counted; each match variable and its inverse ("$!name") as sets
-// of leaves; one partition per distinct set of variables a leaf is in;
-// and each region mapped to its partitions (a macro region to those of
-// its leaves). A partition is one character from '0'. A region with
-// leaves is a macro region unless a group marks it as a grouping (EU,
-// 419), as ICU's Region types them.
+// The region partitions of language matching, as ICU's cldr-to-icu tool
+// builds them (TerritoryContainment and PartitionInfo): the leaf regions
+// of the territory containment, every group counted; each match variable
+// and its inverse ("$!name") as sets of leaves; one partition per distinct
+// set of variables a leaf is in; and each region mapped to its partitions
+// (a macro region to those of its leaves). A partition is one character
+// from '0'. A region with leaves is a macro region unless a group marks it
+// as a grouping (EU, 419), as ICU's Region types them.
 
 #ifndef MLOCGEN_MATCH_REGIONS_H
 #define MLOCGEN_MATCH_REGIONS_H

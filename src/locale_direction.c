@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A locale's direction (maul-locale/locale.h, record mloc-0045): its
-// script's, or its likely script's, against CLDR's scripts written right
-// to left.
+// A locale's direction (maul-locale/locale.h): its script's, or its likely
+// script's, against CLDR's scripts written right to left.
 
 #include "script_directions.h"
 

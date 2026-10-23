@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the generator's collation rule parser (record
-// mloc-0068). Any bytes are parsed or refused with a byte inside the
-// text; parsed rules are written back and parse into the same list.
+// libFuzzer target for the generator's collation rule parser. Any bytes
+// are parsed or refused with a byte inside the text; parsed rules are
+// written back and parse into the same list.
 
 #include "collation_rules.h"
 

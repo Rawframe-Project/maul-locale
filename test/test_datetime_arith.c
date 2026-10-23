@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of date-times through the public functions (record
-// mloc-0041): adding across days and into a date's overflow, the
-// limits at both ends of the range, differences with each kind of
-// largest unit, rounding by sub-second steps whose half-even parity
-// takes the seconds, and every refusal.
+// The arithmetic of date-times through the public functions: adding across
+// days and into a date's overflow, the limits at both ends of the range,
+// differences with each kind of largest unit, rounding by sub-second steps
+// whose half-even parity takes the seconds, and every refusal.
 
 #include "test_harness.h"
 

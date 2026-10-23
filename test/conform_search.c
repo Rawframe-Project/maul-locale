@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation search (record mloc-0074) for a differential against
-// ICU4C's usearch: reads lines of a locale tag, a pattern's and a
-// text's code points in hex, a position in UTF-16 units and a
-// comparison (0, 1 or 2), tab-separated, with a sixth field 1 for a
-// backward find, and writes for each line the match's start and end in
-// units, "none" or "error", as the oracle
-// tools/oracle/collation/icu4c_search.cpp writes them.
-// The UTF-8 find must agree, its bytes mapped to units.
+// Collation search for a differential against ICU4C's usearch: reads lines
+// of a locale tag, a pattern's and a text's code points in hex, a position
+// in UTF-16 units and a comparison (0, 1 or 2), tab-separated, with a
+// sixth field 1 for a backward find, and writes for each line the match's
+// start and end in units, "none" or "error", as the oracle
+// tools/oracle/collation/icu4c_search.cpp writes them. The UTF-8 find must
+// agree, its bytes mapped to units.
 //
 // usage: conform_search collation.mloc < lines
 

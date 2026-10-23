@@ -3,8 +3,7 @@
 //
 // CLDR's day period rules (supplemental/dayPeriods.xml, the format rule
 // set), compiled to the names unit's rules (src/date_tables.h): each
-// hour's period, and whether noon and midnight are named at their
-// instant (record mloc-0042).
+// hour's period, and whether noon and midnight are named at their instant.
 
 #ifndef MLOCGEN_DAY_PERIODS_GEN_H
 #define MLOCGEN_DAY_PERIODS_GEN_H

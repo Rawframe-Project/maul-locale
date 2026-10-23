@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Search's processed elements (record mloc-0074) on a small root, as
-// ICU4C's UCollationPCE makes them: an element in one half or two (a
-// three-byte primary's continuation), each level kept to the strength,
-// halves that reduce to 0 passed over, shifted halves below the variable
-// top keeping only their quaternary and the ignorables after them
-// dropped (a continuation half compared alone, as ICU does), the ranges
-// of both halves and the end; and the same elements walking back, as
-// UCollationPCE::previousProcessed gives them.
+// Search's processed elements on a small root, as ICU4C's UCollationPCE
+// makes them: an element in one half or two (a three-byte primary's
+// continuation), each level kept to the strength, halves that reduce to 0
+// passed over, shifted halves below the variable top keeping only their
+// quaternary and the ignorables after them dropped (a continuation half
+// compared alone, as ICU does), the ranges of both halves and the end; and
+// the same elements walking back, as UCollationPCE::previousProcessed
+// gives them.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

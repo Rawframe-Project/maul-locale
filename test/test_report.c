@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A catalog set's report (record mloc-0057): each kind of finding, the
-// coverage, a long message measured with its examples in its locale, the
-// text and JSON forms, and the kinds read for --fail-on. Run with a
-// directory to write into.
+// A catalog set's report: each kind of finding, the coverage, a long
+// message measured with its examples in its locale, the text and JSON
+// forms, and the kinds read for --fail-on. Run with a directory to write
+// into.
 
 #include "accept.h"
 #include "catalog_set.h"

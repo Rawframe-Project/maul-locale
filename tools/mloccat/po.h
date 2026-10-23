@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// PO files (GNU gettext's format) as the catalog tool exchanges them
-// (record mloc-0059): entries of one msgctxt, msgid and msgstr, their
-// extracted comments (#.) and flags (#,). Plural entries (msgid_plural,
-// msgstr[n]) are refused, as MF2 selects inside the message; obsolete
-// entries (#~) and other comments are read past. Strings take C's escapes
-// as gettext writes them (\n \t \" \\ and the rest of C's).
+// PO files (GNU gettext's format) as the catalog tool exchanges them:
+// entries of one msgctxt, msgid and msgstr, their extracted comments (#.)
+// and flags (#,). Plural entries (msgid_plural, msgstr[n]) are refused, as
+// MF2 selects inside the message; obsolete entries (#~) and other comments
+// are read past. Strings take C's escapes as gettext writes them (\n \t \"
+// \\ and the rest of C's).
 
 #ifndef MLOCCAT_PO_H
 #define MLOCCAT_PO_H

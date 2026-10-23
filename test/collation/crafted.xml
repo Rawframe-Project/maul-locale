@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <!-- Crafted rule strings for the tailoring builder's differential against
-     ICU4C (record mloc-0071): paths CLDR's own rules do not take. -->
+     ICU4C: paths CLDR's own rules do not take. -->
 <ldml>
 <identity><language type='crafted'/></identity>
 <collations>

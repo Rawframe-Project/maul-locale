@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Adding a duration to a date (maul-locale/calendar.h, record mloc-0040):
-// the Intl Era and Month Code proposal's NonISODateAdd, with months
-// carried over as one number (calendar_year.h) rather than year by year.
+// Adding a duration to a date (maul-locale/calendar.h): the Intl Era and
+// Month Code proposal's NonISODateAdd, with months carried over as one
+// number (calendar_year.h) rather than year by year.
 
 #include "calendar_year.h"
 

@@ -2,17 +2,16 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks time zones by BCP 47 id and Windows name (record mloc-0041)
-# against a reading of CLDR's bcp47/timezone.xml and
-# supplemental/windowsZones.xml of its own: every id, in its own case and
-# upper case, finds the zone of its identifier (a deprecated id its
-# replacement's; "unk" none); every identifier an id lists gives that id
-# and the Windows name its id is mapped to; every offset zone of whole
-# hours from -12 to +14 gives its Etc/GMT id, other offsets none; and
-# every Windows name finds, in each region it maps and in 001, a region
-# it does not map and none, the first identifier of the mapping. An
-# identifier CLDR lists that the tzdb source has no Zone or Link for is
-# no zone at all.
+# Checks time zones by BCP 47 id and Windows name against a reading of
+# CLDR's bcp47/timezone.xml and supplemental/windowsZones.xml of its own:
+# every id, in its own case and upper case, finds the zone of its
+# identifier (a deprecated id its replacement's; "unk" none); every
+# identifier an id lists gives that id and the Windows name its id is
+# mapped to; every offset zone of whole hours from -12 to +14 gives its
+# Etc/GMT id, other offsets none; and every Windows name finds, in each
+# region it maps and in 001, a region it does not map and none, the first
+# identifier of the mapping. An identifier CLDR lists that the tzdb source
+# has no Zone or Link for is no zone at all.
 #
 # usage: check_zone_codes.py <conform_zone_codes> <CLDR common directory>
 #                            <tzdb source directory>

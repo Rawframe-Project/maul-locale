@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The rule strings of collation files (record mloc-0071): each file's
-// types parsed and its default type, with [import] resolved among them.
-// The generator reads CLDR's common/collation through it, as does the
-// builder's conformance tool.
+// The rule strings of collation files: each file's types parsed and its
+// default type, with [import] resolved among them. The generator reads
+// CLDR's common/collation through it, as does the builder's conformance
+// tool.
 
 #ifndef MLOCGEN_COLLATION_CATALOG_H
 #define MLOCGEN_COLLATION_CATALOG_H

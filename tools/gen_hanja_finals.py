@@ -3,13 +3,13 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Writes src/generated/hanja_finals.h, the final of each Hanja's Korean
-# reading as a Korean particle reads it (record mloc-0050), from the
-# kHangul field of Unicode's Unihan database at the version
-# tools/unihan-release.txt pins (Unicode License v3,
-# LICENSES/Unicode-3.0.txt). Two bits a code point over the CJK blocks
-# (U+3400 to U+4DBF, U+4E00 to U+9FFF, U+F900 to U+FAFF): 0 no reading
-# or readings whose finals differ, 1 a vowel, 2 the final rieul, 3
-# another final; four code points a byte, the first in the low bits.
+# reading as a Korean particle reads it, from the kHangul field of
+# Unicode's Unihan database at the version tools/unihan-release.txt pins
+# (Unicode License v3, LICENSES/Unicode-3.0.txt). Two bits a code point
+# over the CJK blocks (U+3400 to U+4DBF, U+4E00 to U+9FFF, U+F900 to
+# U+FAFF): 0 no reading or readings whose finals differ, 1 a vowel, 2 the
+# final rieul, 3 another final; four code points a byte, the first in the
+# low bits.
 #
 # usage: gen_hanja_finals.py DIR [--check]
 #   DIR      holds Unihan.zip at the pinned version (its SHA-256 is

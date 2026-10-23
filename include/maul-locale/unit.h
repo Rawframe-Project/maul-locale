@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Units of measurement (UTS #35 Parts 2 and 6, records mloc-0023 to
-// mloc-0031): CLDR's unit identifiers ("kilometer-per-hour",
-// "square-foot", "foot-and-inch") and exact conversion between them by
-// CLDR's units.xml, the units a locale prefers for a usage, and amounts
-// of a unit formatted with its name in a locale. The names are in a data
-// file of their own, units.mloc, which a program adds to its data set.
+// Units of measurement (UTS #35 Parts 2 and 6): CLDR's unit identifiers
+// ("kilometer-per-hour", "square-foot", "foot-and-inch") and exact
+// conversion between them by CLDR's units.xml, the units a locale prefers
+// for a usage, and amounts of a unit formatted with its name in a locale.
+// The names are in a data file of their own, units.mloc, which a program
+// adds to its data set.
 
 #ifndef MAUL_LOCALE_UNIT_H
 #define MAUL_LOCALE_UNIT_H

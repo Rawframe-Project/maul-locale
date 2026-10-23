@@ -355,17 +355,16 @@ static bool AddSignType(Parser* r, SignType type, Pair* positive)
     return ok;
 }
 
-// ICU's createAffixMatchers: the positive sign type (with a plus sign
-// when the formatter shows one) and the negative one, then the matchers
-// sorted (a stable bubble sort, as ICU's) into the list. The except-zero
-// sign display, which ICU's DecimalFormat lacks, writes zero without the
-// plus sign: strict mode reads the positive type too (record mloc-0032).
-// With the ISO append, which ICU lacks, lenient mode reads it too
-// whenever a plus sign is shown: NaN (and zero, except zero) is written
-// without one, and the appended code after the number would otherwise be
-// left unread ("£ NaN GBP" where the plus sign is a suffix).
-// Strict mode reads each outer pattern of a currency's categories, as the
-// formatter writes them (record mloc-0033).
+// ICU's createAffixMatchers: the positive sign type (with a plus sign when
+// the formatter shows one) and the negative one, then the matchers sorted
+// (a stable bubble sort, as ICU's) into the list. The except-zero sign
+// display, which ICU's DecimalFormat lacks, writes zero without the plus
+// sign: strict mode reads the positive type too. With the ISO append,
+// which ICU lacks, lenient mode reads it too whenever a plus sign is
+// shown: NaN (and zero, except zero) is written without one, and the
+// appended code after the number would otherwise be left unread ("£ NaN
+// GBP" where the plus sign is a suffix). Strict mode reads each outer
+// pattern of a currency's categories, as the formatter writes them.
 static bool AddAffixMatchers(Parser* r)
 {
     if (!Interesting(r))

@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // A duration's fields as a host keeps them, float64 integers, and its
-// internal record (maul-locale/zone.h, record mloc-0041): ECMA-262's
-// IsValidDuration with ToInternalDurationRecord, and
-// TemporalDurationFromInternal with CreateTemporalDuration's check. The
-// doubles are read and made from their bits; every sum is exact.
+// internal record (maul-locale/zone.h): ECMA-262's IsValidDuration with
+// ToInternalDurationRecord, and TemporalDurationFromInternal with
+// CreateTemporalDuration's check. The doubles are read and made from their
+// bits; every sum is exact.
 
 #include "duration_values.h"
 

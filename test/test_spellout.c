@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Spell-out formatting with the spell-out data file (record mloc-0034):
-// cardinals, years, ordinals and ordinal suffixes, radix 20, fraction
-// rule sets and plural blocks, the decimal comma's fraction rule, Roman
-// and Hebrew numerals, NaN and the infinities, each expected text
-// ICU4C 79's for the same input; then where the library is exact and
-// ICU is not (long fractions, values past int64_t, plural blocks past
-// 2^31), root's rules with mloc_fellBack, the rule sets listed, and the
-// refusals. CLDR's testData/rbnf runs in CI (conform_spellout).
+// Spell-out formatting with the spell-out data file: cardinals, years,
+// ordinals and ordinal suffixes, radix 20, fraction rule sets and plural
+// blocks, the decimal comma's fraction rule, Roman and Hebrew numerals,
+// NaN and the infinities, each expected text ICU4C 79's for the same
+// input; then where the library is exact and ICU is not (long fractions,
+// values past int64_t, plural blocks past 2^31), root's rules with
+// mloc_fellBack, the rule sets listed, and the refusals. CLDR's
+// testData/rbnf runs in CI (conform_spellout).
 
 #include "test_harness.h"
 

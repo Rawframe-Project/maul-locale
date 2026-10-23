@@ -30,13 +30,12 @@ option(MAUL_LOCALE_SANITIZE "Instrument with AddressSanitizer and UBSan" OFF)
 option(MAUL_LOCALE_COVERAGE "Instrument for gcov coverage" OFF)
 option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 
-# Maul Unicode: the message part calls it at run time (UTF-8, NFC and
-# bidi classes; record mloc-0045), the generator for the currency
-# symbols' letters (record mloc-0022) and the unit names' case. An
-# installed package serves; else the pinned release is fetched, before
-# the family modules, so that ours, included after its copies, serve
-# this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds a local copy
-# instead, offline.
+# Maul Unicode: the message part calls it at run time (UTF-8, NFC and bidi
+# classes), the generator for the currency symbols' letters and the unit
+# names' case. An installed package serves; else the pinned release is
+# fetched, before the family modules, so that ours, included after its
+# copies, serve this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds
+# a local copy instead, offline.
 set(MAUL_LOCALE_UNICODE_VERSION 0.0.1)
 find_package(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION} CONFIG QUIET)
 if(NOT maul-unicode_FOUND)
@@ -275,7 +274,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(data WHITEBOX)
     maul_add_test(locale)
     maul_add_test(message WHITEBOX)
-    # The suite's date cases read the dates (record mloc-0045).
+    # The suite's date cases read the dates.
     if(TARGET test_message)
         set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
         if(EMSCRIPTEN)
@@ -358,8 +357,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(message_numbers WHITEBOX)
     maul_add_test(message_dates WHITEBOX)
-    # It reads the dates (record mloc-0045); a white-box test, so not built
-    # with the shared library.
+    # It reads the dates; a white-box test, so not built with the shared
+    # library.
     if(TARGET test_message_dates)
         set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
         set(MLOC_MESSAGE_ZONE_NAMES ${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc)
@@ -379,8 +378,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                    MLOC_ZONE_NAMES_FILE="${MLOC_MESSAGE_ZONE_NAMES}"
                                    MLOC_LOCALE_NAMES_FILE="${MLOC_MESSAGE_LOCALE_NAMES}")
     endif()
-    # :unit reads the unit names (record mloc-0045); a white-box test, so
-    # not built with the shared library.
+    # :unit reads the unit names; a white-box test, so not built with the
+    # shared library.
     if(TARGET test_message_numbers)
         set(MLOC_MESSAGE_UNITS ${PROJECT_SOURCE_DIR}/src/generated/units.mloc)
         if(EMSCRIPTEN)
@@ -405,7 +404,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(decimal)
     maul_add_test(plural)
     maul_add_test(plural_tables WHITEBOX)
-    # The currency names are a data file of their own (record mloc-0022).
+    # The currency names are a data file of their own.
     maul_add_test(currency MANUAL)
     set(MLOC_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc)
     if(EMSCRIPTEN)
@@ -435,7 +434,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(unit)
     maul_add_test(unit_tables WHITEBOX)
     maul_add_test(unit_names WHITEBOX)
-    # So are the unit names (record mloc-0024).
+    # So are the unit names.
     maul_add_test(unit_format MANUAL)
     # It builds names of its own with the data layout's constants.
     target_include_directories(test_unit_format PRIVATE ${PROJECT_SOURCE_DIR}/src)
@@ -449,8 +448,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     target_compile_definitions(test_unit_format PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
     add_test(NAME unit_format COMMAND test_unit_format)
-    # Durations read the unit names (record mloc-0044); the test reads the
-    # digital pattern and spoils a formatter's state.
+    # Durations read the unit names; the test reads the digital pattern and
+    # spoils a formatter's state.
     maul_add_test(duration MANUAL WHITEBOX)
     if(TARGET test_duration)
         if(EMSCRIPTEN)
@@ -472,13 +471,13 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_unit_names PRIVATE MLOC_UNITS_FILE="${MLOC_UNITS_FILE}")
     endif()
-    # So are the spell-out rules (record mloc-0034).
+    # So are the spell-out rules.
     maul_add_test(spellout MANUAL)
     set(MLOC_SPELLOUT_FILE ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
     if(EMSCRIPTEN)
         target_link_options(test_spellout PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE}@/spellout.mloc")
-        # Rules nested 64 levels deep need more than Emscripten's 64 KB
-        # of stack (record mloc-0034).
+        # Rules nested 64 levels deep need more than Emscripten's 64 KB of
+        # stack.
         target_link_options(test_spellout PRIVATE "-sSTACK_SIZE=262144")
         set(MLOC_SPELLOUT_FILE /spellout.mloc)
     endif()
@@ -518,8 +517,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(list_format)
     maul_add_test(list_gender)
     maul_add_test(turkic_letters WHITEBOX)
-    # So are the names of languages and the rest (record mloc-0036), and
-    # the subdivision names (record mloc-0039).
+    # So are the names of languages and the rest, and the subdivision names.
     set(MLOC_LOCALE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/names.mloc)
     set(MLOC_LOCALE_NAMES_PATH ${MLOC_LOCALE_NAMES_FILE})
     set(MLOC_SUBDIVISIONS_FILE ${PROJECT_SOURCE_DIR}/src/generated/subdivisions.mloc)
@@ -544,7 +542,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                        MLOC_SUBDIVISIONS_FILE="${MLOC_SUBDIVISIONS_PATH}")
         endif()
     endforeach()
-    # And the date patterns (record mloc-0042).
+    # And the date patterns.
     set(MLOC_DATES_FILE ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
     set(MLOC_DATES_PATH ${MLOC_DATES_FILE})
     if(EMSCRIPTEN)
@@ -560,7 +558,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_date_data PRIVATE MLOC_DATES_FILE="${MLOC_DATES_PATH}")
     endif()
-    # And the zone names (record mloc-0042).
+    # And the zone names.
     set(MLOC_ZONE_NAMES_FILE ${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc)
     set(MLOC_ZONE_NAMES_PATH ${MLOC_ZONE_NAMES_FILE})
     if(EMSCRIPTEN)
@@ -577,7 +575,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_zone_names PRIVATE MLOC_ZONE_NAMES_FILE="${MLOC_ZONE_NAMES_PATH}")
     endif()
-    # The collation data file (record mloc-0065).
+    # The collation data file.
     set(MLOC_COLLATION_FILE ${PROJECT_SOURCE_DIR}/src/generated/collation.mloc)
     set(MLOC_COLLATION_PATH ${MLOC_COLLATION_FILE})
     if(EMSCRIPTEN)
@@ -635,7 +633,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_collate PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
-    # Search over the same file (record mloc-0074).
+    # Search over the same file.
     maul_add_test(search)
     if(TARGET test_search)
         if(EMSCRIPTEN)
@@ -644,7 +642,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_search PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
-    # The alphabetic index over the same file (record mloc-0075).
+    # The alphabetic index over the same file.
     maul_add_test(index)
     if(TARGET test_index)
         if(EMSCRIPTEN)
@@ -653,7 +651,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_index PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
-    # And relative time (record mloc-0043).
+    # And relative time.
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
     if(EMSCRIPTEN)
@@ -761,10 +759,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(conform_${name} PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
     endforeach()
-    # The zones against zic and zdump (tools/check_zones.py), on the
-    # library's internal tables.
-    # The general compare against CLDR's CollationTest files
-    # (record mloc-0067), on the library's internal compare.
+    # The zones against zic and zdump (tools/check_zones.py), on the library's
+    # internal tables. The general compare against CLDR's CollationTest files,
+    # on the library's internal compare.
     if(NOT MAUL_LOCALE_BUILD_SHARED)
         add_executable(conform_collation test/conform_collation.c)
         target_link_libraries(conform_collation PRIVATE maul-locale)
@@ -797,8 +794,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_include_directories(conform_collation_reorder PRIVATE src)
         maul_apply_flags(conform_collation_reorder)
     endif()
-    # Tailored locales' public sort keys against ICU4C (record
-    # mloc-0071), which the cldr CI job runs on the builder's queries.
+    # Tailored locales' public sort keys against ICU4C, which the cldr CI job
+    # runs on the builder's queries.
     add_executable(conform_collation_keys test/conform_collation_keys.c)
     target_link_libraries(conform_collation_keys PRIVATE maul-locale)
     maul_apply_flags(conform_collation_keys)
@@ -955,8 +952,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     add_executable(mlocgen tools/mlocgen/main.c)
     target_link_libraries(mlocgen PRIVATE mlocgen_core)
     maul_apply_flags(mlocgen)
-    # The catalog tool, mloccat (record mloc-0053): its parts are a static
-    # library so that their tests link them alone.
+    # The catalog tool, mloccat: its parts are a static library so that their
+    # tests link them alone.
     add_library(mloccat_core STATIC tools/mloccat/accept.c tools/mloccat/catalog_set.c
                              tools/mloccat/compile.c tools/mloccat/exchange_po.c
                              tools/mloccat/file.c tools/mloccat/json.c tools/mloccat/message_text.c

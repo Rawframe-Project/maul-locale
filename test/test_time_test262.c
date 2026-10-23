@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.PlainTime cases (record mloc-0041): every assertion
-// its tests make about a time of day made from fields, a time plus a
-// duration, a rounded time, or the rounded difference of two times, in
-// test262_time.inc, checked against mlocMakeTime, mlocAddToTime,
-// mlocRoundTime and mlocTimeUntil. since is until with the mode negated,
-// as zone.h says; its rows hold the fields before negation. The rows
-// were recorded by running the tests on the library through a reader of
-// their JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal.PlainTime cases: every assertion its tests make about
+// a time of day made from fields, a time plus a duration, a rounded time,
+// or the rounded difference of two times, in test262_time.inc, checked
+// against mlocMakeTime, mlocAddToTime, mlocRoundTime and mlocTimeUntil.
+// since is until with the mode negated, as zone.h says; its rows hold the
+// fields before negation. The rows were recorded by running the tests on
+// the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

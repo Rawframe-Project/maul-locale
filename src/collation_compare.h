@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The general compare of two UTF-8 texts over a root unit (records
-// mloc-0067 and mloc-0069): UCA's levels one at a time, as ICU4C's
-// CollationCompare orders them. At each level the elements whose weight
-// there is zero are passed over, and a text that ends first is the
-// lesser. Primaries are compared whole; secondaries forwards, or
-// backwards within the segments the merge separator (U+FFFE) parts; a
-// case level between the secondary and tertiary levels when asked;
-// tertiaries without the case bits unless case first asks for them,
-// upper case then first or last; with numeric on, runs of digits by
-// their value; primaries through the script reordering, if any. The identical level compares the
-// texts' NFD code points, U+FFFE below every other as ICU ranks it. With the alternate setting
-// shifted, a variable element (a primary above the merge separator, up to the variable top) keeps
-// only its primary, for the quaternary level, and the primary ignorables after it are passed over
-// at every level. Nothing is buffered: a level that the one before leaves equal reads both texts
-// again.
+// The general compare of two UTF-8 texts over a root unit: UCA's levels
+// one at a time, as ICU4C's CollationCompare orders them. At each level
+// the elements whose weight there is zero are passed over, and a text that
+// ends first is the lesser. Primaries are compared whole; secondaries
+// forwards, or backwards within the segments the merge separator (U+FFFE)
+// parts; a case level between the secondary and tertiary levels when
+// asked; tertiaries without the case bits unless case first asks for them,
+// upper case then first or last; with numeric on, runs of digits by their
+// value; primaries through the script reordering, if any. The identical
+// level compares the texts' NFD code points, U+FFFE below every other as
+// ICU ranks it. With the alternate setting shifted, a variable element (a
+// primary above the merge separator, up to the variable top) keeps only
+// its primary, for the quaternary level, and the primary ignorables after
+// it are passed over at every level. Nothing is buffered: a level that the
+// one before leaves equal reads both texts again.
 
 #ifndef MLOC_SRC_COLLATION_COMPARE_H
 #define MLOC_SRC_COLLATION_COMPARE_H

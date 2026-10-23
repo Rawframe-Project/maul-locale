@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collation options (record mloc-0069) for a differential against
-// ICU4C: reads lines of two UTF-8 texts in hex, separated by a tab, and
-// writes for each line the order (-1, 0 or 1) under each option set,
-// tab-separated, in the order the oracle
-// tools/oracle/collation/icu4c_collation_options.cpp
-// writes them.
+// The collation options for a differential against ICU4C: reads lines of
+// two UTF-8 texts in hex, separated by a tab, and writes for each line the
+// order (-1, 0 or 1) under each option set, tab-separated, in the order
+// the oracle tools/oracle/collation/icu4c_collation_options.cpp writes
+// them.
 //
-// With --keys, writes instead the first text's sort key under each set,
-// in hex (record mloc-0070).
+// With --keys, writes instead the first text's sort key under each set, in
+// hex.
 //
 // usage: conform_collation_options collation.mloc [--keys] < pairs
 

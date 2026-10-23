@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// An index's candidates (record mloc-0075), as ICU4C's
-// AlphabeticIndex::init gathers them: the initial labels (the collator's
-// U+FDD0 contractions, with A to Z when one ends in a letter A to Z, else
-// the locale's labels from the data) and the script boundaries (the
-// root's U+FDD1 contractions whose second code point is a letter or
-// unassigned). They are held where they are found, sorted and filtered
-// by index_build.c.
+// An index's candidates, as ICU4C's AlphabeticIndex::init gathers them:
+// the initial labels (the collator's U+FDD0 contractions, with A to Z when
+// one ends in a letter A to Z, else the locale's labels from the data) and
+// the script boundaries (the root's U+FDD1 contractions whose second code
+// point is a letter or unassigned). They are held where they are found,
+// sorted and filtered by index_build.c.
 
 #ifndef MLOC_SRC_INDEX_LABELS_H
 #define MLOC_SRC_INDEX_LABELS_H

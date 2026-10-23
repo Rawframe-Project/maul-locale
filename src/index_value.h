@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// An index value's bytes (record mloc-0075), at any address, read by
-// loads and copies alone:
+// An index value's bytes, at any address, read by loads and copies alone:
 //
 //   0  u32 stamp
 //   4  u32 bucketCount, every bucket, shown or not, in boundary order

@@ -97,10 +97,10 @@ jobs:
         if: matrix.name == 'linux-shared'
         run: cmake --install build --prefix "$PWD/package"
 
-  # The pinned CLDR release: the generator's resolution against CLDR's
-  # JSON of the same release (record mloc-0006), the generated sources,
-  # CLDR's conformance files, and ICU's matcher test. The release is cached by
-  # tools/cldr-release.txt, so a run fetches it only when the pin moves.
+  # The pinned CLDR release: the generator's resolution against CLDR's JSON
+  # of the same release, the generated sources, CLDR's conformance files,
+  # and ICU's matcher test. The release is cached by tools/cldr-release.txt,
+  # so a run fetches it only when the pin moves.
   cldr:
     name: cldr
     runs-on: ubuntu-24.04
@@ -193,70 +193,68 @@ jobs:
           build/mlocgen generate ~/cldr-cache/cldr/common . ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
           git diff --exit-code src/generated || { echo "src/generated is stale: run mlocgen generate"; exit 1; }
       - name: The zones against zic and zdump
-        # Record mloc-0041: every zone's offsets as zdump reads zic's output
-        # for the same source, from 1800 to 2500 and in the range's last
-        # years.
+        # Every zone's offsets as zdump reads zic's output for the same source,
+        # from 1800 to 2500 and in the range's last years.
         timeout-minutes: 20
         run: |
           command -v zic zdump
           python3 tools/check_zones.py build/conform_zones \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: A zones file of an older release against its zic
-        # Record mloc-0041: a zones file mlocgen writes from another tzdb
-        # release opens beside the library's zones, names its release,
-        # and gives that release's offsets.
+        # A zones file mlocgen writes from another tzdb release opens beside the
+        # library's zones, names its release, and gives that release's offsets.
         timeout-minutes: 20
         run: |
           older=~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)
           build/mlocgen zonesfile $older ~/cldr-cache/cldr/common build/zones-older.mloc
           python3 tools/check_zones.py build/conform_zones $older build/zones-older.mloc
       - name: Skeleton matching against ICU
-        # Record mloc-0042: mlocgen's best pattern for each question of
-        # CLDR's skeleton test files equals ICU4C 79's, or the listed one.
+        # The best pattern mlocgen gives for each question of CLDR's skeleton
+        # test files equals ICU4C 79's, or the listed one.
         timeout-minutes: 5
         run: |
           python3 tools/check_skeletons.py build/mlocgen ~/cldr-cache/cldr/common \
             test/skeletons_icu.tsv tools/skeleton-exceptions.txt
       - name: Interval patterns against ICU
-        # Record mloc-0042: mlocgen's interval patterns for each question
-        # of the table equal ICU4C 79's DateIntervalFormat's, or the listed.
+        # The interval patterns mlocgen gives for each question of the table
+        # equal ICU4C 79's DateIntervalFormat's, or the listed ones.
         timeout-minutes: 5
         run: |
           python3 tools/check_intervals.py build/mlocgen ~/cldr-cache/cldr/common \
             test/intervals_icu.tsv tools/interval-exceptions.txt
       - name: Semantic skeletons and dates against CLDR's test data
-        # Record mloc-0042: each semantic skeleton of datetime.json maps to
-        # its classical skeleton, and each date case gives its text.
+        # Each semantic skeleton of datetime.json maps to its classical
+        # skeleton, and each date case gives its text.
         timeout-minutes: 5
         run: |
           python3 tools/check_datetime.py build/mlocgen ~/cldr-cache/cldr/common \
             build/conform_datetime src/generated/dates.mloc src/generated/spellout.mloc \
             src/generated/zone-names.mloc src/generated/names.mloc
       - name: BCP 47 ids and Windows names against CLDR
-        # Record mloc-0041: every id, identifier and Windows mapping, as
-        # check_zone_codes.py reads CLDR's files.
+        # Every id, identifier and Windows mapping, as check_zone_codes.py reads
+        # CLDR's files.
         timeout-minutes: 5
         run: |
           python3 tools/check_zone_codes.py build/conform_zone_codes ~/cldr-cache/cldr/common \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: Local times against zoneinfo
-        # Record mloc-0041: the instants of the local times around every
-        # change from 1800 to 2500, their disambiguations, the start of
-        # those days and the local time at each change, as Python's
-        # zoneinfo reads zic's output for the same source.
+        # The instants of the local times around every change from 1800 to 2500,
+        # their disambiguations, the start of those days and the local time at
+        # each change, as Python's zoneinfo reads zic's output for the same
+        # source.
         timeout-minutes: 20
         run: |
           python3 tools/check_local.py build/conform_local \
             ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
       - name: Temporal strings against ECMA-262's grammar
-        # Record mloc-0041: every goal, offset, time zone, calendar and
-        # duration string, against check_ixdtf.py's second reading.
+        # Every goal, offset, time zone, calendar and duration string, against
+        # check_ixdtf.py's second reading.
         timeout-minutes: 10
         run: python3 tools/check_ixdtf.py build/conform_ixdtf
       - name: Zoned arithmetic against ECMA-262
-        # Record mloc-0041: additions, rounded differences, rounding and
-        # offsets around every change from 1900 to 2040, against
-        # check_zoned.py's reading of the specification over zoneinfo.
+        # Additions, rounded differences, rounding and offsets around every
+        # change from 1900 to 2040, against check_zoned.py's reading of the
+        # specification over zoneinfo.
         timeout-minutes: 20
         run: |
           python3 tools/check_zoned.py build/conform_zoned \

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Durations (record mloc-0044) with the unit names data file: the
-// styles, each field's style and display, the fractions, the sign, the
-// digital separators, the parts, the resolved options and the refusals.
-// Every expected text is ECMA-402's algorithm on ICU4C 79's data, the
-// oracle of record mloc-0044 (sr-Cyrl-ME's aside, whose CLDR data is
-// Cyrillic where ICU's falls back to the Latin script); V8 agrees but
-// for the differences the record lists.
+// Durations with the unit names data file: the styles, each field's style
+// and display, the fractions, the sign, the digital separators, the parts,
+// the resolved options and the refusals. Every expected text is ECMA-402's
+// algorithm on ICU4C 79's data (sr-Cyrl-ME's aside, whose CLDR data is
+// Cyrillic where ICU's falls back to the Latin script).
 
 #include "duration_format.h"
 #include "test_harness.h"
@@ -31,8 +29,8 @@ typedef struct Case
     const char* text;
 } Case;
 
-// test262's intl402/DurationFormat inputs (en, es), research 42's sweep
-// cases, and locales of each separator, padding, script and list.
+// test262's intl402/DurationFormat inputs (en, es), cases of a sweep
+// against ICU4C, and locales of each separator, padding, script and list.
 static const Case s_cases[] = {
     {"en", "long ---------- ---------- -", "1 2 3 3 4 5 6 7 8 9",
      "1 year, 2 months, 3 weeks, 3 days, 4 hours, 5 minutes, 6 seconds, 7 milliseconds, 8 "

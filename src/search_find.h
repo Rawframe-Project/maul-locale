@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// What collation search's two directions share (record mloc-0074): the
-// searcher's layout, ICU4C 79's buffer of the text's elements
-// (CEIBuffer), its element comparison (compareCE64s), its midcluster
-// rule and its identical check.
+// What collation search's two directions share: the searcher's layout,
+// ICU4C 79's buffer of the text's elements (CEIBuffer), its element
+// comparison (compareCE64s), its midcluster rule and its identical check.
 
 #ifndef MLOC_SRC_SEARCH_FIND_H
 #define MLOC_SRC_SEARCH_FIND_H

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Units of measurement (record mloc-0023): the public conversion over the
-// unit table, the identifier parser and the exact converter.
+// Units of measurement: the public conversion over the unit table, the
+// identifier parser and the exact converter.
 
 #include "maul-locale/unit.h"
 

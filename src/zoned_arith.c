@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of zoned date-times (maul-locale/zone.h, record
-// mloc-0041): ECMA-262's InterpretISODateTimeOffset, AddZonedDateTime,
+// The arithmetic of zoned date-times (maul-locale/zone.h): ECMA-262's
+// InterpretISODateTimeOffset, AddZonedDateTime,
 // DifferenceZonedDateTimeWithRounding through DifferenceZonedDateTime and
-// RoundRelativeDuration with the zone, and Temporal.ZonedDateTime's
-// round. A zoned date-time is its instant with the zone and calendar
-// given beside it.
+// RoundRelativeDuration with the zone, and Temporal.ZonedDateTime's round.
+// A zoned date-time is its instant with the zone and calendar given beside
+// it.
 
 #include "date_time.h"
 #include "duration_round.h"

@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A tailoring written as a unit and read back (record mloc-0071) on a
-// small root: the runtime's iterator over the root and the unit gives
-// the builder's elements for a contraction, a prefix, a prefix with
-// contractions only falling back to a shorter one's list, and code
-// points left to the root; the head holds the rules' settings and
-// reorder codes; and the validator refuses a unit whose head, lists or
-// sizes are wrong; a locale's unit of its types finds each by name, and
-// its validator refuses names out of order or not co's, and tailorings
-// out of place. conform_collation_builder --units checks every CLDR
-// type.
+// A tailoring written as a unit and read back on a small root: the
+// runtime's iterator over the root and the unit gives the builder's
+// elements for a contraction, a prefix, a prefix with contractions only
+// falling back to a shorter one's list, and code points left to the root;
+// the head holds the rules' settings and reorder codes; and the validator
+// refuses a unit whose head, lists or sizes are wrong; a locale's unit of
+// its types finds each by name, and its validator refuses names out of
+// order or not co's, and tailorings out of place.
+// conform_collation_builder --units checks every CLDR type.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

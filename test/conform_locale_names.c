@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// CLDR's localeDisplayName.txt (record mloc-0038): each locale id's name
-// in each display locale, in standard and dialect mode, against
-// mlocGetLocaleName, with the names and subdivisions data files. A line of the exceptions file,
-// tab-separated, is a display locale, a mode, an id, the name CLDR's data gives here and the
-// reason; each must be used. Prints each difference and a count; exits 1 on a difference.
+// CLDR's localeDisplayName.txt: each locale id's name in each display
+// locale, in standard and dialect mode, against mlocGetLocaleName, with
+// the names and subdivisions data files. A line of the exceptions file,
+// tab-separated, is a display locale, a mode, an id, the name CLDR's data
+// gives here and the reason; each must be used. Prints each difference and
+// a count; exits 1 on a difference.
 //
 // usage: conform_locale_names names.mloc subdivisions.mloc localeDisplayName.txt
 //        exceptions.txt

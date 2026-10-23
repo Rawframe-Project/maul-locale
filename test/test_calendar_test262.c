@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal calendar cases (record mloc-0040): every assertion its
-// PlainDate tests make about a date made from fields or by adding
-// durations or by changing fields, about the difference of two dates,
-// or about a month and day's reference date, in
-// test262_calendar.inc, checked against mlocMakeDate, mlocAddToDate,
-// mlocDateUntil, mlocDateUntilRounded, mlocWithDate, mlocMakeMonthDay and
-// mlocGetDateFields.
-// The rows were recorded by running the tests on the library through a
-// reader of their JavaScript, kept in the docs with the oracle programs.
-// A row giving a year as well as an era and its year is refused when the
-// two name different years, as Temporal's field resolution does; the
-// library takes one or the other, so that check is the host's.
+// test262's Temporal calendar cases: every assertion its PlainDate tests
+// make about a date made from fields or by adding durations or by changing
+// fields, about the difference of two dates, or about a month and day's
+// reference date, in test262_calendar.inc, checked against mlocMakeDate,
+// mlocAddToDate, mlocDateUntil, mlocDateUntilRounded, mlocWithDate,
+// mlocMakeMonthDay and mlocGetDateFields. The rows were recorded by
+// running the tests on the library through a reader of their JavaScript,
+// in tools/oracle/test262/. A row giving a year as well as an era and its
+// year is refused when the two name different years, as Temporal's field
+// resolution does; the library takes one or the other, so that check is
+// the host's.
 
 #include "test_harness.h"
 

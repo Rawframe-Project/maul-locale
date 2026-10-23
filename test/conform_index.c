@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The alphabetic index (record mloc-0075) for a differential against
-// ICU4C's ImmutableIndex: reads lines of a locale tag, a maximum label
-// count (0 for the default), 1 to set the special labels to "U", "I" and
-// "O" (else 0), and names (each a name's code points in hex joined by
-// "_", space-separated), tab-separated, and writes the index's buckets
-// and each name's bucket as
-// tools/oracle/collation/icu4c_index.cpp writes them. The
-// UTF-16 find must agree with the UTF-8 one.
+// The alphabetic index for a differential against ICU4C's ImmutableIndex:
+// reads lines of a locale tag, a maximum label count (0 for the default),
+// 1 to set the special labels to "U", "I" and "O" (else 0), and names
+// (each a name's code points in hex joined by "_", space-separated),
+// tab-separated, and writes the index's buckets and each name's bucket as
+// tools/oracle/collation/icu4c_index.cpp writes them. The UTF-16 find must
+// agree with the UTF-8 one.
 //
 // usage: conform_index collation.mloc < lines
 

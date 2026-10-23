@@ -123,9 +123,9 @@ size_t mlocNfdBefore(NfdText t, size_t at)
 
 void mlocNfdStartText(NfdStream* s, NfdText text)
 {
-    // The fields read before a fill writes them; the window and the long
-    // run's are written first (research 68: clearing the whole stream
-    // was an eighth of a Chinese compare).
+    // The fields read before a fill writes them; the window and the long run's
+    // are written first (clearing the whole stream was an eighth of a Chinese
+    // compare).
     s->text = text.bytes;
     s->units = text.units;
     s->length = text.length;

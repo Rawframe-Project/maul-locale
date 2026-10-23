@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The relative time data file (record mloc-0043): each locale's fields
-// resolved along its chain, widths through root's aliases, filed where
-// the library's lookup along the chain would give another value.
+// The relative time data file: each locale's fields resolved along its
+// chain, widths through root's aliases, filed where the library's lookup
+// along the chain would give another value.
 
 #include "relative_gen.h"
 

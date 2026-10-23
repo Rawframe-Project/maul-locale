@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The unsafe-backward ranges (record mloc-0074) on a small root and a
-// tailoring over it: the code points after the first of each
-// contraction, a prefix's own contractions too, and never a prefix's
-// code points; the readers refuse a section whose count, order or code
-// points are wrong. conform_collation_fast --unsafe checks every CLDR
-// type against ICU4C's sets.
+// The unsafe-backward ranges on a small root and a tailoring over it: the
+// code points after the first of each contraction, a prefix's own
+// contractions too, and never a prefix's code points; the readers refuse a
+// section whose count, order or code points are wrong.
+// conform_collation_fast --unsafe checks every CLDR type against ICU4C's
+// sets.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

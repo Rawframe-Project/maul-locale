@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Parsing a locale id into canonical syntax, and writing it back as a
-// BCP 47 tag (record mloc-0015, UTS #35 Part 1). The text is split into
-// subtags, checked against the grammar while each extension lists its
-// subtags in canonical order, and the extensions are then written by
-// their singleton.
+// Parsing a locale id into canonical syntax, and writing it back as a BCP
+// 47 tag (UTS #35 Part 1). The text is split into subtags, checked against
+// the grammar while each extension lists its subtags in canonical order,
+// and the extensions are then written by their singleton.
 
 #include "maul-locale/locale.h"
 

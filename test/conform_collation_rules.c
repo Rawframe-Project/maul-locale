@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collation rule parser (record mloc-0068) on every rule string of
-// CLDR's common/collation: each parses, the counts of what it holds are
-// printed for the record, and the list written back parses into the
-// same list.
+// The collation rule parser on every rule string of CLDR's
+// common/collation: each parses, the counts of what it holds are printed
+// for the record, and the list written back parses into the same list.
 //
 // usage: conform_collation_rules common/collation/*.xml
 

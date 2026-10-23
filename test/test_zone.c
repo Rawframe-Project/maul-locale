@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time zones through the public functions (record mloc-0041): finding a
-// zone by name in any case or by offset, its identifier and primary
-// identifier, equality, the list of primaries, offsets and transitions at
-// known instants and at the ends of Temporal's range, and every refusal.
+// Time zones through the public functions: finding a zone by name in any
+// case or by offset, its identifier and primary identifier, equality, the
+// list of primaries, offsets and transitions at known instants and at the
+// ends of Temporal's range, and every refusal.
 
 #include "test_harness.h"
 

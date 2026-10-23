@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The parsers of Temporal's strings through the public functions (record
-// mloc-0041): each goal and the precedence between them, basic and
-// extended forms, the early errors, the annotation rules, offsets, time
-// zone and calendar strings, durations with exact fractions and their
-// limits, and every refusal. tools/check_ixdtf.py compares the parsers
-// with a second reading of the grammar over many more strings.
+// The parsers of Temporal's strings through the public functions: each
+// goal and the precedence between them, basic and extended forms, the
+// early errors, the annotation rules, offsets, time zone and calendar
+// strings, durations with exact fractions and their limits, and every
+// refusal. tools/check_ixdtf.py compares the parsers with a second reading
+// of the grammar over many more strings.
 
 #include "test_harness.h"
 

@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Time durations and the arithmetic of times of day through the public
-// functions (record mloc-0041): durations from fields at their limits and
-// back to fields in each largest unit, a time plus a duration across days
-// both ways, the difference of two times rounded, rounding to each unit
-// and to a day, and every refusal.
+// functions: durations from fields at their limits and back to fields in
+// each largest unit, a time plus a duration across days both ways, the
+// difference of two times rounded, rounding to each unit and to a day, and
+// every refusal.
 
 #include "test_harness.h"
 

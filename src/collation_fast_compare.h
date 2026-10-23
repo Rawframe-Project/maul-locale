@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin compare (record mloc-0072): ICU4C's
-// CollationFastLatin::compareUTF8 over a unit's table, which answers as
-// the general compare does for text it holds and bails out otherwise.
-// Each level reads both texts again, as the general compare does; the
-// first reads every character, so a bail-out comes before any answer.
-// A character's primary comes from its table word (ICU4C keeps an array
-// of them in its settings).
+// The fast Latin compare: ICU4C's CollationFastLatin::compareUTF8 over a
+// unit's table, which answers as the general compare does for text it
+// holds and bails out otherwise. Each level reads both texts again, as the
+// general compare does; the first reads every character, so a bail-out
+// comes before any answer. A character's primary comes from its table word
+// (ICU4C keeps an array of them in its settings).
 
 #ifndef MLOC_SRC_COLLATION_FAST_COMPARE_H
 #define MLOC_SRC_COLLATION_FAST_COMPARE_H

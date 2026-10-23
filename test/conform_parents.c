@@ -3,9 +3,8 @@
 //
 // The library's fallback chains against CLDR's inheritance, for every
 // locale file of the pinned release: reads the lines of `mlocgen chains`
-// ("component<TAB>id<TAB>keys") and walks mlocGetParentLocale from the
-// id on the compiled-in data, each parent written as a key (record
-// mloc-0016). CI runs it.
+// ("component<TAB>id<TAB>keys") and walks mlocGetParentLocale from the id
+// on the compiled-in data, each parent written as a key. CI runs it.
 //
 // usage: mlocgen chains <common> < ids | conform_parents
 

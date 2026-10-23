@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Japan's eras since Meiji (record mloc-0040), from CLDR's
-// supplementalData.xml, which src/generated/calendar_eras.c defines.
+// Japan's eras since Meiji, from CLDR's supplementalData.xml, which
+// src/generated/calendar_eras.c defines.
 
 #ifndef MLOC_CALENDAR_ERAS_H
 #define MLOC_CALENDAR_ERAS_H

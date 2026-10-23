@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Finnish suffixes (record mloc-0049). A word's type and gradation come
-// from Kotus's word list (src/generated/finnish_types.h: the words its
-// endings do not decide, then the endings) for a common noun, a
-// compound by its last word, and from the ending alone for a name; each
-// type is a row of patterns below, read on the word's base (the word
-// less the letters the type drops). Gradation weakens the stem's last
-// strong consonants before a closed syllable (katu, kadun), and in the
-// types that end in a consonant strengthens the vowel stem (rengas,
-// renkaan). Digits and capitals take a colon and the ending as the
-// Kielenhuollon käsikirja writes it (5:een, 3:a, 100:aa, EU:ssa).
+// Finnish suffixes. A word's type and gradation come from Kotus's word
+// list (src/generated/finnish_types.h: the words its endings do not
+// decide, then the endings) for a common noun, a compound by its last
+// word, and from the ending alone for a name; each type is a row of
+// patterns below, read on the word's base (the word less the letters the
+// type drops). Gradation weakens the stem's last strong consonants before
+// a closed syllable (katu, kadun), and in the types that end in a
+// consonant strengthens the vowel stem (rengas, renkaan). Digits and
+// capitals take a colon and the ending as the Kielenhuollon käsikirja
+// writes it (5:een, 3:a, 100:aa, EU:ssa).
 
 #include "grammar_fi.h"
 

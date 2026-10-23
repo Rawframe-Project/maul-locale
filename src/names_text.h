@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// How the names part writes (records mloc-0037 and mloc-0038): text
-// appended as long as it fits, with CLDR's nested bracket replacement
-// when asked, and the first letter titlecased as ICU's display names
-// titlecase it.
+// How the names part writes: text appended as long as it fits, with CLDR's
+// nested bracket replacement when asked, and the first letter titlecased
+// as ICU's display names titlecase it.
 
 #ifndef MLOC_NAMES_TEXT_H
 #define MLOC_NAMES_TEXT_H

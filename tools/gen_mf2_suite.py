@@ -3,9 +3,9 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Writes test/mf2_suite.inc from the MessageFormat 2 test suite in CLDR's
-# common/testData/messageFormat (record mloc-0045): one row per case, with
-# its file, locale, bidi isolation, message, expected text and errors, and
-# arguments, for test_message to run.
+# common/testData/messageFormat: one row per case, with its file, locale,
+# bidi isolation, message, expected text and errors, and arguments, for
+# test_message to run.
 #
 # usage: gen_mf2_suite.py <cldr> <commit> > test/mf2_suite.inc
 

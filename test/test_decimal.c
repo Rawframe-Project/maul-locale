@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Decimal values (record mloc-0019): parsing with the digits shown, the
-// bounds and refusals, integers, writing back, equality by memcmp, and
-// the plural operands with UTS #35's examples and wide integers.
+// Decimal values: parsing with the digits shown, the bounds and refusals,
+// integers, writing back, equality by memcmp, and the plural operands with
+// UTS #35's examples and wide integers.
 
 #include "test_harness.h"
 

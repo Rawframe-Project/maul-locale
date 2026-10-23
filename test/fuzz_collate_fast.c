@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the fast Latin compare against the general path
-// (record mloc-0072), through the public collator. The first byte
-// chooses a locale and options, the second where the rest is cut into
-// two texts, and each byte after them a character: ASCII as itself,
-// most of the rest a letter or sign up to U+017F or general
-// punctuation, the last few one the table bails out on (combining
-// marks, Cyrillic, U+FFFE, U+FFFF, the middle dot). mlocCompare, which
-// tries the fast compare first, must order the texts as their sort keys
-// do (the keys never read the table), the mirror the other way, and
-// each text with itself as equal; their UTF-16 forms must compare and
-// key alike.
+// libFuzzer target for the fast Latin compare against the general path,
+// through the public collator. The first byte chooses a locale and
+// options, the second where the rest is cut into two texts, and each byte
+// after them a character: ASCII as itself, most of the rest a letter or
+// sign up to U+017F or general punctuation, the last few one the table
+// bails out on (combining marks, Cyrillic, U+FFFE, U+FFFF, the middle
+// dot). mlocCompare, which tries the fast compare first, must order the
+// texts as their sort keys do (the keys never read the table), the mirror
+// the other way, and each text with itself as equal; their UTF-16 forms
+// must compare and key alike.
 
 #include "maul-locale/collate.h"
 #include "maul-locale/data.h"

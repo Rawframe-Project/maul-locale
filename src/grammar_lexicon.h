@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Turkish words whose suffixes the rules alone would get wrong
-// (record mloc-0046), from Zemberek-NLP's dictionaries.
+// The Turkish words whose suffixes the rules alone would get wrong, from
+// Zemberek-NLP's dictionaries.
 
 #ifndef MLOC_GRAMMAR_LEXICON_H
 #define MLOC_GRAMMAR_LEXICON_H

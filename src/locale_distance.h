@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Locale distances (record mloc-0017): the matching table, its
-// validator, and the search for the nearest of a list of LSRs, ported
-// from ICU's LocaleDistance.getBestIndexAndDistance. Distances are
-// shifted by 3 bits; the low bits hold the micro distance of subtags
-// one tag gave and the other did not.
+// Locale distances: the matching table, its validator, and the search for
+// the nearest of a list of LSRs, ported from ICU's
+// LocaleDistance.getBestIndexAndDistance. Distances are shifted by 3 bits;
+// the low bits hold the micro distance of subtags one tag gave and the
+// other did not.
 
 #ifndef MLOC_LOCALE_DISTANCE_H
 #define MLOC_LOCALE_DISTANCE_H

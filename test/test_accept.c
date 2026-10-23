@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Stale translations (record mloc-0056): the source hash of a message's
-// canonical text, its hex form, mloccat accept writing it into a
-// translation, and the compiler counting what went stale. Run with a
-// directory to write into.
+// Stale translations: the source hash of a message's canonical text, its
+// hex form, mloccat accept writing it into a translation, and the compiler
+// counting what went stale. Run with a directory to write into.
 
 #include "accept.h"
 #include "compile.h"

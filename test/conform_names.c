@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Compares display names with ICU4C's (record mloc-0037). Reads lines
-// "locale TAB code TAB mode TAB name" from standard input, as an oracle
-// built on ICU4C's LocaleDisplayNames writes them with no substitution:
-// the locale as ICU names it ("sr_Latn_BA"), a code with its namespace
-// ("l:en-GB", "t:ca-gregory"), the mode (0 the standard form, 1 the
-// short one, then the standard form at the beginning of a sentence, in a
-// list or menu and alone), and the name, "<none>" for none. Prints each
-// line whose name differs and a count; exits 1 on a difference.
+// Compares display names with ICU4C's. Reads lines "locale TAB code TAB
+// mode TAB name" from standard input, as an oracle built on ICU4C's
+// LocaleDisplayNames writes them with no substitution: the locale as ICU
+// names it ("sr_Latn_BA"), a code with its namespace ("l:en-GB",
+// "t:ca-gregory"), the mode (0 the standard form, 1 the short one, then
+// the standard form at the beginning of a sentence, in a list or menu and
+// alone), and the name, "<none>" for none. Prints each line whose name
+// differs and a count; exits 1 on a difference.
 //
 // usage: conform_names names.mloc < oracle-lines
 

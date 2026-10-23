@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A catalog set's report (record mloc-0057): per locale, the coverage
-// (translated keys of those the source asks to translate) and each
-// finding:
+// A catalog set's report: per locale, the coverage (translated keys of
+// those the source asks to translate) and each finding:
 // - missing: a key to translate that the translation lacks;
 // - stale: a translation made from another source message (stale.h);
 // - unrecorded: a translation with no record of its source message;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date and time functions of messages (record mloc-0045; UTS #35
-// Part 9, "Date and Time Value Formatting", Draft): a date value, its
-// operands (date/time literals and the date, time and date-time
-// arguments), the options each function takes, and its text by the
-// library's date, time and date-time formatters.
+// The date and time functions of messages (UTS #35 Part 9, "Date and Time
+// Value Formatting", Draft): a date value, its operands (date/time
+// literals and the date, time and date-time arguments), the options each
+// function takes, and its text by the library's date, time and date-time
+// formatters.
 
 #ifndef MLOC_SRC_MESSAGE_DATE_H
 #define MLOC_SRC_MESSAGE_DATE_H

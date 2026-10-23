@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalogs (records mloc-0053 and mloc-0054): a program's messages of one
-// locale, compiled by the catalog tool (mloccat) into a data file, found
-// by key through a minimal perfect hash or by an index resolved once.
-// The catalogs of one set (a source and its translations) share one key
-// order, so an index means the same message in each. A chain formats a
-// set's messages through catalogs in fallback order, binding each message
-// once into a cache of the caller's memory (record mloc-0055).
+// Catalogs: a program's messages of one locale, compiled by the catalog
+// tool (mloccat) into a data file, found by key through a minimal perfect
+// hash or by an index resolved once. The catalogs of one set (a source and
+// its translations) share one key order, so an index means the same
+// message in each. A chain formats a set's messages through catalogs in
+// fallback order, binding each message once into a cache of the caller's
+// memory.
 
 #ifndef MAUL_LOCALE_CATALOG_H
 #define MAUL_LOCALE_CATALOG_H

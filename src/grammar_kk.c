@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Kazakh for the Turkic engine (grammar_turkic.h, record mloc-0047), in
-// its Cyrillic alphabet: two-way harmony for both vowels (a or e, y or
-// i), a suffix's first consonant chosen by the stem's last sound (a
-// vowel, a glide, l, a nasal, z or zh, a voiceless consonant), the n
-// forms after a possessive, no copula suffix; a hyphen after an
-// abbreviation read by its letters, digits and a word in another
-// script, a name joined; a common noun's final p, k, q voiced before a
-// vowel.
+// Kazakh for the Turkic engine (grammar_turkic.h), in its Cyrillic
+// alphabet: two-way harmony for both vowels (a or e, y or i), a suffix's
+// first consonant chosen by the stem's last sound (a vowel, a glide, l, a
+// nasal, z or zh, a voiceless consonant), the n forms after a possessive,
+// no copula suffix; a hyphen after an abbreviation read by its letters,
+// digits and a word in another script, a name joined; a common noun's
+// final p, k, q voiced before a vowel.
 
 #include "grammar_turkic.h"
 

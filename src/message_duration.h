@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloc:duration (record mloc-0045): a duration value, its operands (a
-// duration argument, an ISO 8601 duration literal, a number of seconds
-// balanced up to hours as MF1's duration takes it), ECMA-402's
-// DurationFormat options, and its text by the library's duration
-// formatter.
+// mloc:duration: a duration value, its operands (a duration argument, an
+// ISO 8601 duration literal, a number of seconds balanced up to hours as
+// MF1's duration takes it), ECMA-402's DurationFormat options, and its
+// text by the library's duration formatter.
 
 #ifndef MLOC_SRC_MESSAGE_DURATION_H
 #define MLOC_SRC_MESSAGE_DURATION_H

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The relative time data file's generator (record mloc-0043).
+// The relative time data file's generator.
 
 #ifndef MLOCGEN_RELATIVE_GEN_H
 #define MLOCGEN_RELATIVE_GEN_H

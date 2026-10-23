@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Turkish lexicon of marks (grammar_lexicon.h, record mloc-0046): a
-// word read into its key, the table's blocks searched by their first
-// word, then the block's front-coded entries read in order.
+// The Turkish lexicon of marks (grammar_lexicon.h): a word read into its
+// key, the table's blocks searched by their first word, then the block's
+// front-coded entries read in order.
 
 #include "grammar_lexicon.h"
 

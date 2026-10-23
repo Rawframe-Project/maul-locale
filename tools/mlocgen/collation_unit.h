@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Builds the root collation unit (src/collation_tables.h, record
-// mloc-0065) from the root as read (collation_root.h). As ICU4X's data
-// does, it leaves out every mapping whose first code point has a
-// canonical decomposition, Hangul syllables and surrogates: the runtime
-// decomposes text to NFD before it looks a code point up, so they are
-// never read.
+// Builds the root collation unit (src/collation_tables.h) from the root as
+// read (collation_root.h). As ICU4X's data does, it leaves out every
+// mapping whose first code point has a canonical decomposition, Hangul
+// syllables and surrogates: the runtime decomposes text to NFD before it
+// looks a code point up, so they are never read.
 
 #ifndef MLOCGEN_COLLATION_UNIT_H
 #define MLOCGEN_COLLATION_UNIT_H

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The catalog's hashes (record mloc-0054): XXH64 as its specification
-// defines it (xxHash's xxhash_spec.md), and the minimal perfect hash's
-// slot of a key's hash under its bucket's pilot. Shared by the library,
-// which looks keys up, and the catalog tool, which builds the tables;
-// inline, so that the tool needs none of the library's internals.
+// The catalog's hashes: XXH64 as its specification defines it (xxHash's
+// xxhash_spec.md), and the minimal perfect hash's slot of a key's hash
+// under its bucket's pilot. Shared by the library, which looks keys up,
+// and the catalog tool, which builds the tables; inline, so that the tool
+// needs none of the library's internals.
 
 #ifndef MLOC_CATALOG_HASH_H
 #define MLOC_CATALOG_HASH_H

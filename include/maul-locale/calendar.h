@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Calendars (UTS #35 Part 4, record mloc-0040): dates as values in
-// CLDR's calendars, as Temporal models them. A date is a day, counted
-// from January 1 of year 1 in the proleptic Gregorian calendar (day 1), read in a
-// calendar; its fields (year, era, month code, day) are computed from
-// it.
+// Calendars (UTS #35 Part 4): dates as values in CLDR's calendars, as
+// Temporal models them. A date is a day, counted from January 1 of year 1
+// in the proleptic Gregorian calendar (day 1), read in a calendar; its
+// fields (year, era, month code, day) are computed from it.
 
 #ifndef MAUL_LOCALE_CALENDAR_H
 #define MAUL_LOCALE_CALENDAR_H
@@ -51,9 +50,9 @@ extern "C"
         mloc_calendarIslamicTbla = 12,
         // "islamic-umalqura": Umm al-Qura, eras ah and bh.
         mloc_calendarIslamicUmalqura = 13,
-        // "islamic": read as Umm al-Qura (record mloc-0040).
+        // "islamic": read as Umm al-Qura.
         mloc_calendarIslamic = 14,
-        // "islamic-rgsa": read as Umm al-Qura (record mloc-0040).
+        // "islamic-rgsa": read as Umm al-Qura.
         mloc_calendarIslamicRgsa = 15,
         // "chinese": lunisolar, with leap months, no era.
         mloc_calendarChinese = 16,

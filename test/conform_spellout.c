@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// CLDR's rule-based number format test data against the library (record
-// mloc-0034): reads testData/rbnf's files ("type;rule set;number;
-// expected", the file named for its locale) and formats each number by
-// the rule set on the compiled-in data and the spell-out file. A line
-// that begins with a stray ';' (ak.ssv has 23) is read without it.
-// "Infinity", "-Infinity" and "NaN" are those values. CI runs it.
+// CLDR's rule-based number format test data against the library: reads
+// testData/rbnf's files ("type;rule set;number; expected", the file named
+// for its locale) and formats each number by the rule set on the
+// compiled-in data and the spell-out file. A line that begins with a stray
+// ';' (ak.ssv has 23) is read without it. "Infinity", "-Infinity" and
+// "NaN" are those values. CI runs it.
 //
 // usage: conform_spellout <spellout.mloc> <file.ssv>...
 

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Currency formatting (record mloc-0022): a number formatter's core with
-// the locale's currency pattern, the currency's symbol, separators and
-// names gathered field by field along the locale's chain, its digits,
-// and for a long name or the ISO append a pattern around the number.
+// Currency formatting: a number formatter's core with the locale's
+// currency pattern, the currency's symbol, separators and names gathered
+// field by field along the locale's chain, its digits, and for a long name
+// or the ISO append a pattern around the number.
 
 #include "maul-locale/currency.h"
 

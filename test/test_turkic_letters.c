@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Turkic letters' indexed ASCII table (src/grammar_turkic.c, record
-// mloc-0047): every ASCII code point read by index as the table of Latin
-// letters reads it by search.
+// The Turkic letters' indexed ASCII table (src/grammar_turkic.c): every
+// ASCII code point read by index as the table of Latin letters reads it by
+// search.
 
 #include "grammar_turkic.h"
 #include "test_harness.h"

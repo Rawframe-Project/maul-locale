@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Spell-out parsing (record mloc-0034): text read back by a formatter's
-// group of rules as ICU4C 79's strict RuleBasedNumberFormat::parse reads
-// it, the value exact.
+// Spell-out parsing: text read back by a formatter's group of rules as
+// ICU4C 79's strict RuleBasedNumberFormat::parse reads it, the value
+// exact.
 
 #ifndef MLOC_SPELLOUT_PARSE_H
 #define MLOC_SPELLOUT_PARSE_H

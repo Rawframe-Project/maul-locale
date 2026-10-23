@@ -97,9 +97,9 @@ Value mlocResolveVariable(Resolution* r, uint32_t variable, uint32_t at, uint32_
 // An expression's value.
 Value mlocResolveExpression(Resolution* r, uint32_t expression);
 
-// Resolves a markup's options for their faults (record mloc-0045:
-// markup has no value, but option resolution reports a failed option,
-// and u:dir on markup is a bad option).
+// Resolves a markup's options for their faults (markup has no value, but
+// option resolution reports a failed option, and u:dir on markup is a bad
+// option).
 void mlocResolveMarkup(Resolution* r, uint32_t markup);
 
 // The fallback an expression shows when its value cannot be written.

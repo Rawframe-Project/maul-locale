@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A date formatter's state (maul-locale/datetime.h, record mloc-0042):
-// the compiled patterns of its options in its calendar, its names, its
-// digits and those a pattern names for its fields; and the writing of a
-// date's fields by a pattern.
+// A date formatter's state (maul-locale/datetime.h): the compiled patterns
+// of its options in its calendar, its names, its digits and those a
+// pattern names for its fields; and the writing of a date's fields by a
+// pattern.
 
 #ifndef MLOC_DATE_WRITE_H
 #define MLOC_DATE_WRITE_H
@@ -23,11 +23,11 @@ enum
     dateFormatPatterns = 3,
 };
 
-// A formatter's interval patterns (research 40): the table their indexes
-// resolve in, the pair and prefixes of each pattern the formatter keeps
+// A formatter's interval patterns: the table their indexes resolve in, the
+// pair and prefixes of each pattern the formatter keeps
 // (dateIntervalPairSize bytes), a standard format's own pattern (the
-// generator's match of its skeleton, which a range of one value writes;
-// a field set's are its patterns), and the fallback.
+// generator's match of its skeleton, which a range of one value writes; a
+// field set's are its patterns), and the fallback.
 typedef struct DateRange
 {
     PatternTable table;

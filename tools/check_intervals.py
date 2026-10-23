@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks mlocgen's interval patterns (record mloc-0042, research 40)
-# against ICU4C 79's DateIntervalFormat: every question of
-# test/intervals_icu.tsv must get ICU's patterns, or the answer
-# tools/interval-exceptions.txt gives where the skeleton matcher follows
-# CLDR's inheritance and ICU's data build does not. An exception that no
-# longer differs from ICU is reported too, so the list stays exact.
+# Checks mlocgen's interval patterns against ICU4C 79's
+# DateIntervalFormat: every question of test/intervals_icu.tsv must get
+# ICU's patterns, or the answer tools/interval-exceptions.txt gives where
+# the skeleton matcher follows CLDR's inheritance and ICU's data build
+# does not. An exception that no longer differs from ICU is reported too,
+# so the list stays exact.
 #
 # usage: check_intervals.py <mlocgen> <CLDR common directory> <oracle> <exceptions>
 

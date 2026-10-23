@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit formatting with the unit names data file (records mloc-0024 to
-// mloc-0031): the widths, the plural categories and their fallbacks,
-// patterns without the number, percent and per mille, compound names
-// built from the patterns, compact notation, ranges, the parts, the
-// display names, mixed units, usages, numeric durations, coordinates,
-// grammatical cases and genders, and the refusals. Every expected text
-// and gender is ICU4C 79's for the same input ("generic" aside, which
-// ICU does not take). Then the formatter's pool of patterns on names
-// built here.
+// Unit formatting with the unit names data file: the widths, the plural
+// categories and their fallbacks, patterns without the number, percent and
+// per mille, compound names built from the patterns, compact notation,
+// ranges, the parts, the display names, mixed units, usages, numeric
+// durations, coordinates, grammatical cases and genders, and the refusals.
+// Every expected text and gender is ICU4C 79's for the same input
+// ("generic" aside, which ICU does not take). Then the formatter's pool of
+// patterns on names built here.
 
 #include "currency_tables.h"
 #include "kinds.h"

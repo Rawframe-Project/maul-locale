@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number functions of messages (record mloc-0045; UTS #35 Part 9,
-// "Numeric Value Selection and Formatting"): a number value, its options
-// read and passed on as each function says, its precision by ECMA-402's
-// digit options, its text by the library's number formatter, and its
-// matching of keys by exact value and plural category.
+// The number functions of messages (UTS #35 Part 9, "Numeric Value
+// Selection and Formatting"): a number value, its options read and passed
+// on as each function says, its precision by ECMA-402's digit options, its
+// text by the library's number formatter, and its matching of keys by
+// exact value and plural category.
 
 #ifndef MLOC_SRC_MESSAGE_NUMBER_H
 #define MLOC_SRC_MESSAGE_NUMBER_H
@@ -138,12 +138,11 @@ typedef enum PreparedKind
     preparedRelative = 4,
 } PreparedKind;
 
-// What binding prepares for a number function's expression (record
-// mloc-0045): the options of the value it makes (number, origin and
-// selectability cleared), the plural rules its selection reads (rulesType
-// 1 plus the mlocPluralType, or 0 for none), and its formatter, of the
-// PreparedKind kind. A bound message holds the bytes up to the end of the
-// formatter it has.
+// What binding prepares for a number function's expression: the options of
+// the value it makes (number, origin and selectability cleared), the
+// plural rules its selection reads (rulesType 1 plus the mlocPluralType,
+// or 0 for none), and its formatter, of the PreparedKind kind. A bound
+// message holds the bytes up to the end of the formatter it has.
 typedef struct PreparedNumber
 {
     NumberValue key;

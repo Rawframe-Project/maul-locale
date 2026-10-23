@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Currency parsing (record mloc-0033): ICU4C 79's CombinedCurrencyMatcher,
-// which reads a currency formatter's currency (its symbol, its code, its
-// long names) or, for any currency, the symbols, codes and names the
-// locale's chain gives, as uprv_parseCurrency reads them.
+// Currency parsing: ICU4C 79's CombinedCurrencyMatcher, which reads a
+// currency formatter's currency (its symbol, its code, its long names) or,
+// for any currency, the symbols, codes and names the locale's chain gives,
+// as uprv_parseCurrency reads them.
 
 #ifndef MLOC_PARSE_CURRENCY_H
 #define MLOC_PARSE_CURRENCY_H

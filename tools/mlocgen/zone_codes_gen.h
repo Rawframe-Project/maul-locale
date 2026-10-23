@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zone codes unit (record mloc-0041, src/zone_code_tables.h): CLDR's
-// BCP 47 time zone ids from bcp47/timezone.xml and the Windows zone names
-// from supplemental/windowsZones.xml.
+// The zone codes unit (src/zone_code_tables.h): CLDR's BCP 47 time zone
+// ids from bcp47/timezone.xml and the Windows zone names from
+// supplemental/windowsZones.xml.
 
 #ifndef MLOCGEN_ZONE_CODES_GEN_H
 #define MLOCGEN_ZONE_CODES_GEN_H

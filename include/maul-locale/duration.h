@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Durations (record mloc-0044): a Temporal duration's fields written as
-// a locale says them ("1 hr, 2 min, 3 sec", "1:02:03", "2 days and 3
-// hours"), as ECMA-402's Intl.DurationFormat writes them. The fields are
-// written as given, never balanced ("90 min"); the zone part's
-// arithmetic balances and rounds them (mlocGetDurationValues). The unit
-// names, lists and duration patterns are those of the unit and list
-// parts.
+// Durations: a Temporal duration's fields written as a locale says them
+// ("1 hr, 2 min, 3 sec", "1:02:03", "2 days and 3 hours"), as ECMA-402's
+// Intl.DurationFormat writes them. The fields are written as given, never
+// balanced ("90 min"); the zone part's arithmetic balances and rounds them
+// (mlocGetDurationValues). The unit names, lists and duration patterns are
+// those of the unit and list parts.
 
 #ifndef MAUL_LOCALE_DURATION_H
 #define MAUL_LOCALE_DURATION_H

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Korean particles (record mloc-0050). A Hangul syllable's final is
-// (cp - 0xAC00) % 28 (Unicode 3.12): 0 none, 8 ㄹ. A compatibility jamo
-// is its own letter; a Hanja reads by the generated table.
+// Korean particles. A Hangul syllable's final is (cp - 0xAC00) % 28
+// (Unicode 3.12): 0 none, 8 ㄹ. A compatibility jamo is its own letter; a
+// Hanja reads by the generated table.
 
 #include "grammar_ko.h"
 

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Numbers in words, ordinal suffixes and the algorithmic numbering
-// systems (UTS #35 Part 3, record mloc-0034): CLDR's rule-based number
-// formats, as ICU4C reads and runs them, on the exact decimal. The rules
-// are in a data file of their own, spellout.mloc, which a program adds to
-// its data set.
+// Numbers in words, ordinal suffixes and the algorithmic numbering systems
+// (UTS #35 Part 3): CLDR's rule-based number formats, as ICU4C reads and
+// runs them, on the exact decimal. The rules are in a data file of their
+// own, spellout.mloc, which a program adds to its data set.
 
 #ifndef MAUL_LOCALE_SPELLOUT_H
 #define MAUL_LOCALE_SPELLOUT_H

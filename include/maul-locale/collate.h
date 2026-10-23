@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation (UTS #10 and UTS #35 Part 5, records mloc-0064 to
-// mloc-0071): text compared in a locale's order, as ICU4C's Collator
-// compares it, from CLDR's root collation and the locales' tailorings in
-// the collation data file (src/generated/collation.mloc). A locale's
-// -u-co picks among its collation types; its -u- keys set the options
-// (ks, ka, kv, kf, kc, kn, kb, kr); the options of the call override
-// them. Text is always compared in NFD, whatever kk asks. Sort keys are
-// ICU4C's bytes, with a version to store beside them.
+// Collation (UTS #10 and UTS #35 Part 5): text compared in a locale's
+// order, as ICU4C's Collator compares it, from CLDR's root collation and
+// the locales' tailorings in the collation data file
+// (src/generated/collation.mloc). A locale's -u-co picks among its
+// collation types; its -u- keys set the options (ks, ka, kv, kf, kc, kn,
+// kb, kr); the options of the call override them. Text is always compared
+// in NFD, whatever kk asks. Sort keys are ICU4C's bytes, with a version to
+// store beside them.
 
 #ifndef MAUL_LOCALE_COLLATE_H
 #define MAUL_LOCALE_COLLATE_H
@@ -148,12 +148,11 @@ extern "C"
                                                    size_t aLength, const char* b, size_t bLength,
                                                    int* orderOut);
 
-    /// Writes a UTF-8 text's sort key in a collator's order: bytes whose
-    /// memcmp order, a shorter key first when it is the other's start, is
-    /// the order mlocCompare gives, ICU4C's bytes for the same order and
-    /// options (record mloc-0070). The key ends with a 00 byte, counted in
-    /// its length. Keys from collators of other options or another
-    /// version do not compare.
+    /// Writes a UTF-8 text's sort key in a collator's order: bytes whose memcmp
+    /// order, a shorter key first when it is the other's start, is the order
+    /// mlocCompare gives, ICU4C's bytes for the same order and options. The key
+    /// ends with a 00 byte, counted in its length. Keys from collators of other
+    /// options or another version do not compare.
     ///
     /// @param collator   A collator mlocInitCollator made.
     /// @param text       The text; may be null when length is 0.

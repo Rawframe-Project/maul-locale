@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Date ranges (mlocFormatDateRange, research 40): the greatest
-// difference's pair, the fallback, one date, the order and the parts of
-// each date, checked against ICU4C 79's DateIntervalFormat made from
-// each option's skeleton; where the library differs on purpose (a leap
-// month, fa's month items, a calendar ICU lacks), its own answer. Then
-// ICU's answers kept in test/date_ranges_icu.tsv,
-// test/time_ranges_icu.tsv and test/datetime_ranges_icu.tsv, with the
-// library's own where it differs and why.
+// Date ranges (mlocFormatDateRange): the greatest difference's pair, the
+// fallback, one date, the order and the parts of each date, checked
+// against ICU4C 79's DateIntervalFormat made from each option's skeleton;
+// where the library differs on purpose (a leap month, fa's month items, a
+// calendar ICU lacks), its own answer. Then ICU's answers kept in
+// test/date_ranges_icu.tsv, test/time_ranges_icu.tsv and
+// test/datetime_ranges_icu.tsv, with the library's own where it differs
+// and why.
 
 // fopen is the portable way to read the data file; MSVC's CRT deprecates
 // it.

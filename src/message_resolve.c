@@ -269,10 +269,9 @@ static bool TextIs(const Value* v, const char* text)
     return textual && v->length == length && memcmp(v->text, text, length) == 0;
 }
 
-// The u: options of an expression's call (record mloc-0045): u:dir one
-// of ltr, rtl, auto and inherit, u:id anything with a string; another
-// value is a bad option and ignored (a failed variable already was).
-// Other u: options are ignored.
+// The u: options of an expression's call: u:dir one of ltr, rtl, auto and
+// inherit, u:id anything with a string; another value is a bad option and
+// ignored (a failed variable already was). Other u: options are ignored.
 MLOC_NOINLINE static Directed UnicodeOptions(Resolution* r, uint32_t expression)
 {
     uint32_t first = Field(r, messageExpressions, expression, 5);

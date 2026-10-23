@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Decimal values and their plural operands (record mloc-0019): a
-// number is formatted from its decimal digits, never from a binary
-// value, so the digits a user typed are the digits shown.
+// Decimal values and their plural operands: a number is formatted from its
+// decimal digits, never from a binary value, so the digits a user typed
+// are the digits shown.
 
 #ifndef MAUL_LOCALE_DECIMAL_H
 #define MAUL_LOCALE_DECIMAL_H

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The data file layout (record mloc-0014), shared by the library, which
-// reads it, and the generator, which writes it. All numbers are
-// little-endian.
+// The data file layout, shared by the library, which reads it, and the
+// generator, which writes it. All numbers are little-endian.
 
 #ifndef MLOC_DATA_FORMAT_H
 #define MLOC_DATA_FORMAT_H

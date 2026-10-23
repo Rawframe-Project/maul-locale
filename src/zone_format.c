@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zone formatter (maul-locale/datetime.h, record mloc-0042): a zone
-// at an instant written by a style, falling back as ICU4C's
-// TimeZoneFormat and TimeZoneGenericNames fall back: a specific name,
-// else the offset; a generic name (the standard one where no daylight
-// time lies within 184 days, qualified by the fallback format where the
-// metazone's preferred zone for the locale's region shows another
-// offset), else the location, else the offset; the location by the
-// country or city; the city, else Etc/Unknown's.
+// The zone formatter (maul-locale/datetime.h): a zone at an instant
+// written by a style, falling back as ICU4C's TimeZoneFormat and
+// TimeZoneGenericNames fall back: a specific name, else the offset; a
+// generic name (the standard one where no daylight time lies within 184
+// days, qualified by the fallback format where the metazone's preferred
+// zone for the locale's region shows another offset), else the location,
+// else the offset; the location by the country or city; the city, else
+// Etc/Unknown's.
 
 #include "zone_format.h"
 

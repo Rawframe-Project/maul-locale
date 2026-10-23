@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalogs (record mloc-0054): XXH64 against the reference values,
-// the perfect hash over many keys, and a source and a translation
-// compiled by the catalog tool, opened, looked up and refused when
-// damaged. Run with a directory to write the catalogs into.
+// Catalogs: XXH64 against the reference values, the perfect hash over many
+// keys, and a source and a translation compiled by the catalog tool,
+// opened, looked up and refused when damaged. Run with a directory to
+// write the catalogs into.
 
 #include "catalog_hash.h"
 #include "catalog_tables.h"

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Azerbaijani for the Turkic engine (grammar_turkic.h, record mloc-0047),
-// in its Latin alphabet, as the orthography norms write it: two-way A (a
-// or ə) and four-way I, no assimilation of d after a voiceless consonant,
-// the buffer consonants y, n and s after a vowel, no instrumental case,
-// the question particle joined; a hyphen after an abbreviation read by
-// its letters, after digits ("BMT-yə", "2-yə") and after a name a hint
-// says is foreign ("Microsoft-un", as Microsoft's style guide writes a
-// product's name), a native name joined; a common noun's final k or q
-// after a vowel, in a word of two syllables or more, written y or ğ
-// before a vowel (çörəyi, ayağı).
+// Azerbaijani for the Turkic engine (grammar_turkic.h), in its Latin
+// alphabet, as the orthography norms write it: two-way A (a or ə) and
+// four-way I, no assimilation of d after a voiceless consonant, the buffer
+// consonants y, n and s after a vowel, no instrumental case, the question
+// particle joined; a hyphen after an abbreviation read by its letters,
+// after digits ("BMT-yə", "2-yə") and after a name a hint says is foreign
+// ("Microsoft-un", as Microsoft's style guide writes a product's name), a
+// native name joined; a common noun's final k or q after a vowel, in a
+// word of two syllables or more, written y or ğ before a vowel (çörəyi,
+// ayağı).
 
 #include "grammar_turkic.h"
 

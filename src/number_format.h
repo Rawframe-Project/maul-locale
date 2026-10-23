@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The formatting the number formatters share (record mloc-0021): a core
-// with its options; a decimal is rounded by the precision or compact
-// notation, then written, alone or as a range's end.
+// The formatting the number formatters share: a core with its options; a
+// decimal is rounded by the precision or compact notation, then written,
+// alone or as a range's end.
 
 #ifndef MLOC_NUMBER_FORMAT_H
 #define MLOC_NUMBER_FORMAT_H

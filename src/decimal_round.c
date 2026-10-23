@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Rounding a decimal (record mloc-0019): to a multiple of an increment
-// of 1, 2, 5 or 25 at a power of ten, in ECMA-402's nine modes. With K
-// the digits at and above the position, as an integer, and r the part
-// below it, the value is (K + r) units; K's last two digits decide its
-// remainder by the increment, since each increment divides 100, and r
-// is compared with half a unit from its first digit and whether any
-// follow.
+// Rounding a decimal: to a multiple of an increment of 1, 2, 5 or 25 at a
+// power of ten, in ECMA-402's nine modes. With K the digits at and above
+// the position, as an integer, and r the part below it, the value is (K +
+// r) units; K's last two digits decide its remainder by the increment,
+// since each increment divides 100, and r is compared with half a unit
+// from its first digit and whether any follow.
 
 #include "decimal.h"
 

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Locale keys (record mloc-0016): a CLDR id with the script likely
-// subtags would give it, left out when it is the language's own likely
-// script, and the region as given; "root" for root. The library makes
-// the same keys at run time.
+// Locale keys: a CLDR id with the script likely subtags would give it,
+// left out when it is the language's own likely script, and the region as
+// given; "root" for root. The library makes the same keys at run time.
 
 #ifndef MLOCGEN_KEYS_H
 #define MLOCGEN_KEYS_H

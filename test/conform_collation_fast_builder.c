@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin tables the generator builds (record mloc-0072) for the
-// root and every type of CLDR's common/collation (not "private-", no
-// alt but "short"), each written after its unit and read back; a type
-// the builder refuses is counted. --tables
-// writes each as conform_collation_fast writes a data file's, the tag
-// ("und" for the root's, "locale-u-co-type" for a type's) then the
-// count and the words in hex, for tools/oracles' ICU4C program; alone it
-// prints how many tables of each kind and a hash of them, and with
-// --expect it fails unless the hash is the given one, which CI checks on
-// the pinned release.
+// The fast Latin tables the generator builds for the root and every type
+// of CLDR's common/collation (not "private-", no alt but "short"), each
+// written after its unit and read back; a type the builder refuses is
+// counted. --tables writes each as conform_collation_fast writes a data
+// file's, the tag ("und" for the root's, "locale-u-co-type" for a type's)
+// then the count and the words in hex, for tools/oracles' ICU4C program;
+// alone it prints how many tables of each kind and a hash of them, and
+// with --expect it fails unless the hash is the given one, which CI checks
+// on the pinned release.
 //
 // usage: conform_collation_fast_builder <FractionalUCA.txt>
 //            [--tables | --expect HASH] common/collation/*.xml

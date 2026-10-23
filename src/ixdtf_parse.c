@@ -2,11 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Temporal's date-time, offset, time zone and calendar strings
-// (maul-locale/ixdtf.h, record mloc-0041): ECMA-262's grammar for them,
-// read by recursive descent with a cursor that each rule restores when it
-// does not match. A goal matches syntactically first; the annotation
-// rules, which make ParseISODateTime throw rather than try another goal,
-// are applied after.
+// (maul-locale/ixdtf.h): ECMA-262's grammar for them, read by recursive
+// descent with a cursor that each rule restores when it does not match. A
+// goal matches syntactically first; the annotation rules, which make
+// ParseISODateTime throw rather than try another goal, are applied after.
 
 #include "binary64.h"
 
