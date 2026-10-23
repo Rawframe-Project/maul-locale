@@ -5,6 +5,13 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.1.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.0.1...v0.1.0) (2026-10-23)
+
+
+### Added
+
+* **data:** take the final CLDR 49 and ICU 79.1 releases ([#11](https://github.com/Rawframe-Project/maul-locale/issues/11)) ([73a8158](https://github.com/Rawframe-Project/maul-locale/commit/73a8158d018bcdd2d148d091d3f7387445dadb6a)), closes [#5](https://github.com/Rawframe-Project/maul-locale/issues/5)
+
 ## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1) (2026-10-23)
 
 The first release: locale data and formatting from CLDR 49 (beta 3)
