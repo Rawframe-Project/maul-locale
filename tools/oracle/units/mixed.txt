@@ -1,0 +1,14 @@
+foot-and-inch
+meter-and-centimeter
+minute-and-second
+pound-and-ounce
+stone-and-pound
+year-person-and-month-person
+hour-and-minute
+hour-and-minute-and-second
+yard-and-foot-and-inch
+degree-and-arc-minute-and-arc-second
+kilometer-and-meter
+inch-and-foot
+square-foot-and-square-inch
+mile-and-foot

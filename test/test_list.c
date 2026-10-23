@@ -6,8 +6,7 @@
 // field spoiled refused; a locale's patterns found in the compiled-in
 // data and refused from units that disagree; and items joined by
 // patterns given here, ICU's contextual changes included. Every list the
-// compiled-in data joins agrees with ICU4C 79 (docs/locale/research/
-// oracle/lists in the docs repository).
+// compiled-in data joins agrees with ICU4C 79 (tools/oracle/lists).
 
 #include "kinds.h"
 #include "list_data.h"

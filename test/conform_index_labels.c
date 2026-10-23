@@ -5,7 +5,7 @@
 // against ICU4C's AlphabeticIndex: reads a locale tag a line and writes
 // the tag, a tab and the labels the main chain finds, each label's code
 // points in hex joined by "_", space-separated in code point order, as
-// docs/locale/research/oracle/collation/icu4c_index_labels.cpp writes
+// tools/oracle/collation/icu4c_index_labels.cpp writes
 // them; "error" for a tag that does not parse or labels not found.
 //
 // usage: conform_index_labels collation.mloc < tags

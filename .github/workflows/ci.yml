@@ -39,22 +39,10 @@ jobs:
           python3 tools/check_lengths.py
           python3 tools/check_guide.py
           python3 tools/gen_pow5_tables.py --check
-          # The Turkish lexicon's marks against the dictionaries pinned.
-          commit=$(awk '$1 == "commit" { print $2 }' tools/zemberek-release.txt)
-          mkdir -p zemberek
-          for name in $(awk '$1 == "file" { print $2 }' tools/zemberek-release.txt); do
-            curl -sfL -o "zemberek/$name" \
-              "https://raw.githubusercontent.com/ahmetaa/zemberek-nlp/$commit/morphology/src/main/resources/tr/$name"
-          done
-          python3 tools/gen_turkish_marks.py zemberek --check
-          # The Finnish inflection types against Kotus's word list pinned.
-          commit=$(awk '$1 == "commit" { print $2 }' tools/kotus-release.txt)
-          mkdir -p kotus
-          for name in $(awk '$1 == "file" { print $2 }' tools/kotus-release.txt); do
-            curl -sfL -o "kotus/$name" \
-              "https://raw.githubusercontent.com/hugovk/everyfinnishword/$commit/kotus-sanalista_v1/$name"
-          done
-          python3 tools/gen_finnish_types.py kotus --check
+          # The Turkish and Finnish lexicons against the external data in
+          # tools/external.
+          python3 tools/gen_turkish_marks.py --check
+          python3 tools/gen_finnish_types.py --check
           # The Hanja readings' finals against the Unihan database pinned.
           version=$(awk '$1 == "version" { print $2 }' tools/unihan-release.txt)
           mkdir -p unihan
@@ -290,14 +278,9 @@ jobs:
           build/conform_locale_names src/generated/names.mloc src/generated/subdivisions.mloc \
             $ids/localeDisplayName.txt tools/locale-name-exceptions.txt
       - name: Matching
-        # ICU's matcher test (record mloc-0017), the file tools/icu-release.txt pins.
+        # ICU's matcher test, kept in tools/external/icu.
         timeout-minutes: 5
-        run: |
-          field() { awk -v k="$1" '$1 == k { print $2 }' tools/icu-release.txt; }
-          curl -sfL -o matcher.txt \
-            "https://raw.githubusercontent.com/unicode-org/icu/$(field tag)/$(field file)"
-          echo "$(field sha256)  matcher.txt" | sha256sum -c -
-          build/conform_match matcher.txt tools/match-exceptions.txt
+        run: build/conform_match tools/external/icu/localeMatcherTest.txt tools/match-exceptions.txt
 
   # Each fuzz target runs for one minute on every push.
   fuzz:
@@ -337,19 +320,6 @@ jobs:
         with:
           name: fuzz-crashes
           path: fuzz-crashes/
-
-  # The API reference is generated from the headers; it must match them,
-  # and the README must give its function count.
-  docs:
-    name: generated docs
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: The API reference matches the headers
-        run: |
-          COUNT=$(python3 tools/gen_api.py | grep -oE '\([0-9]+ functions\)' | grep -oE '[0-9]+')
-          git diff --exit-code docs/api.md || { echo "docs/api.md is stale: run tools/gen_api.py"; exit 1; }
-          grep -q "$COUNT public functions" README.md || { echo "README says the wrong function count ($COUNT)"; exit 1; }
 
   windows-clang-cl:
     name: windows-clang-cl

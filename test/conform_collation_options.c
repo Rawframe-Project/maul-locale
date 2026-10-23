@@ -5,7 +5,7 @@
 // ICU4C: reads lines of two UTF-8 texts in hex, separated by a tab, and
 // writes for each line the order (-1, 0 or 1) under each option set,
 // tab-separated, in the order the oracle
-// docs/locale/research/oracle/collation/icu4c_collation_options.cpp
+// tools/oracle/collation/icu4c_collation_options.cpp
 // writes them.
 //
 // With --keys, writes instead the first text's sort key under each set,

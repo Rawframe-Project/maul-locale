@@ -1,7 +1,0 @@
-# Zemberek-NLP's Turkish dictionaries (record mloc-0046), which
-# tools/gen_turkish_marks.py reads into src/generated/turkish_marks.h:
-# the commit, then each file under morphology/src/main/resources/tr with
-# its SHA-256. Apache License 2.0; LICENSES/Apache-2.0-zemberek.txt.
-commit 037202c7e18b977c95181a76db05cb1e95846554
-file master-dictionary.dict c539e12904d1ccac4792073f05deeae2babe692249dc4a359da254f1bd338f6f
-file proper.dict 5704f4017854c474442cce246443b9fec5967799a968ab9d7eb0cce930e32178

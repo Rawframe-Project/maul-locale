@@ -3,9 +3,9 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Writes src/generated/turkish_marks.h, the Turkish words whose suffixes
-# the inflector's rules alone would get wrong (record mloc-0046), from
-# Zemberek-NLP's dictionaries at the commit tools/zemberek-release.txt
-# pins (Apache License 2.0; LICENSES/Apache-2.0-zemberek.txt):
+# the inflector's rules alone would get wrong, from Zemberek-NLP's
+# dictionaries in tools/external/zemberek (Apache License 2.0;
+# LICENSES/Apache-2.0-zemberek.txt):
 #   - a word that keeps its final stop where Zemberek's rule softens it
 #     (NoVoicing: ahlak, tank), and one that softens it where the rule
 #     does not (Voicing: kalp); the rule softens a final ç, k, p or t in
@@ -25,9 +25,9 @@
 # the possessive's length in code points; every 16th shares nothing,
 # and their offsets are searched first.
 #
-# usage: gen_turkish_marks.py DIR [--check]
-#   DIR      holds master-dictionary.dict and proper.dict at the pinned
-#            commit (their SHA-256 is checked)
+# usage: gen_turkish_marks.py [--check]
+#   The dictionaries' SHA-256 are checked against the directory's
+#   README.md.
 #   --check  fail when the file differs from what would be written
 
 import hashlib
@@ -37,7 +37,7 @@ import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 PATH = os.path.join(ROOT, "src", "generated", "turkish_marks.h")
-PIN = os.path.join(ROOT, "tools", "zemberek-release.txt")
+SOURCE = os.path.join(ROOT, "tools", "external", "zemberek")
 BLOCK = 16
 VOWELS = set("aeıioöuü")
 STOPS = ("p", "ç", "t", "k")
@@ -46,14 +46,12 @@ MARKS = {"keeps": 1, "softens": 2, "InverseHarmony": 4, "Doubling": 8, "LastVowe
 VERB_ATTRS = {"Aorist_A", "Aorist_I", "Reciprocal", "Reflexive", "NonReciprocal"}
 
 
-def pins():
-    out = {}
-    with open(PIN, encoding="utf-8") as f:
-        for line in f:
-            parts = line.split()
-            if parts and not line.startswith("#"):
-                out.setdefault(parts[0], []).append(parts[1:])
-    return out
+def pinned():
+    """Each file of the source directory and its SHA-256, from the
+    ```text block of its README.md."""
+    readme = open(os.path.join(SOURCE, "README.md"), encoding="utf-8").read()
+    block = re.search(r"```text\n(.*?)```", readme, re.S).group(1)
+    return [line.split()[::-1] for line in block.splitlines() if line.strip()]
 
 
 def lower(word):
@@ -68,14 +66,13 @@ def key(word):
     return plain(lower(word))
 
 
-def read(directory):
-    pinned = pins()
+def read():
     entries = {}
-    for name, digest in pinned["file"]:
-        path = os.path.join(directory, name)
+    for name, digest in pinned():
+        path = os.path.join(SOURCE, name)
         data = open(path, "rb").read()
         if hashlib.sha256(data).hexdigest() != digest:
-            sys.exit(f"{path}: SHA-256 differs from {PIN}")
+            sys.exit(f"{path}: SHA-256 differs from its README.md")
         for line in data.decode("utf-8").splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
@@ -170,7 +167,8 @@ def table(entries):
 
 
 def render(rows, data, blocks):
-    commit = pins()["commit"][0][0]
+    readme = open(os.path.join(SOURCE, "README.md"), encoding="utf-8").read()
+    commit = re.search(r"commit\s+`([0-9a-f]{40})`", readme).group(1)
     lines = [
         "// SPDX-License-Identifier: MIT AND Apache-2.0",
         "// Copyright (c) 2026 Sirac Ozmen",
@@ -216,13 +214,13 @@ def render(rows, data, blocks):
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit("usage: gen_turkish_marks.py DIR [--check]")
-    rows, data, blocks = table(read(sys.argv[1]))
+    if any(a != "--check" for a in sys.argv[1:]):
+        sys.exit("usage: gen_turkish_marks.py [--check]")
+    rows, data, blocks = table(read())
     if len(data) >= 65536:
         sys.exit("the table passes 64 KiB; the block offsets are 16 bits")
     text = render(rows, data, blocks)
-    if "--check" in sys.argv[2:]:
+    if "--check" in sys.argv[1:]:
         if open(PATH, encoding="utf-8").read() != text:
             sys.exit(f"{PATH} is stale; run tools/gen_turkish_marks.py")
         print(f"turkish marks: {len(rows)} words, {len(data)} bytes, current")

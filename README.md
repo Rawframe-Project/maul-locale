@@ -1,196 +1,64 @@
 # Maul Locale
 
-Locale-aware formatting, parsing, collation and messages for every
-language CLDR describes. Written in C23 with public headers any C17 or
-C++17 program can include, with no dependency beyond Maul Unicode and
-an MIT license.
+Locale data and formatting for every language CLDR describes, in C, with no allocation and the same output on every platform.
 
-It covers, from one pinned CLDR release (49, on Unicode 18):
+[![CI](https://github.com/Rawframe-Project/maul-locale/actions/workflows/ci.yml/badge.svg)](https://github.com/Rawframe-Project/maul-locale/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/Rawframe-Project/maul-locale)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Rawframe-Project/maul-locale)](https://github.com/Rawframe-Project/maul-locale/releases)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Rawframe-Project/maul-locale/badge)](https://scorecard.dev/viewer/?uri=github.com/Rawframe-Project/maul-locale)
 
-- **Locales:** identifiers, canonical forms, likely subtags, fallback,
-  and matching a user's preferred languages to a program's.
-- **Numbers:** plural rules, decimal, percent, scientific and compact
-  notation, currencies, units, ranges, spell-out, and parsing what a
-  user types.
-- **Dates and times:** 18 calendars, time zones from the IANA database,
-  date arithmetic, formatting by semantic skeletons, intervals,
-  relative times and durations.
-- **Text:** lists, display names, person names, collation, search and
-  alphabetic indexes, word breaking for languages written without
-  spaces, and transliteration.
-- **Messages:** MessageFormat 2, grammatical functions for case
-  suffixes and particles, and translation catalogs.
+A program that shows text to people in their own language needs more than translations. It has to pick the user's language from the ones it has, write numbers, money, units and dates as each region writes them, choose the plural form a sentence needs, sort names in the order readers expect, and put a name into a sentence with the right suffix. Maul Locale does this for games, engines and applications, from one pinned CLDR release (49, on Unicode 18):
 
-Nothing is allocated, no operating system call is made, and output is
-identical on every platform. Formatting writes into the caller's
-buffer.
+- **Locales:** parsing and canonical forms, likely subtags, fallback, matching a user's preferred languages to a program's as ICU does, regional preferences, and display names of languages, regions and whole locales.
+- **Numbers:** exact decimals, plural rules, numbers in every notation, currencies, units with exact conversion and each region's preferred units, numbers in words and in algorithmic numbering systems, and reading numbers back as people type them.
+- **Dates and times:** 18 calendars, time zones from the IANA database, Temporal's values and arithmetic and its ISO 8601 and RFC 9557 strings, dates and times written by what they should show, ranges, relative times and durations.
+- **Messages:** Unicode MessageFormat 2, lists, and grammatical suffixes and particles for Turkish and the other Turkic languages, Hungarian, Finnish and Korean ("Ayşe'ye", "1985'te", "Helsingissä", "책은").
+- **Catalogs:** translation catalogs compiled by the `mloccat` tool, with stale translations found, PO and XLIFF exchange, pseudo-locales and fallback chains that say why each text was chosen.
+- **Collation:** sorting and comparing in every CLDR locale's order with ICU4C's sort keys, collation search, and alphabetic indexes.
 
-## Status
+Every part is checked against CLDR's conformance data and against ICU4C and ICU4X. Nothing is allocated and no operating system call is made: formatters are values the caller declares, results go into caller buffers, and the program passes the data, the time and the time zone. Every function is safe from any thread.
 
-Not released. The design is decided. Built so far: the generator's
-reading of CLDR (its inheritance checked against CLDR's own JSON on
-every push), the data layer that opens compiled-in data and data
-files, locale ids parsed strictly into canonical syntax and
-canonicalized with CLDR's aliases, likely subtags added and removed,
-fallback chains per component, language matching as ICU's
-LocaleMatcher does it, and regional preferences (CLDR's conformance
-files, its own inheritance and JSON, and ICU's matcher test pass on
-every push), and decimal values (from text, integers and the shortest
-digits of a double, rounded in ECMA-402's modes) with their plural
-operands, CLDR's cardinal, ordinal and range plural rules compiled to C
-(every sample of CLDR's files passes on every push), and numbers,
-percents and per mille in standard, scientific, engineering and compact
-notation and ranges, with every numbering system and ECMA-402's options
-(CLDR's decimal test data passes on every push) and read back as a
-person types them, as ICU parses, and amounts of money
-with each currency's symbols, digits and cash rounding, in compact
-notation and by name (the names are a data file of their own,
-`src/generated/currency-names.mloc`), read back as ICU reads them
-(the formatter's currency or any the locale names), and the currency a
-locale or region uses on a day; and exact conversion between CLDR's units and
-the units a locale prefers for a usage (every conversion and preference
-CLDR's unit test data gives passes on every push), and amounts and
-ranges of any core unit in each width (a name CLDR lacks built from its
-compound patterns), amounts of mixed units ("5 ft, 6 in") and of a usage
-in the unit the locale prefers ("0.62 mi" for 1000 m on a US road),
-numeric durations ("1:05:09") and coordinates ("12.5°N"), long names
-in a grammatical case ("2 Metern", German's dative) and units'
-grammatical genders, with
-the display names of the units CLDR names (the
-names are a data file of their own, `src/generated/units.mloc`); and
-numbers in words, ordinal suffixes and Roman, Hebrew and the other
-algorithmic numerals by CLDR's rule-based formats, as ICU runs them but
-on the exact decimal, by rule set or numbering system, capitalized as
-the context asks, and read back as ICU's strict parse reads them (CLDR's rule-based test data passes on every push;
-the rules are a data file of their own, `src/generated/spellout.mloc`);
-text compared in CLDR's collation orders, the root's (UCA 18) and
-every locale's types built from their rules as ICU4C builds them, with
-each of ICU's options, the locale's -u- keys and script reordering, and sort
-keys byte for byte as ICU4C writes them, with a version (CLDR's
-conformance files pass on every push; the collation is a data file of
-its own, `src/generated/collation.mloc`);
-lists of any items ("a, b, and c", "a, b, or c") in each width, as
-ICU joins them, and the gender of a list of persons by CLDR's rules; and the display names of languages, scripts, regions,
-variants, keys and their values and measurement systems, in every form
-CLDR has and each capitalization context, as ICU4C's LocaleDisplayNames
-gives them, and of whole locales by UTS #35's algorithm, dialect names,
-extensions and transforms included, as CLDR's own tools build them
-(CLDR's locale display name test data passes on every push; the names
-are a data file of their own, `src/generated/names.mloc`, and the
-subdivision names another, `src/generated/subdivisions.mloc`); and
-dates as values in CLDR's calendars, as Temporal models them, with era
-and month codes and overflow constrained or refused, all 18 of
-them (each day from 1600 to 2400 as ICU4X computes it, and the
-Chinese and Dangi calendars from integer astronomy), with durations
-added to them, their differences taken and rounded, their fields
-changed and month-day reference dates found, as Temporal does it; and
-time zones compiled from the pinned IANA release (every zone's offsets
-and transitions checked against zic), with times of day, date-times,
-instants and zoned date-times and their arithmetic, differences,
-rounding, totals and durations as ECMA-262's Temporal computes them,
-read from and written to Temporal's ISO 8601 and RFC 9557 strings
-(test262's Temporal tests replayed on every push), zones files that
-bring a newer IANA release without the rest of the data, and zones by
-their BCP 47 ids and Windows names as CLDR maps them; and dates
-written in a locale by what they should show (a field set at a length,
-the year with its century or era as it needs) or by its standard
-formats, in its calendar and digits, and times of day by their hour
-cycle and precision or a standard format, with day periods, and both
-joined by the calendar's glue, as ICU4X's
-semantic skeletons and ICU4C's patterns write them (CLDR's datetime
-test data passes on every push; the patterns and calendar names are a
-data file of their own, `src/generated/dates.mloc`); and time zones
-written by their specific or generic names, locations, cities or
-offsets at an instant, falling back as ICU4C's TimeZoneFormat does,
-alone or with a date, a time or both (the zone names are a data file of
-their own, `src/generated/zone-names.mloc`); and ranges of two dates,
-times or date-times ("Jan 5 – 8, 2026", "Jan 5, 2026, 10:00 – 11:30
-AM"), in a zone too, as ICU4C's DateIntervalFormat writes them; and
-relative time ("in 3 days", "2 hr. ago", "yesterday", "next Monday")
-of an amount the caller gives, as ECMA-402's Intl.RelativeTimeFormat
-writes it, alone or with a time ("tomorrow at 3:00 PM"; a data file of
-its own, `src/generated/relative.mloc`); and durations ("1 hr, 2 min, 3
-sec", "1:02:03.456") of Temporal's fields, as ECMA-402's
-Intl.DurationFormat writes them, exactly; and Unicode MessageFormat 2
-messages compiled into caller memory, checked for syntax and the data
-model, written back as canonical text, and bound and formatted with
-named arguments; and Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek,
-Turkmen, Hungarian and Finnish case, plural, possessive and copula suffixes and
-Korean particles on
-names, numbers, abbreviations and common nouns, read from how their end
-is spoken ("Ayşe'ye", "1985'te", "TDK'nin", "Алматыға", "ТМД-ның",
-"АКШнын", "BMT-yə", "qishloqqa", "BMG-niň", "Kodállyal", "5-tel",
-"Helsingissä", "EU:hun", "책은", "URL로"). The catalog tool, `mloccat`,
-reads catalog sources in the W3C's draft message resource syntax,
-checks them and compiles them into catalogs the library opens and
-looks messages up in by key or index. A chain formats them through a
-locale's fallbacks with a stated result for every failure. The tool
-records which source message a translation answers, so a changed
-source shows the translation stale.
-The library has 192 public functions.
-
-## Building
-
-Requirements: CMake 3.25 and GCC 14 or Clang 19 or newer; on Windows,
-`clang-cl` (the Visual Studio component "C++ Clang tools for Windows").
+## Quick start
 
 ```sh
+git clone https://github.com/Rawframe-Project/maul-locale.git
+cd maul-locale
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build
 ```
 
-## Design
+Install it with `cmake --install build --prefix <prefix>` and use it from CMake:
 
-The rules every Maul library follows are in `docs/conventions.md` and
-`docs/adr/`; the records particular to this library are listed in
-`docs/adr/mloc.md`.
+```cmake
+find_package(maul-locale REQUIRED CONFIG)
+target_link_libraries(app PRIVATE maul-locale::maul-locale)
+```
+
+or through pkg-config as `maul-locale`. The data for locales, numbers, currencies, units, calendars and time zones is compiled in; names, date patterns, spell-out rules and collation come as data files the program loads when it needs them. [Getting started](docs/user/getting-started.md) has a first example and [Data](docs/user/data.md) explains the files.
+
+## Platforms
+
+Linux with GCC 14 or Clang 19 and newer, macOS with Apple Clang, Windows with `clang-cl`, and WebAssembly with Emscripten; CI builds and tests each. The public headers are C17 and C++17, so any C or C++ program can include them. The library depends only on the C standard library and [Maul Unicode](https://github.com/Rawframe-Project/maul-unicode), which the build fetches when it is not installed.
+
+## Documentation
+
+- [The documentation site](https://rawframe-project.github.io/maul-locale/), with the API reference generated from the headers.
+- [User documentation](docs/README.md): one page per part of the library.
+- [How it works](docs/internals/overview.md) and [how to develop it](docs/operations/development.md).
+- [Changelog](CHANGELOG.md).
+
+Maul Locale belongs to the Maul family of standalone C libraries, which share one set of conventions.
+
+## Contributing
+
+Issues are welcome. Pull requests are accepted for issues a maintainer has approved; see [CONTRIBUTING.md](https://github.com/Rawframe-Project/.github/blob/main/CONTRIBUTING.md). The project is developed with AI coding agents, directed and reviewed by its maintainers; outside contributions follow the [AI policy](https://github.com/Rawframe-Project/.github/blob/main/AI_POLICY.md).
 
 ## License
 
-MIT; see `LICENSE`.
+MIT; see [LICENSE](LICENSE). The library's code is its own, written from the specifications and from Reingold and Dershowitz's *Calendrical Calculations*. The data it ships and some of its tables come from others, each under its own license in [LICENSES/](LICENSES):
 
-The data the library ships is generated from the Unicode Common Locale
-Data Repository (CLDR), which is covered by the Unicode License v3; its
-notice is in `LICENSES/Unicode-3.0.txt`. That covers:
-- the compiled-in data, `src/generated/builtin_data.c`;
-- the data files in `src/generated`;
-- the tables taken from CLDR's supplemental data;
-- the skeleton test table `test/skeletons_icu.tsv` (CLDR's test
-  questions with ICU4C's answers, ICU being under the same license).
-- the MessageFormat 2 test suite's cases, `test/mf2_suite.inc`.
-
-The library's code is its own, written from the specifications and
-from Reingold and Dershowitz's Calendrical Calculations. The Persian
-calendar's corrections, KACST's Umm al-Qura month lengths and the Qing
-calendar's years 1900 to 1911 are published facts. Maul Locale takes
-them as ICU4C and ICU4X list them, under the same notice.
-
-The Turkish lexicon's marks, `src/generated/turkish_marks.h` (which
-words keep or soften their final stop, take inverse harmony, double
-their final consonant, drop their last vowel or end in a compound's
-possessive), are generated from Zemberek-NLP's dictionaries
-(`tools/zemberek-release.txt` pins them) under the Apache License 2.0;
-its notice is in `LICENSES/Apache-2.0-zemberek.txt`.
-
-The Finnish inflection types, `src/generated/finnish_types.h` (each
-nominal's type and consonant gradation where its ending does not tell
-them), are generated from Kotus's word list of modern Finnish, version 1
-(`tools/kotus-release.txt` pins it), under the Creative Commons
-Attribution 3.0 licence; the attribution is in
-`LICENSES/CC-BY-3.0-kotus.txt`.
-
-The Hanja readings' finals, `src/generated/hanja_finals.h`, are
-generated from the kHangul field of Unicode's Unihan database
-(`tools/unihan-release.txt` pins it) under the Unicode License v3, in
-`LICENSES/Unicode-3.0.txt`.
-
-The test cases in `test/test262_calendar.inc`,
-`test/test262_zone.inc`, `test/test262_time.inc`,
-`test/test262_datetime.inc`, `test/test262_instant.inc`,
-`test/test262_zoned.inc`, `test/test262_duration.inc` and
-`test/test262_ixdtf.inc` are taken from
-test262,
-the ECMAScript test suite, under its BSD license; its notice is in
-`LICENSES/BSD-3-Clause-test262.txt`. They are tests only and are not
-part of the library.
+- CLDR's data, in `src/generated/` (the compiled-in data and the data files) and the tables taken from it, and Unihan's Hanja readings (`src/generated/hanja_finals.h`): the Unicode License v3. The Persian calendar's corrections, the Umm al-Qura month lengths and the Qing calendar's years 1900 to 1911 are published facts, taken as ICU4C and ICU4X list them, under the same notice.
+- The Turkish lexicon's marks (`src/generated/turkish_marks.h`), from Zemberek-NLP's dictionaries: the Apache License 2.0.
+- The Finnish inflection types (`src/generated/finnish_types.h`), from Kotus's word list of modern Finnish: Creative Commons Attribution 3.0.
+- Test data only, not part of the library: test262's cases in `test/test262_*.inc` (BSD 3-Clause), and the MessageFormat 2 suite and ICU4C's answers in `test/` (Unicode License v3).
