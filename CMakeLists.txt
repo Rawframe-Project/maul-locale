@@ -258,8 +258,13 @@ if(MAUL_LOCALE_BUILD_TESTS)
     if(TARGET test_guide)
         set(MLOC_GUIDE_DATA ${PROJECT_SOURCE_DIR}/src/generated)
         if(EMSCRIPTEN)
-            target_link_options(test_guide PRIVATE "SHELL:--embed-file ${MLOC_GUIDE_DATA}@/data"
-                                "-sSTACK_SIZE=262144")
+            # Every data file, about 19 MB, and the test's copy of each.
+            foreach(file dates zone-names names subdivisions currency-names units spellout
+                    relative collation)
+                target_link_options(test_guide PRIVATE
+                                    "SHELL:--embed-file ${MLOC_GUIDE_DATA}/${file}.mloc@/data/${file}.mloc")
+            endforeach()
+            target_link_options(test_guide PRIVATE "-sSTACK_SIZE=262144" "-sALLOW_MEMORY_GROWTH=1")
             set(MLOC_GUIDE_DATA /data)
         endif()
         if(WIN32)

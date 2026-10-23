@@ -98,4 +98,4 @@ Apertium errs too (see [grammar.md](../internals/grammar.md#proof-and-its-limits
 
 ## ICU date tables
 
-`test/skeletons_icu.tsv`, `intervals_icu.tsv`, `date_ranges_icu.tsv`, `time_ranges_icu.tsv` and `datetime_ranges_icu.tsv` hold ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat` answers; each file's header says what was asked. The programs that wrote them are not in `tools/oracle/` yet, so a new ICU release cannot regenerate them until they are written again from those headers.
+`test/skeletons_icu.tsv`, `intervals_icu.tsv`, `date_ranges_icu.tsv`, `time_ranges_icu.tsv` and `datetime_ranges_icu.tsv` hold ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat` answers; each file's header says what was asked. The programs that wrote them are lost: the files stay as committed golden data, and a new ICU release cannot regenerate them until the programs are written again from those headers ([#4](https://github.com/Rawframe-Project/maul-locale/issues/4)).
