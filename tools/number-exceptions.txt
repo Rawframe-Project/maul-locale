@@ -5,8 +5,6 @@
 # reason, replaced in all that locale's lines; or a locale, a line's
 # format, length and input, the text CLDR's data gives and the reason.
 # test/conform_numbers.c applies them; each entry must be used.
-gl	.	 	CLDR 49's gl.xml and its JSON give a no-break space as the group separator; the test data has a full stop, from the older data ICU4J held
-ur	%	٪	CLDR 49's ur.xml and its JSON give the Arabic percent sign (U+066A) for latn; the test data has %, from the older data ICU4J held
 af	decimal	short	1234565.0	1,2 m.	CLDR 49's af.xml and its JSON give the short compact pattern for 10^6 as 0 m'.' (m.); the test data has m, from the older data ICU4J held
 ig	decimal	long	1234565.0	1.2 nde	CLDR 49's ig.xml and its JSON give long compact patterns (0 puku, 0 nde); the test data has the short ones, from the older data ICU4J held, which had none
 ig	decimal	long	-1230.05	-1.2 puku	CLDR 49's ig.xml and its JSON give long compact patterns (0 puku, 0 nde); the test data has the short ones, from the older data ICU4J held, which had none

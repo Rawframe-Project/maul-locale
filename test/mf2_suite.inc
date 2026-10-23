@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unicode-3.0
 // Copyright (C) Unicode, Inc. and others
 //
-// Generated from CLDR at ae413bb (common/testData/messageFormat) by
+// Generated from CLDR at 96e54b2 (common/testData/messageFormat) by
 // tools/gen_mf2_suite.py; do not edit. The license is in
 // LICENSES/Unicode-3.0.txt.
 //
