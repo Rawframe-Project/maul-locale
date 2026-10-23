@@ -10,8 +10,8 @@
 // mlocBalanceTimeDuration to the largest unit (days for a date unit, added
 // to the date part's), each field as the float64 Temporal keeps; since is
 // until with the mode negated. The rows were recorded by running the tests
-// on the library through a reader of their JavaScript, kept in the docs
-// with the oracle programs.
+// on the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 

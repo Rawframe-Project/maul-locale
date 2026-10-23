@@ -10,8 +10,8 @@
 // test262 reads successfully are checked by the rows of the values made
 // from them, and every string is compared with a second reading of the
 // grammar by tools/check_ixdtf.py. The rows were recorded by running the
-// tests on the library through a reader of their JavaScript, kept in the
-// docs with the oracle programs.
+// tests on the library through a reader of their JavaScript, in
+// tools/oracle/test262/.
 
 #include "test_harness.h"
 
