@@ -32,6 +32,12 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
     {
+      "name": "linux-arm64-gcc-14",
+      "displayName": "GCC 14, Release, on 64-bit Arm",
+      "inherits": ["linux", "gcc"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
       "name": "linux-clang-20",
       "displayName": "Clang 20, Release",
       "inherits": ["linux", "clang"],
@@ -70,6 +76,7 @@
   ],
   "buildPresets": [
     { "name": "linux-gcc-14", "configurePreset": "linux-gcc-14" },
+    { "name": "linux-arm64-gcc-14", "configurePreset": "linux-arm64-gcc-14" },
     { "name": "linux-clang-20", "configurePreset": "linux-clang-20" },
     { "name": "linux-clang-20-asan", "configurePreset": "linux-clang-20-asan" },
     { "name": "linux-shared", "configurePreset": "linux-shared" },
@@ -84,6 +91,7 @@
       "execution": { "noTestsAction": "error", "timeout": 300, "jobs": 4 }
     },
     { "name": "linux-gcc-14", "inherits": "base", "configurePreset": "linux-gcc-14" },
+    { "name": "linux-arm64-gcc-14", "inherits": "base", "configurePreset": "linux-arm64-gcc-14" },
     { "name": "linux-clang-20", "inherits": "base", "configurePreset": "linux-clang-20" },
     { "name": "linux-clang-20-asan", "inherits": "base", "configurePreset": "linux-clang-20-asan" },
     { "name": "linux-shared", "inherits": "base", "configurePreset": "linux-shared" },
