@@ -1,36 +1,74 @@
-# Continuous integration for Maul Locale.
+# Continuous integration: the pull request check, and the full check on
+# main and every night, which fuzzes longer and checks the downloaded
+# Unihan data. Each build cell is a CMake preset built by the
+# organization's shared workflow; the other jobs run in the same CI image.
+# docs/operations/checks.md explains each job, and tools/check.sh runs the
+# same presets locally.
 name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "41 2 * * *"
   workflow_dispatch:
 
+# A new push to a pull request cancels its running CI; runs on main get a
+# group of their own, so they are never cancelled.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
 env:
-  # apt retries a stalled download and gives up on a dead one.
-  APT_OPTIONS: -o Acquire::Retries=3 -o Acquire::http::Timeout=30
   PREFIX: MAUL_LOCALE
 
 jobs:
-  # The rules no compiler checks: formatting, static analysis and the
-  # family's source, module, documentation and length checks.
+  # Whether anything beyond documentation changed; the builds skip when not.
+  changes:
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@fe462053997271eb7a3117c65d6dd567e130e229 # v0.0.4
+    permissions:
+      pull-requests: read
+
+  # The organization's documentation check; tools/external holds
+  # third-party data, kept exactly as published.
+  docs:
+    uses: Rawframe-Project/.github/.github/workflows/docs-check.yml@fe462053997271eb7a3117c65d6dd567e130e229 # v0.0.4
+    permissions:
+      contents: read
+    with:
+      exclude: tools/external
+
+  zizmor:
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@fe462053997271eb7a3117c65d6dd567e130e229 # v0.0.4
+    permissions:
+      contents: read
+
+  # The rules no compiler checks: formatting, the family's source, module,
+  # length, API documentation and snippet checks, the documentation site,
+  # the tables generated from data kept in the repository, and clang-tidy.
+  # It runs on documentation changes too, since the snippet check and the
+  # site read docs/.
   checks:
-    name: checks
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ghcr.io/rawframe-project/ci-cpp:2026.10.2@sha256:73aa949aa7e24c9153107e0c601011ab689d3af0bf987ed7128e90faa3a754ef
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - name: Install tools
-        timeout-minutes: 15
-        run: |
-          sudo apt-get $APT_OPTIONS update -q
-          sudo apt-get $APT_OPTIONS install -y -q --no-install-recommends clang-20 clang-tidy-20
-          sudo apt-get $APT_OPTIONS install -y -q ninja-build
-          pip install clang-format==22.1.5 >/dev/null
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: clang-format
         run: |
           clang-format --version
-          clang-format --dry-run -Werror $(find include src test tools bench samples -name '*.[ch]' 2>/dev/null)
+          clang-format --dry-run -Werror $(git ls-files '*.[ch]' '*.cpp' | grep -v '^src/generated/')
       - name: Family checks
         run: |
           python3 tools/check_source.py
@@ -38,326 +76,256 @@ jobs:
           python3 tools/check_docs.py
           python3 tools/check_lengths.py
           python3 tools/check_guide.py
+      - name: The documentation site builds
+        run: python3 tools/build_docs.py
+      - name: Tables generated from data in the repository
+        # The shortest-digits tables, and the Turkish and Finnish lexicons
+        # from tools/external.
+        run: |
           python3 tools/gen_pow5_tables.py --check
-          # The Turkish and Finnish lexicons against the external data in
-          # tools/external.
           python3 tools/gen_turkish_marks.py --check
           python3 tools/gen_finnish_types.py --check
-          # The Hanja readings' finals against the Unihan database pinned.
-          version=$(awk '$1 == "version" { print $2 }' tools/unihan-release.txt)
-          mkdir -p unihan
-          curl -sfL -o unihan/Unihan.zip "https://www.unicode.org/Public/$version/ucd/Unihan.zip"
-          python3 tools/gen_hanja_finals.py unihan --check
       - name: clang-tidy
+        # One file per process, four at a time.
         run: |
-          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          for f in src/*.c; do
-            clang-tidy-20 -p build --quiet --warnings-as-errors='*' "$f" || exit 1
-          done
+          cmake -B out/tidy -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
+          ls src/*.c | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy --quiet --warnings-as-errors='*'
 
-  # Every cell builds with warnings as errors and runs the whole suite,
-  # the header tests included.
-  build-test:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+  # Every cell builds with warnings as errors and runs the whole suite, the
+  # header tests included; the shared cell also installs the library and
+  # builds samples/minimal against it (the "package" test).
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: linux-gcc-14,        os: ubuntu-24.04,     cc: gcc-14,   cxx: g++-14,     config: Release, extra: "" }
-          - { name: linux-clang-20,      os: ubuntu-24.04,     cc: clang-20, cxx: clang++-20, config: Release, extra: "" }
-          - { name: linux-clang-20-asan, os: ubuntu-24.04,     cc: clang-20, cxx: clang++-20, config: Debug,   extra: "-DMAUL_LOCALE_SANITIZE=ON" }
-          - { name: linux-shared,        os: ubuntu-24.04,     cc: clang-20, cxx: clang++-20, config: Release, extra: "-DMAUL_LOCALE_BUILD_SHARED=ON" }
-          - { name: linux-arm64-gcc-14,  os: ubuntu-24.04-arm, cc: gcc-14,   cxx: g++-14,     config: Release, extra: "" }
-          - { name: macos-clang,         os: macos-15,         cc: clang,    cxx: clang++,    config: Release, extra: "" }
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install compilers
-        timeout-minutes: 15
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get $APT_OPTIONS update -q
-          # clang without its recommends, with the sanitizers' runtime.
-          sudo apt-get $APT_OPTIONS install -y -q --no-install-recommends clang-20 libclang-rt-20-dev
-          sudo apt-get $APT_OPTIONS install -y -q gcc-14 g++-14 ninja-build
-      - name: Configure
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -D${PREFIX}_WERROR=ON \
-            -DCMAKE_C_COMPILER=${{ matrix.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} ${{ matrix.extra }}
-      - name: Build
-        run: cmake --build build -j 4
-      - name: Test
-        # A skipped test fails the step, as it would hide a broken job.
-        run: |
-          set -o pipefail
-          ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log
-          if grep -q "(Skipped)" ctest.log; then echo "::error::a test was skipped"; exit 1; fi
-      - name: Package
-        if: matrix.name == 'linux-shared'
-        run: cmake --install build --prefix "$PWD/package"
+          - { preset: linux-gcc-14 }
+          - { preset: linux-clang-20 }
+          - { preset: linux-clang-20-asan, repeat: 3 }
+          - { preset: linux-shared }
+          - { preset: macos-clang, runner: macos-15 }
+          - { preset: windows-clang-cl, runner: windows-2025 }
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@fe462053997271eb7a3117c65d6dd567e130e229 # v0.0.4
+    permissions:
+      contents: read
+    with:
+      preset: ${{ matrix.preset }}
+      runner: ${{ matrix.runner || 'ubuntu-24.04' }}
+      repeat: ${{ matrix.repeat || 1 }}
 
-  # The pinned CLDR release: the generator's resolution against CLDR's JSON
-  # of the same release, the generated sources, CLDR's conformance files,
-  # and ICU's matcher test. The release is cached by tools/cldr-release.txt,
-  # so a run fetches it only when the pin moves.
-  cldr:
-    name: cldr
-    runs-on: ubuntu-24.04
+  # The public headers alone under MSVC's cl, as C17 and C++17 with /W4 /WX:
+  # consumers may compile them with it, though it cannot build the library.
+  msvc-headers:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: windows-2025
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/cache@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: ~/cldr-cache
-          key: cldr-${{ hashFiles('tools/cldr-release.txt') }}
-      - uses: actions/cache@v6
+          persist-credentials: false
+      - name: Headers under MSVC
+        run: |
+          cmake -S cmake/HeaderCheck -B out/headers
+          cmake --build out/headers --config Release
+
+  # The pinned CLDR and tzdb releases: the generated sources regenerated
+  # byte for byte, the generator's resolution against CLDR's JSON, and the
+  # library against CLDR's conformance files, zic, zdump and zoneinfo, the
+  # ICU4C tables in test/ and ICU's matcher test. docs/internals/conformance.md
+  # says what each step proves. The releases are cached by their pins, so a
+  # run downloads them only when a pin moves; main saves the cache.
+  cldr:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: ghcr.io/rawframe-project/ci-cpp:2026.10.2@sha256:73aa949aa7e24c9153107e0c601011ab689d3af0bf987ed7128e90faa3a754ef
+    permissions:
+      contents: read
+    env:
+      CLDR: .cache/cldr/cldr/common
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: ~/tzdb-cache
-          key: tzdb-${{ hashFiles('tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
-      - name: Fetch CLDR
-        timeout-minutes: 15
-        run: bash tools/fetch_cldr.sh ~/cldr-cache
-      - name: Fetch tzdb
-        timeout-minutes: 5
+          persist-credentials: false
+      - name: Environment
         run: |
-          bash tools/fetch_tzdb.sh ~/tzdb-cache
-          bash tools/fetch_tzdb.sh ~/tzdb-cache older
-      - name: Install the compiler
-        timeout-minutes: 15
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          echo "TZDB=.cache/tzdb/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)" >> "$GITHUB_ENV"
+          echo "TZDB_OLDER=.cache/tzdb/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)" >> "$GITHUB_ENV"
+      - name: Restore the releases
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache
+          key: releases-${{ hashFiles('tools/cldr-release.txt', 'tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
+      - name: Fetch CLDR and the tzdb
+        timeout-minutes: 10
         run: |
-          sudo apt-get $APT_OPTIONS update -q
-          sudo apt-get $APT_OPTIONS install -y -q gcc-14
-      - name: Build the generator
+          bash tools/fetch_cldr.sh .cache/cldr
+          bash tools/fetch_tzdb.sh .cache/tzdb
+          bash tools/fetch_tzdb.sh .cache/tzdb older
+      - name: Save the releases
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache
+          key: releases-${{ hashFiles('tools/cldr-release.txt', 'tools/tzdb-release.txt', 'tools/tzdb-older.txt') }}
+      - name: Build the generator and the conformance programs
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON -DCMAKE_C_COMPILER=gcc-14
-          cmake --build build -j 4 --target mlocgen conform_likely conform_canonical conform_parents conform_direction conform_match conform_numbers conform_plurals conform_preferences conform_currency conform_units conform_unit_prefs conform_spellout conform_locale_names conform_datetime conform_zones conform_zone_codes conform_local conform_zoned conform_ixdtf conform_collation_root conform_collation_root_elements conform_collation_mappings conform_collation_builder conform_collation_fast_builder conform_collation conform_collation_rules conform_collation_keys
-      - name: Root collation against allkeys
-        run: |
-          build/conform_collation_root ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            ~/cldr-cache/cldr/common/uca/allkeys_CLDR.txt
-      - name: Root elements against ICU4C 79's, Han's section aside
-        run: |
-          build/conform_collation_root_elements ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect 6110 ab8be4117eb364f2
-      - name: The tailoring builder's lookup against the iterator
-        run: build/conform_collation_mappings ~/cldr-cache/cldr/common/uca/FractionalUCA.txt
-      - name: Every collation type built, its answers ICU4C 79's
-        run: |
-          build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect afcad9d236469b29 ~/cldr-cache/cldr/common/collation/*.xml \
-            test/collation/crafted.xml
-      - name: Every tailoring's unit read through the runtime iterator
-        run: |
-          build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --units ~/cldr-cache/cldr/common/collation/*.xml test/collation/crafted.xml
-      - name: Every type's fast Latin table built, written and read back
-        run: |
-          build/conform_collation_fast_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --expect edb9afb552346149 ~/cldr-cache/cldr/common/collation/*.xml \
-            test/collation/crafted.xml
-      - name: Tailored locales' sort keys, as ICU4C 79's where its data has them
-        run: |
-          set -o pipefail
-          build/conform_collation_builder ~/cldr-cache/cldr/common/uca/FractionalUCA.txt \
-            --queries ~/cldr-cache/cldr/common/collation/*.xml |
-            build/conform_collation_keys src/generated/collation.mloc --expect 5191759b1ca1b666
-      - name: Every collation rule string parsed
-        run: build/conform_collation_rules ~/cldr-cache/cldr/common/collation/*.xml
-      - name: The general compare against CollationTest
-        run: |
-          build/conform_collation src/generated/collation.mloc \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt
-          build/conform_collation src/generated/collation.mloc --shifted \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED_SHORT.txt \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED.txt
-          build/conform_collation src/generated/collation.mloc --identical \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_NON_IGNORABLE.txt
-          build/conform_collation src/generated/collation.mloc --shifted --identical \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED_SHORT.txt \
-            ~/cldr-cache/cldr/common/uca/CollationTest_CLDR_SHIFTED.txt
-      - name: Compare with the JSON
-        run: |
-          python3 tools/check_resolution.py build/mlocgen ~/cldr-cache/cldr/common ~/cldr-cache/json
-          python3 tools/check_preferences.py build/conform_preferences ~/cldr-cache/json
-          python3 tools/check_currency.py build/conform_currency ~/cldr-cache/json
-          python3 tools/check_units.py build/conform_units \
-            ~/cldr-cache/cldr/common/testData/units/unitsTest.txt
-          python3 tools/check_unit_prefs.py build/conform_unit_prefs \
-            ~/cldr-cache/cldr/common/testData/units
+          cmake -B out/cldr -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 \
+            -D${PREFIX}_WERROR=ON -D${PREFIX}_BUILD_BENCH=OFF
+          cmake --build out/cldr --target conformance
       - name: The generated sources are current
         # The generator gives the same bytes on every run, so a stale or
         # hand-edited file shows as a difference.
         run: |
-          build/mlocgen generate ~/cldr-cache/cldr/common . ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
-          git diff --exit-code src/generated || { echo "src/generated is stale: run mlocgen generate"; exit 1; }
-      - name: The zones against zic and zdump
-        # Every zone's offsets as zdump reads zic's output for the same source,
-        # from 1800 to 2500 and in the range's last years.
-        timeout-minutes: 20
-        run: |
-          command -v zic zdump
-          python3 tools/check_zones.py build/conform_zones \
-            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
-      - name: A zones file of an older release against its zic
-        # A zones file mlocgen writes from another tzdb release opens beside the
-        # library's zones, names its release, and gives that release's offsets.
-        timeout-minutes: 20
-        run: |
-          older=~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-older.txt)
-          build/mlocgen zonesfile $older ~/cldr-cache/cldr/common build/zones-older.mloc
-          python3 tools/check_zones.py build/conform_zones $older build/zones-older.mloc
-      - name: Skeleton matching against ICU
-        # The best pattern mlocgen gives for each question of CLDR's skeleton
-        # test files equals ICU4C 79's, or the listed one.
-        timeout-minutes: 5
-        run: |
-          python3 tools/check_skeletons.py build/mlocgen ~/cldr-cache/cldr/common \
-            test/skeletons_icu.tsv tools/skeleton-exceptions.txt
-      - name: Interval patterns against ICU
-        # The interval patterns mlocgen gives for each question of the table
-        # equal ICU4C 79's DateIntervalFormat's, or the listed ones.
-        timeout-minutes: 5
-        run: |
-          python3 tools/check_intervals.py build/mlocgen ~/cldr-cache/cldr/common \
-            test/intervals_icu.tsv tools/interval-exceptions.txt
-      - name: Semantic skeletons and dates against CLDR's test data
-        # Each semantic skeleton of datetime.json maps to its classical
-        # skeleton, and each date case gives its text.
-        timeout-minutes: 5
-        run: |
-          python3 tools/check_datetime.py build/mlocgen ~/cldr-cache/cldr/common \
-            build/conform_datetime src/generated/dates.mloc src/generated/spellout.mloc \
-            src/generated/zone-names.mloc src/generated/names.mloc
-      - name: BCP 47 ids and Windows names against CLDR
-        # Every id, identifier and Windows mapping, as check_zone_codes.py reads
-        # CLDR's files.
-        timeout-minutes: 5
-        run: |
-          python3 tools/check_zone_codes.py build/conform_zone_codes ~/cldr-cache/cldr/common \
-            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
-      - name: Local times against zoneinfo
-        # The instants of the local times around every change from 1800 to 2500,
-        # their disambiguations, the start of those days and the local time at
-        # each change, as Python's zoneinfo reads zic's output for the same
-        # source.
-        timeout-minutes: 20
-        run: |
-          python3 tools/check_local.py build/conform_local \
-            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
-      - name: Temporal strings against ECMA-262's grammar
-        # Every goal, offset, time zone, calendar and duration string, against
-        # check_ixdtf.py's second reading.
-        timeout-minutes: 10
-        run: python3 tools/check_ixdtf.py build/conform_ixdtf
-      - name: Zoned arithmetic against ECMA-262
-        # Additions, rounded differences, rounding and offsets around every
-        # change from 1900 to 2040, against check_zoned.py's reading of the
-        # specification over zoneinfo.
-        timeout-minutes: 20
-        run: |
-          python3 tools/check_zoned.py build/conform_zoned \
-            ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
+          out/cldr/mlocgen generate "$CLDR" . "$TZDB"
+          git diff --exit-code --stat src/generated || { echo "::error::src/generated is stale: run mlocgen generate"; exit 1; }
       - name: Conformance
-        run: |
-          ids=~/cldr-cache/cldr/common/testData/localeIdentifiers
-          build/conform_likely $ids/likelySubtags.txt
-          build/conform_canonical $ids/localeCanonicalization.txt
-          ls ~/cldr-cache/cldr/common/main | grep '\.xml$' | sed 's/\.xml$//' |
-            awk '{ print "main\t" $0; print "collation\t" $0 }' |
-            build/mlocgen chains ~/cldr-cache/cldr/common | build/conform_parents
-          python3 tools/cldr_directions.py ~/cldr-cache/cldr/common | build/conform_direction
-          build/mlocgen plural-samples ~/cldr-cache/cldr/common | build/conform_plurals
-          cat ~/cldr-cache/cldr/common/testData/decimal/*.tsv |
-            build/conform_numbers tools/number-exceptions.txt
-          build/conform_spellout src/generated/spellout.mloc \
-            ~/cldr-cache/cldr/common/testData/rbnf/*.ssv
-          build/conform_locale_names src/generated/names.mloc src/generated/subdivisions.mloc \
-            $ids/localeDisplayName.txt tools/locale-name-exceptions.txt
-      - name: Matching
-        # ICU's matcher test, kept in tools/external/icu.
-        timeout-minutes: 5
-        run: build/conform_match tools/external/icu/localeMatcherTest.txt tools/match-exceptions.txt
+        run: tools/check_cldr.sh out/cldr .cache/cldr "$TZDB" "$TZDB_OLDER"
 
-  # Each fuzz target runs for one minute on every push.
-  fuzz:
-    name: fuzz
+  # The Hanja readings' finals against the pinned Unihan database, an 8 MB
+  # download: every night, and on a pull request that changes the pin, the
+  # generator or the generated header.
+  unihan:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container: ghcr.io/rawframe-project/ci-cpp:2026.10.2@sha256:73aa949aa7e24c9153107e0c601011ab689d3af0bf987ed7128e90faa3a754ef
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - name: Install compilers
-        timeout-minutes: 15
-        run: |
-          sudo apt-get $APT_OPTIONS update -q
-          # clang without its recommends, with libFuzzer's runtime.
-          sudo apt-get $APT_OPTIONS install -y -q --no-install-recommends clang-20 libclang-rt-20-dev
-          sudo apt-get $APT_OPTIONS install -y -q ninja-build
-      - name: Build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang-20 -D${PREFIX}_FUZZ=ON \
-            -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_TOOLS=OFF -D${PREFIX}_WERROR=ON
-          cmake --build build
-      - name: Run
-        run: |
-          mkdir -p fuzz-crashes
-          for target in build/fuzz_*; do
-            mkdir -p "corpus-$(basename $target)"
-            # Seeds start from valid files, which random bytes never form.
-            if [ -d "test/seeds/$(basename $target)" ]; then
-              cp test/seeds/"$(basename $target)"/* "corpus-$(basename $target)"/
-            fi
-            "$target" -max_total_time=60 -max_len=512 -artifact_prefix=fuzz-crashes/ \
-              "corpus-$(basename $target)"
-          done
-      - name: Keep a crash's input
-        # libFuzzer writes the input that failed; without it a crash found
-        # here cannot be reproduced.
-        if: failure()
-        uses: actions/upload-artifact@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: fuzz-crashes
-          path: fuzz-crashes/
-
-  windows-clang-cl:
-    name: windows-clang-cl
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v7
-      - name: Configure
-        run: cmake -B build -T ClangCL -D${PREFIX}_WERROR=ON
-      - name: Build
-        run: cmake --build build --config Release -j 4
-      - name: Test
-        # A skipped test fails the step, as it would hide a broken job.
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Whether the pin or its output changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
-          set -o pipefail
-          ctest --test-dir build -C Release --output-on-failure --timeout 300 2>&1 | tee ctest.log
-          if grep -q "(Skipped)" ctest.log; then echo "::error::a test was skipped"; exit 1; fi
-      # The public headers alone under MSVC's cl, as C17 and C++17 with
-      # /W4 /WX, which cannot build the library itself (family record 0008).
-      - name: Headers under MSVC
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          run=true
+          if [ "$EVENT" = pull_request ]; then
+            # A pull request's checkout is its merge commit, whose first
+            # parent is the base.
+            git diff --name-only HEAD^1 HEAD |
+              grep -qE '^(tools/unihan-release\.txt|tools/gen_hanja_finals\.py|src/generated/hanja_finals\.h)$' || run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - name: The Hanja finals against Unihan
+        if: steps.scope.outputs.run == 'true'
         run: |
-          cmake -S cmake/HeaderCheck -B build-headers
-          cmake --build build-headers --config Release
+          version=$(awk '$1 == "version" { print $2 }' tools/unihan-release.txt)
+          mkdir -p .cache/unihan
+          curl -sSfL --retry 3 -o .cache/unihan/Unihan.zip "https://www.unicode.org/Public/$version/ucd/Unihan.zip"
+          python3 tools/gen_hanja_finals.py .cache/unihan --check
 
-  web:
-    name: web-emscripten
+  # Each fuzz target looks for crashes and broken invariants: briefly on a
+  # pull request, longer on main and at night.
+  fuzz:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: ghcr.io/rawframe-project/ci-cpp:2026.10.2@sha256:73aa949aa7e24c9153107e0c601011ab689d3af0bf987ed7128e90faa3a754ef
+    permissions:
+      contents: read
+    env:
+      FUZZ_SECONDS: ${{ github.event_name == 'pull_request' && 20 || 60 }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: emscripten-core/setup-emsdk@v16
-      - name: Configure
-        run: emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Build
-        run: cmake --build build -j 4
+        run: |
+          cmake -B out/fuzz -G Ninja -DCMAKE_C_COMPILER=clang-20 -D${PREFIX}_FUZZ=ON \
+            -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_TOOLS=OFF -D${PREFIX}_BUILD_BENCH=OFF \
+            -D${PREFIX}_WERROR=ON
+          cmake --build out/fuzz
+      - name: Run
+        # Four targets at a time, one per core of the runner; each keeps its
+        # full time. A target's output goes to its log, printed when it
+        # finds something.
+        run: |
+          mkdir -p out/fuzz-logs out/fuzz-crashes
+          fuzz_one() {
+            name=$(basename "$1")
+            mkdir -p "out/corpus/$name"
+            # Seeds start from valid files, which random bytes never form.
+            if [ -d "test/seeds/$name" ]; then
+              cp test/seeds/"$name"/* "out/corpus/$name"/
+            fi
+            if "$1" -max_total_time="$FUZZ_SECONDS" -max_len=512 -artifact_prefix=out/fuzz-crashes/ \
+              "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
+              echo "$name: no finding"
+            else
+              tail -n 60 "out/fuzz-logs/$name.log"
+              echo "::error::$name found something"
+              return 1
+            fi
+          }
+          export -f fuzz_one
+          printf '%s\n' out/fuzz/fuzz_* | xargs -P 4 -I {} bash -c 'fuzz_one "$1"' _ {}
+      - name: Fuzz logs and crash inputs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz
+          path: |
+            out/fuzz-logs/
+            out/fuzz-crashes/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The library and its tests under Emscripten and Node, and the size of the
+  # static library. The CI image has no Emscripten, so this job uses the
+  # runner and the emsdk action.
+  web:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: emscripten-core/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
+      - name: Configure
+        run: emcmake cmake -B out/web -DCMAKE_BUILD_TYPE=Release -D${PREFIX}_WERROR=ON
+      - name: Build
+        run: cmake --build out/web -j 4
       - name: Test
         run: |
-          for t in build/test_*.js; do node "$t" || exit 1; done
+          for t in out/web/test_*.js; do node "$t"; done
       - name: Size
-        # The static library's size, reported, not gated (family record
-        # 0013).
-        run: stat -c '%s bytes' build/libmaul-locale.a
+        # The static library's size, reported, not gated.
+        run: stat -c '%s bytes' out/web/libmaul-locale.a
+
+  # The one check the ruleset requires: it passes when every job above
+  # passed or was skipped for a documentation-only change, so adding or
+  # renaming a job never touches the ruleset.
+  required:
+    if: always()
+    needs: [changes, docs, zizmor, checks, build, msvc-headers, cldr, unihan, fuzz, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success | skipped) ;; *) exit 1 ;; esac
+          done

@@ -19,16 +19,21 @@ How to build, test and change Maul Locale as a maintainer. Building and using it
 | `MAUL_LOCALE_COVERAGE` | gcov instrumentation. |
 | `MAUL_LOCALE_FUZZ` | The libFuzzer targets, `fuzz_<area>` at the top of the build tree (Clang only). |
 | `MAUL_LOCALE_BUILD_SHARED` | A shared library; the white-box suites, which reach internal symbols, are then not built. |
+| `MAUL_LOCALE_TEST_PACKAGE` | The `package` test: installs the build and builds `samples/minimal` against it. |
 | `MAUL_LOCALE_BUILD_TESTS`, `_BENCH`, `_TOOLS` | On when the project is built on its own; the tools are off in Emscripten builds. |
 
 ## Building and running one test
 
+The CI cells are CMake presets (`CMakePresets.json`), each building into `out/<preset>`:
+
 ```sh
-cmake -S . -B out/dev -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc-14 -DMAUL_LOCALE_WERROR=ON
-cmake --build out/dev
-ctest --test-dir out/dev -R '^number$'
-./out/dev/test_number
+cmake --preset linux-clang-20-asan
+cmake --build --preset linux-clang-20-asan
+ctest --preset linux-clang-20-asan -R '^number$'
+./out/linux-clang-20-asan/test_number
 ```
+
+`tools/check.sh changed` runs the rule checks and the suites a change reaches; [checks.md](checks.md) has the tiers.
 
 Every suite is `test/test_<name>.c`, one executable and one CTest test. A suite that reads a data file gets its path as a compile definition (`MLOC_UNITS_FILE` and the like) in `CMakeLists.txt`; under Emscripten the files are embedded. A suite prints one line per failed check with its file and line.
 
@@ -59,10 +64,12 @@ CI checks the generator and the library against the pinned CLDR and tzdb release
 tools/fetch_cldr.sh ~/cldr-cache
 tools/fetch_tzdb.sh ~/tzdb-cache
 tools/fetch_tzdb.sh ~/tzdb-cache older
-cmake --build out/dev --target mlocgen conform_numbers   # and the other conform_* programs
+cmake -S . -B out/cldr -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14
+cmake --build out/cldr --target conformance
+tools/check_cldr.sh out/cldr ~/cldr-cache ~/tzdb-cache/tzdb-2026e ~/tzdb-cache/tzdb-2025b
 ```
 
-Then each check is one command: `tools/check_*.py` with the program and the data it compares (each script's header gives its usage), the `conform_*` programs on CLDR's test files, and `mlocgen generate` followed by `git diff --exit-code src/generated`. The zone checks need `zic` and `zdump` from the tzdb's own build and Python's `zoneinfo`. [Conformance](../internals/conformance.md) lists what each check proves.
+The `conformance` target builds `mlocgen` and every `conform_*` program; `tools/check_cldr.sh` runs each check in turn, and each check's script or program header gives its own usage. `tools/check.sh full` does all of this, and regenerates `src/generated/` first. The zone checks need `zic` and `zdump` and Python's `zoneinfo`. [Conformance](../internals/conformance.md) lists what each check proves.
 
 ## Fuzzing
 

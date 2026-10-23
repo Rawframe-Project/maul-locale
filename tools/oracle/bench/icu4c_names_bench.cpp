@@ -8,12 +8,12 @@
 // parsed locales are; each call writes a UnicodeString, ICU's only
 // output. ICU names a key's value by its legacy key and type
 // ("calendar", "gregorian"). Given a case name, only that case is timed.
-#include <unicode/locdspnm.h>
-#include <unicode/locid.h>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <string>
+#include <unicode/locdspnm.h>
+#include <unicode/locid.h>
 
 using namespace icu;
 

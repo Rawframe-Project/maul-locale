@@ -29,6 +29,7 @@ option(MAUL_LOCALE_WERROR "Treat compiler warnings as errors" OFF)
 option(MAUL_LOCALE_SANITIZE "Instrument with AddressSanitizer and UBSan" OFF)
 option(MAUL_LOCALE_COVERAGE "Instrument for gcov coverage" OFF)
 option(MAUL_LOCALE_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
+option(MAUL_LOCALE_TEST_PACKAGE "Test the installed package by building samples/minimal against it" OFF)
 
 # Maul Unicode: the message part calls it at run time (UTF-8, NFC and bidi
 # classes), the generator for the currency symbols' letters and the unit
@@ -842,6 +843,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(conform_zoned PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
     maul_add_header_tests()
+    # Installs the build into the binary tree and builds and runs
+    # samples/minimal against it, as a consumer of the package would.
+    if(MAUL_LOCALE_TEST_PACKAGE AND MAUL_LOCALE_INSTALL)
+        add_test(NAME package
+                 COMMAND ${CMAKE_COMMAND} -DBINARY_DIR=${PROJECT_BINARY_DIR}
+                         -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DGENERATOR=${CMAKE_GENERATOR}
+                         -DC_COMPILER=${CMAKE_C_COMPILER} -P ${PROJECT_SOURCE_DIR}/cmake/PackageTest.cmake)
+        set_tests_properties(package PROPERTIES LABELS package)
+    endif()
 endif()
 
 # The fuzz targets: test/fuzz_<area>.c, run as fuzz_<area> <corpus dir>.
@@ -1187,6 +1197,15 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             add_test(NAME gendirection COMMAND test_gendirection ${PROJECT_SOURCE_DIR})
         endif()
     endif()
+endif()
+
+# The generator and every conformance program, which tools/check_cldr.sh
+# runs against the pinned CLDR and tzdb releases.
+if(TARGET mlocgen)
+    get_property(targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    list(FILTER targets INCLUDE REGEX "^conform_")
+    add_custom_target(conformance)
+    add_dependencies(conformance mlocgen ${targets})
 endif()
 
 if(MAUL_LOCALE_BUILD_BENCH AND EXISTS ${PROJECT_SOURCE_DIR}/bench/bench_main.c)

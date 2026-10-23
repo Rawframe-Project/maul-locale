@@ -13,16 +13,15 @@ It never compromises on:
 ## Commands
 
 ```sh
-cmake -S . -B out/dev -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc-14 -DMAUL_LOCALE_WERROR=ON
-cmake --build out/dev
-ctest --test-dir out/dev -R '^number$'          # one suite; each is test/test_<name>.c
-./out/dev/test_number                           # the same, printing each failed check
-python3 tools/check_source.py && python3 tools/check_modules.py && python3 tools/check_lengths.py \
-    && python3 tools/check_docs.py && python3 tools/check_guide.py
-clang-format --dry-run -Werror $(git ls-files '*.[ch]')
+tools/check.sh changed                          # before every push: rules, format, the suites a change reaches
+tools/check.sh pr                               # what the pull request check runs, but the CLDR checks
+tools/check.sh full                             # everything, the CLDR, tzdb and Unihan checks included
+cmake --preset linux-clang-20-asan && cmake --build --preset linux-clang-20-asan
+ctest --preset linux-clang-20-asan -R '^number$'  # one suite; each is test/test_<name>.c
+./out/linux-clang-20-asan/test_number           # the same, printing each failed check
 ```
 
-Name the compiler: the family's CMake refuses GCC 13 and Clang 18, which some machines default to. Run full builds, the sanitizer build and fuzzing through the workspace's heavy-job wrapper on the shared machine. The data checks against CLDR and the tzdb are in [development.md](docs/operations/development.md#data-checks), regenerating data in [updating-data.md](docs/operations/updating-data.md).
+The presets name their compilers: the family's CMake refuses GCC 13 and Clang 18, which some machines default to. Run `pr`, `full` and fuzzing through the workspace's heavy-job wrapper on the shared machine. [checks.md](docs/operations/checks.md) explains the tiers and the CI jobs, [development.md](docs/operations/development.md#data-checks) the data checks, and [updating-data.md](docs/operations/updating-data.md) regenerating data. The speed bar ([performance.md](docs/internals/performance.md#the-bar)): each part within 10% of the faster of ICU4C and ICU4X on the same inputs, measured back to back on a quiet machine before a release, never in CI.
 
 ## Ways to hurt yourself
 
@@ -44,8 +43,8 @@ Name the compiler: the family's CMake refuses GCC 13 and Clang 18, which some ma
 - **Library version:** `MLOC_VERSION_*` in `include/maul-locale/base.h`, which CMake reads. `MLOC_CLDR_VERSION_*` names the CLDR pin.
 - **Public headers** are the common subset of C17 and C++17 and declare only the API; every public function has a `///` block with `@param`, `@return` and a thread safety paragraph (`tools/check_docs.py`). Opaque structs are `uint64_t` arrays whose size is ABI; a `static_assert` beside each internal struct keeps it within its public one.
 - **Modules:** `tools/modules.txt` lists which module may include which; a new include needs a line there.
-- **Errors:** untrusted input (data files, text, arguments) is refused with a status in every build, never by an assertion. Library code never calls `assert`, `abort` or anything that prints.
-- **Workflows:** every action is pinned by commit SHA with its version in a comment, and each workflow and job declares the least `permissions` it needs.
+- **Errors and assertions:** untrusted input (data files, text, arguments) is refused with a status in every build, never by an assertion. `MLOC_ASSERT` (`src/invariant.h`) states internal invariants only; it traps without `NDEBUG` and compiles out of Release. Library code never calls `assert`, `abort` or anything that prints.
+- **Workflows:** every action is pinned by commit SHA with its version in a comment, and each workflow and job declares the least `permissions` it needs. The build cells are the presets in `CMakePresets.json`, run by the organization's `cpp.yml`; a new cell is a new preset.
 
 ## Testing
 

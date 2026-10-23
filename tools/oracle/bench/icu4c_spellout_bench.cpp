@@ -6,12 +6,12 @@
 // after a warm-up of a tenth, nanoseconds per call. A formatter is made
 // by RuleBasedNumberFormat with its rule set chosen; numbers are written
 // to a UnicodeString (UTF-16, ICU's own form), text parsed from one.
-#include <unicode/rbnf.h>
-#include <unicode/ustring.h>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <string>
+#include <unicode/rbnf.h>
+#include <unicode/ustring.h>
 
 using namespace icu;
 
@@ -87,37 +87,49 @@ int main()
     roman->format((int64_t)1999, out);
     Show(out);
     const UnicodeString words("one thousand two hundred thirty-four");
-    Time("spellout-init", 2000, [] {
-        UErrorCode e = U_ZERO_ERROR;
-        RuleBasedNumberFormat f(URBNF_SPELLOUT, Locale("en"), e);
-        f.setDefaultRuleSet(UnicodeString("%spellout-cardinal"), e);
-        sink = (int)e;
-    });
-    Time("spellout-integer", 200000, [&] {
-        out.remove();
-        en->format((int64_t)1234567, out);
-        sink = out.length();
-    });
-    Time("spellout-fraction", 200000, [&] {
-        out.remove();
-        ru->format(21.5, out);
-        sink = out.length();
-    });
-    Time("spellout-ordinal", 200000, [&] {
-        out.remove();
-        fr->format((int64_t)97, out);
-        sink = out.length();
-    });
-    Time("spellout-roman", 500000, [&] {
-        out.remove();
-        roman->format((int64_t)1999, out);
-        sink = out.length();
-    });
-    Time("spellout-parse", 20000, [&] {
-        Formattable result;
-        ParsePosition position(0);
-        en->parse(words, result, position);
-        sink = position.getIndex();
-    });
+    Time("spellout-init", 2000,
+         []
+         {
+             UErrorCode e = U_ZERO_ERROR;
+             RuleBasedNumberFormat f(URBNF_SPELLOUT, Locale("en"), e);
+             f.setDefaultRuleSet(UnicodeString("%spellout-cardinal"), e);
+             sink = (int)e;
+         });
+    Time("spellout-integer", 200000,
+         [&]
+         {
+             out.remove();
+             en->format((int64_t)1234567, out);
+             sink = out.length();
+         });
+    Time("spellout-fraction", 200000,
+         [&]
+         {
+             out.remove();
+             ru->format(21.5, out);
+             sink = out.length();
+         });
+    Time("spellout-ordinal", 200000,
+         [&]
+         {
+             out.remove();
+             fr->format((int64_t)97, out);
+             sink = out.length();
+         });
+    Time("spellout-roman", 500000,
+         [&]
+         {
+             out.remove();
+             roman->format((int64_t)1999, out);
+             sink = out.length();
+         });
+    Time("spellout-parse", 20000,
+         [&]
+         {
+             Formattable result;
+             ParsePosition position(0);
+             en->parse(words, result, position);
+             sink = position.getIndex();
+         });
     return 0;
 }

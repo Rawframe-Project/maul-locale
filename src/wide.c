@@ -8,6 +8,8 @@
 
 #include "wide.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 static void Trim(Wide* a)
@@ -130,6 +132,7 @@ bool mlocWideAdd(Wide* out, const Wide* a, const Wide* b)
 
 void mlocWideSubtract(Wide* out, const Wide* a, const Wide* b)
 {
+    MLOC_ASSERT(mlocWideCompare(a, b) >= 0);
     Wide r = *a;
     int64_t borrow = 0;
     for (uint32_t i = 0; i < a->count; i++)
@@ -138,6 +141,7 @@ void mlocWideSubtract(Wide* out, const Wide* a, const Wide* b)
         borrow = t < 0;
         r.limb[i] = (uint32_t)(t + (borrow << 32));
     }
+    MLOC_ASSERT(borrow == 0);
     Trim(&r);
     *out = r;
 }
@@ -158,6 +162,7 @@ bool mlocWideScale10(Wide* a, uint32_t power)
 
 uint32_t mlocWideDivideSmall(Wide* a, uint32_t divisor)
 {
+    MLOC_ASSERT(divisor != 0);
     uint64_t remainder = 0;
     for (uint32_t i = a->count; i-- > 0;)
     {
@@ -224,6 +229,9 @@ static uint32_t SubtractMultiple(uint32_t* u, const uint32_t* v, uint32_t n, uin
 
 void mlocWideDivide(const Wide* numerator, const Wide* divisor, Wide* quotient, Wide* remainder)
 {
+    MLOC_ASSERT(!mlocWideIsZero(divisor));
+    MLOC_ASSERT(quotient != numerator && quotient != divisor && remainder != numerator &&
+                remainder != divisor);
     Wide q = {0};
     Wide r = *numerator;
     if (mlocWideCompare(numerator, divisor) < 0)

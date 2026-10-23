@@ -1,0 +1,18 @@
+# The pull request title becomes the commit on main and the changelog
+# line, so it must be a conventional commit with one of the scopes
+# AGENTS.md lists.
+name: pull request title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  title:
+    uses: Rawframe-Project/.github/.github/workflows/pr-title.yml@fe462053997271eb7a3117c65d6dd567e130e229 # v0.0.4
+    permissions:
+      pull-requests: read
+    with:
+      scopes: data locale names decimal plural number currency unit spellout list calendar zone ixdtf datetime relative duration message grammar catalog collate search index generator mloccat oracle bench build family

@@ -22,12 +22,11 @@
 // beginning with Latin, places Latin like any other script, as ICU does
 // when its own check fails.
 
+#include <cstdio>
+#include <cstring>
 #include <unicode/uchar.h>
 #include <unicode/ucol.h>
 #include <unicode/uscript.h>
-
-#include <cstdio>
-#include <cstring>
 #include <vector>
 
 int main()
@@ -64,10 +63,10 @@ int main()
         status = U_ZERO_ERROR;
         ucol_setReorderCodes(c, nullptr, 0, &status);
         ucol_setReorderCodes(c, codes, count, &status);
-        printf("%d", status == U_ZERO_ERROR                ? 0
-                     : status == U_ILLEGAL_ARGUMENT_ERROR  ? -1
-                     : status == U_BUFFER_OVERFLOW_ERROR   ? -2
-                                                           : -9);
+        printf("%d", status == U_ZERO_ERROR               ? 0
+                     : status == U_ILLEGAL_ARGUMENT_ERROR ? -1
+                     : status == U_BUFFER_OVERFLOW_ERROR  ? -2
+                                                          : -9);
         for (size_t i = 0; status == U_ZERO_ERROR && i < samples.size(); i++)
         {
             UChar text[2];

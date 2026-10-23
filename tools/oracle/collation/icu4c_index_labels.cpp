@@ -17,9 +17,10 @@
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"
 #include "unicode/ulocdata.h"
-#include "unicode/ures.h"
 #include "unicode/uniset.h"
+#include "unicode/ures.h"
 #include "unicode/usetiter.h"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -30,28 +31,56 @@ static icu::UnicodeSet Labels(const icu::Locale& locale, UErrorCode& e)
 {
     icu::UnicodeSet exemplars;
     ULocaleData* uld = ulocdata_open(locale.getName(), &e);
-    if (U_FAILURE(e)) { return exemplars; }
+    if (U_FAILURE(e))
+    {
+        return exemplars;
+    }
     ulocdata_getExemplarSet(uld, exemplars.toUSet(), 0, ULOCDATA_ES_INDEX, &e);
-    if (U_SUCCESS(e)) { ulocdata_close(uld); return exemplars; }
+    if (U_SUCCESS(e))
+    {
+        ulocdata_close(uld);
+        return exemplars;
+    }
     e = U_ZERO_ERROR;
     ulocdata_getExemplarSet(uld, exemplars.toUSet(), 0, ULOCDATA_ES_STANDARD, &e);
     ulocdata_close(uld);
-    if (U_FAILURE(e)) { return exemplars; }
-    if (exemplars.containsSome(0x61, 0x7A) || exemplars.isEmpty()) { exemplars.add(0x61, 0x7A); }
-    if (exemplars.containsSome(0xAC00, 0xD7A3)) {
-        exemplars.remove(0xAC00, 0xD7A3).add(0xAC00).add(0xB098).add(0xB2E4).add(0xB77C)
-            .add(0xB9C8).add(0xBC14).add(0xC0AC).add(0xC544).add(0xC790).add(0xCC28)
-            .add(0xCE74).add(0xD0C0).add(0xD30C).add(0xD558);
+    if (U_FAILURE(e))
+    {
+        return exemplars;
     }
-    if (exemplars.containsSome(0x1200, 0x137F)) {
-        icu::UnicodeSet ethiopic(icu::UnicodeString(
-            u"[ሀለሐመሠረሰሸቀቈቐቘበቨተቸኀኈነኘአከኰኸዀወዐዘዠየደዸጀገጐጘጠጨጰጸፀፈፐፘ]"), e);
+    if (exemplars.containsSome(0x61, 0x7A) || exemplars.isEmpty())
+    {
+        exemplars.add(0x61, 0x7A);
+    }
+    if (exemplars.containsSome(0xAC00, 0xD7A3))
+    {
+        exemplars.remove(0xAC00, 0xD7A3)
+            .add(0xAC00)
+            .add(0xB098)
+            .add(0xB2E4)
+            .add(0xB77C)
+            .add(0xB9C8)
+            .add(0xBC14)
+            .add(0xC0AC)
+            .add(0xC544)
+            .add(0xC790)
+            .add(0xCC28)
+            .add(0xCE74)
+            .add(0xD0C0)
+            .add(0xD30C)
+            .add(0xD558);
+    }
+    if (exemplars.containsSome(0x1200, 0x137F))
+    {
+        icu::UnicodeSet ethiopic(
+            icu::UnicodeString(u"[ሀለሐመሠረሰሸቀቈቐቘበቨተቸኀኈነኘአከኰኸዀወዐዘዠየደዸጀገጐጘጠጨጰጸፀፈፐፘ]"), e);
         ethiopic.retainAll(exemplars);
         exemplars.remove(u'ሀ', 0x137F).addAll(ethiopic);
     }
     icu::UnicodeSet upper;
     icu::UnicodeSetIterator it(exemplars);
-    while (it.next()) {
+    while (it.next())
+    {
         icu::UnicodeString s = it.getString();
         s.toUpper(locale);
         upper.add(s);
@@ -62,25 +91,36 @@ static icu::UnicodeSet Labels(const icu::Locale& locale, UErrorCode& e)
 int main()
 {
     static char line[1024];
-    while (fgets(line, sizeof line, stdin)) {
+    while (fgets(line, sizeof line, stdin))
+    {
         line[strcspn(line, "\n")] = 0;
         UErrorCode e = U_ZERO_ERROR;
         icu::Locale locale = icu::Locale::forLanguageTag(line, e);
         icu::UnicodeSet set = U_SUCCESS(e) ? Labels(locale, e) : icu::UnicodeSet();
-        if (U_FAILURE(e)) { printf("%s\terror\n", line); continue; }
+        if (U_FAILURE(e))
+        {
+            printf("%s\terror\n", line);
+            continue;
+        }
         std::vector<std::u32string> labels;
         icu::UnicodeSetIterator it(set);
-        while (it.next()) {
+        while (it.next())
+        {
             const icu::UnicodeString& s = it.getString();
             std::u32string cps;
-            for (int32_t i = 0; i < s.length(); i = s.moveIndex32(i, 1)) { cps += (char32_t)s.char32At(i); }
+            for (int32_t i = 0; i < s.length(); i = s.moveIndex32(i, 1))
+            {
+                cps += (char32_t)s.char32At(i);
+            }
             labels.push_back(cps);
         }
         std::sort(labels.begin(), labels.end());
         printf("%s\t", line);
-        for (size_t i = 0; i < labels.size(); i++) {
+        for (size_t i = 0; i < labels.size(); i++)
+        {
             printf("%s", i == 0 ? "" : " ");
-            for (size_t j = 0; j < labels[i].size(); j++) {
+            for (size_t j = 0; j < labels[i].size(); j++)
+            {
                 printf(j == 0 ? "%X" : "_%X", (unsigned)labels[i][j]);
             }
         }
@@ -88,14 +128,21 @@ int main()
         icu::Collator* c = icu::Collator::createInstance(locale, e);
         auto* rbc = dynamic_cast<icu::RuleBasedCollator*>(c);
         icu::UnicodeSet contractions;
-        if (U_SUCCESS(e) && rbc != nullptr) { rbc->internalAddContractions(0xFDD0, contractions, e); }
+        if (U_SUCCESS(e) && rbc != nullptr)
+        {
+            rbc->internalAddContractions(0xFDD0, contractions, e);
+        }
         printf("%s", U_SUCCESS(e) && !contractions.isEmpty() ? "\tfdd0" : "");
         delete c;
         e = U_ZERO_ERROR;
         UResourceBundle* bundle = ures_open(nullptr, locale.getName(), &e);
-        const char* actual = U_SUCCESS(e) ? ures_getLocaleByType(bundle, ULOC_ACTUAL_LOCALE, &e) : "";
+        const char* actual =
+            U_SUCCESS(e) ? ures_getLocaleByType(bundle, ULOC_ACTUAL_LOCALE, &e) : "";
         const char* asked = locale.getName()[0] == 0 ? "root" : locale.getName();
-        if (U_SUCCESS(e) && strcmp(actual, asked) != 0) { printf("\tfrom %s", actual); }
+        if (U_SUCCESS(e) && strcmp(actual, asked) != 0)
+        {
+            printf("\tfrom %s", actual);
+        }
         printf("\n");
         ures_close(bundle);
     }

@@ -6,7 +6,7 @@ Speed is part of the product: a locale layer is called for every number, date an
 
 Each part is benchmarked against ICU4C and ICU4X on the same inputs, and the target is to be no slower than the faster of the two at the same work, with no more code and data than ICU4X's for the same locales. ICU4X formats numbers and dates several times faster than ICU4C and builds formatters an order of magnitude faster; ICU4C compares strings several times faster than ICU4X through its fast Latin table. The bar takes the better of each. Where a part does not meet it yet, the gap is an open `performance` issue, not a remark in the code.
 
-Timings are never a CI gate: wall time is not repeatable on shared runners. The bar is checked on a quiet machine before a release, with a stated tolerance.
+Timings are never a CI gate: wall time is not repeatable on shared runners. The bar is checked on a quiet machine before a release: a part meets it when its time per call is within 10% of the faster baseline's, both measured back to back as [Measuring](#measuring) says.
 
 ## Design rules that serve it
 

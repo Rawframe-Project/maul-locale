@@ -13,27 +13,72 @@
 //       icu4c_search_elements_back.cpp -L$ICU/lib -licui18n -licuuc \
 //       -licudata -Wl,-rpath,$ICU/lib -o icu_search_elements_back
 #include "usrchimp.h"
+
 #include "unicode/coll.h"
 #include "unicode/ucoleitr.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
-int main(){ static char line[1<<16];
- while(fgets(line,sizeof line,stdin)){
-  char* tab=strchr(line,'\t'); if(!tab){ printf("error\n"); continue; } *tab=0;
-  std::u16string text;
-  for(char* p=strtok(tab+1," \n"); p; p=strtok(nullptr," \n")){
-   unsigned long c=strtoul(p,nullptr,16);
-   if(c>=0x10000){ text+=(char16_t)(0xD7C0+(c>>10)); text+=(char16_t)(0xDC00|(c&0x3FF)); }
-   else text+=(char16_t)c; }
-  UErrorCode e=U_ZERO_ERROR; icu::Locale loc=icu::Locale::forLanguageTag(line,e);
-  icu::Collator* c=U_SUCCESS(e)?icu::Collator::createInstance(loc,e):nullptr;
-  if(U_SUCCESS(e)) c->setAttribute(UCOL_NORMALIZATION_MODE,UCOL_ON,e);
-  UCollationElements* el=U_SUCCESS(e)?ucol_openElements(c->toUCollator(),text.data(),(int32_t)text.size(),&e):nullptr;
-  if(U_FAILURE(e)){ printf("error\n"); delete c; continue; }
-  icu::UCollationPCE pce(el); const char* gap=""; ucol_setOffset(el,(int32_t)text.size(),&e);
-  for(;;){ int32_t lo=0,hi=0; int64_t p=pce.previousProcessed(&lo,&hi,&e);
-   if(p==UCOL_PROCESSED_NULLORDER||U_FAILURE(e)) break;
-   printf("%s%llx:%x:%x",gap,(unsigned long long)p,lo,hi); gap=" "; }
-  printf("\n"); ucol_closeElements(el); delete c; } }
+int main()
+{
+    static char line[1 << 16];
+    while (fgets(line, sizeof line, stdin))
+    {
+        char* tab = strchr(line, '\t');
+        if (!tab)
+        {
+            printf("error\n");
+            continue;
+        }
+        *tab = 0;
+        std::u16string text;
+        for (char* p = strtok(tab + 1, " \n"); p; p = strtok(nullptr, " \n"))
+        {
+            unsigned long c = strtoul(p, nullptr, 16);
+            if (c >= 0x10000)
+            {
+                text += (char16_t)(0xD7C0 + (c >> 10));
+                text += (char16_t)(0xDC00 | (c & 0x3FF));
+            }
+            else
+            {
+                text += (char16_t)c;
+            }
+        }
+        UErrorCode e = U_ZERO_ERROR;
+        icu::Locale loc = icu::Locale::forLanguageTag(line, e);
+        icu::Collator* c = U_SUCCESS(e) ? icu::Collator::createInstance(loc, e) : nullptr;
+        if (U_SUCCESS(e))
+        {
+            c->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, e);
+        }
+        UCollationElements* el = U_SUCCESS(e) ? ucol_openElements(c->toUCollator(), text.data(),
+                                                                  (int32_t)text.size(), &e)
+                                              : nullptr;
+        if (U_FAILURE(e))
+        {
+            printf("error\n");
+            delete c;
+            continue;
+        }
+        icu::UCollationPCE pce(el);
+        const char* gap = "";
+        ucol_setOffset(el, (int32_t)text.size(), &e);
+        for (;;)
+        {
+            int32_t lo = 0, hi = 0;
+            int64_t p = pce.previousProcessed(&lo, &hi, &e);
+            if (p == UCOL_PROCESSED_NULLORDER || U_FAILURE(e))
+            {
+                break;
+            }
+            printf("%s%llx:%x:%x", gap, (unsigned long long)p, lo, hi);
+            gap = " ";
+        }
+        printf("\n");
+        ucol_closeElements(el);
+        delete c;
+    }
+}

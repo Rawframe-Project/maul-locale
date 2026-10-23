@@ -19,15 +19,14 @@
 //   g++ -O2 -I$ICU/include icu4c_collation_options.cpp -L$ICU/lib \
 //       -licui18n -licuuc -Wl,-rpath,$ICU/lib -o icu79_options
 
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
 #include <unicode/ucol.h>
 #include <unicode/uscript.h>
 #include <unicode/ustring.h>
-
-#include <cstdio>
-#include <cstdlib>
-#include <algorithm>
-#include <cstring>
-#include <string>
 #include <vector>
 
 // Ends a set's reorder codes (UCOL_REORDER_CODE_NONE is Zzzz, "others").
@@ -61,17 +60,41 @@ static const Options s_sets[] = {
     {UCOL_TERTIARY, UCOL_NON_IGNORABLE, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_ON, {kEnd}},
     {UCOL_QUATERNARY, UCOL_SHIFTED, UCOL_OFF, UCOL_UPPER_FIRST, UCOL_OFF, UCOL_ON, {kEnd}},
     {UCOL_IDENTICAL, UCOL_NON_IGNORABLE, UCOL_ON, UCOL_OFF, UCOL_ON, UCOL_ON, {kEnd}},
-    {UCOL_TERTIARY, UCOL_NON_IGNORABLE, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_OFF,
+    {UCOL_TERTIARY,
+     UCOL_NON_IGNORABLE,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
      {USCRIPT_GREEK, kEnd}},
-    {UCOL_TERTIARY, UCOL_NON_IGNORABLE, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_OFF,
+    {UCOL_TERTIARY,
+     UCOL_NON_IGNORABLE,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
      {USCRIPT_LATIN, USCRIPT_HAN, kEnd}},
-    {UCOL_TERTIARY, UCOL_NON_IGNORABLE, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_ON,
+    {UCOL_TERTIARY,
+     UCOL_NON_IGNORABLE,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_ON,
      {UCOL_REORDER_CODE_DIGIT, UCOL_REORDER_CODE_PUNCTUATION, kEnd}},
-    {UCOL_TERTIARY, UCOL_NON_IGNORABLE, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_OFF,
+    {UCOL_TERTIARY,
+     UCOL_NON_IGNORABLE,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
      {USCRIPT_CYRILLIC, USCRIPT_UNKNOWN, USCRIPT_LATIN, kEnd}},
-    {UCOL_QUATERNARY, UCOL_SHIFTED, UCOL_OFF, UCOL_OFF, UCOL_OFF, UCOL_OFF,
-     {UCOL_REORDER_CODE_SPACE, USCRIPT_HAN, USCRIPT_UNKNOWN, UCOL_REORDER_CODE_DIGIT,
-      kEnd}},
+    {UCOL_QUATERNARY,
+     UCOL_SHIFTED,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     UCOL_OFF,
+     {UCOL_REORDER_CODE_SPACE, USCRIPT_HAN, USCRIPT_UNKNOWN, UCOL_REORDER_CODE_DIGIT, kEnd}},
 };
 
 static std::string Bytes(const char* hex, size_t n)
@@ -104,8 +127,7 @@ static std::vector<uint8_t> Key(const UCollator* c, const std::string& text, UEr
     return key;
 }
 
-static int Order(const UCollator* c, const std::string& a, const std::string& b,
-                 UErrorCode* status)
+static int Order(const UCollator* c, const std::string& a, const std::string& b, UErrorCode* status)
 {
     std::vector<uint8_t> keys[2] = {Key(c, a, status), Key(c, b, status)};
     int r = memcmp(keys[0].data(), keys[1].data(), std::min(keys[0].size(), keys[1].size()));

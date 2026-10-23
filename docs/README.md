@@ -27,3 +27,5 @@
 - [Development](operations/development.md): toolchain, building and running tests, the rule checks, the data checks, fuzzing, benchmarks.
 - [Updating data](operations/updating-data.md): the pins, regenerating `src/generated/`, new CLDR and tzdb releases, the grammar lexicons, external data.
 - [Oracles](operations/oracles.md): the differential programs against ICU4C, ICU4X, Apertium and test262.
+- [Checks](operations/checks.md): the local tiers, the CI jobs, assertions and budgets.
+- [Release](operations/release.md): how a release is made and what it carries.
