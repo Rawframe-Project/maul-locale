@@ -60,6 +60,15 @@
       }
     },
     {
+      "name": "web",
+      "displayName": "Emscripten, Release, tests run by Node",
+      "inherits": "base",
+      "generator": "Ninja",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
       "name": "macos-clang",
       "displayName": "Apple Clang, Release",
       "inherits": "base",
@@ -80,6 +89,7 @@
     { "name": "linux-clang-20", "configurePreset": "linux-clang-20" },
     { "name": "linux-clang-20-asan", "configurePreset": "linux-clang-20-asan" },
     { "name": "linux-shared", "configurePreset": "linux-shared" },
+    { "name": "web", "configurePreset": "web" },
     { "name": "macos-clang", "configurePreset": "macos-clang" },
     { "name": "windows-clang-cl", "configurePreset": "windows-clang-cl", "configuration": "Release" }
   ],
@@ -95,6 +105,7 @@
     { "name": "linux-clang-20", "inherits": "base", "configurePreset": "linux-clang-20" },
     { "name": "linux-clang-20-asan", "inherits": "base", "configurePreset": "linux-clang-20-asan" },
     { "name": "linux-shared", "inherits": "base", "configurePreset": "linux-shared" },
+    { "name": "web", "inherits": "base", "configurePreset": "web" },
     { "name": "macos-clang", "inherits": "base", "configurePreset": "macos-clang" },
     { "name": "windows-clang-cl", "inherits": "base", "configurePreset": "windows-clang-cl", "configuration": "Release" }
   ]

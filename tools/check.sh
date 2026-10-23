@@ -157,7 +157,12 @@ fi
 source_checks
 
 step "clang-format on every file"
-clang-format --dry-run -Werror $(all_c_files)
+mapfile -t files < <(all_c_files)
+[ ${#files[@]} -gt 500 ] || {
+    echo "too few files to format: ${#files[@]}" >&2
+    exit 1
+}
+clang-format --dry-run -Werror "${files[@]}"
 
 step "tables generated from data in the repository"
 python3 tools/gen_pow5_tables.py --check
@@ -166,7 +171,12 @@ python3 tools/gen_finnish_types.py --check
 
 step "clang-tidy"
 configure tidy -DCMAKE_C_COMPILER=clang-20 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMAUL_LOCALE_BUILD_TESTS=OFF
-ls src/*.c | xargs -P "$jobs" -n 1 clang-tidy-20 -p "$out/check-tidy" --quiet --warnings-as-errors='*' 2>/dev/null
+files=(src/*.c)
+[ -f "${files[0]}" ] || {
+    echo "no source file for clang-tidy" >&2
+    exit 1
+}
+printf '%s\n' "${files[@]}" | xargs -P "$jobs" -n 1 clang-tidy-20 -p "$out/check-tidy" --quiet --warnings-as-errors='*' 2>/dev/null
 
 preset linux-gcc-14
 preset linux-clang-20-asan
@@ -177,7 +187,12 @@ step "fuzzing, $fuzz_seconds seconds per target"
 configure fuzz -DCMAKE_C_COMPILER=clang-20 -DMAUL_LOCALE_FUZZ=ON -DMAUL_LOCALE_BUILD_TESTS=OFF \
     -DMAUL_LOCALE_BUILD_TOOLS=OFF
 cmake --build "$out/check-fuzz" -j "$jobs" >>"$out/check-fuzz.log"
-for target in "$out"/check-fuzz/fuzz_*; do
+targets=("$out"/check-fuzz/fuzz_*)
+[ -x "${targets[0]}" ] || {
+    echo "no fuzz target was built" >&2
+    exit 1
+}
+for target in "${targets[@]}"; do
     name=$(basename "$target")
     corpus=$out/corpus/$name
     mkdir -p "$corpus"
