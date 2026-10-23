@@ -9,7 +9,7 @@
 // the groups) and writes for each line its result (0, -1 refused as
 // invalid, -2 for capacity) and, when 0, each sample's primary after the
 // reordering, in hex. The oracle
-// docs/locale/research/oracle/collation/icu4c_collation_reorder.cpp
+// tools/oracle/collation/icu4c_collation_reorder.cpp
 // writes the same from ICU's sort keys.
 //
 // usage: conform_collation_reorder collation.mloc samples > samples.txt

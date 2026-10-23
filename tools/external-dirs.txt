@@ -1,0 +1,7 @@
+# Directories whose files come from outside the project and are kept
+# exactly as published, each with a README.md naming the source, version,
+# license and SHA-256 of every file. tools/check_source.py and
+# tools/check_lengths.py do not check them.
+tools/external/icu
+tools/external/kotus
+tools/external/zemberek

@@ -89,7 +89,7 @@ static void TestLowerLevels(void)
 }
 
 // Allocations ICU4C 79's CollationWeights made for random limits of each
-// level (the docs repository's oracle): whether it fits, the first and
+// level (tools/oracle/collation/icu4c_collation_weights.cpp): whether it fits, the first and
 // last of the n weights, and a hash of all n in order.
 typedef struct IcuCase
 {

@@ -7,7 +7,7 @@
 // comparison (0, 1 or 2), tab-separated, with a sixth field 1 for a
 // backward find, and writes for each line the match's start and end in
 // units, "none" or "error", as the oracle
-// docs/locale/research/oracle/collation/icu4c_search.cpp writes them.
+// tools/oracle/collation/icu4c_search.cpp writes them.
 // The UTF-8 find must agree, its bytes mapped to units.
 //
 // usage: conform_search collation.mloc < lines

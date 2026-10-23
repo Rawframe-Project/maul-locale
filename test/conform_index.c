@@ -7,7 +7,7 @@
 // "O" (else 0), and names (each a name's code points in hex joined by
 // "_", space-separated), tab-separated, and writes the index's buckets
 // and each name's bucket as
-// docs/locale/research/oracle/collation/icu4c_index.cpp writes them. The
+// tools/oracle/collation/icu4c_index.cpp writes them. The
 // UTF-16 find must agree with the UTF-8 one.
 //
 // usage: conform_index collation.mloc < lines

@@ -3,9 +3,9 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Writes src/generated/finnish_types.h, each Finnish nominal's inflection
-# type and consonant gradation (record mloc-0049), from Kotus's word list
-# of modern Finnish at the commit tools/kotus-release.txt pins (CC BY
-# 3.0; LICENSES/CC-BY-3.0-kotus.txt). Only nominals (types 1 to 51) are
+# type and consonant gradation, from Kotus's word list of modern Finnish
+# in tools/external/kotus (CC BY 3.0; LICENSES/CC-BY-3.0-kotus.txt).
+# Only nominals (types 1 to 51) are
 # read, and only what the ending does not decide is kept:
 #   - rules: a word's last one to five letters and the type and
 #     gradation most words ending so have, kept where it differs from the
@@ -17,9 +17,8 @@
 # records, sorted by their bytes: the key's length, its bytes, the type
 # and the gradation letter (0 for none); an offset per record.
 #
-# usage: gen_finnish_types.py DIR [--check]
-#   DIR      holds kotus-sanalista_v1.xml at the pinned commit (its
-#            SHA-256 is checked)
+# usage: gen_finnish_types.py [--check]
+#   The list's SHA-256 is checked against the directory's README.md.
 #   --check  fail when the file differs from what would be written
 
 import collections
@@ -30,24 +29,23 @@ import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 PATH = os.path.join(ROOT, "src", "generated", "finnish_types.h")
-PIN = os.path.join(ROOT, "tools", "kotus-release.txt")
+SOURCE = os.path.join(ROOT, "tools", "external", "kotus")
 LONGEST = 5
 SUPPORT = 3
 
 
 def pinned():
-    files = {}
-    for line in open(PIN, encoding="utf-8"):
-        parts = line.split()
-        if parts and parts[0] == "file":
-            files[parts[1]] = parts[2]
-    return files
+    """Each file of the source directory and its SHA-256, from the
+    ```text block of its README.md."""
+    readme = open(os.path.join(SOURCE, "README.md"), encoding="utf-8").read()
+    block = re.search(r"```text\n(.*?)```", readme, re.S).group(1)
+    return [line.split()[::-1] for line in block.splitlines() if line.strip()]
 
 
-def read(directory):
+def read():
     rows = []
-    for name, digest in pinned().items():
-        data = open(os.path.join(directory, name), "rb").read()
+    for name, digest in pinned():
+        data = open(os.path.join(SOURCE, name), "rb").read()
         if hashlib.sha256(data).hexdigest() != digest:
             sys.exit("gen_finnish_types: %s is not the pinned file" % name)
         text = data.decode("utf-8")
@@ -137,9 +135,9 @@ def blob(name, entries):
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit(__doc__ if __doc__ else "usage: gen_finnish_types.py DIR [--check]")
-    rows = read(sys.argv[1])
+    if any(a != "--check" for a in sys.argv[1:]):
+        sys.exit("usage: gen_finnish_types.py [--check]")
+    rows = read()
     first = {}
     for word, kind in rows:
         first.setdefault(word, kind)
@@ -178,7 +176,7 @@ def main():
         "#endif",
         "",
     ])
-    if "--check" in sys.argv[2:]:
+    if "--check" in sys.argv[1:]:
         if open(PATH, encoding="utf-8").read() != text:
             sys.exit("gen_finnish_types: %s is stale" % PATH)
         return

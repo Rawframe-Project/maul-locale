@@ -1,0 +1,15 @@
+square-meter area default floor geograph land
+millimole-per-liter concentration default blood-glucose
+liter-per-100-kilometer consumption default vehicle-fuel
+second duration default media
+kilojoule energy default food
+newton force default
+meter length default focal-length person person-height rainfall road snowfall vehicle visiblty
+kilogram mass default person
+kilogram-per-cubic-meter mass-density default
+watt power default engine
+hectopascal pressure default baromtrc
+meter-per-second speed default rainfall snowfall wind
+celsius temperature default weather
+liter volume default fluid oil vehicle
+year year-duration default person-age
