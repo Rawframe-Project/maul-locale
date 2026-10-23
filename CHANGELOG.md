@@ -7,10 +7,22 @@ may change the API, the ABI and every data format.
 
 ## [0.1.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.0.1...v0.1.0) (2026-10-23)
 
+The locale data moves from CLDR 49 beta 3 to the final CLDR 49 release.
 
-### Added
+### Changed
 
-* **data:** take the final CLDR 49 and ICU 79.1 releases ([#11](https://github.com/Rawframe-Project/maul-locale/issues/11)) ([73a8158](https://github.com/Rawframe-Project/maul-locale/commit/73a8158d018bcdd2d148d091d3f7387445dadb6a)), closes [#5](https://github.com/Rawframe-Project/maul-locale/issues/5)
+- The data comes from the final CLDR 49 release and is checked against
+  ICU4C 79.1.
+- Windows names of Canadian time zones follow Windows' new zones:
+  `America/Vancouver` is "British Columbia Standard Time",
+  `America/Edmonton` and `America/Inuvik` "Alberta Standard Time", and
+  `America/Winnipeg` "Manitoba Standard Time", and
+  `mlocFindTimeZoneWindows` finds these names. "Pacific Standard Time"
+  with region CA now gives `America/Los_Angeles` instead of
+  `America/Vancouver`.
+- Data files from 0.0.1 do not open with 0.1.0: `mlocOpenData` refuses
+  them with `mloc_errorDataVersion`. Take the data files from the same
+  release as the library, and update the two together.
 
 ## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1) (2026-10-23)
 
