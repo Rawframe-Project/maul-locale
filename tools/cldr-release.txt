@@ -1,9 +1,8 @@
 # The CLDR release the generator reads, and the JSON of the same release,
-# which tools/check_resolution.py compares with. Until CLDR 49 is final,
-# its last beta. tools/fetch_cldr.sh reads these lines; the generator
-# reads the Unicode version CLDR is built on.
-tag release-49-beta3
-commit ae413bb57079c50b8b259fe92169b6e8e170bb78
-json 49.0.0-BETA3
-json-sha256 f874846cb44a224b3ca33681213014f777f2a1ffc32eb9a48e4bd59ca006f6d3
+# which tools/check_resolution.py compares with. tools/fetch_cldr.sh reads
+# these lines; the generator reads the Unicode version CLDR is built on.
+tag release-49
+commit 96e54b273d2da4ec6fbad350ba19ff23fa24a588
+json 49.0.0
+json-sha256 3b1f5d684d29c541d3acf91fe834b3fe36ae0f34775e3ee50e93558bf14ca174
 unicode 18.0.0

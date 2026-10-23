@@ -43,7 +43,7 @@ It writes the compiled-in data, every data file and the code tables, then the da
 3. Regenerate. The generator refuses data it does not understand (a new DTD element in a path it reads, a rule syntax it does not take, a set pattern with a property) with the file and the reason; extend the generator rather than skipping it.
 4. Run the data checks ([development.md](development.md#data-checks)). Each check fails on a new difference and on a listed one that went away; read each, then fix the generator or list the difference with its reason in its `tools/*-exceptions.txt`.
 5. Rerun the oracles of the parts whose data changed ([oracles.md](oracles.md)) against the ICU release built on the same CLDR, and move `tools/external/icu/` to that release's matcher test.
-6. Regenerate `test/mf2_suite.inc` from the release's MessageFormat 2 tests: `python3 tools/gen_mf2_suite.py ~/cldr-cache/cldr <commit> > test/mf2_suite.inc`.
+6. Regenerate `test/mf2_suite.inc` from the release's MessageFormat 2 tests: `python3 tools/gen_mf2_suite.py ~/cldr-cache/cldr <short commit> > test/mf2_suite.inc`.
 
 A new CLDR release is a new minor version of the library: formatted text changes.
 
