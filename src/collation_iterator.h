@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collation elements of UTF-8 text (record mloc-0066), one 64-bit
-// element at a time, from a root unit (record mloc-0065) read through
-// the NFD stream:
+// The collation elements of UTF-8 text, one 64-bit element at a time, from
+// a root unit read through the NFD stream:
 // - a trie value that is one element gives it; expansions give theirs
 //   from the arrays; an offset's element is computed; the implicit word
 //   gives the unassigned primary;
@@ -14,15 +13,14 @@
 //   skipped mark of an equal or higher class, nor by a starter, extends
 //   the match. The marks matched are taken out; the skipped ones follow.
 //   The rule looks at most collationLookahead code points ahead.
-// Hangul syllables reach the trie as jamo, which NFD gives.
-// With a tailoring (record mloc-0071), a code point is read from it
-// first and from the root where it gives the fallback word; the lists
-// and expansions are read from the unit that gave the CE32, and a
-// contraction a list names is matched in turn.
-// With numeric on, a run of decimal digits (General_Category Nd) gives
-// the primaries of its value, as ICU4C's appendNumericCEs: leading
-// zeros dropped, the digits in segments of at most 254, each segment one
-// element up to seven digits, else a length byte and digit pairs.
+// Hangul syllables reach the trie as jamo, which NFD gives. With a
+// tailoring, a code point is read from it first and from the root where it
+// gives the fallback word; the lists and expansions are read from the unit
+// that gave the CE32, and a contraction a list names is matched in turn.
+// With numeric on, a run of decimal digits (General_Category Nd) gives the
+// primaries of its value, as ICU4C's appendNumericCEs: leading zeros
+// dropped, the digits in segments of at most 254, each segment one element
+// up to seven digits, else a length byte and digit pairs.
 
 #ifndef MLOC_SRC_COLLATION_ITERATOR_H
 #define MLOC_SRC_COLLATION_ITERATOR_H

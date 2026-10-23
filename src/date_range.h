@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Ranges of dates and times (maul-locale/datetime.h, research 40): what a
-// range's patterns show, the greatest difference of two values, and the
-// writing of a range as ICU4C's DateIntervalFormat writes it: by its
-// pair's halves, by the fallback around one pattern written for each
-// value, or as one value.
+// Ranges of dates and times (maul-locale/datetime.h): what a range's
+// patterns show, the greatest difference of two values, and the writing of
+// a range as ICU4C's DateIntervalFormat writes it: by its pair's halves,
+// by the fallback around one pattern written for each value, or as one
+// value.
 
 #ifndef MLOC_DATE_RANGE_H
 #define MLOC_DATE_RANGE_H

@@ -1,6 +1,6 @@
-# Unicode's Unihan database (record mloc-0050), whose kHangul field
-# tools/gen_hanja_finals.py reads into src/generated/hanja_finals.h: the
-# Unicode version maul-unicode follows, then the file with its SHA-256.
-# Unicode License v3; LICENSES/Unicode-3.0.txt.
+# Unicode's Unihan database, whose kHangul field tools/gen_hanja_finals.py
+# reads into src/generated/hanja_finals.h: the Unicode version
+# maul-unicode follows, then the file with its SHA-256. Unicode License
+# v3; LICENSES/Unicode-3.0.txt.
 version 18.0.0
 file Unihan.zip 4c93ea9c1f636451729a840978f1667a53886af37ba854fdcce109721c63d43e

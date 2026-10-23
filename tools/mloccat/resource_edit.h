@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A catalog source changed by the tool (records mloc-0056 and mloc-0059):
-// an entry's metadata set, an entry found or added by its section's and
-// its own identifier, and the file written again in the writer's form
-// through a temporary file that replaces it at once.
+// A catalog source changed by the tool: an entry's metadata set, an entry
+// found or added by its section's and its own identifier, and the file
+// written again in the writer's form through a temporary file that
+// replaces it at once.
 
 #ifndef MLOCCAT_RESOURCE_EDIT_H
 #define MLOCCAT_RESOURCE_EDIT_H

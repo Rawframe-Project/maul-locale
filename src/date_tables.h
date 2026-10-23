@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date pattern units of the dates data file (record mloc-0042),
-// which the generator compiles by matching each semantic skeleton to a
-// locale's patterns as ICU's DateTimePatternGenerator does. All integers
-// are little-endian.
+// The date pattern units of the dates data file, which the generator
+// compiles by matching each semantic skeleton to a locale's patterns as
+// ICU's DateTimePatternGenerator does. All integers are little-endian.
 //
 // Date patterns, a unit of no locale. The payload is a header (the u32
 // counts of patterns, rows, sets, time sets, interval sets, interval date
@@ -23,7 +22,7 @@
 //            bytes): the pattern index (u16) of each entry of
 //            DateTimeEntry, then its flags (u16)
 //   interval sets a calendar's interval patterns in a locale
-//            (dateIntervalSetSize bytes, research 40): the date part's
+//            (dateIntervalSetSize bytes): the date part's
 //            and the time part's index (u16), then pattern indexes
 //            (u16): the fallback ("{0} – {1}", its two values in literal
 //            text), the short date with the full year (yMd) and with the
@@ -164,9 +163,9 @@ typedef enum DateTimeEntry
 } DateTimeEntry;
 
 // The options an interval set answers, each the skeleton the generator
-// resolves as ICU4C's DateIntervalFormat does (research 40): a date field
-// set (DateSetEntry) at each length, long, medium and short; the standard
-// date formats, full to short; a time without or with a zone (none, then
+// resolves as ICU4C's DateIntervalFormat does: a date field set
+// (DateSetEntry) at each length, long, medium and short; the standard date
+// formats, full to short; a time without or with a zone (none, then
 // mlocZoneStyle's eight forms; the 12-hour, then the 24-hour clock; the
 // hour, minute and second); the standard time formats, full to short. A
 // time's date differences are left out (none): ICU writes them as

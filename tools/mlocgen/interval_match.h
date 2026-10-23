@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Date interval patterns resolved for a skeleton as ICU4C's
-// DateIntervalFormat resolves them when it is made (research 40): the
-// locale's intervalFormats items, the best of them for the skeleton's
-// date or time part, widened to the skeleton, split into the halves the
-// earlier and the later value write, and the fallbacks where no item
-// serves. Patterns are UTF-8.
+// DateIntervalFormat resolves them when it is made: the locale's
+// intervalFormats items, the best of them for the skeleton's date or time
+// part, widened to the skeleton, split into the halves the earlier and the
+// later value write, and the fallbacks where no item serves. Patterns are
+// UTF-8.
 
 #ifndef MLOCGEN_INTERVAL_MATCH_H
 #define MLOCGEN_INTERVAL_MATCH_H

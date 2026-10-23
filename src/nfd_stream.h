@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// UTF-8 or UTF-16 text read as its NFD (record mloc-0066), a code point
-// at a time, through Maul Unicode's decomposition and combining classes;
-// ill-formed bytes read as U+FFFD, one for each maximal ill-formed
-// subpart, and so does a lone surrogate. Nothing is
-// allocated and nothing limits the marks after a starter.
+// UTF-8 or UTF-16 text read as its NFD, a code point at a time, through
+// Maul Unicode's decomposition and combining classes; ill-formed bytes
+// read as U+FFFD, one for each maximal ill-formed subpart, and so does a
+// lone surrogate. Nothing is allocated and nothing limits the marks after
+// a starter.
 //
 // The stream fills a window: a segment (code points up to the next one
 // whose decomposition starts with a starter), decomposed and its marks

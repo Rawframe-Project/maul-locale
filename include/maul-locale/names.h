@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Display names (UTS #35 Part 2, records mloc-0036 to mloc-0039): a
-// locale's name for a language, script, region, variant, key, key's value
-// or measurement system, as ICU4C's LocaleDisplayNames and ECMA-402's
-// Intl.DisplayNames give them, for a subdivision, and for a whole locale.
-// The names are in a data file of their own, names.mloc, and the
-// subdivision names in another, subdivisions.mloc, which a program adds
-// to its data set.
+// Display names (UTS #35 Part 2): a locale's name for a language, script,
+// region, variant, key, key's value or measurement system, as ICU4C's
+// LocaleDisplayNames and ECMA-402's Intl.DisplayNames give them, for a
+// subdivision, and for a whole locale. The names are in a data file of
+// their own, names.mloc, and the subdivision names in another,
+// subdivisions.mloc, which a program adds to its data set.
 
 #ifndef MAUL_LOCALE_NAMES_H
 #define MAUL_LOCALE_NAMES_H
@@ -97,7 +96,7 @@ extern "C"
     /// @param code     The code, in any case.
     /// @param length   Its length in bytes.
     /// @param options  The options, or null for the defaults.
-    /// @param output   Where the name goes (record mloc-0015); no parts.
+    /// @param output   Where the name goes; no parts.
     /// @return mloc_success; mloc_fellBack when the code, in canonical
     ///         case, is written for a name the locale's chain lacks;
     ///         mloc_errorNotFound for a missing name with
@@ -155,7 +154,7 @@ extern "C"
     /// @param displayLocale  The locale the name is in, canonicalized.
     /// @param locale         The locale named, canonicalized.
     /// @param options        The options, or null for the defaults.
-    /// @param output         Where the name goes (record mloc-0015); no
+    /// @param output         Where the name goes; no
     ///                       parts.
     /// @return mloc_success; mloc_fellBack when the language has no name
     ///         and its code stands; mloc_errorNotFound for data without the

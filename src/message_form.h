@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The compiled message's layout (record mloc-0045), which
-// message_compile writes and message_read checks. All numbers are
-// 32-bit little-endian. A header, then the records of each kind in this
-// order, each kind's count in the header: declarations, expressions,
-// markups, parameters (options and attributes), selectors, keys (one per
-// selector per variant), variants, pieces, variables, and last the pool
-// of string bytes. A string is an offset into the pool and a length.
+// The compiled message's layout, which message_compile writes and
+// message_read checks. All numbers are 32-bit little-endian. A header,
+// then the records of each kind in this order, each kind's count in the
+// header: declarations, expressions, markups, parameters (options and
+// attributes), selectors, keys (one per selector per variant), variants,
+// pieces, variables, and last the pool of string bytes. A string is an
+// offset into the pool and a length.
 
 #ifndef MLOC_MESSAGE_FORM_H
 #define MLOC_MESSAGE_FORM_H

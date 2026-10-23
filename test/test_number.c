@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number formatting on the compiled-in data (record mloc-0021): digits,
-// symbols and grouping of locales of each shape, numbering systems from
-// the locale, every precision option with ECMA-402's results, sign
-// display, the parts, measuring, and the refusals. conform_numbers runs
-// CLDR's test data in CI.
+// Number formatting on the compiled-in data: digits, symbols and grouping
+// of locales of each shape, numbering systems from the locale, every
+// precision option with ECMA-402's results, sign display, the parts,
+// measuring, and the refusals. conform_numbers runs CLDR's test data in
+// CI.
 
 #include "test_harness.h"
 

@@ -56,7 +56,7 @@ void DateSourceLoadIntervals(Cldr* cldr, const char* locale, const char* calenda
                              IntervalItems* items);
 
 // Answers lines "locale\tcalendar\tskeleton" with the skeleton's interval
-// patterns per greatest difference (research 40), as mlocgen intervals.
+// patterns per greatest difference, as mlocgen intervals.
 int PrintIntervals(const char* commonDirectory, char* errorOut, size_t errorCapacity);
 
 int PrintSkeletons(const char* commonDirectory, char* errorOut, size_t errorCapacity);

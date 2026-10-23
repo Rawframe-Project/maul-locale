@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The validators of the number units (record mloc-0021,
-// number_tables.h), for the kind list, and the reads the formatters make
-// of them. Each validator reads its own unit alone; the indexes one unit
-// holds into another are bounded when a formatter is made.
+// The validators of the number units (number_tables.h), for the kind list,
+// and the reads the formatters make of them. Each validator reads its own
+// unit alone; the indexes one unit holds into another are bounded when a
+// formatter is made.
 
 #ifndef MLOC_NUMBER_DATA_H
 #define MLOC_NUMBER_DATA_H

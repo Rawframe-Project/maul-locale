@@ -1,9 +1,8 @@
-# The unit names, the spell-out rules, the display names, the dates,
-# the zone names and relative time are data files of their own (records
-# mloc-0024, mloc-0034, mloc-0036 and mloc-0039 to mloc-0043); the
-# benchmark reads them from the source tree. The datetime part's and the
-# message part's, the grammar part's and the collation part's cases are
-# files of their own; collation reads its data file too.
+# The unit names, the spell-out rules, the display names, the dates, the
+# zone names and relative time are data files of their own; the benchmark
+# reads them from the source tree. The datetime part's and the message
+# part's, the grammar part's and the collation part's cases are files of
+# their own; collation reads its data file too.
 target_sources(${PROJECT_NAME}_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bench_dates.c
                                              ${CMAKE_CURRENT_SOURCE_DIR}/bench_messages.c
                                              ${CMAKE_CURRENT_SOURCE_DIR}/bench_grammar.c
@@ -17,8 +16,8 @@ target_compile_definitions(${PROJECT_NAME}_bench
             MLOC_RELATIVE_FILE="${PROJECT_SOURCE_DIR}/src/generated/relative.mloc"
             MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
 # The catalog cases read a set of 2,000 keys that the catalog tool
-# compiles at build time (record mloc-0062); without the tools the
-# benchmark has no catalog cases.
+# compiles at build time; without the tools the benchmark has no catalog
+# cases.
 target_sources(${PROJECT_NAME}_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bench_catalog.c)
 if(TARGET mloccat)
     set(MLOC_BENCH_CATALOG ${CMAKE_CURRENT_BINARY_DIR}/catalog)

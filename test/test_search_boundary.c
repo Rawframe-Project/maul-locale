@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Search's grapheme cluster boundaries at any position (record
-// mloc-0074): for random texts of the code points the rules read back
-// through (regional indicators, emoji ZWJ sequences, conjuncts with
-// their linkers, Hangul jamo and syllables, prepends, spacing marks, CR
-// and LF, controls) and ill-formed bytes, every code point boundary is
-// a boundary exactly when Maul Unicode's iterator over the whole text
-// says so, and the following boundary is the next it gives; the same
-// over each text's UTF-16 form, in units.
+// Search's grapheme cluster boundaries at any position: for random texts
+// of the code points the rules read back through (regional indicators,
+// emoji ZWJ sequences, conjuncts with their linkers, Hangul jamo and
+// syllables, prepends, spacing marks, CR and LF, controls) and ill-formed
+// bytes, every code point boundary is a boundary exactly when Maul
+// Unicode's iterator over the whole text says so, and the following
+// boundary is the next it gives; the same over each text's UTF-16 form, in
+// units.
 
 #include "search_boundary.h"
 #include "test_harness.h"

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit formatting (record mloc-0024): a number formatter's core within
-// the unit's pattern for the number's plural category. The patterns are
-// copied into the formatter, "{0}" marked as the number, so that one
-// pool holds what keys along the chain gave; the pattern around the
-// number is made from the copy each time the formatter is read. Percent
-// and per mille, short or narrow and not compact, take the locale's
-// percent pattern instead, as ICU's number_formatimpl.cpp does.
+// Unit formatting: a number formatter's core within the unit's pattern for
+// the number's plural category. The patterns are copied into the
+// formatter, "{0}" marked as the number, so that one pool holds what keys
+// along the chain gave; the pattern around the number is made from the
+// copy each time the formatter is read. Percent and per mille, short or
+// narrow and not compact, take the locale's percent pattern instead, as
+// ICU's number_formatimpl.cpp does.
 
 #include "data_view.h"
 #include "decimal.h"

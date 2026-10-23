@@ -1,5 +1,5 @@
 # The Chinese and Dangi years the generator takes as given rather than
-# from the model (record mloc-0040). tools/mlocgen writes them into
+# from the model. tools/mlocgen writes them into
 # src/generated/calendar_years.c in place of the model's years.
 #
 # A line: the calendar, the year (the Gregorian year whose July 1 it

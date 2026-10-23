@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A duration formatter made and read (maul-locale/duration.h, record
-// mloc-0044): the options resolved, the names of each unit-style field in
-// its width, the unit list of the style, and the separators and hour
-// padding of the locale's hms duration pattern, as ICU4X reads them.
+// A duration formatter made and read (maul-locale/duration.h): the options
+// resolved, the names of each unit-style field in its width, the unit list
+// of the style, and the separators and hour padding of the locale's hms
+// duration pattern, as ICU4X reads them.
 
 #include "duration_format.h"
 

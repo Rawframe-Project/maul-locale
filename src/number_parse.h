@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number parsing (record mloc-0032): a formatter's text read back as a
-// person types it, as ICU4C's DecimalFormat::parse reads it, into an
-// exact decimal and the offset where the number ended.
+// Number parsing: a formatter's text read back as a person types it, as
+// ICU4C's DecimalFormat::parse reads it, into an exact decimal and the
+// offset where the number ended.
 
 #ifndef MLOC_NUMBER_PARSE_H
 #define MLOC_NUMBER_PARSE_H

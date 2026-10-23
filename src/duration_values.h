@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A duration's fields read and checked as IsValidDuration checks them
-// (record mloc-0041), for the writers that need only their values.
+// A duration's fields read and checked as IsValidDuration checks them, for
+// the writers that need only their values.
 
 #ifndef MLOC_DURATION_VALUES_H
 #define MLOC_DURATION_VALUES_H

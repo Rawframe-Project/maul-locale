@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Every locale of CLDR's common/main with the character order it
-# inherits (its own file's, then its parent's by parentLocales or by
-# truncation, then root's), one "id<TAB>ltr|rtl" line each (a vertical
-# order, Mongolian's, being left to right in a horizontal line), for
-# conform_direction to check mlocGetLocaleDirection against (record
-# mloc-0045).
+# Every locale of CLDR's common/main with the character order it inherits
+# (its own file's, then its parent's by parentLocales or by truncation,
+# then root's), one "id<TAB>ltr|rtl" line each (a vertical order,
+# Mongolian's, being left to right in a horizontal line), for
+# conform_direction to check mlocGetLocaleDirection against.
 #
 # usage: cldr_directions.py <CLDR common>
 

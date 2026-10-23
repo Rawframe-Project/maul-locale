@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The units of the zone names data file, zone-names.mloc (record
-// mloc-0042), which the generator compiles from CLDR's metaZones.xml,
-// bcp47/timezone.xml and the locale files' timeZoneNames. Both index the
-// BCP 47 ids of the zone codes unit (zone_code_tables.h) of the same
-// CLDR release, by their place there. All integers are little-endian.
+// The units of the zone names data file, zone-names.mloc, which the
+// generator compiles from CLDR's metaZones.xml, bcp47/timezone.xml and the
+// locale files' timeZoneNames. Both index the BCP 47 ids of the zone codes
+// unit (zone_code_tables.h) of the same CLDR release, by their place
+// there. All integers are little-endian.
 //
 // Metazones, a unit of no locale. The payload is a header (u32 code
 // count, u32 period count, u32 metazone count, u32 preferred count),

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fixed-point astronomy (record mloc-0040) against Calendrical
-// Calculations' formulas evaluated in 45-digit decimal arithmetic by a
-// program outside the repository: new moons within 2^-28
-// of a day and solar longitudes within 2^-26 of a degree for five
-// thousand years either side of 2000, and the model well formed over
-// the whole range of dates.
+// The fixed-point astronomy against Calendrical Calculations' formulas
+// evaluated in 45-digit decimal arithmetic by a program outside the
+// repository: new moons within 2^-28 of a day and solar longitudes within
+// 2^-26 of a degree for five thousand years either side of 2000, and the
+// model well formed over the whole range of dates.
 
 #include "calendar_astro.h"
 #include "test_harness.h"
@@ -115,8 +114,8 @@ static const AstroCase s_deltas[] = {
     {INT64_C(-785141496545280), INT64_C(855199571)},
 };
 
-// The model's own bits (record mloc-0001: bit-exact on every machine),
-// from the 128-bit and the four-product paths alike: lunation and moment.
+// The model's own bits (bit-exact on every machine), from the 128-bit and
+// the four-product paths alike: lunation and moment.
 static const AstroCase s_goldenMoons[] = {
     {-3400000, INT64_C(-431028803347237565)},
     {-37118, INT64_C(-4707734909594035)},

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin table (record mloc-0072), ICU4C's CollationFastLatin
-// format version 2: 16-bit words, built by the generator for each unit.
+// The fast Latin table, ICU4C's CollationFastLatin format version 2:
+// 16-bit words, built by the generator for each unit.
 //
 //   word 0  the version (2) in bits 15..8 and the header's length (5) in
 //           7..0

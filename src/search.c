@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation search (record mloc-0074): ICU4C 79's usearch_search over
-// the processed elements (search_elements.h), its match bounds on
-// grapheme clusters (search_boundary.h).
+// Collation search: ICU4C 79's usearch_search over the processed elements
+// (search_elements.h), its match bounds on grapheme clusters
+// (search_boundary.h).
 
 #include "maul-locale/search.h"
 

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Kyrgyz for the Turkic engine (grammar_turkic.h, record mloc-0047), in
-// its Cyrillic alphabet: four-way harmony for both vowels (A rounds after
-// о and ө, not after у; I after each rounded vowel), a suffix's first
-// consonant chosen by the stem's last sound (a vowel, a glide, another
-// voiced consonant, a voiceless one), no instrumental case and no copula
-// suffix, the question particle joined; no mark before suffixes, as the
-// press writes them ("АКШнын", "350дөн"); a final п or к voiced before a
-// vowel and a final ь dropped before any suffix (apertium-kir's model).
+// Kyrgyz for the Turkic engine (grammar_turkic.h), in its Cyrillic
+// alphabet: four-way harmony for both vowels (A rounds after о and ө, not
+// after у; I after each rounded vowel), a suffix's first consonant chosen
+// by the stem's last sound (a vowel, a glide, another voiced consonant, a
+// voiceless one), no instrumental case and no copula suffix, the question
+// particle joined; no mark before suffixes, as the press writes them
+// ("АКШнын", "350дөн"); a final п or к voiced before a vowel and a final ь
+// dropped before any suffix (apertium-kir's model).
 
 #include "grammar_turkic.h"
 

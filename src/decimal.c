@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Decimal values (record mloc-0019): made from integers, parsed and
-// written as text, and the plural operands of their digits. A digit's
-// power of ten is the exponent plus its distance from the last digit.
+// Decimal values: made from integers, parsed and written as text, and the
+// plural operands of their digits. A digit's power of ten is the exponent
+// plus its distance from the last digit.
 
 #include "decimal.h"
 

@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Script reordering (record mloc-0069), as ICU4C's
-// CollationData::makeReorderRanges and CollationSettings::setReordering
-// build it over the root's script starts: the codes asked for (Maul
-// Unicode's packed scripts and the five groups) move to the front in
-// their order, the groups not named stay first, the rest follow in the
-// root's order, and Zzzz ("others") sends the codes after it to the end.
-// A primary's lead byte is mapped through a table; a lead byte that two
-// ranges share is mapped through the ranges.
+// Script reordering, as ICU4C's CollationData::makeReorderRanges and
+// CollationSettings::setReordering build it over the root's script starts:
+// the codes asked for (Maul Unicode's packed scripts and the five groups)
+// move to the front in their order, the groups not named stay first, the
+// rest follow in the root's order, and Zzzz ("others") sends the codes
+// after it to the end. A primary's lead byte is mapped through a table; a
+// lead byte that two ranges share is mapped through the ranges.
 
 #ifndef MLOC_SRC_COLLATION_REORDER_H
 #define MLOC_SRC_COLLATION_REORDER_H

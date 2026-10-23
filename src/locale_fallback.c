@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Locale keys and fallback per component (record mloc-0016). A locale
-// becomes its key once, with likely subtags; each next key is the
-// component's explicit parent, else the last variant, region or script
-// dropped (a script giving root in the main component), else root. The
-// parents table's layout is in locale_tables.h.
+// Locale keys and fallback per component. A locale becomes its key once,
+// with likely subtags; each next key is the component's explicit parent,
+// else the last variant, region or script dropped (a script giving root in
+// the main component), else root. The parents table's layout is in
+// locale_tables.h.
 
 #include "locale_fallback.h"
 

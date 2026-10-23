@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit identifiers (UTS #35 Part 2, Unit Identifiers; record mloc-0023):
-// a core unit (products of single units, "per" once or more, unit
-// constants) or a mixed unit ("foot-and-inch"), parsed against the unit
-// table with its deprecated aliases replaced.
+// Unit identifiers (UTS #35 Part 2, Unit Identifiers): a core unit
+// (products of single units, "per" once or more, unit constants) or a
+// mixed unit ("foot-and-inch"), parsed against the unit table with its
+// deprecated aliases replaced.
 
 #ifndef MLOC_UNIT_ID_H
 #define MLOC_UNIT_ID_H

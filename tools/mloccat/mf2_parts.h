@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // An MF2 message split into what a translator changes and what they must
-// not (records mloc-0058 and mloc-0060): each pattern's text, its
-// placeholders and markup, and the syntax around the patterns
-// (declarations, selectors, variant keys, the quotes of a quoted pattern
-// and the message's leading space). The parts tile the message in order,
-// so their bytes joined give it back; a pattern's start and end are
-// marked by parts of no length.
+// not: each pattern's text, its placeholders and markup, and the syntax
+// around the patterns (declarations, selectors, variant keys, the quotes
+// of a quoted pattern and the message's leading space). The parts tile the
+// message in order, so their bytes joined give it back; a pattern's start
+// and end are marked by parts of no length.
 
 #ifndef MLOCCAT_MF2_PARTS_H
 #define MLOCCAT_MF2_PARTS_H

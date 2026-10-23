@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the inflector (records mloc-0046 to mloc-0048),
-// Turkish, Kazakh, Kyrgyz, Azerbaijani, Uzbek, Turkmen or Hungarian, with
-// the spell-out file beside the compiled-in data.
-// The first two bytes choose the request (case, plural, possessor,
-// copula, question, common noun, reading) and the language, the third
-// where the text ends and the hint begins (0 for no hint); the rest is
-// the text. An inflection refuses with invalid input, a missing number
-// reading or capacity alone; it measures what it then writes, writes the
-// same twice, writes valid UTF-8 that begins with the text (but a stem's
-// changed end), and its parts tile it. The text read as a decimal is
-// inflected as a number too.
+// libFuzzer target for the inflector, Turkish, Kazakh, Kyrgyz,
+// Azerbaijani, Uzbek, Turkmen or Hungarian, with the spell-out file beside
+// the compiled-in data. The first two bytes choose the request (case,
+// plural, possessor, copula, question, common noun, reading) and the
+// language, the third where the text ends and the hint begins (0 for no
+// hint); the rest is the text. An inflection refuses with invalid input, a
+// missing number reading or capacity alone; it measures what it then
+// writes, writes the same twice, writes valid UTF-8 that begins with the
+// text (but a stem's changed end), and its parts tile it. The text read as
+// a decimal is inflected as a number too.
 
 #include "maul-locale/data.h"
 #include "maul-locale/grammar.h"

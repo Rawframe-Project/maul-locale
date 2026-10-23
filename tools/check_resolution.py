@@ -3,12 +3,12 @@
 # Copyright (c) 2026 Sirac Ozmen
 #
 # Compares the generator's CLDR resolution with CLDR's JSON of the same
-# release, which CLDR's own tools resolve (record mloc-0006: the JSON is
-# an oracle, never an input). For every locale the JSON has, it asks
-# mlocgen for number symbols, Gregorian month and day names in every
-# context and width (the paths root aliases the most), Buddhist months
-# (aliased to Gregorian), unit names and patterns (lateral count
-# fallback, and narrow aliased to short), and language names.
+# release, which CLDR's own tools resolve (the JSON is an oracle, never an
+# input). For every locale the JSON has, it asks mlocgen for number
+# symbols, Gregorian month and day names in every context and width (the
+# paths root aliases the most), Buddhist months (aliased to Gregorian),
+# unit names and patterns (lateral count fallback, and narrow aliased to
+# short), and language names.
 #
 # usage: check_resolution.py <mlocgen> <CLDR common dir> <CLDR JSON full dir>
 # It shows five differences per area; ALL=1 shows every one.

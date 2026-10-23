@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalog chains (record mloc-0055): catalogs of one set in fallback
-// order, their messages bound once into the caller's cache. The cache is
-// a head (the arena's bytes used), a slot of eight bytes per key index,
-// and the arena the bound messages are written into, each at a multiple
-// of eight. A cache whose every slot is bound is only read, so threads
-// may share it.
+// Catalog chains: catalogs of one set in fallback order, their messages
+// bound once into the caller's cache. The cache is a head (the arena's
+// bytes used), a slot of eight bytes per key index, and the arena the
+// bound messages are written into, each at a multiple of eight. A cache
+// whose every slot is bound is only read, so threads may share it.
 
 #include "catalog_tables.h"
 #include "catalog_view.h"

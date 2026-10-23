@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks mlocgen's skeleton matching (record mloc-0042, UTS #35
-# "Matching Skeletons") against ICU4C 79's DateTimePatternGenerator: every
-# question of test/skeletons_icu.tsv must get ICU's pattern, or the one
+# Checks mlocgen's skeleton matching (UTS #35 "Matching Skeletons")
+# against ICU4C 79's DateTimePatternGenerator: every question of
+# test/skeletons_icu.tsv must get ICU's pattern, or the one
 # tools/skeleton-exceptions.txt gives where mlocgen follows CLDR's
 # inheritance and ICU's data build does not. An exception that no longer
 # differs from ICU is reported too, so the list stays exact.

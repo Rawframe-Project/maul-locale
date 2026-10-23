@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Code point tries (record mloc-0063): the generator's builder and the
-// library's reader agree on every code point for maps of different
-// shapes, blocks are shared, and the reader refuses a trie whose sizes or
-// offsets do not hold.
+// Code point tries: the generator's builder and the library's reader agree
+// on every code point for maps of different shapes, blocks are shared, and
+// the reader refuses a trie whose sizes or offsets do not hold.
 
 #include "code_point_trie.h"
 #include "test_harness.h"

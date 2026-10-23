@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A formatted message's parts (maul-locale/message.h, record mloc-0045):
-// text, placeholders, fallbacks, markup and isolation marks tiling the
-// text in order, each placeholder's own parts inside it as its function
-// reports them, a program function's parts passed on, and none when the
-// call does not succeed.
+// A formatted message's parts (maul-locale/message.h): text, placeholders,
+// fallbacks, markup and isolation marks tiling the text in order, each
+// placeholder's own parts inside it as its function reports them, a
+// program function's parts passed on, and none when the call does not
+// succeed.
 
 #include "test_harness.h"
 

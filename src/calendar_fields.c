@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Dates from fields given by name (maul-locale/calendar.h, record
-// mloc-0040): Temporal's PlainDate.with, its fields merged as
-// CalendarMergeFields merges them, and the Intl Era and Month Code
-// proposal's NonISOMonthDayToISOReferenceDate.
+// Dates from fields given by name (maul-locale/calendar.h): Temporal's
+// PlainDate.with, its fields merged as CalendarMergeFields merges them,
+// and the Intl Era and Month Code proposal's
+// NonISOMonthDayToISOReferenceDate.
 
 #include "calendar_year.h"
 

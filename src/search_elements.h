@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A text's processed elements for search (record mloc-0074), as ICU4C's
-// UCollationPCE makes them: each 64-bit element split into ICU's two
-// 32-bit halves (the second, when not 0, marked as a continuation), and
-// each half reduced to the collator's strength, 16 bits a level:
-// primary in bits 63..48, secondary 47..32, tertiary 31..16, quaternary
-// 15..0. Under shifted, a half below the variable top keeps only its
-// primary, as the quaternary (0 below the quaternary strength), and the
-// primary ignorables after it are dropped; at the quaternary strength
-// and above, every other half's quaternary is FFFF. Halves that reduce
-// to 0 are passed over.
+// A text's processed elements for search, as ICU4C's UCollationPCE makes
+// them: each 64-bit element split into ICU's two 32-bit halves (the
+// second, when not 0, marked as a continuation), and each half reduced to
+// the collator's strength, 16 bits a level: primary in bits 63..48,
+// secondary 47..32, tertiary 31..16, quaternary 15..0. Under shifted, a
+// half below the variable top keeps only its primary, as the quaternary (0
+// below the quaternary strength), and the primary ignorables after it are
+// dropped; at the quaternary strength and above, every other half's
+// quaternary is FFFF. Halves that reduce to 0 are passed over.
 //
 // Each element has a source range: a half's own element's, the second
 // half's empty at the first's end, as ICU4C's iterator offsets go.

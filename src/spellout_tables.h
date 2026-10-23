@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The spell-out part's units (record mloc-0034), shared by the library
-// and the generator. All integers are little-endian.
+// The spell-out part's units, shared by the library and the generator. All
+// integers are little-endian.
 //
 // A group of rules (spell-out, ordinal suffixes, numbering systems), a
 // unit per locale key whose own file has the group (the lookup along the

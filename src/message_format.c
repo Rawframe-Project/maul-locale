@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Formatting a bound message (maul-locale/message.h, record mloc-0045):
-// the pattern selected, then each piece written, each placeholder
-// resolved where it stands (message_resolve).
+// Formatting a bound message (maul-locale/message.h): the pattern
+// selected, then each piece written, each placeholder resolved where it
+// stands (message_resolve).
 
 #include "message_format.h"
 

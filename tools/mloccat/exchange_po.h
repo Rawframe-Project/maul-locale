@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// PO exchange (record mloc-0059), for translators who work in gettext's
-// tools. An export holds one translation: an entry per key the source
-// asks to translate, msgctxt its key, msgid the source's MF2 text,
-// msgstr the translation's (empty when it has none), flagged mf2-format,
-// and fuzzy when stale; the source entry's comment and @param lines are
-// its extracted comments. An import puts each translated entry back into
-// the translation, adding the keys it lacked where the source has them,
-// and records the msgid's hash as the source it answers, unless fuzzy.
+// PO exchange, for translators who work in gettext's tools. An export
+// holds one translation: an entry per key the source asks to translate,
+// msgctxt its key, msgid the source's MF2 text, msgstr the translation's
+// (empty when it has none), flagged mf2-format, and fuzzy when stale; the
+// source entry's comment and @param lines are its extracted comments. An
+// import puts each translated entry back into the translation, adding the
+// keys it lacked where the source has them, and records the msgid's hash
+// as the source it answers, unless fuzzy.
 
 #ifndef MLOCCAT_EXCHANGE_PO_H
 #define MLOCCAT_EXCHANGE_PO_H

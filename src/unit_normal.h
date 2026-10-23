@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit identifiers in their normal form (record mloc-0025): parsed into
-// the unit table's single units, merged and sorted as ICU's MeasureUnit
-// normalizes them, and written back.
+// Unit identifiers in their normal form: parsed into the unit table's
+// single units, merged and sorted as ICU's MeasureUnit normalizes them,
+// and written back.
 
 #ifndef MLOC_UNIT_NORMAL_H
 #define MLOC_UNIT_NORMAL_H

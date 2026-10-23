@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The generator's data file writer against the library's reader: what
-// the writer makes opens, finds every unit it was given, stores
-// identical payloads once, and gives the same bytes whatever the order
-// the units came in (record mloc-0014).
+// The generator's data file writer against the library's reader: what the
+// writer makes opens, finds every unit it was given, stores identical
+// payloads once, and gives the same bytes whatever the order the units
+// came in.
 
 #include "data_format.h"
 #include "data_view.h"

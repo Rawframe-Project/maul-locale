@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin compare (record mloc-0072) against the general path:
-// random texts of fast characters, with a few it bails out on, compared
-// through mlocCompare must order as their sort keys do (the keys never
-// read the table), under tailorings with contractions and under every
-// option the fast compare reads; and over the root's table it answers
-// every pair of characters the table holds itself, as the general
-// compare does, unless the settings make it bail out; a precomposed
-// letter whose marks a contraction reads past bails out on the mark.
+// The fast Latin compare against the general path: random texts of fast
+// characters, with a few it bails out on, compared through mlocCompare
+// must order as their sort keys do (the keys never read the table), under
+// tailorings with contractions and under every option the fast compare
+// reads; and over the root's table it answers every pair of characters the
+// table holds itself, as the general compare does, unless the settings
+// make it bail out; a precomposed letter whose marks a contraction reads
+// past bails out on the mark.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

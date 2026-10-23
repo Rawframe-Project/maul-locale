@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.PlainDateTime cases (record mloc-0041): every
-// assertion its tests make about a date-time made from ISO fields, a
-// date-time plus a duration, a rounded date-time, or the rounded
-// difference of two, in test262_datetime.inc, checked against
-// mlocMakeDateTime, mlocAddToDateTime, mlocRoundDateTime and
-// mlocDateTimeUntil. A difference is given as a host gives it: its time
-// part balanced by mlocBalanceTimeDuration to the largest unit (days for
-// a date unit, added to the date part's), each field as the float64
-// Temporal keeps; since is until with the mode negated. The rows were
-// recorded by running the tests on the library through a reader of
-// their JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal.PlainDateTime cases: every assertion its tests make
+// about a date-time made from ISO fields, a date-time plus a duration, a
+// rounded date-time, or the rounded difference of two, in
+// test262_datetime.inc, checked against mlocMakeDateTime,
+// mlocAddToDateTime, mlocRoundDateTime and mlocDateTimeUntil. A difference
+// is given as a host gives it: its time part balanced by
+// mlocBalanceTimeDuration to the largest unit (days for a date unit, added
+// to the date part's), each field as the float64 Temporal keeps; since is
+// until with the mode negated. The rows were recorded by running the tests
+// on the library through a reader of their JavaScript, kept in the docs
+// with the oracle programs.
 
 #include "test_harness.h"
 

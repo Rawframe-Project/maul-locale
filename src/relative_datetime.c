@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A relative day and a time joined (maul-locale/relative.h, record
-// mloc-0043): the time formatter's relative date-time glue around the
-// relative formatter's day and the time formatter's time.
+// A relative day and a time joined (maul-locale/relative.h): the time
+// formatter's relative date-time glue around the relative formatter's day
+// and the time formatter's time.
 
 #include "date_data.h"
 #include "date_time.h"

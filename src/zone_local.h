@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date-time at an instant and an offset (record mloc-0041), for a
-// zone's offset read once.
+// The date-time at an instant and an offset, for a zone's offset read
+// once.
 
 #ifndef MLOC_ZONE_LOCAL_H
 #define MLOC_ZONE_LOCAL_H

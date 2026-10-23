@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time zones (record mloc-0041): the IANA time zone database's zones as
-// ECMA-262's Temporal and ECMA-402 read them. A zone is found by an
-// identifier, a Zone or Link name of the database in any letter case
-// ("America/New_York", "asia/calcutta") or a fixed offset ("+05:30"), and
-// keeps the identifier as given; two zones are equal when their
-// identifiers resolve to the same primary identifier. Its offset at any
-// instant comes from the data's zones unit, compiled from the pinned
-// database release (mlocGetDataVersion names it), and runs over
-// Temporal's whole range. A date and a time of day make a date-time,
-// which a zone maps to the instants it names (none in a gap, two in a
-// fold) and back.
+// Time zones: the IANA time zone database's zones as ECMA-262's Temporal
+// and ECMA-402 read them. A zone is found by an identifier, a Zone or Link
+// name of the database in any letter case ("America/New_York",
+// "asia/calcutta") or a fixed offset ("+05:30"), and keeps the identifier
+// as given; two zones are equal when their identifiers resolve to the same
+// primary identifier. Its offset at any instant comes from the data's
+// zones unit, compiled from the pinned database release
+// (mlocGetDataVersion names it), and runs over Temporal's whole range. A
+// date and a time of day make a date-time, which a zone maps to the
+// instants it names (none in a gap, two in a fold) and back.
 
 #ifndef MAUL_LOCALE_ZONE_H
 #define MAUL_LOCALE_ZONE_H

@@ -2,23 +2,22 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks the library's parsers of Temporal's strings (record mloc-0041)
-# against this program's own reading of ECMA-262's grammar
-# (temporal/grammar.emu): each goal as regular expressions over its
-# basic and extended forms, with backtracking where the library reads
-# ahead once; the early errors, ParseISODateTime's annotation rules,
-# ParseTemporalDurationString's exact fractions and CreateTemporalDuration's
-# limits, ParseDateTimeUTCOffset, ParseTemporalTimeZoneString and
-# ParseTemporalCalendarString in code. The strings are every string
-# literal of test262's Temporal tests given as an argument, strings
-# assembled from the grammar's pieces and near misses, and each of those
-# with a byte dropped, doubled or changed. The writers are checked the
-# same way against this program's own reading of ECMA-262's formatting
-# operations (TemporalDateToString to TemporalDurationToString,
-# FormatUTCOffsetNanoseconds), over dates and instants across Temporal's
-# range, times, offset zones, every precision and show option, and
-# durations with exact sub-second sums past 2^64; each string written is
-# also read back through the library's parser.
+# Checks the library's parsers of Temporal's strings against this
+# program's own reading of ECMA-262's grammar (temporal/grammar.emu): each
+# goal as regular expressions over its basic and extended forms, with
+# backtracking where the library reads ahead once; the early errors,
+# ParseISODateTime's annotation rules, ParseTemporalDurationString's exact
+# fractions and CreateTemporalDuration's limits, ParseDateTimeUTCOffset,
+# ParseTemporalTimeZoneString and ParseTemporalCalendarString in code. The
+# strings are every string literal of test262's Temporal tests given as an
+# argument, strings assembled from the grammar's pieces and near misses,
+# and each of those with a byte dropped, doubled or changed. The writers
+# are checked the same way against this program's own reading of
+# ECMA-262's formatting operations (TemporalDateToString to
+# TemporalDurationToString, FormatUTCOffsetNanoseconds), over dates and
+# instants across Temporal's range, times, offset zones, every precision
+# and show option, and durations with exact sub-second sums past 2^64;
+# each string written is also read back through the library's parser.
 #
 # usage: check_ixdtf.py <conform_ixdtf> [test262 directory]
 

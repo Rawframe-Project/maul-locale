@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date-time formatter (maul-locale/datetime.h, record mloc-0042): a
-// date formatter's state, a time formatter's, and the calendar's atTime
-// glue between them, as ICU4C's DateTimePatternGenerator composes a
-// skeleton it has no single item for; or a weekday with a time, which
-// one item covers, matched whole unless a zone follows the time.
+// The date-time formatter (maul-locale/datetime.h): a date formatter's
+// state, a time formatter's, and the calendar's atTime glue between them,
+// as ICU4C's DateTimePatternGenerator composes a skeleton it has no single
+// item for; or a weekday with a time, which one item covers, matched whole
+// unless a zone follows the time.
 
 #include "bytes.h"
 #include "date_format.h"

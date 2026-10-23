@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zone identifiers (record mloc-0041): every Zone and Link name of
-// the source, the zone whose data each reads, and its primary identifier
-// as ECMA-402's AvailableNamedTimeZoneIdentifiers resolves it.
+// The zone identifiers: every Zone and Link name of the source, the zone
+// whose data each reads, and its primary identifier as ECMA-402's
+// AvailableNamedTimeZoneIdentifiers resolves it.
 
 #ifndef MLOCGEN_ZONE_IDS_H
 #define MLOCGEN_ZONE_IDS_H

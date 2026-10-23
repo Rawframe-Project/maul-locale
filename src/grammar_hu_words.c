@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Hungarian stems the rules cannot tell (record mloc-0048), from the
-// grammars (Rounds, Hungarian: An Essential Grammar; Törkenczy, Hungarian
-// Verbs and Essentials of Grammar) and the spelling rules (AkH 12),
-// each checked against an oracle: lowering stems, whose linking vowel is
-// a or e (házat, könyvet); stems that shorten a vowel, drop one or take
-// a v before a linking vowel (vizet, bokrot, lovat); stems whose
-// harmony is back though their vowels are front (hídon); and stems whose
-// accusative takes a linking vowel after a consonant it otherwise joins
-// (mézet). Sorted by the bytes of the key.
+// The Hungarian stems the rules cannot tell, from the grammars (Rounds,
+// Hungarian: An Essential Grammar; Törkenczy, Hungarian Verbs and
+// Essentials of Grammar) and the spelling rules (AkH 12), each checked
+// against an oracle: lowering stems, whose linking vowel is a or e (házat,
+// könyvet); stems that shorten a vowel, drop one or take a v before a
+// linking vowel (vizet, bokrot, lovat); stems whose harmony is back though
+// their vowels are front (hídon); and stems whose accusative takes a
+// linking vowel after a consonant it otherwise joins (mézet). Sorted by
+// the bytes of the key.
 
 #include "grammar_hu.h"
 

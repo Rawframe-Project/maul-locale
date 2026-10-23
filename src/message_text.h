@@ -36,13 +36,13 @@ bool mlocMessageIsNameStart(uint32_t c);
 // name-char: name-start, digits, "-" and ".".
 bool mlocMessageIsNameChar(uint32_t c);
 
-// The offset of a name's first code point whose NFC form leaves the
-// name no name, or the name's length when none does (record mloc-0045).
-// Names are stored in NFC and read back as names; of the code points
-// NFC changes, a few become characters no name holds (U+037E becomes
-// ";", U+1FEF "`"). Composition with a neighbour never does: a
-// composite is a name character whenever its parts are (checked over
-// every canonical composite), so each code point is checked alone.
+// The offset of a name's first code point whose NFC form leaves the name
+// no name, or the name's length when none does. Names are stored in NFC
+// and read back as names; of the code points NFC changes, a few become
+// characters no name holds (U+037E becomes ";", U+1FEF "`"). Composition
+// with a neighbour never does: a composite is a name character whenever
+// its parts are (checked over every canonical composite), so each code
+// point is checked alone.
 size_t mlocMessageNfcNameBreak(const uint8_t* name, size_t length);
 
 #endif

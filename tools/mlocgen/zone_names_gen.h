@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zone names data file (record mloc-0042, src/zone_name_tables.h):
-// the metazone unit from supplemental/metaZones.xml and
-// bcp47/timezone.xml, and per locale key the zone names of its
-// timeZoneNames, each value CLDR resolves filed where the key's chain
-// would give another, as the names are filed.
+// The zone names data file (src/zone_name_tables.h): the metazone unit
+// from supplemental/metaZones.xml and bcp47/timezone.xml, and per locale
+// key the zone names of its timeZoneNames, each value CLDR resolves filed
+// where the key's chain would give another, as the names are filed.
 
 #ifndef MLOCGEN_ZONE_NAMES_GEN_H
 #define MLOCGEN_ZONE_NAMES_GEN_H

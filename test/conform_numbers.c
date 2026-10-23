@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// CLDR's decimal format test data against the library (record mloc-0021):
-// reads the lines of testData/decimal's files ("locale<TAB>number_format
+// CLDR's decimal format test data against the library: reads the lines of
+// testData/decimal's files ("locale<TAB>number_format
 // <TAB>format_length<TAB>input<TAB>expected") and formats each input, a
-// double taken as its shortest decimal, on the compiled-in data. CLDR
-// made the files with ICU4J's NumberFormatter defaults, which these
-// options state: at most six fraction digits (of the mantissa in
-// scientific notation), half to even; compact rows round by compact
-// notation's own rule, half to even. Where the files
-// predate the pinned release's data, tools/number-exceptions.txt names
-// the text to replace in a locale's expected lines, or a line's expected
-// text, with its reason; each entry must be used. CI runs it.
+// double taken as its shortest decimal, on the compiled-in data. CLDR made
+// the files with ICU4J's NumberFormatter defaults, which these options
+// state: at most six fraction digits (of the mantissa in scientific
+// notation), half to even; compact rows round by compact notation's own
+// rule, half to even. Where the files predate the pinned release's data,
+// tools/number-exceptions.txt names the text to replace in a locale's
+// expected lines, or a line's expected text, with its reason; each entry
+// must be used. CI runs it.
 //
 // usage: cat decimals*.tsv | conform_numbers <number-exceptions.txt>
 

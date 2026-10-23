@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number part's units (record mloc-0021), shared by the library and
-// the generator. All integers are little-endian.
+// The number part's units, shared by the library and the generator. All
+// integers are little-endian.
 //
 // Numbering systems, a unit of no locale: a header (u32 count, u32 0),
 // then per numeric system, sorted by id: the id packed (u64, the first

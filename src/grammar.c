@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The inflector (maul-locale/grammar.h, records mloc-0046 to
-// mloc-0049): a text's end found and read (a number by its spoken form,
-// capitals by their letters' names, a word as written or as the hint
-// says), and the language's suffixes written after it with the boundary
-// mark its spelling asks for.
+// The inflector (maul-locale/grammar.h): a text's end found and read (a
+// number by its spoken form, capitals by their letters' names, a word as
+// written or as the hint says), and the language's suffixes written after
+// it with the boundary mark its spelling asks for.
 
 #include "maul-locale/grammar.h"
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A duration formatter's state (maul-locale/duration.h, record
-// mloc-0044): ECMA-402's resolved options, the locale's names of each
-// unit-style field, its unit list and its digital separators.
+// A duration formatter's state (maul-locale/duration.h): ECMA-402's
+// resolved options, the locale's names of each unit-style field, its unit
+// list and its digital separators.
 
 #ifndef MLOC_DURATION_FORMAT_H
 #define MLOC_DURATION_FORMAT_H

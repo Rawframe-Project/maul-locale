@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The date names unit (src/date_tables.h): each locale's months,
-// weekdays, quarters, eras, cyclic years, leap month patterns and day
-// periods in a calendar, resolved by CLDR's inheritance, kept once each
-// as names, lists and name sets, and its day period rules (record
-// mloc-0042).
+// The date names unit (src/date_tables.h): each locale's months, weekdays,
+// quarters, eras, cyclic years, leap month patterns and day periods in a
+// calendar, resolved by CLDR's inheritance, kept once each as names, lists
+// and name sets, and its day period rules.
 
 #ifndef MLOCGEN_DATE_NAMES_GEN_H
 #define MLOCGEN_DATE_NAMES_GEN_H

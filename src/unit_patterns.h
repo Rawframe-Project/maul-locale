@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A unit formatter's contents (record mloc-0024) and its patterns,
-// shared by the simple path (unit_format.c) and the mixed units'
-// (unit_mixed_format.c).
+// A unit formatter's contents and its patterns, shared by the simple path
+// (unit_format.c) and the mixed units' (unit_mixed_format.c).
 
 #ifndef MLOC_UNIT_PATTERNS_H
 #define MLOC_UNIT_PATTERNS_H

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of instants through the public functions (record
-// mloc-0041): adding to the ends of Temporal's range, differences across
-// all of it, rounding as if positive before 1970, half-even's parity over
-// whole days, and every refusal.
+// The arithmetic of instants through the public functions: adding to the
+// ends of Temporal's range, differences across all of it, rounding as if
+// positive before 1970, half-even's parity over whole days, and every
+// refusal.
 
 #include "test_harness.h"
 

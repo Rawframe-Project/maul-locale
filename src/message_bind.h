@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The message formatter and bound messages (record mloc-0045). A bound
-// message is a header, copied in and out by bytes since the caller's
-// buffer may have any alignment, then a word per variable (the
-// declaration binding it, or none) and a word per expression (its
-// function's slot, and in the top byte the length of its chain of
-// declarations), then a word per expression for the resolutions it
-// makes, then a word per expression for its prepared value, and the
-// prepared values. It points into the compiled message and the
-// formatter.
+// The message formatter and bound messages. A bound message is a header,
+// copied in and out by bytes since the caller's buffer may have any
+// alignment, then a word per variable (the declaration binding it, or
+// none) and a word per expression (its function's slot, and in the top
+// byte the length of its chain of declarations), then a word per
+// expression for the resolutions it makes, then a word per expression for
+// its prepared value, and the prepared values. It points into the compiled
+// message and the formatter.
 
 #ifndef MLOC_SRC_MESSAGE_BIND_H
 #define MLOC_SRC_MESSAGE_BIND_H
@@ -111,9 +110,9 @@ bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter, MessageForm
 // library did not bind.
 bool mlocReadBound(const void* bound, BoundHeader* headerOut, MessageFormatter* formatterOut);
 
-// A bound message's words: the variables', then the expressions', then
-// the expressions' resolution counts, then where each expression's
-// prepared value is (record mloc-0045; message_prepare.h).
+// A bound message's words: the variables', then the expressions', then the
+// expressions' resolution counts, then where each expression's prepared
+// value is (message_prepare.h).
 const uint8_t* mlocBoundWords(const void* bound);
 
 // Reads and checks what a bind is given: the formatter, and the compiled

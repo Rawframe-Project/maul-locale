@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A text's processed elements backward (record mloc-0074), as ICU4C's
+// A text's processed elements backward, as ICU4C's
 // UCollationPCE::previousProcessed gives them: the raw 32-bit halves
-// before a position, walking back, gathered to one with a primary that
-// is not a continuation, then that chunk processed forward and handed
-// out last first. The shifted state goes on from one chunk to the one
-// before it, so a run without a primary at the text's start is
-// processed as if the chunk after it came first.
+// before a position, walking back, gathered to one with a primary that is
+// not a continuation, then that chunk processed forward and handed out
+// last first. The shifted state goes on from one chunk to the one before
+// it, so a run without a primary at the text's start is processed as if
+// the chunk after it came first.
 //
 // The halves come from pieces read forward: each piece ends where the
 // one after it starts (the first ends at the walk's start, the text

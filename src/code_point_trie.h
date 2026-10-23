@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A code point trie of 32-bit values (record mloc-0063), a part of a unit
-// rather than a unit of its own: collation's elements are its first use.
-// The layout follows ICU's fast code point trie in spirit, not in its
-// bytes: the BMP takes two reads, a supplementary code point three, and
-// every code point from the high start takes one value. Data blocks of
-// 64 values are shared wherever they are equal. The reader is inline,
-// so that the generator's tests read what the generator writes. All
-// numbers are little-endian.
+// A code point trie of 32-bit values, a part of a unit rather than a unit
+// of its own: collation's elements are its first use. The layout follows
+// ICU's fast code point trie in spirit, not in its bytes: the BMP takes
+// two reads, a supplementary code point three, and every code point from
+// the high start takes one value. Data blocks of 64 values are shared
+// wherever they are equal. The reader is inline, so that the generator's
+// tests read what the generator writes. All numbers are little-endian.
 //
 //   0  u32 highStart: a multiple of 4096 from 0x10000 to 0x110000
 //   4  u32 highValue, the value of every code point from highStart

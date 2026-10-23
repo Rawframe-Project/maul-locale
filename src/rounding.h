@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Temporal's rounding of integers (records mloc-0040, mloc-0041):
-// GetUnsignedRoundingMode, ApplyUnsignedRoundingMode on an exact
-// fraction, and RoundNumberToIncrement.
+// Temporal's rounding of integers: GetUnsignedRoundingMode,
+// ApplyUnsignedRoundingMode on an exact fraction, and
+// RoundNumberToIncrement.
 
 #ifndef MLOC_ROUNDING_H
 #define MLOC_ROUNDING_H

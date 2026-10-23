@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A zone's offsets read from the zones unit (zone_tables.h, record
-// mloc-0041): an identifier by name, the offset at a time and the next
-// transition. Times are seconds since 1970 in universal time, within
-// Temporal's range (±10⁸ days); the closing rule runs to its end.
+// A zone's offsets read from the zones unit (zone_tables.h): an identifier
+// by name, the offset at a time and the next transition. Times are seconds
+// since 1970 in universal time, within Temporal's range (±10⁸ days); the
+// closing rule runs to its end.
 
 #ifndef MLOC_ZONE_RULES_H
 #define MLOC_ZONE_RULES_H

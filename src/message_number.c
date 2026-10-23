@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number functions of messages (record mloc-0045).
+// The number functions of messages.
 
 #include "message_number.h"
 
@@ -23,7 +23,7 @@
 
 enum
 {
-    // The number part's limits (record mloc-0021).
+    // The number part's limits.
     integerDigitsLimit = 21,
     significantLimit = 21,
 };

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The matchers of number parsing (record mloc-0032), ICU4C 79's
-// NumberParserImpl matchers: each reads the text at a segment's offset
-// into a parse, moving the offset past what it read, or leaves both. The
-// parser (number_parse.c) builds their list from a formatter and runs it.
+// The matchers of number parsing, ICU4C 79's NumberParserImpl matchers:
+// each reads the text at a segment's offset into a parse, moving the
+// offset past what it read, or leaves both. The parser (number_parse.c)
+// builds their list from a formatter and runs it.
 
 #ifndef MLOC_PARSE_MATCH_H
 #define MLOC_PARSE_MATCH_H

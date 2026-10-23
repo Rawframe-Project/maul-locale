@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The root elements the tailoring builder reads (record mloc-0071), as
-// ICU4C's CollationBaseDataBuilder::buildRootElementsTable makes them
-// and its CollationRootElements reads them: every distinct element of
-// the root without its case bits, in order, so that the builder can ask
-// for the weight before or after a root weight at each level.
+// The root elements the tailoring builder reads, as ICU4C's
+// CollationBaseDataBuilder::buildRootElementsTable makes them and its
+// CollationRootElements reads them: every distinct element of the root
+// without its case bits, in order, so that the builder can ask for the
+// weight before or after a root weight at each level.
 //
 // The table: five index units, then the elements without a primary
 // (secondary and tertiary units), then the primaries. A primary unit

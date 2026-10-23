@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Locale identifiers (UTS #35 Part 1): a parsed locale is a fixed-size
-// value in canonical syntax (record mloc-0015).
+// value in canonical syntax.
 
 #ifndef MAUL_LOCALE_LOCALE_H
 #define MAUL_LOCALE_LOCALE_H
@@ -194,14 +194,14 @@ extern "C"
         mloc_componentGrammar = 4,
     };
 
-    /// Returns the next locale of a locale's fallback chain in a component
-    /// (record mloc-0016): the locale is first put in key form, with the
-    /// script likely subtags give it and left out when it is its language's
-    /// own ("zh-TW" is zh-Hant-TW, "sr-Cyrl-BA" is sr-BA); then its next
-    /// key is CLDR's explicit parent ("en-AU" gives "en-001", "es-MX"
-    /// "es-419"), else the last variant, the region or the script dropped,
-    /// where in the main component a script gives root ("zh-Hant" gives
-    /// "und", never "zh"). The extensions are kept. Root is "und".
+    /// Returns the next locale of a locale's fallback chain in a component: the
+    /// locale is first put in key form, with the script likely subtags give it
+    /// and left out when it is its language's own ("zh-TW" is zh-Hant-TW,
+    /// "sr-Cyrl-BA" is sr-BA); then its next key is CLDR's explicit parent
+    /// ("en-AU" gives "en-001", "es-MX" "es-419"), else the last variant, the
+    /// region or the script dropped, where in the main component a script gives
+    /// root ("zh-Hant" gives "und", never "zh"). The extensions are kept. Root
+    /// is "und".
     ///
     /// @param data       The data with the parents and likely subtags.
     /// @param component  The component whose parents apply.
@@ -226,12 +226,12 @@ extern "C"
         uint64_t opaque[3];
     } mlocMatchEntry;
 
-    /// Prepares supported locales for mlocMatchLocales (record mloc-0017):
-    /// maximizes each as matching does and orders them as they are tried,
-    /// those equivalent to the default locale first, then CLDR's paradigm
-    /// locales (en, en-GB, es, es-419, pt-BR, pt-PT), then the rest, each
-    /// group in the order given. Give canonicalized locales
-    /// (mlocCanonicalizeLocale): matching replaces no aliases.
+    /// Prepares supported locales for mlocMatchLocales: maximizes each as
+    /// matching does and orders them as they are tried, those equivalent to the
+    /// default locale first, then CLDR's paradigm locales (en, en-GB, es,
+    /// es-419, pt-BR, pt-PT), then the rest, each group in the order given.
+    /// Give canonicalized locales (mlocCanonicalizeLocale): matching replaces
+    /// no aliases.
     ///
     /// @param data           The data with the likely subtags and the
     ///                       matching table.
@@ -287,14 +287,14 @@ extern "C"
     } mlocMatch;
 
     /// Finds the supported locale that best matches the desired locales in
-    /// their order of preference, as ICU's LocaleMatcher does (record
-    /// mloc-0017). Each desired locale is maximized and each supported one
-    /// gets the distance CLDR's rules give its language, script and region
-    /// (regions by groups: "es-MX" is nearer "es-419" than "es", "en-IN"
-    /// nearer "en-GB" than "en-US"); the nearest wins, a tie going to the
-    /// one tried first unless a later one has its language's likely script
-    /// or region. Each later desired locale is demoted by the distance of
-    /// two English regions, so that it wins only with a closer match.
+    /// their order of preference, as ICU's LocaleMatcher does. Each desired
+    /// locale is maximized and each supported one gets the distance CLDR's
+    /// rules give its language, script and region (regions by groups: "es-MX"
+    /// is nearer "es-419" than "es", "en-IN" nearer "en-GB" than "en-US"); the
+    /// nearest wins, a tie going to the one tried first unless a later one has
+    /// its language's likely script or region. Each later desired locale is
+    /// demoted by the distance of two English regions, so that it wins only
+    /// with a closer match.
     ///
     /// @param data          The data mlocPrepareMatch was given.
     /// @param supported     The supported locales mlocPrepareMatch was

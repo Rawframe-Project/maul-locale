@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Relative time (maul-locale/relative.h, record mloc-0043): an amount's
-// magnitude written by the number formatting in the pattern of its
-// direction and plural category, the patterns read along the locale's
-// chain from relative.mloc (relative_tables.h), or a near amount's name.
+// Relative time (maul-locale/relative.h): an amount's magnitude written by
+// the number formatting in the pattern of its direction and plural
+// category, the patterns read along the locale's chain from relative.mloc
+// (relative_tables.h), or a near amount's name.
 
 #include "relative_format.h"
 

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A relative time formatter's state (maul-locale/relative.h, record
-// mloc-0043), for the relative time formatter and the joining of a
-// relative day with a time.
+// A relative time formatter's state (maul-locale/relative.h), for the
+// relative time formatter and the joining of a relative day with a time.
 
 #ifndef MLOC_RELATIVE_FORMAT_H
 #define MLOC_RELATIVE_FORMAT_H

@@ -1,7 +1,7 @@
 # The W3C Internationalization WG's message resource syntax, an Editor's
-# Draft (record mloc-0053), which tools/mloccat/resource.c follows rule
-# by rule: the commit of github.com/w3c/message-resources, then the
-# grammar file with its SHA-256. The draft is not copied here; a new
-# draft revision is read, the reader changed to it, and this pin moved.
+# Draft, which tools/mloccat/resource.c follows rule by rule: the commit
+# of github.com/w3c/message-resources, then the grammar file with its
+# SHA-256. The draft is not copied here; a new draft revision is read, the
+# reader changed to it, and this pin moved.
 commit 5f19cffac034fe1e5d189fe1a0f078faed18c634
 file resource.abnf 0d9ae3eabdc017921f8190841390e7ab59342782791d960e3e71cfc7cab37d2a

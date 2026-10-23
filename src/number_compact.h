@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Compact notation (record mloc-0021): the power of ten a value is
-// divided by and the pattern its plural category takes, from a locale's
-// compact table (number_tables.h).
+// Compact notation: the power of ten a value is divided by and the pattern
+// its plural category takes, from a locale's compact table
+// (number_tables.h).
 
 #ifndef MLOC_NUMBER_COMPACT_H
 #define MLOC_NUMBER_COMPACT_H

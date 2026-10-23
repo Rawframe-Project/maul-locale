@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The names part's units (record mloc-0036), shared by the library and
-// the generator. They ship as a data file of their own, names.mloc, and
-// the subdivision names as another, subdivisions.mloc, with a codes unit
-// and names units of its own (record mloc-0039). All integers are
-// little-endian.
+// The names part's units, shared by the library and the generator. They
+// ship as a data file of their own, names.mloc, and the subdivision names
+// as another, subdivisions.mloc, with a codes unit and names units of its
+// own. All integers are little-endian.
 //
 // The codes, a unit of no locale: a header (u16 count, u16 0, u32 text
 // size), the codes' text offsets (u32 each, count + 1, from 0 to the

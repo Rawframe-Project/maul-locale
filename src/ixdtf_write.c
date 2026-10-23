@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Temporal's strings out (maul-locale/ixdtf.h, record mloc-0041): each
-// type's toString as ECMA-262's formatting operations write it, into a
-// caller's buffer, with no floating-point arithmetic: a duration's
-// fields are read from their bits and its seconds summed exactly.
+// Temporal's strings out (maul-locale/ixdtf.h): each type's toString as
+// ECMA-262's formatting operations write it, into a caller's buffer, with
+// no floating-point arithmetic: a duration's fields are read from their
+// bits and its seconds summed exactly.
 
 #include "binary64.h"
 #include "calendar_arith.h"

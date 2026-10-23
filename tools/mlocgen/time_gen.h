@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // A calendar's time patterns in a locale (src/date_tables.h's time set):
-// the time field set matched at the hour, minute and second on the
-// 12-hour and 24-hour clocks, the standard time formats, the date-time
-// glue and the clocks' minutes and seconds for a standard format, as
-// CLDR resolves them under the calendar (record mloc-0042).
+// the time field set matched at the hour, minute and second on the 12-hour
+// and 24-hour clocks, the standard time formats, the date-time glue and
+// the clocks' minutes and seconds for a standard format, as CLDR resolves
+// them under the calendar.
 
 #ifndef MLOCGEN_TIME_GEN_H
 #define MLOCGEN_TIME_GEN_H

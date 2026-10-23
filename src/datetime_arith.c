@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of date-times (maul-locale/zone.h, record mloc-0041):
-// ECMA-262's AddDurationToDateTime, DifferencePlainDateTimeWithRounding
-// through DifferenceISODateTime and RoundRelativeDuration, and
-// RoundISODateTime.
+// The arithmetic of date-times (maul-locale/zone.h): ECMA-262's
+// AddDurationToDateTime, DifferencePlainDateTimeWithRounding through
+// DifferenceISODateTime and RoundRelativeDuration, and RoundISODateTime.
 
 #include "date_time.h"
 #include "duration_round.h"

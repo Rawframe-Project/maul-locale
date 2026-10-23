@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The general compare against CLDR's CollationTest files (records
-// mloc-0067 and mloc-0069): every line, read as code points, compares no
-// greater than the next at the quaternary strength (the identical one
-// after --identical), non-ignorable or, after --shifted, shifted with the
-// variable top at the end of punctuation, the root read from the
-// collation data file. As ICU4X's
-// conformance test does, a line holding a surrogate is passed over, since
-// UTF-8 cannot carry one; the next line is compared with the last read.
-// The two lines' sort keys (record mloc-0070) must order them as the
-// compare does, ties included, and the fast Latin compare (record
-// mloc-0072) must too wherever it does not bail out; it counts its
-// answers. Each line's UTF-16 form must compare as its UTF-8 form, in
-// both compares, and give the same key bytes.
+// The general compare against CLDR's CollationTest files: every line, read
+// as code points, compares no greater than the next at the quaternary
+// strength (the identical one after --identical), non-ignorable or, after
+// --shifted, shifted with the variable top at the end of punctuation, the
+// root read from the collation data file. As ICU4X's conformance test
+// does, a line holding a surrogate is passed over, since UTF-8 cannot
+// carry one; the next line is compared with the last read. The two lines'
+// sort keys must order them as the compare does, ties included, and the
+// fast Latin compare must too wherever it does not bail out; it counts its
+// answers. Each line's UTF-16 form must compare as its UTF-8 form, in both
+// compares, and give the same key bytes.
 //
 // usage: conform_collation collation.mloc [--shifted] [--identical] CollationTest_CLDR_*.txt...
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloc:case and mloc:particle (record mloc-0052).
+// mloc:case and mloc:particle.
 
 #include "message_grammar.h"
 

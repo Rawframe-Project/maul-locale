@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The mloc: functions of messages over numbers (record mloc-0045):
-// mloc:spellout, a number in words, ordinal suffixes or an algorithmic
-// numbering system by the library's spell-out rules, and mloc:relative,
-// an amount of a unit relative to now by its relative time formatter.
-// Their values are number values (message_number), of their functions.
+// The mloc: functions of messages over numbers: mloc:spellout, a number in
+// words, ordinal suffixes or an algorithmic numbering system by the
+// library's spell-out rules, and mloc:relative, an amount of a unit
+// relative to now by its relative time formatter. Their values are number
+// values (message_number), of their functions.
 
 #ifndef MLOC_SRC_MESSAGE_WORDS_H
 #define MLOC_SRC_MESSAGE_WORDS_H

@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The root elements table the tailoring builder reads (record
-// mloc-0071), built from FractionalUCA.txt, against ICU4C's. Han's
-// section (its primaries and the units after each) is set aside: ICU4C
-// orders Han by radical and stroke where the root here follows CLDR's
-// code point order (record mloc-0070), so the Han characters with
-// weights of their own sit elsewhere in the same range. Alone it writes
-// the number of the other units and a hash of them (hash = hash *
-// 1000003 + unit, 64-bit), then the number of Han's; with --expect it
-// fails unless the first two are the given ones, which CI checks
+// The root elements table the tailoring builder reads, built from
+// FractionalUCA.txt, against ICU4C's. Han's section (its primaries and the
+// units after each) is set aside: ICU4C orders Han by radical and stroke
+// where the root here follows CLDR's code point order, so the Han
+// characters with weights of their own sit elsewhere in the same range.
+// Alone it writes the number of the other units and a hash of them (hash =
+// hash * 1000003 + unit, 64-bit), then the number of Han's; with --expect
+// it fails unless the first two are the given ones, which CI checks
 // against ICU4C 79's table on the pinned release. --dump writes all the
-// units, one in hex per line, as the oracle writes ICU's; --queries
-// reads queries from stdin and writes each
-// answer in hex, as the oracle does over ICU's table:
+// units, one in hex per line, as the oracle writes ICU's; --queries reads
+// queries from stdin and writes each answer in hex, as the oracle does
+// over ICU's table:
 //   pb P C   the primary before P (C 1 when P's lead byte compresses)
 //   pa P C   the primary after P
 //   sb P S   the secondary before [P, S]

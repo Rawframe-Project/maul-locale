@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The number part's currency units (record mloc-0022,
-// src/currency_tables.h): the fractions of supplementalData.xml, and per
-// locale key the currency symbols, own patterns and own separators, and
-// the names, its file gives, each field kept only where it differs from
-// what the parent's chain gives. The pattern sets are the number
-// generator's.
+// The number part's currency units (src/currency_tables.h): the fractions
+// of supplementalData.xml, and per locale key the currency symbols, own
+// patterns and own separators, and the names, its file gives, each field
+// kept only where it differs from what the parent's chain gives. The
+// pattern sets are the number generator's.
 
 #ifndef MLOCGEN_CURRENCY_GEN_H
 #define MLOCGEN_CURRENCY_GEN_H

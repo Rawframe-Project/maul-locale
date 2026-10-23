@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Chinese and Dangi tables (record mloc-0040): every year from 1600
-// to 2400 is the model's but for the overrides, and the days at the
-// tables' ends belong to the same years whichever side computes them.
-// Months are numbered by their new moons alike in the tables and the
-// model, and each number opens the year that holds its month.
+// The Chinese and Dangi tables: every year from 1600 to 2400 is the
+// model's but for the overrides, and the days at the tables' ends belong
+// to the same years whichever side computes them. Months are numbered by
+// their new moons alike in the tables and the model, and each number opens
+// the year that holds its month.
 
 #include "calendar_arith.h"
 #include "calendar_chinese.h"

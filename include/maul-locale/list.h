@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Lists (UTS #35 Part 2, records mloc-0026 and mloc-0035): items joined
-// by a locale's list patterns ("a, b, and c", "a, b o c"), as ICU4C's
-// ListFormatter and ECMA-402's Intl.ListFormat join them, with ICU's
-// contextual changes (Spanish "e" and "u", Hebrew's vav before a word of
-// another script). The patterns are compiled in.
+// Lists (UTS #35 Part 2): items joined by a locale's list patterns ("a, b,
+// and c", "a, b o c"), as ICU4C's ListFormatter and ECMA-402's
+// Intl.ListFormat join them, with ICU's contextual changes (Spanish "e"
+// and "u", Hebrew's vav before a word of another script). The patterns are
+// compiled in.
 
 #ifndef MAUL_LOCALE_LIST_H
 #define MAUL_LOCALE_LIST_H
@@ -93,7 +93,7 @@ extern "C"
     /// @param items      The items, count of them; may be null when count
     ///                   is 0.
     /// @param count      The number of items, at most UINT32_MAX.
-    /// @param output     Where the text goes (record mloc-0015).
+    /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (output's length then the size needed); mloc_errorInvalid
     ///         for a formatter the library did not make, a null pointer, an
@@ -115,16 +115,15 @@ extern "C"
         mloc_personFemale = 2,
     } mlocPersonGender;
 
-    /// Gives the gender of a list of persons ("Tom and Mary") by the
-    /// locale's rule in CLDR's genderList.xml (record mloc-0051); the
-    /// rules are built in. The locale is canonicalized with the data
-    /// set's aliases first (iw is he), then read by its language and
-    /// script ("zh_Hant"), then its language; a locale CLDR does not
-    /// list is neutral. An empty list is other and a list of one its
-    /// person's gender; a longer list is other in a neutral locale (en,
-    /// de), in a mixed neutral one (el, is) male or female when every
-    /// person is, else other, and in a male-taints one (fr, es, ar)
-    /// female when every person is, else male.
+    /// Gives the gender of a list of persons ("Tom and Mary") by the locale's
+    /// rule in CLDR's genderList.xml; the rules are built in. The locale is
+    /// canonicalized with the data set's aliases first (iw is he), then read by
+    /// its language and script ("zh_Hant"), then its language; a locale CLDR
+    /// does not list is neutral. An empty list is other and a list of one its
+    /// person's gender; a longer list is other in a neutral locale (en, de), in
+    /// a mixed neutral one (el, is) male or female when every person is, else
+    /// other, and in a male-taints one (fr, es, ar) female when every person
+    /// is, else male.
     ///
     /// @param data       The data set the locale's aliases come from.
     /// @param locale     The locale.

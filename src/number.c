@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number formatting (record mloc-0021): the formatter is the core and its
-// options (number_format.h).
+// Number formatting: the formatter is the core and its options
+// (number_format.h).
 
 #include "maul-locale/number.h"
 

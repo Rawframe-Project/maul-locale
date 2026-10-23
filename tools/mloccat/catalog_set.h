@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A catalog set read (records mloc-0053 and mloc-0054): the source and
-// its translations, each read, checked and its entries collected (the
-// obsolete left out) with its canonical locale. The compiler and the
-// report read sets the same way.
+// A catalog set read: the source and its translations, each read, checked
+// and its entries collected (the obsolete left out) with its canonical
+// locale. The compiler and the report read sets the same way.
 
 #ifndef MLOCCAT_CATALOG_SET_H
 #define MLOCCAT_CATALOG_SET_H

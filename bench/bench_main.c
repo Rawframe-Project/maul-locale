@@ -8,16 +8,15 @@
 // parsed, made from a double and rounded; Russian plural rules made and
 // selecting for an integer and a decimal; number, currency and unit
 // formatters made and formatting (decimal, compact, percent, scientific),
-// numbers and amounts of money parsed; a spell-out formatter made,
-// numbers in words (an integer, a fraction, an ordinal), a Roman numeral
-// and words parsed back; display names (a language, a region, a key's
-// value, a language at a sentence's start) and whole locales' names in
-// dialect and standard form; then the datetime part's cases
-// (bench_dates.c), the message part's (bench_messages.c), the grammar
-// part's and the collation part's (bench_collation.c), with the
-// stack a message's format call takes. The inputs are the ones the
-// ICU4C and ICU4X baselines time (record mloc-0004). Given a
-// file of times in its own output's form, such as an earlier run's, it
+// numbers and amounts of money parsed; a spell-out formatter made, numbers
+// in words (an integer, a fraction, an ordinal), a Roman numeral and words
+// parsed back; display names (a language, a region, a key's value, a
+// language at a sentence's start) and whole locales' names in dialect and
+// standard form; then the datetime part's cases (bench_dates.c), the
+// message part's (bench_messages.c), the grammar part's and the collation
+// part's (bench_collation.c), with the stack a message's format call
+// takes. The inputs are the ones the ICU4C and ICU4X baselines time. Given
+// a file of times in its own output's form, such as an earlier run's, it
 // prints each time's ratio to the recorded one as well. With BENCH_SHOW
 // set in the environment it first prints the texts the formatters write;
 // BENCH_ONLY, a comma-separated list of case names, times those alone.

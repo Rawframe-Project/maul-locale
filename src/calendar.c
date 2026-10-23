@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Dates (maul-locale/calendar.h, record mloc-0040): fields made into a
-// day and read back, with Temporal's era codes, month codes and
-// overflow.
+// Dates (maul-locale/calendar.h): fields made into a day and read back,
+// with Temporal's era codes, month codes and overflow.
 
 #include "maul-locale/calendar.h"
 

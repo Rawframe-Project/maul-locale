@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.ZonedDateTime arithmetic (record mloc-0041): every
-// assertion its tests make about a zoned date-time plus a duration, a
-// rounded one, the rounded difference of two, the start of a day, or a
-// local date-time found with an offset, in test262_zoned.inc, checked
-// against mlocAddToZonedDateTime, mlocRoundZonedDateTime,
-// mlocZonedDateTimeUntil, mlocGetStartOfDay and mlocGetInstantForOffset.
-// A difference is given as a host gives it: its time part balanced by
-// mlocBalanceTimeDuration to the largest unit or hours, or where a field
-// passes int64_t, that field formed from the exact decimal; each field as
-// the float64 Temporal keeps. since is until with the mode negated. The
-// rows were recorded by running the tests on the library through a reader
-// of their JavaScript, kept in the docs with the oracle programs.
+// test262's Temporal.ZonedDateTime arithmetic: every assertion its tests
+// make about a zoned date-time plus a duration, a rounded one, the rounded
+// difference of two, the start of a day, or a local date-time found with
+// an offset, in test262_zoned.inc, checked against mlocAddToZonedDateTime,
+// mlocRoundZonedDateTime, mlocZonedDateTimeUntil, mlocGetStartOfDay and
+// mlocGetInstantForOffset. A difference is given as a host gives it: its
+// time part balanced by mlocBalanceTimeDuration to the largest unit or
+// hours, or where a field passes int64_t, that field formed from the exact
+// decimal; each field as the float64 Temporal keeps. since is until with
+// the mode negated. The rows were recorded by running the tests on the
+// library through a reader of their JavaScript, kept in the docs with the
+// oracle programs.
 
 #include "test_harness.h"
 

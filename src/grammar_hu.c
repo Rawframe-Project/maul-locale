@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Hungarian suffixes (record mloc-0048) by the Academy's rules (AkH 12),
-// on a word's sound (grammar_hu_sound.h): each suffix in order, its
-// linking vowel (o, e, ö; a and e after a lowering stem or a suffix; u
-// and ü in the possessives' plural), a final a or e lengthened before
-// it (AkH 29, 216), the v of -val, -vel, -vá, -vé assimilated to the
-// last consonant (AkH 82, 160). A joined word's stem changes as a table
-// says (vizet, bokrot, lovat), a digraph doubles in its first letter
-// (Kodállyal), three same letters are written two in a common noun
-// (tollal) and keep a hyphen in a name (Papp-pal).
+// Hungarian suffixes by the Academy's rules (AkH 12), on a word's sound
+// (grammar_hu_sound.h): each suffix in order, its linking vowel (o, e, ö;
+// a and e after a lowering stem or a suffix; u and ü in the possessives'
+// plural), a final a or e lengthened before it (AkH 29, 216), the v of
+// -val, -vel, -vá, -vé assimilated to the last consonant (AkH 82, 160). A
+// joined word's stem changes as a table says (vizet, bokrot, lovat), a
+// digraph doubles in its first letter (Kodállyal), three same letters are
+// written two in a common noun (tollal) and keep a hyphen in a name
+// (Papp-pal).
 
 #include "grammar_hu.h"
 

@@ -23,7 +23,7 @@
 
 // The words of each case; the same in the ICU4C baseline. A compare
 // walks 64 pairs in a fixed order (i = (i + 3) % 64, the pair i / 8 and
-// i % 8), as research 06's case does.
+// i % 8), as the baseline does.
 static const char* const s_de[8] = {"\xC3\x84pfel",
                                     "apfel",
                                     "Zebra",

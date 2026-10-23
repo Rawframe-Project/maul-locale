@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation search (record mloc-0074) over the collation data file, as
-// ICU4C's usearch finds: a match at the strength, accents and case
-// ignored or not; a contraction never split; a match's ends on grapheme
-// boundaries; the wildcard comparisons; a start inside the text backing
-// up over a contraction and keeping a prefix's context; the identical
-// strength asking for the same NFD; UTF-8 and UTF-16 alike; the
-// refusals. conform_search checks random patterns and texts against
-// ICU4C 79's usearch_search.
+// Collation search over the collation data file, as ICU4C's usearch finds:
+// a match at the strength, accents and case ignored or not; a contraction
+// never split; a match's ends on grapheme boundaries; the wildcard
+// comparisons; a start inside the text backing up over a contraction and
+// keeping a prefix's context; the identical strength asking for the same
+// NFD; UTF-8 and UTF-16 alike; the refusals. conform_search checks random
+// patterns and texts against ICU4C 79's usearch_search.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

@@ -2,22 +2,21 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Formats dates and times read one per line from standard input, for
-// tools/check_datetime.py to compare with CLDR's datetime conformance
-// data and ICU4C (record mloc-0042). A date's line is tab-separated: the
-// locale (its -u-ca key naming the calendar), the field set, length,
-// year style and standard style as mlocDateOptions' numbers, and an ISO
-// date (YYYY-MM-DD). A time's line is "T", the locale, the hour cycle,
-// precision and standard style as mlocTimeOptions' numbers, and the time
-// (HH:MM:SS.nnnnnnnnn). A date-time's line is "DT", the locale, the date
-// options' four numbers, the time options' three, the glue, the date and
-// the time. A zone's line is "Z", the locale, the zone's identifier, the
-// instant's seconds since 1970 and the style as mlocZoneStyle's number.
-// A date, time or date-time in a zone is "ZD", "ZT" or "ZDT", the
-// locale, the zone's identifier, the instant's seconds, and the options'
-// numbers: the date's five (the zone's last), the time's four (likewise),
-// or the date's five, the time's four and the glue.
-// The output line is the formatted text, or "error N" with the library's
-// result.
+// tools/check_datetime.py to compare with CLDR's datetime conformance data
+// and ICU4C. A date's line is tab-separated: the locale (its -u-ca key
+// naming the calendar), the field set, length, year style and standard
+// style as mlocDateOptions' numbers, and an ISO date (YYYY-MM-DD). A
+// time's line is "T", the locale, the hour cycle, precision and standard
+// style as mlocTimeOptions' numbers, and the time (HH:MM:SS.nnnnnnnnn). A
+// date-time's line is "DT", the locale, the date options' four numbers,
+// the time options' three, the glue, the date and the time. A zone's line
+// is "Z", the locale, the zone's identifier, the instant's seconds since
+// 1970 and the style as mlocZoneStyle's number. A date, time or date-time
+// in a zone is "ZD", "ZT" or "ZDT", the locale, the zone's identifier, the
+// instant's seconds, and the options' numbers: the date's five (the zone's
+// last), the time's four (likewise), or the date's five, the time's four
+// and the glue. The output line is the formatted text, or "error N" with
+// the library's result.
 //
 // usage: conform_datetime dates.mloc spellout.mloc [zone-names.mloc
 //        names.mloc] < lines

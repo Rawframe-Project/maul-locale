@@ -2,9 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Date interval patterns resolved as ICU4C 79's DateIntervalFormat
-// resolves them (interval_match.h; dtitvfmt.cpp and dtitvinf.cpp, read
-// in research 40). Patterns are UTF-8; every letter is ASCII, so the
-// byte loops below see the letters ICU's UTF-16 loops see.
+// resolves them (interval_match.h; ICU4C's dtitvfmt.cpp and dtitvinf.cpp).
+// Patterns are UTF-8; every letter is ASCII, so the byte loops below see
+// the letters ICU's UTF-16 loops see.
 
 #include "interval_match.h"
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time durations and the arithmetic of times of day (maul-locale/zone.h,
-// record mloc-0041): the check the other parts share.
+// Time durations and the arithmetic of times of day (maul-locale/zone.h):
+// the check the other parts share.
 
 #ifndef MLOC_TIME_ARITH_H
 #define MLOC_TIME_ARITH_H

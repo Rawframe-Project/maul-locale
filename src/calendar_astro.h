@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The astronomy of the Chinese and Korean calendars (record mloc-0040):
-// new moons and the sun's longitude after Reingold and Dershowitz's
-// Calendrical Calculations (Meeus's new moon terms, Bretagnon and
-// Simon's solar terms, NASA's ephemeris correction), in integer fixed
-// point so every machine gives the same bits.
+// The astronomy of the Chinese and Korean calendars: new moons and the
+// sun's longitude after Reingold and Dershowitz's Calendrical Calculations
+// (Meeus's new moon terms, Bretagnon and Simon's solar terms, NASA's
+// ephemeris correction), in integer fixed point so every machine gives the
+// same bits.
 //
 // A moment is days from the start of day 0 of maul-locale/calendar.h
 // (day 1 begins at 1), in universal time, scaled by 2^32. An angle is

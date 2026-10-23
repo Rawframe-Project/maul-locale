@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The shortest decimal that reads back as a double (record mloc-0019),
-// by integer arithmetic only, so every platform gives the same digits:
-// Ulf Adams's Ryu ("Ryu: fast float-to-string conversion", PLDI 2018).
-// The interval of decimals that round to the double is scaled by a
-// power of ten through 125-bit powers of five, and digits are removed
-// while both ends of the interval still differ; of the shortest
-// candidates the one nearest the double wins, ties to even.
+// The shortest decimal that reads back as a double, by integer arithmetic
+// only, so every platform gives the same digits: Ulf Adams's Ryu ("Ryu:
+// fast float-to-string conversion", PLDI 2018). The interval of decimals
+// that round to the double is scaled by a power of ten through 125-bit
+// powers of five, and digits are removed while both ends of the interval
+// still differ; of the shortest candidates the one nearest the double
+// wins, ties to even.
 
 #include "generated/pow5_tables.h"
 #include "maul-locale/decimal.h"

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Local times in a zone (maul-locale/zone.h, record mloc-0041): the
-// instants a date-time names, the one a disambiguation chooses, the
-// start of a day, and the date-time at an instant.
+// Local times in a zone (maul-locale/zone.h): the instants a date-time
+// names, the one a disambiguation chooses, the start of a day, and the
+// date-time at an instant.
 
 #include "zone_local.h"
 

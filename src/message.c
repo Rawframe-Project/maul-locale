@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Messages (maul-locale/message.h, record mloc-0045): compiling, in two
-// passes of message_parse through message_emit, then message_check; and
-// writing back, through message_read and message_write.
+// Messages (maul-locale/message.h): compiling, in two passes of
+// message_parse through message_emit, then message_check; and writing
+// back, through message_read and message_write.
 
 #include "maul-locale/message.h"
 

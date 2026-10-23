@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number formatting (UTS #35 Part 3, record mloc-0021): a decimal in a
-// locale's digits, symbols and grouping, rounded as the options say.
-// The options follow ECMA-402's NumberFormat; their zero value is the
-// default, and the zero precision rounds nothing. A formatter also reads
-// a number a person types (record mloc-0032).
+// Number formatting (UTS #35 Part 3): a decimal in a locale's digits,
+// symbols and grouping, rounded as the options say. The options follow
+// ECMA-402's NumberFormat; their zero value is the default, and the zero
+// precision rounds nothing. A formatter also reads a number a person
+// types.
 
 #ifndef MAUL_LOCALE_NUMBER_H
 #define MAUL_LOCALE_NUMBER_H

@@ -819,9 +819,8 @@ static void AgainPart(void* context, uint32_t part, size_t start, size_t length)
     again->calls++;
 }
 
-// The library's callbacks may call it back (record mloc-0001): every
-// object is read only after it is made, and a call keeps its state on
-// its stack.
+// The library's callbacks may call it back: every object is read only
+// after it is made, and a call keeps its state on its stack.
 static void TestCallingBack(void)
 {
     static uint8_t compiled[1024];

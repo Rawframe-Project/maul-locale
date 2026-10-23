@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// How a Hungarian word sounds (grammar_hu_sound.h, record mloc-0048).
+// How a Hungarian word sounds (grammar_hu_sound.h).
 
 #include "grammar_hu_sound.h"
 

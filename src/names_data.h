@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The names part's units (record mloc-0036, names_tables.h): their
-// validators, and a code's name found along a locale's chain. A names
-// unit's codes index the codes unit of its own source, so each unit of
-// the walk is read with its source's.
+// The names part's units (names_tables.h): their validators, and a code's
+// name found along a locale's chain. A names unit's codes index the codes
+// unit of its own source, so each unit of the walk is read with its
+// source's.
 
 #ifndef MLOC_NAMES_DATA_H
 #define MLOC_NAMES_DATA_H

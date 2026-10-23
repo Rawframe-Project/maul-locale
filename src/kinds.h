@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The kinds of data units (record mloc-0014): the part in the high 16
-// bits, the table in the low 16. Shared by the library and the
-// generator; a kind's number never changes meaning within a data
-// version.
+// The kinds of data units: the part in the high 16 bits, the table in the
+// low 16. Shared by the library and the generator; a kind's number never
+// changes meaning within a data version.
 
 #ifndef MLOC_KINDS_H
 #define MLOC_KINDS_H
@@ -31,13 +30,13 @@ constexpr uint32_t kindLocalePreferences = 0x00010006;
 // (src/locale_context.h).
 constexpr uint32_t kindLocaleContext = 0x00010007;
 // The plural part: a locale's rule sets and range table, a unit per
-// locale (record mloc-0020).
+// locale.
 constexpr uint32_t kindPlurals = 0x00030001;
 // The plural part: the range tables, a unit of no locale.
 constexpr uint32_t kindPluralRanges = 0x00030002;
 
 // The number part: the numeric numbering systems and their digits, a unit
-// of no locale (record mloc-0021, src/number_tables.h).
+// of no locale (src/number_tables.h).
 constexpr uint32_t kindNumberSystems = 0x00040001;
 // The number part: the distinct symbol sets, a unit of no locale.
 constexpr uint32_t kindNumberSymbols = 0x00040002;
@@ -51,7 +50,7 @@ constexpr uint32_t kindNumberCompactPatterns = 0x00040005;
 // The number part: the distinct compact tables, a unit of no locale.
 constexpr uint32_t kindNumberCompact = 0x00040006;
 // The number part: the currencies' digits and roundings, a unit of no
-// locale (record mloc-0022, src/currency_tables.h).
+// locale (src/currency_tables.h).
 constexpr uint32_t kindCurrencyFractions = 0x00040007;
 // The number part: the distinct currency pattern sets, a unit of no
 // locale.
@@ -66,14 +65,14 @@ constexpr uint32_t kindCurrencyNames = 0x0004000A;
 // locale.
 constexpr uint32_t kindCurrencyRegions = 0x0004000B;
 // The number part: the unit identifiers' parts and their conversion to
-// base units, a unit of no locale (record mloc-0023, src/unit_tables.h).
+// base units, a unit of no locale (src/unit_tables.h).
 constexpr uint32_t kindUnits = 0x0004000C;
 // The number part: the units each usage prefers by region, a unit of no
-// locale (record mloc-0023).
+// locale.
 constexpr uint32_t kindUnitPreferences = 0x0004000D;
-// The unit names data file: the identifiers it names, a unit of no
-// locale; the names of each width and the long width's extras, units per
-// locale (record mloc-0023, src/unit_tables.h).
+// The unit names data file: the identifiers it names, a unit of no locale;
+// the names of each width and the long width's extras, units per locale
+// (src/unit_tables.h).
 constexpr uint32_t kindUnitIds = 0x0004000E;
 constexpr uint32_t kindUnitNamesLong = 0x0004000F;
 constexpr uint32_t kindUnitNamesShort = 0x00040010;
@@ -99,7 +98,7 @@ constexpr uint32_t kindListPatterns = 0x00050001;
 constexpr uint32_t kindLists = 0x00050002;
 // The spell-out data file: a locale's spell-out rules, ordinal-suffix
 // rules and numbering-system rules, a unit per locale key whose file has
-// the group (record mloc-0034, src/spellout_tables.h).
+// the group (src/spellout_tables.h).
 constexpr uint32_t kindSpelloutRules = 0x00060001;
 constexpr uint32_t kindSpelloutOrdinals = 0x00060002;
 constexpr uint32_t kindSpelloutNumbering = 0x00060003;
@@ -109,10 +108,10 @@ constexpr uint32_t kindSpelloutSystems = 0x00060004;
 // The spell-out data file: the titlecase of the rules' lowercase letters,
 // a unit of no locale.
 constexpr uint32_t kindSpelloutTitlecase = 0x00060005;
-// The names data file: the codes it names, a unit of no locale; the
-// names a locale key gives of languages, scripts, regions, variants,
-// keys and their values, and its display patterns, units per locale key
-// (record mloc-0036, src/names_tables.h).
+// The names data file: the codes it names, a unit of no locale; the names
+// a locale key gives of languages, scripts, regions, variants, keys and
+// their values, and its display patterns, units per locale key
+// (src/names_tables.h).
 constexpr uint32_t kindNameIds = 0x00070001;
 constexpr uint32_t kindNamesLanguages = 0x00070002;
 constexpr uint32_t kindNamesScripts = 0x00070003;
@@ -123,13 +122,12 @@ constexpr uint32_t kindNamePatterns = 0x00070007;
 // The names data file: the titlecase of the names' first letters, a unit
 // of no locale in the spell-out titlecase table's layout.
 constexpr uint32_t kindNameTitlecase = 0x00070008;
-// The subdivisions data file: subdivision names, in the names layout
-// (record mloc-0039).
+// The subdivisions data file: subdivision names, in the names layout.
 constexpr uint32_t kindNamesSubdivisions = 0x00070009;
 
 // The zone part: every zone's transitions and closing rule, and the
-// identifiers with their primaries, a unit of no locale (record
-// mloc-0041, src/zone_tables.h).
+// identifiers with their primaries, a unit of no locale
+// (src/zone_tables.h).
 constexpr uint32_t kindZones = 0x00080001;
 // The zone part: the BCP 47 time zone ids and the Windows zone names, a
 // unit of no locale (src/zone_code_tables.h).
@@ -137,42 +135,39 @@ constexpr uint32_t kindZoneCodes = 0x00080002;
 // The dates data file: the compiled date patterns, their rows by length
 // and their sets by calendar, a unit of no locale; a locale's pattern set
 // and name set of each calendar, a unit per locale key; the names, their
-// lists and name sets, a unit of no locale (record mloc-0042,
-// src/date_tables.h).
+// lists and name sets, a unit of no locale (src/date_tables.h).
 constexpr uint32_t kindDatePatterns = 0x00090001;
 constexpr uint32_t kindDates = 0x00090002;
 constexpr uint32_t kindDateNames = 0x00090003;
 // The zone names data file: the zones' regions and metazone periods and
-// the metazones' golden and preferred zones, a unit of no locale; the
-// zone and metazone names and formats, a unit per locale key (record
-// mloc-0042, src/zone_name_tables.h).
+// the metazones' golden and preferred zones, a unit of no locale; the zone
+// and metazone names and formats, a unit per locale key
+// (src/zone_name_tables.h).
 constexpr uint32_t kindZoneMeta = 0x00090004;
 constexpr uint32_t kindZoneNames = 0x00090005;
 // The relative time data file: a locale's names of offsets and future and
-// past patterns of each unit and width, a unit per locale key (record
-// mloc-0043, src/relative_tables.h).
+// past patterns of each unit and width, a unit per locale key
+// (src/relative_tables.h).
 constexpr uint32_t kindRelative = 0x00090006;
 // The lowercase letters relative time's texts begin with and their
 // titlecase, a unit of no locale (spellout_tables.h's layout).
 constexpr uint32_t kindRelativeTitlecase = 0x00090007;
-// The catalog part: a catalog's keys under a minimal perfect hash and
-// its compiled messages, two units of its one locale (record mloc-0054,
-// src/catalog_tables.h).
+// The catalog part: a catalog's keys under a minimal perfect hash and its
+// compiled messages, two units of its one locale (src/catalog_tables.h).
 constexpr uint32_t kindCatalogKeys = 0x000A0001;
 constexpr uint32_t kindCatalogMessages = 0x000A0002;
-// The collation part: CLDR's root collation, its elements in a code
-// point trie with their expansions and context lists, a unit of no
-// locale in the collation data file (record mloc-0065,
-// src/collation_tables.h).
+// The collation part: CLDR's root collation, its elements in a code point
+// trie with their expansions and context lists, a unit of no locale in the
+// collation data file (src/collation_tables.h).
 constexpr uint32_t kindCollationRoot = 0x000B0001;
 // A locale's collation types, each a tailoring over the root, a unit of
-// its key in the collation data file (record mloc-0071).
+// its key in the collation data file.
 constexpr uint32_t kindCollationTailorings = 0x000B0002;
 // The radical-stroke Han table the unihan types read, a unit of no locale
-// in the collation data file (record mloc-0071).
+// in the collation data file.
 constexpr uint32_t kindCollationHanRadical = 0x000B0003;
 // A locale's index labels, a unit of its key in the collation data file,
-// found along the main chain (record mloc-0075, src/collation_index.h).
+// found along the main chain (src/collation_index.h).
 constexpr uint32_t kindCollationIndex = 0x000B0004;
 
 #endif

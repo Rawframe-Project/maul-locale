@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The date formatter's state made, checked and read (date_format.c), for
-// the date formatter and the date-time formatter (record mloc-0042).
+// the date formatter and the date-time formatter.
 
 #ifndef MLOC_DATE_FORMAT_H
 #define MLOC_DATE_FORMAT_H

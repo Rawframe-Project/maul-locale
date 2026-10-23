@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A translation accepted (record mloc-0056): each of its entries records
-// the hash of the source message it now answers (@mloc-source, stale.h),
-// so that a later change of the source marks it stale. The keys given are
-// accepted, or with none every entry the source has; entries the source
-// keeps (@translate no) and keys the source lacks are left as they are.
-// The file is written again in the writer's form, through a temporary
-// file renamed over it.
+// A translation accepted: each of its entries records the hash of the
+// source message it now answers (@mloc-source, stale.h), so that a later
+// change of the source marks it stale. The keys given are accepted, or
+// with none every entry the source has; entries the source keeps
+// (@translate no) and keys the source lacks are left as they are. The file
+// is written again in the writer's form, through a temporary file renamed
+// over it.
 
 #ifndef MLOCCAT_ACCEPT_H
 #define MLOCCAT_ACCEPT_H

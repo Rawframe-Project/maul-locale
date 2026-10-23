@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// An opened catalog's fields (record mloc-0054), read by the catalog's
-// lookups and its chains.
+// An opened catalog's fields, read by the catalog's lookups and its
+// chains.
 
 #ifndef MLOC_CATALOG_VIEW_H
 #define MLOC_CATALOG_VIEW_H

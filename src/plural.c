@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Plural rules (record mloc-0020): a locale's unit names its compiled
-// rule sets and range table; the rules value keeps the rule's index and
-// a copy of the table, so selecting reads no data. The units' layout is
-// in plural_rules.h.
+// Plural rules: a locale's unit names its compiled rule sets and range
+// table; the rules value keeps the rule's index and a copy of the table,
+// so selecting reads no data. The units' layout is in plural_rules.h.
 
 #include "plural.h"
 

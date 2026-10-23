@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The explicit parent locales of each component (record mloc-0016) as a
-// unit of no locale, and CLDR's own inheritance chains by key, which the
-// library's chains are checked against.
+// The explicit parent locales of each component as a unit of no locale,
+// and CLDR's own inheritance chains by key, which the library's chains are
+// checked against.
 
 #ifndef MLOCGEN_PARENTS_GEN_H
 #define MLOCGEN_PARENTS_GEN_H

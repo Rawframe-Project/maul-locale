@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collation rule parser (record mloc-0068): each relation, reset and
-// setting; quoting, escapes and comments; starred relations and their
-// ranges; imports in their place; sets; and every refusal with the byte
-// it names.
+// The collation rule parser: each relation, reset and setting; quoting,
+// escapes and comments; starred relations and their ranges; imports in
+// their place; sets; and every refusal with the byte it names.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

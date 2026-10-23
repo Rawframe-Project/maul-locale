@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A message's resolved values (record mloc-0045) and what reads them
-// without the resolver: an argument's name compared after NFC, a numeric
-// argument's decimal and plain digits, a :string value against a key.
+// A message's resolved values and what reads them without the resolver: an
+// argument's name compared after NFC, a numeric argument's decimal and
+// plain digits, a :string value against a key.
 
 #ifndef MLOC_SRC_MESSAGE_VALUE_H
 #define MLOC_SRC_MESSAGE_VALUE_H

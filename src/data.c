@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Opening and validating data, and the lookups over it (record
-// mloc-0014). Validation reads every table once; the lookups trust what
-// it checked.
+// Opening and validating data, and the lookups over it. Validation reads
+// every table once; the lookups trust what it checked.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -76,7 +75,7 @@ static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
 }
 
 // Whether a file holds zones units alone: a zones file, which may be of
-// another tzdb release than the library's (record mloc-0041).
+// another tzdb release than the library's.
 static bool OnlyZones(const DataView* view)
 {
     for (uint32_t i = 0; i < view->unitCount; i++)

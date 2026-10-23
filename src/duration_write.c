@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A duration written (maul-locale/duration.h, record mloc-0044): ECMA-402's
+// A duration written (maul-locale/duration.h): ECMA-402's
 // PartitionDurationFormatPattern, FormatNumericUnits and ListFormatParts.
 // Each field is the exact value of its double; a fraction's sum is exact
 // (duration_fields.h).

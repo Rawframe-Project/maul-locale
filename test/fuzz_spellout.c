@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for spell-out formatting and parsing with CLDR's rules
-// (record mloc-0034), the spell-out file beside the compiled-in data. The
-// first byte chooses a locale of the spell-out file, the second a public
-// rule set or a numbering system, the third the capitalization and what
-// is done; the rest is a decimal's text, the bytes of an integer, or
-// text to parse. Formatting refuses with capacity alone and writes the
-// same twice; parsing refuses with syntax (reading nothing) or capacity
-// alone, ends inside the text and reads the same twice, and the text a
-// value is written as parses without fault.
+// libFuzzer target for spell-out formatting and parsing with CLDR's rules,
+// the spell-out file beside the compiled-in data. The first byte chooses a
+// locale of the spell-out file, the second a public rule set or a
+// numbering system, the third the capitalization and what is done; the
+// rest is a decimal's text, the bytes of an integer, or text to parse.
+// Formatting refuses with capacity alone and writes the same twice;
+// parsing refuses with syntax (reading nothing) or capacity alone, ends
+// inside the text and reads the same twice, and the text a value is
+// written as parses without fault.
 
 #include "maul-locale/data.h"
 #include "maul-locale/spellout.h"

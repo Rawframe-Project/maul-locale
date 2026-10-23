@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The compiled zones (record mloc-0041): offsets at known times from
-// zdump on zic's output, the daylight periods of tzdb's rearguard form
-// where the source has negative savings, times outside int32_t at both
-// ends of a table, the closing rule to the end of Temporal's range, and
-// every transition from 1800 to 2100 seen as a change of offset.
-// tools/check_zones.py compares every zone with zdump in CI.
+// The compiled zones: offsets at known times from zdump on zic's output,
+// the daylight periods of tzdb's rearguard form where the source has
+// negative savings, times outside int32_t at both ends of a table, the
+// closing rule to the end of Temporal's range, and every transition from
+// 1800 to 2100 seen as a change of offset. tools/check_zones.py compares
+// every zone with zdump in CI.
 
 #include "data_format.h"
 #include "data_view.h"

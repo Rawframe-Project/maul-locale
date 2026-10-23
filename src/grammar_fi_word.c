@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Finnish words as code points (record mloc-0049): reading, harmony,
-// the patterns the types' rows write, consonant gradation.
+// Finnish words as code points: reading, harmony, the patterns the types'
+// rows write, consonant gradation.
 
 #include "grammar_fi_word.h"
 

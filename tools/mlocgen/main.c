@@ -12,11 +12,11 @@
 //
 //   mlocgen generate <CLDR common directory> <repository root> <tzdb directory>
 //       Writes the library's generated sources under src/generated/, the
-//       zones from the pinned tzdb release's source (record mloc-0041).
+//       zones from the pinned tzdb release's source.
 //
 //   mlocgen zonesfile <tzdb directory> <CLDR common directory> <out file>
 //       Writes a zones file: the zones unit alone, from a tzdb source of
-//       any release, for this library (record mloc-0041). A program puts
+//       any release, for this library. A program puts
 //       it before the compiled-in data to take that release's rules.
 //
 //   mlocgen zones <tzdb directory> <until year>
@@ -26,7 +26,7 @@
 //   mlocgen chains <CLDR common directory>
 //       Reads lines "main<TAB>id" or "collation<TAB>id" and writes, for
 //       each, the line, a tab and the keys of the locale's CLDR parents up
-//       to root (record mloc-0016); conform_parents compares them with
+//       to root; conform_parents compares them with
 //       the library's.
 
 #include "cldr.h"

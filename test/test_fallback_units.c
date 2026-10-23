@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A part's lookup along a locale's chain (record mloc-0016): a pack with
-// a few locales of a test kind, searched before the compiled-in data
-// that holds the parents and likely subtags; and the parents table's
-// validator, with one field of a copy spoiled for each rule.
+// A part's lookup along a locale's chain: a pack with a few locales of a
+// test kind, searched before the compiled-in data that holds the parents
+// and likely subtags; and the parents table's validator, with one field of
+// a copy spoiled for each rule.
 
 #include "bytes.h"
 #include "data_format.h"

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The maximized language, script and region language matching compares
-// (record mloc-0017), made as ICU's LikelySubtags.makeMaximizedLsr makes
-// them, and the likely script and region of a language for its ties.
+// The maximized language, script and region language matching compares,
+// made as ICU's LikelySubtags.makeMaximizedLsr makes them, and the likely
+// script and region of a language for its ties.
 
 #ifndef MLOC_LOCALE_LSR_H
 #define MLOC_LOCALE_LSR_H

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Sort keys (record mloc-0070), byte for byte as ICU4C's
+// Sort keys, byte for byte as ICU4C's
 // CollationKeys::writeSortKeyUpToQuaternary and
-// RuleBasedCollator::writeIdenticalLevel write them: the primaries, with
-// a compressible lead byte written once for a run; then each further
-// level after a 01 byte, its common weights' runs compressed; the case
-// level in nibbles; the identical level as BOCSU over the NFD code
-// points; a final 00. Nothing is buffered: each level reads the text
-// again and writes into the caller's bytes, and a backwards segment is
-// reversed where it was written.
+// RuleBasedCollator::writeIdenticalLevel write them: the primaries, with a
+// compressible lead byte written once for a run; then each further level
+// after a 01 byte, its common weights' runs compressed; the case level in
+// nibbles; the identical level as BOCSU over the NFD code points; a final
+// 00. Nothing is buffered: each level reads the text again and writes into
+// the caller's bytes, and a backwards segment is reversed where it was
+// written.
 
 #ifndef MLOC_SRC_COLLATION_KEY_H
 #define MLOC_SRC_COLLATION_KEY_H

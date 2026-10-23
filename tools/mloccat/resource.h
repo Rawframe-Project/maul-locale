@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // A message resource read as the W3C Internationalization WG's draft
-// writes it (record mloc-0053; tools/resource-release.txt pins the
-// grammar): frontmatter, sections, entries whose values are MF2 text,
-// metadata and comments attached to what follows them. The data model
-// is the draft's: escapes processed, whitespace and empty lines not
-// kept. Only what the grammar allows is read.
+// writes it (tools/resource-release.txt pins the grammar): frontmatter,
+// sections, entries whose values are MF2 text, metadata and comments
+// attached to what follows them. The data model is the draft's: escapes
+// processed, whitespace and empty lines not kept. Only what the grammar
+// allows is read.
 
 #ifndef MLOCCAT_RESOURCE_H
 #define MLOCCAT_RESOURCE_H

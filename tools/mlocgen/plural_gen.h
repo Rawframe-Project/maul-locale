@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The plural rules (record mloc-0020) from supplemental/plurals.xml,
-// ordinals.xml and pluralRanges.xml: each distinct rule set compiled to
-// a C function, cardinal sets first, and for every locale id the files
-// name a unit with its rules and range table, resolved by truncation.
+// The plural rules from supplemental/plurals.xml, ordinals.xml and
+// pluralRanges.xml: each distinct rule set compiled to a C function,
+// cardinal sets first, and for every locale id the files name a unit with
+// its rules and range table, resolved by truncation.
 
 #ifndef MLOCGEN_PLURAL_GEN_H
 #define MLOCGEN_PLURAL_GEN_H

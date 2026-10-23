@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The spell-out engine's exact arithmetic (record mloc-0034): what ICU
-// computes on an int64_t or a double, on a decimal of its value alone
-// (the fraction digits shown being those the digits need, zero never
-// negative). A result past 40 significant digits or 10^999999 is a
-// failure, never rounded.
+// The spell-out engine's exact arithmetic: what ICU computes on an int64_t
+// or a double, on a decimal of its value alone (the fraction digits shown
+// being those the digits need, zero never negative). A result past 40
+// significant digits or 10^999999 is a failure, never rounded.
 
 #ifndef MLOC_SPELLOUT_VALUE_H
 #define MLOC_SPELLOUT_VALUE_H

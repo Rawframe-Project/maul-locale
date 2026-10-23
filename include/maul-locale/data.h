@@ -2,10 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The library's data: the compiled-in data and data files the program
-// holds, each opened once into an mlocData view and read in place
-// (record mloc-0014). The library reads no file and allocates nothing;
-// the bytes a view was opened from must outlive it and everything made
-// from it.
+// holds, each opened once into an mlocData view and read in place. The
+// library reads no file and allocates nothing; the bytes a view was opened
+// from must outlive it and everything made from it.
 
 #ifndef MAUL_LOCALE_DATA_H
 #define MAUL_LOCALE_DATA_H

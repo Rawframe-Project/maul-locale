@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The root elements the tailoring builder reads (record mloc-0071), on a
-// small file of FractionalUCA.txt's form: the table unit by unit
-// (ignorables, primaries, runs of two- and three-byte primaries, the
-// case bits dropped, a common unit after weights below it, Han's runs
-// around a Han character with weights of its own, the root's own
-// primaries, the sentinel), the queries on it, and the elements it
-// refuses. conform_collation_root_elements checks the whole root
-// against ICU4C's table and queries.
+// The root elements the tailoring builder reads, on a small file of
+// FractionalUCA.txt's form: the table unit by unit (ignorables, primaries,
+// runs of two- and three-byte primaries, the case bits dropped, a common
+// unit after weights below it, Han's runs around a Han character with
+// weights of its own, the root's own primaries, the sentinel), the queries
+// on it, and the elements it refuses. conform_collation_root_elements
+// checks the whole root against ICU4C's table and queries.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

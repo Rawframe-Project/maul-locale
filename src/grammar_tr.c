@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Turkish for the Turkic engine (grammar_turkic.h, record mloc-0046), as
-// the TDK spelling guide gives it: two-way and four-way vowel harmony, d
-// to t after a voiceless consonant, the buffer consonants y, n and s
-// after a vowel, the n a third person's possessive puts before a case,
-// the apostrophe on names, numbers and abbreviations, and a common
-// noun's stem by the lexicon of marks.
+// Turkish for the Turkic engine (grammar_turkic.h), as the TDK spelling
+// guide gives it: two-way and four-way vowel harmony, d to t after a
+// voiceless consonant, the buffer consonants y, n and s after a vowel, the
+// n a third person's possessive puts before a case, the apostrophe on
+// names, numbers and abbreviations, and a common noun's stem by the
+// lexicon of marks.
 
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"

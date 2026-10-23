@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// mloc:case and mloc:particle (record mloc-0052): a value over a string
-// or a number value, inflected by the locale's inflector (records
-// mloc-0047 to mloc-0050) with the request the expression's options
-// make; mloc:gender, a selector on the gender of a list of persons
-// (record mloc-0051).
+// mloc:case and mloc:particle: a value over a string or a number value,
+// inflected by the locale's inflector with the request the expression's
+// options make; mloc:gender, a selector on the gender of a list of
+// persons.
 
 #ifndef MLOC_SRC_MESSAGE_GRAMMAR_H
 #define MLOC_SRC_MESSAGE_GRAMMAR_H

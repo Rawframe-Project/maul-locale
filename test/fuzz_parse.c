@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for parsing (records mloc-0032, mloc-0033). The first
-// two bytes choose a locale of the compiled-in data, the next two the
-// formatter (a number formatter's notation, style, sign display and
-// grouping, or a currency formatter's currency, display and ISO append,
-// with the currency names file) and the mode; the rest is the text. A
-// parse refuses with syntax or capacity alone and ends inside the text,
-// reads the same twice, and an amount it reads writes text the
-// formatter reads back whole, in both modes, to the same text again.
+// libFuzzer target for parsing. The first two bytes choose a locale of the
+// compiled-in data, the next two the formatter (a number formatter's
+// notation, style, sign display and grouping, or a currency formatter's
+// currency, display and ISO append, with the currency names file) and the
+// mode; the rest is the text. A parse refuses with syntax or capacity
+// alone and ends inside the text, reads the same twice, and an amount it
+// reads writes text the formatter reads back whole, in both modes, to the
+// same text again.
 
 #include "maul-locale/currency.h"
 #include "maul-locale/data.h"

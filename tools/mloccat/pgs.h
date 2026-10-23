@@ -2,13 +2,13 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Selection messages as XLIFF's Plural, Gender and Select module sees
-// them (record mloc-0061). A message qualifies when it declares nothing
-// but its selectors, each `.input` of a variable with :number or
-// :integer (a plural, ordinal by select=ordinal, or a select by
-// select=exact) or :string (a select), and matches on them. It is read
-// from its canonical text (mlocWriteMessageText): the declarations, the
-// selectors and each variant's keys and pattern; and written back from
-// the same parts, so a translation's variants become a message again.
+// them. A message qualifies when it declares nothing but its selectors,
+// each `.input` of a variable with :number or :integer (a plural, ordinal
+// by select=ordinal, or a select by select=exact) or :string (a select),
+// and matches on them. It is read from its canonical text
+// (mlocWriteMessageText): the declarations, the selectors and each
+// variant's keys and pattern; and written back from the same parts, so a
+// translation's variants become a message again.
 
 #ifndef MLOCCAT_PGS_H
 #define MLOCCAT_PGS_H

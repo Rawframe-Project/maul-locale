@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Zones files (record mloc-0041): a data file holding the zones unit
-// alone, of another tzdb release than the library's, built here from the
-// compiled-in zones unit with its release renamed. It opens, a data set
-// with it first reads its zones and names its release, zones found in it
-// keep reading it, and a zones unit whose release is malformed is
-// refused. tools/check_zones.py checks a zones file mlocgen writes from
-// an older release against that release's zic.
+// Zones files: a data file holding the zones unit alone, of another tzdb
+// release than the library's, built here from the compiled-in zones unit
+// with its release renamed. It opens, a data set with it first reads its
+// zones and names its release, zones found in it keep reading it, and a
+// zones unit whose release is malformed is refused. tools/check_zones.py
+// checks a zones file mlocgen writes from an older release against that
+// release's zic.
 
 #include "bytes.h"
 #include "data_format.h"

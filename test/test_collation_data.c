@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The collation data file (record mloc-0065): its root unit found and
-// valid, a few elements read through the iterator as CLDR 49's root
-// gives them, and a copy with the unit spoiled refused at open.
+// The collation data file: its root unit found and valid, a few elements
+// read through the iterator as CLDR 49's root gives them, and a copy with
+// the unit spoiled refused at open.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

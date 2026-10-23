@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the data file validator (record mloc-0014). The
-// input is a data file whose magic, format and version are set to the
-// library's, so that the fuzzer reaches the tables. A file that opens
-// must answer every lookup from inside its own bytes.
+// libFuzzer target for the data file validator. The input is a data file
+// whose magic, format and version are set to the library's, so that the
+// fuzzer reaches the tables. A file that opens must answer every lookup
+// from inside its own bytes.
 
 #include "data_format.h"
 #include "data_view.h"

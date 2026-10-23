@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Currency formatting (UTS #35 Part 3, record mloc-0022): an amount of an
-// ISO 4217 currency in a locale's currency pattern, with its symbol or
-// code, rounded to the currency's digits unless the options say
-// otherwise. The options follow ECMA-402's NumberFormat with the
-// currency style; their zero value is the default. Lookups give a
-// currency's symbol, name and digits, and the currency a locale or a
-// region uses on a day.
+// Currency formatting (UTS #35 Part 3): an amount of an ISO 4217 currency
+// in a locale's currency pattern, with its symbol or code, rounded to the
+// currency's digits unless the options say otherwise. The options follow
+// ECMA-402's NumberFormat with the currency style; their zero value is the
+// default. Lookups give a currency's symbol, name and digits, and the
+// currency a locale or a region uses on a day.
 
 #ifndef MAUL_LOCALE_CURRENCY_H
 #define MAUL_LOCALE_CURRENCY_H
@@ -19,17 +18,16 @@ extern "C"
 {
 #endif
 
-    // How the currency is shown: the locale's symbol ("$", "US$", "€"),
-    // its narrow symbol ("$" for any dollar), its ISO code ("USD"), its
-    // formal or variant symbol where the locale has one, not at all
-    // (digits as money, in the locale's noCurrency pattern, for a column
-    // of amounts in one currency), or by name after the number in its
-    // plural form ("3.00 US dollars", the decimal pattern and the
-    // locale's unit pattern; the names are in the currency names data
-    // file, record mloc-0022). A narrow, formal or variant symbol the
-    // locale lacks is its symbol; a symbol it lacks is the code; a name
-    // of a plural category is the other category's, else the currency's
-    // name, else the code.
+    // How the currency is shown: the locale's symbol ("$", "US$", "€"), its
+    // narrow symbol ("$" for any dollar), its ISO code ("USD"), its formal or
+    // variant symbol where the locale has one, not at all (digits as money, in
+    // the locale's noCurrency pattern, for a column of amounts in one
+    // currency), or by name after the number in its plural form ("3.00 US
+    // dollars", the decimal pattern and the locale's unit pattern; the names
+    // are in the currency names data file). A narrow, formal or variant symbol
+    // the locale lacks is its symbol; a symbol it lacks is the code; a name of
+    // a plural category is the other category's, else the currency's name,
+    // else the code.
     typedef enum mlocCurrencyDisplay
     {
         mloc_currencySymbol = 0,

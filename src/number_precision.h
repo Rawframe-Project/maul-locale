@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Rounding a decimal by a number formatter's precision (record
-// mloc-0021), as ECMA-402's FormatNumericToString does: fraction digits
-// (ToRawFixed), significant digits (ToRawPrecision), or both with a
-// priority, then the zeros shown cut to the minimum.
+// Rounding a decimal by a number formatter's precision, as ECMA-402's
+// FormatNumericToString does: fraction digits (ToRawFixed), significant
+// digits (ToRawPrecision), or both with a priority, then the zeros shown
+// cut to the minimum.
 
 #ifndef MLOC_NUMBER_PRECISION_H
 #define MLOC_NUMBER_PRECISION_H

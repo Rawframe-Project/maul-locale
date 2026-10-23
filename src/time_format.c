@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The time formatter (maul-locale/datetime.h, record mloc-0042): the
-// locale's time set in its calendar, the clock and hour letter its
-// options and keywords ask for, its digits, decimal separator, day period
-// names and rules.
+// The time formatter (maul-locale/datetime.h): the locale's time set in
+// its calendar, the clock and hour letter its options and keywords ask
+// for, its digits, decimal separator, day period names and rules.
 
 #include "time_format.h"
 
@@ -146,11 +145,10 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
     return true;
 }
 
-// The interval entry a time set's entry was matched for (research 40):
-// a clock's hour, minute or second, alone or with a zone form; a
-// standard format's own (dateIntervalTimeStyle on), or one matched anew
-// for another clock, its minutes or seconds, the full and long with
-// their zones.
+// The interval entry a time set's entry was matched for: a clock's hour,
+// minute or second, alone or with a zone form; a standard format's own
+// (dateIntervalTimeStyle on), or one matched anew for another clock, its
+// minutes or seconds, the full and long with their zones.
 static uint32_t IntervalEntry(uint32_t entry)
 {
     if (entry < dateTimeStandard)

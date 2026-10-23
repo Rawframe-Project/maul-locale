@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Pseudo-locales (record mloc-0058), written from a source as catalog
-// sources of its set, so that a program loads them as translations and a
-// tester sees what would break:
+// Pseudo-locales, written from a source as catalog sources of its set, so
+// that a program loads them as translations and a tester sees what would
+// break:
 // - en-XA: each pattern's letters accented ("Ŝéţţîñĝš"), the pattern in
 //   brackets, padded by 40% of its text's length with middle dots, so
 //   truncation, concatenation and hard-coded text show;

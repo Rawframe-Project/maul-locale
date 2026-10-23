@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zones unit of the data file (record mloc-0041), which the generator
-// compiles from the pinned tzdb release's source: each zone a table of
-// transitions in universal time, then a closing rule of two yearly
-// changes, or none when its last offset stays; and every Zone and Link
-// name with the zone it reads and its primary identifier. An offset is a
-// standard offset and a saving, never negative, in seconds: the daylight
-// periods are tzdb's rearguard ones.
+// The zones unit of the data file, which the generator compiles from the
+// pinned tzdb release's source: each zone a table of transitions in
+// universal time, then a closing rule of two yearly changes, or none when
+// its last offset stays; and every Zone and Link name with the zone it
+// reads and its primary identifier. An offset is a standard offset and a
+// saving, never negative, in seconds: the daylight periods are tzdb's
+// rearguard ones.
 //
 // The payload is a header of ten 32-bit counts and the tzdb release the
 // unit was compiled from (eight bytes: one to eight ASCII digits and

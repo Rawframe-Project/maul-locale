@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder (record mloc-0071) on every rule string of
-// CLDR's common/collation: each builds or is refused, with its imports
-// read from the files given. --queries writes, for each type, its
-// rule string and the strings its rules name (NFD, a prefix before its
-// string), as the oracle reads them; --answers writes the elements the
-// built tailoring gives each string, as the oracle writes ICU4C's.
-// --units writes each built tailoring as a unit, reads it back and checks
-// its count of mapped code points and that the runtime's iterator over the root and it gives the
-// builder's elements for those strings and 2,000 random ones of its mappings and marks. Alone it
-// prints how many types built and a hash of the answers (a refusal counted too), failing on a
-// refusal; with --expect it fails unless the hash is the given one, which CI checks on the pinned
-// release (the answers ICU4C 79 gives, but for Han's root order in the unihan types and the
-// quaternary bits its iterator drops).
+// The tailoring builder on every rule string of CLDR's common/collation:
+// each builds or is refused, with its imports read from the files given.
+// --queries writes, for each type, its rule string and the strings its
+// rules name (NFD, a prefix before its string), as the oracle reads them;
+// --answers writes the elements the built tailoring gives each string, as
+// the oracle writes ICU4C's. --units writes each built tailoring as a
+// unit, reads it back and checks its count of mapped code points and that
+// the runtime's iterator over the root and it gives the builder's elements
+// for those strings and 2,000 random ones of its mappings and marks. Alone
+// it prints how many types built and a hash of the answers (a refusal
+// counted too), failing on a refusal; with --expect it fails unless the
+// hash is the given one, which CI checks on the pinned release (the
+// answers ICU4C 79 gives, but for Han's root order in the unihan types and
+// the quaternary bits its iterator drops).
 //
 // usage: conform_collation_builder <FractionalUCA.txt>
 //            [--queries | --answers | --units | --expect HASH]

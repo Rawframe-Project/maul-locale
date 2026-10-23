@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for messages (record mloc-0045). The input's first
-// byte chooses: even, the rest is MF2 text, which, when it compiles, is
-// bound and formatted (eight arguments, two functions), written back, compiles again, and writes
-// back the same text (the canonical form is a fixed point) with the same counts; odd, the rest is
-// taken as a compiled message (its magic and versions made this library's), which
-// mlocWriteMessageText reads or refuses without reading past it, and whose text, when it reads it,
+// libFuzzer target for messages. The input's first byte chooses: even, the
+// rest is MF2 text, which, when it compiles, is bound and formatted (eight
+// arguments, two functions), written back, compiles again, and writes back
+// the same text (the canonical form is a fixed point) with the same
+// counts; odd, the rest is taken as a compiled message (its magic and
+// versions made this library's), which mlocWriteMessageText reads or
+// refuses without reading past it, and whose text, when it reads it,
 // writes the same twice and measures its own length.
 
 #include "bytes.h"

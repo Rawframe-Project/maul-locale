@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The catalog tool's resource reader and checks (record mloc-0053): the
-// W3C draft's syntax read into its data model, attachment of comments
-// and metadata, escapes, and every refusal with its line.
+// The catalog tool's resource reader and checks: the W3C draft's syntax
+// read into its data model, attachment of comments and metadata, escapes,
+// and every refusal with its line.
 
 #include "resource.h"
 #include "resource_check.h"

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Rounding a difference relative to where it starts (records mloc-0040,
-// mloc-0041): ECMA-262's RoundRelativeDuration, through
-// NudgeToCalendarUnit, NudgeToZonedTime, NudgeToDayOrTime and
-// BubbleRelativeDuration, for a duration from a date and time of day to
-// a later or earlier one, with or without a time zone. A moment is a day
-// and the nanoseconds past its midnight in universal time, so the
-// progress between two multiples is compared exactly without integers
-// wider than 64 bits. Without a zone a moment reads the wall clock as
-// universal time. The calendar's date differences are the case of
+// Rounding a difference relative to where it starts: ECMA-262's
+// RoundRelativeDuration, through NudgeToCalendarUnit, NudgeToZonedTime,
+// NudgeToDayOrTime and BubbleRelativeDuration, for a duration from a date
+// and time of day to a later or earlier one, with or without a time zone.
+// A moment is a day and the nanoseconds past its midnight in universal
+// time, so the progress between two multiples is compared exactly without
+// integers wider than 64 bits. Without a zone a moment reads the wall
+// clock as universal time. The calendar's date differences are the case of
 // midnight at both ends.
 
 #ifndef MLOC_DURATION_ROUND_H

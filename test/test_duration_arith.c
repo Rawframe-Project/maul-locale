@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Durations through the public functions (record mloc-0041): fields of
-// float64 integers made into internal records and given back, exactly at
-// 2^53 seconds; time durations added, rounded and totalled; totals from
-// plain date-times and zoned date-times, each the float64 nearest the
-// exact quotient; and every refusal.
+// Durations through the public functions: fields of float64 integers made
+// into internal records and given back, exactly at 2^53 seconds; time
+// durations added, rounded and totalled; totals from plain date-times and
+// zoned date-times, each the float64 nearest the exact quotient; and every
+// refusal.
 
 #include "test_harness.h"
 

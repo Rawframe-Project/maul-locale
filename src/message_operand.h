@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Values as functions take them (record mloc-0045): a value as a program
-// function's operand, the default functions' operands read from values,
-// and the setters through which resolution passes their options.
+// Values as functions take them: a value as a program function's operand,
+// the default functions' operands read from values, and the setters
+// through which resolution passes their options.
 
 #ifndef MLOC_SRC_MESSAGE_OPERAND_H
 #define MLOC_SRC_MESSAGE_OPERAND_H

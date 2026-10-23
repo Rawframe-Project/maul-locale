@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the parsers of Temporal's strings (record
-// mloc-0041). Every parser reads the input; what one accepts must hold:
-// a date-time's spans lie inside the input, its fields in their ranges,
-// and a duration's fields are integers of one sign that make a valid
-// record again. An offset or duration accepted is written and read back
-// to the same value.
+// libFuzzer target for the parsers of Temporal's strings. Every parser
+// reads the input; what one accepts must hold: a date-time's spans lie
+// inside the input, its fields in their ranges, and a duration's fields
+// are integers of one sign that make a valid record again. An offset or
+// duration accepted is written and read back to the same value.
 
 #include "maul-locale/ixdtf.h"
 

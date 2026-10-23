@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Semantic skeletons mapped to classical ones (UTS #35, "Mapping to
-// Standard Skeletons"), which skeleton.c then matches to a pattern
-// (record mloc-0042): the year, month and day letters come from the
-// length's datetimeSkeleton, a lone month and the weekday from the
-// mapping table, the hour from the hour cycle, the minutes and seconds
-// from the time precision, the zone from its style.
+// Standard Skeletons"), which skeleton.c then matches to a pattern: the
+// year, month and day letters come from the length's datetimeSkeleton, a
+// lone month and the weekday from the mapping table, the hour from the
+// hour cycle, the minutes and seconds from the time precision, the zone
+// from its style.
 
 #ifndef MLOCGEN_SEMANTIC_H
 #define MLOCGEN_SEMANTIC_H

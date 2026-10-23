@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The compiled plural rule sets (record mloc-0020), which
-// src/generated/plural_rules.c defines, and the layout of the plural
-// units the generator writes and the library reads:
+// The compiled plural rule sets, which src/generated/plural_rules.c
+// defines, and the layout of the plural units the generator writes and the
+// library reads:
 //
 // Plurals (kindPlurals), one unit per locale id CLDR's files name:
 //   u8 cardinal, ordinal, ranges: a rule set's index (a cardinal one,

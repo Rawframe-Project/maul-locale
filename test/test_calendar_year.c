@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A year of any calendar (record mloc-0040): months numbered on from
-// year to year in every calendar, each number opening its month's year
-// again, and the arithmetic calendars' years whole on 64-bit days as
-// far as a Temporal duration reaches (2^33 years).
+// A year of any calendar: months numbered on from year to year in every
+// calendar, each number opening its month's year again, and the arithmetic
+// calendars' years whole on 64-bit days as far as a Temporal duration
+// reaches (2^33 years).
 
 #include "calendar_year.h"
 #include "test_harness.h"

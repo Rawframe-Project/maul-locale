@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The datetime part's benchmark cases (record mloc-0004): formatters made
-// and dates, times, date-times in a zone, ranges, relative times and
-// durations written, on the inputs the ICU4C and ICU4X baselines time.
+// The datetime part's benchmark cases: formatters made and dates, times,
+// date-times in a zone, ranges, relative times and durations written, on
+// the inputs the ICU4C and ICU4X baselines time.
 
 #ifndef MLOC_BENCH_DATES_H
 #define MLOC_BENCH_DATES_H

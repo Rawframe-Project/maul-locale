@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The matching table and LSRs from inside (record mloc-0017): the LSRs
-// ICU's lookup makes, the paradigm locales the generator wrote, a macro
-// region's likely region, and the table's validator, with one field of
-// a copy spoiled for each rule.
+// The matching table and LSRs from inside: the LSRs ICU's lookup makes,
+// the paradigm locales the generator wrote, a macro region's likely
+// region, and the table's validator, with one field of a copy spoiled for
+// each rule.
 
 #include "bytes.h"
 #include "data_view.h"

@@ -2,11 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The date pattern units (src/date_tables.h): each locale's semantic date
-// patterns in every calendar, matched by skeleton.c from UTS #35's
-// mapping (semantic.h), its standard date formats and its time set
-// (time_gen.h), compiled and shared; per locale key the sets of each
-// calendar and the day period rules, filed where the key's chain would
-// give others (record mloc-0042).
+// patterns in every calendar, matched by skeleton.c from UTS #35's mapping
+// (semantic.h), its standard date formats and its time set (time_gen.h),
+// compiled and shared; per locale key the sets of each calendar and the
+// day period rules, filed where the key's chain would give others.
 
 #ifndef MLOCGEN_DATE_GEN_H
 #define MLOCGEN_DATE_GEN_H

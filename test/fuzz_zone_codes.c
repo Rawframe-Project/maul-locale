@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the zone codes unit's validator (record
-// mloc-0041). The input is a zone codes payload; one the validator
-// accepts must answer every lookup from inside its own bytes: each id,
-// alias and Windows name found by its own text, a deprecated id's
-// replacement not deprecated, and each Windows name's identifier read
-// for every region its mappings give and for 001.
+// libFuzzer target for the zone codes unit's validator. The input is a
+// zone codes payload; one the validator accepts must answer every lookup
+// from inside its own bytes: each id, alias and Windows name found by its
+// own text, a deprecated id's replacement not deprecated, and each Windows
+// name's identifier read for every region its mappings give and for 001.
 
 #include "bytes.h"
 #include "zone_code_tables.h"

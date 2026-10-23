@@ -301,8 +301,8 @@ static void TestOracle(void)
 }
 
 // The Chinese and Dangi model's own fields far from the observatories'
-// years (record mloc-0001: the same on every machine), where no other
-// library computes the same model.
+// years (the same on every machine), where no other library computes the
+// same model.
 static const Case s_lunisolarFar[] = {
     {mloc_calendarChinese, -99280838, -271822, "", -271822, 12, false, 25, 0, 354, 30},
     {mloc_calendarChinese, -1000000, -2737, "", -2737, 1, false, 14, 1, 384, 29},
@@ -500,7 +500,7 @@ static bool SameFields(const mlocDateFields* a, const mlocDateFields* b)
            a->dayOfYear == b->dayOfYear && a->daysInYear == b->daysInYear;
 }
 
-// 'islamic' and 'islamic-rgsa' read as Umm al-Qura (record mloc-0040).
+// 'islamic' and 'islamic-rgsa' read as Umm al-Qura.
 static void TestUmalquraAliases(void)
 {
     bool all = true;

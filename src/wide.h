@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unsigned integers of fixed width for exact unit conversion (record
-// mloc-0023): 2,048 bits in 32-bit limbs, least significant first, on
-// the caller's stack. An operation whose result does not fit reports it
-// and leaves its output unspecified. The generator shares this file.
+// Unsigned integers of fixed width for exact unit conversion: 2,048 bits
+// in 32-bit limbs, least significant first, on the caller's stack. An
+// operation whose result does not fit reports it and leaves its output
+// unspecified. The generator shares this file.
 
 #ifndef MLOC_WIDE_H
 #define MLOC_WIDE_H

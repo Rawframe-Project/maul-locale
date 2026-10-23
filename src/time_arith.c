@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time durations and the arithmetic of times of day (maul-locale/zone.h,
-// record mloc-0041): ECMA-262's TimeDurationFromComponents,
-// TemporalDurationFromInternal's balancing, AddTime, DifferenceTime with
-// RoundTimeDuration, and RoundTime. A duration is seconds and
-// nanoseconds, so its 2^53 seconds need no wider integers.
+// Time durations and the arithmetic of times of day (maul-locale/zone.h):
+// ECMA-262's TimeDurationFromComponents, TemporalDurationFromInternal's
+// balancing, AddTime, DifferenceTime with RoundTimeDuration, and
+// RoundTime. A duration is seconds and nanoseconds, so its 2^53 seconds
+// need no wider integers.
 
 #include "time_arith.h"
 

@@ -1,6 +1,6 @@
-# The catalog benchmark's set (record mloc-0062): 2,000 keys in en and
-# fr, a quarter each plain text, a placeholder, a plural selection and
-# two numbers. Run as cmake -DDIR=<directory> -P catalog_set.cmake.
+# The catalog benchmark's set: 2,000 keys in en and fr, a quarter each
+# plain text, a placeholder, a plural selection and two numbers. Run as
+# cmake -DDIR=<directory> -P catalog_set.cmake.
 set(en "@locale en\n---\n")
 set(fr "@locale fr\n---\n")
 foreach(i RANGE 1999)

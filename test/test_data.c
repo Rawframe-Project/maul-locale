@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The data part: the data version, the compiled-in data, files built
-// here by hand and opened with test kinds, the lookups over them, and a
-// refusal for every field a file can get wrong (record mloc-0014).
+// The data part: the data version, the compiled-in data, files built here
+// by hand and opened with test kinds, the lookups over them, and a refusal
+// for every field a file can get wrong.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -300,7 +300,7 @@ static void TestVersionRefusals(void)
 }
 
 // A zones file may be of another tzdb release; any other file may not,
-// whatever else it holds beside zones (record mloc-0041).
+// whatever else it holds beside zones.
 static void TestZonesFiles(void)
 {
     static const DataKind s_zoneKinds[] = {{kindWords, ValidWords}, {kindZones, ValidAny}};

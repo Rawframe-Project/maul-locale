@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The list formatter (maul-locale/list.h, record mloc-0035): a locale's
-// patterns of a style kept in the formatter, items joined by list_join.
+// The list formatter (maul-locale/list.h): a locale's patterns of a style
+// kept in the formatter, items joined by list_join.
 
 #include "maul-locale/list.h"
 

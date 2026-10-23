@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Currency formatting on the compiled-in data (record mloc-0022): the
-// displays and their fallbacks, the spacing of symbols, the currencies'
-// digits and cash rounding, accounting, a currency's own pattern and
-// separators, ranges, the parts and the refusals. Every expected text is
-// ICU4C 79's for the same input (its hidden display aside, which keeps
-// the standard pattern without the symbol where we take CLDR's
-// noCurrency pattern). Then the currency of a locale on a day and the
-// currencies of a region, as supplementalData.xml gives them.
+// Currency formatting on the compiled-in data: the displays and their
+// fallbacks, the spacing of symbols, the currencies' digits and cash
+// rounding, accounting, a currency's own pattern and separators, ranges,
+// the parts and the refusals. Every expected text is ICU4C 79's for the
+// same input (its hidden display aside, which keeps the standard pattern
+// without the symbol where we take CLDR's noCurrency pattern). Then the
+// currency of a locale on a day and the currencies of a region, as
+// supplementalData.xml gives them.
 
 #include "test_harness.h"
 

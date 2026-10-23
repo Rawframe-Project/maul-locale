@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Language matching on the compiled-in data (record mloc-0017): CLDR's
-// distances and region groups, the tie-breaks, demotion, the options,
-// private use and pseudo locales, the combined locale, and the
-// refusals. conform_match runs ICU's own cases in CI.
+// Language matching on the compiled-in data: CLDR's distances and region
+// groups, the tie-breaks, demotion, the options, private use and pseudo
+// locales, the combined locale, and the refusals. conform_match runs ICU's
+// own cases in CI.
 
 #include "test_harness.h"
 

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Plural rules on the compiled-in data (record mloc-0020): cardinal and
-// ordinal categories in languages of every shape, the digits shown,
-// compact numbers, fallback along the plurals chain, ranges and the
-// categories a locale uses, and the refusals. conform_plurals checks
-// every sample of CLDR's files in CI.
+// Plural rules on the compiled-in data: cardinal and ordinal categories in
+// languages of every shape, the digits shown, compact numbers, fallback
+// along the plurals chain, ranges and the categories a locale uses, and
+// the refusals. conform_plurals checks every sample of CLDR's files in CI.
 
 #include "test_harness.h"
 

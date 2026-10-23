@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A unit's unsafe-backward ranges (record mloc-0074): the code points
-// after the first of each of its contractions, as ICU4C's
-// unsafeBackwardSet holds them. A position before one of them, or before
-// a mark (lead combining class not 0), may be inside a contraction, so a
-// search moved there backs up to a safe one first.
+// A unit's unsafe-backward ranges: the code points after the first of each
+// of its contractions, as ICU4C's unsafeBackwardSet holds them. A position
+// before one of them, or before a mark (lead combining class not 0), may
+// be inside a contraction, so a search moved there backs up to a safe one
+// first.
 //
 // In a unit the ranges are a section after the fast Latin table's: a
 // 32-bit count, then that many ranges of two 32-bit words, the first

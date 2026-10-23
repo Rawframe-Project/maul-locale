@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for durations (record mloc-0044), the unit names file
-// beside the compiled-in data. The first byte chooses a locale, the next
-// 22 the options (the style, each field's style and display, fixed digits
-// and their count), the next byte how the fields are read: as doubles from
+// libFuzzer target for durations, the unit names file beside the
+// compiled-in data. The first byte chooses a locale, the next 22 the
+// options (the style, each field's style and display, fixed digits and
+// their count), the next byte how the fields are read: as doubles from
 // their bits, or as signed 32-bit integers of one sign. A formatter is
 // made or refused as invalid alone; a duration is written or refused as
 // invalid alone, the same text twice, its measure the same length, its

@@ -1,4 +1,4 @@
-# Where CLDR's localeDisplayName.txt and the library differ (record mloc-0038),
+# Where CLDR's localeDisplayName.txt and the library differ,
 # tab-separated: display locale, mode, id, the name here, the reason.
 en	standard	en-u-tz-uslax	English (Time Zone: uslax)	time zone names wait for the zone part; the value stands as written
 en	standard	en-u-tz-gblon	English (Time Zone: gblon)	time zone names wait for the zone part; the value stands as written

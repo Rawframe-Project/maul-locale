@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The tailoring builder's lookup (record mloc-0071) on a small root: the
-// root's elements alone (a contraction, a discontiguous one, a prefix,
-// Han, the unassigned, U+FFFD); then tailored mappings over it: one that
-// replaces the root's, one whose code point has root contractions
-// (copied), contractions and prefixes added, a prefix with contractions
-// only falling back to a shorter one, a mapping replaced, ignorable
-// elements left out, more elements than an expansion holds, many code
-// points, and the mappings refused. conform_collation_mappings checks
-// the lookup against the runtime's iterator on the whole root.
+// The tailoring builder's lookup on a small root: the root's elements
+// alone (a contraction, a discontiguous one, a prefix, Han, the
+// unassigned, U+FFFD); then tailored mappings over it: one that replaces
+// the root's, one whose code point has root contractions (copied),
+// contractions and prefixes added, a prefix with contractions only falling
+// back to a shorter one, a mapping replaced, ignorable elements left out,
+// more elements than an expansion holds, many code points, and the
+// mappings refused. conform_collation_mappings checks the lookup against
+// the runtime's iterator on the whole root.
 
 // mlocgen_core defines _CRT_SECURE_NO_WARNINGS for Windows' fopen.
 

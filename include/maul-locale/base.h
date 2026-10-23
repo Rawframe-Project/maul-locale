@@ -63,8 +63,8 @@ extern "C"
     {
         // The call did what was asked.
         mloc_success = 0,
-        // The call did what was asked with the data of a locale the asked
-        // one falls back to (record mloc-0016).
+        // The call did what was asked with the data of a locale the asked one
+        // falls back to.
         mloc_fellBack = 1,
         // The call wrote its result with fallbacks where parts of it
         // failed, which it reports apart (a message's expressions).
@@ -101,19 +101,18 @@ extern "C"
     } mlocTextResult;
 
     // Receives one part of a formatted text, such as a number's integer
-    // digits: the part's kind (each formatting part names its own), and
-    // its byte range in the output. It may call the library back, the
-    // call it is inside of included, but not make again an object that
-    // call uses or write its output (record mloc-0001).
+    // digits: the part's kind (each formatting part names its own), and its
+    // byte range in the output. It may call the library back, the call it is
+    // inside of included, but not make again an object that call uses or write
+    // its output.
     typedef void (*mlocPartFunction)(void* context, uint32_t part, size_t start, size_t length);
 
-    // Where every formatting call writes its UTF-8 text (record
-    // mloc-0015). Set buffer and capacity (a null buffer with capacity 0
-    // measures); the call sets length to the bytes written, or with
-    // mloc_errorCapacity to the bytes needed, the buffer's contents then
-    // being unspecified. No NUL is written. When part is set, it is
-    // called for each part in order of start, after the whole text is
-    // written and only on success.
+    // Where every formatting call writes its UTF-8 text. Set buffer and
+    // capacity (a null buffer with capacity 0 measures); the call sets length
+    // to the bytes written, or with mloc_errorCapacity to the bytes needed,
+    // the buffer's contents then being unspecified. No NUL is written. When
+    // part is set, it is called for each part in order of start, after the
+    // whole text is written and only on success.
     typedef struct mlocOutput
     {
         char* buffer;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// How a Hungarian word sounds (record mloc-0048): its last letters read
-// as lowercase code points, its harmony, and its final sound, a vowel or
-// a consonant with the modern spelling an old or foreign one says
-// (Kossuth's th as t, Madách's ch as cs, Marx's x as ksz; AkH 12, 86,
-// 216); the letters' names.
+// How a Hungarian word sounds: its last letters read as lowercase code
+// points, its harmony, and its final sound, a vowel or a consonant with
+// the modern spelling an old or foreign one says (Kossuth's th as t,
+// Madách's ch as cs, Marx's x as ksz; AkH 12, 86, 216); the letters'
+// names.
 
 #ifndef MLOC_GRAMMAR_HU_SOUND_H
 #define MLOC_GRAMMAR_HU_SOUND_H

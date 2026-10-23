@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The gender of a list of persons (maul-locale/list.h, record
-// mloc-0051): each rule on every list of up to three genders against
-// UTS #35's definitions written out here, the locales by their rules,
-// aliases, scripts and regions, and the refusals.
+// The gender of a list of persons (maul-locale/list.h): each rule on every
+// list of up to three genders against UTS #35's definitions written out
+// here, the locales by their rules, aliases, scripts and regions, and the
+// refusals.
 
 #include "test_harness.h"
 

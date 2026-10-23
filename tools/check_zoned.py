@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks the library's arithmetic of zoned date-times (record mloc-0041)
-# against this program's own reading of ECMA-262 over Python's zoneinfo
-# reading zic's fat TZif files for the same tzdb source: AddZonedDateTime,
+# Checks the library's arithmetic of zoned date-times against this
+# program's own reading of ECMA-262 over Python's zoneinfo reading zic's
+# fat TZif files for the same tzdb source: AddZonedDateTime,
 # DifferenceZonedDateTimeWithRounding (DifferenceZonedDateTime,
 # RoundRelativeDuration with ComputeNudgeWindow, NudgeToCalendarUnit,
 # NudgeToZonedTime and BubbleRelativeDuration),
 # DifferenceZonedDateTimeWithTotal, Temporal.ZonedDateTime's round and
-# InterpretISODateTimeOffset, in the ISO calendar, written from
-# the specification's steps with exact integers and fractions. Around
-# every change of offset from 1900 to 2040 in every zone, conform_zoned is
-# asked about differences spanning the change with each kind of rounding
-# and their totals of each unit (the float64 nearest the exact total),
+# InterpretISODateTimeOffset, in the ISO calendar, written from the
+# specification's steps with exact integers and fractions. Around every
+# change of offset from 1900 to 2040 in every zone, conform_zoned is asked
+# about differences spanning the change with each kind of rounding and
+# their totals of each unit (the float64 nearest the exact total),
 # durations added across it, instants near it rounded, and local times in
 # its gap or fold found with either offset.
 #

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of zoned date-times through the public functions
-// (record mloc-0041), on Berlin's spring change of 2024 (a day of 23
-// hours from March 31) and its autumn fold, and Monrovia's offset of
-// -00:44:30 in 1970: days added as calendar days and hours as exact time,
-// differences whose rounding counts the zone's day, rounding to a day of
-// 23 hours and within a fold, offsets weighed against the zone, and every
-// refusal.
+// The arithmetic of zoned date-times through the public functions, on
+// Berlin's spring change of 2024 (a day of 23 hours from March 31) and its
+// autumn fold, and Monrovia's offset of -00:44:30 in 1970: days added as
+// calendar days and hours as exact time, differences whose rounding counts
+// the zone's day, rounding to a day of 23 hours and within a fold, offsets
+// weighed against the zone, and every refusal.
 
 #include "test_harness.h"
 

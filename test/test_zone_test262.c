@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// test262's Temporal.ZonedDateTime time zone cases (record mloc-0041):
-// every assertion its tests make about a zone's identifier, equality,
-// offset or transitions, in test262_zone.inc, checked against
-// mlocFindTimeZone, mlocFormatTimeZoneId, mlocTimeZonesEqual,
-// mlocGetTimeZoneOffset and mlocGetTimeZoneTransition. The rows were
-// recorded by running the tests on the library through a reader of
-// their JavaScript, kept in the docs with the oracle programs. The tests
-// that loop over Intl.supportedValuesOf("timeZone") run here over
-// mlocGetTimeZone's list: each primary keeps its identifier
-// (supported-values-of.js), no two are equal (canonical-not-equal.js),
-// and none has a transition past Temporal's range
-// (transition-at-instant-boundaries.js).
+// test262's Temporal.ZonedDateTime time zone cases: every assertion its
+// tests make about a zone's identifier, equality, offset or transitions,
+// in test262_zone.inc, checked against mlocFindTimeZone,
+// mlocFormatTimeZoneId, mlocTimeZonesEqual, mlocGetTimeZoneOffset and
+// mlocGetTimeZoneTransition. The rows were recorded by running the tests
+// on the library through a reader of their JavaScript, kept in the docs
+// with the oracle programs. The tests that loop over
+// Intl.supportedValuesOf("timeZone") run here over mlocGetTimeZone's list:
+// each primary keeps its identifier (supported-values-of.js), no two are
+// equal (canonical-not-equal.js), and none has a transition past
+// Temporal's range (transition-at-instant-boundaries.js).
 
 #include "test_harness.h"
 

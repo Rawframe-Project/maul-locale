@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The difference of two dates (maul-locale/calendar.h, record mloc-0040):
-// the Intl Era and Month Code proposal's NonISODateUntil. Its loops of one
-// unit at a time are counted directly: years from the year difference
-// less one, which never passes the second date, and one or two checks by
+// The difference of two dates (maul-locale/calendar.h): the Intl Era and
+// Month Code proposal's NonISODateUntil. Its loops of one unit at a time
+// are counted directly: years from the year difference less one, which
+// never passes the second date, and one or two checks by
 // NonISODateSurpasses; months as the difference of month numbers
 // (calendar_year.h); weeks and days as days.
 

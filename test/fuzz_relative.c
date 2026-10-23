@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the relative time data file's validator (record
-// mloc-0043). The input is a unit's payload; one the validator accepts
-// must keep every read inside its own bytes: each key inside the layout,
-// each text inside the text, no name holding "{0}".
+// libFuzzer target for the relative time data file's validator. The input
+// is a unit's payload; one the validator accepts must keep every read
+// inside its own bytes: each key inside the layout, each text inside the
+// text, no name holding "{0}".
 
 #include "bytes.h"
 #include "relative_tables.h"

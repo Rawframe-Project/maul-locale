@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Time zones (maul-locale/zone.h, record mloc-0041): identifiers found in
-// the zones unit or read as offsets, and the offsets and transitions
-// zone_rules.h reads, as ECMA-262's Temporal gives them.
+// Time zones (maul-locale/zone.h): identifiers found in the zones unit or
+// read as offsets, and the offsets and transitions zone_rules.h reads, as
+// ECMA-262's Temporal gives them.
 
 #include "maul-locale/zone.h"
 

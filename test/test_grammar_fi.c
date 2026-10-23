@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Finnish suffixes (maul-locale/grammar.h, record mloc-0049): the types'
-// stems and gradation, harmony, the cases in both numbers, possessives
-// and the question clitic, names by their ending, the colon after
-// digits and capitals as the Kielenhuollon käsikirja writes it, the
-// apostrophe of an unsaid end, and the refusals.
+// Finnish suffixes (maul-locale/grammar.h): the types' stems and
+// gradation, harmony, the cases in both numbers, possessives and the
+// question clitic, names by their ending, the colon after digits and
+// capitals as the Kielenhuollon käsikirja writes it, the apostrophe of an
+// unsaid end, and the refusals.
 
 #include "test_harness.h"
 

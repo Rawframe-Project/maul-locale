@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Number parsing's affix matchers and bounds on crafted data (record
-// mloc-0032): CLDR's decimal and percent patterns have no literal the
-// ignorables do not cover, so a pack gives the formatter patterns that
-// have ("#,##0 pcs", explicit negative subpatterns, parentheses, a
-// trailing minus), each case's result as ICU4C 79's DecimalFormat with
-// the same pattern and English symbols gives it; then the affix bounds,
-// data without the parse sets, and the code point reader.
+// Number parsing's affix matchers and bounds on crafted data: CLDR's
+// decimal and percent patterns have no literal the ignorables do not
+// cover, so a pack gives the formatter patterns that have ("#,##0 pcs",
+// explicit negative subpatterns, parentheses, a trailing minus), each
+// case's result as ICU4C 79's DecimalFormat with the same pattern and
+// English symbols gives it; then the affix bounds, data without the parse
+// sets, and the code point reader.
 
 #include "bytes.h"
 #include "data_format.h"

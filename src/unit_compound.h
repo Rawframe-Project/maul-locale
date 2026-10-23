@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Unit name patterns (records mloc-0024, mloc-0025 and mloc-0030): a
-// unit's patterns per plural category, those of a unit CLDR names, or
-// built from the compound patterns as ICU's
+// Unit name patterns: a unit's patterns per plural category, those of a
+// unit CLDR names, or built from the compound patterns as ICU's
 // LongNameHandler::forArbitraryUnit builds them.
 
 #ifndef MLOC_UNIT_COMPOUND_H

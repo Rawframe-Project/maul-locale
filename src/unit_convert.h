@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Exact unit conversion (UTS #35 Part 6, Unit Conversion; record
-// mloc-0023): a core unit's size in its base unit as a fraction of
-// fixed-width integers, and a decimal carried through two such sizes
-// without rounding until the end.
+// Exact unit conversion (UTS #35 Part 6, Unit Conversion): a core unit's
+// size in its base unit as a fraction of fixed-width integers, and a
+// decimal carried through two such sizes without rounding until the end.
 
 #ifndef MLOC_UNIT_CONVERT_H
 #define MLOC_UNIT_CONVERT_H

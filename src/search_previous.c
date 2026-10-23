@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Collation search backward (record mloc-0074): ICU4C 79's
-// usearch_searchBackwards over the text's processed elements walking
-// back (search_back.h). The walk's index 0 is the element nearest the
-// position; a match's elements are compared from the pattern's last.
+// Collation search backward: ICU4C 79's usearch_searchBackwards over the
+// text's processed elements walking back (search_back.h). The walk's index
+// 0 is the element nearest the position; a match's elements are compared
+// from the pattern's last.
 
 #include "search_boundary.h"
 #include "search_find.h"

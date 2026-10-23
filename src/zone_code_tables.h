@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The zone codes unit of the data file (record mloc-0041), which the
-// generator compiles from CLDR's bcp47/timezone.xml and
-// supplemental/windowsZones.xml: the BCP 47 time zone ids and the Windows
-// zone names, keyed by identifier names so that they serve a zones unit
-// of any tzdb release.
+// The zone codes unit of the data file, which the generator compiles from
+// CLDR's bcp47/timezone.xml and supplemental/windowsZones.xml: the BCP 47
+// time zone ids and the Windows zone names, keyed by identifier names so
+// that they serve a zones unit of any tzdb release.
 //
 // The payload is a header of five 32-bit counts and four zero bytes, then
 // these sections, each starting on an 8-byte boundary:

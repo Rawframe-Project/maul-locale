@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The fast Latin tables in the collation data file (record mloc-0072):
-// the root's as long as ICU4C 79's with its head words, every type's
-// read as its own, the root's or none, and the section's reader
-// refusing a table that does not hold together.
+// The fast Latin tables in the collation data file: the root's as long as
+// ICU4C 79's with its head words, every type's read as its own, the root's
+// or none, and the section's reader refusing a table that does not hold
+// together.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS

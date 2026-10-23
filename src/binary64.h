@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Exact quotients as binary64 numbers (records mloc-0001, mloc-0041):
-// Temporal's totals are float64 values of exact rationals, which the
-// library finds by integer arithmetic alone, correctly rounded (ties to
-// even), the double assembled from its bits. Numerators and denominators
-// are unsigned integers of 128 bits.
+// Exact quotients as binary64 numbers: Temporal's totals are float64
+// values of exact rationals, which the library finds by integer arithmetic
+// alone, correctly rounded (ties to even), the double assembled from its
+// bits. Numerators and denominators are unsigned integers of 128 bits.
 
 #ifndef MLOC_BINARY64_H
 #define MLOC_BINARY64_H

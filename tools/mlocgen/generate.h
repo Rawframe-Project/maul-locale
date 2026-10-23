@@ -3,10 +3,10 @@
 //
 // Writes the library's generated sources from CLDR: the code tables, the
 // data version they make (src/generated/data_version.h) and the
-// compiled-in data (src/generated/builtin_data.c). The data version's
-// hash covers the pinned releases (tools/cldr-release.txt,
-// tools/tzdb-release.txt) and every generated code table, so data from
-// any other generation is refused (record mloc-0005).
+// compiled-in data (src/generated/builtin_data.c). The data version's hash
+// covers the pinned releases (tools/cldr-release.txt,
+// tools/tzdb-release.txt) and every generated code table, so data from any
+// other generation is refused.
 
 #ifndef MLOCGEN_GENERATE_H
 #define MLOCGEN_GENERATE_H

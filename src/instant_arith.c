@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The arithmetic of instants (maul-locale/zone.h, record mloc-0041):
-// ECMA-262's AddDurationToInstant, DifferenceEpochNanoseconds and
+// The arithmetic of instants (maul-locale/zone.h): ECMA-262's
+// AddDurationToInstant, DifferenceEpochNanoseconds and
 // RoundEpochNanoseconds. An instant's seconds and nanoseconds, and a day
 // with the nanoseconds past its midnight for rounding, keep every value
 // within 64 bits.

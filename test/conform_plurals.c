@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Every sample of CLDR's plural rules against the library (record
-// mloc-0020): reads the lines of `mlocgen plural-samples` ("type<TAB>id
-// <TAB>category<TAB>sample") and selects the sample's category for the
-// id on the compiled-in data. A compact sample ("1.1c6") is the whole
-// value (1100000) with the exponent as c. CI runs it.
+// Every sample of CLDR's plural rules against the library: reads the lines
+// of `mlocgen plural-samples` ("type<TAB>id <TAB>category<TAB>sample") and
+// selects the sample's category for the id on the compiled-in data. A
+// compact sample ("1.1c6") is the whole value (1100000) with the exponent
+// as c. CI runs it.
 //
 // usage: mlocgen plural-samples <common> | conform_plurals
 

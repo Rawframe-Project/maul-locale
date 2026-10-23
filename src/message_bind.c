@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Message formatters and binding (maul-locale/message.h, record
-// mloc-0045).
+// Message formatters and binding (maul-locale/message.h).
 
 #include "message_bind.h"
 

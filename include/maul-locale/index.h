@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Alphabetic index (record mloc-0075): the labels of a sorted list's
-// sections (A, B, C... in English; あ, か, さ... in Japanese) and the
-// section each name falls into, under a collator, as ICU4C's
-// AlphabeticIndex builds its immutable index. The labels are the
-// collator's U+FDD0 contractions (the Chinese types: pinyin letters,
-// stroke counts, zhuyin, radicals), else the locale's index labels;
-// those that sort as their parts or past the scripts are dropped, and an
-// underflow, an overflow and an inflow bucket for each run of scripts
-// skipped surround them. The caller sorts and keeps its own names: the
-// index gives the buckets in order and a name's bucket.
+// Alphabetic index: the labels of a sorted list's sections (A, B, C... in
+// English; あ, か, さ... in Japanese) and the section each name falls into,
+// under a collator, as ICU4C's AlphabeticIndex builds its immutable index.
+// The labels are the collator's U+FDD0 contractions (the Chinese types:
+// pinyin letters, stroke counts, zhuyin, radicals), else the locale's
+// index labels; those that sort as their parts or past the scripts are
+// dropped, and an underflow, an overflow and an inflow bucket for each run
+// of scripts skipped surround them. The caller sorts and keeps its own
+// names: the index gives the buckets in order and a name's bucket.
 //
 // The index is built into caller memory of any alignment and keeps a
 // copy of the collator at primary strength; its bytes may be copied or

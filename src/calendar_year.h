@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A year of any calendar (record mloc-0040): its months, their lengths
-// and codes, and its days, over each calendar's own arithmetic. Making
-// dates and the date arithmetic share it.
+// A year of any calendar: its months, their lengths and codes, and its
+// days, over each calendar's own arithmetic. Making dates and the date
+// arithmetic share it.
 
 #ifndef MLOC_CALENDAR_YEAR_H
 #define MLOC_CALENDAR_YEAR_H

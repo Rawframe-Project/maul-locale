@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// PO exchange (record mloc-0059): the PO reader over gettext's forms
-// (escapes, strings over lines, comments, flags, obsolete entries) and
-// its refusals, the writer read back, an export's exact text, and an
-// import's values, records, skips and refusals, with export then import
-// giving the translation back. Run with a directory to write into.
+// PO exchange: the PO reader over gettext's forms (escapes, strings over
+// lines, comments, flags, obsolete entries) and its refusals, the writer
+// read back, an export's exact text, and an import's values, records,
+// skips and refusals, with export then import giving the translation back.
+// Run with a directory to write into.
 
 #include "exchange_po.h"
 #include "file.h"

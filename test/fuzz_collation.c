@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// libFuzzer target for the general compare (records mloc-0067 and
-// mloc-0069) over the generated root. The first byte chooses the
-// strength and the alternate setting, the second backwards, the case
-// level, case first and numeric; the third and fourth up to three
-// reorder codes, which may be refused; the fifth where the rest is cut
-// into two texts. Each text equals itself, the order of two is the
-// mirror of their order the other way, and their sort keys (record
-// mloc-0070) order them alike.
+// libFuzzer target for the general compare over the generated root. The
+// first byte chooses the strength and the alternate setting, the second
+// backwards, the case level, case first and numeric; the third and fourth
+// up to three reorder codes, which may be refused; the fifth where the
+// rest is cut into two texts. Each text equals itself, the order of two is
+// the mirror of their order the other way, and their sort keys order them
+// alike.
 
 #include "collation_compare.h"
 #include "collation_key.h"

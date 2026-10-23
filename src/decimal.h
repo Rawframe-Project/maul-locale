@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // What the decimal part's files share: a digit's power of ten is the
-// exponent plus its distance from the last digit (record mloc-0019).
+// exponent plus its distance from the last digit.
 
 #ifndef MLOC_DECIMAL_H
 #define MLOC_DECIMAL_H

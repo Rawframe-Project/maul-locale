@@ -52,16 +52,16 @@
 //   char text[textSize]: values in lowercase, subtags joined by "-"; a
 //       subdivision replaced by a region is the region and "zzzz"
 //
-// Parents (kindLocaleParents), the explicit parent locales of record
-// mloc-0016, by locale key:
+// Parents (kindLocaleParents), CLDR's explicit parent locales, by locale
+// key:
 //   u32 count (at most parentMaxEntries), textSize, u64 zero
 //   entries[count], 12 bytes each: u8 component, childLength,
 //       parentLength, zero; u32 childOffset, parentOffset; sorted by
 //       component, then by the child's bytes, a prefix first
-//   char text[textSize]: keys, CLDR ids as mloc-0016 forms them, each
+//   char text[textSize]: keys, CLDR ids in key form, each
 //       exactly as the library writes it back
 //
-// Matching (kindLocaleMatch), the distance table of record mloc-0017:
+// Matching (kindLocaleMatch), CLDR's language matching distances:
 //   u8 languageDistance, scriptDistance, regionDistance,
 //       minRegionDistance: CLDR's defaults and its least region distance
 //   u16 paradigmCount (at most matchMaxParadigms), languageCount,

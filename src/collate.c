@@ -478,10 +478,10 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
     }
     NfdText x = mlocNfdUtf8((const uint8_t*)(a != nullptr ? a : ""), aLength);
     NfdText y = mlocNfdUtf8((const uint8_t*)(b != nullptr ? b : ""), bLength);
-    // Research 68: the identical prefix skipped before both compares, as
-    // ICU4C's compare does. Its unsafe ranges are the root's and the
-    // tailoring's, read with the general path's parts, so only texts that
-    // begin alike read them before the fast compare.
+    // The identical prefix skipped before both compares, as ICU4C's compare
+    // does. Its unsafe ranges are the root's and the tailoring's, read with
+    // the general path's parts, so only texts that begin alike read them
+    // before the fast compare.
     bool alike = aLength > 0 && bLength > 0 && x.bytes[0] == y.bytes[0];
     size_t p = alike ? Prefix(collator, &c, x, y) : 0;
     int order = fastLatinBail;

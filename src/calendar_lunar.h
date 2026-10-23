@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Chinese and Dangi years the dates use (record mloc-0040): the
-// generated tables from 1600 to 2400, the model outside them.
+// The Chinese and Dangi years the dates use: the generated tables from
+// 1600 to 2400, the model outside them.
 
 #ifndef MLOC_CALENDAR_LUNAR_H
 #define MLOC_CALENDAR_LUNAR_H

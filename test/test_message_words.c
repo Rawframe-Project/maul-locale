@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The mloc: functions over numbers and durations (maul-locale/message.h,
-// record mloc-0045): mloc:spellout by rule set or numbering system,
-// MF1's spellout and ordinal texts as ICU4C 79 writes them;
-// mloc:relative by unit, style and numeric with number options;
-// mloc:duration over durations, ISO 8601 literals and seconds with
-// ECMA-402's options; mloc:list by type and style, selecting by its
-// count; their refusals, their operands passed on, their
-// parts and preparation, and that none but mloc:list selects.
+// The mloc: functions over numbers and durations (maul-locale/message.h):
+// mloc:spellout by rule set or numbering system, MF1's spellout and
+// ordinal texts as ICU4C 79 writes them; mloc:relative by unit, style and
+// numeric with number options; mloc:duration over durations, ISO 8601
+// literals and seconds with ECMA-402's options; mloc:list by type and
+// style, selecting by its count; their refusals, their operands passed on,
+// their parts and preparation, and that none but mloc:list selects.
 
 #include "message_prepare.h"
 #include "test_harness.h"

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Every day's fields against ICU4X 2.3 (record mloc-0040): each line
-// "day year era eraYear monthCode day inLeapYear daysInYear daysInMonth
-// monthsInYear dayOfYear dayOfWeek" as the oracle program prints it (era
-// "-" for none), hashed by FNV-1a
-// over every day of the span. The hashes were taken from ICU4X's output
-// by that program, kept in the docs as icu4x_calendar_fields.rs; a
+// Every day's fields against ICU4X 2.3: each line "day year era eraYear
+// monthCode day inLeapYear daysInYear daysInMonth monthsInYear dayOfYear
+// dayOfWeek" as the oracle program prints it (era "-" for none), hashed by
+// FNV-1a over every day of the span. The hashes were taken from ICU4X's
+// output by that program, kept in the docs as icu4x_calendar_fields.rs; a
 // mismatch is found day by day by running it.
 
 #include "test_harness.h"

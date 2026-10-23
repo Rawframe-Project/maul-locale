@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// An XLIFF unit's codes (record mloc-0060): a message's placeholders,
-// markup and syntax (mf2_parts.h) as inline codes over the unit's
-// original data, one <data> per distinct text, shared by the source and
-// the target, and by every segment of a unit (record mloc-0061). A
-// source's codes are numbered on from the unit's last number; a target's
-// code takes the number of the first code of its source with the same
-// data not yet taken, else a new one. Markup open and close in one
-// pattern pair as <sc> and <ec>; one left alone is isolated.
+// An XLIFF unit's codes: a message's placeholders, markup and syntax
+// (mf2_parts.h) as inline codes over the unit's original data, one <data>
+// per distinct text, shared by the source and the target, and by every
+// segment of a unit. A source's codes are numbered on from the unit's last
+// number; a target's code takes the number of the first code of its source
+// with the same data not yet taken, else a new one. Markup open and close
+// in one pattern pair as <sc> and <ec>; one left alone is isolated.
 
 #ifndef MLOCCAT_XLIFF_CODES_H
 #define MLOCCAT_XLIFF_CODES_H
