@@ -268,12 +268,18 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(test_message PRIVATE MLOC_DATES_FILE="${MLOC_MESSAGE_DATES}")
     endif()
     # The NFD stream against Maul Unicode's NFD, and against its
-    # NormalizationTest.txt when the sources were fetched.
+    # NormalizationTest.txt when the sources were fetched. A fetched tree
+    # without the file stops the configuration, so a move of the file in
+    # Maul Unicode cannot silently drop the comparison.
     maul_add_test(nfd_stream WHITEBOX MANUAL)
     if(TARGET test_nfd_stream)
         target_link_libraries(test_nfd_stream PRIVATE maul-unicode::maul-unicode)
-        set(MLOC_NORMALIZATION_TEST "${maul-unicode_SOURCE_DIR}/test/data/NormalizationTest.txt")
-        if(maul-unicode_SOURCE_DIR AND EXISTS "${MLOC_NORMALIZATION_TEST}" AND NOT EMSCRIPTEN)
+        if(maul-unicode_SOURCE_DIR AND NOT EMSCRIPTEN)
+            set(MLOC_NORMALIZATION_TEST "${maul-unicode_SOURCE_DIR}/tools/ucd/NormalizationTest.txt")
+            if(NOT EXISTS "${MLOC_NORMALIZATION_TEST}")
+                message(FATAL_ERROR "Maul Unicode's sources lack ${MLOC_NORMALIZATION_TEST}, "
+                                    "which the nfd_stream test compares against")
+            endif()
             add_test(NAME nfd_stream COMMAND test_nfd_stream "${MLOC_NORMALIZATION_TEST}")
         else()
             add_test(NAME nfd_stream COMMAND test_nfd_stream)
