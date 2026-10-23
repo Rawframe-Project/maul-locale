@@ -5,11 +5,12 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
-## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1)
+## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1) (2026-10-23)
 
-The first release: locale data and formatting from CLDR 49 and the IANA
-time zone database 2026e, checked against CLDR's conformance data and
-against ICU4C and ICU4X.
+The first release: locale data and formatting from CLDR 49 (beta 3)
+and the IANA time zone database 2026e, checked against CLDR's
+conformance data and against ICU4C 79.1 (release candidate) and ICU4X
+2.3.
 
 ### Added
 
