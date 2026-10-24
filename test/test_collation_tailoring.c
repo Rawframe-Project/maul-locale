@@ -70,8 +70,8 @@ static bool BuildOn(const RootTable* root, const char* text, Built* out)
         fprintf(stderr, "  %s: %s\n", text, error);
         return false;
     }
-    out->bytes = CollationTailoringUnit(&out->builder.mappings, &out->builder.settings, &out->size,
-                                        error, sizeof(error));
+    out->bytes = CollationTailoringUnit(&out->builder.mappings, &out->builder.settings, &s_rootUnit,
+                                        &out->size, error, sizeof(error));
     return out->bytes != nullptr &&
            mlocReadCollationTailoring((DataSpan){out->bytes, (uint32_t)out->size}, &out->unit);
 }
@@ -296,10 +296,12 @@ static void TestValidatorSettings(void)
               !ReadsWith(&b, 16, 3 << 12, b.size) && !ReadsWith(&b, 16, 3 << 14, b.size) &&
               !ReadsWith(&b, 16, 1 << 18, b.size) &&
               ReadsWith(&b, 16,
-                        5 | 2 << 3 | 4 << 5 | 3 << 8 | 2 << 10 | 2 << 12 | 2 << 14 | 1 << 16 |
-                            1 << 17,
+                        5 | 2 << 3 | 4 << 5 | 3 << 8 | 2 << 10 | 2 << 12 | 2 << 14 | 1 << 17,
                         b.size),
           "a setting out of range");
+    // Codes given lay out a stored reordering after them, which this unit
+    // lacks.
+    CHECK(!ReadsWith(&b, 16, 1 << 16, b.size), "codes given without their reordering");
     Free(&b);
 }
 

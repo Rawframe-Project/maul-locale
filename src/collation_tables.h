@@ -85,6 +85,12 @@
 //      reorder[reorderCount]: the [reorder] codes, each once: Maul
 //      Unicode's packed scripts (four letters, the first upper case) and
 //      the groups
+//      when bit 16 is set, the reordering those codes make over the root,
+//      as mlocCollationMakeReorder makes it (the generator stores it so
+//      that a collator need not): u32 1, u32 minHighNoReorder (its low
+//      16 bits 0), u32 rangeCount (at most collationMaxReorderRanges),
+//      u32 ranges[rangeCount] (their limits, the top 16 bits, rising),
+//      u8 table[256]; or u32 0 alone when the order is the root's
 //
 // A trie value may be the fallback word 0xC0 (tag 0), "the root's". A
 // context list's default and entries may also be a contraction naming a
@@ -151,6 +157,10 @@ enum
     collationMaxTypeName = 32,
     // Codes in a reorder list, more than the root has ranges.
     collationMaxReorderCodes = 256,
+    // The ranges a reordering keeps, from the first shared lead byte on.
+    // Random orders of up to 40 codes need at most 24; more is refused as
+    // capacity.
+    collationMaxReorderRanges = 64,
     collationSpecialByte = 0xC0,
     collationTagLongPrimary = 1,
     collationTagLongSecondary = 2,
@@ -594,6 +604,11 @@ typedef struct CollationTailoring
     uint32_t settings;
     uint32_t reorderCount;
     const uint8_t* reorder;
+    // The stored reordering past its leading 1 (minHighNoReorder first),
+    // and its range count; null when the rules reorder nothing or keep
+    // the root's order.
+    const uint8_t* reordering;
+    uint32_t reorderRanges;
     uint32_t mappedCount;
 } CollationTailoring;
 
@@ -655,6 +670,33 @@ static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring*
     uint64_t contexts = starts + ((uint64_t)r->listCount + 1) * 4;
     uint64_t reorder = contexts + (uint64_t)r->contextCount * 4;
     uint64_t tableAt = reorder + (uint64_t)t.reorderCount * 4;
+    if ((t.settings & collationReorderGiven) != 0)
+    {
+        // The stored reordering; its range count bounds what a collator
+        // copies, so it is checked here too.
+        if (tableAt + 4 > span.size)
+        {
+            return false;
+        }
+        if (mlocLoad32(p + tableAt) != 0)
+        {
+            if (tableAt + 16 > span.size)
+            {
+                return false;
+            }
+            t.reordering = p + tableAt + 4;
+            t.reorderRanges = mlocLoad32(p + tableAt + 8);
+            if (t.reorderRanges > collationMaxReorderRanges)
+            {
+                return false;
+            }
+            tableAt += 12 + (uint64_t)t.reorderRanges * 4 + 256;
+        }
+        else
+        {
+            tableAt += 4;
+        }
+    }
     uint64_t unsafe = 0;
     if (tableAt > span.size ||
         !mlocReadFastLatin(p, tableAt, span.size, true, &r->fastLatin, &r->fastLatinCount,
@@ -672,6 +714,27 @@ static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring*
     return true;
 }
 
+// Whether a tailoring's stored reordering is one a generator writes: its
+// leading word 1, for codes given, minHighNoReorder a lead byte's start,
+// the ranges' limits rising. Its agreement with the root, another unit,
+// is the generator's; a wrong one only orders wrongly.
+static inline bool mlocCollationReorderingValid(const CollationTailoring* t)
+{
+    if (t->reordering == nullptr)
+    {
+        return true;
+    }
+    const uint8_t* ranges = t->reordering + 8;
+    bool ok = mlocLoad32(t->reordering - 4) == 1 && t->reorderCount > 0 &&
+              (mlocLoad32(t->reordering) & 0xFFFF) == 0;
+    for (uint32_t i = 1; ok && i < t->reorderRanges; i++)
+    {
+        ok = mlocLoad32(ranges + (size_t)(i - 1) * 4) >> 16 < mlocLoad32(ranges + (size_t)i * 4) >>
+             16;
+    }
+    return ok;
+}
+
 // Reads and checks a tailoring as mlocReadCollationRoot reads the root,
 // the fallback word allowed in the trie.
 static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
@@ -686,7 +749,7 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
               (r->fastLatin == nullptr || mlocFastLatinValid(r->fastLatin, r->fastLatinCount)) &&
               mlocCollationUnsafeValid(r->unsafe, r->unsafeCount) &&
               mlocCollationReorderValid(t.reorder, t.reorderCount) &&
-              mlocCollationListStart(r, 0) == 0 &&
+              mlocCollationReorderingValid(&t) && mlocCollationListStart(r, 0) == 0 &&
               mlocCollationListStart(r, r->listCount) == r->contextCount;
     for (uint32_t i = 0; ok && i < r->listCount; i++)
     {

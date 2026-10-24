@@ -96,7 +96,8 @@ static void Type(const CollationType* t, const Root* root, CollationCatalog* cat
                              catalog, error, sizeof(error)) &&
         CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b))
     {
-        unit = CollationTailoringUnit(&b.mappings, &b.settings, &size, error, sizeof(error));
+        unit = CollationTailoringUnit(&b.mappings, &b.settings, &root->view, &size, error,
+                                      sizeof(error));
     }
     if (unit == nullptr)
     {

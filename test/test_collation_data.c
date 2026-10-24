@@ -4,13 +4,16 @@
 // The collation data file: its root unit found and valid, a few elements
 // read through the iterator as CLDR 49's root gives them, and a copy with
 // a unit spoiled refused at open: the checks a collator's making trusts
-// (each trie offset, the fast Latin table, the unsafe ranges) run there.
+// (each trie offset, the fast Latin table, the unsafe ranges, a stored
+// reordering) run there. Every stored reordering is the one the root
+// makes of the tailoring's codes, which no validator can see.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "collation_iterator.h"
+#include "collation_reorder.h"
 #include "collation_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -131,9 +134,10 @@ static void SpoilViews(DataSpan unit, uint32_t hashAt, const CollationRoot* r, c
     CHECK(r->fastLatin != nullptr && r->unsafeCount > 0, what);
     if (r->fastLatin != nullptr)
     {
-        uint8_t version[1] = {(uint8_t)(r->fastLatin[0] ^ 1)};
+        // Word 0 is the version above the header's length: its high byte.
+        uint8_t version[1] = {(uint8_t)(r->fastLatin[1] ^ 1)};
         snprintf(message, sizeof(message), "%s: a fast Latin table of another version", what);
-        Spoil(unit, hashAt, r->fastLatin, version, 1, message);
+        Spoil(unit, hashAt, r->fastLatin + 1, version, 1, message);
     }
     if (r->unsafeCount > 0)
     {
@@ -168,6 +172,85 @@ static bool FindTailoring(const DataView* view, DataSpan* typesOut, CollationTai
         }
     }
     return false;
+}
+
+// Each tailoring's reordering against the one the root makes of its
+// codes; gives the unit of types and the tailoring of the first stored
+// reordering with more than one range.
+static void TestReorderings(const DataView* view, const CollationRoot* root, DataSpan* typesOut,
+                            CollationTailoring* out)
+{
+    uint32_t checked = 0;
+    uint32_t stored = 0;
+    uint32_t same = 0;
+    for (uint32_t u = 0; u < view->unitCount; u++)
+    {
+        const uint8_t* record = view->bytes + dataHeaderSize + (size_t)u * dataUnitSize;
+        if (mlocLoad32(record) != kindCollationTailorings)
+        {
+            continue;
+        }
+        DataSpan types = {view->bytes + mlocLoad32(record + 8), mlocLoad32(record + 12)};
+        CollationTypes t = mlocReadCollationTypes(types);
+        for (uint32_t i = 0; i < t.count; i++)
+        {
+            const uint8_t* entry = types.bytes + collationTypesHead + (size_t)i * collationTypeSize;
+            DataSpan span = {types.bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+            CollationTailoring tailoring;
+            uint32_t codes[collationMaxReorderCodes];
+            if (!mlocReadCollationTailoring(span, &tailoring) ||
+                (tailoring.settings & collationReorderGiven) == 0 ||
+                tailoring.reorderCount > collationMaxReorderCodes)
+            {
+                continue;
+            }
+            for (uint32_t c = 0; c < tailoring.reorderCount; c++)
+            {
+                codes[c] = mlocLoad32(tailoring.reorder + (size_t)c * 4);
+            }
+            CollationReorder made;
+            CollationReorder read;
+            bool changes = false;
+            bool ok = mlocCollationMakeReorder(root, codes, tailoring.reorderCount, &made,
+                                               &changes) == mloc_success;
+            if (ok && changes && tailoring.reordering != nullptr)
+            {
+                stored++;
+                mlocCollationLoadReorder(tailoring.reordering, tailoring.reorderRanges, &read);
+                ok = read.minHighNoReorder == made.minHighNoReorder &&
+                     read.rangeCount == made.rangeCount &&
+                     memcmp(read.ranges, made.ranges, made.rangeCount * sizeof(uint32_t)) == 0 &&
+                     memcmp(read.table, made.table, sizeof(made.table)) == 0;
+                if (ok && read.rangeCount > 1 && typesOut->bytes == nullptr)
+                {
+                    *typesOut = types;
+                    *out = tailoring;
+                }
+            }
+            else
+            {
+                ok = ok && !changes && tailoring.reordering == nullptr;
+            }
+            checked++;
+            same += ok;
+        }
+    }
+    CHECK(stored > 0, "tailorings that reorder store their reordering");
+    CHECK(same == checked, "each stored reordering is the one the root makes of the codes");
+}
+
+// Spoils a stored reordering: its leading word, its range count, the low
+// bits of its boundary, and its range limits, made equal.
+static void SpoilReordering(DataSpan types, const CollationTailoring* t)
+{
+    static const uint8_t two[4] = {2, 0, 0, 0};
+    static const uint8_t over[4] = {collationMaxReorderRanges + 1, 0, 0, 0};
+    static const uint8_t low[1] = {1};
+    const uint8_t* r = t->reordering;
+    Spoil(types, collationTypesHashAt, r - 4, two, 4, "a stored reordering's leading word 2");
+    Spoil(types, collationTypesHashAt, r + 4, over, 4, "more ranges than a collator holds");
+    Spoil(types, collationTypesHashAt, r, low, 1, "a boundary that is not a lead byte's start");
+    Spoil(types, collationTypesHashAt, r + 12, r + 8, 4, "two ranges with the same limit");
 }
 
 int main(void)
@@ -229,6 +312,17 @@ int main(void)
     if (types.bytes != nullptr)
     {
         SpoilViews(types, collationTypesHashAt, &tailoring.view, "a tailoring");
+    }
+    DataSpan reordering = {0};
+    if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&
+        mlocReadCollationRoot(span, &r))
+    {
+        TestReorderings(&view, &r, &reordering, &tailoring);
+    }
+    CHECK(reordering.bytes != nullptr, "a stored reordering of more than one range");
+    if (reordering.bytes != nullptr)
+    {
+        SpoilReordering(reordering, &tailoring);
     }
     CHECK(mlocOpenData(&data, s_file, s_size) == mloc_success, "and put back, it opens again");
     return s_failures == 0 ? 0 : 1;

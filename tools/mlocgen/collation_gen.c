@@ -71,9 +71,9 @@ static CollationTypeBody Build(const CollationType* t, const RootTable* root, co
         CollationBuilderInit(&b, root, CollationCatalogImport, catalog, error, sizeof(error)) &&
         CollationBuilderAdd(&b, &t->rules) && CollationBuilderFinish(&b);
     CollationTypeBody built = {.code = CollationTypeCode(t->type)};
-    built.body =
-        ok ? CollationTailoringUnit(&b.mappings, &b.settings, &built.size, error, sizeof(error))
-           : nullptr;
+    built.body = ok ? CollationTailoringUnit(&b.mappings, &b.settings, &roots->view, &built.size,
+                                             error, sizeof(error))
+                    : nullptr;
     if (built.body != nullptr)
     {
         built.body = CollationFastLatinSection(built.body, &built.size, &b.mappings, &roots->view,

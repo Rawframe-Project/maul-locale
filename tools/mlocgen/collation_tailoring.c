@@ -6,6 +6,7 @@
 #include "collation_tailoring.h"
 
 #include "collation_encode.h"
+#include "collation_reorder.h"
 #include "collation_tables.h"
 #include "collation_unit.h"
 #include "table_gen.h"
@@ -235,15 +236,30 @@ static uint32_t Settings(const CollationRuleSettings* r)
            (r->hanRadical ? collationHanRadical : 0);
 }
 
+// The reordering section: none when the rules give no codes; u32 0 when
+// the codes keep the root's order; else u32 1 and the reordering.
+static size_t ReorderingSize(const CollationRuleSettings* settings, const CollationReorder* made,
+                             bool changes)
+{
+    if (settings == nullptr || !settings->reorderGiven)
+    {
+        return 0;
+    }
+    return changes ? 12 + (size_t)made->rangeCount * 4 + sizeof(made->table) : 4;
+}
+
 static uint8_t* Write(const Writer* w, const uint32_t* values,
-                      const CollationRuleSettings* settings, size_t* sizeOut)
+                      const CollationRuleSettings* settings, const CollationReorder* made,
+                      bool changes, size_t* sizeOut)
 {
     size_t trieSize = 0;
     uint8_t* trie = TrieBuild(values, &trieSize);
     size_t padded = (trieSize + 7) / 8 * 8;
     size_t reorderCount = settings == nullptr ? 0 : settings->reorderCount;
+    size_t reordering = ReorderingSize(settings, made, changes);
     size_t size = collationHead + padded + w->ces.count * 8 + w->ce32s.count * 4 +
-                  (w->listStarts.count + 1) * 4 + w->contexts.count * 4 + reorderCount * 4;
+                  (w->listStarts.count + 1) * 4 + w->contexts.count * 4 + reorderCount * 4 +
+                  reordering;
     uint8_t* out = GenAllocate(size);
     GenPut(out, w->ce32s.count, 4);
     GenPut(out + 4, w->ces.count, 4);
@@ -276,15 +292,41 @@ static uint8_t* Write(const Writer* w, const uint32_t* values,
     {
         GenPut(p, settings->reorder[i], 4);
     }
+    if (reordering > 0)
+    {
+        GenPut(p, changes ? 1 : 0, 4);
+        p += 4;
+    }
+    if (reordering > 4)
+    {
+        GenPut(p, made->minHighNoReorder, 4);
+        GenPut(p + 4, made->rangeCount, 4);
+        p += 8;
+        for (uint32_t i = 0; i < made->rangeCount; i++, p += 4)
+        {
+            GenPut(p, made->ranges[i], 4);
+        }
+        memcpy(p, made->table, sizeof(made->table));
+    }
     free(trie);
     *sizeOut = size;
     return out;
 }
 
 uint8_t* CollationTailoringUnit(const CollationMappings* mappings,
-                                const CollationRuleSettings* settings, size_t* sizeOut, char* error,
-                                size_t errorSize)
+                                const CollationRuleSettings* settings, const CollationRoot* root,
+                                size_t* sizeOut, char* error, size_t errorSize)
 {
+    // The reordering the codes make, as a collator would make it.
+    CollationReorder made = {0};
+    bool changes = false;
+    if (settings != nullptr && settings->reorderGiven &&
+        mlocCollationMakeReorder(root, settings->reorder, settings->reorderCount, &made,
+                                 &changes) != mloc_success)
+    {
+        snprintf(error, errorSize, "the reorder codes make no reordering");
+        return nullptr;
+    }
     Writer w = {.m = mappings};
     uint32_t* values = GenAllocate((size_t)trieCodePoints * 4);
     for (uint32_t c = 0; c <= trieMaxCodePoint; c++)
@@ -306,7 +348,7 @@ uint8_t* CollationTailoringUnit(const CollationMappings* mappings,
             }
         }
     }
-    uint8_t* out = ok ? Write(&w, values, settings, sizeOut) : nullptr;
+    uint8_t* out = ok ? Write(&w, values, settings, &made, changes, sizeOut) : nullptr;
     free(values);
     free(w.ces.items);
     free(w.ce32s.items);
