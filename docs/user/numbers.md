@@ -2,6 +2,16 @@
 
 Numbers are formatted from decimals, chosen by plural rules, written as currencies and units, spelled out in words and read back as a person types them. The headers are `maul-locale/decimal.h`, `plural.h`, `number.h`, `currency.h`, `unit.h` and `spellout.h`.
 
+## Contents
+
+- [Decimals](#decimals)
+- [Plural rules](#plural-rules)
+- [Formatting numbers](#formatting-numbers)
+- [Currencies](#currencies)
+- [Units](#units)
+- [Numbers in words](#numbers-in-words)
+- [Reading numbers](#reading-numbers)
+
 ## Decimals
 
 Every number the library formats is an `mlocDecimal`: up to 40 significant digits, an exponent and the fraction digits it shows, so 1.50 and 1.5 are different decimals with the same value. Make one with `mlocMakeDecimal` from an integer, `mlocParseDecimal` from text such as `"-1234.50"` or `"6.02e23"`, or `mlocMakeShortestDecimal` from a `double`: the shortest digits that read back as the same double, computed with integers, so 0.1 is 0.1 on every platform.
