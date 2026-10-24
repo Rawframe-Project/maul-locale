@@ -46,6 +46,8 @@
 // The titlecase of the lowercase letters that begin a name, a unit of no
 // locale in spellout_tables.h's titlecase layout, for the capitalization
 // contexts.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_NAMES_TABLES_H
 #define MLOC_NAMES_TABLES_H

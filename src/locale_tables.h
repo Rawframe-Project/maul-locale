@@ -100,6 +100,8 @@
 //   locales[localeCount], 8 bytes each: u16 language, region, packed,
 //       sorted by region, then language, unique; u8 hours; zero bytes:
 //       timeData's entries for a language in a region (ca_ES)
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H

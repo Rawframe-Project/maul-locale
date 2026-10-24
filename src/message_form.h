@@ -8,6 +8,8 @@
 // attributes), selectors, keys (one per selector per variant), variants,
 // pieces, variables, and last the pool of string bytes. A string is an
 // offset into the pool and a length.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_MESSAGE_FORM_H
 #define MLOC_MESSAGE_FORM_H

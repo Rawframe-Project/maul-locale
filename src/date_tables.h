@@ -100,6 +100,8 @@
 // time set index (u16) of each calendar, the interval set index (u16) of
 // each calendar, and the index (u16) of the locale's day period rules in
 // the names unit.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_DATE_TABLES_H
 #define MLOC_DATE_TABLES_H

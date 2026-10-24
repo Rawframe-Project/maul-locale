@@ -48,6 +48,8 @@
 // exactly when the zeros are not 0; then the compact pattern index of
 // each slot present (u16), in slot order. A category absent takes the
 // other one's pattern.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_NUMBER_TABLES_H
 #define MLOC_NUMBER_TABLES_H

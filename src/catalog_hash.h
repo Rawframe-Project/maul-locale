@@ -6,6 +6,8 @@
 // under its bucket's pilot. Shared by the library, which looks keys up,
 // and the catalog tool, which builds the tables; inline, so that the tool
 // needs none of the library's internals.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_CATALOG_HASH_H
 #define MLOC_CATALOG_HASH_H

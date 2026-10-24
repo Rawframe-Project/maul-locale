@@ -15,6 +15,8 @@
 //   u8 tableCount, u8 zero[7]
 //   tables[tableCount], 36 bytes each: the category of a range from
 //       start to end at start * 6 + end, 0xFF for none
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_PLURAL_RULES_H
 #define MLOC_PLURAL_RULES_H

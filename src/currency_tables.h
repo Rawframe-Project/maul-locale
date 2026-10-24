@@ -50,6 +50,8 @@
 // a mask (u8) of the fields present, a bit per field in field order, and
 // a u16 for each field present, in field order. Strings hold no byte
 // below 0x20.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_CURRENCY_TABLES_H
 #define MLOC_CURRENCY_TABLES_H

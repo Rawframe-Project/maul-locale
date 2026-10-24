@@ -138,6 +138,8 @@
 // literal), then the coordinate patterns ("{0}N") of each width, long,
 // short and narrow, for east, north, south and west. The values are
 // CLDR's resolution.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_UNIT_TABLES_H
 #define MLOC_UNIT_TABLES_H

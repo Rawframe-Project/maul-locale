@@ -3,6 +3,8 @@
 //
 // The data file layout, shared by the library, which reads it, and the
 // generator, which writes it. All numbers are little-endian.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_DATA_FORMAT_H
 #define MLOC_DATA_FORMAT_H

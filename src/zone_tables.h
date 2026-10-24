@@ -41,6 +41,8 @@
 //                ECMA-402 lists them
 // Within a zone, times ascend; its int64 times are its first few (before
 // December 1901) and last few (after January 2038).
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_ZONE_TABLES_H
 #define MLOC_ZONE_TABLES_H

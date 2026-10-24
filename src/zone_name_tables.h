@@ -45,6 +45,8 @@
 // files each code's city the identifier implies when CLDR names none
 // (its last part, '_' as spaces, for a code with a region), as ICU4C
 // derives it.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_ZONE_NAME_TABLES_H
 #define MLOC_ZONE_NAME_TABLES_H

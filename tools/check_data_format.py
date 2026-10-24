@@ -7,9 +7,11 @@
 # of each header that lays out data the library reads (the patterns on
 # its "layouts" line). A header added, removed or changed since fails the
 # check until someone decides: a change of layout increases the format in
-# include/maul-locale/base.h; then --write records the hashes again. The
-# hashes cannot see a validator that accepts more or less;
-# docs/internals/data.md#versions lists those changes.
+# include/maul-locale/base.h; then --write records the hashes again. Each
+# listed header carries MARKER, and a header of src/ that carries it must
+# be listed, so a new layout header cannot go unwatched. The hashes cannot
+# see a validator that accepts more or less; docs/internals/data.md#versions
+# lists those changes.
 #
 # usage: tools/check_data_format.py [--write]
 
@@ -22,6 +24,7 @@ import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 RECORD = os.path.join(ROOT, "tools", "data-format.txt")
 BASE = os.path.join(ROOT, "include", "maul-locale", "base.h")
+MARKER = "// A data layout: tools/check_data_format.py watches this header."
 
 
 def library_format():
@@ -70,12 +73,33 @@ def current(patterns):
     return out
 
 
+def marked(path):
+    with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+        return MARKER in f.read().splitlines()
+
+
+def marker_problems(listed):
+    problems = [path + " is listed but lacks the marker" for path in listed if not marked(path)]
+    for header in sorted(glob.glob(os.path.join(ROOT, "src", "*.h"))):
+        path = os.path.relpath(header, ROOT).replace(os.sep, "/")
+        if path not in listed and marked(path):
+            problems.append(path + " carries the marker but is not listed")
+    return problems
+
+
 def main():
     if sys.argv[1:] not in ([], ["--write"]):
         sys.exit("usage: tools/check_data_format.py [--write]")
     comments, patterns, fmt, hashes = read_record()
     now = current(patterns)
     own = library_format()
+    unmarked = marker_problems(now)
+    if unmarked:
+        for p in unmarked:
+            print("data format: " + p)
+        print("Every header that lays out data carries the line '%s' and is listed in "
+              "tools/data-format.txt." % MARKER)
+        sys.exit(1)
     if sys.argv[1:] == ["--write"]:
         with open(RECORD, "w", encoding="utf-8", newline="\n") as f:
             f.write("\n".join(comments) + "\n")

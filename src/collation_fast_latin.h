@@ -27,6 +27,8 @@
 // that many words, then the unsafe-backward ranges (collation_unsafe.h). A unit that ends after its
 // arrays has none, nor has one whose count is 0 (the general compare always runs); a tailoring's
 // count fastLatinRootTable says that its table is the root's.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_COLLATION_FAST_LATIN_H
 #define MLOC_COLLATION_FAST_LATIN_H

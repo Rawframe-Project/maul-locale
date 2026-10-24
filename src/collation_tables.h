@@ -60,6 +60,8 @@
 //   after the first. The lists are checked once each at open and a trie
 //   value only names one, so opening costs the unit's size, however many
 //   code points name a list.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 // A tailoring is a unit over the root in the same encoding:
 //

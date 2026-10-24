@@ -6,6 +6,8 @@
 // give others, a byte per usage in the order below, each a set of the
 // contexts in which the usage's first word is titlecased. A locale whose
 // chain has no unit titlecases in none.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_LOCALE_CONTEXT_H
 #define MLOC_LOCALE_CONTEXT_H
