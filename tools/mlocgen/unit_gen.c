@@ -98,8 +98,13 @@ static void Reduce(Fraction* f)
     }
     if (!mlocWideIsZero(&a))
     {
-        mlocWideDivide(&f->n, &a, &f->n, nullptr);
-        mlocWideDivide(&f->d, &a, &f->d, nullptr);
+        // An output of mlocWideDivide may not be one of its inputs.
+        Wide n;
+        Wide d;
+        mlocWideDivide(&f->n, &a, &n, nullptr);
+        mlocWideDivide(&f->d, &a, &d, nullptr);
+        f->n = n;
+        f->d = d;
     }
 }
 

@@ -348,7 +348,12 @@ static void DropUnchanged(Builder* b, CompiledOffset initial)
 // changes nothing.
 static void Merge(Builder* b, CompiledOffset initial)
 {
-    qsort(b->items, (size_t)b->count, sizeof(Raw), CompareRaw);
+    // A zone without transitions has no array, and qsort takes no null
+    // pointer, even for no items.
+    if (b->count > 1)
+    {
+        qsort(b->items, (size_t)b->count, sizeof(Raw), CompareRaw);
+    }
     Raw first = {.standard = initial.standard, .save = initial.save};
     int kept = 0;
     for (int from = 0; from < b->count; from++)

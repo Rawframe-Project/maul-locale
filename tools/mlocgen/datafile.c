@@ -306,7 +306,11 @@ uint8_t* DataFileWrite(DataFile* file, const DataFileVersion* version, size_t* s
         Put32(entry, idOffsets[i]);
         Put32(entry + 4, (uint32_t)strlen(ids[i]));
     }
-    memcpy(out + poolOffset, file->pool, file->poolSize);
+    // A file without strings, as a zones file is, has no pool.
+    if (file->poolSize > 0)
+    {
+        memcpy(out + poolOffset, file->pool, file->poolSize);
+    }
     free(ids);
     free(idOffsets);
     free(placed);
