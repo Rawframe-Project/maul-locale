@@ -27,6 +27,12 @@ for script in "${tables[@]}"; do
 done
 for file in "$root"/src/generated/*; do
     name=src/generated/$(basename "$file")
-    printf '%s\n' "${keep[@]}" | grep -qxF "$name" || rm -- "$file"
+    kept=false
+    for path in "${keep[@]}"; do
+        if [ "$path" = "$name" ]; then
+            kept=true
+        fi
+    done
+    "$kept" || rm -- "$file"
 done
 "$1" generate "$2" "$root" "$3"
