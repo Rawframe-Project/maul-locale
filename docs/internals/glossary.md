@@ -21,7 +21,8 @@ Terms as this repository uses them. Standards' own terms (UTS #35, UTS #10, ECMA
 - **Unit:** one payload of a data file, named by a kind and a locale index (or no locale). Found by binary search.
 - **Kind:** a unit's type, the part in the high 16 bits and the table in the low 16 (`src/kinds.h`). A kind's meaning never changes within a data version.
 - **Validator:** the function a kind's part provides to check a unit when a file opens. It reads its own unit only.
-- **Data version:** CLDR, Unicode and library versions, the tzdb release and a hash of the generated code tables. A file of another data version is refused before anything else is read.
+- **Data version:** CLDR and Unicode versions, the data format version, the tzdb release and a hash of the generated code tables. A file of another data version is refused before anything else is read.
+- **Data format version:** `MLOC_DATA_FORMAT_VERSION`, the version of the data files' and compiled messages' layouts; it changes with them, not with the library version ([data.md](data.md#versions)).
 - **Zones file:** a data file holding only the zones unit, compiled from any tzdb release; the one data whose release may differ from the library's.
 - **Distinct set:** a unit of no locale that stores each distinct value once (number symbols, patterns, compact tables); per-locale units name entries by index.
 

@@ -27,6 +27,8 @@
 // alone, the other grouping separators, infinity, the approximately
 // signs, and the decimal digits, each range of them a run whose digit is
 // its offset from the range's first modulo 10.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_PARSE_TABLES_H
 #define MLOC_PARSE_TABLES_H

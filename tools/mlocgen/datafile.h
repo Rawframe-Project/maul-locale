@@ -43,7 +43,7 @@ typedef struct DataFileVersion
 {
     uint32_t cldr;
     uint32_t unicode;
-    uint32_t library;
+    uint32_t format;
     char tzdb[8];
     uint64_t tables;
 } DataFileVersion;

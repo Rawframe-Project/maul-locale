@@ -24,6 +24,8 @@
 // would give another; a plural category's pattern only where a file
 // along the chain gives that category of that width, as ICU's data has
 // it, the formatter taking other's where the widths have none.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_RELATIVE_TABLES_H
 #define MLOC_RELATIVE_TABLES_H

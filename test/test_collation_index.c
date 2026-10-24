@@ -225,7 +225,7 @@ static uint8_t* LabelFile(const char* locale, const uint8_t* unit, size_t unitSi
     DataFileVersion version = {
         .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
         .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
-        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .format = own.format,
         .tables = own.tables,
     };
     memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));

@@ -45,8 +45,7 @@ static void Stamp(uint8_t* file)
           mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch));
     Put32(file + headerUnicode,
           mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch));
-    Put32(file + headerLibrary,
-          mlocPackVersion(version.library.major, version.library.minor, version.library.patch));
+    Put32(file + headerDataFormat, version.format);
     memcpy(file + headerTzdb, version.tzdb, 8);
     for (int i = 0; i < 8; i++)
     {

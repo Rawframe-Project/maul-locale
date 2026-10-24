@@ -13,6 +13,8 @@
 // differs from its chain's: the set index (u16) of each style, in the
 // order of ListStyle. The values are CLDR's resolution, root's aliases
 // among the styles followed from the locale.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_LIST_TABLES_H
 #define MLOC_LIST_TABLES_H

@@ -27,6 +27,8 @@
 // An id is two to eight digits and lower-case letters; CLDR's "unk" is
 // left out. An alias names every identifier CLDR lists for a code, and
 // every Windows name has a mapping for region 001.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_ZONE_CODE_TABLES_H
 #define MLOC_ZONE_CODE_TABLES_H

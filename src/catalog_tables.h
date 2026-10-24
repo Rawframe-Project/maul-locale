@@ -25,6 +25,8 @@
 //  16  u32 offsets[count + 1] into the message bytes, from 0, rising;
 //      an absent message is an empty one
 //      the compiled messages (mlocCompileMessage's form)
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_CATALOG_TABLES_H
 #define MLOC_CATALOG_TABLES_H

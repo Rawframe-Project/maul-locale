@@ -56,7 +56,7 @@ static uint8_t* Write(const size_t* order, size_t* sizeOut)
     DataFileVersion version = {
         .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
         .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
-        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .format = own.format,
         .tables = own.tables,
     };
     memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));

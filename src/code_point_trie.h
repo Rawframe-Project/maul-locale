@@ -21,6 +21,8 @@
 //      u32 blocks[blockCount][64]: for each 64 code points, the offset of
 //      its data block in values
 //      u32 data[dataLength]
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_CODE_POINT_TRIE_H
 #define MLOC_CODE_POINT_TRIE_H

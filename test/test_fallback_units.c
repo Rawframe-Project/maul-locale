@@ -77,8 +77,7 @@ static uint32_t BuildPack(const char* const* keys, uint32_t count)
         mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch), 4);
     Put(s_pack + headerUnicode,
         mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch), 4);
-    Put(s_pack + headerLibrary,
-        mlocPackVersion(version.library.major, version.library.minor, version.library.patch), 4);
+    Put(s_pack + headerDataFormat, version.format, 4);
     memcpy(s_pack + headerTzdb, version.tzdb, 8);
     Put(s_pack + headerTables, version.tables, 8);
     Put(s_pack + headerUnitCount, count, 4);

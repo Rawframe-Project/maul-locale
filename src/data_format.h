@@ -3,6 +3,8 @@
 //
 // The data file layout, shared by the library, which reads it, and the
 // generator, which writes it. All numbers are little-endian.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_DATA_FORMAT_H
 #define MLOC_DATA_FORMAT_H
@@ -38,10 +40,10 @@ enum
     headerFlags = 12, // zero
     headerCldr = 16,  // a version as major << 16 | minor << 8 | patch
     headerUnicode = 20,
-    headerLibrary = 24,
-    headerReserved = 28, // zero
-    headerTzdb = 32,     // eight ASCII bytes, NUL-padded
-    headerTables = 40,   // 64 bits
+    headerDataFormat = 24, // MLOC_DATA_FORMAT_VERSION
+    headerReserved = 28,   // zero
+    headerTzdb = 32,       // eight ASCII bytes, NUL-padded
+    headerTables = 40,     // 64 bits
     headerUnitCount = 48,
     headerLocaleCount = 52,
     headerPoolOffset = 56,

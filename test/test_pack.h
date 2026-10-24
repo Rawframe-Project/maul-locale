@@ -71,9 +71,7 @@ static bool OpenRootPack(const PackUnit* units, uint32_t count, mlocData* source
     PackPut(s_pack + headerUnicode,
             mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch),
             4);
-    PackPut(s_pack + headerLibrary,
-            mlocPackVersion(version.library.major, version.library.minor, version.library.patch),
-            4);
+    PackPut(s_pack + headerDataFormat, version.format, 4);
     memcpy(s_pack + headerTzdb, version.tzdb, 8);
     PackPut(s_pack + headerTables, version.tables, 8);
     PackPut(s_pack + headerUnitCount, count, 4);

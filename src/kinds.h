@@ -4,6 +4,8 @@
 // The kinds of data units: the part in the high 16 bits, the table in the
 // low 16. Shared by the library and the generator; a kind's number never
 // changes meaning within a data version.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_KINDS_H
 #define MLOC_KINDS_H

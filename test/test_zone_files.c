@@ -62,8 +62,7 @@ static uint32_t BuildZonesFile(const char* headerRelease, const char unitRelease
           mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch));
     Put32(s_file + headerUnicode,
           mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch));
-    Put32(s_file + headerLibrary,
-          mlocPackVersion(version.library.major, version.library.minor, version.library.patch));
+    Put32(s_file + headerDataFormat, version.format);
     memcpy(s_file + headerTzdb, headerRelease, strlen(headerRelease));
     Put32(s_file + headerTables, (uint32_t)version.tables);
     Put32(s_file + headerTables + 4, (uint32_t)(version.tables >> 32));

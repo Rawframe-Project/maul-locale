@@ -42,6 +42,8 @@
 // full titlecase differs, sorted by code point, a record of
 // spelloutTitlecaseSize bytes (u32 code point, u16 offset and u8 length
 // of its titlecase, u8 zero), then the text.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_SPELLOUT_TABLES_H
 #define MLOC_SPELLOUT_TABLES_H

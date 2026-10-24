@@ -197,9 +197,7 @@ static void TestLayout(void)
     CHECK(Compile(text, &size) && size == 170, "the message is its records alone");
     CHECK(mlocLoad16(s_buffer + messageFormat) == messageFormatVersion &&
               mlocLoad16(s_buffer + messageFlags) == 0 &&
-              mlocLoad32(s_buffer + messageLibrary) ==
-                  ((uint32_t)MLOC_VERSION_MAJOR << 16 | (uint32_t)MLOC_VERSION_MINOR << 8 |
-                   MLOC_VERSION_PATCH) &&
+              mlocLoad32(s_buffer + messageDataFormat) == MLOC_DATA_FORMAT_VERSION &&
               mlocLoad32(s_buffer + messageUnicode) >> 16 >= 18,
           "the header names the format and the versions");
     CHECK(Field(messageExpressions, 0, 0) == operandVariable &&
@@ -643,9 +641,19 @@ static void TestCorrupted(void)
               mlocWriteMessageText(s_buffer, size, NULL) == mloc_errorInvalid,
           "null pointers are refused");
     memcpy(copy, s_buffer, size);
-    copy[messageLibrary] ^= 1;
+    copy[messageDataFormat] ^= 1;
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorDataVersion,
-          "another library's message is refused as such");
+          "a message of another data format is refused as such");
+    // The field held a packed library version before: the 0.0.1 and 0.1.0
+    // messages never match a format.
+    static const uint32_t s_released[] = {1, 256};
+    for (size_t i = 0; i < 2; i++)
+    {
+        memcpy(copy, s_buffer, size);
+        mlocStore32(copy + messageDataFormat, s_released[i]);
+        CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorDataVersion,
+              "a message of a released library version is refused");
+    }
 }
 
 // Names stored in NFC must still be names: U+037E becomes ";" and U+1FEF

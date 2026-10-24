@@ -33,14 +33,15 @@ extern "C"
     } mlocDataSet;
 
     // What a data file was generated from. A library opens only data of
-    // its own version, every field equal, but for a zones file (the zones
+    // its own data version, every field equal, but for a zones file (the zones
     // alone, written by mlocgen zonesfile), whose tzdb release may differ.
     typedef struct mlocDataVersion
     {
         mlocVersion cldr;
         mlocVersion unicode;
-        // The library version the data was generated for.
-        mlocVersion library;
+        // The data format version the data was written in
+        // (MLOC_DATA_FORMAT_VERSION).
+        uint32_t format;
         // The time zone database release, such as "2026e", padded with
         // NULs; all eight bytes are used when the name is that long.
         char tzdb[8];

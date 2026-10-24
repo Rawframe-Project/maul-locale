@@ -12,6 +12,8 @@
 // labels are well-formed, nonempty, in code point order and distinct. A
 // label may end in one "*", which keeps a label of several code points
 // that sorts as its parts; the index's filter reads it.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_COLLATION_INDEX_H
 #define MLOC_COLLATION_INDEX_H
