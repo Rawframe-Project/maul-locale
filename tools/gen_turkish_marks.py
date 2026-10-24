@@ -25,10 +25,12 @@
 # the possessive's length in code points; every 16th shares nothing,
 # and their offsets are searched first.
 #
-# usage: gen_turkish_marks.py [--check]
+# usage: gen_turkish_marks.py [--check | --output-path]
 #   The dictionaries' SHA-256 are checked against the directory's
 #   README.md.
 #   --check  fail when the file differs from what would be written
+#   --output-path  print the file it writes, relative to the repository's
+#                  root (tools/regenerate.sh keeps that file)
 
 import hashlib
 import os
@@ -214,8 +216,11 @@ def render(rows, data, blocks):
 
 
 def main():
+    if sys.argv[1:] == ["--output-path"]:
+        print(os.path.relpath(PATH, ROOT).replace(os.sep, "/"))
+        return
     if any(a != "--check" for a in sys.argv[1:]):
-        sys.exit("usage: gen_turkish_marks.py [--check]")
+        sys.exit("usage: gen_turkish_marks.py [--check | --output-path]")
     rows, data, blocks = table(read())
     if len(data) >= 65536:
         sys.exit("the table passes 64 KiB; the block offsets are 16 bits")

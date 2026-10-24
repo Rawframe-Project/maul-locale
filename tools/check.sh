@@ -223,8 +223,9 @@ configure cldr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14
 cmake --build "$out/check-cldr" -j "$jobs" --target conformance >>"$out/check-cldr.log"
 
 step "the generated sources regenerated"
-"$out/check-cldr/mlocgen" generate "$cache/cldr/cldr/common" . "$tzdb"
-git diff --exit-code --stat src/generated
+tools/regenerate.sh "$out/check-cldr/mlocgen" "$cache/cldr/cldr/common" "$tzdb"
+stale=$(git status --porcelain -- src/generated)
+[ -z "$stale" ] || { echo "$stale"; echo "src/generated is stale: run tools/regenerate.sh"; exit 1; }
 
 tools/check_cldr.sh "$out/check-cldr" "$cache/cldr" "$tzdb" "$older"
 

@@ -197,10 +197,16 @@ jobs:
           cmake --build out/cldr --target mlocgen
       - name: The generated sources are current
         # The generator gives the same bytes on every run, so a stale or
-        # hand-edited file shows as a difference.
+        # hand-edited file shows as a difference. Status, not diff: into a
+        # clean src/generated, a file the generator no longer writes shows
+        # as deleted and a new one it writes as added.
         run: |
-          out/cldr/mlocgen generate "$CLDR" . "$TZDB"
-          git diff --exit-code --stat src/generated || { echo "::error::src/generated is stale: run mlocgen generate"; exit 1; }
+          tools/regenerate.sh out/cldr/mlocgen "$CLDR" "$TZDB"
+          stale=$(git status --porcelain -- src/generated)
+          if [ -n "$stale" ]; then
+            echo "$stale"
+            echo "::error::src/generated is stale: run tools/regenerate.sh"; exit 1
+          fi
 
   cldr:
     needs: changes
