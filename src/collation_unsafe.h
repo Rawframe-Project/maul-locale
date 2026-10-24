@@ -21,7 +21,8 @@
 #include <stdint.h>
 
 // Reads the section at an offset up to the unit's end: none when the
-// unit ends there.
+// unit ends there. It checks only that the ranges fit;
+// mlocCollationUnsafeValid checks them.
 static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at, uint64_t size,
                                            const uint8_t** rangesOut, uint32_t* countOut)
 {
@@ -40,7 +41,14 @@ static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at, uint64
     {
         return false;
     }
-    const uint8_t* ranges = p + at + 4;
+    *rangesOut = p + at + 4;
+    *countOut = count;
+    return true;
+}
+
+// Whether the ranges rise apart within U+10FFFF.
+static inline bool mlocCollationUnsafeValid(const uint8_t* ranges, uint32_t count)
+{
     bool ok = true;
     for (uint32_t i = 0; ok && i < count; i++)
     {
@@ -49,8 +57,6 @@ static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at, uint64
         ok = first <= last && last <= 0x10FFFF &&
              (i == 0 || first > mlocLoad32(ranges + (size_t)i * 8 - 4));
     }
-    *rangesOut = ranges;
-    *countOut = count;
     return ok;
 }
 

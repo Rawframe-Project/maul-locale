@@ -518,7 +518,7 @@ static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
         .startCount = mlocLoad32(p + 24),
         .numericPrimary = mlocLoad32(p + 28),
     };
-    if (!mlocReadCodePointTrie((DataSpan){p + collationRootHead, span.size - collationRootHead},
+    if (!mlocViewCodePointTrie((DataSpan){p + collationRootHead, span.size - collationRootHead},
                                &r.trie))
     {
         return false;
@@ -558,7 +558,10 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
     {
         return false;
     }
-    bool ok = mlocCollationScriptsValid(&r) && mlocCollationListStart(&r, 0) == 0 &&
+    bool ok = mlocCodePointTrieOffsetsValid(&r.trie) &&
+              (r.fastLatin == nullptr || mlocFastLatinValid(r.fastLatin, r.fastLatinCount)) &&
+              mlocCollationUnsafeValid(r.unsafe, r.unsafeCount) && mlocCollationScriptsValid(&r) &&
+              mlocCollationListStart(&r, 0) == 0 &&
               mlocCollationListStart(&r, r.listCount) == r.contextCount;
     for (uint32_t i = 0; ok && i < r.listCount; i++)
     {
@@ -642,7 +645,7 @@ static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring*
     CollationRoot* r = &t.view;
     if (!mlocCollationSettingsValid(t.settings) || t.mappedCount > 0x110000 ||
         mlocLoad32(p + 28) != 0 ||
-        !mlocReadCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r->trie))
+        !mlocViewCodePointTrie((DataSpan){p + collationHead, span.size - collationHead}, &r->trie))
     {
         return false;
     }
@@ -679,7 +682,10 @@ static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring*
         return false;
     }
     CollationRoot* r = &t.view;
-    bool ok = mlocCollationReorderValid(t.reorder, t.reorderCount) &&
+    bool ok = mlocCodePointTrieOffsetsValid(&r->trie) &&
+              (r->fastLatin == nullptr || mlocFastLatinValid(r->fastLatin, r->fastLatinCount)) &&
+              mlocCollationUnsafeValid(r->unsafe, r->unsafeCount) &&
+              mlocCollationReorderValid(t.reorder, t.reorderCount) &&
               mlocCollationListStart(r, 0) == 0 &&
               mlocCollationListStart(r, r->listCount) == r->contextCount;
     for (uint32_t i = 0; ok && i < r->listCount; i++)

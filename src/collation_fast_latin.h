@@ -164,7 +164,8 @@ static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
 
 // Reads a unit's table section at an offset: none when the unit ends
 // there; a count, which a tailoring may give as fastLatinRootTable, and
-// its words; where the section ends.
+// its words; where the section ends. It checks only that the words fit;
+// a validator checks them with mlocFastLatinValid.
 static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t size, bool tailoring,
                                      const uint8_t** wordsOut, uint32_t* countOut, uint64_t* endOut)
 {
@@ -186,7 +187,7 @@ static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t siz
         *endOut = at + 4;
         return tailoring || count == 0;
     }
-    if (at + 4 + (uint64_t)count * 2 > size || !mlocFastLatinValid(p + at + 4, count))
+    if (at + 4 + (uint64_t)count * 2 > size)
     {
         return false;
     }

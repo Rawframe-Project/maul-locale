@@ -92,6 +92,14 @@ static void InitZh(void)
     Init("zh");
 }
 
+// A made collator copied, as a program keeps one per locale: the like of
+// ICU4C's open, which clones a tailoring it cached.
+static void CopyDe(void)
+{
+    static mlocCollator s_copy;
+    memcpy(&s_copy, &s_collators[0], sizeof(s_copy));
+}
+
 static void Compare(const mlocCollator* c, const char* const* words)
 {
     s_pair = (s_pair + 3) % 64;
@@ -248,12 +256,12 @@ bool PrepareCollationBench(void)
 }
 
 const BenchCase g_collationCases[] = {
-    {"collator-init-de", InitDe, 500000},       {"collator-init-zh", InitZh, 500000},
-    {"compare-de", CompareDe, 5000000},         {"compare-fr", CompareFr, 5000000},
-    {"compare-zh", CompareZh, 5000000},         {"compare-ko", CompareKo, 5000000},
-    {"compare-prefix", ComparePrefix, 5000000}, {"compare-de-utf16", CompareUtf16, 5000000},
-    {"sort-key-de", SortKey, 5000000},          {"index-build-de", IndexBuild, 2000},
-    {"index-bucket-de", IndexBucket, 2000000},  {"search-first-de", SearchFirst, 1000000},
-    {"search-all-de", SearchAll, 500000},
+    {"collator-init-de", InitDe, 500000},        {"collator-init-zh", InitZh, 500000},
+    {"collator-copy-de", CopyDe, 5000000},       {"compare-de", CompareDe, 5000000},
+    {"compare-fr", CompareFr, 5000000},          {"compare-zh", CompareZh, 5000000},
+    {"compare-ko", CompareKo, 5000000},          {"compare-prefix", ComparePrefix, 5000000},
+    {"compare-de-utf16", CompareUtf16, 5000000}, {"sort-key-de", SortKey, 5000000},
+    {"index-build-de", IndexBuild, 2000},        {"index-bucket-de", IndexBucket, 2000000},
+    {"search-first-de", SearchFirst, 1000000},   {"search-all-de", SearchAll, 500000},
 };
 const size_t g_collationCaseCount = sizeof(g_collationCases) / sizeof(g_collationCases[0]);

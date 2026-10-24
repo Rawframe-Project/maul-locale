@@ -68,9 +68,9 @@ static inline bool mlocTrieBlockFits(uint32_t offset, uint32_t dataLength)
     return offset <= dataLength - trieBlockLength;
 }
 
-// Reads a trie at the start of a span and checks every offset in it;
-// false for one that does not fit the span or points outside its data.
-static inline bool mlocReadCodePointTrie(DataSpan span, CodePointTrie* out)
+// Lays out a trie at the start of a span, checking only that it fits;
+// for a trie a validator passed (mlocReadCodePointTrie).
+static inline bool mlocViewCodePointTrie(DataSpan span, CodePointTrie* out)
 {
     if (span.size < trieHead)
     {
@@ -104,21 +104,34 @@ static inline bool mlocReadCodePointTrie(DataSpan span, CodePointTrie* out)
         .dataLength = dataLength,
         .size = (uint32_t)size,
     };
+    return true;
+}
+
+// Whether every offset of a laid-out trie points inside its data.
+static inline bool mlocCodePointTrieOffsetsValid(const CodePointTrie* t)
+{
     bool ok = true;
     for (uint32_t i = 0; ok && i < trieBmpBlocks; i++)
     {
-        ok = mlocTrieBlockFits(mlocLoad32(out->bmp + i * 4), dataLength);
+        ok = mlocTrieBlockFits(mlocLoad32(t->bmp + i * 4), t->dataLength);
     }
-    uint32_t sections = (highStart - 0x10000) >> trieSupplementaryShift;
+    uint32_t sections = (t->highStart - 0x10000) >> trieSupplementaryShift;
     for (uint32_t i = 0; ok && i < sections; i++)
     {
-        ok = mlocLoad16(out->supplementary + i * 2) < blockCount;
+        ok = mlocLoad16(t->supplementary + i * 2) < t->blockCount;
     }
-    for (uint32_t i = 0; ok && i < blockCount * trieBlockLength; i++)
+    for (uint32_t i = 0; ok && i < t->blockCount * trieBlockLength; i++)
     {
-        ok = mlocTrieBlockFits(mlocLoad32(out->blocks + i * 4), dataLength);
+        ok = mlocTrieBlockFits(mlocLoad32(t->blocks + i * 4), t->dataLength);
     }
     return ok;
+}
+
+// Reads a trie at the start of a span and checks every offset in it;
+// false for one that does not fit the span or points outside its data.
+static inline bool mlocReadCodePointTrie(DataSpan span, CodePointTrie* out)
+{
+    return mlocViewCodePointTrie(span, out) && mlocCodePointTrieOffsetsValid(out);
 }
 
 // A code point's value; codePoint must be at most U+10FFFF.
