@@ -44,6 +44,8 @@ static const char s_file[] = "[UCA version = 18.0.1]\n"
 static RootTable s_root;
 static uint8_t* s_bytes;
 static size_t s_size;
+// The root unit read back, for a tailoring's reordering.
+static CollationRoot s_view;
 
 // The root's unit with an empty fast Latin section and its ranges.
 static bool BuildRoot(void)
@@ -72,7 +74,7 @@ static bool BuildRoot(void)
         return false;
     }
     s_bytes = CollationUnsafeAppend(s_bytes, &s_size, &view);
-    return true;
+    return mlocReadCollationRoot((DataSpan){s_bytes, (uint32_t)s_size}, &s_view);
 }
 
 // Whether a unit's ranges are the expected first and last code points.
@@ -113,7 +115,7 @@ static void TestTailoring(void)
               CollationBuilderAdd(&b, &parsed) && CollationBuilderFinish(&b);
     size_t size = 0;
     uint8_t* unit =
-        ok ? CollationTailoringUnit(&b.mappings, &b.settings, &size, error, sizeof(error))
+        ok ? CollationTailoringUnit(&b.mappings, &b.settings, &s_view, &size, error, sizeof(error))
            : nullptr;
     CollationTailoring t;
     ok = unit != nullptr;

@@ -395,15 +395,13 @@ static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan s
     {
         return result;
     }
-    uint32_t codes[collationMaxReorderCodes];
-    for (uint32_t i = 0; i < t.reorderCount; i++)
+    // The reordering the generator made from the rules' codes, stored.
+    if (t.reordering != nullptr)
     {
-        codes[i] = mlocLoad32(t.reorder + (size_t)i * 4);
+        mlocCollationLoadReorder(t.reordering, t.reorderRanges, &c->reorder);
     }
-    bool changes = false;
-    result = mlocCollationMakeReorder(&c->root, codes, t.reorderCount, &c->reorder, &changes);
-    c->reordered = result == mloc_success && changes ? 1 : 0;
-    return result;
+    c->reordered = t.reordering != nullptr ? 1 : 0;
+    return mloc_success;
 }
 
 mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,

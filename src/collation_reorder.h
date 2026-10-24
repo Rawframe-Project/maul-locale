@@ -12,19 +12,14 @@
 #ifndef MLOC_SRC_COLLATION_REORDER_H
 #define MLOC_SRC_COLLATION_REORDER_H
 
+#include "bytes.h"
 #include "collation_tables.h"
 
 #include "maul-locale/base.h"
 
 #include <stddef.h>
 #include <stdint.h>
-
-enum
-{
-    // The ranges kept, from the first shared lead byte on. Random orders
-    // of up to 40 codes need at most 24; more is refused as capacity.
-    collationMaxReorderRanges = 64,
-};
+#include <string.h>
 
 typedef struct CollationReorder
 {
@@ -47,6 +42,20 @@ typedef struct CollationReorder
 // order is the root's (nothing named, or Zzzz alone).
 mlocResult mlocCollationMakeReorder(const CollationRoot* root, const uint32_t* codes, size_t count,
                                     CollationReorder* out, bool* changes);
+
+// The reordering a tailoring stores (CollationTailoring's reordering and
+// range count), which its validator checked.
+static inline void mlocCollationLoadReorder(const uint8_t* stored, uint32_t rangeCount,
+                                            CollationReorder* out)
+{
+    out->minHighNoReorder = mlocLoad32(stored);
+    out->rangeCount = rangeCount;
+    for (uint32_t i = 0; i < rangeCount; i++)
+    {
+        out->ranges[i] = mlocLoad32(stored + 8 + (size_t)i * 4);
+    }
+    memcpy(out->table, stored + 8 + (size_t)rangeCount * 4, sizeof(out->table));
+}
 
 static inline uint32_t mlocCollationReorderPrimary(const CollationReorder* r, uint32_t p)
 {

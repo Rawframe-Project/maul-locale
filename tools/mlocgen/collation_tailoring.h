@@ -19,10 +19,12 @@
 #include <stdint.h>
 
 // The unit's bytes, the caller frees them; null with a message when a
-// mapping cannot be held. settings are the builder's, or null for none.
+// mapping cannot be held or the reorder codes make no reordering.
+// settings are the builder's, or null for none; root is the root read
+// back, over which the codes' reordering is made and stored.
 uint8_t* CollationTailoringUnit(const CollationMappings* mappings,
-                                const CollationRuleSettings* settings, size_t* sizeOut, char* error,
-                                size_t errorSize);
+                                const CollationRuleSettings* settings, const CollationRoot* root,
+                                size_t* sizeOut, char* error, size_t errorSize);
 
 // A type's written tailoring and its name as BCP 47's co spells it.
 typedef struct CollationTypeBody

@@ -19,6 +19,8 @@ The root collation, tailorings, the compare paths, sort keys, search and the alp
 
 The unit leaves out every mapping whose first code point has a canonical decomposition, Hangul syllables and surrogates, as ICU4X's data does, because the runtime always reads text in NFD (below). The script table for reordering, the compressible lead bytes and the unsafe-backward ranges are sections of each unit.
 
+A tailoring whose rules give reorder codes also stores the reordering they make: the generator makes it over the root's script table with the runtime's own `mlocCollationMakeReorder`, and making a collator copies it instead of making it again. Its validator checks its shape (the range count, the low bits of the boundary, the range limits rising) but cannot compare it with the codes, since a validator reads its own unit only and the script table is the root's; `test_collation_data` compares every stored reordering with the one the root makes.
+
 ## Reading text
 
 `nfd_stream.c` gives a text's NFD as a stream of code points, from Maul Unicode's decomposition and combining classes, in a window of 64 code points: a starter and its marks, sorted. A longer run of marks is given in windows, in passes over the run's bytes, one per combining class present, so the stream is exactly NFD for every text with no allocation and no limit. Ill-formed bytes are U+FFFD, one per maximal ill-formed subpart. A quick path skips decomposition for text already in NFD. UTF-16 goes through the same stream with its own decoder, a lone surrogate as U+FFFD, so both forms of a text always collate alike.

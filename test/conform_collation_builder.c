@@ -284,7 +284,7 @@ static bool CheckUnit(const CollationType* t, CollationBuilder* b)
     char error[256] = "";
     size_t size = 0;
     CollationMappings* m = &b->mappings;
-    uint8_t* bytes = CollationTailoringUnit(m, &b->settings, &size, error, sizeof(error));
+    uint8_t* bytes = CollationTailoringUnit(m, &b->settings, &s_root, &size, error, sizeof(error));
     CollationTailoring unit;
     if (bytes == nullptr || !mlocReadCollationTailoring((DataSpan){bytes, (uint32_t)size}, &unit))
     {
