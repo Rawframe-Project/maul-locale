@@ -406,20 +406,6 @@ static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan s
     return result;
 }
 
-// The fast Latin compare's options for the collator's settings, over
-// its tailoring's table, or the root's when it names the root's or the
-// locale has no tailored mappings.
-static void SetFastLatin(Collator* c)
-{
-    const CollationRoot* unit =
-        c->tailored != 0 && c->tailoring.fastLatinCount != fastLatinRootTable ? &c->tailoring
-                                                                              : &c->root;
-    CollationSettings s = c->settings;
-    s.reorder = c->reordered != 0 ? &c->reorder : nullptr;
-    c->fastLatin =
-        mlocFastLatinOptions(&c->root, &s, unit->fastLatin, unit->fastLatinCount, &c->fast) ? 1 : 0;
-}
-
 mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
                             const mlocLocale* locale, const mlocCollatorOptions* options)
 {
@@ -454,7 +440,7 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
     {
         return result;
     }
-    SetFastLatin(&c);
+    mlocSetCollatorFastLatin(&c);
     memset(collatorOut, 0, sizeof(*collatorOut));
     memcpy(collatorOut, &c, sizeof(c));
     return mloc_success;

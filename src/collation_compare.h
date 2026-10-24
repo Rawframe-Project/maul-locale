@@ -87,6 +87,15 @@ size_t mlocCollationIdenticalPrefix(const CollationRoot* root, const CollationSe
 int mlocCollationCompareFrom(const CollationRoot* root, const CollationSettings* settings,
                              NfdText a, NfdText b, size_t prefix);
 
+// The primary weights a compare reads from a text, in order, into
+// weightsOut, their count into countOut: two texts' weights compared as
+// words, a shorter one first when it is the other's start, give their
+// order at the primary level. False when there are more than capacity,
+// with the first capacity of them given.
+bool mlocCollationPrimaries(const CollationRoot* root, const CollationSettings* settings,
+                            NfdText text, uint32_t* weightsOut, uint32_t capacity,
+                            uint32_t* countOut);
+
 // -1, 0 or 1 as a sorts before, with or after b, the identical prefix
 // skipped.
 int mlocCollationCompareText(const CollationRoot* root, const CollationSettings* settings,

@@ -127,25 +127,62 @@ static int CompareTexts(const Build* b, const IndexText* x, const IndexText* y)
     return Compare(b, LabelText(x, a), LabelText(y, c));
 }
 
-// firstCharsInScripts_: sorted by the collator, stably, the leading
-// primary-ignorable ones dropped.
+// The empty text, whose key has no weights.
+static const IndexText s_empty = {.key = {.whole = true}};
+
+static IndexKey Key(const Build* b, Text text)
+{
+    IndexKey key;
+    uint32_t count = 0;
+    key.whole =
+        mlocCollationPrimaries(&b->c->root, &b->c->settings, mlocNfdUtf8(text.bytes, text.length),
+                               key.weights, indexKeyWeights, &count);
+    key.count = (uint8_t)count;
+    return key;
+}
+
+// A text's key, read once so that most compares are of weights alone.
+static void Weigh(const Build* b, IndexText* t)
+{
+    uint8_t scratch[indexWordsBytes];
+    t->key = Key(b, LabelText(t, scratch));
+}
+
+// Their order at the primary strength: by their keys, else by a compare.
+static int Ordered(const Build* b, const IndexText* x, const IndexText* y)
+{
+    int order = mlocIndexKeyOrder(&x->key, &y->key, b->c->settings.caseLevel);
+    return order != indexKeyUnknown ? order : CompareTexts(b, x, y);
+}
+
+// firstCharsInScripts_: sorted by the collator, stably (each inserted
+// after those equal to it), the leading primary-ignorable ones dropped.
 static bool SortScripts(Build* b)
 {
     IndexCandidates* in = b->in;
-    for (uint32_t i = 1; i < in->scriptCount; i++)
+    for (uint32_t i = 0; i < in->scriptCount; i++)
     {
         IndexText script = in->scripts[i];
-        uint32_t j = i;
-        for (; j > 0 && CompareTexts(b, &in->scripts[j - 1], &script) > 0; j--)
+        Weigh(b, &script);
+        uint32_t start = 0;
+        uint32_t limit = i;
+        while (start < limit)
         {
-            in->scripts[j] = in->scripts[j - 1];
+            uint32_t mid = start + (limit - start) / 2;
+            if (Ordered(b, &script, &in->scripts[mid]) < 0)
+            {
+                limit = mid;
+            }
+            else
+            {
+                start = mid + 1;
+            }
         }
-        in->scripts[j] = script;
+        memmove(in->scripts + start + 1, in->scripts + start, (i - start) * sizeof(script));
+        in->scripts[start] = script;
     }
     uint32_t drop = 0;
-    uint8_t scratch[indexWordsBytes];
-    while (drop < in->scriptCount &&
-           Compare(b, LabelText(&in->scripts[drop], scratch), (Text){nullptr, 0}) == 0)
+    while (drop < in->scriptCount && Ordered(b, &in->scripts[drop], &s_empty) == 0)
     {
         drop++;
     }
@@ -205,15 +242,14 @@ static bool Better(Text one, Text other)
 
 // ICU4C's binarySearch over the sorted labels: true with the place of
 // one equal to the text, else false with where to insert it.
-static bool Search(const Build* b, uint32_t size, Text t, uint32_t* placeOut)
+static bool Search(const Build* b, uint32_t size, const IndexText* t, uint32_t* placeOut)
 {
     uint32_t start = 0;
     uint32_t limit = size;
-    uint8_t scratch[indexWordsBytes];
     while (start < limit)
     {
         uint32_t i = (start + limit) / 2;
-        int order = Compare(b, t, LabelText(&b->in->labels[i], scratch));
+        int order = Ordered(b, t, &b->in->labels[i]);
         if (order == 0)
         {
             *placeOut = i;
@@ -260,8 +296,8 @@ static bool Starred(const IndexText* t)
 
 // Whether a candidate is kept, as initLabels keeps one: within the
 // scripts, and sorting apart from its parts unless starred (the star
-// dropped from the label).
-static bool Keep(const Build* b, IndexText* item, Text first, Text last)
+// dropped from the label). Its key is set.
+static bool Keep(const Build* b, IndexText* item, const IndexText* first, const IndexText* last)
 {
     bool distinct = false;
     if (Multiple(item))
@@ -275,11 +311,23 @@ static bool Keep(const Build* b, IndexText* item, Text first, Text last)
             distinct = true;
         }
     }
+    Weigh(b, item);
+    if (Ordered(b, item, first) < 0 || Ordered(b, item, last) >= 0)
+    {
+        return false;
+    }
     uint8_t scratch[indexWordsBytes];
     uint8_t separated[scratchBytes];
     Text t = LabelText(item, scratch);
-    return Compare(b, t, first) >= 0 && Compare(b, t, last) < 0 &&
-           (!distinct || Compare(b, t, Separated(t, separated)) != 0);
+    if (distinct && Compare(b, t, Separated(t, separated)) == 0)
+    {
+        return false;
+    }
+    // Unshifted, the weights are the primaries above 0; shifted, those
+    // above the variable top are counted.
+    item->multi =
+        b->c->settings.shifted ? MultiPrimary(b, t) : !item->key.whole || item->key.count > 1;
+    return true;
 }
 
 // ICU4C's cut to maxLabelCount: every n-th label dropped.
@@ -311,10 +359,8 @@ static void Thin(IndexCandidates* in, uint32_t maxLabelCount)
 static void Filter(Build* b, uint32_t maxLabelCount)
 {
     IndexCandidates* in = b->in;
-    uint8_t firstScratch[indexWordsBytes];
-    uint8_t lastScratch[indexWordsBytes];
-    Text first = LabelText(&in->scripts[0], firstScratch);
-    Text last = LabelText(&in->scripts[in->scriptCount - 1], lastScratch);
+    const IndexText* first = &in->scripts[0];
+    const IndexText* last = &in->scripts[in->scriptCount - 1];
     uint32_t size = 0;
     for (uint32_t i = 0; i < in->labelCount; i++)
     {
@@ -323,13 +369,12 @@ static void Filter(Build* b, uint32_t maxLabelCount)
         {
             continue;
         }
-        uint8_t scratch[indexWordsBytes];
-        uint8_t other[indexWordsBytes];
-        Text t = LabelText(&item, scratch);
         uint32_t place = 0;
-        if (Search(b, size, t, &place))
+        if (Search(b, size, &item, &place))
         {
-            if (Better(t, LabelText(&in->labels[place], other)))
+            uint8_t scratch[indexWordsBytes];
+            uint8_t other[indexWordsBytes];
+            if (Better(LabelText(&item, scratch), LabelText(&in->labels[place], other)))
             {
                 in->labels[place] = item;
             }
@@ -365,7 +410,7 @@ static void SetField(Build* b, uint32_t record, uint32_t field, uint32_t value)
 }
 
 static uint32_t AddBucket(Build* b, Text label, uint32_t labelAt, Text boundary,
-                          uint32_t boundaryAt, uint32_t type, uint32_t display)
+                          uint32_t boundaryAt, const IndexKey* key, uint32_t type, uint32_t display)
 {
     uint32_t r = b->bucketCount++;
     if (b->records != nullptr)
@@ -375,6 +420,11 @@ static uint32_t AddBucket(Build* b, Text label, uint32_t labelAt, Text boundary,
         SetField(b, r, 2, boundaryAt);
         SetField(b, r, 3, boundary.length);
         SetField(b, r, 4, display << 8 | type);
+        for (uint32_t i = 0; i < indexKeyWeights; i++)
+        {
+            SetField(b, r, 5 + i, i < key->count ? key->weights[i] : 0);
+        }
+        SetField(b, r, 5 + indexKeyWeights, key->count | (key->whole ? 1u : 0u) << 8);
     }
     return r;
 }
@@ -399,10 +449,11 @@ static Text Special(const Build* b, uint32_t which)
     return (Text){b->specials->text[which], b->specials->length[which]};
 }
 
-static uint32_t AddSpecial(Build* b, uint32_t which, Text boundary, uint32_t type)
+static uint32_t AddSpecial(Build* b, uint32_t which, Text boundary, const IndexKey* key,
+                           uint32_t type)
 {
     uint32_t at = PoolAdd(b, boundary.bytes, boundary.length);
-    return AddBucket(b, Special(b, which), b->specialAt[which], boundary, at, type, noDisplay);
+    return AddBucket(b, Special(b, which), b->specialAt[which], boundary, at, key, type, noDisplay);
 }
 
 // fixLabel: a U+FDD0 label shown without it, a stroke count as its
@@ -454,7 +505,7 @@ static void Invisible(Build* b, Text current)
     if (b->records == nullptr)
     {
         b->poolSize += boundary.length;
-        AddBucket(b, (Text){0}, 0, boundary, 0, mloc_indexNormal, noDisplay);
+        AddBucket(b, (Text){0}, 0, boundary, 0, &s_empty.key, mloc_indexNormal, noDisplay);
         return;
     }
     for (uint32_t j = b->bucketCount - 1; j-- > 0;)
@@ -467,19 +518,20 @@ static void Invisible(Build* b, Text current)
         {
             uint32_t at = PoolAdd(b, current.bytes, current.length);
             PoolAdd(b, s_ffff, 3);
-            AddBucket(b, (Text){0}, 0, boundary, at, mloc_indexNormal, j);
+            IndexKey key = Key(b, (Text){b->pool + at, boundary.length});
+            AddBucket(b, (Text){0}, 0, boundary, at, &key, mloc_indexNormal, j);
             b->invisible = true;
             return;
         }
     }
 }
 
-static void AddLabel(Build* b, Text current)
+static void AddLabel(Build* b, Text current, const IndexText* item)
 {
     uint32_t at = PoolAdd(b, current.bytes, current.length);
     uint32_t labelAt = 0;
     Text label = Shown(b, current, at, &labelAt);
-    uint32_t r = AddBucket(b, label, labelAt, current, at, mloc_indexNormal, noDisplay);
+    uint32_t r = AddBucket(b, label, labelAt, current, at, &item->key, mloc_indexNormal, noDisplay);
     if (current.length == 1 && current.bytes[0] >= 'A' && current.bytes[0] <= 'Z')
     {
         b->asciiBuckets[current.bytes[0] - 'A'] = (int32_t)r;
@@ -490,7 +542,7 @@ static void AddLabel(Build* b, Text current)
         b->pinyinBuckets[current.bytes[3] - 'A'] = (int32_t)r;
         b->pinyin = true;
     }
-    if (!Starts(current, s_base) && !Ends(current, s_ffff) && MultiPrimary(b, current))
+    if (!Starts(current, s_base) && !Ends(current, s_ffff) && item->multi)
     {
         Invisible(b, current);
     }
@@ -504,27 +556,31 @@ static void Emit(Build* b)
     {
         b->specialAt[k] = PoolAdd(b, b->specials->text[k], b->specials->length[k]);
     }
-    AddSpecial(b, specialUnderflow, (Text){nullptr, 0}, mloc_indexUnderflow);
+    AddSpecial(b, specialUnderflow, (Text){nullptr, 0}, &s_empty.key, mloc_indexUnderflow);
     uint32_t scriptIndex = 0;
+    // The script boundary above the labels so far, its UTF-8 in scratch
+    // (a contraction's always is).
+    const IndexText* upperText = &s_empty;
     uint8_t upperScratch[indexWordsBytes] = {0};
     uint8_t inflowScratch[indexWordsBytes];
     Text upper = {nullptr, 0};
     bool started = false;
     for (uint32_t i = 0; i < in->labelCount; i++)
     {
-        uint8_t scratch[indexWordsBytes];
-        Text current = LabelText(&in->labels[i], scratch);
-        if (Compare(b, current, upper) >= 0)
+        const IndexText* item = &in->labels[i];
+        if (Ordered(b, item, upperText) >= 0)
         {
             memcpy(inflowScratch, upperScratch, sizeof(inflowScratch));
             Text inflow = {inflowScratch, upper.length};
+            const IndexKey* inflowKey = &upperText->key;
             bool skipped = false;
             for (;;)
             {
                 scriptIndex += started ? 1 : 0;
                 started = true;
-                upper = LabelText(&in->scripts[scriptIndex], upperScratch);
-                if (Compare(b, current, upper) < 0 || scriptIndex + 1 == in->scriptCount)
+                upperText = &in->scripts[scriptIndex];
+                upper = LabelText(upperText, upperScratch);
+                if (Ordered(b, item, upperText) < 0 || scriptIndex + 1 == in->scriptCount)
                 {
                     break;
                 }
@@ -532,14 +588,15 @@ static void Emit(Build* b)
             }
             if (skipped && b->bucketCount > 1)
             {
-                AddSpecial(b, specialInflow, inflow, mloc_indexInflow);
+                AddSpecial(b, specialInflow, inflow, inflowKey, mloc_indexInflow);
             }
         }
-        AddLabel(b, current);
+        uint8_t scratch[indexWordsBytes];
+        AddLabel(b, LabelText(item, scratch), item);
     }
     if (b->bucketCount > 1)
     {
-        AddSpecial(b, specialOverflow, upper, mloc_indexOverflow);
+        AddSpecial(b, specialOverflow, upper, &upperText->key, mloc_indexOverflow);
     }
 }
 

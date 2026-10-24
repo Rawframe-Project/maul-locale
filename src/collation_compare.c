@@ -72,7 +72,12 @@ typedef struct Level
 static void Start(Level* l, const CollationRoot* root, const CollationSettings* settings,
                   uint32_t level, NfdText text, const History* h)
 {
-    *l = (Level){.settings = settings, .level = level};
+    // Field by field: the iterator's start sets each field it reads before
+    // writing, and clearing the whole level (its 2 KB iterator) was most
+    // of a short text's time.
+    l->settings = settings;
+    l->level = level;
+    l->afterVariable = false;
     mlocCollationIteratorStartText(&l->it, root, text);
     l->it.tailoring = settings->tailoring;
     l->it.han = settings->han;
@@ -222,6 +227,26 @@ static int CompareLevel(const CollationRoot* root, const CollationSettings* sett
             return 0;
         }
     }
+}
+
+bool mlocCollationPrimaries(const CollationRoot* root, const CollationSettings* settings,
+                            NfdText text, uint32_t* weightsOut, uint32_t capacity,
+                            uint32_t* countOut)
+{
+    Level l;
+    Start(&l, root, settings, collationPrimary, text, &(History){.count = 0});
+    uint32_t count = 0;
+    for (uint32_t w = Next(&l); w != End(collationPrimary); w = Next(&l))
+    {
+        if (count == capacity)
+        {
+            *countOut = count;
+            return false;
+        }
+        weightsOut[count++] = w;
+    }
+    *countOut = count;
+    return true;
 }
 
 // The next element of a segment with a non-zero secondary, its weight;

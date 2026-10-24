@@ -8,6 +8,8 @@
 #include "maul-locale/index.h"
 
 #include "collation_compare.h"
+#include "collation_fast_compare.h"
+#include "collator.h"
 #include "index_build.h"
 #include "index_labels.h"
 #include "index_value.h"
@@ -54,16 +56,17 @@ mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
         return mloc_errorInvalid;
     }
     // ICU4C's collatorPrimaryOnly_: the collator's settings at primary
-    // strength; the fast Latin options served the old strength.
+    // strength, with the fast Latin options for it.
     c.settings.strength = collationPrimary;
-    c.fastLatin = 0;
-    IndexCandidates* candidates = &(IndexCandidates){0};
-    mlocResult r = mlocIndexGather(&c, data, locale, candidates);
+    mlocSetCollatorFastLatin(&c);
+    // Not cleared: the gathering sets the counts and each entry it adds.
+    IndexCandidates candidates;
+    mlocResult r = mlocIndexGather(&c, data, locale, &candidates);
     if (r != mloc_success)
     {
         return r;
     }
-    return mlocIndexBuild(&c, candidates, &specials, o.maxLabelCount > 0 ? o.maxLabelCount : 99,
+    return mlocIndexBuild(&c, &candidates, &specials, o.maxLabelCount > 0 ? o.maxLabelCount : 99,
                           buffer, capacity, sizeOut);
 }
 
@@ -98,15 +101,47 @@ mlocResult mlocGetIndexBucket(const void* index, uint32_t bucket, mlocIndexBucke
 // the name sorts at or after, as the shown bucket it counts as.
 static uint32_t Find(const IndexView* v, NfdText name)
 {
+    // The fast Latin compare where it serves a UTF-8 name (the boundaries
+    // are UTF-8), as mlocCompare; else the name's key, read once, against
+    // the boundaries' (a script's boundary is a contraction of many, slow
+    // to compare); else a compare.
     Collator c;
-    mlocIndexCollator(v, &c);
+    (void)mlocReadCollatorHead(v->bytes + indexHead, &c);
+    bool fast = c.fastLatin != 0 && name.bytes != nullptr;
+    if (fast)
+    {
+        mlocReadCollatorFast(v->bytes + indexHead, &c);
+    }
+    bool general = false;
+    IndexKey key = {0};
     uint32_t start = 0;
     uint32_t limit = v->bucketCount;
     while (start + 1 < limit)
     {
         uint32_t i = (start + limit) / 2;
         NfdText boundary = mlocNfdUtf8(v->pool + mlocIndexField(v, i, 2), mlocIndexField(v, i, 3));
-        if (mlocCollationCompareText(&c.root, &c.settings, name, boundary) < 0)
+        int order = fast ? mlocFastLatinCompare(&c.fast, name.bytes, name.length, boundary.bytes,
+                                                boundary.length)
+                         : fastLatinBail;
+        if (order == fastLatinBail)
+        {
+            if (!general)
+            {
+                mlocReadCollatorRest(v->bytes + indexHead, &c);
+                uint32_t count = 0;
+                key.whole = mlocCollationPrimaries(&c.root, &c.settings, name, key.weights,
+                                                   indexKeyWeights, &count);
+                key.count = (uint8_t)count;
+                general = true;
+            }
+            IndexKey other = mlocIndexBoundaryKey(v, i);
+            order = mlocIndexKeyOrder(&key, &other, c.settings.caseLevel);
+            if (order == indexKeyUnknown)
+            {
+                order = mlocCollationCompareText(&c.root, &c.settings, name, boundary);
+            }
+        }
+        if (order < 0)
         {
             limit = i;
         }

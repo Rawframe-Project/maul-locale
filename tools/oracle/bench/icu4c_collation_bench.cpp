@@ -3,8 +3,8 @@
 //
 // ICU4C baseline for Maul Locale: collation's work, the same
 // inputs as maul-locale's bench/bench_collation.c. Best of five runs after
-// a warm-up of a tenth, nanoseconds per call. Collators, the index and
-// the UTF-16 forms are made before the timing. A compare walks 64 pairs
+// a warm-up of a tenth, nanoseconds per call. Collators, the index the
+// bucket case reads and the UTF-16 forms are made before the timing. A compare walks 64 pairs
 // of eight words in a fixed order (i = (i + 3) % 64, the pair i / 8 and
 // i % 8), as the library's benchmark case does. ICU's sort keys take UTF-16 only,
 // so its key case reads the words' UTF-16 forms. Given a case name, only
@@ -160,15 +160,23 @@ int main(int argc, char** argv)
              sink = ucol_getSortKey(de, u16[i], n16[i], key, (int32_t)sizeof(key));
          });
 
-    AlphabeticIndex* builder = new AlphabeticIndex(Locale("de"), e);
+    // mlocBuildIndex takes a collator and gathers, sorts and filters the
+    // labels and the scripts' boundaries itself, which ICU4C does in
+    // AlphabeticIndex's constructor and addLabels: they are timed with
+    // buildImmutableIndex, over a clone of a collator made before.
+    const RuleBasedCollator* made =
+        dynamic_cast<const RuleBasedCollator*>(Collator::fromUCollator(de));
     Time("index build de", 2000,
          [&]
          {
              UErrorCode s = U_ZERO_ERROR;
-             AlphabeticIndex::ImmutableIndex* made = builder->buildImmutableIndex(s);
-             sink = made->getBucketCount();
-             delete made;
+             AlphabeticIndex built(made->clone(), s);
+             built.addLabels(Locale("de"), s);
+             AlphabeticIndex::ImmutableIndex* immutable = built.buildImmutableIndex(s);
+             sink = immutable->getBucketCount();
+             delete immutable;
          });
+    AlphabeticIndex* builder = new AlphabeticIndex(Locale("de"), e);
     AlphabeticIndex::ImmutableIndex* index = builder->buildImmutableIndex(e);
     UnicodeString names[8];
     for (int k = 0; k < 8; ++k)

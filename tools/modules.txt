@@ -183,13 +183,13 @@ grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
 grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic number_core number_format
 search_elements: collation_compare collation_iterator collation_tables nfd_stream search_boundary
-collator: collation_compare collation_fast_compare collation_reorder collation_tables
+collator: collation_compare collation_fast_compare collation_fast_latin collation_reorder collation_tables
 search_back: search_elements
 search_boundary: nfd_stream
 search: nfd_stream search_boundary search_find
 search_find: collator nfd_stream search_back search_boundary search_elements
 search_previous: search_back search_boundary search_find
-index_labels: bytes code_point_trie collation_index collation_tables collator
+index_labels: bytes code_point_trie collation_index collation_tables collator index_value
 index_value: bytes collator
 index_build: bytes collation_compare collation_iterator collator index_labels index_value nfd_stream
-index: collation_compare index_build index_labels index_value nfd_stream
+index: collation_compare collation_fast_compare collator index_build index_labels index_value nfd_stream

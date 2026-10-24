@@ -76,7 +76,7 @@ static bool AddLabel(void* context, uint32_t first, const uint8_t* words, uint32
     {
         return false;
     }
-    out->labels[out->labelCount++] = (IndexText){words, count, first};
+    out->labels[out->labelCount++] = (IndexText){.bytes = words, .length = count, .first = first};
     return true;
 }
 
@@ -96,7 +96,7 @@ static bool AddScript(void* context, uint32_t first, const uint8_t* words, uint3
     {
         return false;
     }
-    out->scripts[out->scriptCount++] = (IndexText){words, count, first};
+    out->scripts[out->scriptCount++] = (IndexText){.bytes = words, .length = count, .first = first};
     return true;
 }
 
@@ -125,7 +125,7 @@ static mlocResult AddDataLabels(const mlocDataSet* data, const mlocLocale* local
         {
             return mloc_errorData;
         }
-        out->labels[out->labelCount++] = (IndexText){text, length, 0};
+        out->labels[out->labelCount++] = (IndexText){.bytes = text, .length = length};
     }
     return mloc_success;
 }
@@ -155,7 +155,7 @@ mlocResult mlocIndexGather(const Collator* collator, const mlocDataSet* data,
         {
             return mloc_errorData;
         }
-        out->labels[out->labelCount++] = (IndexText){s_ascii + i, 1, 0};
+        out->labels[out->labelCount++] = (IndexText){.bytes = s_ascii + i, .length = 1};
     }
     return mloc_success;
 }

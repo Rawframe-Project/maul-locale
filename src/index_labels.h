@@ -12,6 +12,7 @@
 #define MLOC_SRC_INDEX_LABELS_H
 
 #include "collator.h"
+#include "index_value.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/locale.h"
@@ -39,6 +40,10 @@ typedef struct IndexText
     uint32_t length;
     // The first code point of a contraction; 0 for UTF-8.
     uint32_t first;
+    // Set by index_build.c: its key, and whether more than one primary is
+    // above the variable top.
+    IndexKey key;
+    bool multi;
 } IndexText;
 
 typedef struct IndexCandidates

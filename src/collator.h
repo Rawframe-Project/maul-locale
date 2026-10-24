@@ -9,6 +9,7 @@
 
 #include "collation_compare.h"
 #include "collation_fast_compare.h"
+#include "collation_fast_latin.h"
 #include "collation_reorder.h"
 #include "collation_tables.h"
 
@@ -56,6 +57,20 @@ static inline void mlocPointCollator(Collator* c)
     c->settings.reorder = c->reordered != 0 ? &c->reorder : nullptr;
     c->settings.tailoring = c->tailored != 0 ? &c->tailoring : nullptr;
     c->settings.han = c->radical != 0 ? &c->han : nullptr;
+}
+
+// The fast Latin compare's options for the collator's settings, over
+// its tailoring's table, or the root's when it names the root's or the
+// locale has no tailored mappings.
+static inline void mlocSetCollatorFastLatin(Collator* c)
+{
+    const CollationRoot* unit =
+        c->tailored != 0 && c->tailoring.fastLatinCount != fastLatinRootTable ? &c->tailoring
+                                                                              : &c->root;
+    CollationSettings s = c->settings;
+    s.reorder = c->reordered != 0 ? &c->reorder : nullptr;
+    c->fastLatin =
+        mlocFastLatinOptions(&c->root, &s, unit->fastLatin, unit->fastLatinCount, &c->fast) ? 1 : 0;
 }
 
 // The head of a collator's value (its stamp, flags and version), copied
