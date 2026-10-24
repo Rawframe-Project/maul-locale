@@ -20,7 +20,7 @@ Timings are never a CI gate: wall time is not repeatable on shared runners. The 
 
 `bench/` holds plain C benchmarks with fixed inputs, built as `maul-locale_bench`. Each case prints nanoseconds per call, the best of five runs; `BENCH_ONLY` selects cases and `BENCH_SHOW` prints the texts written, so a speed change can be checked for a change of output. Given an earlier run's output, it prints each case's ratio to it.
 
-The ICU4C and ICU4X baselines time the same inputs; their programs are in `tools/oracle/bench/` ([oracles](../operations/oracles.md#benchmarks) says how to build them). The machine is shared with other work, so:
+The ICU4C and ICU4X baselines time the same inputs and the same work: where ICU splits a call's work between a constructor and a method, both are timed (the index build times `AlphabeticIndex`'s constructor and `addLabels` with `buildImmutableIndex`, the work `mlocBuildIndex` does). Their programs are in `tools/oracle/bench/` ([oracles](../operations/oracles.md#benchmarks) says how to build them). The machine is shared with other work, so:
 
 - Compare against a baseline measured back to back on the same machine, never against an old figure.
 - Measure on a quiet machine (load well below the core count); under load, a busy SMT sibling slows this library's code (about four instructions a cycle) more than ICU4X's.
