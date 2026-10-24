@@ -5,6 +5,29 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.2.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.1.0...v0.2.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **data:** mlocDataVersion's `library` field (an mlocVersion) is now `format`, a uint32_t holding MLOC_DATA_FORMAT_VERSION. Data files, catalogs and standalone compiled messages (from mlocCompileMessage) made by 0.1.0 or earlier are refused with mloc_errorDataVersion; regenerate data files with this release's mlocgen, catalogs with its mloccat, and compile stored messages again. A host that stores data files per library version should store them per data version (mlocGetDataVersion) instead, since files now stay valid across releases that keep the format.
+
+### Added
+
+* **data:** give data files a format version, not the library's ([#34](https://github.com/Rawframe-Project/maul-locale/issues/34)) ([106b57a](https://github.com/Rawframe-Project/maul-locale/commit/106b57afb76027fdc28205f2b0d4f45cd29cb980))
+
+
+### Fixed
+
+* **generator:** run clean under UBSan and the library's assertions ([#47](https://github.com/Rawframe-Project/maul-locale/issues/47)) ([b4f928b](https://github.com/Rawframe-Project/maul-locale/commit/b4f928b126013b855b68bbc83d470cc2d208558b))
+
+
+### Changed
+
+* **collate:** check collation units once, when the data opens ([#42](https://github.com/Rawframe-Project/maul-locale/issues/42)) ([ff26064](https://github.com/Rawframe-Project/maul-locale/commit/ff26064141852c7a9eb6a10c64953cd6fbaf2728))
+* **collate:** store each tailoring's reordering in the data ([#45](https://github.com/Rawframe-Project/maul-locale/issues/45)) ([5b3f6fc](https://github.com/Rawframe-Project/maul-locale/commit/5b3f6fca7151b1cae7017079212f35db7c56e8c9))
+* **index:** order labels and boundaries by their primary weights ([#30](https://github.com/Rawframe-Project/maul-locale/issues/30)) ([8cb1177](https://github.com/Rawframe-Project/maul-locale/commit/8cb1177fad34923099b58399f602381db63eae7f))
+
 ## [0.1.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.0.1...v0.1.0) (2026-10-23)
 
 The locale data moves from CLDR 49 beta 3 to the final CLDR 49 release.
