@@ -12,6 +12,8 @@
 // code point and the last, rising and apart (each starts past the one
 // before ends), all within U+10FFFF. A unit that ends after the table
 // has none.
+//
+// A data layout: tools/check_data_format.py watches this header.
 
 #ifndef MLOC_COLLATION_UNSAFE_H
 #define MLOC_COLLATION_UNSAFE_H
