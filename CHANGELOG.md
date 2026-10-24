@@ -5,28 +5,60 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
-## [0.2.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.1.0...v0.2.0) (2026-10-24)
-
-
-### ⚠ BREAKING CHANGES
-
-* **data:** mlocDataVersion's `library` field (an mlocVersion) is now `format`, a uint32_t holding MLOC_DATA_FORMAT_VERSION. Data files, catalogs and standalone compiled messages (from mlocCompileMessage) made by 0.1.0 or earlier are refused with mloc_errorDataVersion; regenerate data files with this release's mlocgen, catalogs with its mloccat, and compile stored messages again. A host that stores data files per library version should store them per data version (mlocGetDataVersion) instead, since files now stay valid across releases that keep the format.
-
-### Added
-
-* **data:** give data files a format version, not the library's ([#34](https://github.com/Rawframe-Project/maul-locale/issues/34)) ([106b57a](https://github.com/Rawframe-Project/maul-locale/commit/106b57afb76027fdc28205f2b0d4f45cd29cb980))
-
-
-### Fixed
-
-* **generator:** run clean under UBSan and the library's assertions ([#47](https://github.com/Rawframe-Project/maul-locale/issues/47)) ([b4f928b](https://github.com/Rawframe-Project/maul-locale/commit/b4f928b126013b855b68bbc83d470cc2d208558b))
-
+## [0.2.0](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.2.0) (2026-10-24)
 
 ### Changed
 
-* **collate:** check collation units once, when the data opens ([#42](https://github.com/Rawframe-Project/maul-locale/issues/42)) ([ff26064](https://github.com/Rawframe-Project/maul-locale/commit/ff26064141852c7a9eb6a10c64953cd6fbaf2728))
-* **collate:** store each tailoring's reordering in the data ([#45](https://github.com/Rawframe-Project/maul-locale/issues/45)) ([5b3f6fc](https://github.com/Rawframe-Project/maul-locale/commit/5b3f6fca7151b1cae7017079212f35db7c56e8c9))
-* **index:** order labels and boundaries by their primary weights ([#30](https://github.com/Rawframe-Project/maul-locale/issues/30)) ([8cb1177](https://github.com/Rawframe-Project/maul-locale/commit/8cb1177fad34923099b58399f602381db63eae7f))
+- Data files carry a data format version instead of the library
+  version, so a file stays valid across every release that keeps the
+  format. `mlocDataVersion`'s `library` field (an `mlocVersion`) is now
+  `format`, a `uint32_t` holding the new `MLOC_DATA_FORMAT_VERSION`
+  (`0x80000002` in this release). Data files, catalogs and standalone
+  compiled messages (from `mlocCompileMessage`) made by 0.1.0 or earlier
+  are refused with `mloc_errorDataVersion`: a program must regenerate
+  its data files with this release's `mlocgen`, its catalogs with its
+  `mloccat`, and compile stored messages again. A host that keeps data
+  files per library version should keep them per data version
+  (`mlocGetDataVersion`) instead
+  ([#34](https://github.com/Rawframe-Project/maul-locale/pull/34),
+  [#45](https://github.com/Rawframe-Project/maul-locale/pull/45)).
+- An alphabetic index takes 16 more bytes per bucket, and index bytes
+  built by 0.1.0 are refused with `mloc_errorInvalid`. A program that
+  sized its buffer from 0.1.0 must ask `mlocBuildIndex` for the capacity
+  again (a null buffer and a capacity of 0), and must build stored
+  indexes again
+  ([#30](https://github.com/Rawframe-Project/maul-locale/pull/30)).
+- Building an alphabetic index is about 58 times faster (German: 4.6 ms
+  to 80 µs), and finding a name's bucket about 5 times faster
+  ([#30](https://github.com/Rawframe-Project/maul-locale/pull/30)).
+- Making a collator is faster. The data checks it repeated now run once,
+  when the data file opens, which takes German from about 2,100 to
+  870 ns ([#42](https://github.com/Rawframe-Project/maul-locale/pull/42)).
+  A locale whose rules reorder scripts (Chinese, Japanese, Korean,
+  Russian, Arabic, Hindi, Thai and others) now reads its reordering from
+  the data instead of building it, which halves the time again: Chinese
+  went from about 1,280 to 620 ns
+  ([#45](https://github.com/Rawframe-Project/maul-locale/pull/45)).
+  Results do not change.
+
+### Added
+
+- The locales guide shows how to match the user's languages when they
+  arrive as one comma-separated list, as Maul Window's
+  `mwinGetPreferredLocales` gives them, and to match again on its
+  `mwin_eventLocaleChanged`. Maul Locale does not depend on Maul Window
+  ([#28](https://github.com/Rawframe-Project/maul-locale/pull/28)).
+
+### Fixed
+
+- `mlocgen` built in Debug or with the sanitizers runs to the end. It
+  no longer hands `qsort` or `memcpy` a null array for an empty list, or
+  `mlocWideDivide` an output that is also an input. The data it writes
+  does not change
+  ([#47](https://github.com/Rawframe-Project/maul-locale/pull/47)).
+- The release's SBOM (`sbom.spdx.json`) is named after the repository
+  and tag; v0.1.0's was named `.`
+  ([#15](https://github.com/Rawframe-Project/maul-locale/pull/15)).
 
 ## [0.1.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.0.1...v0.1.0) (2026-10-23)
 
