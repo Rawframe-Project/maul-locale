@@ -66,6 +66,29 @@ if (mlocPrepareMatch(&set, supported, 3, &supported[0], entries) == mloc_success
 
 `mlocPrepareMatch` does the work that depends only on the supported list; keep its entries while the list stays the same. When nothing is near enough, `match.supported` is -1 and the default stays. The options can weigh scripts above languages, stop demoting later preferences, or allow only matches that hold both ways.
 
+The library reads no setting of the operating system, so the program passes the user's languages. A windowing library usually gives them as one list of tags, most preferred first; Maul Window's `mwinGetPreferredLocales`, for one, gives them comma-separated. Canonicalize each, skip the ones that are not locales, and match the rest; an empty list means the platform does not say, and the program's default stays. Match again when the platform reports a change (Maul Window's `mwin_eventLocaleChanged`).
+
+```c
+// list: the user's languages, most preferred first, comma-separated, as
+// Maul Window's mwinGetPreferredLocales gives them
+mlocLocale desired[8];
+size_t count = 0;
+for (size_t start = 0; start < length && count < 8;)
+{
+    const char* comma = memchr(list + start, ',', length - start);
+    size_t end = comma != nullptr ? (size_t)(comma - list) : length;
+    mlocTextResult parsed =
+        mlocCanonicalizeLocale(&set, list + start, end - start, &desired[count], nullptr);
+    if (parsed.status == mloc_success)
+    {
+        count++; // a tag that does not parse is skipped
+    }
+    start = end + 1;
+}
+// count 0: the platform did not say, so the program's default stays;
+// else match desired[0] to desired[count - 1] as above
+```
+
 ## Regional preferences
 
 `mlocGetLocalePreferences` gives what a region prefers: the hour cycle and the hour formats it accepts, the first day of the week and the days of a year's first week, the weekend, the measurement system, the paper size and the calendar. The region is the locale's `-u-rg` key, else its region, else its likely region (`en` is the United States). Keys in the locale override: `-u-hc`, `-u-fw`, `-u-ms` and `-u-ca`.

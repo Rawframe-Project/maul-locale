@@ -188,6 +188,40 @@ static void GuideMatch(void)
     CHECK(memcmp(&use, &austrian, sizeof(use)) == 0, "and formats as in Austria");
 }
 
+static void GuidePreferredList(void)
+{
+    mlocDataSet set = s_all;
+    const char* list = "iw-IL,en_US-x-!,de-AT,,en";
+    size_t length = strlen(list);
+    // list: the user's languages, most preferred first, comma-separated, as
+    // Maul Window's mwinGetPreferredLocales gives them
+    mlocLocale desired[8];
+    size_t count = 0;
+    for (size_t start = 0; start < length && count < 8;)
+    {
+        const char* comma = memchr(list + start, ',', length - start);
+        size_t end = comma != nullptr ? (size_t)(comma - list) : length;
+        mlocTextResult parsed =
+            mlocCanonicalizeLocale(&set, list + start, end - start, &desired[count], nullptr);
+        if (parsed.status == mloc_success)
+        {
+            count++; // a tag that does not parse is skipped
+        }
+        start = end + 1;
+    }
+    // count 0: the platform did not say, so the program's default stays;
+    // else match desired[0] to desired[count - 1] as above
+    CHECK(count == 3, "three of the five entries are locales");
+    mlocLocale supported[3] = {Locale("en"), Locale("de"), Locale("fr-CA")};
+    mlocMatchEntry entries[3];
+    mlocMatch match = {-1, -1};
+    CHECK(mlocPrepareMatch(&set, supported, 3, &supported[0], entries) == mloc_success &&
+              mlocMatchLocales(&set, supported, entries, 3, desired, count, nullptr, &match) ==
+                  mloc_success &&
+              match.supported == 1 && match.desired == 1,
+          "Hebrew has no translations, so de-AT picks German");
+}
+
 static void GuidePreferences(void)
 {
     mlocDataSet set = s_all;
@@ -568,6 +602,7 @@ int main(void)
     GuideCanonicalize();
     GuideParents();
     GuideMatch();
+    GuidePreferredList();
     GuidePreferences();
     GuideLocaleName();
     GuidePlural();
