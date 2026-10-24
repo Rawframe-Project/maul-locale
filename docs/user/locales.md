@@ -2,6 +2,15 @@
 
 A locale names a language and, as needed, its script, region, variants and options: `de-CH`, `sr-Latn`, `ar-EG-u-nu-latn`. Every formatter is made for one. Locales follow UTS #35 and BCP 47; `maul-locale/locale.h` has the functions below, `maul-locale/names.h` the display names.
 
+## Contents
+
+- [Parsing and canonical forms](#parsing-and-canonical-forms)
+- [Likely subtags and direction](#likely-subtags-and-direction)
+- [Fallback](#fallback)
+- [Matching a user's languages](#matching-a-users-languages)
+- [Regional preferences](#regional-preferences)
+- [Display names](#display-names)
+
 ## Parsing and canonical forms
 
 `mlocParseLocale` reads a BCP 47 tag or a CLDR id (`_` works as a separator too) strictly into an `mlocLocale`, a 128-byte value in canonical syntax: two equal locales are equal byte for byte, so `memcmp` compares them. It refuses what is not a locale id with `mloc_errorSyntax` and the offset of the bad subtag. It does not replace aliases.
