@@ -11,10 +11,12 @@
 # final rieul, 3 another final; four code points a byte, the first in the
 # low bits.
 #
-# usage: gen_hanja_finals.py DIR [--check]
+# usage: gen_hanja_finals.py DIR [--check] | --output-path
 #   DIR      holds Unihan.zip at the pinned version (its SHA-256 is
 #            checked)
 #   --check  fail when the file differs from what would be written
+#   --output-path  print the file it writes, relative to the repository's
+#                  root (tools/regenerate.sh keeps that file)
 
 import hashlib
 import io
@@ -66,8 +68,11 @@ def read(directory):
 
 
 def main():
+    if sys.argv[1:] == ["--output-path"]:
+        print(os.path.relpath(PATH, ROOT).replace(os.sep, "/"))
+        return
     if len(sys.argv) < 2:
-        sys.exit("usage: gen_hanja_finals.py DIR [--check]")
+        sys.exit("usage: gen_hanja_finals.py DIR [--check] | --output-path")
     version, classes = read(sys.argv[1])
     lines = [
         "// SPDX-License-Identifier: MIT AND Unicode-3.0",

@@ -31,10 +31,10 @@ Every table in `src/generated/` comes from a pinned source by a generator, and C
 tools/fetch_cldr.sh ~/cldr-cache
 tools/fetch_tzdb.sh ~/tzdb-cache
 cmake --build out/dev --target mlocgen
-./out/dev/mlocgen generate ~/cldr-cache/cldr/common . ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
+tools/regenerate.sh out/dev/mlocgen ~/cldr-cache/cldr/common ~/tzdb-cache/tzdb-$(awk '$1 == "release" { print $2 }' tools/tzdb-release.txt)
 ```
 
-It writes the compiled-in data, every data file and the code tables, then the data version (`src/generated/data_version.h`) from the pins and the code tables' hash. Its output depends only on its inputs, so a run with unchanged pins changes nothing.
+`tools/regenerate.sh` removes mlocgen's old files from `src/generated/` and runs `mlocgen generate`, so a file the generator no longer writes shows as deleted instead of staying behind; the tables of the `tools/gen_*.py` scripts stay. mlocgen writes the compiled-in data, every data file and the code tables, then the data version (`src/generated/data_version.h`) from the pins and the code tables' hash. Its output depends only on its inputs, so a run with unchanged pins changes nothing.
 
 ## A new CLDR release
 

@@ -115,17 +115,13 @@ jobs:
           cmake -B out/regenerate -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 \
             -DMAUL_LOCALE_BUILD_TESTS=OFF -DMAUL_LOCALE_BUILD_BENCH=OFF
           cmake --build out/regenerate --target mlocgen
-          # mlocgen writes its files and removes none, so its old ones go
-          # first and a file it no longer writes is not carried over. The
-          # tables a tools/gen_*.py script writes, each naming its own path,
-          # stay: this job does not remake them.
-          for file in src/generated/*; do
-            grep -qF "$file" tools/gen_*.py || rm -- "$file"
-          done
-          out/regenerate/mlocgen generate "$CLDR" . "$TZDB"
+          # Into a clean src/generated, as ci.yml's `generated` job does, so
+          # a file mlocgen no longer writes is not carried over.
+          tools/regenerate.sh out/regenerate/mlocgen "$CLDR" "$TZDB"
           # Nothing is committed when the data is already current. Status,
           # not diff, so a file the generator adds or drops counts too.
-          if [ -z "$(git status --porcelain -- src/generated)" ]; then
+          status=$(git status --porcelain -- src/generated)
+          if [ -z "$status" ]; then
             echo "src/generated is already current"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else

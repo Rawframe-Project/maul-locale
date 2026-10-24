@@ -8,15 +8,17 @@
 # 64-bit words, low first. The table sizes are the largest indexes any
 # finite double reaches.
 #
-# usage: gen_pow5_tables.py [--check]
+# usage: gen_pow5_tables.py [--check | --output-path]
 #   --check  fail when the file differs from what would be written
+#   --output-path  print the file it writes, relative to the repository's
+#                  root (tools/regenerate.sh keeps that file)
 
 import os
 import sys
 
 BITS = 125
-PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "generated",
-                    "pow5_tables.h")
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+PATH = os.path.join(ROOT, "src", "generated", "pow5_tables.h")
 
 
 def pow5bits(e):
@@ -95,6 +97,9 @@ def text():
 
 
 def main():
+    if sys.argv[1:] == ["--output-path"]:
+        print(os.path.relpath(PATH, ROOT).replace(os.sep, "/"))
+        return
     wanted = text()
     if len(sys.argv) > 1 and sys.argv[1] == "--check":
         with open(PATH, encoding="utf-8") as f:

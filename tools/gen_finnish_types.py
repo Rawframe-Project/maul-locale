@@ -17,9 +17,11 @@
 # records, sorted by their bytes: the key's length, its bytes, the type
 # and the gradation letter (0 for none); an offset per record.
 #
-# usage: gen_finnish_types.py [--check]
+# usage: gen_finnish_types.py [--check | --output-path]
 #   The list's SHA-256 is checked against the directory's README.md.
 #   --check  fail when the file differs from what would be written
+#   --output-path  print the file it writes, relative to the repository's
+#                  root (tools/regenerate.sh keeps that file)
 
 import collections
 import hashlib
@@ -135,8 +137,11 @@ def blob(name, entries):
 
 
 def main():
+    if sys.argv[1:] == ["--output-path"]:
+        print(os.path.relpath(PATH, ROOT).replace(os.sep, "/"))
+        return
     if any(a != "--check" for a in sys.argv[1:]):
-        sys.exit("usage: gen_finnish_types.py [--check]")
+        sys.exit("usage: gen_finnish_types.py [--check | --output-path]")
     rows = read()
     first = {}
     for word, kind in rows:
