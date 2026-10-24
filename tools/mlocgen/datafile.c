@@ -236,7 +236,7 @@ static void WriteHeader(uint8_t* out, const DataFileVersion* version, size_t siz
     Put32(out + headerFileSize, (uint32_t)size);
     Put32(out + headerCldr, version->cldr);
     Put32(out + headerUnicode, version->unicode);
-    Put32(out + headerLibrary, version->library);
+    Put32(out + headerDataFormat, version->format);
     memcpy(out + headerTzdb, version->tzdb, sizeof(version->tzdb));
     Put64(out + headerTables, version->tables);
     Put32(out + headerUnitCount, (uint32_t)unitCount);

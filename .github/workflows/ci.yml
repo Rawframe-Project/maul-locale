@@ -83,6 +83,8 @@ jobs:
           python3 tools/check_docs.py
           python3 tools/check_lengths.py
           python3 tools/check_guide.py
+      - name: The data format version moves with its layouts
+        run: python3 tools/check_data_format.py
       - name: The documentation site builds
         run: python3 tools/build_docs.py
       - name: Tables generated from data in the repository

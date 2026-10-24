@@ -354,9 +354,7 @@ static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
     {
         return mloc_errorData;
     }
-    if (mlocLoad32(bytes + messageLibrary) !=
-            ((uint32_t)MLOC_VERSION_MAJOR << 16 | (uint32_t)MLOC_VERSION_MINOR << 8 |
-             MLOC_VERSION_PATCH) ||
+    if (mlocLoad32(bytes + messageDataFormat) != MLOC_DATA_FORMAT_VERSION ||
         mlocLoad32(bytes + messageUnicode) != UnicodeVersion())
     {
         return mloc_errorDataVersion;

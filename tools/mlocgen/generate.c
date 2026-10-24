@@ -167,7 +167,7 @@ int GenerateVersion(const char* root, DataFileVersion* versionOut, char* errorOu
             .cldr = mlocPackVersion(MLOC_CLDR_VERSION_MAJOR, MLOC_CLDR_VERSION_MINOR,
                                     MLOC_CLDR_VERSION_PATCH),
             .unicode = mlocPackVersion(major, minor, patch),
-            .library = mlocPackVersion(MLOC_VERSION_MAJOR, MLOC_VERSION_MINOR, MLOC_VERSION_PATCH),
+            .format = MLOC_DATA_FORMAT_VERSION,
         };
         memcpy(versionOut->tzdb, release, strlen(release));
         uint64_t hash = HashBytes(0xCBF29CE484222325u, cldr, cldrSize);

@@ -583,13 +583,13 @@ int WriteZonesFile(const char* tzdbDirectory, const char* commonDirectory, const
     {
         return 0;
     }
-    // The library's own version, the release aside.
+    // The library's own data version, the release aside.
     mlocDataVersion own;
     mlocGetDataVersion(&own);
     DataFileVersion version = {
         .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
         .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
-        .library = mlocPackVersion(own.library.major, own.library.minor, own.library.patch),
+        .format = own.format,
         .tables = own.tables,
     };
     memcpy(version.tzdb, release, strlen(release));

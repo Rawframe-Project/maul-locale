@@ -31,9 +31,9 @@ enum
     messageFormat = 4, // 16 bits
     messageFlags = 6,  // 16 bits
     messageSize = 8,
-    messageLibrary = 12, // a version as major << 16 | minor << 8 | patch
-    messageUnicode = 16, // the Unicode version of its NFC
-    messageCounts = 20,  // nine counts, in the order of messageCount
+    messageDataFormat = 12, // MLOC_DATA_FORMAT_VERSION
+    messageUnicode = 16,    // the Unicode version of its NFC
+    messageCounts = 20,     // nine counts, in the order of messageCount
 };
 
 // The kinds of records, in their order in the message.

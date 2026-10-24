@@ -6,7 +6,8 @@
 // compiled message is locale-free: it holds the message's declarations,
 // selectors, variants and patterns with their names resolved, keys and
 // names in NFC, and every syntax and data model check done. It is the form
-// a catalog stores; it is valid only for this library's version.
+// a catalog stores; it is valid with every library of its data format
+// version (MLOC_DATA_FORMAT_VERSION) and Unicode version.
 
 #ifndef MAUL_LOCALE_MESSAGE_H
 #define MAUL_LOCALE_MESSAGE_H

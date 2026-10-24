@@ -304,7 +304,7 @@ static void ReadCompiled(const uint8_t* bytes, size_t size)
             mlocCompileMessage("", 0, current, sizeof current, &currentSize, &error);
         Require(result.status == mloc_success);
         memcpy(message, current, 4);
-        memcpy(message + messageLibrary, current + messageLibrary, 8);
+        memcpy(message + messageDataFormat, current + messageDataFormat, 8);
     }
     size_t length;
     char* text = Write(message, size, &length);

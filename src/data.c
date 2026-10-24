@@ -27,7 +27,7 @@ void mlocGetDataVersion(mlocDataVersion* versionOut)
     *versionOut = (mlocDataVersion){
         .cldr = {MLOC_CLDR_VERSION_MAJOR, MLOC_CLDR_VERSION_MINOR, MLOC_CLDR_VERSION_PATCH},
         .unicode = {MLOC_DATA_UNICODE_MAJOR, MLOC_DATA_UNICODE_MINOR, MLOC_DATA_UNICODE_PATCH},
-        .library = {MLOC_VERSION_MAJOR, MLOC_VERSION_MINOR, MLOC_VERSION_PATCH},
+        .format = MLOC_DATA_FORMAT_VERSION,
         .tables = MLOC_DATA_TABLES_HASH,
     };
     memcpy(versionOut->tzdb, MLOC_DATA_TZDB, sizeof(MLOC_DATA_TZDB) - 1);
@@ -45,7 +45,7 @@ static mlocDataVersion HeaderVersion(const uint8_t* bytes)
     mlocDataVersion version = {
         .cldr = UnpackVersion(mlocLoad32(bytes + headerCldr)),
         .unicode = UnpackVersion(mlocLoad32(bytes + headerUnicode)),
-        .library = UnpackVersion(mlocLoad32(bytes + headerLibrary)),
+        .format = mlocLoad32(bytes + headerDataFormat),
         .tables = mlocLoad64(bytes + headerTables),
     };
     memcpy(version.tzdb, bytes + headerTzdb, sizeof(version.tzdb));
@@ -70,8 +70,8 @@ mlocResult mlocReadDataVersion(const void* bytes, size_t size, mlocDataVersion* 
 static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
 {
     return memcmp(&a->cldr, &b->cldr, sizeof(a->cldr)) == 0 &&
-           memcmp(&a->unicode, &b->unicode, sizeof(a->unicode)) == 0 &&
-           memcmp(&a->library, &b->library, sizeof(a->library)) == 0 && a->tables == b->tables;
+           memcmp(&a->unicode, &b->unicode, sizeof(a->unicode)) == 0 && a->format == b->format &&
+           a->tables == b->tables;
 }
 
 // Whether a file holds zones units alone: a zones file, which may be of

@@ -90,8 +90,7 @@ uint32_t mlocEmitFinish(MessageEmit* emit, uint32_t flags, uint32_t unicode)
     out[messageFlags] = (uint8_t)flags;
     out[messageFlags + 1] = 0;
     Store32(out + messageSize, size);
-    Store32(out + messageLibrary, (uint32_t)MLOC_VERSION_MAJOR << 16 |
-                                      (uint32_t)MLOC_VERSION_MINOR << 8 | MLOC_VERSION_PATCH);
+    Store32(out + messageDataFormat, MLOC_DATA_FORMAT_VERSION);
     Store32(out + messageUnicode, unicode);
     for (uint32_t kind = 0; kind < messageCount; kind++)
     {

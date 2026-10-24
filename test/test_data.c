@@ -85,8 +85,7 @@ static void PutHeader(uint32_t size, uint32_t units, uint32_t locales, uint32_t 
           mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch));
     Put32(s_file + headerUnicode,
           mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch));
-    Put32(s_file + headerLibrary,
-          mlocPackVersion(version.library.major, version.library.minor, version.library.patch));
+    Put32(s_file + headerDataFormat, version.format);
     memcpy(s_file + headerTzdb, version.tzdb, 8);
     Put64(s_file + headerTables, version.tables);
     Put32(s_file + headerUnitCount, units);
@@ -152,8 +151,7 @@ static bool SameVersions(mlocVersion a, mlocVersion b)
 static bool SameVersion(const mlocDataVersion* a, const mlocDataVersion* b)
 {
     return SameVersions(a->cldr, b->cldr) && SameVersions(a->unicode, b->unicode) &&
-           SameVersions(a->library, b->library) && memcmp(a->tzdb, b->tzdb, 8) == 0 &&
-           a->tables == b->tables;
+           a->format == b->format && memcmp(a->tzdb, b->tzdb, 8) == 0 && a->tables == b->tables;
 }
 
 static void TestVersion(void)
@@ -161,8 +159,8 @@ static void TestVersion(void)
     mlocDataVersion version;
     mlocGetDataVersion(&version);
     CHECK(version.cldr.major == MLOC_CLDR_VERSION_MAJOR &&
-              version.library.patch == MLOC_VERSION_PATCH,
-          "the data version names the library's CLDR and version");
+              version.format == MLOC_DATA_FORMAT_VERSION,
+          "the data version names the library's CLDR and data format");
     CHECK(version.unicode.major == 18, "Unicode 18");
     CHECK(memcmp(version.tzdb, "2026e\0\0\0", 8) == 0, "the time zone release, NUL-padded");
     mlocDataVersion read;
@@ -285,13 +283,22 @@ static void TestArguments(void)
 
 static void TestVersionRefusals(void)
 {
-    static const uint32_t s_fields[] = {headerCldr, headerUnicode, headerLibrary,
+    static const uint32_t s_fields[] = {headerCldr, headerUnicode, headerDataFormat,
                                         headerTzdb, headerTables,  headerTables + 4};
     for (size_t i = 0; i < sizeof(s_fields) / sizeof(s_fields[0]); i++)
     {
         uint32_t size = BuildGood();
         s_file[s_fields[i]] ^= 1;
         CHECK(Open(size) == mloc_errorDataVersion, "another data version");
+    }
+    // The field held a packed library version before the data format
+    // version: the released files' 0.0.1 and 0.1.0 never match a format.
+    static const uint32_t s_released[] = {1, 256};
+    for (size_t i = 0; i < 2; i++)
+    {
+        uint32_t size = BuildGood();
+        Put32(s_file + headerDataFormat, s_released[i]);
+        CHECK(Open(size) == mloc_errorDataVersion, "a released file's library version");
     }
     uint32_t size = BuildGood();
     s_file[headerFileSize] ^= 1;
@@ -325,9 +332,9 @@ static void TestZonesFiles(void)
           "no unit at all, of another release");
     size = Build(s_zones, 1, nullptr, 0);
     memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
-    s_file[headerLibrary] ^= 1;
+    s_file[headerDataFormat] ^= 1;
     CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
-          "zones of another library version");
+          "zones of another data format");
 }
 
 // Builds the good file, puts a 32-bit value at an offset, and expects a
