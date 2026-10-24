@@ -396,7 +396,11 @@ static void AddFileIntervals(IntervalWalk* walk, const LdmlFile* file, const cha
 {
     walk->count = 0;
     MapEach(&file->leaves, CollectInterval, walk);
-    qsort(walk->chains, (size_t)walk->count, sizeof(char*), CompareIds);
+    // A file without interval patterns leaves the list unallocated.
+    if (walk->count > 1)
+    {
+        qsort(walk->chains, (size_t)walk->count, sizeof(char*), CompareIds);
+    }
     for (int i = 0; i < walk->count; i++)
     {
         const char* chain = walk->chains[i];
