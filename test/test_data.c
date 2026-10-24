@@ -176,7 +176,7 @@ static void TestVersion(void)
 
 static void TestBuiltin(void)
 {
-    mlocData data;
+    mlocData data = {0};
     CHECK(mlocOpenData(&data, mlocBuiltinData, mlocBuiltinDataSize) == mloc_success,
           "the compiled-in bytes are a valid data file");
     mlocData builtin;
@@ -213,8 +213,11 @@ static void TestLookups(void)
     uint32_t size = BuildGood();
     mlocData data = {0};
     DataView view;
-    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_kinds, 2) == mloc_success,
-          "a file built by hand opens");
+    if (mlocOpenDataWithKinds(&view, s_file, size, s_kinds, 2) != mloc_success)
+    {
+        CHECK(false, "a file built by hand opens");
+        return;
+    }
     memcpy(&data, &view, sizeof(view));
     CHECK(mlocGetDataLocaleCount(&data) == 4, "its locales");
     const char* id = nullptr;
@@ -249,11 +252,17 @@ static void TestDataSet(void)
     memcpy(s_first, s_file, firstSize);
     DataView first;
     DataView second;
-    CHECK(mlocOpenDataWithKinds(&first, s_first, firstSize, s_kinds, 2) == mloc_success,
-          "a pack opens");
+    if (mlocOpenDataWithKinds(&first, s_first, firstSize, s_kinds, 2) != mloc_success)
+    {
+        CHECK(false, "a pack opens");
+        return;
+    }
     uint32_t secondSize = BuildGood();
-    CHECK(mlocOpenDataWithKinds(&second, s_file, secondSize, s_kinds, 2) == mloc_success,
-          "a second source opens");
+    if (mlocOpenDataWithKinds(&second, s_file, secondSize, s_kinds, 2) != mloc_success)
+    {
+        CHECK(false, "a second source opens");
+        return;
+    }
     mlocData sources[2] = {0};
     memcpy(&sources[0], &first, sizeof(first));
     memcpy(&sources[1], &second, sizeof(second));

@@ -273,9 +273,14 @@ static void TestEndlessRules(void)
         }
     }
     DataView view;
-    CHECK(mlocOpenDataWithKinds(&view, file, mlocBuiltinDataSize, mlocDataKinds,
-                                mlocDataKindCount) == mloc_success,
-          "a file whose rules loop still validates");
+    if (mlocOpenDataWithKinds(&view, file, mlocBuiltinDataSize, mlocDataKinds, mlocDataKindCount) !=
+        mloc_success)
+    {
+        // The view is unset: nothing below can run.
+        CHECK(false, "a file whose rules loop still validates");
+        free(file);
+        return;
+    }
     mlocData opened = {0};
     memcpy(&opened, &view, sizeof(view));
     mlocDataSet set = {&opened, 1};

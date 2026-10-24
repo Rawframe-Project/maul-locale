@@ -33,7 +33,12 @@ static bool OpenFile(const char* path, mlocData* out)
     uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
-    return read > 0 && mlocOpenData(out, bytes, read) == mloc_success;
+    if (read > 0 && mlocOpenData(out, bytes, read) == mloc_success)
+    {
+        return true; // the bytes stay for the run
+    }
+    free(bytes);
+    return false;
 }
 
 static mlocTime Time(uint8_t hour, uint8_t minute, uint8_t second, uint32_t nanosecond)
