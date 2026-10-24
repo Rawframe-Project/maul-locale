@@ -252,6 +252,7 @@ set(MAUL_PKG_REQUIRES_PRIVATE "maul-unicode >= ${MAUL_LOCALE_UNICODE_VERSION}")
 if(MAUL_LOCALE_BUILD_TESTS)
     enable_testing()
     maul_add_test(base)
+    maul_add_exports_test()
     # The snippets of docs/user/, on the compiled-in data and the data
     # files (tools/check_guide.py keeps them the same).
     maul_add_test(guide)
