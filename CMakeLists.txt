@@ -858,8 +858,11 @@ endif()
 # They reach internal functions, so the library is static.
 if(MAUL_LOCALE_FUZZ)
     # The library is instrumented too: its coverage guides libFuzzer, and
-    # the sanitizers watch its code, not only the targets'.
-    target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
+    # the sanitizers watch its code, not only the targets'. Undefined
+    # behavior aborts the run, so libFuzzer keeps the input as a crash
+    # instead of printing a warning and going on.
+    target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined
+                                               -fno-sanitize-recover=all)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area catalog collate_fast collation data date_data decimal duration grammar ixdtf locale message parse
                  relative
@@ -869,7 +872,8 @@ if(MAUL_LOCALE_FUZZ)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
         target_include_directories(fuzz_${area} PRIVATE src)
         maul_apply_flags(fuzz_${area})
-        target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
+        target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined
+                                               -fno-sanitize-recover=all)
         target_link_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
     endforeach()
     target_compile_definitions(fuzz_collation PRIVATE
@@ -891,7 +895,8 @@ if(MAUL_LOCALE_FUZZ)
     target_link_libraries(fuzz_resource PRIVATE maul-locale maul-unicode)
     target_include_directories(fuzz_resource PRIVATE tools/mloccat)
     maul_apply_flags(fuzz_resource)
-    target_compile_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_compile_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined
+                                               -fno-sanitize-recover=all)
     target_link_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
     # The generator's collation rule parser, from its source likewise.
     add_executable(fuzz_collation_rules test/fuzz_collation_rules.c
@@ -899,7 +904,8 @@ if(MAUL_LOCALE_FUZZ)
     target_link_libraries(fuzz_collation_rules PRIVATE maul-unicode)
     target_include_directories(fuzz_collation_rules PRIVATE tools/mlocgen)
     maul_apply_flags(fuzz_collation_rules)
-    target_compile_options(fuzz_collation_rules PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_compile_options(fuzz_collation_rules PRIVATE -fsanitize=fuzzer,address,undefined
+                                               -fno-sanitize-recover=all)
     target_link_options(fuzz_collation_rules PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()
 
