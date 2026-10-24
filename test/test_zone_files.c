@@ -93,8 +93,11 @@ static void TestOpenAndRead(void)
     uint32_t size = BuildZonesFile("1999z", "1999z\0\0");
     mlocData sources[2];
     mlocOpenBuiltinData(&sources[1]);
-    CHECK(size > 0 && mlocOpenData(&sources[0], s_file, size) == mloc_success,
-          "a zones file of another release opens");
+    if (size == 0 || mlocOpenData(&sources[0], s_file, size) != mloc_success)
+    {
+        CHECK(false, "a zones file of another release opens");
+        return;
+    }
     mlocDataSet both = {sources, 2};
     mlocDataSet builtin = {&sources[1], 1};
     mlocDataVersion own;
@@ -133,8 +136,11 @@ static void TestRefusals(void)
     }
     mlocData data;
     uint32_t size = BuildZonesFile("1999z", "abcdefgh");
-    CHECK(size > 0 && mlocOpenData(&data, s_file, size) == mloc_success,
-          "a release of eight bytes, letters and digits");
+    if (size == 0 || mlocOpenData(&data, s_file, size) != mloc_success)
+    {
+        CHECK(false, "a release of eight bytes, letters and digits");
+        return;
+    }
     mlocDataSet set = {&data, 1};
     mlocDataSet empty = {nullptr, 0};
     char text[8];

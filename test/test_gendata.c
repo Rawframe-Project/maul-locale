@@ -76,8 +76,13 @@ static void TestRoundTrip(void)
     CHECK(size == otherSize && memcmp(bytes, other, size) == 0,
           "the same bytes whatever the order of the units");
     DataView view;
-    CHECK(mlocOpenDataWithKinds(&view, bytes, size, s_kinds, 2) == mloc_success,
-          "the written file opens");
+    if (mlocOpenDataWithKinds(&view, bytes, size, s_kinds, 2) != mloc_success)
+    {
+        CHECK(false, "the written file opens");
+        free(bytes);
+        free(other);
+        return;
+    }
     CHECK(view.localeCount == 4 && view.unitCount == additionCount, "its locales and units");
     for (size_t i = 0; i < additionCount; i++)
     {
