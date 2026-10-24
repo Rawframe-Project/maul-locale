@@ -22,14 +22,14 @@ Large values that recur across locales (number symbol sets, compiled patterns, c
 
 ## Validation
 
-`mlocOpenData` checks, in this order: the header and size; the data version, refused with `mloc_errorDataVersion` before anything else is read; every table, offset, length and order (`mloc_errorData`); then each unit through its kind's validator. An unknown kind is refused. After a file opens, no lookup checks anything again: a validated unit is safe to read with plain loads.
+`mlocOpenData` checks, in this order: the header and size; the data version, refused with `mloc_errorDataVersion` before anything else is read; every table, offset, length and order (`mloc_errorData`); then each unit through its kind's validator. An unknown kind is refused. After a file opens, no lookup checks anything again: a validated unit is safe to read with plain loads. A part that lays a unit out when a formatter or collator is made (collation's `mlocViewCollationRoot`, say) checks only that its sections fit; the checks of their contents run in the validator alone, which every way to an opened source passes through.
 
 Two rules keep this sound:
 
 - **A validator reads its own unit only.** Units are validated one at a time in table order, so a validator that looked up another unit could read one whose bounds are not checked yet, and a crafted file would then read out of bounds. A check that spans units (an index into a distinct set, say) is made when a formatter is created, against the source that holds the locale's unit, never in a validator.
 - **Indexes are bounded where they are read.** A formatter stores only indexes that it bounded when it was made, so formatting needs no checks.
 
-`fuzz_data` and the other `fuzz_*` targets feed crafted files to the validators; every crash they found became a test.
+`fuzz_data` and the other `fuzz_*` targets feed crafted files to the validators; every crash they found became a test. `fuzz_collation_data` fuzzes what that trust rests on: it patches a collation unit, seals its hash again, and when the validator passes it, makes and uses the locale's collators.
 
 ## Versions
 

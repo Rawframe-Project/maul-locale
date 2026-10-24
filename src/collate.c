@@ -441,8 +441,9 @@ mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
         return result;
     }
     mlocSetCollatorFastLatin(&c);
-    memset(collatorOut, 0, sizeof(*collatorOut));
+    // The collator, then zeros past it: the value's bytes are all set.
     memcpy(collatorOut, &c, sizeof(c));
+    memset((uint8_t*)collatorOut + sizeof(c), 0, sizeof(*collatorOut) - sizeof(c));
     return mloc_success;
 }
 

@@ -118,6 +118,10 @@ int main(int argc, char** argv)
 {
     only = argc > 1 ? argv[1] : nullptr;
     UErrorCode e = U_ZERO_ERROR;
+    // A cache hit after the first call: ucol_open clones the tailoring
+    // ICU4C cached process-wide. mlocInitCollator builds from the data
+    // each time, as ICU4X does, so ICU4X is its baseline; the library's
+    // like of this clone is copying a made collator (collator-copy-de).
     Time("collator construct de", 20000,
          [&]
          {

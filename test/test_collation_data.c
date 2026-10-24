@@ -3,7 +3,8 @@
 //
 // The collation data file: its root unit found and valid, a few elements
 // read through the iterator as CLDR 49's root gives them, and a copy with
-// the unit spoiled refused at open.
+// a unit spoiled refused at open: the checks a collator's making trusts
+// (each trie offset, the fast Latin table, the unsafe ranges) run there.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -87,6 +88,88 @@ static void TestRoot(const mlocData* data)
           "Han below the unassigned lead byte, in code point order");
 }
 
+// A pointer into the file, writable.
+static uint8_t* At(const uint8_t* p)
+{
+    return s_file + (p - s_file);
+}
+
+// Spoils bytes of a unit, seals the unit's hash again so that only the
+// values can refuse it, and expects the file refused at open; then puts
+// both back.
+static void Spoil(DataSpan unit, uint32_t hashAt, const uint8_t* where, const uint8_t* bytes,
+                  size_t length, const char* what)
+{
+    uint8_t saved[8];
+    uint8_t savedHash[8];
+    uint8_t* hash = At(unit.bytes) + hashAt;
+    memcpy(saved, where, length);
+    memcpy(savedHash, hash, 8);
+    memcpy(At(where), bytes, length);
+    uint64_t sealed = mlocCollationUnitHash(unit, hashAt);
+    for (int i = 0; i < 8; i++)
+    {
+        hash[i] = (uint8_t)(sealed >> (8 * i));
+    }
+    mlocData broken;
+    CHECK(mlocCollationHashValid(unit, hashAt) &&
+              mlocOpenData(&broken, s_file, s_size) == mloc_errorData,
+          what);
+    memcpy(At(where), saved, length);
+    memcpy(hash, savedHash, 8);
+}
+
+// The three checks on a unit's view: a trie block past the data, a fast
+// Latin table of another version, a range past U+10FFFF.
+static void SpoilViews(DataSpan unit, uint32_t hashAt, const CollationRoot* r, const char* what)
+{
+    static const uint8_t past[4] = {0xF0, 0xFF, 0xFF, 0xFF};
+    static const uint8_t beyond[4] = {0x00, 0x00, 0x11, 0x00};
+    char message[96];
+    snprintf(message, sizeof(message), "%s: a trie block past its data", what);
+    Spoil(unit, hashAt, r->trie.bmp, past, 4, message);
+    CHECK(r->fastLatin != nullptr && r->unsafeCount > 0, what);
+    if (r->fastLatin != nullptr)
+    {
+        uint8_t version[1] = {(uint8_t)(r->fastLatin[0] ^ 1)};
+        snprintf(message, sizeof(message), "%s: a fast Latin table of another version", what);
+        Spoil(unit, hashAt, r->fastLatin, version, 1, message);
+    }
+    if (r->unsafeCount > 0)
+    {
+        snprintf(message, sizeof(message), "%s: an unsafe range past U+10FFFF", what);
+        Spoil(unit, hashAt, r->unsafe + 4, beyond, 4, message);
+    }
+}
+
+// The first tailoring of the file with a fast Latin table and unsafe
+// ranges of its own, and the unit of types that holds it.
+static bool FindTailoring(const DataView* view, DataSpan* typesOut, CollationTailoring* out)
+{
+    for (uint32_t u = 0; u < view->unitCount; u++)
+    {
+        const uint8_t* record = view->bytes + dataHeaderSize + (size_t)u * dataUnitSize;
+        if (mlocLoad32(record) != kindCollationTailorings)
+        {
+            continue;
+        }
+        DataSpan types = {view->bytes + mlocLoad32(record + 8), mlocLoad32(record + 12)};
+        CollationTypes t = mlocReadCollationTypes(types);
+        for (uint32_t i = 0; i < t.count; i++)
+        {
+            const uint8_t* entry = types.bytes + collationTypesHead + (size_t)i * collationTypeSize;
+            DataSpan span = {types.bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+            if (mlocReadCollationTailoring(span, out) && out->view.fastLatin != nullptr &&
+                out->view.fastLatinCount != fastLatinRootTable && out->view.unsafeCount > 0)
+            {
+                *typesOut = types;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int main(void)
 {
     FILE* file = fopen(MLOC_COLLATION_FILE, "rb");
@@ -126,5 +209,27 @@ int main(void)
                   mlocOpenData(&broken, s_file, s_size) != mloc_success,
               "a file with a spoiled root unit refused at open, by its hash and by its values");
     }
+    // Spoiled from a good copy, each check a collator's making trusts.
+    file = fopen(MLOC_COLLATION_FILE, "rb");
+    s_size = file == nullptr ? 0 : fread(s_file, 1, sizeof(s_file), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    CHECK(mlocOpenData(&data, s_file, s_size) == mloc_success, "the good copy opens");
+    view = mlocViewOf(&data);
+    if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&
+        mlocReadCollationRoot(span, &r))
+    {
+        SpoilViews(span, collationRootHashAt, &r, "the root");
+    }
+    DataSpan types = {0};
+    CollationTailoring tailoring;
+    CHECK(FindTailoring(&view, &types, &tailoring), "a tailoring with tables of its own");
+    if (types.bytes != nullptr)
+    {
+        SpoilViews(types, collationTypesHashAt, &tailoring.view, "a tailoring");
+    }
+    CHECK(mlocOpenData(&data, s_file, s_size) == mloc_success, "and put back, it opens again");
     return s_failures == 0 ? 0 : 1;
 }
