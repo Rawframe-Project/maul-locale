@@ -4,13 +4,14 @@
 # them changes; --write records them again after the format is decided
 # (docs/internals/data.md#versions).
 format 0x80000001
-layouts src/data_format.h src/kinds.h src/message_form.h src/code_point_trie.h src/collation_fast_latin.h src/catalog_hash.h src/plural_rules.h src/locale_context.h src/collation_index.h src/*_tables.h
+layouts src/data_format.h src/kinds.h src/message_form.h src/code_point_trie.h src/collation_fast_latin.h src/catalog_hash.h src/plural_rules.h src/locale_context.h src/collation_index.h src/collation_unsafe.h src/*_tables.h
 sha256 617e67832c7b60ff80ffa726f7681abf32e34a4069b28d39e66c19a2a7c9f0c0 src/catalog_hash.h
 sha256 2e35521a394a55d790cd0f570957e4cbbb6a53d7eb0f1bd61f12631ddae9e5c2 src/catalog_tables.h
 sha256 a05bc2046919adee490e1c58642c353bd228aabce82337ebbaff9ac198ec1877 src/code_point_trie.h
 sha256 d168db6809e7538650839353d11a93ca72868049009734b7ca94178a0beb5202 src/collation_fast_latin.h
 sha256 2458bc33c0a80e9b7cea6c6ac9c71722b094a65a004556ffcc0075199c7a5061 src/collation_index.h
 sha256 8d07df1675c32a84e89610c7ab3a1d1d2a35e59be11338e21047778df5d634fa src/collation_tables.h
+sha256 7e06b64c0cc4302f58a358b31702f8bed766e00a6b1e13a2ddd27e38546b745a src/collation_unsafe.h
 sha256 9eab83116176e1850ff9c45f5d97540b4c32441fa21caf02c54c045b2235e097 src/currency_tables.h
 sha256 6d83091f5285ada624cf0d219d19ad835743358628c6dc0b9f4b23799a10b081 src/data_format.h
 sha256 ea1dbd063bbd0f8c2196660f0da852e33412135d737a062ce992b5ff5eb48e9c src/date_tables.h
