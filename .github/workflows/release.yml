@@ -2,8 +2,8 @@ name: release
 
 # release-please keeps a draft release pull request open from the
 # conventional commits on main. The library version enters every data file,
-# so whenever it opens or updates that pull request, the regenerate job
-# regenerates src/generated on its branch. Merging it tags vX.Y.Z and
+# so whenever it opens or updates that pull request, the regenerate and
+# push-data jobs regenerate src/generated on its branch. Merging it tags vX.Y.Z and
 # creates the GitHub release; the assets job then collects the source
 # archive and the data files, writes their checksums and an SBOM, attests
 # where they were built, and attaches all of it to the release.
@@ -52,9 +52,11 @@ jobs:
 
   # The release pull request moves the version in include/maul-locale/base.h,
   # which every data file carries, so the data is regenerated on its branch
-  # from the pinned CLDR and tzdb, as ci.yml's generated job checks. The
-  # commit is the release app's, so CI runs on it. release-please rebuilds
-  # its branch on every update, and this job runs again each time.
+  # from the pinned CLDR and tzdb, as ci.yml's generated job checks.
+  # release-please rebuilds its branch on every update, and these jobs run
+  # again each time. The build runs the branch's code and holds no token;
+  # push-data holds the release app's token, runs none of the branch's code,
+  # and commits the files the build left.
   regenerate:
     needs: release-please
     if: needs.release-please.outputs.prs-created == 'true'
@@ -64,19 +66,18 @@ jobs:
       image: ghcr.io/rawframe-project/ci-cpp:2026.10.6@sha256:50c383f608f992c272196139d749f15978e35143a2876362b1e0aef6993480bd
       # A PID 1 that reaps orphans, as cpp.yml's container has.
       options: --init
-    # The push acts with the app token, so github.token needs no permissions.
-    permissions: {}
+    permissions:
+      contents: read
+    outputs:
+      branch: ${{ steps.pr.outputs.branch }}
+      sha: ${{ steps.pr.outputs.sha }}
+      changed: ${{ steps.regenerate.outputs.changed }}
     env:
       PR: ${{ needs.release-please.outputs.pr }}
+      REPOSITORY: ${{ github.repository }}
       CLDR: .cache/cldr/cldr/common
     steps:
-      - id: app
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          permission-contents: write
-      - name: The release branch
+      - name: The release branch and its head
         id: pr
         run: |
           branch=$(python3 -c 'import json, os; print(json.loads(os.environ["PR"])["headBranchName"])')
@@ -85,10 +86,13 @@ jobs:
           if [ "$branch" != "release-please--branches--main--components--maul-locale" ]; then
             echo "::error::not release-please's branch: $branch"; exit 1
           fi
+          sha=$(git ls-remote "https://github.com/${REPOSITORY}.git" "refs/heads/$branch" | cut -f1)
+          [ ${#sha} -eq 40 ] || { echo "::error::no head for $branch"; exit 1; }
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.pr.outputs.branch }}
+          ref: ${{ steps.pr.outputs.sha }}
           persist-credentials: false
       - name: Environment
         run: |
@@ -106,33 +110,70 @@ jobs:
           bash tools/fetch_cldr.sh .cache/cldr
           bash tools/fetch_tzdb.sh .cache/tzdb
       - name: Regenerate
+        id: regenerate
         run: |
           cmake -B out/regenerate -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 \
             -DMAUL_LOCALE_BUILD_TESTS=OFF -DMAUL_LOCALE_BUILD_BENCH=OFF
           cmake --build out/regenerate --target mlocgen
           out/regenerate/mlocgen generate "$CLDR" . "$TZDB"
-          git status --short src/generated
-      # The one step that holds the token. Nothing is committed when the
-      # data is already current.
+          # Nothing is committed when the data is already current.
+          if git diff --quiet -- src/generated; then
+            echo "src/generated is already current"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git status --short src/generated
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Keep the data
+        if: steps.regenerate.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: generated
+          path: src/generated/
+          retention-days: 1
+
+  push-data:
+    needs: regenerate
+    if: needs.regenerate.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The push acts with the app token, made in this job only.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.regenerate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: generated
+          path: src/generated/
+      - id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+      # A plain push from the head the build read: when release-please moved
+      # its branch since, the push is refused and the next run starts over.
       - name: Commit and push
         env:
           TOKEN: ${{ steps.app.outputs.token }}
           SLUG: ${{ steps.app.outputs.app-slug }}
-          BRANCH: ${{ steps.pr.outputs.branch }}
+          BRANCH: ${{ needs.regenerate.outputs.branch }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          if git diff --quiet -- src/generated; then
-            echo "src/generated is already current"
-            exit 0
-          fi
+          git diff --stat -- src/generated
           id=$(curl -sSf -H "Authorization: Bearer $TOKEN" "https://api.github.com/users/${SLUG}%5Bbot%5D" |
             python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])')
-          git config user.name "${SLUG}[bot]"
-          git config user.email "${id}+${SLUG}[bot]@users.noreply.github.com"
           version=$(python3 -c 'import json; print(json.load(open(".release-please-manifest.json"))["."])')
           git add src/generated
-          git commit -q -m "chore: regenerate the data for $version"
-          git push -q "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          git -c core.hooksPath=/dev/null -c user.name="${SLUG}[bot]" \
+            -c user.email="${id}+${SLUG}[bot]@users.noreply.github.com" \
+            commit -q --no-verify -m "chore: regenerate the data for $version"
+          git -c core.hooksPath=/dev/null push -q --no-verify \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
 
   assets:
     needs: release-please
