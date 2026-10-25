@@ -5,6 +5,14 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.2.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.1...v0.2.2) (2026-10-25)
+
+
+### Fixed
+
+* **mloccat:** refuse a NUL byte in a PO string ([#67](https://github.com/Rawframe-Project/maul-locale/issues/67)) ([0c304b0](https://github.com/Rawframe-Project/maul-locale/commit/0c304b0282ec464d7ab624d16cf99795e79e3a91)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
+* **mloccat:** refuse a NUL byte in an XLIFF file or a PO comment ([#70](https://github.com/Rawframe-Project/maul-locale/issues/70)) ([83827ee](https://github.com/Rawframe-Project/maul-locale/commit/83827ee6d1dd1f539620d9d8504f58042f8b9964)), closes [#68](https://github.com/Rawframe-Project/maul-locale/issues/68)
+
 ## [0.2.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.0...v0.2.1) (2026-10-25)
 
 ### Fixed
