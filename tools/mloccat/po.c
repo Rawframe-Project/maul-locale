@@ -414,11 +414,13 @@ void PoWrite(const PoFile* po, FILE* out)
     {
         const PoEntry* e = &po->entries[i];
         fputc('\n', out);
-        for (const char* c = e->comments; c != nullptr && *c != '\0';)
+        // Every line of the comments, an empty last one too, which the
+        // reader keeps.
+        for (const char* c = e->comments; c != nullptr;)
         {
             size_t n = strcspn(c, "\n");
             fprintf(out, n > 0 ? "#. %.*s\n" : "#.%.*s\n", (int)n, c);
-            c += n + (c[n] == '\n');
+            c = c[n] == '\n' ? c + n + 1 : nullptr;
         }
         if (e->fuzzy || e->mf2)
         {

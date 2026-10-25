@@ -36,6 +36,26 @@ static const char* Refusal(const char* text)
     return error.reason;
 }
 
+// What the writer gives for a file, NUL-terminated; null when it fails.
+static char* Written(const PoFile* po)
+{
+    FILE* f = tmpfile();
+    if (f == nullptr)
+    {
+        return nullptr;
+    }
+    PoWrite(po, f);
+    size_t size = (size_t)ftell(f);
+    rewind(f);
+    char* written = calloc(size + 1, 1);
+    if (written != nullptr && fread(written, 1, size, f) != size)
+    {
+        written[0] = '\0';
+    }
+    fclose(f);
+    return written;
+}
+
 static void TestReader(void)
 {
     const char* text =
@@ -62,24 +82,7 @@ static void TestReader(void)
                   po.entries[1].comments == nullptr && !po.entries[1].fuzzy && !po.entries[1].mf2,
               "an entry without context, comments or flags");
     }
-    char* written = nullptr;
-    size_t size = 0;
-    FILE* f = tmpfile();
-    if (read && f != nullptr)
-    {
-        PoWrite(&po, f);
-        size = (size_t)ftell(f);
-        rewind(f);
-        written = calloc(size + 1, 1);
-        if (written != nullptr && fread(written, 1, size, f) != size)
-        {
-            written[0] = '\0';
-        }
-    }
-    if (f != nullptr)
-    {
-        fclose(f);
-    }
+    char* written = read ? Written(&po) : nullptr;
     PoFile back = {0};
     CHECK(written != nullptr && Reads(written, &back) && back.count == po.count &&
               strcmp(back.header, po.header) == 0 &&
@@ -93,6 +96,29 @@ static void TestReader(void)
     free(written);
     PoFree(&back);
     PoFree(&po);
+}
+
+static void TestEmptyLastComment(void)
+{
+    // An extracted comment whose last line is empty, alone or after another
+    // line, is written with that line, so it reads back the same.
+    static const char* const texts[] = {"#.\nmsgid \"t\"\nmsgstr \"\"\n",
+                                        "#. a\n#.\nmsgid \"t\"\nmsgstr \"\"\n"};
+    static const char* const comments[] = {"", "a\n"};
+    for (size_t i = 0; i < 2; i++)
+    {
+        PoFile po = {0};
+        PoFile back = {0};
+        char* written = Reads(texts[i], &po) ? Written(&po) : nullptr;
+        CHECK(po.count == 1 && po.entries[0].comments != nullptr &&
+                  strcmp(po.entries[0].comments, comments[i]) == 0 && written != nullptr &&
+                  Reads(written, &back) && back.count == 1 && back.entries[0].comments != nullptr &&
+                  strcmp(back.entries[0].comments, comments[i]) == 0,
+              "an extracted comment ending in an empty line written and read back the same");
+        free(written);
+        PoFree(&back);
+        PoFree(&po);
+    }
 }
 
 static void TestRefusals(void)
@@ -335,6 +361,7 @@ int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
     TestReader();
+    TestEmptyLastComment();
     TestRefusals();
     TestExport();
     TestImport();
