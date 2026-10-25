@@ -8,6 +8,7 @@
 
 #include "collation_fast_latin.h"
 #include "collation_reorder.h"
+#include "invariant.h"
 
 #include "maul-unicode/properties.h"
 
@@ -76,6 +77,7 @@ enum
 // does not hold or bytes that are not UTF-8.
 static int32_t ReadUtf8(const Side* x, size_t* next)
 {
+    MLOC_ASSERT(x->at < x->length);
     size_t i = x->at;
     uint32_t c = x->s[i++];
     *next = i;
@@ -109,6 +111,7 @@ static int32_t ReadUtf8(const Side* x, size_t* next)
 // does not hold, as U+FFFD is.
 static int32_t ReadUtf16(const Side* x, size_t* next)
 {
+    MLOC_ASSERT(x->at < x->length);
     uint32_t c = x->u[x->at];
     *next = x->at + 1;
     return c <= fastLatinMax ? (int32_t)c
