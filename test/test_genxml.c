@@ -128,6 +128,20 @@ static void TestRefusals(void)
         XmlFree(root);
         free(exact);
     }
+
+    // XML allows no U+0000, as written or as a reference, and a NUL would
+    // cut a text or a value short.
+    static const char* const nuls[] = {"<a>\nx\0y</a>", "<a>\n<b x='1\0' /></a>"};
+    for (size_t i = 0; i < 2; i++)
+    {
+        char error[256] = "";
+        size_t length = strlen(nuls[i]) + 1 + strlen(nuls[i] + strlen(nuls[i]) + 1);
+        XmlNode* root = XmlParse(nuls[i], length, error, sizeof(error));
+        CHECK(root == nullptr && strstr(error, "line 2: ") == error &&
+                  strstr(error, "NUL") != nullptr,
+              "a NUL byte in text or a value, at its line");
+        XmlFree(root);
+    }
 }
 
 static void TestDepthLimit(void)

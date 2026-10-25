@@ -139,6 +139,16 @@ static void TestRefusals(void)
               strstr(nul.reason, "NUL") != nullptr && escaped != nullptr &&
               strstr(escaped, "NUL") != nullptr,
           "a NUL byte in a string, as written or escaped, refused at its line");
+    static const char comment[] = "#. one\n#. t\0wo\nmsgid \"a\"\nmsgstr \"\"\n";
+    PoError inComment = {0, nullptr};
+    bool commentRead = PoRead(comment, sizeof(comment) - 1, &po, &inComment);
+    if (commentRead)
+    {
+        PoFree(&po);
+    }
+    CHECK(!commentRead && inComment.line == 2 && inComment.reason != nullptr &&
+              strstr(inComment.reason, "NUL") != nullptr,
+          "a NUL byte in an extracted comment, refused at its line");
 }
 
 static void Path(char* out, size_t capacity, const char* name)

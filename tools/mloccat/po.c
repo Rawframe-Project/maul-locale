@@ -258,14 +258,19 @@ static const char* Keyword(Reading* r, const char* p, const char* end, size_t li
 // One line of the file.
 // A comment line: extracted comments and flags kept, the others (the
 // translator's, references, previous strings, obsolete entries) read
-// past.
-static void Comment(Reading* r, const char* p, const char* end)
+// past. Returns why it is refused, or null: a NUL byte would cut an
+// extracted comment, a C string, short.
+static const char* Comment(Reading* r, const char* p, const char* end)
 {
     r->field = fieldNone;
     if (StartsWith(p, end, "#."))
     {
         const char* text = p + 2 + (end - p > 2 && p[2] == ' ');
         const char* stop = end > text && end[-1] == '\r' ? end - 1 : end;
+        if (memchr(text, '\0', (size_t)(stop - text)) != nullptr)
+        {
+            return "a NUL byte in a comment";
+        }
         if (r->comments.bytes != nullptr)
         {
             Append(&r->comments, "\n", 1);
@@ -276,6 +281,7 @@ static void Comment(Reading* r, const char* p, const char* end)
     {
         Flags(r, p + 2, end);
     }
+    return nullptr;
 }
 
 // One line of the file.
@@ -294,12 +300,9 @@ static const char* Line(Reading* r, PoFile* po, const char* p, const char* end, 
     }
     if (p == end || *p == '\r' || *p == '#')
     {
-        if (p != end && *p == '#')
-        {
-            Comment(r, p, end);
-        }
+        const char* problem = p != end && *p == '#' ? Comment(r, p, end) : nullptr;
         r->field = fieldNone;
-        return nullptr;
+        return problem;
     }
     if (*p == '"')
     {
