@@ -9,10 +9,6 @@
 // (test/segment_icu.tsv), whole and in pieces, its differences those
 // tools/segment-exceptions.txt lists.
 
-#ifdef _WIN32
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "test_harness.h"
 
 #include "maul-locale/data.h"

@@ -43,8 +43,13 @@ typedef struct SegmentGenSets
 const char* SegmentsUnit(const XmlNode* root, SegmentGenSets* sets, uint8_t** unitOut,
                          size_t* sizeOut);
 
-// The source of src/generated/segment_overrides.c, which the caller frees.
-void SegmentOverridesSource(const SegmentGenSets* sets, char** sourceOut, size_t* sourceSizeOut);
+// The source of src/generated/segment_overrides.c into out, NUL-ended,
+// and its length; false when it does not fit capacity bytes.
+bool SegmentOverridesText(const SegmentGenSets* sets, char* out, size_t capacity, size_t* sizeOut);
+
+// The same in memory the caller frees; false when it outgrows the room
+// the sets' lines need.
+bool SegmentOverridesSource(const SegmentGenSets* sets, char** sourceOut, size_t* sourceSizeOut);
 
 // Adds a unit to a file for each locale of common/segments whose file
 // gives a segmentation, and gives the source of the code table its units

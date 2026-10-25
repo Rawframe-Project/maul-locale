@@ -110,6 +110,26 @@ static void TestForms(void)
     CHECK(Read("") == nullptr && s_unit == nullptr, "no unit for a file without segmentations");
 }
 
+// Whether the code table's source is refused with room up to a line's
+// fifth byte (or to the source's last byte, at its end).
+static bool Truncated(const char* source, size_t size, const char* line)
+{
+    char out[4096];
+    size_t written = 1;
+    size_t capacity = line == nullptr ? 0 : (size_t)(line - source) + 5;
+    if (line == source + size - 1)
+    {
+        capacity = size;
+    }
+    if (line == nullptr || capacity > size || capacity > sizeof(out) ||
+        SegmentOverridesText(&s_sets, out, capacity, &written) || written != 0)
+    {
+        printf("  not refused with room for %zu of %zu bytes\n", capacity, size);
+        return false;
+    }
+    return true;
+}
+
 static void TestSets(void)
 {
     CHECK(Read(SENTENCE("<variable id=\"$STerm\">[[$STerm] [;]]</variable>")) == nullptr &&
@@ -121,15 +141,27 @@ static void TestSets(void)
           "a set given again is the same set");
     char* source = nullptr;
     size_t size = 0;
-    SegmentOverridesSource(&s_sets, &source, &size);
     CHECK(
-        source != nullptr && strlen(source) == size &&
+        SegmentOverridesSource(&s_sets, &source, &size) && strlen(source) == size &&
             strstr(source, "    {0x003B, muni_sbSTerm},\n    {0x002E, muni_wbMidNum},\n") !=
                 nullptr &&
             strstr(source, "    {0, 1, mloc_segmentSentence},\n    {1, 1, mloc_segmentWord},\n") !=
                 nullptr &&
             strstr(source, "mlocSegmentOverrideSetCount = 2;") != nullptr,
         "the code table's source: the overrides, then each set's first, count and type");
+    if (source != nullptr)
+    {
+        CHECK(Truncated(source, size, strstr(source, "    {0x002E")) &&
+                  Truncated(source, size, strstr(source, "    {1, 1,")) &&
+                  Truncated(source, size, source + size - 1),
+              "a source cut short in an override's line, a set's line or its last line is "
+              "refused");
+        char out[4096];
+        size_t written = 0;
+        CHECK(size < sizeof(out) && SegmentOverridesText(&s_sets, out, size + 1, &written) &&
+                  written == size && memcmp(out, source, size + 1) == 0,
+              "a source that fits exactly");
+    }
     free(source);
 }
 
