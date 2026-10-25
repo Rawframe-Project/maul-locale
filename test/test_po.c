@@ -121,6 +121,30 @@ static void TestEmptyLastComment(void)
     }
 }
 
+static void TestCommentCarriageReturns(void)
+{
+    // Every CR ending a comment line is the line's end, not the comment's:
+    // a comment keeps none at its end, so it reads back the same once
+    // written. A CR inside a line stays.
+    static const char* const texts[] = {"#. a\r\r\nmsgid \"t\"\nmsgstr \"\"\n",
+                                        "#. a\rb\r\n#.\r\r\nmsgid \"t\"\nmsgstr \"\"\n"};
+    static const char* const comments[] = {"a", "a\rb\n"};
+    for (size_t i = 0; i < 2; i++)
+    {
+        PoFile po = {0};
+        PoFile back = {0};
+        char* written = Reads(texts[i], &po) ? Written(&po) : nullptr;
+        CHECK(po.count == 1 && po.entries[0].comments != nullptr &&
+                  strcmp(po.entries[0].comments, comments[i]) == 0 && written != nullptr &&
+                  Reads(written, &back) && back.count == 1 && back.entries[0].comments != nullptr &&
+                  strcmp(back.entries[0].comments, comments[i]) == 0,
+              "a comment line's trailing CRs read as its end, a CR inside it kept");
+        free(written);
+        PoFree(&back);
+        PoFree(&po);
+    }
+}
+
 static void TestRefusals(void)
 {
     const char* plural = Refusal("msgid \"a\"\nmsgid_plural \"b\"\nmsgstr[0] \"\"\n");
@@ -362,6 +386,7 @@ int main(int argc, char** argv)
     s_directory = argc > 1 ? argv[1] : ".";
     TestReader();
     TestEmptyLastComment();
+    TestCommentCarriageReturns();
     TestRefusals();
     TestExport();
     TestImport();
