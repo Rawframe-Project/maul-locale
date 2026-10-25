@@ -177,16 +177,43 @@ static int Keys(const char* text, size_t length, PgsMessage* m, PgsVariant* v)
     return count == m->selectorCount;
 }
 
-// A variant whose pattern starts at start: its keys run from its line's
-// start to " {{"; the first variant's head is what comes before them.
+// Where the first variant's keys begin: after the .match line, the first
+// line outside a quoted literal that starts with it; end when none does.
+static size_t AfterMatch(const char* c, size_t end)
+{
+    int quoted = 0;
+    for (size_t i = 0; i < end; i++)
+    {
+        if (quoted && c[i] == '\\')
+        {
+            i++;
+        }
+        else if (quoted)
+        {
+            quoted = c[i] != '|';
+        }
+        else if (c[i] == '|')
+        {
+            quoted = 1;
+        }
+        else if ((i == 0 || c[i - 1] == '\n') && end - i >= 7 && memcmp(c + i, ".match ", 7) == 0)
+        {
+            const char* lf = memchr(c + i, '\n', end - i);
+            return lf != nullptr ? (size_t)(lf - c) + 1 : end;
+        }
+    }
+    return end;
+}
+
+// A variant whose pattern starts at start: its keys run to " {{" from the
+// end of the .match line, or from the LF after the variant before (from
+// is just past its "}}"); never from the last LF, which may be in a quoted
+// key. The first variant's head is what comes before them.
 static int Variant(const char* c, size_t start, size_t from, PgsMessage* out)
 {
     size_t keysEnd = start - 3;
-    size_t keysStart = keysEnd;
-    while (keysStart > from && c[keysStart - 1] != '\n')
-    {
-        keysStart--;
-    }
+    size_t keysStart = out->head == nullptr ? AfterMatch(c, keysEnd) : from + (c[from] == '\n');
+    keysStart = keysStart < keysEnd ? keysStart : keysEnd;
     int ok = 1;
     if (out->head == nullptr)
     {
