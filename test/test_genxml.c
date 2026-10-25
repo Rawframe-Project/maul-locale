@@ -7,6 +7,7 @@
 #include "test_harness.h"
 #include "xml.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static XmlNode* Parse(const char* text, char* error, size_t capacity)
@@ -110,6 +111,23 @@ static void TestRefusals(void)
     ExpectRefused("<a><!-- open", 1, "comment is not closed", "an unclosed comment");
     ExpectRefused("<a><![CDATA[x", 1, "CDATA section is not closed", "an unclosed CDATA");
     ExpectRefused("<1a/>", 1, "name was expected", "a name starting with a digit");
+
+    // An end tag cut off right after its name, in a buffer of exactly the
+    // document's bytes: nothing after them is read.
+    static const char cut[] = "<a></a";
+    char* exact = malloc(sizeof(cut) - 1);
+    CHECK(exact != nullptr, "a buffer for the cut end tag");
+    if (exact != nullptr)
+    {
+        memcpy(exact, cut, sizeof(cut) - 1);
+        char error[256] = "";
+        XmlNode* root = XmlParse(exact, sizeof(cut) - 1, error, sizeof(error));
+        CHECK(root == nullptr && strstr(error, "line 1: ") == error &&
+                  strstr(error, "end tag of <a> is malformed") != nullptr,
+              "an end tag cut off at the end of the input");
+        XmlFree(root);
+        free(exact);
+    }
 }
 
 static void TestDepthLimit(void)
