@@ -99,17 +99,22 @@ static int Fail(char* errorOut, size_t errorCapacity, const char* path, const ch
     return 0;
 }
 
-// A text with its whitespace runs made one space and its ends trimmed.
-static void Collapse(const char* text, char* out, size_t capacity)
+// A text with its whitespace runs made one space and its ends trimmed;
+// false when it does not fit.
+static bool Collapse(const char* text, char* out, size_t capacity)
 {
     size_t n = 0;
     bool space = false;
-    for (const char* p = text; *p != '\0' && n + 2 < capacity; p++)
+    for (const char* p = text; *p != '\0'; p++)
     {
         if (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
         {
             space = n > 0;
             continue;
+        }
+        if (n + (space ? 2 : 1) >= capacity)
+        {
+            return false;
         }
         if (space)
         {
@@ -119,6 +124,7 @@ static void Collapse(const char* text, char* out, size_t capacity)
         out[n++] = *p;
     }
     out[n] = '\0';
+    return true;
 }
 
 static int ClassOf(const char* const* names, int count, const char* id)
@@ -134,7 +140,7 @@ static int ClassOf(const char* const* names, int count, const char* id)
 }
 
 // One code point written as a character or \uXXXX, \UXXXXXXXX or \x{X},
-// the whole token; false for anything else.
+// the whole token; false for anything else and for a surrogate.
 static bool ReadCodePoint(const char* token, size_t length, uint32_t* out)
 {
     char digits[16];
@@ -162,7 +168,7 @@ static bool ReadCodePoint(const char* token, size_t length, uint32_t* out)
         char* end = nullptr;
         unsigned long value = strtoul(digits, &end, 16);
         *out = (uint32_t)value;
-        return *end == '\0' && value <= 0x10FFFF;
+        return *end == '\0' && value <= 0x10FFFF && (value < 0xD800 || value > 0xDFFF);
     }
     const unsigned char* t = (const unsigned char*)token;
     int n = token[0] == '\\' ? 0 : GenCharLength(t);
@@ -177,7 +183,7 @@ static bool ReadCodePoint(const char* token, size_t length, uint32_t* out)
         c = (c << 6) | (t[i] & 0x3Fu);
     }
     *out = c;
-    return true;
+    return c < 0xD800 || c > 0xDFFF;
 }
 
 // The code points of a set of characters "[a é \x{1F600}]".
@@ -255,16 +261,18 @@ static bool ReadClassVariable(const char* id, const char* text, uint32_t value,
     return true;
 }
 
-static bool Matches(const char* const (*pairs)[2], size_t count, const char* id, const char* text)
+// The bit of the pair an id and text are, or 0.
+static uint32_t MatchOf(const char* const (*pairs)[2], size_t count, const char* id,
+                        const char* text)
 {
     for (size_t i = 0; i < count; i++)
     {
         if (strcmp(pairs[i][0], id) == 0 && strcmp(pairs[i][1], text) == 0)
         {
-            return true;
+            return 1u << i;
         }
     }
-    return false;
+    return 0;
 }
 
 static int CompareOverrides(const void* a, const void* b)
@@ -311,7 +319,8 @@ static const char* ReadClasses(const XmlNode* segmentation, bool word, Segments*
     Overrides* overrides = word ? &out->word : &out->sentence;
     const char* const* names = word ? s_wordClasses : s_sentenceClasses;
     int classCount = word ? (int)segmentWordClassCount : (int)segmentSentenceClassCount;
-    int japanese = 0;
+    // The Japanese variables' bits, then the rules'.
+    uint32_t japanese = 0;
     for (int c = 0; c < segmentation->childCount; c++)
     {
         const XmlNode* part = segmentation->children[c];
@@ -326,15 +335,23 @@ static const char* ReadClasses(const XmlNode* segmentation, bool word, Segments*
             const XmlNode* item = part->children[i];
             const char* id = XmlGetAttribute(item, "id");
             char text[maxText];
-            Collapse(item->text, text, sizeof(text));
             if (id == nullptr)
             {
                 return "a variable or rule without an id";
             }
-            if (word && (rules ? Matches(s_japaneseRules, 2, id, text)
-                               : Matches(s_japaneseVariables, 4, id, text)))
+            if (!Collapse(item->text, text, sizeof(text)))
             {
-                japanese++;
+                return "a variable or rule longer than the generator reads";
+            }
+            uint32_t match = 0;
+            if (word)
+            {
+                match = rules ? MatchOf(s_japaneseRules, 2, id, text) << 4
+                              : MatchOf(s_japaneseVariables, 4, id, text);
+            }
+            if (match != 0)
+            {
+                japanese |= match;
                 continue;
             }
             int value = ClassOf(names, classCount, id);
@@ -345,18 +362,18 @@ static const char* ReadClasses(const XmlNode* segmentation, bool word, Segments*
             }
         }
     }
-    if (japanese != 0 && japanese != 6)
+    if (japanese != 0 && japanese != 0x3F)
     {
         return "Japanese's word rules in part";
     }
-    out->flags |= japanese == 6 ? segmentJapaneseWords : 0;
+    out->flags |= japanese != 0 ? segmentJapaneseWords : 0;
     return Settle(overrides);
 }
 
 // A line segmentation: CJ as an ideograph, or nothing at all.
 static const char* ReadLine(const XmlNode* segmentation, Segments* out)
 {
-    int cj = 0;
+    uint32_t cj = 0;
     for (int c = 0; c < segmentation->childCount; c++)
     {
         const XmlNode* part = segmentation->children[c];
@@ -372,19 +389,23 @@ static const char* ReadLine(const XmlNode* segmentation, Segments* out)
         {
             const char* id = XmlGetAttribute(part->children[i], "id");
             char text[maxText];
-            Collapse(part->children[i]->text, text, sizeof(text));
-            if (id == nullptr || !Matches(s_cjVariables, 2, id, text))
+            if (!Collapse(part->children[i]->text, text, sizeof(text)))
+            {
+                return "a variable or rule longer than the generator reads";
+            }
+            uint32_t match = id == nullptr ? 0 : MatchOf(s_cjVariables, 2, id, text);
+            if (match == 0)
             {
                 return "a line variable the generator does not take";
             }
-            cj++;
+            cj |= match;
         }
     }
-    if (cj != 0 && cj != 2)
+    if (cj != 0 && cj != 3)
     {
         return "CJ as an ideograph in part";
     }
-    out->flags |= cj == 2 ? segmentCjIdeographic : 0;
+    out->flags |= cj != 0 ? segmentCjIdeographic : 0;
     return nullptr;
 }
 
@@ -501,7 +522,7 @@ static void PutOverrides(uint8_t* at, const Overrides* overrides)
     }
 }
 
-static void AddUnit(const Segments* s, const char* key, DataFile* file)
+static uint8_t* Unit(const Segments* s, size_t* sizeOut)
 {
     size_t text = 0;
     for (int i = 0; i < s->suppressionCount; i++)
@@ -533,8 +554,26 @@ static void AddUnit(const Segments* s, const char* key, DataFile* file)
         offset += length;
     }
     GenPut(at + 4 * (size_t)s->suppressionCount, offset, 4);
-    DataFileAdd(file, kindSegments, key, unit, size);
-    free(unit);
+    *sizeOut = size;
+    return unit;
+}
+
+const char* SegmentsUnit(const XmlNode* root, uint8_t** unitOut, size_t* sizeOut)
+{
+    Segments s = {0};
+    const char* problem = ReadFile(root, &s);
+    *unitOut = nullptr;
+    *sizeOut = 0;
+    if (problem == nullptr && s.given != 0)
+    {
+        *unitOut = Unit(&s, sizeOut);
+    }
+    for (int k = 0; k < s.suppressionCount; k++)
+    {
+        free(s.suppressions[k]);
+    }
+    free((void*)s.suppressions);
+    return problem;
 }
 
 int GenerateSegments(const char* commonDirectory, DataFile* file, char* errorOut,
@@ -563,23 +602,20 @@ int GenerateSegments(const char* commonDirectory, DataFile* file, char* errorOut
             ok = Fail(errorOut, errorCapacity, path, "cannot read", error);
             break;
         }
-        Segments s = {0};
-        const char* problem = ReadFile(root, &s);
+        uint8_t* unit = nullptr;
+        size_t size = 0;
+        const char* problem = SegmentsUnit(root, &unit, &size);
         if (problem != nullptr)
         {
             ok = Fail(errorOut, errorCapacity, path, problem, names[i]);
         }
-        else if (s.given != 0)
+        else if (unit != nullptr)
         {
             char key[maxKey];
             KeyOf(&keys, names[i], key, sizeof(key));
-            AddUnit(&s, key, file);
+            DataFileAdd(file, kindSegments, key, unit, size);
         }
-        for (int k = 0; k < s.suppressionCount; k++)
-        {
-            free(s.suppressions[k]);
-        }
-        free((void*)s.suppressions);
+        free(unit);
         XmlFree(root);
     }
     GenFreeList(names, count);
