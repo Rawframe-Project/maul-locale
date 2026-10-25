@@ -15,7 +15,7 @@ A locale names a language and, as needed, its script, region, variants and optio
 
 `mlocParseLocale` reads a BCP 47 tag or a CLDR id (`_` works as a separator too) strictly into an `mlocLocale`, a 128-byte value in canonical syntax: two equal locales are equal byte for byte, so `memcmp` compares them. It refuses what is not a locale id with `mloc_errorSyntax` and the offset of the bad subtag. It does not replace aliases.
 
-Text from outside the program (a user setting, an HTTP header, a stored preference) goes through `mlocCanonicalizeLocale` instead, which also replaces CLDR's aliases: `iw` becomes `he`, `sh` becomes `sr-Latn`, a legacy tag such as `i-klingon` is replaced whole, and old extension values are renamed. Formatters and matching expect canonicalized locales.
+Text from outside the program (a user setting, an HTTP header, a stored preference) goes through `mlocCanonicalizeLocale` instead, which also replaces CLDR's aliases: `iw` becomes `he`, `sh` becomes `sr-Latn`, a legacy tag such as `i-klingon` is replaced whole, and old extension values are renamed. CLDR's variant POSIX becomes the keyword it stands for: `en-US-posix` and `en_US_POSIX` become `en-US-u-va-posix`, which takes POSIX English's data (`1234.5` with no grouping, capitals sorted before small letters). Formatters and matching expect canonicalized locales.
 
 ```c
 mlocLocale locale;

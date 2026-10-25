@@ -13,6 +13,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_keyword.h"
 #include "locale_likely.h"
 #include "locale_tables.h"
 
@@ -909,6 +910,38 @@ static size_t Prepare(const Aliases* aliases, const char* folded, size_t length,
     return length;
 }
 
+// CLDR's variant POSIX as the keyword -u-va-posix, which UTS #35 makes of
+// it. False when the locale with the keyword does not fit.
+static bool PosixKeyword(mlocLocale* locale, uint32_t* changes)
+{
+    size_t size = FieldLength(locale->tail, sizeof(locale->tail));
+    for (size_t at = 0; at < size;)
+    {
+        size_t end = at;
+        while (end < size && locale->tail[end] != '-')
+        {
+            end++;
+        }
+        if (end - at == 1)
+        {
+            // The extensions begin: no variant posix.
+            return true;
+        }
+        if (end - at == 5 && memcmp(locale->tail + at, "posix", 5) == 0)
+        {
+            // The variant and the hyphen after it (or before it, last).
+            size_t from = end < size ? at : at > 0 ? at - 1 : 0;
+            size_t to = end < size ? end + 1 : end;
+            memmove(locale->tail + from, locale->tail + to, size - to);
+            memset(locale->tail + size - (to - from), 0, to - from);
+            *changes |= mloc_changedVariants;
+            return mlocSetKeyword(locale, "va", "posix", 5);
+        }
+        at = end + 1;
+    }
+    return true;
+}
+
 mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text, size_t length,
                                       mlocLocale* localeOut, mlocLocaleChanges* changesOut)
 {
@@ -949,6 +982,10 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
     if (applied == mloc_success)
     {
         applied = mlocCanonicalizeExtensions(data, &locale, &changes);
+    }
+    if (applied == mloc_success && !PosixKeyword(&locale, &changes))
+    {
+        applied = mloc_errorCapacity;
     }
     if (applied != mloc_success)
     {

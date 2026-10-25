@@ -72,6 +72,8 @@ static void TestLocales(void)
     CHECK(Plain("qaa", "1234.5", "1,234.5"), "a language CLDR does not name takes root's");
     CHECK(Plain("en", "1e25", "10,000,000,000,000,000,000,000,000"), "a power past the digits");
     CHECK(Plain("en", "1e-7", "0.0000001"), "a small number in full");
+    CHECK(Plain("en-US-u-va-posix", "1234.5", "1234.5") && Plain("en-US-posix", "1234.5", "1234.5"),
+          "POSIX English, as the keyword or the variant, does not group");
 }
 
 static void TestSystems(void)
