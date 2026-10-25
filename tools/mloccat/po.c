@@ -266,7 +266,13 @@ static const char* Comment(Reading* r, const char* p, const char* end)
     if (StartsWith(p, end, "#."))
     {
         const char* text = p + 2 + (end - p > 2 && p[2] == ' ');
-        const char* stop = end > text && end[-1] == '\r' ? end - 1 : end;
+        // Every CR at the line's end ends the line: the writer cannot write
+        // one a comment ends in, so the reader keeps none.
+        const char* stop = end;
+        while (stop > text && stop[-1] == '\r')
+        {
+            stop--;
+        }
         if (memchr(text, '\0', (size_t)(stop - text)) != nullptr)
         {
             return "a NUL byte in a comment";
