@@ -7,11 +7,10 @@ may change the API, the ABI and every data format.
 
 ## [0.2.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.2...v0.2.3) (2026-10-25)
 
-
 ### Fixed
 
-* **mloccat:** keep an empty last comment line in a written PO file ([#71](https://github.com/Rawframe-Project/maul-locale/issues/71)) ([1566c47](https://github.com/Rawframe-Project/maul-locale/commit/1566c47292814fb85bc5301d9314eca5ba4402ca)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
-* **mloccat:** read every CR ending a PO comment line as its end ([#74](https://github.com/Rawframe-Project/maul-locale/issues/74)) ([84cb286](https://github.com/Rawframe-Project/maul-locale/commit/84cb2860a82d5e6026c068d2d7ff4df6dd411211)), closes [#72](https://github.com/Rawframe-Project/maul-locale/issues/72)
+- `mloccat export-po` keeps a source entry's comment whole when its last line is empty. The PO writer dropped that line, so the translator saw the comment one line short ([#71](https://github.com/Rawframe-Project/maul-locale/pull/71)).
+- `mloccat` reads an extracted comment line ending in several CRs as ending there, so a comment is the same after `export-po` writes it again ([#74](https://github.com/Rawframe-Project/maul-locale/pull/74)).
 
 ## [0.2.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.1...v0.2.2) (2026-10-25)
 
