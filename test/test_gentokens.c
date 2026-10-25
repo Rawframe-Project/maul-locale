@@ -4,7 +4,8 @@
 // The generators refuse a token longer than the buffer they read it into,
 // with the file and the reason, instead of cutting it short: each site is
 // given a token one byte longer than it holds, in a CLDR common directory
-// this suite writes under the directory its argument names.
+// this suite writes under the directory its argument names. A token that
+// just fits is taken whole, by GenCopy and by a site.
 
 #include "datafile.h"
 #include "day_periods_gen.h"
@@ -13,6 +14,7 @@
 #include "names_gen.h"
 #include "parents_gen.h"
 #include "plural_gen.h"
+#include "table_gen.h"
 #include "test_harness.h"
 #include "zone_codes_gen.h"
 #include "zone_names_gen.h"
@@ -63,16 +65,36 @@ static bool Refused(int ok, const char* reason)
     return true;
 }
 
-static void TestDayPeriods(void)
+static void TestCopy(void)
+{
+    char out[8] = "xxxxxxx";
+    CHECK(GenCopy(out, sizeof(out), "abcdefgh", 7) && strcmp(out, "abcdefg") == 0,
+          "GenCopy takes a token of capacity - 1 bytes whole, NUL-ended");
+    CHECK(!GenCopy(out, sizeof(out), "abcdefgh", 8) && out[0] == '\0',
+          "and refuses one of capacity bytes, leaving the buffer empty");
+}
+
+// dayPeriods.xml with root and a locale of this many bytes in one list.
+static bool PutDayPeriods(size_t length)
 {
     char text[512];
     snprintf(text, sizeof(text),
              "<supplementalData><dayPeriodRuleSet><dayPeriodRules locales=\"root %s\">"
              "<dayPeriodRule type=\"morning1\" from=\"00:00\" before=\"24:00\"/>"
              "</dayPeriodRules></dayPeriodRuleSet></supplementalData>",
-             Long("", 32, ""));
+             Long("", length, ""));
+    return Put("supplemental/dayPeriods.xml", text);
+}
+
+static void TestDayPeriods(void)
+{
     Map rules = {0};
-    CHECK(Put("supplemental/dayPeriods.xml", text) &&
+    CHECK(PutDayPeriods(31) && DayPeriodRulesLoad(&rules, s_common, s_error, sizeof(s_error)) &&
+              MapGet(&rules, Long("", 31, "")) != nullptr,
+          "dayPeriods.xml: a locale of 31 bytes is taken, under its whole key");
+    DayPeriodRulesFree(&rules);
+    rules = (Map){0};
+    CHECK(PutDayPeriods(32) &&
               Refused(DayPeriodRulesLoad(&rules, s_common, s_error, sizeof(s_error)),
                       "a locale longer than the generator holds"),
           "dayPeriods.xml: a locale of 32 bytes");
@@ -239,6 +261,7 @@ int main(int argc, char** argv)
         return 2;
     }
     s_common = argv[1];
+    TestCopy();
     TestDayPeriods();
     TestExtensions();
     TestParents();
