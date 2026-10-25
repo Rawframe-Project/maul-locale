@@ -5,6 +5,13 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.2.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.1...v0.2.2) (2026-10-25)
+
+### Fixed
+
+- `mloccat import-po` refuses a PO file with a NUL byte in a string, written as is or as an escape, naming its line. The byte cut the string short, so the import matched the wrong key, or took the entry as the file's header ([#67](https://github.com/Rawframe-Project/maul-locale/pull/67)).
+- `mloccat import-xliff` refuses an XLIFF file that holds a NUL byte, naming its line, and `import-po` refuses one in an extracted comment; the byte cut a translation, a key or a comment short ([#70](https://github.com/Rawframe-Project/maul-locale/pull/70)).
+
 ## [0.2.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.0...v0.2.1) (2026-10-25)
 
 ### Fixed
