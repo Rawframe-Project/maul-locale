@@ -109,70 +109,88 @@ static bool AddKeyword(char* text, size_t capacity, size_t* length, bool inU, co
            Append(text, capacity, length, keyword, keywordLength);
 }
 
+// A tag being rewritten: its text, the key left out and the keyword to
+// add again (none when null), and where its subtags have brought it.
+typedef struct Rewriting
+{
+    char text[192];
+    size_t n;
+    const char* key;
+    const char* keyword;
+    size_t keywordLength;
+    bool good;
+    bool inU;
+    bool skipping;
+    bool added;
+    bool privateUse;
+    // The text's length before the u singleton, and with it.
+    size_t beforeU;
+    size_t withU;
+} Rewriting;
+
+// A singleton: the u extension ends here, or private use begins without
+// one, so the keyword is added if it is not yet, and a u extension left
+// empty is left out.
+static void BeginExtension(Rewriting* r, char singleton)
+{
+    if (!r->added && (r->inU || singleton == 'x'))
+    {
+        r->good = AddKeyword(r->text, sizeof r->text, &r->n, r->inU, r->keyword, r->keywordLength);
+        r->added = true;
+    }
+    if (r->inU && r->n == r->withU)
+    {
+        r->n = r->beforeU;
+    }
+    r->inU = singleton == 'u';
+    r->privateUse = singleton == 'x';
+    r->skipping = false;
+    r->beforeU = r->n;
+    r->withU = r->n + (r->n > 0) + 1;
+}
+
 // Writes a locale with its -u key left out and, unless keyword is null,
 // added again as keyword ("ca-gregory") at the end of the u extension (or
 // as a new one before private use): parsing puts keys and extensions in
 // order again. A u extension left empty is left out.
 static bool Rewrite(mlocLocale* locale, const char* key, const char* keyword, size_t keywordLength)
 {
-    char text[192];
-    size_t n = 0;
-    bool good = AppendHead(locale, text, sizeof text, &n);
+    Rewriting r = {.key = key, .keyword = keyword, .keywordLength = keywordLength};
+    r.added = keyword == nullptr;
+    r.good = AppendHead(locale, r.text, sizeof r.text, &r.n);
     const char* tail = locale->tail;
     size_t size = FieldLength(tail, sizeof(locale->tail));
-    bool inU = false;
-    bool skipping = false;
-    bool added = keyword == nullptr;
-    bool privateUse = false;
-    // The text's length before the u singleton, and with it.
-    size_t beforeU = 0;
-    size_t withU = 0;
-    for (size_t at = 0; good && at < size;)
+    for (size_t at = 0; r.good && at < size;)
     {
         size_t k = 0;
         while (at + k < size && tail[at + k] != '-')
         {
             k++;
         }
-        bool singleton = k == 1 && !privateUse;
-        if (singleton && !added && (inU || tail[at] == 'x'))
+        if (k == 1 && !r.privateUse)
         {
-            // The u extension ends here, or private use begins without one.
-            good = AddKeyword(text, sizeof text, &n, inU, keyword, keywordLength);
-            added = true;
+            BeginExtension(&r, tail[at]);
         }
-        if (singleton && inU && n == withU)
+        else if (r.inU && k == 2)
         {
-            n = beforeU;
+            r.skipping = memcmp(tail + at, r.key, 2) == 0;
         }
-        if (singleton)
+        if (r.good && !r.skipping)
         {
-            inU = tail[at] == 'u';
-            privateUse = tail[at] == 'x';
-            skipping = false;
-            beforeU = n;
-            withU = n + (n > 0) + 1;
-        }
-        else if (inU && k == 2)
-        {
-            skipping = memcmp(tail + at, key, 2) == 0;
-        }
-        if (good && !skipping)
-        {
-            good = Append(text, sizeof text, &n, tail + at, k);
+            r.good = Append(r.text, sizeof r.text, &r.n, tail + at, k);
         }
         at += k + 1;
     }
-    if (good && !added)
+    if (r.good && !r.added)
     {
-        good = AddKeyword(text, sizeof text, &n, inU, keyword, keywordLength);
+        r.good = AddKeyword(r.text, sizeof r.text, &r.n, r.inU, keyword, keywordLength);
     }
-    if (inU && n == withU)
+    if (r.inU && r.n == r.withU)
     {
-        n = beforeU;
+        r.n = r.beforeU;
     }
     mlocLocale made;
-    if (!good || mlocParseLocale(text, n, &made).status != mloc_success)
+    if (!r.good || mlocParseLocale(r.text, r.n, &made).status != mloc_success)
     {
         return false;
     }
