@@ -36,7 +36,7 @@ Run `changed` before every push. On the shared development machine, run `pr` and
 
 ## Tests
 
-Each suite in `test/` is one executable, registered with CTest under its name and labeled with it; `tools/check.sh changed` picks suites by these labels. The white-box suites (`WHITEBOX` in `CMakeLists.txt`) include `src/` for a data layout or validator no public call reaches, and are not built in shared builds. No test reports itself skipped; a test preset that finds no test fails, and so does a CI cell where a test is skipped or not run.
+Each suite in `test/` is one executable, registered with CTest under its name and labeled with it, through `maul_add_test` or, for a suite with arguments or the tools' libraries, `mloc_add_test`; `tools/check.sh changed` picks suites by these labels, and configuring fails on a suite without its own. The white-box suites (`WHITEBOX` in `CMakeLists.txt`) include `src/` for a data layout or validator no public call reaches, and are not built in shared builds. No test reports itself skipped; a test preset that finds no test fails, and so does a CI cell where a test is skipped or not run.
 
 The `conform_*` programs are not tests: they read files outside the repository (CLDR's test data, the tzdb), so the `conformance` target builds them and `tools/check_cldr.sh` runs them.
 
