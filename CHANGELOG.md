@@ -7,24 +7,67 @@ may change the API, the ABI and every data format.
 
 ## [0.3.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.3...v0.3.0) (2026-10-25)
 
-
-### ⚠ BREAKING CHANGES
-
-* **locale:** `mlocCanonicalizeLocale` gives `en-US-u-va-posix` for `en-US-posix` and `en_US_POSIX`, `en-US-u-va-posix` now formats and sorts as POSIX English, and its parent is `en-US`. A program that stored the canonical form canonicalizes it again; one that compares with `en-US-posix` compares with `en-US-u-va-posix`.
-* **data:** `MLOC_DATA_FORMAT_VERSION` is 0x80000004, because the segmentation unit's layout changed. Data files of an older format are refused with `mloc_errorDataVersion`. Use the data files of this version, rebuild catalogs, and recompile stored messages. Format 0x80000003 ([#78](https://github.com/Rawframe-Project/maul-locale/issues/78)) was never in a release, so 0.2.3's data files, catalogs and messages are what a program moves from.
-* **data:** the data format is now 0x80000003. Data files, catalogs and compiled messages made by 0.2.x are refused with mloc_errorDataVersion: a program takes this release's data files or regenerates them with its mlocgen, rebuilds its catalogs with its mloccat, and compiles stored messages again.
-
 ### Added
 
-* **data:** add the segmentation tailorings' data file ([#78](https://github.com/Rawframe-Project/maul-locale/issues/78)) ([fbacca8](https://github.com/Rawframe-Project/maul-locale/commit/fbacca8e9ed5ac70a2e5e728fa7b877e11011d0e))
-* **data:** store the suppressions as ICU4C's two tables ([#83](https://github.com/Rawframe-Project/maul-locale/issues/83)) ([a5a8b32](https://github.com/Rawframe-Project/maul-locale/commit/a5a8b327015eddfe2789514bf00d535ba4dd6757))
-* **segment:** segment text as a locale tailors it ([#90](https://github.com/Rawframe-Project/maul-locale/issues/90)) ([a7f17f3](https://github.com/Rawframe-Project/maul-locale/commit/a7f17f3c315108374bdc14d5bcd275aac361d2f8)), closes [#35](https://github.com/Rawframe-Project/maul-locale/issues/35)
+- Text segmentation as a locale tailors it, in `maul-locale/segment.h`.
+  `mlocInitSegmenter` starts a word, sentence or line segmenter over a
+  text or its first piece, `mlocNextSegmentBreak` reports each boundary
+  with whether a line must end there, and `mlocFeedSegmenter` hands it
+  the next piece; `base.h` gains `mloc_done` and `mloc_needMoreText`. It
+  follows CLDR's segments files: the sentence suppressions of seven
+  languages with `-u-ss-standard`, as ICU4C's filtered break iterator
+  applies them, Greek sentences ending at a semicolon, POSIX English's
+  "a.b" kept as one word, Japanese Hiragana and ideograph runs kept as
+  one word, and Chinese and Japanese lines with CJ as an ideograph,
+  which `-u-lb-strict`, `normal` and `loose` set. A segmenter is a
+  512-byte value that may be copied, and text may come in pieces of any
+  size. `mlocSetSegmenterComplexBreaker` passes a Thai, Lao, Khmer or
+  Burmese word segmenter to Maul Unicode. Against ICU4C 79.1, 36 of 2031
+  cases differ, each where ICU4C's own data or rules depart from CLDR's;
+  `docs/user/segmentation.md` lists them
+  ([#78](https://github.com/Rawframe-Project/maul-locale/pull/78),
+  [#83](https://github.com/Rawframe-Project/maul-locale/pull/83),
+  [#90](https://github.com/Rawframe-Project/maul-locale/pull/90)).
 
+### Changed
+
+- **Breaking: the data format is 0x80000005.** The new `segments.mloc`
+  (12 KB) holds the segmentation tailorings. Data files, catalogs and
+  compiled messages made by 0.2.x (format 0x80000002) are refused with
+  `mloc_errorDataVersion`: take this release's data files or regenerate
+  them with its `mlocgen`, rebuild catalogs with its `mloccat`, and
+  compile stored messages again
+  ([#78](https://github.com/Rawframe-Project/maul-locale/pull/78),
+  [#83](https://github.com/Rawframe-Project/maul-locale/pull/83),
+  [#90](https://github.com/Rawframe-Project/maul-locale/pull/90)).
+- **Breaking: `en-US-u-va-posix` is POSIX English.**
+  `mlocCanonicalizeLocale` gives `en-US-u-va-posix` for `en-US-posix`
+  and `en_US_POSIX`, as UTS #35's legacy variant mapping says, and
+  `en-US-u-va-posix` now formats and sorts as POSIX English, where it
+  used to fall back to `en_US`. Its parent is `en-US`. A program that
+  stored the canonical form canonicalizes it again, and one that
+  compares with `en-US-posix` compares with `en-US-u-va-posix`
+  ([#91](https://github.com/Rawframe-Project/maul-locale/pull/91)).
+- Maul Unicode 0.3.0. Building against an installed Maul Unicode needs
+  0.3.0, since before 1.0 the package accepts only its exact version,
+  and a shared maul-locale built against an installed shared Maul
+  Unicode loads `libmaul-unicode.so.0.3.0`; a build that fetches Maul
+  Unicode embeds it. No data file, result or API changes from it
+  ([#89](https://github.com/Rawframe-Project/maul-locale/pull/89)).
+- On 32-bit x86 the library is built with SSE2 math
+  (`-msse2 -mfpmath=sse`), so it needs a processor with SSE2, and every
+  build now leaves trapping math at the compiler's default, from the
+  family's compiler flags. The library computes in integers only, so no
+  result depends on either
+  ([#85](https://github.com/Rawframe-Project/maul-locale/pull/85)).
 
 ### Fixed
 
-* **generator:** refuse surrogates, repeats and long segment variables ([#81](https://github.com/Rawframe-Project/maul-locale/issues/81)) ([721b750](https://github.com/Rawframe-Project/maul-locale/commit/721b75083c17fd42d66881455aa6ad39befcef1a)), closes [#35](https://github.com/Rawframe-Project/maul-locale/issues/35)
-* **locale:** read -u-va-posix as POSIX English ([#91](https://github.com/Rawframe-Project/maul-locale/issues/91)) ([b45cc9b](https://github.com/Rawframe-Project/maul-locale/commit/b45cc9b83e5fa5bafbfe424ab965f39bb11cc0fa))
+- `mlocgen` refuses a segments file with a surrogate, a repeated
+  Japanese or CJ rule part, or a variable longer than it reads, naming
+  the file and the reason, where it took the first two or refused the
+  last for the wrong reason. The generated data does not change
+  ([#81](https://github.com/Rawframe-Project/maul-locale/pull/81)).
 
 ## [0.2.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.2...v0.2.3) (2026-10-25)
 
