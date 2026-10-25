@@ -234,6 +234,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone_code_tables.c
     src/zone_name_tables.c
     src/relative_tables.c
+    src/segment_tables.c
     src/relative_format.c
     src/relative_datetime.c
     src/duration_options.c
@@ -678,6 +679,23 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_relative_tables PRIVATE MLOC_RELATIVE_FILE="${MLOC_RELATIVE_PATH}")
     endif()
+    # And the segmentation tailorings.
+    set(MLOC_SEGMENTS_FILE ${PROJECT_SOURCE_DIR}/src/generated/segments.mloc)
+    set(MLOC_SEGMENTS_PATH ${MLOC_SEGMENTS_FILE})
+    if(EMSCRIPTEN)
+        set(MLOC_SEGMENTS_PATH /segments.mloc)
+    endif()
+    maul_add_test(segment_tables WHITEBOX)
+    if(TARGET test_segment_tables)
+        if(EMSCRIPTEN)
+            target_link_options(test_segment_tables PRIVATE
+                                "SHELL:--embed-file ${MLOC_SEGMENTS_FILE}@/segments.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_segment_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_segment_tables PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+    endif()
     maul_add_test(relative)
     if(TARGET test_relative)
         if(EMSCRIPTEN)
@@ -988,6 +1006,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                                     tools/mlocgen/tzdb.c tools/mlocgen/zone_compile.c tools/mlocgen/zone_gen.c
                                     tools/mlocgen/zone_codes_gen.c tools/mlocgen/zone_ids.c tools/mlocgen/zone_names_gen.c
                                     tools/mlocgen/relative_gen.c
+                                    tools/mlocgen/segment_gen.c
                                     tools/mlocgen/date_gen.c tools/mlocgen/date_names_gen.c tools/mlocgen/date_source.c tools/mlocgen/day_periods_gen.c tools/mlocgen/interval_gen.c tools/mlocgen/interval_match.c tools/mlocgen/semantic.c tools/mlocgen/time_gen.c tools/mlocgen/skeleton.c tools/mlocgen/xml.c src/calendar_arith.c src/calendar_astro.c
                                     src/calendar_chinese.c src/wide.c
                                     # The reordering stored with each tailoring, made as a

@@ -30,6 +30,7 @@ The larger data comes in files a program adds when it uses that part. They are i
 | `spellout.mloc` | 1.1 MB | Numbers in words, ordinal suffixes, algorithmic numbering systems, and how numbers are spoken for [grammar](grammar.md). |
 | `relative.mloc` | 0.6 MB | Relative times ("in 3 days", "yesterday"). |
 | `collation.mloc` | 2.5 MB | [Collation](collation.md), search and alphabetic indexes. |
+| `segments.mloc` | 8 KB | Word, sentence and line breaking as a language tailors it: Greek sentences, POSIX English words, Chinese and Japanese lines and Japanese words, and the abbreviations after which a sentence goes on. |
 
 A call that needs data its set does not have returns `mloc_errorNotFound`. A file holds its part for every locale. When two sources have the same part, the one earlier in the set answers.
 

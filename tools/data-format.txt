@@ -3,7 +3,7 @@
 # data the library reads. tools/check_data_format.py fails when one of
 # them changes; --write records them again after the format is decided
 # (docs/internals/data.md#versions).
-format 0x80000002
+format 0x80000003
 layouts src/data_format.h src/kinds.h src/message_form.h src/code_point_trie.h src/collation_fast_latin.h src/catalog_hash.h src/plural_rules.h src/locale_context.h src/collation_index.h src/collation_unsafe.h src/*_tables.h
 sha256 617e67832c7b60ff80ffa726f7681abf32e34a4069b28d39e66c19a2a7c9f0c0 src/catalog_hash.h
 sha256 2e35521a394a55d790cd0f570957e4cbbb6a53d7eb0f1bd61f12631ddae9e5c2 src/catalog_tables.h
@@ -15,7 +15,7 @@ sha256 97fd6e47d1895c4104785910fcc335598a2bc9abff85d0316869e9e565e003d2 src/coll
 sha256 9eab83116176e1850ff9c45f5d97540b4c32441fa21caf02c54c045b2235e097 src/currency_tables.h
 sha256 6d83091f5285ada624cf0d219d19ad835743358628c6dc0b9f4b23799a10b081 src/data_format.h
 sha256 ea1dbd063bbd0f8c2196660f0da852e33412135d737a062ce992b5ff5eb48e9c src/date_tables.h
-sha256 2b261eedaa20591b6570b531233b28d94f60186c77a9c3c2cfba1524f80acc23 src/kinds.h
+sha256 3cade15e23187333d91e0b59301ff2f754422ce08281cc7360740b8686757598 src/kinds.h
 sha256 bcc6e8722b7c6e957937cd3a18b03a2fdcf4da1b37cc6b2b3cf700a50c234186 src/list_tables.h
 sha256 e30dd56ac8153f5e2bfb01f950e222d1df69ab2d42b6d99e83be2df23b886df6 src/locale_context.h
 sha256 75ae2b53028ffd24e42b964ab8cae7cd42aef5b32ddef87724d16115f4080c09 src/locale_tables.h
@@ -25,6 +25,7 @@ sha256 c33c38bc358b4d2faabd409b16f4ec162ada7e3a4f53a4d3777a05f15b1dffd2 src/numb
 sha256 2e6862c850ae6a5a47c8b8bbd4f48f2bfa80bda3de9dd7456ee2b013b114db33 src/parse_tables.h
 sha256 369809c48d249375666f7772b580976ef509216c43b6acc68f802c2a7f1cc377 src/plural_rules.h
 sha256 4b59dbb0a159f427d509905435838afa3a68dca0062f2b73c57cae5d2ddabfca src/relative_tables.h
+sha256 04cf7a2167b5fbb868950b165f6187b4bb21e33b395f2d854f1d149ac83a42b7 src/segment_tables.h
 sha256 3eb3f1505ad9c73a68cd3518391cce2300f29c5277589c63f2e0b7f9e45fc22e src/spellout_tables.h
 sha256 90f0e749a7950c085c0e254982a9ce98cfa5c97161b1bc08d9f09aad1ae23015 src/unit_tables.h
 sha256 9ca32188a515f98b63f6c56cd39d1e492f88f5119b848161f1062b797ab36747 src/zone_code_tables.h
