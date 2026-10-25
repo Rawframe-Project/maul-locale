@@ -5,6 +5,14 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.2.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.2...v0.2.3) (2026-10-25)
+
+
+### Fixed
+
+* **mloccat:** keep an empty last comment line in a written PO file ([#71](https://github.com/Rawframe-Project/maul-locale/issues/71)) ([1566c47](https://github.com/Rawframe-Project/maul-locale/commit/1566c47292814fb85bc5301d9314eca5ba4402ca)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
+* **mloccat:** read every CR ending a PO comment line as its end ([#74](https://github.com/Rawframe-Project/maul-locale/issues/74)) ([84cb286](https://github.com/Rawframe-Project/maul-locale/commit/84cb2860a82d5e6026c068d2d7ff4df6dd411211)), closes [#72](https://github.com/Rawframe-Project/maul-locale/issues/72)
+
 ## [0.2.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.1...v0.2.2) (2026-10-25)
 
 ### Fixed
