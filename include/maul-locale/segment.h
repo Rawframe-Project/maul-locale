@@ -26,6 +26,9 @@
 
 #include "maul-locale/locale.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C"
 {

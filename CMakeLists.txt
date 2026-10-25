@@ -934,7 +934,7 @@ if(MAUL_LOCALE_FUZZ)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area catalog collate_fast collation collation_data data date_data decimal duration grammar ixdtf locale message parse
                  relative
-                 segments
+                 segment segments
                  spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
@@ -951,6 +951,8 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_collation_data PRIVATE
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
+    target_compile_definitions(fuzz_segment PRIVATE
+        MLOC_SEGMENTS_FILE="${PROJECT_SOURCE_DIR}/src/generated/segments.mloc")
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
