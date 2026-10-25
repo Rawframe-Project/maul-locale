@@ -125,6 +125,20 @@ static void TestRefusals(void)
     CHECK(!PoRead(withoutId, strlen(withoutId), &po, &noId) && noId.line == 5 &&
               !PoRead(withoutString, strlen(withoutString), &po, &noString) && noString.line == 3,
           "an entry without msgid at its first keyword's line, without msgstr at its msgid's");
+    // The tool keeps strings as C strings: a NUL byte in one, as written or
+    // escaped, is refused instead of cutting the message short.
+    static const char raw[] = "msgid \"a\"\nmsgstr \"\"\n\nmsgid \"\0\"\nmsgstr \"x\"\n";
+    PoError nul = {0, nullptr};
+    const char* escaped = Refusal("msgid \"a\\0b\"\nmsgstr \"\"\n");
+    bool rawRead = PoRead(raw, sizeof(raw) - 1, &po, &nul);
+    if (rawRead)
+    {
+        PoFree(&po);
+    }
+    CHECK(!rawRead && nul.line == 4 && nul.reason != nullptr &&
+              strstr(nul.reason, "NUL") != nullptr && escaped != nullptr &&
+              strstr(escaped, "NUL") != nullptr,
+          "a NUL byte in a string, as written or escaped, refused at its line");
 }
 
 static void Path(char* out, size_t capacity, const char* name)
