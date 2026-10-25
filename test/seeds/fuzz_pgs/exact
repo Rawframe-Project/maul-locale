@@ -1,0 +1,6 @@
+.input {$n :number select=exact}
+.input {$m :integer}
+.match $n $m
+1 0 {{one none}}
+0 * {{n none}}
+* * {{rest}}

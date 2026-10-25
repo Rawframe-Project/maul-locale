@@ -1,0 +1,1 @@
+<xliff xmlns:pgs="urn:oasis:names:tc:xliff:pgs:1.0" version="2.2"><file id="f"><unit id="v" name="sel" pgs:switch="select:s"><segment pgs:case="9"><source>x</source><target>tis</target></segment><segment pgs:case="a|b"><source>x</source><target>p</target></segment><segment pgs:case="other"><source>x</source><target>o</target></segment></unit></file></xliff>

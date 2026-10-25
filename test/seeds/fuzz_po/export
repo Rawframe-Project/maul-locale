@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Language: ar\n"
+"X-Generator: mloccat\n"
+
+#. A greeting.
+#. @param $name The user
+#, mf2-format
+msgctxt "hello"
+msgid "Hi {$name} & {#b}you{/b} \\{x\\}"
+msgstr "{#b}Ahlan{/b} {$name}"
+
+#, fuzzy, mf2-format
+msgctxt "bye"
+msgid "Bye"
+msgstr "Ma'a salama"

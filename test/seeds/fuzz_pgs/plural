@@ -1,0 +1,5 @@
+.input {$n :integer}
+.match $n
+0 {{No files}}
+one {{One {#b}file{/b}}}
+* {{{$n} files}}

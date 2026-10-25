@@ -1,0 +1,6 @@
+.input {$s :string}
+.match $s
+9 {{nine}}
+|a\|b| {{pipe}}
+|a b| {{space}}
+* {{other}}

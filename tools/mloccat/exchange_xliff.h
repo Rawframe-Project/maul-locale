@@ -18,6 +18,9 @@
 #ifndef MLOCCAT_EXCHANGE_XLIFF_H
 #define MLOCCAT_EXCHANGE_XLIFF_H
 
+#include "catalog_set.h"
+
+#include <stddef.h>
 #include <stdio.h>
 
 // Writes the XLIFF file of a translation; 0 when the set does not read or
@@ -32,5 +35,12 @@ int CatalogExportXliff(const char* source, const char* translation, const char* 
 // of values, a unit translated in part).
 int CatalogImportXliff(const char* source, const char* translation, const char* xliff,
                        FILE* report);
+
+// The import of an XLIFF document held in memory into a set's translation
+// (inputs[1]), the units named by its source (inputs[0]); path names the
+// document in the report. Returns 0, and the translation unchanged, on the
+// refusals above; countOut is the number of entries imported.
+int XliffImport(CatalogSet* set, const char* bytes, size_t length, const char* path,
+                size_t* countOut, FILE* report);
 
 #endif

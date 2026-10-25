@@ -10,6 +10,7 @@
 
 #include "catalog_set.h"
 #include "exchange_xliff.h"
+#include "file.h"
 #include "message_text.h"
 #include "resource_edit.h"
 #include "stale.h"
@@ -472,40 +473,60 @@ static int ChooseAll(const CatalogInput* s, const XmlNode* root, const char* pat
     return ok;
 }
 
-int CatalogImportXliff(const char* source, const char* translation, const char* xliff, FILE* report)
+int XliffImport(CatalogSet* set, const char* bytes, size_t length, const char* path,
+                size_t* countOut, FILE* report)
 {
-    char* paths[] = {(char*)source, (char*)translation};
-    CatalogSet set;
-    int ok = CatalogSetRead(&set, paths, 2, report);
     char error[512] = "";
-    XmlNode* root = ok ? XmlParseFile(xliff, error, sizeof(error)) : nullptr;
-    if (ok && root == nullptr)
+    XmlNode* root = XmlParse(bytes, length, error, sizeof(error));
+    int ok = root != nullptr;
+    if (!ok)
     {
-        fprintf(report, "%s: %s\n", xliff, error);
-        ok = 0;
+        fprintf(report, "%s: %s\n", path, error);
     }
     Imports imports = {0};
-    if (ok && !ChooseAll(&set.inputs[0], root, xliff, set.inputs[1].locale, &imports, report))
+    if (ok && !ChooseAll(&set->inputs[0], root, path, set->inputs[1].locale, &imports, report))
     {
         if (!Is(root, "xliff"))
         {
-            fprintf(report, "%s: not an XLIFF document\n", xliff);
+            fprintf(report, "%s: not an XLIFF document\n", path);
         }
         ok = 0;
     }
     if (ok)
     {
-        Apply(&set.inputs[1].resource, &imports);
-        ok = ResourceWriteFile(translation, &set.inputs[1].resource);
-        fprintf(report, ok ? "%s: %zu entries imported\n" : "%s: cannot write\n", translation,
-                imports.count);
+        Apply(&set->inputs[1].resource, &imports);
     }
+    *countOut = imports.count;
     for (size_t i = 0; i < imports.count; i++)
     {
         free(imports.items[i].text);
     }
     free(imports.items);
     XmlFree(root);
+    return ok;
+}
+
+int CatalogImportXliff(const char* source, const char* translation, const char* xliff, FILE* report)
+{
+    char* paths[] = {(char*)source, (char*)translation};
+    CatalogSet set;
+    int ok = CatalogSetRead(&set, paths, 2, report);
+    size_t length = 0;
+    char* bytes = ok ? FileRead(xliff, &length) : nullptr;
+    if (ok && bytes == nullptr)
+    {
+        fprintf(report, "%s: cannot read\n", xliff);
+        ok = 0;
+    }
+    size_t count = 0;
+    ok = ok && XliffImport(&set, bytes, length, xliff, &count, report);
+    if (ok)
+    {
+        ok = ResourceWriteFile(translation, &set.inputs[1].resource);
+        fprintf(report, ok ? "%s: %zu entries imported\n" : "%s: cannot write\n", translation,
+                count);
+    }
+    free(bytes);
     CatalogSetFree(&set);
     return ok;
 }
