@@ -83,6 +83,47 @@ mkdir -p out/corpus/fuzz_message && cp test/seeds/fuzz_message/* out/corpus/fuzz
 
 Always pass `-max_total_time`: a target runs until it finds something. A target writes a failing input as `crash-<hash>` in its working directory; run the target on that file to reproduce it. Every crash becomes a test in the suite of its module with the smallest input that still fails (`-minimize_crash=1`), and its input goes into `test/seeds/<target>/` when it reaches code that random bytes rarely form. The data targets and the collation targets read the generated files named in `CMakeLists.txt`.
 
+## Debugging a failure
+
+**A red CI cell.** A build cell that fails uploads its CTest logs as the artifact `logs-<preset>` (`logs-web` for the web job), kept for seven days: `LastTest.log` holds every suite's output. Reproduce it locally with the same preset, then run the one suite's binary, which prints each failed check with its file and line. A suite that takes arguments (a source directory, a scratch directory) has them in CTest's command line:
+
+```sh
+ctest --preset linux-clang-20-asan -R '^gendirection$' -N -V | grep 'Test command'
+```
+
+**A trap.** Neither the CI image nor the shared server has a debugger. A broken `MLOC_ASSERT` (`src/invariant.h`) executes a trap instruction, which stops a sanitizer build with "Illegal instruction" and no stack. Run it again with the sanitizer handling the signal, and the report gives the stack with file and line:
+
+```sh
+ASAN_OPTIONS=handle_sigill=1 ./out/linux-clang-20-asan/test_number
+```
+
+UBSan's own reports (`-fno-sanitize-recover=all` makes each one stop the run) and AddressSanitizer's already carry the stack. A Release build compiles `MLOC_ASSERT` out, so a trap seen only in Debug or a sanitizer build is still a real bug.
+
+**A fuzz finding.** The `fuzz` job uploads the artifact `fuzz`, with each target's log in `fuzz-logs/` and its failing input in `fuzz-crashes/` as `crash-<hash>` (or `timeout-`, `oom-`). Build the fuzz tree as in [Fuzzing](#fuzzing), run the target on the input to reproduce it, and minimize it:
+
+```sh
+./out/fuzz/fuzz_message crash-<hash>
+./out/fuzz/fuzz_message -minimize_crash=1 -max_total_time=60 -exact_artifact_path=minimal crash-<hash>
+```
+
+The minimal input becomes a test in its module's suite, and a seed when it reaches code random bytes rarely form.
+
+**The generator.** Build `mlocgen` in Release, as the `generated` job does, for regeneration. To chase a crash or a wrong table, use the sanitizer build's `out/linux-clang-20-asan/mlocgen`, which runs the same code with every check on but far slower. Its smaller commands (`chains`, `plural-samples`, `zones`, `resolve`; run `mlocgen` alone for the list) read one part of CLDR or the tzdb without a full generate.
+
+**A stale `src/generated/`.** The `generated` job regenerates into a clean `src/generated/` and prints `git status --porcelain` when anything differs:
+- `M` for a changed file: the branch changed the generator, a pin or a code table without committing the regenerated output, or a file was edited by hand;
+- `D` for a file the generator no longer writes;
+- `??` for a new one it writes that is not committed.
+
+Run the same step locally with the pins fetched as in [Data checks](#data-checks), and read the difference:
+
+```sh
+tools/regenerate.sh out/cldr/mlocgen ~/cldr-cache/cldr/common ~/tzdb-cache/tzdb-2026e
+git status --porcelain -- src/generated
+```
+
+If the branch did not mean to change the output, the difference points at the generator change that caused it. If it did, commit the regenerated files with the change, and name the generator change or pin in the pull request.
+
 ## Benchmarks
 
 `out/<build>/maul-locale_bench` times every part on fixed inputs. Build the base and the change in Release with the same compiler and run them back to back on a quiet machine; [performance.md](../internals/performance.md#measuring) explains how to measure on a busy one, and [oracles.md](oracles.md#benchmarks) how to run the ICU4C and ICU4X baselines. `MAUL_LOCALE_BUILD_TOOLS=OFF` builds the benchmark without the catalog cases, as the fuzz and web builds do; build it that way too when a change touches code behind a tools-only definition.
