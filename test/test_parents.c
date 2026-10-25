@@ -94,6 +94,15 @@ static void TestExtensions(void)
               output.length == strlen("de-1996-u-co-phonebk") &&
               memcmp(tag, "de-1996-u-co-phonebk", output.length) == 0,
           "after the parent's variants");
+    mlocComponent m = mloc_componentMain;
+    CHECK(CHAIN(m, "en-US-u-va-posix", "en-US", "en", "und") &&
+              CHAIN(m, "en-US-posix", "en-US", "en", "und") &&
+              CHAIN(m, "en-US-u-ca-iso8601-va-posix", "en-US-u-ca-iso8601", "en-u-ca-iso8601",
+                    "und-u-ca-iso8601"),
+          "-u-va-posix is the variant POSIX, and a parent without it drops the keyword");
+    CHECK(CHAIN(m, "en-US-fonipa-u-va-posix", "en-US-fonipa", "en-US", "en", "und") &&
+              CHAIN(m, "en-US-valencia-u-va-posix", "en-US-u-va-posix", "en-US", "en", "und"),
+          "a parent that keeps POSIX keeps the keyword");
 }
 
 static void TestRefusals(void)

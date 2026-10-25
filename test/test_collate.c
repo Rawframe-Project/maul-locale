@@ -54,6 +54,10 @@ static int Order(const char* id, const mlocCollatorOptions* options, const char*
 
 static void TestTailorings(void)
 {
+    CHECK(Order("en-US-u-va-posix", nullptr, "Z", "a") == -1 &&
+              Order("en-US-posix", nullptr, "Z", "a") == -1 &&
+              Order("en-US", nullptr, "Z", "a") == 1,
+          "POSIX English, as the keyword or the variant, sorts capitals first");
     CHECK(Order("es", nullptr, "nz",
                 "\xC3\xB1"
                 "a") == -1 &&

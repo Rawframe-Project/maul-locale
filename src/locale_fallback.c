@@ -12,6 +12,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_keyword.h"
 #include "locale_likely.h"
 #include "locale_tables.h"
 
@@ -244,6 +245,92 @@ static uint32_t KeyText(const mlocLocale* step, char* out)
     return (uint32_t)at;
 }
 
+// Puts the variant posix among a step's variants, in order: CLDR keys
+// POSIX English's data en_US_POSIX, which BCP 47 writes en-US-u-va-posix.
+static void AddPosix(mlocLocale* step)
+{
+    size_t length = VariantsLength(step->tail, sizeof(step->tail));
+    size_t at = 0;
+    while (at < length)
+    {
+        size_t end = at;
+        while (end < length && step->tail[end] != '-')
+        {
+            end++;
+        }
+        size_t common = end - at < 5 ? end - at : 5;
+        int order = memcmp(step->tail + at, "posix", common);
+        if (order == 0 && end - at == 5)
+        {
+            // The step has the variant already.
+            return;
+        }
+        if (order > 0 || (order == 0 && end - at > 5))
+        {
+            break;
+        }
+        at = end + 1;
+    }
+    at = at > length ? length : at;
+    // Six bytes: "posix" and a hyphen; the variants of a parsed locale
+    // leave room, its extensions being dropped from the step.
+    if (length + 6 > sizeof(step->tail))
+    {
+        return;
+    }
+    char rest[sizeof(step->tail)];
+    size_t restLength = length - at;
+    memcpy(rest, step->tail + at, restLength);
+    size_t n = at;
+    if (n > 0 && step->tail[n - 1] != '-')
+    {
+        step->tail[n++] = '-';
+    }
+    memcpy(step->tail + n, "posix", 5);
+    n += 5;
+    if (restLength > 0)
+    {
+        step->tail[n++] = '-';
+        memcpy(step->tail + n, rest, restLength);
+        n += restLength;
+    }
+    memset(step->tail + n, 0, sizeof(step->tail) - n);
+}
+
+// Takes the variant posix out of a step's variants; false when it has
+// none.
+static bool RemovePosix(mlocLocale* step)
+{
+    size_t length = VariantsLength(step->tail, sizeof(step->tail));
+    for (size_t at = 0; at < length;)
+    {
+        size_t end = at;
+        while (end < length && step->tail[end] != '-')
+        {
+            end++;
+        }
+        if (end - at == 5 && memcmp(step->tail + at, "posix", 5) == 0)
+        {
+            // The variant and the hyphen after it (or before it, last).
+            size_t from = end < length ? at : at > 0 ? at - 1 : 0;
+            size_t to = end < length ? end + 1 : end;
+            size_t size = FieldLength(step->tail, sizeof(step->tail));
+            memmove(step->tail + from, step->tail + to, size - to);
+            memset(step->tail + size - (to - from), 0, to - from);
+            return true;
+        }
+        at = end + 1;
+    }
+    return false;
+}
+
+// Whether a locale has -u-va-posix, which its chain reads as the variant.
+static bool HasPosixKeyword(const mlocLocale* locale)
+{
+    const char* va = nullptr;
+    return mlocFindKeyword(locale, "va", &va) == 5 && memcmp(va, "posix", 5) == 0;
+}
+
 // The script likely subtags give a packed language and region, or 0
 // when there is none.
 static uint32_t LikelyScript(const Likely* likely, uint32_t language, uint32_t region)
@@ -264,6 +351,10 @@ static mlocLocale FirstStep(const mlocDataSet* data, const mlocLocale* locale)
     memcpy(step.language, locale->language, 8);
     memcpy(step.region, locale->region, 4);
     memcpy(step.tail, locale->tail, VariantsLength(locale->tail, sizeof(locale->tail)));
+    if (HasPosixKeyword(locale))
+    {
+        AddPosix(&step);
+    }
     uint32_t script = mlocPackScript(locale->script, (uint32_t)FieldLength(locale->script, 4));
     uint32_t region =
         script == 0 ? mlocPackRegion(locale->region, (uint32_t)FieldLength(locale->region, 4)) : 0;
@@ -382,6 +473,10 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
     {
         return mloc_errorNotFound;
     }
+    // A parent that keeps POSIX keeps it as the keyword; one that dropped
+    // it drops the keyword too, or the chain would never end.
+    bool posix = HasPosixKeyword(locale);
+    bool keepsPosix = posix && RemovePosix(&step);
     // The extensions come back after the parent's variants.
     size_t variants = FieldLength(step.tail, sizeof(step.tail));
     size_t own = VariantsLength(locale->tail, sizeof(locale->tail));
@@ -399,6 +494,10 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
             step.tail[variants++] = '-';
         }
         memcpy(step.tail + variants, locale->tail + start, length);
+    }
+    if (posix && !keepsPosix && !mlocRemoveKeyword(&step, "va"))
+    {
+        return mloc_errorCapacity;
     }
     *parentOut = step;
     return mloc_success;

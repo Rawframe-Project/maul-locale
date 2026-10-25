@@ -100,6 +100,16 @@ static void TestBcp47(void)
     CHECK(Gives("sgn-ase", "ase", mloc_changedExtlang), "an extlang after three letters");
     CHECK(Gives("x-private", "und-x-private", 0), "private use alone");
     CHECK(Gives("Latn-US", "und-Latn-US", 0), "a tag that begins with a script");
+    CHECK(Gives("en-US-posix", "en-US-u-va-posix", mloc_changedVariants) &&
+              Gives("en_US_POSIX", "en-US-u-va-posix", mloc_changedVariants) &&
+              Gives("en-US-u-va-posix", "en-US-u-va-posix", 0) &&
+              Gives("en-US-fonipa-posix-u-ca-iso8601", "en-US-fonipa-u-ca-iso8601-va-posix",
+                    mloc_changedVariants),
+          "CLDR's variant POSIX is the BCP 47 keyword -u-va-posix");
+    // UTS #35's own examples (Legacy Variants).
+    CHECK(Gives("en-US-POSIX-u-kn-true", "en-US-u-kn-va-posix", mloc_changedVariants) &&
+              Gives("en-US-POSIX-u-kn-va-posix", "en-US-u-kn-va-posix", mloc_changedVariants),
+          "the variant joins the keys the tag has");
 }
 
 static void TestExtensions(void)

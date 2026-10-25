@@ -26,4 +26,8 @@ bool mlocHasKeyword(const mlocLocale* locale, const char* key);
 // when the locale with it is no locale id or does not fit.
 bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size_t length);
 
+// Leaves the -u key and its value out, and the u extension when nothing
+// is left in it: false when the locale without it does not parse.
+bool mlocRemoveKeyword(mlocLocale* locale, const char* key);
+
 #endif
