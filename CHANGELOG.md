@@ -5,6 +5,15 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.2.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.0...v0.2.1) (2026-10-25)
+
+
+### Fixed
+
+* **generator:** stop reading past an end tag cut off at the end ([#62](https://github.com/Rawframe-Project/maul-locale/issues/62)) ([cebaf1f](https://github.com/Rawframe-Project/maul-locale/commit/cebaf1fef90167a09a405bc2fb8053b0e919fe5d)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
+* **mloccat:** name the line of a PO entry refused without msgid ([#64](https://github.com/Rawframe-Project/maul-locale/issues/64)) ([6ad6fab](https://github.com/Rawframe-Project/maul-locale/commit/6ad6fab92322c8111225abb811a40746ddc34524)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
+* **mloccat:** read a selection key that holds a line feed whole ([#65](https://github.com/Rawframe-Project/maul-locale/issues/65)) ([7b88364](https://github.com/Rawframe-Project/maul-locale/commit/7b88364c40cfda5f71c1ece6f8065bef27b42566)), closes [#56](https://github.com/Rawframe-Project/maul-locale/issues/56)
+
 ## [0.2.0](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.2.0) (2026-10-24)
 
 ### Changed
