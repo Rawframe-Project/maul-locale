@@ -10,7 +10,9 @@
 //
 // - A class's variable with characters added, "[[$STerm] [;
 //   ;]]", gives them that class; with characters taken out,
-//   "[[$MidNumLet]-[.]]", requires that another variable adds them.
+//   "[[$MidNumLet]-[.]]", requires that another variable adds them. A
+//   segmentation's overrides are a set of the code table
+//   src/generated/segment_overrides.c, which its unit names.
 // - The line variables "$ID = [[\p{Line_Break=Ideographic}] [$CJ]]" and
 //   "$NS = \p{Line_Break=Nonstarter}" are CJ as an ideograph.
 // - Japanese's word variables and rules 13.3 and 13.4 are the Japanese
@@ -27,6 +29,7 @@
 #include "table_gen.h"
 #include "xml.h"
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +39,7 @@ enum
 {
     maxKey = 64,
     maxText = 256,
-    maxOverrides = 64,
+    maxOverrides = segmentGenMaxSetOverrides,
 };
 
 typedef struct Override
@@ -73,16 +76,38 @@ typedef struct Segments
     int forwardCount;
 } Segments;
 
-static const char* const s_wordClasses[segmentWordClassCount] = {
-    "$CR",        "$LF",        "$Newline",       "$Extend",  "$ZWJ",          "$RI",
-    "$Format",    "$Katakana",  "$Hebrew_Letter", "$ALetter", "$Single_Quote", "$Double_Quote",
-    "$MidNumLet", "$MidLetter", "$MidNum",        "$Numeric", "$ExtendNumLet", "$WSegSpace",
-    "$XX",
+// Each class's variable and Maul Unicode's name of the class.
+static const char* const s_wordClasses[][2] = {
+    {"$CR", "muni_wbCr"},
+    {"$LF", "muni_wbLf"},
+    {"$Newline", "muni_wbNewline"},
+    {"$Extend", "muni_wbExtend"},
+    {"$ZWJ", "muni_wbZwj"},
+    {"$RI", "muni_wbRegionalIndicator"},
+    {"$Format", "muni_wbFormat"},
+    {"$Katakana", "muni_wbKatakana"},
+    {"$Hebrew_Letter", "muni_wbHebrewLetter"},
+    {"$ALetter", "muni_wbALetter"},
+    {"$Single_Quote", "muni_wbSingleQuote"},
+    {"$Double_Quote", "muni_wbDoubleQuote"},
+    {"$MidNumLet", "muni_wbMidNumLet"},
+    {"$MidLetter", "muni_wbMidLetter"},
+    {"$MidNum", "muni_wbMidNum"},
+    {"$Numeric", "muni_wbNumeric"},
+    {"$ExtendNumLet", "muni_wbExtendNumLet"},
+    {"$WSegSpace", "muni_wbWSegSpace"},
+    {"$XX", "muni_wbOther"},
 };
 
-static const char* const s_sentenceClasses[segmentSentenceClassCount] = {
-    "$CR",      "$LF",      "$Extend", "$Sep",       "$Format", "$Sp",    "$Lower", "$Upper",
-    "$OLetter", "$Numeric", "$ATerm",  "$SContinue", "$STerm",  "$Close", "$XX",
+static const char* const s_sentenceClasses[][2] = {
+    {"$CR", "muni_sbCr"},           {"$LF", "muni_sbLf"},
+    {"$Extend", "muni_sbExtend"},   {"$Sep", "muni_sbSep"},
+    {"$Format", "muni_sbFormat"},   {"$Sp", "muni_sbSp"},
+    {"$Lower", "muni_sbLower"},     {"$Upper", "muni_sbUpper"},
+    {"$OLetter", "muni_sbOLetter"}, {"$Numeric", "muni_sbNumeric"},
+    {"$ATerm", "muni_sbATerm"},     {"$SContinue", "muni_sbSContinue"},
+    {"$STerm", "muni_sbSTerm"},     {"$Close", "muni_sbClose"},
+    {"$XX", "muni_sbOther"},
 };
 
 // Japanese's word variables and rules, whitespace collapsed.
@@ -138,11 +163,11 @@ static bool Collapse(const char* text, char* out, size_t capacity)
     return true;
 }
 
-static int ClassOf(const char* const* names, int count, const char* id)
+static int ClassOf(const char* const (*names)[2], int count, const char* id)
 {
     for (int i = 0; i < count; i++)
     {
-        if (strcmp(names[i], id) == 0)
+        if (strcmp(names[i][0], id) == 0)
         {
             return i;
         }
@@ -320,16 +345,16 @@ static const char* Settle(Overrides* overrides)
             return "a character taken out of a class and given no other";
         }
     }
-    return overrides->addedCount > segmentMaxOverrides ? "more overrides than a segmenter holds"
-                                                       : nullptr;
+    return nullptr;
 }
 
 // A word or sentence segmentation's variables and rules.
 static const char* ReadClasses(const XmlNode* segmentation, bool word, Segments* out)
 {
     Overrides* overrides = word ? &out->word : &out->sentence;
-    const char* const* names = word ? s_wordClasses : s_sentenceClasses;
-    int classCount = word ? (int)segmentWordClassCount : (int)segmentSentenceClassCount;
+    const char* const(*names)[2] = word ? s_wordClasses : s_sentenceClasses;
+    int classCount = word ? (int)(sizeof(s_wordClasses) / sizeof(s_wordClasses[0]))
+                          : (int)(sizeof(s_sentenceClasses) / sizeof(s_sentenceClasses[0]));
     // The Japanese variables' bits, then the rules'.
     uint32_t japanese = 0;
     for (int c = 0; c < segmentation->childCount; c++)
@@ -590,16 +615,44 @@ static const char* ReadFile(const XmlNode* root, Segments* out)
     return nullptr;
 }
 
-static void PutOverrides(uint8_t* at, const Overrides* overrides)
+// A type's overrides as a set of the code table: 0 for none, else the
+// set's number plus one; -1 when the table is full.
+static int64_t SetOf(SegmentGenSets* sets, const Overrides* overrides, uint32_t given)
 {
+    if (overrides->addedCount == 0)
+    {
+        return 0;
+    }
+    bool word = given == segmentGivesWord;
+    SegmentGenSet set = {.given = given, .count = overrides->addedCount};
     for (int i = 0; i < overrides->addedCount; i++)
     {
-        GenPut(at + segmentOverrideSize * (size_t)i, overrides->added[i].codePoint, 4);
-        GenPut(at + segmentOverrideSize * (size_t)i + 4, overrides->added[i].value, 4);
+        set.codePoints[i] = overrides->added[i].codePoint;
+        set.classes[i] = word ? s_wordClasses[overrides->added[i].value][1]
+                              : s_sentenceClasses[overrides->added[i].value][1];
     }
+    for (int k = 0; k < sets->count; k++)
+    {
+        const SegmentGenSet* old = &sets->sets[k];
+        bool same = old->given == given && old->count == set.count;
+        for (int i = 0; same && i < set.count; i++)
+        {
+            same = old->codePoints[i] == set.codePoints[i] && old->classes[i] == set.classes[i];
+        }
+        if (same)
+        {
+            return k + 1;
+        }
+    }
+    if (sets->count == segmentGenMaxSets)
+    {
+        return -1;
+    }
+    sets->sets[sets->count++] = set;
+    return sets->count;
 }
 
-static uint8_t* Unit(const Segments* s, size_t* sizeOut)
+static uint8_t* Unit(const Segments* s, uint32_t words, uint32_t sentences, size_t* sizeOut)
 {
     size_t text = 0;
     for (int i = 0; i < s->backwardCount; i++)
@@ -610,23 +663,17 @@ static uint8_t* Unit(const Segments* s, size_t* sizeOut)
     {
         text += strlen(s->forward[i].text);
     }
-    size_t overrides = (size_t)s->word.addedCount + (size_t)s->sentence.addedCount;
     size_t entries = (size_t)s->backwardCount + (size_t)s->forwardCount;
-    size_t size = segmentHeaderSize + segmentOverrideSize * overrides +
-                  4 * (size_t)s->backwardCount + 4 * (entries + 1) + text;
+    size_t size = segmentHeaderSize + 4 * (size_t)s->backwardCount + 4 * (entries + 1) + text;
     uint8_t* unit = GenAllocate(size);
     GenPut(unit, s->given, 4);
     GenPut(unit + 4, s->flags, 4);
-    GenPut(unit + 8, (uint64_t)s->word.addedCount, 4);
-    GenPut(unit + 12, (uint64_t)s->sentence.addedCount, 4);
+    GenPut(unit + 8, words, 4);
+    GenPut(unit + 12, sentences, 4);
     GenPut(unit + 16, (uint64_t)s->backwardCount, 4);
     GenPut(unit + 20, (uint64_t)s->forwardCount, 4);
     GenPut(unit + 24, text, 4);
     uint8_t* at = unit + segmentHeaderSize;
-    PutOverrides(at, &s->word);
-    at += segmentOverrideSize * (size_t)s->word.addedCount;
-    PutOverrides(at, &s->sentence);
-    at += segmentOverrideSize * (size_t)s->sentence.addedCount;
     for (int i = 0; i < s->backwardCount; i++)
     {
         GenPut(at + 4 * (size_t)i, s->backward[i].value, 4);
@@ -649,15 +696,22 @@ static uint8_t* Unit(const Segments* s, size_t* sizeOut)
     return unit;
 }
 
-const char* SegmentsUnit(const XmlNode* root, uint8_t** unitOut, size_t* sizeOut)
+const char* SegmentsUnit(const XmlNode* root, SegmentGenSets* sets, uint8_t** unitOut,
+                         size_t* sizeOut)
 {
     Segments s = {0};
     const char* problem = ReadFile(root, &s);
     *unitOut = nullptr;
     *sizeOut = 0;
+    int64_t words = problem == nullptr ? SetOf(sets, &s.word, segmentGivesWord) : 0;
+    int64_t sentences = problem == nullptr ? SetOf(sets, &s.sentence, segmentGivesSentence) : 0;
+    if (words < 0 || sentences < 0)
+    {
+        problem = "more override sets than the generator holds";
+    }
     if (problem == nullptr && s.given != 0)
     {
-        *unitOut = Unit(&s, sizeOut);
+        *unitOut = Unit(&s, (uint32_t)words, (uint32_t)sentences, sizeOut);
     }
     for (int k = 0; k < s.backwardCount; k++)
     {
@@ -672,14 +726,90 @@ const char* SegmentsUnit(const XmlNode* root, uint8_t** unitOut, size_t* sizeOut
     return problem;
 }
 
-int GenerateSegments(const char* commonDirectory, DataFile* file, char* errorOut,
-                     size_t errorCapacity)
+// Appends to a text of a capacity; false when it does not fit.
+[[gnu::format(printf, 4, 5)]] static bool Print(char* text, size_t capacity, size_t* size,
+                                                const char* format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    int n = vsnprintf(text + *size, capacity - *size, format, arguments);
+    va_end(arguments);
+    if (n < 0 || (size_t)n >= capacity - *size)
+    {
+        return false;
+    }
+    *size += (size_t)n;
+    return true;
+}
+
+bool SegmentOverridesText(const SegmentGenSets* sets, char* out, size_t capacity, size_t* sizeOut)
+{
+    size_t size = 0;
+    bool fits =
+        capacity > 0 && Print(out, capacity, &size, "%s",
+                              "// SPDX-License-Identifier: MIT\n"
+                              "// Copyright (c) 2026 Sirac Ozmen\n"
+                              "//\n"
+                              "// The class overrides of CLDR's common/segments, each set once,\n"
+                              "// in the order the files first give them.\n"
+                              "// Generated by tools/mlocgen; do not edit.\n"
+                              "// clang-format off\n"
+                              "\n"
+                              "#include \"segment_overrides.h\"\n"
+                              "\n"
+                              "const muniBreakClassOverride mlocSegmentOverrides[] = {\n");
+    for (int k = 0; fits && k < sets->count; k++)
+    {
+        for (int i = 0; fits && i < sets->sets[k].count; i++)
+        {
+            fits = Print(out, capacity, &size, "    {0x%04X, %s},\n", sets->sets[k].codePoints[i],
+                         sets->sets[k].classes[i]);
+        }
+    }
+    fits = fits && Print(out, capacity, &size, "%s",
+                         "};\n\nconst SegmentOverrideSet mlocSegmentOverrideSets[] = {\n");
+    int first = 0;
+    for (int k = 0; fits && k < sets->count; k++)
+    {
+        fits = Print(out, capacity, &size, "    {%d, %d, %s},\n", first, sets->sets[k].count,
+                     sets->sets[k].given == segmentGivesWord ? "mloc_segmentWord"
+                                                             : "mloc_segmentSentence");
+        first += sets->sets[k].count;
+    }
+    fits = fits && Print(out, capacity, &size,
+                         "};\n\nconst uint32_t mlocSegmentOverrideSetCount = %d;\n", sets->count);
+    *sizeOut = fits ? size : 0;
+    return fits;
+}
+
+bool SegmentOverridesSource(const SegmentGenSets* sets, char** sourceOut, size_t* sourceSizeOut)
+{
+    // A line holds at most a code point, a class name and a set's numbers.
+    size_t overrides = 0;
+    for (int k = 0; k < sets->count; k++)
+    {
+        overrides += (size_t)sets->sets[k].count;
+    }
+    size_t capacity = 1024 + overrides * 64 + (size_t)sets->count * 64;
+    char* source = GenAllocate(capacity);
+    if (!SegmentOverridesText(sets, source, capacity, sourceSizeOut))
+    {
+        free(source);
+        return false;
+    }
+    *sourceOut = source;
+    return true;
+}
+
+int GenerateSegments(const char* commonDirectory, DataFile* file, char** sourceOut,
+                     size_t* sourceSizeOut, char* errorOut, size_t errorCapacity)
 {
     Keys keys;
     if (!KeysOpen(&keys, commonDirectory, errorOut, errorCapacity))
     {
         return 0;
     }
+    SegmentGenSets* sets = GenAllocate(sizeof(SegmentGenSets));
     int count = 0;
     char** names = GenListXml(commonDirectory, "segments", &count);
     int ok = 1;
@@ -700,7 +830,7 @@ int GenerateSegments(const char* commonDirectory, DataFile* file, char* errorOut
         }
         uint8_t* unit = nullptr;
         size_t size = 0;
-        const char* problem = SegmentsUnit(root, &unit, &size);
+        const char* problem = SegmentsUnit(root, sets, &unit, &size);
         if (problem != nullptr)
         {
             ok = Fail(errorOut, errorCapacity, path, problem, names[i]);
@@ -716,5 +846,10 @@ int GenerateSegments(const char* commonDirectory, DataFile* file, char* errorOut
     }
     GenFreeList(names, count);
     KeysClose(&keys);
+    if (ok && !SegmentOverridesSource(sets, sourceOut, sourceSizeOut))
+    {
+        ok = Fail(errorOut, errorCapacity, "segments", "the code table longer than its buffer", "");
+    }
+    free(sets);
     return ok;
 }

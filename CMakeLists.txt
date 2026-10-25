@@ -235,6 +235,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone_name_tables.c
     src/relative_tables.c
     src/segment_tables.c
+    src/segment.c
+    src/segment_filter.c
     src/relative_format.c
     src/relative_datetime.c
     src/duration_options.c
@@ -252,7 +254,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/generated/calendar_eras.c
     src/generated/calendar_years.c
     src/generated/script_directions.c
-    src/generated/list_genders.c)
+    src/generated/list_genders.c
+    src/generated/segment_overrides.c)
 maul_configure_library(maul-locale)
 target_link_libraries(maul-locale PRIVATE maul-unicode::maul-unicode)
 set(MAUL_PACKAGE_DEPENDENCIES "find_dependency(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION})")
@@ -270,7 +273,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         if(EMSCRIPTEN)
             # Every data file, about 19 MB, and the test's copy of each.
             foreach(file dates zone-names names subdivisions currency-names units spellout
-                    relative collation)
+                    relative collation segments)
                 target_link_options(test_guide PRIVATE
                                     "SHELL:--embed-file ${MLOC_GUIDE_DATA}/${file}.mloc@/data/${file}.mloc")
             endforeach()
@@ -695,6 +698,34 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_segment_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_segment_tables PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+        # The code table of overrides is in Maul Unicode's type.
+        target_link_libraries(test_segment_tables PRIVATE maul-unicode::maul-unicode)
+    endif()
+    maul_add_test(segment)
+    if(TARGET test_segment)
+        if(EMSCRIPTEN)
+            target_link_options(test_segment PRIVATE
+                                "SHELL:--embed-file ${MLOC_SEGMENTS_FILE}@/segments.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_segment PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_segment PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+        # ICU4C's answers (tools/oracle/segment/) and the listed departures.
+        set(MLOC_SEGMENT_ICU ${PROJECT_SOURCE_DIR}/test/segment_icu.tsv)
+        set(MLOC_SEGMENT_EXCEPTIONS ${PROJECT_SOURCE_DIR}/tools/segment-exceptions.txt)
+        if(EMSCRIPTEN)
+            target_link_options(test_segment PRIVATE
+                                "SHELL:--embed-file ${MLOC_SEGMENT_ICU}@/segment_icu.tsv"
+                                "SHELL:--embed-file ${MLOC_SEGMENT_EXCEPTIONS}@/segment-exceptions.txt")
+            target_compile_definitions(test_segment PRIVATE
+                                       MLOC_SEGMENT_ICU_FILE="/segment_icu.tsv"
+                                       MLOC_SEGMENT_EXCEPTIONS_FILE="/segment-exceptions.txt")
+        else()
+            target_compile_definitions(test_segment PRIVATE
+                                       MLOC_SEGMENT_ICU_FILE="${MLOC_SEGMENT_ICU}"
+                                       MLOC_SEGMENT_EXCEPTIONS_FILE="${MLOC_SEGMENT_EXCEPTIONS}")
+        endif()
     endif()
     maul_add_test(relative)
     if(TARGET test_relative)
@@ -906,7 +937,7 @@ if(MAUL_LOCALE_FUZZ)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area catalog collate_fast collation collation_data data date_data decimal duration grammar ixdtf locale message parse
                  relative
-                 segments
+                 segment segments
                  spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
@@ -923,6 +954,9 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_collation_data PRIVATE
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
+    target_compile_definitions(fuzz_segment PRIVATE
+        MLOC_SEGMENTS_FILE="${PROJECT_SOURCE_DIR}/src/generated/segments.mloc")
+    target_link_libraries(fuzz_segments PRIVATE maul-unicode::maul-unicode)
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE

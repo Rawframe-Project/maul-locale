@@ -11,13 +11,14 @@
 - [Grammar](user/grammar.md): case suffixes and particles on names and numbers.
 - [Catalogs](user/catalogs.md): translation catalogs, the `mloccat` tool, chains.
 - [Collation](user/collation.md): comparing, sort keys, search, alphabetic indexes.
+- [Segmentation](user/segmentation.md): words, sentences and lines as a language tailors them.
 - [API reference](https://rawframe-project.github.io/maul-locale/api.html), generated from the headers.
 
 ## How it works
 
 - [Overview](internals/overview.md): the library profile, the parts and where data comes from.
 - [Glossary](internals/glossary.md).
-- [Data](internals/data.md), [Generator](internals/generator.md), [Locales](internals/locales.md), [Numbers](internals/numbers.md), [Dates and zones](internals/dates-and-zones.md), [Messages and catalogs](internals/messages-and-catalogs.md), [Grammar](internals/grammar.md), [Collation](internals/collation.md).
+- [Data](internals/data.md), [Generator](internals/generator.md), [Locales](internals/locales.md), [Numbers](internals/numbers.md), [Dates and zones](internals/dates-and-zones.md), [Messages and catalogs](internals/messages-and-catalogs.md), [Grammar](internals/grammar.md), [Collation](internals/collation.md), [Segmentation](internals/segmentation.md).
 - [Conformance](internals/conformance.md): what proves each part, and the listed departures.
 - [Performance](internals/performance.md): the speed bar and how speed is measured.
 - [Maul conventions](internals/maul-conventions.md): the rules every Maul library follows.

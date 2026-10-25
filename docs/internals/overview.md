@@ -1,6 +1,6 @@
 # Overview
 
-Maul Locale is the locale layer of a text stack: identifiers, numbers, dates, time zones, messages, grammar, catalogs and collation for every locale CLDR describes, from one CLDR release. This page states the library's profile within the [Maul conventions](maul-conventions.md), how its parts fit, and where data comes from. The other pages of this folder explain each part.
+Maul Locale is the locale layer of a text stack: identifiers, numbers, dates, time zones, messages, grammar, catalogs, collation and segmentation for every locale CLDR describes, from one CLDR release. This page states the library's profile within the [Maul conventions](maul-conventions.md), how its parts fit, and where data comes from. The other pages of this folder explain each part.
 
 ## Profile
 
@@ -28,6 +28,7 @@ The library is one static or shared library over these parts; `tools/modules.txt
 | grammar | `grammar.h` | number, spellout |
 | catalog | `catalog.h` | message |
 | collate | `collate.h`, `search.h`, `index.h` | data, Maul Unicode's NFD |
+| segment | `segment.h` | data, Maul Unicode's iterators |
 
 Word segmentation by dictionaries, transliteration and person names are in CLDR's scope and not built yet.
 

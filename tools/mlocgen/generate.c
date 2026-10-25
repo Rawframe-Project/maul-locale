@@ -270,6 +270,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     Text years = {0};
     Text directions = {0};
     Text genders = {0};
+    Text overrides = {0};
     char release[9] = "";
     memcpy(release, version.tzdb, sizeof(version.tzdb));
     if (!GenerateLocaleUnits(commonDirectory, &data, errorOut, errorCapacity) ||
@@ -279,7 +280,8 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         !GenerateUnitTable(commonDirectory, &data, errorOut, errorCapacity) ||
         !GenerateSpellout(commonDirectory, &spellout, errorOut, errorCapacity) ||
         !GenerateCollation(commonDirectory, &collation, errorOut, errorCapacity) ||
-        !GenerateSegments(commonDirectory, &segments, errorOut, errorCapacity) ||
+        !GenerateSegments(commonDirectory, &segments, &overrides.bytes, &overrides.size, errorOut,
+                          errorCapacity) ||
         !GenerateCalendarEras(commonDirectory, &eras.bytes, &eras.size, errorOut, errorCapacity) ||
         !GenerateScriptDirections(commonDirectory, &directions.bytes, &directions.size, errorOut,
                                   errorCapacity) ||
@@ -294,6 +296,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         free(years.bytes);
         free(directions.bytes);
         free(genders.bytes);
+        free(overrides.bytes);
         DataFileFree(&data);
         FreeNameFiles(&names);
         DataFileFree(&spellout);
@@ -301,9 +304,10 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
         DataFileFree(&segments);
         return 0;
     }
-    // The compiled rules are code tables the data's indexes name, so they
-    // enter the data version.
+    // The compiled rules and the segmentation overrides are code tables the
+    // data's indexes name, so they enter the data version.
     version.tables = HashBytes(version.tables, rules.bytes, rules.size);
+    version.tables = HashBytes(version.tables, overrides.bytes, overrides.size);
     Text header = {0};
     VersionHeader(&header, &version, release);
     size_t size = 0;
@@ -330,6 +334,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
              WriteFile(root, "calendar_years.c", &years, errorOut, errorCapacity) &&
              WriteFile(root, "script_directions.c", &directions, errorOut, errorCapacity) &&
              WriteFile(root, "list_genders.c", &genders, errorOut, errorCapacity) &&
+             WriteFile(root, "segment_overrides.c", &overrides, errorOut, errorCapacity) &&
              WriteFile(root, "spellout.mloc", &spelloutFile, errorOut, errorCapacity);
     for (size_t i = 0; ok && i < sizeof(nameFiles) / sizeof(nameFiles[0]); i++)
     {
@@ -351,6 +356,7 @@ int Generate(const char* commonDirectory, const char* root, const char* tzdbDire
     free(years.bytes);
     free(directions.bytes);
     free(genders.bytes);
+    free(overrides.bytes);
     free(bytes);
     DataFileFree(&data);
     return ok;

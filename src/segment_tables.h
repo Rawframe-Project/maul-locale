@@ -7,14 +7,12 @@
 // little-endian.
 //
 // Segmentation, a unit per locale key whose file gives a segmentation.
-// The payload is a header (u32 types given, u32 flags, u32 word override
-// count, u32 sentence override count, u32 backward count, u32 forward
-// count, u32 text size), the word overrides then the sentence overrides
-// (u32 code point, u32 class each, strictly ascending by code point), the
-// backward entries' values (u32 each), the entries' offsets (u32 each,
-// the backward entries' then the forward entries', then the text size:
-// backward count + forward count + 1, from 0, ascending), then the text,
-// UTF-8 with no byte below 0x20.
+// The payload is a header (u32 types given, u32 flags, u32 word
+// overrides, u32 sentence overrides, u32 backward count, u32 forward
+// count, u32 text size), the backward entries' values (u32 each), the
+// entries' offsets (u32 each, the backward entries' then the forward
+// entries', then the text size: backward count + forward count + 1, from
+// 0, ascending), then the text, UTF-8 with no byte below 0x20.
 //
 // The types given are the segmentations the locale's file has. Each
 // replaces the same type of the locale's parents; a type a unit does not
@@ -24,9 +22,13 @@
 // word rules to the word type, the sentence overrides and suppressions to
 // the sentence type, CJ as an ideograph to the line type.
 //
-// An override gives a code point another class: a SegmentWordClass or a
-// SegmentSentenceClass, the library's numbers, which it maps to Maul
-// Unicode's, so that a renumbering there cannot change what a file means.
+// An override gives a code point another class. The overrides are no
+// data of the unit: they are a code table, segment_overrides.h's, which
+// the generator writes and the data version's tables hash covers, so that
+// Maul Unicode reads them from constant memory and a segmenter holds no
+// pointer into itself. A unit's word overrides and sentence overrides are
+// 0 for none, else the number plus one of a set of that type in the
+// table.
 // A suppression is an abbreviation after which a sentence goes on ("Mr.",
 // "z.B."), as ICU4C's FilteredBreakIterator takes them with -u-ss-standard,
 // in the two tables its builder makes of them. An abbreviation with a full
@@ -90,58 +92,9 @@ enum
     segmentSuppressionPartial = 1,
 };
 
-// Word_Break values, in UAX #29's order.
-typedef enum SegmentWordClass
-{
-    segmentWordCR = 0,
-    segmentWordLF = 1,
-    segmentWordNewline = 2,
-    segmentWordExtend = 3,
-    segmentWordZWJ = 4,
-    segmentWordRegionalIndicator = 5,
-    segmentWordFormat = 6,
-    segmentWordKatakana = 7,
-    segmentWordHebrewLetter = 8,
-    segmentWordALetter = 9,
-    segmentWordSingleQuote = 10,
-    segmentWordDoubleQuote = 11,
-    segmentWordMidNumLet = 12,
-    segmentWordMidLetter = 13,
-    segmentWordMidNum = 14,
-    segmentWordNumeric = 15,
-    segmentWordExtendNumLet = 16,
-    segmentWordWSegSpace = 17,
-    segmentWordOther = 18,
-    segmentWordClassCount = 19,
-} SegmentWordClass;
-
-// Sentence_Break values, in UAX #29's order.
-typedef enum SegmentSentenceClass
-{
-    segmentSentenceCR = 0,
-    segmentSentenceLF = 1,
-    segmentSentenceExtend = 2,
-    segmentSentenceSep = 3,
-    segmentSentenceFormat = 4,
-    segmentSentenceSp = 5,
-    segmentSentenceLower = 6,
-    segmentSentenceUpper = 7,
-    segmentSentenceOLetter = 8,
-    segmentSentenceNumeric = 9,
-    segmentSentenceATerm = 10,
-    segmentSentenceSContinue = 11,
-    segmentSentenceSTerm = 12,
-    segmentSentenceClose = 13,
-    segmentSentenceOther = 14,
-    segmentSentenceClassCount = 15,
-} SegmentSentenceClass;
-
 enum
 {
     segmentHeaderSize = 28,
-    segmentOverrideSize = 8,
-    // A segmenter copies a type's overrides into the caller's memory.
-    segmentMaxOverrides = 4,
     // The longest entry, in bytes: a segmenter keeps this many before a
     // break to look them up.
     segmentMaxSuppression = 32,

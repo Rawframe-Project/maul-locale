@@ -34,7 +34,7 @@ extern "C"
 // stay valid across releases that keep the format. Bit 31 is set: the
 // field once held a packed library version (major << 16 | minor << 8 |
 // patch), which never sets it, so no older file can match a format.
-#define MLOC_DATA_FORMAT_VERSION 0x80000004u
+#define MLOC_DATA_FORMAT_VERSION 0x80000005u
 
 // The one CLDR release every table in the library comes from.
 #define MLOC_CLDR_VERSION_MAJOR 49
@@ -84,6 +84,11 @@ extern "C"
         // The call wrote its result with fallbacks where parts of it
         // failed, which it reports apart (a message's expressions).
         mloc_withFallbacks = 2,
+        // An iterator has reported its last result.
+        mloc_done = 3,
+        // An iterator needs the next piece of its text before it can
+        // answer.
+        mloc_needMoreText = 4,
         // An argument is invalid: a null pointer where one is required, a
         // value out of range.
         mloc_errorInvalid = -1,

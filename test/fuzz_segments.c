@@ -2,12 +2,13 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // libFuzzer target for the segmentation unit's validator. The input is a
-// payload; a unit the validator accepts must give every override and
-// every entry from inside its own bytes: code points scalar values and
-// classes their property's, each entry's text inside the text, not empty
-// and at most a segmenter's look-back long, each backward value known.
+// payload; a unit the validator accepts must name override sets of the
+// code table of their types, and give every entry from inside its own
+// bytes: each entry's text inside the text, not empty and at most a
+// segmenter's look-back long, each backward value known.
 
 #include "bytes.h"
+#include "segment_overrides.h"
 #include "segment_tables.h"
 
 #include <stdlib.h>
@@ -21,15 +22,10 @@ static void Require(bool condition)
     }
 }
 
-static void CheckOverrides(const uint8_t* overrides, uint32_t count, uint32_t classCount)
+static void CheckOverrides(uint32_t field, mlocSegmentKind kind)
 {
-    for (uint32_t i = 0; i < count; i++)
-    {
-        uint32_t codePoint = mlocLoad32(overrides + segmentOverrideSize * (size_t)i);
-        uint32_t value = mlocLoad32(overrides + segmentOverrideSize * (size_t)i + 4);
-        Require(codePoint <= 0x10FFFF && (codePoint < 0xD800 || codePoint > 0xDFFF) &&
-                value < classCount);
-    }
+    Require(field == 0 || (field <= mlocSegmentOverrideSetCount &&
+                           mlocSegmentOverrideSets[field - 1].kind == kind));
 }
 
 static void Check(DataSpan span)
@@ -39,16 +35,13 @@ static void Check(DataSpan span)
     uint32_t backward = mlocLoad32(span.bytes + 16);
     uint32_t forward = mlocLoad32(span.bytes + 20);
     uint32_t textSize = mlocLoad32(span.bytes + 24);
-    Require(words <= segmentMaxOverrides && sentences <= segmentMaxOverrides &&
-            backward <= segmentMaxSuppressions && forward <= segmentMaxSuppressions);
-    const uint8_t* wordOverrides = span.bytes + segmentHeaderSize;
-    const uint8_t* sentenceOverrides = wordOverrides + segmentOverrideSize * (size_t)words;
-    const uint8_t* values = sentenceOverrides + segmentOverrideSize * (size_t)sentences;
+    Require(backward <= segmentMaxSuppressions && forward <= segmentMaxSuppressions);
+    const uint8_t* values = span.bytes + segmentHeaderSize;
     const uint8_t* offsets = values + 4 * (size_t)backward;
     const uint8_t* text = offsets + 4 * ((size_t)backward + forward + 1);
     Require(text + textSize == span.bytes + span.size);
-    CheckOverrides(wordOverrides, words, segmentWordClassCount);
-    CheckOverrides(sentenceOverrides, sentences, segmentSentenceClassCount);
+    CheckOverrides(words, mloc_segmentWord);
+    CheckOverrides(sentences, mloc_segmentSentence);
     for (uint32_t i = 0; i < backward + forward; i++)
     {
         uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);

@@ -15,4 +15,4 @@ jobs:
     permissions:
       pull-requests: read
     with:
-      scopes: data locale names decimal plural number currency unit spellout list calendar zone ixdtf datetime relative duration message grammar catalog collate search index generator mloccat oracle bench build family
+      scopes: data locale names decimal plural number currency unit spellout list calendar zone ixdtf datetime relative duration message grammar catalog collate search index segment generator mloccat oracle bench build family

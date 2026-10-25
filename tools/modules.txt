@@ -99,7 +99,11 @@ calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 relative_tables: bytes data_view number_data
-segment_tables: bytes data_view number_data
+segment_overrides:
+segment_tables: bytes data_view number_data segment_overrides
+segmenter: data_view segment_tables
+segment: bytes invariant kinds locale_fallback locale_keyword segment_overrides segmenter
+segment_filter: bytes invariant segmenter
 catalog_hash: bytes
 catalog_tables: bytes catalog_hash data_view message_read
 catalog_view: catalog_tables

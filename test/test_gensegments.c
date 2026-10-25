@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The generator's segmentation units (segment_gen.h): a file of
-// common/segments read into its unit, suppressions into ICU4C's two
-// tables, and the forms it refuses with their reasons: an escaped surrogate, Japanese's word rules
-// or CJ as an ideograph with a part repeated and another missing, and a variable too long to read.
+// common/segments read into its unit, overrides into sets of the code
+// table, suppressions into ICU4C's two tables, and the forms it refuses with their reasons: an
+// escaped surrogate, Japanese's word rules or CJ as an ideograph with a part repeated and another
+// missing, and a variable too long to read.
 
 #include "bytes.h"
 #include "segment_gen.h"
@@ -18,10 +19,11 @@
 
 static uint8_t* s_unit;
 static size_t s_size;
+static SegmentGenSets s_sets;
 
 // The reason a file's segmentations are refused, or nullptr with the unit
-// in s_unit.
-static const char* Read(const char* segmentations)
+// in s_unit and its overrides in s_sets, which ReadAgain keeps.
+static const char* ReadAgain(const char* segmentations)
 {
     char xml[4096];
     snprintf(xml, sizeof(xml), "<ldml><segmentations>%s</segmentations></ldml>", segmentations);
@@ -35,9 +37,15 @@ static const char* Read(const char* segmentations)
         printf("  cannot parse: %s\n", error);
         return "cannot parse";
     }
-    const char* problem = SegmentsUnit(root, &s_unit, &s_size);
+    const char* problem = SegmentsUnit(root, &s_sets, &s_unit, &s_size);
     XmlFree(root);
     return problem;
+}
+
+static const char* Read(const char* segmentations)
+{
+    memset(&s_sets, 0, sizeof(s_sets));
+    return ReadAgain(segmentations);
 }
 
 // Whether a file is refused for this reason.
@@ -85,11 +93,14 @@ static bool Gives(const char* segmentations, uint32_t given, uint32_t flags)
 
 static void TestForms(void)
 {
-    CHECK(Gives(SENTENCE("<variable id=\"$STerm\">[[$STerm] [; \\u037E]]</variable>"),
+    CHECK(Gives(SENTENCE("<variable id=\"$STerm\">[[$STerm] [\\u037E ;]]</variable>"),
                 segmentGivesSentence, 0) &&
-              mlocLoad32(s_unit + 12) == 2 && mlocLoad32(s_unit + segmentHeaderSize) == 0x3B &&
-              mlocLoad32(s_unit + segmentHeaderSize + 8) == 0x37E,
-          "a class's variable with characters added");
+              mlocLoad32(s_unit + 8) == 0 && mlocLoad32(s_unit + 12) == 1 &&
+              s_size == segmentHeaderSize + 4 && s_sets.count == 1 &&
+              s_sets.sets[0].given == segmentGivesSentence && s_sets.sets[0].count == 2 &&
+              s_sets.sets[0].codePoints[0] == 0x3B && s_sets.sets[0].codePoints[1] == 0x37E &&
+              strcmp(s_sets.sets[0].classes[1], "muni_sbSTerm") == 0,
+          "a class's variable with characters added: a set of the code table, sorted");
     CHECK(
         Gives(WORD(HIRAGANA HIRAGANA_FE IDEOGRAPHIC IDEOGRAPHIC_FE, RULE_HIRAGANA RULE_IDEOGRAPHIC),
               segmentGivesWord, segmentJapaneseWords),
@@ -99,13 +110,67 @@ static void TestForms(void)
     CHECK(Read("") == nullptr && s_unit == nullptr, "no unit for a file without segmentations");
 }
 
+// Whether the code table's source is refused with room up to a line's
+// fifth byte (or to the source's last byte, at its end).
+static bool Truncated(const char* source, size_t size, const char* line)
+{
+    char out[4096];
+    size_t written = 1;
+    size_t capacity = line == nullptr ? 0 : (size_t)(line - source) + 5;
+    if (line == source + size - 1)
+    {
+        capacity = size;
+    }
+    if (line == nullptr || capacity > size || capacity > sizeof(out) ||
+        SegmentOverridesText(&s_sets, out, capacity, &written) || written != 0)
+    {
+        printf("  not refused with room for %zu of %zu bytes\n", capacity, size);
+        return false;
+    }
+    return true;
+}
+
+static void TestSets(void)
+{
+    CHECK(Read(SENTENCE("<variable id=\"$STerm\">[[$STerm] [;]]</variable>")) == nullptr &&
+              ReadAgain(WORD("<variable id=\"$MidNum\">[[$MidNum] [.]]</variable>", "")) ==
+                  nullptr &&
+              mlocLoad32(s_unit + 8) == 2 &&
+              ReadAgain(SENTENCE("<variable id=\"$STerm\">[[$STerm] [;]]</variable>")) == nullptr &&
+              mlocLoad32(s_unit + 12) == 1 && s_sets.count == 2,
+          "a set given again is the same set");
+    char* source = nullptr;
+    size_t size = 0;
+    CHECK(
+        SegmentOverridesSource(&s_sets, &source, &size) && strlen(source) == size &&
+            strstr(source, "    {0x003B, muni_sbSTerm},\n    {0x002E, muni_wbMidNum},\n") !=
+                nullptr &&
+            strstr(source, "    {0, 1, mloc_segmentSentence},\n    {1, 1, mloc_segmentWord},\n") !=
+                nullptr &&
+            strstr(source, "mlocSegmentOverrideSetCount = 2;") != nullptr,
+        "the code table's source: the overrides, then each set's first, count and type");
+    if (source != nullptr)
+    {
+        CHECK(Truncated(source, size, strstr(source, "    {0x002E")) &&
+                  Truncated(source, size, strstr(source, "    {1, 1,")) &&
+                  Truncated(source, size, source + size - 1),
+              "a source cut short in an override's line, a set's line or its last line is "
+              "refused");
+        char out[4096];
+        size_t written = 0;
+        CHECK(size < sizeof(out) && SegmentOverridesText(&s_sets, out, size + 1, &written) &&
+                  written == size && memcmp(out, source, size + 1) == 0,
+              "a source that fits exactly");
+    }
+    free(source);
+}
+
 // Whether the unit's entry is this text, with this value when backward.
 static bool EntryIs(uint32_t i, const char* text, uint32_t value)
 {
-    uint32_t overrides = mlocLoad32(s_unit + 8) + mlocLoad32(s_unit + 12);
     uint32_t backward = mlocLoad32(s_unit + 16);
     uint32_t count = backward + mlocLoad32(s_unit + 20);
-    const uint8_t* values = s_unit + segmentHeaderSize + segmentOverrideSize * (size_t)overrides;
+    const uint8_t* values = s_unit + segmentHeaderSize;
     const uint8_t* offsets = values + 4 * (size_t)backward;
     const uint8_t* texts = offsets + 4 * ((size_t)count + 1);
     uint32_t start = i < count ? mlocLoad32(offsets + 4 * (size_t)i) : 0;
@@ -184,6 +249,7 @@ static void TestRefusals(void)
 int main(void)
 {
     TestForms();
+    TestSets();
     TestSuppressions();
     TestRefusals();
     free(s_unit);

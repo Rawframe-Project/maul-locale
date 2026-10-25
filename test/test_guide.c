@@ -20,6 +20,7 @@
 #include "maul-locale/plural.h"
 #include "maul-locale/relative.h"
 #include "maul-locale/search.h"
+#include "maul-locale/segment.h"
 #include "maul-locale/spellout.h"
 #include "maul-locale/unit.h"
 #include "maul-locale/zone.h"
@@ -33,9 +34,9 @@
 static mlocData s_builtin;
 
 // Every data file the snippets read, then the compiled-in data.
-static const char* const s_files[] = {"dates.mloc",        "zone-names.mloc",     "names.mloc",
-                                      "subdivisions.mloc", "currency-names.mloc", "units.mloc",
-                                      "spellout.mloc",     "relative.mloc",       "collation.mloc"};
+static const char* const s_files[] = {
+    "dates.mloc", "zone-names.mloc", "names.mloc",    "subdivisions.mloc", "currency-names.mloc",
+    "units.mloc", "spellout.mloc",   "relative.mloc", "collation.mloc",    "segments.mloc"};
 enum
 {
     fileCount = sizeof(s_files) / sizeof(s_files[0])
@@ -585,6 +586,54 @@ static void GuideSearch(void)
     CHECK(start == 3 && end == 11, "a primary match across the accents");
 }
 
+static void GuideSentences(void)
+{
+    mlocDataSet set = s_all;
+    mlocLocale locale = Locale("en-u-ss-standard");
+    const char* text = "Mr. Smith left. He came.";
+    mlocSegmenter segmenter;
+    size_t end = 0;
+    if (mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
+                          false) == mloc_success)
+    {
+        while (mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success)
+        {
+            // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
+        }
+    }
+    CHECK(end == 24, "the last sentence ends the text");
+    CHECK(mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
+                            false) == mloc_success &&
+              mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success && end == 16,
+          "no break after Mr.");
+    locale = Locale("en");
+    CHECK(mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
+                            false) == mloc_success &&
+              mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success && end == 4,
+          "without -u-ss-standard, a break after Mr.");
+}
+
+static void GuidePieces(void)
+{
+    mlocDataSet set = s_all;
+    mlocLocale locale = Locale("en");
+    const char* first = "A line in two pie";
+    const char* second = "ces.";
+    mlocSegmenter segmenter;
+    size_t end = 0;
+    mlocResult r =
+        mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentLine, first, strlen(first), true);
+    while (r == mloc_success)
+    {
+        r = mlocNextSegmentBreak(&segmenter, &end, nullptr);
+        if (r == mloc_needMoreText)
+        {
+            r = mlocFeedSegmenter(&segmenter, second, strlen(second), false);
+        }
+    }
+    CHECK(r == mloc_done && end == 21, "the last opportunity is the end of both pieces");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_builtin);
@@ -620,6 +669,8 @@ int main(void)
     GuideInflect();
     GuideCompare();
     GuideSearch();
+    GuideSentences();
+    GuidePieces();
     for (size_t i = 0; i < fileCount; i++)
     {
         free(s_bytes[i]);
