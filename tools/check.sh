@@ -119,9 +119,7 @@ source_checks() {
     fi
 }
 
-# Not the generated sources, nor the test hygiene fixtures, which break the
-# rules on purpose and are synced as published.
-all_c_files() { git ls-files '*.[ch]' '*.cpp' | grep -v -e '^src/generated/' -e '^tools/test_hygiene/'; }
+all_c_files() { git ls-files '*.[ch]' '*.cpp' | grep -v '^src/generated/'; }
 
 if [ "$tier" = changed ]; then
     base=$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD)
@@ -134,7 +132,7 @@ if [ "$tier" = changed ]; then
         exit 0
     fi
     source_checks
-    mapfile -t c_files < <(printf '%s\n' "${changed[@]}" | grep -E '\.([ch]|cpp)$' | grep -v -e '^src/generated/' -e '^tools/test_hygiene/' || true)
+    mapfile -t c_files < <(printf '%s\n' "${changed[@]}" | grep -E '\.([ch]|cpp)$' | grep -v '^src/generated/' || true)
     present=()
     for f in "${c_files[@]+"${c_files[@]}"}"; do [ -f "$f" ] && present+=("$f"); done
     if [ ${#present[@]} -gt 0 ]; then
