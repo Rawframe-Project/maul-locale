@@ -25,7 +25,7 @@
 
 ## Maintaining it
 
-- [Development](operations/development.md): toolchain, building and running tests, the rule checks, the data checks, fuzzing, benchmarks.
+- [Development](operations/development.md): toolchain, building and running tests, the rule checks, the data checks, fuzzing, debugging a failure, benchmarks.
 - [Updating data](operations/updating-data.md): the pins, regenerating `src/generated/`, new CLDR and tzdb releases, the grammar lexicons, external data.
 - [Oracles](operations/oracles.md): the differential programs against ICU4C, ICU4X, Apertium and test262.
 - [Checks](operations/checks.md): the local tiers, the CI jobs, assertions and budgets.
