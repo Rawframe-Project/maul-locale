@@ -4,7 +4,7 @@
 // The library's data: the compiled-in data and data files the program
 // holds, each opened once into an mlocData view and read in place. The
 // library reads no file and allocates nothing; the bytes a view was opened
-// from must outlive it and everything made from it.
+// from must outlive it and everything made from it, and not change.
 
 #ifndef MAUL_LOCALE_DATA_H
 #define MAUL_LOCALE_DATA_H
@@ -72,7 +72,11 @@ extern "C"
                                                            mlocDataVersion* versionOut);
 
     /// Opens a data file held in memory. The whole file is validated here,
-    /// once; a view that opened is never checked again.
+    /// once; a view that opened is never checked again. So the bytes must
+    /// not change while the view or anything made from it is used: after
+    /// a change, any call that reads them may read outside the file or
+    /// give any answer, and a build with assertions on may stop with a
+    /// trap.
     ///
     /// @param dataOut  Receives the view; left unchanged on failure.
     /// @param bytes    The file, 8-byte aligned (any allocator's memory is).
