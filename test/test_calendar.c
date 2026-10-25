@@ -13,6 +13,24 @@
 #include <stdio.h>
 #include <string.h>
 
+// The sweeps' strides in days: sparse in this suite, every third day (and
+// the lunisolar range's every millionth) in conform_calendar, which builds
+// this file again with MLOC_CALENDAR_DENSE and runs in the cldr job and at
+// night under ASan.
+#ifdef MLOC_CALENDAR_DENSE
+enum
+{
+    roundTripStride = 3,
+    lunisolarStride = 999983,
+};
+#else
+enum
+{
+    roundTripStride = 997,
+    lunisolarStride = 49999991,
+};
+#endif
+
 typedef struct Case
 {
     mlocCalendar calendar;
@@ -363,7 +381,7 @@ static void TestRoundTrip(void)
     bool all = true;
     for (size_t c = 0; c < sizeof(s_all) / sizeof(s_all[0]); c++)
     {
-        for (int64_t day = -800000; all && day <= 1600000; day += 3)
+        for (int64_t day = -800000; all && day <= 1600000; day += roundTripStride)
         {
             all = MadeBack(s_all[c], (int32_t)day);
             if (!all)
@@ -525,7 +543,7 @@ static void TestLunisolarRange(void)
     bool all = true;
     for (size_t c = 0; c < 2; c++)
     {
-        for (int64_t day = mlocDateMinDay; all && day <= mlocDateMaxDay; day += 999983)
+        for (int64_t day = mlocDateMinDay; all && day <= mlocDateMaxDay; day += lunisolarStride)
         {
             mlocDateFields f;
             all = MadeBack(s_lunisolar[c], (int32_t)day) &&

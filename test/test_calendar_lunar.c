@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// The Chinese and Dangi tables: every year from 1600 to 2400 is the
+// The Chinese and Dangi tables: each year from 1600 to 2400 is the
 // model's but for the overrides, and the days at the tables' ends belong
 // to the same years whichever side computes them. Months are numbered by
 // their new moons alike in the tables and the model, and each number opens
@@ -13,6 +13,20 @@
 #include "test_harness.h"
 
 #include <string.h>
+
+// Whether a table year is compared with the model: every one in
+// conform_calendar, which builds this file again with MLOC_CALENDAR_DENSE
+// and runs in the cldr job and at night under ASan; here the tables' ends,
+// the years around the Qing overrides and every 37th.
+static bool Swept(int64_t year)
+{
+#ifdef MLOC_CALENDAR_DENSE
+    (void)year;
+    return true;
+#else
+    return year <= 1601 || year >= 2399 || (year >= 1895 && year <= 1915) || year % 37 == 0;
+#endif
+}
 
 static bool SameYear(const LunisolarYear* a, const LunisolarYear* b)
 {
@@ -35,6 +49,10 @@ static void TestTablesAreTheModel(void)
     {
         for (int64_t year = 1600; year <= 2400; year++)
         {
+            if (!Swept(year))
+            {
+                continue;
+            }
             LunisolarYear table;
             LunisolarYear model;
             mlocLunarYear(c == 1, year, &table);
@@ -80,17 +98,20 @@ static void TestLunations(void)
     bool all = true;
     for (int c = 0; c < 2; c++)
     {
-        LunisolarYear before;
-        mlocLunarYear(c == 1, 1599, &before);
         for (int64_t year = 1600; year <= 2401; year++)
         {
+            if (!Swept(year))
+            {
+                continue;
+            }
+            LunisolarYear before;
             LunisolarYear y;
             LunisolarYear model;
+            mlocLunarYear(c == 1, year - 1, &before);
             mlocLunarYear(c == 1, year, &y);
             mlocChineseModelYear(c == 1, year, &model);
             all =
                 all && y.lunation == before.lunation + before.count && y.lunation == model.lunation;
-            before = y;
         }
     }
     CHECK(all, "months numbered on from year to year, as the model numbers them");
@@ -101,9 +122,14 @@ static void TestYearOfLunation(void)
     bool all = true;
     for (int c = 0; c < 2; c++)
     {
-        // Every month of the tables and of the years at their ends.
+        // Every month of the tables' years swept and of the years at
+        // their ends.
         for (int64_t year = 1599; year <= 2401; year++)
         {
+            if (!Swept(year))
+            {
+                continue;
+            }
             LunisolarYear y;
             mlocLunarYear(c == 1, year, &y);
             for (uint32_t m = 0; m < y.count; m++)

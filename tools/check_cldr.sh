@@ -116,4 +116,9 @@ cat "$common"/testData/decimal/*.tsv | "$build/conform_numbers" tools/number-exc
 step "matching against ICU's matcher test"
 "$build/conform_match" tools/external/icu/localeMatcherTest.txt tools/match-exceptions.txt
 
+step "the calendar suites' full sweeps, which the suites sample"
+for suite in calendar calendar_lunar calendar_arithmetic calendar_oracle; do
+    "$build/conform_$suite"
+done
+
 step "every CLDR check passed"

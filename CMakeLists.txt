@@ -818,6 +818,18 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(conform_${name} PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
     endforeach()
+    # The calendar suites again with their full sweeps (MLOC_CALENDAR_DENSE),
+    # which tools/check_cldr.sh runs and the nightly run runs under ASan;
+    # the suites sample them.
+    if(NOT MAUL_LOCALE_BUILD_SHARED)
+        foreach(suite calendar calendar_lunar calendar_arithmetic calendar_oracle)
+            add_executable(conform_${suite} test/test_${suite}.c)
+            target_link_libraries(conform_${suite} PRIVATE maul-locale)
+            target_include_directories(conform_${suite} PRIVATE test src)
+            target_compile_definitions(conform_${suite} PRIVATE MLOC_CALENDAR_DENSE)
+            maul_apply_flags(conform_${suite})
+        endforeach()
+    endif()
     # The zones against zic and zdump (tools/check_zones.py), on the library's
     # internal tables. The general compare against CLDR's CollationTest files,
     # on the library's internal compare.

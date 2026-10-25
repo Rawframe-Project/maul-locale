@@ -13,6 +13,34 @@
 
 #include <string.h>
 
+// The sweeps' sizes: a sample here, the full sweep in conform_calendar,
+// which builds this file again with MLOC_CALENDAR_DENSE and runs in the
+// cldr job and at night under ASan. The random pairs come from the same
+// stream, drawn for fewer pairs.
+#ifdef MLOC_CALENDAR_DENSE
+enum
+{
+    additionStride = 7,
+    untilStride = 127,
+    roundTripPairs = 900,
+    roundTripLunisolarPairs = 24,
+    roundingPairs = 24,
+    leapMonthDays = 15000,
+};
+#else
+enum
+{
+    additionStride = 61,
+    untilStride = 1400,
+    roundTripPairs = 60,
+    roundTripLunisolarPairs = 3,
+    roundingPairs = 2,
+    // About eleven years: four Chinese and Dangi leap months, and four of
+    // Hebrew's leap years.
+    leapMonthDays = 4000,
+};
+#endif
+
 enum
 {
     calendarCount = 18,
@@ -143,7 +171,7 @@ static void TestAgainstSpecification(void)
         mlocCalendar calendar = (mlocCalendar)c;
         mlocDate start = {0};
         CHECK(mlocMakeDateFromDay(calendar, 738000, &start) == mloc_success, "a start");
-        for (int32_t step = 0; step < 1200; step += 7)
+        for (int32_t step = 0; step < 1200; step += additionStride)
         {
             mlocDate date = {.day = start.day + step, .calendar = (uint8_t)calendar};
             for (size_t i = 0; i < sizeof(s_durations) / sizeof(s_durations[0]); i++)
@@ -380,7 +408,7 @@ static void TestUntilAgainstSpecification(void)
     long compared = 0;
     for (uint32_t c = 0; c < calendarCount; c++)
     {
-        for (int32_t step = 0; step < 1400; step += 127)
+        for (int32_t step = 0; step < 1400; step += untilStride)
         {
             mlocDate one = {.day = 738000 + step, .calendar = (uint8_t)c};
             for (size_t i = 0; i < sizeof(s_offsets) / sizeof(s_offsets[0]); i++)
@@ -454,7 +482,7 @@ static void TestUntilRoundTrip(void)
     for (uint32_t c = 0; c < calendarCount; c++)
     {
         bool lunisolar = c == mloc_calendarChinese || c == mloc_calendarDangi;
-        for (int i = 0; i < (lunisolar ? 24 : 900); i++)
+        for (int i = 0; i < (lunisolar ? roundTripLunisolarPairs : roundTripPairs); i++)
         {
             int32_t days[2];
             for (int k = 0; k < 2; k++)
@@ -844,7 +872,7 @@ static void TestRoundingAgainstSpecification(void)
     long compared = 0;
     for (uint32_t c = 0; c < calendarCount; c++)
     {
-        for (int i = 0; i < 24; i++)
+        for (int i = 0; i < roundingPairs; i++)
         {
             state = state * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
             mlocDate one = {.day = 700000 + (int32_t)((state >> 33) % 60000),
@@ -885,7 +913,7 @@ static void TestRoundingAgainstSpecification(void)
                                           mloc_calendarHebrew};
     for (size_t c = 0; c < 3; c++)
     {
-        for (int32_t day = 730000; day < 745000; day++)
+        for (int32_t day = 730000; day < 730000 + leapMonthDays; day++)
         {
             mlocDate one = {.day = day, .calendar = (uint8_t)leapCalendars[c]};
             mlocDateFields f = Fields(one);
