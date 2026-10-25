@@ -5,6 +5,7 @@
 
 #include "bytes.h"
 #include "code_point_trie.h"
+#include "invariant.h"
 
 #include "maul-unicode/properties.h"
 
@@ -92,6 +93,7 @@ static bool Upcoming(CollationIterator* it, uint32_t index)
 
 static void Remove(CollationIterator* it, uint32_t index)
 {
+    MLOC_ASSERT(index < it->upcomingCount);
     for (uint32_t i = index + 1; i < it->upcomingCount; i++)
     {
         it->upcoming[i - 1] = it->upcoming[i];
@@ -262,6 +264,9 @@ static void TakeOut(CollationIterator* it, const Match* best)
         }
         else
         {
+            // A match reaches past the lookahead only with room left to
+            // drop its whole context (the limit set where it was taken).
+            MLOC_ASSERT(it->droppedCount < collationMaxDropped);
             it->dropped[it->droppedCount++] = best->at[j];
         }
     }
@@ -435,6 +440,8 @@ static void Expand(CollationIterator* it, const CollationRoot* r, uint32_t codeP
     }
     uint32_t index = mlocCe32Index(ce32);
     uint32_t length = mlocCe32Length(ce32);
+    // An expansion's elements fit the buffer: the length field holds 31.
+    MLOC_ASSERT(length <= collationNumericElements);
     switch (mlocCe32Tag(ce32))
     {
     case collationTagExpansion32:
@@ -531,6 +538,9 @@ static void NumericSegment(CollationIterator* it, const uint8_t* digits, uint32_
     {
         if (shift == 0)
         {
+            // 254 digits are 127 pairs: a length byte and two pairs, then
+            // three pairs an element.
+            MLOC_ASSERT(it->ceCount < collationNumericElements);
             it->ces[it->ceCount - 1] = NumericElement(primary | pair);
             it->ceCount++;
             primary = lead;
@@ -612,10 +622,13 @@ bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut)
         // lets a contraction name only a list before its own.
         while (IsContext(ce32, collationTagContraction))
         {
-            ce32 = MatchContraction(it, unit, mlocCe32Index(ce32));
+            uint32_t list = mlocCe32Index(ce32);
+            ce32 = MatchContraction(it, unit, list);
+            MLOC_ASSERT(!IsContext(ce32, collationTagContraction) || mlocCe32Index(ce32) < list);
         }
         Expand(it, unit, c, ce32);
     }
+    MLOC_ASSERT(it->ceNext < it->ceCount);
     *elementOut = it->ces[it->ceNext++];
     return true;
 }

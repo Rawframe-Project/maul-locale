@@ -4,6 +4,7 @@
 #include "collation_key.h"
 
 #include "collation_iterator.h"
+#include "invariant.h"
 #include "nfd_stream.h"
 
 // ICU's NO_CE, the element after the last: primary 1, secondary and
@@ -59,6 +60,8 @@ typedef struct Sink
 
 static void Put(Sink* s, uint32_t byte)
 {
+    // Each caller masks or bounds its weight to a byte.
+    MLOC_ASSERT(byte <= 0xFF);
     if (s->length < s->capacity)
     {
         s->out[s->length] = (uint8_t)byte;
@@ -201,6 +204,7 @@ static void Commons(Sink* sink, uint32_t* count, uint32_t max, uint32_t middle, 
 // Reverses the bytes [from, to) where they were written.
 static void Reverse(Sink* sink, size_t from, size_t to)
 {
+    MLOC_ASSERT(from <= to && to <= sink->length);
     if (to > sink->capacity)
     {
         return;
