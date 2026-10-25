@@ -50,6 +50,11 @@ char** GenListXml(const char* commonDirectory, const char* subdirectory, int* co
 
 void GenFreeList(char** names, int count);
 
+// Copies length bytes of text into out, NUL-ended; false, with out empty,
+// when they do not fit its capacity, so that a token is refused, never
+// cut short.
+bool GenCopy(char* out, size_t capacity, const char* text, size_t length);
+
 // Stores a little-endian integer of 1 to 8 bytes.
 void GenPut(uint8_t* p, uint64_t value, int bytes);
 

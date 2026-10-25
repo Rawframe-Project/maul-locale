@@ -185,8 +185,9 @@ static void AddType(Zones* z, const XmlNode* type)
     }
 }
 
-// The aliases of each live id, after sorting.
-static void MapAliases(Zones* z, const XmlNode* key)
+// The aliases of each live id, after sorting; 0 and a message for an
+// alias longer than the generator holds.
+static int MapAliases(Zones* z, const XmlNode* key, char* errorOut, size_t errorCapacity)
 {
     for (int i = 0; i < key->childCount; i++)
     {
@@ -200,11 +201,16 @@ static void MapAliases(Zones* z, const XmlNode* key)
         {
             size_t length = strcspn(at, " ");
             char name[tzdbMaxName];
-            snprintf(name, sizeof(name), "%.*s", (int)length, at);
+            if (!GenCopy(name, sizeof(name), at, length))
+            {
+                return Fail(errorOut, errorCapacity, "an alias longer than the generator holds",
+                            at);
+            }
             MapPut(&z->aliases, name, (void*)(uintptr_t)(c - z->codes + 1));
             at += length + (at[length] == ' ');
         }
     }
+    return 1;
 }
 
 static int ReadCodes(Zones* z, char* errorOut, size_t errorCapacity)
@@ -229,9 +235,9 @@ static int ReadCodes(Zones* z, char* errorOut, size_t errorCapacity)
         AddType(z, key->children[i]);
     }
     qsort(z->codes, (size_t)z->codeCount, sizeof(ZoneCode), CompareCodes);
-    MapAliases(z, key);
+    int ok = MapAliases(z, key, errorOut, errorCapacity);
     XmlFree(root);
-    return 1;
+    return ok;
 }
 
 // Seconds since 1970 of "YYYY-MM-DD HH:MM", or with ":SS", in universal

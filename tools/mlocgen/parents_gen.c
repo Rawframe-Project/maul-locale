@@ -15,6 +15,7 @@
 #include "keys.h"
 #include "kinds.h"
 #include "locale_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -119,8 +120,10 @@ static bool HasCollationFile(const char* commonDirectory, const char* id)
     return file != nullptr;
 }
 
-static void AddList(Parents* parents, const Keys* keys, const XmlNode* list,
-                    const char* commonDirectory)
+// Returns 0 and a message for a list or an id longer than the generator
+// holds.
+static int AddList(Parents* parents, const Keys* keys, const XmlNode* list,
+                   const char* commonDirectory, char* errorOut, size_t errorCapacity)
 {
     unsigned components = Components(XmlGetAttribute(list, "component"));
     for (int i = 0; i < list->childCount; i++)
@@ -134,12 +137,24 @@ static void AddList(Parents* parents, const Keys* keys, const XmlNode* list,
         char parentKey[MAX_KEY];
         KeyOf(keys, parent, parentKey, sizeof(parentKey));
         char copy[8192];
-        snprintf(copy, sizeof(copy), "%s", locales);
+        if (!GenCopy(copy, sizeof(copy), locales, strlen(locales)))
+        {
+            snprintf(errorOut, errorCapacity,
+                     "supplementalData.xml: a locale list longer than the generator holds: %s",
+                     parent);
+            return 0;
+        }
         for (char* child = copy; *child != '\0';)
         {
             size_t length = strcspn(child, " ");
             char id[MAX_KEY];
-            snprintf(id, sizeof(id), "%.*s", (int)length, child);
+            if (!GenCopy(id, sizeof(id), child, length))
+            {
+                snprintf(errorOut, errorCapacity,
+                         "supplementalData.xml: a locale id longer than the generator holds: %s",
+                         child);
+                return 0;
+            }
             char childKey[MAX_KEY];
             KeyOf(keys, id, childKey, sizeof(childKey));
             for (int c = 0; c < 5; c++)
@@ -158,6 +173,7 @@ static void AddList(Parents* parents, const Keys* keys, const XmlNode* list,
             child += strspn(child, " ");
         }
     }
+    return 1;
 }
 
 static void Put(uint8_t* p, uint64_t value, int bytes)
@@ -222,9 +238,13 @@ int GenerateParentUnit(const char* commonDirectory, DataFile* file, char* errorO
     Parents parents = {0};
     for (int i = 0; i < root->childCount; i++)
     {
-        if (strcmp(root->children[i]->name, "parentLocales") == 0)
+        if (strcmp(root->children[i]->name, "parentLocales") == 0 &&
+            !AddList(&parents, &keys, root->children[i], commonDirectory, errorOut, errorCapacity))
         {
-            AddList(&parents, &keys, root->children[i], commonDirectory);
+            XmlFree(root);
+            KeysClose(&keys);
+            free(parents.items);
+            return 0;
         }
     }
     XmlFree(root);

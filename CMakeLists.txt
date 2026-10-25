@@ -1291,6 +1291,15 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_include_directories(test_gensegments PRIVATE test src)
             maul_apply_flags(test_gensegments)
             mloc_add_test(gensegments COMMAND test_gensegments)
+            # The generators refuse an overlong token; the suite writes its
+            # CLDR files into the build tree.
+            file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gentokens/supplemental
+                 ${CMAKE_CURRENT_BINARY_DIR}/gentokens/bcp47)
+            add_executable(test_gentokens test/test_gentokens.c)
+            target_link_libraries(test_gentokens PRIVATE mlocgen_core maul-locale)
+            target_include_directories(test_gentokens PRIVATE test src)
+            maul_apply_flags(test_gentokens)
+            mloc_add_test(gentokens COMMAND test_gentokens ${CMAKE_CURRENT_BINARY_DIR}/gentokens)
         endif()
     endif()
 endif()

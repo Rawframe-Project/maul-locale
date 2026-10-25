@@ -14,6 +14,7 @@
 
 #include "kinds.h"
 #include "locale_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -206,7 +207,15 @@ static int AddSubdivisions(Pairs* pairs, const char* common, char* errorOut, siz
             continue;
         }
         char first[MAX_TEXT];
-        snprintf(first, sizeof(first), "%.*s", (int)strcspn(replacement, " "), replacement);
+        if (!GenCopy(first, sizeof(first), replacement, strcspn(replacement, " ")))
+        {
+            snprintf(errorOut, errorCapacity,
+                     "supplementalMetadata.xml: a subdivision replacement longer than the "
+                     "generator holds: %s",
+                     type);
+            XmlFree(root);
+            return 0;
+        }
         char to[MAX_TEXT + 4];
         snprintf(to, sizeof(to), "%s%s", first, strlen(first) == 2 ? "zzzz" : "");
         Add(pairs, "", type, to);

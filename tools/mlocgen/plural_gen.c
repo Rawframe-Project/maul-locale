@@ -12,6 +12,7 @@
 #include "kinds.h"
 #include "map.h"
 #include "plural_rules.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdarg.h>
@@ -549,13 +550,17 @@ static long long Scaled(const char* text)
     return value;
 }
 
-// Prints the samples after one keyword ("@integer" or "@decimal").
-static void PrintSamples(const char* type, const char* id, const char* category,
+// Prints the samples after one keyword ("@integer" or "@decimal"); false
+// when they are longer than the generator holds.
+static bool PrintSamples(const char* type, const char* id, const char* category,
                          const char* samples)
 {
     char copy[maxText];
     size_t length = strcspn(samples, "@");
-    snprintf(copy, sizeof(copy), "%.*s", (int)length, samples);
+    if (!GenCopy(copy, sizeof(copy), samples, length))
+    {
+        return false;
+    }
     for (char* item = strtok(copy, ", \n"); item != nullptr; item = strtok(nullptr, ", \n"))
     {
         if (strcmp(item, "\xE2\x80\xA6") == 0 || strcmp(item, "...") == 0)
@@ -598,9 +603,12 @@ static void PrintSamples(const char* type, const char* id, const char* category,
             }
         }
     }
+    return true;
 }
 
-static void PrintGroup(const XmlNode* group, const char* type)
+// Prints a group's samples; returns 0 and a message for an id or samples
+// longer than the generator holds.
+static int PrintGroup(const XmlNode* group, const char* type, char* errorOut, size_t errorCapacity)
 {
     // The ids are split by hand: the samples use strtok.
     const char* ids = XmlGetAttribute(group, "locales");
@@ -613,7 +621,12 @@ static void PrintGroup(const XmlNode* group, const char* type)
             break;
         }
         char id[64];
-        snprintf(id, sizeof(id), "%.*s", (int)length, at);
+        if (!GenCopy(id, sizeof(id), at, length))
+        {
+            snprintf(errorOut, errorCapacity,
+                     "plurals: a locale id longer than the generator holds: %.*s", (int)length, at);
+            return 0;
+        }
         at += length;
         for (int k = 0; k < group->childCount; k++)
         {
@@ -623,10 +636,17 @@ static void PrintGroup(const XmlNode* group, const char* type)
                  sample = strchr(sample + 1, '@'))
             {
                 const char* keyword = strncmp(sample, "@integer", 8) == 0 ? "@integer" : "@decimal";
-                PrintSamples(type, id, category, sample + strlen(keyword));
+                if (!PrintSamples(type, id, category, sample + strlen(keyword)))
+                {
+                    snprintf(errorOut, errorCapacity,
+                             "plurals: samples longer than the generator holds: %s %s", id,
+                             category);
+                    return 0;
+                }
             }
         }
     }
+    return 1;
 }
 
 int PrintPluralSamples(const char* commonDirectory, char* errorOut, size_t errorCapacity)
@@ -642,9 +662,12 @@ int PrintPluralSamples(const char* commonDirectory, char* errorOut, size_t error
         const XmlNode* plurals = XmlFindChild(root, "plurals");
         for (int g = 0; plurals != nullptr && g < plurals->childCount; g++)
         {
-            if (strcmp(plurals->children[g]->name, "pluralRules") == 0)
+            if (strcmp(plurals->children[g]->name, "pluralRules") == 0 &&
+                !PrintGroup(plurals->children[g], f == 0 ? "cardinal" : "ordinal", errorOut,
+                            errorCapacity))
             {
-                PrintGroup(plurals->children[g], f == 0 ? "cardinal" : "ordinal");
+                XmlFree(root);
+                return 0;
             }
         }
         XmlFree(root);
