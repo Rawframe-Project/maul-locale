@@ -100,9 +100,10 @@ static size_t Escape(const char* p, const char* end, char* out)
     return 0;
 }
 
-// A quoted string from p to the line's end, appended; 0 when it is not
-// one.
-static int QuotedString(const char* p, const char* end, Str* out)
+// A quoted string from p to the line's end, appended; null, or why it is
+// refused. The tool keeps strings as C strings, so a NUL byte in one, as
+// written or escaped, would cut the message short.
+static const char* QuotedString(const char* p, const char* end, Str* out)
 {
     while (p < end && (*p == ' ' || *p == '\t'))
     {
@@ -110,7 +111,7 @@ static int QuotedString(const char* p, const char* end, Str* out)
     }
     if (p == end || *p != '"')
     {
-        return 0;
+        return "a string that is not one";
     }
     for (p++; p < end && *p != '"'; p++)
     {
@@ -120,20 +121,24 @@ static int QuotedString(const char* p, const char* end, Str* out)
             size_t n = Escape(p + 1, end, &c);
             if (n == 0)
             {
-                return 0;
+                return "a string that is not one";
             }
             p += n;
+        }
+        if (c == '\0')
+        {
+            return "a NUL byte in a string";
         }
         Append(out, &c, 1);
     }
     if (p == end)
     {
-        return 0;
+        return "a string that is not one";
     }
     for (p++; p < end && (*p == ' ' || *p == '\t' || *p == '\r'); p++)
     {
     }
-    return p == end;
+    return p == end ? nullptr : "a string that is not one";
 }
 
 static char* Take(Str* s)
@@ -247,7 +252,7 @@ static const char* Keyword(Reading* r, const char* p, const char* end, size_t li
     }
     *seen = 1;
     r->field = field;
-    return QuotedString(p + s_lengths[field], end, target) ? nullptr : "a string that is not one";
+    return QuotedString(p + s_lengths[field], end, target);
 }
 
 // One line of the file.
@@ -302,8 +307,7 @@ static const char* Line(Reading* r, PoFile* po, const char* p, const char* end, 
                       : r->field == fieldId     ? &r->id
                       : r->field == fieldString ? &r->string
                                                 : nullptr;
-        return target != nullptr && QuotedString(p, end, target) ? nullptr
-                                                                 : "a string with no keyword";
+        return target != nullptr ? QuotedString(p, end, target) : "a string with no keyword";
     }
     return Keyword(r, p, end, line);
 }
