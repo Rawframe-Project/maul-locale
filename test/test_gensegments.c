@@ -118,13 +118,20 @@ static void TestRefusals(void)
         "Japanese's six parts with one repeated and another missing");
     CHECK(Refused(LINE(CJ_ID CJ_ID), "CJ as an ideograph in part"),
           "CJ as an ideograph's two variables with one repeated");
-    char variables[2048];
-    int n = snprintf(variables, sizeof(variables), "%s", "<variable id=\"$STerm\">[[$STerm] [");
-    for (int i = 0; i < 64; i++)
+    // 64 escaped characters, U+2000 to U+203F, of 7 bytes each: past the 255
+    // bytes the generator reads.
+    static const char s_open[] = "<variable id=\"$STerm\">[[$STerm] [";
+    static const char s_close[] = "]]</variable>";
+    char variables[sizeof(s_open) + 64 * 7 + sizeof(s_close)];
+    memcpy(variables, s_open, sizeof(s_open) - 1);
+    size_t n = sizeof(s_open) - 1;
+    for (int i = 0; i < 64; i++, n += 7)
     {
-        n += snprintf(variables + n, sizeof(variables) - (size_t)n, "\\u%04X ", 0x2000 + i);
+        char escape[8];
+        snprintf(escape, sizeof(escape), "\\u%04X ", 0x2000 + i);
+        memcpy(variables + n, escape, 7);
     }
-    snprintf(variables + n, sizeof(variables) - (size_t)n, "%s", "]]</variable>");
+    memcpy(variables + n, s_close, sizeof(s_close));
     char file[4096];
     snprintf(file, sizeof(file), SENTENCE("%s"), variables);
     CHECK(Refused(file, "a variable or rule longer than the generator reads"),
