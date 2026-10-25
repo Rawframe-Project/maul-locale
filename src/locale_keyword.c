@@ -109,29 +109,24 @@ static bool AddKeyword(char* text, size_t capacity, size_t* length, bool inU, co
            Append(text, capacity, length, keyword, keywordLength);
 }
 
-bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size_t length)
+// Writes a locale with its -u key left out and, unless keyword is null,
+// added again as keyword ("ca-gregory") at the end of the u extension (or
+// as a new one before private use): parsing puts keys and extensions in
+// order again. A u extension left empty is left out.
+static bool Rewrite(mlocLocale* locale, const char* key, const char* keyword, size_t keywordLength)
 {
-    // The tag as text, the key's old subtags left out and the key added at
-    // the end of the u extension (or as a new one before private use):
-    // parsing puts keys and extensions in order again.
     char text[192];
     size_t n = 0;
-    char keyword[48];
-    if (length + 3 >= sizeof keyword)
-    {
-        return false;
-    }
-    memcpy(keyword, key, 2);
-    keyword[2] = '-';
-    memcpy(keyword + 3, value, length);
-    size_t keywordLength = length + 3;
     bool good = AppendHead(locale, text, sizeof text, &n);
     const char* tail = locale->tail;
     size_t size = FieldLength(tail, sizeof(locale->tail));
     bool inU = false;
     bool skipping = false;
-    bool added = false;
+    bool added = keyword == nullptr;
     bool privateUse = false;
+    // The text's length before the u singleton, and with it.
+    size_t beforeU = 0;
+    size_t withU = 0;
     for (size_t at = 0; good && at < size;)
     {
         size_t k = 0;
@@ -146,11 +141,17 @@ bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size
             good = AddKeyword(text, sizeof text, &n, inU, keyword, keywordLength);
             added = true;
         }
+        if (singleton && inU && n == withU)
+        {
+            n = beforeU;
+        }
         if (singleton)
         {
             inU = tail[at] == 'u';
             privateUse = tail[at] == 'x';
             skipping = false;
+            beforeU = n;
+            withU = n + (n > 0) + 1;
         }
         else if (inU && k == 2)
         {
@@ -166,6 +167,10 @@ bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size
     {
         good = AddKeyword(text, sizeof text, &n, inU, keyword, keywordLength);
     }
+    if (inU && n == withU)
+    {
+        n = beforeU;
+    }
     mlocLocale made;
     if (!good || mlocParseLocale(text, n, &made).status != mloc_success)
     {
@@ -173,4 +178,22 @@ bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size
     }
     *locale = made;
     return true;
+}
+
+bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size_t length)
+{
+    char keyword[48];
+    if (length + 3 >= sizeof keyword)
+    {
+        return false;
+    }
+    memcpy(keyword, key, 2);
+    keyword[2] = '-';
+    memcpy(keyword + 3, value, length);
+    return Rewrite(locale, key, keyword, length + 3);
+}
+
+bool mlocRemoveKeyword(mlocLocale* locale, const char* key)
+{
+    return Rewrite(locale, key, nullptr, 0);
 }

@@ -106,6 +106,10 @@ static void TestBcp47(void)
               Gives("en-US-fonipa-posix-u-ca-iso8601", "en-US-fonipa-u-ca-iso8601-va-posix",
                     mloc_changedVariants),
           "CLDR's variant POSIX is the BCP 47 keyword -u-va-posix");
+    // UTS #35's own examples (Legacy Variants).
+    CHECK(Gives("en-US-POSIX-u-kn-true", "en-US-u-kn-va-posix", mloc_changedVariants) &&
+              Gives("en-US-POSIX-u-kn-va-posix", "en-US-u-kn-va-posix", mloc_changedVariants),
+          "the variant joins the keys the tag has");
 }
 
 static void TestExtensions(void)
