@@ -36,7 +36,7 @@ A call that needs data its set does not have returns `mloc_errorNotFound`. A fil
 
 ## Opening a file
 
-A program reads the file into memory by its own means (a file, an asset bundle, a download) and opens it. The bytes must be 8-byte aligned, which any allocator's memory is, and must outlive the data and everything made from it.
+A program reads the file into memory by its own means (a file, an asset bundle, a download) and opens it. The bytes must be 8-byte aligned, which any allocator's memory is, and must outlive the data and everything made from it, and not change. They are validated once, when opened: bytes changed afterwards may be read outside the file or give any answer, and a build with assertions on may stop with a trap. To replace a file, open the new bytes, make what you need from them, and only then free the old ones.
 
 ```c
 mlocData sources[2];

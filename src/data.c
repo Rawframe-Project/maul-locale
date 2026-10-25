@@ -7,6 +7,7 @@
 #include "bytes.h"
 #include "data_format.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 
 #include "generated/data_version.h"
@@ -91,10 +92,14 @@ static bool OnlyZones(const DataView* view)
 // The id of locale i, which validation has bounded.
 static const uint8_t* LocaleId(const DataView* view, uint32_t i, uint32_t* lengthOut)
 {
+    MLOC_ASSERT(i < view->localeCount);
     const uint8_t* entry = view->bytes + dataHeaderSize + (size_t)view->unitCount * dataUnitSize +
                            (size_t)i * dataLocaleSize;
+    uint32_t offset = mlocLoad32(entry);
     *lengthOut = mlocLoad32(entry + 4);
-    return view->bytes + view->poolOffset + mlocLoad32(entry);
+    MLOC_ASSERT(*lengthOut > 0 && *lengthOut <= dataMaxLocaleId && offset <= view->poolSize &&
+                *lengthOut <= view->poolSize - offset);
+    return view->bytes + view->poolOffset + offset;
 }
 
 // Orders ids by their bytes, a prefix first. Ids are short: a loop
@@ -280,6 +285,9 @@ void mlocOpenBuiltinData(mlocData* dataOut)
         .poolOffset = mlocLoad32(b + headerPoolOffset),
         .poolSize = mlocLoad32(b + headerPoolSize),
     };
+    MLOC_ASSERT(IsHeader(b, mlocBuiltinDataSize) &&
+                mlocLoad32(b + headerFileSize) == mlocBuiltinDataSize &&
+                view.poolOffset <= view.size && view.poolSize == view.size - view.poolOffset);
     *dataOut = (mlocData){0};
     memcpy(dataOut, &view, sizeof(view));
 }
@@ -350,6 +358,10 @@ static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t
         uint64_t middleKey = (uint64_t)mlocLoad32(entry) << 32 | mlocLoad32(entry + 4);
         if (middleKey == key)
         {
+            // An aligned payload between the tables and the pool.
+            MLOC_ASSERT(mlocLoad32(entry + 8) % dataAlignment == 0 &&
+                        mlocLoad32(entry + 8) >=
+                            dataHeaderSize + (uint64_t)unitCount * dataUnitSize);
             *spanOut = (DataSpan){bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
             return true;
         }
