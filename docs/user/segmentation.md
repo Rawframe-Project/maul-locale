@@ -32,7 +32,7 @@ A locale takes the tailoring of the first locale along its segmentation chain th
 | Locale | Tailoring |
 |---|---|
 | `el` | A sentence ends at U+003B and U+037E, the Greek question mark. |
-| `en-US-posix` | U+002E is MidNum in words: "a.b" is three words, "3.14" one. Give POSIX English as the variant `posix` ([#86](https://github.com/Rawframe-Project/maul-locale/issues/86) reads `-u-va-posix` too). |
+| `en-US-u-va-posix` | U+002E is MidNum in words: "a.b" is three words, "3.14" one. `mlocCanonicalizeLocale` gives this locale for `en-US-posix` and `en_US_POSIX`; a locale parsed with the variant `posix` takes the same tailoring. |
 | `ja` | Rule 13.3 keeps a run of Hiragana one word, and 13.4 a run of ideographs (with 々, 〇 and 〻). Lines break before small kana and the prolonged sound mark (CJ as ID). |
 | `zh`, `zh-Hant` | Lines break before small kana and the prolonged sound mark. |
 | `de`, `en`, `es`, `fr`, `it`, `pt`, `ru` | The abbreviations of the suppressions below. |
@@ -65,7 +65,7 @@ while (r == mloc_success)
 
 ## Differences from ICU4C
 
-The library follows CLDR's segments files. ICU4C 79.1 agrees with it on every suppression of every locale, with `-u-ss-standard` and without, on the class overrides, and on plain text of every kind in each locale CLDR tailors, except where ICU4C uses data or rules of its own, which CLDR does not have. `test/test_segment.c` compares 2031 cases with ICU4C's answers (`tools/oracle/segment/`) and lists each one that differs in `tools/segment-exceptions.txt`:
+The library follows CLDR's segments files. ICU4C 79.1 agrees with it on every suppression of every locale, with `-u-ss-standard` and without, on the class overrides, and on plain text of every kind in each locale CLDR tailors, except where ICU4C uses data or rules of its own, which CLDR does not have. `test/test_segment.c` compares 2033 cases with ICU4C's answers (`tools/oracle/segment/`) and lists each one that differs in `tools/segment-exceptions.txt`:
 
 | Case | ICU4C 79.1 | The library |
 |---|---|---|

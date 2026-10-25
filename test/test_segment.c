@@ -155,6 +155,9 @@ static void TestWords(void)
     CHECK(Is("en-US-posix", 'w', "3.14 a.b", "[3.14][ ][a][.][b]") &&
               Is("en-US", 'w', "3.14 a.b", "[3.14][ ][a.b]"),
           "POSIX English keeps the full stop out of words");
+    CHECK(Is("en-US-u-va-posix", 'w', "3.14 a.b", "[3.14][ ][a][.][b]") &&
+              Is("en-US-u-ss-standard-va-posix", 's', "Ab Mr. Cd ef. Gh.", "[Ab Mr. Cd ef. ][Gh.]"),
+          "-u-va-posix is POSIX English: its words, and English's sentences");
     // Rules 13.3 and 13.4 keep a Hiragana run, and a run of ideographs (with
     // U+3005), one word.
     CHECK(Is("ja", 'w',
