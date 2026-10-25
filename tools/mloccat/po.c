@@ -239,7 +239,9 @@ static const char* Keyword(Reading* r, const char* p, const char* end, size_t li
     {
         return field == fieldNone ? "a line the format does not have" : "a keyword given twice";
     }
-    if (field == fieldId)
+    // An entry's line is its msgid's, and its first keyword's until then, so
+    // a refusal of an entry without msgid names a line too.
+    if (field == fieldId || (!r->hasContext && !r->hasId && !r->hasString))
     {
         r->line = line;
     }
