@@ -78,9 +78,10 @@ jobs:
           persist-credentials: false
       - name: clang-format
         # A check that finds no file fails rather than passing on nothing.
+        # The test hygiene fixtures break the rules on purpose.
         run: |
           clang-format --version
-          mapfile -t files < <(git ls-files '*.[ch]' '*.cpp' | grep -v '^src/generated/')
+          mapfile -t files < <(git ls-files '*.[ch]' '*.cpp' | grep -v -e '^src/generated/' -e '^tools/test_hygiene/')
           echo "${#files[@]} files"
           [ "${#files[@]}" -gt 500 ] || { echo "::error::too few files to format: ${#files[@]}"; exit 1; }
           clang-format --dry-run -Werror "${files[@]}"
