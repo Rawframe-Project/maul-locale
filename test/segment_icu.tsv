@@ -1880,6 +1880,8 @@ de-u-ss-standard	sentence	Ab z. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 
 de-u-ss-standard	sentence	Ab z.B. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25) Cd ef. Gh.	107,110
 el	sentence	Ναι; Όχι; Τέλος; Αρχή. Ναι	8,16,29,39,45
 en-US-posix	word	3.14 a.b c.d. e.f	4,5,6,7,8,9,10,11,12,13,14,15,16,17
+en-US-u-va-posix	word	3.14 a.b c.d. e.f	4,5,6,7,8,9,10,11,12,13,14,15,16,17
+en-US-u-ss-standard-va-posix	sentence	Ab Mr. Cd ef. Gh.	14,17
 en-US	word	3.14 a.b c.d. e.f	4,5,8,9,12,13,14,17
 und	line	あぁあーい	6,12,15
 und	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51

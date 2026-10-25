@@ -67,8 +67,8 @@ extern "C"
     /// Starts a segmenter over a UTF-8 text or its first piece, with a
     /// locale's tailoring of that kind of segmentation: the first unit
     /// along the locale's segmentation chain that tailors it (a variant,
-    /// then the region, then the script are dropped; "en-US-posix" takes
-    /// POSIX English's words and English's sentences), else Maul Unicode's
+    /// then the region, then the script are dropped; "en-US-u-va-posix"
+    /// takes POSIX English's words and English's sentences), else Maul Unicode's
     /// rules alone. Each maximal ill-formed UTF-8 subpart counts as one
     /// U+FFFD.
     ///

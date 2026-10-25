@@ -71,6 +71,9 @@ def cases(common):
         out.append((locale + "-u-ss-standard", "sentence", f"Ab {word} {NUMBERS} Cd ef. Gh."))
     out.append(("el", "sentence", "Ναι; Όχι; Τέλος; Αρχή. Ναι"))
     out.append(("en-US-posix", "word", "3.14 a.b c.d. e.f"))
+    # POSIX English as BCP 47 writes it, and its sentences from English.
+    out.append(("en-US-u-va-posix", "word", "3.14 a.b c.d. e.f"))
+    out.append(("en-US-u-ss-standard-va-posix", "sentence", "Ab Mr. Cd ef. Gh."))
     out.append(("en-US", "word", "3.14 a.b c.d. e.f"))
     for locale in ("und", "en", "ja", "zh", "zh-Hant", "ko", "de"):
         for key in ("", "-u-lb-strict", "-u-lb-normal", "-u-lb-loose"):
