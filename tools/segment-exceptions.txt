@@ -49,3 +49,7 @@ ja-words	ja	word	ひらがなとかんじ
 ja-words	ja	word	これはひらがなです
 ja-words	ja	word	ゝゞのほか゛とゕゖ
 ja-words	ja	word	あ゙い
+ja-words	ja	word	漢字仮名交じり文
+ja-words	ja	word	人々は日本語を話す
+ja-words	ja	word	〇〇年に〻
+ja-words	ja	word	⺀⺁漢𗀀𛅰

@@ -65,7 +65,7 @@ while (r == mloc_success)
 
 ## Differences from ICU4C
 
-The library follows CLDR's segments files. ICU4C 79.1 agrees with it on every suppression of every locale, with `-u-ss-standard` and without, on the class overrides, and on plain text of every kind in each locale CLDR tailors, except where ICU4C uses data or rules of its own, which CLDR does not have. `test/test_segment.c` compares 2042 cases with ICU4C's answers (`tools/oracle/segment/`) and lists each one that differs in `tools/segment-exceptions.txt`:
+The library follows CLDR's segments files. ICU4C 79.1 agrees with it on every suppression of every locale, with `-u-ss-standard` and without, on the class overrides, and on plain text of every kind in each locale CLDR tailors, except where ICU4C uses data or rules of its own, which CLDR does not have. `test/test_segment.c` compares 2031 cases with ICU4C's answers (`tools/oracle/segment/`) and lists each one that differs in `tools/segment-exceptions.txt`:
 
 | Case | ICU4C 79.1 | The library |
 |---|---|---|
