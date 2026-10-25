@@ -3,7 +3,8 @@
 //
 // The segmentation data file's unit (segment_tables.h): a unit built here,
 // valid, and copies with one field spoiled; then segments.mloc: every unit
-// valid, and each locale's tailoring as CLDR's common/segments gives it.
+// valid, and each locale's tailoring as CLDR's common/segments gives it,
+// its suppressions in ICU4C's two tables.
 
 #include "bytes.h"
 #include "data_view.h"
@@ -28,18 +29,22 @@ static void Put(uint8_t* p, uint64_t value, int bytes)
 enum
 {
     // The unit built here gives every type: CJ as an ideograph, Japanese
-    // words, a word override of the full stop, two sentence overrides
-    // and two suppressions, "z.B." before "Mr." read from the end.
+    // words, a word override of the full stop, two sentence overrides,
+    // the backward entries "Dr." and "Mr." (matches) and "z." (partial),
+    // read from the end, and the forward entries "z.B." and "z.T.".
     builtWords = 1,
     builtSentences = 2,
-    builtSuppressions = 2,
+    builtBackward = 3,
+    builtForward = 2,
     builtWordOverrides = segmentHeaderSize,
     builtSentenceOverrides = builtWordOverrides + segmentOverrideSize * builtWords,
-    builtOffsets = builtSentenceOverrides + segmentOverrideSize * builtSentences,
-    builtText = builtOffsets + 4 * (builtSuppressions + 1),
+    builtValues = builtSentenceOverrides + segmentOverrideSize * builtSentences,
+    builtOffsets = builtValues + 4 * builtBackward,
+    builtText = builtOffsets + 4 * (builtBackward + builtForward + 1),
 };
 
-static const char s_builtText[] = "z.B.Mr.";
+static const char s_builtText[] = "Dr.Mr.z.z.B.z.T.";
+static const uint32_t s_builtOffsets[] = {0, 3, 6, 8, 12, 16};
 
 alignas(8) static uint8_t s_unit[256];
 
@@ -51,16 +56,22 @@ static uint32_t BuildUnit(void)
     Put(s_unit + 4, segmentCjIdeographic | segmentJapaneseWords, 4);
     Put(s_unit + 8, builtWords, 4);
     Put(s_unit + 12, builtSentences, 4);
-    Put(s_unit + 16, builtSuppressions, 4);
-    Put(s_unit + 20, textSize, 4);
+    Put(s_unit + 16, builtBackward, 4);
+    Put(s_unit + 20, builtForward, 4);
+    Put(s_unit + 24, textSize, 4);
     Put(s_unit + builtWordOverrides, 0x2E, 4);
     Put(s_unit + builtWordOverrides + 4, segmentWordMidNum, 4);
     Put(s_unit + builtSentenceOverrides, 0x3B, 4);
     Put(s_unit + builtSentenceOverrides + 4, segmentSentenceSTerm, 4);
     Put(s_unit + builtSentenceOverrides + 8, 0x37E, 4);
     Put(s_unit + builtSentenceOverrides + 12, segmentSentenceSTerm, 4);
-    Put(s_unit + builtOffsets + 4, 4, 4);
-    Put(s_unit + builtOffsets + 8, textSize, 4);
+    Put(s_unit + builtValues, segmentSuppressionMatch, 4);
+    Put(s_unit + builtValues + 4, segmentSuppressionMatch, 4);
+    Put(s_unit + builtValues + 8, segmentSuppressionPartial, 4);
+    for (uint32_t i = 0; i < builtBackward + builtForward + 1; i++)
+    {
+        Put(s_unit + builtOffsets + 4 * i, s_builtOffsets[i], 4);
+    }
     memcpy(s_unit + builtText, s_builtText, textSize);
     return builtText + textSize;
 }
@@ -103,7 +114,8 @@ static void TestUnit(void)
               Refuses(0, segmentGivesWord | segmentGivesLine, 4),
           "a flag or overrides or suppressions of a type not given");
     CHECK(Refuses(8, segmentMaxOverrides + 1, 4) && Refuses(12, segmentMaxOverrides + 1, 4) &&
-              Refuses(16, segmentMaxSuppressions + 1, 4) && Refuses(20, 8, 4),
+              Refuses(16, segmentMaxSuppressions + 1, 4) &&
+              Refuses(20, segmentMaxSuppressions + 1, 4) && Refuses(24, 15, 4),
           "the counts past their bounds or the size");
     CHECK(Refuses(builtWordOverrides, 0xD800, 4) && Refuses(builtWordOverrides, 0x110000, 4),
           "a surrogate or a code point past U+10FFFF");
@@ -113,19 +125,17 @@ static void TestUnit(void)
     CHECK(Refuses(builtWordOverrides + 4, segmentWordClassCount, 4) &&
               Refuses(builtSentenceOverrides + 4, segmentSentenceClassCount, 4),
           "a class past its property's");
-    CHECK(Refuses(builtOffsets, 1, 4) && Refuses(builtOffsets + 8, 6, 4),
+    CHECK(Refuses(builtValues + 4, segmentSuppressionPartial + 1, 4),
+          "a value past the known ones");
+    CHECK(Refuses(builtOffsets, 1, 4) && Refuses(builtOffsets + 20, 15, 4),
           "the offsets' first and last");
-    CHECK(Refuses(builtOffsets + 4, 0, 4) && Refuses(builtOffsets + 4, 8, 4),
-          "an empty suppression, offsets out of order");
-    CHECK(TextRefused("Mr.z.B."), "suppressions out of order read from the end");
-    // The same suppression twice: "Mr." and "Mr.".
-    uint32_t twice = BuildUnit() - 1;
-    Put(s_unit + 20, 6, 4);
-    Put(s_unit + builtOffsets + 4, 3, 4);
-    Put(s_unit + builtOffsets + 8, 6, 4);
-    memcpy(s_unit + builtText, "Mr.Mr.", 6);
-    CHECK(!Valid(twice), "the same suppression twice");
-    CHECK(TextRefused("z.B\x01Mr."), "a control byte");
+    CHECK(Refuses(builtOffsets + 4, 0, 4) && Refuses(builtOffsets + 8, 2, 4),
+          "an empty entry, offsets out of order");
+    CHECK(TextRefused("Mr.Dr.z.z.B.z.T.") && TextRefused("Mr.Mr.z.z.B.z.T."),
+          "backward entries out of order read from the end, or twice");
+    CHECK(TextRefused("Dr.Mr.z.z.T.z.B.") && TextRefused("Dr.Mr.z.z.B.z.B."),
+          "forward entries out of order, or twice");
+    CHECK(TextRefused("Dr.Mr\x01z.z.B.z.T."), "a control byte");
 }
 
 alignas(8) static uint8_t s_buffer[1 << 16];
@@ -157,15 +167,16 @@ static DataSpan Unit(const char* key)
 
 // Whether a key's unit gives these types and flags, with these overrides
 // (code point and class pairs, the word's then the sentence's) and this
-// many suppressions.
+// many backward and forward entries.
 static bool Is(const char* key, uint32_t given, uint32_t flags, const uint32_t* words,
                uint32_t wordCount, const uint32_t* sentences, uint32_t sentenceCount,
-               uint32_t suppressions)
+               uint32_t backward, uint32_t forward)
 {
     DataSpan unit = Unit(key);
     if (unit.bytes == nullptr || mlocLoad32(unit.bytes) != given ||
         mlocLoad32(unit.bytes + 4) != flags || mlocLoad32(unit.bytes + 8) != wordCount ||
-        mlocLoad32(unit.bytes + 12) != sentenceCount || mlocLoad32(unit.bytes + 16) != suppressions)
+        mlocLoad32(unit.bytes + 12) != sentenceCount || mlocLoad32(unit.bytes + 16) != backward ||
+        mlocLoad32(unit.bytes + 20) != forward)
     {
         printf("  %s: no unit or another header\n", key);
         return false;
@@ -184,8 +195,16 @@ static bool Is(const char* key, uint32_t given, uint32_t flags, const uint32_t* 
     return true;
 }
 
-// Whether a key's unit holds a suppression.
-static bool Suppresses(const char* key, const char* text)
+enum
+{
+    // What Has looks for: a backward entry with its value, or a forward
+    // entry.
+    forwardEntry = 2,
+};
+
+// Whether a key's unit holds an entry: a backward one with this value, or
+// a forward one.
+static bool Has(const char* key, const char* text, uint32_t value)
 {
     DataSpan unit = Unit(key);
     if (unit.bytes == nullptr)
@@ -193,17 +212,21 @@ static bool Suppresses(const char* key, const char* text)
         return false;
     }
     uint32_t overrides = mlocLoad32(unit.bytes + 8) + mlocLoad32(unit.bytes + 12);
-    uint32_t count = mlocLoad32(unit.bytes + 16);
-    const uint8_t* offsets =
+    uint32_t backward = mlocLoad32(unit.bytes + 16);
+    uint32_t count = backward + mlocLoad32(unit.bytes + 20);
+    const uint8_t* values =
         unit.bytes + segmentHeaderSize + segmentOverrideSize * (size_t)overrides;
+    const uint8_t* offsets = values + 4 * (size_t)backward;
     const uint8_t* texts = offsets + 4 * ((size_t)count + 1);
-    for (uint32_t i = 0; i < count; i++)
+    for (uint32_t i = value == forwardEntry ? backward : 0; i < count; i++)
     {
         uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);
         uint32_t end = mlocLoad32(offsets + 4 * (size_t)i + 4);
         if (end - start == strlen(text) && memcmp(texts + start, text, end - start) == 0)
         {
-            return true;
+            return value == forwardEntry
+                       ? true
+                       : i < backward && mlocLoad32(values + 4 * (size_t)i) == value;
         }
     }
     return false;
@@ -220,23 +243,28 @@ static void TestFile(void)
     s_data = (mlocDataSet){&s_source, 1};
     static const uint32_t s_greek[] = {0x3B, segmentSentenceSTerm, 0x37E, segmentSentenceSTerm};
     static const uint32_t s_posix[] = {0x2E, segmentWordMidNum};
-    CHECK(Is("el", segmentGivesSentence, 0, nullptr, 0, s_greek, 2, 0),
+    CHECK(Is("el", segmentGivesSentence, 0, nullptr, 0, s_greek, 2, 0, 0),
           "Greek ends a sentence at U+003B and U+037E");
-    CHECK(Is("en_US_POSIX", segmentGivesWord, 0, s_posix, 1, nullptr, 0, 0),
+    CHECK(Is("en_US_POSIX", segmentGivesWord, 0, s_posix, 1, nullptr, 0, 0, 0),
           "POSIX English's full stop is MidNum, its sentences its parents'");
     CHECK(Is("ja", segmentGivesWord | segmentGivesLine, segmentCjIdeographic | segmentJapaneseWords,
-             nullptr, 0, nullptr, 0, 0),
+             nullptr, 0, nullptr, 0, 0, 0),
           "Japanese: CJ as an ideograph and the word rules 13.3 and 13.4");
-    CHECK(Is("zh", segmentGivesLine, segmentCjIdeographic, nullptr, 0, nullptr, 0, 0) &&
-              Is("zh_Hant", segmentGivesLine, segmentCjIdeographic, nullptr, 0, nullptr, 0, 0),
+    CHECK(Is("zh", segmentGivesLine, segmentCjIdeographic, nullptr, 0, nullptr, 0, 0, 0) &&
+              Is("zh_Hant", segmentGivesLine, segmentCjIdeographic, nullptr, 0, nullptr, 0, 0, 0),
           "Chinese: CJ as an ideograph");
-    CHECK(Is("de", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 241) &&
-              Is("en", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 151) &&
-              Is("ru", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 18),
-          "the suppressions of German, English and Russian");
-    CHECK(Suppresses("de", "z.B.") && Suppresses("en", "Mr.") && Suppresses("de", "Ursprüngl.") &&
-              Suppresses("fr", "trav. publ.") && !Suppresses("en", "z.B."),
-          "suppressions as written, non-ASCII and with a space");
+    CHECK(Is("de", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 192, 74) &&
+              Is("en", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 119, 51) &&
+              Is("ru", segmentGivesSentence, 0, nullptr, 0, nullptr, 0, 17, 3),
+          "the suppressions' tables of German, English and Russian");
+    CHECK(Has("en", "Mr.", segmentSuppressionMatch) &&
+              Has("de", "Ursprüngl.", segmentSuppressionMatch) &&
+              !Has("en", "z.B.", segmentSuppressionMatch),
+          "matches as written, non-ASCII");
+    CHECK(Has("de", "z.", segmentSuppressionPartial) && Has("de", "z.B.", forwardEntry) &&
+              Has("fr", "trav.", segmentSuppressionPartial) &&
+              Has("fr", "trav. publ.", forwardEntry) && !Has("de", "z.B.", segmentSuppressionMatch),
+          "partials and their families' forward entries, with a space");
     CHECK(Unit("en_US").bytes == nullptr && Unit("root").bytes == nullptr,
           "no unit for a file that gives no segmentation, or for root");
 }
