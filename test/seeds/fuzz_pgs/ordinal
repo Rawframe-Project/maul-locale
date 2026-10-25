@@ -1,0 +1,5 @@
+.input {$p :number select=ordinal}
+.input {$g :string}
+.match $p $g
+one fem {{First, she}}
+* * {{{$p}th}}

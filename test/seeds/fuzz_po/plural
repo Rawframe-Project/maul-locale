@@ -1,0 +1,13 @@
+#, mf2-format
+msgctxt "files"
+msgid ""
+".input {$n :integer}\n"
+".match $n\n"
+"one {{One file}}\n"
+"* {{{$n} files}}"
+msgstr ""
+".input {$n :integer}\n"
+".match $n\n"
+"0 {{la milaffat}}\n"
+"two {{milaffan}}\n"
+"* {{{$n} milaff}}"

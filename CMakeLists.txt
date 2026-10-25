@@ -855,6 +855,19 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
 endif()
 
+# The catalog tool's parts but its compiler, which also needs the
+# generator's data file writer: mloccat_core and the fuzz targets of its
+# readers build them.
+set(MLOCCAT_SOURCES tools/mloccat/accept.c tools/mloccat/catalog_set.c
+                    tools/mloccat/exchange_po.c tools/mloccat/file.c tools/mloccat/json.c
+                    tools/mloccat/message_text.c tools/mloccat/mf2_parts.c tools/mloccat/pgs.c
+                    tools/mloccat/po.c tools/mloccat/pseudo.c tools/mloccat/report.c
+                    tools/mloccat/report_write.c tools/mloccat/resource.c
+                    tools/mloccat/resource_check.c tools/mloccat/resource_edit.c
+                    tools/mloccat/resource_write.c tools/mloccat/stale.c
+                    tools/mloccat/xliff_codes.c tools/mloccat/xliff_pgs.c
+                    tools/mloccat/xliff_read.c tools/mloccat/xliff_write.c tools/mloccat/table.c)
+
 # The fuzz targets: test/fuzz_<area>.c, run as fuzz_<area> <corpus dir>.
 # They reach internal functions, so the library is static.
 if(MAUL_LOCALE_FUZZ)
@@ -901,6 +914,22 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined
                                                -fno-sanitize-recover=all)
     target_link_options(fuzz_resource PRIVATE -fsanitize=fuzzer,address,undefined)
+    # The tool's exchange readers (PO, XLIFF with the generator's XML reader,
+    # selection messages), from its parts instrumented as the library is.
+    add_library(mloccat_fuzz STATIC ${MLOCCAT_SOURCES} tools/mlocgen/xml.c)
+    target_include_directories(mloccat_fuzz PUBLIC tools/mloccat tools/mlocgen src)
+    target_link_libraries(mloccat_fuzz PUBLIC maul-locale maul-unicode)
+    maul_apply_flags(mloccat_fuzz)
+    target_compile_options(mloccat_fuzz PRIVATE -fsanitize=fuzzer-no-link,address,undefined
+                                                -fno-sanitize-recover=all)
+    foreach(area po pgs xliff)
+        add_executable(fuzz_${area} test/fuzz_${area}.c)
+        target_link_libraries(fuzz_${area} PRIVATE mloccat_fuzz)
+        maul_apply_flags(fuzz_${area})
+        target_compile_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined
+                                                -fno-sanitize-recover=all)
+        target_link_options(fuzz_${area} PRIVATE -fsanitize=fuzzer,address,undefined)
+    endforeach()
     # The generator's collation rule parser, from its source likewise.
     add_executable(fuzz_collation_rules test/fuzz_collation_rules.c
                                         tools/mlocgen/collation_rules.c)
@@ -976,19 +1005,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     maul_apply_flags(mlocgen)
     # The catalog tool, mloccat: its parts are a static library so that their
     # tests link them alone.
-    add_library(mloccat_core STATIC tools/mloccat/accept.c tools/mloccat/catalog_set.c
-                             tools/mloccat/compile.c tools/mloccat/exchange_po.c
-                             tools/mloccat/file.c tools/mloccat/json.c tools/mloccat/message_text.c
-                             tools/mloccat/mf2_parts.c
-                             tools/mloccat/pgs.c tools/mloccat/po.c tools/mloccat/pseudo.c
-                             tools/mloccat/report.c
-                             tools/mloccat/report_write.c
-                             tools/mloccat/resource.c tools/mloccat/resource_check.c
-                             tools/mloccat/resource_edit.c tools/mloccat/resource_write.c
-                             tools/mloccat/stale.c tools/mloccat/xliff_codes.c
-                             tools/mloccat/xliff_pgs.c
-                             tools/mloccat/xliff_read.c tools/mloccat/xliff_write.c
-                             tools/mloccat/table.c)
+    add_library(mloccat_core STATIC ${MLOCCAT_SOURCES} tools/mloccat/compile.c)
     # The compiler writes the data layout and the catalog units the library
     # reads (src/data_format.h, src/catalog_tables.h), with the generator's
     # data file writer.

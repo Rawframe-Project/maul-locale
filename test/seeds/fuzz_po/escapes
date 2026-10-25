@@ -1,0 +1,20 @@
+# translator
+#: src/a.c:1
+msgid ""
+msgstr "Language: tr\n"
+
+#. first
+#.
+#. third
+#, c-format, fuzzy,mf2-format
+#| msgid "old"
+msgctxt "k"
+msgid "a\tb\"c\\d\101\x42\71\157\117\100\077\107\377\n"
+"next"
+msgstr ""
+"x"
+
+#~ msgid "gone"
+#~ msgstr "x"
+msgid "bare"
+msgstr ""
