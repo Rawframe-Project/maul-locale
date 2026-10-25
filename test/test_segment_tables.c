@@ -4,11 +4,13 @@
 // The segmentation data file's unit (segment_tables.h): a unit built here,
 // valid, and copies with one field spoiled; then segments.mloc: every unit
 // valid, and each locale's tailoring as CLDR's common/segments gives it,
-// its suppressions in ICU4C's two tables.
+// its overrides in the code table (segment_overrides.h) and its
+// suppressions in ICU4C's two tables.
 
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "segment_overrides.h"
 #include "segment_tables.h"
 #include "test_harness.h"
 
@@ -29,16 +31,12 @@ static void Put(uint8_t* p, uint64_t value, int bytes)
 enum
 {
     // The unit built here gives every type: CJ as an ideograph, Japanese
-    // words, a word override of the full stop, two sentence overrides,
-    // the backward entries "Dr." and "Mr." (matches) and "z." (partial),
-    // read from the end, and the forward entries "z.B." and "z.T.".
-    builtWords = 1,
-    builtSentences = 2,
+    // words, a word and a sentence set of overrides, the backward entries
+    // "Dr." and "Mr." (matches) and "z." (partial), read from the end, and
+    // the forward entries "z.B." and "z.T.".
     builtBackward = 3,
     builtForward = 2,
-    builtWordOverrides = segmentHeaderSize,
-    builtSentenceOverrides = builtWordOverrides + segmentOverrideSize * builtWords,
-    builtValues = builtSentenceOverrides + segmentOverrideSize * builtSentences,
+    builtValues = segmentHeaderSize,
     builtOffsets = builtValues + 4 * builtBackward,
     builtText = builtOffsets + 4 * (builtBackward + builtForward + 1),
 };
@@ -48,23 +46,30 @@ static const uint32_t s_builtOffsets[] = {0, 3, 6, 8, 12, 16};
 
 alignas(8) static uint8_t s_unit[256];
 
+// The number plus one of the code table's first set of a kind, or 0.
+static uint32_t FirstSet(mlocSegmentKind kind)
+{
+    for (uint32_t i = 0; i < mlocSegmentOverrideSetCount; i++)
+    {
+        if (mlocSegmentOverrideSets[i].kind == kind)
+        {
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
 static uint32_t BuildUnit(void)
 {
     memset(s_unit, 0, sizeof(s_unit));
     uint32_t textSize = (uint32_t)strlen(s_builtText);
     Put(s_unit, segmentGivesWord | segmentGivesSentence | segmentGivesLine, 4);
     Put(s_unit + 4, segmentCjIdeographic | segmentJapaneseWords, 4);
-    Put(s_unit + 8, builtWords, 4);
-    Put(s_unit + 12, builtSentences, 4);
+    Put(s_unit + 8, FirstSet(mloc_segmentWord), 4);
+    Put(s_unit + 12, FirstSet(mloc_segmentSentence), 4);
     Put(s_unit + 16, builtBackward, 4);
     Put(s_unit + 20, builtForward, 4);
     Put(s_unit + 24, textSize, 4);
-    Put(s_unit + builtWordOverrides, 0x2E, 4);
-    Put(s_unit + builtWordOverrides + 4, segmentWordMidNum, 4);
-    Put(s_unit + builtSentenceOverrides, 0x3B, 4);
-    Put(s_unit + builtSentenceOverrides + 4, segmentSentenceSTerm, 4);
-    Put(s_unit + builtSentenceOverrides + 8, 0x37E, 4);
-    Put(s_unit + builtSentenceOverrides + 12, segmentSentenceSTerm, 4);
     Put(s_unit + builtValues, segmentSuppressionMatch, 4);
     Put(s_unit + builtValues + 4, segmentSuppressionMatch, 4);
     Put(s_unit + builtValues + 8, segmentSuppressionPartial, 4);
@@ -113,18 +118,17 @@ static void TestUnit(void)
               Refuses(0, segmentGivesSentence | segmentGivesLine, 4) &&
               Refuses(0, segmentGivesWord | segmentGivesLine, 4),
           "a flag or overrides or suppressions of a type not given");
-    CHECK(Refuses(8, segmentMaxOverrides + 1, 4) && Refuses(12, segmentMaxOverrides + 1, 4) &&
-              Refuses(16, segmentMaxSuppressions + 1, 4) &&
+    CHECK(FirstSet(mloc_segmentWord) != 0 && FirstSet(mloc_segmentSentence) != 0,
+          "the code table has word and sentence overrides");
+    CHECK(Refuses(16, segmentMaxSuppressions + 1, 4) &&
               Refuses(20, segmentMaxSuppressions + 1, 4) && Refuses(24, 15, 4),
           "the counts past their bounds or the size");
-    CHECK(Refuses(builtWordOverrides, 0xD800, 4) && Refuses(builtWordOverrides, 0x110000, 4),
-          "a surrogate or a code point past U+10FFFF");
-    CHECK(Refuses(builtSentenceOverrides + 8, 0x3B, 4) &&
-              Refuses(builtSentenceOverrides + 8, 0x3A, 4),
-          "overrides not strictly ascending");
-    CHECK(Refuses(builtWordOverrides + 4, segmentWordClassCount, 4) &&
-              Refuses(builtSentenceOverrides + 4, segmentSentenceClassCount, 4),
-          "a class past its property's");
+    CHECK(Refuses(8, mlocSegmentOverrideSetCount + 1, 4) &&
+              Refuses(12, mlocSegmentOverrideSetCount + 1, 4),
+          "a set past the code table's");
+    CHECK(Refuses(8, FirstSet(mloc_segmentSentence), 4) &&
+              Refuses(12, FirstSet(mloc_segmentWord), 4),
+          "a set of the other type");
     CHECK(Refuses(builtValues + 4, segmentSuppressionPartial + 1, 4),
           "a value past the known ones");
     CHECK(Refuses(builtOffsets, 1, 4) && Refuses(builtOffsets + 20, 15, 4),
@@ -165,6 +169,30 @@ static DataSpan Unit(const char* key)
     return unit;
 }
 
+// Whether an override field names a set of these overrides (code point
+// and Maul Unicode class pairs), or none for a count of 0.
+static bool SetIs(uint32_t field, const uint32_t* pairs, uint32_t count)
+{
+    if (field == 0 || field > mlocSegmentOverrideSetCount)
+    {
+        return field == 0 && count == 0;
+    }
+    const SegmentOverrideSet* set = &mlocSegmentOverrideSets[field - 1];
+    if (set->count != count)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const muniBreakClassOverride* o = &mlocSegmentOverrides[set->first + i];
+        if (o->codePoint != pairs[2 * i] || o->value != pairs[2 * i + 1])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Whether a key's unit gives these types and flags, with these overrides
 // (code point and class pairs, the word's then the sentence's) and this
 // many backward and forward entries.
@@ -174,23 +202,13 @@ static bool Is(const char* key, uint32_t given, uint32_t flags, const uint32_t* 
 {
     DataSpan unit = Unit(key);
     if (unit.bytes == nullptr || mlocLoad32(unit.bytes) != given ||
-        mlocLoad32(unit.bytes + 4) != flags || mlocLoad32(unit.bytes + 8) != wordCount ||
-        mlocLoad32(unit.bytes + 12) != sentenceCount || mlocLoad32(unit.bytes + 16) != backward ||
-        mlocLoad32(unit.bytes + 20) != forward)
+        mlocLoad32(unit.bytes + 4) != flags ||
+        !SetIs(mlocLoad32(unit.bytes + 8), words, wordCount) ||
+        !SetIs(mlocLoad32(unit.bytes + 12), sentences, sentenceCount) ||
+        mlocLoad32(unit.bytes + 16) != backward || mlocLoad32(unit.bytes + 20) != forward)
     {
-        printf("  %s: no unit or another header\n", key);
+        printf("  %s: no unit, another header or other overrides\n", key);
         return false;
-    }
-    const uint8_t* at = unit.bytes + segmentHeaderSize;
-    for (uint32_t i = 0; i < 2 * (wordCount + sentenceCount); i++)
-    {
-        uint32_t want = i < 2 * wordCount ? words[i] : sentences[i - 2 * wordCount];
-        if (mlocLoad32(at + 4 * (size_t)i) != want)
-        {
-            printf("  %s: override field %u is %u, want %u\n", key, i,
-                   mlocLoad32(at + 4 * (size_t)i), want);
-            return false;
-        }
     }
     return true;
 }
@@ -211,11 +229,9 @@ static bool Has(const char* key, const char* text, uint32_t value)
     {
         return false;
     }
-    uint32_t overrides = mlocLoad32(unit.bytes + 8) + mlocLoad32(unit.bytes + 12);
     uint32_t backward = mlocLoad32(unit.bytes + 16);
     uint32_t count = backward + mlocLoad32(unit.bytes + 20);
-    const uint8_t* values =
-        unit.bytes + segmentHeaderSize + segmentOverrideSize * (size_t)overrides;
+    const uint8_t* values = unit.bytes + segmentHeaderSize;
     const uint8_t* offsets = values + 4 * (size_t)backward;
     const uint8_t* texts = offsets + 4 * ((size_t)count + 1);
     for (uint32_t i = value == forwardEntry ? backward : 0; i < count; i++)
@@ -241,8 +257,8 @@ static void TestFile(void)
         return;
     }
     s_data = (mlocDataSet){&s_source, 1};
-    static const uint32_t s_greek[] = {0x3B, segmentSentenceSTerm, 0x37E, segmentSentenceSTerm};
-    static const uint32_t s_posix[] = {0x2E, segmentWordMidNum};
+    static const uint32_t s_greek[] = {0x3B, muni_sbSTerm, 0x37E, muni_sbSTerm};
+    static const uint32_t s_posix[] = {0x2E, muni_wbMidNum};
     CHECK(Is("el", segmentGivesSentence, 0, nullptr, 0, s_greek, 2, 0, 0),
           "Greek ends a sentence at U+003B and U+037E");
     CHECK(Is("en_US_POSIX", segmentGivesWord, 0, s_posix, 1, nullptr, 0, 0, 0),

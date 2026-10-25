@@ -97,12 +97,14 @@ typedef struct Segmenter
     const uint8_t* values;
     const uint8_t* offsets;
     const uint8_t* text;
+    // The class overrides, in the code table (segment_overrides.h): a
+    // segmenter holds no pointer into itself, so it may be copied.
+    const muniBreakClassOverride* overrides;
     // The queue's first break, and each one's distance from it.
     size_t queueBase;
     uint8_t queue[segmentQueue];
     // The bytes before pieceStart.
     uint8_t window[segmentWindow];
-    muniBreakClassOverride overrides[segmentMaxOverrides];
     muniSegmentIterator iterator;
 } Segmenter;
 

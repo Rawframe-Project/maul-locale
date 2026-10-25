@@ -254,7 +254,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/generated/calendar_eras.c
     src/generated/calendar_years.c
     src/generated/script_directions.c
-    src/generated/list_genders.c)
+    src/generated/list_genders.c
+    src/generated/segment_overrides.c)
 maul_configure_library(maul-locale)
 target_link_libraries(maul-locale PRIVATE maul-unicode::maul-unicode)
 set(MAUL_PACKAGE_DEPENDENCIES "find_dependency(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION})")
@@ -697,6 +698,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_segment_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_segment_tables PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+        # The code table of overrides is in Maul Unicode's type.
+        target_link_libraries(test_segment_tables PRIVATE maul-unicode::maul-unicode)
     endif()
     maul_add_test(segment)
     if(TARGET test_segment)
@@ -953,6 +956,7 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_segment PRIVATE
         MLOC_SEGMENTS_FILE="${PROJECT_SOURCE_DIR}/src/generated/segments.mloc")
+    target_link_libraries(fuzz_segments PRIVATE maul-unicode::maul-unicode)
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE

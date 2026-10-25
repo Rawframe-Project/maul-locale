@@ -10,26 +10,10 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
+#include "segment_overrides.h"
 #include "segmenter.h"
 
 #include <string.h>
-
-// Maul Unicode's classes for the library's (segment_tables.h).
-static const uint8_t s_wordClasses[segmentWordClassCount] = {
-    muni_wbCr,        muni_wbLf,           muni_wbNewline,
-    muni_wbExtend,    muni_wbZwj,          muni_wbRegionalIndicator,
-    muni_wbFormat,    muni_wbKatakana,     muni_wbHebrewLetter,
-    muni_wbALetter,   muni_wbSingleQuote,  muni_wbDoubleQuote,
-    muni_wbMidNumLet, muni_wbMidLetter,    muni_wbMidNum,
-    muni_wbNumeric,   muni_wbExtendNumLet, muni_wbWSegSpace,
-    muni_wbOther,
-};
-
-static const uint8_t s_sentenceClasses[segmentSentenceClassCount] = {
-    muni_sbCr,    muni_sbLf,        muni_sbExtend, muni_sbSep,     muni_sbFormat,
-    muni_sbSp,    muni_sbLower,     muni_sbUpper,  muni_sbOLetter, muni_sbNumeric,
-    muni_sbATerm, muni_sbSContinue, muni_sbSTerm,  muni_sbClose,   muni_sbOther,
-};
 
 // The first unit along the chain that gives a type.
 typedef struct Find
@@ -69,35 +53,33 @@ static bool KeywordIs(const mlocLocale* locale, const char* key, const char* val
     return length == strlen(value) && memcmp(found, value, length) == 0;
 }
 
-// The overrides of a type, in Maul Unicode's classes.
-static void TakeOverrides(Segmenter* s, const uint8_t* at, uint32_t count, const uint8_t* classes)
+// The overrides a unit's field names, in the code table: Maul Unicode
+// reads them in place, and constant memory outlives every copy of a
+// segmenter.
+static void TakeOverrides(Segmenter* s, uint32_t field)
 {
-    for (uint32_t i = 0; i < count; i++)
+    if (field > 0)
     {
-        s->overrides[i].codePoint = mlocLoad32(at + segmentOverrideSize * (size_t)i);
-        s->overrides[i].value = classes[mlocLoad32(at + segmentOverrideSize * (size_t)i + 4)];
+        const SegmentOverrideSet* set = &mlocSegmentOverrideSets[field - 1];
+        s->overrides = mlocSegmentOverrides + set->first;
+        s->overrideCount = set->count;
     }
-    s->overrideCount = count;
 }
 
 // The tailoring of a word or sentence segmenter, from its type's unit.
 static void TakeUnit(Segmenter* s, DataSpan unit, const mlocLocale* locale)
 {
     uint32_t flags = mlocLoad32(unit.bytes + 4);
-    uint32_t words = mlocLoad32(unit.bytes + 8);
-    uint32_t sentences = mlocLoad32(unit.bytes + 12);
-    const uint8_t* wordOverrides = unit.bytes + segmentHeaderSize;
-    const uint8_t* sentenceOverrides = wordOverrides + segmentOverrideSize * (size_t)words;
     if (s->kind == mloc_segmentWord)
     {
-        TakeOverrides(s, wordOverrides, words, s_wordClasses);
+        TakeOverrides(s, mlocLoad32(unit.bytes + 8));
         s->filters = (flags & segmentJapaneseWords) != 0 ? segmentJapanese : 0;
         return;
     }
-    TakeOverrides(s, sentenceOverrides, sentences, s_sentenceClasses);
+    TakeOverrides(s, mlocLoad32(unit.bytes + 12));
     s->backward = mlocLoad32(unit.bytes + 16);
     s->forward = mlocLoad32(unit.bytes + 20);
-    s->values = sentenceOverrides + segmentOverrideSize * (size_t)sentences;
+    s->values = unit.bytes + segmentHeaderSize;
     s->offsets = s->values + 4 * (size_t)s->backward;
     s->text = s->offsets + 4 * ((size_t)s->backward + s->forward + 1);
     if (s->backward > 0 && KeywordIs(locale, "ss", "standard"))

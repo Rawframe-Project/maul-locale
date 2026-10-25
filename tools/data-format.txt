@@ -3,7 +3,7 @@
 # data the library reads. tools/check_data_format.py fails when one of
 # them changes; --write records them again after the format is decided
 # (docs/internals/data.md#versions).
-format 0x80000004
+format 0x80000005
 layouts src/data_format.h src/kinds.h src/message_form.h src/code_point_trie.h src/collation_fast_latin.h src/catalog_hash.h src/plural_rules.h src/locale_context.h src/collation_index.h src/collation_unsafe.h src/*_tables.h
 sha256 617e67832c7b60ff80ffa726f7681abf32e34a4069b28d39e66c19a2a7c9f0c0 src/catalog_hash.h
 sha256 2e35521a394a55d790cd0f570957e4cbbb6a53d7eb0f1bd61f12631ddae9e5c2 src/catalog_tables.h
@@ -25,7 +25,7 @@ sha256 c33c38bc358b4d2faabd409b16f4ec162ada7e3a4f53a4d3777a05f15b1dffd2 src/numb
 sha256 2e6862c850ae6a5a47c8b8bbd4f48f2bfa80bda3de9dd7456ee2b013b114db33 src/parse_tables.h
 sha256 369809c48d249375666f7772b580976ef509216c43b6acc68f802c2a7f1cc377 src/plural_rules.h
 sha256 4b59dbb0a159f427d509905435838afa3a68dca0062f2b73c57cae5d2ddabfca src/relative_tables.h
-sha256 7ec125e8deddbc3ddbe81f7dd527615d8b7fafcb72a7d97e0a851be0eee778dd src/segment_tables.h
+sha256 014c2ec4235e25e7a54bd13f35fcfeb2d4b339ab375ce9d0d3232a9d7cfe849c src/segment_tables.h
 sha256 3eb3f1505ad9c73a68cd3518391cce2300f29c5277589c63f2e0b7f9e45fc22e src/spellout_tables.h
 sha256 90f0e749a7950c085c0e254982a9ce98cfa5c97161b1bc08d9f09aad1ae23015 src/unit_tables.h
 sha256 9ca32188a515f98b63f6c56cd39d1e492f88f5119b848161f1062b797ab36747 src/zone_code_tables.h

@@ -8,24 +8,13 @@
 
 #include "bytes.h"
 #include "number_data.h"
+#include "segment_overrides.h"
 
-// Overrides: code points strictly ascending, none a surrogate or past
-// U+10FFFF, each class below count.
-static bool ValidOverrides(const uint8_t* overrides, uint32_t n, uint32_t classCount)
+// An override field: none, or a set of the kind's in the code table.
+static bool ValidOverrides(uint32_t field, mlocSegmentKind kind)
 {
-    uint32_t previous = 0;
-    for (uint32_t i = 0; i < n; i++)
-    {
-        uint32_t codePoint = mlocLoad32(overrides + segmentOverrideSize * (size_t)i);
-        uint32_t value = mlocLoad32(overrides + segmentOverrideSize * (size_t)i + 4);
-        if (codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint < 0xE000) ||
-            (i > 0 && codePoint <= previous) || value >= classCount)
-        {
-            return false;
-        }
-        previous = codePoint;
-    }
-    return true;
+    return field == 0 || (field <= mlocSegmentOverrideSetCount &&
+                          mlocSegmentOverrideSets[field - 1].kind == kind);
 }
 
 // Whether a's bytes read from the end order before b's.
@@ -113,25 +102,22 @@ bool mlocValidSegments(const DataView* view, DataSpan payload)
     if (given == 0 || given > (segmentGivesWord | segmentGivesSentence | segmentGivesLine) ||
         flags > (segmentCjIdeographic | segmentJapaneseWords) ||
         ((flags & segmentCjIdeographic) != 0 && !line) ||
-        ((flags & segmentJapaneseWords) != 0 && !word) || words > segmentMaxOverrides ||
-        sentences > segmentMaxOverrides || backward > segmentMaxSuppressions ||
+        ((flags & segmentJapaneseWords) != 0 && !word) || backward > segmentMaxSuppressions ||
         forward > segmentMaxSuppressions || (words > 0 && !word) ||
-        ((sentences > 0 || backward > 0 || forward > 0) && !sentence))
+        ((sentences > 0 || backward > 0 || forward > 0) && !sentence) ||
+        !ValidOverrides(words, mloc_segmentWord) ||
+        !ValidOverrides(sentences, mloc_segmentSentence))
     {
         return false;
     }
-    uint64_t size = segmentHeaderSize + segmentOverrideSize * ((uint64_t)words + sentences) +
-                    4 * (uint64_t)backward + 4 * ((uint64_t)backward + forward + 1) + textSize;
+    uint64_t size = segmentHeaderSize + 4 * (uint64_t)backward +
+                    4 * ((uint64_t)backward + forward + 1) + textSize;
     if (size != payload.size)
     {
         return false;
     }
-    const uint8_t* wordOverrides = payload.bytes + segmentHeaderSize;
-    const uint8_t* sentenceOverrides = wordOverrides + segmentOverrideSize * (size_t)words;
-    const uint8_t* values = sentenceOverrides + segmentOverrideSize * (size_t)sentences;
+    const uint8_t* values = payload.bytes + segmentHeaderSize;
     const uint8_t* offsets = values + 4 * (size_t)backward;
     const uint8_t* text = offsets + 4 * ((size_t)backward + forward + 1);
-    return ValidOverrides(wordOverrides, words, segmentWordClassCount) &&
-           ValidOverrides(sentenceOverrides, sentences, segmentSentenceClassCount) &&
-           ValidEntries(values, offsets, backward, forward, text, textSize);
+    return ValidEntries(values, offsets, backward, forward, text, textSize);
 }

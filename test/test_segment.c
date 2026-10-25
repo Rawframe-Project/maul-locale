@@ -34,27 +34,40 @@ static mlocSegmentKind KindOf(char kind)
     return kind == 'w' ? mloc_segmentWord : kind == 's' ? mloc_segmentSentence : mloc_segmentLine;
 }
 
+// A segmenter copied to another variable, the old one spoiled: a
+// segmenter is a value.
+static mlocSegmenter* Moved(mlocSegmenter* from, mlocSegmenter* to)
+{
+    *to = *from;
+    memset(from, 0xA5, sizeof(*from));
+    return to;
+}
+
 // The segments of a text as "[a][b]", the text fed in pieces of the size
-// given (0: whole); false when a call fails.
+// given (0: whole); false when a call fails. The segmenter moves to
+// another variable after it is made and after each piece, here and in
+// Offsets.
 static bool Segments(const char* id, char kind, const char* text, size_t pieceSize, char* out,
                      size_t capacity)
 {
     mlocLocale locale;
-    mlocSegmenter s;
+    mlocSegmenter one;
+    mlocSegmenter two;
     size_t length = strlen(text);
     size_t fed = pieceSize == 0 || pieceSize > length ? length : pieceSize;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitSegmenter(&s, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
+        mlocInitSegmenter(&one, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
             mloc_success)
     {
         return false;
     }
+    mlocSegmenter* s = Moved(&one, &two);
     size_t at = 0;
     size_t written = 0;
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(&s, &offset, nullptr);
+        mlocResult r = mlocNextSegmentBreak(s, &offset, nullptr);
         if (r == mloc_done)
         {
             out[written] = '\0';
@@ -63,10 +76,11 @@ static bool Segments(const char* id, char kind, const char* text, size_t pieceSi
         if (r == mloc_needMoreText)
         {
             size_t piece = length - fed < pieceSize ? length - fed : pieceSize;
-            if (mlocFeedSegmenter(&s, text + fed, piece, fed + piece < length) != mloc_success)
+            if (mlocFeedSegmenter(s, text + fed, piece, fed + piece < length) != mloc_success)
             {
                 return false;
             }
+            s = s == &one ? Moved(&one, &two) : Moved(&two, &one);
             fed += piece;
             continue;
         }
@@ -180,20 +194,22 @@ static bool Offsets(const char* id, char kind, const char* text, size_t length, 
                     char* out, size_t capacity)
 {
     mlocLocale locale;
-    mlocSegmenter s;
+    mlocSegmenter one;
+    mlocSegmenter two;
     size_t fed = pieceSize == 0 || pieceSize > length ? length : pieceSize;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitSegmenter(&s, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
+        mlocInitSegmenter(&one, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
             mloc_success)
     {
         return false;
     }
+    mlocSegmenter* s = Moved(&one, &two);
     size_t written = 0;
     out[0] = '\0';
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(&s, &offset, nullptr);
+        mlocResult r = mlocNextSegmentBreak(s, &offset, nullptr);
         if (r == mloc_done)
         {
             return true;
@@ -201,10 +217,11 @@ static bool Offsets(const char* id, char kind, const char* text, size_t length, 
         if (r == mloc_needMoreText)
         {
             size_t piece = length - fed < pieceSize ? length - fed : pieceSize;
-            if (mlocFeedSegmenter(&s, text + fed, piece, fed + piece < length) != mloc_success)
+            if (mlocFeedSegmenter(s, text + fed, piece, fed + piece < length) != mloc_success)
             {
                 return false;
             }
+            s = s == &one ? Moved(&one, &two) : Moved(&two, &one);
             fed += piece;
             continue;
         }
