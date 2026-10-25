@@ -120,9 +120,8 @@ extern "C"
     ///         fed before the segmenter asked for it.
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFeedSegmenter(mlocSegmenter* segmenter,
-                                                         const char* text, size_t length,
-                                                         bool moreFollows);
+    MLOC_NODISCARD MLOC_API mlocResult mlocFeedSegmenter(mlocSegmenter* segmenter, const char* text,
+                                                         size_t length, bool moreFollows);
 
     /// Finds the next boundary, or line break opportunity, and whether the
     /// line must end there: after a mandatory break character (BK, CR, LF

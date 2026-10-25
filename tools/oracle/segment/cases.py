@@ -13,7 +13,8 @@
 # - the line keywords over CJ, quotation marks among Chinese and among
 #   Latin letters, the wave dash and Latin text, for the root and the
 #   locales that tailor lines;
-# - Japanese words, and plain text in every locale and kind.
+# - Japanese words over Hiragana, ideographs and the marks CLDR adds to
+#   them, and plain text in every locale and kind.
 #
 #   python3 tools/oracle/segment/cases.py CLDR_COMMON > cases.txt
 
@@ -75,7 +76,8 @@ def cases(common):
         for key in ("", "-u-lb-strict", "-u-lb-normal", "-u-lb-loose"):
             for text in (KANA, QUOTES, LATIN_QUOTES, WAVE, LATIN):
                 out.append((locale + key, "line", text))
-    for text in ("ひらがなとかんじ", "これはひらがなです", "ゝゞのほか゛とゕゖ", "あ゙い"):
+    for text in ("ひらがなとかんじ", "これはひらがなです", "ゝゞのほか゛とゕゖ", "あ゙い",
+                 "漢字仮名交じり文", "人々は日本語を話す", "〇〇年に〻", "⺀⺁漢\U00017000\U0001B170"):
         out.append(("ja", "word", text))
     return out
 

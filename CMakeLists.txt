@@ -272,7 +272,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         if(EMSCRIPTEN)
             # Every data file, about 19 MB, and the test's copy of each.
             foreach(file dates zone-names names subdivisions currency-names units spellout
-                    relative collation)
+                    relative collation segments)
                 target_link_options(test_guide PRIVATE
                                     "SHELL:--embed-file ${MLOC_GUIDE_DATA}/${file}.mloc@/data/${file}.mloc")
             endforeach()

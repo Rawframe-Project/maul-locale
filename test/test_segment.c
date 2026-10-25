@@ -113,25 +113,30 @@ static void TestSentences(void)
           "en: Ph.D. breaks, D. being a partial whose walk finds no entry; Ph. alone breaks");
     // Maul Unicode holds the break after "Mr. " back until the letter after
     // the numbers, past the bytes a segmenter keeps of the earlier pieces.
-    CHECK(Is("en-u-ss-standard", 's',
-             "Mr. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "
-             "23, 24, 25) Smith left. He came.",
-             "[Mr. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "
-             "23, 24, 25) Smith left. ][He came.]") &&
-              Is("en-u-ss-standard", 's',
-                 "Xy. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "
-                 "23, 24, 25) Smith left.",
-                 "[Xy. ][(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, "
-                 "22, 23, 24, 25) Smith left.]") &&
-              Is("de-u-ss-standard", 's',
-                 "Er kam z. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, "
-                 "21, 22, 23) Bald.",
-                 "[Er kam z. ][(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, "
-                 "20, 21, 22, 23) Bald.]"),
-          "a break held back past the kept bytes: a match suppresses it, a partial's walk "
-          "keeps it, and no entry keeps it");
-    CHECK(Is("el", 's', "\xCE\x9D\xCE\xB1\xCE\xB9; \xCE\x8C\xCF\x87\xCE\xB9. \xCE\xA4\xCE\xAD\xCE\xBB\xCE\xBF\xCF\x82",
-             "[\xCE\x9D\xCE\xB1\xCE\xB9; ][\xCE\x8C\xCF\x87\xCE\xB9. ][\xCE\xA4\xCE\xAD\xCE\xBB\xCE\xBF\xCF\x82]"),
+    CHECK(
+        Is("en-u-ss-standard", 's',
+           "Mr. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "
+           "23, 24, 25) Smith left. He came.",
+           "[Mr. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "
+           "23, 24, 25) Smith left. ][He came.]") &&
+            Is("en-u-ss-standard", 's',
+               "Xy. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, "
+               "22, "
+               "23, 24, 25) Smith left.",
+               "[Xy. ][(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, "
+               "22, 23, 24, 25) Smith left.]") &&
+            Is("de-u-ss-standard", 's',
+               "Er kam z. (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, "
+               "21, 22, 23) Bald.",
+               "[Er kam z. ][(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, "
+               "20, 21, 22, 23) Bald.]"),
+        "a break held back past the kept bytes: a match suppresses it, a partial's walk "
+        "keeps it, and no entry keeps it");
+    CHECK(Is("el", 's',
+             "\xCE\x9D\xCE\xB1\xCE\xB9; \xCE\x8C\xCF\x87\xCE\xB9. "
+             "\xCE\xA4\xCE\xAD\xCE\xBB\xCE\xBF\xCF\x82",
+             "[\xCE\x9D\xCE\xB1\xCE\xB9; ][\xCE\x8C\xCF\x87\xCE\xB9. "
+             "][\xCE\xA4\xCE\xAD\xCE\xBB\xCE\xBF\xCF\x82]"),
           "el: a sentence ends at the semicolon");
 }
 
@@ -140,14 +145,16 @@ static void TestWords(void)
     CHECK(Is("en-US-posix", 'w', "3.14 a.b", "[3.14][ ][a][.][b]") &&
               Is("en-US", 'w', "3.14 a.b", "[3.14][ ][a.b]"),
           "POSIX English keeps the full stop out of words");
-    // Rule 13.3 keeps a Hiragana run one word; ideographs (13.4) wait for
-    // Maul Unicode's Ideographic property.
+    // Rules 13.3 and 13.4 keep a Hiragana run, and a run of ideographs (with
+    // U+3005), one word.
     CHECK(Is("ja", 'w',
              "\xE3\x81\xB2\xE3\x82\x89\xE3\x81\x8C\xE3\x81\xAA\xE6\xBC\xA2\xE5\xAD\x97"
-             "\xE3\x81\xA7\xE3\x81\x99",
-             "[\xE3\x81\xB2\xE3\x82\x89\xE3\x81\x8C\xE3\x81\xAA][\xE6\xBC\xA2][\xE5\xAD\x97]"
-             "[\xE3\x81\xA7\xE3\x81\x99]"),
-          "ja: a Hiragana run is one word (CLDR's 13.3; ICU4C uses its dictionary)");
+             "\xE3\x81\xA7\xE3\x81\x99\xE4\xBA\xBA\xE3\x80\x85",
+             "[\xE3\x81\xB2\xE3\x82\x89\xE3\x81\x8C\xE3\x81\xAA][\xE6\xBC\xA2\xE5\xAD\x97]"
+             "[\xE3\x81\xA7\xE3\x81\x99][\xE4\xBA\xBA\xE3\x80\x85]") &&
+              Is("en", 'w', "\xE6\xBC\xA2\xE5\xAD\x97", "[\xE6\xBC\xA2][\xE5\xAD\x97]"),
+          "ja: a Hiragana run and a run of ideographs are each one word (CLDR's 13.3 and "
+          "13.4; ICU4C uses its dictionary); not in the root");
 }
 
 // Small a, small a (CJ), a, the prolonged sound mark (CJ), i.
@@ -156,8 +163,7 @@ static void TestWords(void)
 static void TestLines(void)
 {
     const char* strict = "[\xE3\x81\x82\xE3\x81\x81][\xE3\x81\x82\xE3\x83\xBC][\xE3\x81\x84]";
-    const char* normal =
-        "[\xE3\x81\x82][\xE3\x81\x81][\xE3\x81\x82][\xE3\x83\xBC][\xE3\x81\x84]";
+    const char* normal = "[\xE3\x81\x82][\xE3\x81\x81][\xE3\x81\x82][\xE3\x83\xBC][\xE3\x81\x84]";
     CHECK(Is("ja", 'l', KANA, normal) && Is("ja-u-lb-strict", 'l', KANA, strict) &&
               Is("ja-u-lb-loose", 'l', KANA, normal) && Is("und", 'l', KANA, strict) &&
               Is("en-u-lb-normal", 'l', KANA, normal),

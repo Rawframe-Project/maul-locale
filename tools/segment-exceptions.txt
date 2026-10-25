@@ -15,8 +15,8 @@
 # cj-wave     ICU4C's line_normal_cj and line_loose_cj take U+301C and
 #             U+30A0 out of NS, so a line may break before them.
 # ja-words    ICU4C finds Japanese words with its own dictionary; CLDR's ja
-#             rule 13.3 keeps a Hiragana run one word (rule 13.4, the
-#             ideographs, waits for Maul Unicode's Ideographic property).
+#             rules 13.3 and 13.4 keep a Hiragana run, and a run of
+#             ideographs, one word.
 cj-quotes	ja-u-lb-strict	line	say “abc”def and “x” y
 cj-quotes	ja-u-lb-normal	line	say “abc”def and “x” y
 cj-wave	ja-u-lb-normal	line	中〜中゠中

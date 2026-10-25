@@ -81,3 +81,4 @@ Each status a function can return is listed in its header and in the [API refere
 - [Grammar](grammar.md): case suffixes and particles on names and numbers.
 - [Catalogs](catalogs.md): translation catalogs and the `mloccat` tool.
 - [Collation](collation.md): sorting, sort keys, search and alphabetic indexes.
+- [Segmentation](segmentation.md): words, sentences and line breaks as a language tailors them.

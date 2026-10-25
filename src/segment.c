@@ -16,17 +16,19 @@
 
 // Maul Unicode's classes for the library's (segment_tables.h).
 static const uint8_t s_wordClasses[segmentWordClassCount] = {
-    muni_wbCr,         muni_wbLf,           muni_wbNewline,     muni_wbExtend,
-    muni_wbZwj,        muni_wbRegionalIndicator, muni_wbFormat, muni_wbKatakana,
-    muni_wbHebrewLetter, muni_wbALetter,    muni_wbSingleQuote, muni_wbDoubleQuote,
-    muni_wbMidNumLet,  muni_wbMidLetter,    muni_wbMidNum,      muni_wbNumeric,
-    muni_wbExtendNumLet, muni_wbWSegSpace,  muni_wbOther,
+    muni_wbCr,        muni_wbLf,           muni_wbNewline,
+    muni_wbExtend,    muni_wbZwj,          muni_wbRegionalIndicator,
+    muni_wbFormat,    muni_wbKatakana,     muni_wbHebrewLetter,
+    muni_wbALetter,   muni_wbSingleQuote,  muni_wbDoubleQuote,
+    muni_wbMidNumLet, muni_wbMidLetter,    muni_wbMidNum,
+    muni_wbNumeric,   muni_wbExtendNumLet, muni_wbWSegSpace,
+    muni_wbOther,
 };
 
 static const uint8_t s_sentenceClasses[segmentSentenceClassCount] = {
-    muni_sbCr,      muni_sbLf,      muni_sbExtend,    muni_sbSep,   muni_sbFormat,
-    muni_sbSp,      muni_sbLower,   muni_sbUpper,     muni_sbOLetter, muni_sbNumeric,
-    muni_sbATerm,   muni_sbSContinue, muni_sbSTerm,   muni_sbClose, muni_sbOther,
+    muni_sbCr,    muni_sbLf,        muni_sbExtend, muni_sbSep,     muni_sbFormat,
+    muni_sbSp,    muni_sbLower,     muni_sbUpper,  muni_sbOLetter, muni_sbNumeric,
+    muni_sbATerm, muni_sbSContinue, muni_sbSTerm,  muni_sbClose,   muni_sbOther,
 };
 
 // The first unit along the chain that gives a type.
@@ -89,7 +91,7 @@ static void TakeUnit(Segmenter* s, DataSpan unit, const mlocLocale* locale)
     if (s->kind == mloc_segmentWord)
     {
         TakeOverrides(s, wordOverrides, words, s_wordClasses);
-        s->filters = (flags & segmentJapaneseWords) != 0 ? segmentHiragana : 0;
+        s->filters = (flags & segmentJapaneseWords) != 0 ? segmentJapanese : 0;
         return;
     }
     TakeOverrides(s, sentenceOverrides, sentences, s_sentenceClasses);
@@ -136,9 +138,9 @@ static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlo
     {
         TakeUnit(s, unit, locale);
     }
-    r = s->kind == mloc_segmentWord ? muniInitWordIterator(&s->iterator, text, length, moreFollows)
-                                    : muniInitSentenceIterator(&s->iterator, text, length,
-                                                               moreFollows);
+    r = s->kind == mloc_segmentWord
+            ? muniInitWordIterator(&s->iterator, text, length, moreFollows)
+            : muniInitSentenceIterator(&s->iterator, text, length, moreFollows);
     return r == muni_success && s->overrideCount > 0
                ? muniSetBreakClassOverrides(&s->iterator, s->overrides, s->overrideCount)
                : r;
@@ -232,7 +234,9 @@ static muniResult Pull(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
 
 static mlocResult Status(muniResult r)
 {
-    return r == muni_done ? mloc_done : r == muni_needMoreText ? mloc_needMoreText : mloc_errorInvalid;
+    return r == muni_done           ? mloc_done
+           : r == muni_needMoreText ? mloc_needMoreText
+                                    : mloc_errorInvalid;
 }
 
 // Queues a break for the filters. The breaks waiting are within the

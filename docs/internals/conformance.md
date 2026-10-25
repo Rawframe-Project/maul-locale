@@ -26,6 +26,7 @@ What proves each part, and where the library departs from its oracles on purpose
 | Messages | The MessageFormat 2 test suite in CLDR's `testData/messageFormat` (`test_message`). |
 | Grammar | The spelling guides' examples; Apertium's generators and Wiktionary's tables by oracle. |
 | Collation | `allkeys_CLDR.txt` and `CollationTest_CLDR_*` (`conform_collation_root`, `conform_collation`); ICU4C 79's root elements, every tailoring's answers, fast Latin tables, sort keys, search and index labels (the `conform_collation_*`, `conform_search*` and `conform_index*` programs). |
+| Segmentation | ICU4C 79.1's `BreakIterator` on every suppression of every locale, the class overrides, the line keywords and plain text (`test_segment` over `test/segment_icu.tsv`); the same breaks for text in pieces as whole. |
 | Data files | Every validator under fuzzing (`fuzz_data` and the part targets). |
 
 ## Listed departures
@@ -39,6 +40,7 @@ Each list is read by its check, which fails on an unlisted difference and on a l
 | `tools/match-exceptions.txt` | Matcher test lines where UTS #35's legacy aliases canonicalize further than ICU. |
 | `tools/locale-name-exceptions.txt` | Locale display name lines where CLDR's tools and the test file part. |
 | `tools/skeleton-exceptions.txt`, `tools/interval-exceptions.txt` | Patterns where the generator follows CLDR's inheritance and ICU4C's data build does not. |
+| `tools/segment-exceptions.txt` | Segmentation cases where ICU4C uses its own line rules or dictionary, not CLDR's segments files ([segmentation.md](../user/segmentation.md#differences-from-icu4c)). |
 
 Departures without a file of their own, each stated where its part is documented:
 
@@ -57,5 +59,6 @@ Tests that compare with an oracle the CI image does not have read tables generat
 | `test/test262_*.inc` | test262's Temporal tests, by `tools/oracle/test262/`. |
 | `test/mf2_suite.inc` | CLDR's MessageFormat 2 test suite, by `tools/gen_mf2_suite.py`. |
 | `test/skeletons_icu.tsv`, `intervals_icu.tsv`, `*_ranges_icu.tsv` | ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat`. |
+| `test/segment_icu.tsv` | ICU4C 79.1's `BreakIterator`, by `tools/oracle/segment/`. |
 | `test/cldr/` | A small CLDR tree of crafted locales for the resolver's tests. |
 | `test/collation/crafted.xml` | Crafted tailoring rules for the builder's checks. |

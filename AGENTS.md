@@ -1,6 +1,6 @@
 # Maul Locale
 
-Maul Locale is a C library of locale data and formatting from one CLDR release (49): locale identifiers and matching, plural rules, numbers, currencies, units, spell-out, calendars, time zones and Temporal arithmetic, date formatting, MessageFormat 2, grammatical suffixes, translation catalogs and collation. It is part of the Maul family; the family rules are in [docs/internals/maul-conventions.md](docs/internals/maul-conventions.md), and [docs/internals/overview.md](docs/internals/overview.md) explains how the parts fit.
+Maul Locale is a C library of locale data and formatting from one CLDR release (49): locale identifiers and matching, plural rules, numbers, currencies, units, spell-out, calendars, time zones and Temporal arithmetic, date formatting, MessageFormat 2, grammatical suffixes, translation catalogs, collation and segmentation. It is part of the Maul family; the family rules are in [docs/internals/maul-conventions.md](docs/internals/maul-conventions.md), and [docs/internals/overview.md](docs/internals/overview.md) explains how the parts fit.
 
 It never compromises on:
 
@@ -63,7 +63,7 @@ Follow the [repository standard's Documentation section](https://github.com/Rawf
 
 ## Pull requests
 
-Titles are conventional commits. Scopes: `data`, `locale`, `names`, `decimal`, `plural`, `number`, `currency`, `unit`, `spellout`, `list`, `calendar`, `zone`, `ixdtf`, `datetime`, `relative`, `duration`, `message`, `grammar`, `catalog`, `collate`, `search`, `index`, `generator`, `mloccat`, `oracle`, `bench`, `build`, `family`. Example: `fix(number): keep the minus sign of a compact zero`.
+Titles are conventional commits. Scopes: `data`, `locale`, `names`, `decimal`, `plural`, `number`, `currency`, `unit`, `spellout`, `list`, `calendar`, `zone`, `ixdtf`, `datetime`, `relative`, `duration`, `message`, `grammar`, `catalog`, `collate`, `search`, `index`, `segment`, `generator`, `mloccat`, `oracle`, `bench`, `build`, `family`. Example: `fix(number): keep the minus sign of a compact zero`.
 
 A change that breaks the API or ABI, gives existing inputs a different result, or refuses stored bytes is breaking, whatever its type: its title carries `!` and the last paragraph of its body a `BREAKING CHANGE:` footer saying what changed and what a program must do. Callers store formatted text, sort keys, index bytes, compiled messages, catalogs and data files, so a new CLDR or tzdb release, a fixed rule that changes output and a change of `MLOC_DATA_FORMAT_VERSION` or of any stored layout are all breaking.
 

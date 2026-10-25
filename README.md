@@ -15,6 +15,7 @@ A program that shows text to people in their own language needs more than transl
 - **Messages:** Unicode MessageFormat 2, lists, and grammatical suffixes and particles for Turkish and the other Turkic languages, Hungarian, Finnish and Korean ("Ayşe'ye", "1985'te", "Helsingissä", "책은").
 - **Catalogs:** translation catalogs compiled by the `mloccat` tool, with stale translations found, PO and XLIFF exchange, pseudo-locales and fallback chains that say why each text was chosen.
 - **Collation:** sorting and comparing in every CLDR locale's order with ICU4C's sort keys, collation search, and alphabetic indexes.
+- **Segmentation:** words, sentences and line breaks as each language tailors them, on Maul Unicode's iterators, with the abbreviations after which a sentence goes on.
 
 Every part is checked against CLDR's conformance data and against ICU4C and ICU4X. Nothing is allocated and no operating system call is made: formatters are values the caller declares, results go into caller buffers, and the program passes the data, the time and the time zone. Every function is safe from any thread.
 

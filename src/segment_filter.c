@@ -3,7 +3,7 @@
 //
 // The segmenter's filters (segmenter.h): the suppressions, as ICU4C's
 // FilteredBreakIterator applies them (segment_tables.h), and Japanese's
-// rule 13.3. The text at hand is the window, the last bytes of the
+// rules 13.3 and 13.4. The text at hand is the window, the last bytes of the
 // earlier pieces, then the current piece.
 
 #include "bytes.h"
@@ -84,9 +84,18 @@ static uint8_t ClassOf(const Segmenter* s, uint32_t codePoint)
                                        : muniGetSentenceBreak(codePoint);
 }
 
-static bool IsHiragana(uint32_t codePoint)
+// A code point's class in rules 13.3 and 13.4: $Hiragana is
+// \p{Hiragana}, $Ideographic [\p{Ideographic} \u3005 \u3007 \u303B].
+static uint8_t JapaneseClass(uint32_t codePoint)
 {
-    return muniGetScript(codePoint) == MUNI_SCRIPT('H', 'i', 'r', 'a');
+    if (muniGetScript(codePoint) == MUNI_SCRIPT('H', 'i', 'r', 'a'))
+    {
+        return japaneseHiragana;
+    }
+    return muniIsIdeographic(codePoint) || codePoint == 0x3005 || codePoint == 0x3007 ||
+                   codePoint == 0x303B
+               ? japaneseIdeographic
+               : japaneseOther;
 }
 
 // Moves rule 13.3's cursor up to an offset, as far as the text goes.
@@ -103,14 +112,16 @@ static void AdvanceCursor(Segmenter* s, size_t offset)
         uint8_t c = ClassOf(s, codePoint);
         if (c != muni_wbExtend && c != muni_wbFormat && c != muni_wbZwj)
         {
-            s->cursorHiragana = IsHiragana(codePoint);
+            s->cursorClass = JapaneseClass(codePoint);
         }
         s->cursor += (size_t)size;
     }
 }
 
-// Rule 13.3, $Hiragana × $Hiragana with $Hiragana = (\p{Hiragana} $FE*).
-static int KeepsHiragana(Segmenter* s, size_t offset)
+// Rules 13.3 and 13.4, $Hiragana × $Hiragana and $Ideographic ×
+// $Ideographic, each class with ($FE*) after it: $FE is Extend, Format and
+// ZWJ, as WB4 passes over them.
+static int KeepsJapanese(Segmenter* s, size_t offset)
 {
     if (offset < s->cursor)
     {
@@ -125,7 +136,8 @@ static int KeepsHiragana(Segmenter* s, size_t offset)
     {
         return -1;
     }
-    return size == 0 || !s->cursorHiragana || !IsHiragana(codePoint);
+    return size == 0 || s->cursorClass == japaneseOther ||
+           s->cursorClass != JapaneseClass(codePoint);
 }
 
 static uint32_t EntryStart(const Segmenter* s, uint32_t i)
@@ -253,9 +265,9 @@ int mlocSegmentKeeps(Segmenter* s, size_t offset)
         // A break at the end of the text is never suppressed.
         return 1;
     }
-    if ((s->filters & segmentHiragana) != 0)
+    if ((s->filters & segmentJapanese) != 0)
     {
-        return KeepsHiragana(s, offset);
+        return KeepsJapanese(s, offset);
     }
     if (offset - (offset < lookBack ? offset : lookBack) < Start(s))
     {
@@ -307,7 +319,7 @@ void mlocSegmentLeavePiece(Segmenter* s)
     size_t end = End(s);
     size_t total = s->windowLength + s->pieceLength;
     size_t keep = total < segmentWindow ? total : segmentWindow;
-    if ((s->filters & segmentHiragana) != 0)
+    if ((s->filters & segmentJapanese) != 0)
     {
         AdvanceCursor(s, end - keep);
     }

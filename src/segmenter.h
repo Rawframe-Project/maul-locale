@@ -4,13 +4,14 @@
 // A segmenter's state (maul-locale/segment.h): Maul Unicode's iterator,
 // the tailoring's class overrides and suppressions, and the filters that
 // take breaks away: the suppressions of a sentence segmenter, which keep a
-// sentence going after an abbreviation, and Japanese's rule 13.3 in a word
-// segmenter, which keeps a run of Hiragana one word.
+// sentence going after an abbreviation, and Japanese's rules 13.3 and 13.4
+// in a word segmenter, which keep a run of Hiragana, or of ideographs, one
+// word.
 //
 // A filter reads the text around a break: the suppressions up to
 // segmentMaxSuppression + 2 bytes before it and as many after an entry's
-// start, rule 13.3 the code point after it and the last one before it that
-// is not Extend, Format or ZWJ. The text comes in pieces, and Maul
+// start, rules 13.3 and 13.4 the code point after it and the last one
+// before it that is not Extend, Format or ZWJ. The text comes in pieces, and Maul
 // Unicode's iterator may hold a break back until it has read far past it
 // (a sentence after "Mr. (1, 2, 3" waits for a letter). So the segmenter
 // keeps the last segmentWindow bytes of the earlier pieces, and when it
@@ -21,7 +22,8 @@
 //   one position is decided then and kept.
 // - A word break held back past the window comes before a mid-word
 //   character (WB6, WB7b, WB12) with Extend or Format characters after it,
-//   so it is never between two Hiragana and rule 13.3 keeps it.
+//   so it is never between two Hiragana or two ideographs, and rules 13.3
+//   and 13.4 keep it.
 // A break a filter decides only with text not yet fed waits in a queue,
 // while the iterator goes on to the end of its piece; only then does the
 // segmenter ask for the next one, so that no piece is needed once it has.
@@ -48,7 +50,11 @@ enum
     segmentQueue = 40,
     // The filters.
     segmentSuppress = 1u << 0,
-    segmentHiragana = 1u << 1,
+    segmentJapanese = 1u << 1,
+    // Rules 13.3 and 13.4's classes of a code point.
+    japaneseOther = 0,
+    japaneseHiragana = 1,
+    japaneseIdeographic = 2,
 };
 
 typedef struct Segmenter
@@ -63,9 +69,9 @@ typedef struct Segmenter
     bool iteratorWaits;
     bool moreFollows;
     bool iteratorDone;
-    // Rule 13.3: whether the last code point before cursor that is not
-    // Extend, Format or ZWJ is Hiragana.
-    bool cursorHiragana;
+    // Rules 13.3 and 13.4: the class of the last code point before cursor
+    // that is not Extend, Format or ZWJ.
+    uint8_t cursorClass;
     // The kept answer for the held sentence break.
     bool heldSuppressed;
     bool heldValid;

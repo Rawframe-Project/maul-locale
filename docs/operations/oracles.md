@@ -11,6 +11,7 @@ How to run the differential oracles in `tools/oracle/`: programs that give the s
 - [Calendars](#calendars)
 - [test262 tables](#test262-tables)
 - [Grammar](#grammar)
+- [Segmentation](#segmentation)
 - [Benchmarks](#benchmarks)
 - [ICU date tables](#icu-date-tables)
 
@@ -91,6 +92,17 @@ A test the interpreter cannot run is reported, not recorded.
 3. `wiktionary_queries.py` does the same from a kaikki.org extract of Wiktionary.
 
 Apertium errs too (see [grammar.md](../internals/grammar.md#proof-and-its-limits)); a difference is a reason to read the spelling guide.
+
+## Segmentation
+
+`segment/` writes ICU4C's answers for the cases `test_segment` checks, `test/segment_icu.tsv`; the suite gives the same cases to the library, whole and in pieces, and fails on a difference `tools/segment-exceptions.txt` does not list and on a listed case that no longer differs. Write the table again when CLDR, ICU4C or the cases move:
+
+```sh
+python3 tools/oracle/segment/cases.py "$CLDR/common" > cases.txt
+LD_LIBRARY_PATH=$ICU/lib ./icu4c_segment < cases.txt > test/segment_icu.tsv
+```
+
+`cases.py` puts each suppression of each locale in a sentence before a capital, with `-u-ss-standard` and without, and each partial's text through its first full stop alone; a break held back past the bytes a segmenter keeps; the class overrides; the line keywords over CJ, quotation marks, the wave dash and Latin text; Japanese words; and plain text in each locale and kind. `icu4c_segment.cpp` answers with UTF-8 byte offsets.
 
 ## Benchmarks
 
