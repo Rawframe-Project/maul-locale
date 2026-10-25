@@ -4,7 +4,7 @@ base:
 bytes:
 data: bytes data_format data_view kinds
 data_format:
-data_kinds: catalog_tables collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
+data_kinds: catalog_tables collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables segment_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
 data_view:
 decimal: bytes
 decimal_round: decimal
@@ -99,6 +99,7 @@ calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 relative_tables: bytes data_view number_data
+segment_tables: bytes data_view number_data
 catalog_hash: bytes
 catalog_tables: bytes catalog_hash data_view message_read
 catalog_view: catalog_tables

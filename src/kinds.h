@@ -172,4 +172,9 @@ constexpr uint32_t kindCollationHanRadical = 0x000B0003;
 // found along the main chain (src/collation_index.h).
 constexpr uint32_t kindCollationIndex = 0x000B0004;
 
+// The segmentation part: a locale's tailoring of word, sentence and line
+// breaking, a unit per locale key in the segmentation data file, found
+// along the segmentation chain (src/segment_tables.h).
+constexpr uint32_t kindSegments = 0x000C0001;
+
 #endif

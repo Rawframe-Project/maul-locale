@@ -23,6 +23,7 @@
 #include "number_parse.h"
 #include "plural.h"
 #include "relative_tables.h"
+#include "segment_tables.h"
 #include "spellout_data.h"
 #include "unit_data.h"
 #include "unit_names.h"
@@ -94,6 +95,7 @@ static const DataKind s_kinds[] = {
     {kindCollationTailorings, mlocValidCollationTypes},
     {kindCollationHanRadical, mlocValidCollationHan},
     {kindCollationIndex, mlocValidIndexLabels},
+    {kindSegments, mlocValidSegments},
 };
 
 const DataKind* const mlocDataKinds = s_kinds;
