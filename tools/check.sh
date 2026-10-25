@@ -92,7 +92,7 @@ labels_for() {
         collation | collator | collate | nfd | search | index) stem="collat|search|index" ;;
         datetime | date | time | instant | zoned | rounding) stem="date|time|instant|zone|datetime|calendar" ;;
         parse) stem="number|currency|parse" ;;
-        script | code) stem=locale ;;
+        script | code) stem="locale" ;;
         esac
         # The guide's snippets reach every part; the message functions
         # reach most.
