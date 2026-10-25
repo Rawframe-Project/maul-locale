@@ -516,6 +516,40 @@ static void TestSelectionBound(void)
     free(x);
 }
 
+static void TestSelectionQuotedLineFeed(void)
+{
+    // A quoted key may hold a LF: a variant's keys run from the end of the
+    // .match line or of the variant before, not from the last LF.
+    static const char* const texts[] = {".input {$s :string}\n.match $s\n* {{x}}\n|b\nc| {{y}}\n",
+                                        ".input {$s :string}\n.match $s\n|b\nc| {{y}}\n* {{x}}\n"};
+    for (size_t t = 0; t < 2; t++)
+    {
+        PgsMessage m;
+        bool read = PgsRead(texts[t], strlen(texts[t]), &m);
+        size_t quoted = t == 0 ? 1 : 0;
+        CHECK(read && m.selectorCount == 1 && m.variantCount == 2 &&
+                  strcmp(m.variants[1 - quoted].keys[0], "*") == 0 &&
+                  strcmp(m.variants[quoted].keys[0], "|b\nc|") == 0 &&
+                  strcmp(m.variants[quoted].cases[0], "b\nc") == 0,
+              "a quoted key with a LF read whole, last and first");
+        if (!read)
+        {
+            continue;
+        }
+        char* const* keys[] = {m.variants[0].keys, m.variants[1].keys};
+        char* patterns[] = {m.variants[0].pattern, m.variants[1].pattern};
+        size_t length = 0;
+        char* again = PgsWrite(m.head, keys, patterns, 2, 1, &length);
+        PgsMessage n = {0};
+        CHECK(again != nullptr && PgsRead(again, length, &n) && n.variantCount == 2 &&
+                  strcmp(n.variants[quoted].keys[0], "|b\nc|") == 0,
+              "a message with a LF in a key written back reads the same");
+        PgsFree(&n);
+        free(again);
+        PgsFree(&m);
+    }
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -529,5 +563,6 @@ int main(int argc, char** argv)
     TestSelectionKeys();
     TestSelectionRefusals();
     TestSelectionBound();
+    TestSelectionQuotedLineFeed();
     return s_failures == 0 ? 0 : 1;
 }
