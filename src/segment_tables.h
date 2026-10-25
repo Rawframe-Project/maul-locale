@@ -8,11 +8,13 @@
 //
 // Segmentation, a unit per locale key whose file gives a segmentation.
 // The payload is a header (u32 types given, u32 flags, u32 word override
-// count, u32 sentence override count, u32 suppression count, u32 text
-// size), the word overrides then the sentence overrides (u32 code point,
-// u32 class each, strictly ascending by code point), the suppressions'
-// offsets (u32 each, suppression count + 1, from 0 to the text size,
-// ascending), then the text, UTF-8 with no byte below 0x20.
+// count, u32 sentence override count, u32 backward count, u32 forward
+// count, u32 text size), the word overrides then the sentence overrides
+// (u32 code point, u32 class each, strictly ascending by code point), the
+// backward entries' values (u32 each), the entries' offsets (u32 each,
+// the backward entries' then the forward entries', then the text size:
+// backward count + forward count + 1, from 0, ascending), then the text,
+// UTF-8 with no byte below 0x20.
 //
 // The types given are the segmentations the locale's file has. Each
 // replaces the same type of the locale's parents; a type a unit does not
@@ -26,9 +28,32 @@
 // SegmentSentenceClass, the library's numbers, which it maps to Maul
 // Unicode's, so that a renumbering there cannot change what a file means.
 // A suppression is an abbreviation after which a sentence goes on ("Mr.",
-// "z.B."), as ICU4C's FilteredBreakIterator takes them with -u-ss-standard;
-// the suppressions are distinct, sorted by their bytes read from the end,
-// so that a break looks up the text before it backwards.
+// "z.B."), as ICU4C's FilteredBreakIterator takes them with -u-ss-standard,
+// in the two tables its builder makes of them. An abbreviation with a full
+// stop before its end ("z.B.") is partial; it and every abbreviation that
+// begins with the same text through its first full stop ("z.", "z.T.")
+// are a family, whose members are the forward entries. The backward
+// entries are each family's text through its first full stop ("z."), with
+// the value partial, and every abbreviation of no family, with the value
+// match. The backward entries are distinct and sorted by their bytes read
+// from the end, the forward entries distinct and sorted by their bytes.
+//
+// Each sentence break the segmenter finds, but one at the end of the text,
+// is checked as ICU4C checks it. Step back over one U+0020 before the break
+// if there is one; then take the longest backward entry that the text
+// before that point ends with. A match suppresses the break. A partial
+// reads the text from that entry's start one character at a time and stops
+// at the first of: a character with which no forward entry goes on from the
+// characters read before it, an entry that no other entry goes on from, or
+// the end of the text. The break is suppressed only when the walk stops at
+// such a final entry, or when the text ends right after an entry. Stopping
+// at a character no entry goes on with keeps the break, even right after an
+// entry: with the forward entries "z." and "z.B.", a break after "z. " in
+// "Er kam z. Bald" stays, since no entry goes on from "z." with a space.
+// The walk may read past the break: with the partial "trav." and the
+// forward entry "trav. publ.", a break after "trav. " before "publ." is
+// suppressed. A suppressed break is replaced by the next one, which is
+// checked the same way.
 //
 // A data layout: tools/check_data_format.py watches this header.
 
@@ -56,6 +81,13 @@ enum
 {
     segmentCjIdeographic = 1u << 0,
     segmentJapaneseWords = 1u << 1,
+};
+
+// A backward entry's value.
+enum
+{
+    segmentSuppressionMatch = 0,
+    segmentSuppressionPartial = 1,
 };
 
 // Word_Break values, in UAX #29's order.
@@ -106,11 +138,12 @@ typedef enum SegmentSentenceClass
 
 enum
 {
-    segmentHeaderSize = 24,
+    segmentHeaderSize = 28,
     segmentOverrideSize = 8,
     // A segmenter copies a type's overrides into the caller's memory.
     segmentMaxOverrides = 4,
-    // A segmenter keeps this many bytes before a break to look them up.
+    // The longest entry, in bytes: a segmenter keeps this many before a
+    // break to look them up.
     segmentMaxSuppression = 32,
     segmentMaxSuppressions = 4096,
 };

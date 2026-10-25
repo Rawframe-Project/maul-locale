@@ -41,12 +41,27 @@ static bool BackwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b
     return aLength < bLength;
 }
 
-// The suppressions: offsets ascending from 0 to the text's end, each text
-// well-formed, not empty and at most segmentMaxSuppression bytes, in
-// strictly ascending order read from the end.
-static bool ValidSuppressions(const uint8_t* offsets, uint32_t count, const uint8_t* text,
-                              uint32_t textSize)
+// Whether a's bytes order before b's.
+static bool ForwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
 {
+    for (uint32_t i = 0; i < aLength && i < bLength; i++)
+    {
+        if (a[i] != b[i])
+        {
+            return a[i] < b[i];
+        }
+    }
+    return aLength < bLength;
+}
+
+// The entries: offsets ascending from 0 to the text's end, each text
+// well-formed, not empty and at most segmentMaxSuppression bytes; the
+// backward entries in strictly ascending order read from the end, each
+// value known, and the forward entries in strictly ascending order.
+static bool ValidEntries(const uint8_t* values, const uint8_t* offsets, uint32_t backward,
+                         uint32_t forward, const uint8_t* text, uint32_t textSize)
+{
+    uint32_t count = backward + forward;
     if (mlocLoad32(offsets) != 0 || mlocLoad32(offsets + 4 * (size_t)count) != textSize)
     {
         return false;
@@ -56,14 +71,19 @@ static bool ValidSuppressions(const uint8_t* offsets, uint32_t count, const uint
         uint32_t start = mlocLoad32(offsets + 4 * (size_t)i);
         uint32_t end = mlocLoad32(offsets + 4 * (size_t)i + 4);
         if (end <= start || end > textSize || end - start > segmentMaxSuppression ||
-            !mlocValidDataText(text + start, end - start, 0))
+            !mlocValidDataText(text + start, end - start, 0) ||
+            (i < backward && mlocLoad32(values + 4 * (size_t)i) > segmentSuppressionPartial))
         {
             return false;
         }
-        if (i > 0)
+        if (i > 0 && i != backward)
         {
             uint32_t before = mlocLoad32(offsets + 4 * (size_t)i - 4);
-            if (!BackwardsBefore(text + before, start - before, text + start, end - start))
+            bool ordered =
+                i < backward
+                    ? BackwardsBefore(text + before, start - before, text + start, end - start)
+                    : ForwardsBefore(text + before, start - before, text + start, end - start);
+            if (!ordered)
             {
                 return false;
             }
@@ -84,8 +104,9 @@ bool mlocValidSegments(const DataView* view, DataSpan payload)
     uint32_t flags = mlocLoad32(payload.bytes + 4);
     uint32_t words = mlocLoad32(payload.bytes + 8);
     uint32_t sentences = mlocLoad32(payload.bytes + 12);
-    uint32_t count = mlocLoad32(payload.bytes + 16);
-    uint32_t textSize = mlocLoad32(payload.bytes + 20);
+    uint32_t backward = mlocLoad32(payload.bytes + 16);
+    uint32_t forward = mlocLoad32(payload.bytes + 20);
+    uint32_t textSize = mlocLoad32(payload.bytes + 24);
     bool word = (given & segmentGivesWord) != 0;
     bool sentence = (given & segmentGivesSentence) != 0;
     bool line = (given & segmentGivesLine) != 0;
@@ -93,22 +114,24 @@ bool mlocValidSegments(const DataView* view, DataSpan payload)
         flags > (segmentCjIdeographic | segmentJapaneseWords) ||
         ((flags & segmentCjIdeographic) != 0 && !line) ||
         ((flags & segmentJapaneseWords) != 0 && !word) || words > segmentMaxOverrides ||
-        sentences > segmentMaxOverrides || count > segmentMaxSuppressions || (words > 0 && !word) ||
-        ((sentences > 0 || count > 0) && !sentence))
+        sentences > segmentMaxOverrides || backward > segmentMaxSuppressions ||
+        forward > segmentMaxSuppressions || (words > 0 && !word) ||
+        ((sentences > 0 || backward > 0 || forward > 0) && !sentence))
     {
         return false;
     }
     uint64_t size = segmentHeaderSize + segmentOverrideSize * ((uint64_t)words + sentences) +
-                    4 * ((uint64_t)count + 1) + textSize;
+                    4 * (uint64_t)backward + 4 * ((uint64_t)backward + forward + 1) + textSize;
     if (size != payload.size)
     {
         return false;
     }
     const uint8_t* wordOverrides = payload.bytes + segmentHeaderSize;
     const uint8_t* sentenceOverrides = wordOverrides + segmentOverrideSize * (size_t)words;
-    const uint8_t* offsets = sentenceOverrides + segmentOverrideSize * (size_t)sentences;
-    const uint8_t* text = offsets + 4 * ((size_t)count + 1);
+    const uint8_t* values = sentenceOverrides + segmentOverrideSize * (size_t)sentences;
+    const uint8_t* offsets = values + 4 * (size_t)backward;
+    const uint8_t* text = offsets + 4 * ((size_t)backward + forward + 1);
     return ValidOverrides(wordOverrides, words, segmentWordClassCount) &&
            ValidOverrides(sentenceOverrides, sentences, segmentSentenceClassCount) &&
-           ValidSuppressions(offsets, count, text, textSize);
+           ValidEntries(values, offsets, backward, forward, text, textSize);
 }

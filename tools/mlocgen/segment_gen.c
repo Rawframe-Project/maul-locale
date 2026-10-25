@@ -15,7 +15,9 @@
 //   "$NS = \p{Line_Break=Nonstarter}" are CJ as an ideograph.
 // - Japanese's word variables and rules 13.3 and 13.4 are the Japanese
 //   word rules.
-// - A sentence segmentation's standard suppressions are kept as written.
+// - A sentence segmentation's standard suppressions become the two tables
+//   ICU4C's FilteredBreakIterator builder makes of them
+//   (segment_tables.h).
 
 #include "segment_gen.h"
 
@@ -52,14 +54,23 @@ typedef struct Overrides
     int removedCount;
 } Overrides;
 
+// A suppression table's entry.
+typedef struct Entry
+{
+    char* text;
+    uint32_t value;
+} Entry;
+
 typedef struct Segments
 {
     uint32_t given;
     uint32_t flags;
     Overrides word;
     Overrides sentence;
-    char** suppressions;
-    int suppressionCount;
+    Entry* backward;
+    int backwardCount;
+    Entry* forward;
+    int forwardCount;
 } Segments;
 
 static const char* const s_wordClasses[segmentWordClassCount] = {
@@ -412,8 +423,8 @@ static const char* ReadLine(const XmlNode* segmentation, Segments* out)
 // Whether a's bytes read from the end order before b's.
 static int CompareBackwards(const void* a, const void* b)
 {
-    const char* x = *(const char* const*)a;
-    const char* y = *(const char* const*)b;
+    const char* x = ((const Entry*)a)->text;
+    const char* y = ((const Entry*)b)->text;
     size_t xl = strlen(x);
     size_t yl = strlen(y);
     for (size_t i = 1; i <= xl && i <= yl; i++)
@@ -428,8 +439,58 @@ static int CompareBackwards(const void* a, const void* b)
     return (xl > yl) - (xl < yl);
 }
 
-// A sentence segmentation's standard suppressions, sorted from the end
-// and each kept once.
+static int CompareForwards(const void* a, const void* b)
+{
+    return strcmp(((const Entry*)a)->text, ((const Entry*)b)->text);
+}
+
+static char* Copy(const char* text, size_t length)
+{
+    char* copy = GenAllocate(length + 1);
+    memcpy(copy, text, length);
+    copy[length] = '\0';
+    return copy;
+}
+
+// The length of a text through its first full stop, or 0 without one.
+static size_t ThroughStop(const char* text)
+{
+    const char* stop = strchr(text, '.');
+    return stop == nullptr ? 0 : (size_t)(stop - text) + 1;
+}
+
+// Whether a suppression is partial: a full stop before its end.
+static bool Partial(const char* text)
+{
+    size_t through = ThroughStop(text);
+    return through != 0 && text[through] != '\0';
+}
+
+// Sorts a table and keeps each entry once.
+static int Settled(Entry* entries, int count, int (*compare)(const void*, const void*))
+{
+    if (count > 0)
+    {
+        qsort(entries, (size_t)count, sizeof(Entry), compare);
+    }
+    int kept = 0;
+    for (int i = 0; i < count; i++)
+    {
+        if (kept > 0 && strcmp(entries[kept - 1].text, entries[i].text) == 0)
+        {
+            free(entries[i].text);
+            continue;
+        }
+        entries[kept++] = entries[i];
+    }
+    return kept;
+}
+
+// A sentence segmentation's standard suppressions, as ICU4C's
+// SimpleFilteredBreakIteratorBuilder::build makes its tables of them: a
+// suppression is a forward entry when a partial suppression begins with
+// its text through its first full stop, else a backward match; and each
+// partial one's text through its first full stop is a backward partial.
 static const char* ReadSuppressions(const XmlNode* segmentation, Segments* out)
 {
     const XmlNode* list = XmlFindChild(segmentation, "suppressions");
@@ -442,8 +503,8 @@ static const char* ReadSuppressions(const XmlNode* segmentation, Segments* out)
     {
         return "suppressions of a type other than standard";
     }
-    out->suppressions = GenAllocate(sizeof(char*) * (size_t)(list->childCount + 1));
-    for (int i = 0; i < list->childCount; i++)
+    int count = list->childCount;
+    for (int i = 0; i < count; i++)
     {
         const XmlNode* item = list->children[i];
         size_t length = strlen(item->text);
@@ -451,26 +512,42 @@ static const char* ReadSuppressions(const XmlNode* segmentation, Segments* out)
         {
             return "a suppression empty or longer than a segmenter looks back";
         }
-        out->suppressions[out->suppressionCount] = GenAllocate(length + 1);
-        memcpy(out->suppressions[out->suppressionCount++], item->text, length + 1);
     }
-    if (out->suppressionCount > 0)
+    out->backward = GenAllocate(sizeof(Entry) * (size_t)(2 * count + 1));
+    out->forward = GenAllocate(sizeof(Entry) * (size_t)(count + 1));
+    for (int i = 0; i < count; i++)
     {
-        qsort((void*)out->suppressions, (size_t)out->suppressionCount, sizeof(char*),
-              CompareBackwards);
-    }
-    int kept = 0;
-    for (int i = 0; i < out->suppressionCount; i++)
-    {
-        if (kept > 0 && strcmp(out->suppressions[kept - 1], out->suppressions[i]) == 0)
+        const char* text = list->children[i]->text;
+        size_t through = ThroughStop(text);
+        bool family = false;
+        for (int j = 0; through != 0 && j < count; j++)
         {
-            free(out->suppressions[i]);
-            continue;
+            const char* other = list->children[j]->text;
+            family = family || (Partial(other) && ThroughStop(other) == through &&
+                                memcmp(other, text, through) == 0);
         }
-        out->suppressions[kept++] = out->suppressions[i];
+        if (family)
+        {
+            out->forward[out->forwardCount++] = (Entry){Copy(text, strlen(text)), 0};
+        }
+        else
+        {
+            out->backward[out->backwardCount++] =
+                (Entry){Copy(text, strlen(text)), segmentSuppressionMatch};
+        }
+        if (Partial(text))
+        {
+            out->backward[out->backwardCount++] =
+                (Entry){Copy(text, through), segmentSuppressionPartial};
+        }
     }
-    out->suppressionCount = kept;
-    return kept > segmentMaxSuppressions ? "more suppressions than the format holds" : nullptr;
+    // A family's partial entries are one text, and a match is never one:
+    // a suppression that is a family's text belongs to it.
+    out->backwardCount = Settled(out->backward, out->backwardCount, CompareBackwards);
+    out->forwardCount = Settled(out->forward, out->forwardCount, CompareForwards);
+    return out->backwardCount > segmentMaxSuppressions || out->forwardCount > segmentMaxSuppressions
+               ? "more suppressions than the format holds"
+               : nullptr;
 }
 
 static const char* ReadFile(const XmlNode* root, Segments* out)
@@ -525,35 +602,49 @@ static void PutOverrides(uint8_t* at, const Overrides* overrides)
 static uint8_t* Unit(const Segments* s, size_t* sizeOut)
 {
     size_t text = 0;
-    for (int i = 0; i < s->suppressionCount; i++)
+    for (int i = 0; i < s->backwardCount; i++)
     {
-        text += strlen(s->suppressions[i]);
+        text += strlen(s->backward[i].text);
+    }
+    for (int i = 0; i < s->forwardCount; i++)
+    {
+        text += strlen(s->forward[i].text);
     }
     size_t overrides = (size_t)s->word.addedCount + (size_t)s->sentence.addedCount;
+    size_t entries = (size_t)s->backwardCount + (size_t)s->forwardCount;
     size_t size = segmentHeaderSize + segmentOverrideSize * overrides +
-                  4 * ((size_t)s->suppressionCount + 1) + text;
+                  4 * (size_t)s->backwardCount + 4 * (entries + 1) + text;
     uint8_t* unit = GenAllocate(size);
     GenPut(unit, s->given, 4);
     GenPut(unit + 4, s->flags, 4);
     GenPut(unit + 8, (uint64_t)s->word.addedCount, 4);
     GenPut(unit + 12, (uint64_t)s->sentence.addedCount, 4);
-    GenPut(unit + 16, (uint64_t)s->suppressionCount, 4);
-    GenPut(unit + 20, text, 4);
+    GenPut(unit + 16, (uint64_t)s->backwardCount, 4);
+    GenPut(unit + 20, (uint64_t)s->forwardCount, 4);
+    GenPut(unit + 24, text, 4);
     uint8_t* at = unit + segmentHeaderSize;
     PutOverrides(at, &s->word);
     at += segmentOverrideSize * (size_t)s->word.addedCount;
     PutOverrides(at, &s->sentence);
     at += segmentOverrideSize * (size_t)s->sentence.addedCount;
-    uint8_t* textAt = at + 4 * ((size_t)s->suppressionCount + 1);
-    size_t offset = 0;
-    for (int i = 0; i < s->suppressionCount; i++)
+    for (int i = 0; i < s->backwardCount; i++)
     {
-        size_t length = strlen(s->suppressions[i]);
-        GenPut(at + 4 * (size_t)i, offset, 4);
-        memcpy(textAt + offset, s->suppressions[i], length);
+        GenPut(at + 4 * (size_t)i, s->backward[i].value, 4);
+    }
+    at += 4 * (size_t)s->backwardCount;
+    uint8_t* textAt = at + 4 * (entries + 1);
+    size_t offset = 0;
+    for (size_t i = 0; i < entries; i++)
+    {
+        const char* entry = i < (size_t)s->backwardCount
+                                ? s->backward[i].text
+                                : s->forward[i - (size_t)s->backwardCount].text;
+        size_t length = strlen(entry);
+        GenPut(at + 4 * i, offset, 4);
+        memcpy(textAt + offset, entry, length);
         offset += length;
     }
-    GenPut(at + 4 * (size_t)s->suppressionCount, offset, 4);
+    GenPut(at + 4 * entries, offset, 4);
     *sizeOut = size;
     return unit;
 }
@@ -568,11 +659,16 @@ const char* SegmentsUnit(const XmlNode* root, uint8_t** unitOut, size_t* sizeOut
     {
         *unitOut = Unit(&s, sizeOut);
     }
-    for (int k = 0; k < s.suppressionCount; k++)
+    for (int k = 0; k < s.backwardCount; k++)
     {
-        free(s.suppressions[k]);
+        free(s.backward[k].text);
     }
-    free((void*)s.suppressions);
+    for (int k = 0; k < s.forwardCount; k++)
+    {
+        free(s.forward[k].text);
+    }
+    free(s.backward);
+    free(s.forward);
     return problem;
 }
 

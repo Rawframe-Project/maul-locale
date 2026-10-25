@@ -2,10 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The generator's segmentation units (segment_gen.h): a file of
-// common/segments read into its unit, and the forms it refuses with their
-// reasons: an escaped surrogate, Japanese's word rules or CJ as an
-// ideograph with a part repeated and another missing, and a variable too
-// long to read.
+// common/segments read into its unit, suppressions into ICU4C's two
+// tables, and the forms it refuses with their reasons: an escaped surrogate, Japanese's word rules
+// or CJ as an ideograph with a part repeated and another missing, and a variable too long to read.
 
 #include "bytes.h"
 #include "segment_gen.h"
@@ -100,6 +99,50 @@ static void TestForms(void)
     CHECK(Read("") == nullptr && s_unit == nullptr, "no unit for a file without segmentations");
 }
 
+// Whether the unit's entry is this text, with this value when backward.
+static bool EntryIs(uint32_t i, const char* text, uint32_t value)
+{
+    uint32_t overrides = mlocLoad32(s_unit + 8) + mlocLoad32(s_unit + 12);
+    uint32_t backward = mlocLoad32(s_unit + 16);
+    uint32_t count = backward + mlocLoad32(s_unit + 20);
+    const uint8_t* values = s_unit + segmentHeaderSize + segmentOverrideSize * (size_t)overrides;
+    const uint8_t* offsets = values + 4 * (size_t)backward;
+    const uint8_t* texts = offsets + 4 * ((size_t)count + 1);
+    uint32_t start = i < count ? mlocLoad32(offsets + 4 * (size_t)i) : 0;
+    uint32_t end = i < count ? mlocLoad32(offsets + 4 * (size_t)i + 4) : 0;
+    if (i >= count || end - start != strlen(text) ||
+        memcmp(texts + start, text, end - start) != 0 ||
+        (i < backward && mlocLoad32(values + 4 * (size_t)i) != value))
+    {
+        printf("  entry %u is not %s\n", i, text);
+        return false;
+    }
+    return true;
+}
+
+static void TestSuppressions(void)
+{
+    // "Mr." is no family's: a match. "z.B.", "Ph.D." and "e.g." are
+    // partial, so "z.", "Ph." and "e." are partials, and their families'
+    // members, "z." among them, are forward entries.
+    CHECK(Gives("<segmentation type=\"SentenceBreak\"><suppressions type=\"standard\">"
+                "<suppression>Mr.</suppression><suppression>z.</suppression>"
+                "<suppression>z.B.</suppression><suppression>Ph.D.</suppression>"
+                "<suppression>e.g.</suppression><suppression>Mr.</suppression>"
+                "</suppressions></segmentation>",
+                segmentGivesSentence, 0) &&
+              mlocLoad32(s_unit + 16) == 4 && mlocLoad32(s_unit + 20) == 4,
+          "four backward and four forward entries, \"Mr.\" once");
+    CHECK(EntryIs(0, "e.", segmentSuppressionPartial) &&
+              EntryIs(1, "Ph.", segmentSuppressionPartial) &&
+              EntryIs(2, "Mr.", segmentSuppressionMatch) &&
+              EntryIs(3, "z.", segmentSuppressionPartial),
+          "the backward entries, sorted read from the end");
+    CHECK(EntryIs(4, "Ph.D.", 0) && EntryIs(5, "e.g.", 0) && EntryIs(6, "z.", 0) &&
+              EntryIs(7, "z.B.", 0),
+          "the forward entries, sorted");
+}
+
 static void TestRefusals(void)
 {
     const char* variable = "a variable the generator does not take";
@@ -141,6 +184,7 @@ static void TestRefusals(void)
 int main(void)
 {
     TestForms();
+    TestSuppressions();
     TestRefusals();
     free(s_unit);
     return s_failures == 0 ? 0 : 1;
