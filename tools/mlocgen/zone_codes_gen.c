@@ -7,6 +7,7 @@
 #include "zone_codes_gen.h"
 
 #include "kinds.h"
+#include "table_gen.h"
 #include "tzdb.h"
 #include "xml.h"
 #include "zone_code_tables.h"
@@ -235,9 +236,13 @@ static int AssignWindows(Codes* c, const Mapping* m, int windows, char* errorOut
     {
         char name[tzdbMaxName];
         size_t length = strcspn(at, " ");
-        snprintf(name, sizeof(name), "%.*s", (int)length, at);
+        if (!GenCopy(name, sizeof(name), at, length))
+        {
+            return Fail(errorOut, errorCapacity, "an identifier longer than the generator holds",
+                        at);
+        }
         at += length + (at[length] == ' ');
-        int code = length < tzdbMaxName ? FindAlias(c, name) : -1;
+        int code = FindAlias(c, name);
         if (code < 0)
         {
             return Fail(errorOut, errorCapacity, "a mapped identifier no id lists", name);

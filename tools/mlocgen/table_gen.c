@@ -33,6 +33,21 @@ void* GenAllocate(size_t size)
     return p;
 }
 
+bool GenCopy(char* out, size_t capacity, const char* text, size_t length)
+{
+    if (length >= capacity)
+    {
+        if (capacity > 0)
+        {
+            out[0] = '\0';
+        }
+        return false;
+    }
+    memcpy(out, text, length);
+    out[length] = '\0';
+    return true;
+}
+
 void GenPut(uint8_t* p, uint64_t value, int bytes)
 {
     for (int i = 0; i < bytes; i++)

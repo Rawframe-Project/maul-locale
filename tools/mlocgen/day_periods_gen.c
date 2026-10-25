@@ -6,6 +6,7 @@
 #include "day_periods_gen.h"
 
 #include "date_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdint.h>
@@ -123,7 +124,10 @@ static int AddRules(Map* rules, const XmlNode* list, char* errorOut, size_t erro
     {
         char key[32];
         size_t length = strcspn(at, " ");
-        snprintf(key, sizeof(key), "%.*s", (int)length, at);
+        if (!GenCopy(key, sizeof(key), at, length))
+        {
+            return Fail(errorOut, errorCapacity, "a locale longer than the generator holds", at);
+        }
         uint8_t* copy = malloc(dateRuleSize);
         if (copy == nullptr)
         {
