@@ -510,6 +510,15 @@ XmlNode* XmlParse(const char* bytes, size_t length, char* errorOut, size_t error
     {
         parser.p += 3;
     }
+    // XML allows no U+0000, and the tree's texts and values are C strings
+    // a NUL would cut short.
+    const char* nul = memchr(parser.p, '\0', (size_t)(parser.end - parser.p));
+    if (nul != nullptr)
+    {
+        parser.p = nul;
+        Refuse(&parser, "a NUL byte, which XML does not allow");
+        return nullptr;
+    }
     for (;;)
     {
         SkipSpace(&parser);
