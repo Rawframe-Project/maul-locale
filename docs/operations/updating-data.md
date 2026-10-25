@@ -52,6 +52,8 @@ A new CLDR release is a new minor version of the library: formatted text changes
 1. Move `tools/tzdb-release.txt` to the release and the SHA-256 of its data archive, after checking the archive's signature against the tzdb maintainers' key.
 2. Regenerate, and run the zone checks: offsets against `zic` and `zdump`, local times against `zoneinfo`, zoned arithmetic, and the BCP 47 and Windows mappings.
 
+A new tzdb release is a new minor version of the library: the local time of existing instants changes.
+
 Programs need not wait for a library release to take new rules: `mlocgen zonesfile <tzdb directory> <CLDR common directory> zones.mloc` writes a zones file for the current data version from any release ([data.md](../user/data.md#a-newer-time-zone-release)). `tools/tzdb-older.txt` names the release the CI check compiles such a file from.
 
 ## Grammar lexicons
