@@ -5,6 +5,27 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.3.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.3...v0.3.0) (2026-10-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **locale:** `mlocCanonicalizeLocale` gives `en-US-u-va-posix` for `en-US-posix` and `en_US_POSIX`, `en-US-u-va-posix` now formats and sorts as POSIX English, and its parent is `en-US`. A program that stored the canonical form canonicalizes it again; one that compares with `en-US-posix` compares with `en-US-u-va-posix`.
+* **data:** `MLOC_DATA_FORMAT_VERSION` is 0x80000004, because the segmentation unit's layout changed. Data files of an older format are refused with `mloc_errorDataVersion`. Use the data files of this version, rebuild catalogs, and recompile stored messages. Format 0x80000003 ([#78](https://github.com/Rawframe-Project/maul-locale/issues/78)) was never in a release, so 0.2.3's data files, catalogs and messages are what a program moves from.
+* **data:** the data format is now 0x80000003. Data files, catalogs and compiled messages made by 0.2.x are refused with mloc_errorDataVersion: a program takes this release's data files or regenerates them with its mlocgen, rebuilds its catalogs with its mloccat, and compiles stored messages again.
+
+### Added
+
+* **data:** add the segmentation tailorings' data file ([#78](https://github.com/Rawframe-Project/maul-locale/issues/78)) ([fbacca8](https://github.com/Rawframe-Project/maul-locale/commit/fbacca8e9ed5ac70a2e5e728fa7b877e11011d0e))
+* **data:** store the suppressions as ICU4C's two tables ([#83](https://github.com/Rawframe-Project/maul-locale/issues/83)) ([a5a8b32](https://github.com/Rawframe-Project/maul-locale/commit/a5a8b327015eddfe2789514bf00d535ba4dd6757))
+* **segment:** segment text as a locale tailors it ([#90](https://github.com/Rawframe-Project/maul-locale/issues/90)) ([a7f17f3](https://github.com/Rawframe-Project/maul-locale/commit/a7f17f3c315108374bdc14d5bcd275aac361d2f8)), closes [#35](https://github.com/Rawframe-Project/maul-locale/issues/35)
+
+
+### Fixed
+
+* **generator:** refuse surrogates, repeats and long segment variables ([#81](https://github.com/Rawframe-Project/maul-locale/issues/81)) ([721b750](https://github.com/Rawframe-Project/maul-locale/commit/721b75083c17fd42d66881455aa6ad39befcef1a)), closes [#35](https://github.com/Rawframe-Project/maul-locale/issues/35)
+* **locale:** read -u-va-posix as POSIX English ([#91](https://github.com/Rawframe-Project/maul-locale/issues/91)) ([b45cc9b](https://github.com/Rawframe-Project/maul-locale/commit/b45cc9b83e5fa5bafbfe424ab965f39bb11cc0fa))
+
 ## [0.2.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.2...v0.2.3) (2026-10-25)
 
 ### Fixed
