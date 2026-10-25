@@ -38,15 +38,22 @@
 // match. The backward entries are distinct and sorted by their bytes read
 // from the end, the forward entries distinct and sorted by their bytes.
 //
-// A sentence break the segmenter finds, but at the end of the text, is
-// suppressed as ICU4C's is. Step back over one U+0020 before the break if
-// there is one; then take the longest backward entry that the text before
-// that point ends with. A match suppresses the break; a partial reads the
-// forward entries from that entry's start, as far as the text goes on
-// along one of them: the break is suppressed when the text there ends one
-// (no entry goes on with the next character, or the text ends), and the
-// walk may read past the break. A suppressed break is replaced by the next
-// one, which is checked the same way.
+// Each sentence break the segmenter finds, but one at the end of the text,
+// is checked as ICU4C checks it. Step back over one U+0020 before the break
+// if there is one; then take the longest backward entry that the text
+// before that point ends with. A match suppresses the break. A partial
+// reads the text from that entry's start one character at a time and stops
+// at the first of: a character with which no forward entry goes on from the
+// characters read before it, an entry that no other entry goes on from, or
+// the end of the text. The break is suppressed only when the walk stops at
+// such a final entry, or when the text ends right after an entry. Stopping
+// at a character no entry goes on with keeps the break, even right after an
+// entry: with the forward entries "z." and "z.B.", a break after "z. " in
+// "Er kam z. Bald" stays, since no entry goes on from "z." with a space.
+// The walk may read past the break: with the partial "trav." and the
+// forward entry "trav. publ.", a break after "trav. " before "publ." is
+// suppressed. A suppressed break is replaced by the next one, which is
+// checked the same way.
 //
 // A data layout: tools/check_data_format.py watches this header.
 
