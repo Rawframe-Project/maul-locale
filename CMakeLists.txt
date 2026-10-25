@@ -906,6 +906,7 @@ if(MAUL_LOCALE_FUZZ)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area catalog collate_fast collation collation_data data date_data decimal duration grammar ixdtf locale message parse
                  relative
+                 segments
                  spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
