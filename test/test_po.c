@@ -117,6 +117,14 @@ static void TestRefusals(void)
     PoFile po;
     CHECK(Reads("", &po) && po.count == 0 && po.header == nullptr, "an empty file");
     PoFree(&po);
+    // An entry refused when it ends names the line where it began.
+    PoError noId = {0, nullptr};
+    PoError noString = {0, nullptr};
+    static const char withoutId[] = "msgid \"a\"\nmsgstr \"\"\n\n#. c\nmsgctxt \"k\"\nmsgstr \"\"";
+    static const char withoutString[] = "\nmsgctxt \"k\"\nmsgid \"a\"\n";
+    CHECK(!PoRead(withoutId, strlen(withoutId), &po, &noId) && noId.line == 5 &&
+              !PoRead(withoutString, strlen(withoutString), &po, &noString) && noString.line == 3,
+          "an entry without msgid at its first keyword's line, without msgstr at its msgid's");
 }
 
 static void Path(char* out, size_t capacity, const char* name)
