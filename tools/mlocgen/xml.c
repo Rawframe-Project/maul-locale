@@ -429,9 +429,11 @@ static void ParseContent(Parser* parser, XmlNode* node, Buffer* text, int depth)
         {
             parser->p += 2;
             size_t length = strlen(node->name);
-            if ((size_t)(parser->end - parser->p) < length ||
-                memcmp(parser->p, node->name, length) != 0 ||
-                IsNameByte((unsigned char)parser->p[length]))
+            size_t left = (size_t)(parser->end - parser->p);
+            // The byte after the name is read only when there is one: an
+            // input may end right after it.
+            if (left < length || memcmp(parser->p, node->name, length) != 0 ||
+                (left > length && IsNameByte((unsigned char)parser->p[length])))
             {
                 Refuse(parser, "the end tag does not close <%s>", node->name);
                 return;
