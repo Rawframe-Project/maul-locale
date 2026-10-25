@@ -100,6 +100,9 @@ zone_tables: bytes data_view kinds
 zone_code_tables: bytes data_view kinds
 relative_tables: bytes data_view number_data
 segment_tables: bytes data_view number_data
+segmenter: data_view segment_tables
+segment: bytes invariant kinds locale_fallback locale_keyword segmenter
+segment_filter: bytes invariant segmenter
 catalog_hash: bytes
 catalog_tables: bytes catalog_hash data_view message_read
 catalog_view: catalog_tables

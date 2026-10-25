@@ -235,6 +235,8 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/zone_name_tables.c
     src/relative_tables.c
     src/segment_tables.c
+    src/segment.c
+    src/segment_filter.c
     src/relative_format.c
     src/relative_datetime.c
     src/duration_options.c
@@ -695,6 +697,32 @@ if(MAUL_LOCALE_BUILD_TESTS)
             target_compile_definitions(test_segment_tables PRIVATE _CRT_SECURE_NO_WARNINGS)
         endif()
         target_compile_definitions(test_segment_tables PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+    endif()
+    maul_add_test(segment)
+    if(TARGET test_segment)
+        if(EMSCRIPTEN)
+            target_link_options(test_segment PRIVATE
+                                "SHELL:--embed-file ${MLOC_SEGMENTS_FILE}@/segments.mloc")
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_segment PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_segment PRIVATE MLOC_SEGMENTS_FILE="${MLOC_SEGMENTS_PATH}")
+        # ICU4C's answers (tools/oracle/segment/) and the listed departures.
+        set(MLOC_SEGMENT_ICU ${PROJECT_SOURCE_DIR}/test/segment_icu.tsv)
+        set(MLOC_SEGMENT_EXCEPTIONS ${PROJECT_SOURCE_DIR}/tools/segment-exceptions.txt)
+        if(EMSCRIPTEN)
+            target_link_options(test_segment PRIVATE
+                                "SHELL:--embed-file ${MLOC_SEGMENT_ICU}@/segment_icu.tsv"
+                                "SHELL:--embed-file ${MLOC_SEGMENT_EXCEPTIONS}@/segment-exceptions.txt")
+            target_compile_definitions(test_segment PRIVATE
+                                       MLOC_SEGMENT_ICU_FILE="/segment_icu.tsv"
+                                       MLOC_SEGMENT_EXCEPTIONS_FILE="/segment-exceptions.txt")
+        else()
+            target_compile_definitions(test_segment PRIVATE
+                                       MLOC_SEGMENT_ICU_FILE="${MLOC_SEGMENT_ICU}"
+                                       MLOC_SEGMENT_EXCEPTIONS_FILE="${MLOC_SEGMENT_EXCEPTIONS}")
+        endif()
     endif()
     maul_add_test(relative)
     if(TARGET test_relative)

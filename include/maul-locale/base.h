@@ -84,6 +84,11 @@ extern "C"
         // The call wrote its result with fallbacks where parts of it
         // failed, which it reports apart (a message's expressions).
         mloc_withFallbacks = 2,
+        // An iterator has reported its last result.
+        mloc_done = 3,
+        // An iterator needs the next piece of its text before it can
+        // answer.
+        mloc_needMoreText = 4,
         // An argument is invalid: a null pointer where one is required, a
         // value out of range.
         mloc_errorInvalid = -1,
