@@ -32,7 +32,7 @@ env:
 jobs:
   # Whether anything beyond documentation changed; the builds skip when not.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@c3e9ba81140f28b7df1ccfb172c031b6e164a73f # v0.0.24
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       pull-requests: read
 
@@ -48,12 +48,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Rawframe-Project/.github/.github/actions/docs-check@c3e9ba81140f28b7df1ccfb172c031b6e164a73f # v0.0.24
+      - uses: Rawframe-Project/.github/.github/actions/docs-check@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
         with:
           exclude: tools/external
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@c3e9ba81140f28b7df1ccfb172c031b6e164a73f # v0.0.24
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       contents: read
 
@@ -141,7 +141,7 @@ jobs:
           - { preset: linux-shared }
           - { preset: macos-clang, runner: macos-15 }
           - { preset: windows-clang-cl, runner: windows-2025 }
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@c3e9ba81140f28b7df1ccfb172c031b6e164a73f # v0.0.24
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       contents: read
     with:
@@ -371,8 +371,7 @@ jobs:
           cmake --build out/fuzz
       # Caches are immutable: each run on main saves a new entry, and every
       # run but a pull request's restores the latest. A pull request's run
-      # starts from the committed seeds alone: it runs the code under
-      # review, which could print the corpus.
+      # starts from the committed seeds alone (maul-conventions.md).
       - name: Restore the corpus
         if: github.event_name != 'pull_request'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -408,6 +407,9 @@ jobs:
           exit "$status"
       # Each corpus is merged into a fresh directory and swapped in only
       # when the merge finished, so a failed merge leaves the old corpus.
+      # This step and the save run only when every target found nothing:
+      # a run that found something keeps its corpus, which holds inputs
+      # near the finding, out of the cache.
       - name: Minimize the corpus
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
