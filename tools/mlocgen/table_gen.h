@@ -55,6 +55,13 @@ void GenFreeList(char** names, int count);
 // cut short.
 bool GenCopy(char* out, size_t capacity, const char* text, size_t length);
 
+// Appends printf's output to a text of a capacity at *size, NUL-ended,
+// and moves *size past it; false, with *size and the text before it
+// unchanged, when it does not fit, so that a source is refused, never cut
+// short.
+[[gnu::format(printf, 4, 5)]] bool GenPrint(char* text, size_t capacity, size_t* size,
+                                            const char* format, ...);
+
 // Stores a little-endian integer of 1 to 8 bytes.
 void GenPut(uint8_t* p, uint64_t value, int bytes);
 

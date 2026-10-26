@@ -9,6 +9,7 @@
 #include "file.h"
 #include "message_text.h"
 #include "po.h"
+#include "print.h"
 #include "resource_edit.h"
 #include "stale.h"
 
@@ -49,8 +50,12 @@ static char* Comments(const CatalogEntry* e)
         const ResMeta* m = &e->item->meta[i];
         if (m->key.length == 5 && memcmp(m->key.bytes, "param", 5) == 0)
         {
-            at += (size_t)snprintf(text + at, length + 1 - at, "%s@param %.*s", at > 0 ? "\n" : "",
-                                   (int)m->value.length, m->value.bytes);
+            // The length counted above holds every line.
+            if (!TextPrint(text, length + 1, &at, "%s@param %.*s", at > 0 ? "\n" : "",
+                           (int)m->value.length, m->value.bytes))
+            {
+                exit(1);
+            }
         }
     }
     text[at] = '\0';

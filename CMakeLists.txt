@@ -930,7 +930,7 @@ endif()
 set(MLOCCAT_SOURCES tools/mloccat/accept.c tools/mloccat/catalog_set.c
                     tools/mloccat/exchange_po.c tools/mloccat/file.c tools/mloccat/json.c
                     tools/mloccat/message_text.c tools/mloccat/mf2_parts.c tools/mloccat/pgs.c
-                    tools/mloccat/po.c tools/mloccat/pseudo.c tools/mloccat/report.c
+                    tools/mloccat/po.c tools/mloccat/print.c tools/mloccat/pseudo.c tools/mloccat/report.c
                     tools/mloccat/report_write.c tools/mloccat/resource.c
                     tools/mloccat/resource_check.c tools/mloccat/resource_edit.c
                     tools/mloccat/resource_write.c tools/mloccat/stale.c

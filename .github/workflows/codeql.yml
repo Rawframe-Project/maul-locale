@@ -1,6 +1,7 @@
-# CodeQL on every pull request and on main. An advanced setup, since the
-# default one builds with the runner's default compiler, GCC 13, and the
-# library needs GCC 14 for C23 (cmake/CompilerFlags.cmake refuses older).
+# CodeQL on every pull request and on main, for the C code and for the
+# workflows. An advanced setup, since the default one builds with the
+# runner's default compiler, GCC 13, and the library needs GCC 14 for C23
+# (cmake/CompilerFlags.cmake refuses older).
 name: codeql
 
 on:
@@ -39,3 +40,22 @@ jobs:
       - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           category: /language:c-cpp
+
+  # The workflows: token permissions, injection, untrusted checkouts.
+  actions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: actions
+          build-mode: none
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:actions

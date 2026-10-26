@@ -8,6 +8,7 @@
 #include "currency_tables.h"
 #include "number_tables.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,25 @@ bool GenCopy(char* out, size_t capacity, const char* text, size_t length)
     }
     memcpy(out, text, length);
     out[length] = '\0';
+    return true;
+}
+
+bool GenPrint(char* text, size_t capacity, size_t* size, const char* format, ...)
+{
+    if (*size >= capacity)
+    {
+        return false;
+    }
+    va_list arguments;
+    va_start(arguments, format);
+    int n = vsnprintf(text + *size, capacity - *size, format, arguments);
+    va_end(arguments);
+    if (n < 0 || (size_t)n >= capacity - *size)
+    {
+        text[*size] = '\0';
+        return false;
+    }
+    *size += (size_t)n;
     return true;
 }
 
