@@ -74,6 +74,22 @@ static void TestCopy(void)
           "and refuses one of capacity bytes, leaving the buffer empty");
 }
 
+static void TestPrint(void)
+{
+    char out[8] = "xxxxxxx";
+    size_t size = 2;
+    memcpy(out, "ab", 2);
+    CHECK(GenPrint(out, sizeof(out), &size, "%s%d", "cd", 345) && size == 7 &&
+              strcmp(out, "abcd345") == 0,
+          "GenPrint appends a text that leaves capacity - 1 bytes in use, NUL-ended");
+    size = 2;
+    CHECK(!GenPrint(out, sizeof(out), &size, "%s%d", "cd", 3456) && size == 2 &&
+              strcmp(out, "ab") == 0,
+          "and refuses one that would fill the capacity, keeping the text before it");
+    size = sizeof(out);
+    CHECK(!GenPrint(out, sizeof(out), &size, "%s", ""), "and refuses any text at a full capacity");
+}
+
 // dayPeriods.xml with root and a locale of this many bytes in one list.
 static bool PutDayPeriods(size_t length)
 {
@@ -262,6 +278,7 @@ int main(int argc, char** argv)
     }
     s_common = argv[1];
     TestCopy();
+    TestPrint();
     TestDayPeriods();
     TestExtensions();
     TestParents();

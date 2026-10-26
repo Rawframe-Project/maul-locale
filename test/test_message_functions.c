@@ -8,6 +8,7 @@
 // better entries, and a selector that cannot select.
 
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/message.h"
 
@@ -557,16 +558,17 @@ static void TestSelection(void)
     for (int count = 32; count <= 33; count++)
     {
         char text[512];
-        size_t at = (size_t)snprintf(text, sizeof text, ".local $v = {|a| :x:any} .match");
+        size_t at = 0;
+        AppendPrint(text, sizeof text, &at, "%s", ".local $v = {|a| :x:any} .match");
         for (int i = 0; i < count; i++)
         {
-            at += (size_t)snprintf(text + at, sizeof text - at, " $v");
+            AppendPrint(text, sizeof text, &at, "%s", " $v");
         }
         for (int i = 0; i < count; i++)
         {
-            at += (size_t)snprintf(text + at, sizeof text - at, " *");
+            AppendPrint(text, sizeof text, &at, "%s", " *");
         }
-        snprintf(text + at, sizeof text - at, " {{all}}");
+        AppendPrint(text, sizeof text, &at, "%s", " {{all}}");
         size_t size = 0;
         size_t bound = 0;
         mlocMessageError error;
@@ -598,12 +600,14 @@ static void TestResolutionLimit(void)
     // resolutions, 29524 for $a10, so two references bind (59048) and
     // three (88572) pass 65536.
     char text[2048];
-    size_t at = (size_t)snprintf(text, sizeof text, ".local $a1 = {|x| :string}");
+    size_t at = 0;
+    AppendPrint(text, sizeof text, &at, "%s", ".local $a1 = {|x| :string}");
     for (int i = 2; i <= 10; i++)
     {
-        at += (size_t)snprintf(text + at, sizeof text - at, " .local $a%d = {$a%d :string k=$a%d}",
-                               i, i - 1, i - 1);
+        AppendPrint(text, sizeof text, &at, " .local $a%d = {$a%d :string k=$a%d}", i, i - 1,
+                    i - 1);
     }
+    // Each message below ends the declarations differently, from at.
     snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}}}");
     CHECK(BindOnly(text) == mloc_success, "a message within the resolution limit binds");
     snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}{$a10}}}");
@@ -643,9 +647,9 @@ static void TestResolutionLimit(void)
         size_t used = 0;
         for (int i = 0; i < count; i++)
         {
-            used += (size_t)snprintf(many + used, sizeof many - used, ".local $d%d={1}", i);
+            AppendPrint(many, sizeof many, &used, ".local $d%d={1}", i);
         }
-        snprintf(many + used, sizeof many - used, "{{}}");
+        AppendPrint(many, sizeof many, &used, "%s", "{{}}");
         CHECK(BindOnly(many) == (count == 1024 ? mloc_success : mloc_errorInvalid),
               "1024 declarations bind, 1025 are refused");
     }

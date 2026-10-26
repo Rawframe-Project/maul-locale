@@ -10,6 +10,7 @@
 #include "bytes.h"
 #include "message_form.h"
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/message.h"
 
@@ -246,23 +247,25 @@ static void TestMarks(void)
     char text[200];
     for (int marks = 30; marks <= 32; marks += 2)
     {
-        size_t at = (size_t)snprintf(text, sizeof text, "{$a");
+        size_t at = 0;
+        AppendPrint(text, sizeof text, &at, "%s", "{$a");
         for (int i = 0; i < marks; i++)
         {
-            at += (size_t)snprintf(text + at, sizeof text - at, "\314\201");
+            AppendPrint(text, sizeof text, &at, "%s", "\314\201");
         }
-        snprintf(text + at, sizeof text - at, "}");
+        AppendPrint(text, sizeof text, &at, "%s", "}");
         size_t size = 0;
         mlocMessageError error;
         mlocTextResult result =
             mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
         CHECK((result.status == mloc_success) == (marks == 30), "a name's marks up to 30");
-        at = (size_t)snprintf(text, sizeof text, ".input {$x :f}.match $x |a");
+        at = 0;
+        AppendPrint(text, sizeof text, &at, "%s", ".input {$x :f}.match $x |a");
         for (int i = 0; i < marks; i++)
         {
-            at += (size_t)snprintf(text + at, sizeof text - at, "\314\201");
+            AppendPrint(text, sizeof text, &at, "%s", "\314\201");
         }
-        snprintf(text + at, sizeof text - at, "| {{}} * {{}}");
+        AppendPrint(text, sizeof text, &at, "%s", "| {{}} * {{}}");
         result = mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
         CHECK((result.status == mloc_success) == (marks == 30), "a key's marks up to 30");
     }
@@ -339,18 +342,19 @@ static void TestLinear(void)
     size_t at = 0;
     for (int i = 0; i < many; i++)
     {
-        at += (size_t)snprintf(text + at, sizeof text - at, "{$v%d :f o%d=1}", i, i);
+        AppendPrint(text, sizeof text, &at, "{$v%d :f o%d=1}", i, i);
     }
     size_t size = 0;
     mlocMessageError error;
     mlocTextResult result = mlocCompileMessage(text, at, big, sizeof big, &size, &error);
     CHECK(result.status == mloc_success, "forty thousand names and options compile");
-    at = (size_t)snprintf(text, sizeof text, ".input {$x :f} .match $x\n");
+    at = 0;
+    AppendPrint(text, sizeof text, &at, "%s", ".input {$x :f} .match $x\n");
     for (int i = 0; i < many; i++)
     {
-        at += (size_t)snprintf(text + at, sizeof text - at, "k%d {{}}", i);
+        AppendPrint(text, sizeof text, &at, "k%d {{}}", i);
     }
-    at += (size_t)snprintf(text + at, sizeof text - at, "* {{}}");
+    AppendPrint(text, sizeof text, &at, "%s", "* {{}}");
     result = mlocCompileMessage(text, at, big, sizeof big, &size, &error);
     CHECK(result.status == mloc_success, "forty thousand variants compile");
 }
@@ -1237,12 +1241,13 @@ static void TestBindAndFormat(void)
     // A chain of 64 expressions binds; of 65, it is refused.
     for (int limit = 63; limit <= 64; limit++)
     {
-        size_t at = (size_t)snprintf(text, sizeof text, ".local $v0 = {$x}");
+        size_t at = 0;
+        AppendPrint(text, sizeof text, &at, "%s", ".local $v0 = {$x}");
         for (int i = 1; i < limit; i++)
         {
-            at += (size_t)snprintf(text + at, sizeof text - at, ".local $v%d = {$v%d}", i, i - 1);
+            AppendPrint(text, sizeof text, &at, ".local $v%d = {$v%d}", i, i - 1);
         }
-        snprintf(text + at, sizeof text - at, "{{{$v%d}}}", limit - 1);
+        AppendPrint(text, sizeof text, &at, "{{{$v%d}}}", limit - 1);
         CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorInvalid),
               "a chain of 64 binds, of 65 is refused");
     }

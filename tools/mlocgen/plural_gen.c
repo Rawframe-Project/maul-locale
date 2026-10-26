@@ -266,8 +266,12 @@ static int FindSet(Plurals* p, const XmlNode* group, bool ordinal)
     {
         if (set.used[c])
         {
-            at += (size_t)snprintf(set.key + at, sizeof(set.key) - at, "%s:%s;", s_categories[c],
-                                   set.conditions[c]);
+            if (!GenPrint(set.key, sizeof(set.key), &at, "%s:%s;", s_categories[c],
+                          set.conditions[c]))
+            {
+                Die("a rule set longer than the generator holds",
+                    XmlGetAttribute(group, "locales"));
+            }
         }
     }
     for (int s = 0; s < p->setCount; s++)

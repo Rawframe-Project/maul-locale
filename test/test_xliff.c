@@ -12,6 +12,7 @@
 #include "file.h"
 #include "stale.h"
 #include "test_harness.h"
+#include "test_print.h"
 #include "xliff_pgs.h"
 
 #include <stdio.h>
@@ -492,12 +493,12 @@ static void TestSelectionRefusals(void)
 static void AppendSelect(char* out, size_t room, const char* key, int count)
 {
     size_t at = strlen(out);
-    at += (size_t)snprintf(out + at, room - at, "%s = .input {$s :string}\n .match $s\n", key);
+    AppendPrint(out, room, &at, "%s = .input {$s :string}\n .match $s\n", key);
     for (int i = 0; i < count; i++)
     {
-        at += (size_t)snprintf(out + at, room - at, " k%d {{%d}}\n", i, i);
+        AppendPrint(out, room, &at, " k%d {{%d}}\n", i, i);
     }
-    (void)snprintf(out + at, room - at, " * {{x}}\n");
+    AppendPrint(out, room, &at, "%s", " * {{x}}\n");
 }
 
 static void TestSelectionBound(void)

@@ -10,6 +10,7 @@
 #include "exchange_po.h"
 #include "file.h"
 #include "po.h"
+#include "print.h"
 #include "test_harness.h"
 
 #include <stdio.h>
@@ -54,6 +55,22 @@ static char* Written(const PoFile* po)
     }
     fclose(f);
     return written;
+}
+
+static void TestPrint(void)
+{
+    char out[8] = "xxxxxxx";
+    size_t size = 2;
+    memcpy(out, "ab", 2);
+    CHECK(TextPrint(out, sizeof(out), &size, "%s%d", "cd", 345) && size == 7 &&
+              strcmp(out, "abcd345") == 0,
+          "TextPrint appends a text that leaves capacity - 1 bytes in use, NUL-ended");
+    size = 2;
+    CHECK(!TextPrint(out, sizeof(out), &size, "%s%d", "cd", 3456) && size == 2 &&
+              strcmp(out, "ab") == 0,
+          "and refuses one that would fill the capacity, keeping the text before it");
+    size = sizeof(out);
+    CHECK(!TextPrint(out, sizeof(out), &size, "%s", ""), "and refuses any text at a full capacity");
 }
 
 static void TestReader(void)
@@ -384,6 +401,7 @@ static void TestSections(void)
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
+    TestPrint();
     TestReader();
     TestEmptyLastComment();
     TestCommentCarriageReturns();

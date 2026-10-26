@@ -15,6 +15,7 @@
 #include "collation_unit.h"
 #include "table_gen.h"
 #include "test_harness.h"
+#include "test_print.h"
 #include "trie_gen.h"
 
 #include "maul-unicode/properties.h"
@@ -636,7 +637,7 @@ static void TestUnitShapes(void)
     size_t n = 0;
     for (int i = 0; i < collationMaxExpansion; i++)
     {
-        n += (size_t)snprintf(line + n, sizeof(line) - n, "[2B, 05, 05]");
+        AppendPrint(line, sizeof(line), &n, "%s", "[2B, 05, 05]");
     }
     snprintf(text, sizeof(text), "%s0061; %s\n", head, line);
     bytes = Unit(text, &t, &r, error, sizeof(error));

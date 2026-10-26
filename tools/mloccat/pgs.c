@@ -8,6 +8,7 @@
 #include "catalog_set.h"
 #include "message_text.h"
 #include "mf2_parts.h"
+#include "print.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -318,15 +319,21 @@ char* PgsWrite(const char* head, char* const* const* keys, char* const* patterns
     {
         exit(1);
     }
-    size_t at = (size_t)snprintf(text, length + 1, "%s", head);
-    for (size_t v = 0; v < count; v++)
+    // The length counted above holds every part.
+    size_t at = 0;
+    bool fits = TextPrint(text, length + 1, &at, "%s", head);
+    for (size_t v = 0; fits && v < count; v++)
     {
-        for (size_t k = 0; k < selectorCount; k++)
+        for (size_t k = 0; fits && k < selectorCount; k++)
         {
-            at += (size_t)snprintf(text + at, length + 1 - at, "%s ", keys[v][k]);
+            fits = TextPrint(text, length + 1, &at, "%s ", keys[v][k]);
         }
-        at += (size_t)snprintf(text + at, length + 1 - at, "{{%s}}%s", patterns[v],
-                               v + 1 < count ? "\n" : "");
+        fits = fits &&
+               TextPrint(text, length + 1, &at, "{{%s}}%s", patterns[v], v + 1 < count ? "\n" : "");
+    }
+    if (!fits)
+    {
+        exit(1);
     }
     *lengthOut = at;
     return text;
