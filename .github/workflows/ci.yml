@@ -32,7 +32,7 @@ env:
 jobs:
   # Whether anything beyond documentation changed; the builds skip when not.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@23883e3610442d449485b0a5ec5192709efbc33c # v0.0.23
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       pull-requests: read
 
@@ -48,12 +48,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Rawframe-Project/.github/.github/actions/docs-check@23883e3610442d449485b0a5ec5192709efbc33c # v0.0.23
+      - uses: Rawframe-Project/.github/.github/actions/docs-check@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
         with:
           exclude: tools/external
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@23883e3610442d449485b0a5ec5192709efbc33c # v0.0.23
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       contents: read
 
@@ -141,7 +141,7 @@ jobs:
           - { preset: linux-shared }
           - { preset: macos-clang, runner: macos-15 }
           - { preset: windows-clang-cl, runner: windows-2025 }
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@23883e3610442d449485b0a5ec5192709efbc33c # v0.0.23
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
     permissions:
       contents: read
     with:
@@ -370,8 +370,10 @@ jobs:
             -D${PREFIX}_WERROR=ON
           cmake --build out/fuzz
       # Caches are immutable: each run on main saves a new entry, and every
-      # run restores the latest.
+      # run but a pull request's restores the latest. A pull request's run
+      # starts from the committed seeds alone (maul-conventions.md).
       - name: Restore the corpus
+        if: github.event_name != 'pull_request'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: out/corpus
@@ -379,69 +381,52 @@ jobs:
           restore-keys: fuzz-corpus-
       - name: Run
         # Four targets at a time, one per core of the runner; each keeps its
-        # full time. A target's output goes to its log, which stays on the
-        # runner: this repository's logs and artifacts are public, and
-        # libFuzzer ends a finding's log with the input itself.
+        # full time. tools/fuzz_target.sh keeps each target's log and
+        # findings on the runner and reports a finding without its input:
+        # this repository's logs are public, and libFuzzer ends a finding's
+        # log with the input itself.
         run: |
-          mkdir -p out/fuzz-logs out/fuzz-crashes
-          # A finding as a public run may show it. libFuzzer dumps the input
-          # (its mutations, the bytes in hex and escaped, Base64) from a line
-          # "MS: <n>" on, inside the report of an out-of-memory finding too,
-          # so the log is cut there before anything is read from it. Then:
-          # the target, its seed, the crash file's name (the SHA-1 of the
-          # input) from the target's own artifact directory, UBSan's runtime
-          # error lines and the report from "ERROR:" to "SUMMARY:".
-          report_finding() {
-            local head
-            head=$(sed '/^MS: [0-9]/,$d' "$3")
-            echo "$1: seed $2"
-            ls "$4"
-            grep -m 5 'runtime error' <<<"$head" || true
-            sed -n '/ERROR: /,/SUMMARY: /p' <<<"$head" | head -n 80
-          }
-          fuzz_one() {
-            name=$(basename "$1")
-            mkdir -p "out/corpus/$name"
-            # Seeds start from valid files, which random bytes never form;
-            # they join whatever corpus the cache brought, as its floor.
-            if [ -d "test/seeds/$name" ]; then
-              cp test/seeds/"$name"/* "out/corpus/$name"/
-            fi
-            # An explicit seed, never 0 (which libFuzzer takes as "pick
-            # one"), so that a finding's run can be started the same way.
-            seed=$(( $(od -An -N4 -tu4 /dev/urandom) % 2147483647 + 1 ))
-            mkdir -p "out/fuzz-crashes/$name"
-            if "$1" -seed="$seed" -max_total_time="$FUZZ_SECONDS" -max_len=512 \
-              -artifact_prefix="out/fuzz-crashes/$name/" "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
-              echo "$name: no finding (seed $seed)"
-            else
-              # One write, so that the four targets' reports do not interleave.
-              printf '%s\n::error::%s found something\n' \
-                "$(report_finding "$name" "$seed" "out/fuzz-logs/$name.log" "out/fuzz-crashes/$name")" "$name"
-              return 1
-            fi
-          }
-          export -f report_finding fuzz_one
           targets=(out/fuzz/fuzz_*)
           [ -x "${targets[0]}" ] || { echo "::error::no fuzz target was built"; exit 1; }
           echo "${#targets[@]} targets"
-          printf '%s\n' "${targets[@]}" | xargs -P 4 -I {} bash -c 'fuzz_one "$1"' _ {}
+          # Seeds start from valid files, which random bytes never form;
+          # they join whatever corpus the cache brought, as its floor.
+          for target in "${targets[@]}"; do
+            name=$(basename "$target")
+            mkdir -p "out/corpus/$name"
+            if [ -d "test/seeds/$name" ]; then
+              cp test/seeds/"$name"/* "out/corpus/$name"/
+            fi
+          done
+          rm -rf out/fuzz-reports
+          status=0
+          printf '%s\n' "${targets[@]##*/}" |
+            xargs -P 4 -I {} tools/fuzz_target.sh out/fuzz/{} \
+              -max_total_time="$FUZZ_SECONDS" -max_len=512 out/corpus/{} || status=$?
+          cat out/fuzz-reports/*.txt 2>/dev/null || true
+          exit "$status"
       # Each corpus is merged into a fresh directory and swapped in only
       # when the merge finished, so a failed merge leaves the old corpus.
+      # This step and the save run only when every target found nothing:
+      # a run that found something keeps its corpus, which holds inputs
+      # near the finding, out of the cache.
       - name: Minimize the corpus
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
+          # A merge reruns every input, so a crash in it leaves libFuzzer's
+          # dump of the input in the log; the log stays on the runner, and
+          # only the failure and its exit status are printed.
           merge_one() {
             name=$(basename "$1")
             rm -rf "out/merged/$name" && mkdir -p "out/merged/$name"
-            if "$1" -merge=1 -max_len=512 "out/merged/$name" "out/corpus/$name" \
-              >"out/fuzz-logs/$name.merge.log" 2>&1; then
-              rm -rf "out/corpus/$name" && mv "out/merged/$name" "out/corpus/$name"
-            else
-              tail -n 30 "out/fuzz-logs/$name.merge.log"
-              echo "::error::$name: the merge failed"
+            status=0
+            "$1" -merge=1 -max_len=512 "out/merged/$name" "out/corpus/$name" \
+              >"out/fuzz-logs/$name.merge.log" 2>&1 || status=$?
+            if [ "$status" -ne 0 ]; then
+              echo "::error::$name: the merge failed (exit $status)"
               return 1
             fi
+            rm -rf "out/corpus/$name" && mv "out/merged/$name" "out/corpus/$name"
           }
           export -f merge_one
           printf '%s\n' out/fuzz/fuzz_* | xargs -P 4 -I {} bash -c 'merge_one "$1"' _ {}
