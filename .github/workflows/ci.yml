@@ -299,6 +299,33 @@ jobs:
             "out/linux-clang-20-asan/conform_$suite"
           done
 
+  # The quarantined tests (docs/operations/checks.md#quarantine), which the
+  # test presets leave out, under AddressSanitizer and UBSan: at night and
+  # on a manual run. A known flake's failure is a warning; a test that did
+  # not run, a sanitizer report or a crash fails the job.
+  quarantine:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: ghcr.io/rawframe-project/ci-cpp:2026.10.7@sha256:08c846597243dc000c83d6c008d078a8c3fabf8633d83963d46c0e6d02c2577e
+      # A PID 1 that reaps orphans, as cpp.yml's container has.
+      options: --init
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        run: |
+          cmake --preset linux-clang-20-asan
+          cmake --build --preset linux-clang-20-asan
+      - name: The quarantined tests
+        # The test presets' limit, which a run outside a preset does not
+        # take: a hung flake then fails as a warning, not the whole job.
+        run: tools/run_quarantine.sh out/linux-clang-20-asan --timeout 300
+
   # The Hanja readings' finals against the pinned Unihan database, an 8 MB
   # download: on every run of main (each push, the night, a manual run), and
   # on a pull request only when it changes the pin, the generator or the
@@ -496,7 +523,7 @@ jobs:
   # renaming a job never touches the ruleset.
   required:
     if: always()
-    needs: [changes, docs, zizmor, checks, build, msvc-headers, generated, cldr, calendar-sweeps, unihan, fuzz, web]
+    needs: [changes, docs, zizmor, checks, build, msvc-headers, generated, cldr, calendar-sweeps, quarantine, unihan, fuzz, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions: {}
