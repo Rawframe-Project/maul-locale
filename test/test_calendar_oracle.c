@@ -76,11 +76,29 @@ static uint64_t SpanHash(const OracleSpan* s)
     return h;
 }
 
+// Whether a span is hashed: every one in conform_calendar_oracle, which
+// builds this file again with MLOC_CALENDAR_DENSE and runs in the cldr job
+// and at night under ASan; here the two lunisolar spans, a tenth of a
+// second, since each other span takes about that alone.
+static bool Swept(const OracleSpan* s)
+{
+#ifdef MLOC_CALENDAR_DENSE
+    (void)s;
+    return true;
+#else
+    return s->calendar == mloc_calendarChinese || s->calendar == mloc_calendarDangi;
+#endif
+}
+
 int main(void)
 {
     bool all = true;
     for (size_t i = 0; i < sizeof(s_spans) / sizeof(s_spans[0]); i++)
     {
+        if (!Swept(&s_spans[i]))
+        {
+            continue;
+        }
         uint64_t h = SpanHash(&s_spans[i]);
         if (h != s_spans[i].hash)
         {
@@ -88,7 +106,11 @@ int main(void)
             all = false;
         }
     }
+#ifdef MLOC_CALENDAR_DENSE
     CHECK(all, "every day's fields as ICU4X 2.3 gives them, 1600 to 2400 (Chinese and Dangi "
                "1900 to 2099)");
+#else
+    CHECK(all, "every Chinese and Dangi day's fields as ICU4X 2.3 gives them, 1900 to 2099");
+#endif
     return s_failures == 0 ? 0 : 1;
 }

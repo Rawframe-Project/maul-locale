@@ -199,6 +199,27 @@ typedef struct LunarYears
     bool overridden[lunarYearCount + 2];
 } LunarYears;
 
+// The model's years of both calendars, the years before and after the
+// table included, computed once: they do not depend on the overrides,
+// and each source made in a run starts from them.
+static const LunisolarYear* ModelYears(void)
+{
+    static LunisolarYear s_years[2][lunarYearCount + 2];
+    static bool s_made;
+    if (!s_made)
+    {
+        for (int c = 0; c < 2; c++)
+        {
+            for (int i = 0; i < lunarYearCount + 2; i++)
+            {
+                mlocChineseModelYear(c == 1, lunarFirstYear - 1 + i, &s_years[c][i]);
+            }
+        }
+        s_made = true;
+    }
+    return &s_years[0][0];
+}
+
 // Reads an override's months: 12 or 13 of '0' and '1'.
 static bool ParseLengths(const char* text, LunisolarYear* out)
 {
@@ -347,13 +368,14 @@ int CalendarYearsSource(const char* overrides, char** sourceOut, size_t* sourceS
     }
     int ok = ReadOverrides(overrides, lunar, errorOut, errorCapacity);
     int32_t firstLunation[2] = {0};
+    const LunisolarYear* model = ok ? ModelYears() : nullptr;
     for (int c = 0; ok && c < 2; c++)
     {
         for (int i = 0; i < lunarYearCount + 2; i++)
         {
             if (!lunar[c].overridden[i])
             {
-                mlocChineseModelYear(c == 1, lunarFirstYear - 1 + i, &lunar[c].years[i]);
+                lunar[c].years[i] = model[c * (lunarYearCount + 2) + i];
             }
         }
         for (int i = 1; ok && i < lunarYearCount + 1; i++)

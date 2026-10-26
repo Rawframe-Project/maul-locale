@@ -19,7 +19,7 @@ What proves each part, and where the library departs from its oracles on purpose
 | Numbers | CLDR's `testData/decimal` (`conform_numbers`); ICU4C's formatting of currencies, units, lists and compact amounts by oracle; ICU4C's parse on generated and random texts. |
 | Units | CLDR's `unitsTest.txt` and unit preference tests (`check_units.py`, `check_unit_prefs.py`); currencies by region and date against the JSON (`check_currency.py`). |
 | Spell-out | CLDR's `testData/rbnf` (`conform_spellout`); ICU4C over every public rule set of 119 locales. |
-| Calendars | test262's Temporal calendar tests (`test_calendar_test262`); ICU4X's fields for each day from 1600 to 2400 (`test_calendar_oracle`). |
+| Calendars | test262's Temporal calendar tests (`test_calendar_test262`); ICU4X's fields for each day from 1600 to 2400 (`conform_calendar_oracle`; `test_calendar_oracle` checks the Chinese and Dangi days). |
 | Zones | zic and zdump for every zone from 1800 to 2500, for the pinned and an older release (`check_zones.py`); Python's `zoneinfo` for local times (`check_local.py`); CLDR's BCP 47 and Windows mappings (`check_zone_codes.py`). |
 | Temporal arithmetic and strings | test262's Temporal tests as tables (the `*_test262` suites); `check_zoned.py` and `check_ixdtf.py` against second readings of ECMA-262. |
 | Date formatting | CLDR's datetime test data (`check_datetime.py`); ICU4C's `DateTimePatternGenerator` and `DateIntervalFormat` (`check_skeletons.py`, `check_intervals.py`, the range suites). |

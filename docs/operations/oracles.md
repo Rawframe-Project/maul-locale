@@ -71,7 +71,7 @@ The expected hashes the CI data checks hold for these programs' outputs (`--expe
 
 ## Calendars
 
-`calendar/icu4x_calendar_fields.rs CALENDAR FIRST LAST` prints every day's fields as ICU4X computes them; `test_calendar_oracle` holds the FNV-1a hash of those lines for each calendar over 1600 to 2400, and a mismatch is found day by day by running the program. `icu4c_calendar_months.cpp`, `icu4x_calendar_months.rs` and `reingold_calendar_months.rs` print the month starts of the Chinese and Dangi calendars by ICU4C, ICU4X and Reingold and Dershowitz's full astronomy, which is how the year tables and their overrides are checked against each other.
+`calendar/icu4x_calendar_fields.rs CALENDAR FIRST LAST` prints every day's fields as ICU4X computes them; `test_calendar_oracle` holds the FNV-1a hash of those lines for each calendar over 1600 to 2400 and checks the Chinese and Dangi ones, `conform_calendar_oracle` checks them all, and a mismatch is found day by day by running the program. `icu4c_calendar_months.cpp`, `icu4x_calendar_months.rs` and `reingold_calendar_months.rs` print the month starts of the Chinese and Dangi calendars by ICU4C, ICU4X and Reingold and Dershowitz's full astronomy, which is how the year tables and their overrides are checked against each other.
 
 ## test262 tables
 
