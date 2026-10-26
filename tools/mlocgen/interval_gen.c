@@ -151,6 +151,7 @@ static void SetPrefix(PatternGenerator* g, const char* date, IntervalPrefix* out
 {
     static const char s_letters[dateIntervalPrefixes] = {'d', 'M', 'y', 'G'};
     char skeleton[maxSkeleton];
+    // date is a skeleton of maxSkeleton bytes, as SetPrefix's caller holds it.
     snprintf(skeleton, sizeof(skeleton), "%s", date);
     for (int level = 0; level < dateIntervalPrefixes; level++)
     {
@@ -185,6 +186,7 @@ void IntervalSetResolve(Cldr* cldr, PatternGenerator* g, const char* locale, con
         char skeleton[maxSkeleton];
         if (e < dateIntervalDateStyle)
         {
+            // Each date is one of the caller's 64-byte classical skeletons.
             snprintf(skeleton, sizeof(skeleton), "%s", dates[e]);
         }
         else if (e < dateIntervalTime)

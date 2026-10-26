@@ -43,9 +43,16 @@ typedef struct Table
 // Zeroed memory, or the program stops.
 void* GenAllocate(size_t size);
 
+// The bytes of a locale id or file name and its NUL that every generator
+// holds.
+enum
+{
+    genMaxId = 64,
+};
+
 // The names of a CLDR directory's XML files without ".xml", sorted (for
-// "main", common/main's); the program stops when it cannot be listed.
-// GenFreeList frees them.
+// "main", common/main's); the program stops when it cannot be listed or a
+// name passes genMaxId - 1 bytes. GenFreeList frees them.
 char** GenListXml(const char* commonDirectory, const char* subdirectory, int* countOut);
 
 void GenFreeList(char** names, int count);

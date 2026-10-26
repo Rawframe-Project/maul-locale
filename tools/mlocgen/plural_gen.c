@@ -26,6 +26,8 @@ enum
     maxSets = 128,
     maxRanges = 64,
     maxText = 4096,
+    // A locale id's bytes and its NUL, as Resolve holds it.
+    maxId = 64,
     categoryCount = 6,
 };
 
@@ -198,12 +200,17 @@ static void Relation(Text* out, char operand, uint64_t modulus, bool equal, char
 // Compiles a condition into a C expression over o.
 static void Compile(const char* condition, Text* out)
 {
+    // A set's condition, which Condition stopped on at 1024 bytes.
     char copy[1024];
     snprintf(copy, sizeof(copy), "%s", condition);
     char* words[128];
     int count = 0;
-    for (char* w = strtok(copy, " "); w != nullptr && count < 128; w = strtok(nullptr, " "))
+    for (char* w = strtok(copy, " "); w != nullptr; w = strtok(nullptr, " "))
     {
+        if (count == 128)
+        {
+            Die("a condition of more words than the generator holds", condition);
+        }
         words[count++] = w;
     }
     // Each or-term in parentheses, so that and binds tighter visibly.
@@ -294,9 +301,17 @@ static int FindSet(Plurals* p, const XmlNode* group, bool ordinal)
 static void FileLocales(Plurals* p, Map* map, const char* locales, int value)
 {
     char copy[maxText];
-    snprintf(copy, sizeof(copy), "%s", locales == nullptr ? "" : locales);
+    locales = locales == nullptr ? "" : locales;
+    if (!GenCopy(copy, sizeof(copy), locales, strlen(locales)))
+    {
+        Die("a locale list longer than the generator holds", locales);
+    }
     for (char* id = strtok(copy, " \n\t"); id != nullptr; id = strtok(nullptr, " \n\t"))
     {
+        if (strlen(id) >= maxId)
+        {
+            Die("a locale id longer than the generator holds", id);
+        }
         if (MapGet(map, id) != nullptr)
         {
             Die("a locale given twice", id);
@@ -365,7 +380,8 @@ static void ReadRanges(Plurals* p, const XmlNode* root)
 // root's, else 0xFF.
 static uint8_t Resolve(const Map* map, const char* id)
 {
-    char key[64];
+    char key[maxId];
+    // FileLocales and the ranges reader keep ids under maxId bytes.
     snprintf(key, sizeof(key), "%s", id);
     for (;;)
     {
@@ -624,7 +640,7 @@ static int PrintGroup(const XmlNode* group, const char* type, char* errorOut, si
         {
             break;
         }
-        char id[64];
+        char id[maxId];
         if (!GenCopy(id, sizeof(id), at, length))
         {
             snprintf(errorOut, errorCapacity,

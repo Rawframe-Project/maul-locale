@@ -128,6 +128,7 @@ void KeyOf(const Keys* keys, const char* id, char* out, size_t capacity)
     Parts parts = Split(id);
     char scratch[5];
     char script[5];
+    // A script of four letters: Parts.script or LikelyScript's 5 bytes.
     snprintf(script, sizeof(script), "%s",
              parts.script[0] != 0 ? parts.script : LikelyScript(keys, &parts, scratch));
     Parts alone = {0};

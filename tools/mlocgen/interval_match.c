@@ -702,6 +702,8 @@ static bool SetSeparate(Resolution* r, const char* date, const char* time)
     // ICU passes the same strings in and out.
     char asked[64];
     char best2[64];
+    // Both are under 64 bytes: the resolved skeleton or extended, and an item's,
+    // which date_source formats into 64 bytes or stops.
     snprintf(asked, sizeof(asked), "%s", skeleton);
     snprintf(best2, sizeof(best2), "%s", bestSkeleton);
     SetFromItem(r, intervalYear, asked, best2, difference, extended, extendedBest);
@@ -717,6 +719,7 @@ static bool SetSeparate(Resolution* r, const char* date, const char* time)
 static void SetPrefixedFallbacks(Resolution* r, const char* date)
 {
     char skeleton[80];
+    // The resolved skeleton is under 64 bytes, with room for the prefixed letters.
     snprintf(skeleton, sizeof(skeleton), "%s", r->skeleton);
     for (int field = intervalDay; field >= intervalEra; field--)
     {

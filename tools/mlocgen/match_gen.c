@@ -127,6 +127,7 @@ static Node* Put(Node* node, const char* desired, const char* supported, int dis
         }
     }
     Cell* cell = &node->cells[node->count++];
+    // Both are a rule's parts, which SplitSpec keeps under maxSubtag, or ANY.
     snprintf(cell->desired, sizeof(cell->desired), "%s", desired);
     snprintf(cell->supported, sizeof(cell->supported), "%s", supported);
     cell->node = NewNode(distance);
@@ -361,6 +362,7 @@ static void ReadRule(const XmlNode* match, Partitions* partitions, Rule* rule)
     }
     if (rule->size == 3)
     {
+        // A variable of 16 bytes or a rule's part of maxSubtag, which fit it.
         char variable[maxSubtag];
         snprintf(variable, sizeof(variable), "%s",
                  PartitionsEnsureVariable(partitions, rule->desired[2]));
@@ -655,6 +657,7 @@ static uint64_t Maximize(const Map* likely, const char* id)
     char language[maxSubtag], script[maxSubtag], region[maxSubtag];
     SplitId(id, language, script, region);
     char tries[4][3 * maxSubtag];
+    // Parts of maxSubtag bytes each, into three times as many.
     snprintf(tries[0], sizeof(tries[0]), "%s_%s_%s", language, script, region);
     snprintf(tries[1], sizeof(tries[1]), "%s_%s", language, region);
     snprintf(tries[2], sizeof(tries[2]), "%s_%s", language, script);
@@ -699,8 +702,12 @@ static int ReadParadigms(const XmlNode* matches, const Map* likely, uint64_t* pa
     {
         size_t length = strcspn(at, " ");
         char id[3 * maxSubtag];
-        snprintf(id, sizeof(id), "%.*s", (int)(length < sizeof(id) - 1 ? length : sizeof(id) - 1),
-                 at);
+        if (length >= sizeof(id))
+        {
+            Die("a paradigm locale longer than the generator holds", at);
+        }
+        memcpy(id, at, length);
+        id[length] = '\0';
         uint64_t tag = Maximize(likely, id);
         bool seen = false;
         for (int i = 0; i < count; i++)

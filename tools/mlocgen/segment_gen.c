@@ -271,6 +271,7 @@ static bool ReadClassVariable(const char* id, const char* text, uint32_t value,
     }
     char set[maxText];
     size_t start = strlen(add ? added : taken);
+    // text is a collapsed value under maxText bytes, which set holds.
     snprintf(set, sizeof(set), "%.*s", (int)(length - 1 - start), text + start);
     uint32_t codePoints[maxOverrides];
     int count = 0;

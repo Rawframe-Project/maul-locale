@@ -5,6 +5,7 @@
 
 #include "ldml.h"
 
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -66,19 +67,17 @@ static int AppendStep(char* chain, size_t* length, const XmlNode* node, const Dt
         }
     }
     qsort(sorted, (size_t)count, sizeof(sorted[0]), CompareAttributes);
-    int used = snprintf(chain + *length, MAX_CHAIN - *length, "/%s", node->name);
-    for (int i = 0; i < count && used >= 0 && *length + (size_t)used < MAX_CHAIN; i++)
+    size_t at = *length;
+    bool fits = GenPrint(chain, MAX_CHAIN, &at, "/%s", node->name);
+    for (int i = 0; fits && i < count; i++)
     {
-        size_t at = *length + (size_t)used;
-        int more =
-            snprintf(chain + at, MAX_CHAIN - at, "[@%s=\"%s\"]", sorted[i]->name, sorted[i]->value);
-        used = more < 0 ? -1 : used + more;
+        fits = GenPrint(chain, MAX_CHAIN, &at, "[@%s=\"%s\"]", sorted[i]->name, sorted[i]->value);
     }
-    if (used < 0 || *length + (size_t)used >= MAX_CHAIN)
+    if (!fits)
     {
         return 0;
     }
-    *length += (size_t)used;
+    *length = at;
     return 1;
 }
 

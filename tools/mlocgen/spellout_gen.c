@@ -238,12 +238,10 @@ static void PluralPiece(Builder* b, const RbnfRule* rule)
     for (int c = 0; c < rbnfCategories; c++)
     {
         const char* form = rule->forms[c] == nullptr ? "\x02" : rule->forms[c];
-        int n = snprintf(key + used, sizeof(key) - used, "%s\x01", form);
-        if (n < 0 || (size_t)n >= sizeof(key) - used)
+        if (!GenPrint(key, sizeof(key), &used, "%s\x01", form))
         {
             GenDie("a plural block is too long", rule->text);
         }
-        used += (size_t)n;
     }
     // The order, a nibble per category written, 0xF past the last.
     uint32_t order = 0xFFFFFFFFu;
@@ -251,7 +249,7 @@ static void PluralPiece(Builder* b, const RbnfRule* rule)
     {
         order = (order & ~(0xFu << (4 * k))) | (uint32_t)rule->order[k] << (4 * k);
     }
-    if (snprintf(key + used, sizeof(key) - used, "%08x", order) != 8)
+    if (!GenPrint(key, sizeof(key), &used, "%08x", order))
     {
         GenDie("a plural block is too long", rule->text);
     }

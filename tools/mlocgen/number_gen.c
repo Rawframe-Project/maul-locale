@@ -192,6 +192,11 @@ static int ReadSystems(Generator* g, const char* commonDirectory, char* errorOut
         }
         System* s = &g->systems[g->systemCount++];
         s->id = mlocPackSystem(id, (uint32_t)strlen(id));
+        // A packed id is 1 to 8 letters and digits, which the name holds.
+        if (s->id == 0)
+        {
+            GenDie("a numeric system id not 1 to 8 letters and digits", id);
+        }
         snprintf(s->name, sizeof(s->name), "%s", id);
         const unsigned char* at = (const unsigned char*)digits;
         int length = 0;

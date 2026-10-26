@@ -168,10 +168,15 @@ static void AddType(Zones* z, const XmlNode* type)
         c->deprecated = true;
         return;
     }
+    // The first alias: MapAliases refuses any alias of the list that does not
+    // fit tzdbMaxName, this one included, before the names are used.
     snprintf(c->name, sizeof(c->name), "%.*s", (int)strcspn(list, " "), list);
     if (region != nullptr)
     {
-        snprintf(c->region, sizeof(c->region), "%s", region);
+        if (!GenCopy(c->region, sizeof(c->region), region, strlen(region)))
+        {
+            GenDie("a zone's region not two letters", id);
+        }
     }
     else if (strlen(id) == 5)
     {
@@ -194,6 +199,7 @@ static int MapAliases(Zones* z, const XmlNode* key, char* errorOut, size_t error
         const char* id = XmlGetAttribute(key->children[i], "name");
         const char* list = XmlGetAttribute(key->children[i], "alias");
         ZoneCode probe = {0};
+        // AddType stopped on any id of maxId bytes or more.
         snprintf(probe.id, sizeof(probe.id), "%s", id != nullptr ? id : "");
         const ZoneCode* c =
             bsearch(&probe, z->codes, (size_t)z->codeCount, sizeof(ZoneCode), CompareCodes);

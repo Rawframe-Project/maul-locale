@@ -12,6 +12,7 @@
 
 #include "kinds.h"
 #include "locale_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include "maul-locale/locale.h"
@@ -63,15 +64,20 @@ typedef struct Aliases
     exit(1);
 }
 
-// CLDR's id with "-" for "_", lowercased, after a prefix.
+// CLDR's id with "-" for "_", lowercased, after a prefix; the generator
+// stops on one longer than out holds.
 static void Normalize(const char* prefix, const char* id, char* out, size_t capacity)
 {
+    if (strlen(prefix) + strlen(id) >= capacity)
+    {
+        Die("an alias id longer than the generator holds", id);
+    }
     size_t at = 0;
-    for (const char* p = prefix; *p != '\0' && at + 1 < capacity; p++)
+    for (const char* p = prefix; *p != '\0'; p++)
     {
         out[at++] = *p;
     }
-    for (const char* p = id; *p != '\0' && at + 1 < capacity; p++)
+    for (const char* p = id; *p != '\0'; p++)
     {
         char c = *p == '_' ? '-' : *p;
         out[at++] = c >= 'A' && c <= 'Z' ? (char)(c + 32) : c;
@@ -235,7 +241,10 @@ static void AddAlias(Aliases* aliases, const XmlNode* node)
         return;
     }
     char list[256];
-    snprintf(list, sizeof(list), "%s", replacement);
+    if (!GenCopy(list, sizeof(list), replacement, strlen(replacement)))
+    {
+        Die("an alias replacement list longer than the generator holds", type);
+    }
     char* cursor = list;
     int replacements = 0;
     for (char* one = NextToken(&cursor, ' '); one != nullptr; one = NextToken(&cursor, ' '))
