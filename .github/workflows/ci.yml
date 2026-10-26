@@ -384,16 +384,20 @@ jobs:
         # libFuzzer ends a finding's log with the input itself.
         run: |
           mkdir -p out/fuzz-logs out/fuzz-crashes
-          # A finding as a public run may show it: the target, its seed, the
-          # crash file's name (the SHA-1 of the input) and the sanitizer's
-          # report from "ERROR:" to "SUMMARY:", with UBSan's runtime error
-          # line before it. libFuzzer's dump of the input after SUMMARY (its
-          # mutations, the bytes in hex and escaped, Base64) is left out.
+          # A finding as a public run may show it. libFuzzer dumps the input
+          # (its mutations, the bytes in hex and escaped, Base64) from a line
+          # "MS: <n>" on, inside the report of an out-of-memory finding too,
+          # so the log is cut there before anything is read from it. Then:
+          # the target, its seed, the crash file's name (the SHA-1 of the
+          # input) from the target's own artifact directory, UBSan's runtime
+          # error lines and the report from "ERROR:" to "SUMMARY:".
           report_finding() {
+            local head
+            head=$(sed '/^MS: [0-9]/,$d' "$3")
             echo "$1: seed $2"
-            grep -o 'Test unit written to [^ ]*' "$3" || true
-            grep -m 5 'runtime error' "$3" || true
-            sed -n '/ERROR: /,/SUMMARY: /p' "$3" | head -n 80
+            ls "$4"
+            grep -m 5 'runtime error' <<<"$head" || true
+            sed -n '/ERROR: /,/SUMMARY: /p' <<<"$head" | head -n 80
           }
           fuzz_one() {
             name=$(basename "$1")
@@ -406,12 +410,14 @@ jobs:
             # An explicit seed, never 0 (which libFuzzer takes as "pick
             # one"), so that a finding's run can be started the same way.
             seed=$(( $(od -An -N4 -tu4 /dev/urandom) % 2147483647 + 1 ))
+            mkdir -p "out/fuzz-crashes/$name"
             if "$1" -seed="$seed" -max_total_time="$FUZZ_SECONDS" -max_len=512 \
-              -artifact_prefix=out/fuzz-crashes/ "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
+              -artifact_prefix="out/fuzz-crashes/$name/" "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
               echo "$name: no finding (seed $seed)"
             else
-              report_finding "$name" "$seed" "out/fuzz-logs/$name.log"
-              echo "::error::$name found something"
+              # One write, so that the four targets' reports do not interleave.
+              printf '%s\n::error::%s found something\n' \
+                "$(report_finding "$name" "$seed" "out/fuzz-logs/$name.log" "out/fuzz-crashes/$name")" "$name"
               return 1
             fi
           }
