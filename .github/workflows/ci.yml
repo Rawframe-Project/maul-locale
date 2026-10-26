@@ -413,17 +413,20 @@ jobs:
       - name: Minimize the corpus
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
+          # A merge reruns every input, so a crash in it leaves libFuzzer's
+          # dump of the input in the log; the log stays on the runner, and
+          # only the failure and its exit status are printed.
           merge_one() {
             name=$(basename "$1")
             rm -rf "out/merged/$name" && mkdir -p "out/merged/$name"
-            if "$1" -merge=1 -max_len=512 "out/merged/$name" "out/corpus/$name" \
-              >"out/fuzz-logs/$name.merge.log" 2>&1; then
-              rm -rf "out/corpus/$name" && mv "out/merged/$name" "out/corpus/$name"
-            else
-              tail -n 30 "out/fuzz-logs/$name.merge.log"
-              echo "::error::$name: the merge failed"
+            status=0
+            "$1" -merge=1 -max_len=512 "out/merged/$name" "out/corpus/$name" \
+              >"out/fuzz-logs/$name.merge.log" 2>&1 || status=$?
+            if [ "$status" -ne 0 ]; then
+              echo "::error::$name: the merge failed (exit $status)"
               return 1
             fi
+            rm -rf "out/corpus/$name" && mv "out/merged/$name" "out/corpus/$name"
           }
           export -f merge_one
           printf '%s\n' out/fuzz/fuzz_* | xargs -P 4 -I {} bash -c 'merge_one "$1"' _ {}
