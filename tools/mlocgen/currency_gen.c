@@ -527,7 +527,7 @@ static void AddSymbolUnit(const CurrencyInput* input, Table* t, Own* own, int co
     static uint8_t* s_rowPointers[maxCurrencies];
     static size_t s_rowSizes[maxCurrencies];
     static uint8_t s_flags[maxTable];
-    qsort(own, (size_t)count, sizeof(Own), CompareOwn);
+    GenSort(own, (size_t)count, sizeof(Own), CompareOwn);
     for (int i = 0; i < count; i++)
     {
         uint8_t* row = s_rows[i];
@@ -570,7 +570,7 @@ static void AddNameUnit(Table* t, Own* own, int count, const char* locale, const
     static uint8_t s_rows[maxCurrencies][1 + 2 * fieldCount];
     static uint8_t* s_rowPointers[maxCurrencies];
     static size_t s_rowSizes[maxCurrencies];
-    qsort(own, (size_t)count, sizeof(Own), CompareOwn);
+    GenSort(own, (size_t)count, sizeof(Own), CompareOwn);
     for (int i = 0; i < count; i++)
     {
         uint8_t* row = s_rows[i];

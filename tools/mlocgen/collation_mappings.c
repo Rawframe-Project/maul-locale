@@ -9,6 +9,7 @@
 #include "collation_mappings.h"
 
 #include "collation_unit.h"
+#include "table_gen.h"
 
 #include "maul-unicode/properties.h"
 
@@ -65,7 +66,7 @@ int CollationMappingsInit(CollationMappings* m, const RootTable* root)
             m->rootIndex[m->rootIndexCount++] = (uint64_t)c << 32 | i;
         }
     }
-    qsort(m->rootIndex, m->rootIndexCount, sizeof *m->rootIndex, ByCodePoint);
+    GenSort(m->rootIndex, m->rootIndexCount, sizeof *m->rootIndex, ByCodePoint);
     for (size_t i = 0; i < root->scriptStartCount; i++)
     {
         const RootMarker* s = &root->scriptStarts[i];

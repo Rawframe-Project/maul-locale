@@ -12,6 +12,7 @@
 #include "locale_tables.h"
 #include "map.h"
 #include "match_regions.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -480,10 +481,10 @@ static void SortCells(Node* node, int level)
 {
     static int (*const s_compare[3])(const void*, const void*) = {CompareLanguages, CompareScripts,
                                                                   CompareRegions};
-    qsort(node->cells, (size_t)node->count, sizeof(Cell), s_compare[level]);
+    GenSort(node->cells, (size_t)node->count, sizeof(Cell), s_compare[level]);
 }
 
-typedef struct Table
+typedef struct MatchTable
 {
     const Node* root;
     const Partitions* partitions;
@@ -494,7 +495,7 @@ typedef struct Table
     size_t scriptCount;
     size_t regionCount;
     size_t textSize;
-} Table;
+} MatchTable;
 
 // The children of a language pair: its regions when its script table is
 // skipped, else its scripts.
@@ -504,7 +505,7 @@ static Node* Children(Node* language)
 }
 
 // Sorts every run and counts the entries of each level.
-static void Measure(Table* table, Node* root)
+static void Measure(MatchTable* table, Node* root)
 {
     SortCells(root, 0);
     for (int l = 0; l < root->count; l++)
@@ -586,7 +587,7 @@ static void WriteLevels(Cursor* at, const Node* root)
     }
 }
 
-static uint8_t* WriteTable(const Table* table, size_t* sizeOut)
+static uint8_t* WriteTable(const MatchTable* table, size_t* sizeOut)
 {
     size_t scripts = matchHeaderSize + (size_t)table->paradigmCount * 8;
     size_t languages = scripts + table->scriptCount * matchScriptSize;
@@ -835,9 +836,9 @@ int GenerateMatchUnit(const char* commonDirectory, DataFile* file, char* errorOu
     Map likely = {0};
     ReadLikely(likelyRoot, &likely);
     uint64_t paradigms[matchMaxParadigms];
-    Table table = {.partitions = &s_partitions,
-                   .paradigms = paradigms,
-                   .paradigmCount = ReadParadigms(matches, &likely, paradigms)};
+    MatchTable table = {.partitions = &s_partitions,
+                        .paradigms = paradigms,
+                        .paradigmCount = ReadParadigms(matches, &likely, paradigms)};
     Node* root = Build(s_rules, count, &s_partitions, table.distances);
     table.root = root;
     Measure(&table, root);

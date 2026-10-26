@@ -240,7 +240,7 @@ static int ReadCodes(Zones* z, char* errorOut, size_t errorCapacity)
     {
         AddType(z, key->children[i]);
     }
-    qsort(z->codes, (size_t)z->codeCount, sizeof(ZoneCode), CompareCodes);
+    GenSort(z->codes, (size_t)z->codeCount, sizeof(ZoneCode), CompareCodes);
     int ok = MapAliases(z, key, errorOut, errorCapacity);
     XmlFree(root);
     return ok;
@@ -419,7 +419,7 @@ static void SortMetazones(Zones* z)
 static void ArrangePeriods(Zones* z)
 {
     SortMetazones(z);
-    qsort(z->periods, (size_t)z->periodCount, sizeof(Period), ComparePeriods);
+    GenSort(z->periods, (size_t)z->periodCount, sizeof(Period), ComparePeriods);
     for (int i = 0; i < z->periodCount; i++)
     {
         ZoneCode* c = &z->codes[z->periods[i].code];
@@ -436,7 +436,7 @@ static void ArrangePeriods(Zones* z)
             GenDie("a zone with too many metazone periods", c->name);
         }
     }
-    qsort(z->preferred, (size_t)z->preferredCount, sizeof(Preferred), ComparePreferred);
+    GenSort(z->preferred, (size_t)z->preferredCount, sizeof(Preferred), ComparePreferred);
     for (int i = 0; i < z->preferredCount; i++)
     {
         Metazone* m = &z->metazones[z->preferred[i].metazone];

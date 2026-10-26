@@ -65,7 +65,7 @@ static uint32_t Encode(Writer* w, const CollationMapping* mapping)
 // the tag naming it.
 static uint32_t List(Writer* w, uint32_t tag, uint32_t fallback, Entry* entries, size_t count)
 {
-    qsort(entries, count, sizeof(Entry), ByText);
+    GenSort(entries, count, sizeof(Entry), ByText);
     size_t number = CollationPush(&w->listStarts, w->contexts.count);
     CollationPush(&w->contexts, fallback);
     CollationPush(&w->contexts, count);
@@ -192,7 +192,7 @@ static bool CodePoint(Writer* w, uint32_t codePoint, uint32_t* valueOut)
             groups[groupCount++] = (Group){t->prefix, t->prefixLength, 0};
         }
     }
-    qsort(groups, groupCount, sizeof(Group), ByPrefixLength);
+    GenSort(groups, groupCount, sizeof(Group), ByPrefixLength);
     bool ok = groupCount > 0 && groups[0].prefixLength == 0;
     for (size_t g = 0; ok && g < groupCount; g++)
     {
@@ -378,7 +378,7 @@ uint8_t* CollationTypesUnit(CollationTypeBody* types, size_t count, const char* 
 {
     if (count > 0)
     {
-        qsort(types, count, sizeof(CollationTypeBody), ByCode);
+        GenSort(types, count, sizeof(CollationTypeBody), ByCode);
     }
     size_t names = strlen(defaultCode);
     for (size_t i = 0; i < count; i++)

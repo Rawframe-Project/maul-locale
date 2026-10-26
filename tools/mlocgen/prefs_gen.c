@@ -8,6 +8,7 @@
 
 #include "kinds.h"
 #include "locale_tables.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include "maul-locale/locale.h"
@@ -332,7 +333,7 @@ static uint8_t* Write(Prefs* p, size_t* sizeOut)
         }
         regionCount += any;
     }
-    qsort(p->locales, (size_t)p->localeCount, sizeof(LocaleHours), CompareLocales);
+    GenSort(p->locales, (size_t)p->localeCount, sizeof(LocaleHours), CompareLocales);
     size_t hoursAt = preferHeaderSize;
     size_t regionsAt = hoursAt + (size_t)p->hoursCount * preferEntrySize;
     size_t localesAt = regionsAt + regionCount * preferEntrySize;

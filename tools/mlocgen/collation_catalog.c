@@ -157,7 +157,7 @@ void CollationCatalogSort(CollationCatalog* catalog)
 {
     if (catalog->count > 0)
     {
-        qsort(catalog->types, catalog->count, sizeof(CollationType), ByFile);
+        GenSort(catalog->types, catalog->count, sizeof(CollationType), ByFile);
     }
 }
 

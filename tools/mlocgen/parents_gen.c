@@ -261,11 +261,7 @@ int GenerateParentUnit(const char* commonDirectory, DataFile* file, char* errorO
     }
     XmlFree(root);
     KeysClose(&keys);
-    // No parent filed leaves items null, which qsort may not be given.
-    if (parents.count > 0)
-    {
-        qsort(parents.items, parents.count, sizeof(Parent), SortParents);
-    }
+    GenSort(parents.items, parents.count, sizeof(Parent), SortParents);
     // Ids that share a key (yue and yue_Hant) may list the same parent;
     // it is kept once. An inherited collation parent yields to an
     // explicit one.

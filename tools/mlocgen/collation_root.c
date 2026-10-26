@@ -420,7 +420,7 @@ static int RadicalsEnd(Reader* r)
     RootTable* t = r->table;
     if (t->radicalCount > 0)
     {
-        qsort(t->radicals, t->radicalCount, 3 * sizeof *t->radicals, ByStart);
+        GenSort(t->radicals, t->radicalCount, 3 * sizeof *t->radicals, ByStart);
     }
     for (size_t i = 1; i < t->radicalCount; i++)
     {

@@ -325,8 +325,8 @@ int GenerateExtensionUnit(const char* commonDirectory, DataFile* file, char* err
         free(subdivisions.items);
         return 0;
     }
-    qsort(types.items, types.count, sizeof(Pair), ComparePairs);
-    qsort(subdivisions.items, subdivisions.count, sizeof(Pair), ComparePairs);
+    GenSort(types.items, types.count, sizeof(Pair), ComparePairs);
+    GenSort(subdivisions.items, subdivisions.count, sizeof(Pair), ComparePairs);
     for (size_t i = 1; i < types.count; i++)
     {
         if (ComparePairs(&types.items[i - 1], &types.items[i]) == 0)

@@ -195,7 +195,7 @@ static int ByText(const void* x, const void* y)
 // order; the trie value becomes its tag with the list's number.
 static void Context(Builder* b, uint32_t codePoint, uint32_t tag, Entry* entries, size_t count)
 {
-    qsort(entries, count, sizeof(Entry), ByText);
+    GenSort(entries, count, sizeof(Entry), ByText);
     size_t number = CollationPush(&b->listStarts, b->contexts.count);
     CollationPush(&b->contexts, b->values[codePoint]);
     CollationPush(&b->contexts, count);
@@ -259,7 +259,7 @@ static int Contexts(Builder* b, const RootTable* t, bool prefixes)
             members[count++] = (Member){m->text[0], (uint32_t)i};
         }
     }
-    qsort(members, count, sizeof(Member), ByCodePoint);
+    GenSort(members, count, sizeof(Member), ByCodePoint);
     Entry* entries = GenAllocate(count * sizeof(Entry) + sizeof(Entry));
     int ok = 1;
     for (size_t start = 0; ok && start < count;)
@@ -410,7 +410,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
             starts[n++] = (Start){primary, code, (uint32_t)(t->scriptStartCount + i)};
         }
     }
-    qsort(starts, n, sizeof(Start), ByPrimary);
+    GenSort(starts, n, sizeof(Start), ByPrimary);
     CollationPush(&b->starts, 0);
     for (size_t i = 0; i < n; i++)
     {
@@ -441,7 +441,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
     free(starts);
     if (b->scripts.count > 2)
     {
-        qsort(b->scripts.items, b->scripts.count / 2, 2 * sizeof(uint64_t), ByCode);
+        GenSort(b->scripts.items, b->scripts.count / 2, 2 * sizeof(uint64_t), ByCode);
     }
     for (size_t i = 2; i < b->scripts.count; i += 2)
     {

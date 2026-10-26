@@ -8,6 +8,7 @@
 #include "collation_root_elements.h"
 
 #include "collation_tables.h"
+#include "table_gen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -421,7 +422,7 @@ static int Build(Builder* b)
     {
         return 0;
     }
-    qsort(b->elements, b->count, sizeof *b->elements, Compare);
+    GenSort(b->elements, b->count, sizeof *b->elements, Compare);
     size_t distinct = 0;
     for (size_t i = 0; i < b->count; i++)
     {

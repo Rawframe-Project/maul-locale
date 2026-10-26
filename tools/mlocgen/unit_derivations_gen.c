@@ -216,7 +216,7 @@ int GenerateUnitDerivations(const char* commonDirectory, DataFile* file, char* e
         }
     }
     XmlFree(root);
-    qsort(unit + unitDerivationsHeaderSize, count, unitDerivationSize, CompareRecords);
+    GenSort(unit + unitDerivationsHeaderSize, count, unitDerivationSize, CompareRecords);
     GenPut(unit, count, 2);
     DataFileAdd(file, kindUnitDerivations, nullptr, unit,
                 unitDerivationsHeaderSize + count * unitDerivationSize);

@@ -6,6 +6,7 @@
 #include "datafile.h"
 
 #include "data_format.h"
+#include "table_gen.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -124,7 +125,7 @@ static char** Locales(const DataFile* file, size_t* countOut)
             ids[count++] = file->units[i].locale;
         }
     }
-    qsort(ids, count, sizeof(char*), CompareLocaleIds);
+    GenSort(ids, count, sizeof(char*), CompareLocaleIds);
     size_t distinct = 0;
     for (size_t i = 0; i < count; i++)
     {
@@ -269,7 +270,7 @@ uint8_t* DataFileWrite(DataFile* file, const DataFileVersion* version, size_t* s
         const DataUnit* unit = &file->units[i];
         placed[i] = (Placed){unit->kind, LocaleIndex(ids, localeCount, unit->locale), unit};
     }
-    qsort(placed, file->unitCount, sizeof(Placed), ComparePlaced);
+    GenSort(placed, file->unitCount, sizeof(Placed), ComparePlaced);
     for (size_t i = 1; i < file->unitCount; i++)
     {
         if (ComparePlaced(&placed[i - 1], &placed[i]) == 0)

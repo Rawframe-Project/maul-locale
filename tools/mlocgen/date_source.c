@@ -8,6 +8,7 @@
 #include "day_periods_gen.h"
 #include "interval_match.h"
 #include "semantic.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdarg.h>
@@ -304,7 +305,7 @@ static void AddFileItems(Cldr* cldr, const char* locale, const LdmlFile* file, c
     ids->prefix = itemPrefix;
     ids->prefixLength = strlen(itemPrefix);
     MapEach(&file->leaves, CollectId, ids);
-    qsort(ids->ids, (size_t)ids->count, sizeof(char*), CompareIds);
+    GenSort(ids->ids, (size_t)ids->count, sizeof(char*), CompareIds);
     for (int i = 0; i < ids->count; i++)
     {
         char chain[cldrMaxChain];
@@ -399,7 +400,7 @@ static void AddFileIntervals(IntervalWalk* walk, const LdmlFile* file, const cha
     // A file without interval patterns leaves the list unallocated.
     if (walk->count > 1)
     {
-        qsort(walk->chains, (size_t)walk->count, sizeof(char*), CompareIds);
+        GenSort(walk->chains, (size_t)walk->count, sizeof(char*), CompareIds);
     }
     for (int i = 0; i < walk->count; i++)
     {
