@@ -13,7 +13,9 @@
 //
 // The index is built into caller memory of any alignment and keeps a
 // copy of the collator at primary strength; its bytes may be copied or
-// moved, and the data the collator reads must outlive it.
+// moved, and the data the collator reads must outlive it. They are valid
+// only in the process that built them: they point into the data, so they
+// are not to be stored or handed to another process.
 
 #ifndef MAUL_LOCALE_INDEX_H
 #define MAUL_LOCALE_INDEX_H

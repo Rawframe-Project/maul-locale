@@ -3,7 +3,7 @@
 //
 // An index value's bytes, at any address, read by loads and copies alone:
 //
-//   0  u32 stamp
+//   0  u32 stamp, the bytes "MLIX"
 //   4  u32 bucketCount, every bucket, shown or not, in boundary order
 //   8  u32 shownCount
 //  12  u32 poolSize
@@ -29,7 +29,10 @@
 
 enum
 {
-    indexStamp = 0x32444E49,
+    // "MLIX" in memory, read as a little-endian word. A stamp, not a
+    // format's magic: the bytes hold the collator's pointers into the
+    // data, so no version is carried.
+    indexStamp = 0x58494C4D,
     indexHead = 16,
     indexRecordSize = 36,
     // The primary weights a key holds at most.
