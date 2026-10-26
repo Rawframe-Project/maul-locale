@@ -82,6 +82,7 @@ static void TestEnglish(void)
     CHECK(size > 0 && Shows(s_index, "\xE2\x80\xA6 A B C D E F G H I J K L M N O P Q R S T U V W X "
                                      "Y Z \xE2\x80\xA6"),
           "English: A to Z between the underflow and overflow buckets");
+    CHECK(size >= 4 && memcmp(s_index, "MLIX", 4) == 0, "the index's first four bytes name it");
     mlocIndexBucket first;
     mlocIndexBucket last;
     CHECK(mlocGetIndexBucket(s_index, 0, &first) == mloc_success &&
