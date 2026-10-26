@@ -171,9 +171,12 @@ static void AddType(Zones* z, const XmlNode* type)
     // The first alias: MapAliases refuses any alias of the list that does not
     // fit tzdbMaxName, this one included, before the names are used.
     snprintf(c->name, sizeof(c->name), "%.*s", (int)strcspn(list, " "), list);
-    if (region != nullptr && !GenCopy(c->region, sizeof(c->region), region, strlen(region)))
+    if (region != nullptr)
     {
-        GenDie("a zone's region not two letters", id);
+        if (!GenCopy(c->region, sizeof(c->region), region, strlen(region)))
+        {
+            GenDie("a zone's region not two letters", id);
+        }
     }
     else if (strlen(id) == 5)
     {
