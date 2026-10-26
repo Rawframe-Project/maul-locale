@@ -12,6 +12,7 @@
 #include "file.h"
 #include "table.h"
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/catalog.h"
 #include "maul-locale/message.h"
@@ -106,7 +107,8 @@ static void TestManyKeys(void)
     }
     for (uint32_t i = 0; i < keyCount; i++)
     {
-        lengths[i] = (size_t)snprintf(texts[i], sizeof(texts[i]), "menu.item%u.label", i);
+        lengths[i] = 0;
+        AppendPrint(texts[i], sizeof(texts[i]), &lengths[i], "menu.item%u.label", i);
         keys[i] = texts[i];
     }
     KeyTable table;

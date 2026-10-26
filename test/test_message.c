@@ -1036,18 +1036,18 @@ static mlocMessageFaultKind TestFormat(void* context, const mlocMessageResolved*
     }
     double magnitude = v.input < 0 ? -v.input : v.input;
     char text[64];
-    int length =
-        snprintf(text, sizeof text, "%s%.0f", v.input < 0 ? "-" : "", (double)(long long)magnitude);
+    size_t length = 0;
+    AppendPrint(text, sizeof text, &length, "%s%.0f", v.input < 0 ? "-" : "",
+                (double)(long long)magnitude);
     if (v.decimalPlaces == 1)
     {
         int digit = (int)((long long)(magnitude * 10) % 10);
-        length += snprintf(text + length, sizeof text - (size_t)length, ".%d", digit);
+        AppendPrint(text, sizeof text, &length, ".%d", digit);
     }
-    output->length = (size_t)length;
+    output->length = length;
     if (output->buffer != NULL)
     {
-        memcpy(output->buffer, text,
-               (size_t)length < output->capacity ? (size_t)length : output->capacity);
+        memcpy(output->buffer, text, length < output->capacity ? length : output->capacity);
     }
     return mloc_messageFaultNone;
 }

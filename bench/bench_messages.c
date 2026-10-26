@@ -28,6 +28,7 @@
 #include "maul-locale/locale.h"
 #include "maul-locale/message.h"
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -449,18 +450,45 @@ static size_t StackOf(const uint8_t* bound)
     return Used();
 }
 
+// Appends printf's output to a text of a capacity at *length; false, with
+// the text before it unchanged, when it does not fit.
+[[gnu::format(printf, 4, 5)]] static bool AppendText(char* text, size_t capacity, size_t* length,
+                                                     const char* format, ...)
+{
+    if (*length >= capacity)
+    {
+        return false;
+    }
+    va_list arguments;
+    va_start(arguments, format);
+    int n = vsnprintf(text + *length, capacity - *length, format, arguments);
+    va_end(arguments);
+    if (n < 0 || (size_t)n >= capacity - *length)
+    {
+        text[*length] = '\0';
+        return false;
+    }
+    *length += (size_t)n;
+    return true;
+}
+
 bool PrintMessageStack(void)
 {
     // .local $a0 = {1 :number} .local $a1 = {$a0 :number} ... and the
     // last named in the pattern: 64 expressions, the longest chain.
     static char source[4096];
-    size_t length = (size_t)snprintf(source, sizeof(source), ".local $a0 = {1 :number}");
-    for (int i = 1; i < 63; i++)
+    size_t length = 0;
+    bool fits = AppendText(source, sizeof(source), &length, "%s", ".local $a0 = {1 :number}");
+    for (int i = 1; fits && i < 63; i++)
     {
-        length += (size_t)snprintf(source + length, sizeof(source) - length,
-                                   " .local $a%d = {$a%d :number}", i, i - 1);
+        fits =
+            AppendText(source, sizeof(source), &length, " .local $a%d = {$a%d :number}", i, i - 1);
     }
-    snprintf(source + length, sizeof(source) - length, " {{{$a62 :number}}}");
+    fits = fits && AppendText(source, sizeof(source), &length, "%s", " {{{$a62 :number}}}");
+    if (!fits)
+    {
+        return false;
+    }
     static uint8_t compiled[16384];
     // Each :number's value is prepared in the bound message.
     static uint8_t bound[65536];
@@ -474,15 +502,15 @@ bool PrintMessageStack(void)
     // Through options: .local $a1 = {1 :number maximumFractionDigits=$a0}
     // and so on, as long a chain as binding takes (an option is resolved
     // twice, so the resolutions double at each level).
-    length = (size_t)snprintf(source, sizeof(source), ".local $a0 = {1 :number}");
-    for (int i = 1; i < 14; i++)
+    length = 0;
+    fits = AppendText(source, sizeof(source), &length, "%s", ".local $a0 = {1 :number}");
+    for (int i = 1; fits && i < 14; i++)
     {
-        length +=
-            (size_t)snprintf(source + length, sizeof(source) - length,
-                             " .local $a%d = {1 :number maximumFractionDigits=$a%d}", i, i - 1);
+        fits = AppendText(source, sizeof(source), &length,
+                          " .local $a%d = {1 :number maximumFractionDigits=$a%d}", i, i - 1);
     }
-    snprintf(source + length, sizeof(source) - length, " {{{$a13 :number}}}");
-    if (!Make(source, compiled, sizeof(compiled), &compiledSize, bound, sizeof(bound)))
+    fits = fits && AppendText(source, sizeof(source), &length, "%s", " {{{$a13 :number}}}");
+    if (!fits || !Make(source, compiled, sizeof(compiled), &compiledSize, bound, sizeof(bound)))
     {
         return false;
     }

@@ -6,6 +6,7 @@
 #include "xliff_pgs.h"
 
 #include "catalog_set.h"
+#include "print.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/decimal.h"
@@ -351,8 +352,12 @@ int XliffPgsPlan(XliffPgsUnit* out, const ResText* source, const ResText* target
             exit(1);
         }
         out->switchText = grown;
-        length += (size_t)snprintf(out->switchText + length, add + 1, "%s%s:%s", k > 0 ? " " : "",
-                                   word, sel->name);
+        // add counts the word, the name, ":" and the space before.
+        if (!TextPrint(out->switchText, length + add + 1, &length, "%s%s:%s", k > 0 ? " " : "",
+                       word, sel->name))
+        {
+            exit(1);
+        }
     }
     if (!ok)
     {

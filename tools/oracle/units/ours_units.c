@@ -4,7 +4,9 @@
 // The library's side of icu_units.cpp: the same lines, the same output.
 #include "maul-locale/unit.h"
 
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 typedef struct Parts
 {
@@ -19,8 +21,16 @@ static void Part(void* context, uint32_t kind, size_t start, size_t length)
     {
         return;
     }
-    p->used += (size_t)snprintf(p->fields + p->used, sizeof(p->fields) - p->used, "%s%.*s",
-                                p->used ? "|" : "", (int)length, p->text + start);
+    int n = snprintf(p->fields + p->used, sizeof(p->fields) - p->used, "%s%.*s", p->used ? "|" : "",
+                     (int)length, p->text + start);
+    // A line whose parts would not fit is no answer to compare.
+    if (n < 0 || (size_t)n >= sizeof(p->fields) - p->used)
+    {
+        fprintf(stderr, "ours_units: the unit parts of a line pass %zu bytes\n",
+                sizeof(p->fields) - 1);
+        exit(1);
+    }
+    p->used += (size_t)n;
 }
 int main(void)
 {

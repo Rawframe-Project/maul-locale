@@ -15,6 +15,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/datetime.h"
@@ -79,10 +80,9 @@ static void Part(void* context, uint32_t part, size_t start, size_t length)
     char side = (part & 0x300) == mloc_dateRangeStart ? '<'
                 : (part & 0x300) == mloc_dateRangeEnd ? '>'
                                                       : '=';
-    int n = snprintf(p->out + p->length, sizeof(p->out) - p->length, "%c%c[%.*s]",
-                     kind < sizeof(s_kinds) - 1 ? s_kinds[kind] : '?', side, (int)length,
-                     p->text + start);
-    p->length += n > 0 ? (size_t)n : 0;
+    AppendPrint(p->out, sizeof(p->out), &p->length, "%c%c[%.*s]",
+                kind < sizeof(s_kinds) - 1 ? s_kinds[kind] : '?', side, (int)length,
+                p->text + start);
 }
 
 static bool Formatter(const char* id, mlocDateOptions options, mlocDateFormatter* formatter)

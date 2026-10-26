@@ -190,6 +190,10 @@ bool PrepareCatalogBench(void)
     for (int i = 0; i < keyCount; i++)
     {
         int n = snprintf(s_keys[i], sizeof(s_keys[i]), "screen.item.%04d", i);
+        if (n < 0 || (size_t)n >= sizeof(s_keys[i]))
+        {
+            return false;
+        }
         s_keyLengths[i] = (size_t)n;
     }
     if (!MakeChain())

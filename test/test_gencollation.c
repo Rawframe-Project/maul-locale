@@ -534,13 +534,12 @@ static uint8_t* Unit(const char* text, RootTable* t, CollationRoot* r, char* err
 static size_t Run(char* out, size_t at, size_t size, uint32_t first, uint32_t last,
                   uint32_t primary, bool compressible, uint32_t step)
 {
-    for (uint32_t c = first; c <= last && at < size; c++)
+    int failures = s_failures;
+    for (uint32_t c = first; c <= last && s_failures == failures; c++)
     {
         uint32_t p = mlocAddToPrimary(primary, compressible, (c - first) * step);
-        int n =
-            snprintf(out + at, size - at, "%04X; [%02X %02X %02X, 05, 05]\n", (unsigned)c,
-                     (unsigned)(p >> 24), (unsigned)(p >> 16 & 0xFF), (unsigned)(p >> 8 & 0xFF));
-        at += n > 0 ? (size_t)n : 0;
+        AppendPrint(out, size, &at, "%04X; [%02X %02X %02X, 05, 05]\n", (unsigned)c,
+                    (unsigned)(p >> 24), (unsigned)(p >> 16 & 0xFF), (unsigned)(p >> 8 & 0xFF));
     }
     return at;
 }
@@ -573,11 +572,12 @@ static void TestOffsetRuns(void)
         CHECK(false, "memory for the runs");
         return;
     }
-    size_t at = (size_t)snprintf(text, textSize,
-                                 "[UCA version = 18.0.1]\n"
-                                 "[Unified_Ideograph 4E00]\n"
-                                 "[top_byte\t60\tCyrl]\n"
-                                 "[top_byte\t62\tGrek\tCOMPRESS]\n");
+    size_t at = 0;
+    AppendPrint(text, textSize, &at, "%s",
+                "[UCA version = 18.0.1]\n"
+                "[Unified_Ideograph 4E00]\n"
+                "[top_byte\t60\tCyrl]\n"
+                "[top_byte\t62\tGrek\tCOMPRESS]\n");
     at = Run(text, at, textSize, 0xE000, 0xE0C0, 0x60100200, false, 2);
     at = Run(text, at, textSize, 0xE13C, 0xE143, 0x60600200, false, 4);
     at = Run(text, at, textSize, 0xE17C, 0xE182, 0x60700200, false, 4);

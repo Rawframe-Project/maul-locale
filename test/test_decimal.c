@@ -6,6 +6,7 @@
 // UTS #35's examples and wide integers.
 
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/decimal.h"
 
@@ -328,7 +329,7 @@ static void TestOperandsAsWritten(void)
         state = state * 6364136223846793005u + 1442695040888963407u;
         uint64_t r = state >> 11;
         char text[96];
-        int at = 0;
+        size_t at = 0;
         int integer = (int)(r % 26);
         int fraction = (int)((r >> 5) % 26);
         for (int k = 0; k < integer; k++)
@@ -353,10 +354,10 @@ static void TestOperandsAsWritten(void)
         }
         if ((r >> 15) % 3 == 0)
         {
-            at += snprintf(text + at, sizeof(text) - (size_t)at, "e%d", (int)((r >> 17) % 61) - 40);
+            AppendPrint(text, sizeof(text), &at, "e%d", (int)((r >> 17) % 61) - 40);
         }
         mlocDecimal d;
-        if (mlocParseDecimal(text, (size_t)at, &d).status == mloc_success)
+        if (mlocParseDecimal(text, at, &d).status == mloc_success)
         {
             all = OperandsAsWritten(&d);
             checked++;
@@ -494,7 +495,7 @@ static void HashShortest(uint64_t bits)
 {
     mlocDecimal d;
     char text[64];
-    int at = 0;
+    size_t at = 0;
     if (mlocMakeShortestDecimal(FromBits(bits), &d) != mloc_success)
     {
         s_hash = 0;
@@ -508,9 +509,8 @@ static void HashShortest(uint64_t bits)
     {
         text[at++] = (char)('0' + d.digits[k]);
     }
-    at += snprintf(text + at, sizeof(text) - (size_t)at, "%se%d\n", d.count == 0 ? "0" : "",
-                   (int)d.exponent);
-    for (int k = 0; k < at; k++)
+    AppendPrint(text, sizeof(text), &at, "%se%d\n", d.count == 0 ? "0" : "", (int)d.exponent);
+    for (size_t k = 0; k < at; k++)
     {
         s_hash = (s_hash ^ (uint8_t)text[k]) * 0x100000001B3u;
     }
