@@ -379,10 +379,26 @@ jobs:
           restore-keys: fuzz-corpus-
       - name: Run
         # Four targets at a time, one per core of the runner; each keeps its
-        # full time. A target's output goes to its log, printed when it
-        # finds something.
+        # full time. A target's output goes to its log, which stays on the
+        # runner: this repository's logs and artifacts are public, and
+        # libFuzzer ends a finding's log with the input itself.
         run: |
           mkdir -p out/fuzz-logs out/fuzz-crashes
+          # A finding as a public run may show it. libFuzzer dumps the input
+          # (its mutations, the bytes in hex and escaped, Base64) from a line
+          # "MS: <n>" on, inside the report of an out-of-memory finding too,
+          # so the log is cut there before anything is read from it. Then:
+          # the target, its seed, the crash file's name (the SHA-1 of the
+          # input) from the target's own artifact directory, UBSan's runtime
+          # error lines and the report from "ERROR:" to "SUMMARY:".
+          report_finding() {
+            local head
+            head=$(sed '/^MS: [0-9]/,$d' "$3")
+            echo "$1: seed $2"
+            ls "$4"
+            grep -m 5 'runtime error' <<<"$head" || true
+            sed -n '/ERROR: /,/SUMMARY: /p' <<<"$head" | head -n 80
+          }
           fuzz_one() {
             name=$(basename "$1")
             mkdir -p "out/corpus/$name"
@@ -391,16 +407,21 @@ jobs:
             if [ -d "test/seeds/$name" ]; then
               cp test/seeds/"$name"/* "out/corpus/$name"/
             fi
-            if "$1" -max_total_time="$FUZZ_SECONDS" -max_len=512 -artifact_prefix=out/fuzz-crashes/ \
-              "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
-              echo "$name: no finding"
+            # An explicit seed, never 0 (which libFuzzer takes as "pick
+            # one"), so that a finding's run can be started the same way.
+            seed=$(( $(od -An -N4 -tu4 /dev/urandom) % 2147483647 + 1 ))
+            mkdir -p "out/fuzz-crashes/$name"
+            if "$1" -seed="$seed" -max_total_time="$FUZZ_SECONDS" -max_len=512 \
+              -artifact_prefix="out/fuzz-crashes/$name/" "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
+              echo "$name: no finding (seed $seed)"
             else
-              tail -n 60 "out/fuzz-logs/$name.log"
-              echo "::error::$name found something"
+              # One write, so that the four targets' reports do not interleave.
+              printf '%s\n::error::%s found something\n' \
+                "$(report_finding "$name" "$seed" "out/fuzz-logs/$name.log" "out/fuzz-crashes/$name")" "$name"
               return 1
             fi
           }
-          export -f fuzz_one
+          export -f report_finding fuzz_one
           targets=(out/fuzz/fuzz_*)
           [ -x "${targets[0]}" ] || { echo "::error::no fuzz target was built"; exit 1; }
           echo "${#targets[@]} targets"
@@ -446,16 +467,6 @@ jobs:
         with:
           path: out/corpus
           key: fuzz-corpus-${{ github.run_id }}
-      - name: Fuzz logs and crash inputs
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: fuzz
-          path: |
-            out/fuzz-logs/
-            out/fuzz-crashes/
-          if-no-files-found: ignore
-          retention-days: 7
 
   # The library and its tests under Emscripten and Node, through the web
   # preset, and the size of the static library. The CI image has no
