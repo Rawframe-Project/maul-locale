@@ -193,20 +193,17 @@ static void TestExtensions(void)
     char text[512];
     snprintf(text, sizeof(text),
              "<ldmlBCP47><keyword><key name=\"ca\"><type name=\"gregorian\" alias=\"%s\"/>"
-             "<type name=\"islamic-civil\" alias=\"islamicc\"/></key></keyword></ldmlBCP47>",
+             "</key></keyword></ldmlBCP47>",
              Long("", 63, ""));
     file = (DataFile){0};
     CHECK(PutKeys(text) &&
               Put("supplemental/supplementalMetadata.xml",
-                  "<supplementalData><metadata><alias><subdivisionAlias type=\"usqq\" "
-                  "replacement=\"usny\"/></alias></metadata></supplementalData>") &&
+                  "<supplementalData><metadata><alias/></metadata></supplementalData>") &&
               GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error)),
           "bcp47: an alias of 63 bytes is held");
     DataFileFree(&file);
 }
 
-// Whether supplementalData.xml with this parentLocales list is refused for
-// this reason.
 // supplementalData.xml with one parentLocales element of these
 // attributes, listing locales under en_001, made into the parent unit.
 static int Parents(const char* attributes, const char* locales)
