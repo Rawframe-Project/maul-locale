@@ -699,8 +699,12 @@ static int ReadParadigms(const XmlNode* matches, const Map* likely, uint64_t* pa
     {
         size_t length = strcspn(at, " ");
         char id[3 * maxSubtag];
-        snprintf(id, sizeof(id), "%.*s", (int)(length < sizeof(id) - 1 ? length : sizeof(id) - 1),
-                 at);
+        if (length >= sizeof(id))
+        {
+            Die("a paradigm locale longer than the generator holds", at);
+        }
+        memcpy(id, at, length);
+        id[length] = '\0';
         uint64_t tag = Maximize(likely, id);
         bool seen = false;
         for (int i = 0; i < count; i++)

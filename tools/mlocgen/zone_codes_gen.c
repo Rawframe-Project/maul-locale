@@ -102,10 +102,15 @@ static int CompareMappings(const void* a, const void* b)
     return order != 0 ? order : strcmp(x->region, y->region);
 }
 
+// The index of an id, or -1; a name longer than any id is none, rather
+// than the id its first bytes spell.
 static int FindCode(const Codes* c, const char* id)
 {
     Code key = {0};
-    snprintf(key.id, sizeof(key.id), "%s", id);
+    if (!GenCopy(key.id, sizeof(key.id), id, strlen(id)))
+    {
+        return -1;
+    }
     const Code* found = bsearch(&key, c->codes, (size_t)c->codeCount, sizeof(Code), CompareCodes);
     return found == nullptr ? -1 : (int)(found - c->codes);
 }
@@ -140,7 +145,12 @@ static int AddType(Codes* c, const XmlNode* type, char* errorOut, size_t errorCa
     if (code->deprecated)
     {
         const char* preferred = XmlGetAttribute(type, "preferred");
-        snprintf(code->name, sizeof(code->name), "%s", preferred != nullptr ? preferred : "");
+        preferred = preferred != nullptr ? preferred : "";
+        if (!GenCopy(code->name, sizeof(code->name), preferred, strlen(preferred)))
+        {
+            return Fail(errorOut, errorCapacity, "a preferred id longer than the generator holds",
+                        id);
+        }
         return 1;
     }
     if (list == nullptr)
@@ -150,7 +160,10 @@ static int AddType(Codes* c, const XmlNode* type, char* errorOut, size_t errorCa
     // CLDR's identifier for the id: the IANA name, else the first alias.
     const char* iana = XmlGetAttribute(type, "iana");
     const char* from = iana != nullptr ? iana : list;
-    snprintf(code->name, sizeof(code->name), "%.*s", (int)strcspn(from, " "), from);
+    if (!GenCopy(code->name, sizeof(code->name), from, strcspn(from, " ")))
+    {
+        return Fail(errorOut, errorCapacity, "an identifier longer than the generator holds", id);
+    }
     for (const char* at = list; *at != '\0';)
     {
         size_t length = strcspn(at, " ");

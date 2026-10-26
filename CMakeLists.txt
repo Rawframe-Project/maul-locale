@@ -1312,6 +1312,31 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             target_include_directories(test_gentokens PRIVATE test src)
             maul_apply_flags(test_gentokens)
             mloc_add_test(gentokens COMMAND test_gentokens ${CMAKE_CURRENT_BINARY_DIR}/gentokens)
+            # The sites that stop the generator, each run alone in a directory
+            # of its own and passed only on the line it stops with; a case
+            # whose generator returns prints "returned", which none matches.
+            foreach(case_line
+                    "zone_region|mlocgen: a zone's region not two letters: usnyc"
+                    "extension_aliases|mlocgen: an alias list longer than the generator holds: gregorian"
+                    "name_word|mlocgen: a key or value longer than the generator holds: aaaaaaaa"
+                    "alias_id|mlocgen: an alias id longer than the generator holds: aaaaaaaa"
+                    "alias_replacements|mlocgen: an alias replacement list longer than the generator holds: QQ"
+                    "number_system|mlocgen: a numeric system id not 1 to 8 letters and digits: abcdefghi"
+                    "match_paradigm|mlocgen: a paradigm locale longer than the generator holds: aaaaaaaa"
+                    "plural_locales|mlocgen: plurals: a locale list longer than the generator holds: aaaaaaaa"
+                    "plural_locale_id|mlocgen: plurals: a locale id longer than the generator holds: aaaaaaaa"
+                    "plural_condition_words|mlocgen: plurals: a condition of more words than the generator holds: n = 1 or"
+                    "file_name|mlocgen: a file name longer than the generator holds: aaaaaaaa")
+                string(FIND "${case_line}" "|" bar)
+                string(SUBSTRING "${case_line}" 0 ${bar} case)
+                math(EXPR start "${bar} + 1")
+                string(SUBSTRING "${case_line}" ${start} -1 expected)
+                set(directory ${CMAKE_CURRENT_BINARY_DIR}/gentokens-${case})
+                file(MAKE_DIRECTORY ${directory}/supplemental ${directory}/bcp47 ${directory}/main)
+                add_test(NAME gentokens_${case} COMMAND test_gentokens ${directory} ${case})
+                set_tests_properties(gentokens_${case} PROPERTIES LABELS "gentokens_${case};gentokens"
+                                     PASS_REGULAR_EXPRESSION "${expected}")
+            endforeach()
         endif()
     endif()
 endif()

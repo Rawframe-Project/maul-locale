@@ -169,9 +169,9 @@ static void AddType(Zones* z, const XmlNode* type)
         return;
     }
     snprintf(c->name, sizeof(c->name), "%.*s", (int)strcspn(list, " "), list);
-    if (region != nullptr)
+    if (region != nullptr && !GenCopy(c->region, sizeof(c->region), region, strlen(region)))
     {
-        snprintf(c->region, sizeof(c->region), "%s", region);
+        GenDie("a zone's region not two letters", id);
     }
     else if (strlen(id) == 5)
     {

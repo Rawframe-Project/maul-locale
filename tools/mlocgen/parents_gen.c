@@ -46,19 +46,23 @@ typedef struct Parents
     exit(1);
 }
 
-// The library's components a parentLocales element's attribute names;
-// a bit for each.
-static unsigned Components(const char* attribute)
+// The library's components a parentLocales element's attribute names,
+// a bit for each; false for a list longer than the generator holds.
+static bool Components(const char* attribute, unsigned* bitsOut)
 {
+    *bitsOut = 1u << 0;
     if (attribute == nullptr)
     {
-        return 1u << 0;
+        return true;
     }
     static const char* const s_names[] = {"", "collations", "plurals", "segmentations",
                                           "grammaticalFeatures"};
     unsigned bits = 0;
     char list[256];
-    snprintf(list, sizeof(list), "%s", attribute);
+    if (!GenCopy(list, sizeof(list), attribute, strlen(attribute)))
+    {
+        return false;
+    }
     for (char* name = list; *name != '\0';)
     {
         size_t length = strcspn(name, " ");
@@ -71,7 +75,8 @@ static unsigned Components(const char* attribute)
         }
         name += length + (name[length] == ' ');
     }
-    return bits;
+    *bitsOut = bits;
+    return true;
 }
 
 static void Add(Parents* parents, int component, const char* child, const char* parent,
@@ -125,7 +130,13 @@ static bool HasCollationFile(const char* commonDirectory, const char* id)
 static int AddList(Parents* parents, const Keys* keys, const XmlNode* list,
                    const char* commonDirectory, char* errorOut, size_t errorCapacity)
 {
-    unsigned components = Components(XmlGetAttribute(list, "component"));
+    unsigned components = 0;
+    if (!Components(XmlGetAttribute(list, "component"), &components))
+    {
+        snprintf(errorOut, errorCapacity,
+                 "supplementalData.xml: a component list longer than the generator holds");
+        return 0;
+    }
     for (int i = 0; i < list->childCount; i++)
     {
         const char* parent = XmlGetAttribute(list->children[i], "parent");

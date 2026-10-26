@@ -275,6 +275,10 @@ static void AddName(char*** names, int* count, int* capacity, const char* name)
     {
         return;
     }
+    if (length - 4 >= genMaxId)
+    {
+        GenDie("a file name longer than the generator holds", name);
+    }
     if (*count == *capacity)
     {
         *capacity = *capacity * 2 + 64;

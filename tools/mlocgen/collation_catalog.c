@@ -5,6 +5,7 @@
 
 #include "collation_catalog.h"
 
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -59,29 +60,39 @@ static bool NameOf(const char* path, char* out, size_t capacity)
     return true;
 }
 
-static bool AddType(CollationCatalog* c, const char* file, const XmlNode* collation,
-                    const XmlNode* cr)
+// Adds a collation element's type; null, or what is wrong.
+static const char* AddType(CollationCatalog* c, const char* file, const XmlNode* collation,
+                           const XmlNode* cr)
 {
+    const char* type = XmlGetAttribute(collation, "type");
+    const char* alt = XmlGetAttribute(collation, "alt");
+    type = type == nullptr ? "standard" : type;
+    alt = alt == nullptr ? "" : alt;
+    CollationType probe;
+    if (!GenCopy(probe.type, sizeof(probe.type), type, strlen(type)) ||
+        !GenCopy(probe.alt, sizeof(probe.alt), alt, strlen(alt)))
+    {
+        return "a collation type or alt longer than the generator holds";
+    }
     CollationType* types = Grow(c->types, &c->capacity, c->count + 1, sizeof(CollationType));
     size_t size = strlen(cr->text) + 1;
     char* text = types == nullptr ? nullptr : malloc(size);
     if (text == nullptr)
     {
         c->types = types != nullptr ? types : c->types;
-        return false;
+        return "out of memory";
     }
     c->types = types;
     CollationType* t = &c->types[c->count];
     t->order = c->count++;
-    const char* type = XmlGetAttribute(collation, "type");
-    const char* alt = XmlGetAttribute(collation, "alt");
+    // The file's name is NameOf's, which holds as many bytes as t->file.
     snprintf(t->file, sizeof(t->file), "%s", file);
-    snprintf(t->type, sizeof(t->type), "%s", type == nullptr ? "standard" : type);
-    snprintf(t->alt, sizeof(t->alt), "%s", alt == nullptr ? "" : alt);
+    memcpy(t->type, probe.type, sizeof(t->type));
+    memcpy(t->alt, probe.alt, sizeof(t->alt));
     memcpy(text, cr->text, size);
     t->text = text;
     t->parsed = CollationRulesParse(text, size - 1, &t->rules, t->error, sizeof(t->error));
-    return true;
+    return nullptr;
 }
 
 bool CollationCatalogRead(CollationCatalog* catalog, const char* path, char* error,
@@ -100,29 +111,35 @@ bool CollationCatalogRead(CollationCatalog* catalog, const char* path, char* err
     }
     CollationFile* files =
         Grow(catalog->files, &catalog->fileCapacity, catalog->fileCount + 1, sizeof(CollationFile));
-    bool ok = files != nullptr;
-    catalog->files = ok ? files : catalog->files;
-    CollationFile* file = ok ? &catalog->files[catalog->fileCount++] : nullptr;
-    if (ok)
+    const char* problem = files == nullptr ? "out of memory" : nullptr;
+    catalog->files = files != nullptr ? files : catalog->files;
+    CollationFile* file = files != nullptr ? &catalog->files[catalog->fileCount++] : nullptr;
+    if (file != nullptr)
     {
+        // name holds as many bytes as file->name.
         snprintf(file->name, sizeof(file->name), "%s", name);
     }
     const XmlNode* collations = XmlFindChild(root, "collations");
-    for (int i = 0; ok && collations != nullptr && i < collations->childCount; i++)
+    for (int i = 0; problem == nullptr && collations != nullptr && i < collations->childCount; i++)
     {
         const XmlNode* child = collations->children[i];
         if (strcmp(child->name, "defaultCollation") == 0)
         {
-            snprintf(file->defaultType, sizeof(file->defaultType), "%s", child->text);
+            if (!GenCopy(file->defaultType, sizeof(file->defaultType), child->text,
+                         strlen(child->text)))
+            {
+                problem = "a default collation longer than the generator holds";
+            }
             continue;
         }
         const XmlNode* cr =
             strcmp(child->name, "collation") == 0 ? XmlFindChild(child, "cr") : nullptr;
-        ok = cr == nullptr || AddType(catalog, name, child, cr);
+        problem = cr == nullptr ? nullptr : AddType(catalog, name, child, cr);
     }
+    bool ok = problem == nullptr;
     if (!ok)
     {
-        snprintf(error, errorSize, "%s: out of memory", path);
+        snprintf(error, errorSize, "%s: %s", path, problem);
     }
     XmlFree(root);
     return ok;
@@ -162,11 +179,15 @@ const CollationRules* CollationCatalogImport(void* context, const char* tag)
     char language[64];
     char type[64] = "standard";
     const char* u = strstr(tag, "-u-co-");
-    snprintf(language, sizeof(language), "%.*s",
-             (int)(u == nullptr ? strlen(tag) : (size_t)(u - tag)), tag);
+    // A tag too long to hold names no file's type, rather than the one its
+    // first bytes spell.
+    if (!GenCopy(language, sizeof(language), tag, u == nullptr ? strlen(tag) : (size_t)(u - tag)) ||
+        (u != nullptr && !GenCopy(type, sizeof(type), u + 6, strlen(u + 6))))
+    {
+        return nullptr;
+    }
     if (u != nullptr)
     {
-        snprintf(type, sizeof(type), "%s", u + 6);
         for (size_t i = 0; i < codeCount; i++)
         {
             if (strcmp(type, s_codes[i][0]) == 0)

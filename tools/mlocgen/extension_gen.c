@@ -129,7 +129,10 @@ static void AddType(Pairs* pairs, const char* key, const XmlNode* type)
         return;
     }
     char list[512];
-    snprintf(list, sizeof(list), "%s", alias);
+    if (!GenCopy(list, sizeof(list), alias, strlen(alias)))
+    {
+        Die("an alias list longer than the generator holds", name);
+    }
     for (char* one = list; *one != '\0';)
     {
         char* end = strchr(one, ' ');

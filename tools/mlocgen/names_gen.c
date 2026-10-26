@@ -101,6 +101,10 @@ static void PutWords(Names* n, const char* id, const char* list, const char* val
     {
         size_t length = strcspn(at, " ");
         char word[maxText * 2];
+        if ((id != nullptr ? strlen(id) + 1 : 0) + length >= sizeof(word))
+        {
+            GenDie("a key or value longer than the generator holds", at);
+        }
         if (id != nullptr)
         {
             snprintf(word, sizeof(word), "%s/%.*s", id, (int)length, at);
@@ -405,6 +409,8 @@ static void Collect(const char* chain, void* value, void* context)
         GenDie("a display name chain the generator does not know", chain);
     }
     step++;
+    // An element of maxText bytes or more, cut, is none CodeOf knows,
+    // whose names are short, so the generator stops below.
     char element[maxText];
     size_t length = strcspn(step, "[");
     snprintf(element, sizeof(element), "%.*s", (int)length, step);
