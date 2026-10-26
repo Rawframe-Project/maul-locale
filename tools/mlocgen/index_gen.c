@@ -227,7 +227,7 @@ static Unit UnitOf(const Exemplars* e, bool upper, muniCaseLanguage language)
     {
         s_labels[i] = Upper(&s_labels[i], language);
     }
-    qsort(s_labels, (size_t)count, sizeof(s_labels[0]), CompareLabels);
+    GenSort(s_labels, (size_t)count, sizeof(s_labels[0]), CompareLabels);
     Unit unit = {GenAllocate(4 + (size_t)count * (1 + maxLabel)), 4};
     uint32_t distinct = 0;
     for (int i = 0; i < count; i++)

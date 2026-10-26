@@ -93,7 +93,7 @@ static void Normalize(Set* set)
     {
         packed[i] = (uint64_t)set->first[i] << 32 | set->last[i];
     }
-    qsort(packed, (size_t)set->count, sizeof(packed[0]), CompareRanges);
+    GenSort(packed, (size_t)set->count, sizeof(packed[0]), CompareRanges);
     int out = 0;
     for (int i = 0; i < set->count; i++)
     {

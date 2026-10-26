@@ -659,7 +659,7 @@ static int AddSystems(const char* commonDirectory, const Map* sets, DataFile* fi
         count++;
     }
     XmlFree(root);
-    qsort(systems, (size_t)count, sizeof(System), CompareSystems);
+    GenSort(systems, (size_t)count, sizeof(System), CompareSystems);
     Bytes text = {0};
     Bytes unit = {0};
     GenPut(Grow(&unit, spelloutSystemHeaderSize), (uint64_t)count, 2);

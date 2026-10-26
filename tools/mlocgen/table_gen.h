@@ -69,6 +69,11 @@ bool GenCopy(char* out, size_t capacity, const char* text, size_t length);
 [[gnu::format(printf, 4, 5)]] bool GenPrint(char* text, size_t capacity, size_t* size,
                                             const char* format, ...);
 
+// Sorts count items of size bytes with qsort; nothing for none, whose
+// pointer may be null, which qsort may not be given. The generator sorts
+// through it alone.
+void GenSort(void* items, size_t count, size_t size, int (*compare)(const void*, const void*));
+
 // Stores a little-endian integer of 1 to 8 bytes.
 void GenPut(uint8_t* p, uint64_t value, int bytes);
 

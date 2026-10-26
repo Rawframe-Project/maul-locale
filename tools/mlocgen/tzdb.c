@@ -6,6 +6,8 @@
 
 #include "tzdb.h"
 
+#include "table_gen.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -421,9 +423,9 @@ static int CompareLinks(const void* a, const void* b)
 static int Finish(Reader* r)
 {
     Tzdb* t = r->tzdb;
-    qsort(t->rules, (size_t)t->ruleCount, sizeof(TzdbRule), CompareRules);
-    qsort(t->zones, (size_t)t->zoneCount, sizeof(TzdbZone), CompareZones);
-    qsort(t->links, (size_t)t->linkCount, sizeof(TzdbLink), CompareLinks);
+    GenSort(t->rules, (size_t)t->ruleCount, sizeof(TzdbRule), CompareRules);
+    GenSort(t->zones, (size_t)t->zoneCount, sizeof(TzdbZone), CompareZones);
+    GenSort(t->links, (size_t)t->linkCount, sizeof(TzdbLink), CompareLinks);
     for (int i = 1; i < t->zoneCount; i++)
     {
         if (strcmp(t->zones[i - 1].name, t->zones[i].name) == 0)

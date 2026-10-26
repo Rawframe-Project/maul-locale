@@ -428,7 +428,7 @@ static void AddUnits(Plurals* p, DataFile* file)
         Die("out of memory", "ids");
     }
     MapEach(&p->ids, CollectId, &list);
-    qsort(list.ids, list.count, sizeof(char*), CompareIds);
+    GenSort(list.ids, list.count, sizeof(char*), CompareIds);
     for (size_t i = 0; i < list.count; i++)
     {
         uint8_t unit[pluralUnitSize] = {0};

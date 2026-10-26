@@ -486,7 +486,7 @@ static void CollectAll(Names* n)
             MapEach(&file->leaves, Collect, n);
         }
     }
-    qsort(n->codes, (size_t)n->count, sizeof(Code), CompareCodes);
+    GenSort(n->codes, (size_t)n->count, sizeof(Code), CompareCodes);
 }
 
 // CLDR's value of a chain at a locale, or null.

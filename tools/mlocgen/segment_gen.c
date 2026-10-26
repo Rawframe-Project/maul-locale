@@ -324,7 +324,8 @@ static const char* Settle(Overrides* overrides)
 {
     if (overrides->addedCount > 0)
     {
-        qsort(overrides->added, (size_t)overrides->addedCount, sizeof(Override), CompareOverrides);
+        GenSort(overrides->added, (size_t)overrides->addedCount, sizeof(Override),
+                CompareOverrides);
     }
     for (int i = 1; i < overrides->addedCount; i++)
     {
@@ -496,7 +497,7 @@ static int Settled(Entry* entries, int count, int (*compare)(const void*, const 
 {
     if (count > 0)
     {
-        qsort(entries, (size_t)count, sizeof(Entry), compare);
+        GenSort(entries, (size_t)count, sizeof(Entry), compare);
     }
     int kept = 0;
     for (int i = 0; i < count; i++)

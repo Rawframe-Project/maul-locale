@@ -66,7 +66,7 @@ static int AppendStep(char* chain, size_t* length, const XmlNode* node, const Dt
             sorted[count++] = &node->attributes[i];
         }
     }
-    qsort(sorted, (size_t)count, sizeof(sorted[0]), CompareAttributes);
+    GenSort(sorted, (size_t)count, sizeof(sorted[0]), CompareAttributes);
     size_t at = *length;
     bool fits = GenPrint(chain, MAX_CHAIN, &at, "/%s", node->name);
     for (int i = 0; fits && i < count; i++)

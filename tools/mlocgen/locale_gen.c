@@ -12,6 +12,7 @@
 #include "match_gen.h"
 #include "parents_gen.h"
 #include "prefs_gen.h"
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -166,8 +167,8 @@ static int AddLikely(const XmlNode* root, DataFile* file, char* errorOut, size_t
     }
     if (ok)
     {
-        qsort(general, generalCount, sizeof(Entry), CompareEntries);
-        qsort(language, languageCount, sizeof(Entry), CompareEntries);
+        GenSort(general, generalCount, sizeof(Entry), CompareEntries);
+        GenSort(language, languageCount, sizeof(Entry), CompareEntries);
         size_t size = 0;
         uint8_t* table = LikelyTable(general, generalCount, language, languageCount, &size);
         DataFileAdd(file, kindLocaleLikely, nullptr, table, size);

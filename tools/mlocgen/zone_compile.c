@@ -8,6 +8,8 @@
 
 #include "zone_compile.h"
 
+#include "table_gen.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -352,7 +354,7 @@ static void Merge(Builder* b, CompiledOffset initial)
     // pointer, even for no items.
     if (b->count > 1)
     {
-        qsort(b->items, (size_t)b->count, sizeof(Raw), CompareRaw);
+        GenSort(b->items, (size_t)b->count, sizeof(Raw), CompareRaw);
     }
     Raw first = {.standard = initial.standard, .save = initial.save};
     int kept = 0;

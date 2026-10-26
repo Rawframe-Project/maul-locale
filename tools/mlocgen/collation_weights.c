@@ -3,6 +3,8 @@
 
 #include "collation_weights.h"
 
+#include "table_gen.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -301,7 +303,7 @@ static bool InShortRanges(CollationWeights* w, int32_t n, int32_t minLength)
                 w->ranges[i].count = n;
             }
             w->rangeCount = i + 1;
-            qsort(w->ranges, (size_t)w->rangeCount, sizeof(WeightRange), ByStart);
+            GenSort(w->ranges, (size_t)w->rangeCount, sizeof(WeightRange), ByStart);
             return true;
         }
         n -= w->ranges[i].count;

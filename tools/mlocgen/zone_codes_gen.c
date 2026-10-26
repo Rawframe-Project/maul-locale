@@ -202,8 +202,8 @@ static int ReadCodes(Codes* c, const char* commonDirectory, char* errorOut, size
         ok = AddType(c, key->children[i], errorOut, errorCapacity);
     }
     XmlFree(root);
-    qsort(c->codes, (size_t)c->codeCount, sizeof(Code), CompareCodes);
-    qsort(c->aliases, (size_t)c->aliasCount, sizeof(Alias), CompareAliases);
+    GenSort(c->codes, (size_t)c->codeCount, sizeof(Code), CompareCodes);
+    GenSort(c->aliases, (size_t)c->aliasCount, sizeof(Alias), CompareAliases);
     for (int i = 0; ok && i < c->codeCount; i++)
     {
         Code* code = &c->codes[i];
@@ -287,7 +287,7 @@ static int ReadMappings(Codes* c, const char* commonDirectory, char* errorOut, s
              AddMapping(c, map->children[i], errorOut, errorCapacity);
     }
     XmlFree(root);
-    qsort(c->mappings, (size_t)c->mappingCount, sizeof(Mapping), CompareMappings);
+    GenSort(c->mappings, (size_t)c->mappingCount, sizeof(Mapping), CompareMappings);
     for (int i = 0; ok && i < c->mappingCount; i++)
     {
         const Mapping* m = &c->mappings[i];

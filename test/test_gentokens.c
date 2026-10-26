@@ -161,15 +161,26 @@ static bool PutKeys(const char* calendar)
 
 static void TestExtensions(void)
 {
-    // One alias, as CLDR's files give some: a writer of no pairs is not
-    // what is checked here.
-    bool put = PutKeys("<ldmlBCP47><keyword><key name=\"ca\"><type name=\"islamic-civil\" "
-                       "alias=\"islamicc\"/></key></keyword></ldmlBCP47>");
-    put = put && Put("supplemental/supplementalMetadata.xml",
-                     Long("<supplementalData><metadata><alias><subdivisionAlias type=\"usqq\" "
-                          "replacement=\"",
-                          64, " usny\"/></alias></metadata></supplementalData>"));
+    // No alias at all: both lists empty.
     DataFile file = {0};
+    CHECK(PutKeys("<ldmlBCP47><keyword/></ldmlBCP47>") &&
+              Put("supplemental/supplementalMetadata.xml",
+                  "<supplementalData><metadata><alias/></metadata></supplementalData>") &&
+              GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error)),
+          "a unit of no extension alias is made");
+    DataFileFree(&file);
+    // Type aliases, and no subdivision alias.
+    file = (DataFile){0};
+    CHECK(PutKeys("<ldmlBCP47><keyword><key name=\"ca\"><type name=\"islamic-civil\" "
+                  "alias=\"islamicc\"/></key></keyword></ldmlBCP47>") &&
+              GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error)),
+          "and a unit of type aliases alone");
+    DataFileFree(&file);
+    bool put = Put("supplemental/supplementalMetadata.xml",
+                   Long("<supplementalData><metadata><alias><subdivisionAlias type=\"usqq\" "
+                        "replacement=\"",
+                        64, " usny\"/></alias></metadata></supplementalData>"));
+    file = (DataFile){0};
     CHECK(put && Refused(GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error)),
                          "a subdivision replacement longer than the generator holds"),
           "supplementalMetadata.xml: a replacement's first subtag of 64 bytes");
@@ -228,6 +239,8 @@ static void TestParents(void)
           "supplementalData.xml: a component list of 256 bytes");
     snprintf(attributes, sizeof(attributes), " component=\"%*s\"", 255, "plurals");
     CHECK(Parents(attributes, "en_AU"), "and one of 255 bytes is taken");
+    // A list naming no component the generator knows files no parent.
+    CHECK(Parents(" component=\"unknown\"", "en_AU"), "a unit of no parent is made");
 }
 
 // Whether plurals.xml with this pluralRules element is refused for this

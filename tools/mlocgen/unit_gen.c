@@ -858,9 +858,9 @@ static void ReadPreferences(Prefs* p, const XmlNode* data)
         {
             GenDie("a unit preference set without 001", category);
         }
-        qsort(set->runs, (size_t)set->runCount, sizeof(Run), CompareRuns);
+        GenSort(set->runs, (size_t)set->runCount, sizeof(Run), CompareRuns);
     }
-    qsort(p->sets, (size_t)p->setCount, sizeof(Set), CompareSets);
+    GenSort(p->sets, (size_t)p->setCount, sizeof(Set), CompareSets);
 }
 
 static void WritePreferences(const Prefs* p, DataFile* file)
@@ -938,9 +938,9 @@ int GenerateUnitTable(const char* commonDirectory, DataFile* file, char* errorOu
     {
         GenDie("units.xml has no conversions, or more prefixes or aliases than kept", path);
     }
-    qsort(s_gen.simples, (size_t)s_gen.simpleCount, sizeof(Simple), CompareSimples);
-    qsort(s_gen.prefixes, (size_t)s_gen.prefixCount, sizeof(XmlNode*), ComparePrefixes);
-    qsort(s_gen.aliases, (size_t)s_gen.aliasCount, sizeof(XmlNode*), CompareAliases);
+    GenSort(s_gen.simples, (size_t)s_gen.simpleCount, sizeof(Simple), CompareSimples);
+    GenSort(s_gen.prefixes, (size_t)s_gen.prefixCount, sizeof(XmlNode*), ComparePrefixes);
+    GenSort(s_gen.aliases, (size_t)s_gen.aliasCount, sizeof(XmlNode*), CompareAliases);
     for (int i = 1; i < s_gen.simpleCount; i++)
     {
         if (strcmp(s_gen.simples[i - 1].id, s_gen.simples[i].id) == 0)

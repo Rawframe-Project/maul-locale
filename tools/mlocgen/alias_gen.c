@@ -319,8 +319,8 @@ static void CollectVariants(Aliases* aliases)
             }
         }
     }
-    qsort(aliases->variants, (size_t)aliases->variantCount, sizeof(aliases->variants[0]),
-          CompareVariants);
+    GenSort(aliases->variants, (size_t)aliases->variantCount, sizeof(aliases->variants[0]),
+            CompareVariants);
 }
 
 static void Put(uint8_t* p, uint64_t value, int bytes)
@@ -453,7 +453,7 @@ static uint8_t* WriteAliases(Aliases* aliases, size_t* sizeOut)
     {
         keys[r] = (uint64_t)Key(aliases, &aliases->rules[r]) << 16 | r;
     }
-    qsort(keys, rules, sizeof(uint64_t), CompareKeys);
+    GenSort(keys, rules, sizeof(uint64_t), CompareKeys);
     uint32_t slots = SlotCount(keys, rules);
     size_t keysAt = aliasHeaderSize + (size_t)rules * aliasRuleSize;
     size_t slotsAt = keysAt + (size_t)rules * 6;
@@ -500,7 +500,7 @@ static uint8_t* WriteAliases(Aliases* aliases, size_t* sizeOut)
         memcpy(out + variantsAt + (size_t)v * 8, aliases->variants[v],
                strlen(aliases->variants[v]));
     }
-    qsort(aliases->legacy, (size_t)aliases->legacyCount, sizeof(Legacy), CompareLegacy);
+    GenSort(aliases->legacy, (size_t)aliases->legacyCount, sizeof(Legacy), CompareLegacy);
     uint32_t at = 0;
     for (int i = 0; i < aliases->legacyCount; i++)
     {
@@ -557,7 +557,7 @@ int GenerateAliasUnit(const char* commonDirectory, DataFile* file, char* errorOu
         }
     }
     XmlFree(root);
-    qsort(aliases->rules, (size_t)aliases->ruleCount, sizeof(Rule), CompareRules);
+    GenSort(aliases->rules, (size_t)aliases->ruleCount, sizeof(Rule), CompareRules);
     CollectVariants(aliases);
     size_t size = 0;
     uint8_t* unit = WriteAliases(aliases, &size);

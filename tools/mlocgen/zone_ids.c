@@ -5,6 +5,7 @@
 
 #include "zone_ids.h"
 
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -279,7 +280,7 @@ static int Collect(const Tzdb* t, ZoneIdentifier* ids, char* errorOut, size_t er
             return Fail(errorOut, errorCapacity, "a Link that reaches no Zone", t->links[i].name);
         }
     }
-    qsort(ids, (size_t)count, sizeof(ZoneIdentifier), CompareIdentifiers);
+    GenSort(ids, (size_t)count, sizeof(ZoneIdentifier), CompareIdentifiers);
     for (int i = 1; i < count; i++)
     {
         if (FoldedCompare(ids[i - 1].name, ids[i].name) == 0)

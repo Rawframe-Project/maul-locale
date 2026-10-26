@@ -109,7 +109,7 @@ static int ReadScripts(const char* metadata, char (*codes)[4], char* errorOut, s
         snprintf(errorOut, errorCapacity, "scriptMetadata.txt has no script written right to left");
         return 0;
     }
-    qsort(codes, (size_t)count, 4, CompareCodes);
+    GenSort(codes, (size_t)count, 4, CompareCodes);
     for (int i = 1; i < count; i++)
     {
         if (memcmp(codes[i - 1], codes[i], 4) == 0)

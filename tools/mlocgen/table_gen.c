@@ -68,6 +68,15 @@ bool GenPrint(char* text, size_t capacity, size_t* size, const char* format, ...
     return true;
 }
 
+void GenSort(void* items, size_t count, size_t size, int (*compare)(const void*, const void*))
+{
+    if (count == 0)
+    {
+        return;
+    }
+    qsort(items, count, size, compare);
+}
+
 void GenPut(uint8_t* p, uint64_t value, int bytes)
 {
     for (int i = 0; i < bytes; i++)
@@ -327,7 +336,7 @@ char** GenListXml(const char* commonDirectory, const char* subdirectory, int* co
 #endif
     if (count > 0)
     {
-        qsort((void*)names, (size_t)count, sizeof(char*), CompareNames);
+        GenSort((void*)names, (size_t)count, sizeof(char*), CompareNames);
     }
     *countOut = count;
     return names;

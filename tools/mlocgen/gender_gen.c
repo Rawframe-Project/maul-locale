@@ -93,7 +93,7 @@ static int ReadEntries(const XmlNode* root, Entry* entries, char* errorOut, size
             return 0;
         }
     }
-    qsort(entries, (size_t)count, sizeof(Entry), CompareEntries);
+    GenSort(entries, (size_t)count, sizeof(Entry), CompareEntries);
     for (int i = 1; i < count; i++)
     {
         if (strcmp(entries[i - 1].locale, entries[i].locale) == 0)

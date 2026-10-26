@@ -229,7 +229,7 @@ void NamesCollect(Names* n)
     {
         MapEach(&root->aliases, CollectAlias, n);
     }
-    qsort(n->names, (size_t)n->count, sizeof(UnitName), CompareNames);
+    GenSort(n->names, (size_t)n->count, sizeof(UnitName), CompareNames);
     // The sort moved the names: the map now gives each one's index + 1.
     for (int i = 0; i < n->count; i++)
     {
