@@ -118,6 +118,7 @@ static int FindCode(const Codes* c, const char* id)
 static int FindAlias(const Codes* c, const char* name)
 {
     Alias key = {0};
+    // A name of tzdbMaxName bytes or fewer, as every caller holds it.
     snprintf(key.name, sizeof(key.name), "%s", name);
     const Alias* found =
         bsearch(&key, c->aliases, (size_t)c->aliasCount, sizeof(Alias), CompareAliases);
@@ -174,6 +175,7 @@ static int AddType(Codes* c, const XmlNode* type, char* errorOut, size_t errorCa
         Alias* alias = &c->aliases[c->aliasCount++];
         memcpy(alias->name, at, length);
         alias->name[length] = '\0';
+        // The id AddType checked against maxId above.
         snprintf(alias->id, sizeof(alias->id), "%s", id);
         at += length + (at[length] == ' ');
     }

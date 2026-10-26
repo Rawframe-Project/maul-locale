@@ -98,6 +98,7 @@ static void Add(Pairs* pairs, const char* key, const char* from, const char* to)
         }
     }
     Pair* pair = &pairs->items[pairs->count++];
+    // A key of two letters, which AddFile checks, or "".
     snprintf(pair->key, sizeof(pair->key), "%s", key);
     Lower(from, pair->from, sizeof(pair->from));
     Lower(to, pair->to, sizeof(pair->to));

@@ -381,6 +381,7 @@ static void ReadRanges(Plurals* p, const XmlNode* root)
 static uint8_t Resolve(const Map* map, const char* id)
 {
     char key[maxId];
+    // FileLocales and the ranges reader keep ids under maxId bytes.
     snprintf(key, sizeof(key), "%s", id);
     for (;;)
     {

@@ -393,6 +393,7 @@ static uint32_t GrammarOf(const Map* map, const char* locale)
 static unsigned RuleCategories(const Names* n, const char* locale)
 {
     char id[maxKey];
+    // A listed id, which GenListXml keeps under genMaxId (64) bytes.
     snprintf(id, sizeof(id), "%s", locale);
     for (;;)
     {

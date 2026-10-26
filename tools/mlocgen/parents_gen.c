@@ -93,6 +93,7 @@ static void Add(Parents* parents, int component, const char* child, const char* 
     }
     Parent* p = &parents->items[parents->count++];
     p->component = component;
+    // Both are keys of MAX_KEY bytes, which KeyOf refuses to pass.
     snprintf(p->child, sizeof(p->child), "%s", child);
     snprintf(p->parent, sizeof(p->parent), "%s", parent);
     p->inherited = inherited;
@@ -331,6 +332,7 @@ int PrintChains(const char* commonDirectory, char* errorOut, size_t errorCapacit
             {
                 printf("%s%s", separator, key);
                 separator = " ";
+                // key and last are both MAX_KEY bytes.
                 snprintf(last, sizeof(last), "%s", key);
             }
         }

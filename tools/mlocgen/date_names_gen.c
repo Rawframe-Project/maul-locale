@@ -321,6 +321,7 @@ uint16_t DateNamesRules(DateNames* n, const DateSupplement* supplement, const ch
     // By truncation, as ICU's DayPeriodRules looks them up: zh_Hant takes
     // zh's, where CLDR's parent locales would give root's.
     char id[64];
+    // A listed id, which GenListXml keeps under genMaxId (64) bytes.
     snprintf(id, sizeof(id), "%s", locale);
     const uint8_t* rules = MapGet(&supplement->dayPeriods, id);
     for (char* cut = strrchr(id, '_'); rules == nullptr && cut != nullptr; cut = strrchr(id, '_'))
