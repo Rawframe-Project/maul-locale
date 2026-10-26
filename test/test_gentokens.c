@@ -26,6 +26,7 @@
 #include "plural_gen.h"
 #include "table_gen.h"
 #include "test_harness.h"
+#include "unit_names_model.h"
 #include "zone_codes_gen.h"
 #include "zone_names_gen.h"
 
@@ -586,6 +587,95 @@ static void RunFileName(void)
     }
 }
 
+// The names generator on a common directory of its own: a cut of CLDR's
+// DTD, root's nested brackets, empty keys, and this text in root's
+// localeDisplayNames.
+static void RunNames(const char* names)
+{
+    char root[2048];
+    snprintf(root, sizeof(root),
+             "<ldml><identity><version number=\"1\"/><language type=\"root\"/></identity>"
+             "<localeDisplayNames>%s</localeDisplayNames><characters>"
+             "<nestedBracketReplacement bracket=\"(\">[</nestedBracketReplacement>"
+             "<nestedBracketReplacement bracket=\")\">]</nestedBracketReplacement>"
+             "<nestedBracketReplacement bracket=\"\xEF\xBC\x88\">\xEF\xBC\xBB"
+             "</nestedBracketReplacement>"
+             "<nestedBracketReplacement bracket=\"\xEF\xBC\x89\">\xEF\xBC\xBD"
+             "</nestedBracketReplacement></characters></ldml>",
+             names);
+    bool put =
+        Put("dtd/ldml.dtd", "<!ELEMENT ldml (identity, localeDisplayNames?, characters?) >\n"
+                            "<!ELEMENT identity (version, language) >\n"
+                            "<!ELEMENT version EMPTY >\n"
+                            "<!ATTLIST version number CDATA #REQUIRED >\n"
+                            "    <!--@METADATA-->\n"
+                            "<!ELEMENT localeDisplayNames (languages?, territories?) >\n"
+                            "<!ELEMENT languages (language*) >\n"
+                            "<!ELEMENT language ( #PCDATA ) >\n"
+                            "<!ATTLIST language type NMTOKEN #REQUIRED >\n"
+                            "<!ATTLIST language alt NMTOKENS #IMPLIED >\n"
+                            "<!ELEMENT territories (territory*) >\n"
+                            "<!ELEMENT territory ( #PCDATA ) >\n"
+                            "<!ATTLIST territory type NMTOKEN #REQUIRED >\n"
+                            "<!ATTLIST territory alt NMTOKENS #IMPLIED >\n"
+                            "<!ELEMENT characters (nestedBracketReplacement*) >\n"
+                            "<!ELEMENT nestedBracketReplacement ( #PCDATA ) >\n"
+                            "<!ATTLIST nestedBracketReplacement bracket CDATA #REQUIRED >\n") &&
+        Put("supplemental/supplementalData.xml", "<supplementalData/>") &&
+        Put("supplemental/likelySubtags.xml",
+            "<supplementalData><likelySubtags/></supplementalData>") &&
+        Put("main/root.xml", root) && PutKeys("<ldmlBCP47><keyword/></ldmlBCP47>");
+    static Cldr s_cldr;
+    static Keys s_keys;
+    if (!put || !CldrOpen(&s_cldr, s_common, s_error, sizeof(s_error)) ||
+        !KeysOpen(&s_keys, s_common, s_error, sizeof(s_error)))
+    {
+        printf("%s\n", s_error);
+        return;
+    }
+    const char* const ids[] = {"root"};
+    NamesInput input = {
+        .commonDirectory = s_common, .cldr = &s_cldr, .keys = &s_keys, .ids = ids, .count = 1};
+    DataFile file = {0};
+    DataFile subdivisions = {0};
+    (void)GenerateNames(&input, &file, &subdivisions, s_error, sizeof(s_error));
+}
+
+static void RunNameLanguage(void)
+{
+    // "l:" and 127 bytes, the longest type an attribute holds.
+    char names[256];
+    snprintf(names, sizeof(names), "<languages><language type=\"%s\">x</language></languages>",
+             Long("", 127, ""));
+    RunNames(names);
+}
+
+static void RunNameTerritory(void)
+{
+    char names[256];
+    snprintf(names, sizeof(names),
+             "<territories><territory type=\"%s\">x</territory></territories>", Long("", 127, ""));
+    RunNames(names);
+}
+
+static void RunNameAlt(void)
+{
+    // "r:US", "%" and 124 bytes.
+    char names[256];
+    snprintf(names, sizeof(names),
+             "<territories><territory type=\"US\" alt=\"%s\">x</territory></territories>",
+             Long("", 124, ""));
+    RunNames(names);
+}
+
+static void RunUnitChain(void)
+{
+    UnitName name = {.kind = unitIdUnit};
+    char chain[128];
+    (void)NamesChainOf(&name, Long("", 128, ""), nullptr, widthLong, unitNameOther, chain,
+                       sizeof(chain));
+}
+
 typedef struct DeathCase
 {
     const char* name;
@@ -604,6 +694,10 @@ static const DeathCase s_deathCases[] = {
     {"plural_locale_id", RunPluralLocaleId},
     {"plural_condition_words", RunPluralConditionWords},
     {"file_name", RunFileName},
+    {"name_language", RunNameLanguage},
+    {"name_territory", RunNameTerritory},
+    {"name_alt", RunNameAlt},
+    {"unit_chain", RunUnitChain},
 };
 
 int main(int argc, char** argv)

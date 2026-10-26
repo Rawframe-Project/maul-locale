@@ -5,6 +5,7 @@
 
 #include "cldr.h"
 
+#include "table_gen.h"
 #include "xml.h"
 
 #include <stdio.h>
@@ -158,22 +159,17 @@ static int FormatChain(const Chain* chain, int count, char* out)
                 order[j - 1] = swap;
             }
         }
-        int used = snprintf(out + length, MAX_CHAIN - length, "/%s", step->name);
-        for (int i = 0; i < step->attributeCount && used >= 0; i++)
+        bool fits = GenPrint(out, MAX_CHAIN, &length, "/%s", step->name);
+        for (int i = 0; fits && i < step->attributeCount; i++)
         {
             const char* name = step->attributeNames[order[i]];
-            size_t at = length + (size_t)used;
-            int more = name[0] == '\0' || at >= MAX_CHAIN
-                           ? 0
-                           : snprintf(out + at, MAX_CHAIN - at, "[@%s=\"%s\"]", name,
-                                      step->attributeValues[order[i]]);
-            used = more < 0 ? -1 : used + more;
+            fits = name[0] == '\0' || GenPrint(out, MAX_CHAIN, &length, "[@%s=\"%s\"]", name,
+                                               step->attributeValues[order[i]]);
         }
-        if (used < 0 || length + (size_t)used >= MAX_CHAIN)
+        if (!fits)
         {
             return 0;
         }
-        length += (size_t)used;
     }
     return 1;
 }

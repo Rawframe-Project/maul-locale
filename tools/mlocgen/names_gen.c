@@ -217,12 +217,19 @@ static bool Attribute(const char* step, const char* name, char* out, size_t capa
 // "be_TARASK" "be-tarask").
 static void LanguageCode(const char* type, char* out, size_t capacity)
 {
-    size_t at = (size_t)snprintf(out, capacity, "l:");
-    for (int subtag = 0; *type != '\0' && at + 1 < capacity; subtag++)
+    // "l:" and the type, its "_" made "-".
+    if (2 + strlen(type) >= capacity)
+    {
+        GenDie("a display name code longer than the generator holds", type);
+    }
+    size_t at = 0;
+    out[at++] = 'l';
+    out[at++] = ':';
+    for (int subtag = 0; *type != '\0'; subtag++)
     {
         size_t length = strcspn(type, "_");
         bool digits = length == 3 && type[0] >= '0' && type[0] <= '9';
-        for (size_t i = 0; i < length && at + 1 < capacity; i++)
+        for (size_t i = 0; i < length; i++)
         {
             char c = type[i];
             bool upper = subtag > 0 && ((length == 4 && i == 0) || length == 2 || digits);
@@ -236,7 +243,7 @@ static void LanguageCode(const char* type, char* out, size_t capacity)
             out[at++] = '-';
         }
     }
-    out[at < capacity ? at : capacity - 1] = '\0';
+    out[at] = '\0';
 }
 
 static const char* KeyId(const Names* n, const char* key)
@@ -304,35 +311,41 @@ static bool CodeOf(const Names* n, const char* element, const char* step, char* 
     char type[maxText] = "";
     char key[maxText] = "";
     (void)Attribute(step, "type", type, sizeof(type));
+    size_t size = 0;
+    bool fits = true;
     if (strcmp(element, "language") == 0)
     {
         LanguageCode(type, out, capacity);
     }
     else if (strcmp(element, "script") == 0 || strcmp(element, "territory") == 0)
     {
-        snprintf(out, capacity, "%c:%s", element[0] == 's' ? 's' : 'r', type);
+        fits = GenPrint(out, capacity, &size, "%c:%s", element[0] == 's' ? 's' : 'r', type);
     }
     else if (strcmp(element, "variant") == 0)
     {
         Lower(type);
-        snprintf(out, capacity, "v:%s", type);
+        fits = GenPrint(out, capacity, &size, "v:%s", type);
     }
     else if (strcmp(element, "key") == 0)
     {
-        snprintf(out, capacity, "k:%s", KeyId(n, type));
+        fits = GenPrint(out, capacity, &size, "k:%s", KeyId(n, type));
     }
     else if (strcmp(element, "type") == 0 && Attribute(step, "key", key, sizeof(key)))
     {
         const char* id = KeyId(n, key);
-        snprintf(out, capacity, "t:%s-%s", id, ValueId(n, id, type));
+        fits = GenPrint(out, capacity, &size, "t:%s-%s", id, ValueId(n, id, type));
     }
     else if (strcmp(element, "subdivision") == 0)
     {
-        snprintf(out, capacity, "d:%s", type);
+        fits = GenPrint(out, capacity, &size, "d:%s", type);
     }
     else if (!PatternCode(element, type, out, capacity))
     {
         GenDie("a display name element the generator does not know", step);
+    }
+    if (!fits)
+    {
+        GenDie("a display name code longer than the generator holds", step);
     }
     return true;
 }
@@ -373,7 +386,10 @@ static NameField FieldOf(const char* step, char* code, size_t capacity)
     if (hasAlt)
     {
         size_t length = strlen(code);
-        snprintf(code + length, capacity - length, "%%%s", alt);
+        if (!GenPrint(code, capacity, &length, "%%%s", alt))
+        {
+            GenDie("a display name code longer than the generator holds", step);
+        }
     }
     return nameFieldName;
 }

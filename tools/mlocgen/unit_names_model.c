@@ -423,8 +423,12 @@ unsigned NamesCategoriesOf(const Names* n, const char* locale)
 bool NamesChainOf(const UnitName* name, const char* type, const char* gender, int width, int field,
                   char* out, size_t capacity)
 {
-    int at = snprintf(out, capacity, "%s%s\"]/%s[@type=\"%s\"]/", s_prefix, s_widths[width],
-                      name->kind == unitIdUnit ? "unit" : "compoundUnit", type);
+    size_t at = 0;
+    if (!GenPrint(out, capacity, &at, "%s%s\"]/%s[@type=\"%s\"]/", s_prefix, s_widths[width],
+                  name->kind == unitIdUnit ? "unit" : "compoundUnit", type))
+    {
+        GenDie("a unit name chain longer than the generator holds", type);
+    }
     const char* element = nullptr;
     bool count = field >= unitNameZero && field <= unitNameOther;
     switch (name->kind)
@@ -451,15 +455,13 @@ bool NamesChainOf(const UnitName* name, const char* type, const char* gender, in
     {
         return false;
     }
-    at += snprintf(out + at, capacity - (size_t)at, "%s", element);
-    if (count)
+    bool fits = GenPrint(out, capacity, &at, "%s", element) &&
+                (!count || GenPrint(out, capacity, &at, "[@count=\"%s\"]",
+                                    s_categories[field - unitNameZero])) &&
+                (gender == nullptr || GenPrint(out, capacity, &at, "[@gender=\"%s\"]", gender));
+    if (!fits)
     {
-        at += snprintf(out + at, capacity - (size_t)at, "[@count=\"%s\"]",
-                       s_categories[field - unitNameZero]);
-    }
-    if (gender != nullptr)
-    {
-        snprintf(out + at, capacity - (size_t)at, "[@gender=\"%s\"]", gender);
+        GenDie("a unit name chain longer than the generator holds", type);
     }
     return true;
 }

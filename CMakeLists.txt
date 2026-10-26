@@ -1326,13 +1326,18 @@ if(MAUL_LOCALE_BUILD_TOOLS)
                     "plural_locales|mlocgen: plurals: a locale list longer than the generator holds: aaaaaaaa"
                     "plural_locale_id|mlocgen: plurals: a locale id longer than the generator holds: aaaaaaaa"
                     "plural_condition_words|mlocgen: plurals: a condition of more words than the generator holds: n = 1 or"
-                    "file_name|mlocgen: a file name longer than the generator holds: aaaaaaaa")
+                    "file_name|mlocgen: a file name longer than the generator holds: aaaaaaaa"
+                    "name_language|mlocgen: a display name code longer than the generator holds: aaaaaaaa"
+                    "name_territory|mlocgen: a display name code longer than the generator holds: territory.@type=.aaaaaaaa"
+                    "name_alt|mlocgen: a display name code longer than the generator holds: territory.@alt=.aaaaaaaa"
+                    "unit_chain|mlocgen: a unit name chain longer than the generator holds: aaaaaaaa")
                 string(FIND "${case_line}" "|" bar)
                 string(SUBSTRING "${case_line}" 0 ${bar} case)
                 math(EXPR start "${bar} + 1")
                 string(SUBSTRING "${case_line}" ${start} -1 expected)
                 set(directory ${CMAKE_CURRENT_BINARY_DIR}/gentokens-${case})
-                file(MAKE_DIRECTORY ${directory}/supplemental ${directory}/bcp47 ${directory}/main)
+                file(MAKE_DIRECTORY ${directory}/supplemental ${directory}/bcp47 ${directory}/main
+                                    ${directory}/dtd)
                 add_test(NAME gentokens_${case} COMMAND test_gentokens ${directory} ${case})
                 set_tests_properties(gentokens_${case} PROPERTIES LABELS "gentokens_${case};gentokens"
                                      PASS_REGULAR_EXPRESSION "${expected}")
