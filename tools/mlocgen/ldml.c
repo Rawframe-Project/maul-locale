@@ -54,15 +54,19 @@ static int CompareAttributes(const void* a, const void* b)
 }
 
 // Appends "/name[@a="x"][@b="y"]" for the node's distinguishing
-// attributes, alphabetically; returns 0 when the chain would not fit.
-static int AppendStep(char* chain, size_t* length, const XmlNode* node, const Dtd* dtd)
+// attributes, alphabetically; null, or why the step does not fit.
+static const char* AppendStep(char* chain, size_t* length, const XmlNode* node, const Dtd* dtd)
 {
     const XmlAttribute* sorted[64];
     int count = 0;
-    for (int i = 0; i < node->attributeCount && count < 64; i++)
+    for (int i = 0; i < node->attributeCount; i++)
     {
         if (DtdAttributeKind(dtd, node->name, node->attributes[i].name) == attributeDistinguishing)
         {
+            if (count == 64)
+            {
+                return "an element with more distinguishing attributes than the generator holds";
+            }
             sorted[count++] = &node->attributes[i];
         }
     }
@@ -75,10 +79,10 @@ static int AppendStep(char* chain, size_t* length, const XmlNode* node, const Dt
     }
     if (!fits)
     {
-        return 0;
+        return "a chain longer than the generator holds";
     }
     *length = at;
-    return 1;
+    return nullptr;
 }
 
 static Leaf* MakeLeaf(const XmlNode* node, const Dtd* dtd, Draft draft)
@@ -113,13 +117,14 @@ typedef struct Flattener
     LdmlFile* file;
     const Dtd* dtd;
     char chain[MAX_CHAIN];
-    int failed;
+    // Why the file is refused, or null.
+    const char* failure;
     int failedLine;
 } Flattener;
 
 static void Flatten(Flattener* flattener, const XmlNode* node, size_t length, Draft draft)
 {
-    if (flattener->failed)
+    if (flattener->failure != nullptr)
     {
         return;
     }
@@ -130,9 +135,9 @@ static void Flatten(Flattener* flattener, const XmlNode* node, size_t length, Dr
         MapPut(&flattener->file->aliases, flattener->chain, Copy(path == nullptr ? "" : path));
         return;
     }
-    if (!AppendStep(flattener->chain, &length, node, flattener->dtd))
+    flattener->failure = AppendStep(flattener->chain, &length, node, flattener->dtd);
+    if (flattener->failure != nullptr)
     {
-        flattener->failed = 1;
         flattener->failedLine = node->line;
         return;
     }
@@ -142,7 +147,7 @@ static void Flatten(Flattener* flattener, const XmlNode* node, size_t length, Dr
         Leaf* old = MapGet(&flattener->file->leaves, flattener->chain);
         if (old != nullptr)
         {
-            flattener->failed = 1;
+            flattener->failure = "a chain given twice";
             flattener->failedLine = node->line;
             return;
         }
@@ -173,11 +178,11 @@ LdmlFile* LdmlLoad(const char* path, const Dtd* dtd, char* errorOut, size_t erro
     flattener->dtd = dtd;
     flattener->chain[0] = '/';
     Flatten(flattener, root, 1, draftApproved);
-    int failed = flattener->failed;
+    bool failed = flattener->failure != nullptr;
     if (failed)
     {
-        snprintf(errorOut, errorCapacity, "%s: line %d: a chain is too long or given twice", path,
-                 flattener->failedLine);
+        snprintf(errorOut, errorCapacity, "%s: line %d: %s", path, flattener->failedLine,
+                 flattener->failure);
     }
     free(flattener);
     XmlFree(root);

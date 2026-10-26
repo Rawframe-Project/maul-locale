@@ -141,13 +141,14 @@ static void AddType(Pairs* pairs, const char* key, const XmlNode* type)
         {
             *end = '\0';
         }
-        if (strlen(one) < sizeof(lowered))
+        if (strlen(one) >= sizeof(lowered))
         {
-            Lower(one, lowered, sizeof(lowered));
-            if (IsValue(lowered) && strcmp(lowered, name) != 0)
-            {
-                Add(pairs, key, lowered, name);
-            }
+            Die("an alias longer than the generator holds", name);
+        }
+        Lower(one, lowered, sizeof(lowered));
+        if (IsValue(lowered) && strcmp(lowered, name) != 0)
+        {
+            Add(pairs, key, lowered, name);
         }
         one = end == nullptr ? one + strlen(one) : end + 1;
     }
