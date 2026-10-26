@@ -17,6 +17,7 @@
 #include "collation_root.h"
 #include "collation_unit.h"
 #include "test_harness.h"
+#include "test_print.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,7 +68,7 @@ static size_t s_length;
 
 static void Add(const char* format, uint32_t a, uint32_t b, uint32_t c)
 {
-    s_length += (size_t)snprintf(s_text + s_length, sizeof(s_text) - s_length, format, a, b, c);
+    AppendPrint(s_text, sizeof(s_text), &s_length, format, a, b, c);
 }
 
 // The head and n letters with rising primaries from 2A 10; with digits,
@@ -77,7 +78,7 @@ static void Add(const char* format, uint32_t a, uint32_t b, uint32_t c)
 static void Letters(size_t n, bool digits)
 {
     s_length = 0;
-    s_length = (size_t)snprintf(s_text, sizeof(s_text), "%s", s_head);
+    AppendPrint(s_text, sizeof(s_text), &s_length, "%s", s_head);
     for (uint32_t c = 0x300; c <= 0x36F; c++)
     {
         Add("%04X;\t[, 85, 05]\n", c, 0, 0);

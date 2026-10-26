@@ -9,6 +9,7 @@
 // a mismatch is found day by day by running it.
 
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/calendar.h"
 
@@ -44,9 +45,9 @@ static const OracleSpan s_spans[] = {
     {mloc_calendarDangi, "dangi", 693596, 766644, UINT64_C(0xa5a552cfde86bed0)},
 };
 
-static uint64_t Hash(uint64_t h, const char* bytes, int count)
+static uint64_t Hash(uint64_t h, const char* bytes, size_t count)
 {
-    for (int i = 0; i < count; i++)
+    for (size_t i = 0; i < count; i++)
     {
         h = (h ^ (uint8_t)bytes[i]) * UINT64_C(0x100000001b3);
     }
@@ -66,11 +67,12 @@ static uint64_t SpanHash(const OracleSpan* s)
             return 0;
         }
         char line[128];
-        int n = snprintf(
-            line, sizeof(line), "%d %d %.*s %d %.*s %d %d %d %d %d %d %d\n", (int)day, (int)f.year,
-            f.eraLength > 0 ? (int)f.eraLength : 1, f.eraLength > 0 ? f.era : "-", (int)f.eraYear,
-            (int)f.monthCodeLength, f.monthCode, (int)f.day, (int)f.inLeapYear, (int)f.daysInYear,
-            (int)f.daysInMonth, (int)f.monthsInYear, (int)f.dayOfYear, (int)f.dayOfWeek);
+        size_t n = 0;
+        AppendPrint(line, sizeof(line), &n, "%d %d %.*s %d %.*s %d %d %d %d %d %d %d\n", (int)day,
+                    (int)f.year, f.eraLength > 0 ? (int)f.eraLength : 1,
+                    f.eraLength > 0 ? f.era : "-", (int)f.eraYear, (int)f.monthCodeLength,
+                    f.monthCode, (int)f.day, (int)f.inLeapYear, (int)f.daysInYear,
+                    (int)f.daysInMonth, (int)f.monthsInYear, (int)f.dayOfYear, (int)f.dayOfWeek);
         h = Hash(h, line, n);
     }
     return h;

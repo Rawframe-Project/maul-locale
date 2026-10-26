@@ -7,6 +7,7 @@
 // not finite, precisions, and the refusals.
 
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/unit.h"
 
@@ -342,8 +343,9 @@ static mlocResult Prefer(const char* id, const char* unit, const char* usage, co
     {
         return r;
     }
-    size_t at = (size_t)snprintf(text, capacity, "%.*s", (int)unitOut.length, chosen);
-    for (uint8_t i = 0; i < amounts.count && at < capacity; i++)
+    size_t at = 0;
+    AppendPrint(text, capacity, &at, "%.*s", (int)unitOut.length, chosen);
+    for (uint8_t i = 0; i < amounts.count; i++)
     {
         char amount[64];
         mlocOutput output = {.buffer = amount, .capacity = sizeof(amount)};
@@ -351,11 +353,11 @@ static mlocResult Prefer(const char* id, const char* unit, const char* usage, co
         {
             return (mlocResult)-101;
         }
-        at += (size_t)snprintf(text + at, capacity - at, " %.*s", (int)output.length, amount);
+        AppendPrint(text, capacity, &at, " %.*s", (int)output.length, amount);
     }
-    if (amounts.increment != 0 && at < capacity)
+    if (amounts.increment != 0)
     {
-        (void)snprintf(text + at, capacity - at, " /%u", amounts.increment);
+        AppendPrint(text, capacity, &at, " /%u", amounts.increment);
     }
     return mloc_success;
 }

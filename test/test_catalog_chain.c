@@ -9,6 +9,7 @@
 #include "compile.h"
 #include "file.h"
 #include "test_harness.h"
+#include "test_print.h"
 
 #include "maul-locale/catalog.h"
 #include "maul-locale/message.h"
@@ -43,17 +44,18 @@ static void Write(const char* name, const char* text)
 // A message of 33 selectors: it compiles, but no formatter binds it.
 static void Wide(char* out, size_t capacity)
 {
-    size_t at = (size_t)snprintf(out, capacity, ".input {$a :string}\n .match");
-    for (int i = 0; i < 33 && at < capacity; i++)
+    size_t at = 0;
+    AppendPrint(out, capacity, &at, "%s", ".input {$a :string}\n .match");
+    for (int i = 0; i < 33; i++)
     {
-        at += (size_t)snprintf(out + at, capacity - at, " $a");
+        AppendPrint(out, capacity, &at, "%s", " $a");
     }
-    at += (size_t)snprintf(out + at, capacity - at, "\n ");
-    for (int i = 0; i < 33 && at < capacity; i++)
+    AppendPrint(out, capacity, &at, "%s", "\n ");
+    for (int i = 0; i < 33; i++)
     {
-        at += (size_t)snprintf(out + at, capacity - at, "* ");
+        AppendPrint(out, capacity, &at, "%s", "* ");
     }
-    (void)snprintf(out + at, capacity - at, "{{x}}");
+    AppendPrint(out, capacity, &at, "%s", "{{x}}");
 }
 
 static bool Compile(void)
