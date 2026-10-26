@@ -1318,6 +1318,7 @@ if(MAUL_LOCALE_BUILD_TOOLS)
             foreach(case_line
                     "zone_region|mlocgen: a zone's region not two letters: usnyc"
                     "extension_aliases|mlocgen: an alias list longer than the generator holds: gregorian"
+                    "extension_alias|mlocgen: an alias longer than the generator holds: gregorian"
                     "name_word|mlocgen: a key or value longer than the generator holds: aaaaaaaa"
                     "alias_id|mlocgen: an alias id longer than the generator holds: aaaaaaaa"
                     "alias_replacements|mlocgen: an alias replacement list longer than the generator holds: QQ"

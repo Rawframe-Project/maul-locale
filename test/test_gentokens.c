@@ -17,7 +17,9 @@
 #include "collation_catalog.h"
 #include "datafile.h"
 #include "day_periods_gen.h"
+#include "dtd.h"
 #include "extension_gen.h"
+#include "ldml.h"
 #include "map.h"
 #include "match_gen.h"
 #include "names_gen.h"
@@ -26,6 +28,7 @@
 #include "plural_gen.h"
 #include "table_gen.h"
 #include "test_harness.h"
+#include "test_print.h"
 #include "unit_names_model.h"
 #include "zone_codes_gen.h"
 #include "zone_names_gen.h"
@@ -185,10 +188,22 @@ static void TestExtensions(void)
                          "a subdivision replacement longer than the generator holds"),
           "supplementalMetadata.xml: a replacement's first subtag of 64 bytes");
     DataFileFree(&file);
+    // An alias of 63 bytes is held; one of 64 stops the generator
+    // (gentokens_extension_alias).
+    char text[512];
+    snprintf(text, sizeof(text),
+             "<ldmlBCP47><keyword><key name=\"ca\"><type name=\"gregorian\" alias=\"%s\"/>"
+             "</key></keyword></ldmlBCP47>",
+             Long("", 63, ""));
+    file = (DataFile){0};
+    CHECK(PutKeys(text) &&
+              Put("supplemental/supplementalMetadata.xml",
+                  "<supplementalData><metadata><alias/></metadata></supplementalData>") &&
+              GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error)),
+          "bcp47: an alias of 63 bytes is held");
+    DataFileFree(&file);
 }
 
-// Whether supplementalData.xml with this parentLocales list is refused for
-// this reason.
 // supplementalData.xml with one parentLocales element of these
 // attributes, listing locales under en_001, made into the parent unit.
 static int Parents(const char* attributes, const char* locales)
@@ -413,6 +428,50 @@ static void TestCollationCatalog(void)
     CollationCatalogFree(&catalog);
 }
 
+// An element of this many distinguishing attributes, a1 to aN, loaded as
+// an LDML file under a DTD that declares 70; the loader's answer.
+static bool LoadAttributes(int count)
+{
+    char dtd[4096] = "<!ELEMENT ldml (e) >\n<!ELEMENT e EMPTY >\n";
+    char file[2048] = "<ldml><e";
+    size_t dtdAt = strlen(dtd);
+    size_t fileAt = strlen(file);
+    for (int i = 1; i <= 70; i++)
+    {
+        AppendPrint(dtd, sizeof(dtd), &dtdAt, "<!ATTLIST e a%d CDATA #IMPLIED >\n", i);
+        if (i <= count)
+        {
+            AppendPrint(file, sizeof(file), &fileAt, " a%d=\"x\"", i);
+        }
+    }
+    AppendPrint(file, sizeof(file), &fileAt, "%s", "/></ldml>");
+    char path[4096];
+    snprintf(path, sizeof(path), "%s/supplemental/attributes.xml", s_common);
+    Dtd loaded = {0};
+    char dtdPath[4096];
+    snprintf(dtdPath, sizeof(dtdPath), "%s/supplemental/attributes.dtd", s_common);
+    bool ok = Put("supplemental/attributes.dtd", dtd) && Put("supplemental/attributes.xml", file) &&
+              DtdLoad(&loaded, dtdPath, s_error, sizeof(s_error));
+    LdmlFile* ldml = ok ? LdmlLoad(path, &loaded, s_error, sizeof(s_error)) : nullptr;
+    ok = ldml != nullptr;
+    if (ldml != nullptr)
+    {
+        LdmlFree(ldml);
+    }
+    DtdFree(&loaded);
+    return ok;
+}
+
+static void TestAttributes(void)
+{
+    CHECK(LoadAttributes(64), "an element of 64 distinguishing attributes is read");
+    CHECK(!LoadAttributes(65) &&
+              strstr(s_error,
+                     "an element with more distinguishing attributes than the generator holds") !=
+                  nullptr,
+          "and one of 65 is refused");
+}
+
 // The cases that stop the generator.
 
 static void RunZoneRegion(void)
@@ -434,6 +493,21 @@ static void RunExtensionAliases(void)
              "<ldmlBCP47><keyword><key name=\"ca\"><type name=\"gregorian\" alias=\"%s\"/></key>"
              "</keyword></ldmlBCP47>",
              Long("", 512, ""));
+    DataFile file = {0};
+    if (PutKeys(text) && Put("supplemental/supplementalMetadata.xml",
+                             "<supplementalData><metadata><alias/></metadata></supplementalData>"))
+    {
+        (void)GenerateExtensionUnit(s_common, &file, s_error, sizeof(s_error));
+    }
+}
+
+static void RunExtensionAlias(void)
+{
+    char text[512];
+    snprintf(text, sizeof(text),
+             "<ldmlBCP47><keyword><key name=\"ca\"><type name=\"gregorian\" alias=\"%s\"/>"
+             "</key></keyword></ldmlBCP47>",
+             Long("", 64, ""));
     DataFile file = {0};
     if (PutKeys(text) && Put("supplemental/supplementalMetadata.xml",
                              "<supplementalData><metadata><alias/></metadata></supplementalData>"))
@@ -698,6 +772,7 @@ typedef struct DeathCase
 static const DeathCase s_deathCases[] = {
     {"zone_region", RunZoneRegion},
     {"extension_aliases", RunExtensionAliases},
+    {"extension_alias", RunExtensionAlias},
     {"name_word", RunNameWord},
     {"alias_id", RunAliasId},
     {"alias_replacements", RunAliasReplacements},
@@ -743,5 +818,6 @@ int main(int argc, char** argv)
     TestPlurals();
     TestZones();
     TestCollationCatalog();
+    TestAttributes();
     return s_failures == 0 ? 0 : 1;
 }
