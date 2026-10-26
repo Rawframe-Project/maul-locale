@@ -228,6 +228,8 @@ static void TestParents(void)
           "supplementalData.xml: a component list of 256 bytes");
     snprintf(attributes, sizeof(attributes), " component=\"%*s\"", 255, "plurals");
     CHECK(Parents(attributes, "en_AU"), "and one of 255 bytes is taken");
+    // A list naming no component the generator knows files no parent.
+    CHECK(Parents(" component=\"unknown\"", "en_AU"), "a unit of no parent is made");
 }
 
 // Whether plurals.xml with this pluralRules element is refused for this
