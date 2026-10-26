@@ -32,7 +32,7 @@ env:
 jobs:
   # Whether anything beyond documentation changed; the builds skip when not.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       pull-requests: read
 
@@ -48,12 +48,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Rawframe-Project/.github/.github/actions/docs-check@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+      - uses: Rawframe-Project/.github/.github/actions/docs-check@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
         with:
           exclude: tools/external
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       contents: read
 
@@ -141,7 +141,7 @@ jobs:
           - { preset: linux-shared }
           - { preset: macos-clang, runner: macos-15 }
           - { preset: windows-clang-cl, runner: windows-2025 }
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       contents: read
     with:
@@ -405,31 +405,29 @@ jobs:
               -max_total_time="$FUZZ_SECONDS" -max_len=512 out/corpus/{} || status=$?
           cat out/fuzz-reports/*.txt 2>/dev/null || true
           exit "$status"
-      # Each corpus is merged into a fresh directory and swapped in only
-      # when the merge finished, so a failed merge leaves the old corpus.
-      # This step and the save run only when every target found nothing:
-      # a run that found something keeps its corpus, which holds inputs
-      # near the finding, out of the cache.
+      # Each corpus is merged into a fresh directory through
+      # tools/fuzz_target.sh --merge, which reruns every input, keeps the
+      # log on the runner and fails on a finding as a run does. The merged
+      # corpora are swapped in only when every merge passed, so a failed
+      # merge leaves the old ones, and the save is skipped. This step and
+      # the save run only when every target found nothing: a run that
+      # found something keeps its corpus, which holds inputs near the
+      # finding, out of the cache.
       - name: Minimize the corpus
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
-          # A merge reruns every input, so a crash in it leaves libFuzzer's
-          # dump of the input in the log; the log stays on the runner, and
-          # only the failure and its exit status are printed.
-          merge_one() {
-            name=$(basename "$1")
-            rm -rf "out/merged/$name" && mkdir -p "out/merged/$name"
-            status=0
-            "$1" -merge=1 -max_len=512 "out/merged/$name" "out/corpus/$name" \
-              >"out/fuzz-logs/$name.merge.log" 2>&1 || status=$?
-            if [ "$status" -ne 0 ]; then
-              echo "::error::$name: the merge failed (exit $status)"
-              return 1
-            fi
-            rm -rf "out/corpus/$name" && mv "out/merged/$name" "out/corpus/$name"
-          }
-          export -f merge_one
-          printf '%s\n' out/fuzz/fuzz_* | xargs -P 4 -I {} bash -c 'merge_one "$1"' _ {}
+          rm -rf out/merged out/fuzz-reports
+          status=0
+          targets=(out/fuzz/fuzz_*)
+          printf '%s\n' "${targets[@]##*/}" |
+            xargs -P 4 -I {} tools/fuzz_target.sh --merge out/fuzz/{} out/merged/{} out/corpus/{} ||
+            status=$?
+          cat out/fuzz-reports/*.txt 2>/dev/null || true
+          [ "$status" -eq 0 ] || exit "$status"
+          for d in out/merged/*/; do
+            name=$(basename "$d")
+            rm -rf "out/corpus/$name" && mv "$d" "out/corpus/$name"
+          done
           over=0
           {
             echo "| Target | Inputs | MB |"
