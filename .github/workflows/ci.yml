@@ -322,7 +322,9 @@ jobs:
           cmake --preset linux-clang-20-asan
           cmake --build --preset linux-clang-20-asan
       - name: The quarantined tests
-        run: tools/run_quarantine.sh out/linux-clang-20-asan
+        # The test presets' limit, which a run outside a preset does not
+        # take: a hung flake then fails as a warning, not the whole job.
+        run: tools/run_quarantine.sh out/linux-clang-20-asan --timeout 300
 
   # The Hanja readings' finals against the pinned Unihan database, an 8 MB
   # download: on every run of main (each push, the night, a manual run), and
