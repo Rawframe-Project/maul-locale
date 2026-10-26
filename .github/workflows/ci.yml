@@ -383,21 +383,22 @@ jobs:
         # runner: this repository's logs and artifacts are public, and
         # libFuzzer ends a finding's log with the input itself.
         run: |
-          mkdir -p out/fuzz-logs out/fuzz-crashes
+          mkdir -p out/fuzz-logs out/fuzz-crashes out/fuzz-reports
           # A finding as a public run may show it. libFuzzer dumps the input
           # (its mutations, the bytes in hex and escaped, Base64) from a line
           # "MS: <n>" on, inside the report of an out-of-memory finding too,
           # so the log is cut there before anything is read from it. Then:
           # the target, its seed, the crash file's name (the SHA-1 of the
           # input) from the target's own artifact directory, UBSan's runtime
-          # error lines and the report from "ERROR:" to "SUMMARY:".
+          # error lines and the sanitizer's or libFuzzer's report, from its
+          # "==<pid>== ERROR:" line to "SUMMARY:".
           report_finding() {
             local head
             head=$(sed '/^MS: [0-9]/,$d' "$3")
             echo "$1: seed $2"
             ls "$4"
             grep -m 5 'runtime error' <<<"$head" || true
-            sed -n '/ERROR: /,/SUMMARY: /p' <<<"$head" | head -n 80
+            sed -n '/^==[0-9]*== *ERROR:/,/SUMMARY: /p' <<<"$head" | head -n 80
           }
           fuzz_one() {
             name=$(basename "$1")
@@ -415,9 +416,12 @@ jobs:
               -artifact_prefix="out/fuzz-crashes/$name/" "out/corpus/$name" >"out/fuzz-logs/$name.log" 2>&1; then
               echo "$name: no finding (seed $seed)"
             else
-              # One write, so that the four targets' reports do not interleave.
-              printf '%s\n::error::%s found something\n' \
-                "$(report_finding "$name" "$seed" "out/fuzz-logs/$name.log" "out/fuzz-crashes/$name")" "$name"
+              # Into a file of its own, printed once every target is done: four
+              # targets write at once, and a report of more than PIPE_BUF
+              # bytes written to their shared output could interleave.
+              report_finding "$name" "$seed" "out/fuzz-logs/$name.log" "out/fuzz-crashes/$name" \
+                >"out/fuzz-reports/$name.txt"
+              echo "::error::$name found something"
               return 1
             fi
           }
@@ -425,7 +429,12 @@ jobs:
           targets=(out/fuzz/fuzz_*)
           [ -x "${targets[0]}" ] || { echo "::error::no fuzz target was built"; exit 1; }
           echo "${#targets[@]} targets"
-          printf '%s\n' "${targets[@]}" | xargs -P 4 -I {} bash -c 'fuzz_one "$1"' _ {}
+          status=0
+          printf '%s\n' "${targets[@]}" | xargs -P 4 -I {} bash -c 'fuzz_one "$1"' _ {} || status=$?
+          for report in out/fuzz-reports/*.txt; do
+            [ -f "$report" ] && cat "$report"
+          done
+          exit "$status"
       # Each corpus is merged into a fresh directory and swapped in only
       # when the merge finished, so a failed merge leaves the old corpus.
       - name: Minimize the corpus
