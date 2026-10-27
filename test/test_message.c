@@ -660,6 +660,30 @@ static void TestCorrupted(void)
     }
 }
 
+// A header alone whose counts' records come to more than 2^64 bytes:
+// 2^32 - 1 selectors and 715,827,882 variants, whose keys and records
+// with a pool of 8 sum to its own 56 bytes modulo 2^64. The variants it
+// claims are far past its end.
+static void TestCountsWrapping(void)
+{
+    size_t size;
+    CHECK(Compile(".input {$x :f} .match $x 1 {{a}} * {{b}}", &size), "a matcher compiles");
+    uint8_t* header = malloc(messageHeaderSize);
+    memcpy(header, s_buffer, messageHeaderSize);
+    Store(header + messageSize, messageHeaderSize);
+    for (uint32_t kind = 0; kind < messageCount; kind++)
+    {
+        Store(header + messageCounts + kind * 4, 0);
+    }
+    Store(header + messageCounts + messageSelectors * 4, UINT32_MAX);
+    Store(header + messageCounts + messageVariants * 4, 715827882);
+    Store(header + messageCounts + messagePool * 4, 8);
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(header, messageHeaderSize, &output) == mloc_errorData,
+          "counts whose records wrap to the size are refused");
+    free(header);
+}
+
 // Names stored in NFC must still be names: U+037E becomes ";" and U+1FEF
 // "`", so names holding them are refused at the code point; U+2126 (Ohm,
 // Omega in NFC) and U+0387 (a middle dot) stay names and write back.
@@ -1411,6 +1435,7 @@ int main(void)
     TestRoundTrip();
     TestCanonical();
     TestCorrupted();
+    TestCountsWrapping();
     TestFieldsRefused();
     TestAmplified();
     TestRefused();

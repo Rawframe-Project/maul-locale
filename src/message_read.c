@@ -9,6 +9,7 @@
 #include "maul-unicode/base.h"
 #include "maul-unicode/encoding.h"
 
+#include <stdckdint.h>
 #include <string.h>
 
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,
@@ -345,7 +346,9 @@ static uint32_t UnicodeVersion(void)
 
 // The header: the counts' records fill exactly the size; a simple message
 // has neither declarations nor a matcher; a matcher has both selectors
-// and variants or neither.
+// and variants or neither. No count passes the size, so the selectors
+// times the variants fit 64 bits; their keys' bytes may not, and are
+// multiplied and added with a check.
 static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
 {
     if (size < messageHeaderSize || memcmp(bytes, MLOC_MESSAGE_MAGIC, 4) != 0 ||
@@ -365,11 +368,17 @@ static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
     for (uint32_t kind = 0; kind < messageCount; kind++)
     {
         v->count[kind] = mlocLoad32(bytes + messageCounts + kind * 4);
+        if (v->count[kind] > size)
+        {
+            return mloc_errorData;
+        }
         total += (uint64_t)v->count[kind] * messageRecordSizes[kind];
     }
-    total += (uint64_t)v->count[messageSelectors] * v->count[messageVariants] * messageKeySize;
+    uint64_t keys = 0;
     bool simple = (v->flags & messageComplex) == 0;
-    if (total != size || (v->flags & ~messageComplex) != 0 ||
+    if (ckd_mul(&keys, (uint64_t)v->count[messageSelectors] * v->count[messageVariants],
+                messageKeySize) ||
+        ckd_add(&total, total, keys) || total != size || (v->flags & ~messageComplex) != 0 ||
         (simple && v->count[messageDeclarations] + v->count[messageVariants] > 0) ||
         ((v->count[messageSelectors] == 0) != (v->count[messageVariants] == 0)))
     {
