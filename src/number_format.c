@@ -347,7 +347,7 @@ static bool SameAffixes(const Prepared* a, const Prepared* b)
 // Whether two prepared ends write alike.
 static bool Alike(const Prepared* a, const Prepared* b)
 {
-    return memcmp(&a->decimal, &b->decimal, sizeof(a->decimal)) == 0 && SameAffixes(a, b) &&
+    return mlocSameDecimal(&a->decimal, &b->decimal) && SameAffixes(a, b) &&
            a->layout.exponent == b->layout.exponent && a->layout.noNumber == b->layout.noNumber;
 }
 

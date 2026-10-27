@@ -157,7 +157,7 @@ message_parse: message_emit message_form message_text
 message_read: bytes message_form message_text
 message_write: message_form message_read message_text
 message_bind: bytes message_form message_read message_text
-message_number: number_precision
+message_number: decimal number_precision
 message_offset: message_number
 message_words: message_number
 message_duration: message_number

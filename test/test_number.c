@@ -11,6 +11,8 @@
 
 #include "maul-locale/number.h"
 
+#include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 static mlocDataSet s_data;
@@ -429,6 +431,16 @@ static void TestCompact(void)
           "a system without digits in compact notation");
 }
 
+// Fills a decimal's padding, the bytes past its last field, with a
+// byte: a caller's decimal may hold anything there.
+static void Pad(mlocDecimal* d, uint8_t byte)
+{
+    for (size_t i = offsetof(mlocDecimal, kind) + 1; i < sizeof(*d); i++)
+    {
+        ((uint8_t*)d)[i] = byte;
+    }
+}
+
 // Whether a range formats as expected in a locale with options.
 static bool Ranges(const char* id, const mlocNumberOptions* options, const char* from,
                    const char* to, const char* expected)
@@ -461,6 +473,22 @@ static void TestRanges(void)
           "the start may pass the end");
     CHECK(Ranges("en", nullptr, "5", "5", "~5") && Ranges("en", nullptr, "-5", "-5", "~-5"),
           "ends that write alike: the approximately sign");
+    mlocLocale en;
+    mlocNumberFormatter plain;
+    mlocDecimal five = {0};
+    mlocDecimal padded;
+    char approximately[16];
+    mlocOutput written = {.buffer = approximately, .capacity = sizeof(approximately)};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitNumberFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
+              mlocParseDecimal("5", 1, &five).status == mloc_success,
+          "a formatter and 5");
+    padded = five;
+    Pad(&five, 0x00);
+    Pad(&padded, 0xA5);
+    CHECK(mlocFormatNumberRange(&plain, &five, &padded, &written) == mloc_success &&
+              written.length == 2 && memcmp(approximately, "~5", 2) == 0,
+          "ends of other padding write alike");
     CHECK(Ranges("en", nullptr, "-5", "-3", "-5 \xE2\x80\x93 -3") &&
               Ranges("en", nullptr, "-3", "5", "-3 \xE2\x80\x93 5"),
           "a sign of one character is not shared, and spaces the separator");

@@ -5,6 +5,7 @@
 
 #include "message_number.h"
 
+#include "decimal.h"
 #include "number_precision.h"
 
 #include "maul-locale/currency.h"
@@ -711,6 +712,8 @@ mlocNumberOptions mlocNumberFormatOptions(const NumberValue* v)
 // Writes a currency value with the currency formatter.
 static_assert(sizeof(NumberValue) == offsetof(NumberValue, reserved) + 3,
               "a number value has no padding");
+static_assert(offsetof(NumberValue, origin) == sizeof(mlocDecimal),
+              "the options follow the decimal");
 static_assert(offsetof(PreparedNumber, formatter) % 8 == 0 && sizeof(PreparedNumber) % 8 == 0,
               "a prepared value's parts stay 8-aligned");
 
@@ -729,8 +732,12 @@ bool mlocNumberFits(const PreparedNumber* prepared, const NumberValue* value)
     {
         return false;
     }
+    // The options alone, the bytes after the decimal: a key holds no
+    // decimal, and a decimal's padding is no part of it.
     NumberValue key = mlocNumberKey(value);
-    return memcmp(&key, &prepared->key, sizeof key) == 0;
+    size_t options = offsetof(NumberValue, origin);
+    return memcmp((const uint8_t*)&key + options, (const uint8_t*)&prepared->key + options,
+                  sizeof key - options) == 0;
 }
 
 // A currency formatter's options for a currency value.
@@ -877,7 +884,7 @@ static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categ
 // Whether the value rounded as it formats is written plainly as key:
 // ASCII digits, "-", "." and the fraction zeros it shows, never an
 // exponent; zero unsigned. The key, a number literal, is read as a
-// decimal, which compares by its bytes (the same value showing the same
+// decimal, which compares by its fields (the same value showing the same
 // digits); a key of more digits than a decimal holds matches nothing.
 bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length)
 {
@@ -890,7 +897,7 @@ bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t lengt
     value.negative = value.count == 0 ? 0 : value.negative;
     mlocDecimal written;
     return mlocParseDecimal((const char*)key, length, &written).status == mloc_success &&
-           memcmp(&written, &value, sizeof value) == 0;
+           mlocSameDecimal(&written, &value);
 }
 
 mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNumber* prepared,
