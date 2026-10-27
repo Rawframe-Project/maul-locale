@@ -55,6 +55,10 @@ Search (`search*.c`) follows ICU4C's `usearch`: processed elements as `UCollatio
 
 The alphabetic index (`index*.c`) follows ICU4C's `AlphabeticIndex`. The generator resolves each locale's initial labels once (its index exemplars, else its exemplars with the synthesis and case mapping ICU applies) into a unit per locale key; the run time filters them over the collator and builds the buckets into caller memory. A build weighs each label and script boundary once (its first primary weights at the index's primary strength) and orders them by those weights, comparing texts only where the weights cannot tell; each bucket keeps its boundary's weights, so finding a name's bucket weighs the name once where the fast Latin compare does not serve it, instead of comparing it with a script's boundary, a contraction of U+FDD1 that a compare reads slowly. Labels follow CLDR's chain, where ICU4C falls back to the bundles it ships: ICU4C gives `az-Arab` Azerbaijani's Latin labels, which CLDR's chain never reaches from an Arabic-script locale.
 
+`fuzz_search` and `fuzz_index` drive both through the public calls.
+- `fuzz_search` searches random patterns and texts forward and backward, in UTF-8 and in UTF-16. The two forms must agree, and bytes that are not UTF-8 must still give a match within the text or a refusal.
+- `fuzz_index` builds indexes with random options and special labels, then finds random names in them.
+
 ## Kept differences
 
 - **Han order:** CLDR's root and its conformance files order unified ideographs by code point; ICU4C's default data orders them by radical and stroke. The library follows CLDR, as ICU4X does, so keys holding Han differ from ICU4C's in those primaries; the `unihan` types order by radical and stroke.
