@@ -7,6 +7,7 @@
 #include "collation_compare.h"
 #include "collation_iterator.h"
 #include "index_value.h"
+#include "invariant.h"
 #include "nfd_stream.h"
 
 #include "maul-unicode/encoding.h"
@@ -44,6 +45,9 @@ typedef struct Build
     uint8_t* pool;
     uint32_t bucketCount;
     uint32_t poolSize;
+    // What counting found, which writing stays within.
+    uint32_t bucketLimit;
+    uint32_t poolLimit;
     uint32_t specialAt[3];
     // ICU4C's hasInvisibleBuckets.
     bool invisible;
@@ -197,6 +201,9 @@ static Text Separated(Text t, uint8_t* scratch)
     uint32_t length = 0;
     for (uint32_t i = 0; i < t.length; i++)
     {
+        // A label holds at most indexMaxLabelBytes, so it fits with its
+        // separators.
+        MLOC_ASSERT(length + 3 <= scratchBytes);
         if (i > 0 && (t.bytes[i] & 0xC0) != 0x80)
         {
             scratch[length++] = 0xCD;
@@ -284,6 +291,8 @@ static bool Multiple(const IndexText* t)
 // kept though it sorts as its parts).
 static bool Starred(const IndexText* t)
 {
+    // Only a label of more than one code point is asked.
+    MLOC_ASSERT(t->length >= (t->first != 0 ? 1u : 2u));
     if (t->first != 0)
     {
         uint32_t last = mlocLoad32(t->bytes + (size_t)(t->length - 1) * 4);
@@ -359,6 +368,7 @@ static void Thin(IndexCandidates* in, uint32_t maxLabelCount)
 static void Filter(Build* b, uint32_t maxLabelCount)
 {
     IndexCandidates* in = b->in;
+    MLOC_ASSERT(in->scriptCount > 0);
     const IndexText* first = &in->scripts[0];
     const IndexText* last = &in->scripts[in->scriptCount - 1];
     uint32_t size = 0;
@@ -391,6 +401,7 @@ static void Filter(Build* b, uint32_t maxLabelCount)
 static uint32_t PoolAdd(Build* b, const uint8_t* bytes, uint32_t length)
 {
     uint32_t at = b->poolSize;
+    MLOC_ASSERT(length <= b->poolLimit - at);
     if (b->pool != nullptr && length > 0)
     {
         memcpy(b->pool + at, bytes, length);
@@ -412,6 +423,7 @@ static void SetField(Build* b, uint32_t record, uint32_t field, uint32_t value)
 static uint32_t AddBucket(Build* b, Text label, uint32_t labelAt, Text boundary,
                           uint32_t boundaryAt, const IndexKey* key, uint32_t type, uint32_t display)
 {
+    MLOC_ASSERT(b->bucketCount < b->bucketLimit);
     uint32_t r = b->bucketCount++;
     if (b->records != nullptr)
     {
@@ -578,6 +590,9 @@ static void Emit(Build* b)
             {
                 scriptIndex += started ? 1 : 0;
                 started = true;
+                // Filter keeps only labels before the last boundary, so
+                // the walk stops there.
+                MLOC_ASSERT(scriptIndex < in->scriptCount);
                 upperText = &in->scripts[scriptIndex];
                 upper = LabelText(upperText, upperScratch);
                 if (Ordered(b, item, upperText) < 0 || scriptIndex + 1 == in->scriptCount)
@@ -658,6 +673,9 @@ static size_t Finish(Build* b, uint8_t* out)
         {
             target = Display(b, target);
         }
+        // Invisible and Redirect send a bucket along a chain that ends at
+        // a shown one.
+        MLOC_ASSERT(Display(b, target) == noDisplay);
         if (target != r)
         {
             SetDisplay(b, r, target);
@@ -681,6 +699,7 @@ static size_t Finish(Build* b, uint8_t* out)
                 hi = mid;
             }
         }
+        MLOC_ASSERT(mlocLoad32(shown + (size_t)lo * 4) == target);
         SetField(b, r, 4, lo << 8 | Type(b, r));
     }
     uint8_t* pool = shown + (size_t)shownCount * 4;
@@ -696,7 +715,11 @@ static size_t Finish(Build* b, uint8_t* out)
 static void Start(Build* b, const Collator* primary, IndexCandidates* in,
                   const IndexSpecials* specials)
 {
-    *b = (Build){.c = primary, .in = in, .specials = specials};
+    *b = (Build){.c = primary,
+                 .in = in,
+                 .specials = specials,
+                 .bucketLimit = UINT32_MAX,
+                 .poolLimit = UINT32_MAX};
     for (uint32_t i = 0; i < 26; i++)
     {
         b->asciiBuckets[i] = -1;
@@ -723,7 +746,11 @@ mlocResult mlocIndexBuild(const Collator* primary, IndexCandidates* candidates,
     {
         return mloc_errorCapacity;
     }
+    uint32_t bucketLimit = b.bucketCount;
+    uint32_t poolLimit = b.poolSize;
     Start(&b, primary, candidates, specials);
+    b.bucketLimit = bucketLimit;
+    b.poolLimit = poolLimit;
     b.records = out + mlocIndexRecords();
     b.pool = b.records + records;
     Emit(&b);

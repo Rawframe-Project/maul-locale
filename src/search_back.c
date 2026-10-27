@@ -3,6 +3,8 @@
 
 #include "search_back.h"
 
+#include "invariant.h"
+
 void mlocSearchBackStart(SearchBack* b, const CollationRoot* root,
                          const CollationSettings* settings, NfdText text, size_t from)
 {
@@ -29,6 +31,8 @@ static bool PreviousHalf(SearchBack* b, SearchHalf* out)
         }
         size_t end = b->start;
         b->start = mlocSearchPieceStart(b->root, b->settings, b->text, end);
+        // Each piece starts before the one after it, so the walk ends.
+        MLOC_ASSERT(b->start < end);
         mlocSearchElementsStartPiece(&b->piece, b->root, b->settings, b->text, b->start, end);
         SearchHalf h;
         while (mlocSearchNextHalf(&b->piece, &h.half, &h.low, &h.high))
@@ -80,6 +84,9 @@ uint64_t mlocSearchPreviousElement(SearchBack* b, uint32_t* lowOut, uint32_t* hi
             uint64_t element = mlocSearchProcess(&b->piece, b->chunk[count].half);
             if (element != 0)
             {
+                // A chunk's halves give an element each at most, and the
+                // chunk before's are all handed out.
+                MLOC_ASSERT(b->processedCount < searchBackHalves);
                 b->processed[b->processedCount++] =
                     (SearchProcessed){element, b->chunk[count].low, b->chunk[count].high};
             }

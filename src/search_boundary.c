@@ -3,6 +3,8 @@
 
 #include "search_boundary.h"
 
+#include "invariant.h"
+
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/properties.h"
 #include "maul-unicode/segment.h"
@@ -82,7 +84,13 @@ static void Fill(Pieces* p)
 // The unit a boundary of the UTF-8 form falls on.
 static size_t UnitOf(const Pieces* p, size_t byte)
 {
-    return byte >= p->base ? p->unitAt[byte - p->base] : p->lastUnitAt[byte - p->lastBase];
+    if (byte >= p->base)
+    {
+        MLOC_ASSERT(byte - p->base <= p->count);
+        return p->unitAt[byte - p->base];
+    }
+    MLOC_ASSERT(byte >= p->lastBase && byte - p->lastBase <= p->lastCount);
+    return p->lastUnitAt[byte - p->lastBase];
 }
 
 // The first boundary from a safe start at or after at (after: past it),

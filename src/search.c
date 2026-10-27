@@ -7,6 +7,7 @@
 
 #include "maul-locale/search.h"
 
+#include "invariant.h"
 #include "search_boundary.h"
 #include "search_find.h"
 
@@ -135,6 +136,9 @@ static bool Match(Find* f, uint32_t index, uint32_t* endOut, uint64_t* lastOut,
     for (int64_t p = 0; p < f->s->count; p++)
     {
         *patternOut = f->s->elements[p];
+        // A skipped text element keeps the pattern's place and a skipped
+        // pattern element the text's, so the text's index never falls.
+        MLOC_ASSERT(p + offset >= 0);
         t = mlocSearchAt(f, (uint32_t)(index + p + offset));
         if (t == nullptr)
         {

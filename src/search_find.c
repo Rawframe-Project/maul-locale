@@ -3,6 +3,7 @@
 
 #include "search_find.h"
 
+#include "invariant.h"
 #include "search_boundary.h"
 
 #include <string.h>
@@ -12,6 +13,7 @@ static_assert(offsetof(Searcher, stamp) == 0, "the stamp is read first, alone");
 
 const Cei* mlocSearchRingGet(Ring* r, uint32_t index)
 {
+    MLOC_ASSERT(r->first <= r->limit && r->limit - r->first <= r->size);
     Cei* cei = &r->buf[index % r->size];
     if (index >= r->first && index < r->limit)
     {
@@ -116,6 +118,7 @@ bool mlocSearchIdentical(const Find* f, size_t start, size_t end)
     {
         return true;
     }
+    MLOC_ASSERT(start <= end && end <= f->text.length);
     NfdText part = f->text.units != nullptr ? mlocNfdUtf16(f->text.units + start, end - start)
                                             : mlocNfdUtf8(f->text.bytes + start, end - start);
     NfdStream n;
