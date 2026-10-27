@@ -6,6 +6,7 @@
 #include "bytes.h"
 #include "code_point_trie.h"
 #include "collation_index.h"
+#include "invariant.h"
 
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/properties.h"
@@ -167,6 +168,9 @@ const uint8_t* mlocIndexTextBytes(const IndexText* text, uint8_t* scratch, uint3
         *lengthOut = text->length;
         return text->bytes;
     }
+    // The validator keeps a contraction within collationMaxContext code
+    // points after its first, which indexWordsBytes holds.
+    MLOC_ASSERT(text->length >= 1 && text->length <= collationMaxContext);
     size_t length = 0;
     size_t size = 0;
     (void)muniEncodeUtf8(text->first, (char*)scratch, &size);

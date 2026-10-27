@@ -3,6 +3,7 @@
 
 #include "search_elements.h"
 
+#include "invariant.h"
 #include "search_boundary.h"
 
 #include "maul-unicode/properties.h"
@@ -140,6 +141,7 @@ void mlocSearchElementsStartAt(SearchElements* e, const CollationRoot* root,
 size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* settings,
                             NfdText text, size_t end)
 {
+    MLOC_ASSERT(end > 0 && end <= text.length);
     size_t start = mlocNfdBefore(text, end);
     size_t size = 0;
     while (start > 0 &&
@@ -154,6 +156,8 @@ void mlocSearchElementsStartPiece(SearchElements* e, const CollationRoot* root,
                                   const CollationSettings* settings, NfdText text, size_t start,
                                   size_t limit)
 {
+    // The ranges count in 32 bits from the whole text's start.
+    MLOC_ASSERT(start <= limit && limit <= text.length && limit <= UINT32_MAX);
     mlocSearchElementsStart(e, root, settings, Between(text, start, limit));
     e->base = (uint32_t)start;
     // The code points before, oldest first, for the prefixes.

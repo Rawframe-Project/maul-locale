@@ -6,6 +6,7 @@
 // 0 is the element nearest the position; a match's elements are compared
 // from the pattern's last.
 
+#include "invariant.h"
 #include "search_boundary.h"
 #include "search_find.h"
 
@@ -21,6 +22,8 @@ static bool MatchBack(Find* f, uint32_t index, uint32_t* firstOut, const Cei** c
     const Cei* t = nullptr;
     for (int64_t p = count - 1; p >= 0; p--)
     {
+        // As in Match: the walk's index never falls.
+        MLOC_ASSERT(count - 1 - p + offset >= 0);
         t = mlocSearchAt(f, (uint32_t)(index + (count - 1 - p) + offset));
         *comparedOut = t;
         if (t == nullptr)
