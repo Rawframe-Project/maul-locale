@@ -160,7 +160,7 @@ extern "C"
     /// @param key        Receives the key; may be null when capacity is 0.
     /// @param capacity   The room in key, in bytes.
     /// @param lengthOut  Receives the key's length, also when it does not
-    ///                   fit.
+    ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (the bytes written are then no key); mloc_errorInvalid for
     ///         a collator the library did not make or a null pointer.
@@ -198,7 +198,7 @@ extern "C"
     /// @param key        Receives the key; may be null when capacity is 0.
     /// @param capacity   The room in key, in bytes.
     /// @param lengthOut  Receives the key's length, also when it does not
-    ///                   fit.
+    ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (lengthOut has the length needed); mloc_errorInvalid for
     ///         a collator the library did not make or a null pointer.

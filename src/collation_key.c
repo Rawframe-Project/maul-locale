@@ -50,12 +50,13 @@ enum
     quatShiftedLimit = 0x1B,
 };
 
-// The caller's bytes; length counts past the capacity.
+// The caller's bytes; length counts past the capacity, in 64 bits: a
+// text's key can be 14 times its length, past a 32-bit size_t.
 typedef struct Sink
 {
     uint8_t* out;
     size_t capacity;
-    size_t length;
+    uint64_t length;
 } Sink;
 
 static void Put(Sink* s, uint32_t byte)
@@ -606,5 +607,5 @@ size_t mlocCollationSortKeyText(const CollationRoot* root, const CollationSettin
         Identical(&sink, text);
     }
     Put(&sink, 0);
-    return sink.length;
+    return sink.length > SIZE_MAX ? SIZE_MAX : (size_t)sink.length;
 }
