@@ -15,10 +15,37 @@
 #define MLOC_SRC_COLLATION_KEY_H
 
 #include "collation_compare.h"
+#include "invariant.h"
 #include "nfd_stream.h"
 
 #include <stddef.h>
 #include <stdint.h>
+
+// The caller's bytes for a key; length counts past the capacity, in 64
+// bits: a text's key can be 14.5 times its length, past a 32-bit size_t.
+typedef struct CollationSink
+{
+    uint8_t* out;
+    size_t capacity;
+    uint64_t length;
+} CollationSink;
+
+static inline void mlocCollationSinkPut(CollationSink* s, uint32_t byte)
+{
+    // Each caller masks or bounds its weight to a byte.
+    MLOC_ASSERT(byte <= 0xFF);
+    if (s->length < s->capacity)
+    {
+        s->out[s->length] = (uint8_t)byte;
+    }
+    s->length++;
+}
+
+// The key's length, SIZE_MAX when it passes SIZE_MAX.
+static inline size_t mlocCollationSinkLength(const CollationSink* s)
+{
+    return s->length > SIZE_MAX ? SIZE_MAX : (size_t)s->length;
+}
 
 // Writes the key of a text into out, at most capacity bytes, and returns
 // its length with the final 00. When that is more than capacity, the

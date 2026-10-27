@@ -50,24 +50,11 @@ enum
     quatShiftedLimit = 0x1B,
 };
 
-// The caller's bytes; length counts past the capacity, in 64 bits: a
-// text's key can be 14 times its length, past a 32-bit size_t.
-typedef struct Sink
-{
-    uint8_t* out;
-    size_t capacity;
-    uint64_t length;
-} Sink;
+typedef CollationSink Sink;
 
 static void Put(Sink* s, uint32_t byte)
 {
-    // Each caller masks or bounds its weight to a byte.
-    MLOC_ASSERT(byte <= 0xFF);
-    if (s->length < s->capacity)
-    {
-        s->out[s->length] = (uint8_t)byte;
-    }
-    s->length++;
+    mlocCollationSinkPut(s, byte);
 }
 
 // A 16-bit weight, its low byte when not 0.
@@ -203,14 +190,15 @@ static void Commons(Sink* sink, uint32_t* count, uint32_t max, uint32_t middle, 
 }
 
 // Reverses the bytes [from, to) where they were written.
-static void Reverse(Sink* sink, size_t from, size_t to)
+static void Reverse(Sink* sink, uint64_t from, uint64_t to)
 {
     MLOC_ASSERT(from <= to && to <= sink->length);
     if (to > sink->capacity)
     {
         return;
     }
-    for (size_t i = from, j = to; i + 1 < j; i++, j--)
+    // Within the capacity, so both fit a size_t.
+    for (size_t i = (size_t)from, j = (size_t)to; i + 1 < j; i++, j--)
     {
         uint8_t b = sink->out[i];
         sink->out[i] = sink->out[j - 1];
@@ -241,7 +229,7 @@ static void Secondaries(Stream* st, Sink* sink)
     bool backwards = st->settings->backwards;
     uint32_t commons = 0;
     uint32_t previous = 0;
-    size_t segment = sink->length;
+    uint64_t segment = sink->length;
     uint64_t e = 0;
     bool variable = false;
     while (Next(st, &e, &variable))
@@ -434,7 +422,7 @@ static void Quaternaries(Stream* st, Sink* sink)
 {
     const CollationSettings* set = st->settings;
     uint32_t commons = 0;
-    size_t start = sink->length;
+    uint64_t start = sink->length;
     uint64_t e = 0;
     bool variable = false;
     while (Next(st, &e, &variable))
@@ -607,5 +595,5 @@ size_t mlocCollationSortKeyText(const CollationRoot* root, const CollationSettin
         Identical(&sink, text);
     }
     Put(&sink, 0);
-    return sink.length > SIZE_MAX ? SIZE_MAX : (size_t)sink.length;
+    return mlocCollationSinkLength(&sink);
 }

@@ -4,8 +4,8 @@
 // Sort keys over the generated root, against the bytes ICU4C 79 writes for
 // the same texts and options: each level's form, the common weights' runs,
 // backwards secondaries, the case level, shifted quaternaries, the
-// identical level's BOCSU, numeric order and reordering; and the caller's
-// capacity.
+// identical level's BOCSU, numeric order and reordering; the caller's
+// capacity, and the count behind a key's length.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -21,6 +21,7 @@
 
 #include "maul-locale/data.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -163,6 +164,23 @@ static void TestCapacity(void)
           "a key's length with no room or too little, nothing written past the room");
 }
 
+// The count behind a key's length. A key past a 32-bit size_t needs more
+// text than a test can allocate, so the count starts near 2^32 instead.
+static void TestLengthCount(void)
+{
+    uint8_t out[4] = {0};
+    CollationSink sink = {out, sizeof(out), UINT32_MAX - 1};
+    mlocCollationSinkPut(&sink, 0x41);
+    mlocCollationSinkPut(&sink, 0x42);
+    CHECK(sink.length == (uint64_t)UINT32_MAX + 1, "a count past 2^32");
+    size_t expected = SIZE_MAX == UINT32_MAX ? SIZE_MAX : (size_t)((uint64_t)UINT32_MAX + 1);
+    CHECK(mlocCollationSinkLength(&sink) == expected,
+          "its length, SIZE_MAX where a size_t has 32 bits");
+    CHECK(memcmp(out, "\0\0\0\0", 4) == 0, "nothing written past the capacity");
+    CollationSink full = {out, sizeof(out), UINT64_MAX};
+    CHECK(mlocCollationSinkLength(&full) == SIZE_MAX, "a count past SIZE_MAX gives SIZE_MAX");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -190,5 +208,6 @@ int main(void)
     TestNumericAndReorder();
     TestBocsu();
     TestCapacity();
+    TestLengthCount();
     return s_failures == 0 ? 0 : 1;
 }
