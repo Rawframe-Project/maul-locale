@@ -332,7 +332,7 @@ static mlocTemporalStringOptions WithPrecision(int precision)
 
 static const char* TimeText(uint8_t h, uint8_t m, uint8_t s, uint32_t ns, int precision)
 {
-    mlocTime t = {h, m, s, 0, ns};
+    mlocTime t = {h, m, s, ns};
     mlocTemporalStringOptions o = WithPrecision(precision);
     mlocOutput out = Out();
     return Text(mlocFormatTemporalTime(&t, &o, &out), &out);
@@ -354,7 +354,7 @@ static void TestTimeWriters(void)
           "a time the library would not make");
     mlocDateTime dt;
     (void)mlocMakeDateFromDay(mloc_calendarGregorian, 719163, &dt.date);
-    dt.time = (mlocTime){12, 34, 56, 0, 5000};
+    dt.time = (mlocTime){12, 34, 56, 5000};
     mlocTemporalStringOptions o = {.calendar = "japanese",
                                    .calendarLength = 8,
                                    .secondsPrecision = mloc_secondsDigits,
@@ -363,7 +363,7 @@ static void TestTimeWriters(void)
     CHECK(strcmp(Text(mlocFormatTemporalDateTime(&dt, &o, &out), &out),
                  "1970-01-01T12:34:56.000005[u-ca=japanese]") == 0,
           "a date-time");
-    dt.time.reserved = 1;
+    dt.time.second = 60;
     CHECK(mlocFormatTemporalDateTime(&dt, nullptr, &out) == mloc_errorInvalid &&
               mlocFormatTemporalTime(nullptr, nullptr, &out) == mloc_errorInvalid,
           "a forged date-time, null");
@@ -476,7 +476,7 @@ static void TestRoundTrips(void)
     {
         mlocDateTime dt;
         (void)mlocMakeDateFromDay(mloc_calendarGregorian, day, &dt.date);
-        dt.time = (mlocTime){(uint8_t)(day & 15), 7, 59, 0, (uint32_t)day & 0x3FFFFFFF};
+        dt.time = (mlocTime){(uint8_t)(day & 15), 7, 59, (uint32_t)day & 0x3FFFFFFF};
         dt.time.nanosecond %= 1000000000;
         mlocOutput out = {.buffer = text, .capacity = sizeof text};
         mlocTemporalParse p;

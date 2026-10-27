@@ -218,7 +218,7 @@ static void TestOperands(void)
     mlocDateInput input = {NULL, 0, 2006, NULL, 0, 1, 2};
     CHECK(mlocMakeDate(mloc_calendarGregorian, &input, mloc_overflowReject, &date) == mloc_success,
           "a date is made");
-    mlocTime time = {15, 4, 6, 0, 250000000};
+    mlocTime time = {15, 4, 6, 250000000};
     mlocMessageArgument a[] = {
         {"d", 1, {mloc_messageValueDate, 0, {.date = date}}},
         {"t", 1, {mloc_messageValueTime, 0, {.time = time}}},
@@ -409,9 +409,9 @@ static void TestRefusedArguments(void)
     mlocMessageArgument k = {"d", 1, {mloc_messageValueDate, 0, {.date = dangi}}};
     CHECK(Formats("{$d :date calendar=gregory}", &k, 1, "Jan 2, 2006", NULL),
           "a date of the last calendar is taken");
-    mlocTime late = {23, 59, 59, 0, 999999999};
-    mlocTime over = {23, 59, 59, 0, 1000000000};
-    mlocTime hour = {24, 0, 0, 0, 0};
+    mlocTime late = {23, 59, 59, 999999999};
+    mlocTime over = {23, 59, 59, 1000000000};
+    mlocTime hour = {24, 0, 0, 0};
     mlocTimeZone none = {&date, 1, 0, 0};
     mlocMessageArgument t = {"d", 1, {mloc_messageValueTime, 0, {.time = late}}};
     CHECK(Formats("{$d :time precision=second}", &t, 1, "11:59:59" NNBSP "PM", NULL),
@@ -461,7 +461,7 @@ static void TestIsoText(void)
     };
     CHECK(Formats("{$a}|{$b}", a, 2, "9999-12-31|+010000-01-01", NULL),
           "years past four digits take a sign and six");
-    mlocTime t = {15, 4, 6, 0, 250000000};
+    mlocTime t = {15, 4, 6, 250000000};
     mlocMessageValue dateTime = {mloc_messageValueDateTime, 0, {.dateTime = {last, t}}};
     char text[64];
     size_t size = 0;

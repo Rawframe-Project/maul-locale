@@ -85,8 +85,6 @@ extern "C"
         int32_t day;
         // An mlocCalendar.
         uint8_t calendar;
-        // Zero.
-        uint8_t reserved[3];
     } mlocDate;
 
     // The fields of a date in its calendar.
@@ -178,8 +176,8 @@ extern "C"
     /// @param date       The date.
     /// @param fieldsOut  Receives the fields.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
-    ///         date the library did not make (a day out of range, an unknown
-    ///         calendar, reserved bytes not zero).
+    ///         date the library did not make (a day out of range or an
+    ///         unknown calendar).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocGetDateFields(const mlocDate* date,

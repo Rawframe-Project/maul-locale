@@ -297,19 +297,15 @@ static void Step(Reader* r, mlocDate dates[2])
         uint8_t spoil = Byte(r);
         if (spoil == 1)
         {
-            probe.reserved[0] = 1;
-        }
-        else if (spoil == 2)
-        {
             probe.day = mlocDateMaxDay + 1;
         }
-        else if (spoil == 3)
+        else if (spoil == 2)
         {
             probe.calendar = calendars;
         }
         mlocDateFields f;
         mlocResult result = mlocGetDateFields(&probe, &f);
-        Require(spoil >= 1 && spoil <= 3 ? result == mloc_errorInvalid : result == mloc_success);
+        Require(spoil >= 1 && spoil <= 2 ? result == mloc_errorInvalid : result == mloc_success);
         if (result == mloc_success)
         {
             CheckFields(&probe);

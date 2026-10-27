@@ -44,7 +44,7 @@ class Input(ctypes.Structure):
 
 
 class Date(ctypes.Structure):
-    _fields_ = [("day", ctypes.c_int32), ("calendar", ctypes.c_uint8), ("reserved", ctypes.c_uint8 * 3)]
+    _fields_ = [("day", ctypes.c_int32), ("calendar", ctypes.c_uint8)]
 
 
 class Fields(ctypes.Structure):

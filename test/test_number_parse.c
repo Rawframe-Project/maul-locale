@@ -232,6 +232,15 @@ static const Case s_cases[] = {
 
 // Parses text from a copy of its exact length, so that the sanitizer
 // builds catch a read past it.
+// Whether two decimals hold the same value and show the same digits,
+// field by field: a decimal's padding is no part of it.
+static bool Same(const mlocDecimal* a, const mlocDecimal* b)
+{
+    return a->kind == b->kind && a->negative == b->negative && a->count == b->count &&
+           a->exponent == b->exponent && a->fractionDigits == b->fractionDigits &&
+           memcmp(a->digits, b->digits, sizeof(a->digits)) == 0;
+}
+
 static mlocResult ParseCopy(const mlocNumberFormatter* formatter, const char* text, size_t length,
                             mlocParseMode mode, mlocDecimal* decimal, size_t* end)
 {
@@ -298,7 +307,7 @@ static bool RoundTrips(const char* id, Style style, const char* value)
         size_t end = 0;
         if (ParseCopy(&formatter, buffer, output.length, (mlocParseMode)mode, &back, &end) !=
                 mloc_success ||
-            end != output.length || memcmp(&back, &decimal, sizeof(back)) != 0)
+            end != output.length || !Same(&back, &decimal))
         {
             return false;
         }

@@ -522,7 +522,7 @@ static void TestRanges(void)
               mlocFormatNumberRange(nullptr, &three, &three, &output) == mloc_errorInvalid,
           "null pointers");
     mlocDecimal madeUp = three;
-    madeUp.reserved = 1;
+    madeUp.negative = 2;
     CHECK(mlocFormatNumberRange(&formatter, &three, &madeUp, &output) == mloc_errorInvalid,
           "a made-up end");
     mlocOutput measure = {0};

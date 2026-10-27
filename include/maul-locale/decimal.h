@@ -31,9 +31,7 @@ extern "C"
         mloc_decimalNaN = 2,
     } mlocDecimalKind;
 
-    // A decimal number with the fraction digits it shows. The library
-    // writes every byte, so two decimals compare equal with memcmp when
-    // they have the same value and show the same digits. Make one with
+    // A decimal number with the fraction digits it shows. Make one with
     // mlocMakeDecimal, mlocMakeUnsignedDecimal or mlocParseDecimal.
     typedef struct mlocDecimal
     {
@@ -51,7 +49,6 @@ extern "C"
         uint8_t negative;
         // An mlocDecimalKind; a decimal that is not finite has no digits.
         uint8_t kind;
-        uint8_t reserved;
     } mlocDecimal;
 
     // How a value between two multiples rounds (ECMA-402's names): toward

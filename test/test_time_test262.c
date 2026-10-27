@@ -135,7 +135,7 @@ static bool TimeOf(const Token* tokens, mlocTime* out)
     {
         return false;
     }
-    *out = (mlocTime){(uint8_t)v[0], (uint8_t)v[1], (uint8_t)v[2], 0, (uint32_t)v[3]};
+    *out = (mlocTime){(uint8_t)v[0], (uint8_t)v[1], (uint8_t)v[2], (uint32_t)v[3]};
     return true;
 }
 

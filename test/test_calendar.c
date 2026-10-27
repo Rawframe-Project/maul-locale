@@ -605,7 +605,6 @@ static void TestRefusals(void)
     mlocDateInput eraLength = {.eraLength = 2, .year = 2024, .month = 1, .day = 1};
     mlocDateInput codeLength = {.monthCodeLength = 3, .year = 2024, .day = 1};
     mlocDate bad = {.day = 1, .calendar = 18};
-    mlocDate reserved = {.day = 1, .reserved = {1}};
     mlocDate outside = {.day = mlocDateMaxDay + 1};
     mlocDate dangi = {.day = 1, .calendar = mloc_calendarDangi};
     mlocDateInput lunarFar = {.year = 275762, .month = 1, .day = 1};
@@ -634,7 +633,6 @@ static void TestRefusals(void)
             mlocGetDateFields(nullptr, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&dangi, nullptr) == mloc_errorInvalid &&
             mlocGetDateFields(&bad, &f) == mloc_errorInvalid &&
-            mlocGetDateFields(&reserved, &f) == mloc_errorInvalid &&
             mlocGetDateFields(&outside, &f) == mloc_errorInvalid,
         "every refusal");
 }

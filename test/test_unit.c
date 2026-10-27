@@ -313,11 +313,12 @@ static void TestRefusals(void)
               mlocConvertUnit(&s_data, "meter", 5, "foot", 4, nullptr, &v, nullptr) ==
                   mloc_errorInvalid,
           "a null pointer");
-    v.reserved = 1;
-    CHECK(mlocConvertUnit(&s_data, "meter", 5, "foot", 4, nullptr, &v, &out) == mloc_errorInvalid,
+    mlocDecimal madeUp = v;
+    madeUp.negative = 2;
+    CHECK(mlocConvertUnit(&s_data, "meter", 5, "foot", 4, nullptr, &madeUp, &out) ==
+              mloc_errorInvalid,
           "a decimal the library did not make");
     mlocDataSet none = {nullptr, 0};
-    v.reserved = 0;
     CHECK(mlocConvertUnit(&none, "meter", 5, "foot", 4, nullptr, &v, &out) == mloc_errorNotFound,
           "data without the unit table");
 }

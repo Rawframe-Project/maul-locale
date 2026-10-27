@@ -53,8 +53,8 @@ static bool ValidDigits(const mlocDecimal* d)
 
 bool mlocValidDecimal(const mlocDecimal* d)
 {
-    if (d->kind > mloc_decimalNaN || d->negative > 1 || d->reserved != 0 ||
-        d->count > mlocDecimalDigits || !ValidDigits(d))
+    if (d->kind > mloc_decimalNaN || d->negative > 1 || d->count > mlocDecimalDigits ||
+        !ValidDigits(d))
     {
         return false;
     }

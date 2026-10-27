@@ -657,7 +657,7 @@ mlocResult mlocParseTemporalString(const char* text, size_t length, uint32_t for
         .day = (uint8_t)f.day,
         .hasYear = !monthDay,
         .hasTime = f.hasTime,
-        .time = {(uint8_t)f.hour, (uint8_t)f.minute, (uint8_t)(f.second == 60 ? 59 : f.second), 0,
+        .time = {(uint8_t)f.hour, (uint8_t)f.minute, (uint8_t)(f.second == 60 ? 59 : f.second),
                  (uint32_t)f.nanosecond},
         .utc = f.utc,
         .hasOffset = f.hasOffset,

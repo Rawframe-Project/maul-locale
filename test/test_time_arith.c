@@ -133,12 +133,12 @@ static bool TimeIs(const mlocTime* t, uint8_t hour, uint8_t minute, uint8_t seco
                    uint32_t nanosecond)
 {
     return t->hour == hour && t->minute == minute && t->second == second &&
-           t->nanosecond == nanosecond && t->reserved == 0;
+           t->nanosecond == nanosecond;
 }
 
 static void TestAdd(void)
 {
-    mlocTime start = {23, 59, 59, 0, 999999999};
+    mlocTime start = {23, 59, 59, 999999999};
     mlocTime out = {0};
     int64_t days = 0;
     mlocTimeDuration one = {0, 1};
@@ -165,8 +165,8 @@ static void TestAdd(void)
 
 static void TestUntil(void)
 {
-    mlocTime one = {12, 34, 56, 0, 987654321};
-    mlocTime two = {18, 4, 5, 0, 123456789};
+    mlocTime one = {12, 34, 56, 987654321};
+    mlocTime two = {18, 4, 5, 123456789};
     mlocTimeDurationFields f = {0};
     mlocTimeRounding r = {mloc_timeUnitHour, mloc_timeUnitNanosecond, 1, mloc_roundTrunc};
     CHECK(mlocTimeUntil(&one, &two, &r, &f) == mloc_success &&
@@ -195,7 +195,7 @@ static void TestUntil(void)
               "a unit, increment or mode refused");
     }
     r = (mlocTimeRounding){mloc_timeUnitHour, mloc_timeUnitNanosecond, 500, mloc_roundTrunc};
-    mlocTime bad = {.reserved = 1};
+    mlocTime bad = {.hour = 24};
     CHECK(mlocTimeUntil(&one, &two, &r, &f) == mloc_success &&
               mlocTimeUntil(&bad, &two, &r, &f) == mloc_errorInvalid &&
               mlocTimeUntil(&one, &bad, &r, &f) == mloc_errorInvalid &&
@@ -208,7 +208,7 @@ static void TestUntil(void)
 
 static void TestRound(void)
 {
-    mlocTime t = {13, 46, 23, 0, 123987500};
+    mlocTime t = {13, 46, 23, 123987500};
     mlocTime out = {0};
     int64_t days = -1;
     CHECK(mlocRoundTime(&t, mloc_timeUnitHour, 1, mloc_roundCeil, &out, &days) == mloc_success &&
@@ -229,7 +229,7 @@ static void TestRound(void)
     CHECK(mlocRoundTime(&t, mloc_timeUnitDay, 1, mloc_roundFloor, &out, &days) == mloc_success &&
               TimeIs(&out, 0, 0, 0, 0) && days == 0,
           "to this midnight");
-    mlocTime late = {23, 59, 59, 0, 999999999};
+    mlocTime late = {23, 59, 59, 999999999};
     CHECK(mlocRoundTime(&late, mloc_timeUnitSecond, 1, mloc_roundExpand, &out, &days) ==
                   mloc_success &&
               TimeIs(&out, 0, 0, 0, 0) && days == 1,
