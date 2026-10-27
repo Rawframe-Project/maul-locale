@@ -6,12 +6,14 @@
 // call (making a date from a day or from fields, reading its fields,
 // adding, a difference plain or rounded, changing fields, a month-day),
 // and the bytes after it its arguments. Numbers are drawn from each
-// value's edges (Temporal's first and last days and years, 0, the limits
-// of a duration's fields, the 32-bit extremes), small, anywhere in its
-// range (days from mlocDateMinDay to mlocDateMaxDay, years over those
-// days, so every calendar's years are reached, Chinese and Dangi's
-// astronomical model among them) or as any 64 bits. Eras and month codes
-// come from the calendars' own lists or as raw bytes.
+// value's edges (Temporal's first and last days, each calendar's first
+// and last years and era years, 0, the limits of a duration's fields,
+// the 32-bit extremes), small, anywhere in its range (days from
+// mlocDateMinDay to mlocDateMaxDay, years from one below the least to
+// one above the greatest that any calendar gives those days, so every
+// calendar's years are reached, Chinese and Dangi's astronomical model
+// among them) or as any 64 bits. Eras and month codes come from the
+// calendars' own lists or as raw bytes.
 //
 // Every call must give success or a refusal, and the answers must agree:
 // a date's fields describe a valid date that the same fields make again,
@@ -103,17 +105,22 @@ static const int64_t s_days[] = {
     mlocDateMaxDay + 1,
 };
 
+// Temporal's ISO edges, years the calendars turn on and the 32-bit
+// extremes, then each calendar's least and greatest year and era
+// year (at mlocDateMinDay and mlocDateMaxDay), calendar by calendar.
 static const int64_t s_years[] = {
-    -271821, 275760, -271822, 275761, 0,         1,         -1,      1600,       2400, 1972,
-    2035,    1900,   5500,    -5500,  1873,      1989,      2019,    622,        1444, 5785,
-    4000,    6000,   -1000,   10000,  INT32_MIN, INT32_MAX, 1 << 30, -(1 << 30),
+    -271821, 275760,  -271822, 275761,  0,         1,         -1,      1600,       2400,   1972,
+    2035,    1900,    5500,    -5500,   1873,      1989,      2019,    622,        1444,   5785,
+    4000,    6000,    -1000,   10000,   INT32_MIN, INT32_MAX, 1 << 30, -(1 << 30), 271822, -271278,
+    276303,  -273732, 273849,  273733,  273742,    -272099,   275471,  -271823,    275747, -266323,
+    281247,  -271899, 275682,  -272442, 275139,    -268058,   279517,  -280804,    283583, 280805,
 };
 
-// A year: near an edge, small, anywhere in the years Temporal's days
-// reach, or any 64 bits.
+// A year: near an edge, small, anywhere in the years and era years any
+// calendar gives Temporal's days, or any 64 bits.
 static int64_t Year(Reader* r)
 {
-    return Spread(r, s_years, sizeof(s_years) / sizeof(s_years[0]), -271822, 275761);
+    return Spread(r, s_years, sizeof(s_years) / sizeof(s_years[0]), -280805, 283584);
 }
 
 static const int64_t s_amounts[] = {
