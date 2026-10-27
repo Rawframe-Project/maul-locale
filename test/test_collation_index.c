@@ -288,6 +288,25 @@ static void TestCraftedLabels(void)
           "a currency sign before the scripts dropped, the underflow bucket alone");
 }
 
+// A starred label of two letters sorts as its parts, so an invisible
+// bucket after it takes the names past it to the nearest label of one
+// letter before: names after Ch to A, after Gh to D, as ICU4C's
+// ImmutableIndex places them for these labels. Gh's goes to D though an
+// invisible bucket (Ch's) comes before D.
+static void TestInvisibleBuckets(void)
+{
+    static const uint8_t s_labels[] = {4,   0,   0, 0,   1, 'A', 3,   'C',
+                                       'h', '*', 1, 'D', 3, 'G', 'h', '*'};
+    uint32_t cz = 0;
+    uint32_t gz = 0;
+    uint32_t zebra = 0;
+    CHECK(CraftedIndex(s_labels, sizeof(s_labels)) == 6 &&
+              mlocFindIndexBucket(s_index, "Cz", 2, &cz) == mloc_success && cz == 1 &&
+              mlocFindIndexBucket(s_index, "Gz", 2, &gz) == mloc_success && gz == 3 &&
+              mlocFindIndexBucket(s_index, "Zebra", 5, &zebra) == mloc_success && zebra == 3,
+          "names past a starred label in the bucket of the label of one letter before it");
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -300,5 +319,6 @@ int main(int argc, char** argv)
     TestValidator();
     TestLookup();
     TestCraftedLabels();
+    TestInvisibleBuckets();
     return s_failures == 0 ? 0 : 1;
 }

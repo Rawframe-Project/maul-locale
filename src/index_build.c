@@ -648,6 +648,9 @@ static size_t Finish(Build* b, uint8_t* out)
             shownCount++;
         }
     }
+    // Each hidden bucket sent to the shown one at the end of its chain,
+    // before any record's field is given a shown bucket's number, which a
+    // chain would read as a record's.
     for (uint32_t r = 0; r < b->bucketCount; r++)
     {
         uint32_t target = r;
@@ -655,6 +658,14 @@ static size_t Finish(Build* b, uint8_t* out)
         {
             target = Display(b, target);
         }
+        if (target != r)
+        {
+            SetDisplay(b, r, target);
+        }
+    }
+    for (uint32_t r = 0; r < b->bucketCount; r++)
+    {
+        uint32_t target = Display(b, r) == noDisplay ? r : Display(b, r);
         // The shown list rises and starts with the underflow, record 0.
         uint32_t lo = 0;
         uint32_t hi = shownCount;
