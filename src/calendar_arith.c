@@ -5,6 +5,8 @@
 
 #include "calendar_arith.h"
 
+#include "invariant.h"
+
 enum
 {
     // The days before each calendar's day 1 of year 1, from Calendrical
@@ -215,7 +217,7 @@ static int64_t GregorianOffset(mlocCalendar calendar)
                                              : 0;
 }
 
-CalendarDate mlocArithmeticFromDay(mlocCalendar calendar, int32_t day)
+static CalendarDate FromDay(mlocCalendar calendar, int32_t day)
 {
     switch (calendar)
     {
@@ -238,8 +240,17 @@ CalendarDate mlocArithmeticFromDay(mlocCalendar calendar, int32_t day)
     }
 }
 
+CalendarDate mlocArithmeticFromDay(mlocCalendar calendar, int32_t day)
+{
+    CalendarDate d = FromDay(calendar, day);
+    // A valid date that is the day again.
+    MLOC_ASSERT(mlocArithmeticToDay(calendar, d.year, d.month, d.day) == day);
+    return d;
+}
+
 int64_t mlocArithmeticToDay(mlocCalendar calendar, int64_t year, uint32_t month, uint32_t day)
 {
+    MLOC_ASSERT(day >= 1 && day <= mlocArithmeticDaysInMonth(calendar, year, month));
     switch (calendar)
     {
     case mloc_calendarCoptic:
@@ -320,6 +331,7 @@ static uint32_t GregorianMonthDays(uint32_t month, bool leap)
 
 uint32_t mlocArithmeticDaysInMonth(mlocCalendar calendar, int64_t year, uint32_t month)
 {
+    MLOC_ASSERT(month >= 1 && month <= mlocArithmeticMonths(calendar));
     bool leap = mlocArithmeticLeap(calendar, year);
     switch (calendar)
     {

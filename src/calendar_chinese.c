@@ -8,6 +8,7 @@
 
 #include "calendar_arith.h"
 #include "calendar_astro.h"
+#include "invariant.h"
 
 enum
 {
@@ -129,6 +130,8 @@ static void MakeSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
         s->start[s->count + 1] = DayOfMoon(korea, s->moon[s->count + 1]);
         s->count++;
     }
+    // A span between solstices holds twelve or thirteen new moons.
+    MLOC_ASSERT(s->start[s->count] >= nextEleventh);
     // In a span of twelve lunations the first month with no major
     // solar term (the one in effect at its start is in effect at the
     // next month's) is the leap month.
@@ -153,6 +156,10 @@ static void MakeSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
 // The year from the first month of one span to the first of the next.
 static void YearFrom(const Sui* a, const Sui* b, LunisolarYear* out)
 {
+    // From one new year to the next are twelve or thirteen months, which
+    // the loops below take whole.
+    MLOC_ASSERT(a->count + 1 - a->newYear + b->newYear == 12 ||
+                a->count + 1 - a->newYear + b->newYear == 13);
     int n = 0;
     out->leap = 0;
     for (int j = a->newYear; j <= a->count && n < 13; j++)
@@ -191,6 +198,7 @@ void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out)
         MakeSui(korea, SolsticeOnOrBefore(korea, solstice - 1), solstice, &b);
         YearFrom(&b, &a, out);
     }
+    MLOC_ASSERT(out->start[0] <= day && day < out->start[out->count]);
 }
 
 int64_t mlocChineseModelMonthStart(bool korea, int64_t lunation)

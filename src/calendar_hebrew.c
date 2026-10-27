@@ -5,6 +5,8 @@
 
 #include "calendar_hebrew.h"
 
+#include "invariant.h"
+
 enum
 {
     // Tishrei 1 of year 1: October 7 of 3761 BCE in the Julian calendar.
@@ -88,6 +90,7 @@ uint32_t mlocHebrewDaysInMonth(int64_t year, uint32_t month)
     uint8_t lengths[13];
     uint32_t count = 0;
     MonthLengths(year, lengths, &count);
+    MLOC_ASSERT(month >= 1 && month <= count);
     return lengths[month - 1];
 }
 
@@ -96,6 +99,7 @@ int64_t mlocHebrewToDay(int64_t year, uint32_t month, uint32_t day)
     uint8_t lengths[13];
     uint32_t count = 0;
     MonthLengths(year, lengths, &count);
+    MLOC_ASSERT(month >= 1 && month <= count && day >= 1 && day <= lengths[month - 1]);
     int64_t fixed = NewYear(year) + day - 1;
     for (uint32_t m = 1; m < month; m++)
     {
@@ -125,6 +129,8 @@ CalendarDate mlocHebrewFromDay(int32_t day)
     {
         left -= lengths[month - 1];
         month++;
+        // The day is before the next year's first.
+        MLOC_ASSERT(month <= count);
     }
     return (CalendarDate){(int32_t)year, (uint8_t)month, (uint8_t)(left + 1)};
 }
