@@ -138,11 +138,17 @@ bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlac
     {
         return false;
     }
-    NumberTable t = mlocReadNumberTable(payload, recordSize);
+    // The size in 64 bits, so that the u32 text size cannot wrap it on a
+    // 32-bit target, and checked before any part's address is taken.
     uint32_t textSize = mlocLoad32(payload.bytes + 4);
-    if (payload.size != numberTableHeaderSize + (size_t)(t.stringCount + 1) * 2 +
-                            (size_t)t.recordCount * recordSize + textSize ||
-        mlocLoad16(t.offsets) != 0 || mlocLoad16(t.offsets + (size_t)t.stringCount * 2) != textSize)
+    uint64_t size = numberTableHeaderSize + 2 * ((uint64_t)mlocLoad16(payload.bytes) + 1) +
+                    (uint64_t)mlocLoad16(payload.bytes + 2) * recordSize + textSize;
+    if (payload.size != size)
+    {
+        return false;
+    }
+    NumberTable t = mlocReadNumberTable(payload, recordSize);
+    if (mlocLoad16(t.offsets) != 0 || mlocLoad16(t.offsets + (size_t)t.stringCount * 2) != textSize)
     {
         return false;
     }

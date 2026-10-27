@@ -154,6 +154,14 @@ static void TestTable(Validator validate, DataSpan unit, uint32_t recordSize, co
     uint8_t* text = offsets + (size_t)(strings + 1) * 2 + (size_t)records * recordSize;
     CHECK(!Valid(validate, u, size - 1), "a short table");
     CHECK(!Valid(validate, u, 7), "shorter than its header");
+    // The most strings, and a text size that takes their offsets back:
+    // the same sum modulo 2^32, the last offset 128 KiB past the unit.
+    uint32_t textSize = mlocLoad32(u + 4);
+    Put16(u, 65535);
+    mlocStore32(u + 4, textSize - 2 * (65535 - strings));
+    CHECK(!Valid(validate, u, size), "a string count and text size that wrap 32 bits");
+    Put16(u, strings);
+    mlocStore32(u + 4, textSize);
     offsets[0] = 1;
     CHECK(!Valid(validate, u, size), "a first offset past 0");
     offsets[0] = 0;
