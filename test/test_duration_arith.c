@@ -203,7 +203,7 @@ static mlocDateTime At(int32_t year, uint32_t month, uint32_t day, uint8_t hour)
 {
     mlocDateInput input = {.year = year, .month = month, .day = day};
     mlocDate date = {0};
-    mlocTime time = {hour, 0, 0, 0, 0};
+    mlocTime time = {hour, 0, 0, 0};
     mlocDateTime out = {0};
     CHECK(mlocMakeDate(mloc_calendarGregorian, &input, mloc_overflowReject, &date) ==
                   mloc_success &&

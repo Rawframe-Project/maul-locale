@@ -339,7 +339,7 @@ static mlocResult Offset(const Token* t, Result* r)
         return (mlocResult)-100;
     }
     mlocDate date;
-    mlocTime time = {(uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3], 0, (uint32_t)v[4]};
+    mlocTime time = {(uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3], (uint32_t)v[4]};
     if (mlocMakeDateFromDay(mloc_calendarGregorian, (int32_t)v[0], &date) != mloc_success ||
         mlocMakeDateTime(&date, &time, &dateTime) != mloc_success)
     {

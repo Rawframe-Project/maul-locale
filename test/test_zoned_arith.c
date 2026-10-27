@@ -198,7 +198,7 @@ static void TestRound(void)
 static mlocDateTime LocalSecond(int32_t day, uint8_t hour, uint8_t minute, uint8_t second)
 {
     mlocDate date = {0};
-    mlocTime time = {hour, minute, second, 0, 0};
+    mlocTime time = {hour, minute, second, 0};
     mlocDateTime out = {0};
     CHECK(mlocMakeDateFromDay(mloc_calendarGregorian, day, &date) == mloc_success &&
               mlocMakeDateTime(&date, &time, &out) == mloc_success,

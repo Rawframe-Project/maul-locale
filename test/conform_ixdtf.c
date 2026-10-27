@@ -218,14 +218,14 @@ static bool Write(char** t, int count, mlocOutput* out, mlocResult* r)
     }
     if (strcmp(t[0], "wtime") == 0 && count == 6)
     {
-        mlocTime time = {(uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3], 0, (uint32_t)v[4]};
+        mlocTime time = {(uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3], (uint32_t)v[4]};
         o = Options("iso8601", v[5], 0, 0, 0);
         *r = mlocFormatTemporalTime(&time, &o, out);
         return true;
     }
     if (strcmp(t[0], "wdt") == 0 && count == 9)
     {
-        dt.time = (mlocTime){(uint8_t)v[2], (uint8_t)v[3], (uint8_t)v[4], 0, (uint32_t)v[5]};
+        dt.time = (mlocTime){(uint8_t)v[2], (uint8_t)v[3], (uint8_t)v[4], (uint32_t)v[5]};
         o = Options(t[6], v[7], v[8], 0, 0);
         if (DateOf(v[1], &dt.date))
         {

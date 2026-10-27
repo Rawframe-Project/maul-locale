@@ -16,7 +16,7 @@ static mlocDateTime At(mlocCalendar calendar, int32_t year, uint32_t month, uint
     mlocDateInput input = {.year = year, .month = month, .day = day};
     mlocDate iso = {0};
     mlocDate date = {0};
-    mlocTime time = {hour, minute, second, 0, nanosecond};
+    mlocTime time = {hour, minute, second, nanosecond};
     mlocDateTime out = {0};
     CHECK(mlocMakeDate(mloc_calendarGregorian, &input, mloc_overflowReject, &iso) == mloc_success &&
               mlocMakeDateFromDay(calendar, iso.day, &date) == mloc_success &&

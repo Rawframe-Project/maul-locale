@@ -165,7 +165,7 @@ static bool At(const RelativeStart* s, int64_t day, Moment* out)
     }
     int64_t second = s->nanosecond / nanosecondsPerSecond;
     mlocTime time = {(uint8_t)(second / 3600), (uint8_t)(second / 60 % 60), (uint8_t)(second % 60),
-                     0, (uint32_t)(s->nanosecond % nanosecondsPerSecond)};
+                     (uint32_t)(s->nanosecond % nanosecondsPerSecond)};
     mlocDateTime dateTime = {{0}, time};
     mlocInstant instant;
     if (day < INT32_MIN || day > INT32_MAX ||

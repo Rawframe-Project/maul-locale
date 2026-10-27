@@ -24,6 +24,15 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
 
 static void Check(const mlocDecimal* decimal);
 
+// Whether two decimals hold the same value and show the same digits,
+// field by field: a decimal's padding is no part of it.
+static bool Same(const mlocDecimal* a, const mlocDecimal* b)
+{
+    return a->kind == b->kind && a->negative == b->negative && a->count == b->count &&
+           a->exponent == b->exponent && a->fractionDigits == b->fractionDigits &&
+           memcmp(a->digits, b->digits, sizeof(a->digits)) == 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     mlocDecimal decimal;
@@ -83,7 +92,7 @@ static void Check(const mlocDecimal* decimal)
         {
             mlocDecimal twice = rounded;
             Require(mlocRoundDecimal(&twice, position, increment, mode) == mloc_success);
-            Require(memcmp(&twice, &rounded, sizeof(twice)) == 0);
+            Require(Same(&twice, &rounded));
             mlocOutput out = {.buffer = s_buffer, .capacity = sizeof(s_buffer)};
             Require(mlocFormatDecimal(&rounded, &out) == mloc_success);
         }

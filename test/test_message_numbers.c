@@ -7,12 +7,15 @@
 // passed on from a number value, and selection by exact value and plural
 // category, with the faults of each.
 
+#include "message_number.h"
 #include "message_prepare.h"
 #include "test_harness.h"
 
 #include "maul-locale/message.h"
 
 #include <math.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -228,6 +231,16 @@ static void TestInheritance(void)
           "a select passed on is a bad option, and the value cannot select");
 }
 
+// Fills a decimal's padding, the bytes past its last field, with a
+// byte: a caller's decimal may hold anything there.
+static void Pad(mlocDecimal* d, uint8_t byte)
+{
+    for (size_t i = offsetof(mlocDecimal, kind) + 1; i < sizeof(*d); i++)
+    {
+        ((uint8_t*)d)[i] = byte;
+    }
+}
+
 static void TestSelection(void)
 {
     CHECK(Formats(".local $n = {1 :number} .match $n one {{one}} 1 {{=1}} * {{other}}", NULL, 0,
@@ -279,6 +292,14 @@ static void TestSelection(void)
     snprintf(text, sizeof text, ".local $n = {1e60 :number} .match $n 1%060d {{big}} * {{other}}",
              0);
     CHECK(Formats(text, NULL, 0, "big", NULL), "a long key of few digits matches");
+    mlocDecimal one;
+    CHECK(mlocParseDecimal("1", 1, &one).status == mloc_success, "1 parses");
+    Pad(&one, 0xA5);
+    mlocMessageArgument padded = {"n", 1, {mloc_messageValueDecimal, 0, {.decimal = &one}}};
+    CHECK(Formats(".input {$n :number} .match $n 1 {{=1}} * {{other}}", &padded, 1, "=1", NULL),
+          "a decimal argument of any padding matches its exact key");
+    // The exact key itself, given that decimal: it compares by fields.
+    CHECK(mlocExactlyKey(&one, (const uint8_t*)"1", 1), "the exact key ignores padding");
 }
 
 static void TestOffset(void)

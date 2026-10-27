@@ -135,13 +135,12 @@ bool mlocDateLiteral(const uint8_t* text, size_t length, const mlocDataSet* data
 bool mlocGoodDate(const mlocDate* date)
 {
     return date->calendar <= mloc_calendarDangi && date->day >= mlocDateMinDay &&
-           date->day <= mlocDateMaxDay && date->reserved[0] == 0 && date->reserved[1] == 0 &&
-           date->reserved[2] == 0;
+           date->day <= mlocDateMaxDay;
 }
 
 bool mlocGoodTime(const mlocTime* time)
 {
-    return time->hour < 24 && time->minute < 60 && time->second < 60 && time->reserved == 0 &&
+    return time->hour < 24 && time->minute < 60 && time->second < 60 &&
            time->nanosecond < 1000000000;
 }
 

@@ -233,7 +233,7 @@ static void TestDurationLimits(void)
               mlocAddToDate(&date, &none, (mlocOverflow)2, &out) == mloc_errorInvalid,
           "null pointers and an unknown overflow refused");
     mlocDate bad = date;
-    bad.reserved[1] = 1;
+    bad.calendar = mloc_calendarDangi + 1;
     CHECK(mlocAddToDate(&bad, &none, mloc_overflowReject, &out) == mloc_errorInvalid,
           "a date the library did not make refused");
 }

@@ -9,7 +9,7 @@
 
 bool mlocTimeValid(const mlocTime* time)
 {
-    return time->hour < 24 && time->minute < 60 && time->second < 60 && time->reserved == 0 &&
+    return time->hour < 24 && time->minute < 60 && time->second < 60 &&
            time->nanosecond < 1000000000;
 }
 

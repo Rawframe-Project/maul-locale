@@ -286,8 +286,6 @@ extern "C"
         uint8_t hour;
         uint8_t minute;
         uint8_t second;
-        // Zero.
-        uint8_t reserved;
         uint32_t nanosecond;
     } mlocTime;
 

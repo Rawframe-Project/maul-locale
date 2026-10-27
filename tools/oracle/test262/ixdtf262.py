@@ -22,7 +22,7 @@ class Span(ctypes.Structure):
 
 class Time(ctypes.Structure):
     _fields_ = [("hour", ctypes.c_uint8), ("minute", ctypes.c_uint8), ("second", ctypes.c_uint8),
-                ("reserved", ctypes.c_uint8), ("nanosecond", ctypes.c_uint32)]
+                ("nanosecond", ctypes.c_uint32)]
 
 
 class Parse(ctypes.Structure):

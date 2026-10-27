@@ -62,7 +62,7 @@ static void TestMakeTime(void)
     mlocTime t = {0};
     mlocTimeInput input = {12, 34, 56, 987, 654, 321};
     CHECK(mlocMakeTime(&input, mloc_overflowReject, &t) == mloc_success && t.hour == 12 &&
-              t.minute == 34 && t.second == 56 && t.nanosecond == 987654321 && t.reserved == 0,
+              t.minute == 34 && t.second == 56 && t.nanosecond == 987654321,
           "fields within range");
     static const mlocTimeInput s_out[] = {
         {24, 0, 0, 0, 0, 0},   {-1, 0, 0, 0, 0, 0},   {0, 60, 0, 0, 0, 0},   {0, 0, 60, 0, 0, 0},
@@ -88,7 +88,7 @@ static void TestMakeDateTime(void)
     mlocDate first = {0};
     mlocDate last = {0};
     mlocTime midnight = {0};
-    mlocTime lastNanosecond = {23, 59, 59, 0, 999999999};
+    mlocTime lastNanosecond = {23, 59, 59, 999999999};
     mlocDateTime out = {0};
     CHECK(mlocMakeDateFromDay(mloc_calendarGregorian, mlocDateMinDay, &first) == mloc_success &&
               mlocMakeDateFromDay(mloc_calendarHebrew, mlocDateMaxDay, &last) == mloc_success,
@@ -103,11 +103,9 @@ static void TestMakeDateTime(void)
               out.date.calendar == mloc_calendarHebrew,
           "the last day's last nanosecond is in, in any calendar");
     mlocTime bad = {.hour = 24};
-    mlocTime reserved = {.reserved = 1};
     mlocTime nanosecond = {.nanosecond = 1000000000};
     mlocDate forged = {.day = mlocDateMaxDay + 1};
     CHECK(mlocMakeDateTime(&last, &bad, &out) == mloc_errorInvalid &&
-              mlocMakeDateTime(&last, &reserved, &out) == mloc_errorInvalid &&
               mlocMakeDateTime(&last, &nanosecond, &out) == mloc_errorInvalid &&
               mlocMakeDateTime(&forged, &midnight, &out) == mloc_errorInvalid &&
               mlocMakeDateTime(nullptr, &midnight, &out) == mloc_errorInvalid &&
@@ -189,7 +187,7 @@ static void TestStartOfDay(void)
     CHECK(mlocGetStartOfDay(&york, &fold.date, &instant) == mloc_success &&
               InstantIs(&instant, 1509854400, 0),
           "an ordinary midnight");
-    mlocDate forged = {.day = 1, .reserved = {1}};
+    mlocDate forged = {.day = mlocDateMinDay - 1};
     CHECK(mlocGetStartOfDay(&york, &forged, &instant) == mloc_errorInvalid &&
               mlocGetStartOfDay(&york, nullptr, &instant) == mloc_errorInvalid &&
               mlocGetStartOfDay(&york, &fold.date, nullptr) == mloc_errorInvalid,

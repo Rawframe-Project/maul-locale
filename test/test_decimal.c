@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Decimal values: parsing with the digits shown, the bounds and refusals,
-// integers, writing back, equality by memcmp, and the plural operands with
+// integers, writing back, equality, and the plural operands with
 // UTS #35's examples and wide integers.
 
 #include "test_harness.h"
@@ -13,6 +13,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// Whether two decimals hold the same value and show the same digits,
+// field by field: a decimal's padding is no part of it.
+static bool Same(const mlocDecimal* a, const mlocDecimal* b)
+{
+    return a->kind == b->kind && a->negative == b->negative && a->count == b->count &&
+           a->exponent == b->exponent && a->fractionDigits == b->fractionDigits &&
+           memcmp(a->digits, b->digits, sizeof(a->digits)) == 0;
+}
 
 static bool Parsed(const char* text, mlocDecimal* out)
 {
@@ -40,8 +49,7 @@ static bool Refuses(const char* text, mlocResult status, size_t offset)
     memset(&d, 0x5A, sizeof(d));
     mlocDecimal before = d;
     mlocTextResult result = mlocParseDecimal(text, strlen(text), &d);
-    return result.status == status && result.offset == offset &&
-           memcmp(&d, &before, sizeof(d)) == 0;
+    return result.status == status && result.offset == offset && Same(&d, &before);
 }
 
 static void TestParse(void)
@@ -67,9 +75,9 @@ static void TestParse(void)
           "an integer's zeros are no digits");
     mlocDecimal a;
     mlocDecimal b;
-    CHECK(Parsed("1.50e1", &a) && Parsed("15.0", &b) && memcmp(&a, &b, sizeof(a)) == 0,
+    CHECK(Parsed("1.50e1", &a) && Parsed("15.0", &b) && Same(&a, &b),
           "the same value and digits compare equal");
-    CHECK(Parsed("15", &b) && memcmp(&a, &b, sizeof(a)) != 0, "other digits shown do not");
+    CHECK(Parsed("15", &b) && !Same(&a, &b), "other digits shown do not");
 }
 
 static void TestBounds(void)
@@ -140,7 +148,7 @@ static void TestIntegers(void)
           "an integer's zeros");
     mlocDecimal parsed;
     CHECK(mlocMakeDecimal(-1200, &d) == mloc_success && Parsed("-1200", &parsed) &&
-              memcmp(&d, &parsed, sizeof(d)) == 0,
+              Same(&d, &parsed),
           "equal to the same integer parsed");
     CHECK(mlocMakeDecimal(1, nullptr) == mloc_errorInvalid &&
               mlocMakeUnsignedDecimal(1, nullptr) == mloc_errorInvalid,
@@ -209,9 +217,6 @@ static void TestMadeUp(void)
     d.exponent = mlocDecimalMaxExponent;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "a first digit too large");
     d = good;
-    d.reserved = 1;
-    CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "the reserved byte");
-    d = good;
     d.negative = 2;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "a sign past 1");
     d = good;
@@ -229,7 +234,7 @@ static void TestMadeUp(void)
     d = (mlocDecimal){.kind = mloc_decimalInfinity};
     CHECK(mlocGetPluralOperands(&d, &operands) == mloc_errorInvalid, "infinity has no operands");
     d = good;
-    d.reserved = 1;
+    d.kind = 3;
     CHECK(mlocGetPluralOperands(&d, &operands) == mloc_errorInvalid, "nor a made-up decimal");
 }
 
@@ -981,7 +986,7 @@ static void TestRound(void)
     CHECK(mlocRoundDecimal(&d, 999999, 1, mloc_roundTrunc) == 0 &&
               mlocRoundDecimal(&d, -999999, 1, mloc_roundTrunc) == 0,
           "the extreme positions");
-    d.reserved = 1;
+    d.negative = 2;
     CHECK(mlocRoundDecimal(&d, 0, 1, mloc_roundHalfExpand) == mloc_errorInvalid,
           "a made-up decimal");
 }

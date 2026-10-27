@@ -282,7 +282,7 @@ static void TestRefusals(void)
               mlocSelectPlural(nullptr, &decimal, &category) == mloc_errorInvalid,
           "select refusals");
     mlocDecimal madeUp = decimal;
-    madeUp.reserved = 1;
+    madeUp.negative = 2;
     CHECK(mlocSelectPlural(&rules, &madeUp, &category) == mloc_errorInvalid, "a made-up decimal");
     CHECK(mlocSelectPluralInteger(&rules, 1, nullptr) == mloc_errorInvalid &&
               mlocSelectPluralInteger(nullptr, 1, &category) == mloc_errorInvalid &&
