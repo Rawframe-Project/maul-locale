@@ -947,9 +947,9 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined
                                                -fno-sanitize-recover=all)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area catalog collate_fast collation collation_data data date_data decimal duration grammar ixdtf locale message parse
+    foreach(area catalog collate_fast collation collation_data data date_data decimal duration grammar index ixdtf locale message parse
                  relative
-                 segment segments
+                 search segment segments
                  spellout
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
@@ -965,6 +965,10 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_definitions(fuzz_collate_fast PRIVATE
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_collation_data PRIVATE
+        MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
+    target_compile_definitions(fuzz_index PRIVATE
+        MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
+    target_compile_definitions(fuzz_search PRIVATE
         MLOC_COLLATION_FILE="${PROJECT_SOURCE_DIR}/src/generated/collation.mloc")
     target_compile_definitions(fuzz_segment PRIVATE
         MLOC_SEGMENTS_FILE="${PROJECT_SOURCE_DIR}/src/generated/segments.mloc")
