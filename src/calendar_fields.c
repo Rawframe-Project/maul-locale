@@ -7,6 +7,7 @@
 // NonISOMonthDayToISOReferenceDate.
 
 #include "calendar_year.h"
+#include "invariant.h"
 
 #include "maul-locale/calendar.h"
 
@@ -105,6 +106,8 @@ static uint32_t LongestMonth(mlocCalendar calendar, uint32_t number)
     static const uint8_t s_indian[12] = {31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30};
     static const uint8_t s_persian[12] = {31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30};
     static const uint8_t s_hebrew[12] = {30, 30, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29};
+    // A code the calendar has, as mlocYearCodeExists found it.
+    MLOC_ASSERT(number >= 1 && number <= mlocArithmeticMonths(calendar));
     switch (calendar)
     {
     case mloc_calendarCoptic:

@@ -5,6 +5,8 @@
 
 #include "calendar_umalqura.h"
 
+#include "invariant.h"
+
 enum
 {
     firstYear = 1300,
@@ -79,6 +81,7 @@ bool mlocUmalquraLeap(int64_t year)
 
 uint32_t mlocUmalquraDaysInMonth(int64_t year, uint32_t month)
 {
+    MLOC_ASSERT(month >= 1 && month <= 12);
     return InTable(year) ? 29u + ((uint32_t)Bits(year) >> (month - 1) & 1u)
                          : mlocArithmeticDaysInMonth(mloc_calendarIslamicCivil, year, month);
 }
@@ -121,6 +124,8 @@ CalendarDate mlocUmalquraFromDay(int32_t day)
     {
         left -= mlocUmalquraDaysInMonth(year, month);
         month++;
+        // The day is before the next year's first.
+        MLOC_ASSERT(month <= 12);
     }
     return (CalendarDate){(int32_t)year, (uint8_t)month, (uint8_t)(left + 1)};
 }

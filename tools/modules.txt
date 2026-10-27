@@ -85,15 +85,15 @@ names_data: bytes data_format data_view kinds locale_fallback names_tables numbe
 names: data_view kinds locale_context names_data names_text
 names_text: data_view kinds locale_context spellout_data
 names_locale: data_view kinds locale_context names_data names_text
-calendar_arith:
+calendar_arith: invariant
 calendar_astro: calendar_arith
-calendar_chinese: calendar_arith calendar_astro
+calendar_chinese: calendar_arith calendar_astro invariant
 calendar_years:
-calendar_lunar: calendar_arith calendar_chinese calendar_years
-calendar_hebrew: calendar_arith
+calendar_lunar: calendar_arith calendar_chinese calendar_years invariant
+calendar_hebrew: calendar_arith invariant
 calendar_eras:
-calendar_umalqura: calendar_arith
-calendar_year: calendar_arith calendar_chinese calendar_hebrew calendar_lunar calendar_umalqura
+calendar_umalqura: calendar_arith invariant
+calendar_year: calendar_arith calendar_chinese calendar_hebrew calendar_lunar calendar_umalqura invariant
 calendar: calendar_arith calendar_eras calendar_year
 calendar_add: calendar_arith calendar_year
 zone_tables: bytes data_view kinds
@@ -139,7 +139,7 @@ datetime_arith: date_time duration_round time_arith
 instant_arith: duration_round rounding time_arith zone_handle
 zoned_arith: date_time duration_round rounding time_arith zone_handle
 zone_local: date_time zone_handle zone_rules zone_tables
-calendar_until: calendar_arith calendar_year
+calendar_until: calendar_arith calendar_year invariant
 calendar_round: duration_round
 duration_round: binary64 date_time rounding
 rounding:
@@ -147,7 +147,7 @@ binary64:
 duration_values: binary64 time_arith
 ixdtf_parse: binary64
 ixdtf_write: binary64 calendar_arith calendar_year date_time
-calendar_fields: calendar_arith calendar_year
+calendar_fields: calendar_arith calendar_year invariant
 message_form: bytes
 message_text:
 message_table: bytes

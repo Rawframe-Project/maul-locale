@@ -7,6 +7,7 @@
 
 #include "calendar_arith.h"
 #include "calendar_years.h"
+#include "invariant.h"
 
 static bool InTable(int64_t year)
 {
@@ -16,12 +17,16 @@ static bool InTable(int64_t year)
 // The table year at an index from 1600.
 static void Unpack(bool korea, size_t index, LunisolarYear* out)
 {
+    MLOC_ASSERT(index < lunarYearCount);
     uint32_t bits = (korea ? mlocDangiYears : mlocChineseYears)[index];
     int64_t year = lunarFirstYear + (int64_t)index;
     out->year = (int32_t)year;
     out->lunation = (korea ? mlocDangiFirstLunation : mlocChineseFirstLunation) +
                     (korea ? mlocDangiMonthsBefore : mlocChineseMonthsBefore)[index];
     out->leap = (uint8_t)((bits >> lunarLeapShift) & 0xF);
+    // The generated tables place a leap month after one of the twelve,
+    // so from the second place to the thirteenth.
+    MLOC_ASSERT(out->leap == 0 || (out->leap >= 2 && out->leap <= 13));
     out->count = out->leap != 0 ? 13 : 12;
     out->start[0] = (int32_t)(mlocArithmeticToDay(mloc_calendarGregorian, year, 1, 1) +
                               (bits >> lunarOffsetShift));
@@ -34,6 +39,7 @@ static void Unpack(bool korea, size_t index, LunisolarYear* out)
 // The first day of a table year.
 static int64_t NewYear(bool korea, int64_t year)
 {
+    MLOC_ASSERT(InTable(year));
     uint32_t bits = (korea ? mlocDangiYears : mlocChineseYears)[year - lunarFirstYear];
     return mlocArithmeticToDay(mloc_calendarGregorian, year, 1, 1) + (bits >> lunarOffsetShift);
 }
@@ -44,6 +50,7 @@ void mlocLunarYearOf(bool korea, int32_t day, LunisolarYear* out)
     if (InTable(year) && day >= NewYear(korea, year))
     {
         Unpack(korea, (size_t)(year - lunarFirstYear), out);
+        MLOC_ASSERT(day < out->start[out->count]);
         return;
     }
     // Before its new year a day is in the year before, if the table

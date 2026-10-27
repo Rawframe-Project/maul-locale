@@ -9,6 +9,7 @@
 // (calendar_year.h); weeks and days as days.
 
 #include "calendar_year.h"
+#include "invariant.h"
 
 #include "maul-locale/calendar.h"
 
@@ -127,6 +128,7 @@ mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit 
         months -= sign;
     }
     d.months = months;
+    MLOC_ASSERT(sign > 0 ? d.years >= 0 && d.months >= 0 : d.years <= 0 && d.months <= 0);
     // The days from the date the months reach, its day clamped. That
     // date is not past the second (its day is at most the one the months
     // were judged by), so the days are never against the sign.
@@ -139,6 +141,7 @@ mlocResult mlocDateUntil(const mlocDate* one, const mlocDate* two, mlocDateUnit 
     uint32_t last = mlocYearDaysInMonth(&y, month);
     int64_t reached = mlocYearDayOf(&y, month, a.day < last ? a.day : last);
     d.days = two->day - reached;
+    MLOC_ASSERT(sign > 0 ? d.days >= 0 : d.days <= 0);
     *durationOut = d;
     return mloc_success;
 }

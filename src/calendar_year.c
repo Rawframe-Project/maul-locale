@@ -7,6 +7,7 @@
 
 #include "calendar_hebrew.h"
 #include "calendar_umalqura.h"
+#include "invariant.h"
 
 CalendarSource mlocYearSource(mlocCalendar calendar)
 {
@@ -59,6 +60,7 @@ uint32_t mlocYearMonths(const CalendarYear* y)
 
 uint32_t mlocYearDaysInMonth(const CalendarYear* y, uint32_t month)
 {
+    MLOC_ASSERT(month >= 1 && month <= mlocYearMonths(y));
     switch (y->source)
     {
     case sourceHebrew:
@@ -75,6 +77,7 @@ uint32_t mlocYearDaysInMonth(const CalendarYear* y, uint32_t month)
 
 int64_t mlocYearDayOf(const CalendarYear* y, uint32_t month, uint32_t day)
 {
+    MLOC_ASSERT(day >= 1 && day <= mlocYearDaysInMonth(y, month));
     switch (y->source)
     {
     case sourceHebrew:
@@ -144,6 +147,8 @@ CalendarDate mlocYearOpenOf(CalendarYear* y, mlocCalendar calendar, int32_t day)
     while (y->lunar.start[month] <= day)
     {
         month++;
+        // The year holds the day.
+        MLOC_ASSERT(month <= y->lunar.count);
     }
     return (CalendarDate){y->lunar.year, (uint8_t)month,
                           (uint8_t)(day - y->lunar.start[month - 1] + 1)};
@@ -244,6 +249,7 @@ bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t num
         }
         y->year = y->lunar.year;
         *monthOut = (uint32_t)(number - y->lunar.lunation + 1);
+        MLOC_ASSERT(*monthOut >= 1 && *monthOut <= y->lunar.count);
         return true;
     }
     int64_t year = 0;
@@ -266,6 +272,7 @@ bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t num
         }
         mlocYearOpen(y, calendar, year);
         *monthOut = (uint32_t)(number - HebrewMonthsBefore(year) + 1);
+        MLOC_ASSERT(mlocYearMonthNumber(y, *monthOut) == number && *monthOut <= mlocYearMonths(y));
         return true;
     }
     mlocYearOpen(y, calendar, 0);
@@ -277,6 +284,7 @@ bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t num
     }
     mlocYearOpen(y, calendar, year);
     *monthOut = (uint32_t)(number - year * months + 1);
+    MLOC_ASSERT(*monthOut >= 1 && *monthOut <= months);
     return true;
 }
 
