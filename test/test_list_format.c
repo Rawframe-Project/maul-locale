@@ -169,6 +169,14 @@ static void TestOutput(void)
               p.count == 0 && mlocFormatList(&en, abc, 3, &measure) == mloc_errorCapacity &&
               measure.length == 11,
           "a buffer too small or none gives the size needed, and no parts");
+    // Items whose lengths pass SIZE_MAX together, as one large text named
+    // three times does on a 32-bit target. Measuring reads no item's
+    // bytes, so only their lengths are large.
+    mlocListItem huge[] = {{"a", SIZE_MAX / 2}, {"b", SIZE_MAX / 2}, {"c", SIZE_MAX / 2}};
+    mlocOutput measureHuge = {0};
+    CHECK(mlocFormatList(&en, huge, 3, &measureHuge) == mloc_errorCapacity &&
+              measureHuge.length == SIZE_MAX,
+          "a size needed past SIZE_MAX is given as SIZE_MAX");
 }
 
 static void TestRefusals(void)

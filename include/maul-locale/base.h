@@ -129,8 +129,9 @@ extern "C"
 
     // Where every formatting call writes its UTF-8 text. Set buffer and
     // capacity (a null buffer with capacity 0 measures); the call sets length
-    // to the bytes written, or with mloc_errorCapacity to the bytes needed,
-    // the buffer's contents then being unspecified. No NUL is written. When
+    // to the bytes written, or with mloc_errorCapacity to the bytes needed
+    // (SIZE_MAX when they pass it), the buffer's contents then being
+    // unspecified. No NUL is written. When
     // part is set, it is called for each part in order of start, after the
     // whole text is written and only on success.
     typedef struct mlocOutput

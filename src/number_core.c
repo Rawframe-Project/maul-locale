@@ -487,7 +487,10 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
             memcpy(w->buffer + w->length, bytes, length);
         }
     }
-    w->length += length;
+    // Saturating: a caller's texts (a list's items, a word to inflect)
+    // can together exceed a 32-bit size_t, which then reports the
+    // capacity short.
+    w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
 }
 
 void mlocWriteLiteral(NumberWriter* w, const char* text, size_t length)
