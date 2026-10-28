@@ -8,6 +8,7 @@
 #include "unit_data.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "locale_tables.h"
 #include "unit_tables.h"
 
@@ -339,33 +340,42 @@ size_t mlocFindUnitAlias(const UnitTable* t, const char* id, size_t length,
 
 const uint8_t* mlocSimpleUnit(const UnitTable* t, uint32_t index)
 {
+    MLOC_ASSERT(index < t->simpleCount);
     return t->simples + (size_t)index * unitSimpleSize;
 }
 
 const uint8_t* mlocUnitPrefix(const UnitTable* t, uint32_t index)
 {
+    MLOC_ASSERT(index < t->prefixCount);
     return t->prefixes + (size_t)index * unitPrefixSize;
 }
 
 const uint8_t* mlocBaseUnit(const UnitTable* t, uint32_t base)
 {
+    MLOC_ASSERT(base < t->baseCount);
     return t->bases + (size_t)base * unitBaseSize;
 }
 
 void mlocReadUnitFactor(const UnitTable* t, uint32_t simple, UnitFactor* out)
 {
     const uint8_t* s = mlocSimpleUnit(t, simple);
+    // Only a unit with a base has a size.
+    MLOC_ASSERT(s[simpleBase] != unitNoBase);
     uint32_t at = mlocLoad32(s + simpleFactor);
-    // The validator bounded the numbers; the size only has to pass them.
-    (void)ReadNumber(t->numbers, UINT32_MAX, &at, &out->numerator);
-    (void)ReadNumber(t->numbers, UINT32_MAX, &at, &out->denominator);
+    // The validator bounded the numbers, none of them a zero denominator;
+    // the size only has to pass them.
+    bool read = ReadNumber(t->numbers, UINT32_MAX, &at, &out->numerator) &&
+                ReadNumber(t->numbers, UINT32_MAX, &at, &out->denominator);
     out->offsetNumerator = mlocWideOf(0);
     out->offsetDenominator = mlocWideOf(1);
     if ((s[simpleFlags] & unitOffset) != 0)
     {
-        (void)ReadNumber(t->numbers, UINT32_MAX, &at, &out->offsetNumerator);
-        (void)ReadNumber(t->numbers, UINT32_MAX, &at, &out->offsetDenominator);
+        read = read && ReadNumber(t->numbers, UINT32_MAX, &at, &out->offsetNumerator) &&
+               ReadNumber(t->numbers, UINT32_MAX, &at, &out->offsetDenominator);
     }
+    MLOC_ASSERT(read && !mlocWideIsZero(&out->denominator) &&
+                !mlocWideIsZero(&out->offsetDenominator));
+    (void)read;
 }
 
 UnitPrefsTable mlocReadUnitPrefs(DataSpan unit)
@@ -511,6 +521,7 @@ int32_t mlocFindUnitPrefSet(const UnitPrefsTable* t, const char* category, size_
 
 uint32_t mlocFindUnitPrefRun(const UnitPrefsTable* t, uint32_t set, uint32_t region)
 {
+    MLOC_ASSERT(set < t->setCount);
     const uint8_t* s = t->sets + (size_t)set * unitSetSize;
     uint32_t first = mlocLoad16(s + 10);
     uint32_t end = first + mlocLoad16(s + 12);
@@ -524,6 +535,8 @@ uint32_t mlocFindUnitPrefRun(const UnitPrefsTable* t, uint32_t set, uint32_t reg
         }
         world = at == mlocPackRegion("001", 3) ? r : world;
     }
+    // The validator gave every set a run for 001.
+    MLOC_ASSERT(mlocLoad16(t->runs + (size_t)world * unitRunSize) == mlocPackRegion("001", 3));
     return world;
 }
 
@@ -532,6 +545,8 @@ uint32_t mlocUnitPrefEntries(const UnitPrefsTable* t, uint32_t run, const uint8_
     uint32_t first = mlocLoad16(t->runs + (size_t)run * unitRunSize + 2);
     uint32_t end = run + 1 < t->runCount ? mlocLoad16(t->runs + (size_t)(run + 1) * unitRunSize + 2)
                                          : t->entryCount;
+    // The validator gave every run an entry or more.
+    MLOC_ASSERT(run < t->runCount && first < end && end <= t->entryCount);
     *firstOut = t->entries + (size_t)first * unitEntrySize;
     return end - first;
 }

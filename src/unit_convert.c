@@ -11,6 +11,7 @@
 
 #include "bytes.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "number_precision.h"
 #include "unit_tables.h"
 
@@ -185,6 +186,7 @@ static bool Fold(UnitValue* x)
 // x = x + sign * n / d, the power folded in first.
 static bool AddFraction(UnitValue* x, const Wide* n, const Wide* d, bool negative)
 {
+    MLOC_ASSERT(!mlocWideIsZero(d) && !mlocWideIsZero(&x->b));
     if (x->infinite || mlocWideIsZero(n))
     {
         return true;
@@ -236,6 +238,9 @@ static bool FromBeaufort(const UnitTable* t, UnitValue* x)
         force = mlocWideCompare(&quotient, &cap) > 0 ? last
                                                      : (quotient.count == 0 ? 0 : quotient.limb[0]);
     }
+    // The validator gave the table two entries or more, and the force is
+    // capped at the one before the last.
+    MLOC_ASSERT(t->beaufortCount >= 2 && force + 1 < t->beaufortCount);
     uint32_t low = mlocLoad16(t->beaufort + 2 * force);
     uint32_t high = mlocLoad16(t->beaufort + 2 * (force + 1));
     *x = (UnitValue){.a = mlocWideOf(low + high), .b = mlocWideOf(20)};
@@ -292,6 +297,7 @@ mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exac
         *out = d;
         return mloc_success;
     }
+    MLOC_ASSERT(!mlocWideIsZero(&x->b));
     // a * 10^k / b has 41 or 42 digits.
     int64_t k = (int64_t)convertDigits + 1 -
                 ((int64_t)mlocWideDigitCount(&x->a) - mlocWideDigitCount(&x->b));
@@ -310,6 +316,9 @@ mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exac
     {
         sticky |= mlocWideDivideSmall(&q, 10) != 0;
     }
+    // Exactly 40 digits are left, the first not zero, so trimming the
+    // last zeros below stops.
+    MLOC_ASSERT(mlocWideDigitCount(&q) == convertDigits);
     uint8_t digits[convertDigits];
     for (uint32_t i = convertDigits; i-- > 0;)
     {
@@ -353,6 +362,7 @@ static bool Opposite(const UnitScale* a, const UnitScale* b)
 // x = x * n / d.
 static bool Scale(UnitValue* x, const Wide* n, const Wide* d)
 {
+    MLOC_ASSERT(!mlocWideIsZero(n) && !mlocWideIsZero(d));
     return mlocWideMultiply(&x->a, &x->a, n) && mlocWideMultiply(&x->b, &x->b, d);
 }
 
@@ -414,6 +424,7 @@ bool mlocUnitValueAtLeast(const UnitValue* x, const Wide* n, const Wide* d)
 
 bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut)
 {
+    MLOC_ASSERT(!x->infinite && !mlocWideIsZero(&x->b));
     if (!Fold(x))
     {
         return false;
