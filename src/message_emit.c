@@ -5,9 +5,11 @@
 
 #include "bytes.h"
 #include "invariant.h"
+#include "message_text.h"
 
 #include "maul-locale/message.h"
 #include "maul-unicode/normalize.h"
+#include "maul-unicode/properties.h"
 
 #include <string.h>
 
@@ -34,24 +36,40 @@ static uint64_t SlotCount(const MessageCounts* counts)
     return mlocTableSlots(most);
 }
 
-// The bytes of the records before the variables.
-static uint64_t RecordBytes(const MessageCounts* counts)
+// A field's payload length: the records counted, the keys', or, for the
+// Unicode version, its room.
+static uint64_t LengthOf(const MessageCounts* counts, uint32_t field)
 {
-    uint64_t total = messageHeaderSize + (uint64_t)counts->keys * messageKeySize;
-    for (uint32_t kind = 0; kind < messageVariables; kind++)
+    if (field == messageFieldKeys)
     {
-        total += (uint64_t)counts->used[kind] * messageRecordSizes[kind];
+        return (uint64_t)counts->keys * messageKeySize;
     }
-    return total;
+    if (field == messageFieldUnicode)
+    {
+        return messageUnicodeSize;
+    }
+    return (uint64_t)counts->used[field] * messageRecordSizes[field];
+}
+
+// Where each field's head goes (UINT64_MAX for none), the variables and
+// the pool at their most and the Unicode version's room kept: the bytes
+// the message takes at most.
+static uint64_t Layout(const MessageCounts* counts, uint64_t* heads)
+{
+    uint64_t at = assetHeaderSize;
+    for (uint32_t place = 0; place < messageFieldCount; place++)
+    {
+        uint64_t length = LengthOf(counts, messageFieldKinds[place]);
+        heads[place] = length == 0 ? UINT64_MAX : at;
+        at += length == 0 ? 0 : mlocAssetFieldBytes(length);
+    }
+    return at;
 }
 
 size_t mlocEmitNeeded(const MessageCounts* counts)
 {
-    uint64_t total =
-        RecordBytes(counts) +
-        (uint64_t)counts->used[messageVariables] * messageRecordSizes[messageVariables] +
-        counts->used[messagePool];
-    total = (total + 7) & ~(uint64_t)7;
+    uint64_t heads[messageFieldCount];
+    uint64_t total = Layout(counts, heads);
     // The words: two a variable for the check, then one a variable and
     // two an expression for the costs.
     uint64_t variables = counts->used[messageVariables];
@@ -65,44 +83,90 @@ void mlocEmitWrite(MessageEmit* emit, uint8_t* out, const MessageCounts* counts)
 {
     memset(emit, 0, sizeof *emit);
     emit->out = out;
-    uint32_t at = messageHeaderSize;
-    for (uint32_t kind = 0; kind < messageCount; kind++)
+    uint64_t heads[messageFieldCount];
+    // mlocEmitNeeded kept the whole within 32 bits.
+    uint32_t end = (uint32_t)Layout(counts, heads);
+    for (uint32_t place = 0; place < messageFieldCount; place++)
     {
-        if (kind == messageVariants)
+        uint32_t field = messageFieldKinds[place];
+        emit->head[place] = heads[place] == UINT64_MAX ? UINT32_MAX : (uint32_t)heads[place];
+        uint32_t payload = emit->head[place] + assetFieldHead;
+        if (heads[place] == UINT64_MAX || field == messageFieldUnicode)
         {
-            emit->keyStart = at;
-            at += counts->keys * messageKeySize;
+            continue;
         }
-        emit->start[kind] = at;
-        at += counts->used[kind] * messageRecordSizes[kind];
+        if (field == messageFieldKeys)
+        {
+            emit->keyStart = payload;
+        }
+        else
+        {
+            emit->start[field] = payload;
+        }
     }
-    emit->poolEnd = at;
-    uint32_t slots = (at + 7) & ~7u;
+    emit->poolEnd = emit->start[messagePool] + counts->used[messagePool];
     emit->slotCount = (uint32_t)SlotCount(counts);
-    emit->wordStart = slots + emit->slotCount * messageSlotSize;
-    mlocTableInit(&emit->table, out + slots, emit->slotCount);
+    emit->wordStart = end + emit->slotCount * messageSlotSize;
+    mlocTableInit(&emit->table, out + end, emit->slotCount);
+}
+
+// Writes a field's head at at and zeros its padding; where the next
+// field goes.
+static uint32_t PutField(uint8_t* out, uint32_t at, uint32_t tag, uint32_t length)
+{
+    Store32(out + at, tag);
+    Store32(out + at + 4, length);
+    uint32_t payloadEnd = at + assetFieldHead + length;
+    uint32_t end = at + (uint32_t)mlocAssetFieldBytes(length);
+    memset(out + payloadEnd, 0, end - payloadEnd);
+    return end;
 }
 
 uint32_t mlocEmitFinish(MessageEmit* emit, uint32_t flags, uint32_t unicode)
 {
     uint8_t* out = emit->out;
-    uint32_t pool = emit->start[messageVariables] +
-                    emit->used[messageVariables] * messageRecordSizes[messageVariables];
-    memmove(out + pool, out + emit->start[messagePool], emit->used[messagePool]);
-    uint32_t size = pool + emit->used[messagePool];
-    memcpy(out, MLOC_MESSAGE_MAGIC, 4);
-    out[messageFormat] = (uint8_t)messageFormatVersion;
-    out[messageFormat + 1] = 0;
-    out[messageFlags] = (uint8_t)flags;
-    out[messageFlags + 1] = 0;
-    Store32(out + messageSize, size);
-    Store32(out + messageDataFormat, MLOC_DATA_FORMAT_VERSION);
-    Store32(out + messageUnicode, unicode);
-    for (uint32_t kind = 0; kind < messageCount; kind++)
+    MessageCounts written;
+    memcpy(written.used, emit->used, sizeof written.used);
+    written.keys = emit->keys;
+    uint32_t at = assetHeaderSize;
+    uint32_t fields = 0;
+    for (uint32_t place = 0; place < messageFieldCount; place++)
     {
-        Store32(out + messageCounts + kind * 4, emit->used[kind]);
+        uint32_t field = messageFieldKinds[place];
+        uint32_t length = (uint32_t)LengthOf(&written, field);
+        if (field == messageFieldUnicode)
+        {
+            if (!emit->unassigned)
+            {
+                continue;
+            }
+            Store32(out + at + assetFieldHead, unicode);
+        }
+        else if (length == 0)
+        {
+            continue;
+        }
+        else if (field == messagePool)
+        {
+            // A name bound once shrank the variables: the pool moves down.
+            memmove(out + at + assetFieldHead, out + emit->start[messagePool], length);
+        }
+        else
+        {
+            // The counts placed every field before the pool.
+            MLOC_ASSERT(at == emit->head[place]);
+        }
+        at = PutField(out, at, messageTags[place], length);
+        fields++;
     }
-    return size;
+    memcpy(out, MLOC_MESSAGE_MAGIC, 4);
+    out[assetFormat] = (uint8_t)messageFormatVersion;
+    out[assetFormat + 1] = 0;
+    out[assetFlags] = (uint8_t)flags;
+    out[assetFlags + 1] = 0;
+    Store32(out + assetSize, at);
+    Store32(out + assetFields, fields);
+    return at;
 }
 
 uint32_t mlocEmitRecord(MessageEmit* emit, uint32_t kind, const uint32_t* fields)
@@ -147,6 +211,25 @@ void mlocEmitBytes(MessageEmit* emit, const uint8_t* bytes, size_t length)
     emit->used[messagePool] += (uint32_t)length;
 }
 
+// Whether well-formed text holds a code point this Unicode version leaves
+// unassigned. Noncharacters are unassigned for good, so their NFC never
+// changes.
+static bool HasUnassigned(const uint8_t* text, size_t length)
+{
+    for (size_t at = 0; at < length;)
+    {
+        size_t size;
+        uint32_t c = mlocMessageDecode(text, at, length, &size);
+        bool noncharacter = (c & 0xFFFE) == 0xFFFE || (c >= 0xFDD0 && c <= 0xFDEF);
+        if (!noncharacter && muniGetGeneralCategory(c) == muni_gcCn)
+        {
+            return true;
+        }
+        at += size;
+    }
+    return false;
+}
+
 bool mlocEmitNfc(MessageEmit* emit, const uint8_t* bytes, size_t length)
 {
     size_t ascii = 0;
@@ -175,6 +258,10 @@ bool mlocEmitNfc(MessageEmit* emit, const uint8_t* bytes, size_t length)
         return false;
     }
     MLOC_ASSERT(emit->out == NULL || result.status == muni_success);
+    if (emit->out != NULL && HasUnassigned((const uint8_t*)to, needed))
+    {
+        emit->unassigned = true;
+    }
     emit->used[messagePool] += (uint32_t)needed;
     return true;
 }

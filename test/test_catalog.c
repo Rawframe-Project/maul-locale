@@ -469,6 +469,64 @@ static void TestCompileFailures(void)
     free(bytes);
 }
 
+// Where a four-byte tag first stands in bytes, or size.
+static size_t FindTag(const uint8_t* bytes, size_t size, const char* tag)
+{
+    for (size_t at = 0; at + 4 <= size; at++)
+    {
+        if (memcmp(bytes + at, tag, 4) == 0)
+        {
+            return at;
+        }
+    }
+    return size;
+}
+
+// A message whose key holds a code point its compiler's Unicode version
+// leaves unassigned (U+0378) records that version, and its catalog opens
+// only under it; a catalog whose messages record none opens under any,
+// since nothing in it names a version.
+static void TestUnicodeVersion(void)
+{
+    Write("ko.mf2", "@locale ko\n---\nkey =\n  .input {$x :string}\n  .match $x\n"
+                    "  |a\xCD\xB8| {{a}}\n  * {{b}}\n");
+    char ko[1024];
+    snprintf(ko, sizeof(ko), "%s/ko.mf2", s_directory);
+    char* paths[] = {ko};
+    FILE* report = tmpfile();
+    CHECK(CatalogCompile(s_directory, paths, 1, report != nullptr ? report : stderr),
+          "a catalog with an unassigned code point in a key compiles");
+    if (report != nullptr)
+    {
+        fclose(report);
+    }
+    mlocCatalog catalog;
+    mlocResult opened = mloc_errorInvalid;
+    uint8_t* bytes = Open("ko", &catalog, &opened);
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/ko.mlct", s_directory);
+    size_t size = 0;
+    uint8_t* copy = (uint8_t*)FileRead(path, &size);
+    size_t unic = copy != nullptr ? FindTag(copy, size, "UNIC") : 0;
+    CHECK(opened == mloc_success && copy != nullptr && unic < size,
+          "it opens under its Unicode version, which its message records");
+    if (copy != nullptr && unic < size)
+    {
+        uint32_t version = Word(copy + unic + assetFieldHead);
+        CHECK(Reopen(copy, size, unic + assetFieldHead, version + 1) == mloc_errorVersion,
+              "it is refused under another");
+    }
+    free(copy);
+    free(bytes);
+
+    snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
+    bytes = (uint8_t*)FileRead(path, &size);
+    CHECK(bytes != nullptr && FindTag(bytes, size, "UNIC") == size &&
+              mlocOpenCatalog(&catalog, bytes, size) == mloc_success,
+          "a catalog whose messages record no Unicode version opens");
+    free(bytes);
+}
+
 int main(int argc, char** argv)
 {
     s_directory = argc > 1 ? argv[1] : ".";
@@ -479,5 +537,6 @@ int main(int argc, char** argv)
     TestEachRefusal();
     TestArguments();
     TestCompileFailures();
+    TestUnicodeVersion();
     return s_failures == 0 ? 0 : 1;
 }

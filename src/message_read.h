@@ -2,8 +2,9 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Reads a compiled message (message_form.h) the caller gives, which may
-// come from a file: the header against this library and its Unicode, the
-// counts against the size, and every record's fields (kinds, indexes,
+// come from a file: the header against this format version, the fields
+// against the size (a Unicode version, when one is there, against this
+// library's), and every record's fields (kinds, indexes,
 // ranges, strings in the pool as well-formed UTF-8, names as MF2 names),
 // so that nothing read through the view leaves the bytes and every
 // string can be written back as MF2 text; the strings the records name
@@ -36,9 +37,14 @@ typedef struct MessageView
 } MessageView;
 
 // Reads a message: mloc_success; mloc_errorFormat for bytes that are not
-// one; mloc_errorVersion for one of another format, library or
-// Unicode version.
+// one; mloc_errorVersion for one a later version wrote (another format
+// version, a flag or field this one does not know) or one that names
+// another Unicode version.
 mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view);
+
+// Reads a message's header and fields alone, not their records: what
+// mlocReadMessage checks first, with its results.
+mlocResult mlocReadMessageLayout(const uint8_t* bytes, size_t size, MessageView* view);
 
 // A record's 32-bit field. Every index a caller reads by is one the
 // reader checked, or a loop's below the count.

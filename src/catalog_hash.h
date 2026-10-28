@@ -7,7 +7,11 @@
 // and the catalog tool, which builds the tables; inline, so that the tool
 // needs none of the library's internals.
 //
+// The collation data's unit hashes are XXH64 too, so this header lays out
+// both kinds.
+//
 // A data layout: tools/check_data_format.py watches this header.
+// An asset layout: tools/check_data_format.py watches this header with catalogFormatVersion.
 
 #ifndef MLOC_CATALOG_HASH_H
 #define MLOC_CATALOG_HASH_H

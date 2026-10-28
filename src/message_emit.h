@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Writes a compiled message's records (message_form.h) in two passes
-// over the same parse: the first counts them and the bytes of their
-// strings, the second writes them where the counts place them. Past the
-// message, the caller's buffer holds scratch while compiling: a hash
-// table (variables once per name, then message_check's duplicates) and
-// two words a variable for message_check.
+// Writes a compiled message's fields (message_form.h) in two passes over
+// the same parse: the first counts the records and the bytes of their
+// strings, the second writes them where the counts place them. A name
+// bound once shrinks the variables and the pool, which the last step
+// moves down. Past the message, the caller's buffer holds scratch while
+// compiling: a hash table (variables once per name, then message_check's
+// duplicates) and two words a variable for message_check.
 
 #ifndef MLOC_SRC_MESSAGE_EMIT_H
 #define MLOC_SRC_MESSAGE_EMIT_H
@@ -32,14 +33,20 @@ typedef struct MessageEmit
     // Records written of each kind (bytes for the pool), and keys.
     uint32_t used[messageCount];
     uint32_t keys;
-    // While writing: each kind's byte offset, the keys', the pool's end,
-    // and the scratch: the table's slots, then the words of the check and the costs.
+    // While writing: where each field's head is (UINT32_MAX for one the
+    // counts leave out), each kind's payload, the keys', the pool's end,
+    // and the scratch: the table's slots, then the words of the check and
+    // the costs.
+    uint32_t head[messageFieldCount];
     uint32_t start[messageCount];
     uint32_t keyStart;
     uint32_t poolEnd;
     uint32_t slotCount;
     uint32_t wordStart;
     MessageTable table;
+    // Whether a string normalized holds a code point this Unicode version
+    // leaves unassigned, whose NFC a later one may change.
+    bool unassigned;
 } MessageEmit;
 
 // The counts of a counting pass, as upper bounds for writing.

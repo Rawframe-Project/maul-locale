@@ -35,9 +35,9 @@ Two rules keep this sound:
 
 The data version is the CLDR and Unicode versions, the data format version, the tzdb release, and a 64-bit hash of the generated code tables and the pinned sources. The code tables are the parts of the data compiled into the library as C (plural rule functions, calendar year tables, script directions, list genders, segmentation class overrides); a data file refers to them by index, so a file is only meaningful with the library whose tables it was generated with. The hash makes a mismatch impossible to miss, and the library opens only files of its own data version. A zones file is the one exception: every field but the tzdb release must match.
 
-The data format version (`MLOC_DATA_FORMAT_VERSION`) is not the library version: it changes only when the format does, so a release that keeps the format keeps every data file valid, and a release needs no new data. Compiled messages carry it too. Its bit 31 is set: the field once held a packed library version, which never sets it, so no file of 0.1.0 or before matches any format. These are format changes, which increase it and regenerate every file:
+The data format version (`MLOC_DATA_FORMAT_VERSION`) is not the library version: it changes only when the format does, so a release that keeps the format keeps every data file valid, and a release needs no new data. Its bit 31 is set: the field once held a packed library version, which never sets it, so no file of 0.1.0 or before matches any format. These are format changes, which increase it and regenerate every file:
 
-- **A layout:** a field of a kind added, moved, resized or given another meaning; a kind added, removed or renumbered; the header; a compiled message's layout. `tools/check_data_format.py` fails when a header that lays these out changes (`tools/data-format.txt` lists them), until the format is decided and the hashes recorded again with `--write`. Each such header carries the line `// A data layout: tools/check_data_format.py watches this header.`, and the check fails on a listed header without it and on a header of `src/` with it that is not listed.
+- **A layout:** a field of a kind added, moved, resized or given another meaning; a kind added, removed or renumbered; the header. `tools/check_data_format.py` fails when a header that lays these out changes (`tools/data-format.txt` lists them), until the format is decided and the hashes recorded again with `--write`. Each such header carries the line `// A data layout: tools/check_data_format.py watches this header.`, and the check fails on a listed header without it and on a header of `src/` with it that is not listed.
 - **What the reader takes from the same bytes:** a value, flag or string encoding read another way, even where the layout header is unchanged.
 - **What a validator accepts, for files a generator of the format writes:** a check that refuses such a file, or one that admits a value or length the reader then relies on, which an older library would refuse. The hashes cannot see these. Tightening a validator against bytes no generator writes, as hardening against hostile input does, is not a format change.
 
@@ -47,22 +47,40 @@ A generator fix that writes other content in the same format is not one either: 
 
 ## Asset formats
 
-Data files are generated: `mlocgen` writes them, and a library opens only those of its own data version. What a host builds once and keeps across releases is an asset, in the family's sense ([maul-conventions.md](maul-conventions.md)), and is extensible instead. Catalogs are assets: a catalog names nothing in the data by index or version, so it opens with a library of another CLDR, tzdb or code-table release.
+Data files are generated: `mlocgen` writes them, and a library opens only those of its own data version. What a host builds once and keeps across releases is an asset, in the family's sense ([maul-conventions.md](maul-conventions.md)), and is extensible instead. Catalogs and compiled messages are assets: they name nothing in the data by index or version, so they open with a library of another CLDR, tzdb or code-table release.
 
 An asset is the family's container ([`src/asset.h`](../../src/asset.h)), little-endian:
 
 1. **Header, 16 bytes:** four bytes of magic, the format version (16 bits), flags (16 bits), the size in bytes and the number of fields.
 2. **Fields,** each a 32-bit tag, its payload's length (32 bits) and the payload, padded with zero bytes to the next multiple of 8 from the asset's start, so a payload can be read in place. They come in the order the format lists its tags, each at most once.
 
-A writer leaves out a field that holds its default, so it never writes an empty one. A reader takes its own format version alone: before 1.0.0 the version rises whenever the bytes change. It refuses a flag or a tag it does not know with `mloc_errorVersion`, since only a later version writes one. A required field that is absent, an empty field, fields out of order or twice, padding that is not zero or a size that does not match is `mloc_errorFormat`. A change of an asset's layout raises its own format version, never `MLOC_DATA_FORMAT_VERSION`: `tools/check_data_format.py` records each asset layout header with the constant that holds its version (the header carries `// An asset layout: tools/check_data_format.py watches this header with <constant>.`), and fails when the header changes and the version does not.
+A writer leaves out a field that holds its default, so it never writes an empty one. A reader takes its own format version alone: before 1.0.0 the version rises whenever the bytes change. It refuses a flag or a tag it does not know with `mloc_errorVersion`, since only a later version writes one. A required field that is absent, an empty field, fields out of order or twice, padding that is not zero or a size that does not match is `mloc_errorFormat`. A change of an asset's layout raises its own format version, never `MLOC_DATA_FORMAT_VERSION`: `tools/check_data_format.py` records each asset layout header with the constant that holds its version (the header carries `// An asset layout: tools/check_data_format.py watches this header with <constant>.`), and fails when the header changes and the version does not. A header that lays out both kinds, such as `src/catalog_hash.h` (XXH64, which the collation data's unit hashes and a catalog's key table both store), carries both lines, and a change to it moves both versions.
 
-A catalog ([`src/catalog_tables.h`](../../src/catalog_tables.h), magic `MLCT`, format 1, a flag for the set's source catalog) has three fields, all required:
+A catalog ([`src/catalog_tables.h`](../../src/catalog_tables.h), magic `MLCT`, format 2, a flag for the set's source catalog) has three fields, all required:
 
 | Tag | Holds |
 |---|---|
 | `LOCL` | The locale, a BCP 47 id the library parses. |
 | `KEYS` | The keys under their minimal perfect hash, and the set id ([messages-and-catalogs.md](messages-and-catalogs.md#catalogs)). |
 | `MSGS` | The compiled messages by key index, and the set id again. |
+
+A compiled message ([`src/message_form.h`](../../src/message_form.h), magic `MLMS`, format 2, a flag for a complex message) has a field per kind of record, each of whole records, and none required: a message without a kind of record leaves its field out.
+
+| Tag | Holds | Record |
+|---|---|---|
+| `DECL` | Declarations: kind, variable, expression. | 12 bytes |
+| `EXPR` | Expressions: operand, function, parameters, source offset. | 32 bytes |
+| `MARK` | Markup: kind, name, parameters, source offset. | 24 bytes |
+| `PARM` | Options and attributes: kind, name, value. | 20 bytes |
+| `SELE` | Selectors: variable, source offset. | 8 bytes |
+| `KEYS` | Each variant's key for each selector: kind, string. | 12 bytes |
+| `VNTS` | Variants: their pattern's pieces, source offset. | 12 bytes |
+| `PIEC` | Pattern pieces: text, an expression or a markup. | 12 bytes |
+| `VARS` | Variables: name, kind. | 12 bytes |
+| `POOL` | The strings' bytes, names and keys in NFC. | 1 byte |
+| `UNIC` | The Unicode version of the strings' NFC. | 4 bytes, once |
+
+A string normalized to NFC stays the same under every later Unicode version as long as its code points were assigned when it was normalized: that is Unicode's normalization stability policy. A key or name may also hold a code point its compiler's Unicode version leaves unassigned, and a later version may give that code point a combining class that changes its NFC, so the key would no longer match what the same text normalizes to. The compiler writes `UNIC` for such a message alone (a noncharacter is unassigned for good, and does not count), and a reader of another Unicode version refuses it with `mloc_errorVersion`. Every other message reads under any Unicode version.
 
 Everything else the library makes in caller memory is state of the running program and is never stored: the opaque structs (data, formatters, collators, segmenters, catalogs, chains), bound messages, an alphabetic index and a catalog chain's cache hold pointers into the data and the caller's bytes and a stamp, and are read only by the process that made them.
 

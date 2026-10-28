@@ -9,7 +9,6 @@
 #include "maul-unicode/base.h"
 #include "maul-unicode/encoding.h"
 
-#include <stdckdint.h>
 #include <string.h>
 
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,
@@ -345,54 +344,80 @@ static uint32_t UnicodeVersion(void)
     return (uint32_t)version.major << 16 | (uint32_t)version.minor << 8 | version.patch;
 }
 
-// The header: the magic; the message format, another being another
-// version's; the counts' records fill exactly the size; a simple message
-// has neither declarations nor a matcher; a matcher has both selectors
-// and variants or neither. No count passes the size, so the selectors
-// times the variants fit 64 bits; their keys' bytes may not, and are
-// multiplied and added with a check.
-static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
+static const AssetFormat messageAsset = {
+    .magic = MLOC_MESSAGE_MAGIC,
+    .version = messageFormatVersion,
+    .flags = messageComplex,
+    .tags = messageTags,
+    .tagCount = messageFieldCount,
+    .required = 0,
+};
+
+// One field: a record kind's whole records, the keys, or the Unicode
+// version, which must be this one's.
+static mlocResult ReadField(const uint8_t* bytes, uint32_t payload, uint32_t field, uint32_t length,
+                            MessageView* v, uint64_t* keyBytes)
 {
-    if (size < messageHeaderSize || memcmp(bytes, MLOC_MESSAGE_MAGIC, 4) != 0)
+    if (field < messageCount)
     {
-        return mloc_errorFormat;
-    }
-    if (mlocLoad16(bytes + messageFormat) != messageFormatVersion)
-    {
-        return mloc_errorVersion;
-    }
-    if (mlocLoad32(bytes + messageSize) != size)
-    {
-        return mloc_errorFormat;
-    }
-    if (mlocLoad32(bytes + messageDataFormat) != MLOC_DATA_FORMAT_VERSION ||
-        mlocLoad32(bytes + messageUnicode) != UnicodeVersion())
-    {
-        return mloc_errorVersion;
-    }
-    v->bytes = bytes;
-    v->flags = mlocLoad16(bytes + messageFlags);
-    uint64_t total = messageHeaderSize;
-    for (uint32_t kind = 0; kind < messageCount; kind++)
-    {
-        v->count[kind] = mlocLoad32(bytes + messageCounts + kind * 4);
-        if (v->count[kind] > size)
+        if (length % messageRecordSizes[field] != 0)
         {
             return mloc_errorFormat;
         }
-        total += (uint64_t)v->count[kind] * messageRecordSizes[kind];
+        v->start[field] = payload;
+        v->count[field] = length / messageRecordSizes[field];
     }
-    uint64_t keys = 0;
-    bool simple = (v->flags & messageComplex) == 0;
-    if (ckd_mul(&keys, (uint64_t)v->count[messageSelectors] * v->count[messageVariants],
-                messageKeySize) ||
-        ckd_add(&total, total, keys) || total != size || (v->flags & ~messageComplex) != 0 ||
-        (simple && v->count[messageDeclarations] + v->count[messageVariants] > 0) ||
-        ((v->count[messageSelectors] == 0) != (v->count[messageVariants] == 0)))
+    else if (field == messageFieldKeys)
+    {
+        v->keyStart = payload;
+        *keyBytes = length;
+    }
+    else if (length != messageUnicodeSize)
     {
         return mloc_errorFormat;
     }
-    mlocMessageStarts(bytes, v->start, &v->keyStart);
+    else if (mlocLoad32(bytes + payload) != UnicodeVersion())
+    {
+        return mloc_errorVersion;
+    }
+    return mloc_success;
+}
+
+mlocResult mlocReadMessageLayout(const uint8_t* bytes, size_t size, MessageView* v)
+{
+    uint32_t flags = 0;
+    AssetField fields[messageFieldCount];
+    mlocResult result = mlocReadAsset(bytes, size, &messageAsset, &flags, fields);
+    if (result != mloc_success)
+    {
+        return result;
+    }
+    memset(v, 0, sizeof *v);
+    v->bytes = bytes;
+    v->flags = flags;
+    uint64_t keyBytes = 0;
+    for (uint32_t place = 0; place < messageFieldCount; place++)
+    {
+        result = fields[place].length == 0
+                     ? mloc_success
+                     : ReadField(bytes, fields[place].start, messageFieldKinds[place],
+                                 fields[place].length, v, &keyBytes);
+        if (result != mloc_success)
+        {
+            return result;
+        }
+    }
+    // A simple message has neither declarations nor a matcher; a matcher
+    // has both selectors and variants or neither, and a key for each
+    // selector of each variant.
+    bool simple = (v->flags & messageComplex) == 0;
+    if ((simple && v->count[messageDeclarations] + v->count[messageVariants] > 0) ||
+        (v->count[messageSelectors] == 0) != (v->count[messageVariants] == 0) ||
+        keyBytes !=
+            (uint64_t)v->count[messageSelectors] * v->count[messageVariants] * messageKeySize)
+    {
+        return mloc_errorFormat;
+    }
     v->pool = bytes + v->start[messagePool];
     return mloc_success;
 }
@@ -400,7 +425,7 @@ static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
 mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view)
 {
     MessageView v;
-    mlocResult result = ReadHeader(bytes, size, &v);
+    mlocResult result = mlocReadMessageLayout(bytes, size, &v);
     if (result != mloc_success)
     {
         return result;

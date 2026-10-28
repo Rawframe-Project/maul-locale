@@ -4,7 +4,9 @@
 #include "message_check.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "message_form.h"
+#include "message_read.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -264,16 +266,19 @@ static MessageCheck CheckVariants(const Checker* c)
     return Error(mloc_messageErrorNone, 0);
 }
 
-MessageCheck mlocCheckMessage(uint8_t* message, MessageTable* table, uint8_t* words)
+MessageCheck mlocCheckMessage(uint8_t* message, uint32_t size, MessageTable* table, uint8_t* words)
 {
+    // The compiler has just written the fields.
+    MessageView view;
+    mlocResult layout = mlocReadMessageLayout(message, size, &view);
+    MLOC_ASSERT(layout == mloc_success);
+    (void)layout;
     Checker c;
     c.message = message;
-    mlocMessageStarts(message, c.start, &c.keyStart);
-    for (uint32_t kind = 0; kind < messageCount; kind++)
-    {
-        c.count[kind] = mlocLoad32(message + messageCounts + kind * 4);
-    }
-    c.pool = message + c.start[messagePool];
+    memcpy(c.start, view.start, sizeof c.start);
+    memcpy(c.count, view.count, sizeof c.count);
+    c.keyStart = view.keyStart;
+    c.pool = view.pool;
     c.table = table;
     c.firstUse = words;
     c.boundBy = words + (size_t)c.count[messageVariables] * 4;

@@ -89,7 +89,8 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     mlocEmitWrite(&emit, buffer, &counts);
     parse = mlocParseMessage(bytes, length, &emit);
     uint32_t size = mlocEmitFinish(&emit, parse.flags, UnicodeVersion());
-    MessageCheck check = mlocCheckMessage(buffer, &emit.table, (uint8_t*)buffer + emit.wordStart);
+    MessageCheck check =
+        mlocCheckMessage(buffer, size, &emit.table, (uint8_t*)buffer + emit.wordStart);
     if (check.error != mloc_messageErrorNone)
     {
         return Refuse(errorOut, check.error, check.at);

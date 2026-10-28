@@ -149,13 +149,13 @@ duration_values: binary64 time_arith
 ixdtf_parse: binary64
 ixdtf_write: binary64 calendar_arith calendar_year date_time
 calendar_fields: calendar_arith calendar_year invariant
-message_form: bytes
+message_form: asset bytes
 message_text:
 message_table: bytes
-message_emit: bytes invariant message_form message_table
-message_check: bytes message_form message_table
+message_emit: bytes invariant message_form message_table message_text
+message_check: bytes invariant message_form message_read message_table
 message_parse: message_emit message_form message_text
-message_read: bytes invariant message_form message_text
+message_read: asset bytes invariant message_form message_text
 message_write: message_form message_read message_text
 message_cost: bytes invariant message_form message_read
 message_bind: bytes invariant message_cost message_form message_read message_text

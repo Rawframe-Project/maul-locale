@@ -277,8 +277,14 @@ static void RoundTrip(const char* text, size_t length)
     size_t again;
     uint8_t* second = Compile(canonical, written, &again);
     Require(second != NULL);
-    // The same records, the source offsets aside.
-    Require(memcmp(first + messageCounts, second + messageCounts, messageCount * 4) == 0);
+    // The same fields, so the same records, the source offsets aside.
+    uint32_t fields = mlocLoad32(first + assetFields);
+    Require(mlocLoad32(second + assetFields) == fields);
+    for (uint32_t i = 0, at = assetHeaderSize; i < fields; i++)
+    {
+        Require(memcmp(first + at, second + at, assetFieldHead) == 0);
+        at += (uint32_t)mlocAssetFieldBytes(mlocLoad32(first + at + 4));
+    }
     size_t rewritten;
     char* fixed = Write(second, again, &rewritten);
     Require(fixed != NULL && rewritten == written && memcmp(fixed, canonical, written) == 0);
@@ -293,18 +299,17 @@ static void ReadCompiled(const uint8_t* bytes, size_t size)
     // A copy of exactly the size, so that a read past it is caught.
     uint8_t* message = malloc(size > 0 ? size : 1);
     memcpy(message, bytes, size);
-    if (size >= messageHeaderSize)
+    if (size >= assetHeaderSize)
     {
-        // This library's magic, message format and versions, so that seeds
-        // compiled by another version still reach the records.
+        // This library's magic and message format, so that seeds compiled
+        // by another version still reach the fields.
         uint8_t current[128];
         size_t currentSize;
         mlocMessageError error;
         mlocTextResult result =
             mlocCompileMessage("", 0, current, sizeof current, &currentSize, &error);
         Require(result.status == mloc_success);
-        memcpy(message, current, messageFormat + 2);
-        memcpy(message + messageDataFormat, current + messageDataFormat, 8);
+        memcpy(message, current, assetFormat + 2);
     }
     size_t length;
     char* text = Write(message, size, &length);
