@@ -9,6 +9,7 @@
 // forArbitraryUnit.
 
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "unit_data.h"
 #include "unit_id.h"
@@ -219,6 +220,7 @@ static uint8_t ArbitraryGender(const GenderContext* c, const UnitId* id)
     UnitPart denominator[unitMaxFactors];
     uint32_t n = 0;
     uint32_t d = 0;
+    MLOC_ASSERT(id->count <= unitMaxFactors);
     for (uint32_t i = 0; i < id->count; i++)
     {
         UnitPart part = id->parts[i];

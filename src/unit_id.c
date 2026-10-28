@@ -10,6 +10,7 @@
 
 #include "bytes.h"
 #include "currency_tables.h"
+#include "invariant.h"
 #include "unit_tables.h"
 
 #include <string.h>
@@ -62,6 +63,8 @@ static bool Tokenize(Parser* p, size_t length)
         {
             return false;
         }
+        // An identifier within unitMaxIdLength has at most this many.
+        MLOC_ASSERT(p->count < maxTokens);
         p->tokens[p->count++] = (Token){(uint16_t)start, (uint16_t)(i - start)};
         start = i + 1;
     }
