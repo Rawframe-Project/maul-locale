@@ -8,6 +8,7 @@
 #include "zone_local.h"
 
 #include "date_time.h"
+#include "invariant.h"
 #include "zone_handle.h"
 #include "zone_rules.h"
 
@@ -61,6 +62,8 @@ static Local Possible(const mlocTimeZone* zone, const ZoneTables* t, bool named,
         }
         if (!more || end > local + secondsPerDay)
         {
+            // The spans come in order and each candidate lies in its own.
+            MLOC_ASSERT(r.count == 0 || r.earliest <= r.latest);
             return r;
         }
         int32_t after = Sum(next);
