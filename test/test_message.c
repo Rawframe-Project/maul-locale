@@ -13,6 +13,7 @@
 #include "test_print.h"
 
 #include "maul-locale/message.h"
+#include "maul-unicode/base.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -78,7 +79,7 @@ static void CheckCase(const SuiteCase* c)
         good = measured.status == mloc_errorCapacity && compiled.status == mloc_success &&
                compiled.offset == c->length && size <= needed && error == mloc_messageErrorNone &&
                memcmp(s_buffer, MLOC_MESSAGE_MAGIC, 4) == 0 &&
-               mlocLoad32(s_buffer + messageSize) == size;
+               mlocLoad32(s_buffer + assetSize) == size;
     }
     else
     {
@@ -107,11 +108,64 @@ static void TestSuite(void)
     }
 }
 
-// A message's size when compiled, the capacity it needs, and each record
-// count, for messages whose records are known.
+// A field of a well-formed message: its payload's offset and length, or
+// 0 and 0 when the message leaves it out.
+static uint32_t Locate(const uint8_t* message, uint32_t field, uint32_t* lengthOut)
+{
+    uint32_t tag = 0;
+    for (uint32_t place = 0; place < messageFieldCount; place++)
+    {
+        tag = messageFieldKinds[place] == field ? messageTags[place] : tag;
+    }
+    uint32_t at = assetHeaderSize;
+    for (uint32_t i = 0; i < mlocLoad32(message + assetFields); i++)
+    {
+        uint32_t length = mlocLoad32(message + at + 4);
+        if (mlocLoad32(message + at) == tag)
+        {
+            *lengthOut = length;
+            return at + assetFieldHead;
+        }
+        at += (uint32_t)mlocAssetFieldBytes(length);
+    }
+    *lengthOut = 0;
+    return 0;
+}
+
+// Whether two well-formed messages have the same fields, tags and
+// lengths: the same records, whatever their source offsets.
+static bool SameFields(const uint8_t* a, const uint8_t* b)
+{
+    uint32_t fields = mlocLoad32(a + assetFields);
+    if (mlocLoad32(b + assetFields) != fields)
+    {
+        return false;
+    }
+    uint32_t at = assetHeaderSize;
+    for (uint32_t i = 0; i < fields; i++)
+    {
+        if (memcmp(a + at, b + at, assetFieldHead) != 0)
+        {
+            return false;
+        }
+        at += (uint32_t)mlocAssetFieldBytes(mlocLoad32(a + at + 4));
+    }
+    return true;
+}
+
+// A record count of the message in s_buffer.
 static uint32_t Count(uint32_t kind)
 {
-    return mlocLoad32(s_buffer + messageCounts + kind * 4);
+    uint32_t length;
+    (void)Locate(s_buffer, kind, &length);
+    return length / messageRecordSizes[kind];
+}
+
+// The pool's offset in s_buffer.
+static uint32_t PoolStart(void)
+{
+    uint32_t length;
+    return Locate(s_buffer, messagePool, &length);
 }
 
 static bool Compile(const char* text, size_t* sizeOut)
@@ -135,10 +189,10 @@ static void TestRecords(void)
               Count(messageVariables) == 2,
           "its records are counted");
     CHECK(Count(messagePieces) == 6, "its patterns' pieces are counted");
-    CHECK((s_buffer[messageFlags] & messageComplex) != 0, "it is a complex message");
+    CHECK((s_buffer[assetFlags] & messageComplex) != 0, "it is a complex message");
 
     CHECK(Compile("  Hello, {$name}! \\{x\\}", &size), "a simple message compiles");
-    CHECK((s_buffer[messageFlags] & messageComplex) == 0, "it is a simple message");
+    CHECK((s_buffer[assetFlags] & messageComplex) == 0, "it is a simple message");
     CHECK(Count(messagePieces) == 3 && Count(messageVariables) == 1 && Count(messagePool) == 18,
           "its text keeps its spaces and drops its escapes");
 
@@ -155,20 +209,11 @@ static void TestRecords(void)
           "a noncharacter starts no name");
 }
 
-// A record's 32-bit field.
 // A record's field's byte offset in s_buffer.
 static uint32_t FieldAt(uint32_t kind, uint32_t index, uint32_t field)
 {
-    uint32_t at = messageHeaderSize;
-    for (uint32_t k = 0; k < kind; k++)
-    {
-        if (k + 1 == messageVariants)
-        {
-            at += Count(messageSelectors) * Count(messageVariants) * messageKeySize;
-        }
-        at += Count(k) * messageRecordSizes[k];
-    }
-    return at + index * messageRecordSizes[kind] + field * 4;
+    uint32_t length;
+    return Locate(s_buffer, kind, &length) + index * messageRecordSizes[kind] + field * 4;
 }
 
 static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
@@ -179,8 +224,7 @@ static uint32_t Field(uint32_t kind, uint32_t index, uint32_t field)
 // A pool string's bytes compared with text.
 static bool PoolIs(uint32_t offset, uint32_t length, const char* text)
 {
-    uint32_t pool = (uint32_t)(mlocLoad32(s_buffer + messageSize) - Count(messagePool));
-    return length == strlen(text) && memcmp(s_buffer + pool + offset, text, length) == 0;
+    return length == strlen(text) && memcmp(s_buffer + PoolStart() + offset, text, length) == 0;
 }
 
 static void TestLayout(void)
@@ -189,19 +233,28 @@ static void TestLayout(void)
     mlocMessageError error;
     const char* text = "{$x}{$y}";
     mlocTextResult result = mlocCompileMessage(text, 8, NULL, 0, &needed, &error);
-    // The header, two expressions, two pieces, two variables and their
-    // names, rounded to 8, then four slots of the table and the costs'
-    // words, one a variable and two an expression (more than the check's
-    // two a variable).
-    CHECK(result.status == mloc_errorCapacity && needed == 176 + 32 + 24,
-          "the capacity is the message's records and the table");
+    // The header, then fields of two expressions (64 bytes), two pieces
+    // (24), two variables (24) and their names (2, padded to 8), each
+    // after its 8-byte head; room for a Unicode version's field; then four
+    // slots of the table and the costs' words,
+    // one a variable and two an expression (more than the check's two a
+    // variable).
+    CHECK(result.status == mloc_errorCapacity && needed == 16 + 72 + 32 + 32 + 16 + 16 + 32 + 24,
+          "the capacity is the message's fields and the table");
     size_t size;
-    CHECK(Compile(text, &size) && size == 170, "the message is its records alone");
-    CHECK(mlocLoad16(s_buffer + messageFormat) == messageFormatVersion &&
-              mlocLoad16(s_buffer + messageFlags) == 0 &&
-              mlocLoad32(s_buffer + messageDataFormat) == MLOC_DATA_FORMAT_VERSION &&
-              mlocLoad32(s_buffer + messageUnicode) >> 16 >= 18,
-          "the header names the format and the versions");
+    CHECK(Compile(text, &size) && size == 16 + 72 + 32 + 32 + 16,
+          "the message is its fields alone");
+    CHECK(mlocLoad16(s_buffer + assetFormat) == messageFormatVersion &&
+              mlocLoad16(s_buffer + assetFlags) == 0 && mlocLoad32(s_buffer + assetFields) == 4 &&
+              mlocLoad32(s_buffer + assetHeaderSize) == messageTags[1] &&
+              mlocLoad32(s_buffer + assetHeaderSize + 4) == 64,
+          "the header names the format and the fields, the expressions first");
+    uint32_t length;
+    CHECK(Locate(s_buffer, messageFieldUnicode, &length) == 0 &&
+              Locate(s_buffer, messageDeclarations, &length) == 0,
+          "fields holding their defaults are left out");
+    CHECK(s_buffer[PoolStart() + 2] == 0 && s_buffer[PoolStart() + 7] == 0,
+          "a payload is padded with zeros");
     CHECK(Field(messageExpressions, 0, 0) == operandVariable &&
               Field(messageExpressions, 0, 1) == 0 && Field(messageExpressions, 1, 1) == 1 &&
               Field(messageExpressions, 0, 4) == 0 && Field(messageExpressions, 1, 7) == 4,
@@ -393,10 +446,9 @@ static void TestRoundTrip(void)
         size_t again = 0;
         result =
             mlocCompileMessage(canonical, (size_t)length, second, sizeof second, &again, &error);
-        bool same =
-            result.status == mloc_success &&
-            memcmp(s_buffer + messageCounts, second + messageCounts, messageCount * 4) == 0 &&
-            WriteBack(second, again) == length && memcmp(s_text, canonical, (size_t)length) == 0;
+        bool same = result.status == mloc_success && SameFields(s_buffer, second) &&
+                    WriteBack(second, again) == length &&
+                    memcmp(s_text, canonical, (size_t)length) == 0;
         if (!same)
         {
             printf("  %s: [%s] -> [%.*s]\n", s_suite[i].file, s_suite[i].source, (int)length,
@@ -496,7 +548,7 @@ static void TestFieldsRefused(void)
     // A name holding a space is no MF2 name.
     static uint8_t copy[4096];
     memcpy(copy, s_buffer, size);
-    uint32_t pool = (uint32_t)size - Count(messagePool);
+    uint32_t pool = PoolStart();
     copy[pool + Field(messageVariables, 0, 0)] = ' ';
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat, "a name with a space");
@@ -578,12 +630,10 @@ static void TestAmplified(void)
     CHECK(result.status == mloc_success, "the message compiles");
     // The text piece shrinks to one byte; the variable's name takes the
     // text's bytes, so the strings still fit the pool.
-    uint32_t starts[messageCount];
-    uint32_t keys;
-    mlocMessageStarts(message, starts, &keys);
-    uint8_t* piece =
-        message + starts[messagePieces] + references * messageRecordSizes[messagePieces];
-    uint8_t* variable = message + starts[messageVariables];
+    uint32_t length;
+    uint8_t* piece = message + Locate(message, messagePieces, &length) +
+                     references * messageRecordSizes[messagePieces];
+    uint8_t* variable = message + Locate(message, messageVariables, &length);
     Store(variable, mlocLoad32(piece + 4));
     Store(variable + 4, name);
     Store(piece + 8, 1);
@@ -645,49 +695,78 @@ static void TestCorrupted(void)
     CHECK(mlocWriteMessageText(NULL, size, &output) == mloc_errorInvalid &&
               mlocWriteMessageText(s_buffer, size, NULL) == mloc_errorInvalid,
           "null pointers are refused");
-    memcpy(copy, s_buffer, size);
-    copy[messageDataFormat] ^= 1;
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
-          "a message of another data format is refused as such");
-    // The field held a packed library version before: the 0.0.1 and 0.1.0
-    // messages never match a format.
-    static const uint32_t s_released[] = {1, 256};
-    for (size_t i = 0; i < 2; i++)
-    {
-        memcpy(copy, s_buffer, size);
-        mlocStore32(copy + messageDataFormat, s_released[i]);
-        CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
-              "a message of a released library version is refused");
-    }
 }
 
-// A header alone whose counts' records come to more than 2^64 bytes:
-// 2^32 - 1 selectors and 715,827,882 variants, whose keys and records
-// with a pool of 8 sum to its own 56 bytes modulo 2^64. The variants it
-// claims are far past its end.
-static void TestCountsWrapping(void)
+// The message in s_buffer, of size bytes, with a field's head (by its
+// place among the fields) set to a tag and a length, read back.
+static mlocResult WithHead(size_t size, uint32_t place, uint32_t tag, uint32_t length)
+{
+    static uint8_t copy[4096];
+    memcpy(copy, s_buffer, size);
+    uint32_t at = assetHeaderSize;
+    for (uint32_t i = 0; i < place; i++)
+    {
+        at += (uint32_t)mlocAssetFieldBytes(mlocLoad32(copy + at + 4));
+    }
+    Store(copy + at, tag);
+    Store(copy + at + 4, length);
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    return mlocWriteMessageText(copy, size, &output);
+}
+
+// Fields out of their order, twice, empty, of part of a record, past the
+// size, with padding that is not zero, or keys that do not match the
+// selectors and variants: not a message.
+static void TestFieldsMalformed(void)
 {
     size_t size;
     CHECK(Compile(".input {$x :f} .match $x 1 {{a}} * {{b}}", &size), "a matcher compiles");
-    uint8_t* header = malloc(messageHeaderSize);
-    memcpy(header, s_buffer, messageHeaderSize);
-    Store(header + messageSize, messageHeaderSize);
-    for (uint32_t kind = 0; kind < messageCount; kind++)
-    {
-        Store(header + messageCounts + kind * 4, 0);
-    }
-    Store(header + messageCounts + messageSelectors * 4, UINT32_MAX);
-    Store(header + messageCounts + messageVariants * 4, 715827882);
-    Store(header + messageCounts + messagePool * 4, 8);
+    // DECL EXPR SELE KEYS VNTS PIEC VARS POOL.
+    CHECK(mlocLoad32(s_buffer + assetFields) == 8, "it has eight fields");
+    uint32_t keys = 0;
+    uint32_t pieces = 0;
+    (void)Locate(s_buffer, messageFieldKeys, &keys);
+    (void)Locate(s_buffer, messagePieces, &pieces);
+    CHECK(WithHead(size, 0, messageTags[1], 12) == mloc_errorFormat &&
+              WithHead(size, 1, messageTags[0], 32) == mloc_errorFormat,
+          "fields out of their order");
+    CHECK(WithHead(size, 6, messageTags[7], 12) == mloc_errorFormat, "a field twice");
+    CHECK(WithHead(size, 7, messageTags[9], 0) == mloc_errorFormat, "an empty field");
+    CHECK(WithHead(size, 5, messageTags[7], pieces - 4) == mloc_errorFormat, "part of a record");
+    CHECK(WithHead(size, 7, messageTags[9], UINT32_MAX) == mloc_errorFormat,
+          "a field past the size");
+    // Four bytes short: the same padded size, and the last key's length
+    // (a catch-all's 0) read as padding.
+    CHECK(WithHead(size, 3, messageTags[5], keys - 4) == mloc_errorFormat,
+          "keys short of the selectors times the variants");
+
+    static uint8_t copy[4096];
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
-    CHECK(mlocWriteMessageText(header, messageHeaderSize, &output) == mloc_errorFormat,
-          "counts whose records wrap to the size are refused");
-    free(header);
+    uint32_t poolLength;
+    uint32_t pool = Locate(s_buffer, messagePool, &poolLength);
+    CHECK(poolLength % 8 != 0, "the pool is padded");
+    memcpy(copy, s_buffer, size);
+    copy[pool + poolLength] = 1;
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
+          "padding that is not zero");
+    memcpy(copy, s_buffer, size);
+    Store(copy + assetFields, 9);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
+          "more fields than the size holds");
+    memcpy(copy, s_buffer, size);
+    Store(copy + assetFields, UINT32_MAX);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
+          "a count of fields past any size");
+    memcpy(copy, s_buffer, size);
+    Store(copy + assetFields, 7);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
+          "fewer fields than fill the size");
 }
 
-// A message of another format, data format or Unicode version is refused
-// as another version's, the message format before the size, which another
-// format may place elsewhere; a wrong magic is no message.
+// A message a later version wrote (another format version, a flag or a
+// field this one does not know) is refused as another version's, the
+// format before the size, which another format may place elsewhere; a
+// wrong magic is no message.
 static void TestOtherVersions(void)
 {
     size_t size;
@@ -695,23 +774,62 @@ static void TestOtherVersions(void)
     static uint8_t copy[4096];
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
     memcpy(copy, s_buffer, size);
-    copy[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    copy[assetFormat] = (uint8_t)(messageFormatVersion + 1);
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion, "another message format");
-    Store(copy + messageSize, (uint32_t)size + 8);
+    Store(copy + assetSize, (uint32_t)size + 8);
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
           "the message format is read before the size");
     memcpy(copy, s_buffer, size);
-    Store(copy + messageDataFormat, MLOC_DATA_FORMAT_VERSION + 1);
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion, "another data format");
-    memcpy(copy, s_buffer, size);
-    Store(copy + messageUnicode, mlocLoad32(s_buffer + messageUnicode) + 1);
+    copy[assetFlags] |= 2;
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
-          "another Unicode version");
+          "a flag of a later version");
+    CHECK(WithHead(size, 0, MLOC_ASSET_TAG('N', 'E', 'X', 'T'), 64) == mloc_errorVersion &&
+              WithHead(size, 1, 0, 24) == mloc_errorVersion,
+          "a field of a later version");
     memcpy(copy, s_buffer, size);
     copy[0] ^= 0x20;
-    copy[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    copy[assetFormat] = (uint8_t)(messageFormatVersion + 1);
     CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
           "a wrong magic is no message, whatever its format");
+}
+
+// A message records the Unicode version of its NFC only when a string
+// it normalized holds a code point that version leaves unassigned
+// (U+0378), whose NFC a later version may change; a noncharacter
+// (U+FDD0) is unassigned for good. The version recorded must be the
+// reader's; without it, any Unicode version reads the message.
+static void TestUnicodeVersion(void)
+{
+    size_t size;
+    uint32_t length;
+    CHECK(Compile(".input {$x :string} .match $x |\xEF\xB7\x90| {{a}} * {{b}}", &size) &&
+              Locate(s_buffer, messageFieldUnicode, &length) == 0,
+          "a key of a noncharacter records no version");
+    CHECK(Compile("{|\xCD\xB8|} text \xCD\xB8", &size) &&
+              Locate(s_buffer, messageFieldUnicode, &length) == 0,
+          "an unassigned code point outside what is normalized records none");
+    CHECK(Compile(".input {$x :string} .match $x |a\xCD\xB8| {{a}} * {{b}}", &size),
+          "a key of an unassigned code point compiles");
+    uint32_t at = Locate(s_buffer, messageFieldUnicode, &length);
+    muniVersion unicode = muniGetUnicodeVersion();
+    uint32_t version = (uint32_t)unicode.major << 16 | (uint32_t)unicode.minor << 8 | unicode.patch;
+    CHECK(at > 0 && length == messageUnicodeSize && mlocLoad32(s_buffer + at) == version &&
+              at + 8 == size && mlocLoad32(s_buffer + at + 4) == 0,
+          "it records the version last");
+    CHECK(WriteBack(s_buffer, size) > 0, "it reads back under its version");
+    static uint8_t copy[4096];
+    memcpy(copy, s_buffer, size);
+    Store(copy + at, version + 1);
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
+          "it is refused under another");
+    // Without the field, nothing names a version: the same message with
+    // the field cut off reads under any.
+    memcpy(copy, s_buffer, size);
+    Store(copy + assetSize, (uint32_t)size - 16);
+    Store(copy + assetFields, mlocLoad32(copy + assetFields) - 1);
+    CHECK(mlocWriteMessageText(copy, size - 16, &output) == mloc_success,
+          "the message without it is read");
 }
 
 // Names stored in NFC must still be names: U+037E becomes ";" and U+1FEF
@@ -1481,7 +1599,7 @@ static void TestRefusedBinds(void)
     s_magic[0] ^= 0x20;
     static uint8_t s_version[256];
     memcpy(s_version, s_message, size);
-    s_version[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    s_version[assetFormat] = (uint8_t)(messageFormatVersion + 1);
     mlocMessageFormatter zero;
     memset(&zero, 0, sizeof zero);
     size_t bound = 0;
@@ -1530,8 +1648,9 @@ int main(void)
     TestRoundTrip();
     TestCanonical();
     TestCorrupted();
-    TestCountsWrapping();
+    TestFieldsMalformed();
     TestOtherVersions();
+    TestUnicodeVersion();
     TestFieldsRefused();
     TestAmplified();
     TestRefused();

@@ -25,6 +25,6 @@ typedef struct MessageCheck
 
 // Checks a message message_emit wrote; table is its scratch table and
 // words its two words a variable.
-MessageCheck mlocCheckMessage(uint8_t* message, MessageTable* table, uint8_t* words);
+MessageCheck mlocCheckMessage(uint8_t* message, uint32_t size, MessageTable* table, uint8_t* words);
 
 #endif

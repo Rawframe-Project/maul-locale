@@ -52,7 +52,7 @@
 enum
 {
     // Before 1.0.0 it changes whenever the bytes do.
-    catalogFormatVersion = 1,
+    catalogFormatVersion = 2,
     catalogSourceFlag = 1,
     catalogKeysHead = 32,
     catalogMessagesHead = 16,

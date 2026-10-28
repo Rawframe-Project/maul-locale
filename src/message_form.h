@@ -2,18 +2,24 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The compiled message's layout, which message_compile writes and
-// message_read checks. All numbers are 32-bit little-endian. A header,
-// then the records of each kind in this order, each kind's count in the
-// header: declarations, expressions, markups, parameters (options and
+// message_read checks: an asset (asset.h, docs/internals/data.md#asset-
+// formats), the magic "MLMS", messageFormatVersion, a flag for a complex
+// message, and fields in the order of messageTags, none required: a field
+// that would hold no records is left out. All numbers are 32-bit
+// little-endian. Each record kind is a field of whole records:
+// declarations, expressions, markups, parameters (options and
 // attributes), selectors, keys (one per selector per variant), variants,
-// pieces, variables, and last the pool of string bytes. A string is an
-// offset into the pool and a length.
+// pieces, variables, and the pool of string bytes. A string is an offset
+// into the pool and a length. Last, only when a string the compiler
+// normalized holds a code point its Unicode version leaves unassigned,
+// that Unicode version, whose NFC the string is.
 //
-// A data layout: tools/check_data_format.py watches this header.
+// An asset layout: tools/check_data_format.py watches this header with messageFormatVersion.
 
 #ifndef MLOC_MESSAGE_FORM_H
 #define MLOC_MESSAGE_FORM_H
 
+#include "asset.h"
 #include "bytes.h"
 
 #include <stdint.h>
@@ -21,21 +27,12 @@
 // The first four bytes.
 #define MLOC_MESSAGE_MAGIC "MLMS"
 
-static const uint32_t messageFormatVersion = 1;
-static const uint32_t messageHeaderSize = 56;
-// Header flags: a complex message (declarations or a quoted body).
-static const uint32_t messageComplex = 1;
-
-// The header's fields, by byte offset.
 enum
 {
-    messageMagic = 0,
-    messageFormat = 4, // 16 bits
-    messageFlags = 6,  // 16 bits
-    messageSize = 8,
-    messageDataFormat = 12, // MLOC_DATA_FORMAT_VERSION
-    messageUnicode = 16,    // the Unicode version of its NFC
-    messageCounts = 20,     // nine counts, in the order of messageCount
+    // Before 1.0.0 it changes whenever the bytes do.
+    messageFormatVersion = 2,
+    // The header's flag: a complex message (declarations or a quoted body).
+    messageComplex = 1,
 };
 
 // The kinds of records, in their order in the message.
@@ -122,23 +119,32 @@ enum
     variableLocal = 2,
 };
 
-// Each kind's first byte in a message whose counts are known to fit (one
-// compiled here), and the keys'.
-static inline void mlocMessageStarts(const uint8_t* message, uint32_t* starts, uint32_t* keyStart)
+// The fields: one per record kind, in the order of messageCount but for
+// the keys, which come before the variants, then the Unicode version.
+enum
 {
-    uint32_t at = messageHeaderSize;
-    uint32_t selectors = mlocLoad32(message + messageCounts + messageSelectors * 4);
-    uint32_t variants = mlocLoad32(message + messageCounts + messageVariants * 4);
-    for (uint32_t kind = 0; kind < messageCount; kind++)
-    {
-        if (kind == messageVariants)
-        {
-            *keyStart = at;
-            at += selectors * variants * messageKeySize;
-        }
-        starts[kind] = at;
-        at += mlocLoad32(message + messageCounts + kind * 4) * messageRecordSizes[kind];
-    }
-}
+    messageFieldKeys = messageCount,
+    messageFieldUnicode = messageCount + 1,
+    messageFieldCount = messageCount + 2,
+};
+
+// Each field's tag in its order in a message, and what it holds (a
+// record kind, messageFieldKeys or messageFieldUnicode).
+static const uint32_t messageTags[messageFieldCount] = {
+    MLOC_ASSET_TAG('D', 'E', 'C', 'L'), MLOC_ASSET_TAG('E', 'X', 'P', 'R'),
+    MLOC_ASSET_TAG('M', 'A', 'R', 'K'), MLOC_ASSET_TAG('P', 'A', 'R', 'M'),
+    MLOC_ASSET_TAG('S', 'E', 'L', 'E'), MLOC_ASSET_TAG('K', 'E', 'Y', 'S'),
+    MLOC_ASSET_TAG('V', 'N', 'T', 'S'), MLOC_ASSET_TAG('P', 'I', 'E', 'C'),
+    MLOC_ASSET_TAG('V', 'A', 'R', 'S'), MLOC_ASSET_TAG('P', 'O', 'O', 'L'),
+    MLOC_ASSET_TAG('U', 'N', 'I', 'C'),
+};
+static const uint32_t messageFieldKinds[messageFieldCount] = {
+    messageDeclarations, messageExpressions, messageMarkups,      messageParameters,
+    messageSelectors,    messageFieldKeys,   messageVariants,     messagePieces,
+    messageVariables,    messagePool,        messageFieldUnicode,
+};
+
+// The Unicode version's payload: major << 16 | minor << 8 | patch.
+static const uint32_t messageUnicodeSize = 4;
 
 #endif

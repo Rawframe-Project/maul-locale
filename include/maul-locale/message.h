@@ -6,8 +6,11 @@
 // compiled message is locale-free: it holds the message's declarations,
 // selectors, variants and patterns with their names resolved, keys and
 // names in NFC, and every syntax and data model check done. It is the form
-// a catalog stores; it is valid with every library of its data format
-// version (MLOC_DATA_FORMAT_VERSION) and Unicode version.
+// a catalog stores, and an asset of its own format version: it names
+// nothing in the data, so it stays valid when the data changes. It names
+// its Unicode version only when a key or name holds a code point that
+// version leaves unassigned, whose NFC a later version may change; such a
+// message reads only with that Unicode version.
 
 #ifndef MAUL_LOCALE_MESSAGE_H
 #define MAUL_LOCALE_MESSAGE_H
@@ -134,8 +137,10 @@ extern "C"
     ///         when the bytes are not a compiled message, or one whose text
     ///         would pass MLOC_MAX_MESSAGE_TEXT bytes, which could not
     ///         compile again;
-    ///         mloc_errorVersion for one of another format, library or Unicode
-    ///         version; mloc_errorInvalid for a null pointer.
+    ///         mloc_errorVersion for one a later version wrote (another
+    ///         format version, a flag or field this one does not know) or
+    ///         one that names another Unicode version; mloc_errorInvalid for
+    ///         a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocWriteMessageText(const void* message, size_t size,

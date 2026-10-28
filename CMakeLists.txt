@@ -290,8 +290,10 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(data WHITEBOX)
     maul_add_test(locale)
     maul_add_test(message WHITEBOX)
-    # The suite's date cases read the dates.
+    # The suite's date cases read the dates; a message's Unicode version is
+    # maul-unicode's.
     if(TARGET test_message)
+        target_link_libraries(test_message PRIVATE maul-unicode::maul-unicode)
         set(MLOC_MESSAGE_DATES ${PROJECT_SOURCE_DIR}/src/generated/dates.mloc)
         if(EMSCRIPTEN)
             target_link_options(test_message PRIVATE "SHELL:--embed-file ${MLOC_MESSAGE_DATES}@/dates.mloc")
