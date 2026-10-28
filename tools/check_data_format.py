@@ -12,9 +12,10 @@
 # change of a data layout increases the format in
 # include/maul-locale/base.h, a change of an asset layout its own version;
 # then --write records them again. Each data layout header carries MARKER
-# and each asset layout header ASSET_MARKER naming its constant; a header
-# of src/ that carries one must be recorded, so a new layout header cannot
-# go unwatched. The hashes cannot see a validator that accepts more or
+# and each asset layout header ASSET_MARKER naming its constant, which
+# that header or another sets; a header that lays out both (a hash both
+# kinds store) carries both. A header of src/ that carries one must be
+# recorded, so a new layout header cannot go unwatched. The hashes cannot see a validator that accepts more or
 # less; docs/internals/data.md#versions lists those changes.
 #
 # usage: tools/check_data_format.py [--write]
@@ -88,8 +89,8 @@ def asset_constant(path):
     return m.group(1) if m else None
 
 
-# The data layouts: the headers the patterns match, but an asset's, which
-# a pattern such as src/*_tables.h may also match.
+# The data layouts: the headers the patterns match, but one that lays out
+# an asset alone, which a pattern such as src/*_tables.h may also match.
 def current(patterns):
     paths = set()
     for pattern in patterns:
@@ -97,21 +98,30 @@ def current(patterns):
         if not found:
             sys.exit("check_data_format: no file matches " + pattern)
         paths.update(os.path.relpath(p, ROOT).replace(os.sep, "/") for p in found)
-    return {path: digest(path) for path in sorted(paths) if asset_constant(path) is None}
+    return {path: digest(path) for path in sorted(paths)
+            if asset_constant(path) is None or MARKER in text_of(path).splitlines()}
+
+
+# A version constant's value, from the header of src/ that sets it.
+def version_of(constant):
+    found = []
+    for path in headers():
+        m = re.search(r"\b%s = (\d+)\b" % re.escape(constant), text_of(path))
+        if m is not None:
+            found.append(int(m.group(1)))
+    if len(found) != 1:
+        sys.exit("check_data_format: %s is set %d times in src/" % (constant, len(found)))
+    return found[0]
 
 
 # The asset layouts: each header with the asset marker, its constant, the
-# version the header gives it and its hash.
+# version it has and the header's hash.
 def current_assets():
     out = {}
     for path in headers():
         constant = asset_constant(path)
-        if constant is None:
-            continue
-        m = re.search(r"\b%s = (\d+)\b" % re.escape(constant), text_of(path))
-        if m is None:
-            sys.exit("check_data_format: %s names %s but does not set it" % (path, constant))
-        out[path] = (constant, int(m.group(1)), digest(path))
+        if constant is not None:
+            out[path] = (constant, version_of(constant), digest(path))
     return out
 
 
