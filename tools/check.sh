@@ -13,7 +13,8 @@
 #   tools/check.sh pr        what the pull request check runs on this
 #                            machine but the CLDR checks: every rule check,
 #                            the tables generated from data in the
-#                            repository, clang-tidy, the linux-gcc-14 and
+#                            repository, clang-tidy in Release and in
+#                            Debug, the linux-gcc-14 and
 #                            linux-clang-20-asan presets, and a short
 #                            fuzzing pass.
 #   tools/check.sh full      also the other Linux presets (shared with the
@@ -49,7 +50,7 @@ jobs=${JOBS:-8}
 
 step() { printf '\n== %s\n' "$*"; }
 
-# A tree outside the presets (clang-tidy, fuzzing, the CLDR checks).
+# A tree outside the presets (fuzzing, the CLDR checks).
 configure() { # name, then cmake arguments
     local name=check-$1
     shift
@@ -173,14 +174,21 @@ python3 tools/gen_pow5_tables.py --check
 python3 tools/gen_turkish_marks.py --check
 python3 tools/gen_finnish_types.py --check
 
-step "clang-tidy"
-configure tidy -DCMAKE_C_COMPILER=clang-20 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMAUL_LOCALE_BUILD_TESTS=OFF
 files=(src/*.c)
 [ -f "${files[0]}" ] || {
     echo "no source file for clang-tidy" >&2
     exit 1
 }
-printf '%s\n' "${files[@]}" | xargs -P "$jobs" -n 1 clang-tidy-20 -p "$out/check-tidy" --quiet --warnings-as-errors='*' 2>/dev/null
+# As CI's checks job: on the Release preset, where the assertions compile
+# out, and with them live. Each hides findings the other shows.
+for build in Release Debug; do
+    step "clang-tidy, $build"
+    cmake --preset linux-clang-20 -B "$out/check-tidy-$build" -DCMAKE_BUILD_TYPE=$build \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMAUL_LOCALE_BUILD_TESTS=OFF -DMAUL_LOCALE_BUILD_BENCH=OFF \
+        >"$out/check-tidy-$build.log"
+    printf '%s\n' "${files[@]}" | xargs -P "$jobs" -n 1 clang-tidy-20 -p "$out/check-tidy-$build" --quiet \
+        --warnings-as-errors='*' 2>/dev/null
+done
 
 preset linux-gcc-14
 preset linux-clang-20-asan

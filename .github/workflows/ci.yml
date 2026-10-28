@@ -114,15 +114,26 @@ jobs:
           python3 tools/gen_pow5_tables.py --check
           python3 tools/gen_turkish_marks.py --check
           python3 tools/gen_finnish_types.py --check
-      - name: clang-tidy
-        # One file per process, four at a time.
+      # clang-tidy twice, one file per process, four at a time: on the
+      # Release preset, where the assertions compile out and the paths
+      # they ruled out open, and with them live, since a live assertion's
+      # branches count toward a function's complexity.
+      - name: clang-tidy, assertions compiled out
         run: |
-          cmake -B out/tidy -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
+          cmake --preset linux-clang-20 -B out/tidy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
           files=(src/*.c)
           [ -f "${files[0]}" ] || { echo "::error::no source file for clang-tidy"; exit 1; }
           echo "${#files[@]} files"
           printf '%s\n' "${files[@]}" | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy --quiet --warnings-as-errors='*'
+      - name: clang-tidy, assertions live
+        run: |
+          cmake --preset linux-clang-20 -B out/tidy-asserts -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
+          files=(src/*.c)
+          [ -f "${files[0]}" ] || { echo "::error::no source file for clang-tidy"; exit 1; }
+          printf '%s\n' "${files[@]}" | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy-asserts --quiet \
+            --warnings-as-errors='*'
 
   # Every cell builds with warnings as errors and runs the whole suite, the
   # header tests included; the shared cell also installs the library and
