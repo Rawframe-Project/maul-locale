@@ -356,6 +356,27 @@ static void TestDayJumps(void)
               mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &noon, &back, &hours, &d) ==
                   mloc_errorInvalid,
           "hours across a skipped day: a day of no length");
+    // Beside the jump the windows last and hold their ends: from noon of
+    // 29 December 2011 under -10:00 to noon of 31 December under +14:00
+    // is two calendar days though 24 hours pass, and to noon of 1 January
+    // three.
+    mlocInstant before = {INT64_C(1325196000), 0};
+    mlocInstant after = {INT64_C(1325282400), 0};
+    CHECK(mlocZonedDateTimeTotal(&apia, mloc_calendarGregorian, &before, &after, mloc_unitDay,
+                                 &total) == mloc_success &&
+              total == 2.0 &&
+              mlocZonedDateTimeTotal(&apia, mloc_calendarGregorian, &after, &before, mloc_unitDay,
+                                     &total) == mloc_success &&
+              total == -2.0 &&
+              mlocZonedDateTimeTotal(&apia, mloc_calendarGregorian, &before, &noon, mloc_unitDay,
+                                     &total) == mloc_success &&
+              total == 3.0,
+          "totals of whole days across the skipped day");
+    CHECK(mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &before, &after, &days, &d) ==
+                  mloc_success &&
+              d.date.years == 0 && d.date.months == 0 && d.date.weeks == 0 && d.date.days == 2 &&
+              d.time.seconds == 0 && d.time.nanoseconds == 0,
+          "two days rounded across the skipped day");
 }
 
 int main(void)
