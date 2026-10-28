@@ -6,8 +6,9 @@
 // autumn fold, and Monrovia's offset of -00:44:30 in 1970: days added as
 // calendar days and hours as exact time, differences whose rounding counts
 // the zone's day, rounding to a day of 23 hours and within a fold, offsets
-// weighed against the zone, every refusal, and differences across the
-// whole day Apia skipped and the one Sitka lived twice.
+// weighed against the zone, every refusal, and the refusal of
+// differences across the whole day Apia skipped and the one Sitka lived
+// twice.
 
 #include "test_harness.h"
 
@@ -315,10 +316,10 @@ static void TestOffset(void)
           "an offset taking the first day's date-time out of the range");
 }
 
-// A difference rounded to days across a jump of a whole wall-clock day:
-// the window NudgeToCalendarUnit shifts once misses the destination,
-// which ECMA-262 asserts it holds. The call returns, though its answer
-// is not yet the right one.
+// Differences rounded or totaled across a jump of a whole wall-clock
+// day, where ECMA-262 asserts that the windows of NudgeToCalendarUnit
+// and the day of NudgeToZonedTime last a while and hold the destination,
+// and gives no answer when they do not: each is refused.
 static void TestDayJumps(void)
 {
     // Pacific/Apia skipped 30 December 2011; from 11:59:59 to 10:59:59 UTC
@@ -333,13 +334,28 @@ static void TestDayJumps(void)
     mlocInstant sitkaTwo = {INT64_C(-3225223727), 0};
     mlocDateTimeRounding days = {mloc_unitDay, mloc_unitDay, 1, mloc_roundHalfExpand};
     mlocDateTimeDuration d = {0};
-    mlocResult apiaResult =
-        mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &apiaOne, &apiaTwo, &days, &d);
-    mlocResult sitkaResult =
-        mlocZonedDateTimeUntil(&sitka, mloc_calendarGregorian, &sitkaOne, &sitkaTwo, &days, &d);
-    CHECK((apiaResult == mloc_success || apiaResult == mloc_errorInvalid) &&
-              (sitkaResult == mloc_success || sitkaResult == mloc_errorInvalid),
-          "days across a skipped and a repeated day");
+    double total = 0;
+    CHECK(mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &apiaOne, &apiaTwo, &days, &d) ==
+                  mloc_errorInvalid &&
+              mlocZonedDateTimeTotal(&apia, mloc_calendarGregorian, &apiaOne, &apiaTwo,
+                                     mloc_unitDay, &total) == mloc_errorInvalid,
+          "days across a skipped day: an empty window");
+    CHECK(mlocZonedDateTimeUntil(&sitka, mloc_calendarGregorian, &sitkaOne, &sitkaTwo, &days, &d) ==
+                  mloc_errorInvalid &&
+              mlocZonedDateTimeTotal(&sitka, mloc_calendarGregorian, &sitkaOne, &sitkaTwo,
+                                     mloc_unitDay, &total) == mloc_errorInvalid,
+          "days across a repeated day: a shifted window that misses the end");
+    // 2012-01-01T12:00+14:00 in Apia, and a day back from it, rounded to
+    // hours: the day before the end has no length.
+    mlocInstant noon = {INT64_C(1325368800), 0};
+    mlocInstant back = {0};
+    mlocDateTimeDuration dayBack = {{0, 0, 0, -1}, {0, 0}};
+    mlocDateTimeRounding hours = {mloc_unitDay, mloc_unitHour, 1, mloc_roundHalfExpand};
+    CHECK(mlocAddToZonedDateTime(&apia, mloc_calendarGregorian, &noon, &dayBack,
+                                 mloc_overflowConstrain, &back) == mloc_success &&
+              mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &noon, &back, &hours, &d) ==
+                  mloc_errorInvalid,
+          "hours across a skipped day: a day of no length");
 }
 
 int main(void)

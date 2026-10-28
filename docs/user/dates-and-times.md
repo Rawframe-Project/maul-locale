@@ -38,7 +38,7 @@ if (mlocFindTimeZone(&set, "Europe/Istanbul", 15, &zone) == mloc_success &&
 }
 ```
 
-`mlocAddToZonedDateTime`, `mlocZonedDateTimeUntil` and `mlocRoundZonedDateTime` do arithmetic on a zoned date-time as Temporal's `ZonedDateTime` does: a day added across a change of clocks keeps the wall-clock time, and an hour added does not. Plain times, date-times, instants and durations have their own arithmetic, rounding and totals in `zone.h`.
+`mlocAddToZonedDateTime`, `mlocZonedDateTimeUntil` and `mlocRoundZonedDateTime` do arithmetic on a zoned date-time as Temporal's `ZonedDateTime` does: a day added across a change of clocks keeps the wall-clock time, and an hour added does not. A difference rounded or totaled across a jump of the clocks by a whole day, as in `Pacific/Apia` at the end of 2011, is refused with `mloc_errorInvalid`: Temporal does not yet say what it is. Plain times, date-times, instants and durations have their own arithmetic, rounding and totals in `zone.h`.
 
 ## Temporal strings
 
