@@ -34,7 +34,7 @@ may change the API, the ABI and every data format.
 - **Breaking: the data format is 0x80000005.** The new `segments.mloc`
   (12 KB) holds the segmentation tailorings. Data files, catalogs and
   compiled messages made by 0.2.x (format 0x80000002) are refused with
-  `mloc_errorVersion`: take this release's data files or regenerate
+  `mloc_errorDataVersion`: take this release's data files or regenerate
   them with its `mlocgen`, rebuild catalogs with its `mloccat`, and
   compile stored messages again
   ([#78](https://github.com/Rawframe-Project/maul-locale/pull/78),
@@ -100,7 +100,7 @@ may change the API, the ABI and every data format.
   `format`, a `uint32_t` holding the new `MLOC_DATA_FORMAT_VERSION`
   (`0x80000002` in this release). Data files, catalogs and standalone
   compiled messages (from `mlocCompileMessage`) made by 0.1.0 or earlier
-  are refused with `mloc_errorVersion`: a program must regenerate
+  are refused with `mloc_errorDataVersion`: a program must regenerate
   its data files with this release's `mlocgen`, its catalogs with its
   `mloccat`, and compile stored messages again. A host that keeps data
   files per library version should keep them per data version
@@ -161,7 +161,7 @@ The locale data moves from CLDR 49 beta 3 to the final CLDR 49 release.
   with region CA now gives `America/Los_Angeles` instead of
   `America/Vancouver`.
 - Data files from 0.0.1 do not open with 0.1.0: `mlocOpenData` refuses
-  them with `mloc_errorVersion`. Take the data files from the same
+  them with `mloc_errorDataVersion`. Take the data files from the same
   release as the library, and update the two together.
 
 ## [0.0.1](https://github.com/Rawframe-Project/maul-locale/releases/tag/v0.0.1) (2026-10-23)
