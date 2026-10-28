@@ -16,6 +16,7 @@
 #ifndef MLOC_SRC_MESSAGE_READ_H
 #define MLOC_SRC_MESSAGE_READ_H
 
+#include "invariant.h"
 #include "message_form.h"
 
 #include "maul-locale/base.h"
@@ -39,10 +40,12 @@ typedef struct MessageView
 // Unicode version.
 mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view);
 
-// A record's 32-bit field.
+// A record's 32-bit field. Every index a caller reads by is one the
+// reader checked, or a loop's below the count.
 static inline uint32_t mlocMessageField(const MessageView* view, uint32_t kind, uint32_t index,
                                         uint32_t field)
 {
+    MLOC_ASSERT(index < view->count[kind] && field < messageRecordSizes[kind] / 4);
     return mlocLoad32(view->bytes + view->start[kind] + index * messageRecordSizes[kind] +
                       field * 4);
 }

@@ -9,6 +9,7 @@
 
 #include "catalog_tables.h"
 #include "catalog_view.h"
+#include "invariant.h"
 
 #include "maul-locale/catalog.h"
 
@@ -128,6 +129,8 @@ static mlocResult BindAt(Binder* b, const mlocMessageFormatter* formatter, const
         step = b->room - b->used;
     }
     b->used += step;
+    // The arena's offsets are 32 bits (BinderOf).
+    MLOC_ASSERT(b->arena == nullptr || b->used <= b->room);
     return mloc_success;
 }
 
@@ -137,6 +140,8 @@ static mlocResult BindAt(Binder* b, const mlocMessageFormatter* formatter, const
 // does not fit.
 static mlocResult BindIndex(const Chain* c, Binder* b, uint32_t index, Slot* out)
 {
+    // A slot's position is a byte.
+    MLOC_ASSERT(c->count <= MLOC_MAX_CATALOG_CHAIN && index < c->keyCount);
     const void* message = nullptr;
     size_t size = 0;
     uint32_t first = 0;
@@ -369,6 +374,8 @@ mlocResult mlocFormatCatalogMessage(const mlocCatalogChain* chain, uint32_t inde
     {
         return WriteKeyAt(&c, index, output);
     }
+    // A bound slot's message lies in the arena the chain has used.
+    MLOC_ASSERT(slot.state == slotBound && slot.offset < LoadUsed(&c));
     const uint8_t* bound = c.cache + SlotsEnd(c.keyCount) + slot.offset;
     return mlocFormatMessage(bound, arguments, argumentCount, output, faults);
 }

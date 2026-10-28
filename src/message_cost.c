@@ -6,6 +6,7 @@
 #include "message_cost.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 static uint32_t Field(const MessageView* v, uint32_t kind, uint32_t index, uint32_t field)
 {
@@ -59,6 +60,7 @@ static Cost CostOf(const MessageView* v, const uint8_t* words, uint32_t e)
         {
             continue;
         }
+        MLOC_ASSERT(variable < v->count[messageVariables]);
         uint32_t d = mlocLoad32(words + (size_t)variable * 4);
         if (d == messageUnbound)
         {
@@ -88,6 +90,7 @@ static Cost CostOf(const MessageView* v, const uint8_t* words, uint32_t e)
 // The resolutions a variable's reference makes.
 static uint64_t VariableCost(const MessageView* v, const uint8_t* words, uint32_t variable)
 {
+    MLOC_ASSERT(variable < v->count[messageVariables]);
     uint32_t d = mlocLoad32(words + (size_t)variable * 4);
     if (d == messageUnbound)
     {

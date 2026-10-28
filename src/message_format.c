@@ -8,6 +8,7 @@
 #include "message_format.h"
 
 #include "decimal.h"
+#include "invariant.h"
 #include "message_prepare.h"
 #include "message_resolve.h"
 
@@ -507,6 +508,8 @@ static uint32_t SelectVariant(Formatting* f)
     const MessageView* v = &f->r.h.view;
     Selector selectors[MLOC_MAX_MESSAGE_SELECTORS];
     uint32_t count = v->count[messageSelectors];
+    // Binding refused a message of more selectors.
+    MLOC_ASSERT(count <= MLOC_MAX_MESSAGE_SELECTORS);
     for (uint32_t s = 0; s < count; s++)
     {
         uint32_t at = Field(f, messageSelectors, s, 1);
@@ -610,7 +613,9 @@ static void Run(Formatting* f, uint32_t quiet)
     f->r.exhausted = false;
     f->r.optionDepth = 0;
     const MessageView* v = &f->r.h.view;
-    // The reported bits of the declarations there are.
+    // The reported bits of the declarations there are, which binding
+    // kept within the bits.
+    MLOC_ASSERT(v->count[messageDeclarations] <= MLOC_MAX_MESSAGE_DECLARATIONS);
     memset(f->r.reported, 0, (v->count[messageDeclarations] + 7) / 8);
     if (v->count[messageVariants] == 0)
     {
