@@ -1467,6 +1467,57 @@ static void TestBindAndFormat(void)
           "a text that fills the buffer exactly");
 }
 
+// A bind refused for any reason leaves no bound message in the buffer,
+// even one bound there before: each refusal below follows a bind that
+// succeeded, and the format call then finds no bound message.
+static void TestRefusedBinds(void)
+{
+    static uint8_t s_message[256];
+    size_t size;
+    CHECK(Compile("Hello {$x}", &size) && size <= sizeof s_message, "a message compiles");
+    memcpy(s_message, s_buffer, size);
+    static uint8_t s_magic[256];
+    memcpy(s_magic, s_message, size);
+    s_magic[0] ^= 0x20;
+    static uint8_t s_version[256];
+    memcpy(s_version, s_message, size);
+    s_version[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    mlocMessageFormatter zero;
+    memset(&zero, 0, sizeof zero);
+    size_t bound = 0;
+    static const struct
+    {
+        int formatter;
+        int bytes;
+        size_t capacity;
+        bool noSize;
+        mlocResult expected;
+        const char* name;
+    } refusals[] = {
+        {1, 0, sizeof s_bound, false, mloc_errorInvalid, "a formatter not made"},
+        {0, 0, sizeof s_bound, true, mloc_errorInvalid, "no size out"},
+        {0, 1, sizeof s_bound, false, mloc_errorFormat, "bytes with a wrong magic"},
+        {0, 2, sizeof s_bound, false, mloc_errorVersion, "bytes of another format"},
+        {0, 0, 8, false, mloc_errorCapacity, "room past the header's start"},
+        {0, 0, 1, false, mloc_errorCapacity, "a single byte of room"},
+    };
+    const uint8_t* messages[] = {s_message, s_magic, s_version};
+    for (size_t i = 0; i < sizeof refusals / sizeof refusals[0]; i++)
+    {
+        mlocOutput first = {s_text, sizeof s_text, 0, NULL, NULL};
+        bool bound1 = mlocBindMessage(&s_formatter, s_message, size, s_bound, sizeof s_bound,
+                                      &bound) == mloc_success &&
+                      mlocFormatMessage(s_bound, NULL, 0, &first, NULL) == mloc_withFallbacks;
+        mlocResult refused = mlocBindMessage(
+            refusals[i].formatter != 0 ? &zero : &s_formatter, messages[refusals[i].bytes], size,
+            s_bound, refusals[i].capacity, refusals[i].noSize ? NULL : &bound);
+        mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};
+        CHECK(bound1 && refused == refusals[i].expected &&
+                  mlocFormatMessage(s_bound, NULL, 0, &stale, NULL) == mloc_errorInvalid,
+              refusals[i].name);
+    }
+}
+
 int main(void)
 {
     TestSuite();
@@ -1487,6 +1538,7 @@ int main(void)
     TestNfcNames();
     TestSuiteFormat();
     TestBindAndFormat();
+    TestRefusedBinds();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;
 }

@@ -288,10 +288,6 @@ uint64_t mlocBoundBase(const MessageView* view)
 mlocResult mlocWriteBound(const mlocMessageFormatter* formatter, const MessageFormatter* f,
                           BoundHeader* h, void* buffer, uint32_t size)
 {
-    // The old header goes first: a bind that fails below must not leave
-    // an earlier bound message's header over words that are no longer
-    // its own.
-    memset(buffer, 0, sizeof *h);
     uint8_t* words = (uint8_t*)buffer + sizeof *h;
     mlocResult result = WriteWords(&h->view, f, words);
     if (result != mloc_success)

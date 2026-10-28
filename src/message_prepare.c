@@ -185,6 +185,13 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
 {
     MessageFormatter f;
     BoundHeader h;
+    // A bind replaces what the buffer held, so one refused for any reason
+    // leaves no bound message: an earlier one's header goes first, as far
+    // as the room reaches (its first byte is enough to unmake it).
+    if (buffer != NULL && capacity > 0)
+    {
+        memset(buffer, 0, capacity < sizeof h ? capacity : sizeof h);
+    }
     if (sizeOut == NULL || (buffer == NULL && capacity > 0))
     {
         return mloc_errorInvalid;
