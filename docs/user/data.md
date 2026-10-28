@@ -48,11 +48,11 @@ if (mlocOpenData(&sources[0], bytes, size) == mloc_success)
 }
 ```
 
-`mlocOpenData` validates the whole file once: a file that opened is never checked again, so a damaged or hostile file is refused here with `mloc_errorData` instead of being read later. `mlocData` is a small value that holds no resource; nothing closes it.
+`mlocOpenData` validates the whole file once: a file that opened is never checked again, so a damaged or hostile file is refused here with `mloc_errorFormat` instead of being read later. `mlocData` is a small value that holds no resource; nothing closes it.
 
 ## Versions
 
-A library opens only data of its own data version: the CLDR and Unicode versions, the data format version (`MLOC_DATA_FORMAT_VERSION`), the time zone release, and a hash of the code tables must all match, or `mlocOpenData` returns `mloc_errorDataVersion`. The data format version changes only when the format does, not with every library release, so data files and catalogs stay valid across releases that keep it. `mlocReadDataVersion` reads a file's version from its first 64 bytes, so a program can tell which file to fetch before opening one, and `mlocGetDataVersion` gives the version the library reads. A program that downloads data files stores them per data version.
+A library opens only data of its own data version: the CLDR and Unicode versions, the data format version (`MLOC_DATA_FORMAT_VERSION`), the time zone release, and a hash of the code tables must all match, or `mlocOpenData` returns `mloc_errorVersion`. The data format version changes only when the format does, not with every library release, so data files and catalogs stay valid across releases that keep it. `mlocReadDataVersion` reads a file's version from its first 64 bytes, so a program can tell which file to fetch before opening one, and `mlocGetDataVersion` gives the version the library reads. A program that downloads data files stores them per data version.
 
 ## A newer time zone release
 

@@ -330,7 +330,7 @@ static mlocResult RunMatches(const UnitTable* t, const UnitPrefsTable* p, uint32
         if (mlocParseUnitId(t, (const char*)p->text + mlocLoad32(entry), entry[4], &id) !=
             mloc_success)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         *matchesOut &= (SystemsOf(t, &id) & systems) != 0;
     }
@@ -372,7 +372,7 @@ static mlocResult ChooseEntry(const Choice* c, const UnitRoute* route,
         UnitId id;
         if (mlocParseUnitId(c->table, entry->id, entry->length, &id) != mloc_success)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         bool reaches = false;
         mlocResult r = mlocReachesThreshold(c->table, &c->input, &c->value, &id, entry->threshold,
@@ -387,7 +387,7 @@ static mlocResult ChooseEntry(const Choice* c, const UnitRoute* route,
             return mloc_success;
         }
     }
-    return mloc_errorData;
+    return mloc_errorFormat;
 }
 
 const mlocPrecision* mlocRoutePrecision(const mlocPrecision* given, uint32_t increment,
@@ -438,7 +438,7 @@ static mlocResult AmountsIn(const Choice* c, const UnitId* id, const mlocPrecisi
     UnitValue v;
     if (mlocScaleUnit(c->table, id, &scale) != mloc_success)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (!mlocUnitValueIn(c->table, &c->input, &c->value, &scale, &v))
     {
@@ -544,7 +544,7 @@ mlocResult mlocRouteUnit(const mlocDataSet* data, const mlocLocale* locale, cons
     }
     int32_t set = FindSet(&p, category, q[8], usage, usageLength);
     uint32_t run = 0;
-    mlocResult r = set < 0 ? mloc_errorData : ChooseRun(t, &p, (uint32_t)set, locale, data, &run);
+    mlocResult r = set < 0 ? mloc_errorFormat : ChooseRun(t, &p, (uint32_t)set, locale, data, &run);
     if (r != mloc_success)
     {
         return r;
@@ -553,7 +553,7 @@ mlocResult mlocRouteUnit(const mlocDataSet* data, const mlocLocale* locale, cons
     uint32_t count = mlocUnitPrefEntries(&p, run, &entry);
     if (count == 0 || count > unitMaxOutputs)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     for (uint32_t i = 0; i < count; i++, entry += unitEntrySize)
     {
@@ -616,8 +616,9 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
     mlocPrecision own;
     if (r == mloc_success)
     {
-        r = mlocParseUnitId(&t, entry->id, entry->length, &chosen) == mloc_success ? mloc_success
-                                                                                   : mloc_errorData;
+        r = mlocParseUnitId(&t, entry->id, entry->length, &chosen) == mloc_success
+                ? mloc_success
+                : mloc_errorFormat;
     }
     if (r == mloc_success)
     {

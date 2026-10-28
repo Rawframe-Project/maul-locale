@@ -116,7 +116,7 @@ extern "C"
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without those parts;
-    ///         mloc_errorData for a locale whose duration pattern is not
+    ///         mloc_errorFormat for a locale whose duration pattern is not
     ///         hours, minutes and seconds between two separators;
     ///         mloc_errorCapacity when the names do not fit the formatter;
     ///         mloc_errorInvalid for a null pointer or options out of

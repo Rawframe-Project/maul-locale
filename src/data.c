@@ -61,7 +61,7 @@ mlocResult mlocReadDataVersion(const void* bytes, size_t size, mlocDataVersion* 
     }
     if (!IsHeader(bytes, size))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     *versionOut = HeaderVersion(bytes);
     return mloc_success;
@@ -221,7 +221,7 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     const uint8_t* b = bytes;
     if (!IsHeader(b, size))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     mlocDataVersion own;
     mlocGetDataVersion(&own);
@@ -229,12 +229,12 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     bool sameRelease = memcmp(own.tzdb, theirs.tzdb, sizeof(own.tzdb)) == 0;
     if (!SameButRelease(&own, &theirs))
     {
-        return mloc_errorDataVersion;
+        return mloc_errorVersion;
     }
     if (mlocLoad32(b + headerFileSize) != size || mlocLoad32(b + headerFlags) != 0 ||
         mlocLoad32(b + headerReserved) != 0)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     DataView view = {
         .bytes = b,
@@ -246,11 +246,11 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     };
     if (!ValidTables(&view, kinds, kindCount))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (!sameRelease && !OnlyZones(&view))
     {
-        return mloc_errorDataVersion;
+        return mloc_errorVersion;
     }
     *viewOut = view;
     return mloc_success;

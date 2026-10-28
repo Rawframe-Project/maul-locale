@@ -148,7 +148,7 @@ static uint8_t* Open(const char* locale, mlocData* data, mlocCatalog* catalog, m
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
     *out = bytes == nullptr                                  ? mloc_errorNotFound
-           : mlocOpenData(data, bytes, size) != mloc_success ? mloc_errorData
+           : mlocOpenData(data, bytes, size) != mloc_success ? mloc_errorFormat
                                                              : mlocOpenCatalog(catalog, data);
     return bytes;
 }
@@ -279,7 +279,7 @@ static mlocResult Reopen(uint8_t* bytes, size_t size, size_t at, uint32_t value)
     mlocData data;
     mlocCatalog catalog;
     mlocResult r = mlocOpenData(&data, bytes, size);
-    r = r == mloc_success ? mlocOpenCatalog(&catalog, &data) : mloc_errorData;
+    r = r == mloc_success ? mlocOpenCatalog(&catalog, &data) : mloc_errorFormat;
     memcpy(bytes + at, saved, 4);
     return r;
 }
@@ -349,26 +349,28 @@ static void TestEachRefusal(void)
     size_t text = (size_t)(k.text - bytes);
     uint32_t firstMessage = Word(messages.bytes + 16);
     size_t messageText = M + 16 + ((size_t)k.count + 1) * 4 + firstMessage;
-    CHECK(Reopen(bytes, size, K + 12, 1) == mloc_errorData &&
-              Reopen(bytes, size, K + 4, 0) == mloc_errorData &&
-              Reopen(bytes, size, K + 8, k.count - 1) == mloc_errorData &&
-              Reopen(bytes, size, remap, k.count) == mloc_errorData &&
-              Reopen(bytes, size, offsets, 1) == mloc_errorData &&
-              Reopen(bytes, size, offsets + 4, Word(bytes + offsets + 8) + 1) == mloc_errorData &&
-              Reopen(bytes, size, offsets + (size_t)k.count * 4, k.textSize + 1) == mloc_errorData,
+    CHECK(Reopen(bytes, size, K + 12, 1) == mloc_errorFormat &&
+              Reopen(bytes, size, K + 4, 0) == mloc_errorFormat &&
+              Reopen(bytes, size, K + 8, k.count - 1) == mloc_errorFormat &&
+              Reopen(bytes, size, remap, k.count) == mloc_errorFormat &&
+              Reopen(bytes, size, offsets, 1) == mloc_errorFormat &&
+              Reopen(bytes, size, offsets + 4, Word(bytes + offsets + 8) + 1) == mloc_errorFormat &&
+              Reopen(bytes, size, offsets + (size_t)k.count * 4, k.textSize + 1) ==
+                  mloc_errorFormat,
           "keys: the reserved word, no buckets, too few places, a remap past the count, offsets "
           "not from 0, falling or past the text");
-    CHECK(Reopen(bytes, size, text, Word(bytes + text) ^ 0x20) == mloc_errorData &&
-              Reopen(bytes, size, text, Word(bytes + text) & 0xFFFFFF00U) == mloc_errorData,
+    CHECK(Reopen(bytes, size, text, Word(bytes + text) ^ 0x20) == mloc_errorFormat &&
+              Reopen(bytes, size, text, Word(bytes + text) & 0xFFFFFF00U) == mloc_errorFormat,
           "keys: a key changed is not at its index; a key holding a NUL");
-    CHECK(Reopen(bytes, size, M + 4, 2) == mloc_errorData &&
-              Reopen(bytes, size, M, 0xFFFF) == mloc_errorData &&
-              Reopen(bytes, size, M + 16, 1) == mloc_errorData &&
-              Reopen(bytes, size, messageText, Word(bytes + messageText) ^ 0xFF) == mloc_errorData,
+    CHECK(Reopen(bytes, size, M + 4, 2) == mloc_errorFormat &&
+              Reopen(bytes, size, M, 0xFFFF) == mloc_errorFormat &&
+              Reopen(bytes, size, M + 16, 1) == mloc_errorFormat &&
+              Reopen(bytes, size, messageText, Word(bytes + messageText) ^ 0xFF) ==
+                  mloc_errorFormat,
           "messages: an unknown flag, a count past the unit, offsets not from 0, a message that "
           "is not one");
-    CHECK(Reopen(bytes, size, M + 8, Word(bytes + M + 8) ^ 1) == mloc_errorData &&
-              Reopen(bytes, size, K + 24, Word(bytes + K + 24) ^ 1) == mloc_errorData,
+    CHECK(Reopen(bytes, size, M + 8, Word(bytes + M + 8) ^ 1) == mloc_errorFormat &&
+              Reopen(bytes, size, K + 24, Word(bytes + K + 24) ^ 1) == mloc_errorFormat,
           "the set ids disagree, or the keys' own is not theirs");
     mlocCatalog catalog;
     mlocData builtin;

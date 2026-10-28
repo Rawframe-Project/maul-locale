@@ -95,7 +95,7 @@ mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const 
     }
     if (walk.full)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     Formatter* n = &f.formatter;
     bool compact = o->number.notation == mloc_notationCompactShort ||
@@ -298,7 +298,7 @@ static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t bas
     size_t length = CopyText(f, text, room, relativeTextMost);
     if (length == 0)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     for (size_t i = 0; i + 3 <= length; i++)
     {
@@ -345,7 +345,7 @@ static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uin
         Lookup(f, unit, (uint32_t)(offset + 2), &name))
     {
         c->nameLength = CopyText(f, name, c->nameRoom, sizeof(c->nameRoom));
-        return c->nameLength == 0 ? mloc_errorData : mloc_success;
+        return c->nameLength == 0 ? mloc_errorFormat : mloc_success;
     }
     c->base = amount->negative != 0 ? relativePast : relativeFuture;
     c->magnitude = *amount;
@@ -394,7 +394,7 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
     r = mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, &room);
     if (r == mloc_success && room.length > room.capacity)
     {
-        r = mloc_errorData;
+        r = mloc_errorFormat;
     }
     if (r == mloc_success)
     {

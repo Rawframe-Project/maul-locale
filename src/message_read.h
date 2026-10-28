@@ -34,9 +34,9 @@ typedef struct MessageView
     const uint8_t* pool;
 } MessageView;
 
-// Reads a message: mloc_success; mloc_errorData for bytes that are not
-// one; mloc_errorDataVersion for one of another library or Unicode
-// version.
+// Reads a message: mloc_success; mloc_errorFormat for bytes that are not
+// one; mloc_errorVersion for one of another format, library or
+// Unicode version.
 mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view);
 
 // A record's 32-bit field.

@@ -32,7 +32,7 @@ static mlocResult LoadOutput(UnitFormat* u, const mlocDataSet* data, const mlocL
     };
     if (mlocParseUnitId(&u->table, entry->id, entry->length, &out->id) != mloc_success)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (out->id.mixed)
     {

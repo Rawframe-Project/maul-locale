@@ -130,7 +130,7 @@ static void TestRefusals(void)
     {
         mlocData data;
         uint32_t size = BuildZonesFile("1999z", s_bad[i]);
-        CHECK(size > 0 && mlocOpenData(&data, s_file, size) == mloc_errorData,
+        CHECK(size > 0 && mlocOpenData(&data, s_file, size) == mloc_errorFormat,
               "a zones unit whose release is malformed");
     }
     mlocData data;

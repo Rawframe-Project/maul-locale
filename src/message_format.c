@@ -665,7 +665,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     if (f.r.faultCount > 0 && f.r.formatter.strict)
     {
         output->length = 0;
-        return mloc_errorFormat;
+        return mloc_errorFallback;
     }
     output->length = f.w.length;
     if (f.w.length > f.w.capacity)

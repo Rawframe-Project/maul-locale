@@ -692,7 +692,7 @@ mlocResult mlocMakeZoneFormat(ZoneFormat* f, const mlocDataSet* data, const mloc
     }
     if (walk.full)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     f->data = data;
     f->locale = *locale;

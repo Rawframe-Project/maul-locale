@@ -261,7 +261,7 @@ mlocResult mlocReachesThreshold(const UnitTable* t, const UnitScale* input, cons
     if (mlocScaleUnit(t, &first, &scale) != mloc_success ||
         !mlocSameDimensions(input, &scale, &reciprocal))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     UnitValue v;
     if (!mlocUnitValueIn(t, input, value, &scale, &v))

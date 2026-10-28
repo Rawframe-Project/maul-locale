@@ -350,7 +350,7 @@ static mlocResult TransformedLanguage(const mlocDataSet* data, const Subtags* s,
     mlocLocale tlang;
     if (mlocParseLocale(At(s, first), length, &tlang).status != mloc_success)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     uint32_t changes = 0;
     mlocResult result = mlocApplyAliases(data, &tlang, &changes);

@@ -462,7 +462,7 @@ static bool RefusedWith(size_t size, uint32_t kind, uint32_t index, uint32_t fie
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(kind, index, field), value);
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
-    return mlocWriteMessageText(copy, size, &output) == mloc_errorData;
+    return mlocWriteMessageText(copy, size, &output) == mloc_errorFormat;
 }
 
 // Each field one past what it may hold, refused.
@@ -498,14 +498,14 @@ static void TestFieldsRefused(void)
     uint32_t pool = (uint32_t)size - Count(messagePool);
     copy[pool + Field(messageVariables, 0, 0)] = ' ';
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData, "a name with a space");
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat, "a name with a space");
 
     // Two text pieces naming one string: more string bytes than the pool.
     CHECK(Compile("abcd{$x}e", &size), "a message with two texts compiles");
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messagePieces, 2, 1), Field(messagePieces, 0, 1));
     Store(copy + FieldAt(messagePieces, 2, 2), 4);
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
           "strings overlapping past the pool");
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messagePieces, 2, 1), Field(messagePieces, 0, 1));
@@ -523,7 +523,7 @@ static void TestFieldsRefused(void)
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messageExpressions, 1, 5), 0);
     Store(copy + FieldAt(messageExpressions, 1, 6), 2);
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
           "parameter ranges together past the parameters");
     CHECK(Compile(".input {$x :f} .match $x 1 {{a}} * {{b}}", &size), "a matcher compiles");
     CHECK(RefusedWith(size, messageVariants, 1, 0, 0) == false, "a variant's own range is fine");
@@ -533,13 +533,13 @@ static void TestFieldsRefused(void)
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messageExpressions, 1, 1), Field(messageExpressions, 0, 1));
     Store(copy + FieldAt(messageExpressions, 1, 2), 4);
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
           "literal operands overlapping past the pool");
     CHECK(Compile("{:f a=|abcd|}{:f b=|e|}", &size), "two option values compile");
     memcpy(copy, s_buffer, size);
     Store(copy + FieldAt(messageParameters, 1, 3), Field(messageParameters, 0, 3));
     Store(copy + FieldAt(messageParameters, 1, 4), 4);
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
           "option values overlapping past the pool");
     CHECK(Compile("hello", &size), "a simple message compiles");
     char exact[5];
@@ -587,7 +587,7 @@ static void TestAmplified(void)
     Store(variable + 4, name);
     Store(piece + 8, 1);
     mlocOutput output = {NULL, 0, 0, NULL, NULL};
-    CHECK(mlocWriteMessageText(message, size, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(message, size, &output) == mloc_errorFormat,
           "a text past 1 GiB is refused");
     // The same with a name of 600 bytes: 12 MB, measured.
     Store(variable + 4, 600);
@@ -624,8 +624,8 @@ static void TestCorrupted(void)
             memcpy(exact, copy, size);
             mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
             mlocResult result = mlocWriteMessageText(exact, size, &output);
-            CHECK(result == mloc_success || result == mloc_errorData ||
-                      result == mloc_errorDataVersion,
+            CHECK(result == mloc_success || result == mloc_errorFormat ||
+                      result == mloc_errorVersion,
                   "a changed byte is written or refused");
             refused += result != mloc_success;
             free(exact);
@@ -646,7 +646,7 @@ static void TestCorrupted(void)
           "null pointers are refused");
     memcpy(copy, s_buffer, size);
     copy[messageDataFormat] ^= 1;
-    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorDataVersion,
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
           "a message of another data format is refused as such");
     // The field held a packed library version before: the 0.0.1 and 0.1.0
     // messages never match a format.
@@ -655,7 +655,7 @@ static void TestCorrupted(void)
     {
         memcpy(copy, s_buffer, size);
         mlocStore32(copy + messageDataFormat, s_released[i]);
-        CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorDataVersion,
+        CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
               "a message of a released library version is refused");
     }
 }
@@ -679,9 +679,38 @@ static void TestCountsWrapping(void)
     Store(header + messageCounts + messageVariants * 4, 715827882);
     Store(header + messageCounts + messagePool * 4, 8);
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
-    CHECK(mlocWriteMessageText(header, messageHeaderSize, &output) == mloc_errorData,
+    CHECK(mlocWriteMessageText(header, messageHeaderSize, &output) == mloc_errorFormat,
           "counts whose records wrap to the size are refused");
     free(header);
+}
+
+// A message of another format, data format or Unicode version is refused
+// as another version's, the message format before the size, which another
+// format may place elsewhere; a wrong magic is no message.
+static void TestOtherVersions(void)
+{
+    size_t size;
+    CHECK(Compile("{$x}", &size), "a message compiles");
+    static uint8_t copy[4096];
+    mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
+    memcpy(copy, s_buffer, size);
+    copy[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion, "another message format");
+    Store(copy + messageSize, (uint32_t)size + 8);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
+          "the message format is read before the size");
+    memcpy(copy, s_buffer, size);
+    Store(copy + messageDataFormat, MLOC_DATA_FORMAT_VERSION + 1);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion, "another data format");
+    memcpy(copy, s_buffer, size);
+    Store(copy + messageUnicode, mlocLoad32(s_buffer + messageUnicode) + 1);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorVersion,
+          "another Unicode version");
+    memcpy(copy, s_buffer, size);
+    copy[0] ^= 0x20;
+    copy[messageFormat] = (uint8_t)(messageFormatVersion + 1);
+    CHECK(mlocWriteMessageText(copy, size, &output) == mloc_errorFormat,
+          "a wrong magic is no message, whatever its format");
 }
 
 // Names stored in NFC must still be names: U+037E becomes ";" and U+1FEF
@@ -1322,7 +1351,7 @@ static void TestBindAndFormat(void)
           "numbers as plain decimals; an object has no text without a function");
 
     CHECK(Bind(&s_strict, "{$x}{$y}") == mloc_success &&
-              Format(&x, 1, &length, &faults) == mloc_errorFormat && length == 0 &&
+              Format(&x, 1, &length, &faults) == mloc_errorFallback && length == 0 &&
               faults.count == 1,
           "strict mode writes nothing at a fault");
     CHECK(Bind(&s_strict, "{$x}!") == mloc_success &&
@@ -1393,7 +1422,7 @@ static void TestBindAndFormat(void)
               mlocBindMessage(&unmade, s_buffer, size, s_bound, sizeof s_bound, &size) ==
                   mloc_errorInvalid &&
               mlocBindMessage(&s_formatter, s_buffer, 4, s_bound, sizeof s_bound, &size) ==
-                  mloc_errorData,
+                  mloc_errorFormat,
           "a formatter never made and bytes not a message are refused");
     CHECK(mlocBindMessage(NULL, s_buffer, size, s_bound, sizeof s_bound, &size) ==
               mloc_errorInvalid,
@@ -1405,7 +1434,7 @@ static void TestBindAndFormat(void)
     memcpy(crafted, s_buffer, size);
     Store(crafted + FieldAt(messageExpressions, 0, 1), Field(messageDeclarations, 0, 1));
     CHECK(mlocBindMessage(&s_formatter, crafted, size, s_bound, sizeof s_bound, &size) ==
-              mloc_errorData,
+              mloc_errorFormat,
           "a local naming itself is refused");
 
     CHECK(Bind(&s_formatter, ".local $a = {$x} {{{$a}}}") == mloc_success &&
@@ -1436,6 +1465,7 @@ int main(void)
     TestCanonical();
     TestCorrupted();
     TestCountsWrapping();
+    TestOtherVersions();
     TestFieldsRefused();
     TestAmplified();
     TestRefused();

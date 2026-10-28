@@ -25,20 +25,24 @@ const char* mlocResultName(mlocResult result)
         return "mloc_fellBack";
     case mloc_withFallbacks:
         return "mloc_withFallbacks";
+    case mloc_done:
+        return "mloc_done";
+    case mloc_needMoreText:
+        return "mloc_needMoreText";
     case mloc_errorInvalid:
         return "mloc_errorInvalid";
     case mloc_errorCapacity:
         return "mloc_errorCapacity";
-    case mloc_errorData:
-        return "mloc_errorData";
-    case mloc_errorDataVersion:
-        return "mloc_errorDataVersion";
+    case mloc_errorVersion:
+        return "mloc_errorVersion";
+    case mloc_errorFormat:
+        return "mloc_errorFormat";
     case mloc_errorSyntax:
         return "mloc_errorSyntax";
     case mloc_errorNotFound:
         return "mloc_errorNotFound";
-    case mloc_errorFormat:
-        return "mloc_errorFormat";
+    case mloc_errorFallback:
+        return "mloc_errorFallback";
     default:
         return "unknown result";
     }

@@ -102,7 +102,7 @@ extern "C"
     ///         text as mlocParseLocale; mloc_errorCapacity for a text of 256
     ///         bytes or more, or a result that does not fit; mloc_errorNotFound
     ///         for data without the aliases (or, for a tag with a u or t
-    ///         extension, the extension aliases); mloc_errorData for aliases that
+    ///         extension, the extension aliases); mloc_errorFormat for aliases that
     ///         never stop replacing, which only a crafted data file has;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety

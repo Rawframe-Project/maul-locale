@@ -81,7 +81,7 @@ extern "C"
     ///                  capacity needed with mloc_errorCapacity, which may
     ///                  be a little more than the size.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
-    ///         small; mloc_errorData for more than 512 labels or a root
+    ///         small; mloc_errorFormat for more than 512 labels or a root
     ///         without script boundaries; mloc_errorInvalid for a
     ///         collator the library did not make, a special label that
     ///         is not UTF-8 or longer than 255 bytes, or a null pointer.

@@ -381,7 +381,7 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
 // Writes the words: each variable's declaration, then each expression's
 // function slot and chain length, then its resolutions;
 // mloc_errorInvalid past the chain or resolution limit (not a capacity
-// error: no buffer would do), mloc_errorData for a declaration naming a
+// error: no buffer would do), mloc_errorFormat for a declaration naming a
 // later one.
 static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, uint8_t* words)
 {
@@ -400,7 +400,7 @@ static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, ui
         Cost cost = CostOf(v, words, e);
         if (cost.chain == 0)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         if (cost.chain > messageChainLimit)
         {

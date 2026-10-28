@@ -64,7 +64,7 @@ extern "C"
     /// @param size        Their size.
     /// @param versionOut  Receives the version.
     /// @return mloc_success; mloc_errorInvalid for a null pointer;
-    ///         mloc_errorData when the bytes are no data file header of a
+    ///         mloc_errorFormat when the bytes are no data file header of a
     ///         format this library knows.
     /// @par Thread safety
     /// Safe from any thread.
@@ -82,9 +82,9 @@ extern "C"
     /// @param bytes    The file, 8-byte aligned (any allocator's memory is).
     /// @param size     The file's size.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or bytes
-    ///         that are not 8-byte aligned; mloc_errorDataVersion for a
+    ///         that are not 8-byte aligned; mloc_errorVersion for a
     ///         file of another data version (mlocReadDataVersion names
-    ///         it), a zones file's release aside; mloc_errorData for
+    ///         it), a zones file's release aside; mloc_errorFormat for
     ///         bytes that are not a valid data file.
     /// @par Thread safety
     /// Safe from any thread.

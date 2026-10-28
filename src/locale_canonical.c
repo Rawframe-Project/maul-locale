@@ -750,7 +750,7 @@ static bool WriteVariants(Ident* ident, size_t rest, mlocLocale* locale)
 
 // Applies the rules until none matches, adding what changed to
 // *changes. Returns mloc_errorCapacity when the result does not fit and
-// mloc_errorData when the rules do not end, which only a crafted data
+// mloc_errorFormat when the rules do not end, which only a crafted data
 // file can make them do.
 static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, mlocLocale* locale,
                              uint32_t* changes)
@@ -771,7 +771,7 @@ static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, ml
         }
         if (iteration == MAX_ITERATIONS)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         Rule rule = ReadRule(aliases, index);
         uint32_t one = Apply(data, aliases, &rule, &ident);

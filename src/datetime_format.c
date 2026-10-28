@@ -167,14 +167,14 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     if (!FindRangeGlues(f, &shared, &choice, kind) ||
         !mlocDatePattern(&choice.patterns, mlocLoad16(choice.set + 2 * (kind + style)), &glue))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
     if (o->date.style == mloc_dateStyleNone && o->date.fields == mloc_dateFieldSetWeekday &&
         !f->time.zoned && !FindWhole(f, o, &choice))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     // The date, the time and the zone read the locale's digits alike, so
     // their results agree.
@@ -453,7 +453,7 @@ static mlocResult WriteRangeOf(RangeWriting* g, Writing* one, bool sameDay, mloc
         if (!mlocTablePattern(&r->table, mlocLoad16(f->timeSet + 2 * (f->glueKind + style)),
                               &join.glue))
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
     }
     // The writing's pointers to this frame are cleared before it returns.

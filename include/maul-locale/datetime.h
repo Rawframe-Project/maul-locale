@@ -185,7 +185,7 @@ extern "C"
     ///         mloc_errorNotFound for data without the dates, the number
     ///         units or the preferences, or a numbering system the
     ///         spell-out rules lack, or with a zone without the zone
-    ///         names; mloc_errorData for a pattern the formatter cannot
+    ///         names; mloc_errorFormat for a pattern the formatter cannot
     ///         write; mloc_errorInvalid for a null pointer, options out of
     ///         range, or a zone with a calendar period (a month, a year).
     /// @par Thread safety
@@ -374,7 +374,7 @@ extern "C"
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the dates, the number
     ///         units or the preferences, or with a zone without the zone
-    ///         names; mloc_errorData for a pattern the formatter cannot
+    ///         names; mloc_errorFormat for a pattern the formatter cannot
     ///         write; mloc_errorInvalid for a null pointer, options out of
     ///         range, or a zone style with a standard format.
     /// @par Thread safety

@@ -319,7 +319,7 @@ static mlocResult WriteKeyAt(const Chain* c, uint32_t index, mlocOutput* output)
     CatalogKeys keys;
     if (!mlocReadCatalog(&c->catalogs[0], &catalog) || !mlocCatalogKeysOf(&catalog, &keys))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     uint32_t length = 0;
     const uint8_t* key = mlocCatalogKeyAt(&keys, index, &length);
