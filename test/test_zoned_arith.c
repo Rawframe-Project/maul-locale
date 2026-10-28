@@ -6,7 +6,8 @@
 // autumn fold, and Monrovia's offset of -00:44:30 in 1970: days added as
 // calendar days and hours as exact time, differences whose rounding counts
 // the zone's day, rounding to a day of 23 hours and within a fold, offsets
-// weighed against the zone, and every refusal.
+// weighed against the zone, every refusal, and differences across the
+// whole day Apia skipped and the one Sitka lived twice.
 
 #include "test_harness.h"
 
@@ -314,6 +315,33 @@ static void TestOffset(void)
           "an offset taking the first day's date-time out of the range");
 }
 
+// A difference rounded to days across a jump of a whole wall-clock day:
+// the window NudgeToCalendarUnit shifts once misses the destination,
+// which ECMA-262 asserts it holds. The call returns, though its answer
+// is not yet the right one.
+static void TestDayJumps(void)
+{
+    // Pacific/Apia skipped 30 December 2011; from 11:59:59 to 10:59:59 UTC
+    // that day.
+    mlocTimeZone apia = Zone("Pacific/Apia");
+    mlocInstant apiaOne = {INT64_C(1325246399), 0};
+    mlocInstant apiaTwo = {INT64_C(1325242799), 0};
+    // America/Sitka went from +14:58:47 to -09:01:13 in October 1867;
+    // 1867-10-16T01:01:13Z to 1867-10-19T00:31:13Z.
+    mlocTimeZone sitka = Zone("America/Sitka");
+    mlocInstant sitkaOne = {INT64_C(-3225481127), 0};
+    mlocInstant sitkaTwo = {INT64_C(-3225223727), 0};
+    mlocDateTimeRounding days = {mloc_unitDay, mloc_unitDay, 1, mloc_roundHalfExpand};
+    mlocDateTimeDuration d = {0};
+    mlocResult apiaResult =
+        mlocZonedDateTimeUntil(&apia, mloc_calendarGregorian, &apiaOne, &apiaTwo, &days, &d);
+    mlocResult sitkaResult =
+        mlocZonedDateTimeUntil(&sitka, mloc_calendarGregorian, &sitkaOne, &sitkaTwo, &days, &d);
+    CHECK((apiaResult == mloc_success || apiaResult == mloc_errorInvalid) &&
+              (sitkaResult == mloc_success || sitkaResult == mloc_errorInvalid),
+          "days across a skipped and a repeated day");
+}
+
 int main(void)
 {
     mlocOpenBuiltinData(&s_builtin);
@@ -323,5 +351,6 @@ int main(void)
     TestRound();
     TestOffset();
     TestOffsetEdges();
+    TestDayJumps();
     return s_failures == 0 ? 0 : 1;
 }
