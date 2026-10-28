@@ -458,8 +458,8 @@ extern "C"
     /// points into the compiled one and the formatter, which must outlive
     /// it; it is read-only, so threads may format with it at once. Call it
     /// with a null buffer and a capacity of 0 to learn the capacity. A
-    /// bind that fails leaves the buffer holding no bound message, even
-    /// one bound there before.
+    /// bind that fails, for any reason, leaves a buffer of capacity 1 or
+    /// more holding no bound message, even one bound there before.
     ///
     /// @param formatter  A formatter from mlocInitMessageFormatter.
     /// @param message    A compiled message from mlocCompileMessage.
