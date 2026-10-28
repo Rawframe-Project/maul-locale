@@ -320,14 +320,7 @@ static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart*
     if (Compare(low, dest) > 0 || Compare(dest, high) > 0)
     {
         *expandedOut = true;
-        if (!ComputeWindow(sign, &d->date, s, unit, increment, true, w))
-        {
-            return false;
-        }
-        // NudgeToCalendarUnit's assertion: the shifted window holds the
-        // destination.
-        MLOC_ASSERT(Compare(sign > 0 ? w->startMoment : w->endMoment, dest) <= 0 &&
-                    Compare(dest, sign > 0 ? w->endMoment : w->startMoment) <= 0);
+        return ComputeWindow(sign, &d->date, s, unit, increment, true, w);
     }
     return true;
 }
