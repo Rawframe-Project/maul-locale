@@ -4,7 +4,7 @@ How locale identifiers are held, how a locale finds its data, and how matching, 
 
 ## The locale value
 
-`mlocLocale` is 128 bytes with readable fields: language (8), script (4), region (4), and the variants and extensions as canonical text (112), every field NUL-padded. Every byte is defined, so locales compare with `memcmp`, and resolving a locale for data reads fixed fields instead of splitting a string. A tag whose variants and extensions pass 112 bytes, or that has more than 64 subtags, is refused with `mloc_errorCapacity`, never cut.
+`mlocLocale` is 128 bytes with readable fields: language (8), script (4), region (4), and the variants and extensions as canonical text (112), every field NUL-padded. Every byte is defined, so locales compare with `memcmp`, and resolving a locale for data reads fixed fields instead of splitting a string. A tag whose variants and extensions pass 112 bytes, or that has more than 64 subtags (`MLOC_MAX_LOCALE_TAIL`, `MLOC_MAX_LOCALE_SUBTAGS`), is refused with `mloc_errorLimit`, never cut.
 
 Parsing (`locale_parse.c`) is strict and applies canonical syntax only: case, variant and attribute order, extensions by singleton with private use last, keys in order, a `u` value of `true` removed. Replacing aliases is canonicalization (`locale_canonical.c`, `locale_extensions.c`), a separate call that reports what it changed, because a program must know whether the tag it stored is the one it uses. Canonicalization follows UTS #35 Annex C, rules applied until none matches; the alias keys have a hash index in their table because a tag looks each of its fields up on every pass. Aliases that never stop replacing can only come from a crafted file and are refused with `mloc_errorFormat`.
 

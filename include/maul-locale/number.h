@@ -206,8 +206,8 @@ extern "C"
     /// @param output     Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
@@ -230,8 +230,8 @@ extern "C"
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, a NaN end, or a formatter or decimal the library
     ///         did not make.
     /// @par Thread safety
@@ -273,11 +273,10 @@ extern "C"
     ///                    mloc_errorSyntax the offset reading stopped at.
     /// @return mloc_success; mloc_errorSyntax when no number is read (or,
     ///         in strict mode, the affixes or grouping do not match);
-    ///         mloc_errorCapacity when the digits or the exponent pass the
-    ///         decimal's limits; mloc_errorNotFound for data without the
-    ///         parse sets; mloc_errorInvalid for a null pointer, a mode out
-    ///         of range, a formatter the library did not make or one of
-    ///         compact notation.
+    ///         mloc_errorLimit when the digits or the exponent pass
+    ///         MLOC_MAX_DECIMAL_DIGITS or MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for data
+    ///         without the parse sets; mloc_errorInvalid for a null pointer, a mode out of range, a
+    ///         formatter the library did not make or one of compact notation.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocParseNumber(const mlocNumberFormatter* formatter,

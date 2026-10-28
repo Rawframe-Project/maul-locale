@@ -559,7 +559,7 @@ static void AppendDigit(Quantity* q, int digit, bool* overflow)
         q->zeros += q->count > 0 ? 1 : 0;
         return;
     }
-    if (q->zeros >= mlocDecimalDigits - q->count)
+    if (q->zeros >= MLOC_MAX_DECIMAL_DIGITS - q->count)
     {
         *overflow = true;
         return;

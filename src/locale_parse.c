@@ -10,7 +10,6 @@
 
 #include <string.h>
 
-#define MAX_SUBTAGS    64
 #define MAX_EXTENSIONS 32
 
 typedef struct Subtag
@@ -32,9 +31,9 @@ typedef struct Parser
 {
     const char* text;
     int count;
-    Subtag subtags[MAX_SUBTAGS];
+    Subtag subtags[MLOC_MAX_LOCALE_SUBTAGS];
     int orderCount;
-    int order[MAX_SUBTAGS];
+    int order[MLOC_MAX_LOCALE_SUBTAGS];
     int extensionCount;
     Extension extensions[MAX_EXTENSIONS];
 } Parser;
@@ -84,9 +83,9 @@ static mlocTextResult Split(Parser* p, const char* text, size_t length)
         {
             return Result(mloc_errorSyntax, start);
         }
-        if (p->count == MAX_SUBTAGS)
+        if (p->count == MLOC_MAX_LOCALE_SUBTAGS)
         {
-            return Result(mloc_errorCapacity, start);
+            return Result(mloc_errorLimit, start);
         }
         p->subtags[p->count++] = (Subtag){(uint32_t)start, (uint32_t)(i - start)};
         start = i + 1;
@@ -191,9 +190,9 @@ static int SortGroups(Parser* p, int first, int groupCount, const int* starts, i
     {
         return -1;
     }
-    int sorted[MAX_SUBTAGS];
-    int lengths[MAX_SUBTAGS];
-    int keys[MAX_SUBTAGS];
+    int sorted[MLOC_MAX_LOCALE_SUBTAGS];
+    int lengths[MLOC_MAX_LOCALE_SUBTAGS];
+    int keys[MLOC_MAX_LOCALE_SUBTAGS];
     for (int g = 0; g < groupCount; g++)
     {
         int next = g + 1 < groupCount ? starts[g + 1] : end;
@@ -214,7 +213,7 @@ static int SortGroups(Parser* p, int first, int groupCount, const int* starts, i
         sorted[at] = starts[g];
         lengths[at] = next - starts[g];
     }
-    int copy[MAX_SUBTAGS];
+    int copy[MLOC_MAX_LOCALE_SUBTAGS];
     memcpy(copy, p->order + first, (size_t)(end - first) * sizeof(int));
     int out = first;
     for (int g = 0; g < groupCount; g++)
@@ -229,7 +228,7 @@ static int SortGroups(Parser* p, int first, int groupCount, const int* starts, i
 static mlocTextResult Variants(Parser* p, int* s)
 {
     int first = p->orderCount;
-    int starts[MAX_SUBTAGS];
+    int starts[MLOC_MAX_LOCALE_SUBTAGS];
     int count = 0;
     while (*s < p->count && IsVariant(p, *s))
     {
@@ -254,7 +253,7 @@ static bool EndsExtension(const Parser* p, int s)
 static mlocTextResult UnicodeExtension(Parser* p, int* s, size_t singletonOffset)
 {
     int first = p->orderCount;
-    int starts[MAX_SUBTAGS];
+    int starts[MLOC_MAX_LOCALE_SUBTAGS];
     int attributes = 0;
     while (!EndsExtension(p, *s) && Length(p, *s) >= 3)
     {
@@ -320,7 +319,7 @@ static mlocTextResult TransformedExtension(Parser* p, int* s, size_t singletonOf
         }
     }
     int fieldsFirst = p->orderCount;
-    int starts[MAX_SUBTAGS];
+    int starts[MLOC_MAX_LOCALE_SUBTAGS];
     int fields = 0;
     while (!EndsExtension(p, *s))
     {
@@ -559,7 +558,7 @@ mlocTextResult mlocParseLocale(const char* text, size_t length, mlocLocale* loca
     }
     if (!WriteTail(&p, variantCount, locale.tail, sizeof(locale.tail)))
     {
-        return Result(mloc_errorCapacity, length);
+        return Result(mloc_errorLimit, length);
     }
     *localeOut = locale;
     return Result(mloc_success, length);

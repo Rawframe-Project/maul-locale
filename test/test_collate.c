@@ -487,7 +487,7 @@ static void TestRefusals(void)
     mlocCollatorOptions far = {.strength = (mlocCollationStrength)6};
     mlocCollatorOptions hollow = {.reorder = nullptr, .reorderLength = 3};
     mlocDataSet none = {nullptr, 0};
-    CHECK(mlocInitCollator(&c, &s_data, &en, &full) == mloc_errorCapacity &&
+    CHECK(mlocInitCollator(&c, &s_data, &en, &full) == mloc_errorLimit &&
               mlocInitCollator(&c, &s_data, &en, &far) == mloc_errorInvalid &&
               mlocInitCollator(&c, &s_data, &en, &hollow) == mloc_errorInvalid &&
               mlocInitCollator(&c, &none, &en, nullptr) == mloc_errorNotFound &&

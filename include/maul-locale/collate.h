@@ -20,6 +20,10 @@ extern "C"
 {
 #endif
 
+// The most ranges of primary lead bytes a script reordering moves, from
+// the first lead byte it shares with another script on.
+#define MLOC_MAX_REORDER_RANGES 64
+
     // The levels compared (ks): base letters, then accents, case and
     // variants, punctuation when shifted, then the code points.
     typedef enum mlocCollationStrength
@@ -121,8 +125,9 @@ extern "C"
     ///         a null pointer, an
     ///         option out of range, or a reorder text that is not a list
     ///         of codes, names a code twice or two codes of one range;
-    ///         mloc_errorCapacity for a reordering too large for the
-    ///         root's lead bytes.
+    ///         mloc_errorLimit for a reordering whose scripts do not fit
+    ///         the root's free primary lead bytes, as ICU4C refuses one, or
+    ///         that moves more than MLOC_MAX_REORDER_RANGES ranges.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitCollator(mlocCollator* collatorOut,

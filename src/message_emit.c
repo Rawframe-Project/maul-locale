@@ -5,7 +5,7 @@
 
 #include "bytes.h"
 
-#include "maul-locale/base.h"
+#include "maul-locale/message.h"
 #include "maul-unicode/normalize.h"
 
 #include <string.h>
@@ -51,8 +51,13 @@ size_t mlocEmitNeeded(const MessageCounts* counts)
         (uint64_t)counts->used[messageVariables] * messageRecordSizes[messageVariables] +
         counts->used[messagePool];
     total = (total + 7) & ~(uint64_t)7;
-    total += SlotCount(counts) * messageSlotSize + (uint64_t)counts->used[messageVariables] * 8;
-    return total > UINT32_MAX ? 0 : (size_t)total;
+    // The words: two a variable for the check, then one a variable and
+    // two an expression for the costs.
+    uint64_t variables = counts->used[messageVariables];
+    uint64_t costs = variables + 2 * (uint64_t)counts->used[messageExpressions];
+    total +=
+        SlotCount(counts) * messageSlotSize + 4 * (costs > 2 * variables ? costs : 2 * variables);
+    return total > MLOC_MAX_MESSAGE_SIZE ? 0 : (size_t)total;
 }
 
 void mlocEmitWrite(MessageEmit* emit, uint8_t* out, const MessageCounts* counts)

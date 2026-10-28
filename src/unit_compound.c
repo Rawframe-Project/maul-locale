@@ -245,7 +245,7 @@ static mlocResult LoadForms(const Context* c, const char* id, size_t length, uin
         uint32_t field = unitNameZero + k;
         if ((f.found & 1u << field) != 0 && !Put(&out->form[k], f.text[field], f.length[field]))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     // A name's empty category is other's: the data says only that ICU
@@ -262,7 +262,7 @@ static mlocResult LoadForms(const Context* c, const char* id, size_t length, uin
     if (kind != kindUnitNameExtras && (f.found & 1u << unitNamePer) != 0 &&
         f.length[unitNamePer] != 0 && !Put(&out->per, f.text[unitNamePer], f.length[unitNamePer]))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     return mloc_success;
 }
@@ -300,14 +300,14 @@ static mlocResult LoadCase(const Context* c, const char* id, size_t length, Gram
         }
         if (!Put(&forms->form[k], f.text[k], f.length[k]))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (lowered != nullptr)
         {
             lowered->form[k] = (UnitPattern){.present = true};
             if ((low.found & 1u << k) != 0 && !Put(&lowered->form[k], low.text[k], low.length[k]))
             {
-                return mloc_errorCapacity;
+                return mloc_errorLimit;
             }
         }
     }
@@ -504,15 +504,14 @@ static mlocResult ApplyCategory(const Context* c, Product* p, const Single* s, u
     if ((s->hasPrefix && !Format(&s->prefix, &core, nullptr, &core)) ||
         (s->hasPower && !Format(WithPlural(&s->power, plural), &core, nullptr, &core)))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (out->form[k].length == 0)
     {
         out->form[k] = core;
         return mloc_success;
     }
-    return Format(&p->times, &out->form[k], &core, &out->form[k]) ? mloc_success
-                                                                  : mloc_errorCapacity;
+    return Format(&p->times, &out->form[k], &core, &out->form[k]) ? mloc_success : mloc_errorLimit;
 }
 
 // A structure's category for a component, given the compound's
@@ -543,7 +542,7 @@ static mlocResult PutConstant(const Product* p, uint64_t constant, UnitForms* ou
     UnitPattern* form = &out->form[first];
     bool fits = form->length == 0 ? Put(form, number.text, number.length)
                                   : Format(&p->times, &number, form, form);
-    return fits ? mloc_success : mloc_errorCapacity;
+    return fits ? mloc_success : mloc_errorLimit;
 }
 
 // The constant, then the placeholder put back at its side with the
@@ -565,7 +564,7 @@ static mlocResult Finish(const Product* p, uint64_t constant, UnitForms* out)
             !Add(&placed, out->form[k].text, out->form[k].length) ||
             !(end ? Add(&placed, j->text, j->length) && Add(&placed, "{0}", 3) : true))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         out->form[k] = placed;
     }
@@ -649,7 +648,7 @@ static mlocResult ProcessTimes(const Context* c, const UnitPart* parts, uint32_t
     uint8_t kind = 0;
     if (!mlocWriteNormalUnit(&c->table, parts, count, constant, id, sizeof(id), &length))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (mlocUnitNameKind(c->data, id, length, &kind) && kind == unitIdUnit)
     {
@@ -694,7 +693,7 @@ static mlocResult PerPattern(const Context* c, const UnitForms* denominator, Uni
     UnitPattern number = {.present = true};
     (void)Put(&trimmed, text.text + start, end - start);
     (void)Put(&number, "{0}", 3);
-    return Format(&per, &number, &trimmed, out) ? mloc_success : mloc_errorCapacity;
+    return Format(&per, &number, &trimmed, out) ? mloc_success : mloc_errorLimit;
 }
 
 // A unit CLDR does not name, from its sides in their cases
@@ -745,7 +744,7 @@ static mlocResult BuildArbitrary(const Context* c, const UnitId* id, Grammatical
                      : Put(&out->form[k], per.length > 0 ? per.text : form->text,
                            per.length > 0 ? per.length : form->length)))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     return mloc_success;
@@ -775,7 +774,7 @@ mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale,
     if (!mlocWriteNormalUnit(&c.table, id.parts, id.count, id.denominatorConstant, name,
                              sizeof(name), &nameLength))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (mlocUnitNameKind(data, name, nameLength, &idKind) && idKind == unitIdUnit)
     {

@@ -15,6 +15,21 @@ extern "C"
 {
 #endif
 
+// The most subtags a locale id may have.
+#define MLOC_MAX_LOCALE_SUBTAGS 64
+
+// The most bytes a locale's variants and extensions take (mlocLocale's
+// tail).
+#define MLOC_MAX_LOCALE_TAIL 112
+
+// The longest text, in bytes, mlocCanonicalizeLocale reads, also after it
+// replaces a legacy tag or puts "und-" before one.
+#define MLOC_MAX_LOCALE_TEXT 255
+
+// The most supported or desired locales a match takes: a match reports
+// their indexes as int32_t.
+#define MLOC_MAX_MATCH_LOCALES 2147483647
+
     // A locale in canonical syntax. The library writes every byte: each
     // field is NUL-padded and uses all its bytes only when its text is
     // that long, so two locales compare equal with memcmp. Read the
@@ -30,7 +45,7 @@ extern "C"
         char region[4];
         // The variants, then the extensions, each subtag lowercase,
         // separated by "-", without a leading one: "fonipa-u-ca-buddhist".
-        char tail[112];
+        char tail[MLOC_MAX_LOCALE_TAIL];
     } mlocLocale;
 
     /// Parses a locale id strictly and puts it in canonical syntax: case,
@@ -45,8 +60,9 @@ extern "C"
     ///         mloc_errorSyntax with the offset of the subtag at fault for
     ///         text that is no locale id, a tag that begins with a script,
     ///         and duplicate variants, extensions, keys or attributes;
-    ///         mloc_errorCapacity when the variants and extensions pass
-    ///         112 bytes or the tag has more than 64 subtags;
+    ///         mloc_errorLimit when the variants and extensions pass
+    ///         MLOC_MAX_LOCALE_TAIL bytes or the tag has more than
+    ///         MLOC_MAX_LOCALE_SUBTAGS subtags;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -95,12 +111,15 @@ extern "C"
     ///
     /// @param data        The data with the aliases and likely subtags.
     /// @param text        The tag.
-    /// @param length      Its length in bytes, below 256.
+    /// @param length      Its length in bytes, at most
+    ///                    MLOC_MAX_LOCALE_TEXT.
     /// @param localeOut   Receives the locale; left unchanged on failure.
     /// @param changesOut  Receives what was replaced; may be null.
     /// @return status mloc_success; mloc_errorSyntax with an offset into the
-    ///         text as mlocParseLocale; mloc_errorCapacity for a text of 256
-    ///         bytes or more, or a result that does not fit; mloc_errorNotFound
+    ///         text as mlocParseLocale; mloc_errorLimit for a text longer
+    ///         than MLOC_MAX_LOCALE_TEXT bytes, before or after a legacy tag
+    ///         is replaced, or a result past the bounds of mlocParseLocale;
+    ///         mloc_errorNotFound
     ///         for data without the aliases (or, for a tag with a u or t
     ///         extension, the extension aliases); mloc_errorFormat for aliases that
     ///         never stop replacing, which only a crafted data file has;
@@ -209,8 +228,8 @@ extern "C"
     /// @param parentOut  Receives the parent; left unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound for root, which has no
     ///         parent, or data without the parents table;
-    ///         mloc_errorCapacity when the extensions do not fit after the
-    ///         parent's variants; mloc_errorInvalid for a null pointer or
+    ///         mloc_errorLimit when the extensions after the parent's
+    ///         variants pass MLOC_MAX_LOCALE_TAIL bytes; mloc_errorInvalid for a null pointer or
     ///         another component.
     /// @par Thread safety
     /// Safe from any thread.
@@ -236,15 +255,16 @@ extern "C"
     /// @param data           The data with the likely subtags and the
     ///                       matching table.
     /// @param supported      The supported locales.
-    /// @param count          Their number, below 2^31.
+    /// @param count          Their number, at most MLOC_MAX_MATCH_LOCALES.
     /// @param defaultLocale  The locale whose equivalents are tried first,
     ///                       as ICU's default locale: usually supported[0];
     ///                       null for none.
     /// @param entriesOut     Receives count entries; left unchanged on
     ///                       failure.
     /// @return mloc_success; mloc_errorNotFound for data without the likely
-    ///         subtags or the matching table; mloc_errorInvalid for a null
-    ///         pointer with a count, or a count too large.
+    ///         subtags or the matching table; mloc_errorLimit for a count
+    ///         past MLOC_MAX_MATCH_LOCALES; mloc_errorInvalid for a null
+    ///         pointer with a count.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocPrepareMatch(const mlocDataSet* data,
@@ -303,12 +323,13 @@ extern "C"
     /// @param count         Their number.
     /// @param desired       The desired locales, the most wanted first,
     ///                      canonicalized.
-    /// @param desiredCount  Their number, below 2^31.
+    /// @param desiredCount  Their number, at most MLOC_MAX_MATCH_LOCALES.
     /// @param options       The options; null for none.
     /// @param matchOut      Receives the outcome; left unchanged on failure.
     /// @return mloc_success, also when nothing matches; mloc_errorNotFound
-    ///         as mlocPrepareMatch; mloc_errorInvalid for a null pointer
-    ///         with a count, a count too large, another flag, a threshold
+    ///         as mlocPrepareMatch; mloc_errorLimit for a count past
+    ///         MLOC_MAX_MATCH_LOCALES; mloc_errorInvalid for a null pointer
+    ///         with a count, another flag, a threshold
     ///         above 100, or an entry the search reads that names no
     ///         locale of the count (entries prepared for another list).
     /// @par Thread safety
@@ -328,8 +349,8 @@ extern "C"
     /// @param supported  The supported locale of the match.
     /// @param localeOut  Receives the locale; may be either input; left
     ///                   unchanged on failure.
-    /// @return mloc_success; mloc_errorCapacity when the variants and
-    ///         extensions pass 112 bytes; mloc_errorInvalid for a null
+    /// @return mloc_success; mloc_errorLimit when the variants and
+    ///         extensions pass MLOC_MAX_LOCALE_TAIL bytes; mloc_errorInvalid for a null
     ///         pointer.
     /// @par Thread safety
     /// Safe from any thread.

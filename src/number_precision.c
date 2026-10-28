@@ -186,9 +186,9 @@ mlocResult mlocApplyPrecision(const mlocPrecision* p, mlocDecimal* decimal)
 
 mlocResult mlocScaleDecimal(mlocDecimal* d, int32_t power)
 {
-    if (d->count > 0 && mlocTopPower(d) + power > mlocDecimalMaxExponent)
+    if (d->count > 0 && mlocTopPower(d) + power > MLOC_MAX_DECIMAL_EXPONENT)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (d->count > 0)
     {
@@ -214,7 +214,7 @@ mlocDecimal mlocShiftDecimal(const mlocDecimal* d, int64_t exponent)
     mlocDecimal m = *d;
     m.exponent = (int32_t)(d->exponent - exponent);
     int64_t shown = d->fractionDigits > 0 ? (int64_t)d->fractionDigits + exponent : 0;
-    shown = shown < mlocDecimalMaxExponent ? shown : mlocDecimalMaxExponent;
+    shown = shown < MLOC_MAX_DECIMAL_EXPONENT ? shown : MLOC_MAX_DECIMAL_EXPONENT;
     int32_t needed = Needed(&m);
     m.fractionDigits = shown > needed ? (int32_t)shown : needed;
     return m;

@@ -17,7 +17,7 @@ static const char text[] = ".input {$count :integer}\n"
                            ".match $count\n"
                            "one {{You have {$count} new message.}}\n"
                            "* {{You have {$count} new messages.}}";
-uint8_t compiled[512];
+uint8_t compiled[1024];
 uint8_t bound[2048];
 size_t compiledSize = 0;
 size_t boundSize = 0;

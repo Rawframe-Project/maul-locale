@@ -487,7 +487,7 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
         size_t length = tail - start;
         if (variants + (variants > 0) + length > sizeof(step.tail))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (variants > 0)
         {
@@ -497,7 +497,7 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
     }
     if (posix && !keepsPosix && !mlocRemoveKeyword(&step, "va"))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     *parentOut = step;
     return mloc_success;

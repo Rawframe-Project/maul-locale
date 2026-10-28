@@ -147,7 +147,7 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         return;
     }
     r.words = mlocBoundWords(buffer);
-    r.budget = messageResolutionLimit;
+    r.budget = MLOC_MAX_MESSAGE_RESOLUTIONS;
     r.probe = true;
     uint8_t* bytes = buffer;
     uint64_t base = mlocBoundBase(&h->view);
@@ -201,9 +201,9 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
         uint32_t slot = mlocExpressionSlot(&h.view, &f, e);
         needed += Prepared(slot) ? RoomOf(slot) : 0;
     }
-    if (needed > UINT32_MAX)
+    if (needed > MLOC_MAX_BOUND_MESSAGE_SIZE)
     {
-        return mloc_errorInvalid;
+        return mloc_errorLimit;
     }
     if (buffer == NULL || capacity < needed)
     {

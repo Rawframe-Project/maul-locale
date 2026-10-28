@@ -585,7 +585,7 @@ static void TestEngineLimits(void)
     // limit.
     static const char s_tens[] = "%a:\n0: x;\n10: << y;\n";
     CHECK(FormatRoot(s_tens, 0, 0, "1e63") == mloc_success &&
-              FormatRoot(s_tens, 0, 0, "1e64") == mloc_errorCapacity,
+              FormatRoot(s_tens, 0, 0, "1e64") == mloc_errorLimit,
           "rule sets nested past 64 levels");
     // A ">>>" remainder made to take its own rule: 15 keeps 5 forever.
     static const char s_triple[] = "%a:\n0: x;\n10: a >>> b;\n";
@@ -606,7 +606,7 @@ static void TestEngineLimits(void)
         RbnfFree(&group);
     }
     CHECK(FormatRoot(s_triple, 0, 0, "15") == mloc_success &&
-              FormatRoot(s_triple, piece + 4, 1, "15") == mloc_errorCapacity,
+              FormatRoot(s_triple, piece + 4, 1, "15") == mloc_errorFormat,
           "rules a remainder calls directly without end");
     // Parsing by a ">>>" with no text after it made to take its own rule
     // nests a level for each "a " (the remainder is the rest of the text),
@@ -642,7 +642,7 @@ static void TestEngineLimits(void)
     CHECK(ParseText(s_tail, 0, 0, "a x", value, sizeof(value), &end) == mloc_success &&
               strcmp(value, "10") == 0 &&
               ParseText(s_tail, tail + 4, 1, deep, value, sizeof(value), &end) ==
-                  mloc_errorCapacity &&
+                  mloc_errorFormat &&
               end == 0,
           "parsing rules a remainder calls directly, nested past the frames allowed");
     free(deep);
@@ -726,15 +726,15 @@ static void TestFractionLimits(void)
 {
     char text[256];
     CHECK(FormatText(s_parts, "%b", 0, 0, "-1e-40", text, sizeof(text)) == mloc_success &&
-              FormatText(s_parts, "%b", 0, 0, "-1e-41", text, sizeof(text)) == mloc_errorCapacity,
+              FormatText(s_parts, "%b", 0, 0, "-1e-41", text, sizeof(text)) == mloc_errorLimit,
           "a negative fraction to 40 places");
-    CHECK(FormatText(s_parts, "%a", 0, 0, "1e999999", text, sizeof(text)) == mloc_errorCapacity,
+    CHECK(FormatText(s_parts, "%a", 0, 0, "1e999999", text, sizeof(text)) == mloc_errorLimit,
           "a numerator past a decimal's exponent");
     // A remainder by a divisor not a power of ten, of a value past 64 bits.
     static const char s_seconds[] = "%a:\n0: =#,##0.##=;\n60/60: >#,##0.##> s;\n";
     CHECK(FormatText(s_seconds, "%a", 0, 0, "61.5", text, sizeof(text)) == mloc_success &&
               strcmp(text, "1.5 s") == 0 &&
-              FormatText(s_seconds, "%a", 0, 0, "1e30", text, sizeof(text)) == mloc_errorCapacity,
+              FormatText(s_seconds, "%a", 0, 0, "1e30", text, sizeof(text)) == mloc_errorLimit,
           "a remainder past 64 bits");
 }
 
@@ -976,7 +976,7 @@ static void TestParseLimits(void)
     char value[64];
     size_t end = 0;
     CHECK(ParseText(s_wide, 0, 0, "1234567890123456789012345678901234567890 p one", value,
-                    sizeof(value), &end) == mloc_errorCapacity &&
+                    sizeof(value), &end) == mloc_errorLimit &&
               ParsesTo(s_wide, "123456789012345678901234567890123456789 p one",
                        "123456789012345678901234567890123456789.1", 45),
           "a value past a decimal's digits");

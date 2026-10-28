@@ -21,10 +21,10 @@ enum
     unitStamp = 0x55,
     unitCategories = 6,
     // The bytes the patterns take, each kept once.
-    unitPool = 2048,
+    unitPool = MLOC_MAX_UNIT_PATTERN_POOL,
     // The pattern slots: a unit's, or a mixed unit's parts', of each
     // output unit.
-    unitSlots = 8,
+    unitSlots = MLOC_MAX_UNIT_SLOTS,
     // The most output units a formatter keeps (unit_prefs.h's
     // unitMaxOutputs).
     unitOutputs = 8,
@@ -121,7 +121,7 @@ typedef struct PatternSlot
 
 // Copies a unit's patterns into a pool, a category without its own
 // taking other's: mloc_success, mloc_errorNotFound for forms without
-// other, mloc_errorCapacity when the pool is full.
+// other, mloc_errorLimit when the pool is full.
 mlocResult mlocPoolUnitPatterns(const PatternPool* pool, PatternSlot* slot, const UnitForms* forms);
 
 // mlocPoolUnitPatterns into a formatter's slot.

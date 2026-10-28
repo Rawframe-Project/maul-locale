@@ -86,10 +86,13 @@ static size_t Gather(const MatchTable* table, mlocMatchEntry* entries, size_t co
 mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported, size_t count,
                             const mlocLocale* defaultLocale, mlocMatchEntry* entriesOut)
 {
-    if (data == nullptr || (count > 0 && (supported == nullptr || entriesOut == nullptr)) ||
-        count > INT32_MAX)
+    if (data == nullptr || (count > 0 && (supported == nullptr || entriesOut == nullptr)))
     {
         return mloc_errorInvalid;
+    }
+    if (count > MLOC_MAX_MATCH_LOCALES)
+    {
+        return mloc_errorLimit;
     }
     Likely likely;
     MatchTable table;
@@ -121,7 +124,7 @@ static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
 {
     if (data == nullptr || matchOut == nullptr ||
         (count > 0 && (supported == nullptr || entries == nullptr)) ||
-        (desiredCount > 0 && desired == nullptr) || count > INT32_MAX || desiredCount > INT32_MAX)
+        (desiredCount > 0 && desired == nullptr))
     {
         return false;
     }
@@ -143,6 +146,10 @@ mlocResult mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported
     if (!ValidArguments(data, supported, entries, count, desired, desiredCount, options, matchOut))
     {
         return mloc_errorInvalid;
+    }
+    if (count > MLOC_MAX_MATCH_LOCALES || desiredCount > MLOC_MAX_MATCH_LOCALES)
+    {
+        return mloc_errorLimit;
     }
     Likely likely;
     MatchTable table;
@@ -303,7 +310,7 @@ mlocResult mlocCombineMatch(const mlocLocale* desired, const mlocLocale* support
     if (parsed != mloc_success)
     {
         // Only a locale mlocParseLocale did not make has text it refuses.
-        return parsed == mloc_errorCapacity ? mloc_errorCapacity : mloc_errorInvalid;
+        return parsed == mloc_errorLimit ? mloc_errorLimit : mloc_errorInvalid;
     }
     *localeOut = combined;
     return mloc_success;

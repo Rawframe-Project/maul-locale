@@ -153,7 +153,7 @@ static void TestExtensions(void)
     }
     mlocLocale locale;
     mlocTextResult result = mlocCanonicalizeLocale(&s_data, text, length, &locale, nullptr);
-    CHECK(result.status == mloc_errorCapacity && result.offset == length,
+    CHECK(result.status == mloc_errorLimit && result.offset == length,
           "a value that grows past the tail");
 }
 
@@ -166,7 +166,7 @@ static void TestRefusals(void)
     char text[300];
     memset(text, 'a', sizeof(text));
     mlocLocale locale;
-    CHECK(mlocCanonicalizeLocale(&s_data, text, 256, &locale, nullptr).status == mloc_errorCapacity,
+    CHECK(mlocCanonicalizeLocale(&s_data, text, 256, &locale, nullptr).status == mloc_errorLimit,
           "256 bytes are too many");
     // 252 bytes fit, but not with "und-" put before them.
     memcpy(text, "x-", 2);
@@ -176,7 +176,7 @@ static void TestRefusals(void)
     }
     text[251] = 'a';
     mlocTextResult grown = mlocCanonicalizeLocale(&s_data, text, 252, &locale, nullptr);
-    CHECK(grown.status == mloc_errorCapacity && grown.offset == 252, "a tag that und- makes 256");
+    CHECK(grown.status == mloc_errorLimit && grown.offset == 252, "a tag that und- makes 256");
     mlocDataSet empty = {nullptr, 0};
     CHECK(mlocCanonicalizeLocale(&empty, "en", 2, &locale, nullptr).status == mloc_errorNotFound,
           "data without the aliases");

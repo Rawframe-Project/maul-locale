@@ -32,7 +32,7 @@ static const uint64_t s_pow10[19] = {1u,
                                      100000000000000000u,
                                      1000000000000000000u};
 
-static_assert(mlocDecimalDigits % 8 == 0, "the digits are checked eight at a time");
+static_assert(MLOC_MAX_DECIMAL_DIGITS % 8 == 0, "the digits are checked eight at a time");
 
 // Whether each digit held is at most 9 and each unused byte 0, eight
 // bytes at a time: a byte below 0x80 plus 0x7F less its limit has its top
@@ -41,7 +41,7 @@ static bool ValidDigits(const mlocDecimal* d)
 {
     const uint64_t nines = 0x0909090909090909u;
     uint64_t bad = 0;
-    for (int k = 0; k < mlocDecimalDigits; k += 8)
+    for (int k = 0; k < MLOC_MAX_DECIMAL_DIGITS; k += 8)
     {
         uint64_t word = mlocLoad64(d->digits + k);
         int used = d->count - k;
@@ -53,7 +53,7 @@ static bool ValidDigits(const mlocDecimal* d)
 
 bool mlocValidDecimal(const mlocDecimal* d)
 {
-    if (d->kind > mloc_decimalNaN || d->negative > 1 || d->count > mlocDecimalDigits ||
+    if (d->kind > mloc_decimalNaN || d->negative > 1 || d->count > MLOC_MAX_DECIMAL_DIGITS ||
         !ValidDigits(d))
     {
         return false;
@@ -66,12 +66,13 @@ bool mlocValidDecimal(const mlocDecimal* d)
     if (d->count == 0)
     {
         return d->exponent == 0 && d->fractionDigits >= 0 &&
-               d->fractionDigits <= mlocDecimalMaxExponent;
+               d->fractionDigits <= MLOC_MAX_DECIMAL_EXPONENT;
     }
     int64_t needed = d->exponent < 0 ? -(int64_t)d->exponent : 0;
     return d->digits[0] != 0 && d->digits[d->count - 1] != 0 &&
-           d->exponent >= -mlocDecimalMaxExponent && mlocTopPower(d) <= mlocDecimalMaxExponent &&
-           d->fractionDigits >= needed && d->fractionDigits <= mlocDecimalMaxExponent;
+           d->exponent >= -MLOC_MAX_DECIMAL_EXPONENT &&
+           mlocTopPower(d) <= MLOC_MAX_DECIMAL_EXPONENT && d->fractionDigits >= needed &&
+           d->fractionDigits <= MLOC_MAX_DECIMAL_EXPONENT;
 }
 
 mlocResult mlocMakeUnsignedDecimal(uint64_t value, mlocDecimal* decimalOut)
@@ -126,7 +127,7 @@ static mlocTextResult Result(mlocResult status, size_t offset)
 // before and after the point.
 typedef struct Mantissa
 {
-    uint8_t digits[mlocDecimalDigits];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
     int count;
     bool tooMany;
     int64_t first;
@@ -163,7 +164,7 @@ static bool ReadMantissa(const char* text, size_t length, size_t* at, Mantissa* 
                 m->first = index;
                 zeros = 0;
             }
-            if (m->count + zeros + 1 > mlocDecimalDigits)
+            if (m->count + zeros + 1 > MLOC_MAX_DECIMAL_DIGITS)
             {
                 m->tooMany = true;
             }
@@ -252,7 +253,7 @@ mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* de
     }
     if (m.tooMany)
     {
-        return Result(mloc_errorCapacity, 0);
+        return Result(mloc_errorLimit, 0);
     }
     int64_t shown = m.fractionDigits - exponent;
     mlocDecimal d = {.negative = negative};
@@ -261,17 +262,17 @@ mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* de
     {
         int64_t top = m.integerDigits - 1 - m.first + exponent;
         int64_t bottom = m.integerDigits - 1 - m.last + exponent;
-        if (top > mlocDecimalMaxExponent || bottom < -mlocDecimalMaxExponent)
+        if (top > MLOC_MAX_DECIMAL_EXPONENT || bottom < -MLOC_MAX_DECIMAL_EXPONENT)
         {
-            return Result(mloc_errorCapacity, 0);
+            return Result(mloc_errorLimit, 0);
         }
         memcpy(d.digits, m.digits, (size_t)m.count);
         d.count = (uint8_t)m.count;
         d.exponent = (int32_t)bottom;
     }
-    if (shown > mlocDecimalMaxExponent)
+    if (shown > MLOC_MAX_DECIMAL_EXPONENT)
     {
-        return Result(mloc_errorCapacity, 0);
+        return Result(mloc_errorLimit, 0);
     }
     *decimalOut = d;
     return Result(mloc_success, length);

@@ -91,10 +91,13 @@ mlocResult mlocFormatList(const mlocListFormatter* formatter, const mlocListItem
 {
     ListFormat f;
     if (!ReadFormatter(formatter, &f) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) || (items == nullptr && count > 0) ||
-        count > UINT32_MAX)
+        (output->buffer == nullptr && output->capacity != 0) || (items == nullptr && count > 0))
     {
         return mloc_errorInvalid;
+    }
+    if (count > MLOC_MAX_LIST_ITEMS)
+    {
+        return mloc_errorLimit;
     }
     for (size_t i = 0; i < count; i++)
     {

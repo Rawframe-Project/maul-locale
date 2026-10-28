@@ -184,10 +184,13 @@ static mlocResult BindIndex(const Chain* c, Binder* b, uint32_t index, Slot* out
 static mlocResult CheckCatalogs(const mlocCatalog* catalogs, const mlocMessageFormatter* formatters,
                                 size_t count, uint32_t* keyCountOut, uint32_t* sourceOut)
 {
-    if (catalogs == nullptr || formatters == nullptr || count == 0 ||
-        count > MLOC_CATALOG_CHAIN_MAX)
+    if (catalogs == nullptr || formatters == nullptr || count == 0)
     {
         return mloc_errorInvalid;
+    }
+    if (count > MLOC_MAX_CATALOG_CHAIN)
+    {
+        return mloc_errorLimit;
     }
     uint32_t source = (uint32_t)count;
     mlocCatalogInfo first = {0};

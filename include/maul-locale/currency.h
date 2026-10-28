@@ -18,6 +18,10 @@ extern "C"
 {
 #endif
 
+// The most currency units of a kind (symbols, names) that parsing any
+// currency reads along a locale's chain, over every source of the data set.
+#define MLOC_MAX_CURRENCY_PARSE_UNITS 8
+
     // How the currency is shown: the locale's symbol ("$", "US$", "€"), its
     // narrow symbol ("$" for any dollar), its ISO code ("USD"), its formal or
     // variant symbol where the locale has one, not at all (digits as money, in
@@ -127,8 +131,8 @@ extern "C"
     ///                   receives mlocNumberPart values, the currency as
     ///                   mloc_numberPartCurrency.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
@@ -150,8 +154,8 @@ extern "C"
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, a NaN end, or a formatter or decimal the library
     ///         did not make.
     /// @par Thread safety
@@ -187,10 +191,10 @@ extern "C"
     /// @param endOut       Receives the offset after the amount, or on
     ///                     mloc_errorSyntax the offset reading stopped at.
     /// @return mloc_success; mloc_errorSyntax when no amount is read (or
-    ///         no currency, with anyCurrency); mloc_errorCapacity as for
-    ///         mlocParseNumber; mloc_errorNotFound for data without the
-    ///         parse sets, or with anyCurrency a chain of more than eight
-    ///         currency units of a kind; mloc_errorInvalid for a null
+    ///         no currency, with anyCurrency); mloc_errorLimit as for
+    ///         mlocParseNumber, and with anyCurrency for a chain of more
+    ///         than MLOC_MAX_CURRENCY_PARSE_UNITS currency units of a kind;
+    ///         mloc_errorNotFound for data without the parse sets; mloc_errorInvalid for a null
     ///         pointer, a mode out of range, or a formatter the library did
     ///         not make or of compact notation, or anyCurrency past 1.
     /// @par Thread safety

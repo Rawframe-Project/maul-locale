@@ -103,8 +103,8 @@ static bool Build(mlocDecimal* out, const uint8_t* digits, int count, int64_t ex
     {
         return true;
     }
-    if (end - start > mlocDecimalDigits || exponent < -mlocDecimalMaxExponent ||
-        exponent + (end - start) - 1 > mlocDecimalMaxExponent)
+    if (end - start > MLOC_MAX_DECIMAL_DIGITS || exponent < -MLOC_MAX_DECIMAL_EXPONENT ||
+        exponent + (end - start) - 1 > MLOC_MAX_DECIMAL_EXPONENT)
     {
         return false;
     }
@@ -143,7 +143,8 @@ bool mlocSpelloutShift(const mlocDecimal* x, int power, mlocDecimal* out)
         return true;
     }
     int64_t exponent = (int64_t)x->exponent - power;
-    if (exponent < -mlocDecimalMaxExponent || exponent + x->count - 1 > mlocDecimalMaxExponent)
+    if (exponent < -MLOC_MAX_DECIMAL_EXPONENT ||
+        exponent + x->count - 1 > MLOC_MAX_DECIMAL_EXPONENT)
     {
         return false;
     }
@@ -164,7 +165,7 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
     if (x->negative == 0)
     {
         // The digits below the point, its zeros before them implied.
-        uint8_t digits[mlocDecimalDigits];
+        uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
         int count = 0;
         for (int i = 0; i < x->count; i++)
         {
@@ -179,11 +180,11 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
     // tens complement (a decimal's last digit is not 0, so nothing
     // carries), which fails past the places a decimal holds.
     int64_t places = -(int64_t)x->exponent;
-    if (places > mlocDecimalDigits)
+    if (places > MLOC_MAX_DECIMAL_DIGITS)
     {
         return false;
     }
-    uint8_t digits[mlocDecimalDigits];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
     for (int64_t i = 0; i < places; i++)
     {
         digits[i] = (uint8_t)(9 - mlocDigitAt(x, -1 - i));
@@ -195,7 +196,7 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
 // x mod 10^k with x's sign (ICU's uprv_fmod by a power of ten).
 static mlocDecimal ModPower(const mlocDecimal* x, int power)
 {
-    uint8_t digits[mlocDecimalDigits];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
     int count = 0;
     for (int i = 0; i < x->count; i++)
     {
@@ -254,7 +255,7 @@ uint64_t mlocSpelloutMagnitudeMod(const mlocDecimal* d, uint64_t divisor)
 // x times a factor below 10^18, exact; false past the decimal's digits.
 bool mlocSpelloutMultiply(const mlocDecimal* x, uint64_t factor, mlocDecimal* out)
 {
-    uint8_t digits[mlocDecimalDigits + 20];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS + 20];
     int n = (int)sizeof(digits);
     uint64_t carry = 0;
     for (int i = x->count - 1; i >= 0 || carry != 0; i--)
@@ -366,7 +367,7 @@ bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecim
     mlocDecimal remainder = mlocSpelloutFromUnsigned(m % divisor.value);
     int64_t top = remainder.count > 0 ? mlocTopPower(&remainder) : 0;
     int64_t last = mlocSpelloutIsZero(&fraction) ? 0 : fraction.exponent;
-    uint8_t digits[mlocDecimalDigits + 24];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS + 24];
     if (top - last + 1 > (int64_t)sizeof(digits))
     {
         return false;
@@ -430,7 +431,7 @@ bool mlocSpelloutAdd(const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* ou
     int64_t top = (topA > topB ? topA : topB) + 1;
     int64_t low = a->exponent < b->exponent ? a->exponent : b->exponent;
     // Digits past a decimal's 40 are a sum it cannot hold.
-    uint8_t digits[2 * mlocDecimalDigits + 2];
+    uint8_t digits[2 * MLOC_MAX_DECIMAL_DIGITS + 2];
     if (top - low + 1 > (int64_t)sizeof(digits))
     {
         return false;

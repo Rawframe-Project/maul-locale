@@ -42,6 +42,7 @@ static void TestResultNames(void)
         {mloc_errorCapacity, -2, "mloc_errorCapacity"},
         {mloc_errorVersion, -7, "mloc_errorVersion"},
         {mloc_errorFormat, -8, "mloc_errorFormat"},
+        {mloc_errorLimit, -9, "mloc_errorLimit"},
         {mloc_errorSyntax, -32, "mloc_errorSyntax"},
         {mloc_errorNotFound, -33, "mloc_errorNotFound"},
         {mloc_errorFallback, -34, "mloc_errorFallback"},

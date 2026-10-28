@@ -243,12 +243,12 @@ static void TestStyles(void)
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
               mlocParseDecimal("1e999998", 8, &big).status == mloc_success &&
-              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity,
+              mlocFormatNumber(&formatter, &big, &output) == mloc_errorLimit,
           "is refused");
     o.style = mloc_numberPerMille;
     CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
               mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
-              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity,
+              mlocFormatNumber(&formatter, &big, &output) == mloc_errorLimit,
           "per mille too");
     o.style = mloc_numberPercent;
     CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
@@ -802,7 +802,7 @@ static void TestRefusals(void)
     mlocNumberOptions coarse = Significant(1, 1);
     CHECK(mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
               mlocInitNumberFormatter(&formatter, &s_data, &locale, &coarse) == mloc_success &&
-              mlocFormatNumber(&formatter, &huge, &output) == mloc_errorCapacity,
+              mlocFormatNumber(&formatter, &huge, &output) == mloc_errorLimit,
           "rounding past the decimal's limits");
 }
 

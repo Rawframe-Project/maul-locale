@@ -207,9 +207,11 @@ static void TestRefusals(void)
               mlocFormatList(&formatter, items, 1, &noBuffer) == mloc_errorInvalid &&
               mlocFormatList(&formatter, nullptr, 1, &output) == mloc_errorInvalid &&
               mlocFormatList(&formatter, items, 2, &output) == mloc_errorInvalid &&
-              (SIZE_MAX == UINT32_MAX || mlocFormatList(&formatter, items, (size_t)UINT32_MAX + 1,
-                                                        &output) == mloc_errorInvalid),
-          "a forged formatter, null pointers, an item without text, a count past 32 bits");
+              (SIZE_MAX == UINT32_MAX ||
+               mlocFormatList(&formatter, items, (size_t)MLOC_MAX_LIST_ITEMS + 1, &output) ==
+                   mloc_errorLimit),
+          "a forged formatter, null pointers, an item without text; a count past "
+          "MLOC_MAX_LIST_ITEMS as a limit");
 }
 
 int main(void)

@@ -170,7 +170,7 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     mlocResult result = text != nullptr ? mlocInflectText(f, text, length, r, &out)
                                         : mlocInflectNumber(f, nullptr, number, r, &out);
     Require(result == mloc_success || result == mloc_errorInvalid || result == mloc_errorNotFound ||
-            result == mloc_errorCapacity);
+            result == mloc_errorCapacity || result == mloc_errorLimit);
     if (result != mloc_success)
     {
         Require(measured == result || result == mloc_errorCapacity);

@@ -108,8 +108,9 @@ extern "C"
                                                              const void** messageOut,
                                                              size_t* sizeOut);
 
-    // The most catalogs a chain holds.
-#define MLOC_CATALOG_CHAIN_MAX 8
+    // The most catalogs a chain holds; more are refused with
+    // mloc_errorLimit.
+#define MLOC_MAX_CATALOG_CHAIN 8
 
     // A chain: catalogs of one set in fallback order ("fr-CA", "fr", the
     // source "en"), each with its locale's formatter, and the cache their
@@ -158,9 +159,10 @@ extern "C"
     ///
     /// @param catalogs    The catalogs, in fallback order.
     /// @param formatters  Each catalog's formatter, of its locale.
-    /// @param count       Their number, 1 to MLOC_CATALOG_CHAIN_MAX.
+    /// @param count       Their number, 1 to MLOC_MAX_CATALOG_CHAIN.
     /// @param sizeOut     Receives the size in bytes.
-    /// @return mloc_success; mloc_errorInvalid as mlocInitCatalogChain.
+    /// @return mloc_success; mloc_errorLimit and mloc_errorInvalid as
+    ///         mlocInitCatalogChain.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
@@ -174,15 +176,16 @@ extern "C"
     /// @param chainOut    Receives the chain; left unchanged on failure.
     /// @param catalogs    The catalogs, in fallback order, of one set.
     /// @param formatters  Each catalog's formatter, of its locale.
-    /// @param count       Their number, 1 to MLOC_CATALOG_CHAIN_MAX.
+    /// @param count       Their number, 1 to MLOC_MAX_CATALOG_CHAIN.
     /// @param cache       The cache's memory; any alignment.
     /// @param cacheSize   Its size: at least 16 bytes and 8 per key of the
     ///                    set; mlocMeasureCatalogChain gives the size with
     ///                    room for every message. Bound messages use at
     ///                    most 4 GiB of it.
     /// @return mloc_success; mloc_errorCapacity for a cache smaller than
-    ///         its head and slots; mloc_errorInvalid for a null pointer, a
-    ///         count out of range, a catalog the library did not open, or
+    ///         its head and slots; mloc_errorLimit for more than
+    ///         MLOC_MAX_CATALOG_CHAIN catalogs; mloc_errorInvalid for a null
+    ///         pointer, a count of 0, a catalog the library did not open, or
     ///         catalogs of different sets. A formatter the library did not
     ///         make binds nothing, so its catalog's messages fall back as
     ///         ones that do not bind.

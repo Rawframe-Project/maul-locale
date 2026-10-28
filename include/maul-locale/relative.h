@@ -118,8 +118,8 @@ extern "C"
     ///                   receives mlocNumberPart values: the number's, and
     ///                   literal for the pattern's text and for a name.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorNotFound for a unit
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a unit
     ///         whose patterns the locale's chain lacks; mloc_errorInvalid
     ///         for a null pointer, an amount not finite, a unit out of
     ///         range, or a formatter or decimal the library did not make.
@@ -149,8 +149,8 @@ extern "C"
     ///                   mloc_datePartRelativeDay, the time's fields, and
     ///                   literal for the glue's text.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorNotFound for a day
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a day
     ///         whose patterns the locale's chain lacks; mloc_errorInvalid
     ///         for a null pointer, an amount not finite, a time out of
     ///         range, or a formatter the library did not make (a time

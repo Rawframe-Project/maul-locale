@@ -196,7 +196,7 @@ static void Encode(const uint8_t* in, size_t count, Text* t)
 
 static bool Expected(mlocResult r)
 {
-    return r == mloc_success || r == mloc_errorNotFound || r == mloc_errorCapacity;
+    return r == mloc_success || r == mloc_errorNotFound || r == mloc_errorLimit;
 }
 
 // The UTF-8 and UTF-16 finds agree, a match on characters within the
@@ -227,7 +227,7 @@ static void Mapped(const mlocCollator* c, mlocSearchOptions options, const uint8
     Require(r8 == r16);
     if (r8 != mloc_success)
     {
-        Require(r8 == mloc_errorInvalid || r8 == mloc_errorCapacity);
+        Require(r8 == mloc_errorInvalid || r8 == mloc_errorLimit);
         return;
     }
     // From the start of a character.

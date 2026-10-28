@@ -350,7 +350,7 @@ static mlocResult TransformedLanguage(const mlocDataSet* data, const Subtags* s,
     mlocLocale tlang;
     if (mlocParseLocale(At(s, first), length, &tlang).status != mloc_success)
     {
-        return mloc_errorFormat;
+        return mloc_errorInvalid;
     }
     uint32_t changes = 0;
     mlocResult result = mlocApplyAliases(data, &tlang, &changes);
@@ -362,7 +362,7 @@ static mlocResult TransformedLanguage(const mlocDataSet* data, const Subtags* s,
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     if (mlocFormatLocale(&tlang, &output) != mloc_success)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     for (size_t k = 0; k < output.length; k++)
     {
@@ -493,7 +493,7 @@ mlocResult mlocCanonicalizeExtensions(const mlocDataSet* data, mlocLocale* local
     }
     if (w.full)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     memset(locale->tail, 0, sizeof(locale->tail));
     memcpy(locale->tail, tail, w.length);

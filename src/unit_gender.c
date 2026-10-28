@@ -273,7 +273,7 @@ mlocResult mlocGetUnitGender(const mlocDataSet* data, const mlocLocale* locale, 
         !mlocWriteNormalUnit(&c.table, id.parts, id.count, id.denominatorConstant, name,
                              sizeof(name), &length))
     {
-        r = mloc_errorCapacity;
+        r = mloc_errorLimit;
     }
     if (r != mloc_success)
     {

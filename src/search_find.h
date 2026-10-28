@@ -24,8 +24,8 @@ enum
     // (ICU4C's CEIBuffer, sized as it sizes it: the pattern's elements,
     // 32 more, and with a wildcard comparison 3 for each UTF-16 unit of
     // the pattern, 8 for one that may be a leading jamo).
-    searchMaxElements = 480,
-    searchRing = 512,
+    searchMaxElements = MLOC_MAX_SEARCH_PATTERN,
+    searchRing = MLOC_MAX_SEARCH_WINDOW,
     searchExtra = 32,
     // ICU4C's compareCE64s results.
     ceMatch = -1,

@@ -18,7 +18,7 @@
 // mloc_errorInvalid for a notation other than standard, or an input
 // that is mixed or does not convert; mloc_errorNotFound for data
 // without the unit table, the preferences or an output's names;
-// mloc_errorCapacity when the slots or the pool run out.
+// mloc_errorLimit when the slots or the pool run out.
 mlocResult mlocInitUsage(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
                          const char* unit, size_t length, const mlocUnitOptions* options,
                          size_t* used);
@@ -27,15 +27,15 @@ mlocResult mlocInitUsage(UnitFormat* u, const mlocDataSet* data, const mlocLocal
 bool mlocValidUsageOutputs(const UnitFormat* u);
 
 // Formats an amount of the input unit in the output its value chooses:
-// mloc_success; mloc_errorCapacity when the text does not fit or the
-// value passes the limits.
+// mloc_success; mloc_errorCapacity when the text does not fit;
+// mloc_errorLimit when the value passes the limits.
 mlocResult mlocFormatUsage(const UnitFormat* u, const mlocDecimal* decimal, mlocOutput* output);
 
 // Formats a range of two amounts of the input unit: in one output, a
 // single unit, as a unit's range ("30–70 ft"); else each end whole in
 // its output, joined by the spaced range separator ("30 ft – 1.2 mi").
-// mloc_success; mloc_errorCapacity when the text does not fit or a value
-// passes the limits.
+// mloc_success; mloc_errorCapacity when the text does not fit;
+// mloc_errorLimit when a value passes the limits.
 mlocResult mlocFormatUsageRange(const UnitFormat* u, const mlocDecimal* start,
                                 const mlocDecimal* end, mlocOutput* output);
 

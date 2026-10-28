@@ -188,146 +188,6 @@ static uint32_t Field(const MessageView* v, uint32_t kind, uint32_t index, uint3
     return mlocMessageField(v, kind, index, field);
 }
 
-static uint32_t Saturate(uint64_t count)
-{
-    return count > messageResolutionLimit ? messageResolutionLimit + 1 : (uint32_t)count;
-}
-
-// What an expression costs: the chain it starts, one more than the
-// longest chain of a declaration whose variable it names (as operand or
-// option value), and the resolutions it makes, its own and each named
-// declaration's again, an option's twice (checked, then read). Each
-// saturates past its limit.
-typedef struct Cost
-{
-    uint32_t chain;
-    uint32_t resolutions;
-} Cost;
-
-// An expression's cost. Declarations name only earlier ones, so theirs
-// are known; one naming a later expression (only in crafted bytes, which
-// could loop) gives a chain of 0.
-static Cost CostOf(const MessageView* v, const uint8_t* words, uint32_t e)
-{
-    const uint8_t* expressionWords = words + (size_t)v->count[messageVariables] * 4;
-    const uint8_t* costWords = expressionWords + (size_t)v->count[messageExpressions] * 4;
-    Cost cost = {0, 1};
-    uint64_t resolutions = 1;
-    uint32_t first = Field(v, messageExpressions, e, 5);
-    uint32_t count = Field(v, messageExpressions, e, 6);
-    for (uint32_t i = 0; i <= count; i++)
-    {
-        uint32_t variable;
-        if (i == count)
-        {
-            if (Field(v, messageExpressions, e, 0) != operandVariable)
-            {
-                continue;
-            }
-            variable = Field(v, messageExpressions, e, 1);
-        }
-        else if (Field(v, messageParameters, first + i, 0) == parameterOptionVariable)
-        {
-            variable = Field(v, messageParameters, first + i, 3);
-        }
-        else
-        {
-            continue;
-        }
-        uint32_t d = mlocLoad32(words + (size_t)variable * 4);
-        if (d == messageUnbound)
-        {
-            continue;
-        }
-        uint32_t named = Field(v, messageDeclarations, d, 2);
-        if (named == e && Field(v, messageDeclarations, d, 0) == declarationInput && i == count)
-        {
-            // An input's own operand is the argument.
-            continue;
-        }
-        if (named >= e)
-        {
-            cost.chain = 0;
-            return cost;
-        }
-        uint32_t length = mlocLoad32(expressionWords + (size_t)named * 4) >> 24;
-        cost.chain = length > cost.chain ? length : cost.chain;
-        resolutions += (uint64_t)(i == count ? 1 : 2) * mlocLoad32(costWords + (size_t)named * 4);
-        resolutions = Saturate(resolutions);
-    }
-    cost.chain++;
-    cost.resolutions = (uint32_t)resolutions;
-    return cost;
-}
-
-// The resolutions a variable's reference makes.
-static uint64_t VariableCost(const MessageView* v, const uint8_t* words, uint32_t variable)
-{
-    uint32_t d = mlocLoad32(words + (size_t)variable * 4);
-    if (d == messageUnbound)
-    {
-        return 0;
-    }
-    const uint8_t* costWords =
-        words + ((size_t)v->count[messageVariables] + v->count[messageExpressions]) * 4;
-    return mlocLoad32(costWords + (size_t)Field(v, messageDeclarations, d, 2) * 4);
-}
-
-// The resolutions a pattern's expressions and markups make.
-static uint64_t PatternCost(const MessageView* v, const uint8_t* words, uint32_t first,
-                            uint32_t count)
-{
-    const uint8_t* costWords =
-        words + ((size_t)v->count[messageVariables] + v->count[messageExpressions]) * 4;
-    uint64_t total = 0;
-    for (uint32_t i = first; i < first + count; i++)
-    {
-        uint32_t kind = Field(v, messagePieces, i, 0);
-        uint32_t index = Field(v, messagePieces, i, 1);
-        if (kind == pieceExpression)
-        {
-            total += mlocLoad32(costWords + (size_t)index * 4);
-        }
-        else if (kind == pieceMarkup)
-        {
-            // A markup's options are resolved for their faults.
-            uint32_t parameter = Field(v, messageMarkups, index, 3);
-            uint32_t end = parameter + Field(v, messageMarkups, index, 4);
-            for (; parameter < end; parameter++)
-            {
-                if (Field(v, messageParameters, parameter, 0) == parameterOptionVariable)
-                {
-                    total += VariableCost(v, words, Field(v, messageParameters, parameter, 3));
-                }
-            }
-        }
-    }
-    return total;
-}
-
-// The most resolutions a format call makes: its selectors', then the
-// costliest pattern's.
-static uint64_t MessageCost(const MessageView* v, const uint8_t* words)
-{
-    uint64_t total = 0;
-    for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
-    {
-        total += VariableCost(v, words, Field(v, messageSelectors, s, 0));
-    }
-    if (v->count[messageVariants] == 0)
-    {
-        return total + PatternCost(v, words, 0, v->count[messagePieces]);
-    }
-    uint64_t costliest = 0;
-    for (uint32_t i = 0; i < v->count[messageVariants]; i++)
-    {
-        uint64_t cost =
-            PatternCost(v, words, Field(v, messageVariants, i, 0), Field(v, messageVariants, i, 1));
-        costliest = cost > costliest ? cost : costliest;
-    }
-    return total + costliest;
-}
-
 // An expression's function slot: none, a default function, a program
 // function by its name, or unknown.
 static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t e)
@@ -378,38 +238,23 @@ static uint32_t SlotOf(const MessageView* v, const MessageFormatter* f, uint32_t
     return messageFunctionUnknown;
 }
 
-// Writes the words: each variable's declaration, then each expression's
-// function slot and chain length, then its resolutions;
-// mloc_errorInvalid past the chain or resolution limit (not a capacity
-// error: no buffer would do), mloc_errorFormat for a declaration naming a
-// later one.
+// Writes the words: the costs, then each expression's function slot
+// below its chain length. A message past a bound is refused with
+// mloc_errorFormat, as every check on stored bytes is: the compiler
+// refuses such a message, so no compiled one has it.
 static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, uint8_t* words)
 {
-    for (uint32_t i = 0; i < v->count[messageVariables]; i++)
+    if (mlocWriteMessageCosts(v, words) != mloc_success)
     {
-        Store32(words + (size_t)i * 4, messageUnbound);
-    }
-    for (uint32_t d = 0; d < v->count[messageDeclarations]; d++)
-    {
-        Store32(words + (size_t)Field(v, messageDeclarations, d, 1) * 4, d);
+        return mloc_errorFormat;
     }
     uint8_t* expressionWords = words + (size_t)v->count[messageVariables] * 4;
-    uint8_t* costWords = expressionWords + (size_t)v->count[messageExpressions] * 4;
     for (uint32_t e = 0; e < v->count[messageExpressions]; e++)
     {
-        Cost cost = CostOf(v, words, e);
-        if (cost.chain == 0)
-        {
-            return mloc_errorFormat;
-        }
-        if (cost.chain > messageChainLimit)
-        {
-            return mloc_errorInvalid;
-        }
-        Store32(expressionWords + (size_t)e * 4, SlotOf(v, f, e) | cost.chain << 24);
-        Store32(costWords + (size_t)e * 4, cost.resolutions);
+        uint8_t* word = expressionWords + (size_t)e * 4;
+        Store32(word, mlocLoad32(word) | SlotOf(v, f, e));
     }
-    return MessageCost(v, words) > messageResolutionLimit ? mloc_errorInvalid : mloc_success;
+    return mloc_success;
 }
 
 uint32_t mlocExpressionSlot(const MessageView* view, const MessageFormatter* formatter,
@@ -431,13 +276,7 @@ mlocResult mlocOpenBind(const mlocMessageFormatter* formatter, const void* messa
     {
         return result;
     }
-    const MessageView* v = &headerOut->view;
-    return v->count[messageSelectors] > messageSelectorLimit ||
-                   v->count[messageDeclarations] > messageDeclarationLimit ||
-                   v->count[messageExpressions] > messageIndexLimit ||
-                   v->count[messageMarkups] > messageIndexLimit
-               ? mloc_errorInvalid
-               : mloc_success;
+    return mlocMessageCountsFit(headerOut->view.count) ? mloc_success : mloc_errorFormat;
 }
 
 uint64_t mlocBoundBase(const MessageView* view)

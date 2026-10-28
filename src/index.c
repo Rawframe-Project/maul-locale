@@ -17,10 +17,15 @@
 
 #include "maul-unicode/encoding.h"
 
+#include <assert.h>
+
+static_assert(indexMaxLabelBytes == MLOC_MAX_INDEX_LABEL,
+              "a special label holds what a label of the data holds");
+
 static const char s_ellipsis[] = "\xE2\x80\xA6";
 
-// A special label as given, or "…"; false when it is no UTF-8 of at most
-// 255 bytes.
+// A special label as given, or "…"; false when it is no UTF-8 (its length
+// is checked apart).
 static bool SpecialLabel(const char* text, size_t length, const uint8_t** textOut,
                          uint32_t* lengthOut)
 {
@@ -32,7 +37,7 @@ static bool SpecialLabel(const char* text, size_t length, const uint8_t** textOu
     }
     *textOut = (const uint8_t*)text;
     *lengthOut = (uint32_t)length;
-    return length <= indexMaxLabelBytes && muniValidateUtf8(text, length).status == muni_success;
+    return muniValidateUtf8(text, length).status == muni_success;
 }
 
 static bool Specials(const mlocIndexOptions* o, IndexSpecials* out)
@@ -54,6 +59,11 @@ mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
         !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
+    }
+    if (o.underflowLength > MLOC_MAX_INDEX_LABEL || o.inflowLength > MLOC_MAX_INDEX_LABEL ||
+        o.overflowLength > MLOC_MAX_INDEX_LABEL)
+    {
+        return mloc_errorLimit;
     }
     // ICU4C's collatorPrimaryOnly_: the collator's settings at primary
     // strength, with the fast Latin options for it.

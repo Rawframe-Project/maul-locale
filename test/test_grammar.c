@@ -413,7 +413,7 @@ static void TestRefusals(void)
               mlocInflectText(&s_tr, ".", 1, &dative, &output) == mloc_errorInvalid,
           "an emoji, punctuation, a closing mark or a period alone end nothing to read");
     static const char s_long[] = "12345678901234567890123456789012345678901234567890";
-    CHECK(mlocInflectText(&s_tr, s_long, sizeof(s_long) - 1, &dative, &output) == mloc_errorInvalid,
+    CHECK(mlocInflectText(&s_tr, s_long, sizeof(s_long) - 1, &dative, &output) == mloc_errorLimit,
           "a number past a decimal's 40 digits is refused");
     static char s_word[301];
     memset(s_word, 'a', 300);
@@ -430,8 +430,9 @@ static void TestRefusals(void)
     CHECK(mlocParseDecimal("5", 1, &five).status == mloc_success &&
               mlocParseDecimal("1e2000", 6, &huge).status == mloc_success &&
               mlocInflectNumber(&s_tr, nullptr, &five, &dative, nullptr) == mloc_errorInvalid &&
-              mlocInflectNumber(&s_tr, nullptr, &huge, &dative, &output) == mloc_errorInvalid,
-          "a number without an output, or whose text passes 1,024 bytes, is refused");
+              mlocInflectNumber(&s_tr, nullptr, &huge, &dative, &output) == mloc_errorLimit,
+          "a number without an output, or whose text passes MLOC_MAX_INFLECTED_NUMBER bytes, is "
+          "refused");
     mlocOutput small = {s_text, 4, 0, nullptr, nullptr};
     CHECK(mlocInflectText(&s_tr, "Ankara", 6, &dative, &small) == mloc_errorCapacity &&
               small.length == 9,

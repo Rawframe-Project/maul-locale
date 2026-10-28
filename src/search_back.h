@@ -21,6 +21,8 @@
 
 #include "search_elements.h"
 
+#include "maul-locale/search.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -28,7 +30,7 @@
 // code points, or of halves without a primary, sets full.
 enum
 {
-    searchBackHalves = 128
+    searchBackHalves = MLOC_MAX_SEARCH_BACKWARD_RUN
 };
 
 typedef struct SearchHalf

@@ -43,6 +43,9 @@ extern "C"
         mloc_listPartLiteral = 1,
     } mlocListPart;
 
+// The most items a list takes: the formatter counts them in 32 bits.
+#define MLOC_MAX_LIST_ITEMS 4294967295u
+
     // A list formatter's options; the zero value is the default (and,
     // wide).
     typedef struct mlocListOptions
@@ -92,13 +95,13 @@ extern "C"
     /// @param formatter  A formatter mlocInitListFormatter made.
     /// @param items      The items, count of them; may be null when count
     ///                   is 0.
-    /// @param count      The number of items, at most UINT32_MAX.
+    /// @param count      The number of items, at most MLOC_MAX_LIST_ITEMS.
     /// @param output     Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output's length then the size needed); mloc_errorInvalid
-    ///         for a formatter the library did not make, a null pointer, an
-    ///         item with a null text and a length, or a count past
-    ///         UINT32_MAX.
+    ///         (output's length then the size needed); mloc_errorLimit for
+    ///         a count past MLOC_MAX_LIST_ITEMS; mloc_errorInvalid for a
+    ///         formatter the library did not make, a null pointer, or an
+    ///         item with a null text and a length.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatList(const mlocListFormatter* formatter,

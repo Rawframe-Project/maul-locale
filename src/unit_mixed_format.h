@@ -19,7 +19,7 @@ bool mlocIsMixedUnit(const char* unit, size_t length);
 // (advanced past them), the pool from *used on, and the formatter's unit
 // list of the width when it has none yet. Returns mloc_success;
 // mloc_errorInvalid for parts that do not convert to each other alone;
-// mloc_errorCapacity when the slots run out; mloc_errorNotFound for data
+// mloc_errorLimit when the slots run out; mloc_errorNotFound for data
 // without the lists; the errors of mlocLoadUnitForms.
 mlocResult mlocLoadMixedOutput(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
                                const char* unit, size_t length, mlocUnitWidth width,
@@ -42,20 +42,20 @@ bool mlocValidMixedUnit(const UnitFormat* u);
 mlocResult mlocRoundSmallest(void* context, mlocDecimal* amount, bool exact);
 
 // Writes an output's amounts across its parts into a writer of the
-// caller's: mloc_success, or mloc_errorCapacity when a part passes the
+// caller's: mloc_success, or mloc_errorLimit when a part passes the
 // limits.
 mlocResult mlocWriteMixedTo(const UnitFormat* u, const UnitOutput* o,
                             const mlocUnitAmounts* amounts, NumberWriter* writer);
 
 // Writes an output's amounts across its parts: mloc_success;
-// mloc_errorCapacity when the text does not fit or a part passes the
-// limits.
+// mloc_errorCapacity when the text does not fit; mloc_errorLimit when a
+// part passes the limits.
 mlocResult mlocWriteMixed(const UnitFormat* u, const UnitOutput* o, const mlocUnitAmounts* amounts,
                           mlocOutput* output);
 
 // Formats an amount of the one output's largest part across its parts:
-// mloc_success; mloc_errorCapacity when the text does not fit or a part
-// passes the limits.
+// mloc_success; mloc_errorCapacity when the text does not fit;
+// mloc_errorLimit when a part passes the limits.
 mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, mlocOutput* output);
 
 #endif

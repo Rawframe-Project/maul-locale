@@ -64,7 +64,7 @@ static void Check(const mlocDecimal* decimal)
 {
     // A decimal's text is at most a sign, 10^6 integer digits, a point and
     // 10^6 fraction digits; a short buffer reports what it needs.
-    static char s_buffer[2 * mlocDecimalMaxExponent + 4];
+    static char s_buffer[2 * MLOC_MAX_DECIMAL_EXPONENT + 4];
     mlocOutput output = {.buffer = s_buffer, .capacity = sizeof(s_buffer)};
     Require(mlocFormatDecimal(decimal, &output) == mloc_success);
     size_t length = output.length;
@@ -87,7 +87,7 @@ static void Check(const mlocDecimal* decimal)
         int32_t position = (int32_t)(operands.i % 41) - 20;
         uint32_t increment = s_increments[(operands.f + (uint32_t)mode) % 4];
         mlocResult result = mlocRoundDecimal(&rounded, position, increment, mode);
-        Require(result == mloc_success || result == mloc_errorCapacity);
+        Require(result == mloc_success || result == mloc_errorLimit);
         if (result == mloc_success)
         {
             mlocDecimal twice = rounded;

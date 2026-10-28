@@ -13,6 +13,7 @@
 #include "spellout_data.h"
 
 #include "maul-locale/decimal.h"
+#include "maul-locale/spellout.h"
 
 #include <stdint.h>
 
@@ -55,8 +56,10 @@ bool mlocValidSpelloutCore(const NumberCore* core);
 // Writes a valid decimal by a formatter's rule set (its core read from
 // source), with the text's first code point when a rule's text or a
 // symbol begins it (0 when a pattern's digits do, or for no text).
-// Returns mloc_errorCapacity when the rules nest past 64 levels or a
-// division passes the decimal's digits, or mloc_errorInvalid for a
+// Returns mloc_errorLimit when the rules nest past 64 levels or a
+// division passes the decimal's digits, mloc_errorFormat for rules only a
+// crafted file has (chained past the frames, a base past 2^63 for a value
+// below it), or mloc_errorInvalid for a
 // source whose core does not hold; the writer's text is then partial.
 mlocResult mlocWriteSpellout(const SpelloutFormat* format, const mlocDecimal* decimal,
                              NumberWriter* writer, uint32_t* firstOut);

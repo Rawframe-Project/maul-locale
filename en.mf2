@@ -1,0 +1,13 @@
+@locale en
+---
+hello = Hello
+bye = Goodbye
+count = .input {$n :integer}
+ .match $n
+ one {{One file}}
+ * {{{$n} files}}
+wide = Wide
+broken = .input {$a :string}
+ .match $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a $a
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * {{x}}
+faulty = Hi {$name}

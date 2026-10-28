@@ -11,7 +11,7 @@
 
 #include "unit_data.h"
 
-#include "maul-locale/base.h"
+#include "maul-locale/unit.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -19,10 +19,10 @@
 enum
 {
     // The single units a core unit holds, and the parts of a mixed unit.
-    unitMaxFactors = 8,
-    unitMaxParts = 4,
+    unitMaxFactors = MLOC_MAX_UNIT_FACTORS,
+    unitMaxParts = MLOC_MAX_UNIT_PARTS,
     // The longest identifier read.
-    unitMaxIdLength = 255,
+    unitMaxIdLength = MLOC_MAX_UNIT_ID,
 };
 
 // A single unit: a simple unit (or, for a currency unit, the currency's
@@ -50,8 +50,8 @@ typedef struct UnitId
 
 // Parses an identifier. Returns mloc_success; mloc_errorSyntax for one
 // that is not well-formed; mloc_errorNotFound for a simple unit the
-// table lacks or a private-use unit; mloc_errorCapacity for more single
-// units, parts or constant than the limits hold.
+// table lacks or a private-use unit; mloc_errorLimit for more single
+// units, parts or constant than the MLOC_MAX_UNIT_* bounds hold.
 mlocResult mlocParseUnitId(const UnitTable* t, const char* text, size_t length, UnitId* out);
 
 #endif

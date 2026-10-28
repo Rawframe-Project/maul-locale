@@ -15,13 +15,14 @@
 bool mlocValidPrecision(const mlocPrecision* precision);
 
 // Rounds a finite decimal by a valid precision; the zero precision leaves
-// it as it is. Returns mloc_errorCapacity when the result passes the
+// it as it is. Returns mloc_errorLimit when the result passes the
 // decimal's limits, the decimal then unchanged.
 mlocResult mlocApplyPrecision(const mlocPrecision* precision, mlocDecimal* decimal);
 
 // Multiplies a finite decimal by 10^power (2 for percent, 3 for per
 // mille), its fraction digits shown moving with the point. Returns
-// mloc_errorCapacity when the result passes 10^999999.
+// mloc_errorLimit when the result passes
+// 10^MLOC_MAX_DECIMAL_EXPONENT.
 mlocResult mlocScaleDecimal(mlocDecimal* decimal, int32_t power);
 
 // A decimal divided by 10^exponent, the exponent within the decimal's

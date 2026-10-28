@@ -34,7 +34,7 @@ mlocResult mlocCheckMixed(const UnitTable* t, const UnitId* mixed, uint32_t* sma
 // Whether a value of the input's unit reaches a threshold (threshold /
 // 10^places) in an output unit (a mixed unit's largest part):
 // mloc_success; mloc_errorFormat for an output that does not convert from
-// the input; mloc_errorCapacity when the integers cannot hold the value.
+// the input; mloc_errorLimit when the integers cannot hold the value.
 mlocResult mlocReachesThreshold(const UnitTable* t, const UnitScale* input, const UnitValue* value,
                                 const UnitId* output, uint32_t threshold, uint8_t places,
                                 bool* reachesOut);
@@ -48,7 +48,7 @@ typedef mlocResult (*MixedRound)(void* context, mlocDecimal* amount, bool exact)
 // are taken largest first whatever their order. The value is in the
 // input's unit, or the largest part's when input is null; NaN and the
 // infinities go to the largest part, the others 0. The first part given
-// carries the sign of a finite value. Returns mloc_success; mloc_errorCapacity when the
+// carries the sign of a finite value. Returns mloc_success; mloc_errorLimit when the
 // integers cannot hold a part; mloc_errorInvalid for parts that do not
 // convert to each other alone (an offset or Beaufort); round's error.
 mlocResult mlocSplitMixed(const UnitTable* t, const UnitId* mixed, const UnitScale* input,

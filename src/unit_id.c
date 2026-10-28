@@ -107,7 +107,7 @@ static bool Times(uint64_t* value, uint64_t factor)
 }
 
 // Reads a unit constant ("100", "1e6"): mloc_success, mloc_errorSyntax
-// when the token is not one, mloc_errorCapacity when it passes 64 bits.
+// when the token is not one, mloc_errorLimit when it passes 64 bits.
 static mlocResult Constant(const Parser* p, uint32_t i, uint64_t* valueOut)
 {
     const char* s = p->text + p->tokens[i].start;
@@ -135,7 +135,7 @@ static mlocResult Constant(const Parser* p, uint32_t i, uint64_t* valueOut)
     {
         if (!Times(&mantissa, 10))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     *valueOut = mantissa;
@@ -198,7 +198,7 @@ static mlocResult AddPart(Parser* p, UnitPart part)
 {
     if (p->id.count == unitMaxFactors)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     p->id.parts[p->id.count++] = part;
     return mloc_success;
@@ -273,7 +273,7 @@ static mlocResult ParseCore(Parser* p)
             uint64_t* into = denominator ? &p->id.denominatorConstant : &p->id.numeratorConstant;
             if (r == mloc_success && !Times(into, value))
             {
-                r = mloc_errorCapacity;
+                r = mloc_errorLimit;
             }
             i++;
         }
@@ -299,7 +299,7 @@ static mlocResult ParseMixed(Parser* p)
     {
         if (p->id.count == unitMaxParts)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         uint32_t end = RunEnd(p, i);
         if (end == i || (end < p->count && !Is(p, end, "and")))
@@ -331,7 +331,7 @@ mlocResult mlocParseUnitId(const UnitTable* t, const char* text, size_t length, 
 {
     if (length == 0 || length > unitMaxIdLength)
     {
-        return length == 0 ? mloc_errorSyntax : mloc_errorCapacity;
+        return length == 0 ? mloc_errorSyntax : mloc_errorLimit;
     }
     Parser p = {.table = t, .text = text};
     const char* replacement = nullptr;

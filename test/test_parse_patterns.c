@@ -296,10 +296,11 @@ static mlocResult ParsePrefixed(const char* prefix, const char* text, bool stric
 static void TestBounds(void)
 {
     // A literal is a matcher, with an ignorables matcher between two in
-    // lenient mode: 16 literals fit, 17 do not.
+    // lenient mode: 16 literals fit, 17 do not. No data file the generator
+    // writes has more, so more is malformed data.
     CHECK(ParsePrefixed("abcdefghijklmnop", "abcdefghijklmnop12", false) == mloc_success,
           "16 literals in lenient mode");
-    CHECK(ParsePrefixed("abcdefghijklmnopq", "abcdefghijklmnopq12", false) == mloc_errorCapacity,
+    CHECK(ParsePrefixed("abcdefghijklmnopq", "abcdefghijklmnopq12", false) == mloc_errorFormat,
           "17 literals in lenient mode");
     CHECK(ParsePrefixed("abcdefghijklmnopqrstuvwxyzABCDEF", "abcdefghijklmnopqrstuvwxyzABCDEF12",
                         true) == mloc_success,
@@ -316,8 +317,7 @@ static void TestBounds(void)
         prefix[3 * count] = '\0';
         memcpy(text, prefix, (size_t)(3 * count));
         memcpy(text + 3 * count, "12", 3);
-        CHECK(ParsePrefixed(prefix, text, true) ==
-                  (count == 21 ? mloc_success : mloc_errorCapacity),
+        CHECK(ParsePrefixed(prefix, text, true) == (count == 21 ? mloc_success : mloc_errorFormat),
               count == 21 ? "an affix of 63 bytes" : "an affix of 66 bytes");
     }
     const char* plain[4] = {"", "", "\x01", ""};

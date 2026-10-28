@@ -124,8 +124,7 @@ static void TestTemperatures(void)
     char text[128];
     mlocDecimal v;
     mlocDecimal out;
-    CHECK(Convert("1e700", "celsius", "kelvin", nullptr, text, sizeof(text)) ==
-                  mloc_errorCapacity &&
+    CHECK(Convert("1e700", "celsius", "kelvin", nullptr, text, sizeof(text)) == mloc_errorLimit &&
               mlocParseDecimal("1e600", 5, &v).status == mloc_success &&
               mlocConvertUnit(&s_data, "celsius", 7, "kelvin", 6, nullptr, &v, &out) ==
                   mloc_success &&
@@ -144,11 +143,11 @@ static void TestLargeValues(void)
           "a scale keeps the power apart");
     CHECK(mlocParseDecimal("1e999999", 8, &v).status == mloc_success &&
               mlocConvertUnit(&s_data, "kilometer", 9, "meter", 5, nullptr, &v, &out) ==
-                  mloc_errorCapacity,
+                  mloc_errorLimit,
           "a result past the decimal's exponent");
     CHECK(mlocParseDecimal("1e-999999", 9, &v).status == mloc_success &&
               mlocConvertUnit(&s_data, "meter", 5, "kilometer", 9, nullptr, &v, &out) ==
-                  mloc_errorCapacity,
+                  mloc_errorLimit,
           "a result below the decimal's exponent");
     CHECK(mlocParseDecimal("1e-999990", 9, &v).status == mloc_success &&
               mlocConvertUnit(&s_data, "foot", 4, "meter", 5, nullptr, &v, &out) == mloc_success &&
@@ -159,8 +158,7 @@ static void TestLargeValues(void)
               out.exponent == -999989 && out.count == 38,
           "an inexact result near the smallest exponent");
     CHECK(mlocParseDecimal("1e-999970", 9, &v).status == mloc_success &&
-              mlocConvertUnit(&s_data, "inch", 4, "foot", 4, nullptr, &v, &out) ==
-                  mloc_errorCapacity,
+              mlocConvertUnit(&s_data, "inch", 4, "foot", 4, nullptr, &v, &out) == mloc_errorLimit,
           "an inexact result whose digits pass the smallest exponent");
 }
 
@@ -279,18 +277,18 @@ static void TestRefusals(void)
               Refusal("kilogram", "meter") == mloc_errorInvalid &&
               Refusal("meter", "foot-and-inch") == mloc_errorInvalid,
           "units that do not convert");
-    CHECK(Refusal("pow15-dalton-pow15-dalton", "kilogram") == mloc_errorCapacity &&
+    CHECK(Refusal("pow15-dalton-pow15-dalton", "kilogram") == mloc_errorLimit &&
               Refusal("meter-meter-meter-meter-meter-meter-meter-meter-meter", "meter") ==
-                  mloc_errorCapacity &&
-              Refusal("foot-and-foot-and-foot-and-foot-and-foot", "foot") == mloc_errorCapacity &&
-              Refusal("pow15-yobibyte-pow15-yobibyte", "pow30-bit") == mloc_errorCapacity &&
-              Refusal("per-1e20", "part") == mloc_errorCapacity &&
-              Refusal("per-1e9-1e9-1e9", "part") == mloc_errorCapacity,
+                  mloc_errorLimit &&
+              Refusal("foot-and-foot-and-foot-and-foot-and-foot", "foot") == mloc_errorLimit &&
+              Refusal("pow15-yobibyte-pow15-yobibyte", "pow30-bit") == mloc_errorLimit &&
+              Refusal("per-1e20", "part") == mloc_errorLimit &&
+              Refusal("per-1e9-1e9-1e9", "part") == mloc_errorLimit,
           "past the limits");
     char longId[300];
     memset(longId, 'm', sizeof(longId) - 1);
     longId[sizeof(longId) - 1] = '\0';
-    CHECK(Refusal(longId, "meter") == mloc_errorCapacity, "an identifier past 255 bytes");
+    CHECK(Refusal(longId, "meter") == mloc_errorLimit, "an identifier past 255 bytes");
     // 255 bytes of one-letter tokens: the most tokens an identifier holds.
     for (size_t i = 0; i < 255; i++)
     {
@@ -420,9 +418,9 @@ static void TestPreferences(void)
           "the first category's preferences");
     char text[256];
     CHECK(Prefer("en", "celsius", "weather", "1e700", nullptr, text, sizeof(text)) ==
-                  mloc_errorCapacity &&
+                  mloc_errorLimit &&
               Prefer("en-US", "meter", "person-height", "1e700", nullptr, text, sizeof(text)) ==
-                  mloc_errorCapacity,
+                  mloc_errorLimit,
           "values the exact integers cannot hold");
 }
 

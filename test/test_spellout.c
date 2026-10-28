@@ -507,7 +507,7 @@ static void TestParse(void)
                   mloc_success &&
               Decimal("123456789012345678.75", &big) &&
               mlocFormatSpellout(&words, &big, &written) == mloc_success &&
-              mlocParseSpellout(&words, text, written.length, &big, &stop) == mloc_errorCapacity &&
+              mlocParseSpellout(&words, text, written.length, &big, &stop) == mloc_errorLimit &&
               stop == 0,
           "a search past its steps");
     // A long Lithuanian number reads within the steps, its searches kept

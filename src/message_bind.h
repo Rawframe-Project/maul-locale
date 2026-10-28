@@ -13,6 +13,7 @@
 #ifndef MLOC_SRC_MESSAGE_BIND_H
 #define MLOC_SRC_MESSAGE_BIND_H
 
+#include "message_cost.h"
 #include "message_read.h"
 
 #include "maul-locale/message.h"
@@ -44,9 +45,6 @@ typedef struct BoundHeader
     MessageView view;
 } BoundHeader;
 
-// A variable bound by no declaration.
-static const uint32_t messageUnbound = UINT32_MAX;
-
 // An expression's function slot: none, a function the formatter does not
 // have, one of the default functions, or a program function (its index
 // past the first).
@@ -76,32 +74,6 @@ enum
 
 // Slots take 24 bits: the program's functions are fewer.
 static const uint32_t messageFunctionLimit = (1u << 24) - messageFunctionProgram;
-
-// The most selectors a bound message has: their values are kept on the
-// stack while a variant is chosen.
-static const uint32_t messageSelectorLimit = 32;
-
-// The most declarations a bound message has: a format call keeps a bit
-// for each, whether its faults were reported.
-enum
-{
-    messageDeclarationLimit = 1024,
-};
-
-// The longest chain of expressions, each naming the next through a
-// declaration, that a bound message resolves on the stack.
-static const uint32_t messageChainLimit = 64;
-
-// The expressions and markups a message may have: a part's kind holds an
-// index in 24 bits.
-static const uint32_t messageIndexLimit = 1u << 24;
-
-// The most expression resolutions a format call makes. Each reference to
-// a local resolves it again (call-by-name), so a message whose locals are
-// each named twice by the next grows as a power of two; binding refuses
-// one whose count, each option read once, is past the limit, and a call
-// stops resolving there whatever its functions read.
-static const uint32_t messageResolutionLimit = 1u << 16;
 
 // Reads a formatter the library made; false for any other bytes.
 bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter, MessageFormatter* out);

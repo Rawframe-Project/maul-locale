@@ -167,7 +167,7 @@ static void TestRefusals(void)
     mlocIndexBucket bucket;
     mlocIndexOptions bad = {0, "\xC3", 1, nullptr, 0, nullptr, 0};
     mlocIndexOptions dangling = {0, nullptr, 2, nullptr, 0, nullptr, 0};
-    static char s_long[256];
+    static char s_long[MLOC_MAX_INDEX_LABEL + 1];
     memset(s_long, 'a', sizeof(s_long));
     mlocIndexOptions longer = {0, s_long, sizeof(s_long), nullptr, 0, nullptr, 0};
     CHECK(Build("en", nullptr) > 0 &&
@@ -184,9 +184,9 @@ static void TestRefusals(void)
               mlocBuildIndex(&s_collator, &s_data, &s_locale, &dangling, s_index, 100, &size) ==
                   mloc_errorInvalid &&
               mlocBuildIndex(&s_collator, &s_data, &s_locale, &longer, s_index, 100, &size) ==
-                  mloc_errorInvalid,
-          "a null collator, data, buffer or size, and special labels ill-formed, missing or "
-          "past 255 bytes refused");
+                  mloc_errorLimit,
+          "a null collator, data, buffer or size, and special labels ill-formed or missing "
+          "refused; one past MLOC_MAX_INDEX_LABEL bytes refused as a limit");
     Build("en", nullptr);
     uint32_t found = 0;
     CHECK(mlocGetIndexBucket(s_index, 28, &bucket) == mloc_errorInvalid &&

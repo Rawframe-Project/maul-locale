@@ -14,7 +14,13 @@
 #include "number_precision.h"
 #include "unit_tables.h"
 
+#include "maul-locale/unit.h"
+
+#include <assert.h>
 #include <string.h>
+
+static_assert(wideLimbs * 32 == MLOC_MAX_UNIT_SCALE_BITS,
+              "the exact integers are as wide as the public bound says");
 
 enum
 {
@@ -22,7 +28,7 @@ enum
     // fewer than it computes, so that rounding to odd makes them exact.
     defaultDigits = 38,
     // The digits a conversion computes before rounding to odd.
-    convertDigits = mlocDecimalDigits,
+    convertDigits = MLOC_MAX_DECIMAL_DIGITS,
     // Past this power of ten a value is beyond every Beaufort force or
     // below the first.
     beaufortReach = 64,
@@ -110,7 +116,7 @@ static mlocResult ScalePart(const UnitTable* t, const UnitPart* part, bool alone
         (part->prefix >= 0 &&
          !MultiplyPrefix(top, bottom, mlocUnitPrefix(t, (uint32_t)part->prefix), count)))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (alone)
     {
@@ -140,7 +146,7 @@ mlocResult mlocScaleUnit(const UnitTable* t, const UnitId* id, UnitScale* out)
     if (!MultiplyConstant(&s.numerator, id->numeratorConstant) ||
         !MultiplyConstant(&s.denominator, id->denominatorConstant))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     *out = s;
     return mloc_success;
@@ -166,7 +172,7 @@ bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out)
 // Folds the power of ten into the integers.
 static bool Fold(UnitValue* x)
 {
-    if (x->e > mlocDecimalMaxExponent || x->e < -mlocDecimalMaxExponent)
+    if (x->e > MLOC_MAX_DECIMAL_EXPONENT || x->e < -MLOC_MAX_DECIMAL_EXPONENT)
     {
         return false;
     }
@@ -293,7 +299,7 @@ mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exac
     Wide b = x->b;
     if (!(k >= 0 ? mlocWideScale10(&a, (uint32_t)k) : mlocWideScale10(&b, (uint32_t)-k)))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     Wide q;
     Wide r;
@@ -319,9 +325,9 @@ mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exac
         count--;
         exponent++;
     }
-    if (exponent < -mlocDecimalMaxExponent || exponent + count - 1 > mlocDecimalMaxExponent)
+    if (exponent < -MLOC_MAX_DECIMAL_EXPONENT || exponent + count - 1 > MLOC_MAX_DECIMAL_EXPONENT)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     memcpy(d.digits, digits, count);
     d.count = (uint8_t)count;
@@ -442,7 +448,7 @@ mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const Un
     UnitValue x;
     if (!mlocUnitValueOf(value, &x))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     bool ok = mlocUnitValueToBase(t, from, &x);
     if (ok && reciprocal)
@@ -450,7 +456,7 @@ mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const Un
         mlocInvertUnitValue(&x);
     }
     ok = ok && mlocUnitValueFromBase(t, to, &x);
-    return ok ? mlocUnitValueDecimal(&x, out, exactOut) : mloc_errorCapacity;
+    return ok ? mlocUnitValueDecimal(&x, out, exactOut) : mloc_errorLimit;
 }
 
 mlocResult mlocRoundConverted(mlocDecimal* d, bool exact, const mlocPrecision* precision)
@@ -469,8 +475,8 @@ mlocResult mlocRoundConverted(mlocDecimal* d, bool exact, const mlocPrecision* p
     }
     int64_t position = mlocTopPower(d) - defaultDigits + 1;
     mlocResult r = mlocRoundDecimal(
-        d, (int32_t)(position < -mlocDecimalMaxExponent ? -mlocDecimalMaxExponent : position), 1,
-        mloc_roundHalfEven);
+        d, (int32_t)(position < -MLOC_MAX_DECIMAL_EXPONENT ? -MLOC_MAX_DECIMAL_EXPONENT : position),
+        1, mloc_roundHalfEven);
     // Shown as the digits it holds, without the zeros rounding left.
     d->fractionDigits = d->exponent < 0 ? -d->exponent : 0;
     return r;

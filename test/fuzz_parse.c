@@ -173,7 +173,7 @@ static void RoundTrip(const Formatter* f, const mlocDecimal* decimal, uint8_t an
     static char s_second[4096];
     mlocOutput first = {.buffer = s_first, .capacity = sizeof(s_first)};
     mlocResult result = Format(f, decimal, &first);
-    if (result == mloc_errorCapacity)
+    if (result == mloc_errorCapacity || result == mloc_errorLimit)
     {
         return;
     }
@@ -236,7 +236,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     size_t end = SIZE_MAX;
     mlocResult result = Parse(&f, text, textLength, mode, any, &decimal, code, &end);
     Require(end <= textLength);
-    Require(result == mloc_success || result == mloc_errorSyntax || result == mloc_errorCapacity);
+    Require(result == mloc_success || result == mloc_errorSyntax || result == mloc_errorLimit);
     // The same text reads the same.
     mlocDecimal again;
     char codeAgain[3];

@@ -154,22 +154,21 @@ static void TestIdentical(void)
         "the identical check reads UTF-16 text too");
     CHECK(Repeated("cs", "ch", 241, mloc_searchExact, mloc_success) &&
               Repeated("cs-u-ks-identic", "ch", 240, mloc_searchExact, mloc_success) &&
-              Repeated("cs-u-ks-identic", "ch", 241, mloc_searchExact, mloc_errorCapacity),
+              Repeated("cs-u-ks-identic", "ch", 241, mloc_searchExact, mloc_errorLimit),
           "Czech ch is one element and two code points: at the identical strength the "
           "pattern's NFD must fit too");
 }
 
-static void TestCapacity(void)
+static void TestLimits(void)
 {
     CHECK(Repeated("en", "a", 480, mloc_searchExact, mloc_success) &&
               Repeated("en", "a", 120, mloc_searchPatternBaseWildcard, mloc_success) &&
-              Repeated("en", "a", 121, mloc_searchPatternBaseWildcard, mloc_errorCapacity),
+              Repeated("en", "a", 121, mloc_searchPatternBaseWildcard, mloc_errorLimit),
           "a searcher's ring holds 512 elements: a pattern's and 32, and 3 per code point "
           "with a wildcard");
-    CHECK(Repeated("en", "\xF0\x90\x80\x80", 69, mloc_searchPatternBaseWildcard,
-                   mloc_errorCapacity) &&
-              Repeated("en", "\xE1\x85\x9E", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity) &&
-              Repeated("en", "\xE3\x86\x86", 54, mloc_searchAnyBaseWildcard, mloc_errorCapacity),
+    CHECK(Repeated("en", "\xF0\x90\x80\x80", 69, mloc_searchPatternBaseWildcard, mloc_errorLimit) &&
+              Repeated("en", "\xE1\x85\x9E", 54, mloc_searchAnyBaseWildcard, mloc_errorLimit) &&
+              Repeated("en", "\xE3\x86\x86", 54, mloc_searchAnyBaseWildcard, mloc_errorLimit),
           "with a wildcard a supplementary code point takes 6 places and a leading jamo 8");
 }
 
@@ -210,8 +209,8 @@ static void TestRingEdge(void)
     // cut at its buffer's end, which the searcher refuses.
     CHECK(AcrossRing(mloc_searchPatternBaseWildcard, 392, mloc_success) &&
               AcrossRing(mloc_searchAnyBaseWildcard, 392, mloc_success) &&
-              AcrossRing(mloc_searchPatternBaseWildcard, 393, mloc_errorCapacity) &&
-              AcrossRing(mloc_searchAnyBaseWildcard, 393, mloc_errorCapacity),
+              AcrossRing(mloc_searchPatternBaseWildcard, 393, mloc_errorLimit) &&
+              AcrossRing(mloc_searchAnyBaseWildcard, 393, mloc_errorLimit),
           "a match fills the ring's 512 elements; one more is refused");
 }
 
@@ -328,7 +327,7 @@ static void TestBackward(void)
     }
     CHECK(Make("en", "b", mloc_searchExact) &&
               mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks, &s, &e) ==
-                  mloc_errorCapacity &&
+                  mloc_errorLimit &&
               mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks + 1, &s, &e) ==
                   mloc_errorInvalid &&
               mlocFindPrevious(nullptr, marks, sizeof marks, 0, &s, &e) == mloc_errorInvalid,
@@ -363,7 +362,7 @@ static void TestRefusals(void)
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
               mlocInitSearcher(&s_searcher, &s_collator, longPattern, sizeof(longPattern),
-                               nullptr) == mloc_errorCapacity,
+                               nullptr) == mloc_errorLimit,
           "a pattern of more elements than a searcher holds");
     mlocSearcher zero = {0};
     CHECK(Make("en", "a", mloc_searchExact) &&
@@ -395,7 +394,7 @@ int main(void)
     TestContractions();
     TestComparisons();
     TestIdentical();
-    TestCapacity();
+    TestLimits();
     TestRingEdge();
     TestStartContext();
     TestUtf16();

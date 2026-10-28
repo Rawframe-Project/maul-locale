@@ -442,7 +442,7 @@ static mlocResult AmountsIn(const Choice* c, const UnitId* id, const mlocPrecisi
     }
     if (!mlocUnitValueIn(c->table, &c->input, &c->value, &scale, &v))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     *out = (mlocUnitAmounts){.count = 1};
     if (c->nan)
@@ -604,7 +604,7 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
     chosenValue.kind = c.nan ? mloc_decimalInfinity : value->kind;
     if (!mlocUnitValueOf(&chosenValue, &c.value))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     static UnitRoute s_zero;
     UnitRoute route = s_zero;
