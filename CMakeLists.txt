@@ -955,6 +955,7 @@ if(MAUL_LOCALE_FUZZ)
                  relative
                  search segment segments
                  spellout
+                 temporal
                  unit
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
