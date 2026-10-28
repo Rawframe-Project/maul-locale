@@ -9,7 +9,7 @@
 //                       compile
 //   mloccat compile DIRECTORY SOURCE [TRANSLATION...]
 //                       compiles a source and its translations into
-//                       catalogs, LOCALE.mloc each (compile.h)
+//                       catalogs, LOCALE.mlct each (compile.h)
 //   mloccat accept SOURCE TRANSLATION [KEY...]
 //                       records in the translation the source messages its
 //                       entries answer, so that a later change shows them

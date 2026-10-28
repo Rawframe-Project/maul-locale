@@ -31,20 +31,19 @@ static bool RisingOffsets(const uint8_t* offsets, uint32_t count, uint32_t size)
     return true;
 }
 
-bool mlocValidCatalogKeys(const DataView* view, DataSpan payload)
+mlocResult mlocValidCatalogKeys(DataSpan payload)
 {
-    (void)view;
     CatalogKeys keys;
     if (!mlocReadCatalogKeys(payload, &keys) ||
         !RisingOffsets(keys.offsets, keys.count, keys.textSize))
     {
-        return false;
+        return mloc_errorFormat;
     }
     for (uint32_t i = 0; i < keys.places - keys.count; i++)
     {
         if (mlocLoad32(keys.remap + (size_t)i * 4) >= keys.count)
         {
-            return false;
+            return mloc_errorFormat;
         }
     }
     // Every key is found at its own index, and is NUL-free: the lookups
@@ -55,36 +54,37 @@ bool mlocValidCatalogKeys(const DataView* view, DataSpan payload)
         const uint8_t* key = mlocCatalogKeyAt(&keys, i, &length);
         if (memchr(key, 0, length) != nullptr || mlocCatalogIndexOf(&keys, key, length) != i)
         {
-            return false;
+            return mloc_errorFormat;
         }
     }
-    return true;
+    return mloc_success;
 }
 
-bool mlocValidCatalogMessages(const DataView* view, DataSpan payload)
+mlocResult mlocValidCatalogMessages(DataSpan payload)
 {
-    (void)view;
     if (payload.size < catalogMessagesHead)
     {
-        return false;
+        return mloc_errorFormat;
     }
     const uint8_t* p = payload.bytes;
     uint32_t count = mlocLoad32(p);
     uint64_t text = catalogMessagesHead + ((uint64_t)count + 1) * 4;
-    if ((mlocLoad32(p + 4) & ~(uint32_t)catalogSourceFlag) != 0 || text > payload.size ||
+    if (mlocLoad32(p + 4) != 0 || text > payload.size ||
         !RisingOffsets(p + catalogMessagesHead, count, payload.size - (uint32_t)text))
     {
-        return false;
+        return mloc_errorFormat;
     }
     for (uint32_t i = 0; i < count; i++)
     {
         uint32_t start = mlocLoad32(p + catalogMessagesHead + (size_t)i * 4);
         uint32_t end = mlocLoad32(p + catalogMessagesHead + (size_t)i * 4 + 4);
         MessageView message;
-        if (end > start && mlocReadMessage(p + text + start, end - start, &message) != mloc_success)
+        mlocResult read =
+            end > start ? mlocReadMessage(p + text + start, end - start, &message) : mloc_success;
+        if (read != mloc_success)
         {
-            return false;
+            return read;
         }
     }
-    return true;
+    return mloc_success;
 }

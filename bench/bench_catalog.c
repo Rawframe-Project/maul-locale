@@ -71,10 +71,8 @@ static void GetMessage(void)
 
 static void Open(void)
 {
-    mlocData data;
     mlocCatalog catalog;
-    mlocResult r = mlocOpenData(&data, s_bytes[0], s_sizes[0]);
-    s_sink += (size_t)r + (size_t)mlocOpenCatalog(&catalog, &data);
+    s_sink += (size_t)mlocOpenCatalog(&catalog, s_bytes[0], s_sizes[0]);
 }
 
 static void Bind(void)
@@ -120,7 +118,6 @@ const BenchCase g_catalogCases[] = {
 
 #ifdef MLOC_BENCH_CATALOG_DIR
 
-static mlocData s_files[2];
 static uint8_t* s_cache;
 
 static uint8_t* ReadFile(const char* path, size_t* sizeOut)
@@ -158,12 +155,11 @@ static bool MakeChain(void)
     for (int i = 0; ok && i < 2; i++)
     {
         char path[1024];
-        snprintf(path, sizeof(path), "%s/%s.mloc", MLOC_BENCH_CATALOG_DIR, locales[i]);
+        snprintf(path, sizeof(path), "%s/%s.mlct", MLOC_BENCH_CATALOG_DIR, locales[i]);
         mlocLocale locale;
         s_bytes[i] = ReadFile(path, &s_sizes[i]);
         ok = s_bytes[i] != nullptr &&
-             mlocOpenData(&s_files[i], s_bytes[i], s_sizes[i]) == mloc_success &&
-             mlocOpenCatalog(&s_catalogs[i], &s_files[i]) == mloc_success &&
+             mlocOpenCatalog(&s_catalogs[i], s_bytes[i], s_sizes[i]) == mloc_success &&
              mlocParseLocale(locales[i], 2, &locale).status == mloc_success &&
              mlocInitMessageFormatter(&s_formatters[i], &data, &locale, nullptr) == mloc_success;
     }

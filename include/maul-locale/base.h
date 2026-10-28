@@ -34,7 +34,7 @@ extern "C"
 // stay valid across releases that keep the format. Bit 31 is set: the
 // field once held a packed library version (major << 16 | minor << 8 |
 // patch), which never sets it, so no older file can match a format.
-#define MLOC_DATA_FORMAT_VERSION 0x80000005u
+#define MLOC_DATA_FORMAT_VERSION 0x80000006u
 
 // The one CLDR release every table in the library comes from.
 #define MLOC_CLDR_VERSION_MAJOR 49

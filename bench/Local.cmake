@@ -22,7 +22,7 @@ target_sources(${PROJECT_NAME}_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bench_c
 if(TARGET mloccat)
     set(MLOC_BENCH_CATALOG ${CMAKE_CURRENT_BINARY_DIR}/catalog)
     add_custom_command(
-        OUTPUT ${MLOC_BENCH_CATALOG}/en.mloc ${MLOC_BENCH_CATALOG}/fr.mloc
+        OUTPUT ${MLOC_BENCH_CATALOG}/en.mlct ${MLOC_BENCH_CATALOG}/fr.mlct
         COMMAND ${CMAKE_COMMAND} -E make_directory ${MLOC_BENCH_CATALOG}
         COMMAND ${CMAKE_COMMAND} -DDIR=${MLOC_BENCH_CATALOG} -P
                 ${CMAKE_CURRENT_SOURCE_DIR}/catalog_set.cmake
@@ -31,7 +31,7 @@ if(TARGET mloccat)
         DEPENDS mloccat ${CMAKE_CURRENT_SOURCE_DIR}/catalog_set.cmake
         VERBATIM)
     add_custom_target(${PROJECT_NAME}_bench_catalog
-                      DEPENDS ${MLOC_BENCH_CATALOG}/en.mloc ${MLOC_BENCH_CATALOG}/fr.mloc)
+                      DEPENDS ${MLOC_BENCH_CATALOG}/en.mlct ${MLOC_BENCH_CATALOG}/fr.mlct)
     add_dependencies(${PROJECT_NAME}_bench ${PROJECT_NAME}_bench_catalog)
     target_compile_definitions(${PROJECT_NAME}_bench
                                PRIVATE MLOC_BENCH_CATALOG_DIR="${MLOC_BENCH_CATALOG}")

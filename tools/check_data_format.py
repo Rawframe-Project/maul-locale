@@ -2,16 +2,20 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Sirac Ozmen
 #
-# Checks that the data format version moves with the layouts it covers.
+# Checks that each format version moves with the layouts it covers.
 # tools/data-format.txt records MLOC_DATA_FORMAT_VERSION and the SHA-256
 # of each header that lays out data the library reads (the patterns on
-# its "layouts" line). A header added, removed or changed since fails the
-# check until someone decides: a change of layout increases the format in
-# include/maul-locale/base.h; then --write records the hashes again. Each
-# listed header carries MARKER, and a header of src/ that carries it must
-# be listed, so a new layout header cannot go unwatched. The hashes cannot
-# see a validator that accepts more or less; docs/internals/data.md#versions
-# lists those changes.
+# its "layouts" line), and, for each asset format (docs/internals/
+# data.md#asset-formats), its header, the constant there that holds its
+# format version, that version and the header's SHA-256. A header added,
+# removed or changed since fails the check until someone decides: a
+# change of a data layout increases the format in
+# include/maul-locale/base.h, a change of an asset layout its own version;
+# then --write records them again. Each data layout header carries MARKER
+# and each asset layout header ASSET_MARKER naming its constant; a header
+# of src/ that carries one must be recorded, so a new layout header cannot
+# go unwatched. The hashes cannot see a validator that accepts more or
+# less; docs/internals/data.md#versions lists those changes.
 #
 # usage: tools/check_data_format.py [--write]
 
@@ -25,6 +29,9 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 RECORD = os.path.join(ROOT, "tools", "data-format.txt")
 BASE = os.path.join(ROOT, "include", "maul-locale", "base.h")
 MARKER = "// A data layout: tools/check_data_format.py watches this header."
+ASSET_MARKER = re.compile(
+    r"^// An asset layout: tools/check_data_format\.py watches this header with (\w+)\.$", re.M
+)
 
 
 def library_format():
@@ -36,7 +43,7 @@ def library_format():
 
 
 def read_record():
-    comments, patterns, fmt, hashes = [], [], None, {}
+    comments, patterns, fmt, hashes, assets = [], [], None, {}, {}
     with open(RECORD, encoding="utf-8") as f:
         for line in f:
             line = line.rstrip("\n")
@@ -52,13 +59,37 @@ def read_record():
                 patterns = fields[1:]
             elif fields[0] == "sha256" and len(fields) == 3:
                 hashes[fields[2]] = fields[1]
+            elif fields[0] == "asset" and len(fields) == 5:
+                assets[fields[1]] = (fields[2], int(fields[3]), fields[4])
             else:
                 sys.exit("check_data_format: a line it does not read: " + line)
     if fmt is None or not patterns:
         sys.exit("check_data_format: the record names no format or no layouts")
-    return comments, patterns, fmt, hashes
+    return comments, patterns, fmt, hashes, assets
 
 
+def text_of(path):
+    with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+        return f.read()
+
+
+def digest(path):
+    with open(os.path.join(ROOT, path), "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def headers():
+    for header in sorted(glob.glob(os.path.join(ROOT, "src", "*.h"))):
+        yield os.path.relpath(header, ROOT).replace(os.sep, "/")
+
+
+def asset_constant(path):
+    m = ASSET_MARKER.search(text_of(path))
+    return m.group(1) if m else None
+
+
+# The data layouts: the headers the patterns match, but an asset's, which
+# a pattern such as src/*_tables.h may also match.
 def current(patterns):
     paths = set()
     for pattern in patterns:
@@ -66,32 +97,69 @@ def current(patterns):
         if not found:
             sys.exit("check_data_format: no file matches " + pattern)
         paths.update(os.path.relpath(p, ROOT).replace(os.sep, "/") for p in found)
+    return {path: digest(path) for path in sorted(paths) if asset_constant(path) is None}
+
+
+# The asset layouts: each header with the asset marker, its constant, the
+# version the header gives it and its hash.
+def current_assets():
     out = {}
-    for path in sorted(paths):
-        with open(os.path.join(ROOT, path), "rb") as f:
-            out[path] = hashlib.sha256(f.read()).hexdigest()
+    for path in headers():
+        constant = asset_constant(path)
+        if constant is None:
+            continue
+        m = re.search(r"\b%s = (\d+)\b" % re.escape(constant), text_of(path))
+        if m is None:
+            sys.exit("check_data_format: %s names %s but does not set it" % (path, constant))
+        out[path] = (constant, int(m.group(1)), digest(path))
     return out
 
 
-def marked(path):
-    with open(os.path.join(ROOT, path), encoding="utf-8") as f:
-        return MARKER in f.read().splitlines()
-
-
 def marker_problems(listed):
-    problems = [path + " is listed but lacks the marker" for path in listed if not marked(path)]
-    for header in sorted(glob.glob(os.path.join(ROOT, "src", "*.h"))):
-        path = os.path.relpath(header, ROOT).replace(os.sep, "/")
-        if path not in listed and marked(path):
+    problems = [path + " is listed but lacks the marker" for path in listed
+                if MARKER not in text_of(path).splitlines()]
+    for path in headers():
+        if path not in listed and MARKER in text_of(path).splitlines():
             problems.append(path + " carries the marker but is not listed")
+    return problems
+
+
+def write(comments, patterns, own, now, assets):
+    with open(RECORD, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(comments) + "\n")
+        f.write("format 0x%08X\n" % own)
+        f.write("layouts " + " ".join(patterns) + "\n")
+        for path, sha in now.items():
+            f.write("sha256 %s %s\n" % (sha, path))
+        for path, (constant, version, sha) in assets.items():
+            f.write("asset %s %s %d %s\n" % (path, constant, version, sha))
+    print("data format 0x%08X: %d layout headers and %d asset layouts recorded"
+          % (own, len(now), len(assets)))
+
+
+def asset_problems(recorded, assets):
+    problems = []
+    for path in sorted(set(recorded) | set(assets)):
+        if path not in recorded:
+            problems.append(path + " is a new asset layout")
+        elif path not in assets:
+            problems.append(path + " is no longer an asset layout")
+        else:
+            constant, version, sha = assets[path]
+            old_constant, old_version, old_sha = recorded[path]
+            if sha != old_sha and version == old_version:
+                problems.append("%s changed, and %s is still %d" % (path, constant, version))
+            elif (constant, version, sha) != (old_constant, old_version, old_sha):
+                problems.append("%s changed, %s now %d" % (path, constant, version))
     return problems
 
 
 def main():
     if sys.argv[1:] not in ([], ["--write"]):
         sys.exit("usage: tools/check_data_format.py [--write]")
-    comments, patterns, fmt, hashes = read_record()
+    comments, patterns, fmt, hashes, recorded_assets = read_record()
     now = current(patterns)
+    assets = current_assets()
     own = library_format()
     unmarked = marker_problems(now)
     if unmarked:
@@ -101,13 +169,7 @@ def main():
               "tools/data-format.txt." % MARKER)
         sys.exit(1)
     if sys.argv[1:] == ["--write"]:
-        with open(RECORD, "w", encoding="utf-8", newline="\n") as f:
-            f.write("\n".join(comments) + "\n")
-            f.write("format 0x%08X\n" % own)
-            f.write("layouts " + " ".join(patterns) + "\n")
-            for path, digest in now.items():
-                f.write("sha256 %s %s\n" % (digest, path))
-        print("data format 0x%08X: %d layout headers recorded" % (own, len(now)))
+        write(comments, patterns, own, now, assets)
         return
     problems = []
     if fmt != own:
@@ -119,14 +181,17 @@ def main():
             problems.append(path + " is gone")
         elif now[path] != hashes[path]:
             problems.append(path + " changed")
+    problems += asset_problems(recorded_assets, assets)
     if problems:
         for p in problems:
             print("data format: " + p)
-        print("If a layout or what a validator accepts changed, increase "
-              "MLOC_DATA_FORMAT_VERSION in include/maul-locale/base.h; either way, record "
-              "the layouts again with tools/check_data_format.py --write.")
+        print("If a data layout or what a validator accepts changed, increase "
+              "MLOC_DATA_FORMAT_VERSION in include/maul-locale/base.h; if an asset layout "
+              "changed, increase its format version; either way, record the layouts again with "
+              "tools/check_data_format.py --write.")
         sys.exit(1)
-    print("data format 0x%08X: %d layout headers as recorded" % (own, len(now)))
+    print("data format 0x%08X: %d layout headers and %d asset layouts as recorded"
+          % (own, len(now), len(assets)))
 
 
 if __name__ == "__main__":

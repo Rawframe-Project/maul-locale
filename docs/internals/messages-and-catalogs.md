@@ -24,7 +24,7 @@ List patterns are compiled in by style and width (14 KB in all) and joined as IC
 
 ## Catalogs
 
-A catalog is a data file holding one locale and two units: the keys and the messages, in compiled form (`src/catalog_tables.h`). Keys are found by a minimal perfect hash after PTHash's design (Pibiri and Trani): buckets of about four keys placed largest first, each with the first 16-bit pilot that places all its keys, a table 2% larger than the keys and places past the count remapped so indexes are dense. A lookup is a hash, a table read and one comparison. Opening validates every offset, every key at its own index and every message as readable, so a lookup checks nothing after that.
+A catalog is an asset ([data.md](data.md#asset-formats)) holding its locale, the keys and the messages, in compiled form (`src/catalog_tables.h`). Keys are found by a minimal perfect hash after PTHash's design (Pibiri and Trani): buckets of about four keys placed largest first, each with the first 16-bit pilot that places all its keys, a table 2% larger than the keys and places past the count remapped so indexes are dense. A lookup is a hash, a table read and one comparison. Opening validates every offset, every key at its own index and every message as readable, so a lookup checks nothing after that.
 
 **One key order per set.** The tool builds the table from the source's keys, and every catalog of the set stores the same keys, table and order with a set id hashed from them. An index then means the same message in every catalog of the set, which is what lets a chain fall back by index, and the library refuses a chain of catalogs from different sets.
 

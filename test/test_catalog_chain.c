@@ -28,7 +28,6 @@ enum
 typedef struct Set
 {
     uint8_t* bytes[chainCount];
-    mlocData data[chainCount];
     mlocCatalog catalogs[chainCount];
     mlocMessageFormatter formatters[chainCount];
 } Set;
@@ -69,7 +68,7 @@ static bool Compile(void)
     return ok;
 }
 
-static bool OpenOne(const char* locale, uint8_t** bytes, mlocData* data, mlocCatalog* catalog,
+static bool OpenOne(const char* locale, uint8_t** bytes, mlocCatalog* catalog,
                     mlocMessageFormatter* formatter)
 {
     static mlocData s_builtin;
@@ -77,12 +76,11 @@ static bool OpenOne(const char* locale, uint8_t** bytes, mlocData* data, mlocCat
     mlocOpenBuiltinData(&s_builtin);
     s_data = (mlocDataSet){&s_builtin, 1};
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.mloc", s_directory, locale);
+    snprintf(path, sizeof(path), "%s/%s.mlct", s_directory, locale);
     size_t size = 0;
     *bytes = (uint8_t*)FileRead(path, &size);
     mlocLocale parsed;
-    return *bytes != nullptr && mlocOpenData(data, *bytes, size) == mloc_success &&
-           mlocOpenCatalog(catalog, data) == mloc_success &&
+    return *bytes != nullptr && mlocOpenCatalog(catalog, *bytes, size) == mloc_success &&
            mlocParseLocale(locale, strlen(locale), &parsed).status == mloc_success &&
            mlocInitMessageFormatter(formatter, &s_data, &parsed, nullptr) == mloc_success;
 }
@@ -94,8 +92,7 @@ static bool OpenSet(Set* s)
     bool ok = true;
     for (int i = 0; i < chainCount; i++)
     {
-        ok = OpenOne(locales[i], &s->bytes[i], &s->data[i], &s->catalogs[i], &s->formatters[i]) &&
-             ok;
+        ok = OpenOne(locales[i], &s->bytes[i], &s->catalogs[i], &s->formatters[i]) && ok;
     }
     return ok;
 }
@@ -345,9 +342,8 @@ static void TestOutputs(Set* s)
 static void TestRefusals(Set* s)
 {
     uint8_t* bytes = nullptr;
-    mlocData data;
     Set other = *s;
-    bool opened = OpenOne("de", &bytes, &data, &other.catalogs[1], &other.formatters[1]);
+    bool opened = OpenOne("de", &bytes, &other.catalogs[1], &other.formatters[1]);
     uint8_t cache[256];
     size_t size = 0;
     mlocCatalogChain chain;

@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A compiled catalog's units, shared by the library, which reads them, and
-// the catalog tool, which writes them; the readers are inline, so that the
-// tool needs none of the library's internals. A catalog is a data file
-// with one locale and two units of it. All numbers are little-endian.
+// A compiled catalog's layout, shared by the library, which reads it, and
+// the catalog tool, which writes it; the readers are inline, so that the
+// tool needs none of the library's internals. A catalog is an asset
+// (asset.h): the magic "MLCT", catalogFormatVersion, a flag for the set's
+// source catalog, and three fields, all required, in this order:
 //
-// The keys (kindCatalogKeys):
+// LOCL  the locale, a BCP 47 id
+// KEYS  the keys
+// MSGS  the messages
+//
+// It names nothing in the data by index or version, so a library with
+// other data reads it. All numbers are little-endian.
+//
+// The keys:
 //   0  u32 count, the keys
 //   4  u32 buckets, at least 1
 //   8  u32 places, count or more: the table the pilots spread keys over
@@ -18,30 +26,51 @@
 //      u32 offsets[count + 1] into the key bytes, from 0, rising
 //      the key bytes, each key NFC UTF-8
 //
-// The messages (kindCatalogMessages):
+// The messages:
 //   0  u32 count, the keys
-//   4  u32 flags: bit 0, the set's source catalog; the rest zero
+//   4  u32 zero
 //   8  u64 set id
 //  16  u32 offsets[count + 1] into the message bytes, from 0, rising;
 //      an absent message is an empty one
 //      the compiled messages (mlocCompileMessage's form)
 //
-// A data layout: tools/check_data_format.py watches this header.
+// An asset layout: tools/check_data_format.py watches this header with catalogFormatVersion.
 
 #ifndef MLOC_CATALOG_TABLES_H
 #define MLOC_CATALOG_TABLES_H
 
+#include "asset.h"
 #include "bytes.h"
 #include "catalog_hash.h"
 #include "data_view.h"
 
 #include <stdint.h>
 
+// The first four bytes.
+#define MLOC_CATALOG_MAGIC "MLCT"
+
 enum
 {
+    // Before 1.0.0 it changes whenever the bytes do.
+    catalogFormatVersion = 1,
+    catalogSourceFlag = 1,
     catalogKeysHead = 32,
     catalogMessagesHead = 16,
-    catalogSourceFlag = 1,
+};
+
+// The fields, in their order.
+enum
+{
+    catalogLocale = 0,
+    catalogKeys = 1,
+    catalogMessages = 2,
+    catalogFieldCount = 3,
+};
+
+static const uint32_t catalogTags[catalogFieldCount] = {
+    MLOC_ASSET_TAG('L', 'O', 'C', 'L'),
+    MLOC_ASSET_TAG('K', 'E', 'Y', 'S'),
+    MLOC_ASSET_TAG('M', 'S', 'G', 'S'),
 };
 
 // A key index's place in the key table (the offsets after the pilots and
@@ -130,7 +159,11 @@ static inline uint64_t mlocCatalogSetId(const CatalogKeys* keys)
     return id;
 }
 
-bool mlocValidCatalogKeys(const DataView* view, DataSpan payload);
-bool mlocValidCatalogMessages(const DataView* view, DataSpan payload);
+// Checks a catalog's keys: mloc_success or mloc_errorFormat.
+mlocResult mlocValidCatalogKeys(DataSpan payload);
+
+// Checks a catalog's messages, each read as a compiled message:
+// mloc_success, mloc_errorFormat, or a message's mloc_errorVersion.
+mlocResult mlocValidCatalogMessages(DataSpan payload);
 
 #endif

@@ -167,6 +167,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_value.c
     src/message_words.c
     src/message_write.c
+    src/asset.c
     src/catalog.c
     src/catalog_chain.c
     src/catalog_tables.c
@@ -925,9 +926,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
 endif()
 
-# The catalog tool's parts but its compiler, which also needs the
-# generator's data file writer: mloccat_core and the fuzz targets of its
-# readers build them.
+# The catalog tool's parts but its compiler: mloccat_core and the fuzz
+# targets of its readers build them.
 set(MLOCCAT_SOURCES tools/mloccat/accept.c tools/mloccat/catalog_set.c
                     tools/mloccat/exchange_po.c tools/mloccat/file.c tools/mloccat/json.c
                     tools/mloccat/message_text.c tools/mloccat/mf2_parts.c tools/mloccat/pgs.c
@@ -1086,9 +1086,8 @@ if(MAUL_LOCALE_BUILD_TOOLS)
     # The catalog tool, mloccat: its parts are a static library so that their
     # tests link them alone.
     add_library(mloccat_core STATIC ${MLOCCAT_SOURCES} tools/mloccat/compile.c)
-    # The compiler writes the data layout and the catalog units the library
-    # reads (src/data_format.h, src/catalog_tables.h), with the generator's
-    # data file writer.
+    # The compiler writes the catalog layout the library reads (src/asset.h,
+    # src/catalog_tables.h).
     target_include_directories(mloccat_core PUBLIC tools/mloccat src)
     target_link_libraries(mloccat_core PUBLIC mlocgen_core maul-locale maul-unicode)
     maul_apply_flags(mloccat_core)
