@@ -6,6 +6,7 @@
 #include "number_precision.h"
 
 #include "decimal.h"
+#include "invariant.h"
 
 enum
 {
@@ -88,6 +89,7 @@ static mlocResult RoundAt(mlocDecimal* d, int64_t position, uint32_t unit, mlocR
     {
         return mloc_success;
     }
+    MLOC_ASSERT(position >= INT32_MIN && position <= INT32_MAX);
     return mlocRoundDecimal(d, (int32_t)position, unit, mode);
 }
 
@@ -99,7 +101,11 @@ static mlocResult Fixed(const mlocPrecision* p, mlocDecimal* d)
     int32_t power = 0;
     if (p->increment > 1)
     {
-        (void)SplitIncrement(p->increment, &unit, &power);
+        // Every increment is one of ECMA-402's, which all split: a
+        // caller's is validated, the unit data's and MF2's are checked.
+        bool split = SplitIncrement(p->increment, &unit, &power);
+        MLOC_ASSERT(split);
+        (void)split;
     }
     mlocResult r = RoundAt(d, (int64_t)power - p->maxFractionDigits, unit, p->mode);
     if (r == mloc_success)
@@ -212,6 +218,7 @@ static int64_t ExponentFor(int64_t magnitude, bool engineering)
 mlocDecimal mlocShiftDecimal(const mlocDecimal* d, int64_t exponent)
 {
     mlocDecimal m = *d;
+    MLOC_ASSERT(d->exponent - exponent >= INT32_MIN && d->exponent - exponent <= INT32_MAX);
     m.exponent = (int32_t)(d->exponent - exponent);
     int64_t shown = d->fractionDigits > 0 ? (int64_t)d->fractionDigits + exponent : 0;
     shown = shown < MLOC_MAX_DECIMAL_EXPONENT ? shown : MLOC_MAX_DECIMAL_EXPONENT;
