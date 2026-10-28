@@ -9,6 +9,7 @@
 
 #include "bytes.h"
 #include "calendar_arith.h"
+#include "invariant.h"
 
 enum
 {
@@ -24,6 +25,7 @@ static int64_t FloorDiv(int64_t a, int64_t b)
 
 static int64_t TimeOf(const ZoneTables* t, const ZoneRecord* z, uint32_t i)
 {
+    MLOC_ASSERT(i < z->transitionCount);
     uint32_t late = (uint32_t)z->transitionCount - z->wideLate;
     if (i < z->wideEarly || i >= late)
     {
@@ -40,6 +42,7 @@ static ZoneOffset OffsetOf(const ZoneTables* t, const ZoneRecord* z, uint32_t pl
 
 static ZoneOffset TypeOf(const ZoneTables* t, const ZoneRecord* z, uint32_t i)
 {
+    MLOC_ASSERT(i < z->transitionCount);
     return OffsetOf(t, z, t->types[z->typeFirst + i]);
 }
 
@@ -73,6 +76,7 @@ static int32_t YearOf(int64_t seconds)
 // counts back from the month's last day), then its universal time.
 static int64_t ChangeTime(const ZoneChange* c, int32_t year)
 {
+    MLOC_ASSERT(c->month >= 1 && c->month <= 12);
     uint32_t length = mlocArithmeticDaysInMonth(mloc_calendarGregorian, year, c->month);
     uint32_t dayOfMonth = c->dayOfMonth < length ? c->dayOfMonth : length;
     int64_t day = mlocArithmeticToDay(mloc_calendarGregorian, year, c->month, dayOfMonth);
@@ -162,6 +166,7 @@ static bool Latest(const ZoneTables* t, const ZoneRecord* z, int64_t seconds, in
             }
         }
     }
+    MLOC_ASSERT(at <= seconds);
     *atOut = at;
     *offsetOut = offset;
     return at != INT64_MIN;
@@ -206,6 +211,10 @@ bool mlocZoneFollowingTransition(const ZoneTables* t, uint32_t zone, int64_t sec
                 offset = mlocZoneOffsetOf(t, c.offset);
             }
         }
+        // The validator keeps a rule's changes from February to November,
+        // within a week of their day, so the next year's come after any
+        // time of this one.
+        MLOC_ASSERT(at != INT64_MAX);
     }
     else
     {

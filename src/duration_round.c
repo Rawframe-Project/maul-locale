@@ -7,6 +7,7 @@
 
 #include "binary64.h"
 #include "date_time.h"
+#include "invariant.h"
 #include "rounding.h"
 
 enum
@@ -44,17 +45,23 @@ static int Compare(Moment a, Moment b)
 // A moment moved by a time duration.
 static Moment Plus(Moment m, mlocTimeDuration d)
 {
+    MLOC_ASSERT(m.nanosecond >= 0 && m.nanosecond < s_nanosecondsPerDay &&
+                d.nanoseconds > -nanosecondsPerSecond && d.nanoseconds < nanosecondsPerSecond);
     int64_t nanosecond =
         m.nanosecond + d.seconds % secondsPerDay * nanosecondsPerSecond + d.nanoseconds;
     int64_t carry = FloorDiv(nanosecond, s_nanosecondsPerDay);
-    return (Moment){m.day + d.seconds / secondsPerDay + carry,
-                    nanosecond - carry * s_nanosecondsPerDay};
+    Moment sum = {m.day + d.seconds / secondsPerDay + carry,
+                  nanosecond - carry * s_nanosecondsPerDay};
+    MLOC_ASSERT(sum.nanosecond >= 0 && sum.nanosecond < s_nanosecondsPerDay);
+    return sum;
 }
 
 // A sum of seconds and nanoseconds of any signs, |nanoseconds| below
 // 2 * 10^9, as a duration of one sign.
 static mlocTimeDuration Normalized(int64_t seconds, int64_t nanoseconds)
 {
+    MLOC_ASSERT(nanoseconds > -2 * (int64_t)nanosecondsPerSecond &&
+                nanoseconds < 2 * (int64_t)nanosecondsPerSecond);
     seconds += nanoseconds / nanosecondsPerSecond;
     nanoseconds %= nanosecondsPerSecond;
     if (seconds > 0 && nanoseconds < 0)
@@ -102,6 +109,13 @@ static bool UpBySeconds(int64_t partSeconds, int64_t partNanoseconds, int64_t wh
 bool mlocRoundTimeStep(mlocTimeDuration value, int64_t stepSeconds, int64_t stepNanoseconds,
                        mlocRoundingMode mode, mlocTimeDuration* out)
 {
+    // A step of whole seconds, or of nanoseconds that divide a second; a
+    // value of one sign.
+    MLOC_ASSERT(
+        (stepSeconds > 0 && stepNanoseconds == 0) ||
+        (stepSeconds == 0 && stepNanoseconds > 0 && nanosecondsPerSecond % stepNanoseconds == 0));
+    MLOC_ASSERT(!(value.seconds < 0 && value.nanoseconds > 0) &&
+                !(value.seconds > 0 && value.nanoseconds < 0));
     bool negative = value.seconds < 0 || value.nanoseconds < 0;
     int64_t s = negative ? -value.seconds : value.seconds;
     int64_t n = negative ? -value.nanoseconds : value.nanoseconds;
@@ -148,6 +162,7 @@ static bool Reach(const mlocDate* date, const mlocDateDuration* d, int64_t* dayO
 
 Moment mlocMomentOf(const mlocInstant* instant)
 {
+    MLOC_ASSERT(instant->nanoseconds >= 0 && instant->nanoseconds < nanosecondsPerSecond);
     int64_t day = FloorDiv(instant->seconds, secondsPerDay);
     return (Moment){day + epochDay,
                     (instant->seconds - day * secondsPerDay) * nanosecondsPerSecond +
@@ -507,6 +522,7 @@ bool mlocTotalRelative(const RelativeDuration* duration, const RelativeStart* st
 
 double mlocTotalOfTime(const mlocTimeDuration* time, int64_t unitNanoseconds)
 {
+    MLOC_ASSERT(unitNanoseconds > 0);
     bool negative = time->seconds < 0 || time->nanoseconds < 0;
     uint64_t seconds = (uint64_t)(negative ? -time->seconds : time->seconds);
     uint64_t nanoseconds = (uint64_t)(negative ? -time->nanoseconds : time->nanoseconds);

@@ -8,6 +8,7 @@
 // within 64 bits.
 
 #include "duration_round.h"
+#include "invariant.h"
 #include "rounding.h"
 #include "time_arith.h"
 #include "zone_handle.h"
@@ -45,6 +46,7 @@ mlocResult mlocAddToInstant(const mlocInstant* instant, const mlocTimeDuration* 
     int64_t carry = FloorDiv(nanoseconds, nanosecondsPerSecond);
     mlocInstant result = {instant->seconds + duration->seconds + carry,
                           (int32_t)(nanoseconds - carry * nanosecondsPerSecond)};
+    MLOC_ASSERT(result.nanoseconds >= 0 && result.nanoseconds < nanosecondsPerSecond);
     if (!mlocValidInstant(&result))
     {
         return mloc_errorInvalid;
@@ -115,6 +117,8 @@ mlocResult mlocRoundInstant(const mlocInstant* instant, mlocTimeUnit unit, uint3
     int64_t day = FloorDiv(instant->seconds, secondsPerDay);
     int64_t past =
         (instant->seconds - day * secondsPerDay) * nanosecondsPerSecond + instant->nanoseconds;
+    // The step divides the day, and the nanoseconds lie within it.
+    MLOC_ASSERT(past >= 0 && past < s_nanosecondsPerDay && s_nanosecondsPerDay % step == 0);
     int64_t low = past / step;
     int64_t stepsPerDay = s_nanosecondsPerDay / step;
     bool evenLow = ((day & 1) * (stepsPerDay % 2) + low) % 2 == 0;

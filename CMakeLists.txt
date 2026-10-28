@@ -956,6 +956,7 @@ if(MAUL_LOCALE_FUZZ)
                  search segment segments
                  spellout
                  temporal
+                 unit
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
@@ -985,6 +986,8 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_definitions(fuzz_grammar PRIVATE
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
     target_compile_definitions(fuzz_duration PRIVATE
+        MLOC_UNITS_FILE="${PROJECT_SOURCE_DIR}/src/generated/units.mloc")
+    target_compile_definitions(fuzz_unit PRIVATE
         MLOC_UNITS_FILE="${PROJECT_SOURCE_DIR}/src/generated/units.mloc")
     # The catalog tool's resource reader, built from its sources since the
     # fuzz build leaves the tools out.
