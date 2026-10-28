@@ -22,7 +22,7 @@ Large values that recur across locales (number symbol sets, compiled patterns, c
 
 ## Validation
 
-`mlocOpenData` checks, in this order: the header and size; the data version, refused with `mloc_errorDataVersion` before anything else is read; every table, offset, length and order (`mloc_errorData`); then each unit through its kind's validator. An unknown kind is refused. After a file opens, no lookup checks anything again: a validated unit is safe to read with plain loads. A part that lays a unit out when a formatter or collator is made (collation's `mlocViewCollationRoot`, say) checks only that its sections fit; the checks of their contents run in the validator alone, which every way to an opened source passes through.
+`mlocOpenData` checks, in this order: the header and size; the data version, refused with `mloc_errorVersion` before anything else is read; every table, offset, length and order (`mloc_errorFormat`); then each unit through its kind's validator. An unknown kind is refused. After a file opens, no lookup checks anything again: a validated unit is safe to read with plain loads. A part that lays a unit out when a formatter or collator is made (collation's `mlocViewCollationRoot`, say) checks only that its sections fit; the checks of their contents run in the validator alone, which every way to an opened source passes through.
 
 Two rules keep this sound:
 

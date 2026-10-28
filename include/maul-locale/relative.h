@@ -93,7 +93,7 @@ extern "C"
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the number units or
-    ///         relative time; mloc_errorData for a chain of more relative
+    ///         relative time; mloc_errorFormat for a chain of more relative
     ///         units than the formatter holds; mloc_errorInvalid for a
     ///         null pointer or options out of range or in conflict (a
     ///         style other than decimal, a sign display other than auto).

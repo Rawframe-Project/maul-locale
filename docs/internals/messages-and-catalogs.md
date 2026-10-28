@@ -10,13 +10,13 @@ A message is compiled once, bound once per locale and formatted many times, each
 - **Bind** (`message_bind.c`, `message_prepare.c`): the compiled message is read as untrusted bytes, as a catalog's would be (versions, counts against the size, every record's indexes and strings), each function is found, and each chain of declarations is measured. Number functions whose options do not come from arguments get their formatter and plural rules made once, by resolving the expression with probe arguments; a format call uses the prepared formatter only when its options are byte for byte the prepared ones, so correctness never rests on the probe.
 - **Format** (`message_format.c`, `message_resolve.c`): each placeholder and selector is resolved where it stands, a local variable through its declaration on the stack (call by name), so a call needs no memory of its own.
 
-Call by name resolves a local again at each reference, so declarations that each name the next twice grow as a power of two. Binding refuses a message whose format would resolve more than 65,536 expressions, a chain of more than 64 declarations, or more than 32 selectors, with `mloc_errorInvalid`, since no buffer would cure them; a crafted message whose declaration names a later one, which could loop, is `mloc_errorData`.
+Call by name resolves a local again at each reference, so declarations that each name the next twice grow as a power of two. Binding refuses a message whose format would resolve more than 65,536 expressions, a chain of more than 64 declarations, or more than 32 selectors, with `mloc_errorInvalid`, since no buffer would cure them; a crafted message whose declaration names a later one, which could loop, is `mloc_errorFormat`.
 
 ## Functions and values
 
 The default functions follow the specification and their formatters are the library's own: `:number` and `:integer` select by plural rules, `:currency`, `:unit` and the date and time functions take the argument kinds the library adds for them. The `mloc:` functions are the library's: `mloc:spellout`, `mloc:relative`, `mloc:duration`, `mloc:list`, and the grammar functions ([grammar.md](grammar.md)). A program's functions are found by a namespaced name (not `u:` or `mloc:`) with resolve, format, match and better entries, so they select and format like the built-in ones.
 
-A fault writes the specification's fallback for the failed part and is reported with its expression, or in strict mode stops the call with `mloc_errorFormat`. Isolation follows the default bidi strategy; the message's own direction is its locale's. With parts, every literal text, placeholder, fallback and markup is reported with its range; markup writes nothing.
+A fault writes the specification's fallback for the failed part and is reported with its expression, or in strict mode stops the call with `mloc_errorFallback`. Isolation follows the default bidi strategy; the message's own direction is its locale's. With parts, every literal text, placeholder, fallback and markup is reported with its range; markup writes nothing.
 
 ## Lists
 

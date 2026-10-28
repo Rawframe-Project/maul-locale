@@ -130,7 +130,7 @@ uint32_t mlocExpressionSlot(const MessageView* view, const MessageFormatter* for
 
 // Writes the header and the words of a bound message of size bytes,
 // no value prepared; mloc_errorInvalid past the chain or resolution
-// limit, mloc_errorData for a declaration naming a later one.
+// limit, mloc_errorFormat for a declaration naming a later one.
 mlocResult mlocWriteBound(const mlocMessageFormatter* formatter, const MessageFormatter* f,
                           BoundHeader* h, void* buffer, uint32_t size);
 

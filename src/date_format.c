@@ -249,7 +249,7 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     }
     if (!FindPatterns(f, patterns, set, o) || !FindRange(f, patterns, intervals, o))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     f->names = l->units.names;
     f->nameSet = l->nameSet;
@@ -321,7 +321,7 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
         if (!mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeAtGlue + length)), &other) ||
             !mlocValidGlue(other.bytes, other.size))
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         if (length == style)
         {
@@ -332,7 +332,7 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
     if (!mlocDatePattern(&patterns, mlocLoad16(set + 2 * (dateTimeZoneAlone + form)), &zone) ||
         !ZoneOnly(zone.bytes, zone.size))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     f->glue = glue.bytes;
     f->glueLength = glue.size;
@@ -686,7 +686,7 @@ mlocResult mlocFormatDateRangeInZone(const mlocDateFormatter* formatter, const m
         if (!mlocTablePattern(&r->table, mlocLoad16(f.timeSet + 2 * (dateTimeAtGlue + style)),
                               &join.glue))
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
     }
     return WriteJoinedRange(&join, (DataSpan){r->fallback, r->fallbackLength}, output);

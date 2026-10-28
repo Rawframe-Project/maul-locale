@@ -53,7 +53,7 @@ extern "C"
     /// @param catalogOut  Receives the catalog; left unchanged on failure.
     /// @param data        The catalog's data.
     /// @return mloc_success; mloc_errorNotFound for data with no catalog;
-    ///         mloc_errorData for data whose keys and messages disagree,
+    ///         mloc_errorFormat for data whose keys and messages disagree,
     ///         whose locale is not a locale id, or that holds more than
     ///         one catalog; mloc_errorInvalid for a null pointer.
     /// @par Thread safety

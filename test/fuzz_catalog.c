@@ -60,7 +60,7 @@ static void CheckCatalog(const mlocCatalog* catalog, const mlocData* opened, con
 {
     mlocCatalogInfo info;
     mlocResult r = mlocGetCatalogInfo(catalog, &info);
-    Require(r == mloc_success || r == mloc_errorData);
+    Require(r == mloc_success || r == mloc_errorFormat);
     DataView view = mlocViewOf(opened);
     DataSpan span = {0};
     bool found = false;

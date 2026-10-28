@@ -124,7 +124,7 @@ static mlocResult AddDataLabels(const mlocDataSet* data, const mlocLocale* local
     {
         if (out->labelCount == indexMaxLabels)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         out->labels[out->labelCount++] = (IndexText){.bytes = text, .length = length};
     }
@@ -139,7 +139,7 @@ mlocResult mlocIndexGather(const Collator* collator, const mlocDataSet* data,
     if (!Contractions(collator, 0xFDD1, AddScript, out) ||
         !Contractions(collator, 0xFDD0, AddLabel, out))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (out->labelCount == 0)
     {
@@ -154,7 +154,7 @@ mlocResult mlocIndexGather(const Collator* collator, const mlocDataSet* data,
     {
         if (out->labelCount == indexMaxLabels)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         out->labels[out->labelCount++] = (IndexText){.bytes = s_ascii + i, .length = 1};
     }

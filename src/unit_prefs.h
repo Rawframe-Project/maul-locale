@@ -51,7 +51,7 @@ bool mlocValidUsage(const char* usage, size_t length);
 
 // The route of an input unit for a usage (empty for "default"), as
 // mlocGetUnitPreference chooses. Returns mloc_success; mloc_errorNotFound
-// for data without the preferences; mloc_errorData for preferences the
+// for data without the preferences; mloc_errorFormat for preferences the
 // tables do not read; mloc_errorInvalid for a base unit past the room.
 mlocResult mlocRouteUnit(const mlocDataSet* data, const mlocLocale* locale, const UnitTable* t,
                          const UnitId* input, const UnitScale* inputScale, const char* usage,

@@ -532,13 +532,13 @@ static void TestUnwritablePattern(void)
     mlocLocale fr;
     mlocDateFormatter formatter;
     CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
-              mlocInitDateFormatter(&formatter, &data, &fr, nullptr) == mloc_errorData,
+              mlocInitDateFormatter(&formatter, &data, &fr, nullptr) == mloc_errorFormat,
           "a pattern the formatter cannot write");
     mlocDateOptions month = {.fields = mloc_dateFieldSetMonth, .length = mloc_dateLengthMedium};
     CHECK(mlocInitDateFormatter(&formatter, &data, &fr, &month) == mloc_success,
           "another of the pack's patterns");
     mlocTimeFormatter times;
-    CHECK(mlocInitTimeFormatter(&times, &data, &fr, nullptr) == mloc_errorData,
+    CHECK(mlocInitTimeFormatter(&times, &data, &fr, nullptr) == mloc_errorFormat,
           "a time pattern the time formatter cannot write");
     // The day's pair on "Q" too.
     patterns = BuildUnit();
@@ -739,11 +739,11 @@ static void TestCompositeData(void)
     size_t length = 0;
     CHECK(CompositeIs(2, 1, mloc_dateFieldSetYearMonthDay, "2026 {16"),
           "a date and time glued, a brace of no slot written");
-    CHECK(MakeComposite(3, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData &&
-              MakeComposite(4, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorData,
+    CHECK(MakeComposite(3, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorFormat &&
+              MakeComposite(4, 1, mloc_dateFieldSetYearMonthDay, text, &length) == mloc_errorFormat,
           "glue without {0} or without {1}");
     CHECK(CompositeIs(2, 1, mloc_dateFieldSetWeekday, "16") &&
-              MakeComposite(2, 5, mloc_dateFieldSetWeekday, text, &length) == mloc_errorData,
+              MakeComposite(2, 5, mloc_dateFieldSetWeekday, text, &length) == mloc_errorFormat,
           "a weekday-with-time pattern, and one the formatter cannot write");
 }
 
@@ -809,10 +809,10 @@ static void TestCompositeRanges(void)
     for (uint32_t length = 0; length < dateStandardCount; length++)
     {
         glues = glues && SpoiledComposite(compositeTimes + 2 * (dateTimeAtGlue + length), 3,
-                                          mloc_timeStyleNone) == mloc_errorData;
+                                          mloc_timeStyleNone) == mloc_errorFormat;
     }
     CHECK(glues && SpoiledComposite(compositeTimes + 2 * (dateTimeGlue + 2), 3,
-                                    mloc_timeStyleNone) == mloc_errorData,
+                                    mloc_timeStyleNone) == mloc_errorFormat,
           "a range's glue of any length, or the Gregorian medium one of a day, no glue");
 }
 
@@ -847,14 +847,14 @@ static void TestCompositeZone(void)
         zone = compositeTimes + 2 * (dateTimeZoneAlone + mloc_zoneStyleSpecificShort - 1),
     };
     // A zone pattern of a space and a letter as text beside its field.
-    CHECK(SpoiledZone(zone, 4) != mloc_errorData, "a zone alone of a field and text");
-    CHECK(SpoiledZone(zone, 0) == mloc_errorData && SpoiledZone(zone, 1) == mloc_errorData,
+    CHECK(SpoiledZone(zone, 4) != mloc_errorFormat, "a zone alone of a field and text");
+    CHECK(SpoiledZone(zone, 0) == mloc_errorFormat && SpoiledZone(zone, 1) == mloc_errorFormat,
           "a zone alone of a date field or a time field");
     bool glues = true;
     for (uint32_t length = 0; length < dateStandardCount; length++)
     {
         glues = glues &&
-                SpoiledZone(compositeTimes + 2 * (dateTimeAtGlue + length), 3) == mloc_errorData;
+                SpoiledZone(compositeTimes + 2 * (dateTimeAtGlue + length), 3) == mloc_errorFormat;
     }
     CHECK(glues, "an atTime glue of any length, no glue");
 }

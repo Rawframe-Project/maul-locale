@@ -274,7 +274,7 @@ static void TestNoParts(void)
     CHECK(Format(&s_plain, "Hello {|World|}", NULL, 0, 5, &parts) == mloc_errorCapacity &&
               parts.count == 0,
           "no parts when the text does not fit");
-    CHECK(Format(&s_strict, "Hello {$x}", NULL, 0, sizeof s_text, &parts) == mloc_errorFormat &&
+    CHECK(Format(&s_strict, "Hello {$x}", NULL, 0, sizeof s_text, &parts) == mloc_errorFallback &&
               parts.count == 0,
           "no parts when strict formatting stops at a fault");
     mlocMessageFault list[4];

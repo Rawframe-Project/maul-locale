@@ -113,7 +113,7 @@ mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* ou
     (void)mlocWriteMessage(&view, &measure);
     if (measure.length >= longestMessage)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (output->capacity < measure.length)
     {

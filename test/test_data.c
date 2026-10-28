@@ -167,7 +167,7 @@ static void TestVersion(void)
     CHECK(mlocReadDataVersion(mlocBuiltinData, mlocBuiltinDataSize, &read) == mloc_success &&
               SameVersion(&read, &version),
           "the compiled-in data has the library's version");
-    CHECK(mlocReadDataVersion(mlocBuiltinData, 63, &read) == mloc_errorData, "a short header");
+    CHECK(mlocReadDataVersion(mlocBuiltinData, 63, &read) == mloc_errorFormat, "a short header");
     CHECK(mlocReadDataVersion(nullptr, 64, &read) == mloc_errorInvalid, "null bytes");
     CHECK(mlocReadDataVersion(mlocBuiltinData, 64, nullptr) == mloc_errorInvalid, "a null version");
 }
@@ -285,9 +285,9 @@ static void TestArguments(void)
     CHECK(mlocOpenData(nullptr, s_file, size) == mloc_errorInvalid, "a null view");
     CHECK(mlocOpenData(&data, nullptr, size) == mloc_errorInvalid, "null bytes");
     CHECK(mlocOpenData(&data, s_file + 1, size) == mloc_errorInvalid, "unaligned bytes");
-    CHECK(mlocOpenData(&data, s_file, size) == mloc_errorData,
+    CHECK(mlocOpenData(&data, s_file, size) == mloc_errorFormat,
           "kinds the library does not read are refused");
-    CHECK(Open(63) == mloc_errorData, "shorter than a header");
+    CHECK(Open(63) == mloc_errorFormat, "shorter than a header");
 }
 
 static void TestVersionRefusals(void)
@@ -298,7 +298,7 @@ static void TestVersionRefusals(void)
     {
         uint32_t size = BuildGood();
         s_file[s_fields[i]] ^= 1;
-        CHECK(Open(size) == mloc_errorDataVersion, "another data version");
+        CHECK(Open(size) == mloc_errorVersion, "another data version");
     }
     // The field held a packed library version before the data format
     // version: the released files' 0.0.1 and 0.1.0 never match a format.
@@ -307,12 +307,12 @@ static void TestVersionRefusals(void)
     {
         uint32_t size = BuildGood();
         Put32(s_file + headerDataFormat, s_released[i]);
-        CHECK(Open(size) == mloc_errorDataVersion, "a released file's library version");
+        CHECK(Open(size) == mloc_errorVersion, "a released file's library version");
     }
     uint32_t size = BuildGood();
     s_file[headerFileSize] ^= 1;
     s_file[headerCldr] ^= 1;
-    CHECK(Open(size) == mloc_errorDataVersion, "the version is checked before the rest");
+    CHECK(Open(size) == mloc_errorVersion, "the version is checked before the rest");
 }
 
 // A zones file may be of another tzdb release; any other file may not,
@@ -330,19 +330,19 @@ static void TestZonesFiles(void)
           "zones alone, of another release");
     size = Build(s_mixed, 2, nullptr, 0);
     memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
-    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorVersion,
           "zones beside another unit, of another release");
     size = Build(s_mixed, 2, nullptr, 0);
     CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_success,
           "zones beside another unit, of the library's release");
     size = Build(s_zones, 0, nullptr, 0);
     memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
-    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorVersion,
           "no unit at all, of another release");
     size = Build(s_zones, 1, nullptr, 0);
     memcpy(s_file + headerTzdb, "1999z\0\0\0", 8);
     s_file[headerDataFormat] ^= 1;
-    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorDataVersion,
+    CHECK(mlocOpenDataWithKinds(&view, s_file, size, s_zoneKinds, 2) == mloc_errorVersion,
           "zones of another data format");
 }
 
@@ -352,7 +352,7 @@ static void Corrupt(uint32_t offset, uint32_t value, const char* what)
 {
     uint32_t size = BuildGood();
     Put32(s_file + offset, value);
-    CHECK(Open(size) == mloc_errorData, what);
+    CHECK(Open(size) == mloc_errorFormat, what);
 }
 
 static void TestHeaderRefusals(void)
@@ -371,7 +371,7 @@ static void TestHeaderRefusals(void)
     Corrupt(headerPoolSize, 3, "a pool that does not end the file");
     Corrupt(headerPoolSize, 17, "a pool said to be longer than the file");
     Corrupt(headerPoolOffset, 64, "a pool inside the tables");
-    CHECK(Open(size - 1) == mloc_errorData, "bytes shorter than the file size");
+    CHECK(Open(size - 1) == mloc_errorFormat, "bytes shorter than the file size");
 }
 
 static void TestLongIds(void)
@@ -384,7 +384,7 @@ static void TestLongIds(void)
     CHECK(Open(Build(s_longUnits, 1, longest, 1)) == mloc_success, "a 64-byte locale id");
     id[64] = 'a';
     id[65] = '\0';
-    CHECK(Open(Build(s_longUnits, 1, longest, 1)) == mloc_errorData, "a 65-byte locale id");
+    CHECK(Open(Build(s_longUnits, 1, longest, 1)) == mloc_errorFormat, "a 65-byte locale id");
 }
 
 static void TestTableRefusals(void)
@@ -410,7 +410,7 @@ static void TestTableRefusals(void)
     uint32_t size = BuildGood();
     uint8_t* id = s_file + mlocLoad32(s_file + headerPoolOffset);
     id[0] = '-';
-    CHECK(Open(size) == mloc_errorData, "a byte no locale id has");
+    CHECK(Open(size) == mloc_errorFormat, "a byte no locale id has");
 }
 
 int main(void)

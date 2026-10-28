@@ -23,20 +23,35 @@ static void TestCldrVersionIsFortyNine(void)
     CHECK(version.major == 49 && version.minor == 0 && version.patch == 0, "CLDR 49.0.0");
 }
 
+// Every result with its name; the shared errors at the family's values,
+// the library's own from -32 down.
 static void TestResultNames(void)
 {
-    CHECK(strcmp(mlocResultName(mloc_success), "mloc_success") == 0, "success name");
-    CHECK(strcmp(mlocResultName(mloc_errorInvalid), "mloc_errorInvalid") == 0, "invalid name");
-    CHECK(strcmp(mlocResultName(mloc_errorCapacity), "mloc_errorCapacity") == 0, "capacity name");
-    CHECK(strcmp(mlocResultName(mloc_errorData), "mloc_errorData") == 0, "data name");
-    CHECK(strcmp(mlocResultName(mloc_errorDataVersion), "mloc_errorDataVersion") == 0,
-          "data version name");
-    CHECK(strcmp(mlocResultName(mloc_errorSyntax), "mloc_errorSyntax") == 0, "syntax name");
-    CHECK(strcmp(mlocResultName(mloc_errorNotFound), "mloc_errorNotFound") == 0, "not found name");
-    CHECK(strcmp(mlocResultName(mloc_fellBack), "mloc_fellBack") == 0 &&
-              strcmp(mlocResultName(mloc_withFallbacks), "mloc_withFallbacks") == 0 &&
-              strcmp(mlocResultName(mloc_errorFormat), "mloc_errorFormat") == 0,
-          "the outcomes' and format's names");
+    static const struct
+    {
+        mlocResult value;
+        mlocResult expected;
+        const char* name;
+    } results[] = {
+        {mloc_success, 0, "mloc_success"},
+        {mloc_fellBack, 1, "mloc_fellBack"},
+        {mloc_withFallbacks, 2, "mloc_withFallbacks"},
+        {mloc_done, 3, "mloc_done"},
+        {mloc_needMoreText, 4, "mloc_needMoreText"},
+        {mloc_errorInvalid, -1, "mloc_errorInvalid"},
+        {mloc_errorCapacity, -2, "mloc_errorCapacity"},
+        {mloc_errorVersion, -7, "mloc_errorVersion"},
+        {mloc_errorFormat, -8, "mloc_errorFormat"},
+        {mloc_errorSyntax, -32, "mloc_errorSyntax"},
+        {mloc_errorNotFound, -33, "mloc_errorNotFound"},
+        {mloc_errorFallback, -34, "mloc_errorFallback"},
+    };
+    for (size_t i = 0; i < sizeof results / sizeof results[0]; i++)
+    {
+        CHECK(results[i].value == results[i].expected &&
+                  strcmp(mlocResultName(results[i].value), results[i].name) == 0,
+              results[i].name);
+    }
     CHECK(strcmp(mlocResultName(12345), "unknown result") == 0, "unknown name");
 }
 

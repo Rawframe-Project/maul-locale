@@ -255,7 +255,7 @@ static mlocResult Resolve(TimeFormat* f, const mlocLocale* locale, const DateLoc
     if (!FindPatterns(f, patterns, set, o, cycle, asked, entries) ||
         !FindRange(f, patterns, set, intervals, entries) || !FindRelativeGlues(&f->range, set))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     *choice = (TimeChoice){*patterns, set,
                            cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 ||
@@ -552,7 +552,7 @@ mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter, const m
     if (!mlocTablePattern(&r->table, r->glue, &join.glue) ||
         !mlocTablePattern(&r->table, shortDate, &join.date))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     join.time = choice.own;
     g.date = &date;

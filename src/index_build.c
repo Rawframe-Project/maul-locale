@@ -735,7 +735,7 @@ mlocResult mlocIndexBuild(const Collator* primary, IndexCandidates* candidates,
     Start(&b, primary, candidates, specials);
     if (!SortScripts(&b))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     Filter(&b, maxLabelCount);
     Emit(&b);

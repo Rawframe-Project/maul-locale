@@ -285,7 +285,7 @@ static void TestEndlessRules(void)
     memcpy(&opened, &view, sizeof(view));
     mlocDataSet set = {&opened, 1};
     mlocLocale locale;
-    CHECK(mlocCanonicalizeLocale(&set, "iw", 2, &locale, nullptr).status == mloc_errorData,
+    CHECK(mlocCanonicalizeLocale(&set, "iw", 2, &locale, nullptr).status == mloc_errorFormat,
           "rules that never end are refused");
     CHECK(mlocCanonicalizeLocale(&set, "en", 2, &locale, nullptr).status == mloc_success,
           "and other tags still canonicalize");

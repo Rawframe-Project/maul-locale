@@ -25,7 +25,7 @@ static mlocResult FindUnits(const DataView* view, uint32_t* localeOut, DataSpan*
         bool hasMessages = mlocFindDataUnit(view, kindCatalogMessages, i, &m);
         if (hasKeys != hasMessages)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         if (hasKeys)
         {
@@ -35,7 +35,7 @@ static mlocResult FindUnits(const DataView* view, uint32_t* localeOut, DataSpan*
             *messages = m;
         }
     }
-    return found == 0 ? mloc_errorNotFound : found > 1 ? mloc_errorData : mloc_success;
+    return found == 0 ? mloc_errorNotFound : found > 1 ? mloc_errorFormat : mloc_success;
 }
 
 mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
@@ -57,7 +57,7 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
     if (!mlocReadCatalogKeys(keysSpan, &keys) || mlocLoad32(messagesSpan.bytes) != keys.count ||
         mlocLoad64(messagesSpan.bytes + 8) != keys.setId || mlocCatalogSetId(&keys) != keys.setId)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     // A catalog's locale is one the library reads, so its info never
     // fails.
@@ -67,7 +67,7 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
     if (mlocGetDataLocale(data, locale, &id, &length) != mloc_success ||
         mlocParseLocale(id, length, &parsed).status != mloc_success)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     Catalog c = {keysSpan.bytes,    messagesSpan.bytes, id,          keysSpan.size,
                  messagesSpan.size, (uint32_t)length,   catalogStamp};
@@ -86,7 +86,7 @@ mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoO
     CatalogKeys keys;
     if (!mlocCatalogKeysOf(&c, &keys))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     uint32_t present = 0;
     const uint8_t* offsets = c.messages + catalogMessagesHead;
@@ -102,7 +102,7 @@ mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoO
     };
     if (mlocParseLocale(c.locale, c.localeLength, &info.locale).status != mloc_success)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     *infoOut = info;
     return mloc_success;
@@ -119,7 +119,7 @@ mlocResult mlocFindCatalogKey(const mlocCatalog* catalog, const char* key, size_
     CatalogKeys keys;
     if (!mlocCatalogKeysOf(&c, &keys))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (keys.count == 0)
     {

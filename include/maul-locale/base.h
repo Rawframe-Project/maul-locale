@@ -71,8 +71,10 @@ extern "C"
 
     // The status a fallible function returns. Zero is success, positive
     // values are outcomes that are not errors, negative values are errors.
-    // The type has a fixed width so that result structs have one layout in
-    // C and C++.
+    // The errors from -1 to -31 mean the same, at the same values, in every
+    // Maul library; the library's own errors count down from -32. The type
+    // has a fixed width so that result structs have one layout in C and
+    // C++.
     typedef int32_t mlocResult;
     enum
     {
@@ -94,21 +96,23 @@ extern "C"
         mloc_errorInvalid = -1,
         // A caller buffer or a named limit is too small for the result.
         mloc_errorCapacity = -2,
-        // Bytes given as data are not a valid data file: a wrong magic or
-        // format, or a table, offset or length that does not hold.
-        mloc_errorData = -3,
+        // Stored bytes are malformed: a data file, a compiled message or a
+        // catalog with a wrong magic, or a table, offset, length or count
+        // that does not hold.
+        mloc_errorFormat = -8,
         // A valid data file of another data version: another CLDR,
-        // Unicode, time zone or library release, or other code tables.
-        mloc_errorDataVersion = -4,
+        // Unicode, time zone or library release, or other code tables; or
+        // a compiled message or catalog of another format version.
+        mloc_errorVersion = -7,
         // Text is not well-formed for what it was given as, such as a
         // locale id.
-        mloc_errorSyntax = -5,
+        mloc_errorSyntax = -32,
         // The data has no answer: no likely subtags for a language, or a
         // data set without the table asked for.
-        mloc_errorNotFound = -6,
+        mloc_errorNotFound = -33,
         // A part of the result failed and the call was asked to write
         // nothing then (a message formatter in strict mode).
-        mloc_errorFormat = -7,
+        mloc_errorFallback = -34,
     };
 
     // The result of a call that reads text: the status and, on failure,

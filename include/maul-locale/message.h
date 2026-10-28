@@ -97,10 +97,10 @@ extern "C"
     /// @param size     Its size in bytes.
     /// @param output   Receives the text.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorData
+    ///         (output->length is then the length needed); mloc_errorFormat
     ///         when the bytes are not a compiled message, or one whose text
     ///         would be 1 GiB or more, which could not compile again;
-    ///         mloc_errorDataVersion for one of another library or Unicode
+    ///         mloc_errorVersion for one of another format, library or Unicode
     ///         version; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -371,7 +371,7 @@ extern "C"
     typedef struct mlocMessageOptions
     {
         // Strict: a format call that meets a fault writes nothing and
-        // returns mloc_errorFormat; else it writes the message with
+        // returns mloc_errorFallback; else it writes the message with
         // fallbacks.
         bool strict;
         // Isolation, by the Default Bidi Strategy unless turned off; the
@@ -435,7 +435,7 @@ extern "C"
     /// @param sizeOut    Receives the size written, or needed with
     ///                   mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
-    ///         small; mloc_errorData and mloc_errorDataVersion as
+    ///         small; mloc_errorFormat and mloc_errorVersion as
     ///         mlocWriteMessageText; mloc_errorInvalid for a null pointer,
     ///         a formatter the library did not make, more than 32
     ///         selectors, 1024 declarations, or 2^24 expressions or
@@ -505,7 +505,7 @@ extern "C"
     /// @param output         Receives the text.
     /// @param faults         Receives the faults; may be null.
     /// @return mloc_success; mloc_withFallbacks when the text holds
-    ///         fallbacks; in strict mode mloc_errorFormat at the first
+    ///         fallbacks; in strict mode mloc_errorFallback at the first
     ///         fault, nothing written; mloc_errorCapacity when the text does
     ///         not fit (output->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,

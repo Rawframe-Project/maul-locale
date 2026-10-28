@@ -344,23 +344,30 @@ static uint32_t UnicodeVersion(void)
     return (uint32_t)version.major << 16 | (uint32_t)version.minor << 8 | version.patch;
 }
 
-// The header: the counts' records fill exactly the size; a simple message
+// The header: the magic; the message format, another being another
+// version's; the counts' records fill exactly the size; a simple message
 // has neither declarations nor a matcher; a matcher has both selectors
 // and variants or neither. No count passes the size, so the selectors
 // times the variants fit 64 bits; their keys' bytes may not, and are
 // multiplied and added with a check.
 static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
 {
-    if (size < messageHeaderSize || memcmp(bytes, MLOC_MESSAGE_MAGIC, 4) != 0 ||
-        mlocLoad16(bytes + messageFormat) != messageFormatVersion ||
-        mlocLoad32(bytes + messageSize) != size)
+    if (size < messageHeaderSize || memcmp(bytes, MLOC_MESSAGE_MAGIC, 4) != 0)
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
+    }
+    if (mlocLoad16(bytes + messageFormat) != messageFormatVersion)
+    {
+        return mloc_errorVersion;
+    }
+    if (mlocLoad32(bytes + messageSize) != size)
+    {
+        return mloc_errorFormat;
     }
     if (mlocLoad32(bytes + messageDataFormat) != MLOC_DATA_FORMAT_VERSION ||
         mlocLoad32(bytes + messageUnicode) != UnicodeVersion())
     {
-        return mloc_errorDataVersion;
+        return mloc_errorVersion;
     }
     v->bytes = bytes;
     v->flags = mlocLoad16(bytes + messageFlags);
@@ -370,7 +377,7 @@ static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
         v->count[kind] = mlocLoad32(bytes + messageCounts + kind * 4);
         if (v->count[kind] > size)
         {
-            return mloc_errorData;
+            return mloc_errorFormat;
         }
         total += (uint64_t)v->count[kind] * messageRecordSizes[kind];
     }
@@ -382,7 +389,7 @@ static mlocResult ReadHeader(const uint8_t* bytes, size_t size, MessageView* v)
         (simple && v->count[messageDeclarations] + v->count[messageVariants] > 0) ||
         ((v->count[messageSelectors] == 0) != (v->count[messageVariants] == 0)))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     mlocMessageStarts(bytes, v->start, &v->keyStart);
     v->pool = bytes + v->start[messagePool];
@@ -401,7 +408,7 @@ mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view)
     // strings costs no more than the pool.
     if (StringBytes(&v) > v.count[messagePool] || !BoundedReferences(&v) || !GoodRecords(&v))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     *view = v;
     return mloc_success;

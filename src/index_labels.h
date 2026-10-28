@@ -55,7 +55,7 @@ typedef struct IndexCandidates
     uint32_t scriptCount;
 } IndexCandidates;
 
-// Gathers the candidates: mloc_success, or mloc_errorData past the
+// Gathers the candidates: mloc_success, or mloc_errorFormat past the
 // limits above.
 mlocResult mlocIndexGather(const Collator* collator, const mlocDataSet* data,
                            const mlocLocale* locale, IndexCandidates* out);

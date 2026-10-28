@@ -114,7 +114,7 @@ static mlocResult Load(DurationFormat* f, const mlocDataSet* data, const mlocLoc
     bool twoDigit = false;
     if (!mlocReadDurationDigital(p.text[unitPatternHms], p.length[unitPatternHms], f, &twoDigit))
     {
-        return mloc_errorData;
+        return mloc_errorFormat;
     }
     if (twoDigit && f->style[mloc_durationHours] == mloc_durationFieldNumeric)
     {

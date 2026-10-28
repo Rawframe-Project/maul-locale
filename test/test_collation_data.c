@@ -116,7 +116,7 @@ static void Spoil(DataSpan unit, uint32_t hashAt, const uint8_t* where, const ui
     }
     mlocData broken;
     CHECK(mlocCollationHashValid(unit, hashAt) &&
-              mlocOpenData(&broken, s_file, s_size) == mloc_errorData,
+              mlocOpenData(&broken, s_file, s_size) == mloc_errorFormat,
           what);
     memcpy(At(where), saved, length);
     memcpy(hash, savedHash, 8);
