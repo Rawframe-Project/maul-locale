@@ -10,6 +10,7 @@
 
 #include "date_time.h"
 #include "duration_round.h"
+#include "invariant.h"
 #include "rounding.h"
 #include "time_arith.h"
 #include "zone_handle.h"
@@ -343,6 +344,9 @@ static mlocResult RoundToDay(const mlocTimeZone* zone, const mlocInstant* instan
     mlocTimeDuration length = Between(&start, &end);
     int64_t lengthNanoseconds = length.seconds * nanosecondsPerSecond + length.nanoseconds;
     int64_t part = progress.seconds * nanosecondsPerSecond + progress.nanoseconds;
+    // RoundTimeInDay's assertions: the day starts at or before the instant
+    // and lasts a while.
+    MLOC_ASSERT(part >= 0 && lengthNanoseconds > 0);
     if (part >= lengthNanoseconds)
     {
         part = lengthNanoseconds - 1;

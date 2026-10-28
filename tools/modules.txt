@@ -131,18 +131,18 @@ duration_fields: binary64 duration_values
 zone_name_tables: bytes data_view number_data
 zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
 zone_codes: data_view zone_code_tables zone_handle zone_tables
-zone_rules: bytes calendar_arith zone_tables
+zone_rules: bytes calendar_arith invariant zone_tables
 zone_handle: zone_rules zone_tables
 zone: bytes data_view kinds zone_handle zone_rules
 date_time: calendar_year
 time_arith: date_time duration_round rounding
 datetime_arith: date_time duration_round time_arith
-instant_arith: duration_round rounding time_arith zone_handle
-zoned_arith: date_time duration_round rounding time_arith zone_handle
-zone_local: date_time zone_handle zone_rules zone_tables
+instant_arith: duration_round invariant rounding time_arith zone_handle
+zoned_arith: date_time duration_round invariant rounding time_arith zone_handle
+zone_local: date_time invariant zone_handle zone_rules zone_tables
 calendar_until: calendar_arith calendar_year invariant
 calendar_round: duration_round
-duration_round: binary64 date_time rounding
+duration_round: binary64 date_time invariant rounding
 rounding:
 binary64:
 duration_values: binary64 time_arith
