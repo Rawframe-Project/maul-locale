@@ -955,6 +955,7 @@ if(MAUL_LOCALE_FUZZ)
                  relative
                  search segment segments
                  spellout
+                 temporal
                  zone_codes zone_names zones)
         add_executable(fuzz_${area} test/fuzz_${area}.c)
         target_link_libraries(fuzz_${area} PRIVATE maul-locale)
