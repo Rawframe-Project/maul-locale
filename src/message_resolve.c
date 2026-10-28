@@ -3,6 +3,7 @@
 
 #include "message_resolve.h"
 
+#include "invariant.h"
 #include "message_offset.h"
 #include "message_operand.h"
 
@@ -34,12 +35,14 @@ static uint32_t Word(const uint8_t* words, uint32_t index)
 
 static uint32_t BoundBy(const Resolution* r, uint32_t variable)
 {
+    MLOC_ASSERT(variable < r->h.view.count[messageVariables]);
     uint32_t d = Word(r->words, variable);
     return d < r->h.view.count[messageDeclarations] ? d : messageUnbound;
 }
 
 static uint32_t SlotOf(const Resolution* r, uint32_t expression)
 {
+    MLOC_ASSERT(expression < r->h.view.count[messageExpressions]);
     return Word(r->words, r->h.view.count[messageVariables] + expression) & 0xFFFFFF;
 }
 
@@ -173,6 +176,11 @@ static void VariableInto(Resolution* r, uint32_t variable, uint32_t at, uint32_t
         ArgumentInto(r, variable, at, out);
         return;
     }
+    // Binding refused a declaration naming its own expression or a later
+    // one, so an operand's chain only goes back and ends; the reported
+    // bits cover the declarations a bound message may have.
+    MLOC_ASSERT(within == UINT32_MAX || Field(r, messageDeclarations, d, 2) < within);
+    MLOC_ASSERT(d < MLOC_MAX_MESSAGE_DECLARATIONS);
     // Call-by-name resolves a declaration at each reference; its faults
     // are reported the first time it is resolved aloud, and quietly
     // after.

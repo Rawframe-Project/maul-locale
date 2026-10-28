@@ -6,6 +6,7 @@
 #include "message_bind.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "message_text.h"
 
 #include "maul-locale/locale.h"
@@ -251,8 +252,12 @@ static mlocResult WriteWords(const MessageView* v, const MessageFormatter* f, ui
     uint8_t* expressionWords = words + (size_t)v->count[messageVariables] * 4;
     for (uint32_t e = 0; e < v->count[messageExpressions]; e++)
     {
+        // The formatter's functions are fewer than messageFunctionLimit,
+        // so a slot leaves the chain's byte alone.
         uint8_t* word = expressionWords + (size_t)e * 4;
-        Store32(word, mlocLoad32(word) | SlotOf(v, f, e));
+        uint32_t slot = SlotOf(v, f, e);
+        MLOC_ASSERT(slot < 1u << 24 && (mlocLoad32(word) & 0xFFFFFFu) == 0);
+        Store32(word, mlocLoad32(word) | slot);
     }
     return mloc_success;
 }

@@ -15,6 +15,7 @@
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,
                         uint32_t* offsetOut, uint32_t* lengthOut)
 {
+    MLOC_ASSERT(variant < view->count[messageVariants] && selector < view->count[messageSelectors]);
     const uint8_t* key = view->bytes + view->keyStart +
                          (variant * view->count[messageSelectors] + selector) * messageKeySize;
     *offsetOut = mlocLoad32(key + 4);

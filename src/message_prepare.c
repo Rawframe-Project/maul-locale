@@ -7,6 +7,7 @@
 #include "message_prepare.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -142,7 +143,10 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
 {
     Resolution r;
     memset(&r, 0, sizeof r);
-    if (!mlocReadBound(buffer, &r.h, &r.formatter))
+    // The header was written just before.
+    bool read = mlocReadBound(buffer, &r.h, &r.formatter);
+    MLOC_ASSERT(read);
+    if (!read)
     {
         return;
     }
@@ -162,7 +166,9 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
         {
             continue;
         }
+        // The bind counted this room, so the value stays in its buffer.
         size_t room = RoomOf(slot);
+        MLOC_ASSERT(at + room <= h->size);
         r.dynamic = false;
         r.probeArgument = ProbeFor(slot);
         Value v = mlocResolveExpression(&r, e);
@@ -230,6 +236,7 @@ mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* me
 const void* mlocPreparedFor(const Resolution* r, uint32_t expression)
 {
     uint32_t at = mlocLoad32(r->words + PreparedWord(&r->h.view, expression));
+    MLOC_ASSERT(expression < r->h.view.count[messageExpressions] && at < r->h.size);
     const uint8_t* place = r->words - sizeof(BoundHeader) + at;
     // A bound message moved to an address that leaves its values
     // unaligned makes its own (a copy would take a unit formatter's

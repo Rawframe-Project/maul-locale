@@ -4,6 +4,7 @@
 #include "message_emit.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include "maul-locale/message.h"
 #include "maul-unicode/normalize.h"
@@ -173,6 +174,7 @@ bool mlocEmitNfc(MessageEmit* emit, const uint8_t* bytes, size_t length)
     {
         return false;
     }
+    MLOC_ASSERT(emit->out == NULL || result.status == muni_success);
     emit->used[messagePool] += (uint32_t)needed;
     return true;
 }
