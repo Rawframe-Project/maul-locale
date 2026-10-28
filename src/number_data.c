@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "currency_tables.h"
+#include "invariant.h"
 #include "number_tables.h"
 
 // The length of the well-formed UTF-8 character at text (the Unicode
@@ -387,6 +388,7 @@ CurrencyFraction mlocFindCurrencyFraction(DataSpan unit, uint16_t code)
     const uint8_t* entries = unit.bytes + currencyFractionsHeaderSize;
     // The default entry stands for a code the table lacks.
     const uint8_t* found = entries;
+    MLOC_ASSERT(high > 0 && mlocLoad16(found + fractionCode) == 0);
     while (low < high)
     {
         uint32_t middle = low + (high - low) / 2;

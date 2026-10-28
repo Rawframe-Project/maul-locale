@@ -7,6 +7,7 @@
 
 #include "currency_tables.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "number_compact.h"
 #include "number_precision.h"
 #include "plural.h"
@@ -176,6 +177,7 @@ static uint32_t Category(const Formatter* f, const Prepared* p)
 // a call.
 static size_t NumberAt(const Outer* o, uint32_t category)
 {
+    MLOC_ASSERT(category < sizeof(o->patternStart) / sizeof(o->patternStart[0]));
     const uint8_t* pattern = o->patternText + o->patternStart[category];
     size_t length = o->patternLength[category];
     size_t at = 0;
