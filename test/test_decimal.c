@@ -87,21 +87,21 @@ static void TestBounds(void)
     CHECK(Reads("1234567890123456789012345678901234567890",
                 "1234567890123456789012345678901234567890"),
           "and forty digits whose last is 0");
-    CHECK(Refuses("12345678901234567890123456789012345678901", mloc_errorCapacity, 0),
+    CHECK(Refuses("12345678901234567890123456789012345678901", mloc_errorLimit, 0),
           "forty-one are refused");
-    CHECK(Refuses("1000000000000000000000000000000000000000001", mloc_errorCapacity, 0),
+    CHECK(Refuses("1000000000000000000000000000000000000000001", mloc_errorLimit, 0),
           "zeros between digits count");
     CHECK(Parsed("100000000000000000000000000000000000000000000000000", &(mlocDecimal){0}),
           "zeros after the last digit do not");
     CHECK(Parsed("1e999999", &(mlocDecimal){0}) && Parsed("1e-999999", &(mlocDecimal){0}),
           "the largest and smallest powers");
-    CHECK(Refuses("1e1000000", mloc_errorCapacity, 0), "past the largest power");
-    CHECK(Refuses("1e-1000000", mloc_errorCapacity, 0), "past the smallest");
+    CHECK(Refuses("1e1000000", mloc_errorLimit, 0), "past the largest power");
+    CHECK(Refuses("1e-1000000", mloc_errorLimit, 0), "past the smallest");
     CHECK(Parsed("12e999998", &(mlocDecimal){0}), "a first digit at the largest power");
-    CHECK(Refuses("12e999999", mloc_errorCapacity, 0), "and one past it");
+    CHECK(Refuses("12e999999", mloc_errorLimit, 0), "and one past it");
     CHECK(Parsed("0e-999999", &(mlocDecimal){0}), "a zero showing the most fraction digits");
-    CHECK(Refuses("0e-1000000", mloc_errorCapacity, 0), "and one more");
-    CHECK(Refuses("1e99999999999999999999999", mloc_errorCapacity, 0),
+    CHECK(Refuses("0e-1000000", mloc_errorLimit, 0), "and one more");
+    CHECK(Refuses("1e99999999999999999999999", mloc_errorLimit, 0),
           "an exponent too long for any integer");
     CHECK(Parsed("0e99999999999999999999999", &(mlocDecimal){0}), "which a zero takes");
 }
@@ -207,14 +207,14 @@ static void TestMadeUp(void)
     d.fractionDigits = 0;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "fewer fraction digits shown");
     d = good;
-    d.fractionDigits = mlocDecimalMaxExponent + 1;
+    d.fractionDigits = MLOC_MAX_DECIMAL_EXPONENT + 1;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "too many");
     d = good;
-    d.exponent = -mlocDecimalMaxExponent - 1;
-    d.fractionDigits = mlocDecimalMaxExponent + 1;
+    d.exponent = -MLOC_MAX_DECIMAL_EXPONENT - 1;
+    d.fractionDigits = MLOC_MAX_DECIMAL_EXPONENT + 1;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "a last digit too small");
     d = good;
-    d.exponent = mlocDecimalMaxExponent;
+    d.exponent = MLOC_MAX_DECIMAL_EXPONENT;
     CHECK(mlocFormatDecimal(&d, &output) == mloc_errorInvalid, "a first digit too large");
     d = good;
     d.negative = 2;
@@ -248,15 +248,15 @@ static void TestMadeUpBytes(void)
     char buffer[64];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     bool all = true;
-    for (int count = 1; count <= mlocDecimalDigits && all; count++)
+    for (int count = 1; count <= MLOC_MAX_DECIMAL_DIGITS && all; count++)
     {
-        char text[mlocDecimalDigits + 1];
+        char text[MLOC_MAX_DECIMAL_DIGITS + 1];
         memcpy(text, s_digits, (size_t)count);
         text[count - 1] = '7';
         text[count] = '\0';
         mlocDecimal good;
         all = Parsed(text, &good) && good.count == count;
-        for (int k = 0; k < mlocDecimalDigits && all; k++)
+        for (int k = 0; k < MLOC_MAX_DECIMAL_DIGITS && all; k++)
         {
             for (size_t b = 0; b < sizeof(s_bad) && all; b++)
             {
@@ -957,11 +957,11 @@ static void TestRound(void)
               Writes(&d, "12300000"),
           "digits two places above the unit are a multiple");
     CHECK(Parsed("9.99e999999", &d) &&
-              mlocRoundDecimal(&d, 999998, 1, mloc_roundExpand) == mloc_errorCapacity &&
+              mlocRoundDecimal(&d, 999998, 1, mloc_roundExpand) == mloc_errorLimit &&
               d.count == 3 && d.exponent == 999997,
           "a value rounded past the largest power, left unchanged");
     CHECK(Parsed("12345678901234567890123456789012345678910", &d) &&
-              mlocRoundDecimal(&d, 0, 25, mloc_roundExpand) == mloc_errorCapacity && d.count == 40,
+              mlocRoundDecimal(&d, 0, 25, mloc_roundExpand) == mloc_errorLimit && d.count == 40,
           "and one that needs 41 digits");
     CHECK(Parsed("1.5e999999", &d) && mlocRoundDecimal(&d, 999999, 1, mloc_roundHalfEven) == 0 &&
               d.count == 1 && d.digits[0] == 2 && d.exponent == 999999,
@@ -980,9 +980,11 @@ static void TestRound(void)
     CHECK(Parsed("1", &d) && mlocRoundDecimal(nullptr, 0, 1, mloc_roundHalfExpand) != 0 &&
               mlocRoundDecimal(&d, 0, 3, mloc_roundHalfExpand) == mloc_errorInvalid &&
               mlocRoundDecimal(&d, 0, 1, (mlocRoundingMode)9) == mloc_errorInvalid &&
-              mlocRoundDecimal(&d, 1000000, 1, mloc_roundHalfExpand) == mloc_errorInvalid &&
-              mlocRoundDecimal(&d, -1000000, 1, mloc_roundHalfExpand) == mloc_errorInvalid,
-          "refusals");
+              mlocRoundDecimal(&d, MLOC_MAX_DECIMAL_EXPONENT + 1, 1, mloc_roundHalfExpand) ==
+                  mloc_errorLimit &&
+              mlocRoundDecimal(&d, -MLOC_MAX_DECIMAL_EXPONENT - 1, 1, mloc_roundHalfExpand) ==
+                  mloc_errorLimit,
+          "refusals, a position past the bound with mloc_errorLimit");
     CHECK(mlocRoundDecimal(&d, 999999, 1, mloc_roundTrunc) == 0 &&
               mlocRoundDecimal(&d, -999999, 1, mloc_roundTrunc) == 0,
           "the extreme positions");
@@ -1006,7 +1008,7 @@ static void TestShowFractionDigits(void)
     CHECK(mlocShowFractionDigits(&special, 2) == 0 && special.fractionDigits == 0,
           "infinity shows none");
     CHECK(mlocShowFractionDigits(&d, -1) == mloc_errorInvalid &&
-              mlocShowFractionDigits(&d, 1000000) == mloc_errorInvalid &&
+              mlocShowFractionDigits(&d, MLOC_MAX_DECIMAL_EXPONENT + 1) == mloc_errorLimit &&
               mlocShowFractionDigits(nullptr, 1) == mloc_errorInvalid,
           "refusals");
     d.negative = 3;

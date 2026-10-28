@@ -22,6 +22,20 @@ extern "C"
 {
 #endif
 
+// The most collation elements a search pattern has, and at the identical
+// strength the most code points of its NFD.
+#define MLOC_MAX_SEARCH_PATTERN 480
+
+// The most collation elements a searcher holds at once, as ICU4C's
+// CEIBuffer: the pattern's, 32 more, and with a wildcard comparison 3 for
+// each UTF-16 unit of the pattern (8 for one that may be a leading jamo).
+// The text's elements between a match's ends must fit the same room.
+#define MLOC_MAX_SEARCH_WINDOW 512
+
+// The longest run a backward search reads at once: elements without a
+// primary weight, or a piece of unsafe code points.
+#define MLOC_MAX_SEARCH_BACKWARD_RUN 128
+
     // How the elements compare, as ICU4C's USEARCH_ELEMENT_COMPARISON:
     // equal to the strength; or a pattern element with a base weight
     // only (no accent, no case) matching the text's with any of the
@@ -57,9 +71,11 @@ extern "C"
     ///         numeric ordering (as ICU4C refuses one: a number's
     ///         elements stand for all its digits), an unknown comparison,
     ///         a collator the library did not make or a null pointer;
-    ///         mloc_errorCapacity for a pattern of more than 480
-    ///         elements (fewer with a wildcard comparison, which keeps
-    ///         room for the text's ignorables between them).
+    ///         mloc_errorLimit for a pattern of more than
+    ///         MLOC_MAX_SEARCH_PATTERN elements, or at the identical
+    ///         strength NFD code points, or one whose elements and the room
+    ///         a wildcard comparison keeps for the text's ignorables pass
+    ///         MLOC_MAX_SEARCH_WINDOW.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcher(mlocSearcher* searcherOut,
@@ -97,9 +113,9 @@ extern "C"
     /// @param startOut  Receives the match's first byte.
     /// @param endOut    Receives the byte after the match.
     /// @return mloc_success with a match; mloc_errorNotFound when there
-    ///         is none; mloc_errorCapacity when the text's elements
-    ///         between a match's ends outgrow the room kept for them (a
-    ///         run of ignorables too long); mloc_errorInvalid for a
+    ///         is none; mloc_errorLimit when the text's elements
+    ///         between a match's ends pass MLOC_MAX_SEARCH_WINDOW (a run
+    ///         of ignorables too long); mloc_errorInvalid for a
     ///         searcher the library did not make, a position past the
     ///         end or a null pointer.
     /// @par Thread safety
@@ -143,10 +159,11 @@ extern "C"
     /// @param startOut  Receives the match's first byte.
     /// @param endOut    Receives the byte after the match.
     /// @return mloc_success with a match; mloc_errorNotFound when there
-    ///         is none; mloc_errorCapacity when the text's elements
-    ///         between a match's ends outgrow the room kept for them, or
-    ///         a run of more than 128 elements without a primary weight
-    ///         or of unsafe code points lies in the walk;
+    ///         is none; mloc_errorLimit when the text's elements
+    ///         between a match's ends pass MLOC_MAX_SEARCH_WINDOW, or a
+    ///         run of more than MLOC_MAX_SEARCH_BACKWARD_RUN elements
+    ///         without a primary weight or of unsafe code points lies in
+    ///         the walk;
     ///         mloc_errorInvalid for a searcher the library did not make,
     ///         a position past the end or a null pointer.
     /// @par Thread safety

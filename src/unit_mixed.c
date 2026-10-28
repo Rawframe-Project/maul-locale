@@ -165,7 +165,7 @@ static mlocResult Carry(const Split* s, Wide* integers, mlocDecimal* last)
         }
         if (!mlocWideMultiplyAdd(&integers[i - 1], 1, 1))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     return mloc_success;
@@ -180,7 +180,7 @@ static mlocResult Divide(const Split* s, UnitValue* v, Wide* integers)
         if (!mlocSplitUnitValue(v, &integers[i]) ||
             !mlocUnitValueIn(s->table, &s->scales[i], v, &s->scales[i + 1], &rest))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         *v = rest;
     }
@@ -209,7 +209,7 @@ mlocResult mlocSplitMixed(const UnitTable* t, const UnitId* mixed, const UnitSca
     UnitValue v = *value;
     if (input != nullptr && !mlocUnitValueIn(t, input, value, &s.scales[0], &v))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     bool negative = v.negative;
     uint32_t smallest = s.count - 1;
@@ -266,7 +266,7 @@ mlocResult mlocReachesThreshold(const UnitTable* t, const UnitScale* input, cons
     UnitValue v;
     if (!mlocUnitValueIn(t, input, value, &scale, &v))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     Wide n = mlocWideOf(threshold);
     Wide d = mlocWideOf(1);

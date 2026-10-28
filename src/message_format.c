@@ -505,7 +505,7 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
 static uint32_t SelectVariant(Formatting* f)
 {
     const MessageView* v = &f->r.h.view;
-    Selector selectors[messageSelectorLimit];
+    Selector selectors[MLOC_MAX_MESSAGE_SELECTORS];
     uint32_t count = v->count[messageSelectors];
     for (uint32_t s = 0; s < count; s++)
     {
@@ -606,7 +606,7 @@ static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
 static void Run(Formatting* f, uint32_t quiet)
 {
     f->r.quiet = quiet;
-    f->r.budget = messageResolutionLimit;
+    f->r.budget = MLOC_MAX_MESSAGE_RESOLUTIONS;
     f->r.exhausted = false;
     f->r.optionDepth = 0;
     const MessageView* v = &f->r.h.view;

@@ -619,6 +619,28 @@ static void TestWithoutNames(void)
           "any currency by its code and symbol, not its name");
 }
 
+// Parsing any currency reads at most MLOC_MAX_CURRENCY_PARSE_UNITS units
+// of a kind along a locale's chain: five copies of the built-in data give
+// "en" ten, en's and root's in each. Parsing one currency reads none.
+static void TestChainLimit(void)
+{
+    mlocData sources[5];
+    for (int i = 0; i < 5; i++)
+    {
+        sources[i] = s_data.sources[0];
+    }
+    mlocDataSet copies = {sources, 5};
+    mlocCurrencyFormatter f;
+    mlocDecimal d;
+    char code[3];
+    size_t end = 0;
+    CHECK(Init(&copies, "en", "USD", nullptr, &f) == mloc_success &&
+              mlocParseCurrency(&f, "$1", 2, mloc_parseLenient, 1, &d, code, &end) ==
+                  mloc_errorLimit &&
+              mlocParseCurrency(&f, "$1", 2, mloc_parseLenient, 0, &d, code, &end) == mloc_success,
+          "any currency along a chain of more units than the bound is refused");
+}
+
 static void TestRefusals(void)
 {
     mlocCurrencyFormatter f;
@@ -688,6 +710,7 @@ int main(void)
     TestLongNamesStrictly();
     TestCodeDisplayStrictly();
     TestWithoutNames();
+    TestChainLimit();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

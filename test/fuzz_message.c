@@ -218,8 +218,8 @@ static void FormatIn(const uint8_t* message, size_t size, const char* tag)
     uint8_t* bound = malloc(needed);
     size_t boundSize;
     mlocResult bind = mlocBindMessage(&formatter, message, size, bound, needed, &boundSize);
-    // A chain past the limit is found only when binding.
-    Require(bind == mloc_success || bind == mloc_errorInvalid);
+    // The compiler refuses every message past a bound binding checks.
+    Require(bind == mloc_success);
     if (bind != mloc_success)
     {
         free(bound);
@@ -295,15 +295,15 @@ static void ReadCompiled(const uint8_t* bytes, size_t size)
     memcpy(message, bytes, size);
     if (size >= messageHeaderSize)
     {
-        // This library's magic and versions, so that seeds compiled by
-        // another version still reach the records.
+        // This library's magic, message format and versions, so that seeds
+        // compiled by another version still reach the records.
         uint8_t current[128];
         size_t currentSize;
         mlocMessageError error;
         mlocTextResult result =
             mlocCompileMessage("", 0, current, sizeof current, &currentSize, &error);
         Require(result.status == mloc_success);
-        memcpy(message, current, 4);
+        memcpy(message, current, messageFormat + 2);
         memcpy(message + messageDataFormat, current + messageDataFormat, 8);
     }
     size_t length;

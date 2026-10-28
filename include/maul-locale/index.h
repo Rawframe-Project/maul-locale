@@ -40,6 +40,9 @@ extern "C"
         mloc_indexOverflow = 3,
     } mlocIndexLabelType;
 
+// The longest special label (underflow, inflow, overflow), in bytes.
+#define MLOC_MAX_INDEX_LABEL 255
+
     // An index's options; the zero value gives ICU4C's defaults.
     typedef struct mlocIndexOptions
     {
@@ -82,9 +85,10 @@ extern "C"
     ///                  be a little more than the size.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         small; mloc_errorFormat for more than 512 labels or a root
-    ///         without script boundaries; mloc_errorInvalid for a
-    ///         collator the library did not make, a special label that
-    ///         is not UTF-8 or longer than 255 bytes, or a null pointer.
+    ///         without script boundaries; mloc_errorLimit for a special
+    ///         label longer than MLOC_MAX_INDEX_LABEL bytes;
+    ///         mloc_errorInvalid for a collator the library did not make,
+    ///         a special label that is not UTF-8, or a null pointer.
     ///         The data giving no labels for the locale is no error: the
     ///         index then has its underflow bucket alone.
     /// @par Thread safety

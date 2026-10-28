@@ -9,6 +9,7 @@
 #define MLOC_UNIT_COMPOUND_H
 
 #include "maul-locale/locale.h"
+#include "maul-locale/unit.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,7 +17,7 @@
 enum
 {
     // The bytes of a pattern built.
-    unitPatternRoom = 256,
+    unitPatternRoom = MLOC_MAX_UNIT_PATTERN,
     unitCategoryCount = 6,
 };
 
@@ -44,7 +45,7 @@ typedef struct UnitForms
 // mloc_success; the errors of mlocNormalizeUnitName; mloc_errorNotFound
 // for names the data lacks (a simple unit without names, a power past
 // three); mloc_errorInvalid for a pattern with the number inside a unit
-// name ICU refuses to build; mloc_errorCapacity for a pattern past
+// name ICU refuses to build; mloc_errorLimit for a pattern past
 // unitPatternRoom.
 mlocResult mlocBuildUnitForms(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
                               size_t length, bool named, uint32_t kind, uint32_t gcase,

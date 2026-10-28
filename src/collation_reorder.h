@@ -37,7 +37,7 @@ typedef struct CollationReorder
 // range and a second Zzzz are refused with mloc_errorInvalid, an order
 // whose ranges do not fit the lead bytes, or need more than
 // collationMaxReorderRanges past the first shared byte, with
-// mloc_errorCapacity. Codes
+// mloc_errorLimit. Codes
 // the root has no range for are passed over. *changes is false when the
 // order is the root's (nothing named, or Zzzz alone).
 mlocResult mlocCollationMakeReorder(const CollationRoot* root, const uint32_t* codes, size_t count,

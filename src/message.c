@@ -7,7 +7,9 @@
 
 #include "maul-locale/message.h"
 
+#include "invariant.h"
 #include "message_check.h"
+#include "message_cost.h"
 #include "message_emit.h"
 #include "message_parse.h"
 #include "message_read.h"
@@ -18,11 +20,10 @@
 
 #include <string.h>
 
-// The longest text compiled. Its compiled form's counters are 32 bits:
-// the pool holds the text at most three times over (NFC expands a name
-// or key at most threefold), so a text under 1 GiB keeps every count and
-// offset, and the capacity measured, exact.
-static const size_t longestMessage = (size_t)1 << 30;
+// The longest text compiled is MLOC_MAX_MESSAGE_TEXT bytes. Its compiled
+// form's counters are 32 bits: the pool holds the text at most three times
+// over (NFC expands a name or key at most threefold), so a text under 1 GiB
+// keeps every count and offset exact.
 
 static uint32_t UnicodeVersion(void)
 {
@@ -48,9 +49,13 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     {
         *errorOut = mloc_messageErrorNone;
     }
-    if ((text == NULL && length > 0) || (buffer == NULL && capacity > 0) || sizeOut == NULL ||
-        length >= longestMessage)
+    if ((text == NULL && length > 0) || (buffer == NULL && capacity > 0) || sizeOut == NULL)
     {
+        return result;
+    }
+    if (length > MLOC_MAX_MESSAGE_TEXT)
+    {
+        result.status = mloc_errorLimit;
         return result;
     }
     muniTextResult valid = muniValidateUtf8(text, length);
@@ -70,8 +75,9 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     memcpy(counts.used, emit.used, sizeof counts.used);
     counts.keys = emit.keys;
     size_t needed = mlocEmitNeeded(&counts);
-    if (needed == 0)
+    if (needed == 0 || !mlocMessageCountsFit(counts.used))
     {
+        result.status = mloc_errorLimit;
         return result;
     }
     if (capacity < needed)
@@ -87,6 +93,17 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     if (check.error != mloc_messageErrorNone)
     {
         return Refuse(errorOut, check.error, check.at);
+    }
+    // The chains and resolutions, in the check's words, which it no longer
+    // needs.
+    MessageView view;
+    mlocResult read = mlocReadMessage(buffer, size, &view);
+    MLOC_ASSERT(read == mloc_success);
+    (void)read;
+    if (mlocWriteMessageCosts(&view, (uint8_t*)buffer + emit.wordStart) != mloc_success)
+    {
+        result.status = mloc_errorLimit;
+        return result;
     }
     *sizeOut = size;
     result.status = mloc_success;
@@ -111,7 +128,7 @@ mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* ou
     // text the compiler would refuse is not a message's text.
     mlocOutput measure = {NULL, 0, 0, NULL, NULL};
     (void)mlocWriteMessage(&view, &measure);
-    if (measure.length >= longestMessage)
+    if (measure.length > MLOC_MAX_MESSAGE_TEXT)
     {
         return mloc_errorFormat;
     }

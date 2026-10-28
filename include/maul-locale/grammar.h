@@ -26,6 +26,14 @@ extern "C"
 {
 #endif
 
+// The longest spell-out, in bytes, of a number an inflector reads by its
+// words.
+#define MLOC_MAX_SPOKEN_NUMBER 256
+
+// The longest text, in bytes, of a number mlocInflectNumber inflects, as
+// its formatter writes it.
+#define MLOC_MAX_INFLECTED_NUMBER 1024
+
     // A locale's inflector: a value that points into the data it was made
     // from, which must outlive it. Opaque; make it with mlocInitInflector.
     typedef struct mlocInflector
@@ -234,11 +242,12 @@ extern "C"
     ///         fit (output->length is then the length needed);
     ///         mloc_errorNotFound for a number when the inflector has no
     ///         spell-out rules or no word for its size (Uzbek past
-    ///         10^35, Turkmen past 10^20); mloc_errorInvalid for a null pointer, an
-    ///         empty text or one that is not UTF-8, a request the
-    ///         language does not have (a case, a person past 3), a text
-    ///         with nothing to read (no letter or digit at its end), or a
-    ///         number of more digits than a decimal holds (40).
+    ///         10^35, Turkmen past 10^20); mloc_errorLimit for a number
+    ///         past MLOC_MAX_DECIMAL_DIGITS digits or whose spell-out passes
+    ///         MLOC_MAX_SPOKEN_NUMBER bytes; mloc_errorInvalid for a null
+    ///         pointer, an empty text or one that is not UTF-8, a request
+    ///         the language does not have (a case, a person past 3), or a
+    ///         text with nothing to read (no letter or digit at its end).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInflectText(const mlocInflector* inflector,
@@ -259,8 +268,10 @@ extern "C"
     ///                   not read).
     /// @param output     Receives the text and its parts, the number's own
     ///                   parts (mlocNumberPart) inside the stem.
-    /// @return As mlocInflectText; mloc_errorInvalid also for a decimal
-    ///         the library did not make or a formatter it did not make.
+    /// @return As mlocInflectText; mloc_errorLimit also for a number
+    ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
+    ///         mloc_errorInvalid also for a decimal the library did not
+    ///         make or a formatter it did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInflectNumber(const mlocInflector* inflector,

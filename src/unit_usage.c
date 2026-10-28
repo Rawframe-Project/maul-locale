@@ -41,7 +41,7 @@ static mlocResult LoadOutput(UnitFormat* u, const mlocDataSet* data, const mlocL
     }
     if (*slots == unitSlots)
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     UnitForms forms;
     mlocResult r = mlocLoadUnitForms(data, locale, entry->id, entry->length,
@@ -145,7 +145,7 @@ static mlocResult AmountIn(const UnitFormat* u, const UnitScale* input, const Un
     }
     if (!mlocUnitValueIn(&u->table, input, value, &scale, &v))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     mlocResult r = mlocUnitValueDecimal(&v, out, &exact);
     return r == mloc_success ? mlocRoundConverted(out, exact, precision) : r;
@@ -169,7 +169,7 @@ static mlocResult Route(const UnitFormat* u, const UnitScale* input, const mlocD
     UnitValue value;
     if (!mlocUnitValueOf(&chosen, &value))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     mlocResult r = Choose(u, input, &value, nan, &out->output);
     if (r != mloc_success)

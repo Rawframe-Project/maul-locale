@@ -9,7 +9,6 @@
 #include "compile.h"
 #include "file.h"
 #include "test_harness.h"
-#include "test_print.h"
 
 #include "maul-locale/catalog.h"
 #include "maul-locale/message.h"
@@ -41,42 +40,15 @@ static void Write(const char* name, const char* text)
     (void)FileWrite(path, text, strlen(text));
 }
 
-// A message of 33 selectors: it compiles, but no formatter binds it.
-static void Wide(char* out, size_t capacity)
-{
-    size_t at = 0;
-    AppendPrint(out, capacity, &at, "%s", ".input {$a :string}\n .match");
-    for (int i = 0; i < 33; i++)
-    {
-        AppendPrint(out, capacity, &at, "%s", " $a");
-    }
-    AppendPrint(out, capacity, &at, "%s", "\n ");
-    for (int i = 0; i < 33; i++)
-    {
-        AppendPrint(out, capacity, &at, "%s", "* ");
-    }
-    AppendPrint(out, capacity, &at, "%s", "{{x}}");
-}
-
 static bool Compile(void)
 {
-    char wide[512];
-    Wide(wide, sizeof(wide));
-    char en[2048];
-    char fr[2048];
-    (void)snprintf(
-        en, sizeof(en),
-        "@locale en\n---\nhello = Hello\nbye = Goodbye\n"
-        "count = .input {$n :integer}\n .match $n\n one {{One file}}\n * {{{$n} files}}\n"
-        "wide = Wide\nbroken = %s\nfaulty = Hi {$name}\n",
-        wide);
-    (void)snprintf(fr, sizeof(fr),
-                   "@locale fr\n---\nhello = Bonjour\n"
-                   "count = .input {$n :integer}\n .match $n\n one {{Un fichier}}\n * {{{$n} "
-                   "fichiers}}\nwide = %s\nbroken = %s\nfaulty = Salut {$nmae}\n",
-                   wide, wide);
-    Write("en.mf2", en);
-    Write("fr.mf2", fr);
+    Write("en.mf2",
+          "@locale en\n---\nhello = Hello\nbye = Goodbye\n"
+          "count = .input {$n :integer}\n .match $n\n one {{One file}}\n * {{{$n} files}}\n"
+          "wide = Wide\nbroken = Broken\nfaulty = Hi {$name}\n");
+    Write("fr.mf2", "@locale fr\n---\nhello = Bonjour\n"
+                    "count = .input {$n :integer}\n .match $n\n one {{Un fichier}}\n * {{{$n} "
+                    "fichiers}}\nwide = Large\nbroken = Casse\nfaulty = Salut {$nmae}\n");
     Write("fr-CA.mf2", "@locale fr-CA\n---\nhello = Allo\n");
     Write("de.mf2", "@locale de\n---\nhello = Hallo\n");
     char paths[4][1024];
@@ -164,8 +136,8 @@ static bool EveryReason(const mlocCatalogChain* chain)
            Says(chain, "bye", 0, "Goodbye", mloc_success, mloc_catalogFallback, 2) &&
            Says(chain, "count", 1, "Un fichier", mloc_success, mloc_catalogFallback, 1) &&
            Says(chain, "count", 3, "3 fichiers", mloc_success, mloc_catalogFallback, 1) &&
-           Says(chain, "wide", 0, "Wide", mloc_success, mloc_catalogSource, 2) &&
-           Says(chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed, 3) &&
+           Says(chain, "wide", 0, "Large", mloc_success, mloc_catalogFallback, 1) &&
+           Says(chain, "broken", 0, "Casse", mloc_success, mloc_catalogFallback, 1) &&
            Says(chain, "faulty", 0, "Salut \xE2\x81\xA8{$nmae}\xE2\x81\xA9", mloc_withFallbacks,
                 mloc_catalogFallback, 1) &&
            Says(chain, "nope", 0, "nope", mloc_success, mloc_catalogMissingKey, 3);
@@ -201,6 +173,36 @@ static void TestReasons(Set* s)
     free(cache);
 }
 
+// A formatter the library did not make binds nothing, so its catalog's
+// messages fall back as ones that do not bind: to the source's, then to
+// the key.
+static void TestUnbound(Set* s)
+{
+    mlocMessageFormatter formatters[chainCount];
+    memcpy(formatters, s->formatters, sizeof(formatters));
+    memset(&formatters[1], 0, sizeof(formatters[1]));
+    size_t size = 0;
+    mlocCatalogChain chain;
+    CHECK(mlocMeasureCatalogChain(s->catalogs, formatters, chainCount, &size) == mloc_success,
+          "a chain with a formatter not made is measured");
+    uint8_t* cache = malloc(size);
+    CHECK(cache != nullptr &&
+              mlocInitCatalogChain(&chain, s->catalogs, formatters, chainCount, cache, size) ==
+                  mloc_success &&
+              Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0) &&
+              Says(&chain, "wide", 0, "Wide", mloc_success, mloc_catalogSource, 2) &&
+              Says(&chain, "count", 1, "One file", mloc_success, mloc_catalogSource, 2),
+          "a message that does not bind falls to the source's");
+    memset(&formatters[2], 0, sizeof(formatters[2]));
+    CHECK(cache != nullptr &&
+              mlocInitCatalogChain(&chain, s->catalogs, formatters, chainCount, cache, size) ==
+                  mloc_success &&
+              Says(&chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed, 3) &&
+              Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0),
+          "and to its key when the source's does not bind either");
+    free(cache);
+}
+
 static void TestWithoutSource(Set* s)
 {
     // The two catalogs alone in memory of their own size, so that a look
@@ -216,6 +218,7 @@ static void TestWithoutSource(Set* s)
     }
     memcpy(catalogs, s->catalogs, 2 * sizeof(mlocCatalog));
     memcpy(formatters, s->formatters, 2 * sizeof(mlocMessageFormatter));
+    memset(&formatters[1], 0, sizeof(mlocMessageFormatter));
     size_t size = 0;
     mlocCatalogChain chain;
     CHECK(mlocMeasureCatalogChain(catalogs, formatters, 2, &size) == mloc_success,
@@ -236,23 +239,23 @@ static void TestWithoutSource(Set* s)
 // again to fill it.
 static void TestLongest(Set* s)
 {
-    mlocCatalog catalogs[MLOC_CATALOG_CHAIN_MAX];
-    mlocMessageFormatter formatters[MLOC_CATALOG_CHAIN_MAX];
-    for (int i = 0; i < MLOC_CATALOG_CHAIN_MAX; i++)
+    mlocCatalog catalogs[MLOC_MAX_CATALOG_CHAIN];
+    mlocMessageFormatter formatters[MLOC_MAX_CATALOG_CHAIN];
+    for (int i = 0; i < MLOC_MAX_CATALOG_CHAIN; i++)
     {
         catalogs[i] = s->catalogs[i < chainCount ? i : chainCount - 1];
         formatters[i] = s->formatters[i < chainCount ? i : chainCount - 1];
     }
     size_t size = 0;
-    (void)mlocMeasureCatalogChain(catalogs, formatters, MLOC_CATALOG_CHAIN_MAX, &size);
+    (void)mlocMeasureCatalogChain(catalogs, formatters, MLOC_MAX_CATALOG_CHAIN, &size);
     uint8_t* cache = malloc(size > 0 ? size : 1);
     mlocCatalogChain chain;
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, catalogs, formatters, MLOC_CATALOG_CHAIN_MAX, cache,
+              mlocInitCatalogChain(&chain, catalogs, formatters, MLOC_MAX_CATALOG_CHAIN, cache,
                                    size) == mloc_success &&
               Says(&chain, "bye", 0, "Goodbye", mloc_success, mloc_catalogFallback, 2) &&
-              Says(&chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed,
-                   MLOC_CATALOG_CHAIN_MAX),
+              Says(&chain, "nope", 0, "nope", mloc_success, mloc_catalogMissingKey,
+                   MLOC_MAX_CATALOG_CHAIN),
           "a chain of eight catalogs");
     free(cache);
 }
@@ -269,7 +272,7 @@ static void TestCacheFull(Set* s)
               mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache, slots) ==
                   mloc_success &&
               Says(&chain, "hello", 0, "hello", mloc_success, mloc_catalogCacheFull, 3) &&
-              Says(&chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed, 3) &&
+              Says(&chain, "nope", 0, "nope", mloc_success, mloc_catalogMissingKey, 3) &&
               mlocBindCatalogChain(&chain) == mloc_errorCapacity,
           "a cache with no room writes keys, refuses no lookup");
     free(cache);
@@ -358,8 +361,8 @@ static void TestRefusals(Set* s)
           "catalogs of different sets");
     CHECK(mlocInitCatalogChain(&chain, s->catalogs, s->formatters, 0, cache, sizeof(cache)) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, MLOC_CATALOG_CHAIN_MAX + 1,
-                                   cache, sizeof(cache)) == mloc_errorInvalid &&
+              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, MLOC_MAX_CATALOG_CHAIN + 1,
+                                   cache, sizeof(cache)) == mloc_errorLimit &&
               mlocInitCatalogChain(nullptr, s->catalogs, s->formatters, 1, cache, sizeof(cache)) ==
                   mloc_errorInvalid &&
               mlocInitCatalogChain(&chain, nullptr, s->formatters, 1, cache, sizeof(cache)) ==
@@ -387,6 +390,7 @@ int main(int argc, char** argv)
         return 1;
     }
     TestReasons(&set);
+    TestUnbound(&set);
     TestWithoutSource(&set);
     TestLongest(&set);
     TestCacheFull(&set);

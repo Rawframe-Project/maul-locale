@@ -82,7 +82,7 @@ static mlocResult Init(mlocSearcher* searcherOut, const mlocCollator* collator, 
     {
         if (s->count == searchMaxElements)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         s->elements[s->count++] = p;
     }
@@ -94,7 +94,7 @@ static mlocResult Init(mlocSearcher* searcherOut, const mlocCollator* collator, 
     if (s->ring > searchRing ||
         (s->collator.settings.strength == collationIdentical && !PatternNfd(s, pattern)))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     s->stamp = searcherStamp;
     return mloc_success;
@@ -296,7 +296,7 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
         const Cei* first = mlocSearchAt(f, index);
         if (first == nullptr)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (first->ce == searchEnd)
         {
@@ -308,7 +308,7 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
         bool matched = Match(f, index, &end, &last, &pattern);
         if (f->full)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (!matched)
         {
@@ -321,7 +321,7 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
         bool found = Bounds(f, index, end, pattern, startOut, endOut);
         if (f->full)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (found)
         {

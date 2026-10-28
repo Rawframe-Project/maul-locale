@@ -72,7 +72,7 @@ mlocResult mlocPoolUnitPatterns(const PatternPool* pool, PatternSlot* slot, cons
         }
         if (!AddPattern(pool, slot, c, (const uint8_t*)p->text, p->length))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     return mloc_success;

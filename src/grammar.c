@@ -38,8 +38,8 @@ enum
     languageFinnish = 8,
     languageKorean = 9,
     // The room for a spoken number's text and a formatted number's.
-    spokenRoom = 256,
-    numberRoom = 1024,
+    spokenRoom = MLOC_MAX_SPOKEN_NUMBER,
+    numberRoom = MLOC_MAX_INFLECTED_NUMBER,
 };
 
 // An inflector as its value stores it.
@@ -386,9 +386,18 @@ static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value,
     return true;
 }
 
-// Reads the number a text's end writes, by the locale's lenient parse;
-// false when it is not one.
-static bool ReadNumber(const Inflector* f, const uint8_t* text, const End* e, mlocDecimal* value)
+// Reads digits as a decimal: mloc_errorLimit past its bounds, else
+// mloc_errorInvalid when they are not a number.
+static mlocResult ReadDigits(const uint8_t* text, size_t length, mlocDecimal* value)
+{
+    mlocResult r = mlocParseDecimal((const char*)text, length, value).status;
+    return r == mloc_success || r == mloc_errorLimit ? r : mloc_errorInvalid;
+}
+
+// Reads the number a text's end writes, by the locale's lenient parse, as
+// ReadDigits does.
+static mlocResult ReadNumber(const Inflector* f, const uint8_t* text, const End* e,
+                             mlocDecimal* value)
 {
     size_t used = 0;
     size_t length = e->end - e->start;
@@ -397,7 +406,7 @@ static bool ReadNumber(const Inflector* f, const uint8_t* text, const End* e, ml
             mloc_success &&
         used == length)
     {
-        return true;
+        return mloc_success;
     }
     // Separators the locale does not read: the last run of digits.
     size_t run = e->end;
@@ -405,7 +414,7 @@ static bool ReadNumber(const Inflector* f, const uint8_t* text, const End* e, ml
     {
         run--;
     }
-    return mlocParseDecimal((const char*)text + run, e->end - run, value).status == mloc_success;
+    return ReadDigits(text + run, e->end - run, value);
 }
 
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
@@ -424,18 +433,22 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     {
         value = *f->shown;
     }
-    else if (!ReadNumber(f, text, e, &value))
+    else
     {
-        return mloc_errorInvalid;
+        mlocResult read = ReadNumber(f, text, e, &value);
+        if (read != mloc_success)
+        {
+            return read;
+        }
     }
     if (value.kind == mloc_decimalFinite && value.fractionDigits > 0 && e->kind == endNumber)
     {
         // The fraction's digits as the integer they are read as.
         size_t shown = (size_t)value.fractionDigits;
-        if (mlocParseDecimal((const char*)text + e->end - shown, shown, &value).status !=
-            mloc_success)
+        mlocResult read = ReadDigits(text + e->end - shown, shown, &value);
+        if (read != mloc_success)
         {
-            return mloc_errorInvalid;
+            return read;
         }
     }
     if (coded)
@@ -449,7 +462,9 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
         mlocFormatSpellout(e->kind == endOrdinal ? f->ordinal : f->cardinal, &value, &out);
     if (r != mloc_success || !LastWord(words, out.length, spoken, spokenLength))
     {
-        return r == mloc_success || r == mloc_errorCapacity ? mloc_errorInvalid : r;
+        return r == mloc_errorCapacity ? mloc_errorLimit
+               : r == mloc_success     ? mloc_errorInvalid
+                                       : r;
     }
     return mloc_success;
 }
@@ -935,7 +950,7 @@ mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFor
     if (r != mloc_success)
     {
         // A number whose text passes the room is refused.
-        return r == mloc_errorCapacity ? mloc_errorInvalid : r;
+        return r == mloc_errorCapacity ? mloc_errorLimit : r;
     }
     mlocInflection number = *request;
     number.reading = mloc_readingAuto;

@@ -28,6 +28,36 @@ extern "C"
 {
 #endif
 
+// A message's fixed bounds: mlocCompileMessage refuses a message past one
+// with mloc_errorLimit, and mlocBindMessage refuses stored bytes past one
+// with mloc_errorFormat.
+//
+// The longest text compiled, in bytes: the compiled form's counts are 32
+// bits.
+#define MLOC_MAX_MESSAGE_TEXT 1073741823
+// The most bytes compiling a message needs: its compiled form and the room
+// it is checked in.
+#define MLOC_MAX_MESSAGE_SIZE 4294967295u
+// The most selectors: their values are kept on the stack while a variant
+// is chosen.
+#define MLOC_MAX_MESSAGE_SELECTORS 32
+// The most declarations: a format call keeps a bit for each.
+#define MLOC_MAX_MESSAGE_DECLARATIONS 1024
+// The most expressions, and the most markups: a part's kind holds an
+// index in 24 bits.
+#define MLOC_MAX_MESSAGE_EXPRESSIONS 16777216
+// The longest chain of expressions, each naming the next through a
+// declaration, which a format call resolves on the stack.
+#define MLOC_MAX_MESSAGE_CHAIN 64
+// The most expressions a format call resolves. A local is resolved again
+// at each reference (call by name), an option's twice, so declarations
+// that each name the next twice grow as a power of two.
+#define MLOC_MAX_MESSAGE_RESOLUTIONS 65536
+// The most bytes a bound message takes: its words and the values its
+// formatter prepares for its expressions. They depend on the formatter, so
+// mlocBindMessage refuses a larger one, with mloc_errorLimit.
+#define MLOC_MAX_BOUND_MESSAGE_SIZE 4294967295u
+
     // Why a message did not compile: a syntax error (the text is not
     // well-formed MF2, or not well-formed UTF-8), or one of the data
     // model errors of UTS #35 Part 9.
@@ -74,8 +104,11 @@ extern "C"
     ///         a name whose NFC form is no name: U+037E and U+1FEF become
     ///         ";" and "`"); mloc_errorCapacity
     ///         when the buffer is too small, nothing then being written
-    ///         that the caller can use; mloc_errorInvalid for a null
-    ///         pointer, or a text of 1 GiB or more.
+    ///         that the caller can use; mloc_errorLimit and offset 0 for a
+    ///         text longer than MLOC_MAX_MESSAGE_TEXT bytes, or a message
+    ///         past another MLOC_MAX_MESSAGE_* bound (the chains and
+    ///         resolutions found only once the buffer is large enough);
+    ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocTextResult mlocCompileMessage(const char* text, size_t length,
@@ -99,7 +132,8 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed); mloc_errorFormat
     ///         when the bytes are not a compiled message, or one whose text
-    ///         would be 1 GiB or more, which could not compile again;
+    ///         would pass MLOC_MAX_MESSAGE_TEXT bytes, which could not
+    ///         compile again;
     ///         mloc_errorVersion for one of another format, library or Unicode
     ///         version; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -436,14 +470,13 @@ extern "C"
     ///                   mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         small; mloc_errorFormat and mloc_errorVersion as
-    ///         mlocWriteMessageText; mloc_errorInvalid for a null pointer,
-    ///         a formatter the library did not make, more than 32
-    ///         selectors, 1024 declarations, or 2^24 expressions or
-    ///         markups, a chain of more than 64 expressions each naming
-    ///         the next through a declaration, or a message whose format
-    ///         call would resolve more than 65536 expressions (a local
-    ///         is resolved again at each reference, an option's twice;
-    ///         these two found only when binding, not when measuring).
+    ///         mlocWriteMessageText, and mloc_errorFormat for a message
+    ///         past an MLOC_MAX_MESSAGE_* bound, which mlocCompileMessage
+    ///         refuses (the chains and resolutions found only when
+    ///         binding, not when measuring); mloc_errorLimit for a bound
+    ///         message past MLOC_MAX_BOUND_MESSAGE_SIZE bytes;
+    ///         mloc_errorInvalid for a null pointer or a formatter the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocBindMessage(const mlocMessageFormatter* formatter,

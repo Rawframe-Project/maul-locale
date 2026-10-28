@@ -666,8 +666,8 @@ static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
     int64_t needed = exponent < 0 ? -exponent : 0;
     fraction = fraction > needed ? fraction : needed;
     int64_t top = exponent + (q->count == 0 ? 0 : q->count - 1);
-    if (p->overflow || exponent < -mlocDecimalMaxExponent || top > mlocDecimalMaxExponent ||
-        fraction > mlocDecimalMaxExponent)
+    if (p->overflow || exponent < -MLOC_MAX_DECIMAL_EXPONENT || top > MLOC_MAX_DECIMAL_EXPONENT ||
+        fraction > MLOC_MAX_DECIMAL_EXPONENT)
     {
         return false;
     }
@@ -690,7 +690,8 @@ mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* curren
     Parser r;
     if (!BuildParser(&r, formatter, currency, mode))
     {
-        return mloc_errorCapacity;
+        // Only affixes of a crafted data file pass the parser's room.
+        return mloc_errorFormat;
     }
     Segment s = {.text = (const uint8_t*)text, .length = length, .at = 0};
     Parsed p;
@@ -709,7 +710,7 @@ mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* curren
     {
         memcpy(codeOut, p.hasCode ? p.code : currency->code, 3);
     }
-    return ToDecimal(&p, scale, decimalOut) ? mloc_success : mloc_errorCapacity;
+    return ToDecimal(&p, scale, decimalOut) ? mloc_success : mloc_errorLimit;
 }
 
 static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)

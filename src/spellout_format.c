@@ -22,7 +22,7 @@
 enum
 {
     // ICU's RECURSION_LIMIT: rule sets nested past it are an error.
-    maxLevels = 64,
+    maxLevels = MLOC_MAX_SPELLOUT_LEVELS,
     // The places a fraction is written digit by digit to.
     fractionPlaces = 20,
     // Rules a ">>>" or infinity calls directly also nest; a crafted file
@@ -224,9 +224,14 @@ static bool Enter(Engine* e, bool level)
     {
         return false;
     }
-    if ((level && e->levels >= maxLevels) || e->frames >= maxFrames)
+    if (level && e->levels >= maxLevels)
     {
-        return Fail(e, mloc_errorCapacity);
+        return Fail(e, mloc_errorLimit);
+    }
+    if (e->frames >= maxFrames)
+    {
+        // Only a crafted file chains rules that deep without a rule set.
+        return Fail(e, mloc_errorFormat);
     }
     e->levels += level ? 1 : 0;
     e->frames++;
@@ -288,7 +293,7 @@ static void WritePattern(Engine* e, uint32_t index, const mlocDecimal* x)
         };
         if (mlocApplyPrecision(&precision, &d) != mloc_success)
         {
-            Fail(e, mloc_errorCapacity);
+            Fail(e, mloc_errorLimit);
             return;
         }
     }
@@ -341,7 +346,9 @@ static void SubInt(Engine* e, const Rule* rule, const uint8_t* piece, int64_t n)
 {
     if (rule->divisor > (uint64_t)INT64_MAX)
     {
-        Fail(e, mloc_errorCapacity);
+        // A rule a value below 2^63 is written by has a smaller base,
+        // unless the file was crafted.
+        Fail(e, mloc_errorFormat);
         return;
     }
     int64_t d = (int64_t)rule->divisor;
@@ -459,7 +466,7 @@ static void Numerator(Engine* e, const Rule* rule, const uint8_t* piece, const m
     mlocDecimal scaled;
     if (!mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0, &scaled))
     {
-        Fail(e, mloc_errorCapacity);
+        Fail(e, mloc_errorLimit);
         return;
     }
     mlocDecimal t = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
@@ -520,7 +527,7 @@ static void SubDec(Engine* e, const Rule* rule, const uint8_t* piece, const mloc
     }
     if (!done)
     {
-        Fail(e, mloc_errorCapacity);
+        Fail(e, mloc_errorLimit);
         return;
     }
     PassOn(e, target, &t);
@@ -569,7 +576,7 @@ static void Pieces(Engine* e, const Rule* rule, int64_t n, const mlocDecimal* x)
             mlocDecimal operand;
             if (!PluralOperand(rule, n, x, &operand))
             {
-                Fail(e, mloc_errorCapacity);
+                Fail(e, mloc_errorLimit);
                 return;
             }
             WritePlural(e, piece, &operand);

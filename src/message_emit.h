@@ -33,7 +33,7 @@ typedef struct MessageEmit
     uint32_t used[messageCount];
     uint32_t keys;
     // While writing: each kind's byte offset, the keys', the pool's end,
-    // and the scratch: the table's slots, then the variables' words.
+    // and the scratch: the table's slots, then the words of the check and the costs.
     uint32_t start[messageCount];
     uint32_t keyStart;
     uint32_t poolEnd;
@@ -53,7 +53,7 @@ typedef struct MessageCounts
 void mlocEmitCount(MessageEmit* emit);
 
 // The capacity a writing pass needs for what a counting pass counted:
-// the message at its largest and the scratch; 0 past 2^32 - 1.
+// the message at its largest and the scratch; 0 past MLOC_MAX_MESSAGE_SIZE.
 size_t mlocEmitNeeded(const MessageCounts* counts);
 
 // Starts a writing pass into out, which holds mlocEmitNeeded bytes.

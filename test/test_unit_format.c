@@ -1061,14 +1061,14 @@ static void TestPool(void)
     s_fill[3][5]++;
     CHECK(OpenUnitNames(&sources[1], s_parts, 4, s_fill) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, s_mixed, sizeof(s_mixed) - 1,
-                                    nullptr) == mloc_errorCapacity,
+                                    nullptr) == mloc_errorLimit,
           "patterns a byte past the pool");
     CHECK(OpenNames(&sources[1], s_room) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
           "a pattern that fills a pattern's room");
     CHECK(OpenNames(&sources[1], s_long) &&
               mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
-                  mloc_errorCapacity,
+                  mloc_errorLimit,
           "a pattern a byte past a pattern's room");
 }
 

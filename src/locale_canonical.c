@@ -21,7 +21,7 @@
 
 #include <string.h>
 
-#define MAX_TEXT       256
+#define MAX_TEXT       (MLOC_MAX_LOCALE_TEXT + 1)
 #define MAX_VARIANTS   32
 #define MAX_ITERATIONS 32
 
@@ -749,7 +749,7 @@ static bool WriteVariants(Ident* ident, size_t rest, mlocLocale* locale)
 }
 
 // Applies the rules until none matches, adding what changed to
-// *changes. Returns mloc_errorCapacity when the result does not fit and
+// *changes. Returns mloc_errorLimit when the result does not fit and
 // mloc_errorFormat when the rules do not end, which only a crafted data
 // file can make them do.
 static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, mlocLocale* locale,
@@ -759,7 +759,7 @@ static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, ml
     size_t rest = 0;
     if (!ToIdent(aliases, locale, &ident, &rest))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     uint32_t applied = 0;
     for (int iteration = 0;; iteration++)
@@ -777,14 +777,14 @@ static mlocResult ApplyRules(const mlocDataSet* data, const Aliases* aliases, ml
         uint32_t one = Apply(data, aliases, &rule, &ident);
         if (one == ~0u)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         applied |= one;
     }
     // The tail is written again only when the variants changed.
     if ((applied & mloc_changedVariants) != 0 && !WriteVariants(&ident, rest, locale))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     if (applied != 0)
     {
@@ -960,7 +960,7 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
     char prepared[MAX_TEXT + 4];
     if (!Fold(text, length, folded))
     {
-        return (mlocTextResult){mloc_errorCapacity, length};
+        return (mlocTextResult){mloc_errorLimit, length};
     }
     uint32_t changes = 0;
     ptrdiff_t shift = 0;
@@ -968,7 +968,7 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
     size_t parseLength = Prepare(&aliases, folded, length, prepared, &toParse, &shift, &changes);
     if (parseLength >= MAX_TEXT)
     {
-        return (mlocTextResult){mloc_errorCapacity, length};
+        return (mlocTextResult){mloc_errorLimit, length};
     }
     mlocLocale locale;
     mlocTextResult result = mlocParseLocale(toParse, parseLength, &locale);
@@ -985,11 +985,11 @@ mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text,
     }
     if (applied == mloc_success && !PosixKeyword(&locale, &changes))
     {
-        applied = mloc_errorCapacity;
+        applied = mloc_errorLimit;
     }
     if (applied != mloc_success)
     {
-        return (mlocTextResult){applied, applied == mloc_errorCapacity ? length : 0};
+        return (mlocTextResult){applied, applied == mloc_errorLimit ? length : 0};
     }
     *localeOut = locale;
     if (changesOut != nullptr)

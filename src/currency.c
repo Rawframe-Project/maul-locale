@@ -548,7 +548,7 @@ mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter, const char*
     }
     if (anyCurrency == 1 && !c.chain.complete)
     {
-        return mloc_errorNotFound;
+        return mloc_errorLimit;
     }
     ParseCurrency currency;
     ParseOf(&c, anyCurrency == 1, &currency);

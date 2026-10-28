@@ -91,19 +91,25 @@ extern "C"
         // An iterator needs the next piece of its text before it can
         // answer.
         mloc_needMoreText = 4,
-        // An argument is invalid: a null pointer where one is required, a
-        // value out of range.
+        // An argument is invalid: a null pointer where one is required, an
+        // object the library did not make, a value outside the range its
+        // parameter's documentation gives.
         mloc_errorInvalid = -1,
-        // A caller buffer or a named limit is too small for the result.
+        // The room is too small for the result: a caller's buffer or cache.
+        // More room would succeed.
         mloc_errorCapacity = -2,
-        // Stored bytes are malformed: a data file, a compiled message or a
-        // catalog with a wrong magic, or a table, offset, length or count
-        // that does not hold.
-        mloc_errorFormat = -8,
         // A valid data file of another data version: another CLDR,
         // Unicode, time zone or library release, or other code tables; or
         // a compiled message or catalog of another format version.
         mloc_errorVersion = -7,
+        // Stored bytes are malformed: a data file, a compiled message or a
+        // catalog with a wrong magic, or a table, offset, length or count
+        // that does not hold.
+        mloc_errorFormat = -8,
+        // An argument, or its content, passes a fixed bound of the
+        // library, published as an MLOC_MAX_* constant: more room would
+        // not help.
+        mloc_errorLimit = -9,
         // Text is not well-formed for what it was given as, such as a
         // locale id.
         mloc_errorSyntax = -32,

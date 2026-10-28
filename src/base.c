@@ -37,6 +37,8 @@ const char* mlocResultName(mlocResult result)
         return "mloc_errorVersion";
     case mloc_errorFormat:
         return "mloc_errorFormat";
+    case mloc_errorLimit:
+        return "mloc_errorLimit";
     case mloc_errorSyntax:
         return "mloc_errorSyntax";
     case mloc_errorNotFound:

@@ -130,7 +130,7 @@ mlocResult mlocFormatCoordinate(const UnitFormat* u, const mlocDecimal* decimal,
         UnitValue value = {0};
         if (!nan && !mlocUnitValueOf(&c.amount, &value))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         mlocResult r =
             mlocSplitMixed(&u->table, &u->output[0].id, nullptr, &value, nan, mlocRoundSmallest,

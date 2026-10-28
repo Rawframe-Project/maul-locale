@@ -324,8 +324,7 @@ static void TestDayTimeRefusals(void)
     output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
     CHECK(mlocInitRelativeFormatter(&relative, &s_data, &en, &coarse) == mloc_success &&
               mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
-              mlocFormatRelativeDayTime(&relative, &time, &huge, &noon, &output) ==
-                  mloc_errorCapacity,
+              mlocFormatRelativeDayTime(&relative, &time, &huge, &noon, &output) == mloc_errorLimit,
           "a day rounded past the decimal's limits");
 }
 

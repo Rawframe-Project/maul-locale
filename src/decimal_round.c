@@ -126,7 +126,7 @@ static bool SetRounded(const uint8_t* buffer, int length, int64_t position, mloc
     }
     int64_t top = position + (length - 1 - first);
     int count = last - first + 1;
-    if (count > mlocDecimalDigits || top > mlocDecimalMaxExponent)
+    if (count > MLOC_MAX_DECIMAL_DIGITS || top > MLOC_MAX_DECIMAL_EXPONENT)
     {
         return false;
     }
@@ -140,12 +140,15 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
                             mlocRoundingMode mode)
 {
     increment = increment == 0 ? 1 : increment;
-    if (decimal == nullptr || !mlocValidDecimal(decimal) || position < -mlocDecimalMaxExponent ||
-        position > mlocDecimalMaxExponent ||
+    if (decimal == nullptr || !mlocValidDecimal(decimal) ||
         (increment != 1 && increment != 2 && increment != 5 && increment != 25) ||
         (uint32_t)mode > mloc_roundTrunc)
     {
         return mloc_errorInvalid;
+    }
+    if (position < -MLOC_MAX_DECIMAL_EXPONENT || position > MLOC_MAX_DECIMAL_EXPONENT)
+    {
+        return mloc_errorLimit;
     }
     if (decimal->kind != mloc_decimalFinite)
     {
@@ -168,7 +171,7 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
         int64_t high = (top > (int64_t)position + 1 ? top : (int64_t)position + 1) + 1;
         // The digits at and above the unit, in their places from high
         // down; the places past the last digit are zeros.
-        uint8_t buffer[mlocDecimalDigits + 3] = {0};
+        uint8_t buffer[MLOC_MAX_DECIMAL_DIGITS + 3] = {0};
         int length = (int)(high - position + 1);
         int64_t kept = top - position + 1 < decimal->count ? top - position + 1 : decimal->count;
         if (kept > 0)
@@ -186,7 +189,7 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
         }
         if (!SetRounded(buffer, length, position, &rounded))
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
     }
     rounded.fractionDigits = Shown(decimal, position, &rounded);
@@ -196,10 +199,13 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
 
 mlocResult mlocShowFractionDigits(mlocDecimal* decimal, int32_t count)
 {
-    if (decimal == nullptr || !mlocValidDecimal(decimal) || count < 0 ||
-        count > mlocDecimalMaxExponent)
+    if (decimal == nullptr || !mlocValidDecimal(decimal) || count < 0)
     {
         return mloc_errorInvalid;
+    }
+    if (count > MLOC_MAX_DECIMAL_EXPONENT)
+    {
+        return mloc_errorLimit;
     }
     if (decimal->kind != mloc_decimalFinite)
     {

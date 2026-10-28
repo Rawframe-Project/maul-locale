@@ -312,9 +312,9 @@ static void TestReorder(void)
                              Script('M', 'a', 'r', 'c'), Script('P', 'a', 'u', 'c'),
                              collationGroupSymbol,       Script('S', 'i', 'd', 't')};
     bool capacity =
-        mlocCollationMakeReorder(&s_root, full, 5, &reorder, &changes) == mloc_errorCapacity &&
+        mlocCollationMakeReorder(&s_root, full, 5, &reorder, &changes) == mloc_errorLimit &&
         mlocCollationMakeReorder(&s_root, full, 4, &reorder, &changes) == mloc_success && changes &&
-        mlocCollationMakeReorder(&s_root, wrap, 6, &reorder, &changes) == mloc_errorCapacity;
+        mlocCollationMakeReorder(&s_root, wrap, 6, &reorder, &changes) == mloc_errorLimit;
     CHECK(capacity && Reordered("\xCD\xB8", "a", full, 4) == 1 &&
               Reordered("\xE4\xB8\x80", "a", full, 4) == 1,
           "an order past the lead bytes refused, ICU's wrap too; one that fits keeps "

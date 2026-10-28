@@ -24,7 +24,8 @@ mlocResult mlocInitCoordinate(UnitFormat* u, const mlocDataSet* data, const mloc
 bool mlocValidCoordinate(const UnitFormat* u);
 
 // Formats an amount as a coordinate: mloc_success; mloc_errorCapacity
-// when the text does not fit or the amount passes the limits.
+// when the text does not fit; mloc_errorLimit when the amount passes the
+// limits.
 mlocResult mlocFormatCoordinate(const UnitFormat* u, const mlocDecimal* decimal,
                                 mlocOutput* output);
 

@@ -69,7 +69,7 @@ static mlocResult LoadParts(UnitFormat* u, const mlocDataSet* data, const mlocLo
         }
         if (*slots == unitSlots)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         UnitForms forms;
         mlocResult r = mlocLoadUnitForms(data, locale, unit + start, at - start, kind,
@@ -408,7 +408,7 @@ mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, 
     UnitValue value = {0};
     if (!nan && !mlocUnitValueOf(decimal, &value))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     mlocUnitAmounts amounts;
     mlocResult r = mlocSplitMixed(&u->table, &u->output[0].id, nullptr, &value, nan,

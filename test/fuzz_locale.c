@@ -55,7 +55,7 @@ static void Match(const mlocDataSet* set, const mlocLocale* locale)
     {
         mlocLocale combined;
         mlocResult result = mlocCombineMatch(locale, &supported[1 + match.supported], &combined);
-        Require(result == mloc_success || result == mloc_errorCapacity);
+        Require(result == mloc_success || result == mloc_errorLimit);
     }
 }
 
@@ -70,7 +70,7 @@ static void Canonicalize(const uint8_t* data, size_t size)
     mlocTextResult result = mlocCanonicalizeLocale(&set, (const char*)data, size, &locale, nullptr);
     if (result.status != mloc_success)
     {
-        Require(result.status == mloc_errorSyntax || result.status == mloc_errorCapacity);
+        Require(result.status == mloc_errorSyntax || result.status == mloc_errorLimit);
         Require(result.offset <= size);
         return;
     }
@@ -95,7 +95,7 @@ static void Canonicalize(const uint8_t* data, size_t size)
             next = mlocGetParentLocale(&set, component, &step, &parent);
             step = next == mloc_success ? parent : step;
         }
-        Require(next == mloc_errorNotFound || next == mloc_errorCapacity);
+        Require(next == mloc_errorNotFound || next == mloc_errorLimit);
     }
     Match(&set, &locale);
     mlocLocalePreferences preferences;
@@ -170,7 +170,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     mlocTextResult result = mlocParseLocale((const char*)data, size, &locale);
     if (result.status != mloc_success)
     {
-        Require(result.status == mloc_errorSyntax || result.status == mloc_errorCapacity);
+        Require(result.status == mloc_errorSyntax || result.status == mloc_errorLimit);
         Require(result.offset <= size);
         return 0;
     }

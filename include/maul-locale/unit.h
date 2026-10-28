@@ -51,8 +51,9 @@ extern "C"
     ///         unit table; mloc_errorInvalid for a null pointer, an invalid
     ///         precision or decimal, a mixed unit, or units that do not
     ///         convert to each other (a currency unit converts to none);
-    ///         mloc_errorCapacity when a unit's size or the value passes
-    ///         what the exact integers (2,048 bits) or a decimal hold.
+    ///         mloc_errorLimit for an identifier past an MLOC_MAX_UNIT_*
+    ///         bound, or when a unit's size or the value passes what the
+    ///         exact integers (MLOC_MAX_UNIT_SCALE_BITS) or a decimal hold.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocConvertUnit(const mlocDataSet* data, const char* from,
@@ -62,18 +63,35 @@ extern "C"
                                                        const mlocDecimal* value,
                                                        mlocDecimal* valueOut);
 
-    enum
-    {
-        // The most parts a mixed unit has ("hour-and-minute-and-second").
-        mlocUnitMaxParts = 4,
-    };
+// A unit's fixed bounds, refused with mloc_errorLimit.
+//
+// The longest unit identifier read, in bytes, also in its normal form.
+#define MLOC_MAX_UNIT_ID 255
+// The most single units a core unit has ("kilogram-meter-per-square-second"
+// has three).
+#define MLOC_MAX_UNIT_FACTORS 8
+// The most parts a mixed unit has ("hour-and-minute-and-second").
+#define MLOC_MAX_UNIT_PARTS 4
+// The largest constant in a unit identifier ("liter-per-100-kilometer"),
+// and the largest product of the constants on either side of "per".
+#define MLOC_MAX_UNIT_CONSTANT UINT64_MAX
+// The width of the exact integers a conversion computes in: a unit's size
+// as a fraction of its base unit, and a value in it, fit them.
+#define MLOC_MAX_UNIT_SCALE_BITS 2048
+// The longest pattern a unit formatter builds for a unit, in bytes.
+#define MLOC_MAX_UNIT_PATTERN 256
+// The bytes a unit formatter keeps its patterns in, each kept once.
+#define MLOC_MAX_UNIT_PATTERN_POOL 2048
+// The pattern sets a unit formatter keeps: one per output unit, or per
+// part of a mixed one.
+#define MLOC_MAX_UNIT_SLOTS 8
 
     // The amounts of a unit chosen by preference: one, or one per part of
     // a mixed unit, the largest first. Parts before the last are integers;
     // only the first carries the sign ("-3 hours 27 minutes").
     typedef struct mlocUnitAmounts
     {
-        mlocDecimal amounts[mlocUnitMaxParts];
+        mlocDecimal amounts[MLOC_MAX_UNIT_PARTS];
         uint8_t count;
         // The preference's rounding increment in units of the last part
         // (CLDR's skeleton "precision-increment/50"), 0 for none.
@@ -115,8 +133,10 @@ extern "C"
     /// @param unitOut     Receives the chosen unit's identifier.
     /// @param amountsOut  Receives the amounts; left unchanged on failure.
     /// @return mloc_success; mloc_errorCapacity when the identifier does
-    ///         not fit unitOut (its length is then the length needed) or a
-    ///         value passes the exact integers; mloc_errorSyntax for a unit
+    ///         not fit unitOut (its length is then the length needed);
+    ///         mloc_errorLimit for an identifier past an MLOC_MAX_UNIT_*
+    ///         bound or a value past the exact integers; mloc_errorSyntax
+    ///         for a unit
     ///         or usage that is not well-formed; mloc_errorNotFound for a
     ///         simple unit the data does not know or data without the
     ///         tables; mloc_errorInvalid for a null pointer, an invalid
@@ -269,8 +289,10 @@ extern "C"
     ///         without the number units, the unit table, the names, the
     ///         unit patterns, the lists or, for a case other than the
     ///         nominative, the case patterns;
-    ///         mloc_errorCapacity for a unit whose patterns pass the
-    ///         formatter's room; mloc_errorInvalid for a null pointer, an
+    ///         mloc_errorLimit for an identifier past an MLOC_MAX_UNIT_*
+    ///         bound, or a unit whose patterns pass the formatter's room
+    ///         (MLOC_MAX_UNIT_PATTERN bytes each, MLOC_MAX_UNIT_PATTERN_POOL
+    ///         in all, MLOC_MAX_UNIT_SLOTS sets); mloc_errorInvalid for a null pointer, an
     ///         empty unit, a currency, a constant in the numerator, a name
     ///         ICU refuses to build (the number inside a part), a mixed
     ///         unit whose parts do not convert to each other alone (other
@@ -301,8 +323,9 @@ extern "C"
     ///                   mloc_numberPartUnit and a unit list's text as
     ///                   mloc_numberPartLiteral.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding or a
-    ///         part passes the decimal's limits; mloc_errorInvalid for a
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding or a part passes MLOC_MAX_DECIMAL_DIGITS or
+    ///         MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a
     ///         null pointer, or a formatter or decimal the library did not
     ///         make.
     /// @par Thread safety
@@ -326,12 +349,11 @@ extern "C"
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed) or rounding
-    ///         passes the decimal's limits; mloc_errorInvalid for a null
-    ///         pointer, a NaN end, a formatter of a mixed unit without a
-    ///         usage (which ICU does not range either), a formatter of a
-    ///         coordinate, or a formatter or decimal the library did not
-    ///         make.
+    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT;
+    ///         mloc_errorInvalid for a null pointer, a NaN end, a formatter of a mixed unit without
+    ///         a usage (which ICU does not range either), a formatter of a coordinate, or a
+    ///         formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,
@@ -354,6 +376,7 @@ extern "C"
     ///         mloc_errorCapacity when the text does not fit
     ///         (output->length is then the length needed);
     ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
+    ///         mloc_errorLimit for one past an MLOC_MAX_UNIT_* bound;
     ///         mloc_errorNotFound for a unit the names do not know (a
     ///         compound CLDR does not name), data without them, or a
     ///         chain that cannot be walked; mloc_errorInvalid for a null
@@ -384,8 +407,8 @@ extern "C"
     /// @return mloc_success; mloc_errorSyntax for an identifier UTS #35
     ///         does not allow; mloc_errorNotFound for a simple unit the
     ///         table does not know, or data without the unit table or the
-    ///         names; mloc_errorCapacity for an identifier whose normal
-    ///         form passes 255 bytes; mloc_errorInvalid for a null
+    ///         names; mloc_errorLimit for an identifier past an
+    ///         MLOC_MAX_UNIT_* bound, also in its normal form; mloc_errorInvalid for a null
     ///         pointer, an empty unit, a currency or a constant in the
     ///         numerator.
     /// @par Thread safety

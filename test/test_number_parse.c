@@ -385,10 +385,11 @@ static void TestBounds(void)
               d.exponent == -598 && d.fractionDigits == 598,
           "a long fraction");
     memset(text, '9', sizeof(text));
-    CHECK(ParseIn("en", styleDecimal, text, mlocDecimalDigits, &d, &end) == mloc_success &&
-              d.count == mlocDecimalDigits,
+    CHECK(ParseIn("en", styleDecimal, text, MLOC_MAX_DECIMAL_DIGITS, &d, &end) == mloc_success &&
+              d.count == MLOC_MAX_DECIMAL_DIGITS,
           "as many digits as a decimal holds");
-    CHECK(ParseIn("en", styleDecimal, text, mlocDecimalDigits + 1, &d, &end) == mloc_errorCapacity,
+    CHECK(ParseIn("en", styleDecimal, text, MLOC_MAX_DECIMAL_DIGITS + 1, &d, &end) ==
+              mloc_errorLimit,
           "one more");
     CHECK(ParseIn("en", styleDecimal, "1E999999", 8, &d, &end) == mloc_success &&
               d.exponent == 999999,
@@ -396,11 +397,11 @@ static void TestBounds(void)
     CHECK(ParseIn("en", styleDecimal, "1E-999999", 9, &d, &end) == mloc_success &&
               d.exponent == -999999 && d.fractionDigits == 999999,
           "the smallest exponent");
-    CHECK(ParseIn("en", styleDecimal, "1E1000000", 9, &d, &end) == mloc_errorCapacity,
+    CHECK(ParseIn("en", styleDecimal, "1E1000000", 9, &d, &end) == mloc_errorLimit,
           "an exponent past it");
-    CHECK(ParseIn("en", styleDecimal, "1E-9999999999", 13, &d, &end) == mloc_errorCapacity,
+    CHECK(ParseIn("en", styleDecimal, "1E-9999999999", 13, &d, &end) == mloc_errorLimit,
           "an exponent past 999,999,999");
-    CHECK(ParseIn("en", stylePercent, "1E-999998", 9, &d, &end) == mloc_errorCapacity,
+    CHECK(ParseIn("en", stylePercent, "1E-999998", 9, &d, &end) == mloc_errorLimit,
           "a scale past the smallest exponent");
     CHECK(ParseIn("en", styleDecimal,
                   "\xFF"

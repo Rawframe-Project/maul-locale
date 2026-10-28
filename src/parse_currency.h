@@ -12,13 +12,15 @@
 #include "data_view.h"
 #include "parse_match.h"
 
+#include "maul-locale/currency.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
 enum
 {
     // The units of a kind a chain holds; a locale's chain has a few.
-    currencyChainUnits = 8,
+    currencyChainUnits = MLOC_MAX_CURRENCY_PARSE_UNITS,
     // The outer patterns of a currency: one per plural category at most.
     parseMaxOuters = 6,
 };

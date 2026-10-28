@@ -27,7 +27,7 @@
 enum
 {
     // ICU's RECURSION_LIMIT: a rule set nested past it reads nothing.
-    maxLevels = 64,
+    maxLevels = MLOC_MAX_SPELLOUT_LEVELS,
     // Rules a ">>>" calls directly nest too, without a rule set between to
     // count them; a crafted file could chain them without end. An error
     // past it, as when formatting.
@@ -37,9 +37,9 @@ enum
     // keep it busy for minutes (of the 323,098 texts CLDR's rules write
     // that the oracle and the survey of long values read, the longest
     // search takes 47,400 here; the 35 past the bound pass 2^26).
-    maxSteps = 1 << 18,
+    maxSteps = MLOC_MAX_SPELLOUT_STEPS,
     // A digit by digit fraction reads at most a decimal's digits.
-    maxFractionDigits = mlocDecimalDigits,
+    maxFractionDigits = MLOC_MAX_DECIMAL_DIGITS,
     // The rule set searches remembered (a power of two), in pairs of
     // slots: ICU's search reads the same part of the text by the same
     // rule set again and again; a search depends only on its inputs, so
@@ -160,7 +160,7 @@ static bool Add(Parser* p, const mlocDecimal* a, const mlocDecimal* b, mlocDecim
     }
     if (!mlocSpelloutAdd(a, b, out))
     {
-        Fail(p, mloc_errorCapacity);
+        Fail(p, mloc_errorLimit);
         return false;
     }
     return true;
@@ -175,7 +175,7 @@ static bool MultiplyBy(Parser* p, const mlocDecimal* x, SpelloutDivisor divisor,
                                            mlocSpelloutMultiply(x, divisor.value, out);
     if (!done)
     {
-        Fail(p, mloc_errorCapacity);
+        Fail(p, mloc_errorLimit);
     }
     return done;
 }
@@ -206,7 +206,7 @@ static bool Divide(Parser* p, const mlocDecimal* x, const mlocDecimal* by, mlocD
     }
     if (!DivisorOf(by, &divisor) || !mlocSpelloutDivideExact(x, divisor, out))
     {
-        Fail(p, mloc_errorCapacity);
+        Fail(p, mloc_errorLimit);
         return false;
     }
     return true;
@@ -234,7 +234,7 @@ MLOC_NOINLINE static bool Compose(Parser* p, const SpelloutRule* rule, SpelloutS
         }
         if (!mlocSpelloutModulo(old, rule->div, &remainder))
         {
-            Fail(p, mloc_errorCapacity);
+            Fail(p, mloc_errorLimit);
             return false;
         }
         mlocDecimal negated = Negated(&remainder);
@@ -390,7 +390,7 @@ MLOC_NOINLINE static bool SubDigits(Parser* p, const uint8_t* sub, SpelloutText 
         }
         if (count == maxFractionDigits)
         {
-            Fail(p, mloc_errorCapacity);
+            Fail(p, mloc_errorLimit);
             return false;
         }
         digits[count++] = (uint8_t)digit;
@@ -477,7 +477,7 @@ MLOC_NOINLINE static bool SubNumerator(Parser* p, const SpelloutRule* rule, cons
     mlocDecimal numerator = mlocSpelloutFromInt64(n);
     if (!mlocSpelloutShift(&numerator, power, valueOut))
     {
-        Fail(p, mloc_errorCapacity);
+        Fail(p, mloc_errorLimit);
         return false;
     }
     return true;
@@ -596,9 +596,15 @@ static void RuleParse(Parser* p, uint32_t index, SpelloutText text, bool fractio
 {
     *endOut = 0;
     *valueOut = Zero();
-    if (++p->steps > maxSteps || depth >= maxFrames)
+    if (++p->steps > maxSteps)
     {
-        Fail(p, mloc_errorCapacity);
+        Fail(p, mloc_errorLimit);
+        return;
+    }
+    if (depth >= maxFrames)
+    {
+        // Only a crafted file chains rules that deep without a rule set.
+        Fail(p, mloc_errorFormat);
         return;
     }
     SpelloutRule rule = mlocReadSpelloutRule(&p->r, index);

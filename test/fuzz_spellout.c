@@ -113,7 +113,7 @@ static void CheckParse(const mlocSpelloutFormatter* formatter, const char* text,
     size_t end = 0;
     size_t again = 0;
     mlocResult r = mlocParseSpellout(formatter, text, length, &first, &end);
-    Require(r == mloc_success || r == mloc_errorSyntax || r == mloc_errorCapacity);
+    Require(r == mloc_success || r == mloc_errorSyntax || r == mloc_errorLimit);
     Require(r == mloc_success ? end > 0 && end <= length : end == 0);
     Require(mlocParseSpellout(formatter, text, length, &second, &again) == r && again == end);
     Require(r != mloc_success || memcmp(&first, &second, sizeof(first)) == 0);
@@ -164,7 +164,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     static char s_again[maxText];
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
     mlocResult r = mlocFormatSpellout(&formatter, &decimal, &output);
-    Require(r == mloc_success || r == mloc_errorCapacity);
+    Require(r == mloc_success || r == mloc_errorCapacity || r == mloc_errorLimit);
     if (r != mloc_success)
     {
         return 0;

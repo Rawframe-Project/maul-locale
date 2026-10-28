@@ -43,7 +43,7 @@ typedef struct UnitValue
 // The scale of a parsed core unit. Returns mloc_success;
 // mloc_errorInvalid for a mixed unit or one that does not convert (a
 // currency, a unit without conversion data, beaufort in a compound);
-// mloc_errorCapacity when its size passes the integers' width.
+// mloc_errorLimit when its size passes the integers' width.
 mlocResult mlocScaleUnit(const UnitTable* t, const UnitId* id, UnitScale* out);
 
 // Converts a decimal between two scales of the same dimensions, or of
@@ -53,7 +53,7 @@ mlocResult mlocScaleUnit(const UnitTable* t, const UnitId* id, UnitScale* out);
 // 5 when the value is inexact, so rounding it again to 38 significant
 // digits or fewer gives what rounding the exact value would. *exactOut
 // tells whether the value was exact. Returns mloc_success;
-// mloc_errorInvalid for scales that do not convert; mloc_errorCapacity
+// mloc_errorInvalid for scales that do not convert; mloc_errorLimit
 // when the integers or the decimal's exponent cannot hold the value.
 mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const UnitScale* to,
                              const mlocDecimal* value, mlocDecimal* out, bool* exactOut);
@@ -80,7 +80,7 @@ bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut);
 UnitValue mlocUnitValueOfInteger(const Wide* integer);
 
 // Writes a value as 40 digits rounded to odd (mlocConvertScaled);
-// mloc_errorCapacity when a decimal cannot hold it.
+// mloc_errorLimit when a decimal cannot hold it.
 mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exactOut);
 
 // Rounds a converted value: by a precision with a kind, else an exact one

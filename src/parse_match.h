@@ -125,7 +125,7 @@ typedef struct AffixMatcher
 // the digits that matter.
 typedef struct Quantity
 {
-    uint8_t digits[mlocDecimalDigits];
+    uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
     uint32_t count;
     uint32_t zeros;
     bool present;

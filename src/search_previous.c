@@ -148,14 +148,14 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
     uint32_t index = 0;
     if (from < text.length && !PastCluster(f, from, &index))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     for (;; index++)
     {
         const Cei* last = mlocSearchAt(f, index);
         if (last == nullptr)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (last->ce == searchEnd)
         {
@@ -169,7 +169,7 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
         bool matched = MatchBack(f, index, &firstIndex, &compared);
         if (f->full)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (!matched)
         {
@@ -182,7 +182,7 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
         bool found = BoundsBack(f, index, firstIndex, from, startOut, endOut);
         if (f->full)
         {
-            return mloc_errorCapacity;
+            return mloc_errorLimit;
         }
         if (found)
         {

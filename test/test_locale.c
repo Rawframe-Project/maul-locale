@@ -134,10 +134,9 @@ static void TestLimits(void)
 {
     char text[512];
     Repeat(text, "en-x", "-abcdefgh", 13);
-    CHECK(Refuses(text, mloc_errorCapacity, strlen(text)),
-          "variants and extensions past 112 bytes");
+    CHECK(Refuses(text, mloc_errorLimit, strlen(text)), "variants and extensions past 112 bytes");
     Repeat(text, "en-x", "-a", 63);
-    CHECK(Refuses(text, mloc_errorCapacity, 4 + 62 * 2 + 1), "more than 64 subtags");
+    CHECK(Refuses(text, mloc_errorLimit, 4 + 62 * 2 + 1), "more than 64 subtags");
     // 112 bytes exactly: "x" and 37 subtags "-ab" make 1 + 37 * 3 = 112.
     Repeat(text, "en-x", "-ab", 37);
     mlocLocale locale;
@@ -145,7 +144,7 @@ static void TestLimits(void)
               locale.tail[111] == 'b',
           "a tail of exactly 112 bytes");
     Repeat(text, "en-x", "-ab", 38);
-    CHECK(Refuses(text, mloc_errorCapacity, strlen(text)), "one subtag more");
+    CHECK(Refuses(text, mloc_errorLimit, strlen(text)), "one subtag more");
 }
 
 static void TestArgumentsAndOutput(void)

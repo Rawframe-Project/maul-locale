@@ -572,11 +572,14 @@ static void TestSelection(void)
         size_t size = 0;
         size_t bound = 0;
         mlocMessageError error;
-        CHECK(mlocCompileMessage(text, strlen(text), s_compiled, sizeof s_compiled, &size, &error)
-                          .status == mloc_success &&
-                  mlocBindMessage(&s_formatter, s_compiled, size, s_bound, sizeof s_bound,
-                                  &bound) == (count == 32 ? mloc_success : mloc_errorInvalid),
-              "32 selectors bind, 33 are refused");
+        mlocTextResult compiled =
+            mlocCompileMessage(text, strlen(text), s_compiled, sizeof s_compiled, &size, &error);
+        CHECK(count == 32 ? compiled.status == mloc_success &&
+                                mlocBindMessage(&s_formatter, s_compiled, size, s_bound,
+                                                sizeof s_bound, &bound) == mloc_success
+                          : compiled.status == mloc_errorLimit && compiled.offset == 0 &&
+                                error == mloc_messageErrorNone,
+              "32 selectors compile and bind, 33 are refused");
     }
 }
 
@@ -586,10 +589,11 @@ static mlocResult BindOnly(const char* message)
     size_t size = 0;
     size_t bound = 0;
     mlocMessageError error;
-    if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
-            .status != mloc_success)
+    mlocTextResult compiled =
+        mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error);
+    if (compiled.status != mloc_success)
     {
-        return mloc_errorSyntax;
+        return compiled.status;
     }
     return mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound);
 }
@@ -611,9 +615,9 @@ static void TestResolutionLimit(void)
     snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}}}");
     CHECK(BindOnly(text) == mloc_success, "a message within the resolution limit binds");
     snprintf(text + at, sizeof text - at, " {{{$a10}{$a10}{$a10}}}");
-    CHECK(BindOnly(text) == mloc_errorInvalid, "one past it is refused");
+    CHECK(BindOnly(text) == mloc_errorLimit, "one past it is refused");
     snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}}} * {{{$a10}{$a10}}}");
-    CHECK(BindOnly(text) == mloc_errorInvalid, "a selector counts with the costliest variant");
+    CHECK(BindOnly(text) == mloc_errorLimit, "a selector counts with the costliest variant");
     snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}}} * {{x}}");
     CHECK(BindOnly(text) == mloc_success, "and a cheaper one binds");
     // Exactly the limit: 1 + 9841 + 2 * 27847 resolutions in one
@@ -625,9 +629,9 @@ static void TestResolutionLimit(void)
     snprintf(text + at, sizeof text - at,
              " {{{$a9 :string k1=$a9 k2=$a9 k3=$a8 k4=$a8 k5=$a7 k6=$a6 k7=$a5 k8=$a3 k9=$a3"
              " k10=$a2}}}");
-    CHECK(BindOnly(text) == mloc_errorInvalid, "one more resolution is refused");
+    CHECK(BindOnly(text) == mloc_errorLimit, "one more resolution is refused");
     snprintf(text + at, sizeof text - at, " .match $a10 x {{{$a10}{$a10}}} * {{{$a10}}}");
-    CHECK(BindOnly(text) == mloc_errorInvalid, "each variant's pieces are its own");
+    CHECK(BindOnly(text) == mloc_errorLimit, "each variant's pieces are its own");
     char input[4096];
     snprintf(input, sizeof input, ".input {$s :string} %s", text);
     size_t end = strlen(input) - strlen(" .match $a10 x {{{$a10}{$a10}}} * {{{$a10}}}");
@@ -636,7 +640,7 @@ static void TestResolutionLimit(void)
     snprintf(text + at, sizeof text - at, " {{{#b k1=$a10 k2=$a10}{/b k=$a1}}}");
     CHECK(BindOnly(text) == mloc_success, "markup's options count");
     snprintf(text + at, sizeof text - at, " {{{#b k1=$a10 k2=$a10}{/b k=$a10}}}");
-    CHECK(BindOnly(text) == mloc_errorInvalid, "and pass the limit");
+    CHECK(BindOnly(text) == mloc_errorLimit, "and pass the limit");
     snprintf(text + at, sizeof text - at, " {{{#b k=$a1}{|x| :string k=$a10}}}");
     CHECK(BindOnly(text) == mloc_success, "a markup counts only its own options");
 
@@ -650,7 +654,7 @@ static void TestResolutionLimit(void)
             AppendPrint(many, sizeof many, &used, ".local $d%d={1}", i);
         }
         AppendPrint(many, sizeof many, &used, "%s", "{{}}");
-        CHECK(BindOnly(many) == (count == 1024 ? mloc_success : mloc_errorInvalid),
+        CHECK(BindOnly(many) == (count == 1024 ? mloc_success : mloc_errorLimit),
               "1024 declarations bind, 1025 are refused");
     }
 

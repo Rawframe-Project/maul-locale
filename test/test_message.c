@@ -190,9 +190,10 @@ static void TestLayout(void)
     const char* text = "{$x}{$y}";
     mlocTextResult result = mlocCompileMessage(text, 8, NULL, 0, &needed, &error);
     // The header, two expressions, two pieces, two variables and their
-    // names, rounded to 8, then four slots of the table and two words a
-    // variable.
-    CHECK(result.status == mloc_errorCapacity && needed == 176 + 32 + 16,
+    // names, rounded to 8, then four slots of the table and the costs'
+    // words, one a variable and two an expression (more than the check's
+    // two a variable).
+    CHECK(result.status == mloc_errorCapacity && needed == 176 + 32 + 24,
           "the capacity is the message's records and the table");
     size_t size;
     CHECK(Compile(text, &size) && size == 170, "the message is its records alone");
@@ -769,8 +770,10 @@ static void TestRefused(void)
     result = mlocCompileMessage("a", 1, s_buffer, sizeof s_buffer, NULL, &error);
     CHECK(result.status == mloc_errorInvalid, "a null size is refused");
     // Refused before a byte is read: the text here is one byte long.
-    result = mlocCompileMessage("a", (size_t)1 << 30, s_buffer, sizeof s_buffer, &size, &error);
-    CHECK(result.status == mloc_errorInvalid, "a text of 1 GiB is refused");
+    result = mlocCompileMessage("a", MLOC_MAX_MESSAGE_TEXT + (size_t)1, s_buffer, sizeof s_buffer,
+                                &size, &error);
+    CHECK(result.status == mloc_errorLimit && result.offset == 0,
+          "a text past MLOC_MAX_MESSAGE_TEXT is refused");
     result = mlocCompileMessage("", 0, s_buffer, sizeof s_buffer, &size, NULL);
     CHECK(result.status == mloc_success, "the empty message compiles, without an error out");
 }
@@ -1259,9 +1262,12 @@ static uint8_t s_bound[1 << 16];
 static mlocResult Bind(const mlocMessageFormatter* formatter, const char* text)
 {
     size_t size;
-    if (!Compile(text, &size))
+    mlocMessageError error;
+    mlocTextResult compiled =
+        mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &size, &error);
+    if (compiled.status != mloc_success)
     {
-        return mloc_errorSyntax;
+        return compiled.status;
     }
     size_t needed = 0;
     mlocResult measured = mlocBindMessage(formatter, s_buffer, size, NULL, 0, &needed);
@@ -1291,7 +1297,8 @@ static void TestBindAndFormat(void)
 {
     MakeFormatters();
     char text[4096];
-    // A chain of 64 expressions binds; of 65, it is refused.
+    // A chain of 64 expressions compiles and binds; of 65, it is refused
+    // when compiled.
     for (int limit = 63; limit <= 64; limit++)
     {
         size_t at = 0;
@@ -1301,12 +1308,20 @@ static void TestBindAndFormat(void)
             AppendPrint(text, sizeof text, &at, ".local $v%d = {$v%d}", i, i - 1);
         }
         AppendPrint(text, sizeof text, &at, "{{{$v%d}}}", limit - 1);
-        CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorInvalid),
+        CHECK(Bind(&s_formatter, text) == (limit == 63 ? mloc_success : mloc_errorLimit),
               "a chain of 64 binds, of 65 is refused");
     }
-    // A bind refused after the buffer held a bound message leaves none.
+    // A bind refused after the buffer held a bound message leaves none:
+    // stored bytes whose first expression names $b, which a later
+    // declaration binds, so resolving could loop.
     CHECK(Bind(&s_formatter, "{$x}") == mloc_success, "a message binds");
-    CHECK(Bind(&s_formatter, text) == mloc_errorInvalid, "the long chain is refused again");
+    size_t laterSize;
+    CHECK(Compile(".local $a = {$x} .local $b = {$a} {{{$b}}}", &laterSize), "two locals compile");
+    Store(s_buffer + FieldAt(messageExpressions, 0, 1), Field(messageDeclarations, 1, 1));
+    size_t laterBound = 0;
+    CHECK(mlocBindMessage(&s_formatter, s_buffer, laterSize, s_bound, sizeof s_bound,
+                          &laterBound) == mloc_errorFormat,
+          "a declaration naming a later expression is refused");
     mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(mlocFormatMessage(s_bound, NULL, 0, &stale, NULL) == mloc_errorInvalid,
           "a failed bind leaves no bound message behind");

@@ -175,8 +175,7 @@ static void TestCombine(void)
               mlocParseLocale(s_long2, strlen(s_long2), &s).status == mloc_success,
           "two long tails");
     mlocLocale out = d;
-    CHECK(mlocCombineMatch(&d, &s, &out) == mloc_errorCapacity &&
-              memcmp(&out, &d, sizeof(out)) == 0,
+    CHECK(mlocCombineMatch(&d, &s, &out) == mloc_errorLimit && memcmp(&out, &d, sizeof(out)) == 0,
           "too long together, the output unchanged");
     CHECK(mlocCombineMatch(&d, &d, &d) == mloc_success, "in place");
     CHECK(mlocCombineMatch(nullptr, &s, &out) == mloc_errorInvalid &&
@@ -226,6 +225,14 @@ static void TestRefusals(void)
     CHECK(mlocMatchLocales(&empty, s.locales, entries, 2, d.locales, 1, nullptr, &match) ==
               mloc_errorNotFound,
           "data without the tables");
+    // Refused before a locale is read: the lists here are short.
+    size_t past = (size_t)MLOC_MAX_MATCH_LOCALES + 1;
+    CHECK(mlocPrepareMatch(&s_data, s.locales, past, nullptr, entries) == mloc_errorLimit &&
+              mlocMatchLocales(&s_data, s.locales, entries, past, d.locales, 1, nullptr, &match) ==
+                  mloc_errorLimit &&
+              mlocMatchLocales(&s_data, s.locales, entries, 2, d.locales, past, nullptr, &match) ==
+                  mloc_errorLimit,
+          "a count past MLOC_MAX_MATCH_LOCALES");
     CHECK(match.supported == 7 && match.desired == 7, "the outcome left unchanged");
     mlocMatchEntry spoiled[2];
     memcpy(spoiled, entries, sizeof(spoiled));

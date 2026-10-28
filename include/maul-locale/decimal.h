@@ -15,13 +15,14 @@ extern "C"
 {
 #endif
 
-    enum
-    {
-        // The significant digits a decimal holds.
-        mlocDecimalDigits = 40,
-        // The largest power of ten a decimal's digits reach, either way.
-        mlocDecimalMaxExponent = 999999,
-    };
+// The most significant digits a decimal holds. A value that needs more is
+// refused with mloc_errorLimit.
+#define MLOC_MAX_DECIMAL_DIGITS 40
+
+// The largest power of ten a decimal's digits reach, either way, and the
+// most fraction digits it shows. A value past it is refused with
+// mloc_errorLimit.
+#define MLOC_MAX_DECIMAL_EXPONENT 999999
 
     // What a decimal is.
     typedef enum mlocDecimalKind
@@ -37,7 +38,7 @@ extern "C"
     {
         // The significant digits, 0 to 9, most significant first: the
         // first and last are not 0. Unused bytes are 0.
-        uint8_t digits[mlocDecimalDigits];
+        uint8_t digits[MLOC_MAX_DECIMAL_DIGITS];
         // The power of ten of the last digit; 0 for zero.
         int32_t exponent;
         // The fraction digits shown, at least those the digits need:
@@ -134,9 +135,10 @@ extern "C"
     /// @param decimalOut  Receives the decimal; left unchanged on failure.
     /// @return status mloc_success with offset the length;
     ///         mloc_errorSyntax with the offset of the byte at fault;
-    ///         mloc_errorCapacity with offset 0 for more than 40
-    ///         significant digits, or digits or fraction digits shown
-    ///         past 10^999999 either way; mloc_errorInvalid for a null
+    ///         mloc_errorLimit with offset 0 for more than
+    ///         MLOC_MAX_DECIMAL_DIGITS significant digits, or digits or
+    ///         fraction digits shown past 10^MLOC_MAX_DECIMAL_EXPONENT either
+    ///         way; mloc_errorInvalid for a null
     ///         pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -168,14 +170,15 @@ extern "C"
     /// @param decimal    The decimal, rounded in place; left unchanged on
     ///                   failure.
     /// @param position   The power of ten of the increment's unit, within
-    ///                   10^±999999.
+    ///                   ±MLOC_MAX_DECIMAL_EXPONENT.
     /// @param increment  1, 2, 5 or 25 (ECMA-402's 10, 20, 50, 250 and
     ///                   larger are these at a higher position); 0 means 1.
     /// @param mode       How a value between two multiples rounds.
-    /// @return mloc_success; mloc_errorCapacity when the rounded value
-    ///         passes 10^999999; mloc_errorInvalid for a null pointer, a
-    ///         decimal the library did not make, or another position,
-    ///         increment or mode.
+    /// @return mloc_success; mloc_errorLimit for a position past
+    ///         MLOC_MAX_DECIMAL_EXPONENT either way, or a rounded value past
+    ///         10^MLOC_MAX_DECIMAL_EXPONENT or MLOC_MAX_DECIMAL_DIGITS digits; mloc_errorInvalid
+    ///         for a null pointer, a decimal the library did not make, or another increment or
+    ///         mode.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position,
@@ -187,10 +190,12 @@ extern "C"
     ///
     /// @param decimal  The decimal, changed in place; left unchanged on
     ///                 failure.
-    /// @param count    The fraction digits to show, 0 to 999999.
+    /// @param count    The fraction digits to show, 0 to
+    ///                 MLOC_MAX_DECIMAL_EXPONENT.
     /// @return mloc_success, also for infinity and NaN, which show none;
+    ///         mloc_errorLimit for a count past MLOC_MAX_DECIMAL_EXPONENT;
     ///         mloc_errorInvalid for a null pointer, a decimal the library
-    ///         did not make, or a count out of range.
+    ///         did not make, or a negative count.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocShowFractionDigits(mlocDecimal* decimal, int32_t count);

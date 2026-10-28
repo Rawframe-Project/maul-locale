@@ -3,9 +3,14 @@
 
 #include "collation_reorder.h"
 
+#include "maul-locale/collate.h"
 #include "maul-unicode/properties.h"
 
+#include <assert.h>
 #include <string.h>
+
+static_assert(collationMaxReorderRanges == MLOC_MAX_REORDER_RANGES,
+              "the reordering keeps the ranges the public bound names");
 
 enum
 {
@@ -268,7 +273,7 @@ static mlocResult Make(const CollationRoot* root, const uint32_t* codes, size_t 
         {
             return Make(root, codes, count, true, ranges, n);
         }
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     *n = Ranges(&b, ranges);
     return mloc_success;
@@ -292,7 +297,7 @@ mlocResult mlocCollationMakeReorder(const CollationRoot* root, const uint32_t* c
     CollationReorder made;
     if (!Arrays(ranges, n, &made))
     {
-        return mloc_errorCapacity;
+        return mloc_errorLimit;
     }
     *out = made;
     *changes = true;

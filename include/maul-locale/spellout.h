@@ -104,10 +104,11 @@ extern "C"
     /// @param decimal    The value.
     /// @param output     Receives the text; on mloc_errorCapacity its
     ///                   length is the size needed. The text has no parts.
-    /// @return mloc_success; mloc_errorCapacity for a buffer too small,
-    ///         or rules that nest past 64 levels for a value (a value far
-    ///         past the rules' largest base) or would divide it to more
-    ///         digits than a decimal holds; mloc_errorInvalid for a null
+    /// @return mloc_success; mloc_errorCapacity for a buffer too small;
+    ///         mloc_errorLimit for rules that nest past
+    ///         MLOC_MAX_SPELLOUT_LEVELS levels for a value (a value far
+    ///         past the rules' largest base) or would divide it past the
+    ///         decimal's bounds; mloc_errorInvalid for a null
     ///         pointer, an invalid decimal, an output asking for parts, or
     ///         a formatter the library did not make.
     /// @par Thread safety
@@ -138,15 +139,25 @@ extern "C"
     ///                    none is.
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
-    ///         mloc_errorCapacity when a value read passes a decimal's
-    ///         digits, or text crafted against the search makes it take
-    ///         more than 4,194,304 steps; mloc_errorInvalid for a null
+    ///         mloc_errorLimit when a value read passes the decimal's
+    ///         bounds, or text crafted against the search makes it take
+    ///         more than MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorInvalid for a null
     ///         pointer or a formatter the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter,
                                                          const char* text, size_t length,
                                                          mlocDecimal* decimalOut, size_t* endOut);
+
+// How deep formatting and parsing nest rule sets, as ICU4C's
+// RECURSION_LIMIT: formatting a value that needs more is refused with
+// mloc_errorLimit, and parsing reads nothing past it.
+#define MLOC_MAX_SPELLOUT_LEVELS 64
+
+// The most rule matches a parse tries: ICU4C's search is exponential, and
+// a long text crafted against it could keep it busy for minutes. A parse
+// past it is refused with mloc_errorLimit.
+#define MLOC_MAX_SPELLOUT_STEPS 262144
 
     // Formatting and parsing nest rule sets up to 64 levels deep, as ICU
     // does, and take about 100 KB of stack at the deepest: a thread for

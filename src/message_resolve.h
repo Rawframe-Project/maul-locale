@@ -34,12 +34,12 @@ typedef struct Resolution
     size_t faultCount;
     // While above 0, faults are not reported (an option read again).
     uint32_t quiet;
-    // The resolutions left (messageResolutionLimit at the start), and
+    // The resolutions left (MLOC_MAX_MESSAGE_RESOLUTIONS at the start), and
     // whether running out has been reported.
     uint32_t budget;
     bool exhausted;
     // A bit per declaration whose faults were reported.
-    uint8_t reported[messageDeclarationLimit / 8];
+    uint8_t reported[MLOC_MAX_MESSAGE_DECLARATIONS / 8];
     // Set while binding probes an expression: an argument stands for a
     // plain number, and dynamic is set when an option's value comes from
     // an argument or a program function is reached (the value then
