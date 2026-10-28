@@ -30,8 +30,8 @@ extern "C"
 
 // The data format version: the layouts of the data files' tables and of a
 // compiled message, which a library reads. It changes only when one of
-// them does, not with the library version, so data files and catalogs
-// stay valid across releases that keep the format. Bit 31 is set: the
+// them does, not with the library version, so data files stay valid
+// across releases that keep the format. Bit 31 is set: the
 // field once held a packed library version (major << 16 | minor << 8 |
 // patch), which never sets it, so no older file can match a format.
 #define MLOC_DATA_FORMAT_VERSION 0x80000006u
