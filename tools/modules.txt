@@ -30,11 +30,11 @@ plural: bytes data_format data_view decimal kinds locale_fallback plural_rules
 number_tables:
 parse_tables:
 currency_tables:
-number_data: bytes currency_tables data_view number_tables
-number_precision: decimal
-number_compact: bytes decimal number_data number_precision number_tables plural
-number_core: bytes currency_tables data_format data_view decimal kinds locale_fallback locale_keyword number_compact number_data number_tables
-number_format: currency_tables decimal number_compact number_core number_precision plural plural_rules
+number_data: bytes currency_tables data_view invariant number_tables
+number_precision: decimal invariant
+number_compact: bytes decimal invariant number_data number_precision number_tables plural
+number_core: bytes currency_tables data_format data_view decimal invariant kinds locale_fallback locale_keyword number_compact number_data number_tables
+number_format: currency_tables decimal invariant number_compact number_core number_precision plural plural_rules
 number: number_core number_format number_parse plural
 number_parse: bytes data_view decimal number_core number_format number_tables parse_currency parse_match parse_tables
 parse_currency: bytes currency_tables data_view number_data parse_match parse_tables

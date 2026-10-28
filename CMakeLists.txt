@@ -951,7 +951,7 @@ if(MAUL_LOCALE_FUZZ)
                                                -fno-sanitize-recover=all)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area calendar catalog collate_fast collation collation_data data date_data decimal
-                 duration grammar index ixdtf locale message parse
+                 duration grammar index ixdtf locale message number parse
                  relative
                  search segment segments
                  spellout

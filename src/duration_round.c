@@ -302,25 +302,41 @@ typedef struct Nudge
     bool expanded;
 } Nudge;
 
+// Whether a window lasts a while, and whether it holds a moment.
+static bool Lasts(int sign, const Window* w)
+{
+    return Compare(w->startMoment, w->endMoment) == -sign;
+}
+
+static bool Holds(int sign, const Window* w, Moment dest)
+{
+    Moment low = sign > 0 ? w->startMoment : w->endMoment;
+    Moment high = sign > 0 ? w->endMoment : w->startMoment;
+    return Compare(low, dest) <= 0 && Compare(dest, high) <= 0;
+}
+
 // NudgeToCalendarUnit: the multiples around the duration, shifted once
 // when the destination lies past them, and the destination's place
 // between them deciding by mode.
 // The window holding the destination: the first, or the next when the
-// destination lies past it (expanded).
+// destination lies past it (expanded). ECMA-262 asserts that each
+// window lasts a while and the next holds the destination; a zone whose
+// clocks jump a whole day breaks both, and the specification has no
+// answer there yet (tc39/proposal-temporal#3310), so the window is
+// refused, as temporal_rs refuses it.
 static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart* s, Moment dest,
                        int unit, int64_t increment, Window* w, bool* expandedOut)
 {
-    if (!ComputeWindow(sign, &d->date, s, unit, increment, false, w))
+    if (!ComputeWindow(sign, &d->date, s, unit, increment, false, w) || !Lasts(sign, w))
     {
         return false;
     }
     *expandedOut = false;
-    Moment low = sign > 0 ? w->startMoment : w->endMoment;
-    Moment high = sign > 0 ? w->endMoment : w->startMoment;
-    if (Compare(low, dest) > 0 || Compare(dest, high) > 0)
+    if (!Holds(sign, w, dest))
     {
         *expandedOut = true;
-        return ComputeWindow(sign, &d->date, s, unit, increment, true, w);
+        return ComputeWindow(sign, &d->date, s, unit, increment, true, w) && Lasts(sign, w) &&
+               Holds(sign, w, dest);
     }
     return true;
 }
@@ -338,6 +354,9 @@ static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const Relat
     int64_t partNanoseconds = sign * (dest.nanosecond - w.startMoment.nanosecond);
     int64_t wholeDays = sign * (w.endMoment.day - w.startMoment.day);
     int64_t wholeNanoseconds = sign * (w.endMoment.nanosecond - w.startMoment.nanosecond);
+    // UpByDays takes a part of a window within it, which FindWindow made
+    // sure of.
+    MLOC_ASSERT(Lasts(sign, &w) && Holds(sign, &w, dest));
     bool atEnd = Compare(dest, w.endMoment) == 0;
     bool evenLow = (w.r1 / r->increment) % 2 == 0;
     bool up = atEnd || UpByDays(partDays, partNanoseconds, wholeDays, wholeNanoseconds,
@@ -363,6 +382,13 @@ static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const Relative
         return false;
     }
     mlocTimeDuration daySpan = Between(start, end);
+    // ECMA-262 asserts that the day runs the duration's way; a zone whose
+    // clocks jump a whole day can leave it no length, and that is refused
+    // as in FindWindow.
+    if (Sign(daySpan) != sign)
+    {
+        return false;
+    }
     int64_t stepSeconds = s_unitSeconds[r->smallestUnit] * r->increment;
     int64_t stepNanoseconds = s_unitNanoseconds[r->smallestUnit] * r->increment;
     mlocTimeDuration rounded;
@@ -505,6 +531,9 @@ bool mlocTotalRelative(const RelativeDuration* duration, const RelativeStart* st
         {
             return false;
         }
+        // FindWindow gave a window of some length that holds the
+        // destination, so the quotient's divisor is not zero.
+        MLOC_ASSERT(Lasts(sign, &w) && Holds(sign, &w, dest));
         uint64_t part = (uint64_t)(sign * NanosecondsBetween(w.startMoment, dest));
         uint64_t whole = (uint64_t)(sign * NanosecondsBetween(w.startMoment, w.endMoment));
         uint64_t below = (uint64_t)(w.r1 < 0 ? -w.r1 : w.r1);

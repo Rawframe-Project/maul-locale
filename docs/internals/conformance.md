@@ -48,6 +48,7 @@ Departures without a file of their own, each stated where its part is documented
 - **Number parsing:** input is UTF-8, so a byte that does not begin a valid sequence is no character.
 - **Currencies:** with the symbol hidden, the amount takes the locale's `alt="noCurrency"` currency pattern, which has no symbol and no space beside it (de `1.234,50`), as `mloc_currencyHidden` documents; ICU4C instead deletes `¤` from the standard pattern and keeps the no-break space that stood beside it. Cash rounding keeps the currency's cash digits, which default to its digits when CLDR gives none: DKK's 0.50 cash increment gives `1.234,50 kr.`, as Danish cash prices are written, where ICU4C writes only the digits of the increment, `1.234,5 kr.`.
 - **Collation:** see [collation.md](collation.md#kept-differences).
+- **Temporal arithmetic:** a zoned difference rounded or totaled across a jump of the zone's clocks by a whole day (`Pacific/Apia` skipping 30 December 2011, `America/Sitka` living 18 October 1867 twice) is refused, as temporal_rs refuses it. ECMA-262 asserts there what does not hold and gives no answer yet ([tc39/proposal-temporal#3310](https://github.com/tc39/proposal-temporal/issues/3310)).
 - **Calendars:** `islamic` reads as Umm al-Qura, as in ICU4X, where ICU4C estimates it astronomically; Chinese years from the astronomical model where ICU4C's reduced model differs from the observatories.
 
 ## Committed oracle data

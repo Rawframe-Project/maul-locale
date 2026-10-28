@@ -953,8 +953,10 @@ extern "C"
     /// @param durationOut  Receives the duration.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
     ///         or instant the library did not make, a calendar out of
-    ///         range, units, an increment or a mode refused, or a date or
-    ///         instant the rounding reaches outside Temporal's range.
+    ///         range, units, an increment or a mode refused, a date or
+    ///         instant the rounding reaches outside Temporal's range, or a
+    ///         rounding across a jump of the zone's clocks by a whole day,
+    ///         which ECMA-262 does not yet answer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocZonedDateTimeUntil(const mlocTimeZone* zone,
@@ -980,8 +982,10 @@ extern "C"
     /// @param totalOut  Receives the total.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
     ///         or instant the library did not make, a calendar out of
-    ///         range, an unknown unit, or a date or instant the total
-    ///         reaches outside Temporal's range.
+    ///         range, an unknown unit, a date or instant the total reaches
+    ///         outside Temporal's range, or a total across a jump of the
+    ///         zone's clocks by a whole day, which ECMA-262 does not yet
+    ///         answer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocZonedDateTimeTotal(const mlocTimeZone* zone,

@@ -10,6 +10,7 @@
 #include "data_format.h"
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
@@ -133,6 +134,9 @@ static const uint8_t* FindEntry(DataSpan locale, DataSpan systems, uint32_t syst
 
 static void TableString(NumberTable t, uint32_t index, uint16_t* startOut, uint16_t* lengthOut)
 {
+    // The validators keep every string index a record holds within its
+    // table.
+    MLOC_ASSERT(index < t.stringCount);
     uint16_t start = mlocLoad16(t.offsets + (size_t)index * 2);
     *startOut = start;
     *lengthOut = (uint16_t)(mlocLoad16(t.offsets + (size_t)index * 2 + 2) - start);
@@ -184,6 +188,7 @@ static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_
     {
         return false;
     }
+    MLOC_ASSERT(system < SystemCount(u->systems));
     const uint8_t* digits = System(u->systems, system) + 8;
     memcpy(core->digits, digits, sizeof(core->digits));
     uint8_t length = 1;
@@ -223,6 +228,7 @@ bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t leng
 static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 {
     NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
+    MLOC_ASSERT(index < t.recordCount);
     uint16_t start = 0;
     uint16_t length = 0;
     TableString(t, mlocLoad16(t.records + (size_t)index * numberPatternSize), &start, &length);
@@ -305,6 +311,7 @@ static void UseParsePattern(NumberCore* core, DataSpan patterns, uint32_t index,
         return;
     }
     NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
+    MLOC_ASSERT(index < t.recordCount);
     const uint8_t* p = t.records + (size_t)index * numberPatternSize;
     for (int i = 0; i < affixCount; i++)
     {
@@ -421,6 +428,8 @@ mlocResult mlocInitCompactCore(NumberCore* coreOut, const mlocDataSet* data,
 bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index)
 {
     NumberTable t = mlocReadNumberTable((DataSpan){patterns, 0}, numberCompactPatternSize);
+    // mlocValidCompactUse checked every pattern a compact table names.
+    MLOC_ASSERT(index < t.recordCount);
     const uint8_t* p = t.records + (size_t)index * numberCompactPatternSize;
     const int fields[affixCount] = {compactPrefix, compactSuffix, compactNegativePrefix,
                                     compactSuffix};
@@ -460,6 +469,7 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
     kind |= w->source;
     if (w->parts != nullptr)
     {
+        MLOC_ASSERT(w->start <= w->length);
         if (kind != w->kind && w->length > w->start)
         {
             w->parts->part(w->parts->context, w->kind, w->start, w->length - w->start);
@@ -536,6 +546,7 @@ static bool Ignorable(uint32_t c)
 // length (1 to 4).
 static uint32_t Decode(const uint8_t* text, size_t length)
 {
+    MLOC_ASSERT(length >= 1 && length <= 4);
     static const uint8_t s_leadMasks[5] = {0, 0x7F, 0x1F, 0x0F, 0x07};
     uint32_t c = text[0] & s_leadMasks[length];
     for (size_t i = 1; i < length; i++)
@@ -799,6 +810,7 @@ static size_t Gather(NumberWriter* w, char* chunk, size_t n, const uint8_t* text
     {
         // Room was kept for it; a short copy by hand costs less than a
         // call.
+        MLOC_ASSERT(n + length <= chunkSize);
         for (size_t i = 0; i < length; i++)
         {
             chunk[n + i] = (char)text[i];
@@ -840,6 +852,7 @@ static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecim
             Put(w, mloc_numberPartInteger, chunk, n);
             n = 0;
         }
+        MLOC_ASSERT(n + numberDigitSize <= chunkSize);
         memcpy(chunk + n, c->digits + (size_t)DigitIndexed(d, index) * numberDigitSize,
                numberDigitSize);
         n += digitLength;
@@ -864,6 +877,7 @@ static void PutDigitsPlain(NumberWriter* w, const NumberCore* c, const mlocDecim
                 Put(w, mloc_numberPartInteger, chunk, n);
                 n = 0;
             }
+            MLOC_ASSERT(n + numberDigitSize <= chunkSize);
             memcpy(chunk + n, c->digits + (size_t)DigitIndexed(d, index) * numberDigitSize,
                    numberDigitSize);
             n += digitLength;
@@ -885,6 +899,9 @@ static void PutDigits(NumberWriter* w, const NumberCore* c, const mlocDecimal* d
                                                              : c->minGrouping;
     bool grouped =
         layout->grouping != mloc_groupingOff && c->primary > 0 && integers >= c->primary + least;
+    // The data gives both group sizes or neither, and the secondary
+    // divides the powers past the primary.
+    MLOC_ASSERT(!grouped || c->secondary > 0);
     if (w->parts == nullptr)
     {
         PutDigitsPlain(w, c, d, integers, grouped, layout->point);
