@@ -4,7 +4,7 @@
 // Catalogs compiled from their sources: the first resource is the set's
 // source, the others its translations. Every resource is read and checked;
 // the source's keys (but the obsolete) get their table and order; each
-// resource becomes a data file of its locale, LOCALE.mloc in the directory
+// resource becomes a catalog of its locale, LOCALE.mlct in the directory
 // given, holding the keys and its messages by index. A translation's key
 // the source lacks is reported and left out; a key marked @translate no
 // keeps the source's message.

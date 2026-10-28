@@ -1,12 +1,13 @@
 # The data format version (MLOC_DATA_FORMAT_VERSION in
 # include/maul-locale/base.h) and the SHA-256 of each header that lays out
-# data the library reads. tools/check_data_format.py fails when one of
-# them changes; --write records them again after the format is decided
+# data the library reads; then each asset layout: its header, the
+# constant holding its format version, that version and the header's
+# SHA-256. tools/check_data_format.py fails when one of them changes;
+# --write records them again after the version is decided
 # (docs/internals/data.md#versions).
-format 0x80000005
+format 0x80000006
 layouts src/data_format.h src/kinds.h src/message_form.h src/code_point_trie.h src/collation_fast_latin.h src/catalog_hash.h src/plural_rules.h src/locale_context.h src/collation_index.h src/collation_unsafe.h src/*_tables.h
 sha256 617e67832c7b60ff80ffa726f7681abf32e34a4069b28d39e66c19a2a7c9f0c0 src/catalog_hash.h
-sha256 2e35521a394a55d790cd0f570957e4cbbb6a53d7eb0f1bd61f12631ddae9e5c2 src/catalog_tables.h
 sha256 bd0b76f42f8c824b1e40c885f67dc593e67d1c9bf40897296558aac7746c1316 src/code_point_trie.h
 sha256 5bc496eab13f8e60e1c35d1c10df6b9de32aff382d5836cf4cc26a30d3617b04 src/collation_fast_latin.h
 sha256 2458bc33c0a80e9b7cea6c6ac9c71722b094a65a004556ffcc0075199c7a5061 src/collation_index.h
@@ -15,7 +16,7 @@ sha256 97fd6e47d1895c4104785910fcc335598a2bc9abff85d0316869e9e565e003d2 src/coll
 sha256 9eab83116176e1850ff9c45f5d97540b4c32441fa21caf02c54c045b2235e097 src/currency_tables.h
 sha256 6d83091f5285ada624cf0d219d19ad835743358628c6dc0b9f4b23799a10b081 src/data_format.h
 sha256 ea1dbd063bbd0f8c2196660f0da852e33412135d737a062ce992b5ff5eb48e9c src/date_tables.h
-sha256 3cade15e23187333d91e0b59301ff2f754422ce08281cc7360740b8686757598 src/kinds.h
+sha256 5971239eaf9ec10a79573cd6f9bcaa8c1575a78e86db6b77ab057c5fecf24b8f src/kinds.h
 sha256 bcc6e8722b7c6e957937cd3a18b03a2fdcf4da1b37cc6b2b3cf700a50c234186 src/list_tables.h
 sha256 e30dd56ac8153f5e2bfb01f950e222d1df69ab2d42b6d99e83be2df23b886df6 src/locale_context.h
 sha256 75ae2b53028ffd24e42b964ab8cae7cd42aef5b32ddef87724d16115f4080c09 src/locale_tables.h
@@ -31,3 +32,4 @@ sha256 90f0e749a7950c085c0e254982a9ce98cfa5c97161b1bc08d9f09aad1ae23015 src/unit
 sha256 9ca32188a515f98b63f6c56cd39d1e492f88f5119b848161f1062b797ab36747 src/zone_code_tables.h
 sha256 5df4dee7bc5b576ab672053448f632579034d09aa14553b2a5ca7e04b74fc80e src/zone_name_tables.h
 sha256 01f9b1ef2ee7138cd12ac1ed5c31519be56e5f6f79ea0003f2f518e44cd08d03 src/zone_tables.h
+asset src/catalog_tables.h catalogFormatVersion 1 0b2cd9494b5b4748abf2e6dac7aaba455a4f982c3263bdde570b17a8a0479836

@@ -79,15 +79,14 @@ static bool Compile(void)
 }
 
 // A compiled catalog of the directory and a formatter of its locale.
-static bool Open(const char* locale, mlocData* data, mlocCatalog* catalog,
-                 mlocMessageFormatter* formatter)
+static bool Open(const char* locale, mlocCatalog* catalog, mlocMessageFormatter* formatter)
 {
     static mlocData s_builtin;
     static mlocDataSet s_set;
     mlocOpenBuiltinData(&s_builtin);
     s_set = (mlocDataSet){&s_builtin, 1};
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.mloc", s_directory, locale);
+    snprintf(path, sizeof(path), "%s/%s.mlct", s_directory, locale);
     size_t size = 0;
     void* bytes = FileRead(path, &size);
     if (bytes != nullptr && s_byteCount < 3)
@@ -95,21 +94,19 @@ static bool Open(const char* locale, mlocData* data, mlocCatalog* catalog,
         s_bytes[s_byteCount++] = bytes;
     }
     mlocLocale parsed;
-    return bytes != nullptr && mlocOpenData(data, bytes, size) == mloc_success &&
-           mlocOpenCatalog(catalog, data) == mloc_success &&
+    return bytes != nullptr && mlocOpenCatalog(catalog, bytes, size) == mloc_success &&
            mlocParseLocale(locale, strlen(locale), &parsed).status == mloc_success &&
            mlocInitMessageFormatter(formatter, &s_set, &parsed, nullptr) == mloc_success;
 }
 
 static void GuideChain(void)
 {
-    mlocData data[3];
     mlocCatalog catalogs[3];
     mlocMessageFormatter formatters[3];
     const char* locales[3] = {"fr-CA", "fr", "en"};
     for (int i = 0; i < 3; i++)
     {
-        CHECK(Open(locales[i], &data[i], &catalogs[i], &formatters[i]), locales[i]);
+        CHECK(Open(locales[i], &catalogs[i], &formatters[i]), locales[i]);
     }
     // catalogs: fr-CA, fr and the source en, opened in that order;
     // formatters: a message formatter of each catalog's locale

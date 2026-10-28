@@ -139,17 +139,14 @@ static void Write(const char* name, const char* text)
     (void)FileWrite(path, text, strlen(text));
 }
 
-// Opens a catalog file into data and a catalog; the bytes are the
-// caller's to free.
-static uint8_t* Open(const char* locale, mlocData* data, mlocCatalog* catalog, mlocResult* out)
+// Opens a catalog file; the bytes are the caller's to free.
+static uint8_t* Open(const char* locale, mlocCatalog* catalog, mlocResult* out)
 {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.mloc", s_directory, locale);
+    snprintf(path, sizeof(path), "%s/%s.mlct", s_directory, locale);
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
-    *out = bytes == nullptr                                  ? mloc_errorNotFound
-           : mlocOpenData(data, bytes, size) != mloc_success ? mloc_errorFormat
-                                                             : mlocOpenCatalog(catalog, data);
+    *out = bytes == nullptr ? mloc_errorNotFound : mlocOpenCatalog(catalog, bytes, size);
     return bytes;
 }
 
@@ -183,14 +180,12 @@ static void TestCompiledSet(void)
     {
         fclose(report);
     }
-    mlocData enData;
-    mlocData trData;
     mlocCatalog enCatalog;
     mlocCatalog trCatalog;
     mlocResult enOpened = mloc_errorInvalid;
     mlocResult trOpened = mloc_errorInvalid;
-    uint8_t* enBytes = Open("en", &enData, &enCatalog, &enOpened);
-    uint8_t* trBytes = Open("tr", &trData, &trCatalog, &trOpened);
+    uint8_t* enBytes = Open("en", &enCatalog, &enOpened);
+    uint8_t* trBytes = Open("tr", &trCatalog, &trOpened);
     CHECK(enOpened == mloc_success && trOpened == mloc_success, "both catalogs open");
     mlocCatalogInfo enInfo;
     mlocCatalogInfo trInfo;
@@ -237,7 +232,7 @@ static void TestCompiledSet(void)
 static void TestDamage(void)
 {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/en.mloc", s_directory);
+    snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
     if (bytes == nullptr)
@@ -247,16 +242,11 @@ static void TestDamage(void)
     }
     uint32_t refused = 0;
     uint32_t tried = 0;
-    for (size_t at = 64; at < size; at++)
+    for (size_t at = assetHeaderSize; at < size; at++)
     {
         bytes[at] ^= 0x5A;
-        mlocData data;
         mlocCatalog catalog;
-        mlocResult opened = mlocOpenData(&data, bytes, size);
-        if (opened == mloc_success)
-        {
-            opened = mlocOpenCatalog(&catalog, &data);
-        }
+        mlocResult opened = mlocOpenCatalog(&catalog, bytes, size);
         refused += opened != mloc_success;
         tried++;
         bytes[at] ^= 0x5A;
@@ -276,10 +266,8 @@ static mlocResult Reopen(uint8_t* bytes, size_t size, size_t at, uint32_t value)
     {
         bytes[at + (size_t)i] = (uint8_t)(value >> (8 * i));
     }
-    mlocData data;
     mlocCatalog catalog;
-    mlocResult r = mlocOpenData(&data, bytes, size);
-    r = r == mloc_success ? mlocOpenCatalog(&catalog, &data) : mloc_errorFormat;
+    mlocResult r = mlocOpenCatalog(&catalog, bytes, size);
     memcpy(bytes + at, saved, 4);
     return r;
 }
@@ -289,65 +277,45 @@ static uint32_t Word(const uint8_t* p)
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
+// A field's payload offset in a catalog's bytes, by its place.
+static size_t FieldStart(const uint8_t* bytes, uint32_t place)
+{
+    size_t at = assetHeaderSize;
+    for (uint32_t i = 0; i < place; i++)
+    {
+        at += (size_t)mlocAssetFieldBytes(Word(bytes + at + 4));
+    }
+    return at + assetFieldHead;
+}
+
 // Each table check refuses its own damage.
 static void TestEachRefusal(void)
 {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/en.mloc", s_directory);
+    snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
-    mlocData data;
-    if (bytes == nullptr || mlocOpenData(&data, bytes, size) != mloc_success)
+    mlocCatalog opened;
+    if (bytes == nullptr || mlocOpenCatalog(&opened, bytes, size) != mloc_success)
     {
         CHECK(false, "the catalog opens");
         free(bytes);
         return;
     }
-    // The units are found by the set id each stores (at 24 in the keys,
-    // at 8 in the messages), as a shared build hides the data's directory.
-    mlocCatalog opened;
-    mlocCatalogInfo info;
-    size_t at[2] = {0, 0};
-    int seen = 0;
-    if (mlocOpenCatalog(&opened, &data) == mloc_success &&
-        mlocGetCatalogInfo(&opened, &info) == mloc_success)
-    {
-        uint8_t id[8];
-        for (int i = 0; i < 8; i++)
-        {
-            id[i] = (uint8_t)(info.setId >> (8 * i));
-        }
-        for (size_t i = 0; seen < 2 && i + 8 <= size; i += 4)
-        {
-            if (memcmp(bytes + i, id, 8) == 0)
-            {
-                at[seen++] = i;
-            }
-        }
-    }
-    DataSpan keys = {0};
-    DataSpan messages = {0};
-    if (seen == 2 && at[0] >= 24 && at[1] >= 8)
-    {
-        keys.bytes = bytes + at[0] - 24;
-        keys.size = (uint32_t)(at[1] - 8 - (at[0] - 24));
-        messages.bytes = bytes + at[1] - 8;
-        messages.size = (uint32_t)(size - (at[1] - 8));
-    }
+    size_t K = FieldStart(bytes, catalogKeys);
+    size_t M = FieldStart(bytes, catalogMessages);
+    DataSpan keys = {bytes + K, Word(bytes + K - 4)};
     CatalogKeys k;
-    if (keys.bytes == nullptr || !mlocReadCatalogKeys(keys, &k) || k.places <= k.count ||
-        k.count < 2)
+    if (!mlocReadCatalogKeys(keys, &k) || k.places <= k.count || k.count < 2)
     {
-        CHECK(false, "the catalog's units");
+        CHECK(false, "the catalog's keys");
         free(bytes);
         return;
     }
-    size_t K = (size_t)(keys.bytes - bytes);
-    size_t M = (size_t)(messages.bytes - bytes);
     size_t remap = (size_t)(k.remap - bytes);
     size_t offsets = (size_t)(k.offsets - bytes);
     size_t text = (size_t)(k.text - bytes);
-    uint32_t firstMessage = Word(messages.bytes + 16);
+    uint32_t firstMessage = Word(bytes + M + 16);
     size_t messageText = M + 16 + ((size_t)k.count + 1) * 4 + firstMessage;
     CHECK(Reopen(bytes, size, K + 12, 1) == mloc_errorFormat &&
               Reopen(bytes, size, K + 4, 0) == mloc_errorFormat &&
@@ -362,23 +330,68 @@ static void TestEachRefusal(void)
     CHECK(Reopen(bytes, size, text, Word(bytes + text) ^ 0x20) == mloc_errorFormat &&
               Reopen(bytes, size, text, Word(bytes + text) & 0xFFFFFF00U) == mloc_errorFormat,
           "keys: a key changed is not at its index; a key holding a NUL");
-    CHECK(Reopen(bytes, size, M + 4, 2) == mloc_errorFormat &&
+    CHECK(Reopen(bytes, size, M + 4, 1) == mloc_errorFormat &&
               Reopen(bytes, size, M, 0xFFFF) == mloc_errorFormat &&
               Reopen(bytes, size, M + 16, 1) == mloc_errorFormat &&
               Reopen(bytes, size, messageText, Word(bytes + messageText) ^ 0xFF) ==
                   mloc_errorFormat,
-          "messages: an unknown flag, a count past the unit, offsets not from 0, a message that "
-          "is not one");
+          "messages: the reserved word, a count past the field, offsets not from 0, a message "
+          "that is not one");
     CHECK(Reopen(bytes, size, M + 8, Word(bytes + M + 8) ^ 1) == mloc_errorFormat &&
               Reopen(bytes, size, K + 24, Word(bytes + K + 24) ^ 1) == mloc_errorFormat,
           "the set ids disagree, or the keys' own is not theirs");
+    size_t locale = FieldStart(bytes, catalogLocale);
+    CHECK(Reopen(bytes, size, locale, Word(bytes + locale) ^ 0x40) == mloc_errorFormat,
+          "a locale that is not a locale id");
+
+    // The container: a field a later version writes, another format
+    // version or a flag it does not know is another version's; a missing
+    // field, a field out of order or padding that is not zero is no
+    // catalog.
+    uint32_t localeTag = Word(bytes + locale - assetFieldHead);
+    CHECK(Reopen(bytes, size, assetFormat, catalogFormatVersion + 1) == mloc_errorVersion &&
+              Reopen(bytes, size, assetFormat, catalogFormatVersion | 2U << 16) ==
+                  mloc_errorVersion &&
+              Reopen(bytes, size, locale - assetFieldHead, MLOC_ASSET_TAG('N', 'E', 'X', 'T')) ==
+                  mloc_errorVersion,
+          "a later version's format, flag or field");
+    CHECK(Reopen(bytes, size, locale - assetFieldHead, catalogTags[catalogKeys]) ==
+                  mloc_errorFormat &&
+              Reopen(bytes, size, K - assetFieldHead, localeTag) == mloc_errorFormat &&
+              Reopen(bytes, size, assetFields, catalogFieldCount - 1) == mloc_errorFormat &&
+              Reopen(bytes, size, assetSize, (uint32_t)size + 8) == mloc_errorFormat,
+          "fields out of order or twice, fewer than the size holds, another size");
+    uint32_t localeLength = Word(bytes + locale - 4);
+    if (localeLength % assetAlignment != 0)
+    {
+        CHECK(Reopen(bytes, size, (locale + localeLength + 3) & ~(size_t)3, 0xFFFFFFFFU) ==
+                  mloc_errorFormat,
+              "padding that is not zero");
+    }
+    // Without its messages: the header counts two fields, and the size
+    // ends after the keys.
+    size_t withoutMessages = M - assetFieldHead;
+    uint8_t* cut = malloc(withoutMessages);
+    if (cut != nullptr)
+    {
+        memcpy(cut, bytes, withoutMessages);
+        for (int i = 0; i < 4; i++)
+        {
+            cut[assetSize + (size_t)i] = (uint8_t)(withoutMessages >> (8 * i));
+            cut[assetFields + (size_t)i] = (uint8_t)((catalogFieldCount - 1) >> (8 * i));
+        }
+        mlocCatalog catalog;
+        CHECK(mlocOpenCatalog(&catalog, cut, withoutMessages) == mloc_errorFormat,
+              "a required field missing");
+        free(cut);
+    }
     mlocCatalog catalog;
-    mlocData builtin;
-    mlocOpenBuiltinData(&builtin);
-    CHECK(mlocOpenCatalog(&catalog, &builtin) == mloc_errorNotFound &&
-              mlocOpenCatalog(nullptr, &data) == mloc_errorInvalid &&
-              mlocOpenCatalog(&catalog, nullptr) == mloc_errorInvalid,
-          "data without a catalog; null pointers");
+    CHECK(mlocOpenCatalog(&catalog, bytes, 8) == mloc_errorFormat &&
+              mlocOpenCatalog(&catalog, "MLOC\x01\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00",
+                              16) == mloc_errorFormat &&
+              mlocOpenCatalog(nullptr, bytes, size) == mloc_errorInvalid &&
+              mlocOpenCatalog(&catalog, nullptr, 0) == mloc_errorInvalid,
+          "bytes shorter than a header; a data file's magic; null pointers");
     free(bytes);
 }
 
@@ -396,12 +409,10 @@ static void TestArguments(void)
               mlocGetCatalogMessage(&zero, 0, &message, &size) == mloc_errorInvalid,
           "a catalog the library did not open is refused");
     char path[1024];
-    snprintf(path, sizeof(path), "%s/en.mloc", s_directory);
+    snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
-    mlocData data;
     mlocCatalog catalog;
-    if (bytes != nullptr && mlocOpenData(&data, bytes, size) == mloc_success &&
-        mlocOpenCatalog(&catalog, &data) == mloc_success)
+    if (bytes != nullptr && mlocOpenCatalog(&catalog, bytes, size) == mloc_success)
     {
         CHECK(mlocGetCatalogInfo(&catalog, nullptr) == mloc_errorInvalid &&
                   mlocFindCatalogKey(&catalog, "a", 1, nullptr) == mloc_errorInvalid &&
@@ -441,14 +452,13 @@ static void TestCompileFailures(void)
         rewind(report);
         size_t read = fread(said, 1, sizeof(said) - 1, report);
         said[read] = '\0';
-        CHECK(strstr(said, "no-such-directory/de.mloc: cannot write") != nullptr,
+        CHECK(strstr(said, "no-such-directory/de.mlct: cannot write") != nullptr,
               "the report names the catalog it could not write");
         fclose(report);
     }
-    mlocData data;
     mlocCatalog catalog;
     mlocResult opened = mloc_errorInvalid;
-    uint8_t* bytes = Open("tr", &data, &catalog, &opened);
+    uint8_t* bytes = Open("tr", &catalog, &opened);
     uint32_t name = 0;
     uint32_t other = 0;
     CHECK(opened == mloc_success &&

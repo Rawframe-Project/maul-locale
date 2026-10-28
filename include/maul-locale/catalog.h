@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // Catalogs: a program's messages of one locale, compiled by the catalog
-// tool (mloccat) into a data file, found by key through a minimal perfect
+// tool (mloccat) into a catalog file, found by key through a minimal perfect
 // hash or by an index resolved once. The catalogs of one set (a source and
 // its translations) share one key order, so an index means the same
 // message in each. A chain formats a set's messages through catalogs in
@@ -12,7 +12,6 @@
 #ifndef MAUL_LOCALE_CATALOG_H
 #define MAUL_LOCALE_CATALOG_H
 
-#include "maul-locale/data.h"
 #include "maul-locale/locale.h"
 #include "maul-locale/message.h"
 
@@ -23,7 +22,7 @@ extern "C"
 {
 #endif
 
-    // An opened catalog: a view of its data, which must outlive it.
+    // An opened catalog: a view of its bytes, which must outlive it.
     // Opaque; make it with mlocOpenCatalog.
     typedef struct mlocCatalog
     {
@@ -45,21 +44,27 @@ extern "C"
         mlocLocale locale;
     } mlocCatalogInfo;
 
-    /// Opens a catalog the catalog tool compiled: the data must hold one
-    /// locale with a catalog's keys and messages. Its tables were
-    /// checked when the data was opened (mlocOpenData); this checks that
-    /// they agree.
+    /// Opens a catalog the catalog tool compiled, from its bytes, checking
+    /// all of them: its keys, its messages and that they agree. A catalog
+    /// names nothing in the data by index or version, so it opens with a
+    /// library of other data (another CLDR or tzdb release); its messages
+    /// are formatted with a formatter's data and locale.
     ///
     /// @param catalogOut  Receives the catalog; left unchanged on failure.
-    /// @param data        The catalog's data.
-    /// @return mloc_success; mloc_errorNotFound for data with no catalog;
-    ///         mloc_errorFormat for data whose keys and messages disagree,
-    ///         whose locale is not a locale id, or that holds more than
-    ///         one catalog; mloc_errorInvalid for a null pointer.
+    ///                    It points into the bytes, which must outlive it.
+    /// @param bytes       The catalog's bytes; any alignment.
+    /// @param size        Their length.
+    /// @return mloc_success; mloc_errorVersion for a catalog a later
+    ///         version wrote (another catalog format, a flag or field this
+    ///         one does not know) or one holding a message it does not
+    ///         read as its version; mloc_errorFormat for bytes that are no
+    ///         catalog: a field missing, keys and messages that disagree, a
+    ///         locale that is not a locale id; mloc_errorInvalid for a null
+    ///         pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocOpenCatalog(mlocCatalog* catalogOut,
-                                                       const mlocData* data);
+    MLOC_NODISCARD MLOC_API mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const void* bytes,
+                                                       size_t size);
 
     /// Reads what a catalog holds.
     ///

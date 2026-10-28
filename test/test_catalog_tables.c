@@ -126,7 +126,6 @@ static Unit MessagesUnit(void)
     {
         uint8_t* p = u.bytes;
         Put32At(p, count);
-        Put32At(p + 4, catalogSourceFlag);
         uint8_t* offsets = p + catalogMessagesHead;
         uint8_t* text = offsets + (count + 1) * 4;
         Put32At(offsets + 4, (uint32_t)sizes[0]);
@@ -154,7 +153,7 @@ static bool Valid(Unit u, bool keys, uint32_t size, size_t at, uint32_t value)
     }
     DataSpan span = {copy, size};
     bool valid =
-        keys ? mlocValidCatalogKeys(nullptr, span) : mlocValidCatalogMessages(nullptr, span);
+        (keys ? mlocValidCatalogKeys(span) : mlocValidCatalogMessages(span)) == mloc_success;
     free(copy);
     return valid;
 }
@@ -211,8 +210,8 @@ static void TestMessages(void)
     CHECK(!Valid(u, false, u.size, last, text + 1) && !Valid(u, false, u.size, offsets + 8, 0) &&
               !Valid(u, false, u.size, offsets + 4, text + 8),
           "the last offset past the messages; offsets falling; a middle one past them");
-    CHECK(!Valid(u, false, u.size, 4, 2) && !Valid(u, false, u.size, 4, 0x80000001U),
-          "flags past the source flag");
+    CHECK(!Valid(u, false, u.size, 4, 1) && !Valid(u, false, u.size, 4, 0x80000000U),
+          "a reserved word that is not zero");
     free(u.bytes);
 }
 

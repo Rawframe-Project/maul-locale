@@ -5,18 +5,17 @@
 
 #include "compile.h"
 
+#include "asset.h"
 #include "catalog_set.h"
 #include "catalog_tables.h"
-#include "data_format.h"
-#include "datafile.h"
 #include "file.h"
-#include "kinds.h"
 #include "stale.h"
 #include "table.h"
 
 #include "maul-locale/locale.h"
 #include "maul-locale/message.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -200,7 +199,7 @@ static Bytes MessagesUnit(const CatalogInput* in, const CatalogInput* source,
     Bytes head = {0};
     Bytes text = {0};
     Put32(&head, keys->count);
-    Put32(&head, in == source ? catalogSourceFlag : 0);
+    Put32(&head, 0);
     Put64(&head, keys->setId);
     for (uint32_t i = 0; i < keys->count; i++)
     {
@@ -224,39 +223,51 @@ static Bytes MessagesUnit(const CatalogInput* in, const CatalogInput* source,
     return head;
 }
 
-static int WriteCatalog(const char* directory, const CatalogInput* in, const Bytes* keys,
-                        const Bytes* messages, FILE* report)
+// A field of the catalog: its tag, its length, the payload, and zero bytes
+// to the next multiple of 8.
+static void PutField(Bytes* b, uint32_t tag, const void* data, size_t size)
 {
-    mlocDataVersion own;
-    mlocGetDataVersion(&own);
-    DataFileVersion version = {
-        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
-        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
-        .format = own.format,
-        .tables = own.tables,
-    };
-    memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
-    // The container names locales as CLDR's files do ("fr_CA"); the file
-    // keeps the BCP 47 id.
-    char id[sizeof(in->locale)];
-    for (size_t i = 0; i < sizeof(id); i++)
+    static const uint8_t zeros[assetAlignment] = {0};
+    Put32(b, tag);
+    Put32(b, (uint32_t)size);
+    Put(b, data, size);
+    Put(b, zeros, (assetAlignment - size % assetAlignment) % assetAlignment);
+}
+
+// The catalog (catalog_tables.h): the header, then its locale, keys and
+// messages.
+static Bytes CatalogBytes(const CatalogInput* in, bool source, const Bytes* keys,
+                          const Bytes* messages)
+{
+    Bytes b = {0};
+    Put(&b, MLOC_CATALOG_MAGIC, 4);
+    uint8_t versionAndFlags[4] = {(uint8_t)catalogFormatVersion, 0,
+                                  (uint8_t)(source ? catalogSourceFlag : 0), 0};
+    Put(&b, versionAndFlags, 4);
+    Put32(&b, 0);
+    Put32(&b, catalogFieldCount);
+    PutField(&b, catalogTags[catalogLocale], in->locale, strlen(in->locale));
+    PutField(&b, catalogTags[catalogKeys], keys->data, keys->size);
+    PutField(&b, catalogTags[catalogMessages], messages->data, messages->size);
+    for (size_t i = 0; i < 4; i++)
     {
-        id[i] = in->locale[i] == '-' ? '_' : in->locale[i];
+        b.data[assetSize + i] = (uint8_t)(b.size >> (8 * i));
     }
-    DataFile file = {0};
-    DataFileAdd(&file, kindCatalogKeys, id, keys->data, keys->size);
-    DataFileAdd(&file, kindCatalogMessages, id, messages->data, messages->size);
-    size_t size = 0;
-    uint8_t* bytes = DataFileWrite(&file, &version, &size);
+    return b;
+}
+
+static int WriteCatalog(const char* directory, const CatalogInput* in, bool source,
+                        const Bytes* keys, const Bytes* messages, FILE* report)
+{
+    Bytes bytes = CatalogBytes(in, source, keys, messages);
     char path[4096];
-    snprintf(path, sizeof(path), "%s/%s.mloc", directory, in->locale);
-    int ok = FileWrite(path, bytes, size);
+    snprintf(path, sizeof(path), "%s/%s.mlct", directory, in->locale);
+    int ok = FileWrite(path, bytes.data, bytes.size);
     if (!ok)
     {
         fprintf(report, "%s: cannot write\n", path);
     }
-    free(bytes);
-    DataFileFree(&file);
+    free(bytes.data);
     return ok;
 }
 
@@ -299,7 +310,7 @@ static int CompileAll(const char* directory, CatalogInput* inputs, size_t count,
     for (size_t i = 0; ok && i < count; i++)
     {
         Bytes messages = MessagesUnit(&inputs[i], &inputs[0], &view, report, &ok);
-        ok = ok && WriteCatalog(directory, &inputs[i], &keys, &messages, report);
+        ok = ok && WriteCatalog(directory, &inputs[i], i == 0, &keys, &messages, report);
         free(messages.data);
     }
     free(keys.data);

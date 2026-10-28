@@ -24,6 +24,8 @@ save = Save changes?
 
 A translation has the same keys with its own `@locale`. The properties the tool reads are `@locale`, `@param`, `@translate no` (or `@do-not-translate`) for text that stays as the source writes it, `@obsolete`, `@allow-empty`, `@mloc-max-length` and `@mloc-example` for the length check, and `@mloc-source`, which the tool writes. Others are kept and ignored. The draft may change; a change touches the tool, never compiled catalogs or programs.
 
+A compiled catalog names nothing in the library's [data](data.md) by index or version, so it keeps working when a program updates its data or the library to a release of another CLDR or tzdb. Before 1.0.0, a release that changes the catalog format refuses an older catalog with `mloc_errorVersion`; compile the set again with that release's `mloccat`.
+
 ## The tool
 
 `mloccat` builds with the library (`MAUL_LOCALE_BUILD_TOOLS`).
@@ -31,7 +33,7 @@ A translation has the same keys with its own `@locale`. The properties the tool 
 | Command | Does |
 |---|---|
 | `mloccat check FILE` | Checks a source or translation: a locale the library parses, unique keys, every message compiles. |
-| `mloccat compile DIR SOURCE [TRANSLATION...]` | Compiles a set into `DIR/<locale>.mloc`, one catalog per locale. |
+| `mloccat compile DIR SOURCE [TRANSLATION...]` | Compiles a set into `DIR/<locale>.mlct`, one catalog per locale. |
 | `mloccat accept SOURCE TRANSLATION [KEY...]` | Records in the translation which source message each entry answers, so a later change of the source shows the entry stale. |
 | `mloccat report [--json] [--fail-on KINDS] SOURCE [TRANSLATION...]` | Coverage and findings per locale: `missing`, `stale`, `unrecorded`, `orphaned`, `differs`, `long`. With `--fail-on`, exits 1 when one of those kinds is found, for CI. |
 | `mloccat export-po` / `import-po SOURCE TRANSLATION PO` | A translation to and from a gettext PO file, one entry per key with the key as `msgctxt`; a stale entry is `fuzzy`. |
@@ -43,7 +45,7 @@ Compile a source with all its translations in one call: the catalogs of one set 
 
 ## Formatting from catalogs
 
-A program opens each catalog file as [data](data.md) (`mlocOpenData`, then `mlocOpenCatalog`), makes a [message formatter](messages.md) for each catalog's locale, and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocBindCatalogChain`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
+A program opens each catalog file's bytes with `mlocOpenCatalog`, which checks them all, makes a [message formatter](messages.md) for each catalog's locale, and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocBindCatalogChain`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
 
 ```c
 // catalogs: fr-CA, fr and the source en, opened in that order;

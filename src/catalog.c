@@ -1,76 +1,82 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Catalogs: the units' validators and the lookups.
+// Catalogs: opening one from its bytes, and the lookups.
 
 #include "maul-locale/catalog.h"
 
+#include "asset.h"
 #include "bytes.h"
 #include "catalog_tables.h"
 #include "catalog_view.h"
-#include "kinds.h"
 
 #include <string.h>
 
-// The one locale with both units, as locale index and spans.
-static mlocResult FindUnits(const DataView* view, uint32_t* localeOut, DataSpan* keys,
-                            DataSpan* messages)
+static const AssetFormat catalogFormat = {
+    .magic = MLOC_CATALOG_MAGIC,
+    .version = catalogFormatVersion,
+    .flags = catalogSourceFlag,
+    .tags = catalogTags,
+    .tagCount = catalogFieldCount,
+    .required = (1u << catalogLocale) | (1u << catalogKeys) | (1u << catalogMessages),
+};
+
+static DataSpan SpanOf(const uint8_t* bytes, AssetField field)
 {
-    uint32_t found = 0;
-    for (uint32_t i = 0; i < view->localeCount; i++)
-    {
-        DataSpan k;
-        DataSpan m;
-        bool hasKeys = mlocFindDataUnit(view, kindCatalogKeys, i, &k);
-        bool hasMessages = mlocFindDataUnit(view, kindCatalogMessages, i, &m);
-        if (hasKeys != hasMessages)
-        {
-            return mloc_errorFormat;
-        }
-        if (hasKeys)
-        {
-            found++;
-            *localeOut = i;
-            *keys = k;
-            *messages = m;
-        }
-    }
-    return found == 0 ? mloc_errorNotFound : found > 1 ? mloc_errorFormat : mloc_success;
+    return (DataSpan){bytes + field.start, field.length};
 }
 
-mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const mlocData* data)
+mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const void* bytes, size_t size)
 {
-    if (catalogOut == nullptr || data == nullptr)
+    if (catalogOut == nullptr || bytes == nullptr)
     {
         return mloc_errorInvalid;
     }
-    DataView view = mlocViewOf(data);
-    uint32_t locale = 0;
-    DataSpan keysSpan = {0};
-    DataSpan messagesSpan = {0};
-    mlocResult r = FindUnits(&view, &locale, &keysSpan, &messagesSpan);
+    const uint8_t* p = bytes;
+    uint32_t flags = 0;
+    AssetField fields[catalogFieldCount];
+    mlocResult r = mlocReadAsset(p, size, &catalogFormat, &flags, fields);
     if (r != mloc_success)
     {
         return r;
     }
+    DataSpan keysSpan = SpanOf(p, fields[catalogKeys]);
+    DataSpan messagesSpan = SpanOf(p, fields[catalogMessages]);
+    r = mlocValidCatalogKeys(keysSpan);
+    if (r == mloc_success)
+    {
+        r = mlocValidCatalogMessages(messagesSpan);
+    }
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    // Both parts are of one set, and the keys' id is theirs.
     CatalogKeys keys;
     if (!mlocReadCatalogKeys(keysSpan, &keys) || mlocLoad32(messagesSpan.bytes) != keys.count ||
         mlocLoad64(messagesSpan.bytes + 8) != keys.setId || mlocCatalogSetId(&keys) != keys.setId)
     {
         return mloc_errorFormat;
     }
-    // A catalog's locale is one the library reads, so its info never
-    // fails.
-    const char* id = nullptr;
-    size_t length = 0;
+    // A locale the library reads, so a catalog's info never fails.
+    const char* id = (const char*)p + fields[catalogLocale].start;
+    uint32_t length = fields[catalogLocale].length;
     mlocLocale parsed;
-    if (mlocGetDataLocale(data, locale, &id, &length) != mloc_success ||
+    if (length > MLOC_MAX_LOCALE_TEXT ||
         mlocParseLocale(id, length, &parsed).status != mloc_success)
     {
         return mloc_errorFormat;
     }
-    Catalog c = {keysSpan.bytes,    messagesSpan.bytes, id,          keysSpan.size,
-                 messagesSpan.size, (uint32_t)length,   catalogStamp};
+    Catalog c = {
+        .keys = keysSpan.bytes,
+        .messages = messagesSpan.bytes,
+        .locale = id,
+        .keysSize = keysSpan.size,
+        .messagesSize = messagesSpan.size,
+        .localeLength = length,
+        .source = (flags & catalogSourceFlag) != 0,
+        .stamp = catalogStamp,
+    };
     memset(catalogOut, 0, sizeof(*catalogOut));
     memcpy(catalogOut, &c, sizeof(c));
     return mloc_success;
@@ -98,7 +104,7 @@ mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoO
         .setId = keys.setId,
         .keyCount = keys.count,
         .messageCount = present,
-        .source = (mlocLoad32(c.messages + 4) & catalogSourceFlag) != 0,
+        .source = c.source,
     };
     if (mlocParseLocale(c.locale, c.localeLength, &info.locale).status != mloc_success)
     {

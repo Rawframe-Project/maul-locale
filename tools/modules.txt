@@ -2,9 +2,10 @@
 # Structure): each module and the modules it may use. tools/check_modules.py enforces it.
 base:
 bytes:
+asset: bytes
 data: bytes data_format data_view invariant kinds
 data_format:
-data_kinds: catalog_tables collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables segment_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
+data_kinds: collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables segment_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
 data_view:
 decimal: bytes
 decimal_round: decimal
@@ -105,9 +106,9 @@ segmenter: data_view segment_tables
 segment: bytes invariant kinds locale_fallback locale_keyword segment_overrides segmenter
 segment_filter: bytes invariant segmenter
 catalog_hash: bytes
-catalog_tables: bytes catalog_hash data_view message_read
+catalog_tables: asset bytes catalog_hash data_view message_read
 catalog_view: catalog_tables
-catalog: bytes catalog_tables catalog_view data_view kinds
+catalog: asset bytes catalog_tables catalog_view data_view
 catalog_chain: catalog_tables catalog_view invariant
 code_point_trie: bytes data_view
 collation_fast_latin: bytes

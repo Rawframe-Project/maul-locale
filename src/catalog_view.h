@@ -28,6 +28,8 @@ typedef struct Catalog
     uint32_t keysSize;
     uint32_t messagesSize;
     uint32_t localeLength;
+    // Whether it is its set's source catalog.
+    bool source;
     uint8_t stamp;
 } Catalog;
 
