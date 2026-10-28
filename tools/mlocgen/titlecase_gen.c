@@ -57,7 +57,7 @@ void TitlecaseAdd(const Titlecase* t, uint32_t kind, DataFile* file)
         char title[16];
         size_t length = 0;
         size_t needed = 0;
-        if (muniEncodeUtf8(cp, letter, &length) != muni_success ||
+        if (muniEncodeUtf8(cp, letter, sizeof(letter), &length) != muni_success ||
             muniConvertCase(letter, length, muni_caseTitle, muni_caseDefault, muni_convertStrict,
                             title, sizeof(title), &needed)
                     .status != muni_success)

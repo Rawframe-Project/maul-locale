@@ -58,7 +58,7 @@ static size_t Text(uint8_t* bytes, bool* starts, bool* wellFormed)
         }
         size_t size = 0;
         (void)muniEncodeUtf8(s_pool[Random() % (sizeof(s_pool) / sizeof(s_pool[0]))],
-                             (char*)bytes + n, &size);
+                             (char*)bytes + n, maxText - n, &size);
         n += size;
     }
     // The code point boundaries as decoding finds them: an ill-formed

@@ -60,7 +60,7 @@ static bool Oracle(const char* text, size_t length, uint32_t* out, size_t* count
 static size_t Append(char* text, size_t at, uint32_t c)
 {
     size_t size = 0;
-    if (muniEncodeUtf8(c, text + at, &size) != muni_success)
+    if (muniEncodeUtf8(c, text + at, maxText - at, &size) != muni_success)
     {
         return at;
     }

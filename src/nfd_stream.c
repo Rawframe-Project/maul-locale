@@ -71,9 +71,11 @@ static uint32_t Decompose(uint32_t codePoint, uint32_t* out)
         uint32_t c = stack[--depth];
         uint32_t first = 0;
         uint32_t second = 0;
-        if (depth + 2 <= nfdMaxDecomposition && muniDecomposePair(c, &first, &second))
+        size_t pieces = 0;
+        if (depth + 2 <= nfdMaxDecomposition &&
+            muniDecomposePair(c, &first, &second, &pieces) == muni_success && pieces > 0)
         {
-            if (second != 0)
+            if (pieces == 2)
             {
                 stack[depth++] = second;
             }
@@ -340,8 +342,10 @@ static bool Plain(uint32_t codePoint)
 {
     uint32_t first = 0;
     uint32_t second = 0;
-    return codePoint < nfdPlain || (muniGetCombiningClass(codePoint) == 0 &&
-                                    !muniDecomposePair(codePoint, &first, &second));
+    size_t pieces = 0;
+    return codePoint < nfdPlain ||
+           (muniGetCombiningClass(codePoint) == 0 &&
+            muniDecomposePair(codePoint, &first, &second, &pieces) == muni_success && pieces == 0);
 }
 
 enum

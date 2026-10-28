@@ -70,7 +70,7 @@ static void Fill(Pieces* p)
         size_t units = 0;
         uint32_t c = mlocNfdDecodeAt(p->text, p->next, &units);
         size_t size = 0;
-        (void)muniEncodeUtf8(c, p->bytes + p->count, &size);
+        (void)muniEncodeUtf8(c, p->bytes + p->count, pieceBytes - p->count, &size);
         for (size_t i = 0; i < size; i++)
         {
             p->unitAt[p->count + i] = p->next;

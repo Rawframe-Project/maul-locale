@@ -86,7 +86,7 @@ static void BufAppendCode(Buf* b, uint32_t c)
 {
     char bytes[4];
     size_t used = 0;
-    (void)muniEncodeUtf8(c, bytes, &used);
+    (void)muniEncodeUtf8(c, bytes, sizeof(bytes), &used);
     BufAppend(b, bytes, used);
 }
 

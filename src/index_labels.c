@@ -173,12 +173,12 @@ const uint8_t* mlocIndexTextBytes(const IndexText* text, uint8_t* scratch, uint3
     MLOC_ASSERT(text->length >= 1 && text->length <= collationMaxContext);
     size_t length = 0;
     size_t size = 0;
-    (void)muniEncodeUtf8(text->first, (char*)scratch, &size);
+    (void)muniEncodeUtf8(text->first, (char*)scratch, indexWordsBytes, &size);
     length += size;
     for (uint32_t i = 0; i < text->length; i++)
     {
         (void)muniEncodeUtf8(mlocLoad32(text->bytes + (size_t)i * 4), (char*)scratch + length,
-                             &size);
+                             indexWordsBytes - length, &size);
         length += size;
     }
     *lengthOut = (uint32_t)length;
