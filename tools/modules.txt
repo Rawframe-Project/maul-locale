@@ -5,7 +5,7 @@ bytes:
 asset: bytes
 data: bytes data_format data_view invariant kinds
 data_format:
-data_kinds: collation_index collation_tables currency_region data_view date_data kinds list_data locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables segment_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
+data_kinds: collation_index collation_tables currency_region data_view date_data kinds list_data locale_aliases locale_canonical locale_context locale_distance locale_fallback locale_likely locale_prefs names_data number_data number_parse plural relative_tables segment_tables spellout_data unit_data unit_names zone_code_tables zone_name_tables zone_tables
 data_view:
 decimal: bytes
 decimal_round: decimal
@@ -14,7 +14,8 @@ locale_parse:
 kinds:
 locale_likely: bytes data_view kinds locale_tables
 locale_tables:
-locale_canonical: bytes data_view kinds locale_keyword locale_likely locale_tables
+locale_aliases: bytes data_view locale_tables
+locale_canonical: bytes data_view kinds locale_aliases locale_keyword locale_likely locale_tables
 locale_extensions: bytes data_view kinds locale_canonical locale_tables
 locale_fallback: bytes data_view kinds locale_keyword locale_likely locale_tables
 locale_context: data_view kinds locale_fallback

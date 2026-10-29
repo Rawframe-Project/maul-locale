@@ -11,6 +11,7 @@
 #include "date_data.h"
 #include "kinds.h"
 #include "list_data.h"
+#include "locale_aliases.h"
 #include "locale_canonical.h"
 #include "locale_context.h"
 #include "locale_distance.h"

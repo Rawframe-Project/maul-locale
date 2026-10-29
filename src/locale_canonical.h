@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Canonicalization's parts for one another: the validators of its two
-// tables, the aliases applied to a locale's language id, and the
-// canonicalization of its extensions.
+// Canonicalization's parts for one another: the validator of the
+// extension aliases (the alias table's is in locale_aliases.h), the
+// aliases applied to a locale's language id, and the canonicalization
+// of its extensions.
 
 #ifndef MLOC_LOCALE_CANONICAL_H
 #define MLOC_LOCALE_CANONICAL_H
@@ -12,7 +13,6 @@
 
 #include "maul-locale/locale.h"
 
-bool mlocValidAliases(const DataView* view, DataSpan payload);
 bool mlocValidExtensionAliases(const DataView* view, DataSpan payload);
 
 // Applies the alias rules to a locale's language, script, region and
