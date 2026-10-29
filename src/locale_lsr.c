@@ -12,6 +12,7 @@
 #include "locale_lsr.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "locale_likely.h"
 #include "locale_tables.h"
 
@@ -156,6 +157,7 @@ static bool OnlyVariant(const char* tail, size_t size, const char* variant)
         return false;
     }
     // A variant has at most 8 bytes, so the tail goes on past it.
+    MLOC_ASSERT(length < size);
     return tail[length] == '\0' || SubtagLength(tail, size, length + 1) == 1;
 }
 
@@ -225,6 +227,8 @@ bool mlocMakeLsr(const Likely* likely, const uint8_t* regionGroups, const mlocLo
         .region = lsr.region == mlocPackRegion("ZZ", 2) ? 0 : lsr.region,
         .hasLanguage = !und,
     };
+    // A packed region has 11 bits, one for each of the table's slots.
+    MLOC_ASSERT(g.region < matchRegionSlots);
     uint64_t value = 0;
     if (g.hasLanguage && g.script != 0 && g.region != 0)
     {

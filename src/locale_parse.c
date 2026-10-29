@@ -6,6 +6,8 @@
 // the grammar while each extension lists its subtags in canonical order,
 // and the extensions are then written by their singleton.
 
+#include "invariant.h"
+
 #include "maul-locale/locale.h"
 
 #include <string.h>
@@ -190,6 +192,10 @@ static int SortGroups(Parser* p, int first, int groupCount, const int* starts, i
     {
         return -1;
     }
+    // The tokenizer keeps the subtags within MLOC_MAX_LOCALE_SUBTAGS, and
+    // each is ordered once.
+    MLOC_ASSERT(groupCount <= MLOC_MAX_LOCALE_SUBTAGS && first >= 0 && first <= end &&
+                end - first <= MLOC_MAX_LOCALE_SUBTAGS);
     int sorted[MLOC_MAX_LOCALE_SUBTAGS];
     int lengths[MLOC_MAX_LOCALE_SUBTAGS];
     int keys[MLOC_MAX_LOCALE_SUBTAGS];
