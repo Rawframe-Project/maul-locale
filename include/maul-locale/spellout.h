@@ -126,7 +126,10 @@ extern "C"
     /// strict number parser reads them. Reading starts at the first byte
     /// and stops where no rule reads more: compare the end with the
     /// length to require the whole text. The value is exact (ICU's is a
-    /// double).
+    /// double). A span of text searched once is not searched again
+    /// deeper, where ICU searches it again and can stop at its recursion
+    /// limit: text a formatter wrote always reads back within the steps,
+    /// which ICU's search may take minutes to do.
     ///
     /// @param formatter   A formatter from mlocInitSpelloutFormatter or
     ///                    mlocInitNumberingSystemFormatter.
@@ -139,8 +142,9 @@ extern "C"
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
     ///         mloc_errorLimit when a value read passes the decimal's
-    ///         bounds, or text crafted against the search makes it take
-    ///         more than MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorInvalid for a null
+    ///         bounds, or text crafted against the search, which no
+    ///         formatter writes, makes it take more than
+    ///         MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorInvalid for a null
     ///         pointer or a formatter the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
@@ -155,11 +159,12 @@ extern "C"
 
 // The most rule matches a parse tries: ICU4C's search is exponential, and
 // a long text crafted against it could keep it busy for minutes. A parse
-// past it is refused with mloc_errorLimit.
+// past it is refused with mloc_errorLimit; no text a formatter writes
+// comes near it.
 #define MLOC_MAX_SPELLOUT_STEPS 262144
 
     // Formatting and parsing nest rule sets up to 64 levels deep, as ICU
-    // does, and take about 100 KB of stack at the deepest: a thread for
+    // does, and take about 160 KB of stack at the deepest: a thread for
     // them, or a WebAssembly build (Emscripten's default stack is 64 KB),
     // needs a stack of 256 KB to format or parse rules nested that far.
 

@@ -497,22 +497,38 @@ static void TestParse(void)
                      "1.001", 31),
           "Polish numerators with their zeros, exact where ICU's double is not");
     // Lithuanian's 123456789012345678.75 nests past ICU's limit, which
-    // keeps ICU's search busy for minutes.
+    // keeps ICU's search busy for minutes; a span searched once is not
+    // searched again deeper, so the text reads back within the steps.
     mlocLocale lt;
     mlocSpelloutFormatter words;
     mlocDecimal big;
     char text[512];
-    mlocOutput written = {.buffer = text, .capacity = sizeof(text)};
+    mlocOutput written = {.buffer = text, .capacity = sizeof(text) - 1};
     size_t stop = 99;
-    CHECK(Locale("lt", &lt) &&
-              mlocInitSpelloutFormatter(&s_data, &lt, "%spellout-numbering", 19, nullptr, &words) ==
-                  mloc_success &&
-              Decimal("123456789012345678.75", &big) &&
-              mlocSpelloutFormatter_Format(&words, &big, &written) == mloc_success &&
-              mlocSpelloutFormatter_Parse(&words, text, written.length, &big, &stop) ==
-                  mloc_errorLimit &&
-              stop == 0,
-          "a search past its steps");
+    bool numbering = Locale("lt", &lt) &&
+                     mlocInitSpelloutFormatter(&s_data, &lt, "%spellout-numbering", 19, nullptr,
+                                               &words) == mloc_success &&
+                     Decimal("123456789012345678.75", &big) &&
+                     mlocSpelloutFormatter_Format(&words, &big, &written) == mloc_success;
+    text[numbering ? written.length : 0] = '\0';
+    CHECK(numbering &&
+              Parses("lt", "%spellout-numbering", text, "123456789012345678.75", written.length),
+          "a number nested past ICU's limit reads back");
+    // Of the texts the formatters write, the search met its bound only in
+    // Lithuanian's, this one among them.
+    mlocSpelloutFormatter genitive;
+    mlocDecimal negative;
+    mlocOutput genitiveText = {.buffer = text, .capacity = sizeof(text) - 1};
+    bool long307 =
+        mlocInitSpelloutFormatter(&s_data, &lt, "%spellout-cardinal-masculine-genitive", 37,
+                                  nullptr, &genitive) == mloc_success &&
+        Decimal("-3544668469065.756978", &negative) &&
+        mlocSpelloutFormatter_Format(&genitive, &negative, &genitiveText) == mloc_success &&
+        genitiveText.length == 307;
+    text[long307 ? genitiveText.length : 0] = '\0';
+    CHECK(long307 && Parses("lt", "%spellout-cardinal-masculine-genitive", text,
+                            "-3544668469065.756978", genitiveText.length),
+          "a long genitive with millionths reads back");
     // A long Lithuanian number reads within the steps, its searches kept
     // over cheaper ones; capitalized, no rule starts where it does, which
     // ends the search at once.
@@ -533,6 +549,23 @@ static void TestParse(void)
                   mloc_errorSyntax &&
               stop == 0,
           "a long number within the steps, a text no rule starts ended at once");
+    // The same number written four times over, which no rule writes,
+    // takes the search past its steps.
+    static char s_four[4 * sizeof(s_long)];
+    size_t fourLength = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        if (i > 0)
+        {
+            s_four[fourLength++] = ' ';
+        }
+        memcpy(s_four + fourLength, s_long, sizeof(s_long) - 1);
+        fourLength += sizeof(s_long) - 1;
+    }
+    stop = 99;
+    CHECK(mlocSpelloutFormatter_Parse(&words, s_four, fourLength, &big, &stop) == mloc_errorLimit &&
+              stop == 0,
+          "a search past its steps");
     mlocLocale en;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
