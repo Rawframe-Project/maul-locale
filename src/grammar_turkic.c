@@ -6,6 +6,8 @@
 
 #include "grammar_turkic.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 // The Latin letters any Turkic language reads as Turkish does, the
@@ -182,6 +184,7 @@ uint16_t mlocTurkicLetterInfo(const TurkicLanguage* language, uint32_t c)
 
 uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut)
 {
+    MLOC_ASSERT(end > 0);
     size_t at = end - 1;
     while (at > 0 && (text[at] & 0xC0) == 0x80)
     {
@@ -337,6 +340,7 @@ static void Put(const TurkicLanguage* language, uint32_t c, TurkicSound* sound, 
 {
     uint8_t* at = (uint8_t*)out->text + out->length;
     size_t n = c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+    MLOC_ASSERT(c < 0x10000 && out->length + n <= sizeof(out->text));
     if (n == 1)
     {
         at[0] = (uint8_t)c;
@@ -426,6 +430,7 @@ static uint32_t Next(const char* text, size_t* at)
 static void AppendOne(const TurkicLanguage* language, uint32_t c, TurkicSound* sound,
                       TurkicSuffixes* out)
 {
+    MLOC_ASSERT(sound->final < turkicClasses);
     size_t front = sound->back ? 0 : 1;
     size_t round = sound->round ? 1 : 0;
     const TurkicOnset* onset = OnsetOf(language, c);
@@ -460,6 +465,7 @@ static void AppendOne(const TurkicLanguage* language, uint32_t c, TurkicSound* s
 static void Append(const TurkicLanguage* language, const char* morpheme, TurkicSound* sound,
                    TurkicSuffixes* out)
 {
+    MLOC_ASSERT(morpheme != nullptr);
     for (size_t at = 0; morpheme[at] != '\0';)
     {
         AppendOne(language, Next(morpheme, &at), sound, out);

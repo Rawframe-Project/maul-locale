@@ -14,6 +14,7 @@
 #include "grammar_ko.h"
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
+#include "invariant.h"
 #include "number_core.h"
 #include "number_format.h"
 
@@ -671,6 +672,7 @@ static mlocResult InflectHungarian(const Inflector* f, const uint8_t* text, size
     bool hyphen = form.hyphen && form.length > 0;
     bool whole = hyphen || form.length == 0;
     out->kept = whole ? length : e->start + form.kept;
+    MLOC_ASSERT(form.tailLength <= sizeof(out->tail));
     memcpy(out->tail, form.tail, form.tailLength);
     out->tailLength = whole ? 0 : form.tailLength;
     out->mark = hyphen ? '-' : 0;
@@ -717,6 +719,7 @@ static mlocResult InflectFinnish(const Inflector* f, const uint8_t* text, size_t
     // ("5:nnen"); after a closing mark the text stays whole.
     bool period = t.ordinal && form.length > 0 && e->end + 1 == length;
     out->kept = !whole ? e->start + form.kept : period ? e->end : length;
+    MLOC_ASSERT(form.tailLength <= sizeof(out->tail));
     memcpy(out->tail, form.tail, form.tailLength);
     out->tailLength = whole ? 0 : form.tailLength;
     out->mark = form.mark;
@@ -850,6 +853,7 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
             language->stem(text + e.start, e.end - e.start, marks.marks, &out->suffixes, &stem))
         {
             out->kept = e.start + stem.kept;
+            MLOC_ASSERT(stem.tailLength <= sizeof(out->tail));
             memcpy(out->tail, stem.tail, stem.tailLength);
             out->tailLength = stem.tailLength;
         }
@@ -869,6 +873,7 @@ static void Write(const uint8_t* text, const Inflected* in, NumberWriter* w)
         mlocWritePart(w, mloc_inflectionPartApostrophe, (const uint8_t*)&in->mark, 1);
     }
     const TurkicSuffixes* s = &in->suffixes;
+    MLOC_ASSERT(s->particle <= s->length);
     mlocWritePart(w, mloc_inflectionPartSuffix, (const uint8_t*)s->text, s->particle);
     mlocWritePart(w, mloc_inflectionPartParticle, (const uint8_t*)s->text + s->particle,
                   (size_t)(s->length - s->particle));

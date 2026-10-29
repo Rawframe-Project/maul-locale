@@ -6,6 +6,8 @@
 
 #include "grammar_fi_word.h"
 
+#include "invariant.h"
+
 #include "maul-unicode/encoding.h"
 
 #include <string.h>
@@ -92,6 +94,7 @@ bool mlocFinnishIsBack(const FinnishWord* w)
 
 void mlocFinnishPush(FinnishWord* w, uint32_t c)
 {
+    MLOC_ASSERT(w->count < finnishLetterRoom);
     if (w->count < finnishLetterRoom)
     {
         w->c[w->count++] = c;
