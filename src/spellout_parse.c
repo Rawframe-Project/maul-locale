@@ -112,7 +112,8 @@ typedef struct Parser
     // Whether the search has met the depth limit, below the rule set
     // search under way.
     bool limited;
-    Memo memo[memoSize];
+    // The searches remembered, in the caller's workspace.
+    Memo* memo;
 } Parser;
 
 static void Fail(Parser* p, mlocResult error)
@@ -853,10 +854,14 @@ static void SetParse(Parser* p, uint32_t index, SpelloutText text, uint64_t uppe
 }
 
 mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, size_t length,
-                            mlocDecimal* valueOut, size_t* endOut)
+                            mlocSpelloutWorkspace* workspace, mlocDecimal* valueOut, size_t* endOut)
 {
     static_assert(sizeof(Memo) == 32 && mloc_decimalNaN < 4, "a memo slot stays 32 bytes");
+    static_assert(sizeof(Memo) * memoSize <= sizeof(mlocSpelloutWorkspace) &&
+                      alignof(Memo) <= alignof(mlocSpelloutWorkspace),
+                  "the memo fits in a workspace");
     Parser p;
+    p.memo = (Memo*)workspace->opaque;
     p.f = format;
     p.r = mlocReadSpelloutRules((DataSpan){format->group, format->groupSize});
     p.origin = text;

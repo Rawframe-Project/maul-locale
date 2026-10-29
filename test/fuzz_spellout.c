@@ -106,16 +106,20 @@ static bool MakeFormatter(const mlocDataSet* set, const mlocData* rules, uint8_t
 
 // Parses text twice: a refusal of syntax or capacity alone, the same
 // reading both times, an end inside the text.
+// The memory every parse searches with.
+static mlocSpelloutWorkspace s_workspace;
+
 static void CheckParse(const mlocSpelloutFormatter* formatter, const char* text, size_t length)
 {
     mlocDecimal first;
     mlocDecimal second;
     size_t end = 0;
     size_t again = 0;
-    mlocResult r = mlocSpelloutFormatter_Parse(formatter, text, length, &first, &end);
+    mlocResult r = mlocSpelloutFormatter_Parse(formatter, text, length, &s_workspace, &first, &end);
     Require(r == mloc_success || r == mloc_errorSyntax || r == mloc_errorLimit);
     Require(r == mloc_success ? end > 0 && end <= length : end == 0);
-    Require(mlocSpelloutFormatter_Parse(formatter, text, length, &second, &again) == r &&
+    Require(mlocSpelloutFormatter_Parse(formatter, text, length, &s_workspace, &second, &again) ==
+                r &&
             again == end);
     Require(r != mloc_success || memcmp(&first, &second, sizeof(first)) == 0);
 }

@@ -32,6 +32,9 @@ typedef struct Case
     const char* expected;
 } Case;
 
+// The memory every parse searches with.
+static mlocSpelloutWorkspace s_workspace;
+
 static const Case s_cases[] = {
     {"%a:\n"
      "0: zero;\n"
@@ -806,7 +809,9 @@ static mlocResult ParseText(const char* rules, size_t at, uint8_t byte, const ch
     r = r == mloc_success
             ? mlocInitSpelloutFormatter(&set, &locale, nullptr, 0, nullptr, &formatter)
             : r;
-    r = r >= 0 ? mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &decimal, endOut) : r;
+    r = r >= 0 ? mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &s_workspace, &decimal,
+                                             endOut)
+               : r;
     mlocOutput output = {.buffer = value, .capacity = capacity - 1};
     if (r == mloc_success && mlocFormatDecimal(&decimal, &output) == mloc_success)
     {

@@ -18,8 +18,10 @@
 // mloc_success with the value and the bytes read; mloc_errorSyntax, the
 // end 0, when no rule set reads anything or the group cannot be parsed;
 // mloc_errorLimit when a value passes a decimal's digits or the search
-// its steps; mloc_errorFormat for rules chained past the frames.
+// its steps; mloc_errorFormat for rules chained past the frames. The
+// workspace holds the searches remembered.
 mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, size_t length,
-                            mlocDecimal* valueOut, size_t* endOut);
+                            mlocSpelloutWorkspace* workspace, mlocDecimal* valueOut,
+                            size_t* endOut);
 
 #endif

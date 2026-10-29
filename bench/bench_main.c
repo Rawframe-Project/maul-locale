@@ -357,6 +357,7 @@ static bool PrepareNumbers(void)
 static mlocDataSet s_withRules;
 static mlocLocale s_fr;
 static mlocSpelloutFormatter s_enWords;
+static mlocSpelloutWorkspace s_workspace;
 static mlocSpelloutFormatter s_ruWords;
 static mlocSpelloutFormatter s_frOrdinal;
 static mlocSpelloutFormatter s_roman;
@@ -401,8 +402,8 @@ static void SpelloutParse(void)
 {
     mlocDecimal d;
     size_t end = 0;
-    s_sink = mlocSpelloutFormatter_Parse(&s_enWords, "one thousand two hundred thirty-four", 36, &d,
-                                         &end) +
+    s_sink = mlocSpelloutFormatter_Parse(&s_enWords, "one thousand two hundred thirty-four", 36,
+                                         &s_workspace, &d, &end) +
              (int)end;
 }
 

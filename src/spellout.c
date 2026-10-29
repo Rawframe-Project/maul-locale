@@ -338,15 +338,16 @@ mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
 }
 
 mlocResult mlocSpelloutFormatter_Parse(const mlocSpelloutFormatter* formatter, const char* text,
-                                       size_t length, mlocDecimal* decimalOut, size_t* endOut)
+                                       size_t length, mlocSpelloutWorkspace* workspace,
+                                       mlocDecimal* decimalOut, size_t* endOut)
 {
     SpelloutFormat f;
     if (!ReadFormatter(formatter, true, &f) || (text == nullptr && length != 0) ||
-        decimalOut == nullptr || endOut == nullptr)
+        workspace == nullptr || decimalOut == nullptr || endOut == nullptr)
     {
         return mloc_errorInvalid;
     }
-    return mlocReadSpellout(&f, (const uint8_t*)text, length, decimalOut, endOut);
+    return mlocReadSpellout(&f, (const uint8_t*)text, length, workspace, decimalOut, endOut);
 }
 
 // The public sets of the locale's spell-out and ordinal suffix groups:

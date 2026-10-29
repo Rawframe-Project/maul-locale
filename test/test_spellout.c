@@ -21,6 +21,8 @@
 
 static mlocDataSet s_builtin;
 static mlocDataSet s_data;
+// The memory every parse searches with.
+static mlocSpelloutWorkspace s_workspace;
 
 static bool Locale(const char* id, mlocLocale* out)
 {
@@ -312,7 +314,8 @@ static void TestRefusals(void)
               mlocSpelloutFormatter_Format(&hollow, &decimal, &words) == mloc_success &&
               words.length == 10 &&
               mlocSpelloutFormatter_Format(&hollow, &huge, &more) == mloc_errorInvalid &&
-              mlocSpelloutFormatter_Parse(&hollow, "one", 3, &back, &end) == mloc_errorInvalid,
+              mlocSpelloutFormatter_Parse(&hollow, "one", 3, &s_workspace, &back, &end) ==
+                  mloc_errorInvalid,
           "a formatter without its symbols: refused where they are read");
 }
 
@@ -425,8 +428,8 @@ static bool Parses(const char* id, const char* ruleSet, const char* text, const 
                                                            strlen(ruleSet + 1), nullptr, &formatter)
                         : mlocInitSpelloutFormatter(&s_data, &locale, ruleSet, strlen(ruleSet),
                                                     nullptr, &formatter)) >= 0 &&
-                mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &decimal, &end) ==
-                    mloc_success &&
+                mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &s_workspace, &decimal,
+                                            &end) == mloc_success &&
                 mlocFormatDecimal(&decimal, &output) == mloc_success && end == expectedEnd &&
                 output.length == strlen(expected) && memcmp(value, expected, output.length) == 0;
     if (!same)
@@ -545,8 +548,8 @@ static void TestParse(void)
         "e\xC5\xA1iasde\xC5\xA1imt";
     stop = 99;
     CHECK(Parses("lt", "%spellout-numbering", s_long, "366503875925", 163) &&
-              mlocSpelloutFormatter_Parse(&words, s_capital, sizeof(s_capital) - 1, &big, &stop) ==
-                  mloc_errorSyntax &&
+              mlocSpelloutFormatter_Parse(&words, s_capital, sizeof(s_capital) - 1, &s_workspace,
+                                          &big, &stop) == mloc_errorSyntax &&
               stop == 0,
           "a long number within the steps, a text no rule starts ended at once");
     // The same number written four times over, which no rule writes,
@@ -563,7 +566,8 @@ static void TestParse(void)
         fourLength += sizeof(s_long) - 1;
     }
     stop = 99;
-    CHECK(mlocSpelloutFormatter_Parse(&words, s_four, fourLength, &big, &stop) == mloc_errorLimit &&
+    CHECK(mlocSpelloutFormatter_Parse(&words, s_four, fourLength, &s_workspace, &big, &stop) ==
+                  mloc_errorLimit &&
               stop == 0,
           "a search past its steps");
     mlocLocale en;
@@ -572,18 +576,21 @@ static void TestParse(void)
     size_t end = 99;
     CHECK(Locale("en", &en) &&
               mlocInitSpelloutFormatter(&s_data, &en, nullptr, 0, nullptr, &formatter) >= 0 &&
-              mlocSpelloutFormatter_Parse(&formatter, "Twenty-one", 10, &decimal, &end) ==
-                  mloc_errorSyntax &&
+              mlocSpelloutFormatter_Parse(&formatter, "Twenty-one", 10, &s_workspace, &decimal,
+                                          &end) == mloc_errorSyntax &&
               end == 0 &&
-              mlocSpelloutFormatter_Parse(&formatter, nullptr, 0, &decimal, &end) ==
+              mlocSpelloutFormatter_Parse(&formatter, nullptr, 0, &s_workspace, &decimal, &end) ==
                   mloc_errorSyntax &&
-              mlocSpelloutFormatter_Parse(&formatter, nullptr, 1, &decimal, &end) ==
+              mlocSpelloutFormatter_Parse(&formatter, nullptr, 1, &s_workspace, &decimal, &end) ==
                   mloc_errorInvalid &&
-              mlocSpelloutFormatter_Parse(&formatter, "one", 3, nullptr, &end) ==
+              mlocSpelloutFormatter_Parse(&formatter, "one", 3, nullptr, &decimal, &end) ==
                   mloc_errorInvalid &&
-              mlocSpelloutFormatter_Parse(&formatter, "one", 3, &decimal, nullptr) ==
+              mlocSpelloutFormatter_Parse(&formatter, "one", 3, &s_workspace, nullptr, &end) ==
                   mloc_errorInvalid &&
-              mlocSpelloutFormatter_Parse(nullptr, "one", 3, &decimal, &end) == mloc_errorInvalid,
+              mlocSpelloutFormatter_Parse(&formatter, "one", 3, &s_workspace, &decimal, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocSpelloutFormatter_Parse(nullptr, "one", 3, &s_workspace, &decimal, &end) ==
+                  mloc_errorInvalid,
           "nothing read, empty text, null pointers");
 }
 
