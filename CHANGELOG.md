@@ -5,6 +5,135 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.4.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.3.0...v0.4.0) (2026-10-29)
+
+### Added
+
+- `mlocSpelloutWorkspace`, the 64 KiB a spell-out parse searches in,
+  which the caller gives `mlocSpelloutFormatter_Parse`, so that the
+  search's memory is not on the stack: under Emscripten, reading "five"
+  back fits the default 64 KB stack
+  ([#197](https://github.com/Rawframe-Project/maul-locale/pull/197)).
+
+### Changed
+
+- **Breaking: the data format is 0x80000006, and catalogs and compiled
+  messages have formats of their own.** Data files of 0.3.x are refused
+  with `mloc_errorVersion`: take this release's data files or
+  regenerate them with its `mlocgen`. A catalog is no longer a data file:
+  `mloccat compile` writes `<locale>.mlct` files, and
+  `mlocOpenCatalog(bytes, size, catalogOut)` opens the file's bytes,
+  which must outlive the catalog, with no `mlocOpenData` before it. A
+  compiled message has its own format (magic `MLMS`, format 2). Rebuild
+  catalogs with this release's `mloccat` and compile stored messages
+  again. From now on a stored message survives data and Unicode updates,
+  unless its keys or names hold a code point its compiler's Unicode
+  version left unassigned
+  ([#154](https://github.com/Rawframe-Project/maul-locale/pull/154),
+  [#155](https://github.com/Rawframe-Project/maul-locale/pull/155)).
+- **Breaking: public calls are renamed by the family's naming rule.** A
+  call that acts on one of the library's objects is
+  `mlocObject_Verb` (`mlocFormatNumber` is
+  `mlocNumberFormatter_Format`, `mlocNextSegmentBreak` is
+  `mlocSegmenter_NextBreak`), and `mlocResultName` is
+  `mlocGetResultName`. Every `mlocInit` and `mlocOpen` call but
+  `mlocOpenBuiltinData` takes its output last instead of first. 61 calls
+  are renamed; the pull request lists each one, old to new
+  ([#185](https://github.com/Rawframe-Project/maul-locale/pull/185)).
+- **Breaking: result values change, and three are renamed.**
+  `mloc_errorData` is `mloc_errorFormat` (-8), `mloc_errorDataVersion`
+  is `mloc_errorVersion` (-7), and strict mode's old `mloc_errorFormat`
+  is `mloc_errorFallback` (-34). `mloc_errorSyntax` is -32 and
+  `mloc_errorNotFound` -33. A fixed bound (a decimal's digits, a unit's
+  parts, a catalog chain's length, a message's bounds) is refused with
+  the new `mloc_errorLimit` (-9) instead of `mloc_errorCapacity` or
+  `mloc_errorInvalid`, and a message past a bound is refused when it is
+  compiled instead of when it is bound. `mlocDecimalDigits`,
+  `mlocDecimalMaxExponent`, `mlocUnitMaxParts` and
+  `MLOC_CATALOG_CHAIN_MAX` are `MLOC_MAX_DECIMAL_DIGITS`,
+  `MLOC_MAX_DECIMAL_EXPONENT`, `MLOC_MAX_UNIT_PARTS` and
+  `MLOC_MAX_CATALOG_CHAIN`. Rebuild against the new headers, rename the
+  statuses and constants, and replace any stored raw values
+  ([#146](https://github.com/Rawframe-Project/maul-locale/pull/146),
+  [#147](https://github.com/Rawframe-Project/maul-locale/pull/147)).
+- **Breaking: `mlocDate`, `mlocTime` and `mlocDecimal` have no
+  `reserved` field.** Stop setting it, and compare two decimals by their
+  fields, not with `memcmp`
+  ([#143](https://github.com/Rawframe-Project/maul-locale/pull/143)).
+- **Breaking: spell-out parsing reads back every text a formatter
+  writes.** Long texts, such as Lithuanian's long numbers, which were
+  refused with `mloc_errorLimit`, now read back to their value: a
+  span of text searched once is kept at its own depth and every deeper
+  one, where ICU4C searches it again and can stop at its recursion
+  limit. `mlocSpelloutFormatter_Parse` takes an `mlocSpelloutWorkspace*`
+  after the text's length (see Added). Only text crafted against the
+  search still meets `MLOC_MAX_SPELLOUT_STEPS`
+  ([#197](https://github.com/Rawframe-Project/maul-locale/pull/197)).
+- **Breaking: zoned differences across a day-long clock jump are
+  refused.** `mlocZonedDateTimeUntil` and `mlocZonedDateTimeTotal`
+  refuse with `mloc_errorInvalid` a difference rounded or totaled across
+  a jump of the zone's clocks by a whole day (`Pacific/Apia` on
+  2011-12-30), where they gave a wrong answer or divided by zero
+  ([#170](https://github.com/Rawframe-Project/maul-locale/pull/170)).
+- **Breaking: Maul Unicode 0.6.0.** Building against an installed Maul
+  Unicode needs 0.6.0. A complex breaker that calls back into the
+  segmenter it serves is refused with `mloc_errorInvalid`, where it
+  recursed until the stack overflowed; `mlocComplexBreakFunction`'s
+  documentation says so
+  ([#173](https://github.com/Rawframe-Project/maul-locale/pull/173),
+  [#174](https://github.com/Rawframe-Project/maul-locale/pull/174)).
+- Every output parameter's name ends in `Out` (`textOut`, `bufferOut`,
+  `keyOut`, `faultsOut`, `storageOut`). Calls compile unchanged
+  ([#199](https://github.com/Rawframe-Project/maul-locale/pull/199)).
+- An alphabetic index's bytes start with `MLIX`, and `index.h` says
+  they are valid only in the process that built them, like a
+  collator's: an index is not stored
+  ([#121](https://github.com/Rawframe-Project/maul-locale/pull/121)).
+- `docs/user/data.md` says a data file's bytes must not change once
+  opened, and how to replace a file
+  ([#97](https://github.com/Rawframe-Project/maul-locale/pull/97)).
+- Spell-out parsing finds text faster: the fuzz corpus reads back 6%
+  faster in a Release build
+  ([#200](https://github.com/Rawframe-Project/maul-locale/pull/200)).
+
+### Fixed
+
+- An alphabetic index put a name in the wrong bucket when a hidden
+  bucket came before the one a display chain ends at (labels A, Ch*, D
+  and Gh* put "Gz" in A, where ICU4C puts it in D). No CLDR 49 locale
+  has such labels
+  ([#123](https://github.com/Rawframe-Project/maul-locale/pull/123)).
+- A failed `mlocMessageFormatter_Bind` leaves no bound message in the
+  buffer, as documented. Before, most refusals left an earlier message
+  bound, and it still formatted
+  ([#149](https://github.com/Rawframe-Project/maul-locale/pull/149)).
+- On 32-bit targets, lengths that pass `SIZE_MAX` no longer wrap: a
+  formatter's output length saturates at `SIZE_MAX`, and a sort key's
+  length needed is counted in 64 bits. Before, a text near the limit got
+  a needed size too short, or a short text reported as `mloc_success`.
+  No byte was written past the capacity
+  ([#139](https://github.com/Rawframe-Project/maul-locale/pull/139),
+  [#141](https://github.com/Rawframe-Project/maul-locale/pull/141)).
+- Hostile bytes are refused where they were read out of bounds: a
+  compiled message or catalog whose counts wrap the size check, a number
+  table unit whose size wraps on a 32-bit target, and a data file whose
+  likely subtags table lacks `und`, which is now refused when it opens
+  ([#135](https://github.com/Rawframe-Project/maul-locale/pull/135),
+  [#137](https://github.com/Rawframe-Project/maul-locale/pull/137),
+  [#180](https://github.com/Rawframe-Project/maul-locale/pull/180)).
+- A zoned difference rounded to days across a day-long jump no longer
+  stops a build with assertions on
+  ([#167](https://github.com/Rawframe-Project/maul-locale/pull/167)).
+- `mlocgen` refuses a CLDR or tzdb token too long for its buffer, an
+  element with more than 64 distinguishing attributes, and an alias of
+  64 bytes or more, naming the file and the reason, where it cut or
+  skipped them; it no longer passes `qsort` a null pointer. The
+  generated data does not change
+  ([#92](https://github.com/Rawframe-Project/maul-locale/pull/92),
+  [#106](https://github.com/Rawframe-Project/maul-locale/pull/106),
+  [#110](https://github.com/Rawframe-Project/maul-locale/pull/110),
+  [#113](https://github.com/Rawframe-Project/maul-locale/pull/113)).
+
 ## [0.3.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.2.3...v0.3.0) (2026-10-25)
 
 ### Added
