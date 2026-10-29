@@ -17,7 +17,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "names\n");
         return 1;
@@ -58,9 +58,9 @@ int main(void)
         char out[256];
         mlocOutput output = {.buffer = out, .capacity = sizeof(out)};
         if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-            mlocInitCurrencyFormatter(&f, &data, &locale, code, strlen(code), &o) < 0 ||
+            mlocInitCurrencyFormatter(&data, &locale, code, strlen(code), &o, &f) < 0 ||
             mlocParseDecimal(value, strlen(value), &d).status != mloc_success ||
-            mlocFormatCurrency(&f, &d, &output) != mloc_success)
+            mlocCurrencyFormatter_Format(&f, &d, &output) != mloc_success)
         {
             printf("%s\tERR\n", line);
             continue;

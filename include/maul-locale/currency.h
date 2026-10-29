@@ -100,8 +100,6 @@ extern "C"
     /// ("USD 3.00", "$3.00"). A code the data does not know shows as its
     /// code with the default digits.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number and currency units,
     ///                      the parents and the likely subtags.
     /// @param locale        The locale, canonicalized.
@@ -109,6 +107,8 @@ extern "C"
     ///                      letters in any case.
     /// @param codeLength    Its length in bytes, 3.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the number or currency
@@ -120,8 +120,8 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitCurrencyFormatter(
-        mlocCurrencyFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale,
-        const char* code, size_t codeLength, const mlocCurrencyOptions* options);
+        const mlocDataSet* data, const mlocLocale* locale, const char* code, size_t codeLength,
+        const mlocCurrencyOptions* options, mlocCurrencyFormatter* formatterOut);
 
     /// Formats an amount of the formatter's currency.
     ///
@@ -136,11 +136,10 @@ extern "C"
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatCurrency(const mlocCurrencyFormatter* formatter,
-                                                          const mlocDecimal* decimal,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCurrencyFormatter_Format(
+        const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
 
-    /// Formats a range of two amounts, as mlocFormatNumberRange does
+    /// Formats a range of two amounts, as mlocNumberFormatter_FormatRange does
     /// ("$3.00 – $5.00", "3,00–5,00 €"; ends that write alike give
     /// "~$5.00"). A name, or the appended code, is written once when both
     /// ends take the same plural category ("3.00–5.00 US dollars"), else
@@ -160,13 +159,13 @@ extern "C"
     ///         did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocFormatCurrencyRange(const mlocCurrencyFormatter* formatter, const mlocDecimal* start,
-                            const mlocDecimal* end, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCurrencyFormatter_FormatRange(
+        const mlocCurrencyFormatter* formatter, const mlocDecimal* start, const mlocDecimal* end,
+        mlocOutput* output);
 
     /// Reads an amount of money as a person types it (ICU's
     /// DecimalFormat::parse on a currency formatter, or with anyCurrency
-    /// its parseCurrency), as mlocParseNumber reads a number: the
+    /// its parseCurrency), as mlocNumberFormatter_Parse reads a number: the
     /// formatter's separators and pattern, and the currency where the
     /// pattern or the person puts it: the formatter's symbol as written
     /// (or the text it shows, a narrow symbol), its code in any case, its
@@ -192,18 +191,16 @@ extern "C"
     ///                     mloc_errorSyntax the offset reading stopped at.
     /// @return mloc_success; mloc_errorSyntax when no amount is read (or
     ///         no currency, with anyCurrency); mloc_errorLimit as for
-    ///         mlocParseNumber, and with anyCurrency for a chain of more
+    ///         mlocNumberFormatter_Parse, and with anyCurrency for a chain of more
     ///         than MLOC_MAX_CURRENCY_PARSE_UNITS currency units of a kind;
     ///         mloc_errorNotFound for data without the parse sets; mloc_errorInvalid for a null
     ///         pointer, a mode out of range, or a formatter the library did
     ///         not make or of compact notation, or anyCurrency past 1.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter,
-                                                         const char* text, size_t length,
-                                                         mlocParseMode mode, uint8_t anyCurrency,
-                                                         mlocDecimal* decimalOut, char* codeOut,
-                                                         size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCurrencyFormatter_Parse(
+        const mlocCurrencyFormatter* formatter, const char* text, size_t length, mlocParseMode mode,
+        uint8_t anyCurrency, mlocDecimal* decimalOut, char* codeOut, size_t* endOut);
 
     /// Writes a currency's symbol, or a variant of it, as a locale shows
     /// it (the ECMA-402 DisplayNames of type currency take names, below).

@@ -265,8 +265,8 @@ static mlocResult Write(const char* id, const mlocDurationOptions* options,
     {
         return mloc_errorInvalid;
     }
-    mlocResult r = mlocInitDurationFormatter(&formatter, &s_data, &locale, options);
-    return r < 0 ? r : mlocFormatDuration(&formatter, d, output);
+    mlocResult r = mlocInitDurationFormatter(&s_data, &locale, options, &formatter);
+    return r < 0 ? r : mlocDurationFormatter_Format(&formatter, d, output);
 }
 
 static void TestCases(void)
@@ -345,8 +345,8 @@ static void TestResolved(void)
     mlocDurationOptions got;
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
               mlocCanonicalizeLocale(&s_data, "af", 2, &af, nullptr).status == mloc_success &&
-              mlocInitDurationFormatter(&formatter, &s_data, &en, &digital) == mloc_success &&
-              mlocGetDurationOptions(&formatter, &got) == mloc_success,
+              mlocInitDurationFormatter(&s_data, &en, &digital, &formatter) == mloc_success &&
+              mlocDurationFormatter_GetOptions(&formatter, &got) == mloc_success,
           "a digital formatter's options");
     CHECK(got.style == mloc_durationStyleDigital && got.fields[0] == mloc_durationFieldShort &&
               got.displays[0] == mloc_durationDisplayAuto &&
@@ -357,13 +357,13 @@ static void TestResolved(void)
               got.fields[7] == mloc_durationFieldNumeric &&
               got.displays[7] == mloc_durationDisplayAuto && !got.fixedFractionalDigits,
           "ECMA-402's digital defaults, a fraction resolved as numeric");
-    CHECK(mlocInitDurationFormatter(&formatter, &s_data, &af, &digital) == mloc_success &&
-              mlocGetDurationOptions(&formatter, &got) == mloc_success &&
+    CHECK(mlocInitDurationFormatter(&s_data, &af, &digital, &formatter) == mloc_success &&
+              mlocDurationFormatter_GetOptions(&formatter, &got) == mloc_success &&
               got.fields[4] == mloc_durationFieldTwoDigit,
           "hours of two digits where the locale's hms pattern pads them");
     mlocDurationOptions fixed = {.fixedFractionalDigits = true, .fractionalDigits = 4};
-    CHECK(mlocInitDurationFormatter(&formatter, &s_data, &en, &fixed) == mloc_success &&
-              mlocGetDurationOptions(&formatter, &got) == mloc_success &&
+    CHECK(mlocInitDurationFormatter(&s_data, &en, &fixed, &formatter) == mloc_success &&
+              mlocDurationFormatter_GetOptions(&formatter, &got) == mloc_success &&
               got.style == mloc_durationStyleShort && got.fields[9] == mloc_durationFieldShort &&
               got.fixedFractionalDigits && got.fractionalDigits == 4,
           "the defaults' short fields and fixed digits");
@@ -375,7 +375,7 @@ static bool Refused(mlocDurationOptions o)
     mlocLocale en;
     mlocDurationFormatter formatter;
     return mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-           mlocInitDurationFormatter(&formatter, &s_data, &en, &o) == mloc_errorInvalid;
+           mlocInitDurationFormatter(&s_data, &en, &o, &formatter) == mloc_errorInvalid;
 }
 
 static void TestOptionRefusals(void)
@@ -419,40 +419,42 @@ static void TestRefusals(void)
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocDurationValues one = {.hours = 1};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitDurationFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDurationFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDurationFormatter(&formatter, &s_data, nullptr, nullptr) ==
+              mlocInitDurationFormatter(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitDurationFormatter(nullptr, &en, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitDurationFormatter(&s_data, nullptr, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitDurationFormatter(&formatter, &s_data, &en, nullptr) == mloc_success,
+              mlocInitDurationFormatter(&s_data, &en, nullptr, &formatter) == mloc_success,
           "null pointers at init");
     mlocDurationValues mixed = {.hours = 1, .minutes = -1};
     mlocDurationValues fraction = {.hours = 1.5};
     mlocDurationValues huge = {.seconds = 9007199254740992.0};
-    CHECK(mlocFormatDuration(&formatter, &mixed, &output) == mloc_errorInvalid &&
-              mlocFormatDuration(&formatter, &fraction, &output) == mloc_errorInvalid &&
-              mlocFormatDuration(&formatter, &huge, &output) == mloc_errorInvalid &&
-              mlocFormatDuration(&formatter, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatDuration(&formatter, &one, nullptr) == mloc_errorInvalid &&
-              mlocFormatDuration(nullptr, &one, &output) == mloc_errorInvalid,
+    CHECK(mlocDurationFormatter_Format(&formatter, &mixed, &output) == mloc_errorInvalid &&
+              mlocDurationFormatter_Format(&formatter, &fraction, &output) == mloc_errorInvalid &&
+              mlocDurationFormatter_Format(&formatter, &huge, &output) == mloc_errorInvalid &&
+              mlocDurationFormatter_Format(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocDurationFormatter_Format(&formatter, &one, nullptr) == mloc_errorInvalid &&
+              mlocDurationFormatter_Format(nullptr, &one, &output) == mloc_errorInvalid,
           "fields of two signs, not integers or past 2^53 seconds; null pointers");
     output = (mlocOutput){.buffer = text, .capacity = 3};
-    CHECK(mlocFormatDuration(&formatter, &one, &output) == mloc_errorCapacity &&
+    CHECK(mlocDurationFormatter_Format(&formatter, &one, &output) == mloc_errorCapacity &&
               output.length == strlen("1 hr"),
           "the length needed when the text does not fit");
     output = (mlocOutput){.buffer = text, .capacity = 4};
-    CHECK(mlocFormatDuration(&formatter, &one, &output) == mloc_success && output.length == 4,
+    CHECK(mlocDurationFormatter_Format(&formatter, &one, &output) == mloc_success &&
+              output.length == 4,
           "a text that fills the room exactly");
     output = (mlocOutput){.buffer = nullptr, .capacity = 0};
-    CHECK(mlocFormatDuration(&formatter, &one, &output) == mloc_errorCapacity && output.length == 4,
+    CHECK(mlocDurationFormatter_Format(&formatter, &one, &output) == mloc_errorCapacity &&
+              output.length == 4,
           "a measure without a buffer");
     mlocDurationFormatter forged = formatter;
     memset(&forged, 0x5A, sizeof(forged));
     mlocDurationOptions got;
     output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
-    CHECK(mlocFormatDuration(&forged, &one, &output) == mloc_errorInvalid &&
-              mlocGetDurationOptions(&forged, &got) == mloc_errorInvalid &&
-              mlocGetDurationOptions(nullptr, &got) == mloc_errorInvalid &&
-              mlocGetDurationOptions(&formatter, nullptr) == mloc_errorInvalid,
+    CHECK(mlocDurationFormatter_Format(&forged, &one, &output) == mloc_errorInvalid &&
+              mlocDurationFormatter_GetOptions(&forged, &got) == mloc_errorInvalid &&
+              mlocDurationFormatter_GetOptions(nullptr, &got) == mloc_errorInvalid &&
+              mlocDurationFormatter_GetOptions(&formatter, nullptr) == mloc_errorInvalid,
           "a formatter the library did not make");
 }
 
@@ -496,7 +498,7 @@ static void TestBounds(void)
     mlocDurationFormatter formatter;
     DurationFormat f;
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitDurationFormatter(&formatter, &s_data, &en, nullptr) == mloc_success,
+              mlocInitDurationFormatter(&s_data, &en, nullptr, &formatter) == mloc_success,
           "a formatter to spoil");
     memcpy(&f, &formatter, sizeof(f));
     CHECK(mlocValidDurationFormat(&f), "the formatter as made");
@@ -533,7 +535,7 @@ static bool OpenData(void)
     }
     s_data = (mlocDataSet){s_sources, 2};
     return size > 0 && size < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+           mlocOpenData(s_names, size, &s_sources[1]) == mloc_success;
 }
 
 int main(void)

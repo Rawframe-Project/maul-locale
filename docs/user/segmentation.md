@@ -11,16 +11,16 @@ Maul Unicode finds the words, sentences and line break opportunities of any text
 
 ## Words, sentences and lines
 
-`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocNextSegmentBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
+`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocSegmenter_NextBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
 
 ```c
 const char* text = "Mr. Smith left. He came.";
 mlocSegmenter segmenter;
 size_t end = 0;
-if (mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
-                      false) == mloc_success)
+if (mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
+                      &segmenter) == mloc_success)
 {
-    while (mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success)
+    while (mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success)
     {
         // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
     }
@@ -37,7 +37,7 @@ A locale takes the tailoring of the first locale along its segmentation chain th
 | `zh`, `zh-Hant` | Lines break before small kana and the prolonged sound mark. |
 | `de`, `en`, `es`, `fr`, `it`, `pt`, `ru` | The abbreviations of the suppressions below. |
 
-A segmenter keeps no pointer into its text once it has asked for the next piece, none into the data it was made from but its suppressions, so the data set must outlive it, and none into itself. It is a value of 512 bytes that needs no cleanup and may be copied, the copy going on where the segmenter was. A Thai, Lao, Khmer or Burmese word segmenter can be set with `mlocSetSegmenterComplexBreaker`, as Maul Unicode's `muniSetComplexBreaker`. The breaker must not make that segmenter again; any other call on it from inside the breaker is refused with `mloc_errorInvalid` and changes nothing.
+A segmenter keeps no pointer into its text once it has asked for the next piece, none into the data it was made from but its suppressions, so the data set must outlive it, and none into itself. It is a value of 512 bytes that needs no cleanup and may be copied, the copy going on where the segmenter was. A Thai, Lao, Khmer or Burmese word segmenter can be set with `mlocSegmenter_SetComplexBreaker`, as Maul Unicode's `muniSetComplexBreaker`. The breaker must not make that segmenter again; any other call on it from inside the breaker is refused with `mloc_errorInvalid` and changes nothing.
 
 ## The keys
 
@@ -46,19 +46,19 @@ A segmenter keeps no pointer into its text once it has asked for the next piece,
 
 ## Text in pieces
 
-Text read from a file or a network may arrive in pieces. Start the segmenter with the first piece and `moreFollows` true; when `mlocNextSegmentBreak` returns `mloc_needMoreText`, hand it the next piece with `mlocFeedSegmenter`. A piece may begin in the middle of a UTF-8 sequence, and the breaks are the same as for the text whole. The segmenter asks for a piece only after it is done with the last one, so a program may reuse the last piece's buffer for the next.
+Text read from a file or a network may arrive in pieces. Start the segmenter with the first piece and `moreFollows` true; when `mlocSegmenter_NextBreak` returns `mloc_needMoreText`, hand it the next piece with `mlocSegmenter_Feed`. A piece may begin in the middle of a UTF-8 sequence, and the breaks are the same as for the text whole. The segmenter asks for a piece only after it is done with the last one, so a program may reuse the last piece's buffer for the next.
 
 ```c
 mlocSegmenter segmenter;
 size_t end = 0;
 mlocResult r =
-    mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentLine, first, strlen(first), true);
+    mlocInitSegmenter(&set, &locale, mloc_segmentLine, first, strlen(first), true, &segmenter);
 while (r == mloc_success)
 {
-    r = mlocNextSegmentBreak(&segmenter, &end, nullptr);
+    r = mlocSegmenter_NextBreak(&segmenter, &end, nullptr);
     if (r == mloc_needMoreText)
     {
-        r = mlocFeedSegmenter(&segmenter, second, strlen(second), false);
+        r = mlocSegmenter_Feed(&segmenter, second, strlen(second), false);
     }
 }
 ```

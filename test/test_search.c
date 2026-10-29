@@ -32,8 +32,8 @@ static bool Make(const char* id, const char* pattern, mlocSearchComparison compa
     mlocLocale locale;
     mlocSearchOptions options = {comparison};
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-           mlocInitSearcher(&s_searcher, &s_collator, pattern, strlen(pattern), &options) ==
+           mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+           mlocInitSearcher(&s_collator, pattern, strlen(pattern), &options, &s_searcher) ==
                mloc_success;
 }
 
@@ -48,7 +48,7 @@ static bool Finds(const char* id, const char* pattern, const char* text, size_t 
     {
         return false;
     }
-    mlocResult r = mlocFindNext(&s_searcher, text, strlen(text), from, &s, &e);
+    mlocResult r = mlocSearcher_FindNext(&s_searcher, text, strlen(text), from, &s, &e);
     return start < 0 ? r == mloc_errorNotFound
                      : r == mloc_success && s == (size_t)start && e == (size_t)end;
 }
@@ -63,7 +63,7 @@ static bool FindsBack(const char* id, const char* pattern, const char* text, siz
     {
         return false;
     }
-    mlocResult r = mlocFindPrevious(&s_searcher, text, strlen(text), from, &s, &e);
+    mlocResult r = mlocSearcher_FindPrevious(&s_searcher, text, strlen(text), from, &s, &e);
     return start < 0 ? r == mloc_errorNotFound
                      : r == mloc_success && s == (size_t)start && e == (size_t)end;
 }
@@ -98,22 +98,25 @@ static void TestComparisons(void)
     size_t s = 0;
     size_t e = 0;
     bool any = Make("en", "a", mloc_searchPatternBaseWildcard) &&
-               mlocFindNext(&s_searcher, "x\xC3\xA1", 3, 0, &s, &e) == mloc_success && s == 1 &&
-               e == 3;
+               mlocSearcher_FindNext(&s_searcher, "x\xC3\xA1", 3, 0, &s, &e) == mloc_success &&
+               s == 1 && e == 3;
     bool pattern = Make("en", "\xC3\xA1", mloc_searchPatternBaseWildcard) &&
-                   mlocFindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_errorNotFound;
+                   mlocSearcher_FindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_errorNotFound;
     bool both = Make("en", "\xC3\xA1", mloc_searchAnyBaseWildcard) &&
-                mlocFindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_success && s == 1 && e == 2;
+                mlocSearcher_FindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_success && s == 1 &&
+                e == 2;
     CHECK(any && pattern && both,
           "a pattern's base letter takes any accent; with any-base the text's takes the "
           "pattern's too");
-    bool accent = Make("en", "\xC3\xA1", mloc_searchPatternBaseWildcard) &&
-                  mlocFindNext(&s_searcher, "x\xC3\xA0", 3, 0, &s, &e) == mloc_errorNotFound &&
-                  mlocFindNext(&s_searcher, "x\xC3\xA1", 3, 0, &s, &e) == mloc_success && s == 1 &&
-                  e == 3;
+    bool accent =
+        Make("en", "\xC3\xA1", mloc_searchPatternBaseWildcard) &&
+        mlocSearcher_FindNext(&s_searcher, "x\xC3\xA0", 3, 0, &s, &e) == mloc_errorNotFound &&
+        mlocSearcher_FindNext(&s_searcher, "x\xC3\xA1", 3, 0, &s, &e) == mloc_success && s == 1 &&
+        e == 3;
     bool upper = Make("en", "A", mloc_searchPatternBaseWildcard) &&
-                 mlocFindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_errorNotFound &&
-                 mlocFindNext(&s_searcher, "xA", 2, 0, &s, &e) == mloc_success && s == 1 && e == 2;
+                 mlocSearcher_FindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_errorNotFound &&
+                 mlocSearcher_FindNext(&s_searcher, "xA", 2, 0, &s, &e) == mloc_success && s == 1 &&
+                 e == 2;
     CHECK(accent && upper, "a pattern's own accent or case is no wildcard");
 }
 
@@ -130,8 +133,8 @@ static bool Repeated(const char* id, const char* utf8, size_t count,
         pattern[i] = utf8[i % size];
     }
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-           mlocInitSearcher(&s_searcher, &s_collator, pattern, count * size, &options) == expected;
+           mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+           mlocInitSearcher(&s_collator, pattern, count * size, &options, &s_searcher) == expected;
 }
 
 static void TestIdentical(void)
@@ -146,12 +149,13 @@ static void TestIdentical(void)
               Finds("en-u-ks-identic", "\xC3\xA5", "xa\xCC\x8A", 0, 1, 4),
           "the identical strength compares NFD: Khmer U+17A2 and U+17A3, equal in the "
           "tailoring, differ; a decomposed letter does not");
-    CHECK(
-        mlocParseLocale("km-u-ks-identic", 15, &locale).status == mloc_success &&
-            mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-            mlocInitSearcherUtf16(&s_searcher, &s_collator, pattern, 1, nullptr) == mloc_success &&
-            mlocFindNextUtf16(&s_searcher, text, 4, 0, &s, &e) == mloc_success && s == 3 && e == 4,
-        "the identical check reads UTF-16 text too");
+    CHECK(mlocParseLocale("km-u-ks-identic", 15, &locale).status == mloc_success &&
+              mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+              mlocInitSearcherUtf16(&s_collator, pattern, 1, nullptr, &s_searcher) ==
+                  mloc_success &&
+              mlocSearcher_FindNextUtf16(&s_searcher, text, 4, 0, &s, &e) == mloc_success &&
+              s == 3 && e == 4,
+          "the identical check reads UTF-16 text too");
     CHECK(Repeated("cs", "ch", 241, mloc_searchExact, mloc_success) &&
               Repeated("cs-u-ks-identic", "ch", 240, mloc_searchExact, mloc_success) &&
               Repeated("cs-u-ks-identic", "ch", 241, mloc_searchExact, mloc_errorLimit),
@@ -196,10 +200,10 @@ static bool AcrossRing(mlocSearchComparison comparison, size_t accents, mlocResu
     size_t start = 0;
     size_t end = 0;
     bool made = mlocParseLocale("en", 2, &locale).status == mloc_success &&
-                mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-                mlocInitSearcher(&s_searcher, &s_collator, pattern, sizeof pattern, &options) ==
+                mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+                mlocInitSearcher(&s_collator, pattern, sizeof pattern, &options, &s_searcher) ==
                     mloc_success;
-    mlocResult result = mlocFindNext(&s_searcher, text, size, 0, &start, &end);
+    mlocResult result = mlocSearcher_FindNext(&s_searcher, text, size, 0, &start, &end);
     return made && result == expected && (expected != mloc_success || (start == 0 && end == size));
 }
 
@@ -226,7 +230,7 @@ static void TestStartContext(void)
     size_t s = 0;
     size_t e = 0;
     CHECK(Make("en", "a", mloc_searchExact) &&
-              mlocFindNext(&s_searcher, text, sizeof text, sizeof text, &s, &e) ==
+              mlocSearcher_FindNext(&s_searcher, text, sizeof text, sizeof text, &s, &e) ==
                   mloc_errorNotFound,
           "a search from the text's end finds nothing");
 }
@@ -240,36 +244,39 @@ static void TestUtf16(void)
     size_t e = 0;
     bool ok =
         mlocParseLocale("en-u-ks-level1", 14, &locale).status == mloc_success &&
-        mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-        mlocInitSearcherUtf16(&s_searcher, &s_collator, pattern, 1, nullptr) == mloc_success &&
-        mlocFindNextUtf16(&s_searcher, text, 8, 0, &s, &e) == mloc_success && s == 1 && e == 2 &&
-        mlocFindNextUtf16(&s_searcher, text, 8, 2, &s, &e) == mloc_success && s == 3 && e == 5 &&
-        mlocFindNextUtf16(&s_searcher, text, 8, 6, &s, &e) == mloc_success && s == 7 && e == 8;
+        mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+        mlocInitSearcherUtf16(&s_collator, pattern, 1, nullptr, &s_searcher) == mloc_success &&
+        mlocSearcher_FindNextUtf16(&s_searcher, text, 8, 0, &s, &e) == mloc_success && s == 1 &&
+        e == 2 && mlocSearcher_FindNextUtf16(&s_searcher, text, 8, 2, &s, &e) == mloc_success &&
+        s == 3 && e == 5 &&
+        mlocSearcher_FindNextUtf16(&s_searcher, text, 8, 6, &s, &e) == mloc_success && s == 7 &&
+        e == 8;
     CHECK(ok, "UTF-16 positions in units; a position inside a pair counts as its start");
     static const uint16_t pair[] = {'x', 0xD83D, 0xDE00};
     static const uint16_t lone[] = {0xD83D, 0xE000};
     bool inside =
-        mlocInitSearcherUtf16(&s_searcher, &s_collator, pair + 1, 2, nullptr) == mloc_success &&
-        mlocFindNextUtf16(&s_searcher, pair, 3, 2, &s, &e) == mloc_success && s == 1 && e == 3;
+        mlocInitSearcherUtf16(&s_collator, pair + 1, 2, nullptr, &s_searcher) == mloc_success &&
+        mlocSearcher_FindNextUtf16(&s_searcher, pair, 3, 2, &s, &e) == mloc_success && s == 1 &&
+        e == 3;
     bool alone =
-        mlocInitSearcherUtf16(&s_searcher, &s_collator, lone, 1, nullptr) == mloc_success &&
-        mlocFindNextUtf16(&s_searcher, lone, 2, 0, &s, &e) == mloc_success && s == 0 && e == 1 &&
-        mlocFindNextUtf16(&s_searcher, lone, 2, 1, &s, &e) == mloc_errorNotFound;
+        mlocInitSearcherUtf16(&s_collator, lone, 1, nullptr, &s_searcher) == mloc_success &&
+        mlocSearcher_FindNextUtf16(&s_searcher, lone, 2, 0, &s, &e) == mloc_success && s == 0 &&
+        e == 1 && mlocSearcher_FindNextUtf16(&s_searcher, lone, 2, 1, &s, &e) == mloc_errorNotFound;
     CHECK(inside && alone, "a pair is found from its trail; a lone lead before U+E000 is no pair");
     bool bytes = Make("en", "\xF0\x9F\x98\x80", mloc_searchExact);
     for (size_t from = 2; from <= 4; from++)
     {
         bytes = bytes &&
-                mlocFindNext(&s_searcher,
-                             "x\xF0\x9F\x98\x80"
-                             "a",
-                             6, from, &s, &e) == mloc_success &&
+                mlocSearcher_FindNext(&s_searcher,
+                                      "x\xF0\x9F\x98\x80"
+                                      "a",
+                                      6, from, &s, &e) == mloc_success &&
                 s == 1 && e == 5;
     }
-    bytes = bytes && mlocFindNext(&s_searcher,
-                                  "x\xF0\x9F\x98\x80"
-                                  "a",
-                                  6, 5, &s, &e) == mloc_errorNotFound;
+    bytes = bytes && mlocSearcher_FindNext(&s_searcher,
+                                           "x\xF0\x9F\x98\x80"
+                                           "a",
+                                           6, 5, &s, &e) == mloc_errorNotFound;
     CHECK(bytes, "a UTF-8 position inside a sequence counts as its start, after it does not");
     CHECK(Finds("en", "a",
                 "xa\x80"
@@ -302,21 +309,21 @@ static void TestBackward(void)
     size_t e = 0;
     bool utf16 =
         mlocParseLocale("en", 2, &locale).status == mloc_success &&
-        mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-        mlocInitSearcherUtf16(&s_searcher, &s_collator, pattern, 1, nullptr) == mloc_success &&
-        mlocFindPreviousUtf16(&s_searcher, text, 5, 5, &s, &e) == mloc_success && s == 4 &&
-        e == 5 && mlocFindPreviousUtf16(&s_searcher, text, 5, 4, &s, &e) == mloc_success &&
+        mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+        mlocInitSearcherUtf16(&s_collator, pattern, 1, nullptr, &s_searcher) == mloc_success &&
+        mlocSearcher_FindPreviousUtf16(&s_searcher, text, 5, 5, &s, &e) == mloc_success && s == 4 &&
+        e == 5 && mlocSearcher_FindPreviousUtf16(&s_searcher, text, 5, 4, &s, &e) == mloc_success &&
         s == 1 && e == 2;
     CHECK(utf16, "UTF-16 positions in units walking back, past a pair");
     // ICU4C finds 0 to 3 from 4, keeping the flag's elements before it.
     static const uint16_t flag[] = {0x660, 0x303, 0x3099, 0xD83C, 0xDDE6};
     utf16 = mlocParseLocale("cs", 2, &locale).status == mloc_success &&
-            mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-            mlocInitSearcherUtf16(&s_searcher, &s_collator, flag, 3, nullptr) == mloc_success &&
-            mlocFindPreviousUtf16(&s_searcher, flag, 5, 4, &s, &e) == mloc_errorNotFound &&
-            mlocFindPreviousUtf16(&s_searcher, flag, 5, 3, &s, &e) == mloc_errorNotFound &&
-            mlocFindPreviousUtf16(&s_searcher, flag, 5, 5, &s, &e) == mloc_success && s == 0 &&
-            e == 3;
+            mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+            mlocInitSearcherUtf16(&s_collator, flag, 3, nullptr, &s_searcher) == mloc_success &&
+            mlocSearcher_FindPreviousUtf16(&s_searcher, flag, 5, 4, &s, &e) == mloc_errorNotFound &&
+            mlocSearcher_FindPreviousUtf16(&s_searcher, flag, 5, 3, &s, &e) == mloc_errorNotFound &&
+            mlocSearcher_FindPreviousUtf16(&s_searcher, flag, 5, 5, &s, &e) == mloc_success &&
+            s == 0 && e == 3;
     CHECK(utf16, "walking back from a pair's second unit is walking back from its first");
     static char marks[1 + 2 * 130];
     marks[0] = 'a';
@@ -325,14 +332,15 @@ static void TestBackward(void)
         marks[1 + 2 * i] = (char)0xCC;
         marks[2 + 2 * i] = (char)0x81;
     }
-    CHECK(Make("en", "b", mloc_searchExact) &&
-              mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks, &s, &e) ==
-                  mloc_errorLimit &&
-              mlocFindPrevious(&s_searcher, marks, sizeof marks, sizeof marks + 1, &s, &e) ==
-                  mloc_errorInvalid &&
-              mlocFindPrevious(nullptr, marks, sizeof marks, 0, &s, &e) == mloc_errorInvalid,
-          "walking back over more unsafe code points than a piece holds is refused, as are a "
-          "position past the end and a null searcher");
+    CHECK(
+        Make("en", "b", mloc_searchExact) &&
+            mlocSearcher_FindPrevious(&s_searcher, marks, sizeof marks, sizeof marks, &s, &e) ==
+                mloc_errorLimit &&
+            mlocSearcher_FindPrevious(&s_searcher, marks, sizeof marks, sizeof marks + 1, &s, &e) ==
+                mloc_errorInvalid &&
+            mlocSearcher_FindPrevious(nullptr, marks, sizeof marks, 0, &s, &e) == mloc_errorInvalid,
+        "walking back over more unsafe code points than a piece holds is refused, as are a "
+        "position past the end and a null searcher");
 }
 
 static void TestRefusals(void)
@@ -341,36 +349,36 @@ static void TestRefusals(void)
     size_t s = 0;
     size_t e = 0;
     bool made = mlocParseLocale("en", 2, &locale).status == mloc_success &&
-                mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success;
+                mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success;
     mlocSearchOptions bad = {(mlocSearchComparison)3};
-    CHECK(made && mlocInitSearcher(&s_searcher, &s_collator, "", 0, nullptr) == mloc_errorInvalid &&
-              mlocInitSearcher(&s_searcher, &s_collator, "a", 1, &bad) == mloc_errorInvalid &&
-              mlocInitSearcher(&s_searcher, &s_collator, nullptr, 1, nullptr) ==
+    CHECK(made && mlocInitSearcher(&s_collator, "", 0, nullptr, &s_searcher) == mloc_errorInvalid &&
+              mlocInitSearcher(&s_collator, "a", 1, &bad, &s_searcher) == mloc_errorInvalid &&
+              mlocInitSearcher(&s_collator, nullptr, 1, nullptr, &s_searcher) ==
                   mloc_errorInvalid &&
-              mlocInitSearcher(nullptr, &s_collator, "a", 1, nullptr) == mloc_errorInvalid,
+              mlocInitSearcher(&s_collator, "a", 1, nullptr, nullptr) == mloc_errorInvalid,
           "an empty pattern, an unknown comparison and null pointers are refused");
     bool numeric = mlocParseLocale("en-u-kn", 7, &locale).status == mloc_success &&
-                   mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-                   mlocInitSearcher(&s_searcher, &s_collator, "1", 1, nullptr) == mloc_errorInvalid;
+                   mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+                   mlocInitSearcher(&s_collator, "1", 1, nullptr, &s_searcher) == mloc_errorInvalid;
     bool shifted = mlocParseLocale("en-u-ka-shifted", 15, &locale).status == mloc_success &&
-                   mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-                   mlocInitSearcher(&s_searcher, &s_collator, " ", 1, nullptr) == mloc_errorInvalid;
+                   mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+                   mlocInitSearcher(&s_collator, " ", 1, nullptr, &s_searcher) == mloc_errorInvalid;
     CHECK(numeric && shifted,
           "numeric ordering and a pattern of variable elements only when shifted are refused");
     static char longPattern[600];
     memset(longPattern, 'a', sizeof(longPattern));
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitCollator(&s_collator, &s_data, &locale, nullptr) == mloc_success &&
-              mlocInitSearcher(&s_searcher, &s_collator, longPattern, sizeof(longPattern),
-                               nullptr) == mloc_errorLimit,
+              mlocInitCollator(&s_data, &locale, nullptr, &s_collator) == mloc_success &&
+              mlocInitSearcher(&s_collator, longPattern, sizeof(longPattern), nullptr,
+                               &s_searcher) == mloc_errorLimit,
           "a pattern of more elements than a searcher holds");
     mlocSearcher zero = {0};
     CHECK(Make("en", "a", mloc_searchExact) &&
-              mlocFindNext(&s_searcher, "a", 1, 2, &s, &e) == mloc_errorInvalid &&
-              mlocFindNext(&s_searcher, nullptr, 1, 0, &s, &e) == mloc_errorInvalid &&
-              mlocFindNext(&s_searcher, "a", 1, 0, nullptr, &e) == mloc_errorInvalid &&
-              mlocFindNext(&zero, "a", 1, 0, &s, &e) == mloc_errorInvalid &&
-              mlocFindNext(&s_searcher, nullptr, 0, 0, &s, &e) == mloc_errorNotFound,
+              mlocSearcher_FindNext(&s_searcher, "a", 1, 2, &s, &e) == mloc_errorInvalid &&
+              mlocSearcher_FindNext(&s_searcher, nullptr, 1, 0, &s, &e) == mloc_errorInvalid &&
+              mlocSearcher_FindNext(&s_searcher, "a", 1, 0, nullptr, &e) == mloc_errorInvalid &&
+              mlocSearcher_FindNext(&zero, "a", 1, 0, &s, &e) == mloc_errorInvalid &&
+              mlocSearcher_FindNext(&s_searcher, nullptr, 0, 0, &s, &e) == mloc_errorNotFound,
           "a position past the end, null pointers and a searcher not made are refused; an "
           "empty text has no match");
 }
@@ -385,7 +393,7 @@ int main(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("test_search: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

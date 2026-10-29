@@ -130,14 +130,14 @@ static mlocMessageFaultKind EchoResolve(void* context, const mlocMessageCall* ca
     Echo e;
     memset(&e, 0, sizeof e);
     AddOperand(&e, operand);
-    size_t count = mlocGetMessageOptionCount(call);
+    size_t count = mlocMessageCall_GetOptionCount(call);
     for (size_t i = 0; i < count; i++)
     {
         const char* name;
         size_t length;
         mlocMessageOperand value;
         mlocMessageResolved storage;
-        if (mlocGetMessageOption(call, i, &name, &length, &value, &storage) != mloc_success)
+        if (mlocMessageCall_GetOption(call, i, &name, &length, &value, &storage) != mloc_success)
         {
             return mloc_messageFaultFunction;
         }
@@ -148,7 +148,7 @@ static mlocMessageFaultKind EchoResolve(void* context, const mlocMessageCall* ca
     }
     mlocMessageOperand fail;
     mlocMessageResolved storage;
-    e.failFormat = mlocFindMessageOption(call, "fail", 4, &fail, &storage) == mloc_success;
+    e.failFormat = mlocMessageCall_FindOption(call, "fail", 4, &fail, &storage) == mloc_success;
     memset(valueOut, 0, sizeof *valueOut);
     memcpy(valueOut, &e, sizeof e);
     return mloc_messageFaultNone;
@@ -213,7 +213,7 @@ static mlocMessageFaultKind LocaleResolve(void* context, const mlocMessageCall* 
     memset(&e, 0, sizeof e);
     char tag[32];
     mlocOutput out = {tag, sizeof tag, 0, NULL, NULL};
-    if (mlocGetMessageLocale(call, &locale) != mloc_success ||
+    if (mlocMessageCall_GetLocale(call, &locale) != mloc_success ||
         mlocFormatLocale(&locale, &out) != mloc_success)
     {
         return mloc_messageFaultFunction;
@@ -237,7 +237,8 @@ static mlocMessageFaultKind GreedyResolve(void* context, const mlocMessageCall* 
     {
         mlocMessageOperand value;
         mlocMessageResolved storage;
-        short_ = short_ || mlocFindMessageOption(call, "k", 1, &value, &storage) != mloc_success ||
+        short_ = short_ ||
+                 mlocMessageCall_FindOption(call, "k", 1, &value, &storage) != mloc_success ||
                  value.kind == mloc_messageOperandFallback;
     }
     Echo e;
@@ -298,7 +299,7 @@ static void MakeFormatter(void)
     mlocMessageOptions options = {false, mloc_messageIsolationNone, s_functions, functionCount,
                                   NULL};
     CHECK(mlocParseLocale("de-CH", 5, &s_locale).status == mloc_success &&
-              mlocInitMessageFormatter(&s_formatter, &s_data, &s_locale, &options) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &s_locale, &options, &s_formatter) == mloc_success,
           "a formatter with functions is made");
 }
 
@@ -307,7 +308,7 @@ static bool Refused(const char* name)
     mlocMessageFunction function = {name, strlen(name), NULL, EchoResolve, NULL, NULL, NULL, NULL};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
     mlocMessageFormatter formatter;
-    return mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid;
+    return mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_errorInvalid;
 }
 
 static void TestTable(void)
@@ -323,18 +324,18 @@ static void TestTable(void)
     mlocMessageFormatter formatter;
     mlocMessageFunction twice[2] = {s_functions[0], s_functions[0]};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, twice, 2, NULL};
-    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_errorInvalid,
           "two functions of one name are refused");
     twice[1].resolve = NULL;
     twice[1].name = "x:other";
     twice[1].nameLength = 7;
-    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_errorInvalid,
           "a function without a resolve entry is refused");
     options.functions = NULL;
-    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_errorInvalid,
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_errorInvalid,
           "a null table with a count is refused");
     options.functionCount = 0;
-    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_success,
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success,
           "a null table without a count is taken");
 }
 
@@ -347,7 +348,8 @@ static mlocResult Run(const char* message, const mlocMessageArgument* arguments,
     mlocMessageError error;
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) != mloc_success)
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success)
     {
         return mloc_errorSyntax;
     }
@@ -478,12 +480,12 @@ static void TestAccessors(void)
     mlocMessageOperand value;
     mlocMessageResolved storage;
     mlocLocale locale;
-    CHECK(mlocGetMessageOptionCount(NULL) == 0 && mlocGetMessageOptionCount(&call) == 0 &&
-              mlocGetMessageOption(&call, 0, &name, &length, &value, &storage) ==
+    CHECK(mlocMessageCall_GetOptionCount(NULL) == 0 && mlocMessageCall_GetOptionCount(&call) == 0 &&
+              mlocMessageCall_GetOption(&call, 0, &name, &length, &value, &storage) ==
                   mloc_errorInvalid &&
-              mlocFindMessageOption(&call, "k", 1, &value, &storage) == mloc_errorInvalid &&
-              mlocGetMessageLocale(&call, &locale) == mloc_errorInvalid &&
-              mlocGetMessageLocale(NULL, &locale) == mloc_errorInvalid,
+              mlocMessageCall_FindOption(&call, "k", 1, &value, &storage) == mloc_errorInvalid &&
+              mlocMessageCall_GetLocale(&call, &locale) == mloc_errorInvalid &&
+              mlocMessageCall_GetLocale(NULL, &locale) == mloc_errorInvalid,
           "a call the library did not make is refused");
 }
 
@@ -575,8 +577,8 @@ static void TestSelection(void)
         mlocTextResult compiled =
             mlocCompileMessage(text, strlen(text), s_compiled, sizeof s_compiled, &size, &error);
         CHECK(count == 32 ? compiled.status == mloc_success &&
-                                mlocBindMessage(&s_formatter, s_compiled, size, s_bound,
-                                                sizeof s_bound, &bound) == mloc_success
+                                mlocMessageFormatter_Bind(&s_formatter, s_compiled, size, s_bound,
+                                                          sizeof s_bound, &bound) == mloc_success
                           : compiled.status == mloc_errorLimit && compiled.offset == 0 &&
                                 error == mloc_messageErrorNone,
               "32 selectors compile and bind, 33 are refused");
@@ -595,7 +597,7 @@ static mlocResult BindOnly(const char* message)
     {
         return compiled.status;
     }
-    return mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound);
+    return mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound);
 }
 
 static void TestResolutionLimit(void)
@@ -665,13 +667,15 @@ static void TestResolutionLimit(void)
     static uint8_t guarded[256];
     CHECK(mlocCompileMessage("{#b k=$x}", 9, s_compiled, sizeof s_compiled, &size, &error).status ==
                   mloc_success &&
-              mlocBindMessage(s_using, s_compiled, size, NULL, 0, &needed) == mloc_errorCapacity &&
+              mlocMessageFormatter_Bind(s_using, s_compiled, size, NULL, 0, &needed) ==
+                  mloc_errorCapacity &&
               needed + 8 <= sizeof guarded,
           "a message of markup alone measures");
     memset(guarded, 0xA5, sizeof guarded);
     size_t bound = 0;
     bool untouched = true;
-    CHECK(mlocBindMessage(s_using, s_compiled, size, guarded, needed, &bound) == mloc_success,
+    CHECK(mlocMessageFormatter_Bind(s_using, s_compiled, size, guarded, needed, &bound) ==
+              mloc_success,
           "it binds into that size");
     for (size_t i = needed; i < sizeof guarded; i++)
     {
@@ -693,7 +697,7 @@ static void MakeIsolating(mlocMessageFormatter* formatter, const char* tag)
     mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, functionCount,
                                   NULL};
     CHECK(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
-              mlocInitMessageFormatter(formatter, &s_data, &locale, &options) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &locale, &options, formatter) == mloc_success,
           "an isolating formatter is made");
 }
 
@@ -768,7 +772,7 @@ static void TestIsolation(void)
     mlocMessageFormatter formatter;
     mlocMessageOptions options = {false, (mlocMessageIsolation)2, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) == mloc_errorInvalid,
+              mlocInitMessageFormatter(&s_data, &locale, &options, &formatter) == mloc_errorInvalid,
           "an unknown isolation is refused");
 }
 
@@ -844,11 +848,11 @@ static void TestCallingBack(void)
     char text[64];
     mlocOutput output = {text, sizeof text, 0, NULL, NULL};
     mlocMessageArgument argument = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 5}}};
-    CHECK(mlocInitMessageFormatter(&formatter, &s_data, &s_locale, &options) == mloc_success &&
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success &&
               mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
                       .status == mloc_success &&
-              mlocBindMessage(&formatter, compiled, size, bound, sizeof bound, &boundSize) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound,
+                                        &boundSize) == mloc_success &&
               mlocFormatMessage(bound, &argument, 1, &output, NULL) == mloc_success &&
               output.length == 7 && memcmp(text, "aaaxbbb", 7) == 0 && nest.depth == 0,
           "a program function formats the message it stands in, from inside its call");
@@ -858,8 +862,8 @@ static void TestCallingBack(void)
     argument.value.as.integer = 1234;
     CHECK(mlocCompileMessage(number, strlen(number), compiled, sizeof compiled, &size, &error)
                       .status == mloc_success &&
-              mlocBindMessage(&formatter, compiled, size, bound, sizeof bound, &boundSize) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound,
+                                        &boundSize) == mloc_success &&
               mlocFormatMessage(bound, &argument, 1, &parts, NULL) == mloc_success &&
               parts.length == again.length && memcmp(text, again.text, again.length) == 0 &&
               again.calls > 0 && again.same,

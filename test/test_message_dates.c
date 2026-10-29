@@ -37,7 +37,8 @@ static bool Formats(const char* message, const mlocMessageArgument* arguments, s
     mlocMessageError error;
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) != mloc_success)
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success)
     {
         printf("  [%s] does not compile and bind\n", message);
         return false;
@@ -129,7 +130,7 @@ static bool FormatsIn(const char* tag, const char* message, const char* text)
     mlocLocale locale;
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     if (mlocParseLocale(tag, strlen(tag), &locale).status != mloc_success ||
-        mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) != mloc_success)
+        mlocInitMessageFormatter(&s_data, &locale, &options, &formatter) != mloc_success)
     {
         return false;
     }
@@ -150,7 +151,7 @@ static size_t Text(const char* message, char* text, size_t capacity)
     bool good =
         mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status == mloc_success &&
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
             mloc_success &&
         mlocFormatMessage(s_bound, NULL, 0, &output, NULL) == mloc_success;
     return good ? output.length : SIZE_MAX;
@@ -165,7 +166,7 @@ static bool SameIn(const char* tag, const char* message, const char* other)
     mlocLocale locale;
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     if (mlocParseLocale(tag, strlen(tag), &locale).status != mloc_success ||
-        mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) != mloc_success)
+        mlocInitMessageFormatter(&s_data, &locale, &options, &formatter) != mloc_success)
     {
         return false;
     }
@@ -339,7 +340,7 @@ static void TestDefaultZone(void)
     mlocTimeZone bad = {&en, 1, 0, 0};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, &bad};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_errorInvalid,
+              mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_errorInvalid,
           "a default zone the library did not make is refused");
 }
 
@@ -392,7 +393,7 @@ static bool Refused(const char* message, const mlocMessageArgument* argument)
     return mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size,
                               &error)
                    .status == mloc_success &&
-           mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
+           mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
                mloc_success &&
            mlocFormatMessage(s_bound, argument, 1, &output, NULL) == mloc_errorInvalid;
 }
@@ -487,7 +488,7 @@ static bool PreparedAs(const char* message, const char* wanted)
     memset(&r, 0, sizeof r);
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success ||
         !mlocReadBound(s_bound, &r.h, &r.formatter) ||
         r.h.view.count[messageExpressions] != strlen(wanted))
@@ -541,7 +542,7 @@ static bool Open(const char* path, uint8_t* buffer, size_t capacity, mlocData* o
     {
         fclose(file);
     }
-    if (size == 0 || size >= capacity || mlocOpenData(out, buffer, size) != mloc_success)
+    if (size == 0 || size >= capacity || mlocOpenData(buffer, size, out) != mloc_success)
     {
         fprintf(stderr, "test_message_dates: cannot open %s\n", path);
         return false;
@@ -568,9 +569,9 @@ int main(void)
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     mlocMessageOptions inYork = {false, mloc_messageIsolationNone, NULL, 0, &york};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&s_en, &s_data, &en, &options) == mloc_success &&
+              mlocInitMessageFormatter(&s_data, &en, &options, &s_en) == mloc_success &&
               mlocFindTimeZone(&s_data, "America/New_York", 16, &york) == mloc_success &&
-              mlocInitMessageFormatter(&s_york, &s_data, &en, &inYork) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &en, &inYork, &s_york) == mloc_success,
           "the formatters are made");
     TestOptions();
     TestCalendars();

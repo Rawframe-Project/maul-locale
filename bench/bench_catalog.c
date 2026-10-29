@@ -57,7 +57,7 @@ static void FindKey(void)
 {
     uint32_t i = s_next++ % keyCount;
     uint32_t index = 0;
-    mlocResult r = mlocFindCatalogKey(&s_catalogs[0], s_keys[i], s_keyLengths[i], &index);
+    mlocResult r = mlocCatalog_FindKey(&s_catalogs[0], s_keys[i], s_keyLengths[i], &index);
     s_sink += (size_t)r + index;
 }
 
@@ -65,37 +65,38 @@ static void GetMessage(void)
 {
     const void* message = nullptr;
     size_t size = 0;
-    mlocResult r = mlocGetCatalogMessage(&s_catalogs[0], s_next++ % keyCount, &message, &size);
+    mlocResult r = mlocCatalog_GetMessage(&s_catalogs[0], s_next++ % keyCount, &message, &size);
     s_sink += (size_t)r + size;
 }
 
 static void Open(void)
 {
     mlocCatalog catalog;
-    s_sink += (size_t)mlocOpenCatalog(&catalog, s_bytes[0], s_sizes[0]);
+    s_sink += (size_t)mlocOpenCatalog(s_bytes[0], s_sizes[0], &catalog);
 }
 
 static void Bind(void)
 {
     mlocCatalogChain chain;
     mlocResult r =
-        mlocInitCatalogChain(&chain, s_catalogs, s_formatters, 2, s_bindCache, s_cacheSize);
-    s_sink += (size_t)r + (size_t)mlocBindCatalogChain(&chain);
+        mlocInitCatalogChain(s_catalogs, s_formatters, 2, s_bindCache, s_cacheSize, &chain);
+    s_sink += (size_t)r + (size_t)mlocCatalogChain_Bind(&chain);
 }
 
 static void FormatIndex(void)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocFormatCatalogMessage(&s_chain, s_formatIndex, s_arguments, argumentCount,
-                                            &output, nullptr, nullptr);
+    mlocResult r = mlocCatalogChain_FormatMessage(&s_chain, s_formatIndex, s_arguments,
+                                                  argumentCount, &output, nullptr, nullptr);
     s_sink += (size_t)r + output.length;
 }
 
 static void FormatKey(void)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocFormatCatalogKey(&s_chain, s_keys[formatKey], s_keyLengths[formatKey],
-                                        s_arguments, argumentCount, &output, nullptr, nullptr);
+    mlocResult r =
+        mlocCatalogChain_FormatKey(&s_chain, s_keys[formatKey], s_keyLengths[formatKey],
+                                   s_arguments, argumentCount, &output, nullptr, nullptr);
     s_sink += (size_t)r + output.length;
 }
 
@@ -159,26 +160,26 @@ static bool MakeChain(void)
         mlocLocale locale;
         s_bytes[i] = ReadFile(path, &s_sizes[i]);
         ok = s_bytes[i] != nullptr &&
-             mlocOpenCatalog(&s_catalogs[i], s_bytes[i], s_sizes[i]) == mloc_success &&
+             mlocOpenCatalog(s_bytes[i], s_sizes[i], &s_catalogs[i]) == mloc_success &&
              mlocParseLocale(locales[i], 2, &locale).status == mloc_success &&
-             mlocInitMessageFormatter(&s_formatters[i], &data, &locale, nullptr) == mloc_success;
+             mlocInitMessageFormatter(&data, &locale, nullptr, &s_formatters[i]) == mloc_success;
     }
     ok = ok && mlocMeasureCatalogChain(s_catalogs, s_formatters, 2, &s_cacheSize) == mloc_success;
     s_cache = ok ? malloc(s_cacheSize) : nullptr;
     s_bindCache = ok ? malloc(s_cacheSize) : nullptr;
     ok = s_cache != nullptr && s_bindCache != nullptr &&
-         mlocInitCatalogChain(&s_chain, s_catalogs, s_formatters, 2, s_cache, s_cacheSize) ==
+         mlocInitCatalogChain(s_catalogs, s_formatters, 2, s_cache, s_cacheSize, &s_chain) ==
              mloc_success &&
-         mlocBindCatalogChain(&s_chain) == mloc_success;
+         mlocCatalogChain_Bind(&s_chain) == mloc_success;
     const void* message = nullptr;
     size_t size = 0;
     size_t bound = 0;
     return ok &&
-           mlocFindCatalogKey(&s_catalogs[0], s_keys[formatKey], s_keyLengths[formatKey],
-                              &s_formatIndex) == mloc_success &&
-           mlocGetCatalogMessage(&s_catalogs[0], s_formatIndex, &message, &size) == mloc_success &&
-           mlocBindMessage(&s_formatters[0], message, size, s_bound, sizeof(s_bound), &bound) ==
-               mloc_success;
+           mlocCatalog_FindKey(&s_catalogs[0], s_keys[formatKey], s_keyLengths[formatKey],
+                               &s_formatIndex) == mloc_success &&
+           mlocCatalog_GetMessage(&s_catalogs[0], s_formatIndex, &message, &size) == mloc_success &&
+           mlocMessageFormatter_Bind(&s_formatters[0], message, size, s_bound, sizeof(s_bound),
+                                     &bound) == mloc_success;
 }
 
 bool PrepareCatalogBench(void)

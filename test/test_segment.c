@@ -52,7 +52,7 @@ static bool Segments(const char* id, char kind, const char* text, size_t pieceSi
     size_t length = strlen(text);
     size_t fed = pieceSize == 0 || pieceSize > length ? length : pieceSize;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitSegmenter(&one, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
+        mlocInitSegmenter(&s_data, &locale, KindOf(kind), text, fed, fed < length, &one) !=
             mloc_success)
     {
         return false;
@@ -63,7 +63,7 @@ static bool Segments(const char* id, char kind, const char* text, size_t pieceSi
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(s, &offset, nullptr);
+        mlocResult r = mlocSegmenter_NextBreak(s, &offset, nullptr);
         if (r == mloc_done)
         {
             out[written] = '\0';
@@ -72,7 +72,7 @@ static bool Segments(const char* id, char kind, const char* text, size_t pieceSi
         if (r == mloc_needMoreText)
         {
             size_t piece = length - fed < pieceSize ? length - fed : pieceSize;
-            if (mlocFeedSegmenter(s, text + fed, piece, fed + piece < length) != mloc_success)
+            if (mlocSegmenter_Feed(s, text + fed, piece, fed + piece < length) != mloc_success)
             {
                 return false;
             }
@@ -197,7 +197,7 @@ static bool Offsets(const char* id, char kind, const char* text, size_t length, 
     mlocSegmenter two;
     size_t fed = pieceSize == 0 || pieceSize > length ? length : pieceSize;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitSegmenter(&one, &s_data, &locale, KindOf(kind), text, fed, fed < length) !=
+        mlocInitSegmenter(&s_data, &locale, KindOf(kind), text, fed, fed < length, &one) !=
             mloc_success)
     {
         return false;
@@ -208,7 +208,7 @@ static bool Offsets(const char* id, char kind, const char* text, size_t length, 
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(s, &offset, nullptr);
+        mlocResult r = mlocSegmenter_NextBreak(s, &offset, nullptr);
         if (r == mloc_done)
         {
             return true;
@@ -216,7 +216,7 @@ static bool Offsets(const char* id, char kind, const char* text, size_t length, 
         if (r == mloc_needMoreText)
         {
             size_t piece = length - fed < pieceSize ? length - fed : pieceSize;
-            if (mlocFeedSegmenter(s, text + fed, piece, fed + piece < length) != mloc_success)
+            if (mlocSegmenter_Feed(s, text + fed, piece, fed + piece < length) != mloc_success)
             {
                 return false;
             }
@@ -333,27 +333,27 @@ static void TestRefusals(void)
     mlocSegmenter s;
     mlocDataSet builtin = {s_sources, 1};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitSegmenter(&s, &builtin, &locale, mloc_segmentWord, "a", 1, false) ==
+              mlocInitSegmenter(&builtin, &locale, mloc_segmentWord, "a", 1, false, &s) ==
                   mloc_errorNotFound,
           "data without the segmentation file");
-    CHECK(mlocInitSegmenter(nullptr, &s_data, &locale, mloc_segmentWord, "a", 1, false) ==
+    CHECK(mlocInitSegmenter(&s_data, &locale, mloc_segmentWord, "a", 1, false, nullptr) ==
                   mloc_errorInvalid &&
-              mlocInitSegmenter(&s, &s_data, &locale, (mlocSegmentKind)3, "a", 1, false) ==
+              mlocInitSegmenter(&s_data, &locale, (mlocSegmentKind)3, "a", 1, false, &s) ==
                   mloc_errorInvalid &&
-              mlocInitSegmenter(&s, &s_data, &locale, mloc_segmentWord, nullptr, 1, false) ==
+              mlocInitSegmenter(&s_data, &locale, mloc_segmentWord, nullptr, 1, false, &s) ==
                   mloc_errorInvalid,
           "a null segmenter, an unknown kind, a null text with a length");
     size_t offset = 0;
-    CHECK(mlocInitSegmenter(&s, &s_data, &locale, mloc_segmentSentence, "a", 1, false) ==
+    CHECK(mlocInitSegmenter(&s_data, &locale, mloc_segmentSentence, "a", 1, false, &s) ==
                   mloc_success &&
-              mlocFeedSegmenter(&s, "b", 1, false) == mloc_errorInvalid &&
-              mlocSetSegmenterComplexBreaker(&s, nullptr, nullptr) == mloc_errorInvalid &&
-              mlocNextSegmentBreak(&s, &offset, nullptr) == mloc_success && offset == 1 &&
-              mlocNextSegmentBreak(&s, &offset, nullptr) == mloc_done,
+              mlocSegmenter_Feed(&s, "b", 1, false) == mloc_errorInvalid &&
+              mlocSegmenter_SetComplexBreaker(&s, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocSegmenter_NextBreak(&s, &offset, nullptr) == mloc_success && offset == 1 &&
+              mlocSegmenter_NextBreak(&s, &offset, nullptr) == mloc_done,
           "a piece not asked for, a sentence segmenter's complex breaker");
     mlocSegmenter zero = {0};
-    CHECK(mlocNextSegmentBreak(&zero, &offset, nullptr) == mloc_errorInvalid &&
-              mlocNextSegmentBreak(&s, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocSegmenter_NextBreak(&zero, &offset, nullptr) == mloc_errorInvalid &&
+              mlocSegmenter_NextBreak(&s, nullptr, nullptr) == mloc_errorInvalid,
           "a segmenter the library did not make, a null offset");
 }
 
@@ -377,9 +377,9 @@ static size_t ReenteringBreaker(void* context, const char* run, size_t length, s
         size_t offset = 0;
         r->calls++;
         r->allowed +=
-            (mlocNextSegmentBreak(r->segmenter, &offset, nullptr) != mloc_errorInvalid) +
-            (mlocFeedSegmenter(r->segmenter, "x", 1, false) != mloc_errorInvalid) +
-            (mlocSetSegmenterComplexBreaker(r->segmenter, nullptr, nullptr) != mloc_errorInvalid);
+            (mlocSegmenter_NextBreak(r->segmenter, &offset, nullptr) != mloc_errorInvalid) +
+            (mlocSegmenter_Feed(r->segmenter, "x", 1, false) != mloc_errorInvalid) +
+            (mlocSegmenter_SetComplexBreaker(r->segmenter, nullptr, nullptr) != mloc_errorInvalid);
     }
     return from + 3 < length ? from + 3 : length;
 }
@@ -393,8 +393,8 @@ static int BreaksInPieces(const char* id, mlocSegmentKind kind, const char* text
     size_t length = strlen(text);
     size_t fed = step < length ? step : length;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitSegmenter(&s, &s_data, &locale, kind, text, fed, fed < length) != mloc_success ||
-        mlocSetSegmenterComplexBreaker(&s, ReenteringBreaker, reentry) != mloc_success)
+        mlocInitSegmenter(&s_data, &locale, kind, text, fed, fed < length, &s) != mloc_success ||
+        mlocSegmenter_SetComplexBreaker(&s, ReenteringBreaker, reentry) != mloc_success)
     {
         return -1;
     }
@@ -403,7 +403,7 @@ static int BreaksInPieces(const char* id, mlocSegmentKind kind, const char* text
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(&s, &offset, nullptr);
+        mlocResult r = mlocSegmenter_NextBreak(&s, &offset, nullptr);
         if (r == mloc_success && count < capacity)
         {
             breaks[count++] = offset;
@@ -411,7 +411,7 @@ static int BreaksInPieces(const char* id, mlocSegmentKind kind, const char* text
         else if (r == mloc_needMoreText)
         {
             size_t more = length - fed < step ? length - fed : step;
-            if (mlocFeedSegmenter(&s, text + fed, more, fed + more < length) != mloc_success)
+            if (mlocSegmenter_Feed(&s, text + fed, more, fed + more < length) != mloc_success)
             {
                 return -1;
             }
@@ -474,7 +474,7 @@ int main(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("test_segment: cannot open " MLOC_SEGMENTS_FILE "\n", stderr);
         return 2;

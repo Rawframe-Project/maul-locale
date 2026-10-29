@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     {
         fclose(file);
     }
-    if (mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "names\n");
         return 1;
@@ -86,10 +86,10 @@ int main(int argc, char** argv)
         mlocOutput output = {.buffer = out, .capacity = sizeof(out)};
         mlocResult r = mloc_errorInvalid;
         if (mlocParseLocale(loc, strlen(loc), &locale).status == mloc_success &&
-            mlocInitUnitFormatter(&f, &data, &locale, unit, strlen(unit), &o) >= 0 &&
+            mlocInitUnitFormatter(&data, &locale, unit, strlen(unit), &o, &f) >= 0 &&
             mlocParseDecimal(a, strlen(a), &x).status == mloc_success)
         {
-            r = mlocFormatUnit(&f, &x, &output);
+            r = mlocUnitFormatter_Format(&f, &x, &output);
         }
         static const char* const s_genders[] = {"undefined", "animate",   "common", "feminine",
                                                 "inanimate", "masculine", "neuter", "personal"};

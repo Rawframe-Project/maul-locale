@@ -41,7 +41,7 @@ Two classes of difference are expected: values where ICU's `double` arithmetic d
 
 ## Parsing
 
-`parse/` compares `mlocParseNumber` and `mlocParseCurrency` with ICU's `DecimalFormat::parse` and `parseCurrency` on lines "locale style mode text" (and "locale code mode any text" for currencies):
+`parse/` compares `mlocNumberFormatter_Parse` and `mlocCurrencyFormatter_Parse` with ICU's `DecimalFormat::parse` and `parseCurrency` on lines "locale style mode text" (and "locale code mode any text" for currencies):
 
 1. `cases.py LOCALES ours_fmt OUT` formats twelve values in each style with the library (`ours_fmt.c`) and writes each text with its lenient variants; `currency_cases.py LOCALES ours_cfmt NAMES OUT` does the same for amounts of money. `random_cases.py` and `random_currency.py LOCALES OUT SEED` write random strings.
 2. Run `icu_parse.cpp` and `ours_parse.c` (or `icu_currency.cpp` and `ours_currency.c`) on the same lines.

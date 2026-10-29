@@ -112,7 +112,7 @@ mlocResult mlocGetIndexBucket(const void* index, uint32_t bucket, mlocIndexBucke
 static uint32_t Find(const IndexView* v, NfdText name)
 {
     // The fast Latin compare where it serves a UTF-8 name (the boundaries
-    // are UTF-8), as mlocCompare; else the name's key, read once, against
+    // are UTF-8), as mlocCollator_Compare; else the name's key, read once, against
     // the boundaries' (a script's boundary is a contraction of many, slow
     // to compare); else a compare.
     Collator c;

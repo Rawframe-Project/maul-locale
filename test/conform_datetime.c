@@ -44,7 +44,7 @@ static bool Open(const char* path, int index)
     uint8_t* bytes = malloc((size_t)16 << 20);
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)16 << 20, file);
     fclose(file);
-    return read > 0 && mlocOpenData(&s_sources[index], bytes, read) == mloc_success;
+    return read > 0 && mlocOpenData(bytes, read, &s_sources[index]) == mloc_success;
 }
 
 static mlocResult Format(const mlocDataSet* set, const char* id, const mlocDateOptions* options,
@@ -59,13 +59,13 @@ static mlocResult Format(const mlocDataSet* set, const char* id, const mlocDateO
         return mloc_errorSyntax;
     }
     mlocResult result = mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &date);
-    result = result < 0 ? result : mlocInitDateFormatter(&formatter, set, &locale, options);
+    result = result < 0 ? result : mlocInitDateFormatter(set, &locale, options, &formatter);
     if (result < 0)
     {
         return result;
     }
     mlocOutput output = {.buffer = out, .capacity = 1024};
-    result = mlocFormatDate(&formatter, &date, &output);
+    result = mlocDateFormatter_Format(&formatter, &date, &output);
     *length = output.length;
     return result;
 }
@@ -97,13 +97,13 @@ static mlocResult FormatTime(const mlocDataSet* set, const char* line, char* out
     {
         return mloc_errorSyntax;
     }
-    mlocResult result = mlocInitTimeFormatter(&formatter, set, &locale, &options);
+    mlocResult result = mlocInitTimeFormatter(set, &locale, &options, &formatter);
     if (result < 0)
     {
         return result;
     }
     mlocOutput output = {.buffer = out, .capacity = 1024};
-    result = mlocFormatTime(&formatter, &time, &output);
+    result = mlocTimeFormatter_Format(&formatter, &time, &output);
     *length = output.length;
     return result;
 }
@@ -144,13 +144,13 @@ static mlocResult FormatDateTime(const mlocDataSet* set, const char* line, char*
     }
     mlocResult result =
         mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date);
-    result = result < 0 ? result : mlocInitDateTimeFormatter(&formatter, set, &locale, &options);
+    result = result < 0 ? result : mlocInitDateTimeFormatter(set, &locale, &options, &formatter);
     if (result < 0)
     {
         return result;
     }
     mlocOutput output = {.buffer = out, .capacity = 1024};
-    result = mlocFormatDateTime(&formatter, &value, &output);
+    result = mlocDateTimeFormatter_Format(&formatter, &value, &output);
     *length = output.length;
     return result;
 }
@@ -189,7 +189,7 @@ static mlocResult FormatZone(const mlocDataSet* set, const char* line, char* out
     if (!s_made[style])
     {
         s_results[style] =
-            mlocInitZoneFormatter(&s_formatters[style], set, &s_locale, (mlocZoneStyle)style);
+            mlocInitZoneFormatter(set, &s_locale, (mlocZoneStyle)style, &s_formatters[style]);
         s_made[style] = true;
     }
     mlocTimeZone zone;
@@ -201,7 +201,7 @@ static mlocResult FormatZone(const mlocDataSet* set, const char* line, char* out
     }
     mlocInstant instant = {.seconds = seconds};
     mlocOutput output = {.buffer = out, .capacity = 1024};
-    result = mlocFormatZone(&s_formatters[style], &zone, &instant, &output);
+    result = mlocZoneFormatter_Format(&s_formatters[style], &zone, &instant, &output);
     *length = output.length;
     return result;
 }
@@ -244,20 +244,21 @@ static mlocResult FormatInZone(const mlocDataSet* set, const char* line, char* o
     if (result >= 0 && strcmp(kind, "ZD") == 0)
     {
         mlocDateFormatter f;
-        result = mlocInitDateFormatter(&f, set, &locale, &o.date);
-        result = result < 0 ? result : mlocFormatDateInZone(&f, &zone, &instant, &output);
+        result = mlocInitDateFormatter(set, &locale, &o.date, &f);
+        result = result < 0 ? result : mlocDateFormatter_FormatInZone(&f, &zone, &instant, &output);
     }
     else if (result >= 0 && strcmp(kind, "ZT") == 0)
     {
         mlocTimeFormatter f;
-        result = mlocInitTimeFormatter(&f, set, &locale, &o.time);
-        result = result < 0 ? result : mlocFormatTimeInZone(&f, &zone, &instant, &output);
+        result = mlocInitTimeFormatter(set, &locale, &o.time, &f);
+        result = result < 0 ? result : mlocTimeFormatter_FormatInZone(&f, &zone, &instant, &output);
     }
     else if (result >= 0)
     {
         mlocDateTimeFormatter f;
-        result = mlocInitDateTimeFormatter(&f, set, &locale, &o);
-        result = result < 0 ? result : mlocFormatDateTimeInZone(&f, &zone, &instant, &output);
+        result = mlocInitDateTimeFormatter(set, &locale, &o, &f);
+        result =
+            result < 0 ? result : mlocDateTimeFormatter_FormatInZone(&f, &zone, &instant, &output);
     }
     *length = output.length;
     return result;

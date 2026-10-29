@@ -128,9 +128,9 @@ static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlo
                : r;
 }
 
-mlocResult mlocInitSegmenter(mlocSegmenter* segmenterOut, const mlocDataSet* data,
-                             const mlocLocale* locale, mlocSegmentKind kind, const char* text,
-                             size_t length, bool moreFollows)
+mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
+                             mlocSegmentKind kind, const char* text, size_t length,
+                             bool moreFollows, mlocSegmenter* segmenterOut)
 {
     if (segmenterOut == nullptr || data == nullptr || locale == nullptr ||
         (text == nullptr && length > 0) ||
@@ -163,8 +163,8 @@ static Segmenter* Made(mlocSegmenter* segmenter)
     return s != nullptr && s->stamp == segmenterStamp ? s : nullptr;
 }
 
-mlocResult mlocSetSegmenterComplexBreaker(mlocSegmenter* segmenter,
-                                          mlocComplexBreakFunction breaker, void* context)
+mlocResult mlocSegmenter_SetComplexBreaker(mlocSegmenter* segmenter,
+                                           mlocComplexBreakFunction breaker, void* context)
 {
     Segmenter* s = Made(segmenter);
     if (s == nullptr || s->kind == mloc_segmentSentence || s->started)
@@ -176,8 +176,8 @@ mlocResult mlocSetSegmenterComplexBreaker(mlocSegmenter* segmenter,
                : mloc_errorInvalid;
 }
 
-mlocResult mlocFeedSegmenter(mlocSegmenter* segmenter, const char* text, size_t length,
-                             bool moreFollows)
+mlocResult mlocSegmenter_Feed(mlocSegmenter* segmenter, const char* text, size_t length,
+                              bool moreFollows)
 {
     Segmenter* s = Made(segmenter);
     if (s == nullptr || (text == nullptr && length > 0) || !s->iteratorWaits)
@@ -272,7 +272,7 @@ static bool Drain(Segmenter* s, size_t* offsetOut)
     return false;
 }
 
-mlocResult mlocNextSegmentBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
+mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
 {
     Segmenter* s = Made(segmenter);
     bool mandatory = false;

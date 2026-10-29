@@ -5,7 +5,7 @@
 # hour cycle, precision, style and zone (mlocTimeOptions' values), the
 # zone (UTC for a time without one), the start and the end (seconds from
 # 1970), ICU's text and its spans (start and end in UTF-16 units, "-" for
-# one time). Where mlocFormatTimeRange or mlocFormatTimeRangeInZone
+# one time). Where mlocTimeFormatter_FormatRange or mlocTimeFormatter_FormatRangeInZone
 # answers otherwise on purpose, its text, its spans and the cause follow:
 # - zone: across dates, the offset zone forms (O, OOOO) kept, which ICU's
 #   skeleton split drops from the date fallback's time;

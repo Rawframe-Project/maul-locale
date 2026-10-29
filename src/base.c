@@ -15,7 +15,7 @@ mlocVersion mlocGetCldrVersion(void)
     return (mlocVersion){MLOC_CLDR_VERSION_MAJOR, MLOC_CLDR_VERSION_MINOR, MLOC_CLDR_VERSION_PATCH};
 }
 
-const char* mlocResultName(mlocResult result)
+const char* mlocGetResultName(mlocResult result)
 {
     switch (result)
     {

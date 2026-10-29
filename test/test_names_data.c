@@ -451,7 +451,7 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     {
         fclose(file);
     }
-    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+    return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
 // The compiled-in data, then the names and subdivisions data files at the

@@ -106,9 +106,9 @@ static void Search(const mlocCollator* collator, char** field, int n)
     Read(&s_pattern, field[1]);
     Read(&s_text, field[2]);
     mlocResult r =
-        mlocInitSearcherUtf16(&searcher, collator, s_pattern.units, s_pattern.length, &options);
+        mlocInitSearcherUtf16(collator, s_pattern.units, s_pattern.length, &options, &searcher);
     mlocResult r8 =
-        mlocInitSearcher(&searcher8, collator, s_pattern.bytes, s_pattern.size, &options);
+        mlocInitSearcher(collator, s_pattern.bytes, s_pattern.size, &options, &searcher8);
     if (r != mloc_success || r8 != r)
     {
         printf(r8 != r ? "differ\n" : "error\n");
@@ -116,8 +116,10 @@ static void Search(const mlocCollator* collator, char** field, int n)
     }
     size_t start = 0;
     size_t end = 0;
-    r = back ? mlocFindPreviousUtf16(&searcher, s_text.units, s_text.length, from, &start, &end)
-             : mlocFindNextUtf16(&searcher, s_text.units, s_text.length, from, &start, &end);
+    r = back ? mlocSearcher_FindPreviousUtf16(&searcher, s_text.units, s_text.length, from, &start,
+                                              &end)
+             : mlocSearcher_FindNextUtf16(&searcher, s_text.units, s_text.length, from, &start,
+                                          &end);
     // The same position in bytes: the last byte on that unit or
     // before, which the find moves to its code point's start, as it
     // moves a unit inside a pair.
@@ -128,8 +130,10 @@ static void Search(const mlocCollator* collator, char** field, int n)
     }
     size_t start8 = 0;
     size_t end8 = 0;
-    r8 = back ? mlocFindPrevious(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8, &end8)
-              : mlocFindNext(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8, &end8);
+    r8 = back ? mlocSearcher_FindPrevious(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8,
+                                          &end8)
+              : mlocSearcher_FindNext(&searcher8, s_text.bytes, s_text.size, byteFrom, &start8,
+                                      &end8);
     if (r8 != r ||
         (r == mloc_success && (s_text.unitOf[start8] != start || s_text.unitOf[end8] != end)))
     {
@@ -149,7 +153,7 @@ int main(int argc, char** argv)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("usage: conform_search collation.mloc < lines\n", stderr);
         return 2;
@@ -170,7 +174,7 @@ int main(int argc, char** argv)
         mlocLocale locale;
         mlocCollator collator;
         if (n < 5 || mlocParseLocale(field[0], strlen(field[0]), &locale).status != mloc_success ||
-            mlocInitCollator(&collator, &data, &locale, nullptr) != mloc_success)
+            mlocInitCollator(&data, &locale, nullptr, &collator) != mloc_success)
         {
             printf("error\n");
             continue;

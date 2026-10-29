@@ -78,9 +78,9 @@ extern "C"
     /// give any answer, and a build with assertions on may stop with a
     /// trap.
     ///
-    /// @param dataOut  Receives the view; left unchanged on failure.
     /// @param bytes    The file, 8-byte aligned (any allocator's memory is).
     /// @param size     The file's size.
+    /// @param dataOut  Receives the view; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or bytes
     ///         that are not 8-byte aligned; mloc_errorVersion for a
     ///         file of another data version (mlocReadDataVersion names
@@ -88,8 +88,8 @@ extern "C"
     ///         bytes that are not a valid data file.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocOpenData(mlocData* dataOut, const void* bytes,
-                                                    size_t size);
+    MLOC_NODISCARD MLOC_API mlocResult mlocOpenData(const void* bytes, size_t size,
+                                                    mlocData* dataOut);
 
     /// Opens the data compiled into the library.
     ///
@@ -104,13 +104,13 @@ extern "C"
     /// @return The count.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_API size_t mlocGetDataLocaleCount(const mlocData* data);
+    MLOC_API size_t mlocData_GetLocaleCount(const mlocData* data);
 
     /// Returns one locale a source has data for, as CLDR names it
     /// ("de_AT", "sr_Latn"), in the order of their bytes.
     ///
     /// @param data       An opened source.
-    /// @param index      Below mlocGetDataLocaleCount.
+    /// @param index      Below mlocData_GetLocaleCount.
     /// @param idOut      Receives the id, which is not NUL-terminated and
     ///                   lives as long as the source's bytes.
     /// @param lengthOut  Receives its length in bytes.
@@ -118,8 +118,8 @@ extern "C"
     ///         index out of range.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetDataLocale(const mlocData* data, size_t index,
-                                                         const char** idOut, size_t* lengthOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocData_GetLocale(const mlocData* data, size_t index,
+                                                          const char** idOut, size_t* lengthOut);
 
 #ifdef __cplusplus
 }

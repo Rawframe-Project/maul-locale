@@ -1171,7 +1171,7 @@ static mlocMessageFaultKind TestResolve(void* context, const mlocMessageCall* ca
     }
     mlocMessageOperand option;
     mlocMessageResolved storage;
-    if (mlocFindMessageOption(call, "decimalPlaces", 13, &option, &storage) == 0 &&
+    if (mlocMessageCall_FindOption(call, "decimalPlaces", 13, &option, &storage) == 0 &&
         option.kind != mloc_messageOperandFallback)
     {
         double places = -1;
@@ -1181,7 +1181,7 @@ static mlocMessageFaultKind TestResolve(void* context, const mlocMessageCall* ca
         }
         v.decimalPlaces = (int)places;
     }
-    if (mlocFindMessageOption(call, "fails", 5, &option, &storage) == 0 &&
+    if (mlocMessageCall_FindOption(call, "fails", 5, &option, &storage) == 0 &&
         option.kind != mloc_messageOperandFallback)
     {
         bool always = OperandIs(&option, "always");
@@ -1281,7 +1281,7 @@ static const mlocDataSet* DatesData(void)
     {
         fclose(file);
     }
-    if (size == 0 || size >= sizeof dates || mlocOpenData(&sources[1], dates, size) != mloc_success)
+    if (size == 0 || size >= sizeof dates || mlocOpenData(dates, size, &sources[1]) != mloc_success)
     {
         return NULL;
     }
@@ -1322,9 +1322,9 @@ static void TestSuiteFormat(void)
             s_testFunctions, 3, NULL};
         size_t boundSize = 0;
         CHECK(mlocParseLocale(c->locale, strlen(c->locale), &locale).status == mloc_success &&
-                  mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success &&
-                  mlocBindMessage(&formatter, s_buffer, size, bound, sizeof bound, &boundSize) ==
-                      mloc_success,
+                  mlocInitMessageFormatter(&data, &locale, &options, &formatter) == mloc_success &&
+                  mlocMessageFormatter_Bind(&formatter, s_buffer, size, bound, sizeof bound,
+                                            &boundSize) == mloc_success,
               "a case binds");
         mlocMessageArgument arguments[8];
         mlocDecimal decimals[8];
@@ -1366,11 +1366,11 @@ static void MakeFormatters(void)
     mlocMessageOptions plain = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitMessageFormatter(&s_formatter, &data, &locale, &plain) == mloc_success &&
-              mlocInitMessageFormatter(&s_strict, &data, &locale, &strict) == mloc_success,
+              mlocInitMessageFormatter(&data, &locale, &plain, &s_formatter) == mloc_success &&
+              mlocInitMessageFormatter(&data, &locale, &strict, &s_strict) == mloc_success,
           "formatters are made");
-    CHECK(mlocInitMessageFormatter(NULL, &data, &locale, NULL) == mloc_errorInvalid &&
-              mlocInitMessageFormatter(&s_strict, NULL, &locale, NULL) == mloc_errorInvalid,
+    CHECK(mlocInitMessageFormatter(&data, &locale, NULL, NULL) == mloc_errorInvalid &&
+              mlocInitMessageFormatter(NULL, &locale, NULL, &s_strict) == mloc_errorInvalid,
           "null pointers are refused");
 }
 
@@ -1388,9 +1388,10 @@ static mlocResult Bind(const mlocMessageFormatter* formatter, const char* text)
         return compiled.status;
     }
     size_t needed = 0;
-    mlocResult measured = mlocBindMessage(formatter, s_buffer, size, NULL, 0, &needed);
+    mlocResult measured = mlocMessageFormatter_Bind(formatter, s_buffer, size, NULL, 0, &needed);
     size_t bound = 0;
-    mlocResult result = mlocBindMessage(formatter, s_buffer, size, s_bound, sizeof s_bound, &bound);
+    mlocResult result =
+        mlocMessageFormatter_Bind(formatter, s_buffer, size, s_bound, sizeof s_bound, &bound);
     CHECK(result != mloc_success || (measured == mloc_errorCapacity && needed == bound),
           "binding measures what it writes");
     return result;
@@ -1437,8 +1438,8 @@ static void TestBindAndFormat(void)
     CHECK(Compile(".local $a = {$x} .local $b = {$a} {{{$b}}}", &laterSize), "two locals compile");
     Store(s_buffer + FieldAt(messageExpressions, 0, 1), Field(messageDeclarations, 1, 1));
     size_t laterBound = 0;
-    CHECK(mlocBindMessage(&s_formatter, s_buffer, laterSize, s_bound, sizeof s_bound,
-                          &laterBound) == mloc_errorFormat,
+    CHECK(mlocMessageFormatter_Bind(&s_formatter, s_buffer, laterSize, s_bound, sizeof s_bound,
+                                    &laterBound) == mloc_errorFormat,
           "a declaration naming a later expression is refused");
     mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(mlocFormatMessage(s_bound, NULL, 0, &stale, NULL) == mloc_errorInvalid,
@@ -1552,12 +1553,12 @@ static void TestBindAndFormat(void)
     mlocMessageFormatter unmade;
     memset(&unmade, 0, sizeof unmade);
     CHECK(Compile("{$x}", &size) &&
-              mlocBindMessage(&unmade, s_buffer, size, s_bound, sizeof s_bound, &size) ==
+              mlocMessageFormatter_Bind(&unmade, s_buffer, size, s_bound, sizeof s_bound, &size) ==
                   mloc_errorInvalid &&
-              mlocBindMessage(&s_formatter, s_buffer, 4, s_bound, sizeof s_bound, &size) ==
-                  mloc_errorFormat,
+              mlocMessageFormatter_Bind(&s_formatter, s_buffer, 4, s_bound, sizeof s_bound,
+                                        &size) == mloc_errorFormat,
           "a formatter never made and bytes not a message are refused");
-    CHECK(mlocBindMessage(NULL, s_buffer, size, s_bound, sizeof s_bound, &size) ==
+    CHECK(mlocMessageFormatter_Bind(NULL, s_buffer, size, s_bound, sizeof s_bound, &size) ==
               mloc_errorInvalid,
           "a null formatter is refused");
 
@@ -1566,7 +1567,7 @@ static void TestBindAndFormat(void)
     static uint8_t crafted[4096];
     memcpy(crafted, s_buffer, size);
     Store(crafted + FieldAt(messageExpressions, 0, 1), Field(messageDeclarations, 0, 1));
-    CHECK(mlocBindMessage(&s_formatter, crafted, size, s_bound, sizeof s_bound, &size) ==
+    CHECK(mlocMessageFormatter_Bind(&s_formatter, crafted, size, s_bound, sizeof s_bound, &size) ==
               mloc_errorFormat,
           "a local naming itself is refused");
 
@@ -1623,10 +1624,10 @@ static void TestRefusedBinds(void)
     for (size_t i = 0; i < sizeof refusals / sizeof refusals[0]; i++)
     {
         mlocOutput first = {s_text, sizeof s_text, 0, NULL, NULL};
-        bool bound1 = mlocBindMessage(&s_formatter, s_message, size, s_bound, sizeof s_bound,
-                                      &bound) == mloc_success &&
+        bool bound1 = mlocMessageFormatter_Bind(&s_formatter, s_message, size, s_bound,
+                                                sizeof s_bound, &bound) == mloc_success &&
                       mlocFormatMessage(s_bound, NULL, 0, &first, NULL) == mloc_withFallbacks;
-        mlocResult refused = mlocBindMessage(
+        mlocResult refused = mlocMessageFormatter_Bind(
             refusals[i].formatter != 0 ? &zero : &s_formatter, messages[refusals[i].bytes], size,
             s_bound, refusals[i].capacity, refusals[i].noSize ? NULL : &bound);
         mlocOutput stale = {s_text, sizeof s_text, 0, NULL, NULL};

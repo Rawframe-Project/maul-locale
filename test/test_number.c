@@ -28,9 +28,9 @@ static bool Formats(const char* id, const mlocNumberOptions* options, const char
     char buffer[256];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitNumberFormatter(&formatter, &s_data, &locale, options) >= 0 &&
+           mlocInitNumberFormatter(&s_data, &locale, options, &formatter) >= 0 &&
            mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success &&
-           mlocFormatNumber(&formatter, &decimal, &output) == mloc_success &&
+           mlocNumberFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
            output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
 }
 
@@ -47,7 +47,7 @@ static mlocResult Init(const char* id, const mlocNumberOptions* options)
     {
         return (mlocResult)-100;
     }
-    return mlocInitNumberFormatter(&formatter, &s_data, &locale, options);
+    return mlocInitNumberFormatter(&s_data, &locale, options, &formatter);
 }
 
 static void TestLocales(void)
@@ -241,19 +241,19 @@ static void TestStyles(void)
     char buffer[16];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
               mlocParseDecimal("1e999998", 8, &big).status == mloc_success &&
-              mlocFormatNumber(&formatter, &big, &output) == mloc_errorLimit,
+              mlocNumberFormatter_Format(&formatter, &big, &output) == mloc_errorLimit,
           "is refused");
     o.style = mloc_numberPerMille;
     CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
-              mlocFormatNumber(&formatter, &big, &output) == mloc_errorLimit,
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &big, &output) == mloc_errorLimit,
           "per mille too");
     o.style = mloc_numberPercent;
     CHECK(mlocParseDecimal("1e999997", 8, &big).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
-              mlocFormatNumber(&formatter, &big, &output) == mloc_errorCapacity &&
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &big, &output) == mloc_errorCapacity &&
               output.length > sizeof(buffer),
           "a percent at the limit is written in full");
 }
@@ -307,8 +307,8 @@ static void TestScientific(void)
     mlocDecimal infinity = {.kind = mloc_decimalInfinity};
     o = (mlocNumberOptions){.notation = mloc_notationScientific};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
-              mlocFormatNumber(&formatter, &infinity, &output) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &infinity, &output) == mloc_success &&
               output.length == 3 && memcmp(buffer, "\xE2\x88\x9E", 3) == 0,
           "infinity has no exponent");
     Parts parts = {0};
@@ -321,7 +321,7 @@ static void TestScientific(void)
         mloc_numberPartExponentSeparator, mloc_numberPartExponentMinusSign,
         mloc_numberPartExponentInteger};
     CHECK(mlocParseDecimal("-0.0012", 7, &value).status == mloc_success &&
-              mlocFormatNumber(&formatter, &value, &withParts) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &value, &withParts) == mloc_success &&
               withParts.length == 7 && parts.count == 7 &&
               memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0 && parts.starts[6] == 6 &&
               parts.lengths[6] == 1,
@@ -331,7 +331,7 @@ static void TestScientific(void)
     char wide[64];
     mlocOutput farOutput = {.buffer = wide, .capacity = sizeof(wide)};
     CHECK(mlocParseDecimal("1e-999999", 9, &far).status == mloc_success &&
-              mlocFormatNumber(&formatter, &far, &farOutput) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &far, &farOutput) == mloc_success &&
               farOutput.length == 9 && memcmp(wide, "1E-999999", 9) == 0,
           "the smallest exponent");
 }
@@ -386,14 +386,15 @@ static void TestCompact(void)
                                        mloc_numberPartFraction, mloc_numberPartLiteral,
                                        mloc_numberPartCompact};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
               mlocParseDecimal("1234", 4, &value).status == mloc_success &&
-              mlocFormatNumber(&formatter, &value, &output) == mloc_success && parts.count == 5 &&
-              memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0 && parts.starts[4] == 4 &&
-              parts.lengths[4] == 8,
+              mlocNumberFormatter_Format(&formatter, &value, &output) == mloc_success &&
+              parts.count == 5 && memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0 &&
+              parts.starts[4] == 4 && parts.lengths[4] == 8,
           "the compact word is its own part, the space before it literal");
     mlocDecimal special = {.kind = mloc_decimalNaN};
-    CHECK(mlocFormatNumber(&formatter, &special, &output) == mloc_success && output.length == 3,
+    CHECK(mlocNumberFormatter_Format(&formatter, &special, &output) == mloc_success &&
+              output.length == 3,
           "NaN is not compacted");
     // The spaces at a compact word's ends are literal, whichever space.
     typedef struct SpaceCase
@@ -416,10 +417,10 @@ static void TestCompact(void)
             .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &got};
         CHECK(mlocParseLocale(s_spaces[i].id, strlen(s_spaces[i].id), &locale).status ==
                       mloc_success &&
-                  mlocInitNumberFormatter(&formatter, &s_data, &locale, &spaced) == mloc_success &&
+                  mlocInitNumberFormatter(&s_data, &locale, &spaced, &formatter) == mloc_success &&
                   mlocParseDecimal(s_spaces[i].number, strlen(s_spaces[i].number), &value).status ==
                       mloc_success &&
-                  mlocFormatNumber(&formatter, &value, &withParts) == mloc_success &&
+                  mlocNumberFormatter_Format(&formatter, &value, &withParts) == mloc_success &&
                   got.count == 5 && got.kinds[3] == mloc_numberPartLiteral &&
                   got.kinds[4] == mloc_numberPartCompact &&
                   got.starts[4] == s_spaces[i].compactStart &&
@@ -452,10 +453,10 @@ static bool Ranges(const char* id, const mlocNumberOptions* options, const char*
     char buffer[256];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitNumberFormatter(&formatter, &s_data, &locale, options) >= 0 &&
+           mlocInitNumberFormatter(&s_data, &locale, options, &formatter) >= 0 &&
            mlocParseDecimal(from, strlen(from), &start).status == mloc_success &&
            mlocParseDecimal(to, strlen(to), &end).status == mloc_success &&
-           mlocFormatNumberRange(&formatter, &start, &end, &output) == mloc_success &&
+           mlocNumberFormatter_FormatRange(&formatter, &start, &end, &output) == mloc_success &&
            output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
 }
 
@@ -480,13 +481,13 @@ static void TestRanges(void)
     char approximately[16];
     mlocOutput written = {.buffer = approximately, .capacity = sizeof(approximately)};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitNumberFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
+              mlocInitNumberFormatter(&s_data, &en, nullptr, &plain) >= 0 &&
               mlocParseDecimal("5", 1, &five).status == mloc_success,
           "a formatter and 5");
     padded = five;
     Pad(&five, 0x00);
     Pad(&padded, 0xA5);
-    CHECK(mlocFormatNumberRange(&plain, &five, &padded, &written) == mloc_success &&
+    CHECK(mlocNumberFormatter_FormatRange(&plain, &five, &padded, &written) == mloc_success &&
               written.length == 2 && memcmp(approximately, "~5", 2) == 0,
           "ends of other padding write alike");
     CHECK(Ranges("en", nullptr, "-5", "-3", "-5 \xE2\x80\x93 -3") &&
@@ -536,25 +537,33 @@ static void TestRanges(void)
     char buffer[64];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, nullptr, &formatter) == mloc_success &&
               mlocParseDecimal("3", 1, &three).status == mloc_success &&
-              mlocFormatNumberRange(&formatter, &three, &infinity, &output) == mloc_success &&
+              mlocNumberFormatter_FormatRange(&formatter, &three, &infinity, &output) ==
+                  mloc_success &&
               output.length == 7 && memcmp(buffer, "3\xE2\x80\x93\xE2\x88\x9E", 7) == 0,
           "to infinity");
-    CHECK(mlocFormatNumberRange(&formatter, &three, &nan, &output) == mloc_errorInvalid &&
-              mlocFormatNumberRange(&formatter, &nan, &three, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_FormatRange(&formatter, &three, &nan, &output) == mloc_errorInvalid &&
+              mlocNumberFormatter_FormatRange(&formatter, &nan, &three, &output) ==
+                  mloc_errorInvalid,
           "a NaN end");
-    CHECK(mlocFormatNumberRange(&formatter, &three, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatNumberRange(&formatter, nullptr, &three, &output) == mloc_errorInvalid &&
-              mlocFormatNumberRange(&formatter, &three, &three, nullptr) == mloc_errorInvalid &&
-              mlocFormatNumberRange(nullptr, &three, &three, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_FormatRange(&formatter, &three, nullptr, &output) ==
+                  mloc_errorInvalid &&
+              mlocNumberFormatter_FormatRange(&formatter, nullptr, &three, &output) ==
+                  mloc_errorInvalid &&
+              mlocNumberFormatter_FormatRange(&formatter, &three, &three, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocNumberFormatter_FormatRange(nullptr, &three, &three, &output) ==
+                  mloc_errorInvalid,
           "null pointers");
     mlocDecimal madeUp = three;
     madeUp.negative = 2;
-    CHECK(mlocFormatNumberRange(&formatter, &three, &madeUp, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_FormatRange(&formatter, &three, &madeUp, &output) ==
+              mloc_errorInvalid,
           "a made-up end");
     mlocOutput measure = {0};
-    CHECK(mlocFormatNumberRange(&formatter, &three, &infinity, &measure) == mloc_errorCapacity &&
+    CHECK(mlocNumberFormatter_FormatRange(&formatter, &three, &infinity, &measure) ==
+                  mloc_errorCapacity &&
               measure.length == 7,
           "measuring");
     // Parts: the start's, the end's, and what both share.
@@ -568,17 +577,18 @@ static void TestRanges(void)
                                        mloc_numberPartLiteral,
                                        mloc_numberPartInteger | mloc_numberRangeEnd,
                                        mloc_numberPartLiteral, mloc_numberPartCompact};
-    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &longCompact) == mloc_success &&
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, &longCompact, &formatter) == mloc_success &&
               mlocParseDecimal("3000", 4, &start).status == mloc_success &&
               mlocParseDecimal("5000", 4, &end).status == mloc_success &&
-              mlocFormatNumberRange(&formatter, &start, &end, &withParts) == mloc_success &&
+              mlocNumberFormatter_FormatRange(&formatter, &start, &end, &withParts) ==
+                  mloc_success &&
               parts.count == 5 && memcmp(parts.kinds, s_kinds, sizeof(s_kinds)) == 0,
           "a range's parts with their ends");
     Parts alike = {0};
     withParts.context = &alike;
     static const uint32_t s_alike[] = {mloc_numberPartApproximatelySign, mloc_numberPartInteger,
                                        mloc_numberPartLiteral, mloc_numberPartCompact};
-    CHECK(mlocFormatNumberRange(&formatter, &start, &start, &withParts) == mloc_success &&
+    CHECK(mlocNumberFormatter_FormatRange(&formatter, &start, &start, &withParts) == mloc_success &&
               alike.count == 4 && memcmp(alike.kinds, s_alike, sizeof(s_alike)) == 0,
           "an approximate number's parts are both ends'");
 }
@@ -622,13 +632,13 @@ static void TestSigns(void)
     mlocDecimal special = {.kind = mloc_decimalInfinity, .negative = 1};
     o = (mlocNumberOptions){.signDisplay = mloc_signAlways};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &o) == mloc_success &&
-              mlocFormatNumber(&formatter, &special, &output) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, &o, &formatter) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &special, &output) == mloc_success &&
               output.length == 4 && memcmp(buffer, "-\xE2\x88\x9E", 4) == 0,
           "negative infinity");
     special = (mlocDecimal){.kind = mloc_decimalNaN};
-    CHECK(mlocFormatNumber(&formatter, &special, &output) == mloc_success && output.length == 3 &&
-              memcmp(buffer, "NaN", 3) == 0,
+    CHECK(mlocNumberFormatter_Format(&formatter, &special, &output) == mloc_success &&
+              output.length == 3 && memcmp(buffer, "NaN", 3) == 0,
           "NaN shows no sign");
 }
 
@@ -638,27 +648,28 @@ static void TestOutput(void)
     mlocNumberFormatter formatter;
     mlocDecimal decimal;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, nullptr, &formatter) == mloc_success &&
               mlocParseDecimal("-1234567.25", 11, &decimal).status == mloc_success,
           "a formatter and a number");
     mlocOutput measure = {0};
-    CHECK(mlocFormatNumber(&formatter, &decimal, &measure) == mloc_errorCapacity &&
+    CHECK(mlocNumberFormatter_Format(&formatter, &decimal, &measure) == mloc_errorCapacity &&
               measure.length == 13,
           "a null buffer measures");
     char buffer[16];
     mlocOutput shortOne = {.buffer = buffer, .capacity = 12};
-    CHECK(mlocFormatNumber(&formatter, &decimal, &shortOne) == mloc_errorCapacity &&
+    CHECK(mlocNumberFormatter_Format(&formatter, &decimal, &shortOne) == mloc_errorCapacity &&
               shortOne.length == 13,
           "a buffer a byte short");
     mlocDecimal five;
     char single[1] = {0};
     mlocOutput exact = {.buffer = single, .capacity = 1};
     CHECK(mlocParseDecimal("5", 1, &five).status == mloc_success &&
-              mlocFormatNumber(&formatter, &five, &exact) == mloc_success && single[0] == '5',
+              mlocNumberFormatter_Format(&formatter, &five, &exact) == mloc_success &&
+              single[0] == '5',
           "a text that fills its buffer in one piece");
     Parts parts = {0};
     mlocOutput output = {.buffer = buffer, .capacity = 13, .part = Collect, .context = &parts};
-    CHECK(mlocFormatNumber(&formatter, &decimal, &output) == mloc_success &&
+    CHECK(mlocNumberFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
               memcmp(buffer, "-1,234,567.25", 13) == 0,
           "an exact buffer");
     static const uint32_t s_kinds[] = {mloc_numberPartMinusSign, mloc_numberPartInteger,
@@ -678,11 +689,11 @@ static void TestOutput(void)
         .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &arabic};
     mlocDecimal one;
     CHECK(mlocParseLocale("ar", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success &&
+              mlocInitNumberFormatter(&s_data, &locale, nullptr, &formatter) == mloc_success &&
               mlocParseDecimal("-1", 2, &one).status == mloc_success &&
-              mlocFormatNumber(&formatter, &one, &withParts) == mloc_success && arabic.count == 2 &&
-              arabic.kinds[0] == mloc_numberPartMinusSign && arabic.lengths[0] == 4 &&
-              arabic.kinds[1] == mloc_numberPartInteger,
+              mlocNumberFormatter_Format(&formatter, &one, &withParts) == mloc_success &&
+              arabic.count == 2 && arabic.kinds[0] == mloc_numberPartMinusSign &&
+              arabic.lengths[0] == 4 && arabic.kinds[1] == mloc_numberPartInteger,
           "a minus sign with its bidi mark is one part");
 }
 
@@ -691,12 +702,12 @@ static void TestRefusals(void)
     mlocLocale locale;
     mlocNumberFormatter formatter;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
-    CHECK(mlocInitNumberFormatter(nullptr, &s_data, &locale, nullptr) == mloc_errorInvalid &&
-              mlocInitNumberFormatter(&formatter, nullptr, &locale, nullptr) == mloc_errorInvalid &&
-              mlocInitNumberFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitNumberFormatter(nullptr, &locale, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitNumberFormatter(&s_data, nullptr, nullptr, &formatter) == mloc_errorInvalid,
           "null pointers");
     mlocDataSet empty = {nullptr, 0};
-    CHECK(mlocInitNumberFormatter(&formatter, &empty, &locale, nullptr) == mloc_errorNotFound,
+    CHECK(mlocInitNumberFormatter(&empty, &locale, nullptr, &formatter) == mloc_errorNotFound,
           "data without numbers");
     struct
     {
@@ -755,7 +766,7 @@ static void TestRefusals(void)
     };
     for (size_t i = 0; i < sizeof(s_bad) / sizeof(s_bad[0]); i++)
     {
-        CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &s_bad[i].options) ==
+        CHECK(mlocInitNumberFormatter(&s_data, &locale, &s_bad[i].options, &formatter) ==
                   mloc_errorInvalid,
               s_bad[i].name);
     }
@@ -764,45 +775,45 @@ static void TestRefusals(void)
                                              .maxFractionDigits = 100,
                                              .minSignificantDigits = 21,
                                              .maxSignificantDigits = 21}};
-    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &edges) == mloc_success,
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, &edges, &formatter) == mloc_success,
           "every limit at its largest");
     edges = (mlocNumberOptions){.precision = {.kind = mloc_precisionFraction, .increment = 1}};
-    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &edges) == mloc_success,
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, &edges, &formatter) == mloc_success,
           "an increment of 1 is none");
     edges = (mlocNumberOptions){.precision = {.kind = mloc_precisionSignificant,
                                               .minSignificantDigits = 1,
                                               .maxSignificantDigits = 2,
                                               .increment = 1}};
-    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, &edges) == mloc_success,
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, &edges, &formatter) == mloc_success,
           "with any kind");
     mlocDecimal decimal = {.count = 1, .digits = {1}};
     char buffer[16];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
-    CHECK(mlocInitNumberFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success,
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, nullptr, &formatter) == mloc_success,
           "a formatter");
-    CHECK(mlocFormatNumber(nullptr, &decimal, &output) == mloc_errorInvalid &&
-              mlocFormatNumber(&formatter, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatNumber(&formatter, &decimal, nullptr) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Format(nullptr, &decimal, &output) == mloc_errorInvalid &&
+              mlocNumberFormatter_Format(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocNumberFormatter_Format(&formatter, &decimal, nullptr) == mloc_errorInvalid,
           "format refusals");
     mlocOutput badOutput = {.buffer = nullptr, .capacity = 4};
-    CHECK(mlocFormatNumber(&formatter, &decimal, &badOutput) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Format(&formatter, &decimal, &badOutput) == mloc_errorInvalid,
           "a null buffer with room");
     mlocDecimal madeUp = decimal;
     madeUp.digits[0] = 10;
-    CHECK(mlocFormatNumber(&formatter, &madeUp, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Format(&formatter, &madeUp, &output) == mloc_errorInvalid,
           "a decimal the library did not make");
     mlocNumberFormatter zero = {0};
-    CHECK(mlocFormatNumber(&zero, &decimal, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Format(&zero, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make");
     mlocNumberFormatter spoiled = formatter;
     memset((uint8_t*)spoiled.opaque + 128, 0xFF, sizeof(spoiled) - 128);
-    CHECK(mlocFormatNumber(&spoiled, &decimal, &output) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Format(&spoiled, &decimal, &output) == mloc_errorInvalid,
           "a spoiled formatter");
     mlocDecimal huge;
     mlocNumberOptions coarse = Significant(1, 1);
     CHECK(mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &coarse) == mloc_success &&
-              mlocFormatNumber(&formatter, &huge, &output) == mloc_errorLimit,
+              mlocInitNumberFormatter(&s_data, &locale, &coarse, &formatter) == mloc_success &&
+              mlocNumberFormatter_Format(&formatter, &huge, &output) == mloc_errorLimit,
           "rounding past the decimal's limits");
 }
 

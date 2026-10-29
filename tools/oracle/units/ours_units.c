@@ -43,7 +43,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "names\n");
         return 1;
@@ -77,27 +77,27 @@ int main(void)
         mlocOutput output = {.buffer = out, .capacity = sizeof(out)};
         mlocResult r = mloc_errorInvalid;
         if (mlocParseLocale(loc, strlen(loc), &locale).status == mloc_success &&
-            mlocInitUnitFormatter(&f, &data, &locale, unit, strlen(unit), &o) >= 0 &&
+            mlocInitUnitFormatter(&data, &locale, unit, strlen(unit), &o, &f) >= 0 &&
             mlocParseDecimal(a, strlen(a), &x).status == mloc_success)
         {
             if (n == 4)
             {
-                r = mlocFormatUnit(&f, &x, &output);
+                r = mlocUnitFormatter_Format(&f, &x, &output);
                 output.part = Part;
                 output.context = &parts;
                 if (r == mloc_success)
                 {
-                    r = mlocFormatUnit(&f, &x, &output);
+                    r = mlocUnitFormatter_Format(&f, &x, &output);
                 }
             }
             else if (mlocParseDecimal(b, strlen(b), &y).status == mloc_success)
             {
-                r = mlocFormatUnitRange(&f, &x, &y, &output);
+                r = mlocUnitFormatter_FormatRange(&f, &x, &y, &output);
                 output.part = Part;
                 output.context = &parts;
                 if (r == mloc_success)
                 {
-                    r = mlocFormatUnitRange(&f, &x, &y, &output);
+                    r = mlocUnitFormatter_FormatRange(&f, &x, &y, &output);
                 }
             }
         }

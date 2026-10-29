@@ -101,9 +101,9 @@ static mlocResult LoadDurations(UnitFormat* u, const mlocDataSet* data, const ml
     return mloc_success;
 }
 
-mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocDataSet* data,
-                                 const mlocLocale* locale, const char* unit, size_t unitLength,
-                                 const mlocUnitOptions* options)
+mlocResult mlocInitUnitFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                 const char* unit, size_t unitLength,
+                                 const mlocUnitOptions* options, mlocUnitFormatter* formatterOut)
 {
     static const mlocUnitOptions s_defaults = {0};
     const mlocUnitOptions* o = options == nullptr ? &s_defaults : options;
@@ -163,7 +163,7 @@ mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut, const mlocData
     {
         return result;
     }
-    if (mlocInitPluralRules(&u.rules, data, locale, mloc_pluralCardinal) < 0)
+    if (mlocInitPluralRules(data, locale, mloc_pluralCardinal, &u.rules) < 0)
     {
         return mloc_errorNotFound;
     }
@@ -282,8 +282,8 @@ static bool ValidArguments(const mlocDecimal* decimal, const mlocOutput* output)
            (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);
 }
 
-mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal* decimal,
-                          mlocOutput* output)
+mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter, const mlocDecimal* decimal,
+                                    mlocOutput* output)
 {
     UnitFormat u;
     if (!ReadUnit(formatter, &u))
@@ -309,8 +309,9 @@ mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter, const mlocDecimal*
                    : mlocFormatMixedUnit(&u, decimal, output);
 }
 
-mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter, const mlocDecimal* start,
-                               const mlocDecimal* end, mlocOutput* output)
+mlocResult mlocUnitFormatter_FormatRange(const mlocUnitFormatter* formatter,
+                                         const mlocDecimal* start, const mlocDecimal* end,
+                                         mlocOutput* output)
 {
     UnitFormat u;
     if (!ReadUnit(formatter, &u) || (u.output[0].parts > 1 && !u.usage) ||

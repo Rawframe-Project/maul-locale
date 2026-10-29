@@ -94,9 +94,9 @@ static bool Open(const char* locale, mlocCatalog* catalog, mlocMessageFormatter*
         s_bytes[s_byteCount++] = bytes;
     }
     mlocLocale parsed;
-    return bytes != nullptr && mlocOpenCatalog(catalog, bytes, size) == mloc_success &&
+    return bytes != nullptr && mlocOpenCatalog(bytes, size, catalog) == mloc_success &&
            mlocParseLocale(locale, strlen(locale), &parsed).status == mloc_success &&
-           mlocInitMessageFormatter(formatter, &s_set, &parsed, nullptr) == mloc_success;
+           mlocInitMessageFormatter(&s_set, &parsed, nullptr, formatter) == mloc_success;
 }
 
 static void GuideChain(void)
@@ -115,16 +115,16 @@ static void GuideChain(void)
     mlocResult measured = mlocMeasureCatalogChain(catalogs, formatters, 3, &cacheSize);
     void* cache = measured == mloc_success ? malloc(cacheSize) : nullptr;
     if (cache != nullptr &&
-        mlocInitCatalogChain(&chain, catalogs, formatters, 3, cache, cacheSize) == mloc_success &&
-        mlocBindCatalogChain(&chain) == mloc_success)
+        mlocInitCatalogChain(catalogs, formatters, 3, cache, cacheSize, &chain) == mloc_success &&
+        mlocCatalogChain_Bind(&chain) == mloc_success)
     {
         mlocMessageArgument count = {
             "count", 5, {.kind = mloc_messageValueInteger, .as.integer = 2}};
         char text[128];
         mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
         mlocCatalogResult how;
-        mlocResult formatted =
-            mlocFormatCatalogKey(&chain, "files.count", 11, &count, 1, &output, nullptr, &how);
+        mlocResult formatted = mlocCatalogChain_FormatKey(&chain, "files.count", 11, &count, 1,
+                                                          &output, nullptr, &how);
         // formatted is mloc_success; text holds "2 fichiers" from fr,
         // how.reason is mloc_catalogFallback: fr-CA has no translation of its own
         (void)formatted;
@@ -134,14 +134,14 @@ static void GuideChain(void)
     char text[128];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocCatalogResult how = {0};
-    CHECK(mlocFormatCatalogKey(&chain, "files.count", 11, &count, 1, &output, nullptr, &how) ==
-                  mloc_success &&
+    CHECK(mlocCatalogChain_FormatKey(&chain, "files.count", 11, &count, 1, &output, nullptr,
+                                     &how) == mloc_success &&
               output.length == 10 && memcmp(text, "2 fichiers", 10) == 0,
           "the French message");
     CHECK(how.reason == mloc_catalogFallback && how.position == 1, "found in fr");
     output.length = 0;
-    CHECK(mlocFormatCatalogKey(&chain, "dialog.save", 11, nullptr, 0, &output, nullptr, &how) ==
-                  mloc_success &&
+    CHECK(mlocCatalogChain_FormatKey(&chain, "dialog.save", 11, nullptr, 0, &output, nullptr,
+                                     &how) == mloc_success &&
               how.reason == mloc_catalogFound && how.position == 0,
           "fr-CA's own translation");
     free(cache);

@@ -30,7 +30,7 @@ static mlocResult Init(mlocCurrencyFormatter* formatter, const char* id, const c
     {
         return (mlocResult)-100;
     }
-    return mlocInitCurrencyFormatter(formatter, &s_data, &locale, code, strlen(code), options);
+    return mlocInitCurrencyFormatter(&s_data, &locale, code, strlen(code), options, formatter);
 }
 
 // Whether an amount formats as expected in a locale with options.
@@ -43,7 +43,7 @@ static bool Formats(const char* id, const char* code, const mlocCurrencyOptions*
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     return Init(&formatter, id, code, options) >= 0 &&
            mlocParseDecimal(amount, strlen(amount), &decimal).status == mloc_success &&
-           mlocFormatCurrency(&formatter, &decimal, &output) == mloc_success &&
+           mlocCurrencyFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
            output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
 }
 
@@ -276,7 +276,7 @@ static bool Ranges(const char* id, const char* code, mlocCurrencyDisplay display
     return Init(&formatter, id, code, &options) >= 0 &&
            mlocParseDecimal(from, strlen(from), &start).status == mloc_success &&
            mlocParseDecimal(to, strlen(to), &end).status == mloc_success &&
-           mlocFormatCurrencyRange(&formatter, &start, &end, &output) == mloc_success &&
+           mlocCurrencyFormatter_FormatRange(&formatter, &start, &end, &output) == mloc_success &&
            output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
 }
 
@@ -413,7 +413,7 @@ static void TestParts(void)
         .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &parts};
     CHECK(Init(&formatter, "en", "USD", nullptr) == mloc_success &&
               mlocParseDecimal("-1.5", 4, &decimal).status == mloc_success &&
-              mlocFormatCurrency(&formatter, &decimal, &output) == mloc_success,
+              mlocCurrencyFormatter_Format(&formatter, &decimal, &output) == mloc_success,
           "a formatter of the parts");
     // -$1.50
     CHECK(parts.count == 5 && parts.kinds[0] == mloc_numberPartMinusSign &&
@@ -426,7 +426,7 @@ static void TestParts(void)
     output = (mlocOutput){
         .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &codeParts};
     CHECK(Init(&formatter, "en", "EUR", &code) == mloc_success &&
-              mlocFormatCurrency(&formatter, &decimal, &output) == mloc_success &&
+              mlocCurrencyFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
               codeParts.kinds[1] == mloc_numberPartCurrency && codeParts.lengths[1] == 3 &&
               memcmp(buffer + codeParts.starts[1], "EUR", 3) == 0,
           "a code as the currency part");
@@ -437,11 +437,11 @@ static void TestRefusals(void)
     mlocCurrencyFormatter formatter;
     mlocLocale locale;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
-    CHECK(mlocInitCurrencyFormatter(&formatter, &s_data, &locale, "US", 2, nullptr) ==
+    CHECK(mlocInitCurrencyFormatter(&s_data, &locale, "US", 2, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitCurrencyFormatter(&formatter, &s_data, &locale, "U$D", 3, nullptr) ==
+              mlocInitCurrencyFormatter(&s_data, &locale, "U$D", 3, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitCurrencyFormatter(&formatter, &s_data, &locale, nullptr, 3, nullptr) ==
+              mlocInitCurrencyFormatter(&s_data, &locale, nullptr, 3, nullptr, &formatter) ==
                   mloc_errorInvalid,
           "a code that is not three letters");
     mlocCurrencyOptions percent = {.number.style = mloc_numberPercent};
@@ -455,9 +455,9 @@ static void TestRefusals(void)
               Init(&formatter, "en", "USD", &display) == mloc_errorInvalid &&
               Init(&formatter, "en", "USD", &usage) == mloc_errorInvalid,
           "options out of range");
-    CHECK(mlocInitCurrencyFormatter(nullptr, &s_data, &locale, "USD", 3, nullptr) ==
+    CHECK(mlocInitCurrencyFormatter(&s_data, &locale, "USD", 3, nullptr, nullptr) ==
                   mloc_errorInvalid &&
-              mlocInitCurrencyFormatter(&formatter, nullptr, &locale, "USD", 3, nullptr) ==
+              mlocInitCurrencyFormatter(nullptr, &locale, "USD", 3, nullptr, &formatter) ==
                   mloc_errorInvalid,
           "null pointers");
     // A number formatter is not a currency formatter.
@@ -466,14 +466,15 @@ static void TestRefusals(void)
     mlocDecimal decimal;
     char buffer[32];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
-    CHECK(mlocInitNumberFormatter(&number, &s_data, &locale, nullptr) == mloc_success &&
+    CHECK(mlocInitNumberFormatter(&s_data, &locale, nullptr, &number) == mloc_success &&
               mlocParseDecimal("1", 1, &decimal).status == mloc_success,
           "a number formatter");
     memset(&mixed, 0, sizeof(mixed));
     memcpy(&mixed, &number, sizeof(number));
-    CHECK(mlocFormatCurrency(&mixed, &decimal, &output) == mloc_errorInvalid,
+    CHECK(mlocCurrencyFormatter_Format(&mixed, &decimal, &output) == mloc_errorInvalid,
           "a number formatter as a currency formatter");
-    CHECK(mlocFormatCurrency(nullptr, &decimal, &output) == mloc_errorInvalid, "a null formatter");
+    CHECK(mlocCurrencyFormatter_Format(nullptr, &decimal, &output) == mloc_errorInvalid,
+          "a null formatter");
 }
 
 // The days from the Unix epoch's to a Gregorian date.
@@ -602,7 +603,7 @@ static bool OpenData(void)
     }
     s_withNames = (mlocDataSet){s_sources, 2};
     return size > 0 && size < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+           mlocOpenData(s_names, size, &s_sources[1]) == mloc_success;
 }
 
 int main(void)

@@ -56,7 +56,7 @@ static void Open(void)
         fclose(f);
     }
     mlocOpenBuiltinData(&s_sources[0]);
-    Require(size > 0 && mlocOpenData(&s_sources[1], s_file, size) == mloc_success);
+    Require(size > 0 && mlocOpenData(s_file, size, &s_sources[1]) == mloc_success);
     s_open = true;
 }
 
@@ -66,12 +66,12 @@ static size_t Breaks(const mlocLocale* locale, mlocSegmentKind kind, const char*
 {
     mlocSegmenter s;
     size_t fed = pieceSize == 0 || pieceSize > length ? length : pieceSize;
-    Require(mlocInitSegmenter(&s, &s_data, locale, kind, text, fed, fed < length) == mloc_success);
+    Require(mlocInitSegmenter(&s_data, locale, kind, text, fed, fed < length, &s) == mloc_success);
     size_t count = 0;
     for (;;)
     {
         size_t offset = 0;
-        mlocResult r = mlocNextSegmentBreak(&s, &offset, nullptr);
+        mlocResult r = mlocSegmenter_NextBreak(&s, &offset, nullptr);
         if (r == mloc_done)
         {
             return count;
@@ -80,7 +80,8 @@ static size_t Breaks(const mlocLocale* locale, mlocSegmentKind kind, const char*
         {
             Require(fed < length);
             size_t piece = length - fed < pieceSize ? length - fed : pieceSize;
-            Require(mlocFeedSegmenter(&s, text + fed, piece, fed + piece < length) == mloc_success);
+            Require(mlocSegmenter_Feed(&s, text + fed, piece, fed + piece < length) ==
+                    mloc_success);
             fed += piece;
             continue;
         }

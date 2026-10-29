@@ -256,7 +256,7 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
     return mloc_success;
 }
 
-mlocResult mlocOpenData(mlocData* dataOut, const void* bytes, size_t size)
+mlocResult mlocOpenData(const void* bytes, size_t size, mlocData* dataOut)
 {
     if (dataOut == nullptr)
     {
@@ -292,13 +292,13 @@ void mlocOpenBuiltinData(mlocData* dataOut)
     memcpy(dataOut, &view, sizeof(view));
 }
 
-size_t mlocGetDataLocaleCount(const mlocData* data)
+size_t mlocData_GetLocaleCount(const mlocData* data)
 {
     return mlocViewOf(data).localeCount;
 }
 
-mlocResult mlocGetDataLocale(const mlocData* data, size_t index, const char** idOut,
-                             size_t* lengthOut)
+mlocResult mlocData_GetLocale(const mlocData* data, size_t index, const char** idOut,
+                              size_t* lengthOut)
 {
     if (data == nullptr || idOut == nullptr || lengthOut == nullptr)
     {

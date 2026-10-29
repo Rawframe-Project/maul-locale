@@ -54,13 +54,13 @@ static bool SpellsIn(const char* id, const char* ruleSet, mlocCapitalization cap
     bool system = ruleSet != nullptr && ruleSet[0] == '@';
     bool same =
         Locale(id, &locale) &&
-        (system ? mlocInitNumberingSystemFormatter(&formatter, &s_data, &locale, ruleSet + 1,
-                                                   strlen(ruleSet + 1), &options)
-                : mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet,
-                                            ruleSet != nullptr ? strlen(ruleSet) : 0, &options)) >=
-            0 &&
+        (system ? mlocInitNumberingSystemFormatter(&s_data, &locale, ruleSet + 1,
+                                                   strlen(ruleSet + 1), &options, &formatter)
+                : mlocInitSpelloutFormatter(&s_data, &locale, ruleSet,
+                                            ruleSet != nullptr ? strlen(ruleSet) : 0, &options,
+                                            &formatter)) >= 0 &&
         Decimal(number, &decimal) &&
-        mlocFormatSpellout(&formatter, &decimal, &output) == mloc_success &&
+        mlocSpelloutFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
         output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
     if (!same)
     {
@@ -214,11 +214,11 @@ static void TestFellBack(void)
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     CHECK(Locale("eu", &locale) &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%spellout-cardinal", 18,
-                                        nullptr) == mloc_fellBack &&
+              mlocInitSpelloutFormatter(&s_data, &locale, "%spellout-cardinal", 18, nullptr,
+                                        &formatter) == mloc_fellBack &&
               Spells("eu", "%spellout-cardinal", "1234", "1.234") &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &locale, "%roman-upper", 12,
-                                        nullptr) == mloc_success,
+              mlocInitSpelloutFormatter(&s_data, &locale, "%roman-upper", 12, nullptr,
+                                        &formatter) == mloc_success,
           "root's rules write digits with mloc_fellBack; numbering systems are root's alone");
 }
 
@@ -261,41 +261,41 @@ static void TestRefusals(void)
     mlocLocale en;
     mlocSpelloutFormatter formatter;
     CHECK(Locale("en", &en) &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%nope", 5, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &en, "%nope", 5, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%%and", 5, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &en, "%%and", 5, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 3, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &en, nullptr, 3, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%x", 0, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &en, "%x", 0, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitSpelloutFormatter(&formatter, &s_builtin, &en, nullptr, 0, nullptr) ==
+              mlocInitSpelloutFormatter(&s_builtin, &en, nullptr, 0, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitSpelloutFormatter(nullptr, &s_data, &en, nullptr, 0, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &en, nullptr, 0, nullptr, nullptr) ==
                   mloc_errorInvalid,
           "an unknown or private rule set, a bad length, data without the rules, null");
     mlocDecimal decimal = {0};
     char small[4];
     mlocOutput output = {.buffer = small, .capacity = sizeof(small)};
-    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &en, "%spellout-cardinal", 18, nullptr) ==
+    CHECK(mlocInitSpelloutFormatter(&s_data, &en, "%spellout-cardinal", 18, nullptr, &formatter) ==
                   mloc_success &&
               Decimal("21", &decimal) &&
-              mlocFormatSpellout(&formatter, &decimal, &output) == mloc_errorCapacity &&
+              mlocSpelloutFormatter_Format(&formatter, &decimal, &output) == mloc_errorCapacity &&
               output.length == 10,
           "a buffer too small gives the size needed");
     mlocOutput empty = {0};
     mlocOutput parts = {.buffer = small, .capacity = sizeof(small), .part = Ignore};
-    CHECK(mlocFormatSpellout(&formatter, &decimal, &empty) == mloc_errorCapacity &&
+    CHECK(mlocSpelloutFormatter_Format(&formatter, &decimal, &empty) == mloc_errorCapacity &&
               empty.length == 10 &&
-              mlocFormatSpellout(&formatter, &decimal, &parts) == mloc_errorInvalid,
+              mlocSpelloutFormatter_Format(&formatter, &decimal, &parts) == mloc_errorInvalid,
           "no buffer; an output asking for parts");
     mlocSpelloutFormatter forged;
     memset(&forged, 0, sizeof(forged));
     mlocDecimal bad = decimal;
     bad.digits[0] = 10;
-    CHECK(mlocFormatSpellout(&forged, &decimal, &output) == mloc_errorInvalid &&
-              mlocFormatSpellout(&formatter, &bad, &output) == mloc_errorInvalid &&
-              mlocFormatSpellout(nullptr, &decimal, &output) == mloc_errorInvalid,
+    CHECK(mlocSpelloutFormatter_Format(&forged, &decimal, &output) == mloc_errorInvalid &&
+              mlocSpelloutFormatter_Format(&formatter, &bad, &output) == mloc_errorInvalid &&
+              mlocSpelloutFormatter_Format(nullptr, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make, an invalid decimal");
     // A formatter whose symbols' text is gone (its first field): formatting
     // reads the symbols only for a pattern (10^18 and past) or a symbol,
@@ -308,10 +308,11 @@ static void TestRefusals(void)
     char text[256];
     mlocOutput words = {.buffer = text, .capacity = sizeof(text)};
     mlocOutput more = {.buffer = text, .capacity = sizeof(text)};
-    CHECK(Decimal("1e18", &huge) && mlocFormatSpellout(&hollow, &decimal, &words) == mloc_success &&
+    CHECK(Decimal("1e18", &huge) &&
+              mlocSpelloutFormatter_Format(&hollow, &decimal, &words) == mloc_success &&
               words.length == 10 &&
-              mlocFormatSpellout(&hollow, &huge, &more) == mloc_errorInvalid &&
-              mlocParseSpellout(&hollow, "one", 3, &back, &end) == mloc_errorInvalid,
+              mlocSpelloutFormatter_Format(&hollow, &huge, &more) == mloc_errorInvalid &&
+              mlocSpelloutFormatter_Parse(&hollow, "one", 3, &back, &end) == mloc_errorInvalid,
           "a formatter without its symbols: refused where they are read");
 }
 
@@ -359,19 +360,20 @@ static void TestCapitalization(void)
     mlocOutput measure = {0};
     mlocOutput exact = {.buffer = buffer, .capacity = 4};
     CHECK(Locale("tr", &tr) &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &tr, "%spellout-cardinal", 18,
-                                        &sentence) == mloc_success &&
+              mlocInitSpelloutFormatter(&s_data, &tr, "%spellout-cardinal", 18, &sentence,
+                                        &formatter) == mloc_success &&
               Decimal("2", &two) &&
-              mlocFormatSpellout(&formatter, &two, &small) == mloc_errorCapacity &&
+              mlocSpelloutFormatter_Format(&formatter, &two, &small) == mloc_errorCapacity &&
               small.length == 4 &&
-              mlocFormatSpellout(&formatter, &two, &measure) == mloc_errorCapacity &&
-              measure.length == 4 && mlocFormatSpellout(&formatter, &two, &exact) == mloc_success &&
+              mlocSpelloutFormatter_Format(&formatter, &two, &measure) == mloc_errorCapacity &&
+              measure.length == 4 &&
+              mlocSpelloutFormatter_Format(&formatter, &two, &exact) == mloc_success &&
               exact.length == 4 && memcmp(buffer, "\xC4\xB0ki", 4) == 0,
           "a titlecase longer than its letter: the size needed, then the text");
     mlocSpelloutOptions bad = {.capitalization = (mlocCapitalization)4};
-    CHECK(mlocInitSpelloutFormatter(&formatter, &s_data, &tr, nullptr, 0, &bad) ==
+    CHECK(mlocInitSpelloutFormatter(&s_data, &tr, nullptr, 0, &bad, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitNumberingSystemFormatter(&formatter, &s_data, &tr, "roman", 5, &bad) ==
+              mlocInitNumberingSystemFormatter(&s_data, &tr, "roman", 5, &bad, &formatter) ==
                   mloc_errorInvalid,
           "a capitalization out of range");
 }
@@ -393,15 +395,15 @@ static void TestNumberingSystems(void)
     mlocLocale en;
     mlocSpelloutFormatter formatter;
     CHECK(Locale("en", &en) &&
-              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, "latn", 4, nullptr) ==
+              mlocInitNumberingSystemFormatter(&s_data, &en, "latn", 4, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, "rom", 3, nullptr) ==
+              mlocInitNumberingSystemFormatter(&s_data, &en, "rom", 3, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitNumberingSystemFormatter(&formatter, &s_builtin, &en, "roman", 5, nullptr) ==
+              mlocInitNumberingSystemFormatter(&s_builtin, &en, "roman", 5, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitNumberingSystemFormatter(&formatter, &s_data, &en, nullptr, 0, nullptr) ==
+              mlocInitNumberingSystemFormatter(&s_data, &en, nullptr, 0, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitNumberingSystemFormatter(nullptr, &s_data, &en, "roman", 5, nullptr) ==
+              mlocInitNumberingSystemFormatter(&s_data, &en, "roman", 5, nullptr, nullptr) ==
                   mloc_errorInvalid,
           "a numeric system, an unknown id, data without the rules, null");
 }
@@ -418,15 +420,15 @@ static bool Parses(const char* id, const char* ruleSet, const char* text, const 
     char value[64] = "";
     mlocOutput output = {.buffer = value, .capacity = sizeof(value) - 1};
     bool system = ruleSet[0] == '@';
-    bool same =
-        Locale(id, &locale) &&
-        (system ? mlocInitNumberingSystemFormatter(&formatter, &s_data, &locale, ruleSet + 1,
-                                                   strlen(ruleSet + 1), nullptr)
-                : mlocInitSpelloutFormatter(&formatter, &s_data, &locale, ruleSet, strlen(ruleSet),
-                                            nullptr)) >= 0 &&
-        mlocParseSpellout(&formatter, text, strlen(text), &decimal, &end) == mloc_success &&
-        mlocFormatDecimal(&decimal, &output) == mloc_success && end == expectedEnd &&
-        output.length == strlen(expected) && memcmp(value, expected, output.length) == 0;
+    bool same = Locale(id, &locale) &&
+                (system ? mlocInitNumberingSystemFormatter(&s_data, &locale, ruleSet + 1,
+                                                           strlen(ruleSet + 1), nullptr, &formatter)
+                        : mlocInitSpelloutFormatter(&s_data, &locale, ruleSet, strlen(ruleSet),
+                                                    nullptr, &formatter)) >= 0 &&
+                mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &decimal, &end) ==
+                    mloc_success &&
+                mlocFormatDecimal(&decimal, &output) == mloc_success && end == expectedEnd &&
+                output.length == strlen(expected) && memcmp(value, expected, output.length) == 0;
     if (!same)
     {
         printf("%s %s \"%s\": %.*s, end %zu\n", id, ruleSet, text, (int)output.length, value, end);
@@ -503,11 +505,12 @@ static void TestParse(void)
     mlocOutput written = {.buffer = text, .capacity = sizeof(text)};
     size_t stop = 99;
     CHECK(Locale("lt", &lt) &&
-              mlocInitSpelloutFormatter(&words, &s_data, &lt, "%spellout-numbering", 19, nullptr) ==
+              mlocInitSpelloutFormatter(&s_data, &lt, "%spellout-numbering", 19, nullptr, &words) ==
                   mloc_success &&
               Decimal("123456789012345678.75", &big) &&
-              mlocFormatSpellout(&words, &big, &written) == mloc_success &&
-              mlocParseSpellout(&words, text, written.length, &big, &stop) == mloc_errorLimit &&
+              mlocSpelloutFormatter_Format(&words, &big, &written) == mloc_success &&
+              mlocSpelloutFormatter_Parse(&words, text, written.length, &big, &stop) ==
+                  mloc_errorLimit &&
               stop == 0,
           "a search past its steps");
     // A long Lithuanian number reads within the steps, its searches kept
@@ -526,7 +529,7 @@ static void TestParse(void)
         "e\xC5\xA1iasde\xC5\xA1imt";
     stop = 99;
     CHECK(Parses("lt", "%spellout-numbering", s_long, "366503875925", 163) &&
-              mlocParseSpellout(&words, s_capital, sizeof(s_capital) - 1, &big, &stop) ==
+              mlocSpelloutFormatter_Parse(&words, s_capital, sizeof(s_capital) - 1, &big, &stop) ==
                   mloc_errorSyntax &&
               stop == 0,
           "a long number within the steps, a text no rule starts ended at once");
@@ -535,14 +538,19 @@ static void TestParse(void)
     mlocDecimal decimal;
     size_t end = 99;
     CHECK(Locale("en", &en) &&
-              mlocInitSpelloutFormatter(&formatter, &s_data, &en, nullptr, 0, nullptr) >= 0 &&
-              mlocParseSpellout(&formatter, "Twenty-one", 10, &decimal, &end) == mloc_errorSyntax &&
+              mlocInitSpelloutFormatter(&s_data, &en, nullptr, 0, nullptr, &formatter) >= 0 &&
+              mlocSpelloutFormatter_Parse(&formatter, "Twenty-one", 10, &decimal, &end) ==
+                  mloc_errorSyntax &&
               end == 0 &&
-              mlocParseSpellout(&formatter, nullptr, 0, &decimal, &end) == mloc_errorSyntax &&
-              mlocParseSpellout(&formatter, nullptr, 1, &decimal, &end) == mloc_errorInvalid &&
-              mlocParseSpellout(&formatter, "one", 3, nullptr, &end) == mloc_errorInvalid &&
-              mlocParseSpellout(&formatter, "one", 3, &decimal, nullptr) == mloc_errorInvalid &&
-              mlocParseSpellout(nullptr, "one", 3, &decimal, &end) == mloc_errorInvalid,
+              mlocSpelloutFormatter_Parse(&formatter, nullptr, 0, &decimal, &end) ==
+                  mloc_errorSyntax &&
+              mlocSpelloutFormatter_Parse(&formatter, nullptr, 1, &decimal, &end) ==
+                  mloc_errorInvalid &&
+              mlocSpelloutFormatter_Parse(&formatter, "one", 3, nullptr, &end) ==
+                  mloc_errorInvalid &&
+              mlocSpelloutFormatter_Parse(&formatter, "one", 3, &decimal, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocSpelloutFormatter_Parse(nullptr, "one", 3, &decimal, &end) == mloc_errorInvalid,
           "nothing read, empty text, null pointers");
 }
 
@@ -560,7 +568,7 @@ static bool OpenData(void)
     }
     s_data = (mlocDataSet){s_sources, 2};
     return size > 0 && size < sizeof(s_rules) &&
-           mlocOpenData(&s_sources[1], s_rules, size) == mloc_success;
+           mlocOpenData(s_rules, size, &s_sources[1]) == mloc_success;
 }
 
 int main(void)

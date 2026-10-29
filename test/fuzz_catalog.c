@@ -44,7 +44,7 @@ static uint32_t Load32(const uint8_t* p)
 static void CheckCatalog(const mlocCatalog* catalog, const uint8_t* file, size_t size)
 {
     mlocCatalogInfo info;
-    Require(mlocGetCatalogInfo(catalog, &info) == mloc_success);
+    Require(mlocCatalog_GetInfo(catalog, &info) == mloc_success);
     // The keys are the second field, after the locale's.
     uint32_t locale = Load32(file + assetHeaderSize + 4);
     const uint8_t* head = file + assetHeaderSize + mlocAssetFieldBytes(locale);
@@ -57,17 +57,17 @@ static void CheckCatalog(const mlocCatalog* catalog, const uint8_t* file, size_t
         uint32_t length = 0;
         const uint8_t* key = mlocCatalogKeyAt(&keys, i, &length);
         uint32_t index = UINT32_MAX;
-        Require(mlocFindCatalogKey(catalog, (const char*)key, length, &index) == mloc_success &&
+        Require(mlocCatalog_FindKey(catalog, (const char*)key, length, &index) == mloc_success &&
                 index == i);
         const void* message = nullptr;
         size_t bytes = 0;
-        mlocResult r = mlocGetCatalogMessage(catalog, i, &message, &bytes);
+        mlocResult r = mlocCatalog_GetMessage(catalog, i, &message, &bytes);
         Require(r == mloc_errorNotFound || (r == mloc_success && (const uint8_t*)message >= file &&
                                             (const uint8_t*)message + bytes <= file + size));
     }
     const void* message = nullptr;
     size_t bytes = 0;
-    Require(mlocGetCatalogMessage(catalog, keys.count, &message, &bytes) == mloc_errorInvalid);
+    Require(mlocCatalog_GetMessage(catalog, keys.count, &message, &bytes) == mloc_errorInvalid);
 }
 
 // A chain of the catalog alone: measured, bound, every key formatted.
@@ -83,7 +83,7 @@ static void CheckChain(const mlocCatalog* catalog)
         mlocOpenBuiltinData(&s_builtin);
         s_set = (mlocDataSet){&s_builtin, 1};
         Require(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-                mlocInitMessageFormatter(&s_formatter, &s_set, &locale, nullptr) == mloc_success);
+                mlocInitMessageFormatter(&s_set, &locale, nullptr, &s_formatter) == mloc_success);
         s_made = true;
     }
     alignas(8) static uint8_t s_cache[1 << 20];
@@ -91,22 +91,23 @@ static void CheckChain(const mlocCatalog* catalog)
     Require(mlocMeasureCatalogChain(catalog, &s_formatter, 1, &size) == mloc_success);
     bool fits = size <= sizeof(s_cache);
     mlocCatalogChain chain;
-    if (mlocInitCatalogChain(&chain, catalog, &s_formatter, 1, s_cache,
-                             fits ? size : sizeof(s_cache)) != mloc_success)
+    if (mlocInitCatalogChain(catalog, &s_formatter, 1, s_cache, fits ? size : sizeof(s_cache),
+                             &chain) != mloc_success)
     {
         Require(!fits);
         return;
     }
-    mlocResult bound = mlocBindCatalogChain(&chain);
+    mlocResult bound = mlocCatalogChain_Bind(&chain);
     Require(bound == mloc_success || (!fits && bound == mloc_errorCapacity));
     mlocCatalogInfo info;
-    Require(mlocGetCatalogInfo(catalog, &info) == mloc_success);
+    Require(mlocCatalog_GetInfo(catalog, &info) == mloc_success);
     for (uint32_t i = 0; i < info.keyCount && i < 256; i++)
     {
         char text[256];
         mlocOutput output = {text, sizeof(text), 0, nullptr, nullptr};
         mlocCatalogResult result;
-        mlocResult r = mlocFormatCatalogMessage(&chain, i, nullptr, 0, &output, nullptr, &result);
+        mlocResult r =
+            mlocCatalogChain_FormatMessage(&chain, i, nullptr, 0, &output, nullptr, &result);
         Require((r == mloc_success || r == mloc_withFallbacks || r == mloc_errorCapacity) &&
                 result.reason <= mloc_catalogCacheFull && result.position <= 1);
         Require(result.reason != mloc_catalogCacheFull || !fits);
@@ -125,7 +126,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     memcpy(s_file, data, size);
     Stamp(s_file);
     mlocCatalog catalog;
-    mlocResult opened = mlocOpenCatalog(&catalog, s_file, size);
+    mlocResult opened = mlocOpenCatalog(s_file, size, &catalog);
     Require(opened == mloc_success || opened == mloc_errorFormat || opened == mloc_errorVersion);
     if (opened != mloc_success)
     {
@@ -136,11 +137,12 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     // The last bytes as a key: found only where stored.
     size_t tail = size < 16 ? size : 16;
     uint32_t index = 0;
-    if (mlocFindCatalogKey(&catalog, (const char*)data + size - tail, tail, &index) == mloc_success)
+    if (mlocCatalog_FindKey(&catalog, (const char*)data + size - tail, tail, &index) ==
+        mloc_success)
     {
         const void* message = nullptr;
         size_t length = 0;
-        mlocResult r = mlocGetCatalogMessage(&catalog, index, &message, &length);
+        mlocResult r = mlocCatalog_GetMessage(&catalog, index, &message, &length);
         Require(r == mloc_success || r == mloc_errorNotFound);
     }
     return 0;

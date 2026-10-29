@@ -135,10 +135,10 @@ static void TestTablePastTheLast(void)
     mlocLocale locale;
     mlocPluralRules rules;
     mlocPluralCategory category = mloc_pluralZero;
-    CHECK(mlocOpenData(&opened, file, mlocBuiltinDataSize) == mloc_success &&
+    CHECK(mlocOpenData(file, mlocBuiltinDataSize, &opened) == mloc_success &&
               mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitPluralRules(&rules, &set, &locale, mloc_pluralCardinal) == mloc_success &&
-              mlocSelectPluralRange(&rules, mloc_pluralOther, mloc_pluralOne, &category) ==
+              mlocInitPluralRules(&set, &locale, mloc_pluralCardinal, &rules) == mloc_success &&
+              mlocPluralRules_SelectRange(&rules, mloc_pluralOther, mloc_pluralOne, &category) ==
                   mloc_success &&
               category == mloc_pluralOne,
           "a table past the last is none");

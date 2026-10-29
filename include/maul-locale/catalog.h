@@ -50,10 +50,10 @@ extern "C"
     /// library of other data (another CLDR or tzdb release); its messages
     /// are formatted with a formatter's data and locale.
     ///
-    /// @param catalogOut  Receives the catalog; left unchanged on failure.
-    ///                    It points into the bytes, which must outlive it.
     /// @param bytes       The catalog's bytes; any alignment.
     /// @param size        Their length.
+    /// @param catalogOut  Receives the catalog; left unchanged on failure.
+    ///                    It points into the bytes, which must outlive it.
     /// @return mloc_success; mloc_errorVersion for a catalog a later
     ///         version wrote (another catalog format, a flag or field this
     ///         one does not know) or one holding a message it does not
@@ -63,8 +63,8 @@ extern "C"
     ///         pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const void* bytes,
-                                                       size_t size);
+    MLOC_NODISCARD MLOC_API mlocResult mlocOpenCatalog(const void* bytes, size_t size,
+                                                       mlocCatalog* catalogOut);
 
     /// Reads what a catalog holds.
     ///
@@ -74,8 +74,8 @@ extern "C"
     ///         did not open or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog,
-                                                          mlocCatalogInfo* infoOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalog_GetInfo(const mlocCatalog* catalog,
+                                                           mlocCatalogInfo* infoOut);
 
     /// Finds a key's index: a hash, a table read and one comparison. Keys
     /// are compared as bytes; the tool stores them in NFC.
@@ -89,15 +89,15 @@ extern "C"
     ///         open or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindCatalogKey(const mlocCatalog* catalog,
-                                                          const char* key, size_t length,
-                                                          uint32_t* indexOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalog_FindKey(const mlocCatalog* catalog,
+                                                           const char* key, size_t length,
+                                                           uint32_t* indexOut);
 
     /// Gives a key's compiled message, as mlocCompileMessage writes one,
     /// to bind and format (message.h).
     ///
     /// @param catalog     A catalog mlocOpenCatalog opened.
-    /// @param index       A key's index (mlocFindCatalogKey), the same in
+    /// @param index       A key's index (mlocCatalog_FindKey), the same in
     ///                    every catalog of the set.
     /// @param messageOut  Receives the message's first byte, in the
     ///                    catalog's data.
@@ -108,10 +108,10 @@ extern "C"
     ///         the library did not open or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetCatalogMessage(const mlocCatalog* catalog,
-                                                             uint32_t index,
-                                                             const void** messageOut,
-                                                             size_t* sizeOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalog_GetMessage(const mlocCatalog* catalog,
+                                                              uint32_t index,
+                                                              const void** messageOut,
+                                                              size_t* sizeOut);
 
     // The most catalogs a chain holds; more are refused with
     // mloc_errorLimit.
@@ -133,7 +133,7 @@ extern "C"
         // A later catalog's message: the ones before it lack it (a
         // translation not yet made).
         mloc_catalogFallback = 1,
-        // The source's message: the chain's did not bind (mlocBindMessage
+        // The source's message: the chain's did not bind (mlocMessageFormatter_Bind
         // refused it).
         mloc_catalogSource = 2,
         // The key: the set has no such key.
@@ -175,10 +175,9 @@ extern "C"
                             size_t count, size_t* sizeOut);
 
     /// Makes a chain. Its messages are bound when first formatted, or all
-    /// at once by mlocBindCatalogChain. The catalogs, formatters and cache
+    /// at once by mlocCatalogChain_Bind. The catalogs, formatters and cache
     /// must outlive the chain, and the cache serves this chain alone.
     ///
-    /// @param chainOut    Receives the chain; left unchanged on failure.
     /// @param catalogs    The catalogs, in fallback order, of one set.
     /// @param formatters  Each catalog's formatter, of its locale.
     /// @param count       Their number, 1 to MLOC_MAX_CATALOG_CHAIN.
@@ -187,6 +186,7 @@ extern "C"
     ///                    set; mlocMeasureCatalogChain gives the size with
     ///                    room for every message. Bound messages use at
     ///                    most 4 GiB of it.
+    /// @param chainOut    Receives the chain; left unchanged on failure.
     /// @return mloc_success; mloc_errorCapacity for a cache smaller than
     ///         its head and slots; mloc_errorLimit for more than
     ///         MLOC_MAX_CATALOG_CHAIN catalogs; mloc_errorInvalid for a null
@@ -196,11 +196,11 @@ extern "C"
     ///         ones that do not bind.
     /// @par Thread safety
     /// Safe from any thread; the cache is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitCatalogChain(mlocCatalogChain* chainOut,
-                                                            const mlocCatalog* catalogs,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitCatalogChain(const mlocCatalog* catalogs,
                                                             const mlocMessageFormatter* formatters,
                                                             size_t count, void* cache,
-                                                            size_t cacheSize);
+                                                            size_t cacheSize,
+                                                            mlocCatalogChain* chainOut);
 
     /// Binds every message of a chain now. Once it succeeds the cache is
     /// complete: format calls only read it, so threads may format with
@@ -213,7 +213,7 @@ extern "C"
     ///         not make.
     /// @par Thread safety
     /// Safe from any thread; the chain is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocBindCatalogChain(const mlocCatalogChain* chain);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalogChain_Bind(const mlocCatalogChain* chain);
 
     /// Formats a key's message through a chain: the first catalog that
     /// has it, bound on first use. Every failure writes a stated text (see
@@ -223,7 +223,7 @@ extern "C"
     /// is reported as one fallback part.
     ///
     /// @param chain          A chain from mlocInitCatalogChain.
-    /// @param index          The key's index (mlocFindCatalogKey).
+    /// @param index          The key's index (mlocCatalog_FindKey).
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
     /// @param output         Receives the text.
@@ -234,15 +234,15 @@ extern "C"
     ///         keys or a chain the library did not make.
     /// @par Thread safety
     /// Safe from any thread; the chain is used by one thread at a time,
-    /// until mlocBindCatalogChain has succeeded; then by any number at
+    /// until mlocCatalogChain_Bind has succeeded; then by any number at
     /// once.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatCatalogMessage(
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalogChain_FormatMessage(
         const mlocCatalogChain* chain, uint32_t index, const mlocMessageArgument* arguments,
         size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults,
         mlocCatalogResult* resultOut);
 
     /// Finds a key in the chain's set and formats its message, as
-    /// mlocFormatCatalogMessage; a key the set does not have is written
+    /// mlocCatalogChain_FormatMessage; a key the set does not have is written
     /// as itself (mloc_catalogMissingKey).
     ///
     /// @param chain          A chain from mlocInitCatalogChain.
@@ -253,12 +253,12 @@ extern "C"
     /// @param output         Receives the text.
     /// @param faults         Receives the faults; may be null.
     /// @param resultOut      Receives the reason and position; may be null.
-    /// @return As mlocFormatCatalogMessage.
+    /// @return As mlocCatalogChain_FormatMessage.
     /// @par Thread safety
     /// Safe from any thread; the chain is used by one thread at a time,
-    /// until mlocBindCatalogChain has succeeded; then by any number at
+    /// until mlocCatalogChain_Bind has succeeded; then by any number at
     /// once.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatCatalogKey(
+    MLOC_NODISCARD MLOC_API mlocResult mlocCatalogChain_FormatKey(
         const mlocCatalogChain* chain, const char* key, size_t length,
         const mlocMessageArgument* arguments, size_t argumentCount, mlocOutput* output,
         mlocMessageFaults* faults, mlocCatalogResult* resultOut);

@@ -67,7 +67,7 @@ typedef struct Inflector
     const mlocSpelloutFormatter* cardinal;
     const mlocSpelloutFormatter* ordinal;
     // The value a number's text shows, when the caller gave it
-    // (mlocInflectNumber): read instead of the text.
+    // (mlocInflector_InflectNumber): read instead of the text.
     const mlocDecimal* shown;
     uint8_t stamp;
     uint8_t language;
@@ -108,8 +108,8 @@ static uint8_t LanguageOfLocale(const mlocLocale* locale)
     return 0;
 }
 
-mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* data,
-                             const mlocLocale* locale)
+mlocResult mlocInitInflector(const mlocDataSet* data, const mlocLocale* locale,
+                             mlocInflector* inflectorOut)
 {
     if (inflectorOut == nullptr || data == nullptr || locale == nullptr)
     {
@@ -122,16 +122,16 @@ mlocResult mlocInitInflector(mlocInflector* inflectorOut, const mlocDataSet* dat
     {
         return mloc_errorNotFound;
     }
-    if (mlocInitNumberFormatter(&f.number, data, locale, nullptr) < 0)
+    if (mlocInitNumberFormatter(data, locale, nullptr, &f.number) < 0)
     {
         return mloc_errorNotFound;
     }
     static const char s_cardinal[] = "%spellout-numbering";
     static const char s_ordinal[] = "%spellout-ordinal";
-    bool cardinal = mlocInitSpelloutFormatter(&f.cardinal, data, locale, s_cardinal,
-                                              sizeof(s_cardinal) - 1, nullptr) == mloc_success;
-    bool ordinal = mlocInitSpelloutFormatter(&f.ordinal, data, locale, s_ordinal,
-                                             sizeof(s_ordinal) - 1, nullptr) == mloc_success;
+    bool cardinal = mlocInitSpelloutFormatter(data, locale, s_cardinal, sizeof(s_cardinal) - 1,
+                                              nullptr, &f.cardinal) == mloc_success;
+    bool ordinal = mlocInitSpelloutFormatter(data, locale, s_ordinal, sizeof(s_ordinal) - 1,
+                                             nullptr, &f.ordinal) == mloc_success;
     // Korean writes no ordinal with a period, so it reads only cardinals.
     f.spoken = cardinal && (ordinal || f.language == languageKorean) ? 1 : 0;
     f.stamp = inflectorStamp;
@@ -403,7 +403,7 @@ static mlocResult ReadNumber(const Inflector* f, const uint8_t* text, const End*
     size_t used = 0;
     size_t length = e->end - e->start;
     const char* digits = (const char*)text + e->start;
-    if (mlocParseNumber(f->number, digits, length, mloc_parseLenient, value, &used) ==
+    if (mlocNumberFormatter_Parse(f->number, digits, length, mloc_parseLenient, value, &used) ==
             mloc_success &&
         used == length)
     {
@@ -459,8 +459,8 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     }
     char words[spokenRoom];
     mlocOutput out = {words, sizeof(words), 0, nullptr, nullptr};
-    mlocResult r =
-        mlocFormatSpellout(e->kind == endOrdinal ? f->ordinal : f->cardinal, &value, &out);
+    mlocResult r = mlocSpelloutFormatter_Format(e->kind == endOrdinal ? f->ordinal : f->cardinal,
+                                                &value, &out);
     if (r != mloc_success || !LastWord(words, out.length, spoken, spokenLength))
     {
         return r == mloc_errorCapacity ? mloc_errorLimit
@@ -912,8 +912,9 @@ static bool ValidOutput(const mlocOutput* output)
     return output != nullptr && (output->buffer != nullptr || output->capacity == 0);
 }
 
-mlocResult mlocInflectText(const mlocInflector* inflector, const char* text, size_t length,
-                           const mlocInflection* request, mlocOutput* output)
+mlocResult mlocInflector_InflectText(const mlocInflector* inflector, const char* text,
+                                     size_t length, const mlocInflection* request,
+                                     mlocOutput* output)
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || text == nullptr || length == 0 || request == nullptr ||
@@ -933,12 +934,13 @@ static void ReportNumberParts(const Inflector* f, const mlocNumberFormatter* for
 {
     char scratch[numberRoom];
     mlocOutput parts = {scratch, sizeof(scratch), 0, output->part, output->context};
-    (void)mlocFormatNumber(formatter != nullptr ? formatter : f->number, decimal, &parts);
+    (void)mlocNumberFormatter_Format(formatter != nullptr ? formatter : f->number, decimal, &parts);
 }
 
-mlocResult mlocInflectNumber(const mlocInflector* inflector, const mlocNumberFormatter* formatter,
-                             const mlocDecimal* decimal, const mlocInflection* request,
-                             mlocOutput* output)
+mlocResult mlocInflector_InflectNumber(const mlocInflector* inflector,
+                                       const mlocNumberFormatter* formatter,
+                                       const mlocDecimal* decimal, const mlocInflection* request,
+                                       mlocOutput* output)
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || decimal == nullptr || request == nullptr ||

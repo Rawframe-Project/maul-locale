@@ -42,7 +42,7 @@ static bool Gives(const mlocInflector* inflector, const char* text, const mlocIn
                   const char* expected)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocInflectText(inflector, text, strlen(text), request, &output);
+    mlocResult r = mlocInflector_InflectText(inflector, text, strlen(text), request, &output);
     bool good = r == mloc_success && output.length == strlen(expected) &&
                 memcmp(s_text, expected, output.length) == 0;
     if (!good)
@@ -220,7 +220,8 @@ static void TestKazakhMarks(void)
     mlocDecimal number;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
     CHECK(mlocParseDecimal("1234", 4, &number).status == mloc_success &&
-              mlocInflectNumber(&s_kk, nullptr, &number, &dative, &output) == mloc_success &&
+              mlocInflector_InflectNumber(&s_kk, nullptr, &number, &dative, &output) ==
+                  mloc_success &&
               output.length == 11 &&
               memcmp(s_text,
                      "1\xC2\xA0"
@@ -234,20 +235,22 @@ static void TestKazakhRefusals(void)
     mlocInflection copula = Case(mloc_caseNominative);
     copula.copula = true;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_kk, "Алматы", strlen("Алматы"), &copula, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_kk, "Алматы", strlen("Алматы"), &copula, &output) ==
+              mloc_errorInvalid,
           "no copula suffix in Kazakh");
     mlocLocale latin;
     mlocInflector inflector;
     CHECK(mlocParseLocale("kk-Latn", 7, &latin).status == mloc_success &&
-              mlocInitInflector(&inflector, &s_data, &latin) == mloc_errorNotFound,
+              mlocInitInflector(&s_data, &latin, &inflector) == mloc_errorNotFound,
           "Kazakh in another script than Cyrillic is refused");
     mlocLocale cyrillic;
     CHECK(mlocParseLocale("kk-Cyrl-KZ", 10, &cyrillic).status == mloc_success &&
-              mlocInitInflector(&inflector, &s_data, &cyrillic) == mloc_success,
+              mlocInitInflector(&s_data, &cyrillic, &inflector) == mloc_success,
           "Kazakh in Cyrillic named");
     mlocInflection letters = Case(mloc_caseDative);
     letters.reading = mloc_readingLetters;
-    CHECK(mlocInflectText(&s_kk, "Ь", strlen("Ь"), &letters, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_kk, "Ь", strlen("Ь"), &letters, &output) ==
+              mloc_errorInvalid,
           "a sign has no name to read");
 }
 
@@ -330,7 +333,8 @@ static void TestKyrgyzWords(void)
     mlocOutput signOutput = {s_text, sizeof(s_text), 0, nullptr, nullptr};
     CHECK(Gives(&s_ky, "я", &letters, "яга") && Gives(&s_ky, "ө", &letters, "өгө") &&
               Gives(&s_ky, "ё", &letters, "ёго") && Gives(&s_ky, "к", &letters, "кга") &&
-              mlocInflectText(&s_ky, "Ь", strlen("Ь"), &letters, &signOutput) == mloc_errorInvalid,
+              mlocInflector_InflectText(&s_ky, "Ь", strlen("Ь"), &letters, &signOutput) ==
+                  mloc_errorInvalid,
           "lowercase letters read by their names; a sign has none");
     mlocInflection question = Common(mloc_caseNominative);
     question.question = true;
@@ -342,9 +346,10 @@ static void TestKyrgyzWords(void)
     mlocInflection copula = Case(mloc_caseNominative);
     copula.copula = true;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_ky, "тоо", strlen("тоо"), &instrumental, &output) ==
+    CHECK(mlocInflector_InflectText(&s_ky, "тоо", strlen("тоо"), &instrumental, &output) ==
                   mloc_errorInvalid &&
-              mlocInflectText(&s_ky, "тоо", strlen("тоо"), &copula, &output) == mloc_errorInvalid,
+              mlocInflector_InflectText(&s_ky, "тоо", strlen("тоо"), &copula, &output) ==
+                  mloc_errorInvalid,
           "no instrumental case and no copula suffix in Kyrgyz");
 }
 
@@ -409,16 +414,16 @@ static void TestAzerbaijani(void)
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
     mlocLocale cyrillic;
     mlocInflector inflector;
-    CHECK(mlocInflectText(&s_az, "ev", 2, &instrumental, &output) == mloc_errorInvalid &&
+    CHECK(mlocInflector_InflectText(&s_az, "ev", 2, &instrumental, &output) == mloc_errorInvalid &&
               mlocParseLocale("az-Cyrl", 7, &cyrillic).status == mloc_success &&
-              mlocInitInflector(&inflector, &s_data, &cyrillic) == mloc_errorNotFound,
+              mlocInitInflector(&s_data, &cyrillic, &inflector) == mloc_errorNotFound,
           "no instrumental case; Azerbaijani in Cyrillic refused");
     mlocInflection letters = Case(mloc_caseDative);
     letters.reading = mloc_readingLetters;
     CHECK(Gives(&s_az, "ə", &letters, "ə-yə") && Gives(&s_az, "Q", &letters, "Q-yə") &&
               Gives(&s_az, "x", &letters, "x-yə") && Gives(&s_az, "Ğ", &letters, "Ğ-yə") &&
               Gives(&s_az, "Z", &letters, "Z-yə") &&
-              mlocInflectText(&s_az, "W", 1, &letters, &output) == mloc_errorInvalid,
+              mlocInflector_InflectText(&s_az, "W", 1, &letters, &output) == mloc_errorInvalid,
           "letters by their names; W has none");
 }
 
@@ -478,14 +483,16 @@ static void TestUzbek(void)
     mlocDecimal huge;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
     CHECK(mlocParseDecimal("1e36", 4, &huge).status == mloc_success &&
-              mlocInflectNumber(&s_uz, nullptr, &huge, &dative, &output) == mloc_errorNotFound,
+              mlocInflector_InflectNumber(&s_uz, nullptr, &huge, &dative, &output) ==
+                  mloc_errorNotFound,
           "a power with no Uzbek word is refused");
     mlocInflection letters = Case(mloc_caseDative);
     letters.reading = mloc_readingLetters;
     mlocInflection instrumental = Case(mloc_caseInstrumental);
     CHECK(Gives(&s_uz, "Z", &letters, "Zga") && Gives(&s_uz, "q", &letters, "qga") &&
-              mlocInflectText(&s_uz, "C", 1, &letters, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_uz, "uy", 2, &instrumental, &output) == mloc_errorInvalid,
+              mlocInflector_InflectText(&s_uz, "C", 1, &letters, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_uz, "uy", 2, &instrumental, &output) ==
+                  mloc_errorInvalid,
           "letters by their names, C none; no instrumental");
 }
 
@@ -555,15 +562,17 @@ static void TestTurkmen(void)
     mlocDecimal huge;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
     CHECK(mlocParseDecimal("1e21", 4, &huge).status == mloc_success &&
-              mlocInflectNumber(&s_tk, nullptr, &huge, &dative, &output) == mloc_errorNotFound,
+              mlocInflector_InflectNumber(&s_tk, nullptr, &huge, &dative, &output) ==
+                  mloc_errorNotFound,
           "a power with no Turkmen word is refused");
     mlocInflection letters = Case(mloc_caseDative);
     letters.reading = mloc_readingLetters;
     mlocInflection instrumental = Case(mloc_caseInstrumental);
     CHECK(Gives(&s_tk, "K", &letters, "K-a") && Gives(&s_tk, "Z", &letters, "Z-ä") &&
               Gives(&s_tk, "Ž", &letters, "Ž-ä") &&
-              mlocInflectText(&s_tk, "Q", 1, &letters, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tk, "el", 2, &instrumental, &output) == mloc_errorInvalid,
+              mlocInflector_InflectText(&s_tk, "Q", 1, &letters, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tk, "el", 2, &instrumental, &output) ==
+                  mloc_errorInvalid,
           "letters by their names, Q none; no instrumental");
 }
 
@@ -578,7 +587,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || mlocOpenData(&sources[1], spellout, size) != mloc_success)
+    if (size == 0 || mlocOpenData(spellout, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "test_grammar_turkic: cannot open %s\n", MLOC_SPELLOUT_FILE);
         return 2;
@@ -586,35 +595,35 @@ int main(void)
     s_data = (mlocDataSet){sources, 2};
     mlocLocale kk;
     if (mlocParseLocale("kk", 2, &kk).status != mloc_success ||
-        mlocInitInflector(&s_kk, &s_data, &kk) != mloc_success)
+        mlocInitInflector(&s_data, &kk, &s_kk) != mloc_success)
     {
         fputs("test_grammar_turkic: cannot make the inflector\n", stderr);
         return 2;
     }
     mlocLocale ky;
     if (mlocParseLocale("ky", 2, &ky).status != mloc_success ||
-        mlocInitInflector(&s_ky, &s_data, &ky) != mloc_success)
+        mlocInitInflector(&s_data, &ky, &s_ky) != mloc_success)
     {
         fputs("test_grammar_turkic: cannot make the Kyrgyz inflector\n", stderr);
         return 2;
     }
     mlocLocale az;
     if (mlocParseLocale("az", 2, &az).status != mloc_success ||
-        mlocInitInflector(&s_az, &s_data, &az) != mloc_success)
+        mlocInitInflector(&s_data, &az, &s_az) != mloc_success)
     {
         fputs("test_grammar_turkic: cannot make the Azerbaijani inflector\n", stderr);
         return 2;
     }
     mlocLocale uz;
     if (mlocParseLocale("uz", 2, &uz).status != mloc_success ||
-        mlocInitInflector(&s_uz, &s_data, &uz) != mloc_success)
+        mlocInitInflector(&s_data, &uz, &s_uz) != mloc_success)
     {
         fputs("test_grammar_turkic: cannot make the Uzbek inflector\n", stderr);
         return 2;
     }
     mlocLocale tk;
     if (mlocParseLocale("tk", 2, &tk).status != mloc_success ||
-        mlocInitInflector(&s_tk, &s_data, &tk) != mloc_success)
+        mlocInitInflector(&s_data, &tk, &s_tk) != mloc_success)
     {
         fputs("test_grammar_turkic: cannot make the Turkmen inflector\n", stderr);
         return 2;

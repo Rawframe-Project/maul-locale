@@ -54,7 +54,7 @@ int main(int argc, char** argv)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("usage: conform_index_labels collation.mloc < tags\n", stderr);
         return 2;

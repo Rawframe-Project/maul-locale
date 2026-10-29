@@ -553,13 +553,13 @@ static mlocResult FormatText(const char* rules, const char* name, size_t at, uin
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
     mlocOutput output = {.buffer = text, .capacity = capacity - 1};
-    mlocResult r = mlocOpenData(&sources[1], bytes, size);
+    mlocResult r = mlocOpenData(bytes, size, &sources[1]);
     r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
     r = r == mloc_success
-            ? mlocInitSpelloutFormatter(&formatter, &set, &locale, name, strlen(name), nullptr)
+            ? mlocInitSpelloutFormatter(&set, &locale, name, strlen(name), nullptr, &formatter)
             : r;
     r = r >= 0 && mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success
-            ? mlocFormatSpellout(&formatter, &decimal, &output)
+            ? mlocSpelloutFormatter_Format(&formatter, &decimal, &output)
             : (mlocResult)-101;
     free(bytes);
     free(unit);
@@ -801,12 +801,12 @@ static mlocResult ParseText(const char* rules, size_t at, uint8_t byte, const ch
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
-    mlocResult r = mlocOpenData(&sources[1], bytes, size);
+    mlocResult r = mlocOpenData(bytes, size, &sources[1]);
     r = r == mloc_success ? mlocParseLocale("en", 2, &locale).status : r;
     r = r == mloc_success
-            ? mlocInitSpelloutFormatter(&formatter, &set, &locale, nullptr, 0, nullptr)
+            ? mlocInitSpelloutFormatter(&set, &locale, nullptr, 0, nullptr, &formatter)
             : r;
-    r = r >= 0 ? mlocParseSpellout(&formatter, text, strlen(text), &decimal, endOut) : r;
+    r = r >= 0 ? mlocSpelloutFormatter_Parse(&formatter, text, strlen(text), &decimal, endOut) : r;
     mlocOutput output = {.buffer = value, .capacity = capacity - 1};
     if (r == mloc_success && mlocFormatDecimal(&decimal, &output) == mloc_success)
     {

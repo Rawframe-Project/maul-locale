@@ -58,33 +58,34 @@ mlocDateTimeOptions options = {
 mlocDateTimeFormatter formatter;
 char text[96];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitDateTimeFormatter(&formatter, &set, &locale, &options) >= 0 &&
-    mlocFormatDateTimeInZone(&formatter, &zone, &instant, &output) == mloc_success)
+if (mlocInitDateTimeFormatter(&set, &locale, &options, &formatter) >= 0 &&
+    mlocDateTimeFormatter_FormatInZone(&formatter, &zone, &instant, &output) == mloc_success)
 {
     // en-US, America/Los_Angeles, 2026-10-15T23:03:00Z: "Oct 15, 2026, 4:03 PM PDT"
 }
 ```
 
-The year shows its century or era where it would be unclear. Ranges (`mlocFormatDateRange`, `mlocFormatTimeRange`, `mlocFormatDateTimeRange` and their `InZone` forms) write the shared fields once, as ICU's `DateIntervalFormat` does: "Oct 15 – 18, 2026", "4:03 – 5:30 PM". A part function receives the year, month, day, hour, day period, zone and the other parts with their ranges.
+The year shows its century or era where it would be unclear. Ranges (`mlocDateFormatter_FormatRange`, `mlocTimeFormatter_FormatRange`, `mlocDateTimeFormatter_FormatRange` and their `InZone` forms) write the shared fields once, as ICU's `DateIntervalFormat` does: "Oct 15 – 18, 2026", "4:03 – 5:30 PM". A part function receives the year, month, day, hour, day period, zone and the other parts with their ranges.
 
 ## Relative time
 
-With `relative.mloc` in the set, `mlocFormatRelative` writes an amount of a unit relative to now, as ECMA-402's `Intl.RelativeTimeFormat` does: "in 3 days", "2 hr. ago", and with the numeric option set to auto "tomorrow", "last year", "next Monday". The caller computes the amount; the library does not know what now is.
+With `relative.mloc` in the set, `mlocRelativeFormatter_Format` writes an amount of a unit relative to now, as ECMA-402's `Intl.RelativeTimeFormat` does: "in 3 days", "2 hr. ago", and with the numeric option set to auto "tomorrow", "last year", "next Monday". The caller computes the amount; the library does not know what now is.
 
 ```c
 mlocRelativeOptions options = {.numeric = mloc_relativeNumericAuto};
 mlocRelativeFormatter formatter;
 char text[64];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitRelativeFormatter(&formatter, &set, &locale, &options) >= 0 &&
-    mlocFormatRelative(&formatter, &amount, mloc_relativeDay, &output) == mloc_success)
+if (mlocInitRelativeFormatter(&set, &locale, &options, &formatter) >= 0 &&
+    mlocRelativeFormatter_Format(&formatter, &amount, mloc_relativeDay, &output) ==
+        mloc_success)
 {
     // en, 1: "tomorrow"; 3: "in 3 days"; -1: "yesterday"
 }
 ```
 
-`mlocFormatRelativeDayTime` joins a relative day with a time of day: "tomorrow at 3:00 PM".
+`mlocRelativeFormatter_FormatDayTime` joins a relative day with a time of day: "tomorrow at 3:00 PM".
 
 ## Durations
 
-With `units.mloc` in the set, `mlocFormatDuration` writes a duration's fields as ECMA-402's `Intl.DurationFormat` does: long ("1 hour, 2 minutes, 3 seconds"), short, narrow or digital ("1:02:03.456"), each field shown always or only when it is not zero. The fields are the ten of a Temporal duration; `mlocGetDurationValues` gives them from a duration the arithmetic computed.
+With `units.mloc` in the set, `mlocDurationFormatter_Format` writes a duration's fields as ECMA-402's `Intl.DurationFormat` does: long ("1 hour, 2 minutes, 3 seconds"), short, narrow or digital ("1:02:03.456"), each field shown always or only when it is not zero. The fields are the ten of a Temporal duration; `mlocGetDurationValues` gives them from a duration the arithmetic computed.

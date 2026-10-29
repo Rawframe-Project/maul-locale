@@ -58,9 +58,9 @@ int main(void)
         mlocDecimal x;
         char out[256];
         mlocOutput op = {.buffer = out, .capacity = sizeof out};
-        if (mlocInitNumberFormatter(&nf, &d, &l, &o) < 0 ||
+        if (mlocInitNumberFormatter(&d, &l, &o, &nf) < 0 ||
             mlocParseDecimal(f[2], strlen(f[2]), &x).status < 0 ||
-            mlocFormatNumber(&nf, &x, &op) < 0)
+            mlocNumberFormatter_Format(&nf, &x, &op) < 0)
         {
             continue;
         }

@@ -29,7 +29,7 @@ static bool Make(const char* id, const mlocCollatorOptions* options, mlocCollato
 {
     mlocLocale locale;
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitCollator(out, &s_data, &locale, options) == mloc_success;
+           mlocInitCollator(&s_data, &locale, options, out) == mloc_success;
 }
 
 // The order of a and b under the locale and options, checked against its
@@ -40,8 +40,8 @@ static int Order(const char* id, const mlocCollatorOptions* options, const char*
     int ab = 2;
     int ba = 2;
     if (!Make(id, options, &c) ||
-        mlocCompare(&c, a, strlen(a), b, strlen(b), &ab) != mloc_success ||
-        mlocCompare(&c, b, strlen(b), a, strlen(a), &ba) != mloc_success)
+        mlocCollator_Compare(&c, a, strlen(a), b, strlen(b), &ab) != mloc_success ||
+        mlocCollator_Compare(&c, b, strlen(b), a, strlen(a), &ba) != mloc_success)
     {
         return 2;
     }
@@ -134,11 +134,11 @@ static void TestEveryType(void)
                                         "stroke",   "zhuyin", "unihan",   "phonetic"};
     size_t made = 0;
     size_t tried = 0;
-    for (size_t i = 0; i < mlocGetDataLocaleCount(&s_sources[1]); i++)
+    for (size_t i = 0; i < mlocData_GetLocaleCount(&s_sources[1]); i++)
     {
         const char* id = nullptr;
         size_t length = 0;
-        if (mlocGetDataLocale(&s_sources[1], i, &id, &length) != mloc_success)
+        if (mlocData_GetLocale(&s_sources[1], i, &id, &length) != mloc_success)
         {
             continue;
         }
@@ -169,19 +169,19 @@ static void TestTailoringVersions(void)
     uint64_t es = 2;
     uint64_t esMx = 3;
     uint64_t ru = 4;
-    CHECK(Make("und", nullptr, &c) && mlocGetCollationVersion(&c, &root) == mloc_success &&
-              Make("en", nullptr, &c) && mlocGetCollationVersion(&c, &en) == mloc_success &&
-              Make("es", nullptr, &c) && mlocGetCollationVersion(&c, &es) == mloc_success &&
-              Make("es-MX", nullptr, &c) && mlocGetCollationVersion(&c, &esMx) == mloc_success &&
-              Make("ru", nullptr, &c) && mlocGetCollationVersion(&c, &ru) == mloc_success &&
+    CHECK(Make("und", nullptr, &c) && mlocCollator_GetVersion(&c, &root) == mloc_success &&
+              Make("en", nullptr, &c) && mlocCollator_GetVersion(&c, &en) == mloc_success &&
+              Make("es", nullptr, &c) && mlocCollator_GetVersion(&c, &es) == mloc_success &&
+              Make("es-MX", nullptr, &c) && mlocCollator_GetVersion(&c, &esMx) == mloc_success &&
+              Make("ru", nullptr, &c) && mlocCollator_GetVersion(&c, &ru) == mloc_success &&
               root == en && es == esMx && es != root && ru != root && ru != es,
           "the version over the tailoring too: es-MX has es's");
     mlocDataSet alone = {&s_sources[1], 1};
     mlocLocale locale;
     CHECK(mlocParseLocale("es", 2, &locale).status == mloc_success &&
-              mlocInitCollator(&c, &alone, &locale, nullptr) == mloc_errorNotFound &&
+              mlocInitCollator(&alone, &locale, nullptr, &c) == mloc_errorNotFound &&
               mlocParseLocale("und", 3, &locale).status == mloc_success &&
-              mlocInitCollator(&c, &alone, &locale, nullptr) == mloc_success,
+              mlocInitCollator(&alone, &locale, nullptr, &c) == mloc_success,
           "a tailored locale needs the parents, the root does not");
 }
 
@@ -194,9 +194,10 @@ static void TestDefaults(void)
           "the root's defaults: tertiary, non-ignorable, digits as text, no reordering");
     mlocCollator c;
     int order = 2;
-    CHECK(Make("en", nullptr, &c) && mlocCompare(&c, nullptr, 0, "a", 1, &order) == mloc_success &&
-              order == -1 &&
-              mlocCompare(&c, "a\xFF", 2, "a\xEF\xBF\xBD", 4, &order) == mloc_success && order == 0,
+    CHECK(Make("en", nullptr, &c) &&
+              mlocCollator_Compare(&c, nullptr, 0, "a", 1, &order) == mloc_success && order == -1 &&
+              mlocCollator_Compare(&c, "a\xFF", 2, "a\xEF\xBF\xBD", 4, &order) == mloc_success &&
+              order == 0,
           "an empty text as null, a bad byte as U+FFFD");
 }
 
@@ -293,8 +294,8 @@ static int KeyOrder(const char* id, const mlocCollatorOptions* options, const ch
     }
     for (int i = 0; i < 2; i++)
     {
-        if (mlocGetSortKey(&c, texts[i], strlen(texts[i]), keys[i], sizeof(keys[i]), &lengths[i]) !=
-                mloc_success ||
+        if (mlocCollator_GetSortKey(&c, texts[i], strlen(texts[i]), keys[i], sizeof(keys[i]),
+                                    &lengths[i]) != mloc_success ||
             lengths[i] == 0 || keys[i][lengths[i] - 1] != 0)
         {
             return 2;
@@ -356,12 +357,13 @@ static void TestSortKeys(void)
     size_t again = 0;
     size_t empty = 0;
     CHECK(Make("en", nullptr, &c) &&
-              mlocGetSortKey(&c, "abc", 3, nullptr, 0, &full) == mloc_errorCapacity && full > 3 &&
-              mlocGetSortKey(&c, "abc", 3, key, full - 1, &again) == mloc_errorCapacity &&
+              mlocCollator_GetSortKey(&c, "abc", 3, nullptr, 0, &full) == mloc_errorCapacity &&
+              full > 3 &&
+              mlocCollator_GetSortKey(&c, "abc", 3, key, full - 1, &again) == mloc_errorCapacity &&
               again == full && key[full - 1] == 0xEE &&
-              mlocGetSortKey(&c, "abc", 3, key, full, &again) == mloc_success && again == full &&
-              key[full - 1] == 0 && key[full] == 0xEE &&
-              mlocGetSortKey(&c, nullptr, 0, key, sizeof(key), &empty) == mloc_success &&
+              mlocCollator_GetSortKey(&c, "abc", 3, key, full, &again) == mloc_success &&
+              again == full && key[full - 1] == 0 && key[full] == 0xEE &&
+              mlocCollator_GetSortKey(&c, nullptr, 0, key, sizeof(key), &empty) == mloc_success &&
               empty == 3,
           "a key's length when it does not fit, nothing past the room, an empty text's key");
     mlocCollator other;
@@ -372,9 +374,9 @@ static void TestSortKeys(void)
     mlocCollatorOptions numeric = {.numeric = mloc_switchOn};
     bool made = Make("en", nullptr, &c) && Make("fr-u-kr-grek", &numeric, &other);
     memcpy(&copy, &c, sizeof(c));
-    CHECK(made && mlocGetCollationVersion(&c, &version) == mloc_success && version != 0 &&
-              mlocGetCollationVersion(&other, &second) == mloc_success && second == version &&
-              mlocGetCollationVersion(&copy, &copied) == mloc_success && copied == version,
+    CHECK(made && mlocCollator_GetVersion(&c, &version) == mloc_success && version != 0 &&
+              mlocCollator_GetVersion(&other, &second) == mloc_success && second == version &&
+              mlocCollator_GetVersion(&copy, &copied) == mloc_success && copied == version,
           "the keys' version: the same for any locale and options over the same data, and for "
           "a copy");
 }
@@ -428,19 +430,19 @@ static void TestUtf16(void)
             uint8_t k16[256];
             size_t n8 = 0;
             size_t n16 = 0;
-            ok =
-                mlocGetSortKey(&c, utf8[i], strlen(utf8[i]), k8, sizeof(k8), &n8) == mloc_success &&
-                mlocGetSortKeyUtf16(&c, utf16[i], lengths[i], k16, sizeof(k16), &n16) ==
-                    mloc_success &&
-                n8 == n16 && memcmp(k8, k16, n8) == 0;
+            ok = mlocCollator_GetSortKey(&c, utf8[i], strlen(utf8[i]), k8, sizeof(k8), &n8) ==
+                     mloc_success &&
+                 mlocCollator_GetSortKeyUtf16(&c, utf16[i], lengths[i], k16, sizeof(k16), &n16) ==
+                     mloc_success &&
+                 n8 == n16 && memcmp(k8, k16, n8) == 0;
             for (size_t j = 0; ok && j < sizeof(utf8) / sizeof(utf8[0]); j++)
             {
                 int o8 = 2;
                 int o16 = 3;
-                ok = mlocCompare(&c, utf8[i], strlen(utf8[i]), utf8[j], strlen(utf8[j]), &o8) ==
-                         mloc_success &&
-                     mlocCompareUtf16(&c, utf16[i], lengths[i], utf16[j], lengths[j], &o16) ==
-                         mloc_success &&
+                ok = mlocCollator_Compare(&c, utf8[i], strlen(utf8[i]), utf8[j], strlen(utf8[j]),
+                                          &o8) == mloc_success &&
+                     mlocCollator_CompareUtf16(&c, utf16[i], lengths[i], utf16[j], lengths[j],
+                                               &o16) == mloc_success &&
                      o8 == o16;
             }
         }
@@ -449,19 +451,21 @@ static void TestUtf16(void)
     int order = 0;
     size_t n = 0;
     CHECK(Make("en", nullptr, &c) &&
-              mlocCompareUtf16(&c, nullptr, 0, nullptr, 0, &order) == mloc_success && order == 0 &&
-              mlocCompareUtf16(&c, nullptr, 1, u1, 1, &order) == mloc_errorInvalid &&
-              mlocCompareUtf16(&c, u1, 1, u1, 1, nullptr) == mloc_errorInvalid &&
-              mlocGetSortKeyUtf16(&c, nullptr, 0, nullptr, 0, &n) == mloc_errorCapacity &&
-              mlocGetSortKeyUtf16(&c, u1, 1, nullptr, 0, nullptr) == mloc_errorInvalid &&
-              mlocGetSortKeyUtf16(nullptr, u1, 1, nullptr, 0, &n) == mloc_errorInvalid,
+              mlocCollator_CompareUtf16(&c, nullptr, 0, nullptr, 0, &order) == mloc_success &&
+              order == 0 &&
+              mlocCollator_CompareUtf16(&c, nullptr, 1, u1, 1, &order) == mloc_errorInvalid &&
+              mlocCollator_CompareUtf16(&c, u1, 1, u1, 1, nullptr) == mloc_errorInvalid &&
+              mlocCollator_GetSortKeyUtf16(&c, nullptr, 0, nullptr, 0, &n) == mloc_errorCapacity &&
+              mlocCollator_GetSortKeyUtf16(&c, u1, 1, nullptr, 0, nullptr) == mloc_errorInvalid &&
+              mlocCollator_GetSortKeyUtf16(nullptr, u1, 1, nullptr, 0, &n) == mloc_errorInvalid,
           "UTF-16 refusals: null texts with lengths, null outputs, no collator");
     uint8_t exact[64];
     size_t needed = 0;
-    CHECK(mlocGetSortKeyUtf16(&c, u1, 1, nullptr, 0, &needed) == mloc_errorCapacity && needed > 0 &&
-              needed <= sizeof(exact) &&
-              mlocGetSortKeyUtf16(&c, u1, 1, exact, needed, &n) == mloc_success && n == needed &&
-              mlocGetSortKeyUtf16(&c, u1, 1, exact, needed - 1, &n) == mloc_errorCapacity,
+    CHECK(mlocCollator_GetSortKeyUtf16(&c, u1, 1, nullptr, 0, &needed) == mloc_errorCapacity &&
+              needed > 0 && needed <= sizeof(exact) &&
+              mlocCollator_GetSortKeyUtf16(&c, u1, 1, exact, needed, &n) == mloc_success &&
+              n == needed &&
+              mlocCollator_GetSortKeyUtf16(&c, u1, 1, exact, needed - 1, &n) == mloc_errorCapacity,
           "a UTF-16 key in a buffer of its size, refused one byte short");
 }
 
@@ -478,7 +482,7 @@ static void TestRefusals(void)
     for (size_t i = 0; ok && i < sizeof(bad) / sizeof(bad[0]); i++)
     {
         mlocCollatorOptions o = {.reorder = bad[i], .reorderLength = strlen(bad[i])};
-        ok = mlocInitCollator(&c, &s_data, &en, &o) == mloc_errorInvalid;
+        ok = mlocInitCollator(&s_data, &en, &o, &c) == mloc_errorInvalid;
     }
     CHECK(ok && memcmp(&c, &before, sizeof(c)) == 0,
           "reorder texts that are no list of codes, or name one twice, refused, the collator "
@@ -487,33 +491,38 @@ static void TestRefusals(void)
     mlocCollatorOptions far = {.strength = (mlocCollationStrength)6};
     mlocCollatorOptions hollow = {.reorder = nullptr, .reorderLength = 3};
     mlocDataSet none = {nullptr, 0};
-    CHECK(mlocInitCollator(&c, &s_data, &en, &full) == mloc_errorLimit &&
-              mlocInitCollator(&c, &s_data, &en, &far) == mloc_errorInvalid &&
-              mlocInitCollator(&c, &s_data, &en, &hollow) == mloc_errorInvalid &&
-              mlocInitCollator(&c, &none, &en, nullptr) == mloc_errorNotFound &&
-              mlocInitCollator(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitCollator(&c, nullptr, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitCollator(&c, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitCollator(&s_data, &en, &full, &c) == mloc_errorLimit &&
+              mlocInitCollator(&s_data, &en, &far, &c) == mloc_errorInvalid &&
+              mlocInitCollator(&s_data, &en, &hollow, &c) == mloc_errorInvalid &&
+              mlocInitCollator(&none, &en, nullptr, &c) == mloc_errorNotFound &&
+              mlocInitCollator(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitCollator(nullptr, &en, nullptr, &c) == mloc_errorInvalid &&
+              mlocInitCollator(&s_data, nullptr, nullptr, &c) == mloc_errorInvalid,
           "a reordering too large, options out of range, data without the root, null pointers");
     int order = 7;
     mlocCollator made;
     CHECK(Make("en", nullptr, &made) &&
-              mlocCompare(&before, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
-              mlocCompare(nullptr, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
-              mlocCompare(&made, nullptr, 1, "b", 1, &order) == mloc_errorInvalid &&
-              mlocCompare(&made, "a", 1, nullptr, 1, &order) == mloc_errorInvalid &&
-              mlocCompare(&made, "a", 1, "b", 1, nullptr) == mloc_errorInvalid && order == 7,
+              mlocCollator_Compare(&before, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCollator_Compare(nullptr, "a", 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCollator_Compare(&made, nullptr, 1, "b", 1, &order) == mloc_errorInvalid &&
+              mlocCollator_Compare(&made, "a", 1, nullptr, 1, &order) == mloc_errorInvalid &&
+              mlocCollator_Compare(&made, "a", 1, "b", 1, nullptr) == mloc_errorInvalid &&
+              order == 7,
           "compare refuses a collator the library did not make and null pointers");
     size_t length = 9;
     uint64_t version = 9;
     uint8_t key[8];
-    CHECK(mlocGetSortKey(&before, "a", 1, key, sizeof(key), &length) == mloc_errorInvalid &&
-              mlocGetSortKey(&made, "a", 1, key, sizeof(key), nullptr) == mloc_errorInvalid &&
-              mlocGetSortKey(&made, nullptr, 1, key, sizeof(key), &length) == mloc_errorInvalid &&
-              mlocGetSortKey(&made, "a", 1, nullptr, 4, &length) == mloc_errorInvalid &&
-              mlocGetSortKey(nullptr, "a", 1, key, sizeof(key), &length) == mloc_errorInvalid &&
-              length == 9 && mlocGetCollationVersion(&before, &version) == mloc_errorInvalid &&
-              mlocGetCollationVersion(&made, nullptr) == mloc_errorInvalid && version == 9,
+    CHECK(mlocCollator_GetSortKey(&before, "a", 1, key, sizeof(key), &length) ==
+                  mloc_errorInvalid &&
+              mlocCollator_GetSortKey(&made, "a", 1, key, sizeof(key), nullptr) ==
+                  mloc_errorInvalid &&
+              mlocCollator_GetSortKey(&made, nullptr, 1, key, sizeof(key), &length) ==
+                  mloc_errorInvalid &&
+              mlocCollator_GetSortKey(&made, "a", 1, nullptr, 4, &length) == mloc_errorInvalid &&
+              mlocCollator_GetSortKey(nullptr, "a", 1, key, sizeof(key), &length) ==
+                  mloc_errorInvalid &&
+              length == 9 && mlocCollator_GetVersion(&before, &version) == mloc_errorInvalid &&
+              mlocCollator_GetVersion(&made, nullptr) == mloc_errorInvalid && version == 9,
           "keys and the version refuse a collator the library did not make and null pointers");
 }
 
@@ -527,7 +536,7 @@ int main(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("test_collate: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

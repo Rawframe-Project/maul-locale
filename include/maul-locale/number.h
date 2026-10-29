@@ -179,12 +179,12 @@ extern "C"
     /// (Roman, for one) takes the default, which the spellout part
     /// formats instead.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number units, the parents and
     ///                      the likely subtags.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system
     ///         asked for has no digits and the default stands instead (the
     ///         locale's data is always found along its chain, root's last,
@@ -194,10 +194,10 @@ extern "C"
     ///         range or in conflict.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut,
-                                                               const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberFormatter(const mlocDataSet* data,
                                                                const mlocLocale* locale,
-                                                               const mlocNumberOptions* options);
+                                                               const mlocNumberOptions* options,
+                                                               mlocNumberFormatter* formatterOut);
 
     /// Formats a decimal.
     ///
@@ -211,9 +211,8 @@ extern "C"
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter,
-                                                        const mlocDecimal* decimal,
-                                                        mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocNumberFormatter_Format(
+        const mlocNumberFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
 
     /// Formats a range of two decimals (ECMA-402's formatRange): both ends
     /// by the formatter, around the locale's range separator, spaced when
@@ -236,10 +235,9 @@ extern "C"
     ///         did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter,
-                                                             const mlocDecimal* start,
-                                                             const mlocDecimal* end,
-                                                             mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocNumberFormatter_FormatRange(const mlocNumberFormatter* formatter, const mlocDecimal* start,
+                                    const mlocDecimal* end, mlocOutput* output);
 
     // How strictly a number is read (ICU's lenient and strict parse
     // modes). Lenient: ignorables anywhere, separators by their
@@ -279,10 +277,9 @@ extern "C"
     ///         formatter the library did not make or one of compact notation.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocParseNumber(const mlocNumberFormatter* formatter,
-                                                       const char* text, size_t length,
-                                                       mlocParseMode mode, mlocDecimal* decimalOut,
-                                                       size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocNumberFormatter_Parse(const mlocNumberFormatter* formatter, const char* text, size_t length,
+                              mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut);
 
 #ifdef __cplusplus
 }

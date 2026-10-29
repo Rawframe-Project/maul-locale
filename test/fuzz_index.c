@@ -98,14 +98,14 @@ static bool Ready(void)
         }
         mlocOpenBuiltinData(&s_sources[0]);
         bool ok =
-            n > 0 && n < sizeof(s_file) && mlocOpenData(&s_sources[1], s_file, n) == mloc_success;
+            n > 0 && n < sizeof(s_file) && mlocOpenData(s_file, n, &s_sources[1]) == mloc_success;
         for (size_t i = 0; ok && i < tags; i++)
         {
             size_t indexSize = 0;
             ok =
                 mlocParseLocale(s_tags[i], strlen(s_tags[i]), &s_locales[i]).status ==
                     mloc_success &&
-                mlocInitCollator(&s_collators[i], &s_set, &s_locales[i], nullptr) == mloc_success &&
+                mlocInitCollator(&s_set, &s_locales[i], nullptr, &s_collators[i]) == mloc_success &&
                 mlocBuildIndex(&s_collators[i], &s_set, &s_locales[i], nullptr, s_indexes[i],
                                indexCapacity, &indexSize) == mloc_success;
         }

@@ -155,7 +155,7 @@ static bool OpenFile(const char* path)
         fclose(file);
     }
     return read > 0 && read < sizeof(s_buffer) &&
-           mlocOpenData(&s_source, s_buffer, read) == mloc_success;
+           mlocOpenData(s_buffer, read, &s_source) == mloc_success;
 }
 
 // A locale key's unit, or a span of no bytes.

@@ -35,7 +35,7 @@ static mlocInflection Common(mlocGrammaticalCase grammaticalCase)
 static bool Gives(const char* text, const mlocInflection* request, const char* expected)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocInflectText(&s_hu, text, strlen(text), request, &output);
+    mlocResult r = mlocInflector_InflectText(&s_hu, text, strlen(text), request, &output);
     bool good = r == mloc_success && output.length == strlen(expected) &&
                 memcmp(s_text, expected, output.length) == 0;
     if (!good)
@@ -237,10 +237,10 @@ static void TestRefusals(void)
     mlocInflection fourth = Case(mloc_caseNominative);
     fourth.possessorPerson = 4;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_hu, "ház", 4, &genitive, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_hu, "ház", 4, &copula, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_hu, "ház", 4, &question, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_hu, "ház", 4, &fourth, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_hu, "ház", 4, &genitive, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_hu, "ház", 4, &copula, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_hu, "ház", 4, &question, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_hu, "ház", 4, &fourth, &output) == mloc_errorInvalid,
           "no genitive, copula or question suffix, no fourth person");
     mlocInflection letters = Case(mloc_caseDative);
     mlocInflection nominative = Case(mloc_caseNominative);
@@ -259,7 +259,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || mlocOpenData(&sources[1], spellout, size) != mloc_success)
+    if (size == 0 || mlocOpenData(spellout, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "test_grammar_hu: cannot open %s\n", MLOC_SPELLOUT_FILE);
         return 2;
@@ -267,7 +267,7 @@ int main(void)
     s_data = (mlocDataSet){sources, 2};
     mlocLocale hu;
     if (mlocParseLocale("hu", 2, &hu).status != mloc_success ||
-        mlocInitInflector(&s_hu, &s_data, &hu) != mloc_success)
+        mlocInitInflector(&s_data, &hu, &s_hu) != mloc_success)
     {
         fputs("test_grammar_hu: cannot make the inflector\n", stderr);
         return 2;

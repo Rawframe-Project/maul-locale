@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     }
     size_t n = fread(names, 1, sizeof names, f);
     fclose(f);
-    if (mlocOpenData(&s[1], names, n) != mloc_success)
+    if (mlocOpenData(names, n, &s[1]) != mloc_success)
     {
         return 2;
     }
@@ -60,9 +60,9 @@ int main(int argc, char** argv)
         mlocDecimal v;
         char out[256];
         mlocOutput op = {.buffer = out, .capacity = sizeof out};
-        if (mlocInitCurrencyFormatter(&cf, &d, &l, x[1], 3, &o) < 0 ||
+        if (mlocInitCurrencyFormatter(&d, &l, x[1], 3, &o, &cf) < 0 ||
             mlocParseDecimal(x[3], strlen(x[3]), &v).status < 0 ||
-            mlocFormatCurrency(&cf, &v, &op) < 0)
+            mlocCurrencyFormatter_Format(&cf, &v, &op) < 0)
         {
             continue;
         }

@@ -7,7 +7,7 @@ A program's user-visible text is written as messages in Unicode MessageFormat 2 
 A message goes through three steps, each into caller memory:
 
 1. `mlocCompileMessage` reads the MF2 text and checks its syntax and data model once. The compiled form is locale-free and is what a catalog stores.
-2. `mlocBindMessage` binds a compiled message to a formatter of a locale: functions are found and the formatters and plural rules the message needs are made once.
+2. `mlocMessageFormatter_Bind` binds a compiled message to a formatter of a locale: functions are found and the formatters and plural rules the message needs are made once.
 3. `mlocFormatMessage` formats a bound message with named arguments, as often as needed and from any thread.
 
 Each step measures with a null buffer and a capacity of 0.
@@ -26,9 +26,9 @@ mlocMessageFormatter formatter;
 mlocTextResult result = mlocCompileMessage(text, sizeof(text) - 1, compiled, sizeof(compiled),
                                            &compiledSize, &error);
 if (result.status == mloc_success &&
-    mlocInitMessageFormatter(&formatter, &set, &locale, nullptr) == mloc_success &&
-    mlocBindMessage(&formatter, compiled, compiledSize, bound, sizeof(bound), &boundSize) ==
-        mloc_success)
+    mlocInitMessageFormatter(&set, &locale, nullptr, &formatter) == mloc_success &&
+    mlocMessageFormatter_Bind(&formatter, compiled, compiledSize, bound, sizeof(bound),
+                              &boundSize) == mloc_success)
 {
     mlocMessageArgument count = {
         "count", 5, {.kind = mloc_messageValueInteger, .as.integer = 3}};
@@ -54,7 +54,7 @@ An argument is a string, an integer, a double, a decimal, a currency amount, a u
 | `mloc:list` | A list, "Ana, Bo and Cy". |
 | `mloc:case`, `mloc:particle`, `mloc:gender` | A name or number with a case suffix or particle, or a value's gender for selection; see [Grammar](grammar.md). |
 
-A program adds functions of its own in the formatter's options, each under a namespace of its own (`app:icon`). Its resolve entry reads the call's operand and options (`mlocGetMessageOption`, `mlocFindMessageOption`) and writes the value; it may format, match and compare like the built-in ones.
+A program adds functions of its own in the formatter's options, each under a namespace of its own (`app:icon`). Its resolve entry reads the call's operand and options (`mlocMessageCall_GetOption`, `mlocMessageCall_FindOption`) and writes the value; it may format, match and compare like the built-in ones.
 
 ## Faults and fallbacks
 
@@ -66,15 +66,15 @@ A placeholder's text is isolated by the specification's default bidi strategy: a
 
 ## Lists
 
-`mlocFormatList` joins items with a locale's patterns: and, or or unit lists, wide, short or narrow ("Ana, Bo, and Cy", "Ana, Bo, or Cy", "5 ft, 6 in"), with the contextual changes some languages make (Spanish "y" before "i" becomes "e"). `mlocGetListGender` gives the gender of a list of persons by the locale's rule, for selecting a message's variant.
+`mlocListFormatter_Format` joins items with a locale's patterns: and, or or unit lists, wide, short or narrow ("Ana, Bo, and Cy", "Ana, Bo, or Cy", "5 ft, 6 in"), with the contextual changes some languages make (Spanish "y" before "i" becomes "e"). `mlocGetListGender` gives the gender of a list of persons by the locale's rule, for selecting a message's variant.
 
 ```c
 mlocListItem items[3] = {{"Ana", 3}, {"Bo", 2}, {"Cy", 2}};
 mlocListFormatter formatter;
 char text[64];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitListFormatter(&formatter, &set, &locale, nullptr) == mloc_success &&
-    mlocFormatList(&formatter, items, 3, &output) == mloc_success)
+if (mlocInitListFormatter(&set, &locale, nullptr, &formatter) == mloc_success &&
+    mlocListFormatter_Format(&formatter, items, 3, &output) == mloc_success)
 {
     // en: "Ana, Bo, and Cy"; de: "Ana, Bo und Cy"
 }

@@ -36,7 +36,7 @@ static bool OpenFile(const char* path, mlocData* out)
     uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
-    if (read > 0 && mlocOpenData(out, bytes, read) == mloc_success)
+    if (read > 0 && mlocOpenData(bytes, read, out) == mloc_success)
     {
         return true; // the bytes stay for the run
     }
@@ -57,7 +57,7 @@ static bool Make(const char* id, mlocZoneStyle style, mlocZoneFormatter* formatt
     mlocLocale locale;
     return mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status ==
                mloc_success &&
-           mlocInitZoneFormatter(formatter, &s_data, &locale, style) >= 0;
+           mlocInitZoneFormatter(&s_data, &locale, style, formatter) >= 0;
 }
 
 // Whether a locale writes a zone at an instant as want in a style.
@@ -71,7 +71,7 @@ static bool Is(const char* id, const char* zoneId, int64_t seconds, mlocZoneStyl
     mlocInstant instant = {.seconds = seconds};
     if (!Make(id, style, &formatter) ||
         mlocFindTimeZone(&s_data, zoneId, strlen(zoneId), &zone) != mloc_success ||
-        mlocFormatZone(&formatter, &zone, &instant, &output) != mloc_success)
+        mlocZoneFormatter_Format(&formatter, &zone, &instant, &output) != mloc_success)
     {
         printf("  %s %s: refused\n", id, zoneId);
         return false;
@@ -238,16 +238,16 @@ static void TestOutput(void)
               mlocFindTimeZone(&s_data, "America/Los_Angeles", 19, &zone) == mloc_success,
           "a formatter and a zone");
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = OnPart};
-    CHECK(mlocFormatZone(&formatter, &zone, &instant, &output) == mloc_success &&
+    CHECK(mlocZoneFormatter_Format(&formatter, &zone, &instant, &output) == mloc_success &&
               s_partCount == 1 && s_partKind == mloc_datePartTimeZone && s_partStart == 0 &&
               s_partLength == 12,
           "one part, the zone");
     mlocOutput small = {.buffer = text, .capacity = 4};
-    CHECK(mlocFormatZone(&formatter, &zone, &instant, &small) == mloc_errorCapacity &&
+    CHECK(mlocZoneFormatter_Format(&formatter, &zone, &instant, &small) == mloc_errorCapacity &&
               small.length == 12,
           "too small a buffer: the size needed");
     mlocOutput measure = {0};
-    CHECK(mlocFormatZone(&formatter, &zone, &instant, &measure) == mloc_errorCapacity &&
+    CHECK(mlocZoneFormatter_Format(&formatter, &zone, &instant, &measure) == mloc_errorCapacity &&
               measure.length == 12,
           "measuring");
 }
@@ -272,18 +272,21 @@ static bool InZone(const char* id, const char* zoneId, int64_t seconds,
             : mloc_errorSyntax;
     if (result >= 0 && kind == 'D')
     {
-        result = mlocInitDateFormatter(&date, &s_data, &locale, &o->date);
-        result = result < 0 ? result : mlocFormatDateInZone(&date, &zone, &instant, &output);
+        result = mlocInitDateFormatter(&s_data, &locale, &o->date, &date);
+        result =
+            result < 0 ? result : mlocDateFormatter_FormatInZone(&date, &zone, &instant, &output);
     }
     else if (result >= 0 && kind == 'T')
     {
-        result = mlocInitTimeFormatter(&time, &s_data, &locale, &o->time);
-        result = result < 0 ? result : mlocFormatTimeInZone(&time, &zone, &instant, &output);
+        result = mlocInitTimeFormatter(&s_data, &locale, &o->time, &time);
+        result =
+            result < 0 ? result : mlocTimeFormatter_FormatInZone(&time, &zone, &instant, &output);
     }
     else if (result >= 0)
     {
-        result = mlocInitDateTimeFormatter(&both, &s_data, &locale, o);
-        result = result < 0 ? result : mlocFormatDateTimeInZone(&both, &zone, &instant, &output);
+        result = mlocInitDateTimeFormatter(&s_data, &locale, o, &both);
+        result = result < 0 ? result
+                            : mlocDateTimeFormatter_FormatInZone(&both, &zone, &instant, &output);
     }
     bool same = result == mloc_success && output.length == strlen(want) &&
                 memcmp(text, want, output.length) == 0;
@@ -378,39 +381,40 @@ static void TestRefused(void)
               mlocFindTimeZone(&s_data, "Europe/Paris", 12, &zone) == mloc_success,
           "en and Paris");
     CHECK(
-        mlocInitZoneFormatter(&formatter, &s_data, &en, mloc_zoneStyleNone) == mloc_errorInvalid &&
-            mlocInitZoneFormatter(&formatter, &s_data, &en, (mlocZoneStyle)9) ==
+        mlocInitZoneFormatter(&s_data, &en, mloc_zoneStyleNone, &formatter) == mloc_errorInvalid &&
+            mlocInitZoneFormatter(&s_data, &en, (mlocZoneStyle)9, &formatter) ==
                 mloc_errorInvalid &&
-            mlocInitZoneFormatter(nullptr, &s_data, &en, mloc_zoneStyleCity) == mloc_errorInvalid &&
-            mlocInitZoneFormatter(&formatter, nullptr, &en, mloc_zoneStyleCity) ==
+            mlocInitZoneFormatter(&s_data, &en, mloc_zoneStyleCity, nullptr) == mloc_errorInvalid &&
+            mlocInitZoneFormatter(nullptr, &en, mloc_zoneStyleCity, &formatter) ==
                 mloc_errorInvalid &&
-            mlocInitZoneFormatter(&formatter, &s_data, nullptr, mloc_zoneStyleCity) ==
+            mlocInitZoneFormatter(&s_data, nullptr, mloc_zoneStyleCity, &formatter) ==
                 mloc_errorInvalid,
         "no style, a style out of range, null pointers");
     mlocDataSet builtin = {s_sources, 1};
-    CHECK(mlocInitZoneFormatter(&formatter, &builtin, &en, mloc_zoneStyleCity) ==
+    CHECK(mlocInitZoneFormatter(&builtin, &en, mloc_zoneStyleCity, &formatter) ==
               mloc_errorNotFound,
           "data without the zone names");
-    CHECK(mlocInitZoneFormatter(&formatter, &s_data, &en, mloc_zoneStyleCity) == mloc_success,
+    CHECK(mlocInitZoneFormatter(&s_data, &en, mloc_zoneStyleCity, &formatter) == mloc_success,
           "a formatter");
     mlocInstant far = {.seconds = INT64_C(8640000000001)};
     mlocInstant fraction = {.seconds = 0, .nanoseconds = 1000000000};
     mlocTimeZone forged = zone;
     forged.offsetMinutes = 30;
-    CHECK(mlocFormatZone(nullptr, &zone, &instant, &output) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, nullptr, &instant, &output) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, &zone, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, &zone, &instant, nullptr) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, &zone, &far, &output) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, &zone, &fraction, &output) == mloc_errorInvalid &&
-              mlocFormatZone(&formatter, &forged, &instant, &output) == mloc_errorInvalid,
-          "null pointers, an instant out of range, a zone the library did not make");
+    CHECK(
+        mlocZoneFormatter_Format(nullptr, &zone, &instant, &output) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, nullptr, &instant, &output) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, &zone, nullptr, &output) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, &zone, &instant, nullptr) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, &zone, &far, &output) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, &zone, &fraction, &output) == mloc_errorInvalid &&
+            mlocZoneFormatter_Format(&formatter, &forged, &instant, &output) == mloc_errorInvalid,
+        "null pointers, an instant out of range, a zone the library did not make");
     mlocOutput noBuffer = {.capacity = 4};
-    CHECK(mlocFormatZone(&formatter, &zone, &instant, &noBuffer) == mloc_errorInvalid,
+    CHECK(mlocZoneFormatter_Format(&formatter, &zone, &instant, &noBuffer) == mloc_errorInvalid,
           "a capacity without a buffer");
     mlocZoneFormatter spoiled = formatter;
     memset(&spoiled, 0, sizeof(spoiled));
-    CHECK(mlocFormatZone(&spoiled, &zone, &instant, &output) == mloc_errorInvalid,
+    CHECK(mlocZoneFormatter_Format(&spoiled, &zone, &instant, &output) == mloc_errorInvalid,
           "a formatter the library did not make");
 }
 
@@ -428,25 +432,27 @@ static void TestForgedInZone(void)
     mlocDateTimeOptions bothOptions = {.time = timeOptions};
     bool made = mlocParseLocale("en", 2, &en).status == mloc_success &&
                 mlocFindTimeZone(&s_data, "America/New_York", 16, &zone) == mloc_success &&
-                mlocInitDateFormatter(&date, &s_data, &en, &dateOptions) >= 0 &&
-                mlocInitTimeFormatter(&time, &s_data, &en, &timeOptions) >= 0 &&
-                mlocInitDateTimeFormatter(&both, &s_data, &en, &bothOptions) >= 0;
+                mlocInitDateFormatter(&s_data, &en, &dateOptions, &date) >= 0 &&
+                mlocInitTimeFormatter(&s_data, &en, &timeOptions, &time) >= 0 &&
+                mlocInitDateTimeFormatter(&s_data, &en, &bothOptions, &both) >= 0;
     mlocTimeZone forged = zone;
     forged.offsetMinutes = 30;
     mlocInstant at = {.seconds = 1792263845};
     mlocInstant later = {.seconds = 1792263845 + 90000};
     char text[128];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    CHECK(
-        made && mlocFormatDateInZone(&date, &zone, &at, &output) == mloc_success &&
-            mlocFormatDateInZone(&date, &forged, &at, &output) == mloc_errorInvalid &&
-            mlocFormatTimeInZone(&time, &forged, &at, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeInZone(&both, &forged, &at, &output) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&date, &forged, &at, &later, &output) == mloc_errorInvalid &&
-            mlocFormatTimeRangeInZone(&time, &forged, &at, &later, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&both, &forged, &at, &later, &output) ==
-                mloc_errorInvalid,
-        "a zone the library did not make, to each zoned formatter");
+    CHECK(made && mlocDateFormatter_FormatInZone(&date, &zone, &at, &output) == mloc_success &&
+              mlocDateFormatter_FormatInZone(&date, &forged, &at, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatInZone(&time, &forged, &at, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatInZone(&both, &forged, &at, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&date, &forged, &at, &later, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&time, &forged, &at, &later, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&both, &forged, &at, &later, &output) ==
+                  mloc_errorInvalid,
+          "a zone the library did not make, to each zoned formatter");
 }
 
 int main(void)

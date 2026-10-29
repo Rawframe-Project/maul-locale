@@ -26,8 +26,8 @@ static mlocResult MakeSpellout(const NumberValue* value, const mlocDataSet* data
 {
     if ((value->given & numberGivenSystem) != 0)
     {
-        return mlocInitNumberingSystemFormatter(out, data, locale, value->unit, value->unitLength,
-                                                NULL);
+        return mlocInitNumberingSystemFormatter(data, locale, value->unit, value->unitLength, NULL,
+                                                out);
     }
     static const char numbering[] = "spellout-numbering";
     const char* name = (value->given & numberGivenRules) != 0 ? value->unit : numbering;
@@ -42,7 +42,7 @@ static mlocResult MakeSpellout(const NumberValue* value, const mlocDataSet* data
     }
     ruleSet[0] = '%';
     memcpy(ruleSet + 1, name, length);
-    return mlocInitSpelloutFormatter(out, data, locale, ruleSet, length + 1, NULL);
+    return mlocInitSpelloutFormatter(data, locale, ruleSet, length + 1, NULL, out);
 }
 
 // Makes a mloc:relative value's formatter.
@@ -56,7 +56,7 @@ static mlocResult MakeRelative(const NumberValue* value, const mlocDataSet* data
                                                            : mloc_relativeWidthLong;
     options.numeric = (value->given & numberGivenNumeric) != 0 ? (mlocRelativeNumeric)value->numeric
                                                                : mloc_relativeNumericAlways;
-    return mlocInitRelativeFormatter(out, data, locale, &options);
+    return mlocInitRelativeFormatter(data, locale, &options, out);
 }
 
 bool mlocPrepareWords(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
@@ -79,7 +79,7 @@ static mlocResult WriteSpellout(const mlocSpelloutFormatter* formatter, const Nu
                                 mlocOutput* output)
 {
     mlocOutput plain = {output->buffer, output->capacity, 0, NULL, NULL};
-    mlocResult result = mlocFormatSpellout(formatter, &value->decimal, &plain);
+    mlocResult result = mlocSpelloutFormatter_Format(formatter, &value->decimal, &plain);
     output->length = plain.length;
     return result;
 }
@@ -87,8 +87,8 @@ static mlocResult WriteSpellout(const mlocSpelloutFormatter* formatter, const Nu
 static mlocResult WriteRelative(const mlocRelativeFormatter* formatter, const NumberValue* value,
                                 mlocOutput* output)
 {
-    return mlocFormatRelative(formatter, &value->decimal, (mlocRelativeUnit)value->relativeUnit,
-                              output);
+    return mlocRelativeFormatter_Format(formatter, &value->decimal,
+                                        (mlocRelativeUnit)value->relativeUnit, output);
 }
 
 // Writes a value with a formatter made here, off the resolver's frames.

@@ -33,7 +33,7 @@ static void Make(mlocMessageFormatter* formatter, const char* tag, mlocMessageIs
     mlocLocale locale;
     mlocMessageOptions options = {false, isolation, NULL, 0, NULL};
     CHECK(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
-              mlocInitMessageFormatter(formatter, &s_data, &locale, &options) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &locale, &options, formatter) == mloc_success,
           "a formatter is made");
 }
 
@@ -47,7 +47,8 @@ static bool Formats(const char* message, const mlocMessageArgument* arguments, s
     mlocMessageError error;
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) != mloc_success)
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success)
     {
         printf("  [%s] does not compile and bind\n", message);
         return false;
@@ -478,7 +479,7 @@ static void TestCurrency(void)
     mlocDataSet none = {NULL, 0};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&bare, &none, &en, &options) == mloc_success,
+              mlocInitMessageFormatter(&none, &en, &options, &bare) == mloc_success,
           "a formatter is made without data");
     s_using = &bare;
     CHECK(Formats("{42 :currency currency=EUR}", NULL, 0, "{|42|}", unsupported),
@@ -498,7 +499,7 @@ static bool PreparedAs(const char* message, const char* wanted)
     memset(&r, 0, sizeof r);
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(s_using, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success ||
         !mlocReadBound(s_bound, &r.h, &r.formatter) ||
         r.h.view.count[messageExpressions] != strlen(wanted))
@@ -555,14 +556,15 @@ static void TestPrepared(void)
     static uint8_t room[1 << 14];
     mlocMessageArgument n = {"n", 1, {mloc_messageValueInteger, 0, {.integer = 22}}};
     size_t measured = 0;
-    CHECK(mlocBindMessage(s_using, s_compiled, size, NULL, 0, &measured) == mloc_errorCapacity,
+    CHECK(mlocMessageFormatter_Bind(s_using, s_compiled, size, NULL, 0, &measured) ==
+              mloc_errorCapacity,
           "the bound size is measured");
     bool good = true;
     for (size_t at = 0; at < 8; at++)
     {
         size_t bound = 0;
         good = good &&
-               mlocBindMessage(s_using, s_compiled, size, room + at, measured, &bound) ==
+               mlocMessageFormatter_Bind(s_using, s_compiled, size, room + at, measured, &bound) ==
                    mloc_success &&
                bound == measured;
         for (size_t to = 0; good && to < 8; to++)
@@ -660,7 +662,7 @@ static void TestUnit(void)
     without = (mlocDataSet){&builtin, 1};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&bare, &without, &en, &options) == mloc_success,
+              mlocInitMessageFormatter(&without, &en, &options, &bare) == mloc_success,
           "a formatter is made without the unit names");
     s_using = &bare;
     CHECK(Formats("{3 :unit unit=meter}", NULL, 0, "{|3|}", unsupported),
@@ -702,7 +704,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || size >= sizeof names || mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (size == 0 || size >= sizeof names || mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         fputs("test_message_numbers: cannot open " MLOC_UNITS_FILE "\n", stderr);
         return 2;

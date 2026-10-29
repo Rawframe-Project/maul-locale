@@ -40,10 +40,10 @@ static bool Formats(const char* tag, const char* message, const mlocMessageArgum
     size_t bound = 0;
     mlocMessageError error;
     if (mlocParseLocale(tag, strlen(tag), &locale).status != mloc_success ||
-        mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) != mloc_success ||
+        mlocInitMessageFormatter(&s_data, &locale, &options, &formatter) != mloc_success ||
         mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success)
     {
         printf("  [%s] does not compile and bind in %s\n", message, tag);
@@ -198,11 +198,11 @@ static void TestDuration(void)
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, NULL};
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+              mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_success &&
               mlocCompileMessage("{$d}", 4, s_compiled, sizeof s_compiled, &size, &error).status ==
                   mloc_success &&
-              mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success &&
               mlocFormatMessage(s_bound, &bad, 1, &output, NULL) == mloc_errorInvalid &&
               mlocFormatMessage(s_bound, &none, 1, &output, NULL) == mloc_errorInvalid,
           "a duration of two signs or none is refused");
@@ -308,11 +308,11 @@ static void TestList(void)
     mlocOutput output = {s_text, sizeof s_text, 0, NULL, NULL};
     CHECK(
         mlocParseLocale("en", 2, &en).status == mloc_success &&
-            mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+            mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_success &&
             mlocCompileMessage("{$l :mloc:list}", 15, s_compiled, sizeof s_compiled, &size, &error)
                     .status == mloc_success &&
-            mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
-                mloc_success &&
+            mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound,
+                                      &bound) == mloc_success &&
             mlocFormatMessage(s_bound, &hole, 1, &output, NULL) == mloc_errorInvalid &&
             mlocFormatMessage(s_bound, &lost, 1, &output, NULL) == mloc_errorInvalid,
         "a list with an item's text or its items missing is refused");
@@ -355,10 +355,10 @@ static bool PreparedAs(const char* message, const char* wanted)
     Resolution r;
     memset(&r, 0, sizeof r);
     if (mlocParseLocale("en", 2, &en).status != mloc_success ||
-        mlocInitMessageFormatter(&formatter, &s_data, &en, &options) != mloc_success ||
+        mlocInitMessageFormatter(&s_data, &en, &options, &formatter) != mloc_success ||
         mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success ||
         !mlocReadBound(s_bound, &r.h, &r.formatter) ||
         r.h.view.count[messageExpressions] != strlen(wanted))
@@ -443,12 +443,12 @@ static void TestParts(void)
     Parts parts = {{0}, 0};
     mlocOutput output = {s_text, sizeof s_text, 0, Collect, &parts};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
+              mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_success &&
               mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size,
                                  &error)
                       .status == mloc_success &&
-              mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success &&
               mlocFormatMessage(s_bound, NULL, 0, &output, NULL) == mloc_success &&
               output.length == 21 && memcmp(s_text, "twenty-one|in 3 hours", 21) == 0,
           "both write with parts asked for");
@@ -467,8 +467,8 @@ static void TestParts(void)
     output.length = 0;
     CHECK(mlocCompileMessage("{$l :mloc:list}", 15, s_compiled, sizeof s_compiled, &size, &error)
                       .status == mloc_success &&
-              mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success &&
               mlocFormatMessage(s_bound, &l, 1, &output, NULL) == mloc_success &&
               output.length == 11 && memcmp(s_text, "Ann and Bob", 11) == 0,
           "a list writes with parts asked for");
@@ -491,7 +491,7 @@ static bool Open(const char* path, uint8_t* buffer, size_t capacity, mlocData* o
     {
         fclose(file);
     }
-    if (size == 0 || size >= capacity || mlocOpenData(out, buffer, size) != mloc_success)
+    if (size == 0 || size >= capacity || mlocOpenData(buffer, size, out) != mloc_success)
     {
         fprintf(stderr, "test_message_words: cannot open %s\n", path);
         return false;

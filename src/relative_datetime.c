@@ -40,9 +40,10 @@ static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
     mlocWriteTimeFields(d->time, d->time->pattern[p], d->time->patternLength[p], d->timeOfDay, w);
 }
 
-mlocResult mlocFormatRelativeDayTime(const mlocRelativeFormatter* relative,
-                                     const mlocTimeFormatter* time, const mlocDecimal* days,
-                                     const mlocTime* timeOfDay, mlocOutput* output)
+mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* relative,
+                                               const mlocTimeFormatter* time,
+                                               const mlocDecimal* days, const mlocTime* timeOfDay,
+                                               mlocOutput* output)
 {
     RelativeFormat r;
     TimeFormat t;

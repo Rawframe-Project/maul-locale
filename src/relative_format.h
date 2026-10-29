@@ -47,7 +47,7 @@ bool mlocReadRelativeFormat(const mlocRelativeFormatter* opaque, RelativeFormat*
 bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit);
 
 // Writes a valid amount of a unit as one part of a kind; as
-// mlocFormatRelative's result but for the output's checks.
+// mlocRelativeFormatter_Format's result but for the output's checks.
 mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount, uint32_t unit,
                              uint32_t kind, NumberWriter* w);
 

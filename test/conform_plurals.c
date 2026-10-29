@@ -24,7 +24,7 @@ static int Select(const mlocDataSet* data, const char* type, const char* id, con
     mlocPluralRules rules;
     mlocPluralType kind = strcmp(type, "ordinal") == 0 ? mloc_pluralOrdinal : mloc_pluralCardinal;
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitPluralRules(&rules, data, &locale, kind) < 0)
+        mlocInitPluralRules(data, &locale, kind, &rules) < 0)
     {
         return -1;
     }
@@ -47,7 +47,7 @@ static int Select(const mlocDataSet* data, const char* type, const char* id, con
         return -1;
     }
     operands.c = exponent;
-    if (mlocSelectPluralOperands(&rules, &operands, &category) != mloc_success)
+    if (mlocPluralRules_SelectOperands(&rules, &operands, &category) != mloc_success)
     {
         return -1;
     }

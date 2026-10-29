@@ -778,8 +778,8 @@ MLOC_NOINLINE static mlocResult WriteUnit(const NumberValue* value, const mlocDa
     mlocUnitOptions options = UnitOptions(value);
     mlocUnitFormatter formatter;
     mlocResult made =
-        mlocInitUnitFormatter(&formatter, data, locale, value->unit, value->unitLength, &options);
-    return made < 0 ? made : mlocFormatUnit(&formatter, &value->decimal, output);
+        mlocInitUnitFormatter(data, locale, value->unit, value->unitLength, &options, &formatter);
+    return made < 0 ? made : mlocUnitFormatter_Format(&formatter, &value->decimal, output);
 }
 
 MLOC_NOINLINE static mlocResult WriteCurrency(const NumberValue* value, const mlocDataSet* data,
@@ -787,8 +787,8 @@ MLOC_NOINLINE static mlocResult WriteCurrency(const NumberValue* value, const ml
 {
     mlocCurrencyOptions options = CurrencyOptions(value);
     mlocCurrencyFormatter formatter;
-    mlocResult made = mlocInitCurrencyFormatter(&formatter, data, locale, value->code, 3, &options);
-    return made < 0 ? made : mlocFormatCurrency(&formatter, &value->decimal, output);
+    mlocResult made = mlocInitCurrencyFormatter(data, locale, value->code, 3, &options, &formatter);
+    return made < 0 ? made : mlocCurrencyFormatter_Format(&formatter, &value->decimal, output);
 }
 
 size_t mlocPreparedSize(PreparedKind kind)
@@ -812,22 +812,22 @@ bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const 
         mlocPluralType type =
             value->select == numberSelectOrdinal ? mloc_pluralOrdinal : mloc_pluralCardinal;
         out->rulesType =
-            mlocInitPluralRules(&out->rules, data, locale, type) < 0 ? 0 : (uint8_t)(1 + type);
+            mlocInitPluralRules(data, locale, type, &out->rules) < 0 ? 0 : (uint8_t)(1 + type);
     }
     if (out->kind == preparedUnit)
     {
         mlocUnitOptions options = UnitOptions(value);
-        return mlocInitUnitFormatter(&out->formatter.unit, data, locale, value->unit,
-                                     value->unitLength, &options) >= 0;
+        return mlocInitUnitFormatter(data, locale, value->unit, value->unitLength, &options,
+                                     &out->formatter.unit) >= 0;
     }
     if (out->kind == preparedCurrency)
     {
         mlocCurrencyOptions options = CurrencyOptions(value);
-        return mlocInitCurrencyFormatter(&out->formatter.currency, data, locale, value->code, 3,
-                                         &options) >= 0;
+        return mlocInitCurrencyFormatter(data, locale, value->code, 3, &options,
+                                         &out->formatter.currency) >= 0;
     }
     mlocNumberOptions options = mlocNumberFormatOptions(value);
-    return mlocInitNumberFormatter(&out->formatter.number, data, locale, &options) >= 0;
+    return mlocInitNumberFormatter(data, locale, &options, &out->formatter.number) >= 0;
 }
 
 mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const PreparedNumber* prepared,
@@ -837,11 +837,13 @@ mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const Prepar
     mlocResult result;
     if (mlocNumberFits(prepared, value))
     {
-        result = prepared->kind == preparedUnit
-                     ? mlocFormatUnit(&prepared->formatter.unit, &value->decimal, output)
-                 : prepared->kind == preparedCurrency
-                     ? mlocFormatCurrency(&prepared->formatter.currency, &value->decimal, output)
-                     : mlocFormatNumber(&prepared->formatter.number, &value->decimal, output);
+        result =
+            prepared->kind == preparedUnit
+                ? mlocUnitFormatter_Format(&prepared->formatter.unit, &value->decimal, output)
+            : prepared->kind == preparedCurrency
+                ? mlocCurrencyFormatter_Format(&prepared->formatter.currency, &value->decimal,
+                                               output)
+                : mlocNumberFormatter_Format(&prepared->formatter.number, &value->decimal, output);
     }
     else if (value->function == numberFunctionUnit)
     {
@@ -855,10 +857,10 @@ mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const Prepar
     {
         mlocNumberOptions options = mlocNumberFormatOptions(value);
         mlocNumberFormatter formatter;
-        result = mlocInitNumberFormatter(&formatter, data, locale, &options);
+        result = mlocInitNumberFormatter(data, locale, &options, &formatter);
         if (result >= 0)
         {
-            result = mlocFormatNumber(&formatter, &value->decimal, output);
+            result = mlocNumberFormatter_Format(&formatter, &value->decimal, output);
         }
     }
     // A text past the room reports the length it needs.
@@ -939,11 +941,11 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNum
     {
         rules = &prepared->rules;
     }
-    else if (mlocInitPluralRules(&made, data, locale, type) < 0)
+    else if (mlocInitPluralRules(data, locale, type, &made) < 0)
     {
         return mloc_messageFaultUnsupportedOperation;
     }
-    if (mlocSelectPlural(rules, &rounded, &category) != mloc_success)
+    if (mlocPluralRules_Select(rules, &rounded, &category) != mloc_success)
     {
         return mloc_messageFaultUnsupportedOperation;
     }

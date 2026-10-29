@@ -151,8 +151,8 @@ static void Key(const mlocCollator* c, bool made, const uint32_t* text, size_t l
     char utf8[maxString * 4];
     static uint8_t key[maxKey];
     size_t n = 0;
-    if (!made ||
-        mlocGetSortKey(c, utf8, Utf8(text, length, utf8), key, sizeof(key), &n) != mloc_success)
+    if (!made || mlocCollator_GetSortKey(c, utf8, Utf8(text, length, utf8), key, sizeof(key), &n) !=
+                     mloc_success)
     {
         s_failed++;
         s_hash = s_hash * 1000003U + 0xE770;
@@ -191,7 +191,7 @@ static void Tag(const char* tag)
     mlocLocale locale;
     mlocCollator c;
     bool made = mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
-                mlocInitCollator(&c, &s_data, &locale, nullptr) == mloc_success;
+                mlocInitCollator(&s_data, &locale, nullptr, &c) == mloc_success;
     for (size_t i = 0; i < s_count; i++)
     {
         Key(&c, made, s_points + s_starts[i], s_starts[i + 1] - s_starts[i]);
@@ -263,7 +263,7 @@ static bool Open(const char* path, uint8_t** bytes)
     }
     *bytes = malloc((size_t)size);
     bool ok = *bytes != nullptr && fread(*bytes, 1, (size_t)size, f) == (size_t)size &&
-              mlocOpenData(&s_sources[1], *bytes, (size_t)size) == mloc_success;
+              mlocOpenData(*bytes, (size_t)size, &s_sources[1]) == mloc_success;
     fclose(f);
     return ok;
 }

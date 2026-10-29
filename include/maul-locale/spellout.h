@@ -41,8 +41,6 @@ extern "C"
     /// first the locale's chain has of each group (spell-out, ordinal
     /// suffixes, numbering systems), a group taken whole as ICU takes it.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number units, the plural
     ///                      rules and the spell-out rules (spellout.mloc).
     /// @param locale        The locale, canonicalized.
@@ -51,6 +49,8 @@ extern "C"
     ///                      (ICU's: "%spellout-numbering").
     /// @param length        The name's length in bytes, 0 with null.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the locale has no rules of
     ///         its own and root's, which write digits, stand instead, or
     ///         when the numbering system asked for has no digits and the
@@ -63,8 +63,8 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitSpelloutFormatter(
-        mlocSpelloutFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale,
-        const char* ruleSet, size_t length, const mlocSpelloutOptions* options);
+        const mlocDataSet* data, const mlocLocale* locale, const char* ruleSet, size_t length,
+        const mlocSpelloutOptions* options, mlocSpelloutFormatter* formatterOut);
 
     /// Makes a formatter of an algorithmic numbering system by its CLDR id
     /// ("roman", "hebr", "hans", "jpanyear"), as ICU's NumberFormat makes
@@ -73,14 +73,14 @@ extern "C"
     /// for a system of root's rules ("roman", "armn", "geor") the locale
     /// asked for.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number units, the plural
     ///                      rules and the spell-out rules (spellout.mloc).
     /// @param locale        The locale, canonicalized.
     /// @param system        The numbering system's id.
     /// @param length        Its length in bytes.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_errorNotFound for an id not of an
     ///         algorithmic system (the numeric ones, "latn" or "arab", are
     ///         the number formatter's), or data without the spell-out
@@ -89,8 +89,8 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInitNumberingSystemFormatter(
-        mlocSpelloutFormatter* formatterOut, const mlocDataSet* data, const mlocLocale* locale,
-        const char* system, size_t length, const mlocSpelloutOptions* options);
+        const mlocDataSet* data, const mlocLocale* locale, const char* system, size_t length,
+        const mlocSpelloutOptions* options, mlocSpelloutFormatter* formatterOut);
 
     /// Formats a decimal by the formatter's rules: its value, not the
     /// digits it shows ("1.10" is written as 1.1, "-0" as 0), exactly
@@ -113,9 +113,8 @@ extern "C"
     ///         a formatter the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter,
-                                                          const mlocDecimal* decimal,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSpelloutFormatter_Format(
+        const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
 
     /// Reads a number written in words (or ordinal suffixes, or a
     /// numbering system's numerals) back, as ICU4C's RuleBasedNumberFormat
@@ -145,9 +144,9 @@ extern "C"
     ///         pointer or a formatter the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter,
-                                                         const char* text, size_t length,
-                                                         mlocDecimal* decimalOut, size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocSpelloutFormatter_Parse(const mlocSpelloutFormatter* formatter, const char* text,
+                                size_t length, mlocDecimal* decimalOut, size_t* endOut);
 
 // How deep formatting and parsing nest rule sets, as ICU4C's
 // RECURSION_LIMIT: formatting a value that needs more is refused with

@@ -532,13 +532,13 @@ static void TestUnwritablePattern(void)
     mlocLocale fr;
     mlocDateFormatter formatter;
     CHECK(mlocParseLocale("fr", 2, &fr).status == mloc_success &&
-              mlocInitDateFormatter(&formatter, &data, &fr, nullptr) == mloc_errorFormat,
+              mlocInitDateFormatter(&data, &fr, nullptr, &formatter) == mloc_errorFormat,
           "a pattern the formatter cannot write");
     mlocDateOptions month = {.fields = mloc_dateFieldSetMonth, .length = mloc_dateLengthMedium};
-    CHECK(mlocInitDateFormatter(&formatter, &data, &fr, &month) == mloc_success,
+    CHECK(mlocInitDateFormatter(&data, &fr, &month, &formatter) == mloc_success,
           "another of the pack's patterns");
     mlocTimeFormatter times;
-    CHECK(mlocInitTimeFormatter(&times, &data, &fr, nullptr) == mloc_errorFormat,
+    CHECK(mlocInitTimeFormatter(&data, &fr, nullptr, &times) == mloc_errorFormat,
           "a time pattern the time formatter cannot write");
     // The day's pair on "Q" too.
     patterns = BuildUnit();
@@ -579,9 +579,9 @@ static bool WeekdayIs(char letter, uint8_t width, const char* want)
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     return OpenRootPack(units, 3, &sources[1]) &&
            mlocParseLocale("fr", 2, &fr).status == mloc_success &&
-           mlocInitDateFormatter(&formatter, &data, &fr, nullptr) >= 0 &&
+           mlocInitDateFormatter(&data, &fr, nullptr, &formatter) >= 0 &&
            mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &date) == mloc_success &&
-           mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+           mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success &&
            output.length == strlen(want) && memcmp(text, want, output.length) == 0;
 }
 
@@ -700,7 +700,7 @@ static mlocResult InitComposite(uint32_t patterns, const mlocDateTimeOptions* op
 {
     mlocLocale fr;
     const mlocDataSet* set = PackComposite(patterns, &fr);
-    return set != nullptr ? mlocInitDateTimeFormatter(formatter, set, &fr, options)
+    return set != nullptr ? mlocInitDateTimeFormatter(set, &fr, options, formatter)
                           : mloc_errorInvalid;
 }
 
@@ -717,7 +717,7 @@ static mlocResult MakeComposite(uint16_t glue, uint16_t weekday, mlocDateFieldSe
     if (result < 0 ||
         mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) !=
             mloc_success ||
-        mlocFormatDateTime(&formatter, &value, &output) != mloc_success)
+        mlocDateTimeFormatter_Format(&formatter, &value, &output) != mloc_success)
     {
         return result < 0 ? result : mloc_errorInvalid;
     }
@@ -836,7 +836,7 @@ static mlocResult SpoiledZone(uint32_t at, uint16_t pattern)
     mlocDateOptions options = {.fields = mloc_dateFieldSetYearMonthDay,
                                .zone = mloc_zoneStyleSpecificShort};
     mlocDateFormatter formatter;
-    return set != nullptr ? mlocInitDateFormatter(&formatter, set, &fr, &options)
+    return set != nullptr ? mlocInitDateFormatter(set, &fr, &options, &formatter)
                           : mloc_errorInvalid;
 }
 
@@ -1256,7 +1256,7 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     {
         fclose(file);
     }
-    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+    return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
 int main(void)

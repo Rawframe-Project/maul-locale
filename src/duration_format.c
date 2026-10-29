@@ -130,15 +130,16 @@ static mlocResult Load(DurationFormat* f, const mlocDataSet* data, const mlocLoc
     }
     r = r == mloc_success ? mlocInitNumberCore(&f->formatter.core, data, locale, mloc_numberDecimal)
                           : r;
-    if (r >= 0 && mlocInitPluralRules(&f->rules, data, locale, mloc_pluralCardinal) < 0)
+    if (r >= 0 && mlocInitPluralRules(data, locale, mloc_pluralCardinal, &f->rules) < 0)
     {
         r = mloc_errorNotFound;
     }
     return r;
 }
 
-mlocResult mlocInitDurationFormatter(mlocDurationFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const mlocDurationOptions* options)
+mlocResult mlocInitDurationFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                     const mlocDurationOptions* options,
+                                     mlocDurationFormatter* formatterOut)
 {
     static const mlocDurationOptions s_defaults = {0};
     static const DurationFormat s_zero;
@@ -195,8 +196,8 @@ bool mlocValidDurationFormat(const DurationFormat* f)
     return valid;
 }
 
-mlocResult mlocGetDurationOptions(const mlocDurationFormatter* formatter,
-                                  mlocDurationOptions* optionsOut)
+mlocResult mlocDurationFormatter_GetOptions(const mlocDurationFormatter* formatter,
+                                            mlocDurationOptions* optionsOut)
 {
     DurationFormat f;
     if (formatter == nullptr || optionsOut == nullptr ||

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Sirac Ozmen
 //
 // The fast Latin compare against the general path: random texts of fast
-// characters, with a few it bails out on, compared through mlocCompare
+// characters, with a few it bails out on, compared through mlocCollator_Compare
 // must order as their sort keys do (the keys never read the table), under
 // tailorings with contractions and under every option the fast compare
 // reads; and over the root's table it answers every pair of characters the
@@ -145,7 +145,7 @@ static bool Agrees(const char* tag)
     mlocLocale locale;
     mlocCollator c;
     if (mlocParseLocale(tag, strlen(tag), &locale).status != mloc_success ||
-        mlocInitCollator(&c, &s_data, &locale, nullptr) != mloc_success)
+        mlocInitCollator(&s_data, &locale, nullptr, &c) != mloc_success)
     {
         fprintf(stderr, "  %s: no collator\n", tag);
         return false;
@@ -172,9 +172,9 @@ static bool Agrees(const char* tag)
         int order = 2;
         size_t na = 0;
         size_t nb = 0;
-        bool made = mlocCompare(&c, a, aLength, b, bLength, &order) == mloc_success &&
-                    mlocGetSortKey(&c, a, aLength, ka, sizeof(ka), &na) == mloc_success &&
-                    mlocGetSortKey(&c, b, bLength, kb, sizeof(kb), &nb) == mloc_success;
+        bool made = mlocCollator_Compare(&c, a, aLength, b, bLength, &order) == mloc_success &&
+                    mlocCollator_GetSortKey(&c, a, aLength, ka, sizeof(ka), &na) == mloc_success &&
+                    mlocCollator_GetSortKey(&c, b, bLength, kb, sizeof(kb), &nb) == mloc_success;
         if (!made || order != KeyOrder(ka, na, kb, nb))
         {
             fprintf(stderr, "  %s: \"%.*s\" and \"%.*s\": compare %d\n", tag, (int)aLength, a,
@@ -213,7 +213,7 @@ static void TestReadsPast(void)
         mlocLocale locale;
         mlocCollator c;
         ok = ok && mlocParseLocale(tags[t], strlen(tags[t]), &locale).status == mloc_success &&
-             mlocInitCollator(&c, &s_data, &locale, nullptr) == mloc_success;
+             mlocInitCollator(&s_data, &locale, nullptr, &c) == mloc_success;
         for (size_t i = 0; ok && i < sizeof(texts) / sizeof(texts[0]); i++)
         {
             const char* a = texts[i][0];
@@ -223,10 +223,10 @@ static void TestReadsPast(void)
             size_t na = 0;
             size_t nb = 0;
             int order = 2;
-            ok = mlocCompare(&c, a, strlen(a), b, strlen(b), &order) == mloc_success &&
+            ok = mlocCollator_Compare(&c, a, strlen(a), b, strlen(b), &order) == mloc_success &&
                  order == -1 &&
-                 mlocGetSortKey(&c, a, strlen(a), ka, sizeof(ka), &na) == mloc_success &&
-                 mlocGetSortKey(&c, b, strlen(b), kb, sizeof(kb), &nb) == mloc_success &&
+                 mlocCollator_GetSortKey(&c, a, strlen(a), ka, sizeof(ka), &na) == mloc_success &&
+                 mlocCollator_GetSortKey(&c, b, strlen(b), kb, sizeof(kb), &nb) == mloc_success &&
                  KeyOrder(ka, na, kb, nb) == -1;
         }
     }
@@ -526,7 +526,7 @@ int main(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("test_collation_fast_compare: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

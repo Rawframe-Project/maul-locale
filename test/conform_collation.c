@@ -233,7 +233,7 @@ int main(int argc, char** argv)
     CollationRoot root;
     DataView view;
     bool open =
-        size > 0 && size < sizeof(s_file) && mlocOpenData(&data, s_file, size) == mloc_success;
+        size > 0 && size < sizeof(s_file) && mlocOpenData(s_file, size, &data) == mloc_success;
     if (open)
     {
         view = mlocViewOf(&data);

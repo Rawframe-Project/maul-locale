@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     mlocData data;
     DataSpan span = {0};
     CollationRoot root;
-    if (size == 0 || size == sizeof(s_file) || mlocOpenData(&data, s_file, size) != mloc_success)
+    if (size == 0 || size == sizeof(s_file) || mlocOpenData(s_file, size, &data) != mloc_success)
     {
         fputs("usage: conform_collation_options collation.mloc [--keys] < pairs\n", stderr);
         return 2;

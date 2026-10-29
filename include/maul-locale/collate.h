@@ -112,13 +112,13 @@ extern "C"
     /// value that is not one of its values is passed over, as is a kr
     /// value the root cannot order.
     ///
-    /// @param collatorOut  Receives the collator; left unchanged on
-    ///                     failure.
     /// @param data         The data with the collation root (the
     ///                     collation data file) and, for a locale other
     ///                     than root, the parents (the main data).
     /// @param locale       The locale, canonicalized.
     /// @param options      The options, or null for the locale's.
+    /// @param collatorOut  Receives the collator; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorNotFound for data without the
     ///         collation root, or without the parents a locale's chain
     ///         needs when the data has tailorings; mloc_errorInvalid for
@@ -130,10 +130,10 @@ extern "C"
     ///         that moves more than MLOC_MAX_REORDER_RANGES ranges.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitCollator(mlocCollator* collatorOut,
-                                                        const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitCollator(const mlocDataSet* data,
                                                         const mlocLocale* locale,
-                                                        const mlocCollatorOptions* options);
+                                                        const mlocCollatorOptions* options,
+                                                        mlocCollator* collatorOut);
 
     /// Compares two UTF-8 texts in a collator's order. A byte that is not
     /// UTF-8 compares as U+FFFD.
@@ -149,13 +149,14 @@ extern "C"
     ///         did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocCompare(const mlocCollator* collator, const char* a,
-                                                   size_t aLength, const char* b, size_t bLength,
-                                                   int* orderOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCollator_Compare(const mlocCollator* collator,
+                                                            const char* a, size_t aLength,
+                                                            const char* b, size_t bLength,
+                                                            int* orderOut);
 
     /// Writes a UTF-8 text's sort key in a collator's order: bytes whose memcmp
     /// order, a shorter key first when it is the other's start, is the order
-    /// mlocCompare gives, ICU4C's bytes for the same order and options. The key
+    /// mlocCollator_Compare gives, ICU4C's bytes for the same order and options. The key
     /// ends with a 00 byte, counted in its length. Keys from collators of other
     /// options or another version do not compare.
     ///
@@ -171,11 +172,12 @@ extern "C"
     ///         a collator the library did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKey(const mlocCollator* collator,
-                                                      const char* text, size_t length, uint8_t* key,
-                                                      size_t capacity, size_t* lengthOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKey(const mlocCollator* collator,
+                                                               const char* text, size_t length,
+                                                               uint8_t* key, size_t capacity,
+                                                               size_t* lengthOut);
 
-    /// Compares two UTF-16 texts in a collator's order, as mlocCompare
+    /// Compares two UTF-16 texts in a collator's order, as mlocCollator_Compare
     /// compares their UTF-8 forms. A lone surrogate compares as U+FFFD.
     ///
     /// @param collator  A collator mlocInitCollator made.
@@ -189,12 +191,12 @@ extern "C"
     ///         did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocCompareUtf16(const mlocCollator* collator,
-                                                        const uint16_t* a, size_t aLength,
-                                                        const uint16_t* b, size_t bLength,
-                                                        int* orderOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCollator_CompareUtf16(const mlocCollator* collator,
+                                                                 const uint16_t* a, size_t aLength,
+                                                                 const uint16_t* b, size_t bLength,
+                                                                 int* orderOut);
 
-    /// Writes a UTF-16 text's sort key: the bytes mlocGetSortKey writes
+    /// Writes a UTF-16 text's sort key: the bytes mlocCollator_GetSortKey writes
     /// for its UTF-8 form, a lone surrogate read as U+FFFD.
     ///
     /// @param collator   A collator mlocInitCollator made.
@@ -209,10 +211,11 @@ extern "C"
     ///         a collator the library did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator,
-                                                           const uint16_t* text, size_t length,
-                                                           uint8_t* key, size_t capacity,
-                                                           size_t* lengthOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator,
+                                                                    const uint16_t* text,
+                                                                    size_t length, uint8_t* key,
+                                                                    size_t capacity,
+                                                                    size_t* lengthOut);
 
     /// Gives the version of a collator's keys, to store beside them: it
     /// changes whenever the keys of some text could change, with the key
@@ -225,7 +228,7 @@ extern "C"
     ///         did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetCollationVersion(const mlocCollator* collator,
+    MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetVersion(const mlocCollator* collator,
                                                                uint64_t* versionOut);
 
 #ifdef __cplusplus

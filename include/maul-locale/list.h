@@ -72,21 +72,21 @@ extern "C"
     /// Makes a locale's list formatter of a type and width. The patterns
     /// are the first the locale's chain has, root's last.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the list units, the parents and
     ///                      the likely subtags.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_errorNotFound for data without the list
     ///         units; mloc_errorInvalid for a null pointer or options out
     ///         of range.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitListFormatter(mlocListFormatter* formatterOut,
-                                                             const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitListFormatter(const mlocDataSet* data,
                                                              const mlocLocale* locale,
-                                                             const mlocListOptions* options);
+                                                             const mlocListOptions* options,
+                                                             mlocListFormatter* formatterOut);
 
     /// Writes items joined by a formatter's patterns: none as no text, one
     /// as itself, two by the locale's pattern for two, more by its start,
@@ -104,9 +104,9 @@ extern "C"
     ///         item with a null text and a length.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatList(const mlocListFormatter* formatter,
-                                                      const mlocListItem* items, size_t count,
-                                                      mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter,
+                                                                const mlocListItem* items,
+                                                                size_t count, mlocOutput* output);
 
     // A person's gender, as a message's gender select reads it: other
     // (unknown or neither), male, female. Not a grammatical gender

@@ -60,11 +60,11 @@ extern "C"
 
     /// Makes a searcher for a UTF-8 pattern in a collator's order.
     ///
-    /// @param searcherOut  Receives the searcher.
     /// @param collator     A collator mlocInitCollator made; copied.
     /// @param pattern      The pattern; may be null when length is 0.
     /// @param length       Its length in bytes.
     /// @param options      The options, or null for exact comparison.
+    /// @param searcherOut  Receives the searcher.
     /// @return mloc_success; mloc_errorInvalid for a pattern with no
     ///         element at the collator's strength (none but ignorables,
     ///         or only variable ones when shifted), a collator with
@@ -78,26 +78,26 @@ extern "C"
     ///         MLOC_MAX_SEARCH_WINDOW.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcher(mlocSearcher* searcherOut,
-                                                        const mlocCollator* collator,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcher(const mlocCollator* collator,
                                                         const char* pattern, size_t length,
-                                                        const mlocSearchOptions* options);
+                                                        const mlocSearchOptions* options,
+                                                        mlocSearcher* searcherOut);
 
     /// Makes a searcher for a UTF-16 pattern, as mlocInitSearcher does
     /// for its UTF-8 form. A lone surrogate reads as U+FFFD.
     ///
-    /// @param searcherOut  Receives the searcher.
     /// @param collator     A collator mlocInitCollator made; copied.
     /// @param pattern      The pattern; may be null when length is 0.
     /// @param length       Its length in 16-bit units.
     /// @param options      The options, or null for exact comparison.
+    /// @param searcherOut  Receives the searcher.
     /// @return As mlocInitSearcher.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcherUtf16(mlocSearcher* searcherOut,
-                                                             const mlocCollator* collator,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitSearcherUtf16(const mlocCollator* collator,
                                                              const uint16_t* pattern, size_t length,
-                                                             const mlocSearchOptions* options);
+                                                             const mlocSearchOptions* options,
+                                                             mlocSearcher* searcherOut);
 
     /// Finds the pattern in a UTF-8 text, the first match whose elements
     /// start at or after a position, as ICU4C's usearch_search from that
@@ -120,11 +120,12 @@ extern "C"
     ///         end or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindNext(const mlocSearcher* searcher, const char* text,
-                                                    size_t length, size_t from, size_t* startOut,
-                                                    size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSearcher_FindNext(const mlocSearcher* searcher,
+                                                             const char* text, size_t length,
+                                                             size_t from, size_t* startOut,
+                                                             size_t* endOut);
 
-    /// Finds the pattern in a UTF-16 text, as mlocFindNext does in its
+    /// Finds the pattern in a UTF-16 text, as mlocSearcher_FindNext does in its
     /// UTF-8 form. A lone surrogate reads as U+FFFD; a position on the
     /// second unit of a pair counts as the pair's first.
     ///
@@ -135,13 +136,13 @@ extern "C"
     /// @param from      The position in units, at most length.
     /// @param startOut  Receives the match's first unit.
     /// @param endOut    Receives the unit after the match.
-    /// @return As mlocFindNext.
+    /// @return As mlocSearcher_FindNext.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindNextUtf16(const mlocSearcher* searcher,
-                                                         const uint16_t* text, size_t length,
-                                                         size_t from, size_t* startOut,
-                                                         size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSearcher_FindNextUtf16(const mlocSearcher* searcher,
+                                                                  const uint16_t* text,
+                                                                  size_t length, size_t from,
+                                                                  size_t* startOut, size_t* endOut);
 
     /// Finds the pattern in a UTF-8 text walking back from a position,
     /// the match nearest before it, as ICU4C's usearch_searchBackwards
@@ -168,13 +169,13 @@ extern "C"
     ///         a position past the end or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindPrevious(const mlocSearcher* searcher,
-                                                        const char* text, size_t length,
-                                                        size_t from, size_t* startOut,
-                                                        size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSearcher_FindPrevious(const mlocSearcher* searcher,
+                                                                 const char* text, size_t length,
+                                                                 size_t from, size_t* startOut,
+                                                                 size_t* endOut);
 
     /// Finds the pattern in a UTF-16 text walking back, as
-    /// mlocFindPrevious does in its UTF-8 form. A lone surrogate reads as
+    /// mlocSearcher_FindPrevious does in its UTF-8 form. A lone surrogate reads as
     /// U+FFFD; a position on the second unit of a pair counts as the
     /// pair's first.
     ///
@@ -185,13 +186,14 @@ extern "C"
     /// @param from      The position in units, at most length.
     /// @param startOut  Receives the match's first unit.
     /// @param endOut    Receives the unit after the match.
-    /// @return As mlocFindPrevious.
+    /// @return As mlocSearcher_FindPrevious.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindPreviousUtf16(const mlocSearcher* searcher,
-                                                             const uint16_t* text, size_t length,
-                                                             size_t from, size_t* startOut,
-                                                             size_t* endOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSearcher_FindPreviousUtf16(const mlocSearcher* searcher,
+                                                                      const uint16_t* text,
+                                                                      size_t length, size_t from,
+                                                                      size_t* startOut,
+                                                                      size_t* endOut);
 
 #ifdef __cplusplus
 }

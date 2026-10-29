@@ -30,7 +30,7 @@ static volatile size_t s_sink;
 static void Inflect(const mlocInflector* inflector, const char* text, const mlocInflection* r)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    (void)mlocInflectText(inflector, text, strlen(text), r, &output);
+    (void)mlocInflector_InflectText(inflector, text, strlen(text), r, &output);
     s_length = output.length;
     s_sink += output.length;
 }
@@ -38,7 +38,7 @@ static void Inflect(const mlocInflector* inflector, const char* text, const mloc
 static void InflectorInit(void)
 {
     mlocInflector inflector;
-    s_sink += (size_t)mlocInitInflector(&inflector, BenchDataSet(), &s_trLocale);
+    s_sink += (size_t)mlocInitInflector(BenchDataSet(), &s_trLocale, &inflector);
 }
 
 static void NameDative(void)
@@ -58,7 +58,7 @@ static void NumberLocative(void)
 {
     static const mlocInflection r = {.grammaticalCase = mloc_caseLocative};
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    (void)mlocInflectNumber(&s_tr, nullptr, &s_year, &r, &output);
+    (void)mlocInflector_InflectNumber(&s_tr, nullptr, &s_year, &r, &output);
     s_length = output.length;
     s_sink += output.length;
 }
@@ -103,7 +103,7 @@ static void MessageCase(void)
 static bool Make(const char* tag, mlocLocale* locale, mlocInflector* out)
 {
     return mlocParseLocale(tag, strlen(tag), locale).status == mloc_success &&
-           mlocInitInflector(out, BenchDataSet(), locale) == mloc_success;
+           mlocInitInflector(BenchDataSet(), locale, out) == mloc_success;
 }
 
 bool PrepareGrammarBench(void)
@@ -118,13 +118,13 @@ bool PrepareGrammarBench(void)
     return Make("tr", &s_trLocale, &s_tr) && Make("fi", &fi, &s_fi) && Make("hu", &hu, &s_hu) &&
            Make("ko", &ko, &s_ko) && mlocParseLocale("fr", 2, &s_frLocale).status == mloc_success &&
            mlocParseDecimal("1985", 4, &s_year).status == mloc_success &&
-           mlocInitMessageFormatter(&s_formatter, BenchDataSet(), &s_trLocale, nullptr) ==
+           mlocInitMessageFormatter(BenchDataSet(), &s_trLocale, nullptr, &s_formatter) ==
                mloc_success &&
            mlocCompileMessage(s_message, sizeof(s_message) - 1, s_compiled, sizeof(s_compiled),
                               &compiled, &error)
                    .status == mloc_success &&
-           mlocBindMessage(&s_formatter, s_compiled, compiled, s_bound, sizeof(s_bound), &bound) ==
-               mloc_success;
+           mlocMessageFormatter_Bind(&s_formatter, s_compiled, compiled, s_bound, sizeof(s_bound),
+                                     &bound) == mloc_success;
 }
 
 void ShowGrammarBench(void)

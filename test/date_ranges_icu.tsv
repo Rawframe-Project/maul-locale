@@ -4,7 +4,7 @@
 # skeleton, in 30 locale-calendars: locale, the options' fields, length,
 # year style and style (mlocDateOptions' values), the start and the end
 # (ISO dates, noon UTC), ICU's text and its spans (start and end in
-# UTF-16 units, "-" for one date). Where mlocFormatDateRange answers
+# UTF-16 units, "-" for one date). Where mlocDateFormatter_FormatRange answers
 # otherwise on purpose, its text, its spans and the cause follow:
 # - numbers: the formats' numbering override (Hebrew numerals,
 #   hanidays, jpanyear's 元), as one date is written (ICU's interval

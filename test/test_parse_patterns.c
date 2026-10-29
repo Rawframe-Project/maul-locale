@@ -223,7 +223,7 @@ static mlocResult Init(const char* const affixes[4], bool percent, bool plus, bo
     {
         return (mlocResult)-102;
     }
-    return mlocInitNumberFormatter(formatter, &set, &locale, &options);
+    return mlocInitNumberFormatter(&set, &locale, &options, formatter);
 }
 
 static bool SameValue(const mlocDecimal* a, const mlocDecimal* b)
@@ -253,7 +253,7 @@ static bool Parses(const Case* c)
         return false;
     }
     memcpy(copy, c->text, length);
-    mlocResult r = mlocParseNumber(
+    mlocResult r = mlocNumberFormatter_Parse(
         &formatter, copy, length, c->strict ? mloc_parseStrict : mloc_parseLenient, &decimal, &end);
     free(copy);
     if (c->expected == nullptr)
@@ -289,8 +289,8 @@ static mlocResult ParsePrefixed(const char* prefix, const char* text, bool stric
     }
     mlocDecimal decimal;
     size_t end = 0;
-    return mlocParseNumber(&formatter, text, strlen(text),
-                           strict ? mloc_parseStrict : mloc_parseLenient, &decimal, &end);
+    return mlocNumberFormatter_Parse(&formatter, text, strlen(text),
+                                     strict ? mloc_parseStrict : mloc_parseLenient, &decimal, &end);
 }
 
 static void TestBounds(void)
@@ -326,7 +326,7 @@ static void TestBounds(void)
     mlocDecimal decimal;
     size_t end = 0;
     CHECK(Init(plain, false, false, false, &source, &formatter) == mloc_success &&
-              mlocParseNumber(&formatter, "12", 2, mloc_parseLenient, &decimal, &end) ==
+              mlocNumberFormatter_Parse(&formatter, "12", 2, mloc_parseLenient, &decimal, &end) ==
                   mloc_errorNotFound,
           "data without the parse sets formats but does not parse");
 }

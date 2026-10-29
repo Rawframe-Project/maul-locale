@@ -53,7 +53,7 @@ int main(void)
         }
         else
         {
-            printf("%s\t%s\n", line, mlocResultName(r));
+            printf("%s\t%s\n", line, mlocGetResultName(r));
         }
     }
     return 0;

@@ -102,7 +102,7 @@ static mlocResult Format(const mlocNumberFormatter* f, const mlocDecimal* value,
 {
     static char s_text[2][maxText];
     mlocOutput one = {.buffer = s_text[0], .capacity = maxText};
-    mlocResult r = mlocFormatNumber(f, value, &one);
+    mlocResult r = mlocNumberFormatter_Format(f, value, &one);
     Require(ONE_OF(r, mloc_success, mloc_errorCapacity, mloc_errorLimit));
     *lengthOut = one.length;
     if (r == mloc_errorCapacity)
@@ -121,10 +121,10 @@ static mlocResult Format(const mlocNumberFormatter* f, const mlocDecimal* value,
         two.context = &p;
     }
     mlocOutput measure = {0};
-    Require(mlocFormatNumber(f, value, &two) == mloc_success && two.length == one.length &&
-            memcmp(s_text[0], s_text[1], one.length) == 0);
+    Require(mlocNumberFormatter_Format(f, value, &two) == mloc_success &&
+            two.length == one.length && memcmp(s_text[0], s_text[1], one.length) == 0);
     Require(!parts || (p.ordered && p.end <= one.length && (p.count > 0) == (one.length > 0)));
-    Require(mlocFormatNumber(f, value, &measure) == mloc_errorCapacity &&
+    Require(mlocNumberFormatter_Format(f, value, &measure) == mloc_errorCapacity &&
             measure.length == one.length);
     return r;
 }
@@ -140,7 +140,7 @@ static void Range(const mlocNumberFormatter* f, const mlocDecimal* start, const 
         out.part = OnPart;
         out.context = &p;
     }
-    mlocResult r = mlocFormatNumberRange(f, start, end, &out);
+    mlocResult r = mlocNumberFormatter_FormatRange(f, start, end, &out);
     bool nan = start->kind == mloc_decimalNaN || end->kind == mloc_decimalNaN;
     Require(nan ? r == mloc_errorInvalid
                 : ONE_OF(r, mloc_success, mloc_errorCapacity, mloc_errorLimit));
@@ -227,7 +227,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     mlocDecimal two = ValueOf(data + headBytes + valueLength, size - headBytes - valueLength);
 
     mlocNumberFormatter formatter;
-    mlocResult r = mlocInitNumberFormatter(&formatter, &s_set, &locale, &options);
+    mlocResult r = mlocInitNumberFormatter(&s_set, &locale, &options, &formatter);
     Require(ONE_OF(r, mloc_success, mloc_fellBack, mloc_errorInvalid));
     if (r == mloc_errorInvalid)
     {
@@ -246,7 +246,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         mlocOutput same = {.buffer = s_text, .capacity = maxText};
         size_t singleLength = 0;
         single = Format(&formatter, &one, false, &singleLength);
-        mlocResult r2 = mlocFormatNumberRange(&formatter, &one, &one, &same);
+        mlocResult r2 = mlocNumberFormatter_FormatRange(&formatter, &one, &one, &same);
         Require(single != mloc_errorLimit || r2 == mloc_errorLimit);
         Require(single != mloc_success || singleLength + rangeSlack > maxText ||
                 (r2 == mloc_success && same.length >= singleLength));

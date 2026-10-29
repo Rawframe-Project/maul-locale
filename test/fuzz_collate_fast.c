@@ -7,7 +7,7 @@
 // after them a character: ASCII as itself, most of the rest a letter or
 // sign up to U+017F or general punctuation, the last few one the table
 // bails out on (combining marks, Cyrillic, U+FFFE, U+FFFF, the middle
-// dot). mlocCompare, which tries the fast compare first, must order the
+// dot). mlocCollator_Compare, which tries the fast compare first, must order the
 // texts as their sort keys do (the keys never read the table), the mirror
 // the other way, and each text with itself as equal; their UTF-16 forms
 // must compare and key alike.
@@ -92,12 +92,12 @@ static bool Ready(void)
         }
         mlocOpenBuiltinData(&s_sources[0]);
         bool ok =
-            n > 0 && n < sizeof(s_file) && mlocOpenData(&s_sources[1], s_file, n) == mloc_success;
+            n > 0 && n < sizeof(s_file) && mlocOpenData(s_file, n, &s_sources[1]) == mloc_success;
         for (size_t i = 0; ok && i < tags; i++)
         {
             mlocLocale locale;
             ok = mlocParseLocale(s_tags[i], strlen(s_tags[i]), &locale).status == mloc_success &&
-                 mlocInitCollator(&s_collators[i], &s_set, &locale, nullptr) == mloc_success;
+                 mlocInitCollator(&s_set, &locale, nullptr, &s_collators[i]) == mloc_success;
         }
         s_state = ok ? 1 : -1;
     }
@@ -181,16 +181,16 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     int ab = 2;
     int ba = 2;
     int aa = 2;
-    Require(mlocCompare(c, a, aLength, b, bLength, &ab) == mloc_success &&
-            mlocCompare(c, b, bLength, a, aLength, &ba) == mloc_success &&
-            mlocCompare(c, a, aLength, a, aLength, &aa) == mloc_success);
+    Require(mlocCollator_Compare(c, a, aLength, b, bLength, &ab) == mloc_success &&
+            mlocCollator_Compare(c, b, bLength, a, aLength, &ba) == mloc_success &&
+            mlocCollator_Compare(c, a, aLength, a, aLength, &aa) == mloc_success);
     Require(ab == -ba && aa == 0);
     static uint8_t ka[1 << 14];
     static uint8_t kb[1 << 14];
     size_t na = 0;
     size_t nb = 0;
-    Require(mlocGetSortKey(c, a, aLength, ka, sizeof(ka), &na) == mloc_success &&
-            mlocGetSortKey(c, b, bLength, kb, sizeof(kb), &nb) == mloc_success);
+    Require(mlocCollator_GetSortKey(c, a, aLength, ka, sizeof(ka), &na) == mloc_success &&
+            mlocCollator_GetSortKey(c, b, bLength, kb, sizeof(kb), &nb) == mloc_success);
     Require(KeyOrder(ka, na, kb, nb) == ab);
     static uint16_t a16[maxText];
     static uint16_t b16[maxText];
@@ -198,9 +198,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     size_t b16Length = Utf16(data + 2 + cut, count - cut, b16);
     int order16 = 2;
     size_t n16 = 0;
-    Require(mlocCompareUtf16(c, a16, a16Length, b16, b16Length, &order16) == mloc_success &&
+    Require(mlocCollator_CompareUtf16(c, a16, a16Length, b16, b16Length, &order16) ==
+                mloc_success &&
             order16 == ab);
-    Require(mlocGetSortKeyUtf16(c, a16, a16Length, kb, sizeof(kb), &n16) == mloc_success &&
+    Require(mlocCollator_GetSortKeyUtf16(c, a16, a16Length, kb, sizeof(kb), &n16) == mloc_success &&
             n16 == na && memcmp(ka, kb, na) == 0);
     return 0;
 }

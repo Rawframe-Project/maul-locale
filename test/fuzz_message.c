@@ -75,18 +75,19 @@ static mlocMessageFaultKind FuzzResolve(void* context, const mlocMessageCall* ca
     {
         return mloc_messageFaultBadOperand;
     }
-    size_t count = mlocGetMessageOptionCount(call);
+    size_t count = mlocMessageCall_GetOptionCount(call);
     for (size_t i = 0; i < count; i++)
     {
         const char* name;
         size_t length;
         mlocMessageOperand value;
         mlocMessageResolved storage;
-        Require(mlocGetMessageOption(call, i, &name, &length, &value, &storage) == mloc_success);
-        Require(mlocFindMessageOption(call, name, length, &value, &storage) == mloc_success);
+        Require(mlocMessageCall_GetOption(call, i, &name, &length, &value, &storage) ==
+                mloc_success);
+        Require(mlocMessageCall_FindOption(call, name, length, &value, &storage) == mloc_success);
     }
     mlocLocale locale;
-    Require(mlocGetMessageLocale(call, &locale) == mloc_success);
+    Require(mlocMessageCall_GetLocale(call, &locale) == mloc_success);
     uint8_t value[64] = {0};
     if (operand->kind == mloc_messageOperandText)
     {
@@ -209,15 +210,17 @@ static void FormatIn(const uint8_t* message, size_t size, const char* tag)
     mlocMessageFormatter formatter;
     mlocMessageOptions options = {false, mloc_messageIsolationDefault, s_functions, 2, NULL};
     Require(mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
-            mlocInitMessageFormatter(&formatter, &data, &locale, &options) == mloc_success);
+            mlocInitMessageFormatter(&data, &locale, &options, &formatter) == mloc_success);
     size_t needed = 0;
-    if (mlocBindMessage(&formatter, message, size, NULL, 0, &needed) != mloc_errorCapacity)
+    if (mlocMessageFormatter_Bind(&formatter, message, size, NULL, 0, &needed) !=
+        mloc_errorCapacity)
     {
         return;
     }
     uint8_t* bound = malloc(needed);
     size_t boundSize;
-    mlocResult bind = mlocBindMessage(&formatter, message, size, bound, needed, &boundSize);
+    mlocResult bind =
+        mlocMessageFormatter_Bind(&formatter, message, size, bound, needed, &boundSize);
     // The compiler refuses every message past a bound binding checks.
     Require(bind == mloc_success);
     if (bind != mloc_success)

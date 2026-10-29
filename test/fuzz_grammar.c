@@ -94,7 +94,7 @@ static const mlocInflector* Inflector(size_t language)
             size_t read = fread(s_rules, 1, sizeof(s_rules), file);
             fclose(file);
             if (read < sizeof(s_rules) &&
-                mlocOpenData(&s_sources[1], s_rules, read) == mloc_success)
+                mlocOpenData(s_rules, read, &s_sources[1]) == mloc_success)
             {
                 count = 2;
             }
@@ -104,7 +104,7 @@ static const mlocInflector* Inflector(size_t language)
         {
             mlocLocale locale;
             Require(mlocParseLocale(s_languages[i], 2, &locale).status == mloc_success &&
-                    mlocInitInflector(&s_inflectors[i], &set, &locale) == mloc_success);
+                    mlocInitInflector(&set, &locale, &s_inflectors[i]) == mloc_success);
         }
         s_state = 1;
     }
@@ -164,11 +164,12 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     static char s_out[8192];
     static char s_again[8192];
     mlocOutput measure = {nullptr, 0, 0, nullptr, nullptr};
-    mlocResult measured = text != nullptr ? mlocInflectText(f, text, length, r, &measure)
-                                          : mlocInflectNumber(f, nullptr, number, r, &measure);
+    mlocResult measured = text != nullptr
+                              ? mlocInflector_InflectText(f, text, length, r, &measure)
+                              : mlocInflector_InflectNumber(f, nullptr, number, r, &measure);
     mlocOutput out = {s_out, sizeof(s_out), 0, nullptr, nullptr};
-    mlocResult result = text != nullptr ? mlocInflectText(f, text, length, r, &out)
-                                        : mlocInflectNumber(f, nullptr, number, r, &out);
+    mlocResult result = text != nullptr ? mlocInflector_InflectText(f, text, length, r, &out)
+                                        : mlocInflector_InflectNumber(f, nullptr, number, r, &out);
     Require(result == mloc_success || result == mloc_errorInvalid || result == mloc_errorNotFound ||
             result == mloc_errorCapacity || result == mloc_errorLimit);
     if (result != mloc_success)
@@ -180,8 +181,9 @@ static void Check(const mlocInflector* f, bool stemsNames, const char* text, siz
     Require(Utf8((const uint8_t*)s_out, out.length));
     Tiling tiling = {0, 0, true};
     mlocOutput again = {s_again, sizeof(s_again), 0, Tile, &tiling};
-    Require((text != nullptr ? mlocInflectText(f, text, length, r, &again)
-                             : mlocInflectNumber(f, nullptr, number, r, &again)) == mloc_success);
+    Require((text != nullptr
+                 ? mlocInflector_InflectText(f, text, length, r, &again)
+                 : mlocInflector_InflectNumber(f, nullptr, number, r, &again)) == mloc_success);
     Require(again.length == out.length && memcmp(s_again, s_out, out.length) == 0);
     Require(tiling.good && tiling.next == out.length);
     // The text begins the output, but a stem's changed end (a common

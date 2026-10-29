@@ -226,7 +226,7 @@ bool mlocPrepareDuration(const DurationValue* value, const mlocDataSet* data,
     memset(out, 0, offsetof(PreparedDuration, formatter));
     out->key = value->key;
     mlocDurationOptions options = OptionsOf(&value->key);
-    return mlocInitDurationFormatter(&out->formatter, data, locale, &options) >= 0;
+    return mlocInitDurationFormatter(data, locale, &options, &out->formatter) >= 0;
 }
 
 // Writes a value with a formatter made here, off the resolver's frames.
@@ -235,8 +235,8 @@ MLOC_NOINLINE static mlocResult WriteMade(const DurationValue* value, const mloc
 {
     mlocDurationFormatter formatter;
     mlocDurationOptions options = OptionsOf(&value->key);
-    mlocResult made = mlocInitDurationFormatter(&formatter, data, locale, &options);
-    return made < 0 ? made : mlocFormatDuration(&formatter, &value->values, output);
+    mlocResult made = mlocInitDurationFormatter(data, locale, &options, &formatter);
+    return made < 0 ? made : mlocDurationFormatter_Format(&formatter, &value->values, output);
 }
 
 mlocMessageFaultKind mlocWriteDurationValue(const DurationValue* value,
@@ -246,7 +246,7 @@ mlocMessageFaultKind mlocWriteDurationValue(const DurationValue* value,
 {
     mlocResult result =
         prepared != NULL && memcmp(&prepared->key, &value->key, sizeof value->key) == 0
-            ? mlocFormatDuration(&prepared->formatter, &value->values, output)
+            ? mlocDurationFormatter_Format(&prepared->formatter, &value->values, output)
             : WriteMade(value, data, locale, output);
     // A text past the room reports the length it needs.
     return result == mloc_success || (result == mloc_errorCapacity && output->length > 0)

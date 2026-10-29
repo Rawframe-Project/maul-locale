@@ -204,7 +204,7 @@ extern "C"
     /// @return A static, NUL-terminated string such as "mloc_errorCapacity".
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_API const char* mlocResultName(mlocResult result);
+    MLOC_API const char* mlocGetResultName(mlocResult result);
 
 #ifdef __cplusplus
 }

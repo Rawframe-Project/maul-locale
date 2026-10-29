@@ -88,8 +88,8 @@ bool mlocValidPlurals(const DataView* view, DataSpan payload)
            ValidRule(payload.bytes[1], 1);
 }
 
-mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut, const mlocDataSet* data,
-                               const mlocLocale* locale, mlocPluralType type)
+mlocResult mlocInitPluralRules(const mlocDataSet* data, const mlocLocale* locale,
+                               mlocPluralType type, mlocPluralRules* rulesOut)
 {
     if (rulesOut == nullptr || data == nullptr || locale == nullptr ||
         (type != mloc_pluralCardinal && type != mloc_pluralOrdinal))
@@ -137,7 +137,7 @@ mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
                               mlocPluralType type, uint8_t* ruleOut)
 {
     mlocPluralRules opaque;
-    mlocResult result = mlocInitPluralRules(&opaque, data, locale, type);
+    mlocResult result = mlocInitPluralRules(data, locale, type, &opaque);
     if (result >= 0)
     {
         *ruleOut = mlocPluralRuleOf(&opaque);
@@ -165,9 +165,9 @@ static bool Read(const mlocPluralRules* opaque, Rules* rules)
            mlocPluralRuleSets[rules->rule].ordinal == rules->type;
 }
 
-mlocResult mlocSelectPluralOperands(const mlocPluralRules* rules,
-                                    const mlocPluralOperands* operands,
-                                    mlocPluralCategory* categoryOut)
+mlocResult mlocPluralRules_SelectOperands(const mlocPluralRules* rules,
+                                          const mlocPluralOperands* operands,
+                                          mlocPluralCategory* categoryOut)
 {
     Rules r;
     if (!Read(rules, &r) || operands == nullptr || categoryOut == nullptr)
@@ -178,8 +178,8 @@ mlocResult mlocSelectPluralOperands(const mlocPluralRules* rules,
     return mloc_success;
 }
 
-mlocResult mlocSelectPlural(const mlocPluralRules* rules, const mlocDecimal* decimal,
-                            mlocPluralCategory* categoryOut)
+mlocResult mlocPluralRules_Select(const mlocPluralRules* rules, const mlocDecimal* decimal,
+                                  mlocPluralCategory* categoryOut)
 {
     Rules r;
     if (!Read(rules, &r) || decimal == nullptr || categoryOut == nullptr)
@@ -201,8 +201,8 @@ mlocResult mlocSelectPlural(const mlocPluralRules* rules, const mlocDecimal* dec
     return mloc_success;
 }
 
-mlocResult mlocSelectPluralInteger(const mlocPluralRules* rules, int64_t value,
-                                   mlocPluralCategory* categoryOut)
+mlocResult mlocPluralRules_SelectInteger(const mlocPluralRules* rules, int64_t value,
+                                         mlocPluralCategory* categoryOut)
 {
     Rules r;
     if (!Read(rules, &r) || categoryOut == nullptr)
@@ -218,8 +218,8 @@ mlocResult mlocSelectPluralInteger(const mlocPluralRules* rules, int64_t value,
     return mloc_success;
 }
 
-mlocResult mlocSelectPluralRange(const mlocPluralRules* rules, mlocPluralCategory start,
-                                 mlocPluralCategory end, mlocPluralCategory* categoryOut)
+mlocResult mlocPluralRules_SelectRange(const mlocPluralRules* rules, mlocPluralCategory start,
+                                       mlocPluralCategory end, mlocPluralCategory* categoryOut)
 {
     Rules r;
     if (!Read(rules, &r) || r.type != mloc_pluralCardinal || categoryOut == nullptr ||
@@ -245,7 +245,7 @@ mlocPluralCategory mlocResolvePluralRange(const mlocPluralRules* rules, mlocPlur
     return category < categoryCount ? (mlocPluralCategory)category : mloc_pluralOther;
 }
 
-mlocResult mlocGetPluralCategories(const mlocPluralRules* rules, uint32_t* categoriesOut)
+mlocResult mlocPluralRules_GetCategories(const mlocPluralRules* rules, uint32_t* categoriesOut)
 {
     Rules r;
     if (!Read(rules, &r) || categoriesOut == nullptr)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// Date ranges (mlocFormatDateRange): the greatest difference's pair, the
+// Date ranges (mlocDateFormatter_FormatRange): the greatest difference's pair, the
 // fallback, one date, the order and the parts of each date, checked
 // against ICU4C 79's DateIntervalFormat made from each option's skeleton;
 // where the library differs on purpose (a leap month, fa's month items, a
@@ -42,7 +42,7 @@ static bool OpenFile(const char* path, mlocData* out)
     uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
-    if (read > 0 && mlocOpenData(out, bytes, read) == mloc_success)
+    if (read > 0 && mlocOpenData(bytes, read, out) == mloc_success)
     {
         return true; // the bytes stay for the run
     }
@@ -90,7 +90,7 @@ static bool Formatter(const char* id, mlocDateOptions options, mlocDateFormatter
     mlocLocale locale;
     return mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status ==
                mloc_success &&
-           mlocInitDateFormatter(formatter, &s_data, &locale, &options) >= 0;
+           mlocInitDateFormatter(&s_data, &locale, &options, formatter) >= 0;
 }
 
 // Whether a locale writes the range as want, and its parts as parts
@@ -103,7 +103,7 @@ static bool Is(const char* id, mlocDateOptions options, mlocDate start, mlocDate
     Parts p = {.text = text};
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
     if (!Formatter(id, options, &formatter) ||
-        mlocFormatDateRange(&formatter, &start, &end, &output) != mloc_success)
+        mlocDateFormatter_FormatRange(&formatter, &start, &end, &output) != mloc_success)
     {
         printf("  %s: not formatted\n", id);
         return false;
@@ -195,8 +195,8 @@ static bool TimeIs(const char* id, mlocTimeOptions options, mlocTime start, mloc
     Parts p = {.text = text};
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
     if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
-        mlocInitTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
-        mlocFormatTimeRange(&formatter, &start, &end, &output) != mloc_success)
+        mlocInitTimeFormatter(&s_data, &locale, &options, &formatter) < 0 ||
+        mlocTimeFormatter_FormatRange(&formatter, &start, &end, &output) != mloc_success)
     {
         printf("  %s: not formatted\n", id);
         return false;
@@ -224,8 +224,8 @@ static bool ZonedIs(const char* id, mlocTimeOptions options, const char* zoneId,
     mlocInstant b = {.seconds = end};
     if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
         mlocFindTimeZone(&s_data, zoneId, strlen(zoneId), &zone) < 0 ||
-        mlocInitTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
-        mlocFormatTimeRangeInZone(&formatter, &zone, &a, &b, &output) != mloc_success)
+        mlocInitTimeFormatter(&s_data, &locale, &options, &formatter) < 0 ||
+        mlocTimeFormatter_FormatRangeInZone(&formatter, &zone, &a, &b, &output) != mloc_success)
     {
         printf("  %s: not formatted\n", id);
         return false;
@@ -347,25 +347,26 @@ static bool BothIs(const char* id, char kind, mlocDateTimeOptions options, const
     if (result >= 0 && kind == 'D')
     {
         mlocDateFormatter formatter;
-        result = mlocInitDateFormatter(&formatter, &s_data, &locale, &options.date);
-        result =
-            result < 0 ? result : mlocFormatDateRangeInZone(&formatter, &zone, &a, &b, &output);
+        result = mlocInitDateFormatter(&s_data, &locale, &options.date, &formatter);
+        result = result < 0
+                     ? result
+                     : mlocDateFormatter_FormatRangeInZone(&formatter, &zone, &a, &b, &output);
     }
     else if (result >= 0)
     {
         mlocDateTimeFormatter formatter;
         mlocDateTime x;
         mlocDateTime y;
-        result = mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options);
+        result = mlocInitDateTimeFormatter(&s_data, &locale, &options, &formatter);
         if (result >= 0 && kind == 'Z')
         {
-            result = mlocFormatDateTimeRangeInZone(&formatter, &zone, &a, &b, &output);
+            result = mlocDateTimeFormatter_FormatRangeInZone(&formatter, &zone, &a, &b, &output);
         }
         else if (result >= 0)
         {
             result = mlocGetDateTimeFor(&utc, &a, mloc_calendarIso8601, &x) == mloc_success &&
                              mlocGetDateTimeFor(&utc, &b, mloc_calendarIso8601, &y) == mloc_success
-                         ? mlocFormatDateTimeRange(&formatter, &x, &y, &output)
+                         ? mlocDateTimeFormatter_FormatRange(&formatter, &x, &y, &output)
                          : mloc_errorInvalid;
         }
     }
@@ -484,25 +485,25 @@ static void TestRefusals(void)
     mlocOutput broken = {.buffer = nullptr, .capacity = 4};
     CHECK(Formatter("en", Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthMedium), &plain),
           "a formatter");
-    CHECK(mlocFormatDateRange(&plain, &a, &b, &measure) == mloc_errorCapacity &&
+    CHECK(mlocDateFormatter_FormatRange(&plain, &a, &b, &measure) == mloc_errorCapacity &&
               measure.length == strlen("Jan 5" DASH "8, 2026") &&
-              mlocFormatDateRange(&plain, &a, &b, &output) == mloc_errorCapacity,
+              mlocDateFormatter_FormatRange(&plain, &a, &b, &output) == mloc_errorCapacity,
           "measured, and a buffer too small");
-    CHECK(mlocFormatDateRange(nullptr, &a, &b, &output) == mloc_errorInvalid &&
-              mlocFormatDateRange(&plain, nullptr, &b, &output) == mloc_errorInvalid &&
-              mlocFormatDateRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatDateRange(&plain, &a, &b, nullptr) == mloc_errorInvalid &&
-              mlocFormatDateRange(&plain, &a, &b, &broken) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_FormatRange(nullptr, &a, &b, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_FormatRange(&plain, nullptr, &b, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_FormatRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_FormatRange(&plain, &a, &b, nullptr) == mloc_errorInvalid &&
+              mlocDateFormatter_FormatRange(&plain, &a, &b, &broken) == mloc_errorInvalid,
           "null pointers");
-    CHECK(mlocFormatDateRange(&plain, &far, &b, &output) == mloc_errorInvalid &&
-              mlocFormatDateRange(&plain, &a, &far, &output) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_FormatRange(&plain, &far, &b, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_FormatRange(&plain, &a, &far, &output) == mloc_errorInvalid,
           "a date outside Temporal's range at either end");
     CHECK(Formatter("en", zone, &zoned) &&
-              mlocFormatDateRange(&zoned, &a, &b, &output) == mloc_errorInvalid,
+              mlocDateFormatter_FormatRange(&zoned, &a, &b, &output) == mloc_errorInvalid,
           "a formatter with a zone");
     mlocDateFormatter forged;
     memset(&forged, 0x5A, sizeof(forged));
-    CHECK(mlocFormatDateRange(&forged, &a, &b, &output) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_FormatRange(&forged, &a, &b, &output) == mloc_errorInvalid,
           "a formatter the library did not make");
 }
 
@@ -523,30 +524,40 @@ static void TestTimeRefusals(void)
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocOutput broken = {.buffer = nullptr, .capacity = 4};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitTimeFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
-              mlocInitTimeFormatter(&zoned, &s_data, &en, &zoneOptions) >= 0 &&
+              mlocInitTimeFormatter(&s_data, &en, nullptr, &plain) >= 0 &&
+              mlocInitTimeFormatter(&s_data, &en, &zoneOptions, &zoned) >= 0 &&
               mlocFindTimeZone(&s_data, "Europe/Berlin", 13, &zone) >= 0,
           "formatters and a zone");
-    CHECK(mlocFormatTimeRange(&plain, &a, &b, &output) == mloc_errorCapacity &&
-              mlocFormatTimeRange(nullptr, &a, &b, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, nullptr, &b, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, &a, &b, nullptr) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, &a, &b, &broken) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, &bad, &b, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRange(&zoned, &a, &b, &output) == mloc_errorInvalid,
+    CHECK(mlocTimeFormatter_FormatRange(&plain, &a, &b, &output) == mloc_errorCapacity &&
+              mlocTimeFormatter_FormatRange(nullptr, &a, &b, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, nullptr, &b, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, &a, &b, nullptr) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, &a, &b, &broken) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, &bad, &b, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRange(&zoned, &a, &b, &output) == mloc_errorInvalid,
           "a time range: too small, null pointers, an hour of 24, a formatter with a zone");
-    CHECK(mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
-              mlocFormatTimeRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, nullptr, &x, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, &x, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&zoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
-              mlocFormatTimeRangeInZone(&plain, &zone, &x, &x, &output) == mloc_errorInvalid,
+    CHECK(mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, &output) ==
+                  mloc_errorCapacity &&
+              mlocTimeFormatter_FormatRangeInZone(nullptr, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, nullptr, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, nullptr, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, nullptr, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, &broken) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &far, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &far, &output) ==
+                  mloc_errorInvalid &&
+              mlocTimeFormatter_FormatRangeInZone(&plain, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid,
           "a range in a zone: too small, null pointers, instants out of range, no zone");
 }
 
@@ -570,50 +581,65 @@ static void TestDateTimeRefusals(void)
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocOutput broken = {.buffer = nullptr, .capacity = 4};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitDateTimeFormatter(&plain, &s_data, &en, nullptr) >= 0 &&
-              mlocInitDateTimeFormatter(&zoned, &s_data, &en, &zoneOptions) >= 0 &&
-              mlocInitDateFormatter(&date, &s_data, &en, nullptr) >= 0 &&
-              mlocInitDateFormatter(&dateZoned, &s_data, &en, &dateZone) >= 0 &&
+              mlocInitDateTimeFormatter(&s_data, &en, nullptr, &plain) >= 0 &&
+              mlocInitDateTimeFormatter(&s_data, &en, &zoneOptions, &zoned) >= 0 &&
+              mlocInitDateFormatter(&s_data, &en, nullptr, &date) >= 0 &&
+              mlocInitDateFormatter(&s_data, &en, &dateZone, &dateZoned) >= 0 &&
               mlocFindTimeZone(&s_data, "Europe/Berlin", 13, &zone) >= 0,
           "formatters and a zone");
-    CHECK(mlocFormatDateTimeRange(&plain, &a, &a, &output) == mloc_errorCapacity &&
-              mlocFormatDateTimeRange(nullptr, &a, &a, &output) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, nullptr, &a, &output) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, &a, &a, nullptr) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, &a, &a, &broken) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, &bad, &a, &output) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
-              mlocFormatDateTimeRange(&zoned, &a, &a, &output) == mloc_errorInvalid,
-          "a date-time range: too small, null pointers, a time out of range, a zone");
     CHECK(
-        mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
-            mlocFormatDateTimeRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, nullptr, &x, &output) ==
-                mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, nullptr, &output) ==
-                mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&zoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
-            mlocFormatDateTimeRangeInZone(&plain, &zone, &x, &x, &output) == mloc_errorInvalid,
-        "a date-time range in a zone: as the date-time's");
-    CHECK(
-        mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, &output) == mloc_errorCapacity &&
-            mlocFormatDateRangeInZone(nullptr, &zone, &x, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, nullptr, &x, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, nullptr, &x, &output) ==
-                mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, nullptr, &output) ==
-                mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, nullptr) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &x, &broken) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, &far, &x, &output) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&dateZoned, &zone, &x, &far, &output) == mloc_errorInvalid &&
-            mlocFormatDateRangeInZone(&date, &zone, &x, &x, &output) == mloc_errorInvalid,
-        "a date range in a zone: as the date's");
+        mlocDateTimeFormatter_FormatRange(&plain, &a, &a, &output) == mloc_errorCapacity &&
+            mlocDateTimeFormatter_FormatRange(nullptr, &a, &a, &output) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, nullptr, &a, &output) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, &a, nullptr, &output) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, &a, &a, nullptr) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, &a, &a, &broken) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, &bad, &a, &output) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&plain, &a, &bad, &output) == mloc_errorInvalid &&
+            mlocDateTimeFormatter_FormatRange(&zoned, &a, &a, &output) == mloc_errorInvalid,
+        "a date-time range: too small, null pointers, a time out of range, a zone");
+    CHECK(mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, &output) ==
+                  mloc_errorCapacity &&
+              mlocDateTimeFormatter_FormatRangeInZone(nullptr, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, nullptr, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, nullptr, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, nullptr, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &x, &broken) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &far, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&zoned, &zone, &x, &far, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateTimeFormatter_FormatRangeInZone(&plain, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid,
+          "a date-time range in a zone: as the date-time's");
+    CHECK(mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &x, &x, &output) ==
+                  mloc_errorCapacity &&
+              mlocDateFormatter_FormatRangeInZone(nullptr, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, nullptr, &x, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, nullptr, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &x, nullptr, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &x, &x, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &x, &x, &broken) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &far, &x, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&dateZoned, &zone, &x, &far, &output) ==
+                  mloc_errorInvalid &&
+              mlocDateFormatter_FormatRangeInZone(&date, &zone, &x, &x, &output) ==
+                  mloc_errorInvalid,
+          "a date range in a zone: as the date's");
 }
 
 // The parts' spans in UTF-16 units, as ICU counts them: the start's from
@@ -718,7 +744,7 @@ static bool DateLine(char* line, size_t number)
     Spans s = {text, {-1, -1}, {0, 0}};
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Span, .context = &s};
     if (!Formatter(field[0], options, &formatter) ||
-        mlocFormatDateRange(&formatter, &start, &end, &output) != mloc_success)
+        mlocDateFormatter_FormatRange(&formatter, &start, &end, &output) != mloc_success)
     {
         printf("  line %zu: %s not formatted\n", number, field[0]);
         return false;
@@ -767,17 +793,18 @@ static bool TimeLine(char* line, size_t number)
     mlocResult result =
         mlocCanonicalizeLocale(&s_data, field[0], strlen(field[0]), &locale, nullptr).status ==
                 mloc_success
-            ? mlocInitTimeFormatter(&formatter, &s_data, &locale, &options)
+            ? mlocInitTimeFormatter(&s_data, &locale, &options, &formatter)
             : mloc_errorSyntax;
     if (result >= 0 && zoned)
     {
         result = mlocFindTimeZone(&s_data, field[2], strlen(field[2]), &zone);
-        result =
-            result < 0 ? result : mlocFormatTimeRangeInZone(&formatter, &zone, &from, &to, &output);
+        result = result < 0
+                     ? result
+                     : mlocTimeFormatter_FormatRangeInZone(&formatter, &zone, &from, &to, &output);
     }
     else if (result >= 0)
     {
-        result = mlocFormatTimeRange(&formatter, &x, &y, &output);
+        result = mlocTimeFormatter_FormatRange(&formatter, &x, &y, &output);
     }
     if (result != mloc_success)
     {
@@ -831,25 +858,27 @@ static bool DateTimeLine(char* line, size_t number)
     if (result >= 0 && kind == 'D')
     {
         mlocDateFormatter formatter;
-        result = mlocInitDateFormatter(&formatter, &s_data, &locale, &options.date);
-        result =
-            result < 0 ? result : mlocFormatDateRangeInZone(&formatter, &zone, &from, &to, &output);
+        result = mlocInitDateFormatter(&s_data, &locale, &options.date, &formatter);
+        result = result < 0
+                     ? result
+                     : mlocDateFormatter_FormatRangeInZone(&formatter, &zone, &from, &to, &output);
     }
     else if (result >= 0)
     {
         mlocDateTimeFormatter formatter;
         mlocDateTime x;
         mlocDateTime y;
-        result = mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options);
+        result = mlocInitDateTimeFormatter(&s_data, &locale, &options, &formatter);
         if (result >= 0 && kind == 'Z')
         {
-            result = mlocFormatDateTimeRangeInZone(&formatter, &zone, &from, &to, &output);
+            result =
+                mlocDateTimeFormatter_FormatRangeInZone(&formatter, &zone, &from, &to, &output);
         }
         else if (result >= 0 &&
                  mlocGetDateTimeFor(&utc, &from, mloc_calendarIso8601, &x) == mloc_success &&
                  mlocGetDateTimeFor(&utc, &to, mloc_calendarIso8601, &y) == mloc_success)
         {
-            result = mlocFormatDateTimeRange(&formatter, &x, &y, &output);
+            result = mlocDateTimeFormatter_FormatRange(&formatter, &x, &y, &output);
         }
     }
     if (result != mloc_success)

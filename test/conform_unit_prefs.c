@@ -78,7 +78,7 @@ int main(void)
         mlocResult r = n == 4 ? Choose(&data, fields) : mloc_errorSyntax;
         if (r != mloc_success)
         {
-            printf("%s\t%s\n", line, mlocResultName(r));
+            printf("%s\t%s\n", line, mlocGetResultName(r));
         }
     }
     return 0;

@@ -465,7 +465,7 @@ static mlocResult InitStyled(const uint8_t* root, uint32_t size, mlocNotation no
     {
         return (mlocResult)-101;
     }
-    return mlocInitNumberFormatter(&formatter, &set, &locale, &options);
+    return mlocInitNumberFormatter(&set, &locale, &options, &formatter);
 }
 
 static mlocResult InitAs(const uint8_t* root, uint32_t size, mlocNotation notation)

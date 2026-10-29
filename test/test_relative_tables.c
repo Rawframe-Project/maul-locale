@@ -128,7 +128,7 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     {
         fclose(file);
     }
-    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+    return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
 // A unit's string at a key: true when the unit files the key.

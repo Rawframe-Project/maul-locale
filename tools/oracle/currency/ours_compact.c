@@ -43,9 +43,9 @@ int main(void)
         char out[256];
         mlocOutput output = {.buffer = out, .capacity = sizeof(out)};
         if (mlocParseLocale(loc, strlen(loc), &locale).status != mloc_success ||
-            mlocInitCurrencyFormatter(&f, &data, &locale, code, strlen(code), &o) < 0 ||
+            mlocInitCurrencyFormatter(&data, &locale, code, strlen(code), &o, &f) < 0 ||
             mlocParseDecimal(value, strlen(value), &d).status != mloc_success ||
-            mlocFormatCurrency(&f, &d, &output) != mloc_success)
+            mlocCurrencyFormatter_Format(&f, &d, &output) != mloc_success)
         {
             printf("%s\tERR\n", line);
             continue;

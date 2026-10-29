@@ -208,7 +208,7 @@ static mlocResult FindOverride(DateFormat* f, const mlocDataSet* data, const mlo
             return mloc_success;
         }
         mlocResult result =
-            mlocInitNumberingSystemFormatter(&f->spellout, data, locale, id, length, nullptr);
+            mlocInitNumberingSystemFormatter(data, locale, id, length, nullptr, &f->spellout);
         if (result < 0)
         {
             return mloc_errorNotFound;
@@ -342,8 +342,8 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
     return mlocMakeZoneFormat(&f->zone, data, locale, o->zone);
 }
 
-mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut, const mlocDataSet* data,
-                                 const mlocLocale* locale, const mlocDateOptions* options)
+mlocResult mlocInitDateFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                 const mlocDateOptions* options, mlocDateFormatter* formatterOut)
 {
     mlocDateOptions o = options != nullptr ? *options : (mlocDateOptions){0};
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
@@ -519,8 +519,8 @@ static mlocResult WriteOut(const DateWriting* g, mlocOutput* output)
     return mloc_success;
 }
 
-mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* date,
-                          mlocOutput* output)
+mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter, const mlocDate* date,
+                                    mlocOutput* output)
 {
     ZonedDateFormat f;
     DateValue v;
@@ -534,8 +534,9 @@ mlocResult mlocFormatDate(const mlocDateFormatter* formatter, const mlocDate* da
     return WriteOut(&g, output);
 }
 
-mlocResult mlocFormatDateInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone,
-                                const mlocInstant* instant, mlocOutput* output)
+mlocResult mlocDateFormatter_FormatInZone(const mlocDateFormatter* formatter,
+                                          const mlocTimeZone* zone, const mlocInstant* instant,
+                                          mlocOutput* output)
 {
     ZonedDateFormat f;
     DateValue v;
@@ -561,8 +562,8 @@ static void WriteRangeValue(const void* context, uint32_t value, const uint8_t* 
     mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
 }
 
-mlocResult mlocFormatDateRange(const mlocDateFormatter* formatter, const mlocDate* start,
-                               const mlocDate* end, mlocOutput* output)
+mlocResult mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, const mlocDate* start,
+                                         const mlocDate* end, mlocOutput* output)
 {
     ZonedDateFormat f;
     DateValue v[2];
@@ -643,9 +644,9 @@ static mlocResult WriteJoinedRange(const RangeJoin* join, DataSpan fallback, mlo
     return mloc_success;
 }
 
-mlocResult mlocFormatDateRangeInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone,
-                                     const mlocInstant* start, const mlocInstant* end,
-                                     mlocOutput* output)
+mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatter,
+                                               const mlocTimeZone* zone, const mlocInstant* start,
+                                               const mlocInstant* end, mlocOutput* output)
 {
     ZonedDateFormat f;
     DateValue v[2];

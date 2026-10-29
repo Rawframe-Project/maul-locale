@@ -17,7 +17,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "names\n");
         return 1;

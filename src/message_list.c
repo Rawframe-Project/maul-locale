@@ -77,7 +77,7 @@ static mlocResult MakeFormatter(const ListKey* key, const mlocDataSet* data,
                                 const mlocLocale* locale, mlocListFormatter* out)
 {
     mlocListOptions options = {(mlocListType)key->type, (mlocListWidth)key->width};
-    return mlocInitListFormatter(out, data, locale, &options);
+    return mlocInitListFormatter(data, locale, &options, out);
 }
 
 bool mlocPrepareList(const ListValue* value, const mlocDataSet* data, const mlocLocale* locale,
@@ -85,7 +85,7 @@ bool mlocPrepareList(const ListValue* value, const mlocDataSet* data, const mloc
 {
     memset(out, 0, offsetof(PreparedList, formatter));
     out->key = value->key;
-    out->rulesMade = mlocInitPluralRules(&out->rules, data, locale, mloc_pluralCardinal) >= 0;
+    out->rulesMade = mlocInitPluralRules(data, locale, mloc_pluralCardinal, &out->rules) >= 0;
     return MakeFormatter(&value->key, data, locale, &out->formatter) >= 0;
 }
 
@@ -112,7 +112,7 @@ mlocMessageFaultKind mlocWriteListValue(const ListValue* value, const PreparedLi
     }
     if (result >= 0)
     {
-        result = mlocFormatList(formatter, value->items, value->count, output);
+        result = mlocListFormatter_Format(formatter, value->items, value->count, output);
     }
     // A text past the room reports the length it needs.
     return result == mloc_success || (result == mloc_errorCapacity && output->length > 0)
@@ -159,12 +159,12 @@ mlocMessageFaultKind mlocMatchList(const ListValue* value, const PreparedList* p
     {
         used = &prepared->rules;
     }
-    else if (mlocInitPluralRules(&rules, data, locale, mloc_pluralCardinal) < 0)
+    else if (mlocInitPluralRules(data, locale, mloc_pluralCardinal, &rules) < 0)
     {
         return mloc_messageFaultUnsupportedOperation;
     }
     mlocPluralCategory category;
-    if (mlocSelectPluralInteger(used, (int64_t)value->count, &category) != mloc_success)
+    if (mlocPluralRules_SelectInteger(used, (int64_t)value->count, &category) != mloc_success)
     {
         return mloc_messageFaultUnsupportedOperation;
     }

@@ -33,7 +33,7 @@ static bool OpenFile(const char* path, mlocData* out)
     uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
-    if (read > 0 && mlocOpenData(out, bytes, read) == mloc_success)
+    if (read > 0 && mlocOpenData(bytes, read, out) == mloc_success)
     {
         return true; // the bytes stay for the run
     }
@@ -51,7 +51,7 @@ static bool Make(const char* id, mlocTimeOptions options, mlocTimeFormatter* for
     mlocLocale locale;
     return mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status ==
                mloc_success &&
-           mlocInitTimeFormatter(formatter, &s_data, &locale, &options) >= 0;
+           mlocInitTimeFormatter(&s_data, &locale, &options, formatter) >= 0;
 }
 
 // Whether a locale formats a time as want with the options.
@@ -61,7 +61,7 @@ static bool Is(const char* id, mlocTimeOptions options, mlocTime time, const cha
     char text[256];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     if (!Make(id, options, &formatter) ||
-        mlocFormatTime(&formatter, &time, &output) != mloc_success)
+        mlocTimeFormatter_Format(&formatter, &time, &output) != mloc_success)
     {
         printf("  %s: refused\n", id);
         return false;
@@ -197,15 +197,15 @@ static void TestOutput(void)
     char text[64];
     mlocOutput output = {
         .buffer = text, .capacity = sizeof(text), .part = ReportPart, .context = parts};
-    CHECK(mlocFormatTime(&formatter, &time, &output) == mloc_success &&
+    CHECK(mlocTimeFormatter_Format(&formatter, &time, &output) == mloc_success &&
               strcmp(parts, "8:0:1 0:1:1 9:2:2 0:4:1 10:5:2 0:7:1 11:8:3 0:11:3 12:14:2 ") == 0,
           "the parts of \"4:03:07.250 PM\"");
     mlocOutput measure = {0};
-    CHECK(mlocFormatTime(&formatter, &time, &measure) == mloc_errorCapacity &&
+    CHECK(mlocTimeFormatter_Format(&formatter, &time, &measure) == mloc_errorCapacity &&
               measure.length == strlen("4:03:07.250" NNBSP "PM"),
           "measuring");
     mlocOutput small = {.buffer = text, .capacity = 5};
-    CHECK(mlocFormatTime(&formatter, &time, &small) == mloc_errorCapacity &&
+    CHECK(mlocTimeFormatter_Format(&formatter, &time, &small) == mloc_errorCapacity &&
               small.length == measure.length,
           "a buffer too small");
 }
@@ -223,41 +223,41 @@ static void TestRefusals(void)
     mlocTimeOptions style = Style((mlocTimeStyle)5);
     mlocTimeOptions styledZone = {.style = mloc_timeStyleFull, .zone = mloc_zoneStyleCity};
     mlocTimeOptions zone = {.zone = (mlocZoneStyle)9};
-    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &full) == mloc_errorNotFound &&
-              mlocInitTimeFormatter(&formatter, &s_data, &en, &longTime) == mloc_errorNotFound,
+    CHECK(mlocInitTimeFormatter(&s_data, &en, &full, &formatter) == mloc_errorNotFound &&
+              mlocInitTimeFormatter(&s_data, &en, &longTime, &formatter) == mloc_errorNotFound,
           "the full and long styles, which name a zone, without the zone names");
-    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &styledZone) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, &s_data, &en, &zone) == mloc_errorInvalid,
+    CHECK(mlocInitTimeFormatter(&s_data, &en, &styledZone, &formatter) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(&s_data, &en, &zone, &formatter) == mloc_errorInvalid,
           "a zone style with a time style, an unknown zone style");
-    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, &cycle) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, &s_data, &en, &precision) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, &s_data, &en, &style) == mloc_errorInvalid,
+    CHECK(mlocInitTimeFormatter(&s_data, &en, &cycle, &formatter) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(&s_data, &en, &precision, &formatter) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(&s_data, &en, &style, &formatter) == mloc_errorInvalid,
           "options out of range");
-    CHECK(mlocInitTimeFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitTimeFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitTimeFormatter(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(nullptr, &en, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitTimeFormatter(&s_data, nullptr, nullptr, &formatter) == mloc_errorInvalid,
           "null arguments");
     mlocDataSet builtin = {s_sources, 1};
-    CHECK(mlocInitTimeFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
+    CHECK(mlocInitTimeFormatter(&builtin, &en, nullptr, &formatter) == mloc_errorNotFound,
           "data without the dates");
-    CHECK(mlocInitTimeFormatter(&formatter, &s_data, &en, nullptr) == mloc_success, "the defaults");
+    CHECK(mlocInitTimeFormatter(&s_data, &en, nullptr, &formatter) == mloc_success, "the defaults");
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocTime late = Time(24, 0, 0, 0);
     mlocTime second = Time(1, 0, 60, 0);
     mlocTime nano = Time(1, 0, 0, 1000000000);
     mlocTime time = Time(1, 0, 0, 0);
-    CHECK(mlocFormatTime(&formatter, &late, &output) == mloc_errorInvalid &&
-              mlocFormatTime(&formatter, &second, &output) == mloc_errorInvalid &&
-              mlocFormatTime(&formatter, &nano, &output) == mloc_errorInvalid,
+    CHECK(mlocTimeFormatter_Format(&formatter, &late, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(&formatter, &second, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(&formatter, &nano, &output) == mloc_errorInvalid,
           "times out of range");
     mlocTimeFormatter blank = {0};
     mlocOutput noBuffer = {.capacity = 4};
-    CHECK(mlocFormatTime(&blank, &time, &output) == mloc_errorInvalid &&
-              mlocFormatTime(nullptr, &time, &output) == mloc_errorInvalid &&
-              mlocFormatTime(&formatter, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatTime(&formatter, &time, nullptr) == mloc_errorInvalid &&
-              mlocFormatTime(&formatter, &time, &noBuffer) == mloc_errorInvalid,
+    CHECK(mlocTimeFormatter_Format(&blank, &time, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(nullptr, &time, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(&formatter, &time, nullptr) == mloc_errorInvalid &&
+              mlocTimeFormatter_Format(&formatter, &time, &noBuffer) == mloc_errorInvalid,
           "a formatter the library did not make, null arguments, a capacity without a buffer");
 }
 
@@ -274,8 +274,8 @@ static bool DateTimeIs(const char* id, mlocDateTimeOptions options, mlocTime tim
     if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
         mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) !=
             mloc_success ||
-        mlocInitDateTimeFormatter(&formatter, &s_data, &locale, &options) < 0 ||
-        mlocFormatDateTime(&formatter, &value, &output) != mloc_success)
+        mlocInitDateTimeFormatter(&s_data, &locale, &options, &formatter) < 0 ||
+        mlocDateTimeFormatter_Format(&formatter, &value, &output) != mloc_success)
     {
         printf("  %s: refused\n", id);
         return false;
@@ -387,7 +387,7 @@ static void TestDateTimeOutput(void)
     mlocDateTimeOptions options =
         Composite(mloc_dateFieldSetMonthDay, mloc_dateLengthMedium, mloc_timePrecisionHour);
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+              mlocInitDateTimeFormatter(&s_data, &en, &options, &formatter) == mloc_success,
           "a date-time formatter");
     mlocDateTime value = {.date = {0}, .time = Time(16, 3, 7, 0)};
     mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
@@ -397,11 +397,11 @@ static void TestDateTimeOutput(void)
         .buffer = text, .capacity = sizeof(text), .part = ReportDateTimePart, .context = parts};
     CHECK(mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &value.date) ==
                   mloc_success &&
-              mlocFormatDateTime(&formatter, &value, &output) == mloc_success &&
+              mlocDateTimeFormatter_Format(&formatter, &value, &output) == mloc_success &&
               strcmp(parts, "5:0:3 0:3:1 7:4:2 0:6:2 8:8:1 0:9:3 12:12:2 ") == 0,
           "the parts of \"Oct 15, 4 PM\"");
     mlocOutput measure = {0};
-    CHECK(mlocFormatDateTime(&formatter, &value, &measure) == mloc_errorCapacity &&
+    CHECK(mlocDateTimeFormatter_Format(&formatter, &value, &measure) == mloc_errorCapacity &&
               measure.length == output.length,
           "measuring");
     mlocDateTimeOptions period =
@@ -411,19 +411,19 @@ static void TestDateTimeOutput(void)
         Composite(mloc_dateFieldSetDay, mloc_dateLengthShort, mloc_timePrecisionMinute);
     zone.date.zone = mloc_zoneStyleGenericShort;
     mlocDateTimeOptions glue = {.glue = (mlocDateTimeGlue)2};
-    CHECK(mlocInitDateTimeFormatter(&formatter, &s_data, &en, &period) == mloc_errorInvalid &&
-              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &oneSided) == mloc_errorInvalid &&
-              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &zone) == mloc_errorInvalid &&
-              mlocInitDateTimeFormatter(&formatter, &s_data, &en, &glue) == mloc_errorInvalid,
+    CHECK(mlocInitDateTimeFormatter(&s_data, &en, &period, &formatter) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&s_data, &en, &oneSided, &formatter) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&s_data, &en, &zone, &formatter) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&s_data, &en, &glue, &formatter) == mloc_errorInvalid,
           "a calendar period, a standard format on one side, a zone on the date, an unknown glue");
-    CHECK(mlocInitDateTimeFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDateTimeFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDateTimeFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitDateTimeFormatter(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(nullptr, &en, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitDateTimeFormatter(&s_data, nullptr, nullptr, &formatter) == mloc_errorInvalid,
           "null arguments");
     mlocDataSet builtin = {s_sources, 1};
-    CHECK(mlocInitDateTimeFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
+    CHECK(mlocInitDateTimeFormatter(&builtin, &en, nullptr, &formatter) == mloc_errorNotFound,
           "data without the dates");
-    CHECK(mlocInitDateTimeFormatter(&formatter, &s_data, &en, nullptr) == mloc_success,
+    CHECK(mlocInitDateTimeFormatter(&s_data, &en, nullptr, &formatter) == mloc_success,
           "the defaults");
     mlocDateTime late = value;
     late.time.hour = 24;
@@ -432,13 +432,13 @@ static void TestDateTimeOutput(void)
     mlocDateTimeFormatter blank = {0};
     mlocOutput noBuffer = {.capacity = 4};
     output.part = nullptr;
-    CHECK(mlocFormatDateTime(&formatter, &late, &output) == mloc_errorInvalid &&
-              mlocFormatDateTime(&formatter, &far, &output) == mloc_errorInvalid &&
-              mlocFormatDateTime(&blank, &value, &output) == mloc_errorInvalid &&
-              mlocFormatDateTime(nullptr, &value, &output) == mloc_errorInvalid &&
-              mlocFormatDateTime(&formatter, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatDateTime(&formatter, &value, nullptr) == mloc_errorInvalid &&
-              mlocFormatDateTime(&formatter, &value, &noBuffer) == mloc_errorInvalid,
+    CHECK(mlocDateTimeFormatter_Format(&formatter, &late, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(&formatter, &far, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(&blank, &value, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(nullptr, &value, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(&formatter, &value, nullptr) == mloc_errorInvalid &&
+              mlocDateTimeFormatter_Format(&formatter, &value, &noBuffer) == mloc_errorInvalid,
           "refused values and arguments");
 }
 

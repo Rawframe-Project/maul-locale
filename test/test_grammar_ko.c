@@ -28,7 +28,7 @@ static mlocInflection Particle(mlocKoreanParticle particle)
 static bool Gives(const char* text, const mlocInflection* request, const char* expected)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocInflectText(&s_ko, text, strlen(text), request, &output);
+    mlocResult r = mlocInflector_InflectText(&s_ko, text, strlen(text), request, &output);
     bool good = r == mloc_success && output.length == strlen(expected) &&
                 memcmp(s_text, expected, output.length) == 0;
     if (!good)
@@ -143,7 +143,7 @@ static void TestOtherScripts(void)
     mlocInflection exact = Particle(mloc_particleTopic);
     exact.exact = true;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_ko, "Apple", 5, &exact, &output) == mloc_errorNotFound &&
+    CHECK(mlocInflector_InflectText(&s_ko, "Apple", 5, &exact, &output) == mloc_errorNotFound &&
               Gives("とうきょう", &topic, "とうきょう은(는)"),
           "an unread end: both forms, or refused when asked to be exact");
 }
@@ -156,9 +156,9 @@ static void TestRefusals(void)
     plural.plural = true;
     mlocInflection unknown = Particle((mlocKoreanParticle)17);
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_ko, "책", 3, &r, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_ko, "책", 3, &plural, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_ko, "책", 3, &unknown, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_ko, "책", 3, &r, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_ko, "책", 3, &plural, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_ko, "책", 3, &unknown, &output) == mloc_errorInvalid,
           "no case, plural or unknown particle");
 }
 
@@ -173,7 +173,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || mlocOpenData(&sources[1], spellout, size) != mloc_success)
+    if (size == 0 || mlocOpenData(spellout, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "test_grammar_ko: cannot open %s\n", MLOC_SPELLOUT_FILE);
         return 2;
@@ -181,7 +181,7 @@ int main(void)
     s_data = (mlocDataSet){sources, 2};
     mlocLocale ko;
     if (mlocParseLocale("ko", 2, &ko).status != mloc_success ||
-        mlocInitInflector(&s_ko, &s_data, &ko) != mloc_success)
+        mlocInitInflector(&s_data, &ko, &s_ko) != mloc_success)
     {
         fputs("test_grammar_ko: cannot make the inflector\n", stderr);
         return 2;

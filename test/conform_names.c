@@ -42,7 +42,7 @@ static bool Open(const char* path, mlocDataSet* set)
     fclose(file);
     mlocOpenBuiltinData(&s_sources[0]);
     *set = (mlocDataSet){s_sources, 2};
-    return read > 0 && mlocOpenData(&s_sources[1], s_bytes, read) == mloc_success;
+    return read > 0 && mlocOpenData(s_bytes, read, &s_sources[1]) == mloc_success;
 }
 
 // The library's name for a line's locale, code and mode, or "<none>".

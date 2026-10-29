@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     FILE* f = fopen("src/generated/units.mloc", "rb");
     size_t s = fread(file, 1, sizeof file, f);
     fclose(f);
-    if (mlocOpenData(&d[1], file, s) != mloc_success)
+    if (mlocOpenData(file, s, &d[1]) != mloc_success)
     {
         return 3;
     }
@@ -35,9 +35,9 @@ int main(int argc, char** argv)
     static mlocUnitFormatter meter, m2;
     mlocNumberOptions percent = {.style = mloc_numberPercent};
     mlocUnitOptions lo = {.width = getenv("SHORT") ? mloc_unitWidthShort : mloc_unitWidthLong};
-    if (mlocInitNumberFormatter(&nde, &builtin, &de, NULL) < 0 ||
-        mlocInitNumberFormatter(&pen, &builtin, &en, &percent) < 0 ||
-        mlocInitUnitFormatter(&meter, &all, &en, "meter", 5, &lo) < 0)
+    if (mlocInitNumberFormatter(&builtin, &de, NULL, &nde) < 0 ||
+        mlocInitNumberFormatter(&builtin, &en, &percent, &pen) < 0 ||
+        mlocInitUnitFormatter(&all, &en, "meter", 5, &lo, &meter) < 0)
     {
         return 4;
     }
@@ -49,28 +49,28 @@ int main(int argc, char** argv)
         o.length = 0;
         if (!strcmp(c, "number-format"))
         {
-            sink += mlocFormatNumber(&nde, &value, &o);
+            sink += mlocNumberFormatter_Format(&nde, &value, &o);
         }
         else if (!strcmp(c, "percent-format"))
         {
-            sink += mlocFormatNumber(&pen, &ratio, &o);
+            sink += mlocNumberFormatter_Format(&pen, &ratio, &o);
         }
         else if (!strcmp(c, "unit-format"))
         {
-            sink += mlocFormatUnit(&meter, &length, &o);
+            sink += mlocUnitFormatter_Format(&meter, &length, &o);
         }
         else if (!strcmp(c, "unit-init"))
         {
-            sink += mlocInitUnitFormatter(&m2, &all, &en, "meter", 5, &lo);
+            sink += mlocInitUnitFormatter(&all, &en, "meter", 5, &lo, &m2);
         }
         else if (!strcmp(c, "currency-init"))
         {
             static mlocCurrencyFormatter cf;
-            sink += mlocInitCurrencyFormatter(&cf, &builtin, &en, "EUR", 3, NULL);
+            sink += mlocInitCurrencyFormatter(&builtin, &en, "EUR", 3, NULL, &cf);
         }
         else if (!strcmp(c, "number-init"))
         {
-            sink += mlocInitNumberFormatter(&nde, &builtin, &de, NULL);
+            sink += mlocInitNumberFormatter(&builtin, &de, NULL, &nde);
         }
     }
     printf("%zu [%.*s]\n", sink, (int)o.length, text);

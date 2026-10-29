@@ -49,14 +49,15 @@ static mlocResult Parse(const Formatter* f, const char* text, size_t length, mlo
                         uint8_t any, mlocDecimal* decimal, char* code, size_t* end)
 {
     memcpy(code, "---", 3);
-    return f->currency ? mlocParseCurrency(&f->money, text, length, mode, any, decimal, code, end)
-                       : mlocParseNumber(&f->number, text, length, mode, decimal, end);
+    return f->currency
+               ? mlocCurrencyFormatter_Parse(&f->money, text, length, mode, any, decimal, code, end)
+               : mlocNumberFormatter_Parse(&f->number, text, length, mode, decimal, end);
 }
 
 static mlocResult Format(const Formatter* f, const mlocDecimal* decimal, mlocOutput* output)
 {
-    return f->currency ? mlocFormatCurrency(&f->money, decimal, output)
-                       : mlocFormatNumber(&f->number, decimal, output);
+    return f->currency ? mlocCurrencyFormatter_Format(&f->money, decimal, output)
+                       : mlocNumberFormatter_Format(&f->number, decimal, output);
 }
 
 static bool Same(const mlocDecimal* a, const mlocDecimal* b)
@@ -80,7 +81,7 @@ static bool OpenData(mlocDataSet* builtin, mlocDataSet* withNames)
             size_t size = fread(s_names, 1, sizeof(s_names), file);
             fclose(file);
             s_count =
-                size < sizeof(s_names) && mlocOpenData(&s_sources[1], s_names, size) == mloc_success
+                size < sizeof(s_names) && mlocOpenData(s_names, size, &s_sources[1]) == mloc_success
                     ? 2
                     : 1;
         }
@@ -109,7 +110,7 @@ static bool MakeFormatter(const mlocDataSet* data, const mlocLocale* locale, boo
             .signDisplay = sign,
             .grouping = (mlocGrouping)(kind >> 4 & 3),
         };
-        return mlocInitNumberFormatter(&out->number, data, locale, &o) == mloc_success;
+        return mlocInitNumberFormatter(data, locale, &o, &out->number) == mloc_success;
     }
     static const mlocCurrencyDisplay s_displays[] = {
         mloc_currencySymbol,       mloc_currencyNarrowSymbol,  mloc_currencyCode,
@@ -123,7 +124,7 @@ static bool MakeFormatter(const mlocDataSet* data, const mlocLocale* locale, boo
         .appendCode = (uint8_t)((kind >> 4 & 1) != 0 && display <= mloc_currencyVariantSymbol),
         .number = {.signDisplay = sign},
     };
-    return mlocInitCurrencyFormatter(&out->money, data, locale, s_codes[options % 10], 3, &o) ==
+    return mlocInitCurrencyFormatter(data, locale, s_codes[options % 10], 3, &o, &out->money) ==
            mloc_success;
 }
 
@@ -206,9 +207,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     // A locale of the data, its id as a tag.
     const char* id = nullptr;
     size_t length = 0;
-    size_t count = mlocGetDataLocaleCount(&builtin.sources[0]);
-    Require(mlocGetDataLocale(&builtin.sources[0], (data[0] | (size_t)data[1] << 8) % count, &id,
-                              &length) == mloc_success);
+    size_t count = mlocData_GetLocaleCount(&builtin.sources[0]);
+    Require(mlocData_GetLocale(&builtin.sources[0], (data[0] | (size_t)data[1] << 8) % count, &id,
+                               &length) == mloc_success);
     char tag[64];
     mlocLocale locale;
     if (length >= sizeof(tag))

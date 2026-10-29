@@ -27,7 +27,7 @@ int main(int argc, char** argv)
         }
         size_t n = fread(names, 1, sizeof names, f);
         fclose(f);
-        if (mlocOpenData(&s[1], names, n) != mloc_success)
+        if (mlocOpenData(names, n, &s[1]) != mloc_success)
         {
             return 2;
         }
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
         (void)mlocParseLocale(f[0], strlen(f[0]), &l);
         mlocCurrencyFormatter cf;
         printf("%s\t%s\t%s\t%s\t%s\t", f[0], f[1], f[2], f[3], f[4]);
-        mlocResult r = mlocInitCurrencyFormatter(&cf, &d, &l, f[1], 3, nullptr);
+        mlocResult r = mlocInitCurrencyFormatter(&d, &l, f[1], 3, nullptr, &cf);
         if (r < 0)
         {
             printf("ERR %d\n", r);
@@ -70,9 +70,9 @@ int main(int argc, char** argv)
         char code[3];
         size_t end = 0;
         int any = f[3][0] == '1';
-        r = mlocParseCurrency(&cf, f[4], strlen(f[4]),
-                              strcmp(f[2], "strict") ? mloc_parseLenient : mloc_parseStrict,
-                              (uint8_t)any, &x, code, &end);
+        r = mlocCurrencyFormatter_Parse(
+            &cf, f[4], strlen(f[4]), strcmp(f[2], "strict") ? mloc_parseLenient : mloc_parseStrict,
+            (uint8_t)any, &x, code, &end);
         if (r == mloc_errorSyntax)
         {
             printf("fail\t%zu\n", end);

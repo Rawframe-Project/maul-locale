@@ -116,7 +116,7 @@ static void Spoil(DataSpan unit, uint32_t hashAt, const uint8_t* where, const ui
     }
     mlocData broken;
     CHECK(mlocCollationHashValid(unit, hashAt) &&
-              mlocOpenData(&broken, s_file, s_size) == mloc_errorFormat,
+              mlocOpenData(s_file, s_size, &broken) == mloc_errorFormat,
           what);
     memcpy(At(where), saved, length);
     memcpy(hash, savedHash, 8);
@@ -263,7 +263,7 @@ int main(void)
     }
     mlocData data;
     if (s_size == 0 || s_size == sizeof(s_file) ||
-        mlocOpenData(&data, s_file, s_size) != mloc_success)
+        mlocOpenData(s_file, s_size, &data) != mloc_success)
     {
         fputs("test_collation_data: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;
@@ -282,14 +282,14 @@ int main(void)
         static const uint8_t bad[4] = {0xC9, 0xFF, 0xFF, 0xFF};
         memcpy(s_file + at, bad, 4);
         mlocData broken;
-        bool stale = mlocOpenData(&broken, s_file, s_size) != mloc_success;
+        bool stale = mlocOpenData(s_file, s_size, &broken) != mloc_success;
         uint64_t hash = mlocCollationUnitHash(span, collationRootHashAt);
         for (int i = 0; i < 8; i++)
         {
             unit[collationRootHashAt + i] = (uint8_t)(hash >> (8 * i));
         }
         CHECK(stale && mlocCollationHashValid(span, collationRootHashAt) &&
-                  mlocOpenData(&broken, s_file, s_size) != mloc_success,
+                  mlocOpenData(s_file, s_size, &broken) != mloc_success,
               "a file with a spoiled root unit refused at open, by its hash and by its values");
     }
     // Spoiled from a good copy, each check a collator's making trusts.
@@ -299,7 +299,7 @@ int main(void)
     {
         fclose(file);
     }
-    CHECK(mlocOpenData(&data, s_file, s_size) == mloc_success, "the good copy opens");
+    CHECK(mlocOpenData(s_file, s_size, &data) == mloc_success, "the good copy opens");
     view = mlocViewOf(&data);
     if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&
         mlocReadCollationRoot(span, &r))
@@ -324,6 +324,6 @@ int main(void)
     {
         SpoilReordering(reordering, &tailoring);
     }
-    CHECK(mlocOpenData(&data, s_file, s_size) == mloc_success, "and put back, it opens again");
+    CHECK(mlocOpenData(s_file, s_size, &data) == mloc_success, "and put back, it opens again");
     return s_failures == 0 ? 0 : 1;
 }
