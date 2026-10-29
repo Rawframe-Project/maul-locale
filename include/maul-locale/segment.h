@@ -51,7 +51,9 @@ extern "C"
     // receives a maximal run of such text as UTF-8 and a byte offset from
     // inside it, and returns the byte offset of the first break between
     // words after from, or length when there is none. It must return the
-    // same answer for the same run and offset each time.
+    // same answer for the same run and offset each time. It must not make
+    // again the segmenter it serves; any other call on that segmenter from
+    // inside it is refused with mloc_errorInvalid and changes nothing.
     typedef size_t (*mlocComplexBreakFunction)(void* context, const char* run, size_t length,
                                                size_t from);
 
