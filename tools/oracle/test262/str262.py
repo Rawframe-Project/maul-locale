@@ -278,5 +278,5 @@ def duration_string(values, options=UNDEF):
         v = dur262.round_time_part(v, TIME_UNITS[r["unit"]], r["increment"], MODES[r["mode"]])
     dv = ixdtf262.DurationValues(*[float(x) for x in v])
     opts = options_struct(precision=r["precision"])
-    text = write(Ctx.lib.mlocDurationFormatter_Format, ctypes.byref(dv), ctypes.byref(opts))
+    text = write(Ctx.lib.mlocFormatTemporalDuration, ctypes.byref(dv), ctypes.byref(opts))
     return tracked(text, "dur", [str(x) for x in v], opts)
