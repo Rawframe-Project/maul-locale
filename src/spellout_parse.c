@@ -9,6 +9,7 @@
 
 #include "spellout_parse.h"
 
+#include "invariant.h"
 #include "number_format.h"
 #include "number_parse.h"
 #include "spellout_match.h"
@@ -305,6 +306,7 @@ static void RuleParse(Parser* p, uint32_t rule, SpelloutText text, bool fraction
 MLOC_NOINLINE static void PatternParse(Parser* p, uint32_t pattern, SpelloutText text,
                                        size_t* endOut, mlocDecimal* valueOut)
 {
+    MLOC_ASSERT(pattern < p->r.patternCount);
     const uint8_t* compiled = p->r.patterns + (size_t)pattern * spelloutPatternSize;
     Formatter number;
     memset(&number, 0, sizeof(number));

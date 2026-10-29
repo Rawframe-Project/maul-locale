@@ -11,6 +11,7 @@
 
 #include "bytes.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "number_precision.h"
 #include "plural.h"
 #include "spellout_rule.h"
@@ -240,6 +241,7 @@ static bool Enter(Engine* e, bool level)
 
 static void Leave(Engine* e, bool level)
 {
+    MLOC_ASSERT(e->frames > 0 && (!level || e->levels > 0));
     e->levels -= level ? 1 : 0;
     e->frames--;
 }
@@ -280,6 +282,7 @@ static void WriteSymbol(Engine* e, NumberSymbol symbol)
 // the locale's symbols.
 static void WritePattern(Engine* e, uint32_t index, const mlocDecimal* x)
 {
+    MLOC_ASSERT(index < e->r.patternCount);
     const uint8_t* p = e->r.patterns + (size_t)index * spelloutPatternSize;
     mlocDecimal d = *x;
     if (d.kind == mloc_decimalFinite)
@@ -315,6 +318,7 @@ static void WritePattern(Engine* e, uint32_t index, const mlocDecimal* x)
 
 static void WritePlural(Engine* e, const uint8_t* piece, const mlocDecimal* operand)
 {
+    MLOC_ASSERT(mlocLoad16(piece + 2) < e->r.pluralCount);
     const uint8_t* plural = e->r.plurals + (size_t)mlocLoad16(piece + 2) * spelloutPluralSize;
     mlocDecimal magnitude = mlocSpelloutAbsolute(operand);
     mlocPluralOperands operands;
@@ -325,6 +329,7 @@ static void WritePlural(Engine* e, const uint8_t* piece, const mlocDecimal* oper
     {
         category = mloc_pluralOther;
     }
+    MLOC_ASSERT(category <= mloc_pluralOther);
     Write(e, e->r.text + mlocLoad16(plural + 4 * category), mlocLoad16(plural + 4 * category + 2));
 }
 
@@ -563,12 +568,14 @@ static bool PluralOperand(const Rule* rule, int64_t n, const mlocDecimal* x, mlo
 // The pieces of a rule, written in order; plural blocks by an operand.
 static void Pieces(Engine* e, const Rule* rule, int64_t n, const mlocDecimal* x)
 {
+    MLOC_ASSERT(rule->firstPiece + rule->pieces <= e->r.pieceCount);
     for (uint32_t i = 0; i < rule->pieces && e->error == mloc_success; i++)
     {
         const uint8_t* piece = e->r.pieces + (size_t)(rule->firstPiece + i) * spelloutPieceSize;
         switch ((SpelloutPieceType)piece[0])
         {
         case spelloutText:
+            MLOC_ASSERT((uint32_t)mlocLoad16(piece + 4) + mlocLoad16(piece + 2) <= e->r.textSize);
             Write(e, e->r.text + mlocLoad16(piece + 4), mlocLoad16(piece + 2));
             break;
         case spelloutPlural:

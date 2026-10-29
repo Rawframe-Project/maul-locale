@@ -8,6 +8,7 @@
 #define MLOC_SPELLOUT_RULE_H
 
 #include "bytes.h"
+#include "invariant.h"
 #include "spellout_data.h"
 #include "spellout_value.h"
 
@@ -34,6 +35,7 @@ typedef struct SpelloutRule
 
 static inline SpelloutRule mlocReadSpelloutRule(const SpelloutRules* r, uint32_t index)
 {
+    MLOC_ASSERT(index < r->ruleCount);
     const uint8_t* p = r->rules + (size_t)index * spelloutRuleSize;
     bool power = (p[13] & spelloutPowerOfTen) != 0;
     SpelloutRule rule = {
@@ -62,6 +64,7 @@ typedef struct SpelloutSet
 
 static inline SpelloutSet mlocReadSpelloutSet(const SpelloutRules* r, uint32_t index)
 {
+    MLOC_ASSERT(index < r->setCount);
     const uint8_t* p = r->sets + (size_t)index * spelloutSetSize;
     return (SpelloutSet){
         .first = mlocLoad16(p + 4),
