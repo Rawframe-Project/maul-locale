@@ -62,16 +62,23 @@ bool mlocSpelloutDelimiter(const SpelloutRules* r, const SpelloutParts* parts, u
 }
 
 // UnicodeString::indexOf: the first match at or after from; an empty key
-// matches nowhere.
+// matches nowhere. memchr finds each place the key's first byte occurs.
 static int64_t IndexOf(SpelloutText text, SpelloutText key, size_t from)
 {
     if (key.length == 0 || key.length > text.length)
     {
         return -1;
     }
-    for (size_t at = from; at + key.length <= text.length; at++)
+    size_t last = text.length - key.length;
+    for (size_t at = from; at <= last; at++)
     {
-        if (text.bytes[at] == key.bytes[0] && memcmp(text.bytes + at, key.bytes, key.length) == 0)
+        const uint8_t* first = memchr(text.bytes + at, key.bytes[0], last - at + 1);
+        if (first == nullptr)
+        {
+            return -1;
+        }
+        at = (size_t)(first - text.bytes);
+        if (memcmp(first, key.bytes, key.length) == 0)
         {
             return (int64_t)at;
         }
