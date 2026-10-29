@@ -176,20 +176,20 @@ message_prepare: bytes invariant message_bind message_date message_duration mess
 message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words
 message: invariant message_check message_cost message_emit message_form message_parse message_read message_table message_write
 grammar_lexicon:
-grammar_turkic:
+grammar_turkic: invariant
 grammar_tk: grammar_turkic
 grammar_fi: grammar_fi_word
-grammar_fi_word:
+grammar_fi_word: invariant
 grammar_ko:
 grammar_hu_sound:
-grammar_hu: grammar_hu_sound
+grammar_hu: grammar_hu_sound invariant
 grammar_hu_words: grammar_hu
 grammar_tr: grammar_lexicon grammar_turkic
 grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
-grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic number_core number_format
+grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic invariant number_core number_format
 search_elements: collation_compare collation_iterator collation_tables invariant nfd_stream search_boundary
 collator: collation_compare collation_fast_compare collation_fast_latin collation_reorder collation_tables
 search_back: invariant search_elements

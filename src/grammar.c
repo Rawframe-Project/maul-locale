@@ -14,6 +14,7 @@
 #include "grammar_ko.h"
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
+#include "invariant.h"
 #include "number_core.h"
 #include "number_format.h"
 
@@ -520,9 +521,17 @@ typedef struct Inflected
     // The mark, or 0 for none.
     char mark;
     size_t kept;
+    // A Turkic stem's tail, a Hungarian one, or a Finnish stem's change:
+    // the graded consonants (2 ASCII letters at most) and the 3 letters
+    // LastSyllable lets follow them, a vowel of 2 bytes and two letters
+    // of 4, 12 bytes; or a type's stem letters, 4 at most.
     char tail[16];
     uint8_t tailLength;
 } Inflected;
+
+static_assert(sizeof(((TurkicStem*)nullptr)->tail) <= sizeof(((Inflected*)nullptr)->tail),
+              "a Turkic stem's tail fits");
+static_assert(hungarianTailRoom <= sizeof(((Inflected*)nullptr)->tail), "a Hungarian tail fits");
 
 static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
@@ -671,6 +680,7 @@ static mlocResult InflectHungarian(const Inflector* f, const uint8_t* text, size
     bool hyphen = form.hyphen && form.length > 0;
     bool whole = hyphen || form.length == 0;
     out->kept = whole ? length : e->start + form.kept;
+    MLOC_ASSERT(form.tailLength <= sizeof(out->tail));
     memcpy(out->tail, form.tail, form.tailLength);
     out->tailLength = whole ? 0 : form.tailLength;
     out->mark = hyphen ? '-' : 0;
@@ -717,6 +727,7 @@ static mlocResult InflectFinnish(const Inflector* f, const uint8_t* text, size_t
     // ("5:nnen"); after a closing mark the text stays whole.
     bool period = t.ordinal && form.length > 0 && e->end + 1 == length;
     out->kept = !whole ? e->start + form.kept : period ? e->end : length;
+    MLOC_ASSERT(form.tailLength <= sizeof(out->tail));
     memcpy(out->tail, form.tail, form.tailLength);
     out->tailLength = whole ? 0 : form.tailLength;
     out->mark = form.mark;
@@ -850,6 +861,7 @@ static mlocResult Inflect(const Inflector* f, const uint8_t* text, size_t length
             language->stem(text + e.start, e.end - e.start, marks.marks, &out->suffixes, &stem))
         {
             out->kept = e.start + stem.kept;
+            MLOC_ASSERT(stem.tailLength <= sizeof(out->tail));
             memcpy(out->tail, stem.tail, stem.tailLength);
             out->tailLength = stem.tailLength;
         }
@@ -869,6 +881,7 @@ static void Write(const uint8_t* text, const Inflected* in, NumberWriter* w)
         mlocWritePart(w, mloc_inflectionPartApostrophe, (const uint8_t*)&in->mark, 1);
     }
     const TurkicSuffixes* s = &in->suffixes;
+    MLOC_ASSERT(s->particle <= s->length);
     mlocWritePart(w, mloc_inflectionPartSuffix, (const uint8_t*)s->text, s->particle);
     mlocWritePart(w, mloc_inflectionPartParticle, (const uint8_t*)s->text + s->particle,
                   (size_t)(s->length - s->particle));

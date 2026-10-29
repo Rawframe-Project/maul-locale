@@ -14,6 +14,7 @@
 #include "grammar_hu.h"
 
 #include "grammar_hu_sound.h"
+#include "invariant.h"
 
 #include "maul-unicode/encoding.h"
 
@@ -43,6 +44,7 @@ typedef struct Builder
 static void Put(Builder* b, const char* s)
 {
     size_t n = strlen(s);
+    MLOC_ASSERT(b->length + n < sizeof(b->text));
     if (b->length + n < sizeof(b->text))
     {
         memcpy(b->text + b->length, s, n);
@@ -645,6 +647,7 @@ static void JoinedStem(const HungarianText* t, const Stem* stem, const Builder* 
 static void Meeting(const HungarianText* t, const HungarianSound* s, HungarianForm* out)
 {
     size_t n = s->soundLength;
+    MLOC_ASSERT(n < sizeof(s->sound));
     bool begins = n > 0 && out->length >= n && memcmp(out->suffixes, s->sound, n) == 0;
     if (!begins || !s->modern || out->kept != t->wordLength || out->tailLength != 0)
     {
