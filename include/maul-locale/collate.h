@@ -163,9 +163,9 @@ extern "C"
     /// @param collator   A collator mlocInitCollator made.
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in bytes.
-    /// @param key        Receives the key; may be null when capacity is 0.
+    /// @param keyOut     Receives the key; may be null when capacity is 0.
     /// @param capacity   The room in key, in bytes.
-    /// @param lengthOut  Receives the key's length, also when it does not
+    /// @param lengthOut  Receives the keyOut's length, also when it does not
     ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (the bytes written are then no key); mloc_errorInvalid for
@@ -174,7 +174,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKey(const mlocCollator* collator,
                                                                const char* text, size_t length,
-                                                               uint8_t* key, size_t capacity,
+                                                               uint8_t* keyOut, size_t capacity,
                                                                size_t* lengthOut);
 
     /// Compares two UTF-16 texts in a collator's order, as mlocCollator_Compare
@@ -202,9 +202,9 @@ extern "C"
     /// @param collator   A collator mlocInitCollator made.
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in 16-bit units.
-    /// @param key        Receives the key; may be null when capacity is 0.
+    /// @param keyOut     Receives the key; may be null when capacity is 0.
     /// @param capacity   The room in key, in bytes.
-    /// @param lengthOut  Receives the key's length, also when it does not
+    /// @param lengthOut  Receives the keyOut's length, also when it does not
     ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (lengthOut has the length needed); mloc_errorInvalid for
@@ -213,7 +213,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator,
                                                                     const uint16_t* text,
-                                                                    size_t length, uint8_t* key,
+                                                                    size_t length, uint8_t* keyOut,
                                                                     size_t capacity,
                                                                     size_t* lengthOut);
 

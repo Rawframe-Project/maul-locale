@@ -114,11 +114,11 @@ extern "C"
     /// @param formatter  A formatter from mlocInitRelativeFormatter.
     /// @param amount     The amount, finite.
     /// @param unit       The unit.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values: the number's, and
     ///                   literal for the pattern's text and for a name.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a unit
     ///         whose patterns the locale's chain lacks; mloc_errorInvalid
     ///         for a null pointer, an amount not finite, a unit out of
@@ -127,7 +127,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter, const mlocDecimal* amount,
-                                 mlocRelativeUnit unit, mlocOutput* output);
+                                 mlocRelativeUnit unit, mlocOutput* textOut);
 
     /// Writes a day relative to today and a time of day joined by the
     /// locale's relative date-time glue ("tomorrow at 3:00 PM", "in 3 days,
@@ -143,12 +143,12 @@ extern "C"
     ///                   zone; its data holds the glue.
     /// @param days       The day's distance from today, finite.
     /// @param timeOfDay  The time.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocDatePart values: the day whole as
     ///                   mloc_datePartRelativeDay, the time's fields, and
     ///                   literal for the glue's text.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a day
     ///         whose patterns the locale's chain lacks; mloc_errorInvalid
     ///         for a null pointer, an amount not finite, a time out of
@@ -158,7 +158,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocRelativeFormatter_FormatDayTime(
         const mlocRelativeFormatter* relative, const mlocTimeFormatter* time,
-        const mlocDecimal* days, const mlocTime* timeOfDay, mlocOutput* output);
+        const mlocDecimal* days, const mlocTime* timeOfDay, mlocOutput* textOut);
 
 #ifdef __cplusplus
 }

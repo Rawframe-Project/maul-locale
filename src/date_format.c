@@ -520,37 +520,37 @@ static mlocResult WriteOut(const DateWriting* g, mlocOutput* output)
 }
 
 mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter, const mlocDate* date,
-                                    mlocOutput* output)
+                                    mlocOutput* textOut)
 {
     ZonedDateFormat f;
     DateValue v;
-    if (!ReadFormatter(formatter, false, &f) || date == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+    if (!ReadFormatter(formatter, false, &f) || date == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadDateValue(&f.date, date, &v))
     {
         return mloc_errorInvalid;
     }
     DateWriting g = {&f, &v, nullptr, nullptr, nullptr};
-    return WriteOut(&g, output);
+    return WriteOut(&g, textOut);
 }
 
 mlocResult mlocDateFormatter_FormatInZone(const mlocDateFormatter* formatter,
                                           const mlocTimeZone* zone, const mlocInstant* instant,
-                                          mlocOutput* output)
+                                          mlocOutput* textOut)
 {
     ZonedDateFormat f;
     DateValue v;
     ZoneAt at;
     mlocDateTime local;
-    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+    if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadZonedLocal(&f.zone, zone, instant, &at, &local) ||
         !mlocReadDateValue(&f.date, &local.date, &v))
     {
         return mloc_errorInvalid;
     }
     DateWriting g = {&f, &v, &at, nullptr, nullptr};
-    return WriteOut(&g, output);
+    return WriteOut(&g, textOut);
 }
 
 // A range's value by a pattern.
@@ -563,12 +563,12 @@ static void WriteRangeValue(const void* context, uint32_t value, const uint8_t* 
 }
 
 mlocResult mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, const mlocDate* start,
-                                         const mlocDate* end, mlocOutput* output)
+                                         const mlocDate* end, mlocOutput* textOut)
 {
     ZonedDateFormat f;
     DateValue v[2];
     if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+        textOut == nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadDateValue(&f.date, start, &v[0]) || !mlocReadDateValue(&f.date, end, &v[1]))
     {
         return mloc_errorInvalid;
@@ -588,7 +588,7 @@ mlocResult mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, con
         .fallback = {r->fallback, r->fallbackLength},
     };
     g.range = &c;
-    return WriteOut(&g, output);
+    return WriteOut(&g, textOut);
 }
 
 // A range in a zone: the formatter, both dates, both instants and the zone.
@@ -646,14 +646,14 @@ static mlocResult WriteJoinedRange(const RangeJoin* join, DataSpan fallback, mlo
 
 mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatter,
                                                const mlocTimeZone* zone, const mlocInstant* start,
-                                               const mlocInstant* end, mlocOutput* output)
+                                               const mlocInstant* end, mlocOutput* textOut)
 {
     ZonedDateFormat f;
     DateValue v[2];
     ZoneAt at[2];
     mlocDateTime local[2];
-    if (!ReadFormatter(formatter, true, &f) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+    if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadZonedLocal(&f.zone, zone, start, &at[0], &local[0]) ||
         !mlocReadZonedLocal(&f.zone, zone, end, &at[1], &local[1]) ||
         !mlocReadDateValue(&f.date, &local[0].date, &v[0]) ||
@@ -666,7 +666,7 @@ mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatte
         // One day: the start's date and zone, as ICU writes a range the
         // pattern shows no difference of.
         DateWriting one = {&f, &v[0], &at[0], nullptr, nullptr};
-        return WriteOut(&one, output);
+        return WriteOut(&one, textOut);
     }
     uint32_t p = v[0].pattern > v[1].pattern ? v[0].pattern : v[1].pattern;
     const DateRange* r = &f.date.range;
@@ -690,5 +690,5 @@ mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatte
             return mloc_errorFormat;
         }
     }
-    return WriteJoinedRange(&join, (DataSpan){r->fallback, r->fallbackLength}, output);
+    return WriteJoinedRange(&join, (DataSpan){r->fallback, r->fallbackLength}, textOut);
 }

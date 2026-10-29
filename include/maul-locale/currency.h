@@ -127,17 +127,17 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitCurrencyFormatter.
     /// @param decimal    The amount.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values, the currency as
     ///                   mloc_numberPartCurrency.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCurrencyFormatter_Format(
-        const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+        const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal, mlocOutput* textOut);
 
     /// Formats a range of two amounts, as mlocNumberFormatter_FormatRange does
     /// ("$3.00 – $5.00", "3,00–5,00 €"; ends that write alike give
@@ -148,12 +148,12 @@ extern "C"
     /// @param formatter  A formatter from mlocInitCurrencyFormatter.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, a NaN end, or a formatter or decimal the library
     ///         did not make.
@@ -161,7 +161,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCurrencyFormatter_FormatRange(
         const mlocCurrencyFormatter* formatter, const mlocDecimal* start, const mlocDecimal* end,
-        mlocOutput* output);
+        mlocOutput* textOut);
 
     /// Reads an amount of money as a person types it (ICU's
     /// DecimalFormat::parse on a currency formatter, or with anyCurrency
@@ -210,10 +210,10 @@ extern "C"
     /// @param code        The currency's ISO 4217 code, three ASCII letters.
     /// @param codeLength  Its length in bytes, 3.
     /// @param display     A symbol display, or the code.
-    /// @param output      Receives the text.
+    /// @param textOut     Receives the text.
     /// @return mloc_success; mloc_fellBack when the locale has no symbol and
     ///         the code is written instead; mloc_errorCapacity when the
-    ///         text does not fit (output->length is then the length
+    ///         text does not fit (textOut->length is then the length
     ///         needed); mloc_errorNotFound when the chain cannot be walked;
     ///         mloc_errorInvalid for a null pointer, a code that is not
     ///         three letters, or a display that is no symbol.
@@ -223,7 +223,7 @@ extern "C"
                                                              const mlocLocale* locale,
                                                              const char* code, size_t codeLength,
                                                              mlocCurrencyDisplay display,
-                                                             mlocOutput* output);
+                                                             mlocOutput* textOut);
 
     /// Writes a currency's name in a locale ("US Dollar", "Dollar
     /// américain"), as a menu of currencies shows it.
@@ -232,11 +232,11 @@ extern "C"
     /// @param locale      The locale, canonicalized.
     /// @param code        The currency's ISO 4217 code, three ASCII letters.
     /// @param codeLength  Its length in bytes, 3.
-    /// @param output      Receives the text.
+    /// @param textOut     Receives the text.
     /// @return mloc_success; mloc_fellBack when the data names it in no
     ///         locale of the chain and the code is written instead;
     ///         mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed);
+    ///         (textOut->length is then the length needed);
     ///         mloc_errorNotFound when the chain cannot be walked;
     ///         mloc_errorInvalid for a null pointer or a code that is not
     ///         three letters.
@@ -245,7 +245,7 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocGetCurrencyName(const mlocDataSet* data,
                                                            const mlocLocale* locale,
                                                            const char* code, size_t codeLength,
-                                                           mlocOutput* output);
+                                                           mlocOutput* textOut);
 
     /// Gives a currency's fraction digits and rounding increment
     /// (supplementalData.xml): JPY 0, BHD 3, CHF cash 2 by 5.

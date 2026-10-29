@@ -68,7 +68,7 @@ extern "C"
     } mlocIndexBucket;
 
     /// Builds an index of a collator's order with a locale's labels. Call
-    /// with a null buffer and a capacity of 0 to learn the capacity
+    /// with a null bufferOut and a capacity of 0 to learn the capacity
     /// needed.
     ///
     /// @param collator  A collator mlocInitCollator made; copied.
@@ -77,9 +77,9 @@ extern "C"
     /// @param locale    The locale whose labels the index takes when the
     ///                  collator has no U+FDD0 contractions.
     /// @param options   The options, or null for the defaults.
-    /// @param buffer    Receives the index; any alignment. May be null
+    /// @param bufferOut Receives the index; any alignment. May be null
     ///                  when capacity is 0.
-    /// @param capacity  The buffer's size in bytes.
+    /// @param capacity  The bufferOut's size in bytes.
     /// @param sizeOut   Receives the index's size on success, or the
     ///                  capacity needed with mloc_errorCapacity, which may
     ///                  be a little more than the size.
@@ -93,11 +93,9 @@ extern "C"
     ///         index then has its underflow bucket alone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocBuildIndex(const mlocCollator* collator,
-                                                      const mlocDataSet* data,
-                                                      const mlocLocale* locale,
-                                                      const mlocIndexOptions* options, void* buffer,
-                                                      size_t capacity, size_t* sizeOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocBuildIndex(
+        const mlocCollator* collator, const mlocDataSet* data, const mlocLocale* locale,
+        const mlocIndexOptions* options, void* bufferOut, size_t capacity, size_t* sizeOut);
 
     /// The number of buckets an index shows.
     ///

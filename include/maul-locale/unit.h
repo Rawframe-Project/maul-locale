@@ -318,12 +318,12 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitUnitFormatter.
     /// @param decimal    The amount.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values, each unit name as
     ///                   mloc_numberPartUnit and a unit list's text as
     ///                   mloc_numberPartLiteral.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding or a part passes MLOC_MAX_DECIMAL_DIGITS or
     ///         MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a
     ///         null pointer, or a formatter or decimal the library did not
@@ -332,7 +332,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter,
                                                                 const mlocDecimal* decimal,
-                                                                mlocOutput* output);
+                                                                mlocOutput* textOut);
 
     /// Formats a range of two amounts, as mlocNumberFormatter_FormatRange does, the
     /// unit written once in the category CLDR's plural ranges give the
@@ -344,12 +344,12 @@ extern "C"
     /// @param formatter  A formatter from mlocInitUnitFormatter.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT;
     ///         mloc_errorInvalid for a null pointer, a NaN end, a formatter of a mixed unit without
     ///         a usage (which ICU does not range either), a formatter of a coordinate, or a
@@ -358,7 +358,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocUnitFormatter_FormatRange(const mlocUnitFormatter* formatter, const mlocDecimal* start,
-                                  const mlocDecimal* end, mlocOutput* output);
+                                  const mlocDecimal* end, mlocOutput* textOut);
 
     /// Writes a unit's display name in a locale ("meters", "m"), as a menu
     /// of units shows it.
@@ -369,11 +369,11 @@ extern "C"
     ///                    ("metric-ton" for "tonne").
     /// @param unitLength  Its length in bytes.
     /// @param width       The width; numeric writes narrow's name.
-    /// @param output      Receives the text.
+    /// @param textOut     Receives the text.
     /// @return mloc_success; mloc_fellBack when no locale of the chain
     ///         names it and the identifier is written instead;
     ///         mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed);
+    ///         (textOut->length is then the length needed);
     ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
     ///         mloc_errorLimit for one past an MLOC_MAX_UNIT_* bound;
     ///         mloc_errorNotFound for a unit the names do not know (a
@@ -387,7 +387,7 @@ extern "C"
                                                               const mlocLocale* locale,
                                                               const char* unit, size_t unitLength,
                                                               mlocUnitWidth width,
-                                                              mlocOutput* output);
+                                                              mlocOutput* textOut);
 
     /// Gives a unit's grammatical gender in a locale, the one a message
     /// agreeing with a formatted amount needs, as ICU's

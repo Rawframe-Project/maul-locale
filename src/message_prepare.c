@@ -187,18 +187,18 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
 }
 
 mlocResult mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, const void* message,
-                                     size_t size, void* buffer, size_t capacity, size_t* sizeOut)
+                                     size_t size, void* bufferOut, size_t capacity, size_t* sizeOut)
 {
     MessageFormatter f;
     BoundHeader h;
-    // A bind replaces what the buffer held, so one refused for any reason
+    // A bind replaces what the bufferOut held, so one refused for any reason
     // leaves no bound message: an earlier one's header goes first, as far
     // as the room reaches (its first byte is enough to unmake it).
-    if (buffer != NULL && capacity > 0)
+    if (bufferOut != NULL && capacity > 0)
     {
-        memset(buffer, 0, capacity < sizeof h ? capacity : sizeof h);
+        memset(bufferOut, 0, capacity < sizeof h ? capacity : sizeof h);
     }
-    if (sizeOut == NULL || (buffer == NULL && capacity > 0))
+    if (sizeOut == NULL || (bufferOut == NULL && capacity > 0))
     {
         return mloc_errorInvalid;
     }
@@ -218,17 +218,17 @@ mlocResult mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, cons
     {
         return mloc_errorLimit;
     }
-    if (buffer == NULL || capacity < needed)
+    if (bufferOut == NULL || capacity < needed)
     {
         *sizeOut = (size_t)needed;
         return mloc_errorCapacity;
     }
-    result = mlocWriteBound(formatter, &f, &h, buffer, (uint32_t)needed);
+    result = mlocWriteBound(formatter, &f, &h, bufferOut, (uint32_t)needed);
     if (result != mloc_success)
     {
         return result;
     }
-    Prepare(buffer, &h, &f);
+    Prepare(bufferOut, &h, &f);
     *sizeOut = (size_t)needed;
     return mloc_success;
 }

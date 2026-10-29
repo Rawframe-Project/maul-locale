@@ -255,29 +255,29 @@ static bool ReadDuration(const mlocDurationFormatter* opaque, DurationFormat* f)
 }
 
 mlocResult mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
-                                        const mlocDurationValues* duration, mlocOutput* output)
+                                        const mlocDurationValues* duration, mlocOutput* textOut)
 {
     DurationFormat f;
     static const Writing s_zero;
     Writing g = s_zero;
-    if (!ReadDuration(formatter, &f) || duration == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+    if (!ReadDuration(formatter, &f) || duration == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadDurationFields(duration, &g.fields))
     {
         return mloc_errorInvalid;
     }
     g.format = &f;
     Plan(&g);
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     WriteItems(&g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
+    textOut->length = w.length;
+    if (textOut->buffer == nullptr || w.length > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
-    if (output->part != nullptr)
+    if (textOut->part != nullptr)
     {
-        NumberWriter parts = {.parts = output};
+        NumberWriter parts = {.parts = textOut};
         WriteItems(&g, &parts);
         mlocEndParts(&parts);
     }

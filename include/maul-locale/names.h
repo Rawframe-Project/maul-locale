@@ -96,13 +96,13 @@ extern "C"
     /// @param code     The code, in any case.
     /// @param length   Its length in bytes.
     /// @param options  The options, or null for the defaults.
-    /// @param output   Where the name goes; no parts.
+    /// @param textOut  Where the name goes; no parts.
     /// @return mloc_success; mloc_fellBack when the code, in canonical
     ///         case, is written for a name the locale's chain lacks;
     ///         mloc_errorNotFound for a missing name with
     ///         mloc_nameFallbackNone, or data without the names;
     ///         mloc_errorSyntax for a code not of the type's syntax;
-    ///         mloc_errorCapacity when the name does not fit (output's
+    ///         mloc_errorCapacity when the name does not fit (textOut's
     ///         length then the size needed); mloc_errorInvalid for a null
     ///         pointer, a part function, or a type or options out of
     ///         range.
@@ -112,7 +112,7 @@ extern "C"
                                                    const mlocLocale* locale, mlocNameType type,
                                                    const char* code, size_t length,
                                                    const mlocNameOptions* options,
-                                                   mlocOutput* output);
+                                                   mlocOutput* textOut);
 
     // How a locale's language and region are named together: by the
     // language's own name for the pair where the locale has one ("British
@@ -154,12 +154,12 @@ extern "C"
     /// @param displayLocale  The locale the name is in, canonicalized.
     /// @param locale         The locale named, canonicalized.
     /// @param options        The options, or null for the defaults.
-    /// @param output         Where the name goes; no
+    /// @param textOut        Where the name goes; no
     ///                       parts.
     /// @return mloc_success; mloc_fellBack when the language has no name
     ///         and its code stands; mloc_errorNotFound for data without the
     ///         names; mloc_errorCapacity when the name does not fit
-    ///         (output's length then the size needed); mloc_errorInvalid
+    ///         (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a part function, or options out of
     ///         range.
     /// @par Thread safety
@@ -168,7 +168,7 @@ extern "C"
                                                          const mlocLocale* displayLocale,
                                                          const mlocLocale* locale,
                                                          const mlocLocaleNameOptions* options,
-                                                         mlocOutput* output);
+                                                         mlocOutput* textOut);
 
 #ifdef __cplusplus
 }

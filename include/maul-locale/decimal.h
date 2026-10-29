@@ -151,14 +151,14 @@ extern "C"
     /// the same value. It reports no parts.
     ///
     /// @param decimal  The decimal.
-    /// @param output   Where the text goes.
+    /// @param textOut  Where the text goes.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorInvalid for a null pointer or a decimal the
     ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatDecimal(const mlocDecimal* decimal,
-                                                         mlocOutput* output);
+                                                         mlocOutput* textOut);
 
     /// Rounds a decimal to a multiple of increment times 10^position: at
     /// position -2 with increment 5, 1.234 becomes 1.25 and 1.2 stays. It

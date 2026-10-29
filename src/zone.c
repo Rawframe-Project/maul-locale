@@ -132,10 +132,11 @@ static mlocResult FormatId(const mlocTimeZone* zone, bool primary, mlocOutput* o
     return Write(name, length, 0, output);
 }
 
-mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* output)
+mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* textOut)
 {
     ZoneTables t;
-    if (data == nullptr || output == nullptr || (output->buffer == nullptr && output->capacity > 0))
+    if (data == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity > 0))
     {
         return mloc_errorInvalid;
     }
@@ -143,17 +144,17 @@ mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* output)
     {
         return mloc_errorNotFound;
     }
-    return Write((const char*)t.release, t.releaseLength, 0, output);
+    return Write((const char*)t.release, t.releaseLength, 0, textOut);
 }
 
-mlocResult mlocFormatTimeZoneId(const mlocTimeZone* zone, mlocOutput* output)
+mlocResult mlocFormatTimeZoneId(const mlocTimeZone* zone, mlocOutput* textOut)
 {
-    return FormatId(zone, false, output);
+    return FormatId(zone, false, textOut);
 }
 
-mlocResult mlocFormatPrimaryTimeZoneId(const mlocTimeZone* zone, mlocOutput* output)
+mlocResult mlocFormatPrimaryTimeZoneId(const mlocTimeZone* zone, mlocOutput* textOut)
 {
-    return FormatId(zone, true, output);
+    return FormatId(zone, true, textOut);
 }
 
 mlocResult mlocTimeZonesEqual(const mlocTimeZone* one, const mlocTimeZone* two, bool* equalOut)

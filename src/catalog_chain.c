@@ -349,11 +349,12 @@ static bool ValidOutput(const mlocOutput* output)
 
 mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_t index,
                                           const mlocMessageArgument* arguments,
-                                          size_t argumentCount, mlocOutput* output,
-                                          mlocMessageFaults* faults, mlocCatalogResult* resultOut)
+                                          size_t argumentCount, mlocOutput* textOut,
+                                          mlocMessageFaults* faultsOut,
+                                          mlocCatalogResult* resultOut)
 {
     Chain c;
-    if (!ReadChain(chain, &c) || index >= c.keyCount || !ValidOutput(output))
+    if (!ReadChain(chain, &c) || index >= c.keyCount || !ValidOutput(textOut))
     {
         return mloc_errorInvalid;
     }
@@ -364,7 +365,7 @@ mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_
         if (BindIndex(&c, &b, index, &slot) != mloc_success)
         {
             Report(resultOut, mloc_catalogCacheFull, c.count);
-            return WriteKeyAt(&c, index, output);
+            return WriteKeyAt(&c, index, textOut);
         }
         StoreSlot(&c, index, slot);
         StoreUsed(&c, b.used);
@@ -372,21 +373,21 @@ mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_
     Report(resultOut, (mlocCatalogReason)slot.reason, slot.position);
     if (slot.state == slotKey)
     {
-        return WriteKeyAt(&c, index, output);
+        return WriteKeyAt(&c, index, textOut);
     }
     // A bound slot's message lies in the arena the chain has used.
     MLOC_ASSERT(slot.state == slotBound && slot.offset < LoadUsed(&c));
     const uint8_t* bound = c.cache + SlotsEnd(c.keyCount) + slot.offset;
-    return mlocFormatMessage(bound, arguments, argumentCount, output, faults);
+    return mlocFormatMessage(bound, arguments, argumentCount, textOut, faultsOut);
 }
 
 mlocResult mlocCatalogChain_FormatKey(const mlocCatalogChain* chain, const char* key, size_t length,
                                       const mlocMessageArgument* arguments, size_t argumentCount,
-                                      mlocOutput* output, mlocMessageFaults* faults,
+                                      mlocOutput* textOut, mlocMessageFaults* faultsOut,
                                       mlocCatalogResult* resultOut)
 {
     Chain c;
-    if (!ReadChain(chain, &c) || (key == nullptr && length > 0) || !ValidOutput(output))
+    if (!ReadChain(chain, &c) || (key == nullptr && length > 0) || !ValidOutput(textOut))
     {
         return mloc_errorInvalid;
     }
@@ -395,12 +396,12 @@ mlocResult mlocCatalogChain_FormatKey(const mlocCatalogChain* chain, const char*
     if (r == mloc_errorNotFound)
     {
         Report(resultOut, mloc_catalogMissingKey, c.count);
-        return WriteKey((const uint8_t*)key, length, output);
+        return WriteKey((const uint8_t*)key, length, textOut);
     }
     if (r != mloc_success)
     {
         return r;
     }
-    return mlocCatalogChain_FormatMessage(chain, index, arguments, argumentCount, output, faults,
-                                          resultOut);
+    return mlocCatalogChain_FormatMessage(chain, index, arguments, argumentCount, textOut,
+                                          faultsOut, resultOut);
 }

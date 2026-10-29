@@ -522,34 +522,36 @@ mlocResult mlocCollator_CompareUtf16(const mlocCollator* collator, const uint16_
 }
 
 mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text,
-                                        size_t length, uint8_t* key, size_t capacity,
+                                        size_t length, uint8_t* keyOut, size_t capacity,
                                         size_t* lengthOut)
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
+        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
     mlocReadCollatorRest(collator, &c);
     static const uint16_t none[1] = {0};
-    *lengthOut = mlocCollationSortKeyText(
-        &c.root, &c.settings, mlocNfdUtf16(text != nullptr ? text : none, length), key, capacity);
+    *lengthOut = mlocCollationSortKeyText(&c.root, &c.settings,
+                                          mlocNfdUtf16(text != nullptr ? text : none, length),
+                                          keyOut, capacity);
     return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
 }
 
 mlocResult mlocCollator_GetSortKey(const mlocCollator* collator, const char* text, size_t length,
-                                   uint8_t* key, size_t capacity, size_t* lengthOut)
+                                   uint8_t* keyOut, size_t capacity, size_t* lengthOut)
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (key == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
+        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
     {
         return mloc_errorInvalid;
     }
     mlocReadCollatorRest(collator, &c);
-    *lengthOut = mlocCollationSortKey(
-        &c.root, &c.settings, (const uint8_t*)(text != nullptr ? text : ""), length, key, capacity);
+    *lengthOut =
+        mlocCollationSortKey(&c.root, &c.settings, (const uint8_t*)(text != nullptr ? text : ""),
+                             length, keyOut, capacity);
     return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
 }
 

@@ -734,13 +734,13 @@ mlocResult mlocInitZoneFormatter(const mlocDataSet* data, const mlocLocale* loca
 }
 
 mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter, const mlocTimeZone* zone,
-                                    const mlocInstant* instant, mlocOutput* output)
+                                    const mlocInstant* instant, mlocOutput* textOut)
 {
     ZoneFormat f;
     ZoneTables t;
     bool named = false;
-    if (formatter == nullptr || zone == nullptr || instant == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) || !mlocValidInstant(instant) ||
+    if (formatter == nullptr || zone == nullptr || instant == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) || !mlocValidInstant(instant) ||
         !mlocReadTimeZone(zone, &t, &named))
     {
         return mloc_errorInvalid;
@@ -753,19 +753,19 @@ mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter, const ml
     // Zone names units that disagree with the zone write nothing.
     ZoneAt a;
     bool read = mlocReadZoneAt(&f, zone, instant, &a);
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     if (read)
     {
         mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &w);
     }
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
+    textOut->length = w.length;
+    if (textOut->buffer == nullptr || w.length > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
-    if (output->part != nullptr)
+    if (textOut->part != nullptr)
     {
-        NumberWriter parts = {.parts = output};
+        NumberWriter parts = {.parts = textOut};
         if (read)
         {
             mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &parts);

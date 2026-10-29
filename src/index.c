@@ -48,14 +48,14 @@ static bool Specials(const mlocIndexOptions* o, IndexSpecials* out)
 }
 
 mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
-                          const mlocLocale* locale, const mlocIndexOptions* options, void* buffer,
-                          size_t capacity, size_t* sizeOut)
+                          const mlocLocale* locale, const mlocIndexOptions* options,
+                          void* bufferOut, size_t capacity, size_t* sizeOut)
 {
     mlocIndexOptions o = options != nullptr ? *options : (mlocIndexOptions){0};
     IndexSpecials specials;
     Collator c;
     if (sizeOut == nullptr || data == nullptr || locale == nullptr ||
-        (buffer == nullptr && capacity > 0) || !Specials(&o, &specials) ||
+        (bufferOut == nullptr && capacity > 0) || !Specials(&o, &specials) ||
         !mlocReadCollator(collator, &c))
     {
         return mloc_errorInvalid;
@@ -77,7 +77,7 @@ mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
         return r;
     }
     return mlocIndexBuild(&c, &candidates, &specials, o.maxLabelCount > 0 ? o.maxLabelCount : 99,
-                          buffer, capacity, sizeOut);
+                          bufferOut, capacity, sizeOut);
 }
 
 mlocResult mlocGetIndexBucketCount(const void* index, uint32_t* countOut)

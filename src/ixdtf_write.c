@@ -234,10 +234,10 @@ static bool Begin(const mlocTemporalStringOptions* given, mlocOutput* output, St
 }
 
 mlocResult mlocFormatTemporalDate(const mlocDate* date, const mlocTemporalStringOptions* options,
-                                  mlocOutput* output)
+                                  mlocOutput* textOut)
 {
     Start s;
-    if (!Begin(options, output, &s) || !mlocYearDateValid(date))
+    if (!Begin(options, textOut, &s) || !mlocYearDateValid(date))
     {
         return mloc_errorInvalid;
     }
@@ -278,22 +278,22 @@ static mlocResult Partial(const mlocDate* date, bool yearMonth,
 }
 
 mlocResult mlocFormatYearMonth(const mlocDate* date, const mlocTemporalStringOptions* options,
-                               mlocOutput* output)
+                               mlocOutput* textOut)
 {
-    return Partial(date, true, options, output);
+    return Partial(date, true, options, textOut);
 }
 
 mlocResult mlocFormatMonthDay(const mlocDate* date, const mlocTemporalStringOptions* options,
-                              mlocOutput* output)
+                              mlocOutput* textOut)
 {
-    return Partial(date, false, options, output);
+    return Partial(date, false, options, textOut);
 }
 
 mlocResult mlocFormatTemporalTime(const mlocTime* time, const mlocTemporalStringOptions* options,
-                                  mlocOutput* output)
+                                  mlocOutput* textOut)
 {
     Start s;
-    if (!Begin(options, output, &s) || time == nullptr || !mlocTimeValid(time))
+    if (!Begin(options, textOut, &s) || time == nullptr || !mlocTimeValid(time))
     {
         return mloc_errorInvalid;
     }
@@ -302,10 +302,10 @@ mlocResult mlocFormatTemporalTime(const mlocTime* time, const mlocTemporalString
 }
 
 mlocResult mlocFormatTemporalDateTime(const mlocDateTime* dateTime,
-                                      const mlocTemporalStringOptions* options, mlocOutput* output)
+                                      const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
     Start s;
-    if (!Begin(options, output, &s) || dateTime == nullptr || !mlocDateTimeValid(dateTime))
+    if (!Begin(options, textOut, &s) || dateTime == nullptr || !mlocDateTimeValid(dateTime))
     {
         return mloc_errorInvalid;
     }
@@ -337,12 +337,12 @@ static bool Local(const mlocTimeZone* zone, const mlocInstant* instant, mlocDate
 }
 
 mlocResult mlocFormatInstant(const mlocInstant* instant, const mlocTimeZone* zone,
-                             const mlocTemporalStringOptions* options, mlocOutput* output)
+                             const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
     Start s;
     mlocDateTime local;
     int32_t offset = 0;
-    if (!Begin(options, output, &s) || !Local(zone, instant, &local, &offset))
+    if (!Begin(options, textOut, &s) || !Local(zone, instant, &local, &offset))
     {
         return mloc_errorInvalid;
     }
@@ -359,14 +359,14 @@ mlocResult mlocFormatInstant(const mlocInstant* instant, const mlocTimeZone* zon
 }
 
 mlocResult mlocFormatZonedDateTime(const mlocTimeZone* zone, const mlocInstant* instant,
-                                   const mlocTemporalStringOptions* options, mlocOutput* output)
+                                   const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
     Start s;
     mlocDateTime local;
     int32_t offset = 0;
     char id[maxZoneId];
     mlocOutput idOutput = {.buffer = id, .capacity = sizeof id};
-    if (!Begin(options, output, &s) || zone == nullptr || !Local(zone, instant, &local, &offset) ||
+    if (!Begin(options, textOut, &s) || zone == nullptr || !Local(zone, instant, &local, &offset) ||
         mlocFormatTimeZoneId(zone, &idOutput) != mloc_success)
     {
         return mloc_errorInvalid;
@@ -428,12 +428,12 @@ static bool ReadDuration(const mlocDurationValues* v, Fields* f)
 }
 
 mlocResult mlocFormatTemporalDuration(const mlocDurationValues* values,
-                                      const mlocTemporalStringOptions* options, mlocOutput* output)
+                                      const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
     static const char s_designators[6] = {'Y', 'M', 'W', 'D', 'H', 'M'};
     Start s;
     Fields f;
-    if (!Begin(options, output, &s) || s.precision == precisionMinute || !ReadDuration(values, &f))
+    if (!Begin(options, textOut, &s) || s.precision == precisionMinute || !ReadDuration(values, &f))
     {
         return mloc_errorInvalid;
     }
@@ -474,10 +474,10 @@ mlocResult mlocFormatTemporalDuration(const mlocDurationValues* values,
     return Finish(&s.w);
 }
 
-mlocResult mlocFormatUTCOffset(int64_t offsetNanoseconds, mlocOutput* output)
+mlocResult mlocFormatUTCOffset(int64_t offsetNanoseconds, mlocOutput* textOut)
 {
-    Writer w = {output, 0};
-    if (!OutputValid(output) || offsetNanoseconds <= -s_nanosecondsPerDay ||
+    Writer w = {textOut, 0};
+    if (!OutputValid(textOut) || offsetNanoseconds <= -s_nanosecondsPerDay ||
         offsetNanoseconds >= s_nanosecondsPerDay)
     {
         return mloc_errorInvalid;

@@ -85,14 +85,14 @@ extern "C"
     /// reports no parts.
     ///
     /// @param zone    The zone.
-    /// @param output  Where the identifier goes.
+    /// @param textOut Where the identifier goes.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorInvalid for a null pointer or a zone the library
     ///         did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneId(const mlocTimeZone* zone,
-                                                            mlocOutput* output);
+                                                            mlocOutput* textOut);
 
     /// Writes a zone's primary identifier, as ECMA-402's
     /// AvailableNamedTimeZoneIdentifiers resolves it ("Asia/Calcutta"
@@ -100,12 +100,12 @@ extern "C"
     /// is its identifier. It reports no parts.
     ///
     /// @param zone    The zone.
-    /// @param output  Where the identifier goes.
+    /// @param textOut Where the identifier goes.
     /// @return As mlocFormatTimeZoneId.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatPrimaryTimeZoneId(const mlocTimeZone* zone,
-                                                                   mlocOutput* output);
+                                                                   mlocOutput* textOut);
 
     /// Tells whether two zones are equal as ECMA-262's TimeZoneEquals
     /// says: named zones whose primary identifiers are the same, or
@@ -153,14 +153,14 @@ extern "C"
     /// release other than the library's.
     ///
     /// @param data    The data with the zones unit.
-    /// @param output  Receives the release's name.
+    /// @param textOut Receives the release's name.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null pointer; mloc_errorNotFound
     ///         for data without the zones unit.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data,
-                                                              mlocOutput* output);
+                                                              mlocOutput* textOut);
 
     /// Finds a time zone by its BCP 47 id, the value of a locale's "tz"
     /// key ("usnyc" for America/New_York), as CLDR lists them: the zone
@@ -187,7 +187,7 @@ extern "C"
     ///
     /// @param data    The data with the zone codes unit.
     /// @param zone    The zone.
-    /// @param output  Receives the id, lower-case.
+    /// @param textOut Receives the id, lower-case.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorNotFound for a zone CLDR gives no id, or data
     ///         without the zone codes unit; mloc_errorInvalid for a null
@@ -196,7 +196,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneBcp47(const mlocDataSet* data,
                                                                const mlocTimeZone* zone,
-                                                               mlocOutput* output);
+                                                               mlocOutput* textOut);
 
     /// Finds a time zone by its Windows name ("Eastern Standard Time"),
     /// as CLDR's windowsZones maps it: the zone of the region's mapping,
@@ -230,7 +230,7 @@ extern "C"
     ///
     /// @param data    The data with the zone codes unit.
     /// @param zone    The zone.
-    /// @param output  Receives the name.
+    /// @param textOut Receives the name.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorNotFound for a zone with no Windows name, or
     ///         data without the zone codes unit; mloc_errorInvalid for a
@@ -239,7 +239,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeZoneWindows(const mlocDataSet* data,
                                                                  const mlocTimeZone* zone,
-                                                                 mlocOutput* output);
+                                                                 mlocOutput* textOut);
 
     /// Returns a zone's offset from universal time at an instant, in
     /// seconds: local time is the instant plus the offset. The database's

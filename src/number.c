@@ -51,26 +51,26 @@ mlocResult mlocInitNumberFormatter(const mlocDataSet* data, const mlocLocale* lo
 }
 
 mlocResult mlocNumberFormatter_Format(const mlocNumberFormatter* formatter,
-                                      const mlocDecimal* decimal, mlocOutput* output)
+                                      const mlocDecimal* decimal, mlocOutput* textOut)
 {
     Formatter f;
     if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatWith(&f, nullptr, decimal, output);
+    return mlocFormatWith(&f, nullptr, decimal, textOut);
 }
 
 mlocResult mlocNumberFormatter_FormatRange(const mlocNumberFormatter* formatter,
                                            const mlocDecimal* start, const mlocDecimal* end,
-                                           mlocOutput* output)
+                                           mlocOutput* textOut)
 {
     Formatter f;
     if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatRangeWith(&f, nullptr, start, end, output);
+    return mlocFormatRangeWith(&f, nullptr, start, end, textOut);
 }
 
 mlocResult mlocNumberFormatter_Parse(const mlocNumberFormatter* formatter, const char* text,

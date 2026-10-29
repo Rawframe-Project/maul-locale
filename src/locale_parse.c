@@ -581,9 +581,10 @@ static size_t FieldLength(const char* field, size_t size)
     return n;
 }
 
-mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* output)
+mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* textOut)
 {
-    if (locale == nullptr || output == nullptr || (output->buffer == nullptr && output->capacity))
+    if (locale == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity))
     {
         return mloc_errorInvalid;
     }
@@ -599,8 +600,8 @@ mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* output)
     {
         needed += lengths[i] + (i > 0 && lengths[i] > 0);
     }
-    output->length = needed;
-    if (needed > output->capacity)
+    textOut->length = needed;
+    if (needed > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
@@ -613,9 +614,9 @@ mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* output)
         }
         if (i > 0)
         {
-            output->buffer[at++] = '-';
+            textOut->buffer[at++] = '-';
         }
-        memcpy(output->buffer + at, fields[i], lengths[i]);
+        memcpy(textOut->buffer + at, fields[i], lengths[i]);
         at += lengths[i];
     }
     return mloc_success;

@@ -73,13 +73,13 @@ extern "C"
     /// "sr-Latn-RS" or "de-DE-u-co-phonebk". It reports no parts.
     ///
     /// @param locale  A locale from mlocParseLocale.
-    /// @param output  Where the tag goes.
+    /// @param textOut Where the tag goes.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatLocale(const mlocLocale* locale,
-                                                        mlocOutput* output);
+                                                        mlocOutput* textOut);
 
     // What mlocCanonicalizeLocale replaced, as bits.
     typedef uint32_t mlocLocaleChanges;
