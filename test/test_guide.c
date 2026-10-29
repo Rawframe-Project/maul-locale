@@ -100,9 +100,9 @@ static void GuideFirstNumber(void)
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     if (parsed.status == mloc_success &&
-        mlocInitNumberFormatter(&formatter, &set, &locale, nullptr) >= 0 &&
+        mlocInitNumberFormatter(&set, &locale, nullptr, &formatter) >= 0 &&
         mlocMakeShortestDecimal(1234567.891, &value) == mloc_success &&
-        mlocFormatNumber(&formatter, &value, &output) == mloc_success)
+        mlocNumberFormatter_Format(&formatter, &value, &output) == mloc_success)
     {
         // text holds output.length bytes: "1'234'567.891"
     }
@@ -116,12 +116,13 @@ static void GuideOpenFile(void)
     CHECK(bytes != nullptr, "units.mloc reads");
     mlocData sources[2];
     mlocDataSet set = {sources, 2};
-    if (mlocOpenData(&sources[0], bytes, size) == mloc_success)
+    if (mlocOpenData(bytes, size, &sources[0]) == mloc_success)
     {
         mlocOpenBuiltinData(&sources[1]);
         // set finds what the file has in it first, the rest built in
     }
-    CHECK(mlocGetDataLocaleCount(&sources[0]) == 219 && mlocGetDataLocaleCount(&sources[1]) == 597,
+    CHECK(mlocData_GetLocaleCount(&sources[0]) == 219 &&
+              mlocData_GetLocaleCount(&sources[1]) == 597,
           "the locales with unit names and with built-in data of their own");
     (void)set;
     free(bytes);
@@ -262,14 +263,14 @@ static void GuidePlural(void)
     CHECK(mlocMakeDecimal(5, &value) == mloc_success, "5");
     mlocPluralRules rules;
     mlocPluralCategory category = mloc_pluralOther;
-    if (mlocInitPluralRules(&rules, &set, &locale, mloc_pluralCardinal) == mloc_success &&
-        mlocSelectPlural(&rules, &value, &category) == mloc_success)
+    if (mlocInitPluralRules(&set, &locale, mloc_pluralCardinal, &rules) == mloc_success &&
+        mlocPluralRules_Select(&rules, &value, &category) == mloc_success)
     {
         // pl, 5: mloc_pluralMany ("5 plików"); 2: mloc_pluralFew ("2 pliki")
     }
     CHECK(category == mloc_pluralMany, "Polish 5 is many");
     CHECK(mlocMakeDecimal(2, &value) == mloc_success &&
-              mlocSelectPlural(&rules, &value, &category) == mloc_success &&
+              mlocPluralRules_Select(&rules, &value, &category) == mloc_success &&
               category == mloc_pluralFew,
           "Polish 2 is few");
 }
@@ -284,16 +285,16 @@ static void GuideCompact(void)
     mlocNumberFormatter formatter;
     char text[32];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
-        mlocFormatNumber(&formatter, &value, &output) == mloc_success)
+    if (mlocInitNumberFormatter(&set, &locale, &options, &formatter) >= 0 &&
+        mlocNumberFormatter_Format(&formatter, &value, &output) == mloc_success)
     {
         // en, 1234567: "1.2M"; ja: "123万"
     }
     CHECK(Wrote(&output, "1.2M"), "English short compact");
     locale = Locale("ja");
     output.length = 0;
-    CHECK(mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
-              mlocFormatNumber(&formatter, &value, &output) == mloc_success &&
+    CHECK(mlocInitNumberFormatter(&set, &locale, &options, &formatter) >= 0 &&
+              mlocNumberFormatter_Format(&formatter, &value, &output) == mloc_success &&
               Wrote(&output, "123\xE4\xB8\x87"),
           "Japanese counts by ten thousands");
 }
@@ -307,8 +308,8 @@ static void GuideCurrency(void)
     mlocCurrencyFormatter formatter;
     char text[32];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitCurrencyFormatter(&formatter, &set, &locale, "EUR", 3, nullptr) >= 0 &&
-        mlocFormatCurrency(&formatter, &value, &output) == mloc_success)
+    if (mlocInitCurrencyFormatter(&set, &locale, "EUR", 3, nullptr, &formatter) >= 0 &&
+        mlocCurrencyFormatter_Format(&formatter, &value, &output) == mloc_success)
     {
         // de-AT, 1234.5: "€ 1.234,50"; fr: "1 234,50 €"
     }
@@ -316,8 +317,8 @@ static void GuideCurrency(void)
                          "1.234,50"),
           "Austria puts the euro first");
     locale = Locale("fr");
-    CHECK(mlocInitCurrencyFormatter(&formatter, &set, &locale, "EUR", 3, nullptr) >= 0 &&
-              mlocFormatCurrency(&formatter, &value, &output) == mloc_success &&
+    CHECK(mlocInitCurrencyFormatter(&set, &locale, "EUR", 3, nullptr, &formatter) >= 0 &&
+              mlocCurrencyFormatter_Format(&formatter, &value, &output) == mloc_success &&
               Wrote(&output, "1\xE2\x80\xAF"
                              "234,50\xC2\xA0\xE2\x82\xAC"),
           "France puts it last");
@@ -333,8 +334,8 @@ static void GuideUnit(void)
     mlocUnitFormatter formatter;
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitUnitFormatter(&formatter, &set, &locale, "kilometer-per-hour", 18, &options) >= 0 &&
-        mlocFormatUnit(&formatter, &value, &output) == mloc_success)
+    if (mlocInitUnitFormatter(&set, &locale, "kilometer-per-hour", 18, &options, &formatter) >= 0 &&
+        mlocUnitFormatter_Format(&formatter, &value, &output) == mloc_success)
     {
         // en, 120: "120 kilometers per hour"
     }
@@ -350,9 +351,9 @@ static void GuideSpellout(void)
     mlocSpelloutFormatter formatter;
     char text[128];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitSpelloutFormatter(&formatter, &set, &locale, "%spellout-cardinal", 18, nullptr) >=
+    if (mlocInitSpelloutFormatter(&set, &locale, "%spellout-cardinal", 18, nullptr, &formatter) >=
             0 &&
-        mlocFormatSpellout(&formatter, &value, &output) == mloc_success)
+        mlocSpelloutFormatter_Format(&formatter, &value, &output) == mloc_success)
     {
         // en, 1234: "one thousand two hundred thirty-four"
     }
@@ -364,11 +365,11 @@ static void GuideParseNumber(void)
     mlocDataSet set = s_all;
     mlocLocale locale = Locale("de");
     mlocNumberFormatter formatter;
-    CHECK(mlocInitNumberFormatter(&formatter, &set, &locale, nullptr) >= 0, "a German formatter");
+    CHECK(mlocInitNumberFormatter(&set, &locale, nullptr, &formatter) >= 0, "a German formatter");
     mlocDecimal parsed;
     size_t end = 0;
     mlocResult read =
-        mlocParseNumber(&formatter, "1.234,5 kg", 10, mloc_parseLenient, &parsed, &end);
+        mlocNumberFormatter_Parse(&formatter, "1.234,5 kg", 10, mloc_parseLenient, &parsed, &end);
     if (read == mloc_success)
     {
         // de: parsed is 1234.5; end is 7, before " kg"
@@ -430,8 +431,8 @@ static void GuideDateTime(void)
     mlocDateTimeFormatter formatter;
     char text[96];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitDateTimeFormatter(&formatter, &set, &locale, &options) >= 0 &&
-        mlocFormatDateTimeInZone(&formatter, &zone, &instant, &output) == mloc_success)
+    if (mlocInitDateTimeFormatter(&set, &locale, &options, &formatter) >= 0 &&
+        mlocDateTimeFormatter_FormatInZone(&formatter, &zone, &instant, &output) == mloc_success)
     {
         // en-US, America/Los_Angeles, 2026-10-15T23:03:00Z: "Oct 15, 2026, 4:03 PM PDT"
     }
@@ -448,15 +449,17 @@ static void GuideRelative(void)
     mlocRelativeFormatter formatter;
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitRelativeFormatter(&formatter, &set, &locale, &options) >= 0 &&
-        mlocFormatRelative(&formatter, &amount, mloc_relativeDay, &output) == mloc_success)
+    if (mlocInitRelativeFormatter(&set, &locale, &options, &formatter) >= 0 &&
+        mlocRelativeFormatter_Format(&formatter, &amount, mloc_relativeDay, &output) ==
+            mloc_success)
     {
         // en, 1: "tomorrow"; 3: "in 3 days"; -1: "yesterday"
     }
     CHECK(Wrote(&output, "tomorrow"), "one day ahead");
     output.length = 0;
     CHECK(mlocMakeDecimal(3, &amount) == mloc_success &&
-              mlocFormatRelative(&formatter, &amount, mloc_relativeDay, &output) == mloc_success &&
+              mlocRelativeFormatter_Format(&formatter, &amount, mloc_relativeDay, &output) ==
+                  mloc_success &&
               Wrote(&output, "in 3 days"),
           "three days ahead");
 }
@@ -478,9 +481,9 @@ static void GuideMessage(void)
     mlocTextResult result = mlocCompileMessage(text, sizeof(text) - 1, compiled, sizeof(compiled),
                                                &compiledSize, &error);
     if (result.status == mloc_success &&
-        mlocInitMessageFormatter(&formatter, &set, &locale, nullptr) == mloc_success &&
-        mlocBindMessage(&formatter, compiled, compiledSize, bound, sizeof(bound), &boundSize) ==
-            mloc_success)
+        mlocInitMessageFormatter(&set, &locale, nullptr, &formatter) == mloc_success &&
+        mlocMessageFormatter_Bind(&formatter, compiled, compiledSize, bound, sizeof(bound),
+                                  &boundSize) == mloc_success)
     {
         mlocMessageArgument count = {
             "count", 5, {.kind = mloc_messageValueInteger, .as.integer = 3}};
@@ -512,15 +515,15 @@ static void GuideList(void)
     mlocListFormatter formatter;
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitListFormatter(&formatter, &set, &locale, nullptr) == mloc_success &&
-        mlocFormatList(&formatter, items, 3, &output) == mloc_success)
+    if (mlocInitListFormatter(&set, &locale, nullptr, &formatter) == mloc_success &&
+        mlocListFormatter_Format(&formatter, items, 3, &output) == mloc_success)
     {
         // en: "Ana, Bo, and Cy"; de: "Ana, Bo und Cy"
     }
     CHECK(Wrote(&output, "Ana, Bo, and Cy"), "an English list");
     locale = Locale("de");
-    CHECK(mlocInitListFormatter(&formatter, &set, &locale, nullptr) == mloc_success &&
-              mlocFormatList(&formatter, items, 3, &output) == mloc_success &&
+    CHECK(mlocInitListFormatter(&set, &locale, nullptr, &formatter) == mloc_success &&
+              mlocListFormatter_Format(&formatter, items, 3, &output) == mloc_success &&
               Wrote(&output, "Ana, Bo und Cy"),
           "a German list");
 }
@@ -533,8 +536,8 @@ static void GuideInflect(void)
     mlocInflection dative = {.grammaticalCase = mloc_caseDative};
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    if (mlocInitInflector(&inflector, &set, &locale) == mloc_success &&
-        mlocInflectText(&inflector, "Ayşe", 5, &dative, &output) == mloc_success)
+    if (mlocInitInflector(&set, &locale, &inflector) == mloc_success &&
+        mlocInflector_InflectText(&inflector, "Ayşe", 5, &dative, &output) == mloc_success)
     {
         // tr: "Ayşe'ye"
     }
@@ -542,7 +545,7 @@ static void GuideInflect(void)
                          "e'ye"),
           "a Turkish dative");
     output.length = 0;
-    CHECK(mlocInflectText(&inflector, "ABD", 3, &dative, &output) == mloc_success &&
+    CHECK(mlocInflector_InflectText(&inflector, "ABD", 3, &dative, &output) == mloc_success &&
               Wrote(&output, "ABD'ye"),
           "an abbreviation by its letters' names");
 }
@@ -553,15 +556,15 @@ static void GuideCompare(void)
     mlocLocale locale = Locale("de");
     mlocCollator collator;
     int order = 0;
-    if (mlocInitCollator(&collator, &set, &locale, nullptr) == mloc_success &&
-        mlocCompare(&collator, "öl", 3, "zebra", 5, &order) == mloc_success)
+    if (mlocInitCollator(&set, &locale, nullptr, &collator) == mloc_success &&
+        mlocCollator_Compare(&collator, "öl", 3, "zebra", 5, &order) == mloc_success)
     {
         // de: order is -1, "öl" first; sv: 1, "ö" sorts after "z"
     }
     CHECK(order == -1, "German sorts o umlaut with o");
     locale = Locale("sv");
-    CHECK(mlocInitCollator(&collator, &set, &locale, nullptr) == mloc_success &&
-              mlocCompare(&collator, "\xC3\xB6l", 3, "zebra", 5, &order) == mloc_success &&
+    CHECK(mlocInitCollator(&set, &locale, nullptr, &collator) == mloc_success &&
+              mlocCollator_Compare(&collator, "\xC3\xB6l", 3, "zebra", 5, &order) == mloc_success &&
               order == 1,
           "Swedish sorts it after z");
 }
@@ -577,9 +580,9 @@ static void GuideSearch(void)
     mlocSearcher searcher;
     size_t start = 0;
     size_t end = 0;
-    if (mlocInitCollator(&collator, &set, &locale, &loose) == mloc_success &&
-        mlocInitSearcher(&searcher, &collator, "resume", 6, nullptr) == mloc_success &&
-        mlocFindNext(&searcher, text, length, 0, &start, &end) == mloc_success)
+    if (mlocInitCollator(&set, &locale, &loose, &collator) == mloc_success &&
+        mlocInitSearcher(&collator, "resume", 6, nullptr, &searcher) == mloc_success &&
+        mlocSearcher_FindNext(&searcher, text, length, 0, &start, &end) == mloc_success)
     {
         // text "My Résumé.pdf": start 3, end 11
     }
@@ -593,23 +596,23 @@ static void GuideSentences(void)
     const char* text = "Mr. Smith left. He came.";
     mlocSegmenter segmenter;
     size_t end = 0;
-    if (mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
-                          false) == mloc_success)
+    if (mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
+                          &segmenter) == mloc_success)
     {
-        while (mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success)
+        while (mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success)
         {
             // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
         }
     }
     CHECK(end == 24, "the last sentence ends the text");
-    CHECK(mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
-                            false) == mloc_success &&
-              mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success && end == 16,
+    CHECK(mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
+                            &segmenter) == mloc_success &&
+              mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success && end == 16,
           "no break after Mr.");
     locale = Locale("en");
-    CHECK(mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentSentence, text, strlen(text),
-                            false) == mloc_success &&
-              mlocNextSegmentBreak(&segmenter, &end, nullptr) == mloc_success && end == 4,
+    CHECK(mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
+                            &segmenter) == mloc_success &&
+              mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success && end == 4,
           "without -u-ss-standard, a break after Mr.");
 }
 
@@ -622,13 +625,13 @@ static void GuidePieces(void)
     mlocSegmenter segmenter;
     size_t end = 0;
     mlocResult r =
-        mlocInitSegmenter(&segmenter, &set, &locale, mloc_segmentLine, first, strlen(first), true);
+        mlocInitSegmenter(&set, &locale, mloc_segmentLine, first, strlen(first), true, &segmenter);
     while (r == mloc_success)
     {
-        r = mlocNextSegmentBreak(&segmenter, &end, nullptr);
+        r = mlocSegmenter_NextBreak(&segmenter, &end, nullptr);
         if (r == mloc_needMoreText)
         {
-            r = mlocFeedSegmenter(&segmenter, second, strlen(second), false);
+            r = mlocSegmenter_Feed(&segmenter, second, strlen(second), false);
         }
     }
     CHECK(r == mloc_done && end == 21, "the last opportunity is the end of both pieces");
@@ -642,7 +645,7 @@ int main(void)
         size_t size = 0;
         s_bytes[i] = LoadFile(s_files[i], &size);
         CHECK(s_bytes[i] != nullptr &&
-                  mlocOpenData(&s_sources[i], s_bytes[i], size) == mloc_success,
+                  mlocOpenData(s_bytes[i], size, &s_sources[i]) == mloc_success,
               s_files[i]);
     }
     s_sources[fileCount] = s_builtin;

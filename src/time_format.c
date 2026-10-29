@@ -291,8 +291,8 @@ mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mloc
     return result;
 }
 
-mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut, const mlocDataSet* data,
-                                 const mlocLocale* locale, const mlocTimeOptions* options)
+mlocResult mlocInitTimeFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                 const mlocTimeOptions* options, mlocTimeFormatter* formatterOut)
 {
     mlocTimeOptions o = options != nullptr ? *options : (mlocTimeOptions){0};
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
@@ -376,8 +376,8 @@ static mlocResult Write(const TimeFormat* f, const mlocTime* time, const ZoneWri
     return mloc_success;
 }
 
-mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* time,
-                          mlocOutput* output)
+mlocResult mlocTimeFormatter_Format(const mlocTimeFormatter* formatter, const mlocTime* time,
+                                    mlocOutput* output)
 {
     ZonedTimeFormat f;
     if (!ReadFormatter(formatter, false, &f) || time == nullptr || !mlocTimeValid(time) ||
@@ -388,8 +388,9 @@ mlocResult mlocFormatTime(const mlocTimeFormatter* formatter, const mlocTime* ti
     return Write(&f.time, time, nullptr, output);
 }
 
-mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
-                                const mlocInstant* instant, mlocOutput* output)
+mlocResult mlocTimeFormatter_FormatInZone(const mlocTimeFormatter* formatter,
+                                          const mlocTimeZone* zone, const mlocInstant* instant,
+                                          mlocOutput* output)
 {
     ZonedTimeFormat f;
     ZoneAt at;
@@ -482,8 +483,8 @@ static RangeChoice TimeChoiceOf(const TimeRangeWriting* g, const TimeRange* r)
     };
 }
 
-mlocResult mlocFormatTimeRange(const mlocTimeFormatter* formatter, const mlocTime* start,
-                               const mlocTime* end, mlocOutput* output)
+mlocResult mlocTimeFormatter_FormatRange(const mlocTimeFormatter* formatter, const mlocTime* start,
+                                         const mlocTime* end, mlocOutput* output)
 {
     ZonedTimeFormat f;
     if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
@@ -507,9 +508,9 @@ static mlocResult MakeRangeDate(const ZonedTimeFormat* f, DateFormat* date)
     return mlocMakeDateFormat(date, f->zone.data, &f->zone.locale, nullptr, &options);
 }
 
-mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
-                                     const mlocInstant* start, const mlocInstant* end,
-                                     mlocOutput* output)
+mlocResult mlocTimeFormatter_FormatRangeInZone(const mlocTimeFormatter* formatter,
+                                               const mlocTimeZone* zone, const mlocInstant* start,
+                                               const mlocInstant* end, mlocOutput* output)
 {
     ZonedTimeFormat f;
     ZoneAt at[2];

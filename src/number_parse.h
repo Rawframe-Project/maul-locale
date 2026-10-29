@@ -21,8 +21,8 @@ bool mlocValidParseSets(const DataView* view, DataSpan payload);
 typedef struct ParseCurrency ParseCurrency;
 
 // Parses text with a formatter of standard, scientific or engineering
-// notation, as mlocParseNumber does; with a currency formatter's currency
-// (parse_currency.h), as mlocParseCurrency does, the currency read, or
+// notation, as mlocNumberFormatter_Parse does; with a currency formatter's currency
+// (parse_currency.h), as mlocCurrencyFormatter_Parse does, the currency read, or
 // the formatter's, into codeOut (null for a number formatter).
 mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* currency,
                          const char* text, size_t length, mlocParseMode mode,

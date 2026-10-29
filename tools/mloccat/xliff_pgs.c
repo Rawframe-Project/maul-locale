@@ -112,7 +112,7 @@ static int Rules(const char* locale, PgsKind kind, mlocPluralRules* rules)
     {
         return 0;
     }
-    mlocResult r = mlocInitPluralRules(rules, &s_data, &parsed, type);
+    mlocResult r = mlocInitPluralRules(&s_data, &parsed, type, rules);
     return r == mloc_success || r == mloc_fellBack;
 }
 
@@ -152,7 +152,7 @@ static int Values(XliffPgsUnit* u, size_t column, const mlocPluralRules* rules)
         qsort((void*)*values, *count, sizeof(char*), kind == pgsSelect ? ByBytes : ByNumber);
     }
     uint32_t categories = 1U << mloc_pluralOther;
-    if (kind != pgsSelect && mlocGetPluralCategories(rules, &categories) != mloc_success)
+    if (kind != pgsSelect && mlocPluralRules_GetCategories(rules, &categories) != mloc_success)
     {
         return 0;
     }
@@ -186,7 +186,8 @@ static char* Examples(const mlocPluralRules* rules, int cardinal, mlocPluralCate
     for (int64_t n = 0; n <= 1001 && items < exampleItems; n++)
     {
         mlocPluralCategory c = mloc_pluralOther;
-        int in = n <= 1000 && mlocSelectPluralInteger(rules, n, &c) == mloc_success && c == want;
+        int in =
+            n <= 1000 && mlocPluralRules_SelectInteger(rules, n, &c) == mloc_success && c == want;
         if (in && start < 0)
         {
             start = n;
@@ -204,7 +205,7 @@ static char* Examples(const mlocPluralRules* rules, int cardinal, mlocPluralCate
     for (int64_t n = 10000; n <= 1000000 && items < exampleItems; n *= 10)
     {
         mlocPluralCategory c = mloc_pluralOther;
-        if (mlocSelectPluralInteger(rules, n, &c) == mloc_success && c == want)
+        if (mlocPluralRules_SelectInteger(rules, n, &c) == mloc_success && c == want)
         {
             char a[24];
             snprintf(a, sizeof a, "%lld", (long long)n);
@@ -221,7 +222,8 @@ static char* Examples(const mlocPluralRules* rules, int cardinal, mlocPluralCate
     {
         mlocPluralOperands o = {k / 10, k % 10, k % 10, 1, k % 10 != 0, 0};
         mlocPluralCategory c = mloc_pluralOther;
-        int in = k <= 25 && mlocSelectPluralOperands(rules, &o, &c) == mloc_success && c == want;
+        int in =
+            k <= 25 && mlocPluralRules_SelectOperands(rules, &o, &c) == mloc_success && c == want;
         if (in)
         {
             if (first[0] == '\0')

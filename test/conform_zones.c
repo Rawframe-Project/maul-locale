@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     mlocDataSet data = {&sources[1], 1};
     size_t size = 0;
     void* file = argc == 4 ? ReadFile(argv[3], &size) : nullptr;
-    if (file != nullptr && mlocOpenData(&sources[0], file, size) == mloc_success)
+    if (file != nullptr && mlocOpenData(file, size, &sources[0]) == mloc_success)
     {
         data = (mlocDataSet){sources, 2};
     }

@@ -50,10 +50,10 @@ static void TestResultNames(void)
     for (size_t i = 0; i < sizeof results / sizeof results[0]; i++)
     {
         CHECK(results[i].value == results[i].expected &&
-                  strcmp(mlocResultName(results[i].value), results[i].name) == 0,
+                  strcmp(mlocGetResultName(results[i].value), results[i].name) == 0,
               results[i].name);
     }
-    CHECK(strcmp(mlocResultName(12345), "unknown result") == 0, "unknown name");
+    CHECK(strcmp(mlocGetResultName(12345), "unknown result") == 0, "unknown name");
 }
 
 int main(void)

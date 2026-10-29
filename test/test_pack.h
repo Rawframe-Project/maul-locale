@@ -78,7 +78,7 @@ static bool OpenRootPack(const PackUnit* units, uint32_t count, mlocData* source
     PackPut(s_pack + headerLocaleCount, 1, 4);
     PackPut(s_pack + headerPoolOffset, pool, 4);
     PackPut(s_pack + headerPoolSize, 4, 4);
-    return mlocOpenData(source, s_pack, at) == mloc_success;
+    return mlocOpenData(s_pack, at, source) == mloc_success;
 }
 
 #endif

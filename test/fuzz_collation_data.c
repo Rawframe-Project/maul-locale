@@ -58,7 +58,7 @@ static bool Load(void)
             fclose(f);
         }
         if (s_size > 0 && s_size < sizeof(s_file) &&
-            mlocOpenData(&s_source, s_file, s_size) == mloc_success)
+            mlocOpenData(s_file, s_size, &s_source) == mloc_success)
         {
             s_view = mlocViewOf(&s_source);
             s_state = 1;
@@ -100,7 +100,7 @@ static void Use(const char* tag, size_t length)
     mlocLocale locale;
     mlocCollator collator;
     if (mlocParseLocale(tag, length, &locale).status != mloc_success ||
-        mlocInitCollator(&collator, &set, &locale, nullptr) != mloc_success)
+        mlocInitCollator(&set, &locale, nullptr, &collator) != mloc_success)
     {
         return;
     }
@@ -109,13 +109,13 @@ static void Use(const char* tag, size_t length)
     {
         uint8_t key[256];
         size_t keyLength = 0;
-        (void)mlocGetSortKey(&collator, s_texts[i], strlen(s_texts[i]), key, sizeof(key),
-                             &keyLength);
+        (void)mlocCollator_GetSortKey(&collator, s_texts[i], strlen(s_texts[i]), key, sizeof(key),
+                                      &keyLength);
         for (size_t j = 0; j < count; j++)
         {
             int order = 0;
-            Require(mlocCompare(&collator, s_texts[i], strlen(s_texts[i]), s_texts[j],
-                                strlen(s_texts[j]), &order) == mloc_success);
+            Require(mlocCollator_Compare(&collator, s_texts[i], strlen(s_texts[i]), s_texts[j],
+                                         strlen(s_texts[j]), &order) == mloc_success);
         }
     }
 }
@@ -126,7 +126,7 @@ static void UseTypes(DataSpan unit, uint32_t localeIndex)
     const char* id = nullptr;
     size_t length = 0;
     if (localeIndex == dataNoLocale ||
-        mlocGetDataLocale(&s_source, localeIndex, &id, &length) != mloc_success || length > 64)
+        mlocData_GetLocale(&s_source, localeIndex, &id, &length) != mloc_success || length > 64)
     {
         Use("und", 3);
         return;

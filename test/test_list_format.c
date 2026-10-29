@@ -22,7 +22,7 @@ static bool Make(const char* id, mlocListType type, mlocListWidth width, mlocLis
     mlocLocale locale;
     mlocListOptions options = {.type = type, .width = width};
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitListFormatter(out, &s_data, &locale, &options) == mloc_success;
+           mlocInitListFormatter(&s_data, &locale, &options, out) == mloc_success;
 }
 
 // Whether items (a NUL-separated run ended by an empty one, count given)
@@ -39,7 +39,7 @@ static bool Joins(const char* id, mlocListType type, mlocListWidth width, const 
     char buffer[256];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     bool same = Make(id, type, width, &formatter) &&
-                mlocFormatList(&formatter, items, count, &output) == mloc_success &&
+                mlocListFormatter_Format(&formatter, items, count, &output) == mloc_success &&
                 output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
     if (!same)
     {
@@ -122,7 +122,7 @@ static void TestParts(void)
     static const size_t s_starts[] = {0, 1, 3, 4, 10};
     static const size_t s_lengths[] = {1, 2, 1, 6, 1};
     CHECK(Make("en", mloc_listAnd, mloc_listWide, &en) &&
-              mlocFormatList(&en, abc, 3, &output) == mloc_success &&
+              mlocListFormatter_Format(&en, abc, 3, &output) == mloc_success &&
               HasParts(&p, 5, s_kinds, s_starts, s_lengths),
           "items and literals as parts");
     // Japanese joins unit amounts in the narrow width with no text
@@ -135,8 +135,8 @@ static void TestParts(void)
     static const size_t s_twoStarts[] = {0, 1};
     static const size_t s_ones[] = {1, 1};
     CHECK(Make("ja", mloc_listUnit, mloc_listNarrow, &ja) &&
-              mlocFormatList(&ja, amounts, 2, &side) == mloc_success && side.length == 2 &&
-              HasParts(&q, 2, s_two, s_twoStarts, s_ones),
+              mlocListFormatter_Format(&ja, amounts, 2, &side) == mloc_success &&
+              side.length == 2 && HasParts(&q, 2, s_two, s_twoStarts, s_ones),
           "items side by side, two parts");
     // An empty item has no part; no items, no parts.
     mlocListItem empty[] = {{"", 0}, {"b", 1}};
@@ -149,10 +149,10 @@ static void TestParts(void)
     Parts none = {0};
     mlocOutput nothing = {
         .buffer = buffer, .capacity = sizeof(buffer), .part = Collect, .context = &none};
-    CHECK(mlocFormatList(&en, empty, 2, &lone) == mloc_success && lone.length == 6 &&
+    CHECK(mlocListFormatter_Format(&en, empty, 2, &lone) == mloc_success && lone.length == 6 &&
               HasParts(&r, 2, s_lit, s_litStarts, s_litLengths) &&
-              mlocFormatList(&en, nullptr, 0, &nothing) == mloc_success && nothing.length == 0 &&
-              none.count == 0,
+              mlocListFormatter_Format(&en, nullptr, 0, &nothing) == mloc_success &&
+              nothing.length == 0 && none.count == 0,
           "an empty item, no items");
 }
 
@@ -165,8 +165,9 @@ static void TestOutput(void)
     mlocOutput tight = {.buffer = small, .capacity = sizeof(small), .part = Collect, .context = &p};
     mlocOutput measure = {0};
     CHECK(Make("en", mloc_listAnd, mloc_listWide, &en) &&
-              mlocFormatList(&en, abc, 3, &tight) == mloc_errorCapacity && tight.length == 11 &&
-              p.count == 0 && mlocFormatList(&en, abc, 3, &measure) == mloc_errorCapacity &&
+              mlocListFormatter_Format(&en, abc, 3, &tight) == mloc_errorCapacity &&
+              tight.length == 11 && p.count == 0 &&
+              mlocListFormatter_Format(&en, abc, 3, &measure) == mloc_errorCapacity &&
               measure.length == 11,
           "a buffer too small or none gives the size needed, and no parts");
     // Items whose lengths pass SIZE_MAX together, as one large text named
@@ -174,7 +175,7 @@ static void TestOutput(void)
     // bytes, so only their lengths are large.
     mlocListItem huge[] = {{"a", SIZE_MAX / 2}, {"b", SIZE_MAX / 2}, {"c", SIZE_MAX / 2}};
     mlocOutput measureHuge = {0};
-    CHECK(mlocFormatList(&en, huge, 3, &measureHuge) == mloc_errorCapacity &&
+    CHECK(mlocListFormatter_Format(&en, huge, 3, &measureHuge) == mloc_errorCapacity &&
               measureHuge.length == SIZE_MAX,
           "a size needed past SIZE_MAX is given as SIZE_MAX");
 }
@@ -187,12 +188,12 @@ static void TestRefusals(void)
     mlocListOptions badWidth = {.width = (mlocListWidth)3};
     mlocDataSet empty = {nullptr, 0};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitListFormatter(nullptr, &s_data, &locale, nullptr) == mloc_errorInvalid &&
-              mlocInitListFormatter(&formatter, nullptr, &locale, nullptr) == mloc_errorInvalid &&
-              mlocInitListFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid &&
-              mlocInitListFormatter(&formatter, &s_data, &locale, &badType) == mloc_errorInvalid &&
-              mlocInitListFormatter(&formatter, &s_data, &locale, &badWidth) == mloc_errorInvalid &&
-              mlocInitListFormatter(&formatter, &empty, &locale, nullptr) == mloc_errorNotFound,
+              mlocInitListFormatter(&s_data, &locale, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitListFormatter(nullptr, &locale, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitListFormatter(&s_data, nullptr, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitListFormatter(&s_data, &locale, &badType, &formatter) == mloc_errorInvalid &&
+              mlocInitListFormatter(&s_data, &locale, &badWidth, &formatter) == mloc_errorInvalid &&
+              mlocInitListFormatter(&empty, &locale, nullptr, &formatter) == mloc_errorNotFound,
           "null pointers, options out of range, data without lists");
     char buffer[16];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
@@ -200,16 +201,16 @@ static void TestRefusals(void)
     mlocListItem items[] = {{"a", 1}, {nullptr, 1}};
     mlocListFormatter forged;
     memset(&forged, 0, sizeof(forged));
-    CHECK(mlocInitListFormatter(&formatter, &s_data, &locale, nullptr) == mloc_success &&
-              mlocFormatList(&forged, items, 1, &output) == mloc_errorInvalid &&
-              mlocFormatList(nullptr, items, 1, &output) == mloc_errorInvalid &&
-              mlocFormatList(&formatter, items, 1, nullptr) == mloc_errorInvalid &&
-              mlocFormatList(&formatter, items, 1, &noBuffer) == mloc_errorInvalid &&
-              mlocFormatList(&formatter, nullptr, 1, &output) == mloc_errorInvalid &&
-              mlocFormatList(&formatter, items, 2, &output) == mloc_errorInvalid &&
+    CHECK(mlocInitListFormatter(&s_data, &locale, nullptr, &formatter) == mloc_success &&
+              mlocListFormatter_Format(&forged, items, 1, &output) == mloc_errorInvalid &&
+              mlocListFormatter_Format(nullptr, items, 1, &output) == mloc_errorInvalid &&
+              mlocListFormatter_Format(&formatter, items, 1, nullptr) == mloc_errorInvalid &&
+              mlocListFormatter_Format(&formatter, items, 1, &noBuffer) == mloc_errorInvalid &&
+              mlocListFormatter_Format(&formatter, nullptr, 1, &output) == mloc_errorInvalid &&
+              mlocListFormatter_Format(&formatter, items, 2, &output) == mloc_errorInvalid &&
               (SIZE_MAX == UINT32_MAX ||
-               mlocFormatList(&formatter, items, (size_t)MLOC_MAX_LIST_ITEMS + 1, &output) ==
-                   mloc_errorLimit),
+               mlocListFormatter_Format(&formatter, items, (size_t)MLOC_MAX_LIST_ITEMS + 1,
+                                        &output) == mloc_errorLimit),
           "a forged formatter, null pointers, an item without text; a count past "
           "MLOC_MAX_LIST_ITEMS as a limit");
 }

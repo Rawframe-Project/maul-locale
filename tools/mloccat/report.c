@@ -88,11 +88,11 @@ static uint32_t Measure(const mlocMessageFormatter* f, const ResText* message,
                                                   compiledSize, &compiledSize, nullptr)
                                        .status == mloc_success)
     {
-        (void)mlocBindMessage(f, compiled, compiledSize, nullptr, 0, &boundSize);
+        (void)mlocMessageFormatter_Bind(f, compiled, compiledSize, nullptr, 0, &boundSize);
         bound = malloc(boundSize + 1);
     }
-    if (bound != nullptr &&
-        mlocBindMessage(f, compiled, compiledSize, bound, boundSize, &boundSize) == mloc_success)
+    if (bound != nullptr && mlocMessageFormatter_Bind(f, compiled, compiledSize, bound, boundSize,
+                                                      &boundSize) == mloc_success)
     {
         mlocOutput out = {nullptr, 0, 0, nullptr, nullptr};
         (void)mlocFormatMessage(bound, arguments, count, &out, nullptr);
@@ -119,7 +119,7 @@ static int MakeFormatter(const CatalogInput* in, mlocMessageFormatter* out)
     // No isolation marks: they are not text a reader counts.
     mlocMessageOptions options = {false, mloc_messageIsolationNone, nullptr, 0, nullptr};
     return mlocParseLocale(in->locale, strlen(in->locale), &locale).status == mloc_success &&
-           mlocInitMessageFormatter(out, &s_data, &locale, &options) == mloc_success;
+           mlocInitMessageFormatter(&s_data, &locale, &options, out) == mloc_success;
 }
 
 // A message above its source's @mloc-max-length.

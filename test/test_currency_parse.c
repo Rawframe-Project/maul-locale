@@ -315,7 +315,7 @@ static mlocResult Init(const mlocDataSet* data, const char* id, const char* code
     {
         return (mlocResult)-100;
     }
-    return mlocInitCurrencyFormatter(out, data, &locale, code, 3, options);
+    return mlocInitCurrencyFormatter(data, &locale, code, 3, options, out);
 }
 
 // Parses from a copy of the text's exact length, so that the sanitizer
@@ -330,7 +330,7 @@ static mlocResult ParseCopy(const mlocCurrencyFormatter* f, const char* text, si
         return (mlocResult)-100;
     }
     memcpy(copy, text, length);
-    mlocResult r = mlocParseCurrency(f, copy, length, mode, any, d, code, end);
+    mlocResult r = mlocCurrencyFormatter_Parse(f, copy, length, mode, any, d, code, end);
     free(copy);
     return r;
 }
@@ -387,7 +387,7 @@ static bool RoundTrips(const char* id, const char* code, mlocCurrencyDisplay dis
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     if (Init(&s_withNames, id, code, &options, &f) < 0 ||
         mlocParseDecimal(amount, strlen(amount), &d).status != mloc_success ||
-        mlocFormatCurrency(&f, &d, &output) != mloc_success)
+        mlocCurrencyFormatter_Format(&f, &d, &output) != mloc_success)
     {
         return false;
     }
@@ -460,7 +460,7 @@ static bool AppendedReadsBack(const char* id, const char* code, mlocCurrencyDisp
     char again[256];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     if (Init(&s_withNames, id, code, &options, &f) < 0 ||
-        mlocFormatCurrency(&f, d, &output) != mloc_success)
+        mlocCurrencyFormatter_Format(&f, d, &output) != mloc_success)
     {
         return false;
     }
@@ -472,7 +472,8 @@ static bool AppendedReadsBack(const char* id, const char* code, mlocCurrencyDisp
         mlocOutput second = {.buffer = again, .capacity = sizeof(again)};
         if (ParseCopy(&f, buffer, output.length, (mlocParseMode)mode, 0, &back, read, &end) !=
                 mloc_success ||
-            end != output.length || mlocFormatCurrency(&f, &back, &second) != mloc_success ||
+            end != output.length ||
+            mlocCurrencyFormatter_Format(&f, &back, &second) != mloc_success ||
             second.length != output.length || memcmp(buffer, again, output.length) != 0)
         {
             return false;
@@ -536,7 +537,7 @@ static void TestAppendedShownSymbol(void)
     size_t end = 0;
     all = Init(&s_withNames, "fr-CA", "USD", &narrow, &n) >= 0 &&
           Init(&s_withNames, "fr-CA", "USD", &symbol, &w) >= 0 &&
-          mlocFormatCurrency(&w, &d, &output) == mloc_success &&
+          mlocCurrencyFormatter_Format(&w, &d, &output) == mloc_success &&
           ParseCopy(&n, text, output.length, mloc_parseLenient, 0, &back, read, &end) ==
               mloc_success &&
           end == output.length && memcmp(read, "USD", 3) == 0;
@@ -600,21 +601,22 @@ static void TestWithoutNames(void)
     char code[3];
     size_t end = 0;
     CHECK(Init(&s_data, "en", "USD", nullptr, &f) == mloc_success &&
-              mlocParseCurrency(&f, "12.50 US dollars", 16, mloc_parseLenient, 0, &d, code, &end) ==
-                  mloc_success &&
+              mlocCurrencyFormatter_Parse(&f, "12.50 US dollars", 16, mloc_parseLenient, 0, &d,
+                                          code, &end) == mloc_success &&
               end == 5 && memcmp(code, "USD", 3) == 0,
           "without the names file the long names are not read");
-    CHECK(mlocParseCurrency(&f, "12.50 USD", 9, mloc_parseLenient, 0, &d, code, &end) ==
+    CHECK(mlocCurrencyFormatter_Parse(&f, "12.50 USD", 9, mloc_parseLenient, 0, &d, code, &end) ==
                   mloc_success &&
               end == 9,
           "the code is");
-    CHECK(mlocParseCurrency(&f, "12.50 euros", 11, mloc_parseLenient, 1, &d, code, &end) ==
-                  mloc_success &&
+    CHECK(mlocCurrencyFormatter_Parse(&f, "12.50 euros", 11, mloc_parseLenient, 1, &d, code,
+                                      &end) == mloc_success &&
               end == 9 && memcmp(code, "EUR", 3) == 0 &&
-              mlocParseCurrency(&f,
-                                "\xE2\x82\xAC"
-                                "12.50",
-                                8, mloc_parseLenient, 1, &d, code, &end) == mloc_success &&
+              mlocCurrencyFormatter_Parse(&f,
+                                          "\xE2\x82\xAC"
+                                          "12.50",
+                                          8, mloc_parseLenient, 1, &d, code,
+                                          &end) == mloc_success &&
               memcmp(code, "EUR", 3) == 0,
           "any currency by its code and symbol, not its name");
 }
@@ -635,9 +637,10 @@ static void TestChainLimit(void)
     char code[3];
     size_t end = 0;
     CHECK(Init(&copies, "en", "USD", nullptr, &f) == mloc_success &&
-              mlocParseCurrency(&f, "$1", 2, mloc_parseLenient, 1, &d, code, &end) ==
+              mlocCurrencyFormatter_Parse(&f, "$1", 2, mloc_parseLenient, 1, &d, code, &end) ==
                   mloc_errorLimit &&
-              mlocParseCurrency(&f, "$1", 2, mloc_parseLenient, 0, &d, code, &end) == mloc_success,
+              mlocCurrencyFormatter_Parse(&f, "$1", 2, mloc_parseLenient, 0, &d, code, &end) ==
+                  mloc_success,
           "any currency along a chain of more units than the bound is refused");
 }
 
@@ -648,32 +651,33 @@ static void TestRefusals(void)
     char code[3];
     size_t end = 0;
     CHECK(Init(&s_withNames, "en", "USD", nullptr, &f) == mloc_success, "a formatter");
-    CHECK(mlocParseCurrency(nullptr, "1", 1, mloc_parseLenient, 0, &d, code, &end) ==
+    CHECK(mlocCurrencyFormatter_Parse(nullptr, "1", 1, mloc_parseLenient, 0, &d, code, &end) ==
                   mloc_errorInvalid &&
-              mlocParseCurrency(&f, nullptr, 1, mloc_parseLenient, 0, &d, code, &end) ==
+              mlocCurrencyFormatter_Parse(&f, nullptr, 1, mloc_parseLenient, 0, &d, code, &end) ==
                   mloc_errorInvalid &&
-              mlocParseCurrency(&f, "1", 1, mloc_parseLenient, 0, nullptr, code, &end) ==
+              mlocCurrencyFormatter_Parse(&f, "1", 1, mloc_parseLenient, 0, nullptr, code, &end) ==
                   mloc_errorInvalid &&
-              mlocParseCurrency(&f, "1", 1, mloc_parseLenient, 0, &d, nullptr, &end) ==
+              mlocCurrencyFormatter_Parse(&f, "1", 1, mloc_parseLenient, 0, &d, nullptr, &end) ==
                   mloc_errorInvalid &&
-              mlocParseCurrency(&f, "1", 1, mloc_parseLenient, 0, &d, code, nullptr) ==
+              mlocCurrencyFormatter_Parse(&f, "1", 1, mloc_parseLenient, 0, &d, code, nullptr) ==
                   mloc_errorInvalid,
           "null pointers");
-    CHECK(mlocParseCurrency(&f, "1", 1, (mlocParseMode)2, 0, &d, code, &end) == mloc_errorInvalid &&
-              mlocParseCurrency(&f, "1", 1, mloc_parseLenient, 2, &d, code, &end) ==
+    CHECK(mlocCurrencyFormatter_Parse(&f, "1", 1, (mlocParseMode)2, 0, &d, code, &end) ==
+                  mloc_errorInvalid &&
+              mlocCurrencyFormatter_Parse(&f, "1", 1, mloc_parseLenient, 2, &d, code, &end) ==
                   mloc_errorInvalid,
           "a mode or flag out of range");
     mlocCurrencyFormatter zero = {0};
-    CHECK(mlocParseCurrency(&zero, "1", 1, mloc_parseLenient, 0, &d, code, &end) ==
+    CHECK(mlocCurrencyFormatter_Parse(&zero, "1", 1, mloc_parseLenient, 0, &d, code, &end) ==
               mloc_errorInvalid,
           "a formatter the library did not make");
     mlocCurrencyOptions compact = {.number = {.notation = mloc_notationCompactShort}};
     CHECK(Init(&s_withNames, "en", "USD", &compact, &f) == mloc_success &&
-              mlocParseCurrency(&f, "$1K", 3, mloc_parseLenient, 0, &d, code, &end) ==
+              mlocCurrencyFormatter_Parse(&f, "$1K", 3, mloc_parseLenient, 0, &d, code, &end) ==
                   mloc_errorInvalid,
           "compact notation is not read");
     CHECK(Init(&s_withNames, "en", "USD", nullptr, &f) == mloc_success &&
-              mlocParseCurrency(&f, nullptr, 0, mloc_parseLenient, 1, &d, code, &end) ==
+              mlocCurrencyFormatter_Parse(&f, nullptr, 0, mloc_parseLenient, 1, &d, code, &end) ==
                   mloc_errorSyntax &&
               end == 0,
           "no text is no amount");
@@ -693,7 +697,7 @@ static bool OpenData(void)
     }
     s_withNames = (mlocDataSet){s_sources, 2};
     return size > 0 && size < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+           mlocOpenData(s_names, size, &s_sources[1]) == mloc_success;
 }
 
 int main(void)

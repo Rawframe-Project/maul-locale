@@ -113,7 +113,7 @@ static mlocResult BindAt(Binder* b, const mlocMessageFormatter* formatter, const
     size_t need = 0;
     uint8_t* at = b->arena != nullptr ? b->arena + b->used : nullptr;
     size_t room = b->arena != nullptr ? b->room - b->used : 0;
-    mlocResult r = mlocBindMessage(formatter, message, size, at, room, &need);
+    mlocResult r = mlocMessageFormatter_Bind(formatter, message, size, at, room, &need);
     if (b->arena == nullptr && r == mloc_errorCapacity)
     {
         r = mloc_success;
@@ -146,7 +146,7 @@ static mlocResult BindIndex(const Chain* c, Binder* b, uint32_t index, Slot* out
     size_t size = 0;
     uint32_t first = 0;
     while (first < c->count &&
-           mlocGetCatalogMessage(&c->catalogs[first], index, &message, &size) != mloc_success)
+           mlocCatalog_GetMessage(&c->catalogs[first], index, &message, &size) != mloc_success)
     {
         first++;
     }
@@ -168,7 +168,7 @@ static mlocResult BindIndex(const Chain* c, Binder* b, uint32_t index, Slot* out
         return r;
     }
     if (c->source < c->count && c->source != first &&
-        mlocGetCatalogMessage(&c->catalogs[c->source], index, &message, &size) == mloc_success)
+        mlocCatalog_GetMessage(&c->catalogs[c->source], index, &message, &size) == mloc_success)
     {
         r = BindAt(b, &c->formatters[c->source], message, size, &offset);
         if (r == mloc_success)
@@ -202,7 +202,7 @@ static mlocResult CheckCatalogs(const mlocCatalog* catalogs, const mlocMessageFo
     for (uint32_t i = 0; i < count; i++)
     {
         mlocCatalogInfo info;
-        if (mlocGetCatalogInfo(&catalogs[i], &info) != mloc_success ||
+        if (mlocCatalog_GetInfo(&catalogs[i], &info) != mloc_success ||
             (i > 0 && info.setId != first.setId))
         {
             return mloc_errorInvalid;
@@ -243,9 +243,9 @@ mlocResult mlocMeasureCatalogChain(const mlocCatalog* catalogs,
     return mloc_success;
 }
 
-mlocResult mlocInitCatalogChain(mlocCatalogChain* chainOut, const mlocCatalog* catalogs,
-                                const mlocMessageFormatter* formatters, size_t count, void* cache,
-                                size_t cacheSize)
+mlocResult mlocInitCatalogChain(const mlocCatalog* catalogs, const mlocMessageFormatter* formatters,
+                                size_t count, void* cache, size_t cacheSize,
+                                mlocCatalogChain* chainOut)
 {
     Chain c = {catalogs, formatters, cache, cacheSize, 0, (uint32_t)count, 0, chainStamp};
     mlocResult r = chainOut == nullptr || cache == nullptr
@@ -273,7 +273,7 @@ static Binder BinderOf(const Chain* c)
     return (Binder){c->cache + start, room < UINT32_MAX ? room : UINT32_MAX, LoadUsed(c)};
 }
 
-mlocResult mlocBindCatalogChain(const mlocCatalogChain* chain)
+mlocResult mlocCatalogChain_Bind(const mlocCatalogChain* chain)
 {
     Chain c;
     if (!ReadChain(chain, &c))
@@ -347,10 +347,10 @@ static bool ValidOutput(const mlocOutput* output)
     return output != nullptr && (output->buffer != nullptr || output->capacity == 0);
 }
 
-mlocResult mlocFormatCatalogMessage(const mlocCatalogChain* chain, uint32_t index,
-                                    const mlocMessageArgument* arguments, size_t argumentCount,
-                                    mlocOutput* output, mlocMessageFaults* faults,
-                                    mlocCatalogResult* resultOut)
+mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_t index,
+                                          const mlocMessageArgument* arguments,
+                                          size_t argumentCount, mlocOutput* output,
+                                          mlocMessageFaults* faults, mlocCatalogResult* resultOut)
 {
     Chain c;
     if (!ReadChain(chain, &c) || index >= c.keyCount || !ValidOutput(output))
@@ -380,10 +380,10 @@ mlocResult mlocFormatCatalogMessage(const mlocCatalogChain* chain, uint32_t inde
     return mlocFormatMessage(bound, arguments, argumentCount, output, faults);
 }
 
-mlocResult mlocFormatCatalogKey(const mlocCatalogChain* chain, const char* key, size_t length,
-                                const mlocMessageArgument* arguments, size_t argumentCount,
-                                mlocOutput* output, mlocMessageFaults* faults,
-                                mlocCatalogResult* resultOut)
+mlocResult mlocCatalogChain_FormatKey(const mlocCatalogChain* chain, const char* key, size_t length,
+                                      const mlocMessageArgument* arguments, size_t argumentCount,
+                                      mlocOutput* output, mlocMessageFaults* faults,
+                                      mlocCatalogResult* resultOut)
 {
     Chain c;
     if (!ReadChain(chain, &c) || (key == nullptr && length > 0) || !ValidOutput(output))
@@ -391,7 +391,7 @@ mlocResult mlocFormatCatalogKey(const mlocCatalogChain* chain, const char* key, 
         return mloc_errorInvalid;
     }
     uint32_t index = 0;
-    mlocResult r = mlocFindCatalogKey(&c.catalogs[0], key, length, &index);
+    mlocResult r = mlocCatalog_FindKey(&c.catalogs[0], key, length, &index);
     if (r == mloc_errorNotFound)
     {
         Report(resultOut, mloc_catalogMissingKey, c.count);
@@ -401,6 +401,6 @@ mlocResult mlocFormatCatalogKey(const mlocCatalogChain* chain, const char* key, 
     {
         return r;
     }
-    return mlocFormatCatalogMessage(chain, index, arguments, argumentCount, output, faults,
-                                    resultOut);
+    return mlocCatalogChain_FormatMessage(chain, index, arguments, argumentCount, output, faults,
+                                          resultOut);
 }

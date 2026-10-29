@@ -131,7 +131,7 @@ static void Line(const mlocDataSet* data, char** field, int n)
     }
     size_t size = 0;
     if (mlocParseLocale(field[0], strlen(field[0]), &locale).status != mloc_success ||
-        mlocInitCollator(&collator, data, &locale, nullptr) != mloc_success ||
+        mlocInitCollator(data, &locale, nullptr, &collator) != mloc_success ||
         mlocBuildIndex(&collator, data, &locale, &options, s_index, sizeof(s_index), &size) !=
             mloc_success)
     {
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("usage: conform_index collation.mloc < lines\n", stderr);
         return 2;

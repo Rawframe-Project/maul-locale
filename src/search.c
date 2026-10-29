@@ -100,8 +100,8 @@ static mlocResult Init(mlocSearcher* searcherOut, const mlocCollator* collator, 
     return mloc_success;
 }
 
-mlocResult mlocInitSearcher(mlocSearcher* searcherOut, const mlocCollator* collator,
-                            const char* pattern, size_t length, const mlocSearchOptions* options)
+mlocResult mlocInitSearcher(const mlocCollator* collator, const char* pattern, size_t length,
+                            const mlocSearchOptions* options, mlocSearcher* searcherOut)
 {
     if (pattern == nullptr && length > 0)
     {
@@ -111,9 +111,9 @@ mlocResult mlocInitSearcher(mlocSearcher* searcherOut, const mlocCollator* colla
                 mlocNfdUtf8((const uint8_t*)(pattern != nullptr ? pattern : ""), length), options);
 }
 
-mlocResult mlocInitSearcherUtf16(mlocSearcher* searcherOut, const mlocCollator* collator,
-                                 const uint16_t* pattern, size_t length,
-                                 const mlocSearchOptions* options)
+mlocResult mlocInitSearcherUtf16(const mlocCollator* collator, const uint16_t* pattern,
+                                 size_t length, const mlocSearchOptions* options,
+                                 mlocSearcher* searcherOut)
 {
     static const uint16_t s_empty[1] = {0};
     if (pattern == nullptr && length > 0)
@@ -330,8 +330,8 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
     }
 }
 
-mlocResult mlocFindNext(const mlocSearcher* searcher, const char* text, size_t length, size_t from,
-                        size_t* startOut, size_t* endOut)
+mlocResult mlocSearcher_FindNext(const mlocSearcher* searcher, const char* text, size_t length,
+                                 size_t from, size_t* startOut, size_t* endOut)
 {
     if (text == nullptr && length > 0)
     {
@@ -341,8 +341,8 @@ mlocResult mlocFindNext(const mlocSearcher* searcher, const char* text, size_t l
     return FindNext(searcher, t, mlocSearchAlign(t, from), startOut, endOut);
 }
 
-mlocResult mlocFindNextUtf16(const mlocSearcher* searcher, const uint16_t* text, size_t length,
-                             size_t from, size_t* startOut, size_t* endOut)
+mlocResult mlocSearcher_FindNextUtf16(const mlocSearcher* searcher, const uint16_t* text,
+                                      size_t length, size_t from, size_t* startOut, size_t* endOut)
 {
     static const uint16_t s_empty[1] = {0};
     if (text == nullptr && length > 0)

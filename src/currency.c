@@ -350,9 +350,10 @@ static mlocResult InitParts(Currency* c, const mlocDataSet* data, const mlocLoca
     return result;
 }
 
-mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const char* code, size_t codeLength,
-                                     const mlocCurrencyOptions* options)
+mlocResult mlocInitCurrencyFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                     const char* code, size_t codeLength,
+                                     const mlocCurrencyOptions* options,
+                                     mlocCurrencyFormatter* formatterOut)
 {
     static const mlocCurrencyOptions s_defaults = {0};
     const mlocCurrencyOptions* o = options == nullptr ? &s_defaults : options;
@@ -408,7 +409,7 @@ mlocResult mlocInitCurrencyFormatter(mlocCurrencyFormatter* formatterOut, const 
     if (name)
     {
         LongNameOuter(&c.outer, &texts, &names);
-        if (mlocInitPluralRules(&c.outer.rules, data, locale, mloc_pluralCardinal) < 0)
+        if (mlocInitPluralRules(data, locale, mloc_pluralCardinal, &c.outer.rules) < 0)
         {
             return mloc_errorNotFound;
         }
@@ -535,9 +536,9 @@ static void ParseOf(const Currency* c, bool any, ParseCurrency* out)
     out->chain = any ? &c->chain : nullptr;
 }
 
-mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter, const char* text,
-                             size_t length, mlocParseMode mode, uint8_t anyCurrency,
-                             mlocDecimal* decimalOut, char* codeOut, size_t* endOut)
+mlocResult mlocCurrencyFormatter_Parse(const mlocCurrencyFormatter* formatter, const char* text,
+                                       size_t length, mlocParseMode mode, uint8_t anyCurrency,
+                                       mlocDecimal* decimalOut, char* codeOut, size_t* endOut)
 {
     Currency c;
     if (!ReadCurrency(formatter, &c) || (text == nullptr && length > 0) || decimalOut == nullptr ||
@@ -555,8 +556,8 @@ mlocResult mlocParseCurrency(const mlocCurrencyFormatter* formatter, const char*
     return mlocParseWith(&c.formatter, &currency, text, length, mode, decimalOut, codeOut, endOut);
 }
 
-mlocResult mlocFormatCurrency(const mlocCurrencyFormatter* formatter, const mlocDecimal* decimal,
-                              mlocOutput* output)
+mlocResult mlocCurrencyFormatter_Format(const mlocCurrencyFormatter* formatter,
+                                        const mlocDecimal* decimal, mlocOutput* output)
 {
     Currency c;
     if (!ReadCurrency(formatter, &c))
@@ -566,8 +567,9 @@ mlocResult mlocFormatCurrency(const mlocCurrencyFormatter* formatter, const mloc
     return mlocFormatWith(&c.formatter, c.hasOuter ? &c.outer : nullptr, decimal, output);
 }
 
-mlocResult mlocFormatCurrencyRange(const mlocCurrencyFormatter* formatter, const mlocDecimal* start,
-                                   const mlocDecimal* end, mlocOutput* output)
+mlocResult mlocCurrencyFormatter_FormatRange(const mlocCurrencyFormatter* formatter,
+                                             const mlocDecimal* start, const mlocDecimal* end,
+                                             mlocOutput* output)
 {
     Currency c;
     if (!ReadCurrency(formatter, &c))

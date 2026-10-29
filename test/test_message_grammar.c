@@ -37,10 +37,10 @@ static bool Formats(const char* tag, const char* message, const mlocMessageArgum
     size_t bound = 0;
     mlocMessageError error;
     if (mlocParseLocale(tag, strlen(tag), &locale).status != mloc_success ||
-        mlocInitMessageFormatter(&formatter, &s_data, &locale, &options) != mloc_success ||
+        mlocInitMessageFormatter(&s_data, &locale, &options, &formatter) != mloc_success ||
         mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(&formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success)
     {
         printf("  [%s] does not compile and bind in %s\n", message, tag);
@@ -210,7 +210,7 @@ static bool Open(const char* path, uint8_t* buffer, size_t capacity, mlocData* o
     {
         fclose(file);
     }
-    if (size == 0 || size >= capacity || mlocOpenData(out, buffer, size) != mloc_success)
+    if (size == 0 || size >= capacity || mlocOpenData(buffer, size, out) != mloc_success)
     {
         fprintf(stderr, "test_message_grammar: cannot open %s\n", path);
         return false;

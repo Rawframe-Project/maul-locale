@@ -254,8 +254,8 @@ static bool ReadDuration(const mlocDurationFormatter* opaque, DurationFormat* f)
     return mlocValidDurationFormat(f);
 }
 
-mlocResult mlocFormatDuration(const mlocDurationFormatter* formatter,
-                              const mlocDurationValues* duration, mlocOutput* output)
+mlocResult mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
+                                        const mlocDurationValues* duration, mlocOutput* output)
 {
     DurationFormat f;
     static const Writing s_zero;

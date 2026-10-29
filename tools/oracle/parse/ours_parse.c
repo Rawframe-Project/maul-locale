@@ -58,7 +58,7 @@ int main(void)
             o.signDisplay = mloc_signAlways;
         }
         mlocNumberFormatter nf;
-        mlocResult r = mlocInitNumberFormatter(&nf, &d, &l, &o);
+        mlocResult r = mlocInitNumberFormatter(&d, &l, &o, &nf);
         printf("%s\t%s\t%s\t%s\t", f[0], f[1], f[2], f[3]);
         if (r < 0)
         {
@@ -67,9 +67,9 @@ int main(void)
         }
         mlocDecimal x;
         size_t end = 0;
-        r = mlocParseNumber(&nf, f[3], strlen(f[3]),
-                            strcmp(f[2], "strict") ? mloc_parseLenient : mloc_parseStrict, &x,
-                            &end);
+        r = mlocNumberFormatter_Parse(&nf, f[3], strlen(f[3]),
+                                      strcmp(f[2], "strict") ? mloc_parseLenient : mloc_parseStrict,
+                                      &x, &end);
         if (r == mloc_errorSyntax)
         {
             printf("fail\t%zu\n", end);

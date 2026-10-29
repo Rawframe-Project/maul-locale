@@ -41,7 +41,7 @@ A program reads the file into memory by its own means (a file, an asset bundle, 
 ```c
 mlocData sources[2];
 mlocDataSet set = {sources, 2};
-if (mlocOpenData(&sources[0], bytes, size) == mloc_success)
+if (mlocOpenData(bytes, size, &sources[0]) == mloc_success)
 {
     mlocOpenBuiltinData(&sources[1]);
     // set finds what the file has in it first, the rest built in
@@ -60,4 +60,4 @@ Time zone rules change several times a year. `mlocgen zonesfile <tzdb directory>
 
 ## Which locales a source has
 
-`mlocGetDataLocaleCount` and `mlocGetDataLocale` list the locales a source has data of their own for, as CLDR names them (597 in the compiled-in data, 219 in `units.mloc`); the others inherit theirs. Whether a locale is supported is a question for [language matching](locales.md#matching-a-users-languages): every lookup falls back along the locale's chain to root, so any well-formed locale gets an answer.
+`mlocData_GetLocaleCount` and `mlocData_GetLocale` list the locales a source has data of their own for, as CLDR names them (597 in the compiled-in data, 219 in `units.mloc`); the others inherit theirs. Whether a locale is supported is a question for [language matching](locales.md#matching-a-users-languages): every lookup falls back along the locale's chain to root, so any well-formed locale gets an answer.

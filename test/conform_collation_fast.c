@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     long size = f != nullptr && fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
     uint8_t* bytes = size > 0 && fseek(f, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     bool ok = bytes != nullptr && fread(bytes, 1, (size_t)size, f) == (size_t)size &&
-              mlocOpenData(&s_source, bytes, (size_t)size) == mloc_success;
+              mlocOpenData(bytes, (size_t)size, &s_source) == mloc_success;
     if (f != nullptr)
     {
         fclose(f);
@@ -153,13 +153,13 @@ int main(int argc, char** argv)
         return 1;
     }
     Print("und", &s_root);
-    for (size_t i = 0; i < mlocGetDataLocaleCount(&s_source); i++)
+    for (size_t i = 0; i < mlocData_GetLocaleCount(&s_source); i++)
     {
         const char* id = nullptr;
         size_t length = 0;
         uint32_t locale = 0;
         char base[64];
-        if (mlocGetDataLocale(&s_source, i, &id, &length) == mloc_success &&
+        if (mlocData_GetLocale(&s_source, i, &id, &length) == mloc_success &&
             mlocFindDataLocale(&view, id, length, &locale))
         {
             TagOf(id, length, base, sizeof(base));

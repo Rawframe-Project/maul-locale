@@ -186,8 +186,8 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     }
 }
 
-mlocResult mlocBindMessage(const mlocMessageFormatter* formatter, const void* message, size_t size,
-                           void* buffer, size_t capacity, size_t* sizeOut)
+mlocResult mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, const void* message,
+                                     size_t size, void* buffer, size_t capacity, size_t* sizeOut)
 {
     MessageFormatter f;
     BoundHeader h;

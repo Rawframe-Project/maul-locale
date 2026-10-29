@@ -76,8 +76,9 @@ static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocC
            (c == mloc_capitalizationStandAlone && (contexts & contextStandAlone) != 0);
 }
 
-mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const mlocRelativeOptions* options)
+mlocResult mlocInitRelativeFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                     const mlocRelativeOptions* options,
+                                     mlocRelativeFormatter* formatterOut)
 {
     static const mlocRelativeOptions s_defaults = {0};
     const mlocRelativeOptions* o = options != nullptr ? options : &s_defaults;
@@ -106,7 +107,7 @@ mlocResult mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const 
                                                   &n->compactTable, &n->compactPatterns)
                             : mlocInitNumberCore(&n->core, data, locale, mloc_numberDecimal);
     mlocPluralRules rules;
-    if (result < 0 || mlocInitPluralRules(&rules, data, locale, mloc_pluralCardinal) < 0)
+    if (result < 0 || mlocInitPluralRules(data, locale, mloc_pluralCardinal, &rules) < 0)
     {
         return result < 0 ? result : mloc_errorNotFound;
     }
@@ -403,8 +404,9 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
     return r;
 }
 
-mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter, const mlocDecimal* amount,
-                              mlocRelativeUnit unit, mlocOutput* output)
+mlocResult mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter,
+                                        const mlocDecimal* amount, mlocRelativeUnit unit,
+                                        mlocOutput* output)
 {
     RelativeFormat f;
     if (!mlocReadRelativeFormat(formatter, &f) || output == nullptr ||

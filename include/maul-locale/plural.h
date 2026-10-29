@@ -48,20 +48,20 @@ extern "C"
     /// component: "pt-PT" has its own, "en-GB" takes "en"'s, and a
     /// language CLDR does not name takes root's (other for everything).
     ///
-    /// @param rulesOut  Receives the rules; left unchanged on failure.
     /// @param data      The data with the plural units and the parents.
     /// @param locale    The locale, canonicalized.
     /// @param type      Cardinal or ordinal.
+    /// @param rulesOut  Receives the rules; left unchanged on failure.
     /// @return mloc_success; mloc_fellBack when the rules are those of a
     ///         locale it falls back to; mloc_errorNotFound for data
     ///         without them; mloc_errorInvalid for a null pointer or
     ///         another type.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitPluralRules(mlocPluralRules* rulesOut,
-                                                           const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitPluralRules(const mlocDataSet* data,
                                                            const mlocLocale* locale,
-                                                           mlocPluralType type);
+                                                           mlocPluralType type,
+                                                           mlocPluralRules* rulesOut);
 
     /// Selects the category of a decimal, by the digits it shows: in
     /// English 1 is one and 1.0 is other. Infinity and NaN are other.
@@ -73,9 +73,9 @@ extern "C"
     ///         rules or a decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocSelectPlural(const mlocPluralRules* rules,
-                                                        const mlocDecimal* decimal,
-                                                        mlocPluralCategory* categoryOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocPluralRules_Select(const mlocPluralRules* rules,
+                                                              const mlocDecimal* decimal,
+                                                              mlocPluralCategory* categoryOut);
 
     /// Selects the category of an integer, as that of its decimal with no
     /// fraction digits, without making the decimal.
@@ -87,9 +87,8 @@ extern "C"
     ///         the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralInteger(const mlocPluralRules* rules,
-                                                               int64_t value,
-                                                               mlocPluralCategory* categoryOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocPluralRules_SelectInteger(
+        const mlocPluralRules* rules, int64_t value, mlocPluralCategory* categoryOut);
 
     /// Selects the category of plural operands, for a compact number
     /// whose exponent (c) the caller sets: in French 1c6 ("1 M") is many.
@@ -102,9 +101,9 @@ extern "C"
     ///         the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralOperands(const mlocPluralRules* rules,
-                                                                const mlocPluralOperands* operands,
-                                                                mlocPluralCategory* categoryOut);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocPluralRules_SelectOperands(const mlocPluralRules* rules, const mlocPluralOperands* operands,
+                                   mlocPluralCategory* categoryOut);
 
     /// Selects the category of a range from its ends' categories, by the
     /// locale's table (English days from 1 to 2 are other); where CLDR has no
@@ -118,10 +117,10 @@ extern "C"
     ///         rules, rules the library did not make, or another category.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocSelectPluralRange(const mlocPluralRules* rules,
-                                                             mlocPluralCategory start,
-                                                             mlocPluralCategory end,
-                                                             mlocPluralCategory* categoryOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocPluralRules_SelectRange(const mlocPluralRules* rules,
+                                                                   mlocPluralCategory start,
+                                                                   mlocPluralCategory end,
+                                                                   mlocPluralCategory* categoryOut);
 
     /// Gives the categories a locale's rules use, as bits 1 << category:
     /// one and other for English cardinals, all six for Arabic's.
@@ -132,8 +131,8 @@ extern "C"
     ///         the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetPluralCategories(const mlocPluralRules* rules,
-                                                               uint32_t* categoriesOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocPluralRules_GetCategories(const mlocPluralRules* rules,
+                                                                     uint32_t* categoriesOut);
 
 #ifdef __cplusplus
 }

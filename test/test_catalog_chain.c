@@ -80,9 +80,9 @@ static bool OpenOne(const char* locale, uint8_t** bytes, mlocCatalog* catalog,
     size_t size = 0;
     *bytes = (uint8_t*)FileRead(path, &size);
     mlocLocale parsed;
-    return *bytes != nullptr && mlocOpenCatalog(catalog, *bytes, size) == mloc_success &&
+    return *bytes != nullptr && mlocOpenCatalog(*bytes, size, catalog) == mloc_success &&
            mlocParseLocale(locale, strlen(locale), &parsed).status == mloc_success &&
-           mlocInitMessageFormatter(formatter, &s_data, &parsed, nullptr) == mloc_success;
+           mlocInitMessageFormatter(&s_data, &parsed, nullptr, formatter) == mloc_success;
 }
 
 // The chain fr-CA, fr, en.
@@ -113,8 +113,8 @@ static bool Says(const mlocCatalogChain* chain, const char* key, int64_t n, cons
     mlocOutput output = {buffer, sizeof(buffer), 0, nullptr, nullptr};
     mlocMessageArgument argument = {"n", 1, {mloc_messageValueInteger, 0, {.integer = n}}};
     mlocCatalogResult result = {mloc_catalogFailed, 99};
-    mlocResult r =
-        mlocFormatCatalogKey(chain, key, strlen(key), &argument, 1, &output, nullptr, &result);
+    mlocResult r = mlocCatalogChain_FormatKey(chain, key, strlen(key), &argument, 1, &output,
+                                              nullptr, &result);
     bool same = r == expected && output.length == strlen(text) &&
                 memcmp(buffer, text, output.length) == 0 && result.reason == reason &&
                 result.position == position;
@@ -149,22 +149,22 @@ static void TestReasons(Set* s)
     uint8_t* cache = malloc(size + 1);
     // Bound lazily, at an odd address.
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache + 1,
-                                   size) == mloc_success &&
+              mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache + 1, size,
+                                   &chain) == mloc_success &&
               EveryReason(&chain) && EveryReason(&chain),
           "each key's text and reason, bound lazily, then from the cache");
     // Bound at once into the measured size: it all fits, and the texts
     // are the same.
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache, size) ==
+              mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache, size, &chain) ==
                   mloc_success &&
-              mlocBindCatalogChain(&chain) == mloc_success && EveryReason(&chain) &&
-              mlocBindCatalogChain(&chain) == mloc_success,
+              mlocCatalogChain_Bind(&chain) == mloc_success && EveryReason(&chain) &&
+              mlocCatalogChain_Bind(&chain) == mloc_success,
           "a chain bound at once in the measured cache");
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache,
-                                   size / 2) == mloc_success &&
-              mlocBindCatalogChain(&chain) == mloc_errorCapacity &&
+              mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache, size / 2,
+                                   &chain) == mloc_success &&
+              mlocCatalogChain_Bind(&chain) == mloc_errorCapacity &&
               Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0),
           "half the room: not every message fits, those bound still serve");
     free(cache);
@@ -184,7 +184,7 @@ static void TestUnbound(Set* s)
           "a chain with a formatter not made is measured");
     uint8_t* cache = malloc(size);
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, formatters, chainCount, cache, size) ==
+              mlocInitCatalogChain(s->catalogs, formatters, chainCount, cache, size, &chain) ==
                   mloc_success &&
               Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0) &&
               Says(&chain, "wide", 0, "Wide", mloc_success, mloc_catalogSource, 2) &&
@@ -192,7 +192,7 @@ static void TestUnbound(Set* s)
           "a message that does not bind falls to the source's");
     memset(&formatters[2], 0, sizeof(formatters[2]));
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, formatters, chainCount, cache, size) ==
+              mlocInitCatalogChain(s->catalogs, formatters, chainCount, cache, size, &chain) ==
                   mloc_success &&
               Says(&chain, "broken", 0, "broken", mloc_success, mloc_catalogFailed, 3) &&
               Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0),
@@ -222,7 +222,7 @@ static void TestWithoutSource(Set* s)
           "a chain without its source is measured");
     uint8_t* cache = malloc(size);
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, catalogs, formatters, 2, cache, size) == mloc_success &&
+              mlocInitCatalogChain(catalogs, formatters, 2, cache, size, &chain) == mloc_success &&
               Says(&chain, "bye", 0, "bye", mloc_success, mloc_catalogAbsent, 2) &&
               Says(&chain, "wide", 0, "wide", mloc_success, mloc_catalogFailed, 2) &&
               Says(&chain, "hello", 0, "Allo", mloc_success, mloc_catalogFound, 0),
@@ -248,8 +248,8 @@ static void TestLongest(Set* s)
     uint8_t* cache = malloc(size > 0 ? size : 1);
     mlocCatalogChain chain;
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, catalogs, formatters, MLOC_MAX_CATALOG_CHAIN, cache,
-                                   size) == mloc_success &&
+              mlocInitCatalogChain(catalogs, formatters, MLOC_MAX_CATALOG_CHAIN, cache, size,
+                                   &chain) == mloc_success &&
               Says(&chain, "bye", 0, "Goodbye", mloc_success, mloc_catalogFallback, 2) &&
               Says(&chain, "nope", 0, "nope", mloc_success, mloc_catalogMissingKey,
                    MLOC_MAX_CATALOG_CHAIN),
@@ -264,13 +264,13 @@ static void TestCacheFull(Set* s)
     uint8_t* cache = malloc(slots);
     mlocCatalogChain chain;
     CHECK(cache != nullptr &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache,
-                                   slots - 1) == mloc_errorCapacity &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount, cache, slots) ==
+              mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache, slots - 1,
+                                   &chain) == mloc_errorCapacity &&
+              mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache, slots, &chain) ==
                   mloc_success &&
               Says(&chain, "hello", 0, "hello", mloc_success, mloc_catalogCacheFull, 3) &&
               Says(&chain, "nope", 0, "nope", mloc_success, mloc_catalogMissingKey, 3) &&
-              mlocBindCatalogChain(&chain) == mloc_errorCapacity,
+              mlocCatalogChain_Bind(&chain) == mloc_errorCapacity,
           "a cache with no room writes keys, refuses no lookup");
     free(cache);
 }
@@ -289,8 +289,8 @@ static void TestOutputs(Set* s)
     mlocCatalogChain chain;
     (void)mlocMeasureCatalogChain(s->catalogs, s->formatters, chainCount, &size);
     uint8_t* cache = malloc(size);
-    if (cache == nullptr || mlocInitCatalogChain(&chain, s->catalogs, s->formatters, chainCount,
-                                                 cache, size) != mloc_success)
+    if (cache == nullptr || mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache,
+                                                 size, &chain) != mloc_success)
     {
         CHECK(false, "a chain is made");
         free(cache);
@@ -299,42 +299,43 @@ static void TestOutputs(Set* s)
     char small[3];
     mlocOutput output = {small, sizeof(small), 0, nullptr, nullptr};
     mlocResult key =
-        mlocFormatCatalogKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr);
+        mlocCatalogChain_FormatKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr);
     size_t keyLength = output.length;
-    mlocResult text = mlocFormatCatalogKey(&chain, "bye", 3, nullptr, 0, &output, nullptr, nullptr);
+    mlocResult text =
+        mlocCatalogChain_FormatKey(&chain, "bye", 3, nullptr, 0, &output, nullptr, nullptr);
     CHECK(key == mloc_errorCapacity && keyLength == 7 && text == mloc_errorCapacity &&
               output.length == 7,
           "a key or a text too long for the buffer gives the length needed");
     char buffer[32];
     size_t seen[3] = {0, 0, 0};
     output = (mlocOutput){buffer, sizeof(buffer), 0, Part, seen};
-    CHECK(mlocFormatCatalogKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr) ==
+    CHECK(mlocCatalogChain_FormatKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_success &&
               seen[0] == 1 && seen[1] == mloc_messagePartFallback && seen[2] == 7,
           "a key written is one fallback part");
     output = (mlocOutput){nullptr, 0, 0, nullptr, nullptr};
-    CHECK(mlocFormatCatalogKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr) ==
+    CHECK(mlocCatalogChain_FormatKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_errorCapacity &&
               output.length == 7 &&
-              mlocFormatCatalogKey(&chain, "", 0, nullptr, 0, &output, nullptr, nullptr) ==
+              mlocCatalogChain_FormatKey(&chain, "", 0, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_success &&
               output.length == 0,
           "a key measured; the empty key written as nothing");
     mlocCatalogChain zero;
     memset(&zero, 0, sizeof(zero));
     output = (mlocOutput){buffer, sizeof(buffer), 0, nullptr, nullptr};
-    CHECK(mlocFormatCatalogMessage(&chain, 6, nullptr, 0, &output, nullptr, nullptr) ==
+    CHECK(mlocCatalogChain_FormatMessage(&chain, 6, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_errorInvalid &&
-              mlocFormatCatalogMessage(&zero, 0, nullptr, 0, &output, nullptr, nullptr) ==
+              mlocCatalogChain_FormatMessage(&zero, 0, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_errorInvalid &&
-              mlocFormatCatalogMessage(&chain, 0, nullptr, 0, nullptr, nullptr, nullptr) ==
+              mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, nullptr, nullptr, nullptr) ==
                   mloc_errorInvalid &&
-              mlocFormatCatalogKey(&chain, nullptr, 1, nullptr, 0, &output, nullptr, nullptr) ==
+              mlocCatalogChain_FormatKey(&chain, nullptr, 1, nullptr, 0, &output, nullptr,
+                                         nullptr) == mloc_errorInvalid &&
+              mlocCatalogChain_FormatKey(&zero, "a", 1, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_errorInvalid &&
-              mlocFormatCatalogKey(&zero, "a", 1, nullptr, 0, &output, nullptr, nullptr) ==
-                  mloc_errorInvalid &&
-              mlocBindCatalogChain(&zero) == mloc_errorInvalid &&
-              mlocBindCatalogChain(nullptr) == mloc_errorInvalid,
+              mlocCatalogChain_Bind(&zero) == mloc_errorInvalid &&
+              mlocCatalogChain_Bind(nullptr) == mloc_errorInvalid,
           "an index past the keys, a chain not made, null pointers");
     free(cache);
 }
@@ -350,24 +351,24 @@ static void TestRefusals(Set* s)
     mlocCatalog zero;
     memset(&zero, 0, sizeof(zero));
     CHECK(opened &&
-              mlocInitCatalogChain(&chain, other.catalogs, other.formatters, 2, cache,
-                                   sizeof(cache)) == mloc_errorInvalid &&
+              mlocInitCatalogChain(other.catalogs, other.formatters, 2, cache, sizeof(cache),
+                                   &chain) == mloc_errorInvalid &&
               mlocMeasureCatalogChain(other.catalogs, other.formatters, 2, &size) ==
                   mloc_errorInvalid,
           "catalogs of different sets");
-    CHECK(mlocInitCatalogChain(&chain, s->catalogs, s->formatters, 0, cache, sizeof(cache)) ==
+    CHECK(mlocInitCatalogChain(s->catalogs, s->formatters, 0, cache, sizeof(cache), &chain) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, MLOC_MAX_CATALOG_CHAIN + 1,
-                                   cache, sizeof(cache)) == mloc_errorLimit &&
-              mlocInitCatalogChain(nullptr, s->catalogs, s->formatters, 1, cache, sizeof(cache)) ==
+              mlocInitCatalogChain(s->catalogs, s->formatters, MLOC_MAX_CATALOG_CHAIN + 1, cache,
+                                   sizeof(cache), &chain) == mloc_errorLimit &&
+              mlocInitCatalogChain(s->catalogs, s->formatters, 1, cache, sizeof(cache), nullptr) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, nullptr, s->formatters, 1, cache, sizeof(cache)) ==
+              mlocInitCatalogChain(nullptr, s->formatters, 1, cache, sizeof(cache), &chain) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, s->catalogs, nullptr, 1, cache, sizeof(cache)) ==
+              mlocInitCatalogChain(s->catalogs, nullptr, 1, cache, sizeof(cache), &chain) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, s->catalogs, s->formatters, 1, nullptr, 0) ==
+              mlocInitCatalogChain(s->catalogs, s->formatters, 1, nullptr, 0, &chain) ==
                   mloc_errorInvalid &&
-              mlocInitCatalogChain(&chain, &zero, s->formatters, 1, cache, sizeof(cache)) ==
+              mlocInitCatalogChain(&zero, s->formatters, 1, cache, sizeof(cache), &chain) ==
                   mloc_errorInvalid &&
               mlocMeasureCatalogChain(s->catalogs, s->formatters, 1, nullptr) == mloc_errorInvalid,
           "counts out of range, null pointers, a catalog not opened");

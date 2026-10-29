@@ -209,7 +209,7 @@ mlocMessageFaultKind mlocSetGrammarFrom(void* context, const uint8_t* name, size
 bool mlocPrepareGrammar(const mlocDataSet* data, const mlocLocale* locale, PreparedGrammar* out)
 {
     memset(out, 0, offsetof(PreparedGrammar, inflector));
-    out->made = mlocInitInflector(&out->inflector, data, locale) == mloc_success ? 1 : 0;
+    out->made = mlocInitInflector(data, locale, &out->inflector) == mloc_success ? 1 : 0;
     return out->made != 0;
 }
 
@@ -236,16 +236,16 @@ mlocMessageFaultKind mlocWriteGrammarValue(const GrammarValue* value,
     }
     if (!value->isNumber)
     {
-        return FaultOf(mlocInflectText(&prepared->inflector, (const char*)value->text,
-                                       value->length, &value->request, output));
+        return FaultOf(mlocInflector_InflectText(&prepared->inflector, (const char*)value->text,
+                                                 value->length, &value->request, output));
     }
     PreparedNumber number;
     if (!mlocPrepareNumber(&value->number, data, locale, &number) || number.kind != preparedNumber)
     {
         return mloc_messageFaultUnsupportedOperation;
     }
-    return FaultOf(mlocInflectNumber(&prepared->inflector, &number.formatter.number,
-                                     &value->number.decimal, &value->request, output));
+    return FaultOf(mlocInflector_InflectNumber(&prepared->inflector, &number.formatter.number,
+                                               &value->number.decimal, &value->request, output));
 }
 
 // A person's gender by its name; -1 for another text.

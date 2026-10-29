@@ -33,10 +33,10 @@ int main(void)
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     if (mlocParseLocale("de-CH", 5, &locale).status != mloc_success ||
-        mlocInitNumberFormatter(&formatter, &set, &locale, NULL) < 0 ||
+        mlocInitNumberFormatter(&set, &locale, NULL, &formatter) < 0 ||
         mlocMakeShortestDecimal(1234567.891, &value) != mloc_success ||
-        mlocFormatNumber(&formatter, &value, &output) != mloc_success || output.length != 13 ||
-        memcmp(text, "1'234'567.891", 13) != 0)
+        mlocNumberFormatter_Format(&formatter, &value, &output) != mloc_success ||
+        output.length != 13 || memcmp(text, "1'234'567.891", 13) != 0)
     {
         printf("FAIL: 1234567.891 in de-CH\n");
         failures += 1;

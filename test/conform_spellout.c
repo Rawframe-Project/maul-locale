@@ -33,7 +33,7 @@ static bool OpenFile(const char* path, mlocData* data)
     }
     size_t size = fread(s_bytes, 1, sizeof(s_bytes), file);
     fclose(file);
-    return size < sizeof(s_bytes) && mlocOpenData(data, s_bytes, size) == mloc_success;
+    return size < sizeof(s_bytes) && mlocOpenData(s_bytes, size, data) == mloc_success;
 }
 
 // The locale of a file's name ("sr_Latn.ssv" is sr-Latn).
@@ -96,10 +96,10 @@ static bool CheckLine(const mlocDataSet* data, const mlocLocale* locale, char* l
     static char s_text[maxLine];
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
     const char* name = fields[1][0] != '\0' ? fields[1] : nullptr;
-    if (mlocInitSpelloutFormatter(&formatter, data, locale, name,
-                                  name != nullptr ? strlen(name) : 0, nullptr) < 0 ||
+    if (mlocInitSpelloutFormatter(data, locale, name, name != nullptr ? strlen(name) : 0, nullptr,
+                                  &formatter) < 0 ||
         !ReadNumber(fields[2], &decimal) ||
-        mlocFormatSpellout(&formatter, &decimal, &output) != mloc_success ||
+        mlocSpelloutFormatter_Format(&formatter, &decimal, &output) != mloc_success ||
         output.length != strlen(fields[3]) || memcmp(s_text, fields[3], output.length) != 0)
     {
         printf("%s: %s %s: got \"%.*s\", expected \"%s\"\n", path, fields[1], fields[2],

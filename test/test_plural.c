@@ -19,7 +19,7 @@ static bool Rules(const char* id, mlocPluralType type, mlocPluralRules* rules)
 {
     mlocLocale locale;
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitPluralRules(rules, &s_data, &locale, type) >= 0;
+           mlocInitPluralRules(&s_data, &locale, type, rules) >= 0;
 }
 
 // Whether a number, as text, takes the category in a locale.
@@ -31,7 +31,8 @@ static bool Takes(const char* id, mlocPluralType type, const char* number,
     mlocPluralCategory category = (mlocPluralCategory)-1;
     return Rules(id, type, &rules) &&
            mlocParseDecimal(number, strlen(number), &decimal).status == mloc_success &&
-           mlocSelectPlural(&rules, &decimal, &category) == mloc_success && category == expected;
+           mlocPluralRules_Select(&rules, &decimal, &category) == mloc_success &&
+           category == expected;
 }
 
 #define CARDINAL(id, number, category) Takes(id, mloc_pluralCardinal, number, category)
@@ -76,8 +77,8 @@ static bool IntegerAgrees(const mlocPluralRules* cardinal, const mlocPluralRules
     {
         mlocPluralCategory fromDecimal = (mlocPluralCategory)-1;
         mlocPluralCategory fromInteger = (mlocPluralCategory)-2;
-        if (mlocSelectPlural(both[i], &decimal, &fromDecimal) != mloc_success ||
-            mlocSelectPluralInteger(both[i], value, &fromInteger) != mloc_success ||
+        if (mlocPluralRules_Select(both[i], &decimal, &fromDecimal) != mloc_success ||
+            mlocPluralRules_SelectInteger(both[i], value, &fromInteger) != mloc_success ||
             fromDecimal != fromInteger)
         {
             return false;
@@ -116,7 +117,7 @@ static void TestInteger(void)
     mlocPluralRules rules;
     mlocPluralCategory category = (mlocPluralCategory)-1;
     CHECK(Rules("ru", mloc_pluralCardinal, &rules) &&
-              mlocSelectPluralInteger(&rules, -21, &category) == mloc_success &&
+              mlocPluralRules_SelectInteger(&rules, -21, &category) == mloc_success &&
               category == mloc_pluralOne,
           "the sign is no operand");
 }
@@ -142,18 +143,18 @@ static void TestCompact(void)
               mlocGetPluralOperands(&decimal, &operands) == mloc_success,
           "French and 1c6");
     operands.c = 6;
-    CHECK(mlocSelectPluralOperands(&rules, &operands, &category) == mloc_success &&
+    CHECK(mlocPluralRules_SelectOperands(&rules, &operands, &category) == mloc_success &&
               category == mloc_pluralMany,
           "1 M is many");
     CHECK(mlocParseDecimal("1e3", 3, &decimal).status == mloc_success &&
               mlocGetPluralOperands(&decimal, &operands) == mloc_success,
           "and 1c3");
     operands.c = 3;
-    CHECK(mlocSelectPluralOperands(&rules, &operands, &category) == mloc_success &&
+    CHECK(mlocPluralRules_SelectOperands(&rules, &operands, &category) == mloc_success &&
               category == mloc_pluralOther,
           "1 k is other");
     mlocDecimal infinity = {.kind = mloc_decimalInfinity};
-    CHECK(mlocSelectPlural(&rules, &infinity, &category) == mloc_success &&
+    CHECK(mlocPluralRules_Select(&rules, &infinity, &category) == mloc_success &&
               category == mloc_pluralOther,
           "infinity is other");
 }
@@ -163,20 +164,20 @@ static void TestFallback(void)
     mlocLocale locale;
     mlocPluralRules rules;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitPluralRules(&rules, &s_data, &locale, mloc_pluralCardinal) == mloc_success,
+              mlocInitPluralRules(&s_data, &locale, mloc_pluralCardinal, &rules) == mloc_success,
           "en has its own");
     CHECK(mlocParseLocale("en-GB", 5, &locale).status == mloc_success &&
-              mlocInitPluralRules(&rules, &s_data, &locale, mloc_pluralCardinal) == mloc_fellBack,
+              mlocInitPluralRules(&s_data, &locale, mloc_pluralCardinal, &rules) == mloc_fellBack,
           "en-GB falls back to en");
     CHECK(mlocParseLocale("sr-Latn", 7, &locale).status == mloc_success &&
-              mlocInitPluralRules(&rules, &s_data, &locale, mloc_pluralCardinal) == mloc_fellBack,
+              mlocInitPluralRules(&s_data, &locale, mloc_pluralCardinal, &rules) == mloc_fellBack,
           "sr-Latn to sr in the plurals component");
     CHECK(mlocParseLocale("qaa", 3, &locale).status == mloc_success &&
-              mlocInitPluralRules(&rules, &s_data, &locale, mloc_pluralOrdinal) == mloc_fellBack,
+              mlocInitPluralRules(&s_data, &locale, mloc_pluralOrdinal, &rules) == mloc_fellBack,
           "a language CLDR does not name takes root's");
     CHECK(CARDINAL("qaa", "1", mloc_pluralOther), "which are other");
     mlocDataSet empty = {nullptr, 0};
-    CHECK(mlocInitPluralRules(&rules, &empty, &locale, mloc_pluralCardinal) == mloc_errorNotFound,
+    CHECK(mlocInitPluralRules(&empty, &locale, mloc_pluralCardinal, &rules) == mloc_errorNotFound,
           "data without plurals");
 }
 
@@ -186,7 +187,7 @@ static bool Range(const char* id, mlocPluralCategory start, mlocPluralCategory e
     mlocPluralRules rules;
     mlocPluralCategory category = (mlocPluralCategory)-1;
     return Rules(id, mloc_pluralCardinal, &rules) &&
-           mlocSelectPluralRange(&rules, start, end, &category) == mloc_success &&
+           mlocPluralRules_SelectRange(&rules, start, end, &category) == mloc_success &&
            category == expected;
 }
 
@@ -202,16 +203,16 @@ static void TestRanges(void)
     mlocPluralRules ordinal;
     mlocPluralCategory category;
     CHECK(Rules("en", mloc_pluralOrdinal, &ordinal) &&
-              mlocSelectPluralRange(&ordinal, mloc_pluralOne, mloc_pluralOther, &category) ==
+              mlocPluralRules_SelectRange(&ordinal, mloc_pluralOne, mloc_pluralOther, &category) ==
                   mloc_errorInvalid,
           "ranges are cardinal");
     mlocPluralRules rules;
     CHECK(Rules("en", mloc_pluralCardinal, &rules) &&
-              mlocSelectPluralRange(&rules, (mlocPluralCategory)6, mloc_pluralOther, &category) ==
-                  mloc_errorInvalid &&
-              mlocSelectPluralRange(&rules, mloc_pluralOne, (mlocPluralCategory)6, &category) ==
-                  mloc_errorInvalid &&
-              mlocSelectPluralRange(&rules, mloc_pluralOne, mloc_pluralOne, nullptr) ==
+              mlocPluralRules_SelectRange(&rules, (mlocPluralCategory)6, mloc_pluralOther,
+                                          &category) == mloc_errorInvalid &&
+              mlocPluralRules_SelectRange(&rules, mloc_pluralOne, (mlocPluralCategory)6,
+                                          &category) == mloc_errorInvalid &&
+              mlocPluralRules_SelectRange(&rules, mloc_pluralOne, mloc_pluralOne, nullptr) ==
                   mloc_errorInvalid,
           "another category, or no output");
 }
@@ -221,19 +222,20 @@ static void TestCategories(void)
     mlocPluralRules rules;
     uint32_t categories = 0;
     CHECK(Rules("en", mloc_pluralCardinal, &rules) &&
-              mlocGetPluralCategories(&rules, &categories) == mloc_success &&
+              mlocPluralRules_GetCategories(&rules, &categories) == mloc_success &&
               categories == (1u << mloc_pluralOne | 1u << mloc_pluralOther),
           "English cardinals: one and other");
     CHECK(Rules("ar", mloc_pluralCardinal, &rules) &&
-              mlocGetPluralCategories(&rules, &categories) == mloc_success && categories == 0x3F,
+              mlocPluralRules_GetCategories(&rules, &categories) == mloc_success &&
+              categories == 0x3F,
           "Arabic's: all six");
     CHECK(Rules("en", mloc_pluralOrdinal, &rules) &&
-              mlocGetPluralCategories(&rules, &categories) == mloc_success &&
+              mlocPluralRules_GetCategories(&rules, &categories) == mloc_success &&
               categories == (1u << mloc_pluralOne | 1u << mloc_pluralTwo | 1u << mloc_pluralFew |
                              1u << mloc_pluralOther),
           "English ordinals");
-    CHECK(mlocGetPluralCategories(&rules, nullptr) == mloc_errorInvalid &&
-              mlocGetPluralCategories(nullptr, &categories) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_GetCategories(&rules, nullptr) == mloc_errorInvalid &&
+              mlocPluralRules_GetCategories(nullptr, &categories) == mloc_errorInvalid,
           "null pointers");
 }
 
@@ -246,53 +248,54 @@ static void TestRefusals(void)
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocParseDecimal("1", 1, &decimal).status == mloc_success,
           "a locale and a number");
-    CHECK(mlocInitPluralRules(nullptr, &s_data, &locale, mloc_pluralCardinal) ==
+    CHECK(mlocInitPluralRules(&s_data, &locale, mloc_pluralCardinal, nullptr) ==
                   mloc_errorInvalid &&
-              mlocInitPluralRules(&rules, nullptr, &locale, mloc_pluralCardinal) ==
+              mlocInitPluralRules(nullptr, &locale, mloc_pluralCardinal, &rules) ==
                   mloc_errorInvalid &&
-              mlocInitPluralRules(&rules, &s_data, nullptr, mloc_pluralCardinal) ==
+              mlocInitPluralRules(&s_data, nullptr, mloc_pluralCardinal, &rules) ==
                   mloc_errorInvalid &&
-              mlocInitPluralRules(&rules, &s_data, &locale, (mlocPluralType)2) == mloc_errorInvalid,
+              mlocInitPluralRules(&s_data, &locale, (mlocPluralType)2, &rules) == mloc_errorInvalid,
           "init refusals");
     mlocPluralRules zero = {0};
-    CHECK(mlocSelectPlural(&zero, &decimal, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_Select(&zero, &decimal, &category) == mloc_errorInvalid,
           "rules the library did not make");
     CHECK(Rules("en", mloc_pluralCardinal, &rules), "English rules");
     mlocPluralRules spoiled = rules;
     memset(&spoiled, 0xEE, 1);
-    CHECK(mlocSelectPlural(&spoiled, &decimal, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_Select(&spoiled, &decimal, &category) == mloc_errorInvalid,
           "a rule index past the sets");
     spoiled = rules;
     ((uint8_t*)&spoiled)[1] = 1;
-    CHECK(mlocSelectPlural(&spoiled, &decimal, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_Select(&spoiled, &decimal, &category) == mloc_errorInvalid,
           "a cardinal rule called ordinal");
     spoiled = rules;
     ((uint8_t*)&spoiled)[2] = 2;
-    CHECK(mlocSelectPlural(&spoiled, &decimal, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_Select(&spoiled, &decimal, &category) == mloc_errorInvalid,
           "a range flag past 1");
     spoiled = rules;
     ((uint8_t*)&spoiled)[4] = 9;
-    CHECK(mlocSelectPluralRange(&spoiled, mloc_pluralZero, mloc_pluralZero, &category) ==
+    CHECK(mlocPluralRules_SelectRange(&spoiled, mloc_pluralZero, mloc_pluralZero, &category) ==
                   mloc_errorInvalid &&
-              mlocSelectPluralRange(&spoiled, mloc_pluralZero, mloc_pluralOne, &category) ==
+              mlocPluralRules_SelectRange(&spoiled, mloc_pluralZero, mloc_pluralOne, &category) ==
                   mloc_success,
           "a range table entry with no category, where it is read");
-    CHECK(mlocSelectPlural(&rules, nullptr, &category) == mloc_errorInvalid &&
-              mlocSelectPlural(&rules, &decimal, nullptr) == mloc_errorInvalid &&
-              mlocSelectPlural(nullptr, &decimal, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_Select(&rules, nullptr, &category) == mloc_errorInvalid &&
+              mlocPluralRules_Select(&rules, &decimal, nullptr) == mloc_errorInvalid &&
+              mlocPluralRules_Select(nullptr, &decimal, &category) == mloc_errorInvalid,
           "select refusals");
     mlocDecimal madeUp = decimal;
     madeUp.negative = 2;
-    CHECK(mlocSelectPlural(&rules, &madeUp, &category) == mloc_errorInvalid, "a made-up decimal");
-    CHECK(mlocSelectPluralInteger(&rules, 1, nullptr) == mloc_errorInvalid &&
-              mlocSelectPluralInteger(nullptr, 1, &category) == mloc_errorInvalid &&
-              mlocSelectPluralInteger(&zero, 1, &category) == mloc_errorInvalid &&
-              mlocSelectPluralInteger(&spoiled, 1, &category) == mloc_success,
+    CHECK(mlocPluralRules_Select(&rules, &madeUp, &category) == mloc_errorInvalid,
+          "a made-up decimal");
+    CHECK(mlocPluralRules_SelectInteger(&rules, 1, nullptr) == mloc_errorInvalid &&
+              mlocPluralRules_SelectInteger(nullptr, 1, &category) == mloc_errorInvalid &&
+              mlocPluralRules_SelectInteger(&zero, 1, &category) == mloc_errorInvalid &&
+              mlocPluralRules_SelectInteger(&spoiled, 1, &category) == mloc_success,
           "integer refusals");
     mlocPluralOperands operands = {0};
-    CHECK(mlocSelectPluralOperands(&rules, nullptr, &category) == mloc_errorInvalid &&
-              mlocSelectPluralOperands(&rules, &operands, nullptr) == mloc_errorInvalid &&
-              mlocSelectPluralOperands(&zero, &operands, &category) == mloc_errorInvalid,
+    CHECK(mlocPluralRules_SelectOperands(&rules, nullptr, &category) == mloc_errorInvalid &&
+              mlocPluralRules_SelectOperands(&rules, &operands, nullptr) == mloc_errorInvalid &&
+              mlocPluralRules_SelectOperands(&zero, &operands, &category) == mloc_errorInvalid,
           "operand refusals");
 }
 

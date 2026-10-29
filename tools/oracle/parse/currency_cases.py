@@ -5,7 +5,7 @@
 
 currency_cases.py LOCALES FORMATTER NAMES OUT: for each locale of LOCALES,
 twelve currencies, four displays (symbol, narrow, code, name) and three
-values, the text FORMATTER (ours_cfmt, mlocFormatCurrency) writes and its
+values, the text FORMATTER (ours_cfmt, mlocCurrencyFormatter_Format) writes and its
 variants, parsed with a formatter of the same currency (any 0 and 1) and
 of another (any 1), in both modes: "locale code mode any text" lines.
 """

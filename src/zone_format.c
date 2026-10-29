@@ -714,8 +714,8 @@ bool mlocZoneFormatSound(const ZoneFormat* f)
 
 static_assert(sizeof(ZoneFormat) <= sizeof(mlocZoneFormatter), "a zone formatter fits its value");
 
-mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut, const mlocDataSet* data,
-                                 const mlocLocale* locale, mlocZoneStyle style)
+mlocResult mlocInitZoneFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                 mlocZoneStyle style, mlocZoneFormatter* formatterOut)
 {
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
         style <= mloc_zoneStyleNone || style > mloc_zoneStyleOffsetShort)
@@ -733,8 +733,8 @@ mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut, const mlocData
     return result;
 }
 
-mlocResult mlocFormatZone(const mlocZoneFormatter* formatter, const mlocTimeZone* zone,
-                          const mlocInstant* instant, mlocOutput* output)
+mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter, const mlocTimeZone* zone,
+                                    const mlocInstant* instant, mlocOutput* output)
 {
     ZoneFormat f;
     ZoneTables t;

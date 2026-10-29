@@ -45,7 +45,7 @@ static bool Formatter(const char* id, Style style, mlocNumberFormatter* formatte
     mlocLocale locale;
     mlocNumberOptions o = OptionsOf(style);
     return mlocParseLocale(id, strlen(id), &locale).status == mloc_success &&
-           mlocInitNumberFormatter(formatterOut, &s_data, &locale, &o) >= 0;
+           mlocInitNumberFormatter(&s_data, &locale, &o, formatterOut) >= 0;
 }
 
 typedef struct Case
@@ -250,7 +250,7 @@ static mlocResult ParseCopy(const mlocNumberFormatter* formatter, const char* te
         return (mlocResult)-100;
     }
     memcpy(copy, text, length);
-    mlocResult r = mlocParseNumber(formatter, copy, length, mode, decimal, end);
+    mlocResult r = mlocNumberFormatter_Parse(formatter, copy, length, mode, decimal, end);
     free(copy);
     return r;
 }
@@ -297,7 +297,7 @@ static bool RoundTrips(const char* id, Style style, const char* value)
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     if (!Formatter(id, style, &formatter) ||
         mlocParseDecimal(value, strlen(value), &decimal).status != mloc_success ||
-        mlocFormatNumber(&formatter, &decimal, &output) != mloc_success)
+        mlocNumberFormatter_Format(&formatter, &decimal, &output) != mloc_success)
     {
         return false;
     }
@@ -444,28 +444,31 @@ static void TestRefusals(void)
     mlocDecimal d;
     size_t end = 0;
     CHECK(Formatter("en", styleDecimal, &formatter), "a formatter");
-    CHECK(mlocParseNumber(nullptr, "1", 1, mloc_parseLenient, &d, &end) == mloc_errorInvalid &&
-              mlocParseNumber(&formatter, nullptr, 1, mloc_parseLenient, &d, &end) ==
+    CHECK(mlocNumberFormatter_Parse(nullptr, "1", 1, mloc_parseLenient, &d, &end) ==
                   mloc_errorInvalid &&
-              mlocParseNumber(&formatter, "1", 1, mloc_parseLenient, nullptr, &end) ==
+              mlocNumberFormatter_Parse(&formatter, nullptr, 1, mloc_parseLenient, &d, &end) ==
                   mloc_errorInvalid &&
-              mlocParseNumber(&formatter, "1", 1, mloc_parseLenient, &d, nullptr) ==
+              mlocNumberFormatter_Parse(&formatter, "1", 1, mloc_parseLenient, nullptr, &end) ==
+                  mloc_errorInvalid &&
+              mlocNumberFormatter_Parse(&formatter, "1", 1, mloc_parseLenient, &d, nullptr) ==
                   mloc_errorInvalid,
           "null pointers");
-    CHECK(mlocParseNumber(&formatter, nullptr, 0, mloc_parseLenient, &d, &end) ==
+    CHECK(mlocNumberFormatter_Parse(&formatter, nullptr, 0, mloc_parseLenient, &d, &end) ==
                   mloc_errorSyntax &&
               end == 0,
           "no text is no number");
-    CHECK(mlocParseNumber(&formatter, "1", 1, (mlocParseMode)2, &d, &end) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Parse(&formatter, "1", 1, (mlocParseMode)2, &d, &end) ==
+              mloc_errorInvalid,
           "a mode out of range");
     mlocNumberFormatter zero = {0};
-    CHECK(mlocParseNumber(&zero, "1", 1, mloc_parseLenient, &d, &end) == mloc_errorInvalid,
+    CHECK(mlocNumberFormatter_Parse(&zero, "1", 1, mloc_parseLenient, &d, &end) ==
+              mloc_errorInvalid,
           "a formatter the library did not make");
     mlocLocale locale;
     mlocNumberOptions compact = {.notation = mloc_notationCompactShort};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitNumberFormatter(&formatter, &s_data, &locale, &compact) == mloc_success &&
-              mlocParseNumber(&formatter, "1K", 2, mloc_parseLenient, &d, &end) ==
+              mlocInitNumberFormatter(&s_data, &locale, &compact, &formatter) == mloc_success &&
+              mlocNumberFormatter_Parse(&formatter, "1K", 2, mloc_parseLenient, &d, &end) ==
                   mloc_errorInvalid,
           "compact notation is not read");
 }

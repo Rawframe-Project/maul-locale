@@ -38,7 +38,7 @@ static mlocResult Init(mlocUnitFormatter* formatter, const char* id, const char*
     {
         return (mlocResult)-100;
     }
-    return mlocInitUnitFormatter(formatter, &s_data, &locale, unit, strlen(unit), options);
+    return mlocInitUnitFormatter(&s_data, &locale, unit, strlen(unit), options, formatter);
 }
 
 static bool Same(const char* buffer, const mlocOutput* output, const char* expected)
@@ -56,7 +56,7 @@ static bool Formats(const char* id, const char* unit, const mlocUnitOptions* opt
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     return Init(&formatter, id, unit, options) >= 0 &&
            mlocParseDecimal(amount, strlen(amount), &decimal).status == mloc_success &&
-           mlocFormatUnit(&formatter, &decimal, &output) == mloc_success &&
+           mlocUnitFormatter_Format(&formatter, &decimal, &output) == mloc_success &&
            Same(buffer, &output, expected);
 }
 
@@ -179,7 +179,7 @@ static bool Range(const char* id, const char* unit, mlocUnitWidth width, const c
     return Init(&formatter, id, unit, &options) >= 0 &&
            mlocParseDecimal(start, strlen(start), &a).status == mloc_success &&
            mlocParseDecimal(end, strlen(end), &b).status == mloc_success &&
-           mlocFormatUnitRange(&formatter, &a, &b, &output) == mloc_success &&
+           mlocUnitFormatter_FormatRange(&formatter, &a, &b, &output) == mloc_success &&
            Same(buffer, &output, expected);
 }
 
@@ -231,7 +231,7 @@ static bool PartsOf(const char* id, const char* unit, mlocUnitWidth width, const
     mlocOutput output = {.buffer = buffer, .capacity = capacity, .part = Collect, .context = parts};
     return Init(&formatter, id, unit, &options) >= 0 &&
            mlocParseDecimal(amount, strlen(amount), &decimal).status == mloc_success &&
-           mlocFormatUnit(&formatter, &decimal, &output) == mloc_success;
+           mlocUnitFormatter_Format(&formatter, &decimal, &output) == mloc_success;
 }
 
 static void TestParts(void)
@@ -351,9 +351,9 @@ static void TestMixed(void)
     char text[32];
     mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
     bool nanWritten = Init(&special, "en", "inch-and-foot", nullptr) == mloc_success &&
-                      mlocFormatUnit(&special, &nan, &out) == mloc_success &&
+                      mlocUnitFormatter_Format(&special, &nan, &out) == mloc_success &&
                       Same(text, &out, "0 in, NaN ft");
-    CHECK(nanWritten && mlocFormatUnit(&special, &infinity, &out) == mloc_success &&
+    CHECK(nanWritten && mlocUnitFormatter_Format(&special, &infinity, &out) == mloc_success &&
               Same(text, &out, "0 in, -\xE2\x88\x9E ft"),
           "NaN and the infinities in the largest part, with their sign");
     char buffer[64];
@@ -370,26 +370,26 @@ static void TestMixed(void)
     mlocLocale locale;
     mlocUnitOptions compact = {.number.notation = mloc_notationCompactShort};
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-second", 15, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "foot-and-second", 15, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "celsius-and-kelvin", 18,
-                                    nullptr) == mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, &compact) ==
+              mlocInitUnitFormatter(&s_data, &locale, "celsius-and-kelvin", 18, nullptr,
+                                    &formatter) == mloc_errorInvalid &&
+              mlocInitUnitFormatter(&s_data, &locale, "foot-and-inch", 13, &compact, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-", 9, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "foot-and-", 9, nullptr, &formatter) ==
                   mloc_errorSyntax &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-foot", 13, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "foot-and-foot", 13, nullptr, &formatter) ==
                   mloc_errorInvalid,
           "parts that do not convert alone, a notation other than standard, a part missing, "
           "parts of one size");
     mlocDecimal one;
     mlocOutput output = {.buffer = buffer, .capacity = 4};
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, nullptr) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "foot-and-inch", 13, nullptr, &formatter) ==
                   mloc_success &&
               mlocParseDecimal("1.5", 3, &one).status == mloc_success &&
-              mlocFormatUnit(&formatter, &one, &output) == mloc_errorCapacity &&
+              mlocUnitFormatter_Format(&formatter, &one, &output) == mloc_errorCapacity &&
               output.length == 10 &&
-              mlocFormatUnitRange(&formatter, &one, &one, &output) == mloc_errorInvalid,
+              mlocUnitFormatter_FormatRange(&formatter, &one, &one, &output) == mloc_errorInvalid,
           "a text that does not fit gives its length; no range of a mixed unit");
 }
 
@@ -412,7 +412,7 @@ static bool UsedRange(const char* id, const char* unit, const char* usage, const
     return Init(&formatter, id, unit, &options) >= 0 &&
            mlocParseDecimal(start, strlen(start), &a).status == mloc_success &&
            mlocParseDecimal(end, strlen(end), &b).status == mloc_success &&
-           mlocFormatUnitRange(&formatter, &a, &b, &output) == mloc_success &&
+           mlocUnitFormatter_FormatRange(&formatter, &a, &b, &output) == mloc_success &&
            Same(buffer, &output, expected);
 }
 
@@ -457,35 +457,36 @@ static void TestUsage(void)
     mlocUnitOptions road = {.usage = "road", .usageLength = 4};
     mlocUnitOptions null = {.usageLength = 4};
     CHECK(mlocParseLocale("en-US", 5, &locale).status == mloc_success &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &bad) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &bad, &formatter) ==
                   mloc_errorSyntax &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &shortUsage) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &shortUsage, &formatter) ==
                   mloc_errorSyntax &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &compact) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &compact, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "foot-and-inch", 13, &road) ==
+              mlocInitUnitFormatter(&s_data, &locale, "foot-and-inch", 13, &road, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &null) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &null, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, &road) ==
+              mlocInitUnitFormatter(&s_builtin, &locale, "meter", 5, &road, &formatter) ==
                   mloc_errorNotFound,
           "a usage not well-formed, compact notation, a mixed input, a null usage, no names");
     mlocDecimal amount;
     mlocDecimal nan = {.kind = mloc_decimalNaN};
     char buffer[32];
     mlocOutput output = {.buffer = buffer, .capacity = 3};
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &road) == mloc_success &&
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &road, &formatter) == mloc_success &&
               mlocParseDecimal("1000", 4, &amount).status == mloc_success &&
-              mlocFormatUnit(&formatter, &amount, &output) == mloc_errorCapacity &&
+              mlocUnitFormatter_Format(&formatter, &amount, &output) == mloc_errorCapacity &&
               output.length == 7 &&
-              mlocFormatUnitRange(&formatter, &nan, &amount, &output) == mloc_errorInvalid,
+              mlocUnitFormatter_FormatRange(&formatter, &nan, &amount, &output) ==
+                  mloc_errorInvalid,
           "a text that does not fit gives its length; a NaN end is refused");
     output.capacity = sizeof(buffer);
-    CHECK(mlocFormatUnit(&formatter, &nan, &output) == mloc_success &&
+    CHECK(mlocUnitFormatter_Format(&formatter, &nan, &output) == mloc_success &&
               Same(buffer, &output, "NaN mi"),
           "NaN in the first output, as the largest value");
     mlocOutput measure = {0};
-    CHECK(mlocFormatUnit(&formatter, &amount, &measure) == mloc_errorCapacity &&
+    CHECK(mlocUnitFormatter_Format(&formatter, &amount, &measure) == mloc_errorCapacity &&
               measure.length == 7,
           "a null buffer measures");
     mlocUnitFormatter forged;
@@ -494,7 +495,7 @@ static void TestUsage(void)
     inside.table.simples = nullptr;
     memcpy(&forged, &formatter, sizeof(forged));
     memcpy(&forged, &inside, sizeof(inside));
-    CHECK(mlocFormatUnit(&forged, &amount, &output) == mloc_errorInvalid,
+    CHECK(mlocUnitFormatter_Format(&forged, &amount, &output) == mloc_errorInvalid,
           "a usage formatter without its unit table");
     // A usage of 64 bytes is read (it falls back to the default); one of
     // 65 is refused.
@@ -506,7 +507,7 @@ static void TestUsage(void)
     mlocOutput unitOut = {.buffer = unit, .capacity = sizeof(unit)};
     mlocUnitAmounts amounts;
     CHECK(Formats("en-US", "meter", &longest, "3", "9.8 ft") &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &past) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &past, &formatter) ==
                   mloc_errorSyntax &&
               mlocGetUnitPreference(&s_builtin, &locale, "meter", 5, s_long, sizeof(s_long) - 2,
                                     &amount, nullptr, &unitOut, &amounts) == mloc_success &&
@@ -594,7 +595,7 @@ static void TestCases(void)
     CHECK(Init(&formatter, "de", "meter", &past) == mloc_errorInvalid, "a case out of range");
     mlocLocale locale;
     CHECK(mlocParseLocale("de", 2, &locale).status == mloc_success &&
-              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, &dative) ==
+              mlocInitUnitFormatter(&s_builtin, &locale, "meter", 5, &dative, &formatter) ==
                   mloc_errorNotFound,
           "data without the case patterns");
 }
@@ -736,23 +737,23 @@ static void TestCoordinate(void)
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     bool nanNorth =
         mlocParseLocale("en", 2, &locale).status == mloc_success &&
-        mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &lat) == mloc_success &&
-        mlocFormatUnit(&formatter, &nan, &output) == mloc_success &&
+        mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &lat, &formatter) == mloc_success &&
+        mlocUnitFormatter_Format(&formatter, &nan, &output) == mloc_success &&
         Same(buffer, &output, "NaN\xC2\xB0N");
-    CHECK(nanNorth && mlocFormatUnit(&formatter, &south, &output) == mloc_success &&
+    CHECK(nanNorth && mlocUnitFormatter_Format(&formatter, &south, &output) == mloc_success &&
               Same(buffer, &output, "\xE2\x88\x9E\xC2\xB0S") &&
-              mlocFormatUnitRange(&formatter, &nan, &nan, &output) == mloc_errorInvalid,
+              mlocUnitFormatter_FormatRange(&formatter, &nan, &nan, &output) == mloc_errorInvalid,
           "NaN north, an infinity by its sign; no range");
     mlocUnitOptions road = {
         .usage = "road", .usageLength = 4, .coordinate = mloc_coordinateLatitude};
     mlocUnitOptions bad = {.coordinate = (mlocCoordinate)3};
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &lat) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &lat, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &road) ==
+              mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &road, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "degree", 6, &bad) ==
+              mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &bad, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "degree", 6, &lat) ==
+              mlocInitUnitFormatter(&s_builtin, &locale, "degree", 6, &lat, &formatter) ==
                   mloc_errorNotFound,
           "a unit not an angle, a usage, a coordinate out of range, data without the names");
 }
@@ -762,27 +763,27 @@ static void TestRefusals(void)
     mlocUnitFormatter formatter;
     mlocLocale locale;
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success, "a locale");
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "Meter", 5, nullptr) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "Meter", 5, nullptr, &formatter) ==
                   mloc_errorSyntax &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "pow4-meter", 10, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "pow4-meter", 10, nullptr, &formatter) ==
                   mloc_errorNotFound &&
-              mlocInitUnitFormatter(&formatter, &s_builtin, &locale, "meter", 5, nullptr) ==
+              mlocInitUnitFormatter(&s_builtin, &locale, "meter", 5, nullptr, &formatter) ==
                   mloc_errorNotFound,
           "a malformed identifier, a power past three, data without the names");
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "curr-usd", 8, nullptr) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "curr-usd", 8, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "100-meter", 9, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "100-meter", 9, nullptr, &formatter) ==
                   mloc_errorInvalid,
           "a currency, a constant in the numerator");
     mlocUnitOptions percent = {.number = {.style = mloc_numberPercent}};
     mlocUnitOptions width = {.width = (mlocUnitWidth)4};
-    CHECK(mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &percent) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &percent, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 5, &width) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &width, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(&formatter, &s_data, &locale, "meter", 0, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 0, nullptr, &formatter) ==
                   mloc_errorInvalid &&
-              mlocInitUnitFormatter(nullptr, &s_data, &locale, "meter", 5, nullptr) ==
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, nullptr, nullptr) ==
                   mloc_errorInvalid,
           "a percent style, a width out of range, an empty unit, a null pointer");
     mlocUnitFormatter forged;
@@ -791,44 +792,46 @@ static void TestRefusals(void)
     char buffer[16];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     CHECK(mlocParseDecimal("1", 1, &decimal).status == mloc_success &&
-              mlocFormatUnit(&forged, &decimal, &output) == mloc_errorInvalid &&
-              mlocFormatUnitRange(&forged, &decimal, &decimal, &output) == mloc_errorInvalid &&
-              mlocFormatUnit(nullptr, &decimal, &output) == mloc_errorInvalid,
+              mlocUnitFormatter_Format(&forged, &decimal, &output) == mloc_errorInvalid &&
+              mlocUnitFormatter_FormatRange(&forged, &decimal, &decimal, &output) ==
+                  mloc_errorInvalid &&
+              mlocUnitFormatter_Format(nullptr, &decimal, &output) == mloc_errorInvalid,
           "a formatter the library did not make");
     mlocUnitFormatter made;
-    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "meter", 5, nullptr) == mloc_success,
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "meter", 5, nullptr, &made) == mloc_success,
           "a formatter");
     UnitFormat inside;
     memcpy(&inside, &made, sizeof(inside));
     inside.start[1][0] = 2 * unitPool;
     memcpy(&made, &inside, sizeof(inside));
-    bool unused = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
+    bool unused = mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_success;
     inside.start[0][0] = unitPool;
     inside.length[0][0] = 0;
     memcpy(&made, &inside, sizeof(inside));
-    bool emptyAtEnd = mlocFormatUnit(&made, &decimal, &output) == mloc_success;
+    bool emptyAtEnd = mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_success;
     inside.start[0][0] = unitPool + 1;
     memcpy(&made, &inside, sizeof(inside));
-    CHECK(unused && emptyAtEnd && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+    CHECK(unused && emptyAtEnd &&
+              mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid,
           "a pattern's offsets checked within the pool, an unused part's not read");
     inside.start[0][0] = 0;
     inside.outputs = 0;
     memcpy(&made, &inside, sizeof(inside));
-    bool none = mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid;
+    bool none = mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid;
     inside.outputs = unitOutputs + 1;
     memcpy(&made, &inside, sizeof(inside));
-    CHECK(none && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+    CHECK(none && mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid,
           "the output units counted within the formatter's");
     output.capacity = 2;
     CHECK(Init(&formatter, "en", "meter", nullptr) == mloc_success &&
-              mlocFormatUnit(&formatter, &decimal, &output) == mloc_errorCapacity &&
+              mlocUnitFormatter_Format(&formatter, &decimal, &output) == mloc_errorCapacity &&
               output.length == 3,
           "a text that does not fit gives its length");
     mlocUnitOptions numeric = {.width = mloc_unitWidthNumeric};
     output.capacity = sizeof(buffer);
-    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "hour-and-minute", 15, &numeric) ==
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "hour-and-minute", 15, &numeric, &made) ==
                   mloc_success &&
-              mlocFormatUnit(&made, &decimal, &output) == mloc_success &&
+              mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_success &&
               Same(buffer, &output, "1:00"),
           "a numeric formatter");
     memcpy(&inside, &made, sizeof(inside));
@@ -845,21 +848,21 @@ static void TestRefusals(void)
         spoiled.output[0].numeric = numerics[i].numeric;
         spoiled.duration[0] = numerics[i].duration ? spoiled.duration[0] : nullptr;
         memcpy(&made, &spoiled, sizeof(spoiled));
-        CHECK(mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+        CHECK(mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid,
               "a numeric field past the parts, a pattern past the three, a pattern missing");
     }
     mlocUnitOptions lat = {.coordinate = mloc_coordinateLatitude};
-    CHECK(mlocInitUnitFormatter(&made, &s_data, &locale, "degree", 6, &lat) == mloc_success,
+    CHECK(mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &lat, &made) == mloc_success,
           "a coordinate formatter");
     memcpy(&inside, &made, sizeof(inside));
     UnitFormat spoiled = inside;
     spoiled.coordinate = mloc_coordinateLongitude + 1;
     memcpy(&made, &spoiled, sizeof(spoiled));
-    bool past = mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid;
+    bool past = mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid;
     spoiled = inside;
     spoiled.direction[3] = nullptr;
     memcpy(&made, &spoiled, sizeof(spoiled));
-    CHECK(past && mlocFormatUnit(&made, &decimal, &output) == mloc_errorInvalid,
+    CHECK(past && mlocUnitFormatter_Format(&made, &decimal, &output) == mloc_errorInvalid,
           "a coordinate past longitude, a direction missing");
 }
 
@@ -993,13 +996,13 @@ static void TestMixedContext(void)
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     bool other = OpenFootAndInch(&sources[1]) &&
                  mlocParseLocale("es", 2, &locale).status == mloc_success &&
-                 mlocInitUnitFormatter(&formatter, &set, &locale, "foot-and-inch", 13, &whole) ==
+                 mlocInitUnitFormatter(&set, &locale, "foot-and-inch", 13, &whole, &formatter) ==
                      mloc_success &&
                  mlocParseDecimal("1.25", 4, &amount).status == mloc_success &&
-                 mlocFormatUnit(&formatter, &amount, &output) == mloc_success &&
+                 mlocUnitFormatter_Format(&formatter, &amount, &output) == mloc_success &&
                  Same(buffer, &output, "1 ft e in 3");
     CHECK(other && mlocParseDecimal("1.0833", 6, &amount).status == mloc_success &&
-              mlocFormatUnit(&formatter, &amount, &output) == mloc_success &&
+              mlocUnitFormatter_Format(&formatter, &amount, &output) == mloc_success &&
               Same(buffer, &output, "1 ft y 1 inch"),
           "Spanish's y read against the smallest part's pattern for its category");
 }
@@ -1055,19 +1058,19 @@ static void TestPool(void)
     static const uint32_t s_long[6] = {1, 1, 1, 1, 1, unitPatternRoom - 2};
     CHECK(mlocParseLocale("ar", 2, &locale).status == mloc_success, "a locale");
     CHECK(OpenUnitNames(&sources[1], s_parts, 4, s_fill) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, s_mixed, sizeof(s_mixed) - 1,
-                                    nullptr) == mloc_success,
+              mlocInitUnitFormatter(&set, &locale, s_mixed, sizeof(s_mixed) - 1, nullptr,
+                                    &formatter) == mloc_success,
           "patterns that fill the pool");
     s_fill[3][5]++;
     CHECK(OpenUnitNames(&sources[1], s_parts, 4, s_fill) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, s_mixed, sizeof(s_mixed) - 1,
-                                    nullptr) == mloc_errorLimit,
+              mlocInitUnitFormatter(&set, &locale, s_mixed, sizeof(s_mixed) - 1, nullptr,
+                                    &formatter) == mloc_errorLimit,
           "patterns a byte past the pool");
     CHECK(OpenNames(&sources[1], s_room) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) == mloc_success,
+              mlocInitUnitFormatter(&set, &locale, "meter", 5, nullptr, &formatter) == mloc_success,
           "a pattern that fills a pattern's room");
     CHECK(OpenNames(&sources[1], s_long) &&
-              mlocInitUnitFormatter(&formatter, &set, &locale, "meter", 5, nullptr) ==
+              mlocInitUnitFormatter(&set, &locale, "meter", 5, nullptr, &formatter) ==
                   mloc_errorLimit,
           "a pattern a byte past a pattern's room");
 }
@@ -1088,7 +1091,7 @@ static bool OpenData(void)
     }
     s_data = (mlocDataSet){s_sources, 2};
     return size > 0 && size < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+           mlocOpenData(s_names, size, &s_sources[1]) == mloc_success;
 }
 
 int main(void)

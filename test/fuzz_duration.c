@@ -50,7 +50,7 @@ static bool OpenData(mlocDataSet* set)
             size_t size = fread(s_names, 1, sizeof(s_names), file);
             fclose(file);
             if (size > 0 && size < sizeof(s_names) &&
-                mlocOpenData(&s_sources[1], s_names, size) == mloc_success)
+                mlocOpenData(s_names, size, &s_sources[1]) == mloc_success)
             {
                 s_state = 1;
             }
@@ -128,7 +128,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     Require(mlocCanonicalizeLocale(&set, id, strlen(id), &locale, nullptr).status == mloc_success);
     mlocDurationOptions o = OptionsOf(data + 1);
     mlocDurationFormatter formatter;
-    mlocResult r = mlocInitDurationFormatter(&formatter, &set, &locale, &o);
+    mlocResult r = mlocInitDurationFormatter(&set, &locale, &o, &formatter);
     Require(r == mloc_success || r == mloc_errorInvalid);
     if (r != mloc_success)
     {
@@ -141,7 +141,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     bool valid = mlocMakeDuration(&d, &checked) == mloc_success;
     static char s_text[2][maxText];
     mlocOutput one = {.buffer = s_text[0], .capacity = maxText};
-    r = mlocFormatDuration(&formatter, &d, &one);
+    r = mlocDurationFormatter_Format(&formatter, &d, &one);
     Require(valid ? r == mloc_success : r == mloc_errorInvalid);
     if (!valid)
     {
@@ -150,11 +150,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     Covered covered = {0, true};
     mlocOutput two = {.buffer = s_text[1], .capacity = maxText, .part = Part, .context = &covered};
     mlocOutput measure = {0};
-    Require(mlocFormatDuration(&formatter, &d, &two) == mloc_success && two.length == one.length &&
-            memcmp(s_text[0], s_text[1], one.length) == 0 && covered.ordered &&
-            covered.end == one.length);
-    Require(
-        (mlocFormatDuration(&formatter, &d, &measure) == mloc_errorCapacity || one.length == 0) &&
-        measure.length == one.length);
+    Require(mlocDurationFormatter_Format(&formatter, &d, &two) == mloc_success &&
+            two.length == one.length && memcmp(s_text[0], s_text[1], one.length) == 0 &&
+            covered.ordered && covered.end == one.length);
+    Require((mlocDurationFormatter_Format(&formatter, &d, &measure) == mloc_errorCapacity ||
+             one.length == 0) &&
+            measure.length == one.length);
     return 0;
 }

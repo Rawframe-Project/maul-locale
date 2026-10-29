@@ -99,9 +99,9 @@ extern "C"
     ///         style other than decimal, a sign display other than auto).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocInitRelativeFormatter(mlocRelativeFormatter* formatterOut, const mlocDataSet* data,
-                              const mlocLocale* locale, const mlocRelativeOptions* options);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitRelativeFormatter(
+        const mlocDataSet* data, const mlocLocale* locale, const mlocRelativeOptions* options,
+        mlocRelativeFormatter* formatterOut);
 
     /// Writes an amount of a unit relative to now: negative amounts (-0
     /// included) in the past, the others in the future; the amount's
@@ -125,14 +125,13 @@ extern "C"
     ///         range, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelative(const mlocRelativeFormatter* formatter,
-                                                          const mlocDecimal* amount,
-                                                          mlocRelativeUnit unit,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter, const mlocDecimal* amount,
+                                 mlocRelativeUnit unit, mlocOutput* output);
 
     /// Writes a day relative to today and a time of day joined by the
     /// locale's relative date-time glue ("tomorrow at 3:00 PM", "in 3 days,
-    /// 10:00"): the day as mlocFormatRelative writes an amount of days, the
+    /// 10:00"): the day as mlocRelativeFormatter_Format writes an amount of days, the
     /// time as the time formatter writes it, joined by the glue of the
     /// time formatter's calendar at the length the relative width gives
     /// (long the long glue, short the medium, narrow the short; ICU4C takes
@@ -157,7 +156,7 @@ extern "C"
     ///         formatter with a zone among them).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatRelativeDayTime(
+    MLOC_NODISCARD MLOC_API mlocResult mlocRelativeFormatter_FormatDayTime(
         const mlocRelativeFormatter* relative, const mlocTimeFormatter* time,
         const mlocDecimal* days, const mlocTime* timeOfDay, mlocOutput* output);
 

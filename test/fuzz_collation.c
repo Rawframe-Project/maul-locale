@@ -49,7 +49,7 @@ static const CollationRoot* Root(void)
         }
         mlocData file;
         DataSpan span = {0};
-        if (n > 0 && n < sizeof(s_file) && mlocOpenData(&file, s_file, n) == mloc_success)
+        if (n > 0 && n < sizeof(s_file) && mlocOpenData(s_file, n, &file) == mloc_success)
         {
             DataView view = mlocViewOf(&file);
             s_state = mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span) &&

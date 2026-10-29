@@ -191,7 +191,7 @@ int main(void)
     }
     mlocData data;
     DataSpan span = {0};
-    if (size == 0 || size == sizeof(s_file) || mlocOpenData(&data, s_file, size) != mloc_success)
+    if (size == 0 || size == sizeof(s_file) || mlocOpenData(s_file, size, &data) != mloc_success)
     {
         fputs("test_collation_key: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

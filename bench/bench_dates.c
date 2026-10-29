@@ -83,67 +83,67 @@ static void Write(mlocResult r, const mlocOutput* output)
 static void DateInit(void)
 {
     mlocDateFormatter f;
-    s_sink = mlocInitDateFormatter(&f, &s_set, &s_en, &s_dateOptions);
+    s_sink = mlocInitDateFormatter(&s_set, &s_en, &s_dateOptions, &f);
 }
 
 static void DateFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatDate(&s_date, &s_value.date, &o), &o);
+    Write(mlocDateFormatter_Format(&s_date, &s_value.date, &o), &o);
 }
 
 static void TimeFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatTime(&s_time, &s_value.time, &o), &o);
+    Write(mlocTimeFormatter_Format(&s_time, &s_value.time, &o), &o);
 }
 
 static void DateTimeInit(void)
 {
     mlocDateTimeFormatter f;
-    s_sink = mlocInitDateTimeFormatter(&f, &s_set, &s_en, &s_bothOptions);
+    s_sink = mlocInitDateTimeFormatter(&s_set, &s_en, &s_bothOptions, &f);
 }
 
 static void DateTimeFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatDateTime(&s_both, &s_value, &o), &o);
+    Write(mlocDateTimeFormatter_Format(&s_both, &s_value, &o), &o);
 }
 
 static void ZonedFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatDateTimeInZone(&s_zoned, &s_newYork, &s_instant, &o), &o);
+    Write(mlocDateTimeFormatter_FormatInZone(&s_zoned, &s_newYork, &s_instant, &o), &o);
 }
 
 static void DateRange(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatDateRange(&s_date, &s_rangeStart, &s_rangeEnd, &o), &o);
+    Write(mlocDateFormatter_FormatRange(&s_date, &s_rangeStart, &s_rangeEnd, &o), &o);
 }
 
 static void RelativeInit(void)
 {
     mlocRelativeFormatter f;
-    s_sink = mlocInitRelativeFormatter(&f, &s_set, &s_en, &s_relativeOptions);
+    s_sink = mlocInitRelativeFormatter(&s_set, &s_en, &s_relativeOptions, &f);
 }
 
 static void RelativeFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatRelative(&s_relative, &s_three, mloc_relativeDay, &o), &o);
+    Write(mlocRelativeFormatter_Format(&s_relative, &s_three, mloc_relativeDay, &o), &o);
 }
 
 static void DurationInit(void)
 {
     mlocDurationFormatter f;
-    s_sink = mlocInitDurationFormatter(&f, &s_set, &s_en, nullptr);
+    s_sink = mlocInitDurationFormatter(&s_set, &s_en, nullptr, &f);
 }
 
 static void DurationFormat(void)
 {
     mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
-    Write(mlocFormatDuration(&s_duration, &s_hms, &o), &o);
+    Write(mlocDurationFormatter_Format(&s_duration, &s_hms, &o), &o);
 }
 
 const BenchCase g_dateCases[] = {
@@ -169,7 +169,7 @@ static bool OpenFile(const char* path, mlocData* out, uint8_t* bytes, size_t cap
     {
         fclose(file);
     }
-    return size > 0 && size < capacity && mlocOpenData(out, bytes, size) == mloc_success;
+    return size > 0 && size < capacity && mlocOpenData(bytes, size, out) == mloc_success;
 }
 
 static bool OpenFiles(void)
@@ -215,12 +215,12 @@ static bool MakeValues(void)
 bool PrepareDateBench(void)
 {
     return OpenFiles() && mlocParseLocale("en", 2, &s_en).status == mloc_success && MakeValues() &&
-           mlocInitDateFormatter(&s_date, &s_set, &s_en, &s_dateOptions) >= 0 &&
-           mlocInitTimeFormatter(&s_time, &s_set, &s_en, &s_timeOptions) >= 0 &&
-           mlocInitDateTimeFormatter(&s_both, &s_set, &s_en, &s_bothOptions) >= 0 &&
-           mlocInitDateTimeFormatter(&s_zoned, &s_set, &s_en, &s_zonedOptions) >= 0 &&
-           mlocInitRelativeFormatter(&s_relative, &s_set, &s_en, &s_relativeOptions) >= 0 &&
-           mlocInitDurationFormatter(&s_duration, &s_set, &s_en, nullptr) >= 0;
+           mlocInitDateFormatter(&s_set, &s_en, &s_dateOptions, &s_date) >= 0 &&
+           mlocInitTimeFormatter(&s_set, &s_en, &s_timeOptions, &s_time) >= 0 &&
+           mlocInitDateTimeFormatter(&s_set, &s_en, &s_bothOptions, &s_both) >= 0 &&
+           mlocInitDateTimeFormatter(&s_set, &s_en, &s_zonedOptions, &s_zoned) >= 0 &&
+           mlocInitRelativeFormatter(&s_set, &s_en, &s_relativeOptions, &s_relative) >= 0 &&
+           mlocInitDurationFormatter(&s_set, &s_en, nullptr, &s_duration) >= 0;
 }
 
 void ShowDateBench(void)

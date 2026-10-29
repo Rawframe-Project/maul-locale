@@ -146,7 +146,7 @@ static uint8_t* Open(const char* locale, mlocCatalog* catalog, mlocResult* out)
     snprintf(path, sizeof(path), "%s/%s.mlct", s_directory, locale);
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
-    *out = bytes == nullptr ? mloc_errorNotFound : mlocOpenCatalog(catalog, bytes, size);
+    *out = bytes == nullptr ? mloc_errorNotFound : mlocOpenCatalog(bytes, size, catalog);
     return bytes;
 }
 
@@ -156,7 +156,7 @@ static bool SameMessage(const mlocCatalog* catalog, uint32_t index, const char* 
     size_t size = 0;
     uint8_t compiled[512];
     size_t expected = 0;
-    return mlocGetCatalogMessage(catalog, index, &message, &size) == mloc_success &&
+    return mlocCatalog_GetMessage(catalog, index, &message, &size) == mloc_success &&
            mlocCompileMessage(text, strlen(text), compiled, sizeof(compiled), &expected, nullptr)
                    .status == mloc_success &&
            size == expected && memcmp(message, compiled, size) == 0;
@@ -190,8 +190,8 @@ static void TestCompiledSet(void)
     mlocCatalogInfo enInfo;
     mlocCatalogInfo trInfo;
     if (enOpened == mloc_success && trOpened == mloc_success &&
-        mlocGetCatalogInfo(&enCatalog, &enInfo) == mloc_success &&
-        mlocGetCatalogInfo(&trCatalog, &trInfo) == mloc_success)
+        mlocCatalog_GetInfo(&enCatalog, &enInfo) == mloc_success &&
+        mlocCatalog_GetInfo(&trCatalog, &trInfo) == mloc_success)
     {
         CHECK(enInfo.keyCount == 4 && enInfo.messageCount == 4 && enInfo.source &&
                   trInfo.keyCount == 4 && trInfo.messageCount == 3 && !trInfo.source &&
@@ -201,11 +201,11 @@ static void TestCompiledSet(void)
         uint32_t bye = 0;
         uint32_t brand = 0;
         uint32_t again = 0;
-        CHECK(mlocFindCatalogKey(&enCatalog, "hello", 5, &hello) == mloc_success &&
-                  mlocFindCatalogKey(&trCatalog, "hello", 5, &again) == mloc_success &&
+        CHECK(mlocCatalog_FindKey(&enCatalog, "hello", 5, &hello) == mloc_success &&
+                  mlocCatalog_FindKey(&trCatalog, "hello", 5, &again) == mloc_success &&
                   hello == again &&
-                  mlocFindCatalogKey(&trCatalog, "bye", 3, &bye) == mloc_success &&
-                  mlocFindCatalogKey(&enCatalog, "menu.brand", 10, &brand) == mloc_success,
+                  mlocCatalog_FindKey(&trCatalog, "bye", 3, &bye) == mloc_success &&
+                  mlocCatalog_FindKey(&enCatalog, "menu.brand", 10, &brand) == mloc_success,
               "a key has one index in every catalog of the set");
         CHECK(SameMessage(&trCatalog, hello, "Merhaba {$name}!") &&
                   SameMessage(&enCatalog, bye, "Goodbye.") &&
@@ -213,15 +213,15 @@ static void TestCompiledSet(void)
               "the messages as compiled; a @translate no key keeps the source's");
         const void* message = nullptr;
         size_t size = 0;
-        CHECK(mlocGetCatalogMessage(&trCatalog, bye, &message, &size) == mloc_errorNotFound &&
-                  mlocGetCatalogMessage(&trCatalog, 4, &message, &size) == mloc_errorInvalid,
+        CHECK(mlocCatalog_GetMessage(&trCatalog, bye, &message, &size) == mloc_errorNotFound &&
+                  mlocCatalog_GetMessage(&trCatalog, 4, &message, &size) == mloc_errorInvalid,
               "an untranslated key is not found; an index past the count is refused");
         uint32_t index = 0;
-        CHECK(mlocFindCatalogKey(&enCatalog, "hell", 4, &index) == mloc_errorNotFound &&
-                  mlocFindCatalogKey(&enCatalog, "hello!", 6, &index) == mloc_errorNotFound &&
-                  mlocFindCatalogKey(&enCatalog, "", 0, &index) == mloc_errorNotFound &&
-                  mlocFindCatalogKey(&enCatalog, "menu.extra", 10, &index) == mloc_errorNotFound &&
-                  mlocFindCatalogKey(&enCatalog, nullptr, 1, &index) == mloc_errorInvalid,
+        CHECK(mlocCatalog_FindKey(&enCatalog, "hell", 4, &index) == mloc_errorNotFound &&
+                  mlocCatalog_FindKey(&enCatalog, "hello!", 6, &index) == mloc_errorNotFound &&
+                  mlocCatalog_FindKey(&enCatalog, "", 0, &index) == mloc_errorNotFound &&
+                  mlocCatalog_FindKey(&enCatalog, "menu.extra", 10, &index) == mloc_errorNotFound &&
+                  mlocCatalog_FindKey(&enCatalog, nullptr, 1, &index) == mloc_errorInvalid,
               "keys the set lacks are not found, the orphan included");
     }
     free(enBytes);
@@ -246,7 +246,7 @@ static void TestDamage(void)
     {
         bytes[at] ^= 0x5A;
         mlocCatalog catalog;
-        mlocResult opened = mlocOpenCatalog(&catalog, bytes, size);
+        mlocResult opened = mlocOpenCatalog(bytes, size, &catalog);
         refused += opened != mloc_success;
         tried++;
         bytes[at] ^= 0x5A;
@@ -267,7 +267,7 @@ static mlocResult Reopen(uint8_t* bytes, size_t size, size_t at, uint32_t value)
         bytes[at + (size_t)i] = (uint8_t)(value >> (8 * i));
     }
     mlocCatalog catalog;
-    mlocResult r = mlocOpenCatalog(&catalog, bytes, size);
+    mlocResult r = mlocOpenCatalog(bytes, size, &catalog);
     memcpy(bytes + at, saved, 4);
     return r;
 }
@@ -296,7 +296,7 @@ static void TestEachRefusal(void)
     size_t size = 0;
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
     mlocCatalog opened;
-    if (bytes == nullptr || mlocOpenCatalog(&opened, bytes, size) != mloc_success)
+    if (bytes == nullptr || mlocOpenCatalog(bytes, size, &opened) != mloc_success)
     {
         CHECK(false, "the catalog opens");
         free(bytes);
@@ -381,16 +381,16 @@ static void TestEachRefusal(void)
             cut[assetFields + (size_t)i] = (uint8_t)((catalogFieldCount - 1) >> (8 * i));
         }
         mlocCatalog catalog;
-        CHECK(mlocOpenCatalog(&catalog, cut, withoutMessages) == mloc_errorFormat,
+        CHECK(mlocOpenCatalog(cut, withoutMessages, &catalog) == mloc_errorFormat,
               "a required field missing");
         free(cut);
     }
     mlocCatalog catalog;
-    CHECK(mlocOpenCatalog(&catalog, bytes, 8) == mloc_errorFormat &&
-              mlocOpenCatalog(&catalog, "MLOC\x01\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00",
-                              16) == mloc_errorFormat &&
-              mlocOpenCatalog(nullptr, bytes, size) == mloc_errorInvalid &&
-              mlocOpenCatalog(&catalog, nullptr, 0) == mloc_errorInvalid,
+    CHECK(mlocOpenCatalog(bytes, 8, &catalog) == mloc_errorFormat &&
+              mlocOpenCatalog("MLOC\x01\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00", 16,
+                              &catalog) == mloc_errorFormat &&
+              mlocOpenCatalog(bytes, size, nullptr) == mloc_errorInvalid &&
+              mlocOpenCatalog(nullptr, 0, &catalog) == mloc_errorInvalid,
           "bytes shorter than a header; a data file's magic; null pointers");
     free(bytes);
 }
@@ -403,22 +403,22 @@ static void TestArguments(void)
     uint32_t index = 0;
     const void* message = nullptr;
     size_t size = 0;
-    CHECK(mlocGetCatalogInfo(&zero, &info) == mloc_errorInvalid &&
-              mlocGetCatalogInfo(nullptr, &info) == mloc_errorInvalid &&
-              mlocFindCatalogKey(&zero, "a", 1, &index) == mloc_errorInvalid &&
-              mlocGetCatalogMessage(&zero, 0, &message, &size) == mloc_errorInvalid,
+    CHECK(mlocCatalog_GetInfo(&zero, &info) == mloc_errorInvalid &&
+              mlocCatalog_GetInfo(nullptr, &info) == mloc_errorInvalid &&
+              mlocCatalog_FindKey(&zero, "a", 1, &index) == mloc_errorInvalid &&
+              mlocCatalog_GetMessage(&zero, 0, &message, &size) == mloc_errorInvalid,
           "a catalog the library did not open is refused");
     char path[1024];
     snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
     uint8_t* bytes = (uint8_t*)FileRead(path, &size);
     mlocCatalog catalog;
-    if (bytes != nullptr && mlocOpenCatalog(&catalog, bytes, size) == mloc_success)
+    if (bytes != nullptr && mlocOpenCatalog(bytes, size, &catalog) == mloc_success)
     {
-        CHECK(mlocGetCatalogInfo(&catalog, nullptr) == mloc_errorInvalid &&
-                  mlocFindCatalogKey(&catalog, "a", 1, nullptr) == mloc_errorInvalid &&
-                  mlocFindCatalogKey(&catalog, nullptr, 0, &index) == mloc_errorNotFound &&
-                  mlocGetCatalogMessage(&catalog, 0, nullptr, &size) == mloc_errorInvalid &&
-                  mlocGetCatalogMessage(&catalog, 0, &message, nullptr) == mloc_errorInvalid,
+        CHECK(mlocCatalog_GetInfo(&catalog, nullptr) == mloc_errorInvalid &&
+                  mlocCatalog_FindKey(&catalog, "a", 1, nullptr) == mloc_errorInvalid &&
+                  mlocCatalog_FindKey(&catalog, nullptr, 0, &index) == mloc_errorNotFound &&
+                  mlocCatalog_GetMessage(&catalog, 0, nullptr, &size) == mloc_errorInvalid &&
+                  mlocCatalog_GetMessage(&catalog, 0, &message, nullptr) == mloc_errorInvalid,
               "null outputs refused; a null empty key is no key");
     }
     free(bytes);
@@ -462,8 +462,8 @@ static void TestCompileFailures(void)
     uint32_t name = 0;
     uint32_t other = 0;
     CHECK(opened == mloc_success &&
-              mlocFindCatalogKey(&catalog, "brand.name", 10, &name) == mloc_success &&
-              mlocFindCatalogKey(&catalog, "brand.other", 11, &other) == mloc_success &&
+              mlocCatalog_FindKey(&catalog, "brand.name", 10, &name) == mloc_success &&
+              mlocCatalog_FindKey(&catalog, "brand.other", 11, &other) == mloc_success &&
               SameMessage(&catalog, name, "Maul") && SameMessage(&catalog, other, "X"),
           "@translate no on a section keeps every message of it");
     free(bytes);
@@ -522,7 +522,7 @@ static void TestUnicodeVersion(void)
     snprintf(path, sizeof(path), "%s/en.mlct", s_directory);
     bytes = (uint8_t*)FileRead(path, &size);
     CHECK(bytes != nullptr && FindTag(bytes, size, "UNIC") == size &&
-              mlocOpenCatalog(&catalog, bytes, size) == mloc_success,
+              mlocOpenCatalog(bytes, size, &catalog) == mloc_success,
           "a catalog whose messages record no Unicode version opens");
     free(bytes);
 }

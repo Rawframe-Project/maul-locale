@@ -48,7 +48,7 @@ static bool OpenFile(const char* path, mlocData* source)
     uint8_t* bytes = malloc((size_t)16 << 20);
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)16 << 20, file);
     fclose(file);
-    return read > 0 && mlocOpenData(source, bytes, read) == mloc_success;
+    return read > 0 && mlocOpenData(bytes, read, source) == mloc_success;
 }
 
 static bool Open(const char* names, const char* subdivisions, mlocDataSet* set)

@@ -5,7 +5,7 @@
 
 cases.py LOCALES FORMATTER OUT: for each locale of LOCALES and each style
 (decimal, percent, permille, scientific, plus), the values below formatted
-by FORMATTER (ours_fmt, the library's mlocFormatNumber), then each text and
+by FORMATTER (ours_fmt, the library's mlocNumberFormatter_Format), then each text and
 its lenient variants, in both modes, as "locale<TAB>style<TAB>mode<TAB>text"
 lines in OUT.
 """

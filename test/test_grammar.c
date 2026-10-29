@@ -31,7 +31,7 @@ static mlocInflection Case(mlocGrammaticalCase grammaticalCase)
 static bool Gives(const char* text, const mlocInflection* request, const char* expected)
 {
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    mlocResult r = mlocInflectText(&s_tr, text, strlen(text), request, &output);
+    mlocResult r = mlocInflector_InflectText(&s_tr, text, strlen(text), request, &output);
     bool good = r == mloc_success && output.length == strlen(expected) &&
                 memcmp(s_text, expected, output.length) == 0;
     if (!good)
@@ -331,8 +331,8 @@ static void TestParts(void)
     mlocOutput output = {s_text, sizeof(s_text), 0, Collect, &parts};
     mlocInflection r = Case(mloc_caseDative);
     r.question = true;
-    CHECK(mlocInflectText(&s_tr, "Ahmet", 5, &r, &output) == mloc_success && output.length == 10 &&
-              memcmp(s_text, "Ahmet'e mi", 10) == 0 && parts.count == 4 &&
+    CHECK(mlocInflector_InflectText(&s_tr, "Ahmet", 5, &r, &output) == mloc_success &&
+              output.length == 10 && memcmp(s_text, "Ahmet'e mi", 10) == 0 && parts.count == 4 &&
               parts.kinds[0] == mloc_inflectionPartStem && parts.lengths[0] == 5 &&
               parts.kinds[1] == mloc_inflectionPartApostrophe && parts.starts[1] == 5 &&
               parts.kinds[2] == mloc_inflectionPartSuffix && parts.starts[2] == 6 &&
@@ -343,7 +343,7 @@ static void TestParts(void)
     output.length = 0;
     mlocInflection compound = Case(mloc_caseDative);
     compound.commonNoun = true;
-    CHECK(mlocInflectText(&s_tr, "zeytinya\xC4\x9F\xC4\xB1", 12, &compound, &output) ==
+    CHECK(mlocInflector_InflectText(&s_tr, "zeytinya\xC4\x9F\xC4\xB1", 12, &compound, &output) ==
                   mloc_success &&
               output.length == 14 && parts.count == 2 && parts.lengths[0] == 12 &&
               parts.kinds[1] == mloc_inflectionPartSuffix && parts.starts[1] == 12 &&
@@ -354,7 +354,7 @@ static void TestParts(void)
     parts.count = 0;
     output.length = 0;
     mlocInflection locative = Case(mloc_caseLocative);
-    CHECK(mlocInflectNumber(&s_tr, nullptr, &year, &locative, &output) == mloc_success &&
+    CHECK(mlocInflector_InflectNumber(&s_tr, nullptr, &year, &locative, &output) == mloc_success &&
               output.length == 8 && memcmp(s_text, "1.985'te", 8) == 0 && parts.count == 6 &&
               parts.kinds[0] == mloc_inflectionPartStem && parts.lengths[0] == 5 &&
               parts.kinds[1] == mloc_numberPartInteger && parts.lengths[1] == 1 &&
@@ -372,8 +372,9 @@ static void TestParts(void)
     output.part = nullptr;
     CHECK(mlocParseDecimal("0.5", 3, &half).status == mloc_success &&
               mlocParseLocale("tr", 2, &tr).status == mloc_success &&
-              mlocInitNumberFormatter(&percent, &s_builtin, &tr, &options) == mloc_success &&
-              mlocInflectNumber(&s_tr, &percent, &half, &dative, &output) == mloc_success &&
+              mlocInitNumberFormatter(&s_builtin, &tr, &options, &percent) == mloc_success &&
+              mlocInflector_InflectNumber(&s_tr, &percent, &half, &dative, &output) ==
+                  mloc_success &&
               output.length == 6 && memcmp(s_text, "%50'ye", 6) == 0,
           "a percent by its own formatter, read as it is written");
     mlocNumberFormatter english;
@@ -383,12 +384,14 @@ static void TestParts(void)
     mlocDecimal thousand;
     CHECK(mlocParseDecimal("1000", 4, &thousand).status == mloc_success &&
               mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitNumberFormatter(&english, &s_builtin, &en, nullptr) == mloc_success &&
-              mlocInflectNumber(&s_tr, &english, &thousand, &locative, &output) == mloc_success &&
+              mlocInitNumberFormatter(&s_builtin, &en, nullptr, &english) == mloc_success &&
+              mlocInflector_InflectNumber(&s_tr, &english, &thousand, &locative, &output) ==
+                  mloc_success &&
               output.length == 8 && memcmp(s_text, "1,000'de", 8) == 0,
           "another locale's number read by its value: English's thousand, not 1.000");
-    CHECK(mlocInitNumberFormatter(&scientific, &s_builtin, &tr, &powers) == mloc_success &&
-              mlocInflectNumber(&s_tr, &scientific, &thousand, &dative, &output) == mloc_success &&
+    CHECK(mlocInitNumberFormatter(&s_builtin, &tr, &powers, &scientific) == mloc_success &&
+              mlocInflector_InflectNumber(&s_tr, &scientific, &thousand, &dative, &output) ==
+                  mloc_success &&
               output.length == 5 && memcmp(s_text, "1E3'e", 5) == 0,
           "scientific notation read from its text, the exponent last");
 }
@@ -400,54 +403,59 @@ static void TestRefusals(void)
     mlocInflection fourth = Case(mloc_caseNominative);
     fourth.possessorPerson = 4;
     mlocOutput output = {s_text, sizeof(s_text), 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_tr, "", 0, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "\xC3", 1, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "!!", 2, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "Ali", 3, &vocative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "Ali", 3, &fourth, &output) == mloc_errorInvalid &&
-              mlocInflectText(nullptr, "Ali", 3, &dative, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_tr, "", 0, &dative, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "\xC3", 1, &dative, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "!!", 2, &dative, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "Ali", 3, &vocative, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "Ali", 3, &fourth, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(nullptr, "Ali", 3, &dative, &output) == mloc_errorInvalid,
           "empty text, bad UTF-8, nothing to read, a case or person Turkish lacks");
-    CHECK(mlocInflectText(&s_tr, "Ali\xF0\x9F\x98\x80", 7, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "Ali!", 4, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, "\xE2\x80\x9D", 3, &dative, &output) == mloc_errorInvalid &&
-              mlocInflectText(&s_tr, ".", 1, &dative, &output) == mloc_errorInvalid,
+    CHECK(mlocInflector_InflectText(&s_tr, "Ali\xF0\x9F\x98\x80", 7, &dative, &output) ==
+                  mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "Ali!", 4, &dative, &output) == mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, "\xE2\x80\x9D", 3, &dative, &output) ==
+                  mloc_errorInvalid &&
+              mlocInflector_InflectText(&s_tr, ".", 1, &dative, &output) == mloc_errorInvalid,
           "an emoji, punctuation, a closing mark or a period alone end nothing to read");
     static const char s_long[] = "12345678901234567890123456789012345678901234567890";
-    CHECK(mlocInflectText(&s_tr, s_long, sizeof(s_long) - 1, &dative, &output) == mloc_errorLimit,
+    CHECK(mlocInflector_InflectText(&s_tr, s_long, sizeof(s_long) - 1, &dative, &output) ==
+              mloc_errorLimit,
           "a number past a decimal's 40 digits is refused");
     static char s_word[301];
     memset(s_word, 'a', 300);
     output.length = 0;
-    CHECK(mlocInflectText(&s_tr, s_word, 300, &dative, &output) == mloc_success &&
+    CHECK(mlocInflector_InflectText(&s_tr, s_word, 300, &dative, &output) == mloc_success &&
               output.length == 303 && memcmp(s_text + 300, "'ya", 3) == 0 && s_text[299] == 'a',
           "a word past the spoken room is read by its last letters");
     mlocOutput measure = {nullptr, 0, 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_tr, "Ali", 3, &dative, &measure) == mloc_errorCapacity &&
+    CHECK(mlocInflector_InflectText(&s_tr, "Ali", 3, &dative, &measure) == mloc_errorCapacity &&
               measure.length == 6,
           "a null buffer of no capacity measures");
     mlocDecimal five;
     mlocDecimal huge;
     CHECK(mlocParseDecimal("5", 1, &five).status == mloc_success &&
               mlocParseDecimal("1e2000", 6, &huge).status == mloc_success &&
-              mlocInflectNumber(&s_tr, nullptr, &five, &dative, nullptr) == mloc_errorInvalid &&
-              mlocInflectNumber(&s_tr, nullptr, &huge, &dative, &output) == mloc_errorLimit,
+              mlocInflector_InflectNumber(&s_tr, nullptr, &five, &dative, nullptr) ==
+                  mloc_errorInvalid &&
+              mlocInflector_InflectNumber(&s_tr, nullptr, &huge, &dative, &output) ==
+                  mloc_errorLimit,
           "a number without an output, or whose text passes MLOC_MAX_INFLECTED_NUMBER bytes, is "
           "refused");
     mlocOutput small = {s_text, 4, 0, nullptr, nullptr};
-    CHECK(mlocInflectText(&s_tr, "Ankara", 6, &dative, &small) == mloc_errorCapacity &&
+    CHECK(mlocInflector_InflectText(&s_tr, "Ankara", 6, &dative, &small) == mloc_errorCapacity &&
               small.length == 9,
           "a text that does not fit reports its length");
     mlocInflector other;
     mlocLocale en;
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitInflector(&other, &s_data, &en) == mloc_errorNotFound,
+              mlocInitInflector(&s_data, &en, &other) == mloc_errorNotFound,
           "a language without rules is refused");
     mlocInflector bare;
     mlocLocale tr;
     CHECK(mlocParseLocale("tr", 2, &tr).status == mloc_success &&
-              mlocInitInflector(&bare, &s_builtin, &tr) == mloc_success &&
-              mlocInflectText(&bare, "5", 1, &dative, &output) == mloc_errorNotFound &&
-              mlocInflectText(&bare, "Ali", 3, &dative, &output) == mloc_success,
+              mlocInitInflector(&s_builtin, &tr, &bare) == mloc_success &&
+              mlocInflector_InflectText(&bare, "5", 1, &dative, &output) == mloc_errorNotFound &&
+              mlocInflector_InflectText(&bare, "Ali", 3, &dative, &output) == mloc_success,
           "without the spell-out rules a number is refused, a word is not");
 }
 
@@ -462,7 +470,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || mlocOpenData(&sources[1], spellout, size) != mloc_success)
+    if (size == 0 || mlocOpenData(spellout, size, &sources[1]) != mloc_success)
     {
         fprintf(stderr, "test_grammar: cannot open %s\n", MLOC_SPELLOUT_FILE);
         return 2;
@@ -471,7 +479,7 @@ int main(void)
     s_builtin = (mlocDataSet){sources, 1};
     mlocLocale tr;
     if (mlocParseLocale("tr", 2, &tr).status != mloc_success ||
-        mlocInitInflector(&s_tr, &s_data, &tr) != mloc_success)
+        mlocInitInflector(&s_data, &tr, &s_tr) != mloc_success)
     {
         fputs("test_grammar: cannot make the inflector\n", stderr);
         return 2;

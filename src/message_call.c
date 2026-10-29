@@ -43,7 +43,7 @@ static uint32_t OptionAt(const CallState* s, size_t index)
     return UINT32_MAX;
 }
 
-size_t mlocGetMessageOptionCount(const mlocMessageCall* call)
+size_t mlocMessageCall_GetOptionCount(const mlocMessageCall* call)
 {
     CallState s;
     if (!ReadCall(call, &s))
@@ -67,9 +67,9 @@ static void ReadOption(const CallState* s, uint32_t p, mlocMessageOperand* value
     mlocToOperand(&v, valueOut, storage);
 }
 
-mlocResult mlocGetMessageOption(const mlocMessageCall* call, size_t index, const char** nameOut,
-                                size_t* lengthOut, mlocMessageOperand* valueOut,
-                                mlocMessageResolved* storage)
+mlocResult mlocMessageCall_GetOption(const mlocMessageCall* call, size_t index,
+                                     const char** nameOut, size_t* lengthOut,
+                                     mlocMessageOperand* valueOut, mlocMessageResolved* storage)
 {
     CallState s;
     if (!ReadCall(call, &s) || nameOut == NULL || lengthOut == NULL || valueOut == NULL ||
@@ -89,8 +89,8 @@ mlocResult mlocGetMessageOption(const mlocMessageCall* call, size_t index, const
     return mloc_success;
 }
 
-mlocResult mlocFindMessageOption(const mlocMessageCall* call, const char* name, size_t length,
-                                 mlocMessageOperand* valueOut, mlocMessageResolved* storage)
+mlocResult mlocMessageCall_FindOption(const mlocMessageCall* call, const char* name, size_t length,
+                                      mlocMessageOperand* valueOut, mlocMessageResolved* storage)
 {
     CallState s;
     if (!ReadCall(call, &s) || name == NULL || valueOut == NULL || storage == NULL)
@@ -114,7 +114,7 @@ mlocResult mlocFindMessageOption(const mlocMessageCall* call, const char* name, 
     }
 }
 
-mlocResult mlocGetMessageLocale(const mlocMessageCall* call, mlocLocale* localeOut)
+mlocResult mlocMessageCall_GetLocale(const mlocMessageCall* call, mlocLocale* localeOut)
 {
     CallState s;
     if (!ReadCall(call, &s) || localeOut == NULL)

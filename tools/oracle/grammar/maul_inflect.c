@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     {
         fclose(f);
     }
-    if (argc < 2 || mlocOpenData(&d[1], s_rules, n) != mloc_success)
+    if (argc < 2 || mlocOpenData(s_rules, n, &d[1]) != mloc_success)
     {
         return 2;
     }
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     mlocLocale tr;
     mlocInflector inf;
     if (mlocParseLocale(id, strlen(id), &tr).status != mloc_success ||
-        mlocInitInflector(&inf, &set, &tr) != mloc_success)
+        mlocInitInflector(&set, &tr, &inf) != mloc_success)
     {
         return 2;
     }
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         }
         char out[512];
         mlocOutput o = {out, sizeof out, 0, NULL, NULL};
-        mlocResult res = mlocInflectText(&inf, word, strlen(word), &r, &o);
+        mlocResult res = mlocInflector_InflectText(&inf, word, strlen(word), &r, &o);
         if (res == mloc_success)
         {
             printf("%.*s\n", (int)o.length, out);

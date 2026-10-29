@@ -68,7 +68,7 @@ static bool OpenData(mlocDataSet* set)
             size_t size = fread(s_units, 1, sizeof(s_units), file);
             fclose(file);
             if (size > 0 && size < sizeof(s_units) &&
-                mlocOpenData(&s_sources[1], s_units, size) == mloc_success)
+                mlocOpenData(s_units, size, &s_sources[1]) == mloc_success)
             {
                 s_state = 1;
             }
@@ -122,21 +122,21 @@ static void Format(const mlocUnitFormatter* formatter, const mlocDecimal* value)
 {
     static char s_text[2][maxText];
     mlocOutput one = {.buffer = s_text[0], .capacity = maxText};
-    mlocResult r = mlocFormatUnit(formatter, value, &one);
+    mlocResult r = mlocUnitFormatter_Format(formatter, value, &one);
     Require(ONE_OF(r, mloc_success, mloc_errorCapacity, mloc_errorLimit));
     if (r == mloc_success)
     {
         mlocOutput two = {.buffer = s_text[1], .capacity = maxText};
         mlocOutput measure = {0};
-        Require(mlocFormatUnit(formatter, value, &two) == mloc_success &&
+        Require(mlocUnitFormatter_Format(formatter, value, &two) == mloc_success &&
                 two.length == one.length && memcmp(s_text[0], s_text[1], one.length) == 0);
-        Require(mlocFormatUnit(formatter, value, &measure) == mloc_errorCapacity &&
+        Require(mlocUnitFormatter_Format(formatter, value, &measure) == mloc_errorCapacity &&
                 measure.length == one.length);
     }
     mlocDecimal end;
     Require(mlocMakeDecimal(1000, &end) == mloc_success);
     mlocOutput range = {.buffer = s_text[0], .capacity = maxText};
-    r = mlocFormatUnitRange(formatter, value, &end, &range);
+    r = mlocUnitFormatter_FormatRange(formatter, value, &end, &range);
     Require(ONE_OF(r, mloc_success, mloc_errorCapacity, mloc_errorLimit, mloc_errorInvalid));
 }
 
@@ -221,7 +221,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         .grammaticalCase = (mlocGrammaticalCase)(data[2] % 30),
     };
     mlocUnitFormatter formatter;
-    r = mlocInitUnitFormatter(&formatter, &set, &locale, unit, unitLength, &options);
+    r = mlocInitUnitFormatter(&set, &locale, unit, unitLength, &options, &formatter);
     Require(ONE_OF(r, mloc_success, mloc_fellBack, mloc_errorSyntax, mloc_errorNotFound,
                    mloc_errorLimit, mloc_errorInvalid));
     if (r == mloc_success || r == mloc_fellBack)

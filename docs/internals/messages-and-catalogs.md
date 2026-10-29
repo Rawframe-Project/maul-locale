@@ -30,7 +30,7 @@ A catalog is an asset ([data.md](data.md#asset-formats)) holding its locale, the
 
 ## Chains
 
-A chain is up to eight catalogs of one set in fallback order, each with its locale's message formatter, and a cache in caller memory: a head, an 8-byte slot per key, and an arena for bound messages. A message is bound when it is first formatted, never on the stack (bound messages have no size bound), or all at once by `mlocBindCatalogChain`. While it still binds, a chain writes its cache and is used by one thread at a time; once bound, every slot is filled and format calls only read.
+A chain is up to eight catalogs of one set in fallback order, each with its locale's message formatter, and a cache in caller memory: a head, an 8-byte slot per key, and an arena for bound messages. A message is bound when it is first formatted, never on the stack (bound messages have no size bound), or all at once by `mlocCatalogChain_Bind`. While it still binds, a chain writes its cache and is used by one thread at a time; once bound, every slot is filled and format calls only read.
 
 Every call writes some text and states why, so a missing translation is visible but never blank: the first catalog's message, a later one's, the source's when a translation does not bind, or the key when nothing else works. A message with fallbacks does not fall to another locale: its faults name a translator's mistake, and text in the right language with a fallback is better than another language.
 

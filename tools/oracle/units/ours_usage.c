@@ -16,7 +16,7 @@ int main(void)
     static char names[8 << 20];
     size_t size = fread(names, 1, sizeof(names), file);
     fclose(file);
-    if (mlocOpenData(&sources[1], names, size) != mloc_success)
+    if (mlocOpenData(names, size, &sources[1]) != mloc_success)
     {
         return 1;
     }
@@ -44,14 +44,15 @@ int main(void)
         mlocOutput output = {.buffer = out, .capacity = sizeof(out)};
         mlocResult r;
         if (mlocParseLocale(loc, strlen(loc), &locale).status < 0 ||
-            (r = mlocInitUnitFormatter(&f, &data, &locale, unit, strlen(unit), &o)) < 0 ||
+            (r = mlocInitUnitFormatter(&data, &locale, unit, strlen(unit), &o, &f)) < 0 ||
             mlocParseDecimal(value, strlen(value), &d).status < 0 ||
-            (value2[0] == 0 ? (r = mlocFormatUnit(&f, &d, &output)) < 0
+            (value2[0] == 0 ? (r = mlocUnitFormatter_Format(&f, &d, &output)) < 0
                             : (
                                   {
                                       mlocDecimal e;
                                       mlocParseDecimal(value2, strlen(value2), &e).status < 0 ||
-                                          (r = mlocFormatUnitRange(&f, &d, &e, &output)) < 0;
+                                          (r = mlocUnitFormatter_FormatRange(&f, &d, &e, &output)) <
+                                              0;
                                   })))
         {
             printf("%s\tERR\n", line);

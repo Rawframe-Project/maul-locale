@@ -113,7 +113,7 @@ extern "C"
         // do not change.
         mlocDateStyle style;
         // A zone after the date, joined by the calendar's glue as a time
-        // is ("January 5, 2026 at PT"), for mlocFormatDateInZone; none for
+        // is ("January 5, 2026 at PT"), for mlocDateFormatter_FormatInZone; none for
         // a date alone.
         mlocZoneStyle zone;
     } mlocDateOptions;
@@ -142,7 +142,7 @@ extern "C"
         // A time zone's name, city or offset ("Pacific Time", "GMT-7").
         mloc_datePartTimeZone = 13,
         // A day relative to today, whole ("tomorrow", "in 3 days";
-        // mlocFormatRelativeDayTime).
+        // mlocRelativeFormatter_FormatDayTime).
         mloc_datePartRelativeDay = 14,
     } mlocDatePart;
 
@@ -171,8 +171,6 @@ extern "C"
     /// systems a pattern names for its fields (Japanese years by
     /// jpanyear, Hebrew dates by hebr).
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the dates (dates.mloc), the
     ///                      number units, the preferences, the parents
     ///                      and, for a pattern naming an algorithmic
@@ -180,6 +178,8 @@ extern "C"
     ///                      zone, what mlocInitZoneFormatter reads too.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the dates, the number
@@ -190,10 +190,10 @@ extern "C"
     ///         range, or a zone with a calendar period (a month, a year).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitDateFormatter(mlocDateFormatter* formatterOut,
-                                                             const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitDateFormatter(const mlocDataSet* data,
                                                              const mlocLocale* locale,
-                                                             const mlocDateOptions* options);
+                                                             const mlocDateOptions* options,
+                                                             mlocDateFormatter* formatterOut);
 
     /// Writes a date by the formatter, read in the formatter's calendar
     /// (the same day). Parts: mlocDatePart.
@@ -207,13 +207,14 @@ extern "C"
     ///         formatter the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDate(const mlocDateFormatter* formatter,
-                                                      const mlocDate* date, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter,
+                                                                const mlocDate* date,
+                                                                mlocOutput* output);
 
     /// Writes the date in a zone at an instant, and the zone, by a
     /// formatter made with a zone (mlocDateOptions' zone): the zone's
     /// local date in the formatter's calendar, the zone as
-    /// mlocFormatZone writes it. Parts: mlocDatePart.
+    /// mlocZoneFormatter_Format writes it. Parts: mlocDatePart.
     ///
     /// @param formatter  A formatter from mlocInitDateFormatter, with a
     ///                   zone.
@@ -227,10 +228,9 @@ extern "C"
     ///         make or made without a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateInZone(const mlocDateFormatter* formatter,
-                                                            const mlocTimeZone* zone,
-                                                            const mlocInstant* instant,
-                                                            mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocDateFormatter_FormatInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone,
+                                   const mlocInstant* instant, mlocOutput* output);
 
     /// Writes a range of two dates by the formatter (ECMA-402's
     /// formatRange), as ICU4C's DateIntervalFormat writes the formatter's
@@ -249,12 +249,12 @@ extern "C"
     ///                   function, when set, receives mlocDatePart values
     ///                   with the date each belongs to (mloc_dateRangeStart,
     ///                   mloc_dateRangeEnd, or 0 for both).
-    /// @return As mlocFormatDate.
+    /// @return As mlocDateFormatter_Format.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateRange(const mlocDateFormatter* formatter,
-                                                           const mlocDate* start,
-                                                           const mlocDate* end, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, const mlocDate* start,
+                                  const mlocDate* end, mlocOutput* output);
 
     /// Writes a range of two instants' dates in a zone, each with the zone,
     /// by a formatter made with one: on one local day the start's date and
@@ -270,15 +270,13 @@ extern "C"
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
     /// @param output     Where the text goes; parts as
-    ///                   mlocFormatDateRange's.
-    /// @return As mlocFormatDateInZone.
+    ///                   mlocDateFormatter_FormatRange's.
+    /// @return As mlocDateFormatter_FormatInZone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateRangeInZone(const mlocDateFormatter* formatter,
-                                                                 const mlocTimeZone* zone,
-                                                                 const mlocInstant* start,
-                                                                 const mlocInstant* end,
-                                                                 mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateFormatter_FormatRangeInZone(
+        const mlocDateFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
+        const mlocInstant* end, mlocOutput* output);
 
     // How hours are numbered (UTS #35's hour cycle). Auto takes -u-hc as
     // the cycle when the locale gives one, else the clock of the locale's
@@ -320,7 +318,7 @@ extern "C"
 
     // One of the locale's four standard time formats instead of a
     // precision, or none. The full and long ones name a time zone, so
-    // they write a zoned time only (mlocFormatTimeInZone).
+    // they write a zoned time only (mlocTimeFormatter_FormatInZone).
     typedef enum mlocTimeStyle
     {
         mloc_timeStyleNone = 0,
@@ -343,7 +341,7 @@ extern "C"
         // their zone themselves.
         mlocTimeStyle style;
         // A zone after the time ("4:03 PM PT"), as the locale's patterns
-        // join them, for mlocFormatTimeInZone; none for a time alone, and
+        // join them, for mlocTimeFormatter_FormatInZone; none for a time alone, and
         // with a standard format.
         mlocZoneStyle zone;
     } mlocTimeOptions;
@@ -361,8 +359,6 @@ extern "C"
     /// decimal separator its numbering system's (-u-nu, else its
     /// default).
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the dates (dates.mloc), the
     ///                      number units, the preferences and the
     ///                      parents; with a zone (a zone style, or the
@@ -370,6 +366,8 @@ extern "C"
     ///                      mlocInitZoneFormatter reads too.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the dates, the number
@@ -379,10 +377,10 @@ extern "C"
     ///         range, or a zone style with a standard format.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitTimeFormatter(mlocTimeFormatter* formatterOut,
-                                                             const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitTimeFormatter(const mlocDataSet* data,
                                                              const mlocLocale* locale,
-                                                             const mlocTimeOptions* options);
+                                                             const mlocTimeOptions* options,
+                                                             mlocTimeFormatter* formatterOut);
 
     /// Writes a time of day by the formatter. Parts: mlocDatePart.
     ///
@@ -395,12 +393,13 @@ extern "C"
     ///         library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTime(const mlocTimeFormatter* formatter,
-                                                      const mlocTime* time, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocTimeFormatter_Format(const mlocTimeFormatter* formatter,
+                                                                const mlocTime* time,
+                                                                mlocOutput* output);
 
     /// Writes the time of day in a zone at an instant, and the zone, by a
     /// formatter made with one (a zone style, or the full or long format):
-    /// the zone's local time, the zone as mlocFormatZone writes it in the
+    /// the zone's local time, the zone as mlocZoneFormatter_Format writes it in the
     /// form the pattern names. Parts: mlocDatePart.
     ///
     /// @param formatter  A formatter from mlocInitTimeFormatter, with a
@@ -415,10 +414,9 @@ extern "C"
     ///         make or made without a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeInZone(const mlocTimeFormatter* formatter,
-                                                            const mlocTimeZone* zone,
-                                                            const mlocInstant* instant,
-                                                            mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocTimeFormatter_FormatInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
+                                   const mlocInstant* instant, mlocOutput* output);
 
     /// Writes a range of two times of day by the formatter, as ICU4C's
     /// DateIntervalFormat writes the formatter's skeleton: the locale's
@@ -433,13 +431,13 @@ extern "C"
     /// @param start      The range's start.
     /// @param end        Its end.
     /// @param output     Where the text goes; parts as
-    ///                   mlocFormatDateRange's.
-    /// @return As mlocFormatTime.
+    ///                   mlocDateFormatter_FormatRange's.
+    /// @return As mlocTimeFormatter_Format.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeRange(const mlocTimeFormatter* formatter,
-                                                           const mlocTime* start,
-                                                           const mlocTime* end, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocTimeFormatter_FormatRange(const mlocTimeFormatter* formatter, const mlocTime* start,
+                                  const mlocTime* end, mlocOutput* output);
 
     /// Writes a range of two instants' times of day in a zone by a
     /// formatter made with one, each with its zone as the pattern names
@@ -457,18 +455,16 @@ extern "C"
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
     /// @param output     Where the text goes; parts as
-    ///                   mlocFormatDateRange's.
-    /// @return As mlocFormatTimeInZone; across dates, also as
+    ///                   mlocDateFormatter_FormatRange's.
+    /// @return As mlocTimeFormatter_FormatInZone; across dates, also as
     ///         mlocInitDateFormatter for the dates (mloc_errorNotFound for
     ///         data without a numbering system's spell-out rules the dates
     ///         name).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatTimeRangeInZone(const mlocTimeFormatter* formatter,
-                                                                 const mlocTimeZone* zone,
-                                                                 const mlocInstant* start,
-                                                                 const mlocInstant* end,
-                                                                 mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocTimeFormatter_FormatRangeInZone(
+        const mlocTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
+        const mlocInstant* end, mlocOutput* output);
 
     // Which of the calendar's glue joins a date and a time: atTime ("{1}
     // 'at' {0}", UTS #35's default since CLDR 48, as ICU4C 79 and ICU4X
@@ -521,9 +517,9 @@ extern "C"
     ///         the date's options.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocInitDateTimeFormatter(mlocDateTimeFormatter* formatterOut, const mlocDataSet* data,
-                              const mlocLocale* locale, const mlocDateTimeOptions* options);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitDateTimeFormatter(
+        const mlocDataSet* data, const mlocLocale* locale, const mlocDateTimeOptions* options,
+        mlocDateTimeFormatter* formatterOut);
 
     /// Writes a date and time of day by the formatter, the date read in
     /// the formatter's calendar. Parts: mlocDatePart.
@@ -537,9 +533,8 @@ extern "C"
     ///         the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter,
-                                                          const mlocDateTime* dateTime,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_Format(
+        const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime, mlocOutput* output);
 
     /// Writes the date and time of day in a zone at an instant, and the
     /// zone, by a formatter made with one: the zone's local date-time,
@@ -557,9 +552,9 @@ extern "C"
     ///         make or made without a zone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone,
-                             const mlocInstant* instant, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatInZone(
+        const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone,
+        const mlocInstant* instant, mlocOutput* output);
 
     /// Writes a range of two date-times by the formatter, as ICU4C's
     /// DateIntervalFormat writes the formatter's skeleton: on one day the
@@ -575,16 +570,16 @@ extern "C"
     /// @param start      The range's start.
     /// @param end        Its end.
     /// @param output     Where the text goes; parts as
-    ///                   mlocFormatDateRange's.
-    /// @return As mlocFormatDateTime.
+    ///                   mlocDateFormatter_FormatRange's.
+    /// @return As mlocDateTimeFormatter_Format.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocFormatDateTimeRange(const mlocDateTimeFormatter* formatter, const mlocDateTime* start,
-                            const mlocDateTime* end, mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatRange(
+        const mlocDateTimeFormatter* formatter, const mlocDateTime* start, const mlocDateTime* end,
+        mlocOutput* output);
 
     /// Writes a range of two instants' date-times in a zone by a formatter
-    /// made with one, as mlocFormatDateTimeRange writes the zone's local
+    /// made with one, as mlocDateTimeFormatter_FormatRange writes the zone's local
     /// date-times, each time with its zone as the pattern names it.
     ///
     /// @param formatter  A formatter from mlocInitDateTimeFormatter, with
@@ -593,11 +588,11 @@ extern "C"
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
     /// @param output     Where the text goes; parts as
-    ///                   mlocFormatDateRange's.
-    /// @return As mlocFormatDateTimeInZone.
+    ///                   mlocDateFormatter_FormatRange's.
+    /// @return As mlocDateTimeFormatter_FormatInZone.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDateTimeRangeInZone(
+    MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatRangeInZone(
         const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
         const mlocInstant* end, mlocOutput* output);
 
@@ -617,14 +612,14 @@ extern "C"
     /// metazone's preferred zone for the locale's region (its likely
     /// region when it names none) is another zone of another offset.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the zone names (zone-names.mloc),
     ///                      the zone codes, the number units, the likely
     ///                      subtags and the parents; the region names
     ///                      (names.mloc) for the location formats.
     /// @param locale        The locale, canonicalized.
     /// @param style         How zones are written.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorNotFound for data without the zone names, the
@@ -632,10 +627,10 @@ extern "C"
     ///         pointer or a style out of range or none.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitZoneFormatter(mlocZoneFormatter* formatterOut,
-                                                             const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitZoneFormatter(const mlocDataSet* data,
                                                              const mlocLocale* locale,
-                                                             mlocZoneStyle style);
+                                                             mlocZoneStyle style,
+                                                             mlocZoneFormatter* formatterOut);
 
     /// Writes a time zone at an instant by the formatter (the instant
     /// picks the metazone, standard or daylight time and the offset). A
@@ -653,10 +648,10 @@ extern "C"
     ///         make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatZone(const mlocZoneFormatter* formatter,
-                                                      const mlocTimeZone* zone,
-                                                      const mlocInstant* instant,
-                                                      mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter,
+                                                                const mlocTimeZone* zone,
+                                                                const mlocInstant* instant,
+                                                                mlocOutput* output);
 
 #ifdef __cplusplus
 }

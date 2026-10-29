@@ -111,10 +111,10 @@ static void Canonicalize(const uint8_t* data, size_t size)
         mlocDecimal number;
         mlocPluralCategory category;
         uint32_t categories = 0;
-        Require(mlocInitPluralRules(&rules, &set, &locale, (mlocPluralType)type) >= 0);
+        Require(mlocInitPluralRules(&set, &locale, (mlocPluralType)type, &rules) >= 0);
         Require(mlocMakeDecimal(21, &number) == mloc_success &&
-                mlocSelectPlural(&rules, &number, &category) == mloc_success &&
-                mlocGetPluralCategories(&rules, &categories) == mloc_success &&
+                mlocPluralRules_Select(&rules, &number, &category) == mloc_success &&
+                mlocPluralRules_GetCategories(&rules, &categories) == mloc_success &&
                 (categories >> category & 1u) != 0);
     }
     // Every locale has numbers (root's at worst), whatever -u-nu says.
@@ -123,22 +123,24 @@ static void Canonicalize(const uint8_t* data, size_t size)
     char text[256];
     mlocOutput measure = {0};
     mlocOutput written = {.buffer = text, .capacity = sizeof(text)};
-    Require(mlocInitNumberFormatter(&formatter, &set, &locale, nullptr) >= 0 &&
+    Require(mlocInitNumberFormatter(&set, &locale, nullptr, &formatter) >= 0 &&
             mlocParseDecimal("-1234.5", 7, &value).status == mloc_success &&
-            mlocFormatNumber(&formatter, &value, &measure) == mloc_errorCapacity &&
-            mlocFormatNumber(&formatter, &value, &written) == mloc_success &&
+            mlocNumberFormatter_Format(&formatter, &value, &measure) == mloc_errorCapacity &&
+            mlocNumberFormatter_Format(&formatter, &value, &written) == mloc_success &&
             written.length == measure.length);
     // And compact numbers of both lengths.
     for (int notation = mloc_notationCompactShort; notation <= mloc_notationCompactLong; notation++)
     {
         mlocNumberOptions options = {.notation = (mlocNotation)notation};
-        Require(mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
-                mlocFormatNumber(&formatter, &value, &written) == mloc_success);
+        Require(mlocInitNumberFormatter(&set, &locale, &options, &formatter) >= 0 &&
+                mlocNumberFormatter_Format(&formatter, &value, &written) == mloc_success);
         // A range, and one whose ends write alike.
-        Require(mlocFormatNumberRange(&formatter, &value, &value, &written) == mloc_success);
+        Require(mlocNumberFormatter_FormatRange(&formatter, &value, &value, &written) ==
+                mloc_success);
         mlocDecimal other;
         Require(mlocMakeDecimal(98765, &other) == mloc_success &&
-                mlocFormatNumberRange(&formatter, &value, &other, &written) == mloc_success);
+                mlocNumberFormatter_FormatRange(&formatter, &value, &other, &written) ==
+                    mloc_success);
     }
 }
 

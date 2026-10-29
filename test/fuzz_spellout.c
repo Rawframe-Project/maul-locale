@@ -50,7 +50,7 @@ static bool OpenData(mlocDataSet* set, const mlocData** rulesOut)
             size_t size = fread(s_rules, 1, sizeof(s_rules), file);
             fclose(file);
             if (size < sizeof(s_rules) &&
-                mlocOpenData(&s_sources[1], s_rules, size) == mloc_success)
+                mlocOpenData(s_rules, size, &s_sources[1]) == mloc_success)
             {
                 s_state = 1;
             }
@@ -68,12 +68,12 @@ static bool MakeFormatter(const mlocDataSet* set, const mlocData* rules, uint8_t
 {
     static const char* const s_systems[] = {"roman", "romanlow", "hebr",     "armn",
                                             "geor",  "hans",     "jpanyear", "taml"};
-    size_t count = mlocGetDataLocaleCount(rules);
+    size_t count = mlocData_GetLocaleCount(rules);
     const char* id = nullptr;
     size_t length = 0;
     mlocLocale parsed;
     char tag[64];
-    if (count == 0 || mlocGetDataLocale(rules, locale % count, &id, &length) != mloc_success ||
+    if (count == 0 || mlocData_GetLocale(rules, locale % count, &id, &length) != mloc_success ||
         length >= sizeof(tag))
     {
         return false;
@@ -90,8 +90,8 @@ static bool MakeFormatter(const mlocDataSet* set, const mlocData* rules, uint8_t
     if (which >= 248)
     {
         const char* system = s_systems[which - 248];
-        return mlocInitNumberingSystemFormatter(out, set, &parsed, system, strlen(system),
-                                                &options) >= 0;
+        return mlocInitNumberingSystemFormatter(set, &parsed, system, strlen(system), &options,
+                                                out) >= 0;
     }
     size_t sets = mlocGetSpelloutRuleSetCount(set, &parsed);
     const char* name = nullptr;
@@ -101,7 +101,7 @@ static bool MakeFormatter(const mlocDataSet* set, const mlocData* rules, uint8_t
     {
         return false;
     }
-    return mlocInitSpelloutFormatter(out, set, &parsed, name, nameLength, &options) >= 0;
+    return mlocInitSpelloutFormatter(set, &parsed, name, nameLength, &options, out) >= 0;
 }
 
 // Parses text twice: a refusal of syntax or capacity alone, the same
@@ -112,10 +112,11 @@ static void CheckParse(const mlocSpelloutFormatter* formatter, const char* text,
     mlocDecimal second;
     size_t end = 0;
     size_t again = 0;
-    mlocResult r = mlocParseSpellout(formatter, text, length, &first, &end);
+    mlocResult r = mlocSpelloutFormatter_Parse(formatter, text, length, &first, &end);
     Require(r == mloc_success || r == mloc_errorSyntax || r == mloc_errorLimit);
     Require(r == mloc_success ? end > 0 && end <= length : end == 0);
-    Require(mlocParseSpellout(formatter, text, length, &second, &again) == r && again == end);
+    Require(mlocSpelloutFormatter_Parse(formatter, text, length, &second, &again) == r &&
+            again == end);
     Require(r != mloc_success || memcmp(&first, &second, sizeof(first)) == 0);
 }
 
@@ -163,17 +164,17 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     static char s_text[maxText];
     static char s_again[maxText];
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
-    mlocResult r = mlocFormatSpellout(&formatter, &decimal, &output);
+    mlocResult r = mlocSpelloutFormatter_Format(&formatter, &decimal, &output);
     Require(r == mloc_success || r == mloc_errorCapacity || r == mloc_errorLimit);
     if (r != mloc_success)
     {
         return 0;
     }
     mlocOutput repeat = {.buffer = s_again, .capacity = sizeof(s_again)};
-    Require(mlocFormatSpellout(&formatter, &decimal, &repeat) == mloc_success &&
+    Require(mlocSpelloutFormatter_Format(&formatter, &decimal, &repeat) == mloc_success &&
             repeat.length == output.length && memcmp(s_text, s_again, output.length) == 0);
     mlocOutput measure = {0};
-    Require(mlocFormatSpellout(&formatter, &decimal, &measure) == mloc_errorCapacity &&
+    Require(mlocSpelloutFormatter_Format(&formatter, &decimal, &measure) == mloc_errorCapacity &&
             measure.length == output.length);
     CheckParse(&formatter, s_text, output.length);
     return 0;

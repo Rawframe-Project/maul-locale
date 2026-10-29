@@ -248,10 +248,10 @@ static uint32_t CraftedIndex(const uint8_t* unit, size_t unitSize)
     size_t indexSize = 0;
     uint32_t count = 0;
     bool built = s_collationSize > 0 && s_collationSize < sizeof(s_collation) &&
-                 mlocOpenData(&sources[1], bytes, size) == mloc_success &&
-                 mlocOpenData(&sources[2], s_collation, s_collationSize) == mloc_success &&
+                 mlocOpenData(bytes, size, &sources[1]) == mloc_success &&
+                 mlocOpenData(s_collation, s_collationSize, &sources[2]) == mloc_success &&
                  mlocParseLocale("xx", 2, &locale).status == mloc_success &&
-                 mlocInitCollator(&collator, &data, &locale, nullptr) >= 0 &&
+                 mlocInitCollator(&data, &locale, nullptr, &collator) >= 0 &&
                  mlocBuildIndex(&collator, &data, &locale, nullptr, s_index, sizeof(s_index),
                                 &indexSize) == mloc_success &&
                  mlocGetIndexBucketCount(s_index, &count) == mloc_success;

@@ -176,9 +176,9 @@ static bool Format(const mlocDataSet* data, const char* id, const char* format, 
     mlocDecimal decimal;
     mlocOutput output = {.buffer = out, .capacity = capacity};
     if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
-        mlocInitNumberFormatter(&formatter, data, &locale, &options) < 0 ||
+        mlocInitNumberFormatter(data, &locale, &options, &formatter) < 0 ||
         mlocMakeShortestDecimal(strtod(input, nullptr), &decimal) != mloc_success ||
-        mlocFormatNumber(&formatter, &decimal, &output) != mloc_success)
+        mlocNumberFormatter_Format(&formatter, &decimal, &output) != mloc_success)
     {
         return false;
     }

@@ -180,9 +180,10 @@ static bool ValidOptions(const mlocSpelloutOptions* options)
            ((uint32_t)options->capitalization <= (uint32_t)mloc_capitalizationStandAlone);
 }
 
-mlocResult mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const char* ruleSet, size_t length,
-                                     const mlocSpelloutOptions* options)
+mlocResult mlocInitSpelloutFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                     const char* ruleSet, size_t length,
+                                     const mlocSpelloutOptions* options,
+                                     mlocSpelloutFormatter* formatterOut)
 {
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
         (ruleSet == nullptr && length != 0) || (ruleSet != nullptr && length == 0) ||
@@ -204,10 +205,10 @@ mlocResult mlocInitSpelloutFormatter(mlocSpelloutFormatter* formatterOut, const 
     return Complete(&f, data, locale, options, found, formatterOut);
 }
 
-mlocResult mlocInitNumberingSystemFormatter(mlocSpelloutFormatter* formatterOut,
-                                            const mlocDataSet* data, const mlocLocale* locale,
+mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocLocale* locale,
                                             const char* system, size_t length,
-                                            const mlocSpelloutOptions* options)
+                                            const mlocSpelloutOptions* options,
+                                            mlocSpelloutFormatter* formatterOut)
 {
     if (formatterOut == nullptr || data == nullptr || locale == nullptr || system == nullptr ||
         !ValidOptions(options))
@@ -310,8 +311,8 @@ static void Capitalize(const SpelloutFormat* f, uint32_t first, NumberWriter* w)
     w->length = length;
 }
 
-mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal,
-                              mlocOutput* output)
+mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
+                                        const mlocDecimal* decimal, mlocOutput* output)
 {
     SpelloutFormat f;
     if (!ReadFormatter(formatter, false, &f) || decimal == nullptr || output == nullptr ||
@@ -336,8 +337,8 @@ mlocResult mlocFormatSpellout(const mlocSpelloutFormatter* formatter, const mloc
                                                                     : mloc_success;
 }
 
-mlocResult mlocParseSpellout(const mlocSpelloutFormatter* formatter, const char* text,
-                             size_t length, mlocDecimal* decimalOut, size_t* endOut)
+mlocResult mlocSpelloutFormatter_Parse(const mlocSpelloutFormatter* formatter, const char* text,
+                                       size_t length, mlocDecimal* decimalOut, size_t* endOut)
 {
     SpelloutFormat f;
     if (!ReadFormatter(formatter, true, &f) || (text == nullptr && length != 0) ||

@@ -191,13 +191,13 @@ static void TestTypes(const mlocData* data, const DataView* view)
     size_t refused = 0;
     size_t searches = 0;
     size_t searchesNone = 0;
-    for (size_t i = 0; i < mlocGetDataLocaleCount(data); i++)
+    for (size_t i = 0; i < mlocData_GetLocaleCount(data); i++)
     {
         const char* id = nullptr;
         size_t length = 0;
         uint32_t locale = 0;
         DataSpan unit = {0};
-        if (mlocGetDataLocale(data, i, &id, &length) != mloc_success ||
+        if (mlocData_GetLocale(data, i, &id, &length) != mloc_success ||
             !mlocFindDataLocale(view, id, length, &locale) ||
             !mlocFindDataUnit(view, kindCollationTailorings, locale, &unit))
         {
@@ -239,7 +239,7 @@ int main(void)
     }
     mlocData data;
     if (s_size == 0 || s_size == sizeof(s_file) ||
-        mlocOpenData(&data, s_file, s_size) != mloc_success)
+        mlocOpenData(s_file, s_size, &data) != mloc_success)
     {
         fputs("test_collation_fast_latin: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

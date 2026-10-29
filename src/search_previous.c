@@ -191,8 +191,8 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
     }
 }
 
-mlocResult mlocFindPrevious(const mlocSearcher* searcher, const char* text, size_t length,
-                            size_t from, size_t* startOut, size_t* endOut)
+mlocResult mlocSearcher_FindPrevious(const mlocSearcher* searcher, const char* text, size_t length,
+                                     size_t from, size_t* startOut, size_t* endOut)
 {
     if (text == nullptr && length > 0)
     {
@@ -202,8 +202,9 @@ mlocResult mlocFindPrevious(const mlocSearcher* searcher, const char* text, size
     return FindPrevious(searcher, t, mlocSearchAlign(t, from), startOut, endOut);
 }
 
-mlocResult mlocFindPreviousUtf16(const mlocSearcher* searcher, const uint16_t* text, size_t length,
-                                 size_t from, size_t* startOut, size_t* endOut)
+mlocResult mlocSearcher_FindPreviousUtf16(const mlocSearcher* searcher, const uint16_t* text,
+                                          size_t length, size_t from, size_t* startOut,
+                                          size_t* endOut)
 {
     static const uint16_t s_empty[1] = {0};
     if (text == nullptr && length > 0)

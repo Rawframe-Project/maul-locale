@@ -194,20 +194,20 @@ static void DecimalRound(void)
 static void PluralInit(void)
 {
     mlocPluralRules rules;
-    s_sink = mlocInitPluralRules(&rules, &s_data, &s_ru, mloc_pluralCardinal);
+    s_sink = mlocInitPluralRules(&s_data, &s_ru, mloc_pluralCardinal, &rules);
 }
 
 static void PluralSelectInteger(void)
 {
     s_n = (s_n + 7) % 1000;
     mlocPluralCategory category;
-    s_sink = mlocSelectPluralInteger(&s_ruRules, s_n, &category) + (int)category;
+    s_sink = mlocPluralRules_SelectInteger(&s_ruRules, s_n, &category) + (int)category;
 }
 
 static void PluralSelectDecimal(void)
 {
     mlocPluralCategory category;
-    s_sink = mlocSelectPlural(&s_ruRules, &s_value, &category) + (int)category;
+    s_sink = mlocPluralRules_Select(&s_ruRules, &s_value, &category) + (int)category;
 }
 
 // The number part: formatters of de, en, en's dollar and meter (long),
@@ -230,13 +230,13 @@ static char s_text[128];
 static void NumberInit(void)
 {
     mlocNumberFormatter f;
-    s_sink = mlocInitNumberFormatter(&f, &s_data, &s_de, nullptr);
+    s_sink = mlocInitNumberFormatter(&s_data, &s_de, nullptr, &f);
 }
 
 static void Format(const mlocNumberFormatter* f, const mlocDecimal* d)
 {
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
-    s_sink = mlocFormatNumber(f, d, &output) + (int)output.length;
+    s_sink = mlocNumberFormatter_Format(f, d, &output) + (int)output.length;
 }
 
 static void NumberFormat(void)
@@ -262,13 +262,13 @@ static void ScientificFormat(void)
 static void CurrencyInit(void)
 {
     mlocCurrencyFormatter f;
-    s_sink = mlocInitCurrencyFormatter(&f, &s_data, &s_en, "USD", 3, nullptr);
+    s_sink = mlocInitCurrencyFormatter(&s_data, &s_en, "USD", 3, nullptr, &f);
 }
 
 static void CurrencyFormat(void)
 {
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
-    s_sink = mlocFormatCurrency(&s_usd, &s_money, &output) + (int)output.length;
+    s_sink = mlocCurrencyFormatter_Format(&s_usd, &s_money, &output) + (int)output.length;
 }
 
 static const mlocUnitOptions s_long = {.width = mloc_unitWidthLong};
@@ -276,13 +276,13 @@ static const mlocUnitOptions s_long = {.width = mloc_unitWidthLong};
 static void UnitInit(void)
 {
     static mlocUnitFormatter f;
-    s_sink = mlocInitUnitFormatter(&f, &s_withUnits, &s_en, "meter", 5, &s_long);
+    s_sink = mlocInitUnitFormatter(&s_withUnits, &s_en, "meter", 5, &s_long, &f);
 }
 
 static void UnitFormat(void)
 {
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
-    s_sink = mlocFormatUnit(&s_meter, &s_length, &output) + (int)output.length;
+    s_sink = mlocUnitFormatter_Format(&s_meter, &s_length, &output) + (int)output.length;
 }
 
 static void NumberParse(void)
@@ -290,7 +290,8 @@ static void NumberParse(void)
     mlocDecimal d;
     size_t end = 0;
     s_sink =
-        mlocParseNumber(&s_deDecimal, "1.234.567,891", 13, mloc_parseLenient, &d, &end) + (int)end;
+        mlocNumberFormatter_Parse(&s_deDecimal, "1.234.567,891", 13, mloc_parseLenient, &d, &end) +
+        (int)end;
 }
 
 static void CurrencyParse(void)
@@ -298,7 +299,8 @@ static void CurrencyParse(void)
     mlocDecimal d;
     char code[3];
     size_t end = 0;
-    s_sink = mlocParseCurrency(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 0, &d, code, &end) +
+    s_sink = mlocCurrencyFormatter_Parse(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 0, &d,
+                                         code, &end) +
              (int)end;
 }
 
@@ -307,7 +309,8 @@ static void CurrencyParseAny(void)
     mlocDecimal d;
     char code[3];
     size_t end = 0;
-    s_sink = mlocParseCurrency(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 1, &d, code, &end) +
+    s_sink = mlocCurrencyFormatter_Parse(&s_usd, "$1,234,567.89", 13, mloc_parseLenient, 1, &d,
+                                         code, &end) +
              (int)end;
 }
 
@@ -336,13 +339,13 @@ static bool PrepareNumbers(void)
     mlocNumberOptions percent = {.style = mloc_numberPercent};
     mlocNumberOptions scientific = {.notation = mloc_notationScientific};
     return size > 0 && size < sizeof(s_units) &&
-           mlocOpenData(&s_sources[1], s_units, size) == mloc_success &&
-           mlocInitNumberFormatter(&s_deDecimal, &s_data, &s_de, nullptr) == mloc_success &&
-           mlocInitNumberFormatter(&s_enCompact, &s_data, &s_en, &compact) == mloc_success &&
-           mlocInitNumberFormatter(&s_enPercent, &s_data, &s_en, &percent) == mloc_success &&
-           mlocInitNumberFormatter(&s_enScientific, &s_data, &s_en, &scientific) == mloc_success &&
-           mlocInitCurrencyFormatter(&s_usd, &s_data, &s_en, "USD", 3, nullptr) == mloc_success &&
-           mlocInitUnitFormatter(&s_meter, &s_withUnits, &s_en, "meter", 5, &s_long) ==
+           mlocOpenData(s_units, size, &s_sources[1]) == mloc_success &&
+           mlocInitNumberFormatter(&s_data, &s_de, nullptr, &s_deDecimal) == mloc_success &&
+           mlocInitNumberFormatter(&s_data, &s_en, &compact, &s_enCompact) == mloc_success &&
+           mlocInitNumberFormatter(&s_data, &s_en, &percent, &s_enPercent) == mloc_success &&
+           mlocInitNumberFormatter(&s_data, &s_en, &scientific, &s_enScientific) == mloc_success &&
+           mlocInitCurrencyFormatter(&s_data, &s_en, "USD", 3, nullptr, &s_usd) == mloc_success &&
+           mlocInitUnitFormatter(&s_withUnits, &s_en, "meter", 5, &s_long, &s_meter) ==
                mloc_success &&
            Number("1234567", &s_million) && Number("0.256", &s_ratio) &&
            Number("1234567.89", &s_money) && Number("1234.5", &s_length);
@@ -365,13 +368,13 @@ static char s_words[512];
 static void SpelloutInit(void)
 {
     mlocSpelloutFormatter f;
-    s_sink = mlocInitSpelloutFormatter(&f, &s_withRules, &s_en, "%spellout-cardinal", 18, nullptr);
+    s_sink = mlocInitSpelloutFormatter(&s_withRules, &s_en, "%spellout-cardinal", 18, nullptr, &f);
 }
 
 static void Spell(const mlocSpelloutFormatter* f, const mlocDecimal* d)
 {
     mlocOutput output = {.buffer = s_words, .capacity = sizeof(s_words)};
-    s_sink = mlocFormatSpellout(f, d, &output) + (int)output.length;
+    s_sink = mlocSpelloutFormatter_Format(f, d, &output) + (int)output.length;
 }
 
 static void SpelloutInteger(void)
@@ -398,7 +401,8 @@ static void SpelloutParse(void)
 {
     mlocDecimal d;
     size_t end = 0;
-    s_sink = mlocParseSpellout(&s_enWords, "one thousand two hundred thirty-four", 36, &d, &end) +
+    s_sink = mlocSpelloutFormatter_Parse(&s_enWords, "one thousand two hundred thirty-four", 36, &d,
+                                         &end) +
              (int)end;
 }
 
@@ -418,14 +422,14 @@ static bool PrepareSpellout(void)
     s_withRules = (mlocDataSet){s_sources, 2};
     s_fr = Parsed("fr");
     return size > 0 && size < sizeof(s_rules) &&
-           mlocOpenData(&s_sources[1], s_rules, size) == mloc_success &&
-           mlocInitSpelloutFormatter(&s_enWords, &s_withRules, &s_en, "%spellout-cardinal", 18,
-                                     nullptr) == mloc_success &&
-           mlocInitSpelloutFormatter(&s_ruWords, &s_withRules, &s_ru, "%spellout-cardinal-feminine",
-                                     27, nullptr) == mloc_success &&
-           mlocInitSpelloutFormatter(&s_frOrdinal, &s_withRules, &s_fr,
-                                     "%spellout-ordinal-masculine", 27, nullptr) == mloc_success &&
-           mlocInitNumberingSystemFormatter(&s_roman, &s_withRules, &s_en, "roman", 5, nullptr) ==
+           mlocOpenData(s_rules, size, &s_sources[1]) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_withRules, &s_en, "%spellout-cardinal", 18, nullptr,
+                                     &s_enWords) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_withRules, &s_ru, "%spellout-cardinal-feminine", 27,
+                                     nullptr, &s_ruWords) == mloc_success &&
+           mlocInitSpelloutFormatter(&s_withRules, &s_fr, "%spellout-ordinal-masculine", 27,
+                                     nullptr, &s_frOrdinal) == mloc_success &&
+           mlocInitNumberingSystemFormatter(&s_withRules, &s_en, "roman", 5, nullptr, &s_roman) ==
                mloc_success &&
            Number("21.5", &s_half) && Number("97", &s_ninetySeven) && Number("1999", &s_year);
 }
@@ -499,7 +503,7 @@ static bool PrepareNames(void)
     s_deATBuddhist = Parsed("de-AT-u-ca-buddhist");
     s_zhHantTWName = Parsed("zh-Hant-TW");
     return size > 0 && size < sizeof(s_names) &&
-           mlocOpenData(&s_sources[1], s_names, size) == mloc_success;
+           mlocOpenData(s_names, size, &s_sources[1]) == mloc_success;
 }
 
 typedef BenchCase Case;
@@ -572,7 +576,7 @@ int main(int argc, char** argv)
     s_enGB = Parsed("en-GB");
     PrepareMatch();
     s_ru = Parsed("ru");
-    if (mlocInitPluralRules(&s_ruRules, &s_data, &s_ru, mloc_pluralCardinal) != mloc_success ||
+    if (mlocInitPluralRules(&s_data, &s_ru, mloc_pluralCardinal, &s_ruRules) != mloc_success ||
         mlocParseDecimal("1234567.891", 11, &s_value).status != mloc_success)
     {
         fprintf(stderr, "bench: no Russian rules\n");

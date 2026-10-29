@@ -271,8 +271,6 @@ extern "C"
     /// where the locale's chain has it, as ICU's unitDisplayCase reads
     /// it, a built name taking it through CLDR's case derivations.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number units, the plural
     ///                      rules and the unit names (units.mloc).
     /// @param locale        The locale, canonicalized.
@@ -281,6 +279,8 @@ extern "C"
     ///                      mixed unit ("foot-and-inch").
     /// @param unitLength    Its length in bytes.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_fellBack when the numbering system asked
     ///         for has no digits and the default stands instead;
     ///         mloc_errorSyntax for an identifier UTS #35 does not allow;
@@ -305,11 +305,11 @@ extern "C"
     ///         usage of a length).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(mlocUnitFormatter* formatterOut,
-                                                             const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitUnitFormatter(const mlocDataSet* data,
                                                              const mlocLocale* locale,
                                                              const char* unit, size_t unitLength,
-                                                             const mlocUnitOptions* options);
+                                                             const mlocUnitOptions* options,
+                                                             mlocUnitFormatter* formatterOut);
 
     /// Formats an amount of the formatter's unit (of a mixed unit's largest
     /// part, split exactly: whole larger parts, the rest in the smallest,
@@ -330,11 +330,11 @@ extern "C"
     ///         make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnit(const mlocUnitFormatter* formatter,
-                                                      const mlocDecimal* decimal,
-                                                      mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter,
+                                                                const mlocDecimal* decimal,
+                                                                mlocOutput* output);
 
-    /// Formats a range of two amounts, as mlocFormatNumberRange does, the
+    /// Formats a range of two amounts, as mlocNumberFormatter_FormatRange does, the
     /// unit written once in the category CLDR's plural ranges give the
     /// ends' ("3–5 meters"), as ICU collapses a unit. With a usage, ends
     /// whose values choose one output unit, not mixed, collapse so
@@ -356,10 +356,9 @@ extern "C"
     ///         formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatUnitRange(const mlocUnitFormatter* formatter,
-                                                           const mlocDecimal* start,
-                                                           const mlocDecimal* end,
-                                                           mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocUnitFormatter_FormatRange(const mlocUnitFormatter* formatter, const mlocDecimal* start,
+                                  const mlocDecimal* end, mlocOutput* output);
 
     /// Writes a unit's display name in a locale ("meters", "m"), as a menu
     /// of units shows it.

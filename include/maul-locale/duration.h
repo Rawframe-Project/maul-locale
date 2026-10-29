@@ -126,9 +126,9 @@ extern "C"
     ///         fraction after one).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocInitDurationFormatter(mlocDurationFormatter* formatterOut, const mlocDataSet* data,
-                              const mlocLocale* locale, const mlocDurationOptions* options);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitDurationFormatter(
+        const mlocDataSet* data, const mlocLocale* locale, const mlocDurationOptions* options,
+        mlocDurationFormatter* formatterOut);
 
     /// Gives a formatter's options as resolved: every field's style and
     /// display (numeric for a fraction), never the defaults.
@@ -139,8 +139,8 @@ extern "C"
     ///         formatter the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult
-    mlocGetDurationOptions(const mlocDurationFormatter* formatter, mlocDurationOptions* optionsOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocDurationFormatter_GetOptions(
+        const mlocDurationFormatter* formatter, mlocDurationOptions* optionsOut);
 
     /// Writes a duration as ECMA-402's PartitionDurationFormatPattern
     /// does: the fields in order up to the first numeric one, each shown
@@ -163,9 +163,9 @@ extern "C"
     ///         make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFormatDuration(const mlocDurationFormatter* formatter,
-                                                          const mlocDurationValues* duration,
-                                                          mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
+                                 const mlocDurationValues* duration, mlocOutput* output);
 
 #ifdef __cplusplus
 }

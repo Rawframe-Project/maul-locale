@@ -33,8 +33,8 @@ typedef struct ListFormat
 
 static_assert(sizeof(ListFormat) <= sizeof(mlocListFormatter), "a list formatter fits its value");
 
-mlocResult mlocInitListFormatter(mlocListFormatter* formatterOut, const mlocDataSet* data,
-                                 const mlocLocale* locale, const mlocListOptions* options)
+mlocResult mlocInitListFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                 const mlocListOptions* options, mlocListFormatter* formatterOut)
 {
     mlocListOptions o = options != nullptr ? *options : (mlocListOptions){0};
     if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
@@ -86,8 +86,8 @@ static void ReportPart(void* context, uint32_t kind, size_t start, size_t length
                  start, length);
 }
 
-mlocResult mlocFormatList(const mlocListFormatter* formatter, const mlocListItem* items,
-                          size_t count, mlocOutput* output)
+mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter, const mlocListItem* items,
+                                    size_t count, mlocOutput* output)
 {
     ListFormat f;
     if (!ReadFormatter(formatter, &f) || output == nullptr ||

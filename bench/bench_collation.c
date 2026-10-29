@@ -79,7 +79,7 @@ static void Init(const char* tag)
     mlocLocale locale;
     mlocCollator collator;
     s_sink += (int)mlocParseLocale(tag, strlen(tag), &locale).status;
-    s_sink += (int)mlocInitCollator(&collator, &s_data, &locale, nullptr);
+    s_sink += (int)mlocInitCollator(&s_data, &locale, nullptr, &collator);
 }
 
 static void InitDe(void)
@@ -106,7 +106,7 @@ static void Compare(const mlocCollator* c, const char* const* words)
     const char* a = words[s_pair / 8];
     const char* b = words[s_pair % 8];
     int order = 0;
-    s_sink += (int)mlocCompare(c, a, strlen(a), b, strlen(b), &order);
+    s_sink += (int)mlocCollator_Compare(c, a, strlen(a), b, strlen(b), &order);
     s_sink += order;
 }
 
@@ -141,8 +141,8 @@ static void CompareUtf16(void)
     unsigned a = s_pair / 8;
     unsigned b = s_pair % 8;
     int order = 0;
-    s_sink += (int)mlocCompareUtf16(&s_collators[0], s_utf16[a], s_utf16Length[a], s_utf16[b],
-                                    s_utf16Length[b], &order);
+    s_sink += (int)mlocCollator_CompareUtf16(&s_collators[0], s_utf16[a], s_utf16Length[a],
+                                             s_utf16[b], s_utf16Length[b], &order);
     s_sink += order;
 }
 
@@ -151,8 +151,8 @@ static void SortKey(void)
     s_pair = (s_pair + 1) % 8;
     uint8_t key[256];
     size_t length = 0;
-    s_sink += (int)mlocGetSortKey(&s_collators[0], s_de[s_pair], s_length[s_pair], key, sizeof(key),
-                                  &length);
+    s_sink += (int)mlocCollator_GetSortKey(&s_collators[0], s_de[s_pair], s_length[s_pair], key,
+                                           sizeof(key), &length);
     s_sink += (int)length;
 }
 
@@ -176,7 +176,7 @@ static void SearchFirst(void)
 {
     size_t start = 0;
     size_t end = 0;
-    s_sink += (int)mlocFindNext(&s_searcher, s_text, sizeof(s_text) - 1, 0, &start, &end);
+    s_sink += (int)mlocSearcher_FindNext(&s_searcher, s_text, sizeof(s_text) - 1, 0, &start, &end);
     s_sink += (int)start;
 }
 
@@ -185,8 +185,8 @@ static void SearchAll(void)
     size_t start = 0;
     size_t end = 0;
     int found = 0;
-    for (size_t from = 0;
-         mlocFindNext(&s_searcher, s_text, sizeof(s_text) - 1, from, &start, &end) == mloc_success;
+    for (size_t from = 0; mlocSearcher_FindNext(&s_searcher, s_text, sizeof(s_text) - 1, from,
+                                                &start, &end) == mloc_success;
          from = end)
     {
         found++;
@@ -220,7 +220,7 @@ static bool Make(const char* tag, mlocCollator* out)
 {
     mlocLocale locale;
     return mlocParseLocale(tag, strlen(tag), &locale).status == mloc_success &&
-           mlocInitCollator(out, &s_data, &locale, nullptr) == mloc_success;
+           mlocInitCollator(&s_data, &locale, nullptr, out) == mloc_success;
 }
 
 bool PrepareCollationBench(void)
@@ -233,7 +233,7 @@ bool PrepareCollationBench(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         return false;
     }
@@ -251,8 +251,8 @@ bool PrepareCollationBench(void)
            mlocBuildIndex(&s_collators[0], &s_data, &s_deLocale, nullptr, s_index, sizeof(s_index),
                           &indexSize) == mloc_success &&
            mlocParseLocale("de-u-ks-level1", 14, &searchLocale).status == mloc_success &&
-           mlocInitCollator(&primary, &s_data, &searchLocale, nullptr) == mloc_success &&
-           mlocInitSearcher(&s_searcher, &primary, "strasse", 7, nullptr) == mloc_success;
+           mlocInitCollator(&s_data, &searchLocale, nullptr, &primary) == mloc_success &&
+           mlocInitSearcher(&primary, "strasse", 7, nullptr, &s_searcher) == mloc_success;
 }
 
 const BenchCase g_collationCases[] = {

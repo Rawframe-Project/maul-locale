@@ -167,8 +167,8 @@ static void Compile(void)
 static void Bind(void)
 {
     size_t size = 0;
-    mlocResult result = mlocBindMessage(&s_formatter, s_compiled[2], s_compiledSize[2], s_scratch,
-                                        sizeof(s_scratch), &size);
+    mlocResult result = mlocMessageFormatter_Bind(&s_formatter, s_compiled[2], s_compiledSize[2],
+                                                  s_scratch, sizeof(s_scratch), &size);
     s_sink += size + (size_t)result;
 }
 
@@ -260,8 +260,8 @@ static void Table(void)
 static void BindWide(void)
 {
     size_t size = 0;
-    mlocResult result =
-        mlocBindMessage(&s_full, s_compiled[13], s_wideSize, s_scratch, sizeof(s_scratch), &size);
+    mlocResult result = mlocMessageFormatter_Bind(&s_full, s_compiled[13], s_wideSize, s_scratch,
+                                                  sizeof(s_scratch), &size);
     s_sink += size + (size_t)result;
 }
 
@@ -290,8 +290,8 @@ static bool MakeFor(const mlocMessageFormatter* formatter, const char* source, u
     return mlocCompileMessage(source, strlen(source), compiled, compiledCapacity, compiledSize,
                               &error)
                    .status == mloc_success &&
-           mlocBindMessage(formatter, compiled, *compiledSize, bound, boundCapacity, &size) ==
-               mloc_success;
+           mlocMessageFormatter_Bind(formatter, compiled, *compiledSize, bound, boundCapacity,
+                                     &size) == mloc_success;
 }
 
 static bool Make(const char* source, uint8_t* compiled, size_t compiledCapacity,
@@ -325,7 +325,7 @@ static bool MakeTable(const mlocDataSet* data, const mlocLocale* en)
     }
     mlocMessageOptions options = {false, mloc_messageIsolationDefault, functions, functionCount,
                                   nullptr};
-    return mlocInitMessageFormatter(&s_table, data, en, &options) == mloc_success;
+    return mlocInitMessageFormatter(data, en, &options, &s_table) == mloc_success;
 }
 
 // The values the function families' messages read.
@@ -358,12 +358,12 @@ bool PrepareMessageBench(void)
     data = (mlocDataSet){&builtin, 1};
     mlocLocale en;
     if (mlocParseLocale("en", 2, &en).status != mloc_success ||
-        mlocInitMessageFormatter(&s_formatter, &data, &en, nullptr) != mloc_success)
+        mlocInitMessageFormatter(&data, &en, nullptr, &s_formatter) != mloc_success)
     {
         return false;
     }
     const mlocDataSet* all = BenchDataSet();
-    if (!MakeValues() || mlocInitMessageFormatter(&s_full, all, &en, nullptr) != mloc_success ||
+    if (!MakeValues() || mlocInitMessageFormatter(all, &en, nullptr, &s_full) != mloc_success ||
         !MakeTable(all, &en))
     {
         return false;

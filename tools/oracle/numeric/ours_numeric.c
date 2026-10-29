@@ -15,7 +15,7 @@ int main(void)
     static char b[8 << 20];
     size_t n = fread(b, 1, sizeof b, f);
     fclose(f);
-    if (mlocOpenData(&s[1], b, n) != mloc_success)
+    if (mlocOpenData(b, n, &s[1]) != mloc_success)
     {
         return 1;
     }
@@ -40,9 +40,9 @@ int main(void)
         char out[256];
         mlocOutput op = {.buffer = out, .capacity = sizeof out};
         if (mlocParseLocale(loc, strlen(loc), &l).status < 0 ||
-            mlocInitUnitFormatter(&u, &d, &l, unit, strlen(unit), &o) < 0 ||
+            mlocInitUnitFormatter(&d, &l, unit, strlen(unit), &o, &u) < 0 ||
             mlocParseDecimal(amount, strlen(amount), &x).status < 0 ||
-            mlocFormatUnit(&u, &x, &op) < 0)
+            mlocUnitFormatter_Format(&u, &x, &op) < 0)
         {
             printf("%s\tERR\n", line);
             continue;

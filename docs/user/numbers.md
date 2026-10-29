@@ -23,14 +23,14 @@ Number and unit formatters do not round unless asked: a decimal shows its own di
 ```c
 mlocPluralRules rules;
 mlocPluralCategory category = mloc_pluralOther;
-if (mlocInitPluralRules(&rules, &set, &locale, mloc_pluralCardinal) == mloc_success &&
-    mlocSelectPlural(&rules, &value, &category) == mloc_success)
+if (mlocInitPluralRules(&set, &locale, mloc_pluralCardinal, &rules) == mloc_success &&
+    mlocPluralRules_Select(&rules, &value, &category) == mloc_success)
 {
     // pl, 5: mloc_pluralMany ("5 plików"); 2: mloc_pluralFew ("2 pliki")
 }
 ```
 
-The category depends on the digits shown: in English 1 is one and 1.0 is other, so select on the decimal as it will be formatted. Ordinal rules (`mloc_pluralOrdinal`) give "1st", "2nd", "3rd"; `mlocSelectPluralRange` gives the category of a range from its ends', and `mlocGetPluralCategories` the categories a locale uses, so a program knows which translations it needs.
+The category depends on the digits shown: in English 1 is one and 1.0 is other, so select on the decimal as it will be formatted. Ordinal rules (`mloc_pluralOrdinal`) give "1st", "2nd", "3rd"; `mlocPluralRules_SelectRange` gives the category of a range from its ends', and `mlocPluralRules_GetCategories` the categories a locale uses, so a program knows which translations it needs.
 
 ## Formatting numbers
 
@@ -41,14 +41,14 @@ mlocNumberOptions options = {.notation = mloc_notationCompactShort};
 mlocNumberFormatter formatter;
 char text[32];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitNumberFormatter(&formatter, &set, &locale, &options) >= 0 &&
-    mlocFormatNumber(&formatter, &value, &output) == mloc_success)
+if (mlocInitNumberFormatter(&set, &locale, &options, &formatter) >= 0 &&
+    mlocNumberFormatter_Format(&formatter, &value, &output) == mloc_success)
 {
     // en, 1234567: "1.2M"; ja: "123万"
 }
 ```
 
-`mlocFormatNumberRange` writes ranges as ECMA-402's `formatRange` does ("3–5", "~5" when both ends write alike). With a part function set, the output reports each part: integer digits, group and decimal separators, the sign, the exponent, a compact suffix.
+`mlocNumberFormatter_FormatRange` writes ranges as ECMA-402's `formatRange` does ("3–5", "~5" when both ends write alike). With a part function set, the output reports each part: integer digits, group and decimal separators, the sign, the exponent, a compact suffix.
 
 A formatter is a value of a few hundred bytes that points into the data it was made from. Make it once per locale and options, not per number.
 
@@ -60,8 +60,8 @@ A formatter is a value of a few hundred bytes that points into the data it was m
 mlocCurrencyFormatter formatter;
 char text[32];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitCurrencyFormatter(&formatter, &set, &locale, "EUR", 3, nullptr) >= 0 &&
-    mlocFormatCurrency(&formatter, &value, &output) == mloc_success)
+if (mlocInitCurrencyFormatter(&set, &locale, "EUR", 3, nullptr, &formatter) >= 0 &&
+    mlocCurrencyFormatter_Format(&formatter, &value, &output) == mloc_success)
 {
     // de-AT, 1234.5: "€ 1.234,50"; fr: "1 234,50 €"
 }
@@ -80,8 +80,8 @@ mlocUnitOptions options = {.width = mloc_unitWidthLong};
 mlocUnitFormatter formatter;
 char text[64];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitUnitFormatter(&formatter, &set, &locale, "kilometer-per-hour", 18, &options) >= 0 &&
-    mlocFormatUnit(&formatter, &value, &output) == mloc_success)
+if (mlocInitUnitFormatter(&set, &locale, "kilometer-per-hour", 18, &options, &formatter) >= 0 &&
+    mlocUnitFormatter_Format(&formatter, &value, &output) == mloc_success)
 {
     // en, 120: "120 kilometers per hour"
 }
@@ -97,29 +97,29 @@ With `spellout.mloc` in the set, `mlocInitSpelloutFormatter` makes a formatter o
 mlocSpelloutFormatter formatter;
 char text[128];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitSpelloutFormatter(&formatter, &set, &locale, "%spellout-cardinal", 18, nullptr) >=
+if (mlocInitSpelloutFormatter(&set, &locale, "%spellout-cardinal", 18, nullptr, &formatter) >=
         0 &&
-    mlocFormatSpellout(&formatter, &value, &output) == mloc_success)
+    mlocSpelloutFormatter_Format(&formatter, &value, &output) == mloc_success)
 {
     // en, 1234: "one thousand two hundred thirty-four"
 }
 ```
 
-The value is formatted exactly, whatever its size or fraction. `mlocParseSpellout` reads words back as ICU's strict parse does.
+The value is formatted exactly, whatever its size or fraction. `mlocSpelloutFormatter_Parse` reads words back as ICU's strict parse does.
 
 ## Reading numbers
 
-`mlocParseNumber` reads a number as a person types it in a locale: its separators and digits (any Unicode decimal digits), signs, percent and per mille signs, exponents, and the formatter's affixes. Lenient mode, the default, accepts what a person would mean (separators by their equivalence classes, grouping sizes unchecked); strict mode accepts only what the formatter would write. It reports where the number ends, so text may follow.
+`mlocNumberFormatter_Parse` reads a number as a person types it in a locale: its separators and digits (any Unicode decimal digits), signs, percent and per mille signs, exponents, and the formatter's affixes. Lenient mode, the default, accepts what a person would mean (separators by their equivalence classes, grouping sizes unchecked); strict mode accepts only what the formatter would write. It reports where the number ends, so text may follow.
 
 ```c
 mlocDecimal parsed;
 size_t end = 0;
 mlocResult read =
-    mlocParseNumber(&formatter, "1.234,5 kg", 10, mloc_parseLenient, &parsed, &end);
+    mlocNumberFormatter_Parse(&formatter, "1.234,5 kg", 10, mloc_parseLenient, &parsed, &end);
 if (read == mloc_success)
 {
     // de: parsed is 1234.5; end is 7, before " kg"
 }
 ```
 
-`mlocParseCurrency` reads an amount of money the same way, with the formatter's currency or any currency the locale names.
+`mlocCurrencyFormatter_Parse` reads an amount of money the same way, with the formatter's currency or any currency the locale names.

@@ -414,7 +414,7 @@ static mlocResult InitOver(const Pack* p)
         return (mlocResult)-101;
     }
     mlocDataSet set = {&source, 1};
-    return mlocInitCurrencyFormatter(&formatter, &set, &locale, "EUR", 3, nullptr);
+    return mlocInitCurrencyFormatter(&set, &locale, "EUR", 3, nullptr, &formatter);
 }
 
 static void TestDisagreeing(void)

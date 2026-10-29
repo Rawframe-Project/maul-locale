@@ -33,7 +33,7 @@ static bool OpenFile(const char* path, mlocData* out)
     uint8_t* bytes = size > 0 && fseek(file, 0, SEEK_SET) == 0 ? malloc((size_t)size) : nullptr;
     size_t read = bytes == nullptr ? 0 : fread(bytes, 1, (size_t)size, file);
     fclose(file);
-    if (read > 0 && mlocOpenData(out, bytes, read) == mloc_success)
+    if (read > 0 && mlocOpenData(bytes, read, out) == mloc_success)
     {
         return true; // the bytes stay for the run
     }
@@ -60,8 +60,8 @@ static bool Is(const char* id, mlocDateOptions options, mlocDate date, const cha
     char text[256];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
-        mlocInitDateFormatter(&formatter, &s_data, &locale, &options) < 0 ||
-        mlocFormatDate(&formatter, &date, &output) != mloc_success)
+        mlocInitDateFormatter(&s_data, &locale, &options, &formatter) < 0 ||
+        mlocDateFormatter_Format(&formatter, &date, &output) != mloc_success)
     {
         return false;
     }
@@ -218,7 +218,7 @@ static void TestDigits(void)
     mlocDateFormatter formatter;
     CHECK(mlocCanonicalizeLocale(&s_data, "en-u-nu-hebr", 12, &hebr, nullptr).status ==
                   mloc_success &&
-              mlocInitDateFormatter(&formatter, &s_data, &hebr, nullptr) == mloc_fellBack,
+              mlocInitDateFormatter(&s_data, &hebr, nullptr, &formatter) == mloc_fellBack,
           "a numbering system without digits falls back");
     mlocDateOptions shortDate = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthShort);
     CHECK(Is("fa", shortDate, Iso(2026, 10, 15), "۱۴۰۵/۷/۲۳"), "the locale's own digits");
@@ -245,21 +245,21 @@ static void TestOutput(void)
     mlocDate date = Iso(2026, 10, 15);
     mlocDateOptions options = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthMedium);
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitDateFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+              mlocInitDateFormatter(&s_data, &en, &options, &formatter) == mloc_success,
           "a formatter");
     char parts[256] = "";
     char text[64];
     mlocOutput output = {
         .buffer = text, .capacity = sizeof(text), .part = ReportPart, .context = parts};
-    CHECK(mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+    CHECK(mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success &&
               strcmp(parts, "5:0:3 0:3:1 7:4:2 0:6:2 2:8:4 ") == 0,
           "the parts of \"Oct 15, 2026\"");
     parts[0] = '\0';
     options = (mlocDateOptions){.fields = mloc_dateFieldSetYearMonthDayWeekday,
                                 .yearStyle = mloc_yearStyleWithEra};
     output.capacity = sizeof(text);
-    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &options) == mloc_success &&
-              mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+    CHECK(mlocInitDateFormatter(&s_data, &en, &options, &formatter) == mloc_success &&
+              mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success &&
               strcmp(parts, "6:0:8 0:8:2 5:10:7 0:17:1 7:18:2 0:20:2 2:22:4 0:26:1 1:27:2 ") == 0,
           "the parts of \"Thursday, October 15, 2026 AD\"");
     parts[0] = '\0';
@@ -267,18 +267,20 @@ static void TestOutput(void)
     options = (mlocDateOptions){.style = mloc_dateStyleLong};
     CHECK(mlocCanonicalizeLocale(&s_data, "zh-u-ca-chinese", 15, &zh, nullptr).status ==
                   mloc_success &&
-              mlocInitDateFormatter(&formatter, &s_data, &zh, &options) == mloc_success &&
-              mlocFormatDate(&formatter, &date, &output) == mloc_success &&
+              mlocInitDateFormatter(&s_data, &zh, &options, &formatter) == mloc_success &&
+              mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success &&
               strncmp(parts, "3:0:4 4:4:6 ", 12) == 0,
           "a related year and a year name");
     options = Set(mloc_dateFieldSetYearMonthDay, mloc_dateLengthMedium);
-    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+    CHECK(mlocInitDateFormatter(&s_data, &en, &options, &formatter) == mloc_success,
           "the medium formatter again");
     mlocOutput measure = {0};
-    CHECK(mlocFormatDate(&formatter, &date, &measure) == mloc_errorCapacity && measure.length == 12,
+    CHECK(mlocDateFormatter_Format(&formatter, &date, &measure) == mloc_errorCapacity &&
+              measure.length == 12,
           "measuring");
     mlocOutput small = {.buffer = text, .capacity = 5};
-    CHECK(mlocFormatDate(&formatter, &date, &small) == mloc_errorCapacity && small.length == 12,
+    CHECK(mlocDateFormatter_Format(&formatter, &date, &small) == mloc_errorCapacity &&
+              small.length == 12,
           "a buffer too small");
 }
 
@@ -292,9 +294,9 @@ static void TestRefusals(void)
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success, "a locale");
-    CHECK(mlocInitDateFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDateFormatter(&formatter, nullptr, &en, nullptr) == mloc_errorInvalid &&
-              mlocInitDateFormatter(&formatter, &s_data, nullptr, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitDateFormatter(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid &&
+              mlocInitDateFormatter(nullptr, &en, nullptr, &formatter) == mloc_errorInvalid &&
+              mlocInitDateFormatter(&s_data, nullptr, nullptr, &formatter) == mloc_errorInvalid,
           "null pointers");
     mlocDateOptions bad[] = {{.fields = (mlocDateFieldSet)10},
                              {.length = (mlocDateLength)3},
@@ -305,28 +307,28 @@ static void TestRefusals(void)
                              {.fields = mloc_dateFieldSetMonth, .zone = mloc_zoneStyleCity}};
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
-        CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &bad[i]) == mloc_errorInvalid,
+        CHECK(mlocInitDateFormatter(&s_data, &en, &bad[i], &formatter) == mloc_errorInvalid,
               "options out of range, a zone with a style or a calendar period");
     }
     mlocDateOptions zoned = {.zone = mloc_zoneStyleGenericShort};
-    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, &zoned) == mloc_errorNotFound,
+    CHECK(mlocInitDateFormatter(&s_data, &en, &zoned, &formatter) == mloc_errorNotFound,
           "a zone without the zone names");
     mlocDataSet builtin = {s_sources, 1};
-    CHECK(mlocInitDateFormatter(&formatter, &builtin, &en, nullptr) == mloc_errorNotFound,
+    CHECK(mlocInitDateFormatter(&builtin, &en, nullptr, &formatter) == mloc_errorNotFound,
           "data without the dates");
     CHECK(memcmp(&formatter, &before, sizeof(formatter)) == 0, "the formatter left unchanged");
-    CHECK(mlocFormatDate(&formatter, &date, &output) == mloc_errorInvalid &&
-              mlocFormatDate(nullptr, &date, &output) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_Format(&formatter, &date, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_Format(nullptr, &date, &output) == mloc_errorInvalid,
           "a formatter the library did not make, or none");
-    CHECK(mlocInitDateFormatter(&formatter, &s_data, &en, nullptr) == mloc_success &&
-              mlocFormatDate(&formatter, nullptr, &output) == mloc_errorInvalid &&
-              mlocFormatDate(&formatter, &date, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitDateFormatter(&s_data, &en, nullptr, &formatter) == mloc_success &&
+              mlocDateFormatter_Format(&formatter, nullptr, &output) == mloc_errorInvalid &&
+              mlocDateFormatter_Format(&formatter, &date, nullptr) == mloc_errorInvalid,
           "a null date or output");
     mlocOutput noBuffer = {.capacity = 4};
-    CHECK(mlocFormatDate(&formatter, &date, &noBuffer) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_Format(&formatter, &date, &noBuffer) == mloc_errorInvalid,
           "a capacity without a buffer");
     mlocDate far = {.day = mlocDateMaxDay + 1};
-    CHECK(mlocFormatDate(&formatter, &far, &output) == mloc_errorInvalid,
+    CHECK(mlocDateFormatter_Format(&formatter, &far, &output) == mloc_errorInvalid,
           "a date outside Temporal's range");
 }
 

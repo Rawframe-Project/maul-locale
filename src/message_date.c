@@ -502,19 +502,19 @@ static mlocResult Make(const DateValue* value, const mlocDataSet* data, const ml
     if (value->function == dateFunctionDate)
     {
         mlocDateOptions options = DateOptions(value);
-        return mlocInitDateFormatter(&prepared->formatter.date, data, &l, &options);
+        return mlocInitDateFormatter(data, &l, &options, &prepared->formatter.date);
     }
     if (value->function == dateFunctionTime)
     {
         mlocTimeOptions options = TimeOptions(value);
-        return mlocInitTimeFormatter(&prepared->formatter.time, data, &l, &options);
+        return mlocInitTimeFormatter(data, &l, &options, &prepared->formatter.time);
     }
     mlocDateTimeOptions options;
     memset(&options, 0, sizeof options);
     options.date = DateOptions(value);
     options.time = TimeOptions(value);
     options.glue = mloc_dateTimeGlueAtTime;
-    return mlocInitDateTimeFormatter(&prepared->formatter.dateTime, data, &l, &options);
+    return mlocInitDateTimeFormatter(data, &l, &options, &prepared->formatter.dateTime);
 }
 
 bool mlocPrepareDate(const DateValue* value, const mlocDataSet* data, const mlocLocale* locale,
@@ -540,17 +540,19 @@ static mlocResult WriteWith(const DateValue* value, const Shown* shown,
     bool inZone = value->zoneStyle != mloc_zoneStyleNone;
     if (value->function == dateFunctionDate)
     {
-        return mlocFormatDate(&prepared->formatter.date, &shown->local.date, output);
+        return mlocDateFormatter_Format(&prepared->formatter.date, &shown->local.date, output);
     }
     if (value->function == dateFunctionTime)
     {
-        return inZone ? mlocFormatTimeInZone(&prepared->formatter.time, &shown->zone,
-                                             &shown->instant, output)
-                      : mlocFormatTime(&prepared->formatter.time, &shown->local.time, output);
+        return inZone ? mlocTimeFormatter_FormatInZone(&prepared->formatter.time, &shown->zone,
+                                                       &shown->instant, output)
+                      : mlocTimeFormatter_Format(&prepared->formatter.time, &shown->local.time,
+                                                 output);
     }
-    return inZone ? mlocFormatDateTimeInZone(&prepared->formatter.dateTime, &shown->zone,
-                                             &shown->instant, output)
-                  : mlocFormatDateTime(&prepared->formatter.dateTime, &shown->local, output);
+    return inZone
+               ? mlocDateTimeFormatter_FormatInZone(&prepared->formatter.dateTime, &shown->zone,
+                                                    &shown->instant, output)
+               : mlocDateTimeFormatter_Format(&prepared->formatter.dateTime, &shown->local, output);
 }
 
 // Writes a value with a formatter made here, off the resolver's frames.

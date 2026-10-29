@@ -15,15 +15,15 @@ Another language's inflector refuses with `mloc_errorNotFound`.
 
 ## Inflecting text and numbers
 
-`mlocInitInflector` makes a locale's inflector. `mlocInflectText` writes a text with the suffixes an `mlocInflection` asks for; `mlocInflectNumber` writes a number as a number formatter writes it, inflected by how that number is spoken, which the spell-out rules give (`spellout.mloc`; Uzbek and Turkmen have their number words in code).
+`mlocInitInflector` makes a locale's inflector. `mlocInflector_InflectText` writes a text with the suffixes an `mlocInflection` asks for; `mlocInflector_InflectNumber` writes a number as a number formatter writes it, inflected by how that number is spoken, which the spell-out rules give (`spellout.mloc`; Uzbek and Turkmen have their number words in code).
 
 ```c
 mlocInflector inflector;
 mlocInflection dative = {.grammaticalCase = mloc_caseDative};
 char text[64];
 mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-if (mlocInitInflector(&inflector, &set, &locale) == mloc_success &&
-    mlocInflectText(&inflector, "Ayşe", 5, &dative, &output) == mloc_success)
+if (mlocInitInflector(&set, &locale, &inflector) == mloc_success &&
+    mlocInflector_InflectText(&inflector, "Ayşe", 5, &dative, &output) == mloc_success)
 {
     // tr: "Ayşe'ye"
 }

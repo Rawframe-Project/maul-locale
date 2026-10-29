@@ -74,24 +74,24 @@ extern "C"
     /// rules alone. Each maximal ill-formed UTF-8 subpart counts as one
     /// U+FFFD.
     ///
-    /// @param segmenterOut  Receives the segmenter; left unchanged on
-    ///                      failure.
     /// @param data          A data set holding the segmentation data file.
     /// @param locale        A canonical locale.
     /// @param kind          What the segmenter finds.
     /// @param text          The text; may be null when length is 0.
     /// @param length        Its length in bytes.
     /// @param moreFollows   true when more pieces of the text will be fed.
+    /// @param segmenterOut  Receives the segmenter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_errorNotFound for a data set without the
     ///         segmentation data; mloc_errorInvalid for a null pointer, a
     ///         null text with a nonzero length or an unknown kind.
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitSegmenter(mlocSegmenter* segmenterOut,
-                                                         const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitSegmenter(const mlocDataSet* data,
                                                          const mlocLocale* locale,
                                                          mlocSegmentKind kind, const char* text,
-                                                         size_t length, bool moreFollows);
+                                                         size_t length, bool moreFollows,
+                                                         mlocSegmenter* segmenterOut);
 
     /// Sets the word segmenter a word or line segmenter hands runs of
     /// Thai, Lao, Khmer and Burmese text to, as Maul Unicode's
@@ -108,7 +108,7 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time,
     /// and calls the word segmenter on that thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocSetSegmenterComplexBreaker(
+    MLOC_NODISCARD MLOC_API mlocResult mlocSegmenter_SetComplexBreaker(
         mlocSegmenter* segmenter, mlocComplexBreakFunction breaker, void* context);
 
     /// Hands a segmenter the next piece of its text, after it returned
@@ -125,8 +125,9 @@ extern "C"
     ///         fed before the segmenter asked for it.
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFeedSegmenter(mlocSegmenter* segmenter, const char* text,
-                                                         size_t length, bool moreFollows);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSegmenter_Feed(mlocSegmenter* segmenter,
+                                                          const char* text, size_t length,
+                                                          bool moreFollows);
 
     /// Finds the next boundary, or line break opportunity, and whether the
     /// line must end there: after a mandatory break character (BK, CR, LF
@@ -144,8 +145,9 @@ extern "C"
     ///         or a segmenter the library did not make.
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocNextSegmentBreak(mlocSegmenter* segmenter,
-                                                            size_t* offsetOut, bool* mandatoryOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter,
+                                                               size_t* offsetOut,
+                                                               bool* mandatoryOut);
 
 #ifdef __cplusplus
 }

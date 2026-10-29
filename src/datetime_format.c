@@ -183,8 +183,9 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     return f->time.zoned ? mlocMakeZoneFormat(&f->zone, data, locale, zoneStyle) : time;
 }
 
-mlocResult mlocInitDateTimeFormatter(mlocDateTimeFormatter* formatterOut, const mlocDataSet* data,
-                                     const mlocLocale* locale, const mlocDateTimeOptions* options)
+mlocResult mlocInitDateTimeFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                     const mlocDateTimeOptions* options,
+                                     mlocDateTimeFormatter* formatterOut)
 {
     mlocDateTimeOptions o = options != nullptr ? *options : (mlocDateTimeOptions){0};
     if (formatterOut == nullptr || data == nullptr || locale == nullptr || !ValidOptions(&o))
@@ -286,8 +287,8 @@ static mlocResult WriteOut(const Writing* g, mlocOutput* output)
     return mloc_success;
 }
 
-mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime,
-                              mlocOutput* output)
+mlocResult mlocDateTimeFormatter_Format(const mlocDateTimeFormatter* formatter,
+                                        const mlocDateTime* dateTime, mlocOutput* output)
 {
     DateTimeFormat f;
     DateValue date;
@@ -302,9 +303,9 @@ mlocResult mlocFormatDateTime(const mlocDateTimeFormatter* formatter, const mloc
     return WriteOut(&g, output);
 }
 
-mlocResult mlocFormatDateTimeInZone(const mlocDateTimeFormatter* formatter,
-                                    const mlocTimeZone* zone, const mlocInstant* instant,
-                                    mlocOutput* output)
+mlocResult mlocDateTimeFormatter_FormatInZone(const mlocDateTimeFormatter* formatter,
+                                              const mlocTimeZone* zone, const mlocInstant* instant,
+                                              mlocOutput* output)
 {
     DateTimeFormat f;
     DateValue date;
@@ -463,9 +464,9 @@ static mlocResult WriteRangeOf(RangeWriting* g, Writing* one, bool sameDay, mloc
     return result;
 }
 
-mlocResult mlocFormatDateTimeRange(const mlocDateTimeFormatter* formatter,
-                                   const mlocDateTime* start, const mlocDateTime* end,
-                                   mlocOutput* output)
+mlocResult mlocDateTimeFormatter_FormatRange(const mlocDateTimeFormatter* formatter,
+                                             const mlocDateTime* start, const mlocDateTime* end,
+                                             mlocOutput* output)
 {
     DateTimeFormat f;
     DateValue dates[2];
@@ -486,9 +487,10 @@ mlocResult mlocFormatDateTimeRange(const mlocDateTimeFormatter* formatter,
     return WriteRangeOf(&g, &one, start->date.day == end->date.day, output);
 }
 
-mlocResult mlocFormatDateTimeRangeInZone(const mlocDateTimeFormatter* formatter,
-                                         const mlocTimeZone* zone, const mlocInstant* start,
-                                         const mlocInstant* end, mlocOutput* output)
+mlocResult mlocDateTimeFormatter_FormatRangeInZone(const mlocDateTimeFormatter* formatter,
+                                                   const mlocTimeZone* zone,
+                                                   const mlocInstant* start, const mlocInstant* end,
+                                                   mlocOutput* output)
 {
     DateTimeFormat f;
     DateValue dates[2];

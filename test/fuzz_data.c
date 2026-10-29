@@ -86,7 +86,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     {
         const char* id = nullptr;
         size_t length = 0;
-        Require(mlocGetDataLocale(&opened, i, &id, &length) == mloc_success);
+        Require(mlocData_GetLocale(&opened, i, &id, &length) == mloc_success);
         Require((const uint8_t*)id >= s_file + view.poolOffset &&
                 (const uint8_t*)id + length <= s_file + size);
         uint32_t index = 0;

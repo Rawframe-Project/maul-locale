@@ -34,7 +34,7 @@ static size_t Build(const char* id, const mlocIndexOptions* options)
 {
     size_t size = 0;
     bool ok = mlocParseLocale(id, strlen(id), &s_locale).status == mloc_success &&
-              mlocInitCollator(&s_collator, &s_data, &s_locale, nullptr) == mloc_success &&
+              mlocInitCollator(&s_data, &s_locale, nullptr, &s_collator) == mloc_success &&
               mlocBuildIndex(&s_collator, &s_data, &s_locale, options, s_index, sizeof(s_index),
                              &size) == mloc_success;
     return ok ? size : 0;
@@ -113,7 +113,7 @@ static void TestMeasure(void)
     size_t needed = 0;
     size_t size = 0;
     bool made = mlocParseLocale("de", 2, &locale).status == mloc_success &&
-                mlocInitCollator(&collator, &s_data, &locale, nullptr) == mloc_success;
+                mlocInitCollator(&s_data, &locale, nullptr, &collator) == mloc_success;
     CHECK(made &&
               mlocBuildIndex(&collator, &s_data, &locale, nullptr, nullptr, 0, &needed) ==
                   mloc_errorCapacity &&
@@ -210,7 +210,7 @@ int main(void)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("test_index: cannot open " MLOC_COLLATION_FILE "\n", stderr);
         return 2;

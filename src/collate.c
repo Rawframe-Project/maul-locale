@@ -404,8 +404,8 @@ static mlocResult FromTailoring(Collator* c, const mlocDataSet* data, DataSpan s
     return mloc_success;
 }
 
-mlocResult mlocInitCollator(mlocCollator* collatorOut, const mlocDataSet* data,
-                            const mlocLocale* locale, const mlocCollatorOptions* options)
+mlocResult mlocInitCollator(const mlocDataSet* data, const mlocLocale* locale,
+                            const mlocCollatorOptions* options, mlocCollator* collatorOut)
 {
     mlocCollatorOptions o = options != nullptr ? *options : (mlocCollatorOptions){0};
     if (collatorOut == nullptr || data == nullptr || locale == nullptr || !OptionsValid(&o))
@@ -452,8 +452,8 @@ static size_t Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdTe
     return mlocCollationIdenticalPrefix(&c->root, &c->settings, x, y);
 }
 
-mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLength, const char* b,
-                       size_t bLength, int* orderOut)
+mlocResult mlocCollator_Compare(const mlocCollator* collator, const char* a, size_t aLength,
+                                const char* b, size_t bLength, int* orderOut)
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
@@ -487,8 +487,9 @@ mlocResult mlocCompare(const mlocCollator* collator, const char* a, size_t aLeng
     return mloc_success;
 }
 
-mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, size_t aLength,
-                            const uint16_t* b, size_t bLength, int* orderOut)
+mlocResult mlocCollator_CompareUtf16(const mlocCollator* collator, const uint16_t* a,
+                                     size_t aLength, const uint16_t* b, size_t bLength,
+                                     int* orderOut)
 {
     Collator c;
     if (orderOut == nullptr || (a == nullptr && aLength > 0) || (b == nullptr && bLength > 0) ||
@@ -520,8 +521,9 @@ mlocResult mlocCompareUtf16(const mlocCollator* collator, const uint16_t* a, siz
     return mloc_success;
 }
 
-mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text, size_t length,
-                               uint8_t* key, size_t capacity, size_t* lengthOut)
+mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text,
+                                        size_t length, uint8_t* key, size_t capacity,
+                                        size_t* lengthOut)
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
@@ -536,8 +538,8 @@ mlocResult mlocGetSortKeyUtf16(const mlocCollator* collator, const uint16_t* tex
     return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
 }
 
-mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t length,
-                          uint8_t* key, size_t capacity, size_t* lengthOut)
+mlocResult mlocCollator_GetSortKey(const mlocCollator* collator, const char* text, size_t length,
+                                   uint8_t* key, size_t capacity, size_t* lengthOut)
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
@@ -551,7 +553,7 @@ mlocResult mlocGetSortKey(const mlocCollator* collator, const char* text, size_t
     return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
 }
 
-mlocResult mlocGetCollationVersion(const mlocCollator* collator, uint64_t* versionOut)
+mlocResult mlocCollator_GetVersion(const mlocCollator* collator, uint64_t* versionOut)
 {
     Collator c;
     if (versionOut == nullptr || !mlocReadCollatorHead(collator, &c))

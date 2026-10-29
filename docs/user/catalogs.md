@@ -45,7 +45,7 @@ Compile a source with all its translations in one call: the catalogs of one set 
 
 ## Formatting from catalogs
 
-A program opens each catalog file's bytes with `mlocOpenCatalog`, which checks them all, makes a [message formatter](messages.md) for each catalog's locale, and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocBindCatalogChain`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
+A program opens each catalog file's bytes with `mlocOpenCatalog`, which checks them all, makes a [message formatter](messages.md) for each catalog's locale, and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocCatalogChain_Bind`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
 
 ```c
 // catalogs: fr-CA, fr and the source en, opened in that order;
@@ -55,22 +55,22 @@ mlocCatalogChain chain;
 mlocResult measured = mlocMeasureCatalogChain(catalogs, formatters, 3, &cacheSize);
 void* cache = measured == mloc_success ? malloc(cacheSize) : nullptr;
 if (cache != nullptr &&
-    mlocInitCatalogChain(&chain, catalogs, formatters, 3, cache, cacheSize) == mloc_success &&
-    mlocBindCatalogChain(&chain) == mloc_success)
+    mlocInitCatalogChain(catalogs, formatters, 3, cache, cacheSize, &chain) == mloc_success &&
+    mlocCatalogChain_Bind(&chain) == mloc_success)
 {
     mlocMessageArgument count = {
         "count", 5, {.kind = mloc_messageValueInteger, .as.integer = 2}};
     char text[128];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     mlocCatalogResult how;
-    mlocResult formatted =
-        mlocFormatCatalogKey(&chain, "files.count", 11, &count, 1, &output, nullptr, &how);
+    mlocResult formatted = mlocCatalogChain_FormatKey(&chain, "files.count", 11, &count, 1,
+                                                      &output, nullptr, &how);
     // formatted is mloc_success; text holds "2 fichiers" from fr,
     // how.reason is mloc_catalogFallback: fr-CA has no translation of its own
     (void)formatted;
 }
 ```
 
-Every call writes something and says why: the first catalog's message, a later one's where earlier ones lack it, the source's where a translation does not bind, or the key itself when the set has no such key or nothing else works. A program can log the reasons it did not expect. `mlocFindCatalogKey` turns a key into an index once, for `mlocFormatCatalogMessage`, which then skips the lookup.
+Every call writes something and says why: the first catalog's message, a later one's where earlier ones lack it, the source's where a translation does not bind, or the key itself when the set has no such key or nothing else works. A program can log the reasons it did not expect. `mlocCatalog_FindKey` turns a key into an index once, for `mlocCatalogChain_FormatMessage`, which then skips the lookup.
 
-A chain that still binds writes its cache, so it is used by one thread at a time. Once `mlocBindCatalogChain` has succeeded, any number of threads may format with it at once.
+A chain that still binds writes its cache, so it is used by one thread at a time. Once `mlocCatalogChain_Bind` has succeeded, any number of threads may format with it at once.

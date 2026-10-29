@@ -32,7 +32,7 @@ extern "C"
 #endif
 
 // A message's fixed bounds: mlocCompileMessage refuses a message past one
-// with mloc_errorLimit, and mlocBindMessage refuses stored bytes past one
+// with mloc_errorLimit, and mlocMessageFormatter_Bind refuses stored bytes past one
 // with mloc_errorFormat.
 //
 // The longest text compiled, in bytes: the compiled form's counts are 32
@@ -58,7 +58,7 @@ extern "C"
 #define MLOC_MAX_MESSAGE_RESOLUTIONS 65536
 // The most bytes a bound message takes: its words and the values its
 // formatter prepares for its expressions. They depend on the formatter, so
-// mlocBindMessage refuses a larger one, with mloc_errorLimit.
+// mlocMessageFormatter_Bind refuses a larger one, with mloc_errorLimit.
 #define MLOC_MAX_BOUND_MESSAGE_SIZE 4294967295u
 
     // Why a message did not compile: a syntax error (the text is not
@@ -437,11 +437,11 @@ extern "C"
 
     /// Makes a locale's message formatter.
     ///
-    /// @param formatterOut  Receives the formatter; left unchanged on
-    ///                      failure.
     /// @param data          The data its functions read.
     /// @param locale        The locale, canonicalized.
     /// @param options       The options, or null for the defaults.
+    /// @param formatterOut  Receives the formatter; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, an
     ///         unknown isolation, a time zone the library did not make,
     ///         or a function without a resolve entry, a name that is not
@@ -449,10 +449,10 @@ extern "C"
     ///         mloc:, or two functions of one name.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut,
-                                                                const mlocDataSet* data,
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitMessageFormatter(const mlocDataSet* data,
                                                                 const mlocLocale* locale,
-                                                                const mlocMessageOptions* options);
+                                                                const mlocMessageOptions* options,
+                                                                mlocMessageFormatter* formatterOut);
 
     /// Binds a compiled message to a formatter in caller memory: the
     /// message is read as mlocWriteMessageText reads it, each function
@@ -484,10 +484,9 @@ extern "C"
     ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocBindMessage(const mlocMessageFormatter* formatter,
-                                                       const void* message, size_t size,
-                                                       void* buffer, size_t capacity,
-                                                       size_t* sizeOut);
+    MLOC_NODISCARD MLOC_API mlocResult
+    mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, const void* message,
+                              size_t size, void* buffer, size_t capacity, size_t* sizeOut);
 
     // A formatted message's parts, as the output's part function receives
     // them. A part whose kind's low byte is 0x80 or more is the message's own:
@@ -537,7 +536,7 @@ extern "C"
     /// program function's entries must give the same results for the
     /// same values.
     ///
-    /// @param bound          A bound message from mlocBindMessage.
+    /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
     /// @param output         Receives the text.
@@ -563,20 +562,20 @@ extern "C"
 
     /// The number of options a function's call has (its attributes and
     /// its u: options aside, which are the formatter's), for
-    /// mlocGetMessageOption.
+    /// mlocMessageCall_GetOption.
     ///
     /// @param call  The call a function's resolve entry received, read
     ///              only while that entry runs.
     /// @return The count; 0 for a null pointer.
     /// @par Thread safety
     /// Safe from any thread; the call is used by one thread at a time.
-    MLOC_API size_t mlocGetMessageOptionCount(const mlocMessageCall* call);
+    MLOC_API size_t mlocMessageCall_GetOptionCount(const mlocMessageCall* call);
 
     /// Reads one of a call's options: its name and its value, resolved
     /// now (a variable's value resolved through its declaration).
     ///
     /// @param call        The call a function's resolve entry received.
-    /// @param index       Below mlocGetMessageOptionCount.
+    /// @param index       Below mlocMessageCall_GetOptionCount.
     /// @param nameOut     Receives the name (UTF-8, NFC, not terminated).
     /// @param lengthOut   Receives its length.
     /// @param valueOut    Receives the value; mloc_messageOperandFallback
@@ -588,28 +587,28 @@ extern "C"
     ///         index past the count.
     /// @par Thread safety
     /// Safe from any thread; the call is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageOption(const mlocMessageCall* call,
-                                                            size_t index, const char** nameOut,
-                                                            size_t* lengthOut,
-                                                            mlocMessageOperand* valueOut,
-                                                            mlocMessageResolved* storage);
+    MLOC_NODISCARD MLOC_API mlocResult mlocMessageCall_GetOption(const mlocMessageCall* call,
+                                                                 size_t index, const char** nameOut,
+                                                                 size_t* lengthOut,
+                                                                 mlocMessageOperand* valueOut,
+                                                                 mlocMessageResolved* storage);
 
     /// Finds a call's option by name and reads its value as
-    /// mlocGetMessageOption does.
+    /// mlocMessageCall_GetOption does.
     ///
     /// @param call      The call a function's resolve entry received.
     /// @param name      The option's name, UTF-8 in NFC.
     /// @param length    Its length.
     /// @param valueOut  Receives the value.
-    /// @param storage   As for mlocGetMessageOption.
+    /// @param storage   As for mlocMessageCall_GetOption.
     /// @return mloc_success; mloc_errorNotFound when the call has no such
     ///         option; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread; the call is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocFindMessageOption(const mlocMessageCall* call,
-                                                             const char* name, size_t length,
-                                                             mlocMessageOperand* valueOut,
-                                                             mlocMessageResolved* storage);
+    MLOC_NODISCARD MLOC_API mlocResult mlocMessageCall_FindOption(const mlocMessageCall* call,
+                                                                  const char* name, size_t length,
+                                                                  mlocMessageOperand* valueOut,
+                                                                  mlocMessageResolved* storage);
 
     /// The locale a call formats for: the formatter's.
     ///
@@ -618,8 +617,8 @@ extern "C"
     /// @return mloc_success; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread; the call is used by one thread at a time.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessageLocale(const mlocMessageCall* call,
-                                                            mlocLocale* localeOut);
+    MLOC_NODISCARD MLOC_API mlocResult mlocMessageCall_GetLocale(const mlocMessageCall* call,
+                                                                 mlocLocale* localeOut);
 
     // What a placeholder's or markup's part names, as the message wrote
     // it: an expression's function (none for an expression without one)

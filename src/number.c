@@ -16,8 +16,9 @@
 static_assert(sizeof(Formatter) <= sizeof(mlocNumberFormatter),
               "a formatter fits its opaque value");
 
-mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mlocDataSet* data,
-                                   const mlocLocale* locale, const mlocNumberOptions* options)
+mlocResult mlocInitNumberFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                   const mlocNumberOptions* options,
+                                   mlocNumberFormatter* formatterOut)
 {
     static const mlocNumberOptions s_defaults = {0};
     const mlocNumberOptions* o = options == nullptr ? &s_defaults : options;
@@ -49,8 +50,8 @@ mlocResult mlocInitNumberFormatter(mlocNumberFormatter* formatterOut, const mloc
     return result;
 }
 
-mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDecimal* decimal,
-                            mlocOutput* output)
+mlocResult mlocNumberFormatter_Format(const mlocNumberFormatter* formatter,
+                                      const mlocDecimal* decimal, mlocOutput* output)
 {
     Formatter f;
     if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
@@ -60,8 +61,9 @@ mlocResult mlocFormatNumber(const mlocNumberFormatter* formatter, const mlocDeci
     return mlocFormatWith(&f, nullptr, decimal, output);
 }
 
-mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlocDecimal* start,
-                                 const mlocDecimal* end, mlocOutput* output)
+mlocResult mlocNumberFormatter_FormatRange(const mlocNumberFormatter* formatter,
+                                           const mlocDecimal* start, const mlocDecimal* end,
+                                           mlocOutput* output)
 {
     Formatter f;
     if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f))
@@ -71,8 +73,9 @@ mlocResult mlocFormatNumberRange(const mlocNumberFormatter* formatter, const mlo
     return mlocFormatRangeWith(&f, nullptr, start, end, output);
 }
 
-mlocResult mlocParseNumber(const mlocNumberFormatter* formatter, const char* text, size_t length,
-                           mlocParseMode mode, mlocDecimal* decimalOut, size_t* endOut)
+mlocResult mlocNumberFormatter_Parse(const mlocNumberFormatter* formatter, const char* text,
+                                     size_t length, mlocParseMode mode, mlocDecimal* decimalOut,
+                                     size_t* endOut)
 {
     Formatter f;
     if (!mlocReadFormatter(formatter, sizeof(*formatter), numberFormatterStamp, &f) ||

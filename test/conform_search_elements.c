@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     }
     mlocOpenBuiltinData(&s_sources[0]);
     if (size == 0 || size == sizeof(s_file) ||
-        mlocOpenData(&s_sources[1], s_file, size) != mloc_success)
+        mlocOpenData(s_file, size, &s_sources[1]) != mloc_success)
     {
         fputs("usage: conform_search_elements collation.mloc [--back] < lines\n", stderr);
         return 2;
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
         Collator c;
         if (tab == nullptr ||
             mlocParseLocale(s_line, (size_t)(tab - s_line), &locale).status != mloc_success ||
-            mlocInitCollator(&collator, &data, &locale, nullptr) != mloc_success ||
+            mlocInitCollator(&data, &locale, nullptr, &collator) != mloc_success ||
             !mlocReadCollator(&collator, &c))
         {
             printf("error\n");

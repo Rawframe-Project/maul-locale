@@ -175,14 +175,14 @@ static void TestVersion(void)
 static void TestBuiltin(void)
 {
     mlocData data = {0};
-    CHECK(mlocOpenData(&data, mlocBuiltinData, mlocBuiltinDataSize) == mloc_success,
+    CHECK(mlocOpenData(mlocBuiltinData, mlocBuiltinDataSize, &data) == mloc_success,
           "the compiled-in bytes are a valid data file");
     mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     CHECK(memcmp(&data, &builtin, sizeof(data)) == 0, "opened alike either way");
     // The plural part files a unit under every locale id CLDR's plural
     // files name, root included; the ids are sorted.
-    size_t count = mlocGetDataLocaleCount(&builtin);
+    size_t count = mlocData_GetLocaleCount(&builtin);
     CHECK(count > 200, "the plural part's locales");
     bool sorted = true;
     bool root = false;
@@ -192,7 +192,7 @@ static void TestBuiltin(void)
     {
         const char* id = nullptr;
         size_t length = 0;
-        sorted = sorted && mlocGetDataLocale(&builtin, i, &id, &length) == mloc_success;
+        sorted = sorted && mlocData_GetLocale(&builtin, i, &id, &length) == mloc_success;
         if (previous != nullptr)
         {
             size_t n = length < previousLength ? length : previousLength;
@@ -217,14 +217,14 @@ static void TestLookups(void)
         return;
     }
     memcpy(&data, &view, sizeof(view));
-    CHECK(mlocGetDataLocaleCount(&data) == 4, "its locales");
+    CHECK(mlocData_GetLocaleCount(&data) == 4, "its locales");
     const char* id = nullptr;
     size_t length = 0;
-    CHECK(mlocGetDataLocale(&data, 3, &id, &length) == mloc_success && length == 7 &&
+    CHECK(mlocData_GetLocale(&data, 3, &id, &length) == mloc_success && length == 7 &&
               memcmp(id, "sr_Latn", 7) == 0,
           "a locale by index");
-    CHECK(mlocGetDataLocale(&data, 4, &id, &length) == mloc_errorInvalid, "an index past them");
-    CHECK(mlocGetDataLocale(&data, 0, nullptr, &length) == mloc_errorInvalid, "a null id");
+    CHECK(mlocData_GetLocale(&data, 4, &id, &length) == mloc_errorInvalid, "an index past them");
+    CHECK(mlocData_GetLocale(&data, 0, nullptr, &length) == mloc_errorInvalid, "a null id");
     uint32_t index = 0;
     CHECK(mlocFindDataLocale(&view, "de_AT", 5, &index) && index == 1, "a locale by id");
     CHECK(mlocFindDataLocale(&view, "de", 2, &index) && index == 0, "a prefix of another");
@@ -282,10 +282,10 @@ static void TestArguments(void)
 {
     uint32_t size = BuildGood();
     mlocData data;
-    CHECK(mlocOpenData(nullptr, s_file, size) == mloc_errorInvalid, "a null view");
-    CHECK(mlocOpenData(&data, nullptr, size) == mloc_errorInvalid, "null bytes");
-    CHECK(mlocOpenData(&data, s_file + 1, size) == mloc_errorInvalid, "unaligned bytes");
-    CHECK(mlocOpenData(&data, s_file, size) == mloc_errorFormat,
+    CHECK(mlocOpenData(s_file, size, nullptr) == mloc_errorInvalid, "a null view");
+    CHECK(mlocOpenData(nullptr, size, &data) == mloc_errorInvalid, "null bytes");
+    CHECK(mlocOpenData(s_file + 1, size, &data) == mloc_errorInvalid, "unaligned bytes");
+    CHECK(mlocOpenData(s_file, size, &data) == mloc_errorFormat,
           "kinds the library does not read are refused");
     CHECK(Open(63) == mloc_errorFormat, "shorter than a header");
 }

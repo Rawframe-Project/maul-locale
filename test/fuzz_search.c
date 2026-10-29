@@ -91,12 +91,12 @@ static bool Ready(void)
         }
         mlocOpenBuiltinData(&s_sources[0]);
         bool ok =
-            n > 0 && n < sizeof(s_file) && mlocOpenData(&s_sources[1], s_file, n) == mloc_success;
+            n > 0 && n < sizeof(s_file) && mlocOpenData(s_file, n, &s_sources[1]) == mloc_success;
         for (size_t i = 0; ok && i < tags; i++)
         {
             mlocLocale locale;
             ok = mlocParseLocale(s_tags[i], strlen(s_tags[i]), &locale).status == mloc_success &&
-                 mlocInitCollator(&s_collators[i], &s_set, &locale, nullptr) == mloc_success;
+                 mlocInitCollator(&s_set, &locale, nullptr, &s_collators[i]) == mloc_success;
         }
         s_state = ok ? 1 : -1;
     }
@@ -221,9 +221,9 @@ static void Mapped(const mlocCollator* c, mlocSearchOptions options, const uint8
     static mlocSearcher s_searcher16;
     Encode(chars, cut, &s_pattern);
     Encode(chars + cut, count - cut, &s_text);
-    mlocResult r8 = mlocInitSearcher(&s_searcher8, c, s_pattern.bytes, s_pattern.length, &options);
+    mlocResult r8 = mlocInitSearcher(c, s_pattern.bytes, s_pattern.length, &options, &s_searcher8);
     mlocResult r16 =
-        mlocInitSearcherUtf16(&s_searcher16, c, s_pattern.units, s_pattern.unitLength, &options);
+        mlocInitSearcherUtf16(c, s_pattern.units, s_pattern.unitLength, &options, &s_searcher16);
     Require(r8 == r16);
     if (r8 != mloc_success)
     {
@@ -242,11 +242,13 @@ static void Mapped(const mlocCollator* c, mlocSearchOptions options, const uint8
     size_t e8 = 0;
     size_t s16 = 0;
     size_t e16 = 0;
-    r8 = mlocFindNext(&s_searcher8, s_text.bytes, s_text.length, from8, &s8, &e8);
-    r16 = mlocFindNextUtf16(&s_searcher16, s_text.units, s_text.unitLength, from16, &s16, &e16);
+    r8 = mlocSearcher_FindNext(&s_searcher8, s_text.bytes, s_text.length, from8, &s8, &e8);
+    r16 = mlocSearcher_FindNextUtf16(&s_searcher16, s_text.units, s_text.unitLength, from16, &s16,
+                                     &e16);
     Agree(r8, s8, e8, r16, s16, e16, &s_text);
-    r8 = mlocFindPrevious(&s_searcher8, s_text.bytes, s_text.length, from8, &s8, &e8);
-    r16 = mlocFindPreviousUtf16(&s_searcher16, s_text.units, s_text.unitLength, from16, &s16, &e16);
+    r8 = mlocSearcher_FindPrevious(&s_searcher8, s_text.bytes, s_text.length, from8, &s8, &e8);
+    r16 = mlocSearcher_FindPreviousUtf16(&s_searcher16, s_text.units, s_text.unitLength, from16,
+                                         &s16, &e16);
     Agree(r8, s8, e8, r16, s16, e16, &s_text);
 }
 
@@ -260,12 +262,12 @@ static void Raw(const mlocCollator* c, mlocSearchOptions options, const uint8_t*
     size_t length = count - cut;
     size_t start = 0;
     size_t end = 0;
-    if (mlocInitSearcher(&s_searcher, c, pattern, cut, &options) == mloc_success)
+    if (mlocInitSearcher(c, pattern, cut, &options, &s_searcher) == mloc_success)
     {
         size_t from = position % (length + 1);
-        mlocResult r = mlocFindNext(&s_searcher, text, length, from, &start, &end);
+        mlocResult r = mlocSearcher_FindNext(&s_searcher, text, length, from, &start, &end);
         Require(Expected(r) && (r != mloc_success || (start <= end && end <= length)));
-        r = mlocFindPrevious(&s_searcher, text, length, from, &start, &end);
+        r = mlocSearcher_FindPrevious(&s_searcher, text, length, from, &start, &end);
         Require(Expected(r) && (r != mloc_success || (start <= end && end <= length)));
     }
     size_t patternUnits = cut / 2;
@@ -273,13 +275,13 @@ static void Raw(const mlocCollator* c, mlocSearchOptions options, const uint8_t*
     memcpy(s_units, bytes + patternUnits * 2, units * 2);
     static uint16_t s_patternUnits[maxChars * 4 / 2];
     memcpy(s_patternUnits, bytes, patternUnits * 2);
-    if (mlocInitSearcherUtf16(&s_searcher, c, s_patternUnits, patternUnits, &options) ==
+    if (mlocInitSearcherUtf16(c, s_patternUnits, patternUnits, &options, &s_searcher) ==
         mloc_success)
     {
         size_t from = position % (units + 1);
-        mlocResult r = mlocFindNextUtf16(&s_searcher, s_units, units, from, &start, &end);
+        mlocResult r = mlocSearcher_FindNextUtf16(&s_searcher, s_units, units, from, &start, &end);
         Require(Expected(r) && (r != mloc_success || (start <= end && end <= units)));
-        r = mlocFindPreviousUtf16(&s_searcher, s_units, units, from, &start, &end);
+        r = mlocSearcher_FindPreviousUtf16(&s_searcher, s_units, units, from, &start, &end);
         Require(Expected(r) && (r != mloc_success || (start <= end && end <= units)));
     }
 }

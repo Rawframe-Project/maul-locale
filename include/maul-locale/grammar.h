@@ -30,7 +30,7 @@ extern "C"
 // words.
 #define MLOC_MAX_SPOKEN_NUMBER 256
 
-// The longest text, in bytes, of a number mlocInflectNumber inflects, as
+// The longest text, in bytes, of a number mlocInflector_InflectNumber inflects, as
 // its formatter writes it.
 #define MLOC_MAX_INFLECTED_NUMBER 1024
 
@@ -147,11 +147,11 @@ extern "C"
     /// spell-out rules when the data has them (spellout.mloc); without
     /// them the inflector is made, and a number it meets is refused.
     ///
-    /// @param inflectorOut  Receives the inflector; left unchanged on
-    ///                      failure.
     /// @param data          The data with the number units and, for
     ///                      numbers, the spell-out rules.
     /// @param locale        The locale, canonicalized.
+    /// @param inflectorOut  Receives the inflector; left unchanged on
+    ///                      failure.
     /// @return mloc_success; mloc_errorNotFound for a language the library
     ///         has no rules for (Turkish, Kazakh, Kyrgyz, Azerbaijani,
     ///         Uzbek, Turkmen, Hungarian, Finnish and Korean now, Kazakh and Kyrgyz in
@@ -160,9 +160,9 @@ extern "C"
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInitInflector(mlocInflector* inflectorOut,
-                                                         const mlocDataSet* data,
-                                                         const mlocLocale* locale);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInitInflector(const mlocDataSet* data,
+                                                         const mlocLocale* locale,
+                                                         mlocInflector* inflectorOut);
 
     /// Writes a text inflected as asked: in Turkish its suffixes in
     /// order (plural, possessive, case, copula) by vowel harmony, the
@@ -250,10 +250,10 @@ extern "C"
     ///         text with nothing to read (no letter or digit at its end).
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInflectText(const mlocInflector* inflector,
-                                                       const char* text, size_t length,
-                                                       const mlocInflection* request,
-                                                       mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInflector_InflectText(const mlocInflector* inflector,
+                                                                 const char* text, size_t length,
+                                                                 const mlocInflection* request,
+                                                                 mlocOutput* output);
 
     /// Writes a number as a formatter writes it, inflected as asked by
     /// how the number is spoken ("5'e", "1.985'te", "%50'ye"): the value
@@ -268,17 +268,15 @@ extern "C"
     ///                   not read).
     /// @param output     Receives the text and its parts, the number's own
     ///                   parts (mlocNumberPart) inside the stem.
-    /// @return As mlocInflectText; mloc_errorLimit also for a number
+    /// @return As mlocInflector_InflectText; mloc_errorLimit also for a number
     ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
     ///         mloc_errorInvalid also for a decimal the library did not
     ///         make or a formatter it did not make.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocInflectNumber(const mlocInflector* inflector,
-                                                         const mlocNumberFormatter* formatter,
-                                                         const mlocDecimal* decimal,
-                                                         const mlocInflection* request,
-                                                         mlocOutput* output);
+    MLOC_NODISCARD MLOC_API mlocResult mlocInflector_InflectNumber(
+        const mlocInflector* inflector, const mlocNumberFormatter* formatter,
+        const mlocDecimal* decimal, const mlocInflection* request, mlocOutput* output);
 
 #ifdef __cplusplus
 }

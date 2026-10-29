@@ -27,7 +27,7 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     {
         fclose(file);
     }
-    return read > 0 && read < capacity && mlocOpenData(out, buffer, read) == mloc_success;
+    return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
 typedef struct Parts
@@ -48,7 +48,7 @@ static bool Formatter(const char* id, mlocRelativeOptions options, mlocRelativeF
     mlocLocale locale;
     return mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status ==
                mloc_success &&
-           mlocInitRelativeFormatter(f, &s_data, &locale, &options) >= 0;
+           mlocInitRelativeFormatter(&s_data, &locale, &options, f) >= 0;
 }
 
 // Whether an amount of a unit writes want (and the parts, when given).
@@ -62,7 +62,7 @@ static bool Is(const char* id, mlocRelativeOptions options, const char* amount,
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
     if (!Formatter(id, options, &f) ||
         mlocParseDecimal(amount, strlen(amount), &d).status != mloc_success ||
-        mlocFormatRelative(&f, &d, unit, &output) != mloc_success)
+        mlocRelativeFormatter_Format(&f, &d, unit, &output) != mloc_success)
     {
         printf("  %s %s: not formatted\n", id, amount);
         return false;
@@ -163,18 +163,18 @@ static void TestRefusals(void)
     mlocLocale en;
     mlocRelativeOptions bad = {.number = {.style = mloc_numberPercent}};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitRelativeFormatter(&f, &s_data, &en, &bad) == mloc_errorInvalid,
+              mlocInitRelativeFormatter(&s_data, &en, &bad, &f) == mloc_errorInvalid,
           "a percent style");
     bad = (mlocRelativeOptions){.number = {.signDisplay = mloc_signAlways}};
-    CHECK(mlocInitRelativeFormatter(&f, &s_data, &en, &bad) == mloc_errorInvalid, "a sign display");
+    CHECK(mlocInitRelativeFormatter(&s_data, &en, &bad, &f) == mloc_errorInvalid, "a sign display");
     bad = (mlocRelativeOptions){.width = (mlocRelativeWidth)3};
-    CHECK(mlocInitRelativeFormatter(&f, &s_data, &en, &bad) == mloc_errorInvalid &&
-              mlocInitRelativeFormatter(nullptr, &s_data, &en, nullptr) == mloc_errorInvalid,
+    CHECK(mlocInitRelativeFormatter(&s_data, &en, &bad, &f) == mloc_errorInvalid &&
+              mlocInitRelativeFormatter(&s_data, &en, nullptr, nullptr) == mloc_errorInvalid,
           "a width out of range, a null formatter");
     mlocData builtin;
     mlocOpenBuiltinData(&builtin);
     mlocDataSet alone = {&builtin, 1};
-    CHECK(mlocInitRelativeFormatter(&f, &alone, &en, nullptr) == mloc_errorNotFound,
+    CHECK(mlocInitRelativeFormatter(&alone, &en, nullptr, &f) == mloc_errorNotFound,
           "data without relative time");
     mlocDecimal one;
     // A decimal that is not finite has no digits.
@@ -183,13 +183,15 @@ static void TestRefusals(void)
     infinity.kind = mloc_decimalInfinity;
     char text[8];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
-    CHECK(mlocInitRelativeFormatter(&f, &s_data, &en, nullptr) == mloc_success &&
+    CHECK(mlocInitRelativeFormatter(&s_data, &en, nullptr, &f) == mloc_success &&
               mlocMakeDecimal(1, &one) == mloc_success &&
-              mlocFormatRelative(&f, &infinity, mloc_relativeDay, &output) == mloc_errorInvalid &&
-              mlocFormatRelative(&f, &one, (mlocRelativeUnit)15, &output) == mloc_errorInvalid,
+              mlocRelativeFormatter_Format(&f, &infinity, mloc_relativeDay, &output) ==
+                  mloc_errorInvalid &&
+              mlocRelativeFormatter_Format(&f, &one, (mlocRelativeUnit)15, &output) ==
+                  mloc_errorInvalid,
           "an amount not finite, a unit out of range");
     output = (mlocOutput){.buffer = text, .capacity = 4};
-    CHECK(mlocFormatRelative(&f, &one, mloc_relativeDay, &output) == mloc_errorCapacity &&
+    CHECK(mlocRelativeFormatter_Format(&f, &one, mloc_relativeDay, &output) == mloc_errorCapacity &&
               output.length == strlen("in 1 day"),
           "the length needed when the text does not fit");
     mlocRelativeFormatter named;
@@ -197,19 +199,22 @@ static void TestRefusals(void)
     mlocDecimal minusOne;
     char exact[9];
     output = (mlocOutput){.buffer = exact, .capacity = sizeof(exact)};
-    CHECK(mlocInitRelativeFormatter(&named, &s_data, &en, &automatic) == mloc_success &&
+    CHECK(mlocInitRelativeFormatter(&s_data, &en, &automatic, &named) == mloc_success &&
               mlocMakeDecimal(-1, &minusOne) == mloc_success &&
-              mlocFormatRelative(&named, &minusOne, mloc_relativeDay, &output) == mloc_success &&
+              mlocRelativeFormatter_Format(&named, &minusOne, mloc_relativeDay, &output) ==
+                  mloc_success &&
               output.length == 9 && memcmp(exact, "yesterday", 9) == 0,
           "a name that fills the room exactly");
     output = (mlocOutput){.buffer = exact, .capacity = 8};
-    CHECK(mlocFormatRelative(&named, &minusOne, mloc_relativeDay, &output) == mloc_errorCapacity &&
+    CHECK(mlocRelativeFormatter_Format(&named, &minusOne, mloc_relativeDay, &output) ==
+                  mloc_errorCapacity &&
               output.length == 9,
           "a name one byte past the room");
     mlocRelativeFormatter forged = f;
     memset(&forged, 0x5A, sizeof(forged));
     output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
-    CHECK(mlocFormatRelative(&forged, &one, mloc_relativeDay, &output) == mloc_errorInvalid,
+    CHECK(mlocRelativeFormatter_Format(&forged, &one, mloc_relativeDay, &output) ==
+              mloc_errorInvalid,
           "a formatter the library did not make");
 }
 
@@ -228,10 +233,10 @@ static bool DayTimeIs(const char* id, mlocRelativeOptions options, const char* d
     Parts p = {.text = text};
     mlocOutput output = {.buffer = text, .capacity = sizeof(text), .part = Part, .context = &p};
     if (mlocCanonicalizeLocale(&s_data, id, strlen(id), &locale, nullptr).status != mloc_success ||
-        mlocInitRelativeFormatter(&relative, &s_data, &locale, &options) < 0 ||
-        mlocInitTimeFormatter(&time, &s_data, &locale, &timeOptions) < 0 ||
+        mlocInitRelativeFormatter(&s_data, &locale, &options, &relative) < 0 ||
+        mlocInitTimeFormatter(&s_data, &locale, &timeOptions, &time) < 0 ||
         mlocParseDecimal(days, strlen(days), &d).status != mloc_success ||
-        mlocFormatRelativeDayTime(&relative, &time, &d, &at, &output) != mloc_success)
+        mlocRelativeFormatter_FormatDayTime(&relative, &time, &d, &at, &output) != mloc_success)
     {
         printf("  %s %s: not formatted\n", id, days);
         return false;
@@ -277,16 +282,17 @@ static void TestDayTimeHour(void)
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitRelativeFormatter(&relative, &s_data, &en, nullptr) == mloc_success &&
-              mlocInitTimeFormatter(&time, &s_data, &en, &optional) >= 0 &&
+              mlocInitRelativeFormatter(&s_data, &en, nullptr, &relative) == mloc_success &&
+              mlocInitTimeFormatter(&s_data, &en, &optional, &time) >= 0 &&
               mlocMakeDecimal(1, &one) == mloc_success &&
-              mlocFormatRelativeDayTime(&relative, &time, &one, &(mlocTime){.hour = 15}, &output) ==
-                  mloc_success &&
+              mlocRelativeFormatter_FormatDayTime(&relative, &time, &one, &(mlocTime){.hour = 15},
+                                                  &output) == mloc_success &&
               output.length == strlen("in 1 day at 3" NNBSP "PM") &&
               memcmp(text, "in 1 day at 3" NNBSP "PM", output.length) == 0,
           "a whole hour without its minutes");
-    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &(mlocTime){.hour = 15, .minute = 30},
-                                    &output) == mloc_success &&
+    CHECK(mlocRelativeFormatter_FormatDayTime(&relative, &time, &one,
+                                              &(mlocTime){.hour = 15, .minute = 30},
+                                              &output) == mloc_success &&
               output.length == strlen("in 1 day at 3:30" NNBSP "PM") &&
               memcmp(text, "in 1 day at 3:30" NNBSP "PM", output.length) == 0,
           "a time with its minutes");
@@ -303,18 +309,20 @@ static void TestDayTimeRefusals(void)
     char text[64];
     mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
     CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
-              mlocInitRelativeFormatter(&relative, &s_data, &en, nullptr) == mloc_success &&
-              mlocInitTimeFormatter(&time, &s_data, &en, nullptr) >= 0 &&
+              mlocInitRelativeFormatter(&s_data, &en, nullptr, &relative) == mloc_success &&
+              mlocInitTimeFormatter(&s_data, &en, nullptr, &time) >= 0 &&
               mlocMakeDecimal(1, &one) == mloc_success,
           "formatters made");
-    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &bad, &output) == mloc_errorInvalid &&
-              mlocFormatRelativeDayTime(nullptr, &time, &one, &noon, &output) ==
+    CHECK(mlocRelativeFormatter_FormatDayTime(&relative, &time, &one, &bad, &output) ==
                   mloc_errorInvalid &&
-              mlocFormatRelativeDayTime(&relative, &time, nullptr, &noon, &output) ==
+              mlocRelativeFormatter_FormatDayTime(nullptr, &time, &one, &noon, &output) ==
+                  mloc_errorInvalid &&
+              mlocRelativeFormatter_FormatDayTime(&relative, &time, nullptr, &noon, &output) ==
                   mloc_errorInvalid,
           "a time out of range, null pointers");
     output = (mlocOutput){.buffer = text, .capacity = 5};
-    CHECK(mlocFormatRelativeDayTime(&relative, &time, &one, &noon, &output) == mloc_errorCapacity &&
+    CHECK(mlocRelativeFormatter_FormatDayTime(&relative, &time, &one, &noon, &output) ==
+                  mloc_errorCapacity &&
               output.length > 5,
           "the length needed when the text does not fit");
     mlocRelativeOptions coarse = {.number = {.precision = {.kind = mloc_precisionSignificant,
@@ -322,9 +330,10 @@ static void TestDayTimeRefusals(void)
                                                            .maxSignificantDigits = 1}}};
     mlocDecimal huge;
     output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
-    CHECK(mlocInitRelativeFormatter(&relative, &s_data, &en, &coarse) == mloc_success &&
+    CHECK(mlocInitRelativeFormatter(&s_data, &en, &coarse, &relative) == mloc_success &&
               mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
-              mlocFormatRelativeDayTime(&relative, &time, &huge, &noon, &output) == mloc_errorLimit,
+              mlocRelativeFormatter_FormatDayTime(&relative, &time, &huge, &noon, &output) ==
+                  mloc_errorLimit,
           "a day rounded past the decimal's limits");
 }
 

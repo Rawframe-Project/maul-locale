@@ -526,7 +526,7 @@ static bool OpenData(void)
     }
     s_data = (mlocDataSet){s_sources, 3};
     return OpenRootPack(&unit, 1, &s_sources[1]) && read > 0 && read < sizeof(s_names) &&
-           mlocOpenData(&s_sources[2], s_names, read) == mloc_success;
+           mlocOpenData(s_names, read, &s_sources[2]) == mloc_success;
 }
 
 int main(void)

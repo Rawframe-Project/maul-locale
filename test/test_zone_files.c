@@ -92,7 +92,7 @@ static void TestOpenAndRead(void)
     uint32_t size = BuildZonesFile("1999z", "1999z\0\0");
     mlocData sources[2];
     mlocOpenBuiltinData(&sources[1]);
-    if (size == 0 || mlocOpenData(&sources[0], s_file, size) != mloc_success)
+    if (size == 0 || mlocOpenData(s_file, size, &sources[0]) != mloc_success)
     {
         CHECK(false, "a zones file of another release opens");
         return;
@@ -130,12 +130,12 @@ static void TestRefusals(void)
     {
         mlocData data;
         uint32_t size = BuildZonesFile("1999z", s_bad[i]);
-        CHECK(size > 0 && mlocOpenData(&data, s_file, size) == mloc_errorFormat,
+        CHECK(size > 0 && mlocOpenData(s_file, size, &data) == mloc_errorFormat,
               "a zones unit whose release is malformed");
     }
     mlocData data;
     uint32_t size = BuildZonesFile("1999z", "abcdefgh");
-    if (size == 0 || mlocOpenData(&data, s_file, size) != mloc_success)
+    if (size == 0 || mlocOpenData(s_file, size, &data) != mloc_success)
     {
         CHECK(false, "a release of eight bytes, letters and digits");
         return;

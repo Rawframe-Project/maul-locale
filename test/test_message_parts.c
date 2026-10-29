@@ -66,7 +66,7 @@ static mlocResult Format(const mlocMessageFormatter* formatter, const char* mess
     memset(parts, 0, sizeof *parts);
     if (mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                 .status != mloc_success ||
-        mlocBindMessage(formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
+        mlocMessageFormatter_Bind(formatter, s_compiled, size, s_bound, sizeof s_bound, &bound) !=
             mloc_success)
     {
         printf("  [%s] does not compile and bind\n", message);
@@ -247,7 +247,7 @@ static void TestProgramParts(void)
     mlocMessageFormatter formatter;
     mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&formatter, &s_data, &en, &options) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_success,
           "a formatter with x:parts is made");
     Part wanted[] = {{mloc_messagePartText, 0, 1},
                      {Message(mloc_messagePartPlaceholder, 0), 1, 2},
@@ -287,8 +287,8 @@ static void TestNoParts(void)
     memset(&parts, 0, sizeof parts);
     CHECK(mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
                       .status == mloc_success &&
-              mlocBindMessage(&s_plain, s_compiled, size, s_bound, sizeof s_bound, &bound) ==
-                  mloc_success &&
+              mlocMessageFormatter_Bind(&s_plain, s_compiled, size, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success &&
               mlocFormatMessage(s_bound, NULL, 0, &output, &faults) == mloc_withFallbacks &&
               faults.count == 2 && parts.count == 3,
           "faults are counted once though the text is written twice");
@@ -418,7 +418,7 @@ int main(void)
     {
         fclose(file);
     }
-    if (size == 0 || size >= sizeof dates || mlocOpenData(&sources[1], dates, size) != mloc_success)
+    if (size == 0 || size >= sizeof dates || mlocOpenData(dates, size, &sources[1]) != mloc_success)
     {
         fputs("test_message_parts: cannot open " MLOC_DATES_FILE "\n", stderr);
         return 2;
@@ -429,9 +429,9 @@ int main(void)
     mlocMessageOptions isolating = {false, mloc_messageIsolationDefault, NULL, 0, NULL};
     mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0, NULL};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
-              mlocInitMessageFormatter(&s_plain, &s_data, &en, &plain) == mloc_success &&
-              mlocInitMessageFormatter(&s_isolating, &s_data, &en, &isolating) == mloc_success &&
-              mlocInitMessageFormatter(&s_strict, &s_data, &en, &strict) == mloc_success,
+              mlocInitMessageFormatter(&s_data, &en, &plain, &s_plain) == mloc_success &&
+              mlocInitMessageFormatter(&s_data, &en, &isolating, &s_isolating) == mloc_success &&
+              mlocInitMessageFormatter(&s_data, &en, &strict, &s_strict) == mloc_success,
           "the formatters are made");
     TestPieces();
     TestInner();

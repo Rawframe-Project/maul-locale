@@ -77,7 +77,7 @@ static void WriteNumber(const DateFormat* f, bool overridden, uint32_t kind, uin
         mlocDecimal decimal;
         mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
         if (mlocMakeUnsignedDecimal(value, &decimal) == mloc_success &&
-            mlocFormatSpellout(&f->spellout, &decimal, &out) == mloc_success)
+            mlocSpelloutFormatter_Format(&f->spellout, &decimal, &out) == mloc_success)
         {
             mlocWritePart(w, kind, (const uint8_t*)text, out.length);
             return;

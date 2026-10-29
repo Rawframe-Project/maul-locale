@@ -26,7 +26,7 @@ static DataSpan SpanOf(const uint8_t* bytes, AssetField field)
     return (DataSpan){bytes + field.start, field.length};
 }
 
-mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const void* bytes, size_t size)
+mlocResult mlocOpenCatalog(const void* bytes, size_t size, mlocCatalog* catalogOut)
 {
     if (catalogOut == nullptr || bytes == nullptr)
     {
@@ -82,7 +82,7 @@ mlocResult mlocOpenCatalog(mlocCatalog* catalogOut, const void* bytes, size_t si
     return mloc_success;
 }
 
-mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoOut)
+mlocResult mlocCatalog_GetInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoOut)
 {
     Catalog c;
     if (!mlocReadCatalog(catalog, &c) || infoOut == nullptr)
@@ -114,8 +114,8 @@ mlocResult mlocGetCatalogInfo(const mlocCatalog* catalog, mlocCatalogInfo* infoO
     return mloc_success;
 }
 
-mlocResult mlocFindCatalogKey(const mlocCatalog* catalog, const char* key, size_t length,
-                              uint32_t* indexOut)
+mlocResult mlocCatalog_FindKey(const mlocCatalog* catalog, const char* key, size_t length,
+                               uint32_t* indexOut)
 {
     Catalog c;
     if (!mlocReadCatalog(catalog, &c) || (key == nullptr && length > 0) || indexOut == nullptr)
@@ -143,8 +143,8 @@ mlocResult mlocFindCatalogKey(const mlocCatalog* catalog, const char* key, size_
     return mloc_success;
 }
 
-mlocResult mlocGetCatalogMessage(const mlocCatalog* catalog, uint32_t index,
-                                 const void** messageOut, size_t* sizeOut)
+mlocResult mlocCatalog_GetMessage(const mlocCatalog* catalog, uint32_t index,
+                                  const void** messageOut, size_t* sizeOut)
 {
     Catalog c;
     if (!mlocReadCatalog(catalog, &c) || messageOut == nullptr || sizeOut == nullptr)

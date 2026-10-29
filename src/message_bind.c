@@ -116,8 +116,9 @@ static bool GoodFunctions(const mlocMessageFunction* functions, size_t count)
     return true;
 }
 
-mlocResult mlocInitMessageFormatter(mlocMessageFormatter* formatterOut, const mlocDataSet* data,
-                                    const mlocLocale* locale, const mlocMessageOptions* options)
+mlocResult mlocInitMessageFormatter(const mlocDataSet* data, const mlocLocale* locale,
+                                    const mlocMessageOptions* options,
+                                    mlocMessageFormatter* formatterOut)
 {
     if (formatterOut == NULL || data == NULL || locale == NULL)
     {
