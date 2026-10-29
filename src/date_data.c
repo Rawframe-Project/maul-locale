@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "data_format.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "number_data.h"
@@ -600,6 +601,8 @@ DateNameTables mlocReadDateNames(DataSpan unit)
 
 DateNameList mlocDateNameList(const DateNameTables* t, uint32_t list)
 {
+    // A name set's lists are below the count (mlocValidDateNames).
+    MLOC_ASSERT(list < t->listCount);
     uint32_t start = mlocLoad32(t->lists + 4 * (size_t)list);
     uint32_t end = mlocLoad32(t->lists + 4 * (size_t)list + 4);
     return (DateNameList){t->items + 2 * (size_t)start, end - start};
@@ -612,6 +615,8 @@ DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item)
         return (DataSpan){t->text, 0};
     }
     uint32_t s = mlocLoad16(list.items + 2 * (size_t)item);
+    // A list's items are strings (ValidIndexes in mlocValidDateNames).
+    MLOC_ASSERT(s < t->stringCount);
     uint32_t start = mlocLoad32(t->strings + 4 * (size_t)s);
     return (DataSpan){t->text + start, mlocLoad32(t->strings + 4 * (size_t)s + 4) - start};
 }
@@ -929,6 +934,10 @@ bool mlocWritableDate(const uint8_t* pattern, uint32_t length)
             at++;
             continue;
         }
+        // A valid pattern's fields are whole (mlocValidDatePattern).
+        MLOC_ASSERT(at + 3 <= length &&
+                    (pattern[at] == datePatternField ||
+                     (pattern[at] == datePatternOverride && at + 4 + pattern[at + 3] <= length)));
         if (!InLetters(s_dateLetters, pattern[at + 1]))
         {
             return false;
@@ -948,6 +957,8 @@ bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut)
             at++;
             continue;
         }
+        // A valid pattern's fields are whole (mlocValidDatePattern).
+        MLOC_ASSERT(at + 3 <= length);
         bool zone = pattern[at] == datePatternField &&
                     mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]) != mloc_zoneStyleNone;
         if (pattern[at] != datePatternField ||

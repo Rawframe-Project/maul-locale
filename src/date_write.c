@@ -10,6 +10,7 @@
 #include "date_write.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -45,6 +46,9 @@ static void WriteName(const DateFormat* f, uint32_t kind, const uint8_t* set, ui
 size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value, uint32_t width,
                       char* out)
 {
+    // A sound formatter's digits (mlocDateFormatSound), which the callers'
+    // buffers hold 24 of.
+    MLOC_ASSERT(digitLength >= 1 && digitLength <= numberDigitSize);
     char reversed[24];
     uint32_t n = 0;
     do
@@ -99,6 +103,8 @@ static void WriteNumber(const DateFormat* f, bool overridden, uint32_t kind, uin
 static int32_t EraIndex(uint32_t calendar, const mlocDateFields* fields)
 {
     static const char* const s_codes[dateCalendarCount] = dateEraCodes;
+    // A sound formatter's calendar (mlocDateFormatSound), or Gregorian.
+    MLOC_ASSERT(calendar < dateCalendarCount);
     const char* codes = s_codes[calendar];
     int32_t index = 0;
     for (const char* at = codes; *at != '\0'; index++)
@@ -142,6 +148,11 @@ static uint32_t MonthSlot(uint32_t calendar, const mlocDateFields* fields)
     uint32_t number =
         (uint32_t)(fields->monthCode[1] - '0') * 10 + (uint32_t)(fields->monthCode[2] - '0');
     bool leap = fields->monthCodeLength == 4;
+    // The library's month codes: an M, the month's number from 1 to 13 in
+    // two digits, and an L for a leap month, so every slot is below
+    // dateMonthCount.
+    MLOC_ASSERT((fields->monthCodeLength == 3 || leap) && fields->monthCode[0] == 'M' &&
+                number >= 1 && number <= 13);
     if (calendar != mloc_calendarHebrew)
     {
         return number - 1;
@@ -315,6 +326,8 @@ static void WriteField(const DateFormat* f, const mlocDateFields* fields, int32_
         WriteNumber(f, overridden, mloc_datePartDay, fields->day, width, w);
         break;
     default:
+        // The other letters a writable date pattern holds (mlocWritableDate).
+        MLOC_ASSERT(letter == 'E' || letter == 'e' || letter == 'c');
         WriteWeekday(f, fields, letter, width, overridden, w);
         break;
     }
@@ -337,6 +350,9 @@ void mlocWriteDateFieldsIn(const DateFormat* f, const uint8_t* pattern, uint32_t
         w->source = at >= span->first && at < span->end ? span->source : 0;
         if (pattern[at] == datePatternField || pattern[at] == datePatternOverride)
         {
+            // The patterns written were validated whole (mlocValidDatePattern).
+            MLOC_ASSERT(at + 3 <= length &&
+                        (pattern[at] == datePatternField || at + 4 + pattern[at + 3] <= length));
             WriteField(f, fields, relatedYear, pattern + at, w);
             at += pattern[at] == datePatternField ? 3 : 4 + pattern[at + 3];
             continue;

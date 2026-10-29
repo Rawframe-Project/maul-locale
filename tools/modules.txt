@@ -59,16 +59,16 @@ unit_patterns: currency_tables kinds list_data number_format unit_compound unit_
 unit_format: data_view decimal kinds number_core number_format plural plural_rules unit_compound unit_coordinate unit_id unit_mixed_format unit_names unit_patterns unit_tables unit_usage
 unit_mixed_format: currency_tables data_view decimal kinds list_data list_join number_core number_format number_precision plural plural_rules unit_compound unit_convert unit_data unit_id unit_mixed unit_patterns unit_tables
 date_tables:
-date_data: bytes data_format data_view date_tables kinds locale_fallback number_data
+date_data: bytes data_format data_view date_tables invariant kinds locale_fallback number_data
 list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
 list: list_data list_join number_core
 list_genders:
 list_gender: list_genders
-date_format: bytes calendar_arith date_data date_range date_write locale_prefs number_core number_tables zone_format
-date_write: bytes date_data decimal number_core number_tables
-date_range: bytes date_data date_write number_core
+date_format: bytes calendar_arith date_data date_range date_write invariant locale_prefs number_core number_tables zone_format
+date_write: bytes date_data decimal invariant number_core number_tables
+date_range: bytes date_data date_write invariant number_core
 time_format: bytes date_data date_format date_range date_time locale_keyword locale_prefs number_core number_tables time_write zone_format
 datetime_format: bytes date_data date_format date_range date_time date_write time_format time_write number_core number_tables zone_format
 time_write: date_data date_write number_core number_tables
