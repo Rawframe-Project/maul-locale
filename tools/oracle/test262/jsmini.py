@@ -1260,6 +1260,10 @@ def pattern_names(p):
 
 
 def typeof(v):
+    # A value the interpreter only stands in for answers itself, or refuses.
+    own = getattr(v, "js_typeof", None)
+    if own is not None:
+        return own()
     if isinstance(v, BigInt):
         return "bigint"
     if v is UNDEF:

@@ -973,6 +973,9 @@ class Unknown:
     def construct(self, args):
         raise Unsupported("new " + self.name)
 
+    def js_typeof(self):
+        raise Unsupported("typeof " + self.name)
+
 
 class TemporalNS:
     def js_get(self, prop):
