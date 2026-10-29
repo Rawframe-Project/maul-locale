@@ -10,6 +10,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_tables.h"
 
@@ -192,6 +193,9 @@ static mlocResult Maximize(const Likely* likely, const mlocLocale* locale, mlocL
     {
         return mloc_errorNotFound;
     }
+    // The validator takes only full tags as answers, so whatever is
+    // missing is filled.
+    MLOC_ASSERT(((uint32_t)(value >> 11) & 0xFFFFF) != 0 && ((uint32_t)value & 0x7FF) != 0);
     if (und)
     {
         mlocUnpackLanguage((uint32_t)(value >> 31), result.language);
@@ -266,10 +270,12 @@ void mlocLikelyRegionRange(const Likely* likely, uint32_t language, uint32_t* st
 {
     *startOut = LowerBound(likely, mlocPackTag(language, 0, 1));
     *endOut = LowerBound(likely, mlocPackTag(language, 1, 0));
+    MLOC_ASSERT(*startOut <= *endOut);
 }
 
 uint64_t mlocLikelyValueAt(const Likely* likely, uint32_t index)
 {
+    MLOC_ASSERT(index < likely->generalCount);
     return mlocLoad64(likely->generalValues + (size_t)index * 8);
 }
 

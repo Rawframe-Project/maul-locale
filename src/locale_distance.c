@@ -12,6 +12,7 @@
 #include "locale_distance.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_tables.h"
 
@@ -290,6 +291,8 @@ static const uint8_t* FindLanguagePair(const MatchTable* t, const Wanted* w, uin
 // The script pair of a run, else its "*" entry, which is first.
 static const uint8_t* FindScriptPair(const MatchTable* t, Next run, uint64_t key)
 {
+    // Distance asks only a run that has its "*" entry first.
+    MLOC_ASSERT(run.count > 0);
     const uint8_t* entries = t->scripts + (size_t)run.start * matchScriptSize;
     uint32_t low = key == 0 ? 0 : 1;
     uint32_t high = key == 0 ? 0 : run.count;
@@ -315,6 +318,7 @@ static const uint8_t* FindScriptPair(const MatchTable* t, Next run, uint64_t key
 
 static uint32_t RegionPair(const MatchTable* t, Next run, uint8_t desired, uint8_t supported)
 {
+    MLOC_ASSERT(run.count > 0);
     const uint8_t* entries = t->regions + (size_t)run.start * matchRegionSize;
     for (uint32_t i = 1; i < run.count; i++)
     {
@@ -330,6 +334,7 @@ static uint32_t RegionPair(const MatchTable* t, Next run, uint8_t desired, uint8
 static void GroupOf(const MatchTable* t, uint32_t region, const uint8_t** textOut,
                     uint32_t* lengthOut)
 {
+    MLOC_ASSERT(region < matchRegionSlots);
     const uint8_t* g =
         t->groups + (size_t)(t->regionGroups[region] & ~matchMacroRegion) * matchGroupSize;
     *textOut = t->text + mlocLoad16(g);

@@ -10,18 +10,18 @@ data_view:
 decimal: bytes
 decimal_round: decimal
 decimal_shortest:
-locale_parse:
+locale_parse: invariant
 kinds:
-locale_likely: bytes data_view kinds locale_tables
+locale_likely: bytes data_view invariant kinds locale_tables
 locale_tables:
 locale_canonical: bytes data_view kinds locale_keyword locale_likely locale_tables
 locale_extensions: bytes data_view kinds locale_canonical locale_tables
-locale_fallback: bytes data_view kinds locale_keyword locale_likely locale_tables
+locale_fallback: bytes data_view invariant kinds locale_keyword locale_likely locale_tables
 locale_context: data_view kinds locale_fallback
-locale_lsr: bytes locale_likely locale_tables
+locale_lsr: bytes invariant locale_likely locale_tables
 script_directions:
 locale_direction: script_directions
-locale_distance: bytes data_view kinds locale_likely locale_lsr locale_tables
+locale_distance: bytes data_view invariant kinds locale_likely locale_lsr locale_tables
 locale_match: bytes locale_distance locale_likely locale_lsr locale_tables
 locale_keyword:
 locale_prefs: bytes data_view kinds locale_keyword locale_tables
