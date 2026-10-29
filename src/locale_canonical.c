@@ -12,6 +12,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_aliases.h"
 #include "locale_keyword.h"
@@ -125,6 +126,7 @@ static uint32_t FirstMatch(const Aliases* aliases, const Ident* ident)
     uint32_t best = aliases->ruleCount;
     uint32_t keys[3 + MAX_VARIANTS];
     int count = 0;
+    MLOC_ASSERT(ident->variantCount <= MAX_VARIANTS);
     if (ident->language != 0)
     {
         keys[count++] = ident->language;
@@ -172,6 +174,8 @@ static bool AddVariant(Ident* ident, const Aliases* aliases, uint32_t id)
     {
         return false;
     }
+    // ValidVariants keeps a rule's variants within the table.
+    MLOC_ASSERT(id < aliases->variantCount);
     char* name = ident->variants[ident->variantCount];
     memset(name, 0, 9);
     memcpy(name, aliases->variants + (size_t)id * 8, 8);
@@ -321,6 +325,9 @@ static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ide
         {
             return false;
         }
+        // Both callers parse the locale first, and the parser takes
+        // variants of 4 to 8 characters.
+        MLOC_ASSERT(end - at <= 8);
         char* name = ident->variants[ident->variantCount];
         memcpy(name, locale->tail + at, end - at);
         name[end - at] = '\0';
