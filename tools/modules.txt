@@ -175,6 +175,7 @@ message_call: message_bind message_form message_operand message_read message_res
 message_prepare: bytes invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_read message_resolve message_words
 message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words
 message: invariant message_check message_cost message_emit message_form message_parse message_read message_table message_write
+grammar_end:
 grammar_lexicon:
 grammar_turkic: invariant
 grammar_tk: grammar_turkic
@@ -189,7 +190,7 @@ grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
-grammar: grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic invariant number_core number_format
+grammar: grammar_end grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic invariant number_core number_format
 search_elements: collation_compare collation_iterator collation_tables invariant nfd_stream search_boundary
 collator: collation_compare collation_fast_compare collation_fast_latin collation_reorder collation_tables
 search_back: invariant search_elements
