@@ -15,7 +15,7 @@ kinds:
 locale_likely: bytes data_view invariant kinds locale_tables
 locale_tables:
 locale_aliases: bytes data_view locale_tables
-locale_canonical: bytes data_view kinds locale_aliases locale_keyword locale_likely locale_tables
+locale_canonical: bytes data_view invariant kinds locale_aliases locale_keyword locale_likely locale_tables
 locale_extensions: bytes data_view kinds locale_canonical locale_tables
 locale_fallback: bytes data_view invariant kinds locale_keyword locale_likely locale_tables
 locale_context: data_view kinds locale_fallback
