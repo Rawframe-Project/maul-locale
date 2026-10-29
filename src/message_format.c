@@ -657,7 +657,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     if (textOut->part != NULL && f.w.length <= f.w.capacity &&
         !(f.r.faultCount > 0 && f.r.formatter.strict))
     {
-        // The same text again, its parts reported, its faultsOut already
+        // The same text again, its parts reported, its faults already
         // counted.
         size_t faultCount = f.r.faultCount;
         f.w = (Writer){textOut->buffer, textOut->capacity, 0, textOut->part, textOut->context};

@@ -98,7 +98,7 @@ extern "C"
     /// @param count      The number of items, at most MLOC_MAX_LIST_ITEMS.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (textOut's length then the size needed); mloc_errorLimit for
+    ///         (textOut->length then the size needed); mloc_errorLimit for
     ///         a count past MLOC_MAX_LIST_ITEMS; mloc_errorInvalid for a
     ///         formatter the library did not make, a null pointer, or an
     ///         item with a null text and a length.

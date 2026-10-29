@@ -79,7 +79,7 @@ extern "C"
     /// @param options   The options, or null for the defaults.
     /// @param bufferOut Receives the index; any alignment. May be null
     ///                  when capacity is 0.
-    /// @param capacity  The bufferOut's size in bytes.
+    /// @param capacity  Its size in bytes.
     /// @param sizeOut   Receives the index's size on success, or the
     ///                  capacity needed with mloc_errorCapacity, which may
     ///                  be a little more than the size.

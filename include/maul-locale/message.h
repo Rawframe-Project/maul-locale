@@ -94,7 +94,7 @@ extern "C"
     /// @param text      The message, UTF-8. May be null when length is 0.
     /// @param length    The number of bytes.
     /// @param bufferOut Receives the compiled message; any alignment.
-    /// @param capacity  The bufferOut's size in bytes.
+    /// @param capacity  Its size in bytes.
     /// @param sizeOut   Receives the compiled message's size on success,
     ///                  or the capacity needed with mloc_errorCapacity,
     ///                  which may be a little more than the size.
@@ -470,7 +470,7 @@ extern "C"
     /// @param message    A compiled message from mlocCompileMessage.
     /// @param size       Its size in bytes.
     /// @param bufferOut  Receives the bound message; any alignment.
-    /// @param capacity   The bufferOut's size in bytes.
+    /// @param capacity   Its size in bytes.
     /// @param sizeOut    Receives the size written, or needed with
     ///                   mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too

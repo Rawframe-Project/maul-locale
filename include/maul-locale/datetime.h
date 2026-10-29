@@ -202,7 +202,7 @@ extern "C"
     /// @param date       The date.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date outside Temporal's range, or a
     ///         formatter the library did not make or made with a zone.
     /// @par Thread safety
@@ -222,7 +222,7 @@ extern "C"
     /// @param instant    The instant, in Temporal's range.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -388,7 +388,7 @@ extern "C"
     /// @param time       The time.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a time out of range, or a formatter the
     ///         library did not make or made with a zone.
     /// @par Thread safety
@@ -408,7 +408,7 @@ extern "C"
     /// @param instant    The instant, in Temporal's range.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -528,7 +528,7 @@ extern "C"
     /// @param dateTime   The date and time.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date-time out of range, or a formatter
     ///         the library did not make or made with a zone.
     /// @par Thread safety
@@ -546,7 +546,7 @@ extern "C"
     /// @param instant    The instant, in Temporal's range.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -642,7 +642,7 @@ extern "C"
     /// @param instant    The instant, in Temporal's range.
     /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (textOut's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make.

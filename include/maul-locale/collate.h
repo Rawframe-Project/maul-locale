@@ -164,8 +164,8 @@ extern "C"
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in bytes.
     /// @param keyOut     Receives the key; may be null when capacity is 0.
-    /// @param capacity   The room in key, in bytes.
-    /// @param lengthOut  Receives the keyOut's length, also when it does not
+    /// @param capacity   Its room in bytes.
+    /// @param lengthOut  Receives the key's length, also when it does not
     ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (the bytes written are then no key); mloc_errorInvalid for
@@ -203,8 +203,8 @@ extern "C"
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in 16-bit units.
     /// @param keyOut     Receives the key; may be null when capacity is 0.
-    /// @param capacity   The room in key, in bytes.
-    /// @param lengthOut  Receives the keyOut's length, also when it does not
+    /// @param capacity   Its room in bytes.
+    /// @param lengthOut  Receives the key's length, also when it does not
     ///                   fit (SIZE_MAX when it passes SIZE_MAX).
     /// @return mloc_success; mloc_errorCapacity when the key does not fit
     ///         (lengthOut has the length needed); mloc_errorInvalid for
