@@ -102,8 +102,8 @@ extern "C"
     ///         mloc_errorNotFound for a missing name with
     ///         mloc_nameFallbackNone, or data without the names;
     ///         mloc_errorSyntax for a code not of the type's syntax;
-    ///         mloc_errorCapacity when the name does not fit (textOut's
-    ///         length then the size needed); mloc_errorInvalid for a null
+    ///         mloc_errorCapacity when the name does not fit (textOut->length
+    ///         then the size needed); mloc_errorInvalid for a null
     ///         pointer, a part function, or a type or options out of
     ///         range.
     /// @par Thread safety
@@ -159,7 +159,7 @@ extern "C"
     /// @return mloc_success; mloc_fellBack when the language has no name
     ///         and its code stands; mloc_errorNotFound for data without the
     ///         names; mloc_errorCapacity when the name does not fit
-    ///         (textOut's length then the size needed); mloc_errorInvalid
+    ///         (textOut->length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a part function, or options out of
     ///         range.
     /// @par Thread safety
