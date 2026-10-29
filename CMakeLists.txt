@@ -113,6 +113,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/list_gender.c
     src/list_data.c
     src/list_join.c
+    src/locale_aliases.c
     src/locale_canonical.c
     src/locale_context.c
     src/locale_distance.c

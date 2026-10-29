@@ -8,6 +8,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "kinds.h"
+#include "locale_aliases.h"
 #include "locale_canonical.h"
 #include "locale_tables.h"
 #include "test_harness.h"
@@ -160,7 +161,7 @@ static void TestIndex(void)
     CHECK(!ValidWith(s_layout.keyRulesAt, second, 2), "a rule filed twice");
 }
 
-static uint32_t KeyAt(uint32_t index)
+static uint32_t BuiltinKeyAt(uint32_t index)
 {
     return mlocLoad32(s_builtin.bytes + s_layout.keysAt + (size_t)index * 4);
 }
@@ -168,7 +169,7 @@ static uint32_t KeyAt(uint32_t index)
 // The offset of the slot that names a key's first index.
 static size_t SlotOf(uint32_t index)
 {
-    uint32_t at = mlocAliasSlot(KeyAt(index), s_layout.slots);
+    uint32_t at = mlocAliasSlot(BuiltinKeyAt(index), s_layout.slots);
     while (mlocLoad16(s_builtin.bytes + s_layout.slotsAt + (size_t)at * 2) != index + 1)
     {
         at = (at + 1) & (s_layout.slots - 1);
@@ -214,7 +215,7 @@ static bool ValidOneRule(uint32_t slotCount, bool everySlot)
 static void TestSlots(void)
 {
     uint32_t run = 0;
-    while (KeyAt(run) != KeyAt(run + 1))
+    while (BuiltinKeyAt(run) != BuiltinKeyAt(run + 1))
     {
         run++;
     }
