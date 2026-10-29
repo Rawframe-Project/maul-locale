@@ -521,9 +521,17 @@ typedef struct Inflected
     // The mark, or 0 for none.
     char mark;
     size_t kept;
+    // A Turkic stem's tail, a Hungarian one, or a Finnish stem's change:
+    // the graded consonants (2 ASCII letters at most) and the 3 letters
+    // LastSyllable lets follow them, a vowel of 2 bytes and two letters
+    // of 4, 12 bytes; or a type's stem letters, 4 at most.
     char tail[16];
     uint8_t tailLength;
 } Inflected;
+
+static_assert(sizeof(((TurkicStem*)nullptr)->tail) <= sizeof(((Inflected*)nullptr)->tail),
+              "a Turkic stem's tail fits");
+static_assert(hungarianTailRoom <= sizeof(((Inflected*)nullptr)->tail), "a Hungarian tail fits");
 
 static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
