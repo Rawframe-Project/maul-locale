@@ -492,9 +492,10 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     # So are the spell-out rules.
     maul_add_test(spellout MANUAL)
-    set(MLOC_SPELLOUT_FILE ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+    set(MLOC_SPELLOUT_FILE_SOURCE ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+    set(MLOC_SPELLOUT_FILE ${MLOC_SPELLOUT_FILE_SOURCE})
     if(EMSCRIPTEN)
-        target_link_options(test_spellout PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE}@/spellout.mloc")
+        target_link_options(test_spellout PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE_SOURCE}@/spellout.mloc")
         # Rules nested 64 levels deep need more than Emscripten's 64 KB of
         # stack.
         target_link_options(test_spellout PRIVATE "-sSTACK_SIZE=262144")
@@ -505,6 +506,18 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     target_compile_definitions(test_spellout PRIVATE MLOC_SPELLOUT_FILE="${MLOC_SPELLOUT_FILE}")
     mloc_add_test(spellout COMMAND test_spellout)
+    # A parse within Emscripten's default stack of 64 KB, every frame
+    # checked against it.
+    maul_add_test(spellout_stack MANUAL)
+    if(EMSCRIPTEN)
+        target_link_options(test_spellout_stack PRIVATE "SHELL:--embed-file ${MLOC_SPELLOUT_FILE_SOURCE}@/spellout.mloc"
+                                                        "-sSTACK_OVERFLOW_CHECK=2")
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_spellout_stack PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_spellout_stack PRIVATE MLOC_SPELLOUT_FILE="${MLOC_SPELLOUT_FILE}")
+    mloc_add_test(spellout_stack COMMAND test_spellout_stack)
     maul_add_test(wide WHITEBOX)
     maul_add_test(list WHITEBOX)
     maul_add_test(calendar)

@@ -105,7 +105,7 @@ if (mlocInitSpelloutFormatter(&set, &locale, "%spellout-cardinal", 18, nullptr, 
 }
 ```
 
-The value is formatted exactly, whatever its size or fraction. `mlocSpelloutFormatter_Parse` reads words back as ICU's strict parse does.
+The value is formatted exactly, whatever its size or fraction. `mlocSpelloutFormatter_Parse` reads words back as ICU's strict parse does, searching in an `mlocSpelloutWorkspace` of the caller's (64 KiB, used by one thread at a time; it need not be set), and text a formatter wrote always reads back; only text crafted against the search can take it past `MLOC_MAX_SPELLOUT_STEPS` and be refused with `mloc_errorLimit`.
 
 ## Reading numbers
 
