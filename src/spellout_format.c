@@ -325,11 +325,11 @@ static void WritePlural(Engine* e, const uint8_t* piece, const mlocDecimal* oper
     mlocFillPluralOperands(&magnitude, &operands);
     mlocPluralCategory category =
         mlocSelectPluralRule(piece[1] != 0 ? e->f->ordinal : e->f->cardinal, &operands);
+    MLOC_ASSERT(category <= mloc_pluralOther);
     if (mlocLoad16(plural + 4 * category + 2) == spelloutNone)
     {
         category = mloc_pluralOther;
     }
-    MLOC_ASSERT(category <= mloc_pluralOther);
     Write(e, e->r.text + mlocLoad16(plural + 4 * category), mlocLoad16(plural + 4 * category + 2));
 }
 
