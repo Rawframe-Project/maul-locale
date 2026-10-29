@@ -11,6 +11,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_keyword.h"
 #include "locale_likely.h"
@@ -242,6 +243,7 @@ static uint32_t KeyText(const mlocLocale* step, char* out)
             out[at++] = c == '-' ? '_' : (char)(c >= 'a' && c <= 'z' ? c - 32 : c);
         }
     }
+    MLOC_ASSERT(at <= MAX_KEY);
     return (uint32_t)at;
 }
 
@@ -294,6 +296,7 @@ static void AddPosix(mlocLocale* step)
         memcpy(step->tail + n, rest, restLength);
         n += restLength;
     }
+    MLOC_ASSERT(n <= sizeof(step->tail));
     memset(step->tail + n, 0, sizeof(step->tail) - n);
 }
 
@@ -392,7 +395,11 @@ static bool NextStep(const Parents* parents, mlocComponent component, mlocLocale
     Entry entry;
     if (FindParent(parents, component, key, length, &entry) != nullptr)
     {
-        return mlocParseLocale(entry.parent, entry.parentLength, step).status == mloc_success;
+        // The validator parsed every parent key.
+        bool parsed =
+            mlocParseLocale(entry.parent, entry.parentLength, step).status == mloc_success;
+        MLOC_ASSERT(parsed);
+        return parsed;
     }
     size_t variants = VariantsLength(step->tail, sizeof(step->tail));
     if (variants > 0)

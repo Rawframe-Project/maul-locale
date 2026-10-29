@@ -100,15 +100,22 @@ mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported
     {
         return mloc_errorNotFound;
     }
+    // mlocMakeLsr answers every locale when the table has und's entry,
+    // which the validator requires; without it the data has no likely
+    // subtags to match by.
     Lsr defaultLsr;
-    if (defaultLocale != nullptr)
+    if (defaultLocale != nullptr &&
+        !mlocMakeLsr(&likely, table.regionGroups, defaultLocale, 0, &defaultLsr))
     {
-        (void)mlocMakeLsr(&likely, table.regionGroups, defaultLocale, 0, &defaultLsr);
+        return mloc_errorNotFound;
     }
     for (size_t i = 0; i < count; i++)
     {
         Lsr lsr;
-        (void)mlocMakeLsr(&likely, table.regionGroups, &supported[i], (uint32_t)i, &lsr);
+        if (!mlocMakeLsr(&likely, table.regionGroups, &supported[i], (uint32_t)i, &lsr))
+        {
+            return mloc_errorNotFound;
+        }
         memcpy(&entriesOut[i], &lsr, sizeof(lsr));
     }
     const Lsr* def = defaultLocale != nullptr ? &defaultLsr : nullptr;
@@ -170,7 +177,10 @@ mlocResult mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported
     for (size_t i = 0; i < desiredCount; i++)
     {
         Lsr lsr;
-        (void)mlocMakeLsr(&likely, table.regionGroups, &desired[i], (uint32_t)i, &lsr);
+        if (!mlocMakeLsr(&likely, table.regionGroups, &desired[i], (uint32_t)i, &lsr))
+        {
+            return mloc_errorNotFound;
+        }
         Wanted wanted;
         mlocWant(&matcher, &lsr, &desired[i], &wanted);
         uint32_t shifted = 0;

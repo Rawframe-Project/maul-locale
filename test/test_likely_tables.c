@@ -84,6 +84,31 @@ int main(void)
           "a language value's top bit");
     CHECK(!ValidWith(languageValues, latn << 11, 4), "a language value without a region");
     CHECK(!mlocValidLikely(nullptr, (DataSpan){s_copy, 8}), "shorter than the header");
+    // The table without und's own entry, the general entry every lookup
+    // that finds nothing else ends at: its key and value taken out.
+    uint64_t root = mlocPackTag(und, 0, 0);
+    uint32_t at = 0;
+    while (at < generalCount && mlocLoad64(s_builtin.bytes + generalKeys + (size_t)at * 8) != root)
+    {
+        at++;
+    }
+    size_t smaller = s_builtin.size - 16;
+    uint8_t* without = malloc(smaller);
+    CHECK(at < generalCount && without != nullptr, "the compiled-in table has und's entry");
+    if (at < generalCount && without != nullptr)
+    {
+        size_t keyAt = generalKeys + (size_t)at * 8;
+        size_t valueAt = generalValues + (size_t)at * 8;
+        // The header, the keys before and after und's, the values before
+        // and after its value, and the language entries, in that order.
+        memcpy(without, s_builtin.bytes, keyAt);
+        memcpy(without + keyAt, s_builtin.bytes + keyAt + 8, valueAt - keyAt - 8);
+        memcpy(without + valueAt - 8, s_builtin.bytes + valueAt + 8, s_builtin.size - valueAt - 8);
+        Put(without + 4, generalCount - 1, 4);
+        CHECK(!mlocValidLikely(nullptr, (DataSpan){without, (uint32_t)smaller}),
+              "a table without und's entry, which matching falls back to");
+    }
+    free(without);
     free(s_copy);
     return s_failures == 0 ? 0 : 1;
 }

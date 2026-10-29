@@ -10,6 +10,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_tables.h"
 
@@ -52,6 +53,8 @@ static bool ValidTag(uint64_t tag, bool full)
            ((region == 0 && !full) || mlocValidPackedRegion(region));
 }
 
+static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut);
+
 bool mlocValidLikely(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -88,7 +91,10 @@ bool mlocValidLikely(const DataView* view, DataSpan payload)
             return false;
         }
     }
-    return true;
+    // Every lookup that finds nothing else ends at und's entry, so a
+    // table without it leaves a locale without likely subtags.
+    uint64_t root = 0;
+    return FindGeneral(&likely, mlocPackTag(und, 0, 0), &root);
 }
 
 static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut)
@@ -192,6 +198,9 @@ static mlocResult Maximize(const Likely* likely, const mlocLocale* locale, mlocL
     {
         return mloc_errorNotFound;
     }
+    // The validator takes only full tags as answers, so whatever is
+    // missing is filled.
+    MLOC_ASSERT(((uint32_t)(value >> 11) & 0xFFFFF) != 0 && ((uint32_t)value & 0x7FF) != 0);
     if (und)
     {
         mlocUnpackLanguage((uint32_t)(value >> 31), result.language);
@@ -266,10 +275,12 @@ void mlocLikelyRegionRange(const Likely* likely, uint32_t language, uint32_t* st
 {
     *startOut = LowerBound(likely, mlocPackTag(language, 0, 1));
     *endOut = LowerBound(likely, mlocPackTag(language, 1, 0));
+    MLOC_ASSERT(*startOut <= *endOut);
 }
 
 uint64_t mlocLikelyValueAt(const Likely* likely, uint32_t index)
 {
+    MLOC_ASSERT(index < likely->generalCount);
     return mlocLoad64(likely->generalValues + (size_t)index * 8);
 }
 
