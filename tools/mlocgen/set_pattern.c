@@ -96,7 +96,8 @@ static void String(const char* pattern, size_t end, size_t* at, const SetSink* s
         char bytes[4];
         size_t size = 0;
         uint32_t cp = Character(pattern, end, at);
-        if (muniEncodeUtf8(cp, bytes, &size) != muni_success || length + size > sizeof(text))
+        if (muniEncodeUtf8(cp, bytes, sizeof(bytes), &size) != muni_success ||
+            length + size > sizeof(text))
         {
             GenDie("a set pattern's string too long", pattern);
         }

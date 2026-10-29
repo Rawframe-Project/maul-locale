@@ -409,7 +409,7 @@ static size_t Encode(const HungarianLetters* w, size_t from, size_t to, char* te
     {
         char bytes[4];
         size_t used = 0;
-        if (muniEncodeUtf8(w->c[i], bytes, &used) != muni_success || n + used > room)
+        if (muniEncodeUtf8(w->c[i], bytes, sizeof(bytes), &used) != muni_success || n + used > room)
         {
             return 0;
         }
@@ -435,7 +435,8 @@ static const HungarianWord* Lookup(const HungarianLetters* w, size_t shortest, s
     {
         char bytes[4];
         size_t used = 0;
-        if (muniEncodeUtf8(w->c[first - 1], bytes, &used) != muni_success || used > start)
+        if (muniEncodeUtf8(w->c[first - 1], bytes, sizeof(bytes), &used) != muni_success ||
+            used > start)
         {
             break;
         }
@@ -598,7 +599,8 @@ static void ChangedEnd(const HungarianText* t, const Stem* stem, const Hungarian
         size_t used = 0;
         size_t rest = (same + 1 < changed.count ? changed.at[same + 1] : length) - from;
         if (mlocHungarianSmall(original) != original &&
-            muniEncodeUtf8(mlocHungarianCapital(changed.c[same]), capital, &used) == muni_success &&
+            muniEncodeUtf8(mlocHungarianCapital(changed.c[same]), capital, sizeof(capital),
+                           &used) == muni_success &&
             used + n - rest <= hungarianTailRoom)
         {
             memmove(out->tail + used, out->tail + rest, n - rest);
@@ -627,7 +629,8 @@ static void JoinedStem(const HungarianText* t, const Stem* stem, const Builder* 
         uint32_t longer =
             mlocHungarianLongVowel(mlocHungarianPrevious(t->word, t->wordLength, &start));
         size_t used = 0;
-        if (longer != 0 && muniEncodeUtf8(longer, out->tail, &used) == muni_success)
+        if (longer != 0 &&
+            muniEncodeUtf8(longer, out->tail, sizeof(out->tail), &used) == muni_success)
         {
             out->kept = start;
             out->tailLength = (uint8_t)used;

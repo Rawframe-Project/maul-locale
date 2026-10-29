@@ -58,7 +58,7 @@ static bool Name(const char* hex, char* utf8, size_t* length, uint16_t* utf16, s
         uint32_t cp = (uint32_t)strtoul(p, &end, 16);
         size_t size = 0;
         if (*length + 4 > 1024 || *units + 2 > 1024 ||
-            muniEncodeUtf8(cp, utf8 + *length, &size) != muni_success)
+            muniEncodeUtf8(cp, utf8 + *length, 1024 - *length, &size) != muni_success)
         {
             return false;
         }

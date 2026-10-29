@@ -357,6 +357,113 @@ static void TestRefusals(void)
           "a segmenter the library did not make, a null offset");
 }
 
+// A complex breaker that calls back into the segmenter it serves: a break
+// every three bytes of the run, and, when it calls back, each call it
+// could make on its segmenter, counting those not refused.
+typedef struct Reentry
+{
+    bool callBack;
+    mlocSegmenter* segmenter;
+    int calls;
+    int allowed;
+} Reentry;
+
+static size_t ReenteringBreaker(void* context, const char* run, size_t length, size_t from)
+{
+    (void)run;
+    Reentry* r = context;
+    if (r->callBack)
+    {
+        size_t offset = 0;
+        r->calls++;
+        r->allowed +=
+            (mlocNextSegmentBreak(r->segmenter, &offset, nullptr) != mloc_errorInvalid) +
+            (mlocFeedSegmenter(r->segmenter, "x", 1, false) != mloc_errorInvalid) +
+            (mlocSetSegmenterComplexBreaker(r->segmenter, nullptr, nullptr) != mloc_errorInvalid);
+    }
+    return from + 3 < length ? from + 3 : length;
+}
+
+// The breaks of a text fed in pieces of step bytes; their count, or -1.
+static int BreaksInPieces(const char* id, mlocSegmentKind kind, const char* text, size_t step,
+                          Reentry* reentry, size_t* breaks, int capacity)
+{
+    mlocLocale locale;
+    mlocSegmenter s;
+    size_t length = strlen(text);
+    size_t fed = step < length ? step : length;
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
+        mlocInitSegmenter(&s, &s_data, &locale, kind, text, fed, fed < length) != mloc_success ||
+        mlocSetSegmenterComplexBreaker(&s, ReenteringBreaker, reentry) != mloc_success)
+    {
+        return -1;
+    }
+    reentry->segmenter = &s;
+    int count = 0;
+    for (;;)
+    {
+        size_t offset = 0;
+        mlocResult r = mlocNextSegmentBreak(&s, &offset, nullptr);
+        if (r == mloc_success && count < capacity)
+        {
+            breaks[count++] = offset;
+        }
+        else if (r == mloc_needMoreText)
+        {
+            size_t more = length - fed < step ? length - fed : step;
+            if (mlocFeedSegmenter(&s, text + fed, more, fed + more < length) != mloc_success)
+            {
+                return -1;
+            }
+            fed += more;
+        }
+        else
+        {
+            return r == mloc_done ? count : -1;
+        }
+    }
+}
+
+static void TestReentry(void)
+{
+    static const char* const s_texts[] = {
+        "ひらがなภาษาไทยかんじ漢字ภาษาひら",
+        "かなภาษาไทยภาษาไทย。漢字ກະເຣີ",
+        "ภาษาไทยひらがなภาษา",
+    };
+    static const char* const s_ids[] = {"ja", "th", "en"};
+    int differ = 0;
+    int calls = 0;
+    int allowed = 0;
+    for (size_t t = 0; t < sizeof(s_texts) / sizeof(s_texts[0]); t++)
+    {
+        for (size_t l = 0; l < sizeof(s_ids) / sizeof(s_ids[0]); l++)
+        {
+            for (int kind = mloc_segmentWord; kind <= mloc_segmentLine; kind += 2)
+            {
+                for (size_t step = 1; step <= 8; step++)
+                {
+                    size_t plain[64];
+                    size_t reentered[64];
+                    Reentry none = {0};
+                    Reentry back = {.callBack = true};
+                    int a = BreaksInPieces(s_ids[l], (mlocSegmentKind)kind, s_texts[t], step, &none,
+                                           plain, 64);
+                    int b = BreaksInPieces(s_ids[l], (mlocSegmentKind)kind, s_texts[t], step, &back,
+                                           reentered, 64);
+                    differ +=
+                        a < 0 || a != b ||
+                        memcmp(plain, reentered, (size_t)(a > 0 ? a : 0) * sizeof(size_t)) != 0;
+                    calls += back.calls;
+                    allowed += back.allowed;
+                }
+            }
+        }
+    }
+    CHECK(calls > 500 && allowed == 0 && differ == 0,
+          "a complex breaker's calls back into its segmenter are refused and change no break");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_SEGMENTS_FILE, "rb");
@@ -376,6 +483,7 @@ int main(void)
     TestWords();
     TestLines();
     TestRefusals();
+    TestReentry();
     TestOracle();
     return s_failures == 0 ? 0 : 1;
 }

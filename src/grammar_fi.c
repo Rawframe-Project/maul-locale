@@ -172,7 +172,8 @@ static bool MakeKeyText(const FinnishWord* w, KeyText* out)
     {
         size_t used = 0;
         out->at[i] = (uint16_t)n;
-        if (muniEncodeUtf8(mlocFinnishSmall(w->c[i]), (char*)out->bytes + n, &used) != muni_success)
+        if (muniEncodeUtf8(mlocFinnishSmall(w->c[i]), (char*)out->bytes + n, sizeof(out->bytes) - n,
+                           &used) != muni_success)
         {
             return false;
         }
@@ -825,7 +826,7 @@ static uint8_t Encode(const FinnishWord* w, size_t from, size_t to, char* buffer
     {
         char bytes[4];
         size_t used = 0;
-        if (muniEncodeUtf8(w->c[i], bytes, &used) != muni_success || n + used > room)
+        if (muniEncodeUtf8(w->c[i], bytes, sizeof(bytes), &used) != muni_success || n + used > room)
         {
             break;
         }

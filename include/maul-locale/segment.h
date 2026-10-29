@@ -47,7 +47,7 @@ extern "C"
     } mlocSegmentKind;
 
     // A caller's word segmenter for Thai, Lao, Khmer and Burmese, which
-    // write words without spaces, as Maul Unicode's muniComplexBreakFn: it
+    // write words without spaces, as Maul Unicode's muniComplexBreakFunction: it
     // receives a maximal run of such text as UTF-8 and a byte offset from
     // inside it, and returns the byte offset of the first break between
     // words after from, or length when there is none. It must return the

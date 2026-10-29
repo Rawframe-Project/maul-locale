@@ -476,7 +476,9 @@ static bool Inert(uint32_t c)
 {
     uint32_t a = 0;
     uint32_t b = 0;
-    return !muniDecomposePair(c, &a, &b) && muniGetCombiningClass(c) == 0;
+    size_t pieces = 0;
+    return muniDecomposePair(c, &a, &b, &pieces) == muni_success && pieces == 0 &&
+           muniGetCombiningClass(c) == 0;
 }
 
 // Whether text may break before the code point in NFC.
@@ -485,7 +487,8 @@ static bool NfcBoundary(uint32_t c)
     char bytes[4];
     size_t size = 0;
     muniQuickCheck answer = muni_quickCheckNo;
-    return muniEncodeUtf8(c, bytes, &size) == muni_success && muniGetCombiningClass(c) == 0 &&
+    return muniEncodeUtf8(c, bytes, sizeof(bytes), &size) == muni_success &&
+           muniGetCombiningClass(c) == 0 &&
            muniCheckNormalization(bytes, size, muni_nfc, &answer).status == muni_success &&
            answer == muni_quickCheckYes;
 }
@@ -1068,7 +1071,7 @@ static void PutPoint(Text* t, uint32_t c)
     {
         PutText(t, "\\");
     }
-    if (muniEncodeUtf8(c, bytes, &size) == muni_success)
+    if (muniEncodeUtf8(c, bytes, sizeof(bytes), &size) == muni_success)
     {
         Put(t, bytes, size);
         return;

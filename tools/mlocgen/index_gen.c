@@ -192,7 +192,7 @@ static Label Encoded(uint32_t cp)
 {
     Label l = {0};
     size_t size = 0;
-    if (muniEncodeUtf8(cp, l.text, &size) != muni_success)
+    if (muniEncodeUtf8(cp, l.text, sizeof(l.text), &size) != muni_success)
     {
         GenDie("an exemplar that is no scalar value", "");
     }
