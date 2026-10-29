@@ -52,6 +52,8 @@ static bool ValidTag(uint64_t tag, bool full)
            ((region == 0 && !full) || mlocValidPackedRegion(region));
 }
 
+static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut);
+
 bool mlocValidLikely(const DataView* view, DataSpan payload)
 {
     (void)view;
@@ -88,7 +90,10 @@ bool mlocValidLikely(const DataView* view, DataSpan payload)
             return false;
         }
     }
-    return true;
+    // Every lookup that finds nothing else ends at und's entry, so a
+    // table without it leaves a locale without likely subtags.
+    uint64_t root = 0;
+    return FindGeneral(&likely, mlocPackTag(und, 0, 0), &root);
 }
 
 static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut)
