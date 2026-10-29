@@ -5,15 +5,20 @@
 
 #include "spellout_match.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 static const uint8_t* Piece(const SpelloutRules* r, uint32_t index)
 {
+    MLOC_ASSERT(index < r->pieceCount);
     return r->pieces + (size_t)index * spelloutPieceSize;
 }
 
 static SpelloutText PieceText(const SpelloutRules* r, const uint8_t* piece)
 {
+    MLOC_ASSERT(piece[0] == spelloutText &&
+                (uint32_t)mlocLoad16(piece + 4) + mlocLoad16(piece + 2) <= r->textSize);
     return (SpelloutText){r->text + mlocLoad16(piece + 4), mlocLoad16(piece + 2)};
 }
 
@@ -120,6 +125,7 @@ static size_t PiecesLength(const SpelloutRules* r, const SpelloutParts* parts, u
 static int64_t FindPlural(const SpelloutRules* r, const SpelloutParts* parts, SpelloutText text,
                           size_t from, size_t* lengthOut)
 {
+    MLOC_ASSERT(mlocLoad16(parts->plural + 2) < r->pluralCount);
     const uint8_t* plural = r->plurals + (size_t)mlocLoad16(parts->plural + 2) * spelloutPluralSize;
     uint32_t order = mlocLoad32(plural + 24);
     int64_t matched = -1;
