@@ -278,10 +278,10 @@ mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* de
     return Result(mloc_success, length);
 }
 
-mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output)
+mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
 {
-    if (decimal == nullptr || output == nullptr ||
-        (output->buffer == nullptr && output->capacity > 0) || !mlocValidDecimal(decimal))
+    if (decimal == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity > 0) || !mlocValidDecimal(decimal))
     {
         return mloc_errorInvalid;
     }
@@ -295,13 +295,13 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* output)
     int64_t integerDigits = special != nullptr ? specialLength : top >= 0 ? top + 1 : 1;
     int64_t fraction = decimal->fractionDigits;
     size_t length = (size_t)(decimal->negative + integerDigits + (fraction > 0 ? fraction + 1 : 0));
-    output->length = length;
+    textOut->length = length;
     // Every decimal writes at least one byte, so no buffer is too short.
-    if (length > output->capacity || output->buffer == nullptr)
+    if (length > textOut->capacity || textOut->buffer == nullptr)
     {
         return mloc_errorCapacity;
     }
-    char* out = output->buffer;
+    char* out = textOut->buffer;
     size_t n = 0;
     if (decimal->negative)
     {

@@ -312,29 +312,29 @@ static void Capitalize(const SpelloutFormat* f, uint32_t first, NumberWriter* w)
 }
 
 mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
-                                        const mlocDecimal* decimal, mlocOutput* output)
+                                        const mlocDecimal* decimal, mlocOutput* textOut)
 {
     SpelloutFormat f;
-    if (!ReadFormatter(formatter, false, &f) || decimal == nullptr || output == nullptr ||
-        output->part != nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+    if (!ReadFormatter(formatter, false, &f) || decimal == nullptr || textOut == nullptr ||
+        textOut->part != nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocValidDecimal(decimal))
     {
         return mloc_errorInvalid;
     }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     uint32_t first = 0;
     mlocResult r = mlocWriteSpellout(&f, decimal, &w, &first);
     if (r == mloc_success && f.capitalize)
     {
         Capitalize(&f, first, &w);
     }
-    output->length = w.length;
+    textOut->length = w.length;
     if (r != mloc_success)
     {
         return r;
     }
-    return output->buffer == nullptr || w.length > output->capacity ? mloc_errorCapacity
-                                                                    : mloc_success;
+    return textOut->buffer == nullptr || w.length > textOut->capacity ? mloc_errorCapacity
+                                                                      : mloc_success;
 }
 
 mlocResult mlocSpelloutFormatter_Parse(const mlocSpelloutFormatter* formatter, const char* text,

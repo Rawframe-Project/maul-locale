@@ -557,26 +557,26 @@ mlocResult mlocCurrencyFormatter_Parse(const mlocCurrencyFormatter* formatter, c
 }
 
 mlocResult mlocCurrencyFormatter_Format(const mlocCurrencyFormatter* formatter,
-                                        const mlocDecimal* decimal, mlocOutput* output)
+                                        const mlocDecimal* decimal, mlocOutput* textOut)
 {
     Currency c;
     if (!ReadCurrency(formatter, &c))
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatWith(&c.formatter, c.hasOuter ? &c.outer : nullptr, decimal, output);
+    return mlocFormatWith(&c.formatter, c.hasOuter ? &c.outer : nullptr, decimal, textOut);
 }
 
 mlocResult mlocCurrencyFormatter_FormatRange(const mlocCurrencyFormatter* formatter,
                                              const mlocDecimal* start, const mlocDecimal* end,
-                                             mlocOutput* output)
+                                             mlocOutput* textOut)
 {
     Currency c;
     if (!ReadCurrency(formatter, &c))
     {
         return mloc_errorInvalid;
     }
-    return mlocFormatRangeWith(&c.formatter, c.hasOuter ? &c.outer : nullptr, start, end, output);
+    return mlocFormatRangeWith(&c.formatter, c.hasOuter ? &c.outer : nullptr, start, end, textOut);
 }
 
 // Writes text into an output: its length, and mloc_errorCapacity when it
@@ -617,9 +617,9 @@ static mlocResult WriteField(const Fields* f, uint32_t field, mlocOutput* output
 
 mlocResult mlocGetCurrencySymbol(const mlocDataSet* data, const mlocLocale* locale,
                                  const char* code, size_t codeLength, mlocCurrencyDisplay display,
-                                 mlocOutput* output)
+                                 mlocOutput* textOut)
 {
-    uint16_t packed = LookupCode(data, locale, code, codeLength, output);
+    uint16_t packed = LookupCode(data, locale, code, codeLength, textOut);
     if (packed == 0 || !(IsSymbolDisplay(display) || display == mloc_currencyCode))
     {
         return mloc_errorInvalid;
@@ -629,15 +629,15 @@ mlocResult mlocGetCurrencySymbol(const mlocDataSet* data, const mlocLocale* loca
     {
         return mloc_errorNotFound;
     }
-    mlocResult r = WriteField(&fields, ShownField(&fields, display), output);
+    mlocResult r = WriteField(&fields, ShownField(&fields, display), textOut);
     // The code shown as asked is no fallback.
     return r == mloc_fellBack && display == mloc_currencyCode ? mloc_success : r;
 }
 
 mlocResult mlocGetCurrencyName(const mlocDataSet* data, const mlocLocale* locale, const char* code,
-                               size_t codeLength, mlocOutput* output)
+                               size_t codeLength, mlocOutput* textOut)
 {
-    uint16_t packed = LookupCode(data, locale, code, codeLength, output);
+    uint16_t packed = LookupCode(data, locale, code, codeLength, textOut);
     if (packed == 0)
     {
         return mloc_errorInvalid;
@@ -649,7 +649,7 @@ mlocResult mlocGetCurrencyName(const mlocDataSet* data, const mlocLocale* locale
         return mloc_errorNotFound;
     }
     uint32_t field = (names.found & 1u << currencyName) != 0 ? currencyName : currencyFieldCount;
-    return WriteField(&names, field, output);
+    return WriteField(&names, field, textOut);
 }
 
 mlocResult mlocGetCurrencyDigits(const mlocDataSet* data, const char* code, size_t codeLength,

@@ -739,18 +739,18 @@ static bool ValidOutput(const mlocOutput* output)
 
 mlocResult mlocInflector_InflectText(const mlocInflector* inflector, const char* text,
                                      size_t length, const mlocInflection* request,
-                                     mlocOutput* output)
+                                     mlocOutput* textOut)
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || text == nullptr || length == 0 || request == nullptr ||
-        !ValidOutput(output) || !ValidRequest(&f, request) ||
+        !ValidOutput(textOut) || !ValidRequest(&f, request) ||
         muniValidateUtf8(text, length).status != muni_success)
     {
         return mloc_errorInvalid;
     }
     Inflected in;
     mlocResult r = Inflect(&f, (const uint8_t*)text, length, request, &in);
-    return r != mloc_success ? r : Output((const uint8_t*)text, &in, output);
+    return r != mloc_success ? r : Output((const uint8_t*)text, &in, textOut);
 }
 
 // Reports a number's own parts inside the stem.
@@ -765,11 +765,11 @@ static void ReportNumberParts(const Inflector* f, const mlocNumberFormatter* for
 mlocResult mlocInflector_InflectNumber(const mlocInflector* inflector,
                                        const mlocNumberFormatter* formatter,
                                        const mlocDecimal* decimal, const mlocInflection* request,
-                                       mlocOutput* output)
+                                       mlocOutput* textOut)
 {
     Inflector f;
     if (!ReadInflector(inflector, &f) || decimal == nullptr || request == nullptr ||
-        !ValidOutput(output) || !ValidRequest(&f, request))
+        !ValidOutput(textOut) || !ValidRequest(&f, request))
     {
         return mloc_errorInvalid;
     }
@@ -803,23 +803,23 @@ mlocResult mlocInflector_InflectNumber(const mlocInflector* inflector,
     {
         return r;
     }
-    mlocOutput plain = *output;
+    mlocOutput plain = *textOut;
     plain.part = nullptr;
     r = Output((const uint8_t*)text, &in, &plain);
-    output->length = plain.length;
-    if (r == mloc_success && output->part != nullptr)
+    textOut->length = plain.length;
+    if (r == mloc_success && textOut->part != nullptr)
     {
         // The stem, then the number's parts inside it, then the rest.
         Inflected stem = in;
         stem.suffixes = (TurkicSuffixes){0};
         stem.mark = 0;
-        NumberWriter parts = {.parts = output};
+        NumberWriter parts = {.parts = textOut};
         Write((const uint8_t*)text, &stem, &parts);
         mlocEndParts(&parts);
-        ReportNumberParts(&f, formatter, decimal, output);
+        ReportNumberParts(&f, formatter, decimal, textOut);
         Inflected rest = in;
         rest.kept = 0;
-        NumberWriter after = {.parts = output, .length = written.length, .start = written.length};
+        NumberWriter after = {.parts = textOut, .length = written.length, .start = written.length};
         Write((const uint8_t*)text, &rest, &after);
         mlocEndParts(&after);
     }

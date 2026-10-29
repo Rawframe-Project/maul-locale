@@ -41,7 +41,7 @@ static mlocTextResult Refuse(mlocMessageError* errorOut, mlocMessageError error,
     return result;
 }
 
-mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer, size_t capacity,
+mlocTextResult mlocCompileMessage(const char* text, size_t length, void* bufferOut, size_t capacity,
                                   size_t* sizeOut, mlocMessageError* errorOut)
 {
     mlocTextResult result = {mloc_errorInvalid, 0};
@@ -49,7 +49,7 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     {
         *errorOut = mloc_messageErrorNone;
     }
-    if ((text == NULL && length > 0) || (buffer == NULL && capacity > 0) || sizeOut == NULL)
+    if ((text == NULL && length > 0) || (bufferOut == NULL && capacity > 0) || sizeOut == NULL)
     {
         return result;
     }
@@ -86,11 +86,11 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
         result.status = mloc_errorCapacity;
         return result;
     }
-    mlocEmitWrite(&emit, buffer, &counts);
+    mlocEmitWrite(&emit, bufferOut, &counts);
     parse = mlocParseMessage(bytes, length, &emit);
     uint32_t size = mlocEmitFinish(&emit, parse.flags, UnicodeVersion());
     MessageCheck check =
-        mlocCheckMessage(buffer, size, &emit.table, (uint8_t*)buffer + emit.wordStart);
+        mlocCheckMessage(bufferOut, size, &emit.table, (uint8_t*)bufferOut + emit.wordStart);
     if (check.error != mloc_messageErrorNone)
     {
         return Refuse(errorOut, check.error, check.at);
@@ -98,10 +98,10 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     // The chains and resolutions, in the check's words, which it no longer
     // needs.
     MessageView view;
-    mlocResult read = mlocReadMessage(buffer, size, &view);
+    mlocResult read = mlocReadMessage(bufferOut, size, &view);
     MLOC_ASSERT(read == mloc_success);
     (void)read;
-    if (mlocWriteMessageCosts(&view, (uint8_t*)buffer + emit.wordStart) != mloc_success)
+    if (mlocWriteMessageCosts(&view, (uint8_t*)bufferOut + emit.wordStart) != mloc_success)
     {
         result.status = mloc_errorLimit;
         return result;
@@ -112,9 +112,9 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* buffer,
     return result;
 }
 
-mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* output)
+mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* textOut)
 {
-    if (message == NULL || output == NULL || (output->buffer == NULL && output->capacity > 0))
+    if (message == NULL || textOut == NULL || (textOut->buffer == NULL && textOut->capacity > 0))
     {
         return mloc_errorInvalid;
     }
@@ -133,10 +133,10 @@ mlocResult mlocWriteMessageText(const void* message, size_t size, mlocOutput* ou
     {
         return mloc_errorFormat;
     }
-    if (output->capacity < measure.length)
+    if (textOut->capacity < measure.length)
     {
-        output->length = measure.length;
+        textOut->length = measure.length;
         return mloc_errorCapacity;
     }
-    return mlocWriteMessage(&view, output);
+    return mlocWriteMessage(&view, textOut);
 }

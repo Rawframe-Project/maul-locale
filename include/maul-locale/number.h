@@ -203,16 +203,16 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitNumberFormatter.
     /// @param decimal    The number.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, or a formatter or decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocNumberFormatter_Format(
-        const mlocNumberFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+        const mlocNumberFormatter* formatter, const mlocDecimal* decimal, mlocOutput* textOut);
 
     /// Formats a range of two decimals (ECMA-402's formatRange): both ends
     /// by the formatter, around the locale's range separator, spaced when
@@ -224,12 +224,12 @@ extern "C"
     /// @param formatter  A formatter from mlocInitNumberFormatter.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
     ///                   mloc_numberRangeEnd, or 0 for both).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed); mloc_errorLimit
+    ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
     ///         pointer, a NaN end, or a formatter or decimal the library
     ///         did not make.
@@ -237,7 +237,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocNumberFormatter_FormatRange(const mlocNumberFormatter* formatter, const mlocDecimal* start,
-                                    const mlocDecimal* end, mlocOutput* output);
+                                    const mlocDecimal* end, mlocOutput* textOut);
 
     // How strictly a number is read (ICU's lenient and strict parse
     // modes). Lenient: ignorables anywhere, separators by their

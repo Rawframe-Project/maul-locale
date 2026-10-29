@@ -69,11 +69,11 @@ static void ReadOption(const CallState* s, uint32_t p, mlocMessageOperand* value
 
 mlocResult mlocMessageCall_GetOption(const mlocMessageCall* call, size_t index,
                                      const char** nameOut, size_t* lengthOut,
-                                     mlocMessageOperand* valueOut, mlocMessageResolved* storage)
+                                     mlocMessageOperand* valueOut, mlocMessageResolved* storageOut)
 {
     CallState s;
     if (!ReadCall(call, &s) || nameOut == NULL || lengthOut == NULL || valueOut == NULL ||
-        storage == NULL)
+        storageOut == NULL)
     {
         return mloc_errorInvalid;
     }
@@ -85,15 +85,15 @@ mlocResult mlocMessageCall_GetOption(const mlocMessageCall* call, size_t index,
     *nameOut =
         (const char*)mlocResolutionPool(s.r, mlocResolutionField(s.r, messageParameters, p, 1));
     *lengthOut = mlocResolutionField(s.r, messageParameters, p, 2);
-    ReadOption(&s, p, valueOut, storage);
+    ReadOption(&s, p, valueOut, storageOut);
     return mloc_success;
 }
 
 mlocResult mlocMessageCall_FindOption(const mlocMessageCall* call, const char* name, size_t length,
-                                      mlocMessageOperand* valueOut, mlocMessageResolved* storage)
+                                      mlocMessageOperand* valueOut, mlocMessageResolved* storageOut)
 {
     CallState s;
-    if (!ReadCall(call, &s) || name == NULL || valueOut == NULL || storage == NULL)
+    if (!ReadCall(call, &s) || name == NULL || valueOut == NULL || storageOut == NULL)
     {
         return mloc_errorInvalid;
     }
@@ -108,7 +108,7 @@ mlocResult mlocMessageCall_FindOption(const mlocMessageCall* call, const char* n
             memcmp(mlocResolutionPool(s.r, mlocResolutionField(s.r, messageParameters, p, 1)), name,
                    length) == 0)
         {
-            ReadOption(&s, p, valueOut, storage);
+            ReadOption(&s, p, valueOut, storageOut);
             return mloc_success;
         }
     }

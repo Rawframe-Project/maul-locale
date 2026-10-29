@@ -154,10 +154,10 @@ extern "C"
     /// @param formatter  A formatter from mlocInitDurationFormatter.
     /// @param duration   The fields: integers of one sign, valid as
     ///                   mlocMakeDuration takes them.
-    /// @param output     Receives the text; its part function, when set,
+    /// @param textOut    Receives the text; its part function, when set,
     ///                   receives the parts (mloc_durationPartField).
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output->length is then the length needed);
+    ///         (textOut->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer, a duration
     ///         mlocMakeDuration refuses, or a formatter the library did not
     ///         make.
@@ -165,7 +165,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
-                                 const mlocDurationValues* duration, mlocOutput* output);
+                                 const mlocDurationValues* duration, mlocOutput* textOut);
 
 #ifdef __cplusplus
 }

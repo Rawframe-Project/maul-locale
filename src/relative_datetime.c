@@ -43,14 +43,14 @@ static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
 mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* relative,
                                                const mlocTimeFormatter* time,
                                                const mlocDecimal* days, const mlocTime* timeOfDay,
-                                               mlocOutput* output)
+                                               mlocOutput* textOut)
 {
     RelativeFormat r;
     TimeFormat t;
     if (!mlocReadRelativeFormat(relative, &r) || !mlocReadTimeFormat(time, &t) ||
         !mlocValidRelativeAmount(days, relativeDay) || timeOfDay == nullptr ||
-        !mlocTimeValid(timeOfDay) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0))
+        !mlocTimeValid(timeOfDay) || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0))
     {
         return mloc_errorInvalid;
     }
@@ -62,20 +62,20 @@ mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* rela
     }
     r.capitalize = glue.size >= 3 && memcmp(glue.bytes, "{1}", 3) == 0 ? r.capitalize : 0;
     DayTimeWriting d = {&r, &t, days, timeOfDay, mloc_success};
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     mlocWriteGlue(glue.bytes, glue.size, WriteSlot, &d, &w);
-    output->length = w.length;
+    textOut->length = w.length;
     if (d.result != mloc_success)
     {
         return d.result;
     }
-    if (output->buffer == nullptr || w.length > output->capacity)
+    if (textOut->buffer == nullptr || w.length > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
-    if (output->part != nullptr)
+    if (textOut->part != nullptr)
     {
-        NumberWriter parts = {.parts = output};
+        NumberWriter parts = {.parts = textOut};
         mlocWriteGlue(glue.bytes, glue.size, WriteSlot, &d, &parts);
         mlocEndParts(&parts);
     }

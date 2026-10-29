@@ -226,8 +226,8 @@ extern "C"
     /// @param index          The key's index (mlocCatalog_FindKey).
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
-    /// @param output         Receives the text.
-    /// @param faults         Receives the faults; may be null.
+    /// @param textOut        Receives the text.
+    /// @param faultsOut      Receives the faults; may be null.
     /// @param resultOut      Receives the reason and position; may be null.
     /// @return As mlocFormatMessage, and mloc_success when the key is
     ///         written; mloc_errorInvalid also for an index past the set's
@@ -238,7 +238,7 @@ extern "C"
     /// once.
     MLOC_NODISCARD MLOC_API mlocResult mlocCatalogChain_FormatMessage(
         const mlocCatalogChain* chain, uint32_t index, const mlocMessageArgument* arguments,
-        size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults,
+        size_t argumentCount, mlocOutput* textOut, mlocMessageFaults* faultsOut,
         mlocCatalogResult* resultOut);
 
     /// Finds a key in the chain's set and formats its message, as
@@ -250,8 +250,8 @@ extern "C"
     /// @param length         Its length in bytes.
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
-    /// @param output         Receives the text.
-    /// @param faults         Receives the faults; may be null.
+    /// @param textOut        Receives the text.
+    /// @param faultsOut      Receives the faults; may be null.
     /// @param resultOut      Receives the reason and position; may be null.
     /// @return As mlocCatalogChain_FormatMessage.
     /// @par Thread safety
@@ -260,8 +260,8 @@ extern "C"
     /// once.
     MLOC_NODISCARD MLOC_API mlocResult mlocCatalogChain_FormatKey(
         const mlocCatalogChain* chain, const char* key, size_t length,
-        const mlocMessageArgument* arguments, size_t argumentCount, mlocOutput* output,
-        mlocMessageFaults* faults, mlocCatalogResult* resultOut);
+        const mlocMessageArgument* arguments, size_t argumentCount, mlocOutput* textOut,
+        mlocMessageFaults* faultsOut, mlocCatalogResult* resultOut);
 
 #ifdef __cplusplus
 }

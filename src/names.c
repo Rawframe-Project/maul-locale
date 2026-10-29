@@ -223,12 +223,12 @@ static bool Replaced(const mlocDataSet* data, const mlocLocale* locale, const ch
 
 mlocResult mlocGetName(const mlocDataSet* data, const mlocLocale* locale, mlocNameType type,
                        const char* code, size_t length, const mlocNameOptions* options,
-                       mlocOutput* output)
+                       mlocOutput* textOut)
 {
     mlocNameOptions o = options != nullptr ? *options : (mlocNameOptions){0};
     if (data == nullptr || locale == nullptr || (code == nullptr && length != 0) ||
-        output == nullptr || output->part != nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+        textOut == nullptr || textOut->part != nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         (uint32_t)type > mloc_nameSubdivision || (uint32_t)o.form >= nameFieldCount ||
         (uint32_t)o.fallback > mloc_nameFallbackNone ||
         (uint32_t)o.capitalization > mloc_capitalizationStandAlone)
@@ -251,13 +251,13 @@ mlocResult mlocGetName(const mlocDataSet* data, const mlocLocale* locale, mlocNa
     if (mlocFindName(data, locale, canonical, canonicalLength, (NameField)o.form, &name) ||
         Replaced(data, locale, code, length, type, (NameField)o.form, &name))
     {
-        return Write(data, locale, name.text, name.length, capitalize, output);
+        return Write(data, locale, name.text, name.length, capitalize, textOut);
     }
     if (o.fallback == mloc_nameFallbackNone)
     {
         return mloc_errorNotFound;
     }
     mlocResult r = Write(data, locale, (const uint8_t*)canonical + fallback,
-                         canonicalLength - fallback, capitalize, output);
+                         canonicalLength - fallback, capitalize, textOut);
     return r == mloc_success ? mloc_fellBack : r;
 }

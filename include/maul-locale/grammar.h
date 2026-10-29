@@ -235,11 +235,11 @@ extern "C"
     /// @param text       The text, UTF-8.
     /// @param length     Its length in bytes.
     /// @param request    What to inflect it for.
-    /// @param output     Receives the text with its suffixes and, when
-    ///                   output->part is set, its parts
+    /// @param textOut    Receives the text with its suffixes and, when
+    ///                   textOut->part is set, its parts
     ///                   (mlocInflectionPart).
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output->length is then the length needed);
+    ///         fit (textOut->length is then the length needed);
     ///         mloc_errorNotFound for a number when the inflector has no
     ///         spell-out rules or no word for its size (Uzbek past
     ///         10^35, Turkmen past 10^20); mloc_errorLimit for a number
@@ -253,7 +253,7 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocInflector_InflectText(const mlocInflector* inflector,
                                                                  const char* text, size_t length,
                                                                  const mlocInflection* request,
-                                                                 mlocOutput* output);
+                                                                 mlocOutput* textOut);
 
     /// Writes a number as a formatter writes it, inflected as asked by
     /// how the number is spoken ("5'e", "1.985'te", "%50'ye"): the value
@@ -266,7 +266,7 @@ extern "C"
     /// @param decimal    The number.
     /// @param request    What to inflect it for (its reading and hint are
     ///                   not read).
-    /// @param output     Receives the text and its parts, the number's own
+    /// @param textOut    Receives the text and its parts, the number's own
     ///                   parts (mlocNumberPart) inside the stem.
     /// @return As mlocInflector_InflectText; mloc_errorLimit also for a number
     ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
@@ -276,7 +276,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInflector_InflectNumber(
         const mlocInflector* inflector, const mlocNumberFormatter* formatter,
-        const mlocDecimal* decimal, const mlocInflection* request, mlocOutput* output);
+        const mlocDecimal* decimal, const mlocInflection* request, mlocOutput* textOut);
 
 #ifdef __cplusplus
 }

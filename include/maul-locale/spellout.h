@@ -102,7 +102,7 @@ extern "C"
     /// @param formatter  A formatter from mlocInitSpelloutFormatter or
     ///                   mlocInitNumberingSystemFormatter.
     /// @param decimal    The value.
-    /// @param output     Receives the text; on mloc_errorCapacity its
+    /// @param textOut    Receives the text; on mloc_errorCapacity its
     ///                   length is the size needed. The text has no parts.
     /// @return mloc_success; mloc_errorCapacity for a buffer too small;
     ///         mloc_errorLimit for rules that nest past
@@ -114,7 +114,7 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocSpelloutFormatter_Format(
-        const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal, mlocOutput* output);
+        const mlocSpelloutFormatter* formatter, const mlocDecimal* decimal, mlocOutput* textOut);
 
     /// Reads a number written in words (or ordinal suffixes, or a
     /// numbering system's numerals) back, as ICU4C's RuleBasedNumberFormat

@@ -283,7 +283,7 @@ static bool ValidArguments(const mlocDecimal* decimal, const mlocOutput* output)
 }
 
 mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter, const mlocDecimal* decimal,
-                                    mlocOutput* output)
+                                    mlocOutput* textOut)
 {
     UnitFormat u;
     if (!ReadUnit(formatter, &u))
@@ -295,23 +295,23 @@ mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter, const ml
     {
         Outer outer;
         mlocUnitOuter(&u, 0, &outer);
-        return mlocFormatWith(&u.formatter, u.percent ? nullptr : &outer, decimal, output);
+        return mlocFormatWith(&u.formatter, u.percent ? nullptr : &outer, decimal, textOut);
     }
-    if (!ValidArguments(decimal, output))
+    if (!ValidArguments(decimal, textOut))
     {
         return mloc_errorInvalid;
     }
     if (u.coordinate != mloc_coordinateNone)
     {
-        return mlocFormatCoordinate(&u, decimal, output);
+        return mlocFormatCoordinate(&u, decimal, textOut);
     }
-    return u.usage ? mlocFormatUsage(&u, decimal, output)
-                   : mlocFormatMixedUnit(&u, decimal, output);
+    return u.usage ? mlocFormatUsage(&u, decimal, textOut)
+                   : mlocFormatMixedUnit(&u, decimal, textOut);
 }
 
 mlocResult mlocUnitFormatter_FormatRange(const mlocUnitFormatter* formatter,
                                          const mlocDecimal* start, const mlocDecimal* end,
-                                         mlocOutput* output)
+                                         mlocOutput* textOut)
 {
     UnitFormat u;
     if (!ReadUnit(formatter, &u) || (u.output[0].parts > 1 && !u.usage) ||
@@ -321,24 +321,24 @@ mlocResult mlocUnitFormatter_FormatRange(const mlocUnitFormatter* formatter,
     }
     if (u.usage)
     {
-        if (!ValidArguments(start, output) || end == nullptr || !mlocValidDecimal(end) ||
+        if (!ValidArguments(start, textOut) || end == nullptr || !mlocValidDecimal(end) ||
             start->kind == mloc_decimalNaN || end->kind == mloc_decimalNaN)
         {
             return mloc_errorInvalid;
         }
-        return mlocFormatUsageRange(&u, start, end, output);
+        return mlocFormatUsageRange(&u, start, end, textOut);
     }
     Outer outer;
     mlocUnitOuter(&u, 0, &outer);
-    return mlocFormatRangeWith(&u.formatter, u.percent ? nullptr : &outer, start, end, output);
+    return mlocFormatRangeWith(&u.formatter, u.percent ? nullptr : &outer, start, end, textOut);
 }
 
 mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* locale,
                                   const char* unit, size_t unitLength, mlocUnitWidth width,
-                                  mlocOutput* output)
+                                  mlocOutput* textOut)
 {
     if (data == nullptr || locale == nullptr || unit == nullptr || unitLength == 0 ||
-        output == nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+        textOut == nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         width > mloc_unitWidthNumeric)
     {
         return mloc_errorInvalid;
@@ -352,11 +352,11 @@ mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* loc
     bool named = (names.found & 1u << unitNameDisplay) != 0 && names.length[unitNameDisplay] != 0;
     const void* text = named ? (const void*)names.text[unitNameDisplay] : unit;
     size_t length = named ? names.length[unitNameDisplay] : unitLength;
-    output->length = length;
-    if (output->buffer == nullptr || length > output->capacity)
+    textOut->length = length;
+    if (textOut->buffer == nullptr || length > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
-    memcpy(output->buffer, text, length);
+    memcpy(textOut->buffer, text, length);
     return named ? mloc_success : mloc_fellBack;
 }

@@ -106,13 +106,13 @@ mlocResult mlocFindTimeZoneBcp47(const mlocDataSet* data, const char* id, size_t
 }
 
 mlocResult mlocFormatTimeZoneBcp47(const mlocDataSet* data, const mlocTimeZone* zone,
-                                   mlocOutput* output)
+                                   mlocOutput* textOut)
 {
     ZoneCodeTables c;
     ZoneCode code;
-    mlocResult result = ZoneCodeOf(data, zone, output, &c, &code);
+    mlocResult result = ZoneCodeOf(data, zone, textOut, &c, &code);
     return result != mloc_success ? result
-                                  : Write((const char*)c.text + code.id, code.idLength, output);
+                                  : Write((const char*)c.text + code.id, code.idLength, textOut);
 }
 
 // A region as the mappings store it: "001" for none, two letters upper
@@ -160,11 +160,11 @@ mlocResult mlocFindTimeZoneWindows(const mlocDataSet* data, const char* name, si
 }
 
 mlocResult mlocFormatTimeZoneWindows(const mlocDataSet* data, const mlocTimeZone* zone,
-                                     mlocOutput* output)
+                                     mlocOutput* textOut)
 {
     ZoneCodeTables c;
     ZoneCode code;
-    mlocResult result = ZoneCodeOf(data, zone, output, &c, &code);
+    mlocResult result = ZoneCodeOf(data, zone, textOut, &c, &code);
     if (result != mloc_success)
     {
         return result;
@@ -175,5 +175,5 @@ mlocResult mlocFormatTimeZoneWindows(const mlocDataSet* data, const mlocTimeZone
     }
     size_t length = 0;
     const char* name = mlocZoneWindowsName(&c, code.windows, &length);
-    return Write(name, length, output);
+    return Write(name, length, textOut);
 }

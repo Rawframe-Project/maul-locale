@@ -406,11 +406,11 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
 
 mlocResult mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter,
                                         const mlocDecimal* amount, mlocRelativeUnit unit,
-                                        mlocOutput* output)
+                                        mlocOutput* textOut)
 {
     RelativeFormat f;
-    if (!mlocReadRelativeFormat(formatter, &f) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) ||
+    if (!mlocReadRelativeFormat(formatter, &f) || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocValidRelativeAmount(amount, (uint32_t)unit))
     {
         return mloc_errorInvalid;
@@ -421,6 +421,7 @@ mlocResult mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter,
     {
         return r;
     }
-    return c.nameLength > 0 ? WriteName(c.nameRoom, c.nameLength, output)
-                            : mlocFormatChosen(&f.formatter, ChooseOuter, &c, &c.magnitude, output);
+    return c.nameLength > 0
+               ? WriteName(c.nameRoom, c.nameLength, textOut)
+               : mlocFormatChosen(&f.formatter, ChooseOuter, &c, &c.magnitude, textOut);
 }

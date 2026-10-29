@@ -87,11 +87,11 @@ static void ReportPart(void* context, uint32_t kind, size_t start, size_t length
 }
 
 mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter, const mlocListItem* items,
-                                    size_t count, mlocOutput* output)
+                                    size_t count, mlocOutput* textOut)
 {
     ListFormat f;
-    if (!ReadFormatter(formatter, &f) || output == nullptr ||
-        (output->buffer == nullptr && output->capacity != 0) || (items == nullptr && count > 0))
+    if (!ReadFormatter(formatter, &f) || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) || (items == nullptr && count > 0))
     {
         return mloc_errorInvalid;
     }
@@ -106,19 +106,19 @@ mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter, const ml
             return mloc_errorInvalid;
         }
     }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     if (count > 0)
     {
         mlocWriteList(&f.patterns, items, (uint32_t)count, WriteItem, (void*)items, &w);
     }
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
+    textOut->length = w.length;
+    if (textOut->buffer == nullptr || w.length > textOut->capacity)
     {
         return mloc_errorCapacity;
     }
-    if (output->part != nullptr && count > 0)
+    if (textOut->part != nullptr && count > 0)
     {
-        mlocOutput report = {.part = ReportPart, .context = output};
+        mlocOutput report = {.part = ReportPart, .context = textOut};
         NumberWriter parts = {.parts = &report};
         mlocWriteList(&f.patterns, items, (uint32_t)count, WriteItem, (void*)items, &parts);
         mlocEndParts(&parts);

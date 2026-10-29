@@ -96,9 +96,9 @@ extern "C"
     /// @param items      The items, count of them; may be null when count
     ///                   is 0.
     /// @param count      The number of items, at most MLOC_MAX_LIST_ITEMS.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
-    ///         (output's length then the size needed); mloc_errorLimit for
+    ///         (textOut's length then the size needed); mloc_errorLimit for
     ///         a count past MLOC_MAX_LIST_ITEMS; mloc_errorInvalid for a
     ///         formatter the library did not make, a null pointer, or an
     ///         item with a null text and a length.
@@ -106,7 +106,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter,
                                                                 const mlocListItem* items,
-                                                                size_t count, mlocOutput* output);
+                                                                size_t count, mlocOutput* textOut);
 
     // A person's gender, as a message's gender select reads it: other
     // (unknown or neither), male, female. Not a grammatical gender

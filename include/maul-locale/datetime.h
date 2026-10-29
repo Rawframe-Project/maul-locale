@@ -200,16 +200,16 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitDateFormatter.
     /// @param date       The date.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date outside Temporal's range, or a
     ///         formatter the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter,
                                                                 const mlocDate* date,
-                                                                mlocOutput* output);
+                                                                mlocOutput* textOut);
 
     /// Writes the date in a zone at an instant, and the zone, by a
     /// formatter made with a zone (mlocDateOptions' zone): the zone's
@@ -220,9 +220,9 @@ extern "C"
     ///                   zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -230,7 +230,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocDateFormatter_FormatInZone(const mlocDateFormatter* formatter, const mlocTimeZone* zone,
-                                   const mlocInstant* instant, mlocOutput* output);
+                                   const mlocInstant* instant, mlocOutput* textOut);
 
     /// Writes a range of two dates by the formatter (ECMA-402's
     /// formatRange), as ICU4C's DateIntervalFormat writes the formatter's
@@ -245,7 +245,7 @@ extern "C"
     ///                   zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes; its part
+    /// @param textOut    Where the text goes; its part
     ///                   function, when set, receives mlocDatePart values
     ///                   with the date each belongs to (mloc_dateRangeStart,
     ///                   mloc_dateRangeEnd, or 0 for both).
@@ -254,7 +254,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, const mlocDate* start,
-                                  const mlocDate* end, mlocOutput* output);
+                                  const mlocDate* end, mlocOutput* textOut);
 
     /// Writes a range of two instants' dates in a zone, each with the zone,
     /// by a formatter made with one: on one local day the start's date and
@@ -269,14 +269,14 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes; parts as
+    /// @param textOut    Where the text goes; parts as
     ///                   mlocDateFormatter_FormatRange's.
     /// @return As mlocDateFormatter_FormatInZone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateFormatter_FormatRangeInZone(
         const mlocDateFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
-        const mlocInstant* end, mlocOutput* output);
+        const mlocInstant* end, mlocOutput* textOut);
 
     // How hours are numbered (UTS #35's hour cycle). Auto takes -u-hc as
     // the cycle when the locale gives one, else the clock of the locale's
@@ -386,16 +386,16 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitTimeFormatter.
     /// @param time       The time.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a time out of range, or a formatter the
     ///         library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocTimeFormatter_Format(const mlocTimeFormatter* formatter,
                                                                 const mlocTime* time,
-                                                                mlocOutput* output);
+                                                                mlocOutput* textOut);
 
     /// Writes the time of day in a zone at an instant, and the zone, by a
     /// formatter made with one (a zone style, or the full or long format):
@@ -406,9 +406,9 @@ extern "C"
     ///                   zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -416,7 +416,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocTimeFormatter_FormatInZone(const mlocTimeFormatter* formatter, const mlocTimeZone* zone,
-                                   const mlocInstant* instant, mlocOutput* output);
+                                   const mlocInstant* instant, mlocOutput* textOut);
 
     /// Writes a range of two times of day by the formatter, as ICU4C's
     /// DateIntervalFormat writes the formatter's skeleton: the locale's
@@ -430,14 +430,14 @@ extern "C"
     ///                   zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes; parts as
+    /// @param textOut    Where the text goes; parts as
     ///                   mlocDateFormatter_FormatRange's.
     /// @return As mlocTimeFormatter_Format.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
     mlocTimeFormatter_FormatRange(const mlocTimeFormatter* formatter, const mlocTime* start,
-                                  const mlocTime* end, mlocOutput* output);
+                                  const mlocTime* end, mlocOutput* textOut);
 
     /// Writes a range of two instants' times of day in a zone by a
     /// formatter made with one, each with its zone as the pattern names
@@ -454,7 +454,7 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes; parts as
+    /// @param textOut    Where the text goes; parts as
     ///                   mlocDateFormatter_FormatRange's.
     /// @return As mlocTimeFormatter_FormatInZone; across dates, also as
     ///         mlocInitDateFormatter for the dates (mloc_errorNotFound for
@@ -464,7 +464,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocTimeFormatter_FormatRangeInZone(
         const mlocTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
-        const mlocInstant* end, mlocOutput* output);
+        const mlocInstant* end, mlocOutput* textOut);
 
     // Which of the calendar's glue joins a date and a time: atTime ("{1}
     // 'at' {0}", UTS #35's default since CLDR 48, as ICU4C 79 and ICU4X
@@ -526,15 +526,15 @@ extern "C"
     ///
     /// @param formatter  A formatter from mlocInitDateTimeFormatter.
     /// @param dateTime   The date and time.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a date-time out of range, or a formatter
     ///         the library did not make or made with a zone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_Format(
-        const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime, mlocOutput* output);
+        const mlocDateTimeFormatter* formatter, const mlocDateTime* dateTime, mlocOutput* textOut);
 
     /// Writes the date and time of day in a zone at an instant, and the
     /// zone, by a formatter made with one: the zone's local date-time,
@@ -544,9 +544,9 @@ extern "C"
     ///                   a zone.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make or made without a zone.
@@ -554,7 +554,7 @@ extern "C"
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatInZone(
         const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone,
-        const mlocInstant* instant, mlocOutput* output);
+        const mlocInstant* instant, mlocOutput* textOut);
 
     /// Writes a range of two date-times by the formatter, as ICU4C's
     /// DateIntervalFormat writes the formatter's skeleton: on one day the
@@ -569,14 +569,14 @@ extern "C"
     ///                   without a zone.
     /// @param start      The range's start.
     /// @param end        Its end.
-    /// @param output     Where the text goes; parts as
+    /// @param textOut    Where the text goes; parts as
     ///                   mlocDateFormatter_FormatRange's.
     /// @return As mlocDateTimeFormatter_Format.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatRange(
         const mlocDateTimeFormatter* formatter, const mlocDateTime* start, const mlocDateTime* end,
-        mlocOutput* output);
+        mlocOutput* textOut);
 
     /// Writes a range of two instants' date-times in a zone by a formatter
     /// made with one, as mlocDateTimeFormatter_FormatRange writes the zone's local
@@ -587,14 +587,14 @@ extern "C"
     /// @param zone       The zone.
     /// @param start      The range's start, in Temporal's range.
     /// @param end        Its end, likewise.
-    /// @param output     Where the text goes; parts as
+    /// @param textOut    Where the text goes; parts as
     ///                   mlocDateFormatter_FormatRange's.
     /// @return As mlocDateTimeFormatter_FormatInZone.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocDateTimeFormatter_FormatRangeInZone(
         const mlocDateTimeFormatter* formatter, const mlocTimeZone* zone, const mlocInstant* start,
-        const mlocInstant* end, mlocOutput* output);
+        const mlocInstant* end, mlocOutput* textOut);
 
     // A zone formatter: a locale's zone names and formats in the data it
     // was made from, which must outlive it, as must the data set.
@@ -640,9 +640,9 @@ extern "C"
     /// @param formatter  A formatter from mlocInitZoneFormatter.
     /// @param zone       The zone.
     /// @param instant    The instant, in Temporal's range.
-    /// @param output     Where the text goes.
+    /// @param textOut    Where the text goes.
     /// @return mloc_success; mloc_errorCapacity when the text does not
-    ///         fit (output's length then the size needed); mloc_errorInvalid
+    ///         fit (textOut's length then the size needed); mloc_errorInvalid
     ///         for a null pointer, a zone the library did not make, an
     ///         instant out of range, or a formatter the library did not
     ///         make.
@@ -651,7 +651,7 @@ extern "C"
     MLOC_NODISCARD MLOC_API mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter,
                                                                 const mlocTimeZone* zone,
                                                                 const mlocInstant* instant,
-                                                                mlocOutput* output);
+                                                                mlocOutput* textOut);
 
 #ifdef __cplusplus
 }

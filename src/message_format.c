@@ -631,48 +631,49 @@ static void Run(Formatting* f, uint32_t quiet)
 }
 
 mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments,
-                             size_t argumentCount, mlocOutput* output, mlocMessageFaults* faults)
+                             size_t argumentCount, mlocOutput* textOut,
+                             mlocMessageFaults* faultsOut)
 {
     // Each field set below rather than the whole state cleared: the
     // clearing cost more than a short message's formatting.
     Formatting f;
-    if (!mlocReadBound(bound, &f.r.h, &f.r.formatter) || output == NULL ||
-        (output->buffer == NULL && output->capacity > 0) ||
+    if (!mlocReadBound(bound, &f.r.h, &f.r.formatter) || textOut == NULL ||
+        (textOut->buffer == NULL && textOut->capacity > 0) ||
         (arguments == NULL && argumentCount > 0) || !GoodArguments(arguments, argumentCount) ||
-        (faults != NULL && faults->faults == NULL && faults->capacity > 0))
+        (faultsOut != NULL && faultsOut->faults == NULL && faultsOut->capacity > 0))
     {
         return mloc_errorInvalid;
     }
     f.r.words = mlocBoundWords(bound);
     f.r.arguments = arguments;
     f.r.argumentCount = argumentCount;
-    f.r.faults = faults;
+    f.r.faults = faultsOut;
     f.r.faultCount = 0;
     f.r.probe = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
-    f.w = (Writer){output->buffer, output->capacity, 0, NULL, NULL};
+    f.w = (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
     Run(&f, 0);
-    if (output->part != NULL && f.w.length <= f.w.capacity &&
+    if (textOut->part != NULL && f.w.length <= f.w.capacity &&
         !(f.r.faultCount > 0 && f.r.formatter.strict))
     {
-        // The same text again, its parts reported, its faults already
+        // The same text again, its parts reported, its faultsOut already
         // counted.
         size_t faultCount = f.r.faultCount;
-        f.w = (Writer){output->buffer, output->capacity, 0, output->part, output->context};
+        f.w = (Writer){textOut->buffer, textOut->capacity, 0, textOut->part, textOut->context};
         Run(&f, 1);
         f.r.faultCount = faultCount;
     }
-    if (faults != NULL)
+    if (faultsOut != NULL)
     {
-        faults->count = f.r.faultCount;
+        faultsOut->count = f.r.faultCount;
     }
     if (f.r.faultCount > 0 && f.r.formatter.strict)
     {
-        output->length = 0;
+        textOut->length = 0;
         return mloc_errorFallback;
     }
-    output->length = f.w.length;
+    textOut->length = f.w.length;
     if (f.w.length > f.w.capacity)
     {
         return mloc_errorCapacity;

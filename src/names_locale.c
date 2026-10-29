@@ -709,11 +709,11 @@ static mlocResult WriteLocale(Composer* c, const mlocLocale* locale, const Tail*
 
 mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayLocale,
                              const mlocLocale* locale, const mlocLocaleNameOptions* options,
-                             mlocOutput* output)
+                             mlocOutput* textOut)
 {
     mlocLocaleNameOptions o = options != nullptr ? *options : (mlocLocaleNameOptions){0};
-    if (data == nullptr || displayLocale == nullptr || locale == nullptr || output == nullptr ||
-        output->part != nullptr || (output->buffer == nullptr && output->capacity != 0) ||
+    if (data == nullptr || displayLocale == nullptr || locale == nullptr || textOut == nullptr ||
+        textOut->part != nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         (uint32_t)o.languageDisplay > mloc_languageDisplayStandard ||
         (uint32_t)o.form >= nameFieldCount ||
         (uint32_t)o.capitalization > mloc_capitalizationStandAlone)
@@ -724,7 +724,7 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
     {
         return mloc_errorNotFound;
     }
-    NameWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    NameWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     // A chain that cannot be walked past its first step keeps that step,
     // where mlocFindName would find names too.
     NameChain chain;
@@ -754,6 +754,6 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
     {
         mlocNameCapitalize(data, displayLocale, &w);
     }
-    mlocResult finished = mlocNameFinish(&w, output);
+    mlocResult finished = mlocNameFinish(&w, textOut);
     return finished != mloc_success ? finished : r;
 }
