@@ -57,10 +57,11 @@ static bool Oracle(const char* text, size_t length, uint32_t* out, size_t* count
     return r.status == muni_success;
 }
 
-static size_t Append(char* text, size_t at, uint32_t c)
+// Appends a code point's UTF-8 to text of a capacity, when it fits.
+static size_t Append(char* text, size_t capacity, size_t at, uint32_t c)
 {
     size_t size = 0;
-    if (muniEncodeUtf8(c, text + at, maxText - at, &size) != muni_success)
+    if (muniEncodeUtf8(c, text + at, capacity - at, &size) != muni_success)
     {
         return at;
     }
@@ -102,7 +103,7 @@ static void TestRandom(void)
             uint32_t k = Random(sizeof(pieces) / sizeof(pieces[0]) + 5);
             if (k < sizeof(pieces) / sizeof(pieces[0]))
             {
-                at = Append(text, at, pieces[k]);
+                at = Append(text, sizeof(text), at, pieces[k]);
             }
             else
             {
@@ -132,7 +133,7 @@ static size_t Reference(const uint32_t* marks, size_t count, uint32_t* out)
     size_t n = 0;
     for (size_t i = 0; i < count; i++)
     {
-        size_t at = Append(text, 0, marks[i]);
+        size_t at = Append(text, sizeof(text), 0, marks[i]);
         uint32_t d[8];
         size_t k = 0;
         if (Oracle(text, at, d, &k))
@@ -182,10 +183,10 @@ static void TestLongRuns(void)
             size_t at = 0;
             for (size_t i = 0; i < count; i++)
             {
-                at = Append(text, at, run[i]);
+                at = Append(text, sizeof(text), at, run[i]);
             }
-            at = Append(text, at, 0x62);
-            at = Append(text, at, 0x301);
+            at = Append(text, sizeof(text), at, 0x62);
+            at = Append(text, sizeof(text), at, 0x301);
             size_t n = Reference(run, count, want);
             want[n++] = 0x62;
             want[n++] = 0x301;
@@ -200,12 +201,12 @@ static void TestLongRuns(void)
     static const size_t ends[] = {127, 191};
     for (size_t e = 0; e < 2; e++)
     {
-        size_t at = Append(text, 0, 0x61);
+        size_t at = Append(text, sizeof(text), 0, 0x61);
         for (size_t i = 0; i < ends[e]; i++)
         {
-            at = Append(text, at, 0x301);
+            at = Append(text, sizeof(text), at, 0x301);
         }
-        at = Append(text, at, 0x62);
+        at = Append(text, sizeof(text), at, 0x62);
         size_t n = Stream(text, at, got);
         bool acutes = true;
         for (size_t i = 1; i <= ends[e] && i < n; i++)
@@ -216,10 +217,10 @@ static void TestLongRuns(void)
               "a long run ending with a window, and the starter after it");
     }
     // A long run ending the text, in a buffer of the text's own size.
-    size_t end = Append(text, 0, 0x61);
+    size_t end = Append(text, sizeof(text), 0, 0x61);
     for (int i = 0; i < 100; i++)
     {
-        end = Append(text, end, i % 2 == 0 ? 0x301 : 0x323);
+        end = Append(text, sizeof(text), end, i % 2 == 0 ? 0x301 : 0x323);
     }
     char* exact = malloc(end);
     if (exact != nullptr)
@@ -233,16 +234,16 @@ static void TestLongRuns(void)
     }
     // Marks of different classes swapped make a canonically equal text,
     // which reads the same.
-    size_t at = Append(text, 0, 0x61);
-    size_t swapped = Append(text, 0, 0x61);
+    size_t at = Append(text, sizeof(text), 0, 0x61);
+    size_t swapped = Append(text, sizeof(text), 0, 0x61);
     static char other[maxText];
     memcpy(other, text, swapped);
     for (int i = 0; i < 100; i++)
     {
-        at = Append(text, at, 0x301);
-        at = Append(text, at, 0x323);
-        swapped = Append(other, swapped, 0x323);
-        swapped = Append(other, swapped, 0x301);
+        at = Append(text, sizeof(text), at, 0x301);
+        at = Append(text, sizeof(text), at, 0x323);
+        swapped = Append(other, sizeof(other), swapped, 0x323);
+        swapped = Append(other, sizeof(other), swapped, 0x301);
     }
     size_t n = Stream(text, at, got);
     size_t m = Stream(other, swapped, want);
@@ -251,7 +252,7 @@ static void TestLongRuns(void)
           "two canonically equal texts of 200 marks read the same");
 }
 
-static size_t Hexes(const char* field, size_t length, char* out)
+static size_t Hexes(const char* field, size_t length, char* out, size_t capacity)
 {
     size_t at = 0;
     for (size_t i = 0; i < length;)
@@ -267,7 +268,7 @@ static size_t Hexes(const char* field, size_t length, char* out)
         char* end = nullptr;
         uint32_t c = (uint32_t)strtoul(field + i, &end, 16);
         i = (size_t)(end - field);
-        at = Append(out, at, c);
+        at = Append(out, capacity, at, c);
     }
     return at;
 }
@@ -301,7 +302,7 @@ static void TestNormalizationFile(const char* path)
             {
                 break;
             }
-            sizes[c] = Hexes(p, (size_t)(semi - p), columns[c]);
+            sizes[c] = Hexes(p, (size_t)(semi - p), columns[c], sizeof(columns[c]));
             p = semi + 1;
         }
         // NFD(c1) = NFD(c2) = NFD(c3) = c3 and NFD(c4) = NFD(c5) = c5.
