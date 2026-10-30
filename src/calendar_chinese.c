@@ -126,7 +126,9 @@ static void MakeSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
     s->count = 0;
     while (s->count < maxSuiMonths && s->start[s->count] < nextEleventh)
     {
-        s->moon[s->count + 1] = NewMoonOnOrAfter(korea, s->start[s->count] + 1);
+        // The next month begins with the next new moon: a month's own
+        // falls on its first day, and the next one a month later.
+        s->moon[s->count + 1] = s->moon[s->count] + 1;
         s->start[s->count + 1] = DayOfMoon(korea, s->moon[s->count + 1]);
         s->count++;
     }
