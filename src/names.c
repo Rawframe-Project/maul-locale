@@ -115,7 +115,7 @@ static bool Language(const mlocDataSet* data, const char* code, size_t length, b
         {
             return false;
         }
-        at += subtag + 1;
+        at += subtag + (at + subtag < size && tail[at + subtag] == '-');
     }
     mlocOutput output = {.buffer = out, .capacity = maxCode};
     if (mlocFormatLocale(&locale, &output) != mloc_success)
