@@ -566,10 +566,11 @@ static void TestParse(void)
         fourLength += sizeof(s_long) - 1;
     }
     stop = 99;
+    mlocDecimal kept = big;
     CHECK(mlocSpelloutFormatter_Parse(&words, s_four, fourLength, &s_workspace, &big, &stop) ==
                   mloc_errorLimit &&
-              stop == 0,
-          "a search past its steps");
+              stop == 99 && memcmp(&big, &kept, sizeof(big)) == 0,
+          "a search past its steps, refused with the outputs left as they were");
     mlocLocale en;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;

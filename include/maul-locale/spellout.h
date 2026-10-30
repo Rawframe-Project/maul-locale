@@ -145,9 +145,11 @@ extern "C"
     /// @param length      Its length in bytes.
     /// @param workspace   The memory the parse searches with.
     /// @param decimalOut  Receives the value read: finite, NaN or an
-    ///                    infinity; zero is never negative.
-    /// @param endOut      Receives the offset after the text read, 0 when
-    ///                    none is.
+    ///                    infinity; zero is never negative. Left unchanged
+    ///                    on failure.
+    /// @param endOut      Receives the offset after the text read, or 0 on
+    ///                    mloc_errorSyntax; left unchanged on any other
+    ///                    failure.
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
     ///         mloc_errorLimit when a value read passes the decimal's
