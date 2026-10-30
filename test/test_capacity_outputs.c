@@ -15,7 +15,9 @@
 #include "maul-locale/decimal.h"
 #include "maul-locale/duration.h"
 #include "maul-locale/grammar.h"
+#include "maul-locale/ixdtf.h"
 #include "maul-locale/list.h"
+#include "maul-locale/message.h"
 #include "maul-locale/names.h"
 #include "maul-locale/number.h"
 #include "maul-locale/unit.h"
@@ -65,6 +67,9 @@ static mlocListItem s_items[3];
 static mlocListItem s_longItems[3];
 static char s_longWord[200];
 static mlocLocale s_longLocale;
+static mlocMessageFormatter s_messages;
+static uint8_t s_bound[2][4096];
+static char s_longCalendar[160];
 
 // A call writing its text into an output.
 typedef mlocResult (*Call)(mlocOutput* output);
@@ -175,6 +180,43 @@ static mlocResult LongLocaleName(mlocOutput* o)
     return mlocGetLocaleName(&s_data, &s_en, &s_longLocale, nullptr, o);
 }
 
+static mlocResult Message(mlocOutput* o)
+{
+    static const mlocMessageArgument s_count = {
+        "n", 1, {mloc_messageValueInteger, 0, {.integer = 3}}};
+    return mlocFormatMessage(s_bound[0], &s_count, 1, o, nullptr);
+}
+
+static mlocResult LongMessage(mlocOutput* o)
+{
+    return mlocFormatMessage(s_bound[1], nullptr, 0, o, nullptr);
+}
+
+static mlocResult TemporalDate(mlocOutput* o)
+{
+    return mlocFormatTemporalDate(&s_date, nullptr, o);
+}
+
+static mlocResult LongTemporalDate(mlocOutput* o)
+{
+    mlocTemporalStringOptions options = {.calendar = s_longCalendar,
+                                         .calendarLength = sizeof(s_longCalendar) - 1};
+    return mlocFormatTemporalDate(&s_date, &options, o);
+}
+
+static mlocResult TemporalDuration(mlocOutput* o)
+{
+    static const mlocDurationValues s_values = {
+        .days = 3, .hours = 4, .seconds = 5, .milliseconds = 250};
+    return mlocFormatTemporalDuration(&s_values, nullptr, o);
+}
+
+static mlocResult ZonedString(mlocOutput* o)
+{
+    static const mlocInstant s_july = {1782864000, 123456789};
+    return mlocFormatZonedDateTime(&s_zone, &s_july, nullptr, o);
+}
+
 typedef struct Case
 {
     const char* name;
@@ -207,6 +249,12 @@ static const Case s_cases[] = {
     CASE(Name, 0),
     CASE(LocaleName, 0),
     CASE(LongLocaleName, 256),
+    CASE(Message, 0),
+    CASE(LongMessage, 512),
+    CASE(TemporalDate, 0),
+    CASE(LongTemporalDate, 128),
+    CASE(TemporalDuration, 0),
+    CASE(ZonedString, 0),
 };
 
 static bool Kept(const char* bytes, size_t from, size_t to)
@@ -280,6 +328,21 @@ static bool OpenData(void)
     return true;
 }
 
+// Compiles and binds a message into s_bound[slot]; the bound message
+// points into its compiled one, which each slot keeps.
+static bool Bind(const char* text, size_t length, size_t slot)
+{
+    static uint8_t s_compiled[2][4096];
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    return mlocCompileMessage(text, length, s_compiled[slot], sizeof(s_compiled[slot]), &size,
+                              &error)
+                   .status == mloc_success &&
+           mlocMessageFormatter_Bind(&s_messages, s_compiled[slot], size, s_bound[slot],
+                                     sizeof(s_bound[slot]), &bound) == mloc_success;
+}
+
 int main(void)
 {
     if (!OpenData())
@@ -341,6 +404,19 @@ int main(void)
               mlocInitDurationFormatter(&s_data, &s_en, nullptr, &s_durations) == mloc_success &&
               mlocInitInflector(&s_data, &s_tr, &s_turkish) == mloc_success,
           "formatters and values to write");
+    static const char s_count[] = ".input {$n :integer} .match $n one {{You have {$n} new "
+                                  "message.}} * {{You have {$n} new messages.}}";
+    static char s_long[600];
+    memset(s_long, 'x', sizeof(s_long));
+    // Components of eight letters joined by hyphens, as the grammar has
+    // them.
+    for (size_t i = 0; i + 1 < sizeof(s_longCalendar); i++)
+    {
+        s_longCalendar[i] = i % 9 == 8 ? '-' : (char)('a' + i % 9);
+    }
+    CHECK(mlocInitMessageFormatter(&s_data, &s_en, nullptr, &s_messages) == mloc_success &&
+              Bind(s_count, sizeof(s_count) - 1, 0) && Bind(s_long, sizeof(s_long), 1),
+          "messages to format");
     TestCapacity();
     return s_failures == 0 ? 0 : 1;
 }

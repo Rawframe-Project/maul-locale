@@ -11,6 +11,7 @@
 #include "invariant.h"
 #include "message_prepare.h"
 #include "message_resolve.h"
+#include "number_output.h"
 
 #include <string.h>
 
@@ -630,6 +631,33 @@ static void Run(Formatting* f, uint32_t quiet)
     }
 }
 
+enum
+{
+    // Holds most messages a program shows whole (see Verification in the
+    // pull request that sized it); a longer one is written twice.
+    messageScratchSize = 512,
+};
+
+typedef struct MessagePass
+{
+    Formatting* f;
+    uint32_t passes;
+} MessagePass;
+
+// Writes the message into a buffer: the first pass reports the faults,
+// and a strict message with one stops there; a second pass, into the
+// caller's buffer, repeats the same text quietly.
+static mlocResult WritePass(void* context, char* buffer, size_t capacity, size_t* lengthOut)
+{
+    MessagePass* p = context;
+    Formatting* f = p->f;
+    f->w = (Writer){buffer, capacity, 0, NULL, NULL};
+    Run(f, p->passes == 0 ? 0 : 1);
+    p->passes++;
+    *lengthOut = f->w.length;
+    return f->r.faultCount > 0 && f->r.formatter.strict ? mloc_errorFallback : mloc_success;
+}
+
 mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments,
                              size_t argumentCount, mlocOutput* textOut,
                              mlocMessageFaults* faultsOut)
@@ -652,18 +680,20 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.probe = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
-    // Strict: measured first, so that a fault leaves the text as it was;
-    // the text is written only when there is none.
-    bool strict = f.r.formatter.strict;
-    f.w = strict ? (Writer){NULL, 0, 0, NULL, NULL}
-                 : (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
-    Run(&f, 0);
-    if (strict && f.r.faultCount == 0)
+    // The text goes to a scratch first: a buffer too small, or a fault
+    // when strict, leaves the caller's as it was.
+    char scratch[messageScratchSize];
+    MessagePass pass = {&f, 0};
+    mlocResult r = mlocWriteKept(WritePass, &pass, scratch, sizeof(scratch), textOut);
+    if (faultsOut != NULL)
     {
-        f.w = (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
-        Run(&f, 1);
+        faultsOut->count = f.r.faultCount;
     }
-    if (textOut->part != NULL && f.w.length <= f.w.capacity && !(f.r.faultCount > 0 && strict))
+    if (r < 0)
+    {
+        return r;
+    }
+    if (textOut->part != NULL)
     {
         // The same text again, its parts reported, its faults already
         // counted.
@@ -671,19 +701,6 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
         f.w = (Writer){textOut->buffer, textOut->capacity, 0, textOut->part, textOut->context};
         Run(&f, 1);
         f.r.faultCount = faultCount;
-    }
-    if (faultsOut != NULL)
-    {
-        faultsOut->count = f.r.faultCount;
-    }
-    if (f.r.faultCount > 0 && strict)
-    {
-        return mloc_errorFallback;
-    }
-    textOut->length = f.w.length;
-    if (f.w.length > f.w.capacity)
-    {
-        return mloc_errorCapacity;
     }
     return f.r.faultCount > 0 ? mloc_withFallbacks : mloc_success;
 }

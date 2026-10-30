@@ -458,12 +458,12 @@ static void TestCalls(void)
     CHECK(Formats("{:x:locale}", a, 4, "de-CH", NULL), "a call's locale is the formatter's");
 
     size_t length = 0;
-    char small[4];
+    char small[4] = {'-', '-', '-', '-'};
     mlocOutput output = {small, sizeof small, 0, NULL, NULL};
     CHECK(Run("{|abcdef| :x:echo}!", a, 4, NULL, &length) == mloc_success &&
               mlocFormatMessage(s_bound, a, 4, &output, NULL) == mloc_errorCapacity &&
-              output.length == 7 && memcmp(small, "abcd", 4) == 0,
-          "a function's text past the buffer counts its length");
+              output.length == 7 && memcmp(small, "----", 4) == 0,
+          "a function's text past the buffer counts its length and leaves the buffer");
     output.capacity = 0;
     output.buffer = NULL;
     CHECK(mlocFormatMessage(s_bound, a, 4, &output, NULL) == mloc_errorCapacity &&

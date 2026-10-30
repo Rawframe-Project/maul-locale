@@ -11,6 +11,7 @@
 #include "calendar_year.h"
 #include "date_time.h"
 #include "invariant.h"
+#include "number_output.h"
 
 #include "maul-locale/ixdtf.h"
 
@@ -69,10 +70,38 @@ static void Digits(Writer* w, uint64_t value, int width)
     Text(w, digits + sizeof digits - n, (size_t)n);
 }
 
-static mlocResult Finish(Writer* w)
+// Writes a string's text into a writer, from what its call read.
+typedef void (*Body)(Writer* w, const void* context);
+
+typedef struct Pass
 {
-    w->output->length = w->length;
-    return w->length > w->output->capacity ? mloc_errorCapacity : mloc_success;
+    Body body;
+    const void* context;
+} Pass;
+
+static mlocResult RunPass(void* context, char* buffer, size_t capacity, size_t* lengthOut)
+{
+    const Pass* p = context;
+    mlocOutput output = {.buffer = buffer, .capacity = capacity};
+    Writer w = {&output, 0};
+    p->body(&w, p->context);
+    *lengthOut = w.length;
+    return mloc_success;
+}
+
+enum
+{
+    // Holds every string but one whose calendar id or zone id is long.
+    stringScratchSize = 128,
+};
+
+// Writes a string into an output, which a buffer too small leaves as it
+// was: the text goes to a scratch first.
+static mlocResult Kept(Body body, const void* context, mlocOutput* output)
+{
+    char scratch[stringScratchSize];
+    Pass p = {body, context};
+    return mlocWriteKept(RunPass, &p, scratch, sizeof(scratch), output);
 }
 
 static bool OutputValid(const mlocOutput* output)
@@ -229,15 +258,26 @@ static void DateTime(Writer* w, const mlocDateTime* dt, int precision)
 // The writer, the options and their precision.
 typedef struct Start
 {
-    Writer w;
     mlocTemporalStringOptions o;
     int precision;
 } Start;
 
-static bool Begin(const mlocTemporalStringOptions* given, mlocOutput* output, Start* s)
+static bool Begin(const mlocTemporalStringOptions* given, const mlocOutput* output, Start* s)
 {
-    s->w = (Writer){output, 0};
     return OutputValid(output) && ReadOptions(given, &s->o, &s->precision);
+}
+
+typedef struct DateText
+{
+    const Start* s;
+    CalendarDate d;
+} DateText;
+
+static void WriteDate(Writer* w, const void* context)
+{
+    const DateText* g = context;
+    Date(w, g->d);
+    CalendarAnnotation(w, &g->s->o);
 }
 
 mlocResult mlocFormatTemporalDate(const mlocDate* date, const mlocTemporalStringOptions* options,
@@ -248,9 +288,37 @@ mlocResult mlocFormatTemporalDate(const mlocDate* date, const mlocTemporalString
     {
         return mloc_errorInvalid;
     }
-    Date(&s.w, mlocArithmeticFromDay(mloc_calendarGregorian, date->day));
-    CalendarAnnotation(&s.w, &s.o);
-    return Finish(&s.w);
+    DateText g = {&s, mlocArithmeticFromDay(mloc_calendarGregorian, date->day)};
+    return Kept(WriteDate, &g, textOut);
+}
+
+typedef struct PartialText
+{
+    const Start* s;
+    CalendarDate d;
+    bool yearMonth;
+} PartialText;
+
+static void WritePartial(Writer* w, const void* context)
+{
+    const PartialText* g = context;
+    bool full = g->s->o.showCalendar == mloc_showCalendarAlways ||
+                g->s->o.showCalendar == mloc_showCalendarCritical || !IsIso(&g->s->o);
+    if (g->yearMonth || full)
+    {
+        Year(w, g->d.year);
+        Char(w, '-');
+    }
+    Digits(w, g->d.month, 2);
+    if (!g->yearMonth || full)
+    {
+        Char(w, '-');
+        Digits(w, g->d.day, 2);
+    }
+    if (full)
+    {
+        CalendarAnnotation(w, &g->s->o);
+    }
 }
 
 // A year-month or month-day: the part always shown, then the reference
@@ -263,25 +331,8 @@ static mlocResult Partial(const mlocDate* date, bool yearMonth,
     {
         return mloc_errorInvalid;
     }
-    CalendarDate d = mlocArithmeticFromDay(mloc_calendarGregorian, date->day);
-    bool full = s.o.showCalendar == mloc_showCalendarAlways ||
-                s.o.showCalendar == mloc_showCalendarCritical || !IsIso(&s.o);
-    if (yearMonth || full)
-    {
-        Year(&s.w, d.year);
-        Char(&s.w, '-');
-    }
-    Digits(&s.w, d.month, 2);
-    if (!yearMonth || full)
-    {
-        Char(&s.w, '-');
-        Digits(&s.w, d.day, 2);
-    }
-    if (full)
-    {
-        CalendarAnnotation(&s.w, &s.o);
-    }
-    return Finish(&s.w);
+    PartialText g = {&s, mlocArithmeticFromDay(mloc_calendarGregorian, date->day), yearMonth};
+    return Kept(WritePartial, &g, output);
 }
 
 mlocResult mlocFormatYearMonth(const mlocDate* date, const mlocTemporalStringOptions* options,
@@ -296,6 +347,18 @@ mlocResult mlocFormatMonthDay(const mlocDate* date, const mlocTemporalStringOpti
     return Partial(date, false, options, textOut);
 }
 
+typedef struct TimeText
+{
+    const Start* s;
+    const mlocTime* time;
+} TimeText;
+
+static void WriteTime(Writer* w, const void* context)
+{
+    const TimeText* g = context;
+    Time(w, g->time->hour, g->time->minute, g->time->second, g->time->nanosecond, g->s->precision);
+}
+
 mlocResult mlocFormatTemporalTime(const mlocTime* time, const mlocTemporalStringOptions* options,
                                   mlocOutput* textOut)
 {
@@ -304,8 +367,21 @@ mlocResult mlocFormatTemporalTime(const mlocTime* time, const mlocTemporalString
     {
         return mloc_errorInvalid;
     }
-    Time(&s.w, time->hour, time->minute, time->second, time->nanosecond, s.precision);
-    return Finish(&s.w);
+    TimeText g = {&s, time};
+    return Kept(WriteTime, &g, textOut);
+}
+
+typedef struct DateTimeText
+{
+    const Start* s;
+    const mlocDateTime* dateTime;
+} DateTimeText;
+
+static void WriteDateTime(Writer* w, const void* context)
+{
+    const DateTimeText* g = context;
+    DateTime(w, g->dateTime, g->s->precision);
+    CalendarAnnotation(w, &g->s->o);
 }
 
 mlocResult mlocFormatTemporalDateTime(const mlocDateTime* dateTime,
@@ -316,9 +392,8 @@ mlocResult mlocFormatTemporalDateTime(const mlocDateTime* dateTime,
     {
         return mloc_errorInvalid;
     }
-    DateTime(&s.w, dateTime, s.precision);
-    CalendarAnnotation(&s.w, &s.o);
-    return Finish(&s.w);
+    DateTimeText g = {&s, dateTime};
+    return Kept(WriteDateTime, &g, textOut);
 }
 
 // FormatDateTimeUTCOffsetRounded of an offset in whole seconds: to the
@@ -343,6 +418,31 @@ static bool Local(const mlocTimeZone* zone, const mlocInstant* instant, mlocDate
            mlocGetTimeZoneOffset(z, instant, offsetOut) == mloc_success;
 }
 
+// An instant's local date-time and offset, and a zoned one's zone id.
+typedef struct InstantText
+{
+    const Start* s;
+    const mlocDateTime* local;
+    int32_t offset;
+    bool zoned;
+    const char* id;
+    size_t idLength;
+} InstantText;
+
+static void WriteInstant(Writer* w, const void* context)
+{
+    const InstantText* g = context;
+    DateTime(w, g->local, g->s->precision);
+    if (!g->zoned)
+    {
+        Char(w, 'Z');
+    }
+    else
+    {
+        OffsetRounded(w, g->offset);
+    }
+}
+
 mlocResult mlocFormatInstant(const mlocInstant* instant, const mlocTimeZone* zone,
                              const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
@@ -353,16 +453,27 @@ mlocResult mlocFormatInstant(const mlocInstant* instant, const mlocTimeZone* zon
     {
         return mloc_errorInvalid;
     }
-    DateTime(&s.w, &local, s.precision);
-    if (zone == nullptr)
+    InstantText g = {&s, &local, offset, zone != nullptr, nullptr, 0};
+    return Kept(WriteInstant, &g, textOut);
+}
+
+static void WriteZoned(Writer* w, const void* context)
+{
+    const InstantText* g = context;
+    const mlocTemporalStringOptions* o = &g->s->o;
+    DateTime(w, g->local, g->s->precision);
+    if (!o->hideOffset)
     {
-        Char(&s.w, 'Z');
+        OffsetRounded(w, g->offset);
     }
-    else
+    if (o->showTimeZone != mloc_showTimeZoneNever)
     {
-        OffsetRounded(&s.w, offset);
+        Text(w, o->showTimeZone == mloc_showTimeZoneCritical ? "[!" : "[",
+             o->showTimeZone == mloc_showTimeZoneCritical ? 2 : 1);
+        Text(w, g->id, g->idLength);
+        Char(w, ']');
     }
-    return Finish(&s.w);
+    CalendarAnnotation(w, o);
 }
 
 mlocResult mlocFormatZonedDateTime(const mlocTimeZone* zone, const mlocInstant* instant,
@@ -378,20 +489,8 @@ mlocResult mlocFormatZonedDateTime(const mlocTimeZone* zone, const mlocInstant* 
     {
         return mloc_errorInvalid;
     }
-    DateTime(&s.w, &local, s.precision);
-    if (!s.o.hideOffset)
-    {
-        OffsetRounded(&s.w, offset);
-    }
-    if (s.o.showTimeZone != mloc_showTimeZoneNever)
-    {
-        Text(&s.w, s.o.showTimeZone == mloc_showTimeZoneCritical ? "[!" : "[",
-             s.o.showTimeZone == mloc_showTimeZoneCritical ? 2 : 1);
-        Text(&s.w, id, idOutput.length);
-        Char(&s.w, ']');
-    }
-    CalendarAnnotation(&s.w, &s.o);
-    return Finish(&s.w);
+    InstantText g = {&s, &local, offset, true, id, idOutput.length};
+    return Kept(WriteZoned, &g, textOut);
 }
 
 // A duration's field magnitudes, sign and seconds part, read from the
@@ -438,67 +537,84 @@ static bool ReadDuration(const mlocDurationValues* v, Fields* f)
     return true;
 }
 
+typedef struct DurationText
+{
+    const Start* s;
+    const Fields* f;
+} DurationText;
+
+static void WriteDuration(Writer* w, const void* context)
+{
+    static const char s_designators[6] = {'Y', 'M', 'W', 'D', 'H', 'M'};
+    const DurationText* g = context;
+    const Fields* f = g->f;
+    if (f->sign < 0)
+    {
+        Char(w, '-');
+    }
+    Char(w, 'P');
+    bool time = false;
+    bool minutesAndHigher = false;
+    for (int i = 0; i < 6; i += 1)
+    {
+        if (f->magnitude[i] == 0)
+        {
+            continue;
+        }
+        if (i >= 4 && !time)
+        {
+            Char(w, 'T');
+            time = true;
+        }
+        Digits(w, f->magnitude[i], 1);
+        Char(w, s_designators[i]);
+        minutesAndHigher = true;
+    }
+    bool seconds = f->subMinute.high != 0 || f->subMinute.low != 0;
+    if (seconds || !minutesAndHigher || g->s->precision != precisionAuto)
+    {
+        if (!time)
+        {
+            Char(w, 'T');
+        }
+        Wide remainder;
+        Digits(w, mlocWideQuotient(f->subMinute, (Wide){0, nanosecondsPerSecond}, &remainder), 1);
+        Fraction(w, (uint32_t)remainder.low, g->s->precision);
+        Char(w, 'S');
+    }
+}
+
 mlocResult mlocFormatTemporalDuration(const mlocDurationValues* values,
                                       const mlocTemporalStringOptions* options, mlocOutput* textOut)
 {
-    static const char s_designators[6] = {'Y', 'M', 'W', 'D', 'H', 'M'};
     Start s;
     Fields f;
     if (!Begin(options, textOut, &s) || s.precision == precisionMinute || !ReadDuration(values, &f))
     {
         return mloc_errorInvalid;
     }
-    if (f.sign < 0)
-    {
-        Char(&s.w, '-');
-    }
-    Char(&s.w, 'P');
-    bool time = false;
-    bool minutesAndHigher = false;
-    for (int i = 0; i < 6; i += 1)
-    {
-        if (f.magnitude[i] == 0)
-        {
-            continue;
-        }
-        if (i >= 4 && !time)
-        {
-            Char(&s.w, 'T');
-            time = true;
-        }
-        Digits(&s.w, f.magnitude[i], 1);
-        Char(&s.w, s_designators[i]);
-        minutesAndHigher = true;
-    }
-    bool seconds = f.subMinute.high != 0 || f.subMinute.low != 0;
-    if (seconds || !minutesAndHigher || s.precision != precisionAuto)
-    {
-        if (!time)
-        {
-            Char(&s.w, 'T');
-        }
-        Wide remainder;
-        Digits(&s.w, mlocWideQuotient(f.subMinute, (Wide){0, nanosecondsPerSecond}, &remainder), 1);
-        Fraction(&s.w, (uint32_t)remainder.low, s.precision);
-        Char(&s.w, 'S');
-    }
-    return Finish(&s.w);
+    DurationText g = {&s, &f};
+    return Kept(WriteDuration, &g, textOut);
+}
+
+static void WriteOffset(Writer* w, const void* context)
+{
+    int64_t offsetNanoseconds = *(const int64_t*)context;
+    uint64_t magnitude = offsetNanoseconds < 0 ? (uint64_t)0 - (uint64_t)offsetNanoseconds
+                                               : (uint64_t)offsetNanoseconds;
+    uint64_t seconds = magnitude / nanosecondsPerSecond;
+    uint32_t fraction = (uint32_t)(magnitude % nanosecondsPerSecond);
+    Char(w, offsetNanoseconds < 0 ? '-' : '+');
+    Time(w, (uint32_t)(seconds / 3600), (uint32_t)(seconds / 60 % 60), (uint32_t)(seconds % 60),
+         fraction, seconds % 60 == 0 && fraction == 0 ? precisionMinute : precisionAuto);
 }
 
 mlocResult mlocFormatUTCOffset(int64_t offsetNanoseconds, mlocOutput* textOut)
 {
-    Writer w = {textOut, 0};
     if (!OutputValid(textOut) || offsetNanoseconds <= -s_nanosecondsPerDay ||
         offsetNanoseconds >= s_nanosecondsPerDay)
     {
         return mloc_errorInvalid;
     }
-    uint64_t magnitude = offsetNanoseconds < 0 ? (uint64_t)0 - (uint64_t)offsetNanoseconds
-                                               : (uint64_t)offsetNanoseconds;
-    uint64_t seconds = magnitude / nanosecondsPerSecond;
-    uint32_t fraction = (uint32_t)(magnitude % nanosecondsPerSecond);
-    Char(&w, offsetNanoseconds < 0 ? '-' : '+');
-    Time(&w, (uint32_t)(seconds / 3600), (uint32_t)(seconds / 60 % 60), (uint32_t)(seconds % 60),
-         fraction, seconds % 60 == 0 && fraction == 0 ? precisionMinute : precisionAuto);
-    return Finish(&w);
+    return Kept(WriteOffset, &offsetNanoseconds, textOut);
 }

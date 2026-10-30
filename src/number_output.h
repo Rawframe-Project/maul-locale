@@ -15,6 +15,11 @@
 // Writes text into a writer: mloc_success, or the error that stops it.
 typedef mlocResult (*NumberWriting)(const void* context, NumberWriter* writer);
 
+// Writes a text into a buffer of a capacity, no byte past it: mloc_success
+// or the error that stops it, and the text's whole length, which may pass
+// the capacity.
+typedef mlocResult (*TextWriting)(void* context, char* buffer, size_t capacity, size_t* lengthOut);
+
 // Copies a short text without a call: two overlapping words cover any
 // length from 4 to 16 bytes.
 static inline void mlocCopyText(char* to, const char* from, size_t length)
@@ -92,6 +97,40 @@ static inline mlocResult mlocWriteOutput(NumberWriting writing, const void* cont
         mlocEndParts(&parts);
     }
     return mloc_success;
+}
+
+// Writes the text a writing gives into an output's buffer, which a failure
+// leaves as it was (base.h): the text goes to the scratch given first; an
+// error from that pass is returned with nothing written. A text that fits
+// the output is copied, or written again into it when it passed the
+// scratch. Sets the output's length, also with mloc_errorCapacity.
+static inline mlocResult mlocWriteKept(TextWriting writing, void* context, char* scratch,
+                                       size_t scratchSize, mlocOutput* output)
+{
+    size_t length = 0;
+    mlocResult r = writing(context, scratch, scratchSize, &length);
+    if (r < 0)
+    {
+        return r;
+    }
+    output->length = length;
+    if (length > output->capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (length <= scratchSize)
+    {
+        if (length > 0)
+        {
+            mlocCopyText(output->buffer, scratch, length);
+        }
+        return r;
+    }
+    size_t again = 0;
+    mlocResult direct = writing(context, output->buffer, output->capacity, &again);
+    MLOC_ASSERT(direct == r && again == length);
+    (void)direct;
+    return r;
 }
 
 #endif

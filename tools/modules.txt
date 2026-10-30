@@ -149,7 +149,7 @@ rounding:
 binary64:
 duration_values: binary64 time_arith
 ixdtf_parse: binary64 invariant
-ixdtf_write: binary64 calendar_arith calendar_year date_time invariant
+ixdtf_write: binary64 calendar_arith calendar_year date_time invariant number_output
 calendar_fields: calendar_arith calendar_year invariant
 message_form: asset bytes
 message_text:
@@ -174,7 +174,7 @@ message_resolve: invariant message_bind message_date message_duration message_fo
 message_access: message_bind message_form message_read
 message_call: message_bind message_form message_operand message_read message_resolve
 message_prepare: bytes invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_read message_resolve message_words
-message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words
+message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words number_output
 message: invariant message_check message_cost message_emit message_form message_parse message_read message_table message_write
 grammar_end:
 grammar_lexicon:
