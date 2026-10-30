@@ -11,18 +11,19 @@ Maul Unicode finds the words, sentences and line break opportunities of any text
 
 ## Words, sentences and lines
 
-`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocSegmenter_NextBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
+`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocSegmenter_NextBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last, with the offset then 0, as it is after `mloc_needMoreText` or a failure, so keep the last boundary yourself. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
 
 ```c
 const char* text = "Mr. Smith left. He came.";
 mlocSegmenter segmenter;
 size_t end = 0;
+size_t last = 0;
 if (mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
                       &segmenter) == mloc_success)
 {
     while (mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success)
     {
-        // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
+        last = end; // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
     }
 }
 ```
@@ -51,12 +52,17 @@ Text read from a file or a network may arrive in pieces. Start the segmenter wit
 ```c
 mlocSegmenter segmenter;
 size_t end = 0;
+size_t last = 0;
 mlocResult r =
     mlocInitSegmenter(&set, &locale, mloc_segmentLine, first, strlen(first), true, &segmenter);
 while (r == mloc_success)
 {
     r = mlocSegmenter_NextBreak(&segmenter, &end, nullptr);
-    if (r == mloc_needMoreText)
+    if (r == mloc_success)
+    {
+        last = end;
+    }
+    else if (r == mloc_needMoreText)
     {
         r = mlocSegmenter_Feed(&segmenter, second, strlen(second), false);
     }

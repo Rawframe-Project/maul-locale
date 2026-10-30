@@ -274,6 +274,16 @@ static bool Drain(Segmenter* s, size_t* offsetOut)
 
 mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
 {
+    // No boundary until one is found: a failure, mloc_done and
+    // mloc_needMoreText leave none from an earlier call.
+    if (offsetOut != nullptr)
+    {
+        *offsetOut = 0;
+    }
+    if (mandatoryOut != nullptr)
+    {
+        *mandatoryOut = false;
+    }
     Segmenter* s = Made(segmenter);
     bool mandatory = false;
     if (s == nullptr || offsetOut == nullptr)
@@ -281,10 +291,6 @@ mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, 
         return mloc_errorInvalid;
     }
     s->started = true;
-    if (mandatoryOut != nullptr)
-    {
-        *mandatoryOut = false;
-    }
     if (s->filters == 0)
     {
         muniResult r = Pull(s, offsetOut, &mandatory);

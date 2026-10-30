@@ -596,15 +596,16 @@ static void GuideSentences(void)
     const char* text = "Mr. Smith left. He came.";
     mlocSegmenter segmenter;
     size_t end = 0;
+    size_t last = 0;
     if (mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
                           &segmenter) == mloc_success)
     {
         while (mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success)
         {
-            // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
+            last = end; // en-u-ss-standard: 16, then 24; en: 4 (after "Mr. ") first
         }
     }
-    CHECK(end == 24, "the last sentence ends the text");
+    CHECK(last == 24, "the last sentence ends the text");
     CHECK(mlocInitSegmenter(&set, &locale, mloc_segmentSentence, text, strlen(text), false,
                             &segmenter) == mloc_success &&
               mlocSegmenter_NextBreak(&segmenter, &end, nullptr) == mloc_success && end == 16,
@@ -624,17 +625,22 @@ static void GuidePieces(void)
     const char* second = "ces.";
     mlocSegmenter segmenter;
     size_t end = 0;
+    size_t last = 0;
     mlocResult r =
         mlocInitSegmenter(&set, &locale, mloc_segmentLine, first, strlen(first), true, &segmenter);
     while (r == mloc_success)
     {
         r = mlocSegmenter_NextBreak(&segmenter, &end, nullptr);
-        if (r == mloc_needMoreText)
+        if (r == mloc_success)
+        {
+            last = end;
+        }
+        else if (r == mloc_needMoreText)
         {
             r = mlocSegmenter_Feed(&segmenter, second, strlen(second), false);
         }
     }
-    CHECK(r == mloc_done && end == 21, "the last opportunity is the end of both pieces");
+    CHECK(r == mloc_done && last == 21, "the last opportunity is the end of both pieces");
 }
 
 int main(void)
