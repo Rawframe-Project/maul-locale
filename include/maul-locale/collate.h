@@ -169,12 +169,14 @@ extern "C"
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in bytes.
     /// @param keyOut     Receives the key; may be null when capacity is 0.
+    ///                   Left as it was on failure.
     /// @param capacity   Its room in bytes.
     /// @param lengthOut  Receives the key's length, also when it does not
-    ///                   fit (SIZE_MAX when it passes SIZE_MAX).
-    /// @return mloc_success; mloc_errorCapacity when the key does not fit
-    ///         (the bytes written are then no key); mloc_errorInvalid for
-    ///         a collator the library did not make or a null pointer.
+    ///                   fit (SIZE_MAX when it passes SIZE_MAX); left as it
+    ///                   was on any other failure.
+    /// @return mloc_success; mloc_errorCapacity when the key does not fit,
+    ///         the buffer left as it was; mloc_errorInvalid for a collator
+    ///         the library did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKey(const mlocCollator* collator,
@@ -208,12 +210,14 @@ extern "C"
     /// @param text       The text; may be null when length is 0.
     /// @param length     Its length in 16-bit units.
     /// @param keyOut     Receives the key; may be null when capacity is 0.
+    ///                   Left as it was on failure.
     /// @param capacity   Its room in bytes.
     /// @param lengthOut  Receives the key's length, also when it does not
-    ///                   fit (SIZE_MAX when it passes SIZE_MAX).
-    /// @return mloc_success; mloc_errorCapacity when the key does not fit
-    ///         (lengthOut has the length needed); mloc_errorInvalid for
-    ///         a collator the library did not make or a null pointer.
+    ///                   fit (SIZE_MAX when it passes SIZE_MAX); left as it
+    ///                   was on any other failure.
+    /// @return mloc_success; mloc_errorCapacity when the key does not fit,
+    ///         the buffer left as it was; mloc_errorInvalid for a collator
+    ///         the library did not make or a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator,
