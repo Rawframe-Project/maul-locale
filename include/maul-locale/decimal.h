@@ -153,7 +153,8 @@ extern "C"
     /// the same value. It reports no parts.
     ///
     /// @param decimal  The decimal.
-    /// @param textOut  Where the text goes.
+    /// @param textOut  Receives the text; left as it was on any failure
+    ///                 but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorInvalid for a null pointer or a decimal the
     ///         library did not make.
@@ -205,7 +206,8 @@ extern "C"
     /// Computes the plural operands of a finite decimal; c is 0.
     ///
     /// @param decimal      The decimal.
-    /// @param operandsOut  Receives the operands.
+    /// @param operandsOut  Receives the operands; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         decimal that is not finite, or one the library did not make.
     /// @par Thread safety

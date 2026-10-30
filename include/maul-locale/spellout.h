@@ -198,8 +198,9 @@ extern "C"
     /// @param index      The rule set's index, below
     ///                   mlocGetSpelloutRuleSetCount.
     /// @param nameOut    Receives the name, in the data, not
-    ///                   NUL-terminated.
-    /// @param lengthOut  Receives its length in bytes.
+    ///                   NUL-terminated; left unchanged on failure.
+    /// @param lengthOut  Receives its length in bytes; left unchanged on
+    ///                   failure.
     /// @return mloc_success; mloc_errorNotFound for an index past the last
     ///         or data without the rules; mloc_errorInvalid for a null
     ///         pointer.

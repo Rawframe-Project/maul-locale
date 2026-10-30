@@ -130,7 +130,8 @@ extern "C"
     ///                    preference's increment when it has one, else an
     ///                    integer of at least two significant digits, as
     ///                    ICU does.
-    /// @param unitOut     Receives the chosen unit's identifier.
+    /// @param unitOut     Receives the chosen unit's identifier; left as
+    ///                    it was on any failure but mloc_errorCapacity.
     /// @param amountsOut  Receives the amounts; left unchanged on failure.
     /// @return mloc_success; mloc_errorCapacity when the identifier does
     ///         not fit unitOut (its length is then the length needed);
@@ -325,7 +326,8 @@ extern "C"
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values, each unit name as
     ///                   mloc_numberPartUnit and a unit list's text as
-    ///                   mloc_numberPartLiteral.
+    ///                   mloc_numberPartLiteral. Left as it was on any
+    ///                   failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding or a part passes MLOC_MAX_DECIMAL_DIGITS or
@@ -351,7 +353,8 @@ extern "C"
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
-    ///                   mloc_numberRangeEnd, or 0 for both).
+    ///                   mloc_numberRangeEnd, or 0 for both). Left
+    ///                   as it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT;
@@ -373,7 +376,8 @@ extern "C"
     ///                    ("metric-ton" for "tonne").
     /// @param unitLength  Its length in bytes.
     /// @param width       The width; numeric writes narrow's name.
-    /// @param textOut     Receives the text.
+    /// @param textOut     Receives the text; left as it was on any
+    ///                    failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_fellBack when no locale of the chain
     ///         names it and the identifier is written instead;
     ///         mloc_errorCapacity when the text does not fit
