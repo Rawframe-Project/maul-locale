@@ -362,8 +362,9 @@ mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
         {
             // Longer than the scratch: written again, where it succeeded.
             NumberWriter direct = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-            r = WriteText(&f, decimal, &direct, &whole);
-            MLOC_ASSERT(r == mloc_success && direct.length == w.length && whole);
+            mlocResult again = WriteText(&f, decimal, &direct, &whole);
+            MLOC_ASSERT(again == mloc_success && direct.length == w.length && whole);
+            (void)again;
         }
     }
     textOut->length = w.length;
