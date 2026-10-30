@@ -148,8 +148,9 @@ extern "C"
     /// @param aLength   Its length in bytes.
     /// @param b         The second text; may be null when bLength is 0.
     /// @param bLength   Its length in bytes.
-    /// @param orderOut  Receives -1 when a sorts first, 1 when b does, 0
-    ///                  when they are equal up to the strength.
+    /// @param orderOut  Receives -1 when a sorts first, 1 when b does, 0 when
+    ///                  they are equal up to the strength; left unchanged on
+    ///                  failure.
     /// @return mloc_success; mloc_errorInvalid for a collator the library
     ///         did not make or a null pointer.
     /// @par Thread safety
@@ -192,8 +193,9 @@ extern "C"
     /// @param aLength   Its length in 16-bit units.
     /// @param b         The second text; may be null when bLength is 0.
     /// @param bLength   Its length in 16-bit units.
-    /// @param orderOut  Receives -1 when a sorts first, 1 when b does, 0
-    ///                  when they are equal up to the strength.
+    /// @param orderOut  Receives -1 when a sorts first, 1 when b does, 0 when
+    ///                  they are equal up to the strength; left unchanged on
+    ///                  failure.
     /// @return mloc_success; mloc_errorInvalid for a collator the library
     ///         did not make or a null pointer.
     /// @par Thread safety
@@ -232,7 +234,7 @@ extern "C"
     /// options, which the caller keeps with the keys.
     ///
     /// @param collator    A collator mlocInitCollator made.
-    /// @param versionOut  Receives the version.
+    /// @param versionOut  Receives the version; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a collator the library
     ///         did not make or a null pointer.
     /// @par Thread safety

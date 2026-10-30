@@ -239,8 +239,9 @@ extern "C"
     /// @param length     Its length in bytes.
     /// @param request    What to inflect it for.
     /// @param textOut    Receives the text with its suffixes and, when
-    ///                   textOut->part is set, its parts
-    ///                   (mlocInflectionPart).
+    ///                   textOut->part is set, its parts (mlocInflectionPart);
+    ///                   left as it was on failure but for the length
+    ///                   mloc_errorCapacity gives.
     /// @return mloc_success; mloc_errorCapacity when the text does not
     ///         fit (textOut->length is then the length needed);
     ///         mloc_errorNotFound for a number when the inflector has no
@@ -270,7 +271,9 @@ extern "C"
     /// @param request    What to inflect it for (its reading and hint are
     ///                   not read).
     /// @param textOut    Receives the text and its parts, the number's own
-    ///                   parts (mlocNumberPart) inside the stem.
+    ///                   parts (mlocNumberPart) inside the stem; left as it was
+    ///                   on failure but for the length mloc_errorCapacity
+    ///                   gives.
     /// @return As mlocInflector_InflectText; mloc_errorLimit also for a number
     ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
     ///         mloc_errorInvalid also for a decimal the library did not
