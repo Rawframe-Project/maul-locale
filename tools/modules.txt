@@ -73,7 +73,7 @@ time_format: bytes date_data date_format date_range date_time invariant locale_k
 datetime_format: bytes date_data date_format date_range date_time date_write invariant time_format time_write number_core number_tables zone_format
 time_write: date_data date_write invariant number_core number_tables
 unit_usage: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
-unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
+unit_coordinate: data_view invariant kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:
 spellout_data: bytes data_view number_data spellout_tables
 spellout_format: bytes decimal invariant number_core number_precision plural spellout_data spellout_rule spellout_value

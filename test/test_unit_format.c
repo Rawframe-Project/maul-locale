@@ -768,6 +768,27 @@ static void TestCoordinate(void)
               mlocInitUnitFormatter(&s_builtin, &locale, "degree", 6, &lat, &formatter) ==
                   mloc_errorNotFound,
           "a unit not an angle, a usage, a coordinate out of range, data without the names");
+    // Rounded to one digit, the amount passes the decimal's exponent after
+    // the pattern's text before it, and its text after (" N") would follow.
+    mlocUnitOptions one = {.number.precision = {.kind = mloc_precisionSignificant,
+                                                .minSignificantDigits = 1,
+                                                .maxSignificantDigits = 1},
+                           .coordinate = mloc_coordinateLatitude};
+    mlocDecimal huge;
+    memset(buffer, 'X', sizeof(buffer));
+    output = (mlocOutput){.buffer = buffer, .capacity = sizeof(buffer), .length = 99};
+    bool kept = output.length == 99;
+    CHECK(mlocParseLocale("en-US", 5, &locale).status == mloc_success &&
+              mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &one, &formatter) ==
+                  mloc_success &&
+              mlocParseDecimal("9.99e999999", 11, &huge).status == mloc_success &&
+              mlocUnitFormatter_Format(&formatter, &huge, &output) == mloc_errorLimit,
+          "an amount rounded past the decimal's limits");
+    for (size_t i = 0; i < sizeof(buffer); i++)
+    {
+        kept = kept && buffer[i] == 'X';
+    }
+    CHECK(kept && output.length == 99, "is refused with the output left as it was");
 }
 
 static void TestRefusals(void)
