@@ -9,6 +9,7 @@
 #include "bytes.h"
 #include "currency_tables.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_keyword.h"
 #include "locale_prefs.h"
@@ -104,6 +105,9 @@ static uint32_t FindRegion(const Regions* r, uint32_t region, const uint8_t** fi
             uint32_t first = mlocLoad16(e + 2);
             uint32_t end = middle + 1 < r->regionCount ? mlocLoad16(e + currencyRegionSize + 2)
                                                        : r->entryCount;
+            // The regions' first entries ascend, each below the count
+            // (mlocValidCurrencyRegions), so each region has one or more.
+            MLOC_ASSERT(first < end && end <= r->entryCount);
             *firstOut = r->entries + (size_t)first * currencyRegionEntrySize;
             return end - first;
         }
@@ -132,6 +136,9 @@ static bool OpenRegions(const mlocDataSet* data, Regions* out)
 
 static void WriteCode(uint16_t packed, char* out)
 {
+    // A -u-cu key's three letters, packed, or an entry's code, which the
+    // validator holds to the packed codes.
+    MLOC_ASSERT(packed >= 1 && packed <= currencyMaxCode);
     mlocUnpackCurrency(packed, out);
     out[3] = '\0';
 }
