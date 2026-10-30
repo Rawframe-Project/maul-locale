@@ -965,7 +965,7 @@ if(MAUL_LOCALE_FUZZ)
                                                -fno-sanitize-recover=all)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
     foreach(area calendar catalog collate_fast collation collation_data data date_data datetime decimal
-                 duration grammar index ixdtf locale message number parse
+                 duration grammar index ixdtf locale message names number parse
                  relative
                  search segment segments
                  spellout
@@ -1000,6 +1000,9 @@ if(MAUL_LOCALE_FUZZ)
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc"
         MLOC_ZONE_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc"
         MLOC_RELATIVE_FILE="${PROJECT_SOURCE_DIR}/src/generated/relative.mloc")
+    target_compile_definitions(fuzz_names PRIVATE
+        MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/names.mloc"
+        MLOC_SUBDIVISIONS_FILE="${PROJECT_SOURCE_DIR}/src/generated/subdivisions.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
     target_compile_definitions(fuzz_grammar PRIVATE
