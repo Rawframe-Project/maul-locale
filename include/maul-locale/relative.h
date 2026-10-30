@@ -119,7 +119,8 @@ extern "C"
     /// @param unit       The unit.
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values: the number's, and
-    ///                   literal for the pattern's text and for a name.
+    ///                   literal for the pattern's text and for a name. Left
+    ///                   as it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a unit

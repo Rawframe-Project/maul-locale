@@ -176,7 +176,7 @@ extern "C"
     /// Computes a date's fields in its calendar.
     ///
     /// @param date       The date.
-    /// @param fieldsOut  Receives the fields.
+    /// @param fieldsOut  Receives the fields; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
     ///         date the library did not make (a day out of range or an
     ///         unknown calendar).
