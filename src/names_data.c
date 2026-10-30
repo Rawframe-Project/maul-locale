@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "data_format.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "number_data.h"
@@ -166,6 +167,11 @@ static NameText EntryText(const uint8_t* offsets, const uint8_t* text, uint32_t 
 static bool UnitField(DataSpan unit, uint16_t index, NameField field, NameText* fieldOut,
                       NameText* nameOut)
 {
+    // Both callers refuse a field past the last, and the index is one
+    // mlocFindNameId found in an ids unit of at most nameMaxCodes codes,
+    // so the code's keys fit in 16 bits.
+    MLOC_ASSERT((uint32_t)field < nameFieldCount);
+    MLOC_ASSERT(index < nameMaxCodes);
     uint32_t count = mlocLoad16(unit.bytes);
     const uint8_t* keys = unit.bytes + nameUnitHeaderSize;
     const uint8_t* offsets = keys + 2 * (size_t)count;
