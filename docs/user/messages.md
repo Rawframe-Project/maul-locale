@@ -7,7 +7,7 @@ A program's user-visible text is written as messages in Unicode MessageFormat 2 
 A message goes through three steps, each into caller memory:
 
 1. `mlocCompileMessage` reads the MF2 text and checks its syntax and data model once. The compiled form is locale-free and is what a catalog stores.
-2. `mlocMessageFormatter_Bind` binds a compiled message to a formatter of a locale: functions are found and the formatters and plural rules the message needs are made once.
+2. `mlocMessageFormatter_Bind` binds a compiled message to a formatter of a locale: functions are found and the formatters and plural rules the message needs are made once. The bound message points into the compiled message and the formatter, so its buffer lies apart from both; a buffer that overlaps either is refused.
 3. `mlocFormatMessage` formats a bound message with named arguments, as often as needed and from any thread.
 
 Each step measures with a null buffer and a capacity of 0.

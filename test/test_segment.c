@@ -397,9 +397,16 @@ static void TestCleared(void)
     mlocSegmenter zero = {0};
     size_t offset = 12345;
     bool mandatory = true;
-    CHECK(mlocSegmenter_NextBreak(&zero, &offset, &mandatory) == mloc_errorInvalid && offset == 0 &&
-              !mandatory,
-          "a segmenter the library did not make: the outputs cleared");
+    CHECK(mlocSegmenter_NextBreak(&zero, &offset, &mandatory) == mloc_errorInvalid &&
+              offset == 12345 && mandatory,
+          "a segmenter the library did not make: the outputs left as they were");
+    mlocLocale en;
+    mlocSegmenter s;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitSegmenter(&s_data, &en, mloc_segmentLine, "a b", 3, false, &s) ==
+                  mloc_success &&
+              mlocSegmenter_NextBreak(&s, nullptr, &mandatory) == mloc_errorInvalid && mandatory,
+          "a null offset: mandatoryOut left as it was");
 }
 
 // A complex breaker that calls back into the segmenter it serves: a break

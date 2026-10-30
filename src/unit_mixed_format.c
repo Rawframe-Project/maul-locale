@@ -15,9 +15,9 @@
 
 #include "currency_tables.h"
 #include "decimal.h"
-#include "invariant.h"
 #include "kinds.h"
 #include "list_join.h"
+#include "number_output.h"
 #include "number_precision.h"
 #include "plural.h"
 #include "plural_rules.h"
@@ -380,33 +380,27 @@ mlocResult mlocWriteMixedTo(const UnitFormat* u, const UnitOutput* o,
     return m.result;
 }
 
+// A mixed unit's amounts as one writing.
+typedef struct MixedWriting
+{
+    const UnitFormat* unit;
+    const UnitOutput* output;
+    const mlocUnitAmounts* amounts;
+} MixedWriting;
+
+static mlocResult WriteMixedWith(const void* context, NumberWriter* w)
+{
+    const MixedWriting* m = context;
+    return mlocWriteMixedTo(m->unit, m->output, m->amounts, w);
+}
+
 mlocResult mlocWriteMixed(const UnitFormat* u, const UnitOutput* o, const mlocUnitAmounts* amounts,
                           mlocOutput* output)
 {
     // A part fails, if at all, as it is written, after the parts before
-    // it: measured first, a failure leaves the output as it was.
-    NumberWriter measured = {0};
-    mlocResult r = mlocWriteMixedTo(u, o, amounts, &measured);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocResult again = mlocWriteMixedTo(u, o, amounts, &w);
-    MLOC_ASSERT(again == mloc_success && w.length == measured.length);
-    (void)again;
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        (void)mlocWriteMixedTo(u, o, amounts, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    // it.
+    MixedWriting m = {u, o, amounts};
+    return mlocWriteOutput(WriteMixedWith, &m, output);
 }
 
 mlocResult mlocFormatMixedUnit(const UnitFormat* u, const mlocDecimal* decimal, mlocOutput* output)

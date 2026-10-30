@@ -195,6 +195,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/number_core.c
     src/number_data.c
     src/number_format.c
+    src/number_output.c
     src/number_parse.c
     src/number_precision.c
     src/parse_currency.c
@@ -423,6 +424,20 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(temporal_outputs)
     maul_add_test(date_outputs)
     maul_add_test(aliased_outputs)
+    # A negative value of every enumeration: every data file, so that each
+    # call reaches its validator.
+    maul_add_test(enum_refusals)
+    set(MLOC_GENERATED_DIR ${PROJECT_SOURCE_DIR}/src/generated)
+    if(EMSCRIPTEN)
+        foreach(file collation currency-names dates names relative segments spellout units zone-names)
+            target_link_options(test_enum_refusals PRIVATE "SHELL:--embed-file ${MLOC_GENERATED_DIR}/${file}.mloc@/generated/${file}.mloc")
+        endforeach()
+        set(MLOC_GENERATED_DIR /generated)
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_enum_refusals PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_enum_refusals PRIVATE MLOC_GENERATED_DIR="${MLOC_GENERATED_DIR}")
     maul_add_test(preferences)
     maul_add_test(preference_tables WHITEBOX)
     maul_add_test(decimal)
