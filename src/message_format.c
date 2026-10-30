@@ -652,10 +652,18 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.probe = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
-    f.w = (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
+    // Strict: measured first, so that a fault leaves the text as it was;
+    // the text is written only when there is none.
+    bool strict = f.r.formatter.strict;
+    f.w = strict ? (Writer){NULL, 0, 0, NULL, NULL}
+                 : (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
     Run(&f, 0);
-    if (textOut->part != NULL && f.w.length <= f.w.capacity &&
-        !(f.r.faultCount > 0 && f.r.formatter.strict))
+    if (strict && f.r.faultCount == 0)
+    {
+        f.w = (Writer){textOut->buffer, textOut->capacity, 0, NULL, NULL};
+        Run(&f, 1);
+    }
+    if (textOut->part != NULL && f.w.length <= f.w.capacity && !(f.r.faultCount > 0 && strict))
     {
         // The same text again, its parts reported, its faults already
         // counted.
@@ -668,9 +676,8 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     {
         faultsOut->count = f.r.faultCount;
     }
-    if (f.r.faultCount > 0 && f.r.formatter.strict)
+    if (f.r.faultCount > 0 && strict)
     {
-        textOut->length = 0;
         return mloc_errorFallback;
     }
     textOut->length = f.w.length;

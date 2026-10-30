@@ -58,7 +58,7 @@ A program adds functions of its own in the formatter's options, each under a nam
 
 ## Faults and fallbacks
 
-When part of a message fails (an argument is missing, a function refuses its operand), the format call writes the rest with the specification's fallback for that part, such as `{$name}`, and returns `mloc_withFallbacks`. The faults, with the expression each comes from, go to an `mlocMessageFaults` when one is given. A formatter made with the strict option writes nothing then and returns `mloc_errorFallback`.
+When part of a message fails (an argument is missing, a function refuses its operand), the format call writes the rest with the specification's fallback for that part, such as `{$name}`, and returns `mloc_withFallbacks`. The faults, with the expression each comes from, go to an `mlocMessageFaults` when one is given. A formatter made with the strict option then returns `mloc_errorFallback` and leaves the output, its buffer and length, as it was, so text written there earlier stays.
 
 ## Direction and parts
 

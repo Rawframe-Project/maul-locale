@@ -409,9 +409,9 @@ extern "C"
     // A message formatter's options; the zero value is the default.
     typedef struct mlocMessageOptions
     {
-        // Strict: a format call that meets a fault writes nothing and
-        // returns mloc_errorFallback; else it writes the message with
-        // fallbacks.
+        // Strict: a format call that meets a fault returns
+        // mloc_errorFallback and leaves the text output, its buffer and
+        // length, as it was; else it writes the message with fallbacks.
         bool strict;
         // Isolation, by the Default Bidi Strategy unless turned off; the
         // message's own direction is its locale's
@@ -539,11 +539,12 @@ extern "C"
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
-    /// @param textOut        Receives the text.
+    /// @param textOut        Receives the text; left as it was on any failure
+    ///                       but mloc_errorCapacity.
     /// @param faultsOut      Receives the faults; may be null.
     /// @return mloc_success; mloc_withFallbacks when the text holds
-    ///         fallbacks; in strict mode mloc_errorFallback at the first
-    ///         fault, nothing written; mloc_errorCapacity when the text does
+    ///         fallbacks; in strict mode mloc_errorFallback when a part
+    ///         fails, the faults reported; mloc_errorCapacity when the text does
     ///         not fit (textOut->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,
     ///         string, decimal, amount or unit among them), a decimal that
