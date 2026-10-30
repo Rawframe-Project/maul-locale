@@ -202,9 +202,12 @@ static bool WellFormed(int64_t n)
     int64_t m = mlocAstroNewMoon(n);
     int64_t next = mlocAstroNewMoon(n + 1);
     int64_t length = next - m;
+    int64_t at[4] = {0};
     return length > 29 * s_day + s_day / 10 && length < 29 * s_day + 9 * s_day / 10 &&
-           mlocAstroNewMoonIndex(m) == n && mlocAstroNewMoonIndex(m + 1) == n + 1 &&
-           mlocAstroNewMoonIndex(m - 1) == n && mlocAstroNewMoonIndex(next) == n + 1;
+           mlocAstroNewMoonIndex(m, &at[0]) == n && mlocAstroNewMoonIndex(m + 1, &at[1]) == n + 1 &&
+           mlocAstroNewMoonIndex(m - 1, &at[2]) == n &&
+           mlocAstroNewMoonIndex(next, &at[3]) == n + 1 && at[0] == m && at[1] == next &&
+           at[2] == m && at[3] == next;
 }
 
 static void TestWellFormed(void)
@@ -249,8 +252,9 @@ static void TestGolden(void)
     for (size_t i = 0; i < sizeof(s_goldenMoments) / sizeof(s_goldenMoments[0]); i++)
     {
         const int64_t* g = s_goldenMoments[i];
+        int64_t moon = 0;
         all = all && mlocAstroSolarLongitude(g[0]) == g[1] && mlocAstroDeltaT(g[0]) == g[2] &&
-              mlocAstroNewMoonIndex(g[0]) == g[3];
+              mlocAstroNewMoonIndex(g[0], &moon) == g[3] && moon == mlocAstroNewMoon(g[3]);
     }
     CHECK(all, "the model's bits unchanged");
 }
