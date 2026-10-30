@@ -11,8 +11,8 @@
 
 #include "unit_usage.h"
 
-#include "invariant.h"
 #include "kinds.h"
+#include "number_output.h"
 #include "unit_mixed.h"
 #include "unit_mixed_format.h"
 #include "unit_prefs.h"
@@ -236,6 +236,20 @@ static mlocResult WriteEnds(const UnitFormat* u, const Routed* a, const Routed* 
     return r != mloc_success ? r : s;
 }
 
+// Two routed ends as one writing.
+typedef struct Ends
+{
+    const UnitFormat* unit;
+    const Routed* start;
+    const Routed* end;
+} Ends;
+
+static mlocResult WriteEndsWith(const void* context, NumberWriter* w)
+{
+    const Ends* e = context;
+    return WriteEnds(e->unit, e->start, e->end, w);
+}
+
 mlocResult mlocFormatUsageRange(const UnitFormat* u, const mlocDecimal* start,
                                 const mlocDecimal* end, mlocOutput* output)
 {
@@ -260,27 +274,7 @@ mlocResult mlocFormatUsageRange(const UnitFormat* u, const mlocDecimal* start,
                                    &b.amounts.amounts[0], output);
     }
     // The end fails, if at all, after the start and the separator are
-    // written: measured first, a failure leaves the output as it was.
-    NumberWriter measured = {0};
-    r = WriteEnds(u, &a, &b, &measured);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocResult again = WriteEnds(u, &a, &b, &w);
-    MLOC_ASSERT(again == mloc_success && w.length == measured.length);
-    (void)again;
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        (void)WriteEnds(u, &a, &b, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    // written.
+    Ends ends = {u, &a, &b};
+    return mlocWriteOutput(WriteEndsWith, &ends, output);
 }

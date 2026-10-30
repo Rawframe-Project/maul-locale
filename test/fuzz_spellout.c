@@ -14,6 +14,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/spellout.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,20 +105,26 @@ static bool MakeFormatter(const mlocDataSet* set, const mlocData* rules, uint8_t
     return mlocInitSpelloutFormatter(set, &parsed, name, nameLength, &options, out) >= 0;
 }
 
-// Parses text twice: a refusal of syntax or capacity alone, the same
-// reading both times, an end inside the text.
 // The memory every parse searches with.
 static mlocSpelloutWorkspace s_workspace;
 
+// Parses text twice: a refusal of syntax or a limit alone, the same
+// reading both times, an end inside the text on success, 0 on a syntax
+// error, and past a limit the end and the value left as they were.
 static void CheckParse(const mlocSpelloutFormatter* formatter, const char* text, size_t length)
 {
     mlocDecimal first;
     mlocDecimal second;
-    size_t end = 0;
-    size_t again = 0;
+    size_t end = SIZE_MAX;
+    size_t again = SIZE_MAX;
+    memset(&first, 0xA5, sizeof(first));
+    mlocDecimal kept = first;
     mlocResult r = mlocSpelloutFormatter_Parse(formatter, text, length, &s_workspace, &first, &end);
     Require(r == mloc_success || r == mloc_errorSyntax || r == mloc_errorLimit);
-    Require(r == mloc_success ? end > 0 && end <= length : end == 0);
+    Require(r == mloc_success       ? end > 0 && end <= length
+            : r == mloc_errorSyntax ? end == 0
+                                    : end == SIZE_MAX);
+    Require(r == mloc_success || memcmp(&first, &kept, sizeof(first)) == 0);
     Require(mlocSpelloutFormatter_Parse(formatter, text, length, &s_workspace, &second, &again) ==
                 r &&
             again == end);

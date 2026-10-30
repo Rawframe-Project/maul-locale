@@ -10,6 +10,7 @@
 #include "date_write.h"
 #include "invariant.h"
 #include "number_core.h"
+#include "number_output.h"
 #include "relative_format.h"
 #include "relative_tables.h"
 #include "time_format.h"
@@ -23,6 +24,7 @@ typedef struct DayTimeWriting
     const TimeFormat* time;
     const mlocDecimal* days;
     const mlocTime* timeOfDay;
+    DataSpan glue;
     mlocResult result;
 } DayTimeWriting;
 
@@ -39,6 +41,14 @@ static void WriteSlot(void* context, uint32_t slot, NumberWriter* w)
     }
     uint32_t p = d->timeOfDay->minute == 0 ? 1 : 0;
     mlocWriteTimeFields(d->time, d->time->pattern[p], d->time->patternLength[p], d->timeOfDay, w);
+}
+
+// The glue with its slots, as one writing: the day's failure, if any.
+static mlocResult WriteDayTime(const void* context, NumberWriter* w)
+{
+    DayTimeWriting d = *(const DayTimeWriting*)context;
+    mlocWriteGlue(d.glue.bytes, d.glue.size, WriteSlot, &d, w);
+    return d.result;
 }
 
 mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* relative,
@@ -64,28 +74,8 @@ mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* rela
         return mloc_errorInvalid;
     }
     r.capitalize = glue.size >= 3 && memcmp(glue.bytes, "{1}", 3) == 0 ? r.capitalize : 0;
-    // The day is the one slot that can fail: it is measured before the
-    // glue writes anything, so a failure leaves the output as it was.
-    NumberWriter measured = {0};
-    mlocResult day = mlocWriteRelative(&r, days, relativeDay, mloc_datePartRelativeDay, &measured);
-    if (day != mloc_success)
-    {
-        return day;
-    }
-    DayTimeWriting d = {&r, &t, days, timeOfDay, mloc_success};
-    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-    mlocWriteGlue(glue.bytes, glue.size, WriteSlot, &d, &w);
-    MLOC_ASSERT(d.result == mloc_success);
-    textOut->length = w.length;
-    if (textOut->buffer == nullptr || w.length > textOut->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (textOut->part != nullptr)
-    {
-        NumberWriter parts = {.parts = textOut};
-        mlocWriteGlue(glue.bytes, glue.size, WriteSlot, &d, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    // The day, the one slot that can fail, may come after text the glue
+    // has written.
+    DayTimeWriting d = {&r, &t, days, timeOfDay, glue, mloc_success};
+    return mlocWriteOutput(WriteDayTime, &d, textOut);
 }
