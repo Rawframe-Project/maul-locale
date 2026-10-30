@@ -62,7 +62,7 @@ extern "C"
     ///
     /// @param bytes       The file's first bytes; at least 64.
     /// @param size        Their size.
-    /// @param versionOut  Receives the version.
+    /// @param versionOut  Receives the version; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer;
     ///         mloc_errorFormat when the bytes are no data file header of a
     ///         format this library knows.
@@ -112,8 +112,10 @@ extern "C"
     /// @param data       An opened source.
     /// @param index      Below mlocData_GetLocaleCount.
     /// @param idOut      Receives the id, which is not NUL-terminated and
-    ///                   lives as long as the source's bytes.
-    /// @param lengthOut  Receives its length in bytes.
+    ///                   lives as long as the source's bytes; left
+    ///                   unchanged on failure.
+    /// @param lengthOut  Receives its length in bytes; left unchanged on
+    ///                   failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or an
     ///         index out of range.
     /// @par Thread safety

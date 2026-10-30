@@ -73,7 +73,8 @@ extern "C"
     /// "sr-Latn-RS" or "de-DE-u-co-phonebk". It reports no parts.
     ///
     /// @param locale  A locale from mlocParseLocale.
-    /// @param textOut Where the tag goes.
+    /// @param textOut Where the tag goes; left as it was on any failure but
+    ///                mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity with the length needed;
     ///         mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -114,7 +115,8 @@ extern "C"
     /// @param length      Its length in bytes, at most
     ///                    MLOC_MAX_LOCALE_TEXT.
     /// @param localeOut   Receives the locale; left unchanged on failure.
-    /// @param changesOut  Receives what was replaced; may be null.
+    /// @param changesOut  Receives what was replaced; may be null; left
+    ///                    unchanged on failure.
     /// @return status mloc_success; mloc_errorSyntax with an offset into the
     ///         text as mlocParseLocale; mloc_errorLimit for a text longer
     ///         than MLOC_MAX_LOCALE_TEXT bytes, before or after a legacy tag

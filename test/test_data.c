@@ -413,6 +413,38 @@ static void TestTableRefusals(void)
     CHECK(Open(size) == mloc_errorFormat, "a byte no locale id has");
 }
 
+// A failed call leaves its outputs as they were: each filled with a
+// pattern before, every byte of it checked after.
+static void TestFailedOutputs(void)
+{
+    static const uint8_t s_zeros[64] = {0};
+    mlocDataVersion version;
+    memset(&version, 0xA5, sizeof version);
+    mlocDataVersion keptVersion = version;
+    CHECK(mlocReadDataVersion(s_zeros, sizeof s_zeros, &version) == mloc_errorFormat &&
+              mlocReadDataVersion(nullptr, 64, &version) == mloc_errorInvalid &&
+              memcmp(&version, &keptVersion, sizeof version) == 0,
+          "a version refused leaves the version");
+    mlocData data;
+    memset(&data, 0xA5, sizeof data);
+    mlocData keptData = data;
+    uint32_t size = BuildGood();
+    bool refused = mlocOpenData(s_file + 1, size, &data) == mloc_errorInvalid &&
+                   mlocOpenData(s_file, 63, &data) == mloc_errorFormat;
+    s_file[headerCldr] ^= 1;
+    refused = refused && mlocOpenData(s_file, size, &data) == mloc_errorVersion;
+    CHECK(refused && memcmp(&data, &keptData, sizeof data) == 0,
+          "an open refused as unaligned, malformed or of another version leaves the view");
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    const char* id = (const char*)&keptData;
+    size_t length = 99;
+    CHECK(mlocData_GetLocale(&builtin, mlocData_GetLocaleCount(&builtin), &id, &length) ==
+                  mloc_errorInvalid &&
+              id == (const char*)&keptData && length == 99,
+          "an index out of range leaves the id and its length");
+}
+
 int main(void)
 {
     TestVersion();
@@ -425,5 +457,6 @@ int main(void)
     TestHeaderRefusals();
     TestTableRefusals();
     TestLongIds();
+    TestFailedOutputs();
     return s_failures == 0 ? 0 : 1;
 }

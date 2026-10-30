@@ -99,7 +99,8 @@ extern "C"
     /// @param code     The code, in any case.
     /// @param length   Its length in bytes.
     /// @param options  The options, or null for the defaults.
-    /// @param textOut  Where the name goes; no parts.
+    /// @param textOut  Where the name goes; no parts; left as it was on
+    ///                 any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_fellBack when the code, in canonical
     ///         case, is written for a name the locale's chain lacks;
     ///         mloc_errorNotFound for a missing name with
@@ -158,8 +159,8 @@ extern "C"
     /// @param displayLocale  The locale the name is in, canonicalized.
     /// @param locale         The locale named, canonicalized.
     /// @param options        The options, or null for the defaults.
-    /// @param textOut        Where the name goes; no
-    ///                       parts.
+    /// @param textOut        Where the name goes; no parts; left as it was
+    ///                       on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_fellBack when the language has no name
     ///         and its code stands; mloc_errorNotFound for data without the
     ///         names; mloc_errorCapacity when the name does not fit
