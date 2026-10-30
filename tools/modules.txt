@@ -40,8 +40,8 @@ number: number_core number_format number_parse plural
 number_parse: bytes data_view decimal number_core number_format number_tables parse_currency parse_match parse_tables
 parse_currency: bytes currency_tables data_view invariant number_data parse_match parse_tables
 parse_match: bytes invariant number_core number_format number_tables parse_tables
-currency: bytes currency_tables data_format data_view kinds locale_fallback locale_keyword number_core number_data number_format number_parse parse_currency parse_match plural plural_rules
-currency_region: bytes currency_tables data_view kinds locale_keyword locale_prefs locale_tables
+currency: bytes currency_tables data_format data_view invariant kinds locale_fallback locale_keyword number_core number_data number_format number_parse parse_currency parse_match plural plural_rules
+currency_region: bytes currency_tables data_view invariant kinds locale_keyword locale_prefs locale_tables
 invariant:
 wide: invariant
 unit_tables:

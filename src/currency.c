@@ -12,6 +12,7 @@
 #include "currency_tables.h"
 #include "data_format.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
@@ -89,6 +90,9 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
                          !mlocFindDataUnit(view, kindNumberPatterns, dataNoLocale, &f->patterns);
             continue;
         }
+        // The other fields name strings, which mlocValidSparse holds below
+        // the unit's count (ValidRow).
+        MLOC_ASSERT(value < t.stringCount);
         uint16_t start = mlocLoad16(t.offsets + (size_t)value * 2);
         f->text[field] = t.text + start;
         f->length[field] = (uint16_t)(mlocLoad16(t.offsets + (size_t)value * 2 + 2) - start);
@@ -216,6 +220,8 @@ static bool ShowCurrency(NumberCore* core, const Fields* f, mlocCurrencyDisplay 
 // a count; currencyNameFieldCount for the code (UTS #35).
 static uint32_t NameField(const Fields* names, uint32_t category)
 {
+    // Both callers walk the six categories.
+    MLOC_ASSERT(category < 6);
     uint32_t own = currencyNameZero + category;
     if ((names->found & 1u << own) != 0)
     {
@@ -612,6 +618,9 @@ static mlocResult WriteField(const Fields* f, uint32_t field, mlocOutput* output
         mlocResult r = WriteText(letters, sizeof(letters), output);
         return r == mloc_success ? mloc_fellBack : r;
     }
+    // ShownField and the name lookup give a field only when the walk
+    // found it, and Gather set the text of every field it found.
+    MLOC_ASSERT(field < currencyFieldCount && f->text[field] != nullptr);
     return WriteText(f->text[field], f->length[field], output);
 }
 
