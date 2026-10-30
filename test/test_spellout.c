@@ -50,7 +50,7 @@ static bool SpellsIn(const char* id, const char* ruleSet, mlocCapitalization cap
     mlocLocale locale;
     mlocSpelloutFormatter formatter;
     mlocDecimal decimal;
-    char buffer[512];
+    char buffer[1024];
     mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
     mlocSpelloutOptions options = {.capitalization = capitalization};
     bool system = ruleSet != nullptr && ruleSet[0] == '@';
@@ -317,6 +317,86 @@ static void TestRefusals(void)
               mlocSpelloutFormatter_Parse(&hollow, "one", 3, &s_workspace, &back, &end) ==
                   mloc_errorInvalid,
           "a formatter without its symbols: refused where they are read");
+}
+
+static bool Untouched(const char* buffer, size_t size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        if (buffer[i] != 'X')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Korean's Sino-Korean ordinals nest too deep for a value far past their
+// largest base: at once without a sign, after writing the word for minus
+// with one.
+static void TestFailedOutput(void)
+{
+    mlocLocale ko;
+    mlocSpelloutFormatter ordinal;
+    mlocSpelloutFormatter count;
+    mlocDecimal huge;
+    mlocDecimal negative;
+    char buffer[64];
+    memset(buffer, 'X', sizeof(buffer));
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer), .length = 99};
+    mlocOutput measure = {.length = 99};
+    bool ready = Locale("ko", &ko) &&
+                 mlocInitSpelloutFormatter(&s_data, &ko, "%spellout-ordinal-sinokorean", 28,
+                                           nullptr, &ordinal) == mloc_success &&
+                 mlocInitSpelloutFormatter(&s_data, &ko, "%spellout-ordinal-sinokorean-count", 34,
+                                           nullptr, &count) == mloc_success &&
+                 Decimal("9e999", &huge) && Decimal("-7e999", &negative);
+    CHECK(ready && mlocSpelloutFormatter_Format(&ordinal, &huge, &output) == mloc_errorLimit &&
+              mlocSpelloutFormatter_Format(&ordinal, &huge, &measure) == mloc_errorLimit &&
+              output.length == 99 && measure.length == 99 && Untouched(buffer, sizeof(buffer)),
+          "rules nested too deep leave the output");
+    CHECK(ready && mlocSpelloutFormatter_Format(&count, &negative, &output) == mloc_errorLimit &&
+              output.length == 99 && Untouched(buffer, sizeof(buffer)),
+          "rules that fail after writing text leave the output");
+}
+
+// Burmese words: 777777777777777777 is 549 bytes of them, more than a
+// format writes before the caller's buffer.
+#define MY_SEVEN "\xE1\x80\x81\xE1\x80\xAF\xE1\x80\x94\xE1\x80\xBE\xE1\x80\x85\xE1\x80\xBA"
+#define MY_GROUP                                                                                   \
+    MY_SEVEN "\xE1\x80\x91\xE1\x80\xB1\xE1\x80\xAC\xE1\x80\x84\xE1\x80\xB7\xE1\x80\xBA" MY_SEVEN   \
+             "\xE1\x80\x9B\xE1\x80\xAC\xE1\x80\xB7" MY_SEVEN                                       \
+             "\xE1\x80\x86\xE1\x80\x9A\xE1\x80\xBA" MY_SEVEN
+#define MY_LOWER                                                                                   \
+    MY_SEVEN "\xE1\x80\x9E\xE1\x80\x94\xE1\x80\xBA\xE1\x80\xB8" MY_SEVEN                           \
+             "\xE1\x80\x9E\xE1\x80\xAD\xE1\x80\x94\xE1\x80\xBA\xE1\x80\xB8" MY_SEVEN               \
+             "\xE1\x80\x9E\xE1\x80\xB1\xE1\x80\xAC\xE1\x80\x84\xE1\x80\xBA\xE1\x80\xB8"
+
+static void TestLongText(void)
+{
+    static const char s_expected[] =
+        MY_GROUP "\xE1\x80\x80\xE1\x80\xB1\xE1\x80\xAC\xE1\x80\x8B"
+                 "\xE1\x80\xAD" MY_LOWER MY_GROUP
+                 "\xE1\x80\x80\xE1\x80\xAF\xE1\x80\x8B\xE1\x80\xB1" MY_LOWER MY_GROUP;
+    CHECK(sizeof(s_expected) - 1 == 549 &&
+              Spells("my", "%spellout-cardinal", "777777777777777777", s_expected),
+          "549 bytes of Burmese words");
+    mlocLocale my;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal decimal;
+    char exact[549];
+    char under[548];
+    mlocOutput fits = {.buffer = exact, .capacity = sizeof(exact)};
+    mlocOutput small = {.buffer = under, .capacity = sizeof(under)};
+    CHECK(Locale("my", &my) &&
+              mlocInitSpelloutFormatter(&s_data, &my, "%spellout-cardinal", 18, nullptr,
+                                        &formatter) == mloc_success &&
+              Decimal("777777777777777777", &decimal) &&
+              mlocSpelloutFormatter_Format(&formatter, &decimal, &fits) == mloc_success &&
+              fits.length == 549 && memcmp(exact, s_expected, 549) == 0 &&
+              mlocSpelloutFormatter_Format(&formatter, &decimal, &small) == mloc_errorCapacity &&
+              small.length == 549,
+          "549 bytes into a buffer of 549 and of 548");
 }
 
 // ICU4C 79's results with each context (the double path for NaN).
@@ -625,6 +705,8 @@ int main(void)
     TestFellBack();
     TestRuleSets();
     TestRefusals();
+    TestFailedOutput();
+    TestLongText();
     TestCapitalization();
     TestNumberingSystems();
     TestParse();
