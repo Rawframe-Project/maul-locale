@@ -5,10 +5,12 @@
 // compiled-in data, the next two the formatter (a number formatter's
 // notation, style, sign display and grouping, or a currency formatter's
 // currency, display and ISO append, with the currency names file) and the
-// mode; the rest is the text. A parse refuses with syntax or capacity
-// alone and ends inside the text, reads the same twice, and an amount it
-// reads writes text the formatter reads back whole, in both modes, to the
-// same text again.
+// mode; the rest is the text. A parse refuses with syntax or a limit
+// alone; it ends inside the text, but past a limit, which leaves the end,
+// the amount and the code as they were, as a syntax error leaves the
+// amount and the code. It reads the same twice, and an amount it reads
+// writes text the formatter reads back whole, in both modes, to the same
+// text again.
 
 #include "maul-locale/currency.h"
 #include "maul-locale/data.h"
@@ -48,7 +50,6 @@ typedef struct Formatter
 static mlocResult Parse(const Formatter* f, const char* text, size_t length, mlocParseMode mode,
                         uint8_t any, mlocDecimal* decimal, char* code, size_t* end)
 {
-    memcpy(code, "---", 3);
     return f->currency
                ? mlocCurrencyFormatter_Parse(&f->money, text, length, mode, any, decimal, code, end)
                : mlocNumberFormatter_Parse(&f->number, text, length, mode, decimal, end);
@@ -58,6 +59,20 @@ static mlocResult Format(const Formatter* f, const mlocDecimal* decimal, mlocOut
 {
     return f->currency ? mlocCurrencyFormatter_Format(&f->money, decimal, output)
                        : mlocNumberFormatter_Format(&f->number, decimal, output);
+}
+
+// Whether every byte still holds the pattern it was filled with.
+static bool Kept(const void* output, size_t size)
+{
+    const unsigned char* bytes = output;
+    for (size_t i = 0; i < size; i++)
+    {
+        if (bytes[i] != 0xA5)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool Same(const mlocDecimal* a, const mlocDecimal* b)
@@ -232,16 +247,23 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     uint8_t any = (uint8_t)((data[2] >> 2) & (f.currency ? 1 : 0));
     const char* text = (const char*)data + 4;
     size_t textLength = size - 4;
+    // Outputs a failure must leave as they were (base.h): the end, but
+    // where a syntax error stopped, the amount and the code.
     mlocDecimal decimal;
     char code[3];
     size_t end = SIZE_MAX;
+    memset(&decimal, 0xA5, sizeof(decimal));
+    memset(code, 0xA5, sizeof(code));
     mlocResult result = Parse(&f, text, textLength, mode, any, &decimal, code, &end);
-    Require(end <= textLength);
     Require(result == mloc_success || result == mloc_errorSyntax || result == mloc_errorLimit);
+    Require(result == mloc_errorLimit ? end == SIZE_MAX : end <= textLength);
+    Require(result == mloc_success ||
+            (Kept(&decimal, sizeof(decimal)) && Kept(code, sizeof(code))));
     // The same text reads the same.
     mlocDecimal again;
     char codeAgain[3];
     size_t endAgain = SIZE_MAX;
+    memset(codeAgain, 0xA5, sizeof(codeAgain));
     Require(Parse(&f, text, textLength, mode, any, &again, codeAgain, &endAgain) == result &&
             endAgain == end);
     if (result != mloc_success)
