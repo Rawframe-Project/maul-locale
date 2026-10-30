@@ -10,6 +10,7 @@
 // name's brackets nested.
 
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "names_data.h"
 #include "names_text.h"
@@ -152,7 +153,10 @@ static Pattern FindPattern(const Composer* c, const char* code, const char* fall
     {
         return p;
     }
-    (void)Split((NameText){(const uint8_t*)fallback, (uint16_t)strlen(fallback)}, &p);
+    // Every caller passes a literal with "{0}" before "{1}".
+    bool split = Split((NameText){(const uint8_t*)fallback, (uint16_t)strlen(fallback)}, &p);
+    MLOC_ASSERT(split);
+    (void)split;
     return p;
 }
 
@@ -395,6 +399,9 @@ static void ReadTail(const char* tail, Tail* t)
     {
         at = Extension(at, t);
     }
+    // Keys and Extension keep each list within maxItems, which
+    // WriteLocale's order is sized for.
+    MLOC_ASSERT(t->uCount <= maxItems && t->tCount <= maxItems && t->otherCount <= maxItems);
 }
 
 // Writes a key and value by the locale's key-type pattern, every bracket

@@ -8,6 +8,7 @@
 #include "maul-locale/names.h"
 
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "names_data.h"
 #include "names_text.h"
@@ -125,6 +126,8 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
                       char* out, size_t* lengthOut, size_t* fallbackOut)
 {
     static const char s_prefixes[] = "lsrvktmd";
+    // mlocGetName refuses any other type before it asks.
+    MLOC_ASSERT((uint32_t)type <= mloc_nameSubdivision);
     out[0] = s_prefixes[type];
     out[1] = ':';
     *fallbackOut = 2;
@@ -188,6 +191,7 @@ static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocN
     static const ContextUsage s_usages[] = {contextLanguages,  contextScript,    contextTerritory,
                                             contextVariant,    contextKey,       contextKeyValue,
                                             contextUsageCount, contextUsageCount};
+    MLOC_ASSERT((uint32_t)type < sizeof(s_usages) / sizeof(s_usages[0]));
     return mlocNameCapitalizes(data, locale, s_usages[type], capitalization);
 }
 

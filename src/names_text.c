@@ -6,6 +6,7 @@
 #include "names_text.h"
 
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "spellout_data.h"
 
@@ -68,6 +69,8 @@ bool mlocNameCapitalizes(const mlocDataSet* data, const mlocLocale* locale, Cont
 // when the text is shorter than its first character.
 static uint32_t First(const uint8_t* text, size_t length, size_t* sizeOut)
 {
+    // Its one caller asks only when something was written.
+    MLOC_ASSERT(length > 0);
     uint32_t size = text[0] < 0x80 ? 1 : text[0] < 0xE0 ? 2 : text[0] < 0xF0 ? 3 : 4;
     if (length < size)
     {
