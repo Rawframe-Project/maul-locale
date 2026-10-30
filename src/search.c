@@ -54,13 +54,15 @@ static mlocResult Init(mlocSearcher* searcherOut, const mlocCollator* collator, 
                        const mlocSearchOptions* options)
 {
     mlocSearchOptions o = options != nullptr ? *options : (mlocSearchOptions){0};
-    static Searcher s_zero;
-    Searcher* s = (Searcher*)searcherOut;
     if (searcherOut == nullptr || (uint32_t)o.comparison > mloc_searchAnyBaseWildcard)
     {
         return mloc_errorInvalid;
     }
-    *s = s_zero;
+    // Built apart and copied once made: a refusal past this point leaves
+    // the caller's searcher as it was.
+    static Searcher s_zero;
+    Searcher built = s_zero;
+    Searcher* s = &built;
     if (!mlocReadCollator(collator, &s->collator))
     {
         return mloc_errorInvalid;
@@ -97,6 +99,7 @@ static mlocResult Init(mlocSearcher* searcherOut, const mlocCollator* collator, 
         return mloc_errorLimit;
     }
     s->stamp = searcherStamp;
+    *(Searcher*)searcherOut = built;
     return mloc_success;
 }
 
