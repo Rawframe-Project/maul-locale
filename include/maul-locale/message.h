@@ -532,9 +532,11 @@ extern "C"
     ///
     /// When textOut->part is set, the call reports the text's parts
     /// (mlocMessagePart) once it is written, on mloc_success or
-    /// mloc_withFallbacks: it formats a second time to report them, so a
-    /// program function's entries must give the same results for the
-    /// same values.
+    /// mloc_withFallbacks: it formats a second time to report them. A
+    /// strict formatter's call also formats twice, first to find a fault,
+    /// then to write. So a program function's entries must give the same
+    /// results for the same values within one call; if they do not, a
+    /// strict call may leave the buffer partly written.
     ///
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.
