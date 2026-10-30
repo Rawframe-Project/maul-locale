@@ -56,7 +56,7 @@ static const int64_t s_meanYearMicro = INT64_C(365242189);
 
 static const int64_t s_unit = INT64_C(1) << 32;
 static const int64_t s_turn = INT64_C(360) << 32;
-static const int64_t s_one62 = INT64_C(1) << 62;
+static const uint64_t s_one62 = UINT64_C(1) << 62;
 // 2^62 / 360: a turn's degrees to a fraction of a turn scaled by 2^62.
 static const int64_t s_turnInverse = INT64_C(12810238940076078);
 // 2 pi scaled by 2^60.
@@ -95,6 +95,18 @@ static uint64_t MultiplyHigh(uint64_t a, uint64_t b, uint64_t* lowOut)
 #endif
 }
 
+// a * b / 2^shift for magnitudes, rounded to nearest with ties up, for
+// a shift of 1 to 64 and a result that fits.
+static uint64_t MulMagnitude(uint64_t a, uint64_t b, uint32_t shift)
+{
+    uint64_t low = 0;
+    uint64_t high = MultiplyHigh(a, b, &low);
+    uint64_t half = UINT64_C(1) << (shift - 1);
+    low += half;
+    high += low < half;
+    return shift == 64 ? high : (high << (64 - shift)) | (low >> shift);
+}
+
 // a * b / 2^shift, rounded to nearest with ties away from zero, for a
 // shift of 1 to 64 and a result that fits.
 static int64_t Mul(int64_t a, int64_t b, uint32_t shift)
@@ -102,12 +114,7 @@ static int64_t Mul(int64_t a, int64_t b, uint32_t shift)
     bool negative = (a < 0) != (b < 0);
     uint64_t x = a < 0 ? 0 - (uint64_t)a : (uint64_t)a;
     uint64_t y = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
-    uint64_t low = 0;
-    uint64_t high = MultiplyHigh(x, y, &low);
-    uint64_t half = UINT64_C(1) << (shift - 1);
-    low += half;
-    high += low < half;
-    uint64_t magnitude = shift == 64 ? high : (high << (64 - shift)) | (low >> shift);
+    uint64_t magnitude = MulMagnitude(x, y, shift);
     return negative ? -(int64_t)magnitude : (int64_t)magnitude;
 }
 
@@ -145,18 +152,21 @@ enum
 // powers down, of the cosines in v[0, cosines) and of the sines in
 // v[first, count), each step over all of them so that their
 // multiplications overlap. The divisors are written out as constants.
-static void SineSeries(const int64_t* r2, int64_t* v, uint32_t cosines, uint32_t first,
+// Every value is a magnitude: r^2 is at most (pi/4)^2, under 0.62, so a
+// step takes at most 0.31 from a value of at most 1, leaving it above
+// 0.69.
+static void SineSeries(const uint64_t* r2, uint64_t* v, uint32_t cosines, uint32_t first,
                        uint32_t count)
 {
 #define MLOC_COSINE_STEP(i)                                                                        \
     for (uint32_t k = 0; k < cosines; k++)                                                         \
     {                                                                                              \
-        v[k] = s_one62 - Mul(r2[k], v[k], 62) / ((2 * (i) - 1) * (2 * (i)));                       \
+        v[k] = s_one62 - MulMagnitude(r2[k], v[k], 62) / ((2 * (i) - 1) * (2 * (i)));              \
     }
 #define MLOC_SINE_STEP(i)                                                                          \
     for (uint32_t k = first; k < count; k++)                                                       \
     {                                                                                              \
-        v[k] = s_one62 - Mul(r2[k], v[k], 62) / ((2 * (i)) * (2 * (i) + 1));                       \
+        v[k] = s_one62 - MulMagnitude(r2[k], v[k], 62) / ((2 * (i)) * (2 * (i) + 1));              \
     }
     MLOC_COSINE_STEP(10)
     MLOC_COSINE_STEP(9)
@@ -188,9 +198,9 @@ static void SineSeries(const int64_t* r2, int64_t* v, uint32_t cosines, uint32_t
 static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
 {
     // The series to take, cosines from the front and sines from the back.
-    int64_t r[maxSines];
-    int64_t r2[maxSines];
-    int64_t v[maxSines];
+    uint64_t r[maxSines];
+    uint64_t r2[maxSines];
+    uint64_t v[maxSines];
     uint32_t angle[maxSines];
     bool negative[maxSines];
     uint32_t cosines = 0;
@@ -206,8 +216,8 @@ static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
         }
         bool cosine = octant == 1 || octant == 2 || octant == 5 || octant == 6;
         uint32_t at = cosine ? cosines++ : --first;
-        r[at] = Mul(within, s_twoPi, 60);
-        r2[at] = Mul(r[at], r[at], 62);
+        r[at] = MulMagnitude((uint64_t)within, (uint64_t)s_twoPi, 60);
+        r2[at] = MulMagnitude(r[at], r[at], 62);
         v[at] = s_one62;
         angle[at] = j;
         negative[at] = octant >= 4;
@@ -215,11 +225,11 @@ static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
     SineSeries(r2, v, cosines, first, count);
     for (uint32_t k = first; k < count; k++)
     {
-        v[k] = Mul(r[k], v[k], 62);
+        v[k] = MulMagnitude(r[k], v[k], 62);
     }
     for (uint32_t k = 0; k < count; k++)
     {
-        values[angle[k]] = negative[k] ? -v[k] : v[k];
+        values[angle[k]] = negative[k] ? -(int64_t)v[k] : (int64_t)v[k];
     }
 }
 
