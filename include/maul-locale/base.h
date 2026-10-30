@@ -75,6 +75,14 @@ extern "C"
     // Maul library; the library's own errors count down from -32. The type
     // has a fixed width so that result structs have one layout in C and
     // C++.
+    //
+    // A call that returns an error leaves every output as it was, buffers
+    // and single values alike, since no owner object of the library could
+    // clear them. It writes only what the failure itself defines, which
+    // each output says: an mlocOutput's length with mloc_errorCapacity,
+    // the offset where a reading call stopped, a message's faults. An
+    // outcome that is not an error (mloc_fellBack, mloc_withFallbacks,
+    // mloc_done, mloc_needMoreText) writes the outputs it describes.
     typedef int32_t mlocResult;
     enum
     {
@@ -141,7 +149,8 @@ extern "C"
     // capacity (a null buffer with capacity 0 measures); the call sets length
     // to the bytes written, or with mloc_errorCapacity to the bytes needed
     // (SIZE_MAX when they pass it), the buffer's contents then being
-    // unspecified. No NUL is written. When
+    // unspecified; any other error leaves length and buffer as they were.
+    // No NUL is written. When
     // part is set, it is called for each part in order of start, after the
     // whole text is written and only on success.
     typedef struct mlocOutput
