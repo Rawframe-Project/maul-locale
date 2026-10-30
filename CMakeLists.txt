@@ -964,7 +964,7 @@ if(MAUL_LOCALE_FUZZ)
     target_compile_options(maul-locale PRIVATE -fsanitize=fuzzer-no-link,address,undefined
                                                -fno-sanitize-recover=all)
     target_link_options(maul-locale PUBLIC -fsanitize=address,undefined)
-    foreach(area calendar catalog collate_fast collation collation_data data date_data decimal
+    foreach(area calendar catalog collate_fast collation collation_data data date_data datetime decimal
                  duration grammar index ixdtf locale message number parse
                  relative
                  search segment segments
@@ -995,6 +995,11 @@ if(MAUL_LOCALE_FUZZ)
     target_link_libraries(fuzz_segments PRIVATE maul-unicode::maul-unicode)
     target_compile_definitions(fuzz_parse PRIVATE
         MLOC_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/currency-names.mloc")
+    target_compile_definitions(fuzz_datetime PRIVATE
+        MLOC_DATES_FILE="${PROJECT_SOURCE_DIR}/src/generated/dates.mloc"
+        MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc"
+        MLOC_ZONE_NAMES_FILE="${PROJECT_SOURCE_DIR}/src/generated/zone-names.mloc"
+        MLOC_RELATIVE_FILE="${PROJECT_SOURCE_DIR}/src/generated/relative.mloc")
     target_compile_definitions(fuzz_spellout PRIVATE
         MLOC_SPELLOUT_FILE="${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc")
     target_compile_definitions(fuzz_grammar PRIVATE
