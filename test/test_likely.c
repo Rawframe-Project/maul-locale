@@ -69,11 +69,20 @@ static void TestMaximize(void)
 // input's from either side: refused, every byte left as it was.
 static void TestAliasing(void)
 {
-    static unsigned char s_bytes[2 * sizeof(mlocLocale)];
-    mlocLocale ja = Parse("ja");
-    bool all = true;
-    for (size_t shift = 0; shift < sizeof(mlocLocale); shift += sizeof(mlocLocale) / 4)
+    enum
     {
+        size = sizeof(mlocLocale),
+    };
+    // The output the input itself, overlapping it by most to one byte,
+    // or right beside it.
+    static const size_t s_overlapping[] = {0, size / 4, size / 2, 3 * size / 4, size - 1};
+    static unsigned char s_bytes[2 * size];
+    mlocLocale ja = Parse("ja");
+    bool refused = true;
+    bool beside = true;
+    for (size_t i = 0; i <= sizeof s_overlapping / sizeof s_overlapping[0]; i++)
+    {
+        size_t shift = i < sizeof s_overlapping / sizeof s_overlapping[0] ? s_overlapping[i] : size;
         for (int side = 0; side < 2; side++)
         {
             // A locale is bytes alone, so one at any offset is aligned.
@@ -83,18 +92,24 @@ static void TestAliasing(void)
             memcpy(in, &ja, sizeof ja);
             unsigned char before[sizeof s_bytes];
             memcpy(before, s_bytes, sizeof s_bytes);
-            all = all &&
-                  mlocMaximizeLocale(&s_data, (const mlocLocale*)in, (mlocLocale*)out) ==
-                      mloc_errorInvalid &&
-                  mlocMinimizeLocale(&s_data, (const mlocLocale*)in, mloc_favorRegion,
-                                     (mlocLocale*)out) == mloc_errorInvalid &&
-                  memcmp(before, s_bytes, sizeof s_bytes) == 0;
+            mlocResult maximized =
+                mlocMaximizeLocale(&s_data, (const mlocLocale*)in, (mlocLocale*)out);
+            if (shift < size)
+            {
+                refused = refused && maximized == mloc_errorInvalid &&
+                          mlocMinimizeLocale(&s_data, (const mlocLocale*)in, mloc_favorRegion,
+                                             (mlocLocale*)out) == mloc_errorInvalid &&
+                          memcmp(before, s_bytes, sizeof s_bytes) == 0;
+                continue;
+            }
+            beside = beside && maximized == mloc_success && Same((mlocLocale*)out, "ja-Jpan-JP") &&
+                     mlocMinimizeLocale(&s_data, (const mlocLocale*)in, mloc_favorRegion,
+                                        (mlocLocale*)out) == mloc_success &&
+                     Same((mlocLocale*)out, "ja") && memcmp(in, &ja, sizeof ja) == 0;
         }
     }
-    CHECK(all, "an output that is or overlaps the input refused, nothing written");
-    mlocLocale apart;
-    CHECK(mlocMaximizeLocale(&s_data, &ja, &apart) == mloc_success && Same(&apart, "ja-Jpan-JP"),
-          "an output apart from the input");
+    CHECK(refused, "an output that is or overlaps the input refused, nothing written");
+    CHECK(beside, "an output right beside the input, on either side, written");
 }
 
 static void TestMinimize(void)
