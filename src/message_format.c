@@ -64,7 +64,7 @@ typedef struct Inner
 
 // Passes on a function's part at its place in the message; a kind whose
 // low byte is a message part's is not the function's to give.
-static void PassPart(void* context, uint32_t part, size_t start, size_t length)
+static void PassPart(void* context, mlocPart part, size_t start, size_t length)
 {
     const Inner* inner = context;
     if ((part & 0xFF) < mloc_messagePartText)

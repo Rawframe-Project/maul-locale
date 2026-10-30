@@ -25,7 +25,8 @@ extern "C"
 
     // What a date shows: its day of the month, weekday, month and year in
     // the sets UTS #35 defines.
-    typedef enum mlocDateFieldSet
+    typedef int32_t mlocDateFieldSet;
+    enum
     {
         mloc_dateFieldSetYearMonthDay = 0,
         mloc_dateFieldSetYearMonthDayWeekday = 1,
@@ -38,45 +39,49 @@ extern "C"
         mloc_dateFieldSetMonth = 7,
         mloc_dateFieldSetYear = 8,
         mloc_dateFieldSetYearMonth = 9,
-    } mlocDateFieldSet;
+    };
 
     // How much room the date takes: names written out ("January 5,
     // 2026"), abbreviated ("Jan 5, 2026"), or numeric where the locale
     // has a numeric form ("1/5/26").
-    typedef enum mlocDateLength
+    typedef int32_t mlocDateLength;
+    enum
     {
         mloc_dateLengthLong = 0,
         mloc_dateLengthMedium = 1,
         mloc_dateLengthShort = 2,
-    } mlocDateLength;
+    };
 
     // How a year is written: as the length's pattern writes it where the
     // year is clear, else with its century, else with its era too (a
     // Gregorian year from 1950 to 2049 is clear in two digits; one before
     // 1000 or before the common era needs its era); always with its
     // century; always with its era.
-    typedef enum mlocYearStyle
+    typedef int32_t mlocYearStyle;
+    enum
     {
         mloc_yearStyleAuto = 0,
         mloc_yearStyleFull = 1,
         mloc_yearStyleWithEra = 2,
-    } mlocYearStyle;
+    };
 
     // One of the locale's four standard date formats instead of a field
     // set, or none.
-    typedef enum mlocDateStyle
+    typedef int32_t mlocDateStyle;
+    enum
     {
         mloc_dateStyleNone = 0,
         mloc_dateStyleFull = 1,
         mloc_dateStyleLong = 2,
         mloc_dateStyleMedium = 3,
         mloc_dateStyleShort = 4,
-    } mlocDateStyle;
+    };
 
     // How a time zone is written (UTS #35's zone formats, chosen as
     // ICU4X's zone field sets choose them), each falling back as ICU4C
     // falls back where the locale has no name.
-    typedef enum mlocZoneStyle
+    typedef int32_t mlocZoneStyle;
+    enum
     {
         mloc_zoneStyleNone = 0,
         // "Pacific Daylight Time": the zone's standard or daylight name
@@ -100,7 +105,7 @@ extern "C"
         mloc_zoneStyleOffsetLong = 7,
         // "GMT-7" (O).
         mloc_zoneStyleOffsetShort = 8,
-    } mlocZoneStyle;
+    };
 
     // The options of a date formatter; zeroed, a year, month and day at
     // the long length.
@@ -119,7 +124,8 @@ extern "C"
     } mlocDateOptions;
 
     // The parts of a formatted date or time.
-    typedef enum mlocDatePart
+    typedef int32_t mlocDatePart;
+    enum
     {
         mloc_datePartLiteral = 0,
         mloc_datePartEra = 1,
@@ -144,7 +150,7 @@ extern "C"
         // A day relative to today, whole ("tomorrow", "in 3 days";
         // mlocRelativeFormatter_FormatDayTime).
         mloc_datePartRelativeDay = 14,
-    } mlocDatePart;
+    };
 
     // In a range's parts, the value a part belongs to, added to its
     // mlocDatePart: the start, the end, or neither for what both share
@@ -284,7 +290,8 @@ extern "C"
     // it. H11 to H24 number hours 0 to 11, 1 to 12, 0 to 23 or 1 to 24 on
     // the locale's pattern of that clock; Clock12 and Clock24 take the
     // locale's own 12-hour or 24-hour clock ("aK:mm" in Japanese).
-    typedef enum mlocHourCycle
+    typedef int32_t mlocHourCycle;
+    enum
     {
         mloc_hourCycleAuto = 0,
         mloc_hourCycleH11 = 1,
@@ -293,13 +300,14 @@ extern "C"
         mloc_hourCycleH24 = 4,
         mloc_hourCycleClock12 = 5,
         mloc_hourCycleClock24 = 6,
-    } mlocHourCycle;
+    };
 
     // How precisely a time is written: to the second, the hour, the
     // minute, the minute unless it is zero (then the hour), or the second
     // with 1 to 9 digits of its fraction. A time is truncated, never
     // rounded: 11:59:59 is "11:59" to the minute.
-    typedef enum mlocTimePrecision
+    typedef int32_t mlocTimePrecision;
+    enum
     {
         mloc_timePrecisionSecond = 0,
         mloc_timePrecisionHour = 1,
@@ -314,19 +322,20 @@ extern "C"
         mloc_timePrecisionFraction7 = 10,
         mloc_timePrecisionFraction8 = 11,
         mloc_timePrecisionFraction9 = 12,
-    } mlocTimePrecision;
+    };
 
     // One of the locale's four standard time formats instead of a
     // precision, or none. The full and long ones name a time zone, so
     // they write a zoned time only (mlocTimeFormatter_FormatInZone).
-    typedef enum mlocTimeStyle
+    typedef int32_t mlocTimeStyle;
+    enum
     {
         mloc_timeStyleNone = 0,
         mloc_timeStyleFull = 1,
         mloc_timeStyleLong = 2,
         mloc_timeStyleMedium = 3,
         mloc_timeStyleShort = 4,
-    } mlocTimeStyle;
+    };
 
     // The options of a time formatter; zeroed, the locale's hour cycle
     // to the second.
@@ -470,11 +479,12 @@ extern "C"
     // 'at' {0}", UTS #35's default since CLDR 48, as ICU4C 79 and ICU4X
     // join them), or the standard one ("{1}, {0}"), CLDR's
     // dateTimeFormatType.
-    typedef enum mlocDateTimeGlue
+    typedef int32_t mlocDateTimeGlue;
+    enum
     {
         mloc_dateTimeGlueAtTime = 0,
         mloc_dateTimeGlueStandard = 1,
-    } mlocDateTimeGlue;
+    };
 
     // The options of a date-time formatter: a date field set that shows
     // a day or a weekday (not a calendar period) with a time, or a

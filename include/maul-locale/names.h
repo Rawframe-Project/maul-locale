@@ -19,7 +19,8 @@ extern "C"
 #endif
 
     // What a code names, and the code's syntax (any case; BCP 47's ids).
-    typedef enum mlocNameType
+    typedef int32_t mlocNameType;
+    enum
     {
         // A language id CLDR names whole: "en", "en-GB", "zh-Hant",
         // "ca-ES-valencia".
@@ -39,11 +40,12 @@ extern "C"
         // A subdivision, as -u-sd writes it: "gbsct", "usca" (names in
         // subdivisions.mloc; ICU4C has none).
         mloc_nameSubdivision = 7,
-    } mlocNameType;
+    };
 
     // Which of a name's forms: CLDR's name, or one of its alternates,
     // which stands in for the name where a locale's chain has it.
-    typedef enum mlocNameForm
+    typedef int32_t mlocNameForm;
+    enum
     {
         mloc_nameFormStandard = 0,
         // "US" for the United States, "UK English".
@@ -61,15 +63,16 @@ extern "C"
         mloc_nameFormExtension = 6,
         // A script's name standing alone ("Simplified Han").
         mloc_nameFormStandAlone = 7,
-    } mlocNameForm;
+    };
 
     // What a code without a name gives: the code itself (a value's code
     // for a key and its value), or nothing.
-    typedef enum mlocNameFallback
+    typedef int32_t mlocNameFallback;
+    enum
     {
         mloc_nameFallbackCode = 0,
         mloc_nameFallbackNone = 1,
-    } mlocNameFallback;
+    };
 
     // The options of a name; the zero value is the default (the standard
     // form, the code for a missing name, as the data writes it).
@@ -118,11 +121,12 @@ extern "C"
     // language's own name for the pair where the locale has one ("British
     // English", "Flemish"), or always the language with its region in
     // the pattern ("English (United Kingdom)").
-    typedef enum mlocLanguageDisplay
+    typedef int32_t mlocLanguageDisplay;
+    enum
     {
         mloc_languageDisplayDialect = 0,
         mloc_languageDisplayStandard = 1,
-    } mlocLanguageDisplay;
+    };
 
     // The options of a locale's name; the zero value is the default
     // (dialect names, the standard form, as the data writes it).

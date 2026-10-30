@@ -42,7 +42,8 @@ extern "C"
     } mlocInflector;
 
     // How an inflected text's end is read.
-    typedef enum mlocInflectionReading
+    typedef int32_t mlocInflectionReading;
+    enum
     {
         // By its look: a number at its end by how the number is spoken,
         // a word of capitals by its letters' names, else as written.
@@ -51,11 +52,12 @@ extern "C"
         mloc_readingWord = 1,
         // By its letters' names (TDK, ABD).
         mloc_readingLetters = 2,
-    } mlocInflectionReading;
+    };
 
     // A Korean particle, each written in its form after a final consonant
     // or after a vowel (the (으)로 family's after a vowel also after ㄹ).
-    typedef enum mlocKoreanParticle
+    typedef int32_t mlocKoreanParticle;
+    enum
     {
         mloc_particleNone = 0,
         // 은/는.
@@ -90,7 +92,7 @@ extern "C"
         mloc_particleQuotation = 15,
         // 이란/란.
         mloc_particleDefinition = 16,
-    } mlocKoreanParticle;
+    };
 
     // What a text is inflected for; zero is the text as it is.
     typedef struct mlocInflection
@@ -135,13 +137,14 @@ extern "C"
     // name apostrophe), the suffixes, and the space
     // and particle of a question. Their values differ from a number's parts (mlocNumberPart), which
     // a number's stem holds inside it.
-    typedef enum mlocInflectionPart
+    typedef int32_t mlocInflectionPart;
+    enum
     {
         mloc_inflectionPartStem = 0x60,
         mloc_inflectionPartApostrophe = 0x61,
         mloc_inflectionPartSuffix = 0x62,
         mloc_inflectionPartParticle = 0x63,
-    } mlocInflectionPart;
+    };
 
     /// Makes a locale's inflector. Its numbers are read by the locale's
     /// spell-out rules when the data has them (spellout.mloc); without

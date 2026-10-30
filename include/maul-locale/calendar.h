@@ -18,7 +18,8 @@ extern "C"
 #endif
 
     // CLDR's calendars, by their BCP 47 ids.
-    typedef enum mlocCalendar
+    typedef int32_t mlocCalendar;
+    enum
     {
         // "gregory": the proleptic Gregorian calendar, eras ce and bce.
         mloc_calendarGregorian = 0,
@@ -58,15 +59,16 @@ extern "C"
         mloc_calendarChinese = 16,
         // "dangi": the Korean lunisolar calendar, no era.
         mloc_calendarDangi = 17,
-    } mlocCalendar;
+    };
 
     // What a field out of range does: clamped to the nearest valid value,
     // or refused (Temporal's overflow option).
-    typedef enum mlocOverflow
+    typedef int32_t mlocOverflow;
+    enum
     {
         mloc_overflowConstrain = 0,
         mloc_overflowReject = 1,
-    } mlocOverflow;
+    };
 
     // The first and last day a date may be: Temporal's range,
     // April 19 of year -271821 and September 13 of 275760 in the ISO
@@ -218,13 +220,14 @@ extern "C"
                                                      mlocOverflow overflow, mlocDate* dateOut);
 
     // The largest unit a difference of dates is given in.
-    typedef enum mlocDateUnit
+    typedef int32_t mlocDateUnit;
+    enum
     {
         mloc_dateUnitYear = 0,
         mloc_dateUnitMonth = 1,
         mloc_dateUnitWeek = 2,
         mloc_dateUnitDay = 3,
-    } mlocDateUnit;
+    };
 
     /// Computes the duration from one date to another of the same
     /// calendar, as Temporal's PlainDate.until does: the most years whose

@@ -19,7 +19,8 @@ extern "C"
 #endif
 
     // CLDR's plural categories.
-    typedef enum mlocPluralCategory
+    typedef int32_t mlocPluralCategory;
+    enum
     {
         mloc_pluralZero = 0,
         mloc_pluralOne = 1,
@@ -27,14 +28,15 @@ extern "C"
         mloc_pluralFew = 3,
         mloc_pluralMany = 4,
         mloc_pluralOther = 5,
-    } mlocPluralCategory;
+    };
 
     // Which rules: counting things or ordering them.
-    typedef enum mlocPluralType
+    typedef int32_t mlocPluralType;
+    enum
     {
         mloc_pluralCardinal = 0,
         mloc_pluralOrdinal = 1,
-    } mlocPluralType;
+    };
 
     // A locale's plural rules of one type, with its range table: a value
     // that reads no data once made. Opaque; make it with

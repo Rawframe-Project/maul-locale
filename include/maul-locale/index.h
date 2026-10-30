@@ -28,7 +28,8 @@ extern "C"
 #endif
 
     // A bucket's kind, as ICU4C's UAlphabeticIndexLabelType numbers it.
-    typedef enum mlocIndexLabelType
+    typedef int32_t mlocIndexLabelType;
+    enum
     {
         // A label's bucket.
         mloc_indexNormal = 0,
@@ -38,7 +39,7 @@ extern "C"
         mloc_indexInflow = 2,
         // Names past the last label's script.
         mloc_indexOverflow = 3,
-    } mlocIndexLabelType;
+    };
 
 // The longest special label (underflow, inflow, overflow), in bytes.
 #define MLOC_MAX_INDEX_LABEL 255

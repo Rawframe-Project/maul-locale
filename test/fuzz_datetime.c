@@ -203,7 +203,7 @@ typedef struct Parts
     size_t count;
 } Parts;
 
-static void Part(void* context, uint32_t part, size_t start, size_t length)
+static void Part(void* context, mlocPart part, size_t start, size_t length)
 {
     (void)part;
     Parts* p = context;

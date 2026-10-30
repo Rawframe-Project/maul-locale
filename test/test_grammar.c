@@ -313,7 +313,7 @@ typedef struct Parts
     size_t count;
 } Parts;
 
-static void Collect(void* context, uint32_t part, size_t start, size_t length)
+static void Collect(void* context, mlocPart part, size_t start, size_t length)
 {
     Parts* p = context;
     if (p->count < 8)

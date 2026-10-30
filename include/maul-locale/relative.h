@@ -20,7 +20,8 @@ extern "C"
 
     // The units: ECMA-402's eight, then the weekdays, ICU4C's ("next
     // Monday", "in 3 Mondays").
-    typedef enum mlocRelativeUnit
+    typedef int32_t mlocRelativeUnit;
+    enum
     {
         mloc_relativeYear = 0,
         mloc_relativeQuarter = 1,
@@ -37,27 +38,29 @@ extern "C"
         mloc_relativeThursday = 12,
         mloc_relativeFriday = 13,
         mloc_relativeSaturday = 14,
-    } mlocRelativeUnit;
+    };
 
     // How much room the text takes, as ECMA-402's style: long ("in 3
     // hours"), short ("in 3 hr.") or narrow ("in 3h"); a width the locale
     // lacks takes the next wider one's.
-    typedef enum mlocRelativeWidth
+    typedef int32_t mlocRelativeWidth;
+    enum
     {
         mloc_relativeWidthLong = 0,
         mloc_relativeWidthShort = 1,
         mloc_relativeWidthNarrow = 2,
-    } mlocRelativeWidth;
+    };
 
     // Whether a near amount takes its name, as ECMA-402's numeric: always
     // the number ("in 1 day"), or auto, the locale's name of an amount
     // that equals -2, -1, 0, 1 or 2 where it has one ("tomorrow"; -0 is 0;
     // "1.0" is 1), the number otherwise.
-    typedef enum mlocRelativeNumeric
+    typedef int32_t mlocRelativeNumeric;
+    enum
     {
         mloc_relativeNumericAlways = 0,
         mloc_relativeNumericAuto = 1,
-    } mlocRelativeNumeric;
+    };
 
     // A relative time formatter's options; the zero value is the default.
     typedef struct mlocRelativeOptions

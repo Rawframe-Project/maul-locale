@@ -180,7 +180,7 @@ static void TestDayPeriods(void)
           "midnight left out, the hour's period instead");
 }
 
-static void ReportPart(void* context, uint32_t part, size_t start, size_t length)
+static void ReportPart(void* context, mlocPart part, size_t start, size_t length)
 {
     char* parts = context;
     char item[32];
@@ -372,7 +372,7 @@ static void TestDateTimes(void)
           "the standard glue asked for");
 }
 
-static void ReportDateTimePart(void* context, uint32_t part, size_t start, size_t length)
+static void ReportDateTimePart(void* context, mlocPart part, size_t start, size_t length)
 {
     char* parts = context;
     char item[32];

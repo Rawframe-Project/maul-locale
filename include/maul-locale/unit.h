@@ -154,30 +154,33 @@ extern "C"
     // ICU's MeasureFormat: a mixed unit of hours, minutes and seconds by
     // the locale's duration patterns ("1:05:09"), any other unit, and a
     // negative or non-finite amount, as narrow.
-    typedef enum mlocUnitWidth
+    typedef int32_t mlocUnitWidth;
+    enum
     {
         mloc_unitWidthShort = 0,
         mloc_unitWidthNarrow = 1,
         mloc_unitWidthLong = 2,
         mloc_unitWidthNumeric = 3,
-    } mlocUnitWidth;
+    };
 
     // An angle written as a coordinate with the locale's direction
     // ("12°N"): a latitude's sign gives north or south, a longitude's
     // east or west, and the amount is written unsigned.
-    typedef enum mlocCoordinate
+    typedef int32_t mlocCoordinate;
+    enum
     {
         mloc_coordinateNone = 0,
         mloc_coordinateLatitude = 1,
         mloc_coordinateLongitude = 2,
-    } mlocCoordinate;
+    };
 
     // A grammatical case, CLDR's (grammaticalFeatures.xml): the
     // nominative, then the others in alphabetical order. The long width
     // writes a unit in the case's patterns where the locale has them
     // ("2 Metern", German's dative), the nominative's where it does not,
     // as ICU's unitDisplayCase; the other widths have no cases.
-    typedef enum mlocGrammaticalCase
+    typedef int32_t mlocGrammaticalCase;
+    enum
     {
         mloc_caseNominative = 0,
         mloc_caseAbessive = 1,
@@ -207,11 +210,12 @@ extern "C"
         mloc_caseTerminative = 25,
         mloc_caseTranslative = 26,
         mloc_caseVocative = 27,
-    } mlocGrammaticalCase;
+    };
 
     // A grammatical gender, CLDR's (grammaticalFeatures.xml): none, then
     // the others in alphabetical order.
-    typedef enum mlocGender
+    typedef int32_t mlocGender;
+    enum
     {
         mloc_genderNone = 0,
         mloc_genderAnimate = 1,
@@ -221,7 +225,7 @@ extern "C"
         mloc_genderMasculine = 5,
         mloc_genderNeuter = 6,
         mloc_genderPersonal = 7,
-    } mlocGender;
+    };
 
     // A unit formatter's options; the zero value is the default.
     typedef struct mlocUnitOptions

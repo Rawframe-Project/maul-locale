@@ -230,7 +230,7 @@ static void TestDigits(void)
           "a day written by hanidays");
 }
 
-static void ReportPart(void* context, uint32_t part, size_t start, size_t length)
+static void ReportPart(void* context, mlocPart part, size_t start, size_t length)
 {
     char* parts = context;
     char item[32];

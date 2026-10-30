@@ -120,7 +120,7 @@ typedef struct Tiling
     bool good;
 } Tiling;
 
-static void Tile(void* context, uint32_t part, size_t start, size_t length)
+static void Tile(void* context, mlocPart part, size_t start, size_t length)
 {
     Tiling* t = context;
     if (part < mloc_inflectionPartStem)

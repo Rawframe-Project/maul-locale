@@ -126,7 +126,8 @@ extern "C"
     } mlocCatalogChain;
 
     // Which text a chain wrote, and why.
-    typedef enum mlocCatalogReason
+    typedef int32_t mlocCatalogReason;
+    enum
     {
         // The message of the chain's first catalog.
         mloc_catalogFound = 0,
@@ -146,7 +147,7 @@ extern "C"
         mloc_catalogFailed = 5,
         // The key: the message does not fit in the cache's room left.
         mloc_catalogCacheFull = 6,
-    } mlocCatalogReason;
+    };
 
     // A chain's account of a format call.
     typedef struct mlocCatalogResult

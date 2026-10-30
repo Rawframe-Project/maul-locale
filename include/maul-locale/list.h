@@ -19,29 +19,32 @@ extern "C"
 
     // What a list says of its items: all of them ("a, b, and c"), one of
     // them ("a, b, or c"), or amounts of units together ("3 ft, 7 in").
-    typedef enum mlocListType
+    typedef int32_t mlocListType;
+    enum
     {
         mloc_listAnd = 0,
         mloc_listOr = 1,
         mloc_listUnit = 2,
-    } mlocListType;
+    };
 
     // How much room the list takes: its words written out ("a, b, and
     // c"), short ("a, b, & c" in English), or narrow ("a, b, c").
-    typedef enum mlocListWidth
+    typedef int32_t mlocListWidth;
+    enum
     {
         mloc_listWide = 0,
         mloc_listShort = 1,
         mloc_listNarrow = 2,
-    } mlocListWidth;
+    };
 
     // The parts of a list (mlocOutput's part function): an item, or the
     // text the patterns put between items. An empty item has no part.
-    typedef enum mlocListPart
+    typedef int32_t mlocListPart;
+    enum
     {
         mloc_listPartElement = 0,
         mloc_listPartLiteral = 1,
-    } mlocListPart;
+    };
 
 // The most items a list takes: the formatter counts them in 32 bits.
 #define MLOC_MAX_LIST_ITEMS 4294967295u
@@ -111,12 +114,13 @@ extern "C"
     // A person's gender, as a message's gender select reads it: other
     // (unknown or neither), male, female. Not a grammatical gender
     // (mlocGender).
-    typedef enum mlocPersonGender
+    typedef int32_t mlocPersonGender;
+    enum
     {
         mloc_personOther = 0,
         mloc_personMale = 1,
         mloc_personFemale = 2,
-    } mlocPersonGender;
+    };
 
     /// Gives the gender of a list of persons ("Tom and Mary") by the locale's
     /// rule in CLDR's genderList.xml; the rules are built in. The locale is
