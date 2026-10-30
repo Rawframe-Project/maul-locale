@@ -135,43 +135,92 @@ static int64_t Fixed(int64_t m, int64_t d)
     return q * s_unit + RoundDiv((m - q * d) * s_unit, d);
 }
 
-// The sine of an angle scaled by 2^62: the angle is reduced to an eighth
-// of a turn and the Taylor series taken to the 19th and 20th powers,
-// past the scale's resolution.
-static int64_t Sine(int64_t degrees)
+enum
 {
-    uint64_t turn = (uint64_t)Mul(FloorMod(degrees, s_turn), s_turnInverse, 32);
-    uint32_t octant = (uint32_t)(turn >> 59) & 7;
-    int64_t within = (int64_t)(turn & ((UINT64_C(1) << 59) - 1));
-    if (octant % 2 == 1)
-    {
-        within = (INT64_C(1) << 59) - within;
+    // The most angles one call of Sines takes.
+    maxSines = 64,
+};
+
+// The steps of the series of Sines: Horner's, from the 19th and 20th
+// powers down, of the cosines in v[0, cosines) and of the sines in
+// v[first, count), each step over all of them so that their
+// multiplications overlap. The divisors are written out as constants.
+static void SineSeries(const int64_t* r2, int64_t* v, uint32_t cosines, uint32_t first,
+                       uint32_t count)
+{
+#define MLOC_COSINE_STEP(i)                                                                        \
+    for (uint32_t k = 0; k < cosines; k++)                                                         \
+    {                                                                                              \
+        v[k] = s_one62 - Mul(r2[k], v[k], 62) / ((2 * (i) - 1) * (2 * (i)));                       \
     }
-    int64_t r = Mul(within, s_twoPi, 60);
-    int64_t r2 = Mul(r, r, 62);
-    int64_t value = s_one62;
-    bool cosine = octant == 1 || octant == 2 || octant == 5 || octant == 6;
-    if (cosine)
-    {
-        for (int64_t i = 10; i >= 1; i--)
-        {
-            value = s_one62 - Mul(r2, value, 62) / ((2 * i - 1) * (2 * i));
-        }
+#define MLOC_SINE_STEP(i)                                                                          \
+    for (uint32_t k = first; k < count; k++)                                                       \
+    {                                                                                              \
+        v[k] = s_one62 - Mul(r2[k], v[k], 62) / ((2 * (i)) * (2 * (i) + 1));                       \
     }
-    else
-    {
-        for (int64_t i = 9; i >= 1; i--)
-        {
-            value = s_one62 - Mul(r2, value, 62) / ((2 * i) * (2 * i + 1));
-        }
-        value = Mul(r, value, 62);
-    }
-    return octant >= 4 ? -value : value;
+    MLOC_COSINE_STEP(10)
+    MLOC_COSINE_STEP(9)
+    MLOC_SINE_STEP(9)
+    MLOC_COSINE_STEP(8)
+    MLOC_SINE_STEP(8)
+    MLOC_COSINE_STEP(7)
+    MLOC_SINE_STEP(7)
+    MLOC_COSINE_STEP(6)
+    MLOC_SINE_STEP(6)
+    MLOC_COSINE_STEP(5)
+    MLOC_SINE_STEP(5)
+    MLOC_COSINE_STEP(4)
+    MLOC_SINE_STEP(4)
+    MLOC_COSINE_STEP(3)
+    MLOC_SINE_STEP(3)
+    MLOC_COSINE_STEP(2)
+    MLOC_SINE_STEP(2)
+    MLOC_COSINE_STEP(1)
+    MLOC_SINE_STEP(1)
+#undef MLOC_COSINE_STEP
+#undef MLOC_SINE_STEP
 }
 
-static int64_t Cosine(int64_t degrees)
+// The sines of up to maxSines angles, scaled by 2^62: each angle is
+// reduced to an eighth of a turn and the Taylor series of its sine or
+// cosine there taken to the 19th and 20th powers, past the scale's
+// resolution.
+static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
 {
-    return Sine(degrees + DEG(90, 0));
+    // The series to take, cosines from the front and sines from the back.
+    int64_t r[maxSines];
+    int64_t r2[maxSines];
+    int64_t v[maxSines];
+    uint32_t angle[maxSines];
+    bool negative[maxSines];
+    uint32_t cosines = 0;
+    uint32_t first = count;
+    for (uint32_t j = 0; j < count; j++)
+    {
+        uint64_t turn = (uint64_t)Mul(FloorMod(degrees[j], s_turn), s_turnInverse, 32);
+        uint32_t octant = (uint32_t)(turn >> 59) & 7;
+        int64_t within = (int64_t)(turn & ((UINT64_C(1) << 59) - 1));
+        if (octant % 2 == 1)
+        {
+            within = (INT64_C(1) << 59) - within;
+        }
+        bool cosine = octant == 1 || octant == 2 || octant == 5 || octant == 6;
+        uint32_t at = cosine ? cosines++ : --first;
+        r[at] = Mul(within, s_twoPi, 60);
+        r2[at] = Mul(r[at], r[at], 62);
+        v[at] = s_one62;
+        angle[at] = j;
+        negative[at] = octant >= 4;
+    }
+    SineSeries(r2, v, cosines, first, count);
+    for (uint32_t k = first; k < count; k++)
+    {
+        v[k] = Mul(r[k], v[k], 62);
+    }
+    for (uint32_t k = 0; k < count; k++)
+    {
+        values[angle[k]] = negative[k] ? -v[k] : v[k];
+    }
 }
 
 // A polynomial in num / den, coefficients first to last power, all
@@ -380,21 +429,38 @@ static const PlanetaryTerm s_planetary[] = {
 
 int64_t mlocAstroSolarLongitude(int64_t moment)
 {
-    int64_t c = Centuries(moment);
-    int64_t sum = 0;
-    for (uint32_t i = 0; i < sizeof(s_solar) / sizeof(s_solar[0]); i++)
+    enum
     {
-        const SolarTerm* t = &s_solar[i];
-        sum += Mul(t->x, Sine(t->y + Mul(t->z, c, 48)), 30);
+        solarCount = sizeof(s_solar) / sizeof(s_solar[0]),
+        // The terms, then the aberration's cosine and the nutation's two.
+        angleCount = solarCount + 3,
+    };
+    static_assert((size_t)angleCount <= (size_t)maxSines,
+                  "Sines takes the solar longitude's angles");
+    int64_t c = Centuries(moment);
+    int64_t c2 = Mul(c, c, 64);
+    int64_t angles[angleCount];
+    for (uint32_t i = 0; i < solarCount; i++)
+    {
+        angles[i] = s_solar[i].y + Mul(s_solar[i].z, c, 48);
+    }
+    angles[solarCount] = DEG(17763, 2) + Mul(DEG(3599901848, 5), c, 48) + DEG(90, 0);
+    angles[solarCount + 1] =
+        DEG(12490, 2) - Mul(DEG(1934134, 3), c, 48) + Mul(DEG(2063, 6), c2, 32);
+    angles[solarCount + 2] =
+        DEG(20111, 2) + Mul(DEG(720015377, 4), c, 48) + Mul(DEG(57, 5), c2, 32);
+    int64_t sines[angleCount];
+    Sines(angles, sines, angleCount);
+    int64_t sum = 0;
+    for (uint32_t i = 0; i < solarCount; i++)
+    {
+        sum += Mul(s_solar[i].x, sines[i], 30);
     }
     int64_t lambda =
         Mul(sum, s_solarScale, 62) + DEG(2827771834, 7) + Mul(DEG(3600076953744, 8), c, 48);
-    int64_t aberration =
-        Mul(DEG(974, 7), Cosine(DEG(17763, 2) + Mul(DEG(3599901848, 5), c, 48)), 62) - DEG(5575, 6);
-    int64_t c2 = Mul(c, c, 64);
-    int64_t a = DEG(12490, 2) - Mul(DEG(1934134, 3), c, 48) + Mul(DEG(2063, 6), c2, 32);
-    int64_t b = DEG(20111, 2) + Mul(DEG(720015377, 4), c, 48) + Mul(DEG(57, 5), c2, 32);
-    int64_t nutation = -Mul(DEG(4778, 6), Sine(a), 62) - Mul(DEG(3667, 7), Sine(b), 62);
+    int64_t aberration = Mul(DEG(974, 7), sines[solarCount], 62) - DEG(5575, 6);
+    int64_t nutation = -Mul(DEG(4778, 6), sines[solarCount + 1], 62) -
+                       Mul(DEG(3667, 7), sines[solarCount + 2], 62);
     return FloorMod(lambda + aberration + nutation, s_turn);
 }
 
@@ -461,23 +527,41 @@ int64_t mlocAstroNewMoon(int64_t n)
                 SquaredValue(&s_moonArgument, c);
     int64_t omega =
         DEG(1247746, 4) + DegreesTimes(-156375588, 100000000, k) + SquaredValue(&s_omega, c);
-    int64_t sum = -Mul(DAYS40(17, 5), Sine(omega), 62);
-    for (uint32_t i = 0; i < sizeof(s_lunar) / sizeof(s_lunar[0]); i++)
+    enum
+    {
+        lunarCount = sizeof(s_lunar) / sizeof(s_lunar[0]),
+        planetaryCount = sizeof(s_planetary) / sizeof(s_planetary[0]),
+        // The lunar and planetary terms, then omega's and the 0.000325's.
+        angleCount = lunarCount + planetaryCount + 2,
+    };
+    static_assert((size_t)angleCount <= (size_t)maxSines, "Sines takes the new moon's angles");
+    int64_t angles[angleCount];
+    for (uint32_t i = 0; i < lunarCount; i++)
     {
         const LunarTerm* t = &s_lunar[i];
-        int64_t term = Mul(t->v,
-                           Sine(t->x * FloorMod(m, s_turn) + t->y * FloorMod(mp, s_turn) +
-                                t->z * FloorMod(f, s_turn)),
-                           62);
+        angles[i] =
+            t->x * FloorMod(m, s_turn) + t->y * FloorMod(mp, s_turn) + t->z * FloorMod(f, s_turn);
+    }
+    for (uint32_t i = 0; i < planetaryCount; i++)
+    {
+        angles[lunarCount + i] = s_planetary[i].i + DegreesTimes(s_planetary[i].j, 1000000, k);
+    }
+    angles[lunarCount + planetaryCount] = omega;
+    angles[lunarCount + planetaryCount + 1] =
+        DEG(29977, 2) + Mul(DEG(1328475848, 7), c, 48) - Mul(DEG(9173, 6), c2, 32);
+    int64_t sines[angleCount];
+    Sines(angles, sines, angleCount);
+    int64_t sum = -Mul(DAYS40(17, 5), sines[lunarCount + planetaryCount], 62);
+    for (uint32_t i = 0; i < lunarCount; i++)
+    {
+        const LunarTerm* t = &s_lunar[i];
+        int64_t term = Mul(t->v, sines[i], 62);
         sum += t->e == 0 ? term : Mul(term, t->e == 1 ? e : e2, 40);
     }
-    sum +=
-        Mul(DAYS40(325, 6),
-            Sine(DEG(29977, 2) + Mul(DEG(1328475848, 7), c, 48) - Mul(DEG(9173, 6), c2, 32)), 62);
-    for (uint32_t i = 0; i < sizeof(s_planetary) / sizeof(s_planetary[0]); i++)
+    sum += Mul(DAYS40(325, 6), sines[lunarCount + planetaryCount + 1], 62);
+    for (uint32_t i = 0; i < planetaryCount; i++)
     {
-        const PlanetaryTerm* t = &s_planetary[i];
-        sum += Mul(t->l, Sine(t->i + DegreesTimes(t->j, 1000000, k)), 62);
+        sum += Mul(s_planetary[i].l, sines[lunarCount + i], 62);
     }
     int64_t dynamical = approx + RoundDiv(sum, 256);
     return dynamical - mlocAstroDeltaT(dynamical);
