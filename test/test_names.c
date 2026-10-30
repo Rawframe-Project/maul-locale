@@ -248,6 +248,32 @@ static void TestRefusals(void)
           "null pointers, a part function, values out of range, data without the names");
 }
 
+// A failed call leaves its output as it was, buffer and length: each
+// failure but mloc_errorCapacity.
+static void TestFailedOutputs(void)
+{
+    mlocLocale en;
+    char buffer[32];
+    memset(buffer, 0xA5, sizeof buffer);
+    char kept[sizeof buffer];
+    memcpy(kept, buffer, sizeof buffer);
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer), .length = 99};
+    mlocNameOptions badForm = {.form = (mlocNameForm)8};
+    mlocLocaleNameOptions badCase = {.capitalization = (mlocCapitalization)4};
+    mlocDataSet builtinAlone = {s_sources, 1};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocGetName(&s_data, &en, mloc_nameRegion, "USA", 3, nullptr, &output) ==
+                  mloc_errorSyntax &&
+              mlocGetName(&builtinAlone, &en, mloc_nameRegion, "US", 2, nullptr, &output) ==
+                  mloc_errorNotFound &&
+              mlocGetName(&s_data, &en, mloc_nameRegion, "US", 2, &badForm, &output) ==
+                  mloc_errorInvalid &&
+              mlocGetLocaleName(&builtinAlone, &en, &en, nullptr, &output) == mloc_errorNotFound &&
+              mlocGetLocaleName(&s_data, &en, &en, &badCase, &output) == mloc_errorInvalid &&
+              output.length == 99 && memcmp(buffer, kept, sizeof buffer) == 0,
+          "a name refused leaves the output");
+}
+
 // Whether a locale's name in a display locale is as expected.
 static bool LocaleNamed(const char* display, const char* id, mlocLanguageDisplay mode,
                         mlocNameForm form, mlocCapitalization capitalization, mlocResult status,
@@ -394,5 +420,6 @@ int main(void)
     TestOutput();
     TestRefusals();
     TestLocaleName();
+    TestFailedOutputs();
     return s_failures == 0 ? 0 : 1;
 }
