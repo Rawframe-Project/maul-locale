@@ -177,7 +177,53 @@ static void TestCombine(void)
     mlocLocale out = d;
     CHECK(mlocCombineMatch(&d, &s, &out) == mloc_errorLimit && memcmp(&out, &d, sizeof(out)) == 0,
           "too long together, the output unchanged");
-    CHECK(mlocCombineMatch(&d, &d, &d) == mloc_success, "in place");
+    // The output either input itself, overlapping either by most to one
+    // byte, or right beside it. A locale is bytes alone, so one at any
+    // offset is aligned.
+    enum
+    {
+        size = sizeof(mlocLocale),
+    };
+    static const size_t s_overlapping[] = {0, size / 4, size / 2, 3 * size / 4, size - 1};
+    static unsigned char s_bytes[3 * size];
+    mlocLocale de;
+    mlocLocale en;
+    mlocLocale apart;
+    bool refused = mlocParseLocale("de-u-co-phonebk", 15, &de).status == mloc_success &&
+                   mlocParseLocale("en-GB", 5, &en).status == mloc_success &&
+                   mlocCombineMatch(&de, &en, &apart) == mloc_success;
+    bool beside = refused;
+    for (size_t i = 0; i <= sizeof s_overlapping / sizeof s_overlapping[0]; i++)
+    {
+        size_t shift = i < sizeof s_overlapping / sizeof s_overlapping[0] ? s_overlapping[i] : size;
+        for (int which = 0; which < 2; which++)
+        {
+            for (int side = 0; side < 2; side++)
+            {
+                memset(s_bytes, 0xA5, sizeof s_bytes);
+                // The input the output may meet, the other input apart.
+                unsigned char* met = s_bytes + size + (side == 0 ? 0 : shift);
+                unsigned char* target = s_bytes + size + (side == 0 ? shift : 0);
+                memcpy(met, which == 0 ? &de : &en, size);
+                mlocLocale other = which == 0 ? en : de;
+                unsigned char before[sizeof s_bytes];
+                memcpy(before, s_bytes, sizeof s_bytes);
+                const mlocLocale* desired = which == 0 ? (const mlocLocale*)met : &other;
+                const mlocLocale* supported = which == 0 ? &other : (const mlocLocale*)met;
+                mlocResult combined = mlocCombineMatch(desired, supported, (mlocLocale*)target);
+                if (shift < size)
+                {
+                    refused = refused && combined == mloc_errorInvalid &&
+                              memcmp(before, s_bytes, sizeof s_bytes) == 0;
+                    continue;
+                }
+                beside = beside && combined == mloc_success && memcmp(target, &apart, size) == 0 &&
+                         memcmp(met, which == 0 ? &de : &en, size) == 0;
+            }
+        }
+    }
+    CHECK(refused, "an output that is or overlaps either input refused, nothing written");
+    CHECK(beside, "an output right beside either input, on either side, written");
     CHECK(mlocCombineMatch(nullptr, &s, &out) == mloc_errorInvalid &&
               mlocCombineMatch(&d, nullptr, &out) == mloc_errorInvalid &&
               mlocCombineMatch(&d, &s, nullptr) == mloc_errorInvalid,
