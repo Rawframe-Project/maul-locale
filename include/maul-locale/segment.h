@@ -35,7 +35,8 @@ extern "C"
 #endif
 
     // What a segmenter finds.
-    typedef enum mlocSegmentKind
+    typedef int32_t mlocSegmentKind;
+    enum
     {
         // Word boundaries: between them lies a word, a run of spaces or a
         // punctuation mark, which the caller tells apart.
@@ -44,7 +45,7 @@ extern "C"
         mloc_segmentSentence = 1,
         // Line break opportunities, each mandatory or not.
         mloc_segmentLine = 2,
-    } mlocSegmentKind;
+    };
 
     // A caller's word segmenter for Thai, Lao, Khmer and Burmese, which
     // write words without spaces, as Maul Unicode's muniComplexBreakFunction: it

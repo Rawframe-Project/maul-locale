@@ -130,7 +130,7 @@ static void Write(int message)
 // them.
 static size_t s_parts;
 
-static void CountPart(void* context, uint32_t part, size_t start, size_t length)
+static void CountPart(void* context, mlocPart part, size_t start, size_t length)
 {
     (void)context;
     (void)part;

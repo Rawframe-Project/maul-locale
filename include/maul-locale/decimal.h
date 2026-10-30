@@ -25,12 +25,13 @@ extern "C"
 #define MLOC_MAX_DECIMAL_EXPONENT 999999
 
     // What a decimal is.
-    typedef enum mlocDecimalKind
+    typedef int32_t mlocDecimalKind;
+    enum
     {
         mloc_decimalFinite = 0,
         mloc_decimalInfinity = 1,
         mloc_decimalNaN = 2,
-    } mlocDecimalKind;
+    };
 
     // A decimal number with the fraction digits it shows. Make one with
     // mlocMakeDecimal, mlocMakeUnsignedDecimal or mlocParseDecimal.
@@ -56,7 +57,8 @@ extern "C"
     // positive infinity, negative infinity, away from zero or toward
     // zero; or to the nearer, a tie going as named. The zero value is
     // ECMA-402's default.
-    typedef enum mlocRoundingMode
+    typedef int32_t mlocRoundingMode;
+    enum
     {
         mloc_roundHalfExpand = 0,
         mloc_roundHalfEven = 1,
@@ -67,7 +69,7 @@ extern "C"
         mloc_roundFloor = 6,
         mloc_roundExpand = 7,
         mloc_roundTrunc = 8,
-    } mlocRoundingMode;
+    };
 
     // The operands CLDR's plural rules read (UTS #35 Part 3). An integer
     // of more than 18 digits is 10^18 plus its low 18 digits: it equals

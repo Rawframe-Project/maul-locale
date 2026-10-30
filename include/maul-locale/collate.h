@@ -26,7 +26,8 @@ extern "C"
 
     // The levels compared (ks): base letters, then accents, case and
     // variants, punctuation when shifted, then the code points.
-    typedef enum mlocCollationStrength
+    typedef int32_t mlocCollationStrength;
+    enum
     {
         mloc_strengthOfLocale = 0,
         mloc_strengthPrimary = 1,
@@ -34,43 +35,47 @@ extern "C"
         mloc_strengthTertiary = 3,
         mloc_strengthQuaternary = 4,
         mloc_strengthIdentical = 5,
-    } mlocCollationStrength;
+    };
 
     // Whether spaces, punctuation and, by the max variable, symbols are
     // ignored until the quaternary level (ka).
-    typedef enum mlocCollationAlternate
+    typedef int32_t mlocCollationAlternate;
+    enum
     {
         mloc_alternateOfLocale = 0,
         mloc_alternateNonIgnorable = 1,
         mloc_alternateShifted = 2,
-    } mlocCollationAlternate;
+    };
 
     // The last group that is ignorable when shifted (kv).
-    typedef enum mlocCollationMaxVariable
+    typedef int32_t mlocCollationMaxVariable;
+    enum
     {
         mloc_maxVariableOfLocale = 0,
         mloc_maxVariableSpace = 1,
         mloc_maxVariablePunctuation = 2,
         mloc_maxVariableSymbol = 3,
         mloc_maxVariableCurrency = 4,
-    } mlocCollationMaxVariable;
+    };
 
     // Which case sorts first at the tertiary level (kf).
-    typedef enum mlocCollationCaseFirst
+    typedef int32_t mlocCollationCaseFirst;
+    enum
     {
         mloc_caseFirstOfLocale = 0,
         mloc_caseFirstOff = 1,
         mloc_caseFirstLower = 2,
         mloc_caseFirstUpper = 3,
-    } mlocCollationCaseFirst;
+    };
 
     // A switch of the options: the locale's, off or on.
-    typedef enum mlocCollationSwitch
+    typedef int32_t mlocCollationSwitch;
+    enum
     {
         mloc_switchOfLocale = 0,
         mloc_switchOff = 1,
         mloc_switchOn = 2,
-    } mlocCollationSwitch;
+    };
 
     // A collator's options; the zero value takes each from the locale,
     // and from CLDR's root where the locale says nothing (tertiary,

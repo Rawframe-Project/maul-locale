@@ -32,7 +32,8 @@ extern "C"
     // the locale lacks is its symbol; a symbol it lacks is the code; a name of
     // a plural category is the other category's, else the currency's name,
     // else the code.
-    typedef enum mlocCurrencyDisplay
+    typedef int32_t mlocCurrencyDisplay;
+    enum
     {
         mloc_currencySymbol = 0,
         mloc_currencyNarrowSymbol = 1,
@@ -41,25 +42,27 @@ extern "C"
         mloc_currencyVariantSymbol = 4,
         mloc_currencyHidden = 5,
         mloc_currencyName = 6,
-    } mlocCurrencyDisplay;
+    };
 
     // Which digits and rounding the zero precision takes: the currency's
     // usual ones, or those of its cash (Swiss francs to 0.05).
-    typedef enum mlocCurrencyUsage
+    typedef int32_t mlocCurrencyUsage;
+    enum
     {
         mloc_currencyUsageStandard = 0,
         mloc_currencyUsageCash = 1,
-    } mlocCurrencyUsage;
+    };
 
     // Which currency pattern: the locale's choice (its -u-cf keyword),
     // the standard one, or the accounting one ("($3.00)"), as ECMA-402's
     // currencySign.
-    typedef enum mlocCurrencySign
+    typedef int32_t mlocCurrencySign;
+    enum
     {
         mloc_currencySignLocale = 0,
         mloc_currencySignStandard = 1,
         mloc_currencySignAccounting = 2,
-    } mlocCurrencySign;
+    };
 
     // A currency formatter's options; the zero value is the default.
     typedef struct mlocCurrencyOptions

@@ -28,68 +28,74 @@ extern "C"
     // and to two significant digits otherwise. Compact notation groups
     // with two digits before the first separator unless the grouping
     // option says otherwise, and takes the decimal style only.
-    typedef enum mlocNotation
+    typedef int32_t mlocNotation;
+    enum
     {
         mloc_notationStandard = 0,
         mloc_notationScientific = 1,
         mloc_notationEngineering = 2,
         mloc_notationCompactShort = 3,
         mloc_notationCompactLong = 4,
-    } mlocNotation;
+    };
 
     // What a number stands for: itself, or a ratio shown as a percent or
     // per mille (the value times 100 or 1000, before rounding), in the
     // locale's percent pattern.
-    typedef enum mlocNumberStyle
+    typedef int32_t mlocNumberStyle;
+    enum
     {
         mloc_numberDecimal = 0,
         mloc_numberPercent = 1,
         mloc_numberPerMille = 2,
-    } mlocNumberStyle;
+    };
 
     // When the integer digits are grouped: as the locale prefers
     // (Spanish writes 1234 but 12 345), always, only with at least two
     // digits before the first separator, or never.
-    typedef enum mlocGrouping
+    typedef int32_t mlocGrouping;
+    enum
     {
         mloc_groupingAuto = 0,
         mloc_groupingAlways = 1,
         mloc_groupingMin2 = 2,
         mloc_groupingOff = 3,
-    } mlocGrouping;
+    };
 
     // Which numbers show a sign (ECMA-402's signDisplay): negative ones,
     // negative zero included; every one but NaN; none; every one but
     // zero; or negative ones but zero.
-    typedef enum mlocSignDisplay
+    typedef int32_t mlocSignDisplay;
+    enum
     {
         mloc_signAuto = 0,
         mloc_signAlways = 1,
         mloc_signNever = 2,
         mloc_signExceptZero = 3,
         mloc_signNegative = 4,
-    } mlocSignDisplay;
+    };
 
     // Which digit limits round the number (ECMA-402's roundingType): none
     // (the decimal shows its own digits), fraction digits, significant
     // digits, or both, the result with more or with less precision
     // winning.
-    typedef enum mlocPrecisionKind
+    typedef int32_t mlocPrecisionKind;
+    enum
     {
         mloc_precisionNone = 0,
         mloc_precisionFraction = 1,
         mloc_precisionSignificant = 2,
         mloc_precisionMorePrecision = 3,
         mloc_precisionLessPrecision = 4,
-    } mlocPrecisionKind;
+    };
 
     // Whether a rounded integer keeps the fraction zeros the minimum
     // fraction digits ask for (ECMA-402's trailingZeroDisplay).
-    typedef enum mlocTrailingZeros
+    typedef int32_t mlocTrailingZeros;
+    enum
     {
         mloc_trailingZerosAuto = 0,
         mloc_trailingZerosStripIfInteger = 1,
-    } mlocTrailingZeros;
+    };
 
     // How a number is rounded. Fields a kind does not read must be 0.
     typedef struct mlocPrecision
@@ -135,7 +141,8 @@ extern "C"
 
     // The parts of a formatted number the output's part function
     // receives.
-    typedef enum mlocNumberPart
+    typedef int32_t mlocNumberPart;
+    enum
     {
         mloc_numberPartInteger = 0,
         mloc_numberPartGroup = 1,
@@ -161,7 +168,7 @@ extern "C"
         // A unit's name ("m", "meters"), the spaces around it being
         // literal.
         mloc_numberPartUnit = 17,
-    } mlocNumberPart;
+    };
 
     // In a range's parts, the end a part belongs to, added to its
     // mlocNumberPart: the start, the end, or neither for what both share
@@ -245,11 +252,12 @@ extern "C"
     // and per mille signs read where the pattern has none, affixes alone.
     // Strict: the grouping sizes, the strict separator classes, the
     // pattern's full affixes, bidi controls the only ignorables.
-    typedef enum mlocParseMode
+    typedef int32_t mlocParseMode;
+    enum
     {
         mloc_parseLenient = 0,
         mloc_parseStrict = 1,
-    } mlocParseMode;
+    };
 
     /// Reads a number as a person types it in the formatter's locale
     /// (ICU's DecimalFormat::parse): its digits, any Unicode decimal

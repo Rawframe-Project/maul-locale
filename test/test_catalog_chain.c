@@ -275,7 +275,7 @@ static void TestCacheFull(Set* s)
     free(cache);
 }
 
-static void Part(void* context, uint32_t part, size_t start, size_t length)
+static void Part(void* context, mlocPart part, size_t start, size_t length)
 {
     size_t* seen = context;
     seen[0]++;

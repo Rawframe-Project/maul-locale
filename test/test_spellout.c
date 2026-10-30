@@ -250,7 +250,7 @@ static void TestRuleSets(void)
           "an index past the last, a null pointer, data without the rules");
 }
 
-static void Ignore(void* context, uint32_t part, size_t start, size_t length)
+static void Ignore(void* context, mlocPart part, size_t start, size_t length)
 {
     (void)context;
     (void)part;

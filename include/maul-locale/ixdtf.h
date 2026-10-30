@@ -22,7 +22,8 @@ extern "C"
     // The grammar's goals a date-time string may match, as bits; a parse
     // tries those allowed in this order and the first that matches wins,
     // as every list of goals in ECMA-262 has them.
-    typedef enum mlocTemporalFormat
+    typedef uint32_t mlocTemporalFormat;
+    enum
     {
         // TemporalDateTimeString[+Zoned]: a time zone annotation required.
         mloc_formatZonedDateTime = 1,
@@ -36,7 +37,7 @@ extern "C"
         mloc_formatMonthDay = 16,
         // TemporalYearMonthString.
         mloc_formatYearMonth = 32,
-    } mlocTemporalFormat;
+    };
 
     // A part of the parsed text: its first byte and length; a length of 0
     // when the part is absent.
@@ -54,7 +55,7 @@ extern "C"
     typedef struct mlocTemporalParse
     {
         // The goal that matched, one of mlocTemporalFormat.
-        uint32_t format;
+        mlocTemporalFormat format;
         int32_t year;
         uint8_t month;
         uint8_t day;
@@ -92,7 +93,7 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocParseTemporalString(const char* text, size_t length,
-                                                               uint32_t formats,
+                                                               mlocTemporalFormat formats,
                                                                mlocTemporalParse* parseOut);
 
     /// Reads a UTC offset (ECMA-262's ParseDateTimeUTCOffset): ±HH,
@@ -172,7 +173,8 @@ extern "C"
     // How a string shows seconds (ToSecondsStringPrecisionRecord's
     // [[Precision]]). The writers truncate; a caller rounds first, as each
     // toString does.
-    typedef enum mlocSecondsPrecision
+    typedef int32_t mlocSecondsPrecision;
+    enum
     {
         // As many digits of a fraction as it needs, none for a whole second.
         mloc_secondsAuto = 0,
@@ -180,26 +182,28 @@ extern "C"
         mloc_secondsMinute = 1,
         // Seconds and the options' fractionDigits digits, 0 to 9.
         mloc_secondsDigits = 2,
-    } mlocSecondsPrecision;
+    };
 
     // When a string shows its calendar annotation (Temporal's
     // calendarName option): auto leaves out the ISO calendar's.
-    typedef enum mlocShowCalendar
+    typedef int32_t mlocShowCalendar;
+    enum
     {
         mloc_showCalendarAuto = 0,
         mloc_showCalendarAlways = 1,
         mloc_showCalendarNever = 2,
         mloc_showCalendarCritical = 3,
-    } mlocShowCalendar;
+    };
 
     // When a zoned date-time's string shows its time zone annotation
     // (Temporal's timeZoneName option).
-    typedef enum mlocShowTimeZone
+    typedef int32_t mlocShowTimeZone;
+    enum
     {
         mloc_showTimeZoneAuto = 0,
         mloc_showTimeZoneNever = 1,
         mloc_showTimeZoneCritical = 2,
-    } mlocShowTimeZone;
+    };
 
     // What a Temporal string shows, as its toString's options give it.
     // Zeroed, it shows a fraction as long as needed, the calendar unless

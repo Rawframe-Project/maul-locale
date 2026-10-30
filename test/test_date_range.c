@@ -72,7 +72,7 @@ typedef struct Parts
     size_t length;
 } Parts;
 
-static void Part(void* context, uint32_t part, size_t start, size_t length)
+static void Part(void* context, mlocPart part, size_t start, size_t length)
 {
     static const char s_kinds[] = "LGyrUMEdhmsfaz";
     Parts* p = context;
@@ -662,7 +662,7 @@ static long Units(const char* text, size_t bytes)
     return units;
 }
 
-static void Span(void* context, uint32_t part, size_t start, size_t length)
+static void Span(void* context, mlocPart part, size_t start, size_t length)
 {
     Spans* s = context;
     uint32_t side = part & 0x300;

@@ -40,12 +40,13 @@ extern "C"
     // equal to the strength; or a pattern element with a base weight
     // only (no accent, no case) matching the text's with any of the
     // level; or either side's base weight matching the other's.
-    typedef enum mlocSearchComparison
+    typedef int32_t mlocSearchComparison;
+    enum
     {
         mloc_searchExact = 0,
         mloc_searchPatternBaseWildcard = 1,
         mloc_searchAnyBaseWildcard = 2,
-    } mlocSearchComparison;
+    };
 
     // A searcher's options; the zero value compares exactly.
     typedef struct mlocSearchOptions

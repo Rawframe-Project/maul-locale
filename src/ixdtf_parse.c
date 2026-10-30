@@ -648,7 +648,7 @@ static bool Match(const char* text, size_t length, uint32_t formats, Fields* f, 
     return false;
 }
 
-mlocResult mlocParseTemporalString(const char* text, size_t length, uint32_t formats,
+mlocResult mlocParseTemporalString(const char* text, size_t length, mlocTemporalFormat formats,
                                    mlocTemporalParse* parseOut)
 {
     Fields f;

@@ -39,7 +39,7 @@ typedef struct Parts
     size_t count;
 } Parts;
 
-static void Collect(void* context, uint32_t part, size_t start, size_t length)
+static void Collect(void* context, mlocPart part, size_t start, size_t length)
 {
     Parts* parts = context;
     if (parts->count < sizeof parts->list / sizeof parts->list[0])

@@ -179,7 +179,7 @@ typedef struct Tiling
 
 // The message's own parts tile the text in order; the others lie inside
 // the one before them.
-static void CheckPart(void* context, uint32_t part, size_t start, size_t length)
+static void CheckPart(void* context, mlocPart part, size_t start, size_t length)
 {
     Tiling* t = context;
     if ((part & 0xFF) >= mloc_messagePartText)

@@ -64,7 +64,8 @@ extern "C"
     // Why a message did not compile: a syntax error (the text is not
     // well-formed MF2, or not well-formed UTF-8), or one of the data
     // model errors of UTS #35 Part 9.
-    typedef enum mlocMessageError
+    typedef int32_t mlocMessageError;
+    enum
     {
         mloc_messageErrorNone = 0,
         mloc_messageErrorSyntax = 1,
@@ -82,7 +83,7 @@ extern "C"
         mloc_messageErrorDuplicateOptionName = 6,
         // Two variants have the same keys.
         mloc_messageErrorDuplicateVariant = 7,
-    } mlocMessageError;
+    };
 
     /// Compiles a message from its MF2 text into caller memory. Call it
     /// with a null bufferOut and a capacity of 0 to learn the capacity
@@ -161,7 +162,8 @@ extern "C"
     // its fields by pointer (to outlive the call), which mloc:duration
     // formats; a list is its items' texts by pointer (to outlive the
     // call), which mloc:list formats and selects by its count.
-    typedef enum mlocMessageValueKind
+    typedef int32_t mlocMessageValueKind;
+    enum
     {
         mloc_messageValueString = 0,
         mloc_messageValueInteger = 1,
@@ -177,7 +179,7 @@ extern "C"
         mloc_messageValueZonedDateTime = 11,
         mloc_messageValueDuration = 12,
         mloc_messageValueList = 13,
-    } mlocMessageValueKind;
+    };
 
     // A value given to a message: one of the kinds, its fields by kind.
     typedef struct mlocMessageValue
@@ -239,7 +241,8 @@ extern "C"
     // What went wrong in one expression while formatting (UTS #35 Part 9's
     // resolution and function errors); the message is still written,
     // with a fallback where the expression would be.
-    typedef enum mlocMessageFaultKind
+    typedef int32_t mlocMessageFaultKind;
+    enum
     {
         // No fault: what a function's entries return on success.
         mloc_messageFaultNone = 0,
@@ -252,7 +255,7 @@ extern "C"
         mloc_messageFaultUnsupportedOperation = 7,
         // A program function's own failure.
         mloc_messageFaultFunction = 8,
-    } mlocMessageFaultKind;
+    };
 
     // A fault and the byte offset in the message's source of the
     // expression or selector where it arose.
@@ -296,7 +299,8 @@ extern "C"
     } mlocMessageResolved;
 
     // What a function receives as its operand or an option's value.
-    typedef enum mlocMessageOperandKind
+    typedef int32_t mlocMessageOperandKind;
+    enum
     {
         // The expression has no operand.
         mloc_messageOperandNone = 0,
@@ -334,7 +338,7 @@ extern "C"
         mloc_messageOperandDuration = 11,
         // A mloc:list value as its items, itemCount of them.
         mloc_messageOperandList = 12,
-    } mlocMessageOperandKind;
+    };
 
     typedef struct mlocMessageOperand
     {
@@ -396,7 +400,8 @@ extern "C"
 
     // How a formatted message isolates its placeholders (UTS #35 Part 9,
     // "Handling Bidirectional Text").
-    typedef enum mlocMessageIsolation
+    typedef int32_t mlocMessageIsolation;
+    enum
     {
         // The Default Bidi Strategy: each placeholder in FSI, LRI or RLI
         // and PDI by its direction, a left-to-right one left bare in a
@@ -404,7 +409,7 @@ extern "C"
         mloc_messageIsolationDefault = 0,
         // No isolation: the text as the placeholders format.
         mloc_messageIsolationNone = 1,
-    } mlocMessageIsolation;
+    };
 
     // A message formatter's options; the zero value is the default.
     typedef struct mlocMessageOptions
@@ -497,7 +502,8 @@ extern "C"
     // for the number functions, mlocDatePart for the date functions), its
     // range inside the placeholder's. The message's own parts tile its text in
     // order.
-    typedef enum mlocMessagePart
+    typedef int32_t mlocMessagePart;
+    enum
     {
         // A text of the pattern.
         mloc_messagePartText = 0x80,
@@ -513,7 +519,7 @@ extern "C"
         // An isolation mark: LRI, RLI or FSI before a placeholder, PDI
         // after it.
         mloc_messagePartIsolation = 0x86,
-    } mlocMessagePart;
+    };
 
     /// Formats a bound message with its arguments: the pattern selected,
     /// each text written, each placeholder resolved where it stands and
@@ -660,7 +666,7 @@ extern "C"
     ///         or an index the message does not have.
     /// @par Thread safety
     /// Safe from any thread.
-    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartInfo(const void* bound, uint32_t part,
+    MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part,
                                                               mlocMessagePartInfo* infoOut);
 
     /// Reads a placeholder's or markup's option or attribute by index, the
@@ -676,7 +682,7 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocGetMessagePartParameter(
-        const void* bound, uint32_t part, uint32_t index, mlocMessageParameter* parameterOut);
+        const void* bound, mlocPart part, uint32_t index, mlocMessageParameter* parameterOut);
 
     /// Finds a placeholder's or markup's option by name ("u:id" for its
     /// identifier, which formatting to parts serves), as
@@ -692,7 +698,7 @@ extern "C"
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
-    mlocFindMessagePartOption(const void* bound, uint32_t part, const char* name, size_t length,
+    mlocFindMessagePartOption(const void* bound, mlocPart part, const char* name, size_t length,
                               mlocMessageParameter* parameterOut);
 
 #ifdef __cplusplus

@@ -130,12 +130,20 @@ extern "C"
         size_t offset;
     } mlocTextResult;
 
+    // A part of a formatted text as a part function receives it, a layout
+    // of bits: its kind in the low byte, one of the kinds of the call that
+    // writes it (mlocNumberPart, mlocDatePart, mlocListPart,
+    // mlocInflectionPart, mlocMessagePart), and the bits above it the
+    // kind's own (a range's end, a message expression's index), as each
+    // kind says.
+    typedef uint32_t mlocPart;
+
     // Receives one part of a formatted text, such as a number's integer
     // digits: the part's kind (each formatting part names its own), and its
     // byte range in the output. It may call the library back, the call it is
     // inside of included, but not make again an object that call uses or write
     // its output.
-    typedef void (*mlocPartFunction)(void* context, uint32_t part, size_t start, size_t length);
+    typedef void (*mlocPartFunction)(void* context, mlocPart part, size_t start, size_t length);
 
     // Where every formatting call writes its UTF-8 text. Set buffer and
     // capacity (a null buffer with capacity 0 measures); the call sets length
@@ -155,25 +163,27 @@ extern "C"
 
     // A text's direction: a locale's (CLDR's character order), or a
     // message part's, which may be unknown.
-    typedef enum mlocDirection
+    typedef int32_t mlocDirection;
+    enum
     {
         mloc_directionUnknown = 0,
         mloc_directionLeftToRight = 1,
         mloc_directionRightToLeft = 2,
-    } mlocDirection;
+    };
 
     // Where a formatted text stands, which decides whether its first word
     // is capitalized (CLDR's context transforms): mid-sentence as the data
     // writes it; at the beginning of a sentence, titlecased; an item of a
     // UI list or menu, or alone (a label), titlecased when the locale's
     // data asks for it there.
-    typedef enum mlocCapitalization
+    typedef int32_t mlocCapitalization;
+    enum
     {
         mloc_capitalizationNone = 0,
         mloc_capitalizationSentence = 1,
         mloc_capitalizationListOrMenu = 2,
         mloc_capitalizationStandAlone = 3,
-    } mlocCapitalization;
+    };
 
     // A version: major, minor and patch.
     typedef struct mlocVersion

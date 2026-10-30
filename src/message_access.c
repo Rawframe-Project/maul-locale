@@ -50,7 +50,7 @@ static void Parameters(const BoundHeader* h, uint32_t kind, uint32_t index, uint
     *countOut = mlocMessageField(&h->view, kind, index, field + 1);
 }
 
-mlocResult mlocGetMessagePartInfo(const void* bound, uint32_t part, mlocMessagePartInfo* infoOut)
+mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part, mlocMessagePartInfo* infoOut)
 {
     BoundHeader h;
     uint32_t kind = 0;
@@ -95,7 +95,7 @@ static void ReadParameter(const BoundHeader* h, uint32_t p, mlocMessageParameter
     }
 }
 
-mlocResult mlocGetMessagePartParameter(const void* bound, uint32_t part, uint32_t index,
+mlocResult mlocGetMessagePartParameter(const void* bound, mlocPart part, uint32_t index,
                                        mlocMessageParameter* parameterOut)
 {
     BoundHeader h;
@@ -116,7 +116,7 @@ mlocResult mlocGetMessagePartParameter(const void* bound, uint32_t part, uint32_
     return mloc_success;
 }
 
-mlocResult mlocFindMessagePartOption(const void* bound, uint32_t part, const char* name,
+mlocResult mlocFindMessagePartOption(const void* bound, mlocPart part, const char* name,
                                      size_t length, mlocMessageParameter* parameterOut)
 {
     BoundHeader h;

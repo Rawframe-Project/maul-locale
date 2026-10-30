@@ -53,11 +53,12 @@ extern "C"
     } mlocTimeZone;
 
     // Which way mlocGetTimeZoneTransition looks.
-    typedef enum mlocTransitionDirection
+    typedef int32_t mlocTransitionDirection;
+    enum
     {
         mloc_transitionNext = 0,
         mloc_transitionPrevious = 1,
-    } mlocTransitionDirection;
+    };
 
     /// Finds a time zone by its identifier: an available Zone or Link
     /// name compared with ASCII letters folded, or an offset as
@@ -312,26 +313,28 @@ extern "C"
     // the earlier of a fold and moves forward across a gap by its
     // length; earlier takes the earlier and moves back; later takes the
     // later and moves forward; reject refuses both.
-    typedef enum mlocDisambiguation
+    typedef int32_t mlocDisambiguation;
+    enum
     {
         mloc_disambiguationCompatible = 0,
         mloc_disambiguationEarlier = 1,
         mloc_disambiguationLater = 2,
         mloc_disambiguationReject = 3,
-    } mlocDisambiguation;
+    };
 
     // How mlocGetInstantForOffset weighs an offset against the zone's
     // rules, as Temporal's offset option: use takes the offset alone;
     // ignore takes the zone's rules alone; prefer takes the offset when
     // the zone gives the date-time that offset, else the zone's rules;
     // reject refuses in that case.
-    typedef enum mlocOffsetOption
+    typedef int32_t mlocOffsetOption;
+    enum
     {
         mloc_offsetUse = 0,
         mloc_offsetIgnore = 1,
         mloc_offsetPrefer = 2,
         mloc_offsetReject = 3,
-    } mlocOffsetOption;
+    };
 
     // The instants a zone's local date-time names, in time order.
     typedef struct mlocPossibleInstants
@@ -399,7 +402,8 @@ extern "C"
     } mlocTimeDurationFields;
 
     // Temporal's units of a day and less.
-    typedef enum mlocTimeUnit
+    typedef int32_t mlocTimeUnit;
+    enum
     {
         mloc_timeUnitDay = 0,
         mloc_timeUnitHour = 1,
@@ -408,7 +412,7 @@ extern "C"
         mloc_timeUnitMillisecond = 4,
         mloc_timeUnitMicrosecond = 5,
         mloc_timeUnitNanosecond = 6,
-    } mlocTimeUnit;
+    };
 
     // How a difference of times is rounded and given (Temporal's
     // difference settings): rounded to a multiple of increment of
@@ -571,7 +575,8 @@ extern "C"
                                                      mlocTime* timeOut, int64_t* daysOut);
 
     // Temporal's units, a year to a nanosecond.
-    typedef enum mlocUnit
+    typedef int32_t mlocUnit;
+    enum
     {
         mloc_unitYear = 0,
         mloc_unitMonth = 1,
@@ -583,7 +588,7 @@ extern "C"
         mloc_unitMillisecond = 7,
         mloc_unitMicrosecond = 8,
         mloc_unitNanosecond = 9,
-    } mlocUnit;
+    };
 
     // A duration as Temporal keeps it inside (an Internal Duration
     // Record): the date fields and a time duration, of one sign.

@@ -20,7 +20,8 @@ extern "C"
 #endif
 
     // The fields, largest first, as mlocDurationValues holds them.
-    typedef enum mlocDurationField
+    typedef int32_t mlocDurationField;
+    enum
     {
         mloc_durationYears = 0,
         mloc_durationMonths = 1,
@@ -33,17 +34,18 @@ extern "C"
         mloc_durationMicroseconds = 8,
         mloc_durationNanoseconds = 9,
         mloc_durationFieldCount = 10,
-    } mlocDurationField;
+    };
 
     // The style of the whole, ECMA-402's style: short ("1 hr, 2 min"),
     // long ("1 hour, 2 minutes"), narrow ("1h 2m") or digital ("1:02:00").
-    typedef enum mlocDurationStyle
+    typedef int32_t mlocDurationStyle;
+    enum
     {
         mloc_durationStyleShort = 0,
         mloc_durationStyleLong = 1,
         mloc_durationStyleNarrow = 2,
         mloc_durationStyleDigital = 3,
-    } mlocDurationStyle;
+    };
 
     // A field's style. Default takes ECMA-402's: under digital, short for
     // years to days and numeric for the rest; after a numeric field,
@@ -53,7 +55,8 @@ extern "C"
     // fraction of the next larger field ("1.5 sec", "1:02:03.456").
     // Minutes and seconds after a numeric field are written with two
     // digits, and hours too where the locale pads them.
-    typedef enum mlocDurationFieldStyle
+    typedef int32_t mlocDurationFieldStyle;
+    enum
     {
         mloc_durationFieldDefault = 0,
         mloc_durationFieldLong = 1,
@@ -61,17 +64,18 @@ extern "C"
         mloc_durationFieldNarrow = 3,
         mloc_durationFieldNumeric = 4,
         mloc_durationFieldTwoDigit = 5,
-    } mlocDurationFieldStyle;
+    };
 
     // Whether a field of 0 is written. Default takes ECMA-402's: always
     // for hours to seconds under digital and for minutes and seconds
     // after a numeric field, auto otherwise.
-    typedef enum mlocDurationDisplay
+    typedef int32_t mlocDurationDisplay;
+    enum
     {
         mloc_durationDisplayDefault = 0,
         mloc_durationDisplayAuto = 1,
         mloc_durationDisplayAlways = 2,
-    } mlocDurationDisplay;
+    };
 
     // A duration formatter's options; the zero value is ECMA-402's
     // defaults. The numbering system is the locale's (its -u-nu).
