@@ -189,11 +189,13 @@ extern "C"
     /// @param mode         An mlocParseMode.
     /// @param anyCurrency  1 to read any currency, 0 for the formatter's
     ///                     alone.
-    /// @param decimalOut   Receives the amount.
+    /// @param decimalOut   Receives the amount; left unchanged on failure.
     /// @param codeOut      Receives the currency's code, three letters
-    ///                     (the formatter's when none was typed).
+    ///                     (the formatter's when none was typed); left
+    ///                     unchanged on failure.
     /// @param endOut       Receives the offset after the amount, or on
-    ///                     mloc_errorSyntax the offset reading stopped at.
+    ///                     mloc_errorSyntax the offset reading stopped at;
+    ///                     left unchanged on any other failure.
     /// @return mloc_success; mloc_errorSyntax when no amount is read (or
     ///         no currency, with anyCurrency); mloc_errorLimit as for
     ///         mlocNumberFormatter_Parse, and with anyCurrency for a chain of more
