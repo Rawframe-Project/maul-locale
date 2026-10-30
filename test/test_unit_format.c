@@ -303,9 +303,11 @@ static void TestNames(void)
                   mloc_errorInvalid &&
               mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, (mlocUnitWidth)4, &output) ==
                   mloc_errorInvalid &&
+              mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, (mlocUnitWidth)-1, &output) ==
+                  mloc_errorInvalid &&
               mlocGetUnitDisplayName(&s_data, &locale, "meter", 5, mloc_unitWidthLong, nullptr) ==
                   mloc_errorInvalid,
-          "a null pointer, an empty unit, a width out of range");
+          "a null pointer, an empty unit, a width out of range either way");
 }
 
 static void TestMixed(void)
@@ -369,6 +371,16 @@ static void TestMixed(void)
     mlocUnitFormatter formatter;
     mlocLocale locale;
     mlocUnitOptions compact = {.number.notation = mloc_notationCompactShort};
+    // Below the first value too: an enumeration is a signed int where the
+    // compiler makes it one, as MSVC's ABI does.
+    mlocUnitOptions narrow = {.width = (mlocUnitWidth)-1};
+    mlocUnitOptions south = {.coordinate = (mlocCoordinate)-1};
+    CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitUnitFormatter(&s_data, &locale, "meter", 5, &narrow, &formatter) ==
+                  mloc_errorInvalid &&
+              mlocInitUnitFormatter(&s_data, &locale, "degree", 6, &south, &formatter) ==
+                  mloc_errorInvalid,
+          "a width or a coordinate below the first refused");
     CHECK(mlocParseLocale("en", 2, &locale).status == mloc_success &&
               mlocInitUnitFormatter(&s_data, &locale, "foot-and-second", 15, nullptr, &formatter) ==
                   mloc_errorInvalid &&
