@@ -29,7 +29,8 @@ static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
 
 static bool ValidOptions(const mlocUnitOptions* o)
 {
-    return o->width <= mloc_unitWidthNumeric && o->coordinate <= mloc_coordinateLongitude &&
+    return (uint32_t)o->width <= mloc_unitWidthNumeric &&
+           (uint32_t)o->coordinate <= mloc_coordinateLongitude &&
            (uint32_t)o->grammaticalCase < unitCaseCount && mlocValidFormatOptions(&o->number) &&
            o->number.style == mloc_numberDecimal && (o->usage != nullptr || o->usageLength == 0);
 }
@@ -339,7 +340,7 @@ mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* loc
 {
     if (data == nullptr || locale == nullptr || unit == nullptr || unitLength == 0 ||
         textOut == nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
-        width > mloc_unitWidthNumeric)
+        (uint32_t)width > mloc_unitWidthNumeric)
     {
         return mloc_errorInvalid;
     }
