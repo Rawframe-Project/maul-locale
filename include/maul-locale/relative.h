@@ -150,7 +150,8 @@ extern "C"
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocDatePart values: the day whole as
     ///                   mloc_datePartRelativeDay, the time's fields, and
-    ///                   literal for the glue's text.
+    ///                   literal for the glue's text. Left as it was on any
+    ///                   failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for a day

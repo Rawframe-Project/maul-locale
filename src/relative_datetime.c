@@ -64,14 +64,19 @@ mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* rela
         return mloc_errorInvalid;
     }
     r.capitalize = glue.size >= 3 && memcmp(glue.bytes, "{1}", 3) == 0 ? r.capitalize : 0;
+    // The day is the one slot that can fail: it is measured before the
+    // glue writes anything, so a failure leaves the output as it was.
+    NumberWriter measured = {0};
+    mlocResult day = mlocWriteRelative(&r, days, relativeDay, mloc_datePartRelativeDay, &measured);
+    if (day != mloc_success)
+    {
+        return day;
+    }
     DayTimeWriting d = {&r, &t, days, timeOfDay, mloc_success};
     NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     mlocWriteGlue(glue.bytes, glue.size, WriteSlot, &d, &w);
+    MLOC_ASSERT(d.result == mloc_success);
     textOut->length = w.length;
-    if (d.result != mloc_success)
-    {
-        return d.result;
-    }
     if (textOut->buffer == nullptr || w.length > textOut->capacity)
     {
         return mloc_errorCapacity;

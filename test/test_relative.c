@@ -329,12 +329,21 @@ static void TestDayTimeRefusals(void)
                                                            .minSignificantDigits = 1,
                                                            .maxSignificantDigits = 1}}};
     mlocDecimal huge;
-    output = (mlocOutput){.buffer = text, .capacity = sizeof(text)};
+    // The glue writes " at " and the time around the day: none of it
+    // reaches the output.
+    memset(text, 'X', sizeof(text));
+    output = (mlocOutput){.buffer = text, .capacity = sizeof(text), .length = 99};
+    bool kept = true;
     CHECK(mlocInitRelativeFormatter(&s_data, &en, &coarse, &relative) == mloc_success &&
               mlocParseDecimal("9.9e999999", 10, &huge).status == mloc_success &&
               mlocRelativeFormatter_FormatDayTime(&relative, &time, &huge, &noon, &output) ==
                   mloc_errorLimit,
           "a day rounded past the decimal's limits");
+    for (size_t i = 0; i < sizeof(text); i++)
+    {
+        kept = kept && text[i] == 'X';
+    }
+    CHECK(kept && output.length == 99, "is refused with the output left as it was");
 }
 
 int main(void)
