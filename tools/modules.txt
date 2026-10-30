@@ -81,7 +81,7 @@ spellout_value: decimal number_precision
 spellout_rule: bytes invariant spellout_data spellout_value
 spellout_match: bytes invariant spellout_data spellout_rule
 spellout_parse: bytes decimal invariant number_format number_parse spellout_data spellout_format spellout_match spellout_rule spellout_value
-spellout: bytes data_view decimal kinds locale_context locale_fallback number_core plural plural_rules spellout_data spellout_format spellout_parse
+spellout: bytes data_view decimal invariant kinds locale_context locale_fallback number_core plural plural_rules spellout_data spellout_format spellout_parse
 names_tables: kinds
 names_data: bytes data_format data_view invariant kinds locale_fallback names_tables number_data
 names: data_view invariant kinds locale_context names_data names_text

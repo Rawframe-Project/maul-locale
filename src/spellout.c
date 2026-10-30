@@ -10,6 +10,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_context.h"
 #include "locale_fallback.h"
@@ -26,6 +27,10 @@ enum
 {
     // Marks a spell-out formatter the library made.
     spelloutStamp = 0x53,
+    // Bytes of text a format writes before the caller's buffer, more than
+    // most texts take; a longer one (Burmese words from 10^17, Finnish
+    // ordinals in some cases) is written twice.
+    spelloutScratchSize = 512,
 };
 
 static_assert(sizeof(SpelloutFormat) <= sizeof(mlocSpelloutFormatter),
@@ -311,6 +316,22 @@ static void Capitalize(const SpelloutFormat* f, uint32_t first, NumberWriter* w)
     w->length = length;
 }
 
+// Writes the text of a value, titlecased when the formatter asks; whether
+// the writer's buffer holds all of it goes to wholeOut.
+static mlocResult WriteText(const SpelloutFormat* f, const mlocDecimal* decimal, NumberWriter* w,
+                            bool* wholeOut)
+{
+    uint32_t first = 0;
+    mlocResult r = mlocWriteSpellout(f, decimal, w, &first);
+    bool whole = w->length <= w->capacity;
+    if (r == mloc_success && f->capitalize)
+    {
+        Capitalize(f, first, w);
+    }
+    *wholeOut = whole && w->length <= w->capacity;
+    return r;
+}
+
 mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
                                         const mlocDecimal* decimal, mlocOutput* textOut)
 {
@@ -321,18 +342,31 @@ mlocResult mlocSpelloutFormatter_Format(const mlocSpelloutFormatter* formatter,
     {
         return mloc_errorInvalid;
     }
-    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-    uint32_t first = 0;
-    mlocResult r = mlocWriteSpellout(&f, decimal, &w, &first);
-    if (r == mloc_success && f.capitalize)
-    {
-        Capitalize(&f, first, &w);
-    }
-    textOut->length = w.length;
+    // The rules can fail after writing text, so the text is written here
+    // first and reaches the caller's buffer only once all of it is.
+    char scratch[spelloutScratchSize];
+    NumberWriter w = {.buffer = scratch, .capacity = sizeof(scratch)};
+    bool whole = false;
+    mlocResult r = WriteText(&f, decimal, &w, &whole);
     if (r != mloc_success)
     {
         return r;
     }
+    if (textOut->buffer != nullptr && w.length <= textOut->capacity)
+    {
+        if (whole)
+        {
+            memcpy(textOut->buffer, scratch, w.length);
+        }
+        else
+        {
+            // Longer than the scratch: written again, where it succeeded.
+            NumberWriter direct = {.buffer = textOut->buffer, .capacity = textOut->capacity};
+            r = WriteText(&f, decimal, &direct, &whole);
+            MLOC_ASSERT(r == mloc_success && direct.length == w.length && whole);
+        }
+    }
+    textOut->length = w.length;
     return textOut->buffer == nullptr || w.length > textOut->capacity ? mloc_errorCapacity
                                                                       : mloc_success;
 }

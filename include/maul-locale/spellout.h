@@ -111,7 +111,9 @@ extern "C"
     ///                   mlocInitNumberingSystemFormatter.
     /// @param decimal    The value.
     /// @param textOut    Receives the text; on mloc_errorCapacity its
-    ///                   length is the size needed. The text has no parts.
+    ///                   length is the size needed, and any other
+    ///                   failure leaves it as it was. The text has no
+    ///                   parts.
     /// @return mloc_success; mloc_errorCapacity for a buffer too small;
     ///         mloc_errorLimit for rules that nest past
     ///         MLOC_MAX_SPELLOUT_LEVELS levels for a value (a value far
