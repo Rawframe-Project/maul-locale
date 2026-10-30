@@ -8,6 +8,7 @@
 // ParseISODateTime throw rather than try another goal, are applied after.
 
 #include "binary64.h"
+#include "invariant.h"
 
 #include "maul-locale/ixdtf.h"
 
@@ -64,6 +65,9 @@ static bool IsAlpha(char ch)
 // count digits as a number.
 static bool Digits(Cursor* c, int count, int32_t* out)
 {
+    // Callers read two, four or six digits, which fit 32 bits, and no rule
+    // moves its cursor past the text's end.
+    MLOC_ASSERT(count >= 1 && count <= 9 && c->at <= c->length);
     if (c->length - c->at < (size_t)count)
     {
         return false;
@@ -586,6 +590,8 @@ static bool Goal(const char* text, size_t length, uint32_t format, Fields* f)
         c.at = 0;
         return AnnotatedDateTime(&c, false, true, f);
     default:
+        // Match asks for one format at a time, and the others have cases.
+        MLOC_ASSERT(format == mloc_formatMonthDay || format == mloc_formatYearMonth);
         if (format == mloc_formatMonthDay ? MonthDaySpec(&c, f) : YearMonthSpec(&c, f))
         {
             f->dateSpecOnly = true;
@@ -630,6 +636,12 @@ static bool Match(const char* text, size_t length, uint32_t formats, Fields* f, 
             continue;
         }
         *formatOut = format;
+        // The rules read each field within its range, which the parse
+        // narrows to a byte, and Goal starts the month and day at 1.
+        MLOC_ASSERT(f->month >= 1 && f->month <= 12 && f->day >= 1 && f->day <= 31 &&
+                    f->hour >= 0 && f->hour <= 23 && f->minute >= 0 && f->minute <= 59 &&
+                    f->second >= 0 && f->second <= 60 && f->nanosecond >= 0 &&
+                    f->nanosecond < nanosecondsPerSecond);
         return !f->refused &&
                !(f->dateSpecOnly && f->calendar.length != 0 && !IsIso(text, f->calendar));
     }
@@ -704,6 +716,11 @@ static bool Identifier(const char* text, mlocTextSpan span, mlocTimeZoneParse* o
     *out = (mlocTimeZoneParse){0};
     if (isOffset)
     {
+        // Without sub-minute precision an offset is whole minutes, of an
+        // hour of at most 23.
+        MLOC_ASSERT(offset % s_nanosecondsPerMinute == 0 &&
+                    offset / s_nanosecondsPerMinute > -24 * 60 &&
+                    offset / s_nanosecondsPerMinute < 24 * 60);
         out->hasOffset = true;
         out->offsetMinutes = (int16_t)(offset / s_nanosecondsPerMinute);
     }
@@ -751,6 +768,8 @@ mlocResult mlocParseTimeZoneString(const char* text, size_t length, mlocTimeZone
         {
             return mloc_errorSyntax;
         }
+        // Read without seconds, it has no fraction either.
+        MLOC_ASSERT(f.offsetNanoseconds % s_nanosecondsPerMinute == 0);
         out = (mlocTimeZoneParse){.hasOffset = true,
                                   .offsetMinutes =
                                       (int16_t)(f.offsetNanoseconds / s_nanosecondsPerMinute)};
@@ -858,6 +877,7 @@ static bool TimeParts(Cursor* c, Wide* f)
         if (fractional)
         {
             // fraction is the digits scaled to nine places.
+            MLOC_ASSERT(fraction >= 0 && fraction < nanosecondsPerSecond);
             uint64_t below = (uint64_t)fraction * (s_unitNanoseconds[unit] / nanosecondsPerSecond);
             uint64_t seconds = below / nanosecondsPerSecond;
             uint64_t rest = below % nanosecondsPerSecond;

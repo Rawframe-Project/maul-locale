@@ -10,6 +10,7 @@
 #include "calendar_arith.h"
 #include "calendar_year.h"
 #include "date_time.h"
+#include "invariant.h"
 
 #include "maul-locale/ixdtf.h"
 
@@ -52,6 +53,8 @@ static void Char(Writer* w, char ch)
 static void Digits(Writer* w, uint64_t value, int width)
 {
     char digits[20];
+    // Callers ask for at most six.
+    MLOC_ASSERT(width <= (int)sizeof digits);
     int n = 0;
     do
     {
@@ -165,6 +168,10 @@ static void CalendarAnnotation(Writer* w, const mlocTemporalStringOptions* o)
 // FormatFractionalSeconds.
 static void Fraction(Writer* w, uint32_t nanoseconds, int precision)
 {
+    // A minute's precision ends a time before its fraction and is refused
+    // for a duration, and ReadOptions holds the digits to nine. The
+    // nanoseconds are a valid time's, or what is left of a second.
+    MLOC_ASSERT(nanoseconds < nanosecondsPerSecond && precision >= precisionAuto && precision <= 9);
     int digits = precision;
     if (precision == precisionAuto)
     {
@@ -411,7 +418,10 @@ static bool ReadDuration(const mlocDurationValues* v, Fields* f)
     for (int i = 0; i < 10; i += 1)
     {
         bool negative = false;
-        (void)mlocWideOfDouble(given[i], &negative, &wide[i]);
+        // mlocMakeDuration read each field so.
+        bool read = mlocWideOfDouble(given[i], &negative, &wide[i]);
+        MLOC_ASSERT(read);
+        (void)read;
         f->magnitude[i] = wide[i].low;
         if (f->sign == 0 && (wide[i].high != 0 || wide[i].low != 0))
         {
@@ -420,6 +430,7 @@ static bool ReadDuration(const mlocDurationValues* v, Fields* f)
     }
     // Valid, the seconds and milliseconds fit 64 bits and the sum of the
     // sub-minute fields in nanoseconds stays below 2^84.
+    MLOC_ASSERT(wide[6].high == 0 && wide[7].high == 0);
     f->subMinute = mlocWideProduct(wide[6].low, nanosecondsPerSecond);
     f->subMinute = mlocWideSum(f->subMinute, mlocWideProduct(wide[7].low, 1000000));
     f->subMinute = mlocWideSum(f->subMinute, mlocWideScaled(wide[8], 1000));
