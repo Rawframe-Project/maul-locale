@@ -11,6 +11,7 @@
 
 #include "unit_usage.h"
 
+#include "invariant.h"
 #include "kinds.h"
 #include "unit_mixed.h"
 #include "unit_mixed_format.h"
@@ -258,12 +259,18 @@ mlocResult mlocFormatUsageRange(const UnitFormat* u, const mlocDecimal* start,
         return mlocFormatRangeWith(&u->formatter, &outer, &a.amounts.amounts[0],
                                    &b.amounts.amounts[0], output);
     }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    r = WriteEnds(u, &a, &b, &w);
+    // The end fails, if at all, after the start and the separator are
+    // written: measured first, a failure leaves the output as it was.
+    NumberWriter measured = {0};
+    r = WriteEnds(u, &a, &b, &measured);
     if (r != mloc_success)
     {
         return r;
     }
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocResult again = WriteEnds(u, &a, &b, &w);
+    MLOC_ASSERT(again == mloc_success && w.length == measured.length);
+    (void)again;
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {

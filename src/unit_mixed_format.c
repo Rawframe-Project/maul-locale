@@ -15,6 +15,7 @@
 
 #include "currency_tables.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "list_join.h"
 #include "number_precision.h"
@@ -382,12 +383,18 @@ mlocResult mlocWriteMixedTo(const UnitFormat* u, const UnitOutput* o,
 mlocResult mlocWriteMixed(const UnitFormat* u, const UnitOutput* o, const mlocUnitAmounts* amounts,
                           mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocResult r = mlocWriteMixedTo(u, o, amounts, &w);
+    // A part fails, if at all, as it is written, after the parts before
+    // it: measured first, a failure leaves the output as it was.
+    NumberWriter measured = {0};
+    mlocResult r = mlocWriteMixedTo(u, o, amounts, &measured);
     if (r != mloc_success)
     {
         return r;
     }
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocResult again = mlocWriteMixedTo(u, o, amounts, &w);
+    MLOC_ASSERT(again == mloc_success && w.length == measured.length);
+    (void)again;
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
