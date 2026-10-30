@@ -1484,10 +1484,21 @@ static void TestBindAndFormat(void)
               list[0].kind == mloc_messageFaultUnsupportedOperation,
           "numbers as plain decimals; an object has no text without a function");
 
+    // A strict call that meets a fault leaves the text there and its
+    // length, so a program can keep showing what it held.
+    char kept[16];
+    memset(kept, 'K', sizeof kept);
+    mlocOutput earlier = {kept, sizeof kept, 99, NULL, NULL};
+    bool untouched = true;
     CHECK(Bind(&s_strict, "{$x}{$y}") == mloc_success &&
-              Format(&x, 1, &length, &faults) == mloc_errorFallback && length == 0 &&
-              faults.count == 1,
-          "strict mode writes nothing at a fault");
+              mlocFormatMessage(s_bound, &x, 1, &earlier, &faults) == mloc_errorFallback &&
+              earlier.length == 99 && faults.count == 1,
+          "strict mode leaves the length at a fault");
+    for (size_t i = 0; i < sizeof kept; i++)
+    {
+        untouched = untouched && kept[i] == 'K';
+    }
+    CHECK(untouched, "strict mode leaves the buffer at a fault");
     CHECK(Bind(&s_strict, "{$x}!") == mloc_success &&
               Format(&x, 1, &length, NULL) == mloc_success && TextIs(length, "X!"),
           "strict mode writes a message without faults");
