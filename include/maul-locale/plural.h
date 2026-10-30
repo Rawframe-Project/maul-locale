@@ -70,7 +70,8 @@ extern "C"
     ///
     /// @param rules        Rules from mlocInitPluralRules.
     /// @param decimal      The number.
-    /// @param categoryOut  Receives the category.
+    /// @param categoryOut  Receives the category; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, or
     ///         rules or a decimal the library did not make.
     /// @par Thread safety
@@ -84,7 +85,8 @@ extern "C"
     ///
     /// @param rules        Rules from mlocInitPluralRules.
     /// @param value        The integer.
-    /// @param categoryOut  Receives the category.
+    /// @param categoryOut  Receives the category; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or rules
     ///         the library did not make.
     /// @par Thread safety
@@ -98,7 +100,8 @@ extern "C"
     /// @param rules        Rules from mlocInitPluralRules.
     /// @param operands     The operands, as mlocGetPluralOperands gives
     ///                     them for the whole value, with c set.
-    /// @param categoryOut  Receives the category.
+    /// @param categoryOut  Receives the category; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or rules
     ///         the library did not make.
     /// @par Thread safety
@@ -114,7 +117,8 @@ extern "C"
     /// @param rules        Cardinal rules from mlocInitPluralRules.
     /// @param start        The category of the range's start.
     /// @param end          The category of its end.
-    /// @param categoryOut  Receives the category.
+    /// @param categoryOut  Receives the category; left unchanged on
+    ///                     failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, ordinal
     ///         rules, rules the library did not make, or another category.
     /// @par Thread safety
@@ -128,7 +132,7 @@ extern "C"
     /// one and other for English cardinals, all six for Arabic's.
     ///
     /// @param rules          Rules from mlocInitPluralRules.
-    /// @param categoriesOut  Receives the bits.
+    /// @param categoriesOut  Receives the bits; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or rules
     ///         the library did not make.
     /// @par Thread safety

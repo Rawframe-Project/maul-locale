@@ -111,7 +111,9 @@ extern "C"
     ///                   mlocInitNumberingSystemFormatter.
     /// @param decimal    The value.
     /// @param textOut    Receives the text; on mloc_errorCapacity its
-    ///                   length is the size needed. The text has no parts.
+    ///                   length is the size needed, and any other
+    ///                   failure leaves it as it was. The text has no
+    ///                   parts.
     /// @return mloc_success; mloc_errorCapacity for a buffer too small;
     ///         mloc_errorLimit for rules that nest past
     ///         MLOC_MAX_SPELLOUT_LEVELS levels for a value (a value far
@@ -145,9 +147,11 @@ extern "C"
     /// @param length      Its length in bytes.
     /// @param workspace   The memory the parse searches with.
     /// @param decimalOut  Receives the value read: finite, NaN or an
-    ///                    infinity; zero is never negative.
-    /// @param endOut      Receives the offset after the text read, 0 when
-    ///                    none is.
+    ///                    infinity; zero is never negative. Left unchanged
+    ///                    on failure.
+    /// @param endOut      Receives the offset after the text read, or 0 on
+    ///                    mloc_errorSyntax; left unchanged on any other
+    ///                    failure.
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
     ///         mloc_errorLimit when a value read passes the decimal's
@@ -198,8 +202,9 @@ extern "C"
     /// @param index      The rule set's index, below
     ///                   mlocGetSpelloutRuleSetCount.
     /// @param nameOut    Receives the name, in the data, not
-    ///                   NUL-terminated.
-    /// @param lengthOut  Receives its length in bytes.
+    ///                   NUL-terminated; left unchanged on failure.
+    /// @param lengthOut  Receives its length in bytes; left unchanged on
+    ///                   failure.
     /// @return mloc_success; mloc_errorNotFound for an index past the last
     ///         or data without the rules; mloc_errorInvalid for a null
     ///         pointer.

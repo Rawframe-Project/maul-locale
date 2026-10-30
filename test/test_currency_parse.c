@@ -644,6 +644,27 @@ static void TestChainLimit(void)
           "any currency along a chain of more units than the bound is refused");
 }
 
+// An amount of more digits than a decimal holds is read, then refused: the
+// code, the end and the amount are left as they were.
+static void TestLimitLeavesOutputs(void)
+{
+    char text[1 + MLOC_MAX_DECIMAL_DIGITS + 1];
+    text[0] = '$';
+    memset(text + 1, '9', sizeof(text) - 1);
+    mlocCurrencyFormatter f;
+    mlocDecimal d;
+    mlocDecimal kept;
+    memset(&kept, 0xA5, sizeof(kept));
+    d = kept;
+    char code[3] = {'X', 'X', 'X'};
+    size_t end = 77;
+    CHECK(Init(&s_data, "en", "USD", nullptr, &f) == mloc_success &&
+              ParseCopy(&f, text, sizeof(text), mloc_parseLenient, 0, &d, code, &end) ==
+                  mloc_errorLimit &&
+              memcmp(&d, &kept, sizeof(d)) == 0 && memcmp(code, "XXX", 3) == 0 && end == 77,
+          "an amount past the digits a decimal holds leaves the outputs");
+}
+
 static void TestRefusals(void)
 {
     mlocCurrencyFormatter f;
@@ -715,6 +736,7 @@ int main(void)
     TestCodeDisplayStrictly();
     TestWithoutNames();
     TestChainLimit();
+    TestLimitLeavesOutputs();
     TestRefusals();
     return s_failures == 0 ? 0 : 1;
 }

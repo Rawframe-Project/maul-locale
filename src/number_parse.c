@@ -636,8 +636,8 @@ static void PostProcess(const Parser* r, Parsed* p, int64_t* scaleOut)
 }
 
 // The decimal a parse gives: its digits, the point moved by the exponent
-// and the scale, the fraction digits typed moved with it; false past the
-// decimal's limits.
+// and the scale, the fraction digits typed moved with it; false, out left
+// as it was, past the decimal's limits.
 static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
 {
     mlocDecimal d = {0};
@@ -701,16 +701,22 @@ mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* curren
     RunGreedy(&r, &s, &p);
     int64_t scale = 0;
     PostProcess(&r, &p, &scale);
-    *endOut = p.charEnd;
     if (p.charEnd == 0 || (p.flags & parsedFail) != 0)
     {
+        *endOut = p.charEnd;
         return mloc_errorSyntax;
+    }
+    // A value past the decimal's bounds leaves every output as it was.
+    if (!ToDecimal(&p, scale, decimalOut))
+    {
+        return mloc_errorLimit;
     }
     if (codeOut != nullptr && currency != nullptr)
     {
         memcpy(codeOut, p.hasCode ? p.code : currency->code, 3);
     }
-    return ToDecimal(&p, scale, decimalOut) ? mloc_success : mloc_errorLimit;
+    *endOut = p.charEnd;
+    return mloc_success;
 }
 
 static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)
