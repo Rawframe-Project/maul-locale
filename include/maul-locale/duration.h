@@ -138,7 +138,7 @@ extern "C"
     /// display (numeric for a fraction), never the defaults.
     ///
     /// @param formatter   A formatter from mlocInitDurationFormatter.
-    /// @param optionsOut  Receives the options.
+    /// @param optionsOut  Receives the options; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
     ///         formatter the library did not make.
     /// @par Thread safety
@@ -159,7 +159,8 @@ extern "C"
     /// @param duration   The fields: integers of one sign, valid as
     ///                   mlocMakeDuration takes them.
     /// @param textOut    Receives the text; its part function, when set,
-    ///                   receives the parts (mloc_durationPartField).
+    ///                   receives the parts (mloc_durationPartField); left as
+    ///                   it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer, a duration

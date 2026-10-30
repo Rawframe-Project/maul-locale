@@ -85,7 +85,8 @@ extern "C"
     /// @param text     The string, UTF-8; it need not end in a zero byte.
     /// @param length   Its length in bytes.
     /// @param formats  The goals allowed, mlocTemporalFormat bits.
-    /// @param parseOut Receives what the string holds.
+    /// @param parseOut Receives what the string holds; left unchanged on
+    ///                 failure.
     /// @return mloc_success; mloc_errorSyntax for a string no allowed goal
     ///         matches, or that the grammar's early errors or the annotation
     ///         rules refuse; mloc_errorInvalid for a null pointer or no goal
@@ -101,9 +102,10 @@ extern "C"
     ///
     /// @param text               The string, UTF-8.
     /// @param length             Its length in bytes.
-    /// @param nanosecondsOut     Receives the offset.
-    /// @param hasSecondsOut      Receives whether it gave seconds; may be
-    ///                           null.
+    /// @param nanosecondsOut     Receives the offset; left unchanged on
+    ///                           failure.
+    /// @param hasSecondsOut      Receives whether it gave seconds; may be null.
+    ///                           Left unchanged on failure.
     /// @return mloc_success; mloc_errorSyntax for a string that is no UTC
     ///         offset; mloc_errorInvalid for a null text or nanosecondsOut.
     /// @par Thread safety
@@ -130,7 +132,7 @@ extern "C"
     ///
     /// @param text      The string, UTF-8.
     /// @param length    Its length in bytes.
-    /// @param parseOut  Receives the zone read.
+    /// @param parseOut  Receives the zone read; left unchanged on failure.
     /// @return mloc_success; mloc_errorSyntax for a string that names no
     ///         zone by the grammar; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -145,7 +147,8 @@ extern "C"
     ///
     /// @param text        The string, UTF-8.
     /// @param length      Its length in bytes.
-    /// @param calendarOut Receives the calendar id's span.
+    /// @param calendarOut Receives the calendar id's span; left unchanged on
+    ///                    failure.
     /// @return mloc_success; mloc_errorSyntax for a string that is
     ///         neither; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -161,7 +164,7 @@ extern "C"
     ///
     /// @param text       The string, UTF-8.
     /// @param length     Its length in bytes.
-    /// @param valuesOut  Receives the fields.
+    /// @param valuesOut  Receives the fields; left unchanged on failure.
     /// @return mloc_success; mloc_errorSyntax for a string that is no
     ///         duration; mloc_errorInvalid for a null pointer or fields past
     ///         the limits.
@@ -232,7 +235,8 @@ extern "C"
     ///
     /// @param date     The date.
     /// @param options  The calendar and its annotation; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null date or textOut, a date
     ///         the library did not make, or options out of range.
@@ -247,7 +251,8 @@ extern "C"
     ///
     /// @param date     The year-month's reference date.
     /// @param options  The calendar and its annotation; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return As mlocFormatTemporalDate.
     /// @par Thread safety
     /// Safe from any thread.
@@ -261,7 +266,8 @@ extern "C"
     ///
     /// @param date     The month-day's reference date.
     /// @param options  The calendar and its annotation; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return As mlocFormatTemporalDate.
     /// @par Thread safety
     /// Safe from any thread.
@@ -274,7 +280,8 @@ extern "C"
     ///
     /// @param time     The time.
     /// @param options  The precision; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null time or textOut, a time
     ///         the library did not make, or options out of range.
@@ -289,7 +296,8 @@ extern "C"
     /// @param dateTime  The date-time.
     /// @param options   The precision, calendar and annotation; may be
     ///                  null.
-    /// @param textOut   Receives the string.
+    /// @param textOut   Receives the string; left as it was on any failure but
+    ///                  mloc_errorCapacity.
     /// @return As mlocFormatTemporalDate.
     /// @par Thread safety
     /// Safe from any thread.
@@ -304,7 +312,8 @@ extern "C"
     /// @param instant  The instant.
     /// @param zone     The zone; null for universal time.
     /// @param options  The precision; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null instant or textOut, an
     ///         instant out of range, a zone the library did not make, or
@@ -325,7 +334,8 @@ extern "C"
     /// @param instant  The instant.
     /// @param options  The precision, calendar and what is shown; may be
     ///                 null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return As mlocFormatInstant.
     /// @par Thread safety
     /// Safe from any thread.
@@ -340,7 +350,8 @@ extern "C"
     ///
     /// @param values   The fields, which pass Temporal's limits.
     /// @param options  The precision; may be null.
-    /// @param textOut  Receives the string.
+    /// @param textOut  Receives the string; left as it was on any failure but
+    ///                 mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null pointer, fields past
     ///         the limits or of mixed signs, or options out of range.
@@ -354,7 +365,8 @@ extern "C"
     /// ±HH:MM, with seconds and as many digits of a fraction as it needs.
     ///
     /// @param offsetNanoseconds  The offset, less than a day either way.
-    /// @param textOut            Receives the string.
+    /// @param textOut            Receives the string; left as it was on any
+    ///                           failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         short; mloc_errorInvalid for a null textOut or an offset of
     ///         a day or more.
