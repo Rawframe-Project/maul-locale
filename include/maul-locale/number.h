@@ -274,9 +274,11 @@ extern "C"
     /// @param text        UTF-8 text; it need not end in a 0 byte.
     /// @param length      Its length in bytes.
     /// @param mode        An mlocParseMode.
-    /// @param decimalOut  Receives the number read.
+    /// @param decimalOut  Receives the number read; left unchanged on
+    ///                    failure.
     /// @param endOut      Receives the offset after the number read, or on
-    ///                    mloc_errorSyntax the offset reading stopped at.
+    ///                    mloc_errorSyntax the offset reading stopped at;
+    ///                    left unchanged on any other failure.
     /// @return mloc_success; mloc_errorSyntax when no number is read (or,
     ///         in strict mode, the affixes or grouping do not match);
     ///         mloc_errorLimit when the digits or the exponent pass
