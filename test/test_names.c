@@ -120,6 +120,19 @@ static void TestFallback(void)
               mlocGetName(&s_data, &en, mloc_nameLanguage, "qqq", 3, &none, &output) ==
                   mloc_errorNotFound,
           "no fallback: not found");
+    // Variants that fill the locale's tail, all 112 bytes and no NUL.
+    char full[3 + MLOC_MAX_LOCALE_TAIL + 1] = "en-1901";
+    for (char letter = 'a'; letter <= 'l'; letter++)
+    {
+        size_t at = strlen(full);
+        full[at] = '-';
+        memset(full + at + 1, letter, 8);
+        full[at + 9] = '\0';
+    }
+    CHECK(strlen(full) == 3 + MLOC_MAX_LOCALE_TAIL &&
+              Named("en", mloc_nameLanguage, full, mloc_nameFormStandard, mloc_capitalizationNone,
+                    mloc_fellBack, full),
+          "a language id whose variants fill the tail falls back to itself");
 }
 
 static void TestCapitalization(void)
