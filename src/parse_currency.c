@@ -12,6 +12,7 @@
 
 #include "bytes.h"
 #include "currency_tables.h"
+#include "invariant.h"
 #include "number_data.h"
 #include "parse_tables.h"
 
@@ -109,6 +110,7 @@ static void Append(Units* out, uint32_t cp, uint32_t limit)
 static void Upper(const uint8_t* sets, bool turkic, const uint8_t* text, size_t length,
                   uint32_t limit, Units* out)
 {
+    MLOC_ASSERT(limit <= maxInputUnits);
     out->count = 0;
     for (size_t at = 0; at < length && out->count < limit;)
     {
@@ -325,6 +327,9 @@ static const uint8_t* RowField(const SparseTable* t, const uint8_t* row, uint32_
     {
         return nullptr;
     }
+    // Its callers ask for string fields, which mlocValidSparse holds below
+    // the string count.
+    MLOC_ASSERT(value < t->stringCount);
     uint16_t start = mlocLoad16(t->offsets + (size_t)value * 2);
     *lengthOut = (size_t)(mlocLoad16(t->offsets + (size_t)value * 2 + 2) - start);
     return t->text + start;
@@ -364,6 +369,9 @@ typedef struct Step
 
 static void OpenStep(const CurrencyChain* c, uint32_t step, Step* out)
 {
+    // A sound currency formatter's chain holds at most currencyChainUnits
+    // units of each kind.
+    MLOC_ASSERT(c->symbolCount <= currencyChainUnits && c->nameCount <= currencyChainUnits);
     out->count = 0;
     for (uint32_t i = 0; i < c->symbolCount; i++)
     {
@@ -514,11 +522,14 @@ static bool TryPlurals(Search* q, uint16_t packed, const Given* g)
 
 static bool Seen(const uint8_t* bits, uint16_t code)
 {
+    // A code of a valid table (mlocValidSparse: 1 to currencyMaxCode).
+    MLOC_ASSERT(code >= 1 && code <= currencyMaxCode);
     return (bits[code / 8] >> (code % 8) & 1) != 0;
 }
 
 static void Mark(uint8_t* bits, uint16_t code)
 {
+    MLOC_ASSERT(code >= 1 && code <= currencyMaxCode);
     bits[code / 8] = (uint8_t)(bits[code / 8] | 1u << (code % 8));
 }
 

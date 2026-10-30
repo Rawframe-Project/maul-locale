@@ -8,6 +8,7 @@
 #include "parse_match.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "number_tables.h"
 #include "parse_tables.h"
 
@@ -15,6 +16,9 @@
 
 uint32_t mlocParseCodePoint(const uint8_t* text, size_t length, size_t at, size_t* sizeOut)
 {
+    // The matchers read only before the segment's end (mlocParseMatch's
+    // callers and MatchScientific check it), the others within a text.
+    MLOC_ASSERT(at < length);
     uint8_t lead = text[at];
     size_t n = lead < 0x80   ? 1
                : lead < 0xC2 ? 0
@@ -83,6 +87,8 @@ static uint32_t MapByRuns(const uint8_t* runs, uint32_t count, uint32_t cp)
     const uint8_t* run = runs + (size_t)(low - 1) * parseFoldSize;
     uint32_t offset = cp - mlocLoad32(run);
     uint32_t stride = run[6];
+    // A run's stride is 1 or 2 (ValidRuns in mlocValidParseSets).
+    MLOC_ASSERT(stride == 1 || stride == 2);
     bool in = offset % stride == 0 && offset / stride < mlocLoad16(run + 4);
     return in ? (uint32_t)((int64_t)cp + (int32_t)mlocLoad32(run + 8)) : cp;
 }
@@ -160,6 +166,9 @@ size_t mlocParsePrefix(const uint8_t* sets, const Segment* s, const uint8_t* tex
 
 bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp)
 {
+    // Callers name a ParseClass (setAll and setOwn are handled by InClass
+    // and InSet).
+    MLOC_ASSERT(set < parseClassCount);
     const uint8_t* entry = sets + parseHeaderSize + (size_t)set * parseClassSize;
     const uint8_t* ranges =
         sets + parseHeaderSize + parseClassCount * parseClassSize + (size_t)mlocLoad16(entry) * 8;
@@ -187,6 +196,7 @@ bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp)
 
 ParseClassView mlocParseClass(const uint8_t* sets, uint32_t set)
 {
+    MLOC_ASSERT(set < parseClassCount);
     const uint8_t* entry = sets + parseHeaderSize + (size_t)set * parseClassSize;
     const uint8_t* offsets =
         Folds(sets) + (size_t)(mlocLoad16(sets + 8) + mlocLoad16(sets + 10)) * parseFoldSize +
@@ -203,6 +213,8 @@ ParseClassView mlocParseClass(const uint8_t* sets, uint32_t set)
 
 const uint8_t* mlocParseClassString(const ParseClassView* c, uint32_t index, size_t* lengthOut)
 {
+    // Callers walk the class's strings.
+    MLOC_ASSERT(index < c->stringCount);
     uint32_t start = mlocLoad16(c->offsets + 2 * (size_t)index);
     *lengthOut = mlocLoad16(c->offsets + 2 * (size_t)index + 2) - start;
     return c->text + start;
@@ -256,6 +268,9 @@ static uint32_t SymbolClass(MatcherKind kind, NumberSymbol* symbolOut)
         [matchNaN] = {parseClassCount, numberNaN},
         [matchInfinity] = {parseInfinity, numberInfinity},
     };
+    // mlocParseMatch's default case: the other kinds have cases of their
+    // own, and the validators are never matched.
+    MLOC_ASSERT(kind >= matchMinus && kind <= matchInfinity);
     *symbolOut = (NumberSymbol)s_symbols[kind].symbol;
     return s_symbols[kind].set;
 }
@@ -855,6 +870,8 @@ bool mlocParseMatched(const Parser* r, int8_t affix, int8_t seen)
     {
         return affix < 0 && seen == affixNone;
     }
+    // Affix matchers and what was seen name series the parser made.
+    MLOC_ASSERT((uint32_t)affix < r->seriesCount && (uint32_t)seen < r->seriesCount);
     const Series* a = &r->series[affix];
     const Series* b = &r->series[seen];
     return a->length == b->length && memcmp(a->text, b->text, a->length) == 0;
@@ -864,6 +881,8 @@ bool mlocParseMatched(const Parser* r, int8_t affix, int8_t seen)
 // when the prefix seen is its own.
 static void MatchAffix(const Parser* r, const AffixMatcher* a, Segment* s, Parsed* p)
 {
+    MLOC_ASSERT((a->prefix < 0 || (uint32_t)a->prefix < r->seriesCount) &&
+                (a->suffix < 0 || (uint32_t)a->suffix < r->seriesCount));
     size_t initial = s->at;
     if (!SeenNumber(p))
     {
@@ -891,6 +910,8 @@ void mlocParseMatch(const Parser* r, const Matcher* m, Segment* s, Parsed* p)
         .strictGrouping = (r->flags & modeStrictGrouping) != 0,
         .strictSeparators = (r->flags & modeStrictSeparators) != 0,
     };
+    // Both callers stop at the segment's end.
+    MLOC_ASSERT(s->at < s->length);
     switch (m->kind)
     {
     case matchIgnorables:
@@ -906,6 +927,7 @@ void mlocParseMatch(const Parser* r, const Matcher* m, Segment* s, Parsed* p)
         MatchCodePoint(r, m, s, p);
         break;
     case matchAffix:
+        MLOC_ASSERT(m->arg < r->affixCount);
         MatchAffix(r, &r->affixes[m->arg], s, p);
         break;
     case matchCurrency:
