@@ -11,6 +11,7 @@
 #include "date_format.h"
 #include "date_range.h"
 #include "date_time.h"
+#include "invariant.h"
 #include "locale_keyword.h"
 
 #include "maul-locale/datetime.h"
@@ -76,6 +77,9 @@ static mlocHourCycle CycleOf(const mlocTimeOptions* o, const mlocLocale* locale,
     if (KeywordIs(value, length, "h11") || KeywordIs(value, length, "h12") ||
         KeywordIs(value, length, "h23") || KeywordIs(value, length, "h24"))
     {
+        // The preferences give one of the four cycles: -u-hc's, c12's or
+        // c24's, or the region's, which the validator holds to them.
+        MLOC_ASSERT(p->hourCycle <= mloc_hourFormatH24);
         return (mlocHourCycle)(mloc_hourCycleH11 + p->hourCycle);
     }
     bool twelve = p->hourCycle == mloc_hourFormatH11 || p->hourCycle == mloc_hourFormatH12;
@@ -151,6 +155,11 @@ static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* se
 // minutes or seconds, the full and long with their zones.
 static uint32_t IntervalEntry(uint32_t entry)
 {
+    // FindPatterns gives a clock's or a zone form's hour, minute or
+    // second, or a standard format's own or matched entry; never a glue
+    // or a weekday's.
+    MLOC_ASSERT(entry < dateTimeGlue || (entry >= dateTimeStyle12 && entry < dateTimeWeekday) ||
+                (entry >= dateTimeZoned && entry < dateTimeRelativeGlue));
     if (entry < dateTimeStandard)
     {
         return dateIntervalTime + entry;
@@ -261,6 +270,8 @@ static mlocResult Resolve(TimeFormat* f, const mlocLocale* locale, const DateLoc
                            cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 ||
                                cycle == mloc_hourCycleClock12};
     static const uint8_t s_letters[] = {0, 'K', 'h', 'H', 'k', 0, 0};
+    // The options' cycle (mlocValidTimeOptions), or CycleOf's.
+    MLOC_ASSERT((uint32_t)cycle < sizeof(s_letters));
     f->hourLetter = s_letters[cycle];
     f->dayPeriods = mlocDateNameList(&f->names, mlocLoad16(l->nameSet + 2 * dateNamesDayPeriods));
     memcpy(f->rules, rules, dateRuleSize);

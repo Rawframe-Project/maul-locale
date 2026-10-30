@@ -11,6 +11,7 @@
 #include "date_format.h"
 #include "date_range.h"
 #include "date_time.h"
+#include "invariant.h"
 #include "time_format.h"
 
 #include "maul-locale/datetime.h"
@@ -70,6 +71,8 @@ static bool WritableWhole(const uint8_t* pattern, uint32_t length)
             at++;
             continue;
         }
+        // A valid pattern's fields are whole (mlocValidDatePattern).
+        MLOC_ASSERT(at + 3 <= length);
         if (pattern[at] != datePatternField || strchr("EcehHKkmsabB", pattern[at + 1]) == nullptr)
         {
             return false;
@@ -161,6 +164,8 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
         return time;
     }
     uint32_t style = mlocDateGlueStyle(&o->date, mlocLoad16(choice.set + 2 * dateTimeFlags));
+    // A standard format's length (ValidOptions), or a glue's.
+    MLOC_ASSERT(style < dateStandardCount);
     uint32_t kind = o->glue == mloc_dateTimeGlueStandard ? dateTimeGlue : dateTimeAtGlue;
     // The range's glues hold every length's of the kind, checked.
     DataSpan glue;

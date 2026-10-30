@@ -11,6 +11,7 @@
 #include "time_write.h"
 
 #include "date_write.h"
+#include "invariant.h"
 
 enum
 {
@@ -43,6 +44,9 @@ static uint32_t Hour(char letter, uint32_t hour)
 // The fraction's digits after the seconds, truncated.
 static void WriteFraction(const TimeFormat* f, uint32_t nanosecond, NumberWriter* w)
 {
+    // Its one caller asks only for a fraction, and a sound formatter's
+    // has at most nine digits (mlocTimeFormatSound).
+    MLOC_ASSERT(f->fractionDigits >= 1 && f->fractionDigits <= 9);
     uint32_t value = nanosecond;
     for (uint32_t i = f->fractionDigits; i < 9; i++)
     {
@@ -56,6 +60,9 @@ static void WriteFraction(const TimeFormat* f, uint32_t nanosecond, NumberWriter
 // letters, wide at four or past five, narrow at five.
 static DataSpan PeriodName(const TimeFormat* f, uint32_t width, uint32_t period)
 {
+    // Am, pm, noon, or a rule's period, which ValidRules holds to the
+    // periods there are.
+    MLOC_ASSERT(period < dateDayPeriodCount);
     uint32_t form = width <= 3 ? 0 : width == 5 ? 2 : 1;
     return mlocDateName(&f->names, f->dayPeriods, form * dateDayPeriodCount + period);
 }
@@ -88,6 +95,8 @@ static bool HasField(const uint8_t* pattern, uint32_t length, char letter)
 static void WriteDayPeriod(const TimeFormat* f, const uint8_t* pattern, uint32_t length,
                            const mlocTime* time, char letter, uint32_t width, NumberWriter* w)
 {
+    // A valid time's hour, which indexes the rules' hours.
+    MLOC_ASSERT(time->hour < 24);
     // Noon is the time as shown: its minutes and seconds, where the
     // pattern shows them, zero.
     bool noon = time->hour == 12 && (time->minute == 0 || !HasField(pattern, length, 'm')) &&
@@ -181,6 +190,11 @@ void mlocWriteTimeFieldsIn(const TimeFormat* f, const uint8_t* pattern, uint32_t
     while (at < length)
     {
         w->source = at >= span->first && at < span->end ? span->source : 0;
+        // Every pattern written here is one mlocWritableTime takes: the
+        // formatters' own, and the interval patterns' time side, which
+        // the validator checks (WritableIntervals). Its fields are whole,
+        // and it holds no other marker, which would stall the loop.
+        MLOC_ASSERT(pattern[at] >= 0x20 || (pattern[at] == datePatternField && at + 3 <= length));
         if (pattern[at] == datePatternField)
         {
             WriteField(f, pattern, length, time, pattern + at, &other, w);

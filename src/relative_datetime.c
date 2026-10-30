@@ -8,6 +8,7 @@
 #include "date_data.h"
 #include "date_time.h"
 #include "date_write.h"
+#include "invariant.h"
 #include "number_core.h"
 #include "relative_format.h"
 #include "relative_tables.h"
@@ -54,7 +55,9 @@ mlocResult mlocRelativeFormatter_FormatDayTime(const mlocRelativeFormatter* rela
     {
         return mloc_errorInvalid;
     }
-    // Long, short and narrow take the long, medium and short glue.
+    // Long, short and narrow take the long, medium and short glue. A
+    // sound relative formatter's width is at most narrow.
+    MLOC_ASSERT(r.width + 1 < dateStandardCount);
     DataSpan glue;
     if (!mlocTablePattern(&t.range.table, t.range.relativeGlue[r.width + 1], &glue))
     {
