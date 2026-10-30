@@ -11,7 +11,7 @@ Maul Unicode finds the words, sentences and line break opportunities of any text
 
 ## Words, sentences and lines
 
-`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocSegmenter_NextBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last, with the offset then 0, as it is after `mloc_needMoreText` or a failure, so keep the last boundary yourself. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
+`mlocInitSegmenter` starts a segmenter of one kind over a text, and `mlocSegmenter_NextBreak` reports each boundary after the start of the text, the last one being its end, as a byte offset; it returns `mloc_done` after the last, with the offset then 0, as it is after `mloc_needMoreText`, so keep the last boundary yourself; a failure leaves the offset as it was. A line segmenter also reports whether the line must end there (after a line feed or another mandatory break, and at the end of the text). Grapheme clusters have no tailoring: take them from Maul Unicode.
 
 ```c
 const char* text = "Mr. Smith left. He came.";

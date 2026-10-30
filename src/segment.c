@@ -274,38 +274,13 @@ static bool Drain(Segmenter* s, size_t* offsetOut)
     return false;
 }
 
-mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
+// The next break into offsetOut and mandatoryOut, which are the caller's
+// locals: written whatever the result.
+static mlocResult Next(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
 {
-    Segmenter* s = Made(segmenter);
-    // A call from the complex breaker is refused before it writes
-    // anything: its outputs may be the ones the call it is inside fills.
-    if (s != nullptr && s->busy)
-    {
-        return mloc_errorInvalid;
-    }
-    // No boundary until one is found: a failure, mloc_done and
-    // mloc_needMoreText leave none from an earlier call.
-    if (offsetOut != nullptr)
-    {
-        *offsetOut = 0;
-    }
-    if (mandatoryOut != nullptr)
-    {
-        *mandatoryOut = false;
-    }
-    bool mandatory = false;
-    if (s == nullptr || offsetOut == nullptr)
-    {
-        return mloc_errorInvalid;
-    }
-    s->started = true;
     if (s->filters == 0)
     {
-        muniResult r = Pull(s, offsetOut, &mandatory);
-        if (mandatoryOut != nullptr)
-        {
-            *mandatoryOut = mandatory;
-        }
+        muniResult r = Pull(s, offsetOut, mandatoryOut);
         return r == muni_success ? mloc_success : Status(r);
     }
     for (;;)
@@ -326,6 +301,7 @@ mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, 
         // text never leaves it.
         MLOC_ASSERT(!s->iteratorDone);
         size_t offset = 0;
+        bool mandatory = false;
         muniResult r = Pull(s, &offset, &mandatory);
         if (r == muni_success)
         {
@@ -336,4 +312,34 @@ mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, 
             return mloc_errorInvalid;
         }
     }
+}
+
+mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
+{
+    Segmenter* s = Made(segmenter);
+    // A call from the complex breaker is refused before it writes
+    // anything: its outputs may be the ones the call it is inside fills.
+    if (s != nullptr && s->busy)
+    {
+        return mloc_errorInvalid;
+    }
+    if (s == nullptr || offsetOut == nullptr)
+    {
+        return mloc_errorInvalid;
+    }
+    s->started = true;
+    size_t offset = 0;
+    bool mandatory = false;
+    mlocResult result = Next(s, &offset, &mandatory);
+    // No boundary until one is found: mloc_done and mloc_needMoreText
+    // leave none from an earlier call; a failure leaves both outputs.
+    if (result != mloc_errorInvalid)
+    {
+        *offsetOut = result == mloc_success ? offset : 0;
+        if (mandatoryOut != nullptr)
+        {
+            *mandatoryOut = result == mloc_success && mandatory;
+        }
+    }
+    return result;
 }
