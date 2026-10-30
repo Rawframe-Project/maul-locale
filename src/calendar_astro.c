@@ -567,29 +567,38 @@ int64_t mlocAstroNewMoon(int64_t n)
     return dynamical - mlocAstroDeltaT(dynamical);
 }
 
-int64_t mlocAstroNewMoonIndex(int64_t moment)
+int64_t mlocAstroNewMoonIndex(int64_t moment, int64_t* moonOut)
 {
     int64_t month = Fixed(s_meanMonthNano, 1000000000);
     // The mean month, then steps of the true one (within a day of the
-    // mean however far the terms drift), then the exact search.
+    // mean however far the terms drift), then the exact search. A new
+    // moon computed is kept while it is n's, so none is computed twice.
     int64_t n = FloorDiv(moment - DEG(11458922816, 9), month);
+    int64_t moon = 0;
+    bool known = false;
     for (int i = 0; i < 8; i++)
     {
-        int64_t step = FloorDiv(moment - mlocAstroNewMoon(n), month);
+        moon = mlocAstroNewMoon(n);
+        int64_t step = FloorDiv(moment - moon, month);
         if (step == 0)
         {
+            known = true;
             break;
         }
         n += step;
     }
-    while (mlocAstroNewMoon(n - 1) >= moment)
+    for (int64_t before = mlocAstroNewMoon(n - 1); before >= moment;
+         before = mlocAstroNewMoon(n - 1))
     {
         n--;
+        moon = before;
+        known = true;
     }
-    while (mlocAstroNewMoon(n) < moment)
+    for (moon = known ? moon : mlocAstroNewMoon(n); moon < moment; moon = mlocAstroNewMoon(n))
     {
         n++;
     }
+    *moonOut = moon;
     return n;
 }
 

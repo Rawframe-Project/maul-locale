@@ -34,8 +34,9 @@ int64_t mlocAstroDeltaT(int64_t moment);
 // (n 0), before it for n negative.
 int64_t mlocAstroNewMoon(int64_t n);
 
-// The number of the first new moon at or after a moment.
-int64_t mlocAstroNewMoonIndex(int64_t moment);
+// The number of the first new moon at or after a moment; moonOut
+// receives its moment.
+int64_t mlocAstroNewMoonIndex(int64_t moment, int64_t* moonOut);
 
 // The sun's apparent longitude at a moment, in [0, 360) degrees.
 int64_t mlocAstroSolarLongitude(int64_t moment);

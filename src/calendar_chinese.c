@@ -66,17 +66,23 @@ static int64_t Midnight(bool korea, int64_t day)
     return day * s_unit - Zone(korea, day);
 }
 
+// The day a moment falls on there.
+static int64_t DayOf(bool korea, int64_t moment)
+{
+    return FloorDiv(moment + Zone(korea, FloorDiv(moment, s_unit)), s_unit);
+}
+
 // The day a new moon falls on there.
 static int64_t DayOfMoon(bool korea, int64_t n)
 {
-    int64_t moon = mlocAstroNewMoon(n);
-    return FloorDiv(moon + Zone(korea, FloorDiv(moon, s_unit)), s_unit);
+    return DayOf(korea, mlocAstroNewMoon(n));
 }
 
-// The number of the first new moon on or after a day.
-static int64_t NewMoonOnOrAfter(bool korea, int64_t day)
+// The number of the first new moon on or after a day; moonOut receives
+// its moment.
+static int64_t NewMoonOnOrAfter(bool korea, int64_t day, int64_t* moonOut)
 {
-    return mlocAstroNewMoonIndex(Midnight(korea, day));
+    return mlocAstroNewMoonIndex(Midnight(korea, day), moonOut);
 }
 
 // The major solar term in effect when a day begins, 1 to 12.
@@ -147,9 +153,10 @@ static void BeginSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
     // Months begin on days in the order of their new moons, so the span
     // holds those from the first one after the solstice to the eleventh
     // month's, the last one before the next.
-    int64_t eleventh = NewMoonOnOrAfter(korea, nextSolstice + 1) - 1;
-    s->moon[0] = NewMoonOnOrAfter(korea, solstice + 1);
-    s->start[0] = DayOfMoon(korea, s->moon[0]);
+    int64_t moon = 0;
+    int64_t eleventh = NewMoonOnOrAfter(korea, nextSolstice + 1, &moon) - 1;
+    s->moon[0] = NewMoonOnOrAfter(korea, solstice + 1, &moon);
+    s->start[0] = DayOf(korea, moon);
     // A span between solstices holds twelve or thirteen new moons.
     MLOC_ASSERT(eleventh - s->moon[0] >= 2 && eleventh - s->moon[0] <= maxSuiMonths);
     s->count = (int)(eleventh - s->moon[0]);
