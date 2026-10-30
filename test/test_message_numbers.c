@@ -236,7 +236,7 @@ static void TestInheritance(void)
 // byte: a caller's decimal may hold anything there.
 static void Pad(mlocDecimal* d, uint8_t byte)
 {
-    for (size_t i = offsetof(mlocDecimal, kind) + 1; i < sizeof(*d); i++)
+    for (size_t i = offsetof(mlocDecimal, negative) + 1; i < sizeof(*d); i++)
     {
         ((uint8_t*)d)[i] = byte;
     }

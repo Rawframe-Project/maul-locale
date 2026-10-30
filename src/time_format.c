@@ -79,7 +79,7 @@ static mlocHourCycle CycleOf(const mlocTimeOptions* o, const mlocLocale* locale,
     {
         // The preferences give one of the four cycles: -u-hc's, c12's or
         // c24's, or the region's, which the validator holds to them.
-        MLOC_ASSERT(p->hourCycle <= mloc_hourFormatH24);
+        MLOC_ASSERT((uint32_t)p->hourCycle <= mloc_hourFormatH24);
         return (mlocHourCycle)(mloc_hourCycleH11 + p->hourCycle);
     }
     bool twelve = p->hourCycle == mloc_hourFormatH11 || p->hourCycle == mloc_hourFormatH12;

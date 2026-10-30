@@ -10,7 +10,15 @@
 #include "bytes.h"
 #include "invariant.h"
 
+#include <stddef.h>
 #include <string.h>
+
+// The decimal's layout is ABI: its digits, the exponent and fraction
+// digits, the kind, then the count and sign, padding last.
+static_assert(sizeof(mlocDecimal) == 56, "a decimal is 56 bytes");
+static_assert(offsetof(mlocDecimal, kind) == MLOC_MAX_DECIMAL_DIGITS + 8 &&
+                  offsetof(mlocDecimal, negative) == MLOC_MAX_DECIMAL_DIGITS + 13,
+              "the kind follows the exponents, the count and sign the kind");
 
 // 10^0 to 10^18.
 static const uint64_t s_pow10[19] = {1u,
@@ -54,8 +62,8 @@ static bool ValidDigits(const mlocDecimal* d)
 
 bool mlocValidDecimal(const mlocDecimal* d)
 {
-    if (d->kind > mloc_decimalNaN || d->negative > 1 || d->count > MLOC_MAX_DECIMAL_DIGITS ||
-        !ValidDigits(d))
+    if ((uint32_t)d->kind > mloc_decimalNaN || d->negative > 1 ||
+        d->count > MLOC_MAX_DECIMAL_DIGITS || !ValidDigits(d))
     {
         return false;
     }

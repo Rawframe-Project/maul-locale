@@ -218,13 +218,11 @@ extern "C"
         // checked against the grammar's calendar ids.
         const char* calendar;
         size_t calendarLength;
-        // An mlocSecondsPrecision, and the digits for mloc_secondsDigits.
-        uint8_t secondsPrecision;
+        // The precision, and the digits for mloc_secondsDigits.
+        mlocSecondsPrecision secondsPrecision;
         uint8_t fractionDigits;
-        // An mlocShowCalendar.
-        uint8_t showCalendar;
-        // An mlocShowTimeZone.
-        uint8_t showTimeZone;
+        mlocShowCalendar showCalendar;
+        mlocShowTimeZone showTimeZone;
         // Whether a zoned date-time's string leaves out its offset
         // (Temporal's offset option of never).
         bool hideOffset;

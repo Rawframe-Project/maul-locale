@@ -18,6 +18,13 @@
 
 #include <string.h>
 
+// The preferences' layout is ABI: four bytes of region, ten kinds and
+// five counts and days.
+static_assert(sizeof(mlocLocalePreferences) == 52, "the preferences are 52 bytes");
+static_assert(sizeof(((mlocLocalePreferences*)nullptr)->allowedHours) ==
+                  preferHoursMax * sizeof(mlocHourFormat),
+              "the allowed hours hold the table's");
+
 typedef struct Prefs
 {
     const uint8_t* hours;
@@ -254,7 +261,7 @@ static uint8_t FirstDay(const mlocLocale* locale, const uint8_t* region, bool is
 }
 
 // The calendar of -u-ca (its BCP 47 type), else the region's.
-static uint8_t Calendar(const char* value, size_t length, const uint8_t* region)
+static mlocCalendar Calendar(const char* value, size_t length, const uint8_t* region)
 {
     static const char* const s_types[18] = {
         "gregory",      "iso8601",          "buddhist", "roc",          "japanese", "coptic",
@@ -322,7 +329,10 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
         .calendar = Calendar(calendar, calendarLength, entry),
     };
     mlocUnpackRegion(region, out.region);
-    memcpy(out.allowedHours, hours + 2, preferHoursMax);
+    for (size_t i = 0; i < preferHoursMax; i++)
+    {
+        out.allowedHours[i] = hours[2 + i];
+    }
     *preferencesOut = out;
     return mloc_success;
 }

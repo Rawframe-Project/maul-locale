@@ -202,7 +202,7 @@ mlocResult mlocYearMonthOfCode(const CalendarYear* y, uint32_t number, bool leap
 
 bool mlocYearDateValid(const mlocDate* date)
 {
-    return date != nullptr && date->calendar < yearCalendarCount && date->day >= mlocDateMinDay &&
+    return date != nullptr && (uint32_t)date->calendar < yearCalendarCount && date->day >= mlocDateMinDay &&
            date->day <= mlocDateMaxDay;
 }
 

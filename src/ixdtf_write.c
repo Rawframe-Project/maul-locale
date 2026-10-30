@@ -128,10 +128,10 @@ static bool ReadOptions(const mlocTemporalStringOptions* given, mlocTemporalStri
                     : out->secondsPrecision == mloc_secondsMinute ? precisionMinute
                                                                   : out->fractionDigits;
     return CalendarIdValid(out->calendar, out->calendarLength) &&
-           out->secondsPrecision <= mloc_secondsDigits &&
+           (uint32_t)out->secondsPrecision <= mloc_secondsDigits &&
            (out->secondsPrecision != mloc_secondsDigits || out->fractionDigits <= 9) &&
-           out->showCalendar <= mloc_showCalendarCritical &&
-           out->showTimeZone <= mloc_showTimeZoneCritical;
+           (uint32_t)out->showCalendar <= mloc_showCalendarCritical &&
+           (uint32_t)out->showTimeZone <= mloc_showTimeZoneCritical;
 }
 
 static bool IsIso(const mlocTemporalStringOptions* o)

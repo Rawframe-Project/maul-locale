@@ -8,6 +8,7 @@
 #define MAUL_LOCALE_LOCALE_H
 
 #include "maul-locale/base.h"
+#include "maul-locale/calendar.h"
 #include "maul-locale/data.h"
 
 #ifdef __cplusplus
@@ -136,7 +137,7 @@ extern "C"
     // Which shorter form mlocMinimizeLocale keeps when a language's
     // likely script and region could each be dropped: UTS #35's default
     // keeps the region ("zh-TW"), the other the script ("zh-Hant").
-    typedef uint8_t mlocFavor;
+    typedef int32_t mlocFavor;
     enum
     {
         mloc_favorRegion = 0,
@@ -206,7 +207,7 @@ extern "C"
 
     // The parts of CLDR's data whose locales inherit differently (UTS #35,
     // Parent Locales).
-    typedef uint8_t mlocComponent;
+    typedef int32_t mlocComponent;
     enum
     {
         // Everything not listed below: names, numbers, dates and the rest.
@@ -365,7 +366,7 @@ extern "C"
     // An hour format of CLDR's time data: the four hour cycles (the
     // pattern letters K, h, H and k), then 12 hours with a day period (hb,
     // "noon") or a flexible one (hB, "in the evening").
-    typedef uint8_t mlocHourFormat;
+    typedef int32_t mlocHourFormat;
     enum
     {
         mloc_hourFormatH11 = 0,
@@ -376,7 +377,7 @@ extern "C"
         mloc_hourFormatH12FlexibleDayPeriod = 5,
     };
 
-    typedef uint8_t mlocMeasurementSystem;
+    typedef int32_t mlocMeasurementSystem;
     enum
     {
         mloc_measurementMetric = 0,
@@ -386,7 +387,7 @@ extern "C"
         mloc_measurementUk = 2,
     };
 
-    typedef uint8_t mlocPaperSize;
+    typedef int32_t mlocPaperSize;
     enum
     {
         mloc_paperA4 = 0,
@@ -401,20 +402,21 @@ extern "C"
         char region[4];
         // One of the four hour cycles.
         mlocHourFormat hourCycle;
-        uint8_t allowedHourCount;
-        // The formats the region accepts, the most usual first.
+        // The formats the region accepts, the most usual first,
+        // allowedHourCount of them.
         mlocHourFormat allowedHours[6];
-        // Days are numbered from Monday, 1, to Sunday, 7.
+        mlocMeasurementSystem measurementSystem;
+        mlocPaperSize paperSize;
+        // The region's first preference, as CLDR orders them.
+        mlocCalendar calendar;
+        // Counts and days, not kinds: each fits a byte. Days are numbered
+        // from Monday, 1, to Sunday, 7.
+        uint8_t allowedHourCount;
         uint8_t firstDay;
         // The days of a year's first week that must fall in the year.
         uint8_t minimalDays;
         uint8_t weekendStart;
         uint8_t weekendEnd;
-        mlocMeasurementSystem measurementSystem;
-        mlocPaperSize paperSize;
-        // The calendar (an mlocCalendar of maul-locale/calendar.h): the
-        // region's first preference, as CLDR orders them.
-        uint8_t calendar;
     } mlocLocalePreferences;
 
     /// Returns a locale's regional preferences (UTS #35), the region's

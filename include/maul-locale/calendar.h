@@ -85,8 +85,7 @@ extern "C"
     {
         // Day 1 is January 1 of year 1 in the proleptic Gregorian calendar.
         int32_t day;
-        // An mlocCalendar.
-        uint8_t calendar;
+        mlocCalendar calendar;
     } mlocDate;
 
     // The fields of a date in its calendar.
