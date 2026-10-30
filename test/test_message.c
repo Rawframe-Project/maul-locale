@@ -16,6 +16,7 @@
 #include "maul-unicode/base.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1648,6 +1649,83 @@ static void TestRefusedBinds(void)
     }
 }
 
+// Binds a copy of "Hello {$x}" placed at the middle of room into a buffer
+// starting at the offset from it given, of the bound message's size;
+// whether the call returned expected and left the message and
+// s_formatter as they were, or, bound, formats as a buffer apart does.
+static bool BindsAt(ptrdiff_t start, mlocResult expected)
+{
+    static uint8_t s_room[1 << 13];
+    static mlocMessageFormatter s_saved;
+    size_t size = 0;
+    size_t bound = 0;
+    uint8_t* message = s_room + sizeof s_room / 2;
+    if (!Compile("Hello {$x}", &size) ||
+        mlocMessageFormatter_Bind(&s_formatter, s_buffer, size, s_bound, sizeof s_bound, &bound) !=
+            mloc_success ||
+        bound > sizeof s_room / 2 - size)
+    {
+        return false;
+    }
+    memcpy(message, s_buffer, size);
+    s_saved = s_formatter;
+    size_t written = 0;
+    mlocResult result =
+        mlocMessageFormatter_Bind(&s_formatter, message, size, message + start, bound, &written);
+    bool kept =
+        memcmp(message, s_buffer, size) == 0 && memcmp(&s_saved, &s_formatter, sizeof s_saved) == 0;
+    if (result != mloc_success)
+    {
+        return result == expected && kept;
+    }
+    mlocOutput apart = {s_text, sizeof s_text / 2, 0, NULL, NULL};
+    mlocOutput here = {s_text + sizeof s_text / 2, sizeof s_text / 2, 0, NULL, NULL};
+    return expected == mloc_success && kept && written == bound &&
+           mlocFormatMessage(s_bound, NULL, 0, &apart, NULL) == mloc_withFallbacks &&
+           mlocFormatMessage(message + start, NULL, 0, &here, NULL) == mloc_withFallbacks &&
+           apart.length == here.length && memcmp(apart.buffer, here.buffer, here.length) == 0;
+}
+
+static void TestOverlappingBinds(void)
+{
+    size_t size = 0;
+    size_t bound = 0;
+    CHECK(Compile("Hello {$x}", &size) &&
+              mlocMessageFormatter_Bind(&s_formatter, s_buffer, size, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success,
+          "a message binds");
+    ptrdiff_t length = (ptrdiff_t)size;
+    ptrdiff_t room = (ptrdiff_t)bound;
+    CHECK(BindsAt(0, mloc_errorInvalid), "a buffer that is the message is refused");
+    CHECK(BindsAt(length / 2, mloc_errorInvalid), "a buffer half way into the message is refused");
+    CHECK(BindsAt(length - 1, mloc_errorInvalid) && BindsAt(1 - room, mloc_errorInvalid),
+          "a buffer one byte into the message, at either end, is refused");
+    CHECK(BindsAt(length, mloc_success) && BindsAt(-room, mloc_success),
+          "a buffer right beside the message, on either side, binds");
+    // The formatter, a copy past room for a buffer: a buffer over it, and
+    // one ending a byte into it.
+    typedef struct Placed
+    {
+        uint8_t before[1 << 13];
+        mlocMessageFormatter formatter;
+    } Placed;
+    static Placed s_placed;
+    s_placed.formatter = s_formatter;
+    static mlocMessageFormatter s_saved;
+    s_saved = s_placed.formatter;
+    uint8_t* at = (uint8_t*)&s_placed + offsetof(Placed, formatter);
+    size_t written = 0;
+    CHECK(bound <= sizeof s_placed.before &&
+              mlocMessageFormatter_Bind(&s_placed.formatter, s_buffer, size, s_bound,
+                                        sizeof s_bound, &written) == mloc_success &&
+              mlocMessageFormatter_Bind(&s_placed.formatter, s_buffer, size, at, bound, &written) ==
+                  mloc_errorInvalid &&
+              mlocMessageFormatter_Bind(&s_placed.formatter, s_buffer, size, at + 1 - bound, bound,
+                                        &written) == mloc_errorInvalid &&
+              memcmp(&s_saved, &s_placed.formatter, sizeof s_saved) == 0,
+          "a buffer over the formatter is refused, the formatter left as it was");
+}
+
 int main(void)
 {
     TestSuite();
@@ -1670,6 +1748,7 @@ int main(void)
     TestSuiteFormat();
     TestBindAndFormat();
     TestRefusedBinds();
+    TestOverlappingBinds();
     TestPrefixes();
     return s_failures == 0 ? 0 : 1;
 }

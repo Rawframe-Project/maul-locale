@@ -469,7 +469,9 @@ extern "C"
     /// it; it is read-only, so threads may format with it at once. Call it
     /// with a null bufferOut and a capacity of 0 to learn the capacity. A
     /// bind that fails, for any reason, leaves a buffer of capacity 1 or
-    /// more holding no bound message, even one bound there before.
+    /// more holding no bound message, even one bound there before; but a
+    /// buffer that overlaps the message or the formatter is refused before
+    /// anything is written.
     ///
     /// @param formatter  A formatter from mlocInitMessageFormatter.
     /// @param message    A compiled message from mlocCompileMessage.
@@ -485,8 +487,9 @@ extern "C"
     ///         refuses (the chains and resolutions found only when
     ///         binding, not when measuring); mloc_errorLimit for a bound
     ///         message past MLOC_MAX_BOUND_MESSAGE_SIZE bytes;
-    ///         mloc_errorInvalid for a null pointer or a formatter the
-    ///         library did not make.
+    ///         mloc_errorInvalid for a null pointer, a formatter the
+    ///         library did not make, or a buffer that overlaps the
+    ///         message or the formatter.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
