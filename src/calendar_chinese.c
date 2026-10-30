@@ -79,12 +79,6 @@ static int64_t NewMoonOnOrAfter(bool korea, int64_t day)
     return mlocAstroNewMoonIndex(Midnight(korea, day));
 }
 
-// The day of the last new moon before a day.
-static int64_t NewMoonBefore(bool korea, int64_t day)
-{
-    return DayOfMoon(korea, mlocAstroNewMoonIndex(Midnight(korea, day)) - 1);
-}
-
 // The major solar term in effect when a day begins, 1 to 12.
 static int MajorTerm(bool korea, int64_t day)
 {
@@ -116,43 +110,67 @@ typedef struct Sui
     int count;
     int leap;
     int newYear;
+    // The months made so far, start[0] to start[made], and how far the
+    // leap month has been sought: term is the major solar term in effect
+    // when month sought begins.
+    int made;
+    int sought;
+    int term;
 } Sui;
 
-static void MakeSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
+// Makes the months up to start[last] and seeks the leap month among
+// them: in a span of twelve lunations, the first month with no major
+// solar term (the one in effect at its start is in effect at the next
+// month's).
+static void MakeMonths(bool korea, int last, Sui* s)
 {
-    int64_t nextEleventh = NewMoonBefore(korea, nextSolstice + 1);
-    s->moon[0] = NewMoonOnOrAfter(korea, solstice + 1);
-    s->start[0] = DayOfMoon(korea, s->moon[0]);
-    s->count = 0;
-    while (s->count < maxSuiMonths && s->start[s->count] < nextEleventh)
+    for (; s->made < last; s->made++)
     {
         // The next month begins with the next new moon: a month's own
         // falls on its first day, and the next one a month later.
-        s->moon[s->count + 1] = s->moon[s->count] + 1;
-        s->start[s->count + 1] = DayOfMoon(korea, s->moon[s->count + 1]);
-        s->count++;
+        s->moon[s->made + 1] = s->moon[s->made] + 1;
+        s->start[s->made + 1] = DayOfMoon(korea, s->moon[s->made + 1]);
     }
-    // A span between solstices holds twelve or thirteen new moons.
-    MLOC_ASSERT(s->start[s->count] >= nextEleventh);
-    // In a span of twelve lunations the first month with no major
-    // solar term (the one in effect at its start is in effect at the
-    // next month's) is the leap month.
-    s->leap = -1;
-    if (s->count == 12)
+    for (; s->count == 12 && s->sought < s->made && s->leap < 0; s->sought++)
     {
-        int term = MajorTerm(korea, s->start[0]);
-        for (int j = 0; j < s->count && s->leap < 0; j++)
-        {
-            int next = MajorTerm(korea, s->start[j + 1]);
-            s->leap = next == term ? j : -1;
-            term = next;
-        }
-        // The rule always finds one over the dates' range; were it not
-        // to, the month before the eleventh keeps the count of months.
-        s->leap = s->leap < 0 ? s->count - 1 : s->leap;
+        int next = MajorTerm(korea, s->start[s->sought + 1]);
+        s->leap = next == s->term ? s->sought : -1;
+        s->term = next;
     }
+}
+
+// Begins a span: its count of months, its first three and which month
+// opens its year, all a year that ends in it needs. FinishSui makes the
+// rest.
+static void BeginSui(bool korea, int64_t solstice, int64_t nextSolstice, Sui* s)
+{
+    // Months begin on days in the order of their new moons, so the span
+    // holds those from the first one after the solstice to the eleventh
+    // month's, the last one before the next.
+    int64_t eleventh = NewMoonOnOrAfter(korea, nextSolstice + 1) - 1;
+    s->moon[0] = NewMoonOnOrAfter(korea, solstice + 1);
+    s->start[0] = DayOfMoon(korea, s->moon[0]);
+    // A span between solstices holds twelve or thirteen new moons.
+    MLOC_ASSERT(eleventh - s->moon[0] >= 2 && eleventh - s->moon[0] <= maxSuiMonths);
+    s->count = (int)(eleventh - s->moon[0]);
+    s->made = 0;
+    s->sought = 0;
+    s->leap = -1;
+    s->term = s->count == 12 ? MajorTerm(korea, s->start[0]) : 0;
+    MakeMonths(korea, 2, s);
+    // A leap month first or second opens the year a month later; one
+    // further on does not change which month opens it.
     s->newYear = s->leap == 0 || s->leap == 1 ? 2 : 1;
     s->newYear = s->newYear < s->count ? s->newYear : s->count;
+}
+
+// Makes the rest of a span's months and finds its leap month.
+static void FinishSui(bool korea, Sui* s)
+{
+    MakeMonths(korea, s->count, s);
+    // The rule always finds one over the dates' range; were it not to,
+    // the month before the eleventh keeps the count of months.
+    s->leap = s->count == 12 && s->leap < 0 ? s->count - 1 : s->leap;
 }
 
 // The year from the first month of one span to the first of the next.
@@ -187,17 +205,21 @@ void mlocChineseModelYearOf(bool korea, int32_t day, LunisolarYear* out)
 {
     int64_t solstice = SolsticeOnOrBefore(korea, day);
     int64_t next = SolsticeOnOrBefore(korea, solstice + 370);
+    // The year is made of one span whole and the first months of the
+    // other: the next one's, or this one's for a day before its new year.
     Sui a = {0};
-    MakeSui(korea, solstice, next, &a);
+    BeginSui(korea, solstice, next, &a);
     Sui b = {0};
     if (day >= a.start[a.newYear])
     {
-        MakeSui(korea, next, SolsticeOnOrBefore(korea, next + 370), &b);
+        FinishSui(korea, &a);
+        BeginSui(korea, next, SolsticeOnOrBefore(korea, next + 370), &b);
         YearFrom(&a, &b, out);
     }
     else
     {
-        MakeSui(korea, SolsticeOnOrBefore(korea, solstice - 1), solstice, &b);
+        BeginSui(korea, SolsticeOnOrBefore(korea, solstice - 1), solstice, &b);
+        FinishSui(korea, &b);
         YearFrom(&b, &a, out);
     }
     MLOC_ASSERT(out->start[0] <= day && day < out->start[out->count]);
