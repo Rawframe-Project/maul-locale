@@ -186,11 +186,28 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
     }
 }
 
+// Whether two ranges of bytes share one, compared as addresses, which C
+// allows of any two objects.
+static bool Overlap(const void* one, size_t oneSize, const void* two, size_t twoSize)
+{
+    uintptr_t a = (uintptr_t)one;
+    uintptr_t b = (uintptr_t)two;
+    return oneSize > 0 && twoSize > 0 && a < b + twoSize && b < a + oneSize;
+}
+
 mlocResult mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, const void* message,
                                      size_t size, void* bufferOut, size_t capacity, size_t* sizeOut)
 {
     MessageFormatter f;
     BoundHeader h;
+    // The bound message points into the message and the formatter, so it
+    // cannot be written over either: a buffer that overlaps one is refused
+    // before anything is written.
+    if (bufferOut != NULL && (Overlap(bufferOut, capacity, message, size) ||
+                              Overlap(bufferOut, capacity, formatter, sizeof *formatter)))
+    {
+        return mloc_errorInvalid;
+    }
     // A bind replaces what the bufferOut held, so one refused for any reason
     // leaves no bound message: an earlier one's header goes first, as far
     // as the room reaches (its first byte is enough to unmake it).
