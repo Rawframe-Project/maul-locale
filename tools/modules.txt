@@ -73,7 +73,7 @@ time_format: bytes date_data date_format date_range date_time invariant locale_k
 datetime_format: bytes date_data date_format date_range date_time date_write invariant time_format time_write number_core number_tables zone_format
 time_write: date_data date_write invariant number_core number_tables
 unit_usage: data_view invariant kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
-unit_coordinate: data_view kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
+unit_coordinate: data_view invariant kinds number_core number_format unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:
 spellout_data: bytes data_view number_data spellout_tables
 spellout_format: bytes decimal invariant number_core number_precision plural spellout_data spellout_rule spellout_value
@@ -81,7 +81,7 @@ spellout_value: decimal number_precision
 spellout_rule: bytes invariant spellout_data spellout_value
 spellout_match: bytes invariant spellout_data spellout_rule
 spellout_parse: bytes decimal invariant number_format number_parse spellout_data spellout_format spellout_match spellout_rule spellout_value
-spellout: bytes data_view decimal kinds locale_context locale_fallback number_core plural plural_rules spellout_data spellout_format spellout_parse
+spellout: bytes data_view decimal invariant kinds locale_context locale_fallback number_core plural plural_rules spellout_data spellout_format spellout_parse
 names_tables: kinds
 names_data: bytes data_format data_view invariant kinds locale_fallback names_tables number_data
 names: data_view invariant kinds locale_context names_data names_text

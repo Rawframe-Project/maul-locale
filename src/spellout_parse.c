@@ -872,9 +872,9 @@ mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, s
     {
         p.memo[i].flags = 0;
     }
-    *endOut = 0;
     if ((p.r.flags & spelloutGroupUnparseable) != 0)
     {
+        *endOut = 0;
         return mloc_errorSyntax;
     }
     size_t best = 0;
@@ -901,6 +901,7 @@ mlocResult mlocReadSpellout(const SpelloutFormat* format, const uint8_t* text, s
     }
     if (best == 0)
     {
+        *endOut = 0;
         return mloc_errorSyntax;
     }
     mlocSpelloutNormalize(&value);

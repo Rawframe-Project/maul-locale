@@ -211,7 +211,8 @@ extern "C"
     /// @param formatter  A formatter from mlocInitNumberFormatter.
     /// @param decimal    The number.
     /// @param textOut    Receives the text; its part function, when set,
-    ///                   receives mlocNumberPart values.
+    ///                   receives mlocNumberPart values. Left as it was on
+    ///                   any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
@@ -234,7 +235,8 @@ extern "C"
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
-    ///                   mloc_numberRangeEnd, or 0 for both).
+    ///                   mloc_numberRangeEnd, or 0 for both). Left
+    ///                   as it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
@@ -274,9 +276,11 @@ extern "C"
     /// @param text        UTF-8 text; it need not end in a 0 byte.
     /// @param length      Its length in bytes.
     /// @param mode        An mlocParseMode.
-    /// @param decimalOut  Receives the number read.
+    /// @param decimalOut  Receives the number read; left unchanged on
+    ///                    failure.
     /// @param endOut      Receives the offset after the number read, or on
-    ///                    mloc_errorSyntax the offset reading stopped at.
+    ///                    mloc_errorSyntax the offset reading stopped at;
+    ///                    left unchanged on any other failure.
     /// @return mloc_success; mloc_errorSyntax when no number is read (or,
     ///         in strict mode, the affixes or grouping do not match);
     ///         mloc_errorLimit when the digits or the exponent pass

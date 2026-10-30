@@ -132,7 +132,8 @@ extern "C"
     /// @param decimal    The amount.
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values, the currency as
-    ///                   mloc_numberPartCurrency.
+    ///                   mloc_numberPartCurrency. Left as it was on any
+    ///                   failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
@@ -154,7 +155,8 @@ extern "C"
     /// @param textOut    Receives the text; its part function, when set,
     ///                   receives mlocNumberPart values with the end each
     ///                   belongs to (mloc_numberRangeStart,
-    ///                   mloc_numberRangeEnd, or 0 for both).
+    ///                   mloc_numberRangeEnd, or 0 for both). Left
+    ///                   as it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a null
@@ -187,11 +189,13 @@ extern "C"
     /// @param mode         An mlocParseMode.
     /// @param anyCurrency  1 to read any currency, 0 for the formatter's
     ///                     alone.
-    /// @param decimalOut   Receives the amount.
+    /// @param decimalOut   Receives the amount; left unchanged on failure.
     /// @param codeOut      Receives the currency's code, three letters
-    ///                     (the formatter's when none was typed).
+    ///                     (the formatter's when none was typed); left
+    ///                     unchanged on failure.
     /// @param endOut       Receives the offset after the amount, or on
-    ///                     mloc_errorSyntax the offset reading stopped at.
+    ///                     mloc_errorSyntax the offset reading stopped at;
+    ///                     left unchanged on any other failure.
     /// @return mloc_success; mloc_errorSyntax when no amount is read (or
     ///         no currency, with anyCurrency); mloc_errorLimit as for
     ///         mlocNumberFormatter_Parse, and with anyCurrency for a chain of more
@@ -213,7 +217,8 @@ extern "C"
     /// @param code        The currency's ISO 4217 code, three ASCII letters.
     /// @param codeLength  Its length in bytes, 3.
     /// @param display     A symbol display, or the code.
-    /// @param textOut     Receives the text.
+    /// @param textOut     Receives the text; left as it was on any
+    ///                    failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_fellBack when the locale has no symbol and
     ///         the code is written instead; mloc_errorCapacity when the
     ///         text does not fit (textOut->length is then the length
@@ -235,7 +240,8 @@ extern "C"
     /// @param locale      The locale, canonicalized.
     /// @param code        The currency's ISO 4217 code, three ASCII letters.
     /// @param codeLength  Its length in bytes, 3.
-    /// @param textOut     Receives the text.
+    /// @param textOut     Receives the text; left as it was on any
+    ///                    failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_fellBack when the data names it in no
     ///         locale of the chain and the code is written instead;
     ///         mloc_errorCapacity when the text does not fit
@@ -259,9 +265,10 @@ extern "C"
     ///                      the default, 2 digits.
     /// @param codeLength    Its length in bytes, 3.
     /// @param usage         Standard or cash.
-    /// @param digitsOut     Receives the fraction digits.
+    /// @param digitsOut     Receives the fraction digits; left unchanged on
+    ///                      failure.
     /// @param incrementOut  Receives the rounding increment in units of the
-    ///                      last digit, 1 for none.
+    ///                      last digit, 1 for none; left unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound for data without the
     ///         fractions; mloc_errorInvalid for a null pointer, a code
     ///         that is not three letters or a usage out of range.
@@ -322,11 +329,12 @@ extern "C"
     ///                       three digits.
     /// @param regionLength   Its length in bytes.
     /// @param currenciesOut  Receives the currencies; may be null when
-    ///                       capacity is 0.
+    ///                       capacity is 0. Left unchanged on failure.
     /// @param capacity       The room in currenciesOut.
     /// @param countOut       Receives the count, 0 for a region the data
     ///                       does not list; with mloc_errorCapacity the
-    ///                       count needed.
+    ///                       count needed; left unchanged on any other
+    ///                       failure.
     /// @return mloc_success; mloc_errorCapacity when the currencies do
     ///         not fit; mloc_errorNotFound for data without the currency
     ///         regions; mloc_errorInvalid for a null pointer or a region

@@ -399,16 +399,24 @@ static void TestBounds(void)
     CHECK(ParseIn("en", styleDecimal, text, MLOC_MAX_DECIMAL_DIGITS, &d, &end) == mloc_success &&
               d.count == MLOC_MAX_DECIMAL_DIGITS,
           "as many digits as a decimal holds");
+    mlocDecimal kept;
+    memset(&kept, 0xA5, sizeof(kept));
+    d = kept;
+    end = 77;
     CHECK(ParseIn("en", styleDecimal, text, MLOC_MAX_DECIMAL_DIGITS + 1, &d, &end) ==
-              mloc_errorLimit,
-          "one more");
+                  mloc_errorLimit &&
+              memcmp(&d, &kept, sizeof(d)) == 0 && end == 77,
+          "one more, refused with the outputs left as they were");
     CHECK(ParseIn("en", styleDecimal, "1E999999", 8, &d, &end) == mloc_success &&
               d.exponent == 999999,
           "the largest exponent");
     CHECK(ParseIn("en", styleDecimal, "1E-999999", 9, &d, &end) == mloc_success &&
               d.exponent == -999999 && d.fractionDigits == 999999,
           "the smallest exponent");
-    CHECK(ParseIn("en", styleDecimal, "1E1000000", 9, &d, &end) == mloc_errorLimit,
+    d = kept;
+    end = 77;
+    CHECK(ParseIn("en", styleDecimal, "1E1000000", 9, &d, &end) == mloc_errorLimit &&
+              memcmp(&d, &kept, sizeof(d)) == 0 && end == 77,
           "an exponent past it");
     CHECK(ParseIn("en", styleDecimal, "1E-9999999999", 13, &d, &end) == mloc_errorLimit,
           "an exponent past 999,999,999");

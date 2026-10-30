@@ -8,7 +8,7 @@ What verifies a change, locally and in CI, and the time each may take.
 
 | Tier | Runs | Budget |
 |---|---|---|
-| `changed` | The source, module, length, API documentation and snippet rules, test hygiene, the data format's layout hashes, the organization's documentation check, `clang-format` on the changed C files, and the `linux-clang-20-asan` preset (assertions on) with the CTest labels the changed files reach. | under 2 minutes on a built tree |
+| `changed` | The source, module, length, API documentation and snippet rules, test hygiene, the data format's layout hashes, the organization's documentation check, `clang-format` on the changed C files, clang-tidy in Release and in Debug on the changed `src/*.c` files, and the `linux-clang-20-asan` preset (assertions on) with the CTest labels the changed files reach. | under 2 minutes on a built tree |
 | `pr` | Every rule on every file, the tables generated from data in the repository, clang-tidy in Release and in Debug, the `linux-gcc-14` and `linux-clang-20-asan` presets, and 10 seconds of fuzzing per target. | under 10 minutes |
 | `full` | Also the shared library with the package test and Clang Release, 60 seconds per fuzz target, `src/generated/` regenerated from the pinned CLDR and tzdb, every check against those releases (`tools/check_cldr.sh`), and the Hanja finals against Unihan. The releases are fetched into `out/cache` once. | under 20 minutes |
 

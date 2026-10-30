@@ -111,7 +111,9 @@ extern "C"
     ///                   mlocInitNumberingSystemFormatter.
     /// @param decimal    The value.
     /// @param textOut    Receives the text; on mloc_errorCapacity its
-    ///                   length is the size needed. The text has no parts.
+    ///                   length is the size needed, and any other
+    ///                   failure leaves it as it was. The text has no
+    ///                   parts.
     /// @return mloc_success; mloc_errorCapacity for a buffer too small;
     ///         mloc_errorLimit for rules that nest past
     ///         MLOC_MAX_SPELLOUT_LEVELS levels for a value (a value far
@@ -145,16 +147,24 @@ extern "C"
     /// @param length      Its length in bytes.
     /// @param workspace   The memory the parse searches with.
     /// @param decimalOut  Receives the value read: finite, NaN or an
-    ///                    infinity; zero is never negative.
-    /// @param endOut      Receives the offset after the text read, 0 when
-    ///                    none is.
+    ///                    infinity; zero is never negative. Left unchanged
+    ///                    on failure.
+    /// @param endOut      Receives the offset after the text read, or on
+    ///                    mloc_errorSyntax 0, where reading stopped since
+    ///                    no rule read anything; left unchanged on any
+    ///                    other failure.
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
     ///         mloc_errorLimit when a value read passes the decimal's
     ///         bounds, or text crafted against the search, which no
     ///         formatter writes, makes it take more than
-    ///         MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorInvalid for a null
-    ///         pointer or a formatter the library did not make.
+    ///         MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorNotFound when a
+    ///         rule's decimal pattern is read with number data that lacks
+    ///         the parse sets; mloc_errorFormat for rules chained past the
+    ///         parser's depth, or a pattern's affixes past the number
+    ///         parser's room, which only a crafted data file holds;
+    ///         mloc_errorInvalid for a null pointer or a formatter the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread; a workspace is used by one thread at a time.
     MLOC_NODISCARD MLOC_API mlocResult mlocSpelloutFormatter_Parse(
@@ -198,8 +208,9 @@ extern "C"
     /// @param index      The rule set's index, below
     ///                   mlocGetSpelloutRuleSetCount.
     /// @param nameOut    Receives the name, in the data, not
-    ///                   NUL-terminated.
-    /// @param lengthOut  Receives its length in bytes.
+    ///                   NUL-terminated; left unchanged on failure.
+    /// @param lengthOut  Receives its length in bytes; left unchanged on
+    ///                   failure.
     /// @return mloc_success; mloc_errorNotFound for an index past the last
     ///         or data without the rules; mloc_errorInvalid for a null
     ///         pointer.
