@@ -366,6 +366,51 @@ static void TestSortKeys(void)
               mlocCollator_GetSortKey(&c, nullptr, 0, key, sizeof(key), &empty) == mloc_success &&
               empty == 3,
           "a key's length when it does not fit, nothing past the room, an empty text's key");
+    // A key that does not fit leaves the buffer as it was, a short key and
+    // one longer than the library's 256-byte scratch, in UTF-8 and UTF-16.
+    static char s_long[600];
+    static uint16_t s_long16[600];
+    for (size_t i = 0; i < sizeof(s_long); i++)
+    {
+        s_long[i] = (char)('a' + i % 26);
+        s_long16[i] = (uint16_t)('a' + i % 26);
+    }
+    static uint8_t s_whole[1024];
+    static uint8_t s_room[1024];
+    static const uint16_t s_abc16[3] = {'a', 'b', 'c'};
+    size_t length = 0;
+    bool kept = true;
+    for (int utf16 = 0; utf16 < 2; utf16++)
+    {
+        for (int big = 0; big < 2; big++)
+        {
+            const char* text = big ? s_long : "abc";
+            const uint16_t* text16 = big ? s_long16 : s_abc16;
+            size_t count = big ? sizeof(s_long) : 3;
+            mlocResult whole =
+                utf16 ? mlocCollator_GetSortKeyUtf16(&c, text16, count, s_whole, sizeof(s_whole),
+                                                     &full)
+                      : mlocCollator_GetSortKey(&c, text, count, s_whole, sizeof(s_whole), &full);
+            memset(s_room, 0xEE, sizeof(s_room));
+            mlocResult cut =
+                utf16 ? mlocCollator_GetSortKeyUtf16(&c, text16, count, s_room, full - 1, &length)
+                      : mlocCollator_GetSortKey(&c, text, count, s_room, full - 1, &length);
+            bool untouched = true;
+            for (size_t i = 0; i < sizeof(s_room); i++)
+            {
+                untouched = untouched && s_room[i] == 0xEE;
+            }
+            mlocResult fits =
+                utf16 ? mlocCollator_GetSortKeyUtf16(&c, text16, count, s_room, full, &again)
+                      : mlocCollator_GetSortKey(&c, text, count, s_room, full, &again);
+            kept = kept && whole == mloc_success && (big ? full > 256 : full <= 256) &&
+                   cut == mloc_errorCapacity && length == full && untouched &&
+                   fits == mloc_success && again == full && memcmp(s_room, s_whole, full) == 0 &&
+                   s_room[full] == 0xEE;
+        }
+    }
+    CHECK(kept, "a key that does not fit leaves the buffer as it was; one that just fits is the "
+                "key, short or past the scratch, in UTF-8 and UTF-16");
     mlocCollator other;
     mlocCollator copy;
     uint64_t version = 0;

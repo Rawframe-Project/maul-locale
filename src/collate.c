@@ -12,6 +12,7 @@
 #include "collator.h"
 #include "data_format.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
@@ -521,6 +522,41 @@ mlocResult mlocCollator_CompareUtf16(const mlocCollator* collator, const uint16_
     return mloc_success;
 }
 
+enum
+{
+    // Holds the key of every word and every line of up to 80 characters
+    // in a probe of English text; a longer key is written twice.
+    keyScratchSize = 256,
+};
+
+// Writes a text's key into keyOut when it fits, else only its length:
+// the key goes into a scratch first, and a key longer than the scratch
+// is written again straight into keyOut once it is known to fit.
+static mlocResult WriteKey(const Collator* c, NfdText text, uint8_t* keyOut, size_t capacity,
+                           size_t* lengthOut)
+{
+    uint8_t scratch[keyScratchSize];
+    size_t length =
+        mlocCollationSortKeyText(&c->root, &c->settings, text, scratch, sizeof(scratch));
+    *lengthOut = length;
+    if (length > capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (length <= sizeof(scratch))
+    {
+        if (length > 0)
+        {
+            memcpy(keyOut, scratch, length);
+        }
+        return mloc_success;
+    }
+    size_t again = mlocCollationSortKeyText(&c->root, &c->settings, text, keyOut, capacity);
+    MLOC_ASSERT(again == length);
+    (void)again;
+    return mloc_success;
+}
+
 mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator, const uint16_t* text,
                                         size_t length, uint8_t* keyOut, size_t capacity,
                                         size_t* lengthOut)
@@ -533,10 +569,8 @@ mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator, const uint
     }
     mlocReadCollatorRest(collator, &c);
     static const uint16_t none[1] = {0};
-    *lengthOut = mlocCollationSortKeyText(&c.root, &c.settings,
-                                          mlocNfdUtf16(text != nullptr ? text : none, length),
-                                          keyOut, capacity);
-    return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
+    return WriteKey(&c, mlocNfdUtf16(text != nullptr ? text : none, length), keyOut, capacity,
+                    lengthOut);
 }
 
 mlocResult mlocCollator_GetSortKey(const mlocCollator* collator, const char* text, size_t length,
@@ -549,10 +583,8 @@ mlocResult mlocCollator_GetSortKey(const mlocCollator* collator, const char* tex
         return mloc_errorInvalid;
     }
     mlocReadCollatorRest(collator, &c);
-    *lengthOut =
-        mlocCollationSortKey(&c.root, &c.settings, (const uint8_t*)(text != nullptr ? text : ""),
-                             length, keyOut, capacity);
-    return *lengthOut <= capacity ? mloc_success : mloc_errorCapacity;
+    return WriteKey(&c, mlocNfdUtf8((const uint8_t*)(text != nullptr ? text : ""), length), keyOut,
+                    capacity, lengthOut);
 }
 
 mlocResult mlocCollator_GetVersion(const mlocCollator* collator, uint64_t* versionOut)
