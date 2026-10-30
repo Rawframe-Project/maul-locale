@@ -100,15 +100,22 @@ static bool Language(const mlocDataSet* data, const char* code, size_t length, b
     {
         return false;
     }
-    // An extension starts with a singleton subtag.
-    for (const char* at = locale.tail; *at != '\0';)
+    // An extension starts with a singleton subtag. A tail that fills its
+    // field has no NUL.
+    const char* tail = locale.tail;
+    size_t size = sizeof(locale.tail);
+    for (size_t at = 0; at < size && tail[at] != '\0';)
     {
-        size_t subtag = strcspn(at, "-");
+        size_t subtag = 0;
+        while (at + subtag < size && tail[at + subtag] != '\0' && tail[at + subtag] != '-')
+        {
+            subtag++;
+        }
         if (subtag == 1)
         {
             return false;
         }
-        at += subtag + (at[subtag] == '-');
+        at += subtag + 1;
     }
     mlocOutput output = {.buffer = out, .capacity = maxCode};
     if (mlocFormatLocale(&locale, &output) != mloc_success)
