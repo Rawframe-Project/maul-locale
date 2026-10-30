@@ -9,6 +9,8 @@
 // still differ; of the shortest candidates the one nearest the double
 // wins, ties to even.
 
+#include "invariant.h"
+
 #include "generated/pow5_tables.h"
 #include "maul-locale/decimal.h"
 
@@ -52,6 +54,9 @@ static uint64_t MultiplyHigh(uint64_t a, uint64_t b, uint64_t* lowOut)
 // shift above 64.
 static uint64_t MultiplyShift(uint64_t m, const uint64_t multiplier[2], int32_t shift)
 {
+    // Scale's m is four times a 53-bit mantissa, plus at most 2, and its
+    // shifts are Ryu's, which leave the product's top 64 bits and more.
+    MLOC_ASSERT(m >> 55 == 0 && shift > 64 && shift < 128);
     uint64_t low0 = 0;
     uint64_t high0 = MultiplyHigh(m, multiplier[0], &low0);
     uint64_t low1 = 0;
@@ -81,6 +86,10 @@ static int32_t Log10Pow5(int32_t e)
 
 static bool MultipleOfPow5(uint64_t value, int32_t p)
 {
+    // Every multiple of 5 would include 0, and the loop would not end:
+    // Scale asks about four times a nonzero mantissa, less 2 at most, or
+    // plus 2.
+    MLOC_ASSERT(value != 0);
     int32_t count = 0;
     for (; value % 5 == 0; value /= 5)
     {
@@ -91,6 +100,8 @@ static bool MultipleOfPow5(uint64_t value, int32_t p)
 
 static bool MultipleOfPow2(uint64_t value, int32_t p)
 {
+    // Scale asks only for q below 63.
+    MLOC_ASSERT(p >= 0 && p < 64);
     return (value & ((1ull << p) - 1)) == 0;
 }
 
@@ -114,6 +125,8 @@ static Scaled Scale(uint64_t m2, int32_t e2, bool acceptBounds, uint32_t mmShift
     if (e2 >= 0)
     {
         int32_t q = Log10Pow2(e2) - (e2 > 3);
+        // e2 is at most 2046 - 1023 - 52 - 2, so q is at most 290.
+        MLOC_ASSERT(q >= 0 && q < pow5InverseCount);
         int32_t shift = -e2 + q + pow5Bits + Pow5Bits(q) - 1;
         s.exponent = q;
         s.vr = MultiplyShift(mv, s_pow5Inverse[q], shift);
@@ -139,6 +152,8 @@ static Scaled Scale(uint64_t m2, int32_t e2, bool acceptBounds, uint32_t mmShift
     }
     int32_t q = Log10Pow5(-e2) - (-e2 > 1);
     int32_t i = -e2 - q;
+    // -e2 is at most 1023 + 52 + 2 - 1, so i is at most 325.
+    MLOC_ASSERT(q >= 0 && i >= 0 && i < pow5Count);
     int32_t shift = q - (Pow5Bits(i) - pow5Bits);
     s.exponent = q + e2;
     s.vr = MultiplyShift(mv, s_pow5[i], shift);
@@ -240,6 +255,8 @@ static uint64_t Shorten(Scaled* s, bool acceptBounds, int32_t* removedOut)
 // 10^exponent, its trailing zeros moved into the exponent.
 static void SetDigits(uint64_t digits, int32_t exponent, mlocDecimal* d)
 {
+    // A double's shortest digits are at most 17.
+    MLOC_ASSERT(digits < UINT64_C(100000000000000000));
     while (digits != 0 && digits % 10 == 0)
     {
         digits /= 10;
