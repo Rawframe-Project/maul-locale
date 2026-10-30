@@ -357,6 +357,51 @@ static void TestRefusals(void)
           "a segmenter the library did not make, a null offset");
 }
 
+// Whether a call that finds no boundary, by mloc_done or
+// mloc_needMoreText, clears the outputs the caller set: for words, lines,
+// and sentences with suppressions (filtered).
+static bool ClearsAtTheEnd(const char* id, mlocSegmentKind kind, bool moreFollows)
+{
+    mlocLocale locale;
+    mlocSegmenter s;
+    const char* text = "Mr. Smith left. He did";
+    if (mlocParseLocale(id, strlen(id), &locale).status != mloc_success ||
+        mlocInitSegmenter(&s_data, &locale, kind, text, strlen(text), moreFollows, &s) !=
+            mloc_success)
+    {
+        return false;
+    }
+    for (int i = 0; i < 64; i++)
+    {
+        size_t offset = 12345;
+        bool mandatory = true;
+        mlocResult r = mlocSegmenter_NextBreak(&s, &offset, &mandatory);
+        if (r != mloc_success)
+        {
+            return r == (moreFollows ? mloc_needMoreText : mloc_done) && offset == 0 && !mandatory;
+        }
+    }
+    return false;
+}
+
+static void TestCleared(void)
+{
+    bool all = true;
+    for (int more = 0; more <= 1; more++)
+    {
+        all = ClearsAtTheEnd("en", mloc_segmentWord, more) &&
+              ClearsAtTheEnd("en", mloc_segmentLine, more) &&
+              ClearsAtTheEnd("en-u-ss-standard", mloc_segmentSentence, more) && all;
+    }
+    CHECK(all, "no boundary found: the offset 0 and not mandatory");
+    mlocSegmenter zero = {0};
+    size_t offset = 12345;
+    bool mandatory = true;
+    CHECK(mlocSegmenter_NextBreak(&zero, &offset, &mandatory) == mloc_errorInvalid && offset == 0 &&
+              !mandatory,
+          "a segmenter the library did not make: the outputs cleared");
+}
+
 // A complex breaker that calls back into the segmenter it serves: a break
 // every three bytes of the run, and, when it calls back, each call it
 // could make on its segmenter, counting those not refused.
@@ -483,6 +528,7 @@ int main(void)
     TestWords();
     TestLines();
     TestRefusals();
+    TestCleared();
     TestReentry();
     TestOracle();
     return s_failures == 0 ? 0 : 1;
