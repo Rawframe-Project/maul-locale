@@ -124,6 +124,17 @@ static const Case s_cases[] = {
     {"en", stylePerMille, mloc_parseLenient, "50\xE2\x80\xB0", "0.050", 5},
     {"en", stylePerMille, mloc_parseLenient, "50%", "0.050", 2},
     {"en", stylePerMille, mloc_parseStrict, "50\xE2\x80\xB0", "0.050", 5},
+    // POSIX English's per mille sign, "0/00", begins with a digit, which
+    // is read as one before the sign is tried, so the texts its formatter
+    // writes do not read back (1 is "10000/00"); ICU4C 79.1 answers the same.
+    {"en-US-u-va-posix", stylePerMille, mloc_parseLenient, "10000/00", "10.000", 5},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseStrict, "10000/00", nullptr, 5},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseLenient, "3141.590/00", "3.141590", 8},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseStrict, "3141.590/00", nullptr, 8},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseLenient, "-5000/00", "-5.000", 5},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseStrict, "-5000/00", nullptr, 5},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseLenient, "00/00", "0.000", 2},
+    {"en-US-u-va-posix", stylePerMille, mloc_parseStrict, "00/00", nullptr, 2},
     {"en", styleScientific, mloc_parseLenient, "1.5E3", "1500", 5},
     {"en", styleScientific, mloc_parseLenient, "1.5E-3", "0.0015", 6},
     {"en", styleScientific, mloc_parseLenient, "1.5E", "1.5", 3},

@@ -109,7 +109,7 @@ The value is formatted exactly, whatever its size or fraction. `mlocSpelloutForm
 
 ## Reading numbers
 
-`mlocNumberFormatter_Parse` reads a number as a person types it in a locale: its separators and digits (any Unicode decimal digits), signs, percent and per mille signs, exponents, and the formatter's affixes. Lenient mode, the default, accepts what a person would mean (separators by their equivalence classes, grouping sizes unchecked); strict mode accepts only what the formatter would write. It reports where the number ends, so text may follow.
+`mlocNumberFormatter_Parse` reads a number as a person types it in a locale: its separators and digits (any Unicode decimal digits), signs, percent and per mille signs, exponents, and the formatter's affixes. Lenient mode, the default, accepts what a person would mean (separators by their equivalence classes, grouping sizes unchecked); strict mode accepts only what the formatter would write. It reports where the number ends, so text may follow. As in ICU, digits are read before an affix is tried, so a sign that begins with a digit is not read: POSIX English (`en-US-u-va-posix`) writes 1 per mille as "10000/00", which lenient mode reads as 10, ending before "/00", and strict mode refuses.
 
 ```c
 mlocDecimal parsed;
