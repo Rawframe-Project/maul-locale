@@ -6,6 +6,7 @@
 #include "date_time.h"
 
 #include "calendar_year.h"
+#include "invariant.h"
 
 bool mlocTimeValid(const mlocTime* time)
 {
@@ -29,6 +30,9 @@ bool mlocDateTimeWithinLimits(const mlocDateTime* dateTime)
 
 int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime)
 {
+    // Every caller checks the date-time (mlocDateTimeValid) or reads it
+    // from an instant.
+    MLOC_ASSERT(mlocDateTimeValid(dateTime));
     const mlocTime* t = &dateTime->time;
     return ((int64_t)dateTime->date.day - epochDay) * secondsPerDay + t->hour * 3600 +
            t->minute * 60 + t->second;
