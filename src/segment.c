@@ -201,9 +201,11 @@ mlocResult mlocSegmenter_Feed(mlocSegmenter* segmenter, const char* text, size_t
 static muniResult Pull(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
 {
     *mandatoryOut = false;
+    s->busy = true;
     muniResult r = s->kind == mloc_segmentLine
                        ? muniNextLineBreak(&s->iterator, offsetOut, mandatoryOut)
                        : muniNextSegmentBreak(&s->iterator, offsetOut);
+    s->busy = false;
     s->iteratorDone = r == muni_done;
     if (r == muni_needMoreText)
     {
@@ -274,6 +276,13 @@ static bool Drain(Segmenter* s, size_t* offsetOut)
 
 mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, bool* mandatoryOut)
 {
+    Segmenter* s = Made(segmenter);
+    // A call from the complex breaker is refused before it writes
+    // anything: its outputs may be the ones the call it is inside fills.
+    if (s != nullptr && s->busy)
+    {
+        return mloc_errorInvalid;
+    }
     // No boundary until one is found: a failure, mloc_done and
     // mloc_needMoreText leave none from an earlier call.
     if (offsetOut != nullptr)
@@ -284,7 +293,6 @@ mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter, size_t* offsetOut, 
     {
         *mandatoryOut = false;
     }
-    Segmenter* s = Made(segmenter);
     bool mandatory = false;
     if (s == nullptr || offsetOut == nullptr)
     {

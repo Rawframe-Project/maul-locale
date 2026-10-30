@@ -136,15 +136,19 @@ extern "C"
     /// @param segmenter     The segmenter.
     /// @param offsetOut     Receives the boundary's byte offset from the
     ///                      start of the whole text; 0 when the call
-    ///                      returns anything but mloc_success.
+    ///                      returns anything but mloc_success, except a
+    ///                      call from the segmenter's own complex breaker,
+    ///                      which leaves it as it was.
     /// @param mandatoryOut  Receives whether the line must end there:
     ///                      always false for words and sentences, and
     ///                      false when the call returns anything but
-    ///                      mloc_success. May be null.
+    ///                      mloc_success, except as for offsetOut. May be
+    ///                      null.
     /// @return mloc_success with a boundary; mloc_done after the last one;
     ///         mloc_needMoreText when the next boundary depends on text not
     ///         yet fed; mloc_errorInvalid for a null segmenter or offset,
-    ///         or a segmenter the library did not make.
+    ///         a segmenter the library did not make, or a call from the
+    ///         segmenter's own complex breaker.
     /// @par Thread safety
     /// Safe from any thread; a segmenter is used by one thread at a time.
     MLOC_NODISCARD MLOC_API mlocResult mlocSegmenter_NextBreak(mlocSegmenter* segmenter,
