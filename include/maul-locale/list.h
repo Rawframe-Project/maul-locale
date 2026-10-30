@@ -136,7 +136,7 @@ extern "C"
     /// @param locale     The locale.
     /// @param genders    The persons' genders; null when count is 0.
     /// @param count      The number of persons.
-    /// @param genderOut  Receives the list's gender.
+    /// @param genderOut  Receives the list's gender. May be one of genders.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
     ///         gender past mloc_personFemale.
     /// @par Thread safety

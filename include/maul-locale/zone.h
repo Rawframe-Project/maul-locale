@@ -272,7 +272,7 @@ extern "C"
     /// @param instant        An instant in Temporal's range.
     /// @param direction      Next or previous.
     /// @param transitionOut  Receives the transition, whose nanoseconds are 0;
-    ///                       left unchanged on failure.
+    ///                       left unchanged on failure. May be instant itself.
     /// @return mloc_success; mloc_errorNotFound when there is none within
     ///         Temporal's range (an offset zone has none);
     ///         mloc_errorInvalid for a null pointer, a zone the library did
@@ -472,7 +472,7 @@ extern "C"
     /// @param one          The first duration.
     /// @param two          The second.
     /// @param durationOut  Receives the sum, of one sign; left unchanged on
-    ///                     failure.
+    ///                     failure. May be one or two.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         duration the library would not make, or a sum of 2^53
     ///         seconds or more in size.
@@ -493,7 +493,7 @@ extern "C"
     /// @param increment    The increment.
     /// @param mode         The rounding mode.
     /// @param durationOut  Receives the rounded duration; left unchanged on
-    ///                     failure.
+    ///                     failure. May be duration itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         duration the library would not make, a unit, increment or
     ///         mode refused, or a result of 2^53 seconds or more in size.
@@ -527,7 +527,7 @@ extern "C"
     ///
     /// @param time      The time of day.
     /// @param duration  The duration.
-    /// @param timeOut   Receives the time; left unchanged on failure.
+    /// @param timeOut   Receives the time; left unchanged on failure. May be time itself.
     /// @param daysOut   Receives the days passed, negative going back; may be
     ///                  null. Left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, or a
@@ -571,7 +571,7 @@ extern "C"
     /// @param unit       The unit.
     /// @param increment  The increment.
     /// @param mode       The rounding mode.
-    /// @param timeOut    Receives the time; left unchanged on failure.
+    /// @param timeOut    Receives the time; left unchanged on failure. May be time itself.
     /// @param daysOut    Receives 1 when the rounding reaches the next
     ///                   midnight, else 0; may be null. Left unchanged on
     ///                   failure.
@@ -680,7 +680,7 @@ extern "C"
     /// @param duration     The duration, its days of 24 hours.
     /// @param overflow     What a month code or day the result lacks does.
     /// @param dateTimeOut  Receives the date-time; left unchanged on
-    ///                     failure.
+    ///                     failure. May be dateTime itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         date-time the library did not make, a duration of two signs
     ///         or out of its limits, a month code or day refused, or a result
@@ -730,7 +730,7 @@ extern "C"
     /// @param increment    The increment, as mlocRoundTime takes it.
     /// @param mode         The rounding mode.
     /// @param dateTimeOut  Receives the date-time; left unchanged on
-    ///                     failure.
+    ///                     failure. May be dateTime itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a
     ///         date-time the library did not make, a unit, increment or mode
     ///         refused, or a result outside Temporal's limits.
@@ -768,7 +768,7 @@ extern "C"
     ///
     /// @param instant     The instant.
     /// @param duration    The time duration.
-    /// @param instantOut  Receives the instant; left unchanged on failure.
+    /// @param instantOut  Receives the instant; left unchanged on failure. May be instant itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, an
     ///         instant or duration the library would not make, or a result
     ///         outside Temporal's range.
@@ -811,7 +811,7 @@ extern "C"
     /// @param unit        The unit.
     /// @param increment   The increment.
     /// @param mode        The rounding mode.
-    /// @param instantOut  Receives the instant; left unchanged on failure.
+    /// @param instantOut  Receives the instant; left unchanged on failure. May be instant itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, an
     ///         instant the library would not make, or a unit, increment or
     ///         mode refused.
@@ -936,7 +936,7 @@ extern "C"
     /// @param duration    The duration, of one sign.
     /// @param overflow    Constrain or refuse a day past its month's
     ///                    end.
-    /// @param instantOut  Receives the instant; left unchanged on failure.
+    /// @param instantOut  Receives the instant; left unchanged on failure. May be instant itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone,
     ///         instant or duration the library did not make, a calendar
     ///         out of range, a duration of two signs or too many days, a
@@ -1021,7 +1021,7 @@ extern "C"
     /// @param increment   1 for a day; for another unit below and
     ///                    dividing the next larger.
     /// @param mode        The rounding mode.
-    /// @param instantOut  Receives the instant; left unchanged on failure.
+    /// @param instantOut  Receives the instant; left unchanged on failure. May be instant itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a zone
     ///         or instant the library did not make, a unit, increment or
     ///         mode refused, or an instant outside Temporal's range.

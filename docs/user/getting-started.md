@@ -50,6 +50,8 @@ A fallible function returns an `mlocResult`: `mloc_success` (0), a positive outc
 
 Every formatting function writes UTF-8 into an `mlocOutput`: a buffer and its capacity. The call sets `length` to the bytes written, or with `mloc_errorCapacity` to the bytes needed. A null buffer with capacity 0 measures. No NUL is written.
 
+An output never overlaps an input unless the call's header says it may. The date, time, instant and duration arithmetic, `mlocConvertUnit`, `mlocGetListGender` and `mlocGetParentLocale` may write their result over their input, so `mlocAddToDate(&date, &duration, mloc_overflowConstrain, &date)` moves a date in place.
+
 ```c
 mlocDataSet set = {&builtin, 1};
 mlocLocale locale;
