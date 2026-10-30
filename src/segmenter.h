@@ -64,11 +64,13 @@ typedef struct Segmenter
     uint8_t filters;
     // Whether a break was asked for; whether the iterator asked for the
     // next piece; whether more pieces follow the last one fed; whether the
-    // iterator reported its last break.
+    // iterator reported its last break; whether the iterator is finding a
+    // break, so that the complex breaker runs.
     bool started;
     bool iteratorWaits;
     bool moreFollows;
     bool iteratorDone;
+    bool busy;
     // Rules 13.3 and 13.4: the class of the last code point before cursor
     // that is not Extend, Format or ZWJ.
     uint8_t cursorClass;

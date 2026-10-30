@@ -411,6 +411,7 @@ typedef struct Reentry
     mlocSegmenter* segmenter;
     int calls;
     int allowed;
+    int written;
 } Reentry;
 
 static size_t ReenteringBreaker(void* context, const char* run, size_t length, size_t from)
@@ -419,12 +420,16 @@ static size_t ReenteringBreaker(void* context, const char* run, size_t length, s
     Reentry* r = context;
     if (r->callBack)
     {
-        size_t offset = 0;
+        // Values the refused call must leave: the call being inside it may
+        // be filling outputs of its own there.
+        size_t offset = 12345;
+        bool mandatory = true;
         r->calls++;
         r->allowed +=
-            (mlocSegmenter_NextBreak(r->segmenter, &offset, nullptr) != mloc_errorInvalid) +
+            (mlocSegmenter_NextBreak(r->segmenter, &offset, &mandatory) != mloc_errorInvalid) +
             (mlocSegmenter_Feed(r->segmenter, "x", 1, false) != mloc_errorInvalid) +
             (mlocSegmenter_SetComplexBreaker(r->segmenter, nullptr, nullptr) != mloc_errorInvalid);
+        r->written += offset != 12345 || !mandatory;
     }
     return from + 3 < length ? from + 3 : length;
 }
@@ -480,6 +485,7 @@ static void TestReentry(void)
     int differ = 0;
     int calls = 0;
     int allowed = 0;
+    int written = 0;
     for (size_t t = 0; t < sizeof(s_texts) / sizeof(s_texts[0]); t++)
     {
         for (size_t l = 0; l < sizeof(s_ids) / sizeof(s_ids[0]); l++)
@@ -501,12 +507,15 @@ static void TestReentry(void)
                         memcmp(plain, reentered, (size_t)(a > 0 ? a : 0) * sizeof(size_t)) != 0;
                     calls += back.calls;
                     allowed += back.allowed;
+                    written += back.written;
                 }
             }
         }
     }
     CHECK(calls > 500 && allowed == 0 && differ == 0,
           "a complex breaker's calls back into its segmenter are refused and change no break");
+    CHECK(calls > 500 && written == 0,
+          "a complex breaker's call back into NextBreak leaves the outputs it was given");
 }
 
 int main(void)
