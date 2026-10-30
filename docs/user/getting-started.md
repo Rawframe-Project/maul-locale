@@ -48,7 +48,7 @@ The data files in `src/generated/*.mloc` are not installed; a program ships the 
 
 A fallible function returns an `mlocResult`: `mloc_success` (0), a positive outcome that is not an error, or a negative error. An error from -1 to -31 has the same name, meaning and value in every Maul library, so a program that links several reads a logged value one way; this library's own errors count down from -32. `mloc_errorCapacity` means the caller's buffer or cache is too small and a larger one succeeds; `mloc_errorLimit` means an argument passes one of the library's fixed bounds, each published as an `MLOC_MAX_*` constant in its header, so no room helps. `mloc_fellBack` means the call used the data of a locale the asked one falls back to; `mloc_withFallbacks` means a message was written with fallbacks for the parts that failed. Functions that read text return an `mlocTextResult`, the status and the byte offset where the fault starts. `mlocGetResultName` names any result for logs.
 
-Every formatting function writes UTF-8 into an `mlocOutput`: a buffer and its capacity. The call sets `length` to the bytes written, or with `mloc_errorCapacity` to the bytes needed, leaving the buffer as it was; a call that fails otherwise leaves `length` and the buffer as they were. A null buffer with capacity 0 measures. No NUL is written.
+Every formatting function writes UTF-8 into an `mlocOutput`: a buffer and its capacity. The call sets `length` to the bytes written, or with `mloc_errorCapacity` to the bytes needed. A null buffer with capacity 0 measures. No NUL is written.
 
 ```c
 mlocDataSet set = {&builtin, 1};
