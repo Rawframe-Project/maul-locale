@@ -46,6 +46,10 @@ static bool OpenFile(const char* path, uint8_t* bytes, size_t capacity, mlocData
     return size < capacity && mlocOpenData(bytes, size, out) == mloc_success;
 }
 
+// The data files are read once into buffers with room to spare (8 MiB
+// for zone-names.mloc's 2.9 MB, 4 MiB for the others, each at most
+// 1.3 MB); a file that outgrows its buffer stops the run at the first
+// input.
 static const mlocDataSet* Data(void)
 {
     static mlocData s_sources[5];
@@ -121,12 +125,9 @@ static uint64_t Take(Reader* r, int bytes)
 typedef struct Values
 {
     mlocDate dates[2];
-    bool hasDates[2];
     mlocTime times[2];
-    bool hasTimes[2];
     mlocInstant instants[2];
     mlocTimeZone zone;
-    bool hasZone;
     mlocDecimal days;
 } Values;
 
@@ -254,20 +255,30 @@ static void ReadValues(const mlocDataSet* set, Reader* r, Values* v)
     memset(v, 0, sizeof(*v));
     for (int i = 0; i < 2; i++)
     {
+        // A day, time or zone the library refuses to make is left zeroed,
+        // and the calls get it as they would any other value.
         int32_t day = (int32_t)(uint32_t)Take(r, 4);
-        v->hasDates[i] =
-            mlocMakeDateFromDay(mloc_calendarGregorian, day, &v->dates[i]) == mloc_success;
+        if (mlocMakeDateFromDay(mloc_calendarGregorian, day, &v->dates[i]) != mloc_success)
+        {
+            v->dates[i] = (mlocDate){0};
+        }
         mlocTimeInput in = {.hour = (int64_t)Take(r, 1),
                             .minute = (int64_t)Take(r, 1),
                             .second = (int64_t)Take(r, 1),
                             .nanosecond = (int64_t)Take(r, 4)};
-        v->hasTimes[i] = mlocMakeTime(&in, mloc_overflowConstrain, &v->times[i]) == mloc_success;
+        if (mlocMakeTime(&in, mloc_overflowConstrain, &v->times[i]) != mloc_success)
+        {
+            v->times[i] = (mlocTime){0};
+        }
         v->instants[i] = (mlocInstant){(int64_t)Take(r, 6) - (INT64_C(1) << 47),
                                        (int32_t)(Take(r, 4) % 1000000000)};
     }
     size_t zones = mlocGetTimeZoneCount(set);
     size_t which = (size_t)Take(r, 2);
-    v->hasZone = zones > 0 && mlocGetTimeZone(set, which % zones, &v->zone) == mloc_success;
+    if (zones == 0 || mlocGetTimeZone(set, which % zones, &v->zone) != mloc_success)
+    {
+        v->zone = (mlocTimeZone){0};
+    }
     Require(mlocMakeDecimal((int8_t)Take(r, 1), &v->days) == mloc_success);
 }
 
