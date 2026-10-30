@@ -135,9 +135,9 @@ zone_codes: data_view zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith invariant zone_tables
 zone_handle: zone_rules zone_tables
 zone: bytes data_view kinds zone_handle zone_rules
-date_time: calendar_year
-time_arith: date_time duration_round rounding
-datetime_arith: date_time duration_round time_arith
+date_time: calendar_year invariant
+time_arith: date_time duration_round invariant rounding
+datetime_arith: date_time duration_round invariant time_arith
 instant_arith: duration_round invariant rounding time_arith zone_handle
 zoned_arith: date_time duration_round invariant rounding time_arith zone_handle
 zone_local: date_time invariant zone_handle zone_rules zone_tables

@@ -11,6 +11,7 @@
 
 #include "date_time.h"
 #include "duration_round.h"
+#include "invariant.h"
 #include "rounding.h"
 
 enum
@@ -67,6 +68,8 @@ static int64_t Magnitude(int64_t v)
 // increment dividing the unit above it into more than one part.
 static bool ValidIncrement(mlocTimeUnit unit, uint32_t increment)
 {
+    // Callers check the unit first.
+    MLOC_ASSERT((uint32_t)unit <= mloc_timeUnitNanosecond);
     uint32_t maximum = s_maxIncrement[unit];
     return increment >= 1 && (unit == mloc_timeUnitDay ? increment == 1 : increment < maximum) &&
            maximum % increment == 0;
@@ -76,6 +79,8 @@ static bool ValidIncrement(mlocTimeUnit unit, uint32_t increment)
 // duration of one sign.
 static bool Normalize(int64_t seconds, int64_t nanoseconds, mlocTimeDuration* out)
 {
+    // Three fields' remainders, or two durations' nanoseconds, summed.
+    MLOC_ASSERT(nanoseconds > -INT64_C(10000000000) && nanoseconds < INT64_C(10000000000));
     seconds += nanoseconds / nanosecondsPerSecond;
     nanoseconds %= nanosecondsPerSecond;
     if (seconds > 0 && nanoseconds < 0)
@@ -213,6 +218,8 @@ mlocResult mlocBalanceTimeDuration(const mlocTimeDuration* duration, mlocTimeUni
                                      .nanoseconds = n % 1000};
         break;
     default:
+        // The unit was checked, and the others have cases.
+        MLOC_ASSERT(largestUnit == mloc_timeUnitNanosecond);
         if (s > (INT64_MAX - (nanosecondsPerSecond - 1)) / nanosecondsPerSecond)
         {
             return mloc_errorInvalid;
@@ -247,6 +254,9 @@ static int64_t FloorDiv(int64_t a, int64_t b)
 // A second of a day, and the nanoseconds past it, as a time.
 static mlocTime TimeOf(int64_t second, int64_t nanosecond)
 {
+    // Callers take both from floored or nonnegative remainders.
+    MLOC_ASSERT(second >= 0 && second < secondsPerDay && nanosecond >= 0 &&
+                nanosecond < nanosecondsPerSecond);
     return (mlocTime){.hour = (uint8_t)(second / 3600),
                       .minute = (uint8_t)(second / 60 % 60),
                       .second = (uint8_t)(second % 60),

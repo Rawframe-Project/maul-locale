@@ -7,6 +7,7 @@
 
 #include "date_time.h"
 #include "duration_round.h"
+#include "invariant.h"
 #include "time_arith.h"
 
 #include "maul-locale/zone.h"
@@ -92,6 +93,9 @@ static bool Difference(const mlocDateTime* one, const mlocDateTime* two, mlocUni
         adjusted.day += timeSign;
         time -= timeSign * s_nanosecondsPerDay;
     }
+    // Both times are of a day, and a day moved off a difference of their
+    // sign leaves it under a day.
+    MLOC_ASSERT(time > -s_nanosecondsPerDay && time < s_nanosecondsPerDay);
     mlocDateUnit dateLargest = largest < mloc_unitDay ? (mlocDateUnit)largest : mloc_dateUnitDay;
     *out = (RelativeDuration){0};
     if (mlocDateUntil(&one->date, &adjusted, dateLargest, &out->date) != mloc_success)
@@ -175,9 +179,13 @@ mlocResult mlocRoundDateTime(const mlocDateTime* dateTime, mlocTimeUnit unit, ui
     mlocDateTime result;
     int64_t days = 0;
     if (!Usable(dateTime) || dateTimeOut == nullptr ||
-        mlocRoundTime(&dateTime->time, unit, increment, mode, &result.time, &days) !=
-            mloc_success ||
-        mlocMakeDateFromDay((mlocCalendar)dateTime->date.calendar,
+        mlocRoundTime(&dateTime->time, unit, increment, mode, &result.time, &days) != mloc_success)
+    {
+        return mloc_errorInvalid;
+    }
+    // Rounding a time of a day carries at most into the next.
+    MLOC_ASSERT(days >= 0 && days <= 1);
+    if (mlocMakeDateFromDay((mlocCalendar)dateTime->date.calendar,
                             (int32_t)(dateTime->date.day + days), &result.date) != mloc_success ||
         !mlocDateTimeWithinLimits(&result))
     {
