@@ -147,16 +147,22 @@ extern "C"
     /// @param decimalOut  Receives the value read: finite, NaN or an
     ///                    infinity; zero is never negative. Left unchanged
     ///                    on failure.
-    /// @param endOut      Receives the offset after the text read, or 0 on
-    ///                    mloc_errorSyntax; left unchanged on any other
-    ///                    failure.
+    /// @param endOut      Receives the offset after the text read, or on
+    ///                    mloc_errorSyntax 0, where reading stopped since
+    ///                    no rule read anything; left unchanged on any
+    ///                    other failure.
     /// @return mloc_success; mloc_errorSyntax when no rule reads anything
     ///         (or the rules are of a kind ICU refuses to parse);
     ///         mloc_errorLimit when a value read passes the decimal's
     ///         bounds, or text crafted against the search, which no
     ///         formatter writes, makes it take more than
-    ///         MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorInvalid for a null
-    ///         pointer or a formatter the library did not make.
+    ///         MLOC_MAX_SPELLOUT_STEPS steps; mloc_errorNotFound when a
+    ///         rule's decimal pattern is read with number data that lacks
+    ///         the parse sets; mloc_errorFormat for rules chained past the
+    ///         parser's depth, or a pattern's affixes past the number
+    ///         parser's room, which only a crafted data file holds;
+    ///         mloc_errorInvalid for a null pointer or a formatter the
+    ///         library did not make.
     /// @par Thread safety
     /// Safe from any thread; a workspace is used by one thread at a time.
     MLOC_NODISCARD MLOC_API mlocResult mlocSpelloutFormatter_Parse(
