@@ -10,6 +10,7 @@
 #include "date_range.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include "maul-locale/datetime.h"
 
@@ -244,7 +245,9 @@ bool mlocRangeWritesTwo(const RangeChoice* c)
 bool mlocRangePrefix(const PatternTable* table, const uint8_t* prefix, uint32_t difference,
                      DataSpan* pattern, uint32_t* style)
 {
-    // The levels prefix d, M, y and G: the day's difference first.
+    // The levels prefix d, M, y and G: the day's difference first. Both
+    // callers ask for two different days, which differ in one of those.
+    MLOC_ASSERT(difference <= rangeDay);
     uint32_t level = rangeDay - difference;
     *style = mlocLoad16(prefix + 2 * dateIntervalPrefixes) >> (2 * level) & 3;
     return mlocTablePattern(table, mlocLoad16(prefix + 2 * (size_t)level), pattern);

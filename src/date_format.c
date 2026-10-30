@@ -11,6 +11,7 @@
 #include "bytes.h"
 #include "calendar_arith.h"
 #include "date_range.h"
+#include "invariant.h"
 
 #include "maul-locale/datetime.h"
 
@@ -127,6 +128,8 @@ static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* se
             uint32_t entry = s_entries[o->fields];
             bool year = entry >= dateYearMonthDay;
             uint32_t row = mlocLoad16(set + 2 * (size_t)(entry + (year ? i : 0)));
+            // A set's entries are rows (mlocValidDatePatterns).
+            MLOC_ASSERT(row < p->rowCount);
             index = mlocLoad16(p->rows + (size_t)row * dateRowSize + 2 * (size_t)o->length);
         }
         DataSpan pattern;
@@ -153,6 +156,8 @@ static const uint8_t* IndexesOf(const DatePatterns* p, const uint8_t* part,
     uint32_t entry = s_entries[o->fields];
     bool year = entry >= dateYearMonthDay;
     uint32_t row = mlocLoad16(part + 2 * (size_t)(entry + (year ? i : 0)));
+    // A date part's entries are interval rows (ValidIntervals).
+    MLOC_ASSERT(row < p->intervalRowCount);
     return p->intervalRows + (size_t)row * dateIntervalRowSize + 4 * (size_t)o->length;
 }
 
@@ -163,6 +168,9 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
 {
     DateRange* r = &f->range;
     r->table = (PatternTable){p->offsets, p->text, p->patternCount};
+    // An interval set's date part, and the pairs and prefixes of date
+    // parts and rows, are within their sections (ValidIntervals).
+    MLOC_ASSERT(mlocLoad16(intervals) < p->datePartCount);
     const uint8_t* part = p->dateParts + (size_t)mlocLoad16(intervals) * dateIntervalDateSize;
     // The validator saw the fallback hold both values.
     DataSpan fallback;
@@ -186,6 +194,7 @@ static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* inter
     for (uint32_t i = 0; i < dateFormatPatterns; i++)
     {
         const uint8_t* at = IndexesOf(p, part, o, i);
+        MLOC_ASSERT(mlocLoad16(at) < p->pairCount && mlocLoad16(at + 2) < p->prefixCount);
         r->pairs[i] = p->pairs + (size_t)mlocLoad16(at) * dateIntervalPairSize;
         r->prefixes[i] = p->prefixes + (size_t)mlocLoad16(at + 2) * dateIntervalPrefixSize;
     }
