@@ -9,6 +9,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/locale.h"
+
 #include <stdint.h>
 
 typedef struct Likely
@@ -36,6 +38,10 @@ bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script, ui
 // the full tag, packed.
 bool mlocLookupLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
                       uint64_t* valueOut);
+
+// Whether two locales share a byte: an output that does with an input
+// is refused, so a failed call leaves it as it was.
+bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two);
 
 // Whether an entry has the language and, unless script is 0, the
 // script.

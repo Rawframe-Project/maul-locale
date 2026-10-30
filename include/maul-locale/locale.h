@@ -148,11 +148,12 @@ extern "C"
     ///
     /// @param data       The data to read the likely subtags from.
     /// @param locale     The locale.
-    /// @param localeOut  Receives the result; may be locale itself; left
-    ///                   unchanged on failure.
+    /// @param localeOut  Receives the result, a locale apart from locale;
+    ///                   left unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound when the data has no likely
     ///         subtags for the locale or has no likely subtags table;
-    ///         mloc_errorInvalid for a null pointer.
+    ///         mloc_errorInvalid for a null pointer or a localeOut that is
+    ///         or overlaps locale.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocMaximizeLocale(const mlocDataSet* data,
@@ -190,10 +191,11 @@ extern "C"
     /// @param data       The data to read the likely subtags from.
     /// @param locale     The locale.
     /// @param favor      mloc_favorRegion or mloc_favorScript.
-    /// @param localeOut  Receives the result; may be locale itself; left
-    ///                   unchanged on failure.
+    /// @param localeOut  Receives the result, a locale apart from locale;
+    ///                   left unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound as mlocMaximizeLocale;
-    ///         mloc_errorInvalid for a null pointer or another favor.
+    ///         mloc_errorInvalid for a null pointer, a localeOut that is or
+    ///         overlaps locale, or another favor.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocMinimizeLocale(const mlocDataSet* data,
@@ -347,11 +349,11 @@ extern "C"
     ///
     /// @param desired    The desired locale of the match.
     /// @param supported  The supported locale of the match.
-    /// @param localeOut  Receives the locale; may be either input; left
-    ///                   unchanged on failure.
+    /// @param localeOut  Receives the locale, a locale apart from both
+    ///                   inputs; left unchanged on failure.
     /// @return mloc_success; mloc_errorLimit when the variants and
     ///         extensions pass MLOC_MAX_LOCALE_TAIL bytes; mloc_errorInvalid for a null
-    ///         pointer.
+    ///         pointer or a localeOut that is or overlaps either input.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocCombineMatch(const mlocLocale* desired,

@@ -295,10 +295,19 @@ bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut)
     return true;
 }
 
+bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two)
+{
+    // Compared as addresses, which C allows of any two objects.
+    uintptr_t a = (uintptr_t)one;
+    uintptr_t b = (uintptr_t)two;
+    return a < b + sizeof(*two) && b < a + sizeof(*one);
+}
+
 mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
                               mlocLocale* localeOut)
 {
-    if (data == nullptr || locale == nullptr || localeOut == nullptr)
+    if (data == nullptr || locale == nullptr || localeOut == nullptr ||
+        mlocLocalesOverlap(locale, localeOut))
     {
         return mloc_errorInvalid;
     }
@@ -314,6 +323,7 @@ mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale,
                               mlocLocale* localeOut)
 {
     if (data == nullptr || locale == nullptr || localeOut == nullptr ||
+        mlocLocalesOverlap(locale, localeOut) ||
         (favor != mloc_favorRegion && favor != mloc_favorScript))
     {
         return mloc_errorInvalid;

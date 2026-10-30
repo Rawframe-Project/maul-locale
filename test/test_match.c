@@ -177,7 +177,40 @@ static void TestCombine(void)
     mlocLocale out = d;
     CHECK(mlocCombineMatch(&d, &s, &out) == mloc_errorLimit && memcmp(&out, &d, sizeof(out)) == 0,
           "too long together, the output unchanged");
-    CHECK(mlocCombineMatch(&d, &d, &d) == mloc_success, "in place");
+    // The output either input itself, or overlapping either: refused,
+    // every byte left as it was. A locale is bytes alone, so one at any
+    // offset is aligned.
+    static unsigned char s_bytes[3 * sizeof(mlocLocale)];
+    mlocLocale de;
+    mlocLocale en;
+    mlocLocale apart;
+    bool all = mlocParseLocale("de-u-co-phonebk", 15, &de).status == mloc_success &&
+               mlocParseLocale("en-GB", 5, &en).status == mloc_success &&
+               mlocCombineMatch(&de, &en, &apart) == mloc_success;
+    for (size_t shift = 0; shift < sizeof(mlocLocale); shift += sizeof(mlocLocale) / 4)
+    {
+        for (int which = 0; which < 2; which++)
+        {
+            for (int side = 0; side < 2; side++)
+            {
+                memset(s_bytes, 0xA5, sizeof s_bytes);
+                // The input the output may meet, the other input apart.
+                unsigned char* met = s_bytes + sizeof(mlocLocale) + (side == 0 ? 0 : shift);
+                unsigned char* target = s_bytes + sizeof(mlocLocale) + (side == 0 ? shift : 0);
+                memcpy(met, which == 0 ? &de : &en, sizeof(mlocLocale));
+                mlocLocale other = which == 0 ? en : de;
+                unsigned char before[sizeof s_bytes];
+                memcpy(before, s_bytes, sizeof s_bytes);
+                const mlocLocale* desired = which == 0 ? (const mlocLocale*)met : &other;
+                const mlocLocale* supported = which == 0 ? &other : (const mlocLocale*)met;
+                all = all &&
+                      mlocCombineMatch(desired, supported, (mlocLocale*)target) ==
+                          mloc_errorInvalid &&
+                      memcmp(before, s_bytes, sizeof s_bytes) == 0;
+            }
+        }
+    }
+    CHECK(all, "an output that is or overlaps either input refused, nothing written");
     CHECK(mlocCombineMatch(nullptr, &s, &out) == mloc_errorInvalid &&
               mlocCombineMatch(&d, nullptr, &out) == mloc_errorInvalid &&
               mlocCombineMatch(&d, &s, nullptr) == mloc_errorInvalid,

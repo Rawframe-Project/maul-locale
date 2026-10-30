@@ -287,7 +287,8 @@ static void Append(char* text, size_t* length, const char* part, size_t size)
 mlocResult mlocCombineMatch(const mlocLocale* desired, const mlocLocale* supported,
                             mlocLocale* localeOut)
 {
-    if (desired == nullptr || supported == nullptr || localeOut == nullptr)
+    if (desired == nullptr || supported == nullptr || localeOut == nullptr ||
+        mlocLocalesOverlap(desired, localeOut) || mlocLocalesOverlap(supported, localeOut))
     {
         return mloc_errorInvalid;
     }
