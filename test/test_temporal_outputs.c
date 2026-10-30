@@ -286,12 +286,13 @@ int main(void)
     s_data = (mlocDataSet){&builtin, 1};
     s_empty = (mlocDataSet){nullptr, 0};
     mlocDate date;
+    mlocTime noonTime;
     mlocTimeInput noon = {.hour = 12};
     CHECK(mlocFindTimeZone(&s_data, "+01:00", 6, &s_offset) == mloc_success &&
               mlocFindTimeZone(&s_data, "Europe/Paris", 12, &s_named) == mloc_success &&
               mlocMakeDateFromDay(mloc_calendarGregorian, 739000, &date) == mloc_success &&
-              mlocMakeTime(&noon, mloc_overflowReject, &s_dateTime.time) == mloc_success &&
-              mlocMakeDateTime(&date, &s_dateTime.time, &s_dateTime) == mloc_success,
+              mlocMakeTime(&noon, mloc_overflowReject, &noonTime) == mloc_success &&
+              mlocMakeDateTime(&date, &noonTime, &s_dateTime) == mloc_success,
           "zones and a date-time to work with");
     s_forged = s_named;
     s_forged.identifier = UINT16_MAX;
