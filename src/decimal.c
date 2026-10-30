@@ -8,6 +8,7 @@
 #include "decimal.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -309,6 +310,8 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
     }
     if (special != nullptr)
     {
+        // A special value is its sign and its name.
+        MLOC_ASSERT(n + (size_t)specialLength == length);
         memcpy(out + n, special, (size_t)specialLength);
         return mloc_success;
     }
@@ -324,6 +327,8 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
             out[n++] = (char)('0' + mlocDigitAt(decimal, power));
         }
     }
+    // The text filled the length measured.
+    MLOC_ASSERT(n == length);
     return mloc_success;
 }
 
@@ -369,7 +374,11 @@ void mlocFillPluralOperands(const mlocDecimal* d, mlocPluralOperands* operandsOu
         return;
     }
     // Each operand fits in its 18 digits: fold the integer digits, then
-    // the fraction digits, which end at the last nonzero one.
+    // the fraction digits, which end at the last nonzero one. A valid
+    // decimal shows at least its fraction's digits (mlocValidDecimal), and
+    // below 10^18 its exponent is at most 17, so each power of ten taken
+    // is in the table.
+    MLOC_ASSERT(v >= w && d->exponent <= 17);
     int integer = top < 0 ? 0 : d->count < top + 1 ? d->count : (int)top + 1;
     uint64_t i = 0;
     uint64_t t = 0;

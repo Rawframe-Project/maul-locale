@@ -9,6 +9,7 @@
 // from its first digit and whether any follow.
 
 #include "decimal.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -173,6 +174,7 @@ mlocResult mlocRoundDecimal(mlocDecimal* decimal, int32_t position, uint32_t inc
         // down; the places past the last digit are zeros.
         uint8_t buffer[MLOC_MAX_DECIMAL_DIGITS + 3] = {0};
         int length = (int)(high - position + 1);
+        MLOC_ASSERT(high >= top && length >= 2 && length <= (int)sizeof(buffer));
         int64_t kept = top - position + 1 < decimal->count ? top - position + 1 : decimal->count;
         if (kept > 0)
         {
