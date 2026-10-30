@@ -407,11 +407,11 @@ jobs:
             -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_TOOLS=OFF -D${PREFIX}_BUILD_BENCH=OFF \
             -D${PREFIX}_WERROR=ON
           cmake --build out/fuzz
-      # Caches are immutable: each run on main saves a new entry, and every
-      # run but a pull request's restores the latest. A pull request's run
-      # starts from the committed seeds alone (maul-conventions.md).
+      # Caches are immutable: each clean run on main saves a new entry, and
+      # every run restores the latest, a pull request's included, so a
+      # change that breaks a harness fails on its own pull request
+      # (maul-conventions.md).
       - name: Restore the corpus
-        if: github.event_name != 'pull_request'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: out/corpus
