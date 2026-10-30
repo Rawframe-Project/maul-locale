@@ -107,6 +107,10 @@ int main()
         { FormatOne(Skeleton("measure-unit/length-meter unit-width-full-name", "en"), "1234.5"); });
     Time("unit-format", 2000000, [&] { FormatOne(meter, "1234.5"); });
     Show(meter, "1234.5");
+    // ICU4C has no coordinate formatter: unit-coordinate has no baseline.
+    LocalizedNumberFormatter height = Skeleton("unit/foot-and-inch unit-width-full-name", "en");
+    Time("unit-mixed", 1000000, [&] { FormatOne(height, "5.5"); });
+    Show(height, "5.5");
     // Parsing: DecimalFormat's lenient parse, as the library's.
     UChar deText[32], usdText[32];
     u_uastrcpy(deText, "1.234.567,891");

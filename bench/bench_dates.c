@@ -8,7 +8,8 @@
 // the instant 19:04:05 UTC that day in America/New_York with the specific
 // short zone ("Oct 17, 2026, 3:04 PM EDT"); the range from 5 to 8
 // October 2026 ("Oct 5 – 8, 2026"); a relative time formatter made (long,
-// numeric always) and 3 days written ("in 3 days"); a duration formatter
+// numeric always) and 3 days written ("in 3 days"), and 1 day with
+// 15:04:05 ("in 1 day at 3:04 PM"); a duration formatter
 // made (short) and 1 hour, 2 minutes and 3 seconds written ("1 hr, 2 min,
 // 3 sec").
 
@@ -71,6 +72,7 @@ static mlocDateTime s_value;
 static mlocDate s_rangeEnd;
 static mlocDate s_rangeStart;
 static mlocDecimal s_three;
+static mlocDecimal s_one;
 static const mlocInstant s_instant = {.seconds = 1792263845};
 static const mlocDurationValues s_hms = {.hours = 1, .minutes = 2, .seconds = 3};
 
@@ -134,6 +136,12 @@ static void RelativeFormat(void)
     Write(mlocRelativeFormatter_Format(&s_relative, &s_three, mloc_relativeDay, &o), &o);
 }
 
+static void RelativeDayTime(void)
+{
+    mlocOutput o = {.buffer = s_text, .capacity = sizeof(s_text) - 1};
+    Write(mlocRelativeFormatter_FormatDayTime(&s_relative, &s_time, &s_one, &s_value.time, &o), &o);
+}
+
 static void DurationInit(void)
 {
     mlocDurationFormatter f;
@@ -156,6 +164,7 @@ const BenchCase g_dateCases[] = {
     {"date-range", DateRange, 1000000},
     {"relative-init", RelativeInit, 200000},
     {"relative-format", RelativeFormat, 2000000},
+    {"relative-day-time", RelativeDayTime, 1000000},
     {"duration-init", DurationInit, 100000},
     {"duration-format", DurationFormat, 1000000},
 };
@@ -209,6 +218,7 @@ static bool MakeValues(void)
            mlocMakeDate(mloc_calendarIso8601, &end, mloc_overflowReject, &s_rangeEnd) ==
                mloc_success &&
            mlocMakeDecimal(3, &s_three) == mloc_success &&
+           mlocMakeDecimal(1, &s_one) == mloc_success &&
            mlocFindTimeZone(&s_set, "America/New_York", 16, &s_newYork) == mloc_success;
 }
 
@@ -225,8 +235,8 @@ bool PrepareDateBench(void)
 
 void ShowDateBench(void)
 {
-    const BenchBody show[] = {DateFormat, TimeFormat,     DateTimeFormat, ZonedFormat,
-                              DateRange,  RelativeFormat, DurationFormat};
+    const BenchBody show[] = {DateFormat, TimeFormat,     DateTimeFormat,  ZonedFormat,
+                              DateRange,  RelativeFormat, RelativeDayTime, DurationFormat};
     for (size_t i = 0; i < sizeof(show) / sizeof(show[0]); i++)
     {
         memset(s_text, 0, sizeof(s_text));

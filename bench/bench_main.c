@@ -7,7 +7,8 @@
 // supported locales (ICU's test list), regional preferences; a decimal
 // parsed, made from a double and rounded; Russian plural rules made and
 // selecting for an integer and a decimal; number, currency and unit
-// formatters made and formatting (decimal, compact, percent, scientific),
+// formatters made and formatting (decimal, compact, percent, scientific,
+// a mixed unit "5 feet, 6 inches", a latitude "40.446°N"),
 // numbers and amounts of money parsed; a spell-out formatter made, numbers
 // in words (an integer, a fraction, an ordinal), a Roman numeral and words
 // parsed back; display names (a language, a region, a key's value, a
@@ -221,10 +222,14 @@ static mlocNumberFormatter s_enPercent;
 static mlocNumberFormatter s_enScientific;
 static mlocCurrencyFormatter s_usd;
 static mlocUnitFormatter s_meter;
+static mlocUnitFormatter s_height;
+static mlocUnitFormatter s_latitude;
 static mlocDecimal s_million;
 static mlocDecimal s_ratio;
 static mlocDecimal s_money;
 static mlocDecimal s_length;
+static mlocDecimal s_feet;
+static mlocDecimal s_angle;
 static char s_text[128];
 
 static void NumberInit(void)
@@ -272,6 +277,8 @@ static void CurrencyFormat(void)
 }
 
 static const mlocUnitOptions s_long = {.width = mloc_unitWidthLong};
+static const mlocUnitOptions s_north = {.width = mloc_unitWidthNarrow,
+                                        .coordinate = mloc_coordinateLatitude};
 
 static void UnitInit(void)
 {
@@ -283,6 +290,18 @@ static void UnitFormat(void)
 {
     mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
     s_sink = mlocUnitFormatter_Format(&s_meter, &s_length, &output) + (int)output.length;
+}
+
+static void UnitMixed(void)
+{
+    mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
+    s_sink = mlocUnitFormatter_Format(&s_height, &s_feet, &output) + (int)output.length;
+}
+
+static void UnitCoordinate(void)
+{
+    mlocOutput output = {.buffer = s_text, .capacity = sizeof(s_text)};
+    s_sink = mlocUnitFormatter_Format(&s_latitude, &s_angle, &output) + (int)output.length;
 }
 
 static void NumberParse(void)
@@ -348,7 +367,12 @@ static bool PrepareNumbers(void)
            mlocInitUnitFormatter(&s_withUnits, &s_en, "meter", 5, &s_long, &s_meter) ==
                mloc_success &&
            Number("1234567", &s_million) && Number("0.256", &s_ratio) &&
-           Number("1234567.89", &s_money) && Number("1234.5", &s_length);
+           mlocInitUnitFormatter(&s_withUnits, &s_en, "foot-and-inch", 13, &s_long, &s_height) ==
+               mloc_success &&
+           mlocInitUnitFormatter(&s_withUnits, &s_en, "degree", 6, &s_north, &s_latitude) ==
+               mloc_success &&
+           Number("1234567.89", &s_money) && Number("1234.5", &s_length) &&
+           Number("5.5", &s_feet) && Number("40.446", &s_angle);
 }
 
 // The spell-out part: formatters of en's cardinal, ru's feminine
@@ -629,8 +653,9 @@ int main(int argc, char** argv)
         ShowMessageBench();
         ShowGrammarBench();
         void (*const show[])(void) = {NumberFormat,     CompactFormat,  PercentFormat,
-                                      ScientificFormat, CurrencyFormat, UnitFormat};
-        for (size_t i = 0; i < 6; i++)
+                                      ScientificFormat, CurrencyFormat, UnitFormat,
+                                      UnitMixed,        UnitCoordinate};
+        for (size_t i = 0; i < sizeof(show) / sizeof(show[0]); i++)
         {
             memset(s_text, 0, sizeof(s_text));
             show[i]();
@@ -679,6 +704,8 @@ int main(int argc, char** argv)
         {"currency-format", CurrencyFormat, 2000000},
         {"unit-init", UnitInit, 200000},
         {"unit-format", UnitFormat, 2000000},
+        {"unit-mixed", UnitMixed, 1000000},
+        {"unit-coordinate", UnitCoordinate, 1000000},
         {"number-parse", NumberParse, 1000000},
         {"currency-parse", CurrencyParse, 500000},
         {"currency-parse-any", CurrencyParseAny, 100000},

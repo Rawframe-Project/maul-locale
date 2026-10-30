@@ -152,6 +152,22 @@ int main()
              sink = out.length();
          });
     Show(out);
+    // The library's call writes the day, the time and the glue; ICU's
+    // combineDateAndTime takes the two written.
+    UnicodeString day, clock;
+    Time("relative-day-time", 1000000,
+         [&]
+         {
+             UErrorCode s = U_ZERO_ERROR;
+             day.remove();
+             clock.remove();
+             out.remove();
+             relative.formatNumeric(1.0, UDAT_REL_UNIT_DAY, day, s);
+             time->format(local, clock);
+             relative.combineDateAndTime(day, clock, out, s);
+             sink = out.length();
+         });
+    Show(out);
     printf("status %s\n", u_errorName(e));
     delete utc;
     return 0;
