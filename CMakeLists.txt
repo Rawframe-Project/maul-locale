@@ -195,6 +195,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/number_core.c
     src/number_data.c
     src/number_format.c
+    src/number_output.c
     src/number_parse.c
     src/number_precision.c
     src/parse_currency.c

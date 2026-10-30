@@ -791,6 +791,39 @@ static void TestCoordinate(void)
     CHECK(kept && output.length == 99, "is refused with the output left as it was");
 }
 
+// Tamil's long mixed angle: 130 bytes, more than a format writes before
+// the output, so they are written again into it.
+static void TestLongMixed(void)
+{
+    static const char s_angle[] =
+        "1,234 \xE0\xAE\x9F\xE0\xAE\xBF\xE0\xAE\x95\xE0\xAE\xBF\xE0\xAE\xB0\xE0\xAF\x80\xE0\xAE\xB8"
+        "\xE0\xAF\x8D, 34 \xE0\xAE\x86\xE0\xAE\xB0\xE0\xAF\x8D\xE0\xAE\x95\xE0\xAF\x8D \xE0\xAE\xA8"
+        "\xE0\xAE\xBF\xE0\xAE\xAE\xE0\xAE\xBF\xE0\xAE\x9F\xE0\xAE\x99\xE0\xAF\x8D\xE0\xAE\x95\xE0"
+        "\xAE"
+        "\xB3\xE0\xAF\x8D, 1.2 \xE0\xAE\x86\xE0\xAE\xB0\xE0\xAF\x8D\xE0\xAE\x95\xE0\xAF\x8D "
+        "\xE0\xAE"
+        "\xB5\xE0\xAE\xBF\xE0\xAE\xA8\xE0\xAE\xBE\xE0\xAE\x9F\xE0\xAE\xBF\xE0\xAE\x95\xE0\xAE\xB3"
+        "\xE0"
+        "\xAF\x8D";
+    CHECK(sizeof(s_angle) - 1 == 130 &&
+              Long("ta", "degree-and-arc-minute-and-arc-second", "1234.567", s_angle),
+          "130 bytes of a mixed angle");
+    mlocUnitOptions options = {.width = mloc_unitWidthLong};
+    mlocUnitFormatter formatter;
+    mlocDecimal decimal;
+    char exact[130];
+    char under[129];
+    mlocOutput fits = {.buffer = exact, .capacity = sizeof(exact)};
+    mlocOutput small = {.buffer = under, .capacity = sizeof(under)};
+    CHECK(Init(&formatter, "ta", "degree-and-arc-minute-and-arc-second", &options) >= 0 &&
+              mlocParseDecimal("1234.567", 8, &decimal).status == mloc_success &&
+              mlocUnitFormatter_Format(&formatter, &decimal, &fits) == mloc_success &&
+              fits.length == 130 && memcmp(exact, s_angle, 130) == 0 &&
+              mlocUnitFormatter_Format(&formatter, &decimal, &small) == mloc_errorCapacity &&
+              small.length == 130,
+          "130 bytes into a buffer of 130 and of 129");
+}
+
 static void TestRefusals(void)
 {
     mlocUnitFormatter formatter;
@@ -1148,6 +1181,7 @@ int main(void)
     TestRanges();
     TestParts();
     TestNames();
+    TestLongMixed();
     TestRefusals();
     TestWholeValue();
     TestPool();
