@@ -9,6 +9,7 @@
 
 #include "unit_coordinate.h"
 
+#include "invariant.h"
 #include "kinds.h"
 #include "unit_mixed.h"
 #include "unit_mixed_format.h"
@@ -140,12 +141,19 @@ mlocResult mlocFormatCoordinate(const UnitFormat* u, const mlocDecimal* decimal,
             return r;
         }
     }
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocResult r = WriteCoordinate(&c, &w);
+    // The amount can fail after the pattern's text before it, and the text
+    // after it is written either way: measured first, a failure leaves
+    // the output as it was.
+    NumberWriter measured = {0};
+    mlocResult r = WriteCoordinate(&c, &measured);
     if (r != mloc_success)
     {
         return r;
     }
+    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocResult again = WriteCoordinate(&c, &w);
+    MLOC_ASSERT(again == mloc_success && w.length == measured.length);
+    (void)again;
     output->length = w.length;
     if (output->buffer == nullptr || w.length > output->capacity)
     {
