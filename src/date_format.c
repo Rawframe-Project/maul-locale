@@ -12,6 +12,7 @@
 #include "calendar_arith.h"
 #include "date_range.h"
 #include "invariant.h"
+#include "number_output.h"
 
 #include "maul-locale/datetime.h"
 
@@ -510,22 +511,15 @@ static void Write(const DateWriting* g, NumberWriter* w)
     WriteSlot((void*)g, 1, w);
 }
 
+static mlocResult WriteDateText(const void* context, NumberWriter* w)
+{
+    Write(context, w);
+    return mloc_success;
+}
+
 static mlocResult WriteOut(const DateWriting* g, mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    Write(g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        Write(g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteDateText, g, output);
 }
 
 mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter, const mlocDate* date,
@@ -634,23 +628,16 @@ static void WriteJoinedOut(const JoinedOut* g, NumberWriter* w)
     mlocWriteJoinedFallback(g->join, g->fallback, w);
 }
 
+static mlocResult WriteJoinedText(const void* context, NumberWriter* w)
+{
+    WriteJoinedOut(context, w);
+    return mloc_success;
+}
+
 static mlocResult WriteJoinedRange(const RangeJoin* join, DataSpan fallback, mlocOutput* output)
 {
     JoinedOut g = {join, fallback};
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteJoinedOut(&g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        WriteJoinedOut(&g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteJoinedText, &g, output);
 }
 
 mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatter,

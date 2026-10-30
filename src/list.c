@@ -9,6 +9,7 @@
 #include "list_data.h"
 #include "list_join.h"
 #include "number_core.h"
+#include "number_output.h"
 
 #include <string.h>
 
@@ -86,6 +87,35 @@ static void ReportPart(void* context, uint32_t kind, size_t start, size_t length
                  start, length);
 }
 
+typedef struct ListWriting
+{
+    const ListFormat* f;
+    const mlocListItem* items;
+    size_t count;
+} ListWriting;
+
+// Writes a list's text, or in the parts pass reports its parts by their
+// list kinds, through a writer of its own.
+static mlocResult WriteListText(const void* context, NumberWriter* w)
+{
+    const ListWriting* g = context;
+    if (g->count == 0)
+    {
+        return mloc_success;
+    }
+    if (w->parts == nullptr)
+    {
+        mlocWriteList(&g->f->patterns, g->items, (uint32_t)g->count, WriteItem, (void*)g->items, w);
+        return mloc_success;
+    }
+    mlocOutput report = {.part = ReportPart, .context = (void*)w->parts};
+    NumberWriter parts = {.parts = &report};
+    mlocWriteList(&g->f->patterns, g->items, (uint32_t)g->count, WriteItem, (void*)g->items,
+                  &parts);
+    mlocEndParts(&parts);
+    return mloc_success;
+}
+
 mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter, const mlocListItem* items,
                                     size_t count, mlocOutput* textOut)
 {
@@ -106,22 +136,6 @@ mlocResult mlocListFormatter_Format(const mlocListFormatter* formatter, const ml
             return mloc_errorInvalid;
         }
     }
-    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-    if (count > 0)
-    {
-        mlocWriteList(&f.patterns, items, (uint32_t)count, WriteItem, (void*)items, &w);
-    }
-    textOut->length = w.length;
-    if (textOut->buffer == nullptr || w.length > textOut->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (textOut->part != nullptr && count > 0)
-    {
-        mlocOutput report = {.part = ReportPart, .context = textOut};
-        NumberWriter parts = {.parts = &report};
-        mlocWriteList(&f.patterns, items, (uint32_t)count, WriteItem, (void*)items, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    ListWriting g = {&f, items, count};
+    return mlocWriteOutput(WriteListText, &g, textOut);
 }

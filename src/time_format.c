@@ -13,6 +13,7 @@
 #include "date_time.h"
 #include "invariant.h"
 #include "locale_keyword.h"
+#include "number_output.h"
 
 #include "maul-locale/datetime.h"
 
@@ -365,26 +366,28 @@ static bool ReadFormatter(const mlocTimeFormatter* opaque, bool zoned, ZonedTime
 
 // Writes a time by the pattern its minute picks, its zone field by the
 // zone writing (null for none).
+// A time in its pattern: the one without minutes when they are 0.
+typedef struct TimeWriting
+{
+    const TimeFormat* f;
+    const mlocTime* time;
+    const ZoneWriting* zone;
+} TimeWriting;
+
+static mlocResult WriteTimeText(const void* context, NumberWriter* w)
+{
+    const TimeWriting* g = context;
+    uint32_t p = g->time->minute == 0 ? 1 : 0;
+    mlocWriteTimeFieldsWith(g->f, g->f->pattern[p], g->f->patternLength[p], g->time,
+                            mlocWriteZoneField, (void*)g->zone, w);
+    return mloc_success;
+}
+
 static mlocResult Write(const TimeFormat* f, const mlocTime* time, const ZoneWriting* zone,
                         mlocOutput* output)
 {
-    uint32_t p = time->minute == 0 ? 1 : 0;
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocWriteTimeFieldsWith(f, f->pattern[p], f->patternLength[p], time, mlocWriteZoneField,
-                            (void*)zone, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        mlocWriteTimeFieldsWith(f, f->pattern[p], f->patternLength[p], time, mlocWriteZoneField,
-                                (void*)zone, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    TimeWriting g = {f, time, zone};
+    return mlocWriteOutput(WriteTimeText, &g, output);
 }
 
 mlocResult mlocTimeFormatter_Format(const mlocTimeFormatter* formatter, const mlocTime* time,
@@ -457,22 +460,15 @@ static void WriteRange(const TimeRangeWriting* g, NumberWriter* w)
     mlocWriteRange(g->choice, w);
 }
 
+static mlocResult WriteTimeRangeText(const void* context, NumberWriter* w)
+{
+    WriteRange(context, w);
+    return mloc_success;
+}
+
 static mlocResult WriteRangeOut(const TimeRangeWriting* g, mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteRange(g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        WriteRange(g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteTimeRangeText, g, output);
 }
 
 // What a range of times writes: the pattern both times' minutes pick
