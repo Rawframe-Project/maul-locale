@@ -43,6 +43,14 @@ bool mlocNameCapitalizes(const mlocDataSet* data, const mlocLocale* locale, Cont
 void mlocNameCapitalize(const mlocDataSet* data, const mlocLocale* locale, NameWriter* w);
 
 // Sets an output's length; mloc_errorCapacity when the text did not fit.
-mlocResult mlocNameFinish(const NameWriter* w, mlocOutput* output);
+// Writes a name into a writer: mloc_success or mloc_fellBack.
+typedef mlocResult (*NameWriting)(const void* context, NameWriter* writer);
+
+// Writes the name a writing gives into an output, which a buffer too
+// small leaves as it was (base.h): the name goes to a scratch on the
+// stack first and is copied once it is known to fit; a name longer than
+// the scratch is written again, into the output. Gives the length on
+// mloc_errorCapacity, else the writing's result.
+mlocResult mlocWriteName(NameWriting writing, const void* context, mlocOutput* output);
 
 #endif

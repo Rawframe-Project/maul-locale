@@ -12,6 +12,7 @@
 #include "date_range.h"
 #include "date_time.h"
 #include "invariant.h"
+#include "number_output.h"
 #include "time_format.h"
 
 #include "maul-locale/datetime.h"
@@ -274,22 +275,15 @@ static void Write(const Writing* g, NumberWriter* w)
     mlocWriteGlue(f->glue, f->glueLength, WriteSlot, (void*)g, w);
 }
 
+static mlocResult WriteDateTimeText(const void* context, NumberWriter* w)
+{
+    Write(context, w);
+    return mloc_success;
+}
+
 static mlocResult WriteOut(const Writing* g, mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    Write(g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        Write(g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteDateTimeText, g, output);
 }
 
 mlocResult mlocDateTimeFormatter_Format(const mlocDateTimeFormatter* formatter,
@@ -391,22 +385,15 @@ static void WriteDateTimeRange(const RangeWriting* g, NumberWriter* w)
     }
 }
 
+static mlocResult WriteDateTimeRangeText(const void* context, NumberWriter* w)
+{
+    WriteDateTimeRange(context, w);
+    return mloc_success;
+}
+
 static mlocResult WriteRangeOut(const RangeWriting* g, mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteDateTimeRange(g, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        WriteDateTimeRange(g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteDateTimeRangeText, g, output);
 }
 
 // Writes a range of date-times read already: on one day the time's range

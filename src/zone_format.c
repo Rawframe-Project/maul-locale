@@ -17,6 +17,7 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "names_data.h"
+#include "number_output.h"
 #include "zone_code_tables.h"
 #include "zone_handle.h"
 #include "zone_local.h"
@@ -733,6 +734,24 @@ mlocResult mlocInitZoneFormatter(const mlocDataSet* data, const mlocLocale* loca
     return result;
 }
 
+// A zone's name at an instant; none when the names disagree with the zone.
+typedef struct ZoneNameWriting
+{
+    const ZoneFormat* f;
+    ZoneAt at;
+    bool read;
+} ZoneNameWriting;
+
+static mlocResult WriteZoneNameText(const void* context, NumberWriter* w)
+{
+    const ZoneNameWriting* g = context;
+    if (g->read)
+    {
+        mlocWriteZone(g->f, (mlocZoneStyle)g->f->style, &g->at, w);
+    }
+    return mloc_success;
+}
+
 mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter, const mlocTimeZone* zone,
                                     const mlocInstant* instant, mlocOutput* textOut)
 {
@@ -751,26 +770,7 @@ mlocResult mlocZoneFormatter_Format(const mlocZoneFormatter* formatter, const ml
         return mloc_errorInvalid;
     }
     // Zone names units that disagree with the zone write nothing.
-    ZoneAt a;
-    bool read = mlocReadZoneAt(&f, zone, instant, &a);
-    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-    if (read)
-    {
-        mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &w);
-    }
-    textOut->length = w.length;
-    if (textOut->buffer == nullptr || w.length > textOut->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (textOut->part != nullptr)
-    {
-        NumberWriter parts = {.parts = textOut};
-        if (read)
-        {
-            mlocWriteZone(&f, (mlocZoneStyle)f.style, &a, &parts);
-        }
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    ZoneNameWriting g = {.f = &f};
+    g.read = mlocReadZoneAt(&f, zone, instant, &g.at);
+    return mlocWriteOutput(WriteZoneNameText, &g, textOut);
 }

@@ -10,6 +10,7 @@
 #include "duration_format.h"
 #include "list_join.h"
 #include "number_core.h"
+#include "number_output.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -165,7 +166,7 @@ static void WriteNumber(const Formatter* n, const Outer* outer, const mlocDecima
 
 // Writes the numeric fields shown, the sign on the first, with the
 // separators between them.
-static void WriteClock(Writing* g, bool signShown, NumberWriter* w)
+static void WriteClock(const Writing* g, bool signShown, NumberWriter* w)
 {
     const DurationFormat* f = g->format;
     bool sign = signShown;
@@ -191,7 +192,7 @@ static void WriteClock(Writing* g, bool signShown, NumberWriter* w)
 
 static void WriteItem(void* context, uint32_t index, NumberWriter* w)
 {
-    Writing* g = context;
+    const Writing* g = context;
     const Item* item = &g->items[index];
     if (item->numeric)
     {
@@ -212,7 +213,7 @@ static void WriteItem(void* context, uint32_t index, NumberWriter* w)
 // the contextual changes. The text pass keeps each item's text and joins
 // the texts, so that each is formatted once; the parts pass, or an item
 // longer than its room, writes them again where they go.
-static void WriteItems(Writing* g, NumberWriter* w)
+static void WriteItems(const Writing* g, NumberWriter* w)
 {
     if (g->count == 0)
     {
@@ -224,7 +225,7 @@ static void WriteItems(Writing* g, NumberWriter* w)
     for (uint32_t i = 0; i < g->count; i++)
     {
         NumberWriter text = {.buffer = texts[i], .capacity = kept ? itemText : itemLead};
-        WriteItem(g, i, &text);
+        WriteItem((void*)g, i, &text);
         kept = kept && text.length <= itemText;
         items[i] = (ListItem){texts[i], text.length < itemText ? text.length : itemText};
     }
@@ -235,7 +236,7 @@ static void WriteItems(Writing* g, NumberWriter* w)
             items[i].length = items[i].length < itemLead ? items[i].length : itemLead;
         }
     }
-    mlocWriteList(&g->format->list, items, g->count, kept ? nullptr : WriteItem, g, w);
+    mlocWriteList(&g->format->list, items, g->count, kept ? nullptr : WriteItem, (void*)g, w);
 }
 
 // The duration formatter of an opaque value, its pool read in place, or
@@ -254,6 +255,12 @@ static bool ReadDuration(const mlocDurationFormatter* opaque, DurationFormat* f)
     return mlocValidDurationFormat(f);
 }
 
+static mlocResult WriteDurationText(const void* context, NumberWriter* w)
+{
+    WriteItems(context, w);
+    return mloc_success;
+}
+
 mlocResult mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
                                         const mlocDurationValues* duration, mlocOutput* textOut)
 {
@@ -268,18 +275,5 @@ mlocResult mlocDurationFormatter_Format(const mlocDurationFormatter* formatter,
     }
     g.format = &f;
     Plan(&g);
-    NumberWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
-    WriteItems(&g, &w);
-    textOut->length = w.length;
-    if (textOut->buffer == nullptr || w.length > textOut->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (textOut->part != nullptr)
-    {
-        NumberWriter parts = {.parts = textOut};
-        WriteItems(&g, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    return mlocWriteOutput(WriteDurationText, &g, textOut);
 }
