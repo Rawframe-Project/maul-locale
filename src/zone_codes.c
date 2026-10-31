@@ -5,6 +5,7 @@
 // identifier, which the set's zones then resolve, so the codes serve zones
 // of any tzdb release.
 
+#include "invariant.h"
 #include "zone_code_tables.h"
 #include "zone_handle.h"
 #include "zone_tables.h"
@@ -84,6 +85,10 @@ static mlocResult ZoneCodeOf(const mlocDataSet* data, const mlocTimeZone* zone,
     {
         return mloc_errorNotFound;
     }
+    // A code found, or an alias's, and its preferred one, all of which the
+    // code tables' validator bounds.
+    MLOC_ASSERT((uint32_t)code < c->codeCount &&
+                mlocZoneCode(c, (uint32_t)code).preferred < c->codeCount);
     *codeOut = mlocZoneCode(c, mlocZoneCode(c, (uint32_t)code).preferred);
     return mloc_success;
 }
@@ -101,6 +106,8 @@ mlocResult mlocFindTimeZoneBcp47(const mlocDataSet* data, const char* id, size_t
     {
         return mloc_errorNotFound;
     }
+    MLOC_ASSERT((uint32_t)code < c.codeCount &&
+                mlocZoneCode(&c, (uint32_t)code).preferred < c.codeCount);
     ZoneCode named = mlocZoneCode(&c, mlocZoneCode(&c, (uint32_t)code).preferred);
     return mlocFindTimeZone(data, (const char*)c.text + named.name, named.nameLength, zoneOut);
 }
@@ -173,6 +180,7 @@ mlocResult mlocFormatTimeZoneWindows(const mlocDataSet* data, const mlocTimeZone
     {
         return mloc_errorNotFound;
     }
+    MLOC_ASSERT(code.windows < c.windowsCount);
     size_t length = 0;
     const char* name = mlocZoneWindowsName(&c, code.windows, &length);
     return Write(name, length, textOut);

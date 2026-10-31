@@ -5,6 +5,7 @@
 
 #include "zone_handle.h"
 
+#include "invariant.h"
 #include "zone_rules.h"
 
 enum
@@ -42,6 +43,10 @@ int32_t mlocTimeZoneOffsetAt(const mlocTimeZone* zone, const ZoneTables* t, bool
     {
         return zone->offsetMinutes * 60;
     }
-    ZoneOffset o = mlocZoneOffsetAt(t, mlocZoneIdentifierZone(t, zone->identifier), seconds);
+    // mlocReadTimeZone checked the identifier, and the zones validator its
+    // zone.
+    uint32_t index = mlocZoneIdentifierZone(t, zone->identifier);
+    MLOC_ASSERT(index < t->zoneCount);
+    ZoneOffset o = mlocZoneOffsetAt(t, index, seconds);
     return o.standard + o.save;
 }
