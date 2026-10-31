@@ -5,6 +5,122 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.5.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.4.0...v0.5.0) (2026-10-31)
+
+### Changed
+
+- **Breaking: the public enumerations are fixed-width integers.** Each
+  `mlocX` kind is an `int32_t` typedef with named constants
+  (`mlocTemporalFormat`, a set of bits, is `uint32_t`), no longer a C
+  `enum` type; the constants keep their values. C++ code that overloads
+  on these types or converts to them as enums changes, and a part
+  function takes `mlocPart` in place of `uint32_t`
+  ([#255](https://github.com/Rawframe-Project/maul-locale/pull/255)).
+  `mlocFavor`, `mlocComponent`, `mlocHourFormat`, `mlocMeasurementSystem`
+  and `mlocPaperSize` are `int32_t` too, and every struct field of a kind
+  takes its kind's typedef. `mlocLocalePreferences` puts its kinds first
+  and grows from 19 to 52 bytes; `mlocDecimal` moves `kind` before
+  `count` and grows from 52 to 56 bytes. Recompile against the new
+  headers, and store again any `mlocLocalePreferences` or `mlocDecimal`
+  kept as bytes. A negative value of any kind is refused with
+  `mloc_errorInvalid`
+  ([#313](https://github.com/Rawframe-Project/maul-locale/pull/313)).
+- **Breaking: a failed call leaves its outputs as they were.** It writes
+  only what the failure defines, which each output's documentation now
+  says: the length (or size) needed with `mloc_errorCapacity`, the
+  offset where a parse stopped, a message's faults. Calls that wrote
+  more before:
+  - a strict `mlocFormatMessage` that returns `mloc_errorFallback` no
+    longer sets the length to 0 or writes into the buffer
+    ([#251](https://github.com/Rawframe-Project/maul-locale/pull/251));
+  - `mlocSpelloutFormatter_Format` failing with anything but
+    `mloc_errorCapacity` writes neither text nor length
+    ([#268](https://github.com/Rawframe-Project/maul-locale/pull/268));
+  - `mlocNumberFormatter_Parse` and `mlocCurrencyFormatter_Parse` past
+    the decimal's bounds (`mloc_errorLimit`) write neither the end nor
+    the currency code
+    ([#270](https://github.com/Rawframe-Project/maul-locale/pull/270)),
+    and `mlocSpelloutFormatter_Parse` failing with anything but
+    `mloc_errorSyntax` no longer sets the end to 0
+    ([#272](https://github.com/Rawframe-Project/maul-locale/pull/272));
+  - `mlocRelativeFormatter_FormatDayTime` whose day fails, and a
+    coordinate `mlocUnitFormatter_Format` whose amount fails, write
+    nothing ([#276](https://github.com/Rawframe-Project/maul-locale/pull/276),
+    [#281](https://github.com/Rawframe-Project/maul-locale/pull/281)).
+
+  A program that read an output after one of these failures reads the
+  value it set before.
+- **Breaking: `mlocSegmenter_NextBreak` without a boundary.** With
+  `mloc_done` and `mloc_needMoreText` the offset is 0 and the mandatory
+  flag false; keep the last boundary in a variable of your own while
+  the call returns `mloc_success`. A call it refuses with
+  `mloc_errorInvalid` (a segmenter the library did not make, a null
+  pointer, a call from the segmenter's own breaker) leaves both outputs
+  as they were
+  ([#211](https://github.com/Rawframe-Project/maul-locale/pull/211),
+  [#220](https://github.com/Rawframe-Project/maul-locale/pull/220),
+  [#302](https://github.com/Rawframe-Project/maul-locale/pull/302)).
+- **Breaking: a locale output may not be an input of
+  `mlocMaximizeLocale`, `mlocMinimizeLocale` or `mlocCombineMatch`.**
+  Such a call returns `mloc_errorInvalid`; write the result to another
+  locale and copy it back
+  ([#265](https://github.com/Rawframe-Project/maul-locale/pull/265)).
+- A buffer too small for its text or key is left as it was: every
+  formatting call, `mlocFormatMessage`, the IXDTF strings and the sort
+  keys returned `mloc_errorCapacity` with as much text as fit written,
+  and now write only the length needed. A call that measures with a
+  null buffer is unchanged
+  ([#310](https://github.com/Rawframe-Project/maul-locale/pull/310),
+  [#314](https://github.com/Rawframe-Project/maul-locale/pull/314),
+  [#315](https://github.com/Rawframe-Project/maul-locale/pull/315)).
+- A program function must give the same text for the same value within
+  one format call: a message over 512 bytes, or one whose parts are
+  reported, is formatted again, and a second text of another length is
+  refused with `mloc_errorInvalid`, the buffer cleared, no part reported
+  past the text first written
+  ([#315](https://github.com/Rawframe-Project/maul-locale/pull/315),
+  [#317](https://github.com/Rawframe-Project/maul-locale/pull/317)).
+- A Chinese or Dangi date outside the tables' 1600 to 2400 takes about
+  a sixth of the time it did, within 1.3 times ICU4C 79.1's; results are
+  unchanged
+  ([#241](https://github.com/Rawframe-Project/maul-locale/pull/241),
+  [#243](https://github.com/Rawframe-Project/maul-locale/pull/243),
+  [#245](https://github.com/Rawframe-Project/maul-locale/pull/245),
+  [#247](https://github.com/Rawframe-Project/maul-locale/pull/247),
+  [#250](https://github.com/Rawframe-Project/maul-locale/pull/250)).
+- Every output's documentation says what a failure leaves in it, and
+  `base.h` states the rule and the three calls that clear a buffer
+  instead; the headers also say which outputs may be their input
+  ([#263](https://github.com/Rawframe-Project/maul-locale/pull/263),
+  [#299](https://github.com/Rawframe-Project/maul-locale/pull/299),
+  [#325](https://github.com/Rawframe-Project/maul-locale/pull/325)).
+
+### Fixed
+
+- `mlocGetName` with `mloc_nameLanguage` read past a stack variable for
+  a code whose variants and extensions filled the locale's tail exactly
+  ([#229](https://github.com/Rawframe-Project/maul-locale/pull/229)).
+- A negative unit width or coordinate is refused; where enumerations
+  are signed (MSVC) it read before a table
+  ([#254](https://github.com/Rawframe-Project/maul-locale/pull/254)).
+- `mlocMessageFormatter_Bind` refuses a buffer that overlaps the
+  compiled message or the formatter, which it overwrote before
+  ([#298](https://github.com/Rawframe-Project/maul-locale/pull/298)).
+- `mlocInitSearcher` and `mlocInitSearcherUtf16` leave the searcher of a
+  refused call as it was
+  ([#307](https://github.com/Rawframe-Project/maul-locale/pull/307)),
+  and a search that fails no longer leaves a rejected candidate's
+  bounds in its outputs
+  ([#320](https://github.com/Rawframe-Project/maul-locale/pull/320)).
+- `mlocCompileMessage` refusing a message for an error it finds only
+  once written (a data model error, a chain or resolution bound) clears
+  the bytes it wrote, so the buffer holds no compiled message, instead
+  of the refused records
+  ([#323](https://github.com/Rawframe-Project/maul-locale/pull/323)).
+- `mlocCatalogChain_FormatMessage` and `mlocCatalogChain_FormatKey`
+  report the reason and position only once the text is written
+  ([#324](https://github.com/Rawframe-Project/maul-locale/pull/324)).
+
 ## [0.4.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.3.0...v0.4.0) (2026-10-29)
 
 ### Added
