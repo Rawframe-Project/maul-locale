@@ -8,6 +8,7 @@
 
 #include "duration_fields.h"
 #include "duration_format.h"
+#include "invariant.h"
 #include "list_join.h"
 #include "number_core.h"
 #include "number_output.h"
@@ -219,6 +220,8 @@ static void WriteItems(const Writing* g, NumberWriter* w)
     {
         return;
     }
+    // The plan takes each field once at most.
+    MLOC_ASSERT(g->count <= mloc_durationFieldCount);
     char texts[mloc_durationFieldCount][itemText];
     ListItem items[mloc_durationFieldCount];
     bool kept = w->parts == nullptr;

@@ -5,6 +5,7 @@
 // GetDurationUnitOptions and ValidateDurationUnitStyle, field by field.
 
 #include "duration_format.h"
+#include "invariant.h"
 
 enum
 {
@@ -50,9 +51,13 @@ static void DefaultOf(uint32_t field, uint32_t base, uint32_t previous, uint32_t
     {
         static const uint8_t s_widths[3] = {mloc_durationFieldShort, mloc_durationFieldLong,
                                             mloc_durationFieldNarrow};
+        // The style was checked to be at most digital, taken above.
+        MLOC_ASSERT(base < 3);
         *style = s_widths[base];
         *display = mloc_durationDisplayAuto;
     }
+    // A default resolves to a style and a display of their own.
+    MLOC_ASSERT(*style != mloc_durationFieldDefault && *display != mloc_durationDisplayDefault);
 }
 
 // ValidateDurationUnitStyle: no display always on a fraction, nothing but
