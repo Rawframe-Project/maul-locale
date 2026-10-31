@@ -183,7 +183,7 @@ grammar_tk: grammar_turkic
 grammar_fi: grammar_fi_word invariant
 grammar_fi_word: invariant
 grammar_ko:
-grammar_hu_sound:
+grammar_hu_sound: invariant
 grammar_hu: grammar_hu_sound invariant
 grammar_hu_words: grammar_hu
 grammar_tr: grammar_lexicon grammar_turkic invariant
