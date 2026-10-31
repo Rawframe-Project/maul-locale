@@ -5,6 +5,24 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **locale:** every function that reads an `mlocLocale` now refuses with `mloc_errorInvalid` a locale whose fields are not NUL-padded text in canonical syntax, where it used to go on and could report success. A program that fills an `mlocLocale` by hand must keep that syntax, or make the locale with `mlocParseLocale` or `mlocCanonicalizeLocale`.
+
+### Fixed
+
+* **catalog:** refuse a key past a replaced first catalog's keys ([#336](https://github.com/Rawframe-Project/maul-locale/issues/336)) ([e6f8cb4](https://github.com/Rawframe-Project/maul-locale/commit/e6f8cb4e058eb220c21321f3b955ee485a185e9d)), closes [#335](https://github.com/Rawframe-Project/maul-locale/issues/335)
+* **catalog:** say a catalog's bytes stay as they were while it is open ([#341](https://github.com/Rawframe-Project/maul-locale/issues/341)) ([61bfb20](https://github.com/Rawframe-Project/maul-locale/commit/61bfb20dff71be0e90d1f21a9ea543dace9dbeaf)), closes [#340](https://github.com/Rawframe-Project/maul-locale/issues/340)
+* **grammar:** refuse a compact number ending in its pattern's digit ([#365](https://github.com/Rawframe-Project/maul-locale/issues/365)) ([f15b607](https://github.com/Rawframe-Project/maul-locale/commit/f15b607def232b4570dd6c928f8961124cff9059)), closes [#364](https://github.com/Rawframe-Project/maul-locale/issues/364)
+* **grammar:** refuse a number whose text ends in an affix's digit ([#363](https://github.com/Rawframe-Project/maul-locale/issues/363)) ([447fe39](https://github.com/Rawframe-Project/maul-locale/commit/447fe39b9f869449eaf231fa437d52e69704c9fe)), closes [#362](https://github.com/Rawframe-Project/maul-locale/issues/362)
+* **grammar:** size a stem's tail to the largest language room ([#353](https://github.com/Rawframe-Project/maul-locale/issues/353)) ([73013f0](https://github.com/Rawframe-Project/maul-locale/commit/73013f0800992d003f23787ac01fe5a02d8b1846)), closes [#352](https://github.com/Rawframe-Project/maul-locale/issues/352)
+* **locale:** refuse a hand-filled locale whose bytes are no locale's ([#361](https://github.com/Rawframe-Project/maul-locale/issues/361)) ([46054b0](https://github.com/Rawframe-Project/maul-locale/commit/46054b02fbc7f996719d86d159645ad59f45e226)), closes [#360](https://github.com/Rawframe-Project/maul-locale/issues/360)
+* **message:** refuse a match entry cleared during selection ([#345](https://github.com/Rawframe-Project/maul-locale/issues/345)) ([b0ed799](https://github.com/Rawframe-Project/maul-locale/commit/b0ed799e08d4dd860f16ae625ab5e9dbe1de1f2c)), closes [#344](https://github.com/Rawframe-Project/maul-locale/issues/344)
+* say kept memory stays as it was; refuse changed message calls ([#343](https://github.com/Rawframe-Project/maul-locale/issues/343)) ([a096334](https://github.com/Rawframe-Project/maul-locale/commit/a09633462f315aec7abfc5184a93781a2c45c98d)), closes [#342](https://github.com/Rawframe-Project/maul-locale/issues/342)
+
 ## [0.5.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.4.0...v0.5.0) (2026-10-31)
 
 ### Changed
