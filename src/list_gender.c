@@ -7,6 +7,7 @@
 
 #include "invariant.h"
 #include "list_genders.h"
+#include "locale_valid.h"
 
 #include "maul-locale/list.h"
 
@@ -83,7 +84,7 @@ mlocResult mlocGetListGender(const mlocDataSet* data, const mlocLocale* locale,
                              const mlocPersonGender* genders, size_t count,
                              mlocPersonGender* genderOut)
 {
-    if (data == nullptr || locale == nullptr || genderOut == nullptr ||
+    if (data == nullptr || !mlocLocaleValid(locale) || genderOut == nullptr ||
         (genders == nullptr && count > 0))
     {
         return mloc_errorInvalid;

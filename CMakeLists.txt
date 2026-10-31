@@ -125,6 +125,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/locale_direction.c
     src/locale_match.c
     src/locale_parse.c
+    src/locale_valid.c
     src/locale_prefs.c
     src/message.c
     src/message_bind.c
@@ -450,6 +451,18 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(test_enum_refusals PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
     target_compile_definitions(test_enum_refusals PRIVATE MLOC_GENERATED_DIR="${MLOC_GENERATED_DIR}")
+    # A malformed locale given to every function that reads one, with every
+    # data file so that a valid one succeeds.
+    maul_add_test(locale_refusals)
+    if(EMSCRIPTEN)
+        foreach(file collation currency-names dates names relative segments spellout units zone-names)
+            target_link_options(test_locale_refusals PRIVATE "SHELL:--embed-file ${PROJECT_SOURCE_DIR}/src/generated/${file}.mloc@/generated/${file}.mloc")
+        endforeach()
+    endif()
+    if(WIN32)
+        target_compile_definitions(test_locale_refusals PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+    target_compile_definitions(test_locale_refusals PRIVATE MLOC_GENERATED_DIR="${MLOC_GENERATED_DIR}")
     # The collation, segmentation and spell-out data files.
     maul_add_test(text_outputs)
     set(MLOC_TEXT_DIR ${PROJECT_SOURCE_DIR}/src/generated)

@@ -13,6 +13,7 @@
 #include "index_build.h"
 #include "index_labels.h"
 #include "index_value.h"
+#include "locale_valid.h"
 #include "nfd_stream.h"
 
 #include "maul-unicode/encoding.h"
@@ -54,7 +55,7 @@ mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
     mlocIndexOptions o = options != nullptr ? *options : (mlocIndexOptions){0};
     IndexSpecials specials;
     Collator c;
-    if (sizeOut == nullptr || data == nullptr || locale == nullptr ||
+    if (sizeOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         (bufferOut == nullptr && capacity > 0) || !Specials(&o, &specials) ||
         !mlocReadCollator(collator, &c))
     {

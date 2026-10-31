@@ -12,6 +12,7 @@
 #include "data_view.h"
 #include "invariant.h"
 #include "kinds.h"
+#include "locale_valid.h"
 #include "names_data.h"
 #include "names_text.h"
 
@@ -743,8 +744,9 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
                              mlocOutput* textOut)
 {
     mlocLocaleNameOptions o = options != nullptr ? *options : (mlocLocaleNameOptions){0};
-    if (data == nullptr || displayLocale == nullptr || locale == nullptr || textOut == nullptr ||
-        textOut->part != nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
+    if (data == nullptr || !mlocLocaleValid(displayLocale) || !mlocLocaleValid(locale) ||
+        textOut == nullptr || textOut->part != nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity != 0) ||
         (uint32_t)o.languageDisplay > mloc_languageDisplayStandard ||
         (uint32_t)o.form >= nameFieldCount ||
         (uint32_t)o.capitalization > mloc_capitalizationStandAlone)

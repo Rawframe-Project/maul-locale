@@ -16,6 +16,7 @@
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
 #include "invariant.h"
+#include "locale_valid.h"
 #include "number_core.h"
 #include "number_format.h"
 #include "number_output.h"
@@ -113,7 +114,7 @@ static uint8_t LanguageOfLocale(const mlocLocale* locale)
 mlocResult mlocInitInflector(const mlocDataSet* data, const mlocLocale* locale,
                              mlocInflector* inflectorOut)
 {
-    if (inflectorOut == nullptr || data == nullptr || locale == nullptr)
+    if (inflectorOut == nullptr || data == nullptr || !mlocLocaleValid(locale))
     {
         return mloc_errorInvalid;
     }

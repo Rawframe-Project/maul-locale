@@ -12,6 +12,7 @@
 #include "date_range.h"
 #include "date_time.h"
 #include "invariant.h"
+#include "locale_valid.h"
 #include "number_output.h"
 #include "time_format.h"
 
@@ -194,7 +195,7 @@ mlocResult mlocInitDateTimeFormatter(const mlocDataSet* data, const mlocLocale* 
                                      mlocDateTimeFormatter* formatterOut)
 {
     mlocDateTimeOptions o = options != nullptr ? *options : (mlocDateTimeOptions){0};
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || !ValidOptions(&o))
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !ValidOptions(&o))
     {
         return mloc_errorInvalid;
     }

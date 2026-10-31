@@ -15,6 +15,7 @@
 #include "locale_keyword.h"
 #include "locale_prefs.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 #include "number_precision.h"
 #include "unit_convert.h"
 #include "unit_data.h"
@@ -575,7 +576,7 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
                                  const mlocPrecision* precision, mlocOutput* unitOut,
                                  mlocUnitAmounts* amountsOut)
 {
-    if (data == nullptr || locale == nullptr || unit == nullptr || value == nullptr ||
+    if (data == nullptr || !mlocLocaleValid(locale) || unit == nullptr || value == nullptr ||
         unitOut == nullptr || amountsOut == nullptr || (usage == nullptr && usageLength > 0) ||
         (unitOut->buffer == nullptr && unitOut->capacity > 0) || !mlocValidDecimal(value) ||
         (precision != nullptr && !mlocValidPrecision(precision)))

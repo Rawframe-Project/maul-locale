@@ -194,7 +194,8 @@ extern "C"
     ///
     /// @param data    The data with the spell-out rules.
     /// @param locale  The locale, canonicalized.
-    /// @return The count; 0 for a null pointer or data without the rules.
+    /// @return The count; 0 for a null pointer, a locale that is not one
+    ///         (mlocLocale) or data without the rules.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data,

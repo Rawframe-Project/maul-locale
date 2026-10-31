@@ -14,6 +14,7 @@
 #include "kinds.h"
 #include "locale_context.h"
 #include "locale_fallback.h"
+#include "locale_valid.h"
 #include "plural.h"
 #include "plural_rules.h"
 #include "spellout_data.h"
@@ -190,7 +191,7 @@ mlocResult mlocInitSpelloutFormatter(const mlocDataSet* data, const mlocLocale* 
                                      const mlocSpelloutOptions* options,
                                      mlocSpelloutFormatter* formatterOut)
 {
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         (ruleSet == nullptr && length != 0) || (ruleSet != nullptr && length == 0) ||
         !ValidOptions(options))
     {
@@ -215,8 +216,8 @@ mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocL
                                             const mlocSpelloutOptions* options,
                                             mlocSpelloutFormatter* formatterOut)
 {
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || system == nullptr ||
-        !ValidOptions(options))
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+        system == nullptr || !ValidOptions(options))
     {
         return mloc_errorInvalid;
     }
@@ -420,7 +421,7 @@ static size_t VisitSets(const mlocDataSet* data, const mlocLocale* locale, size_
 
 size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* locale)
 {
-    if (data == nullptr || locale == nullptr)
+    if (data == nullptr || !mlocLocaleValid(locale))
     {
         return 0;
     }
@@ -430,7 +431,7 @@ size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* lo
 mlocResult mlocGetSpelloutRuleSet(const mlocDataSet* data, const mlocLocale* locale, size_t index,
                                   const char** nameOut, size_t* lengthOut)
 {
-    if (data == nullptr || locale == nullptr || nameOut == nullptr || lengthOut == nullptr)
+    if (data == nullptr || !mlocLocaleValid(locale) || nameOut == nullptr || lengthOut == nullptr)
     {
         return mloc_errorInvalid;
     }

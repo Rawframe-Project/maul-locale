@@ -12,6 +12,7 @@
 #include "kinds.h"
 #include "locale_keyword.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 
 #include "maul-locale/calendar.h"
 #include "maul-locale/locale.h"
@@ -295,7 +296,7 @@ static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const u
 mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* locale,
                                     mlocLocalePreferences* preferencesOut)
 {
-    if (data == nullptr || locale == nullptr || preferencesOut == nullptr)
+    if (data == nullptr || !mlocLocaleValid(locale) || preferencesOut == nullptr)
     {
         return mloc_errorInvalid;
     }

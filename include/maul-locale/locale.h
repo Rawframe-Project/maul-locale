@@ -35,6 +35,13 @@ extern "C"
     // field is NUL-padded and uses all its bytes only when its text is
     // that long, so two locales compare equal with memcmp. Read the
     // fields; make a locale with mlocParseLocale.
+    //
+    // Every function that reads a locale refuses with mloc_errorInvalid
+    // one whose fields are not NUL-padded text of the syntax below (the
+    // tail's subtags 1 to 8 lowercase letters and digits), as it refuses
+    // a null pointer. It checks syntax only: a locale filled by hand that
+    // is well formed but not canonical (an alias, variants or extensions
+    // out of order) is accepted, and what it gives is then undefined.
     typedef struct mlocLocale
     {
         // Lowercase, 2, 3 or 5 to 8 letters; "und" when the tag gave

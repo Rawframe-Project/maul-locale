@@ -10,6 +10,7 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
+#include "locale_valid.h"
 #include "segment_overrides.h"
 #include "segmenter.h"
 
@@ -132,7 +133,7 @@ mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
                              mlocSegmentKind kind, const char* text, size_t length,
                              bool moreFollows, mlocSegmenter* segmenterOut)
 {
-    if (segmenterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (segmenterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         (text == nullptr && length > 0) ||
         (kind != mloc_segmentWord && kind != mloc_segmentSentence && kind != mloc_segmentLine))
     {

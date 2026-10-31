@@ -14,6 +14,7 @@
 #include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
+#include "locale_valid.h"
 #include "plural_rules.h"
 
 #include "maul-locale/plural.h"
@@ -92,7 +93,7 @@ bool mlocValidPlurals(const DataView* view, DataSpan payload)
 mlocResult mlocInitPluralRules(const mlocDataSet* data, const mlocLocale* locale,
                                mlocPluralType type, mlocPluralRules* rulesOut)
 {
-    if (rulesOut == nullptr || data == nullptr || locale == nullptr ||
+    if (rulesOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         (type != mloc_pluralCardinal && type != mloc_pluralOrdinal))
     {
         return mloc_errorInvalid;

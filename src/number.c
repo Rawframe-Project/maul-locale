@@ -6,6 +6,7 @@
 
 #include "maul-locale/number.h"
 
+#include "locale_valid.h"
 #include "number_core.h"
 #include "number_format.h"
 #include "number_parse.h"
@@ -22,7 +23,7 @@ mlocResult mlocInitNumberFormatter(const mlocDataSet* data, const mlocLocale* lo
 {
     static const mlocNumberOptions s_defaults = {0};
     const mlocNumberOptions* o = options == nullptr ? &s_defaults : options;
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         !mlocValidFormatOptions(o))
     {
         return mloc_errorInvalid;

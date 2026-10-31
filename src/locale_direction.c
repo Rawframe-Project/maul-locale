@@ -4,6 +4,7 @@
 // A locale's direction (maul-locale/locale.h): its script's, or its likely
 // script's, against CLDR's scripts written right to left.
 
+#include "locale_valid.h"
 #include "script_directions.h"
 
 #include "maul-locale/locale.h"
@@ -39,7 +40,7 @@ static bool RightToLeft(const char script[4])
 mlocResult mlocGetLocaleDirection(const mlocDataSet* data, const mlocLocale* locale,
                                   mlocDirection* directionOut)
 {
-    if (data == NULL || locale == NULL || directionOut == NULL)
+    if (data == NULL || !mlocLocaleValid(locale) || directionOut == NULL)
     {
         return mloc_errorInvalid;
     }

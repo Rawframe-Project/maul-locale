@@ -13,6 +13,7 @@
 #include "invariant.h"
 #include "kinds.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 
 #include "maul-locale/locale.h"
 
@@ -306,7 +307,7 @@ bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two)
 mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
                               mlocLocale* localeOut)
 {
-    if (data == nullptr || locale == nullptr || localeOut == nullptr ||
+    if (data == nullptr || !mlocLocaleValid(locale) || localeOut == nullptr ||
         mlocLocalesOverlap(locale, localeOut))
     {
         return mloc_errorInvalid;
@@ -322,7 +323,7 @@ mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
 mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocFavor favor,
                               mlocLocale* localeOut)
 {
-    if (data == nullptr || locale == nullptr || localeOut == nullptr ||
+    if (data == nullptr || !mlocLocaleValid(locale) || localeOut == nullptr ||
         mlocLocalesOverlap(locale, localeOut) ||
         (favor != mloc_favorRegion && favor != mloc_favorScript))
     {
