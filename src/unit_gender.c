@@ -11,6 +11,7 @@
 #include "data_view.h"
 #include "invariant.h"
 #include "kinds.h"
+#include "locale_valid.h"
 #include "unit_data.h"
 #include "unit_id.h"
 #include "unit_names.h"
@@ -239,7 +240,7 @@ static uint8_t ArbitraryGender(const GenderContext* c, const UnitId* id)
 mlocResult mlocGetUnitGender(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
                              size_t unitLength, mlocGender* genderOut)
 {
-    if (data == nullptr || locale == nullptr || unit == nullptr || unitLength == 0 ||
+    if (data == nullptr || !mlocLocaleValid(locale) || unit == nullptr || unitLength == 0 ||
         genderOut == nullptr)
     {
         return mloc_errorInvalid;

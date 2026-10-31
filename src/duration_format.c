@@ -9,6 +9,7 @@
 #include "duration_format.h"
 
 #include "kinds.h"
+#include "locale_valid.h"
 #include "plural.h"
 #include "plural_rules.h"
 #include "unit_names.h"
@@ -145,7 +146,7 @@ mlocResult mlocInitDurationFormatter(const mlocDataSet* data, const mlocLocale* 
     static const DurationFormat s_zero;
     const mlocDurationOptions* o = options == nullptr ? &s_defaults : options;
     DurationFormat f = s_zero;
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         !mlocResolveDurationOptions(o, f.style, f.display))
     {
         return mloc_errorInvalid;

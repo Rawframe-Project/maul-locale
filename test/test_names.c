@@ -373,11 +373,25 @@ static void TestLocaleName(void)
               mlocGetLocaleName(&s_data, &en, &gb, &badCase, &tight) == mloc_errorInvalid &&
               mlocGetLocaleName(&builtinAlone, &en, &gb, nullptr, &tight) == mloc_errorNotFound,
           "the size needed, and every refusal");
-    // A value the parser did not make: its fields full, with no NUL.
+    // A value the parser did not make, its fields full with no NUL: refused
+    // when they are no locale's, read in bounds when they are (the region
+    // is 3 bytes at most).
     mlocLocale full;
     memset(&full, 'a', sizeof(full));
     char buffer[512];
     mlocOutput wide = {.buffer = buffer, .capacity = sizeof(buffer)};
+    CHECK(mlocGetLocaleName(&s_data, &en, &full, nullptr, &wide) == mloc_errorInvalid,
+          "a locale value of no locale's bytes is refused");
+    memset(&full, 0, sizeof(full));
+    memcpy(full.language, "abcdefgh", 8);
+    memcpy(full.script, "Abcd", 4);
+    memcpy(full.region, "419", 3);
+    // Subtags of 8 letters and a last one of 1 to 8, whatever the size.
+    memset(full.tail, 'a', sizeof(full.tail));
+    for (size_t at = 8; at + 1 < sizeof(full.tail); at += 9)
+    {
+        full.tail[at] = '-';
+    }
     mlocResult r = mlocGetLocaleName(&s_data, &en, &full, nullptr, &wide);
     CHECK(r == mloc_success || r == mloc_fellBack, "a locale value without a NUL read in bounds");
 }

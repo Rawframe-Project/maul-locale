@@ -13,6 +13,7 @@
 #include "date_time.h"
 #include "invariant.h"
 #include "locale_keyword.h"
+#include "locale_valid.h"
 #include "number_output.h"
 
 #include "maul-locale/datetime.h"
@@ -307,7 +308,7 @@ mlocResult mlocInitTimeFormatter(const mlocDataSet* data, const mlocLocale* loca
                                  const mlocTimeOptions* options, mlocTimeFormatter* formatterOut)
 {
     mlocTimeOptions o = options != nullptr ? *options : (mlocTimeOptions){0};
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         !mlocValidTimeOptions(&o))
     {
         return mloc_errorInvalid;

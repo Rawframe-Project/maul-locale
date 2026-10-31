@@ -17,6 +17,8 @@ A locale names a language and, as needed, its script, region, variants and optio
 
 Text from outside the program (a user setting, an HTTP header, a stored preference) goes through `mlocCanonicalizeLocale` instead, which also replaces CLDR's aliases: `iw` becomes `he`, `sh` becomes `sr-Latn`, a legacy tag such as `i-klingon` is replaced whole, and old extension values are renamed. CLDR's variant POSIX becomes the keyword it stands for: `en-US-posix` and `en_US_POSIX` become `en-US-u-va-posix`, which takes POSIX English's data (`1234.5` with no grouping, capitals sorted before small letters). Formatters and matching expect canonicalized locales.
 
+A locale filled in by hand rather than parsed must keep the same syntax: each field NUL-padded, the language 2, 3 or 5 to 8 lowercase letters, the script 4 letters in title case or none, the region 2 capitals or 3 digits or none, and the tail lowercase subtags of 1 to 8 letters and digits joined by single hyphens. Every function that reads a locale refuses any other with `mloc_errorInvalid`. Only the syntax is checked: a well-formed locale that is not canonical (an alias, variants out of order) is accepted, and what a function gives for it is undefined, so parse a locale rather than fill one in.
+
 ```c
 mlocLocale locale;
 mlocLocaleChanges changes = 0;

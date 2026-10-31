@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "invariant.h"
+#include "locale_valid.h"
 #include "message_text.h"
 
 #include "maul-locale/locale.h"
@@ -120,7 +121,7 @@ mlocResult mlocInitMessageFormatter(const mlocDataSet* data, const mlocLocale* l
                                     const mlocMessageOptions* options,
                                     mlocMessageFormatter* formatterOut)
 {
-    if (formatterOut == NULL || data == NULL || locale == NULL)
+    if (formatterOut == NULL || data == NULL || !mlocLocaleValid(locale))
     {
         return mloc_errorInvalid;
     }

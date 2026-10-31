@@ -16,6 +16,7 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
+#include "locale_valid.h"
 #include "number_core.h"
 #include "number_data.h"
 #include "number_format.h"
@@ -364,7 +365,7 @@ mlocResult mlocInitCurrencyFormatter(const mlocDataSet* data, const mlocLocale* 
     static const mlocCurrencyOptions s_defaults = {0};
     const mlocCurrencyOptions* o = options == nullptr ? &s_defaults : options;
     uint16_t packed = code == nullptr || codeLength != 3 ? 0 : mlocPackCurrency(code, 3);
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || packed == 0 ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || packed == 0 ||
         !ValidOptions(o))
     {
         return mloc_errorInvalid;
@@ -602,7 +603,7 @@ static mlocResult WriteText(const void* text, size_t length, mlocOutput* output)
 static uint16_t LookupCode(const mlocDataSet* data, const mlocLocale* locale, const char* code,
                            size_t codeLength, const mlocOutput* output)
 {
-    bool valid = data != nullptr && locale != nullptr && code != nullptr && codeLength == 3 &&
+    bool valid = data != nullptr && mlocLocaleValid(locale) && code != nullptr && codeLength == 3 &&
                  output != nullptr && (output->buffer != nullptr || output->capacity == 0);
     return valid ? mlocPackCurrency(code, 3) : 0;
 }

@@ -14,6 +14,7 @@
 #include "locale_keyword.h"
 #include "locale_prefs.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 
 #include "maul-locale/currency.h"
 
@@ -176,7 +177,7 @@ static uint16_t RegionCurrency(const uint8_t* entries, uint32_t count, int32_t d
 mlocResult mlocFindCurrency(const mlocDataSet* data, const mlocLocale* locale, int32_t day,
                             char* codeOut)
 {
-    if (data == nullptr || locale == nullptr || codeOut == nullptr)
+    if (data == nullptr || !mlocLocaleValid(locale) || codeOut == nullptr)
     {
         return mloc_errorInvalid;
     }

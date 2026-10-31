@@ -9,6 +9,7 @@
 #include "invariant.h"
 #include "list_data.h"
 #include "list_join.h"
+#include "locale_valid.h"
 #include "number_core.h"
 #include "number_output.h"
 
@@ -39,7 +40,7 @@ mlocResult mlocInitListFormatter(const mlocDataSet* data, const mlocLocale* loca
                                  const mlocListOptions* options, mlocListFormatter* formatterOut)
 {
     mlocListOptions o = options != nullptr ? *options : (mlocListOptions){0};
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         (uint32_t)o.type > mloc_listUnit || (uint32_t)o.width > mloc_listNarrow)
     {
         return mloc_errorInvalid;

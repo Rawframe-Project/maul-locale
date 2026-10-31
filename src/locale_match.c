@@ -10,6 +10,7 @@
 #include "locale_likely.h"
 #include "locale_lsr.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 
 #include "maul-locale/locale.h"
 
@@ -83,6 +84,19 @@ static size_t Gather(const MatchTable* table, mlocMatchEntry* entries, size_t co
     return at;
 }
 
+// Whether each of count locales is valid (mlocLocaleValid).
+static bool LocalesValid(const mlocLocale* locales, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        if (!mlocLocaleValid(&locales[i]))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported, size_t count,
                             const mlocLocale* defaultLocale, mlocMatchEntry* entriesOut)
 {
@@ -93,6 +107,11 @@ mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported
     if (count > MLOC_MAX_MATCH_LOCALES)
     {
         return mloc_errorLimit;
+    }
+    if (!LocalesValid(supported, count) ||
+        (defaultLocale != nullptr && !mlocLocaleValid(defaultLocale)))
+    {
+        return mloc_errorInvalid;
     }
     Likely likely;
     MatchTable table;
@@ -157,6 +176,10 @@ mlocResult mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported
     if (count > MLOC_MAX_MATCH_LOCALES || desiredCount > MLOC_MAX_MATCH_LOCALES)
     {
         return mloc_errorLimit;
+    }
+    if (!LocalesValid(supported, count) || !LocalesValid(desired, desiredCount))
+    {
+        return mloc_errorInvalid;
     }
     Likely likely;
     MatchTable table;
@@ -287,7 +310,7 @@ static void Append(char* text, size_t* length, const char* part, size_t size)
 mlocResult mlocCombineMatch(const mlocLocale* desired, const mlocLocale* supported,
                             mlocLocale* localeOut)
 {
-    if (desired == nullptr || supported == nullptr || localeOut == nullptr ||
+    if (!mlocLocaleValid(desired) || !mlocLocaleValid(supported) || localeOut == nullptr ||
         mlocLocalesOverlap(desired, localeOut) || mlocLocalesOverlap(supported, localeOut))
     {
         return mloc_errorInvalid;

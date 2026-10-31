@@ -16,6 +16,7 @@
 #include "locale_keyword.h"
 #include "locale_likely.h"
 #include "locale_tables.h"
+#include "locale_valid.h"
 
 #include "maul-locale/locale.h"
 
@@ -465,7 +466,7 @@ static bool OpenParents(const mlocDataSet* data, Parents* parents)
 mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
                                const mlocLocale* locale, mlocLocale* parentOut)
 {
-    if (data == nullptr || locale == nullptr || parentOut == nullptr ||
+    if (data == nullptr || !mlocLocaleValid(locale) || parentOut == nullptr ||
         (uint32_t)component > mloc_componentGrammar)
     {
         return mloc_errorInvalid;

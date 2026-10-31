@@ -16,6 +16,7 @@
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
+#include "locale_valid.h"
 
 #include "maul-unicode/properties.h"
 
@@ -409,7 +410,7 @@ mlocResult mlocInitCollator(const mlocDataSet* data, const mlocLocale* locale,
                             const mlocCollatorOptions* options, mlocCollator* collatorOut)
 {
     mlocCollatorOptions o = options != nullptr ? *options : (mlocCollatorOptions){0};
-    if (collatorOut == nullptr || data == nullptr || locale == nullptr || !OptionsValid(&o))
+    if (collatorOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !OptionsValid(&o))
     {
         return mloc_errorInvalid;
     }

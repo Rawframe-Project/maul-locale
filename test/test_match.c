@@ -58,7 +58,8 @@ static mlocMatch MatchWith(const char* supported, const char* desired, mlocMatch
     mlocMatchEntry entries[maxList];
     mlocMatchOptions options = {.flags = flags, .threshold = threshold};
     mlocMatch match = {-2, -2};
-    const mlocLocale* def = defaultIndex >= 0 ? &s.locales[defaultIndex] : nullptr;
+    const mlocLocale* def =
+        defaultIndex >= 0 && (size_t)defaultIndex < s.count ? &s.locales[defaultIndex] : nullptr;
     if (mlocPrepareMatch(&s_data, s.locales, s.count, def, entries) != mloc_success ||
         mlocMatchLocales(&s_data, s.locales, entries, s.count, d.locales, d.count, &options,
                          &match) != mloc_success)

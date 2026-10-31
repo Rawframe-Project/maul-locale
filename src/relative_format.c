@@ -16,6 +16,7 @@
 #include "kinds.h"
 #include "locale_context.h"
 #include "locale_fallback.h"
+#include "locale_valid.h"
 #include "number_core.h"
 #include "number_format.h"
 #include "plural.h"
@@ -84,7 +85,7 @@ mlocResult mlocInitRelativeFormatter(const mlocDataSet* data, const mlocLocale* 
 {
     static const mlocRelativeOptions s_defaults = {0};
     const mlocRelativeOptions* o = options != nullptr ? options : &s_defaults;
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || !ValidOptions(o))
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !ValidOptions(o))
     {
         return mloc_errorInvalid;
     }

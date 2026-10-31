@@ -7,6 +7,7 @@
 // and the extensions are then written by their singleton.
 
 #include "invariant.h"
+#include "locale_valid.h"
 
 #include "maul-locale/locale.h"
 
@@ -583,7 +584,7 @@ static size_t FieldLength(const char* field, size_t size)
 
 mlocResult mlocFormatLocale(const mlocLocale* locale, mlocOutput* textOut)
 {
-    if (locale == nullptr || textOut == nullptr ||
+    if (!mlocLocaleValid(locale) || textOut == nullptr ||
         (textOut->buffer == nullptr && textOut->capacity))
     {
         return mloc_errorInvalid;

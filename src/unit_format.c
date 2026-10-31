@@ -12,6 +12,7 @@
 #include "data_view.h"
 #include "decimal.h"
 #include "kinds.h"
+#include "locale_valid.h"
 #include "number_core.h"
 #include "plural.h"
 #include "plural_rules.h"
@@ -108,7 +109,7 @@ mlocResult mlocInitUnitFormatter(const mlocDataSet* data, const mlocLocale* loca
 {
     static const mlocUnitOptions s_defaults = {0};
     const mlocUnitOptions* o = options == nullptr ? &s_defaults : options;
-    if (formatterOut == nullptr || data == nullptr || locale == nullptr || unit == nullptr ||
+    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || unit == nullptr ||
         unitLength == 0 || !ValidOptions(o))
     {
         return mloc_errorInvalid;
@@ -338,7 +339,7 @@ mlocResult mlocGetUnitDisplayName(const mlocDataSet* data, const mlocLocale* loc
                                   const char* unit, size_t unitLength, mlocUnitWidth width,
                                   mlocOutput* textOut)
 {
-    if (data == nullptr || locale == nullptr || unit == nullptr || unitLength == 0 ||
+    if (data == nullptr || !mlocLocaleValid(locale) || unit == nullptr || unitLength == 0 ||
         textOut == nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         (uint32_t)width > mloc_unitWidthNumeric)
     {
