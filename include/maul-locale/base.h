@@ -82,8 +82,8 @@ extern "C"
     // each output says: the length needed with mloc_errorCapacity, the
     // buffer too small for it left as it was, the offset where a reading
     // call stopped, a message's faults. One error clears a buffer instead:
-    // a message whose program function gives a text over 512 bytes another
-    // length when formatted again (mlocFormatMessage). An
+    // a message whose program function gives its text another length when
+    // formatted again (mlocFormatMessage). An
     // outcome that is not an error (mloc_fellBack, mloc_withFallbacks,
     // mloc_done, mloc_needMoreText) writes the outputs it describes.
     typedef int32_t mlocResult;
@@ -164,7 +164,10 @@ extern "C"
     // mlocFormatMessage names that clears the buffer.
     // No NUL is written. When
     // part is set, it is called for each part in order of start, after the
-    // whole text is written and only on success.
+    // whole text is written and only on success, but for that one
+    // error of mlocFormatMessage, which may come after some parts are
+    // reported: they then describe a text that is cleared, and the program
+    // treats them as void. No part ends past the text first written.
     typedef struct mlocOutput
     {
         char* buffer;

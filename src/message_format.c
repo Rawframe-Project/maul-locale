@@ -16,7 +16,9 @@
 #include <string.h>
 
 // The bytes that fit go to the buffer; length counts them all. In the
-// pass that reports parts, part is the caller's.
+// pass that reports parts, part is the caller's and limit the length the
+// first pass wrote: a text or a part that passes it marks the pass
+// overrun, which reports nothing more and stops.
 typedef struct Writer
 {
     char* buffer;
@@ -24,6 +26,8 @@ typedef struct Writer
     size_t length;
     mlocPartFunction part;
     void* context;
+    size_t limit;
+    bool overrun;
 } Writer;
 
 typedef struct Formatting
@@ -47,10 +51,21 @@ static void Put(Writer* w, const void* bytes, size_t length)
     w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
 }
 
-// Reports a message part of a kind and index, in the pass that reports.
-static void Report(const Writer* w, uint32_t kind, uint32_t index, size_t start, size_t length)
+// Whether a part lies within the text the first pass wrote, the pass
+// marked overrun when it does not.
+static bool Within(Writer* w, size_t start, size_t length)
 {
-    if (w->part != NULL)
+    if (start > w->limit || length > w->limit - start)
+    {
+        w->overrun = true;
+    }
+    return !w->overrun;
+}
+
+// Reports a message part of a kind and index, in the pass that reports.
+static void Report(Writer* w, uint32_t kind, uint32_t index, size_t start, size_t length)
+{
+    if (w->part != NULL && Within(w, start, length))
     {
         w->part(w->context, index << 8 | kind, start, length);
     }
@@ -59,7 +74,7 @@ static void Report(const Writer* w, uint32_t kind, uint32_t index, size_t start,
 // What a function's parts are moved by: the place its text starts.
 typedef struct Inner
 {
-    const Writer* w;
+    Writer* w;
     size_t start;
 } Inner;
 
@@ -68,9 +83,10 @@ typedef struct Inner
 static void PassPart(void* context, mlocPart part, size_t start, size_t length)
 {
     const Inner* inner = context;
-    if ((part & 0xFF) < mloc_messagePartText)
+    size_t at = start > SIZE_MAX - inner->start ? SIZE_MAX : inner->start + start;
+    if ((part & 0xFF) < mloc_messagePartText && Within(inner->w, at, length))
     {
-        inner->w->part(inner->w->context, part, inner->start + start, length);
+        inner->w->part(inner->w->context, part, at, length);
     }
 }
 
@@ -141,7 +157,7 @@ static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
 
 // The output over the writer's room left, passing parts on through
 // inner when the writer reports them.
-static mlocOutput Room(const Writer* w, Inner* inner)
+static mlocOutput Room(Writer* w, Inner* inner)
 {
     bool room = w->buffer != NULL && w->length < w->capacity;
     inner->w = w;
@@ -275,7 +291,7 @@ static void PutMark(Writer* w, const char* mark)
 static bool Measure(Formatting* f, const Value* v, uint32_t expression, size_t* lengthOut)
 {
     Writer saved = f->w;
-    f->w = (Writer){NULL, 0, 0, NULL, NULL};
+    f->w = (Writer){NULL, 0, 0, NULL, NULL, 0, false};
     bool good = PutValue(f, v, expression);
     *lengthOut = f->w.length;
     f->w = saved;
@@ -325,6 +341,11 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
 {
     for (uint32_t i = first; i < first + count; i++)
     {
+        // The pass that reports parts stops once past the first text.
+        if (f->w.part != NULL && !Within(&f->w, 0, f->w.length))
+        {
+            return;
+        }
         uint32_t kind = Field(f, messagePieces, i, 0);
         if (kind == pieceText)
         {
@@ -651,7 +672,7 @@ static mlocResult WritePass(void* context, char* buffer, size_t capacity, size_t
 {
     MessagePass* p = context;
     Formatting* f = p->f;
-    f->w = (Writer){buffer, capacity, 0, NULL, NULL};
+    f->w = (Writer){buffer, capacity, 0, NULL, NULL, 0, false};
     Run(f, p->passes == 0 ? 0 : 1);
     p->passes++;
     *lengthOut = f->w.length;
@@ -684,6 +705,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     // when strict, leaves the caller's as it was.
     char scratch[messageScratchSize];
     MessagePass pass = {&f, 0};
+    size_t kept = textOut->length;
     mlocResult r = mlocWriteKept(WritePass, &pass, scratch, sizeof(scratch), textOut);
     if (faultsOut != NULL)
     {
@@ -698,9 +720,22 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
         // The same text again, its parts reported, its faults already
         // counted.
         size_t faultCount = f.r.faultCount;
-        f.w = (Writer){textOut->buffer, textOut->capacity, 0, textOut->part, textOut->context};
+        f.w = (Writer){textOut->buffer,  textOut->capacity, 0,    textOut->part,
+                       textOut->context, textOut->length,   false};
         Run(&f, 1);
         f.r.faultCount = faultCount;
+        // A program function that gave another length this time, or a
+        // part past the first text, leaves parts and text that do not
+        // agree, refused as in mlocWriteKept.
+        if (f.w.overrun || f.w.length != textOut->length)
+        {
+            if (textOut->capacity > 0)
+            {
+                memset(textOut->buffer, 0, textOut->capacity);
+            }
+            textOut->length = kept;
+            return mloc_errorInvalid;
+        }
     }
     return f.r.faultCount > 0 ? mloc_withFallbacks : mloc_success;
 }
