@@ -267,6 +267,9 @@ static void PluralPossessive(Builder* b, const mlocInflection* r)
     Start(b);
     Put(b, s);
     static const char* const s_persons[2][3] = {{"m", "d", ""}, {"nk", "", "k"}};
+    // mlocHungarianRequestValid kept the person within 1 to 3, and Build
+    // calls this only for a person.
+    MLOC_ASSERT(r->possessorPerson >= 1 && r->possessorPerson <= 3);
     const char* person = s_persons[r->possessorPlural ? 1 : 0][r->possessorPerson - 1];
     if (r->possessorPerson == 2 && r->possessorPlural)
     {
@@ -514,6 +517,8 @@ static bool ReadStem(const HungarianText* t, const mlocInflection* r, Stem* out)
     out->word = Lookup(&out->letters, t->marked ? 1 : t->name ? 0 : 3, &out->from);
     if (out->word != nullptr && out->from > 0)
     {
+        // Lookup found the part at a letter of the word.
+        MLOC_ASSERT(out->from < out->letters.count);
         // A compound's harmony is its last word's (számítógépek).
         HungarianLetters head = out->letters;
         head.count -= out->from;
@@ -580,6 +585,8 @@ static void ChangedEnd(const HungarianText* t, const Stem* stem, const Hungarian
     size_t length = strlen(stem->changedStem);
     mlocHungarianReadLetters((const uint8_t*)stem->changedStem, length, &changed);
     size_t part = stem->letters.count - stem->from;
+    // JoinedStem checked that the written word has the part's letters.
+    MLOC_ASSERT(written->count >= part);
     size_t same = 0;
     while (same < part && same < changed.count &&
            stem->letters.c[stem->from + same] == changed.c[same])
@@ -600,6 +607,9 @@ static void ChangedEnd(const HungarianText* t, const Stem* stem, const Hungarian
         char capital[4];
         size_t used = 0;
         size_t rest = (same + 1 < changed.count ? changed.at[same + 1] : length) - from;
+        // The changed letter's bytes are within the tail written: n holds
+        // at least that letter (its bytes are fewer than the room).
+        MLOC_ASSERT(rest <= n);
         if (mlocHungarianSmall(original) != original &&
             muniEncodeUtf8(mlocHungarianCapital(changed.c[same]), capital, sizeof(capital),
                            &used) == muni_success &&
@@ -668,6 +678,9 @@ static void Meeting(const HungarianText* t, const HungarianSound* s, HungarianFo
     }
     if (n >= 2 && s->writtenLength == n)
     {
+        // The word is the spoken end itself (not hinted), whose final
+        // sound it ends with.
+        MLOC_ASSERT(t->wordLength >= n);
         // The digraph doubles in its first letter: Kodá + lly + al.
         out->kept = t->wordLength - n;
         out->tail[0] = s->sound[0];
