@@ -3,6 +3,8 @@
 
 #include "message_operand.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 // A date value as a function receives it: a zoned one in the timeZone
@@ -34,6 +36,8 @@ void mlocToOperand(const Value* v, mlocMessageOperand* out, mlocMessageResolved*
 {
     memset(out, 0, sizeof *out);
     ValueKind kind = v->kind == valueString ? v->behind : v->kind;
+    // A :string value of a :string value takes the inner one's behind.
+    MLOC_ASSERT(kind != valueString);
     if (kind == valueText)
     {
         out->kind = mloc_messageOperandText;
