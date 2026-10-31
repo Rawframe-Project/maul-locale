@@ -64,6 +64,15 @@ static_assert(sizeof(StoredInflector) <= sizeof(mlocInflector), "an inflector fi
 
 // An inflector as a call reads it: its few bytes copied, its formatters
 // read in place (each is a value of uint64_t words, as its home is).
+// The last run of a formatted number's digits in its text: its integer,
+// fraction or exponent digits with the separators between them.
+typedef struct DigitRun
+{
+    size_t start;
+    size_t end;
+    bool seen;
+} DigitRun;
+
 typedef struct Inflector
 {
     const mlocNumberFormatter* number;
@@ -73,10 +82,10 @@ typedef struct Inflector
     // (mlocInflector_InflectNumber) in standard notation: read instead of
     // the text.
     const mlocDecimal* shown;
-    // Whether the caller gave a number, and where the formatter's last
-    // digit of it (integer, fraction or exponent) ends in its text.
+    // Whether the caller gave a number, and where the formatter wrote
+    // its last run of digits.
     bool formatted;
-    size_t numberEnd;
+    DigitRun digits;
     uint8_t stamp;
     uint8_t language;
     uint8_t spoken;
@@ -164,7 +173,7 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     f->ordinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, ordinal));
     f->shown = nullptr;
     f->formatted = false;
-    f->numberEnd = 0;
+    f->digits = (DigitRun){0};
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
            f->language <= languageKorean && f->spoken <= 1;
 }
@@ -276,9 +285,12 @@ static mlocResult SpokenValue(const Inflector* f, const uint8_t* text, const End
                               mlocDecimal* value)
 {
     // The digits that end a formatted number's text are the number's only
-    // where its own end: data the loader accepts may give an affix or a
-    // compact pattern after it that ends in a digit ("12.5%9", "129").
-    if (f->formatted && e->kind == endNumber && e->end != f->numberEnd)
+    // where its own end and begin within them: data the loader accepts may
+    // give an affix, a compact pattern or an exponent separator next to
+    // them that ends or begins in a digit ("12.5%9", "129", "912",
+    // "1.2E93").
+    if (f->formatted && e->kind == endNumber &&
+        (e->end != f->digits.end || e->start < f->digits.start))
     {
         return mloc_errorInvalid;
     }
@@ -804,15 +816,26 @@ mlocResult mlocInflector_InflectText(const mlocInflector* inflector, const char*
     return r != mloc_success ? r : Output((const uint8_t*)text, &in, textOut);
 }
 
-// Notes where a number's last integer, fraction or exponent digit ends.
+// Notes a number's digits and the separators between them: a part that
+// meets or overlaps the run noted so far extends it, any other begins
+// the next run.
 static void NoteDigits(void* context, mlocPart part, size_t start, size_t length)
 {
-    if (part == mloc_numberPartInteger || part == mloc_numberPartFraction ||
-        part == mloc_numberPartExponentInteger)
+    if (part != mloc_numberPartInteger && part != mloc_numberPartFraction &&
+        part != mloc_numberPartExponentInteger && part != mloc_numberPartGroup &&
+        part != mloc_numberPartDecimal)
     {
-        size_t* end = context;
-        *end = start + length > *end ? start + length : *end;
+        return;
     }
+    DigitRun* run = context;
+    size_t end = start + length;
+    if (!run->seen || start > run->end)
+    {
+        *run = (DigitRun){start, end, true};
+        return;
+    }
+    run->start = start < run->start ? start : run->start;
+    run->end = end > run->end ? end : run->end;
 }
 
 // Reports a number's own parts inside the stem.
@@ -845,7 +868,7 @@ mlocResult mlocInflector_InflectNumber(const mlocInflector* inflector,
     }
     char text[numberRoom];
     f.formatted = true;
-    mlocOutput written = {text, sizeof(text), 0, NoteDigits, &f.numberEnd};
+    mlocOutput written = {text, sizeof(text), 0, NoteDigits, &f.digits};
     mlocResult r = mlocFormatWith(&numberFormat, nullptr, decimal, &written);
     mlocDecimal shown;
     f.shown =

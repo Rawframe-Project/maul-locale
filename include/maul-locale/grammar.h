@@ -279,8 +279,9 @@ extern "C"
     ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
     ///         mloc_errorInvalid also for a decimal the library did not
     ///         make, a formatter it did not make, or one whose data writes
-    ///         a digit after the number (a percent sign or compact pattern
-    ///         that ends in a digit) or fewer ASCII digits than its value
+    ///         a digit that is not the number's beside its last digits (a
+    ///         percent sign, compact pattern or exponent separator that
+    ///         ends in a digit) or fewer ASCII digits than its value
     ///         shows (a zero that is a letter).
     /// @par Thread safety
     /// Safe from any thread.
