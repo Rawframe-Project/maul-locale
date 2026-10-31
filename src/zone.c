@@ -9,6 +9,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "zone_handle.h"
 #include "zone_rules.h"
@@ -44,6 +45,8 @@ static bool ParseOffset(const char* id, size_t length, int16_t* minutesOut)
         return false;
     }
     int total = hours * 60 + minutes;
+    // Within the offsets mlocReadTimeZone accepts.
+    MLOC_ASSERT(total <= 23 * 60 + 59);
     *minutesOut = (int16_t)(negative ? -total : total);
     return true;
 }
@@ -79,6 +82,8 @@ mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t leng
     {
         return mloc_errorNotFound;
     }
+    // The zones validator bounds the identifiers to 16 bits.
+    MLOC_ASSERT((uint32_t)identifier < t.identifierCount && t.identifierCount <= UINT16_MAX);
     *zoneOut = (mlocTimeZone){
         .zones = span.bytes, .zonesSize = span.size, .identifier = (uint16_t)identifier};
     return mloc_success;
@@ -91,6 +96,9 @@ static mlocResult Write(const char* text, size_t length, int minutes, mlocOutput
     if (text == nullptr)
     {
         int magnitude = minutes < 0 ? -minutes : minutes;
+        // mlocReadTimeZone refuses an offset zone past 23:59, so the hours
+        // are two digits.
+        MLOC_ASSERT(magnitude <= 23 * 60 + 59);
         offset[0] = minutes < 0 ? '-' : '+';
         offset[1] = (char)('0' + magnitude / 600);
         offset[2] = (char)('0' + magnitude / 60 % 10);
@@ -127,6 +135,8 @@ static mlocResult FormatId(const mlocTimeZone* zone, bool primary, mlocOutput* o
     }
     uint32_t identifier =
         primary ? mlocZoneIdentifierPrimary(&t, zone->identifier) : zone->identifier;
+    // The zones validator checked every identifier's primary.
+    MLOC_ASSERT(identifier < t.identifierCount);
     size_t length = 0;
     const char* name = mlocZoneIdentifierName(&t, identifier, &length);
     return Write(name, length, 0, output);
@@ -201,9 +211,11 @@ mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* 
     {
         return mloc_errorInvalid;
     }
-    *zoneOut = (mlocTimeZone){.zones = span.bytes,
-                              .zonesSize = span.size,
-                              .identifier = mlocLoad16(t.primaries + index * 2)};
+    uint16_t identifier = mlocLoad16(t.primaries + index * 2);
+    // The zones validator checked each primary names an identifier.
+    MLOC_ASSERT(identifier < t.identifierCount);
+    *zoneOut =
+        (mlocTimeZone){.zones = span.bytes, .zonesSize = span.size, .identifier = identifier};
     return mloc_success;
 }
 
@@ -228,6 +240,8 @@ mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* in
 static bool OffsetChange(const ZoneTables* t, uint32_t zone, int64_t seconds, bool next,
                          int64_t* atOut)
 {
+    // An identifier's zone, which the zones validator checked.
+    MLOC_ASSERT(zone < t->zoneCount);
     ZoneRecord z = mlocZoneRecord(t, zone);
     int64_t at = seconds;
     ZoneOffset after = {0};
