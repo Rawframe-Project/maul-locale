@@ -43,6 +43,7 @@
 #include "bytes.h"
 #include "catalog_hash.h"
 #include "data_view.h"
+#include "invariant.h"
 
 #include <stdint.h>
 
@@ -128,10 +129,15 @@ static inline bool mlocReadCatalogKeys(DataSpan payload, CatalogKeys* out)
 static inline uint32_t mlocCatalogIndexOf(const CatalogKeys* keys, const uint8_t* key,
                                           size_t length)
 {
+    // Its callers ask only a set of keys, so the places are at least one
+    // and the buckets too (mlocReadCatalogKeys); a hash's bucket and place
+    // fall within them, and a place past the keys within the remap.
+    MLOC_ASSERT(keys->count > 0 && keys->places >= keys->count && keys->buckets > 0);
     uint64_t hash = mlocXxh64(key, length, keys->seed);
     uint32_t bucket = mlocCatalogBucket(hash, keys->buckets);
     uint32_t pilot = mlocLoad16(keys->pilots + (size_t)bucket * 2);
     uint32_t place = mlocCatalogPlace(hash, pilot, keys->seed, keys->places);
+    MLOC_ASSERT(bucket < keys->buckets && place < keys->places);
     return place < keys->count ? place
                                : mlocLoad32(keys->remap + (size_t)(place - keys->count) * 4);
 }

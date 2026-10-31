@@ -74,9 +74,11 @@ static bool ReadChain(const mlocCatalogChain* chain, Chain* out)
 }
 
 // The cache is this process's memory, so it is read and written in the
-// machine's own order, by copies for any alignment.
+// machine's own order, by copies for any alignment. Every caller's index
+// is below the set's keys, whose slots mlocInitCatalogChain made room for.
 static Slot LoadSlot(const Chain* c, uint32_t index)
 {
+    MLOC_ASSERT(index < c->keyCount);
     Slot slot;
     memcpy(&slot, c->cache + cacheHead + (size_t)index * slotSize, sizeof(slot));
     return slot;
@@ -84,6 +86,7 @@ static Slot LoadSlot(const Chain* c, uint32_t index)
 
 static void StoreSlot(const Chain* c, uint32_t index, Slot slot)
 {
+    MLOC_ASSERT(index < c->keyCount);
     memcpy(c->cache + cacheHead + (size_t)index * slotSize, &slot, sizeof(slot));
 }
 
@@ -269,6 +272,8 @@ mlocResult mlocInitCatalogChain(const mlocCatalog* catalogs, const mlocMessageFo
 static Binder BinderOf(const Chain* c)
 {
     size_t start = SlotsEnd(c->keyCount);
+    // mlocInitCatalogChain refused a cache smaller than its slots.
+    MLOC_ASSERT(c->cacheSize >= start);
     size_t room = c->cacheSize - start;
     return (Binder){c->cache + start, room < UINT32_MAX ? room : UINT32_MAX, LoadUsed(c)};
 }
