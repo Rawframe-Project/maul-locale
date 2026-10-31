@@ -45,7 +45,7 @@ Compile a source with all its translations in one call: the catalogs of one set 
 
 ## Formatting from catalogs
 
-A program opens each catalog file's bytes with `mlocOpenCatalog`, which checks them all, makes a [message formatter](messages.md) for each catalog's locale, and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocCatalogChain_Bind`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
+A program opens each catalog file's bytes with `mlocOpenCatalog`, which checks them all once; the catalog reads them in place as checked, so they outlive it and stay as they were for its whole life. The program then makes a [message formatter](messages.md) for each catalog's locale and puts them in a chain in fallback order, the source last. The chain binds each message once into a cache of the caller's memory, on first use or all at once with `mlocCatalogChain_Bind`; `mlocMeasureCatalogChain` gives the cache size that holds them all.
 
 ```c
 // catalogs: fr-CA, fr and the source en, opened in that order;
