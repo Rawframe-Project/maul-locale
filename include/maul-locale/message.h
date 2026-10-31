@@ -103,7 +103,8 @@ extern "C"
     /// @param capacity  Its size in bytes.
     /// @param sizeOut   Receives the compiled message's size on success,
     ///                  or the capacity needed with mloc_errorCapacity,
-    ///                  which may be a little more than the size.
+    ///                  which may be a little more than the size; left
+    ///                  unchanged on any other failure.
     /// @param errorOut  Receives what failed with mloc_errorSyntax, else
     ///                  mloc_messageErrorNone; may be null.
     /// @return mloc_success and the length read; mloc_errorSyntax and the
@@ -137,7 +138,8 @@ extern "C"
     ///
     /// @param message  A compiled message from mlocCompileMessage.
     /// @param size     Its size in bytes.
-    /// @param textOut  Receives the text.
+    /// @param textOut  Receives the text; left as it was on failure but for
+    ///                 the length mloc_errorCapacity gives.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorFormat
     ///         when the bytes are not a compiled message, or one whose text
@@ -481,10 +483,14 @@ extern "C"
     /// @param formatter  A formatter from mlocInitMessageFormatter.
     /// @param message    A compiled message from mlocCompileMessage.
     /// @param size       Its size in bytes.
-    /// @param bufferOut  Receives the bound message; any alignment.
+    /// @param bufferOut  Receives the bound message; any alignment. On any
+    ///                   failure but an overlap, a buffer of capacity 1 or
+    ///                   more has its first bytes cleared, so it holds no
+    ///                   bound message.
     /// @param capacity   Its size in bytes.
     /// @param sizeOut    Receives the size written, or needed with
-    ///                   mloc_errorCapacity.
+    ///                   mloc_errorCapacity; left unchanged on any other
+    ///                   failure.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         small; mloc_errorFormat and mloc_errorVersion as
     ///         mlocWriteMessageText, and mloc_errorFormat for a message
@@ -565,7 +571,11 @@ extern "C"
     ///                       but mloc_errorCapacity and a program
     ///                       function's text of another length, which
     ///                       clears the buffer.
-    /// @param faultsOut      Receives the faults; may be null.
+    /// @param faultsOut      Receives the faults; may be null. They are
+    ///                       found and written also when the call fails with
+    ///                       mloc_errorCapacity, mloc_errorFallback or a
+    ///                       program function's text of another length;
+    ///                       left unchanged on any other failure.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
     ///         fails, the faults reported; mloc_errorCapacity when the text does
@@ -602,13 +612,16 @@ extern "C"
     ///
     /// @param call        The call a function's resolve entry received.
     /// @param index       Below mlocMessageCall_GetOptionCount.
-    /// @param nameOut     Receives the name (UTF-8, NFC, not terminated).
-    /// @param lengthOut   Receives its length.
+    /// @param nameOut     Receives the name (UTF-8, NFC, not terminated);
+    ///                    left unchanged on failure.
+    /// @param lengthOut   Receives its length; left unchanged on failure.
     /// @param valueOut    Receives the value; mloc_messageOperandFallback
     ///                    for one that failed (the formatter has reported
-    ///                    a bad option), which the function ignores.
+    ///                    a bad option), which the function ignores. Left
+    ///                    unchanged on failure.
     /// @param storageOut  Holds a resolved value valueOut points to; it
-    ///                    must live as long as valueOut is read.
+    ///                    must live as long as valueOut is read. Left
+    ///                    unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or an
     ///         index past the count.
     /// @par Thread safety
@@ -625,8 +638,9 @@ extern "C"
     /// @param call        The call a function's resolve entry received.
     /// @param name        The option's name, UTF-8 in NFC.
     /// @param length      Its length.
-    /// @param valueOut    Receives the value.
-    /// @param storageOut  As for mlocMessageCall_GetOption.
+    /// @param valueOut    Receives the value; left unchanged on failure.
+    /// @param storageOut  As for mlocMessageCall_GetOption; left unchanged
+    ///                    on failure.
     /// @return mloc_success; mloc_errorNotFound when the call has no such
     ///         option; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
@@ -639,7 +653,7 @@ extern "C"
     /// The locale a call formats for: the formatter's.
     ///
     /// @param call        The call a function's resolve entry received.
-    /// @param localeOut   Receives the locale.
+    /// @param localeOut   Receives the locale; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread; the call is used by one thread at a time.
@@ -677,7 +691,7 @@ extern "C"
     /// @param bound    The bound message the part came from.
     /// @param part     The part's kind, as reported.
     /// @param infoOut  Receives what it names; its texts point into the
-    ///                 compiled message.
+    ///                 compiled message. Left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a bound
     ///         message the library did not make, a part of another kind,
     ///         or an index the message does not have.
@@ -693,7 +707,7 @@ extern "C"
     /// @param part          The part's kind, as reported.
     /// @param index         The parameter's index, under its count.
     /// @param parameterOut  Receives it; its texts point into the
-    ///                      compiled message.
+    ///                      compiled message. Left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid as mlocGetMessagePartInfo,
     ///         or for an index past the count.
     /// @par Thread safety
@@ -709,7 +723,7 @@ extern "C"
     /// @param part          The part's kind, as reported.
     /// @param name          The option's name, UTF-8 in NFC.
     /// @param length        Its length.
-    /// @param parameterOut  Receives it.
+    /// @param parameterOut  Receives it; left unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound when it has no such
     ///         option; mloc_errorInvalid as mlocGetMessagePartInfo.
     /// @par Thread safety

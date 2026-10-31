@@ -1224,6 +1224,15 @@ if(MAUL_LOCALE_BUILD_TOOLS)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/catalog-chain-test)
         mloc_add_test(catalog_chain COMMAND test_catalog_chain
                  ${CMAKE_CURRENT_BINARY_DIR}/catalog-chain-test)
+        # What a failed message or catalog call leaves, with a set the
+        # tool compiles.
+        add_executable(test_message_outputs test/test_message_outputs.c)
+        target_link_libraries(test_message_outputs PRIVATE mloccat_core)
+        target_include_directories(test_message_outputs PRIVATE test)
+        maul_apply_flags(test_message_outputs)
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/message-outputs-test)
+        mloc_add_test(message_outputs COMMAND test_message_outputs
+                 ${CMAKE_CURRENT_BINARY_DIR}/message-outputs-test)
         # The units' validators alone, which a shared build hides.
         if(NOT MAUL_LOCALE_BUILD_SHARED)
             add_executable(test_catalog_tables test/test_catalog_tables.c)

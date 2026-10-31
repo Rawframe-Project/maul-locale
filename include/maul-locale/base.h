@@ -81,10 +81,12 @@ extern "C"
     // clear them. It writes only what the failure itself defines, which
     // each output says: the length needed with mloc_errorCapacity, the
     // buffer too small for it left as it was, the offset where a reading
-    // call stopped, a message's faults. Two calls clear a buffer instead:
+    // call stopped, a message's faults. Three calls clear a buffer instead:
     // mlocCompileMessage, for an error it finds only once the message is
-    // written, and mlocFormatMessage, when a program function gives its
-    // text another length when formatted again. An
+    // written; mlocMessageFormatter_Bind, whose failures leave no bound
+    // message in its buffer, even one bound there before; and
+    // mlocFormatMessage, when a program function gives its text another
+    // length when formatted again. An
     // outcome that is not an error (mloc_fellBack, mloc_withFallbacks,
     // mloc_done, mloc_needMoreText) writes the outputs it describes.
     typedef int32_t mlocResult;
