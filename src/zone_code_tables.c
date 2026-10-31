@@ -7,6 +7,7 @@
 #include "zone_code_tables.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "kinds.h"
 
 static uint64_t Align(uint64_t at)
@@ -44,8 +45,11 @@ bool mlocZoneCodeTablesOf(DataSpan payload, ZoneCodeTables* out)
     return at == payload.size;
 }
 
+// The lookups below take indexes the validator checked: of the loop it
+// runs over a section, or read from a field it bounded by the section.
 ZoneCode mlocZoneCode(const ZoneCodeTables* t, uint32_t code)
 {
+    MLOC_ASSERT(code < t->codeCount);
     const uint8_t* p = t->codes + (size_t)code * zoneCodeSize;
     return (ZoneCode){.id = mlocLoad32(p),
                       .name = mlocLoad32(p + 4),
@@ -298,6 +302,7 @@ int32_t mlocZoneWindowsFind(const ZoneCodeTables* t, const char* name, size_t le
 
 const char* mlocZoneWindowsName(const ZoneCodeTables* t, uint32_t windows, size_t* lengthOut)
 {
+    MLOC_ASSERT(windows < t->windowsCount);
     const uint8_t* p = t->windows + (size_t)windows * zoneWindowsSize;
     *lengthOut = p[4];
     return (const char*)t->text + mlocLoad32(p);
@@ -308,7 +313,10 @@ const char* mlocZoneWindowsIdentifier(const ZoneCodeTables* t, uint32_t windows,
 {
     // A name's mappings are in order of their regions, and the validator
     // requires one for 001, which sorts before every letter: the first.
+    MLOC_ASSERT(windows < t->windowsCount);
     uint32_t first = FirstMapping(t, windows);
+    // The validator gave each name at least one mapping.
+    MLOC_ASSERT(first < FirstMapping(t, windows + 1));
     const uint8_t* found = t->mappings + (size_t)first * zoneMappingSize;
     for (uint32_t m = first + 1; m < FirstMapping(t, windows + 1); m++)
     {

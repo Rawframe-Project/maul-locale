@@ -7,6 +7,7 @@
 #include "zone_tables.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "kinds.h"
 
 #include <string.h>
@@ -89,8 +90,13 @@ bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out)
     return at == payload.size;
 }
 
+// The lookups below take indexes the validator checked: of the loop it
+// runs over a section, or read from a field it bounded by the section.
+static_assert(zoneClosingSize == 4 + 2 * zoneChangeSize, "a closing holds a year and two changes");
+
 ZoneRecord mlocZoneRecord(const ZoneTables* t, uint32_t zone)
 {
+    MLOC_ASSERT(zone < t->zoneCount);
     const uint8_t* p = t->zones + (size_t)zone * zoneRecordSize;
     return (ZoneRecord){.narrowFirst = mlocLoad32(p),
                         .typeFirst = mlocLoad32(p + 4),
@@ -107,17 +113,20 @@ ZoneRecord mlocZoneRecord(const ZoneTables* t, uint32_t zone)
 
 ZoneOffset mlocZoneOffsetOf(const ZoneTables* t, uint32_t index)
 {
+    MLOC_ASSERT(index < t->offsetCount);
     const uint8_t* p = t->offsets + (size_t)index * zoneOffsetSize;
     return (ZoneOffset){(int32_t)mlocLoad32(p), (int32_t)mlocLoad32(p + 4)};
 }
 
 int32_t mlocZoneClosingYear(const ZoneTables* t, uint32_t closing)
 {
+    MLOC_ASSERT(closing < t->closingCount);
     return (int32_t)mlocLoad32(t->closings + (size_t)closing * zoneClosingSize);
 }
 
 ZoneChange mlocZoneClosingChange(const ZoneTables* t, uint32_t closing, uint32_t change)
 {
+    MLOC_ASSERT(closing < t->closingCount && change < 2);
     const uint8_t* p =
         t->closings + (size_t)closing * zoneClosingSize + 4 + change * zoneChangeSize;
     return (ZoneChange){.month = p[0],
@@ -130,6 +139,7 @@ ZoneChange mlocZoneClosingChange(const ZoneTables* t, uint32_t closing, uint32_t
 
 const char* mlocZoneIdentifierName(const ZoneTables* t, uint32_t identifier, size_t* lengthOut)
 {
+    MLOC_ASSERT(identifier < t->identifierCount);
     const uint8_t* p = t->identifiers + (size_t)identifier * zoneIdentifierSize;
     *lengthOut = p[4];
     return (const char*)t->text + mlocLoad32(p);
@@ -137,11 +147,13 @@ const char* mlocZoneIdentifierName(const ZoneTables* t, uint32_t identifier, siz
 
 uint32_t mlocZoneIdentifierZone(const ZoneTables* t, uint32_t identifier)
 {
+    MLOC_ASSERT(identifier < t->identifierCount);
     return mlocLoad16(t->identifiers + (size_t)identifier * zoneIdentifierSize + 6);
 }
 
 uint32_t mlocZoneIdentifierPrimary(const ZoneTables* t, uint32_t identifier)
 {
+    MLOC_ASSERT(identifier < t->identifierCount);
     return mlocLoad16(t->identifiers + (size_t)identifier * zoneIdentifierSize + 8);
 }
 
