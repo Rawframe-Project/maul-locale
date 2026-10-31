@@ -422,6 +422,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
     maul_add_test(number_outputs)
     maul_add_test(temporal_outputs)
     maul_add_test(date_outputs)
+    maul_add_test(aliased_outputs)
     # A text one byte too long for its buffer, from every data file it needs.
     maul_add_test(capacity_outputs)
     set(MLOC_CAPACITY_DIR ${PROJECT_SOURCE_DIR}/src/generated)

@@ -230,7 +230,7 @@ extern "C"
     /// @param data       The data with the parents and likely subtags.
     /// @param component  The component whose parents apply.
     /// @param locale     The locale.
-    /// @param parentOut  Receives the parent; left unchanged on failure.
+    /// @param parentOut  Receives the parent; left unchanged on failure. May be locale itself.
     /// @return mloc_success; mloc_errorNotFound for root, which has no
     ///         parent, or data without the parents table;
     ///         mloc_errorLimit when the extensions after the parent's

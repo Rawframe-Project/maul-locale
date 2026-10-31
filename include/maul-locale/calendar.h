@@ -207,7 +207,7 @@ extern "C"
     /// @param duration  The duration.
     /// @param overflow  What a month code or day the result lacks does.
     /// @param dateOut   Receives the date, in the date's calendar; left
-    ///                  unchanged on failure.
+    ///                  unchanged on failure. May be date itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
     ///         the library did not make, a duration out of its limits or of
     ///         two signs, a month code or day refused, or a result outside
@@ -330,7 +330,7 @@ extern "C"
     /// @param date      The date.
     /// @param changes   The fields to change.
     /// @param overflow  What a month or day past the calendar's does.
-    /// @param dateOut   Receives the date; left unchanged on failure.
+    /// @param dateOut   Receives the date; left unchanged on failure. May be date itself.
     /// @return mloc_success; mloc_errorInvalid for a null pointer, a date
     ///         the library did not make, an era without its era year or
     ///         the reverse, a year, month or day refused or disagreeing,

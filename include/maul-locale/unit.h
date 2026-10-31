@@ -44,7 +44,7 @@ extern "C"
     ///                    may be one unit off.
     /// @param value       The value.
     /// @param valueOut    Receives the converted value; left unchanged on
-    ///                    failure.
+    ///                    failure. May be value itself.
     /// @return mloc_success; mloc_errorSyntax for an identifier that is
     ///         not well-formed; mloc_errorNotFound for a simple unit the
     ///         data does not know, a private-use unit, or data without the
