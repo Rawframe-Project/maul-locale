@@ -386,10 +386,11 @@ static void TestLocaleName(void)
     memcpy(full.language, "abcdefgh", 8);
     memcpy(full.script, "Abcd", 4);
     memcpy(full.region, "419", 3);
-    for (size_t at = 0; at < sizeof(full.tail); at += 9)
+    // Subtags of 8 letters and a last one of 1 to 8, whatever the size.
+    memset(full.tail, 'a', sizeof(full.tail));
+    for (size_t at = 8; at + 1 < sizeof(full.tail); at += 9)
     {
-        memcpy(full.tail + at, "abcdefgh-",
-               sizeof(full.tail) - at < 9 ? sizeof(full.tail) - at : 9);
+        full.tail[at] = '-';
     }
     mlocResult r = mlocGetLocaleName(&s_data, &en, &full, nullptr, &wide);
     CHECK(r == mloc_success || r == mloc_fellBack, "a locale value without a NUL read in bounds");

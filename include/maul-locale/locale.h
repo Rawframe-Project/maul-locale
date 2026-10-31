@@ -276,7 +276,9 @@ extern "C"
     /// @return mloc_success; mloc_errorNotFound for data without the likely
     ///         subtags or the matching table; mloc_errorLimit for a count
     ///         past MLOC_MAX_MATCH_LOCALES; mloc_errorInvalid for a null
-    ///         pointer with a count.
+    ///         pointer with a count or a locale that is not one
+    ///         (mlocLocale). When several apply, the first of a null
+    ///         pointer, the count, a locale and the data is reported.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocPrepareMatch(const mlocDataSet* data,
@@ -342,8 +344,11 @@ extern "C"
     ///         as mlocPrepareMatch; mloc_errorLimit for a count past
     ///         MLOC_MAX_MATCH_LOCALES; mloc_errorInvalid for a null pointer
     ///         with a count, another flag, a threshold
-    ///         above 100, or an entry the search reads that names no
-    ///         locale of the count (entries prepared for another list).
+    ///         above 100, a locale that is not one (mlocLocale), or an
+    ///         entry the search reads that names no locale of the count
+    ///         (entries prepared for another list). When several apply,
+    ///         the first of a null pointer, flag or threshold, a count, a
+    ///         locale, the data and an entry is reported.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult
