@@ -15,6 +15,7 @@
 #include "grammar_fi.h"
 
 #include "grammar_fi_word.h"
+#include "invariant.h"
 
 #include "generated/finnish_types.h"
 #include "maul-unicode/encoding.h"
@@ -608,6 +609,8 @@ static void Form(const Stems* s, const FinnishWord* word, mlocGrammaticalCase c,
 static void Possessive(const Stems* s, const mlocInflection* r, FinnishWord* form, size_t* start)
 {
     mlocGrammaticalCase c = r->grammaticalCase;
+    // mlocFinnishRequestValid kept the person within 1 to 3.
+    MLOC_ASSERT(r->possessorPerson >= 1 && r->possessorPerson <= 3);
     bool bare = c == mloc_caseNominative || (c == mloc_caseGenitive && !r->plural);
     if (bare)
     {
@@ -616,10 +619,14 @@ static void Possessive(const Stems* s, const mlocInflection* r, FinnishWord* for
     }
     else if (c == mloc_caseIllative || (c == mloc_caseGenitive && r->plural))
     {
+        // The case's ending was written: its n is the last letter.
+        MLOC_ASSERT(form->count > 0);
         form->count--;
     }
     else if (c == mloc_caseTranslative)
     {
+        // The case's ending was written: its i is the last letter.
+        MLOC_ASSERT(form->count > 0);
         form->c[form->count - 1] = 'e';
     }
     else if (c == mloc_caseComitative)
@@ -689,6 +696,8 @@ static const Numeral* NumeralOf(const FinnishWord* spoken)
         size_t w = strlen(s_multiples[i][1]);
         if (n >= m && memcmp(text + n - m, s_multiples[i][0], m) == 0)
         {
+            // Each word it becomes is no longer, so it fits where it was.
+            MLOC_ASSERT(w <= m);
             memcpy(text + n - m, s_multiples[i][1], w);
             n = n - m + w;
         }
@@ -903,6 +912,8 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
     // A compound's harmony is its last word's (meriherkkusienessä).
     FinnishWord last;
     last.count = 0;
+    // A compound's last word is at least three of the word's letters.
+    MLOC_ASSERT(kind.from <= spoken.count);
     for (size_t i = kind.from; i < spoken.count; i++)
     {
         last.c[last.count++] = spoken.c[i];
@@ -937,6 +948,8 @@ bool mlocFinnishInflect(const FinnishText* t, const mlocInflection* r, FinnishFo
     char kept[finnishLetterRoom * 4];
     out->kept = wordFrom + Encode(&word, 0, same, kept, sizeof(kept));
     size_t split = start > same ? start : same;
+    // The stem ends within the form: its endings were written after it.
+    MLOC_ASSERT(split <= form.count);
     out->tailLength = Encode(&form, same, split, out->tail, sizeof(out->tail));
     out->length = Encode(&form, split, form.count, out->suffixes, sizeof(out->suffixes));
     return true;

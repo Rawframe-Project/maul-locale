@@ -22,6 +22,9 @@ uint32_t mlocFinnishPrevious(const uint8_t* text, size_t end, size_t* startOut)
     *startOut = at;
     uint32_t c = text[at];
     size_t extra = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
+    // Valid UTF-8 (the text was checked), read from a code point's end:
+    // the sequence ends where the read began.
+    MLOC_ASSERT(at + extra + 1 == end);
     c &= extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F;
     for (size_t i = 1; i <= extra; i++)
     {
@@ -248,6 +251,8 @@ void mlocFinnishGrade(FinnishWord* w, char letter, bool toWeak)
         mlocFinnishAppend(w, to, true, 0);
         if (*to == '\0')
         {
+            // GradesAt saw a vowel after the consonants.
+            MLOC_ASSERT(rest.count > 0);
             KGone(w, rest.c[0]);
         }
         for (size_t i = 0; i < rest.count; i++)
