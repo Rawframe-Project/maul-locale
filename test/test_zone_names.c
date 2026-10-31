@@ -5,7 +5,8 @@
 // and a zone names unit built here, valid, and copies with one field
 // spoiled; then zone-names.mloc: every unit valid, the metazone unit's
 // codes those of the zone codes unit, and a few zones' regions, flags and
-// metazone periods as CLDR gives them.
+// metazone periods as CLDR gives them; and a qualified generic name whose
+// city a copy of the file empties.
 
 #include "bytes.h"
 #include "data_view.h"
@@ -15,6 +16,8 @@
 #include "zone_name_tables.h"
 
 #include "maul-locale/data.h"
+#include "maul-locale/datetime.h"
+#include "maul-locale/zone.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -257,6 +260,8 @@ static void TestNames(void)
 
 static mlocData s_sources[2];
 static mlocDataSet s_data;
+alignas(8) static uint8_t s_file[1 << 23];
+static size_t s_fileSize;
 
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
@@ -266,6 +271,7 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     {
         fclose(file);
     }
+    s_fileSize = read;
     return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
@@ -310,13 +316,79 @@ static void TestFile(void)
           "Los Angeles golden for its metazone");
 }
 
+// Empties a zone names unit's entry, as CLDR's "∅∅∅" would: its end is
+// set to its start, so that the next entry starts there too and holds
+// both texts. 1 when emptied, 0 for a unit without the key, -1 for the
+// unit's last entry.
+static int EmptyEntry(uint8_t* unit, uint32_t key)
+{
+    uint32_t count = mlocLoad32(unit);
+    const uint8_t* keys = unit + zoneNameHeaderSize;
+    uint8_t* offsets = unit + zoneNameHeaderSize + 2 * (size_t)count;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        if (mlocLoad16(keys + 2 * (size_t)i) == key)
+        {
+            if (i + 1 == count)
+            {
+                return -1;
+            }
+            Put(offsets + 4 * ((size_t)i + 1), mlocLoad32(offsets + 4 * (size_t)i), 4);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Punta Arenas's generic name, in July, is qualified by its city: Chile's
+// preferred zone for the US is another, of another offset. A file whose
+// first unit along English's chain to file that city empties it
+// qualifies the name by the zone's identifier.
+static void TestNoCity(void)
+{
+    const char* id = "America/Punta_Arenas";
+    mlocLocale en;
+    mlocTimeZone zone;
+    mlocZoneFormatter formatter;
+    mlocInstant july = {1784116800, 0};
+    char text[64];
+    mlocOutput output = {text, sizeof text, 0, nullptr, nullptr};
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocFindTimeZone(&s_data, id, strlen(id), &zone) == mloc_success &&
+              mlocInitZoneFormatter(&s_data, &en, mloc_zoneStyleGenericLong, &formatter) ==
+                  mloc_success &&
+              mlocZoneFormatter_Format(&formatter, &zone, &july, &output) == mloc_success &&
+              output.length == 25 && memcmp(text, "Chile Time (Punta Arenas)", 25) == 0,
+          "Punta Arenas qualified by its city");
+    ZoneCodeTables t;
+    int32_t code = mlocFindZoneCodeTables(&s_data, &t) ? mlocZoneCodeFind(&t, "clpuq", 5) : -1;
+    uint32_t key = (zoneNameCodeBase + (uint32_t)code) * zoneNameFieldsPerItem + zoneFieldCity;
+    static const char* const chain[] = {"en", "root"};
+    int emptied = 0;
+    for (size_t c = 0; c < sizeof chain / sizeof chain[0] && emptied == 0 && code >= 0; c++)
+    {
+        DataSpan unit;
+        if (mlocFindDataSetUnit(&s_data, kindZoneNames, chain[c], strlen(chain[c]), &unit))
+        {
+            emptied = EmptyEntry(s_file + (unit.bytes - s_file), key);
+        }
+    }
+    CHECK(emptied == 1 && mlocOpenData(s_file, s_fileSize, &s_sources[1]) == mloc_success,
+          "a copy of the file without Punta Arenas's city opens");
+    output.length = 0;
+    CHECK(mlocInitZoneFormatter(&s_data, &en, mloc_zoneStyleGenericLong, &formatter) ==
+                  mloc_success &&
+              mlocZoneFormatter_Format(&formatter, &zone, &july, &output) == mloc_success &&
+              output.length == 33 && memcmp(text, "Chile Time (America/Punta_Arenas)", 33) == 0,
+          "without its city, Punta Arenas qualified by its identifier");
+}
+
 int main(void)
 {
     TestMeta();
     TestPreferredOrder();
     TestNames();
     TestFormats();
-    alignas(8) static uint8_t s_file[1 << 23];
     mlocOpenBuiltinData(&s_sources[0]);
     s_data = (mlocDataSet){s_sources, 2};
     if (!OpenFile(MLOC_ZONE_NAMES_FILE, s_file, sizeof(s_file), &s_sources[1]))
@@ -325,5 +397,6 @@ int main(void)
         return 2;
     }
     TestFile();
+    TestNoCity();
     return s_failures == 0 ? 0 : 1;
 }
