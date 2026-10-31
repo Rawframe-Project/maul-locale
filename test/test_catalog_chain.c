@@ -321,6 +321,22 @@ static void TestOutputs(Set* s)
                   mloc_success &&
               output.length == 0,
           "a key measured; the empty key written as nothing");
+    // A text that is not written leaves the reason as it was: too long,
+    // as the key or as the message, or refused for its argument.
+    mlocCatalogResult result = {mloc_catalogFailed, 99};
+    mlocMessageArgument unnamed = {nullptr, 1, {mloc_messageValueInteger, 0, {.integer = 1}}};
+    output = (mlocOutput){small, sizeof(small), 0, nullptr, nullptr};
+    mlocResult keyRefused =
+        mlocCatalogChain_FormatKey(&chain, "missing", 7, nullptr, 0, &output, nullptr, &result);
+    mlocResult textRefused =
+        mlocCatalogChain_FormatKey(&chain, "bye", 3, nullptr, 0, &output, nullptr, &result);
+    output = (mlocOutput){buffer, sizeof(buffer), 0, nullptr, nullptr};
+    mlocResult argumentRefused =
+        mlocCatalogChain_FormatKey(&chain, "bye", 3, &unnamed, 1, &output, nullptr, &result);
+    CHECK(keyRefused == mloc_errorCapacity && textRefused == mloc_errorCapacity &&
+              argumentRefused == mloc_errorInvalid && result.reason == mloc_catalogFailed &&
+              result.position == 99,
+          "a key or text too long, or an argument refused, leaves the reason as it was");
     mlocCatalogChain zero;
     memset(&zero, 0, sizeof(zero));
     output = (mlocOutput){buffer, sizeof(buffer), 0, nullptr, nullptr};

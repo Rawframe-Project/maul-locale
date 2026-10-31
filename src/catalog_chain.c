@@ -334,12 +334,16 @@ static mlocResult WriteKeyAt(const Chain* c, uint32_t index, mlocOutput* output)
     return WriteKey(key, length, output);
 }
 
-static void Report(mlocCatalogResult* resultOut, mlocCatalogReason reason, uint32_t position)
+// Reports a reason and position once the text is written: a failure
+// leaves the result as it was.
+static mlocResult Report(mlocResult written, mlocCatalogResult* resultOut, mlocCatalogReason reason,
+                         uint32_t position)
 {
-    if (resultOut != nullptr)
+    if (written >= 0 && resultOut != nullptr)
     {
         *resultOut = (mlocCatalogResult){reason, position};
     }
+    return written;
 }
 
 static bool ValidOutput(const mlocOutput* output)
@@ -364,21 +368,22 @@ mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_
         Binder b = BinderOf(&c);
         if (BindIndex(&c, &b, index, &slot) != mloc_success)
         {
-            Report(resultOut, mloc_catalogCacheFull, c.count);
-            return WriteKeyAt(&c, index, textOut);
+            return Report(WriteKeyAt(&c, index, textOut), resultOut, mloc_catalogCacheFull,
+                          c.count);
         }
         StoreSlot(&c, index, slot);
         StoreUsed(&c, b.used);
     }
-    Report(resultOut, (mlocCatalogReason)slot.reason, slot.position);
+    mlocCatalogReason reason = (mlocCatalogReason)slot.reason;
     if (slot.state == slotKey)
     {
-        return WriteKeyAt(&c, index, textOut);
+        return Report(WriteKeyAt(&c, index, textOut), resultOut, reason, slot.position);
     }
     // A bound slot's message lies in the arena the chain has used.
     MLOC_ASSERT(slot.state == slotBound && slot.offset < LoadUsed(&c));
     const uint8_t* bound = c.cache + SlotsEnd(c.keyCount) + slot.offset;
-    return mlocFormatMessage(bound, arguments, argumentCount, textOut, faultsOut);
+    return Report(mlocFormatMessage(bound, arguments, argumentCount, textOut, faultsOut), resultOut,
+                  reason, slot.position);
 }
 
 mlocResult mlocCatalogChain_FormatKey(const mlocCatalogChain* chain, const char* key, size_t length,
@@ -395,8 +400,8 @@ mlocResult mlocCatalogChain_FormatKey(const mlocCatalogChain* chain, const char*
     mlocResult r = mlocCatalog_FindKey(&c.catalogs[0], key, length, &index);
     if (r == mloc_errorNotFound)
     {
-        Report(resultOut, mloc_catalogMissingKey, c.count);
-        return WriteKey((const uint8_t*)key, length, textOut);
+        return Report(WriteKey((const uint8_t*)key, length, textOut), resultOut,
+                      mloc_catalogMissingKey, c.count);
     }
     if (r != mloc_success)
     {

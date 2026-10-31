@@ -229,7 +229,9 @@ extern "C"
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text.
     /// @param faultsOut      Receives the faults; may be null.
-    /// @param resultOut      Receives the reason and position; may be null.
+    /// @param resultOut      Receives the reason and position once the text
+    ///                       is written; left unchanged on failure. May be
+    ///                       null.
     /// @return As mlocFormatMessage, and mloc_success when the key is
     ///         written; mloc_errorInvalid also for an index past the set's
     ///         keys or a chain the library did not make.
@@ -253,7 +255,9 @@ extern "C"
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text.
     /// @param faultsOut      Receives the faults; may be null.
-    /// @param resultOut      Receives the reason and position; may be null.
+    /// @param resultOut      Receives the reason and position once the text
+    ///                       is written; left unchanged on failure. May be
+    ///                       null.
     /// @return As mlocCatalogChain_FormatMessage.
     /// @par Thread safety
     /// Safe from any thread; the chain is used by one thread at a time,
