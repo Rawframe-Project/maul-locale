@@ -180,11 +180,12 @@ extern "C"
                             size_t count, size_t* sizeOut);
 
     /// Makes a chain. Its messages are bound when first formatted, or all
-    /// at once by mlocCatalogChain_Bind. The catalogs, formatters and cache
-    /// must outlive the chain, and the cache serves this chain alone. The
-    /// array of catalogs and every catalog in it stay as they were for the
-    /// chain's life, from this call until the chain is no longer used: its
-    /// bound messages point into the catalogs' bytes and the formatters.
+    /// at once by mlocCatalogChain_Bind. The chain keeps pointers to its
+    /// three inputs, so for its life, from this call until it is no longer
+    /// used, they stay as they were: the array of catalogs and every catalog
+    /// in it, the array of formatters and every formatter in it (its bound
+    /// messages point into both), and the cache, which only the chain's
+    /// calls write.
     ///
     /// @param catalogs    The catalogs, in fallback order, of one set.
     /// @param formatters  Each catalog's formatter, of its locale.
