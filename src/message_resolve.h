@@ -49,8 +49,9 @@ typedef struct Resolution
     bool dynamic;
     uint32_t optionDepth;
     // Set when a program function to call is past the formatter's, or has
-    // no resolve entry: a formatter made again under the bound message, or
-    // a functions array changed since it was made. The call is refused.
+    // no resolve entry, or a selector's has lost its match entry: a
+    // formatter made again under the bound message, or a functions array
+    // changed since it was made. The call is refused.
     bool broken;
     // What an argument stands for in a probe: a plain number for a
     // number function's expression, a date-time for a date function's.

@@ -599,9 +599,9 @@ extern "C"
     ///         library did not make, a program function that gave the
     ///         text another length when formatted again or changed an
     ///         argument before it was, or a program function past the
-    ///         formatter's own or without a resolve entry (a formatter
-    ///         made again under the bound message, or its functions
-    ///         changed).
+    ///         formatter's own, without a resolve entry, or selecting
+    ///         without the match entry it had (a formatter made again
+    ///         under the bound message, or its functions changed).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,
