@@ -100,8 +100,8 @@ calendar_umalqura: calendar_arith invariant
 calendar_year: calendar_arith calendar_chinese calendar_hebrew calendar_lunar calendar_umalqura invariant
 calendar: calendar_arith calendar_eras calendar_year
 calendar_add: calendar_arith calendar_year
-zone_tables: bytes data_view kinds
-zone_code_tables: bytes data_view kinds
+zone_tables: bytes data_view invariant kinds
+zone_code_tables: bytes data_view invariant kinds
 relative_tables: bytes data_view number_data
 segment_overrides:
 segment_tables: bytes data_view number_data segment_overrides
