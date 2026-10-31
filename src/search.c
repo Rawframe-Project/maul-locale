@@ -321,13 +321,18 @@ static mlocResult FindNext(const mlocSearcher* searcher, NfdText text, size_t fr
             }
             continue;
         }
-        bool found = Bounds(f, index, end, pattern, startOut, endOut);
+        // A candidate refused leaves the outputs as they were.
+        size_t start = 0;
+        size_t limit = 0;
+        bool found = Bounds(f, index, end, pattern, &start, &limit);
         if (f->full)
         {
             return mloc_errorLimit;
         }
         if (found)
         {
+            *startOut = start;
+            *endOut = limit;
             return mloc_success;
         }
     }

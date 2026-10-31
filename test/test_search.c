@@ -435,6 +435,69 @@ static void TestRefusalsKeepSearcher(void)
           "a pattern of too many elements: the searcher left as it was");
 }
 
+// Whether a search from a position fails as expected with its outputs
+// left as they were.
+static bool KeptBounds(const char* text, size_t length, size_t from, bool back, mlocResult expected)
+{
+    size_t start = 777;
+    size_t end = 777;
+    mlocResult result =
+        back ? mlocSearcher_FindPrevious(&s_searcher, text, length, from, &start, &end)
+             : mlocSearcher_FindNext(&s_searcher, text, length, from, &start, &end);
+    return result == expected && start == 777 && end == 777;
+}
+
+// A candidate the elements match but whose bounds are refused (the "a"
+// of "æ", which ends inside it) leaves no bounds behind when the search
+// then fails.
+static void TestRefusedCandidate(void)
+{
+    static const char marks[4][3] = {"\xCC\x81", "\xCC\x80", "\xCC\x82", "\xCC\x83"};
+    static char pattern[120];
+    static char text[1200];
+    CHECK(Make("en", "a", mloc_searchPatternBaseWildcard) &&
+              KeptBounds("\xC3\xA6", 2, 0, false, mloc_errorNotFound) &&
+              KeptBounds("\xC3\xA6", 2, 2, true, mloc_errorNotFound),
+          "a refused candidate, then no match: the bounds left as they were");
+    // "a" and 40 accents, then "æ": backward, "æ" is refused and the
+    // accents pass the ring.
+    size_t size = 0;
+    text[size++] = 'a';
+    for (int i = 0; i < 40; i++)
+    {
+        text[size++] = marks[i % 3][0];
+        text[size++] = marks[i % 3][1];
+    }
+    text[size++] = (char)0xC3;
+    text[size++] = (char)0xA6;
+    bool back = KeptBounds(text, size, size, true, mloc_errorLimit);
+    // 119 "a" and "æ", refused, then the match of TestRingEdge one
+    // element past the ring.
+    memset(pattern, 'a', sizeof(pattern));
+    size = 0;
+    memset(text, 'a', 119);
+    size += 119;
+    text[size++] = (char)0xC3;
+    text[size++] = (char)0xA6;
+    text[size++] = ' ';
+    size_t left = 393;
+    for (int letter = 0; letter < 120; letter++)
+    {
+        text[size++] = 'a';
+        for (int m = 0; m < 4 && left > 0; m++, left--)
+        {
+            text[size++] = marks[m][0];
+            text[size++] = marks[m][1];
+        }
+    }
+    mlocSearchOptions options = {mloc_searchPatternBaseWildcard};
+    CHECK(back &&
+              mlocInitSearcher(&s_collator, pattern, sizeof(pattern), &options, &s_searcher) ==
+                  mloc_success &&
+              KeptBounds(text, size, 0, false, mloc_errorLimit),
+          "a refused candidate, then a match past the ring: the bounds left as they were");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -461,5 +524,6 @@ int main(void)
     TestBackward();
     TestRefusals();
     TestRefusalsKeepSearcher();
+    TestRefusedCandidate();
     return s_failures == 0 ? 0 : 1;
 }
