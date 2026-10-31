@@ -11,6 +11,7 @@
 #include "calendar_astro.h"
 
 #include "calendar_arith.h"
+#include "invariant.h"
 
 enum
 {
@@ -99,11 +100,14 @@ static uint64_t MultiplyHigh(uint64_t a, uint64_t b, uint64_t* lowOut)
 // a shift of 1 to 64 and a result that fits.
 static uint64_t MulMagnitude(uint64_t a, uint64_t b, uint32_t shift)
 {
+    MLOC_ASSERT(shift >= 1 && shift <= 64);
     uint64_t low = 0;
     uint64_t high = MultiplyHigh(a, b, &low);
     uint64_t half = UINT64_C(1) << (shift - 1);
     low += half;
     high += low < half;
+    // The callers' scales keep every product's result within 64 bits.
+    MLOC_ASSERT(shift == 64 || high >> shift == 0);
     return shift == 64 ? high : (high << (64 - shift)) | (low >> shift);
 }
 
@@ -132,12 +136,14 @@ static int64_t FloorMod(int64_t a, int64_t b)
 // a / d rounded to nearest, ties away from zero, for d above 0.
 static int64_t RoundDiv(int64_t a, int64_t d)
 {
+    MLOC_ASSERT(d > 0);
     return (a >= 0 ? a + d / 2 : a - d / 2) / d;
 }
 
 // m / d scaled by 2^32 and rounded, for d from 1 to 2^31.
 static int64_t Fixed(int64_t m, int64_t d)
 {
+    MLOC_ASSERT(d >= 1 && d <= INT64_C(1) << 31);
     int64_t q = FloorDiv(m, d);
     return q * s_unit + RoundDiv((m - q * d) * s_unit, d);
 }
@@ -203,6 +209,8 @@ static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
     uint64_t v[maxSines];
     uint32_t angle[maxSines];
     bool negative[maxSines];
+    // The callers' angle counts are within it (their static_asserts).
+    MLOC_ASSERT(count <= maxSines);
     uint32_t cosines = 0;
     uint32_t first = count;
     for (uint32_t j = 0; j < count; j++)
@@ -222,6 +230,8 @@ static void Sines(const int64_t* degrees, int64_t* values, uint32_t count)
         angle[at] = j;
         negative[at] = octant >= 4;
     }
+    // The cosines from the front and the sines from the back meet.
+    MLOC_ASSERT(cosines == first);
     SineSeries(r2, v, cosines, first, count);
     for (uint32_t k = first; k < count; k++)
     {
