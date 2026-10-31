@@ -3,6 +3,8 @@
 
 #include "collation_reorder.h"
 
+#include "invariant.h"
+
 #include "maul-locale/collate.h"
 #include "maul-unicode/properties.h"
 
@@ -46,6 +48,8 @@ typedef struct Builder
 // last one ended at takes the next lead byte.
 static void AddLow(Builder* b, uint32_t index)
 {
+    // A script's start has a start after it (mlocCollationScriptsValid).
+    MLOC_ASSERT(index > 0 && index + 1 < b->root->startCount);
     uint32_t start = mlocCollationStart(b->root, index);
     if ((start & 0xFF) < (b->lowStart & 0xFF))
     {
@@ -64,6 +68,7 @@ static void AddLow(Builder* b, uint32_t index)
 // ICU's int arithmetic goes negative.
 static void AddHigh(Builder* b, uint32_t index)
 {
+    MLOC_ASSERT(index > 0 && index + 1 < b->root->startCount);
     uint32_t limit = mlocCollationStart(b->root, index + 1);
     uint32_t start = mlocCollationStart(b->root, index);
     uint32_t high = b->highLimit - ((limit & 0xFF) > (b->highLimit & 0xFF) ? 0x100 : 0);
@@ -177,6 +182,8 @@ static uint32_t Ranges(const Builder* b, uint32_t* ranges)
         }
         if (offset != 0 || i < last)
         {
+            // A range for each start at most: fewer than the caller's 256.
+            MLOC_ASSERT(n < i);
             ranges[n++] = mlocCollationStart(r, i) << 16 | ((uint32_t)offset & 0xFFFF);
         }
         if (i == last)
@@ -192,6 +199,8 @@ static uint32_t Ranges(const Builder* b, uint32_t* ranges)
 // the reordering holds.
 static bool Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
 {
+    // The caller returns before making no ranges.
+    MLOC_ASSERT(n > 0);
     out->minHighNoReorder = ranges[n - 1] & 0xFFFF0000;
     uint32_t b = 0;
     uint32_t firstSplit = n;
@@ -226,6 +235,8 @@ static bool Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
 static mlocResult Make(const CollationRoot* root, const uint32_t* codes, size_t count,
                        bool latinMustMove, uint32_t* ranges, uint32_t* n)
 {
+    // The caller returns before an empty order.
+    MLOC_ASSERT(count > 0);
     Builder b = {.root = root,
                  .lowStart = mlocCollationStart(root, 1),
                  .highLimit = mlocCollationStart(root, root->startCount - 1)};
