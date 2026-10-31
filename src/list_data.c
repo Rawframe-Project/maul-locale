@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "data_format.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "number_data.h"
@@ -91,6 +92,9 @@ bool mlocFindListPatterns(const mlocDataSet* data, const mlocLocale* locale, Lis
     {
         return false;
     }
+    // Every caller makes the style from a type and width it checked, and
+    // the locale's unit holds a set per style (mlocValidLists).
+    MLOC_ASSERT((uint32_t)style < listStyleCount && lists.size == listLocaleSize);
     NumberTable t = mlocReadNumberTable(sets, listSetSize);
     uint32_t set = mlocLoad16(lists.bytes + 2 * (size_t)style);
     if (set >= t.recordCount)
@@ -100,6 +104,8 @@ bool mlocFindListPatterns(const mlocDataSet* data, const mlocLocale* locale, Lis
     for (uint32_t p = 0; p < listPatternCount; p++)
     {
         uint32_t s = mlocLoad16(t.records + (size_t)set * listSetSize + 2 * p);
+        // mlocValidListPatterns checked each record's strings.
+        MLOC_ASSERT(s < t.stringCount);
         uint32_t start = mlocLoad16(t.offsets + (size_t)s * 2);
         out->text[p] = (const char*)t.text + start;
         out->length[p] = (uint16_t)(mlocLoad16(t.offsets + (size_t)s * 2 + 2) - start);

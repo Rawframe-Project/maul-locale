@@ -10,6 +10,8 @@
 
 #include "list_join.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 typedef struct Pattern
@@ -93,6 +95,7 @@ static bool Is(const char* text, size_t length, const char* pattern)
 // language's change for the item, else the start or a middle one.
 static Pattern PatternFor(const ListPatterns* p, const ListItem* items, uint32_t k, uint32_t count)
 {
+    MLOC_ASSERT(k >= 1 && k < count);
     uint32_t which = count == 2       ? listPatternTwo
                      : k == count - 1 ? listPatternEnd
                      : k == 1         ? listPatternStart
@@ -120,6 +123,9 @@ static Pattern PatternFor(const ListPatterns* p, const ListItem* items, uint32_t
     {
         out.zero++;
     }
+    // The data's patterns hold "{0}" (mlocValidListPatterns), and so do
+    // the changed ones above.
+    MLOC_ASSERT(out.zero + 3 <= out.length);
     return out;
 }
 
@@ -140,6 +146,7 @@ static void WriteItem(const ListItem* items, uint32_t k, ListItemWriter write, v
 static void WriteSpan(const Pattern* p, size_t from, size_t to, const ListItem* items, uint32_t k,
                       ListItemWriter write, void* context, NumberWriter* writer)
 {
+    MLOC_ASSERT(from <= to && to <= p->length);
     size_t start = from;
     for (size_t at = from; at + 3 <= to; at++)
     {
@@ -157,6 +164,9 @@ static void WriteSpan(const Pattern* p, size_t from, size_t to, const ListItem* 
 void mlocWriteList(const ListPatterns* patterns, const ListItem* items, uint32_t count,
                    ListItemWriter write, void* context, NumberWriter* writer)
 {
+    // Its callers write nothing for no items (list.c, duration_write.c),
+    // and a unit formatter has a part; k below would wrap at 0.
+    MLOC_ASSERT(count >= 1);
     for (uint32_t k = count - 1; k >= 1; k--)
     {
         Pattern p = PatternFor(patterns, items, k, count);

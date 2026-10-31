@@ -5,6 +5,7 @@
 // table, then UTS #35's definitions, with ICU's answers for a list of none
 // or one.
 
+#include "invariant.h"
 #include "list_genders.h"
 
 #include "maul-locale/list.h"
@@ -22,6 +23,7 @@ static int RuleOf(const char* id)
         int order = strcmp(mlocListGenderRules[middle].locale, id);
         if (order == 0)
         {
+            MLOC_ASSERT(mlocListGenderRules[middle].rule <= listGenderMaleTaints);
             return mlocListGenderRules[middle].rule;
         }
         if (order < 0)
@@ -61,6 +63,8 @@ static int LocaleRule(const mlocDataSet* data, const mlocLocale* locale)
     if (canonical.script[0] != '\0')
     {
         char scripted[16];
+        static_assert(sizeof(canonical.language) + 1 + sizeof(canonical.script) < sizeof(scripted),
+                      "a language, an underscore, a script and a NUL fit");
         memcpy(scripted, id, language);
         scripted[language] = '_';
         memcpy(scripted + language + 1, canonical.script, 4);
