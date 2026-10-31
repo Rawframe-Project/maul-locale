@@ -4,6 +4,7 @@
 #include "collation_index.h"
 
 #include "bytes.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 
@@ -74,6 +75,8 @@ bool mlocNextIndexLabel(const IndexLabels* labels, uint32_t* at, const uint8_t**
         return false;
     }
     *lengthOut = labels->bytes[*at];
+    // The validator required the labels to fill the unit exactly.
+    MLOC_ASSERT(*lengthOut < labels->size - *at);
     *textOut = labels->bytes + *at + 1;
     *at += 1 + *lengthOut;
     return true;

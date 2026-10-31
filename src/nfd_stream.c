@@ -3,6 +3,8 @@
 
 #include "nfd_stream.h"
 
+#include "invariant.h"
+
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/normalize.h"
 #include "maul-unicode/properties.h"
@@ -33,6 +35,7 @@ static uint32_t DecodeUtf16(const uint16_t* units, size_t length, size_t at, siz
 
 uint32_t mlocNfdDecodeAt(NfdText text, size_t at, size_t* sizeOut)
 {
+    MLOC_ASSERT(at < text.length);
     if (text.units != nullptr)
     {
         return DecodeUtf16(text.units, text.length, at, sizeOut);
@@ -86,6 +89,8 @@ static uint32_t Decompose(uint32_t codePoint, uint32_t* out)
             out[count++] = c;
         }
     }
+    // The longest canonical decomposition, 4 code points, fits the room.
+    MLOC_ASSERT(depth == 0);
     return count;
 }
 
@@ -104,6 +109,7 @@ uint32_t mlocNfdDecompose(uint32_t codePoint, uint32_t* out, uint8_t* leadOut, u
 
 size_t mlocNfdBefore(NfdText t, size_t at)
 {
+    MLOC_ASSERT(at > 0 && at <= t.length);
     if (t.units != nullptr)
     {
         bool pair =
@@ -154,6 +160,8 @@ static bool Mark(const NfdStream* s, size_t at, uint32_t* d, uint32_t* n, size_t
 
 static void Put(NfdStream* s, uint32_t codePoint, uint8_t ccc, size_t from)
 {
+    // Each fill stops at the window's end or counts its marks first.
+    MLOC_ASSERT(s->count < nfdWindow);
     s->window[s->count] = codePoint;
     s->classes[s->count] = ccc;
     s->from[s->count++] = (uint32_t)from;
@@ -283,6 +291,8 @@ typedef struct Sources
 
 static void AddSource(Sources* q, const NfdStream* s, size_t start, const uint32_t* d, uint32_t n)
 {
+    // A source for each window code point at most, each giving one.
+    MLOC_ASSERT(q->count < nfdWindow && n > 0);
     q->start[q->count] = start;
     q->first[q->count] = s->count;
     q->lead[q->count] = Class(d[0]);
@@ -450,6 +460,8 @@ bool mlocNfdFill(NfdStream* s)
         Place(s, &q, Normalized(&q));
         return true;
     }
+    // Only the first decomposition is in the window yet.
+    MLOC_ASSERT(s->count - marks <= nfdMaxDecomposition);
     s->headCount = (uint8_t)(s->count - marks);
     for (uint32_t i = 0; i < s->headCount; i++)
     {
