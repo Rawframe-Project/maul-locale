@@ -466,7 +466,7 @@ mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
                                const mlocLocale* locale, mlocLocale* parentOut)
 {
     if (data == nullptr || locale == nullptr || parentOut == nullptr ||
-        component > mloc_componentGrammar)
+        (uint32_t)component > mloc_componentGrammar)
     {
         return mloc_errorInvalid;
     }

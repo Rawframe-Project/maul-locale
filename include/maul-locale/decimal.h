@@ -45,12 +45,12 @@ extern "C"
         // The fraction digits shown, at least those the digits need:
         // 2 for "1.50", whose digits are 15 with exponent -1.
         int32_t fractionDigits;
+        // A decimal that is not finite has no digits.
+        mlocDecimalKind kind;
         // The digits held, 0 for zero.
         uint8_t count;
         // 1 for a negative value, "-0" included; 0 for NaN.
         uint8_t negative;
-        // An mlocDecimalKind; a decimal that is not finite has no digits.
-        uint8_t kind;
     } mlocDecimal;
 
     // How a value between two multiples rounds (ECMA-402's names): toward

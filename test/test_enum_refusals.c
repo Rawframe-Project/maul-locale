@@ -18,7 +18,9 @@
 #include "maul-locale/decimal.h"
 #include "maul-locale/duration.h"
 #include "maul-locale/grammar.h"
+#include "maul-locale/ixdtf.h"
 #include "maul-locale/list.h"
+#include "maul-locale/locale.h"
 #include "maul-locale/message.h"
 #include "maul-locale/names.h"
 #include "maul-locale/number.h"
@@ -54,6 +56,8 @@ static mlocDate s_date;
 static mlocTime s_time;
 static mlocDateTime s_dateTime;
 static mlocDecimal s_one;
+// Zero has no digits, so its kind alone decides whether it is valid.
+static mlocDecimal s_zero;
 static mlocTimeDuration s_hour;
 static mlocCollator s_collator;
 static mlocNumberFormatter s_number;
@@ -408,6 +412,18 @@ static mlocResult MessageValueKind(int32_t v)
     return mlocFormatMessage(s_bound, &argument, 1, &output, nullptr);
 }
 
+static mlocResult MinimizeFavor(int32_t v)
+{
+    mlocLocale locale;
+    return mlocMinimizeLocale(&s_data, &s_en, (mlocFavor)v, &locale);
+}
+
+static mlocResult ParentComponent(int32_t v)
+{
+    mlocLocale parent;
+    return mlocGetParentLocale(&s_data, (mlocComponent)v, &s_tr, &parent);
+}
+
 #define PARAMETER(call, valid) {#call, call, valid}
 
 static const Parameter s_parameters[] = {
@@ -460,6 +476,8 @@ static const Parameter s_parameters[] = {
     PARAMETER(RoundZonedMode, mloc_roundHalfExpand),
     PARAMETER(ListGender, mloc_personMale),
     PARAMETER(MessageValueKind, mloc_messageValueInteger),
+    PARAMETER(MinimizeFavor, mloc_favorRegion),
+    PARAMETER(ParentComponent, mloc_componentMain),
 };
 
 // A call made with options; a field is checked by writing its value over
@@ -608,6 +626,27 @@ static mlocResult ZonedUntil(const void* rounding)
                                   &duration);
 }
 
+static mlocResult AddToDate(const void* date)
+{
+    mlocDateDuration days = {.days = 1};
+    mlocDate out;
+    return mlocAddToDate(date, &days, mloc_overflowReject, &out);
+}
+
+static mlocResult FormatDecimal(const void* decimal)
+{
+    mlocOutput output = Text();
+    return mlocNumberFormatter_Format(&s_number, decimal, &output);
+}
+
+static mlocResult ZonedString(const void* options)
+{
+    mlocOutput output = Text();
+    return mlocFormatZonedDateTime(&s_zone, &s_epoch, options, &output);
+}
+
+static const mlocTemporalStringOptions s_stringOptions = {0};
+
 static const mlocDateRounding s_dateRounding = {mloc_dateUnitYear, mloc_dateUnitDay, 1,
                                                 mloc_roundTrunc};
 static const mlocCollatorOptions s_collatorOptions = {0};
@@ -635,6 +674,11 @@ static const mlocDateTimeRounding s_dateTimeRounding = {mloc_unitDay, mloc_unitN
     {#type "." #member " (" #make ")", make, &valid, sizeof(type), offsetof(type, member)}
 
 static const Field s_fields[] = {
+    FIELD(AddToDate, s_date, mlocDate, calendar),
+    FIELD(FormatDecimal, s_zero, mlocDecimal, kind),
+    FIELD(ZonedString, s_stringOptions, mlocTemporalStringOptions, secondsPrecision),
+    FIELD(ZonedString, s_stringOptions, mlocTemporalStringOptions, showCalendar),
+    FIELD(ZonedString, s_stringOptions, mlocTemporalStringOptions, showTimeZone),
     FIELD(DateUntilRounded, s_dateRounding, mlocDateRounding, largestUnit),
     FIELD(DateUntilRounded, s_dateRounding, mlocDateRounding, smallestUnit),
     FIELD(DateUntilRounded, s_dateRounding, mlocDateRounding, mode),
@@ -858,6 +902,7 @@ int main(void)
               mlocMakeTime(&noon, mloc_overflowReject, &s_time) == mloc_success &&
               mlocMakeDateTime(&s_date, &s_time, &s_dateTime) == mloc_success &&
               mlocParseDecimal("1", 1, &s_one).status == mloc_success &&
+              mlocParseDecimal("0", 1, &s_zero).status == mloc_success &&
               mlocMakeTimeDuration(&hour, &s_hour) == mloc_success &&
               mlocInitCollator(&s_data, &s_en, nullptr, &s_collator) == mloc_success &&
               mlocInitNumberFormatter(&s_data, &s_en, nullptr, &s_number) == mloc_success &&

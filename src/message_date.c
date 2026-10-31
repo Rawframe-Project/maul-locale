@@ -134,7 +134,7 @@ bool mlocDateLiteral(const uint8_t* text, size_t length, const mlocDataSet* data
 
 bool mlocGoodDate(const mlocDate* date)
 {
-    return date->calendar <= mloc_calendarDangi && date->day >= mlocDateMinDay &&
+    return (uint32_t)date->calendar <= mloc_calendarDangi && date->day >= mlocDateMinDay &&
            date->day <= mlocDateMaxDay;
 }
 
