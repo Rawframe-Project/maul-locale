@@ -370,14 +370,16 @@ static bool PreparedAs(const char* message, const char* wanted)
     for (uint32_t e = 0; wanted[e] != '\0'; e++)
     {
         const PreparedNumber* p = mlocPreparedFor(&r, e);
-        char got = p == NULL                     ? '-'
-                   : wanted[e] == 'D'            ? 'D'
+        // A duration's or a list's prepared value is not a number's, so
+        // its bytes are never read as a number's kind.
+        char got = p == NULL          ? '-'
+                   : wanted[e] == 'D' ? 'D'
+                   : wanted[e] == 'L'
+                       ? (((const PreparedList*)(const void*)p)->rulesMade ? 'L' : 'x')
                    : p->kind == preparedSpellout ? 's'
                    : p->kind == preparedRelative ? 'r'
                    : p->kind == preparedNumber   ? 'n'
-                   : wanted[e] == 'L'
-                       ? (((const PreparedList*)(const void*)p)->rulesMade ? 'L' : 'x')
-                       : '?';
+                                                 : '?';
         if (got != wanted[e])
         {
             printf("  [%s] expression %u: %c, not %c\n", message, (unsigned)e, got, wanted[e]);
