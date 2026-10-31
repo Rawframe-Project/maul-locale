@@ -9,6 +9,7 @@
 #include "bytes.h"
 #include "catalog_tables.h"
 #include "catalog_view.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -94,6 +95,8 @@ mlocResult mlocCatalog_GetInfo(const mlocCatalog* catalog, mlocCatalogInfo* info
     {
         return mloc_errorFormat;
     }
+    // mlocOpenCatalog checked that the messages have one place per key.
+    MLOC_ASSERT(mlocLoad32(c.messages) == keys.count);
     uint32_t present = 0;
     const uint8_t* offsets = c.messages + catalogMessagesHead;
     for (uint32_t i = 0; i < keys.count; i++)
@@ -133,6 +136,8 @@ mlocResult mlocCatalog_FindKey(const mlocCatalog* catalog, const char* key, size
     }
     const uint8_t* bytes = length > 0 ? (const uint8_t*)key : (const uint8_t*)"";
     uint32_t index = mlocCatalogIndexOf(&keys, bytes, length);
+    // mlocValidCatalogKeys refused a remap entry past the keys.
+    MLOC_ASSERT(index < keys.count);
     uint32_t stored = 0;
     const uint8_t* found = mlocCatalogKeyAt(&keys, index, &stored);
     if (stored != length || (length > 0 && memcmp(found, bytes, length) != 0))
@@ -159,6 +164,9 @@ mlocResult mlocCatalog_GetMessage(const mlocCatalog* catalog, uint32_t index,
     const uint8_t* offsets = c.messages + catalogMessagesHead;
     uint32_t start = mlocLoad32(offsets + (size_t)index * 4);
     uint32_t end = mlocLoad32(offsets + (size_t)index * 4 + 4);
+    // mlocValidCatalogMessages checked the offsets rise within the text.
+    MLOC_ASSERT(start <= end &&
+                end <= c.messagesSize - catalogMessagesHead - ((size_t)count + 1) * 4);
     if (end == start)
     {
         return mloc_errorNotFound;
