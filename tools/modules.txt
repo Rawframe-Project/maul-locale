@@ -116,12 +116,12 @@ catalog_chain: catalog_tables catalog_view invariant
 code_point_trie: bytes data_view
 collation_fast_latin: bytes
 collation_unsafe: bytes
-collation_index: bytes data_view kinds locale_fallback
+collation_index: bytes data_view invariant kinds locale_fallback
 collation_tables: bytes catalog_hash code_point_trie collation_fast_latin collation_unsafe data_view
-nfd_stream:
+nfd_stream: invariant
 collation_iterator: bytes code_point_trie collation_tables data_view invariant nfd_stream
-collation_compare: collation_iterator collation_reorder collation_tables nfd_stream
-collation_reorder: bytes collation_tables
+collation_compare: collation_iterator collation_reorder collation_tables invariant nfd_stream
+collation_reorder: bytes collation_tables invariant
 collation_fast_compare: collation_compare collation_fast_latin collation_reorder collation_tables invariant
 collation_key: collation_compare collation_iterator collation_reorder collation_tables invariant nfd_stream
 collate: catalog_hash collation_compare collation_fast_compare collation_key collation_reorder collation_tables collator data_format data_view invariant kinds locale_fallback locale_keyword locale_valid
