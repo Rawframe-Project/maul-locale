@@ -7,6 +7,8 @@
 #ifndef MLOC_GRAMMAR_END_H
 #define MLOC_GRAMMAR_END_H
 
+#include "invariant.h"
+
 #include "maul-locale/grammar.h"
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/properties.h"
@@ -42,6 +44,7 @@ typedef struct End
 // byte's index in startOut.
 static inline uint32_t Before(const uint8_t* text, size_t end, size_t* startOut)
 {
+    MLOC_ASSERT(end > 0);
     size_t at = end - 1;
     if (text[at] < 0x80)
     {
@@ -55,6 +58,9 @@ static inline uint32_t Before(const uint8_t* text, size_t end, size_t* startOut)
     *startOut = at;
     uint32_t c = text[at];
     size_t extra = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
+    // Valid UTF-8 (the text was checked), read from a code point's end:
+    // the sequence ends where the read began.
+    MLOC_ASSERT(at + extra + 1 == end);
     c &= extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F;
     for (size_t i = 1; i <= extra; i++)
     {

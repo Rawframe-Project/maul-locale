@@ -78,6 +78,11 @@ static uint32_t Last(const uint8_t* text, size_t end)
     return c;
 }
 
+// Each block's table holds a two-bit final for each of its code points.
+static_assert(sizeof(s_hanjaFinals3400) * 4 == 0x4DBF - 0x3400 + 1, "the 3400 block's finals");
+static_assert(sizeof(s_hanjaFinals4E00) * 4 == 0x9FFF - 0x4E00 + 1, "the 4E00 block's finals");
+static_assert(sizeof(s_hanjaFinalsF900) * 4 == 0xFAFF - 0xF900 + 1, "the F900 block's finals");
+
 static KoreanFinal Hanja(uint32_t c)
 {
     static const struct

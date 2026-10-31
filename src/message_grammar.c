@@ -88,6 +88,13 @@ static const char* const s_nouns[2] = {"proper", "common"};
 static const char* const s_readings[3] = {"auto", "word", "letters"};
 
 // Each option's value, by its index among its names, into a request.
+// A name for each value the options set.
+static_assert(sizeof(s_cases) / sizeof(s_cases[0]) == mloc_caseVocative + 1, "a name per case");
+static_assert(sizeof(s_particles) / sizeof(s_particles[0]) == mloc_particleDefinition + 1,
+              "a name per particle");
+static_assert(sizeof(s_readings) / sizeof(s_readings[0]) == mloc_readingLetters + 1,
+              "a name per reading");
+
 static void SetCase(mlocInflection* r, int i)
 {
     r->grammaticalCase = (mlocGrammaticalCase)i;

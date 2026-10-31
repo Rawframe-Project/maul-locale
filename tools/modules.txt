@@ -176,7 +176,7 @@ message_call: message_bind message_form message_operand message_read message_res
 message_prepare: bytes invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_read message_resolve message_words
 message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words number_output
 message: invariant message_check message_cost message_emit message_form message_parse message_read message_table message_write
-grammar_end:
+grammar_end: invariant
 grammar_lexicon: invariant
 grammar_turkic: invariant
 grammar_tk: grammar_turkic
