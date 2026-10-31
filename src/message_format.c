@@ -424,7 +424,15 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     }
     else
     {
+        // Selectable saw a match entry, but a program function called since
+        // may have cleared it: refused as CallProgram refuses a cleared
+        // resolve entry.
         const mlocMessageFunction* function = &f->r.formatter.functions[s->value.function];
+        if (function->match == NULL)
+        {
+            f->r.broken = true;
+            return false;
+        }
         fault = function->match(function->context, &s->value.resolved, (const char*)key, length,
                                 &matched);
     }

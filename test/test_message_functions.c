@@ -1131,6 +1131,46 @@ static void TestChangedArguments(void)
           "cleared");
 }
 
+// x:forget's match entry clears itself the first time it is called and
+// matches nothing, as a program that changes its functions during a
+// selection would.
+static mlocMessageFaultKind ForgetMatch(void* context, const mlocMessageResolved* value,
+                                        const char* key, size_t length, bool* matchOut)
+{
+    (void)value;
+    (void)key;
+    (void)length;
+    mlocMessageFunction* function = context;
+    function->match = NULL;
+    *matchOut = false;
+    return mloc_messageFaultNone;
+}
+
+static void TestClearedMatch(void)
+{
+    static uint8_t compiled[512];
+    static uint8_t bound[1 << 12];
+    static char text[256];
+    static mlocMessageFunction function = {"x:forget", 8,           &function, EchoResolve,
+                                           EchoFormat, ForgetMatch, NULL,      NULL};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
+    mlocMessageFormatter formatter;
+    const char* message = ".local $v = {|v| :x:forget} .match $v a {{A}} b {{B}} * {{other}}";
+    size_t size = 0;
+    size_t boundSize = 0;
+    mlocMessageError error;
+    mlocOutput output = {text, sizeof text, 9, NULL, NULL};
+    memset(text, '-', sizeof text);
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success &&
+              mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound,
+                                        &boundSize) == mloc_success &&
+              mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+              output.length == 9 && text[0] == '-' && function.match == NULL,
+          "a selector whose match entry was cleared after it was found selectable is refused");
+}
+
 int main(void)
 {
     MakeFormatter();
@@ -1145,5 +1185,6 @@ int main(void)
     TestChangedText();
     TestBrokenFunctions();
     TestChangedArguments();
+    TestClearedMatch();
     return s_failures == 0 ? 0 : 1;
 }
