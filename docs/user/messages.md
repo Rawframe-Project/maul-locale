@@ -54,7 +54,7 @@ An argument is a string, an integer, a double, a decimal, a currency amount, a u
 | `mloc:list` | A list, "Ana, Bo and Cy". |
 | `mloc:case`, `mloc:particle`, `mloc:gender` | A name or number with a case suffix or particle, or a value's gender for selection; see [Grammar](grammar.md). |
 
-A program adds functions of its own in the formatter's options, each under a namespace of its own (`app:icon`). Its resolve entry reads the call's operand and options (`mlocMessageCall_GetOption`, `mlocMessageCall_FindOption`) and writes the value; it may format, match and compare like the built-in ones.
+A program adds functions of its own in the formatter's options, each under a namespace of its own (`app:icon`). Its resolve entry reads the call's operand and options (`mlocMessageCall_GetOption`, `mlocMessageCall_FindOption`) and writes the value; it may format, match and compare like the built-in ones. Its entries must give the same text for the same value within one call, which formats a message again to report its parts and one over 512 bytes to write it; a text over 512 bytes whose length differs the second time refuses the call with `mloc_errorInvalid`, the buffer cleared.
 
 ## Faults and fallbacks
 

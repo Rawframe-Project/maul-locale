@@ -542,16 +542,20 @@ extern "C"
     /// When textOut->part is set, the call reports the text's parts
     /// (mlocMessagePart) once it is written, on mloc_success or
     /// mloc_withFallbacks: it formats a second time to report them. A
-    /// strict formatter's call also formats twice, first to find a fault,
-    /// then to write. So a program function's entries must give the same
-    /// results for the same values within one call; if they do not, a
-    /// strict call may leave the buffer partly written.
+    /// text longer than 512 bytes is also formatted twice, strict or
+    /// not: first into a scratch, to find its length and its faults, then
+    /// into textOut's buffer. So a program function's entries must give
+    /// the same text for the same values within one call; a second pass
+    /// whose text is of another length than the first's is refused with
+    /// mloc_errorInvalid, the buffer cleared over its capacity.
     ///
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text; left as it was on any failure
-    ///                       but mloc_errorCapacity.
+    ///                       but mloc_errorCapacity and a program
+    ///                       function's text of another length, which
+    ///                       clears the buffer.
     /// @param faultsOut      Receives the faults; may be null.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
@@ -563,8 +567,9 @@ extern "C"
     ///         three ASCII letters, a date, time, instant or duration the
     ///         library does not make, a zone it did not make, a list whose
     ///         items or an item's text are missing or of more than
-    ///         UINT32_MAX items, an unknown kind, or a bound message the
-    ///         library did not make.
+    ///         UINT32_MAX items, an unknown kind, a bound message the
+    ///         library did not make, or a program function that gave a
+    ///         text over 512 bytes another length when formatted again.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,
