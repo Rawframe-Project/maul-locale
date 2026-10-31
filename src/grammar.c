@@ -265,6 +265,37 @@ static mlocResult ReadFraction(const uint8_t* text, const End* e, mlocDecimal* v
     return ReadDigits(text + e->end - shown, shown, value);
 }
 
+// The value a number at the text's end is spoken as: the one the caller
+// gave, else read from the text, its fraction digits read as written.
+static mlocResult SpokenValue(const Inflector* f, const uint8_t* text, const End* e,
+                              mlocDecimal* value)
+{
+    if (f->shown != nullptr && e->kind == endNumber)
+    {
+        // The digits that end the text are the number's only where its
+        // own end: data the loader accepts may give an affix after it
+        // that ends in a digit ("12.5%9").
+        if (e->end != f->shownEnd)
+        {
+            return mloc_errorInvalid;
+        }
+        *value = *f->shown;
+    }
+    else
+    {
+        mlocResult read = ReadNumber(f, text, e, value);
+        if (read != mloc_success)
+        {
+            return read;
+        }
+    }
+    if (value->kind == mloc_decimalFinite && value->fractionDigits > 0 && e->kind == endNumber)
+    {
+        return ReadFraction(text, e, value);
+    }
+    return mloc_success;
+}
+
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
                                size_t* spokenLength)
 {
@@ -274,35 +305,11 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     {
         return mloc_errorNotFound;
     }
-    // A number the caller gave is read from its value, the text from its
-    // characters.
     mlocDecimal value;
-    if (f->shown != nullptr && e->kind == endNumber)
+    mlocResult read = SpokenValue(f, text, e, &value);
+    if (read != mloc_success)
     {
-        // The digits that end the text are the number's only where its
-        // own end: data the loader accepts may give an affix after it
-        // that ends in a digit ("12,5%9").
-        if (e->end != f->shownEnd)
-        {
-            return mloc_errorInvalid;
-        }
-        value = *f->shown;
-    }
-    else
-    {
-        mlocResult read = ReadNumber(f, text, e, &value);
-        if (read != mloc_success)
-        {
-            return read;
-        }
-    }
-    if (value.kind == mloc_decimalFinite && value.fractionDigits > 0 && e->kind == endNumber)
-    {
-        mlocResult read = ReadFraction(text, e, &value);
-        if (read != mloc_success)
-        {
-            return read;
-        }
+        return read;
     }
     if (coded)
     {
