@@ -548,7 +548,10 @@ extern "C"
     /// the same text for the same values within one call; a second pass,
     /// either one, whose text is of another length than the first's is
     /// refused with mloc_errorInvalid, the buffer cleared over its
-    /// capacity (the parts pass has then reported its parts).
+    /// capacity. The parts pass stops at the first text or part that
+    /// passes the first pass's length, so no part reported ends past it;
+    /// the parts it reported before such a refusal describe a text that is
+    /// then cleared, and the program treats them as void.
     ///
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.

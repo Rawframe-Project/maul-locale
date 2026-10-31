@@ -165,7 +165,9 @@ extern "C"
     // No NUL is written. When
     // part is set, it is called for each part in order of start, after the
     // whole text is written and only on success, but for that one
-    // error of mlocFormatMessage, found once the parts are reported.
+    // error of mlocFormatMessage, which may come after some parts are
+    // reported: they then describe a text that is cleared, and the program
+    // treats them as void. No part ends past the text first written.
     typedef struct mlocOutput
     {
         char* buffer;

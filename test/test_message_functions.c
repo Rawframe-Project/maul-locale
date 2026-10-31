@@ -902,6 +902,20 @@ static void CountPart(void* context, mlocPart part, size_t start, size_t length)
     (*(size_t*)context)++;
 }
 
+// Whether every part reported lies within the first limit bytes.
+typedef struct Bounds
+{
+    size_t limit;
+    bool within;
+} Bounds;
+
+static void BoundedPart(void* context, mlocPart part, size_t start, size_t length)
+{
+    (void)part;
+    Bounds* bounds = context;
+    bounds->within = bounds->within && start <= bounds->limit && length <= bounds->limit - start;
+}
+
 // A text over the scratch, or one whose parts are reported, is formatted
 // again, so a function that gives another length the second time is
 // refused, never reported as the first text's length over the second's
@@ -966,6 +980,21 @@ static void TestChangedText(void)
     }
     CHECK(cleared, "a text that a function changes in the parts pass is refused, the buffer "
                    "cleared and the length left as it was");
+    // Longer in the parts pass, and past the buffer: a part function that
+    // read each range from the buffer would read past it.
+    Bounds bounds = {5, true};
+    mlocOutput small = {text, 10, 0, BoundedPart, &bounds};
+    drift = (Drift){5, 20, 0};
+    memset(text, '-', sizeof text);
+    small.length = 9;
+    cleared =
+        mlocFormatMessage(bound, NULL, 0, &small, NULL) == mloc_errorInvalid && small.length == 9;
+    for (size_t i = 0; i < sizeof text; i++)
+    {
+        cleared = cleared && text[i] == (i < 10 ? 0 : '-');
+    }
+    CHECK(cleared && bounds.within, "a text that a function lengthens in the parts pass reports "
+                                    "no part past the first text, and is refused");
 }
 
 int main(void)
