@@ -70,10 +70,13 @@ typedef struct Inflector
     const mlocSpelloutFormatter* cardinal;
     const mlocSpelloutFormatter* ordinal;
     // The value a number's text shows, when the caller gave it
-    // (mlocInflector_InflectNumber): read instead of the text, and where
-    // the formatter's last digit of it ends there.
+    // (mlocInflector_InflectNumber) in standard notation: read instead of
+    // the text.
     const mlocDecimal* shown;
-    size_t shownEnd;
+    // Whether the caller gave a number, and where the formatter's last
+    // digit of it (integer, fraction or exponent) ends in its text.
+    bool formatted;
+    size_t numberEnd;
     uint8_t stamp;
     uint8_t language;
     uint8_t spoken;
@@ -160,7 +163,8 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
     f->cardinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, cardinal));
     f->ordinal = (const mlocSpelloutFormatter*)(stored + offsetof(StoredInflector, ordinal));
     f->shown = nullptr;
-    f->shownEnd = 0;
+    f->formatted = false;
+    f->numberEnd = 0;
     return f->stamp == inflectorStamp && f->language >= languageTurkish &&
            f->language <= languageKorean && f->spoken <= 1;
 }
@@ -271,15 +275,15 @@ static mlocResult ReadFraction(const uint8_t* text, const End* e, mlocDecimal* v
 static mlocResult SpokenValue(const Inflector* f, const uint8_t* text, const End* e,
                               mlocDecimal* value)
 {
+    // The digits that end a formatted number's text are the number's only
+    // where its own end: data the loader accepts may give an affix or a
+    // compact pattern after it that ends in a digit ("12.5%9", "129").
+    if (f->formatted && e->kind == endNumber && e->end != f->numberEnd)
+    {
+        return mloc_errorInvalid;
+    }
     if (f->shown != nullptr && e->kind == endNumber)
     {
-        // The digits that end the text are the number's only where its
-        // own end: data the loader accepts may give an affix after it
-        // that ends in a digit ("12.5%9").
-        if (e->end != f->shownEnd)
-        {
-            return mloc_errorInvalid;
-        }
         *value = *f->shown;
     }
     else
@@ -800,10 +804,11 @@ mlocResult mlocInflector_InflectText(const mlocInflector* inflector, const char*
     return r != mloc_success ? r : Output((const uint8_t*)text, &in, textOut);
 }
 
-// Notes where a number's last integer or fraction digit ends.
+// Notes where a number's last integer, fraction or exponent digit ends.
 static void NoteDigits(void* context, mlocPart part, size_t start, size_t length)
 {
-    if (part == mloc_numberPartInteger || part == mloc_numberPartFraction)
+    if (part == mloc_numberPartInteger || part == mloc_numberPartFraction ||
+        part == mloc_numberPartExponentInteger)
     {
         size_t* end = context;
         *end = start + length > *end ? start + length : *end;
@@ -839,7 +844,8 @@ mlocResult mlocInflector_InflectNumber(const mlocInflector* inflector,
         return mloc_errorInvalid;
     }
     char text[numberRoom];
-    mlocOutput written = {text, sizeof(text), 0, NoteDigits, &f.shownEnd};
+    f.formatted = true;
+    mlocOutput written = {text, sizeof(text), 0, NoteDigits, &f.numberEnd};
     mlocResult r = mlocFormatWith(&numberFormat, nullptr, decimal, &written);
     mlocDecimal shown;
     f.shown =
