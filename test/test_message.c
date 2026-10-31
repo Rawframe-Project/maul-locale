@@ -336,6 +336,70 @@ static bool Refused(const char* text, mlocMessageError expected, size_t at)
     return result.status == mloc_errorSyntax && error == expected && result.offset == at;
 }
 
+// Compiles a message over one compiled there before, each byte past the
+// size it needs set to 0xA5; whether it is refused as expected with the
+// bytes it needs cleared (or, when cleared is false, the buffer as it
+// was) and the rest as they were.
+static bool RefusedOver(const char* text, mlocResult expected, bool cleared)
+{
+    static uint8_t before[1 << 16];
+    size_t size = 0;
+    size_t needed = 0;
+    if (!Compile("{{a}}", &size) ||
+        mlocCompileMessage(text, strlen(text), NULL, 0, &needed, NULL).status !=
+            (cleared ? mloc_errorCapacity : expected))
+    {
+        return false;
+    }
+    memset(s_buffer + size, 0xA5, sizeof s_buffer - size);
+    memcpy(before, s_buffer, sizeof s_buffer);
+    size_t sizeOut = 777;
+    mlocTextResult result =
+        mlocCompileMessage(text, strlen(text), s_buffer, sizeof s_buffer, &sizeOut, NULL);
+    if (result.status != expected || sizeOut != 777)
+    {
+        return false;
+    }
+    size_t zeros = cleared ? needed : 0;
+    for (size_t i = 0; i < sizeof s_buffer; i++)
+    {
+        if (s_buffer[i] != (i < zeros ? 0 : before[i]))
+        {
+            return false;
+        }
+    }
+    mlocOutput output = {NULL, 0, 0, NULL, NULL};
+    return !cleared || mlocWriteMessageText(s_buffer, size, &output) == mloc_errorFormat;
+}
+
+// A refusal found while measuring leaves the buffer as it was; one found
+// only once the message is written clears what it wrote, so the message
+// compiled there before is gone and no other stands in its place.
+static void TestRefusedOver(void)
+{
+    CHECK(RefusedOver("{{a}", mloc_errorSyntax, false) &&
+              RefusedOver(".input {$n :number} .match $n 1 {{a}}", mloc_errorSyntax, false),
+          "a syntax error or a missing fallback leaves the buffer as it was");
+    CHECK(
+        RefusedOver(".local $x = {1} .local $x = {2} {{a}}", mloc_errorSyntax, true) &&
+            RefusedOver("{$x :f a=1 a=2}", mloc_errorSyntax, true) &&
+            RefusedOver(".input {$n :f} .match $n 1 {{a}} 1 {{b}} * {{c}}", mloc_errorSyntax, true),
+        "a data model error clears the bytes written");
+    // Each local named by the next as operand and option: three
+    // references to $a10 pass the resolution limit.
+    static char text[2048];
+    size_t at = 0;
+    AppendPrint(text, sizeof text, &at, "%s", ".local $a1 = {|x| :string}");
+    for (int i = 2; i <= 10; i++)
+    {
+        AppendPrint(text, sizeof text, &at, " .local $a%d = {$a%d :string k=$a%d}", i, i - 1,
+                    i - 1);
+    }
+    AppendPrint(text, sizeof text, &at, "%s", " {{{$a10}{$a10}{$a10}}}");
+    CHECK(RefusedOver(text, mloc_errorLimit, true), "a message past the resolution limit clears "
+                                                    "the bytes written");
+}
+
 static void TestDataModel(void)
 {
     CHECK(Refused(".input {$x :f} .input {$x :g} {{}}", mloc_messageErrorDuplicateDeclaration, 22),
@@ -1734,6 +1798,7 @@ int main(void)
     TestCut();
     TestMarks();
     TestDataModel();
+    TestRefusedOver();
     TestLinear();
     TestRoundTrip();
     TestCanonical();

@@ -40,7 +40,7 @@ if (result.status == mloc_success &&
 }
 ```
 
-A message that does not compile reports `mloc_errorSyntax` with the offset and the kind of error. `mlocWriteMessageText` writes a compiled message back as canonical MF2 text.
+A message that does not compile reports `mloc_errorSyntax` with the offset and the kind of error. A syntax error is found while measuring and leaves the buffer as it was; a data model error, or a message past the chain and resolution bounds, is found only once the compiled form is written, and the bytes written are cleared, so the buffer holds no compiled message. `mlocWriteMessageText` writes a compiled message back as canonical MF2 text.
 
 ## Arguments and functions
 
