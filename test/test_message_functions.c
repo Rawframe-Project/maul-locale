@@ -870,6 +870,75 @@ static void TestCallingBack(void)
           "a part function formats the message it is given parts of, from inside its call");
 }
 
+// x:drift writes first bytes at its first call, then bytes at each later
+// one.
+typedef struct Drift
+{
+    size_t first;
+    size_t then;
+    int calls;
+} Drift;
+
+static mlocMessageFaultKind DriftFormat(void* context, const mlocMessageResolved* value,
+                                        mlocOutput* output)
+{
+    (void)value;
+    Drift* drift = context;
+    size_t length = drift->calls++ == 0 ? drift->first : drift->then;
+    output->length = length;
+    if (output->buffer != NULL)
+    {
+        memset(output->buffer, 'd', length < output->capacity ? length : output->capacity);
+    }
+    return mloc_messageFaultNone;
+}
+
+// A text over the scratch is formatted twice, so a function that gives
+// another text the second time is refused, never reported as the first
+// text's length over the second's bytes.
+static void TestChangedText(void)
+{
+    static uint8_t compiled[256];
+    static uint8_t bound[1 << 12];
+    static char text[1024];
+    Drift drift = {600, 600, 0};
+    mlocMessageFunction function = {"x:drift",   7,    &drift, EchoResolve,
+                                    DriftFormat, NULL, NULL,   NULL};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
+    mlocMessageFormatter formatter;
+    const char* message = "{|a| :x:drift}";
+    size_t size = 0;
+    size_t boundSize = 0;
+    mlocMessageError error;
+    mlocOutput output = {text, sizeof text, 0, NULL, NULL};
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success &&
+              mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound,
+                                        &boundSize) == mloc_success &&
+              mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_success &&
+              output.length == 600 && text[0] == 'd' && text[599] == 'd' && drift.calls == 2,
+          "a text over the scratch that a function gives again is written");
+    // Longer, shorter, and shorter than the scratch the second time.
+    static const size_t then[] = {601, 599, 100};
+    bool cleared = true;
+    for (size_t c = 0; c < sizeof then / sizeof then[0]; c++)
+    {
+        drift = (Drift){600, then[c], 0};
+        memset(text, '-', sizeof text);
+        output.length = 9;
+        cleared = cleared &&
+                  mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+                  output.length == 9 && drift.calls == 2;
+        for (size_t i = 0; i < sizeof text; i++)
+        {
+            cleared = cleared && text[i] == 0;
+        }
+    }
+    CHECK(cleared, "a text over the scratch that a function changes the second time is refused, "
+                   "the buffer cleared and the length left as it was");
+}
+
 int main(void)
 {
     MakeFormatter();
@@ -881,5 +950,6 @@ int main(void)
     TestResolutionLimit();
     TestIsolation();
     TestCallingBack();
+    TestChangedText();
     return s_failures == 0 ? 0 : 1;
 }

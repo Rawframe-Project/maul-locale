@@ -103,7 +103,10 @@ static inline mlocResult mlocWriteOutput(NumberWriting writing, const void* cont
 // leaves as it was (base.h): the text goes to the scratch given first; an
 // error from that pass is returned with nothing written. A text that fits
 // the output is copied, or written again into it when it passed the
-// scratch. Sets the output's length, also with mloc_errorCapacity.
+// scratch. Sets the output's length, also with mloc_errorCapacity. A
+// second pass that does not write what the first did (a program
+// function giving another text) is refused with mloc_errorInvalid in
+// every build, the buffer it wrote cleared over its capacity.
 static inline mlocResult mlocWriteKept(TextWriting writing, void* context, char* scratch,
                                        size_t scratchSize, mlocOutput* output)
 {
@@ -113,9 +116,9 @@ static inline mlocResult mlocWriteKept(TextWriting writing, void* context, char*
     {
         return r;
     }
-    output->length = length;
     if (length > output->capacity)
     {
+        output->length = length;
         return mloc_errorCapacity;
     }
     if (length <= scratchSize)
@@ -124,12 +127,17 @@ static inline mlocResult mlocWriteKept(TextWriting writing, void* context, char*
         {
             mlocCopyText(output->buffer, scratch, length);
         }
+        output->length = length;
         return r;
     }
     size_t again = 0;
     mlocResult direct = writing(context, output->buffer, output->capacity, &again);
-    MLOC_ASSERT(direct == r && again == length);
-    (void)direct;
+    if (direct != r || again != length)
+    {
+        memset(output->buffer, 0, output->capacity);
+        return mloc_errorInvalid;
+    }
+    output->length = length;
     return r;
 }
 
