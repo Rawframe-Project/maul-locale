@@ -10,6 +10,7 @@
 
 #include "grammar_lexicon.h"
 #include "grammar_turkic.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -168,7 +169,9 @@ static bool TurkishStem(const uint8_t* word, size_t length, uint8_t marks, Turki
     }
     if (drops)
     {
-        // The consonants after the dropped vowel, the final one softened.
+        // The consonants after the dropped vowel, the final one softened;
+        // the vowel is before the final letter (lastVowelEnd < length).
+        MLOC_ASSERT(lastVowelEnd <= finalStart);
         out->kept = lastVowel;
         Tail(out, (const char*)word + lastVowelEnd, finalStart - lastVowelEnd);
     }
