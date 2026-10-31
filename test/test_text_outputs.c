@@ -145,6 +145,12 @@ static void TestSearch(void)
               mlocInitSearcherUtf16(&s_unmade, s_a, 1, nullptr, &searcher) == mloc_errorInvalid &&
               Kept(&searcher, sizeof(searcher)),
           "a searcher refused leaves its output");
+    static char s_long[600];
+    memset(s_long, 'a', sizeof(s_long));
+    CHECK(mlocInitSearcher(&s_collator, s_long, sizeof(s_long), nullptr, &searcher) ==
+                  mloc_errorLimit &&
+              Kept(&searcher, sizeof(searcher)),
+          "a searcher past its limit leaves its output");
     static const uint16_t s_text[3] = {'x', 'y', 'z'};
     size_t start;
     size_t end;
@@ -163,6 +169,40 @@ static void TestSearch(void)
                   mloc_errorNotFound &&
               Kept(&start, sizeof(start)) && Kept(&end, sizeof(end)),
           "a search without a match, or refused, leaves its outputs");
+    CHECK(mlocSearcher_FindPrevious(&s_searcher, "xyz", 3, 4, &start, &end) == mloc_errorInvalid &&
+              mlocSearcher_FindPrevious(&unmade, "xyz", 3, 3, &start, &end) == mloc_errorInvalid &&
+              mlocSearcher_FindNextUtf16(&s_searcher, s_text, 3, 4, &start, &end) ==
+                  mloc_errorInvalid &&
+              mlocSearcher_FindNextUtf16(&unmade, s_text, 3, 0, &start, &end) ==
+                  mloc_errorInvalid &&
+              mlocSearcher_FindPreviousUtf16(&s_searcher, s_text, 3, 4, &start, &end) ==
+                  mloc_errorInvalid &&
+              mlocSearcher_FindPreviousUtf16(&unmade, s_text, 3, 3, &start, &end) ==
+                  mloc_errorInvalid &&
+              Kept(&start, sizeof(start)) && Kept(&end, sizeof(end)),
+          "a backward or UTF-16 search refused leaves its outputs");
+    // 120 "a" and 393 accents: a match one element past the ring, as
+    // test_search's TestRingEdge.
+    static const char marks[4][3] = {"\xCC\x81", "\xCC\x80", "\xCC\x82", "\xCC\x83"};
+    static char text[1200];
+    size_t size = 0;
+    size_t left = 393;
+    for (int letter = 0; letter < 120; letter++)
+    {
+        text[size++] = 'a';
+        for (int m = 0; m < 4 && left > 0; m++, left--)
+        {
+            text[size++] = marks[m][0];
+            text[size++] = marks[m][1];
+        }
+    }
+    mlocSearchOptions wildcard = {.comparison = mloc_searchPatternBaseWildcard};
+    CHECK(mlocInitSearcher(&s_collator, s_long, 120, &wildcard, &searcher) == mloc_success &&
+              mlocSearcher_FindNext(&searcher, text, size, 0, &start, &end) == mloc_errorLimit &&
+              mlocSearcher_FindPrevious(&searcher, text, size, size, &start, &end) ==
+                  mloc_errorLimit &&
+              Kept(&start, sizeof(start)) && Kept(&end, sizeof(end)),
+          "a search past its window leaves its outputs");
 }
 
 static void TestIndex(void)
@@ -183,6 +223,14 @@ static void TestIndex(void)
                   mloc_errorCapacity &&
               needed >= size && Kept(s_small, sizeof(s_small)),
           "an index too large leaves the buffer and gives the capacity");
+    static char s_label[MLOC_MAX_INDEX_LABEL + 1];
+    memset(s_label, 'x', sizeof(s_label));
+    mlocIndexOptions longLabel = {.underflowLabel = s_label, .underflowLength = sizeof(s_label)};
+    Fill(&needed, sizeof(needed));
+    CHECK(mlocBuildIndex(&s_collator, &s_data, &s_en, &longLabel, s_small, sizeof(s_small),
+                         &needed) == mloc_errorLimit &&
+              Kept(s_small, sizeof(s_small)) && Kept(&needed, sizeof(needed)),
+          "an index with a label past its limit leaves its outputs");
     static uint8_t s_garbage[256];
     uint32_t count;
     uint32_t bucket;
@@ -240,6 +288,12 @@ static void TestList(void)
     CHECK(mlocListFormatter_Format(&made, s_items, 3, &text.output) == mloc_errorCapacity &&
               Measured(&text, 20),
           "a list too long leaves the buffer and gives the length");
+    FillText(&text, sizeof(text.buffer));
+    CHECK(SIZE_MAX == UINT32_MAX ||
+              (mlocListFormatter_Format(&made, s_items, (size_t)MLOC_MAX_LIST_ITEMS + 1,
+                                        &text.output) == mloc_errorLimit &&
+               KeptText(&text)),
+          "a list past its item limit leaves its output");
     mlocPersonGender gender;
     mlocPersonGender genders[2] = {mloc_personMale, (mlocPersonGender)7};
     Fill(&gender, sizeof(gender));
@@ -293,6 +347,19 @@ static void TestGrammar(void)
                   mloc_errorCapacity &&
               Measured(&text, 3),
           "a number's inflection too long leaves the buffer and gives the length");
+    // The built-in data alone has no spell-out rules.
+    mlocDataSet builtin = {s_sources, 1};
+    mlocInflector bare;
+    mlocDecimal huge;
+    FillText(&text, sizeof(text.buffer));
+    CHECK(mlocInitInflector(&builtin, &s_tr, &bare) == mloc_success &&
+              mlocParseDecimal("1e2000", 6, &huge).status == mloc_success &&
+              mlocInflector_InflectNumber(&bare, nullptr, &five, &dative, &text.output) ==
+                  mloc_errorNotFound &&
+              mlocInflector_InflectNumber(&turkish, nullptr, &huge, &dative, &text.output) ==
+                  mloc_errorLimit &&
+              KeptText(&text),
+          "a number without spell-out rules, or past the inflected limit, leaves its output");
 }
 
 static bool OpenData(void)
