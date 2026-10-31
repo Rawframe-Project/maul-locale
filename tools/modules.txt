@@ -180,7 +180,7 @@ grammar_end:
 grammar_lexicon: invariant
 grammar_turkic: invariant
 grammar_tk: grammar_turkic
-grammar_fi: grammar_fi_word
+grammar_fi: grammar_fi_word invariant
 grammar_fi_word: invariant
 grammar_ko:
 grammar_hu_sound:
