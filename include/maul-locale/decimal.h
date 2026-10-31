@@ -95,7 +95,7 @@ extern "C"
     /// Makes the decimal of a signed integer, with no fraction digits.
     ///
     /// @param value       The integer.
-    /// @param decimalOut  Receives the decimal.
+    /// @param decimalOut  Receives the decimal; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -104,7 +104,7 @@ extern "C"
     /// Makes the decimal of an unsigned integer, with no fraction digits.
     ///
     /// @param value       The integer.
-    /// @param decimalOut  Receives the decimal.
+    /// @param decimalOut  Receives the decimal; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.
@@ -119,7 +119,7 @@ extern "C"
     /// digits come from integer arithmetic, the same on every platform.
     ///
     /// @param value       The double.
-    /// @param decimalOut  Receives the decimal.
+    /// @param decimalOut  Receives the decimal; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a null pointer.
     /// @par Thread safety
     /// Safe from any thread.

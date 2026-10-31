@@ -69,7 +69,8 @@ extern "C"
     /// Reads what a catalog holds.
     ///
     /// @param catalog  A catalog mlocOpenCatalog opened.
-    /// @param infoOut  Receives its set id, counts, kind and locale.
+    /// @param infoOut  Receives its set id, counts, kind and locale; left
+    ///                 unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a catalog the library
     ///         did not open or a null pointer.
     /// @par Thread safety
@@ -83,7 +84,8 @@ extern "C"
     /// @param catalog   A catalog mlocOpenCatalog opened.
     /// @param key       The key, UTF-8; may be null when length is 0.
     /// @param length    Its length in bytes.
-    /// @param indexOut  Receives the index, below the key count.
+    /// @param indexOut  Receives the index, below the key count; left
+    ///                  unchanged on failure.
     /// @return mloc_success; mloc_errorNotFound for a key the set does not
     ///         have; mloc_errorInvalid for a catalog the library did not
     ///         open or a null pointer.
@@ -100,8 +102,9 @@ extern "C"
     /// @param index       A key's index (mlocCatalog_FindKey), the same in
     ///                    every catalog of the set.
     /// @param messageOut  Receives the message's first byte, in the
-    ///                    catalog's data.
-    /// @param sizeOut     Receives its size in bytes.
+    ///                    catalog's data; left unchanged on failure.
+    /// @param sizeOut     Receives its size in bytes; left unchanged on
+    ///                    failure.
     /// @return mloc_success; mloc_errorNotFound when this catalog has no
     ///         message for the key (a translation not yet made);
     ///         mloc_errorInvalid for an index past the key count, a catalog
@@ -166,7 +169,8 @@ extern "C"
     /// @param catalogs    The catalogs, in fallback order.
     /// @param formatters  Each catalog's formatter, of its locale.
     /// @param count       Their number, 1 to MLOC_MAX_CATALOG_CHAIN.
-    /// @param sizeOut     Receives the size in bytes.
+    /// @param sizeOut     Receives the size in bytes; left unchanged on
+    ///                    failure.
     /// @return mloc_success; mloc_errorLimit and mloc_errorInvalid as
     ///         mlocInitCatalogChain.
     /// @par Thread safety
@@ -227,8 +231,12 @@ extern "C"
     /// @param index          The key's index (mlocCatalog_FindKey).
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
-    /// @param textOut        Receives the text.
-    /// @param faultsOut      Receives the faults; may be null.
+    /// @param textOut        Receives the text; left as it was on failure
+    ///                       but for the length mloc_errorCapacity gives,
+    ///                       and the buffer mlocFormatMessage clears when a
+    ///                       program function gives a text another length.
+    /// @param faultsOut      Receives the faults; may be null. As
+    ///                       mlocFormatMessage leaves them on failure.
     /// @param resultOut      Receives the reason and position once the text
     ///                       is written; left unchanged on failure. May be
     ///                       null.
@@ -253,8 +261,12 @@ extern "C"
     /// @param length         Its length in bytes.
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
-    /// @param textOut        Receives the text.
-    /// @param faultsOut      Receives the faults; may be null.
+    /// @param textOut        Receives the text; left as it was on failure
+    ///                       but for the length mloc_errorCapacity gives,
+    ///                       and the buffer mlocFormatMessage clears when a
+    ///                       program function gives a text another length.
+    /// @param faultsOut      Receives the faults; may be null. As
+    ///                       mlocFormatMessage leaves them on failure.
     /// @param resultOut      Receives the reason and position once the text
     ///                       is written; left unchanged on failure. May be
     ///                       null.
