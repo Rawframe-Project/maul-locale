@@ -73,4 +73,4 @@ if (cache != nullptr &&
 
 Every call writes something and says why: the first catalog's message, a later one's where earlier ones lack it, the source's where a translation does not bind, or the key itself when the set has no such key or nothing else works. A program can log the reasons it did not expect. `mlocCatalog_FindKey` turns a key into an index once, for `mlocCatalogChain_FormatMessage`, which then skips the lookup.
 
-A chain that still binds writes its cache, so it is used by one thread at a time. Once `mlocCatalogChain_Bind` has succeeded, any number of threads may format with it at once.
+The chain keeps pointers to its catalogs, their formatters and its cache, so all three stay as they were while it is used: the array of catalogs and every catalog in it, the array of formatters and every formatter in it (its bound messages point into both), and the cache, which only the chain's calls write. A chain that still binds writes its cache, so it is used by one thread at a time. Once `mlocCatalogChain_Bind` has succeeded, any number of threads may format with it at once.
