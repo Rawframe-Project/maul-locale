@@ -12,6 +12,7 @@
 #include "currency_tables.h"
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_context.h"
 #include "locale_fallback.h"
@@ -28,6 +29,7 @@
 static_assert(sizeof(RelativeFormat) <= sizeof(mlocRelativeFormatter),
               "a relative time formatter fits its opaque value");
 static_assert(offsetof(RelativeFormat, formatter) == 0, "the formatter begins it");
+static_assert(relativeTextMost <= UINT16_MAX, "a pattern's length fits an outer pattern's");
 
 typedef struct ChainWalk
 {
@@ -168,6 +170,8 @@ static bool FiledText(DataSpan unit, uint32_t key, DataSpan* out)
         return false;
     }
     uint32_t string = mlocLoad16(strings + 2 * (size_t)low);
+    // mlocValidRelative checked each entry's string.
+    MLOC_ASSERT(string < stringCount);
     uint32_t start = mlocLoad32(offsets + 4 * (size_t)string);
     out->bytes = offsets + 4 * ((size_t)stringCount + 1) + start;
     out->size = mlocLoad32(offsets + 4 * (size_t)string + 4) - start;
@@ -178,6 +182,9 @@ static bool FiledText(DataSpan unit, uint32_t key, DataSpan* out)
 // width's; false for none or an empty one.
 static bool Lookup(const RelativeFormat* f, uint32_t unit, uint32_t slot, DataSpan* out)
 {
+    // The unit was checked with the amount, the width when the formatter
+    // was read, and the callers' slots are a name's or a direction's.
+    MLOC_ASSERT(unit < relativeUnitCount && f->width < relativeWidthCount && slot < relativeSlots);
     for (uint32_t w = f->width + 1; w-- > 0;)
     {
         uint32_t key = (unit * relativeWidthCount + w) * relativeSlots + slot;
@@ -235,6 +242,9 @@ static size_t CopyText(const RelativeFormat* f, DataSpan text, uint8_t* room, si
     const uint8_t* title = nullptr;
     uint32_t titleLength = 0;
     size_t old = TitleOf(f, text, &title, &titleLength);
+    // The data's text is well-formed UTF-8 (mlocValidRelative), so its first
+    // code point ends within it.
+    MLOC_ASSERT(old <= text.size);
     size_t length = text.size - old + titleLength;
     if (length > capacity)
     {
@@ -287,6 +297,9 @@ static mlocResult WriteName(const uint8_t* text, size_t length, mlocOutput* outp
 static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t base,
                             uint32_t category, uint8_t* room, Outer* outer)
 {
+    // A category is one of the six plural categories, and base a
+    // direction's first slot.
+    MLOC_ASSERT(category <= mloc_pluralOther && (base == relativeFuture || base == relativePast));
     DataSpan text;
     if (!Lookup(f, unit, base + category, &text) && !Lookup(f, unit, base + 5, &text))
     {
