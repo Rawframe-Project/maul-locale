@@ -545,9 +545,10 @@ extern "C"
     /// text longer than 512 bytes is also formatted twice, strict or
     /// not: first into a scratch, to find its length and its faults, then
     /// into textOut's buffer. So a program function's entries must give
-    /// the same text for the same values within one call; a second pass
-    /// whose text is of another length than the first's is refused with
-    /// mloc_errorInvalid, the buffer cleared over its capacity.
+    /// the same text for the same values within one call; a second pass,
+    /// either one, whose text is of another length than the first's is
+    /// refused with mloc_errorInvalid, the buffer cleared over its
+    /// capacity (the parts pass has then reported its parts).
     ///
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
     /// @param arguments      The arguments; may be null when count is 0.
@@ -568,8 +569,8 @@ extern "C"
     ///         library does not make, a zone it did not make, a list whose
     ///         items or an item's text are missing or of more than
     ///         UINT32_MAX items, an unknown kind, a bound message the
-    ///         library did not make, or a program function that gave a
-    ///         text over 512 bytes another length when formatted again.
+    ///         library did not make, or a program function that gave
+    ///         the text another length when formatted again.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

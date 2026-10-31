@@ -684,6 +684,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     // when strict, leaves the caller's as it was.
     char scratch[messageScratchSize];
     MessagePass pass = {&f, 0};
+    size_t kept = textOut->length;
     mlocResult r = mlocWriteKept(WritePass, &pass, scratch, sizeof(scratch), textOut);
     if (faultsOut != NULL)
     {
@@ -701,6 +702,17 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
         f.w = (Writer){textOut->buffer, textOut->capacity, 0, textOut->part, textOut->context};
         Run(&f, 1);
         f.r.faultCount = faultCount;
+        // A program function that gave another length this time leaves
+        // parts and text that do not agree, refused as in mlocWriteKept.
+        if (f.w.length != textOut->length)
+        {
+            if (textOut->capacity > 0)
+            {
+                memset(textOut->buffer, 0, textOut->capacity);
+            }
+            textOut->length = kept;
+            return mloc_errorInvalid;
+        }
     }
     return f.r.faultCount > 0 ? mloc_withFallbacks : mloc_success;
 }

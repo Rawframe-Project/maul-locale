@@ -893,9 +893,19 @@ static mlocMessageFaultKind DriftFormat(void* context, const mlocMessageResolved
     return mloc_messageFaultNone;
 }
 
-// A text over the scratch is formatted twice, so a function that gives
-// another text the second time is refused, never reported as the first
-// text's length over the second's bytes.
+// Counts the parts reported.
+static void CountPart(void* context, mlocPart part, size_t start, size_t length)
+{
+    (void)part;
+    (void)start;
+    (void)length;
+    (*(size_t*)context)++;
+}
+
+// A text over the scratch, or one whose parts are reported, is formatted
+// again, so a function that gives another length the second time is
+// refused, never reported as the first text's length over the second's
+// bytes.
 static void TestChangedText(void)
 {
     static uint8_t compiled[256];
@@ -937,6 +947,25 @@ static void TestChangedText(void)
     }
     CHECK(cleared, "a text over the scratch that a function changes the second time is refused, "
                    "the buffer cleared and the length left as it was");
+    size_t parts = 0;
+    mlocOutput reported = {text, sizeof text, 0, CountPart, &parts};
+    // The parts pass measures each placeholder before writing it, so the
+    // function is called three times.
+    drift = (Drift){10, 10, 0};
+    CHECK(mlocFormatMessage(bound, NULL, 0, &reported, NULL) == mloc_success &&
+              reported.length == 10 && drift.calls == 3 && parts > 0,
+          "a text whose parts are reported is formatted again for them");
+    drift = (Drift){10, 5, 0};
+    memset(text, '-', sizeof text);
+    reported.length = 9;
+    cleared = mlocFormatMessage(bound, NULL, 0, &reported, NULL) == mloc_errorInvalid &&
+              reported.length == 9 && drift.calls == 3;
+    for (size_t i = 0; i < sizeof text; i++)
+    {
+        cleared = cleared && text[i] == 0;
+    }
+    CHECK(cleared, "a text that a function changes in the parts pass is refused, the buffer "
+                   "cleared and the length left as it was");
 }
 
 int main(void)
