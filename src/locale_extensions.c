@@ -9,6 +9,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_canonical.h"
 #include "locale_tables.h"
@@ -18,6 +19,10 @@
 #include <string.h>
 
 #define MAX_SUBTAGS 64
+
+// A tail holds at most a subtag of one character for every two bytes, so
+// Split never stops short.
+static_assert((MLOC_MAX_LOCALE_TAIL + 1) / 2 <= MAX_SUBTAGS, "the subtags hold a tail's");
 
 typedef struct Extensions
 {
@@ -301,6 +306,9 @@ static bool WriteKeyword(const Extensions* x, const Subtags* s, int key, int fir
                          bool unicode, Writer* w)
 {
     const char* name = At(s, key);
+    // The callers stop at a key: a subtag after the values (of 3 or more)
+    // that is no singleton.
+    MLOC_ASSERT(s->length[key] == 2);
     Write(w, name, 2);
     uint32_t length = ValueLength(s, first, end);
     if (length == 0)

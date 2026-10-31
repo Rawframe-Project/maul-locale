@@ -5,6 +5,7 @@
 
 #include "locale_context.h"
 
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 
@@ -35,5 +36,7 @@ uint8_t mlocGetLocaleContext(const mlocDataSet* data, const mlocLocale* locale, 
     {
         return 0;
     }
+    // The validator took a byte for each usage.
+    MLOC_ASSERT((uint32_t)usage < unit.size);
     return unit.bytes[usage];
 }

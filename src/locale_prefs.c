@@ -9,6 +9,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_keyword.h"
 #include "locale_tables.h"
@@ -150,6 +151,8 @@ static const uint8_t* LocaleHours(const Prefs* p, uint32_t language, uint32_t re
     {
         if (mlocLoad32(p->locales + (size_t)i * preferEntrySize) == key)
         {
+            // The validator checked each entry's hours.
+            MLOC_ASSERT(p->locales[(size_t)i * preferEntrySize + 4] < p->hoursCount);
             return p->hours + (size_t)p->locales[(size_t)i * preferEntrySize + 4] * preferEntrySize;
         }
     }
@@ -213,6 +216,8 @@ uint32_t mlocPreferenceRegion(const mlocDataSet* data, const mlocLocale* locale,
 static mlocHourFormat HourCycle(const mlocLocale* locale, const uint8_t* hours)
 {
     static const char* const s_cycles[4] = {"h11", "h12", "h23", "h24"};
+    static_assert(sizeof(s_cycles) / sizeof(s_cycles[0]) == mloc_hourFormatH24 + 1,
+                  "a cycle for each hour format of a -u-hc value");
     const char* value = nullptr;
     size_t length = mlocFindKeyword(locale, "hc", &value);
     for (uint8_t c = 0; c < 4; c++)
@@ -228,6 +233,8 @@ static mlocHourFormat HourCycle(const mlocLocale* locale, const uint8_t* hours)
         // K before h gives h11, else h12; k before H gives h24, else h23.
         mlocHourFormat other = twelve ? mloc_hourFormatH11 : mloc_hourFormatH24;
         mlocHourFormat usual = twelve ? mloc_hourFormatH12 : mloc_hourFormatH23;
+        // The validator kept the count within the formats' room.
+        MLOC_ASSERT(hours[1] <= preferHoursMax);
         for (uint8_t i = 0; i < hours[1]; i++)
         {
             uint8_t f = hours[2 + i] == mloc_hourFormatH12DayPeriod ||
@@ -268,6 +275,8 @@ static mlocCalendar Calendar(const char* value, size_t length, const uint8_t* re
         "gregory",      "iso8601",          "buddhist", "roc",          "japanese", "coptic",
         "ethiopic",     "ethioaa",          "indian",   "persian",      "hebrew",   "islamic-civil",
         "islamic-tbla", "islamic-umalqura", "islamic",  "islamic-rgsa", "chinese",  "dangi"};
+    static_assert(sizeof(s_types) / sizeof(s_types[0]) == mloc_calendarDangi + 1,
+                  "a type for each calendar");
     for (uint8_t c = 0; c < 18; c++)
     {
         if (Is(value, length, s_types[c]))
@@ -281,6 +290,8 @@ static mlocCalendar Calendar(const char* value, size_t length, const uint8_t* re
 static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const uint8_t* region)
 {
     static const char* const s_systems[3] = {"metric", "ussystem", "uksystem"};
+    static_assert(sizeof(s_systems) / sizeof(s_systems[0]) == mloc_measurementUk + 1,
+                  "a type for each measurement system");
     const char* value = nullptr;
     size_t length = mlocFindKeyword(locale, "ms", &value);
     for (uint8_t m = 0; m < 3; m++)
@@ -310,6 +321,9 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
     uint32_t language = 0;
     uint32_t region = mlocPreferenceRegion(data, locale, &language);
     const uint8_t* entry = RegionEntry(&p, region);
+    // The validator required 001's entry, which every region falls back
+    // to, and checked each entry's hours.
+    MLOC_ASSERT(entry != nullptr && entry[2] < p.hoursCount);
     const uint8_t* hours = LocaleHours(&p, language, region);
     if (hours == nullptr)
     {
