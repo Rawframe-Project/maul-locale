@@ -381,7 +381,13 @@ MLOC_NOINLINE static Value CallProgram(Resolution* r, uint32_t expression, uint3
         r->dynamic = true;
         return mlocExpressionFallback(r, expression);
     }
-    const mlocMessageFunction* function = &r->formatter.functions[slot - messageFunctionProgram];
+    uint32_t index = slot - messageFunctionProgram;
+    if (index >= r->formatter.functionCount || r->formatter.functions[index].resolve == NULL)
+    {
+        r->broken = true;
+        return mlocExpressionFallback(r, expression);
+    }
+    const mlocMessageFunction* function = &r->formatter.functions[index];
     mlocMessageOperand given;
     mlocMessageResolved storage;
     if (operand != NULL)
@@ -397,7 +403,7 @@ MLOC_NOINLINE static Value CallProgram(Resolution* r, uint32_t expression, uint3
     memset(&call, 0, sizeof call);
     memcpy(&call, &state, sizeof state);
     Value v = Make(valueResolved);
-    v.function = slot - messageFunctionProgram;
+    v.function = index;
     mlocMessageFaultKind fault = function->resolve(function->context, &call, &given, &v.resolved);
     if (fault != mloc_messageFaultNone)
     {

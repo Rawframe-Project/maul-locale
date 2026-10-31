@@ -5,7 +5,8 @@
 // formatter is made with and what it refuses; a call's options and
 // locale through the accessors; operands of each kind; a function's
 // faults, falling back; :string's operands; selection through match and
-// better entries, and a selector that cannot select.
+// better entries, and a selector that cannot select; functions and
+// arguments a program changes while they are in use, refused.
 
 #include "test_harness.h"
 #include "test_print.h"
@@ -997,6 +998,139 @@ static void TestChangedText(void)
                                     "no part past the first text, and is refused");
 }
 
+// Whether a refused call cleared the buffer and left the length at the 9
+// the test set.
+static bool Cleared(const char* text, size_t size, const mlocOutput* output)
+{
+    bool cleared = output->length == 9;
+    for (size_t i = 0; i < size; i++)
+    {
+        cleared = cleared && text[i] == 0;
+    }
+    return cleared;
+}
+
+// A bound message keeps its program functions' places in the formatter's
+// array; a formatter made again in its place, or an entry cleared, is
+// refused rather than read past or called.
+static void TestBrokenFunctions(void)
+{
+    static uint8_t compiled[256];
+    static uint8_t bound[1 << 12];
+    static char text[256];
+    static mlocMessageFunction two[] = {
+        {"x:one", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, NULL},
+        {"x:two", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, NULL},
+    };
+    static const mlocMessageFunction one[] = {
+        {"x:one", 5, NULL, EchoResolve, EchoFormat, NULL, NULL, NULL},
+    };
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, two, 2, NULL};
+    mlocMessageFormatter formatter;
+    const char* message = "{|a| :x:two}";
+    size_t size = 0;
+    size_t boundSize = 0;
+    mlocMessageError error;
+    mlocOutput output = {text, sizeof text, 0, NULL, NULL};
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success &&
+              mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
+                      .status == mloc_success &&
+              mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound,
+                                        &boundSize) == mloc_success &&
+              mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_success,
+          "a message bound to a program function formats");
+    // The bound message keeps the second function's place, which the
+    // formatter made again where it was no longer has.
+    options = (mlocMessageOptions){false, mloc_messageIsolationNone, one, 1, NULL};
+    memset(text, '-', sizeof text);
+    output.length = 9;
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success &&
+              mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+              output.length == 9 && text[0] == '-',
+          "a formatter made again with fewer functions under a bound message is refused");
+    options = (mlocMessageOptions){false, mloc_messageIsolationNone, two, 2, NULL};
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) == mloc_success,
+          "the formatter is made again with both functions");
+    two[1].resolve = NULL;
+    output.length = 9;
+    CHECK(mlocFormatMessage(bound, NULL, 0, &output, NULL) == mloc_errorInvalid &&
+              output.length == 9 && text[0] == '-',
+          "a function whose resolve entry was cleared after the formatter was made is refused");
+    two[1].resolve = EchoResolve;
+}
+
+// x:spoil clears the decimal of the argument its context holds the first
+// time it is called, as a program that changes an argument during a call
+// would.
+typedef struct Spoil
+{
+    mlocMessageArgument* argument;
+    int calls;
+} Spoil;
+
+static mlocMessageFaultKind SpoilResolve(void* context, const mlocMessageCall* call,
+                                         const mlocMessageOperand* operand,
+                                         mlocMessageResolved* valueOut)
+{
+    Spoil* spoil = context;
+    if (spoil->calls++ == 0)
+    {
+        spoil->argument->value.as.decimal = NULL;
+    }
+    return EchoResolve(NULL, call, operand, valueOut);
+}
+
+// Formats a message whose decimal argument x:spoil clears after it is
+// first read; false when it does not compile or bind.
+static bool FormatSpoiled(const char* message, mlocOutput* output, mlocResult* resultOut)
+{
+    static uint8_t compiled[2048];
+    static uint8_t bound[1 << 13];
+    mlocDecimal seven;
+    mlocMessageArgument argument = {"n", 1, {mloc_messageValueDecimal, 0, {.decimal = &seven}}};
+    Spoil spoil = {&argument, 0};
+    mlocMessageFunction function = {"x:spoil",  7,    &spoil, SpoilResolve,
+                                    EchoFormat, NULL, NULL,   NULL};
+    mlocMessageOptions options = {false, mloc_messageIsolationNone, &function, 1, NULL};
+    mlocMessageFormatter formatter;
+    size_t size = 0;
+    size_t boundSize = 0;
+    mlocMessageError error;
+    if (mlocMakeDecimal(7, &seven) != mloc_success ||
+        mlocInitMessageFormatter(&s_data, &s_locale, &options, &formatter) != mloc_success ||
+        mlocCompileMessage(message, strlen(message), compiled, sizeof compiled, &size, &error)
+                .status != mloc_success ||
+        mlocMessageFormatter_Bind(&formatter, compiled, size, bound, sizeof bound, &boundSize) !=
+            mloc_success)
+    {
+        return false;
+    }
+    *resultOut = mlocFormatMessage(bound, &argument, 1, output, NULL);
+    return true;
+}
+
+static void TestChangedArguments(void)
+{
+    static char text[1024];
+    static char message[700];
+    // Over the scratch, so the text is written a second time.
+    snprintf(message, sizeof message, "{$n :number} {|a| :x:spoil} %0600d", 0);
+    mlocOutput output = {text, sizeof text, 9, NULL, NULL};
+    mlocResult result = mloc_success;
+    memset(text, '-', sizeof text);
+    CHECK(FormatSpoiled(message, &output, &result) && result == mloc_errorInvalid &&
+              Cleared(text, sizeof text, &output),
+          "an argument a program function changes before the text is written again is refused, "
+          "the buffer cleared");
+    size_t parts = 0;
+    mlocOutput reported = {text, sizeof text, 9, CountPart, &parts};
+    memset(text, '-', sizeof text);
+    CHECK(FormatSpoiled("{$n :number} {|a| :x:spoil}", &reported, &result) &&
+              result == mloc_errorInvalid && Cleared(text, sizeof text, &reported),
+          "an argument a program function changes before the parts pass is refused, the buffer "
+          "cleared");
+}
+
 int main(void)
 {
     MakeFormatter();
@@ -1009,5 +1143,7 @@ int main(void)
     TestIsolation();
     TestCallingBack();
     TestChangedText();
+    TestBrokenFunctions();
+    TestChangedArguments();
     return s_failures == 0 ? 0 : 1;
 }

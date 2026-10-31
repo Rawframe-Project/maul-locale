@@ -241,7 +241,9 @@ extern "C"
     /// @param textOut        Receives the text; left as it was on failure
     ///                       but for the length mloc_errorCapacity gives,
     ///                       and the buffer mlocFormatMessage clears when a
-    ///                       program function gives a text another length.
+    ///                       program function changes a text's length, an
+    ///                       argument or the functions before the text is
+    ///                       formatted again.
     /// @param faultsOut      Receives the faults; may be null. As
     ///                       mlocFormatMessage leaves them on failure.
     /// @param resultOut      Receives the reason and position once the text
@@ -272,7 +274,9 @@ extern "C"
     /// @param textOut        Receives the text; left as it was on failure
     ///                       but for the length mloc_errorCapacity gives,
     ///                       and the buffer mlocFormatMessage clears when a
-    ///                       program function gives a text another length.
+    ///                       program function changes a text's length, an
+    ///                       argument or the functions before the text is
+    ///                       formatted again.
     /// @param faultsOut      Receives the faults; may be null. As
     ///                       mlocFormatMessage leaves them on failure.
     /// @param resultOut      Receives the reason and position once the text

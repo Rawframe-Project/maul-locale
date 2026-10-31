@@ -576,14 +576,15 @@ extern "C"
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text; left as it was on any failure
-    ///                       but mloc_errorCapacity and a program
-    ///                       function's text of another length, which
-    ///                       clears the buffer.
+    ///                       but mloc_errorCapacity and a program function
+    ///                       that changes the text's length, an argument or
+    ///                       the functions before the text is formatted
+    ///                       again, which clears the buffer.
     /// @param faultsOut      Receives the faults; may be null. They are
     ///                       found and written also when the call fails with
     ///                       mloc_errorCapacity, mloc_errorFallback or a
-    ///                       program function's text of another length;
-    ///                       left unchanged on any other failure.
+    ///                       refusal of what a program function gave or
+    ///                       changed; left unchanged on any other failure.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
     ///         fails, the faults reported; mloc_errorCapacity when the text does
@@ -595,8 +596,12 @@ extern "C"
     ///         library does not make, a zone it did not make, a list whose
     ///         items or an item's text are missing or of more than
     ///         UINT32_MAX items, an unknown kind, a bound message the
-    ///         library did not make, or a program function that gave
-    ///         the text another length when formatted again.
+    ///         library did not make, a program function that gave the
+    ///         text another length when formatted again or changed an
+    ///         argument before it was, or a program function past the
+    ///         formatter's own or without a resolve entry (a formatter
+    ///         made again under the bound message, or its functions
+    ///         changed).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,

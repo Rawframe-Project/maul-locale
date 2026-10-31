@@ -672,10 +672,21 @@ static mlocResult WritePass(void* context, char* buffer, size_t capacity, size_t
 {
     MessagePass* p = context;
     Formatting* f = p->f;
+    // A later pass reads the arguments again: one a program function
+    // changed is refused, as a text of another length is.
+    if (p->passes > 0 && !GoodArguments(f->r.arguments, f->r.argumentCount))
+    {
+        *lengthOut = 0;
+        return mloc_errorInvalid;
+    }
     f->w = (Writer){buffer, capacity, 0, NULL, NULL, 0, false};
     Run(f, p->passes == 0 ? 0 : 1);
     p->passes++;
     *lengthOut = f->w.length;
+    if (f->r.broken)
+    {
+        return mloc_errorInvalid;
+    }
     return f->r.faultCount > 0 && f->r.formatter.strict ? mloc_errorFallback : mloc_success;
 }
 
@@ -699,6 +710,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.faults = faultsOut;
     f.r.faultCount = 0;
     f.r.probe = false;
+    f.r.broken = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
     // The text goes to a scratch first: a buffer too small, or a fault
@@ -720,14 +732,19 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
         // The same text again, its parts reported, its faults already
         // counted.
         size_t faultCount = f.r.faultCount;
+        bool good = GoodArguments(arguments, argumentCount);
         f.w = (Writer){textOut->buffer,  textOut->capacity, 0,    textOut->part,
                        textOut->context, textOut->length,   false};
-        Run(&f, 1);
+        if (good)
+        {
+            Run(&f, 1);
+        }
         f.r.faultCount = faultCount;
-        // A program function that gave another length this time, or a
-        // part past the first text, leaves parts and text that do not
-        // agree, refused as in mlocWriteKept.
-        if (f.w.overrun || f.w.length != textOut->length)
+        // A program function that gave another length this time or broke
+        // the rules, an argument it changed, or a part past the first
+        // text, leaves parts and text that do not agree, refused as in
+        // mlocWriteKept.
+        if (!good || f.r.broken || f.w.overrun || f.w.length != textOut->length)
         {
             if (textOut->capacity > 0)
             {
