@@ -193,6 +193,9 @@ uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut)
     *startOut = at;
     uint32_t c = text[at];
     size_t extra = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
+    // Valid UTF-8 (the text was checked), read from a code point's end:
+    // the sequence ends where the read began.
+    MLOC_ASSERT(at + extra + 1 == end);
     c &= extra == 3 ? 0x07 : extra == 2 ? 0x0F : extra == 1 ? 0x1F : 0x7F;
     for (size_t i = 1; i <= extra; i++)
     {
@@ -488,6 +491,9 @@ void mlocTurkicSuffixes(const TurkicLanguage* language, TurkicSound sound, const
                         bool endsThird, TurkicSuffixes* out)
 {
     *out = (TurkicSuffixes){0};
+    // mlocTurkicRequestValid refused a person past 3 and a case the
+    // language does not have.
+    MLOC_ASSERT(r->possessorPerson <= 3 && CaseRow(r->grammaticalCase) < turkicCases);
     bool third = r->possessorPerson == 3 || endsThird;
     if (r->plural && !(language->pluralInThirdPlural && third && r->possessorPlural))
     {

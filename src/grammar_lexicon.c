@@ -7,6 +7,8 @@
 
 #include "grammar_lexicon.h"
 
+#include "invariant.h"
+
 #include "generated/turkish_marks.h"
 
 #include <string.h>
@@ -129,6 +131,7 @@ static bool KeyOf(const uint8_t* word, size_t length, bool plain, uint8_t* key, 
 // Compares a key with a block's first word, which shares nothing.
 static int CompareHead(const uint8_t* key, size_t length, size_t block)
 {
+    MLOC_ASSERT(block < turkishMarkBlocks);
     const uint8_t* entry = s_turkishMarks + s_turkishMarkBlocks[block];
     size_t own = entry[1];
     size_t n = length < own ? length : own;
@@ -163,6 +166,9 @@ static bool ScanBlock(const uint8_t* key, size_t keyLength, size_t block, Turkic
         {
             return false;
         }
+        // The generator writes whole entries: its bytes, marks and a
+        // compound's possessive.
+        MLOC_ASSERT(at + 3 + own <= turkishMarkBytes);
         const uint8_t* bytes = s_turkishMarks + at + 2;
         uint8_t marks = bytes[own];
         bool compound = (marks & turkicCompound) != 0;
@@ -201,6 +207,7 @@ static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
     {
         return false;
     }
+    MLOC_ASSERT(low < high && high <= turkishMarkBlocks);
     while (high - low > 1)
     {
         size_t middle = low + (high - low) / 2;

@@ -177,7 +177,7 @@ message_prepare: bytes invariant message_bind message_date message_duration mess
 message_format: decimal invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_prepare message_read message_resolve message_words number_output
 message: invariant message_check message_cost message_emit message_form message_parse message_read message_table message_write
 grammar_end:
-grammar_lexicon:
+grammar_lexicon: invariant
 grammar_turkic: invariant
 grammar_tk: grammar_turkic
 grammar_fi: grammar_fi_word
@@ -186,7 +186,7 @@ grammar_ko:
 grammar_hu_sound:
 grammar_hu: grammar_hu_sound invariant
 grammar_hu_words: grammar_hu
-grammar_tr: grammar_lexicon grammar_turkic
+grammar_tr: grammar_lexicon grammar_turkic invariant
 grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
