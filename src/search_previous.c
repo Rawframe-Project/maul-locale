@@ -179,13 +179,18 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
             }
             continue;
         }
-        bool found = BoundsBack(f, index, firstIndex, from, startOut, endOut);
+        // A candidate refused leaves the outputs as they were.
+        size_t start = 0;
+        size_t limit = 0;
+        bool found = BoundsBack(f, index, firstIndex, from, &start, &limit);
         if (f->full)
         {
             return mloc_errorLimit;
         }
         if (found)
         {
+            *startOut = start;
+            *endOut = limit;
             return mloc_success;
         }
     }
