@@ -6,6 +6,7 @@
 // bytes.
 
 #include "bytes.h"
+#include "invariant.h"
 #include "locale_distance.h"
 #include "locale_likely.h"
 #include "locale_lsr.h"
@@ -73,6 +74,8 @@ static size_t Gather(const MatchTable* table, mlocMatchEntry* entries, size_t co
     for (size_t i = at; i < count; i++)
     {
         Lsr lsr = EntryAt(entries, i);
+        // mlocPrepareMatch made each entry for its locale.
+        MLOC_ASSERT(lsr.index < count);
         if (Rank(table, &lsr, supported, defaultLsr, defaultLocale) != rank)
         {
             continue;
@@ -215,6 +218,9 @@ mlocResult mlocMatchLocales(const mlocDataSet* data, const mlocLocale* supported
         }
         if (at >= 0)
         {
+            // mlocNearest checked each entry it read (ValidLsr), the one it
+            // gives included.
+            MLOC_ASSERT((size_t)at < count && EntryAt(entries, (size_t)at).index < count);
             best = shifted;
             match = (mlocMatch){.supported = (int32_t)EntryAt(entries, (size_t)at).index,
                                 .desired = (int32_t)i};
