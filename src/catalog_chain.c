@@ -329,8 +329,8 @@ static mlocResult WriteKeyAt(const Chain* c, uint32_t index, mlocOutput* output)
     {
         return mloc_errorFormat;
     }
-    // The array is the caller's: a first catalog replaced since the chain
-    // was made may hold fewer keys than the chain's set.
+    // A defense: the array must stay as it was (catalog.h), but a first
+    // catalog changed against that must not send the read past its keys.
     if (index >= keys.count)
     {
         return mloc_errorInvalid;

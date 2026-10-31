@@ -356,9 +356,9 @@ static void TestOutputs(Set* s)
     free(cache);
 }
 
-// A chain reads its catalogs through the array it was made with; one
-// replaced since by a catalog of another set, with fewer keys, is refused
-// where the chain would write a key it does not have.
+// A chain's catalogs must stay as they were (catalog.h); a first catalog
+// replaced against that by one of another set, with fewer keys, still does
+// not send the read of a key past it.
 static void TestReplaced(Set* s)
 {
     uint8_t* bytes = nullptr;
@@ -386,7 +386,7 @@ static void TestReplaced(Set* s)
     CHECK(made && faulty > 0 &&
               mlocCatalogChain_FormatMessage(&chain, faulty, nullptr, 0, &output, nullptr,
                                              nullptr) == mloc_errorInvalid,
-          "a key past the first catalog's keys, its catalogs replaced, is refused");
+          "a key index past the first catalog's keys is refused");
     free(cache);
     free(bytes);
 }
