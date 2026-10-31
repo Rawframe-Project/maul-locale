@@ -6,6 +6,7 @@
 
 #include "maul-locale/list.h"
 
+#include "invariant.h"
 #include "list_data.h"
 #include "list_join.h"
 #include "number_core.h"
@@ -99,6 +100,8 @@ typedef struct ListWriting
 static mlocResult WriteListText(const void* context, NumberWriter* w)
 {
     const ListWriting* g = context;
+    // mlocListFormatter_Format refuses more, so the count fits 32 bits.
+    MLOC_ASSERT(g->count <= MLOC_MAX_LIST_ITEMS);
     if (g->count == 0)
     {
         return mloc_success;
