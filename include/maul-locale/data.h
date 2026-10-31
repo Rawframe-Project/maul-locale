@@ -23,9 +23,12 @@ extern "C"
         uint64_t opaque[4];
     } mlocData;
 
-    // The sources a part looks data up in, searched in order: for example
-    // a downloaded language pack before the compiled-in data. The caller
-    // keeps the array.
+    // The sources a part looks data up in, searched in order: for example a
+    // downloaded language pack before the compiled-in data. The caller
+    // keeps the array. A message formatter, a zone formatter, and a date,
+    // time or date-time formatter made with a zone keep a pointer to the
+    // set itself, so the set and its array must outlive them and stay as
+    // they were.
     typedef struct mlocDataSet
     {
         const mlocData* sources;

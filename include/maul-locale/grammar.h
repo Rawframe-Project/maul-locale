@@ -35,7 +35,8 @@ extern "C"
 #define MLOC_MAX_INFLECTED_NUMBER 1024
 
     // A locale's inflector: a value that points into the data it was made
-    // from, which must outlive it. Opaque; make it with mlocInitInflector.
+    // from, which must outlive it and not change. Opaque; make it with
+    // mlocInitInflector.
     typedef struct mlocInflector
     {
         uint64_t opaque[100];

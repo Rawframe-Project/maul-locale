@@ -40,7 +40,7 @@ The data files in `src/generated/*.mloc` are not installed; a program ships the 
 
 - **One CLDR release.** Every table comes from CLDR 49.0 and its Unicode version; `mlocGetCldrVersion` says which. Results follow CLDR's data and, where CLDR leaves the algorithm open, ICU4C's and ECMA-402's behavior.
 - **Data is passed in.** Every function that needs locale data takes an `mlocDataSet`: the data compiled into the library, data files the program holds in memory, or both, searched in order. The library reads no file, no environment variable and no system locale or clock.
-- **No allocation.** Formatters, collators and compiled messages are fixed-size structs the caller declares, with nothing to destroy. They point into the data they were made from, which must outlive them.
+- **No allocation.** Formatters, collators and compiled messages are fixed-size structs the caller declares, with nothing to destroy. They point into the data they were made from, and some also to what they were given: a message formatter to the data set and the program's functions, a bound message to its compiled message and formatter, a catalog to its bytes. The library checks such memory once and then reads it as checked, so all of it must outlive what points to it and stay as it was.
 - **Any thread.** Data and formatters are read only once made, so every function is safe from any thread, and one formatter may be used by several threads at once. An output buffer is used by one call at a time.
 - **Same results everywhere.** A `double` given as input is converted to its shortest decimal digits by integer arithmetic, and conversions are exact; identical input gives identical output on every platform and compiler.
 

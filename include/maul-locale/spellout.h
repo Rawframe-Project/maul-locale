@@ -18,8 +18,8 @@ extern "C"
 #endif
 
     // A locale's formatter of one rule set: a value that points into the
-    // data it was made from, which must outlive it. Opaque; make it with
-    // mlocInitSpelloutFormatter.
+    // data it was made from, which must outlive it and not change. Opaque;
+    // make it with mlocInitSpelloutFormatter.
     typedef struct mlocSpelloutFormatter
     {
         uint64_t opaque[32];

@@ -77,9 +77,9 @@ extern "C"
         mlocCapitalization capitalization;
     } mlocRelativeOptions;
 
-    // A locale's relative time formatter: a value that points into the
-    // data it was made from, which must outlive it. Opaque; make it with
-    // mlocInitRelativeFormatter.
+    // A locale's relative time formatter: a value that points into the data
+    // it was made from, which must outlive it and not change. Opaque; make
+    // it with mlocInitRelativeFormatter.
     typedef struct mlocRelativeFormatter
     {
         uint64_t opaque[56];

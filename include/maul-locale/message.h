@@ -168,7 +168,10 @@ extern "C"
     // the call), which the date and time functions format; a duration is
     // its fields by pointer (to outlive the call), which mloc:duration
     // formats; a list is its items' texts by pointer (to outlive the
-    // call), which mloc:list formats and selects by its count.
+    // call), which mloc:list formats and selects by its count. The call
+    // checks the arguments and all they point to once, before it formats,
+    // so they stay as they were for the whole call: the program's own
+    // functions change none of them.
     typedef int32_t mlocMessageValueKind;
     enum
     {
@@ -429,8 +432,9 @@ extern "C"
         // message's own direction is its locale's
         // (mlocGetLocaleDirection), unknown when that has none.
         mlocMessageIsolation isolation;
-        // The program's functions, which must outlive the formatter; may
-        // be null when count is 0.
+        // The program's functions, which must outlive the formatter and
+        // stay as they were, the array and each entry; may be null when
+        // count is 0.
         const mlocMessageFunction* functions;
         size_t functionCount;
         // The default time zone the date and time functions show exact
@@ -440,8 +444,9 @@ extern "C"
     } mlocMessageOptions;
 
     // A locale's message formatter: a value that points into the data it
-    // was made from, which must outlive it. Opaque; make it with
-    // mlocInitMessageFormatter.
+    // was made from, and to the data set and the program's functions it was
+    // given, which must all outlive it and stay as they were. Opaque; make
+    // it with mlocInitMessageFormatter.
     typedef struct mlocMessageFormatter
     {
         uint64_t opaque[32];
@@ -473,7 +478,10 @@ extern "C"
     /// do not come from arguments (a format call makes its own when its
     /// options differ). No program function is called. The bound message
     /// points into the compiled one and the formatter, which must outlive
-    /// it; it is read-only, so threads may format with it at once. Call it
+    /// it and stay as they were (a formatter made again in the same place
+    /// is another one), as must the bound message itself: the bind checks
+    /// the message once, and formatting reads both as checked. It is
+    /// read-only, so threads may format with it at once. Call it
     /// with a null bufferOut and a capacity of 0 to learn the capacity. A
     /// bind that fails, for any reason, leaves a buffer of capacity 1 or
     /// more holding no bound message, even one bound there before; but a

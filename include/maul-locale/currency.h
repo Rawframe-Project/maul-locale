@@ -87,8 +87,8 @@ extern "C"
     } mlocCurrencyOptions;
 
     // A locale's formatter of one currency: a value that points into the
-    // data it was made from, which must outlive it. Opaque; make it with
-    // mlocInitCurrencyFormatter.
+    // data it was made from, which must outlive it and not change. Opaque;
+    // make it with mlocInitCurrencyFormatter.
     typedef struct mlocCurrencyFormatter
     {
         uint64_t opaque[96];

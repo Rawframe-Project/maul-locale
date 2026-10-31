@@ -48,4 +48,4 @@ if (mlocInitCollator(&set, &locale, &loose, &collator) == mloc_success &&
 
 ## Alphabetic indexes
 
-`mlocBuildIndex` builds the buckets of a contacts list from a locale's index labels, as ICU4C's `AlphabeticIndex` does: "A" to "Z" in English, "A" to "Z" with "Å", "Ä", "Ö" in Swedish, kana rows in Japanese, and an underflow and overflow bucket for names of other scripts. `mlocFindIndexBucket` gives the bucket a name falls into. The index is built into caller memory once per locale and read from any thread.
+`mlocBuildIndex` builds the buckets of a contacts list from a locale's index labels, as ICU4C's `AlphabeticIndex` does: "A" to "Z" in English, "A" to "Z" with "Å", "Ä", "Ö" in Swedish, kana rows in Japanese, and an underflow and overflow bucket for names of other scripts. `mlocFindIndexBucket` gives the bucket a name falls into. The index is built into caller memory once per locale and read from any thread; its bytes may be copied or moved but not otherwise changed.

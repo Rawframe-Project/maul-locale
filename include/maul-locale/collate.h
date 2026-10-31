@@ -101,9 +101,9 @@ extern "C"
         size_t reorderLength;
     } mlocCollatorOptions;
 
-    // A collator: a locale's order and options over the collation data
-    // it was made from, which must outlive it. Opaque; make it with
-    // mlocInitCollator. It may be copied.
+    // A collator: a locale's order and options over the collation data it
+    // was made from, which must outlive it and not change. Opaque; make it
+    // with mlocInitCollator. It may be copied.
     typedef struct mlocCollator
     {
         uint64_t opaque[128];

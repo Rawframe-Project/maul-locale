@@ -1,6 +1,6 @@
 # Data
 
-Every function that needs locale data takes an `mlocDataSet`: a list of opened sources searched in order. A source is the data compiled into the library or a data file the program holds in memory. The library never reads a file itself.
+Every function that needs locale data takes an `mlocDataSet`: a list of opened sources searched in order. A source is the data compiled into the library or a data file the program holds in memory. The library never reads a file itself. A message formatter, a zone formatter, and a date, time or date-time formatter made with a zone keep a pointer to the set, so the set and its array of sources outlive them and stay as they were.
 
 ## What is built in
 

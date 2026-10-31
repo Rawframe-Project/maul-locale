@@ -58,8 +58,8 @@ extern "C"
     } mlocListOptions;
 
     // A list formatter: a locale's patterns of a type and width, in the
-    // data it was made from, which must outlive it. Opaque; make it with
-    // mlocInitListFormatter.
+    // data it was made from, which must outlive it and not change. Opaque;
+    // make it with mlocInitListFormatter.
     typedef struct mlocListFormatter
     {
         uint64_t opaque[8];
