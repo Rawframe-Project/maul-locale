@@ -65,7 +65,7 @@ extern "C"
     /// @param pattern      The pattern; may be null when length is 0.
     /// @param length       Its length in bytes.
     /// @param options      The options, or null for exact comparison.
-    /// @param searcherOut  Receives the searcher.
+    /// @param searcherOut  Receives the searcher; left as it was on failure.
     /// @return mloc_success; mloc_errorInvalid for a pattern with no
     ///         element at the collator's strength (none but ignorables,
     ///         or only variable ones when shifted), a collator with
@@ -91,7 +91,7 @@ extern "C"
     /// @param pattern      The pattern; may be null when length is 0.
     /// @param length       Its length in 16-bit units.
     /// @param options      The options, or null for exact comparison.
-    /// @param searcherOut  Receives the searcher.
+    /// @param searcherOut  Receives the searcher; left as it was on failure.
     /// @return As mlocInitSearcher.
     /// @par Thread safety
     /// Safe from any thread.

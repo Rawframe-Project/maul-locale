@@ -18,6 +18,7 @@
 #include "invariant.h"
 #include "number_core.h"
 #include "number_format.h"
+#include "number_output.h"
 
 #include "maul-locale/spellout.h"
 #include "maul-unicode/encoding.h"
@@ -712,24 +713,25 @@ static void Write(const uint8_t* text, const Inflected* in, NumberWriter* w)
                   (size_t)(s->length - s->particle));
 }
 
+typedef struct InflectedWriting
+{
+    const uint8_t* text;
+    const Inflected* in;
+} InflectedWriting;
+
+static mlocResult WriteInflectedText(const void* context, NumberWriter* w)
+{
+    const InflectedWriting* g = context;
+    Write(g->text, g->in, w);
+    return mloc_success;
+}
+
 // Writes an inflected text to an output, its parts reported once it
 // fits.
 static mlocResult Output(const uint8_t* text, const Inflected* in, mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    Write(text, in, &w);
-    output->length = w.length;
-    if (output->buffer == nullptr || w.length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        Write(text, in, &parts);
-        mlocEndParts(&parts);
-    }
-    return mloc_success;
+    InflectedWriting g = {text, in};
+    return mlocWriteOutput(WriteInflectedText, &g, output);
 }
 
 static bool ValidOutput(const mlocOutput* output)

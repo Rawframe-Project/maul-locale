@@ -135,8 +135,35 @@ void mlocNameCapitalize(const mlocDataSet* data, const mlocLocale* locale, NameW
     w->length = length;
 }
 
-mlocResult mlocNameFinish(const NameWriter* w, mlocOutput* output)
+enum
 {
-    output->length = w->length;
-    return w->length > w->capacity ? mloc_errorCapacity : mloc_success;
+    // Holds a long display name: a locale's name with its script, region
+    // and keywords runs to a few dozen bytes.
+    nameScratchSize = 256,
+};
+
+mlocResult mlocWriteName(NameWriting writing, const void* context, mlocOutput* output)
+{
+    char scratch[nameScratchSize];
+    NameWriter w = {.buffer = scratch, .capacity = sizeof(scratch)};
+    mlocResult result = writing(context, &w);
+    MLOC_ASSERT(result >= 0);
+    output->length = w.length;
+    if (w.length > output->capacity)
+    {
+        return mloc_errorCapacity;
+    }
+    if (w.length <= sizeof(scratch))
+    {
+        if (w.length > 0)
+        {
+            memcpy(output->buffer, scratch, w.length);
+        }
+        return result;
+    }
+    NameWriter direct = {.buffer = output->buffer, .capacity = output->capacity};
+    mlocResult again = writing(context, &direct);
+    MLOC_ASSERT(again == result && direct.length == w.length);
+    (void)again;
+    return result;
 }

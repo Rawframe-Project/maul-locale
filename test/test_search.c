@@ -383,6 +383,58 @@ static void TestRefusals(void)
           "empty text has no match");
 }
 
+// Whether a refused init left the searcher made before it as it was, and
+// it still finds "a".
+static bool KeptSearcher(const mlocSearcher* kept, mlocResult result, mlocResult expected)
+{
+    size_t s = 0;
+    size_t e = 0;
+    return result == expected && memcmp(kept, &s_searcher, sizeof(*kept)) == 0 &&
+           mlocSearcher_FindNext(&s_searcher, "xa", 2, 0, &s, &e) == mloc_success && s == 1 &&
+           e == 2;
+}
+
+static void TestRefusalsKeepSearcher(void)
+{
+    static mlocSearcher s_kept;
+    static mlocCollator s_numeric;
+    static mlocCollator s_shifted;
+    static mlocCollator s_unmade;
+    static char longPattern[600];
+    static const uint16_t s_empty16[1] = {0};
+    static const uint16_t s_a16[1] = {'a'};
+    mlocLocale locale;
+    memset(longPattern, 'a', sizeof(longPattern));
+    CHECK(mlocParseLocale("en-u-kn", 7, &locale).status == mloc_success &&
+              mlocInitCollator(&s_data, &locale, nullptr, &s_numeric) == mloc_success &&
+              mlocParseLocale("en-u-ka-shifted", 15, &locale).status == mloc_success &&
+              mlocInitCollator(&s_data, &locale, nullptr, &s_shifted) == mloc_success &&
+              Make("en", "a", mloc_searchExact),
+          "collators and a searcher of \"a\"");
+    s_kept = s_searcher;
+    CHECK(KeptSearcher(&s_kept, mlocInitSearcher(&s_unmade, "a", 1, nullptr, &s_searcher),
+                       mloc_errorInvalid) &&
+              KeptSearcher(&s_kept,
+                           mlocInitSearcherUtf16(&s_unmade, s_a16, 1, nullptr, &s_searcher),
+                           mloc_errorInvalid),
+          "a collator not made: the searcher left as it was");
+    CHECK(KeptSearcher(&s_kept, mlocInitSearcher(&s_numeric, "1", 1, nullptr, &s_searcher),
+                       mloc_errorInvalid) &&
+              KeptSearcher(&s_kept, mlocInitSearcher(&s_shifted, " ", 1, nullptr, &s_searcher),
+                           mloc_errorInvalid) &&
+              KeptSearcher(&s_kept, mlocInitSearcher(&s_collator, "", 0, nullptr, &s_searcher),
+                           mloc_errorInvalid) &&
+              KeptSearcher(&s_kept,
+                           mlocInitSearcherUtf16(&s_collator, s_empty16, 0, nullptr, &s_searcher),
+                           mloc_errorInvalid),
+          "a numeric collator, a pattern of no element: the searcher left as it was");
+    CHECK(KeptSearcher(
+              &s_kept,
+              mlocInitSearcher(&s_collator, longPattern, sizeof(longPattern), nullptr, &s_searcher),
+              mloc_errorLimit),
+          "a pattern of too many elements: the searcher left as it was");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -408,5 +460,6 @@ int main(void)
     TestUtf16();
     TestBackward();
     TestRefusals();
+    TestRefusalsKeepSearcher();
     return s_failures == 0 ? 0 : 1;
 }

@@ -9,6 +9,7 @@
 #include "decimal.h"
 #include "invariant.h"
 #include "number_compact.h"
+#include "number_output.h"
 #include "number_precision.h"
 #include "plural.h"
 #include "plural_rules.h"
@@ -268,12 +269,19 @@ static bool CheckArguments(const mlocDecimal* decimal, const mlocOutput* output)
            (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);
 }
 
-// Ends a text pass: the length written, and whether it fit.
-static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
+// A prepared number within the outer pattern's of the category.
+typedef struct PreparedWriting
 {
-    output->length = w->length;
-    return output->buffer == nullptr || w->length > output->capacity ? mloc_errorCapacity
-                                                                     : mloc_success;
+    const Outer* outer;
+    const Prepared* p;
+    uint32_t category;
+} PreparedWriting;
+
+static mlocResult WritePreparedText(const void* context, NumberWriter* w)
+{
+    const PreparedWriting* g = context;
+    WriteIn(g->outer, g->p, g->category, w);
+    return mloc_success;
 }
 
 // Writes a prepared number into an output, within the outer pattern's of
@@ -281,16 +289,8 @@ static mlocResult Finish(const NumberWriter* w, mlocOutput* output)
 static mlocResult WritePrepared(const Outer* outer, const Prepared* p, uint32_t category,
                                 mlocOutput* output)
 {
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteIn(outer, p, category, &w);
-    mlocResult r = Finish(&w, output);
-    if (r == mloc_success && output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        WriteIn(outer, p, category, &parts);
-        mlocEndParts(&parts);
-    }
-    return r;
+    PreparedWriting g = {outer, p, category};
+    return mlocWriteOutput(WritePreparedText, &g, output);
 }
 
 mlocResult mlocFormatWith(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
@@ -453,6 +453,25 @@ static void WriteEither(const Formatter* f, const Outer* outer, Prepared* a, Pre
     }
 }
 
+// Both ends of a range, which each pass writes from copies: writing one
+// changes it.
+typedef struct RangeWriting
+{
+    const Formatter* f;
+    const Outer* outer;
+    const Prepared* a;
+    const Prepared* b;
+} RangeWriting;
+
+static mlocResult WriteRangeText(const void* context, NumberWriter* w)
+{
+    const RangeWriting* g = context;
+    Prepared a = *g->a;
+    Prepared b = *g->b;
+    WriteEither(g->f, g->outer, &a, &b, w);
+    return mloc_success;
+}
+
 mlocResult mlocFormatRangeWith(const Formatter* f, const Outer* outer, const mlocDecimal* start,
                                const mlocDecimal* end, mlocOutput* output)
 {
@@ -469,16 +488,6 @@ mlocResult mlocFormatRangeWith(const Formatter* f, const Outer* outer, const mlo
     {
         return r;
     }
-    Prepared textA = a;
-    Prepared textB = b;
-    NumberWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    WriteEither(f, outer, &textA, &textB, &w);
-    r = Finish(&w, output);
-    if (r == mloc_success && output->part != nullptr)
-    {
-        NumberWriter parts = {.parts = output};
-        WriteEither(f, outer, &a, &b, &parts);
-        mlocEndParts(&parts);
-    }
-    return r;
+    RangeWriting g = {f, outer, &a, &b};
+    return mlocWriteOutput(WriteRangeText, &g, output);
 }

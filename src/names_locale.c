@@ -714,6 +714,30 @@ static mlocResult WriteLocale(Composer* c, const mlocLocale* locale, const Tail*
     return language.found ? mloc_success : mloc_fellBack;
 }
 
+typedef struct LocaleNameWriting
+{
+    const Composer* c;
+    const mlocLocale* locale;
+    const Tail* tail;
+    const Pattern* pattern;
+    bool capitalize;
+} LocaleNameWriting;
+
+// Composes a locale's name into a writer, each pass from a copy of the
+// composer.
+static mlocResult WriteLocaleName(const void* context, NameWriter* w)
+{
+    const LocaleNameWriting* g = context;
+    Composer c = *g->c;
+    c.w = w;
+    mlocResult r = WriteLocale(&c, g->locale, g->tail, g->pattern, false);
+    if (g->capitalize)
+    {
+        mlocNameCapitalize(c.data, c.display, w);
+    }
+    return r;
+}
+
 mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayLocale,
                              const mlocLocale* locale, const mlocLocaleNameOptions* options,
                              mlocOutput* textOut)
@@ -731,7 +755,6 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
     {
         return mloc_errorNotFound;
     }
-    NameWriter w = {.buffer = textOut->buffer, .capacity = textOut->capacity};
     // A chain that cannot be walked past its first step keeps that step,
     // where mlocFindName would find names too.
     NameChain chain;
@@ -742,7 +765,6 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
         .chain = &chain,
         .dialect = o.languageDisplay == mloc_languageDisplayDialect,
         .field = (NameField)o.form,
-        .w = &w,
     };
     c.separator = FindPattern(&c, "p:localeSeparator", "{0}, {1}");
     c.keyType = FindPattern(&c, "p:localeKeyTypePattern", "{0}: {1}");
@@ -756,11 +778,8 @@ mlocResult mlocGetLocaleName(const mlocDataSet* data, const mlocLocale* displayL
     Tail tail = {0};
     ReadTail(text, &tail);
     c.hybrid = tail.hybrid;
-    mlocResult r = WriteLocale(&c, locale, &tail, &pattern, false);
-    if (mlocNameCapitalizes(data, displayLocale, contextLanguages, o.capitalization))
-    {
-        mlocNameCapitalize(data, displayLocale, &w);
-    }
-    mlocResult finished = mlocNameFinish(&w, textOut);
-    return finished != mloc_success ? finished : r;
+    LocaleNameWriting g = {
+        &c, locale, &tail, &pattern,
+        mlocNameCapitalizes(data, displayLocale, contextLanguages, o.capitalization)};
+    return mlocWriteName(WriteLocaleName, &g, textOut);
 }

@@ -202,17 +202,32 @@ static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocN
     return mlocNameCapitalizes(data, locale, s_usages[type], capitalization);
 }
 
+typedef struct TextWriting
+{
+    const mlocDataSet* data;
+    const mlocLocale* locale;
+    const uint8_t* text;
+    size_t length;
+    bool capitalize;
+} TextWriting;
+
+static mlocResult WriteNameText(const void* context, NameWriter* w)
+{
+    const TextWriting* g = context;
+    mlocNameAppend(w, g->text, g->length, false);
+    if (g->capitalize)
+    {
+        mlocNameCapitalize(g->data, g->locale, w);
+    }
+    return mloc_success;
+}
+
 // Writes text, its first code point titlecased when asked.
 static mlocResult Write(const mlocDataSet* data, const mlocLocale* locale, const uint8_t* text,
                         size_t length, bool capitalize, mlocOutput* output)
 {
-    NameWriter w = {.buffer = output->buffer, .capacity = output->capacity};
-    mlocNameAppend(&w, text, length, false);
-    if (capitalize)
-    {
-        mlocNameCapitalize(data, locale, &w);
-    }
-    return mlocNameFinish(&w, output);
+    TextWriting g = {data, locale, text, length, capitalize};
+    return mlocWriteName(WriteNameText, &g, output);
 }
 
 // A language id's name by its CLDR alias, as ICU4C looks a deprecated

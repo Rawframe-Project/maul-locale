@@ -35,7 +35,7 @@ number_data: bytes currency_tables data_view invariant number_tables
 number_precision: decimal invariant
 number_compact: bytes decimal invariant number_data number_precision number_tables plural
 number_core: bytes currency_tables data_format data_view decimal invariant kinds locale_fallback locale_keyword number_compact number_data number_tables
-number_format: currency_tables decimal invariant number_compact number_core number_precision plural plural_rules
+number_format: currency_tables decimal invariant number_compact number_core number_output number_precision plural plural_rules
 number_output: invariant number_core
 number: number_core number_format number_parse plural
 number_parse: bytes data_view decimal number_core number_format number_tables parse_currency parse_match parse_tables
@@ -64,14 +64,14 @@ date_data: bytes data_format data_view date_tables invariant kinds locale_fallba
 list_tables:
 list_data: bytes data_format data_view kinds list_tables locale_fallback number_data
 list_join: list_data number_core
-list: list_data list_join number_core
+list: list_data list_join number_core number_output
 list_genders:
 list_gender: list_genders
-date_format: bytes calendar_arith date_data date_range date_write invariant locale_prefs number_core number_tables zone_format
+date_format: bytes calendar_arith date_data date_range date_write invariant locale_prefs number_core number_output number_tables zone_format
 date_write: bytes date_data decimal invariant number_core number_tables
 date_range: bytes date_data date_write invariant number_core
-time_format: bytes date_data date_format date_range date_time invariant locale_keyword locale_prefs number_core number_tables time_write zone_format
-datetime_format: bytes date_data date_format date_range date_time date_write invariant time_format time_write number_core number_tables zone_format
+time_format: bytes date_data date_format date_range date_time invariant locale_keyword locale_prefs number_core number_output number_tables time_write zone_format
+datetime_format: bytes date_data date_format date_range date_time date_write invariant number_core number_output number_tables time_format time_write zone_format
 time_write: date_data date_write invariant number_core number_tables
 unit_usage: data_view kinds number_core number_format number_output unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
 unit_coordinate: data_view kinds number_core number_format number_output unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
@@ -123,15 +123,15 @@ collation_compare: collation_iterator collation_reorder collation_tables nfd_str
 collation_reorder: bytes collation_tables
 collation_fast_compare: collation_compare collation_fast_latin collation_reorder collation_tables invariant
 collation_key: collation_compare collation_iterator collation_reorder collation_tables invariant nfd_stream
-collate: catalog_hash collation_compare collation_fast_compare collation_key collation_reorder collation_tables collator data_format data_view kinds locale_fallback locale_keyword
+collate: catalog_hash collation_compare collation_fast_compare collation_key collation_reorder collation_tables collator data_format data_view invariant kinds locale_fallback locale_keyword
 relative_format: bytes currency_tables data_view decimal kinds locale_context locale_fallback number_core number_format plural plural_rules relative_tables spellout_data
 relative_datetime: date_data date_time date_write invariant number_core number_output relative_format relative_tables time_format time_write
 duration_options: duration_format
 duration_format: kinds list_data list_tables number_core number_format plural plural_rules unit_compound unit_names unit_patterns unit_tables
-duration_write: duration_fields duration_format list_data list_join number_core number_format unit_patterns
+duration_write: duration_fields duration_format list_data list_join number_core number_format number_output unit_patterns
 duration_fields: binary64 duration_values
 zone_name_tables: bytes data_view number_data
-zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
+zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_output number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
 zone_codes: data_view zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith invariant zone_tables
 zone_handle: zone_rules zone_tables
@@ -191,7 +191,7 @@ grammar_uz: grammar_turkic
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
-grammar: grammar_end grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic invariant number_core number_format
+grammar: grammar_end grammar_fi grammar_hu grammar_hu_sound grammar_ko grammar_lexicon grammar_turkic invariant number_core number_format number_output
 search_elements: collation_compare collation_iterator collation_tables invariant nfd_stream search_boundary
 collator: collation_compare collation_fast_compare collation_fast_latin collation_reorder collation_tables
 search_back: invariant search_elements
