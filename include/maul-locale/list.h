@@ -99,7 +99,8 @@ extern "C"
     /// @param items      The items, count of them; may be null when count
     ///                   is 0.
     /// @param count      The number of items, at most MLOC_MAX_LIST_ITEMS.
-    /// @param textOut    Where the text goes.
+    /// @param textOut    Receives the text; left as it was on failure but for
+    ///                   the length mloc_errorCapacity gives.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length then the size needed); mloc_errorLimit for
     ///         a count past MLOC_MAX_LIST_ITEMS; mloc_errorInvalid for a
@@ -136,7 +137,8 @@ extern "C"
     /// @param locale     The locale.
     /// @param genders    The persons' genders; null when count is 0.
     /// @param count      The number of persons.
-    /// @param genderOut  Receives the list's gender. May be one of genders.
+    /// @param genderOut  Receives the list's gender; left unchanged on failure.
+    ///                   May be one of genders.
     /// @return mloc_success; mloc_errorInvalid for a null pointer or a
     ///         gender past mloc_personFemale.
     /// @par Thread safety

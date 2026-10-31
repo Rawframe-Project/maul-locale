@@ -78,12 +78,13 @@ extern "C"
     /// @param locale    The locale whose labels the index takes when the
     ///                  collator has no U+FDD0 contractions.
     /// @param options   The options, or null for the defaults.
-    /// @param bufferOut Receives the index; any alignment. May be null
-    ///                  when capacity is 0.
+    /// @param bufferOut Receives the index; any alignment. May be null when
+    ///                  capacity is 0; left unchanged on failure.
     /// @param capacity  Its size in bytes.
-    /// @param sizeOut   Receives the index's size on success, or the
-    ///                  capacity needed with mloc_errorCapacity, which may
-    ///                  be a little more than the size.
+    /// @param sizeOut   Receives the index's size on success, or the capacity
+    ///                  needed with mloc_errorCapacity, which may be a little
+    ///                  more than the size; left unchanged on any other
+    ///                  failure.
     /// @return mloc_success; mloc_errorCapacity when the buffer is too
     ///         small; mloc_errorFormat for more than 512 labels or a root
     ///         without script boundaries; mloc_errorLimit for a special
@@ -101,7 +102,8 @@ extern "C"
     /// The number of buckets an index shows.
     ///
     /// @param index    An index mlocBuildIndex built.
-    /// @param countOut Receives the count, 1 or more.
+    /// @param countOut Receives the count, 1 or more; left unchanged on
+    ///                 failure.
     /// @return mloc_success; mloc_errorInvalid for bytes mlocBuildIndex
     ///         did not write or a null pointer.
     /// @par Thread safety
@@ -113,8 +115,8 @@ extern "C"
     ///
     /// @param index      An index mlocBuildIndex built.
     /// @param bucket     The bucket's number, below the count.
-    /// @param bucketOut  Receives its label, pointing into the index, and
-    ///                   its type.
+    /// @param bucketOut  Receives its label, pointing into the index, and its
+    ///                   type; left unchanged on failure.
     /// @return mloc_success; mloc_errorInvalid for a number past the
     ///         buckets, bytes mlocBuildIndex did not write or a null
     ///         pointer.
@@ -130,7 +132,8 @@ extern "C"
     /// @param index      An index mlocBuildIndex built.
     /// @param name       The name; may be null when length is 0.
     /// @param length     Its length in bytes.
-    /// @param bucketOut  Receives the bucket's number.
+    /// @param bucketOut  Receives the bucket's number; left unchanged on
+    ///                   failure.
     /// @return mloc_success; mloc_errorInvalid for bytes mlocBuildIndex
     ///         did not write or a null pointer.
     /// @par Thread safety
@@ -144,7 +147,8 @@ extern "C"
     /// @param index      An index mlocBuildIndex built.
     /// @param name       The name; may be null when length is 0.
     /// @param length     Its length in 16-bit units.
-    /// @param bucketOut  Receives the bucket's number.
+    /// @param bucketOut  Receives the bucket's number; left unchanged on
+    ///                   failure.
     /// @return As mlocFindIndexBucket.
     /// @par Thread safety
     /// Safe from any thread.

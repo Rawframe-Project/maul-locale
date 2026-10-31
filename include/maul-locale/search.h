@@ -111,8 +111,10 @@ extern "C"
     /// @param text      The text; may be null when length is 0.
     /// @param length    Its length in bytes.
     /// @param from      The position, at most length.
-    /// @param startOut  Receives the match's first byte.
-    /// @param endOut    Receives the byte after the match.
+    /// @param startOut  Receives the match's first byte; left unchanged on
+    ///                  failure.
+    /// @param endOut    Receives the byte after the match; left unchanged on
+    ///                  failure.
     /// @return mloc_success with a match; mloc_errorNotFound when there
     ///         is none; mloc_errorLimit when the text's elements
     ///         between a match's ends pass MLOC_MAX_SEARCH_WINDOW (a run
@@ -135,8 +137,10 @@ extern "C"
     /// @param text      The text; may be null when length is 0.
     /// @param length    Its length in 16-bit units.
     /// @param from      The position in units, at most length.
-    /// @param startOut  Receives the match's first unit.
-    /// @param endOut    Receives the unit after the match.
+    /// @param startOut  Receives the match's first unit; left unchanged on
+    ///                  failure.
+    /// @param endOut    Receives the unit after the match; left unchanged on
+    ///                  failure.
     /// @return As mlocSearcher_FindNext.
     /// @par Thread safety
     /// Safe from any thread.
@@ -158,8 +162,10 @@ extern "C"
     /// @param text      The text; may be null when length is 0.
     /// @param length    Its length in bytes.
     /// @param from      The position, at most length.
-    /// @param startOut  Receives the match's first byte.
-    /// @param endOut    Receives the byte after the match.
+    /// @param startOut  Receives the match's first byte; left unchanged on
+    ///                  failure.
+    /// @param endOut    Receives the byte after the match; left unchanged on
+    ///                  failure.
     /// @return mloc_success with a match; mloc_errorNotFound when there
     ///         is none; mloc_errorLimit when the text's elements
     ///         between a match's ends pass MLOC_MAX_SEARCH_WINDOW, or a
@@ -185,8 +191,10 @@ extern "C"
     /// @param text      The text; may be null when length is 0.
     /// @param length    Its length in 16-bit units.
     /// @param from      The position in units, at most length.
-    /// @param startOut  Receives the match's first unit.
-    /// @param endOut    Receives the unit after the match.
+    /// @param startOut  Receives the match's first unit; left unchanged on
+    ///                  failure.
+    /// @param endOut    Receives the unit after the match; left unchanged on
+    ///                  failure.
     /// @return As mlocSearcher_FindPrevious.
     /// @par Thread safety
     /// Safe from any thread.
