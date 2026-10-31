@@ -22,8 +22,8 @@ extern "C"
 {
 #endif
 
-    // An opened catalog: a view of its bytes, which must outlive it.
-    // Opaque; make it with mlocOpenCatalog.
+    // An opened catalog: a view of its bytes, which must outlive it and
+    // not change. Opaque; make it with mlocOpenCatalog.
     typedef struct mlocCatalog
     {
         uint64_t opaque[8];
@@ -53,7 +53,10 @@ extern "C"
     /// @param bytes       The catalog's bytes; any alignment.
     /// @param size        Their length.
     /// @param catalogOut  Receives the catalog; left unchanged on failure.
-    ///                    It points into the bytes, which must outlive it.
+    ///                    It points into the bytes, which must outlive it
+    ///                    and stay as they were for its whole life: they
+    ///                    are checked here once, and its calls read them
+    ///                    as checked.
     /// @return mloc_success; mloc_errorVersion for a catalog a later
     ///         version wrote (another catalog format, a flag or field this
     ///         one does not know) or one holding a message it does not
