@@ -94,7 +94,12 @@ extern "C"
     ///
     /// @param text      The message, UTF-8. May be null when length is 0.
     /// @param length    The number of bytes.
-    /// @param bufferOut Receives the compiled message; any alignment.
+    /// @param bufferOut Receives the compiled message; any alignment. Left as
+    ///                  it was on failure, but for an error found only once
+    ///                  the message is written (a data model error, a chain
+    ///                  or resolution bound): the bytes written, as many as
+    ///                  the size needed, are then cleared, so the buffer
+    ///                  holds no compiled message.
     /// @param capacity  Its size in bytes.
     /// @param sizeOut   Receives the compiled message's size on success,
     ///                  or the capacity needed with mloc_errorCapacity,
@@ -107,8 +112,8 @@ extern "C"
     ///         stream-safe form bounds and NFC here does not take, and for
     ///         a name whose NFC form is no name: U+037E and U+1FEF become
     ///         ";" and "`"); mloc_errorCapacity
-    ///         when the buffer is too small, nothing then being written
-    ///         that the caller can use; mloc_errorLimit and offset 0 for a
+    ///         when the buffer is too small, nothing then being written;
+    ///         mloc_errorLimit and offset 0 for a
     ///         text longer than MLOC_MAX_MESSAGE_TEXT bytes, or a message
     ///         past another MLOC_MAX_MESSAGE_* bound (the chains and
     ///         resolutions found only once the buffer is large enough);

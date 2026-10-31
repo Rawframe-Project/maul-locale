@@ -91,8 +91,12 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* bufferO
     uint32_t size = mlocEmitFinish(&emit, parse.flags, UnicodeVersion());
     MessageCheck check =
         mlocCheckMessage(bufferOut, size, &emit.table, (uint8_t*)bufferOut + emit.wordStart);
+    // The checks below read the compiled form, so a message they refuse
+    // has been written: its bytes are cleared, leaving no compiled
+    // message (one there before is gone).
     if (check.error != mloc_messageErrorNone)
     {
+        memset(bufferOut, 0, needed);
         return Refuse(errorOut, check.error, check.at);
     }
     // The chains and resolutions, in the check's words, which it no longer
@@ -103,6 +107,7 @@ mlocTextResult mlocCompileMessage(const char* text, size_t length, void* bufferO
     (void)read;
     if (mlocWriteMessageCosts(&view, (uint8_t*)bufferOut + emit.wordStart) != mloc_success)
     {
+        memset(bufferOut, 0, needed);
         result.status = mloc_errorLimit;
         return result;
     }
