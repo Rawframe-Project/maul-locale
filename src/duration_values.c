@@ -9,6 +9,7 @@
 
 #include "duration_values.h"
 
+#include "invariant.h"
 #include "time_arith.h"
 
 #include "maul-locale/zone.h"
@@ -119,10 +120,13 @@ mlocResult mlocMakeDuration(const mlocDurationValues* values, mlocDateTimeDurati
     // TimeDurationFromComponents of hours to nanoseconds: the days stay
     // in the date part.
     Wide days = mlocWideProduct(f[3].low * 86400, nanosecondsPerSecond);
+    // The total counts the days, and stays below 2^53 seconds.
+    MLOC_ASSERT(!mlocWideBelow(total, days));
     Wide remainder;
     uint64_t seconds = mlocWideQuotient(
         (Wide){total.high - days.high - (total.low < days.low ? 1 : 0), total.low - days.low},
         (Wide){0, nanosecondsPerSecond}, &remainder);
+    MLOC_ASSERT(seconds < UINT64_C(9007199254740992) && remainder.low < nanosecondsPerSecond);
     int64_t s = sign < 0 ? -1 : 1;
     *durationOut = (mlocDateTimeDuration){
         .date = {s * (int64_t)f[0].low, s * (int64_t)f[1].low, s * (int64_t)f[2].low,
@@ -146,7 +150,11 @@ static Wide Rounded(Wide v)
 {
     bool negative = false;
     Wide out = {0, 0};
-    (void)mlocWideOfDouble(mlocBinary64Of(false, v, (Wide){0, 1}), &negative, &out);
+    // A field balanced from a valid time (below 2^53 seconds) is below
+    // 2^84, and its double is an integer the reading takes.
+    bool read = mlocWideOfDouble(mlocBinary64Of(false, v, (Wide){0, 1}), &negative, &out);
+    MLOC_ASSERT(read);
+    (void)read;
     return out;
 }
 

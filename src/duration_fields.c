@@ -8,6 +8,7 @@
 #include "duration_fields.h"
 
 #include "duration_values.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -16,6 +17,8 @@ enum
     // The digits of 10^19, the largest power of ten below 2^64, less one.
     chunkDigits = 19,
 };
+
+static_assert(2 * chunkDigits <= MLOC_MAX_DECIMAL_DIGITS, "a decimal holds a field's digits");
 
 bool mlocReadDurationFields(const mlocDurationValues* d, DurationFields* out)
 {
@@ -61,6 +64,9 @@ static void DecimalOf(Wide magnitude, uint32_t places, bool negative, mlocDecima
     {
         Wide rest;
         uint64_t high = mlocWideQuotient(magnitude, s_chunk, &rest);
+        // A field, with the fractions after it, is at most the time's
+        // total, below 2^53 seconds in nanoseconds: far within 10^38.
+        MLOC_ASSERT(high < s_chunk.low);
         first = Digits(high, 0, Digits(rest.low, chunkDigits, end));
     }
     int32_t exponent = -(int32_t)places;
@@ -84,6 +90,8 @@ static void DecimalOf(Wide magnitude, uint32_t places, bool negative, mlocDecima
 void mlocDurationValue(const DurationFields* f, uint32_t field, uint32_t fractions,
                        mlocDecimal* out)
 {
+    // The fractions taken are the fields after this one.
+    MLOC_ASSERT(field + fractions < mloc_durationFieldCount);
     Wide total = {f->high[field], f->low[field]};
     for (uint32_t i = 1; i <= fractions; i++)
     {
