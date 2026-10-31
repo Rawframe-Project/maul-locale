@@ -11,6 +11,7 @@
 #include "data_format.h"
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "plural_rules.h"
@@ -109,6 +110,10 @@ mlocResult mlocInitPluralRules(const mlocDataSet* data, const mlocLocale* locale
     {
         return mloc_errorNotFound;
     }
+    // mlocValidPlurals checked that each index names a rule set of its
+    // type.
+    MLOC_ASSERT(rules.rule < mlocPluralRuleSetCount &&
+                mlocPluralRuleSets[rules.rule].ordinal == type);
     memset(rules.ranges, pluralNone, sizeof(rules.ranges));
     DataSpan ranges;
     // The range table of the source that holds the unit, which its index
@@ -145,9 +150,20 @@ mlocResult mlocFindPluralRule(const mlocDataSet* data, const mlocLocale* locale,
     return result;
 }
 
+// A rule set's category of the operands. Every caller's rule was checked
+// (mlocValidPlurals, or the formatter's or rules' read), and a generated
+// rule set gives one of the six categories.
+static mlocPluralCategory Select(uint32_t rule, const mlocPluralOperands* operands)
+{
+    MLOC_ASSERT(rule < mlocPluralRuleSetCount);
+    uint8_t category = mlocPluralRuleSets[rule].select(operands);
+    MLOC_ASSERT(category < categoryCount);
+    return (mlocPluralCategory)category;
+}
+
 mlocPluralCategory mlocSelectPluralRule(uint8_t rule, const mlocPluralOperands* operands)
 {
-    return (mlocPluralCategory)mlocPluralRuleSets[rule].select(operands);
+    return Select(rule, operands);
 }
 
 // The rules of an opaque value, or false when the library did not make
@@ -174,7 +190,7 @@ mlocResult mlocPluralRules_SelectOperands(const mlocPluralRules* rules,
     {
         return mloc_errorInvalid;
     }
-    *categoryOut = (mlocPluralCategory)mlocPluralRuleSets[r.rule].select(operands);
+    *categoryOut = Select(r.rule, operands);
     return mloc_success;
 }
 
@@ -197,7 +213,7 @@ mlocResult mlocPluralRules_Select(const mlocPluralRules* rules, const mlocDecima
     }
     mlocPluralOperands operands;
     mlocFillPluralOperands(decimal, &operands);
-    *categoryOut = (mlocPluralCategory)mlocPluralRuleSets[r.rule].select(&operands);
+    *categoryOut = Select(r.rule, &operands);
     return mloc_success;
 }
 
@@ -214,7 +230,7 @@ mlocResult mlocPluralRules_SelectInteger(const mlocPluralRules* rules, int64_t v
     const uint64_t wide = 1000000000000000000u;
     uint64_t magnitude = value < 0 ? 0u - (uint64_t)value : (uint64_t)value;
     mlocPluralOperands operands = {.i = magnitude < wide ? magnitude : wide + magnitude % wide};
-    *categoryOut = (mlocPluralCategory)mlocPluralRuleSets[r.rule].select(&operands);
+    *categoryOut = Select(r.rule, &operands);
     return mloc_success;
 }
 
@@ -240,6 +256,8 @@ mlocResult mlocPluralRules_SelectRange(const mlocPluralRules* rules, mlocPluralC
 mlocPluralCategory mlocResolvePluralRange(const mlocPluralRules* rules, mlocPluralCategory start,
                                           mlocPluralCategory end)
 {
+    // Both ends are categories a rule set gave.
+    MLOC_ASSERT((uint32_t)start < categoryCount && (uint32_t)end < categoryCount);
     const uint8_t* table = (const uint8_t*)rules->opaque + offsetof(Rules, ranges);
     uint8_t category = table[start * categoryCount + end];
     return category < categoryCount ? (mlocPluralCategory)category : mloc_pluralOther;
