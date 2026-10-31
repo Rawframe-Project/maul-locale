@@ -586,9 +586,9 @@ static void TestDisagreeing(void)
 }
 
 // Uzbek's inflection of a value written by an und formatter made over
-// the compiled-in number units with these systems and symbols; text gets
-// what the formatter writes.
-static mlocResult InflectPacked(DataSpan systems, DataSpan symbols,
+// the compiled-in number units with these systems, symbols and compact
+// patterns; text gets what the formatter writes.
+static mlocResult InflectPacked(DataSpan systems, DataSpan symbols, DataSpan compact,
                                 const mlocNumberOptions* options, const char* decimal, char* text,
                                 size_t* length)
 {
@@ -599,7 +599,7 @@ static mlocResult InflectPacked(DataSpan systems, DataSpan symbols,
         {kindNumberSymbols, symbols, false},
         {kindNumberPatterns, s_patterns, false},
         {kindNumbers, s_root, true},
-        {kindNumberCompactPatterns, s_compactPatterns, false},
+        {kindNumberCompactPatterns, compact, false},
         {kindNumberCompact, s_compact, false},
     };
     mlocData source;
@@ -660,10 +660,12 @@ static void TestOtherDigits(void)
     DataSpan systems = {u, s_systems.size};
     char text[128];
     size_t length = 0;
-    CHECK(InflectPacked(systems, s_symbols, nullptr, "12.05", text, &length) == mloc_errorInvalid &&
+    CHECK(InflectPacked(systems, s_symbols, s_compactPatterns, nullptr, "12.05", text, &length) ==
+                  mloc_errorInvalid &&
               length == 5 && memcmp(text, "12.x5", 5) == 0,
           "12.x5 is not inflected");
-    CHECK(InflectPacked(systems, s_symbols, nullptr, "1.25", text, &length) == mloc_success &&
+    CHECK(InflectPacked(systems, s_symbols, s_compactPatterns, nullptr, "1.25", text, &length) ==
+                  mloc_success &&
               length == 6 && memcmp(text, "1.25ga", 6) == 0,
           "1.25 is inflected 1.25ga");
     free(u);
@@ -671,11 +673,10 @@ static void TestOtherDigits(void)
 
 // An affix may end in a digit, so the digits that end a number's text
 // need not be the number's: an inflector reading them is refused.
-static void TestDigitAfter(void)
+// The compiled-in symbols with one more string, of 2 bytes, which every
+// set takes for one symbol; null when there is no room.
+static uint8_t* SymbolsWith(uint32_t symbol, const char sign[2], uint32_t* sizeOut)
 {
-    // The symbols with one more string, "%9", which every set takes for
-    // its percent sign.
-    static const char s_sign[] = "%9";
     uint32_t strings = mlocLoad16(s_symbols.bytes);
     uint32_t records = mlocLoad16(s_symbols.bytes + 2);
     uint32_t textSize = mlocLoad32(s_symbols.bytes + 4);
@@ -684,10 +685,9 @@ static void TestDigitAfter(void)
     uint32_t size =
         (uint32_t)(numberTableHeaderSize + (size_t)(strings + 2) * 2 + recordBytes + textSize + 2);
     uint8_t* u = calloc(1, size);
-    CHECK(u != nullptr, "room for the symbols");
     if (u == nullptr)
     {
-        return;
+        return nullptr;
     }
     Put16(u, strings + 1);
     Put16(u + 2, records);
@@ -701,10 +701,26 @@ static void TestDigitAfter(void)
     memcpy(newRecords, oldRecords, recordBytes);
     for (uint32_t r = 0; r < records; r++)
     {
-        Put16(newRecords + ((size_t)r * numberSymbolCount + numberPercent) * 2, strings);
+        Put16(newRecords + ((size_t)r * numberSymbolCount + symbol) * 2, strings);
     }
     memcpy(newRecords + recordBytes, oldRecords + recordBytes, textSize);
-    memcpy(newRecords + recordBytes + textSize, s_sign, 2);
+    memcpy(newRecords + recordBytes + textSize, sign, 2);
+    *sizeOut = size;
+    return u;
+}
+
+// A symbol may end in a digit, so the digits beside a number's need not
+// be the number's: an inflector reading them is refused.
+static void TestDigitAfter(void)
+{
+    // Every set's percent sign "%9".
+    uint32_t size = 0;
+    uint8_t* u = SymbolsWith(numberPercent, "%9", &size);
+    CHECK(u != nullptr, "room for the symbols");
+    if (u == nullptr)
+    {
+        return;
+    }
     DataSpan symbols = {u, size};
     CHECK(mlocValidNumberSymbols(&s_view, symbols), "the symbols with %9 are valid");
     mlocNumberOptions percent = {.style = mloc_numberPercent,
@@ -713,12 +729,13 @@ static void TestDigitAfter(void)
                                                .maxFractionDigits = 1}};
     char text[128];
     size_t length = 0;
-    CHECK(InflectPacked(s_systems, symbols, &percent, "0.125", text, &length) ==
+    CHECK(InflectPacked(s_systems, symbols, s_compactPatterns, &percent, "0.125", text, &length) ==
                   mloc_errorInvalid &&
               length == 6 && memcmp(text, "12.5%9", 6) == 0,
           "12.5%9 is not inflected as 12.9");
     percent.precision = (mlocPrecision){0};
-    CHECK(InflectPacked(s_systems, symbols, &percent, "0.12", text, &length) == mloc_errorInvalid &&
+    CHECK(InflectPacked(s_systems, symbols, s_compactPatterns, &percent, "0.12", text, &length) ==
+                  mloc_errorInvalid &&
               length == 4 && memcmp(text, "12%9", 4) == 0,
           "12%9 is not inflected as 12");
     // Uzbek reads nothing after a percent sign; a number without one
@@ -726,9 +743,90 @@ static void TestDigitAfter(void)
     mlocNumberOptions decimal = {.precision = {.kind = mloc_precisionFraction,
                                                .minFractionDigits = 1,
                                                .maxFractionDigits = 1}};
-    CHECK(InflectPacked(s_systems, symbols, &decimal, "12.5", text, &length) == mloc_success &&
+    CHECK(InflectPacked(s_systems, symbols, s_compactPatterns, &decimal, "12.5", text, &length) ==
+                  mloc_success &&
               length == 6 && memcmp(text, "12.5ga", 6) == 0,
           "12.5 is inflected 12.5ga");
+    free(u);
+    // Every set's exponent separator "E9": 1200 is written 1.2E93.
+    u = SymbolsWith(numberExponential, "E9", &size);
+    CHECK(u != nullptr, "room for the symbols");
+    if (u == nullptr)
+    {
+        return;
+    }
+    symbols = (DataSpan){u, size};
+    CHECK(mlocValidNumberSymbols(&s_view, symbols), "the symbols with E9 are valid");
+    mlocNumberOptions scientific = {.notation = mloc_notationScientific};
+    CHECK(InflectPacked(s_systems, symbols, s_compactPatterns, &scientific, "1200", text,
+                        &length) == mloc_errorInvalid &&
+              length == 6 && memcmp(text, "1.2E93", 6) == 0,
+          "1.2E93 is not inflected as 93");
+    free(u);
+}
+
+// A compact pattern may hold a digit, so the digits that end a compact
+// number's text need not all be the number's: an inflector reading them
+// is refused.
+static void TestCompactDigit(void)
+{
+    // Root's short suffix K made 9: 12000 is written 129.
+    uint8_t* u = Copy(s_compactPatterns);
+    NumberTable t =
+        mlocReadNumberTable((DataSpan){u, s_compactPatterns.size}, numberCompactPatternSize);
+    uint8_t* k = nullptr;
+    uint32_t kIndex = 0;
+    for (uint32_t i = 0; u != nullptr && i < t.stringCount; i++)
+    {
+        uint32_t start = mlocLoad16(t.offsets + (size_t)i * 2);
+        if (mlocLoad16(t.offsets + (size_t)i * 2 + 2) == start + 1 && t.text[start] == 'K')
+        {
+            k = u + (t.text + start - (const uint8_t*)u);
+            kIndex = i;
+        }
+    }
+    CHECK(k != nullptr, "the compact patterns have K");
+    if (k == nullptr)
+    {
+        free(u);
+        return;
+    }
+    *k = '9';
+    DataSpan compact = {u, s_compactPatterns.size};
+    CHECK(mlocValidNumberCompactPatterns(&s_view, compact), "the patterns with 9 are valid");
+    mlocNumberOptions options = {.notation = mloc_notationCompactShort};
+    char text[128];
+    size_t length = 0;
+    CHECK(InflectPacked(s_systems, s_symbols, compact, &options, "12000", text, &length) ==
+                  mloc_errorInvalid &&
+              length == 3 && memcmp(text, "129", 3) == 0,
+          "129 is not inflected as 129");
+    CHECK(InflectPacked(s_systems, s_symbols, compact, &options, "12", text, &length) ==
+                  mloc_success &&
+              length == 4 && memcmp(text, "12ga", 4) == 0,
+          "12, not compacted, is inflected 12ga");
+    options.notation = mloc_notationScientific;
+    CHECK(InflectPacked(s_systems, s_symbols, compact, &options, "1200", text, &length) ==
+                  mloc_success &&
+              length == 7 && memcmp(text, "1.2E3ga", 7) == 0,
+          "a scientific number ends in its exponent: 1.2E3ga");
+    // The 9 made a prefix: 12000 is written 912.
+    uint8_t* records = u + (t.records - (const uint8_t*)u);
+    for (uint32_t r = 0; r < t.recordCount; r++)
+    {
+        uint8_t* record = records + (size_t)r * numberCompactPatternSize;
+        if (mlocLoad16(record + compactSuffix) == kIndex)
+        {
+            Put16(record + compactSuffix, mlocLoad16(record + compactPrefix));
+            Put16(record + compactPrefix, kIndex);
+        }
+    }
+    CHECK(mlocValidNumberCompactPatterns(&s_view, compact), "the patterns with prefix 9 are valid");
+    options.notation = mloc_notationCompactShort;
+    CHECK(InflectPacked(s_systems, s_symbols, compact, &options, "12000", text, &length) ==
+                  mloc_errorInvalid &&
+              length == 3 && memcmp(text, "912", 3) == 0,
+          "912 is not inflected as 912");
     free(u);
 }
 
@@ -882,6 +980,7 @@ int main(void)
     TestDisagreeing();
     TestOtherDigits();
     TestDigitAfter();
+    TestCompactDigit();
     TestParseSets();
     return s_failures == 0 ? 0 : 1;
 }
