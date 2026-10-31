@@ -14,6 +14,7 @@
 
 #include "bytes.h"
 #include "date_tables.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "names_data.h"
@@ -67,6 +68,9 @@ static const uint8_t* PeriodAt(const ZoneMeta* m, int32_t code, int64_t seconds)
         return nullptr;
     }
     const uint8_t* c = m->codes + (size_t)code * zoneMetaCodeSize;
+    // mlocValidZoneMeta kept a code's periods within the unit's.
+    MLOC_ASSERT((uint32_t)code < m->codeCount &&
+                mlocLoad16(c + 4) + (uint32_t)c[3] <= m->periodCount);
     for (uint32_t k = 0; k < c[3]; k++)
     {
         const uint8_t* p = m->periods + (size_t)(mlocLoad16(c + 4) + k) * zoneMetaPeriodSize;
@@ -94,10 +98,13 @@ static ZoneOffset Classify(const uint8_t* period, ZoneOffset offset)
     return total == daylight ? (ZoneOffset){standard, daylight - standard} : offset;
 }
 
-// A metazone's preferred zone in a region, else its golden zone.
+// A metazone's preferred zone in a region, else its golden zone; the
+// metazone is a period's, which the validator bounded.
 static int32_t ReferenceZone(const ZoneMeta* m, int32_t metazone, const char* region)
 {
+    MLOC_ASSERT(metazone >= 0 && (uint32_t)metazone < m->metazoneCount);
     const uint8_t* z = m->metazones + (size_t)metazone * zoneMetaZoneSize;
+    MLOC_ASSERT(mlocLoad16(z + 2) + (uint32_t)mlocLoad16(z + 4) <= m->preferredCount);
     for (uint32_t k = 0; k < mlocLoad16(z + 4); k++)
     {
         const uint8_t* p = m->preferred + (size_t)(mlocLoad16(z + 2) + k) * zoneMetaPreferredSize;
@@ -151,6 +158,9 @@ static bool FindKey(const ZoneFormat* f, uint32_t key, ZoneText* out)
         if (low < count && mlocLoad16(keys + 2 * (size_t)low) == key)
         {
             uint32_t start = mlocLoad32(offsets + 4 * (size_t)low);
+            // mlocValidZoneNames checked the offsets rise within the text.
+            MLOC_ASSERT(start <= mlocLoad32(offsets + 4 * (size_t)low + 4) &&
+                        mlocLoad32(offsets + 4 * (size_t)low + 4) <= mlocLoad32(unit + 4));
             out->bytes = offsets + 4 * ((size_t)count + 1) + start;
             out->length = mlocLoad32(offsets + 4 * (size_t)low + 4) - start;
             return out->length > 0;
@@ -218,6 +228,7 @@ static ZoneText Literal(const char* text)
 // The digits of n (0 to 99), at least minimum of them.
 static void WriteDigits(const ZoneFormat* f, NumberWriter* w, uint32_t n, uint32_t minimum)
 {
+    MLOC_ASSERT(n < 100);
     if (n >= 10 || minimum > 1)
     {
         Write(w, f->digits + (size_t)(n / 10) * numberDigitSize, f->digitLength);
@@ -242,11 +253,13 @@ static void ReadOffsetPattern(ZoneText text, OffsetPattern* out)
     uint32_t i = 0;
     while (memcmp(text.bytes + i, "mm", 2) != 0)
     {
+        MLOC_ASSERT(i + 3 <= text.length);
         i++;
     }
     uint32_t h = i;
     while (text.bytes[h - 1] != 'H')
     {
+        MLOC_ASSERT(h > 1);
         h--;
     }
     out->minutes = i;
@@ -287,6 +300,9 @@ static void WriteOffset(const ZoneFormat* f, NumberWriter* w, int32_t offset, bo
     ZoneText half;
     OffsetPattern p = {0};
     bool negative = offset < 0;
+    // Every offset of the zones unit, and of a zone of an offset, is within
+    // a day, so its hours are two digits.
+    MLOC_ASSERT(offset > -secondsPerDay && offset < secondsPerDay);
     if (!FormatText(f, zoneFormatGmt, &gmt))
     {
         gmt = Literal("GMT{0}");
@@ -300,6 +316,7 @@ static void WriteOffset(const ZoneFormat* f, NumberWriter* w, int32_t offset, bo
     uint32_t at = 0;
     while (memcmp(gmt.bytes + at, "{0}", 3) != 0)
     {
+        MLOC_ASSERT(at + 4 <= gmt.length);
         at++;
     }
     Write(w, gmt.bytes, at);
@@ -487,6 +504,8 @@ static void WritePartial(const ZoneFormat* f, const ZoneAt* a, ZoneText name, Nu
     }
     else if (!City(f, a, &location))
     {
+        // A code found in the code tables (CodeOf).
+        MLOC_ASSERT((uint32_t)a->code < a->codes.codeCount);
         ZoneCode code = mlocZoneCode(&a->codes, (uint32_t)a->code);
         location = (ZoneText){a->codes.text + code.name, code.nameLength};
     }
@@ -511,6 +530,9 @@ static bool WriteGeneric(const ZoneFormat* f, const ZoneAt* a, bool longForm, Nu
     {
         return false;
     }
+    // A zone with a metazone has a code, so it is a named one, which
+    // StandardAround and OtherReference read the transitions of.
+    MLOC_ASSERT(a->named && a->code >= 0);
     bool hasGeneric = MetazoneText(f, a->metazone, generic, &metazone);
     if (StandardAround(a) &&
         (CodeText(f, a->code, standard, &name) || MetazoneText(f, a->metazone, standard, &name)) &&
@@ -549,6 +571,8 @@ static bool WriteLocation(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
     {
         pattern = Literal("{0}");
     }
+    // CodeRegion found a code, below the metazone unit's (CodeOf).
+    MLOC_ASSERT(a->code >= 0 && (uint32_t)a->code < a->meta.codeCount);
     bool country = (a->meta.codes[(size_t)a->code * zoneMetaCodeSize + 2] & zoneMetaCountry) != 0;
     if (country)
     {
@@ -620,6 +644,10 @@ void mlocWriteZonePattern(const ZoneFormat* f, const uint8_t* pattern, uint32_t 
     while (at < length)
     {
         w->source = at >= span->first && at < span->end ? span->source : 0;
+        // A zone pattern holds whole zone fields only (ZoneOnly in
+        // date_format.c, its one caller), so the text never stops at a
+        // byte below 0x20 that is not one.
+        MLOC_ASSERT(pattern[at] >= 0x20 || (pattern[at] == datePatternField && at + 3 <= length));
         if (pattern[at] == datePatternField)
         {
             mlocWriteZone(f, mlocZoneFieldStyle(pattern[at + 1], pattern[at + 2]), zone, w);

@@ -131,7 +131,7 @@ duration_format: kinds list_data list_tables number_core number_format plural pl
 duration_write: duration_fields duration_format list_data list_join number_core number_format number_output unit_patterns
 duration_fields: binary64 duration_values
 zone_name_tables: bytes data_view number_data
-zone_format: bytes data_view date_data date_tables kinds locale_fallback names_data number_core number_output number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
+zone_format: bytes data_view date_data date_tables invariant kinds locale_fallback names_data number_core number_output number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
 zone_codes: data_view invariant zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith invariant zone_tables
 zone_handle: invariant zone_rules zone_tables
