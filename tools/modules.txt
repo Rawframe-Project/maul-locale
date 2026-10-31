@@ -90,7 +90,7 @@ names: data_view invariant kinds locale_context locale_valid names_data names_te
 names_text: data_view invariant kinds locale_context spellout_data
 names_locale: data_view invariant kinds locale_context locale_valid names_data names_text
 calendar_arith: invariant
-calendar_astro: calendar_arith
+calendar_astro: calendar_arith invariant
 calendar_chinese: calendar_arith calendar_astro invariant
 calendar_years:
 calendar_lunar: calendar_arith calendar_chinese calendar_years invariant
@@ -98,8 +98,8 @@ calendar_hebrew: calendar_arith invariant
 calendar_eras:
 calendar_umalqura: calendar_arith invariant
 calendar_year: calendar_arith calendar_chinese calendar_hebrew calendar_lunar calendar_umalqura invariant
-calendar: calendar_arith calendar_eras calendar_year
-calendar_add: calendar_arith calendar_year
+calendar: calendar_arith calendar_eras calendar_year invariant
+calendar_add: calendar_arith calendar_year invariant
 zone_tables: bytes data_view invariant kinds
 zone_code_tables: bytes data_view invariant kinds
 relative_tables: bytes data_view number_data

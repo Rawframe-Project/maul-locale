@@ -6,6 +6,7 @@
 // number (calendar_year.h) rather than year by year.
 
 #include "calendar_year.h"
+#include "invariant.h"
 
 #include "maul-locale/calendar.h"
 
@@ -64,7 +65,9 @@ mlocResult mlocAddToDate(const mlocDate* date, const mlocDateDuration* duration,
     {
         return mloc_errorInvalid;
     }
-    // The day, then weeks and days.
+    // The day, then weeks and days: the month is the year's, from its
+    // code or its number (each refused when it has none).
+    MLOC_ASSERT(month >= 1 && month <= mlocYearMonths(&y));
     uint32_t last = mlocYearDaysInMonth(&y, month);
     if (start.day > last && overflow == mloc_overflowReject)
     {

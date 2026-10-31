@@ -8,6 +8,7 @@
 
 #include "calendar_eras.h"
 #include "calendar_year.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -38,6 +39,12 @@ typedef struct Eras
     uint8_t count;
     int32_t start;
 } Eras;
+
+// An era's code, NUL-ended in its array, fits the fields' era.
+static_assert(sizeof(((Era*)nullptr)->code) <= sizeof(((mlocDateFields*)nullptr)->era),
+              "the fields hold an era's code");
+static_assert(sizeof(((JapaneseEra*)nullptr)->code) <= sizeof(((mlocDateFields*)nullptr)->era),
+              "the fields hold a Japanese era's code");
 
 static const Era s_ce = {"ce", 0, 1};
 static const Era s_bce = {"bce", 1, -1};
@@ -196,6 +203,9 @@ mlocResult mlocMakeDate(mlocCalendar calendar, const mlocDateInput* input, mlocO
         return mloc_errorInvalid;
     }
     month = month < months ? month : months;
+    // A month code names a month of the year or is refused; a place past
+    // the year's months was refused or constrained just above.
+    MLOC_ASSERT(month >= 1 && month <= months);
     uint32_t last = mlocYearDaysInMonth(&y, month);
     if (overflow == mloc_overflowReject && input->day > last)
     {
@@ -253,6 +263,9 @@ mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
     mlocCalendar calendar = (mlocCalendar)date->calendar;
     CalendarYear y;
     CalendarDate d = mlocYearOpenOf(&y, calendar, date->day);
+    // The year was opened from the day, which it holds.
+    MLOC_ASSERT(d.month >= 1 && d.month <= mlocYearMonths(&y) && d.day >= 1 &&
+                d.day <= mlocYearDaysInMonth(&y, d.month));
     mlocDateFields f = {
         .year = d.year,
         .month = d.month,
@@ -265,6 +278,8 @@ mlocResult mlocGetDateFields(const mlocDate* date, mlocDateFields* fieldsOut)
     uint32_t number = 0;
     bool leapMonth = false;
     mlocYearCodeOf(&y, d.month, &number, &leapMonth);
+    // A month's code numbers it 1 to 13, with L for a leap month.
+    MLOC_ASSERT(number >= 1 && number <= 13);
     f.monthCode[0] = 'M';
     f.monthCode[1] = (char)('0' + number / 10);
     f.monthCode[2] = (char)('0' + number % 10);
