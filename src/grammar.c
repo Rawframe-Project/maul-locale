@@ -248,14 +248,18 @@ static mlocResult ReadNumber(const Inflector* f, const uint8_t* text, const End*
     return ReadDigits(text + run, e->end - run, value);
 }
 
-// Reads a number's fraction digits as the integer they are read as.
+// Reads a number's fraction digits as the integer they are read as, as
+// ReadDigits does; mloc_errorInvalid when the number that ends the text
+// has fewer: data the loader accepts may give a numbering system digits
+// that are not ASCII ones, or an affix that ends in a digit, so a shown
+// value's fraction need not end the text.
 static mlocResult ReadFraction(const uint8_t* text, const End* e, mlocDecimal* value)
 {
     size_t shown = (size_t)value->fractionDigits;
-    // The text ends in the digits its value shows: a value read from the
-    // text has no more, and a shown one comes only from standard notation
-    // (mlocShownDecimal), whose text ends in its fraction.
-    MLOC_ASSERT(shown <= e->end - e->start);
+    if (shown > e->end - e->start)
+    {
+        return mloc_errorInvalid;
+    }
     return ReadDigits(text + e->end - shown, shown, value);
 }
 

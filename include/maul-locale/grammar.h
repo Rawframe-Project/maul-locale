@@ -278,7 +278,10 @@ extern "C"
     /// @return As mlocInflector_InflectText; mloc_errorLimit also for a number
     ///         whose text passes MLOC_MAX_INFLECTED_NUMBER bytes;
     ///         mloc_errorInvalid also for a decimal the library did not
-    ///         make or a formatter it did not make.
+    ///         make, a formatter it did not make, or one whose data writes
+    ///         the number's text ending in fewer digits than its value
+    ///         shows (a zero that is a letter, a digit after the percent
+    ///         sign).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocInflector_InflectNumber(
