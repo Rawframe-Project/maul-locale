@@ -6,6 +6,7 @@
 // attributes, read from the compiled message by the index a part's kind
 // holds.
 
+#include "invariant.h"
 #include "message_bind.h"
 #include "message_form.h"
 #include "message_read.h"
@@ -75,6 +76,10 @@ mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part, mlocMessageP
 static void ReadParameter(const BoundHeader* h, uint32_t p, mlocMessageParameter* out)
 {
     const MessageView* v = &h->view;
+    // The bind read the message (mlocReadMessage), whose expressions' and
+    // markups' parameters lie within the parameters, and which formatting
+    // reads as checked (mlocMessageFormatter_Bind).
+    MLOC_ASSERT(p < v->count[messageParameters]);
     uint32_t kind = mlocMessageField(v, messageParameters, p, 0);
     out->attribute = kind == parameterAttribute || kind == parameterAttributeLiteral;
     out->variable = kind == parameterOptionVariable;
@@ -85,6 +90,7 @@ static void ReadParameter(const BoundHeader* h, uint32_t p, mlocMessageParameter
     if (out->variable)
     {
         uint32_t variable = mlocMessageField(v, messageParameters, p, 3);
+        MLOC_ASSERT(variable < v->count[messageVariables]);
         out->value = (const char*)v->pool + mlocMessageField(v, messageVariables, variable, 0);
         out->valueLength = mlocMessageField(v, messageVariables, variable, 1);
     }

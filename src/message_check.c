@@ -169,6 +169,9 @@ static MessageCheck CheckDeclarations(const Checker* c)
         uint32_t kind = Get(c, messageDeclarations, d, 0);
         uint32_t variable = Get(c, messageDeclarations, d, 1);
         uint32_t expression = Get(c, messageDeclarations, d, 2);
+        // The compiler has just written them.
+        MLOC_ASSERT(variable < c->count[messageVariables] &&
+                    expression < c->count[messageExpressions]);
         if (Word(c->firstUse, variable) != none ||
             Names(c, expression, variable, kind == declarationLocal))
         {
@@ -189,6 +192,7 @@ static MessageCheck CheckDeclarations(const Checker* c)
 // declaration (a later one binding it would be a duplicate), so it ends.
 static bool Annotated(const Checker* c, uint32_t variable)
 {
+    uint32_t later = none;
     for (;;)
     {
         uint32_t d = Word(c->boundBy, variable);
@@ -196,6 +200,9 @@ static bool Annotated(const Checker* c, uint32_t variable)
         {
             return false;
         }
+        MLOC_ASSERT(d < later);
+        later = d;
+        (void)later;
         uint32_t expression = Get(c, messageDeclarations, d, 2);
         if (Get(c, messageExpressions, expression, 4) > 0)
         {

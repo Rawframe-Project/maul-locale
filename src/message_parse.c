@@ -3,6 +3,7 @@
 
 #include "message_parse.h"
 
+#include "invariant.h"
 #include "message_text.h"
 
 #include <stdbool.h>
@@ -455,6 +456,7 @@ static bool ParseMarkup(Parser* p, size_t source, uint32_t* indexOut)
 // placeholder = expression / markup, after its "{": emits its piece.
 static bool ParsePlaceholder(Parser* p)
 {
+    MLOC_ASSERT(p->at >= 1 && p->text[p->at - 1] == messageOpenBrace);
     size_t source = p->at - 1;
     SkipSpace(p);
     uint32_t piece[3] = {pieceExpression, 0, 0};
@@ -644,6 +646,7 @@ static bool ParseSelectors(Parser* p, uint32_t* countOut)
 // matcher, after ".match": the selectors, then the variants to the end.
 static bool ParseMatcher(Parser* p)
 {
+    MLOC_ASSERT(p->at >= 6 && memcmp(p->text + p->at - 6, ".match", 6) == 0);
     size_t start = p->at - 6;
     uint32_t selectors;
     if (!ParseSelectors(p, &selectors))
@@ -788,6 +791,8 @@ static bool ParseComplex(Parser* p)
 
 MessageParse mlocParseMessage(const uint8_t* text, size_t length, MessageEmit* emit)
 {
+    // The compile refused a longer text, so every offset fits 32 bits.
+    MLOC_ASSERT(length <= MLOC_MAX_MESSAGE_TEXT);
     Parser p = {text, length, 0, emit, SIZE_MAX, mloc_messageErrorNone, 0};
     MessageParse result = {mloc_messageErrorNone, 0, 0};
     SkipSpace(&p);

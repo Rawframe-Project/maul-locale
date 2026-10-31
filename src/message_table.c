@@ -4,6 +4,7 @@
 #include "message_table.h"
 
 #include "bytes.h"
+#include "invariant.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -28,6 +29,8 @@ uint64_t mlocTableSlots(uint32_t count)
 
 void mlocTableInit(MessageTable* table, uint8_t* memory, uint32_t slotCount)
 {
+    // mlocTableSlots: a power of two, 4 or more.
+    MLOC_ASSERT(slotCount >= 4 && (slotCount & (slotCount - 1)) == 0);
     table->slots = memory;
     table->mask = slotCount - 1;
     table->stamp = 1;
@@ -49,8 +52,13 @@ uint32_t mlocTableFindOrAdd(MessageTable* table, uint32_t hash, uint32_t candida
                             MessageSame same, const void* context)
 {
     uint32_t slot = hash & table->mask;
-    for (;;)
+    // The slots are at least twice the entries added between clears (the
+    // variables, an expression's or a markup's parameters, or the
+    // variants), so a probe finds an empty slot before it wraps.
+    uint32_t probes = 0;
+    for (;; probes++)
     {
+        MLOC_ASSERT(probes <= table->mask);
         uint8_t* p = table->slots + (size_t)slot * messageSlotSize;
         if (mlocLoad32(p) != table->stamp)
         {

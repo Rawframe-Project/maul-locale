@@ -3,10 +3,16 @@
 
 #include "message_text.h"
 
+#include "invariant.h"
+
 #include "maul-unicode/normalize.h"
 
 uint32_t mlocMessageDecode(const uint8_t* text, size_t at, size_t end, size_t* sizeOut)
 {
+    // Every text decoded was checked to be well-formed UTF-8 (the
+    // message, a function's name, the compiled pool's strings, an NFC
+    // form), so a code point's bytes lie within it.
+    MLOC_ASSERT(at < end);
     uint32_t lead = text[at];
     if (lead < 0x80 || at + 1 >= end)
     {
@@ -20,9 +26,11 @@ uint32_t mlocMessageDecode(const uint8_t* text, size_t at, size_t end, size_t* s
     }
     if (lead < 0xF0)
     {
+        MLOC_ASSERT(at + 3 <= end);
         *sizeOut = 3;
         return (lead & 0x0F) << 12 | (text[at + 1] & 0x3Fu) << 6 | (text[at + 2] & 0x3Fu);
     }
+    MLOC_ASSERT(at + 4 <= end);
     *sizeOut = 4;
     return (lead & 0x07) << 18 | (text[at + 1] & 0x3Fu) << 12 | (text[at + 2] & 0x3Fu) << 6 |
            (text[at + 3] & 0x3Fu);
