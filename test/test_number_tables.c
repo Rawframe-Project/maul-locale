@@ -16,6 +16,9 @@
 #include "test_harness.h"
 #include "test_pack.h"
 
+#include "maul-locale/decimal.h"
+#include "maul-locale/grammar.h"
+#include "maul-locale/locale.h"
 #include "maul-locale/number.h"
 
 #include <stdlib.h>
@@ -583,6 +586,72 @@ static void TestDisagreeing(void)
 }
 
 // The parse sets: each field spoiled in turn is refused.
+// A system's digits are any characters the loader accepts, so a number's
+// text need not end in the fraction its value shows: an inflector reading
+// one is refused, as a text it cannot read is.
+static void TestOtherDigits(void)
+{
+    uint8_t* u = Copy(s_systems);
+    uint8_t* latn = nullptr;
+    for (uint32_t i = 0; u != nullptr && i < mlocLoad32(u); i++)
+    {
+        uint8_t* e = u + numberSystemsHeaderSize + (size_t)i * numberSystemSize;
+        if (mlocLoad64(e) == numberLatn)
+        {
+            latn = e;
+        }
+    }
+    CHECK(latn != nullptr, "latn is in the systems");
+    if (latn == nullptr)
+    {
+        free(u);
+        return;
+    }
+    latn[8] = 'x';
+    const PackUnit units[] = {
+        {kindPlurals, s_plurals, true},
+        {kindPluralRanges, s_ranges, false},
+        {kindNumberSystems, {u, s_systems.size}, false},
+        {kindNumberSymbols, s_symbols, false},
+        {kindNumberPatterns, s_patterns, false},
+        {kindNumbers, s_root, true},
+        {kindNumberCompactPatterns, s_compactPatterns, false},
+        {kindNumberCompact, s_compact, false},
+    };
+    mlocData source;
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet packed = {&source, 1};
+    mlocDataSet compiled = {&builtin, 1};
+    mlocLocale und;
+    mlocLocale uz;
+    mlocNumberFormatter formatter;
+    mlocInflector inflector;
+    mlocDecimal value;
+    CHECK(OpenRootPack(units, sizeof(units) / sizeof(units[0]), &source) &&
+              mlocParseLocale("und", 3, &und).status == mloc_success &&
+              mlocParseLocale("uz", 2, &uz).status == mloc_success &&
+              mlocInitNumberFormatter(&packed, &und, nullptr, &formatter) == mloc_success &&
+              mlocInitInflector(&compiled, &uz, &inflector) == mloc_success &&
+              mlocParseDecimal("12.05", 5, &value).status == mloc_success,
+          "a formatter whose zero is x");
+    char text[64];
+    mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
+    CHECK(mlocNumberFormatter_Format(&formatter, &value, &out) == mloc_success && out.length == 5 &&
+              memcmp(text, "12.x5", 5) == 0,
+          "12.05 is written 12.x5");
+    mlocInflection request = {.grammaticalCase = mloc_caseDative};
+    CHECK(mlocInflector_InflectNumber(&inflector, &formatter, &value, &request, &out) ==
+              mloc_errorInvalid,
+          "12.x5 is not inflected");
+    CHECK(mlocParseDecimal("1.25", 4, &value).status == mloc_success &&
+              mlocInflector_InflectNumber(&inflector, &formatter, &value, &request, &out) ==
+                  mloc_success &&
+              out.length == 6 && memcmp(text, "1.25ga", 6) == 0,
+          "1.25 is inflected 1.25ga");
+    free(u);
+}
+
 static void TestParseSets(void)
 {
     DataSpan u = s_parseSets;
@@ -730,6 +799,7 @@ int main(void)
     TestCompactUnits();
     TestLocaleUnit();
     TestDisagreeing();
+    TestOtherDigits();
     TestParseSets();
     return s_failures == 0 ? 0 : 1;
 }

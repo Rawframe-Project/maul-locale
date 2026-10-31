@@ -171,6 +171,8 @@ static const TurkicLanguage* LanguageOf(const Inflector* f)
 {
     static const TurkicLanguage* const s_languages[] = {
         &mlocTurkish, &mlocKazakh, &mlocKyrgyz, &mlocAzerbaijani, &mlocUzbek, &mlocTurkmen};
+    // ReadInflector checked the language, and its callers ask a Turkic one.
+    MLOC_ASSERT(f->language >= languageTurkish && f->language <= languageTurkmen);
     return s_languages[f->language - languageTurkish];
 }
 
@@ -209,6 +211,8 @@ static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value,
         return false;
     }
     *spokenLength = strlen(word);
+    // The languages' number words are a few letters (milliard, kvintillion).
+    MLOC_ASSERT(*spokenLength < spokenRoom);
     memcpy(spoken, word, *spokenLength);
     return true;
 }
@@ -244,6 +248,21 @@ static mlocResult ReadNumber(const Inflector* f, const uint8_t* text, const End*
     return ReadDigits(text + run, e->end - run, value);
 }
 
+// Reads a number's fraction digits as the integer they are read as, as
+// ReadDigits does; mloc_errorInvalid when the number that ends the text
+// has fewer: data the loader accepts may give a numbering system digits
+// that are not ASCII ones, or an affix that ends in a digit, so a shown
+// value's fraction need not end the text.
+static mlocResult ReadFraction(const uint8_t* text, const End* e, mlocDecimal* value)
+{
+    size_t shown = (size_t)value->fractionDigits;
+    if (shown > e->end - e->start)
+    {
+        return mloc_errorInvalid;
+    }
+    return ReadDigits(text + e->end - shown, shown, value);
+}
+
 static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const End* e, char* spoken,
                                size_t* spokenLength)
 {
@@ -270,9 +289,7 @@ static mlocResult SpokenNumber(const Inflector* f, const uint8_t* text, const En
     }
     if (value.kind == mloc_decimalFinite && value.fractionDigits > 0 && e->kind == endNumber)
     {
-        // The fraction's digits as the integer they are read as.
-        size_t shown = (size_t)value.fractionDigits;
-        mlocResult read = ReadDigits(text + e->end - shown, shown, &value);
+        mlocResult read = ReadFraction(text, e, &value);
         if (read != mloc_success)
         {
             return read;
@@ -316,6 +333,8 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
             return mloc_errorInvalid;
         }
         *spokenLength = strlen(name);
+        // The letters' names are a few letters (kaksoisvee, elipszilon).
+        MLOC_ASSERT(*spokenLength < spokenRoom);
         memcpy(spoken, name, *spokenLength);
         return mloc_success;
     }
@@ -328,6 +347,9 @@ static mlocResult Spoken(const Inflector* f, const uint8_t* text, const End* e, 
         {
             start++;
         }
+        // Valid UTF-8 ends with a code point's last byte, so the letters
+        // kept are not empty.
+        MLOC_ASSERT(start < e->end);
         length = e->end - start;
         memcpy(spoken, text + start, length);
     }
@@ -618,6 +640,7 @@ static mlocResult InflectKorean(const Inflector* f, const uint8_t* text, size_t 
     {
         out->kept = word;
         out->tailLength = (uint8_t)strlen(stem);
+        MLOC_ASSERT(out->tailLength <= sizeof(out->tail));
         memcpy(out->tail, stem, out->tailLength);
     }
     size_t n =
