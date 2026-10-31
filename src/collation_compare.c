@@ -4,6 +4,7 @@
 #include "collation_compare.h"
 
 #include "collation_iterator.h"
+#include "invariant.h"
 
 #include "maul-unicode/properties.h"
 
@@ -179,6 +180,8 @@ static uint32_t Weight(const Level* l, uint64_t element, bool variable)
         return Case(l->settings, primary, lower);
     default:
     {
+        // The compares read no other level.
+        MLOC_ASSERT(l->level == collationQuaternary);
         // ICU's quaternary: a variable element's primary, else the
         // weight in the tertiary's bits 7..6 above every primary.
         uint32_t q = lower & 0xFFFF;
@@ -282,6 +285,44 @@ static uint32_t CountSegment(Level* l, bool* ended)
     return n;
 }
 
+// One segment's secondaries of each text, the pairs lined up from the
+// end: the order of the last pair that differs, else of the counts; and
+// whether either text ended.
+static int CompareSegment(Level* left, Level* right, bool* endedOut)
+{
+    Level l = *left;
+    Level r = *right;
+    bool leftEnded = false;
+    bool rightEnded = false;
+    uint32_t leftCount = CountSegment(left, &leftEnded);
+    uint32_t rightCount = CountSegment(right, &rightEnded);
+    bool ignored = false;
+    for (uint32_t k = rightCount; k < leftCount; k++)
+    {
+        (void)SegmentSecondary(&l, &ignored);
+    }
+    for (uint32_t k = leftCount; k < rightCount; k++)
+    {
+        (void)SegmentSecondary(&r, &ignored);
+    }
+    int order = 0;
+    uint32_t pairs = leftCount < rightCount ? leftCount : rightCount;
+    for (uint32_t k = 0; k < pairs; k++)
+    {
+        uint32_t lw = SegmentSecondary(&l, &ignored);
+        uint32_t rw = SegmentSecondary(&r, &ignored);
+        order = lw != rw ? (lw < rw ? -1 : 1) : order;
+    }
+    if (order == 0 && leftCount != rightCount)
+    {
+        order = leftCount < rightCount ? -1 : 1;
+    }
+    // Equal primaries give both texts the same segments.
+    MLOC_ASSERT(order != 0 || leftEnded == rightEnded);
+    *endedOut = leftEnded || rightEnded;
+    return order;
+}
+
 // The secondary level backwards within each segment, as ICU compares it,
 // with nothing buffered: each segment's secondaries are counted, then
 // read forwards again with the longer one's surplus skipped, so that
@@ -295,35 +336,9 @@ static int Backwards(const CollationRoot* root, const CollationSettings* setting
     Start(&right, root, settings, collationSecondary, b, h);
     for (;;)
     {
-        Level l = left;
-        Level r = right;
-        bool leftEnded = false;
-        bool rightEnded = false;
-        uint32_t leftCount = CountSegment(&left, &leftEnded);
-        uint32_t rightCount = CountSegment(&right, &rightEnded);
-        bool ignored = false;
-        for (uint32_t k = rightCount; k < leftCount; k++)
-        {
-            (void)SegmentSecondary(&l, &ignored);
-        }
-        for (uint32_t k = leftCount; k < rightCount; k++)
-        {
-            (void)SegmentSecondary(&r, &ignored);
-        }
-        int order = 0;
-        uint32_t pairs = leftCount < rightCount ? leftCount : rightCount;
-        for (uint32_t k = 0; k < pairs; k++)
-        {
-            uint32_t lw = SegmentSecondary(&l, &ignored);
-            uint32_t rw = SegmentSecondary(&r, &ignored);
-            order = lw != rw ? (lw < rw ? -1 : 1) : order;
-        }
-        if (order == 0 && leftCount != rightCount)
-        {
-            order = leftCount < rightCount ? -1 : 1;
-        }
-        // Equal primaries give both texts the same segments.
-        if (order != 0 || leftEnded || rightEnded)
+        bool ended = false;
+        int order = CompareSegment(&left, &right, &ended);
+        if (order != 0 || ended)
         {
             return order;
         }
@@ -449,6 +464,9 @@ size_t mlocCollationIdenticalPrefix(const CollationRoot* root, const CollationSe
         } while (p > 0 &&
                  mlocCollationUnsafeBackward(root, settings, mlocNfdDecodeAt(a, p, &size)));
     }
+    // Backing up reads a alone: the texts share their units up to p, so
+    // where p falls in a code point it falls alike in b.
+    MLOC_ASSERT(Inside(a, p) == Inside(b, p));
     return p;
 }
 
@@ -462,6 +480,8 @@ static NfdText From(NfdText text, size_t at)
 int mlocCollationCompareFrom(const CollationRoot* root, const CollationSettings* settings,
                              NfdText a, NfdText b, size_t prefix)
 {
+    // The prefix is the texts' identical one (mlocCollationIdenticalPrefix).
+    MLOC_ASSERT(prefix <= a.length && prefix <= b.length);
     History h = Before(a, prefix);
     a = From(a, prefix);
     b = From(b, prefix);
