@@ -59,9 +59,11 @@ extern "C"
                                                size_t from);
 
     // A segmenter: Maul Unicode's iterator with a locale's tailoring, over
-    // the segmentation data it was made from, which must outlive it. It
-    // keeps no pointer to a piece of text once it has asked for the next
-    // one. Opaque; make it with mlocInitSegmenter. It may be copied.
+    // the segmentation data it was made from, which must outlive it and not
+    // change. It reads the current piece of text in place, so that piece
+    // stays where it is and as it was until the segmenter asks for the next
+    // one; after that it keeps no pointer to it. Opaque; make it with
+    // mlocInitSegmenter. It may be copied.
     typedef struct mlocSegmenter
     {
         uint64_t opaque[64];

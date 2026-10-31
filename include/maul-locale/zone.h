@@ -40,7 +40,7 @@ extern "C"
 
     // A time zone, made by mlocFindTimeZone or mlocGetTimeZone and read
     // through the functions here; its fields are the library's. A named
-    // zone points into its data, which must outlive it.
+    // zone points into its data, which must outlive it and not change.
     typedef struct mlocTimeZone
     {
         // The zones unit, or null for an offset zone.

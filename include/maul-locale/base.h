@@ -85,9 +85,9 @@ extern "C"
     // mlocCompileMessage, for an error it finds only once the message is
     // written; mlocMessageFormatter_Bind, whose failures leave no bound
     // message in its buffer, even one bound there before; and
-    // mlocFormatMessage, when a program function gives its text another
-    // length when formatted again. An
-    // outcome that is not an error (mloc_fellBack, mloc_withFallbacks,
+    // mlocFormatMessage, when a program function changes the text's
+    // length, an argument or the functions before the text is formatted
+    // again. An outcome that is not an error (mloc_fellBack, mloc_withFallbacks,
     // mloc_done, mloc_needMoreText) writes the outputs it describes.
     typedef int32_t mlocResult;
     enum

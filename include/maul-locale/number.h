@@ -131,8 +131,8 @@ extern "C"
         uint8_t minIntegerDigits;
     } mlocNumberOptions;
 
-    // A locale's number formatter: a value that points into the data it
-    // was made from, which must outlive it. Opaque; make it with
+    // A locale's number formatter: a value that points into the data it was
+    // made from, which must outlive it and not change. Opaque; make it with
     // mlocInitNumberFormatter.
     typedef struct mlocNumberFormatter
     {

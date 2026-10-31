@@ -101,9 +101,9 @@ extern "C"
         mloc_durationPartField = 0x100,
     };
 
-    // A locale's duration formatter: a value that points into the data
-    // it was made from, which must outlive it. Opaque; make it with
-    // mlocInitDurationFormatter.
+    // A locale's duration formatter: a value that points into the data it
+    // was made from, which must outlive it and not change. Opaque; make it
+    // with mlocInitDurationFormatter.
     typedef struct mlocDurationFormatter
     {
         uint64_t opaque[512];

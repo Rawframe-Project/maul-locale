@@ -164,8 +164,10 @@ extern "C"
     };
 
     // A date formatter: a locale's patterns for the options in its
-    // calendar, in the data it was made from, which must outlive it.
-    // Opaque; make it with mlocInitDateFormatter.
+    // calendar, in the data it was made from, which must outlive it and not
+    // change. Made with a zone, it also keeps a pointer to the data set,
+    // which must likewise outlive it and stay as it was. Opaque; make it
+    // with mlocInitDateFormatter.
     typedef struct mlocDateFormatter
     {
         uint64_t opaque[128];
@@ -360,8 +362,10 @@ extern "C"
     } mlocTimeOptions;
 
     // A time formatter: a locale's time patterns for the options in its
-    // calendar, in the data it was made from, which must outlive it.
-    // Opaque; make it with mlocInitTimeFormatter.
+    // calendar, in the data it was made from, which must outlive it and not
+    // change. Made with a zone, it also keeps a pointer to the data set,
+    // which must likewise outlive it and stay as it was. Opaque; make it
+    // with mlocInitTimeFormatter.
     typedef struct mlocTimeFormatter
     {
         uint64_t opaque[80];
@@ -507,8 +511,11 @@ extern "C"
         mlocDateTimeGlue glue;
     } mlocDateTimeOptions;
 
-    // A date-time formatter: a locale's date and time patterns and the
-    // glue between them. Opaque; make it with mlocInitDateTimeFormatter.
+    // A date-time formatter: a locale's date and time patterns and the glue
+    // between them, in the data it was made from, which must outlive it and
+    // not change. Made with a zone, it also keeps a pointer to the data
+    // set, which must likewise outlive it and stay as it was. Opaque; make
+    // it with mlocInitDateTimeFormatter.
     typedef struct mlocDateTimeFormatter
     {
         uint64_t opaque[176];
@@ -619,8 +626,8 @@ extern "C"
         const mlocInstant* end, mlocOutput* textOut);
 
     // A zone formatter: a locale's zone names and formats in the data it
-    // was made from, which must outlive it, as must the data set.
-    // Opaque; make it with mlocInitZoneFormatter.
+    // was made from, and a pointer to the data set, which must both outlive
+    // it and stay as they were. Opaque; make it with mlocInitZoneFormatter.
     typedef struct mlocZoneFormatter
     {
         uint64_t opaque[48];

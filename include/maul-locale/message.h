@@ -168,7 +168,10 @@ extern "C"
     // the call), which the date and time functions format; a duration is
     // its fields by pointer (to outlive the call), which mloc:duration
     // formats; a list is its items' texts by pointer (to outlive the
-    // call), which mloc:list formats and selects by its count.
+    // call), which mloc:list formats and selects by its count. The call
+    // checks the arguments and all they point to once, before it formats,
+    // so they stay as they were for the whole call: the program's own
+    // functions change none of them.
     typedef int32_t mlocMessageValueKind;
     enum
     {
@@ -429,8 +432,9 @@ extern "C"
         // message's own direction is its locale's
         // (mlocGetLocaleDirection), unknown when that has none.
         mlocMessageIsolation isolation;
-        // The program's functions, which must outlive the formatter; may
-        // be null when count is 0.
+        // The program's functions, which must outlive the formatter and
+        // stay as they were, the array and each entry; may be null when
+        // count is 0.
         const mlocMessageFunction* functions;
         size_t functionCount;
         // The default time zone the date and time functions show exact
@@ -440,8 +444,9 @@ extern "C"
     } mlocMessageOptions;
 
     // A locale's message formatter: a value that points into the data it
-    // was made from, which must outlive it. Opaque; make it with
-    // mlocInitMessageFormatter.
+    // was made from, and to the data set and the program's functions it was
+    // given, which must all outlive it and stay as they were. Opaque; make
+    // it with mlocInitMessageFormatter.
     typedef struct mlocMessageFormatter
     {
         uint64_t opaque[32];
@@ -473,7 +478,10 @@ extern "C"
     /// do not come from arguments (a format call makes its own when its
     /// options differ). No program function is called. The bound message
     /// points into the compiled one and the formatter, which must outlive
-    /// it; it is read-only, so threads may format with it at once. Call it
+    /// it and stay as they were (a formatter made again in the same place
+    /// is another one), as must the bound message itself: the bind checks
+    /// the message once, and formatting reads both as checked. It is
+    /// read-only, so threads may format with it at once. Call it
     /// with a null bufferOut and a capacity of 0 to learn the capacity. A
     /// bind that fails, for any reason, leaves a buffer of capacity 1 or
     /// more holding no bound message, even one bound there before; but a
@@ -568,14 +576,15 @@ extern "C"
     /// @param arguments      The arguments; may be null when count is 0.
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text; left as it was on any failure
-    ///                       but mloc_errorCapacity and a program
-    ///                       function's text of another length, which
-    ///                       clears the buffer.
+    ///                       but mloc_errorCapacity and a program function
+    ///                       that changes the text's length, an argument or
+    ///                       the functions before the text is formatted
+    ///                       again, which clears the buffer.
     /// @param faultsOut      Receives the faults; may be null. They are
     ///                       found and written also when the call fails with
     ///                       mloc_errorCapacity, mloc_errorFallback or a
-    ///                       program function's text of another length;
-    ///                       left unchanged on any other failure.
+    ///                       refusal of what a program function gave or
+    ///                       changed; left unchanged on any other failure.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
     ///         fails, the faults reported; mloc_errorCapacity when the text does
@@ -587,8 +596,12 @@ extern "C"
     ///         library does not make, a zone it did not make, a list whose
     ///         items or an item's text are missing or of more than
     ///         UINT32_MAX items, an unknown kind, a bound message the
-    ///         library did not make, or a program function that gave
-    ///         the text another length when formatted again.
+    ///         library did not make, a program function that gave the
+    ///         text another length when formatted again or changed an
+    ///         argument before it was, or a program function past the
+    ///         formatter's own or without a resolve entry (a formatter
+    ///         made again under the bound message, or its functions
+    ///         changed).
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,
