@@ -105,6 +105,15 @@ static inline void mlocNfdStart(NfdStream* s, const uint8_t* text, size_t length
     mlocNfdStartText(s, mlocNfdUtf8(text, length));
 }
 
+// The marks a segment holds so far with count more, counted only as far
+// as telling whether they fit the window: a segment is counted to its
+// end before it is read, and a count of all its marks would wrap at 2^32
+// of them.
+static inline uint32_t mlocNfdCountMarks(uint32_t total, uint32_t count)
+{
+    return total > nfdWindow ? total : total + count;
+}
+
 // Fills the window with the next code points when it is empty; false at
 // the end of the text.
 bool mlocNfdFill(NfdStream* s);
