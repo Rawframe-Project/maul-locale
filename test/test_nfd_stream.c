@@ -4,8 +4,8 @@
 // The NFD stream against Maul Unicode's whole-string NFD: random texts of
 // decomposable letters, Hangul, marks, marks that decompose and
 // ill-formed bytes; runs of marks past the window against a reference
-// sort; the quick path's edges; and, given its path, every line of
-// NormalizationTest.txt.
+// sort; the count of a run's marks held from wrapping; the quick path's
+// edges; and, given its path, every line of NormalizationTest.txt.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -362,8 +362,27 @@ static void TestQuick(void)
           "each syllable's first jamo at its start, the second at its end");
 }
 
+// A run's marks are counted before they are read, to tell whether they
+// fit the window. 2^32 marks (4 GiB of UTF-16) would wrap a count kept
+// whole and read as a few that fit, so the count stops growing once past
+// the window: started near the wrap, it stays past the window.
+static void TestMarkCount(void)
+{
+    uint32_t total = 0;
+    for (uint32_t i = 0; i < 40; i++)
+    {
+        total = mlocNfdCountMarks(total, 2);
+    }
+    CHECK(total == nfdWindow + 2 && mlocNfdCountMarks(nfdWindow, 4) == nfdWindow + 4,
+          "a run's count grows to just past the window, then holds");
+    CHECK(mlocNfdCountMarks(UINT32_MAX - 1, 2) == UINT32_MAX - 1 &&
+              mlocNfdCountMarks(UINT32_MAX, nfdMaxDecomposition) == UINT32_MAX,
+          "a count near 2^32 holds instead of wrapping into the window");
+}
+
 int main(int argc, char** argv)
 {
+    TestMarkCount();
     TestQuick();
     TestRandom();
     TestLongRuns();

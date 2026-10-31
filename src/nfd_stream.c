@@ -432,7 +432,7 @@ bool mlocNfdFill(NfdStream* s)
     size_t end = s->at;
     for (uint32_t k = 0; end < s->length && Mark(s, end, d, &k, &size); end += size)
     {
-        total += k;
+        total = mlocNfdCountMarks(total, k);
     }
     if (total <= nfdWindow)
     {
