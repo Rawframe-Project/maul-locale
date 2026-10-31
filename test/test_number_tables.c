@@ -585,7 +585,56 @@ static void TestDisagreeing(void)
     free(u);
 }
 
-// The parse sets: each field spoiled in turn is refused.
+// Uzbek's inflection of a value written by an und formatter made over
+// the compiled-in number units with these systems and symbols; text gets
+// what the formatter writes.
+static mlocResult InflectPacked(DataSpan systems, DataSpan symbols,
+                                const mlocNumberOptions* options, const char* decimal, char* text,
+                                size_t* length)
+{
+    const PackUnit units[] = {
+        {kindPlurals, s_plurals, true},
+        {kindPluralRanges, s_ranges, false},
+        {kindNumberSystems, systems, false},
+        {kindNumberSymbols, symbols, false},
+        {kindNumberPatterns, s_patterns, false},
+        {kindNumbers, s_root, true},
+        {kindNumberCompactPatterns, s_compactPatterns, false},
+        {kindNumberCompact, s_compact, false},
+    };
+    mlocData source;
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet packed = {&source, 1};
+    mlocDataSet compiled = {&builtin, 1};
+    mlocLocale und;
+    mlocLocale uz;
+    mlocNumberFormatter formatter;
+    mlocInflector inflector;
+    mlocDecimal value;
+    mlocOutput out = {.buffer = text, .capacity = 64};
+    if (!OpenRootPack(units, sizeof(units) / sizeof(units[0]), &source) ||
+        mlocParseLocale("und", 3, &und).status != mloc_success ||
+        mlocParseLocale("uz", 2, &uz).status != mloc_success ||
+        mlocInitNumberFormatter(&packed, &und, options, &formatter) != mloc_success ||
+        mlocInitInflector(&compiled, &uz, &inflector) != mloc_success ||
+        mlocParseDecimal(decimal, strlen(decimal), &value).status != mloc_success ||
+        mlocNumberFormatter_Format(&formatter, &value, &out) != mloc_success)
+    {
+        return (mlocResult)-100;
+    }
+    *length = out.length;
+    out = (mlocOutput){.buffer = text + 64, .capacity = 64};
+    mlocInflection request = {.grammaticalCase = mloc_caseDative};
+    mlocResult r = mlocInflector_InflectNumber(&inflector, &formatter, &value, &request, &out);
+    if (r == mloc_success)
+    {
+        memmove(text, text + 64, out.length);
+        *length = out.length;
+    }
+    return r;
+}
+
 // A system's digits are any characters the loader accepts, so a number's
 // text need not end in the fraction its value shows: an inflector reading
 // one is refused, as a text it cannot read is.
@@ -608,50 +657,82 @@ static void TestOtherDigits(void)
         return;
     }
     latn[8] = 'x';
-    const PackUnit units[] = {
-        {kindPlurals, s_plurals, true},
-        {kindPluralRanges, s_ranges, false},
-        {kindNumberSystems, {u, s_systems.size}, false},
-        {kindNumberSymbols, s_symbols, false},
-        {kindNumberPatterns, s_patterns, false},
-        {kindNumbers, s_root, true},
-        {kindNumberCompactPatterns, s_compactPatterns, false},
-        {kindNumberCompact, s_compact, false},
-    };
-    mlocData source;
-    mlocData builtin;
-    mlocOpenBuiltinData(&builtin);
-    mlocDataSet packed = {&source, 1};
-    mlocDataSet compiled = {&builtin, 1};
-    mlocLocale und;
-    mlocLocale uz;
-    mlocNumberFormatter formatter;
-    mlocInflector inflector;
-    mlocDecimal value;
-    CHECK(OpenRootPack(units, sizeof(units) / sizeof(units[0]), &source) &&
-              mlocParseLocale("und", 3, &und).status == mloc_success &&
-              mlocParseLocale("uz", 2, &uz).status == mloc_success &&
-              mlocInitNumberFormatter(&packed, &und, nullptr, &formatter) == mloc_success &&
-              mlocInitInflector(&compiled, &uz, &inflector) == mloc_success &&
-              mlocParseDecimal("12.05", 5, &value).status == mloc_success,
-          "a formatter whose zero is x");
-    char text[64];
-    mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
-    CHECK(mlocNumberFormatter_Format(&formatter, &value, &out) == mloc_success && out.length == 5 &&
-              memcmp(text, "12.x5", 5) == 0,
-          "12.05 is written 12.x5");
-    mlocInflection request = {.grammaticalCase = mloc_caseDative};
-    CHECK(mlocInflector_InflectNumber(&inflector, &formatter, &value, &request, &out) ==
-              mloc_errorInvalid,
+    DataSpan systems = {u, s_systems.size};
+    char text[128];
+    size_t length = 0;
+    CHECK(InflectPacked(systems, s_symbols, nullptr, "12.05", text, &length) == mloc_errorInvalid &&
+              length == 5 && memcmp(text, "12.x5", 5) == 0,
           "12.x5 is not inflected");
-    CHECK(mlocParseDecimal("1.25", 4, &value).status == mloc_success &&
-              mlocInflector_InflectNumber(&inflector, &formatter, &value, &request, &out) ==
-                  mloc_success &&
-              out.length == 6 && memcmp(text, "1.25ga", 6) == 0,
+    CHECK(InflectPacked(systems, s_symbols, nullptr, "1.25", text, &length) == mloc_success &&
+              length == 6 && memcmp(text, "1.25ga", 6) == 0,
           "1.25 is inflected 1.25ga");
     free(u);
 }
 
+// An affix may end in a digit, so the digits that end a number's text
+// need not be the number's: an inflector reading them is refused.
+static void TestDigitAfter(void)
+{
+    // The symbols with one more string, "%9", which every set takes for
+    // its percent sign.
+    static const char s_sign[] = "%9";
+    uint32_t strings = mlocLoad16(s_symbols.bytes);
+    uint32_t records = mlocLoad16(s_symbols.bytes + 2);
+    uint32_t textSize = mlocLoad32(s_symbols.bytes + 4);
+    size_t recordBytes = (size_t)records * 2 * numberSymbolCount;
+    const uint8_t* oldRecords = s_symbols.bytes + numberTableHeaderSize + (size_t)(strings + 1) * 2;
+    uint32_t size =
+        (uint32_t)(numberTableHeaderSize + (size_t)(strings + 2) * 2 + recordBytes + textSize + 2);
+    uint8_t* u = calloc(1, size);
+    CHECK(u != nullptr, "room for the symbols");
+    if (u == nullptr)
+    {
+        return;
+    }
+    Put16(u, strings + 1);
+    Put16(u + 2, records);
+    u[4] = (uint8_t)(textSize + 2);
+    u[5] = (uint8_t)((textSize + 2) >> 8);
+    u[6] = (uint8_t)((textSize + 2) >> 16);
+    memcpy(u + numberTableHeaderSize, s_symbols.bytes + numberTableHeaderSize,
+           (size_t)(strings + 1) * 2);
+    Put16(u + numberTableHeaderSize + (size_t)(strings + 1) * 2, textSize + 2);
+    uint8_t* newRecords = u + numberTableHeaderSize + (size_t)(strings + 2) * 2;
+    memcpy(newRecords, oldRecords, recordBytes);
+    for (uint32_t r = 0; r < records; r++)
+    {
+        Put16(newRecords + ((size_t)r * numberSymbolCount + numberPercent) * 2, strings);
+    }
+    memcpy(newRecords + recordBytes, oldRecords + recordBytes, textSize);
+    memcpy(newRecords + recordBytes + textSize, s_sign, 2);
+    DataSpan symbols = {u, size};
+    CHECK(mlocValidNumberSymbols(&s_view, symbols), "the symbols with %9 are valid");
+    mlocNumberOptions percent = {.style = mloc_numberPercent,
+                                 .precision = {.kind = mloc_precisionFraction,
+                                               .minFractionDigits = 1,
+                                               .maxFractionDigits = 1}};
+    char text[128];
+    size_t length = 0;
+    CHECK(InflectPacked(s_systems, symbols, &percent, "0.125", text, &length) ==
+                  mloc_errorInvalid &&
+              length == 6 && memcmp(text, "12.5%9", 6) == 0,
+          "12.5%9 is not inflected as 12.9");
+    percent.precision = (mlocPrecision){0};
+    CHECK(InflectPacked(s_systems, symbols, &percent, "0.12", text, &length) == mloc_errorInvalid &&
+              length == 4 && memcmp(text, "12%9", 4) == 0,
+          "12%9 is not inflected as 12");
+    // Uzbek reads nothing after a percent sign; a number without one
+    // still inflects over these symbols.
+    mlocNumberOptions decimal = {.precision = {.kind = mloc_precisionFraction,
+                                               .minFractionDigits = 1,
+                                               .maxFractionDigits = 1}};
+    CHECK(InflectPacked(s_systems, symbols, &decimal, "12.5", text, &length) == mloc_success &&
+              length == 6 && memcmp(text, "12.5ga", 6) == 0,
+          "12.5 is inflected 12.5ga");
+    free(u);
+}
+
+// The parse sets: each field spoiled in turn is refused.
 static void TestParseSets(void)
 {
     DataSpan u = s_parseSets;
@@ -800,6 +881,7 @@ int main(void)
     TestLocaleUnit();
     TestDisagreeing();
     TestOtherDigits();
+    TestDigitAfter();
     TestParseSets();
     return s_failures == 0 ? 0 : 1;
 }
