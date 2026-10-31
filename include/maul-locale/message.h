@@ -546,7 +546,7 @@ extern "C"
     /// not: first into a scratch, to find its length and its faults, then
     /// into textOut's buffer. So a program function's entries must give
     /// the same text for the same values within one call; a second pass
-    /// whose text differs from the first's is refused with
+    /// whose text is of another length than the first's is refused with
     /// mloc_errorInvalid, the buffer cleared over its capacity.
     ///
     /// @param bound          A bound message from mlocMessageFormatter_Bind.
@@ -554,7 +554,8 @@ extern "C"
     /// @param argumentCount  Their number.
     /// @param textOut        Receives the text; left as it was on any failure
     ///                       but mloc_errorCapacity and a program
-    ///                       function's changed text.
+    ///                       function's text of another length, which
+    ///                       clears the buffer.
     /// @param faultsOut      Receives the faults; may be null.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
@@ -568,7 +569,7 @@ extern "C"
     ///         items or an item's text are missing or of more than
     ///         UINT32_MAX items, an unknown kind, a bound message the
     ///         library did not make, or a program function that gave a
-    ///         text over 512 bytes another text when formatted again.
+    ///         text over 512 bytes another length when formatted again.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocFormatMessage(const void* bound,
