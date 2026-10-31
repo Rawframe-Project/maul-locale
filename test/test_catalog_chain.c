@@ -356,6 +356,41 @@ static void TestOutputs(Set* s)
     free(cache);
 }
 
+// A chain reads its catalogs through the array it was made with; one
+// replaced since by a catalog of another set, with fewer keys, is refused
+// where the chain would write a key it does not have.
+static void TestReplaced(Set* s)
+{
+    uint8_t* bytes = nullptr;
+    mlocCatalog other;
+    mlocMessageFormatter formatter;
+    bool opened = OpenOne("de", &bytes, &other, &formatter);
+    mlocCatalog catalogs[chainCount];
+    memcpy(catalogs, s->catalogs, sizeof(catalogs));
+    uint32_t faulty = 0;
+    size_t size = 0;
+    mlocCatalogChain chain;
+    uint8_t* cache = nullptr;
+    bool made =
+        opened && mlocCatalog_FindKey(&s->catalogs[2], "faulty", 6, &faulty) == mloc_success &&
+        mlocMeasureCatalogChain(catalogs, s->formatters, chainCount, &size) == mloc_success &&
+        (cache = malloc(size)) != nullptr &&
+        mlocInitCatalogChain(catalogs, s->formatters, chainCount, cache, size, &chain) ==
+            mloc_success;
+    for (int i = 0; i < chainCount; i++)
+    {
+        catalogs[i] = other;
+    }
+    char buffer[64];
+    mlocOutput output = {buffer, sizeof(buffer), 0, nullptr, nullptr};
+    CHECK(made && faulty > 0 &&
+              mlocCatalogChain_FormatMessage(&chain, faulty, nullptr, 0, &output, nullptr,
+                                             nullptr) == mloc_errorInvalid,
+          "a key past the first catalog's keys, its catalogs replaced, is refused");
+    free(cache);
+    free(bytes);
+}
+
 static void TestRefusals(Set* s)
 {
     uint8_t* bytes = nullptr;
@@ -408,6 +443,7 @@ int main(int argc, char** argv)
     TestLongest(&set);
     TestCacheFull(&set);
     TestOutputs(&set);
+    TestReplaced(&set);
     TestRefusals(&set);
     CloseSet(&set);
     return s_failures == 0 ? 0 : 1;

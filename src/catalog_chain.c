@@ -329,6 +329,12 @@ static mlocResult WriteKeyAt(const Chain* c, uint32_t index, mlocOutput* output)
     {
         return mloc_errorFormat;
     }
+    // The array is the caller's: a first catalog replaced since the chain
+    // was made may hold fewer keys than the chain's set.
+    if (index >= keys.count)
+    {
+        return mloc_errorInvalid;
+    }
     uint32_t length = 0;
     const uint8_t* key = mlocCatalogKeyAt(&keys, index, &length);
     return WriteKey(key, length, output);

@@ -242,7 +242,9 @@ extern "C"
     ///                       null.
     /// @return As mlocFormatMessage, and mloc_success when the key is
     ///         written; mloc_errorInvalid also for an index past the set's
-    ///         keys or a chain the library did not make.
+    ///         keys, a key to write past the keys of the chain's first
+    ///         catalog (one replaced in its array since the chain was made),
+    ///         or a chain the library did not make.
     /// @par Thread safety
     /// Safe from any thread; the chain is used by one thread at a time,
     /// until mlocCatalogChain_Bind has succeeded; then by any number at
