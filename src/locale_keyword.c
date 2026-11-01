@@ -5,6 +5,8 @@
 
 #include "locale_keyword.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 // The value of a -u key, or an empty one: the tail is canonical, so the
@@ -14,6 +16,9 @@ static const char s_absent[] = "";
 
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut)
 {
+    // A key of two letters, a constant of each caller: two bytes of it
+    // are compared.
+    MLOC_ASSERT(strlen(key) == 2);
     const char* tail = locale->tail;
     size_t size = sizeof(locale->tail);
     bool inU = false;
@@ -155,6 +160,9 @@ static void BeginExtension(Rewriting* r, char singleton)
 // order again. A u extension left empty is left out.
 static bool Rewrite(mlocLocale* locale, const char* key, const char* keyword, size_t keywordLength)
 {
+    // A key of two letters, a constant of each caller: two bytes of it
+    // are compared and copied.
+    MLOC_ASSERT(strlen(key) == 2);
     Rewriting r = {.key = key, .keyword = keyword, .keywordLength = keywordLength};
     r.added = keyword == nullptr;
     r.good = AppendHead(locale, r.text, sizeof r.text, &r.n);
