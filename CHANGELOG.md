@@ -37,10 +37,12 @@ may change the API, the ABI and every data format.
 
 ### Fixed
 
-- `mlocFormatMessage` refuses with `mloc_errorInvalid`, where it called
-  a null pointer or read past an array: a bound message whose formatter
-  was made again with fewer program functions, a program function's
-  null resolve entry, a `match` entry set to null during selection, and
+- `mlocFormatMessage` refuses with `mloc_errorInvalid` memory it checked
+  that changed under it, which it used to read as it then was (calling a
+  null pointer, reading past the program's functions, or reading through
+  an argument's cleared pointer): a bound message whose formatter was
+  made again with fewer program functions, a program function's null
+  resolve entry, a `match` entry set to null during selection, and
   arguments a program function changed before a later pass. The output
   is left as it was when this happens in the first pass, and cleared in
   a later one
@@ -58,9 +60,11 @@ may change the API, the ABI and every data format.
   reported success
   ([#363](https://github.com/Rawframe-Project/maul-locale/pull/363),
   [#365](https://github.com/Rawframe-Project/maul-locale/pull/365)).
-- Collation and search: a run of 2^32 or more combining marks after a
-  starter (4 GiB of UTF-16) was taken to fit the normalization window
-  and written past it
+- Collation and search: a run of combining marks after a starter whose
+  count passed 2^32 (4 GiB of UTF-16 or more) and wrapped to a count
+  that fits the 64 code point normalization window was taken to fit it
+  and written past it. A run whose count wrapped to more was read as a
+  long run, as it should be
   ([#374](https://github.com/Rawframe-Project/maul-locale/pull/374)).
 - `mlocOpenData` refuses a spell-out rule that holds a substitution its
   kind cannot make, which no generated file has. A data file whose
