@@ -79,7 +79,7 @@ unit_coordinate: data_view kinds number_core number_format number_output unit_co
 spellout_tables:
 spellout_data: bytes data_view number_data spellout_tables
 spellout_format: bytes decimal invariant number_core number_precision plural spellout_data spellout_rule spellout_value
-spellout_value: decimal number_precision
+spellout_value: decimal invariant number_precision
 spellout_rule: bytes invariant spellout_data spellout_value
 spellout_match: bytes invariant spellout_data spellout_rule
 spellout_parse: bytes decimal invariant number_format number_parse spellout_data spellout_format spellout_match spellout_rule spellout_value

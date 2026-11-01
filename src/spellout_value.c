@@ -6,6 +6,7 @@
 #include "spellout_value.h"
 
 #include "decimal.h"
+#include "invariant.h"
 #include "number_precision.h"
 
 #include <string.h>
@@ -71,14 +72,20 @@ bool mlocSpelloutToInt64(const mlocDecimal* d, int64_t* out)
 mlocDecimal mlocSpelloutFromInt64(int64_t n)
 {
     mlocDecimal d;
-    (void)mlocMakeDecimal(n, &d);
+    // Every int64_t has at most 19 digits.
+    mlocResult made = mlocMakeDecimal(n, &d);
+    MLOC_ASSERT(made == mloc_success);
+    (void)made;
     return d;
 }
 
 mlocDecimal mlocSpelloutFromUnsigned(uint64_t n)
 {
     mlocDecimal d;
-    (void)mlocMakeUnsignedDecimal(n, &d);
+    // Every uint64_t has at most 20 digits.
+    mlocResult made = mlocMakeUnsignedDecimal(n, &d);
+    MLOC_ASSERT(made == mloc_success);
+    (void)made;
     return d;
 }
 
@@ -122,7 +129,10 @@ mlocDecimal mlocSpelloutRound(const mlocDecimal* x, mlocRoundingMode mode)
     mlocDecimal d = *x;
     if (!mlocSpelloutIsInteger(&d))
     {
-        (void)mlocRoundDecimal(&d, 0, 1, mode);
+        // A value below the point rounds to at most 10^40.
+        mlocResult rounded = mlocRoundDecimal(&d, 0, 1, mode);
+        MLOC_ASSERT(rounded == mloc_success);
+        (void)rounded;
     }
     mlocSpelloutNormalize(&d);
     return d;
@@ -180,6 +190,10 @@ bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out)
     // tens complement (a decimal's last digit is not 0, so nothing
     // carries), which fails past the places a decimal holds.
     int64_t places = -(int64_t)x->exponent;
+    // A value not an integer is finite with digits below the point: no
+    // negative rule takes a fractional part (mlocValidSpelloutRules), and
+    // a fraction rule only a finite value.
+    MLOC_ASSERT(x->kind == mloc_decimalFinite && places >= 1);
     if (places > MLOC_MAX_DECIMAL_DIGITS)
     {
         return false;
@@ -206,8 +220,11 @@ static mlocDecimal ModPower(const mlocDecimal* x, int power)
             digits[count++] = x->digits[i];
         }
     }
+    // The digits are some of x's, at its exponent or above.
     mlocDecimal d;
-    (void)Build(&d, digits, count, x->exponent, x->negative != 0);
+    bool built = Build(&d, digits, count, x->exponent, x->negative != 0);
+    MLOC_ASSERT(built);
+    (void)built;
     return d;
 }
 
@@ -235,6 +252,8 @@ static uint64_t MultiplyMod(uint64_t a, uint64_t b, uint64_t m)
 // A decimal's integer magnitude mod a 64-bit divisor, for any exponent.
 uint64_t mlocSpelloutMagnitudeMod(const mlocDecimal* d, uint64_t divisor)
 {
+    // A rule's divisor is not zero (mlocValidSpelloutRules).
+    MLOC_ASSERT(divisor > 0);
     uint64_t r = 0;
     uint64_t ten = 10 % divisor;
     for (int i = 0; i < d->count; i++)
@@ -255,6 +274,7 @@ uint64_t mlocSpelloutMagnitudeMod(const mlocDecimal* d, uint64_t divisor)
 // x times a factor below 10^18, exact; false past the decimal's digits.
 bool mlocSpelloutMultiply(const mlocDecimal* x, uint64_t factor, mlocDecimal* out)
 {
+    MLOC_ASSERT(factor < 1000000000000000000u);
     uint8_t digits[MLOC_MAX_DECIMAL_DIGITS + 20];
     int n = (int)sizeof(digits);
     uint64_t carry = 0;
@@ -275,6 +295,9 @@ bool mlocSpelloutMultiply(const mlocDecimal* x, uint64_t factor, mlocDecimal* ou
 // a power of ten meets an integer part past int64_t.
 bool mlocSpelloutDivideFloor(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out)
 {
+    // A rule's divisor is not zero (mlocValidSpelloutRules), nor a
+    // parsed one (DivisorOf).
+    MLOC_ASSERT(divisor.value > 0);
     if (divisor.power >= 0)
     {
         mlocDecimal shifted;
@@ -314,6 +337,8 @@ bool mlocSpelloutDivideTrunc(const mlocDecimal* x, SpelloutDivisor divisor, mloc
 // (x times 10^k / divisor, then shifted); any other fails.
 bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out)
 {
+    // Not zero, or taking out its twos would not end.
+    MLOC_ASSERT(divisor.value > 0);
     if (divisor.power >= 0)
     {
         return mlocSpelloutShift(x, divisor.power, out);
@@ -350,6 +375,7 @@ bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor, mloc
 // fmod(x, divisor) with x's sign.
 bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out)
 {
+    MLOC_ASSERT(divisor.value > 0);
     if (divisor.power >= 0)
     {
         *out = ModPower(x, divisor.power);
