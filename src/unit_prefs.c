@@ -11,6 +11,7 @@
 #include "bytes.h"
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_keyword.h"
 #include "locale_prefs.h"
@@ -166,6 +167,8 @@ static int32_t QuantityOf(const UnitTable* t, const Exponents* e)
 // "pow4-"), giving its length; 0 for a power the syntax lacks.
 static size_t PowerPrefix(int32_t power, char* out)
 {
+    // AppendSide passes a cancelled side's exponent of 1 to 15.
+    MLOC_ASSERT(power >= 1 && power <= 15);
     if (power == 1)
     {
         return 0;
@@ -195,6 +198,8 @@ static size_t PowerPrefix(int32_t power, char* out)
 // or a power passes 15.
 static bool AppendSide(const UnitTable* t, const int32_t* exponents, char* out, size_t* at)
 {
+    // The table's validator holds its dimensions to the exponents' room.
+    MLOC_ASSERT(t->dimensionCount <= unitMaxDimensions);
     for (uint32_t place = 0; place < 256; place++)
     {
         for (uint32_t d = 0; d < t->dimensionCount; d++)
@@ -453,6 +458,9 @@ static mlocResult AmountsIn(const Choice* c, const UnitId* id, const mlocPrecisi
     }
     return DecimalOf(&v, precision, &out->amounts[0]);
 }
+
+// A quantity's base unit identifier, of a byte's length, fits the room.
+static_assert(unitMaxBaseId > UINT8_MAX, "a base identifier fits its buffer");
 
 // The unit chosen without preferences: a quantity's base unit, or the
 // input's base units.

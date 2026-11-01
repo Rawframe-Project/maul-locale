@@ -11,6 +11,7 @@
 
 #include "unit_usage.h"
 
+#include "invariant.h"
 #include "kinds.h"
 #include "number_output.h"
 #include "unit_mixed.h"
@@ -18,6 +19,9 @@
 #include "unit_prefs.h"
 
 #include <string.h>
+
+static_assert((int)unitOutputs == (int)unitMaxOutputs,
+              "a formatter keeps every output a route has");
 
 // Fills one output from a route entry.
 static mlocResult LoadOutput(UnitFormat* u, const mlocDataSet* data, const mlocLocale* locale,
@@ -83,6 +87,8 @@ mlocResult mlocInitUsage(UnitFormat* u, const mlocDataSet* data, const mlocLocal
     r = r == mloc_success ? mlocRouteUnit(data, locale, &u->table, &u->input, &scale,
                                           options->usage, options->usageLength, &route)
                           : r;
+    // mlocRouteUnit refuses a run of more entries.
+    MLOC_ASSERT(r != mloc_success || route.count <= unitOutputs);
     uint32_t slots = 0;
     for (uint32_t i = 0; r == mloc_success && i < route.count; i++)
     {
