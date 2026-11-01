@@ -14,6 +14,28 @@
 // The value given for a key the locale has not.
 static const char s_absent[] = "";
 
+// The length of a key's value that begins at next: its type subtags
+// (three to eight characters) run to the next key or singleton
+// ("islamic-civil").
+static size_t ValueLength(const char* tail, size_t size, size_t next)
+{
+    size_t length = 0;
+    for (;;)
+    {
+        size_t part = 0;
+        size_t from = next + length + (length > 0);
+        while (from + part < size && tail[from + part] != '\0' && tail[from + part] != '-')
+        {
+            part++;
+        }
+        if (part < 3)
+        {
+            return length;
+        }
+        length = from + part - next;
+    }
+}
+
 size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** valueOut)
 {
     // A key of two letters, a constant of each caller: two bytes of it
@@ -41,25 +63,8 @@ size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** v
         }
         else if (inU && n == 2 && memcmp(tail + at, key, 2) == 0)
         {
-            // The value's type subtags (three to eight characters) run to
-            // the next key or singleton: "islamic-civil".
-            size_t length = 0;
-            for (;;)
-            {
-                size_t part = 0;
-                size_t from = next + length + (length > 0);
-                while (from + part < size && tail[from + part] != '\0' && tail[from + part] != '-')
-                {
-                    part++;
-                }
-                if (part < 3)
-                {
-                    break;
-                }
-                length = from + part - next;
-            }
             *valueOut = tail + next;
-            return length;
+            return ValueLength(tail, size, next);
         }
         at = next;
     }
