@@ -350,16 +350,6 @@ bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint3
     return true;
 }
 
-uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category)
-{
-    uint32_t own = unitNameZero + category;
-    if ((fields->found & 1u << own) != 0)
-    {
-        return own;
-    }
-    return (fields->found & 1u << unitNameOther) != 0 ? unitNameOther : unitNameFields;
-}
-
 // Whether text holds "{0}" exactly once.
 static bool OnePlaceholder(const uint8_t* text, uint32_t length)
 {
