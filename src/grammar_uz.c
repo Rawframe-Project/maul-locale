@@ -14,6 +14,7 @@
 // having no spell-out rules in CLDR.
 
 #include "grammar_turkic.h"
+#include "invariant.h"
 
 #include <string.h>
 
@@ -81,6 +82,9 @@ static const char* UzbekNumberWord(uint8_t digit, int32_t power)
     {
         return nullptr;
     }
+    // A valid decimal's last digit is not 0 (mlocValidDecimal), and zero
+    // has no digits.
+    MLOC_ASSERT(digit != 0 || power == 0);
     if (power == 0)
     {
         return s_units[digit];

@@ -7,6 +7,8 @@
 
 #include "grammar_ko.h"
 
+#include "invariant.h"
+
 #include "generated/hanja_finals.h"
 
 #include <string.h>
@@ -44,6 +46,8 @@ static const Particle s_particles[17] = {
     [mloc_particleQuotation] = {"\xEC\x9D\xB4\xEB\x9D\xBC", "\xEB\x9D\xBC", false, 3},
     [mloc_particleDefinition] = {"\xEC\x9D\xB4\xEB\x9E\x80", "\xEB\x9E\x80", false, 3},
 };
+static_assert(sizeof(s_particles) / sizeof(s_particles[0]) == mloc_particleDefinition + 1,
+              "a form for each particle");
 
 bool mlocKoreanRequestValid(const mlocInflection* request)
 {
@@ -210,6 +214,7 @@ size_t mlocKoreanParticleText(mlocKoreanParticle particle, KoreanFinal final, ch
     else if (p->extra > 0)
     {
         // (으)로: the consonant form's own syllables, then the vowel form.
+        MLOC_ASSERT(strcmp(p->consonant + p->extra, p->vowel) == 0);
         fits = Put("(", 1, out, room, &at) && Put(p->consonant, p->extra, out, room, &at) &&
                Put(")", 1, out, room, &at) && Put(p->vowel, strlen(p->vowel), out, room, &at);
     }
