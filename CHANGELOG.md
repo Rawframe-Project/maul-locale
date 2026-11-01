@@ -7,23 +7,69 @@ may change the API, the ABI and every data format.
 
 ## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-11-01)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **locale:** every function that reads an `mlocLocale` now refuses with `mloc_errorInvalid` a locale whose fields are not NUL-padded text in canonical syntax, where it used to go on and could report success. A program that fills an `mlocLocale` by hand must keep that syntax, or make the locale with `mlocParseLocale` or `mlocCanonicalizeLocale`.
+- **Breaking: a hand-filled `mlocLocale` must be a well-formed locale.**
+  Every function that reads an `mlocLocale` (all 38) now refuses with
+  `mloc_errorInvalid` a locale whose fields are not NUL-padded text in
+  locale syntax: a language of 2, 3 or 5 to 8 lowercase letters, an
+  empty or title-case 4-letter script, an empty, 2-letter uppercase or
+  3-digit region, and a tail of subtags of 1 to 8 lowercase letters and
+  digits joined by single hyphens. Before, such a locale was read as it
+  was, and the call could report success with an undefined result. Only
+  the syntax is checked; canonical form stays the caller's job. A
+  program that fills an `mlocLocale` by hand must keep that syntax, or
+  make the locale with `mlocParseLocale` or `mlocCanonicalizeLocale`.
+  `mlocGetSpelloutRuleSetCount` returns 0 for such a locale, and
+  `docs/user/locales.md` says what a hand-filled locale must keep
+  ([#361](https://github.com/Rawframe-Project/maul-locale/pull/361)).
+- The headers and guides now say that memory an object keeps a pointer
+  to must stay as it was for the object's life, not only outlive it:
+  data files and data sets, compiled and bound messages, the formatter
+  a message is bound to, a message formatter's program functions, a
+  format call's arguments, an alphabetic index's bytes, a segmenter's
+  current piece of text, a catalog's bytes, and a catalog chain's
+  catalogs, formatters and cache. Each is checked once and read as
+  checked
+  ([#336](https://github.com/Rawframe-Project/maul-locale/pull/336),
+  [#341](https://github.com/Rawframe-Project/maul-locale/pull/341),
+  [#343](https://github.com/Rawframe-Project/maul-locale/pull/343)).
 
 ### Fixed
 
-* **catalog:** refuse a key past a replaced first catalog's keys ([#336](https://github.com/Rawframe-Project/maul-locale/issues/336)) ([e6f8cb4](https://github.com/Rawframe-Project/maul-locale/commit/e6f8cb4e058eb220c21321f3b955ee485a185e9d)), closes [#335](https://github.com/Rawframe-Project/maul-locale/issues/335)
-* **catalog:** say a catalog's bytes stay as they were while it is open ([#341](https://github.com/Rawframe-Project/maul-locale/issues/341)) ([61bfb20](https://github.com/Rawframe-Project/maul-locale/commit/61bfb20dff71be0e90d1f21a9ea543dace9dbeaf)), closes [#340](https://github.com/Rawframe-Project/maul-locale/issues/340)
-* **collate:** keep a long mark run's count from wrapping ([#374](https://github.com/Rawframe-Project/maul-locale/issues/374)) ([2097c4c](https://github.com/Rawframe-Project/maul-locale/commit/2097c4ceeb16002db48cff431b3abfa26ad2c295)), closes [#373](https://github.com/Rawframe-Project/maul-locale/issues/373)
-* **grammar:** refuse a compact number ending in its pattern's digit ([#365](https://github.com/Rawframe-Project/maul-locale/issues/365)) ([f15b607](https://github.com/Rawframe-Project/maul-locale/commit/f15b607def232b4570dd6c928f8961124cff9059)), closes [#364](https://github.com/Rawframe-Project/maul-locale/issues/364)
-* **grammar:** refuse a number whose text ends in an affix's digit ([#363](https://github.com/Rawframe-Project/maul-locale/issues/363)) ([447fe39](https://github.com/Rawframe-Project/maul-locale/commit/447fe39b9f869449eaf231fa437d52e69704c9fe)), closes [#362](https://github.com/Rawframe-Project/maul-locale/issues/362)
-* **grammar:** size a stem's tail to the largest language room ([#353](https://github.com/Rawframe-Project/maul-locale/issues/353)) ([73013f0](https://github.com/Rawframe-Project/maul-locale/commit/73013f0800992d003f23787ac01fe5a02d8b1846)), closes [#352](https://github.com/Rawframe-Project/maul-locale/issues/352)
-* **locale:** refuse a hand-filled locale whose bytes are no locale's ([#361](https://github.com/Rawframe-Project/maul-locale/issues/361)) ([46054b0](https://github.com/Rawframe-Project/maul-locale/commit/46054b02fbc7f996719d86d159645ad59f45e226)), closes [#360](https://github.com/Rawframe-Project/maul-locale/issues/360)
-* **message:** refuse a match entry cleared during selection ([#345](https://github.com/Rawframe-Project/maul-locale/issues/345)) ([b0ed799](https://github.com/Rawframe-Project/maul-locale/commit/b0ed799e08d4dd860f16ae625ab5e9dbe1de1f2c)), closes [#344](https://github.com/Rawframe-Project/maul-locale/issues/344)
-* say kept memory stays as it was; refuse changed message calls ([#343](https://github.com/Rawframe-Project/maul-locale/issues/343)) ([a096334](https://github.com/Rawframe-Project/maul-locale/commit/a09633462f315aec7abfc5184a93781a2c45c98d)), closes [#342](https://github.com/Rawframe-Project/maul-locale/issues/342)
-* **spellout:** refuse a substitution its rule cannot make ([#393](https://github.com/Rawframe-Project/maul-locale/issues/393)) ([783dce8](https://github.com/Rawframe-Project/maul-locale/commit/783dce89d4e7355e82c6da5d11a79fba62638cbb)), closes [#392](https://github.com/Rawframe-Project/maul-locale/issues/392)
+- `mlocFormatMessage` refuses with `mloc_errorInvalid`, where it called
+  a null pointer or read past an array: a bound message whose formatter
+  was made again with fewer program functions, a program function's
+  null resolve entry, a `match` entry set to null during selection, and
+  arguments a program function changed before a later pass. The output
+  is left as it was when this happens in the first pass, and cleared in
+  a later one
+  ([#343](https://github.com/Rawframe-Project/maul-locale/pull/343),
+  [#345](https://github.com/Rawframe-Project/maul-locale/pull/345)).
+- `mlocCatalogChain_FormatMessage` refuses with `mloc_errorInvalid` a
+  key index past the first catalog's keys. A first catalog replaced by
+  one with fewer keys sent the read past its key offsets
+  ([#336](https://github.com/Rawframe-Project/maul-locale/pull/336)).
+- `mlocInflector_InflectNumber` refuses with `mloc_errorInvalid` a
+  number whose text does not end in the number's own digits: a percent
+  sign, compact pattern or exponent separator that ends or begins in a
+  digit (`12.5%9`, `129` for 12K, `1.2E93`). Such numbers, which only
+  altered number data writes, were spoken as another number and
+  reported success
+  ([#363](https://github.com/Rawframe-Project/maul-locale/pull/363),
+  [#365](https://github.com/Rawframe-Project/maul-locale/pull/365)).
+- Collation and search: a run of 2^32 or more combining marks after a
+  starter (4 GiB of UTF-16) was taken to fit the normalization window
+  and written past it
+  ([#374](https://github.com/Rawframe-Project/maul-locale/pull/374)).
+- `mlocOpenData` refuses a spell-out rule that holds a substitution its
+  kind cannot make, which no generated file has. A data file whose
+  negative rule took a fractional part made formatting negative
+  infinity write one byte before a buffer
+  ([#393](https://github.com/Rawframe-Project/maul-locale/pull/393)).
+- A Finnish stem change of 17 to 24 bytes would have written past its
+  buffer in Release builds; no known input reaches it
+  ([#353](https://github.com/Rawframe-Project/maul-locale/pull/353)).
 
 ## [0.5.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.4.0...v0.5.0) (2026-10-31)
 
