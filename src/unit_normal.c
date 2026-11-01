@@ -7,6 +7,7 @@
 #include "unit_normal.h"
 
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "unit_tables.h"
 
@@ -46,6 +47,8 @@ static bool AppendId(char* out, size_t room, size_t* at, const char* text, size_
 static bool WritePart(const UnitTable* t, const UnitPart* part, char* out, size_t room, size_t* at)
 {
     int power = part->power < 0 ? -part->power : part->power;
+    // Each factor's power is 15 at most, merged across the factors.
+    MLOC_ASSERT(power >= 1 && power <= unitMaxFactors * 15);
     char head[16] = "";
     if (power == 2 || power == 3)
     {
@@ -78,6 +81,8 @@ static bool WritePart(const UnitTable* t, const UnitPart* part, char* out, size_
 static size_t ConstantText(uint64_t constant, char* out, size_t room)
 {
     int n = snprintf(out, room, "%llu", (unsigned long long)constant);
+    // A 64-bit constant's 20 digits fit the caller's room.
+    MLOC_ASSERT(n > 0 && (size_t)n < room);
     size_t zeros = strspn(out + 1, "0");
     if (constant > 1000 && out[0] == '1' && zeros == (size_t)n - 1)
     {
@@ -190,6 +195,9 @@ static void Normalize(const UnitTable* t, UnitId* id)
         }
         if (j < count)
         {
+            // At most unitMaxFactors powers of 15 or less: far within int8_t.
+            MLOC_ASSERT(id->parts[j].power + part.power >= -unitMaxFactors * 15 &&
+                        id->parts[j].power + part.power <= unitMaxFactors * 15);
             id->parts[j].power = (int8_t)(id->parts[j].power + part.power);
             continue;
         }
