@@ -53,10 +53,6 @@ bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint
 bool mlocGatherUnitCases(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
                          uint32_t caseIndex, const char* id, size_t length, UnitNameFields* out);
 
-// The field a plural category's pattern comes from: its own, else
-// other's; unitNameFields when neither is found.
-uint32_t mlocUnitPatternField(const UnitNameFields* fields, uint32_t category);
-
 // The features a derivation gives.
 enum
 {
