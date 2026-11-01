@@ -7,13 +7,30 @@
 
 static_assert(sizeof(ListKey) == offsetof(ListKey, reserved) + 2, "a list key has no padding");
 static_assert(offsetof(PreparedList, formatter) % 8 == 0, "a prepared list's formatter is aligned");
-// An option's index among its names is the enumeration's value it gives.
-static_assert(mloc_listAnd == 0 && mloc_listOr == 1 && mloc_listUnit == 2,
-              "the types follow mlocListType");
-static_assert(mloc_listWide == 0 && mloc_listShort == 1 && mloc_listNarrow == 2,
-              "the styles follow mlocListWidth");
-static_assert(mloc_pluralZero == 0 && mloc_pluralOther == 5,
-              "the plural keywords follow mlocPluralCategory");
+
+// ECMA-402's names, each keyed by the public enumeration's value, so that
+// the index a name is found at is the value it gives.
+static const char* const s_types[] = {
+    [mloc_listAnd] = "conjunction",
+    [mloc_listOr] = "disjunction",
+    [mloc_listUnit] = "unit",
+};
+static const char* const s_styles[] = {
+    [mloc_listWide] = "long",
+    [mloc_listShort] = "short",
+    [mloc_listNarrow] = "narrow",
+};
+static const char* const s_keywords[] = {
+    [mloc_pluralZero] = "zero", [mloc_pluralOne] = "one",   [mloc_pluralTwo] = "two",
+    [mloc_pluralFew] = "few",   [mloc_pluralMany] = "many", [mloc_pluralOther] = "other",
+};
+
+static_assert(sizeof(s_types) / sizeof(s_types[0]) == mloc_listUnit + 1,
+              "a name for each mlocListType");
+static_assert(sizeof(s_styles) / sizeof(s_styles[0]) == mloc_listNarrow + 1,
+              "a name for each mlocListWidth");
+static_assert(sizeof(s_keywords) / sizeof(s_keywords[0]) == mloc_pluralOther + 1,
+              "a keyword for each mlocPluralCategory");
 
 bool mlocGoodList(const mlocMessageValue* argument)
 {
@@ -50,15 +67,12 @@ static bool NameIs(const uint8_t* name, size_t length, const char* text)
 mlocMessageFaultKind mlocSetListOption(ListValue* value, const uint8_t* name, size_t length,
                                        const NumberOption* option)
 {
-    // ECMA-402's names, in mlocListType's and mlocListWidth's orders.
-    static const char* const types[] = {"conjunction", "disjunction", "unit"};
-    static const char* const styles[] = {"long", "short", "narrow"};
     bool type = NameIs(name, length, "type");
     if (!type && !NameIs(name, length, "style"))
     {
         return mloc_messageFaultNone;
     }
-    const char* const* names = type ? types : styles;
+    const char* const* names = type ? s_types : s_styles;
     for (int i = 0; option->hasText && option->literal && i < 3; i++)
     {
         if (NameIs(option->text, option->length, names[i]))
@@ -130,10 +144,9 @@ mlocMessageFaultKind mlocWriteListValue(const ListValue* value, const PreparedLi
 // A plural keyword's category; false for another key.
 static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categoryOut)
 {
-    static const char* const keywords[] = {"zero", "one", "two", "few", "many", "other"};
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < (int)(sizeof(s_keywords) / sizeof(s_keywords[0])); i++)
     {
-        if (NameIs(key, length, keywords[i]))
+        if (NameIs(key, length, s_keywords[i]))
         {
             *categoryOut = (mlocPluralCategory)i;
             return true;

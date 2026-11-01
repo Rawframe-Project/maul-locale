@@ -215,7 +215,7 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
     }
     for (int i = 0; i < count; i++)
     {
-        size_t length = strlen(names[i]);
+        size_t length = names[i] != nullptr ? strlen(names[i]) : SIZE_MAX;
         if (option->length == length && memcmp(option->text, names[i], length) == 0)
         {
             return i;
@@ -309,60 +309,68 @@ static bool SetChoice(NumberValue* v, uint8_t* field, uint32_t bit, const Number
 }
 
 static const char* const s_selects[] = {"plural", "ordinal", "exact"};
-// In mlocSignDisplay's order.
-static const char* const s_signs[] = {"auto", "always", "never", "exceptZero", "negative"};
-// In mlocGrouping's order.
-static const char* const s_groupings[] = {"auto", "always", "min2", "never"};
-static const char* const s_trailingZeros[] = {"auto", "stripIfInteger"};
 static const char* const s_priorities[] = {"auto", "morePrecision", "lessPrecision"};
-// UTS #35's names, in s_displayKinds' order ("never" is ICU's hidden).
-static const char* const s_displays[] = {"symbol", "narrowSymbol", "code", "never", "name"};
-static const mlocCurrencyDisplay s_displayKinds[] = {mloc_currencySymbol, mloc_currencyNarrowSymbol,
-                                                     mloc_currencyCode, mloc_currencyHidden,
-                                                     mloc_currencyName};
-// In mlocCurrencySign's order after its locale choice.
-static const char* const s_currencySigns[] = {"standard", "accounting"};
-// In mlocUnitWidth's order.
-static const char* const s_widths[] = {"short", "narrow", "long"};
-// In mlocRelativeWidth's, mlocRelativeNumeric's and mlocRelativeUnit's
-// orders.
-static const char* const s_styles[] = {"long", "short", "narrow"};
-static const char* const s_numerics[] = {"always", "auto"};
-static const char* const s_relativeUnits[] = {
-    "year",   "quarter", "month",   "week",      "day",      "hour",   "minute",  "second",
-    "sunday", "monday",  "tuesday", "wednesday", "thursday", "friday", "saturday"};
-// In mlocRoundingMode's order.
-static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
-                                      "halfCeil",   "halfFloor", "ceil",
-                                      "floor",      "expand",    "trunc"};
 
-// An option's index among its names is the enumeration's value it gives.
-static_assert(mloc_signAuto == 0 && mloc_signAlways == 1 && mloc_signNever == 2 &&
-                  mloc_signExceptZero == 3 && mloc_signNegative == 4,
-              "s_signs follows mlocSignDisplay");
-static_assert(mloc_groupingAuto == 0 && mloc_groupingAlways == 1 && mloc_groupingMin2 == 2 &&
-                  mloc_groupingOff == 3,
-              "s_groupings follows mlocGrouping");
-static_assert(mloc_trailingZerosAuto == 0 && mloc_trailingZerosStripIfInteger == 1,
-              "s_trailingZeros follows mlocTrailingZeros");
-static_assert(mloc_currencySignStandard == mloc_currencySignLocale + 1 &&
-                  mloc_currencySignAccounting == mloc_currencySignLocale + 2,
-              "s_currencySigns follows mlocCurrencySign after its locale choice");
-static_assert(mloc_unitWidthShort == 0 && mloc_unitWidthNarrow == 1 && mloc_unitWidthLong == 2,
-              "s_widths follows mlocUnitWidth");
-static_assert(mloc_relativeWidthLong == 0 && mloc_relativeWidthShort == 1 &&
-                  mloc_relativeWidthNarrow == 2 && mloc_relativeNumericAlways == 0 &&
-                  mloc_relativeNumericAuto == 1,
-              "s_styles and s_numerics follow mlocRelativeWidth and mlocRelativeNumeric");
-static_assert(sizeof(s_relativeUnits) / sizeof(s_relativeUnits[0]) == mloc_relativeSaturday + 1 &&
-                  mloc_relativeYear == 0 && mloc_relativeSecond == 7 && mloc_relativeSunday == 8,
-              "s_relativeUnits follows mlocRelativeUnit");
-static_assert(sizeof(s_modes) / sizeof(s_modes[0]) == mloc_roundTrunc + 1 &&
-                  mloc_roundHalfExpand == 0 && mloc_roundCeil == 5 && mloc_roundExpand == 7,
-              "s_modes follows mlocRoundingMode");
-static_assert(mloc_pluralZero == 0 && mloc_pluralOne == 1 && mloc_pluralTwo == 2 &&
-                  mloc_pluralFew == 3 && mloc_pluralMany == 4 && mloc_pluralOther == 5,
-              "the plural keywords follow mlocPluralCategory");
+// Names keyed by the public enumeration's value they give (null for one
+// none gives), to its last value an option names.
+// clang-format off
+static const char* const s_signs[] = {
+    [mloc_signAuto] = "auto", [mloc_signAlways] = "always", [mloc_signNever] = "never",
+    [mloc_signExceptZero] = "exceptZero", [mloc_signNegative] = "negative"};
+static const char* const s_groupings[] = {
+    [mloc_groupingAuto] = "auto", [mloc_groupingAlways] = "always",
+    [mloc_groupingMin2] = "min2", [mloc_groupingOff] = "never"};
+static const char* const s_trailingZeros[] = {
+    [mloc_trailingZerosAuto] = "auto", [mloc_trailingZerosStripIfInteger] = "stripIfInteger"};
+// UTS #35's names ("never" is ICU's hidden); the formal and variant
+// symbols have none.
+static const char* const s_displays[] = {
+    [mloc_currencySymbol] = "symbol", [mloc_currencyNarrowSymbol] = "narrowSymbol",
+    [mloc_currencyCode] = "code", [mloc_currencyHidden] = "never", [mloc_currencyName] = "name"};
+// The locale's choice has no name.
+static const char* const s_currencySigns[] = {
+    [mloc_currencySignStandard] = "standard", [mloc_currencySignAccounting] = "accounting"};
+// The numeric width is no unitDisplay.
+static const char* const s_widths[] = {
+    [mloc_unitWidthShort] = "short", [mloc_unitWidthNarrow] = "narrow",
+    [mloc_unitWidthLong] = "long"};
+static const char* const s_styles[] = {
+    [mloc_relativeWidthLong] = "long", [mloc_relativeWidthShort] = "short",
+    [mloc_relativeWidthNarrow] = "narrow"};
+static const char* const s_numerics[] = {
+    [mloc_relativeNumericAlways] = "always", [mloc_relativeNumericAuto] = "auto"};
+static const char* const s_relativeUnits[] = {
+    [mloc_relativeYear] = "year", [mloc_relativeQuarter] = "quarter",
+    [mloc_relativeMonth] = "month", [mloc_relativeWeek] = "week", [mloc_relativeDay] = "day",
+    [mloc_relativeHour] = "hour", [mloc_relativeMinute] = "minute",
+    [mloc_relativeSecond] = "second", [mloc_relativeSunday] = "sunday",
+    [mloc_relativeMonday] = "monday", [mloc_relativeTuesday] = "tuesday",
+    [mloc_relativeWednesday] = "wednesday", [mloc_relativeThursday] = "thursday",
+    [mloc_relativeFriday] = "friday", [mloc_relativeSaturday] = "saturday"};
+static const char* const s_modes[] = {
+    [mloc_roundHalfExpand] = "halfExpand", [mloc_roundHalfEven] = "halfEven",
+    [mloc_roundHalfTrunc] = "halfTrunc", [mloc_roundHalfCeil] = "halfCeil",
+    [mloc_roundHalfFloor] = "halfFloor", [mloc_roundCeil] = "ceil", [mloc_roundFloor] = "floor",
+    [mloc_roundExpand] = "expand", [mloc_roundTrunc] = "trunc"};
+static const char* const s_keywords[] = {
+    [mloc_pluralZero] = "zero", [mloc_pluralOne] = "one", [mloc_pluralTwo] = "two",
+    [mloc_pluralFew] = "few", [mloc_pluralMany] = "many", [mloc_pluralOther] = "other"};
+// clang-format on
+
+#define NAMES(table)        table, (int)(sizeof(table) / sizeof((table)[0]))
+#define COVERS(table, last) (sizeof(table) / sizeof((table)[0]) == (size_t)(last) + 1)
+
+static_assert(COVERS(s_signs, mloc_signNegative), "a name for each mlocSignDisplay");
+static_assert(COVERS(s_groupings, mloc_groupingOff), "a name for each mlocGrouping");
+static_assert(COVERS(s_trailingZeros, mloc_trailingZerosStripIfInteger), "a name for each");
+static_assert(COVERS(s_displays, mloc_currencyName), "s_displays covers mlocCurrencyDisplay");
+static_assert(COVERS(s_currencySigns, mloc_currencySignAccounting), "a named sign for each");
+static_assert(COVERS(s_widths, mloc_unitWidthLong), "s_widths covers the named widths");
+static_assert(COVERS(s_styles, mloc_relativeWidthNarrow), "a name for each mlocRelativeWidth");
+static_assert(COVERS(s_numerics, mloc_relativeNumericAuto), "a name for each mlocRelativeNumeric");
+static_assert(COVERS(s_relativeUnits, mloc_relativeSaturday), "a name for each mlocRelativeUnit");
+static_assert(COVERS(s_modes, mloc_roundTrunc), "a name for each mlocRoundingMode");
+static_assert(COVERS(s_keywords, mloc_pluralOther), "a keyword for each mlocPluralCategory");
 
 // The options each function takes, by name and the bit they set;
 // another name is ignored.
@@ -497,11 +505,11 @@ static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
     switch (bit)
     {
     case numberGivenSelect:
-        return SetChoice(v, &v->select, bit, option, s_selects, 3);
+        return SetChoice(v, &v->select, bit, option, NAMES(s_selects));
     case numberGivenSign:
-        return SetChoice(v, &v->sign, bit, option, s_signs, 5);
+        return SetChoice(v, &v->sign, bit, option, NAMES(s_signs));
     case numberGivenGrouping:
-        return SetChoice(v, &v->grouping, bit, option, s_groupings, 4);
+        return SetChoice(v, &v->grouping, bit, option, NAMES(s_groupings));
     case numberGivenMinInteger:
         return SetDigits(v, &v->minInteger, bit, option);
     case numberGivenMinFraction:
@@ -513,31 +521,31 @@ static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
     case numberGivenMaxSignificant:
         return SetDigits(v, &v->maxSignificant, bit, option);
     case numberGivenTrailingZeros:
-        return SetChoice(v, &v->trailingZeros, bit, option, s_trailingZeros, 2);
+        return SetChoice(v, &v->trailingZeros, bit, option, NAMES(s_trailingZeros));
     case numberGivenPriority:
-        return SetChoice(v, &v->priority, bit, option, s_priorities, 3);
+        return SetChoice(v, &v->priority, bit, option, NAMES(s_priorities));
     case numberGivenMode:
-        return SetChoice(v, &v->mode, bit, option, s_modes, 9);
+        return SetChoice(v, &v->mode, bit, option, NAMES(s_modes));
     case numberGivenCurrency:
         return SetCode(v, option);
     case numberGivenUnit:
     case numberGivenUsage:
         return SetUnitText(v, bit, option);
     case numberGivenWidth:
-        return SetChoice(v, &v->width, bit, option, s_widths, 3);
+        return SetChoice(v, &v->width, bit, option, NAMES(s_widths));
     case numberGivenRules:
     case numberGivenSystem:
         return SetRulesText(v, bit, option);
     case numberGivenRelativeUnit:
-        return SetChoice(v, &v->relativeUnit, bit, option, s_relativeUnits, 15);
+        return SetChoice(v, &v->relativeUnit, bit, option, NAMES(s_relativeUnits));
     case numberGivenStyle:
-        return SetChoice(v, &v->width, bit, option, s_styles, 3);
+        return SetChoice(v, &v->width, bit, option, NAMES(s_styles));
     case numberGivenNumeric:
-        return SetChoice(v, &v->numeric, bit, option, s_numerics, 2);
+        return SetChoice(v, &v->numeric, bit, option, NAMES(s_numerics));
     case numberGivenDisplay:
-        return SetChoice(v, &v->display, bit, option, s_displays, 5);
+        return SetChoice(v, &v->display, bit, option, NAMES(s_displays));
     case numberGivenCurrencySign:
-        return SetChoice(v, &v->currencySign, bit, option, s_currencySigns, 2);
+        return SetChoice(v, &v->currencySign, bit, option, NAMES(s_currencySigns));
     case numberGivenFractionDigits:
         if (option->hasText && NameIs(option->text, option->length, "auto"))
         {
@@ -777,13 +785,10 @@ static mlocCurrencyOptions CurrencyOptions(const NumberValue* value)
     mlocCurrencyOptions options;
     memset(&options, 0, sizeof options);
     options.number = mlocNumberFormatOptions(value);
-    // A display is set only to its index among s_displays.
-    MLOC_ASSERT((value->given & numberGivenDisplay) == 0 ||
-                value->display < sizeof s_displayKinds / sizeof s_displayKinds[0]);
-    options.display = (value->given & numberGivenDisplay) != 0 ? s_displayKinds[value->display]
+    options.display = (value->given & numberGivenDisplay) != 0 ? (mlocCurrencyDisplay)value->display
                                                                : mloc_currencySymbol;
     options.sign = (value->given & numberGivenCurrencySign) != 0
-                       ? (mlocCurrencySign)(value->currencySign + 1)
+                       ? (mlocCurrencySign)value->currencySign
                        : mloc_currencySignLocale;
     return options;
 }
@@ -906,10 +911,9 @@ mlocMessageFaultKind mlocWriteNumberValue(const NumberValue* value, const Prepar
 
 static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categoryOut)
 {
-    static const char* const keywords[] = {"zero", "one", "two", "few", "many", "other"};
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < (int)(sizeof(s_keywords) / sizeof(s_keywords[0])); i++)
     {
-        if (NameIs(key, length, keywords[i]))
+        if (NameIs(key, length, s_keywords[i]))
         {
             *categoryOut = (mlocPluralCategory)i;
             return true;
