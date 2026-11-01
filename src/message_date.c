@@ -3,6 +3,7 @@
 
 #include "message_date.h"
 
+#include "invariant.h"
 #include "locale_keyword.h"
 
 #include "maul-locale/calendar.h"
@@ -235,22 +236,69 @@ bool mlocDateTakes(DateFunction function, uint8_t has)
     return function == dateFunctionTime ? has != 0 : (has & dateHasDate) != 0;
 }
 
-static const char* const s_fields[] = {"year-month-day",
-                                       "year-month-day-weekday",
-                                       "month-day",
-                                       "month-day-weekday",
-                                       NULL,
-                                       "day-weekday",
-                                       "weekday"};
-// In mlocDateLength's order.
-static const char* const s_lengths[] = {"long", "medium", "short"};
-// In mlocTimePrecision's order, as far as the specification names them.
-static const char* const s_precisions[] = {"second", "hour", "minute"};
-// In mlocCalendar's order: the BCP 47 calendar types.
+// The names of the options whose values are a public enumeration, each
+// keyed by its value, so that the index a name is found at is the value
+// it gives; null for a value no name gives. Each table covers its
+// enumeration to its last value an option names.
+// The day alone, and the month, year and year-month sets, have none.
+static const char* const s_fields[] = {
+    [mloc_dateFieldSetYearMonthDay] = "year-month-day",
+    [mloc_dateFieldSetYearMonthDayWeekday] = "year-month-day-weekday",
+    [mloc_dateFieldSetMonthDay] = "month-day",
+    [mloc_dateFieldSetMonthDayWeekday] = "month-day-weekday",
+    [mloc_dateFieldSetDayWeekday] = "day-weekday",
+    [mloc_dateFieldSetWeekday] = "weekday",
+};
+static const char* const s_lengths[] = {
+    [mloc_dateLengthLong] = "long",
+    [mloc_dateLengthMedium] = "medium",
+    [mloc_dateLengthShort] = "short",
+};
+// As far as the specification names them.
+static const char* const s_precisions[] = {
+    [mloc_timePrecisionSecond] = "second",
+    [mloc_timePrecisionHour] = "hour",
+    [mloc_timePrecisionMinute] = "minute",
+};
+// The BCP 47 calendar types.
 static const char* const s_calendars[] = {
-    "gregory",      "iso8601",          "buddhist", "roc",          "japanese", "coptic",
-    "ethiopic",     "ethioaa",          "indian",   "persian",      "hebrew",   "islamic-civil",
-    "islamic-tbla", "islamic-umalqura", "islamic",  "islamic-rgsa", "chinese",  "dangi"};
+    [mloc_calendarGregorian] = "gregory",
+    [mloc_calendarIso8601] = "iso8601",
+    [mloc_calendarBuddhist] = "buddhist",
+    [mloc_calendarRoc] = "roc",
+    [mloc_calendarJapanese] = "japanese",
+    [mloc_calendarCoptic] = "coptic",
+    [mloc_calendarEthiopic] = "ethiopic",
+    [mloc_calendarEthiopicAmeteAlem] = "ethioaa",
+    [mloc_calendarIndian] = "indian",
+    [mloc_calendarPersian] = "persian",
+    [mloc_calendarHebrew] = "hebrew",
+    [mloc_calendarIslamicCivil] = "islamic-civil",
+    [mloc_calendarIslamicTbla] = "islamic-tbla",
+    [mloc_calendarIslamicUmalqura] = "islamic-umalqura",
+    [mloc_calendarIslamic] = "islamic",
+    [mloc_calendarIslamicRgsa] = "islamic-rgsa",
+    [mloc_calendarChinese] = "chinese",
+    [mloc_calendarDangi] = "dangi",
+};
+// Shown as none has no name.
+static const char* const s_zoneStyles[] = {
+    [mloc_zoneStyleSpecificLong] = "long",
+    [mloc_zoneStyleSpecificShort] = "short",
+};
+
+static_assert(sizeof(s_fields) / sizeof(s_fields[0]) == mloc_dateFieldSetWeekday + 1,
+              "s_fields covers mlocDateFieldSet to its last named set");
+static_assert(sizeof(s_lengths) / sizeof(s_lengths[0]) == mloc_dateLengthShort + 1,
+              "a name for each mlocDateLength");
+static_assert(sizeof(s_precisions) / sizeof(s_precisions[0]) == mloc_timePrecisionMinute + 1,
+              "s_precisions covers mlocTimePrecision to its last named precision");
+static_assert(sizeof(s_calendars) / sizeof(s_calendars[0]) == mloc_calendarDangi + 1,
+              "a name for each mlocCalendar");
+static_assert(sizeof(s_zoneStyles) / sizeof(s_zoneStyles[0]) == mloc_zoneStyleSpecificShort + 1,
+              "s_zoneStyles covers mlocZoneStyle to its last named style");
+
+#define NAMES(table) table, (int)(sizeof(table) / sizeof((table)[0]))
 
 // The index of an option's text among names (null entries skipped), or
 // -1.
@@ -356,14 +404,12 @@ mlocMessageFaultKind mlocSetDateOption(DateValue* value, DateFunction function, 
         return SetTimeZone(value, option, data);
     }
     static const char* const s_hour12[] = {"true", "false"};
-    // In mlocZoneStyle's order from its specific long name.
-    static const char* const s_zoneStyles[] = {"long", "short"};
-    int index = bit == dateGivenFields      ? Choice(option, s_fields, 7)
-                : bit == dateGivenLength    ? Choice(option, s_lengths, 3)
-                : bit == dateGivenPrecision ? Choice(option, s_precisions, 3)
-                : bit == dateGivenHour12    ? Choice(option, s_hour12, 2)
-                : bit == dateGivenZoneStyle ? Choice(option, s_zoneStyles, 2)
-                                            : Choice(option, s_calendars, 18);
+    int index = bit == dateGivenFields      ? Choice(option, NAMES(s_fields))
+                : bit == dateGivenLength    ? Choice(option, NAMES(s_lengths))
+                : bit == dateGivenPrecision ? Choice(option, NAMES(s_precisions))
+                : bit == dateGivenHour12    ? Choice(option, NAMES(s_hour12))
+                : bit == dateGivenZoneStyle ? Choice(option, NAMES(s_zoneStyles))
+                                            : Choice(option, NAMES(s_calendars));
     if (index < 0)
     {
         return mloc_messageFaultBadOption;
@@ -384,7 +430,7 @@ mlocMessageFaultKind mlocSetDateOption(DateValue* value, DateFunction function, 
         value->hourCycle = index == 0 ? mloc_hourCycleClock12 : mloc_hourCycleClock24;
         break;
     case dateGivenZoneStyle:
-        value->zoneStyle = (uint8_t)(mloc_zoneStyleSpecificLong + index);
+        value->zoneStyle = chosen;
         break;
     default:
         value->calendar = chosen;
@@ -444,6 +490,8 @@ static bool LocaleOf(const DateValue* value, const mlocLocale* locale, mlocLocal
     {
         return true;
     }
+    // A calendar is set only to its index among s_calendars.
+    MLOC_ASSERT(value->calendar < sizeof s_calendars / sizeof s_calendars[0]);
     const char* calendar = s_calendars[value->calendar];
     return mlocSetKeyword(out, "ca", calendar, strlen(calendar));
 }
@@ -487,6 +535,7 @@ size_t mlocPreparedDateSize(DateFunction function)
 {
     static const size_t sizes[] = {sizeof(mlocDateFormatter), sizeof(mlocTimeFormatter),
                                    sizeof(mlocDateTimeFormatter)};
+    MLOC_ASSERT((uint32_t)function <= dateFunctionDateTime);
     return offsetof(PreparedDate, formatter) + sizes[function];
 }
 

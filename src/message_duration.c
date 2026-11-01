@@ -3,6 +3,8 @@
 
 #include "message_duration.h"
 
+#include "invariant.h"
+
 #include "maul-locale/ixdtf.h"
 #include "maul-locale/zone.h"
 
@@ -58,6 +60,8 @@ bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out
     for (int32_t p = top > 0 ? top : 0; p >= -9; p--)
     {
         bool held = seconds->count > 0 && p <= top && p >= seconds->exponent;
+        // A held power's digit lies between the first and the last.
+        MLOC_ASSERT(!held || top - p < seconds->count);
         uint64_t digit = held ? seconds->digits[top - p] : 0;
         if (p >= 0)
         {
@@ -92,12 +96,13 @@ static bool NameIs(const uint8_t* name, size_t length, const char* text)
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
 
-// The index of an option's text among count names, or -1.
+// The index of an option's text among count names (null entries
+// skipped), or -1.
 static int Choice(const NumberOption* option, const char* const* names, int count)
 {
     for (int i = 0; option->hasText && i < count; i++)
     {
-        if (NameIs(option->text, option->length, names[i]))
+        if (names[i] != NULL && NameIs(option->text, option->length, names[i]))
         {
             return i;
         }
@@ -105,24 +110,61 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
     return -1;
 }
 
-// The fields' names, by mlocDurationField.
-static const char* const s_fields[] = {"years",        "months",     "weeks",   "days",
-                                       "hours",        "minutes",    "seconds", "milliseconds",
-                                       "microseconds", "nanoseconds"};
+// The names of the options and their values, each keyed by the public
+// enumeration's value, so that the index a name is found at is the value
+// it gives; null for a value no name gives.
+static const char* const s_fields[] = {
+    [mloc_durationYears] = "years",
+    [mloc_durationMonths] = "months",
+    [mloc_durationWeeks] = "weeks",
+    [mloc_durationDays] = "days",
+    [mloc_durationHours] = "hours",
+    [mloc_durationMinutes] = "minutes",
+    [mloc_durationSeconds] = "seconds",
+    [mloc_durationMilliseconds] = "milliseconds",
+    [mloc_durationMicroseconds] = "microseconds",
+    [mloc_durationNanoseconds] = "nanoseconds",
+};
+// The default has no name.
+static const char* const s_fieldStyles[] = {
+    [mloc_durationFieldLong] = "long",        [mloc_durationFieldShort] = "short",
+    [mloc_durationFieldNarrow] = "narrow",    [mloc_durationFieldNumeric] = "numeric",
+    [mloc_durationFieldTwoDigit] = "2-digit",
+};
+static const char* const s_displays[] = {
+    [mloc_durationDisplayAuto] = "auto",
+    [mloc_durationDisplayAlways] = "always",
+};
+static const char* const s_styles[] = {
+    [mloc_durationStyleShort] = "short",
+    [mloc_durationStyleLong] = "long",
+    [mloc_durationStyleNarrow] = "narrow",
+    [mloc_durationStyleDigital] = "digital",
+};
 
-// A field's style option: mlocDurationFieldStyle's from long, as far as
-// the field takes them (years to days the names, hours to seconds also
-// numeric and 2-digit, the smaller ones also numeric).
+static_assert(sizeof(s_fields) / sizeof(s_fields[0]) == mloc_durationFieldCount,
+              "a name for each mlocDurationField");
+static_assert(sizeof(s_fieldStyles) / sizeof(s_fieldStyles[0]) == mloc_durationFieldTwoDigit + 1,
+              "a name for each mlocDurationFieldStyle");
+static_assert(sizeof(s_displays) / sizeof(s_displays[0]) == mloc_durationDisplayAlways + 1,
+              "a name for each mlocDurationDisplay");
+static_assert(sizeof(s_styles) / sizeof(s_styles[0]) == mloc_durationStyleDigital + 1,
+              "a name for each mlocDurationStyle");
+
+// A field's style option, as far as the field takes them: years to days
+// the names, hours to seconds also numeric and 2-digit, the smaller ones
+// also numeric.
 static bool SetField(DurationValue* v, int field, const NumberOption* option)
 {
-    static const char* const styles[] = {"long", "short", "narrow", "numeric", "2-digit"};
-    int taken = field < mloc_durationHours ? 3 : field <= mloc_durationSeconds ? 5 : 4;
-    int index = Choice(option, styles, taken);
+    int taken = field < mloc_durationHours      ? mloc_durationFieldNarrow + 1
+                : field <= mloc_durationSeconds ? mloc_durationFieldTwoDigit + 1
+                                                : mloc_durationFieldNumeric + 1;
+    int index = Choice(option, s_fieldStyles, taken);
     if (index < 0)
     {
         return false;
     }
-    v->key.fields[field] = (uint8_t)(mloc_durationFieldLong + index);
+    v->key.fields[field] = (uint8_t)index;
     v->key.given |= durationGivenField << field;
     return true;
 }
@@ -130,13 +172,12 @@ static bool SetField(DurationValue* v, int field, const NumberOption* option)
 // A field's display option.
 static bool SetDisplay(DurationValue* v, int field, const NumberOption* option)
 {
-    static const char* const displays[] = {"auto", "always"};
-    int index = Choice(option, displays, 2);
+    int index = Choice(option, s_displays, (int)(sizeof(s_displays) / sizeof(s_displays[0])));
     if (index < 0)
     {
         return false;
     }
-    v->key.displays[field] = (uint8_t)(mloc_durationDisplayAuto + index);
+    v->key.displays[field] = (uint8_t)index;
     v->key.given |= durationGivenDisplay << field;
     return true;
 }
@@ -148,8 +189,7 @@ static bool SetWhole(DurationValue* v, const uint8_t* name, size_t length,
 {
     if (NameIs(name, length, "style"))
     {
-        static const char* const styles[] = {"short", "long", "narrow", "digital"};
-        int index = Choice(option, styles, 4);
+        int index = Choice(option, s_styles, (int)(sizeof(s_styles) / sizeof(s_styles[0])));
         *good = index >= 0;
         v->key.style = *good ? (uint8_t)index : v->key.style;
         v->key.given |= *good ? durationGivenStyle : 0;

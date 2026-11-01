@@ -94,6 +94,14 @@ static_assert(sizeof(s_particles) / sizeof(s_particles[0]) == mloc_particleDefin
               "a name per particle");
 static_assert(sizeof(s_readings) / sizeof(s_readings[0]) == mloc_readingLetters + 1,
               "a name per reading");
+// A person's gender's names, keyed by the public enumeration's value.
+static const char* const s_genders[] = {
+    [mloc_personOther] = "other",
+    [mloc_personMale] = "male",
+    [mloc_personFemale] = "female",
+};
+static_assert(sizeof(s_genders) / sizeof(s_genders[0]) == mloc_personFemale + 1,
+              "a name for each mlocPersonGender");
 
 static void SetCase(mlocInflection* r, int i)
 {
@@ -258,8 +266,7 @@ mlocMessageFaultKind mlocWriteGrammarValue(const GrammarValue* value,
 // A person's gender by its name; -1 for another text.
 static int PersonGender(const uint8_t* text, size_t length)
 {
-    static const char* const s_genders[3] = {"other", "male", "female"};
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < (int)(sizeof(s_genders) / sizeof(s_genders[0])); i++)
     {
         if (text != nullptr && NameIs(text, length, s_genders[i]))
         {
