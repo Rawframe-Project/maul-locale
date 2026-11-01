@@ -189,6 +189,55 @@ static bool ValidPlurals(const SpelloutRules* r)
     return true;
 }
 
+// The substitution kinds a rule of a set can hold, as ICU's
+// NFSubstitution::makeSubstitution makes them: "<<" an integral part in
+// a fraction rule, a numerator in a fraction rule set, else a multiplier
+// (none in a negative rule); ">>" the absolute value in a negative rule,
+// a fractional part in a fraction rule, else a modulus (none in a
+// fraction rule set); "=" the same value in any.
+static uint32_t KindsOf(uint8_t rule, bool fractionSet)
+{
+    uint32_t same = 1u << spelloutSame;
+    if (rule == spelloutNegative)
+    {
+        return same | 1u << spelloutAbsolute;
+    }
+    if (rule == spelloutImproper || rule == spelloutProper || rule == spelloutDefault)
+    {
+        return same | 1u << spelloutIntegral | 1u << spelloutFraction;
+    }
+    return fractionSet ? same | 1u << spelloutNumerator
+                       : same | 1u << spelloutMultiplier | 1u << spelloutModulus;
+}
+
+// Each set's rules hold only substitutions their kind and the set's can
+// make: a fractional part of a value without digits (a negative rule's
+// infinity) would have no places to take.
+static bool ValidKinds(const SpelloutRules* r)
+{
+    for (uint32_t s = 0; s < r->setCount; s++)
+    {
+        const uint8_t* set = r->sets + (size_t)s * spelloutSetSize;
+        uint32_t first = mlocLoad16(set + 4);
+        uint32_t count = mlocLoad16(set + 6) + (uint32_t)mlocLoad16(set + 8);
+        for (uint32_t i = first; i < first + count; i++)
+        {
+            const uint8_t* rule = r->rules + (size_t)i * spelloutRuleSize;
+            uint32_t kinds = KindsOf(rule[12], (set[3] & spelloutSetFraction) != 0);
+            const uint8_t* piece = r->pieces + (size_t)mlocLoad16(rule + 8) * spelloutPieceSize;
+            for (uint32_t k = 0; k < rule[14]; k++, piece += spelloutPieceSize)
+            {
+                if (piece[0] == spelloutSubstitution &&
+                    (kinds & 1u << (piece[1] & spelloutSubKindMask)) == 0)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 static bool ValidPatterns(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->patternCount; i++)
@@ -219,7 +268,7 @@ bool mlocValidSpelloutRules(const DataView* view, DataSpan payload)
     return size == payload.size && r.setCount > 0 && r.defaultSet < r.setCount &&
            (mlocLoad16(payload.bytes + 14) & ~spelloutGroupUnparseable) == 0 &&
            mlocValidDataText(r.text, r.textSize, 0) && ValidSets(&r) && ValidRules(&r) &&
-           ValidPieces(&r) && ValidPlurals(&r) && ValidPatterns(&r);
+           ValidPieces(&r) && ValidKinds(&r) && ValidPlurals(&r) && ValidPatterns(&r);
 }
 
 // Whether one id sorts before another, byte by byte.
