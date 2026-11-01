@@ -6,6 +6,7 @@
 #include "unit_patterns.h"
 
 #include "currency_tables.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "unit_names.h"
 #include "unit_normal.h"
@@ -19,8 +20,13 @@ static const uint32_t s_widthKinds[] = {
     [mloc_unitWidthNumeric] = kindUnitNamesNarrow,
 };
 
+static_assert(sizeof(s_widthKinds) / sizeof(s_widthKinds[0]) == mloc_unitWidthNumeric + 1,
+              "a names kind for each mlocUnitWidth");
+
 uint32_t mlocUnitWidthKind(mlocUnitWidth width)
 {
+    // The formatter's options and the display name's width were checked.
+    MLOC_ASSERT((uint32_t)width <= mloc_unitWidthNumeric);
     return s_widthKinds[width];
 }
 
@@ -29,6 +35,8 @@ uint32_t mlocUnitWidthKind(mlocUnitWidth width)
 static bool AddPattern(const PatternPool* pool, PatternSlot* slot, uint32_t category,
                        const uint8_t* text, size_t length)
 {
+    // A slot keeps a pattern's start and length in 16 bits.
+    MLOC_ASSERT(pool->capacity <= UINT16_MAX);
     uint8_t copy[unitPool];
     size_t n = 0;
     for (size_t at = 0; at < length; at++)
@@ -80,6 +88,8 @@ mlocResult mlocPoolUnitPatterns(const PatternPool* pool, PatternSlot* slot, cons
 
 mlocResult mlocAddUnitPatterns(UnitFormat* u, uint32_t slot, size_t* used, const UnitForms* forms)
 {
+    // Each output takes its slots below unitSlots, refused past it.
+    MLOC_ASSERT(slot < unitSlots);
     PatternPool pool = {u->pool, unitPool, used};
     PatternSlot s;
     memcpy(s.start, u->start[slot], sizeof(s.start));

@@ -11,6 +11,7 @@
 
 #include "data_view.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_valid.h"
 #include "number_core.h"
@@ -174,6 +175,8 @@ mlocResult mlocInitUnitFormatter(const mlocDataSet* data, const mlocLocale* loca
     f->style = (uint8_t)style;
     f->unscaled = 1;
     u.percent = style != mloc_numberDecimal;
+    // The patterns were added only while they fit the pool (AddPattern).
+    MLOC_ASSERT(used <= unitPool);
     uint8_t* out = (uint8_t*)formatterOut;
     memcpy(out, &u, pool + used);
     memset(out + pool + used, 0, rest - pool - used);
