@@ -3,6 +3,8 @@
 
 #include "message_words.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 // Keeps a formatter made in a call in its own frame, not in every
@@ -62,6 +64,8 @@ static mlocResult MakeRelative(const NumberValue* value, const mlocDataSet* data
 bool mlocPrepareWords(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
                       PreparedNumber* out)
 {
+    // The bind prepares a number value here only when it is one.
+    MLOC_ASSERT(mlocWordsValue(value));
     memset(out, 0, offsetof(PreparedNumber, formatter));
     out->key = mlocNumberKey(value);
     if (value->function == numberFunctionSpellout)
@@ -110,6 +114,8 @@ mlocMessageFaultKind mlocWriteWordsValue(const NumberValue* value, const Prepare
                                          const mlocDataSet* data, const mlocLocale* locale,
                                          mlocOutput* output)
 {
+    // Formatting writes a number value here only when it is one.
+    MLOC_ASSERT(mlocWordsValue(value));
     mlocResult result = !mlocNumberFits(prepared, value) ? WriteMade(value, data, locale, output)
                         : value->function == numberFunctionRelative
                             ? WriteRelative(&prepared->formatter.relative, value, output)

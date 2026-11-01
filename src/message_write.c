@@ -3,6 +3,7 @@
 
 #include "message_write.h"
 
+#include "invariant.h"
 #include "message_text.h"
 
 #include <stdbool.h>
@@ -39,8 +40,13 @@ static uint32_t Field(const Writer* w, uint32_t kind, uint32_t index, uint32_t f
     return mlocMessageField(w->view, kind, index, field);
 }
 
+// Every string, record and range written is the message's: the view was
+// read just before (mlocWriteMessageText reads it with mlocReadMessage,
+// whose checks place each one).
 static void PutPool(Writer* w, uint32_t offset, uint32_t length)
 {
+    MLOC_ASSERT(offset <= w->view->count[messagePool] &&
+                length <= w->view->count[messagePool] - offset);
     Put(w, w->view->pool + offset, length);
 }
 
@@ -48,6 +54,8 @@ static void PutPool(Writer* w, uint32_t offset, uint32_t length)
 // "\" and "|" in a quoted literal, "\", "{" and "}" in text.
 static void PutEscaped(Writer* w, uint32_t offset, uint32_t length, bool quoted)
 {
+    MLOC_ASSERT(offset <= w->view->count[messagePool] &&
+                length <= w->view->count[messagePool] - offset);
     const uint8_t* text = w->view->pool + offset;
     uint32_t from = 0;
     for (uint32_t i = 0; i < length; i++)
@@ -89,6 +97,7 @@ static void PutLiteral(Writer* w, uint32_t offset, uint32_t length)
 
 static void PutVariable(Writer* w, uint32_t variable)
 {
+    MLOC_ASSERT(variable < w->view->count[messageVariables]);
     PutText(w, "$");
     PutPool(w, Field(w, messageVariables, variable, 0), Field(w, messageVariables, variable, 1));
 }
@@ -97,6 +106,8 @@ static void PutVariable(Writer* w, uint32_t variable)
 // as the grammar orders them.
 static void PutParameters(Writer* w, uint32_t first, uint32_t count)
 {
+    MLOC_ASSERT(first <= w->view->count[messageParameters] &&
+                count <= w->view->count[messageParameters] - first);
     for (uint32_t pass = 0; pass < 2; pass++)
     {
         for (uint32_t i = first; i < first + count; i++)
@@ -128,6 +139,7 @@ static void PutParameters(Writer* w, uint32_t first, uint32_t count)
 
 static void PutExpression(Writer* w, uint32_t e)
 {
+    MLOC_ASSERT(e < w->view->count[messageExpressions]);
     PutText(w, "{");
     uint32_t operand = Field(w, messageExpressions, e, 0);
     if (operand == operandVariable)
@@ -150,6 +162,7 @@ static void PutExpression(Writer* w, uint32_t e)
 
 static void PutMarkup(Writer* w, uint32_t m)
 {
+    MLOC_ASSERT(m < w->view->count[messageMarkups]);
     uint32_t kind = Field(w, messageMarkups, m, 0);
     PutText(w, kind == markupClose ? "{/" : "{#");
     PutPool(w, Field(w, messageMarkups, m, 1), Field(w, messageMarkups, m, 2));
