@@ -180,15 +180,15 @@ message: invariant message_check message_cost message_emit message_form message_
 grammar_end: invariant
 grammar_lexicon: invariant
 grammar_turkic: invariant
-grammar_tk: grammar_turkic
+grammar_tk: grammar_turkic invariant
 grammar_fi: grammar_fi_word invariant
 grammar_fi_word: invariant
-grammar_ko:
+grammar_ko: invariant
 grammar_hu_sound: invariant
 grammar_hu: grammar_hu_sound invariant
 grammar_hu_words: grammar_hu
 grammar_tr: grammar_lexicon grammar_turkic invariant
-grammar_uz: grammar_turkic
+grammar_uz: grammar_turkic invariant
 grammar_az: grammar_turkic
 grammar_kk: grammar_turkic
 grammar_ky: grammar_turkic
