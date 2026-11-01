@@ -151,16 +151,25 @@ static_assert(sizeof(s_displays) / sizeof(s_displays[0]) == mloc_durationDisplay
 static_assert(sizeof(s_styles) / sizeof(s_styles[0]) == mloc_durationStyleDigital + 1,
               "a name for each mlocDurationStyle");
 
-// A field's style option, as far as the field takes them: years to days
-// the names, hours to seconds also numeric and 2-digit, the smaller ones
-// also numeric.
+// The styles a field takes, a bit for each mlocDurationFieldStyle: years
+// to days the names, hours to seconds also numeric and 2-digit, the
+// smaller ones also numeric.
+static uint32_t FieldStyles(int field)
+{
+    uint32_t names = 1u << mloc_durationFieldLong | 1u << mloc_durationFieldShort |
+                     1u << mloc_durationFieldNarrow;
+    uint32_t numeric = 1u << mloc_durationFieldNumeric;
+    return field < mloc_durationHours      ? names
+           : field <= mloc_durationSeconds ? names | numeric | 1u << mloc_durationFieldTwoDigit
+                                           : names | numeric;
+}
+
+// A field's style option, as far as the field takes it.
 static bool SetField(DurationValue* v, int field, const NumberOption* option)
 {
-    int taken = field < mloc_durationHours      ? mloc_durationFieldNarrow + 1
-                : field <= mloc_durationSeconds ? mloc_durationFieldTwoDigit + 1
-                                                : mloc_durationFieldNumeric + 1;
-    int index = Choice(option, s_fieldStyles, taken);
-    if (index < 0)
+    int index =
+        Choice(option, s_fieldStyles, (int)(sizeof(s_fieldStyles) / sizeof(s_fieldStyles[0])));
+    if (index < 0 || (FieldStyles(field) & 1u << index) == 0)
     {
         return false;
     }

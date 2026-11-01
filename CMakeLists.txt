@@ -375,6 +375,7 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_message_parts PRIVATE MLOC_DATES_FILE="${MLOC_PARTS_DATES}")
     endif()
+    maul_add_test(message_options WHITEBOX)
     maul_add_test(message_numbers WHITEBOX)
     maul_add_test(message_dates WHITEBOX)
     # It reads the dates; a white-box test, so not built with the shared
