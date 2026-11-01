@@ -727,8 +727,8 @@ uint16_t* CollationFastLatinTable(CollationMappings* mappings, const CollationRo
         Append(b, 0);
     }
     b->firstDigitPrimary = FirstPrimary(root, collationGroupDigit);
-    b->firstLatinPrimary = FirstPrimary(root, MUNI_SCRIPT('L', 'a', 't', 'n'));
-    b->lastLatinPrimary = mlocCollationLastPrimary(root, MUNI_SCRIPT('L', 'a', 't', 'n'));
+    b->firstLatinPrimary = FirstPrimary(root, MUNI_MAKE_SCRIPT('L', 'a', 't', 'n'));
+    b->lastLatinPrimary = mlocCollationLastPrimary(root, MUNI_MAKE_SCRIPT('L', 'a', 't', 'n'));
     ok = ok && b->firstDigitPrimary != 0 && b->firstLatinPrimary != 0;
     for (int32_t i = 0; ok && i < fastLatinChars; i++)
     {

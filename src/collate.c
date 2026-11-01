@@ -221,8 +221,8 @@ static bool Code(const char* text, size_t length, uint32_t* codeOut)
         letters = word[i] >= 'a' && word[i] <= 'z';
     }
     *codeOut = group != 0                   ? collationGroupSpace + group - 1
-               : Is(word, length, "others") ? MUNI_SCRIPT('Z', 'z', 'z', 'z')
-               : letters ? MUNI_SCRIPT(word[0] - 'a' + 'A', word[1], word[2], word[3])
+               : Is(word, length, "others") ? MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z')
+               : letters ? MUNI_MAKE_SCRIPT(word[0] - 'a' + 'A', word[1], word[2], word[3])
                          : 0;
     return *codeOut != 0;
 }

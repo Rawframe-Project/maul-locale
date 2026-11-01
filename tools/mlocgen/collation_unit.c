@@ -351,7 +351,7 @@ static uint32_t SampleScript(uint32_t sample)
     static const uint32_t groups[][2] = {
         {0x00A0, collationGroupSpace},  {0x201C, collationGroupPunctuation},
         {0x263A, collationGroupSymbol}, {0x20AC, collationGroupCurrency},
-        {0x0034, collationGroupDigit},  {0xFDD0, MUNI_SCRIPT('Z', 'z', 'z', 'z')},
+        {0x0034, collationGroupDigit},  {0xFDD0, MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z')},
     };
     for (size_t i = 0; i < sizeof(groups) / sizeof(groups[0]); i++)
     {
@@ -361,8 +361,9 @@ static uint32_t SampleScript(uint32_t sample)
         }
     }
     uint32_t script = muniGetScript(sample);
-    return script == MUNI_SCRIPT('Z', 'y', 'y', 'y') || script == MUNI_SCRIPT('Z', 'i', 'n', 'h') ||
-                   script == MUNI_SCRIPT('Z', 'z', 'z', 'z')
+    return script == MUNI_MAKE_SCRIPT('Z', 'y', 'y', 'y') ||
+                   script == MUNI_MAKE_SCRIPT('Z', 'i', 'n', 'h') ||
+                   script == MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z')
                ? 0
                : script;
 }
@@ -390,7 +391,7 @@ static int ScriptTable(Builder* b, const RootTable* t)
             free(starts);
             return Fail(b, "a script start whose sample has no script", m->codePoint);
         }
-        uint32_t primary = code == MUNI_SCRIPT('Z', 'z', 'z', 'z')
+        uint32_t primary = code == MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z')
                                ? (uint32_t)collationUnassignedByte << 24 | 0x040200
                                : (uint32_t)(m->element >> 32);
         starts[n++] = (Start){primary, code, (uint32_t)i};
@@ -424,16 +425,16 @@ static int ScriptTable(Builder* b, const RootTable* t)
         size_t index = b->starts.items[last] == p ? last : CollationPush(&b->starts, p);
         uint32_t code = starts[i].code;
         AddScript(b, code, (uint32_t)index);
-        if (code == MUNI_SCRIPT('H', 'i', 'r', 'a'))
+        if (code == MUNI_MAKE_SCRIPT('H', 'i', 'r', 'a'))
         {
-            AddScript(b, MUNI_SCRIPT('H', 'r', 'k', 't'), (uint32_t)index);
+            AddScript(b, MUNI_MAKE_SCRIPT('H', 'r', 'k', 't'), (uint32_t)index);
         }
-        else if (code == MUNI_SCRIPT('H', 'a', 'n', 'i'))
+        else if (code == MUNI_MAKE_SCRIPT('H', 'a', 'n', 'i'))
         {
-            AddScript(b, MUNI_SCRIPT('H', 'a', 'n', 's'), (uint32_t)index);
-            AddScript(b, MUNI_SCRIPT('H', 'a', 'n', 't'), (uint32_t)index);
+            AddScript(b, MUNI_MAKE_SCRIPT('H', 'a', 'n', 's'), (uint32_t)index);
+            AddScript(b, MUNI_MAKE_SCRIPT('H', 'a', 'n', 't'), (uint32_t)index);
         }
-        if (code == MUNI_SCRIPT('Z', 'z', 'z', 'z'))
+        if (code == MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z'))
         {
             CollationPush(&b->starts, 0xFF00);
         }

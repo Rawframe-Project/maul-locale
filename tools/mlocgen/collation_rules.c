@@ -812,7 +812,7 @@ static bool Reorder(Parser* p, const char* words, size_t at)
         }
         if (code == 0 && SameWord(w, n, "others"))
         {
-            code = MUNI_SCRIPT('Z', 'z', 'z', 'z');
+            code = MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z');
         }
         bool letters = n == 4;
         for (size_t k = 0; letters && k < 4; k++)
@@ -822,7 +822,7 @@ static bool Reorder(Parser* p, const char* words, size_t at)
         }
         if (code == 0 && letters)
         {
-            code = MUNI_SCRIPT(w[0] & ~0x20, w[1] | 0x20, w[2] | 0x20, w[3] | 0x20);
+            code = MUNI_MAKE_SCRIPT(w[0] & ~0x20, w[1] | 0x20, w[2] | 0x20, w[3] | 0x20);
         }
         if (code == 0)
         {
@@ -1152,7 +1152,7 @@ static void PutSettings(Text* t, const CollationRules* r)
             char word[5] = {(char)(code >> 24), (char)(code >> 16), (char)(code >> 8), (char)code,
                             '\0'};
             PutText(t, " ");
-            if (code == MUNI_SCRIPT('Z', 'z', 'z', 'z'))
+            if (code == MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z'))
             {
                 PutText(t, "others");
             }

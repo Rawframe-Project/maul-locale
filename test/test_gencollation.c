@@ -342,10 +342,10 @@ static void TestUnit(void)
         // start not the trailing range's, starts not rising, a script naming
         // start 0 or the last, scripts not rising, and one script too many.
         CHECK(r.scriptCount == 2 && r.startCount == 4 &&
-                  mlocCollationScriptCode(&r, 0) == MUNI_SCRIPT('C', 'y', 'r', 'l') &&
-                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('C', 'y', 'r', 'l')) == 2 &&
-                  mlocCollationScriptIndex(&r, MUNI_SCRIPT('G', 'r', 'e', 'k')) == 0 &&
-                  mlocCollationLastPrimary(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) ==
+                  mlocCollationScriptCode(&r, 0) == MUNI_MAKE_SCRIPT('C', 'y', 'r', 'l') &&
+                  mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('C', 'y', 'r', 'l')) == 2 &&
+                  mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('G', 'r', 'e', 'k')) == 0 &&
+                  mlocCollationLastPrimary(&r, MUNI_MAKE_SCRIPT('L', 'a', 't', 'n')) ==
                       (mlocCollationStart(&r, 2) << 16) - 1 &&
                   mlocCollationStart(&r, 3) == 0xFF00 && r.numericPrimary == 0x10000000,
               "the scripts and their starts from the FDD1 lines, numeric order's lead byte");
@@ -361,7 +361,7 @@ static void TestUnit(void)
             {scriptStarts + 8, mlocCollationStart(&r, 1)},
             {scripts + 4, 0},
             {scripts + 4, 3},
-            {scripts + 8, MUNI_SCRIPT('C', 'y', 'r', 'l')},
+            {scripts + 8, MUNI_MAKE_SCRIPT('C', 'y', 'r', 'l')},
             {20, 3},
         };
         for (size_t i = 0; i < sizeof(tables) / sizeof(tables[0]); i++)
@@ -715,12 +715,12 @@ static void TestScripts(void)
               "compressible, the unassigned range's (its byte compressible, as ICU counts it), "
               "then the trailing range's");
     CHECK(ok && mlocCollationScriptIndex(&r, collationReservedBeforeLatin) == 3 &&
-              mlocCollationScriptIndex(&r, MUNI_SCRIPT('L', 'a', 't', 'n')) == 4 &&
+              mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('L', 'a', 't', 'n')) == 4 &&
               mlocCollationScriptIndex(&r, collationReservedAfterLatin) == 5 &&
-              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'i', 'r', 'a')) == 7 &&
-              mlocCollationScriptIndex(&r, MUNI_SCRIPT('K', 'a', 'n', 'a')) == 7 &&
-              mlocCollationScriptIndex(&r, MUNI_SCRIPT('H', 'r', 'k', 't')) == 7 &&
-              mlocCollationScriptIndex(&r, MUNI_SCRIPT('Z', 'z', 'z', 'z')) == 8 &&
+              mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('H', 'i', 'r', 'a')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('K', 'a', 'n', 'a')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('H', 'r', 'k', 't')) == 7 &&
+              mlocCollationScriptIndex(&r, MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z')) == 8 &&
               mlocCollationLastPrimary(&r, collationGroupSpace) == 0x0505FFFF &&
               mlocCollationLastPrimary(&r, collationGroupPunctuation) == 0x27FFFFFF,
           "the reserved ranges either side of Latin, Hiragana and Katakana sharing a range with "

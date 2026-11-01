@@ -98,7 +98,7 @@ extern "C"
 
     /// Sets the word segmenter a word or line segmenter hands runs of
     /// Thai, Lao, Khmer and Burmese text to, as Maul Unicode's
-    /// muniSetComplexBreaker: inside such a run its breaks replace the
+    /// muniSegmentIterator_SetComplexBreaker: inside such a run its breaks replace the
     /// default ones. Without one, such text follows rule LB1 of UAX #14 and
     /// the default word rules.
     ///

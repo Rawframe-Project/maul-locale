@@ -514,7 +514,7 @@ static bool ReorderServed(const CollationRoot* root, const CollationReorder* reo
             previous = start;
         }
     }
-    uint32_t latin = ReorderedStart(root, reorder, MUNI_SCRIPT('L', 'a', 't', 'n'));
+    uint32_t latin = ReorderedStart(root, reorder, MUNI_MAKE_SCRIPT('L', 'a', 't', 'n'));
     if (latin < previous)
     {
         return false;

@@ -38,7 +38,7 @@ A locale takes the tailoring of the first locale along its segmentation chain th
 | `zh`, `zh-Hant` | Lines break before small kana and the prolonged sound mark. |
 | `de`, `en`, `es`, `fr`, `it`, `pt`, `ru` | The abbreviations of the suppressions below. |
 
-A segmenter reads the current piece of text in place, so that piece stays as it was until the segmenter asks for the next one; it keeps no pointer into a piece after that, none into the data it was made from but its suppressions, so the data must outlive it and not change, and none into itself. It is a value of 512 bytes that needs no cleanup and may be copied, the copy going on where the segmenter was. A Thai, Lao, Khmer or Burmese word segmenter can be set with `mlocSegmenter_SetComplexBreaker`, as Maul Unicode's `muniSetComplexBreaker`. The breaker must not make that segmenter again; any other call on it from inside the breaker is refused with `mloc_errorInvalid` and changes nothing.
+A segmenter reads the current piece of text in place, so that piece stays as it was until the segmenter asks for the next one; it keeps no pointer into a piece after that, none into the data it was made from but its suppressions, so the data must outlive it and not change, and none into itself. It is a value of 512 bytes that needs no cleanup and may be copied, the copy going on where the segmenter was. A Thai, Lao, Khmer or Burmese word segmenter can be set with `mlocSegmenter_SetComplexBreaker`, as Maul Unicode's `muniSegmentIterator_SetComplexBreaker`. The breaker must not make that segmenter again; any other call on it from inside the breaker is refused with `mloc_errorInvalid` and changes nothing.
 
 ## The keys
 
