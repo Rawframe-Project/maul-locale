@@ -51,11 +51,11 @@ unit_data: bytes data_view invariant locale_tables unit_tables wide
 unit_id: bytes currency_tables invariant unit_data unit_tables
 unit_convert: bytes decimal invariant number_precision unit_data unit_id unit_tables wide
 unit: data_view decimal kinds number_precision unit_convert unit_data unit_id
-unit_prefs: bytes data_view decimal kinds locale_keyword locale_prefs locale_tables locale_valid number_precision unit_convert unit_data unit_id unit_mixed unit_tables
+unit_prefs: bytes data_view decimal invariant kinds locale_keyword locale_prefs locale_tables locale_valid number_precision unit_convert unit_data unit_id unit_mixed unit_tables
 unit_mixed: decimal invariant unit_convert unit_data unit_id wide
 unit_names: bytes currency_tables data_format data_view invariant kinds locale_fallback number_data unit_tables
 unit_gender: data_view invariant kinds locale_valid unit_data unit_id unit_names unit_normal unit_tables
-unit_normal: data_view kinds unit_data unit_id unit_tables
+unit_normal: data_view invariant kinds unit_data unit_id unit_tables
 unit_compound: data_view invariant kinds unit_data unit_id unit_names unit_normal unit_tables
 unit_patterns: currency_tables invariant kinds list_data number_format unit_compound unit_data unit_id unit_names unit_normal
 unit_format: data_view decimal invariant kinds locale_valid number_core number_format plural plural_rules unit_compound unit_coordinate unit_id unit_mixed_format unit_names unit_patterns unit_tables unit_usage
@@ -74,7 +74,7 @@ date_range: bytes date_data date_write invariant number_core
 time_format: bytes date_data date_format date_range date_time invariant locale_keyword locale_prefs locale_valid number_core number_output number_tables time_write zone_format
 datetime_format: bytes date_data date_format date_range date_time date_write invariant locale_valid number_core number_output number_tables time_format time_write zone_format
 time_write: date_data date_write invariant number_core number_tables
-unit_usage: data_view kinds number_core number_format number_output unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
+unit_usage: data_view invariant kinds number_core number_format number_output unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_patterns unit_prefs
 unit_coordinate: data_view kinds number_core number_format number_output unit_convert unit_data unit_id unit_mixed unit_mixed_format unit_names unit_patterns unit_tables
 spellout_tables:
 spellout_data: bytes data_view number_data spellout_tables
