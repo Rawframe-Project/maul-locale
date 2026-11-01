@@ -6,6 +6,7 @@
 
 #include "maul-locale/number.h"
 
+#include "invariant.h"
 #include "locale_valid.h"
 #include "number_core.h"
 #include "number_format.h"
@@ -45,6 +46,9 @@ mlocResult mlocInitNumberFormatter(const mlocDataSet* data, const mlocLocale* lo
     {
         return result;
     }
+    // A compact core always finds its table, by which parsing tells a
+    // compact formatter.
+    MLOC_ASSERT(!compact || f.compactTable != nullptr);
     mlocSetFormatOptions(&f, o, numberFormatterStamp);
     memcpy(formatterOut, &f, sizeof(f));
     memset((uint8_t*)formatterOut + sizeof(f), 0, sizeof(*formatterOut) - sizeof(f));

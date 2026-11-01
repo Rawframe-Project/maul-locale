@@ -5,6 +5,8 @@
 
 #include "binary64.h"
 
+#include "invariant.h"
+
 #include <string.h>
 
 Wide mlocWideProduct(uint64_t a, uint64_t b)
@@ -46,8 +48,13 @@ static int BitLength(Wide v)
     return length;
 }
 
+// The callers' operands are small enough that no set bit is shifted out:
+// a double's mantissa by at most 74, a remainder below a divisor of at
+// most 74 bits by one, and a quotient's operands to 54 or 55 bits of
+// quotient over divisors of 64 bits.
 static Wide ShiftLeft(Wide v, int n)
 {
+    MLOC_ASSERT(n >= 0 && n < 128 && (n == 0 || BitLength(v) + n <= 128));
     if (n == 0)
     {
         return v;
@@ -83,6 +90,8 @@ bool mlocWideBelow(Wide a, Wide b)
 // quotient fits 64 bits here.
 uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut)
 {
+    // The callers divide by a power of ten, a unit's nanoseconds, or one.
+    MLOC_ASSERT(d.high != 0 || d.low != 0);
     if (n.high == 0 && d.high == 0)
     {
         *remainderOut = (Wide){0, n.low % d.low};
@@ -94,6 +103,7 @@ uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut)
     {
         r = ShiftLeft(r, 1);
         r.low |= Bit(n, i) ? 1 : 0;
+        MLOC_ASSERT(quotient >> 63 == 0);
         quotient <<= 1;
         if (AtLeast(r, d))
         {
@@ -103,6 +113,31 @@ uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut)
     }
     *remainderOut = r;
     return quotient;
+}
+
+// The bits of a quotient of 54 or 55 bits scaled by 2^shift, rounded to
+// 53 to nearest with ties to even (sticky when a remainder was left).
+static uint64_t Rounded(bool negative, uint64_t q, bool sticky, int shift)
+{
+    MLOC_ASSERT(q >> 53 != 0 && q >> 55 == 0);
+    int drop = q >> 54 != 0 ? 2 : 1;
+    uint64_t mantissa = q >> drop;
+    uint64_t rest = q & ((UINT64_C(1) << drop) - 1);
+    uint64_t half = UINT64_C(1) << (drop - 1);
+    if (rest > half || (rest == half && (sticky || (mantissa & 1) != 0)))
+    {
+        mantissa += 1;
+    }
+    int exponent = 52 + drop - shift;
+    if (mantissa >> 53 != 0)
+    {
+        mantissa >>= 1;
+        exponent += 1;
+    }
+    // Operands below 2^128 give a normal double.
+    MLOC_ASSERT(mantissa >> 52 == 1 && exponent > -1023 && exponent < 1024);
+    return (negative ? UINT64_C(1) << 63 : 0) | ((uint64_t)(exponent + 1023) << 52) |
+           (mantissa & ((UINT64_C(1) << 52) - 1));
 }
 
 double mlocBinary64Of(bool negative, Wide numerator, Wide denominator)
@@ -125,23 +160,7 @@ double mlocBinary64Of(bool negative, Wide numerator, Wide denominator)
         Wide d = shift >= 0 ? denominator : ShiftLeft(denominator, -shift);
         Wide remainder;
         uint64_t q = mlocWideQuotient(n, d, &remainder);
-        int drop = q >> 54 != 0 ? 2 : 1;
-        uint64_t mantissa = q >> drop;
-        uint64_t rest = q & ((UINT64_C(1) << drop) - 1);
-        uint64_t half = UINT64_C(1) << (drop - 1);
-        bool sticky = remainder.high != 0 || remainder.low != 0;
-        if (rest > half || (rest == half && (sticky || (mantissa & 1) != 0)))
-        {
-            mantissa += 1;
-        }
-        int exponent = 52 + drop - shift;
-        if (mantissa >> 53 != 0)
-        {
-            mantissa >>= 1;
-            exponent += 1;
-        }
-        bits = (negative ? UINT64_C(1) << 63 : 0) | ((uint64_t)(exponent + 1023) << 52) |
-               (mantissa & ((UINT64_C(1) << 52) - 1));
+        bits = Rounded(negative, q, remainder.high != 0 || remainder.low != 0, shift);
     }
     memcpy(&out, &bits, sizeof out);
     return out;

@@ -12,6 +12,7 @@
 
 #include "bytes.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "number_tables.h"
 #include "parse_currency.h"
 #include "parse_match.h"
@@ -28,11 +29,19 @@ typedef enum SignType
     signNegative,
 } SignType;
 
+// The list holds the affix matchers and at most 14 others: the
+// currency, percent and per mille signs, plus, minus, approximately, NaN,
+// infinity, ignorables, the decimal, the exponent, and the number,
+// currency and scale validators (the affix validator only in strict mode,
+// which has no signs).
+static_assert(parseMaxAffixMatchers + 14 <= parseMaxMatchers, "the list holds every matcher");
+
 // A token of an affix: a placeholder byte for a symbol, else a code
 // point; its length into sizeOut.
 static uint32_t TokenAt(const uint8_t* text, size_t length, size_t at, bool* symbolOut,
                         size_t* sizeOut)
 {
+    MLOC_ASSERT(at < length);
     *symbolOut = text[at] < 0x20;
     if (*symbolOut)
     {
@@ -158,6 +167,7 @@ static int AddSeries(Parser* r, const uint8_t* text, size_t length)
 
 static const uint8_t* AffixText(const Parser* r, int affix, size_t* lengthOut)
 {
+    MLOC_ASSERT(affix >= 0 && affix < affixCount);
     *lengthOut = r->affixLength[affix];
     return r->affixText[affix];
 }
@@ -280,6 +290,8 @@ static bool Interesting(const Parser* r)
 
 static int AffixUnits(const Parser* r, int8_t affix)
 {
+    // An affix matcher's series came from AddSeries.
+    MLOC_ASSERT(affix < (int)r->seriesCount);
     return affix < 0 ? 0 : r->series[affix].units;
 }
 
@@ -406,6 +418,7 @@ static bool AddAffixMatchers(Parser* r)
     }
     for (uint32_t i = 0; i < r->affixCount; i++)
     {
+        MLOC_ASSERT(r->count < parseMaxMatchers);
         r->list[r->count++] = (Matcher){.kind = matchAffix, .arg = i};
     }
     return true;
@@ -413,6 +426,7 @@ static bool AddAffixMatchers(Parser* r)
 
 static void Add(Parser* r, MatcherKind kind, uint32_t arg)
 {
+    MLOC_ASSERT(r->count < parseMaxMatchers);
     r->list[r->count++] = (Matcher){.kind = (uint8_t)kind, .arg = arg};
 }
 
@@ -613,6 +627,7 @@ static void PostProcess(const Parser* r, Parsed* p, int64_t* scaleOut)
         switch (m->kind)
         {
         case matchAffix:
+            MLOC_ASSERT(m->arg < r->affixCount);
             AcceptAffix(r, &r->affixes[m->arg], p);
             break;
         case validateNumber:
@@ -671,6 +686,8 @@ static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
     {
         return false;
     }
+    // The digits read stop at a decimal's room (the overflow flag).
+    MLOC_ASSERT(q->count <= MLOC_MAX_DECIMAL_DIGITS);
     memcpy(d.digits, q->digits, q->count);
     d.count = (uint8_t)q->count;
     d.exponent = (int32_t)exponent;
