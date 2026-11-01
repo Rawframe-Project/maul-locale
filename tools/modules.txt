@@ -25,7 +25,7 @@ script_directions:
 locale_direction: locale_valid script_directions
 locale_distance: bytes data_view invariant kinds locale_likely locale_lsr locale_tables
 locale_match: bytes invariant locale_distance locale_likely locale_lsr locale_tables locale_valid
-locale_keyword:
+locale_keyword: invariant
 locale_prefs: bytes data_view invariant kinds locale_keyword locale_tables locale_valid
 plural_rules:
 plural: bytes data_format data_view decimal invariant kinds locale_fallback locale_valid plural_rules
