@@ -3,6 +3,7 @@
 
 #include "message_date.h"
 
+#include "invariant.h"
 #include "locale_keyword.h"
 
 #include "maul-locale/calendar.h"
@@ -252,6 +253,21 @@ static const char* const s_calendars[] = {
     "ethiopic",     "ethioaa",          "indian",   "persian",      "hebrew",   "islamic-civil",
     "islamic-tbla", "islamic-umalqura", "islamic",  "islamic-rgsa", "chinese",  "dangi"};
 
+// An option's index among its names is the enumeration's value it gives.
+static_assert(mloc_dateFieldSetYearMonthDay == 0 && mloc_dateFieldSetDay == 4 &&
+                  mloc_dateFieldSetWeekday == 6,
+              "s_fields follows mlocDateFieldSet");
+static_assert(mloc_dateLengthLong == 0 && mloc_dateLengthMedium == 1 && mloc_dateLengthShort == 2,
+              "s_lengths follows mlocDateLength");
+static_assert(mloc_timePrecisionSecond == 0 && mloc_timePrecisionHour == 1 &&
+                  mloc_timePrecisionMinute == 2,
+              "s_precisions follows mlocTimePrecision");
+static_assert(sizeof(s_calendars) / sizeof(s_calendars[0]) == mloc_calendarDangi + 1 &&
+                  mloc_calendarGregorian == 0 && mloc_calendarIslamicCivil == 11,
+              "s_calendars follows mlocCalendar");
+static_assert(mloc_zoneStyleSpecificShort == mloc_zoneStyleSpecificLong + 1,
+              "the zone styles follow mlocZoneStyle from its specific long name");
+
 // The index of an option's text among names (null entries skipped), or
 // -1.
 static int Choice(const NumberOption* option, const char* const* names, int count)
@@ -444,6 +460,8 @@ static bool LocaleOf(const DateValue* value, const mlocLocale* locale, mlocLocal
     {
         return true;
     }
+    // A calendar is set only to its index among s_calendars.
+    MLOC_ASSERT(value->calendar < sizeof s_calendars / sizeof s_calendars[0]);
     const char* calendar = s_calendars[value->calendar];
     return mlocSetKeyword(out, "ca", calendar, strlen(calendar));
 }
@@ -487,6 +505,7 @@ size_t mlocPreparedDateSize(DateFunction function)
 {
     static const size_t sizes[] = {sizeof(mlocDateFormatter), sizeof(mlocTimeFormatter),
                                    sizeof(mlocDateTimeFormatter)};
+    MLOC_ASSERT((uint32_t)function <= dateFunctionDateTime);
     return offsetof(PreparedDate, formatter) + sizes[function];
 }
 

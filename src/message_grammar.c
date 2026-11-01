@@ -94,6 +94,8 @@ static_assert(sizeof(s_particles) / sizeof(s_particles[0]) == mloc_particleDefin
               "a name per particle");
 static_assert(sizeof(s_readings) / sizeof(s_readings[0]) == mloc_readingLetters + 1,
               "a name per reading");
+static_assert(mloc_personOther == 0 && mloc_personMale == 1 && mloc_personFemale == 2,
+              "the person genders' names follow mlocPersonGender");
 
 static void SetCase(mlocInflection* r, int i)
 {

@@ -7,6 +7,13 @@
 
 static_assert(sizeof(ListKey) == offsetof(ListKey, reserved) + 2, "a list key has no padding");
 static_assert(offsetof(PreparedList, formatter) % 8 == 0, "a prepared list's formatter is aligned");
+// An option's index among its names is the enumeration's value it gives.
+static_assert(mloc_listAnd == 0 && mloc_listOr == 1 && mloc_listUnit == 2,
+              "the types follow mlocListType");
+static_assert(mloc_listWide == 0 && mloc_listShort == 1 && mloc_listNarrow == 2,
+              "the styles follow mlocListWidth");
+static_assert(mloc_pluralZero == 0 && mloc_pluralOther == 5,
+              "the plural keywords follow mlocPluralCategory");
 
 bool mlocGoodList(const mlocMessageValue* argument)
 {

@@ -6,6 +6,7 @@
 #include "message_number.h"
 
 #include "decimal.h"
+#include "invariant.h"
 #include "number_precision.h"
 
 #include "maul-locale/currency.h"
@@ -335,6 +336,34 @@ static const char* const s_modes[] = {"halfExpand", "halfEven",  "halfTrunc",
                                       "halfCeil",   "halfFloor", "ceil",
                                       "floor",      "expand",    "trunc"};
 
+// An option's index among its names is the enumeration's value it gives.
+static_assert(mloc_signAuto == 0 && mloc_signAlways == 1 && mloc_signNever == 2 &&
+                  mloc_signExceptZero == 3 && mloc_signNegative == 4,
+              "s_signs follows mlocSignDisplay");
+static_assert(mloc_groupingAuto == 0 && mloc_groupingAlways == 1 && mloc_groupingMin2 == 2 &&
+                  mloc_groupingOff == 3,
+              "s_groupings follows mlocGrouping");
+static_assert(mloc_trailingZerosAuto == 0 && mloc_trailingZerosStripIfInteger == 1,
+              "s_trailingZeros follows mlocTrailingZeros");
+static_assert(mloc_currencySignStandard == mloc_currencySignLocale + 1 &&
+                  mloc_currencySignAccounting == mloc_currencySignLocale + 2,
+              "s_currencySigns follows mlocCurrencySign after its locale choice");
+static_assert(mloc_unitWidthShort == 0 && mloc_unitWidthNarrow == 1 && mloc_unitWidthLong == 2,
+              "s_widths follows mlocUnitWidth");
+static_assert(mloc_relativeWidthLong == 0 && mloc_relativeWidthShort == 1 &&
+                  mloc_relativeWidthNarrow == 2 && mloc_relativeNumericAlways == 0 &&
+                  mloc_relativeNumericAuto == 1,
+              "s_styles and s_numerics follow mlocRelativeWidth and mlocRelativeNumeric");
+static_assert(sizeof(s_relativeUnits) / sizeof(s_relativeUnits[0]) == mloc_relativeSaturday + 1 &&
+                  mloc_relativeYear == 0 && mloc_relativeSecond == 7 && mloc_relativeSunday == 8,
+              "s_relativeUnits follows mlocRelativeUnit");
+static_assert(sizeof(s_modes) / sizeof(s_modes[0]) == mloc_roundTrunc + 1 &&
+                  mloc_roundHalfExpand == 0 && mloc_roundCeil == 5 && mloc_roundExpand == 7,
+              "s_modes follows mlocRoundingMode");
+static_assert(mloc_pluralZero == 0 && mloc_pluralOne == 1 && mloc_pluralTwo == 2 &&
+                  mloc_pluralFew == 3 && mloc_pluralMany == 4 && mloc_pluralOther == 5,
+              "the plural keywords follow mlocPluralCategory");
+
 // The options each function takes, by name and the bit they set;
 // another name is ignored.
 static const struct
@@ -612,6 +641,8 @@ static mlocPrecision PrecisionOf(const NumberValue* v)
         mloc_precisionFraction, mloc_precisionMorePrecision, mloc_precisionLessPrecision};
     mlocPrecision p;
     memset(&p, 0, sizeof p);
+    // A priority is set only to its index among s_priorities.
+    MLOC_ASSERT(priority < 3);
     p.kind = priority == 0 && hasSignificant ? mloc_precisionSignificant : priorities[priority];
     p.mode = (v->given & numberGivenMode) != 0 ? (mlocRoundingMode)v->mode : mloc_roundHalfExpand;
     p.trailingZeros = (v->given & numberGivenTrailingZeros) != 0
@@ -746,6 +777,9 @@ static mlocCurrencyOptions CurrencyOptions(const NumberValue* value)
     mlocCurrencyOptions options;
     memset(&options, 0, sizeof options);
     options.number = mlocNumberFormatOptions(value);
+    // A display is set only to its index among s_displays.
+    MLOC_ASSERT((value->given & numberGivenDisplay) == 0 ||
+                value->display < sizeof s_displayKinds / sizeof s_displayKinds[0]);
     options.display = (value->given & numberGivenDisplay) != 0 ? s_displayKinds[value->display]
                                                                : mloc_currencySymbol;
     options.sign = (value->given & numberGivenCurrencySign) != 0
@@ -796,6 +830,7 @@ size_t mlocPreparedSize(PreparedKind kind)
     static const size_t sizes[] = {sizeof(mlocNumberFormatter), sizeof(mlocCurrencyFormatter),
                                    sizeof(mlocUnitFormatter), sizeof(mlocSpelloutFormatter),
                                    sizeof(mlocRelativeFormatter)};
+    MLOC_ASSERT((uint32_t)kind <= preparedRelative);
     return offsetof(PreparedNumber, formatter) + sizes[kind];
 }
 

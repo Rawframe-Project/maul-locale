@@ -3,6 +3,8 @@
 
 #include "message_duration.h"
 
+#include "invariant.h"
+
 #include "maul-locale/ixdtf.h"
 #include "maul-locale/zone.h"
 
@@ -58,6 +60,8 @@ bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out
     for (int32_t p = top > 0 ? top : 0; p >= -9; p--)
     {
         bool held = seconds->count > 0 && p <= top && p >= seconds->exponent;
+        // A held power's digit lies between the first and the last.
+        MLOC_ASSERT(!held || top - p < seconds->count);
         uint64_t digit = held ? seconds->digits[top - p] : 0;
         if (p >= 0)
         {
@@ -109,6 +113,21 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
 static const char* const s_fields[] = {"years",        "months",     "weeks",   "days",
                                        "hours",        "minutes",    "seconds", "milliseconds",
                                        "microseconds", "nanoseconds"};
+
+// An option's index among its names, from the first, is the enumeration's
+// value it gives.
+static_assert(sizeof(s_fields) / sizeof(s_fields[0]) == mloc_durationFieldCount,
+              "a name for each duration field");
+static_assert(mloc_durationFieldShort == mloc_durationFieldLong + 1 &&
+                  mloc_durationFieldNarrow == mloc_durationFieldLong + 2 &&
+                  mloc_durationFieldNumeric == mloc_durationFieldLong + 3 &&
+                  mloc_durationFieldTwoDigit == mloc_durationFieldLong + 4,
+              "a field's styles follow mlocDurationFieldStyle from long");
+static_assert(mloc_durationDisplayAlways == mloc_durationDisplayAuto + 1,
+              "a field's displays follow mlocDurationDisplay from auto");
+static_assert(mloc_durationStyleShort == 0 && mloc_durationStyleLong == 1 &&
+                  mloc_durationStyleNarrow == 2 && mloc_durationStyleDigital == 3,
+              "the styles follow mlocDurationStyle");
 
 // A field's style option: mlocDurationFieldStyle's from long, as far as
 // the field takes them (years to days the names, hours to seconds also
