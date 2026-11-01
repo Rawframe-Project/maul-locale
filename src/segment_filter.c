@@ -88,7 +88,7 @@ static uint8_t ClassOf(const Segmenter* s, uint32_t codePoint)
 // \p{Hiragana}, $Ideographic [\p{Ideographic} \u3005 \u3007 \u303B].
 static uint8_t JapaneseClass(uint32_t codePoint)
 {
-    if (muniGetScript(codePoint) == MUNI_SCRIPT('H', 'i', 'r', 'a'))
+    if (muniGetScript(codePoint) == MUNI_MAKE_SCRIPT('H', 'i', 'r', 'a'))
     {
         return japaneseHiragana;
     }

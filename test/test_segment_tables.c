@@ -185,7 +185,7 @@ static bool SetIs(uint32_t field, const uint32_t* pairs, uint32_t count)
     for (uint32_t i = 0; i < count; i++)
     {
         const muniBreakClassOverride* o = &mlocSegmentOverrides[set->first + i];
-        if (o->codePoint != pairs[2 * i] || o->value != pairs[2 * i + 1])
+        if (o->codePoint != pairs[2 * i] || o->value < 0 || (uint32_t)o->value != pairs[2 * i + 1])
         {
             return false;
         }

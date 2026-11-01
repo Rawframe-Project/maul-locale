@@ -102,13 +102,13 @@ static void TestSettings(void)
               s_rules.backwards == 1 && s_rules.caseFirst == ruleUnset,
           "every setting and value, @ as [backwards 2], unset ones left so");
     CHECK(Parse("[reorder Zyyy]") && s_rules.reorderCount == 1 &&
-              s_rules.reorder[0] == MUNI_SCRIPT('Z', 'y', 'y', 'y'),
+              s_rules.reorder[0] == MUNI_MAKE_SCRIPT('Z', 'y', 'y', 'y'),
           "a script code with a z");
     CHECK(Parse("[reorder Grek digit others latn][hiraganaQ off]") && s_rules.reorderCount == 4 &&
-              s_rules.reorder[0] == MUNI_SCRIPT('G', 'r', 'e', 'k') &&
+              s_rules.reorder[0] == MUNI_MAKE_SCRIPT('G', 'r', 'e', 'k') &&
               s_rules.reorder[1] == ruleReorderDigit &&
-              s_rules.reorder[2] == MUNI_SCRIPT('Z', 'z', 'z', 'z') &&
-              s_rules.reorder[3] == MUNI_SCRIPT('L', 'a', 't', 'n') && Parse("[reorder]") &&
+              s_rules.reorder[2] == MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z') &&
+              s_rules.reorder[3] == MUNI_MAKE_SCRIPT('L', 'a', 't', 'n') && Parse("[reorder]") &&
               s_rules.reorderGiven && s_rules.reorderCount == 0,
           "reorder codes: scripts in any case, groups, others; an empty reorder");
     CHECK(Parse("[import und-u-co-search]&a<b[import de-u-co-phonebk]") && s_rules.count == 4 &&

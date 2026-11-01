@@ -20,8 +20,8 @@ enum
 };
 
 // Zzzz: "others", and the unassigned range's script.
-static const uint32_t scriptUnknown = MUNI_SCRIPT('Z', 'z', 'z', 'z');
-static const uint32_t scriptLatin = MUNI_SCRIPT('L', 'a', 't', 'n');
+static const uint32_t scriptUnknown = MUNI_MAKE_SCRIPT('Z', 'z', 'z', 'z');
+static const uint32_t scriptLatin = MUNI_MAKE_SCRIPT('L', 'a', 't', 'n');
 
 // A code's start index, as ICU's getScriptIndex: the reserved ranges
 // either side of Latin are never named.

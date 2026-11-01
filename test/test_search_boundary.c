@@ -84,7 +84,7 @@ static void Whole(const uint8_t* bytes, size_t n, bool* boundary)
     muniSegmentIterator g;
     (void)muniInitGraphemeIterator(&g, (const char*)bytes, n, false);
     size_t offset = 0;
-    while (muniNextSegmentBreak(&g, &offset) == muni_success)
+    while (muniSegmentIterator_NextBreak(&g, &offset) == muni_success)
     {
         boundary[offset] = true;
     }

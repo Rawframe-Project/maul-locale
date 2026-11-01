@@ -104,11 +104,11 @@ static size_t FirstUtf16(NfdText t, size_t start, size_t at, bool after)
     for (;;)
     {
         size_t offset = 0;
-        muniResult r = muniNextSegmentBreak(&g, &offset);
+        muniResult r = muniSegmentIterator_NextBreak(&g, &offset);
         if (r == muni_needMoreText)
         {
             Fill(&p);
-            (void)muniFeedSegmentIterator(&g, p.bytes, p.count, p.next < t.length);
+            (void)muniSegmentIterator_Feed(&g, p.bytes, p.count, p.next < t.length);
             continue;
         }
         if (r != muni_success)
@@ -135,7 +135,7 @@ static size_t First(NfdText t, size_t at, bool after)
     muniSegmentIterator g;
     (void)muniInitGraphemeIterator(&g, (const char*)t.bytes + start, t.length - start, false);
     size_t offset = 0;
-    while (muniNextSegmentBreak(&g, &offset) == muni_success)
+    while (muniSegmentIterator_NextBreak(&g, &offset) == muni_success)
     {
         if (start + offset > at || (start + offset == at && !after))
         {

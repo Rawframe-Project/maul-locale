@@ -166,7 +166,7 @@ static void Groups(CollationBuilder* b)
         uint32_t start = Start16(t, (uint32_t)(t->scriptStarts[i].element >> 32));
         uint32_t sample = t->scriptStarts[i].codePoint;
         punctuation = sample == 0x201C ? start : punctuation;
-        if (sample != 0xFDD0 && muniGetScript(sample) == MUNI_SCRIPT('H', 'a', 'n', 'i'))
+        if (sample != 0xFDD0 && muniGetScript(sample) == MUNI_MAKE_SCRIPT('H', 'a', 'n', 'i'))
         {
             b->hanFirstPrimary = start << 16;
         }

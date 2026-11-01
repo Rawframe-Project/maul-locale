@@ -89,21 +89,19 @@ static void TakeUnit(Segmenter* s, DataSpan unit, const mlocLocale* locale)
     }
 }
 
-// The line options: -u-lb, else the unit's CJ as an ideograph.
-static uint32_t LineOptions(const mlocDataSet* data, const mlocLocale* locale)
+// Whether a line takes CJ as an ideograph: by -u-lb, else by the unit.
+static bool CjAsIdeographic(const mlocDataSet* data, const mlocLocale* locale)
 {
     if (KeywordIs(locale, "lb", "strict"))
     {
-        return 0;
+        return false;
     }
     if (KeywordIs(locale, "lb", "normal") || KeywordIs(locale, "lb", "loose"))
     {
-        return muni_lineCjAsIdeographic;
+        return true;
     }
     DataSpan unit = FindType(data, locale, segmentGivesLine);
-    return unit.bytes != nullptr && (mlocLoad32(unit.bytes + 4) & segmentCjIdeographic) != 0
-               ? muni_lineCjAsIdeographic
-               : 0;
+    return unit.bytes != nullptr && (mlocLoad32(unit.bytes + 4) & segmentCjIdeographic) != 0;
 }
 
 static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlocLocale* locale,
@@ -113,7 +111,9 @@ static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlo
     if (s->kind == mloc_segmentLine)
     {
         r = muniInitLineIterator(&s->iterator, text, length, moreFollows);
-        return r == muni_success ? muniSetLineOptions(&s->iterator, LineOptions(data, locale)) : r;
+        return r == muni_success ? muniSegmentIterator_EnableCjAsIdeographic(
+                                       &s->iterator, CjAsIdeographic(data, locale))
+                                 : r;
     }
     uint32_t type = s->kind == mloc_segmentWord ? segmentGivesWord : segmentGivesSentence;
     DataSpan unit = FindType(data, locale, type);
@@ -125,7 +125,8 @@ static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlo
             ? muniInitWordIterator(&s->iterator, text, length, moreFollows)
             : muniInitSentenceIterator(&s->iterator, text, length, moreFollows);
     return r == muni_success && s->overrideCount > 0
-               ? muniSetBreakClassOverrides(&s->iterator, s->overrides, s->overrideCount)
+               ? muniSegmentIterator_SetBreakClassOverrides(&s->iterator, s->overrides,
+                                                            s->overrideCount)
                : r;
 }
 
@@ -172,7 +173,7 @@ mlocResult mlocSegmenter_SetComplexBreaker(mlocSegmenter* segmenter,
     {
         return mloc_errorInvalid;
     }
-    return muniSetComplexBreaker(&s->iterator, breaker, context) == muni_success
+    return muniSegmentIterator_SetComplexBreaker(&s->iterator, breaker, context) == muni_success
                ? mloc_success
                : mloc_errorInvalid;
 }
@@ -185,7 +186,7 @@ mlocResult mlocSegmenter_Feed(mlocSegmenter* segmenter, const char* text, size_t
     {
         return mloc_errorInvalid;
     }
-    if (muniFeedSegmentIterator(&s->iterator, text, length, moreFollows) != muni_success)
+    if (muniSegmentIterator_Feed(&s->iterator, text, length, moreFollows) != muni_success)
     {
         return mloc_errorInvalid;
     }
@@ -204,8 +205,8 @@ static muniResult Pull(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
     *mandatoryOut = false;
     s->busy = true;
     muniResult r = s->kind == mloc_segmentLine
-                       ? muniNextLineBreak(&s->iterator, offsetOut, mandatoryOut)
-                       : muniNextSegmentBreak(&s->iterator, offsetOut);
+                       ? muniSegmentIterator_NextLineBreak(&s->iterator, offsetOut, mandatoryOut)
+                       : muniSegmentIterator_NextBreak(&s->iterator, offsetOut);
     s->busy = false;
     s->iteratorDone = r == muni_done;
     if (r == muni_needMoreText)

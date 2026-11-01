@@ -202,8 +202,8 @@ static void TestHead(void)
                     &b);
     CHECK(ok && b.unit.settings == (2 | 2 << 3 | 3 << 8 | 2 << 14 | collationReorderGiven) &&
               b.unit.reorderCount == 2 &&
-              mlocLoad32(b.unit.reorder) == MUNI_SCRIPT('G', 'r', 'e', 'k') &&
-              mlocLoad32(b.unit.reorder + 4) == MUNI_SCRIPT('L', 'a', 't', 'n'),
+              mlocLoad32(b.unit.reorder) == MUNI_MAKE_SCRIPT('G', 'r', 'e', 'k') &&
+              mlocLoad32(b.unit.reorder + 4) == MUNI_MAKE_SCRIPT('L', 'a', 't', 'n'),
           "the rules' settings and reorder codes in the head");
     if (ok)
     {
