@@ -34,12 +34,13 @@ GrammarValue mlocMakeGrammarNumber(uint8_t function, const NumberValue* number)
     return v;
 }
 
-// The index of an option's literal text in names; -1 for none.
+// The index of an option's literal text in names (null entries
+// skipped); -1 for none.
 static int Choice(const NumberOption* option, const char* const* names, int count)
 {
     for (int i = 0; option->hasText && option->literal && i < count; i++)
     {
-        if (NameIs(option->text, option->length, names[i]))
+        if (names[i] != nullptr && NameIs(option->text, option->length, names[i]))
         {
             return i;
         }
@@ -47,45 +48,70 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
     return -1;
 }
 
-// The options that choose the rules, by name; their values' names in
-// their enumerations' orders.
-static const char* const s_cases[28] = {"nominative",
-                                        "abessive",
-                                        "ablative",
-                                        "accusative",
-                                        "adessive",
-                                        "allative",
-                                        "causal",
-                                        "comitative",
-                                        "dative",
-                                        "delative",
-                                        "elative",
-                                        "ergative",
-                                        "essive",
-                                        "genitive",
-                                        "illative",
-                                        "inessive",
-                                        "instrumental",
-                                        "locative",
-                                        "locativecopulative",
-                                        "oblique",
-                                        "partitive",
-                                        "prepositional",
-                                        "sociative",
-                                        "sublative",
-                                        "superessive",
-                                        "terminative",
-                                        "translative",
-                                        "vocative"};
-static const char* const s_particles[17] = {
-    "none",     "topic",        "subject", "object",    "comitative", "comitativeSpoken",
-    "vocative", "copulaPolite", "copula",  "direction", "capacity",   "means",
-    "source",   "choice",       "any",     "quotation", "definition"};
+// The options that choose the rules, by name. The case, particle and
+// reading names are keyed by the public enumeration's value, so that the
+// index a name is found at is the value it gives; the others' names are
+// in the order their setters read.
+static const char* const s_cases[] = {
+    [mloc_caseNominative] = "nominative",
+    [mloc_caseAbessive] = "abessive",
+    [mloc_caseAblative] = "ablative",
+    [mloc_caseAccusative] = "accusative",
+    [mloc_caseAdessive] = "adessive",
+    [mloc_caseAllative] = "allative",
+    [mloc_caseCausal] = "causal",
+    [mloc_caseComitative] = "comitative",
+    [mloc_caseDative] = "dative",
+    [mloc_caseDelative] = "delative",
+    [mloc_caseElative] = "elative",
+    [mloc_caseErgative] = "ergative",
+    [mloc_caseEssive] = "essive",
+    [mloc_caseGenitive] = "genitive",
+    [mloc_caseIllative] = "illative",
+    [mloc_caseInessive] = "inessive",
+    [mloc_caseInstrumental] = "instrumental",
+    [mloc_caseLocative] = "locative",
+    [mloc_caseLocativecopulative] = "locativecopulative",
+    [mloc_caseOblique] = "oblique",
+    [mloc_casePartitive] = "partitive",
+    [mloc_casePrepositional] = "prepositional",
+    [mloc_caseSociative] = "sociative",
+    [mloc_caseSublative] = "sublative",
+    [mloc_caseSuperessive] = "superessive",
+    [mloc_caseTerminative] = "terminative",
+    [mloc_caseTranslative] = "translative",
+    [mloc_caseVocative] = "vocative",
+};
+static const char* const s_particles[] = {
+    [mloc_particleNone] = "none",
+    [mloc_particleTopic] = "topic",
+    [mloc_particleSubject] = "subject",
+    [mloc_particleObject] = "object",
+    [mloc_particleComitative] = "comitative",
+    [mloc_particleComitativeSpoken] = "comitativeSpoken",
+    [mloc_particleVocative] = "vocative",
+    [mloc_particleCopulaPolite] = "copulaPolite",
+    [mloc_particleCopula] = "copula",
+    [mloc_particleDirection] = "direction",
+    [mloc_particleCapacity] = "capacity",
+    [mloc_particleMeans] = "means",
+    [mloc_particleSource] = "source",
+    [mloc_particleChoice] = "choice",
+    [mloc_particleAny] = "any",
+    [mloc_particleQuotation] = "quotation",
+    [mloc_particleDefinition] = "definition",
+};
 static const char* const s_possessors[7] = {"none", "1", "2", "3", "1p", "2p", "3p"};
 static const char* const s_booleans[2] = {"false", "true"};
 static const char* const s_numbers[2] = {"singular", "plural"};
 static const char* const s_nouns[2] = {"proper", "common"};
-static const char* const s_readings[3] = {"auto", "word", "letters"};
+static const char* const s_readings[] = {
+    [mloc_readingAuto] = "auto",
+    [mloc_readingWord] = "word",
+    [mloc_readingLetters] = "letters",
+};
+
+#define NAMES(table) table, (int)(sizeof(table) / sizeof((table)[0]))
 
 // Each option's value, by its index among its names, into a request.
 // A name for each value the options set.
@@ -156,14 +182,14 @@ static bool SetRule(mlocInflection* r, const uint8_t* name, size_t length,
         int count;
         void (*set)(mlocInflection*, int);
     } s_rules[] = {
-        {"case", s_cases, 28, SetCase},
-        {"particle", s_particles, 17, SetParticle},
-        {"possessor", s_possessors, 7, SetPossessor},
-        {"number", s_numbers, 2, SetNumber},
-        {"copula", s_booleans, 2, SetCopula},
-        {"question", s_booleans, 2, SetQuestion},
-        {"noun", s_nouns, 2, SetNoun},
-        {"reading", s_readings, 3, SetReading},
+        {"case", NAMES(s_cases), SetCase},
+        {"particle", NAMES(s_particles), SetParticle},
+        {"possessor", NAMES(s_possessors), SetPossessor},
+        {"number", NAMES(s_numbers), SetNumber},
+        {"copula", NAMES(s_booleans), SetCopula},
+        {"question", NAMES(s_booleans), SetQuestion},
+        {"noun", NAMES(s_nouns), SetNoun},
+        {"reading", NAMES(s_readings), SetReading},
     };
     for (size_t k = 0; k < sizeof(s_rules) / sizeof(s_rules[0]); k++)
     {
