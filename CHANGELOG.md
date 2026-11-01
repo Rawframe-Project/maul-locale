@@ -5,6 +5,76 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-11-01)
+
+### Changed
+
+- **Breaking: a hand-filled `mlocLocale` must be a well-formed locale.**
+  Every function that reads an `mlocLocale` (all 38) now refuses with
+  `mloc_errorInvalid` a locale whose fields are not NUL-padded text in
+  locale syntax: a language of 2, 3 or 5 to 8 lowercase letters, an
+  empty or title-case 4-letter script, an empty, 2-letter uppercase or
+  3-digit region, and a tail of subtags of 1 to 8 lowercase letters and
+  digits joined by single hyphens. Before, such a locale was read as it
+  was, and the call could report success with an undefined result. Only
+  the syntax is checked; canonical form stays the caller's job. A
+  program that fills an `mlocLocale` by hand must keep that syntax, or
+  make the locale with `mlocParseLocale` or `mlocCanonicalizeLocale`.
+  `mlocGetSpelloutRuleSetCount` returns 0 for such a locale, and
+  `docs/user/locales.md` says what a hand-filled locale must keep
+  ([#361](https://github.com/Rawframe-Project/maul-locale/pull/361)).
+- The headers and guides now say that memory an object keeps a pointer
+  to must stay as it was for the object's life, not only outlive it:
+  data files and data sets, compiled and bound messages, the formatter
+  a message is bound to, a message formatter's program functions, a
+  format call's arguments, an alphabetic index's bytes, a segmenter's
+  current piece of text, a catalog's bytes, and a catalog chain's
+  catalogs, formatters and cache. Each is checked once and read as
+  checked
+  ([#336](https://github.com/Rawframe-Project/maul-locale/pull/336),
+  [#341](https://github.com/Rawframe-Project/maul-locale/pull/341),
+  [#343](https://github.com/Rawframe-Project/maul-locale/pull/343)).
+
+### Fixed
+
+- `mlocFormatMessage` refuses with `mloc_errorInvalid` memory it checked
+  that changed under it, which it used to read as it then was (calling a
+  null pointer, reading past the program's functions, or reading through
+  an argument's cleared pointer): a bound message whose formatter was
+  made again with fewer program functions, a program function's null
+  resolve entry, a `match` entry set to null during selection, and
+  arguments a program function changed before a later pass. The output
+  is left as it was when this happens in the first pass, and cleared in
+  a later one
+  ([#343](https://github.com/Rawframe-Project/maul-locale/pull/343),
+  [#345](https://github.com/Rawframe-Project/maul-locale/pull/345)).
+- `mlocCatalogChain_FormatMessage` refuses with `mloc_errorInvalid` a
+  key index past the first catalog's keys. A first catalog replaced by
+  one with fewer keys sent the read past its key offsets
+  ([#336](https://github.com/Rawframe-Project/maul-locale/pull/336)).
+- `mlocInflector_InflectNumber` refuses with `mloc_errorInvalid` a
+  number whose text does not end in the number's own digits: a percent
+  sign, compact pattern or exponent separator that ends or begins in a
+  digit (`12.5%9`, `129` for 12K, `1.2E93`). Such numbers, which only
+  altered number data writes, were spoken as another number and
+  reported success
+  ([#363](https://github.com/Rawframe-Project/maul-locale/pull/363),
+  [#365](https://github.com/Rawframe-Project/maul-locale/pull/365)).
+- Collation and search: a run of combining marks after a starter whose
+  count passed 2^32 (4 GiB of UTF-16 or more) and wrapped to a count
+  that fits the 64 code point normalization window was taken to fit it
+  and written past it. A run whose count wrapped to more was read as a
+  long run, as it should be
+  ([#374](https://github.com/Rawframe-Project/maul-locale/pull/374)).
+- `mlocOpenData` refuses a spell-out rule that holds a substitution its
+  kind cannot make, which no generated file has. A data file whose
+  negative rule took a fractional part made formatting negative
+  infinity write one byte before a buffer
+  ([#393](https://github.com/Rawframe-Project/maul-locale/pull/393)).
+- A Finnish stem change of 17 to 24 bytes would have written past its
+  buffer in Release builds; no known input reaches it
+  ([#353](https://github.com/Rawframe-Project/maul-locale/pull/353)).
+
 ## [0.5.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.4.0...v0.5.0) (2026-10-31)
 
 ### Changed
