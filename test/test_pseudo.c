@@ -237,7 +237,12 @@ static void TestTool(void)
 
 int main(int argc, char** argv)
 {
-    s_directory = argc > 1 ? argv[1] : ".";
+    if (argc != 2)
+    {
+        printf("usage: test_pseudo DIRECTORY\n");
+        return 1;
+    }
+    s_directory = argv[1];
     TestForms();
     TestSuite();
     TestTool();
