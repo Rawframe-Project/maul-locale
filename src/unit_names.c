@@ -8,6 +8,7 @@
 #include "bytes.h"
 #include "currency_tables.h"
 #include "data_format.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "number_data.h"
@@ -255,6 +256,8 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
     {
         return false;
     }
+    // The gatherings ask for the names', extras' or cases' fields.
+    MLOC_ASSERT(g->fieldCount <= unitNameFields);
     SparseTable t = mlocReadSparseTable(unit);
     const uint8_t* row = mlocFindSparseRow(&t, (uint16_t)full);
     for (uint32_t field = 0; row != nullptr && field < g->fieldCount; field++)
@@ -344,6 +347,8 @@ bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint3
     record = record != nullptr ? record : FindDerivation(unit, "root");
     uint32_t at =
         feature == unitFeatureGender ? unitDerivationGender + structure : feature + 2 * structure;
+    // The callers' features and structures are within the record.
+    MLOC_ASSERT(at + (feature == unitFeatureGender ? 0 : 1) < unitDerivationSize);
     *value0Out = record != nullptr ? record[at] : unitDerivedNone;
     *value1Out =
         record != nullptr && feature != unitFeatureGender ? record[at + 1] : unitDerivedNone;

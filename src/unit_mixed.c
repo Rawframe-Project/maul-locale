@@ -6,10 +6,12 @@
 #include "unit_mixed.h"
 
 #include "decimal.h"
+#include "invariant.h"
 #include "wide.h"
 
 UnitId mlocUnitPartOf(const UnitId* mixed, uint32_t i)
 {
+    MLOC_ASSERT(i < mixed->count);
     UnitId part = {.numeratorConstant = 1, .denominatorConstant = 1, .count = 1};
     part.parts[0] = mixed->parts[i];
     return part;
@@ -229,6 +231,8 @@ mlocResult mlocSplitMixed(const UnitTable* t, const UnitId* mixed, const UnitSca
     *out = (mlocUnitAmounts){.count = (uint8_t)s.count};
     for (uint32_t i = 0; i < smallest; i++)
     {
+        // Sort placed each part's own index once.
+        MLOC_ASSERT(s.index[i] < s.count);
         bool exact = true;
         UnitValue w = mlocUnitValueOfInteger(&integers[i]);
         r = v.infinite || nan ? mlocMakeDecimal(0, &out->amounts[s.index[i]])

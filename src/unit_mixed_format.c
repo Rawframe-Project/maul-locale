@@ -15,6 +15,7 @@
 
 #include "currency_tables.h"
 #include "decimal.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "list_join.h"
 #include "number_output.h"
@@ -238,6 +239,8 @@ static void SmallestLead(const Mixed* m, char* lead, ListItem* item)
         category = mlocSelectPluralRule(f->pluralRule, &operands);
     }
     uint32_t slot = m->output->slot + m->last;
+    // A plural category, and a slot ValidOutput placed below unitSlots.
+    MLOC_ASSERT(category < unitCategories && slot < unitSlots);
     const uint8_t* text = m->unit->patterns + m->unit->start[slot][category];
     size_t length = m->unit->length[slot][category];
     size_t n = 0;
