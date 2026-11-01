@@ -3,6 +3,8 @@
 
 #include "message_offset.h"
 
+#include "invariant.h"
+
 #include "maul-locale/decimal.h"
 
 #include <string.h>
@@ -51,9 +53,31 @@ static int CompareDigits(const uint8_t* a, const uint8_t* b)
     return 0;
 }
 
+// The value's digits into a and the delta's magnitude into b, each from
+// the power low up. Each digit and the delta's two lie at most at top,
+// below the room and its spare top digit.
+static void Place(const mlocDecimal* d, int32_t delta, int64_t low, int64_t top, uint8_t* a,
+                  uint8_t* b)
+{
+    for (int i = 0; i < d->count; i++)
+    {
+        int64_t at = d->exponent + d->count - 1 - i - low;
+        MLOC_ASSERT(at >= 0 && at <= top - low);
+        a[at] = d->digits[i];
+    }
+    uint32_t magnitude = (uint32_t)(delta < 0 ? -(int64_t)delta : delta);
+    for (int64_t at = -low; magnitude > 0; at++, magnitude /= 10)
+    {
+        MLOC_ASSERT(at <= top - low);
+        b[at] = (uint8_t)(magnitude % 10);
+    }
+}
+
 bool mlocOffsetNumber(NumberValue* value, int32_t delta)
 {
     mlocDecimal* d = &value->decimal;
+    // The add or subtract option's digit size (mlocDigitSize).
+    MLOC_ASSERT(delta >= -99 && delta <= 99);
     if (d->kind != mloc_decimalFinite || delta == 0)
     {
         return true;
@@ -70,15 +94,7 @@ bool mlocOffsetNumber(NumberValue* value, int32_t delta)
     }
     uint8_t a[offsetDigits] = {0};
     uint8_t b[offsetDigits] = {0};
-    for (int i = 0; i < d->count; i++)
-    {
-        a[d->exponent + d->count - 1 - i - low] = d->digits[i];
-    }
-    uint32_t magnitude = (uint32_t)(delta < 0 ? -(int64_t)delta : delta);
-    for (int64_t at = -low; magnitude > 0; at++, magnitude /= 10)
-    {
-        b[at] = (uint8_t)(magnitude % 10);
-    }
+    Place(d, delta, low, top, a, b);
     bool negative = d->negative != 0 && d->count > 0;
     bool subtract = negative != (delta < 0);
     if (!subtract)
