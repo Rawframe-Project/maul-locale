@@ -7,8 +7,9 @@
 // special rules, fraction rule sets, plural blocks, apostrophes, patterns,
 // ">>>"); the rules ICU refuses, and the one the library refuses that ICU
 // takes (a fraction rule set read before a rule names it); the unit the
-// generator writes opening, every corruption of it refused, and its lead
-// records; and the engine's limits on rules that nest without end.
+// generator writes opening, every corruption of it refused (a substitution
+// its rule cannot make among them), and its lead records; and the
+// engine's limits on rules that nest without end.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -651,6 +652,114 @@ static void TestEngineLimits(void)
     free(deep);
 }
 
+// The offset of a rule's n-th substitution piece in its unit.
+static size_t SubOf(const uint8_t* unit, const SpelloutRules* r, uint32_t rule, int n)
+{
+    const uint8_t* record = r->rules + (size_t)rule * spelloutRuleSize;
+    size_t piece = (size_t)(r->pieces - unit) + (size_t)mlocLoad16(record + 8) * spelloutPieceSize;
+    for (;; piece += spelloutPieceSize)
+    {
+        if (unit[piece] == spelloutSubstitution && n-- == 0)
+        {
+            return piece;
+        }
+    }
+}
+
+// Opens a data file of root's rules alone.
+static mlocResult OpenRootFile(const uint8_t* unit, size_t unitSize)
+{
+    size_t size = 0;
+    uint8_t* bytes = RootFile(unit, unitSize, &size);
+    mlocData source;
+    mlocResult r = mlocOpenData(bytes, size, &source);
+    free(bytes);
+    return r;
+}
+
+// Whether the unit with a substitution made another kind is refused.
+static bool KindRefused(const uint8_t* unit, size_t size, size_t piece, SpelloutSubKind kind)
+{
+    return Refused(unit, size, piece + 1,
+                   (uint8_t)((unit[piece + 1] & ~spelloutSubKindMask) | (uint32_t)kind));
+}
+
+// Each rule holds only the substitutions its kind and its set's can make
+// (ICU's NFSubstitution::makeSubstitution): a negative rule's ">>" made
+// a fractional part took the fraction of -Infinity, which has no places,
+// and wrote before its buffer.
+static void TestSubstitutionKinds(void)
+{
+    size_t size = 0;
+    uint8_t* unit = Unit(&size);
+    if (unit == nullptr)
+    {
+        return;
+    }
+    SpelloutRules r = mlocReadSpelloutRules((DataSpan){unit, (uint32_t)size});
+    // %a's eight normal rules, then "-x" and "x.x"; "20: x >>> y"; and
+    // %%f's first rule, "10: <%a< tenths".
+    size_t negative = SubOf(unit, &r, 8, 0);
+    size_t integral = SubOf(unit, &r, 9, 0);
+    size_t fraction = SubOf(unit, &r, 9, 1);
+    uint32_t twenty = 0;
+    while (mlocLoad64(r.rules + (size_t)twenty * spelloutRuleSize) != 20)
+    {
+        twenty++;
+    }
+    size_t modulus = SubOf(unit, &r, twenty, 0);
+    uint32_t set = 0;
+    while ((r.sets[(size_t)set * spelloutSetSize + 3] & spelloutSetFraction) == 0)
+    {
+        set++;
+    }
+    size_t numerator = SubOf(unit, &r, mlocLoad16(r.sets + (size_t)set * spelloutSetSize + 4), 0);
+    CHECK(unit[negative + 1] == spelloutAbsolute && unit[integral + 1] == spelloutIntegral &&
+              unit[fraction + 1] == spelloutFraction &&
+              (unit[modulus + 1] & spelloutSubKindMask) == spelloutModulus &&
+              (unit[numerator + 1] & spelloutSubKindMask) == spelloutNumerator,
+          "the substitutions the generator writes");
+    CHECK(KindRefused(unit, size, negative, spelloutFraction) &&
+              KindRefused(unit, size, negative, spelloutModulus) &&
+              KindRefused(unit, size, negative, spelloutMultiplier) &&
+              !KindRefused(unit, size, negative, spelloutSame),
+          "a negative rule: the absolute value or the same value");
+    CHECK(KindRefused(unit, size, integral, spelloutMultiplier) &&
+              KindRefused(unit, size, fraction, spelloutAbsolute) &&
+              KindRefused(unit, size, fraction, spelloutModulus) &&
+              !KindRefused(unit, size, integral, spelloutFraction) &&
+              !KindRefused(unit, size, fraction, spelloutSame),
+          "a fraction rule: the integral and fractional parts or the same value");
+    CHECK(KindRefused(unit, size, modulus, spelloutFraction) &&
+              KindRefused(unit, size, modulus, spelloutAbsolute) &&
+              KindRefused(unit, size, modulus, spelloutNumerator) &&
+              !KindRefused(unit, size, modulus, spelloutMultiplier),
+          "a normal rule: a multiplier, a modulus or the same value");
+    CHECK(KindRefused(unit, size, numerator, spelloutMultiplier) &&
+              KindRefused(unit, size, numerator, spelloutModulus) &&
+              !KindRefused(unit, size, numerator, spelloutSame),
+          "a fraction rule set's rule: a numerator or the same value");
+    free(unit);
+    // A file of root's rules with "-x"'s ">>" made a fractional part.
+    static const char s_minus[] = "%a:\n-x: minus >>;\n0: =#,##0=;\n";
+    RbnfGroup group;
+    char error[256];
+    mlocResult plain = (mlocResult)-100;
+    mlocResult forged = (mlocResult)-100;
+    if (RbnfCompile(s_minus, strlen(s_minus), &group, error, sizeof(error)))
+    {
+        unit = SpelloutPayload(&group, &size);
+        RbnfFree(&group);
+        r = mlocReadSpelloutRules((DataSpan){unit, (uint32_t)size});
+        plain = OpenRootFile(unit, size);
+        unit[SubOf(unit, &r, 1, 0) + 1] = spelloutFraction;
+        forged = OpenRootFile(unit, size);
+        free(unit);
+    }
+    CHECK(plain == mloc_success && forged == mloc_errorFormat,
+          "a file whose negative rule takes a fractional part");
+}
+
 // Rules CLDR's data barely reaches, ICU4C 79's results: a divisor not a
 // power of ten taking a fraction (%duration's 60), a negative value
 // without a "-x" rule, whose fraction is x - floor(x) for a fraction rule
@@ -1086,6 +1195,7 @@ int main(void)
     TestTitlecase();
     TestCasesAsIcu();
     TestEngineLimits();
+    TestSubstitutionKinds();
     TestEngineResults();
     TestFractionLimits();
     TestParseRules();
