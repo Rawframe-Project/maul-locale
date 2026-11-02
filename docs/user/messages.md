@@ -60,6 +60,8 @@ A program adds functions of its own in the formatter's options, each under a nam
 
 When part of a message fails (an argument is missing, a function refuses its operand), the format call writes the rest with the specification's fallback for that part, such as `{$name}`, and returns `mloc_withFallbacks`. The faults, with the expression each comes from, go to an `mlocMessageFaults` when one is given. A formatter made with the strict option then returns `mloc_errorFallback` and leaves the output, its buffer and length, as it was, so text written there earlier stays.
 
+`:string` compares its text with a key after NFC. A text whose NFC is longer than 512 bytes is compared a stretch at a time, cut before the starters nothing before them composes with. A stretch can be at most `MLOC_MAX_MESSAGE_SELECTOR_RUN` (170) bytes, which holds any stream-safe text (UAX #15): its longest run is a starter and 30 combining marks, 124 bytes. Past that bound, the text cannot be compared with a key as long as its NFC. A strict formatter then refuses the call with `mloc_errorLimit`; otherwise the selector is a bad selector, and its variant is `*`.
+
 ## Direction and parts
 
 A placeholder's text is isolated by the specification's default bidi strategy: a right-to-left name inside a left-to-right message keeps its own order. The formatter's options can turn isolation off where the program isolates itself. With the output's part function set, a format call reports each literal text, placeholder, fallback and markup with its byte range, and `mlocGetMessagePartInfo` tells what each one names; markup writes nothing, so a program can style or link a range.

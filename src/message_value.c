@@ -110,11 +110,11 @@ bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t c
 
 enum
 {
-    // The bytes the NFC of a piece of text is written into, and the most
-    // a piece compared in turn may have: NFC makes UTF-8 at most three
-    // times as long (UAX #15).
-    normalRoom = 256,
-    pieceRoom = 84,
+    // The bytes the NFC of a text, or of a piece of it compared in turn,
+    // is written into, and the most a piece may have: NFC makes UTF-8 at
+    // most three times as long (UAX #15).
+    normalRoom = 512,
+    pieceRoom = MLOC_MAX_MESSAGE_SELECTOR_RUN,
 };
 
 static_assert(3 * pieceRoom <= normalRoom, "a piece's NFC fits");
@@ -161,9 +161,9 @@ static size_t PieceEnd(const char* text, size_t size, size_t at)
 
 // Whether a text's NFC is a key, normalized a piece at a time; with a
 // fault when a piece cannot be normalized or has no boundary within
-// pieceRoom bytes.
+// pieceRoom bytes, and *limitOut set for the latter.
 static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_t length,
-                        mlocMessageFaultKind* faultOut)
+                        mlocMessageFaultKind* faultOut, bool* limitOut)
 {
     size_t matched = 0;
     for (size_t at = 0; at < size;)
@@ -176,6 +176,7 @@ static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_
                                 .status != muni_success)
         {
             *faultOut = mloc_messageFaultUnsupportedOperation;
+            *limitOut = end == 0;
             return false;
         }
         if (needed > length - matched || memcmp(normal, key + matched, needed) != 0)
@@ -189,9 +190,10 @@ static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_
 }
 
 bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
-                       mlocMessageFaultKind* faultOut)
+                       mlocMessageFaultKind* faultOut, bool* limitOut)
 {
     *faultOut = mloc_messageFaultNone;
+    *limitOut = false;
     const char* text = (const char*)value->text;
     size_t size = value->length;
     char digits[128];
@@ -234,7 +236,7 @@ bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
     // another length cannot match, and one as long is compared in pieces.
     if (result.status == muni_errorCapacity)
     {
-        return needed == length && PiecesMatch(text, size, key, length, faultOut);
+        return needed == length && PiecesMatch(text, size, key, length, faultOut, limitOut);
     }
     if (result.status != muni_success)
     {

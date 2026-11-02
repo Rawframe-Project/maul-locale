@@ -60,6 +60,14 @@ extern "C"
 // formatter prepares for its expressions. They depend on the formatter, so
 // mlocMessageFormatter_Bind refuses a larger one, with mloc_errorLimit.
 #define MLOC_MAX_BOUND_MESSAGE_SIZE 4294967295u
+// The longest stretch, in bytes, of a :string selector's text between two
+// NFC boundaries (starters whose NFC quick check is yes, before which the
+// text's NFC can be cut). A text whose NFC passes 512 bytes is compared
+// with a key as long a stretch at a time, so mlocFormatMessage cannot
+// compare it when a stretch is longer: in strict mode it refuses the call
+// with mloc_errorLimit, else the selector is a bad one. A stream-safe text
+// (UAX #15) runs at most 30 combining marks after a starter, 124 bytes.
+#define MLOC_MAX_MESSAGE_SELECTOR_RUN 170
 
     // Why a message did not compile: a syntax error (the text is not
     // well-formed MF2, or not well-formed UTF-8), or one of the data
@@ -582,12 +590,16 @@ extern "C"
     ///                       again, which clears the buffer.
     /// @param faultsOut      Receives the faults; may be null. They are
     ///                       found and written also when the call fails with
-    ///                       mloc_errorCapacity, mloc_errorFallback or a
+    ///                       mloc_errorCapacity, mloc_errorFallback,
+    ///                       mloc_errorLimit or a
     ///                       refusal of what a program function gave or
     ///                       changed; left unchanged on any other failure.
     /// @return mloc_success; mloc_withFallbacks when the text holds
     ///         fallbacks; in strict mode mloc_errorFallback when a part
-    ///         fails, the faults reported; mloc_errorCapacity when the text does
+    ///         fails, the faults reported; in strict mode mloc_errorLimit
+    ///         when a :string selector's text and a key cannot be compared
+    ///         (MLOC_MAX_MESSAGE_SELECTOR_RUN), the faults reported;
+    ///         mloc_errorCapacity when the text does
     ///         not fit (textOut->length is then the length needed);
     ///         mloc_errorInvalid for a null pointer (an argument's name,
     ///         string, decimal, amount or unit among them), a decimal that
