@@ -7,21 +7,48 @@ may change the API, the ABI and every data format.
 
 ## [0.7.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.6.0...v0.7.0) (2026-11-02)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **segment:** lines at normal, the default, no longer break before small kana and the prolonged sound mark (Line_Break=CJ). This holds in `ja`, `zh` and `zh-Hant` without `-u-lb`, and with `-u-lb-normal` in any locale; only `-u-lb-loose` breaks there. `-u-lb-loose` now adds CSS's other loose breaks. Lines of `ja`, `zh` and `zh-Hant` at normal and loose may break before U+301C and U+30A0. A program that stored line breaks computes them again.
+- **Breaking: line breaks follow the levels of CSS's `line-break`.**
+  `-u-lb` now picks CSS Text 3's `strict`, `normal` or `loose` level, and
+  a locale without the key, or with a value CLDR's key does not have
+  (`anywhere`), breaks at `normal`. Small kana and the prolonged sound
+  mark (Line_Break=CJ) stay with the character before them at `normal`
+  and `strict` in every locale, `ja`, `zh` and `zh-Hant` without the key
+  included: "あぁあーい" is `[あぁ][あー][い]`, where it used to break
+  before each of them. Only `-u-lb-loose` breaks there. `-u-lb-loose`
+  used to break as `normal`; it now adds CSS's other loose breaks. Lines
+  of `ja`, `zh` and `zh-Hant` may now break before 〜 (U+301C) and ゠
+  (U+30A0) at `normal` and `loose`. A program that stored line breaks
+  must compute them again. `docs/user/segmentation.md` describes the
+  levels and the cases where ICU4C 79.1 breaks otherwise
+  ([#409](https://github.com/Rawframe-Project/maul-locale/pull/409)).
+- The library builds against Maul Unicode 0.11.0, up from 0.6.0. The
+  build fetches it when no installed copy of that version is found
+  ([#403](https://github.com/Rawframe-Project/maul-locale/pull/403),
+  [#409](https://github.com/Rawframe-Project/maul-locale/pull/409),
+  [#415](https://github.com/Rawframe-Project/maul-locale/pull/415)).
 
 ### Added
 
-* **generator:** make el and hy index labels by their case rules ([#412](https://github.com/Rawframe-Project/maul-locale/issues/412)) ([b374bad](https://github.com/Rawframe-Project/maul-locale/commit/b374bad3f6358833412317fdb442de9d664c4280)), closes [#411](https://github.com/Rawframe-Project/maul-locale/issues/411)
-* **segment:** break lines at CSS's line-break levels ([#409](https://github.com/Rawframe-Project/maul-locale/issues/409)) ([2dc9870](https://github.com/Rawframe-Project/maul-locale/commit/2dc9870076843396559a9725f7a1ffae54f220e2)), closes [#408](https://github.com/Rawframe-Project/maul-locale/issues/408)
-
+- The generator makes `el` and `hy` index labels from their exemplars,
+  with Greek and Armenian casing, when the CLDR it reads gives them none.
+  It used to stop there. The data files built from CLDR 49 do not change
+  ([#412](https://github.com/Rawframe-Project/maul-locale/pull/412)).
 
 ### Fixed
 
-* **datetime:** write a long spelled-out month whole ([#417](https://github.com/Rawframe-Project/maul-locale/issues/417)) ([3d5c3d0](https://github.com/Rawframe-Project/maul-locale/commit/3d5c3d034190eb69d6b640b1926d0b2e4bce4631)), closes [#414](https://github.com/Rawframe-Project/maul-locale/issues/414)
-* **unit:** find a power's patterns of a long gender ([#420](https://github.com/Rawframe-Project/maul-locale/issues/420)) ([3d938c5](https://github.com/Rawframe-Project/maul-locale/commit/3d938c5a8fd71c3bc2dc77d4165e4c52f8d67a61)), closes [#419](https://github.com/Rawframe-Project/maul-locale/issues/419)
+- A date whose pattern writes the month number in a spelled-out
+  numbering system (`numbers="M=..."`) wrote 64 bytes of uninitialized
+  memory in place of a spelled-out month longer than 64 bytes. It is now
+  written whole. Only a data file with such rules reaches it; CLDR 49's
+  built-in data does not
+  ([#417](https://github.com/Rawframe-Project/maul-locale/pull/417)).
+- A unit power of a gender found its gendered patterns ("power2" of a
+  feminine unit) only for genders of up to 24 bytes. A longer gender in
+  a data file fell back to the plain power's patterns. CLDR 49's genders
+  are at most 9 bytes
+  ([#420](https://github.com/Rawframe-Project/maul-locale/pull/420)).
 
 ## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-11-01)
 
