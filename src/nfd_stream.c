@@ -57,7 +57,7 @@ static uint32_t Decode(const NfdStream* s, size_t at, size_t* sizeOut)
     return mlocNfdDecodeAt((NfdText){s->text, s->units, s->length}, at, sizeOut);
 }
 
-// The full canonical decomposition, one level at a time.
+// The full canonical decomposition.
 static uint32_t Decompose(uint32_t codePoint, uint32_t* out)
 {
     if (codePoint < nfdPlain)
@@ -65,33 +65,12 @@ static uint32_t Decompose(uint32_t codePoint, uint32_t* out)
         out[0] = codePoint;
         return 1;
     }
-    uint32_t stack[nfdMaxDecomposition];
-    uint32_t depth = 0;
-    uint32_t count = 0;
-    stack[depth++] = codePoint;
-    while (depth > 0 && count < nfdMaxDecomposition)
-    {
-        uint32_t c = stack[--depth];
-        uint32_t first = 0;
-        uint32_t second = 0;
-        size_t pieces = 0;
-        if (depth + 2 <= nfdMaxDecomposition &&
-            muniDecomposePair(c, &first, &second, &pieces) == muni_success && pieces > 0)
-        {
-            if (pieces == 2)
-            {
-                stack[depth++] = second;
-            }
-            stack[depth++] = first;
-        }
-        else
-        {
-            out[count++] = c;
-        }
-    }
+    size_t count = 0;
+    muniResult result = muniGetDecomposition(codePoint, muni_nfd, out, nfdMaxDecomposition, &count);
     // The longest canonical decomposition, 4 code points, fits the room.
-    MLOC_ASSERT(depth == 0);
-    return count;
+    MLOC_ASSERT(result == muni_success);
+    (void)result;
+    return count < nfdMaxDecomposition ? (uint32_t)count : nfdMaxDecomposition;
 }
 
 static uint8_t Class(uint32_t codePoint)
