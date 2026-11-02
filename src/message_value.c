@@ -119,10 +119,14 @@ enum
 
 static_assert(3 * pieceRoom <= normalRoom, "a piece's NFC fits");
 
-// Whether the code point at text is an NFC boundary: one nothing before
-// it composes with or moves past (a starter whose quick check is yes),
-// so a text's NFC is that of its pieces cut there. *sizeOut receives
-// the code point's length, 0 for ill-formed text.
+// Whether the code point at text is an NFC boundary, as ICU4C's
+// hasCompBoundaryBefore: a starter that composes with nothing before it,
+// so that nothing before it moves past it or composes with it, and a
+// text's NFC is that of its pieces cut there. Its NFD's first code point
+// is a starter whose quick check is not maybe (which names the second
+// code point of a composition); a singleton such as U+2126 or a CJK
+// compatibility ideograph is one. *sizeOut receives the code point's
+// length, 0 for ill-formed text.
 static bool NfcBoundary(const char* text, size_t length, size_t* sizeOut)
 {
     uint32_t codePoint = 0;
@@ -132,10 +136,20 @@ static bool NfcBoundary(const char* text, size_t length, size_t* sizeOut)
         *sizeOut = 0;
         return false;
     }
-    muniQuickCheck answer = muni_quickCheckNo;
-    return muniGetCombiningClass(codePoint) == 0 &&
-           muniCheckNormalization(text, *sizeOut, muni_nfc, &answer).status == muni_success &&
-           answer == muni_quickCheckYes;
+    uint32_t decomposed[MUNI_MAX_DECOMPOSITION];
+    size_t count = 0;
+    uint32_t first = muniGetDecomposition(codePoint, muni_nfd, decomposed, MUNI_MAX_DECOMPOSITION,
+                                          &count) == muni_success &&
+                             count > 0
+                         ? decomposed[0]
+                         : codePoint;
+    char bytes[4];
+    size_t size = 0;
+    muniQuickCheck answer = muni_quickCheckMaybe;
+    return muniGetCombiningClass(codePoint) == 0 && muniGetCombiningClass(first) == 0 &&
+           muniEncodeUtf8(first, bytes, sizeof bytes, &size) == muni_success &&
+           muniCheckNormalization(bytes, size, muni_nfc, &answer).status == muni_success &&
+           answer != muni_quickCheckMaybe;
 }
 
 // Where the piece of text from at ends: the last boundary within

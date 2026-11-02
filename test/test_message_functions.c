@@ -531,6 +531,21 @@ static void TestString(void)
     nfc[at + 599] = (char)0xa8;
     CHECK(Formats(nfc, &longer, 1, "other", NULL),
           "a key as long that differs in its last letter does not, without a fault");
+    // CJK compatibility ideographs, singletons each its own boundary:
+    // U+F900 is U+8C48 after NFC.
+    static char ideographs[600];
+    static char hanja[1024] = ".input {$h :string} .match $h |";
+    size_t hanjaAt = strlen(hanja);
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(ideographs + 3 * i, "\xef\xa4\x80", 3);
+        memcpy(hanja + hanjaAt + 3 * i, "\xe8\xb1\x88", 3);
+    }
+    strcpy(hanja + hanjaAt + 600, "| {{nfc}} * {{other}}");
+    mlocMessageArgument compatibility = {
+        "h", 1, {mloc_messageValueString, 0, {.string = {ideographs, sizeof(ideographs)}}}};
+    CHECK(Formats(hanja, &compatibility, 1, "nfc", NULL),
+          "200 compatibility ideographs match their NFC, cut before each");
     // No boundary within MLOC_MAX_MESSAGE_SELECTOR_RUN bytes: Hangul
     // vowels, starters that compose with a leading consonant, after a
     // decomposed letter.

@@ -61,12 +61,17 @@ extern "C"
 // mlocMessageFormatter_Bind refuses a larger one, with mloc_errorLimit.
 #define MLOC_MAX_BOUND_MESSAGE_SIZE 4294967295u
 // The longest stretch, in bytes, of a :string selector's text between two
-// NFC boundaries (starters whose NFC quick check is yes, before which the
-// text's NFC can be cut). A text whose NFC passes 512 bytes is compared
-// with a key as long a stretch at a time, so mlocFormatMessage cannot
-// compare it when a stretch is longer: in strict mode it refuses the call
-// with mloc_errorLimit, else the selector is a bad one. A stream-safe text
-// (UAX #15) runs at most 30 combining marks after a starter, 124 bytes.
+// NFC boundaries, starters that compose with nothing before them, where
+// the text's NFC can be cut. A text whose NFC passes 512 bytes is
+// compared with a key as long a stretch at a time, so mlocFormatMessage
+// cannot compare it when a stretch is longer: in strict mode it refuses
+// the call with mloc_errorLimit, else the selector is a bad one. Every
+// starter is a boundary but 96 that compose with the code point before
+// them: conjoining Hangul vowels and trailing consonants, and vowel signs
+// and length marks of Brahmic scripts (and three Tibetan vowel signs that
+// decompose into combining marks). So only a run of those and of
+// combining marks passes the bound; a stream-safe text (UAX #15) has at
+// most 30 combining marks after a starter, 124 bytes.
 #define MLOC_MAX_MESSAGE_SELECTOR_RUN 170
 
     // Why a message did not compile: a syntax error (the text is not
