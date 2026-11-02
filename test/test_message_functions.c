@@ -509,8 +509,8 @@ static void TestString(void)
               Formats(".input {$s :string} .match $s s {{s}} * {{other}}", a, 4, "other", NULL),
           ":string matches a number's decimal and a key in NFC, case and all");
     // A string not in NFC and longer than the stack's buffer after NFC
-    // matches no key of another length; a key as long cannot be compared:
-    // the selector is bad, matching only "*".
+    // matches no key of another length, and a key as long is compared a
+    // piece at a time, cut where nothing composes across.
     static char decomposed[600];
     for (size_t i = 0; i < 200; i++)
     {
@@ -518,18 +518,35 @@ static void TestString(void)
     }
     mlocMessageArgument longer = {
         "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, 600}}}};
-    static char asLong[512] = ".input {$e :string} .match $e ";
-    size_t at = strlen(asLong);
-    for (size_t i = 0; i < 200; i++)
-    {
-        memcpy(asLong + at + 2 * i, "\xc3\xa9", 2);
-    }
-    strcpy(asLong + at + 400, " {{nfc}} * {{other}}");
-    static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
     CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", NULL),
           "a long string not in NFC matches no key of another length, and is no bad selector");
-    CHECK(Formats(asLong, &longer, 1, "other", bad),
-          "a key as long as its NFC cannot be compared: a bad selector");
+    static char nfc[512] = ".input {$e :string} .match $e |";
+    size_t at = strlen(nfc);
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(nfc + at + 2 * i, "\xc3\xa9", 2);
+    }
+    strcpy(nfc + at + 400, "| {{nfc}} * {{other}}");
+    CHECK(Formats(nfc, &longer, 1, "nfc", NULL), "a key equal to its NFC, 400 bytes, matches");
+    nfc[at + 399] = (char)0xa8;
+    CHECK(Formats(nfc, &longer, 1, "other", NULL),
+          "a key as long that differs in its last letter does not, without a fault");
+    // No boundary within a piece: Hangul vowels, starters that compose
+    // with a leading consonant, after a decomposed letter.
+    static char vowels[303] = "e\xcc\x81";
+    static char vowelKey[640] = ".input {$v :string} .match $v |\xc3\xa9";
+    size_t keyAt = strlen(vowelKey);
+    for (size_t i = 0; i < 100; i++)
+    {
+        memcpy(vowels + 3 + 3 * i, "\xe1\x85\xa1", 3);
+        memcpy(vowelKey + keyAt + 3 * i, "\xe1\x85\xa1", 3);
+    }
+    strcpy(vowelKey + keyAt + 300, "| {{nfc}} * {{other}}");
+    mlocMessageArgument unbroken = {
+        "v", 1, {mloc_messageValueString, 0, {.string = {vowels, sizeof(vowels)}}}};
+    static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
+    CHECK(Formats(vowelKey, &unbroken, 1, "other", bad),
+          "a key as long as a text with no boundary for 84 bytes cannot be compared");
     mlocMessageArgument unnamed = {NULL, 0, {mloc_messageValueInteger, 0, {.integer = 1}}};
     static const mlocMessageFaultKind unresolved2[] = {mloc_messageFaultUnresolvedVariable, 0};
     CHECK(Formats("{$x}", &unnamed, 1, "{$x}", unresolved2),

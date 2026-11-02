@@ -3,7 +3,9 @@
 
 #include "message_value.h"
 
+#include "maul-unicode/encoding.h"
 #include "maul-unicode/normalize.h"
+#include "maul-unicode/properties.h"
 
 #include <string.h>
 
@@ -106,6 +108,86 @@ bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t c
     return true;
 }
 
+enum
+{
+    // The bytes the NFC of a piece of text is written into, and the most
+    // a piece compared in turn may have: NFC makes UTF-8 at most three
+    // times as long (UAX #15).
+    normalRoom = 256,
+    pieceRoom = 84,
+};
+
+static_assert(3 * pieceRoom <= normalRoom, "a piece's NFC fits");
+
+// Whether the code point at text is an NFC boundary: one nothing before
+// it composes with or moves past (a starter whose quick check is yes),
+// so a text's NFC is that of its pieces cut there. *sizeOut receives
+// the code point's length, 0 for ill-formed text.
+static bool NfcBoundary(const char* text, size_t length, size_t* sizeOut)
+{
+    uint32_t codePoint = 0;
+    *sizeOut = 0;
+    if (muniDecodeUtf8(text, length, &codePoint, sizeOut) != muni_success)
+    {
+        *sizeOut = 0;
+        return false;
+    }
+    muniQuickCheck answer = muni_quickCheckNo;
+    return muniGetCombiningClass(codePoint) == 0 &&
+           muniCheckNormalization(text, *sizeOut, muni_nfc, &answer).status == muni_success &&
+           answer == muni_quickCheckYes;
+}
+
+// Where the piece of text from at ends: the last boundary within
+// pieceRoom bytes, or the text's end within them; 0 when there is none.
+static size_t PieceEnd(const char* text, size_t size, size_t at)
+{
+    if (size - at <= pieceRoom)
+    {
+        return size;
+    }
+    size_t end = 0;
+    size_t step = 0;
+    (void)NfcBoundary(text + at, size - at, &step);
+    for (size_t i = at + step; step > 0 && i - at <= pieceRoom; i += step)
+    {
+        if (NfcBoundary(text + i, size - i, &step))
+        {
+            end = i;
+        }
+    }
+    return end;
+}
+
+// Whether a text's NFC is a key, normalized a piece at a time; with a
+// fault when a piece cannot be normalized or has no boundary within
+// pieceRoom bytes.
+static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_t length,
+                        mlocMessageFaultKind* faultOut)
+{
+    size_t matched = 0;
+    for (size_t at = 0; at < size;)
+    {
+        size_t end = PieceEnd(text, size, at);
+        char normal[normalRoom];
+        size_t needed = 0;
+        if (end == 0 || muniNormalize(text + at, end - at, muni_nfc, muni_convertStrict, normal,
+                                      sizeof normal, &needed)
+                                .status != muni_success)
+        {
+            *faultOut = mloc_messageFaultUnsupportedOperation;
+            return false;
+        }
+        if (needed > length - matched || memcmp(normal, key + matched, needed) != 0)
+        {
+            return false;
+        }
+        matched += needed;
+        at = end;
+    }
+    return matched == length;
+}
+
 bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
                        mlocMessageFaultKind* faultOut)
 {
@@ -144,15 +226,15 @@ bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
     {
         return false;
     }
-    char normal[256];
+    char normal[normalRoom];
     size_t needed = 0;
     muniTextResult result =
         muniNormalize(text, size, muni_nfc, muni_convertStrict, normal, sizeof normal, &needed);
     // The whole length is given when the text does not fit: a key of
-    // another length cannot match, and only one as long can go uncompared.
-    if (result.status == muni_errorCapacity && needed != length)
+    // another length cannot match, and one as long is compared in pieces.
+    if (result.status == muni_errorCapacity)
     {
-        return false;
+        return needed == length && PiecesMatch(text, size, key, length, faultOut);
     }
     if (result.status != muni_success)
     {
