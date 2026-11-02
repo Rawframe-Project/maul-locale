@@ -5,13 +5,15 @@
 // well formed or not, a patterns unit built here and copies with one
 // field spoiled, then the dates data file: patterns of a locale's
 // calendars by entry and length, a region's own over its parent's, the
-// ISO calendar's taken from the Gregorian, and a numbering override.
+// ISO calendar's taken from the Gregorian, and a numbering override; and
+// a year before the Persian epoch with a long minus sign.
 
 #include "bytes.h"
 #include "data_view.h"
 #include "date_data.h"
 #include "date_tables.h"
 #include "kinds.h"
+#include "number_tables.h"
 #include "test_harness.h"
 #include "test_pack.h"
 #include "time_write.h"
@@ -1259,6 +1261,75 @@ static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocDat
     return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
 }
 
+// A Persian year before the epoch with a minus sign longer than the
+// formatter could once copy: root's number units of the library's data,
+// their symbol sets' minus made a string of 20 bytes, in a pack before
+// the data.
+static void TestLongMinus(void)
+{
+    static const char s_minus[] = "minus-sign-of-twenty";
+    DataView view = mlocViewOf(&s_sources[0]);
+    uint32_t root = 0;
+    DataSpan numbers;
+    DataSpan systems;
+    DataSpan symbols;
+    DataSpan patterns;
+    alignas(8) static uint8_t s_symbols[1 << 16];
+    if (!mlocFindDataLocale(&view, "root", 4, &root) ||
+        !mlocFindDataUnit(&view, kindNumbers, root, &numbers) ||
+        !mlocFindDataUnit(&view, kindNumberSystems, dataNoLocale, &systems) ||
+        !mlocFindDataUnit(&view, kindNumberSymbols, dataNoLocale, &symbols) ||
+        !mlocFindDataUnit(&view, kindNumberPatterns, dataNoLocale, &patterns) ||
+        symbols.size + 2 + sizeof(s_minus) > sizeof(s_symbols))
+    {
+        CHECK(false, "the library's number units");
+        return;
+    }
+    // The symbols with one more string, s_minus, after the others.
+    uint32_t strings = mlocLoad16(symbols.bytes);
+    uint32_t records = mlocLoad16(symbols.bytes + 2);
+    uint32_t text = mlocLoad32(symbols.bytes + 4);
+    uint32_t minus = sizeof(s_minus) - 1;
+    size_t offsets = numberTableHeaderSize + 2 * ((size_t)strings + 1);
+    size_t rest = symbols.size - offsets;
+    memcpy(s_symbols, symbols.bytes, offsets);
+    Put(s_symbols, strings + 1, 2);
+    Put(s_symbols + 4, text + minus, 4);
+    Put(s_symbols + offsets, text + minus, 2);
+    memcpy(s_symbols + offsets + 2, symbols.bytes + offsets, rest);
+    memcpy(s_symbols + offsets + 2 + rest, s_minus, minus);
+    for (uint32_t r = 0; r < records; r++)
+    {
+        Put(s_symbols + offsets + 2 + (size_t)r * 2 * numberSymbolCount + 2 * numberMinus, strings,
+            2);
+    }
+    PackUnit units[] = {
+        {kindNumberSystems, systems, false},
+        {kindNumberSymbols, {s_symbols, (uint32_t)(symbols.size + 2 + minus)}, false},
+        {kindNumberPatterns, patterns, false},
+        {kindNumbers, numbers, true},
+    };
+    mlocData sources[3];
+    memcpy(sources + 1, s_sources, sizeof(s_sources));
+    mlocDataSet set = {sources, 3};
+    mlocLocale persian;
+    mlocDateOptions options = {.style = mloc_dateStyleShort};
+    mlocDateFormatter formatter;
+    mlocDateInput input = {.year = 500, .month = 6, .day = 15};
+    mlocDate date;
+    char written[128];
+    mlocOutput output = {.buffer = written, .capacity = sizeof(written) - 1};
+    bool formatted =
+        OpenRootPack(units, 4, &sources[0]) &&
+        mlocParseLocale("und-u-ca-persian", 16, &persian).status == mloc_success &&
+        mlocInitDateFormatter(&set, &persian, &options, &formatter) >= 0 &&
+        mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &date) == mloc_success &&
+        mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success;
+    written[formatted ? output.length : 0] = '\0';
+    CHECK(formatted && strstr(written, "minus-sign-of-twenty121") != nullptr,
+          "Persian year -121 with a minus sign of 20 bytes");
+}
+
 int main(void)
 {
     TestPatterns();
@@ -1284,5 +1355,6 @@ int main(void)
     TestNames();
     TestDayPeriods();
     TestDayPeriodFields();
+    TestLongMinus();
     return s_failures == 0 ? 0 : 1;
 }
