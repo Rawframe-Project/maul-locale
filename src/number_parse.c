@@ -18,6 +18,7 @@
 #include "parse_match.h"
 #include "parse_tables.h"
 
+#include <stddef.h>
 #include <string.h>
 
 // ICU's sign types of affix patterns: positive, positive with a plus
@@ -190,10 +191,25 @@ static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t leng
     return true;
 }
 
+// Whether an affix pattern has MLOC_MAX_NUMBER_PARSE_AFFIX characters at
+// most, a symbol counting one.
+static bool WithinAffixBound(const uint8_t* text, size_t length)
+{
+    size_t characters = 0;
+    for (size_t at = 0; at < length && characters <= MLOC_MAX_NUMBER_PARSE_AFFIX; characters++)
+    {
+        bool symbol = false;
+        size_t size = 0;
+        (void)TokenAt(text, length, at, &symbol, &size);
+        at += size;
+    }
+    return characters <= MLOC_MAX_NUMBER_PARSE_AFFIX;
+}
+
 // The affix patterns the parser reads: the formatter's parse affixes,
 // within one of the currency's outer patterns when it has them (a prefix
 // after the text before the number, a suffix before the text after it).
-// False when one does not fit.
+// False when one passes MLOC_MAX_NUMBER_PARSE_AFFIX characters.
 static bool FillAffixes(Parser* r, uint32_t variant)
 {
     const NumberCore* c = &r->f->core;
@@ -215,6 +231,7 @@ static bool FillAffixes(Parser* r, uint32_t variant)
             ok = ok && Append(out, &at, outer->after[variant], outer->afterLength[variant]);
         }
         r->affixLength[affix] = (uint8_t)at;
+        ok = ok && WithinAffixBound(out, at);
     }
     return ok;
 }
@@ -389,6 +406,10 @@ static bool AddAffixMatchers(Parser* r)
     bool unsignedToo = plus && (strict ? r->f->signDisplay == mloc_signExceptZero : appended);
     uint32_t variants =
         strict && r->currency != nullptr && r->currency->outer ? r->currency->outerCount : 1;
+    if (variants > MLOC_MAX_CURRENCY_PARSE_PATTERNS)
+    {
+        return false;
+    }
     for (uint32_t v = 0; v < variants; v++)
     {
         Pair positive = {affixNone, affixNone};
@@ -533,7 +554,10 @@ static uint32_t ModeFlags(const Formatter* f, mlocParseMode mode)
 static bool BuildParser(Parser* r, const Formatter* f, const ParseCurrency* currency,
                         mlocParseMode mode)
 {
-    memset(r, 0, sizeof(*r));
+    // The series past those built are not read, and each built one is
+    // cleared then: they are most of the parser.
+    memset(r, 0, offsetof(Parser, series));
+    memset((char*)r + offsetof(Parser, seriesCount), 0, sizeof(*r) - offsetof(Parser, seriesCount));
     r->f = f;
     r->currency = currency;
     r->matchCurrency = currency != nullptr ? mlocMatchCurrency : nullptr;
@@ -707,8 +731,10 @@ mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* curren
     Parser r;
     if (!BuildParser(&r, formatter, currency, mode))
     {
-        // Only affixes of a crafted data file pass the parser's room.
-        return mloc_errorFormat;
+        // An affix past MLOC_MAX_NUMBER_PARSE_AFFIX characters, or a strict
+        // parse of more than MLOC_MAX_CURRENCY_PARSE_PATTERNS outer
+        // patterns: the rooms hold every other formatter's.
+        return mloc_errorLimit;
     }
     Segment s = {.text = (const uint8_t*)text, .length = length, .at = 0};
     Parsed p;

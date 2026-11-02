@@ -21,6 +21,12 @@ extern "C"
 // The most currency units of a kind (symbols, names) that parsing any
 // currency reads along a locale's chain, over every source of the data set.
 #define MLOC_MAX_CURRENCY_PARSE_UNITS 8
+// The most distinct patterns a currency's long name or ISO append takes
+// among a locale's plural categories that a strict parse reads, each
+// around the number: twice CLDR 49's most along any locale's chain (2,
+// Romanian's "{0} {1}" and "{0} de {1}"). mlocCurrencyFormatter_Parse
+// refuses a strict parse with more with mloc_errorLimit.
+#define MLOC_MAX_CURRENCY_PARSE_PATTERNS 4
 
     // How the currency is shown: the locale's symbol ("$", "US$", "€"), its
     // narrow symbol ("$" for any dollar), its ISO code ("USD"), its formal or
@@ -198,8 +204,11 @@ extern "C"
     ///                     left unchanged on any other failure.
     /// @return mloc_success; mloc_errorSyntax when no amount is read (or
     ///         no currency, with anyCurrency); mloc_errorLimit as for
-    ///         mlocNumberFormatter_Parse, and with anyCurrency for a chain of more
-    ///         than MLOC_MAX_CURRENCY_PARSE_UNITS currency units of a kind;
+    ///         mlocNumberFormatter_Parse, with anyCurrency for a chain of more
+    ///         than MLOC_MAX_CURRENCY_PARSE_UNITS currency units of a kind,
+    ///         and in strict mode for more than
+    ///         MLOC_MAX_CURRENCY_PARSE_PATTERNS patterns of the long name or
+    ///         ISO append;
     ///         mloc_errorNotFound for data without the parse sets; mloc_errorInvalid for a null
     ///         pointer, a mode out of range, or a formatter the library did
     ///         not make or of compact notation, or anyCurrency past 1.

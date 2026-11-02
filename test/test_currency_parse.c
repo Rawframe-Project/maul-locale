@@ -5,9 +5,18 @@
 // file: cases whose results ICU4C 79's DecimalFormat::parse and
 // parseCurrency give alike (tools/oracle/parse compares over 500,000
 // more), the round trip of each display in both modes, the names file's
-// absence, and the refusals.
+// absence, the refusals, and the currency patterns a strict parse reads
+// (MLOC_MAX_CURRENCY_PARSE_PATTERNS) on a pack before the data.
 
+#include "bytes.h"
+#include "currency_tables.h"
+#include "data_format.h"
+#include "data_view.h"
+#include "kinds.h"
+#include "number_data.h"
+#include "number_tables.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/currency.h"
 #include "maul-locale/data.h"
@@ -704,6 +713,97 @@ static void TestRefusals(void)
           "no text is no amount");
 }
 
+// Whether und's long name of EUR, from a pack before the data whose
+// currency pattern sets give the plural categories, zero to other, as many
+// distinct unit patterns as asked ("a" before the name and after the
+// number, then "b", and so on, other taking the last), formats 5 and
+// reads it back strictly with the status wanted, and leniently.
+static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
+{
+    DataView view = mlocViewOf(&s_withNames.sources[0]);
+    uint32_t root = 0;
+    DataSpan numbers, systems, symbols, patterns, fractions, sets, currencySymbols;
+    alignas(8) static uint8_t s_sets[1 << 16];
+    if (!mlocFindDataLocale(&view, "root", 4, &root) ||
+        !mlocFindDataUnit(&view, kindNumbers, root, &numbers) ||
+        !mlocFindDataUnit(&view, kindNumberSystems, dataNoLocale, &systems) ||
+        !mlocFindDataUnit(&view, kindNumberSymbols, dataNoLocale, &symbols) ||
+        !mlocFindDataUnit(&view, kindNumberPatterns, dataNoLocale, &patterns) ||
+        !mlocFindDataUnit(&view, kindCurrencyFractions, dataNoLocale, &fractions) ||
+        !mlocFindDataUnit(&view, kindCurrencyPatterns, dataNoLocale, &sets) ||
+        !mlocFindDataUnit(&view, kindCurrencySymbols, root, &currencySymbols) ||
+        sets.size + 64 > sizeof(s_sets))
+    {
+        return false;
+    }
+    // The sets with six more strings after the others: the header and
+    // offsets, the six strings' ends, the records (their unit patterns
+    // those strings) and the text, then the strings.
+    uint32_t strings = mlocLoad16(sets.bytes);
+    uint32_t records = mlocLoad16(sets.bytes + 2);
+    uint32_t text = mlocLoad32(sets.bytes + 4);
+    size_t offsets = numberTableHeaderSize + 2 * ((size_t)strings + 1);
+    size_t rest = sets.size - offsets;
+    memcpy(s_sets, sets.bytes, offsets);
+    PackPut(s_sets, strings + 6, 2);
+    PackPut(s_sets + 4, text + 36, 4);
+    memcpy(s_sets + offsets + 12, sets.bytes + offsets, rest);
+    uint8_t* added = s_sets + offsets + 12 + rest;
+    for (uint32_t c = 0; c < 6; c++)
+    {
+        uint8_t letter = (uint8_t)('a' + (c < distinct ? c : distinct - 1));
+        const uint8_t pattern[6] = {letter, currencyTextOther, ' ', currencyTextNumber, ' ',
+                                    letter};
+        memcpy(added + 6 * c, pattern, 6);
+        PackPut(s_sets + offsets + 2 * c, text + 6 * (c + 1), 2);
+        for (uint32_t r = 0; r < records; r++)
+        {
+            PackPut(s_sets + offsets + 12 + (size_t)r * currencySetSize + setUnitPatterns + 2 * c,
+                    strings + c, 2);
+        }
+    }
+    PackUnit units[] = {
+        {kindNumberSystems, systems, false},
+        {kindNumberSymbols, symbols, false},
+        {kindNumberPatterns, patterns, false},
+        {kindNumbers, numbers, true},
+        {kindCurrencyFractions, fractions, false},
+        {kindCurrencyPatterns, {s_sets, (uint32_t)(sets.size + 12 + 36)}, false},
+        {kindCurrencySymbols, currencySymbols, true},
+    };
+    mlocData sources[3];
+    memcpy(sources + 1, s_withNames.sources, 2 * sizeof(mlocData));
+    mlocDataSet set = {sources, 3};
+    mlocCurrencyOptions options = {.display = mloc_currencyName};
+    mlocCurrencyFormatter formatter;
+    mlocDecimal five;
+    char written[128];
+    mlocOutput output = {.buffer = written, .capacity = sizeof(written)};
+    if (!OpenRootPack(units, 7, &sources[0]) ||
+        Init(&set, "und", "EUR", &options, &formatter) != mloc_success ||
+        mlocParseDecimal("5", 1, &five).status != mloc_success ||
+        mlocCurrencyFormatter_Format(&formatter, &five, &output) != mloc_success)
+    {
+        return false;
+    }
+    mlocDecimal read;
+    char code[3];
+    size_t end = 0;
+    mlocResult strict = mlocCurrencyFormatter_Parse(&formatter, written, output.length,
+                                                    mloc_parseStrict, 0, &read, code, &end);
+    mlocResult lenient = mlocCurrencyFormatter_Parse(&formatter, written, output.length,
+                                                     mloc_parseLenient, 0, &read, code, &end);
+    return strict == strictly && lenient == mloc_success && end == output.length;
+}
+
+// MLOC_MAX_CURRENCY_PARSE_PATTERNS distinct unit patterns a strict parse
+// reads; one more is refused as a limit, and lenient mode reads other's.
+static void TestOuterPatterns(void)
+{
+    CHECK(OuterPatterns(4, mloc_success), "4 distinct unit patterns, strictly");
+    CHECK(OuterPatterns(5, mloc_errorLimit), "5 refused strictly, read leniently");
+}
+
 static bool OpenData(void)
 {
     static mlocData s_sources[2];
@@ -738,5 +838,6 @@ int main(void)
     TestChainLimit();
     TestLimitLeavesOutputs();
     TestRefusals();
+    TestOuterPatterns();
     return s_failures == 0 ? 0 : 1;
 }

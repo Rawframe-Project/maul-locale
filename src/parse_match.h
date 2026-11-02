@@ -11,27 +11,39 @@
 
 #include "number_format.h"
 
+#include "maul-locale/currency.h"
 #include "maul-locale/decimal.h"
+#include "maul-locale/number.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
 enum
 {
-    // The matchers of a list and of an affix's series.
+    // The matchers of a list.
     parseMaxMatchers = 32,
-    parseMaxSeries = 32,
-    // The affix patterns of a parser: a prefix and a suffix per sign type,
-    // and in strict mode those of each outer pattern of a currency.
-    parseMaxAffixes = 8,
-    // The affix matchers: the pairs and the unpaired affixes, and in
-    // strict mode the pairs of each outer pattern of a currency.
+    // The matchers of an affix's series: one per token of an affix of
+    // MLOC_MAX_NUMBER_PARSE_AFFIX characters and the plus sign a sign type
+    // may put before it, and an ignorables matcher between two of them.
+    parseMaxSeries = 2 * (MLOC_MAX_NUMBER_PARSE_AFFIX + 1),
+    // The affix patterns of a parser: a prefix and a suffix for each of
+    // three sign types (plus, positive, negative), for each outer pattern
+    // of a currency a strict parse reads.
+    parseMaxAffixes = 6 * MLOC_MAX_CURRENCY_PARSE_PATTERNS,
+    // The affix matchers: three pairs and their unpaired affixes in
+    // lenient mode, and in strict mode three pairs for each outer pattern
+    // of a currency.
     parseMaxAffixMatchers = 18,
-    // The bytes of an affix pattern a series is built from.
-    parseMaxAffixText = 64,
+    // The bytes of an affix pattern: MLOC_MAX_NUMBER_PARSE_AFFIX
+    // characters of four bytes at most and a plus sign.
+    parseMaxAffixText = 4 * (MLOC_MAX_NUMBER_PARSE_AFFIX + 1),
     // A code point no set holds: a byte that does not begin valid UTF-8.
     parseNoCodePoint = 0x110000,
 };
+
+static_assert(parseMaxAffixMatchers >= 3 * MLOC_MAX_CURRENCY_PARSE_PATTERNS &&
+                  parseMaxAffixMatchers >= 3 * 3,
+              "the affix matchers of every outer pattern, and of lenient mode");
 
 // The flags of a parse (ICU's ParsedNumber flags).
 enum

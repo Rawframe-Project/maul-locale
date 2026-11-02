@@ -503,6 +503,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
         target_compile_definitions(test_currency_parse PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
     target_compile_definitions(test_currency_parse PRIVATE MLOC_NAMES_FILE="${MLOC_NAMES_FILE}")
+    # It builds currency pattern sets of its own with the data layout's
+    # constants.
+    target_include_directories(test_currency_parse PRIVATE ${PROJECT_SOURCE_DIR}/src)
     mloc_add_test(currency_parse COMMAND test_currency_parse)
     maul_add_test(number)
     maul_add_test(number_parse)

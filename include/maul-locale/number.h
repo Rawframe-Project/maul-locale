@@ -20,6 +20,14 @@ extern "C"
 {
 #endif
 
+// The most characters of an affix that parsing reads, a symbol counting
+// one: a pattern's prefix or suffix, with the text a currency's long name
+// or ISO append writes on that side. Twice CLDR 49's longest along any
+// locale's chain (5, Romanian's " de " and the name), and no fewer than
+// 16. mlocNumberFormatter_Parse and mlocCurrencyFormatter_Parse refuse a
+// formatter with a longer one with mloc_errorLimit, whatever the text.
+#define MLOC_MAX_NUMBER_PARSE_AFFIX 16
+
     // How a number is written: in full, with an exponent of ten (any, or
     // a multiple of three), or compact ("1.2K", "1.2 thousand"). The
     // precision rounds the mantissa of scientific and engineering
@@ -284,7 +292,9 @@ extern "C"
     /// @return mloc_success; mloc_errorSyntax when no number is read (or,
     ///         in strict mode, the affixes or grouping do not match);
     ///         mloc_errorLimit when the digits or the exponent pass
-    ///         MLOC_MAX_DECIMAL_DIGITS or MLOC_MAX_DECIMAL_EXPONENT; mloc_errorNotFound for data
+    ///         MLOC_MAX_DECIMAL_DIGITS or MLOC_MAX_DECIMAL_EXPONENT, or an
+    ///         affix the formatter reads passes MLOC_MAX_NUMBER_PARSE_AFFIX
+    ///         characters; mloc_errorNotFound for data
     ///         without the parse sets; mloc_errorInvalid for a null pointer, a mode out of range, a
     ///         formatter the library did not make or one of compact notation.
     /// @par Thread safety
