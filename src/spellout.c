@@ -232,16 +232,7 @@ mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocL
     mlocLocale named;
     if (s.localeLength > 0)
     {
-        char tag[16];
-        if (s.localeLength >= sizeof(tag))
-        {
-            return mloc_errorNotFound;
-        }
-        for (size_t i = 0; i < s.localeLength; i++)
-        {
-            tag[i] = s.locale[i] == '_' ? '-' : s.locale[i];
-        }
-        if (mlocParseLocale(tag, s.localeLength, &named).status != mloc_success)
+        if (mlocParseLocale(s.locale, s.localeLength, &named).status != mloc_success)
         {
             return mloc_errorNotFound;
         }
