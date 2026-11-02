@@ -5,6 +5,51 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.7.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.6.0...v0.7.0) (2026-11-02)
+
+### Changed
+
+- **Breaking: line breaks follow the levels of CSS's `line-break`.**
+  `-u-lb` now picks CSS Text 3's `strict`, `normal` or `loose` level, and
+  a locale without the key, or with a value CLDR's key does not have
+  (`anywhere`), breaks at `normal`. Small kana and the prolonged sound
+  mark (Line_Break=CJ) stay with the character before them at `normal`
+  and `strict` in every locale, `ja`, `zh` and `zh-Hant` without the key
+  included: "あぁあーい" is `[あぁ][あー][い]`, where it used to break
+  before each of them. Only `-u-lb-loose` breaks there. `-u-lb-loose`
+  used to break as `normal`; it now adds CSS's other loose breaks. Lines
+  of `ja`, `zh` and `zh-Hant` may now break before 〜 (U+301C) and ゠
+  (U+30A0) at `normal` and `loose`. A program that stored line breaks
+  must compute them again. `docs/user/segmentation.md` describes the
+  levels and the cases where ICU4C 79.1 breaks otherwise
+  ([#409](https://github.com/Rawframe-Project/maul-locale/pull/409)).
+- The library builds against Maul Unicode 0.11.0, up from 0.6.0. The
+  build fetches it when no installed copy of that version is found
+  ([#403](https://github.com/Rawframe-Project/maul-locale/pull/403),
+  [#409](https://github.com/Rawframe-Project/maul-locale/pull/409),
+  [#415](https://github.com/Rawframe-Project/maul-locale/pull/415)).
+
+### Added
+
+- The generator makes `el` and `hy` index labels from their exemplars,
+  with Greek and Armenian casing, when the CLDR it reads gives them none.
+  It used to stop there. The data files built from CLDR 49 do not change
+  ([#412](https://github.com/Rawframe-Project/maul-locale/pull/412)).
+
+### Fixed
+
+- A date whose pattern writes the month number in a spelled-out
+  numbering system (`numbers="M=..."`) wrote 64 bytes of uninitialized
+  memory in place of a spelled-out month longer than 64 bytes. It is now
+  written whole. Only a data file with such rules reaches it; CLDR 49's
+  built-in data does not
+  ([#417](https://github.com/Rawframe-Project/maul-locale/pull/417)).
+- A unit power of a gender found its gendered patterns ("power2" of a
+  feminine unit) only for genders of up to 24 bytes. A longer gender in
+  a data file fell back to the plain power's patterns. CLDR 49's genders
+  are at most 9 bytes
+  ([#420](https://github.com/Rawframe-Project/maul-locale/pull/420)).
+
 ## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-11-01)
 
 ### Changed
