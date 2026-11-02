@@ -89,19 +89,37 @@ static void TakeUnit(Segmenter* s, DataSpan unit, const mlocLocale* locale)
     }
 }
 
-// Whether a line takes CJ as an ideograph: by -u-lb, else by the unit.
-static bool CjAsIdeographic(const mlocDataSet* data, const mlocLocale* locale)
+// A line's strictness: the level of CSS's line-break -u-lb names, else
+// normal. CLDR's key has strict, normal and loose, not CSS's anywhere.
+static muniLineBreakStrictness LineStrictness(const mlocLocale* locale)
 {
-    if (KeywordIs(locale, "lb", "strict"))
-    {
-        return false;
-    }
-    if (KeywordIs(locale, "lb", "normal") || KeywordIs(locale, "lb", "loose"))
-    {
-        return true;
-    }
+    return KeywordIs(locale, "lb", "strict")  ? muni_lineBreakStrict
+           : KeywordIs(locale, "lb", "loose") ? muni_lineBreakLoose
+                                              : muni_lineBreakNormal;
+}
+
+// A line's writing system: Chinese or Japanese where CLDR tailors the
+// language's lines to take CJ as an ideograph, which it does for ja, zh
+// and zh_Hant alone.
+static muniWritingSystem LineWritingSystem(const mlocDataSet* data, const mlocLocale* locale)
+{
     DataSpan unit = FindType(data, locale, segmentGivesLine);
-    return unit.bytes != nullptr && (mlocLoad32(unit.bytes + 4) & segmentCjIdeographic) != 0;
+    return unit.bytes != nullptr && (mlocLoad32(unit.bytes + 4) & segmentCjIdeographic) != 0
+               ? muni_writingChineseJapanese
+               : muni_writingOther;
+}
+
+static muniResult StartLineIterator(Segmenter* s, const mlocDataSet* data, const mlocLocale* locale,
+                                    const char* text, size_t length, bool moreFollows)
+{
+    muniResult r = muniInitLineIterator(&s->iterator, text, length, moreFollows);
+    if (r == muni_success)
+    {
+        r = muniSegmentIterator_SetLineBreakStrictness(&s->iterator, LineStrictness(locale));
+    }
+    return r == muni_success
+               ? muniSegmentIterator_SetWritingSystem(&s->iterator, LineWritingSystem(data, locale))
+               : r;
 }
 
 static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlocLocale* locale,
@@ -110,10 +128,7 @@ static muniResult StartIterator(Segmenter* s, const mlocDataSet* data, const mlo
     muniResult r = muni_errorInvalid;
     if (s->kind == mloc_segmentLine)
     {
-        r = muniInitLineIterator(&s->iterator, text, length, moreFollows);
-        return r == muni_success ? muniSegmentIterator_EnableCjAsIdeographic(
-                                       &s->iterator, CjAsIdeographic(data, locale))
-                                 : r;
+        return StartLineIterator(s, data, locale, text, length, moreFollows);
     }
     uint32_t type = s->kind == mloc_segmentWord ? segmentGivesWord : segmentGivesSentence;
     DataSpan unit = FindType(data, locale, type);

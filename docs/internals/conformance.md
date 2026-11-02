@@ -40,7 +40,7 @@ Each list is read by its check, which fails on an unlisted difference and on a l
 | `tools/match-exceptions.txt` | Matcher test lines where UTS #35's legacy aliases canonicalize further than ICU. |
 | `tools/locale-name-exceptions.txt` | Locale display name lines where CLDR's tools and the test file part. |
 | `tools/skeleton-exceptions.txt`, `tools/interval-exceptions.txt` | Patterns where the generator follows CLDR's inheritance and ICU4C's data build does not. |
-| `tools/segment-exceptions.txt` | Segmentation cases where ICU4C uses its own line rules or dictionary, not CLDR's segments files ([segmentation.md](../user/segmentation.md#differences-from-icu4c)). |
+| `tools/segment-exceptions.txt` | Segmentation cases where ICU4C uses its own line rules or dictionary, not CLDR's segments files, and where its line rules break where the CSS Text 3 draft of 14 August 2026 forbids or keep what it allows ([segmentation.md](../user/segmentation.md#differences-from-icu4c)). |
 
 Departures without a file of their own, each stated where its part is documented:
 

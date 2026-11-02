@@ -40,6 +40,7 @@ static const char* const s_locales[] = {
     "ru-u-ss-standard",
     "zh",
     "zh-Hant-u-lb-loose",
+    "ja-u-lb-loose",
 };
 
 alignas(8) static uint8_t s_file[1 << 16];

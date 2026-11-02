@@ -102,7 +102,7 @@ python3 tools/oracle/segment/cases.py "$CLDR/common" > cases.txt
 LD_LIBRARY_PATH=$ICU/lib ./icu4c_segment < cases.txt > test/segment_icu.tsv
 ```
 
-`cases.py` puts each suppression of each locale in a sentence before a capital, with `-u-ss-standard` and without, and each partial's text through its first full stop alone; a break held back past the bytes a segmenter keeps; the class overrides; the line keywords over CJ, quotation marks, the wave dash and Latin text; Japanese words; and plain text in each locale and kind. `icu4c_segment.cpp` answers with UTF-8 byte offsets.
+`cases.py` puts each suppression of each locale in a sentence before a capital, with `-u-ss-standard` and without, and each partial's text through its first full stop alone; a break held back past the bytes a segmenter keeps; the class overrides; the line keywords over CJ, quotation marks, the wave dash, what the loose level adds and Latin text; Japanese words; and plain text in each locale and kind. `icu4c_segment.cpp` answers with UTF-8 byte offsets.
 
 ## Benchmarks
 

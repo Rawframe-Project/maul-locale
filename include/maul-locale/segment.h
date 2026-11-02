@@ -10,11 +10,13 @@
 // A locale's -u-ss-standard keeps a sentence going after the abbreviations
 // CLDR lists for its language ("Mr.", "z.B."), as ICU4C's
 // FilteredBreakIterator does; without it, or with -u-ss-none, every
-// sentence break stays. Its -u-lb picks the line rules: strict breaks
-// before small kana and the prolonged sound mark as UAX #14 does, normal
-// and loose may break there (CSS's line-break); without the key a locale
-// takes its language's (normal for Chinese and Japanese, strict for the
-// others).
+// sentence break stays. Its -u-lb picks the level of CSS's line-break
+// that lines break at, strict, normal or loose; without the key, or with
+// another value, lines break at normal. Lines of ja, zh and zh-Hant also
+// take the breaks CSS allows Chinese and Japanese text. Small kana and the
+// prolonged sound mark stay with the character before them, except at
+// loose, as the CSS Text 3 draft of 14 August 2026 says; ICU4C's normal
+// breaks before them.
 //
 // A segmenter walks UTF-8 text, given whole or in pieces, and reports each
 // boundary after the start of the text, the last one being its end, as

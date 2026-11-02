@@ -37,7 +37,7 @@ option(MAUL_LOCALE_TEST_PACKAGE "Test the installed package by building samples/
 # fetched, before the family modules, so that ours, included after its
 # copies, serve this project. FETCHCONTENT_SOURCE_DIR_MAUL-UNICODE builds
 # a local copy instead, offline.
-set(MAUL_LOCALE_UNICODE_VERSION 0.9.1)
+set(MAUL_LOCALE_UNICODE_VERSION 0.10.0)
 find_package(maul-unicode ${MAUL_LOCALE_UNICODE_VERSION} CONFIG QUIET)
 if(NOT maul-unicode_FOUND)
     include(FetchContent)
