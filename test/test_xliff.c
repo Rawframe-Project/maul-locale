@@ -553,7 +553,12 @@ static void TestSelectionQuotedLineFeed(void)
 
 int main(int argc, char** argv)
 {
-    s_directory = argc > 1 ? argv[1] : ".";
+    if (argc != 2)
+    {
+        printf("usage: test_xliff DIRECTORY\n");
+        return 1;
+    }
+    s_directory = argv[1];
     TestExport();
     TestImport();
     TestRefusals();

@@ -427,7 +427,12 @@ static void TestCatalog(void)
 
 int main(int argc, char** argv)
 {
-    s_directory = argc > 1 ? argv[1] : ".";
+    if (argc != 2)
+    {
+        printf("usage: test_message_outputs DIRECTORY\n");
+        return 1;
+    }
+    s_directory = argv[1];
     mlocOpenBuiltinData(&s_builtin);
     s_data = (mlocDataSet){&s_builtin, 1};
     memset(&s_unmade, 0, sizeof(s_unmade));
