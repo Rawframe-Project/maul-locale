@@ -5,6 +5,18 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.7.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.6.0...v0.7.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **segment:** lines at normal, the default, no longer break before small kana and the prolonged sound mark (Line_Break=CJ). This holds in `ja`, `zh` and `zh-Hant` without `-u-lb`, and with `-u-lb-normal` in any locale; only `-u-lb-loose` breaks there. `-u-lb-loose` now adds CSS's other loose breaks. Lines of `ja`, `zh` and `zh-Hant` at normal and loose may break before U+301C and U+30A0. A program that stored line breaks computes them again.
+
+### Added
+
+* **generator:** make el and hy index labels by their case rules ([#412](https://github.com/Rawframe-Project/maul-locale/issues/412)) ([b374bad](https://github.com/Rawframe-Project/maul-locale/commit/b374bad3f6358833412317fdb442de9d664c4280)), closes [#411](https://github.com/Rawframe-Project/maul-locale/issues/411)
+* **segment:** break lines at CSS's line-break levels ([#409](https://github.com/Rawframe-Project/maul-locale/issues/409)) ([2dc9870](https://github.com/Rawframe-Project/maul-locale/commit/2dc9870076843396559a9725f7a1ffae54f220e2)), closes [#408](https://github.com/Rawframe-Project/maul-locale/issues/408)
+
 ## [0.6.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.5.0...v0.6.0) (2026-11-01)
 
 ### Changed
