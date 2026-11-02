@@ -384,10 +384,13 @@ static mlocResult LoadPower(const Context* c, int power, const char* gender, Gra
     char id[32];
     snprintf(id, sizeof(id), "power%d", power);
     mlocResult r = LoadForms(c, id, strlen(id), c->kind, out);
-    char gendered[32];
-    snprintf(gendered, sizeof(gendered), "power%d:%s", power, gender);
+    // As long as the longest identifier a file can name; one longer is
+    // filed nowhere.
+    char gendered[unitMaxNameId + 1];
+    int written = snprintf(gendered, sizeof(gendered), "power%d:%s", power, gender);
     uint8_t kind = 0;
-    bool known = gender[0] != '\0' && mlocUnitNameKind(c->data, gendered, strlen(gendered), &kind);
+    bool known = gender[0] != '\0' && written < (int)sizeof(gendered) &&
+                 mlocUnitNameKind(c->data, gendered, strlen(gendered), &kind);
     if (r == mloc_success && known)
     {
         r = OverlayGender(c, gendered, out);
@@ -439,7 +442,8 @@ static mlocResult LoadSingle(const Context* c, const Product* p, const UnitPart*
     mlocResult r = LoadForms(c, text, length, c->kind, &s->unit);
     if (r == mloc_success && s->hasPower)
     {
-        char gender[32];
+        // Room for a gender as long as an identifier.
+        char gender[unitMaxNameId + 1];
         LoadGender(c, text, length, gender, sizeof(gender));
         r = power > 3 ? mloc_errorNotFound : LoadPower(c, power, gender, gcase, &s->power);
         gcase = DeriveCase(p->power0, gcase);

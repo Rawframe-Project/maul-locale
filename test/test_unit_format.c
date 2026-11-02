@@ -1073,6 +1073,92 @@ static void TestMixedContext(void)
           "Spanish's y read against the smallest part's pattern for its category");
 }
 
+// Builds a sparse unit of one entry, the identifier code, whose fields in
+// mask are all one text; returns its size.
+static uint32_t OneEntry(uint8_t* unit, uint32_t code, uint8_t mask, const char* text)
+{
+    uint32_t length = (uint32_t)strlen(text);
+    uint32_t fields = 0;
+    for (uint32_t m = mask; m != 0; m &= m - 1)
+    {
+        fields++;
+    }
+    uint32_t rowSize = 1 + 2 * fields;
+    uint8_t* offsets = unit + sparseHeaderSize;
+    uint8_t* codes = offsets + 2 * 2;
+    uint8_t* rowOffsets = codes + 2;
+    uint8_t* row = rowOffsets + 2 * 2;
+    uint8_t* chars = row + rowSize;
+    PackPut(unit, 1, 2);
+    PackPut(unit + 2, 1, 2);
+    PackPut(unit + 4, length, 4);
+    PackPut(unit + 8, rowSize, 4);
+    PackPut(offsets + 2, length, 2);
+    PackPut(codes, code, 2);
+    PackPut(rowOffsets + 2, rowSize, 2);
+    row[0] = mask;
+    memcpy(chars, text, length);
+    return (uint32_t)(chars + length - unit);
+}
+
+// English "square-meter" with a pack before the names: identifiers meter
+// and power2 of a gender of the given length, root's gender of meter that
+// one, and root's long patterns of the gendered power "great {0}".
+static bool LongGender(uint32_t genderLength, const char* expected)
+{
+    static uint8_t s_units[512];
+    memset(s_units, 0, sizeof(s_units));
+    char gender[unitMaxNameId + 1] = {0};
+    memset(gender, 'g', genderLength);
+    char power[sizeof("power2:") + unitMaxNameId];
+    snprintf(power, sizeof(power), "power2:%s", gender);
+    uint32_t meter = 5;
+    uint32_t idText = meter + (uint32_t)strlen(power);
+    uint8_t* ids = s_units;
+    PackPut(ids, 2, 2);
+    PackPut(ids + 4, idText, 4);
+    PackPut(ids + unitIdsHeaderSize + 4, meter, 4);
+    PackPut(ids + unitIdsHeaderSize + 8, idText, 4);
+    ids[unitIdsHeaderSize + 12] = unitIdUnit;
+    ids[unitIdsHeaderSize + 13] = unitIdPower;
+    memcpy(ids + unitIdsHeaderSize + 14, "meter", meter);
+    memcpy(ids + unitIdsHeaderSize + 14 + meter, power, strlen(power));
+    uint32_t idsSize = unitIdsHeaderSize + 14 + idText;
+    uint8_t* names = s_units + 128;
+    uint32_t namesSize = OneEntry(names, 1, 0x7E, "great {0}");
+    uint8_t* extras = s_units + 256;
+    uint32_t extrasSize = OneEntry(extras, 0, 1u << unitExtraGender, gender);
+    PackUnit units[3] = {
+        {kindUnitIds, {ids, idsSize}, false},
+        {kindUnitNamesLong, {names, namesSize}, true},
+        {kindUnitNameExtras, {extras, extrasSize}, true},
+    };
+    mlocData sources[3];
+    sources[1] = s_data.sources[0];
+    sources[2] = s_data.sources[1];
+    mlocDataSet set = {sources, 3};
+    mlocLocale locale;
+    mlocUnitFormatter formatter;
+    mlocUnitOptions options = {.width = mloc_unitWidthLong};
+    mlocDecimal amount;
+    char buffer[64];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    return OpenRootPack(units, 3, &sources[0]) &&
+           mlocParseLocale("en", 2, &locale).status == mloc_success &&
+           mlocInitUnitFormatter(&set, &locale, "square-meter", 12, &options, &formatter) ==
+               mloc_success &&
+           mlocParseDecimal("2", 1, &amount).status == mloc_success &&
+           mlocUnitFormatter_Format(&formatter, &amount, &output) == mloc_success &&
+           Same(buffer, &output, expected);
+}
+
+static void TestLongGender(void)
+{
+    CHECK(LongGender(9, "2 great meters"), "a power's patterns of a gender of 9 bytes");
+    CHECK(LongGender(30, "2 great meters") && LongGender(57, "2 great meters"),
+          "of a gender of 30 bytes, and of 57, as long as an identifier lets it be");
+}
+
 // A formatter is the same value whatever its bytes held before: the room
 // the patterns leave in the pool is written as zero. A refusal leaves
 // the bytes as they were.
@@ -1186,5 +1272,6 @@ int main(void)
     TestWholeValue();
     TestPool();
     TestMixedContext();
+    TestLongGender();
     return s_failures == 0 ? 0 : 1;
 }
