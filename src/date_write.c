@@ -201,10 +201,12 @@ static void WriteMonth(const DateFormat* f, const mlocDateFields* fields, char l
         // their code's, a leap month's in the numeric leap pattern.
         uint32_t number =
             f->calendar == mloc_calendarHebrew ? fields->month : MonthSlot(f->calendar, fields) + 1;
-        char text[maxNumber];
+        // As large as WriteNumber's own text, so whatever it writes fits.
+        char text[maxNumber * numberDigitSize];
         NumberWriter local = {.buffer = text, .capacity = sizeof(text)};
         WriteNumber(f, overridden, mloc_datePartMonth, number, width, &local);
-        size_t length = local.length < sizeof(text) ? local.length : sizeof(text);
+        MLOC_ASSERT(local.length <= sizeof(text));
+        size_t length = local.length;
         if (leap)
         {
             WriteLeap(f, 2, 0, (const uint8_t*)text, length, w);

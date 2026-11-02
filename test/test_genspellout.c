@@ -8,8 +8,9 @@
 // ">>>"); the rules ICU refuses, and the one the library refuses that ICU
 // takes (a fraction rule set read before a rule names it); the unit the
 // generator writes opening, every corruption of it refused (a substitution
-// its rule cannot make among them), and its lead records; and the
-// engine's limits on rules that nest without end.
+// its rule cannot make among them), and its lead records; the
+// engine's limits on rules that nest without end; and a date's month
+// spelled out by such rules at length, over the date patterns' file.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -22,8 +23,10 @@
 #include "spellout_value.h"
 #include "test_harness.h"
 
+#include "maul-locale/datetime.h"
 #include "maul-locale/spellout.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1186,6 +1189,85 @@ static void TestLeads(void)
           "the special rules ICU keeps");
 }
 
+// A data file read into a buffer and opened; false when it is not.
+static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
+{
+    FILE* file = fopen(path, "rb");
+    size_t read = file == nullptr ? 0 : fread(buffer, 1, capacity, file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    return read > 0 && read < capacity && mlocOpenData(buffer, read, out) == mloc_success;
+}
+
+// A date pattern that writes the month in a spelled-out system (haw's
+// short date, "d/M/yy" with romanlow's months) gives the month whole,
+// however long: root's %roman-lower made 80 letters, in a file whose
+// systems unit names it, read before the library's data.
+static void TestLongMonth(void)
+{
+    static const char s_text[] = "romanlow%roman-lower";
+    uint8_t systems[spelloutSystemHeaderSize + spelloutSystemSize + sizeof(s_text)] = {1, 0, 20};
+    static const uint8_t s_record[spelloutSystemSize] = {0, 0, 8, 0,  8,
+                                                         0, 8, 0, 12, spelloutGroupNumbering};
+    memcpy(systems + spelloutSystemHeaderSize, s_record, sizeof(s_record));
+    memcpy(systems + spelloutSystemHeaderSize + spelloutSystemSize, s_text, 20);
+    char rules[128] = "%roman-lower:\n0: ";
+    memset(rules + strlen(rules), 'x', 80);
+    strcat(rules, ";\n");
+    RbnfGroup group;
+    char error[256];
+    if (!RbnfCompile(rules, strlen(rules), &group, error, sizeof(error)))
+    {
+        CHECK(false, error);
+        return;
+    }
+    size_t unitSize = 0;
+    uint8_t* unit = SpelloutPayload(&group, &unitSize);
+    RbnfFree(&group);
+    DataFile file = {0};
+    DataFileAdd(&file, kindSpelloutNumbering, "root", unit, unitSize);
+    DataFileAdd(&file, kindSpelloutSystems, nullptr, systems, sizeof(systems) - 1);
+    mlocDataVersion own;
+    mlocGetDataVersion(&own);
+    DataFileVersion version = {
+        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
+        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
+        .format = own.format,
+        .tables = own.tables,
+    };
+    memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
+    size_t size = 0;
+    uint8_t* bytes = DataFileWrite(&file, &version, &size);
+    DataFileFree(&file);
+    alignas(8) static uint8_t s_dates[4 << 20];
+    mlocData sources[3];
+    mlocOpenBuiltinData(&sources[1]);
+    mlocDataSet set = {sources, 3};
+    mlocLocale haw;
+    mlocDateOptions options = {.style = mloc_dateStyleShort};
+    mlocDateFormatter formatter;
+    mlocDateInput input = {.year = 2026, .month = 10, .day = 15};
+    mlocDate date;
+    char text[256];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    char want[128] = "15/";
+    memset(want + 3, 'x', 80);
+    strcpy(want + 83, "/26");
+    CHECK(mlocOpenData(bytes, size, &sources[0]) == mloc_success &&
+              OpenFile(MLOC_DATES_FILE, s_dates, sizeof(s_dates), &sources[2]) &&
+              mlocParseLocale("haw", 3, &haw).status == mloc_success &&
+              mlocInitDateFormatter(&set, &haw, &options, &formatter) >= 0 &&
+              mlocMakeDate(mloc_calendarIso8601, &input, mloc_overflowReject, &date) ==
+                  mloc_success &&
+              mlocDateFormatter_Format(&formatter, &date, &output) == mloc_success &&
+              output.length == strlen(want) && memcmp(text, want, output.length) == 0,
+          "a month spelled out past 64 bytes, whole");
+    free(bytes);
+    free(unit);
+}
+
 int main(void)
 {
     TestCompile();
@@ -1202,5 +1284,6 @@ int main(void)
     TestAdd();
     TestParseLimits();
     TestLeads();
+    TestLongMonth();
     return s_failures == 0 ? 0 : 1;
 }
