@@ -1888,141 +1888,169 @@ und	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36
 und	line	say “abc”def and “x” y	4,17,21,29,30
 und	line	中〜中゠中	6,12,15
 und	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+und	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 und-u-lb-strict	line	あぁあーい	6,12,15
 und-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 und-u-lb-strict	line	say “abc”def and “x” y	4,17,21,29,30
 und-u-lb-strict	line	中〜中゠中	6,12,15
 und-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+und-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 und-u-lb-normal	line	あぁあーい	3,6,9,12,15
 und-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 und-u-lb-normal	line	say “abc”def and “x” y	4,17,21,29,30
 und-u-lb-normal	line	中〜中゠中	6,12,15
 und-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+und-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 und-u-lb-loose	line	あぁあーい	3,6,9,12,15
 und-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 und-u-lb-loose	line	say “abc”def and “x” y	4,17,21,29,30
 und-u-lb-loose	line	中〜中゠中	6,12,15
 und-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+und-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,15,18,21,24,27,30,33,36,42,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 en	line	あぁあーい	6,12,15
 en	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 en	line	say “abc”def and “x” y	4,17,21,29,30
 en	line	中〜中゠中	6,12,15
 en	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+en	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 en-u-lb-strict	line	あぁあーい	6,12,15
 en-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 en-u-lb-strict	line	say “abc”def and “x” y	4,17,21,29,30
 en-u-lb-strict	line	中〜中゠中	6,12,15
 en-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+en-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 en-u-lb-normal	line	あぁあーい	3,6,9,12,15
 en-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 en-u-lb-normal	line	say “abc”def and “x” y	4,17,21,29,30
 en-u-lb-normal	line	中〜中゠中	6,12,15
 en-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+en-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 en-u-lb-loose	line	あぁあーい	3,6,9,12,15
 en-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 en-u-lb-loose	line	say “abc”def and “x” y	4,17,21,29,30
 en-u-lb-loose	line	中〜中゠中	6,12,15
 en-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+en-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,15,18,21,24,27,30,33,36,42,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ja	line	あぁあーい	3,6,9,12,15
 ja	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ja	line	say “abc”def and “x” y	4,17,21,29,30
 ja	line	中〜中゠中	6,12,15
 ja	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ja	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ja-u-lb-strict	line	あぁあーい	6,12,15
 ja-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 ja-u-lb-strict	line	say “abc”def and “x” y	4,13,17,21,29,30
 ja-u-lb-strict	line	中〜中゠中	6,12,15
 ja-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ja-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ja-u-lb-normal	line	あぁあーい	3,6,9,12,15
 ja-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ja-u-lb-normal	line	say “abc”def and “x” y	4,13,17,21,29,30
 ja-u-lb-normal	line	中〜中゠中	3,6,9,12,15
 ja-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ja-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ja-u-lb-loose	line	あぁあーい	3,6,9,12,15
 ja-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ja-u-lb-loose	line	say “abc”def and “x” y	4,13,17,21,29,30
 ja-u-lb-loose	line	中〜中゠中	3,6,9,12,15
 ja-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ja-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	3,6,9,12,15,18,21,24,27,30,33,36,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108,111,114,117,120,123,126,129
 zh	line	あぁあーい	6,12,15
 zh	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 zh	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh	line	中〜中゠中	6,12,15
 zh	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-u-lb-strict	line	あぁあーい	6,12,15
 zh-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 zh-u-lb-strict	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-u-lb-strict	line	中〜中゠中	6,12,15
 zh-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-u-lb-normal	line	あぁあーい	3,6,9,12,15
 zh-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 zh-u-lb-normal	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-u-lb-normal	line	中〜中゠中	3,6,9,12,15
 zh-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-u-lb-loose	line	あぁあーい	3,6,9,12,15
 zh-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 zh-u-lb-loose	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-u-lb-loose	line	中〜中゠中	3,6,9,12,15
 zh-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	3,6,9,12,15,18,21,24,27,30,33,36,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108,111,114,117,120,123,126,129
 zh-Hant	line	あぁあーい	6,12,15
 zh-Hant	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 zh-Hant	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-Hant	line	中〜中゠中	6,12,15
 zh-Hant	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-Hant	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-Hant-u-lb-strict	line	あぁあーい	6,12,15
 zh-Hant-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 zh-Hant-u-lb-strict	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-Hant-u-lb-strict	line	中〜中゠中	6,12,15
 zh-Hant-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-Hant-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-Hant-u-lb-normal	line	あぁあーい	3,6,9,12,15
 zh-Hant-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 zh-Hant-u-lb-normal	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-Hant-u-lb-normal	line	中〜中゠中	3,6,9,12,15
 zh-Hant-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-Hant-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 zh-Hant-u-lb-loose	line	あぁあーい	3,6,9,12,15
 zh-Hant-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 zh-Hant-u-lb-loose	line	say “abc”def and “x” y	4,13,17,21,29,30
 zh-Hant-u-lb-loose	line	中〜中゠中	3,6,9,12,15
 zh-Hant-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+zh-Hant-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	3,6,9,12,15,18,21,24,27,30,33,36,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108,111,114,117,120,123,126,129
 ko	line	あぁあーい	3,6,9,12,15
 ko	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ko	line	say “abc”def and “x” y	4,17,21,29,30
 ko	line	中〜中゠中	6,12,15
 ko	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ko	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ko-u-lb-strict	line	あぁあーい	6,12,15
 ko-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 ko-u-lb-strict	line	say “abc”def and “x” y	4,13,17,21,29,30
 ko-u-lb-strict	line	中〜中゠中	6,12,15
 ko-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ko-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ko-u-lb-normal	line	あぁあーい	3,6,9,12,15
 ko-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ko-u-lb-normal	line	say “abc”def and “x” y	4,13,17,21,29,30
 ko-u-lb-normal	line	中〜中゠中	3,6,9,12,15
 ko-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ko-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ko-u-lb-loose	line	あぁあーい	3,6,9,12,15
 ko-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 ko-u-lb-loose	line	say “abc”def and “x” y	4,13,17,21,29,30
 ko-u-lb-loose	line	中〜中゠中	3,6,9,12,15
 ko-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+ko-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	3,6,9,12,15,18,21,24,27,30,33,36,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108,111,114,117,120,123,126,129
 de	line	あぁあーい	6,12,15
 de	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 de	line	say “abc”def and “x” y	4,17,21,29,30
 de	line	中〜中゠中	6,12,15
 de	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+de	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 de-u-lb-strict	line	あぁあーい	6,12,15
 de-u-lb-strict	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,45,51
 de-u-lb-strict	line	say “abc”def and “x” y	4,17,21,29,30
 de-u-lb-strict	line	中〜中゠中	6,12,15
 de-u-lb-strict	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+de-u-lb-strict	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 de-u-lb-normal	line	あぁあーい	3,6,9,12,15
 de-u-lb-normal	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 de-u-lb-normal	line	say “abc”def and “x” y	4,17,21,29,30
 de-u-lb-normal	line	中〜中゠中	6,12,15
 de-u-lb-normal	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+de-u-lb-normal	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,18,36,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 de-u-lb-loose	line	あぁあーい	3,6,9,12,15
 de-u-lb-loose	line	中“文”中。彼は“はい”と言った。	3,12,18,21,24,30,36,39,42,45,51
 de-u-lb-loose	line	say “abc”def and “x” y	4,17,21,29,30
 de-u-lb-loose	line	中〜中゠中	6,12,15
 de-u-lb-loose	line	Hello, world (a test) - done; ok? Yes!	7,13,16,22,24,30,34,38
+de-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中	6,12,15,18,21,24,27,30,33,36,42,45,51,57,63,69,75,81,87,93,99,105,108,111,117,120,126,129
 ja	word	ひらがなとかんじ	3,6,9,12,15,21,24
 ja	word	これはひらがなです	6,9,12,15,18,21,27
 ja	word	ゝゞのほか゛とゕゖ	3,6,9,21,24,27

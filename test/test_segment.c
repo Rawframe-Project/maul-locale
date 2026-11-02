@@ -175,16 +175,19 @@ static void TestWords(void)
 
 static void TestLines(void)
 {
-    const char* strict = "[\xE3\x81\x82\xE3\x81\x81][\xE3\x81\x82\xE3\x83\xBC][\xE3\x81\x84]";
-    const char* normal = "[\xE3\x81\x82][\xE3\x81\x81][\xE3\x81\x82][\xE3\x83\xBC][\xE3\x81\x84]";
-    CHECK(Is("ja", 'l', KANA, normal) && Is("ja-u-lb-strict", 'l', KANA, strict) &&
-              Is("ja-u-lb-loose", 'l', KANA, normal) && Is("und", 'l', KANA, strict) &&
-              Is("en-u-lb-normal", 'l', KANA, normal),
-          "CJ breaks as an ideograph in ja and with normal or loose, as a nonstarter with "
-          "strict and in the root");
-    CHECK(Is("zh", 'l', KANA, normal) && Is("zh-Hant", 'l', KANA, normal) &&
-              Is("zh-u-lb-strict", 'l', KANA, strict),
-          "zh: CLDR's normal (ICU4C's zh default is strict, zh-u-lb-strict here)");
+    const char* kept = "[\xE3\x81\x82\xE3\x81\x81][\xE3\x81\x82\xE3\x83\xBC][\xE3\x81\x84]";
+    const char* apart = "[\xE3\x81\x82][\xE3\x81\x81][\xE3\x81\x82][\xE3\x83\xBC][\xE3\x81\x84]";
+    CHECK(Is("ja", 'l', KANA, kept) && Is("ja-u-lb-normal", 'l', KANA, kept) &&
+              Is("ja-u-lb-strict", 'l', KANA, kept) && Is("en-u-lb-normal", 'l', KANA, kept) &&
+              Is("und", 'l', KANA, kept) && Is("zh", 'l', KANA, kept) &&
+              Is("zh-Hant", 'l', KANA, kept),
+          "CJ stays with what precedes it in normal and strict, as the CSS Text 3 draft of 14 "
+          "August 2026 says (ICU4C's normal breaks before it)");
+    CHECK(Is("ja-u-lb-loose", 'l', KANA, apart) && Is("en-u-lb-loose", 'l', KANA, apart),
+          "loose breaks before CJ");
+    CHECK(Is("en-u-lb-anywhere", 'l', "ab cd", "[ab ][cd]") &&
+              Is("en-u-lb-anywhere", 'l', KANA, kept),
+          "anywhere, a level of CSS that CLDR's key does not have, breaks as normal");
 }
 
 // The breaks of a text as ICU4C's table writes them: byte offsets joined

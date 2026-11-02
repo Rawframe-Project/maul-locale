@@ -1,50 +1,76 @@
 # Where the library's segmentation departs from ICU4C 79.1 on the cases of
 # test/segment_icu.tsv, each line a reason, then the case: locale, kind
 # and text. test_segment fails on a difference not listed here and on a
-# line that no longer differs. The library follows CLDR's segments files;
-# each departure is ICU4C's own data or rules, not CLDR's
-# (docs/user/segmentation.md#differences-from-icu4c).
+# line that no longer differs. The library follows CLDR's segments files
+# and, for the levels of -u-lb, CSS Text 3; each departure is ICU4C's own
+# data or rules (docs/user/segmentation.md#differences-from-icu4c).
 #
-# zh-default  ICU4C's zh and zh_Hant line default is its strict line_cj;
-#             CLDR's zh.xml gives normal, CJ as an ideograph.
-# ko-default  ICU4C tailors Korean lines with its own data, normal by
-#             default; CLDR has no Korean segments file, so Korean takes
-#             the root's strict lines.
+# css-normal-cj  The CSS Text 3 Candidate Recommendation Draft of 14
+#             August 2026, section 5.2: "The following breaks are
+#             forbidden for normal and strict line breaking and allowed in
+#             loose: breaks before Japanese small kana or the
+#             Katakana-Hiragana prolonged sound mark, i.e. characters from
+#             the Unicode line breaking class CJ." ICU4C's normal rules,
+#             for -u-lb-normal and the default of ja and ko, break before
+#             CJ.
+# cj-wave-default  Without -u-lb, ICU4C keeps U+301C and U+30A0
+#             nonstarters in ja (its normal rules) and zh (its strict
+#             line_cj). The library breaks at CSS's normal level, which
+#             allows a break before them in Chinese and Japanese text.
+# loose-hyphens  CSS's loose level allows a break before U+2010 and
+#             U+2013 after an ideograph, in any writing system; ICU4C's
+#             line_loose, which locales without _cj rules take, does not.
+# ko-cj       ICU4C breaks Korean lines with -u-lb by its _cj rules, which
+#             add the breaks CSS gives Chinese and Japanese text only:
+#             before U+301C and U+30A0 at normal and loose, and at loose
+#             before the centered punctuation and a wide postfix and after
+#             a wide prefix.
 # cj-quotes   ICU4C's _cj line rules, for Chinese, Japanese and Korean with
 #             -u-lb and zh's default, make U+201C OP and U+201D CL.
-# cj-wave     ICU4C's line_normal_cj and line_loose_cj take U+301C and
-#             U+30A0 out of NS, so a line may break before them.
 # ja-words    ICU4C finds Japanese words with its own dictionary; CLDR's ja
 #             rules 13.3 and 13.4 keep a Hiragana run, and a run of
 #             ideographs, one word.
+css-normal-cj	ko	line	あぁあーい
+css-normal-cj	ko	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	und-u-lb-normal	line	あぁあーい
+css-normal-cj	und-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	en-u-lb-normal	line	あぁあーい
+css-normal-cj	en-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	ja-u-lb-normal	line	あぁあーい
+css-normal-cj	ja-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	zh-u-lb-normal	line	あぁあーい
+css-normal-cj	zh-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	zh-Hant-u-lb-normal	line	あぁあーい
+css-normal-cj	zh-Hant-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	ko-u-lb-normal	line	あぁあーい
+css-normal-cj	ko-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	de-u-lb-normal	line	あぁあーい
+css-normal-cj	de-u-lb-normal	line	中“文”中。彼は“はい”と言った。
+css-normal-cj	ja	line	あぁあーい
+css-normal-cj	ja	line	中“文”中。彼は“はい”と言った。
+cj-wave-default	ja	line	中〜中゠中
+cj-wave-default	zh	line	中〜中゠中
+cj-wave-default	zh-Hant	line	中〜中゠中
+loose-hyphens	und-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中
+loose-hyphens	en-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中
+loose-hyphens	de-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中
+ko-cj	ko-u-lb-normal	line	中〜中゠中
+ko-cj	ko-u-lb-loose	line	中〜中゠中
+ko-cj	ko-u-lb-loose	line	中‐中–中々中〻ゝゞヽヾ中……中・中：中；中･中‼中⁇中⁈中⁉中！中？中５０％中￥５中
 cj-quotes	ja-u-lb-strict	line	say “abc”def and “x” y
 cj-quotes	ja-u-lb-normal	line	say “abc”def and “x” y
-cj-wave	ja-u-lb-normal	line	中〜中゠中
 cj-quotes	ja-u-lb-loose	line	say “abc”def and “x” y
-cj-wave	ja-u-lb-loose	line	中〜中゠中
-zh-default	zh	line	あぁあーい
-zh-default	zh	line	中“文”中。彼は“はい”と言った。
 cj-quotes	zh	line	say “abc”def and “x” y
 cj-quotes	zh-u-lb-strict	line	say “abc”def and “x” y
 cj-quotes	zh-u-lb-normal	line	say “abc”def and “x” y
-cj-wave	zh-u-lb-normal	line	中〜中゠中
 cj-quotes	zh-u-lb-loose	line	say “abc”def and “x” y
-cj-wave	zh-u-lb-loose	line	中〜中゠中
-zh-default	zh-Hant	line	あぁあーい
-zh-default	zh-Hant	line	中“文”中。彼は“はい”と言った。
 cj-quotes	zh-Hant	line	say “abc”def and “x” y
 cj-quotes	zh-Hant-u-lb-strict	line	say “abc”def and “x” y
 cj-quotes	zh-Hant-u-lb-normal	line	say “abc”def and “x” y
-cj-wave	zh-Hant-u-lb-normal	line	中〜中゠中
 cj-quotes	zh-Hant-u-lb-loose	line	say “abc”def and “x” y
-cj-wave	zh-Hant-u-lb-loose	line	中〜中゠中
-ko-default	ko	line	あぁあーい
-ko-default	ko	line	中“文”中。彼は“はい”と言った。
 cj-quotes	ko-u-lb-strict	line	say “abc”def and “x” y
 cj-quotes	ko-u-lb-normal	line	say “abc”def and “x” y
-cj-wave	ko-u-lb-normal	line	中〜中゠中
 cj-quotes	ko-u-lb-loose	line	say “abc”def and “x” y
-cj-wave	ko-u-lb-loose	line	中〜中゠中
 ja-words	ja	word	ひらがなとかんじ
 ja-words	ja	word	これはひらがなです
 ja-words	ja	word	ゝゞのほか゛とゕゖ

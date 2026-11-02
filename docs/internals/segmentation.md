@@ -11,10 +11,10 @@ How `segment.h` turns CLDR's segments files into breaks on Maul Unicode's iterat
 
 ## The data
 
-CLDR writes a tailoring as ICU rule syntax: variables and rules over Unicode properties. The library has no rule engine; Maul Unicode's iterators implement UAX #29 and UAX #14 directly, with two hooks for what CLDR's files change: class overrides for words and sentences, and the CJ-as-ideograph line option. What no hook covers, the Japanese word rules and the suppressions, the library filters itself. So `tools/mlocgen/segment_gen.c` recognizes the forms CLDR 49 writes and turns each into a hook's setting or a filter's data, refusing any other form with its file and reason, so a new CLDR release shows what to add:
+CLDR writes a tailoring as ICU rule syntax: variables and rules over Unicode properties. The library has no rule engine; Maul Unicode's iterators implement UAX #29 and UAX #14 directly, with two hooks for what CLDR's files change: class overrides for words and sentences, and the line options of strictness and writing system. What no hook covers, the Japanese word rules and the suppressions, the library filters itself. So `tools/mlocgen/segment_gen.c` recognizes the forms CLDR 49 writes and turns each into a hook's setting or a filter's data, refusing any other form with its file and reason, so a new CLDR release shows what to add:
 
 - a class variable with characters added (`[[$STerm] [; ;]]`) becomes a set of overrides in a code table, `src/generated/segment_overrides.c`, written with Maul Unicode's class names, and the unit names the set. Maul Unicode reads an iterator's overrides in place, so they live in constant memory, not in the segmenter: a segmenter that held its own would point into itself, and a copy would read the original's. The data version's tables hash covers the table;
-- the `$ID` and `$NS` line variables become the CJ flag;
+- the `$ID` and `$NS` line variables, which take CJ as an ideograph in `ja`, `zh` and `zh_Hant`, become the CJ flag, which marks Chinese and Japanese text;
 - Japanese's word variables and rules 13.3 and 13.4 become the Japanese flag;
 - the standard suppressions become ICU4C's two tables, built as its `SimpleFilteredBreakIteratorBuilder` builds them.
 
@@ -22,7 +22,7 @@ CLDR writes a tailoring as ICU rule syntax: variables and rules over Unicode pro
 
 ## The segmenter
 
-`mlocInitSegmenter` finds, for its kind, the first unit along the locale's segmentation chain that gives that kind, points the iterator at its overrides in the code table, keeps a pointer to its suppressions, and starts Maul Unicode's iterator with them. A line segmenter reads `-u-lb` before the unit's flag; a sentence segmenter turns its suppressions on only with `-u-ss-standard`. Without a filter a segmenter is the iterator: each call passes its break through.
+`mlocInitSegmenter` finds, for its kind, the first unit along the locale's segmentation chain that gives that kind, points the iterator at its overrides in the code table, keeps a pointer to its suppressions, and starts Maul Unicode's iterator with them. A line segmenter takes its strictness from `-u-lb` and its writing system from the unit's flag; a sentence segmenter turns its suppressions on only with `-u-ss-standard`. Without a filter a segmenter is the iterator: each call passes its break through.
 
 ## The filters
 

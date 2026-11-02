@@ -11,8 +11,8 @@
 #   match, a partial and no entry;
 # - the class overrides (Greek's semicolons, POSIX English's full stop);
 # - the line keywords over CJ, quotation marks among Chinese and among
-#   Latin letters, the wave dash and Latin text, for the root and the
-#   locales that tailor lines;
+#   Latin letters, the wave dash, what the loose level adds and Latin
+#   text, for the root and the locales that tailor lines;
 # - Japanese words over Hiragana, ideographs and the marks CLDR adds to
 #   them, and plain text in every locale and kind.
 #
@@ -45,6 +45,12 @@ QUOTES = "中“文”中。彼は“はい”と言った。"
 LATIN_QUOTES = "say “abc”def and “x” y"
 WAVE = "中〜中゠中"
 LATIN = "Hello, world (a test) - done; ok? Yes!"
+# What CSS's loose level adds: U+2010 and U+2013 after an ideograph, the
+# iteration marks, two inseparables, the centered punctuation, and a wide
+# postfix and prefix.
+LOOSE = ("中\u2010中\u2013中\u3005中\u303B\u309D\u309E\u30FD\u30FE中\u2026\u2026中"
+         "\u30FB中\uFF1A中\uFF1B中\uFF65中\u203C中\u2047中\u2048中\u2049中\uFF01中\uFF1F"
+         "中５０\uFF05中\uFFE5５中")
 PLAIN = {
     "word": "The quick (\"brown\") fox's 3.14 jumps, o'clock. 12,345.67 e-mail",
     "sentence": "It is 3.5 p.m. now. Mr. Jones said \"Go!\" She left... Then 'yes.' Done",
@@ -77,7 +83,7 @@ def cases(common):
     out.append(("en-US", "word", "3.14 a.b c.d. e.f"))
     for locale in ("und", "en", "ja", "zh", "zh-Hant", "ko", "de"):
         for key in ("", "-u-lb-strict", "-u-lb-normal", "-u-lb-loose"):
-            for text in (KANA, QUOTES, LATIN_QUOTES, WAVE, LATIN):
+            for text in (KANA, QUOTES, LATIN_QUOTES, WAVE, LATIN, LOOSE):
                 out.append((locale + key, "line", text))
     for text in ("ひらがなとかんじ", "これはひらがなです", "ゝゞのほか゛とゕゖ", "あ゙い",
                  "漢字仮名交じり文", "人々は日本語を話す", "〇〇年に〻", "⺀⺁漢\U00017000\U0001B170"):
