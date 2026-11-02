@@ -159,9 +159,11 @@ static mlocResult FindPrevious(const mlocSearcher* searcher, NfdText text, size_
         }
         if (last->ce == searchEnd)
         {
-            // No match ends at the start. ICU4C goes on here for ever when
-            // a wildcard comparison skips the pattern's elements against
-            // it.
+            // No match ends at the start. A wildcard comparison that skips
+            // every element of the pattern against the end gives ICU4C an
+            // empty match before the first character where its bounds allow
+            // one, and otherwise goes on for ever (collation.md's kept
+            // differences).
             return mloc_errorNotFound;
         }
         uint32_t firstIndex = 0;
