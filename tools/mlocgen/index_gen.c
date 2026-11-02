@@ -157,21 +157,22 @@ static void Synthesize(Exemplars* e)
     }
 }
 
-// The case rules ICU4C's toUpper(locale) takes for a locale's language:
-// false for a language whose rules Maul Unicode does not have.
-static bool LanguageRules(const char* locale, muniCaseLanguage* out)
+// The case rules ICU4C's toUpper(locale) takes for a locale's language.
+static muniCaseLanguage LanguageRules(const char* locale)
 {
     size_t length = strcspn(locale, "_");
-    *out = muni_caseDefault;
-    if ((length == 2 && (memcmp(locale, "tr", 2) == 0 || memcmp(locale, "az", 2) == 0)))
+    if (length != 2)
     {
-        *out = muni_caseTurkic;
+        return muni_caseDefault;
     }
-    else if (length == 2 && memcmp(locale, "lt", 2) == 0)
+    if (memcmp(locale, "tr", 2) == 0 || memcmp(locale, "az", 2) == 0)
     {
-        *out = muni_caseLithuanian;
+        return muni_caseTurkic;
     }
-    return !(length == 2 && (memcmp(locale, "el", 2) == 0 || memcmp(locale, "hy", 2) == 0));
+    return memcmp(locale, "lt", 2) == 0   ? muni_caseLithuanian
+           : memcmp(locale, "el", 2) == 0 ? muni_caseGreek
+           : memcmp(locale, "hy", 2) == 0 ? muni_caseArmenian
+                                          : muni_caseDefault;
 }
 
 static Label Upper(const Label* in, muniCaseLanguage language)
@@ -269,13 +270,8 @@ static Unit Resolve(Cldr* cldr, const char* locale)
     {
         ReadSet(leaf, &s_set);
     }
-    muniCaseLanguage language = muni_caseDefault;
-    if (!LanguageRules(locale, &language))
-    {
-        GenDie("index labels to make with case rules Maul Unicode does not have", locale);
-    }
     Synthesize(&s_set);
-    return UnitOf(&s_set, true, language);
+    return UnitOf(&s_set, true, LanguageRules(locale));
 }
 
 static int IndexOf(const IndexInput* in, const char* id)
