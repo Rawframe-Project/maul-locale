@@ -35,9 +35,9 @@ static mlocResult MakeSpellout(const NumberValue* value, const mlocDataSet* data
     const char* name = (value->given & numberGivenRules) != 0 ? value->unit : numbering;
     size_t length =
         (value->given & numberGivenRules) != 0 ? value->unitLength : sizeof numbering - 1;
-    // A rule set's name is a unit identifier's letters, so 64 bytes hold
-    // any the data has; a longer one it cannot have.
-    char ruleSet[64];
+    // A rule set's name, its "%" included, is at most a byte's length in
+    // the data; a longer one is in no file.
+    char ruleSet[UINT8_MAX];
     if (length + 1 > sizeof ruleSet)
     {
         return mloc_errorNotFound;

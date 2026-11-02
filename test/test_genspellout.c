@@ -9,8 +9,9 @@
 // takes (a fraction rule set read before a rule names it); the unit the
 // generator writes opening, every corruption of it refused (a substitution
 // its rule cannot make among them), and its lead records; the
-// engine's limits on rules that nest without end; and a date's month
-// spelled out by such rules at length, over the date patterns' file.
+// engine's limits on rules that nest without end; a date's month spelled
+// out by such rules at length, over the date patterns' file; and
+// MessageFormat's :mloc:spellout finding a rule set by a long name.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -24,6 +25,7 @@
 #include "test_harness.h"
 
 #include "maul-locale/datetime.h"
+#include "maul-locale/message.h"
 #include "maul-locale/spellout.h"
 
 #include <stdio.h>
@@ -1268,6 +1270,61 @@ static void TestLongMonth(void)
     free(unit);
 }
 
+// Whether MessageFormat's :mloc:spellout formats 7 by root's rule set
+// "spellout" and letters to the length given, "=#,##0= long", in a file
+// read after the library's data.
+static bool LongNameFormats(size_t length)
+{
+    char name[256] = "spellout";
+    memset(name + 8, 'a', length - 8);
+    name[length] = '\0';
+    char rules[320];
+    snprintf(rules, sizeof(rules), "%%%s:\n0: =#,##0= long;\n", name);
+    size_t unitSize = 0;
+    uint8_t* unit = UnitOf(rules, &unitSize);
+    if (unit == nullptr)
+    {
+        return false;
+    }
+    size_t size = 0;
+    uint8_t* bytes = RootFile(unit, unitSize, &size);
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet set = {sources, 2};
+    char message[320];
+    snprintf(message, sizeof(message), "{7 :mloc:spellout rules=%s}", name);
+    static uint8_t s_compiled[1 << 12];
+    static uint8_t s_bound[1 << 14];
+    static mlocMessageFormatter s_formatter;
+    mlocMessageOptions options = {0};
+    mlocMessageError error;
+    mlocLocale locale;
+    size_t compiled = 0;
+    size_t bound = 0;
+    char text[64];
+    mlocOutput output = {.buffer = text, .capacity = sizeof(text)};
+    bool good = mlocOpenData(bytes, size, &sources[1]) == mloc_success &&
+                mlocParseLocale("en", 2, &locale).status == mloc_success &&
+                mlocInitMessageFormatter(&set, &locale, &options, &s_formatter) == mloc_success &&
+                mlocCompileMessage(message, strlen(message), s_compiled, sizeof(s_compiled),
+                                   &compiled, &error)
+                        .status == mloc_success &&
+                mlocMessageFormatter_Bind(&s_formatter, s_compiled, compiled, s_bound,
+                                          sizeof(s_bound), &bound) == mloc_success &&
+                mlocFormatMessage(s_bound, nullptr, 0, &output, nullptr) == mloc_success &&
+                output.length == 6 && memcmp(text, "7 long", 6) == 0;
+    free(bytes);
+    free(unit);
+    return good;
+}
+
+static void TestLongRuleSetName(void)
+{
+    CHECK(LongNameFormats(63), "a rule set name of 63 letters");
+    CHECK(LongNameFormats(64) && LongNameFormats(254),
+          "of 64, and of 254, the longest a file can give with its \"%\"");
+}
+
 int main(void)
 {
     TestCompile();
@@ -1285,5 +1342,6 @@ int main(void)
     TestParseLimits();
     TestLeads();
     TestLongMonth();
+    TestLongRuleSetName();
     return s_failures == 0 ? 0 : 1;
 }
