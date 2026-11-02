@@ -56,10 +56,10 @@ typedef struct DateFormat
     // The digits of a system the patterns name for their fields, when it
     // has digits ("hanidec").
     uint8_t overrideDigits[10 * numberDigitSize];
-    // The locale's minus sign, for a year before the epoch of a calendar
-    // with no earlier era (the Persian).
-    uint8_t minus[12];
-    uint8_t minusLength;
+    // The locale's minus sign, in the data, for a year before the epoch
+    // of a calendar with no earlier era (the Persian).
+    const uint8_t* minus;
+    uint16_t minusLength;
     uint8_t digitLength;
     uint8_t overrideDigitLength;
     // Whether the patterns name an algorithmic system, written by the

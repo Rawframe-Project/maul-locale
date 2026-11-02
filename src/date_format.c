@@ -267,9 +267,8 @@ static mlocResult Resolve(DateFormat* f, const mlocDataSet* data, const mlocLoca
     f->gregorianSet = l->gregorianSet;
     memcpy(f->digits, l->core.digits, sizeof(f->digits));
     f->digitLength = l->core.digitLength;
-    uint32_t minus = l->core.symbolLength[numberMinus];
-    f->minusLength = (uint8_t)(minus <= sizeof(f->minus) ? minus : 0);
-    memcpy(f->minus, l->core.symbolText + l->core.symbolStart[numberMinus], f->minusLength);
+    f->minus = l->core.symbolText + l->core.symbolStart[numberMinus];
+    f->minusLength = l->core.symbolLength[numberMinus];
     f->calendar = (uint8_t)l->calendar;
     f->firstDay = l->preferences.firstDay;
     f->minimalDays = l->preferences.minimalDays;
@@ -434,7 +433,7 @@ bool mlocDateFormatSound(const DateFormat* f)
            f->range.pairs[1] != nullptr && f->range.pairs[2] != nullptr &&
            f->range.fallback != nullptr && f->digitLength > 0 &&
            f->digitLength <= numberDigitSize && f->overrideDigitLength <= numberDigitSize &&
-           f->minusLength <= sizeof(f->minus);
+           f->minus != nullptr;
 }
 
 bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateValue* value)
