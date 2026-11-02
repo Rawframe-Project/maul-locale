@@ -722,7 +722,7 @@ static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
 {
     DataView view = mlocViewOf(&s_withNames.sources[0]);
     uint32_t root = 0;
-    DataSpan numbers, systems, symbols, patterns, fractions, sets, currencySymbols;
+    DataSpan numbers, systems, symbols, patterns, fractions, sets, currencySymbols, parseSets;
     alignas(8) static uint8_t s_sets[1 << 16];
     if (!mlocFindDataLocale(&view, "root", 4, &root) ||
         !mlocFindDataUnit(&view, kindNumbers, root, &numbers) ||
@@ -732,6 +732,7 @@ static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
         !mlocFindDataUnit(&view, kindCurrencyFractions, dataNoLocale, &fractions) ||
         !mlocFindDataUnit(&view, kindCurrencyPatterns, dataNoLocale, &sets) ||
         !mlocFindDataUnit(&view, kindCurrencySymbols, root, &currencySymbols) ||
+        !mlocFindDataUnit(&view, kindParseSets, dataNoLocale, &parseSets) ||
         sets.size + 64 > sizeof(s_sets))
     {
         return false;
@@ -770,6 +771,7 @@ static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
         {kindCurrencyFractions, fractions, false},
         {kindCurrencyPatterns, {s_sets, (uint32_t)(sets.size + 12 + 36)}, false},
         {kindCurrencySymbols, currencySymbols, true},
+        {kindParseSets, parseSets, false},
     };
     mlocData sources[3];
     memcpy(sources + 1, s_withNames.sources, 2 * sizeof(mlocData));
@@ -779,7 +781,7 @@ static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
     mlocDecimal five;
     char written[128];
     mlocOutput output = {.buffer = written, .capacity = sizeof(written)};
-    if (!OpenRootPack(units, 7, &sources[0]) ||
+    if (!OpenRootPack(units, 8, &sources[0]) ||
         Init(&set, "und", "EUR", &options, &formatter) != mloc_success ||
         mlocParseDecimal("5", 1, &five).status != mloc_success ||
         mlocCurrencyFormatter_Format(&formatter, &five, &output) != mloc_success)
