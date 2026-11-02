@@ -9,6 +9,7 @@
 // the other extensions, joined by the locale's separator and pattern, each
 // name's brackets nested.
 
+#include "currency.h"
 #include "data_view.h"
 #include "invariant.h"
 #include "kinds.h"
@@ -16,7 +17,6 @@
 #include "names_data.h"
 #include "names_text.h"
 
-#include "maul-locale/currency.h"
 #include "maul-locale/names.h"
 
 #include <string.h>
@@ -479,24 +479,16 @@ static void WriteReorder(Composer* c, Span code)
     Append(c, code, true);
 }
 
-// A currency's symbol in the locale, else its code in capitals (CLDR's
-// tools look the symbol up by the code in capitals, which is its own
-// fallback, whatever its length).
+// A currency's symbol in the locale, however long, else its code in
+// capitals (CLDR's tools look the symbol up by the code in capitals,
+// which is its own fallback, whatever its length).
 static void WriteCurrency(Composer* c, Span code)
 {
-    char upper[3];
-    char symbol[64];
-    mlocOutput output = {.buffer = symbol, .capacity = sizeof(symbol)};
-    for (size_t i = 0; code.length == 3 && i < 3; i++)
+    const char* symbol = nullptr;
+    size_t length = 0;
+    if (mlocFindCurrencySymbol(c->data, c->display, code.text, code.length, &symbol, &length))
     {
-        upper[i] = Upper(code.text[i]);
-    }
-    mlocResult r = code.length == 3 ? mlocGetCurrencySymbol(c->data, c->display, upper, 3,
-                                                            mloc_currencySymbol, &output)
-                                    : mloc_errorInvalid;
-    if (r == mloc_success || r == mloc_fellBack)
-    {
-        Append(c, (Span){symbol, output.length}, true);
+        Append(c, (Span){symbol, length}, true);
         return;
     }
     for (size_t i = 0; i < code.length; i++)

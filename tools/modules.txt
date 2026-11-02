@@ -88,7 +88,7 @@ names_tables: kinds
 names_data: bytes data_format data_view invariant kinds locale_fallback names_tables number_data
 names: data_view invariant kinds locale_context locale_valid names_data names_text
 names_text: data_view invariant kinds locale_context spellout_data
-names_locale: data_view invariant kinds locale_context locale_valid names_data names_text
+names_locale: currency data_view invariant kinds locale_context locale_valid names_data names_text
 calendar_arith: invariant
 calendar_astro: calendar_arith invariant
 calendar_chinese: calendar_arith calendar_astro invariant

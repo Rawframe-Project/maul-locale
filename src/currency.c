@@ -6,7 +6,7 @@
 // field by field along the locale's chain, its digits, and for a long name
 // or the ISO append a pattern around the number.
 
-#include "maul-locale/currency.h"
+#include "currency.h"
 
 #include "bytes.h"
 #include "currency_tables.h"
@@ -642,6 +642,25 @@ mlocResult mlocGetCurrencySymbol(const mlocDataSet* data, const mlocLocale* loca
     mlocResult r = WriteField(&fields, ShownField(&fields, display), textOut);
     // The code shown as asked is no fallback.
     return r == mloc_fellBack && display == mloc_currencyCode ? mloc_success : r;
+}
+
+bool mlocFindCurrencySymbol(const mlocDataSet* data, const mlocLocale* locale, const char* code,
+                            size_t codeLength, const char** textOut, size_t* lengthOut)
+{
+    uint16_t packed = codeLength == 3 ? mlocPackCurrency(code, 3) : 0;
+    Fields fields;
+    if (packed == 0 || !GatherFields(data, locale, kindCurrencySymbols, packed, &fields))
+    {
+        return false;
+    }
+    uint32_t field = ShownField(&fields, mloc_currencySymbol);
+    if (field == currencyFieldCount)
+    {
+        return false;
+    }
+    *textOut = (const char*)fields.text[field];
+    *lengthOut = fields.length[field];
+    return true;
 }
 
 mlocResult mlocGetCurrencyName(const mlocDataSet* data, const mlocLocale* locale, const char* code,

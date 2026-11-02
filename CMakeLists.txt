@@ -619,6 +619,8 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(names_data WHITEBOX)
     maul_add_test(names MANUAL)
+    # It builds a currency unit of its own with the data layout's constants.
+    target_include_directories(test_names PRIVATE ${PROJECT_SOURCE_DIR}/src)
     mloc_add_test(names COMMAND test_names)
     foreach(target test_names_data test_names)
         if(TARGET ${target})

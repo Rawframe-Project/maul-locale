@@ -4,9 +4,13 @@
 // Display names (maul-locale/names.h): each type and form, subdivisions
 // included, a code in any case, the fallbacks, the capitalization
 // contexts, the output protocol and every refusal. Every code of every
-// locale agrees with ICU4C 79's LocaleDisplayNames (conform_names).
+// locale agrees with ICU4C 79's LocaleDisplayNames (conform_names). Then
+// a currency key's symbol of any length, from a pack before the data.
 
+#include "currency_tables.h"
+#include "kinds.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/names.h"
@@ -397,6 +401,52 @@ static void TestLocaleName(void)
 }
 
 // Reads a data file into a buffer and opens it.
+// Whether en's name of en-u-cu-xyz shows XYZ's symbol of the length
+// given, "e"s, which a pack before the data gives in root.
+static bool LongSymbol(uint32_t length)
+{
+    static uint8_t s_unit[256];
+    memset(s_unit, 0, sizeof(s_unit));
+    uint8_t* offsets = s_unit + sparseHeaderSize;
+    uint8_t* codes = offsets + 2 * 2;
+    uint8_t* rowOffsets = codes + 2;
+    uint8_t* row = rowOffsets + 2 * 2;
+    uint8_t* text = row + 3;
+    PackPut(s_unit, 1, 2);
+    PackPut(s_unit + 2, 1, 2);
+    PackPut(s_unit + 4, length, 4);
+    PackPut(s_unit + 8, 3, 4);
+    PackPut(offsets + 2, length, 2);
+    PackPut(codes, mlocPackCurrency("XYZ", 3), 2);
+    PackPut(rowOffsets + 2, 3, 2);
+    row[0] = 1u << currencySymbol;
+    memset(text, 'e', length);
+    PackUnit unit = {kindCurrencySymbols, {s_unit, (uint32_t)(text + length + 1 - s_unit)}, true};
+    mlocData sources[4];
+    memcpy(sources + 1, s_sources, sizeof(s_sources));
+    mlocDataSet set = {sources, 4};
+    mlocLocale en;
+    mlocLocale named;
+    mlocLocaleNameOptions options = {mloc_languageDisplayDialect, mloc_nameFormStandard,
+                                     mloc_capitalizationNone};
+    char buffer[256];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    char expected[128] = "English (Currency: ";
+    memset(expected + strlen(expected), 'e', length);
+    strcat(expected, ")");
+    return OpenRootPack(&unit, 1, &sources[0]) &&
+           mlocParseLocale("en", 2, &en).status == mloc_success &&
+           mlocParseLocale("en-u-cu-xyz", 11, &named).status == mloc_success &&
+           mlocGetLocaleName(&set, &en, &named, &options, &output) == mloc_success &&
+           output.length == strlen(expected) && memcmp(buffer, expected, output.length) == 0;
+}
+
+static void TestLongSymbol(void)
+{
+    CHECK(LongSymbol(10), "a currency key's symbol of 10 bytes");
+    CHECK(LongSymbol(70), "of 70 bytes, whole");
+}
+
 static bool OpenFile(const char* path, uint8_t* buffer, size_t capacity, mlocData* out)
 {
     FILE* file = fopen(path, "rb");
@@ -435,5 +485,6 @@ int main(void)
     TestRefusals();
     TestLocaleName();
     TestFailedOutputs();
+    TestLongSymbol();
     return s_failures == 0 ? 0 : 1;
 }
