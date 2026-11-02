@@ -457,6 +457,72 @@ static void TestSystems(void)
           "a name, its range, the group and the ids' order");
 }
 
+// Whether a numbering system of a file, which names root's %digits
+// ("=#,##0= d") in its numbering group and the locale given, formats 7.
+static bool SystemFormats(const char* locale)
+{
+    char text[64];
+    size_t localeLength = strlen(locale);
+    int length = snprintf(text, sizeof(text), "sys%s%%digits", locale);
+    uint8_t systems[spelloutSystemHeaderSize + spelloutSystemSize + sizeof(text)] = {1};
+    systems[2] = (uint8_t)length;
+    uint8_t* record = systems + spelloutSystemHeaderSize;
+    record[2] = 3;
+    record[4] = (uint8_t)(3 + localeLength);
+    record[6] = 3;
+    record[7] = (uint8_t)localeLength;
+    record[8] = 7;
+    record[9] = spelloutGroupNumbering;
+    memcpy(record + spelloutSystemSize, text, (size_t)length);
+    size_t unitSize = 0;
+    uint8_t* unit = UnitOf("%digits:\n0: =#,##0= d;\n", &unitSize);
+    if (unit == nullptr)
+    {
+        return false;
+    }
+    DataFile file = {0};
+    DataFileAdd(&file, kindSpelloutNumbering, "root", unit, unitSize);
+    DataFileAdd(&file, kindSpelloutSystems, nullptr, systems,
+                spelloutSystemHeaderSize + spelloutSystemSize + (size_t)length);
+    mlocDataVersion own;
+    mlocGetDataVersion(&own);
+    DataFileVersion version = {
+        .cldr = mlocPackVersion(own.cldr.major, own.cldr.minor, own.cldr.patch),
+        .unicode = mlocPackVersion(own.unicode.major, own.unicode.minor, own.unicode.patch),
+        .format = own.format,
+        .tables = own.tables,
+    };
+    memcpy(version.tzdb, own.tzdb, sizeof(version.tzdb));
+    size_t size = 0;
+    uint8_t* bytes = DataFileWrite(&file, &version, &size);
+    DataFileFree(&file);
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[1]);
+    mlocDataSet set = {sources, 2};
+    mlocLocale en;
+    mlocSpelloutFormatter formatter;
+    mlocDecimal seven;
+    char written[16];
+    mlocOutput output = {.buffer = written, .capacity = sizeof(written)};
+    bool good = mlocOpenData(bytes, size, &sources[0]) == mloc_success &&
+                mlocParseLocale("en", 2, &en).status == mloc_success &&
+                mlocInitNumberingSystemFormatter(&set, &en, "sys", 3, nullptr, &formatter) >= 0 &&
+                mlocParseDecimal("7", 1, &seven).status == mloc_success &&
+                mlocSpelloutFormatter_Format(&formatter, &seven, &output) == mloc_success &&
+                output.length == 3 && memcmp(written, "7 d", 3) == 0;
+    free(bytes);
+    free(unit);
+    return good;
+}
+
+// A numbering system's rules found by the locale its record names,
+// whatever the locale's length.
+static void TestSystemLocale(void)
+{
+    CHECK(SystemFormats("en_US"), "a system naming a locale of 5 bytes");
+    CHECK(SystemFormats("zh_Hant_HK_u_ca_chinese"), "of 23 bytes");
+}
+
 // A titlecase unit of "a" and "ß" ("A" and "Ss").
 static const uint8_t s_titlecase[] = {
     2,    0,   3,   0,             // count, text size
@@ -1331,6 +1397,7 @@ int main(void)
     TestRefused();
     TestUnit();
     TestSystems();
+    TestSystemLocale();
     TestTitlecase();
     TestCasesAsIcu();
     TestEngineLimits();
