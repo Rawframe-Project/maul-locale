@@ -520,13 +520,15 @@ static void TestString(void)
         "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, sizeof(decomposed)}}}};
     CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", NULL),
           "a long string not in NFC matches no key of another length, and is no bad selector");
+    // The variants after a long key, with its NUL.
+    static const char variants[] = "| {{nfc}} * {{other}}";
     static char nfc[1024] = ".input {$e :string} .match $e |";
     size_t at = strlen(nfc);
     for (size_t i = 0; i < 300; i++)
     {
         memcpy(nfc + at + 2 * i, "\xc3\xa9", 2);
     }
-    strcpy(nfc + at + 600, "| {{nfc}} * {{other}}");
+    memcpy(nfc + at + 600, variants, sizeof(variants));
     CHECK(Formats(nfc, &longer, 1, "nfc", NULL), "a key equal to its NFC, 600 bytes, matches");
     nfc[at + 599] = (char)0xa8;
     CHECK(Formats(nfc, &longer, 1, "other", NULL),
@@ -541,7 +543,7 @@ static void TestString(void)
         memcpy(ideographs + 3 * i, "\xef\xa4\x80", 3);
         memcpy(hanja + hanjaAt + 3 * i, "\xe8\xb1\x88", 3);
     }
-    strcpy(hanja + hanjaAt + 600, "| {{nfc}} * {{other}}");
+    memcpy(hanja + hanjaAt + 600, variants, sizeof(variants));
     mlocMessageArgument compatibility = {
         "h", 1, {mloc_messageValueString, 0, {.string = {ideographs, sizeof(ideographs)}}}};
     CHECK(Formats(hanja, &compatibility, 1, "nfc", NULL),
@@ -557,7 +559,7 @@ static void TestString(void)
         memcpy(vowels + 3 + 3 * i, "\xe1\x85\xa1", 3);
         memcpy(vowelKey + keyAt + 3 * i, "\xe1\x85\xa1", 3);
     }
-    strcpy(vowelKey + keyAt + 600, "| {{nfc}} * {{other}}");
+    memcpy(vowelKey + keyAt + 600, variants, sizeof(variants));
     mlocMessageArgument unbroken = {
         "v", 1, {mloc_messageValueString, 0, {.string = {vowels, sizeof(vowels)}}}};
     static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
