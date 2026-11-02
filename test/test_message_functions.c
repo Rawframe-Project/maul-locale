@@ -508,8 +508,9 @@ static void TestString(void)
                       NULL) &&
               Formats(".input {$s :string} .match $s s {{s}} * {{other}}", a, 4, "other", NULL),
           ":string matches a number's decimal and a key in NFC, case and all");
-    // A string not in NFC and longer than the stack's buffer cannot be
-    // compared: the selector is bad, matching only "*".
+    // A string not in NFC and longer than the stack's buffer after NFC
+    // matches no key of another length; a key as long cannot be compared:
+    // the selector is bad, matching only "*".
     static char decomposed[600];
     for (size_t i = 0; i < 200; i++)
     {
@@ -517,9 +518,18 @@ static void TestString(void)
     }
     mlocMessageArgument longer = {
         "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, 600}}}};
+    static char asLong[512] = ".input {$e :string} .match $e ";
+    size_t at = strlen(asLong);
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(asLong + at + 2 * i, "\xc3\xa9", 2);
+    }
+    strcpy(asLong + at + 400, " {{nfc}} * {{other}}");
     static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
-    CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", bad),
-          "a long string not in NFC is a bad selector");
+    CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", NULL),
+          "a long string not in NFC matches no key of another length, and is no bad selector");
+    CHECK(Formats(asLong, &longer, 1, "other", bad),
+          "a key as long as its NFC cannot be compared: a bad selector");
     mlocMessageArgument unnamed = {NULL, 0, {mloc_messageValueInteger, 0, {.integer = 1}}};
     static const mlocMessageFaultKind unresolved2[] = {mloc_messageFaultUnresolvedVariable, 0};
     CHECK(Formats("{$x}", &unnamed, 1, "{$x}", unresolved2),

@@ -148,6 +148,12 @@ bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
     size_t needed = 0;
     muniTextResult result =
         muniNormalize(text, size, muni_nfc, muni_convertStrict, normal, sizeof normal, &needed);
+    // The whole length is given when the text does not fit: a key of
+    // another length cannot match, and only one as long can go uncompared.
+    if (result.status == muni_errorCapacity && needed != length)
+    {
+        return false;
+    }
     if (result.status != muni_success)
     {
         *faultOut = mloc_messageFaultUnsupportedOperation;
