@@ -402,7 +402,9 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
     mlocMessageFaultKind fault = mloc_messageFaultNone;
     if (s->value.kind == valueString)
     {
-        matched = mlocStringMatches(&s->value, key, length, &fault);
+        bool limited = false;
+        matched = mlocStringMatches(&s->value, key, length, &fault, &limited);
+        f->r.limited |= limited;
     }
     else if (s->value.kind == valueList)
     {
@@ -695,7 +697,11 @@ static mlocResult WritePass(void* context, char* buffer, size_t capacity, size_t
     {
         return mloc_errorInvalid;
     }
-    return f->r.faultCount > 0 && f->r.formatter.strict ? mloc_errorFallback : mloc_success;
+    if (f->r.faultCount > 0 && f->r.formatter.strict)
+    {
+        return f->r.limited ? mloc_errorLimit : mloc_errorFallback;
+    }
+    return mloc_success;
 }
 
 mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* arguments,
@@ -719,6 +725,7 @@ mlocResult mlocFormatMessage(const void* bound, const mlocMessageArgument* argum
     f.r.faultCount = 0;
     f.r.probe = false;
     f.r.broken = false;
+    f.r.limited = false;
     f.r.probeArgument = NULL;
     f.r.dynamic = false;
     // The text goes to a scratch first: a buffer too small, or a fault

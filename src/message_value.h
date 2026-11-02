@@ -95,8 +95,9 @@ bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t c
                         size_t* lengthOut);
 
 // Whether a :string value matches a key (in NFC); false with a fault
-// kind in *faultOut when its text cannot be compared.
+// kind in *faultOut when its text cannot be compared, and *limitOut set
+// when that is for a stretch past MLOC_MAX_MESSAGE_SELECTOR_RUN.
 bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
-                       mlocMessageFaultKind* faultOut);
+                       mlocMessageFaultKind* faultOut, bool* limitOut);
 
 #endif

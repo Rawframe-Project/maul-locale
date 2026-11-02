@@ -508,18 +508,82 @@ static void TestString(void)
                       NULL) &&
               Formats(".input {$s :string} .match $s s {{s}} * {{other}}", a, 4, "other", NULL),
           ":string matches a number's decimal and a key in NFC, case and all");
-    // A string not in NFC and longer than the stack's buffer cannot be
-    // compared: the selector is bad, matching only "*".
-    static char decomposed[600];
-    for (size_t i = 0; i < 200; i++)
+    // A string not in NFC and longer than the stack's buffer after NFC
+    // matches no key of another length, and a key as long is compared a
+    // piece at a time, cut where nothing composes across.
+    static char decomposed[900];
+    for (size_t i = 0; i < 300; i++)
     {
         memcpy(decomposed + 3 * i, "e\xcc\x81", 3);
     }
     mlocMessageArgument longer = {
-        "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, 600}}}};
+        "e", 1, {mloc_messageValueString, 0, {.string = {decomposed, sizeof(decomposed)}}}};
+    CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", NULL),
+          "a long string not in NFC matches no key of another length, and is no bad selector");
+    // The variants after a long key, with its NUL.
+    static const char variants[] = "| {{nfc}} * {{other}}";
+    static char nfc[1024] = ".input {$e :string} .match $e |";
+    size_t at = strlen(nfc);
+    for (size_t i = 0; i < 300; i++)
+    {
+        memcpy(nfc + at + 2 * i, "\xc3\xa9", 2);
+    }
+    memcpy(nfc + at + 600, variants, sizeof(variants));
+    CHECK(Formats(nfc, &longer, 1, "nfc", NULL), "a key equal to its NFC, 600 bytes, matches");
+    nfc[at + 599] = (char)0xa8;
+    CHECK(Formats(nfc, &longer, 1, "other", NULL),
+          "a key as long that differs in its last letter does not, without a fault");
+    // CJK compatibility ideographs, singletons each its own boundary:
+    // U+F900 is U+8C48 after NFC.
+    static char ideographs[600];
+    static char hanja[1024] = ".input {$h :string} .match $h |";
+    size_t hanjaAt = strlen(hanja);
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(ideographs + 3 * i, "\xef\xa4\x80", 3);
+        memcpy(hanja + hanjaAt + 3 * i, "\xe8\xb1\x88", 3);
+    }
+    memcpy(hanja + hanjaAt + 600, variants, sizeof(variants));
+    mlocMessageArgument compatibility = {
+        "h", 1, {mloc_messageValueString, 0, {.string = {ideographs, sizeof(ideographs)}}}};
+    CHECK(Formats(hanja, &compatibility, 1, "nfc", NULL),
+          "200 compatibility ideographs match their NFC, cut before each");
+    // No boundary within MLOC_MAX_MESSAGE_SELECTOR_RUN bytes: Hangul
+    // vowels, starters that compose with a leading consonant, after a
+    // decomposed letter.
+    static char vowels[603] = "e\xcc\x81";
+    static char vowelKey[1024] = ".input {$v :string} .match $v |\xc3\xa9";
+    size_t keyAt = strlen(vowelKey);
+    for (size_t i = 0; i < 200; i++)
+    {
+        memcpy(vowels + 3 + 3 * i, "\xe1\x85\xa1", 3);
+        memcpy(vowelKey + keyAt + 3 * i, "\xe1\x85\xa1", 3);
+    }
+    memcpy(vowelKey + keyAt + 600, variants, sizeof(variants));
+    mlocMessageArgument unbroken = {
+        "v", 1, {mloc_messageValueString, 0, {.string = {vowels, sizeof(vowels)}}}};
     static const mlocMessageFaultKind bad[] = {mloc_messageFaultBadSelector, 0};
-    CHECK(Formats(".input {$e :string} .match $e x {{x}} * {{other}}", &longer, 1, "other", bad),
-          "a long string not in NFC is a bad selector");
+    CHECK(Formats(vowelKey, &unbroken, 1, "other", bad),
+          "a stretch past MLOC_MAX_MESSAGE_SELECTOR_RUN against a key as long: a bad selector");
+    static mlocMessageFormatter s_strict;
+    mlocMessageOptions strict = {true, mloc_messageIsolationNone, NULL, 0, NULL};
+    size_t compiled = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    char kept[4] = "abc";
+    mlocOutput output = {kept, sizeof(kept), 3, NULL, NULL};
+    mlocMessageFault list[2];
+    mlocMessageFaults faults = {list, 2, 0};
+    CHECK(mlocInitMessageFormatter(&s_data, &s_locale, &strict, &s_strict) == mloc_success &&
+              mlocCompileMessage(vowelKey, strlen(vowelKey), s_compiled, sizeof s_compiled,
+                                 &compiled, &error)
+                      .status == mloc_success &&
+              mlocMessageFormatter_Bind(&s_strict, s_compiled, compiled, s_bound, sizeof s_bound,
+                                        &bound) == mloc_success &&
+              mlocFormatMessage(s_bound, &unbroken, 1, &output, &faults) == mloc_errorLimit &&
+              output.length == 3 && memcmp(kept, "abc", 3) == 0 && faults.count == 1 &&
+              list[0].kind == mloc_messageFaultBadSelector,
+          "strict, the call refused as a limit, the output as it was");
     mlocMessageArgument unnamed = {NULL, 0, {mloc_messageValueInteger, 0, {.integer = 1}}};
     static const mlocMessageFaultKind unresolved2[] = {mloc_messageFaultUnresolvedVariable, 0};
     CHECK(Formats("{$x}", &unnamed, 1, "{$x}", unresolved2),

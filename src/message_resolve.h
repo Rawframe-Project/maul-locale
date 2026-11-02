@@ -53,6 +53,9 @@ typedef struct Resolution
     // formatter made again under the bound message, or a functions array
     // changed since it was made. The call is refused.
     bool broken;
+    // Set when a :string selector could not be compared with a key within
+    // MLOC_MAX_MESSAGE_SELECTOR_RUN: a strict call is refused as a limit.
+    bool limited;
     // What an argument stands for in a probe: a plain number for a
     // number function's expression, a date-time for a date function's.
     const mlocMessageValue* probeArgument;
