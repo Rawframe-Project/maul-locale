@@ -511,9 +511,16 @@ static void TestLongZoneIdentifier(void)
           "a zone of a 255-byte identifier is found");
     mlocMessageArgument z = {
         "z", 1, {mloc_messageValueZonedDateTime, 0, {.zoned = {{1136239445, 123456789}, &zone}}}};
+    // Put together by hand: GCC takes "%.*s" of the name, which has no
+    // NUL, as at most 254 bytes and folds a length check on it to false.
+    static const char prefix[] = "2006-01-02T22:04:05.123456789+00:00[";
     static char want[512];
-    int n = snprintf(want, sizeof want, "2006-01-02T22:04:05.123456789+00:00[%.*s]",
-                     (int)sizeof(name), name);
+    size_t n = sizeof(prefix) - 1;
+    memcpy(want, prefix, n);
+    memcpy(want + n, name, sizeof(name));
+    n += sizeof(name);
+    want[n++] = ']';
+    want[n] = '\0';
     s_using = &s_en;
     CHECK(n == 292 && Formats("{$z}", &z, 1, want, NULL), "is written whole, 292 bytes");
 }
