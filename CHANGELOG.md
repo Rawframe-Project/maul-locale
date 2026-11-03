@@ -5,6 +5,27 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.10.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.9.0...v0.10.0) (2026-11-03)
+
+### Changed
+
+- **Breaking: a dated message value keeps its calendar option on a
+  locale with a long tail.** `mlocFormatMessage` wrote a `:date`,
+  `:time` or `:datetime` value with a `calendar` option as its
+  fallback, with an Unsupported Operation fault (`mloc_errorFallback`
+  in strict mode), when the formatter's locale had too little room left
+  in its tail (`MLOC_MAX_LOCALE_TAIL`, 112 bytes) to take
+  `-u-ca-<type>`, such as `en` with an `a` extension of 100 bytes. Such
+  a value is now formatted in the calendar it names: a message that
+  gave `{|2006-01-02|}` gives "Jan 2, 2006"
+  ([#442](https://github.com/Rawframe-Project/maul-locale/pull/442)).
+- **Breaking: a long relative day is joined to a time.**
+  `mlocRelativeFormatter_FormatDayTime` returned `mloc_errorFormat`, a
+  status its header does not list, for a finite day count whose text
+  passed 1536 bytes, such as 1e1600 days in English. It now succeeds
+  and writes the day whole before the time, as one relative day part
+  ([#448](https://github.com/Rawframe-Project/maul-locale/pull/448)).
+
 ## [0.9.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.8.0...v0.9.0) (2026-11-03)
 
 ### Changed
