@@ -5,6 +5,22 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.9.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.8.0...v0.9.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* the installed package requires Maul Unicode 0.13.0 (`find_dependency(maul-unicode 0.13.0)`), and a Maul Unicode package before 1.0 matches only its exact version, so a build that provides 0.11.0 no longer configures. Consumers must provide Maul Unicode 0.13.0; a build that fetches it is unaffected.
+
+### Fixed
+
+* **message:** write a long numeric argument whole ([#440](https://github.com/Rawframe-Project/maul-locale/issues/440)) ([649d4bc](https://github.com/Rawframe-Project/maul-locale/commit/649d4bccc47f79903151b2112f701d100bc8dfea)), closes [#436](https://github.com/Rawframe-Project/maul-locale/issues/436)
+
+
+### Build
+
+* take Maul Unicode 0.13.0 ([#437](https://github.com/Rawframe-Project/maul-locale/issues/437)) ([5b38cf5](https://github.com/Rawframe-Project/maul-locale/commit/5b38cf501d1ff8354749c36a1be50fa5e2d27c0c)), closes [#434](https://github.com/Rawframe-Project/maul-locale/issues/434)
+
 ## [0.8.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.7.0...v0.8.0) (2026-11-03)
 
 ### Changed
