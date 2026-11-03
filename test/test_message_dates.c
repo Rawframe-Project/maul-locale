@@ -7,8 +7,13 @@
 // date-time, instant and zoned arguments) and refusals, options passed on,
 // calendars, zones, and the formatters prepared at bind.
 
+#include "bytes.h"
+#include "data_format.h"
+#include "data_view.h"
+#include "kinds.h"
 #include "message_prepare.h"
 #include "test_harness.h"
+#include "zone_tables.h"
 
 #include "maul-locale/message.h"
 
@@ -395,6 +400,124 @@ static void TestZonedArguments(void)
           "an offset of 0 is +00:00; a zoned text fits its room with its end or is none");
 }
 
+alignas(8) static uint8_t s_zones[1 << 20];
+
+static void Put32(uint8_t* p, uint32_t v)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        p[i] = (uint8_t)(v >> (8 * i));
+    }
+}
+
+static uint32_t Align8(uint32_t n)
+{
+    return (n + 7) / 8 * 8;
+}
+
+// Writes into s_zones a data file of the compiled-in zones unit with its
+// last identifier, Zulu, renamed to Zulu and extra x's: the new name goes
+// after the text, and the primaries after it. Returns the file's size, or
+// 0, and the name.
+static uint32_t BuildLongZone(uint32_t extra, char* nameOut)
+{
+    static uint8_t s_unit[1 << 20];
+    mlocData builtin;
+    mlocOpenBuiltinData(&builtin);
+    mlocDataSet set = {&builtin, 1};
+    DataSpan zones;
+    if (!mlocFindDataSetUnit(&set, kindZones, nullptr, 0, &zones))
+    {
+        return 0;
+    }
+    static const uint32_t s_sizes[zoneSectionCount] = {
+        zoneRecordSize, zoneIdentifierSize, zoneOffsetSize, 2, 4, 8, 1, zoneClosingSize, 1, 2};
+    uint32_t starts[zoneSectionCount];
+    uint32_t counts[zoneSectionCount];
+    uint32_t at = zoneHeaderSize;
+    for (int i = 0; i < zoneSectionCount; i++)
+    {
+        counts[i] = mlocLoad32(zones.bytes + 4 * i);
+        starts[i] = at = Align8(at);
+        at += counts[i] * s_sizes[i];
+    }
+    uint32_t text = starts[8];
+    uint32_t textSize = counts[8];
+    const uint8_t* last = zones.bytes + starts[1] + (counts[1] - 1) * zoneIdentifierSize;
+    uint32_t length = last[4] + extra;
+    if (length > UINT8_MAX || Align8(text + textSize + length) + 2 * counts[9] > sizeof(s_unit))
+    {
+        return 0;
+    }
+    memset(s_unit, 0, sizeof(s_unit));
+    memcpy(s_unit, zones.bytes, text + textSize);
+    memcpy(s_unit + text + textSize, zones.bytes + text + mlocLoad32(last), last[4]);
+    memset(s_unit + text + textSize + last[4], 'x', extra);
+    memcpy(nameOut, s_unit + text + textSize, length);
+    uint8_t* renamed = s_unit + starts[1] + (counts[1] - 1) * zoneIdentifierSize;
+    Put32(renamed, textSize);
+    renamed[4] = (uint8_t)length;
+    Put32(s_unit + 4 * 8, textSize + length);
+    uint32_t primaries = Align8(text + textSize + length);
+    memcpy(s_unit + primaries, zones.bytes + starts[9], 2 * counts[9]);
+    uint32_t unitSize = primaries + 2 * counts[9];
+    uint32_t payload = (uint32_t)(dataHeaderSize + dataUnitSize + 7) / 8 * 8;
+    uint32_t size = payload + unitSize;
+    mlocDataVersion version;
+    mlocGetDataVersion(&version);
+    memset(s_zones, 0, sizeof(s_zones));
+    memcpy(s_zones + headerMagic, "MLOC", 4);
+    s_zones[headerFormat] = (uint8_t)dataFormatVersion;
+    s_zones[headerFormat + 1] = (uint8_t)(dataFormatVersion >> 8);
+    s_zones[headerHeaderSize] = (uint8_t)dataHeaderSize;
+    s_zones[headerHeaderSize + 1] = (uint8_t)(dataHeaderSize >> 8);
+    Put32(s_zones + headerFileSize, size);
+    Put32(s_zones + headerCldr,
+          mlocPackVersion(version.cldr.major, version.cldr.minor, version.cldr.patch));
+    Put32(s_zones + headerUnicode,
+          mlocPackVersion(version.unicode.major, version.unicode.minor, version.unicode.patch));
+    Put32(s_zones + headerDataFormat, version.format);
+    // The release is the zones header's last eight bytes, NUL-padded.
+    for (int i = 0; i < 8 && s_unit[40 + i] != 0; i++)
+    {
+        s_zones[headerTzdb + i] = s_unit[40 + i];
+    }
+    Put32(s_zones + headerTables, (uint32_t)version.tables);
+    Put32(s_zones + headerTables + 4, (uint32_t)(version.tables >> 32));
+    Put32(s_zones + headerUnitCount, 1);
+    Put32(s_zones + headerPoolOffset, size);
+    uint8_t* entry = s_zones + dataHeaderSize;
+    Put32(entry, kindZones);
+    Put32(entry + 4, dataNoLocale);
+    Put32(entry + 8, payload);
+    Put32(entry + 12, unitSize);
+    memcpy(s_zones + payload, s_unit, unitSize);
+    return size;
+}
+
+// A zoned argument written with no function, its zone's identifier of
+// any length a zones unit gives.
+static void TestLongZoneIdentifier(void)
+{
+    char name[UINT8_MAX];
+    uint32_t size = BuildLongZone(UINT8_MAX - 4, name);
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[1]);
+    mlocDataSet set = {sources, 2};
+    mlocTimeZone zone;
+    CHECK(size > 0 && memcmp(name, "Zulu", 4) == 0 &&
+              mlocOpenData(s_zones, size, &sources[0]) == mloc_success &&
+              mlocFindTimeZone(&set, name, sizeof(name), &zone) == mloc_success,
+          "a zone of a 255-byte identifier is found");
+    mlocMessageArgument z = {
+        "z", 1, {mloc_messageValueZonedDateTime, 0, {.zoned = {{1136239445, 123456789}, &zone}}}};
+    static char want[512];
+    int n = snprintf(want, sizeof want, "2006-01-02T22:04:05.123456789+00:00[%.*s]",
+                     (int)sizeof(name), name);
+    s_using = &s_en;
+    CHECK(n == 292 && Formats("{$z}", &z, 1, want, NULL), "is written whole, 292 bytes");
+}
+
 // Whether a format call refuses an argument as mloc_errorInvalid.
 static bool Refused(const char* message, const mlocMessageArgument* argument)
 {
@@ -595,6 +718,7 @@ int main(void)
     TestZones();
     TestDefaultZone();
     TestZonedArguments();
+    TestLongZoneIdentifier();
     TestRefusedArguments();
     TestIsoText();
     TestPrepared();
