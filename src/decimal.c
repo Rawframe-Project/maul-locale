@@ -287,13 +287,9 @@ mlocTextResult mlocParseDecimal(const char* text, size_t length, mlocDecimal* de
     return Result(mloc_success, length);
 }
 
-mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
+size_t mlocDecimalText(const mlocDecimal* decimal, size_t from, char* out, size_t capacity,
+                       size_t* lengthOut)
 {
-    if (decimal == nullptr || textOut == nullptr ||
-        (textOut->buffer == nullptr && textOut->capacity > 0) || !mlocValidDecimal(decimal))
-    {
-        return mloc_errorInvalid;
-    }
     static const char s_infinity[8] = {'I', 'n', 'f', 'i', 'n', 'i', 't', 'y'};
     static const char s_nan[3] = {'N', 'a', 'N'};
     const char* special = decimal->kind == mloc_decimalInfinity ? s_infinity
@@ -304,39 +300,54 @@ mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
     int64_t integerDigits = special != nullptr ? specialLength : top >= 0 ? top + 1 : 1;
     int64_t fraction = decimal->fractionDigits;
     size_t length = (size_t)(decimal->negative + integerDigits + (fraction > 0 ? fraction + 1 : 0));
+    *lengthOut = length;
+    size_t n = 0;
+    // Each byte from its place: the sign, a special value's name or the
+    // integer digits, then the point and the fraction digits.
+    for (size_t at = from; at < length && n < capacity; at++)
+    {
+        int64_t k = (int64_t)at - decimal->negative;
+        char c = '.';
+        if (k < 0)
+        {
+            c = '-';
+        }
+        else if (special != nullptr)
+        {
+            c = special[k];
+        }
+        else if (k < integerDigits)
+        {
+            c = (char)('0' + mlocDigitAt(decimal, integerDigits - 1 - k));
+        }
+        else if (k > integerDigits)
+        {
+            c = (char)('0' + mlocDigitAt(decimal, integerDigits - k));
+        }
+        out[n++] = c;
+    }
+    return n;
+}
+
+mlocResult mlocFormatDecimal(const mlocDecimal* decimal, mlocOutput* textOut)
+{
+    if (decimal == nullptr || textOut == nullptr ||
+        (textOut->buffer == nullptr && textOut->capacity > 0) || !mlocValidDecimal(decimal))
+    {
+        return mloc_errorInvalid;
+    }
+    size_t length = 0;
+    (void)mlocDecimalText(decimal, 0, nullptr, 0, &length);
     textOut->length = length;
     // Every decimal writes at least one byte, so no buffer is too short.
     if (length > textOut->capacity || textOut->buffer == nullptr)
     {
         return mloc_errorCapacity;
     }
-    char* out = textOut->buffer;
-    size_t n = 0;
-    if (decimal->negative)
-    {
-        out[n++] = '-';
-    }
-    if (special != nullptr)
-    {
-        // A special value is its sign and its name.
-        MLOC_ASSERT(n + (size_t)specialLength == length);
-        memcpy(out + n, special, (size_t)specialLength);
-        return mloc_success;
-    }
-    for (int64_t power = integerDigits - 1; power >= 0; power--)
-    {
-        out[n++] = (char)('0' + mlocDigitAt(decimal, power));
-    }
-    if (fraction > 0)
-    {
-        out[n++] = '.';
-        for (int64_t power = -1; power >= -fraction; power--)
-        {
-            out[n++] = (char)('0' + mlocDigitAt(decimal, power));
-        }
-    }
+    size_t written = mlocDecimalText(decimal, 0, textOut->buffer, length, &length);
     // The text filled the length measured.
-    MLOC_ASSERT(n == length);
+    MLOC_ASSERT(written == length);
+    (void)written;
     return mloc_success;
 }
 

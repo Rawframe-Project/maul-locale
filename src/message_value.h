@@ -89,10 +89,13 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
 // An argument written with no function as its plain decimal (a currency
 // amount's followed by a space and its code; a unit amount's digits
 // alone, its unit written after them and a space by the caller), or a
-// date, time or date-time in ISO 8601; false for a kind that has none
-// (an object).
-bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
-                        size_t* lengthOut);
+// date, time or date-time in ISO 8601: the bytes from offset from on, at
+// most capacity of them, written into out, how many in *writtenOut, and
+// the whole text's length in *lengthOut. A decimal's text can be far
+// longer than a buffer, so it is written a piece at a time. False for a
+// kind that has none (an object).
+bool mlocArgumentText(const mlocMessageValue* argument, size_t from, char* out, size_t capacity,
+                      size_t* writtenOut, size_t* lengthOut);
 
 // Whether a :string value matches a key (in NFC); false with a fault
 // kind in *faultOut when its text cannot be compared, and *limitOut set

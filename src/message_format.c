@@ -136,16 +136,25 @@ static void PutFallback(Formatting* f, const Value* v)
 // which is reported, false.
 static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
 {
-    // A zoned date-time's text is the longest.
-    char digits[128];
+    // A decimal's text, which can be far longer, is written a piece at a
+    // time.
+    char piece[128];
+    size_t written = 0;
     size_t length = 0;
-    if (!mlocArgumentDigits(v->argument, digits, sizeof digits, &length))
+    if (!mlocArgumentText(v->argument, 0, piece, sizeof piece, &written, &length))
     {
         mlocReportFault(&f->r, mloc_messageFaultUnsupportedOperation,
                         Field(f, messageExpressions, expression, 7));
         return false;
     }
-    Put(&f->w, digits, length);
+    for (size_t from = 0; from < length; from += written)
+    {
+        if (from > 0)
+        {
+            (void)mlocArgumentText(v->argument, from, piece, sizeof piece, &written, &length);
+        }
+        Put(&f->w, piece, written);
+    }
     if (v->argument->kind == mloc_messageValueUnit)
     {
         // The amount and the unit, as ICU4J writes a Measure.

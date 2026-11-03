@@ -3,6 +3,8 @@
 
 #include "message_value.h"
 
+#include "decimal.h"
+
 #include "maul-unicode/encoding.h"
 #include "maul-unicode/normalize.h"
 #include "maul-unicode/properties.h"
@@ -47,6 +49,12 @@ bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t leng
     return result.status == muni_success && needed == length && memcmp(normal, name, length) == 0;
 }
 
+enum
+{
+    // The bytes of an argument's ISO 8601 text.
+    isoRoom = 128,
+};
+
 // A numeric argument's decimal (a currency amount's amount); false for
 // another kind or a number past a decimal's limits.
 bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
@@ -71,40 +79,55 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out)
     }
 }
 
-bool mlocArgumentDigits(const mlocMessageValue* argument, char* digits, size_t capacity,
-                        size_t* lengthOut)
+bool mlocArgumentText(const mlocMessageValue* argument, size_t from, char* out, size_t capacity,
+                      size_t* writtenOut, size_t* lengthOut)
 {
+    // A zoned date-time's text is the longest of the ISO 8601 forms.
+    char iso[isoRoom];
+    size_t length = 0;
     if (argument->kind == mloc_messageValueDuration)
     {
         // A duration in ISO 8601, as Temporal writes it.
-        *lengthOut = mlocWriteIsoDuration(argument->as.duration, digits, capacity);
-        return *lengthOut > 0;
+        length = mlocWriteIsoDuration(argument->as.duration, iso, sizeof iso);
     }
-    if (argument->kind >= mloc_messageValueDate && argument->kind <= mloc_messageValueZonedDateTime)
+    else if (argument->kind >= mloc_messageValueDate &&
+             argument->kind <= mloc_messageValueZonedDateTime)
     {
         // A date, time, date-time, instant or zoned date-time in ISO 8601.
-        *lengthOut = mlocWriteIsoDateTime(argument, digits, capacity);
-        return *lengthOut > 0;
+        length = mlocWriteIsoDateTime(argument, iso, sizeof iso);
     }
-    mlocDecimal decimal;
-    mlocOutput out = {digits, capacity, 0, NULL, NULL};
-    if (!mlocArgumentDecimal(argument, &decimal) ||
-        mlocFormatDecimal(&decimal, &out) != mloc_success)
+    else
     {
-        return false;
-    }
-    if (argument->kind == mloc_messageValueCurrency)
-    {
-        // The amount and the code, as ICU4J writes a CurrencyAmount.
-        if (out.length + 4 > capacity)
+        mlocDecimal decimal;
+        if (!mlocArgumentDecimal(argument, &decimal) || !mlocValidDecimal(&decimal))
         {
             return false;
         }
-        digits[out.length] = ' ';
-        mlocUpperCode(argument->as.currency.code, digits + out.length + 1);
-        out.length += 4;
+        size_t n = mlocDecimalText(&decimal, from, out, capacity, &length);
+        if (argument->kind == mloc_messageValueCurrency)
+        {
+            // The amount and the code, as ICU4J writes a CurrencyAmount.
+            char code[4] = {' '};
+            mlocUpperCode(argument->as.currency.code, code + 1);
+            for (size_t at = from + n; at < length + sizeof code && n < capacity; at++)
+            {
+                out[n++] = code[at - length];
+            }
+            length += sizeof code;
+        }
+        *writtenOut = n;
+        *lengthOut = length;
+        return true;
     }
-    *lengthOut = out.length;
+    if (length == 0)
+    {
+        return false;
+    }
+    size_t n = from < length ? length - from : 0;
+    n = n < capacity ? n : capacity;
+    memcpy(out, iso + from, n);
+    *writtenOut = n;
+    *lengthOut = length;
     return true;
 }
 
@@ -203,31 +226,51 @@ static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_
     return matched == length;
 }
 
+// Whether an argument's text written with no function matches a key. The
+// text, ASCII and so NFC, is compared by its bytes a piece at a time: a
+// decimal's can be far longer than a buffer.
+static bool ArgumentMatches(const mlocMessageValue* a, const uint8_t* key, size_t length)
+{
+    char piece[128];
+    size_t written = 0;
+    size_t size = 0;
+    if (!mlocArgumentText(a, 0, piece, sizeof piece, &written, &size))
+    {
+        return false;
+    }
+    size_t unit = a->kind == mloc_messageValueUnit ? 1 + a->as.unit.unitLength : 0;
+    if (size > length || length - size != unit)
+    {
+        return false;
+    }
+    for (size_t from = 0; from < size; from += written)
+    {
+        if (from > 0)
+        {
+            (void)mlocArgumentText(a, from, piece, sizeof piece, &written, &size);
+        }
+        if (memcmp(key + from, piece, written) != 0)
+        {
+            return false;
+        }
+    }
+    // A unit amount's digits, a space and the unit.
+    return unit == 0 ||
+           (key[size] == ' ' && memcmp(key + size + 1, a->as.unit.unit, unit - 1) == 0);
+}
+
 bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
                        mlocMessageFaultKind* faultOut, bool* limitOut)
 {
     *faultOut = mloc_messageFaultNone;
     *limitOut = false;
-    const char* text = (const char*)value->text;
-    size_t size = value->length;
-    char digits[128];
     if (value->behind == valueArgument)
     {
-        if (!mlocArgumentDigits(value->argument, digits, sizeof digits, &size))
-        {
-            return false;
-        }
-        text = digits;
-        const mlocMessageValue* a = value->argument;
-        if (a->kind == mloc_messageValueUnit)
-        {
-            // Digits, a space and the unit, all compared by their bytes.
-            return length == size + 1 + a->as.unit.unitLength && memcmp(key, digits, size) == 0 &&
-                   key[size] == ' ' &&
-                   memcmp(key + size + 1, a->as.unit.unit, a->as.unit.unitLength) == 0;
-        }
+        return ArgumentMatches(value->argument, key, length);
     }
-    else if (value->behind != valueText)
+    const char* text = (const char*)value->text;
+    size_t size = value->length;
+    if (value->behind != valueText)
     {
         // Over a failed operand: no key matches.
         return false;

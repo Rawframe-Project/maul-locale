@@ -451,8 +451,8 @@ static void TestCurrency(void)
                       "42.00",
                       s_badOption),
           "bad option values; no currency is a bad operand");
-    // 124 and 125 bytes of digits: with " EUR", 128 fit the writer's room
-    // and 129 do not.
+    // 124 and 125 bytes of digits: with " EUR", 128 and 129, past the 128
+    // bytes the text is written in at a time.
     mlocDecimal wide = {0};
     mlocDecimal wider = {0};
     CHECK(
@@ -465,15 +465,19 @@ static void TestCurrency(void)
         "a", 1, {mloc_messageValueCurrency, 0, {.currency = {&wide, {'E', 'U', 'R'}}}}};
     mlocMessageArgument long2 = {
         "a", 1, {mloc_messageValueCurrency, 0, {.currency = {&wider, {'E', 'U', 'R'}}}}};
-    static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
     CHECK(Formats("{$a}", &long1, 1,
                   "0.0000000000000000000000000000000000000000000000000000000000"
                   "000000000000000000000000111111111122222222223333333333444444"
                   "4444"
                   " EUR",
                   NULL) &&
-              Formats("{$a}", &long2, 1, "{$a}", unsupported),
-          "an amount written bare fits its room or falls back");
+              Formats("{$a}", &long2, 1,
+                      "0.00000000000000000000000000000000000000000000000000000000000"
+                      "000000000000000000000000111111111122222222223333333333444444"
+                      "4444"
+                      " EUR",
+                      NULL),
+          "an amount written bare is written whole however long");
     static mlocMessageFormatter bare;
     mlocLocale en;
     mlocDataSet none = {NULL, 0};
@@ -482,6 +486,7 @@ static void TestCurrency(void)
               mlocInitMessageFormatter(&none, &en, &options, &bare) == mloc_success,
           "a formatter is made without data");
     s_using = &bare;
+    static const mlocMessageFaultKind unsupported[] = {mloc_messageFaultUnsupportedOperation, 0};
     CHECK(Formats("{42 :currency currency=EUR}", NULL, 0, "{|42|}", unsupported),
           "data without the currencies' digits cannot make a currency value");
     s_using = &s_en;
