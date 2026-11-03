@@ -5,6 +5,19 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.10.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.9.0...v0.10.0) (2026-11-03)
+
+
+### Fixed
+
+* **message:** give a date's calendar option to its formatter ([#442](https://github.com/Rawframe-Project/maul-locale/issues/442)) ([8e95f3e](https://github.com/Rawframe-Project/maul-locale/commit/8e95f3eeeedb0b2d9d38c577b282f450cabcdbaa)), closes [#441](https://github.com/Rawframe-Project/maul-locale/issues/441)
+* **relative:** write a long day before a time whole ([#448](https://github.com/Rawframe-Project/maul-locale/issues/448)) ([f7fa578](https://github.com/Rawframe-Project/maul-locale/commit/f7fa578b8abcd89e2707f18c8c5fabaf0ff51d73)), closes [#443](https://github.com/Rawframe-Project/maul-locale/issues/443)
+
+
+### Chores
+
+* release 0.10.0 ([#452](https://github.com/Rawframe-Project/maul-locale/issues/452)) ([ccd4f43](https://github.com/Rawframe-Project/maul-locale/commit/ccd4f432ad04d46481db2870c09609dcc94ba8b1)), closes [#451](https://github.com/Rawframe-Project/maul-locale/issues/451)
+
 ## [0.9.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.8.0...v0.9.0) (2026-11-03)
 
 ### Changed
