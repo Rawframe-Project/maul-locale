@@ -168,7 +168,7 @@ message_words: invariant message_number
 message_duration: invariant message_number
 message_list: message_number
 message_grammar: grammar message_number
-message_date: invariant locale_keyword message_number
+message_date: date_format datetime_format invariant message_number time_format
 message_value: decimal message_date message_duration message_grammar message_list message_number
 message_operand: invariant message_date message_duration message_list message_number message_value
 message_resolve: invariant message_bind message_date message_duration message_form message_grammar message_list message_number message_offset message_operand message_read message_value

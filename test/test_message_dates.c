@@ -201,7 +201,19 @@ static void TestCalendars(void)
                         "Jan \xD9\xA2, \xD9\xA2\xD9\xA5\xD9\xA4\xD9\xA9 BE") &&
               FormatsIn("en-u-nu-arab-z-abc", "{|2006-01-02| :date calendar=buddhist}",
                         "Jan \xD9\xA2, \xD9\xA2\xD9\xA5\xD9\xA4\xD9\xA9 BE"),
-          "the calendar keeps the script and region, and goes in the u extension before others");
+          "the calendar keeps the script, the region and the keys, whatever extensions follow");
+    // A tail of 110 bytes, MLOC_MAX_LOCALE_TAIL less 2: -u-ca-buddhist
+    // does not fit beside it.
+    const char* full = "en-u-nu-arab-a-abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdefgh-"
+                       "abcdefgh-abcdefgh-abcdefgh-abcdefgh-abcdefgh";
+    CHECK(FormatsIn(full, "{|2006-01-02| :date calendar=buddhist}",
+                    "Jan \xD9\xA2, \xD9\xA2\xD9\xA5\xD9\xA4\xD9\xA9 BE") &&
+              FormatsIn(full, "{|2006-01-02T15:04:06| :time calendar=japanese}",
+                        "\xD9\xA3:\xD9\xA0\xD9\xA4" NNBSP "PM") &&
+              FormatsIn(full, "{|2006-01-02T15:04:06| :datetime calendar=japanese}",
+                        "Jan \xD9\xA2, \xD9\xA1\xD9\xA8 Heisei, \xD9\xA3:\xD9\xA0\xD9\xA4" NNBSP
+                        "PM"),
+          "the calendar option applies to a locale whose tail has no room for it");
 }
 
 static void TestOperands(void)

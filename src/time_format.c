@@ -296,7 +296,8 @@ mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mloc
     TimeChoice unused;
     memset(f, 0, sizeof(*f));
     DateLocale own;
-    mlocResult result = shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale);
+    mlocResult result =
+        shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale, nullptr);
     result = result < 0 ? result
                         : Resolve(f, locale, shared != nullptr ? shared : &own, options,
                                   choice != nullptr ? choice : &unused);
@@ -307,6 +308,13 @@ mlocResult mlocMakeTimeFormat(TimeFormat* f, const mlocDataSet* data, const mloc
 mlocResult mlocInitTimeFormatter(const mlocDataSet* data, const mlocLocale* locale,
                                  const mlocTimeOptions* options, mlocTimeFormatter* formatterOut)
 {
+    return mlocInitTimeFormatterIn(data, locale, nullptr, options, formatterOut);
+}
+
+mlocResult mlocInitTimeFormatterIn(const mlocDataSet* data, const mlocLocale* locale,
+                                   const char* calendar, const mlocTimeOptions* options,
+                                   mlocTimeFormatter* formatterOut)
+{
     mlocTimeOptions o = options != nullptr ? *options : (mlocTimeOptions){0};
     if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         !mlocValidTimeOptions(&o))
@@ -315,7 +323,9 @@ mlocResult mlocInitTimeFormatter(const mlocDataSet* data, const mlocLocale* loca
     }
     ZonedTimeFormat f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocMakeTimeFormat(&f.time, data, locale, nullptr, &o, nullptr);
+    DateLocale shared;
+    mlocResult result = mlocReadDateLocale(&shared, data, locale, calendar);
+    result = result < 0 ? result : mlocMakeTimeFormat(&f.time, data, locale, &shared, &o, nullptr);
     if (result >= 0 && f.time.zoned)
     {
         mlocZoneStyle style = o.zone != mloc_zoneStyleNone ? o.zone : mloc_zoneStyleSpecificShort;
@@ -429,7 +439,7 @@ typedef struct TimeRangeWriting
     const mlocTime* times[2];
     const ZoneWriting* zones[2];
     const DateFormat* date;
-    const DateValue* dates[2];
+    const DateRead* dates[2];
     const RangeChoice* choice;
     const RangeJoin* join;
     DataSpan fallback;
@@ -447,7 +457,7 @@ static void WriteDateValue(const void* context, uint32_t value, const uint8_t* p
                            uint32_t length, const PatternSpan* span, NumberWriter* w)
 {
     const TimeRangeWriting* g = context;
-    const DateValue* v = g->dates[value];
+    const DateRead* v = g->dates[value];
     mlocWriteDateFieldsIn(g->date, pattern, length, &v->fields, v->related, span, w);
 }
 
@@ -541,7 +551,7 @@ mlocResult mlocTimeFormatter_FormatRangeInZone(const mlocTimeFormatter* formatte
         return WriteRangeOut(&g, textOut);
     }
     DateFormat date;
-    DateValue dates[2];
+    DateRead dates[2];
     mlocResult made = MakeRangeDate(&f, &date);
     if (made < 0)
     {
