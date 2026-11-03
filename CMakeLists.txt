@@ -819,6 +819,9 @@ if(MAUL_LOCALE_BUILD_TESTS)
     endif()
     maul_add_test(relative)
     if(TARGET test_relative)
+        # It builds a relative time unit of its own with the data layout's
+        # constants.
+        target_include_directories(test_relative PRIVATE ${PROJECT_SOURCE_DIR}/src)
         if(EMSCRIPTEN)
             target_link_options(test_relative PRIVATE
                                 "SHELL:--embed-file ${MLOC_RELATIVE_FILE}@/relative.mloc"

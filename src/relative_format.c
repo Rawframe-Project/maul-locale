@@ -9,7 +9,6 @@
 #include "relative_format.h"
 
 #include "bytes.h"
-#include "currency_tables.h"
 #include "data_view.h"
 #include "decimal.h"
 #include "invariant.h"
@@ -19,6 +18,7 @@
 #include "locale_valid.h"
 #include "number_core.h"
 #include "number_format.h"
+#include "number_output.h"
 #include "plural.h"
 #include "plural_rules.h"
 #include "relative_tables.h"
@@ -30,7 +30,6 @@
 static_assert(sizeof(RelativeFormat) <= sizeof(mlocRelativeFormatter),
               "a relative time formatter fits its opaque value");
 static_assert(offsetof(RelativeFormat, formatter) == 0, "the formatter begins it");
-static_assert(relativeTextMost <= UINT16_MAX, "a pattern's length fits an outer pattern's");
 
 typedef struct ChainWalk
 {
@@ -236,24 +235,24 @@ static size_t TitleOf(const RelativeFormat* f, DataSpan text, const uint8_t** ti
     return size;
 }
 
-// Copies text into room, its first letter titlecased when the formatter
-// capitalizes; the length copied, or 0 when it does not fit.
-static size_t CopyText(const RelativeFormat* f, DataSpan text, uint8_t* room, size_t capacity)
+// A text of the data as it is written: its first letter's titlecase when
+// the formatter capitalizes (no bytes otherwise), then the rest.
+typedef struct TitledText
 {
-    const uint8_t* title = nullptr;
-    uint32_t titleLength = 0;
-    size_t old = TitleOf(f, text, &title, &titleLength);
+    const uint8_t* title;
+    uint32_t titleLength;
+    DataSpan rest;
+} TitledText;
+
+static TitledText Titled(const RelativeFormat* f, DataSpan text)
+{
+    TitledText t;
+    size_t old = TitleOf(f, text, &t.title, &t.titleLength);
     // The data's text is well-formed UTF-8 (mlocValidRelative), so its first
     // code point ends within it.
     MLOC_ASSERT(old <= text.size);
-    size_t length = text.size - old + titleLength;
-    if (length > capacity)
-    {
-        return 0;
-    }
-    memcpy(room, title, titleLength);
-    memcpy(room + titleLength, text.bytes + old, text.size - old);
-    return length;
+    t.rest = (DataSpan){text.bytes + old, text.size - (uint32_t)old};
+    return t;
 }
 
 // The offset an amount names under auto, from -2 to 2, or false: an
@@ -273,107 +272,75 @@ static bool NamedOffset(const mlocDecimal* d, int32_t* offset)
     return true;
 }
 
-// Writes a name as one literal part.
-static mlocResult WriteName(const uint8_t* text, size_t length, mlocOutput* output)
-{
-    output->length = length;
-    if (length > output->capacity)
-    {
-        return mloc_errorCapacity;
-    }
-    if (length > 0)
-    {
-        memcpy(output->buffer, text, length);
-    }
-    if (output->part != nullptr && length > 0)
-    {
-        output->part(output->context, mloc_numberPartLiteral, 0, length);
-    }
-    return mloc_success;
-}
-
-// Fills an outer pattern with a direction's pattern of a category
-// (other's where the chain lacks it), copied into room with its "{0}" as
-// currencyTextNumber, every category pointing at it.
-static mlocResult FillOuter(const RelativeFormat* f, uint32_t unit, uint32_t base,
-                            uint32_t category, uint8_t* room, Outer* outer)
-{
-    // A category is one of the six plural categories, and base a
-    // direction's first slot.
-    MLOC_ASSERT(category <= mloc_pluralOther && (base == relativeFuture || base == relativePast));
-    DataSpan text;
-    if (!Lookup(f, unit, base + category, &text) && !Lookup(f, unit, base + 5, &text))
-    {
-        return mloc_errorNotFound;
-    }
-    memset(outer, 0, sizeof(*outer));
-    outer->patternText = room;
-    outer->textKind = mloc_numberPartLiteral;
-    outer->patternKind = mloc_numberPartLiteral;
-    size_t length = CopyText(f, text, room, relativeTextMost);
-    if (length == 0)
-    {
-        return mloc_errorFormat;
-    }
-    for (size_t i = 0; i + 3 <= length; i++)
-    {
-        if (memcmp(room + i, "{0}", 3) == 0)
-        {
-            room[i] = currencyTextNumber;
-            memmove(room + i + 1, room + i + 3, length - i - 3);
-            length -= 2;
-            break;
-        }
-    }
-    for (uint32_t c = 0; c < 6; c++)
-    {
-        outer->patternLength[c] = (uint16_t)length;
-    }
-    return mloc_success;
-}
-
-// What an amount of a unit writes: a name, copied into nameRoom (its
-// length in nameLength), or a pattern of its direction filled into outer
-// from patternRoom with the magnitude to write in it (nameLength 0).
+// What an amount of a unit writes: a name, or the pattern of its
+// direction and its magnitude's category with the magnitude at the
+// pattern's "{0}". Both are written from the data, whatever their length.
 typedef struct RelativeChoice
 {
-    uint8_t nameRoom[relativeTextMost];
-    size_t nameLength;
-    uint8_t patternRoom[relativeTextMost];
-    Outer outer;
-    mlocDecimal magnitude;
-    // The formatter, unit and direction a pattern is chosen in.
-    const RelativeFormat* format;
-    uint32_t unit;
-    uint32_t base;
+    TitledText text;
+    // Where the "{0}" begins in the text's rest; the rest's size for a
+    // name or a pattern that writes no number.
+    uint32_t numberAt;
+    // The magnitude, rounded once for every pass of the writing.
+    Prepared number;
 } RelativeChoice;
 
 static mlocResult Choose(const RelativeFormat* f, const mlocDecimal* amount, uint32_t unit,
                          RelativeChoice* c)
 {
     int32_t offset = 0;
-    DataSpan name;
-    c->nameLength = 0;
-    c->format = f;
-    c->unit = unit;
+    DataSpan text;
     if (f->numeric == mloc_relativeNumericAuto && NamedOffset(amount, &offset) &&
-        Lookup(f, unit, (uint32_t)(offset + 2), &name))
+        Lookup(f, unit, (uint32_t)(offset + 2), &text))
     {
-        c->nameLength = CopyText(f, name, c->nameRoom, sizeof(c->nameRoom));
-        return c->nameLength == 0 ? mloc_errorFormat : mloc_success;
+        c->text = Titled(f, text);
+        c->numberAt = c->text.rest.size;
+        return mloc_success;
     }
-    c->base = amount->negative != 0 ? relativePast : relativeFuture;
-    c->magnitude = *amount;
-    c->magnitude.negative = 0;
+    uint32_t base = amount->negative != 0 ? relativePast : relativeFuture;
+    mlocDecimal magnitude = *amount;
+    magnitude.negative = 0;
+    uint32_t category = mloc_pluralOther;
+    mlocResult r = mlocPrepareDecimal(&f->formatter, &magnitude, &c->number, &category);
+    if (r != mloc_success)
+    {
+        return r;
+    }
+    // Other's pattern where the chain lacks the category's.
+    if (!Lookup(f, unit, base + category, &text) && !Lookup(f, unit, base + 5, &text))
+    {
+        return mloc_errorNotFound;
+    }
+    // A titlecased first letter is not a "{0}"'s brace.
+    c->text = Titled(f, text);
+    const uint8_t* rest = c->text.rest.bytes;
+    c->numberAt = c->text.rest.size;
+    for (uint32_t i = 0; i + 3 <= c->text.rest.size; i++)
+    {
+        if (memcmp(rest + i, "{0}", 3) == 0)
+        {
+            c->numberAt = i;
+            break;
+        }
+    }
     return mloc_success;
 }
 
-// A choice's outer pattern for the category its magnitude is written in.
-static const Outer* ChooseOuter(void* context, uint32_t category, mlocResult* resultOut)
+// Writes a choice: the text as literal parts, the magnitude's parts
+// where its "{0}" was.
+static mlocResult WriteChoice(const void* context, NumberWriter* w)
 {
-    RelativeChoice* c = context;
-    *resultOut = FillOuter(c->format, c->unit, c->base, category, c->patternRoom, &c->outer);
-    return *resultOut == mloc_success ? &c->outer : nullptr;
+    const RelativeChoice* c = context;
+    const TitledText* t = &c->text;
+    mlocWritePart(w, mloc_numberPartLiteral, t->title, t->titleLength);
+    mlocWritePart(w, mloc_numberPartLiteral, t->rest.bytes, c->numberAt);
+    if (c->numberAt < t->rest.size)
+    {
+        mlocWritePrepared(&c->number, w);
+        mlocWritePart(w, mloc_numberPartLiteral, t->rest.bytes + c->numberAt + 3,
+                      t->rest.size - c->numberAt - 3);
+    }
+    return mloc_success;
 }
 
 bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit)
@@ -391,31 +358,16 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
     {
         return r;
     }
-    if (c.nameLength > 0)
-    {
-        mlocWritePart(w, kind, c.nameRoom, c.nameLength);
-        return mloc_success;
-    }
-    uint32_t category = mloc_pluralOther;
-    r = mlocFormattedCategory(&f->formatter, &c.magnitude, &category);
-    r = r == mloc_success ? FillOuter(f, unit, c.base, category, c.patternRoom, &c.outer) : r;
-    if (r != mloc_success)
-    {
-        return r;
-    }
     // The text is written in place; a parts pass counts its length and
     // reports it as one part, reading no bytes.
     if (w->parts == nullptr)
     {
-        return mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, w);
+        return WriteChoice(&c, w);
     }
     NumberWriter count = {0};
-    r = mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, &count);
-    if (r == mloc_success)
-    {
-        mlocWritePart(w, kind, nullptr, count.length);
-    }
-    return r;
+    (void)WriteChoice(&c, &count);
+    mlocWritePart(w, kind, nullptr, count.length);
+    return mloc_success;
 }
 
 mlocResult mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter,
@@ -431,11 +383,5 @@ mlocResult mlocRelativeFormatter_Format(const mlocRelativeFormatter* formatter,
     }
     RelativeChoice c;
     mlocResult r = Choose(&f, amount, (uint32_t)unit, &c);
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    return c.nameLength > 0
-               ? WriteName(c.nameRoom, c.nameLength, textOut)
-               : mlocFormatChosen(&f.formatter, ChooseOuter, &c, &c.magnitude, textOut);
+    return r != mloc_success ? r : mlocWriteOutput(WriteChoice, &c, textOut);
 }

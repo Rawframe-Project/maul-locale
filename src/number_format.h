@@ -79,11 +79,30 @@ typedef struct Outer
     mlocPluralRules rules;
 } Outer;
 
-// The plural category of a valid decimal as the formatter writes it, the
-// one an outer pattern is chosen by: mloc_success, or mloc_errorCapacity
-// when rounding passes the decimal's limits (the category then other).
-mlocResult mlocFormattedCategory(const Formatter* formatter, const mlocDecimal* decimal,
-                                 uint32_t* categoryOut);
+// A decimal made ready to write: rounded, with its layout, the core its
+// affixes come from and its sign.
+typedef struct Prepared
+{
+    mlocDecimal decimal;
+    NumberLayout layout;
+    // The formatter's core, or in compact notation the copy its pattern
+    // is chosen in (a Prepared copied keeps pointing at its source's).
+    const NumberCore* core;
+    NumberCore compact;
+    NumberSign sign;
+    // The compact exponent, the plural operand c.
+    int32_t exponent;
+} Prepared;
+
+// Rounds a valid decimal as the formatter writes it, once for any number
+// of writings, and gives the plural category an outer pattern is chosen
+// by: mloc_success, or mloc_errorCapacity when rounding passes the
+// decimal's limits (the category then other).
+mlocResult mlocPrepareDecimal(const Formatter* formatter, const mlocDecimal* decimal,
+                              Prepared* preparedOut, uint32_t* categoryOut);
+
+// Writes a prepared number into a writer of the caller's.
+void mlocWritePrepared(const Prepared* prepared, NumberWriter* writer);
 
 // Writes a valid decimal as mlocFormatWith does, into a writer of the
 // caller's: mloc_success, or mloc_errorCapacity when rounding passes the
@@ -100,15 +119,6 @@ void mlocWriteRangeSeparator(const NumberCore* core, bool spaced, NumberWriter* 
 // and the output.
 mlocResult mlocFormatWith(const Formatter* formatter, const Outer* outer,
                           const mlocDecimal* decimal, mlocOutput* output);
-
-// Chooses the outer pattern of a number written in a plural category:
-// the pattern, or null with the failure in resultOut.
-typedef const Outer* (*OuterChooser)(void* context, uint32_t category, mlocResult* resultOut);
-
-// Formats a valid decimal into a checked output within the outer pattern
-// choose gives for the category the number is written in, rounding once.
-mlocResult mlocFormatChosen(const Formatter* formatter, OuterChooser choose, void* context,
-                            const mlocDecimal* decimal, mlocOutput* output);
 
 // Formats a range of two decimals, within an outer pattern when one is
 // given, once around both ends, in the category the plural ranges give

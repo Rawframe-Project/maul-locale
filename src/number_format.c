@@ -104,21 +104,6 @@ static mlocResult Round(const Formatter* f, mlocDecimal* d, NumberLayout* layout
     return r == mloc_success ? mlocApplyPrecision(&f->precision, d) : r;
 }
 
-// A decimal made ready to write: rounded, with its layout, the core its
-// affixes come from and its sign.
-typedef struct Prepared
-{
-    mlocDecimal decimal;
-    NumberLayout layout;
-    // The formatter's core, or in compact notation the copy its pattern
-    // is chosen in (a Prepared copied keeps pointing at its source's).
-    const NumberCore* core;
-    NumberCore compact;
-    NumberSign sign;
-    // The compact exponent, the plural operand c.
-    int32_t exponent;
-} Prepared;
-
 static mlocResult Prepare(const Formatter* f, const mlocDecimal* decimal, Prepared* p)
 {
     p->decimal = *decimal;
@@ -242,13 +227,17 @@ static void WriteOne(const Formatter* f, const Outer* o, const Prepared* p, Numb
     WriteIn(o, p, o == nullptr ? 0 : Category(f, p), w);
 }
 
-mlocResult mlocFormattedCategory(const Formatter* f, const mlocDecimal* decimal,
-                                 uint32_t* categoryOut)
+mlocResult mlocPrepareDecimal(const Formatter* f, const mlocDecimal* decimal, Prepared* preparedOut,
+                              uint32_t* categoryOut)
 {
-    Prepared p;
-    mlocResult r = Prepare(f, decimal, &p);
-    *categoryOut = r == mloc_success ? Category(f, &p) : mloc_pluralOther;
+    mlocResult r = Prepare(f, decimal, preparedOut);
+    *categoryOut = r == mloc_success ? Category(f, preparedOut) : mloc_pluralOther;
     return r;
+}
+
+void mlocWritePrepared(const Prepared* prepared, NumberWriter* writer)
+{
+    WriteIn(nullptr, prepared, 0, writer);
 }
 
 mlocResult mlocWriteFormatted(const Formatter* f, const Outer* outer, const mlocDecimal* decimal,
@@ -321,20 +310,6 @@ bool mlocShownDecimal(const Formatter* f, const mlocDecimal* decimal, mlocDecima
     *out = p.decimal;
     out->negative = 0;
     return true;
-}
-
-mlocResult mlocFormatChosen(const Formatter* f, OuterChooser choose, void* context,
-                            const mlocDecimal* decimal, mlocOutput* output)
-{
-    Prepared p;
-    mlocResult r = Prepare(f, decimal, &p);
-    uint32_t category = r == mloc_success ? Category(f, &p) : 0;
-    const Outer* outer = r == mloc_success ? choose(context, category, &r) : nullptr;
-    if (r != mloc_success)
-    {
-        return r;
-    }
-    return WritePrepared(outer, &p, category, output);
 }
 
 // Whether two ends share their affixes: one sign, one pattern. The rest

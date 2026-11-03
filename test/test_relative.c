@@ -5,9 +5,13 @@
 // in each width and mode, as ICU4C 79's RelativeDateTimeFormatter writes
 // them (its formatNumeric and format), but where the library differs on
 // purpose (auto without ICU's 1% epsilon; capitalization by CLDR's
-// relative context transforms; parts kept); parts; refusals.
+// relative context transforms; parts kept); parts; refusals. Then a name
+// and a pattern of any length, from a pack before the data.
 
+#include "kinds.h"
+#include "relative_tables.h"
 #include "test_harness.h"
+#include "test_pack.h"
 
 #include "maul-locale/data.h"
 #include "maul-locale/locale.h"
@@ -349,6 +353,82 @@ static void TestDayTimeLong(void)
           "as one part");
 }
 
+// Opens a pack whose root gives day, long, a name for +1 of length
+// "e"s and an other future pattern "in {0}" then length "f"s, before
+// the data; false when it is refused.
+static bool OpenLongTexts(uint32_t length, mlocData* sources)
+{
+    static uint8_t s_unit[4096];
+    memset(s_unit, 0, sizeof(s_unit));
+    uint32_t day = relativeDay * relativeWidthCount * relativeSlots;
+    uint32_t size = 2 * length + 6;
+    uint8_t* keys = s_unit + relativeHeaderSize;
+    uint8_t* offsets = keys + 2 * 2 * 2;
+    uint8_t* text = offsets + 3 * 4;
+    PackPut(s_unit, 2, 4);
+    PackPut(s_unit + 4, 2, 4);
+    PackPut(s_unit + 8, size, 4);
+    PackPut(keys, day + 3, 2);
+    PackPut(keys + 2, day + relativeFuture + 5, 2);
+    PackPut(keys + 6, 1, 2);
+    PackPut(offsets + 4, length, 4);
+    PackPut(offsets + 8, size, 4);
+    memset(text, 'e', length);
+    memcpy(text + length, "in {0}", 6);
+    memset(text + length + 6, 'f', length);
+    PackUnit unit = {kindRelative, {s_unit, (uint32_t)(text + size - s_unit)}, true};
+    memcpy(sources + 1, s_sources, sizeof(s_sources));
+    return OpenRootPack(&unit, 1, &sources[0]);
+}
+
+// Names and patterns are written from the data whatever their length.
+static void TestLongTexts(void)
+{
+    mlocData sources[4];
+    mlocDataSet set = {sources, 4};
+    mlocLocale und;
+    mlocRelativeFormatter named;
+    mlocRelativeFormatter numeric;
+    mlocTimeFormatter time;
+    mlocRelativeOptions automatic = {.numeric = mloc_relativeNumericAuto};
+    mlocDecimal one;
+    static char text[4096];
+    static char want[4096];
+    FirstPart first = {0};
+    CHECK(OpenLongTexts(300, sources) &&
+              mlocCanonicalizeLocale(&set, "und", 3, &und, nullptr).status == mloc_success &&
+              mlocInitRelativeFormatter(&set, &und, &automatic, &named) == mloc_success &&
+              mlocInitRelativeFormatter(&set, &und, nullptr, &numeric) == mloc_success &&
+              mlocInitTimeFormatter(&set, &und, nullptr, &time) >= 0 &&
+              mlocMakeDecimal(1, &one) == mloc_success,
+          "formatters on a pack of 300-byte texts");
+    mlocOutput output = {
+        .buffer = text, .capacity = sizeof(text), .part = RecordPart, .context = &first};
+    memset(want, 'e', 300);
+    CHECK(mlocRelativeFormatter_Format(&named, &one, mloc_relativeDay, &output) == mloc_success &&
+              output.length == 300 && memcmp(text, want, 300) == 0 &&
+              first.part == mloc_numberPartLiteral && first.length == 300 && first.count == 1,
+          "a name of 300 bytes as one literal part");
+    first = (FirstPart){0};
+    output = (mlocOutput){
+        .buffer = text, .capacity = sizeof(text), .part = RecordPart, .context = &first};
+    memcpy(want, "in 1", 4);
+    memset(want + 4, 'f', 300);
+    CHECK(mlocRelativeFormatter_Format(&numeric, &one, mloc_relativeDay, &output) == mloc_success &&
+              output.length == 304 && memcmp(text, want, 304) == 0 &&
+              first.part == mloc_numberPartLiteral && first.length == 3 && first.count == 3,
+          "a pattern of 303 bytes around the number");
+    first = (FirstPart){0};
+    output = (mlocOutput){
+        .buffer = text, .capacity = sizeof(text), .part = RecordPart, .context = &first};
+    memset(want, 'e', 300);
+    CHECK(mlocRelativeFormatter_FormatDayTime(&named, &time, &one, &(mlocTime){.hour = 12},
+                                              &output) == mloc_success &&
+              output.length > 300 && memcmp(text, want, 300) == 0 &&
+              first.part == mloc_datePartRelativeDay && first.length == 300,
+          "the name before a time, as the day's part");
+}
+
 static void TestDayTimeRefusals(void)
 {
     mlocLocale en;
@@ -416,6 +496,7 @@ int main(void)
     TestDayTime();
     TestDayTimeHour();
     TestDayTimeLong();
+    TestLongTexts();
     TestDayTimeRefusals();
     return s_failures == 0 ? 0 : 1;
 }
