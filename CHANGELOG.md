@@ -7,20 +7,61 @@ may change the API, the ABI and every data format.
 
 ## [0.8.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.7.0...v0.8.0) (2026-11-03)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **number:** `mlocNumberFormatter_Parse` and `mlocCurrencyFormatter_Parse` return `mloc_errorLimit`, where they returned `mloc_errorFormat`, for a formatter with an affix past `MLOC_MAX_NUMBER_PARSE_AFFIX` characters, and `mlocCurrencyFormatter_Parse` in strict mode for more than `MLOC_MAX_CURRENCY_PARSE_PATTERNS` long-name or ISO-append patterns. A strict parse of an affix of 17 to 32 characters, which used to be read, is now refused. A program that handled `mloc_errorFormat` from a parse handles `mloc_errorLimit` instead.
-* **message:** in strict mode, `mlocFormatMessage` refuses with `mloc_errorLimit`, where it returned `mloc_errorFallback`, a `:string` selector whose text has a stretch past `MLOC_MAX_MESSAGE_SELECTOR_RUN` (170 bytes) between NFC boundaries and must be compared with a key as long as its NFC. A program that tells the two apart handles `mloc_errorLimit` there; in fallback mode the result is as before.
+- **Breaking: number and currency parsing publish their bounds.**
+  `MLOC_MAX_NUMBER_PARSE_AFFIX` (16, `number.h`) is the most characters
+  of an affix a parse reads, a symbol counting one, and
+  `MLOC_MAX_CURRENCY_PARSE_PATTERNS` (4, `currency.h`) the most distinct
+  long-name or ISO-append patterns a strict currency parse reads. Each
+  is at least twice what CLDR 49 needs (5 characters, 2 patterns).
+  `mlocNumberFormatter_Parse` and `mlocCurrencyFormatter_Parse` used to
+  answer `mloc_errorFormat`, a status neither header lists, for every
+  text when a formatter's affixes did not fit the parser's fixed room:
+  an affix of 17 characters in lenient mode, or several distinct
+  patterns in a strict currency parse. They now read every formatter
+  within the bounds and return `mloc_errorLimit` past them. A strict
+  parse of an affix of 17 to 32 characters, which used to be read, is
+  now refused. A program that handled `mloc_errorFormat` from a parse
+  handles `mloc_errorLimit` instead. The parser takes about 5.7 KB more
+  stack; `docs/user/numbers.md` gives the deepest stack measured
+  ([#433](https://github.com/Rawframe-Project/maul-locale/pull/433)).
+- **Breaking: a long `:string` selector is compared a piece at a time.**
+  A `:string` selector over text not in NFC and longer than 256 bytes
+  after NFC was a bad selector for every key, so it took `*` and a
+  strict formatter failed the message. It now matches a key equal to
+  its NFC. The text is cut at NFC boundaries, and
+  `MLOC_MAX_MESSAGE_SELECTOR_RUN` (170 bytes, `message.h`) is the
+  longest stretch between two that can be compared; only a run of
+  combining marks and of starters that compose with the code point
+  before them passes it. Past it, the selector is still a bad one, and
+  in strict mode `mlocFormatMessage` now returns `mloc_errorLimit`
+  where it returned `mloc_errorFallback`. A program that tells the two
+  apart handles `mloc_errorLimit` there; in fallback mode the result is
+  as before
+  ([#428](https://github.com/Rawframe-Project/maul-locale/pull/428)).
 
 ### Fixed
 
-* **datetime:** keep a long minus sign of a year before the epoch ([#431](https://github.com/Rawframe-Project/maul-locale/issues/431)) ([8b63a83](https://github.com/Rawframe-Project/maul-locale/commit/8b63a835e9bd78f1853cee05bf937c8c786f67e8)), closes [#429](https://github.com/Rawframe-Project/maul-locale/issues/429)
-* **message:** compare a long :string selector a piece at a time ([#428](https://github.com/Rawframe-Project/maul-locale/issues/428)) ([27ea690](https://github.com/Rawframe-Project/maul-locale/commit/27ea690ecc01849192b122e1f9596d900a743538)), closes [#424](https://github.com/Rawframe-Project/maul-locale/issues/424)
-* **message:** find a spell-out rule set by a long name ([#425](https://github.com/Rawframe-Project/maul-locale/issues/425)) ([846f63a](https://github.com/Rawframe-Project/maul-locale/commit/846f63aba31fd0b0c88ef8fb5b867908e161eb99)), closes [#421](https://github.com/Rawframe-Project/maul-locale/issues/421)
-* **names:** show a currency key's symbol however long ([#426](https://github.com/Rawframe-Project/maul-locale/issues/426)) ([189750c](https://github.com/Rawframe-Project/maul-locale/commit/189750ca73087602842836dc5cfda514f0df7913)), closes [#422](https://github.com/Rawframe-Project/maul-locale/issues/422)
-* **number:** publish the parser's affix and pattern bounds as limits ([#433](https://github.com/Rawframe-Project/maul-locale/issues/433)) ([06ac785](https://github.com/Rawframe-Project/maul-locale/commit/06ac7855edf897b478da524003c8ae4bfccd24fe)), closes [#432](https://github.com/Rawframe-Project/maul-locale/issues/432)
-* **spellout:** read a numbering system's locale however long ([#427](https://github.com/Rawframe-Project/maul-locale/issues/427)) ([3fd060f](https://github.com/Rawframe-Project/maul-locale/commit/3fd060f56ca5b18532633cbff508c5d3345f176c)), closes [#423](https://github.com/Rawframe-Project/maul-locale/issues/423)
+Each came from a fixed-size buffer too small for what a valid data
+file a host loads may hold. CLDR 49's built-in data reaches none.
+
+- `:mloc:spellout` in a message refused a rule set name of 64 bytes or
+  more with `mloc_errorNotFound`. It now finds any name a data file can
+  give
+  ([#425](https://github.com/Rawframe-Project/maul-locale/pull/425)).
+- A locale's display name showed a currency key's code in capitals in
+  place of a symbol of 64 bytes or more. It now shows the symbol whole
+  ([#426](https://github.com/Rawframe-Project/maul-locale/pull/426)).
+- `mlocInitNumberingSystemFormatter` refused with `mloc_errorNotFound`
+  a numbering system whose record names a locale of 16 bytes or more,
+  such as `zh_Hant_HK_u_ca_chinese`. It now reads any locale that parses
+  ([#427](https://github.com/Rawframe-Project/maul-locale/pull/427)).
+- A year before the epoch of a calendar with no earlier era (the
+  Persian) lost its minus sign when the locale's minus sign was longer
+  than 12 bytes: "-121" was written "121". It now keeps the sign
+  whatever its length
+  ([#431](https://github.com/Rawframe-Project/maul-locale/pull/431)).
 
 ## [0.7.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.6.0...v0.7.0) (2026-11-02)
 
