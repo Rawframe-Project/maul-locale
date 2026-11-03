@@ -51,8 +51,12 @@ bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t leng
 
 enum
 {
-    // The bytes of an argument's ISO 8601 text.
-    isoRoom = 128,
+    // The bytes of an argument's ISO 8601 text. A zoned date-time's is the
+    // longest: a date of at most 17 bytes, T, a time of at most 18, an
+    // offset of at most 9, its zone's identifier in brackets (at most 255
+    // bytes, a byte giving its length in zone_tables.h), and snprintf's
+    // NUL. A duration's, its fields within Temporal's bounds, is under 128.
+    isoRoom = 64 + UINT8_MAX,
 };
 
 // A numeric argument's decimal (a currency amount's amount); false for
