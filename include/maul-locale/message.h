@@ -66,9 +66,9 @@ extern "C"
 // compared with a key as long a stretch at a time, so mlocFormatMessage
 // cannot compare it when a stretch is longer: in strict mode it refuses
 // the call with mloc_errorLimit, else the selector is a bad one. Every
-// starter is a boundary but 96 that compose with the code point before
+// starter is a boundary but those that compose with the code point before
 // them: conjoining Hangul vowels and trailing consonants, and vowel signs
-// and length marks of Brahmic scripts (and three Tibetan vowel signs that
+// and length marks of Brahmic scripts (and Tibetan vowel signs that
 // decompose into combining marks). So only a run of those and of
 // combining marks passes the bound; a stream-safe text (UAX #15) has at
 // most 30 combining marks after a starter, 124 bytes.
