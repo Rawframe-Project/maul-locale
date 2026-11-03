@@ -18,8 +18,6 @@ enum
     relativeStamp = 0x52,
     // The most relative units a locale's chain files.
     relativeChainMost = 8,
-    // The room for a text read and its titlecase.
-    relativeTextMost = 256,
 };
 
 typedef struct RelativeFormat
