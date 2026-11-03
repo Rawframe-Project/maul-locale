@@ -200,6 +200,11 @@ void mlocWriteLiteral(NumberWriter* writer, const char* text, size_t length);
 // Writes text as a part of a kind.
 void mlocWritePart(NumberWriter* writer, uint32_t kind, const uint8_t* text, size_t length);
 
+// Takes length bytes of a kind as written: text a caller wrote in place
+// at the writer's end, into the room it had left (none in a parts pass),
+// or did not write for want of room, which the length then counts.
+void mlocWrittenPart(NumberWriter* writer, uint32_t kind, size_t length);
+
 // Writes text as a part of a kind between the spaces, bidi controls and
 // variation selectors at its ends, which are literal, as ICU trims its
 // unit and compact fields.

@@ -513,6 +513,17 @@ void mlocWritePart(NumberWriter* w, uint32_t kind, const uint8_t* text, size_t l
     Put(w, kind, text, length);
 }
 
+void mlocWrittenPart(NumberWriter* w, uint32_t kind, size_t length)
+{
+    if (w->parts != nullptr)
+    {
+        // A parts pass reads no bytes.
+        Put(w, kind, nullptr, length);
+        return;
+    }
+    w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
+}
+
 void mlocEndParts(NumberWriter* w)
 {
     if (w->parts != nullptr && w->length > w->start)
