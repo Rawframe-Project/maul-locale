@@ -311,6 +311,12 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
     {
         return mloc_errorInvalid;
     }
+    return mlocPreferencesInCalendar(data, locale, nullptr, preferencesOut);
+}
+
+mlocResult mlocPreferencesInCalendar(const mlocDataSet* data, const mlocLocale* locale,
+                                     const char* calendar, mlocLocalePreferences* preferencesOut)
+{
     DataSpan span;
     Prefs p;
     if (!mlocFindDataSetUnit(data, kindLocalePreferences, nullptr, 0, &span) ||
@@ -329,8 +335,8 @@ mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* l
     {
         hours = p.hours + (size_t)entry[2] * preferEntrySize;
     }
-    const char* calendar = nullptr;
-    size_t calendarLength = mlocFindKeyword(locale, "ca", &calendar);
+    size_t calendarLength =
+        calendar != nullptr ? strlen(calendar) : mlocFindKeyword(locale, "ca", &calendar);
     bool iso = Is(calendar, calendarLength, "iso8601");
     mlocLocalePreferences out = {
         .hourCycle = HourCycle(locale, hours),

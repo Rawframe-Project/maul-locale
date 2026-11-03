@@ -12,12 +12,12 @@
 
 // A date read for a formatter: its fields in the formatter's calendar,
 // the Gregorian year its year begins in, and the pattern its year needs.
-typedef struct DateValue
+typedef struct DateRead
 {
     mlocDateFields fields;
     int32_t related;
     uint32_t pattern;
-} DateValue;
+} DateRead;
 
 // What a locale's date and time formatters both read: its preferences,
 // its number symbols with their result (a fallback of the numbering
@@ -35,11 +35,12 @@ typedef struct DateLocale
     const uint8_t* gregorianSet;
 } DateLocale;
 
-// Reads what a locale's date and time formatters share: the number
-// core's result; mloc_errorNotFound for data without the preferences,
-// the number units or the names.
-mlocResult mlocReadDateLocale(DateLocale* shared, const mlocDataSet* data,
-                              const mlocLocale* locale);
+// Reads what a locale's date and time formatters share, in calendar (a
+// BCP 47 calendar type) in place of the locale's -u-ca, or in its own for
+// null: the number core's result; mloc_errorNotFound for data without the
+// preferences, the number units or the names.
+mlocResult mlocReadDateLocale(DateLocale* shared, const mlocDataSet* data, const mlocLocale* locale,
+                              const char* calendar);
 
 // Whether date options are in range.
 bool mlocValidDateOptions(const mlocDateOptions* options);
@@ -50,12 +51,18 @@ bool mlocValidDateOptions(const mlocDateOptions* options);
 mlocResult mlocMakeDateFormat(DateFormat* format, const mlocDataSet* data, const mlocLocale* locale,
                               const DateLocale* shared, const mlocDateOptions* options);
 
+// mlocInitDateFormatter, in calendar (a BCP 47 calendar type) in place of
+// the locale's -u-ca, or in its own for null.
+mlocResult mlocInitDateFormatterIn(const mlocDataSet* data, const mlocLocale* locale,
+                                   const char* calendar, const mlocDateOptions* options,
+                                   mlocDateFormatter* formatterOut);
+
 // Whether a state is one mlocMakeDateFormat made.
 bool mlocDateFormatSound(const DateFormat* format);
 
 // Reads a date for a sound state; false for a date outside Temporal's
 // range.
-bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateValue* value);
+bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateRead* value);
 
 // The glue's style of date options (glueFull to glueShort): a standard
 // format's length, or by the field set's month at its length (four

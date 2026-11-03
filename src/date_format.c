@@ -12,6 +12,7 @@
 #include "calendar_arith.h"
 #include "date_range.h"
 #include "invariant.h"
+#include "locale_prefs.h"
 #include "locale_valid.h"
 #include "number_output.h"
 
@@ -230,15 +231,16 @@ static mlocResult FindOverride(DateFormat* f, const mlocDataSet* data, const mlo
     return mloc_success;
 }
 
-mlocResult mlocReadDateLocale(DateLocale* l, const mlocDataSet* data, const mlocLocale* locale)
+mlocResult mlocReadDateLocale(DateLocale* l, const mlocDataSet* data, const mlocLocale* locale,
+                              const char* calendar)
 {
-    if (mlocGetLocalePreferences(data, locale, &l->preferences) != mloc_success)
+    if (mlocPreferencesInCalendar(data, locale, calendar, &l->preferences) != mloc_success)
     {
         return mloc_errorNotFound;
     }
     l->digits = mlocInitNumberCore(&l->core, data, locale, mloc_numberDecimal);
-    uint32_t calendar = l->preferences.calendar;
-    l->calendar = calendar == mloc_calendarIso8601 ? mloc_calendarGregorian : calendar;
+    uint32_t chosen = l->preferences.calendar;
+    l->calendar = chosen == mloc_calendarIso8601 ? mloc_calendarGregorian : chosen;
     if (l->digits < 0 || !mlocFindDateUnits(data, locale, &l->units) ||
         !mlocDateNamesOf(&l->units, l->calendar, &l->nameSet) ||
         !mlocDateNamesOf(&l->units, mloc_calendarGregorian, &l->gregorianSet))
@@ -283,7 +285,8 @@ mlocResult mlocMakeDateFormat(DateFormat* f, const mlocDataSet* data, const mloc
     static_assert(sizeof(s_entries) == mloc_dateFieldSetYearMonth + 1, "an entry per field set");
     memset(f, 0, sizeof(*f));
     DateLocale own;
-    mlocResult result = shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale);
+    mlocResult result =
+        shared != nullptr ? shared->digits : mlocReadDateLocale(&own, data, locale, nullptr);
     result = result < 0 ? result : Resolve(f, data, locale, shared != nullptr ? shared : &own, o);
     f->stamp = result < 0 ? 0 : dateStamp;
     return result;
@@ -355,6 +358,13 @@ static mlocResult ResolveZone(ZonedDateFormat* f, const mlocDataSet* data, const
 mlocResult mlocInitDateFormatter(const mlocDataSet* data, const mlocLocale* locale,
                                  const mlocDateOptions* options, mlocDateFormatter* formatterOut)
 {
+    return mlocInitDateFormatterIn(data, locale, nullptr, options, formatterOut);
+}
+
+mlocResult mlocInitDateFormatterIn(const mlocDataSet* data, const mlocLocale* locale,
+                                   const char* calendar, const mlocDateOptions* options,
+                                   mlocDateFormatter* formatterOut)
+{
     mlocDateOptions o = options != nullptr ? *options : (mlocDateOptions){0};
     if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
         !mlocValidDateOptions(&o))
@@ -363,7 +373,9 @@ mlocResult mlocInitDateFormatter(const mlocDataSet* data, const mlocLocale* loca
     }
     ZonedDateFormat f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = mlocMakeDateFormat(&f.date, data, locale, nullptr, &o);
+    DateLocale shared;
+    mlocResult result = mlocReadDateLocale(&shared, data, locale, calendar);
+    result = result < 0 ? result : mlocMakeDateFormat(&f.date, data, locale, &shared, &o);
     if (result >= 0 && o.zone != mloc_zoneStyleNone)
     {
         // The zone reads the locale's digits as the date does: one result.
@@ -436,7 +448,7 @@ bool mlocDateFormatSound(const DateFormat* f)
            f->minus != nullptr;
 }
 
-bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateValue* value)
+bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateRead* value)
 {
     mlocDate in;
     if (mlocMakeDateFromDay((mlocCalendar)f->calendar, date->day, &in) != mloc_success ||
@@ -471,11 +483,11 @@ static bool ReadFormatter(const mlocDateFormatter* opaque, bool zoned, ZonedDate
 typedef struct DateWriting
 {
     const ZonedDateFormat* f;
-    const DateValue* value;
+    const DateRead* value;
     // The zone read at the instant, or null for a date without one.
     const ZoneAt* zone;
     // A range's end and what it writes; null for one date.
-    const DateValue* end;
+    const DateRead* end;
     const RangeChoice* range;
 } DateWriting;
 
@@ -526,7 +538,7 @@ mlocResult mlocDateFormatter_Format(const mlocDateFormatter* formatter, const ml
                                     mlocOutput* textOut)
 {
     ZonedDateFormat f;
-    DateValue v;
+    DateRead v;
     if (!ReadFormatter(formatter, false, &f) || date == nullptr || textOut == nullptr ||
         (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadDateValue(&f.date, date, &v))
@@ -542,7 +554,7 @@ mlocResult mlocDateFormatter_FormatInZone(const mlocDateFormatter* formatter,
                                           mlocOutput* textOut)
 {
     ZonedDateFormat f;
-    DateValue v;
+    DateRead v;
     ZoneAt at;
     mlocDateTime local;
     if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||
@@ -561,7 +573,7 @@ static void WriteRangeValue(const void* context, uint32_t value, const uint8_t* 
                             uint32_t length, const PatternSpan* span, NumberWriter* w)
 {
     const DateWriting* g = context;
-    const DateValue* v = value == 0 ? g->value : g->end;
+    const DateRead* v = value == 0 ? g->value : g->end;
     mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
 }
 
@@ -569,7 +581,7 @@ mlocResult mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, con
                                          const mlocDate* end, mlocOutput* textOut)
 {
     ZonedDateFormat f;
-    DateValue v[2];
+    DateRead v[2];
     if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
         textOut == nullptr || (textOut->buffer == nullptr && textOut->capacity != 0) ||
         !mlocReadDateValue(&f.date, start, &v[0]) || !mlocReadDateValue(&f.date, end, &v[1]))
@@ -598,7 +610,7 @@ mlocResult mlocDateFormatter_FormatRange(const mlocDateFormatter* formatter, con
 typedef struct ZonedRangeWriting
 {
     const ZonedDateFormat* f;
-    const DateValue* dates[2];
+    const DateRead* dates[2];
     const ZoneAt* zones[2];
 } ZonedRangeWriting;
 
@@ -606,7 +618,7 @@ static void WriteZonedDate(const void* context, uint32_t value, const uint8_t* p
                            uint32_t length, const PatternSpan* span, NumberWriter* w)
 {
     const ZonedRangeWriting* g = context;
-    const DateValue* v = g->dates[value];
+    const DateRead* v = g->dates[value];
     mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
 }
 
@@ -645,7 +657,7 @@ mlocResult mlocDateFormatter_FormatRangeInZone(const mlocDateFormatter* formatte
                                                const mlocInstant* end, mlocOutput* textOut)
 {
     ZonedDateFormat f;
-    DateValue v[2];
+    DateRead v[2];
     ZoneAt at[2];
     mlocDateTime local[2];
     if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||

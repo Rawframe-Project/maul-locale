@@ -31,6 +31,14 @@ mlocResult mlocMakeTimeFormat(TimeFormat* format, const mlocDataSet* data, const
                               const DateLocale* shared, const mlocTimeOptions* options,
                               TimeChoice* choice);
 
+// mlocInitTimeFormatter, in calendar (a BCP 47 calendar type) in place of
+// the locale's -u-ca, or in its own for null.
+// A range across dates in a zone still writes its dates in the locale's
+// own calendar.
+mlocResult mlocInitTimeFormatterIn(const mlocDataSet* data, const mlocLocale* locale,
+                                   const char* calendar, const mlocTimeOptions* options,
+                                   mlocTimeFormatter* formatterOut);
+
 // Whether a state is one mlocMakeTimeFormat made.
 bool mlocTimeFormatSound(const TimeFormat* format);
 

@@ -7,6 +7,8 @@
 // item for; or a weekday with a time, which one item covers, matched whole
 // unless a zone follows the time.
 
+#include "datetime_format.h"
+
 #include "bytes.h"
 #include "date_format.h"
 #include "date_range.h"
@@ -142,7 +144,7 @@ static bool FindRangeGlues(DateTimeFormat* f, const DateLocale* shared, const Ti
 }
 
 static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mlocLocale* locale,
-                          const mlocDateTimeOptions* o)
+                          const char* calendar, const mlocDateTimeOptions* o)
 {
     TimeChoice choice;
     // A weekday alone at the short length is narrow, with a time
@@ -156,7 +158,7 @@ static mlocResult Resolve(DateTimeFormat* f, const mlocDataSet* data, const mloc
     // The date and the time read the locale's preferences, digits and
     // names once.
     DateLocale shared;
-    mlocResult read = mlocReadDateLocale(&shared, data, locale);
+    mlocResult read = mlocReadDateLocale(&shared, data, locale, calendar);
     mlocResult date =
         read < 0 ? read : mlocMakeDateFormat(&f->date, data, locale, &shared, &dateOptions);
     mlocResult time =
@@ -194,6 +196,13 @@ mlocResult mlocInitDateTimeFormatter(const mlocDataSet* data, const mlocLocale* 
                                      const mlocDateTimeOptions* options,
                                      mlocDateTimeFormatter* formatterOut)
 {
+    return mlocInitDateTimeFormatterIn(data, locale, nullptr, options, formatterOut);
+}
+
+mlocResult mlocInitDateTimeFormatterIn(const mlocDataSet* data, const mlocLocale* locale,
+                                       const char* calendar, const mlocDateTimeOptions* options,
+                                       mlocDateTimeFormatter* formatterOut)
+{
     mlocDateTimeOptions o = options != nullptr ? *options : (mlocDateTimeOptions){0};
     if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !ValidOptions(&o))
     {
@@ -201,7 +210,7 @@ mlocResult mlocInitDateTimeFormatter(const mlocDataSet* data, const mlocLocale* 
     }
     DateTimeFormat f;
     memset(&f, 0, sizeof(f));
-    mlocResult result = Resolve(&f, data, locale, &o);
+    mlocResult result = Resolve(&f, data, locale, calendar, &o);
     if (result < 0)
     {
         return result;
@@ -231,7 +240,7 @@ static bool ReadFormatter(const mlocDateTimeFormatter* opaque, bool zoned, DateT
 typedef struct Writing
 {
     const DateTimeFormat* f;
-    const DateValue* date;
+    const DateRead* date;
     const mlocTime* time;
     // The time's pattern: 1 for a minute of zero.
     uint32_t pattern;
@@ -291,7 +300,7 @@ mlocResult mlocDateTimeFormatter_Format(const mlocDateTimeFormatter* formatter,
                                         const mlocDateTime* dateTime, mlocOutput* textOut)
 {
     DateTimeFormat f;
-    DateValue date;
+    DateRead date;
     if (!ReadFormatter(formatter, false, &f) || dateTime == nullptr ||
         !mlocDateTimeValid(dateTime) || textOut == nullptr ||
         (textOut->buffer == nullptr && textOut->capacity != 0) ||
@@ -308,7 +317,7 @@ mlocResult mlocDateTimeFormatter_FormatInZone(const mlocDateTimeFormatter* forma
                                               mlocOutput* textOut)
 {
     DateTimeFormat f;
-    DateValue date;
+    DateRead date;
     ZoneAt at;
     mlocDateTime local;
     if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||
@@ -328,7 +337,7 @@ mlocResult mlocDateTimeFormatter_FormatInZone(const mlocDateTimeFormatter* forma
 typedef struct RangeWriting
 {
     const DateTimeFormat* f;
-    const DateValue* dates[2];
+    const DateRead* dates[2];
     const mlocTime* times[2];
     const ZoneWriting* zones[2];
     uint32_t pattern;
@@ -345,7 +354,7 @@ static void WriteRangeDate(const void* context, uint32_t value, const uint8_t* p
                            uint32_t length, const PatternSpan* span, NumberWriter* w)
 {
     const RangeWriting* g = context;
-    const DateValue* v = g->dates[value];
+    const DateRead* v = g->dates[value];
     mlocWriteDateFieldsIn(&g->f->date, pattern, length, &v->fields, v->related, span, w);
 }
 
@@ -462,7 +471,7 @@ mlocResult mlocDateTimeFormatter_FormatRange(const mlocDateTimeFormatter* format
                                              mlocOutput* textOut)
 {
     DateTimeFormat f;
-    DateValue dates[2];
+    DateRead dates[2];
     if (!ReadFormatter(formatter, false, &f) || start == nullptr || end == nullptr ||
         !mlocDateTimeValid(start) || !mlocDateTimeValid(end) || textOut == nullptr ||
         (textOut->buffer == nullptr && textOut->capacity != 0) ||
@@ -486,7 +495,7 @@ mlocResult mlocDateTimeFormatter_FormatRangeInZone(const mlocDateTimeFormatter* 
                                                    mlocOutput* textOut)
 {
     DateTimeFormat f;
-    DateValue dates[2];
+    DateRead dates[2];
     ZoneAt at[2];
     mlocDateTime local[2];
     if (!ReadFormatter(formatter, true, &f) || textOut == nullptr ||

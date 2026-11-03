@@ -21,4 +21,9 @@ bool mlocValidPreferences(const DataView* view, DataSpan payload);
 uint32_t mlocPreferenceRegion(const mlocDataSet* data, const mlocLocale* locale,
                               uint32_t* languageOut);
 
+// mlocGetLocalePreferences of a valid locale, with calendar (a BCP 47
+// calendar type) in place of its -u-ca; with its own for null.
+mlocResult mlocPreferencesInCalendar(const mlocDataSet* data, const mlocLocale* locale,
+                                     const char* calendar, mlocLocalePreferences* preferencesOut);
+
 #endif

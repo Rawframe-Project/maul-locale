@@ -3,8 +3,10 @@
 
 #include "message_date.h"
 
+#include "date_format.h"
+#include "datetime_format.h"
 #include "invariant.h"
-#include "locale_keyword.h"
+#include "time_format.h"
 
 #include "maul-locale/calendar.h"
 #include "maul-locale/ixdtf.h"
@@ -481,19 +483,17 @@ bool mlocDateZone(const DateValue* value, const mlocDataSet* data, const mlocTim
     return true;
 }
 
-// The locale a value is written in: the formatter's, with the calendar
-// option's -u-ca; false when that makes no locale.
-static bool LocaleOf(const DateValue* value, const mlocLocale* locale, mlocLocale* out)
+// The calendar a value is written in: the calendar option's BCP 47
+// type, or null for the locale's own.
+static const char* CalendarOf(const DateValue* value)
 {
-    *out = *locale;
     if ((value->given & dateGivenCalendar) == 0)
     {
-        return true;
+        return NULL;
     }
     // A calendar is set only to its index among s_calendars.
     MLOC_ASSERT(value->calendar < sizeof s_calendars / sizeof s_calendars[0]);
-    const char* calendar = s_calendars[value->calendar];
-    return mlocSetKeyword(out, "ca", calendar, strlen(calendar));
+    return s_calendars[value->calendar];
 }
 
 static mlocDateOptions DateOptions(const DateValue* value)
@@ -543,27 +543,24 @@ size_t mlocPreparedDateSize(DateFunction function)
 static mlocResult Make(const DateValue* value, const mlocDataSet* data, const mlocLocale* locale,
                        PreparedDate* prepared)
 {
-    mlocLocale l;
-    if (!LocaleOf(value, locale, &l))
-    {
-        return mloc_errorInvalid;
-    }
+    const char* calendar = CalendarOf(value);
     if (value->function == dateFunctionDate)
     {
         mlocDateOptions options = DateOptions(value);
-        return mlocInitDateFormatter(data, &l, &options, &prepared->formatter.date);
+        return mlocInitDateFormatterIn(data, locale, calendar, &options, &prepared->formatter.date);
     }
     if (value->function == dateFunctionTime)
     {
         mlocTimeOptions options = TimeOptions(value);
-        return mlocInitTimeFormatter(data, &l, &options, &prepared->formatter.time);
+        return mlocInitTimeFormatterIn(data, locale, calendar, &options, &prepared->formatter.time);
     }
     mlocDateTimeOptions options;
     memset(&options, 0, sizeof options);
     options.date = DateOptions(value);
     options.time = TimeOptions(value);
     options.glue = mloc_dateTimeGlueAtTime;
-    return mlocInitDateTimeFormatter(data, &l, &options, &prepared->formatter.dateTime);
+    return mlocInitDateTimeFormatterIn(data, locale, calendar, &options,
+                                       &prepared->formatter.dateTime);
 }
 
 bool mlocPrepareDate(const DateValue* value, const mlocDataSet* data, const mlocLocale* locale,
