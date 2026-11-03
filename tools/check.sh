@@ -164,11 +164,16 @@ if [ "$tier" = changed ]; then
         step "clang-format on ${#present[@]} changed files"
         clang-format --dry-run -Werror "${present[@]}"
     fi
-    sources=()
-    for f in "${present[@]+"${present[@]}"}"; do [[ $f == src/*.c ]] && sources+=("$f"); done
     # A changed header tidies every source: which ones include it, through
-    # other headers too, is not worked out.
-    if printf '%s\n' "${changed[@]}" | grep -qE '^(src|include)/.*\.h$'; then
+    # other headers too, is not worked out. The test is in the loop, not a
+    # pipe to grep -q, whose early exit fails the pipe under pipefail.
+    sources=()
+    header=false
+    for f in "${present[@]+"${present[@]}"}"; do
+        [[ $f == src/*.c ]] && sources+=("$f")
+        [[ $f == src/*.h || $f == include/*.h ]] && header=true
+    done
+    if $header; then
         sources=(src/*.c)
     fi
     if [ ${#sources[@]} -gt 0 ]; then
