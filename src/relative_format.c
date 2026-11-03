@@ -403,17 +403,17 @@ mlocResult mlocWriteRelative(const RelativeFormat* f, const mlocDecimal* amount,
     {
         return r;
     }
-    // The pattern's text first, then as one part.
-    uint8_t text[relativePatternsMost];
-    NumberWriter room = {.buffer = (char*)text, .capacity = sizeof(text)};
-    r = mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, &room);
-    if (r == mloc_success && room.length > room.capacity)
+    // The text is written in place; a parts pass counts its length and
+    // reports it as one part, reading no bytes.
+    if (w->parts == nullptr)
     {
-        r = mloc_errorFormat;
+        return mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, w);
     }
+    NumberWriter count = {0};
+    r = mlocWriteFormatted(&f->formatter, &c.outer, &c.magnitude, &count);
     if (r == mloc_success)
     {
-        mlocWritePart(w, kind, text, room.length);
+        mlocWritePart(w, kind, nullptr, count.length);
     }
     return r;
 }
