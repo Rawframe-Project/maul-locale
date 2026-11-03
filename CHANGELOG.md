@@ -5,6 +5,30 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.9.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.8.0...v0.9.0) (2026-11-03)
+
+### Changed
+
+- **Breaking: the package requires Maul Unicode 0.13.0.** Maul Locale
+  now builds against Maul Unicode 0.13.0 in place of 0.11.0, and its
+  installed CMake package asks for that version
+  (`find_dependency(maul-unicode 0.13.0)`). A Maul Unicode package
+  before 1.0 matches only its exact version, so a build that provides
+  0.11.0 no longer configures: provide Maul Unicode 0.13.0. A build
+  that fetches Maul Unicode is unaffected. No result changes; the
+  Unicode version and the data files are the same as in 0.8.0
+  ([#437](https://github.com/Rawframe-Project/maul-locale/pull/437)).
+
+### Fixed
+
+- `mlocFormatMessage` wrote a numeric argument with no function as its
+  fallback `{$n}`, with an Unsupported Operation fault
+  (`mloc_errorFallback` in strict mode), once its plain text passed 128
+  bytes, such as 1e130 or a currency or unit amount that long. Under
+  `:string` such an argument matched no key, not even its own digits,
+  and raised no fault. It is now written whole and selected by its text
+  ([#440](https://github.com/Rawframe-Project/maul-locale/pull/440)).
+
 ## [0.8.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.7.0...v0.8.0) (2026-11-03)
 
 ### Changed
