@@ -466,14 +466,18 @@ static void TestIsoText(void)
     mlocMessageValue dateTime = {mloc_messageValueDateTime, 0, {.dateTime = {last, t}}};
     char text[64];
     size_t size = 0;
+    size_t written = 0;
     CHECK(mlocWriteIsoDateTime(&dateTime, text, 22) == 0 &&
               mlocWriteIsoDateTime(&dateTime, text, 23) == 22 &&
               memcmp(text, "9999-12-31T15:04:06.25", 22) == 0 &&
               mlocWriteIsoDateTime(&dateTime, text, 11) == 0 &&
-              mlocWriteIsoDateTime(&dateTime, text, 12) == 0 &&
-              !mlocArgumentDigits(&dateTime, text, 12, &size) &&
-              mlocArgumentDigits(&dateTime, text, 23, &size) && size == 22,
+              mlocWriteIsoDateTime(&dateTime, text, 12) == 0,
           "an ISO text that does not fit its room with its end is none");
+    memset(text, 0, sizeof text);
+    CHECK(mlocArgumentText(&dateTime, 0, text, 12, &written, &size) && written == 12 &&
+              size == 22 && mlocArgumentText(&dateTime, 12, text + 12, 12, &written, &size) &&
+              written == 10 && size == 22 && memcmp(text, "9999-12-31T15:04:06.25", 23) == 0,
+          "an argument's ISO text is written a piece at a time");
 }
 
 // Whether binding prepared each expression's value as wanted says, in

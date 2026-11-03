@@ -590,6 +590,68 @@ static void TestString(void)
           "an argument without a name matches no variable");
 }
 
+// A number's digits: "1" and zeros at power 10^zeros, or "0." and
+// zeros then "1" at 10^-zeros.
+static const char* Digits(int zeros, bool fraction)
+{
+    static char digits[1024];
+    size_t n = 0;
+    digits[n++] = fraction ? '0' : '1';
+    if (fraction)
+    {
+        digits[n++] = '.';
+        memset(digits + n, '0', (size_t)zeros - 1);
+        n += (size_t)zeros - 1;
+        digits[n++] = '1';
+    }
+    else
+    {
+        memset(digits + n, '0', (size_t)zeros);
+        n += (size_t)zeros;
+    }
+    digits[n] = 0;
+    return digits;
+}
+
+static void TestLongNumbers(void)
+{
+    static char text[1100];
+    static char message[1200];
+    mlocDecimal d;
+    mlocMessageArgument a = {"n", 1, {mloc_messageValueDecimal, 0, {.decimal = &d}}};
+    const int powers[] = {127, 128, 130, 200, 1000};
+    bool good = true;
+    for (size_t i = 0; i < sizeof powers / sizeof powers[0]; i++)
+    {
+        for (int fraction = 0; fraction < 2; fraction++)
+        {
+            const char* digits = Digits(powers[i], fraction);
+            good = good && mlocParseDecimal(digits, strlen(digits), &d).status == mloc_success &&
+                   Formats("{$n}", &a, 1, digits, NULL);
+            snprintf(message, sizeof message,
+                     ".input {$n :string} .match $n |%s| {{key}} * {{other}}", digits);
+            good = good && Formats(message, &a, 1, "key", NULL);
+            // The same length, the last digit another.
+            message[strlen(message) - strlen("| {{key}} * {{other}}") - 1] = '2';
+            good = good && Formats(message, &a, 1, "other", NULL);
+        }
+    }
+    CHECK(good, "a number of 128 to 1002 bytes is written plainly and selected by its digits");
+    const char* digits = Digits(300, false);
+    mlocDecimal amount;
+    mlocMessageArgument amounts[] = {
+        {"c", 1, {mloc_messageValueCurrency, 0, {.currency = {&amount, {'E', 'U', 'R'}}}}},
+        {"u", 1, {mloc_messageValueUnit, 0, {.unit = {&amount, "meter", 5}}}},
+    };
+    snprintf(text, sizeof text, "%s EUR|%s meter", digits, digits);
+    CHECK(mlocParseDecimal(digits, strlen(digits), &amount).status == mloc_success &&
+              Formats("{$c}|{$u}", amounts, 2, text, NULL),
+          "a long amount is written with its code or its unit");
+    snprintf(message, sizeof message,
+             ".input {$u :string} .match $u |%s meter| {{key}} * {{other}}", digits);
+    CHECK(Formats(message, amounts, 2, "key", NULL), "a long unit amount is selected by its text");
+}
+
 static void TestSelection(void)
 {
     const mlocMessageArgument* a = s_arguments;
@@ -1242,6 +1304,7 @@ int main(void)
     TestCalls();
     TestAccessors();
     TestString();
+    TestLongNumbers();
     TestSelection();
     TestResolutionLimit();
     TestIsolation();

@@ -30,6 +30,14 @@ static inline uint8_t mlocDigitAt(const mlocDecimal* d, int64_t power)
 // Whether every field holds as the library writes it.
 bool mlocValidDecimal(const mlocDecimal* d);
 
+// The bytes of a valid decimal's plain text (mlocFormatDecimal's) from
+// offset from on, at most capacity of them, written into out; returns
+// how many, and gives the whole text's length in *lengthOut. A text far
+// longer than any buffer, up to 10^MLOC_MAX_DECIMAL_EXPONENT, is written
+// a piece at a time.
+size_t mlocDecimalText(const mlocDecimal* decimal, size_t from, char* out, size_t capacity,
+                       size_t* lengthOut);
+
 // Whether two valid decimals hold the same value and show the same
 // digits, compared field by field: a decimal's padding is no part of it,
 // and a caller's may hold anything.
