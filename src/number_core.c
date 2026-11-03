@@ -464,21 +464,35 @@ NumberSign mlocNumberSign(const mlocDecimal* d, mlocSignDisplay display)
     }
 }
 
-static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length)
+// In a parts pass, starts a part of a kind at the writer's end, or goes
+// on with the one there of the same kind, reporting the one it ends.
+static void Mark(NumberWriter* w, uint32_t kind)
 {
     kind |= w->source;
+    MLOC_ASSERT(w->start <= w->length);
+    if (kind != w->kind && w->length > w->start)
+    {
+        w->parts->part(w->parts->context, w->kind, w->start, w->length - w->start);
+    }
+    if (kind != w->kind || w->length == w->start)
+    {
+        w->kind = kind;
+        w->start = w->length;
+    }
+}
+
+// Saturating: a caller's texts (a list's items, a word to inflect) can
+// together exceed a 32-bit size_t, which then reports the capacity short.
+static void Count(NumberWriter* w, size_t length)
+{
+    w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
+}
+
+static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length)
+{
     if (w->parts != nullptr)
     {
-        MLOC_ASSERT(w->start <= w->length);
-        if (kind != w->kind && w->length > w->start)
-        {
-            w->parts->part(w->parts->context, w->kind, w->start, w->length - w->start);
-        }
-        if (kind != w->kind || w->length == w->start)
-        {
-            w->kind = kind;
-            w->start = w->length;
-        }
+        Mark(w, kind);
     }
     else if (length > 0 && length <= w->capacity && w->length <= w->capacity - length)
     {
@@ -497,10 +511,7 @@ static void Put(NumberWriter* w, uint32_t kind, const void* bytes, size_t length
             memcpy(w->buffer + w->length, bytes, length);
         }
     }
-    // Saturating: a caller's texts (a list's items, a word to inflect)
-    // can together exceed a 32-bit size_t, which then reports the
-    // capacity short.
-    w->length = length > SIZE_MAX - w->length ? SIZE_MAX : w->length + length;
+    Count(w, length);
 }
 
 void mlocWriteLiteral(NumberWriter* w, const char* text, size_t length)
@@ -511,6 +522,15 @@ void mlocWriteLiteral(NumberWriter* w, const char* text, size_t length)
 void mlocWritePart(NumberWriter* w, uint32_t kind, const uint8_t* text, size_t length)
 {
     Put(w, kind, text, length);
+}
+
+void mlocWrittenPart(NumberWriter* w, uint32_t kind, size_t length)
+{
+    if (w->parts != nullptr)
+    {
+        Mark(w, kind);
+    }
+    Count(w, length);
 }
 
 void mlocEndParts(NumberWriter* w)

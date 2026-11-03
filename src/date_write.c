@@ -69,24 +69,39 @@ size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value
     return length;
 }
 
+// Spells a number out into a writer as one part of a kind, whatever its
+// length: in place, into the room the writer has left. False, with
+// nothing written, when the rules cannot write it.
+static bool WriteSpelledOut(const DateFormat* f, uint64_t value, uint32_t kind, NumberWriter* w)
+{
+    mlocDecimal decimal;
+    bool room = w->parts == nullptr && w->buffer != nullptr && w->length < w->capacity;
+    mlocOutput out = {.buffer = room ? w->buffer + w->length : nullptr,
+                      .capacity = room ? w->capacity - w->length : 0};
+    if (mlocMakeUnsignedDecimal(value, &decimal) != mloc_success)
+    {
+        return false;
+    }
+    mlocResult r = mlocSpelloutFormatter_Format(&f->spellout, &decimal, &out);
+    if (r != mloc_success && r != mloc_errorCapacity)
+    {
+        return false;
+    }
+    mlocWrittenPart(w, kind, out.length);
+    return true;
+}
+
 // A number field: in the formatter's digits, or by the system the
 // pattern names for it (its digits, or its spell-out rules).
 static void WriteNumber(const DateFormat* f, bool overridden, uint32_t kind, uint64_t value,
                         uint32_t width, NumberWriter* w)
 {
+    if (overridden && f->hasSpellout && WriteSpelledOut(f, value, kind, w))
+    {
+        return;
+    }
     char text[maxNumber * numberDigitSize];
     size_t length = 0;
-    if (overridden && f->hasSpellout)
-    {
-        mlocDecimal decimal;
-        mlocOutput out = {.buffer = text, .capacity = sizeof(text)};
-        if (mlocMakeUnsignedDecimal(value, &decimal) == mloc_success &&
-            mlocSpelloutFormatter_Format(&f->spellout, &decimal, &out) == mloc_success)
-        {
-            mlocWritePart(w, kind, (const uint8_t*)text, out.length);
-            return;
-        }
-    }
     if (overridden && f->overrideDigitLength > 0)
     {
         length = mlocDateDigits(f->overrideDigits, f->overrideDigitLength, value, width, text);
@@ -170,23 +185,33 @@ static uint32_t MonthSlot(uint32_t calendar, const mlocDateFields* fields)
 
 // A leap month's pattern around text ("闰{0}"); the text alone when the
 // calendar has none.
-static void WriteLeap(const DateFormat* f, uint32_t context, uint32_t width, const uint8_t* text,
-                      size_t length, NumberWriter* w)
+// A leap month's pattern of a context and width, and where its "{0}"
+// is; null when it has none, and the month is then written alone.
+static DataSpan LeapPattern(const DateFormat* f, uint32_t context, uint32_t width,
+                            const uint8_t** atOut)
 {
     DateNameList list = mlocDateNameList(&f->names, mlocLoad16(f->nameSet + 2 * dateNamesLeap));
     DataSpan pattern = mlocDateName(&f->names, list, context * 3 + width);
-    const uint8_t* at = nullptr;
-    for (uint32_t i = 0; i + 3 <= pattern.size && at == nullptr; i++)
+    *atOut = nullptr;
+    for (uint32_t i = 0; i + 3 <= pattern.size && *atOut == nullptr; i++)
     {
-        at = memcmp(pattern.bytes + i, "{0}", 3) == 0 ? pattern.bytes + i : nullptr;
+        *atOut = memcmp(pattern.bytes + i, "{0}", 3) == 0 ? pattern.bytes + i : nullptr;
     }
+    return pattern;
+}
+
+// Writes the side of a leap month's pattern before its "{0}", or after.
+static void WriteLeapSide(DataSpan pattern, const uint8_t* at, bool before, NumberWriter* w)
+{
     if (at == nullptr)
     {
-        mlocWritePart(w, mloc_datePartMonth, text, length);
         return;
     }
-    mlocWritePart(w, mloc_datePartMonth, pattern.bytes, (size_t)(at - pattern.bytes));
-    mlocWritePart(w, mloc_datePartMonth, text, length);
+    if (before)
+    {
+        mlocWritePart(w, mloc_datePartMonth, pattern.bytes, (size_t)(at - pattern.bytes));
+        return;
+    }
     mlocWritePart(w, mloc_datePartMonth, at + 3, pattern.size - (size_t)(at + 3 - pattern.bytes));
 }
 
@@ -201,32 +226,24 @@ static void WriteMonth(const DateFormat* f, const mlocDateFields* fields, char l
         // their code's, a leap month's in the numeric leap pattern.
         uint32_t number =
             f->calendar == mloc_calendarHebrew ? fields->month : MonthSlot(f->calendar, fields) + 1;
-        // As large as WriteNumber's own text, so whatever it writes fits.
-        char text[maxNumber * numberDigitSize];
-        NumberWriter local = {.buffer = text, .capacity = sizeof(text)};
-        WriteNumber(f, overridden, mloc_datePartMonth, number, width, &local);
-        MLOC_ASSERT(local.length <= sizeof(text));
-        size_t length = local.length;
-        if (leap)
-        {
-            WriteLeap(f, 2, 0, (const uint8_t*)text, length, w);
-        }
-        else
-        {
-            mlocWritePart(w, mloc_datePartMonth, (const uint8_t*)text, length);
-        }
+        // Every piece is a month part, so the number goes between the
+        // pattern's sides as it is written.
+        const uint8_t* at = nullptr;
+        DataSpan pattern = leap ? LeapPattern(f, 2, 0, &at) : (DataSpan){0};
+        WriteLeapSide(pattern, at, true, w);
+        WriteNumber(f, overridden, mloc_datePartMonth, number, width, w);
+        WriteLeapSide(pattern, at, false, w);
         return;
     }
     uint32_t slot = MonthSlot(f->calendar, fields);
     uint32_t item = (context * 3 + Width(width, 3) % 3) * dateMonthCount + slot;
     DateNameList list = mlocDateNameList(&f->names, mlocLoad16(f->nameSet + 2 * dateNamesMonths));
     DataSpan name = mlocDateName(&f->names, list, item);
-    if (leap)
-    {
-        WriteLeap(f, context, Width(width, 3) % 3, name.bytes, name.size, w);
-        return;
-    }
+    const uint8_t* at = nullptr;
+    DataSpan pattern = leap ? LeapPattern(f, context, Width(width, 3) % 3, &at) : (DataSpan){0};
+    WriteLeapSide(pattern, at, true, w);
     mlocWritePart(w, mloc_datePartMonth, name.bytes, name.size);
+    WriteLeapSide(pattern, at, false, w);
 }
 
 // A weekday: e and c of one or two letters the day's number in the
