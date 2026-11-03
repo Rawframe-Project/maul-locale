@@ -6,8 +6,9 @@
 // cover, so a pack gives the formatter patterns that have ("#,##0 pcs",
 // explicit negative subpatterns, parentheses, a trailing minus), each
 // case's result as ICU4C 79's DecimalFormat with the same pattern and
-// English symbols gives it; then the affix bounds, data without the parse
-// sets, and the code point reader.
+// English symbols gives it; then the affix bound
+// (MLOC_MAX_NUMBER_PARSE_AFFIX), data without the parse sets, and the
+// code point reader.
 
 #include "bytes.h"
 #include "data_format.h"
@@ -21,6 +22,7 @@
 #include "maul-locale/decimal.h"
 #include "maul-locale/number.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -295,30 +297,34 @@ static mlocResult ParsePrefixed(const char* prefix, const char* text, bool stric
 
 static void TestBounds(void)
 {
-    // A literal is a matcher, with an ignorables matcher between two in
-    // lenient mode: 16 literals fit, 17 do not. No data file the generator
-    // writes has more, so more is malformed data.
-    CHECK(ParsePrefixed("abcdefghijklmnop", "abcdefghijklmnop12", false) == mloc_success,
-          "16 literals in lenient mode");
-    CHECK(ParsePrefixed("abcdefghijklmnopq", "abcdefghijklmnopq12", false) == mloc_errorFormat,
-          "17 literals in lenient mode");
-    CHECK(ParsePrefixed("abcdefghijklmnopqrstuvwxyzABCDEF", "abcdefghijklmnopqrstuvwxyzABCDEF12",
-                        true) == mloc_success,
-          "32 literals in strict mode");
-    // 21 and 22 three-byte literals: 63 bytes fit, 66 do not.
+    // MLOC_MAX_NUMBER_PARSE_AFFIX characters an affix, in either mode:
+    // 16 parse, 17 are refused as a limit, whatever the text.
+    static const char* const s_letters[2] = {"abcdefghijklmnop", "abcdefghijklmnopq"};
+    for (int strict = 0; strict <= 1; strict++)
+    {
+        char text[32];
+        snprintf(text, sizeof(text), "%s12", s_letters[0]);
+        CHECK(ParsePrefixed(s_letters[0], text, strict) == mloc_success,
+              strict ? "16 characters, strictly" : "16 characters, leniently");
+        snprintf(text, sizeof(text), "%s12", s_letters[1]);
+        CHECK(ParsePrefixed(s_letters[1], text, strict) == mloc_errorLimit &&
+                  ParsePrefixed(s_letters[1], "12", strict) == mloc_errorLimit,
+              strict ? "17 characters, strictly" : "17 characters, leniently");
+    }
+    // Characters of four bytes: 16 (64 bytes) parse, 17 do not.
     char prefix[80] = {0};
     char text[90] = {0};
-    for (int count = 21; count <= 22; count++)
+    for (int count = 16; count <= 17; count++)
     {
         for (int i = 0; i < count; i++)
         {
-            memcpy(prefix + 3 * i, "\xE3\x81\x82", 3);
+            memcpy(prefix + 4 * i, "\xF0\xA0\x80\x80", 4);
         }
-        prefix[3 * count] = '\0';
-        memcpy(text, prefix, (size_t)(3 * count));
-        memcpy(text + 3 * count, "12", 3);
-        CHECK(ParsePrefixed(prefix, text, true) == (count == 21 ? mloc_success : mloc_errorFormat),
-              count == 21 ? "an affix of 63 bytes" : "an affix of 66 bytes");
+        prefix[4 * count] = '\0';
+        memcpy(text, prefix, (size_t)(4 * count));
+        memcpy(text + 4 * count, "12", 3);
+        CHECK(ParsePrefixed(prefix, text, true) == (count == 16 ? mloc_success : mloc_errorLimit),
+              count == 16 ? "16 characters of 4 bytes" : "17 characters of 4 bytes");
     }
     const char* plain[4] = {"", "", "\x01", ""};
     mlocData source;

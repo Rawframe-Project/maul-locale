@@ -5,7 +5,8 @@
 // currency_region.h, currency_tables.h): the compiled-in units pass, units with one field
 // spoiled are refused, lookups find what the units hold; and a currency
 // formatter refuses units that pass alone but disagree, in a pack built
-// here.
+// here; and the long-name patterns a strict currency parse reads
+// (MLOC_MAX_CURRENCY_PARSE_PATTERNS), over the currency names data file.
 
 #include "bytes.h"
 #include "currency_region.h"
@@ -21,6 +22,7 @@
 
 #include "maul-locale/currency.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -495,6 +497,102 @@ static void TestDisagreeing(void)
     CHECK(InitOver(&p) == mloc_success, "a symbol of 255 bytes");
 }
 
+// Whether und's long name of EUR, from a pack before the data whose
+// currency pattern sets give the plural categories, zero to other, as many
+// distinct unit patterns as asked ("a" before the name and after the
+// number, then "b", and so on, other taking the last), formats 5 and
+// reads it back strictly with the status wanted, and leniently.
+static bool OuterPatterns(uint32_t distinct, mlocResult strictly)
+{
+    alignas(8) static uint8_t s_patternSets[1 << 16];
+    alignas(8) static uint8_t s_names[4 << 20];
+    DataSpan parseSets;
+    DataSpan sets = s_sets;
+    mlocData sources[3];
+    mlocOpenBuiltinData(&sources[1]);
+    FILE* file = fopen(MLOC_NAMES_FILE, "rb");
+    size_t namesSize = file == nullptr ? 0 : fread(s_names, 1, sizeof(s_names), file);
+    if (file != nullptr)
+    {
+        fclose(file);
+    }
+    if (namesSize == 0 || namesSize == sizeof(s_names) ||
+        mlocOpenData(s_names, namesSize, &sources[2]) != mloc_success ||
+        !mlocFindDataUnit(&s_view, kindParseSets, dataNoLocale, &parseSets) ||
+        sets.size + 64 > sizeof(s_patternSets))
+    {
+        return false;
+    }
+    // The sets with six more strings after the others: the header and
+    // offsets, the six strings' ends, the records (their unit patterns
+    // those strings) and the text, then the strings.
+    uint32_t strings = mlocLoad16(sets.bytes);
+    uint32_t records = mlocLoad16(sets.bytes + 2);
+    uint32_t text = mlocLoad32(sets.bytes + 4);
+    size_t offsets = numberTableHeaderSize + 2 * ((size_t)strings + 1);
+    size_t rest = sets.size - offsets;
+    memcpy(s_patternSets, sets.bytes, offsets);
+    PackPut(s_patternSets, strings + 6, 2);
+    PackPut(s_patternSets + 4, text + 36, 4);
+    memcpy(s_patternSets + offsets + 12, sets.bytes + offsets, rest);
+    uint8_t* added = s_patternSets + offsets + 12 + rest;
+    for (uint32_t c = 0; c < 6; c++)
+    {
+        uint8_t letter = (uint8_t)('a' + (c < distinct ? c : distinct - 1));
+        const uint8_t pattern[6] = {letter, currencyTextOther, ' ', currencyTextNumber, ' ',
+                                    letter};
+        memcpy(added + 6 * c, pattern, 6);
+        PackPut(s_patternSets + offsets + 2 * c, text + 6 * (c + 1), 2);
+        for (uint32_t r = 0; r < records; r++)
+        {
+            PackPut(s_patternSets + offsets + 12 + (size_t)r * currencySetSize + setUnitPatterns +
+                        2 * c,
+                    strings + c, 2);
+        }
+    }
+    PackUnit units[] = {
+        {kindNumberSystems, s_numberSystems, false},
+        {kindNumberSymbols, s_numberSymbols, false},
+        {kindNumberPatterns, s_numberPatterns, false},
+        {kindNumbers, s_numbers, true},
+        {kindCurrencyFractions, s_fractions, false},
+        {kindCurrencyPatterns, {s_patternSets, (uint32_t)(sets.size + 12 + 36)}, false},
+        {kindCurrencySymbols, s_rootSymbols, true},
+        {kindParseSets, parseSets, false},
+    };
+    mlocDataSet set = {sources, 3};
+    mlocCurrencyOptions options = {.display = mloc_currencyName};
+    mlocLocale und;
+    mlocCurrencyFormatter formatter;
+    mlocDecimal five;
+    char written[128];
+    mlocOutput output = {.buffer = written, .capacity = sizeof(written)};
+    if (!OpenRootPack(units, 8, &sources[0]) ||
+        mlocParseLocale("und", 3, &und).status != mloc_success ||
+        mlocInitCurrencyFormatter(&set, &und, "EUR", 3, &options, &formatter) != mloc_success ||
+        mlocParseDecimal("5", 1, &five).status != mloc_success ||
+        mlocCurrencyFormatter_Format(&formatter, &five, &output) != mloc_success)
+    {
+        return false;
+    }
+    mlocDecimal read;
+    char code[3];
+    size_t end = 0;
+    mlocResult strict = mlocCurrencyFormatter_Parse(&formatter, written, output.length,
+                                                    mloc_parseStrict, 0, &read, code, &end);
+    mlocResult lenient = mlocCurrencyFormatter_Parse(&formatter, written, output.length,
+                                                     mloc_parseLenient, 0, &read, code, &end);
+    return strict == strictly && lenient == mloc_success && end == output.length;
+}
+
+// MLOC_MAX_CURRENCY_PARSE_PATTERNS distinct unit patterns a strict parse
+// reads; one more is refused as a limit, and lenient mode reads other's.
+static void TestOuterPatterns(void)
+{
+    CHECK(OuterPatterns(4, mloc_success), "4 distinct unit patterns, strictly");
+    CHECK(OuterPatterns(5, mloc_errorLimit), "5 refused strictly, read leniently");
+}
+
 int main(void)
 {
     mlocData builtin;
@@ -521,5 +619,6 @@ int main(void)
     TestSets();
     TestSymbols();
     TestDisagreeing();
+    TestOuterPatterns();
     return s_failures == 0 ? 0 : 1;
 }

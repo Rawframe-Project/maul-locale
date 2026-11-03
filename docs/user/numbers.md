@@ -123,3 +123,5 @@ if (read == mloc_success)
 ```
 
 `mlocCurrencyFormatter_Parse` reads an amount of money the same way, with the formatter's currency or any currency the locale names.
+
+The parser is built on the stack, so what it reads is bounded, at least twice what CLDR 49 needs. An affix (a prefix or suffix, with the text a long name or the ISO append puts on that side, a symbol counting one) can have `MLOC_MAX_NUMBER_PARSE_AFFIX` (16) characters; CLDR's longest has 5. A strict currency parse reads the long name's or ISO append's patterns of every plural category at once, and they can be `MLOC_MAX_CURRENCY_PARSE_PATTERNS` (4) distinct ones; CLDR's most is 2. Past either bound, the parse is refused with `mloc_errorLimit`, whatever the text. Measured with the Release build, the deepest stack a strict currency parse of a long name takes is 19,519 bytes on x86-64 and 14,335 on wasm32. Formatting a message whose `mloc:case` reads a number with the parser takes 19,535 and 23,783 bytes in all, well within wasm32's default stack of 64 KB.
