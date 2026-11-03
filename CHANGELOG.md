@@ -7,16 +7,24 @@ may change the API, the ABI and every data format.
 
 ## [0.10.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.9.0...v0.10.0) (2026-11-03)
 
+### Changed
 
-### Fixed
-
-* **message:** give a date's calendar option to its formatter ([#442](https://github.com/Rawframe-Project/maul-locale/issues/442)) ([8e95f3e](https://github.com/Rawframe-Project/maul-locale/commit/8e95f3eeeedb0b2d9d38c577b282f450cabcdbaa)), closes [#441](https://github.com/Rawframe-Project/maul-locale/issues/441)
-* **relative:** write a long day before a time whole ([#448](https://github.com/Rawframe-Project/maul-locale/issues/448)) ([f7fa578](https://github.com/Rawframe-Project/maul-locale/commit/f7fa578b8abcd89e2707f18c8c5fabaf0ff51d73)), closes [#443](https://github.com/Rawframe-Project/maul-locale/issues/443)
-
-
-### Chores
-
-* release 0.10.0 ([#452](https://github.com/Rawframe-Project/maul-locale/issues/452)) ([ccd4f43](https://github.com/Rawframe-Project/maul-locale/commit/ccd4f432ad04d46481db2870c09609dcc94ba8b1)), closes [#451](https://github.com/Rawframe-Project/maul-locale/issues/451)
+- **Breaking: a dated message value keeps its calendar option on a
+  locale with a long tail.** `mlocFormatMessage` wrote a `:date`,
+  `:time` or `:datetime` value with a `calendar` option as its
+  fallback, with an Unsupported Operation fault (`mloc_errorFallback`
+  in strict mode), when the formatter's locale had too little room left
+  in its tail (`MLOC_MAX_LOCALE_TAIL`, 112 bytes) to take
+  `-u-ca-<type>`, such as `en` with an `a` extension of 100 bytes. Such
+  a value is now formatted in the calendar it names: a message that
+  gave `{|2006-01-02|}` gives "Jan 2, 2006"
+  ([#442](https://github.com/Rawframe-Project/maul-locale/pull/442)).
+- **Breaking: a long relative day is joined to a time.**
+  `mlocRelativeFormatter_FormatDayTime` returned `mloc_errorFormat`, a
+  status its header does not list, for a finite day count whose text
+  passed 1536 bytes, such as 1e1600 days in English. It now succeeds
+  and writes the day whole before the time, as one relative day part
+  ([#448](https://github.com/Rawframe-Project/maul-locale/pull/448)).
 
 ## [0.9.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.8.0...v0.9.0) (2026-11-03)
 
