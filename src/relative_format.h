@@ -20,8 +20,6 @@ enum
     relativeChainMost = 8,
     // The room for a text read and its titlecase.
     relativeTextMost = 256,
-    // The room for a direction's six patterns.
-    relativePatternsMost = 6 * relativeTextMost,
 };
 
 typedef struct RelativeFormat

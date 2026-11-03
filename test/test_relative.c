@@ -298,6 +298,57 @@ static void TestDayTimeHour(void)
           "a time with its minutes");
 }
 
+// The first part reported, and how many there were.
+typedef struct FirstPart
+{
+    mlocPart part;
+    size_t start;
+    size_t length;
+    size_t count;
+} FirstPart;
+
+static void RecordPart(void* context, mlocPart part, size_t start, size_t length)
+{
+    FirstPart* first = context;
+    if (first->count++ == 0)
+    {
+        *first = (FirstPart){part, start, length, 1};
+    }
+}
+
+// A day whose text is long: 1e1600 days take 2142 bytes in English.
+static void TestDayTimeLong(void)
+{
+    mlocLocale en;
+    mlocRelativeFormatter relative;
+    mlocTimeFormatter time;
+    mlocTimeOptions optional = {.precision = mloc_timePrecisionMinuteOptional};
+    mlocDecimal days;
+    static char day[4096];
+    static char text[4096];
+    const char* glue = " at 3" NNBSP "PM";
+    FirstPart first = {0};
+    mlocOutput dayOutput = {.buffer = day, .capacity = sizeof(day)};
+    mlocOutput output = {
+        .buffer = text, .capacity = sizeof(text), .part = RecordPart, .context = &first};
+    CHECK(mlocCanonicalizeLocale(&s_data, "en", 2, &en, nullptr).status == mloc_success &&
+              mlocInitRelativeFormatter(&s_data, &en, nullptr, &relative) == mloc_success &&
+              mlocInitTimeFormatter(&s_data, &en, &optional, &time) >= 0 &&
+              mlocParseDecimal("1e1600", 6, &days).status == mloc_success &&
+              mlocRelativeFormatter_Format(&relative, &days, mloc_relativeDay, &dayOutput) ==
+                  mloc_success &&
+              dayOutput.length == 2142 &&
+              mlocRelativeFormatter_FormatDayTime(&relative, &time, &days, &(mlocTime){.hour = 15},
+                                                  &output) == mloc_success &&
+              output.length == dayOutput.length + strlen(glue) &&
+              memcmp(text, day, dayOutput.length) == 0 &&
+              memcmp(text + dayOutput.length, glue, strlen(glue)) == 0,
+          "a day of 2142 bytes is written whole before the time");
+    CHECK(first.part == mloc_datePartRelativeDay && first.start == 0 &&
+              first.length == dayOutput.length && first.count > 1,
+          "as one part");
+}
+
 static void TestDayTimeRefusals(void)
 {
     mlocLocale en;
@@ -364,6 +415,7 @@ int main(void)
     TestRefusals();
     TestDayTime();
     TestDayTimeHour();
+    TestDayTimeLong();
     TestDayTimeRefusals();
     return s_failures == 0 ? 0 : 1;
 }
