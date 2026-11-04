@@ -10,6 +10,8 @@
 #include "date_write.h"
 #include "zone_format.h"
 
+#include "maul-locale/base.h"
+
 // A date read for a formatter: its fields in the formatter's calendar,
 // the Gregorian year its year begins in, and the pattern its year needs.
 typedef struct DateRead
@@ -43,7 +45,7 @@ mlocResult mlocReadDateLocale(DateLocale* shared, const mlocDataSet* data, const
                               const char* calendar);
 
 // Whether date options are in range.
-bool mlocValidDateOptions(const mlocDateOptions* options);
+MLOC_NODISCARD bool mlocValidDateOptions(const mlocDateOptions* options);
 
 // Makes a formatter's state from valid options and what the locale's
 // formatters share (null to read it); its result as
@@ -58,11 +60,12 @@ mlocResult mlocInitDateFormatterIn(const mlocDataSet* data, const mlocLocale* lo
                                    mlocDateFormatter* formatterOut);
 
 // Whether a state is one mlocMakeDateFormat made.
-bool mlocDateFormatSound(const DateFormat* format);
+MLOC_NODISCARD bool mlocDateFormatSound(const DateFormat* format);
 
 // Reads a date for a sound state; false for a date outside Temporal's
 // range.
-bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateRead* value);
+MLOC_NODISCARD bool mlocReadDateValue(const DateFormat* format, const mlocDate* date,
+                                      DateRead* value);
 
 // The glue's style of date options (glueFull to glueShort): a standard
 // format's length, or by the field set's month at its length (four
@@ -71,6 +74,6 @@ bool mlocReadDateValue(const DateFormat* format, const mlocDate* date, DateRead*
 uint32_t mlocDateGlueStyle(const mlocDateOptions* options, uint32_t flags);
 
 // Whether glue holds {0} and {1}.
-bool mlocValidGlue(const uint8_t* glue, uint32_t length);
+MLOC_NODISCARD bool mlocValidGlue(const uint8_t* glue, uint32_t length);
 
 #endif

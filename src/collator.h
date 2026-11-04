@@ -78,7 +78,7 @@ static inline void mlocSetCollatorFastLatin(Collator* c)
 // the head says it is in use, holds more ranges than it has room for. The
 // value may lie at any alignment (an index holds one), so each part is
 // copied by its bytes.
-static inline bool mlocReadCollatorHead(const void* value, Collator* c)
+MLOC_NODISCARD static inline bool mlocReadCollatorHead(const void* value, Collator* c)
 {
     if (value == nullptr)
     {
@@ -104,7 +104,7 @@ static_assert(offsetof(FastLatinOptions, digitsBail) - offsetof(FastLatinOptions
 // Whether a collator value's fast Latin options hold a bool's byte in
 // each bool, checked before they are read as bools: the six side by side,
 // read at once, each 0 or 1. A fast compare reads them on every call.
-static inline bool mlocCollatorFastSound(const void* value)
+MLOC_NODISCARD static inline bool mlocCollatorFastSound(const void* value)
 {
     uint64_t flags = 0;
     memcpy(&flags, (const uint8_t*)value + offsetof(Collator, fast.backwards), 6);
@@ -115,7 +115,7 @@ static inline bool mlocCollatorFastSound(const void* value)
 
 // Whether a collator value's settings hold a bool's byte in each bool and
 // a strength and case order the library has, checked before they are read.
-static inline bool mlocCollatorSettingsSound(const void* value)
+MLOC_NODISCARD static inline bool mlocCollatorSettingsSound(const void* value)
 {
     const uint8_t* b = value;
     unsigned flags =
@@ -130,7 +130,7 @@ static inline bool mlocCollatorSettingsSound(const void* value)
 
 // The fast Latin compare's options, after the head; false for options
 // whose bools are not bools.
-static inline bool mlocReadCollatorFast(const void* value, Collator* c)
+MLOC_NODISCARD static inline bool mlocReadCollatorFast(const void* value, Collator* c)
 {
     if (!mlocCollatorFastSound(value))
     {
@@ -145,7 +145,7 @@ static inline bool mlocReadCollatorFast(const void* value, Collator* c)
 // are in use (the reordering alone is 520 bytes), the settings pointed at
 // them: copying the whole value was most of a fast compare's time. False
 // for settings whose bools or kinds are none the library writes.
-static inline bool mlocReadCollatorRest(const void* value, Collator* c)
+MLOC_NODISCARD static inline bool mlocReadCollatorRest(const void* value, Collator* c)
 {
     if (!mlocCollatorSettingsSound(value))
     {
@@ -174,7 +174,7 @@ static inline bool mlocReadCollatorRest(const void* value, Collator* c)
 // pointing at its own parts, for a caller that keeps or copies it on (a
 // searcher, an index); false for any other. A call that only compares
 // reads the parts above instead.
-static inline bool mlocReadCollator(const void* value, Collator* c)
+MLOC_NODISCARD static inline bool mlocReadCollator(const void* value, Collator* c)
 {
     if (!mlocReadCollatorHead(value, c) || !mlocCollatorFastSound(value) ||
         !mlocCollatorSettingsSound(value))

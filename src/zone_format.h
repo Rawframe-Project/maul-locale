@@ -79,17 +79,18 @@ mlocResult mlocMakeZoneFormat(ZoneFormat* f, const mlocDataSet* data, const mloc
                               mlocZoneStyle style);
 
 // Whether a zone format holds what the library made.
-bool mlocZoneFormatSound(const ZoneFormat* f);
+MLOC_NODISCARD bool mlocZoneFormatSound(const ZoneFormat* f);
 
 // Reads a zone the library made at an instant in range; false for zone
 // names units that disagree with it.
-bool mlocReadZoneAt(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
-                    ZoneAt* out);
+MLOC_NODISCARD bool mlocReadZoneAt(const ZoneFormat* f, const mlocTimeZone* zone,
+                                   const mlocInstant* instant, ZoneAt* out);
 
 // Reads a zone at an instant as mlocReadZoneAt does, after checking both,
 // and the ISO date-time there.
-bool mlocReadZonedLocal(const ZoneFormat* f, const mlocTimeZone* zone, const mlocInstant* instant,
-                        ZoneAt* at, mlocDateTime* localOut);
+MLOC_NODISCARD bool mlocReadZonedLocal(const ZoneFormat* f, const mlocTimeZone* zone,
+                                       const mlocInstant* instant, ZoneAt* at,
+                                       mlocDateTime* localOut);
 
 // Writes a zone read at an instant by a style other than none, as one
 // part.

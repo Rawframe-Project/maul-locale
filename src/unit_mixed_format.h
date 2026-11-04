@@ -9,6 +9,8 @@
 
 #include "unit_patterns.h"
 
+#include "maul-locale/base.h"
+
 #include <stddef.h>
 
 // Whether an identifier names a mixed unit (its parts joined by "-and-").
@@ -35,7 +37,7 @@ mlocResult mlocInitMixedUnit(UnitFormat* u, const mlocDataSet* data, const mlocL
 
 // Whether a formatter's mixed outputs are as mlocLoadMixedOutput leaves
 // them.
-bool mlocValidMixedUnit(const UnitFormat* u);
+MLOC_NODISCARD bool mlocValidMixedUnit(const UnitFormat* u);
 
 // Rounds a mixed unit's smallest part (MixedRound): by the precision the
 // context points to, else an inexact value to 38 digits.

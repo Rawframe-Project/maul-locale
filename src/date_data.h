@@ -17,14 +17,14 @@
 
 // Whether a date patterns unit's sizes hold, each pattern is well formed
 // and every row, set and time set indexes within the unit.
-bool mlocValidDatePatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidDatePatterns(const DataView* view, DataSpan payload);
 
 // Whether a locale's dates unit has its size.
-bool mlocValidDates(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidDates(const DataView* view, DataSpan payload);
 
 // Whether a compiled pattern is well formed: literal UTF-8 without bytes
 // below 0x20, and field items of the known letters and widths.
-bool mlocValidDatePattern(const uint8_t* text, uint32_t length);
+MLOC_NODISCARD bool mlocValidDatePattern(const uint8_t* text, uint32_t length);
 
 // The parts of a valid date patterns unit.
 typedef struct DatePatterns
@@ -59,7 +59,7 @@ DatePatterns mlocReadDatePatterns(DataSpan unit);
 // their kinds' sizes and each day period rule gives every hour a period.
 // A leap month pattern's "{0}" is the user's to check: the validator
 // stays linear in the unit's size.
-bool mlocValidDateNames(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidDateNames(const DataView* view, DataSpan payload);
 
 // The parts of a valid date names unit.
 typedef struct DateNameTables

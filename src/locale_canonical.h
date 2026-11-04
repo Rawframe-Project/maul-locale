@@ -13,7 +13,7 @@
 
 #include "maul-locale/locale.h"
 
-bool mlocValidExtensionAliases(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidExtensionAliases(const DataView* view, DataSpan payload);
 
 // Applies the alias rules to a locale's language, script, region and
 // variants, adding what changed to *changes; the extensions are kept.

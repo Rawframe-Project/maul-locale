@@ -12,7 +12,7 @@
 #include "maul-locale/number.h"
 
 // Whether a precision's fields are in range and agree with its kind.
-bool mlocValidPrecision(const mlocPrecision* precision);
+MLOC_NODISCARD bool mlocValidPrecision(const mlocPrecision* precision);
 
 // Rounds a finite decimal by a valid precision; the zero precision leaves
 // it as it is. Returns mloc_errorLimit when the result passes the

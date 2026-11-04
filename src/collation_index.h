@@ -31,7 +31,7 @@ typedef struct IndexLabels
     uint32_t count;
 } IndexLabels;
 
-bool mlocValidIndexLabels(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidIndexLabels(const DataView* view, DataSpan payload);
 
 // The labels of a locale along its main chain. False when no step has
 // a unit (data without the collation file), or when the chain needs the

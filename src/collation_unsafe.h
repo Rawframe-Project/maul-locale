@@ -20,13 +20,16 @@
 
 #include "bytes.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 // Reads the section at an offset up to the unit's end: none when the
 // unit ends there. It checks only that the ranges fit;
 // mlocCollationUnsafeValid checks them.
-static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at, uint64_t size,
-                                           const uint8_t** rangesOut, uint32_t* countOut)
+MLOC_NODISCARD static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at,
+                                                          uint64_t size, const uint8_t** rangesOut,
+                                                          uint32_t* countOut)
 {
     *rangesOut = nullptr;
     *countOut = 0;
@@ -49,7 +52,7 @@ static inline bool mlocReadCollationUnsafe(const uint8_t* p, uint64_t at, uint64
 }
 
 // Whether the ranges rise apart within U+10FFFF.
-static inline bool mlocCollationUnsafeValid(const uint8_t* ranges, uint32_t count)
+MLOC_NODISCARD static inline bool mlocCollationUnsafeValid(const uint8_t* ranges, uint32_t count)
 {
     bool ok = true;
     for (uint32_t i = 0; ok && i < count; i++)

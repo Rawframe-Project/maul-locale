@@ -106,7 +106,7 @@ static_assert((UINT64_MAX - indexHead - sizeof(Collator)) / UINT32_MAX >= indexR
 // bound message's): the counts must fit each other and the extent the
 // address space, and its collator must be one. The records, shown list
 // and pool spans a call reads are checked where it reads them.
-static inline bool mlocReadIndex(const void* index, IndexView* out)
+MLOC_NODISCARD static inline bool mlocReadIndex(const void* index, IndexView* out)
 {
     if (index == nullptr || mlocLoad32(index) != indexStamp)
     {
@@ -137,8 +137,8 @@ static inline bool mlocReadIndex(const void* index, IndexView* out)
 
 // A span of an index's pool at a record's fields (offset, then length);
 // false when it passes the pool.
-static inline bool mlocIndexSpan(const IndexView* v, uint32_t offset, uint32_t length,
-                                 const uint8_t** bytesOut)
+MLOC_NODISCARD static inline bool mlocIndexSpan(const IndexView* v, uint32_t offset,
+                                                uint32_t length, const uint8_t** bytesOut)
 {
     if ((uint64_t)offset + length > v->poolSize)
     {

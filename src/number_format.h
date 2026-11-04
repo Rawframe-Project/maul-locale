@@ -43,7 +43,7 @@ enum
 };
 
 // Whether a number formatter's options are in range and agree.
-bool mlocValidFormatOptions(const mlocNumberOptions* options);
+MLOC_NODISCARD bool mlocValidFormatOptions(const mlocNumberOptions* options);
 
 // Copies valid options into a formatter, with the stamp of its kind.
 void mlocSetFormatOptions(Formatter* formatter, const mlocNumberOptions* options, uint8_t stamp);
@@ -53,7 +53,8 @@ void mlocSetFormatOptions(Formatter* formatter, const mlocNumberOptions* options
 // refuses a zeroed or unmade value, so the fields checked are those that
 // bound a read or a write or pick a branch (lengths, counts, options);
 // the core's texts are the data's whenever the stamp is.
-bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp, Formatter* formatterOut);
+MLOC_NODISCARD bool mlocReadFormatter(const void* opaque, size_t size, uint8_t stamp,
+                                      Formatter* formatterOut);
 
 // A pattern around a formatted number, by the plural category of the
 // number as rounded (a currency's long name, "{0} US dollars"; the ISO

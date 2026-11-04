@@ -174,6 +174,6 @@ static inline uint32_t KeyStart(const Aliases* aliases, uint32_t key)
         }
     }
 }
-bool mlocValidAliases(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidAliases(const DataView* view, DataSpan payload);
 
 #endif

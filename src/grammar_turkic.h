@@ -242,13 +242,14 @@ uint32_t mlocTurkicPrevious(const uint8_t* text, size_t end, size_t* startOut);
 uint32_t mlocTurkicCyrillicCapital(uint32_t codePoint);
 
 // Whether a request is one the language has.
-bool mlocTurkicRequestValid(const TurkicLanguage* language, const mlocInflection* request);
+MLOC_NODISCARD bool mlocTurkicRequestValid(const TurkicLanguage* language,
+                                           const mlocInflection* request);
 
 // Reads the sound of a spoken word's end (UTF-8, valid), or false when
 // it has no vowel; with inverse, its harmony is front (a word of
 // inverse harmony: saat as saet).
-bool mlocTurkicSound(const TurkicLanguage* language, const uint8_t* word, size_t length,
-                     bool inverse, TurkicSound* out);
+MLOC_NODISCARD bool mlocTurkicSound(const TurkicLanguage* language, const uint8_t* word,
+                                    size_t length, bool inverse, TurkicSound* out);
 
 // Writes the suffixes a request asks for after a sound; endsThird for a
 // word that already ends in a third person's possessive (a compound:

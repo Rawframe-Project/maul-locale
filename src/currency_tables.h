@@ -56,6 +56,8 @@
 #ifndef MLOC_CURRENCY_TABLES_H
 #define MLOC_CURRENCY_TABLES_H
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -153,7 +155,7 @@ enum
 
 // Whether a rounding is one the precision's increments can say: none, or
 // 1, 2, 5, 10, 20, 25 or 50 units of the last digit.
-static inline bool mlocValidCurrencyRounding(uint32_t rounding)
+MLOC_NODISCARD static inline bool mlocValidCurrencyRounding(uint32_t rounding)
 {
     return rounding == 0 || rounding == 1 || rounding == 2 || rounding == 5 || rounding == 10 ||
            rounding == 20 || rounding == 25 || rounding == 50;

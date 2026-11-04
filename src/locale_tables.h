@@ -106,6 +106,8 @@
 #ifndef MLOC_LOCALE_TABLES_H
 #define MLOC_LOCALE_TABLES_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -246,17 +248,17 @@ static inline bool mlocPackedLetters(uint64_t packed, int count, int required)
     return true;
 }
 
-static inline bool mlocValidPackedLanguage(uint32_t language)
+MLOC_NODISCARD static inline bool mlocValidPackedLanguage(uint32_t language)
 {
     return language < 1u << 15 && mlocPackedLetters(language, 3, 2);
 }
 
-static inline bool mlocValidPackedScript(uint32_t script)
+MLOC_NODISCARD static inline bool mlocValidPackedScript(uint32_t script)
 {
     return script < 1u << 20 && mlocPackedLetters(script, 4, 4);
 }
 
-static inline bool mlocValidPackedRegion(uint32_t region)
+MLOC_NODISCARD static inline bool mlocValidPackedRegion(uint32_t region)
 {
     return (region >= 1024 && region < 2024) || (region < 1024 && mlocPackedLetters(region, 2, 2));
 }

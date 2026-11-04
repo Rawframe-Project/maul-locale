@@ -32,6 +32,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 // The units, in CLDR's field names: year, quarter, month, week, day,
@@ -64,6 +66,6 @@ enum
 };
 
 // Whether a payload is a valid relative time unit.
-bool mlocValidRelative(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidRelative(const DataView* view, DataSpan payload);
 
 #endif

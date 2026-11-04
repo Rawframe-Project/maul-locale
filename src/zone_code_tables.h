@@ -35,6 +35,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -82,7 +84,7 @@ bool mlocZoneCodeTablesOf(DataSpan payload, ZoneCodeTables* out);
 // range, ids and names in strict order, a deprecated id's replacement not
 // deprecated, aliases naming ids that are not, and each Windows name's
 // mappings in order with one for region 001.
-bool mlocValidZoneCodes(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidZoneCodes(const DataView* view, DataSpan payload);
 
 // The tables of the first source of a set with a zone codes unit, or
 // false.

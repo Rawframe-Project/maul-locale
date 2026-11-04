@@ -51,7 +51,7 @@ typedef struct SpelloutFormat
 uint32_t mlocSpelloutFirstCodePoint(const uint8_t* text, size_t length);
 
 // Whether a core holds what a formatter reads of it.
-bool mlocValidSpelloutCore(const NumberCore* core);
+MLOC_NODISCARD bool mlocValidSpelloutCore(const NumberCore* core);
 
 // Writes a valid decimal by a formatter's rule set (its core read from
 // source), with the text's first code point when a rule's text or a

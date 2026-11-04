@@ -10,10 +10,12 @@
 #include "data_view.h"
 #include "wide.h"
 
+#include "maul-locale/base.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
-bool mlocValidUnits(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnits(const DataView* view, DataSpan payload);
 
 // The parts of a valid unit table.
 typedef struct UnitTable
@@ -70,7 +72,7 @@ typedef struct UnitFactor
 
 void mlocReadUnitFactor(const UnitTable* t, uint32_t simple, UnitFactor* out);
 
-bool mlocValidUnitPreferences(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitPreferences(const DataView* view, DataSpan payload);
 
 // The parts of a valid unit preferences unit.
 typedef struct UnitPrefsTable

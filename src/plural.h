@@ -11,8 +11,8 @@
 
 #include "maul-locale/plural.h"
 
-bool mlocValidPlurals(const DataView* view, DataSpan payload);
-bool mlocValidPluralRanges(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidPlurals(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidPluralRanges(const DataView* view, DataSpan payload);
 
 // The index of a locale's rule set of a type, as mlocInitPluralRules
 // finds it, for a part that keeps only the index.

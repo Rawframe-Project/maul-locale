@@ -9,6 +9,8 @@
 
 #include "data_view.h"
 
-bool mlocValidCurrencyRegions(const DataView* view, DataSpan payload);
+#include "maul-locale/base.h"
+
+MLOC_NODISCARD bool mlocValidCurrencyRegions(const DataView* view, DataSpan payload);
 
 #endif

@@ -11,6 +11,8 @@
 #include "time_write.h"
 #include "zone_format.h"
 
+#include "maul-locale/base.h"
+
 // What a state was made from: the time set it took its patterns from,
 // with its unit, and whether its clock counts 12 hours.
 typedef struct TimeChoice
@@ -21,7 +23,7 @@ typedef struct TimeChoice
 } TimeChoice;
 
 // Whether time options are in range.
-bool mlocValidTimeOptions(const mlocTimeOptions* options);
+MLOC_NODISCARD bool mlocValidTimeOptions(const mlocTimeOptions* options);
 
 // Makes a formatter's state from valid options and what the locale's
 // formatters share (null to read it); its result as
@@ -40,11 +42,11 @@ mlocResult mlocInitTimeFormatterIn(const mlocDataSet* data, const mlocLocale* lo
                                    mlocTimeFormatter* formatterOut);
 
 // Whether a state is one mlocMakeTimeFormat made.
-bool mlocTimeFormatSound(const TimeFormat* format);
+MLOC_NODISCARD bool mlocTimeFormatSound(const TimeFormat* format);
 
 // The state of a formatter the library made without a zone; false for
 // any other.
-bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format);
+MLOC_NODISCARD bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format);
 
 // Writes a zone field of a pattern: the context is a ZoneWriting.
 typedef struct ZoneWriting

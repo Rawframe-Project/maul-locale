@@ -76,11 +76,13 @@ enum
 static const uint32_t messageFunctionLimit = (1u << 24) - messageFunctionProgram;
 
 // Reads a formatter the library made; false for any other bytes.
-bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter, MessageFormatter* out);
+MLOC_NODISCARD bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter,
+                                             MessageFormatter* out);
 
 // Reads a bound message's header and its formatter; false for bytes the
 // library did not bind.
-bool mlocReadBound(const void* bound, BoundHeader* headerOut, MessageFormatter* formatterOut);
+MLOC_NODISCARD bool mlocReadBound(const void* bound, BoundHeader* headerOut,
+                                  MessageFormatter* formatterOut);
 
 // A bound message's words: the variables', then the expressions', then the
 // expressions' resolution counts, then where each expression's prepared

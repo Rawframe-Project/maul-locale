@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-bool mlocValidPreferences(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidPreferences(const DataView* view, DataSpan payload);
 
 // The region of a locale's regional data by UTS #35's order, packed: the
 // -u-rg key's, the locale's own, the -u-sd key's, the likely one, else

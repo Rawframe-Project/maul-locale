@@ -10,6 +10,8 @@
 
 #include "unit_patterns.h"
 
+#include "maul-locale/base.h"
+
 #include <stddef.h>
 
 // Fills a formatter's coordinate: checks that its unit (each part of a
@@ -21,7 +23,7 @@ mlocResult mlocInitCoordinate(UnitFormat* u, const mlocDataSet* data, const mloc
                               const char* unit, size_t length, const mlocUnitOptions* options);
 
 // Whether a formatter's coordinate is as mlocInitCoordinate leaves it.
-bool mlocValidCoordinate(const UnitFormat* u);
+MLOC_NODISCARD bool mlocValidCoordinate(const UnitFormat* u);
 
 // Formats an amount as a coordinate: mloc_success; mloc_errorCapacity
 // when the text does not fit; mloc_errorLimit when the amount passes the

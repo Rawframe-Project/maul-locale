@@ -53,6 +53,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -106,9 +108,9 @@ typedef enum ZoneNameField
 } ZoneNameField;
 
 // Whether a payload is a valid metazone unit.
-bool mlocValidZoneMeta(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidZoneMeta(const DataView* view, DataSpan payload);
 
 // Whether a payload is a valid zone names unit.
-bool mlocValidZoneNames(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidZoneNames(const DataView* view, DataSpan payload);
 
 #endif

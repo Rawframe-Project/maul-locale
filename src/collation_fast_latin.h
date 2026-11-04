@@ -35,6 +35,8 @@
 
 #include "bytes.h"
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -92,7 +94,8 @@ static inline uint32_t mlocFastLatinWord(const uint8_t* words, uint32_t at)
 // Whether words a compare reads as mini CEs are none of them the end of
 // string mark, which would end a text early and leave the rest of it
 // unchecked for the later levels.
-static inline bool mlocFastLatinMinisValid(const uint8_t* words, uint32_t at, uint32_t length)
+MLOC_NODISCARD static inline bool mlocFastLatinMinisValid(const uint8_t* words, uint32_t at,
+                                                          uint32_t length)
 {
     bool ok = true;
     for (uint32_t i = 0; ok && i < length; i++)
@@ -105,7 +108,8 @@ static inline bool mlocFastLatinMinisValid(const uint8_t* words, uint32_t at, ui
 // Whether a contraction list stays inside the table: from its default,
 // entries by their lengths up to the next one of character 0x1FF, the
 // word the compare stops on; no result the end of string mark.
-static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count, uint32_t at)
+MLOC_NODISCARD static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count,
+                                                         uint32_t at)
 {
     bool ok = at < count &&
               (mlocFastLatinWord(words, at) & fastContractionCharMask) == fastContractionCharMask;
@@ -129,7 +133,7 @@ static inline bool mlocFastLatinListValid(const uint8_t* words, uint32_t count, 
 // Whether a table's words hold together: its head word, every
 // character's expansion and contraction list inside it, and no mini CE
 // the end of string mark.
-static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
+MLOC_NODISCARD static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
 {
     if (count < fastLatinHeader + fastLatinChars ||
         mlocFastLatinWord(words, 0) != (fastLatinVersion << 8 | fastLatinHeader))
@@ -166,8 +170,9 @@ static inline bool mlocFastLatinValid(const uint8_t* words, uint32_t count)
 // there; a count, which a tailoring may give as fastLatinRootTable, and
 // its words; where the section ends. It checks only that the words fit;
 // a validator checks them with mlocFastLatinValid.
-static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t size, bool tailoring,
-                                     const uint8_t** wordsOut, uint32_t* countOut, uint64_t* endOut)
+MLOC_NODISCARD static inline bool mlocReadFastLatin(const uint8_t* p, uint64_t at, uint64_t size,
+                                                    bool tailoring, const uint8_t** wordsOut,
+                                                    uint32_t* countOut, uint64_t* endOut)
 {
     *wordsOut = nullptr;
     *countOut = 0;

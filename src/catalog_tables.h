@@ -45,6 +45,8 @@
 #include "data_view.h"
 #include "invariant.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 // The first four bytes.
@@ -93,7 +95,7 @@ typedef struct CatalogKeys
 
 // Reads a keys unit's head and parts; false when they do not fit its
 // size.
-static inline bool mlocReadCatalogKeys(DataSpan payload, CatalogKeys* out)
+MLOC_NODISCARD static inline bool mlocReadCatalogKeys(DataSpan payload, CatalogKeys* out)
 {
     if (payload.size < catalogKeysHead)
     {

@@ -9,6 +9,8 @@
 
 #include "unit_patterns.h"
 
+#include "maul-locale/base.h"
+
 #include <stddef.h>
 
 // Fills a formatter's outputs from an input unit's route for the
@@ -24,7 +26,7 @@ mlocResult mlocInitUsage(UnitFormat* u, const mlocDataSet* data, const mlocLocal
                          size_t* used);
 
 // Whether a formatter's usage outputs are as mlocInitUsage leaves them.
-bool mlocValidUsageOutputs(const UnitFormat* u);
+MLOC_NODISCARD bool mlocValidUsageOutputs(const UnitFormat* u);
 
 // Formats an amount of the input unit in the output its value chooses:
 // mloc_success; mloc_errorCapacity when the text does not fit;
