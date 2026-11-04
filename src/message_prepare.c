@@ -252,8 +252,14 @@ mlocResult mlocMessageFormatter_Bind(const mlocMessageFormatter* formatter, cons
 
 const void* mlocPreparedFor(const Resolution* r, uint32_t expression)
 {
+    // An expression past the count is named only by bytes changed since
+    // the bind.
+    if (expression >= r->h.view.count[messageExpressions])
+    {
+        return NULL;
+    }
     uint32_t at = mlocLoad32(r->words + PreparedWord(&r->h.view, expression));
-    MLOC_ASSERT(expression < r->h.view.count[messageExpressions] && at < r->h.size);
+    MLOC_ASSERT(at < r->h.size);
     const uint8_t* place = r->words - sizeof(BoundHeader) + at;
     // A bound message moved to an address that leaves its values
     // unaligned makes its own (a copy would take a unit formatter's

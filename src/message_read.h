@@ -46,17 +46,64 @@ mlocResult mlocReadMessage(const uint8_t* bytes, size_t size, MessageView* view)
 // mlocReadMessage checks first, with its results.
 mlocResult mlocReadMessageLayout(const uint8_t* bytes, size_t size, MessageView* view);
 
-// A record's 32-bit field. Every index a caller reads by is one the
-// reader checked, or a loop's below the count.
+// A record's 32-bit field, or 0 for a record past the kind's count. A
+// bound message's bytes were read once, at the bind, and the caller
+// keeps them as they were; bytes changed since may name any record or
+// string, so every read through the view stays within it whatever they
+// hold (mlocMessageString, mlocMessageRange).
 static inline uint32_t mlocMessageField(const MessageView* view, uint32_t kind, uint32_t index,
                                         uint32_t field)
 {
-    MLOC_ASSERT(index < view->count[kind] && field < messageRecordSizes[kind] / 4);
-    return mlocLoad32(view->bytes + view->start[kind] + index * messageRecordSizes[kind] +
+    MLOC_ASSERT(field < messageRecordSizes[kind] / 4);
+    if (index >= view->count[kind])
+    {
+        return 0;
+    }
+    return mlocLoad32(view->bytes + view->start[kind] + (size_t)index * messageRecordSizes[kind] +
                       field * 4);
 }
 
-// The key of a variant for a selector: its kind and string.
+// A string in the pool: its bytes and length.
+typedef struct MessageText
+{
+    const uint8_t* text;
+    uint32_t length;
+} MessageText;
+
+// The pool's string at an offset and length, or an empty one where they
+// leave the pool.
+static inline MessageText mlocMessageSpan(const MessageView* view, uint32_t offset, uint32_t length)
+{
+    uint32_t pool = view->count[messagePool];
+    if (offset > pool || length > pool - offset)
+    {
+        return (MessageText){view->pool, 0};
+    }
+    return (MessageText){view->pool + offset, length};
+}
+
+// The string a record names: its offset at a field, its length at the
+// next.
+static inline MessageText mlocMessageString(const MessageView* view, uint32_t kind, uint32_t index,
+                                            uint32_t field)
+{
+    return mlocMessageSpan(view, mlocMessageField(view, kind, index, field),
+                           mlocMessageField(view, kind, index, field + 1));
+}
+
+// The run of records of a kind that a record names, its first at a field
+// and its count at the next: the count, cut to the records there are.
+static inline uint32_t mlocMessageRange(const MessageView* view, uint32_t kind, uint32_t index,
+                                        uint32_t field, uint32_t of, uint32_t* firstOut)
+{
+    uint32_t first = mlocMessageField(view, kind, index, field);
+    uint32_t count = mlocMessageField(view, kind, index, field + 1);
+    uint32_t total = view->count[of];
+    *firstOut = first;
+    return first > total ? 0 : count < total - first ? count : total - first;
+}
+
+// The key of a variant for a selector: its kind and string, as stored.
 uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t selector,
                         uint32_t* offsetOut, uint32_t* lengthOut);
 

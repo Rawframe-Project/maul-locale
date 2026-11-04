@@ -38,6 +38,8 @@ typedef struct Resolution
     // whether running out has been reported.
     uint32_t budget;
     bool exhausted;
+    // The declarations being resolved, one inside another.
+    uint32_t depth;
     // A bit per declaration whose faults were reported.
     uint8_t reported[MLOC_MAX_MESSAGE_DECLARATIONS / 8];
     // Set while binding probes an expression: an argument stands for a
@@ -74,10 +76,19 @@ enum
     callStamp = 0x4D43414C,
 };
 
-// A string in the message's pool.
-static inline const uint8_t* mlocResolutionPool(const Resolution* r, uint32_t offset)
+// The parameters a record names, their first at a field and their count
+// at the next (mlocMessageRange): the count.
+static inline uint32_t mlocResolutionParameters(const Resolution* r, uint32_t kind, uint32_t index,
+                                                uint32_t field, uint32_t* firstOut)
 {
-    return r->h.view.pool + offset;
+    return mlocMessageRange(&r->h.view, kind, index, field, messageParameters, firstOut);
+}
+
+// The string a record names (mlocMessageString).
+static inline MessageText mlocResolutionString(const Resolution* r, uint32_t kind, uint32_t index,
+                                               uint32_t field)
+{
+    return mlocMessageString(&r->h.view, kind, index, field);
 }
 
 // Whether a parameter is a u: option, hidden from functions.
