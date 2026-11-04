@@ -117,7 +117,11 @@ jobs:
       # clang-tidy twice, one file per process, four at a time: on the
       # Release preset, where the assertions compile out and the paths
       # they ruled out open, and with them live, since a live assertion's
-      # branches count toward a function's complexity.
+      # branches count toward a function's complexity. clang-tidy-20 run
+      # from the root does not apply .clang-tidy's HeaderFilterRegex, so
+      # the filter is passed, anchored at the source directory as CMake
+      # gives it to the compiler, so that fetched dependencies' headers
+      # stay out.
       - name: clang-tidy, assertions compiled out
         run: |
           cmake --preset linux-clang-20 -B out/tidy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -125,15 +129,20 @@ jobs:
           files=(src/*.c)
           [ -f "${files[0]}" ] || { echo "::error::no source file for clang-tidy"; exit 1; }
           echo "${#files[@]} files"
-          printf '%s\n' "${files[@]}" | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy --quiet --warnings-as-errors='*'
+          filter=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' out/tidy/CMakeCache.txt | sed 's/[][\\.*^$+?(){}|]/\\&/g')
+          filter="^$filter/(src|include)/"
+          printf '%s\n' "${files[@]}" | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy --quiet --warnings-as-errors='*' \
+            --header-filter="$filter"
       - name: clang-tidy, assertions live
         run: |
           cmake --preset linux-clang-20 -B out/tidy-asserts -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -D${PREFIX}_BUILD_TESTS=OFF -D${PREFIX}_BUILD_BENCH=OFF
           files=(src/*.c)
           [ -f "${files[0]}" ] || { echo "::error::no source file for clang-tidy"; exit 1; }
+          filter=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' out/tidy-asserts/CMakeCache.txt | sed 's/[][\\.*^$+?(){}|]/\\&/g')
+          filter="^$filter/(src|include)/"
           printf '%s\n' "${files[@]}" | xargs -P 4 -n 1 clang-tidy-20 -p out/tidy-asserts --quiet \
-            --warnings-as-errors='*'
+            --warnings-as-errors='*' --header-filter="$filter"
 
   # Every cell builds with warnings as errors and runs the whole suite, the
   # header tests included; the shared cell also installs the library and

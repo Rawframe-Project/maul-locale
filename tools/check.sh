@@ -126,16 +126,23 @@ all_c_files() { git ls-files '*.[ch]' '*.cpp' | grep -v '^src/generated/'; }
 
 # clang-tidy on the files given, as CI's checks job runs it: on the
 # Release preset, where the assertions compile out, and with them live.
-# Each hides findings the other shows.
+# Each hides findings the other shows. clang-tidy-20 run from the root
+# does not apply .clang-tidy's HeaderFilterRegex, so the filter is
+# passed, anchored at the source directory as CMake gives it to the
+# compiler (a symlinked checkout's path is not), so that fetched
+# dependencies' headers stay out.
 tidy() { # files
-    local build
+    local build filter
     for build in Release Debug; do
         step "clang-tidy, $build, on $# files"
         cmake --preset linux-clang-20 -B "$out/check-tidy-$build" -DCMAKE_BUILD_TYPE=$build \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMAUL_LOCALE_BUILD_TESTS=OFF -DMAUL_LOCALE_BUILD_BENCH=OFF \
             >"$out/check-tidy-$build.log"
+        filter=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$out/check-tidy-$build/CMakeCache.txt" |
+            sed 's/[][\\.*^$+?(){}|]/\\&/g')
+        filter="^$filter/(src|include)/"
         printf '%s\n' "$@" | xargs -P "$jobs" -n 1 clang-tidy-20 -p "$out/check-tidy-$build" --quiet \
-            --warnings-as-errors='*' 2>/dev/null
+            --warnings-as-errors='*' --header-filter="$filter" 2>/dev/null
     done
 }
 
@@ -157,8 +164,18 @@ if [ "$tier" = changed ]; then
         step "clang-format on ${#present[@]} changed files"
         clang-format --dry-run -Werror "${present[@]}"
     fi
+    # A changed header tidies every source: which ones include it, through
+    # other headers too, is not worked out. The test is in the loop, not a
+    # pipe to grep -q, whose early exit fails the pipe under pipefail.
     sources=()
-    for f in "${present[@]+"${present[@]}"}"; do [[ $f == src/*.c ]] && sources+=("$f"); done
+    header=false
+    for f in "${present[@]+"${present[@]}"}"; do
+        [[ $f == src/*.c ]] && sources+=("$f")
+        [[ $f == src/*.h || $f == include/*.h ]] && header=true
+    done
+    if $header; then
+        sources=(src/*.c)
+    fi
     if [ ${#sources[@]} -gt 0 ]; then
         tidy "${sources[@]}"
     fi
