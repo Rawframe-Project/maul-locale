@@ -8,7 +8,8 @@
 // reads; and over the root's table it answers every pair of characters the
 // table holds itself, as the general compare does, unless the settings
 // make it bail out; a precomposed letter whose marks a contraction reads
-// past bails out on the mark.
+// past bails out on the mark. A collator whose stored reordering claims
+// more ranges than it holds is refused by every call that reads one.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -18,6 +19,7 @@
 #include "collation_fast_compare.h"
 #include "collation_reorder.h"
 #include "collation_tables.h"
+#include "collator.h"
 #include "data_format.h"
 #include "data_view.h"
 #include "kinds.h"
@@ -25,6 +27,8 @@
 
 #include "maul-locale/collate.h"
 #include "maul-locale/data.h"
+#include "maul-locale/index.h"
+#include "maul-locale/search.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -516,6 +520,60 @@ static void TestReorderings(void)
           "served");
 }
 
+// Whether every call that reads a collator gives the result: compares,
+// keys, its version, a searcher and an index made from it.
+static bool AllGive(const mlocCollator* c, mlocResult expected)
+{
+    static const uint16_t units[] = {0x61};
+    static uint8_t key[256];
+    static mlocSearcher searcher;
+    static uint8_t index[1 << 16];
+    int order = 0;
+    size_t length = 0;
+    uint64_t version = 0;
+    mlocLocale locale;
+    (void)mlocParseLocale("en", 2, &locale);
+    mlocResult r[] = {
+        mlocCollator_Compare(c, "a", 1, "b", 1, &order),
+        mlocCollator_CompareUtf16(c, units, 1, units, 1, &order),
+        mlocCollator_GetSortKey(c, "a", 1, key, sizeof(key), &length),
+        mlocCollator_GetSortKeyUtf16(c, units, 1, key, sizeof(key), &length),
+        mlocCollator_GetVersion(c, &version),
+        mlocInitSearcher(c, "a", 1, nullptr, &searcher),
+        mlocBuildIndex(c, &s_data, &locale, nullptr, index, sizeof(index), &length),
+    };
+    bool all = true;
+    for (size_t i = 0; i < sizeof(r) / sizeof(r[0]); i++)
+    {
+        all = all && r[i] == expected;
+    }
+    return all;
+}
+
+// A collator whose stored reordering claims more ranges than it holds,
+// which mlocCollationReorderPrimary would walk past: refused, while one
+// at the ranges' room is still read.
+static void TestForgedRanges(void)
+{
+    mlocLocale locale;
+    static mlocCollator c;
+    bool made = mlocParseLocale("en-u-kr-grek", 12, &locale).status == mloc_success &&
+                mlocInitCollator(&s_data, &locale, nullptr, &c) == mloc_success;
+    Collator* stored = (Collator*)&c;
+    CHECK(made && stored->reordered == 1 &&
+              stored->reorder.rangeCount <= collationMaxReorderRanges && AllGive(&c, mloc_success),
+          "a Greek-first collator holds its reordering within its ranges");
+    stored->reorder.rangeCount = collationMaxReorderRanges;
+    CHECK(made && AllGive(&c, mloc_success), "a range count at the ranges' room is read");
+    stored->reorder.rangeCount = collationMaxReorderRanges + 1;
+    CHECK(made && AllGive(&c, mloc_errorInvalid), "one more is refused by every call");
+    stored->reorder.rangeCount = UINT32_MAX;
+    CHECK(made && AllGive(&c, mloc_errorInvalid), "and so is the largest");
+    stored->reordered = 0;
+    CHECK(made && AllGive(&c, mloc_success),
+          "a collator without a reordering does not read its count");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -545,5 +603,6 @@ int main(void)
     TestAnswers();
     TestTailoredAnswers();
     TestReorderings();
+    TestForgedRanges();
     return s_failures == 0 ? 0 : 1;
 }
