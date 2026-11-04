@@ -360,6 +360,12 @@ mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_
         StoreSlot(&c, index, slot);
         StoreUsed(&c, b.used);
     }
+    // A slot's reason and position reach the result: a cache changed so
+    // that they name none is refused.
+    if (slot.reason > mloc_catalogCacheFull || slot.position > c.count)
+    {
+        return mloc_errorInvalid;
+    }
     mlocCatalogReason reason = (mlocCatalogReason)slot.reason;
     if (slot.state == slotKey)
     {
