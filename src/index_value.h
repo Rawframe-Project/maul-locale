@@ -89,12 +89,23 @@ typedef struct IndexView
     const uint8_t* bytes;
     uint32_t bucketCount;
     uint32_t shownCount;
+    uint32_t poolSize;
     const uint8_t* records;
     const uint8_t* shown;
     const uint8_t* pool;
 } IndexView;
 
-// An index's view; false for bytes mlocBuildIndex did not write.
+// An index's extent sums its head, its collator and three 32-bit fields
+// times their sizes: the largest such sum fits 64 bits, so no header can
+// wrap it.
+static_assert((UINT64_MAX - indexHead - sizeof(Collator)) / UINT32_MAX >= indexRecordSize + 4 + 1,
+              "an index's largest extent fits 64 bits");
+
+// An index's view; false for bytes mlocBuildIndex did not write. An index
+// has no size passed with it, so its header is its extent (as a
+// bound message's): the counts must fit each other and the extent the
+// address space, and its collator must be one. The records, shown list
+// and pool spans a call reads are checked where it reads them.
 static inline bool mlocReadIndex(const void* index, IndexView* out)
 {
     if (index == nullptr || mlocLoad32(index) != indexStamp)
@@ -102,12 +113,38 @@ static inline bool mlocReadIndex(const void* index, IndexView* out)
         return false;
     }
     const uint8_t* p = index;
+    uint32_t bucketCount = mlocLoad32(p + 4);
+    uint32_t shownCount = mlocLoad32(p + 8);
+    uint32_t poolSize = mlocLoad32(p + 12);
+    // No header wraps it (the static_assert above).
+    uint64_t extent = mlocIndexRecords() + (uint64_t)bucketCount * indexRecordSize +
+                      (uint64_t)shownCount * 4 + poolSize;
+    Collator c;
+    if (bucketCount < 1 || shownCount < 1 || shownCount > bucketCount || extent > SIZE_MAX ||
+        !mlocReadCollatorHead(p + indexHead, &c))
+    {
+        return false;
+    }
     out->bytes = p;
-    out->bucketCount = mlocLoad32(p + 4);
-    out->shownCount = mlocLoad32(p + 8);
+    out->bucketCount = bucketCount;
+    out->shownCount = shownCount;
+    out->poolSize = poolSize;
     out->records = p + mlocIndexRecords();
-    out->shown = out->records + (size_t)out->bucketCount * indexRecordSize;
-    out->pool = out->shown + (size_t)out->shownCount * 4;
+    out->shown = out->records + (size_t)bucketCount * indexRecordSize;
+    out->pool = out->shown + (size_t)shownCount * 4;
+    return true;
+}
+
+// A span of an index's pool at a record's fields (offset, then length);
+// false when it passes the pool.
+static inline bool mlocIndexSpan(const IndexView* v, uint32_t offset, uint32_t length,
+                                 const uint8_t** bytesOut)
+{
+    if ((uint64_t)offset + length > v->poolSize)
+    {
+        return false;
+    }
+    *bytesOut = v->pool + offset;
     return true;
 }
 

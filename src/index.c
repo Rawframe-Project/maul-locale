@@ -101,23 +101,32 @@ mlocResult mlocGetIndexBucket(const void* index, uint32_t bucket, mlocIndexBucke
         return mloc_errorInvalid;
     }
     uint32_t record = mlocLoad32(v.shown + (size_t)bucket * 4);
+    const uint8_t* label = nullptr;
+    uint32_t type = record < v.bucketCount ? mlocIndexField(&v, record, 4) & 0xFF : UINT32_MAX;
+    if (type > mloc_indexOverflow ||
+        !mlocIndexSpan(&v, mlocIndexField(&v, record, 0), mlocIndexField(&v, record, 1), &label))
+    {
+        return mloc_errorInvalid;
+    }
     *bucketOut = (mlocIndexBucket){
-        .label = (const char*)v.pool + mlocIndexField(&v, record, 0),
+        .label = (const char*)label,
         .length = mlocIndexField(&v, record, 1),
-        .type = (mlocIndexLabelType)(mlocIndexField(&v, record, 4) & 0xFF),
+        .type = (mlocIndexLabelType)type,
     };
     return mloc_success;
 }
 
 // getBucketIndex: the last bucket, shown or not, whose lower boundary
-// the name sorts at or after, as the shown bucket it counts as.
-static uint32_t Find(const IndexView* v, NfdText name)
+// the name sorts at or after, as the shown bucket it counts as; false when
+// a record it reads passes the pool or names no shown bucket.
+static bool Find(const IndexView* v, NfdText name, uint32_t* bucketOut)
 {
     // The fast Latin compare where it serves a UTF-8 name (the boundaries
     // are UTF-8), as mlocCollator_Compare; else the name's key, read once, against
     // the boundaries' (a script's boundary is a contraction of many, slow
     // to compare); else a compare.
     Collator c;
+    // mlocReadIndex read the head already.
     (void)mlocReadCollatorHead(v->bytes + indexHead, &c);
     bool fast = c.fastLatin != 0 && name.bytes != nullptr;
     if (fast)
@@ -131,7 +140,13 @@ static uint32_t Find(const IndexView* v, NfdText name)
     while (start + 1 < limit)
     {
         uint32_t i = (start + limit) / 2;
-        NfdText boundary = mlocNfdUtf8(v->pool + mlocIndexField(v, i, 2), mlocIndexField(v, i, 3));
+        const uint8_t* bytes = nullptr;
+        uint32_t length = mlocIndexField(v, i, 3);
+        if (!mlocIndexSpan(v, mlocIndexField(v, i, 2), length, &bytes))
+        {
+            return false;
+        }
+        NfdText boundary = mlocNfdUtf8(bytes, length);
         int order = fast ? mlocFastLatinCompare(&c.fast, name.bytes, name.length, boundary.bytes,
                                                 boundary.length)
                          : fastLatinBail;
@@ -162,7 +177,8 @@ static uint32_t Find(const IndexView* v, NfdText name)
             start = i;
         }
     }
-    return mlocIndexField(v, start, 4) >> 8;
+    *bucketOut = mlocIndexField(v, start, 4) >> 8;
+    return *bucketOut < v->shownCount;
 }
 
 mlocResult mlocFindIndexBucket(const void* index, const char* name, size_t length,
@@ -173,7 +189,12 @@ mlocResult mlocFindIndexBucket(const void* index, const char* name, size_t lengt
     {
         return mloc_errorInvalid;
     }
-    *bucketOut = Find(&v, mlocNfdUtf8((const uint8_t*)(name != nullptr ? name : ""), length));
+    uint32_t bucket = 0;
+    if (!Find(&v, mlocNfdUtf8((const uint8_t*)(name != nullptr ? name : ""), length), &bucket))
+    {
+        return mloc_errorInvalid;
+    }
+    *bucketOut = bucket;
     return mloc_success;
 }
 
@@ -186,6 +207,11 @@ mlocResult mlocFindIndexBucketUtf16(const void* index, const uint16_t* name, siz
     {
         return mloc_errorInvalid;
     }
-    *bucketOut = Find(&v, mlocNfdUtf16(name != nullptr ? name : s_empty, length));
+    uint32_t bucket = 0;
+    if (!Find(&v, mlocNfdUtf16(name != nullptr ? name : s_empty, length), &bucket))
+    {
+        return mloc_errorInvalid;
+    }
+    *bucketOut = bucket;
     return mloc_success;
 }
