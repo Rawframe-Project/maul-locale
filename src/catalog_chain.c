@@ -7,6 +7,8 @@
 // bound messages are written into, each at a multiple of eight. A cache
 // whose every slot is bound is only read, so threads may share it.
 
+#include "catalog_chain.h"
+
 #include "catalog_tables.h"
 #include "catalog_view.h"
 #include "invariant.h"
@@ -15,46 +17,6 @@
 
 #include <string.h>
 
-enum
-{
-    // Marks a chain the library made.
-    chainStamp = 0x4B,
-    cacheHead = 16,
-    slotSize = 8,
-    // A slot's states: no bind tried yet, a bound message, the key.
-    slotUnbound = 0,
-    slotBound = 1,
-    slotKey = 2,
-};
-
-// The opaque chain's fields.
-typedef struct Chain
-{
-    const mlocCatalog* catalogs;
-    const mlocMessageFormatter* formatters;
-    uint8_t* cache;
-    size_t cacheSize;
-    uint32_t keyCount;
-    uint32_t count;
-    // The source's position, or count when the chain lacks it.
-    uint32_t source;
-    uint8_t stamp;
-} Chain;
-
-static_assert(sizeof(Chain) <= sizeof(mlocCatalogChain), "a chain fits its public struct");
-
-// A key index's slot: where its bound message is, from which position and
-// why, or the reason its key is written.
-typedef struct Slot
-{
-    uint32_t offset;
-    uint8_t state;
-    uint8_t position;
-    uint8_t reason;
-} Slot;
-
-static_assert(sizeof(Slot) == slotSize, "a slot is eight bytes");
-
 // Where binding writes: the arena's room, or nothing when measuring.
 typedef struct Binder
 {
@@ -62,16 +24,6 @@ typedef struct Binder
     size_t room;
     size_t used;
 } Binder;
-
-static bool ReadChain(const mlocCatalogChain* chain, Chain* out)
-{
-    if (chain == nullptr)
-    {
-        return false;
-    }
-    memcpy(out, chain, sizeof(*out));
-    return out->stamp == chainStamp;
-}
 
 // The cache is this process's memory, so it is read and written in the
 // machine's own order, by copies for any alignment. Every caller's index
@@ -90,11 +42,11 @@ static void StoreSlot(const Chain* c, uint32_t index, Slot slot)
     memcpy(c->cache + cacheHead + (size_t)index * slotSize, &slot, sizeof(slot));
 }
 
-static size_t LoadUsed(const Chain* c)
+static uint64_t LoadUsed(const Chain* c)
 {
     uint64_t used = 0;
     memcpy(&used, c->cache, sizeof(used));
-    return (size_t)used;
+    return used;
 }
 
 static void StoreUsed(const Chain* c, size_t used)
@@ -106,6 +58,32 @@ static void StoreUsed(const Chain* c, size_t used)
 static size_t SlotsEnd(uint32_t keyCount)
 {
     return cacheHead + (size_t)keyCount * slotSize;
+}
+
+// The arena's room after a cache's slots: its offsets are 32 bits, so room
+// past 4 GiB goes unused.
+static size_t ArenaRoom(const Chain* c)
+{
+    size_t room = c->cacheSize - SlotsEnd(c->keyCount);
+    return room < UINT32_MAX ? room : UINT32_MAX;
+}
+
+// A chain the library made, copied out; false for any other, and for one
+// whose counts or cache, which it keeps, pass their bounds: every
+// count and the arena's bytes used are checked before anything is read
+// through them.
+static bool ReadChain(const mlocCatalogChain* chain, Chain* out)
+{
+    if (chain == nullptr)
+    {
+        return false;
+    }
+    memcpy(out, chain, sizeof(*out));
+    return out->stamp == chainStamp && out->catalogs != nullptr && out->formatters != nullptr &&
+           out->cache != nullptr && out->count >= 1 && out->count <= MLOC_MAX_CATALOG_CHAIN &&
+           out->source <= out->count &&
+           cacheHead + (uint64_t)out->keyCount * slotSize <= out->cacheSize &&
+           LoadUsed(out) <= ArenaRoom(out);
 }
 
 // Binds one message at the arena's end: mloc_errorCapacity when it does
@@ -268,14 +246,11 @@ mlocResult mlocInitCatalogChain(const mlocCatalog* catalogs, const mlocMessageFo
     return mloc_success;
 }
 
-// The arena: its offsets are 32 bits, so room past 4 GiB goes unused.
+// The arena of a chain ReadChain read: its slots fit the cache, and its
+// bytes used the room.
 static Binder BinderOf(const Chain* c)
 {
-    size_t start = SlotsEnd(c->keyCount);
-    // mlocInitCatalogChain refused a cache smaller than its slots.
-    MLOC_ASSERT(c->cacheSize >= start);
-    size_t room = c->cacheSize - start;
-    return (Binder){c->cache + start, room < UINT32_MAX ? room : UINT32_MAX, LoadUsed(c)};
+    return (Binder){c->cache + SlotsEnd(c->keyCount), ArenaRoom(c), (size_t)LoadUsed(c)};
 }
 
 mlocResult mlocCatalogChain_Bind(const mlocCatalogChain* chain)
@@ -390,8 +365,13 @@ mlocResult mlocCatalogChain_FormatMessage(const mlocCatalogChain* chain, uint32_
     {
         return Report(WriteKeyAt(&c, index, textOut), resultOut, reason, slot.position);
     }
-    // A bound slot's message lies in the arena the chain has used.
-    MLOC_ASSERT(slot.state == slotBound && slot.offset < LoadUsed(&c));
+    // A bound slot's message lies in the arena the chain has used; the
+    // cache must stay as the chain's calls wrote it (catalog.h), but one
+    // changed against that is refused rather than read.
+    if (slot.state != slotBound || slot.offset >= LoadUsed(&c))
+    {
+        return mloc_errorInvalid;
+    }
     const uint8_t* bound = c.cache + SlotsEnd(c.keyCount) + slot.offset;
     return Report(mlocFormatMessage(bound, arguments, argumentCount, textOut, faultsOut), resultOut,
                   reason, slot.position);

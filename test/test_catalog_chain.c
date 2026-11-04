@@ -3,9 +3,11 @@
 //
 // Catalog chains: a set of three locales with holes compiled by the
 // catalog tool, formatted through a chain, each failure's stated text and
-// reason, a cache measured, a cache too small, a chain bound at once. Run
+// reason, a cache measured, a cache too small, a chain bound at once, and
+// a chain or cache whose stored counts were changed refused. Run
 // with a directory to write the catalogs into.
 
+#include "catalog_chain.h"
 #include "compile.h"
 #include "file.h"
 #include "test_harness.h"
@@ -426,6 +428,105 @@ static void TestRefusals(Set* s)
     free(bytes);
 }
 
+// Whether each chain call gives the result on a chain: a message by its
+// index, one by its key, and binding all.
+static bool AllGive(const mlocCatalogChain* chain, mlocResult expected)
+{
+    char buffer[256];
+    mlocOutput output = {buffer, sizeof(buffer), 0, nullptr, nullptr};
+    mlocResult r[] = {
+        mlocCatalogChain_FormatMessage(chain, 0, nullptr, 0, &output, nullptr, nullptr),
+        mlocCatalogChain_FormatKey(chain, "hello", 5, nullptr, 0, &output, nullptr, nullptr),
+        mlocCatalogChain_Bind(chain),
+    };
+    bool all = true;
+    for (size_t i = 0; i < sizeof(r) / sizeof(r[0]); i++)
+    {
+        all = all && r[i] == expected;
+    }
+    return all;
+}
+
+// A chain whose stamp is right but whose counts, or whose cache's bytes
+// used and slots, were changed: refused before any is read through, as
+// the library checks every index it stores.
+static void TestForged(Set* s)
+{
+    size_t size = 0;
+    mlocCatalogChain made;
+    uint8_t* cache = nullptr;
+    bool ok =
+        mlocMeasureCatalogChain(s->catalogs, s->formatters, chainCount, &size) == mloc_success &&
+        (cache = malloc(size)) != nullptr &&
+        mlocInitCatalogChain(s->catalogs, s->formatters, chainCount, cache, size, &made) ==
+            mloc_success &&
+        AllGive(&made, mloc_success);
+    CHECK(ok, "a chain the library made formats and binds");
+    if (!ok)
+    {
+        free(cache);
+        return;
+    }
+    mlocCatalogChain chain;
+    Chain* c = (Chain*)&chain;
+    struct
+    {
+        const char* what;
+        uint32_t count;
+        uint32_t source;
+        // 0 keeps the chain's.
+        uint32_t keyCount;
+        size_t cacheSize;
+    } cases[] = {
+        {"no catalogs", 0, 0, 0, size},
+        {"more catalogs than a chain holds", MLOC_MAX_CATALOG_CHAIN + 1, 2, 0, size},
+        {"a source past the catalogs", chainCount, chainCount + 1, 0, size},
+        {"more keys than the cache has slots for", chainCount, 2, 0, cacheHead + slotSize},
+        {"the most keys", chainCount, 2, UINT32_MAX, size},
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        chain = made;
+        c->count = cases[i].count;
+        c->source = cases[i].source;
+        c->keyCount = cases[i].keyCount != 0 ? cases[i].keyCount : c->keyCount;
+        c->cacheSize = cases[i].cacheSize;
+        CHECK(AllGive(&chain, mloc_errorInvalid), cases[i].what);
+    }
+    chain = made;
+    c->catalogs = nullptr;
+    CHECK(AllGive(&chain, mloc_errorInvalid), "no catalogs array");
+    // The cache: its bytes used past the arena's room, then a bound slot
+    // past the bytes used, and one in no state.
+    chain = made;
+    uint64_t used = 0;
+    memcpy(&used, cache, sizeof(used));
+    uint64_t past = size;
+    memcpy(cache, &past, sizeof(past));
+    CHECK(AllGive(&chain, mloc_errorInvalid), "a cache's bytes used past its room");
+    memcpy(cache, &used, sizeof(used));
+    Slot slot;
+    memcpy(&slot, cache + cacheHead, sizeof(slot));
+    char buffer[256];
+    mlocOutput output = {buffer, sizeof(buffer), 0, nullptr, nullptr};
+    Slot forged = slot;
+    forged.offset = (uint32_t)used;
+    memcpy(cache + cacheHead, &forged, sizeof(forged));
+    CHECK(slot.state == slotBound &&
+              mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, &output, nullptr, nullptr) ==
+                  mloc_errorInvalid,
+          "a bound slot past the bytes used");
+    forged = slot;
+    forged.state = slotKey + 1;
+    memcpy(cache + cacheHead, &forged, sizeof(forged));
+    CHECK(mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, &output, nullptr, nullptr) ==
+              mloc_errorInvalid,
+          "a slot in no state");
+    memcpy(cache + cacheHead, &slot, sizeof(slot));
+    CHECK(AllGive(&chain, mloc_success), "put back, the chain formats again");
+    free(cache);
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -450,6 +551,7 @@ int main(int argc, char** argv)
     TestOutputs(&set);
     TestReplaced(&set);
     TestRefusals(&set);
+    TestForged(&set);
     CloseSet(&set);
     return s_failures == 0 ? 0 : 1;
 }
