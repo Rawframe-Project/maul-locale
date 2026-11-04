@@ -74,8 +74,10 @@ static inline void mlocSetCollatorFastLatin(Collator* c)
 }
 
 // The head of a collator's value (its stamp, flags and version), copied
-// out; false for bytes the library did not make. The value may lie at any
-// alignment (an index holds one), so each part is copied by its bytes.
+// out; false for bytes the library did not make, or whose reordering, when
+// the head says it is in use, holds more ranges than it has room for. The
+// value may lie at any alignment (an index holds one), so each part is
+// copied by its bytes.
 static inline bool mlocReadCollatorHead(const void* value, Collator* c)
 {
     if (value == nullptr)
@@ -83,7 +85,17 @@ static inline bool mlocReadCollatorHead(const void* value, Collator* c)
         return false;
     }
     memcpy(c, value, offsetof(Collator, root));
-    return c->stamp == collatorStamp;
+    if (c->stamp != collatorStamp)
+    {
+        return false;
+    }
+    uint32_t ranges = 0;
+    if (c->reordered != 0)
+    {
+        memcpy(&ranges, (const uint8_t*)value + offsetof(Collator, reorder.rangeCount),
+               sizeof(ranges));
+    }
+    return ranges <= collationMaxReorderRanges;
 }
 
 // The fast Latin compare's options, after the head.
