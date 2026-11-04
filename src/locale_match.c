@@ -6,6 +6,7 @@
 // bytes.
 
 #include "bytes.h"
+#include "data_view.h"
 #include "invariant.h"
 #include "locale_distance.h"
 #include "locale_likely.h"
@@ -103,7 +104,7 @@ static bool LocalesValid(const mlocLocale* locales, size_t count)
 mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported, size_t count,
                             const mlocLocale* defaultLocale, mlocMatchEntry* entriesOut)
 {
-    if (data == nullptr || (count > 0 && (supported == nullptr || entriesOut == nullptr)))
+    if (!mlocValidDataSet(data) || (count > 0 && (supported == nullptr || entriesOut == nullptr)))
     {
         return mloc_errorInvalid;
     }
@@ -151,7 +152,7 @@ static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
                            size_t desiredCount, const mlocMatchOptions* options,
                            const mlocMatch* matchOut)
 {
-    if (data == nullptr || matchOut == nullptr ||
+    if (!mlocValidDataSet(data) || matchOut == nullptr ||
         (count > 0 && (supported == nullptr || entries == nullptr)) ||
         (desiredCount > 0 && desired == nullptr))
     {

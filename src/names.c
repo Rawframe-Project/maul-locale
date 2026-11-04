@@ -253,7 +253,7 @@ mlocResult mlocGetName(const mlocDataSet* data, const mlocLocale* locale, mlocNa
                        mlocOutput* textOut)
 {
     mlocNameOptions o = options != nullptr ? *options : (mlocNameOptions){0};
-    if (data == nullptr || !mlocLocaleValid(locale) || (code == nullptr && length != 0) ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || (code == nullptr && length != 0) ||
         textOut == nullptr || textOut->part != nullptr ||
         (textOut->buffer == nullptr && textOut->capacity != 0) ||
         (uint32_t)type > mloc_nameSubdivision || (uint32_t)o.form >= nameFieldCount ||

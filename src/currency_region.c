@@ -177,7 +177,7 @@ static uint16_t RegionCurrency(const uint8_t* entries, uint32_t count, int32_t d
 mlocResult mlocFindCurrency(const mlocDataSet* data, const mlocLocale* locale, int32_t day,
                             char* codeOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || codeOut == nullptr)
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || codeOut == nullptr)
     {
         return mloc_errorInvalid;
     }
@@ -208,7 +208,7 @@ mlocResult mlocGetRegionCurrencies(const mlocDataSet* data, const char* region, 
 {
     uint32_t packed =
         region == nullptr || regionLength > 3 ? 0 : mlocPackRegion(region, (uint32_t)regionLength);
-    if (data == nullptr || countOut == nullptr || packed == 0 ||
+    if (!mlocValidDataSet(data) || countOut == nullptr || packed == 0 ||
         (currenciesOut == nullptr && capacity > 0))
     {
         return mloc_errorInvalid;

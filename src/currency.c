@@ -365,8 +365,8 @@ mlocResult mlocInitCurrencyFormatter(const mlocDataSet* data, const mlocLocale* 
     static const mlocCurrencyOptions s_defaults = {0};
     const mlocCurrencyOptions* o = options == nullptr ? &s_defaults : options;
     uint16_t packed = code == nullptr || codeLength != 3 ? 0 : mlocPackCurrency(code, 3);
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || packed == 0 ||
-        !ValidOptions(o))
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
+        packed == 0 || !ValidOptions(o))
     {
         return mloc_errorInvalid;
     }
@@ -603,8 +603,9 @@ static mlocResult WriteText(const void* text, size_t length, mlocOutput* output)
 static uint16_t LookupCode(const mlocDataSet* data, const mlocLocale* locale, const char* code,
                            size_t codeLength, const mlocOutput* output)
 {
-    bool valid = data != nullptr && mlocLocaleValid(locale) && code != nullptr && codeLength == 3 &&
-                 output != nullptr && (output->buffer != nullptr || output->capacity == 0);
+    bool valid = mlocValidDataSet(data) && mlocLocaleValid(locale) && code != nullptr &&
+                 codeLength == 3 && output != nullptr &&
+                 (output->buffer != nullptr || output->capacity == 0);
     return valid ? mlocPackCurrency(code, 3) : 0;
 }
 
@@ -686,7 +687,7 @@ mlocResult mlocGetCurrencyDigits(const mlocDataSet* data, const char* code, size
                                  uint16_t* incrementOut)
 {
     uint16_t packed = code == nullptr || codeLength != 3 ? 0 : mlocPackCurrency(code, 3);
-    if (data == nullptr || packed == 0 || (uint32_t)usage > mloc_currencyUsageCash ||
+    if (!mlocValidDataSet(data) || packed == 0 || (uint32_t)usage > mloc_currencyUsageCash ||
         digitsOut == nullptr || incrementOut == nullptr)
     {
         return mloc_errorInvalid;

@@ -6,6 +6,7 @@
 // over the iterator's breaks (segmenter.h).
 
 #include "bytes.h"
+#include "data_view.h"
 #include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
@@ -149,7 +150,7 @@ mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
                              mlocSegmentKind kind, const char* text, size_t length,
                              bool moreFollows, mlocSegmenter* segmenterOut)
 {
-    if (segmenterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (segmenterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         (text == nullptr && length > 0) ||
         (kind != mloc_segmentWord && kind != mloc_segmentSentence && kind != mloc_segmentLine))
     {

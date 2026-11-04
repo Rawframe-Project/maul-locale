@@ -8,6 +8,7 @@
 
 #include "maul-locale/grammar.h"
 
+#include "data_view.h"
 #include "grammar_end.h"
 #include "grammar_fi.h"
 #include "grammar_hu.h"
@@ -128,7 +129,7 @@ static uint8_t LanguageOfLocale(const mlocLocale* locale)
 mlocResult mlocInitInflector(const mlocDataSet* data, const mlocLocale* locale,
                              mlocInflector* inflectorOut)
 {
-    if (inflectorOut == nullptr || data == nullptr || !mlocLocaleValid(locale))
+    if (inflectorOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale))
     {
         return mloc_errorInvalid;
     }

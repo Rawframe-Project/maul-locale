@@ -93,7 +93,7 @@ bool mlocValidPlurals(const DataView* view, DataSpan payload)
 mlocResult mlocInitPluralRules(const mlocDataSet* data, const mlocLocale* locale,
                                mlocPluralType type, mlocPluralRules* rulesOut)
 {
-    if (rulesOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (rulesOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         (type != mloc_pluralCardinal && type != mloc_pluralOrdinal))
     {
         return mloc_errorInvalid;

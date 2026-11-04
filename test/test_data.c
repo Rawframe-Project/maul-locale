@@ -11,7 +11,12 @@
 #include "kinds.h"
 #include "test_harness.h"
 
+#include "maul-locale/collate.h"
 #include "maul-locale/data.h"
+#include "maul-locale/locale.h"
+#include "maul-locale/message.h"
+#include "maul-locale/number.h"
+#include "maul-locale/zone.h"
 
 #include <string.h>
 
@@ -445,6 +450,64 @@ static void TestFailedOutputs(void)
           "an index out of range leaves the id and its length");
 }
 
+// Whether the calls that take a set refuse it as no data a library made.
+static bool SetRefused(const mlocDataSet* set)
+{
+    mlocLocale en;
+    mlocLocale out;
+    mlocTimeZone zone;
+    mlocNumberFormatter number;
+    mlocCollator collator;
+    mlocMessageFormatter message;
+    if (mlocParseLocale("en", 2, &en).status != mloc_success)
+    {
+        return false;
+    }
+    return mlocFindTimeZone(set, "Europe/Vienna", 13, &zone) == mloc_errorInvalid &&
+           mlocGetTimeZone(set, 0, &zone) == mloc_errorInvalid && mlocGetTimeZoneCount(set) == 0 &&
+           mlocMaximizeLocale(set, &en, &out) == mloc_errorInvalid &&
+           mlocCanonicalizeLocale(set, "en", 2, &out, NULL).status == mloc_errorInvalid &&
+           mlocInitNumberFormatter(set, &en, NULL, &number) == mloc_errorInvalid &&
+           mlocInitCollator(set, &en, NULL, &collator) == mloc_errorInvalid &&
+           mlocInitMessageFormatter(set, &en, NULL, &message) == mloc_errorInvalid;
+}
+
+// An mlocData no open filled, cleared or of other bytes, in a set alone
+// or after an opened one, is refused by the calls that take it, never
+// read through and never skipped.
+static void TestUnopenedSources(void)
+{
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[0]);
+    mlocDataSet one = {&sources[1], 1};
+    mlocDataSet both = {sources, 2};
+    memset(&sources[1], 0, sizeof sources[1]);
+    CHECK(SetRefused(&one) && SetRefused(&both), "a cleared source is refused");
+    static const uint8_t words[] = {0x41, 0xFF, 0x80, 0x01};
+    bool refused = true;
+    for (size_t w = 0; w < sizeof words; w++)
+    {
+        memset(&sources[1], words[w], sizeof sources[1]);
+        refused = refused && SetRefused(&one) && SetRefused(&both);
+    }
+    CHECK(refused, "a source of other bytes is refused");
+    // An opened source whose words were changed: its counts disagree with
+    // its sizes.
+    mlocOpenBuiltinData(&sources[1]);
+    sources[1].opaque[1] ^= 0xFFFFFFFF00000000u;
+    CHECK(SetRefused(&one) && mlocData_GetLocaleCount(&sources[1]) == 0,
+          "an opened source whose sizes were changed is refused");
+    mlocDataSet none = {NULL, 1};
+    CHECK(SetRefused(&none), "a set with no array and a count is refused");
+    mlocOpenBuiltinData(&sources[1]);
+    mlocLocale en;
+    mlocNumberFormatter number;
+    CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
+              mlocInitNumberFormatter(&both, &en, NULL, &number) == mloc_success &&
+              mlocData_GetLocaleCount(&sources[1]) > 0,
+          "and opened sources still read");
+}
+
 int main(void)
 {
     TestVersion();
@@ -458,5 +521,6 @@ int main(void)
     TestTableRefusals();
     TestLongIds();
     TestFailedOutputs();
+    TestUnopenedSources();
     return s_failures == 0 ? 0 : 1;
 }

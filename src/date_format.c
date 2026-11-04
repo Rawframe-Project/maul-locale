@@ -10,6 +10,7 @@
 
 #include "bytes.h"
 #include "calendar_arith.h"
+#include "data_view.h"
 #include "date_range.h"
 #include "invariant.h"
 #include "locale_prefs.h"
@@ -366,7 +367,7 @@ mlocResult mlocInitDateFormatterIn(const mlocDataSet* data, const mlocLocale* lo
                                    mlocDateFormatter* formatterOut)
 {
     mlocDateOptions o = options != nullptr ? *options : (mlocDateOptions){0};
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         !mlocValidDateOptions(&o))
     {
         return mloc_errorInvalid;

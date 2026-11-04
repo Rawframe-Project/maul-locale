@@ -243,6 +243,7 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
         .localeCount = mlocLoad32(b + headerLocaleCount),
         .poolOffset = mlocLoad32(b + headerPoolOffset),
         .poolSize = mlocLoad32(b + headerPoolSize),
+        .cookie = dataViewCookie,
     };
     if (!ValidTables(&view, kinds, kindCount))
     {
@@ -284,6 +285,7 @@ void mlocOpenBuiltinData(mlocData* dataOut)
         .localeCount = mlocLoad32(b + headerLocaleCount),
         .poolOffset = mlocLoad32(b + headerPoolOffset),
         .poolSize = mlocLoad32(b + headerPoolSize),
+        .cookie = dataViewCookie,
     };
     MLOC_ASSERT(IsHeader(b, mlocBuiltinDataSize) &&
                 mlocLoad32(b + headerFileSize) == mlocBuiltinDataSize &&
@@ -294,7 +296,25 @@ void mlocOpenBuiltinData(mlocData* dataOut)
 
 size_t mlocData_GetLocaleCount(const mlocData* data)
 {
-    return mlocViewOf(data).localeCount;
+    DataView view;
+    return data != nullptr && mlocReadView(data, &view) ? view.localeCount : 0;
+}
+
+bool mlocValidDataSet(const mlocDataSet* set)
+{
+    if (set == nullptr || (set->sources == nullptr && set->count > 0))
+    {
+        return false;
+    }
+    DataView view;
+    for (size_t i = 0; i < set->count; i++)
+    {
+        if (!mlocReadView(&set->sources[i], &view))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 mlocResult mlocData_GetLocale(const mlocData* data, size_t index, const char** idOut,
@@ -304,8 +324,8 @@ mlocResult mlocData_GetLocale(const mlocData* data, size_t index, const char** i
     {
         return mloc_errorInvalid;
     }
-    DataView view = mlocViewOf(data);
-    if (index >= view.localeCount)
+    DataView view;
+    if (!mlocReadView(data, &view) || index >= view.localeCount)
     {
         return mloc_errorInvalid;
     }
@@ -438,7 +458,11 @@ bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind)
 {
     for (size_t i = 0; i < set->count; i++)
     {
-        DataView view = mlocViewOf(&set->sources[i]);
+        DataView view;
+        if (!mlocReadView(&set->sources[i], &view))
+        {
+            continue;
+        }
         if (HasKind(&view, kind))
         {
             return true;
@@ -453,7 +477,11 @@ static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id
 {
     for (size_t i = 0; i < set->count; i++)
     {
-        DataView view = mlocViewOf(&set->sources[i]);
+        DataView view;
+        if (!mlocReadView(&set->sources[i], &view))
+        {
+            continue;
+        }
         uint32_t locale = dataNoLocale;
         if (mlocFindDataLocale(&view, id, length, &locale) &&
             FindUnit(view.bytes, view.unitCount, kind, locale, spanOut))
@@ -481,7 +509,11 @@ bool mlocFindDataSetUnitAt(const mlocDataSet* set, uint32_t kind, size_t* source
 {
     for (size_t i = 0; i < set->count; i++)
     {
-        DataView view = mlocViewOf(&set->sources[i]);
+        DataView view;
+        if (!mlocReadView(&set->sources[i], &view))
+        {
+            continue;
+        }
         if (FindUnitAt(view.bytes, view.unitCount, kind, dataNoLocale, spanOut, indexOut))
         {
             *sourceOut = i;
@@ -501,7 +533,11 @@ bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, 
     // A unit of no locale, the common lookup, reads no locale table.
     for (size_t i = 0; i < set->count; i++)
     {
-        DataView view = mlocViewOf(&set->sources[i]);
+        DataView view;
+        if (!mlocReadView(&set->sources[i], &view))
+        {
+            continue;
+        }
         if (FindUnit(view.bytes, view.unitCount, kind, dataNoLocale, spanOut))
         {
             return true;

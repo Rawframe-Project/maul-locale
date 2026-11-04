@@ -307,7 +307,7 @@ static mlocMeasurementSystem MeasurementSystem(const mlocLocale* locale, const u
 mlocResult mlocGetLocalePreferences(const mlocDataSet* data, const mlocLocale* locale,
                                     mlocLocalePreferences* preferencesOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || preferencesOut == nullptr)
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || preferencesOut == nullptr)
     {
         return mloc_errorInvalid;
     }

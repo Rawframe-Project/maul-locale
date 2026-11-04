@@ -54,7 +54,9 @@ static bool ParseOffset(const char* id, size_t length, int16_t* minutesOut)
 mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t length,
                             mlocTimeZone* zoneOut)
 {
-    if ((id == nullptr && length > 0) || zoneOut == nullptr)
+    // The data may be null when the id is an offset.
+    if ((id == nullptr && length > 0) || zoneOut == nullptr ||
+        (data != nullptr && !mlocValidDataSet(data)))
     {
         return mloc_errorInvalid;
     }
@@ -147,7 +149,7 @@ static mlocResult FormatId(const mlocTimeZone* zone, bool primary, mlocOutput* o
 mlocResult mlocGetTimeZoneRelease(const mlocDataSet* data, mlocOutput* textOut)
 {
     ZoneTables t;
-    if (data == nullptr || textOut == nullptr ||
+    if (!mlocValidDataSet(data) || textOut == nullptr ||
         (textOut->buffer == nullptr && textOut->capacity > 0))
     {
         return mloc_errorInvalid;
@@ -200,7 +202,7 @@ mlocResult mlocTimeZonesEqual(const mlocTimeZone* one, const mlocTimeZone* two, 
 size_t mlocGetTimeZoneCount(const mlocDataSet* data)
 {
     ZoneTables t;
-    return data != nullptr && mlocFindZoneTables(data, &t) ? t.primaryCount : 0;
+    return mlocValidDataSet(data) && mlocFindZoneTables(data, &t) ? t.primaryCount : 0;
 }
 
 mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* zoneOut)
@@ -209,7 +211,7 @@ mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* 
     ZoneTables t;
     size_t source = 0;
     uint32_t unit = 0;
-    if (data == nullptr || zoneOut == nullptr ||
+    if (!mlocValidDataSet(data) || zoneOut == nullptr ||
         !mlocFindDataSetUnitAt(data, kindZones, &source, &unit, &span) ||
         !mlocZoneTablesOf(span, &t) || index >= t.primaryCount)
     {

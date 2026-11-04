@@ -10,6 +10,7 @@
 #include "datetime_format.h"
 
 #include "bytes.h"
+#include "data_view.h"
 #include "date_format.h"
 #include "date_range.h"
 #include "date_time.h"
@@ -204,7 +205,8 @@ mlocResult mlocInitDateTimeFormatterIn(const mlocDataSet* data, const mlocLocale
                                        mlocDateTimeFormatter* formatterOut)
 {
     mlocDateTimeOptions o = options != nullptr ? *options : (mlocDateTimeOptions){0};
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !ValidOptions(&o))
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
+        !ValidOptions(&o))
     {
         return mloc_errorInvalid;
     }

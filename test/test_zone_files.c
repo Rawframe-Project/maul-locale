@@ -196,6 +196,9 @@ static void TestMixedFields(void)
     mixed = large;
     mixed.unit = 0;
     CHECK(large.unit != 0 && Refused(&mixed), "a unit of another kind is refused");
+    mixed = small;
+    memset(&mixed.data, 0x41, sizeof mixed.data);
+    CHECK(Refused(&mixed), "a zone holding data no open filled is refused");
     mlocInstant epoch = {0, 0};
     int32_t offset = 0;
     mlocTimeZone copy;

@@ -27,7 +27,7 @@ mlocResult mlocConvertUnit(const mlocDataSet* data, const char* from, size_t fro
 {
     static const mlocPrecision s_none = {0};
     precision = precision == nullptr ? &s_none : precision;
-    if (data == nullptr || from == nullptr || to == nullptr || value == nullptr ||
+    if (!mlocValidDataSet(data) || from == nullptr || to == nullptr || value == nullptr ||
         valueOut == nullptr || !mlocValidDecimal(value) || !mlocValidPrecision(precision))
     {
         return mloc_errorInvalid;

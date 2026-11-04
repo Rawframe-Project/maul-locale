@@ -5,6 +5,7 @@
 // table, then UTS #35's definitions, with ICU's answers for a list of none
 // or one.
 
+#include "data_view.h"
 #include "invariant.h"
 #include "list_genders.h"
 #include "locale_valid.h"
@@ -84,7 +85,7 @@ mlocResult mlocGetListGender(const mlocDataSet* data, const mlocLocale* locale,
                              const mlocPersonGender* genders, size_t count,
                              mlocPersonGender* genderOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || genderOut == nullptr ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || genderOut == nullptr ||
         (genders == nullptr && count > 0))
     {
         return mloc_errorInvalid;

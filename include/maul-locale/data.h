@@ -17,7 +17,12 @@ extern "C"
 #endif
 
     // An opened source of data: compiled-in data or a data file. It is
-    // copyable and holds no resource; nothing closes it.
+    // copyable and holds no resource; nothing closes it. Only
+    // mlocOpenData and mlocOpenBuiltinData fill one, with a mark that a
+    // value left uninitialized or cleared does not carry: every call
+    // refuses a source without it, or whose sizes disagree, before reading
+    // through it. Its bytes are those the open was given; a source whose
+    // bytes pointer was changed afterwards is outside the contract.
     typedef struct mlocData
     {
         uint64_t opaque[4];
@@ -28,7 +33,10 @@ extern "C"
     // keeps the array. A message formatter, a zone formatter, and a date,
     // time or date-time formatter made with a zone keep a pointer to the
     // set itself, so the set and its array must outlive them and stay as
-    // they were.
+    // they were. A call taking a set refuses one that is null (unless its
+    // documentation allows one), has a null array with a count, or has a
+    // source refused as above, with mloc_errorInvalid, or a count of 0
+    // where it returns a count; it never skips such a source.
     typedef struct mlocDataSet
     {
         const mlocData* sources;
@@ -104,7 +112,7 @@ extern "C"
     /// Returns the number of locales a source has data for.
     ///
     /// @param data  An opened source.
-    /// @return The count.
+    /// @return The count; 0 for a null data or one no open filled.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_API size_t mlocData_GetLocaleCount(const mlocData* data);
@@ -119,8 +127,8 @@ extern "C"
     ///                   unchanged on failure.
     /// @param lengthOut  Receives its length in bytes; left unchanged on
     ///                   failure.
-    /// @return mloc_success; mloc_errorInvalid for a null pointer or an
-    ///         index out of range.
+    /// @return mloc_success; mloc_errorInvalid for a null pointer, a data
+    ///         no open filled or an index out of range.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocData_GetLocale(const mlocData* data, size_t index,

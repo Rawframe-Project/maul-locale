@@ -84,7 +84,8 @@ mlocResult mlocInitRelativeFormatter(const mlocDataSet* data, const mlocLocale* 
 {
     static const mlocRelativeOptions s_defaults = {0};
     const mlocRelativeOptions* o = options != nullptr ? options : &s_defaults;
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !ValidOptions(o))
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
+        !ValidOptions(o))
     {
         return mloc_errorInvalid;
     }

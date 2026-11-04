@@ -10,6 +10,7 @@
 #include "collation_compare.h"
 #include "collation_fast_compare.h"
 #include "collator.h"
+#include "data_view.h"
 #include "index_build.h"
 #include "index_labels.h"
 #include "index_value.h"
@@ -55,7 +56,7 @@ mlocResult mlocBuildIndex(const mlocCollator* collator, const mlocDataSet* data,
     mlocIndexOptions o = options != nullptr ? *options : (mlocIndexOptions){0};
     IndexSpecials specials;
     Collator c;
-    if (sizeOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (sizeOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         (bufferOut == nullptr && capacity > 0) || !Specials(&o, &specials) ||
         !mlocReadCollator(collator, &c))
     {

@@ -615,7 +615,7 @@ static bool PosixKeyword(mlocLocale* locale, uint32_t* changes)
 mlocTextResult mlocCanonicalizeLocale(const mlocDataSet* data, const char* text, size_t length,
                                       mlocLocale* localeOut, mlocLocaleChanges* changesOut)
 {
-    if (data == nullptr || (text == nullptr && length > 0) || localeOut == nullptr)
+    if (!mlocValidDataSet(data) || (text == nullptr && length > 0) || localeOut == nullptr)
     {
         return (mlocTextResult){mloc_errorInvalid, 0};
     }
