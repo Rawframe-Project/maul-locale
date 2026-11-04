@@ -23,12 +23,12 @@ static void Store32(uint8_t* p, uint32_t value)
 
 // Whether a slot is a number function's or a date function's, and so
 // prepared.
-static bool Prepared(uint32_t slot)
+MLOC_NODISCARD static bool Prepared(uint32_t slot)
 {
     return slot >= messageFunctionNumber && slot <= messageFunctionParticle;
 }
 
-static bool DateSlot(uint32_t slot)
+MLOC_NODISCARD static bool DateSlot(uint32_t slot)
 {
     return slot >= messageFunctionDate && slot <= messageFunctionDateTime;
 }
@@ -188,7 +188,7 @@ static void Prepare(void* buffer, const BoundHeader* h, const MessageFormatter* 
 
 // Whether two ranges of bytes share one, compared as addresses, which C
 // allows of any two objects.
-static bool Overlap(const void* one, size_t oneSize, const void* two, size_t twoSize)
+MLOC_NODISCARD static bool Overlap(const void* one, size_t oneSize, const void* two, size_t twoSize)
 {
     uintptr_t a = (uintptr_t)one;
     uintptr_t b = (uintptr_t)two;

@@ -62,7 +62,7 @@ typedef struct Split
 } Split;
 
 // Whether one part is larger than another (a / b > c / d).
-static bool Larger(const UnitScale* a, const UnitScale* b)
+MLOC_NODISCARD static bool Larger(const UnitScale* a, const UnitScale* b)
 {
     Wide left;
     Wide right;
@@ -115,7 +115,7 @@ static mlocResult Sort(const UnitTable* t, const UnitId* mixed, Split* s)
 }
 
 // Whether a rounded amount of one part reaches one of the part above.
-static bool Reaches(const Split* s, const mlocDecimal* amount, uint32_t part)
+MLOC_NODISCARD static bool Reaches(const Split* s, const mlocDecimal* amount, uint32_t part)
 {
     Wide one = mlocWideOf(1);
     UnitValue unit = mlocUnitValueOfInteger(&one);

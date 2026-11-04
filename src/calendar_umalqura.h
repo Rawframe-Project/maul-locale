@@ -19,7 +19,7 @@ CalendarDate mlocUmalquraFromDay(int32_t day);
 int64_t mlocUmalquraToDay(int64_t year, uint32_t month, uint32_t day);
 
 // A leap year has 355 days.
-bool mlocUmalquraLeap(int64_t year);
+MLOC_NODISCARD bool mlocUmalquraLeap(int64_t year);
 uint32_t mlocUmalquraDaysInMonth(int64_t year, uint32_t month);
 
 #endif

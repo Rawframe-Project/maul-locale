@@ -24,8 +24,8 @@ static uint32_t Placeholders(const uint8_t* text, uint32_t length)
 
 // The strings: offsets ascending from 0 to the text's end, each text
 // well-formed.
-static bool ValidStrings(const uint8_t* offsets, uint32_t stringCount, const uint8_t* text,
-                         uint32_t textSize)
+MLOC_NODISCARD static bool ValidStrings(const uint8_t* offsets, uint32_t stringCount,
+                                        const uint8_t* text, uint32_t textSize)
 {
     if (mlocLoad32(offsets) != 0 || mlocLoad32(offsets + 4 * (size_t)stringCount) != textSize)
     {

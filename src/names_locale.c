@@ -119,7 +119,7 @@ static void AppendName(Composer* c, NameText n, bool brackets)
 
 // Splits a pattern at "{0}" and "{1}", or false when it lacks them in
 // that order.
-static bool Split(NameText text, Pattern* out)
+MLOC_NODISCARD static bool Split(NameText text, Pattern* out)
 {
     const char* t = (const char*)text.text;
     size_t zero = text.length;
@@ -162,8 +162,8 @@ static Pattern FindPattern(const Composer* c, const char* code, const char* fall
 }
 
 // Looks a code up: a namespace and the parts given, joined by '-'.
-static bool Find(const Composer* c, char space, const Span* parts, size_t count, NameField field,
-                 NameText* out)
+MLOC_NODISCARD static bool Find(const Composer* c, char space, const Span* parts, size_t count,
+                                NameField field, NameText* out)
 {
     char code[2 + maxCode];
     size_t at = 2;
@@ -191,7 +191,7 @@ static bool Find(const Composer* c, char space, const Span* parts, size_t count,
 
 // Whether a name holds '_' or '-', which sends the whole id's match on
 // to the parts (NameGetter's check).
-static bool Joined(NameText n)
+MLOC_NODISCARD static bool Joined(NameText n)
 {
     return memchr(n.text, '_', n.length) != nullptr || memchr(n.text, '-', n.length) != nullptr;
 }
@@ -285,18 +285,18 @@ static const char* Values(const char* at, bool (*isKey)(const char*, size_t), It
     return at;
 }
 
-static bool UKey(const char* at, size_t n)
+MLOC_NODISCARD static bool UKey(const char* at, size_t n)
 {
     (void)at;
     return n == 2;
 }
 
-static bool TKey(const char* at, size_t n)
+MLOC_NODISCARD static bool TKey(const char* at, size_t n)
 {
     return n == 2 && at[1] >= '0' && at[1] <= '9';
 }
 
-static bool NoKey(const char* at, size_t n)
+MLOC_NODISCARD static bool NoKey(const char* at, size_t n)
 {
     (void)at;
     (void)n;

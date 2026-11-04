@@ -8,17 +8,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static bool IsLower(char c)
+MLOC_NODISCARD static bool IsLower(char c)
 {
     return c >= 'a' && c <= 'z';
 }
 
-static bool IsUpper(char c)
+MLOC_NODISCARD static bool IsUpper(char c)
 {
     return c >= 'A' && c <= 'Z';
 }
 
-static bool IsDigit(char c)
+MLOC_NODISCARD static bool IsDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
@@ -42,7 +42,7 @@ static size_t TextLength(const char* field, size_t size)
     return n;
 }
 
-static bool ValidLanguage(const char* language, size_t length)
+MLOC_NODISCARD static bool ValidLanguage(const char* language, size_t length)
 {
     if (length < 2 || length > 8 || length == 4)
     {
@@ -58,19 +58,19 @@ static bool ValidLanguage(const char* language, size_t length)
     return true;
 }
 
-static bool ValidScript(const char* script, size_t length)
+MLOC_NODISCARD static bool ValidScript(const char* script, size_t length)
 {
     return length == 0 || (length == 4 && IsUpper(script[0]) && IsLower(script[1]) &&
                            IsLower(script[2]) && IsLower(script[3]));
 }
 
-static bool ValidRegion(const char* region, size_t length)
+MLOC_NODISCARD static bool ValidRegion(const char* region, size_t length)
 {
     return length == 0 || (length == 2 && IsUpper(region[0]) && IsUpper(region[1])) ||
            (length == 3 && IsDigit(region[0]) && IsDigit(region[1]) && IsDigit(region[2]));
 }
 
-static bool ValidTail(const char* tail, size_t length)
+MLOC_NODISCARD static bool ValidTail(const char* tail, size_t length)
 {
     size_t subtag = 0;
     for (size_t i = 0; i < length; i++)

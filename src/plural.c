@@ -41,13 +41,13 @@ typedef struct Rules
 
 static_assert(sizeof(Rules) == sizeof(mlocPluralRules), "the rules fill their opaque value");
 
-static bool ValidRule(uint8_t rule, uint8_t ordinal)
+MLOC_NODISCARD static bool ValidRule(uint8_t rule, uint8_t ordinal)
 {
     return rule == pluralNone ||
            (rule < mlocPluralRuleSetCount && mlocPluralRuleSets[rule].ordinal == ordinal);
 }
 
-static bool ValidTable(const uint8_t* table)
+MLOC_NODISCARD static bool ValidTable(const uint8_t* table)
 {
     for (int k = 0; k < pluralRangeSize; k++)
     {
@@ -170,7 +170,7 @@ mlocPluralCategory mlocSelectPluralRule(uint8_t rule, const mlocPluralOperands* 
 // The rules of an opaque value, or false when the library did not make
 // it. Only the header is read here: the range table is checked byte by
 // byte where it is read.
-static bool Read(const mlocPluralRules* opaque, Rules* rules)
+MLOC_NODISCARD static bool Read(const mlocPluralRules* opaque, Rules* rules)
 {
     if (opaque == nullptr)
     {

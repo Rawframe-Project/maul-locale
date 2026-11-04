@@ -41,8 +41,8 @@ SpelloutParts mlocReadSpelloutParts(const SpelloutRules* r, const SpelloutRule* 
 // The text of a delimiter's pieces (from, to), and whether it holds the
 // plural block. Text pieces between two cuts are one at most, so a
 // delimiter without the block is one piece or none.
-bool mlocSpelloutDelimiter(const SpelloutRules* r, const SpelloutParts* parts, uint32_t from,
-                           uint32_t to, SpelloutText* textOut);
+MLOC_NODISCARD bool mlocSpelloutDelimiter(const SpelloutRules* r, const SpelloutParts* parts,
+                                          uint32_t from, uint32_t to, SpelloutText* textOut);
 
 // NFRule::findText, strict: where a key is found at or after a position
 // and the length found, or -1. For a rule with a plural block, whatever

@@ -43,8 +43,8 @@ static const uint32_t s_groupKinds[spelloutGroupCount] = {kindSpelloutRules, kin
 
 // A group's unit, the first along the locale's chain, and whether it is
 // root's for a locale that is not root.
-static bool FindGroup(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                      DataSpan* spanOut, bool* rootOut)
+MLOC_NODISCARD static bool FindGroup(const mlocDataSet* data, const mlocLocale* locale,
+                                     uint32_t kind, DataSpan* spanOut, bool* rootOut)
 {
     bool fellBack = false;
     DataView view;
@@ -59,7 +59,8 @@ static bool FindGroup(const mlocDataSet* data, const mlocLocale* locale, uint32_
     return true;
 }
 
-static bool NameIs(const SpelloutRules* r, const uint8_t* set, const char* name, size_t length)
+MLOC_NODISCARD static bool NameIs(const SpelloutRules* r, const uint8_t* set, const char* name,
+                                  size_t length)
 {
     return set[2] == length && memcmp(r->text + mlocLoad16(set), name, length) == 0;
 }
@@ -134,8 +135,8 @@ static mlocResult FindNamedSet(const mlocDataSet* data, const mlocLocale* locale
 // Whether the first word is titlecased in a context, as ICU decides: at
 // the beginning of a sentence always, in a list or menu or alone as the
 // locale's number-spellout transforms say.
-static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale,
-                        mlocCapitalization capitalization)
+MLOC_NODISCARD static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale,
+                                       mlocCapitalization capitalization)
 {
     uint8_t contexts =
         capitalization == mloc_capitalizationNone || capitalization == mloc_capitalizationSentence
@@ -180,7 +181,7 @@ static mlocResult Complete(SpelloutFormat* f, const mlocDataSet* data, const mlo
     return found == mloc_fellBack || core == mloc_fellBack ? mloc_fellBack : mloc_success;
 }
 
-static bool ValidOptions(const mlocSpelloutOptions* options)
+MLOC_NODISCARD static bool ValidOptions(const mlocSpelloutOptions* options)
 {
     return options == nullptr ||
            ((uint32_t)options->capitalization <= (uint32_t)mloc_capitalizationStandAlone);
@@ -250,7 +251,8 @@ mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocL
 
 // A formatter the library made, copied out, with its core or (to format,
 // which seldom reads it) without; false for any other.
-static bool ReadFormatter(const mlocSpelloutFormatter* opaque, bool withCore, SpelloutFormat* f)
+MLOC_NODISCARD static bool ReadFormatter(const mlocSpelloutFormatter* opaque, bool withCore,
+                                         SpelloutFormat* f)
 {
     if (opaque == nullptr || !mlocFlagAt(opaque, offsetof(SpelloutFormat, capitalize)) ||
         !mlocFlagAt(opaque, offsetof(SpelloutFormat, turkic)))

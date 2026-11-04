@@ -74,7 +74,8 @@ size_t mlocSearchPieceStart(const CollationRoot* root, const CollationSettings* 
 
 // ICU4C's CollationElementIterator::next: the next 32-bit half and its
 // range, relative to the iterator's text; false at its end.
-bool mlocSearchNextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut, uint32_t* highOut);
+MLOC_NODISCARD bool mlocSearchNextHalf(SearchElements* e, uint32_t* halfOut, uint32_t* lowOut,
+                                       uint32_t* highOut);
 
 // ICU4C's processCE on a 32-bit half, keeping its shifted state in e: 0
 // for one passed over.
@@ -88,7 +89,7 @@ uint64_t mlocSearchNextElement(SearchElements* e, uint32_t* lowOut, uint32_t* hi
 // 32-bit halves: masked to the strength, a variable one dropped when
 // shifted below the quaternary strength); usearch refuses a pattern
 // with none.
-bool mlocSearchHasElements(const CollationRoot* root, const CollationSettings* settings,
-                           NfdText text);
+MLOC_NODISCARD bool mlocSearchHasElements(const CollationRoot* root,
+                                          const CollationSettings* settings, NfdText text);
 
 #endif

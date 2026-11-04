@@ -95,11 +95,12 @@ const Cei* mlocSearchAt(Find* f, uint32_t index);
 
 // ICU4C's midcluster rule: the next element starts a primary inside its
 // code point's range, at a normalization boundary.
-bool mlocSearchMidCluster(const Find* f, const Cei* last, const Cei* next, uint32_t maxLimit);
+MLOC_NODISCARD bool mlocSearchMidCluster(const Find* f, const Cei* last, const Cei* next,
+                                         uint32_t maxLimit);
 
 // Whether the text between the bounds has the pattern's NFD, at the
 // identical strength.
-bool mlocSearchIdentical(const Find* f, size_t start, size_t end);
+MLOC_NODISCARD bool mlocSearchIdentical(const Find* f, size_t start, size_t end);
 
 // A position inside a code point moved to its start.
 size_t mlocSearchAlign(NfdText t, size_t at);

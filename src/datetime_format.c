@@ -56,7 +56,7 @@ typedef struct DateTimeFormat
 static_assert(sizeof(DateTimeFormat) <= sizeof(mlocDateTimeFormatter),
               "a date-time formatter fits its value");
 
-static bool ValidOptions(const mlocDateTimeOptions* o)
+MLOC_NODISCARD static bool ValidOptions(const mlocDateTimeOptions* o)
 {
     bool standard = o->date.style != mloc_dateStyleNone;
     return mlocValidDateOptions(&o->date) && mlocValidTimeOptions(&o->time) &&
@@ -67,7 +67,7 @@ static bool ValidOptions(const mlocDateTimeOptions* o)
 
 // Whether a weekday-with-time pattern holds only a weekday and the
 // fields the time formatter writes.
-static bool WritableWhole(const uint8_t* pattern, uint32_t length)
+MLOC_NODISCARD static bool WritableWhole(const uint8_t* pattern, uint32_t length)
 {
     for (uint32_t at = 0; at < length;)
     {
@@ -89,7 +89,8 @@ static bool WritableWhole(const uint8_t* pattern, uint32_t length)
 
 // The weekday-with-time patterns of the options: the time's clock, the
 // weekday's width (long EEEE, else EEE) and the time's precision.
-static bool FindWhole(DateTimeFormat* f, const mlocDateTimeOptions* o, const TimeChoice* c)
+MLOC_NODISCARD static bool FindWhole(DateTimeFormat* f, const mlocDateTimeOptions* o,
+                                     const TimeChoice* c)
 {
     uint32_t base =
         dateTimeWeekday + (c->twelve ? 0 : 6) + (o->date.length == mloc_dateLengthLong ? 0 : 3);
@@ -117,8 +118,8 @@ static bool FindWhole(DateTimeFormat* f, const mlocDateTimeOptions* o, const Tim
 
 // A range's glues: each length's of the formatter's kind, checked, and
 // the Gregorian medium standard glue.
-static bool FindRangeGlues(DateTimeFormat* f, const DateLocale* shared, const TimeChoice* c,
-                           uint32_t kind)
+MLOC_NODISCARD static bool FindRangeGlues(DateTimeFormat* f, const DateLocale* shared,
+                                          const TimeChoice* c, uint32_t kind)
 {
     const DatePatterns* gregorian = &shared->units.patterns;
     const uint8_t* set = nullptr;
@@ -225,7 +226,8 @@ mlocResult mlocInitDateTimeFormatterIn(const mlocDataSet* data, const mlocLocale
 
 // A formatter the library made, copied out, with a zone or without as
 // asked; false for any other.
-static bool ReadFormatter(const mlocDateTimeFormatter* opaque, bool zoned, DateTimeFormat* f)
+MLOC_NODISCARD static bool ReadFormatter(const mlocDateTimeFormatter* opaque, bool zoned,
+                                         DateTimeFormat* f)
 {
     if (opaque == nullptr)
     {

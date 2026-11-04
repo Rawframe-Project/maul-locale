@@ -44,7 +44,7 @@ typedef struct Choice
     bool nan;
 } Choice;
 
-static bool Is(const char* value, size_t length, const char* text)
+MLOC_NODISCARD static bool Is(const char* value, size_t length, const char* text)
 {
     return strlen(text) == length && memcmp(value, text, length) == 0;
 }
@@ -113,7 +113,8 @@ static void ExponentsOf(const UnitTable* t, const UnitId* id, Exponents* out)
     }
 }
 
-static bool QuantityMatches(const uint8_t* q, const int32_t* numerator, const int32_t* denominator)
+MLOC_NODISCARD static bool QuantityMatches(const uint8_t* q, const int32_t* numerator,
+                                           const int32_t* denominator)
 {
     for (uint32_t d = 0; d < unitMaxDimensions; d++)
     {
@@ -196,7 +197,8 @@ static size_t PowerPrefix(int32_t power, char* out)
 // Appends a side of base units to an identifier, in the dimensions'
 // normalization order, each with its power; false when it does not fit
 // or a power passes 15.
-static bool AppendSide(const UnitTable* t, const int32_t* exponents, char* out, size_t* at)
+MLOC_NODISCARD static bool AppendSide(const UnitTable* t, const int32_t* exponents, char* out,
+                                      size_t* at)
 {
     // The table's validator holds its dimensions to the exponents' room.
     MLOC_ASSERT(t->dimensionCount <= unitMaxDimensions);

@@ -30,7 +30,7 @@ static uint32_t Ce32Of(const Collator* c, uint32_t codePoint, const CollationRoo
     return mlocTrieValue(&c->root.trie, codePoint);
 }
 
-static bool IsContext(uint32_t ce32, uint32_t tag)
+MLOC_NODISCARD static bool IsContext(uint32_t ce32, uint32_t tag)
 {
     return mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 && mlocCe32Tag(ce32) == tag;
 }
@@ -42,8 +42,8 @@ typedef bool (*ContractionVisitor)(void* context, uint32_t first, const uint8_t*
 // ContractionsAndExpansions finds them without prefixes: a prefix list's
 // default followed, a contraction list's entries given. False when the
 // visitor refuses one.
-static bool Contractions(const Collator* c, uint32_t codePoint, ContractionVisitor visit,
-                         void* context)
+MLOC_NODISCARD static bool Contractions(const Collator* c, uint32_t codePoint,
+                                        ContractionVisitor visit, void* context)
 {
     const CollationRoot* unit = nullptr;
     uint32_t ce32 = Ce32Of(c, codePoint, &unit);
@@ -70,7 +70,8 @@ static bool Contractions(const Collator* c, uint32_t codePoint, ContractionVisit
     return true;
 }
 
-static bool AddLabel(void* context, uint32_t first, const uint8_t* words, uint32_t count)
+MLOC_NODISCARD static bool AddLabel(void* context, uint32_t first, const uint8_t* words,
+                                    uint32_t count)
 {
     IndexCandidates* out = context;
     if (out->labelCount == indexMaxLabels)
@@ -84,7 +85,8 @@ static bool AddLabel(void* context, uint32_t first, const uint8_t* words, uint32
 // ICU4C's firstStringsInScript: a boundary whose sample is a letter or
 // unassigned stands for a script; the others for the special groups. (A
 // Hangul sample is in the data as its jamo, the first a letter too.)
-static bool AddScript(void* context, uint32_t first, const uint8_t* words, uint32_t count)
+MLOC_NODISCARD static bool AddScript(void* context, uint32_t first, const uint8_t* words,
+                                     uint32_t count)
 {
     IndexCandidates* out = context;
     uint32_t sample = mlocLoad32(words);
@@ -103,7 +105,7 @@ static bool AddScript(void* context, uint32_t first, const uint8_t* words, uint3
 
 // Whether a contraction label ends in a letter A to Z, after which
 // ICU4C adds the ASCII labels for the pinyin ones to show as.
-static bool EndsInAscii(const IndexText* t)
+MLOC_NODISCARD static bool EndsInAscii(const IndexText* t)
 {
     uint32_t last = t->length > 0 ? mlocLoad32(t->bytes + (size_t)(t->length - 1) * 4) : t->first;
     return last >= 'A' && last <= 'Z';

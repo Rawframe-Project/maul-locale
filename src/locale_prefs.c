@@ -37,7 +37,7 @@ typedef struct Prefs
     uint32_t localeCount;
 } Prefs;
 
-static bool ReadPrefs(DataSpan span, Prefs* p)
+MLOC_NODISCARD static bool ReadPrefs(DataSpan span, Prefs* p)
 {
     if (span.size < preferHeaderSize)
     {
@@ -54,12 +54,12 @@ static bool ReadPrefs(DataSpan span, Prefs* p)
            span.size;
 }
 
-static bool ValidDay(uint8_t day)
+MLOC_NODISCARD static bool ValidDay(uint8_t day)
 {
     return day >= 1 && day <= 7;
 }
 
-static bool ValidRegions(const Prefs* p)
+MLOC_NODISCARD static bool ValidRegions(const Prefs* p)
 {
     bool world = false;
     for (uint32_t i = 0; i < p->regionCount; i++)
@@ -159,7 +159,7 @@ static const uint8_t* LocaleHours(const Prefs* p, uint32_t language, uint32_t re
     return nullptr;
 }
 
-static bool Is(const char* value, size_t length, const char* text)
+MLOC_NODISCARD static bool Is(const char* value, size_t length, const char* text)
 {
     return strlen(text) == length && memcmp(value, text, length) == 0;
 }

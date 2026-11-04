@@ -180,7 +180,7 @@ const char* mlocKoreanSubjectStem(const uint8_t* word, size_t length)
 }
 
 // Copies text into out[*at, room); false when it does not fit.
-static bool Put(const char* text, size_t length, char* out, size_t room, size_t* at)
+MLOC_NODISCARD static bool Put(const char* text, size_t length, char* out, size_t room, size_t* at)
 {
     if (*at + length > room)
     {

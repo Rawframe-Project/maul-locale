@@ -82,7 +82,7 @@ static uint8_t GenderRule(const GenderContext* c, uint32_t structure)
 
 // Whether a rule fixes a gender, or gives none (ICU's rule of a length
 // other than 1).
-static bool Fixed(uint8_t rule)
+MLOC_NODISCARD static bool Fixed(uint8_t rule)
 {
     return rule != unitGenderFirst && rule != unitGenderSecond;
 }
@@ -103,8 +103,8 @@ static uint8_t Derived(uint8_t rule, uint8_t first, uint8_t second)
 // Narrows a unit with a denominator to the side the per rule picks;
 // false with the gender decided where the rule fixes one or the side is
 // empty.
-static bool PerSide(const GenderContext* c, const UnitId* id, int32_t* start, int32_t* end,
-                    uint8_t* decided)
+MLOC_NODISCARD static bool PerSide(const GenderContext* c, const UnitId* id, int32_t* start,
+                                   int32_t* end, uint8_t* decided)
 {
     uint8_t per = GenderRule(c, unitDerivePer);
     if (Fixed(per))

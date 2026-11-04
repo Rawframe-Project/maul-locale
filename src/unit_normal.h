@@ -31,8 +31,9 @@ mlocResult mlocParseNormalUnit(const mlocDataSet* data, const char* unit, size_t
 // Writes a normalized product as ICU's MeasureUnitImpl::serialize does
 // ("per-" before the first denominator unit, a constant after it or at
 // the end); false when it passes the room.
-bool mlocWriteNormalUnit(const UnitTable* t, const UnitPart* parts, uint32_t count,
-                         uint64_t constant, char* out, size_t room, size_t* lengthOut);
+MLOC_NODISCARD bool mlocWriteNormalUnit(const UnitTable* t, const UnitPart* parts, uint32_t count,
+                                        uint64_t constant, char* out, size_t room,
+                                        size_t* lengthOut);
 
 // Writes an identifier's normal form ("meter-per-second" for
 // "per-second-meter", "tonne" for "metric-ton"). Returns mloc_success;

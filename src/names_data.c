@@ -15,7 +15,7 @@
 #include <string.h>
 
 // Whether a byte may be in a code.
-static bool CodeByte(uint8_t c)
+MLOC_NODISCARD static bool CodeByte(uint8_t c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' ||
            c == ':' || c == '%';
@@ -164,8 +164,8 @@ static NameText EntryText(const uint8_t* offsets, const uint8_t* text, uint32_t 
 
 // Reads a code's field and name from a valid names unit; true when the
 // field is there.
-static bool UnitField(DataSpan unit, uint16_t index, NameField field, NameText* fieldOut,
-                      NameText* nameOut)
+MLOC_NODISCARD static bool UnitField(DataSpan unit, uint16_t index, NameField field,
+                                     NameText* fieldOut, NameText* nameOut)
 {
     // Both callers refuse a field past the last, and the index is one
     // mlocFindNameId found in an ids unit of at most nameMaxCodes codes,
@@ -212,7 +212,7 @@ static bool UnitField(DataSpan unit, uint16_t index, NameField field, NameText* 
     return false;
 }
 
-static bool Find(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool Find(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)depth;
     Finding* f = context;
@@ -245,7 +245,7 @@ bool mlocFindName(const mlocDataSet* data, const mlocLocale* locale, const char*
     return out->text != nullptr;
 }
 
-static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
+MLOC_NODISCARD static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
 {
     (void)depth;
     NameChain* chain = context;

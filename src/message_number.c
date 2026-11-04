@@ -22,7 +22,7 @@ enum
     significantLimit = 21,
 };
 
-static bool IsDigit(uint8_t c)
+MLOC_NODISCARD static bool IsDigit(uint8_t c)
 {
     return c >= '0' && c <= '9';
 }
@@ -268,13 +268,14 @@ static uint16_t Increment(const NumberOption* option)
     return 0;
 }
 
-static bool NameIs(const uint8_t* name, size_t length, const char* text)
+MLOC_NODISCARD static bool NameIs(const uint8_t* name, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
 
 // Sets a digit size field and its bit; false for a bad value.
-static bool SetDigits(NumberValue* v, uint8_t* field, uint32_t bit, const NumberOption* option)
+MLOC_NODISCARD static bool SetDigits(NumberValue* v, uint8_t* field, uint32_t bit,
+                                     const NumberOption* option)
 {
     int digits = mlocDigitSize(option);
     if (digits < 0)
@@ -287,8 +288,9 @@ static bool SetDigits(NumberValue* v, uint8_t* field, uint32_t bit, const Number
 }
 
 // Sets an enumerated field and its bit; false for a bad value.
-static bool SetChoice(NumberValue* v, uint8_t* field, uint32_t bit, const NumberOption* option,
-                      const char* const* names, int count)
+MLOC_NODISCARD static bool SetChoice(NumberValue* v, uint8_t* field, uint32_t bit,
+                                     const NumberOption* option, const char* const* names,
+                                     int count)
 {
     int index = Choice(option, names, count);
     if (index < 0)
@@ -437,7 +439,7 @@ static uint32_t OptionsOf(NumberFunction function)
 
 // Sets a currency code from three ASCII letters in any case; false for
 // another value.
-static bool SetCode(NumberValue* v, const NumberOption* option)
+MLOC_NODISCARD static bool SetCode(NumberValue* v, const NumberOption* option)
 {
     if (!option->hasText || option->length != 3)
     {
@@ -457,7 +459,7 @@ static bool SetCode(NumberValue* v, const NumberOption* option)
 
 // Sets a unit or a usage from text that is lexically one; false for
 // another value.
-static bool SetUnitText(NumberValue* v, uint32_t bit, const NumberOption* option)
+MLOC_NODISCARD static bool SetUnitText(NumberValue* v, uint32_t bit, const NumberOption* option)
 {
     const char* text = (const char*)option->text;
     if (!option->hasText || !mlocUnitText(text, option->length) || option->length > UINT32_MAX)
@@ -478,7 +480,7 @@ static bool SetUnitText(NumberValue* v, uint32_t bit, const NumberOption* option
 // Sets a mloc:spellout value's rule set or numbering system from text
 // that is lexically one (as a unit identifier is), the other dropped;
 // false for another value.
-static bool SetRulesText(NumberValue* v, uint32_t bit, const NumberOption* option)
+MLOC_NODISCARD static bool SetRulesText(NumberValue* v, uint32_t bit, const NumberOption* option)
 {
     const char* text = (const char*)option->text;
     if (!option->hasText || !mlocUnitText(text, option->length) || option->length > UINT32_MAX)
@@ -492,7 +494,7 @@ static bool SetRulesText(NumberValue* v, uint32_t bit, const NumberOption* optio
 }
 
 // Sets one option by its bit; whether its value was good.
-static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
+MLOC_NODISCARD static bool SetByBit(NumberValue* v, uint32_t bit, const NumberOption* option)
 {
     switch (bit)
     {
@@ -757,7 +759,8 @@ NumberValue mlocNumberKey(const NumberValue* value)
     return key;
 }
 
-static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categoryOut)
+MLOC_NODISCARD static bool Keyword(const uint8_t* key, size_t length,
+                                   mlocPluralCategory* categoryOut)
 {
     for (int i = 0; i < (int)(sizeof(s_keywords) / sizeof(s_keywords[0])); i++)
     {

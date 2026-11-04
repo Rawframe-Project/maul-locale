@@ -132,7 +132,7 @@ int mlocParseUpper(const uint8_t* sets, uint32_t cp, uint32_t* out)
 // Whether two code points are equal or fold alike (ICU's
 // codePointsEqual); with units set, only those of the BMP fold, as ICU's
 // prefix comparison folds UTF-16 units.
-static bool SameFolded(const uint8_t* sets, uint32_t a, uint32_t b, bool units)
+MLOC_NODISCARD static bool SameFolded(const uint8_t* sets, uint32_t a, uint32_t b, bool units)
 {
     if (a == b)
     {
@@ -247,7 +247,7 @@ static const uint8_t* Symbol(const Formatter* f, NumberSymbol s, size_t* lengthO
     return f->core.symbolText + f->core.symbolStart[s];
 }
 
-static bool SeenNumber(const Parsed* p)
+MLOC_NODISCARD static bool SeenNumber(const Parsed* p)
 {
     return p->quantity.present || (p->flags & (parsedNaN | parsedInfinity)) != 0;
 }
@@ -276,7 +276,7 @@ static uint32_t SymbolClass(MatcherKind kind, NumberSymbol* symbolOut)
 }
 
 // Whether a symbol matcher is off for what was parsed.
-static bool SymbolDisabled(const Matcher* m, const Parsed* p)
+MLOC_NODISCARD static bool SymbolDisabled(const Matcher* m, const Parsed* p)
 {
     switch (m->kind)
     {
@@ -423,12 +423,12 @@ typedef struct Seen
     size_t length;
 } Seen;
 
-static bool SeenIs(const Seen* seen)
+MLOC_NODISCARD static bool SeenIs(const Seen* seen)
 {
     return seen->text != nullptr;
 }
 
-static bool InClass(const uint8_t* sets, uint32_t set, uint32_t cp)
+MLOC_NODISCARD static bool InClass(const uint8_t* sets, uint32_t set, uint32_t cp)
 {
     if (set == setAll)
     {
@@ -452,7 +452,7 @@ uint32_t mlocParseChooseSet(const uint8_t* sets, const uint8_t* text, size_t len
 
 // Whether a separator's set holds a code point: its class, all the
 // separators, or its own first code point.
-static bool InSet(const Parser* r, uint32_t set, uint32_t own, uint32_t cp)
+MLOC_NODISCARD static bool InSet(const Parser* r, uint32_t set, uint32_t own, uint32_t cp)
 {
     if (cp == parseNoCodePoint)
     {
@@ -465,7 +465,7 @@ static bool InSet(const Parser* r, uint32_t set, uint32_t own, uint32_t cp)
 // set. With both separators' sets static ICU takes the static lead set,
 // whose separators are the strict ones in lenient mode and all of them in
 // strict mode, as ICU 79 has it.
-static bool MayLead(const Parser* r, const DecimalConfig* c, const Segment* s)
+MLOC_NODISCARD static bool MayLead(const Parser* r, const DecimalConfig* c, const Segment* s)
 {
     size_t size = 0;
     uint32_t cp = First(s, &size);
@@ -498,7 +498,8 @@ typedef struct Group
 
 // ICU's DecimalMatcher::validateGroup: the strict sizes, or in lenient
 // mode no middle group of one digit.
-static bool ValidGroup(const Parser* r, const DecimalConfig* c, const Group* g, bool primary)
+MLOC_NODISCARD static bool ValidGroup(const Parser* r, const DecimalConfig* c, const Group* g,
+                                      bool primary)
 {
     if (!c->strictGrouping)
     {
@@ -609,8 +610,9 @@ static void RemoveDigits(Quantity* q, uint32_t n)
 // group sizes that fail (in strict mode clearing the digits, but for a
 // trailing grouping separator, which the back-off handles), or in strict
 // mode two grouping separators in a row.
-static bool SeparatorEnds(const Parser* r, const DecimalConfig* c, bool isDecimal, bool isGrouping,
-                          const Group* curr, const Group* prev, Quantity* q)
+MLOC_NODISCARD static bool SeparatorEnds(const Parser* r, const DecimalConfig* c, bool isDecimal,
+                                         bool isGrouping, const Group* curr, const Group* prev,
+                                         Quantity* q)
 {
     if ((isDecimal && c->integerOnly) || (curr->type == 2 && isGrouping))
     {
@@ -663,8 +665,8 @@ static void ReadDigits(const Parser* r, const DecimalConfig* c, Segment* s, Quan
 // ICU's back-off after the loop: a trailing grouping separator is not
 // read, and in lenient mode a group of one digit gives its digits back;
 // false when the grouping fails.
-static bool CheckGroups(const Parser* r, const DecimalConfig* c, Segment* s, Quantity* q,
-                        Group* curr, Group* prev)
+MLOC_NODISCARD static bool CheckGroups(const Parser* r, const DecimalConfig* c, Segment* s,
+                                       Quantity* q, Group* curr, Group* prev)
 {
     if (curr->type != 2 && curr->count == 0)
     {
@@ -694,7 +696,7 @@ static bool CheckGroups(const Parser* r, const DecimalConfig* c, Segment* s, Qua
 }
 
 // An exponent's digits as a number, false past 999,999,999.
-static bool ExponentOf(const Quantity* q, int64_t* out)
+MLOC_NODISCARD static bool ExponentOf(const Quantity* q, int64_t* out)
 {
     int64_t value = 0;
     for (uint32_t i = 0; i < q->count + q->zeros; i++)

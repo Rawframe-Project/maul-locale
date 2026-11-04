@@ -25,12 +25,13 @@ MLOC_NODISCARD bool mlocValidUnitDerivations(const DataView* view, DataSpan payl
 
 // The code of an identifier in a valid identifiers unit, and its kind
 // (a unitId value); false when the unit lacks it.
-bool mlocFindUnitNameId(DataSpan ids, const char* id, size_t length, uint16_t* codeOut,
-                        uint8_t* kindOut);
+MLOC_NODISCARD bool mlocFindUnitNameId(DataSpan ids, const char* id, size_t length,
+                                       uint16_t* codeOut, uint8_t* kindOut);
 
 // An identifier's kind in the first source of a set with the
 // identifiers; false when none has them or that one lacks it.
-bool mlocUnitNameKind(const mlocDataSet* data, const char* id, size_t length, uint8_t* kindOut);
+MLOC_NODISCARD bool mlocUnitNameKind(const mlocDataSet* data, const char* id, size_t length,
+                                     uint8_t* kindOut);
 
 // A unit's fields of a kind (a width's names, or the extras), each from
 // the first key along the chain that gives it.
@@ -43,15 +44,17 @@ typedef struct UnitNameFields
 
 // Gathers an identifier's fields of a kind along a locale's chain; false
 // when the chain cannot be walked.
-bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                         const char* id, size_t length, UnitNameFields* out);
+MLOC_NODISCARD bool mlocGatherUnitNames(const mlocDataSet* data, const mlocLocale* locale,
+                                        uint32_t kind, const char* id, size_t length,
+                                        UnitNameFields* out);
 
 // Gathers an identifier's patterns of a case past the nominative from the
 // case rows of a kind (kindUnitCases, kindUnitCasesLowered) along the
 // locale's chain, as mlocGatherUnitNames: the fields zero to other from
 // 0. False for a case out of range, or data without the kind.
-bool mlocGatherUnitCases(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                         uint32_t caseIndex, const char* id, size_t length, UnitNameFields* out);
+MLOC_NODISCARD bool mlocGatherUnitCases(const mlocDataSet* data, const mlocLocale* locale,
+                                        uint32_t kind, uint32_t caseIndex, const char* id,
+                                        size_t length, UnitNameFields* out);
 
 // The features a derivation gives.
 enum
@@ -68,8 +71,9 @@ enum
 // in value0 (unitGenderFirst, unitGenderSecond, a gender's index or
 // unitDerivedNone) and unitDerivedNone in value1. False when the data
 // has no derivations.
-bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint32_t feature,
-                        uint32_t structure, uint8_t* value0Out, uint8_t* value1Out);
+MLOC_NODISCARD bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale,
+                                       uint32_t feature, uint32_t structure, uint8_t* value0Out,
+                                       uint8_t* value1Out);
 
 // Whether a patterns unit is a table of one record whose string indexes
 // are in range, its coordinate patterns each holding "{0}" once.
@@ -84,6 +88,7 @@ typedef struct UnitPatternTexts
 
 // Finds a locale's patterns along its main chain; false when the data has
 // none or the chain cannot be walked.
-bool mlocFindUnitPatterns(const mlocDataSet* data, const mlocLocale* locale, UnitPatternTexts* out);
+MLOC_NODISCARD bool mlocFindUnitPatterns(const mlocDataSet* data, const mlocLocale* locale,
+                                         UnitPatternTexts* out);
 
 #endif

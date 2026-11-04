@@ -21,7 +21,7 @@ enum
     maxMinInteger = 21,
 };
 
-static bool IsCompact(uint32_t notation)
+MLOC_NODISCARD static bool IsCompact(uint32_t notation)
 {
     return notation == mloc_notationCompactShort || notation == mloc_notationCompactLong;
 }
@@ -252,7 +252,7 @@ mlocResult mlocWriteFormatted(const Formatter* f, const Outer* outer, const mloc
     return r;
 }
 
-static bool CheckArguments(const mlocDecimal* decimal, const mlocOutput* output)
+MLOC_NODISCARD static bool CheckArguments(const mlocDecimal* decimal, const mlocOutput* output)
 {
     return decimal != nullptr && output != nullptr &&
            (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);
@@ -314,7 +314,7 @@ bool mlocShownDecimal(const Formatter* f, const mlocDecimal* decimal, mlocDecima
 
 // Whether two ends share their affixes: one sign, one pattern. The rest
 // of their cores is the formatter's.
-static bool SameAffixes(const Prepared* a, const Prepared* b)
+MLOC_NODISCARD static bool SameAffixes(const Prepared* a, const Prepared* b)
 {
     return a->sign == b->sign && a->core->affixText == b->core->affixText &&
            memcmp(a->core->affixStart, b->core->affixStart, sizeof(a->core->affixStart)) == 0 &&
@@ -322,7 +322,7 @@ static bool SameAffixes(const Prepared* a, const Prepared* b)
 }
 
 // Whether two prepared ends write alike.
-static bool Alike(const Prepared* a, const Prepared* b)
+MLOC_NODISCARD static bool Alike(const Prepared* a, const Prepared* b)
 {
     return mlocSameDecimal(&a->decimal, &b->decimal) && SameAffixes(a, b) &&
            a->layout.exponent == b->layout.exponent && a->layout.noNumber == b->layout.noNumber;
@@ -331,7 +331,7 @@ static bool Alike(const Prepared* a, const Prepared* b)
 // Whether text starts (or ends) with Pattern_White_Space, which ICU
 // takes as spacing already in a range pattern: U+0009 to U+000D, U+0020,
 // U+0085, U+200E, U+200F, U+2028 and U+2029.
-static bool IsSpace(const uint8_t* text, size_t length, bool atEnd)
+MLOC_NODISCARD static bool IsSpace(const uint8_t* text, size_t length, bool atEnd)
 {
     static const char* const s_spaces[] = {
         "\x09",     "\x0A",         "\x0B",         "\x0C",         "\x0D",        " ",

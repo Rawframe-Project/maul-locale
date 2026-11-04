@@ -23,7 +23,7 @@ typedef struct Find
     DataSpan unit;
 } Find;
 
-static bool TakeType(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool TakeType(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)view;
     (void)depth;
@@ -47,7 +47,7 @@ static DataSpan FindType(const mlocDataSet* data, const mlocLocale* locale, uint
     return find.unit;
 }
 
-static bool KeywordIs(const mlocLocale* locale, const char* key, const char* value)
+MLOC_NODISCARD static bool KeywordIs(const mlocLocale* locale, const char* key, const char* value)
 {
     const char* found = nullptr;
     size_t length = mlocFindKeyword(locale, key, &found);
@@ -176,7 +176,7 @@ mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
 
 // Whether a segmenter's overrides are none, or one set of the code table
 // whole.
-static bool KnownOverrides(const Segmenter* s)
+MLOC_NODISCARD static bool KnownOverrides(const Segmenter* s)
 {
     if (s->overrides == nullptr)
     {
@@ -195,7 +195,7 @@ static bool KnownOverrides(const Segmenter* s)
 
 // Whether a segmenter's queued breaks start within the text fed: each is
 // a break the iterator gave, so none passes the end of the piece.
-static bool QueueInText(const Segmenter* s)
+MLOC_NODISCARD static bool QueueInText(const Segmenter* s)
 {
     return s->queueCount == 0 || s->queueBase <= s->pieceStart ||
            s->queueBase - s->pieceStart <= s->pieceLength;
@@ -204,7 +204,7 @@ static bool QueueInText(const Segmenter* s)
 // Whether a segmenter's bool and enumeration bytes hold what one stores:
 // each bool's byte 0 or 1, read before the bool is, the filters a set
 // made, and the class and the terminator run within their ranges.
-static bool KnownBytes(const Segmenter* s)
+MLOC_NODISCARD static bool KnownBytes(const Segmenter* s)
 {
     static const size_t flags[] = {
         offsetof(Segmenter, started),     offsetof(Segmenter, iteratorWaits),
@@ -302,7 +302,7 @@ static mlocResult Status(muniResult r)
 // bytes a filter may wait on, so their distances from the first fit; false
 // for a segmenter whose queue was changed so that they do not, or so that
 // a break comes before the first.
-static bool Push(Segmenter* s, size_t offset)
+MLOC_NODISCARD static bool Push(Segmenter* s, size_t offset)
 {
     if (s->queueCount == 0)
     {

@@ -59,7 +59,7 @@ mlocResult mlocInitListFormatter(const mlocDataSet* data, const mlocLocale* loca
 }
 
 // A formatter the library made, copied out; false for any other.
-static bool ReadFormatter(const mlocListFormatter* opaque, ListFormat* f)
+MLOC_NODISCARD static bool ReadFormatter(const mlocListFormatter* opaque, ListFormat* f)
 {
     if (opaque == nullptr)
     {

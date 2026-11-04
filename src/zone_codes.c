@@ -125,7 +125,7 @@ mlocResult mlocFormatTimeZoneBcp47(const mlocDataSet* data, const mlocTimeZone* 
 
 // A region as the mappings store it: "001" for none, two letters upper
 // case and a zero byte, or three digits; false when it is none of those.
-static bool RegionOf(const char* region, size_t length, uint8_t out[3])
+MLOC_NODISCARD static bool RegionOf(const char* region, size_t length, uint8_t out[3])
 {
     out[0] = length == 0 ? '0' : 0;
     out[1] = length == 0 ? '0' : 0;

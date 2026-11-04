@@ -241,10 +241,11 @@ const uint8_t* mlocParseClassString(const ParseClassView* c, uint32_t index, siz
 
 // Whether a class holds a symbol: its one code point, or one of the
 // class's strings (ICU's UnicodeSet::contains of a string).
-bool mlocParseHoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text, size_t length);
+MLOC_NODISCARD bool mlocParseHoldsSymbol(const uint8_t* sets, uint32_t set, const uint8_t* text,
+                                         size_t length);
 
 // Whether a class of the parse sets holds a code point.
-bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp);
+MLOC_NODISCARD bool mlocParseHas(const uint8_t* sets, uint32_t set, uint32_t cp);
 
 // A code point's full uppercase by the parse sets (u_strToUpper's default
 // rules): one to three code points into out, and their count.
@@ -266,7 +267,7 @@ size_t mlocParsePrefix(const uint8_t* sets, const Segment* segment, const uint8_
 
 // Whether the affix a matcher names is the one a parse matched (ICU's
 // AffixMatcher::matched): both none, or equal patterns.
-bool mlocParseMatched(const Parser* parser, int8_t affix, int8_t seen);
+MLOC_NODISCARD bool mlocParseMatched(const Parser* parser, int8_t affix, int8_t seen);
 
 // Runs a matcher at a segment with text left.
 void mlocParseMatch(const Parser* parser, const Matcher* matcher, Segment* segment, Parsed* parsed);

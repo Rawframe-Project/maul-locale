@@ -34,7 +34,7 @@ void mlocGetDataVersion(mlocDataVersion* versionOut)
     memcpy(versionOut->tzdb, MLOC_DATA_TZDB, sizeof(MLOC_DATA_TZDB) - 1);
 }
 
-static bool IsHeader(const uint8_t* bytes, size_t size)
+MLOC_NODISCARD static bool IsHeader(const uint8_t* bytes, size_t size)
 {
     return size >= dataHeaderSize && memcmp(bytes + headerMagic, MLOC_DATA_MAGIC, 4) == 0 &&
            mlocLoad16(bytes + headerFormat) == dataFormatVersion &&
@@ -68,7 +68,7 @@ mlocResult mlocReadDataVersion(const void* bytes, size_t size, mlocDataVersion* 
 }
 
 // Whether two versions are equal but perhaps in the tzdb release.
-static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
+MLOC_NODISCARD static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
 {
     return memcmp(&a->cldr, &b->cldr, sizeof(a->cldr)) == 0 &&
            memcmp(&a->unicode, &b->unicode, sizeof(a->unicode)) == 0 && a->format == b->format &&
@@ -77,7 +77,7 @@ static bool SameButRelease(const mlocDataVersion* a, const mlocDataVersion* b)
 
 // Whether a file holds zones units alone: a zones file, which may be of
 // another tzdb release than the library's.
-static bool OnlyZones(const DataView* view)
+MLOC_NODISCARD static bool OnlyZones(const DataView* view)
 {
     for (uint32_t i = 0; i < view->unitCount; i++)
     {
@@ -117,12 +117,12 @@ static int CompareIds(const uint8_t* a, size_t aLength, const uint8_t* b, size_t
     return aLength < bLength ? -1 : aLength > bLength;
 }
 
-static bool IsIdByte(uint8_t c)
+MLOC_NODISCARD static bool IsIdByte(uint8_t c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
-static bool ValidLocales(const DataView* view)
+MLOC_NODISCARD static bool ValidLocales(const DataView* view)
 {
     const uint8_t* previous = nullptr;
     uint32_t previousLength = 0;
@@ -167,8 +167,8 @@ static const DataKind* FindKind(const DataKind* kinds, uint32_t count, uint32_t 
     return nullptr;
 }
 
-static bool ValidUnits(const DataView* view, uint32_t payloadStart, const DataKind* kinds,
-                       uint32_t kindCount)
+MLOC_NODISCARD static bool ValidUnits(const DataView* view, uint32_t payloadStart,
+                                      const DataKind* kinds, uint32_t kindCount)
 {
     uint64_t previous = 0;
     for (uint32_t i = 0; i < view->unitCount; i++)
@@ -198,7 +198,8 @@ static bool ValidUnits(const DataView* view, uint32_t payloadStart, const DataKi
 }
 
 // The tables' bounds and order; the header's own fields are checked.
-static bool ValidTables(const DataView* view, const DataKind* kinds, uint32_t kindCount)
+MLOC_NODISCARD static bool ValidTables(const DataView* view, const DataKind* kinds,
+                                       uint32_t kindCount)
 {
     uint64_t tablesEnd = dataHeaderSize + (uint64_t)view->unitCount * dataUnitSize +
                          (uint64_t)view->localeCount * dataLocaleSize;
@@ -365,8 +366,9 @@ bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uin
 // The search of a unit table, taking the view's two fields by value so
 // that the set's loop keeps them in registers; where the key is, or on a
 // miss where it would be.
-static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
-                              uint32_t locale, DataSpan* spanOut, uint32_t* atOut)
+MLOC_NODISCARD static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount,
+                                             uint32_t kind, uint32_t locale, DataSpan* spanOut,
+                                             uint32_t* atOut)
 {
     uint64_t key = (uint64_t)kind << 32 | locale;
     uint32_t low = 0;
@@ -399,8 +401,8 @@ static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t
     return false;
 }
 
-static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
-                            uint32_t locale, DataSpan* spanOut)
+MLOC_NODISCARD static inline bool FindUnit(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
+                                           uint32_t locale, DataSpan* spanOut)
 {
     uint32_t at = 0;
     return FindUnitAt(bytes, unitCount, kind, locale, spanOut, &at);
@@ -427,7 +429,7 @@ bool mlocFindDataUnitOrKind(const DataView* view, uint32_t kind, uint32_t locale
     return false;
 }
 
-static inline bool HasKind(const DataView* view, uint32_t kind)
+MLOC_NODISCARD static inline bool HasKind(const DataView* view, uint32_t kind)
 {
     // The first unit at or after the kind's first key.
     uint32_t low = 0;
@@ -472,8 +474,8 @@ bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind)
 }
 
 // A unit for a locale id: the first source with the id and the unit.
-static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
-                           DataSpan* spanOut)
+MLOC_NODISCARD static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id,
+                                          size_t length, DataSpan* spanOut)
 {
     for (size_t i = 0; i < set->count; i++)
     {

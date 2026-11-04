@@ -49,7 +49,7 @@ typedef struct Writing
 } Writing;
 
 // Whether a field's next smaller one is a fraction (NextUnitFractional).
-static bool NextFraction(const DurationFormat* f, uint32_t field)
+MLOC_NODISCARD static bool NextFraction(const DurationFormat* f, uint32_t field)
 {
     return field >= mloc_durationSeconds && field < mloc_durationNanoseconds &&
            f->style[field + 1] == durationFieldFraction;
@@ -67,14 +67,14 @@ static void ValueWithFractions(const Writing* g, uint32_t field, mlocDecimal* ou
     mlocDurationValue(&g->fields, field, fractions, out);
 }
 
-static bool IsZero(const mlocDecimal* d)
+MLOC_NODISCARD static bool IsZero(const mlocDecimal* d)
 {
     return d->count == 0;
 }
 
 // FormatNumericUnits' choice of the fields shown, from the first numeric
 // one; false when none is.
-static bool PlanClock(Writing* g, uint32_t first)
+MLOC_NODISCARD static bool PlanClock(Writing* g, uint32_t first)
 {
     const DurationFormat* f = g->format;
     for (uint32_t i = 0; i < 3; i++)
@@ -244,7 +244,7 @@ static void WriteItems(const Writing* g, NumberWriter* w)
 
 // The duration formatter of an opaque value, its pool read in place, or
 // false when the library did not make it.
-static bool ReadDuration(const mlocDurationFormatter* opaque, DurationFormat* f)
+MLOC_NODISCARD static bool ReadDuration(const mlocDurationFormatter* opaque, DurationFormat* f)
 {
     if (opaque == nullptr ||
         !mlocReadFormatter(opaque, sizeof(*opaque), durationStamp, &f->formatter))

@@ -37,14 +37,14 @@ typedef struct Parser
     UnitId id;
 } Parser;
 
-static bool Is(const Parser* p, uint32_t i, const char* word)
+MLOC_NODISCARD static bool Is(const Parser* p, uint32_t i, const char* word)
 {
     size_t n = strlen(word);
     return p->tokens[i].length == n && memcmp(p->text + p->tokens[i].start, word, n) == 0;
 }
 
 // Splits the text into tokens of lowercase letters and digits.
-static bool Tokenize(Parser* p, size_t length)
+MLOC_NODISCARD static bool Tokenize(Parser* p, size_t length)
 {
     p->count = 0;
     size_t start = 0;
@@ -99,7 +99,7 @@ static int Power(const Parser* p, uint32_t i)
     return power >= 2 && power <= 15 ? power : 0;
 }
 
-static bool Times(uint64_t* value, uint64_t factor)
+MLOC_NODISCARD static bool Times(uint64_t* value, uint64_t factor)
 {
     if (factor != 0 && *value > UINT64_MAX / factor)
     {

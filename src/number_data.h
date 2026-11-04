@@ -104,6 +104,6 @@ MLOC_NODISCARD bool mlocValidSparse(DataSpan payload, const SparseShape* shape);
 const uint8_t* mlocFindSparseRow(const SparseTable* table, uint16_t code);
 
 // A row's value of a field; false when the row does not give it.
-bool mlocSparseField(const uint8_t* row, uint32_t field, uint16_t* valueOut);
+MLOC_NODISCARD bool mlocSparseField(const uint8_t* row, uint32_t field, uint16_t* valueOut);
 
 #endif

@@ -46,7 +46,7 @@ static_assert(MLOC_MAX_DECIMAL_DIGITS % 8 == 0, "the digits are checked eight at
 // Whether each digit held is at most 9 and each unused byte 0, eight
 // bytes at a time: a byte below 0x80 plus 0x7F less its limit has its top
 // bit set only past the limit, and no such sum carries into the next byte.
-static bool ValidDigits(const mlocDecimal* d)
+MLOC_NODISCARD static bool ValidDigits(const mlocDecimal* d)
 {
     const uint64_t nines = 0x0909090909090909u;
     uint64_t bad = 0;
@@ -121,7 +121,7 @@ mlocResult mlocMakeDecimal(int64_t value, mlocDecimal* decimalOut)
     return result;
 }
 
-static bool IsDigit(char c)
+MLOC_NODISCARD static bool IsDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
@@ -147,7 +147,7 @@ typedef struct Mantissa
 
 // Reads digits with at most one point from *at; false when there is no
 // digit.
-static bool ReadMantissa(const char* text, size_t length, size_t* at, Mantissa* m)
+MLOC_NODISCARD static bool ReadMantissa(const char* text, size_t length, size_t* at, Mantissa* m)
 {
     *m = (Mantissa){.first = -1, .last = -1};
     bool point = false;
@@ -207,7 +207,8 @@ static bool ReadMantissa(const char* text, size_t length, size_t* at, Mantissa* 
 
 // Reads an exponent after its "e" from *at; its magnitude stops growing
 // past any bound a decimal has, so it never overflows.
-static bool ReadExponent(const char* text, size_t length, size_t* at, int64_t* exponentOut)
+MLOC_NODISCARD static bool ReadExponent(const char* text, size_t length, size_t* at,
+                                        int64_t* exponentOut)
 {
     bool negative = false;
     if (*at < length && (text[*at] == '+' || text[*at] == '-'))

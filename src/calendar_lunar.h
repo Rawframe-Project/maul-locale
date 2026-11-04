@@ -9,6 +9,8 @@
 
 #include "calendar_chinese.h"
 
+#include "maul-locale/base.h"
+
 enum
 {
     // The Chinese and Dangi years the dates use: those holding
@@ -31,6 +33,6 @@ void mlocLunarYear(bool korea, int64_t year, LunisolarYear* out);
 
 // The year holding the month the numbered new moon begins; false for a
 // new moon outside the years from lunarMinYear to lunarMaxYear.
-bool mlocLunarYearOfLunation(bool korea, int64_t lunation, LunisolarYear* out);
+MLOC_NODISCARD bool mlocLunarYearOfLunation(bool korea, int64_t lunation, LunisolarYear* out);
 
 #endif

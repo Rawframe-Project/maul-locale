@@ -51,13 +51,14 @@ static MessageCheck Error(mlocMessageError error, uint32_t at)
     return check;
 }
 
-static bool SamePool(const Checker* c, uint32_t offsetA, uint32_t lengthA, uint32_t offsetB,
-                     uint32_t lengthB)
+MLOC_NODISCARD static bool SamePool(const Checker* c, uint32_t offsetA, uint32_t lengthA,
+                                    uint32_t offsetB, uint32_t lengthB)
 {
     return lengthA == lengthB && memcmp(c->pool + offsetA, c->pool + offsetB, lengthA) == 0;
 }
 
-static bool SameParameterName(const void* context, uint32_t entry, uint32_t candidate)
+MLOC_NODISCARD static bool SameParameterName(const void* context, uint32_t entry,
+                                             uint32_t candidate)
 {
     const Checker* c = context;
     return SamePool(c, Get(c, messageParameters, entry, 1), Get(c, messageParameters, entry, 2),
@@ -66,7 +67,7 @@ static bool SameParameterName(const void* context, uint32_t entry, uint32_t cand
 }
 
 // Whether parameters [first, first + count) name an option twice.
-static bool RepeatsOption(const Checker* c, uint32_t first, uint32_t count)
+MLOC_NODISCARD static bool RepeatsOption(const Checker* c, uint32_t first, uint32_t count)
 {
     mlocTableClear(c->table);
     for (uint32_t i = first; i < first + count; i++)
@@ -120,7 +121,8 @@ static void MarkUse(const Checker* c, uint32_t variable, uint32_t declaration)
 
 // Whether an expression names a variable: its operand when asked, and
 // its options' values.
-static bool Names(const Checker* c, uint32_t expression, uint32_t variable, bool operand)
+MLOC_NODISCARD static bool Names(const Checker* c, uint32_t expression, uint32_t variable,
+                                 bool operand)
 {
     if (operand && Get(c, messageExpressions, expression, 0) == operandVariable &&
         Get(c, messageExpressions, expression, 1) == variable)
@@ -190,7 +192,7 @@ static MessageCheck CheckDeclarations(const Checker* c)
 // Whether a variable leads to a declaration with a function, through
 // local declarations of a bare variable. Each step goes to an earlier
 // declaration (a later one binding it would be a duplicate), so it ends.
-static bool Annotated(const Checker* c, uint32_t variable)
+MLOC_NODISCARD static bool Annotated(const Checker* c, uint32_t variable)
 {
     uint32_t later = none;
     for (;;)
@@ -236,7 +238,7 @@ static const uint8_t* Key(const Checker* c, uint32_t variant, uint32_t key)
     return c->message + c->keyStart + index * messageKeySize;
 }
 
-static bool SameKeys(const void* context, uint32_t entry, uint32_t candidate)
+MLOC_NODISCARD static bool SameKeys(const void* context, uint32_t entry, uint32_t candidate)
 {
     const Checker* c = context;
     for (uint32_t k = 0; k < c->count[messageSelectors]; k++)

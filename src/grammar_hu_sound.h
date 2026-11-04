@@ -10,6 +10,8 @@
 #ifndef MLOC_GRAMMAR_HU_SOUND_H
 #define MLOC_GRAMMAR_HU_SOUND_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -93,7 +95,7 @@ uint32_t mlocHungarianCapital(uint32_t c);
 void mlocHungarianReadLetters(const uint8_t* text, size_t length, HungarianLetters* out);
 
 // Whether the letters before end are the UTF-8 string s.
-bool mlocHungarianEndsWith(const HungarianLetters* w, size_t end, const char* s);
+MLOC_NODISCARD bool mlocHungarianEndsWith(const HungarianLetters* w, size_t end, const char* s);
 
 // The vowel information of the letter at i (a final y after a consonant
 // but g, l, n, t read as i), or 0 for a consonant.

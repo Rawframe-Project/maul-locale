@@ -23,7 +23,7 @@ typedef struct Pattern
 
 // Whether an item starts with "i" or "hi" (not "hia" nor "hie"), any
 // case: Spanish's "y" becomes "e".
-static bool BeforeE(const ListItem* item)
+MLOC_NODISCARD static bool BeforeE(const ListItem* item)
 {
     const char* t = item->text;
     size_t n = item->length;
@@ -36,7 +36,7 @@ static bool BeforeE(const ListItem* item)
 
 // Whether an item starts with "o", "ho" or "8", any case, or is "11"
 // alone or before a space: Spanish's "o" becomes "u".
-static bool BeforeU(const ListItem* item)
+MLOC_NODISCARD static bool BeforeU(const ListItem* item)
 {
     const char* t = item->text;
     size_t n = item->length;
@@ -52,7 +52,7 @@ static bool BeforeU(const ListItem* item)
 }
 
 // Whether a code point is of the Hebrew script (Scripts.txt, Unicode 18).
-static bool Hebrew(uint32_t c)
+MLOC_NODISCARD static bool Hebrew(uint32_t c)
 {
     static const uint32_t s_ranges[][2] = {
         {0x0591, 0x05C9}, {0x05D0, 0x05EA}, {0x05EF, 0x05F4}, {0xFB1D, 0xFB36}, {0xFB38, 0xFB3C},
@@ -70,7 +70,7 @@ static bool Hebrew(uint32_t c)
 
 // Whether an item's first code point is not Hebrew: Hebrew's vav takes a
 // dash.
-static bool BeforeDash(const ListItem* item)
+MLOC_NODISCARD static bool BeforeDash(const ListItem* item)
 {
     const uint8_t* t = (const uint8_t*)item->text;
     size_t n = item->length;
@@ -86,7 +86,7 @@ static bool BeforeDash(const ListItem* item)
     return !Hebrew(c);
 }
 
-static bool Is(const char* text, size_t length, const char* pattern)
+MLOC_NODISCARD static bool Is(const char* text, size_t length, const char* pattern)
 {
     return length == strlen(pattern) && memcmp(text, pattern, length) == 0;
 }

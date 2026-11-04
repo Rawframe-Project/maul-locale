@@ -15,7 +15,8 @@
 // Whether the pattern's elements match with its last at an index of the
 // walk; the index of the element its first matched, and the element
 // compared last (null when the ring ran out).
-static bool MatchBack(Find* f, uint32_t index, uint32_t* firstOut, const Cei** comparedOut)
+MLOC_NODISCARD static bool MatchBack(Find* f, uint32_t index, uint32_t* firstOut,
+                                     const Cei** comparedOut)
 {
     int64_t offset = 0;
     int64_t count = f->s->count;
@@ -51,8 +52,8 @@ static bool MatchBack(Find* f, uint32_t index, uint32_t* firstOut, const Cei** c
 
 // Whether the match whose last element is at an index has bounds
 // usearch_searchBackwards accepts; its bounds.
-static bool BoundsBack(Find* f, uint32_t index, uint32_t firstIndex, size_t from, size_t* startOut,
-                       size_t* endOut)
+MLOC_NODISCARD static bool BoundsBack(Find* f, uint32_t index, uint32_t firstIndex, size_t from,
+                                      size_t* startOut, size_t* endOut)
 {
     // The elements are copied: fetching more may reuse their places.
     const Cei* held = mlocSearchAt(f, firstIndex);
@@ -111,7 +112,7 @@ static bool BoundsBack(Find* f, uint32_t index, uint32_t firstIndex, size_t from
 
 // The walk's index of the first element starting before the position:
 // those of the cluster at it come first. False when the ring ran out.
-static bool PastCluster(Find* f, size_t from, uint32_t* indexOut)
+MLOC_NODISCARD static bool PastCluster(Find* f, size_t from, uint32_t* indexOut)
 {
     uint32_t index = 0;
     for (;; index++)

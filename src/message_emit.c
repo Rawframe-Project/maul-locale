@@ -214,7 +214,7 @@ void mlocEmitBytes(MessageEmit* emit, const uint8_t* bytes, size_t length)
 // Whether well-formed text holds a code point this Unicode version leaves
 // unassigned. Noncharacters are unassigned for good, so their NFC never
 // changes.
-static bool HasUnassigned(const uint8_t* text, size_t length)
+MLOC_NODISCARD static bool HasUnassigned(const uint8_t* text, size_t length)
 {
     for (size_t at = 0; at < length;)
     {
@@ -279,7 +279,7 @@ typedef struct NameSearch
     MessageString name;
 } NameSearch;
 
-static bool SameName(const void* context, uint32_t entry, uint32_t candidate)
+MLOC_NODISCARD static bool SameName(const void* context, uint32_t entry, uint32_t candidate)
 {
     (void)candidate;
     const NameSearch* search = context;

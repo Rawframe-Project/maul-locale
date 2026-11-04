@@ -193,7 +193,7 @@ static void Accusative(Builder* b)
 // sibilant, a palatal, j, h or v; after two consonants; after one
 // consonant n, d, b or p, and in a word of one syllable also m, t, k or
 // l (napja but háza, asztala; kertje but könyve).
-static bool TakesJ(const HungarianSound* s)
+MLOC_NODISCARD static bool TakesJ(const HungarianSound* s)
 {
     static const char* const s_never[] = {"s",  "sz", "z",  "zs", "c", "cs", "dz", "dzs",
                                           "gy", "ny", "ty", "ly", "j", "h",  "v"};
@@ -366,7 +366,7 @@ bool mlocHungarianRequestValid(const mlocInflection* request)
 // bokrot, lovak); the superessive only where the table says (bokron,
 // lovon, but vízen); the third person's possessive not where it takes
 // -ja on the word as it is (útja).
-static bool StemChanges(const mlocInflection* r, uint8_t flags)
+MLOC_NODISCARD static bool StemChanges(const mlocInflection* r, uint8_t flags)
 {
     if (r->plural || (r->possessorPerson > 0 && r->possessorPerson < 3))
     {
@@ -502,7 +502,7 @@ typedef struct Stem
     HungarianLetters changedLetters;
 } Stem;
 
-static bool ReadStem(const HungarianText* t, const mlocInflection* r, Stem* out)
+MLOC_NODISCARD static bool ReadStem(const HungarianText* t, const mlocInflection* r, Stem* out)
 {
     out->from = 0;
     mlocHungarianReadLetters(t->spoken, t->spokenLength, &out->letters);
@@ -555,7 +555,7 @@ static bool ReadStem(const HungarianText* t, const mlocInflection* r, Stem* out)
 // takes a hyphen (Rousseau-val, Molière-rel, Peugeot-t; AkH 217): a
 // vowel letter said as another sound, or a consonant letter said as a
 // vowel. A consonant said as a consonant joins (Balzackal, AkH 216).
-static bool Unsaid(const HungarianText* t, const HungarianSound* spoken)
+MLOC_NODISCARD static bool Unsaid(const HungarianText* t, const HungarianSound* spoken)
 {
     HungarianLetters written;
     mlocHungarianReadLetters(t->word, t->wordLength, &written);

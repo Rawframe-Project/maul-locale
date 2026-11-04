@@ -37,7 +37,7 @@ typedef struct Aliases
 } Aliases;
 
 // The table's parts, or false when its counts do not give its size.
-static inline bool ReadAliases(DataSpan span, Aliases* out)
+MLOC_NODISCARD static inline bool ReadAliases(DataSpan span, Aliases* out)
 {
     if (span.size < aliasHeaderSize)
     {

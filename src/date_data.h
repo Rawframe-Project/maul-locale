@@ -94,28 +94,31 @@ DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item)
 // main chain: the set's bytes (dateSetSize), the interval set's
 // (dateIntervalSetSize) and the unit they index. False when the data has
 // no dates, the calendar is unknown or a set is past the unit's.
-bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals);
+MLOC_NODISCARD bool mlocFindDateSet(const mlocDataSet* data, const mlocLocale* locale,
+                                    uint32_t calendar, DatePatterns* patterns, const uint8_t** set,
+                                    const uint8_t** intervals);
 
 // A locale's time patterns in a calendar along its main chain: the time
 // set's bytes (dateTimeSetSize), when intervals is not null the interval
 // set's, and the unit they index. False when the data has no dates, the
 // calendar is unknown or a set is past the unit's.
-bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                     DatePatterns* patterns, const uint8_t** set, const uint8_t** intervals);
+MLOC_NODISCARD bool mlocFindTimeSet(const mlocDataSet* data, const mlocLocale* locale,
+                                    uint32_t calendar, DatePatterns* patterns, const uint8_t** set,
+                                    const uint8_t** intervals);
 
 // A locale's date names in a calendar along its main chain: the name
 // set's bytes (dateNameSetSize) and the unit they index. False when the
 // data has no names, the calendar is unknown or the set is past the
 // unit's.
-bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale, uint32_t calendar,
-                       DateNameTables* names, const uint8_t** set);
+MLOC_NODISCARD bool mlocFindDateNames(const mlocDataSet* data, const mlocLocale* locale,
+                                      uint32_t calendar, DateNameTables* names,
+                                      const uint8_t** set);
 
 // A locale's day period rules along its main chain (dateRuleSize
 // bytes). False when the data has no names or the rules are past the
 // unit's.
-bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
-                            const uint8_t** rules);
+MLOC_NODISCARD bool mlocFindDayPeriodRules(const mlocDataSet* data, const mlocLocale* locale,
+                                           const uint8_t** rules);
 // A locale's dates unit along its main chain and the patterns and names
 // units beside it (each when the data has it), found once for every set
 // a formatter reads. False when the data has no dates.
@@ -128,30 +131,31 @@ typedef struct DateUnits
     bool hasNames;
 } DateUnits;
 
-bool mlocFindDateUnits(const mlocDataSet* data, const mlocLocale* locale, DateUnits* units);
+MLOC_NODISCARD bool mlocFindDateUnits(const mlocDataSet* data, const mlocLocale* locale,
+                                      DateUnits* units);
 
 // The sets of found units, as mlocFindDateSet, mlocFindTimeSet,
 // mlocFindDateNames and mlocFindDayPeriodRules give them.
-bool mlocDateSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
-                   const uint8_t** intervals);
-bool mlocTimeSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
-                   const uint8_t** intervals);
-bool mlocDateNamesOf(const DateUnits* units, uint32_t calendar, const uint8_t** set);
-bool mlocDayPeriodRulesOf(const DateUnits* units, const uint8_t** rules);
+MLOC_NODISCARD bool mlocDateSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
+                                  const uint8_t** intervals);
+MLOC_NODISCARD bool mlocTimeSetOf(const DateUnits* units, uint32_t calendar, const uint8_t** set,
+                                  const uint8_t** intervals);
+MLOC_NODISCARD bool mlocDateNamesOf(const DateUnits* units, uint32_t calendar, const uint8_t** set);
+MLOC_NODISCARD bool mlocDayPeriodRulesOf(const DateUnits* units, const uint8_t** rules);
 
 // A pattern of a valid unit by index; false past its patterns.
-bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
+MLOC_NODISCARD bool mlocDatePattern(const DatePatterns* p, uint32_t index, DataSpan* out);
 
 // The style of a pattern's zone field (zzzz, z, vvvv, v, VVVV, VVV, OOOO,
 // O; zz and zzz as z), or none for another letter or width.
 mlocZoneStyle mlocZoneFieldStyle(uint8_t letter, uint32_t width);
 
 // Whether a pattern holds only fields the date formatter writes.
-bool mlocWritableDate(const uint8_t* pattern, uint32_t length);
+MLOC_NODISCARD bool mlocWritableDate(const uint8_t* pattern, uint32_t length);
 
 // Whether a pattern's fields are those a time writer writes, a zone's
 // among them.
-bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);
+MLOC_NODISCARD bool mlocWritableTime(const uint8_t* pattern, uint32_t length, bool* zonedOut);
 
 // A patterns unit's pattern views, which a formatter keeps to resolve
 // its interval indexes.
@@ -173,6 +177,6 @@ typedef struct PatternSpan
 } PatternSpan;
 
 // A table's pattern by index; false past its patterns.
-bool mlocTablePattern(const PatternTable* table, uint32_t index, DataSpan* out);
+MLOC_NODISCARD bool mlocTablePattern(const PatternTable* table, uint32_t index, DataSpan* out);
 
 #endif

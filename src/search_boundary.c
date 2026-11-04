@@ -16,7 +16,7 @@ enum
 };
 
 // Whether no grapheme rule reads back past a code point.
-static bool Safe(uint32_t c)
+MLOC_NODISCARD static bool Safe(uint32_t c)
 {
     muniGraphemeBreak g = muniGetGraphemeBreak(c);
     return g <= muni_gcbControl && !muniIsExtendedPictographic(c) &&

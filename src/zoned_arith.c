@@ -90,8 +90,8 @@ static int64_t CandidateOffset(const mlocDateTime* dateTime, const mlocInstant* 
 
 // Whether a candidate's offset is the one given, or rounds to it when
 // minutes match.
-static bool Matches(const mlocDateTime* dateTime, const mlocInstant* candidate, int64_t offset,
-                    bool matchMinutes)
+MLOC_NODISCARD static bool Matches(const mlocDateTime* dateTime, const mlocInstant* candidate,
+                                   int64_t offset, bool matchMinutes)
 {
     int64_t own = CandidateOffset(dateTime, candidate);
     return own == offset || (matchMinutes && mlocRoundToIncrement(own, s_nanosecondsPerMinute,
@@ -203,9 +203,10 @@ mlocResult mlocAddToZonedDateTime(const mlocTimeZone* zone, mlocCalendar calenda
 // the local dates, the second's date moved toward the first until the
 // first's time of day on it lies between them (a day, or two backward
 // across a fold), and the exact time left.
-static bool Difference(const mlocTimeZone* zone, mlocCalendar calendar, const mlocInstant* one,
-                       const mlocInstant* two, mlocUnit largest, mlocDateTime* startOut,
-                       RelativeDuration* out)
+MLOC_NODISCARD static bool Difference(const mlocTimeZone* zone, mlocCalendar calendar,
+                                      const mlocInstant* one, const mlocInstant* two,
+                                      mlocUnit largest, mlocDateTime* startOut,
+                                      RelativeDuration* out)
 {
     mlocDateTime end;
     if (mlocGetDateTimeFor(zone, one, calendar, startOut) != mloc_success ||

@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-static bool NameIs(const uint8_t* name, size_t length, const char* text)
+MLOC_NODISCARD static bool NameIs(const uint8_t* name, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
@@ -172,8 +172,8 @@ static void SetReading(mlocInflection* r, int i)
 
 // Sets one of the options that choose the rules; false for a name it
 // does not know, *bad set for a value it does not take.
-static bool SetRule(mlocInflection* r, const uint8_t* name, size_t length,
-                    const NumberOption* option, bool* bad)
+MLOC_NODISCARD static bool SetRule(mlocInflection* r, const uint8_t* name, size_t length,
+                                   const NumberOption* option, bool* bad)
 {
     static const struct
     {

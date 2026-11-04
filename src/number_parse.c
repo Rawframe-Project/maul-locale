@@ -52,7 +52,7 @@ static uint32_t TokenAt(const uint8_t* text, size_t length, size_t at, bool* sym
     return mlocParseCodePoint(text, length, at, sizeOut);
 }
 
-static bool AddTo(Series* series, Matcher m)
+MLOC_NODISCARD static bool AddTo(Series* series, Matcher m)
 {
     if (series->count == parseMaxSeries)
     {
@@ -104,7 +104,8 @@ static uint16_t TokenUnits(bool symbol, uint32_t token)
 // ignorables matcher between tokens but after an ignorable literal, the
 // symbols' matchers, the other literals' code points; in exact mode no
 // ignorables, every literal its code point. False when it does not fit.
-static bool BuildSeries(const Parser* r, const uint8_t* text, size_t length, Series* out)
+MLOC_NODISCARD static bool BuildSeries(const Parser* r, const uint8_t* text, size_t length,
+                                       Series* out)
 {
     bool exact = (r->flags & modeExactAffix) != 0;
     bool perMille = r->f->style == mloc_numberPerMille;
@@ -173,14 +174,14 @@ static const uint8_t* AffixText(const Parser* r, int affix, size_t* lengthOut)
     return r->affixText[affix];
 }
 
-static bool HasPlaceholder(const Parser* r, int affix, uint8_t placeholder)
+MLOC_NODISCARD static bool HasPlaceholder(const Parser* r, int affix, uint8_t placeholder)
 {
     size_t length = 0;
     const uint8_t* text = AffixText(r, affix, &length);
     return memchr(text, placeholder, length) != nullptr;
 }
 
-static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t length)
+MLOC_NODISCARD static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t length)
 {
     if (length > parseMaxAffixText - *at)
     {
@@ -193,7 +194,7 @@ static bool Append(uint8_t* buffer, size_t* at, const uint8_t* text, size_t leng
 
 // Whether an affix pattern has MLOC_MAX_NUMBER_PARSE_AFFIX characters at
 // most, a symbol counting one.
-static bool WithinAffixBound(const uint8_t* text, size_t length)
+MLOC_NODISCARD static bool WithinAffixBound(const uint8_t* text, size_t length)
 {
     size_t characters = 0;
     for (size_t at = 0; at < length && characters <= MLOC_MAX_NUMBER_PARSE_AFFIX; characters++)
@@ -210,7 +211,7 @@ static bool WithinAffixBound(const uint8_t* text, size_t length)
 // within one of the currency's outer patterns when it has them (a prefix
 // after the text before the number, a suffix before the text after it).
 // False when one passes MLOC_MAX_NUMBER_PARSE_AFFIX characters.
-static bool FillAffixes(Parser* r, uint32_t variant)
+MLOC_NODISCARD static bool FillAffixes(Parser* r, uint32_t variant)
 {
     const NumberCore* c = &r->f->core;
     const ParseCurrency* outer =
@@ -270,7 +271,7 @@ static size_t PatternOf(const Parser* r, SignType type, bool prefix, uint8_t* bu
 
 // Whether an affix is only symbols and ignorables (ICU's
 // containsOnlySymbolsAndIgnorables).
-static bool OnlySymbols(const Parser* r, int affix)
+MLOC_NODISCARD static bool OnlySymbols(const Parser* r, int affix)
 {
     size_t length = 0;
     const uint8_t* text = AffixText(r, affix, &length);
@@ -290,7 +291,7 @@ static bool OnlySymbols(const Parser* r, int affix)
 
 // ICU's isInteresting: affix matchers are made in strict mode, or when an
 // affix has a literal ignorables do not cover, or a suffix a sign.
-static bool Interesting(const Parser* r)
+MLOC_NODISCARD static bool Interesting(const Parser* r)
 {
     bool plain = true;
     for (int affix = 0; affix < affixCount; affix++)
@@ -314,7 +315,7 @@ static int AffixUnits(const Parser* r, int8_t affix)
 
 // ICU's AffixMatcher::compareTo: the longer prefix, then the longer
 // suffix, first.
-static bool AffixAfter(const Parser* r, const AffixMatcher* a, const AffixMatcher* b)
+MLOC_NODISCARD static bool AffixAfter(const Parser* r, const AffixMatcher* a, const AffixMatcher* b)
 {
     if (AffixUnits(r, a->prefix) != AffixUnits(r, b->prefix))
     {
@@ -324,7 +325,7 @@ static bool AffixAfter(const Parser* r, const AffixMatcher* a, const AffixMatche
 }
 
 // Adds an affix matcher; false when the matchers are full.
-static bool AddAffixMatcher(Parser* r, int prefix, int suffix, uint32_t flags)
+MLOC_NODISCARD static bool AddAffixMatcher(Parser* r, int prefix, int suffix, uint32_t flags)
 {
     if (r->affixCount == parseMaxAffixMatchers)
     {
@@ -346,7 +347,7 @@ typedef struct Pair
 // the positive one, and in lenient mode each affix of it alone, unless
 // a later type's equals the positive one's. False when an affix does not
 // fit.
-static bool AddSignType(Parser* r, SignType type, Pair* positive)
+MLOC_NODISCARD static bool AddSignType(Parser* r, SignType type, Pair* positive)
 {
     uint8_t buffer[parseMaxAffixText + 1];
     size_t length = PatternOf(r, type, true, buffer, sizeof(buffer));
@@ -394,7 +395,7 @@ static bool AddSignType(Parser* r, SignType type, Pair* positive)
 // appended code after the number would otherwise be left unread ("£ NaN
 // GBP" where the plus sign is a suffix). Strict mode reads each outer
 // pattern of a currency's categories, as the formatter writes them.
-static bool AddAffixMatchers(Parser* r)
+MLOC_NODISCARD static bool AddAffixMatchers(Parser* r)
 {
     if (!Interesting(r))
     {
@@ -451,7 +452,7 @@ static void Add(Parser* r, MatcherKind kind, uint32_t arg)
     r->list[r->count++] = (Matcher){.kind = (uint8_t)kind, .arg = arg};
 }
 
-static bool PatternHas(const Parser* r, uint8_t placeholder)
+MLOC_NODISCARD static bool PatternHas(const Parser* r, uint8_t placeholder)
 {
     for (int affix = 0; affix < affixCount; affix++)
     {
@@ -463,7 +464,7 @@ static bool PatternHas(const Parser* r, uint8_t placeholder)
     return false;
 }
 
-static bool HasCurrency(const Parser* r)
+MLOC_NODISCARD static bool HasCurrency(const Parser* r)
 {
     for (uint32_t placeholder = numberAffixCurrency; placeholder <= numberAffixCurrencyNarrow;
          placeholder++)
@@ -479,7 +480,7 @@ static bool HasCurrency(const Parser* r)
 // Whether the numbering system's digits are not matched by code point
 // (ICU's getCodePointZero is not a decimal digit 0): a digit not one code
 // point, or not the zero's code point plus its value.
-static bool NeedsDigitStrings(const NumberCore* c, const uint8_t* sets)
+MLOC_NODISCARD static bool NeedsDigitStrings(const NumberCore* c, const uint8_t* sets)
 {
     size_t size = 0;
     uint32_t zero = mlocParseCodePoint(c->digits, c->digitLength, 0, &size);
@@ -551,8 +552,8 @@ static uint32_t ModeFlags(const Formatter* f, mlocParseMode mode)
 // Builds the list in ICU's order: the affix matchers, in lenient mode the
 // percent or per mille sign the pattern has and the signs, NaN, infinity,
 // the ignorables, the digits, the exponent, then the validators.
-static bool BuildParser(Parser* r, const Formatter* f, const ParseCurrency* currency,
-                        mlocParseMode mode)
+MLOC_NODISCARD static bool BuildParser(Parser* r, const Formatter* f, const ParseCurrency* currency,
+                                       mlocParseMode mode)
 {
     // The series past those built are not read, and each built one is
     // cleared then: they are most of the parser.
@@ -677,7 +678,7 @@ static void PostProcess(const Parser* r, Parsed* p, int64_t* scaleOut)
 // The decimal a parse gives: its digits, the point moved by the exponent
 // and the scale, the fraction digits typed moved with it; false, out left
 // as it was, past the decimal's limits.
-static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
+MLOC_NODISCARD static bool ToDecimal(const Parsed* p, int64_t scale, mlocDecimal* out)
 {
     mlocDecimal d = {0};
     d.negative = (p->flags & parsedNegative) != 0 ? 1 : 0;
@@ -762,7 +763,7 @@ mlocResult mlocParseWith(const Formatter* formatter, const ParseCurrency* curren
     return mloc_success;
 }
 
-static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)
+MLOC_NODISCARD static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)
 {
     uint32_t previous = 0;
     for (uint32_t i = first; i < first + count; i++)
@@ -780,7 +781,7 @@ static bool ValidRanges(const uint8_t* ranges, uint32_t first, uint32_t count)
 
 // Runs of a mapping: 1 or more code points 1 or 2 apart, sorted and
 // disjoint, each mapping within the code points.
-static bool ValidRuns(const uint8_t* folds, uint32_t count)
+MLOC_NODISCARD static bool ValidRuns(const uint8_t* folds, uint32_t count)
 {
     int64_t previous = -1;
     for (uint32_t i = 0; i < count; i++)
@@ -800,7 +801,7 @@ static bool ValidRuns(const uint8_t* folds, uint32_t count)
 }
 
 // The specials: sorted, each of two or three code points.
-static bool ValidSpecials(const uint8_t* specials, uint32_t count)
+MLOC_NODISCARD static bool ValidSpecials(const uint8_t* specials, uint32_t count)
 {
     uint32_t previous = 0;
     for (uint32_t i = 0; i < count; i++)

@@ -41,7 +41,7 @@ size_t mlocDecimalText(const mlocDecimal* decimal, size_t from, char* out, size_
 // Whether two valid decimals hold the same value and show the same
 // digits, compared field by field: a decimal's padding is no part of it,
 // and a caller's may hold anything.
-static inline bool mlocSameDecimal(const mlocDecimal* a, const mlocDecimal* b)
+MLOC_NODISCARD static inline bool mlocSameDecimal(const mlocDecimal* a, const mlocDecimal* b)
 {
     return a->kind == b->kind && a->negative == b->negative && a->count == b->count &&
            a->exponent == b->exponent && a->fractionDigits == b->fractionDigits &&

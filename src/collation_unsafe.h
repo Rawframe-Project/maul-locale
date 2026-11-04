@@ -66,7 +66,8 @@ MLOC_NODISCARD static inline bool mlocCollationUnsafeValid(const uint8_t* ranges
 }
 
 // Whether the ranges hold a code point.
-static inline bool mlocCollationInUnsafe(const uint8_t* ranges, uint32_t count, uint32_t codePoint)
+MLOC_NODISCARD static inline bool mlocCollationInUnsafe(const uint8_t* ranges, uint32_t count,
+                                                        uint32_t codePoint)
 {
     uint32_t lo = 0;
     uint32_t hi = count;

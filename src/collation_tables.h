@@ -224,7 +224,7 @@ typedef struct CollationRoot
     uint32_t unsafeCount;
 } CollationRoot;
 
-static inline bool mlocCe32IsSpecial(uint32_t ce32)
+MLOC_NODISCARD static inline bool mlocCe32IsSpecial(uint32_t ce32)
 {
     return (ce32 & 0xFF) >= collationSpecialByte;
 }
@@ -439,7 +439,8 @@ static inline uint32_t mlocCollationStart(const CollationRoot* r, uint32_t index
 }
 
 // Whether sort keys compress primaries of the lead byte.
-static inline bool mlocCollationCompressible(const CollationRoot* r, uint32_t leadByte)
+MLOC_NODISCARD static inline bool mlocCollationCompressible(const CollationRoot* r,
+                                                            uint32_t leadByte)
 {
     return (r->compressible[leadByte / 8] >> (leadByte % 8) & 1) != 0;
 }
@@ -796,8 +797,8 @@ static inline CollationTypes mlocReadCollationTypes(DataSpan unit)
 }
 
 // A type's tailoring by its name, or false when the locale lists none.
-static inline bool mlocFindCollationType(const CollationTypes* t, const char* name, size_t length,
-                                         DataSpan* tailoringOut)
+MLOC_NODISCARD static inline bool mlocFindCollationType(const CollationTypes* t, const char* name,
+                                                        size_t length, DataSpan* tailoringOut)
 {
     for (uint32_t i = 0; i < t->count; i++)
     {
@@ -838,8 +839,8 @@ static inline CollationHan mlocReadCollationHan(DataSpan unit)
 
 // A code point's radical-stroke primary, or false when the table has
 // none for it.
-static inline bool mlocCollationHanPrimary(const CollationHan* han, uint32_t codePoint,
-                                           uint32_t* primaryOut)
+MLOC_NODISCARD static inline bool mlocCollationHanPrimary(const CollationHan* han,
+                                                          uint32_t codePoint, uint32_t* primaryOut)
 {
     uint32_t lo = 0;
     uint32_t hi = han->count;

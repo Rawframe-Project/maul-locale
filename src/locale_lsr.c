@@ -40,8 +40,8 @@ static uint32_t ScriptOf(uint64_t tag)
 
 // The entry for a language, script and region, with "und"'s entries
 // under a script made from its region ones (they win, as in ICU's trie).
-static bool Find(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
-                 uint64_t* valueOut)
+MLOC_NODISCARD static bool Find(const Likely* likely, uint32_t language, uint32_t script,
+                                uint32_t region, uint64_t* valueOut)
 {
     if (language == Und() && script != 0 && region != 0)
     {
@@ -64,7 +64,7 @@ static bool Find(const Likely* likely, uint32_t language, uint32_t script, uint3
     return mlocFindLikely(likely, language, script, region, valueOut);
 }
 
-static bool HasScript(const Likely* likely, uint32_t language, uint32_t script)
+MLOC_NODISCARD static bool HasScript(const Likely* likely, uint32_t language, uint32_t script)
 {
     if (mlocHasLikely(likely, language, script))
     {
@@ -99,8 +99,8 @@ typedef struct Given
 // ICU's maximize: the language's entries, or "und"'s for one the table
 // lacks; the script's within them, or "*"; then the region's, or "*",
 // with its fallbacks. Fills the flags and the answer's tag.
-static bool Lookup(const Likely* likely, const uint8_t* regionGroups, Given g, uint8_t* flagsOut,
-                   uint64_t* valueOut)
+MLOC_NODISCARD static bool Lookup(const Likely* likely, const uint8_t* regionGroups, Given g,
+                                  uint8_t* flagsOut, uint64_t* valueOut)
 {
     uint32_t und = Und();
     bool known = !g.hasLanguage || (g.language != 0 && mlocHasLikely(likely, g.language, 0));
@@ -149,7 +149,7 @@ static size_t SubtagLength(const char* tail, size_t size, size_t at)
 
 // Whether a tail begins with this variant and has no other: the next
 // subtag, if any, is a singleton.
-static bool OnlyVariant(const char* tail, size_t size, const char* variant)
+MLOC_NODISCARD static bool OnlyVariant(const char* tail, size_t size, const char* variant)
 {
     size_t length = SubtagLength(tail, size, 0);
     if (strlen(variant) != length || memcmp(tail, variant, length) != 0)
@@ -163,7 +163,7 @@ static bool OnlyVariant(const char* tail, size_t size, const char* variant)
 
 // A pseudo locale: region XA, XB or XC as given, or a single variant
 // psaccent, psbidi or pscrack with the region given or the kind's.
-static bool Pseudo(const mlocLocale* locale, Lsr* lsr)
+MLOC_NODISCARD static bool Pseudo(const mlocLocale* locale, Lsr* lsr)
 {
     static const char s_regions[3][3] = {"XA", "XB", "XC"};
     static const char* const s_variants[3] = {"psaccent", "psbidi", "pscrack"};
@@ -195,7 +195,7 @@ static bool Pseudo(const mlocLocale* locale, Lsr* lsr)
 
 // ICU's own kinds of LSR, made without likely subtags: an exact "und", a
 // private use tag, a pseudo locale.
-static bool Special(const mlocLocale* locale, Lsr* lsr)
+MLOC_NODISCARD static bool Special(const mlocLocale* locale, Lsr* lsr)
 {
     bool bare =
         memcmp(locale->language, "und\0\0\0\0\0", 8) == 0 && lsr->script == 0 && lsr->region == 0;

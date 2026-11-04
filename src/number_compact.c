@@ -82,7 +82,7 @@ bool mlocValidCompactUse(CompactData data)
 
 // Whether a magnitude's value is compacted, and the power it is then
 // divided by.
-static bool Divisor(const uint8_t* table, int64_t magnitude, int64_t* divisorOut)
+MLOC_NODISCARD static bool Divisor(const uint8_t* table, int64_t magnitude, int64_t* divisorOut)
 {
     *divisorOut = 0;
     if (magnitude < numberCompactFirstPower)
@@ -98,7 +98,7 @@ static bool Divisor(const uint8_t* table, int64_t magnitude, int64_t* divisorOut
     return row[0] != 0;
 }
 
-static bool IsExactlyOne(const mlocDecimal* d)
+MLOC_NODISCARD static bool IsExactlyOne(const mlocDecimal* d)
 {
     return d->count == 1 && d->digits[0] == 1 && d->exponent == 0 && d->fractionDigits == 0;
 }

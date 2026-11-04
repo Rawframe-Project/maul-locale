@@ -84,8 +84,8 @@ static int Sign(mlocTimeDuration d)
 
 // Whether a magnitude part of a step rounds up: part and whole as
 // seconds and nanoseconds compared through twice the part.
-static bool UpBySeconds(int64_t partSeconds, int64_t partNanoseconds, int64_t wholeSeconds,
-                        RoundingUnsigned mode, bool evenLow)
+MLOC_NODISCARD static bool UpBySeconds(int64_t partSeconds, int64_t partNanoseconds,
+                                       int64_t wholeSeconds, RoundingUnsigned mode, bool evenLow)
 {
     if (partSeconds == 0 && partNanoseconds == 0)
     {
@@ -149,7 +149,7 @@ bool mlocRoundTimeStep(mlocTimeDuration value, int64_t stepSeconds, int64_t step
 }
 
 // The day a date duration reaches from a date, constrained.
-static bool Reach(const mlocDate* date, const mlocDateDuration* d, int64_t* dayOut)
+MLOC_NODISCARD static bool Reach(const mlocDate* date, const mlocDateDuration* d, int64_t* dayOut)
 {
     mlocDate end = {0};
     if (mlocAddToDate(date, d, mloc_overflowConstrain, &end) != mloc_success)
@@ -171,7 +171,7 @@ Moment mlocMomentOf(const mlocInstant* instant)
 
 // The moment a day reaches at the start's time of day: without a zone
 // the wall clock, with one its compatible instant (GetEpochNanosecondsFor).
-static bool At(const RelativeStart* s, int64_t day, Moment* out)
+MLOC_NODISCARD static bool At(const RelativeStart* s, int64_t day, Moment* out)
 {
     if (s->zone == nullptr)
     {
@@ -215,8 +215,9 @@ typedef struct Window
     Moment endMoment;
 } Window;
 
-static bool ComputeWindow(int sign, const mlocDateDuration* d, const RelativeStart* s, int unit,
-                          int64_t increment, bool shift, Window* w)
+MLOC_NODISCARD static bool ComputeWindow(int sign, const mlocDateDuration* d,
+                                         const RelativeStart* s, int unit, int64_t increment,
+                                         bool shift, Window* w)
 {
     int64_t step = increment * sign;
     *w = (Window){0};
@@ -269,8 +270,8 @@ static bool ComputeWindow(int sign, const mlocDateDuration* d, const RelativeSta
 // Whether a part of a window rounds up: part and whole are days and
 // nanoseconds (each under a day, of any sign), 0 <= part < whole. Twice
 // the part is compared with the whole by days first, exactly.
-static bool UpByDays(int64_t partDays, int64_t partNanoseconds, int64_t wholeDays,
-                     int64_t wholeNanoseconds, RoundingUnsigned mode, bool evenLow)
+MLOC_NODISCARD static bool UpByDays(int64_t partDays, int64_t partNanoseconds, int64_t wholeDays,
+                                    int64_t wholeNanoseconds, RoundingUnsigned mode, bool evenLow)
 {
     if (partDays == 0 && partNanoseconds == 0)
     {
@@ -303,12 +304,12 @@ typedef struct Nudge
 } Nudge;
 
 // Whether a window lasts a while, and whether it holds a moment.
-static bool Lasts(int sign, const Window* w)
+MLOC_NODISCARD static bool Lasts(int sign, const Window* w)
 {
     return Compare(w->startMoment, w->endMoment) == -sign;
 }
 
-static bool Holds(int sign, const Window* w, Moment dest)
+MLOC_NODISCARD static bool Holds(int sign, const Window* w, Moment dest)
 {
     Moment low = sign > 0 ? w->startMoment : w->endMoment;
     Moment high = sign > 0 ? w->endMoment : w->startMoment;
@@ -324,8 +325,9 @@ static bool Holds(int sign, const Window* w, Moment dest)
 // clocks jump a whole day breaks both, and the specification has no
 // answer there yet (tc39/proposal-temporal#3310), so the window is
 // refused, as temporal_rs refuses it.
-static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart* s, Moment dest,
-                       int unit, int64_t increment, Window* w, bool* expandedOut)
+MLOC_NODISCARD static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart* s,
+                                      Moment dest, int unit, int64_t increment, Window* w,
+                                      bool* expandedOut)
 {
     if (!ComputeWindow(sign, &d->date, s, unit, increment, false, w) || !Lasts(sign, w))
     {
@@ -341,8 +343,9 @@ static bool FindWindow(int sign, const RelativeDuration* d, const RelativeStart*
     return true;
 }
 
-static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const RelativeStart* s,
-                                Moment dest, const RelativeRounding* r, Nudge* out)
+MLOC_NODISCARD static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d,
+                                               const RelativeStart* s, Moment dest,
+                                               const RelativeRounding* r, Nudge* out)
 {
     Window w;
     bool expanded = false;
@@ -370,8 +373,9 @@ static bool NudgeToCalendarUnit(int sign, const RelativeDuration* d, const Relat
 // NudgeToZonedTime: the time part rounded within the day the date part
 // reaches, and past that day's end into the next when it rounds beyond
 // it; a day's length is the zone's.
-static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const RelativeStart* s,
-                             const RelativeRounding* r, Nudge* out)
+MLOC_NODISCARD static bool NudgeToZonedTime(int sign, const RelativeDuration* d,
+                                            const RelativeStart* s, const RelativeRounding* r,
+                                            Nudge* out)
 {
     int64_t startDay = 0;
     Moment start;
@@ -417,8 +421,8 @@ static bool NudgeToZonedTime(int sign, const RelativeDuration* d, const Relative
 // NudgeToDayOrTime: the days and time together rounded as a time
 // duration, the days split off again when the largest unit is a date
 // unit.
-static bool NudgeToDayOrTime(const RelativeDuration* d, Moment dest, const RelativeRounding* r,
-                             Nudge* out)
+MLOC_NODISCARD static bool NudgeToDayOrTime(const RelativeDuration* d, Moment dest,
+                                            const RelativeRounding* r, Nudge* out)
 {
     mlocTimeDuration total =
         Normalized(d->date.days * secondsPerDay + d->time.seconds, d->time.nanoseconds);
@@ -448,8 +452,8 @@ static bool NudgeToDayOrTime(const RelativeDuration* d, Moment dest, const Relat
 
 // BubbleRelativeDuration: carries a rounding that reached the next value
 // of a larger unit into it, up to the largest unit.
-static bool Bubble(int sign, RelativeDuration* d, Moment nudged, const RelativeStart* s,
-                   int largest, int smallest)
+MLOC_NODISCARD static bool Bubble(int sign, RelativeDuration* d, Moment nudged,
+                                  const RelativeStart* s, int largest, int smallest)
 {
     for (int unit = smallest - 1; unit >= largest; unit--)
     {

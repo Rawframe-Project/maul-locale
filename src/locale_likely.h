@@ -26,26 +26,26 @@ typedef struct Likely
 MLOC_NODISCARD bool mlocValidLikely(const DataView* view, DataSpan payload);
 
 // The first source's likely subtags table, or false.
-bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut);
+MLOC_NODISCARD bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut);
 
 // The value of the entry for a packed language, script and region (0
 // for none): the full tag, packed.
-bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
-                    uint64_t* valueOut);
+MLOC_NODISCARD bool mlocFindLikely(const Likely* likely, uint32_t language, uint32_t script,
+                                   uint32_t region, uint64_t* valueOut);
 
 // The table's answer for a packed language ("und" packed, not 0),
 // script and region (0, Zzzz or ZZ for none) as maximizing finds it:
 // the full tag, packed.
-bool mlocLookupLikely(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
-                      uint64_t* valueOut);
+MLOC_NODISCARD bool mlocLookupLikely(const Likely* likely, uint32_t language, uint32_t script,
+                                     uint32_t region, uint64_t* valueOut);
 
 // Whether two locales share a byte: an output that does with an input
 // is refused, so a failed call leaves it as it was.
-bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two);
+MLOC_NODISCARD bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two);
 
 // Whether an entry has the language and, unless script is 0, the
 // script.
-bool mlocHasLikely(const Likely* likely, uint32_t language, uint32_t script);
+MLOC_NODISCARD bool mlocHasLikely(const Likely* likely, uint32_t language, uint32_t script);
 
 // The general entries with a language alone and a region, as a range of
 // indexes, and the value at an index.

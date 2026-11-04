@@ -84,7 +84,7 @@ static int32_t Log10Pow5(int32_t e)
     return (int32_t)(((uint32_t)e * 732923) >> 20);
 }
 
-static bool MultipleOfPow5(uint64_t value, int32_t p)
+MLOC_NODISCARD static bool MultipleOfPow5(uint64_t value, int32_t p)
 {
     // Every multiple of 5 would include 0, and the loop would not end:
     // Scale asks about four times a nonzero mantissa, less 2 at most, or
@@ -98,7 +98,7 @@ static bool MultipleOfPow5(uint64_t value, int32_t p)
     return count >= p;
 }
 
-static bool MultipleOfPow2(uint64_t value, int32_t p)
+MLOC_NODISCARD static bool MultipleOfPow2(uint64_t value, int32_t p)
 {
     // Scale asks only for q below 63.
     MLOC_ASSERT(p >= 0 && p < 64);

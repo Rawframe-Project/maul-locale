@@ -15,7 +15,7 @@ enum
     firstFraction = mloc_durationMilliseconds,
 };
 
-static bool Numeric(uint32_t style)
+MLOC_NODISCARD static bool Numeric(uint32_t style)
 {
     return style == mloc_durationFieldNumeric || style == mloc_durationFieldTwoDigit ||
            style == durationFieldFraction;
@@ -23,7 +23,7 @@ static bool Numeric(uint32_t style)
 
 // Whether a field takes a style given: years to days the three widths,
 // hours to seconds also numeric and two-digit, the fractions numeric.
-static bool Takes(uint32_t field, uint32_t style)
+MLOC_NODISCARD static bool Takes(uint32_t field, uint32_t style)
 {
     return style <= mloc_durationFieldNarrow ||
            (field >= firstClock && style == mloc_durationFieldNumeric) ||
@@ -62,7 +62,7 @@ static void DefaultOf(uint32_t field, uint32_t base, uint32_t previous, uint32_t
 
 // ValidateDurationUnitStyle: no display always on a fraction, nothing but
 // fractions after one, nothing but numeric fields after a numeric one.
-static bool Allowed(uint32_t style, uint32_t display, uint32_t previous)
+MLOC_NODISCARD static bool Allowed(uint32_t style, uint32_t display, uint32_t previous)
 {
     return !(display == mloc_durationDisplayAlways && style == durationFieldFraction) &&
            !(previous == durationFieldFraction && style != durationFieldFraction) &&
@@ -70,7 +70,7 @@ static bool Allowed(uint32_t style, uint32_t display, uint32_t previous)
 }
 
 // Whether a field's given style and display are in range and its own.
-static bool InRange(uint32_t field, uint32_t style, uint32_t display)
+MLOC_NODISCARD static bool InRange(uint32_t field, uint32_t style, uint32_t display)
 {
     return style <= mloc_durationFieldTwoDigit && display <= mloc_durationDisplayAlways &&
            (style == mloc_durationFieldDefault || Takes(field, style));

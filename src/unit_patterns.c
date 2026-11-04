@@ -32,8 +32,8 @@ uint32_t mlocUnitWidthKind(mlocUnitWidth width)
 
 // Copies a pattern into a pool, "{0}" as currencyTextNumber, sharing an
 // equal one of a category before it; false when the pool is full.
-static bool AddPattern(const PatternPool* pool, PatternSlot* slot, uint32_t category,
-                       const uint8_t* text, size_t length)
+MLOC_NODISCARD static bool AddPattern(const PatternPool* pool, PatternSlot* slot, uint32_t category,
+                                      const uint8_t* text, size_t length)
 {
     // A slot keeps a pattern's start and length in 16 bits.
     MLOC_ASSERT(pool->capacity <= UINT16_MAX);

@@ -60,7 +60,7 @@ static Part BeyondMultiple(uint32_t remainder, Part part, uint32_t increment)
 
 // Whether a value between two multiples goes to the upper one (farther
 // from zero); odd says whether the lower one's quotient is odd.
-static bool RoundsUp(mlocRoundingMode mode, Part beyond, bool negative, bool odd)
+MLOC_NODISCARD static bool RoundsUp(mlocRoundingMode mode, Part beyond, bool negative, bool odd)
 {
     switch (mode)
     {
@@ -106,7 +106,8 @@ static int32_t Shown(const mlocDecimal* before, int64_t position, const mlocDeci
 // Writes the digits of buffer[0, length), the last at position, into a
 // decimal without leading or trailing zeros; false when they pass its
 // capacity or its largest power.
-static bool SetRounded(const uint8_t* buffer, int length, int64_t position, mlocDecimal* d)
+MLOC_NODISCARD static bool SetRounded(const uint8_t* buffer, int length, int64_t position,
+                                      mlocDecimal* d)
 {
     int first = 0;
     while (first < length && buffer[first] == 0)

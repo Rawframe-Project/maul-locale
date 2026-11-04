@@ -19,15 +19,16 @@ size_t mlocFindKeyword(const mlocLocale* locale, const char* key, const char** v
 
 // Whether the locale has the -u key, with a value or without one (a key
 // alone stands for "true", which canonical form leaves out).
-bool mlocHasKeyword(const mlocLocale* locale, const char* key);
+MLOC_NODISCARD bool mlocHasKeyword(const mlocLocale* locale, const char* key);
 
 // Sets the -u key (two letters) to a value (its type subtags, lowercase,
 // joined by hyphens), replacing the key's value if it has one: false
 // when the locale with it is no locale id or does not fit.
-bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value, size_t length);
+MLOC_NODISCARD bool mlocSetKeyword(mlocLocale* locale, const char* key, const char* value,
+                                   size_t length);
 
 // Leaves the -u key and its value out, and the u extension when nothing
 // is left in it: false when the locale without it does not parse.
-bool mlocRemoveKeyword(mlocLocale* locale, const char* key);
+MLOC_NODISCARD bool mlocRemoveKeyword(mlocLocale* locale, const char* key);
 
 #endif

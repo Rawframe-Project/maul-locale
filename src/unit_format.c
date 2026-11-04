@@ -30,7 +30,7 @@
 static_assert(sizeof(UnitFormat) <= sizeof(mlocUnitFormatter),
               "a unit formatter fits its opaque value");
 
-static bool ValidOptions(const mlocUnitOptions* o)
+MLOC_NODISCARD static bool ValidOptions(const mlocUnitOptions* o)
 {
     return (uint32_t)o->width <= mloc_unitWidthNumeric &&
            (uint32_t)o->coordinate <= mloc_coordinateLongitude &&
@@ -187,7 +187,7 @@ mlocResult mlocInitUnitFormatter(const mlocDataSet* data, const mlocLocale* loca
 }
 
 // Whether an output's slots and patterns lie within the formatter.
-static bool ValidOutput(const UnitFormat* u, const UnitOutput* o)
+MLOC_NODISCARD static bool ValidOutput(const UnitFormat* u, const UnitOutput* o)
 {
     if (o->parts < 1 || o->parts > unitMaxParts || o->slot > unitSlots - o->parts ||
         o->smallest >= o->parts || (o->parts > 1 && (!o->id.mixed || o->id.count != o->parts)) ||
@@ -223,7 +223,7 @@ static_assert(offsetof(UnitFormat, formatter) == 0, "the formatter begins a unit
 // most of the value, is read in place, the output units are those the
 // formatter has, and the input unit, unit table and unit list only a
 // usage or a mixed unit reads.
-static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
+MLOC_NODISCARD static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
 {
     if (opaque == nullptr || !mlocReadFormatter(opaque, sizeof(*opaque), unitStamp, &u->formatter))
     {
@@ -287,7 +287,7 @@ static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
            (!u->usage || (!u->percent && mlocValidUsageOutputs(u)));
 }
 
-static bool ValidArguments(const mlocDecimal* decimal, const mlocOutput* output)
+MLOC_NODISCARD static bool ValidArguments(const mlocDecimal* decimal, const mlocOutput* output)
 {
     return decimal != nullptr && output != nullptr &&
            (output->buffer != nullptr || output->capacity == 0) && mlocValidDecimal(decimal);

@@ -65,6 +65,7 @@ const char* mlocFinnishLetterName(const uint8_t* text, size_t end);
 
 // Writes a request's endings on a text's end; false when there is
 // nothing to read or a marked text is asked a plural or a possessor.
-bool mlocFinnishInflect(const FinnishText* text, const mlocInflection* request, FinnishForm* out);
+MLOC_NODISCARD bool mlocFinnishInflect(const FinnishText* text, const mlocInflection* request,
+                                       FinnishForm* out);
 
 #endif

@@ -136,7 +136,7 @@ typedef struct ZoneTables
 
 // The sections of a payload whose size their counts give; false when it
 // is not.
-bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out);
+MLOC_NODISCARD bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out);
 
 // The validator of the zones unit: the sections, every index and range,
 // times ascending within a zone, identifiers in order and unique with
@@ -146,7 +146,7 @@ bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out);
 MLOC_NODISCARD bool mlocValidZones(const DataView* view, DataSpan payload);
 
 // The tables of the first source of a set with a zones unit, or false.
-bool mlocFindZoneTables(const mlocDataSet* data, ZoneTables* out);
+MLOC_NODISCARD bool mlocFindZoneTables(const mlocDataSet* data, ZoneTables* out);
 
 ZoneRecord mlocZoneRecord(const ZoneTables* t, uint32_t zone);
 ZoneOffset mlocZoneOffsetOf(const ZoneTables* t, uint32_t index);

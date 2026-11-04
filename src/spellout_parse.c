@@ -129,7 +129,7 @@ static mlocDecimal Zero(void)
     return (mlocDecimal){.kind = mloc_decimalFinite};
 }
 
-static bool Finite(const mlocDecimal* d)
+MLOC_NODISCARD static bool Finite(const mlocDecimal* d)
 {
     return d->kind == mloc_decimalFinite;
 }
@@ -152,7 +152,8 @@ static mlocDecimal AddSpecial(const mlocDecimal* a, const mlocDecimal* b)
     return Finite(a) ? *b : *a;
 }
 
-static bool Add(Parser* p, const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* out)
+MLOC_NODISCARD static bool Add(Parser* p, const mlocDecimal* a, const mlocDecimal* b,
+                               mlocDecimal* out)
 {
     if (!Finite(a) || !Finite(b))
     {
@@ -168,7 +169,8 @@ static bool Add(Parser* p, const mlocDecimal* a, const mlocDecimal* b, mlocDecim
 }
 
 // x times a rule's divisor.
-static bool MultiplyBy(Parser* p, const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out)
+MLOC_NODISCARD static bool MultiplyBy(Parser* p, const mlocDecimal* x, SpelloutDivisor divisor,
+                                      mlocDecimal* out)
 {
     bool done = !Finite(x)           ? (*out = *x, true)
                 : divisor.power >= 0 ? mlocSpelloutShift(x, -divisor.power, out)
@@ -182,7 +184,7 @@ static bool MultiplyBy(Parser* p, const mlocDecimal* x, SpelloutDivisor divisor,
 }
 
 // A positive integer as a divisor, with its power of ten when it is one.
-static bool DivisorOf(const mlocDecimal* d, SpelloutDivisor* out)
+MLOC_NODISCARD static bool DivisorOf(const mlocDecimal* d, SpelloutDivisor* out)
 {
     uint64_t value = 0;
     if (!Finite(d) || d->negative != 0 || !mlocSpelloutIsInteger(d) ||
@@ -197,7 +199,8 @@ static bool DivisorOf(const mlocDecimal* d, SpelloutDivisor* out)
 
 // x over a positive integer, exact: the bases of fraction rule sets are
 // powers of ten.
-static bool Divide(Parser* p, const mlocDecimal* x, const mlocDecimal* by, mlocDecimal* out)
+MLOC_NODISCARD static bool Divide(Parser* p, const mlocDecimal* x, const mlocDecimal* by,
+                                  mlocDecimal* out)
 {
     SpelloutDivisor divisor;
     if (!Finite(x))
@@ -215,9 +218,9 @@ static bool Divide(Parser* p, const mlocDecimal* x, const mlocDecimal* by, mlocD
 
 // The composeRuleValue of each substitution: the value read and the
 // partial result before it.
-MLOC_NOINLINE static bool Compose(Parser* p, const SpelloutRule* rule, SpelloutSubKind kind,
-                                  const mlocDecimal* value, const mlocDecimal* old,
-                                  mlocDecimal* out)
+MLOC_NODISCARD MLOC_NOINLINE static bool Compose(Parser* p, const SpelloutRule* rule,
+                                                 SpelloutSubKind kind, const mlocDecimal* value,
+                                                 const mlocDecimal* old, mlocDecimal* out)
 {
     switch (kind)
     {
@@ -335,9 +338,9 @@ MLOC_NOINLINE static void PatternParse(Parser* p, uint32_t pattern, SpelloutText
 // NFSubstitution::doParse: the substitution's rule set or pattern under
 // its upper bound (calcUpperBound), the value composed with the partial
 // result.
-static bool SubBasic(Parser* p, const SpelloutRule* rule, const uint8_t* sub, SpelloutText text,
-                     const mlocDecimal* base, uint64_t upper, uint32_t mask, int depth,
-                     size_t* endOut, mlocDecimal* valueOut)
+MLOC_NODISCARD static bool SubBasic(Parser* p, const SpelloutRule* rule, const uint8_t* sub,
+                                    SpelloutText text, const mlocDecimal* base, uint64_t upper,
+                                    uint32_t mask, int depth, size_t* endOut, mlocDecimal* valueOut)
 {
     SpelloutSubKind kind = (SpelloutSubKind)(sub[1] & spelloutSubKindMask);
     uint64_t bound = kind == spelloutSame                                    ? upper
@@ -368,9 +371,9 @@ static bool SubBasic(Parser* p, const SpelloutRule* rule, const uint8_t* sub, Sp
 // FractionalPartSubstitution::doParse digit by digit: each digit a rule
 // below ten reads, spaces after it skipped. A rule reading other than a
 // digit from 0 to 9 ends the fraction (ICU appends it as a digit).
-MLOC_NOINLINE static bool SubDigits(Parser* p, const uint8_t* sub, SpelloutText text,
-                                    const mlocDecimal* base, uint32_t mask, int depth,
-                                    size_t* endOut, mlocDecimal* valueOut)
+MLOC_NODISCARD MLOC_NOINLINE static bool SubDigits(Parser* p, const uint8_t* sub, SpelloutText text,
+                                                   const mlocDecimal* base, uint32_t mask,
+                                                   int depth, size_t* endOut, mlocDecimal* valueOut)
 {
     uint8_t digits[maxFractionDigits];
     int count = 0;
@@ -431,10 +434,11 @@ MLOC_NOINLINE static bool SubDigits(Parser* p, const uint8_t* sub, SpelloutText 
 // below one), then the numerator over the power of ten past it and the
 // zeros. The position ICU reports leaves the zeros out, which it then
 // fails to match.
-MLOC_NOINLINE static bool SubNumerator(Parser* p, const SpelloutRule* rule, const uint8_t* sub,
-                                       SpelloutText text, const mlocDecimal* base, uint64_t upper,
-                                       uint32_t mask, int depth, size_t* endOut,
-                                       mlocDecimal* valueOut)
+MLOC_NODISCARD MLOC_NOINLINE static bool SubNumerator(Parser* p, const SpelloutRule* rule,
+                                                      const uint8_t* sub, SpelloutText text,
+                                                      const mlocDecimal* base, uint64_t upper,
+                                                      uint32_t mask, int depth, size_t* endOut,
+                                                      mlocDecimal* valueOut)
 {
     if ((sub[1] & spelloutSubZeros) == 0 || mlocSpelloutTarget(sub) < 0)
     {
@@ -487,9 +491,9 @@ MLOC_NOINLINE static bool SubNumerator(Parser* p, const SpelloutRule* rule, cons
 
 // NFSubstitution::doParse and its subclasses': whether it read, the end
 // and the value composed.
-static bool SubParse(Parser* p, const SpelloutRule* rule, const uint8_t* sub, SpelloutText text,
-                     const mlocDecimal* base, uint64_t upper, uint32_t mask, int depth,
-                     size_t* endOut, mlocDecimal* valueOut)
+MLOC_NODISCARD static bool SubParse(Parser* p, const SpelloutRule* rule, const uint8_t* sub,
+                                    SpelloutText text, const mlocDecimal* base, uint64_t upper,
+                                    uint32_t mask, int depth, size_t* endOut, mlocDecimal* valueOut)
 {
     SpelloutSubKind kind = (SpelloutSubKind)(sub[1] & spelloutSubKindMask);
     uint32_t before = mlocLoad16(sub + 4);
@@ -584,7 +588,7 @@ static mlocDecimal MatchToDelimiter(Parser* p, const SpelloutRule* rule, const S
 
 // One over a rule's value: a rule of a fraction rule set without
 // substitutions reads one over its base.
-MLOC_NOINLINE static bool Inverse(Parser* p, mlocDecimal* value)
+MLOC_NODISCARD MLOC_NOINLINE static bool Inverse(Parser* p, mlocDecimal* value)
 {
     mlocDecimal one = mlocSpelloutFromUnsigned(1);
     return Divide(p, &one, value, value);
@@ -685,7 +689,7 @@ static Memo* MemoOf(Parser* p, const MemoKey* key)
 // searched again at each depth, a long text whose search meets the limit
 // is exponential. A search the limit cut short is searched again
 // shallower, where more of it may be read.
-static bool Holds(const Memo* memo, const MemoKey* key, int depth)
+MLOC_NODISCARD static bool Holds(const Memo* memo, const MemoKey* key, int depth)
 {
     return (memo->flags & memoUsed) != 0 && memo->start == key->start &&
            memo->length == key->length && memo->upper == key->upper && memo->set == key->set &&
@@ -694,8 +698,8 @@ static bool Holds(const Memo* memo, const MemoKey* key, int depth)
 
 // Whether a pair of slots holds the search of these inputs, standing at
 // this depth; its result then, the limit it met counted as met.
-static bool Recall(Parser* p, const Memo* pair, const MemoKey* key, int depth, size_t* endOut,
-                   mlocDecimal* valueOut)
+MLOC_NODISCARD static bool Recall(Parser* p, const Memo* pair, const MemoKey* key, int depth,
+                                  size_t* endOut, mlocDecimal* valueOut)
 {
     for (uint32_t way = 0; way < memoWays; way++)
     {
@@ -805,8 +809,8 @@ static size_t TryRules(Parser* p, uint32_t index, SpelloutText text, uint64_t up
 // record: it reaches a pattern under the upper bound, or a special rule
 // not yet tried, or a text starting with the text's first character. A
 // search refused reads nothing at any depth, as ICU's would.
-static bool MayStart(const Parser* p, uint32_t index, SpelloutText text, uint64_t upper,
-                     uint32_t mask)
+MLOC_NODISCARD static bool MayStart(const Parser* p, uint32_t index, SpelloutText text,
+                                    uint64_t upper, uint32_t mask)
 {
     const uint8_t* lead = p->r.leads + (size_t)index * spelloutLeadSize;
     uint64_t need = mlocLoad64(lead);

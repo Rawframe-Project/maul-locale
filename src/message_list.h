@@ -59,7 +59,7 @@ typedef struct PreparedList
 
 // Whether a list argument holds what the library takes: items with text
 // where their lengths ask, a count of at most UINT32_MAX.
-bool mlocGoodList(const mlocMessageValue* argument);
+MLOC_NODISCARD bool mlocGoodList(const mlocMessageValue* argument);
 
 // A list value of a list argument's items, no option given.
 ListValue mlocMakeListValue(const mlocMessageValue* argument);
@@ -73,8 +73,8 @@ mlocMessageFaultKind mlocSetListOption(ListValue* value, const uint8_t* name, si
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made.
-bool mlocPrepareList(const ListValue* value, const mlocDataSet* data, const mlocLocale* locale,
-                     PreparedList* out);
+MLOC_NODISCARD bool mlocPrepareList(const ListValue* value, const mlocDataSet* data,
+                                    const mlocLocale* locale, PreparedList* out);
 
 // Writes a value in a locale, with the formatter prepared for it when
 // prepared (which may be null) has its options, else one made here;

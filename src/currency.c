@@ -47,7 +47,7 @@ typedef struct Fields
     bool broken;
 } Fields;
 
-static bool Gather(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool Gather(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)depth;
     Fields* f = context;
@@ -84,8 +84,8 @@ static bool Gather(void* context, DataSpan unit, const DataView* view, int depth
 
 // A currency's fields of a kind along a locale's chain; false when the
 // chain cannot be walked or a field names what its source lacks.
-static bool GatherFields(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                         uint16_t code, Fields* out)
+MLOC_NODISCARD static bool GatherFields(const mlocDataSet* data, const mlocLocale* locale,
+                                        uint32_t kind, uint16_t code, Fields* out)
 {
     *out = (Fields){.kind = kind, .code = code};
     return mlocVisitLocaleUnits(data, mloc_componentMain, kind, locale, Gather, out) &&
@@ -109,13 +109,13 @@ static uint32_t ShownField(const Fields* f, mlocCurrencyDisplay display)
     return (f->found & 1u << field) != 0 ? field : currencyFieldCount;
 }
 
-static bool IsSymbolDisplay(mlocCurrencyDisplay display)
+MLOC_NODISCARD static bool IsSymbolDisplay(mlocCurrencyDisplay display)
 {
     return display == mloc_currencySymbol || display == mloc_currencyNarrowSymbol ||
            display == mloc_currencyFormalSymbol || display == mloc_currencyVariantSymbol;
 }
 
-static bool ValidOptions(const mlocCurrencyOptions* o)
+MLOC_NODISCARD static bool ValidOptions(const mlocCurrencyOptions* o)
 {
     const mlocNumberOptions* n = &o->number;
     return mlocValidFormatOptions(n) && n->style == mloc_numberDecimal &&
@@ -126,7 +126,8 @@ static bool ValidOptions(const mlocCurrencyOptions* o)
 }
 
 // A currency's fraction; false for data without the fractions.
-static bool FindFraction(const mlocDataSet* data, uint16_t code, CurrencyFraction* out)
+MLOC_NODISCARD static bool FindFraction(const mlocDataSet* data, uint16_t code,
+                                        CurrencyFraction* out)
 {
     DataSpan fractions;
     if (!mlocFindDataSetUnit(data, kindCurrencyFractions, nullptr, 0, &fractions))
@@ -138,8 +139,8 @@ static bool FindFraction(const mlocDataSet* data, uint16_t code, CurrencyFractio
 }
 
 // The zero precision's: the currency's digits and rounding increment.
-static bool CurrencyPrecision(const mlocDataSet* data, uint16_t code, mlocCurrencyUsage usage,
-                              mlocPrecision* precision)
+MLOC_NODISCARD static bool CurrencyPrecision(const mlocDataSet* data, uint16_t code,
+                                             mlocCurrencyUsage usage, mlocPrecision* precision)
 {
     CurrencyFraction f;
     if (!FindFraction(data, code, &f))
@@ -158,7 +159,7 @@ static bool CurrencyPrecision(const mlocDataSet* data, uint16_t code, mlocCurren
 
 // Whether the options, or else the locale (-u-cf-account), ask for
 // accounting.
-static bool Accounting(const mlocLocale* locale, mlocCurrencySign sign)
+MLOC_NODISCARD static bool Accounting(const mlocLocale* locale, mlocCurrencySign sign)
 {
     if (sign != mloc_currencySignLocale)
     {
@@ -170,8 +171,8 @@ static bool Accounting(const mlocLocale* locale, mlocCurrencySign sign)
 }
 
 // Sets the currency a core shows and the separators it gives of its own.
-static bool ShowCurrency(NumberCore* core, const Fields* f, mlocCurrencyDisplay display,
-                         bool ownPattern)
+MLOC_NODISCARD static bool ShowCurrency(NumberCore* core, const Fields* f,
+                                        mlocCurrencyDisplay display, bool ownPattern)
 {
     mlocUnpackCurrency(f->code, core->currencyCode);
     uint32_t field = ShownField(f, display);
@@ -251,7 +252,7 @@ typedef struct Keep
     bool names;
 } Keep;
 
-static bool KeepUnit(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool KeepUnit(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)view;
     Keep* k = context;
@@ -278,7 +279,7 @@ typedef struct Walk
     Keep keep;
 } Walk;
 
-static bool WalkUnit(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool WalkUnit(void* context, DataSpan unit, const DataView* view, int depth)
 {
     Walk* w = context;
     if (w->fields != nullptr && !w->done)
@@ -293,8 +294,9 @@ static bool WalkUnit(void* context, DataSpan unit, const DataView* view, int dep
 // when the set has the names data file), and a currency's symbol fields,
 // and its name fields when names is set; false when the chain cannot be
 // walked or a field names what its source lacks.
-static bool WalkChain(const mlocDataSet* data, const mlocLocale* locale, uint16_t code,
-                      Fields* symbols, Fields* names, CurrencyChain* out)
+MLOC_NODISCARD static bool WalkChain(const mlocDataSet* data, const mlocLocale* locale,
+                                     uint16_t code, Fields* symbols, Fields* names,
+                                     CurrencyChain* out)
 {
     *out = (CurrencyChain){.complete = true};
     out->turkic = strcmp(locale->language, "tr") == 0 || strcmp(locale->language, "az") == 0;
@@ -415,7 +417,7 @@ mlocResult mlocInitCurrencyFormatter(const mlocDataSet* data, const mlocLocale* 
 
 // The currency formatter of an opaque value, or false when the library
 // did not make it.
-static bool ReadCurrency(const mlocCurrencyFormatter* opaque, Currency* c)
+MLOC_NODISCARD static bool ReadCurrency(const mlocCurrencyFormatter* opaque, Currency* c)
 {
     if (!mlocReadFormatter(opaque, sizeof(*opaque), currencyStamp, &c->formatter))
     {

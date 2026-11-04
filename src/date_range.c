@@ -109,7 +109,7 @@ static uint32_t LetterPart(uint8_t letter)
 
 // Whether a pattern's byte starts a field, with or without its
 // numbering system.
-static bool IsField(uint8_t byte)
+MLOC_NODISCARD static bool IsField(uint8_t byte)
 {
     return byte == datePatternField || byte == datePatternOverride;
 }
@@ -167,7 +167,7 @@ static int32_t LetterLevel(uint8_t letter)
 
 // Whether a pattern shows no field as small as a difference
 // (SimpleDateFormat::isFieldUnitIgnored).
-static bool Ignores(DataSpan pattern, uint32_t difference)
+MLOC_NODISCARD static bool Ignores(DataSpan pattern, uint32_t difference)
 {
     for (uint32_t at = 0; at < pattern.size; at += ItemSize(pattern.bytes + at))
     {

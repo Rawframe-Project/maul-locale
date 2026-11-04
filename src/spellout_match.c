@@ -88,8 +88,9 @@ static int64_t IndexOf(SpelloutText text, SpelloutText key, size_t from)
 
 // Whether text at a position holds the text pieces of a range in order,
 // and the length they take.
-static bool HoldsPieces(const SpelloutRules* r, const SpelloutParts* parts, uint32_t from,
-                        uint32_t to, SpelloutText text, size_t at, size_t* lengthOut)
+MLOC_NODISCARD static bool HoldsPieces(const SpelloutRules* r, const SpelloutParts* parts,
+                                       uint32_t from, uint32_t to, SpelloutText text, size_t at,
+                                       size_t* lengthOut)
 {
     size_t length = 0;
     for (uint32_t i = from; i < to; i++)

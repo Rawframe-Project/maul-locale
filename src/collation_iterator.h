@@ -109,8 +109,8 @@ static inline void mlocCollationIteratorStart(CollationIterator* it, const Colla
 // NFD changes, only the whole segment has a range (see NfdStream). A
 // discontiguous contraction spans to the end of its last code point,
 // and the marks it skipped have empty ranges there.
-bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut, uint32_t* lowOut,
-                                uint32_t* highOut);
+MLOC_NODISCARD bool mlocCollationNextElementAt(CollationIterator* it, uint64_t* elementOut,
+                                               uint32_t* lowOut, uint32_t* highOut);
 
 // Adds a code point to the history prefixes are matched against, as
 // though read before the text: a search started inside a text gives it
@@ -119,6 +119,6 @@ void mlocCollationIteratorRemember(CollationIterator* it, uint32_t codePoint);
 
 // The next element; false at the end of the text. A completely
 // ignorable element is given as 0.
-bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut);
+MLOC_NODISCARD bool mlocCollationNextElement(CollationIterator* it, uint64_t* elementOut);
 
 #endif

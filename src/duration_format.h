@@ -56,9 +56,9 @@ typedef struct DurationFormat
 // ECMA-402's GetDurationUnitOptions over the fields in order, into the
 // resolved styles and displays (the locale's two-digit hours aside);
 // false for options out of range or in conflict.
-bool mlocResolveDurationOptions(const mlocDurationOptions* options,
-                                uint8_t style[mloc_durationFieldCount],
-                                uint8_t display[mloc_durationFieldCount]);
+MLOC_NODISCARD bool mlocResolveDurationOptions(const mlocDurationOptions* options,
+                                               uint8_t style[mloc_durationFieldCount],
+                                               uint8_t display[mloc_durationFieldCount]);
 
 // The separators and hour padding of an hms pattern, "h" or "hh", a
 // separator, "m" or "mm", a separator, "s" or "ss", into a formatter's

@@ -23,7 +23,8 @@ uint32_t mlocMessageKey(const MessageView* view, uint32_t variant, uint32_t sele
 }
 
 // A string in the pool, well-formed UTF-8; empty only where allowed.
-static bool GoodString(const MessageView* v, uint32_t offset, uint32_t length, bool empty)
+MLOC_NODISCARD static bool GoodString(const MessageView* v, uint32_t offset, uint32_t length,
+                                      bool empty)
 {
     uint32_t pool = v->count[messagePool];
     if (length == 0)
@@ -39,7 +40,8 @@ static bool GoodString(const MessageView* v, uint32_t offset, uint32_t length, b
 
 // A well-formed string that is one MF2 name, or with identifier set a
 // namespace, ":" and a name.
-static bool GoodName(const MessageView* v, uint32_t offset, uint32_t length, bool identifier)
+MLOC_NODISCARD static bool GoodName(const MessageView* v, uint32_t offset, uint32_t length,
+                                    bool identifier)
 {
     if (!GoodString(v, offset, length, false))
     {
@@ -71,7 +73,7 @@ static bool GoodName(const MessageView* v, uint32_t offset, uint32_t length, boo
     return !start;
 }
 
-static bool InRange(uint32_t first, uint32_t count, uint32_t total)
+MLOC_NODISCARD static bool InRange(uint32_t first, uint32_t count, uint32_t total)
 {
     return first <= total && count <= total - first;
 }
@@ -81,7 +83,7 @@ static uint32_t Field(const MessageView* v, uint32_t kind, uint32_t index, uint3
     return mlocMessageField(v, kind, index, field);
 }
 
-static bool GoodDeclarations(const MessageView* v)
+MLOC_NODISCARD static bool GoodDeclarations(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messageDeclarations]; i++)
     {
@@ -95,7 +97,7 @@ static bool GoodDeclarations(const MessageView* v)
     return true;
 }
 
-static bool GoodOperand(const MessageView* v, uint32_t i)
+MLOC_NODISCARD static bool GoodOperand(const MessageView* v, uint32_t i)
 {
     uint32_t a = Field(v, messageExpressions, i, 1);
     uint32_t b = Field(v, messageExpressions, i, 2);
@@ -112,7 +114,7 @@ static bool GoodOperand(const MessageView* v, uint32_t i)
     }
 }
 
-static bool GoodExpressions(const MessageView* v)
+MLOC_NODISCARD static bool GoodExpressions(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messageExpressions]; i++)
     {
@@ -129,7 +131,7 @@ static bool GoodExpressions(const MessageView* v)
     return true;
 }
 
-static bool GoodMarkups(const MessageView* v)
+MLOC_NODISCARD static bool GoodMarkups(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messageMarkups]; i++)
     {
@@ -144,7 +146,7 @@ static bool GoodMarkups(const MessageView* v)
     return true;
 }
 
-static bool GoodParameter(const MessageView* v, uint32_t i)
+MLOC_NODISCARD static bool GoodParameter(const MessageView* v, uint32_t i)
 {
     uint32_t a = Field(v, messageParameters, i, 3);
     uint32_t b = Field(v, messageParameters, i, 4);
@@ -166,7 +168,7 @@ static bool GoodParameter(const MessageView* v, uint32_t i)
     }
 }
 
-static bool GoodMatcher(const MessageView* v)
+MLOC_NODISCARD static bool GoodMatcher(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messageSelectors]; i++)
     {
@@ -199,7 +201,7 @@ static bool GoodMatcher(const MessageView* v)
     return true;
 }
 
-static bool GoodPieces(const MessageView* v)
+MLOC_NODISCARD static bool GoodPieces(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messagePieces]; i++)
     {
@@ -217,7 +219,7 @@ static bool GoodPieces(const MessageView* v)
     return true;
 }
 
-static bool GoodRecords(const MessageView* v)
+MLOC_NODISCARD static bool GoodRecords(const MessageView* v)
 {
     for (uint32_t i = 0; i < v->count[messageParameters]; i++)
     {
@@ -292,7 +294,7 @@ static uint64_t StringBytes(const MessageView* v)
 // compiler's order (the declarations', then the pieces'), and the
 // parameter and piece ranges together fit their records: so writing a
 // message back visits each record a bounded number of times.
-static bool BoundedReferences(const MessageView* v)
+MLOC_NODISCARD static bool BoundedReferences(const MessageView* v)
 {
     uint64_t next = 0;
     for (uint32_t d = 0; d < v->count[messageDeclarations]; d++)

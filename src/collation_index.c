@@ -14,8 +14,8 @@
 
 // Whether a label sorts after another in code point order, which UTF-8's
 // bytes keep.
-static bool After(const uint8_t* text, uint32_t length, const uint8_t* before,
-                  uint32_t beforeLength)
+MLOC_NODISCARD static bool After(const uint8_t* text, uint32_t length, const uint8_t* before,
+                                 uint32_t beforeLength)
 {
     uint32_t common = length < beforeLength ? length : beforeLength;
     int order = memcmp(text, before, common);

@@ -137,8 +137,8 @@ int32_t mlocZoneFindIdentifier(const ZoneTables* t, const char* name, size_t len
 
 // The last transition at or before a time, the table's or the closing
 // rule's: false when the time is before the first.
-static bool Latest(const ZoneTables* t, const ZoneRecord* z, int64_t seconds, int64_t* atOut,
-                   ZoneOffset* offsetOut)
+MLOC_NODISCARD static bool Latest(const ZoneTables* t, const ZoneRecord* z, int64_t seconds,
+                                  int64_t* atOut, ZoneOffset* offsetOut)
 {
     uint32_t count = CountUpTo(t, z, seconds);
     int64_t at = count == 0 ? INT64_MIN : TimeOf(t, z, count - 1);

@@ -45,14 +45,14 @@ enum
 MLOC_NODISCARD bool mlocYearDateValid(const mlocDate* date);
 
 CalendarSource mlocYearSource(mlocCalendar calendar);
-bool mlocYearLunisolar(CalendarSource source);
+MLOC_NODISCARD bool mlocYearLunisolar(CalendarSource source);
 
 void mlocYearOpen(CalendarYear* y, mlocCalendar calendar, int64_t year);
 uint32_t mlocYearMonths(const CalendarYear* y);
 uint32_t mlocYearDaysInMonth(const CalendarYear* y, uint32_t month);
 int64_t mlocYearDayOf(const CalendarYear* y, uint32_t month, uint32_t day);
 // A leap day or a leap month.
-bool mlocYearLeap(const CalendarYear* y);
+MLOC_NODISCARD bool mlocYearLeap(const CalendarYear* y);
 // The leap month's place in the year, 0 for none: Hebrew's Adar I, the
 // sixth month of a leap year, and the Chinese or Dangi leap month.
 uint32_t mlocYearLeapMonth(const CalendarYear* y);
@@ -72,19 +72,20 @@ int64_t mlocYearMonthNumber(const CalendarYear* y, uint32_t month);
 // years either way in the arithmetic calendars, beyond any a valid
 // Temporal duration reaches (2^33), and lunarMinYear to lunarMaxYear in
 // Chinese and Dangi.
-bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t number,
-                             uint32_t* monthOut);
+MLOC_NODISCARD bool mlocYearOpenMonthNumber(CalendarYear* y, mlocCalendar calendar, int64_t number,
+                                            uint32_t* monthOut);
 
 // Reads a month code's text, 'M01' to 'M13' with 'L' after for a leap
 // month: false for any other.
-bool mlocYearParseMonthCode(const char* code, size_t length, uint32_t* numberOut, bool* leapOut);
+MLOC_NODISCARD bool mlocYearParseMonthCode(const char* code, size_t length, uint32_t* numberOut,
+                                           bool* leapOut);
 
 // A month's code: its number, and whether it is the leap month, which
 // takes the number of the month before it ('M05L' after 'M05'); the
 // months after a leap month take the code of the place before theirs.
 void mlocYearCodeOf(const CalendarYear* y, uint32_t month, uint32_t* numberOut, bool* leapOut);
 // Whether a code is one some year of the calendar has.
-bool mlocYearCodeExists(const CalendarYear* y, uint32_t number, bool leap);
+MLOC_NODISCARD bool mlocYearCodeExists(const CalendarYear* y, uint32_t number, bool leap);
 // The month a code names in a year: mloc_success; for a leap month the
 // year lacks, the month Temporal puts in its place (Hebrew's Adar,
 // 'M06'; the Chinese month of the same number) or mloc_errorInvalid

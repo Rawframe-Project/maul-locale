@@ -119,7 +119,7 @@ static int32_t ReferenceZone(const ZoneMeta* m, int32_t metazone, const char* re
 }
 
 // A code's region (two letters), or false for none.
-static bool CodeRegion(const ZoneAt* a, char region[3])
+MLOC_NODISCARD static bool CodeRegion(const ZoneAt* a, char region[3])
 {
     region[0] = '\0';
     if (a->code >= 0)
@@ -134,7 +134,7 @@ static bool CodeRegion(const ZoneAt* a, char region[3])
 
 // The text filed at a key first along the chain; false for none or an
 // empty one ("∅∅∅").
-static bool FindKey(const ZoneFormat* f, uint32_t key, ZoneText* out)
+MLOC_NODISCARD static bool FindKey(const ZoneFormat* f, uint32_t key, ZoneText* out)
 {
     *out = (ZoneText){0};
     for (uint32_t i = 0; i < f->nameCount; i++)
@@ -171,13 +171,14 @@ static bool FindKey(const ZoneFormat* f, uint32_t key, ZoneText* out)
     return false;
 }
 
-static bool FormatText(const ZoneFormat* f, ZoneNameFormat field, ZoneText* out)
+MLOC_NODISCARD static bool FormatText(const ZoneFormat* f, ZoneNameFormat field, ZoneText* out)
 {
     return FindKey(f, zoneNameFormats * zoneNameFieldsPerItem + (uint32_t)field, out);
 }
 
 // A code's field; false for a code the keys cannot hold.
-static bool CodeText(const ZoneFormat* f, int32_t code, ZoneNameField field, ZoneText* out)
+MLOC_NODISCARD static bool CodeText(const ZoneFormat* f, int32_t code, ZoneNameField field,
+                                    ZoneText* out)
 {
     *out = (ZoneText){0};
     return code >= 0 && code < zoneNameMaxCodes &&
@@ -185,7 +186,8 @@ static bool CodeText(const ZoneFormat* f, int32_t code, ZoneNameField field, Zon
                    out);
 }
 
-static bool MetazoneText(const ZoneFormat* f, int32_t metazone, ZoneNameField field, ZoneText* out)
+MLOC_NODISCARD static bool MetazoneText(const ZoneFormat* f, int32_t metazone, ZoneNameField field,
+                                        ZoneText* out)
 {
     *out = (ZoneText){0};
     return metazone >= 0 &&
@@ -378,7 +380,8 @@ static int32_t TotalOffset(const ZoneAt* a)
 
 // "zzzz" or "z": the zone's name of its time at the instant, else its
 // metazone's.
-static bool WriteSpecific(const ZoneFormat* f, const ZoneAt* a, bool longForm, NumberWriter* w)
+MLOC_NODISCARD static bool WriteSpecific(const ZoneFormat* f, const ZoneAt* a, bool longForm,
+                                         NumberWriter* w)
 {
     bool daylight = a->offset.save != 0;
     ZoneNameField field = longForm ? (daylight ? zoneFieldLongDaylight : zoneFieldLongStandard)
@@ -395,7 +398,7 @@ static bool WriteSpecific(const ZoneFormat* f, const ZoneAt* a, bool longForm, N
 // Whether a named zone keeps standard time within 184 days of the
 // instant either way, as ICU4C asks before taking a standard name for a
 // generic one.
-static bool StandardAround(const ZoneAt* a)
+MLOC_NODISCARD static bool StandardAround(const ZoneAt* a)
 {
     int64_t at = 0;
     ZoneOffset offset = {0};
@@ -412,7 +415,7 @@ static bool StandardAround(const ZoneAt* a)
              at - a->seconds < daylightReach && offset.save != 0);
 }
 
-static bool SameIgnoringCase(ZoneText x, ZoneText y)
+MLOC_NODISCARD static bool SameIgnoringCase(ZoneText x, ZoneText y)
 {
     if (x.length != y.length)
     {
@@ -450,7 +453,7 @@ static ZoneOffset OffsetAtLocal(const ZoneTables* t, uint32_t zone, int64_t loca
 // Whether the metazone's preferred zone for the region shows the zone's
 // wall time with another offset, which qualifies its generic name (a
 // zone in a metazone is a named one).
-static bool OtherReference(const ZoneFormat* f, const ZoneAt* a)
+MLOC_NODISCARD static bool OtherReference(const ZoneFormat* f, const ZoneAt* a)
 {
     int32_t reference = ReferenceZone(&a->meta, a->metazone, f->region);
     if (reference == a->code || (uint32_t)reference >= a->codes.codeCount)
@@ -483,7 +486,7 @@ static ZoneText RegionName(const ZoneFormat* f, const char region[3])
 }
 
 // The zone's city: the locale's, else the one its identifier implies.
-static bool City(const ZoneFormat* f, const ZoneAt* a, ZoneText* out)
+MLOC_NODISCARD static bool City(const ZoneFormat* f, const ZoneAt* a, ZoneText* out)
 {
     return CodeText(f, a->code, zoneFieldCity, out);
 }
@@ -517,7 +520,8 @@ static void WritePartial(const ZoneFormat* f, const ZoneAt* a, ZoneText name, Nu
 // "Pacific Time", "PT": the zone's generic name, else the standard name
 // of a zone in standard time all around, else its metazone's generic
 // name, qualified where the reference zone differs.
-static bool WriteGeneric(const ZoneFormat* f, const ZoneAt* a, bool longForm, NumberWriter* w)
+MLOC_NODISCARD static bool WriteGeneric(const ZoneFormat* f, const ZoneAt* a, bool longForm,
+                                        NumberWriter* w)
 {
     ZoneNameField generic = longForm ? zoneFieldLongGeneric : zoneFieldShortGeneric;
     ZoneNameField standard = longForm ? zoneFieldLongStandard : zoneFieldShortStandard;
@@ -560,7 +564,7 @@ static bool WriteGeneric(const ZoneFormat* f, const ZoneAt* a, bool longForm, Nu
 
 // "Los Angeles Time", "Japan Time": the region format around the country
 // for its only or primary zone, else around the city.
-static bool WriteLocation(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
+MLOC_NODISCARD static bool WriteLocation(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
 {
     char region[3];
     ZoneText pattern;
@@ -600,7 +604,8 @@ static void WriteCity(const ZoneFormat* f, const ZoneAt* a, NumberWriter* w)
     Write(w, city.bytes, city.length);
 }
 
-static bool WriteStyle(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a, NumberWriter* w)
+MLOC_NODISCARD static bool WriteStyle(const ZoneFormat* f, mlocZoneStyle style, const ZoneAt* a,
+                                      NumberWriter* w)
 {
     switch (style)
     {
@@ -673,7 +678,7 @@ typedef struct ChainWalk
     bool full;
 } ChainWalk;
 
-static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
+MLOC_NODISCARD static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
 {
     (void)depth;
     ChainWalk* walk = context;

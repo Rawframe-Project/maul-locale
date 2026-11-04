@@ -100,7 +100,8 @@ bool mlocValidGlue(const uint8_t* glue, uint32_t length)
 }
 
 // The numbering system a pattern names for its fields, or none.
-static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id, size_t* idLength)
+MLOC_NODISCARD static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id,
+                                      size_t* idLength)
 {
     for (uint32_t at = 0; at < length;)
     {
@@ -117,8 +118,8 @@ static bool OverrideOf(const uint8_t* pattern, uint32_t length, const char** id,
 
 // The formatter's patterns: the standard format's, or the field set's at
 // its length in the three year styles (one for a set without a year).
-static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* set,
-                         const mlocDateOptions* o)
+MLOC_NODISCARD static bool FindPatterns(DateFormat* f, const DatePatterns* p, const uint8_t* set,
+                                        const mlocDateOptions* o)
 {
     for (uint32_t i = 0; i < dateFormatPatterns; i++)
     {
@@ -167,8 +168,8 @@ static const uint8_t* IndexesOf(const DatePatterns* p, const uint8_t* part,
 
 // The formatter's interval patterns: each kept pattern's pair, a standard
 // format's own pattern, and the fallback.
-static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* intervals,
-                      const mlocDateOptions* o)
+MLOC_NODISCARD static bool FindRange(DateFormat* f, const DatePatterns* p, const uint8_t* intervals,
+                                     const mlocDateOptions* o)
 {
     DateRange* r = &f->range;
     r->table = (PatternTable){p->offsets, p->text, p->patternCount};
@@ -294,7 +295,7 @@ mlocResult mlocMakeDateFormat(DateFormat* f, const mlocDataSet* data, const mloc
 }
 
 // Whether a pattern holds literal text and zone fields only.
-static bool ZoneOnly(const uint8_t* pattern, uint32_t length)
+MLOC_NODISCARD static bool ZoneOnly(const uint8_t* pattern, uint32_t length)
 {
     for (uint32_t at = 0; at < length;)
     {
@@ -395,7 +396,7 @@ mlocResult mlocInitDateFormatterIn(const mlocDataSet* data, const mlocLocale* lo
 // the calendar's main one (before the common era, before the Republic of
 // China, before the Hijra, before the Incarnation), or a Japanese date
 // before Meiji.
-static bool NeedsEra(uint32_t calendar, const mlocDateFields* fields)
+MLOC_NODISCARD static bool NeedsEra(uint32_t calendar, const mlocDateFields* fields)
 {
     static const char* const s_main[dateCalendarCount] = {"ce", "ce", "be",    "roc", "",   "am",
                                                           "am", "aa", "shaka", "ap",  "am", "ah",
@@ -469,7 +470,8 @@ bool mlocReadDateValue(const DateFormat* f, const mlocDate* date, DateRead* valu
 
 // A formatter the library made, copied out, with a zone or without as
 // asked; false for any other.
-static bool ReadFormatter(const mlocDateFormatter* opaque, bool zoned, ZonedDateFormat* f)
+MLOC_NODISCARD static bool ReadFormatter(const mlocDateFormatter* opaque, bool zoned,
+                                         ZonedDateFormat* f)
 {
     if (opaque == nullptr)
     {

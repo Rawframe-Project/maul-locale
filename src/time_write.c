@@ -79,7 +79,7 @@ static void WritePeriod(const TimeFormat* f, uint32_t width, uint32_t period, ui
 }
 
 // Whether a pattern holds a field of a letter.
-static bool HasField(const uint8_t* pattern, uint32_t length, char letter)
+MLOC_NODISCARD static bool HasField(const uint8_t* pattern, uint32_t length, char letter)
 {
     for (uint32_t at = 0; at < length; at++)
     {

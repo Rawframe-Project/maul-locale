@@ -48,7 +48,7 @@ static mlocTimeZone Utc(const mlocDataSet* data)
 }
 
 // Whether a span of text is "iso8601", in any case.
-static bool IsIso(const char* text, mlocTextSpan span)
+MLOC_NODISCARD static bool IsIso(const char* text, mlocTextSpan span)
 {
     static const char iso[] = "iso8601";
     if (span.length != sizeof iso - 1)
@@ -68,8 +68,8 @@ static bool IsIso(const char* text, mlocTextSpan span)
 
 // The instant and zone of a literal with Z, an offset or a zone, its
 // local date-time already read; out's local becomes the zone's.
-static bool ZonedLiteral(const mlocTemporalParse* p, const char* text, const mlocDataSet* data,
-                         DateMoment* out)
+MLOC_NODISCARD static bool ZonedLiteral(const mlocTemporalParse* p, const char* text,
+                                        const mlocDataSet* data, DateMoment* out)
 {
     // Z or the offset as a zone of its own.
     mlocTimeZone fixed;
@@ -164,7 +164,8 @@ bool mlocGoodZoned(const mlocMessageValue* argument)
 }
 
 // An exact time in a zone: its local date-time there.
-static bool AtInstant(const mlocInstant* instant, const mlocTimeZone* zone, DateMoment* out)
+MLOC_NODISCARD static bool AtInstant(const mlocInstant* instant, const mlocTimeZone* zone,
+                                     DateMoment* out)
 {
     out->instant = *instant;
     out->zone = *zone;
@@ -317,7 +318,7 @@ static int Choice(const NumberOption* option, const char* const* names, int coun
     return -1;
 }
 
-static bool NameIs(const uint8_t* name, size_t length, const char* text)
+MLOC_NODISCARD static bool NameIs(const uint8_t* name, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
@@ -614,8 +615,8 @@ MLOC_NOINLINE static mlocResult WriteMade(const DateValue* value, const Shown* s
 // How a value is shown: a zoned one at its instant in the zone it is
 // shown in; a floating one as it is, at the instant its date-time names
 // in the zone for a zone style.
-static bool ShownOf(const DateValue* value, const mlocDataSet* data,
-                    const mlocTimeZone* defaultZone, Shown* out)
+MLOC_NODISCARD static bool ShownOf(const DateValue* value, const mlocDataSet* data,
+                                   const mlocTimeZone* defaultZone, Shown* out)
 {
     out->local = value->value;
     out->instant = value->instant;

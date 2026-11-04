@@ -18,7 +18,7 @@
 
 static const uint8_t s_minusSign[3] = {0xE2, 0x88, 0x92};
 
-static bool TwoDigits(const char* p, int limit, int* out)
+MLOC_NODISCARD static bool TwoDigits(const char* p, int limit, int* out)
 {
     if (p[0] < '0' || p[0] > '9' || p[1] < '0' || p[1] > '9')
     {
@@ -30,7 +30,7 @@ static bool TwoDigits(const char* p, int limit, int* out)
 
 // An offset: a sign, two digits of hours, then optionally two of minutes
 // after a colon or not.
-static bool ParseOffset(const char* id, size_t length, int16_t* minutesOut)
+MLOC_NODISCARD static bool ParseOffset(const char* id, size_t length, int16_t* minutesOut)
 {
     size_t sign = length >= 3 && memcmp(id, s_minusSign, 3) == 0 ? 3 : 1;
     bool negative = sign == 3 || id[0] == '-';
@@ -243,8 +243,8 @@ mlocResult mlocGetTimeZoneOffset(const mlocTimeZone* zone, const mlocInstant* in
 // a time: the zone's transitions that keep the sum are passed over. In
 // the closing rule's years the changes alternate, so a rule whose two
 // offsets have one sum has none; the count bounds the walk.
-static bool OffsetChange(const ZoneTables* t, uint32_t zone, int64_t seconds, bool next,
-                         int64_t* atOut)
+MLOC_NODISCARD static bool OffsetChange(const ZoneTables* t, uint32_t zone, int64_t seconds,
+                                        bool next, int64_t* atOut)
 {
     // An identifier's zone, which the zones validator checked.
     MLOC_ASSERT(zone < t->zoneCount);

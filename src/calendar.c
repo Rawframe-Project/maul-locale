@@ -84,8 +84,8 @@ static Eras ErasOf(mlocCalendar calendar)
 
 // The year an era and a year in it name; false for an era not of the
 // calendar.
-static bool YearInEra(mlocCalendar calendar, const char* era, size_t length, int64_t eraYear,
-                      int64_t* yearOut)
+MLOC_NODISCARD static bool YearInEra(mlocCalendar calendar, const char* era, size_t length,
+                                     int64_t eraYear, int64_t* yearOut)
 {
     Eras eras = ErasOf(calendar);
     for (uint32_t i = 0; i < eras.count; i++)

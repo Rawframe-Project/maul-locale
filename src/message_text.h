@@ -7,6 +7,8 @@
 #ifndef MLOC_SRC_MESSAGE_TEXT_H
 #define MLOC_SRC_MESSAGE_TEXT_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,17 +26,17 @@ enum
 uint32_t mlocMessageDecode(const uint8_t* text, size_t at, size_t end, size_t* sizeOut);
 
 // ws: space, tab, CR, LF, U+3000.
-bool mlocMessageIsSpace(uint32_t c);
+MLOC_NODISCARD bool mlocMessageIsSpace(uint32_t c);
 
 // bidi: ALM, LRM, RLM and the isolates LRI, RLI, FSI and PDI.
-bool mlocMessageIsBidi(uint32_t c);
+MLOC_NODISCARD bool mlocMessageIsBidi(uint32_t c);
 
 // name-start: the letters and most code points past ASCII, without
 // whitespace, controls and bidi controls.
-bool mlocMessageIsNameStart(uint32_t c);
+MLOC_NODISCARD bool mlocMessageIsNameStart(uint32_t c);
 
 // name-char: name-start, digits, "-" and ".".
-bool mlocMessageIsNameChar(uint32_t c);
+MLOC_NODISCARD bool mlocMessageIsNameChar(uint32_t c);
 
 // The offset of a name's first code point whose NFC form leaves the name
 // no name, or the name's length when none does. Names are stored in NFC

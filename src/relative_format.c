@@ -37,7 +37,7 @@ typedef struct ChainWalk
     bool full;
 } ChainWalk;
 
-static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
+MLOC_NODISCARD static bool TakeStep(void* context, const DataView* view, uint32_t locale, int depth)
 {
     (void)depth;
     ChainWalk* walk = context;
@@ -55,7 +55,7 @@ static bool TakeStep(void* context, const DataView* view, uint32_t locale, int d
     return false;
 }
 
-static bool ValidOptions(const mlocRelativeOptions* o)
+MLOC_NODISCARD static bool ValidOptions(const mlocRelativeOptions* o)
 {
     return mlocValidFormatOptions(&o->number) && o->number.style == mloc_numberDecimal &&
            o->number.signDisplay == mloc_signAuto &&
@@ -66,7 +66,8 @@ static bool ValidOptions(const mlocRelativeOptions* o)
 
 // Whether the formatter titlecases: at a sentence's start always, in the
 // other contexts where the locale's relative transforms name them.
-static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocCapitalization c)
+MLOC_NODISCARD static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale,
+                                       mlocCapitalization c)
 {
     if (c == mloc_capitalizationSentence)
     {
@@ -145,7 +146,7 @@ bool mlocReadRelativeFormat(const mlocRelativeFormatter* opaque, RelativeFormat*
 }
 
 // A unit's string at a key: true when the unit files the key.
-static bool FiledText(DataSpan unit, uint32_t key, DataSpan* out)
+MLOC_NODISCARD static bool FiledText(DataSpan unit, uint32_t key, DataSpan* out)
 {
     uint32_t count = mlocLoad32(unit.bytes);
     uint32_t stringCount = mlocLoad32(unit.bytes + 4);
@@ -181,7 +182,8 @@ static bool FiledText(DataSpan unit, uint32_t key, DataSpan* out)
 
 // A slot's text: the width's first along the chain, else the next wider
 // width's; false for none or an empty one.
-static bool Lookup(const RelativeFormat* f, uint32_t unit, uint32_t slot, DataSpan* out)
+MLOC_NODISCARD static bool Lookup(const RelativeFormat* f, uint32_t unit, uint32_t slot,
+                                  DataSpan* out)
 {
     // The unit was checked with the amount, the width when the formatter
     // was read, and the callers' slots are a name's or a direction's.
@@ -258,7 +260,7 @@ static TitledText Titled(const RelativeFormat* f, DataSpan text)
 
 // The offset an amount names under auto, from -2 to 2, or false: an
 // integer of at most one digit, its trailing zeros aside.
-static bool NamedOffset(const mlocDecimal* d, int32_t* offset)
+MLOC_NODISCARD static bool NamedOffset(const mlocDecimal* d, int32_t* offset)
 {
     if (d->count == 0)
     {

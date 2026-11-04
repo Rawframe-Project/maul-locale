@@ -7,6 +7,8 @@
 #ifndef MLOC_GRAMMAR_LEXICON_H
 #define MLOC_GRAMMAR_LEXICON_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -40,6 +42,6 @@ typedef struct TurkicMarks
 // circumflexed spelling first as it is written, then without its
 // circumflexes); false, with no marks, for a word the table does not
 // hold.
-bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out);
+MLOC_NODISCARD bool mlocTurkicMarks(const uint8_t* word, size_t length, TurkicMarks* out);
 
 #endif

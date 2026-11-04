@@ -193,7 +193,7 @@ static void PutPattern(Writer* w, uint32_t first, uint32_t count)
 
 // Whether a pattern can stand as a simple message: its first character
 // past spaces and bidi marks is not ".", which would start a complex one.
-static bool StandsAlone(const Writer* w)
+MLOC_NODISCARD static bool StandsAlone(const Writer* w)
 {
     const MessageView* v = w->view;
     for (uint32_t i = 0; i < v->count[messagePieces]; i++)

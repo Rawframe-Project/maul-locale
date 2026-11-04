@@ -16,12 +16,12 @@
 
 // Whether a number value is a mloc:spellout or mloc:relative value,
 // written and prepared here.
-bool mlocWordsValue(const NumberValue* value);
+MLOC_NODISCARD bool mlocWordsValue(const NumberValue* value);
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made.
-bool mlocPrepareWords(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
-                      PreparedNumber* out);
+MLOC_NODISCARD bool mlocPrepareWords(const NumberValue* value, const mlocDataSet* data,
+                                     const mlocLocale* locale, PreparedNumber* out);
 
 // Writes a value in a locale, with the formatter prepared for it when
 // prepared (which may be null) has its options, else one made here;

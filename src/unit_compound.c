@@ -88,7 +88,7 @@ typedef struct Single
     uint8_t category;
 } Single;
 
-static bool Put(UnitPattern* p, const void* text, size_t length)
+MLOC_NODISCARD static bool Put(UnitPattern* p, const void* text, size_t length)
 {
     if (length > unitPatternRoom)
     {
@@ -100,7 +100,7 @@ static bool Put(UnitPattern* p, const void* text, size_t length)
     return true;
 }
 
-static bool Add(UnitPattern* p, const void* text, size_t length)
+MLOC_NODISCARD static bool Add(UnitPattern* p, const void* text, size_t length)
 {
     if (length > (size_t)(unitPatternRoom - p->length))
     {
@@ -113,8 +113,8 @@ static bool Add(UnitPattern* p, const void* text, size_t length)
 
 // Writes a pattern with "{0}" and "{1}" replaced by the arguments (the
 // second may be null), as ICU's SimpleFormatter formats.
-static bool Format(const UnitPattern* pattern, const UnitPattern* first, const UnitPattern* second,
-                   UnitPattern* out)
+MLOC_NODISCARD static bool Format(const UnitPattern* pattern, const UnitPattern* first,
+                                  const UnitPattern* second, UnitPattern* out)
 {
     UnitPattern result = {.present = true};
     size_t literal = 0;
@@ -184,7 +184,7 @@ static size_t LastLength(const char* text, size_t length)
 
 // Whether a code point is a Java space character (Zs, Zl, Zp), as ICU's
 // u_isJavaSpaceChar.
-static bool JavaSpace(uint32_t c)
+MLOC_NODISCARD static bool JavaSpace(uint32_t c)
 {
     return c == 0x20 || c == 0xA0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200A) || c == 0x2028 ||
            c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000;

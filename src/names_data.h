@@ -22,7 +22,8 @@ MLOC_NODISCARD bool mlocValidNames(const DataView* view, DataSpan payload);
 
 // The index of a code in a valid codes unit; false when the unit lacks
 // it.
-bool mlocFindNameId(DataSpan ids, const char* code, size_t length, uint16_t* indexOut);
+MLOC_NODISCARD bool mlocFindNameId(DataSpan ids, const char* code, size_t length,
+                                   uint16_t* indexOut);
 
 // A name's UTF-8 text, in the data.
 typedef struct NameText
@@ -34,8 +35,8 @@ typedef struct NameText
 // Finds a code's field along a locale's chain, else its name along the
 // chain (a NameField; nameFieldName for the name alone). False when
 // neither is found or the chain cannot be walked.
-bool mlocFindName(const mlocDataSet* data, const mlocLocale* locale, const char* code,
-                  size_t length, NameField field, NameText* out);
+MLOC_NODISCARD bool mlocFindName(const mlocDataSet* data, const mlocLocale* locale,
+                                 const char* code, size_t length, NameField field, NameText* out);
 
 enum
 {
@@ -62,10 +63,11 @@ typedef struct NameChain
 } NameChain;
 
 // Resolves a locale's chain; false when it cannot be walked.
-bool mlocOpenNameChain(const mlocDataSet* data, const mlocLocale* locale, NameChain* out);
+MLOC_NODISCARD bool mlocOpenNameChain(const mlocDataSet* data, const mlocLocale* locale,
+                                      NameChain* out);
 
 // mlocFindName along an opened chain.
-bool mlocFindChainName(const NameChain* chain, const char* code, size_t length, NameField field,
-                       NameText* out);
+MLOC_NODISCARD bool mlocFindChainName(const NameChain* chain, const char* code, size_t length,
+                                      NameField field, NameText* out);
 
 #endif

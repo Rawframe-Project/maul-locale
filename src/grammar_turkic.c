@@ -142,7 +142,8 @@ static const uint16_t s_ascii[128] = {
 // clang-format on
 
 // A letter in a table sorted by code point, or false.
-static bool Find(const TurkicLetter* table, size_t count, uint32_t c, uint16_t* infoOut)
+MLOC_NODISCARD static bool Find(const TurkicLetter* table, size_t count, uint32_t c,
+                                uint16_t* infoOut)
 {
     size_t low = 0;
     size_t high = count;
@@ -256,7 +257,8 @@ bool mlocTurkicRequestValid(const TurkicLanguage* language, const mlocInflection
 
 // Whether a final y after a consonant is said as i (Harry, Kennedy): no
 // Turkish word ends so.
-static bool FinalYAsI(const TurkicLanguage* language, const uint8_t* word, size_t start, uint32_t c)
+MLOC_NODISCARD static bool FinalYAsI(const TurkicLanguage* language, const uint8_t* word,
+                                     size_t start, uint32_t c)
 {
     if (!language->finalYAsI || (c != 'y' && c != 'Y') || start == 0)
     {
@@ -476,7 +478,7 @@ static void Append(const TurkicLanguage* language, const char* morpheme, TurkicS
 }
 
 // Whether the suffixes before the particle begin with a vowel.
-static bool BeginsWithVowel(const TurkicLanguage* language, const TurkicSuffixes* s)
+MLOC_NODISCARD static bool BeginsWithVowel(const TurkicLanguage* language, const TurkicSuffixes* s)
 {
     if (s->particle == 0)
     {

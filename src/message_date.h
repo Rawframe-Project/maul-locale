@@ -131,22 +131,23 @@ typedef struct PreparedDate
 // iso8601, or an instant outside Temporal's range. The date is the ISO
 // calendar's. Z without a zone is UTC's zone (an offset zone of 0 when
 // the data has none).
-bool mlocDateLiteral(const uint8_t* text, size_t length, const mlocDataSet* data, DateMoment* out);
+MLOC_NODISCARD bool mlocDateLiteral(const uint8_t* text, size_t length, const mlocDataSet* data,
+                                    DateMoment* out);
 
 // Whether a date argument, time argument or date-time argument holds
 // what the library makes.
-bool mlocGoodDate(const mlocDate* date);
-bool mlocGoodTime(const mlocTime* time);
+MLOC_NODISCARD bool mlocGoodDate(const mlocDate* date);
+MLOC_NODISCARD bool mlocGoodTime(const mlocTime* time);
 
 // Whether an instant is in Temporal's range, and a zoned date-time
 // argument's zone one the library made.
-bool mlocGoodInstant(const mlocInstant* instant);
-bool mlocGoodZoned(const mlocMessageValue* argument);
+MLOC_NODISCARD bool mlocGoodInstant(const mlocInstant* instant);
+MLOC_NODISCARD bool mlocGoodZoned(const mlocMessageValue* argument);
 
 // What an argument of a date kind holds (an instant's zone UTC's, as for
 // a literal with Z); false for another kind.
-bool mlocArgumentDateTime(const mlocMessageValue* argument, const mlocDataSet* data,
-                          DateMoment* out);
+MLOC_NODISCARD bool mlocArgumentDateTime(const mlocMessageValue* argument, const mlocDataSet* data,
+                                         DateMoment* out);
 
 // A date value of a function for what an operand holds, no option given.
 DateValue mlocMakeDateValue(DateFunction function, const DateMoment* moment);
@@ -158,7 +159,7 @@ DateValue mlocDateFromValue(DateFunction function, const DateValue* operand);
 
 // Whether a function takes an operand of these parts: :date and
 // :datetime need a date, :time takes a date alone at midnight.
-bool mlocDateTakes(DateFunction function, uint8_t has);
+MLOC_NODISCARD bool mlocDateTakes(DateFunction function, uint8_t has);
 
 // Sets an option the expression gives by name: none, also for a name the
 // function does not take (ignored); mloc_messageFaultBadOption for a
@@ -180,13 +181,13 @@ size_t mlocPreparedDateSize(DateFunction function);
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made.
-bool mlocPrepareDate(const DateValue* value, const mlocDataSet* data, const mlocLocale* locale,
-                     PreparedDate* out);
+MLOC_NODISCARD bool mlocPrepareDate(const DateValue* value, const mlocDataSet* data,
+                                    const mlocLocale* locale, PreparedDate* out);
 
 // The zone a value is shown in (the option's, its operand's for input,
 // else the default, else UTC's for a zoned value); false for none.
-bool mlocDateZone(const DateValue* value, const mlocDataSet* data, const mlocTimeZone* defaultZone,
-                  mlocTimeZone* zoneOut);
+MLOC_NODISCARD bool mlocDateZone(const DateValue* value, const mlocDataSet* data,
+                                 const mlocTimeZone* defaultZone, mlocTimeZone* zoneOut);
 
 // Writes a value in a locale, a zoned one in its zone (defaultZone, the
 // formatter's, may be null), with the formatter prepared for it when

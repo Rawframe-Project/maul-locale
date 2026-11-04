@@ -5,12 +5,13 @@
 
 #include "locale_aliases.h"
 
-static bool Optional(uint32_t packed, bool (*valid)(uint32_t))
+MLOC_NODISCARD static bool Optional(uint32_t packed, bool (*valid)(uint32_t))
 {
     return packed == 0 || valid(packed);
 }
 
-static bool ValidVariants(const Aliases* aliases, const uint32_t* variants, uint32_t count)
+MLOC_NODISCARD static bool ValidVariants(const Aliases* aliases, const uint32_t* variants,
+                                         uint32_t count)
 {
     // The count comes from 4 bits of the file; the rule holds two.
     if (count > aliasMaxVariants)
@@ -29,7 +30,7 @@ static bool ValidVariants(const Aliases* aliases, const uint32_t* variants, uint
 
 // A variant name as the parser writes one: 5 to 8 lowercase letters and
 // digits, or a digit and 3 of them.
-static bool ValidVariantName(const uint8_t* name, uint32_t length)
+MLOC_NODISCARD static bool ValidVariantName(const uint8_t* name, uint32_t length)
 {
     for (uint32_t k = 0; k < length; k++)
     {
@@ -41,7 +42,7 @@ static bool ValidVariantName(const uint8_t* name, uint32_t length)
     return length >= 5 || (length == 4 && name[0] >= '0' && name[0] <= '9');
 }
 
-static bool ValidRule(const Aliases* aliases, const Rule* rule)
+MLOC_NODISCARD static bool ValidRule(const Aliases* aliases, const Rule* rule)
 {
     bool fields = Optional(rule->typeLanguage, mlocValidPackedLanguage) &&
                   Optional(rule->replacementLanguage, mlocValidPackedLanguage) &&
@@ -58,7 +59,7 @@ static bool ValidRule(const Aliases* aliases, const Rule* rule)
 }
 
 // Whether two legacy entries, whose texts are in bounds, are in order.
-static bool LegacyBefore(const Aliases* aliases, const uint8_t* a, const uint8_t* b)
+MLOC_NODISCARD static bool LegacyBefore(const Aliases* aliases, const uint8_t* a, const uint8_t* b)
 {
     uint32_t aAt = mlocLoad16(a);
     uint32_t bAt = mlocLoad16(b);
@@ -68,7 +69,7 @@ static bool LegacyBefore(const Aliases* aliases, const uint8_t* a, const uint8_t
            CompareText(aliases->text + aAt, aLength, aliases->text + bAt, bLength) < 0;
 }
 
-static bool ValidTables(const Aliases* aliases)
+MLOC_NODISCARD static bool ValidTables(const Aliases* aliases)
 {
     for (uint32_t i = 0; i < aliases->variantCount; i++)
     {
@@ -117,7 +118,7 @@ static bool ValidTables(const Aliases* aliases)
 
 // Whether the slots name each key's first index once and nothing else,
 // with a 0 to end every probe.
-static bool ValidSlots(const Aliases* aliases)
+MLOC_NODISCARD static bool ValidSlots(const Aliases* aliases)
 {
     uint32_t used = 0;
     for (uint32_t at = 0; at < aliases->slotCount; at++)

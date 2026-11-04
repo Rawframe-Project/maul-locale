@@ -217,8 +217,8 @@ static const char* KazakhLetterName(uint32_t c)
 // (кітабы, жүрегі, тарағы, акведугі), in names too (Айтбегі); a final ь
 // is dropped (автомобилі, Абелі). No dictionary of the words that keep a
 // stop is free to use, so every word follows the rule.
-static bool KazakhStem(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
-                       TurkicStem* out)
+MLOC_NODISCARD static bool KazakhStem(const uint8_t* word, size_t length, uint8_t marks,
+                                      TurkicSuffixes* suffixes, TurkicStem* out)
 {
     if (!suffixes->vowelFirst)
     {

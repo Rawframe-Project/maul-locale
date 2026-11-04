@@ -29,8 +29,8 @@ MLOC_NODISCARD bool mlocValidSpelloutTitlecase(const DataView* view, DataSpan pa
 
 // A lowercase letter's titlecase from a valid titlecase unit; false for a
 // code point it does not list.
-bool mlocSpelloutTitlecase(DataSpan unit, uint32_t codePoint, const uint8_t** textOut,
-                           uint32_t* lengthOut);
+MLOC_NODISCARD bool mlocSpelloutTitlecase(DataSpan unit, uint32_t codePoint,
+                                          const uint8_t** textOut, uint32_t* lengthOut);
 
 // An algorithmic numbering system: the locale whose rules it names
 // (empty for the locale asked for), the group and the rule set.
@@ -44,7 +44,8 @@ typedef struct SpelloutSystem
 } SpelloutSystem;
 
 // A numbering system of a valid systems unit by its id; false for none.
-bool mlocFindSpelloutSystem(DataSpan unit, const char* id, size_t length, SpelloutSystem* out);
+MLOC_NODISCARD bool mlocFindSpelloutSystem(DataSpan unit, const char* id, size_t length,
+                                           SpelloutSystem* out);
 
 // The parts of a valid group's unit.
 typedef struct SpelloutRules

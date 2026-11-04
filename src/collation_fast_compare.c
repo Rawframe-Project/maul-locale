@@ -297,7 +297,7 @@ static uint32_t Quaternaries(uint32_t variableTop, uint32_t pair)
 
 // Whether a pair of primaries holds a digit's under a reordering that
 // moves digits.
-static bool HoldsDigit(const FastLatinOptions* o, uint32_t pair)
+MLOC_NODISCARD static bool HoldsDigit(const FastLatinOptions* o, uint32_t pair)
 {
     uint32_t low = pair & 0xFFFF;
     uint32_t high = pair >> 16;
@@ -307,7 +307,7 @@ static bool HoldsDigit(const FastLatinOptions* o, uint32_t pair)
 
 // The first level's next pair of primaries, reading and checking each
 // character; false to bail out.
-static bool NextPrimaries(const FastLatinOptions* o, Side* x)
+MLOC_NODISCARD static bool NextPrimaries(const FastLatinOptions* o, Side* x)
 {
     while (x->pair == 0)
     {
@@ -491,8 +491,8 @@ static uint32_t ReorderedStart(const CollationRoot* root, const CollationReorder
 
 // ICU4C's check of a reordering: false when it moves the groups before
 // Latin out of their order; *digitsOut when it moves digits apart.
-static bool ReorderServed(const CollationRoot* root, const CollationReorder* reorder,
-                          bool* digitsOut)
+MLOC_NODISCARD static bool ReorderServed(const CollationRoot* root, const CollationReorder* reorder,
+                                         bool* digitsOut)
 {
     uint32_t previous = 0;
     uint32_t beforeDigit = 0;
@@ -527,7 +527,7 @@ static bool ReorderServed(const CollationRoot* root, const CollationReorder* reo
 
 // The mini primaries from 0's to 9's, which every digit's primary in the
 // table is among; false when a digit's word is not a plain primary.
-static bool DigitRange(const uint8_t* table, uint32_t* lowOut, uint32_t* highOut)
+MLOC_NODISCARD static bool DigitRange(const uint8_t* table, uint32_t* lowOut, uint32_t* highOut)
 {
     uint32_t primaries[2];
     for (int i = 0; i < 2; i++)

@@ -35,7 +35,7 @@ enum
     beaufortReach = 64,
 };
 
-static bool MultiplyPower(Wide* w, uint32_t base, uint32_t times)
+MLOC_NODISCARD static bool MultiplyPower(Wide* w, uint32_t base, uint32_t times)
 {
     for (uint32_t i = 0; i < times; i++)
     {
@@ -49,8 +49,8 @@ static bool MultiplyPower(Wide* w, uint32_t base, uint32_t times)
 
 // Multiplies a size by a factor raised to a count: numerator by
 // numerator, denominator by denominator.
-static bool MultiplyBy(Wide* numerator, Wide* denominator, const Wide* n, const Wide* d,
-                       uint32_t count)
+MLOC_NODISCARD static bool MultiplyBy(Wide* numerator, Wide* denominator, const Wide* n,
+                                      const Wide* d, uint32_t count)
 {
     for (uint32_t i = 0; i < count; i++)
     {
@@ -64,8 +64,8 @@ static bool MultiplyBy(Wide* numerator, Wide* denominator, const Wide* n, const 
 }
 
 // Multiplies a size by a prefix's value raised to a count.
-static bool MultiplyPrefix(Wide* numerator, Wide* denominator, const uint8_t* prefix,
-                           uint32_t count)
+MLOC_NODISCARD static bool MultiplyPrefix(Wide* numerator, Wide* denominator, const uint8_t* prefix,
+                                          uint32_t count)
 {
     int8_t power10 = (int8_t)prefix[5];
     uint32_t times = count * (uint32_t)(power10 < 0 ? -power10 : power10);
@@ -76,7 +76,7 @@ static bool MultiplyPrefix(Wide* numerator, Wide* denominator, const uint8_t* pr
     return power10 > 0 ? mlocWideScale10(numerator, times) : mlocWideScale10(denominator, times);
 }
 
-static bool MultiplyConstant(Wide* w, uint64_t constant)
+MLOC_NODISCARD static bool MultiplyConstant(Wide* w, uint64_t constant)
 {
     Wide c = mlocWideOf(constant);
     return mlocWideMultiply(w, w, &c);
@@ -84,7 +84,7 @@ static bool MultiplyConstant(Wide* w, uint64_t constant)
 
 // Whether a part converts with its simple unit's offset or table: alone,
 // of power 1, without a prefix or constants.
-static bool Alone(const UnitId* id)
+MLOC_NODISCARD static bool Alone(const UnitId* id)
 {
     return id->count == 1 && id->parts[0].power == 1 && id->parts[0].prefix < 0 &&
            id->numeratorConstant == 1 && id->denominatorConstant == 1;
@@ -171,7 +171,7 @@ bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out)
 }
 
 // Folds the power of ten into the integers.
-static bool Fold(UnitValue* x)
+MLOC_NODISCARD static bool Fold(UnitValue* x)
 {
     if (x->e > MLOC_MAX_DECIMAL_EXPONENT || x->e < -MLOC_MAX_DECIMAL_EXPONENT)
     {
@@ -184,7 +184,7 @@ static bool Fold(UnitValue* x)
 }
 
 // x = x + sign * n / d, the power folded in first.
-static bool AddFraction(UnitValue* x, const Wide* n, const Wide* d, bool negative)
+MLOC_NODISCARD static bool AddFraction(UnitValue* x, const Wide* n, const Wide* d, bool negative)
 {
     MLOC_ASSERT(!mlocWideIsZero(d) && !mlocWideIsZero(&x->b));
     if (x->infinite || mlocWideIsZero(n))
@@ -211,7 +211,7 @@ static bool AddFraction(UnitValue* x, const Wide* n, const Wide* d, bool negativ
 
 // The Beaufort force's middle speed in its base unit: |x| rounded to a
 // force, half up, within the table (as ICU's scaleToBase).
-static bool FromBeaufort(const UnitTable* t, UnitValue* x)
+MLOC_NODISCARD static bool FromBeaufort(const UnitTable* t, UnitValue* x)
 {
     uint32_t last = t->beaufortCount - 2;
     uint32_t force = last;
@@ -248,7 +248,7 @@ static bool FromBeaufort(const UnitTable* t, UnitValue* x)
 }
 
 // The Beaufort force whose range holds |x| (as ICU's baseToScale).
-static bool ToBeaufort(const UnitTable* t, UnitValue* x)
+MLOC_NODISCARD static bool ToBeaufort(const UnitTable* t, UnitValue* x)
 {
     uint32_t last = t->beaufortCount - 2;
     uint32_t force = 0;
@@ -347,7 +347,7 @@ mlocResult mlocUnitValueDecimal(const UnitValue* x, mlocDecimal* out, bool* exac
     return mloc_success;
 }
 
-static bool Opposite(const UnitScale* a, const UnitScale* b)
+MLOC_NODISCARD static bool Opposite(const UnitScale* a, const UnitScale* b)
 {
     for (uint32_t d = 0; d < unitMaxDimensions; d++)
     {
@@ -360,7 +360,7 @@ static bool Opposite(const UnitScale* a, const UnitScale* b)
 }
 
 // x = x * n / d.
-static bool Scale(UnitValue* x, const Wide* n, const Wide* d)
+MLOC_NODISCARD static bool Scale(UnitValue* x, const Wide* n, const Wide* d)
 {
     MLOC_ASSERT(!mlocWideIsZero(n) && !mlocWideIsZero(d));
     return mlocWideMultiply(&x->a, &x->a, n) && mlocWideMultiply(&x->b, &x->b, d);

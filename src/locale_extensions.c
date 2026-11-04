@@ -34,7 +34,7 @@ typedef struct Extensions
     uint32_t textSize;
 } Extensions;
 
-static bool ReadExtensions(DataSpan span, Extensions* out)
+MLOC_NODISCARD static bool ReadExtensions(DataSpan span, Extensions* out)
 {
     if (span.size < extensionHeaderSize)
     {
@@ -67,14 +67,14 @@ typedef struct Text
     uint32_t length;
 } Text;
 
-static bool InText(const Extensions* x, uint32_t offset, uint32_t length)
+MLOC_NODISCARD static bool InText(const Extensions* x, uint32_t offset, uint32_t length)
 {
     return (uint64_t)offset + length <= x->textSize;
 }
 
 // Whether a text is a value a tag holds: subtags of 3 to 8 lowercase
 // letters and digits joined by "-" (or of 1 to 8 for a key's 2).
-static bool ValidValue(const uint8_t* text, uint32_t length, uint32_t least)
+MLOC_NODISCARD static bool ValidValue(const uint8_t* text, uint32_t length, uint32_t least)
 {
     uint32_t run = 0;
     for (uint32_t i = 0; i <= length; i++)
@@ -138,7 +138,7 @@ static Entry ReadEntry(const Extensions* x, bool subdivision, uint32_t i)
 }
 
 // Whether entry i's offsets, lengths, reserved bytes and texts hold.
-static bool ValidEntry(const Extensions* x, bool subdivision, uint32_t i)
+MLOC_NODISCARD static bool ValidEntry(const Extensions* x, bool subdivision, uint32_t i)
 {
     const uint8_t* e = subdivision ? x->subdivisions + (size_t)i * extensionSubdivisionSize
                                    : x->types + (size_t)i * extensionTypeSize;
@@ -157,7 +157,7 @@ static bool ValidEntry(const Extensions* x, bool subdivision, uint32_t i)
 }
 
 // Whether entry i comes after entry i - 1: by key, then by from text.
-static bool InOrder(const Extensions* x, bool subdivision, uint32_t i)
+MLOC_NODISCARD static bool InOrder(const Extensions* x, bool subdivision, uint32_t i)
 {
     Entry before = ReadEntry(x, subdivision, i - 1);
     Entry entry = ReadEntry(x, subdivision, i);
@@ -169,7 +169,7 @@ static bool InOrder(const Extensions* x, bool subdivision, uint32_t i)
     return order < 0;
 }
 
-static bool ValidEntries(const Extensions* x, bool subdivision)
+MLOC_NODISCARD static bool ValidEntries(const Extensions* x, bool subdivision)
 {
     uint32_t count = subdivision ? x->subdivisionCount : x->typeCount;
     for (uint32_t i = 0; i < count; i++)
@@ -288,7 +288,7 @@ static const char* At(const Subtags* s, int i)
     return s->tail + s->start[i];
 }
 
-static bool IsSingleton(const Subtags* s, int i)
+MLOC_NODISCARD static bool IsSingleton(const Subtags* s, int i)
 {
     return i >= s->count || s->length[i] == 1;
 }
@@ -302,8 +302,8 @@ static uint32_t ValueLength(const Subtags* s, int first, int end)
 
 // Writes a key and its value, replaced by its alias when it has one; a
 // u value that is then "true" is left out. Returns whether it changed.
-static bool WriteKeyword(const Extensions* x, const Subtags* s, int key, int first, int end,
-                         bool unicode, Writer* w)
+MLOC_NODISCARD static bool WriteKeyword(const Extensions* x, const Subtags* s, int key, int first,
+                                        int end, bool unicode, Writer* w)
 {
     const char* name = At(s, key);
     // The callers stop at a key: a subtag after the values (of 3 or more)
@@ -328,7 +328,8 @@ static bool WriteKeyword(const Extensions* x, const Subtags* s, int key, int fir
 
 // A u extension after its singleton, from subtag *i; returns whether it
 // changed.
-static bool UnicodeExtension(const Extensions* x, const Subtags* s, int* i, Writer* w)
+MLOC_NODISCARD static bool UnicodeExtension(const Extensions* x, const Subtags* s, int* i,
+                                            Writer* w)
 {
     bool changed = false;
     while (!IsSingleton(s, *i) && s->length[*i] >= 3)
@@ -425,7 +426,7 @@ static void CopyExtension(const Subtags* s, int* i, bool privateUse, Writer* w)
 }
 
 // Whether the tail has a u or t extension, the only ones this changes.
-static bool HasAliasedExtension(const char* tail, size_t size)
+MLOC_NODISCARD static bool HasAliasedExtension(const char* tail, size_t size)
 {
     for (size_t at = 0; at < size && tail[at] != '\0';)
     {

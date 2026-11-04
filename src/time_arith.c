@@ -54,7 +54,7 @@ bool mlocTimeDurationValid(const mlocTimeDuration* d)
 
 // Whether a field lies within a limit either side; compared, not
 // negated, so INT64_MIN is out rather than an overflow.
-static bool Within(int64_t v, int64_t limit)
+MLOC_NODISCARD static bool Within(int64_t v, int64_t limit)
 {
     return v >= -limit && v <= limit;
 }
@@ -66,7 +66,7 @@ static int64_t Magnitude(int64_t v)
 
 // ValidateTemporalRoundingIncrement: a day takes 1; another unit an
 // increment dividing the unit above it into more than one part.
-static bool ValidIncrement(mlocTimeUnit unit, uint32_t increment)
+MLOC_NODISCARD static bool ValidIncrement(mlocTimeUnit unit, uint32_t increment)
 {
     // Callers check the unit first.
     MLOC_ASSERT((uint32_t)unit <= mloc_timeUnitNanosecond);
@@ -77,7 +77,7 @@ static bool ValidIncrement(mlocTimeUnit unit, uint32_t increment)
 
 // Seconds and nanoseconds of any signs, |nanoseconds| below 10^10, as a
 // duration of one sign.
-static bool Normalize(int64_t seconds, int64_t nanoseconds, mlocTimeDuration* out)
+MLOC_NODISCARD static bool Normalize(int64_t seconds, int64_t nanoseconds, mlocTimeDuration* out)
 {
     // Three fields' remainders, or two durations' nanoseconds, summed.
     MLOC_ASSERT(nanoseconds > -INT64_C(10000000000) && nanoseconds < INT64_C(10000000000));

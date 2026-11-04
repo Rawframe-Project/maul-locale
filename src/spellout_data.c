@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-static bool InText(const SpelloutRules* r, uint32_t offset, uint32_t length)
+MLOC_NODISCARD static bool InText(const SpelloutRules* r, uint32_t offset, uint32_t length)
 {
     return offset <= r->textSize && length <= r->textSize - offset;
 }
@@ -18,7 +18,7 @@ static bool InText(const SpelloutRules* r, uint32_t offset, uint32_t length)
 // A set's rules, at least one: its normal rules of the normal kind,
 // bases ascending (equal ones allowed in a fraction rule set), then its
 // special ones.
-static bool ValidSetRules(const SpelloutRules* r, const uint8_t* set)
+MLOC_NODISCARD static bool ValidSetRules(const SpelloutRules* r, const uint8_t* set)
 {
     uint32_t first = mlocLoad16(set + 4);
     uint32_t normal = mlocLoad16(set + 6);
@@ -50,7 +50,7 @@ static bool ValidSetRules(const SpelloutRules* r, const uint8_t* set)
 }
 
 // Each set's rules, and its lead record naming special rule kinds alone.
-static bool ValidSets(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidSets(const SpelloutRules* r)
 {
     for (uint32_t s = 0; s < r->setCount; s++)
     {
@@ -88,7 +88,7 @@ uint64_t mlocSpelloutDivisor(const uint8_t* rule)
     return divisor;
 }
 
-static bool ValidRules(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidRules(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->ruleCount; i++)
     {
@@ -109,7 +109,7 @@ static bool ValidRules(const SpelloutRules* r)
     return true;
 }
 
-static bool ValidSubstitution(const SpelloutRules* r, const uint8_t* piece)
+MLOC_NODISCARD static bool ValidSubstitution(const SpelloutRules* r, const uint8_t* piece)
 {
     uint8_t detail = piece[1];
     uint32_t index = mlocLoad16(piece + 2);
@@ -122,7 +122,7 @@ static bool ValidSubstitution(const SpelloutRules* r, const uint8_t* piece)
     return index < limit && (rule == spelloutNone || rule < r->ruleCount);
 }
 
-static bool ValidPieces(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidPieces(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->pieceCount; i++)
     {
@@ -153,7 +153,7 @@ static bool ValidPieces(const SpelloutRules* r)
 
 // Each plural block's forms in the text, other's present, and its order
 // naming each form once and nothing else.
-static bool ValidPlurals(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidPlurals(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->pluralCount; i++)
     {
@@ -213,7 +213,7 @@ static uint32_t KindsOf(uint8_t rule, bool fractionSet)
 // Each set's rules hold only substitutions their kind and the set's can
 // make: a fractional part of a value without digits (a negative rule's
 // infinity) would have no places to take.
-static bool ValidKinds(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidKinds(const SpelloutRules* r)
 {
     for (uint32_t s = 0; s < r->setCount; s++)
     {
@@ -238,7 +238,7 @@ static bool ValidKinds(const SpelloutRules* r)
     return true;
 }
 
-static bool ValidPatterns(const SpelloutRules* r)
+MLOC_NODISCARD static bool ValidPatterns(const SpelloutRules* r)
 {
     for (uint32_t i = 0; i < r->patternCount; i++)
     {
@@ -272,7 +272,8 @@ bool mlocValidSpelloutRules(const DataView* view, DataSpan payload)
 }
 
 // Whether one id sorts before another, byte by byte.
-static bool Before(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
+MLOC_NODISCARD static bool Before(const uint8_t* a, uint32_t aLength, const uint8_t* b,
+                                  uint32_t bLength)
 {
     uint32_t n = aLength < bLength ? aLength : bLength;
     int order = memcmp(a, b, n);

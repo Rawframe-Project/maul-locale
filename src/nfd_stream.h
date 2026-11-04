@@ -18,6 +18,8 @@
 #ifndef MLOC_SRC_NFD_STREAM_H
 #define MLOC_SRC_NFD_STREAM_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -116,10 +118,10 @@ static inline uint32_t mlocNfdCountMarks(uint32_t total, uint32_t count)
 
 // Fills the window with the next code points when it is empty; false at
 // the end of the text.
-bool mlocNfdFill(NfdStream* s);
+MLOC_NODISCARD bool mlocNfdFill(NfdStream* s);
 
 // The next code point of the NFD; false at the end.
-static inline bool mlocNfdNext(NfdStream* s, uint32_t* codePointOut)
+MLOC_NODISCARD static inline bool mlocNfdNext(NfdStream* s, uint32_t* codePointOut)
 {
     if (s->next == s->count && !mlocNfdFill(s))
     {
@@ -132,8 +134,8 @@ static inline bool mlocNfdNext(NfdStream* s, uint32_t* codePointOut)
 // The next code point of the NFD, its combining class and where in the
 // source it comes from (a byte or unit offset; texts over 4 GiB give
 // offsets modulo 2^32); false at the end.
-static inline bool mlocNfdNextFrom(NfdStream* s, uint32_t* codePointOut, uint8_t* classOut,
-                                   uint32_t* fromOut)
+MLOC_NODISCARD static inline bool mlocNfdNextFrom(NfdStream* s, uint32_t* codePointOut,
+                                                  uint8_t* classOut, uint32_t* fromOut)
 {
     if (s->next == s->count && !mlocNfdFill(s))
     {
@@ -159,7 +161,8 @@ static inline uint32_t mlocNfdPeekFrom(const NfdStream* s)
 
 // The next code point of the NFD and its combining class; false at the
 // end.
-static inline bool mlocNfdNextClass(NfdStream* s, uint32_t* codePointOut, uint8_t* classOut)
+MLOC_NODISCARD static inline bool mlocNfdNextClass(NfdStream* s, uint32_t* codePointOut,
+                                                   uint8_t* classOut)
 {
     if (s->next == s->count && !mlocNfdFill(s))
     {

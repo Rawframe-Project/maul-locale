@@ -86,12 +86,13 @@ void mlocEmitBytes(MessageEmit* emit, const uint8_t* bytes, size_t length);
 
 // Appends bytes to the pool in NFC; false when Maul Unicode refuses them
 // (a run of combining marks too long to normalize).
-bool mlocEmitNfc(MessageEmit* emit, const uint8_t* bytes, size_t length);
+MLOC_NODISCARD bool mlocEmitNfc(MessageEmit* emit, const uint8_t* bytes, size_t length);
 
 // Ends a string begun by mlocEmitBeginString.
 MessageString mlocEmitEndString(const MessageEmit* emit, MessageString string);
 
 // The variable of a name (NFC), added when new; false as mlocEmitNfc.
-bool mlocEmitVariable(MessageEmit* emit, const uint8_t* name, size_t length, uint32_t* indexOut);
+MLOC_NODISCARD bool mlocEmitVariable(MessageEmit* emit, const uint8_t* name, size_t length,
+                                     uint32_t* indexOut);
 
 #endif

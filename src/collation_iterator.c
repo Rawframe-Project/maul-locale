@@ -33,7 +33,7 @@ void mlocCollationIteratorStartText(CollationIterator* it, const CollationRoot* 
 
 // Whether a contraction took the code point the stream gives at the
 // count; taken out of the list when reading on (drop).
-static bool Dropped(CollationIterator* it, uint32_t at, bool drop)
+MLOC_NODISCARD static bool Dropped(CollationIterator* it, uint32_t at, bool drop)
 {
     for (uint32_t i = 0; i < it->droppedCount; i++)
     {
@@ -51,8 +51,8 @@ static bool Dropped(CollationIterator* it, uint32_t at, bool drop)
 
 // The next code point of a stream that no contraction took, its count
 // advanced past it (*atOut, its own count).
-static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop, uint32_t* c,
-                 uint8_t* k, uint32_t* from, uint32_t* atOut)
+MLOC_NODISCARD static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop,
+                                uint32_t* c, uint8_t* k, uint32_t* from, uint32_t* atOut)
 {
     for (;;)
     {
@@ -71,7 +71,7 @@ static bool Read(CollationIterator* it, NfdStream* s, uint32_t* count, bool drop
 
 // The upcoming code point at the index, read from the stream when it is
 // not yet; false past the end or the lookahead.
-static bool Upcoming(CollationIterator* it, uint32_t index)
+MLOC_NODISCARD static bool Upcoming(CollationIterator* it, uint32_t index)
 {
     while (it->upcomingCount <= index && it->upcomingCount < collationLookahead)
     {
@@ -137,7 +137,7 @@ static uint32_t Value(const CollationIterator* it, uint32_t codePoint,
     return mlocTrieValue(&it->root->trie, codePoint);
 }
 
-static bool IsContext(uint32_t ce32, uint32_t tag)
+MLOC_NODISCARD static bool IsContext(uint32_t ce32, uint32_t tag)
 {
     return mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 && mlocCe32Tag(ce32) == tag;
 }
@@ -203,8 +203,8 @@ typedef struct Ahead
 // The upcoming code point at the index (one more than the last asked)
 // and its class: from the lookahead, else from the copy; *atOut its
 // count in the stream past the lookahead.
-static bool Next(CollationIterator* it, Ahead* a, uint32_t index, uint32_t* c, uint8_t* k,
-                 uint32_t* atOut)
+MLOC_NODISCARD static bool Next(CollationIterator* it, Ahead* a, uint32_t index, uint32_t* c,
+                                uint8_t* k, uint32_t* atOut)
 {
     if (Upcoming(it, index))
     {
@@ -274,8 +274,8 @@ static void TakeOut(CollationIterator* it, const Match* best)
 
 // Whether some entry starts with the match's text; *exactOut set to the
 // CE32 of the entry that is the text, when one is.
-static bool Lookup(const CollationRoot* r, uint32_t number, const Match* m, bool* exactOut,
-                   uint32_t* ce32Out)
+MLOC_NODISCARD static bool Lookup(const CollationRoot* r, uint32_t number, const Match* m,
+                                  bool* exactOut, uint32_t* ce32Out)
 {
     uint32_t at = mlocCollationListStart(r, number);
     uint32_t count = mlocCollationContext(r, at + 1);
@@ -341,8 +341,8 @@ static void Skip(Scan* s, uint8_t k)
 
 // One step of the scan over the upcoming code point at the index; false
 // when the scan ends.
-static bool Step(CollationIterator* it, const CollationRoot* r, uint32_t number, Scan* s,
-                 uint32_t i)
+MLOC_NODISCARD static bool Step(CollationIterator* it, const CollationRoot* r, uint32_t number,
+                                Scan* s, uint32_t i)
 {
     uint32_t c = 0;
     uint8_t k = 0;

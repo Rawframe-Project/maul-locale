@@ -20,7 +20,7 @@ enum
 };
 
 // Encodes a code point as UTF-8 at key[*length], when it fits.
-static bool Put(uint32_t c, uint8_t* key, size_t* length)
+MLOC_NODISCARD static bool Put(uint32_t c, uint8_t* key, size_t* length)
 {
     size_t n = c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
     if (*length + n > keyRoom)
@@ -111,8 +111,8 @@ static uint32_t Next(const uint8_t* word, size_t length, size_t* at)
 // The key of a word, without its circumflexes when plain; false when it
 // holds a letter no Turkish word has. Whether the word had a circumflex
 // goes in circumflexOut.
-static bool KeyOf(const uint8_t* word, size_t length, bool plain, uint8_t* key, size_t* keyLength,
-                  bool* circumflexOut)
+MLOC_NODISCARD static bool KeyOf(const uint8_t* word, size_t length, bool plain, uint8_t* key,
+                                 size_t* keyLength, bool* circumflexOut)
 {
     *keyLength = 0;
     *circumflexOut = false;
@@ -151,7 +151,8 @@ static size_t Common(const uint8_t* a, size_t aLength, const uint8_t* b, size_t 
 }
 
 // Finds a key in a block of the table, whose entries are sorted.
-static bool ScanBlock(const uint8_t* key, size_t keyLength, size_t block, TurkicMarks* out)
+MLOC_NODISCARD static bool ScanBlock(const uint8_t* key, size_t keyLength, size_t block,
+                                     TurkicMarks* out)
 {
     // Front coding: an entry sharing more with the one before than that
     // one shared with the key is below the key too, one sharing less is
@@ -195,7 +196,7 @@ static bool ScanBlock(const uint8_t* key, size_t keyLength, size_t block, Turkic
 }
 
 // Finds a key's marks in the table.
-static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
+MLOC_NODISCARD static bool Find(const uint8_t* key, size_t keyLength, TurkicMarks* out)
 {
     // The last block whose first word is at most the key, among the
     // blocks whose first words begin with the key's first byte or below

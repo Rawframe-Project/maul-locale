@@ -154,7 +154,7 @@ static_assert(3 * pieceRoom <= normalRoom, "a piece's NFC fits");
 // code point of a composition); a singleton such as U+2126 or a CJK
 // compatibility ideograph is one. *sizeOut receives the code point's
 // length, 0 for ill-formed text.
-static bool NfcBoundary(const char* text, size_t length, size_t* sizeOut)
+MLOC_NODISCARD static bool NfcBoundary(const char* text, size_t length, size_t* sizeOut)
 {
     uint32_t codePoint = 0;
     *sizeOut = 0;
@@ -203,8 +203,9 @@ static size_t PieceEnd(const char* text, size_t size, size_t at)
 // Whether a text's NFC is a key, normalized a piece at a time; with a
 // fault when a piece cannot be normalized or has no boundary within
 // pieceRoom bytes, and *limitOut set for the latter.
-static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_t length,
-                        mlocMessageFaultKind* faultOut, bool* limitOut)
+MLOC_NODISCARD static bool PiecesMatch(const char* text, size_t size, const uint8_t* key,
+                                       size_t length, mlocMessageFaultKind* faultOut,
+                                       bool* limitOut)
 {
     size_t matched = 0;
     for (size_t at = 0; at < size;)
@@ -233,7 +234,8 @@ static bool PiecesMatch(const char* text, size_t size, const uint8_t* key, size_
 // Whether an argument's text written with no function matches a key. The
 // text, ASCII and so NFC, is compared by its bytes a piece at a time: a
 // decimal's can be far longer than a buffer.
-static bool ArgumentMatches(const mlocMessageValue* a, const uint8_t* key, size_t length)
+MLOC_NODISCARD static bool ArgumentMatches(const mlocMessageValue* a, const uint8_t* key,
+                                           size_t length)
 {
     char piece[128];
     size_t written = 0;

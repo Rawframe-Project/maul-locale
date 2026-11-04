@@ -80,11 +80,11 @@ typedef struct Value
 
 // Whether an argument's name is a variable's (NFC, from the compiled
 // message).
-bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t length);
+MLOC_NODISCARD bool mlocSameName(const mlocMessageArgument* a, const uint8_t* name, size_t length);
 
 // A numeric argument's decimal (a currency amount's amount); false for
 // another kind or a number past a decimal's limits.
-bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
+MLOC_NODISCARD bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
 
 // An argument written with no function as its plain decimal (a currency
 // amount's followed by a space and its code; a unit amount's digits
@@ -94,13 +94,13 @@ bool mlocArgumentDecimal(const mlocMessageValue* argument, mlocDecimal* out);
 // the whole text's length in *lengthOut. A decimal's text can be far
 // longer than a buffer, so it is written a piece at a time. False for a
 // kind that has none (an object).
-bool mlocArgumentText(const mlocMessageValue* argument, size_t from, char* out, size_t capacity,
-                      size_t* writtenOut, size_t* lengthOut);
+MLOC_NODISCARD bool mlocArgumentText(const mlocMessageValue* argument, size_t from, char* out,
+                                     size_t capacity, size_t* writtenOut, size_t* lengthOut);
 
 // Whether a :string value matches a key (in NFC); false with a fault
 // kind in *faultOut when its text cannot be compared, and *limitOut set
 // when that is for a stretch past MLOC_MAX_MESSAGE_SELECTOR_RUN.
-bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
-                       mlocMessageFaultKind* faultOut, bool* limitOut);
+MLOC_NODISCARD bool mlocStringMatches(const Value* value, const uint8_t* key, size_t length,
+                                      mlocMessageFaultKind* faultOut, bool* limitOut);
 
 #endif
