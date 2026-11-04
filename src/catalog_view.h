@@ -36,7 +36,7 @@ typedef struct Catalog
 
 static_assert(sizeof(Catalog) <= sizeof(mlocCatalog), "a catalog fits its public struct");
 
-static inline bool mlocReadCatalog(const mlocCatalog* catalog, Catalog* out)
+MLOC_NODISCARD static inline bool mlocReadCatalog(const mlocCatalog* catalog, Catalog* out)
 {
     if (catalog == nullptr || !mlocFlagAt(catalog, offsetof(Catalog, source)))
     {
@@ -48,7 +48,7 @@ static inline bool mlocReadCatalog(const mlocCatalog* catalog, Catalog* out)
 
 // A catalog's keys; false only for a catalog whose data was not
 // validated, which mlocOpenCatalog does not make.
-static inline bool mlocCatalogKeysOf(const Catalog* c, CatalogKeys* keys)
+MLOC_NODISCARD static inline bool mlocCatalogKeysOf(const Catalog* c, CatalogKeys* keys)
 {
     return mlocReadCatalogKeys((DataSpan){c->keys, c->keysSize}, keys);
 }

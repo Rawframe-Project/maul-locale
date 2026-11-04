@@ -10,6 +10,8 @@
 #ifndef MLOC_BYTES_H
 #define MLOC_BYTES_H
 
+#include "maul-locale/base.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -31,7 +33,7 @@ static inline uint64_t mlocLoad64(const uint8_t* p)
 // Whether a value's byte at an offset is a bool's, 0 or 1: reading a bool
 // whose byte holds anything else is undefined, so a value a caller holds
 // is checked so before a bool field of it is read.
-static inline bool mlocFlagAt(const void* value, size_t offset)
+MLOC_NODISCARD static inline bool mlocFlagAt(const void* value, size_t offset)
 {
     return ((const uint8_t*)value)[offset] <= 1;
 }
