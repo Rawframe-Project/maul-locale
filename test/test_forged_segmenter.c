@@ -12,10 +12,6 @@
 // queue filled or a break queued too far behind a waiting one; a
 // segmenter the library made breaks, before and after.
 
-#ifdef _WIN32
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "segment_overrides.h"
 #include "segmenter.h"
 #include "test_harness.h"
