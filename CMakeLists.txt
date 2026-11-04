@@ -746,6 +746,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_search PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    # A searcher's stored counts forged, over the same file.
+    maul_add_test(forged_searcher WHITEBOX)
+    if(TARGET test_forged_searcher)
+        if(EMSCRIPTEN)
+            target_link_options(test_forged_searcher PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_forged_searcher PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # The alphabetic index over the same file.
     maul_add_test(index)
     if(TARGET test_index)
