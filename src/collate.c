@@ -456,11 +456,17 @@ mlocResult mlocInitCollator(const mlocDataSet* data, const mlocLocale* locale,
     return mloc_success;
 }
 
-// The general path's parts read, then the texts' identical prefix.
-static size_t Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdText y)
+// The general path's parts read, then the texts' identical prefix; false
+// for a collator whose settings are none the library writes.
+static bool Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdText y,
+                   size_t* prefixOut)
 {
-    mlocReadCollatorRest(collator, c);
-    return mlocCollationIdenticalPrefix(&c->root, &c->settings, x, y);
+    if (!mlocReadCollatorRest(collator, c))
+    {
+        return false;
+    }
+    *prefixOut = mlocCollationIdenticalPrefix(&c->root, &c->settings, x, y);
+    return true;
 }
 
 mlocResult mlocCollator_Compare(const mlocCollator* collator, const char* a, size_t aLength,
@@ -479,18 +485,25 @@ mlocResult mlocCollator_Compare(const mlocCollator* collator, const char* a, siz
     // the general path's parts, so only texts that begin alike read them
     // before the fast compare.
     bool alike = aLength > 0 && bLength > 0 && x.bytes[0] == y.bytes[0];
-    size_t p = alike ? Prefix(collator, &c, x, y) : 0;
+    size_t p = 0;
+    if (alike && !Prefix(collator, &c, x, y, &p))
+    {
+        return mloc_errorInvalid;
+    }
     int order = fastLatinBail;
     if (c.fastLatin != 0)
     {
-        mlocReadCollatorFast(collator, &c);
+        if (!mlocReadCollatorFast(collator, &c))
+        {
+            return mloc_errorInvalid;
+        }
         order = mlocFastLatinCompare(&c.fast, x.bytes + p, aLength - p, y.bytes + p, bLength - p);
     }
     if (order == fastLatinBail)
     {
-        if (!alike)
+        if (!alike && !mlocReadCollatorRest(collator, &c))
         {
-            mlocReadCollatorRest(collator, &c);
+            return mloc_errorInvalid;
         }
         order = mlocCollationCompareFrom(&c.root, &c.settings, x, y, p);
     }
@@ -512,19 +525,26 @@ mlocResult mlocCollator_CompareUtf16(const mlocCollator* collator, const uint16_
     NfdText x = mlocNfdUtf16(a != nullptr ? a : none, aLength);
     NfdText y = mlocNfdUtf16(b != nullptr ? b : none, bLength);
     bool alike = aLength > 0 && bLength > 0 && x.units[0] == y.units[0];
-    size_t p = alike ? Prefix(collator, &c, x, y) : 0;
+    size_t p = 0;
+    if (alike && !Prefix(collator, &c, x, y, &p))
+    {
+        return mloc_errorInvalid;
+    }
     int order = fastLatinBail;
     if (c.fastLatin != 0)
     {
-        mlocReadCollatorFast(collator, &c);
+        if (!mlocReadCollatorFast(collator, &c))
+        {
+            return mloc_errorInvalid;
+        }
         order =
             mlocFastLatinCompareUtf16(&c.fast, x.units + p, aLength - p, y.units + p, bLength - p);
     }
     if (order == fastLatinBail)
     {
-        if (!alike)
+        if (!alike && !mlocReadCollatorRest(collator, &c))
         {
-            mlocReadCollatorRest(collator, &c);
+            return mloc_errorInvalid;
         }
         order = mlocCollationCompareFrom(&c.root, &c.settings, x, y, p);
     }
@@ -573,11 +593,11 @@ mlocResult mlocCollator_GetSortKeyUtf16(const mlocCollator* collator, const uint
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
+        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c) ||
+        !mlocReadCollatorRest(collator, &c))
     {
         return mloc_errorInvalid;
     }
-    mlocReadCollatorRest(collator, &c);
     static const uint16_t none[1] = {0};
     return WriteKey(&c, mlocNfdUtf16(text != nullptr ? text : none, length), keyOut, capacity,
                     lengthOut);
@@ -588,11 +608,11 @@ mlocResult mlocCollator_GetSortKey(const mlocCollator* collator, const char* tex
 {
     Collator c;
     if (lengthOut == nullptr || (text == nullptr && length > 0) ||
-        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c))
+        (keyOut == nullptr && capacity > 0) || !mlocReadCollatorHead(collator, &c) ||
+        !mlocReadCollatorRest(collator, &c))
     {
         return mloc_errorInvalid;
     }
-    mlocReadCollatorRest(collator, &c);
     return WriteKey(&c, mlocNfdUtf8((const uint8_t*)(text != nullptr ? text : ""), length), keyOut,
                     capacity, lengthOut);
 }

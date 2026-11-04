@@ -129,9 +129,9 @@ static bool Find(const IndexView* v, NfdText name, uint32_t* bucketOut)
     // mlocReadIndex read the head already.
     (void)mlocReadCollatorHead(v->bytes + indexHead, &c);
     bool fast = c.fastLatin != 0 && name.bytes != nullptr;
-    if (fast)
+    if (fast && !mlocReadCollatorFast(v->bytes + indexHead, &c))
     {
-        mlocReadCollatorFast(v->bytes + indexHead, &c);
+        return false;
     }
     bool general = false;
     IndexKey key = {0};
@@ -154,7 +154,10 @@ static bool Find(const IndexView* v, NfdText name, uint32_t* bucketOut)
         {
             if (!general)
             {
-                mlocReadCollatorRest(v->bytes + indexHead, &c);
+                if (!mlocReadCollatorRest(v->bytes + indexHead, &c))
+                {
+                    return false;
+                }
                 uint32_t count = 0;
                 key.whole = mlocCollationPrimaries(&c.root, &c.settings, name, key.weights,
                                                    indexKeyWeights, &count);

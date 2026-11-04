@@ -4,11 +4,10 @@
 // An index whose stamp is right but whose bytes were changed after
 // mlocBuildIndex wrote them (as for a bound message: the
 // index's header is its extent): counts that do not fit each other, a
-// collator that is not one, a shown entry past the buckets, a label or
-// boundary past the pool, a bucket counted as no shown bucket, and a type
-// that is none, are refused by every call that reads them; records
-// reversed still end every find; the index as built answers, before and
-// after.
+// collator that is not one or whose bool bytes are forged, a shown entry past the buckets, a label
+// or boundary past the pool, a bucket counted as no shown bucket, and a type that is none, are
+// refused by every call that reads them; records reversed still end every find; the index as built
+// answers, before and after.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -22,6 +21,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/index.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -110,6 +110,29 @@ static void TestHeader(void)
     CHECK(AllGive(mloc_errorInvalid), "a collator that is not one is refused");
 }
 
+// The collator's bool bytes, which a find reads: a settings bool byte of
+// 2 is refused by a find through the general path (UTF-16), a fast Latin
+// bool byte of 2 by one through the fast path (UTF-8); a count and a
+// bucket read neither.
+static void TestCollatorBytes(void)
+{
+    static const uint16_t units[] = {'b', 'o', 'b'};
+    uint32_t bucket = 0;
+    uint32_t count = 0;
+    (void)Fresh();
+    s_index[indexHead + offsetof(Collator, settings.shifted)] = 2;
+    CHECK(mlocFindIndexBucketUtf16(s_index, units, 3, &bucket) == mloc_errorInvalid &&
+              mlocGetIndexBucketCount(s_index, &count) == mloc_success,
+          "a settings bool byte of 2 is refused by a find");
+    (void)Fresh();
+    s_index[indexHead + offsetof(Collator, fast.backwards)] = 2;
+    CHECK(mlocFindIndexBucket(s_index, "bob", 3, &bucket) == mloc_errorInvalid &&
+              mlocGetIndexBucketCount(s_index, &count) == mloc_success,
+          "a fast Latin bool byte of 2 is refused by a find");
+    (void)Fresh();
+    CHECK(AllGive(mloc_success), "put back, the index answers again");
+}
+
 static void TestRecords(void)
 {
     mlocIndexBucket bucket;
@@ -186,6 +209,7 @@ int main(void)
         return 2;
     }
     TestHeader();
+    TestCollatorBytes();
     TestRecords();
     TestReversed();
     return s_failures == 0 ? 0 : 1;

@@ -5,8 +5,9 @@
 // library checks every index it stores): a ring of no elements or more
 // than it holds, a pattern of no elements or more than it holds, an NFD
 // longer than it holds, a comparison that is none, and a collator inside
-// it that is not one, are refused by every find, which then reads none of
-// them; a searcher the library made is found in, before and after.
+// it that is not one or whose bool or kind bytes are forged, are refused
+// by every find, which then reads none of them; a searcher the library
+// made is found in, before and after.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -18,6 +19,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/search.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -94,6 +96,20 @@ static void TestCollatorRanges(void)
     CHECK(AllGive(mloc_errorInvalid), "its collator's reordering past its ranges is refused");
 }
 
+// Its collator's bool and kind bytes, which every find reads: a settings
+// bool byte of 2, which is undefined to read as a bool, and a strength the
+// library has not, are refused.
+static void TestCollatorBytes(void)
+{
+    CHECK(Make("en") && (Fresh(), AllGive(mloc_success)), "an English searcher finds");
+    ((uint8_t*)Fresh())[offsetof(Searcher, collator.settings.shifted)] = 2;
+    CHECK(AllGive(mloc_errorInvalid), "its collator's settings bool byte of 2 is refused");
+    Fresh()->collator.settings.strength = collationIdentical + 1;
+    CHECK(AllGive(mloc_errorInvalid), "its collator's strength past the levels is refused");
+    Fresh();
+    CHECK(AllGive(mloc_success), "put back, it finds again");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -111,5 +127,6 @@ int main(void)
     }
     TestCounts();
     TestCollatorRanges();
+    TestCollatorBytes();
     return s_failures == 0 ? 0 : 1;
 }
