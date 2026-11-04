@@ -7,7 +7,6 @@
 
 #include "bytes.h"
 #include "data_view.h"
-#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
@@ -175,10 +174,44 @@ mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
     return mloc_success;
 }
 
+// Whether a segmenter's overrides are none, or one set of the code table
+// whole.
+static bool KnownOverrides(const Segmenter* s)
+{
+    if (s->overrides == nullptr)
+    {
+        return s->overrideCount == 0;
+    }
+    for (uint32_t i = 0; i < mlocSegmentOverrideSetCount; i++)
+    {
+        const SegmentOverrideSet* set = &mlocSegmentOverrideSets[i];
+        if (s->overrides == mlocSegmentOverrides + set->first && s->overrideCount == set->count)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Whether a segmenter's queued breaks start within the text fed: each is
+// a break the iterator gave, so none passes the end of the piece.
+static bool QueueInText(const Segmenter* s)
+{
+    return s->queueCount == 0 || s->queueBase <= s->pieceStart ||
+           s->queueBase - s->pieceStart <= s->pieceLength;
+}
+
+// A segmenter the library made; null for any other, and for one whose
+// counts pass the arrays and table they index, or whose queue starts past
+// the text fed, which the filters read before anything else.
 static Segmenter* Made(mlocSegmenter* segmenter)
 {
     Segmenter* s = (Segmenter*)segmenter;
-    return s != nullptr && s->stamp == segmenterStamp ? s : nullptr;
+    return s != nullptr && s->stamp == segmenterStamp && s->kind <= mloc_segmentLine &&
+                   s->queueCount < segmentQueue && s->windowLength <= segmentWindow &&
+                   s->windowLength <= s->pieceStart && KnownOverrides(s) && QueueInText(s)
+               ? s
+               : nullptr;
 }
 
 mlocResult mlocSegmenter_SetComplexBreaker(mlocSegmenter* segmenter,
@@ -242,16 +275,21 @@ static mlocResult Status(muniResult r)
 }
 
 // Queues a break for the filters. The breaks waiting are within the
-// bytes a filter may wait on, so their distances from the first fit.
-static void Push(Segmenter* s, size_t offset)
+// bytes a filter may wait on, so their distances from the first fit; false
+// for a segmenter whose queue was changed so that they do not, or so that
+// a break comes before the first.
+static bool Push(Segmenter* s, size_t offset)
 {
-    MLOC_ASSERT(s->queueCount < segmentQueue);
     if (s->queueCount == 0)
     {
         s->queueBase = offset;
     }
-    MLOC_ASSERT(offset - s->queueBase <= UINT8_MAX);
+    if (s->queueCount >= segmentQueue || offset < s->queueBase || offset - s->queueBase > UINT8_MAX)
+    {
+        return false;
+    }
     s->queue[s->queueCount++] = (uint8_t)(offset - s->queueBase);
+    return true;
 }
 
 static void Pop(Segmenter* s)
@@ -270,26 +308,30 @@ static void Pop(Segmenter* s)
 }
 
 // The first queued break the filters keep, as far as the text at hand
-// tells: true with it, false when the queue empties or its first break
-// waits for text.
-static bool Drain(Segmenter* s, size_t* offsetOut)
+// tells: 1 with it, 0 when the queue empties or its first break waits for
+// text, -1 for a segmenter whose state was changed against itself.
+static int Drain(Segmenter* s, size_t* offsetOut)
 {
     while (s->queueCount > 0)
     {
         size_t offset = s->queueBase;
         int keeps = mlocSegmentKeeps(s, offset);
+        if (keeps == segmentKeepsBroken)
+        {
+            return -1;
+        }
         if (keeps < 0)
         {
-            return false;
+            return 0;
         }
         Pop(s);
         if (keeps > 0)
         {
             *offsetOut = offset;
-            return true;
+            return 1;
         }
     }
-    return false;
+    return 0;
 }
 
 // The next break into offsetOut and mandatoryOut, which are the caller's
@@ -303,9 +345,10 @@ static mlocResult Next(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
     }
     for (;;)
     {
-        if (Drain(s, offsetOut))
+        int drained = Drain(s, offsetOut);
+        if (drained != 0)
         {
-            return mloc_success;
+            return drained > 0 ? mloc_success : mloc_errorInvalid;
         }
         if (s->queueCount == 0 && s->iteratorDone)
         {
@@ -316,14 +359,21 @@ static mlocResult Next(Segmenter* s, size_t* offsetOut, bool* mandatoryOut)
             return mloc_needMoreText;
         }
         // A break waits only for text not yet fed, which the end of the
-        // text never leaves it.
-        MLOC_ASSERT(!s->iteratorDone);
+        // text never leaves it: a segmenter changed so that one does is
+        // refused.
+        if (s->iteratorDone)
+        {
+            return mloc_errorInvalid;
+        }
         size_t offset = 0;
         bool mandatory = false;
         muniResult r = Pull(s, &offset, &mandatory);
         if (r == muni_success)
         {
-            Push(s, offset);
+            if (!Push(s, offset))
+            {
+                return mloc_errorInvalid;
+            }
         }
         else if (r != muni_done && r != muni_needMoreText)
         {

@@ -7,7 +7,6 @@
 // earlier pieces, then the current piece.
 
 #include "bytes.h"
-#include "invariant.h"
 #include "segmenter.h"
 
 #include "maul-unicode/encoding.h"
@@ -129,7 +128,12 @@ static int KeepsJapanese(Segmenter* s, size_t offset)
         return 1;
     }
     AdvanceCursor(s, offset);
-    MLOC_ASSERT(s->cursor == offset);
+    // The text up to a break the iterator gave is at hand, so the cursor
+    // reaches it, but in a segmenter changed against that.
+    if (s->cursor != offset)
+    {
+        return segmentKeepsBroken;
+    }
     uint32_t codePoint = 0;
     int size = DecodeAt(s, offset, &codePoint);
     if (size < 0)

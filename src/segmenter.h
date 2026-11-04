@@ -112,8 +112,16 @@ typedef struct Segmenter
 
 static_assert(sizeof(Segmenter) <= sizeof(mlocSegmenter), "a segmenter fits its value");
 
+// mlocSegmentKeeps' answer for a segmenter whose state was changed against
+// itself, which the call it is under refuses.
+enum
+{
+    segmentKeepsBroken = -2,
+};
+
 // Whether a filter keeps a break: 1 when it does, 0 when it takes it
-// away, -1 when it needs text not yet fed.
+// away, -1 when it needs text not yet fed, segmentKeepsBroken for a
+// segmenter changed against itself.
 int mlocSegmentKeeps(Segmenter* s, size_t offset);
 
 // Before the segmenter lets its piece go: keeps its last bytes and settles
