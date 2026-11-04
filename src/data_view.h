@@ -62,9 +62,10 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
                                  const DataKind* kinds, uint32_t kindCount);
 
 // The view an mlocData holds, copied out so that no pointer of another
-// type reads the public struct's words: false for an mlocData no open
-// filled (left uninitialized, cleared, or written by hand), which has no
-// cookie or sizes that disagree, so that nothing is read through it.
+// type reads the public struct's words: false for one without the cookie
+// (left uninitialized or cleared) or whose sizes disagree, so that
+// nothing is read through it. The bytes pointer cannot be checked: one
+// changed after the open is outside the contract.
 static inline bool mlocReadView(const mlocData* data, DataView* viewOut)
 {
     memcpy(viewOut, data, sizeof(*viewOut));

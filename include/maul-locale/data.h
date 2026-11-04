@@ -18,9 +18,11 @@ extern "C"
 
     // An opened source of data: compiled-in data or a data file. It is
     // copyable and holds no resource; nothing closes it. Only
-    // mlocOpenData and mlocOpenBuiltinData fill one: a value left
-    // uninitialized, cleared or written by hand is not a source, and every
-    // call refuses it before reading through it.
+    // mlocOpenData and mlocOpenBuiltinData fill one, with a mark that a
+    // value left uninitialized or cleared does not carry: every call
+    // refuses a source without it, or whose sizes disagree, before reading
+    // through it. Its bytes are those the open was given; a source whose
+    // bytes pointer was changed afterwards is outside the contract.
     typedef struct mlocData
     {
         uint64_t opaque[4];
@@ -33,7 +35,7 @@ extern "C"
     // set itself, so the set and its array must outlive them and stay as
     // they were. A call taking a set refuses one that is null (unless its
     // documentation allows one), has a null array with a count, or has a
-    // source no open filled, with mloc_errorInvalid, or a count of 0
+    // source refused as above, with mloc_errorInvalid, or a count of 0
     // where it returns a count; it never skips such a source.
     typedef struct mlocDataSet
     {
